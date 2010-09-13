@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+g++ -O3 -I. -I$HOME/boost_1_44_0 -L$HOME/boost_1_44_0/stage/lib -lboost_system test.cpp -o test
