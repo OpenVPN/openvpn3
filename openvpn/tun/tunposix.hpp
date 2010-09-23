@@ -3,11 +3,11 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/exception/all.hpp>
+#include <boost/intrusive_ptr.hpp>
 
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
-namespace tun {
 
 class TunPosix : boost::noncopyable {
 public:
@@ -19,8 +19,8 @@ public:
   struct tun_name_error : virtual error { };
 
   // typedefs
-  typedef openvpn::buffer::BufferOwned buffer;
-  typedef boost::shared_ptr<buffer> buffer_ptr;
+  typedef openvpn::BufferRC buffer;
+  typedef boost::intrusive_ptr<buffer> buffer_ptr;
 
   const char *name(void) const {
     return name_.c_str();
@@ -33,7 +33,6 @@ protected:
   std::string name_;
 };
 
-} // namespace tun
 } // namespace openvpn
 
 #endif // OPENVPN_TUN_TUNPOSIX_H

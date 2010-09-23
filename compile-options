@@ -1,0 +1,5 @@
+#!/bin/bash
+echo -I$HOME/ovpn3
+#echo -I$HOME/openssl/openssl-0.9.8o/include
+echo -I$HOME/openssl/openssl-1.0.0a/include
+echo -I$HOME/boost_1_44_0

@@ -9,7 +9,6 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/exception/all.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -20,7 +19,6 @@
 #include <openvpn/tun/tunposix.hpp>
 
 namespace openvpn {
-namespace tun {
 
 class TunLinux : public TunPosix {
 public:
@@ -116,8 +114,8 @@ public:
     queue_read();
   }
 
-  openvpn::common::counter n_read_pkts(void) const { return n_read_pkts_; }
-  openvpn::common::counter n_read_bytes(void) const { return n_read_bytes_; }
+  openvpn::counter n_read_pkts(void) const { return n_read_pkts_; }
+  openvpn::counter n_read_bytes(void) const { return n_read_bytes_; }
 
   void stop(void) {
     halt = true;
@@ -159,13 +157,12 @@ private:
   }
 
   boost::asio::posix::stream_descriptor *sd;
-  openvpn::common::counter n_read_pkts_;
-  openvpn::common::counter n_read_bytes_;
+  openvpn::counter n_read_pkts_;
+  openvpn::counter n_read_bytes_;
   bool halt;
   const size_t buf_size_;
 };
 
-} // namespace tun
 } // namespace openvpn
 
 #endif // OPENVPN_TUN_TUNLINUX_H
