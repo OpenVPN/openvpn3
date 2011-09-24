@@ -1,1 +1,1 @@
-export LD_LIBRARY_PATH="$HOME/boost_1_44_0/stage/lib:$HOME/openssl/openssl-1.0.0a"
+export LD_LIBRARY_PATH="$BOOST/stage/lib"

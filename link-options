@@ -1,7 +1,0 @@
-#!/bin/bash
-#echo -L$HOME/openssl/openssl-0.9.8o
-echo -L$HOME/openssl/openssl-1.0.0a
-echo -L$HOME/boost_1_44_0/stage/lib
-echo -lboost_system
-echo -lcrypto
-echo -lssl

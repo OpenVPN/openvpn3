@@ -1,0 +1,2 @@
+export BOOST=$HOME/boost_1_47_0
+export OVPN3=$HOME/ovpn3
