@@ -2,7 +2,6 @@
 #define OPENVPN_LINK_UDPLINK_H
 
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/noncopyable.hpp>
@@ -11,6 +10,7 @@
 #include <openvpn/common/log.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/iostats.hpp>
+#include <openvpn/common/dispatch.hpp>
 
 namespace openvpn {
 
@@ -82,9 +82,10 @@ namespace openvpn {
     Stats stats() { return stats_.get(); }
     void log() { stats_.log("UDP"); }
 
-    void start()
+    void start(const int n_parallel)
     {
-      queue_read();
+      for (int i = 0; i < n_parallel; i++)
+	queue_read(NULL);
     }
 
     void stop() {
@@ -96,17 +97,15 @@ namespace openvpn {
     }
 
   private:
-    void queue_read()
+    void queue_read(UDPPacketFrom *udpfrom)
     {
       //OPENVPN_LOG("UDPLink::queue_read"); // fixme
-      UDPPacketFrom *udpfrom = new UDPPacketFrom(buf_size_);
+      if (!udpfrom)
+	udpfrom = new UDPPacketFrom(buf_size_);
 
       socket_.async_receive_from(udpfrom->buf.mutable_buffers_1(),
 				 udpfrom->sender_endpoint,
-				 boost::bind(&UDPLink::handle_read, this, // consider: this->shared_from_this()
-				      udpfrom,
-				      boost::asio::placeholders::error,
-				      boost::asio::placeholders::bytes_transferred));
+				 asio_dispatch_read(&UDPLink::handle_read, this, udpfrom)); // consider: this->shared_from_this()
     }
 
     void handle_read(UDPPacketFrom *udpfrom, const boost::system::error_code& error, const size_t bytes_recvd)
@@ -131,7 +130,7 @@ namespace openvpn {
 	    }
 	  else
 	    OPENVPN_LOG("UDP Read Error: " << error);
-	  queue_read();
+	  queue_read(suf.release()); // reuse UDPPacketFrom object if still available
 	}
     }
 

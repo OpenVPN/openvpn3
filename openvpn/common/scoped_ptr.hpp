@@ -14,7 +14,7 @@ namespace openvpn {
     explicit ScopedPtr(T* p)
       : px(p) {}
 
-    void release() {
+    T* release() {
       T* ret = px;
       px = NULL;
       return ret;

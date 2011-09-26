@@ -8,7 +8,6 @@
 #include <linux/if_tun.h>
 
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/weak_ptr.hpp>
 
@@ -16,10 +15,10 @@
 #include <openvpn/common/log.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/iostats.hpp>
+#include <openvpn/common/dispatch.hpp>
 #include <openvpn/tun/tunposix.hpp>
 
 namespace openvpn {
-
   template <typename ReadHandler>
   class TunLinux
     : public TunPosix,
@@ -136,9 +135,10 @@ namespace openvpn {
     Stats stats() { return stats_.get(); }
     void log() { stats_.log("TUN"); }
 
-    void start()
+    void start(const int n_parallel)
     {
-      queue_read();
+      for (int i = 0; i < n_parallel; i++)
+	queue_read(NULL);
     }
 
     void stop() {
@@ -151,16 +151,14 @@ namespace openvpn {
     }
 
   private:
-    void queue_read()
+    void queue_read(BufferAllocated *buf)
     {
       //OPENVPN_LOG("TunLinux::queue_read"); // fixme
-      BufferAllocated *buf = new BufferAllocated(buf_size_);
+      if (!buf)
+	buf = new BufferAllocated(buf_size_);
 
       sd->async_read_some(buf->mutable_buffers_1(),
-			  boost::bind(&TunLinux::handle_read, this, // consider: this->shared_from_this()
-				      buf,
-				      boost::asio::placeholders::error,
-				      boost::asio::placeholders::bytes_transferred));
+			  asio_dispatch_read(&TunLinux::handle_read, this, buf)); // consider: this->shared_from_this()
     }
 
     void handle_read(BufferAllocated *buf, const boost::system::error_code& error, const size_t bytes_recvd)
@@ -184,7 +182,7 @@ namespace openvpn {
 	    }
 	  else
 	    OPENVPN_LOG("TUN Read Error: " << error);
-	  queue_read();
+	  queue_read(sbuf.release()); // reuse buffer if still available
 	}
     }
 
