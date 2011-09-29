@@ -3,7 +3,7 @@
 
 namespace openvpn {
 
-typedef long long counter;
+typedef long long count_t;
 
 } // namespace openvpn
 

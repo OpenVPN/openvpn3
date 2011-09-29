@@ -34,7 +34,6 @@ namespace openvpn {
     };
 
     typedef UDPPacketFrom::Endpoint Endpoint;
-    typedef IOStats::Stats Stats;
 
     UDPLink(boost::asio::io_service& io_service,
 	    ReadHandler read_handler,
@@ -79,7 +78,7 @@ namespace openvpn {
 	}
     }
 
-    Stats stats() { return stats_.get(); }
+    RWStats stats() { return stats_.get(); }
     void log() { stats_.log("UDP"); }
 
     void start(const int n_parallel)
@@ -138,7 +137,7 @@ namespace openvpn {
     bool halt_;
     const size_t buf_size_;
     ReadHandler read_handler_;
-    IOStats stats_;
+    IOStatsSingleThread stats_;
   };
 } // namespace openvpn
 

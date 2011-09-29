@@ -1,20 +1,12 @@
 #ifndef OPENVPN_COMMON_THREADPOOL_H
 #define OPENVPN_COMMON_THREADPOOL_H
 
-#if defined(BOOST_HAS_THREADS) && !defined(BOOST_ASIO_DISABLE_THREADS)
-#define OPENVPN_MULTITHREAD 1
-#else
-#define OPENVPN_MULTITHREAD 0
-#endif
-
 #include <queue>
 
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
-#if OPENVPN_MULTITHREAD
-#include <boost/thread/thread.hpp>
-#endif
 
+#include <openvpn/common/thread.hpp>
 #include <openvpn/common/log.hpp>
 
 
@@ -47,7 +39,7 @@ namespace openvpn {
 	run();
     }
 
-#if defined(BOOST_HAS_THREADS) && !defined(BOOST_ASIO_DISABLE_THREADS)
+#if OPENVPN_MULTITHREAD
   private:
     typedef boost::shared_ptr<boost::thread> threadptr;
     std::queue<threadptr> threads_;

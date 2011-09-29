@@ -28,8 +28,6 @@ namespace openvpn {
     // exceptions
     OPENVPN_EXCEPTION(tun_tx_queue_len_error);
 
-    typedef IOStats::Stats Stats;
-
     TunLinux(boost::asio::io_service& io_service,
 	     ReadHandler read_handler,
 	     const char *name=NULL,
@@ -132,7 +130,7 @@ namespace openvpn {
 	}
     }
 
-    Stats stats() { return stats_.get(); }
+    RWStats stats() { return stats_.get(); }
     void log() { stats_.log("TUN"); }
 
     void start(const int n_parallel)
@@ -190,7 +188,7 @@ namespace openvpn {
     bool halt_;
     const size_t buf_size_;
     ReadHandler read_handler_;
-    IOStats stats_;
+    IOStatsSingleThread stats_;
   };
 
 } // namespace openvpn
