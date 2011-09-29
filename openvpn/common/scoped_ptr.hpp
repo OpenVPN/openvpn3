@@ -4,6 +4,8 @@
 #include <boost/assert.hpp>
 #include <boost/noncopyable.hpp>
 
+#include <openvpn/common/types.hpp>
+
 namespace openvpn {
 
   // like boost::scoped_ptr but has release method

@@ -7,6 +7,7 @@
 #include <boost/cstdint.hpp>
 #include <boost/asio.hpp>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/log.hpp>
 #include <openvpn/common/circ_list.hpp>

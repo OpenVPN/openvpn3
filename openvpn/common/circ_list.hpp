@@ -2,6 +2,8 @@
 #define OPENVPN_COMMON_CIRC_LIST_H
 
 #include <vector>
+
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {

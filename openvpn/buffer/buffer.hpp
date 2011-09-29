@@ -1,10 +1,13 @@
 #ifndef OPENVPN_BUFFER_BUFFER_H
 #define OPENVPN_BUFFER_BUFFER_H
 
+#include <cstring>
+
 #include <boost/noncopyable.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/asio.hpp>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
 
 namespace openvpn {
@@ -80,13 +83,13 @@ namespace openvpn {
     BufferAllocated(const void *data, size_t size)
     {
       data_ = new unsigned char[size_ = capacity_ = size];
-      memcpy(data_, data, size);
+      std::memcpy(data_, data, size);
       offset_ = 0;
     }
 
     ~BufferAllocated()
     {
-      delete data_;
+      delete [] data_;
     }
   };
 

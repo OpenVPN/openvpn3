@@ -3,6 +3,7 @@
 
 #include <queue>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {

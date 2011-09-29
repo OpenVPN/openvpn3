@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/thread.hpp>
 #include <openvpn/common/log.hpp>
 

@@ -1,6 +1,8 @@
 #ifndef OPENVPN_COMMON_DISPATCH_H
 #define OPENVPN_COMMON_DISPATCH_H
 
+#include <openvpn/common/types.hpp>
+
 namespace openvpn {
 
   template <typename C, typename Handler, typename Data>
