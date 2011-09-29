@@ -9,8 +9,8 @@
 namespace openvpn {
 
   /*
-   * A variable length array for simple types
-   * (no complex constructors or destructors).
+   * A variable length array for simple types, i.e.
+   * those having trivial constructors/destructors.
    */
   template <typename T>
   class SimpleArray
@@ -23,23 +23,24 @@ namespace openvpn {
 
     explicit SimpleArray(const size_t size, const bool zero = false)
     {
-      size_ = size;
       data_ = NULL;
-      if (size_)
+      size_ = size;
+      if (size)
 	{
-	  data_ = new T[size_];
+	  data_ = new T[size];
 	  if (zero)
-	    std::memset(data_, 0, sizeof(T[size_]));
+	    std::memset(data_, 0, sizeof(T[size]));
 	}
     }
 
     explicit SimpleArray(const T* src, const size_t size)
     {
+      data_ = NULL;
       size_ = size;
-      if (size_)
+      if (size)
 	{
-	  data_ = new T[size_];
-	  std::memcpy(data_, src, sizeof(T[size_]));
+	  data_ = new T[size];
+	  std::memcpy(data_, src, sizeof(T[size]));
 	}
     }
 
@@ -56,22 +57,19 @@ namespace openvpn {
 
     void operator=(const SimpleArray& other)
     {
-      init(other.data_, other.size_);
+      if (this != &other)
+	init(other.data_, other.size_);
     }
 
     void init(const size_t size, const bool zero = false)
     {
-      if (data_)
+      erase();
+      if (size)
 	{
-	  delete [] data_;
-	  data_ = NULL;
-	}
-      size_ = size;
-      if (size_)
-	{
-	  data_ = new T[size_];
+	  data_ = new T[size];
+	  size_ = size;
 	  if (zero)
-	    std::memset(data_, 0, sizeof(T[size_]));
+	    std::memset(data_, 0, sizeof(T[size]));
 	}
     }
 
@@ -79,17 +77,35 @@ namespace openvpn {
     {
       if (size_ != size)
 	{
-	  if (data_)
+	  erase();
+	  if (size)
 	    {
-	      delete [] data_;
-	      data_ = NULL;
+	      data_ = new T[size];
+	      size_ = size;
 	    }
-	  size_ = size;
-	  if (size_)
-	    data_ = new T[size_];
 	}
-      if (size_)
-	std::memcpy(data_, src, sizeof(T[size_]));
+      if (size)
+	std::memcpy(data_, src, sizeof(T[size]));
+    }
+
+    void erase()
+    {
+      if (data_)
+	{
+	  delete [] data_;
+	  data_ = NULL;
+	}
+      size_ = 0;
+    }
+
+    void move(SimpleArray& other)
+    {
+      if (data_)
+	delete [] data_;
+      data_ = other.data_;
+      size_ = other.size_;
+      other.data_ = NULL;
+      other.size_ = 0;
     }
 
     ~SimpleArray()
