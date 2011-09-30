@@ -47,7 +47,7 @@ namespace openvpn {
   /*
    * A variable length array for simple types that don't have constructors/destructors.
    */
-  template <typename T, class Allocator = SimpleAllocator<T> >
+  template <typename T, typename Allocator = SimpleAllocator<T> >
   class SimpleArray
   {
   public:
