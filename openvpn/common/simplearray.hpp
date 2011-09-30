@@ -2,6 +2,7 @@
 #define OPENVPN_COMMON_SIMPLEARRAY_H
 
 #include <cstring>
+#include <vector>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -120,6 +121,25 @@ namespace openvpn {
 	}
       if (size)
 	std::memcpy(data_, src, sizeof(T[size]));
+    }
+
+    void init(std::vector<T>& vec)
+    {
+      const size_t size = vec.size();
+      if (size_ != size)
+	{
+	  erase();
+	  if (size)
+	    {
+	      data_ = Allocator::array_new(size);
+	      size_ = size;
+	    }
+	}
+      if (size)
+	{
+	  for (size_t i = 0; i < size; ++i)
+	    data_[i] = vec[i];
+	}
     }
 
     void erase()
