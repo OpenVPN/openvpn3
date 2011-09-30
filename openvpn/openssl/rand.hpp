@@ -8,7 +8,7 @@
 namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION(rand_error);
 
-  void rand_bytes(unsigned char *buf, const size_t size)
+  inline void rand_bytes(unsigned char *buf, const size_t size)
   {
     if (!RAND_bytes(buf, size))
       throw rand_error();

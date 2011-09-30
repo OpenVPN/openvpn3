@@ -47,7 +47,7 @@ namespace openvpn {
   /*
    * A variable length array for simple types that don't have constructors/destructors.
    */
-  template <typename T, typename Allocator = SimpleAllocator<T> >
+  template <typename T, template <typename> class Allocator = SimpleAllocator>
   class SimpleArray
   {
   public:
@@ -62,7 +62,7 @@ namespace openvpn {
       size_ = size;
       if (size)
 	{
-	  data_ = Allocator::array_new(size);
+	  data_ = Allocator<T>::array_new(size);
 	  if (zero)
 	    std::memset(data_, 0, sizeof(T[size]));
 	}
@@ -74,7 +74,7 @@ namespace openvpn {
       size_ = size;
       if (size)
 	{
-	  data_ = Allocator::array_new(size);
+	  data_ = Allocator<T>::array_new(size);
 	  std::memcpy(data_, src, sizeof(T[size]));
 	}
     }
@@ -85,7 +85,7 @@ namespace openvpn {
       size_ = other.size_;
       if (size_)
 	{
-	  data_ = Allocator::array_new(size_);
+	  data_ = Allocator<T>::array_new(size_);
 	  std::memcpy(data_, other.data_, sizeof(T[size_]));
 	}
     }
@@ -101,7 +101,7 @@ namespace openvpn {
       erase();
       if (size)
 	{
-	  data_ = Allocator::array_new(size);
+	  data_ = Allocator<T>::array_new(size);
 	  size_ = size;
 	  if (zero)
 	    std::memset(data_, 0, sizeof(T[size]));
@@ -115,7 +115,7 @@ namespace openvpn {
 	  erase();
 	  if (size)
 	    {
-	      data_ = Allocator::array_new(size);
+	      data_ = Allocator<T>::array_new(size);
 	      size_ = size;
 	    }
 	}
@@ -131,7 +131,7 @@ namespace openvpn {
 	  erase();
 	  if (size)
 	    {
-	      data_ = Allocator::array_new(size);
+	      data_ = Allocator<T>::array_new(size);
 	      size_ = size;
 	    }
 	}
@@ -146,7 +146,7 @@ namespace openvpn {
     {
       if (data_)
 	{
-	  Allocator::array_delete(data_, sizeof(T[size_]));
+	  Allocator<T>::array_delete(data_, sizeof(T[size_]));
 	  data_ = NULL;
 	}
       size_ = 0;
@@ -155,7 +155,7 @@ namespace openvpn {
     void move(SimpleArray& other)
     {
       if (data_)
-	Allocator::array_delete(data_, sizeof(T[size_]));
+	Allocator<T>::array_delete(data_, sizeof(T[size_]));
       data_ = other.data_;
       size_ = other.size_;
       other.data_ = NULL;
@@ -165,7 +165,7 @@ namespace openvpn {
     ~SimpleArray()
     {
       if (data_)
-	Allocator::array_delete(data_, sizeof(T[size_]));
+	Allocator<T>::array_delete(data_, sizeof(T[size_]));
     }
 
     size_t size() const { return size_; }

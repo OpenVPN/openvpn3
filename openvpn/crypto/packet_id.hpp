@@ -29,19 +29,19 @@ namespace openvpn {
      * start thinking about triggering a new
      * SSL/TLS handshake.
      */
-    const packet_id_type PACKET_ID_WRAP_TRIGGER = 0xFF000000;
+    //static const packet_id_type PACKET_ID_WRAP_TRIGGER = 0xFF000000;
 
     /* convert a packet_id_type from host to network order */
-    packet_id_type htonpid(const packet_id_type x) { return htonl(x); }
+    inline packet_id_type htonpid(const packet_id_type x) { return htonl(x); }
 
     /* convert a packet_id_type from network to host order */
-    packet_id_type ntohpid(const packet_id_type x) { return ntohl(x); }
+    inline packet_id_type ntohpid(const packet_id_type x) { return ntohl(x); }
 
     /* convert a time_type in host order to a net_time_t in network order */
-    net_time_type htontime(const time_type x) { return htonl(net_time_type(x)); }
+    inline net_time_type htontime(const time_type x) { return htonl(net_time_type(x)); }
 
     /* convert a net_time_type in network order to a time_type in host order */
-    time_type ntohtime(const net_time_type x) { return time_type(ntohl(x)); }
+    inline time_type ntohtime(const net_time_type x) { return time_type(ntohl(x)); }
 
     /*
      * Communicate packet-id over the wire.

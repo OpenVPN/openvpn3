@@ -7,8 +7,7 @@
 namespace openvpn {
 
   // return an OpenSSL error string
-  std::string
-  openssl_error()
+  inline std::string openssl_error()
   {
     std::ostringstream tmp;
     char buf[256];
@@ -25,8 +24,7 @@ namespace openvpn {
     return tmp.str();
   }
 
-  std::string
-  openssl_ssl_error(const int sslerr)
+  inline std::string openssl_ssl_error(const int sslerr)
   {
     switch (sslerr)
       {

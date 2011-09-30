@@ -8,7 +8,7 @@
 
 namespace openvpn {
 
-  char render_hex_char(const int c)
+  inline char render_hex_char(const int c)
   {
     if (c < 10)
       return '0' + c;
@@ -18,7 +18,7 @@ namespace openvpn {
       return '?';
   }
 
-  int parse_hex_char (const char c)
+  inline int parse_hex_char (const char c)
   {
     if (c >= '0' && c <= '9')
       return c - '0';
@@ -30,7 +30,7 @@ namespace openvpn {
       return -1;
   }
 
-  std::string render_hex(const unsigned char *data, size_t size)
+  inline std::string render_hex(const unsigned char *data, size_t size)
   {
     std::string ret;
     ret.reserve(size*2+1);
@@ -43,7 +43,7 @@ namespace openvpn {
     return ret;
   }
 
-  std::string render_hex(const std::vector<unsigned char>& data)
+  inline std::string render_hex(const std::vector<unsigned char>& data)
   {
     std::string ret;
     ret.reserve(data.size()*2+1);
@@ -58,7 +58,7 @@ namespace openvpn {
 
   OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
 
-  void parse_hex(std::vector<unsigned char>& dest, std::string& str)
+  inline void parse_hex(std::vector<unsigned char>& dest, std::string& str)
   {
     const int len = int(str.length());
     int i;
@@ -74,7 +74,7 @@ namespace openvpn {
       throw parse_hex_error(); // straggler char      
   }
 
-  std::vector<unsigned char> parse_hex(std::string& str)
+  inline std::vector<unsigned char> parse_hex(std::string& str)
   {
     std::vector<unsigned char> ret;
     parse_hex(ret, str);

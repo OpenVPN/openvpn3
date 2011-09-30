@@ -14,7 +14,7 @@ namespace openvpn {
   class StaticKey
   {
   protected:
-    typedef SimpleArray< unsigned char, SimpleAllocatorSecure<unsigned char> > key_t;
+    typedef SimpleArray<unsigned char, SimpleAllocatorSecure> key_t;
   public:
     // delegate to key_data
     //size_t size() const { return key_data.bytes(); }
