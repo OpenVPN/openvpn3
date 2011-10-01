@@ -47,9 +47,9 @@ namespace openvpn {
       while (std::getline(in, line))
 	{
 	  boost::trim(line);
-	  if (line == static_key_head())
+	  if (line == static_key_head)
 	    in_body = true;
-	  else if (line == static_key_foot())
+	  else if (line == static_key_foot)
 	    in_body = false;
 	  else if (in_body)
 	    parse_hex(data, line);
@@ -64,17 +64,20 @@ namespace openvpn {
       if (key_data.size() != KEY_SIZE)
 	throw static_key_bad_render_size();
       std::ostringstream out;
-      out << static_key_head() << "\n";
+      out << static_key_head << "\n";
       for (size_t i = 0; i < KEY_SIZE; i += 16)
 	out << render_hex(key_data.data() + i, 16) << "\n";
-      out << static_key_foot() << "\n";
+      out << static_key_foot << "\n";
       return out.str();
     }
 
   private:
-    static const char *static_key_head() { return "-----BEGIN OpenVPN Static key V1-----"; }
-    static const char *static_key_foot() { return "-----END OpenVPN Static key V1-----"; }
+    static const char static_key_head[];
+    static const char static_key_foot[];
   };
+
+  const char OpenVPNStaticKey::static_key_head[] = "-----BEGIN OpenVPN Static key V1-----"; // CONST GLOBAL
+  const char OpenVPNStaticKey::static_key_foot[] = "-----END OpenVPN Static key V1-----"; // CONST GLOBAL
 
 } // namespace openvpn
 
