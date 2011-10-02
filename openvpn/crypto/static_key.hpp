@@ -8,20 +8,14 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/simplearray.hpp>
+#include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
   class StaticKey
   {
   protected:
-    typedef SimpleArray<unsigned char, SimpleAllocatorSecure> key_t;
+    typedef BufferAllocatedType<unsigned char> key_t;
   public:
-    // delegate to key_data
-    //size_t size() const { return key_data.bytes(); }
-    //const unsigned char* data() const { return key_data.data(); };
-    //unsigned char* data() { return key_data.data(); };
-    //unsigned char& operator[](const size_t index) { return key_data[index]; }
-    //const unsigned char& operator[](const size_t index) const { return key_data[index]; }
 
   protected:
     key_t key_data;
@@ -40,10 +34,9 @@ namespace openvpn {
     void parse(const std::string& key_text)
     {
       std::stringstream in(key_text);
-      std::vector<unsigned char> data;
+      key_t data(KEY_SIZE, key_t::DESTRUCT_ZERO);
       std::string line;
       bool in_body = false;
-      data.reserve(KEY_SIZE);
       while (std::getline(in, line))
 	{
 	  boost::trim(line);
@@ -56,7 +49,7 @@ namespace openvpn {
 	}
       if (in_body || data.size() != KEY_SIZE)
 	throw static_key_parse_error();
-      key_data.init(data);
+      key_data = data;
     }
 
     std::string render() const
@@ -66,7 +59,7 @@ namespace openvpn {
       std::ostringstream out;
       out << static_key_head << "\n";
       for (size_t i = 0; i < KEY_SIZE; i += 16)
-	out << render_hex(key_data.data() + i, 16) << "\n";
+	out << render_hex(key_data.c_data() + i, 16) << "\n";
       out << static_key_foot << "\n";
       return out.str();
     }

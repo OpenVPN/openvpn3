@@ -17,7 +17,7 @@ namespace openvpn {
   struct UDPPacketFrom
   {
     typedef boost::asio::ip::udp::endpoint Endpoint;
-    explicit UDPPacketFrom(size_t capacity) : buf(capacity) {}
+    explicit UDPPacketFrom(size_t capacity) : buf(capacity, 0) {}
     BufferAllocated buf;
     Endpoint sender_endpoint;
   };
@@ -115,7 +115,7 @@ namespace openvpn {
 	{
 	  if (!error)
 	    {
-	      suf->buf.set_size(bytes_recvd);
+	      suf->buf.set_size_bytes(bytes_recvd);
 	      stats_.add_read_bytes(bytes_recvd);
 	      try
 		{

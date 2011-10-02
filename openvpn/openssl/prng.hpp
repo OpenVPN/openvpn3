@@ -7,14 +7,14 @@
 #include <openssl/evp.h>
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/simplearray.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/openssl/rand.hpp>
 
 namespace openvpn {
 
   class PRNG
   {
-    typedef SimpleArray<unsigned char> nonce_t;
+    typedef BufferAllocatedType<unsigned char> nonce_t;
   public:
     enum {
       NONCE_SECRET_LEN_MIN = 16,
@@ -42,7 +42,7 @@ namespace openvpn {
 	throw prng_bad_digest();
 
       // allocate array for nonce and seed it
-      nonce_t nd(EVP_MD_size(md) + nonce_secret_len);
+      nonce_t nd(EVP_MD_size(md) + nonce_secret_len, nonce_t::DESTRUCT_ZERO|nonce_t::ARRAY);
       reseed(nd);
 
       // Move all items into *this as a last step to avoid
@@ -65,12 +65,12 @@ namespace openvpn {
 	      unsigned int outlen = 0;
 	      const size_t blen = std::min(len, md_size);
 	      EVP_DigestInit (&ctx, nonce_md_);
-	      EVP_DigestUpdate (&ctx, nonce_data_.data(), nonce_data_.size());
-	      EVP_DigestFinal (&ctx, nonce_data_.data(), &outlen);
+	      EVP_DigestUpdate (&ctx, nonce_data_.c_data_bytes(), nonce_data_.size_bytes());
+	      EVP_DigestFinal (&ctx, nonce_data_.data_bytes(), &outlen);
 	      EVP_MD_CTX_cleanup (&ctx);
 	      if (outlen != md_size)
 		throw prng_internal_error();
-	      memcpy (output, nonce_data_.data(), blen);
+	      memcpy (output, nonce_data_.data_bytes(), blen);
 	      output += blen;
 	      len -= blen;
 
@@ -94,7 +94,7 @@ namespace openvpn {
     static void reseed (nonce_t& nd)
     {
 #if 1 /* Must be 1 for real usage */
-      rand_bytes(nd.data(), nd.bytes());
+      rand_bytes(nd.data_bytes(), nd.size_bytes());
 #else
       /* Only for testing -- will cause a predictable PRNG sequence */
       {

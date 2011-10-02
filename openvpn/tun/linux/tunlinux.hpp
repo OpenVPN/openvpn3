@@ -153,7 +153,7 @@ namespace openvpn {
     {
       //OPENVPN_LOG("TunLinux::queue_read"); // fixme
       if (!buf)
-	buf = new BufferAllocated(buf_size_);
+	buf = new BufferAllocated(buf_size_, 0);
 
       sd->async_read_some(buf->mutable_buffers_1(),
 			  asio_dispatch_read(&TunLinux::handle_read, this, buf)); // consider: this->shared_from_this()
@@ -167,7 +167,7 @@ namespace openvpn {
 	{
 	  if (!error)
 	    {
-	      buf->set_size(bytes_recvd);
+	      buf->set_size_bytes(bytes_recvd);
 	      stats_.add_read_bytes(bytes_recvd);
 	      try
 		{

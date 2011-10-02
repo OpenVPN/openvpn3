@@ -31,7 +31,6 @@ namespace openvpn {
 
   inline void intrusive_ptr_add_ref(RC *p)
   {
-    OPENVPN_LOG("ADD REF " << long(p->refcount_)); // fixme
     ++p->refcount_;
   }
 
@@ -39,9 +38,8 @@ namespace openvpn {
   {
     if (--p->refcount_ == 0)
       delete p;
-    OPENVPN_LOG("RELEASE REF " << long(p->refcount_));
   }
 
 } // namespace openvpn
 
-#endif // OPENVPN_BUFFER_MEMQ_H
+#endif // OPENVPN_COMMON_RC_H

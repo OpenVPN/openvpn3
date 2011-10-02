@@ -2,7 +2,6 @@
 #define OPENVPN_COMMON_HEXSTR_H
 
 #include <string>
-#include <vector>
 
 #include <openvpn/common/exception.hpp>
 
@@ -43,13 +42,14 @@ namespace openvpn {
     return ret;
   }
 
-  inline std::string render_hex(const std::vector<unsigned char>& data)
+  template <typename V>
+  inline std::string render_hex(const V& data)
   {
     std::string ret;
     ret.reserve(data.size()*2+1);
-    for (std::vector<unsigned char>::const_iterator i = data.begin(); i != data.end(); i++)
+    for (size_t i = 0; i < data.size(); ++i)
       {
-	const unsigned char c = *i;
+	const unsigned char c = data[i];
 	ret += render_hex_char(c >> 4);
 	ret += render_hex_char(c & 0x0F);
       }
@@ -58,7 +58,8 @@ namespace openvpn {
 
   OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
 
-  inline void parse_hex(std::vector<unsigned char>& dest, std::string& str)
+  template <typename V>
+  inline void parse_hex(V& dest, std::string& str)
   {
     const int len = int(str.length());
     int i;
@@ -72,13 +73,6 @@ namespace openvpn {
       }
     if (i != len)
       throw parse_hex_error(); // straggler char      
-  }
-
-  inline std::vector<unsigned char> parse_hex(std::string& str)
-  {
-    std::vector<unsigned char> ret;
-    parse_hex(ret, str);
-    return ret;
   }
 
 } // namespace openvpn

@@ -3,11 +3,14 @@
 
 #include <queue>
 
+#include <boost/intrusive_ptr.hpp>
+
 #include <openvpn/common/types.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
 
+template <typename T>
 class MemQ {
 public:
   bool empty() const { return q.empty(); }
