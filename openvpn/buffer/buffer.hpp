@@ -13,6 +13,8 @@
 namespace openvpn {
 
   OPENVPN_SIMPLE_EXCEPTION(buffer_full);
+  OPENVPN_SIMPLE_EXCEPTION(buffer_headroom);
+  OPENVPN_SIMPLE_EXCEPTION(buffer_empty);
   OPENVPN_SIMPLE_EXCEPTION(buffer_index);
   OPENVPN_SIMPLE_EXCEPTION(buffer_const_index);
 
@@ -30,6 +32,14 @@ namespace openvpn {
       data_ = data;
       offset_ = 0;
       size_ = capacity_ = size;
+    }
+
+    void init_headroom(size_t headroom)
+    {
+      if (headroom > capacity_)
+	throw buffer_headroom();
+      offset_ = headroom;
+      size_ = 0;
     }
 
     // return a const pointer to start of array
@@ -90,8 +100,8 @@ namespace openvpn {
     // append a T object to array, with possible resize
     void push_back(const T& value)
     {
-      while (!remaining())
-	resize();
+      if (!remaining())
+	resize(offset_ + size_ + 1);
       *(data()+size_++) = value;
     }
 
@@ -125,13 +135,61 @@ namespace openvpn {
       return boost::asio::const_buffers_1(data_bytes(), size_bytes());
     }
 
-    // Derived classes can implement array growing semantics
+    // Derived classes can implement buffer growing semantics
     // by overloading this method.  In the default implementation,
     // buffers are non-growable, so we throw an exception.
-    virtual void resize(size_t new_capacity = 0)
+    virtual void resize(const size_t new_capacity)
     {
       if (new_capacity > capacity_)
 	throw buffer_full();
+    }
+
+    void write(const T* data, const size_t size)
+    {
+      std::memcpy(write_alloc(size), data, sizeof(T[size]));
+    }
+
+    void prepend(const T* data, const size_t size)
+    {
+      std::memcpy(prepend_alloc(size), data, sizeof(T[size]));
+    }
+
+    void read(T* data, const size_t size)
+    {
+      std::memcpy(data, read_alloc(size), sizeof(T[size]));
+    }
+
+    T* write_alloc(const size_t size)
+    {
+      if (size > remaining())
+	resize(offset_ + size_ + size);
+      T* ret = data()+size_;
+      size_ += size;
+      return ret;
+    }
+
+    T* prepend_alloc(const size_t size)
+    {
+      if (size <= offset_)
+	{
+	  offset_ -= size;
+	  return data();
+	}
+      else
+	throw buffer_headroom();
+    }
+
+    T* read_alloc(const size_t size)
+    {
+      if (size <= size_)
+	{
+	  T* ret = data();
+	  offset_ += size;
+	  size_ -= size;
+	  return ret;
+	}
+      else
+	throw buffer_empty();
     }
 
   protected:
@@ -277,24 +335,21 @@ namespace openvpn {
 	delete_(data_, capacity_, flags_);
     }
 
-    // Set current capacity to new_capacity.
-    // If new_capacity is 0, array capacity will double.
-    // If new_capacity < current capacity, do nothing.
-    virtual void resize(size_t new_capacity = 0)
+    // Set current capacity to at least new_capacity.
+    virtual void resize(const size_t new_capacity)
     {
-      if (!new_capacity)
-	new_capacity = std::max(size_t(1), capacity_ * 2);
-      if (new_capacity > capacity_)
+      const size_t newcap = std::max(new_capacity, capacity_ * 2);
+      if (newcap > capacity_)
 	{
 	  if (flags_ & GROW)
 	    {
-	      T* data = new T[new_capacity];
+	      T* data = new T[newcap];
 	      if (size_)
 		std::memcpy(data + offset_, data_ + offset_, sizeof(T[size_]));
 	      delete_(data_, capacity_, flags_);
 	      data_ = data;
-	      //std::cout << "*** RESIZE " << capacity_ << " -> " << new_capacity << std::endl; // fixme
-	      capacity_ = new_capacity;
+	      //std::cout << "*** RESIZE " << capacity_ << " -> " << newcap << std::endl; // fixme
+	      capacity_ = newcap;
 	    }
 	  else
 	    throw buffer_full();
