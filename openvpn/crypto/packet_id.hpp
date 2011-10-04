@@ -24,13 +24,6 @@ namespace openvpn {
     typedef boost::uint32_t net_time_type;
     typedef now_t time_type;
 
-    /*
-     * In TLS mode, when a packet ID gets to this level,
-     * start thinking about triggering a new
-     * SSL/TLS handshake.
-     */
-    //static const packet_id_type PACKET_ID_WRAP_TRIGGER = 0xFF000000;
-
     /* convert a packet_id_type from host to network order */
     inline packet_id_type htonpid(const packet_id_type x) { return htonl(x); }
 
@@ -88,6 +81,67 @@ namespace openvpn {
 	time = v_time;
 	id = v_id;
       }
+    };
+
+    class PacketIDSend
+    {
+    public:
+      OPENVPN_SIMPLE_EXCEPTION(packet_id_wrap);
+
+      PacketIDSend()
+      {
+	init(false);
+      }
+
+      void init(const bool long_form)
+      {
+	pid_.time = time_type(0);
+	pid_.id = packet_id_type(0);
+	long_form_ = long_form;
+      }
+
+      PacketID next()
+      {
+	PacketID ret;
+	if (!pid_.time)
+	  pid_.time = now;
+	ret.id = ++pid_.id;
+	if (!pid_.id) // wraparound
+	  {
+	    if (!long_form_)
+	      throw packet_id_wrap();
+	    pid_.time = now;
+	    ret.id = pid_.id = 1;
+	  }
+	ret.time = pid_.time;
+	return ret;
+      }
+
+    /*
+     * In TLS mode, when a packet ID gets to this level,
+     * start thinking about triggering a new
+     * SSL/TLS handshake.
+     */
+      bool wrap_trigger() const
+      {
+	const packet_id_type wrap_at = 0xFF000000;
+	return pid_.id >= wrap_at;
+      }
+
+#ifdef OPENVPN_EXTRA_LOG_INFO
+      std::string str() const
+      {
+	std::string ret;
+	ret = pid_.str();
+	if (long_form_)
+	  ret += 'L';
+	return ret;
+      }
+#endif
+
+    private:
+      PacketID pid_;
+      bool long_form_;
     };
 
     /*

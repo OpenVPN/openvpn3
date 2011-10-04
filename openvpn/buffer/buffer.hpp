@@ -135,15 +135,6 @@ namespace openvpn {
       return boost::asio::const_buffers_1(data_bytes(), size_bytes());
     }
 
-    // Derived classes can implement buffer growing semantics
-    // by overloading this method.  In the default implementation,
-    // buffers are non-growable, so we throw an exception.
-    virtual void resize(const size_t new_capacity)
-    {
-      if (new_capacity > capacity_)
-	throw buffer_full();
-    }
-
     void write(const T* data, const size_t size)
     {
       std::memcpy(write_alloc(size), data, sizeof(T[size]));
@@ -193,6 +184,15 @@ namespace openvpn {
     }
 
   protected:
+    // Derived classes can implement buffer growing semantics
+    // by overloading this method.  In the default implementation,
+    // buffers are non-growable, so we throw an exception.
+    virtual void resize(const size_t new_capacity)
+    {
+      if (new_capacity > capacity_)
+	throw buffer_full();
+    }
+
     T *data_;          // pointer to data
     size_t offset_;    // offset from data_ of beginning of T array (to allow for headroom)
     size_t size_;      // number of T objects in array starting at data_ + offset_
@@ -326,6 +326,7 @@ namespace openvpn {
     void clear()
     {
       erase_();
+      flags_ = 0;
       size_ = offset_ = 0;
     }
 
@@ -335,6 +336,7 @@ namespace openvpn {
 	delete_(data_, capacity_, flags_);
     }
 
+  protected:
     // Set current capacity to at least new_capacity.
     virtual void resize(const size_t new_capacity)
     {
@@ -356,7 +358,6 @@ namespace openvpn {
 	}
     }
 
-  protected:
     void erase_()
     {
       if (data_)
