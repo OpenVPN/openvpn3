@@ -1,12 +1,15 @@
 #ifndef OPENVPN_CRYPTO_DIGEST
 #define OPENVPN_CRYPTO_DIGEST
 
+#include <boost/noncopyable.hpp>
+
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/crypto/static_key.hpp>
 
 namespace openvpn {
   class Digest
@@ -40,6 +43,8 @@ namespace openvpn {
       return EVP_MD_size (digest_);
     }
 
+    bool defined() const { return digest_ != NULL; }
+
   private:
     const EVP_MD *get() const { return digest_; }
 
@@ -52,6 +57,7 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(digest_init_insufficient_key_material);
     OPENVPN_SIMPLE_EXCEPTION(hmac_size_inconsistency);
     OPENVPN_SIMPLE_EXCEPTION(hmac_uninitialized);
+    OPENVPN_SIMPLE_EXCEPTION(digest_output_buffer);
 
   private:
     class HMAC_CTX_wrapper : boost::noncopyable
@@ -92,12 +98,19 @@ namespace openvpn {
 	return &ctx;
       }
 
+    bool is_initialized() const { return initialized; }
+
     private:
       HMAC_CTX ctx;
       bool initialized;
     };
 
   public:
+    // OpenSSL constants
+    enum {
+      MAX_HMAC_SIZE = EVP_MAX_MD_SIZE
+    };
+
     HMACContext() {}
 
     HMACContext(const Digest& digest, const StaticKey& key)
@@ -110,10 +123,18 @@ namespace openvpn {
       init(ref.digest_, ref.key_);
     }
 
+    bool defined() const { return ctx.is_initialized(); }
+
     void operator=(const HMACContext& ref)
     {
       if (this != &ref)
 	init(ref.digest_, ref.key_);
+    }
+
+    // size of out buffer to pass to hmac
+    size_t output_size() const
+    {
+      return HMAC_size (ctx());
     }
 
     void init(const Digest& digest, const StaticKey& key)
@@ -123,29 +144,30 @@ namespace openvpn {
       key_ = key;
       ctx.erase();
 
-      // check that key is large enough
-      if (key_.size() < digest_.size())
-	throw digest_init_insufficient_key_material();
+      if (digest.defined())
+	{
+	  // check that key is large enough
+	  if (key_.size() < digest_.size())
+	    throw digest_init_insufficient_key_material();
 
-      // initialize HMAC context with digest type and key
-      ctx.init();
-      HMAC_Init_ex (ctx(), key_.data(), int(key_.size()), digest_.get(), NULL);
+	  // initialize HMAC context with digest type and key
+	  ctx.init();
+	  HMAC_Init_ex (ctx(), key_.data(), int(key_.size()), digest_.get(), NULL);
+	}
     }
 
-    // size of out buffer to pass to hmac
-    size_t out_size() const
-    {
-      return HMAC_size (ctx());
-    }
-
-    size_t hmac(unsigned char *out, const unsigned char *in, const size_t inlen)
+    size_t hmac(unsigned char *out, const size_t out_size,
+		const unsigned char *in, const size_t in_size)
     {
       unsigned int outlen;
-
-      HMAC_Init_ex (ctx(), NULL, 0, NULL, NULL);
-      HMAC_Update (ctx(), in, int(inlen));
-      HMAC_Final (ctx(), out, &outlen);
-      if (outlen != static_cast<unsigned int>(HMAC_size(ctx())))
+      HMAC_CTX *c = ctx();
+      const unsigned int hmac_size = HMAC_size(c);
+      if (out_size != hmac_size)
+	throw digest_output_buffer();
+      HMAC_Init_ex (c, NULL, 0, NULL, NULL);
+      HMAC_Update (c, in, int(in_size));
+      HMAC_Final (c, out, &outlen);
+      if (outlen != hmac_size)
 	throw hmac_size_inconsistency();
       return outlen;
     }

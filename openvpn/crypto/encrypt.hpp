@@ -1,33 +1,96 @@
 #ifndef OPENVPN_CRYPTO_ENCRYPT
 #define OPENVPN_CRYPTO_ENCRYPT
 
-#include <openssl/objects.h>
-#include <openssl/evp.h>
+#include <cstring>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/buffer/buffer.hpp>
+#include <openvpn/openssl/prng.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/digest.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
-#include <openvpn/openssl/prng.hpp>
+#include <openvpn/crypto/frame.hpp>
 
 namespace openvpn {
   class Encrypt {
   public:
-    // Flags
-    enum  {
-      PACKET_ID_LONG_FORM = (1<<0)
-    };
+    OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
+
+    void encrypt(BufferAllocated& buf)
+    {
+      if (cipher.defined())
+	{
+	  // workspace for generating IV
+	  unsigned char iv_buf[CipherContext::MAX_IV_SIZE];
+	  const size_t iv_size = cipher.iv_size();
+
+	  // IV and packet ID are generated differently depending on cipher mode
+	  const int cipher_mode = cipher.cipher_mode();
+	  if (cipher_mode == CipherContext::CIPH_CBC_MODE)
+	    {
+	      // in CBC mode, use an explicit, random IV
+	      prng.bytes(iv_buf, iv_size);
+
+	      // generate fresh outgoing packet ID and prepend to cleartext buffer
+	      pid_send.write_next(buf, true);
+	    }
+	  else
+	    {
+	      throw unsupported_cipher_mode();
+	    }
+
+	  // initialize work buffer
+	  frame.prepare(work, Frame::ENCRYPT_WORK);
+
+	  // encrypt from buf -> work
+	  const size_t encrypt_bytes = cipher.encrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
+	  work.set_size_bytes(encrypt_bytes);
+
+	  // prepend the IV to the ciphertext
+	  work.prepend(iv_buf, iv_size);
+
+	  // HMAC the ciphertext
+	  prepend_hmac(work);
+	}
+      else // no encryption
+	{
+	  // generate fresh outgoing packet ID and prepend to cleartext buffer
+	  pid_send.write_next(buf, true);
+
+	  // HMAC the cleartext
+	  prepend_hmac(work);
+	}
+
+      // return ciphertext result in buf
+      buf.swap(work);
+    }
+
+    CipherContext cipher;
+    HMACContext hmac;
+    Frame frame;
+    PacketIDSend pid_send;
+    PRNG prng;
 
   private:
-    StaticKey key_;
-    Cipher cipher_;
-    Digest digest_;
-    packet_id::PacketIDSend pid_;
-    PRNG prng_;
-    unsigned int flags_;
+    // compute HMAC signature of data buffer,
+    // then prepend the signature to the buffer.
+    void prepend_hmac(BufferAllocated& buf)
+    {
+      if (hmac.defined())
+	{
+	  const unsigned char *content = buf.data();
+	  const size_t content_size = buf.size();
+	  const size_t hmac_size = hmac.output_size();
+	  unsigned char *hmac_buf = buf.prepend_alloc(hmac_size);
+	  hmac.hmac(hmac_buf, hmac_size, content, content_size);
+	}
+    }
+
+    BufferAllocated work;
   };
+
 } // namespace openvpn
 
 #endif // OPENVPN_CRYPTO_ENCRYPT

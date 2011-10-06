@@ -42,6 +42,8 @@ namespace openvpn {
       return EVP_CIPHER_key_length (cipher_);
     }
 
+    bool defined() const { return cipher_ != NULL; }
+
   private:
     const EVP_CIPHER *get() const { return cipher_; }
 
@@ -57,12 +59,22 @@ namespace openvpn {
       DECRYPT = 0
     };
 
+    // OpenSSL cipher constants
+    enum {
+      MAX_IV_SIZE = EVP_MAX_IV_LENGTH,
+      CIPH_CFB_MODE = EVP_CIPH_CFB_MODE,
+      CIPH_OFB_MODE = EVP_CIPH_OFB_MODE,
+      CIPH_CBC_MODE = EVP_CIPH_CBC_MODE
+    };
+
     OPENVPN_SIMPLE_EXCEPTION(cipher_init);
     OPENVPN_SIMPLE_EXCEPTION(cipher_update);
     OPENVPN_SIMPLE_EXCEPTION(cipher_final);
-    OPENVPN_SIMPLE_EXCEPTION(cipher_mode);
+    OPENVPN_SIMPLE_EXCEPTION(cipher_mode_error);
     OPENVPN_SIMPLE_EXCEPTION(cipher_uninitialized);
     OPENVPN_SIMPLE_EXCEPTION(cipher_init_insufficient_key_material);
+    OPENVPN_SIMPLE_EXCEPTION(cipher_internal_error);
+    OPENVPN_SIMPLE_EXCEPTION(cipher_output_buffer);
 
     class EVP_CIPHER_CTX_wrapper : boost::noncopyable
     {
@@ -102,13 +114,15 @@ namespace openvpn {
 	return &ctx;
       }
 
+      bool is_initialized() const { return initialized; }
+
     private:
       EVP_CIPHER_CTX ctx;
       bool initialized;
     };
 
   public:
-    CipherContext() {}
+    CipherContext() : mode_(-1) {}
 
     CipherContext(const Cipher& cipher, const StaticKey& key, const int mode)
     {
@@ -120,10 +134,30 @@ namespace openvpn {
       init(ref.cipher_, ref.key_, ref.mode_);
     }
 
+    bool defined() const { return ctx.is_initialized(); }
+
     void operator=(const CipherContext& ref)
     {
       if (this != &ref)
 	init(ref.cipher_, ref.key_, ref.mode_);
+    }
+
+    // size of iv buffer to pass to encrypt_decrypt
+    size_t iv_size() const
+    {
+      return EVP_CIPHER_CTX_iv_length (ctx());
+    }
+
+    // cipher mode (such as CBC, etc.)
+    int cipher_mode() const
+    {
+      return EVP_CIPHER_CTX_mode (ctx());  
+    }
+
+    // size of out buffer to pass to encrypt_decrypt
+    size_t output_size(const size_t in_size) const
+    {
+      return in_size + EVP_CIPHER_CTX_block_size(ctx());
     }
 
     void init(const Cipher& cipher, const StaticKey& key, const int mode)
@@ -133,41 +167,68 @@ namespace openvpn {
       mode_ = mode;
       ctx.erase();
 
-      // check that key is large enough
-      if (key_.size() < cipher_.key_length())
-	throw cipher_init_insufficient_key_material();
+      if (cipher.defined())
+	{
+	  // check that key is large enough
+	  if (key_.size() < cipher_.key_length())
+	    throw cipher_init_insufficient_key_material();
 
-      // check that mode is valid
-      if (!(mode_ == ENCRYPT || mode_ == DECRYPT))
-	throw cipher_mode();
+	  // check that mode is valid
+	  if (!(mode_ == ENCRYPT || mode_ == DECRYPT))
+	    throw cipher_mode_error();
 
-      // initialize cipher context with cipher type, key, and encrypt/decrypt mode
-      ctx.init();
-      if (!EVP_CipherInit_ex (ctx(), cipher_.get(), NULL, key_.data(), NULL, mode_))
-	throw cipher_init();
+	  // initialize cipher context with cipher type, key, and encrypt/decrypt mode
+	  ctx.init();
+	  try
+	    {
+	      if (!EVP_CipherInit_ex (ctx(), cipher_.get(), NULL, key_.data(), NULL, mode_))
+		throw cipher_init();
+
+	      // This could occur if we were built with a different version of
+	      // OpenSSL headers than the underlying library.
+	      if (iv_size() > MAX_IV_SIZE)
+		throw cipher_internal_error();
+	    }
+	  catch (...)
+	    {
+	      ctx.erase();
+	      throw;
+	    }
+	}
     }
 
-    // size of iv buffer to pass to encrypt_decrypt
-    size_t iv_size() const
+    size_t encrypt(const unsigned char *iv,
+		   unsigned char *out, const size_t out_size,
+		   const unsigned char *in, const size_t in_size)
     {
-      return EVP_CIPHER_CTX_iv_length (ctx());
+      if (mode_ != ENCRYPT)
+	throw cipher_mode_error();
+      return encrypt_decrypt(iv, out, out_size, in, in_size);
     }
 
-    // size of out buffer to pass to encrypt_decrypt
-    size_t out_max_size(const size_t inlen) const
+    size_t decrypt(const unsigned char *iv,
+		   unsigned char *out, const size_t out_size,
+		   const unsigned char *in, const size_t in_size)
     {
-      return inlen + EVP_CIPHER_CTX_block_size(ctx());
+      if (mode_ != DECRYPT)
+	throw cipher_mode_error();
+      return encrypt_decrypt(iv, out, out_size, in, in_size);
     }
 
-    size_t encrypt_decrypt(unsigned char *out, const unsigned char *iv, const unsigned char *in, const size_t inlen)
+    size_t encrypt_decrypt(const unsigned char *iv,
+			   unsigned char *out, const size_t out_size,
+			   const unsigned char *in, const size_t in_size)
     {
       int outlen, tmplen;
 
-      if (!EVP_CipherInit_ex (ctx(), NULL, NULL, NULL, iv, -1))
+      EVP_CIPHER_CTX *c = ctx();
+      if (out_size < output_size(in_size))
+	throw cipher_output_buffer();
+      if (!EVP_CipherInit_ex (c, NULL, NULL, NULL, iv, -1))
 	throw cipher_init();
-      if (!EVP_CipherUpdate (ctx(), out, &outlen, in, int(inlen)))
+      if (!EVP_CipherUpdate (c, out, &outlen, in, int(in_size)))
 	throw cipher_update();
-      if (!EVP_CipherFinal_ex (ctx(), out + outlen, &tmplen))
+      if (!EVP_CipherFinal_ex (c, out + outlen, &tmplen))
 	throw cipher_final();
       return outlen + tmplen;
     }

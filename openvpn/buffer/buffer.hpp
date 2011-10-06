@@ -14,13 +14,16 @@ namespace openvpn {
 
   OPENVPN_SIMPLE_EXCEPTION(buffer_full);
   OPENVPN_SIMPLE_EXCEPTION(buffer_headroom);
-  OPENVPN_SIMPLE_EXCEPTION(buffer_empty);
+  OPENVPN_SIMPLE_EXCEPTION(buffer_underflow);
   OPENVPN_SIMPLE_EXCEPTION(buffer_index);
   OPENVPN_SIMPLE_EXCEPTION(buffer_const_index);
 
   template <typename T>
   class BufferType {
   public:
+    typedef T* type;
+    typedef const T* const_type;
+
     BufferType()
     {
       data_ = NULL;
@@ -135,17 +138,17 @@ namespace openvpn {
       return boost::asio::const_buffers_1(data_bytes(), size_bytes());
     }
 
-    void write(const T* data, const size_t size)
+    void write(const void* data, const size_t size)
     {
       std::memcpy(write_alloc(size), data, sizeof(T[size]));
     }
 
-    void prepend(const T* data, const size_t size)
+    void prepend(const void* data, const size_t size)
     {
       std::memcpy(prepend_alloc(size), data, sizeof(T[size]));
     }
 
-    void read(T* data, const size_t size)
+    void read(void* data, const size_t size)
     {
       std::memcpy(data, read_alloc(size), sizeof(T[size]));
     }
@@ -164,6 +167,7 @@ namespace openvpn {
       if (size <= offset_)
 	{
 	  offset_ -= size;
+	  size_ += size;
 	  return data();
 	}
       else
@@ -180,7 +184,7 @@ namespace openvpn {
 	  return ret;
 	}
       else
-	throw buffer_empty();
+	throw buffer_underflow();
     }
 
   protected:
@@ -308,6 +312,13 @@ namespace openvpn {
       std::memcpy(data_, data, sizeof(T[size]));
     }
 
+    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+    {
+      if (min_capacity > capacity_)
+	init (min_capacity, flags);
+      this->init_headroom (headroom);
+    }
+
     void move(BufferAllocatedType& other)
     {
       if (data_)
@@ -321,6 +332,15 @@ namespace openvpn {
 
       other.data_ = NULL;
       other.offset_ = other.size_ = other.capacity_ = 0;
+    }
+
+    void swap(BufferAllocatedType& other)
+    {
+      std::swap(data_, other.data_);
+      std::swap(offset_, other.offset_);
+      std::swap(size_, other.size_);
+      std::swap(capacity_, other.capacity_);
+      std::swap(flags_, other.flags_);
     }
 
     void clear()

@@ -5,8 +5,8 @@
 
 namespace openvpn {
 
-  typedef time_t now_t;
-  now_t now = 0; /* GLOBAL */
+  typedef ::time_t time_t;
+  time_t now = 0; /* GLOBAL */
 
 } // namespace openvpn
 
