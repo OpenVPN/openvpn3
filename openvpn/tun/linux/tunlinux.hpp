@@ -17,6 +17,7 @@
 #include <openvpn/common/iostats.hpp>
 #include <openvpn/common/dispatch.hpp>
 #include <openvpn/tun/tunposix.hpp>
+#include <openvpn/crypto/frame.hpp>
 
 namespace openvpn {
   template <typename ReadHandler>
@@ -30,14 +31,14 @@ namespace openvpn {
 
     TunLinux(boost::asio::io_service& io_service,
 	     ReadHandler read_handler,
+	     const Frame& frame,
 	     const char *name=NULL,
 	     const bool ipv6=false,
 	     const bool tap=false,
-	     const size_t buf_size=1500,
 	     const int txqueuelen=200)
       : halt_(false),
-	buf_size_(buf_size),
-	read_handler_(read_handler)
+	read_handler_(read_handler),
+	frame_(frame)
     {
       static const char node[] = "/dev/net/tun";
       const int fd = open (node, O_RDWR);
@@ -153,7 +154,8 @@ namespace openvpn {
     {
       //OPENVPN_LOG("TunLinux::queue_read"); // fixme
       if (!buf)
-	buf = new BufferAllocated(buf_size_, 0);
+	buf = new BufferAllocated();
+      frame_.prepare(*buf, Frame::READ_TUN);
 
       sd->async_read_some(buf->mutable_buffers_1(),
 			  asio_dispatch_read(&TunLinux::handle_read, this, buf)); // consider: this->shared_from_this()
@@ -186,8 +188,8 @@ namespace openvpn {
 
     boost::asio::posix::stream_descriptor *sd;
     bool halt_;
-    const size_t buf_size_;
     ReadHandler read_handler_;
+    const Frame& frame_;
     IOStatsSingleThread stats_;
   };
 

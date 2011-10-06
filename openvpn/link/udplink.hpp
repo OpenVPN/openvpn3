@@ -11,13 +11,13 @@
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/iostats.hpp>
 #include <openvpn/common/dispatch.hpp>
+#include <openvpn/crypto/frame.hpp>
 
 namespace openvpn {
 
   struct UDPPacketFrom
   {
     typedef boost::asio::ip::udp::endpoint Endpoint;
-    explicit UDPPacketFrom(size_t capacity) : buf(capacity, 0) {}
     BufferAllocated buf;
     Endpoint sender_endpoint;
   };
@@ -37,14 +37,14 @@ namespace openvpn {
 
     UDPLink(boost::asio::io_service& io_service,
 	    ReadHandler read_handler,
+	    const Frame& frame,
 	    bind_type bt,
 	    const boost::asio::ip::address& address,
 	    int port,
-	    const bool reuse_addr=false,
-	    const size_t buf_size=1500)
+	    const bool reuse_addr=false)
       : socket_(io_service),
-	buf_size_(buf_size),
-	read_handler_(read_handler)
+	read_handler_(read_handler),
+	frame_(frame)
     {
       if (bt == local_bind)
 	{
@@ -100,7 +100,8 @@ namespace openvpn {
     {
       //OPENVPN_LOG("UDPLink::queue_read"); // fixme
       if (!udpfrom)
-	udpfrom = new UDPPacketFrom(buf_size_);
+	udpfrom = new UDPPacketFrom();
+      frame_.prepare(udpfrom->buf, Frame::READ_LINK_UDP);
 
       socket_.async_receive_from(udpfrom->buf.mutable_buffers_1(),
 				 udpfrom->sender_endpoint,
@@ -135,8 +136,8 @@ namespace openvpn {
 
     boost::asio::ip::udp::socket socket_;
     bool halt_;
-    const size_t buf_size_;
     ReadHandler read_handler_;
+    const Frame& frame_;
     IOStatsSingleThread stats_;
   };
 } // namespace openvpn

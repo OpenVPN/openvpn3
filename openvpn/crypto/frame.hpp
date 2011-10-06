@@ -28,21 +28,21 @@ namespace openvpn {
       init(0, 0);
     }
 
-    Frame(const size_t offset,
-	  const size_t size,
+    Frame(const size_t headroom,
+	  const size_t capacity,
 	  const unsigned int buffer_flags = 0)
     {
-      init(offset, size, buffer_flags);
+      init(headroom, capacity, buffer_flags);
     }
 
-    void init(const size_t offset,
-	      const size_t size,
+    void init(const size_t headroom,
+	      const size_t capacity,
 	      const unsigned int buffer_flags = 0)
     {
-      if (!(offset <= size))
+      if (!(headroom <= capacity))
 	throw frame_size();
-      size_ = size;
-      offset_ = offset;
+      headroom_ = headroom;
+      capacity_ = capacity;
       buffer_flags_ = buffer_flags;
       std::memset(align_adjust_, 0, sizeof(align_adjust_));
     }
@@ -52,7 +52,7 @@ namespace openvpn {
     // the alignment types above.
     void prepare(BufferAllocated& buf, const unsigned int context) const
     {
-      buf.reset (adjusted_headroom(context), size_, buffer_flags_);
+      buf.reset (adjusted_headroom(context), capacity_, buffer_flags_);
     }
 
     // set alignment adjustment for one of the alignment types
@@ -63,19 +63,19 @@ namespace openvpn {
       align_adjust_[context] = adjust;
     }
 
+  private:
     size_t adjusted_headroom (const unsigned int context) const
     {
       if (context >= N_ALIGN_TYPES)
 	throw frame_context();
       const size_t PAYLOAD_ALIGN = sizeof(size_t);
       const size_t adjust = align_adjust_[context];
-      const size_t delta = ((PAYLOAD_ALIGN << 24) - (offset_ + adjust)) & (PAYLOAD_ALIGN - 1);
-      return offset_ + delta;
+      const size_t delta = ((PAYLOAD_ALIGN << 24) - (headroom_ + adjust)) & (PAYLOAD_ALIGN - 1);
+      return headroom_ + delta;
     }
 
-  private:
-    size_t size_;
-    size_t offset_;
+    size_t headroom_;
+    size_t capacity_;
     unsigned int buffer_flags_;
     unsigned int align_adjust_[N_ALIGN_TYPES];
   };
