@@ -9,6 +9,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/common/file.hpp>
 
 namespace openvpn {
 
@@ -66,6 +67,12 @@ namespace openvpn {
       static const unsigned char key_table[] = { 0, 1, 2, 3, 2, 3, 0, 1 };
       const unsigned int idx = key_table[key_specifier & 7] * 64;
       return StaticKey(key_data_.c_data() + idx, KEY_SIZE / 4);
+    }
+
+    void parse_from_file(const char *filename)
+    {
+      const std::string str = read_text(filename);
+      parse(str);
     }
 
     void parse(const std::string& key_text)
