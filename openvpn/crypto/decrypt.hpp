@@ -44,7 +44,7 @@ namespace openvpn {
 	  buf.read(iv_buf, iv_size);
 
 	  // initialize work buffer
-	  frame.prepare(work, Frame::DECRYPT_WORK);
+	  frame->prepare(work, Frame::DECRYPT_WORK);
 
 	  // decrypt from buf -> work
 	  const size_t decrypt_bytes = cipher.decrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
@@ -70,9 +70,9 @@ namespace openvpn {
       buf.swap(work);
     }
 
+    FramePtr frame;
     CipherContext cipher;
     HMACContext hmac;
-    Frame frame;
     PacketIDReceive pid_recv;
 
   private:

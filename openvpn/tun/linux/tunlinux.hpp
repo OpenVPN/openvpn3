@@ -31,7 +31,7 @@ namespace openvpn {
 
     TunLinux(boost::asio::io_service& io_service,
 	     ReadHandler read_handler,
-	     const Frame& frame,
+	     const FramePtr frame,
 	     const char *name=NULL,
 	     const bool ipv6=false,
 	     const bool tap=false,
@@ -155,7 +155,7 @@ namespace openvpn {
       //OPENVPN_LOG("TunLinux::queue_read"); // fixme
       if (!buf)
 	buf = new BufferAllocated();
-      frame_.prepare(*buf, Frame::READ_TUN);
+      frame_->prepare(*buf, Frame::READ_TUN);
 
       sd->async_read_some(buf->mutable_buffers_1(),
 			  asio_dispatch_read(&TunLinux::handle_read, this, buf)); // consider: this->shared_from_this()
@@ -189,7 +189,7 @@ namespace openvpn {
     boost::asio::posix::stream_descriptor *sd;
     bool halt_;
     ReadHandler read_handler_;
-    const Frame& frame_;
+    const FramePtr frame_;
     IOStatsSingleThread stats_;
   };
 

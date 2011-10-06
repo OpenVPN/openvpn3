@@ -1,6 +1,8 @@
 #ifndef OPENVPN_CRYPTO_FRAME
 #define OPENVPN_CRYPTO_FRAME
 
+#include <boost/shared_ptr.hpp>
+
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
@@ -79,6 +81,8 @@ namespace openvpn {
     unsigned int buffer_flags_;
     unsigned int align_adjust_[N_ALIGN_TYPES];
   };
+
+  typedef boost::shared_ptr<Frame> FramePtr;
 
 } // namespace openvpn
 

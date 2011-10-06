@@ -42,7 +42,7 @@ namespace openvpn {
 	    }
 
 	  // initialize work buffer
-	  frame.prepare(work, Frame::ENCRYPT_WORK);
+	  frame->prepare(work, Frame::ENCRYPT_WORK);
 
 	  // encrypt from buf -> work
 	  const size_t encrypt_bytes = cipher.encrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
@@ -67,9 +67,9 @@ namespace openvpn {
       buf.swap(work);
     }
 
+    FramePtr frame;
     CipherContext cipher;
     HMACContext hmac;
-    Frame frame;
     PacketIDSend pid_send;
     PRNG prng;
 
