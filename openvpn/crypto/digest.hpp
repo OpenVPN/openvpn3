@@ -152,7 +152,7 @@ namespace openvpn {
 
 	  // initialize HMAC context with digest type and key
 	  ctx.init();
-	  HMAC_Init_ex (ctx(), key_.data(), int(key_.size()), digest_.get(), NULL);
+	  HMAC_Init_ex (ctx(), key_.data(), int(digest_.size()), digest_.get(), NULL);
 	}
     }
 

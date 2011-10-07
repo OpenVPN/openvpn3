@@ -69,7 +69,7 @@ namespace openvpn {
       return StaticKey(key_data_.c_data() + idx, KEY_SIZE / 4);
     }
 
-    void parse_from_file(const char *filename)
+    void parse_from_file(const std::string filename)
     {
       const std::string str = read_text(filename);
       parse(str);
