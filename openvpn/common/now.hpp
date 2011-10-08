@@ -6,9 +6,9 @@
 namespace openvpn {
 
   typedef ::time_t time_t;
-  time_t now = 0; /* GLOBAL */
+  volatile time_t now = 0; /* GLOBAL */
 
-  void update_now()
+  inline void update_now()
   {
     now = time(NULL);
   }
