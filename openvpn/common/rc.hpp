@@ -9,32 +9,34 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/intrusive_ptr.hpp>
+
 #include <boost/smart_ptr/detail/atomic_count.hpp>
 
 namespace openvpn {
 
-  class RC;
+  typedef boost::detail::atomic_count thread_safe_refcount;
+  typedef long thread_unsafe_refcount;
 
-  void intrusive_ptr_add_ref(RC *p);
-  void intrusive_ptr_release(RC *p);
-
+  template <typename RCImpl> // RCImpl = thread_safe_refcount or thread_unsafe_refcount
   class RC : boost::noncopyable
   {
   public:
     RC() : refcount_(0) {}
-    virtual ~RC() {}
+    ~RC() {}
   private:
-    friend void intrusive_ptr_add_ref(RC* p);
-    friend void intrusive_ptr_release(RC* p);
-    boost::detail::atomic_count refcount_;
+    template <typename R> friend void intrusive_ptr_add_ref(RC<R>* p);
+    template <typename R> friend void intrusive_ptr_release(RC<R>* p);
+    RCImpl refcount_;
   };
 
-  inline void intrusive_ptr_add_ref(RC *p)
+  template <typename R>
+  inline void intrusive_ptr_add_ref(RC<R> *p)
   {
     ++p->refcount_;
   }
 
-  inline void intrusive_ptr_release(RC *p)
+  template <typename R>
+  inline void intrusive_ptr_release(RC<R> *p)
   {
     if (--p->refcount_ == 0)
       delete p;

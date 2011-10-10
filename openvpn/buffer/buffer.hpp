@@ -203,8 +203,8 @@ namespace openvpn {
     size_t capacity_;  // maximum number of array objects of type T for which memory is allocated, starting at data_
   };
 
-  template <typename T>
-  class BufferAllocatedType : public BufferType<T>
+  template <typename T, typename R = thread_unsafe_refcount>
+  class BufferAllocatedType : public BufferType<T>, public RC<R>
   {
   public:
     using BufferType<T>::data_;
@@ -398,24 +398,9 @@ namespace openvpn {
     unsigned long flags_;
   };
 
-  template <typename T>
-  class BufferRCType : public BufferAllocatedType<T>, public RC {
-  public:
-
-    BufferRCType(const size_t capacity, const unsigned int flags)
-      : BufferAllocatedType<T>(capacity, flags) {}
-
-    BufferRCType(const void *data, const size_t size, const unsigned int flags)
-      : BufferAllocatedType<T>(data, size, flags) {}
-
-    ~BufferRCType() {}
-  };
-
-  typedef unsigned char buffer_t;
-  typedef BufferType<buffer_t> Buffer;
-  typedef BufferAllocatedType<buffer_t> BufferAllocated;
-  typedef BufferRCType<buffer_t> BufferRC;
-  typedef boost::intrusive_ptr<BufferRC> BufferPtr;
+  typedef BufferType<unsigned char> Buffer;
+  typedef BufferAllocatedType<unsigned char> BufferAllocated;
+  typedef boost::intrusive_ptr<BufferAllocated> BufferPtr;
 
 } // namespace openvpn
 
