@@ -1,16 +1,15 @@
 #ifndef OPENVPN_COMMON_NOW_H
 #define OPENVPN_COMMON_NOW_H
 
-#include <ctime>
+#include <openvpn/common/time.hpp>
 
 namespace openvpn {
 
-  typedef ::time_t time_t;
-  volatile time_t now = 0; /* GLOBAL */
+  volatile time::coarse::abs now = 0; /* GLOBAL */
 
   inline void update_now()
   {
-    now = time(NULL);
+    now = time::coarse::now();
   }
 
 } // namespace openvpn

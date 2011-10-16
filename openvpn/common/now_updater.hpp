@@ -11,13 +11,11 @@ namespace openvpn {
 
   class NowUpdater
   {
-    typedef boost::asio::time_traits<boost::posix_time::ptime> time_traits;
-
   public:
     NowUpdater(boost::asio::io_service& io_service)
       : io_service_(io_service),
 	timer_(io_service_),
-	epoch_(boost::gregorian::date(1970,1,1))
+	epoch_(time::fine::gregorian::date(1970,1,1))
     {
       update();
     }
@@ -36,10 +34,10 @@ namespace openvpn {
 
     void update()
     {
-      const time_traits::time_type local_now = time_traits::now();	
-      const time_traits::duration_type since_epoch = local_now - epoch_;
-      const time_traits::duration_type::fractional_seconds_type fs = since_epoch.fractional_seconds();
-      const time_traits::duration_type next_second(0, 0, 0, since_epoch.ticks_per_second() - fs);
+      const time::fine::abs local_now = time::fine::now();	
+      const time::fine::delta since_epoch = local_now - epoch_;
+      const time::fine::delta::fractional_seconds_type fs = since_epoch.fractional_seconds();
+      const time::fine::delta next_second(0, 0, 0, since_epoch.ticks_per_second() - fs);
       now = since_epoch.total_seconds();
       timer_.expires_at(local_now + next_second);
       timer_.async_wait(openvpn::asio_dispatch_timer(&NowUpdater::timer_callback, this));
@@ -47,7 +45,7 @@ namespace openvpn {
 
     boost::asio::io_service& io_service_;
     boost::asio::deadline_timer timer_;
-    const time_traits::time_type epoch_;
+    const time::fine::abs epoch_;
 };
 
 } // namespace openvpn
