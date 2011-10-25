@@ -17,7 +17,7 @@
 #include <openvpn/common/iostats.hpp>
 #include <openvpn/common/dispatch.hpp>
 #include <openvpn/tun/tunposix.hpp>
-#include <openvpn/crypto/frame.hpp>
+#include <openvpn/frame/frame.hpp>
 
 namespace openvpn {
   template <typename ReadHandler>
@@ -155,7 +155,7 @@ namespace openvpn {
       //OPENVPN_LOG("TunLinux::queue_read"); // fixme
       if (!buf)
 	buf = new BufferAllocated();
-      frame_->prepare(*buf, Frame::READ_TUN);
+      frame_->prepare(Frame::READ_TUN, *buf);
 
       sd->async_read_some(buf->mutable_buffers_1(),
 			  asio_dispatch_read(&TunLinux::handle_read, this, buf)); // consider: this->shared_from_this()
@@ -169,7 +169,7 @@ namespace openvpn {
 	{
 	  if (!error)
 	    {
-	      buf->set_size_bytes(bytes_recvd);
+	      buf->set_size(bytes_recvd);
 	      stats_.add_read_bytes(bytes_recvd);
 	      try
 		{

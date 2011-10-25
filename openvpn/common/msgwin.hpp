@@ -11,7 +11,7 @@ namespace openvpn {
   // MessageWindow --
   //   On receiving side: used to order packets which may be received out-of-order
   //   On sending side: used to buffer unacknowledged packets
-  //   M : message class, must define defined() and erase() methods
+  //   M : message class, must define default constructor, defined(), and erase() methods
   //   id_t : sequence number object, usually unsigned int
   template <typename M, typename id_t>
   class MessageWindow

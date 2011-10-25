@@ -13,8 +13,7 @@ namespace openvpn {
   {
   public:
     NowUpdater(boost::asio::io_service& io_service)
-      : io_service_(io_service),
-	timer_(io_service_),
+      : timer_(io_service),
 	epoch_(time::fine::gregorian::date(1970,1,1))
     {
       update();
@@ -43,7 +42,6 @@ namespace openvpn {
       timer_.async_wait(openvpn::asio_dispatch_timer(&NowUpdater::timer_callback, this));
     }
 
-    boost::asio::io_service& io_service_;
     boost::asio::deadline_timer timer_;
     const time::fine::abs epoch_;
 };

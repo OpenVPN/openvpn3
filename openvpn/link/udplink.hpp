@@ -11,7 +11,7 @@
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/iostats.hpp>
 #include <openvpn/common/dispatch.hpp>
-#include <openvpn/crypto/frame.hpp>
+#include <openvpn/frame/frame.hpp>
 
 namespace openvpn {
 
@@ -101,7 +101,7 @@ namespace openvpn {
       //OPENVPN_LOG("UDPLink::queue_read"); // fixme
       if (!udpfrom)
 	udpfrom = new UDPPacketFrom();
-      frame_->prepare(udpfrom->buf, Frame::READ_LINK_UDP);
+      frame_->prepare(Frame::READ_LINK_UDP, udpfrom->buf);
 
       socket_.async_receive_from(udpfrom->buf.mutable_buffers_1(),
 				 udpfrom->sender_endpoint,
@@ -116,7 +116,7 @@ namespace openvpn {
 	{
 	  if (!error)
 	    {
-	      suf->buf.set_size_bytes(bytes_recvd);
+	      suf->buf.set_size(bytes_recvd);
 	      stats_.add_read_bytes(bytes_recvd);
 	      try
 		{

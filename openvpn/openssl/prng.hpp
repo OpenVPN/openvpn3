@@ -65,12 +65,12 @@ namespace openvpn {
 	      unsigned int outlen = 0;
 	      const size_t blen = std::min(len, md_size);
 	      EVP_DigestInit (&ctx, nonce_md_);
-	      EVP_DigestUpdate (&ctx, nonce_data_.c_data_bytes(), nonce_data_.size_bytes());
-	      EVP_DigestFinal (&ctx, nonce_data_.data_bytes(), &outlen);
+	      EVP_DigestUpdate (&ctx, nonce_data_.c_data(), nonce_data_.size());
+	      EVP_DigestFinal (&ctx, nonce_data_.data(), &outlen);
 	      EVP_MD_CTX_cleanup (&ctx);
 	      if (outlen != md_size)
 		throw prng_internal_error();
-	      memcpy (output, nonce_data_.data_bytes(), blen);
+	      memcpy (output, nonce_data_.data(), blen);
 	      output += blen;
 	      len -= blen;
 
@@ -94,7 +94,7 @@ namespace openvpn {
     static void reseed (nonce_t& nd)
     {
 #if 1 /* Must be 1 for real usage */
-      rand_bytes(nd.data_bytes(), nd.size_bytes());
+      rand_bytes(nd.data(), nd.size());
 #else
       /* Only for testing -- will cause a predictable PRNG sequence */
       {

@@ -18,7 +18,6 @@ namespace openvpn {
     const std::string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
     if (!ifs)
       OPENVPN_THROW(open_file_error, "cannot read " << filename);
-    ifs.close();
     return str;
   }
 

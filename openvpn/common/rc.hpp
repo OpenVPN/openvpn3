@@ -22,21 +22,21 @@ namespace openvpn {
   {
   public:
     RC() : refcount_(0) {}
-    ~RC() {}
+    virtual ~RC() {}
   private:
-    template <typename R> friend void intrusive_ptr_add_ref(RC<R>* p);
-    template <typename R> friend void intrusive_ptr_release(RC<R>* p);
+    template <typename R> friend void intrusive_ptr_add_ref(R* p);
+    template <typename R> friend void intrusive_ptr_release(R* p);
     RCImpl refcount_;
   };
 
   template <typename R>
-  inline void intrusive_ptr_add_ref(RC<R> *p)
+  inline void intrusive_ptr_add_ref(R *p)
   {
     ++p->refcount_;
   }
 
   template <typename R>
-  inline void intrusive_ptr_release(RC<R> *p)
+  inline void intrusive_ptr_release(R *p)
   {
     if (--p->refcount_ == 0)
       delete p;

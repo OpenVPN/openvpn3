@@ -7,11 +7,11 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/openssl/prng.hpp>
+#include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/digest.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
-#include <openvpn/crypto/frame.hpp>
 
 namespace openvpn {
 
@@ -44,11 +44,11 @@ namespace openvpn {
 	  buf.read(iv_buf, iv_size);
 
 	  // initialize work buffer
-	  frame->prepare(work, Frame::DECRYPT_WORK);
+	  frame->prepare(Frame::DECRYPT_WORK, work);
 
 	  // decrypt from buf -> work
 	  const size_t decrypt_bytes = cipher.decrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
-	  work.set_size_bytes(decrypt_bytes);
+	  work.set_size(decrypt_bytes);
 
 	  // handle different cipher modes
 	  const int cipher_mode = cipher.cipher_mode();

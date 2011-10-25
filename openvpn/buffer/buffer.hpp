@@ -30,11 +30,12 @@ namespace openvpn {
       offset_ = size_ = capacity_ = 0;
     }
 
-    BufferType(T* data, size_t size)
+    BufferType(T* data, size_t size, bool filled)
     {
       data_ = data;
       offset_ = 0;
-      size_ = capacity_ = size;
+      capacity_ = size;
+      size_ = filled ? size : 0;
     }
 
     void init_headroom(size_t headroom)
@@ -46,31 +47,16 @@ namespace openvpn {
     }
 
     // return a const pointer to start of array
-    unsigned const char *c_data() const { return data_ + offset_; }
+    const T* c_data() const { return data_ + offset_; }
 
     // return a mutable pointer to start of array
-    T *data() { return data_ + offset_; }
-
-    // return a const pointer to start of array cast to unsigned char *
-    const unsigned char *c_data_bytes() const { return static_cast<const unsigned char *>(data_ + offset_); }
-
-    // return a mutable pointer to start of array cast to unsigned char *
-    unsigned char *data_bytes() { return static_cast<unsigned char *>(data_ + offset_); }
+    T* data() { return data_ + offset_; }
 
     // return size of array in T objects
     size_t size() const { return size_; }
 
-    // return size of array in bytes
-    size_t size_bytes() const { return sizeof(T[size_]); }
-
     // return true if array is empty
     bool empty() const { return !size_; }
-
-    // return the number of additional bytes that can be added before capacity is reached (without considering resize)
-    size_t remaining_bytes() const {
-      const size_t r = capacity_ - (offset_ + size_);
-      return r <= capacity_ ? sizeof(T[r]) : 0;
-    }
 
     // return the number of additional T objects that can be added before capacity is reached (without considering resize)
     size_t remaining() const {
@@ -84,20 +70,13 @@ namespace openvpn {
       return r <= capacity_ ? r : 0;
     }
 
-    // return the maximum allowable size value in bytes given the current offset (without considering resize)
-    size_t max_size_bytes() const {
-      const size_t r = capacity_ - offset_;
-      return r <= capacity_ ? sizeof(T[r]) : 0;
-    }
-
     // After an external method, operating on the array as
     // a mutable unsigned char buffer, has written data to the
-    // array with a known number of bytes, use this method
-    // to set the array length in terms of T objects.
-    void set_size_bytes(const size_t size_bytes)
+    // array, use this method to set the array length in terms
+    // of T objects.
+    void set_size(const size_t size)
     {
-      const size_t rb = std::min(max_size_bytes(), size_bytes);
-      size_ = rb / sizeof(T[1]);
+      size_ = std::min(max_size(), size);
     }
 
     // append a T object to array, with possible resize
@@ -128,27 +107,27 @@ namespace openvpn {
     // asio read methods.
     boost::asio::mutable_buffers_1 mutable_buffers_1()
     {
-      return boost::asio::mutable_buffers_1(data_bytes(), remaining_bytes());
+      return boost::asio::mutable_buffers_1(data(), remaining());
     }
 
     // return a boost::asio::const_buffers_1 object used by
     // asio write methods.
     boost::asio::const_buffers_1 const_buffers_1()
     {
-      return boost::asio::const_buffers_1(data_bytes(), size_bytes());
+      return boost::asio::const_buffers_1(data(), size());
     }
 
-    void write(const void* data, const size_t size)
+    void write(const T* data, const size_t size)
     {
       std::memcpy(write_alloc(size), data, sizeof(T[size]));
     }
 
-    void prepend(const void* data, const size_t size)
+    void prepend(const T* data, const size_t size)
     {
       std::memcpy(prepend_alloc(size), data, sizeof(T[size]));
     }
 
-    void read(void* data, const size_t size)
+    void read(T* data, const size_t size)
     {
       std::memcpy(data, read_alloc(size), sizeof(T[size]));
     }
@@ -197,7 +176,7 @@ namespace openvpn {
 	throw buffer_full();
     }
 
-    T *data_;          // pointer to data
+    T* data_;          // pointer to data
     size_t offset_;    // offset from data_ of beginning of T array (to allow for headroom)
     size_t size_;      // number of T objects in array starting at data_ + offset_
     size_t capacity_;  // maximum number of array objects of type T for which memory is allocated, starting at data_
@@ -388,7 +367,7 @@ namespace openvpn {
       capacity_ = 0;
     }
 
-    static void delete_(T *data, const size_t size, const unsigned int flags)
+    static void delete_(T* data, const size_t size, const unsigned int flags)
     {
       if (size && (flags & DESTRUCT_ZERO))
 	std::memset(data, 0, sizeof(T[size]));
@@ -399,6 +378,7 @@ namespace openvpn {
   };
 
   typedef BufferType<unsigned char> Buffer;
+  typedef BufferType<const unsigned char> ConstBuffer;
   typedef BufferAllocatedType<unsigned char> BufferAllocated;
   typedef boost::intrusive_ptr<BufferAllocated> BufferPtr;
 

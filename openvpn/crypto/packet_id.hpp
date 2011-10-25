@@ -63,12 +63,12 @@ namespace openvpn {
       id_t net_id;
       net_time_t net_time;
 
-      buf.read (&net_id, sizeof (net_id));
+      buf.read ((unsigned char *)&net_id, sizeof (net_id));
       id = ntohl (net_id);
 
       if (form == LONG_FORM)
 	{
-	  buf.read (&net_time, sizeof (net_time));
+	  buf.read ((unsigned char *)&net_time, sizeof (net_time));
 	  time = ntohl (net_time);
 	}
       else
@@ -83,18 +83,18 @@ namespace openvpn {
       if (prepend)
 	{
 	  if (form == LONG_FORM)
-	    buf.prepend (&net_time, sizeof (net_time));
-	  buf.prepend (&net_id, sizeof (net_id));
+	    buf.prepend ((unsigned char *)&net_time, sizeof (net_time));
+	  buf.prepend ((unsigned char *)&net_id, sizeof (net_id));
 	}
       else
 	{
-	  buf.write (&net_id, sizeof (net_id));
+	  buf.write ((unsigned char *)&net_id, sizeof (net_id));
 	  if (form == LONG_FORM)
-	    buf.write (&net_time, sizeof (net_time));
+	    buf.write ((unsigned char *)&net_time, sizeof (net_time));
 	}
     }
 
-#ifdef OPENVPN_EXTRA_LOG_INFO
+#ifdef PACKET_ID_EXTRA_LOG_INFO
     std::string str() const
     {
       std::ostringstream os;
@@ -164,7 +164,7 @@ namespace openvpn {
       return pid_.id >= wrap_at;
     }
 
-#ifdef OPENVPN_EXTRA_LOG_INFO
+#ifdef PACKET_ID_EXTRA_LOG_INFO
     std::string str() const
     {
       std::string ret;
@@ -446,7 +446,7 @@ namespace openvpn {
       return pid;
     }
 
-#ifdef OPENVPN_EXTRA_LOG_INFO
+#ifdef PACKET_ID_EXTRA_LOG_INFO
     std::string str() const
     {
       if (!initialized_)
@@ -513,11 +513,11 @@ namespace openvpn {
 
     void do_log (const PacketID& pin, const char *description, const PacketID::id_t info) const
     {
-#       ifdef OPENVPN_EXTRA_LOG_INFO
+#ifdef PACKET_ID_EXTRA_LOG_INFO
       OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.id << "," << pin.time << "] info=" << info << " state=" << str());
-#       else
+#else
       OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.id << "," << pin.time << "] info=" << info << " state=" << name_ << "-" << unit_);
-#       endif
+#endif
     }
 
     bool initialized_;                     /* true if packet_id_init was called */

@@ -7,11 +7,11 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/openssl/prng.hpp>
+#include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/digest.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
-#include <openvpn/crypto/frame.hpp>
 
 namespace openvpn {
   class Encrypt {
@@ -42,11 +42,11 @@ namespace openvpn {
 	    }
 
 	  // initialize work buffer
-	  frame->prepare(work, Frame::ENCRYPT_WORK);
+	  frame->prepare(Frame::ENCRYPT_WORK, work);
 
 	  // encrypt from buf -> work
 	  const size_t encrypt_bytes = cipher.encrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
-	  work.set_size_bytes(encrypt_bytes);
+	  work.set_size(encrypt_bytes);
 
 	  // prepend the IV to the ciphertext
 	  work.prepend(iv_buf, iv_size);
