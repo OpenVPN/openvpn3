@@ -20,11 +20,12 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(message_window_ref_by_id);
     OPENVPN_SIMPLE_EXCEPTION(message_window_rm_head);
 
-    MessageWindow(const id_t span) : head_id_(1), span_(span) {}
+    MessageWindow(const id_t starting_head_id, const id_t span)
+      : head_id_(starting_head_id), span_(span) {}
 
-    void init(const id_t span)
+    void init(const id_t starting_head_id, const id_t span)
     {
-      head_id_ = id_t(1);
+      head_id_ = starting_head_id;
       span_ = span;
       q_.clear();
     }
@@ -33,6 +34,12 @@ namespace openvpn {
     bool in_window(const id_t id) const
     {
       return id >= head_id_ && id < head_id_ + span_;
+    }
+
+    // Return true if id is before current window
+    bool pre_window(const id_t id) const
+    {
+      return id < head_id_;
     }
 
     // Return a reference to M object at id, throw exception
@@ -84,13 +91,19 @@ namespace openvpn {
     void rm_head()
     {
       if (head_defined())
-	{
-	  q_.front().erase();
-	  q_.pop_front();
-	  ++head_id_;
-	}
+	rm_head_nocheck();
       else
 	throw message_window_rm_head();
+    }
+
+    // Remove the object at head of queue without error checking (other than
+    // that provided by std::deque object).  Don't call this method unless
+    // head_defined() returns true.
+    void rm_head_nocheck()
+    {
+      q_.front().erase();
+      q_.pop_front();
+      ++head_id_;
     }
 
   private:

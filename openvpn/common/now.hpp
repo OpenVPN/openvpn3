@@ -5,12 +5,7 @@
 
 namespace openvpn {
 
-  volatile time::coarse::abs now = 0; /* GLOBAL */
-
-  inline void update_now()
-  {
-    now = time::coarse::now();
-  }
+  volatile Time::base_type now = 0; /* GLOBAL */
 
 } // namespace openvpn
 

@@ -42,7 +42,7 @@ namespace openvpn {
   {
     typedef boost::uint32_t id_t;
     typedef boost::uint32_t net_time_t;
-    typedef time::coarse::abs time_t;
+    typedef Time::base_type time_t;
 
     enum {
       SHORT_FORM = 0,

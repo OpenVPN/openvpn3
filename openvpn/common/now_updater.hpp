@@ -1,9 +1,7 @@
 #ifndef OPENVPN_COMMON_NOW_UPDATER_H
 #define OPENVPN_COMMON_NOW_UPDATER_H
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/asio.hpp>
-
+#include <openvpn/common/asiotimer.hpp>
 #include <openvpn/common/now.hpp>
 #include <openvpn/common/dispatch.hpp>
 
@@ -13,8 +11,7 @@ namespace openvpn {
   {
   public:
     NowUpdater(boost::asio::io_service& io_service)
-      : timer_(io_service),
-	epoch_(time::fine::gregorian::date(1970,1,1))
+      : timer_(io_service)
     {
       update();
     }
@@ -33,17 +30,16 @@ namespace openvpn {
 
     void update()
     {
-      const time::fine::abs local_now = time::fine::now();	
-      const time::fine::delta since_epoch = local_now - epoch_;
-      const time::fine::delta::fractional_seconds_type fs = since_epoch.fractional_seconds();
-      const time::fine::delta next_second(0, 0, 0, since_epoch.ticks_per_second() - fs);
-      now = since_epoch.total_seconds();
+      const Time local_now = Time::now();
+      const Time::type fs = local_now.fractional_binary_ms();
+      const Time::Duration next_second = Time::Duration::binary_ms(Time::prec - fs);
+      now = local_now.seconds_since_epoch();
+      //std::cout << now << std::endl;
       timer_.expires_at(local_now + next_second);
-      timer_.async_wait(openvpn::asio_dispatch_timer(&NowUpdater::timer_callback, this));
+      timer_.async_wait(asio_dispatch_timer(&NowUpdater::timer_callback, this));
     }
 
-    boost::asio::deadline_timer timer_;
-    const time::fine::abs epoch_;
+    AsioTimer timer_;
 };
 
 } // namespace openvpn
