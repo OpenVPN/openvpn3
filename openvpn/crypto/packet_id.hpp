@@ -11,7 +11,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/log.hpp>
 #include <openvpn/common/circ_list.hpp>
-#include <openvpn/common/now.hpp>
+#include <openvpn/time/now.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {

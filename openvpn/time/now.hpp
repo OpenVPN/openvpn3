@@ -1,7 +1,7 @@
 #ifndef OPENVPN_COMMON_NOW_H
 #define OPENVPN_COMMON_NOW_H
 
-#include <openvpn/common/time.hpp>
+#include <openvpn/time/time.hpp>
 
 namespace openvpn {
 

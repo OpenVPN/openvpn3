@@ -2,7 +2,7 @@
 #define OPENVPN_COMMON_NOW_UPDATER_H
 
 #include <openvpn/common/asiotimer.hpp>
-#include <openvpn/common/now.hpp>
+#include <openvpn/time/now.hpp>
 #include <openvpn/common/dispatch.hpp>
 
 namespace openvpn {

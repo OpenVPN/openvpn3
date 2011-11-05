@@ -3,7 +3,7 @@
 
 #include <boost/asio.hpp>
 
-#include <openvpn/common/time.hpp>
+#include <openvpn/time/time.hpp>
 
 namespace boost {
   namespace asio {
