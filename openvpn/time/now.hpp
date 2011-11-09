@@ -6,7 +6,7 @@
 namespace openvpn {
   namespace time {
 
-    Time now; /* GLOBAL */ // fixme should be volatile
+    volatile Time::base_type now = 0; /* GLOBAL */
 
   } // namespace time
 } // namespace openvpn
