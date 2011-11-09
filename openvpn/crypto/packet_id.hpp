@@ -11,7 +11,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/log.hpp>
 #include <openvpn/common/circ_list.hpp>
-#include <openvpn/time/now.hpp>
+#include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
@@ -130,7 +130,7 @@ namespace openvpn {
       form_ = form;
     }
 
-    PacketID next()
+    PacketID next(const PacketID::time_t now)
     {
       PacketID ret;
       if (!pid_.time)
@@ -147,9 +147,9 @@ namespace openvpn {
       return ret;
     }
 
-    void write_next(Buffer& buf, const bool prepend)
+    void write_next(Buffer& buf, const bool prepend, const PacketID::time_t now)
     {
-      const PacketID pid = next();
+      const PacketID pid = next(now);
       pid.write(buf, form_, prepend);
     }
 
@@ -292,7 +292,7 @@ namespace openvpn {
      * Return true if packet id is ok, or false if
      * it's a replay.
      */
-    bool test(const PacketID& pin)
+    bool test(const PacketID& pin, const PacketID::time_t now)
     {
       // make sure we were initialized
       if (!initialized_)
@@ -300,12 +300,12 @@ namespace openvpn {
 
       // see if we should do an expiration reap pass
       if (last_reap_ + SEQ_REAP_PERIOD <= now)
-	reap();
+	reap(now);
 
       // packet ID==0 is invalid
       if (!pin.id)
 	{
-	  debug_log (DEBUG_LOW, pin, "ID is 0", 0);
+	  debug_log (DEBUG_LOW, pin, "ID is 0", 0, now);
 	  return false;
 	}
 
@@ -330,12 +330,12 @@ namespace openvpn {
 	      if (diff > max_backtrack_stat_)
 		{
 		  max_backtrack_stat_ = diff;
-		  debug_log (DEBUG_LOW, pin, "UDP replay-window backtrack occurred", max_backtrack_stat_);
+		  debug_log (DEBUG_LOW, pin, "UDP replay-window backtrack occurred", max_backtrack_stat_, now);
 		}
 
 	      if (diff >= seq_list_.size())
 		{
-		  debug_log (DEBUG_LOW, pin, "UDP large diff", diff);
+		  debug_log (DEBUG_LOW, pin, "UDP large diff", diff, now);
 		  return false;
 		}
 
@@ -346,14 +346,14 @@ namespace openvpn {
 		else
 		  {
 		    /* raised from DEBUG_LOW to reduce verbosity */
-		    debug_log (DEBUG_MEDIUM, pin, "UDP replay", diff);
+		    debug_log (DEBUG_MEDIUM, pin, "UDP replay", diff, now);
 		    return false;
 		  }
 	      }
 	    }
 	  else if (pin.time < time_) /* if time goes back, reject */
 	    {
-	      debug_log (DEBUG_LOW, pin, "UDP time backtrack", 0);
+	      debug_log (DEBUG_LOW, pin, "UDP time backtrack", 0, now);
 	      return false;
 	    }
 	  else                       /* time moved forward */
@@ -373,13 +373,13 @@ namespace openvpn {
 		return true;
 	      else
 		{
-		  debug_log (DEBUG_MEDIUM, pin, "TCP packet ID out of sequence", 0);
+		  debug_log (DEBUG_MEDIUM, pin, "TCP packet ID out of sequence", 0, now);
 		  return false;
 		}
 	    }
 	  else if (pin.time < time_)    /* if time goes back, reject */
 	    {
-	      debug_log (DEBUG_LOW, pin, "TCP time backtrack", 0);
+	      debug_log (DEBUG_LOW, pin, "TCP time backtrack", 0, now);
 	      return false;
 	    }
 	  else                          /* time moved forward */
@@ -388,7 +388,7 @@ namespace openvpn {
 		return true;
 	      else
 		{
-		  debug_log (DEBUG_LOW, pin, "bad initial TCP packet ID", pin.id);
+		  debug_log (DEBUG_LOW, pin, "bad initial TCP packet ID", pin.id, now);
 		  return false;
 		}
 	    }
@@ -396,7 +396,7 @@ namespace openvpn {
     }
 
     void
-    add(const PacketID& pin)
+    add(const PacketID& pin, const PacketID::time_t now)
     {
       if (!initialized_)
 	throw packet_id_not_initialized();
@@ -423,10 +423,9 @@ namespace openvpn {
 
 	  // remember timestamp of packet ID
 	  {
-	    const PacketID::time_t local_now = now;
 	    const size_t diff = id_ - pin.id;
-	    if (diff < seq_list_.size() && local_now > PacketID::time_t(SEQ_EXPIRED))
-	      seq_list_[diff] = local_now;
+	    if (diff < seq_list_.size() && now > PacketID::time_t(SEQ_EXPIRED))
+	      seq_list_[diff] = now;
 	  }
 	}
       else
@@ -447,12 +446,11 @@ namespace openvpn {
     }
 
 #ifdef PACKET_ID_EXTRA_LOG_INFO
-    std::string str() const
+    std::string str(const PacketID::time_t now) const
     {
       if (!initialized_)
 	throw packet_id_not_initialized();
       std::ostringstream os;
-      const PacketID::time_t local_now = now;
       os << name_ << "-" << unit_ << " [";
       for (size_t i = 0; i < seq_list_.size(); ++i)
 	{
@@ -464,7 +462,7 @@ namespace openvpn {
 	    c = 'E';
 	  else
 	    {
-	      const int diff = int(local_now - v);
+	      const int diff = int(now - v);
 	      if (diff < 0)
 		c = 'N';
 	      else if (diff < 10)
@@ -485,9 +483,8 @@ namespace openvpn {
      * be accepted because they would violate
      * time_backtrack.
      */
-    void reap()
+    void reap(const PacketID::time_t now)
     {
-      const PacketID::time_t local_now = now;
       if (time_backtrack_)
 	{
 	  bool expire = false;
@@ -496,25 +493,25 @@ namespace openvpn {
 	      const PacketID::time_t t = seq_list_[i];
 	      if (t == PacketID::time_t(SEQ_EXPIRED)) // fast path -- once we see SEQ_EXPIRED from previous run, we can stop
 		break;
-	      if (!expire && t && t + time_backtrack_ < local_now)
+	      if (!expire && t && t + time_backtrack_ < now)
 		expire = true;
 	      if (expire)
 		seq_list_[i] = PacketID::time_t(SEQ_EXPIRED);
 	    }
 	}
-      last_reap_ = local_now;
+      last_reap_ = now;
     }
 
-    void debug_log (const int level, const PacketID& pin, const char *description, const PacketID::id_t info) const
+    void debug_log (const int level, const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
       if (debug_level_ >= level)
-	do_log(pin, description, info);
+	do_log(pin, description, info, now);
     }
 
-    void do_log (const PacketID& pin, const char *description, const PacketID::id_t info) const
+    void do_log (const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
 #ifdef PACKET_ID_EXTRA_LOG_INFO
-      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.id << "," << pin.time << "] info=" << info << " state=" << str());
+      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.id << "," << pin.time << "] info=" << info << " state=" << str(now));
 #else
       OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.id << "," << pin.time << "] info=" << info << " state=" << name_ << "-" << unit_);
 #endif

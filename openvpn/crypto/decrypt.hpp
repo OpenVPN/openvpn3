@@ -21,7 +21,7 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(decrypt_hmac_verify_failed);
     OPENVPN_SIMPLE_EXCEPTION(decrypt_packet_id_verify_failed);
 
-    void decrypt(BufferAllocated& buf)
+    void decrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
       // verify the HMAC
       if (hmac.defined())
@@ -54,7 +54,7 @@ namespace openvpn {
 	  const int cipher_mode = cipher.cipher_mode();
 	  if (cipher_mode == CipherContext::CIPH_CBC_MODE)
 	    {
-	      verify_packet_id(work);
+	      verify_packet_id(work, now);
 	    }
 	  else
 	    {
@@ -63,7 +63,7 @@ namespace openvpn {
 	}
       else // no encryption
 	{
-	  verify_packet_id(buf);
+	  verify_packet_id(buf, now);
 	}
 
       // return cleartext result in buf
@@ -76,14 +76,14 @@ namespace openvpn {
     PacketIDReceive pid_recv;
 
   private:
-    void verify_packet_id(BufferAllocated& buf)
+    void verify_packet_id(BufferAllocated& buf, const PacketID::time_t now)
     {
       // ignore packet ID if pid_recv is not initialized
       if (pid_recv.initialized())
 	{
 	  const PacketID pid = pid_recv.read_next(buf);
-	  if (pid_recv.test(pid)) // verify packet ID
-	    pid_recv.add(pid);    // remember packet ID
+	  if (pid_recv.test(pid, now)) // verify packet ID
+	    pid_recv.add(pid, now);    // remember packet ID
 	  else
 	    throw decrypt_packet_id_verify_failed();
 	}

@@ -20,6 +20,9 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(message_window_ref_by_id);
     OPENVPN_SIMPLE_EXCEPTION(message_window_rm_head);
 
+    MessageWindow()
+      : head_id_(0), span_(0) {}
+
     MessageWindow(const id_t starting_head_id, const id_t span)
       : head_id_(starting_head_id), span_(span) {}
 
@@ -81,6 +84,9 @@ namespace openvpn {
     // would have (even if it isn't defined yet).
     id_t head_id() const { return head_id_; }
 
+    // Return the id of one past the end of the window
+    id_t tail_id() const { return head_id_ + span_; }
+
     // Return the window size
     id_t span() const { return span_; }
 
@@ -111,7 +117,7 @@ namespace openvpn {
     // to an object in the queue
     void grow(const id_t id)
     {
-      const size_t needed_index = head_id_ + id;
+      const size_t needed_index = id - head_id_;
       while (q_.size() <= needed_index)
 	q_.push_back(M());
     }
@@ -120,7 +126,7 @@ namespace openvpn {
     // the queue, advancing the head_id_
     void purge()
     {
-      while (!q_.empty() && !q_.front().defined())
+      while (!q_.empty() && q_.front().erased())
 	{
 	  q_.pop_front();
 	  ++head_id_;

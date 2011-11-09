@@ -5,6 +5,7 @@ if [ -z "$1" ]; then
     echo " DEBUG=1 -- enable debug"
     echo " STRIP=1 -- strip binary"
     echo " LTO=1 -- build with LTO"
+    echo " GPROF=1 -- build for gprof profiling"
     exit 1
 fi
 
@@ -14,9 +15,11 @@ if [ "$DEBUG" ]; then
 else
     # release build
     FLAGS=""
-    [ "$LTO" ] && FLAGS="-flto=4 -Wl,--no-as-needed "
+    [ "$LTO" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
+    [ "$GPROF" ] && FLAGS="$FLAGS -pg"
     g++ -Wall -O3 -fwhole-program $FLAGS -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system -lcrypto -lssl 
 fi
 
 # maybe strip
 [ "$STRIP" ] && strip $1
+exit 0

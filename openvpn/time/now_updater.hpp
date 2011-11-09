@@ -33,8 +33,8 @@ namespace openvpn {
       const Time local_now = Time::now();
       const Time::type fs = local_now.fractional_binary_ms();
       const Time::Duration next_second = Time::Duration::binary_ms(Time::prec - fs);
-      now = local_now.seconds_since_epoch();
-      //std::cout << now << std::endl;
+      time::now = local_now;
+      //std::cout << time::now.seconds_since_epoch() << std::endl;
       timer_.expires_at(local_now + next_second);
       timer_.async_wait(asio_dispatch_timer(&NowUpdater::timer_callback, this));
     }

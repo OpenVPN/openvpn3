@@ -18,7 +18,7 @@ namespace openvpn {
   public:
     OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
 
-    void encrypt(BufferAllocated& buf)
+    void encrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
       if (cipher.defined())
 	{
@@ -34,7 +34,7 @@ namespace openvpn {
 	      prng.bytes(iv_buf, iv_size);
 
 	      // generate fresh outgoing packet ID and prepend to cleartext buffer
-	      pid_send.write_next(buf, true);
+	      pid_send.write_next(buf, true, now);
 	    }
 	  else
 	    {
@@ -57,7 +57,7 @@ namespace openvpn {
       else // no encryption
 	{
 	  // generate fresh outgoing packet ID and prepend to cleartext buffer
-	  pid_send.write_next(buf, true);
+	  pid_send.write_next(buf, true, now);
 
 	  // HMAC the cleartext
 	  prepend_hmac(work);

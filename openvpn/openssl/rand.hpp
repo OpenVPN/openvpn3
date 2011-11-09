@@ -4,6 +4,7 @@
 #include <openssl/rand.h>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/boostrand.hpp>
 
 namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION(rand_error);
@@ -13,6 +14,20 @@ namespace openvpn {
     if (!RAND_bytes(buf, size))
       throw rand_error();
   }
+
+  template <typename T>
+  inline T rand_type()
+  {
+    T ret;
+    rand_bytes((unsigned char *)&ret, sizeof(ret));
+    return ret;
+  }
+
+  class RandomInt : public RandomIntBase
+  {
+  public:
+    RandomInt() : RandomIntBase(rand_type<unsigned int>()) {}
+  };
 
 } // namespace openvpn
 

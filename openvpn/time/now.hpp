@@ -4,9 +4,11 @@
 #include <openvpn/time/time.hpp>
 
 namespace openvpn {
+  namespace time {
 
-  volatile Time::base_type now = 0; /* GLOBAL */
+    Time now; /* GLOBAL */ // fixme should be volatile
 
+  } // namespace time
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_NOW_H
