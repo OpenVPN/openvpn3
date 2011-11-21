@@ -4,12 +4,11 @@
 #include <cstring>
 #include <algorithm>
 
-#include <openssl/evp.h>
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/random/rand.hpp>
+#include <openvpn/gencrypto/evpdigest.hpp>
 
 namespace openvpn {
 
