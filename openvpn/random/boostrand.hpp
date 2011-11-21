@@ -1,5 +1,5 @@
-#ifndef OPENVPN_COMMON_BOOSTRAND_H
-#define OPENVPN_COMMON_BOOSTRAND_H
+#ifndef OPENVPN_RANDOM_BOOSTRAND_H
+#define OPENVPN_RANDOM_BOOSTRAND_H
 
 #include <boost/random.hpp>
 
@@ -24,4 +24,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_COMMON_BOOSTRAND_H
+#endif // OPENVPN_RANDOM_BOOSTRAND_H

@@ -1,10 +1,10 @@
-#ifndef OPENVPN_OPENSSL_RAND_H
-#define OPENVPN_OPENSSL_RAND_H
+#ifndef OPENVPN_RANDOM_RAND_H
+#define OPENVPN_RANDOM_RAND_H
 
 #include <openssl/rand.h>
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/boostrand.hpp>
+#include <openvpn/random/boostrand.hpp>
 
 namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION(rand_error);
@@ -31,4 +31,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_OPENSSL_RAND_H
+#endif // OPENVPN_RANDOM_RAND_H

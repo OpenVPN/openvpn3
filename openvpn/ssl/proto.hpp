@@ -9,7 +9,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/openssl/error.hpp>
 #include <openvpn/openssl/bio_memq_stream.hpp>
-#include <openvpn/openssl/prng.hpp>
+#include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/reliable/relrecv.hpp>

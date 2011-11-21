@@ -4,7 +4,7 @@
 #include <cstring>
 
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/openssl/prng.hpp>
+#include <openvpn/random/prng.hpp>
 
 namespace openvpn {
 

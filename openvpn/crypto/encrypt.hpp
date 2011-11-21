@@ -6,7 +6,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/openssl/prng.hpp>
+#include <openvpn/random/prng.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/digest.hpp>

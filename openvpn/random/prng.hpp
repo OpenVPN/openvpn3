@@ -1,5 +1,5 @@
-#ifndef OPENVPN_OPENSSL_PRNG_H
-#define OPENVPN_OPENSSL_PRNG_H
+#ifndef OPENVPN_RANDOM_PRNG_H
+#define OPENVPN_RANDOM_PRNG_H
 
 #include <cstring>
 #include <algorithm>
@@ -9,7 +9,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/openssl/rand.hpp>
+#include <openvpn/random/rand.hpp>
 
 namespace openvpn {
 
@@ -116,4 +116,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_OPENSSL_PRNG_H
+#endif // OPENVPN_RANDOM_PRNG_H
