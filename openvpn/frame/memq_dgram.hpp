@@ -13,8 +13,8 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(frame_uninitialized);
 
     MemQDgram() {}
-    explicit MemQDgram(FramePtr& frame) : frame_(frame) {}
-    void set_frame(FramePtr& frame) { frame_ = frame; }
+    explicit MemQDgram(const FramePtr& frame) : frame_(frame) {}
+    void set_frame(const FramePtr& frame) { frame_ = frame; }
 
     size_t pending() const
     {

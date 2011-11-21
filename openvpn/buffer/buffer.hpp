@@ -55,6 +55,9 @@ namespace openvpn {
     // return size of array in T objects
     size_t size() const { return size_; }
 
+    // return true if array is not empty
+    bool defined() const { return size_ > 0; }
+
     // return true if array is empty
     bool empty() const { return !size_; }
 

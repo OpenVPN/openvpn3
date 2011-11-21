@@ -15,8 +15,8 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(frame_uninitialized);
 
     MemQStream() {}
-    explicit MemQStream(FramePtr& frame) : frame_(frame) {}
-    void set_frame(FramePtr& frame) { frame_ = frame; }
+    explicit MemQStream(const FramePtr& frame) : frame_(frame) {}
+    void set_frame(const FramePtr& frame) { frame_ = frame; }
 
     size_t pending() const
     {

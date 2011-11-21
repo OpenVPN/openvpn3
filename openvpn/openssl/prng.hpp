@@ -7,12 +7,13 @@
 #include <openssl/evp.h>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/openssl/rand.hpp>
 
 namespace openvpn {
 
-  class PRNG
+  class PRNG : public RC<thread_unsafe_refcount>
   {
     typedef BufferAllocatedType<unsigned char> nonce_t;
   public:
@@ -96,6 +97,7 @@ namespace openvpn {
 #if 1 /* Must be 1 for real usage */
       rand_bytes(nd.data(), nd.size());
 #else
+#pragma message ( "WARNING: predictable PRNG sequence" )
       /* Only for testing -- will cause a predictable PRNG sequence */
       {
 	for (size_t i = 0; i < nd.size(); ++i)
@@ -109,6 +111,8 @@ namespace openvpn {
     size_t n_processed_;
     nonce_t nonce_data_;
   };
+
+  typedef boost::intrusive_ptr<PRNG> PRNGPtr;
 
 } // namespace openvpn
 

@@ -60,6 +60,8 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(static_key_parse_error);
     OPENVPN_SIMPLE_EXCEPTION(static_key_bad_size);
 
+    bool defined() const { return key_data_.defined(); }
+
     StaticKey slice(unsigned int key_specifier)
     {
       if (key_data_.size() != KEY_SIZE)

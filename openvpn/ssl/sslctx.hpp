@@ -17,7 +17,7 @@ namespace openvpn {
   class SSLContext : public RC<thread_unsafe_refcount>
   {
   public:
-    struct Parms
+    struct Config
     {
       enum Mode {
 	UNDEF,
@@ -25,7 +25,7 @@ namespace openvpn {
 	SERVER
       };
 
-      Parms() : mode(UNDEF) {}
+      Config() : mode(UNDEF) {}
 
       Mode mode;
       CertCRLList ca;
@@ -37,13 +37,13 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(ssl_context_error);
 
-    SSLContext(const Parms& parms)
+    SSLContext(const Config& parms)
       : ctx_(NULL)
     {
       try
 	{
 	  // Create new SSL_CTX for server or client mode
-	  if (parms.mode == Parms::SERVER)
+	  if (parms.mode == Config::SERVER)
 	    {
 	      ctx_ = SSL_CTX_new(TLSv1_server_method());
 	      if (ctx_ == NULL)
@@ -55,7 +55,7 @@ namespace openvpn {
 	      if (!SSL_CTX_set_tmp_dh(ctx_, parms.dh.obj()))
 		throw OpenSSLException("SSLContext: SSL_CTX_set_tmp_dh failed");
 	    }
-	  else if (parms.mode == Parms::CLIENT)
+	  else if (parms.mode == Config::CLIENT)
 	    {
 	      ctx_ = SSL_CTX_new(TLSv1_client_method());
 	      if (ctx_ == NULL)
@@ -119,6 +119,8 @@ namespace openvpn {
     {
       erase();
     }
+
+    SSL_CTX* raw_ctx() const { return ctx_; }    
 
   private:
     void erase()

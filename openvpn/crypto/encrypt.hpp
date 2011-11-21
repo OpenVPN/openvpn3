@@ -31,7 +31,7 @@ namespace openvpn {
 	  if (cipher_mode == CipherContext::CIPH_CBC_MODE)
 	    {
 	      // in CBC mode, use an explicit, random IV
-	      prng.bytes(iv_buf, iv_size);
+	      prng->bytes(iv_buf, iv_size);
 
 	      // generate fresh outgoing packet ID and prepend to cleartext buffer
 	      pid_send.write_next(buf, true, now);
@@ -71,7 +71,7 @@ namespace openvpn {
     CipherContext cipher;
     HMACContext hmac;
     PacketIDSend pid_send;
-    PRNG prng;
+    PRNGPtr prng;
 
   private:
     // compute HMAC signature of data buffer,
