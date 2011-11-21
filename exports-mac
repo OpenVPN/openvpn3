@@ -1,0 +1,2 @@
+export PATH="$OVPN3/scripts:$PATH"
+export DYLD_LIBRARY_PATH="$BOOST/stage/lib"
