@@ -48,6 +48,7 @@ namespace openvpn {
 	      const size_t payload,
 	      const size_t tailroom,
 	      const unsigned int align_adjust, // length of leading prefix data before the data that needs to be aligned on a size_t boundary
+	      const size_t align_block,        // size of alignment block, usually sizeof(size_t) but sometimes the cipher block size
 	      const unsigned int buffer_flags) // flags passed to BufferAllocated constructor
       {
 	headroom_ = headroom;
@@ -55,6 +56,7 @@ namespace openvpn {
 	tailroom_ = tailroom;
 	buffer_flags_ = buffer_flags;
 	align_adjust_ = align_adjust;
+	align_block_ = align_block;
 	recalc_derived();
       }
 
@@ -94,11 +96,12 @@ namespace openvpn {
       {
 	std::ostringstream info;
 	info << "head=" << headroom_ << "[" << adj_headroom_ << "] "
-	     << "pay=" << payload_ << " "
-	     << "tail=" << tailroom_ << " "
-	     << "cap=" << adj_capacity_ << " "
-	     << "bf=" << buffer_flags_ << " "
-	     << "align=" << align_adjust_;
+	     << "pay=" << payload_ << ' '
+	     << "tail=" << tailroom_ << ' '
+	     << "cap=" << adj_capacity_ << ' '
+	     << "bf=" << buffer_flags_ << ' '
+	     << "align_adj=" << align_adjust_ << ' '
+	     << "align_block=" << align_block_;
 	return info.str();
       }
 
@@ -114,11 +117,10 @@ namespace openvpn {
       }
 
       // add a small delta to headroom so that the point after the first align_adjust
-      // bytes of the buffer will be aligned on a size_t boundary
+      // bytes of the buffer will be aligned on an align_block boundary
       size_t adjusted_headroom() const
       {
-	const size_t PAYLOAD_ALIGN = sizeof(size_t);
-	const size_t delta = ((PAYLOAD_ALIGN << 24) - (headroom_ + align_adjust_)) & (PAYLOAD_ALIGN - 1);
+	const size_t delta = ((align_block_ << 24) - (headroom_ + align_adjust_)) & (align_block_ - 1);
 	return headroom_ + delta;
       }
 
@@ -128,6 +130,7 @@ namespace openvpn {
       size_t tailroom_;
       unsigned int buffer_flags_;
       unsigned int align_adjust_;
+      size_t align_block_;
 
       // derived
       size_t adj_headroom_;
