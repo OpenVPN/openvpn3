@@ -6,18 +6,28 @@ if [ -z "$1" ]; then
     echo " STRIP=1 -- strip binary"
     echo " LTO=1 -- build with LTO"
     echo " GPROF=1 -- build for gprof profiling"
+    echo " OSSL=1 -- include OpenSSL on Mac"
+    echo ' GCC_EXTRA="-DITER=5" -- add build flags'
     exit 1
+fi
+
+# On Mac, only link with OpenSSL if OSSL is defined.
+# On other platforms, always link with OpenSSL.
+if [ "$PLATFORM" = "mac" ] && [ -z "$OSSL" ]; then
+    CRYPTO_LIBS="-framework Security"
+else
+    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 fi
 
 if [ "$DEBUG" ]; then
     # debug build
-    g++ -Wall -g -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system -lcrypto -lssl 
+    g++ -Wall -g -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
 else
     # release build
     FLAGS=""
     [ "$LTO" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" ] && FLAGS="$FLAGS -pg"
-    g++ -Wall -O3 -fwhole-program $FLAGS -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system -lcrypto -lssl 
+    g++ -Wall -O3 -fwhole-program $FLAGS -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
 fi
 
 # maybe strip

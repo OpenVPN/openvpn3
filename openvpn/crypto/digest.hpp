@@ -3,9 +3,8 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <openssl/objects.h>
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
+#include <openvpn/gencrypto/evpdigest.hpp>
+#include <openvpn/gencrypto/evphmac.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -33,14 +32,14 @@ namespace openvpn {
     {
       if (!digest_)
 	throw digest_undefined();
-      return OBJ_nid2sn (EVP_MD_nid (digest_));
+      return EVP_MD_name(digest_);
     }
 
     size_t size() const
     {
       if (!digest_)
 	throw digest_undefined();
-      return EVP_MD_size (digest_);
+      return EVP_MD_size(digest_);
     }
 
     bool defined() const { return digest_ != NULL; }
@@ -162,7 +161,7 @@ namespace openvpn {
       unsigned int outlen;
       HMAC_CTX *c = ctx();
       const unsigned int hmac_size = HMAC_size(c);
-      if (out_size != hmac_size)
+      if (out_size < hmac_size)
 	throw digest_output_buffer();
       HMAC_Init_ex (c, NULL, 0, NULL, NULL);
       HMAC_Update (c, in, int(in_size));

@@ -5,6 +5,7 @@
 #ifdef OPENVPN_APPLE_CRYPTO
 #include <openvpn/applecrypto/evpdigest.hpp>
 #else
+#include <openssl/objects.h>
 #include <openssl/evp.h>
 #endif
 

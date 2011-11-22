@@ -2,6 +2,7 @@
 #define OPENVPN_APPLECRYPTO_EVPDIGEST_H
 
 #include <CommonCrypto/CommonDigest.h>
+#include <CommonCrypto/CommonHMAC.h>
 
 #include <openvpn/common/string.hpp>
 
@@ -17,7 +18,7 @@
   { \
   public: \
     EVP_MD_##TYPE() \
-      : EVP_MD(#TYPE, CC_##TYPE##_DIGEST_LENGTH) {} \
+      : EVP_MD(#TYPE, CC_##TYPE##_DIGEST_LENGTH, kCCHmacAlg##TYPE) {}	\
     virtual int DigestInit(EVP_MD_CTX *ctx) const \
     { \
       return CC_##TYPE##_Init(&ctx->u.TYPE##_ctx); \
@@ -46,6 +47,11 @@ namespace openvpn {
       return md_size_;
     }
 
+    const char *MD_name() const
+    {
+      return name_;
+    }
+
     bool name_match(const char *name) const
     {
       return string::strcasecmp(name, name_) == 0;
@@ -56,21 +62,28 @@ namespace openvpn {
       return 1;
     }
 
+    CCHmacAlgorithm algorithm() const { return algorithm_; }
+
     virtual int DigestInit(EVP_MD_CTX *ctx) const = 0;
     virtual int DigestUpdate(EVP_MD_CTX *ctx, const void *d, size_t cnt) const = 0;
     virtual int DigestFinal(EVP_MD_CTX *ctx, unsigned char *md, unsigned int *s) const = 0;
 
   protected:
-    EVP_MD(const char *name, const int md_size)
-      : name_(name), md_size_(md_size) {}
+    EVP_MD(const char *name, const int md_size, const CCHmacAlgorithm algorithm)
+      : name_(name), md_size_(md_size), algorithm_(algorithm) {}
 
   private:
     const char *name_;
     int md_size_;
+    CCHmacAlgorithm algorithm_;
   };
 
   typedef CC_SHA256_CTX CC_SHA224_CTX;
   typedef CC_SHA512_CTX CC_SHA384_CTX;
+
+  enum {
+    EVP_MAX_MD_SIZE = CC_SHA512_DIGEST_LENGTH
+  };
 
   struct EVP_MD_CTX
   {
@@ -115,6 +128,11 @@ namespace openvpn {
   inline int EVP_MD_size(const EVP_MD *md)
   {
     return md->MD_size();
+  }
+
+  inline const char *EVP_MD_name(const EVP_MD *md)
+  {
+    return md->MD_name();
   }
 
   inline int EVP_DigestInit(EVP_MD_CTX *ctx, const EVP_MD *md)
