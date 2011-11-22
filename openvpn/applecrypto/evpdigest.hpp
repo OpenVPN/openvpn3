@@ -5,10 +5,11 @@
 #include <CommonCrypto/CommonHMAC.h>
 
 #include <openvpn/common/string.hpp>
+#include <openvpn/applecrypto/evpcommon.hpp>
 
 #define OPENVPN_DIGEST_CONTEXT(TYPE) CC_##TYPE##_CTX TYPE##_ctx
 
-#define OPENVPN_DIGEST_DECLARE(TYPE) EVP_MD_##TYPE TYPE
+#define OPENVPN_DIGEST_DECLARE(TYPE) const EVP_MD_##TYPE TYPE
 
 #define OPENVPN_DIGEST_SELECT(TYPE) \
   if (apple_digest::TYPE.name_match(name)) return &apple_digest::TYPE
@@ -82,7 +83,7 @@ namespace openvpn {
   typedef CC_SHA512_CTX CC_SHA384_CTX;
 
   enum {
-    EVP_MAX_MD_SIZE = CC_SHA512_DIGEST_LENGTH
+    EVP_MAX_MD_SIZE = CC_SHA512_DIGEST_LENGTH // largest known is SHA512
   };
 
   struct EVP_MD_CTX

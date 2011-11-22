@@ -3,8 +3,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <openssl/objects.h>
-#include <openssl/evp.h>
+#include <openvpn/gencrypto/evpcipher.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -32,7 +31,7 @@ namespace openvpn {
     {
       if (!cipher_)
 	throw cipher_undefined();
-      return OBJ_nid2sn (EVP_CIPHER_nid (cipher_));
+      return EVP_CIPHER_name (cipher_);
     }
 
     size_t key_length() const
@@ -62,9 +61,9 @@ namespace openvpn {
     // OpenSSL cipher constants
     enum {
       MAX_IV_SIZE = EVP_MAX_IV_LENGTH,
-      CIPH_CFB_MODE = EVP_CIPH_CFB_MODE,
-      CIPH_OFB_MODE = EVP_CIPH_OFB_MODE,
       CIPH_CBC_MODE = EVP_CIPH_CBC_MODE
+      //CIPH_CFB_MODE = EVP_CIPH_CFB_MODE,
+      //CIPH_OFB_MODE = EVP_CIPH_OFB_MODE,
     };
 
     OPENVPN_SIMPLE_EXCEPTION(cipher_init);
@@ -219,8 +218,7 @@ namespace openvpn {
 			   unsigned char *out, const size_t out_size,
 			   const unsigned char *in, const size_t in_size)
     {
-      int outlen, tmplen;
-
+      int outlen = out_size;
       EVP_CIPHER_CTX *c = ctx();
       if (out_size < output_size(in_size))
 	throw cipher_output_buffer();
@@ -228,6 +226,7 @@ namespace openvpn {
 	throw cipher_init();
       if (!EVP_CipherUpdate (c, out, &outlen, in, int(in_size)))
 	throw cipher_update();
+      int tmplen = out_size - outlen;
       if (!EVP_CipherFinal_ex (c, out + outlen, &tmplen))
 	throw cipher_final();
       return outlen + tmplen;

@@ -6,16 +6,15 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/applecrypto/evpcommon.hpp>
 #include <openvpn/applecrypto/evpdigest.hpp>
 
 namespace openvpn {
 
   OPENVPN_SIMPLE_EXCEPTION(hmac_init_error);
 
-  struct ENGINE {};
-
   enum {
-    HMAC_MAX_MD_CBLOCK = 128  /* largest known is SHA512 */
+    HMAC_MAX_MD_CBLOCK = 128  // largest known is SHA512
   };
 
   struct HMAC_CTX
