@@ -7,6 +7,8 @@
 #else
 #include <openssl/objects.h>
 #include <openssl/evp.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
 #endif
 
 #endif // OPENVPN_GENCRYPTO_EVPDIGEST_H

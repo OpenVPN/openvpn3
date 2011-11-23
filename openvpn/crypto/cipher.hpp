@@ -218,12 +218,12 @@ namespace openvpn {
 			   unsigned char *out, const size_t out_size,
 			   const unsigned char *in, const size_t in_size)
     {
-      int outlen = out_size;
       EVP_CIPHER_CTX *c = ctx();
       if (out_size < output_size(in_size))
 	throw cipher_output_buffer();
       if (!EVP_CipherInit_ex (c, NULL, NULL, NULL, iv, -1))
 	throw cipher_init();
+      int outlen = out_size;
       if (!EVP_CipherUpdate (c, out, &outlen, in, int(in_size)))
 	throw cipher_update();
       int tmplen = out_size - outlen;

@@ -19,6 +19,9 @@ else
     CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 fi
 
+# remove previous build
+rm -f $1
+
 if [ "$DEBUG" ]; then
     # debug build
     g++ -Wall -g -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS

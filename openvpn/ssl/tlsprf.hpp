@@ -3,13 +3,9 @@
 
 #include <cstring>
 
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/ssl/psid.hpp>
+#include <openvpn/gencrypto/evphmac.hpp>
 
 namespace openvpn {
   namespace tls_prf {
