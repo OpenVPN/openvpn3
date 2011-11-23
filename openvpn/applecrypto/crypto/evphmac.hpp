@@ -6,8 +6,8 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/applecrypto/evpcommon.hpp>
-#include <openvpn/applecrypto/evpdigest.hpp>
+#include <openvpn/applecrypto/crypto/evpcommon.hpp>
+#include <openvpn/applecrypto/crypto/evpdigest.hpp>
 
 namespace openvpn {
 

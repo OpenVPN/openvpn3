@@ -62,8 +62,6 @@ namespace openvpn {
     enum {
       MAX_IV_SIZE = EVP_MAX_IV_LENGTH,
       CIPH_CBC_MODE = EVP_CIPH_CBC_MODE
-      //CIPH_CFB_MODE = EVP_CIPH_CFB_MODE,
-      //CIPH_OFB_MODE = EVP_CIPH_OFB_MODE,
     };
 
     OPENVPN_SIMPLE_EXCEPTION(cipher_init);
@@ -223,10 +221,10 @@ namespace openvpn {
 	throw cipher_output_buffer();
       if (!EVP_CipherInit_ex (c, NULL, NULL, NULL, iv, -1))
 	throw cipher_init();
-      int outlen = out_size;
+      int outlen = out_size; // NOTE: minor change to OpenSSL semantics, pass size of output buffer
       if (!EVP_CipherUpdate (c, out, &outlen, in, int(in_size)))
 	throw cipher_update();
-      int tmplen = out_size - outlen;
+      int tmplen = out_size - outlen; // NOTE: minor change to OpenSSL semantics, pass size of output buffer
       if (!EVP_CipherFinal_ex (c, out + outlen, &tmplen))
 	throw cipher_final();
       return outlen + tmplen;

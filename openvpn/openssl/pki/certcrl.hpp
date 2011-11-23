@@ -10,8 +10,8 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
-#include <openvpn/pki/x509.hpp>
-#include <openvpn/pki/crl.hpp>
+#include <openvpn/openssl/pki/x509.hpp>
+#include <openvpn/openssl/pki/crl.hpp>
 
 namespace openvpn {
 

@@ -10,7 +10,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/openssl/error.hpp>
+#include <openvpn/openssl/util/error.hpp>
 
 namespace openvpn {
 

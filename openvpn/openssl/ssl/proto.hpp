@@ -7,8 +7,8 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/openssl/error.hpp>
-#include <openvpn/openssl/bio_memq_stream.hpp>
+#include <openvpn/openssl/util/error.hpp>
+#include <openvpn/openssl/bio/bio_memq_stream.hpp>
 #include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
@@ -16,7 +16,7 @@
 #include <openvpn/reliable/relsend.hpp>
 #include <openvpn/reliable/relack.hpp>
 #include <openvpn/ssl/psid.hpp>
-#include <openvpn/ssl/sslctx.hpp>
+#include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
 
 namespace openvpn {

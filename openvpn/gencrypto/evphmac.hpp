@@ -3,7 +3,7 @@
 
 #include <openvpn/gencrypto/applecrypto.hpp>
 #ifdef OPENVPN_APPLE_CRYPTO
-#include <openvpn/applecrypto/evphmac.hpp>
+#include <openvpn/applecrypto/crypto/evphmac.hpp>
 #else
 #include <openssl/hmac.h>
 #endif

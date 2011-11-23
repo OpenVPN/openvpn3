@@ -13,7 +13,7 @@ namespace openvpn {
 
 #else
 
-#include <openvpn/openssl/init.hpp>
+#include <openvpn/openssl/util/init.hpp>
 
 namespace openvpn {
   typedef openssl_init crypto_init;

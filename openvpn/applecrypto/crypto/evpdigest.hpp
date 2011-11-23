@@ -5,7 +5,7 @@
 #include <CommonCrypto/CommonHMAC.h>
 
 #include <openvpn/common/string.hpp>
-#include <openvpn/applecrypto/evpcommon.hpp>
+#include <openvpn/applecrypto/crypto/evpcommon.hpp>
 
 #define OPENVPN_DIGEST_CONTEXT(TYPE) CC_##TYPE##_CTX TYPE##_ctx
 

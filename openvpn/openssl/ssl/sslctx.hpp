@@ -4,13 +4,13 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/openssl/error.hpp>
-#include <openvpn/pki/x509.hpp>
-#include <openvpn/pki/crl.hpp>
-#include <openvpn/pki/pkey.hpp>
-#include <openvpn/pki/dh.hpp>
-#include <openvpn/pki/certcrl.hpp>
-#include <openvpn/pki/x509store.hpp>
+#include <openvpn/openssl/util/error.hpp>
+#include <openvpn/openssl/pki/x509.hpp>
+#include <openvpn/openssl/pki/crl.hpp>
+#include <openvpn/openssl/pki/pkey.hpp>
+#include <openvpn/openssl/pki/dh.hpp>
+#include <openvpn/openssl/pki/certcrl.hpp>
+#include <openvpn/openssl/pki/x509store.hpp>
 
 namespace openvpn {
 

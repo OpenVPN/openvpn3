@@ -4,8 +4,8 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/openssl/error.hpp>
-#include <openvpn/pki/certcrl.hpp>
+#include <openvpn/openssl/util/error.hpp>
+#include <openvpn/openssl/pki/certcrl.hpp>
 
 namespace openvpn {
 

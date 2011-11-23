@@ -7,7 +7,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/applecrypto/evpcommon.hpp>
+#include <openvpn/applecrypto/crypto/evpcommon.hpp>
 
 #define OPENVPN_CIPHER_SELECT(TYPE) \
   if (apple_cipher::TYPE.name_match(name)) return &apple_cipher::TYPE
