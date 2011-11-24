@@ -1,5 +1,5 @@
-#ifndef OPENVPN_OPENSSL_INIT_H
-#define OPENVPN_OPENSSL_INIT_H
+#ifndef OPENVPN_OPENSSL_UTIL_INIT_H
+#define OPENVPN_OPENSSL_UTIL_INIT_H
 
 #include <boost/asio/ssl/detail/openssl_init.hpp>
 
@@ -10,4 +10,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_OPENSSL_INIT_H
+#endif // OPENVPN_OPENSSL_UTIL_INIT_H

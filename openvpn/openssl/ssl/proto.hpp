@@ -1,5 +1,5 @@
-#ifndef OPENVPN_SSL_PROTO_H
-#define OPENVPN_SSL_PROTO_H
+#ifndef OPENVPN_OPENSSL_SSL_PROTO_H
+#define OPENVPN_OPENSSL_SSL_PROTO_H
 
 #include <openssl/ssl.h>
 
@@ -153,6 +153,8 @@ namespace openvpn {
       BIO *ct_in;          // write ciphertext to here
       BIO *ct_out;         // read ciphertext from here
 
+      ProtoSessionID psid_peer;
+
       unsigned int state;
       unsigned int key_id;
 
@@ -179,14 +181,14 @@ namespace openvpn {
 	config(config_p)
     {
       primary.reset(new KeyContext(*config, *this));
-      psid.init(*config->prng);
+      psid_self.init(*config->prng);
     }
 
   private:
     unsigned int key_id;
     ConfigPtr config;
 
-    ProtoSessionID psid;
+    ProtoSessionID psid_self;
     KeyContextPtr primary;
     KeyContextPtr expiring;
   };
@@ -195,4 +197,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_SSL_PROTO_H
+#endif // OPENVPN_OPENSSL_SSL_PROTO_H

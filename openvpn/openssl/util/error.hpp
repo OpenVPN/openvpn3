@@ -1,8 +1,9 @@
-#ifndef OPENVPN_OPENSSL_SSLERR_H
-#define OPENVPN_OPENSSL_SSLERR_H
+#ifndef OPENVPN_OPENSSL_UTIL_ERROR_H
+#define OPENVPN_OPENSSL_UTIL_ERROR_H
 
 #include <string>
 #include <openssl/err.h>
+#include <openssl/ssl.h>
 
 #include <openvpn/common/exception.hpp>
 
@@ -148,4 +149,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_OPENSSL_SSLERR_H
+#endif // OPENVPN_OPENSSL_UTIL_ERROR_H

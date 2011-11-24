@@ -1,5 +1,5 @@
-#ifndef OPENVPN_PKI_DH_H
-#define OPENVPN_PKI_DH_H
+#ifndef OPENVPN_OPENSSL_PKI_DH_H
+#define OPENVPN_OPENSSL_PKI_DH_H
 
 #include <string>
 
@@ -16,11 +16,19 @@ namespace openvpn {
   {
   public:
     DH() : dh_(NULL) {}
+
+    explicit DH(const std::string& dh_txt)
+      : dh_(NULL)
+    {
+      parse_pem(dh_txt);
+    }
+
     DH(const DH& other)
       : dh_(NULL)
     {
       assign(other.dh_);
     }
+
     void operator=(const DH& other)
     {
       assign(other.dh_);
@@ -29,7 +37,7 @@ namespace openvpn {
     bool defined() const { return dh_ != NULL; }
     ::DH* obj() const { return dh_; }
 
-    void parse_pem(const std::string dh_txt)
+    void parse_pem(const std::string& dh_txt)
     {
       BIO *bio = BIO_new_mem_buf(const_cast<char *>(dh_txt.c_str()), dh_txt.length());
       if (!bio)
@@ -102,5 +110,5 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_PKI_DH_H
+#endif // OPENVPN_OPENSSL_PKI_DH_H
 

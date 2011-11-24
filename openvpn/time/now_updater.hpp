@@ -1,5 +1,5 @@
-#ifndef OPENVPN_COMMON_NOW_UPDATER_H
-#define OPENVPN_COMMON_NOW_UPDATER_H
+#ifndef OPENVPN_TIME_NOW_UPDATER_H
+#define OPENVPN_TIME_NOW_UPDATER_H
 
 #include <openvpn/common/asiotimer.hpp>
 #include <openvpn/time/now.hpp>

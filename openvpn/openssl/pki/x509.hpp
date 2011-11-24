@@ -1,5 +1,5 @@
-#ifndef OPENVPN_PKI_X509_H
-#define OPENVPN_PKI_X509_H
+#ifndef OPENVPN_OPENSSL_PKI_X509_H
+#define OPENVPN_OPENSSL_PKI_X509_H
 
 #include <string>
 #include <vector>
@@ -65,16 +65,23 @@ namespace openvpn {
   {
   public:
     X509() {}
+
+    explicit X509(const std::string& cert_txt)
+    {
+      parse_pem(cert_txt);
+    }
+
     X509(const X509& other)
     {
       assign(other.x509_);
     }
+
     void operator=(const X509& other)
     {
       assign(other.x509_);
     }
 
-    void parse_pem(const std::string cert_txt)
+    void parse_pem(const std::string& cert_txt)
     {
       BIO *bio = BIO_new_mem_buf(const_cast<char *>(cert_txt.c_str()), cert_txt.length());
       if (!bio)
@@ -116,6 +123,9 @@ namespace openvpn {
   class X509List : public std::vector<X509Ptr>
   {
   public:
+    typedef X509 Item;
+    typedef X509Ptr ItemPtr;
+
     bool defined() const { return !empty(); }
 
     std::string render_pem() const
@@ -129,4 +139,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_PKI_X509_H
+#endif // OPENVPN_OPENSSL_PKI_X509_H

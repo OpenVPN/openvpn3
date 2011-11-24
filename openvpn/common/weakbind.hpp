@@ -39,4 +39,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif //  OPENVPN_COMMON_WEAKBIND_H
+#endif // OPENVPN_COMMON_WEAKBIND_H

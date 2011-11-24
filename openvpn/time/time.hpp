@@ -1,5 +1,5 @@
-#ifndef OPENVPN_COMMON_TIME_H
-#define OPENVPN_COMMON_TIME_H
+#ifndef OPENVPN_TIME_TIME_H
+#define OPENVPN_TIME_TIME_H
 
 #include <limits>
 
@@ -113,4 +113,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_COMMON_TIME_H
+#endif // OPENVPN_TIME_TIME_H

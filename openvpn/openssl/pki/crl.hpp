@@ -1,5 +1,5 @@
-#ifndef OPENVPN_PKI_CRL_H
-#define OPENVPN_PKI_CRL_H
+#ifndef OPENVPN_OPENSSL_PKI_CRL_H
+#define OPENVPN_OPENSSL_PKI_CRL_H
 
 #include <string>
 #include <vector>
@@ -18,11 +18,19 @@ namespace openvpn {
   {
   public:
     CRL() : crl_(NULL) {}
+
+    explicit CRL(const std::string& crl_txt)
+      : crl_(NULL)
+    {
+      parse_pem(crl_txt);
+    }
+
     CRL(const CRL& other)
       : crl_(NULL)
     {
       assign(other.crl_);
     }
+
     void operator=(const CRL& other)
     {
       assign(other.crl_);
@@ -31,7 +39,7 @@ namespace openvpn {
     bool defined() const { return crl_ != NULL; }
     X509_CRL* obj() const { return crl_; }
 
-    void parse_pem(const std::string crl_txt)
+    void parse_pem(const std::string& crl_txt)
     {
       BIO *bio = BIO_new_mem_buf(const_cast<char *>(crl_txt.c_str()), crl_txt.length());
       if (!bio)
@@ -109,6 +117,9 @@ namespace openvpn {
   class CRLList : public std::vector<CRLPtr>
   {
   public:
+    typedef CRL Item;
+    typedef CRLPtr ItemPtr;
+
     bool defined() const { return !empty(); }
 
     std::string render_pem() const
@@ -122,4 +133,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_PKI_CRL_H
+#endif // OPENVPN_OPENSSL_PKI_CRL_H

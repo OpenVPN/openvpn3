@@ -1,5 +1,5 @@
-#ifndef OPENVPN_PKI_CERTCRL_H
-#define OPENVPN_PKI_CERTCRL_H
+#ifndef OPENVPN_PKI_CCLIST_H
+#define OPENVPN_PKI_CCLIST_H
 
 #include <string>
 #include <sstream>
@@ -10,16 +10,38 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
-#include <openvpn/openssl/pki/x509.hpp>
-#include <openvpn/openssl/pki/crl.hpp>
 
 namespace openvpn {
 
-  namespace parse_ca {
-
+  template <typename CertList, typename CRLList>
+  class CertCRLListTemplate
+  {
+  public:
     OPENVPN_EXCEPTION(parse_cert_crl_error);
 
-    inline void from_istream(std::istream& in, const std::string title, X509List* cert_list, CRLList* crl_list)
+    CertCRLListTemplate() {}
+
+    explicit CertCRLListTemplate(const std::string& content, const std::string title)
+    {
+      from_string(content, title, &certs, &crls);
+    }
+
+    void parse_pem(const std::string& content, const std::string title)
+    {
+      from_string(content, title, &certs, &crls);
+    }
+
+    void parse_pem_file(const std::string& filename)
+    {
+      from_file(filename, &certs, &crls);
+    }
+
+    std::string render_pem() const
+    {
+      return certs.render_pem() + crls.render_pem();
+    }
+
+    static void from_istream(std::istream& in, const std::string title, CertList* cert_list, CRLList* crl_list)
     {
       static const char cert_start[] = "-----BEGIN CERTIFICATE-----";
       static const char cert_end[] = "-----END CERTIFICATE-----";
@@ -63,29 +85,27 @@ namespace openvpn {
 	    }
 	  if (state == S_IN_CERT && line == cert_end)
 	    {
-	      X509Ptr x509(new X509());
 	      try {
-		x509->parse_pem(item);
+		typename CertList::ItemPtr x509(new typename CertList::Item(item));
+		cert_list->push_back(x509);
 	      }
 	      catch (std::exception& e)
 		{
 		  OPENVPN_THROW(parse_cert_crl_error, title << ":" << line_num << " : error parsing CERT: " << e.what());
 		}
-	      cert_list->push_back(x509);
 	      state = S_OUTSIDE;
 	      item = "";
 	    }
 	  if (state == S_IN_CRL && line == crl_end)
 	    {
-	      CRLPtr crl(new CRL());
 	      try {
-		crl->parse_pem(item);
+		typename CRLList::ItemPtr crl(new typename CRLList::Item(item));
+		crl_list->push_back(crl);
 	      }
 	      catch (std::exception& e)
 		{
 		  OPENVPN_THROW(parse_cert_crl_error, title << ":" << line_num << " : error parsing CRL: " << e.what());
 		}
-	      crl_list->push_back(crl);
 	      state = S_OUTSIDE;
 	      item = "";
 	    }
@@ -94,13 +114,13 @@ namespace openvpn {
 	OPENVPN_THROW(parse_cert_crl_error, title << " : CERT/CRL content ended unexpectedly without END marker");
     }
 
-    inline void from_string(const std::string content, const std::string title, X509List* cert_list, CRLList* crl_list = NULL)
+    static void from_string(const std::string content, const std::string title, CertList* cert_list, CRLList* crl_list = NULL)
     {
       std::stringstream in(content);
       from_istream(in, title, cert_list, crl_list);
     }
 
-    inline void from_file(const std::string filename, X509List* cert_list, CRLList* crl_list = NULL)
+    static void from_file(const std::string filename, CertList* cert_list, CRLList* crl_list = NULL)
     {
       std::ifstream ifs(filename.c_str());
       if (!ifs)
@@ -110,30 +130,10 @@ namespace openvpn {
 	OPENVPN_THROW(open_file_error, "cannot read CERT/CRL file " << filename);
     }
 
-  } // namespace parse_ca
-
-  class CertCRLList
-  {
-  public:
-    void parse_pem(const std::string content, const std::string title)
-    {
-      parse_ca::from_string(content, title, &certs, &crls);
-    }
-
-    void parse_pem_file(const std::string filename)
-    {
-      parse_ca::from_file(filename, &certs, &crls);
-    }
-
-    std::string render_pem() const
-    {
-      return certs.render_pem() + crls.render_pem();
-    }
-
-    X509List certs;
+    CertList certs;
     CRLList crls;
   };
 
 } // namespace openvpn
 
-#endif // OPENVPN_PKI_CERTCRL_H
+#endif // OPENVPN_PKI_CCLIST_H

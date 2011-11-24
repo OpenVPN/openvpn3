@@ -4,8 +4,8 @@
  * semantics to use with DTLS sessions.
  */
 
-#ifndef OPENVPN_OPENSSL_BIO_MEMQ_DGRAM_H
-#define OPENVPN_OPENSSL_BIO_MEMQ_DGRAM_H
+#ifndef OPENVPN_OPENSSL_BIO_BIO_MEMQ_DGRAM_H
+#define OPENVPN_OPENSSL_BIO_BIO_MEMQ_DGRAM_H
 
 #include <cstring>
 
@@ -225,4 +225,4 @@ namespace openvpn {
   } // namespace bmq_dgram
 } // namespace openvpn
 
-#endif // OPENVPN_OPENSSL_BIO_MEMQ_DGRAM_H
+#endif // OPENVPN_OPENSSL_BIO_BIO_MEMQ_DGRAM_H

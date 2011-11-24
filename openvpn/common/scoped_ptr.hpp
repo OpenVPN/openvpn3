@@ -50,4 +50,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif //  OPENVPN_COMMON_SCOPED_PTR_H
+#endif // OPENVPN_COMMON_SCOPED_PTR_H

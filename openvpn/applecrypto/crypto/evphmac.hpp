@@ -1,5 +1,5 @@
-#ifndef OPENVPN_APPLECRYPTO_EVPHMAC_H
-#define OPENVPN_APPLECRYPTO_EVPHMAC_H
+#ifndef OPENVPN_APPLECRYPTO_CRYPTO_EVPHMAC_H
+#define OPENVPN_APPLECRYPTO_CRYPTO_EVPHMAC_H
 
 #include <cstring>
 #include <CommonCrypto/CommonHMAC.h>
@@ -70,4 +70,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_APPLECRYPTO_EVPHMAC_H
+#endif // OPENVPN_APPLECRYPTO_CRYPTO_EVPHMAC_H

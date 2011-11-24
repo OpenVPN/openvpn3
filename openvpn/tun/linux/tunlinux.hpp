@@ -1,5 +1,5 @@
-#ifndef OPENVPN_TUN_TUNLINUX_H
-#define OPENVPN_TUN_TUNLINUX_H
+#ifndef OPENVPN_TUN_LINUX_TUNLINUX_H
+#define OPENVPN_TUN_LINUX_TUNLINUX_H
 
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -195,4 +195,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_TUN_TUNLINUX_H
+#endif // OPENVPN_TUN_LINUX_TUNLINUX_H

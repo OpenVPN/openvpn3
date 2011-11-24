@@ -1,5 +1,5 @@
-#ifndef OPENVPN_PKI_PKEY_H
-#define OPENVPN_PKI_PKEY_H
+#ifndef OPENVPN_OPENSSL_PKI_PKEY_H
+#define OPENVPN_OPENSSL_PKI_PKEY_H
 
 #include <string>
 
@@ -16,11 +16,19 @@ namespace openvpn {
   {
   public:
     PKey() : pkey_(NULL) {}
+
+    explicit PKey(const std::string& pkey_txt)
+      : pkey_(NULL)
+    {
+      parse_pem(pkey_txt);
+    }
+
     PKey(const PKey& other)
       : pkey_(NULL)
     {
       assign(other.pkey_);
     }
+
     void operator=(const PKey& other)
     {
       assign(other.pkey_);
@@ -29,7 +37,7 @@ namespace openvpn {
     bool defined() const { return pkey_ != NULL; }
     EVP_PKEY* obj() const { return pkey_; }
 
-    void parse_pem(const std::string pkey_txt)
+    void parse_pem(const std::string& pkey_txt)
     {
       BIO *bio = BIO_new_mem_buf(const_cast<char *>(pkey_txt.c_str()), pkey_txt.length());
       if (!bio)
@@ -111,4 +119,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_PKI_PKEY_H
+#endif // OPENVPN_OPENSSL_PKI_PKEY_H

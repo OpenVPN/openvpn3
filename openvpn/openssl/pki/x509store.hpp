@@ -1,11 +1,13 @@
-#ifndef OPENVPN_PKI_X509STORE_H
-#define OPENVPN_PKI_X509STORE_H
+#ifndef OPENVPN_OPENSSL_PKI_X509STORE_H
+#define OPENVPN_OPENSSL_PKI_X509STORE_H
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/pki/cclist.hpp>
 #include <openvpn/openssl/util/error.hpp>
-#include <openvpn/openssl/pki/certcrl.hpp>
+#include <openvpn/openssl/pki/x509.hpp>
+#include <openvpn/openssl/pki/crl.hpp>
 
 namespace openvpn {
 
@@ -16,9 +18,11 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(x509_store_add_cert_error);
     OPENVPN_SIMPLE_EXCEPTION(x509_store_add_crl_error);
 
+    typedef CertCRLListTemplate<X509List, CRLList> CertCRLList;
+
     X509Store() : x509_store_(NULL) {}
 
-    X509Store(const CertCRLList& cc)
+    explicit X509Store(const CertCRLList& cc)
     {
       init();
 
@@ -47,6 +51,13 @@ namespace openvpn {
 
     X509_STORE* obj() const { return x509_store_; }
 
+    X509_STORE* move()
+    {
+      X509_STORE* ret = x509_store_;
+      x509_store_ = NULL;
+      return ret;
+    }
+
     ~X509Store()
     {
       if (x509_store_)
@@ -66,4 +77,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_PKI_X509STORE_H
+#endif // OPENVPN_OPENSSL_PKI_X509STORE_H

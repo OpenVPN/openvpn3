@@ -1,7 +1,7 @@
 #ifndef OPENVPN_GENCRYPTO_CRYPTOINIT_H
 #define OPENVPN_GENCRYPTO_CRYPTOINIT_H
 
-#include <openvpn/gencrypto/applecrypto.hpp>
+#include <openvpn/gencrypto/gencrypto.hpp>
 
 #ifdef OPENVPN_APPLE_CRYPTO
 
