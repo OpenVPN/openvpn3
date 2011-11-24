@@ -77,7 +77,7 @@ namespace openvpn {
 	    std::memcpy(&next_timeout, ptr, sizeof(struct timeval));		
 	    break;
 	  default:
-	    OPENVPN_LOG("*** MemQ-dgram unimplemented ctrl method=" << cmd);
+	    //OPENVPN_LOG("*** MemQ-dgram unimplemented ctrl method=" << cmd);
 	    ret = 0;
 	    break;
 	  }

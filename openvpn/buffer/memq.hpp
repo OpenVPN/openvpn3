@@ -27,13 +27,13 @@ namespace openvpn {
       length = 0;
     }
 
-    void write(BufferPtr& bp)
+    void write_buf(const BufferPtr& bp)
     {
       q.push_back(bp);
       length += bp->size();
     }
 
-    BufferPtr read()
+    BufferPtr read_buf()
     {
       BufferPtr ret = q.front();
       q.pop_front();

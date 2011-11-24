@@ -57,7 +57,7 @@ namespace openvpn {
 	    ret = 1;
 	    break;
 	  default:
-	    OPENVPN_LOG("*** MemQ-stream unimplemented ctrl method=" << cmd);
+	    //OPENVPN_LOG("*** MemQ-stream unimplemented ctrl method=" << cmd);
 	    ret = 0;
 	    break;
 	  }

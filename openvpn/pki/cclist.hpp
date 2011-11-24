@@ -13,6 +13,9 @@
 
 namespace openvpn {
 
+  // Parse a concatenated list of certs and CRLs (PEM format).
+  // Abstracts CertList and CRLList, so can be used with any crypto lib.
+  // CertList and CRLList must define Item and ItemPtr types.
   template <typename CertList, typename CRLList>
   class CertCRLListTemplate
   {

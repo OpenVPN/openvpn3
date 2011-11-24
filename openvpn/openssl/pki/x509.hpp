@@ -90,7 +90,10 @@ namespace openvpn {
       ::X509 *cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
       BIO_free(bio);
       if (!cert)
-	throw OpenSSLException("X509::parse_pem");
+	{
+	  std::abort();
+	  throw OpenSSLException("X509::parse_pem");
+	}
 
       erase();
       x509_ = cert;

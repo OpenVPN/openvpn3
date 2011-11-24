@@ -8,7 +8,6 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/openssl/util/error.hpp>
-#include <openvpn/openssl/bio/bio_memq_stream.hpp>
 #include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
@@ -18,6 +17,7 @@
 #include <openvpn/ssl/psid.hpp>
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
+#include <openvpn/gencrypto/gensslctx.hpp>
 
 namespace openvpn {
 
@@ -26,18 +26,10 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(proto_context_error);
 
-    // client/server designation
-    enum ClientServer {
-      CLIENT=0,
-      SERVER=1,
-    };
-
-    // configuration info passed to ProtoContext constructor
+    // configuration data passed to ProtoContext constructor
     struct Config : public RC<thread_unsafe_refcount>
     {
-      ClientServer cli_serv;
-      FramePtr frame;
-      SSLContextPtr ssl_ctx;
+      SSLContextPtr ssl; // defined in gensslctx based on choice of crypto library
       OpenVPNStaticKey tls_auth;
       PRNGPtr prng;
     };
@@ -85,74 +77,17 @@ namespace openvpn {
     public:
       KeyContext(const Config& config, ProtoContext& proto)
       {
-	ssl_clear();
-	try {
-	  state = S_INITIAL;
+	state = S_INITIAL;
 
-	  // init SSL objects
-	  ssl = SSL_new(config.ssl_ctx->raw_ctx());
-	  if (!ssl)
-	    throw OpenSSLException("KeyContext: SSL_new failed");
-	  ssl_bio = BIO_new(BIO_f_ssl());
-	  if (!ssl_bio)
-	    throw OpenSSLException("KeyContext: BIO_new BIO_f_ssl failed");
-	  ct_in = mem_bio(config);
-	  ct_out = mem_bio(config);
+	// get key_id from parent
+	key_id = proto.next_key_id();
 
-	  // set client/server mode
-	  if (config.cli_serv == SERVER)
-	    SSL_set_connect_state(ssl);
-	  else if (config.cli_serv == CLIENT)
-	    SSL_set_accept_state(ssl);
-	  else
-	    OPENVPN_THROW(proto_context_error, "KeyContext: unknown client/server mode");
-
-	  // effect SSL/BIO linkage
-	  SSL_set_bio (ssl, ct_in, ct_out);
-	  BIO_set_ssl (ssl_bio, ssl, BIO_NOCLOSE);
-
-	  // get key_id from parent
-	  key_id = proto.next_key_id();
-	}
-	catch (...)
-	  {
-	    ssl_erase();
-	    throw;
-	  }
+	// create SSL session
+	ssl = config.ssl->ssl();
       }
 
     private:
-      void ssl_clear()
-      {
-	ssl = NULL;
-	ssl_bio = NULL;
-	ct_in = NULL;
-	ct_out = NULL;
-      }
-
-      void ssl_erase()
-      {
-	if (ssl_bio)
-	  BIO_free_all(ssl_bio);
-	if (ssl)
-	  SSL_free(ssl);
-	ssl_clear();
-      }
-
-      static BIO* mem_bio(const Config& config)
-      {
-	BIO *bio = BIO_new(bmq_stream::BIO_s_memq());
-	if (!bio)
-	  throw OpenSSLException("KeyContext: BIO_new failed on bmq_stream");
-	bmq_stream::memq_from_bio(bio)->set_frame(config.frame);
-	return bio;
-      }
-
-      SSL *ssl;		   // OpenSSL SSL object
-      BIO *ssl_bio;        // read/write cleartext from here
-      BIO *ct_in;          // write ciphertext to here
-      BIO *ct_out;         // read ciphertext from here
-
+      SSLContext::SSLPtr ssl;
       ProtoSessionID psid_peer;
 
       unsigned int state;

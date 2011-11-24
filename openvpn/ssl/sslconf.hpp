@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <openvpn/frame/frame.hpp>
+
 namespace openvpn {
 
   struct SSLConfig
@@ -13,14 +15,20 @@ namespace openvpn {
       SERVER
     };
 
-    SSLConfig() : mode(UNDEF) {}
+    enum Flags {
+      DEBUG = 1<<0,
+    };
+
+    SSLConfig() : mode(UNDEF), flags(0) {}
 
     Mode mode;
+    unsigned int flags;
     std::string ca;
     std::string cert;
     std::string extra_certs;
     std::string pkey;
     std::string dh;
+    FramePtr frame;
   };
 
 } // namespace openvpn

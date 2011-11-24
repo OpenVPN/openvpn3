@@ -10,7 +10,7 @@ OPENVPN_EXCEPTION(open_file_error);
 
 namespace openvpn {
 
-  std::string read_text(const std::string filename)
+  std::string read_text(const std::string& filename)
   {
     std::ifstream ifs(filename.c_str());
     if (!ifs)
