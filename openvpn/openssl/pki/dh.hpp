@@ -12,6 +12,18 @@
 
 namespace openvpn {
 
+  namespace DH_private {
+    // defined outside of DH class to avoid symbol collision in way
+    // that DHparams_dup macro is defined
+    inline ::DH *dup(const ::DH *dh)
+    {
+      if (dh)
+	return DHparams_dup(const_cast< ::DH * >(dh));
+      else
+	return NULL;
+    }
+  }
+
   class DH
   {
   public:
@@ -91,18 +103,10 @@ namespace openvpn {
     }
 
   private:
-    static ::DH *dup(const ::DH *dh)
-    {
-      if (dh)
-	return DHparams_dup(const_cast< ::DH * >(dh));
-      else
-	return NULL;
-    }
-
     void assign(const ::DH *dh)
     {
       erase();
-      dh_ = dup(dh);
+      dh_ = DH_private::dup(dh);
     }
 
     ::DH *dh_;
