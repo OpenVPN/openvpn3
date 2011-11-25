@@ -2,7 +2,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
-#include <openvpn/openssl/ssl/sslctx.hpp>
+#include <openvpn/gencrypto/gensslctx.hpp>
 #include <openvpn/gencrypto/cryptoinit.hpp>
 
 using namespace openvpn;
