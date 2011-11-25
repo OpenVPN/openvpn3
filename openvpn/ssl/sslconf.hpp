@@ -15,14 +15,15 @@ namespace openvpn {
       SERVER
     };
 
-    enum Flags {
+    enum {
       DEBUG = 1<<0,
     };
+    typedef unsigned int Flags;
 
     SSLConfig() : mode(UNDEF), flags(0) {}
 
     Mode mode;
-    unsigned int flags;
+    Flags flags;
     std::string ca;
     std::string cert;
     std::string extra_certs;

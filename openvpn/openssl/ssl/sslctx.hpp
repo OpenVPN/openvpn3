@@ -36,7 +36,7 @@ namespace openvpn {
       Config() : mode(SSLConfig::UNDEF), flags(0) {}
 
       SSLConfig::Mode mode;
-      unsigned int flags;
+      SSLConfig::Flags flags;
       CertCRLList ca;
       X509 cert;
       X509List extra_certs;
@@ -216,7 +216,7 @@ namespace openvpn {
     }
 
     SSLConfig::Mode mode() const { return mode_; }
-    unsigned int flags() const { return flags_; }
+    SSLConfig::Flags flags() const { return flags_; }
     const FramePtr& frame() const { return frame_; }
     SSL_CTX* raw_ctx() const { return ctx_; }
 
@@ -230,7 +230,7 @@ namespace openvpn {
 	}
       else if (where & SSL_CB_ALERT)
 	{
-	  OPENVPN_LOG("SSL alert (" << (where & SSL_CB_READ ? "read" : "write") << "): " << SSL_alert_type_string_long (ret) << ": " << SSL_alert_desc_string_long(ret));
+	  OPENVPN_LOG("SSL alert (" << (where & SSL_CB_READ ? "read" : "write") << "): " << SSL_alert_type_string_long(ret) << ": " << SSL_alert_desc_string_long(ret));
 	}
     }
 
@@ -324,7 +324,7 @@ namespace openvpn {
     }
 
     SSLConfig::Mode mode_;
-    unsigned int flags_;
+    SSLConfig::Flags flags_;
     FramePtr frame_;
     SSL_CTX* ctx_;
   };
