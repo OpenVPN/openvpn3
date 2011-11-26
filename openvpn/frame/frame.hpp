@@ -47,7 +47,7 @@ namespace openvpn {
       Context(const size_t headroom,
 	      const size_t payload,
 	      const size_t tailroom,
-	      const unsigned int align_adjust, // length of leading prefix data before the data that needs to be aligned on a size_t boundary
+	      const size_t align_adjust, // length of leading prefix data before the data that needs to be aligned on a size_t boundary
 	      const size_t align_block,        // size of alignment block, usually sizeof(size_t) but sometimes the cipher block size
 	      const unsigned int buffer_flags) // flags passed to BufferAllocated constructor
       {
@@ -70,7 +70,8 @@ namespace openvpn {
       // headroom and alignment issues.
       void prepare(BufferAllocated& buf) const
       {
-	buf.reset (headroom(), capacity(), buffer_flags());
+	buf.reset (capacity(), buffer_flags());
+	buf.init_headroom(actual_headroom(buf.c_data_raw()));
       }
 
       // Return a new BufferAllocated object initialized with the given data
@@ -78,7 +79,7 @@ namespace openvpn {
       {
 	const size_t cap = size + headroom() + tailroom();
 	BufferPtr b = new BufferAllocated(cap, buffer_flags());
-	b->init_headroom(headroom());
+	b->init_headroom(actual_headroom(b->c_data_raw()));
 	b->write(data, size);
 	return b;
       }
@@ -90,6 +91,14 @@ namespace openvpn {
 	  return payload() - buf.size();
 	else
 	  return 0;
+      }
+
+      // Used to set the capacity of a group of Context objects
+      // to the highest capacity of any one of the members.
+      void standardize_capacity(const size_t newcap)
+      {
+	if (newcap > adj_capacity_)
+	  adj_capacity_ = newcap;
       }
 
       std::string info() const
@@ -109,28 +118,28 @@ namespace openvpn {
       // recalculate derived values when object parameters are modified
       void recalc_derived()
       {
-	// calculate adjusted headroom due to alignment
-	adj_headroom_ = adjusted_headroom();
+	// calculate adjusted headroom due to worst-case alignment loss
+	adj_headroom_ = headroom_ + align_block_;
 
 	// calculate capacity
 	adj_capacity_ = adj_headroom_ + payload_ + tailroom_;
       }
 
-      // add a small delta to headroom so that the point after the first align_adjust
-      // bytes of the buffer will be aligned on an align_block boundary
-      size_t adjusted_headroom() const
+      // add a small delta ( < align_block) to headroom so that the point
+      // after the first align_adjust bytes of the buffer starting at base
+      // will be aligned on an align_block boundary
+      size_t actual_headroom(const void *base) const
       {
-	const size_t delta = ((align_block_ << 24) - (headroom_ + align_adjust_)) & (align_block_ - 1);
-	return headroom_ + delta;
+	return headroom_ + (-(size_t(base) + headroom_ + align_adjust_) & (align_block_ - 1));
       }
 
       // parameters
       size_t headroom_;
       size_t payload_;
       size_t tailroom_;
-      unsigned int buffer_flags_;
-      unsigned int align_adjust_;
+      size_t align_adjust_;
       size_t align_block_;
+      unsigned int buffer_flags_;
 
       // derived
       size_t adj_headroom_;
@@ -170,6 +179,34 @@ namespace openvpn {
       if (i >= N_ALIGN_CONTEXTS)
 	throw frame_context_index();
       return contexts[i];
+    }
+
+    void standardize_capacity(const unsigned int context_mask)
+    {
+      size_t i;
+      size_t max_cap = 0;
+      unsigned int mask = context_mask;
+
+      // find the largest capacity in the group
+      for (i = 0; i < N_ALIGN_CONTEXTS; ++i)
+	{
+	  if (mask & 1)
+	    {
+	      const size_t cap = contexts[i].capacity();
+	      if (cap > max_cap)
+		max_cap = cap;
+	    }
+	  mask >>= 1;
+	}
+
+      // set all members of group to largest capacity found
+      mask = context_mask;
+      for (i = 0; i < N_ALIGN_CONTEXTS; ++i)
+	{
+	  if (mask & 1)
+	    contexts[i].standardize_capacity(max_cap);
+	  mask >>= 1;
+	}
     }
 
   private:

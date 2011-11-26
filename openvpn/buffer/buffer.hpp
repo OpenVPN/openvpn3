@@ -52,8 +52,20 @@ namespace openvpn {
     // return a mutable pointer to start of array
     T* data() { return data_ + offset_; }
 
+    // return a const pointer to start of raw data
+    const T* c_data_raw() const { return data_; }
+
+    // return a mutable pointer to start of raw data
+    T* data_raw() { return data_; }
+
     // return size of array in T objects
     size_t size() const { return size_; }
+
+    // return raw size of allocated buffer in T objects
+    size_t capacity() const { return capacity_; }
+
+    // return current offset (headroom) into buffer
+    size_t offset() const { return offset_; }
 
     // return true if array is not empty
     bool defined() const { return size_ > 0; }
@@ -294,11 +306,10 @@ namespace openvpn {
       std::memcpy(data_, data, sizeof(T[size]));
     }
 
-    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+    void reset(const size_t min_capacity, const unsigned int flags)
     {
       if (min_capacity > capacity_)
 	init (min_capacity, flags);
-      this->init_headroom (headroom);
     }
 
     void move(BufferAllocatedType& other)
