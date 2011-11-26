@@ -19,6 +19,10 @@ else
     CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 fi
 
+# Include other Mac frameworks
+# -framework CoreServices
+[ "$PLATFORM" = "mac" ] && CRYPTO_LIBS="$CRYPTO_LIBS -framework CoreFoundation"
+
 # remove previous build
 rm -f $1
 

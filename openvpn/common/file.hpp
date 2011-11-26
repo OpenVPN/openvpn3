@@ -5,10 +5,11 @@
 #include <fstream>
 
 #include <openvpn/common/exception.hpp>
-
-OPENVPN_EXCEPTION(open_file_error);
+#include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
+
+  OPENVPN_EXCEPTION(open_file_error);
 
   std::string read_text(const std::string& filename)
   {
@@ -19,6 +20,32 @@ namespace openvpn {
     if (!ifs)
       OPENVPN_THROW(open_file_error, "cannot read " << filename);
     return str;
+  }
+
+  BufferPtr read_binary(const std::string& filename, const unsigned int buffer_flags = 0)
+  {
+    std::ifstream ifs(filename.c_str(), std::ios::binary);
+    if (!ifs)
+      OPENVPN_THROW(open_file_error, "cannot open " << filename);
+
+    // get length of file
+    ifs.seekg (0, std::ios::end);
+    const std::streamsize length = ifs.tellg();
+    ifs.seekg (0, std::ios::beg);
+
+    // allocate buffer
+    BufferPtr b = new BufferAllocated(length, buffer_flags | BufferAllocated::ARRAY);
+
+    // read data
+    ifs.read((char *)b->data(), length);
+
+    // check for errors
+    if (ifs.gcount() != length)
+      OPENVPN_THROW(open_file_error, "read length inconsistency " << filename);
+    if (!ifs)
+      OPENVPN_THROW(open_file_error, "cannot read " << filename);
+
+    return b;
   }
 
 } // namespace openvpn
