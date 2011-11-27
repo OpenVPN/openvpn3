@@ -11,17 +11,24 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-# On Mac, only link with OpenSSL if OSSL is defined.
-# On other platforms, always link with OpenSSL.
-if [ "$PLATFORM" = "mac" ] && [ -z "$OSSL" ]; then
-    CRYPTO_LIBS="-framework Security"
-else
-    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
-fi
+# special Mac settings
+if [ "$PLATFORM" = "mac" ]; then
+    # On Mac, only link with OpenSSL if OSSL is defined.
+    # On other platforms, always link with OpenSSL.
+    if [ "$SSL_BOTH" ]; then
+	CRYPTO_LIBS="-lcrypto -lssl -framework Security"
+    else
+	if [ "$OSSL" ]; then
+	    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
+	else
+	    CRYPTO_LIBS="-framework Security"
+	fi
+    fi
 
-# Include other Mac frameworks
-# -framework CoreServices
-[ "$PLATFORM" = "mac" ] && CRYPTO_LIBS="$CRYPTO_LIBS -framework CoreFoundation"
+    # Include other Mac frameworks
+    # -framework CoreServices
+    CRYPTO_LIBS="$CRYPTO_LIBS -framework CoreFoundation"
+fi
 
 # remove previous build
 rm -f $1
