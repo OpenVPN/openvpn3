@@ -2,6 +2,7 @@
 #define OPENVPN_APPLECRYPTO_CF_CF_H
 
 #include <iostream>
+#include <string>
 #include <algorithm>
 
 #include <CoreFoundation/CFBase.h>
@@ -9,136 +10,120 @@
 #include <CoreFoundation/CFArray.h>
 #include <CoreFoundation/CFDictionary.h>
 #include <CoreFoundation/CFData.h>
+#include <CoreFoundation/CFNumber.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
-namespace openvpn {
+#define OPENVPN_CF_WRAP(cls, fname, cftype, idmeth) \
+    typedef Wrap<cftype> cls; \
+    inline cls fname(CFTypeRef obj) \
+    { \
+      if (obj && CFGetTypeID(obj) == idmeth()) \
+	return cls((cftype)obj, BORROW); \
+      else \
+	return cls(); \
+    }
 
+namespace openvpn {
   namespace CF
   {
     enum Own {
       OWN,
       BORROW
     };
-  }
 
-  template <typename T>
-  class CFWrap
-  {
-  public:
-    CFWrap() : obj_(NULL) {}
-
-    // Set own=CF::BORROW if we don't currently own the object
-    explicit CFWrap(T obj, const CF::Own own=CF::OWN)
-       : obj_(NULL)
+    template <typename T>
+    class Wrap
     {
-      if (own == CF::BORROW && obj)
-	CFRetain(obj);
-      obj_ = obj;
-    }
+    public:
+      Wrap() : obj_(NULL) {}
 
-    CFWrap(const CFWrap& other)
-    {
-      obj_ = other.obj_;
-      if (obj_)
-	CFRetain(obj_);
-    }
+      // Set own=BORROW if we don't currently own the object
+      explicit Wrap(T obj, const Own own=OWN)
+      {
+	if (own == BORROW && obj)
+	  CFRetain(obj);
+	obj_ = obj;
+      }
 
-    CFWrap& operator=(const CFWrap& other)
-    {
-      if (other.obj_)
-	CFRetain(other.obj_);
-      if (obj_)
-	CFRelease(obj_);
-      obj_ = other.obj_;
-      return *this;
-    }
+      Wrap(const Wrap& other)
+      {
+	obj_ = other.obj_;
+	if (obj_)
+	  CFRetain(obj_);
+      }
 
-    void reset(T obj, const CF::Own own=CF::OWN)
-    {
-      if (own == CF::BORROW && obj)
-	CFRetain(obj);
-      if (obj_)
-	CFRelease(obj_);
-      obj_ = obj;
-    }
-
-    bool defined() const { return obj_ != NULL; }
-
-    T operator()() const { return obj_; }
-
-    // Intended for use with Apple methods that require
-    // a T* for saving a (non-borrowed) return value
-    T* mod_ref()
-    {
-      if (obj_)
-	{
+      Wrap& operator=(const Wrap& other)
+      {
+	if (other.obj_)
+	  CFRetain(other.obj_);
+	if (obj_)
 	  CFRelease(obj_);
-	  obj_ = NULL;
-	}
-      return &obj_;
-    }
+	obj_ = other.obj_;
+	return *this;
+      }
 
-    void show() const
-    {
-      if (obj_)
-	CFShow(obj_);
-      else
-	std::cerr << "CF_UNDEFINED" << std::endl;
-    }
+      void reset(T obj, const Own own=OWN)
+      {
+	if (own == BORROW && obj)
+	  CFRetain(obj);
+	if (obj_)
+	  CFRelease(obj_);
+	obj_ = obj;
+      }
 
-    virtual ~CFWrap()
-    {
-      if (obj_)
-	CFRelease(obj_);
-    }
+      bool defined() const { return obj_ != NULL; }
 
-  private:
-    CFWrap& operator=(T obj); // prevent use because no way to pass ownership parameter
+      T operator()() const { return obj_; }
 
-    T obj_;
-  };
+      // Intended for use with Apple methods that require
+      // a T* for saving a (non-borrowed) return value
+      T* mod_ref()
+      {
+	if (obj_)
+	  {
+	    CFRelease(obj_);
+	    obj_ = NULL;
+	  }
+	return &obj_;
+      }
 
-  namespace CF
-  {
-    // common CF types
+      void show() const
+      {
+	if (obj_)
+	  CFShow(obj_);
+	else
+	  std::cerr << "CF_UNDEFINED" << std::endl;
+      }
 
-    typedef CFWrap<CFStringRef> String;
-    typedef CFWrap<CFArrayRef> Array;
-    typedef CFWrap<CFDictionaryRef> Dict;
-    typedef CFWrap<CFDataRef> Data;
-    typedef CFWrap<CFTypeRef> Generic;
+      virtual ~Wrap()
+      {
+	if (obj_)
+	  CFRelease(obj_);
+      }
+
+    private:
+      Wrap& operator=(T obj); // prevent use because no way to pass ownership parameter
+
+      T obj_;
+    };
 
     // essentially a vector of void *, used as source for array and dictionary constructors
     typedef BufferAllocatedType<CFTypeRef> SrcList;
 
-    // casts
+    // common CF types
 
-    inline String string_cast(CFTypeRef obj)
-    {
-      if (obj && CFGetTypeID(obj) == CFStringGetTypeID())
-	return String((CFStringRef)obj, BORROW);
-      else
-	return String();
-    }
+    OPENVPN_CF_WRAP(String, string_cast, CFStringRef, CFStringGetTypeID)
+    OPENVPN_CF_WRAP(Number, number_cast, CFNumberRef, CFNumberGetTypeID)
+    OPENVPN_CF_WRAP(Array, array_cast, CFArrayRef, CFArrayGetTypeID)
+    OPENVPN_CF_WRAP(Dict, dict_cast, CFDictionaryRef, CFDictionaryGetTypeID)
+    OPENVPN_CF_WRAP(Data, data_cast, CFDataRef, CFDataGetTypeID)
 
-    inline Array array_cast(CFTypeRef obj)
-    {
-      if (obj && CFGetTypeID(obj) == CFArrayGetTypeID())
-	return Array((CFArrayRef)obj, BORROW);
-      else
-	return Array();
-    }
+    // generic CFTypeRef wrapper
 
-    inline Dict dict_cast(CFTypeRef obj)
-    {
-      if (obj && CFGetTypeID(obj) == CFDictionaryGetTypeID())
-	return Dict((CFDictionaryRef)obj, BORROW);
-      else
-	return Dict();
-    }
+    typedef Wrap<CFTypeRef> Generic;
 
     inline Generic generic_cast(CFTypeRef obj)
     {
@@ -152,9 +137,19 @@ namespace openvpn {
       return String(CFStringCreateWithCString(kCFAllocatorDefault, str, kCFStringEncodingUTF8));
     }
 
-    inline Data data(const UInt8 *bytes, CFIndex length)
+    inline String string(const std::string& str)
     {
-      return Data(CFDataCreate(kCFAllocatorDefault, bytes, length));
+      return String(CFStringCreateWithCString(kCFAllocatorDefault, str.c_str(), kCFStringEncodingUTF8));
+    }
+
+    inline Number number(const int n)
+    {
+      return Number(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &n));
+    }
+
+    inline Data data(const void *bytes, CFIndex length)
+    {
+      return Data(CFDataCreate(kCFAllocatorDefault, (const UInt8 *)bytes, length));
     }
 
     inline Array array(const void **values, CFIndex numValues)
@@ -170,11 +165,11 @@ namespace openvpn {
     inline Dict dict(const void **keys, const void **values, CFIndex numValues)
     {
       return Dict(CFDictionaryCreate(kCFAllocatorDefault,
-					   keys,
-					   values,
-					   numValues,
-					   &kCFTypeDictionaryKeyCallBacks,
-					   &kCFTypeDictionaryValueCallBacks));
+				     keys,
+				     values,
+				     numValues,
+				     &kCFTypeDictionaryKeyCallBacks,
+				     &kCFTypeDictionaryValueCallBacks));
     }
 
     inline Dict dict(const SrcList& keys, const SrcList& values)
@@ -213,7 +208,7 @@ namespace openvpn {
 
     inline CFTypeRef dict_index(const Dict& dict, CFStringRef key)
     {
-      if (dict.defined())
+      if (dict.defined() && key)
 	return CFDictionaryGetValue(dict(), key);
       else
 	return NULL;
@@ -221,9 +216,9 @@ namespace openvpn {
 
     // comparison
 
-    bool string_equal(const String& s1, const String& s2, const CFStringCompareFlags compareOptions = 0)
+    inline bool string_equal(const String& s1, const String& s2, const CFStringCompareFlags compareOptions = 0)
     {
-      return CFStringCompare(s1(), s2(), compareOptions) == kCFCompareEqualTo;
+      return s1.defined() && s2.defined() && CFStringCompare(s1(), s2(), compareOptions) == kCFCompareEqualTo;
     }
 
   } // namespace CF

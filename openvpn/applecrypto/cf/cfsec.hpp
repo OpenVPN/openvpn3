@@ -3,6 +3,8 @@
 
 #include <Security/SecCertificate.h>
 #include <Security/SecIdentity.h>
+#include <Security/SecKeychain.h>
+#include <Security/SecAccess.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -12,28 +14,10 @@ namespace openvpn {
 
   namespace CF {
 
-    // CF types
-
-    typedef CFWrap<SecCertificateRef> Cert;
-    typedef CFWrap<SecIdentityRef> Identity;
-
-    // casts
-
-    inline Cert cert_cast(CFTypeRef obj)
-    {
-      if (obj && CFGetTypeID(obj) == SecCertificateGetTypeID())
-	return Cert((SecCertificateRef)obj, BORROW);
-      else
-	return Cert();
-    }
-
-    inline Identity identity_cast(CFTypeRef obj)
-    {
-      if (obj && CFGetTypeID(obj) == SecIdentityGetTypeID())
-	return Identity((SecIdentityRef)obj, BORROW);
-      else
-	return Identity();
-    }
+    OPENVPN_CF_WRAP(Cert, cert_cast, SecCertificateRef, SecCertificateGetTypeID)
+    OPENVPN_CF_WRAP(Identity, identity_cast, SecIdentityRef, SecIdentityGetTypeID)
+    OPENVPN_CF_WRAP(Keychain, keychain_cast, SecKeychainRef, SecKeychainGetTypeID)
+    OPENVPN_CF_WRAP(Access, access_cast, SecAccessRef, SecAccessGetTypeID)
 
   } // namespace CF
 
