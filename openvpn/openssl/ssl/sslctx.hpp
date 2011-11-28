@@ -88,6 +88,11 @@ namespace openvpn {
 	  }
       }
 
+      void start_handshake()
+      {
+	SSL_do_handshake(ssl);
+      }
+
       ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
       {
 	const int status = BIO_write(ssl_bio, data, size);
