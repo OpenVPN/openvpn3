@@ -24,11 +24,16 @@ namespace openvpn {
 
     Mode mode;
     Flags flags;
+
+    // If defined, look up ca, cert, and pkey in cert store,
+    // by matching against X509 subject.
+    std::string identity;
+
     std::string ca;
     std::string cert;
     std::string extra_certs;
     std::string pkey;
-    std::string dh;
+    std::string dh; // only needed by server
     FramePtr frame;
   };
 

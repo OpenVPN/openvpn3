@@ -28,6 +28,7 @@ namespace openvpn {
     OPENVPN_EXCEPTION(ssl_context_error);
 
     // The data needed to construct an AppleSSLContext.
+    // Alternatively, SSLConfig can be used.
     struct Config
     {
       Config() : mode(SSLConfig::UNDEF), flags(0) {}
@@ -207,6 +208,16 @@ namespace openvpn {
     {
       if (!config_.identity())
 	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");	
+    }
+
+    explicit AppleSSLContext(const SSLConfig& config)
+    {
+      config_.identity = load_identity(config.identity);
+      if (!config_.identity())
+	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");	
+      config_.mode = config.mode;
+      config_.flags = config.flags;
+      config_.frame = config.frame;
     }
 
     SSLPtr ssl() const { return SSLPtr(new SSL(*this)); }

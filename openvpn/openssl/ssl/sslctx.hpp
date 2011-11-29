@@ -41,7 +41,7 @@ namespace openvpn {
       X509 cert;
       X509List extra_certs;
       PKey pkey;
-      DH dh;
+      DH dh; // only needed in server mode
       FramePtr frame;
     };
 
