@@ -8,7 +8,7 @@
 
 namespace openvpn {
 
-  class ReliableAck : public std::vector<ReliableMessageBase::id_t>
+  class ReliableAck : public std::vector<ReliableMessageBase::id_t> // fixme -- make self contained
   {
   public:
   };

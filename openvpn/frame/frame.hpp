@@ -22,6 +22,8 @@ namespace openvpn {
       READ_TUN,
       READ_BIO_MEMQ_DGRAM,
       READ_BIO_MEMQ_STREAM,
+      READ_SSL_CLEARTEXT,
+      WRITE_ACK_STANDALONE,
       N_ALIGN_CONTEXTS
     };
 

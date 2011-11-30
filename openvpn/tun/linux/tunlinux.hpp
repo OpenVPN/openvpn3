@@ -23,7 +23,7 @@ namespace openvpn {
   template <typename ReadHandler>
   class TunLinux
     : public TunPosix,
-      public boost::enable_shared_from_this< TunLinux<ReadHandler> >
+      public boost::enable_shared_from_this< TunLinux<ReadHandler> >  // fixme -- don't need any more
   {
   public:
     // exceptions
@@ -175,7 +175,7 @@ namespace openvpn {
 		{
 		  read_handler_(sbuf);
 		}
-	      catch (boost::bad_weak_ptr& e)
+	      catch (boost::bad_weak_ptr& e) // fixme -- don't really need any longer
 		{
 		  return; // read handler has gone out of scope, don't requeue
 		}

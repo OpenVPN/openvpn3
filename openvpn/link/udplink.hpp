@@ -24,7 +24,7 @@ namespace openvpn {
 
   template <typename ReadHandler>
   class UDPLink
-    : public boost::enable_shared_from_this< UDPLink<ReadHandler> >,
+    : public boost::enable_shared_from_this< UDPLink<ReadHandler> >, // fixme -- don't need any more
       private boost::noncopyable
   {
   public:
@@ -122,7 +122,7 @@ namespace openvpn {
 		{
 		  read_handler_(suf);
 		}
-	      catch (boost::bad_weak_ptr &e)
+	      catch (boost::bad_weak_ptr &e) // fixme -- don't really need any longer
 		{
 		  // read handler has gone out of scope, don't requeue
 		  return;

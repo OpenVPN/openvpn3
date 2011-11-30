@@ -41,6 +41,22 @@ namespace openvpn {
       return ret;
     }
 
+    BufferPtr& peek()
+    {
+      return q.front();
+    }
+
+    void pop()
+    {
+      length -= q.front()->size();
+      q.pop_front();
+    }
+
+    void resize(const size_t cap)
+    {
+      q.resize(cap);
+    }
+
   protected:
     typedef std::deque<BufferPtr> q_type;
     size_t length;
