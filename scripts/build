@@ -28,6 +28,8 @@ if [ "$PLATFORM" = "mac" ]; then
     # Include other Mac frameworks
     # -framework CoreServices
     CRYPTO_LIBS="$CRYPTO_LIBS -framework CoreFoundation"
+else
+    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 fi
 
 # remove previous build
