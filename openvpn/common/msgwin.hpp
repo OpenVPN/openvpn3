@@ -68,8 +68,7 @@ namespace openvpn {
 	{
 	  grow(id);
 	  M& m = q_[id - head_id_];
-	  if (m.defined())
-	    m.erase();
+	  m.erase();
 	}
       purge();
     }

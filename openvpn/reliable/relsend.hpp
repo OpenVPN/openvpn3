@@ -78,7 +78,7 @@ namespace openvpn {
       Time::Duration ret = Time::Duration::infinite();
       for (id_t i = head_id(); i < tail_id(); ++i)
 	{
-	  Message& msg = ref_by_id(i);
+	  const Message& msg = ref_by_id(i);
 	  if (msg.defined())
 	    {
 	      Time::Duration ut = msg.until_retransmit(now);

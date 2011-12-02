@@ -45,12 +45,14 @@ namespace openvpn {
     typedef Time::base_type time_t;
 
     enum {
-      SHORT_FORM = 0,
-      LONG_FORM = 1
+      SHORT_FORM = 0, // short form of ID (4 bytes)
+      LONG_FORM = 1,  // long form of ID (8 bytes)
+
+      UNDEF = 0       // special undefined/null id_t value
     };
 
-    id_t id;       /* legal values are 1 through 2^32-1 */
-    time_t time;   /* converted to PacketID::net_time_t before transmission */
+    id_t id;       // legal values are 1 through 2^32-1
+    time_t time;   // converted to PacketID::net_time_t before transmission
 
     void reset()
     {
@@ -92,6 +94,19 @@ namespace openvpn {
 	  if (form == LONG_FORM)
 	    buf.write ((unsigned char *)&net_time, sizeof (net_time));
 	}
+    }
+
+    static void prepend_id(Buffer& buf, const id_t id)
+    {
+      const id_t net_id = htonl(id);
+      buf.prepend ((unsigned char *)&net_id, sizeof (net_id));
+    }
+
+    static id_t read_id(Buffer& buf)
+    {
+      id_t net_id;
+      buf.read ((unsigned char *)&net_id, sizeof (net_id));
+      return ntohl(net_id);
     }
 
 #ifdef PACKET_ID_EXTRA_LOG_INFO

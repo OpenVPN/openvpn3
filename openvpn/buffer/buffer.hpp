@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include <boost/asio.hpp>
+#include <boost/static_assert.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -100,6 +101,24 @@ namespace openvpn {
       if (!remaining())
 	resize(offset_ + size_ + 1);
       *(data()+size_++) = value;
+    }
+
+    // append a T object to array, with possible resize
+    void push_front(const T& value)
+    {
+      if (!offset_)
+	throw buffer_underflow();
+      --offset_;
+      ++size_;
+      *data() = value;
+    }
+
+    T pop_front()
+    {
+      T ret = (*this)[0];
+      ++offset_;
+      --size_;
+      return ret;
     }
 
     // mutable index into array
@@ -247,10 +266,26 @@ namespace openvpn {
       capacity_ = other.capacity_;
       flags_ = other.flags_;
       if (capacity_)
+        {
+          data_ = new T[capacity_];
+          if (size_)
+            std::memcpy(data_ + offset_, other.data_ + offset_, sizeof(T[size_]));
+        }
+    }
+
+    template <typename OT>
+    BufferAllocatedType(const BufferType<OT>& other, const unsigned int flags)
+    {
+      BOOST_STATIC_ASSERT(sizeof(T) == sizeof(OT));
+      offset_ = other.offset();
+      size_ = other.size();
+      capacity_ = other.capacity();
+      flags_ = flags;
+      if (capacity_)
 	{
 	  data_ = new T[capacity_];
 	  if (size_)
-	    std::memcpy(data_ + offset_, other.data_ + offset_, sizeof(T[size_]));
+	    std::memcpy(data_ + offset_, other.c_data(), sizeof(T[size_]));
 	}
     }
 
@@ -395,6 +430,12 @@ namespace openvpn {
   typedef BufferType<const unsigned char> ConstBuffer;
   typedef BufferAllocatedType<unsigned char> BufferAllocated;
   typedef boost::intrusive_ptr<BufferAllocated> BufferPtr;
+
+  template <typename T>
+  BufferType<const T>& const_buffer_ref(BufferType<T>& src)
+  {
+    return (BufferType<const T>&)src;
+  }
 
 } // namespace openvpn
 
