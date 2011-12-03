@@ -16,12 +16,12 @@ if [ "$PLATFORM" = "mac" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, always link with OpenSSL.
     if [ "$SSL_BOTH" ]; then
-	CRYPTO_LIBS="-lcrypto -lssl -framework Security"
+	CRYPTO_LIBS="-DUSE_APPLE_SSL -DUSE_OPENSSL -lcrypto -lssl -framework Security"
     else
 	if [ "$OSSL" ]; then
 	    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 	else
-	    CRYPTO_LIBS="-framework Security"
+	    CRYPTO_LIBS="-DUSE_APPLE_SSL -framework Security"
 	fi
     fi
 
