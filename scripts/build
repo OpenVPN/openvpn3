@@ -7,9 +7,14 @@ if [ -z "$1" ]; then
     echo " LTO=1 -- build with LTO"
     echo " GPROF=1 -- build for gprof profiling"
     echo " OSSL=1 -- include OpenSSL on Mac"
+    echo " SSL_BOTH=1 -- include OpenSSL and Apple SSL on Mac"
+    echo " NOTHREADS=1 -- disable threads"
     echo ' GCC_EXTRA="-DITER=5" -- add build flags'
     exit 1
 fi
+
+# remove previous build
+rm -f $1
 
 # special Mac settings
 if [ "$PLATFORM" = "mac" ]; then
@@ -32,18 +37,21 @@ else
     CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 fi
 
-# remove previous build
-rm -f $1
+if [ "$NOTHREADS" ]; then
+    THREAD_FLAGS="-DBOOST_DISABLE_THREADS"
+else
+    THREAD_FLAGS="-pthread"
+fi
 
 if [ "$DEBUG" ]; then
     # debug build
-    g++ -Wall -g -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
+    g++ -Wall -g $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
 else
     # release build
     FLAGS=""
     [ "$LTO" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" ] && FLAGS="$FLAGS -pg"
-    g++ -Wall -O3 -fwhole-program $FLAGS -pthread $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
+    g++ -Wall -O3 -fwhole-program $FLAGS $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
 fi
 
 # maybe strip
