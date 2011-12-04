@@ -60,43 +60,49 @@ namespace openvpn {
 	xmit_acks(max_ack_list),
 	up_stack_reentry_level(0),
 	invalidate(false),
+	ssl_started_(false),
 	next_retransmit_(Time::infinite())
     {
     }
 
     // Start SSL handshake on underlying SSL connection object
-    void start_handshake()
+    void start_handshake(const Time now)
     {
       test_invalidated();
       ssl_->start_handshake();
+      ssl_started_ = true;
+      up_sequenced(now);
     }
 
-    // Incoming ciphertext packet arriving from network
+    // Incoming ciphertext packet arriving from network,
+    // we will take ownership of pkt.
     void net_recv(const Time now, PACKET& pkt)
     {
       test_invalidated();
       up_stack(now, pkt);
-      update_retransmit(now);
     }
 
     // Outgoing application-level cleartext packet ready to send
-    // (will be encrypted via SSL)
+    // (will be encrypted via SSL), we will take ownership
+    // of buf.
     void app_send(const Time now, BufferPtr& buf)
     {
+      test_invalidated();
       app_write_queue.push_back(buf);
     }
 
     // Outgoing raw packet ready to send (will NOT be encrypted
-    // via SSL, but will still be encapsulated and tracked
-    // via reliability layer).
+    // via SSL, but will still be encapsulated, sequentialized,
+    // and tracked via reliability layer).
     void raw_send(const Time now, const PACKET& pkt)
     {
+      test_invalidated();
       raw_write_queue.push_back(pkt);
     }
 
-    // Write any pending data to network.  Should be called
-    // as a final step after one or more net_recv, app_send,
-    // or raw_send calls.
+    // Write any pending data to network and update retransmit
+    // timer.  Should be called as a final step after one or more
+    // net_recv, app_send, raw_send, or start_handshake calls.
     void flush(const Time now)
     {
       test_invalidated();
@@ -143,6 +149,9 @@ namespace openvpn {
     // When should we next call retransmit()
     Time next_retransmit() const { return next_retransmit_; }
 
+    // Has SSL handshake been started yet?
+    bool ssl_started() const { return ssl_started_; }
+
     // Was session invalidated by an exception?
     bool invalidated() const { return invalidate; }
 
@@ -165,7 +174,8 @@ namespace openvpn {
     // the packet will be dropped.
     virtual id_t decapsulate(const Time now, PACKET& pkt, ReliableSend& rel_send) = 0;
 
-    // Generate a standalone ACK message in buf (PACKET will be initialized by frame_prepare()).
+    // Generate a standalone ACK message in buf (PACKET will be already be initialized
+    // by frame_prepare()).
     virtual void generate_ack(const Time now, PACKET& pkt, ReliableAck& xmit_acks) = 0;
 
     // Transmit encapsulated ciphertext packet to peer.  Method may not modify
@@ -178,7 +188,10 @@ namespace openvpn {
     virtual void app_recv(const Time now, BufferPtr& to_app_buf) = 0;
 
     // Pass raw data up to application.  A packet is considered to be raw
-    // if is_raw() method returns true.
+    // if is_raw() method returns true.  Method may take ownership
+    // of raw_pkt underlying data as long as it resets raw_pkt so that
+    // a subsequent call to PACKET::frame_prepare will revert it to
+    // a ready-to-read state.
     virtual void raw_recv(const Time now, PACKET& raw_pkt) = 0;
 
     // END of VIRTUAL METHODS
@@ -187,41 +200,44 @@ namespace openvpn {
     // app data -> SSL -> protocol encapsulation -> reliability layer -> network
     void down_stack_app(const Time now)
     {
-      // push app-layer cleartext through SSL object
-      while (!app_write_queue.empty())
+      if (ssl_started_)
 	{
-	  BufferPtr& buf = app_write_queue.front();
-	  try {
-	    const ssize_t size = ssl_->write_cleartext_unbuffered(buf->data(), buf->size());
-	    if (size == SSLContext::SSL::SHOULD_RETRY)
-	      break;
-	  }
-	  catch (...)
+	  // push app-layer cleartext through SSL object
+	  while (!app_write_queue.empty())
 	    {
-	      invalidate = true;
-	      throw;
-	    }
-	  app_write_queue.pop_front();
-	}
-
-      // encapsulate SSL ciphertext packets
-      while (ssl_->read_ciphertext_ready() && rel_send.ready())
-	{
-	  typename ReliableSend::Message& m = rel_send.send(now);
-	  m.packet = PACKET(ssl_->read_ciphertext());
-
-	  // encapsulate packet
-	  try {
-	    encapsulate(now, m.id(), m.packet, xmit_acks);
-	  }
-	  catch (...)
-	    {
-	      invalidate = true;
-	      throw;
+	      BufferPtr& buf = app_write_queue.front();
+	      try {
+		const ssize_t size = ssl_->write_cleartext_unbuffered(buf->data(), buf->size());
+		if (size == SSLContext::SSL::SHOULD_RETRY)
+		  break;
+	      }
+	      catch (...)
+		{
+		  invalidate = true;
+		  throw;
+		}
+	      app_write_queue.pop_front();
 	    }
 
-	  // transmit it
-	  net_send(now, m.packet);
+	  // encapsulate SSL ciphertext packets
+	  while (ssl_->read_ciphertext_ready() && rel_send.ready())
+	    {
+	      typename ReliableSend::Message& m = rel_send.send(now);
+	      m.packet = PACKET(ssl_->read_ciphertext());
+
+	      // encapsulate packet
+	      try {
+		encapsulate(now, m.id(), m.packet, xmit_acks);
+	      }
+	      catch (...)
+		{
+		  invalidate = true;
+		  throw;
+		}
+
+	      // transmit it
+	      net_send(now, m.packet);
+	    }
 	}
     }
 
@@ -254,8 +270,8 @@ namespace openvpn {
     {
       UseCount use_count(up_stack_reentry_level);
 
+      // decapsulate packet
       {
-	// decapsulate packet
 	const id_t id = decapsulate(now, recv, rel_send);
 	if (id != PacketID::UNDEF)
 	  {
@@ -265,24 +281,33 @@ namespace openvpn {
 	  }
       }
 
+      // continue to move packet up the stack
+      up_sequenced(now);
+    }
+
+    // if a sequenced packet is available from reliability layer,
+    // move it up the stack
+    void up_sequenced(const Time now)
+    {
       // is sequenced receive packet available?
-      bool wrote_ciphertext = false; // true if we wrote received ciphertext into SSL object
       while (rel_recv.ready())
 	{
 	  typename ReliableRecv::Message& m = rel_recv.next_sequenced();
 	  if (m.packet.is_raw())
 	    raw_recv(now, m.packet);
-	  else
+	  else // SSL packet
 	    {
-	      ssl_->write_ciphertext(m.packet.buffer_ptr());
-	      wrote_ciphertext = true;
+	      if (ssl_started_)
+		ssl_->write_ciphertext(m.packet.buffer_ptr());
+	      else
+		break;
 	    }
 	  rel_recv.advance();
 	}
 
       // read cleartext data from SSL object
-      if (wrote_ciphertext)
-	while (true)
+      if (ssl_started_)
+	while (ssl_->write_ciphertext_ready())
 	  {
 	    ssize_t size;
 	    if (!to_app_buf)
@@ -323,19 +348,15 @@ namespace openvpn {
 
     typename SSLContext::SSLPtr ssl_;
     FramePtr frame_;
-
     ReliableRecv rel_recv;
     ReliableSend rel_send;
     ReliableAck xmit_acks;
-
     int up_stack_reentry_level;
     bool invalidate;
-
+    bool ssl_started_;
     Time next_retransmit_;
-
     BufferPtr to_app_buf; // cleartext data decrypted by SSL that is to be passed to app via app_recv method
     PACKET ack_send_buf;  // only used for standalone ACKs to be sent to peer
-
     std::deque<BufferPtr> app_write_queue;
     std::deque<PACKET> raw_write_queue;
   };

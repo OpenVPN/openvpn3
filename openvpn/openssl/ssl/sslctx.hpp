@@ -121,6 +121,10 @@ namespace openvpn {
 	  return status;
       }
 
+      bool write_ciphertext_ready() const {
+	return !bmq_stream::memq_from_bio(ct_in)->empty();
+      }
+
       void write_ciphertext(const BufferPtr& buf)
       {
 	bmq_stream::memq_from_bio(ct_in)->write_buf(buf);

@@ -136,6 +136,10 @@ namespace openvpn {
 	  return actual;
       }
 
+      bool write_ciphertext_ready() const {
+	return !ct_in.empty();
+      }
+
       void write_ciphertext(const BufferPtr& buf)
       {
 	ct_in.write_buf(buf);
