@@ -2,7 +2,6 @@
 #define OPENVPN_TUN_TUNPOSIX_H
 
 #include <boost/noncopyable.hpp>
-#include <boost/intrusive_ptr.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <openvpn/buffer/buffer.hpp>

@@ -228,12 +228,12 @@ namespace openvpn {
   template <typename T, typename R = thread_unsafe_refcount>
   class BufferAllocatedType : public BufferType<T>, public RC<R>
   {
-  public:
     using BufferType<T>::data_;
     using BufferType<T>::offset_;
     using BufferType<T>::size_;
     using BufferType<T>::capacity_;
 
+  public:
     enum {
       CONSTRUCT_ZERO = (1<<0),  // if enabled, constructors/init will zero allocated space
       DESTRUCT_ZERO  = (1<<1),  // if enabled, destructor will zero data before deletion

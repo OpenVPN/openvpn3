@@ -6,10 +6,14 @@
 
 namespace openvpn {
 
+  namespace reliable {
+    typedef PacketID::id_t id_t;    
+  }
+
   class ReliableMessageBase
   {
   public:
-    typedef PacketID::id_t id_t;
+    typedef reliable::id_t id_t;
 
     ReliableMessageBase() : id_(0), erased_(false) {}
     bool defined() const { return bool(buffer); }

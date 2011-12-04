@@ -1,8 +1,6 @@
 #ifndef OPENVPN_FRAME_FRAME
 #define OPENVPN_FRAME_FRAME
 
-#include <boost/intrusive_ptr.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>

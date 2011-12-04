@@ -8,7 +8,6 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/reliable/relcommon.hpp>
-#include <openvpn/reliable/relsend.hpp>
 
 namespace openvpn {
 
@@ -27,7 +26,8 @@ namespace openvpn {
     void pop_front()           { data.pop_front(); }
 
     // called to read incoming ACKs from buf and mark them as ACKed in rel_send
-    static void ack(ReliableSend& rel_send, Buffer& buf)
+    template <typename REL_SEND>
+    static void ack(REL_SEND& rel_send, Buffer& buf)
     {
       const size_t len = buf.pop_front();
       for (size_t i = 0; i < len; ++i)
