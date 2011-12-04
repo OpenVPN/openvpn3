@@ -14,7 +14,7 @@ namespace openvpn {
   class ReliableAck
   {
   public:
-    typedef ReliableMessageBase::id_t id_t;
+    typedef reliable::id_t id_t;
 
     ReliableAck(const size_t max_ack_list)
       : max_ack_list_(max_ack_list ? max_ack_list : std::numeric_limits<size_t>::max()) {}

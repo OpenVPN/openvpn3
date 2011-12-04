@@ -1,7 +1,6 @@
 #ifndef OPENVPN_RELIABLE_RELCOMMON_H
 #define OPENVPN_RELIABLE_RELCOMMON_H
 
-#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 
 namespace openvpn {
@@ -10,25 +9,26 @@ namespace openvpn {
     typedef PacketID::id_t id_t;    
   }
 
+  template <typename PACKET>
   class ReliableMessageBase
   {
   public:
     typedef reliable::id_t id_t;
 
     ReliableMessageBase() : id_(0), erased_(false) {}
-    bool defined() const { return bool(buffer); }
+    bool defined() const { return bool(packet); }
     bool erased() const { return erased_; }
 
     void erase()
     {
       id_ = id_t(0);
-      buffer.reset();
+      packet.reset();
       erased_ = true;
     }
 
     id_t id() const { return id_; }
 
-    BufferPtr buffer;
+    PACKET packet;
 
   protected:
     id_t id_;

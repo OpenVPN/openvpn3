@@ -5,23 +5,24 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/msgwin.hpp>
 #include <openvpn/time/time.hpp>
-#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/reliable/relcommon.hpp>
 
 namespace openvpn {
 
-  class ReliableSend
+  template <typename PACKET>
+  class ReliableSendTemplate
   {
   public:
-    typedef ReliableMessageBase::id_t id_t;
+    typedef reliable::id_t id_t;
 
     enum {
       RETRANSMIT = 2 // retransmit in N seconds if ACK not received
     };
 
-    class Message : public ReliableMessageBase
+    class Message : public ReliableMessageBase<PACKET>
     {
-      friend class ReliableSend;
+      friend class ReliableSendTemplate;
+      using ReliableMessageBase<PACKET>::defined;
 
     public:
       bool ready_retransmit(const Time now) const
@@ -46,8 +47,8 @@ namespace openvpn {
       Time retransmit_at_;
     };
 
-    ReliableSend() : next(0) {}
-    ReliableSend(const id_t span) { init(span); }
+    ReliableSendTemplate() : next(0) {}
+    ReliableSendTemplate(const id_t span) { init(span); }
 
     void init(const id_t span)
     {
@@ -100,10 +101,10 @@ namespace openvpn {
       return msg;
     }
 
-    // Return true if output buffer is ready to receive another packet
+    // Return true if send queue is ready to receive another packet
     bool ready() const { return window_.in_window(next); }
 
-    // Remove a packet from send buffer that has been acknowledged
+    // Remove a message from send queue that has been acknowledged
     void ack(const id_t id) { window_.rm_by_id(id); }
 
   private:
