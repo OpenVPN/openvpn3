@@ -20,14 +20,24 @@ namespace openvpn {
       std::memset(id_, 0, SIZE);
     }
 
-    void init(PRNG& prng)
+    void randomize(PRNG& prng)
     {
       prng.bytes(id_, SIZE);
+    }
+
+    void read(Buffer& buf)
+    {
+      buf.read(id_, SIZE);
     }
 
     void write(Buffer& buf) const
     {
       buf.write(id_, SIZE);
+    }
+
+    void prepend(Buffer& buf) const
+    {
+      buf.prepend(id_, SIZE);
     }
 
   protected:

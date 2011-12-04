@@ -39,7 +39,7 @@ namespace openvpn {
     {
     }
 
-    // start SSL handshake on underlying SSL connection object
+    // Start SSL handshake on underlying SSL connection object
     void start_handshake()
     {
       test_invalidated();
@@ -55,9 +55,18 @@ namespace openvpn {
     }
 
     // Outgoing application-level cleartext packet ready to send
+    // (will be encrypted via SSL)
     void app_send(const Time now, BufferPtr& buf)
     {
       app_write_queue.push_back(buf);
+    }
+
+    // Outgoing raw packet ready to send (will NOT be encrypted
+    // via SSL, but will still be encapsulated and tracked
+    // via reliability layer).
+    void raw_send(const Time now, BufferPtr& buf)
+    {
+      raw_write_queue.push_back(buf);
     }
 
     // Write any pending data to network.  Should be called
@@ -67,7 +76,8 @@ namespace openvpn {
       test_invalidated();
       if (!up_stack_reentry_level)
 	{
-	  down_stack(now);
+	  down_stack_raw(now);
+	  down_stack_app(now);
 	  update_retransmit(now);
 	}
     }
@@ -106,10 +116,10 @@ namespace openvpn {
       update_retransmit(now);
     }
 
-    // when should we next call retransmit()
+    // When should we next call retransmit()
     Time next_retransmit() const { return next_retransmit_; }
 
-    // was session invalidated by an exception?
+    // Was session invalidated by an exception?
     bool invalidated() const { return invalidate; }
 
     virtual ~ProtoStackBase() {}
@@ -122,10 +132,10 @@ namespace openvpn {
     // invalidate session, i.e. this object can no longer be used.
     virtual void encapsulate(const Time now, id_t id, Buffer& buf, ReliableAck& xmit_acks) = 0;
 
-    // Un-encapsulate buffer returning sequence number, or PacketID::UNDEF
-    // if packet should be dropped.
+    // Un-encapsulate buffer, method should return sequence number,
+    // or PacketID::UNDEF if packet should be dropped.
     // Any ACKs received for messages previously sent should be marked in
-    // rel_send, which can be accomplished by calling ReliableAck::ack.
+    // rel_send, which can be accomplished by calling ReliableAck::ack().
     // Exceptions may be thrown here and they will be passed up to
     // caller of net_recv and will not invalidate the session, however
     // the packet will be dropped.
@@ -134,8 +144,8 @@ namespace openvpn {
     // Generate a standalone ACK message in buf (buf is already allocated and framed).
     virtual void generate_ack(const Time now, Buffer& buf, ReliableAck& xmit_acks) = 0;
 
-    // Transmit encapsulated ciphertext buffer to peer.  Method should not modify
-    // net_buf underlying data.
+    // Transmit encapsulated ciphertext buffer to peer.  Method may not modify
+    // or take ownership of net_buf underlying data unless it copies it.
     virtual void net_send(const Time now, const ConstBuffer& net_buf) = 0;
 
     // Pass cleartext data up to application.  Method may take ownership
@@ -147,7 +157,7 @@ namespace openvpn {
 
 
     // app data -> SSL -> protocol encapsulation -> reliability layer -> network
-    void down_stack(const Time now)
+    void down_stack_app(const Time now)
     {
       // push app-layer cleartext through SSL object
       while (!app_write_queue.empty())
@@ -171,6 +181,30 @@ namespace openvpn {
 	{
 	  ReliableSend::Message& m = rel_send.send(now);
 	  m.buffer = ssl_->read_ciphertext();
+
+	  // encapsulate buffer
+	  try {
+	    encapsulate(now, m.id(), *m.buffer, xmit_acks);
+	  }
+	  catch (...)
+	    {
+	      invalidate = true;
+	      throw;
+	    }
+
+	  // transmit it
+	  net_send(now, const_buffer_ref(*m.buffer));
+	}
+    }
+
+    // app data -> protocol encapsulation -> reliability layer -> network
+    void down_stack_raw(const Time now)
+    {
+      while (!raw_write_queue.empty() && rel_send.ready())
+	{
+	  ReliableSend::Message& m = rel_send.send(now);
+	  m.buffer = raw_write_queue.front();
+	  raw_write_queue.pop_front();
 
 	  // encapsulate buffer
 	  try {
@@ -267,6 +301,7 @@ namespace openvpn {
     BufferPtr ack_send_buf; // only used for standalone ACKs to be sent to peer
 
     std::deque<BufferPtr> app_write_queue;
+    std::deque<BufferPtr> raw_write_queue;
   };
 
 } // namespace openvpn

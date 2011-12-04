@@ -16,6 +16,7 @@ namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION(buffer_full);
   OPENVPN_SIMPLE_EXCEPTION(buffer_headroom);
   OPENVPN_SIMPLE_EXCEPTION(buffer_underflow);
+  OPENVPN_SIMPLE_EXCEPTION(buffer_overflow);
   OPENVPN_SIMPLE_EXCEPTION(buffer_index);
   OPENVPN_SIMPLE_EXCEPTION(buffer_const_index);
 
@@ -119,6 +120,14 @@ namespace openvpn {
       ++offset_;
       --size_;
       return ret;
+    }
+
+    void advance(const size_t delta)
+    {
+      if (delta > size_)
+	throw buffer_overflow();
+      offset_ += delta;
+      size_ -= delta;
     }
 
     // mutable index into array
