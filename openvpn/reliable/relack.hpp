@@ -28,7 +28,7 @@ namespace openvpn {
     // Called to read incoming ACK IDs from buf and mark them as ACKed in rel_send.
     // If live is false, read the ACK IDs, but don't modify rel_send.
     template <typename REL_SEND>
-    static void ack(REL_SEND& rel_send, Buffer& buf, bool live)
+    static void ack(REL_SEND& rel_send, Buffer& buf, const bool live)
     {
       const size_t len = buf.pop_front();
       for (size_t i = 0; i < len; ++i)

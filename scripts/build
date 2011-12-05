@@ -20,10 +20,10 @@ rm -f $1
 if [ "$PLATFORM" = "mac" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, always link with OpenSSL.
-    if [ "$SSL_BOTH" ]; then
+    if [ "$SSL_BOTH" = "1" ]; then
 	CRYPTO_LIBS="-DUSE_APPLE_SSL -DUSE_OPENSSL -lcrypto -lssl -framework Security"
     else
-	if [ "$OSSL" ]; then
+	if [ "$OSSL" = "1" ]; then
 	    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 	else
 	    CRYPTO_LIBS="-DUSE_APPLE_SSL -framework Security"
@@ -37,23 +37,27 @@ else
     CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 fi
 
-if [ "$NOTHREADS" ]; then
+if [ "$NOTHREADS" = "1" ]; then
     THREAD_FLAGS="-DBOOST_DISABLE_THREADS"
 else
     THREAD_FLAGS="-pthread"
 fi
 
-if [ "$DEBUG" ]; then
+if [ "$DEBUG" = "1" ]; then
     # debug build
-    g++ -Wall -g $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
+    CMD="g++ -Wall -g $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS"
 else
     # release build
     FLAGS=""
-    [ "$LTO" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
-    [ "$GPROF" ] && FLAGS="$FLAGS -pg"
-    g++ -Wall -O3 -fwhole-program $FLAGS $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS
+    [ "$LTO" = "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
+    [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
+    CMD="g++ -Wall -O3 -fwhole-program $FLAGS $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS"
 fi
 
+# execute CMD
+[ "$ECHO" = "1" ] && echo $CMD
+$CMD
+
 # maybe strip
-[ "$STRIP" ] && strip $1
+[ "$STRIP" = "1" ] && strip $1
 exit 0
