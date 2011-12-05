@@ -1,10 +1,12 @@
 #ifndef OPENVPN_SSL_PSID_H
 #define OPENVPN_SSL_PSID_H
 
+#include <string>
 #include <cstring>
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/random/prng.hpp>
+#include <openvpn/common/hexstr.hpp>
 
 namespace openvpn {
 
@@ -16,18 +18,27 @@ namespace openvpn {
     };
 
     ProtoSessionID()
+      : defined_(false)
     {
       std::memset(id_, 0, SIZE);
+    }
+
+    explicit ProtoSessionID(Buffer& buf)
+    {
+      buf.read(id_, SIZE);
+      defined_ = true;
     }
 
     void randomize(PRNG& prng)
     {
       prng.bytes(id_, SIZE);
+      defined_ = true;
     }
 
     void read(Buffer& buf)
     {
       buf.read(id_, SIZE);
+      defined_ = true;
     }
 
     void write(Buffer& buf) const
@@ -40,6 +51,18 @@ namespace openvpn {
       buf.prepend(id_, SIZE);
     }
 
+    bool defined() const { return defined_; }
+
+    bool match(const ProtoSessionID& other) const
+    {
+      return defined_ && other.defined_ && !std::memcmp(id_, other.id_, SIZE);
+    }
+
+    std::string str() const
+    {
+      return render_hex(id_, SIZE);
+    }
+
   protected:
     ProtoSessionID(const unsigned char *data)
     {
@@ -47,6 +70,7 @@ namespace openvpn {
     }
 
   private:
+    bool defined_;
     unsigned char id_[SIZE];
   };
 } // namespace openvpn
