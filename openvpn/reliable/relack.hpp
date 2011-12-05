@@ -25,15 +25,17 @@ namespace openvpn {
     id_t front() const         { return data.front(); }
     void pop_front()           { data.pop_front(); }
 
-    // called to read incoming ACKs from buf and mark them as ACKed in rel_send
+    // Called to read incoming ACK IDs from buf and mark them as ACKed in rel_send.
+    // If live is false, read the ACK IDs, but don't modify rel_send.
     template <typename REL_SEND>
-    static void ack(REL_SEND& rel_send, Buffer& buf)
+    static void ack(REL_SEND& rel_send, Buffer& buf, bool live)
     {
       const size_t len = buf.pop_front();
       for (size_t i = 0; i < len; ++i)
 	{
-	  const id_t id = PacketID::read_id(buf);
-	  rel_send.ack(id);
+	  const id_t id = read_id(buf);
+	  if (live)
+	    rel_send.ack(id);
 	}
     }
 
@@ -43,7 +45,7 @@ namespace openvpn {
       const size_t len = buf.pop_front();
       for (size_t i = 0; i < len; ++i)
 	{
-	  const id_t id = PacketID::read_id(buf);
+	  const id_t id = read_id(buf);
 	  data.push_back(id);
 	}
     }
@@ -54,10 +56,23 @@ namespace openvpn {
       const size_t len = std::min(data.size(), max_ack_list_);
       for (size_t i = len; i > 0; --i)
 	{
-	  PacketID::prepend_id(buf, data[i-1]);
+	  prepend_id(buf, data[i-1]);
 	}
       buf.push_front((unsigned char)len);
       data.erase (data.begin(), data.begin()+len);
+    }
+
+    static void prepend_id(Buffer& buf, const id_t id)
+    {
+      const id_t net_id = htonl(id);
+      buf.prepend ((unsigned char *)&net_id, sizeof (net_id));
+    }
+
+    static id_t read_id(Buffer& buf)
+    {
+      id_t net_id;
+      buf.read ((unsigned char *)&net_id, sizeof (net_id));
+      return ntohl(net_id);
     }
 
   private:

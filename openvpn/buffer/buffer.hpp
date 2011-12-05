@@ -19,6 +19,8 @@ namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION(buffer_overflow);
   OPENVPN_SIMPLE_EXCEPTION(buffer_index);
   OPENVPN_SIMPLE_EXCEPTION(buffer_const_index);
+  OPENVPN_SIMPLE_EXCEPTION(buffer_push_front_headroom);
+  
 
   template <typename T>
   class BufferType {
@@ -108,7 +110,7 @@ namespace openvpn {
     void push_front(const T& value)
     {
       if (!offset_)
-	throw buffer_underflow();
+	throw buffer_push_front_headroom();
       --offset_;
       ++size_;
       *data() = value;

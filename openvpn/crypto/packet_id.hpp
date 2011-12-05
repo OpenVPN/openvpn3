@@ -48,11 +48,17 @@ namespace openvpn {
       SHORT_FORM = 0, // short form of ID (4 bytes)
       LONG_FORM = 1,  // long form of ID (8 bytes)
 
-      UNDEF = 0       // special undefined/null id_t value
+      UNDEF = 0,       // special undefined/null id_t value
+      SMALLEST_LEGAL_TIME = 256, // time value must be at least this value
     };
 
     id_t id;       // legal values are 1 through 2^32-1
     time_t time;   // converted to PacketID::net_time_t before transmission
+
+    bool is_valid() const
+    {
+      return id != UNDEF && time >= SMALLEST_LEGAL_TIME;
+    }
 
     void reset()
     {
@@ -94,19 +100,6 @@ namespace openvpn {
 	  if (form == LONG_FORM)
 	    buf.write ((unsigned char *)&net_time, sizeof (net_time));
 	}
-    }
-
-    static void prepend_id(Buffer& buf, const id_t id)
-    {
-      const id_t net_id = htonl(id);
-      buf.prepend ((unsigned char *)&net_id, sizeof (net_id));
-    }
-
-    static id_t read_id(Buffer& buf)
-    {
-      id_t net_id;
-      buf.read ((unsigned char *)&net_id, sizeof (net_id));
-      return ntohl(net_id);
     }
 
 #ifdef PACKET_ID_EXTRA_LOG_INFO
@@ -317,10 +310,10 @@ namespace openvpn {
       if (last_reap_ + SEQ_REAP_PERIOD <= now)
 	reap(now);
 
-      // packet ID==0 is invalid
-      if (!pin.id)
+      // test for invalid packet ID
+      if (!pin.is_valid())
 	{
-	  debug_log (DEBUG_LOW, pin, "ID is 0", 0, now);
+	  debug_log (DEBUG_LOW, pin, "PID is invalid", 0, now);
 	  return false;
 	}
 

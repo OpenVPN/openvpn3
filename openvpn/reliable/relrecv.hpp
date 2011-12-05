@@ -30,19 +30,22 @@ namespace openvpn {
     }
 
     // Call with unsequenced packet off of the wire.
-    // Will return true if ACK for this packet ID
-    // should be returned to sender.
-    bool receive(const PACKET& packet, const id_t id)
+    // Will return receive flags below.
+    enum {
+      ACK_TO_SENDER = (1<<0), // ACK for this packet should be returned to sender
+      IN_WINDOW = (1<<1)      // Packet is in-window (otherwise, packet is dropped)
+    };
+    unsigned int receive(const PACKET& packet, const id_t id)
     {
       if (window_.in_window(id))
 	{
 	  Message& m = window_.ref_by_id(id);
 	  m.id_ = id;
 	  m.packet = packet;
-	  return true;
+	  return ACK_TO_SENDER|IN_WINDOW;
 	}
       else
-	return window_.pre_window(id);
+	return window_.pre_window(id) ? ACK_TO_SENDER : 0;
     }
 
     // Return true if next_sequenced() is ready to return next message

@@ -55,13 +55,13 @@ namespace openvpn {
 		   const size_t max_ack_list)
       : ssl_(ctx.ssl()),
 	frame_(frame),
-	rel_recv(span),
-	rel_send(span),
-	xmit_acks(max_ack_list),
 	up_stack_reentry_level(0),
 	invalidate(false),
 	ssl_started_(false),
-	next_retransmit_(Time::infinite())
+	next_retransmit_(Time::infinite()),
+	rel_recv(span),
+	rel_send(span),
+	xmit_acks(max_ack_list)
     {
     }
 
@@ -123,7 +123,7 @@ namespace openvpn {
 	  ack_send_buf.frame_prepare(*frame_, Frame::WRITE_ACK_STANDALONE);
 
 	  // encapsulate standalone ACK
-	  generate_ack(now, ack_send_buf, xmit_acks);
+	  generate_ack(now, ack_send_buf);
 
 	  // transmit it
 	  net_send(now, ack_send_buf);
@@ -160,26 +160,25 @@ namespace openvpn {
   private:
     // VIRTUAL METHODS -- derived class must define these virtual methods
 
-    // Encapsulate packet, use id as sequence number, xmit_acks as ACKs
-    // in reply to sender (if non-NULL), any exceptions thrown will
-    // invalidate session, i.e. this object can no longer be used.
-    virtual void encapsulate(const Time now, id_t id, PACKET& pkt, ReliableAck& xmit_acks) = 0;
+    // Encapsulate packet, use id as sequence number.  If xmit_acks is non-empty,
+    // try to piggy-back ACK replies from xmit_acks to sender in encapsulated
+    // packet. Any exceptions thrown will invalidate session, i.e. this object
+    // can no longer be used.
+    virtual void encapsulate(const Time now, id_t id, PACKET& pkt) = 0;
 
-    // Un-encapsulate packet, method should return sequence number,
-    // or PacketID::UNDEF if packet should be dropped.
-    // Any ACKs received for messages previously sent should be marked in
-    // rel_send, which can be accomplished by calling ReliableAck::ack().
-    // Exceptions may be thrown here and they will be passed up to
-    // caller of net_recv and will not invalidate the session, however
-    // the packet will be dropped.
-    virtual id_t decapsulate(const Time now, PACKET& pkt, ReliableSend& rel_send) = 0;
+    // Perform integrity check on packet.  If packet is good, unencapsulate it and
+    // pass it into the rel_recv object.  Any ACKs received for messages previously
+    // sent should be marked in rel_send.  Message sequence number should be recorded
+    // in xmit_acks.  Exceptions may be thrown here and they will be passed up to
+    // caller of net_recv and will not invalidate the session.
+    virtual void decapsulate(const Time now, PACKET& pkt) = 0;
 
-    // Generate a standalone ACK message in buf (PACKET will be already be initialized
-    // by frame_prepare()).
-    virtual void generate_ack(const Time now, PACKET& pkt, ReliableAck& xmit_acks) = 0;
+    // Generate a standalone ACK message in buf based on ACKs in xmit_acks
+    // (PACKET will be already be initialized by frame_prepare()).
+    virtual void generate_ack(const Time now, PACKET& pkt) = 0;
 
     // Transmit encapsulated ciphertext packet to peer.  Method may not modify
-    // or take ownership of net_buf underlying data unless it copies it.
+    // or take ownership of net_pkt or underlying data unless it copies it.
     virtual void net_send(const Time now, const PACKET& net_pkt) = 0;
 
     // Pass cleartext data up to application.  Method may take ownership
@@ -191,7 +190,7 @@ namespace openvpn {
     // if is_raw() method returns true.  Method may take ownership
     // of raw_pkt underlying data as long as it resets raw_pkt so that
     // a subsequent call to PACKET::frame_prepare will revert it to
-    // a ready-to-read state.
+    // a ready-to-use state.
     virtual void raw_recv(const Time now, PACKET& raw_pkt) = 0;
 
     // END of VIRTUAL METHODS
@@ -227,7 +226,7 @@ namespace openvpn {
 
 	      // encapsulate packet
 	      try {
-		encapsulate(now, m.id(), m.packet, xmit_acks);
+		encapsulate(now, m.id(), m.packet);
 	      }
 	      catch (...)
 		{
@@ -252,7 +251,7 @@ namespace openvpn {
 
 	  // encapsulate packet
 	  try {
-	    encapsulate(now, m.id(), m.packet, xmit_acks);
+	    encapsulate(now, m.id(), m.packet);
 	  }
 	  catch (...)
 	    {
@@ -269,19 +268,7 @@ namespace openvpn {
     void up_stack(const Time now, PACKET& recv)
     {
       UseCount use_count(up_stack_reentry_level);
-
-      // decapsulate packet
-      {
-	const id_t id = decapsulate(now, recv, rel_send);
-	if (id != PacketID::UNDEF)
-	  {
-	    const bool should_ack = rel_recv.receive(recv, id);
-	    if (should_ack)
-	      xmit_acks.push_back(id);
-	  }
-      }
-
-      // continue to move packet up the stack
+      decapsulate(now, recv);
       up_sequenced(now);
     }
 
@@ -346,11 +333,9 @@ namespace openvpn {
 	next_retransmit_ = now + d;
     }
 
+  private:
     typename SSLContext::SSLPtr ssl_;
     FramePtr frame_;
-    ReliableRecv rel_recv;
-    ReliableSend rel_send;
-    ReliableAck xmit_acks;
     int up_stack_reentry_level;
     bool invalidate;
     bool ssl_started_;
@@ -359,6 +344,11 @@ namespace openvpn {
     PACKET ack_send_buf;  // only used for standalone ACKs to be sent to peer
     std::deque<BufferPtr> app_write_queue;
     std::deque<PACKET> raw_write_queue;
+
+  protected:
+    ReliableRecv rel_recv;
+    ReliableSend rel_send;
+    ReliableAck xmit_acks;
   };
 
 } // namespace openvpn
