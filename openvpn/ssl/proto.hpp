@@ -289,7 +289,7 @@ namespace openvpn {
       BufferPtr buf;
     };
 
-    class KeyContext : public ProtoStackBase<SSLContext, Packet>, public RC<thread_unsafe_refcount>
+    class KeyContext : ProtoStackBase<SSLContext, Packet>, public RC<thread_unsafe_refcount>
     {
       typedef ProtoStackBase<SSLContext, Packet> Base;
       typedef typename Base::ReliableSend ReliableSend;
@@ -315,6 +315,7 @@ namespace openvpn {
 	: Base(*p.config->ssl_ctx, p.config->now, p.config->frame, p.stats,
 	       p.config->reliable_window, p.config->max_ack_list),
 	  proto(p),
+	  dirty(0),
 	  tlsprf_self(p.server_),
 	  tlsprf_peer(!p.server_)
       {
@@ -330,22 +331,47 @@ namespace openvpn {
 	  {
 	    send_reset();
 	    state = C_WAIT_RESET;
+	    dirty = true;
 	  }
       }
 
       void flush()
       {
-	post_ack_action();
-	Base::flush();
-	send_pending_acks();
+	if (dirty)
+	  {
+	    post_ack_action();
+	    Base::flush();
+	    send_pending_acks();
+	    dirty = false;
+	  }
+      }
+
+      void retransmit()
+      {
+	Base::retransmit();
+	dirty = true;
+      }
+
+      Time next_retransmit() const
+      {
+	return Base::next_retransmit();
       }
 
       void app_send(BufferPtr& bp)
       {
 	if (state >= ACTIVE)
-	  Base::app_send(bp);
+	  {
+	    Base::app_send(bp);
+	    dirty = true;
+	  }
 	else
 	  app_pre_write_queue.push_back(bp);
+      }
+
+      void net_recv(Packet& pkt)
+      {
+	Base::net_recv(pkt);
+	dirty = true;
       }
 
       void encrypt(BufferAllocated& buf)
@@ -373,6 +399,8 @@ namespace openvpn {
       unsigned int key_id() const { return key_id_; }
 
       bool data_channel_ready() const { return state >= ACTIVE; }
+
+      bool is_dirty() const { return dirty; }
 
     private:
       unsigned int initial_op(const bool sender) const
@@ -748,6 +776,7 @@ namespace openvpn {
       ProtoContext& proto; // parent
       unsigned int state;
       unsigned int key_id_;
+      bool dirty;
       std::deque<BufferPtr> app_pre_write_queue;
       CryptoContext crypto;
       TLSPRF tlsprf_self;
@@ -828,16 +857,27 @@ namespace openvpn {
     void flush()
     {
       primary->flush();
+      if (secondary)
+	secondary->flush();
     }
 
     void retransmit()
     {
       primary->retransmit();
+      if (secondary)
+	secondary->retransmit();
     }
 
     Time next_retransmit() const
     {
-      return primary->next_retransmit();
+      const Time p = primary->next_retransmit();
+      if (secondary)
+	{
+	  const Time s = secondary->next_retransmit();
+	  if (s < p)
+	    return s;
+	}
+      return p;
     }
 
     void control_send(BufferPtr& app_bp)

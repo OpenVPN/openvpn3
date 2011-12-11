@@ -3,6 +3,7 @@ if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"
     echo " DEBUG=1 -- enable debug"
+    echo ' ECHO=1 -- show commands'
     echo " STRIP=1 -- strip binary"
     echo " LTO=1 -- build with LTO"
     echo " GPROF=1 -- build for gprof profiling"
