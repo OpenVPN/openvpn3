@@ -23,9 +23,7 @@ namespace openvpn {
   };
 
   template <typename ReadHandler>
-  class UDPLink
-    : public boost::enable_shared_from_this< UDPLink<ReadHandler> >, // fixme -- don't need any more
-      private boost::noncopyable
+  class UDPLink : private boost::noncopyable
   {
   public:
     enum bind_type {
@@ -37,7 +35,7 @@ namespace openvpn {
 
     UDPLink(boost::asio::io_service& io_service,
 	    ReadHandler read_handler,
-	    const FramePtr frame,
+	    const Frame::Ptr frame,
 	    bind_type bt,
 	    const boost::asio::ip::address& address,
 	    int port,
@@ -118,15 +116,7 @@ namespace openvpn {
 	    {
 	      suf->buf.set_size(bytes_recvd);
 	      stats_.add_read_bytes(bytes_recvd);
-	      try
-		{
-		  read_handler_(suf);
-		}
-	      catch (boost::bad_weak_ptr &e) // fixme -- don't really need any longer
-		{
-		  // read handler has gone out of scope, don't requeue
-		  return;
-		}
+	      read_handler_(suf);
 	    }
 	  else
 	    OPENVPN_LOG("UDP Read Error: " << error);
@@ -137,7 +127,7 @@ namespace openvpn {
     boost::asio::ip::udp::socket socket_;
     bool halt_;
     ReadHandler read_handler_;
-    const FramePtr frame_;
+    const Frame::Ptr frame_;
     IOStatsSingleThread stats_;
   };
 } // namespace openvpn

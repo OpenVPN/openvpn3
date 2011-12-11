@@ -67,11 +67,11 @@ namespace openvpn {
       buf.swap(work);
     }
 
-    FramePtr frame;
+    Frame::Ptr frame;
     CipherContext cipher;
     HMACContext hmac;
     PacketIDSend pid_send;
-    PRNGPtr prng;
+    PRNG::Ptr prng;
 
   private:
     // compute HMAC signature of data buffer,

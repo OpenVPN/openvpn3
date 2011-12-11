@@ -11,6 +11,8 @@ namespace openvpn {
   class Frame : public RC<thread_unsafe_refcount>
   {
   public:
+    typedef boost::intrusive_ptr<Frame> Ptr;
+
     // Frame context types -- we maintain a Context object for each context type
     enum {
       ENCRYPT_WORK=0,
@@ -21,6 +23,8 @@ namespace openvpn {
       READ_BIO_MEMQ_DGRAM,
       READ_BIO_MEMQ_STREAM,
       READ_SSL_CLEARTEXT,
+      WRITE_SSL_INIT,
+      WRITE_SSL_CLEARTEXT,
       WRITE_ACK_STANDALONE,
       N_ALIGN_CONTEXTS
     };
@@ -68,9 +72,9 @@ namespace openvpn {
 
       // Calculate a starting offset into a buffer object, dealing with
       // headroom and alignment issues.
-      void prepare(BufferAllocated& buf) const
+      void prepare(Buffer& buf) const
       {
-	buf.reset (capacity(), buffer_flags());
+	buf.reset(capacity(), buffer_flags());
 	buf.init_headroom(actual_headroom(buf.c_data_raw()));
       }
 
@@ -212,8 +216,6 @@ namespace openvpn {
   private:
     Context contexts[N_ALIGN_CONTEXTS];
   };
-
-  typedef boost::intrusive_ptr<Frame> FramePtr;
 
 } // namespace openvpn
 

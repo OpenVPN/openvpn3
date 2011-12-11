@@ -13,14 +13,15 @@
 
 namespace openvpn {
 
-  OPENVPN_SIMPLE_EXCEPTION(buffer_full);
-  OPENVPN_SIMPLE_EXCEPTION(buffer_headroom);
-  OPENVPN_SIMPLE_EXCEPTION(buffer_underflow);
-  OPENVPN_SIMPLE_EXCEPTION(buffer_overflow);
-  OPENVPN_SIMPLE_EXCEPTION(buffer_index);
-  OPENVPN_SIMPLE_EXCEPTION(buffer_const_index);
-  OPENVPN_SIMPLE_EXCEPTION(buffer_push_front_headroom);
-  
+  OPENVPN_SIMPLE_EXCEPTION(buffer_exception);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_full);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_headroom);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_underflow);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_overflow);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_index);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_const_index);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_push_front_headroom);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_no_reset_impl);
 
   template <typename T>
   class BufferType {
@@ -47,6 +48,11 @@ namespace openvpn {
       if (headroom > capacity_)
 	throw buffer_headroom();
       offset_ = headroom;
+      size_ = 0;
+    }
+
+    void reset_size()
+    {
       size_ = 0;
     }
 
@@ -211,7 +217,19 @@ namespace openvpn {
 	throw buffer_underflow();
     }
 
+    void reset(const size_t min_capacity, const unsigned int flags)
+    {
+      if (min_capacity > capacity_)
+	reset_impl(min_capacity, flags);
+    }
+
   protected:
+    // Called when reset method needs to expand the buffer size
+    virtual void reset_impl(const size_t min_capacity, const unsigned int flags)
+    {
+      throw buffer_no_reset_impl();
+    }
+
     // Derived classes can implement buffer growing semantics
     // by overloading this method.  In the default implementation,
     // buffers are non-growable, so we throw an exception.
@@ -396,6 +414,12 @@ namespace openvpn {
     }
 
   protected:
+    // Called when reset method needs to expand the buffer size
+    virtual void reset_impl(const size_t min_capacity, const unsigned int flags)
+    {
+      init(min_capacity, flags);
+    }
+
     // Set current capacity to at least new_capacity.
     virtual void resize(const size_t new_capacity)
     {
@@ -443,7 +467,7 @@ namespace openvpn {
   typedef boost::intrusive_ptr<BufferAllocated> BufferPtr;
 
   template <typename T>
-  BufferType<const T>& const_buffer_ref(BufferType<T>& src)
+  inline BufferType<const T>& const_buffer_ref(BufferType<T>& src)
   {
     return (BufferType<const T>&)src;
   }

@@ -8,6 +8,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
+#include <openvpn/crypto/protostats.hpp>
 
 namespace openvpn {
   class Cipher
@@ -121,14 +122,14 @@ namespace openvpn {
   public:
     CipherContext() : mode_(-1) {}
 
-    CipherContext(const Cipher& cipher, const StaticKey& key, const int mode)
+    CipherContext(const Cipher& cipher, const StaticKey& key, const int mode, const ProtoStats::Ptr& stats)
     {
-      init(cipher, key, mode);
+      init(cipher, key, mode, stats);
     }
 
     CipherContext(const CipherContext& ref)
     {
-      init(ref.cipher_, ref.key_, ref.mode_);
+      init(ref.cipher_, ref.key_, ref.mode_, ref.stats_);
     }
 
     bool defined() const { return ctx.is_initialized(); }
@@ -136,7 +137,7 @@ namespace openvpn {
     void operator=(const CipherContext& ref)
     {
       if (this != &ref)
-	init(ref.cipher_, ref.key_, ref.mode_);
+	init(ref.cipher_, ref.key_, ref.mode_, ref.stats_);
     }
 
     // size of iv buffer to pass to encrypt_decrypt
@@ -157,11 +158,12 @@ namespace openvpn {
       return in_size + EVP_CIPHER_CTX_block_size(ctx());
     }
 
-    void init(const Cipher& cipher, const StaticKey& key, const int mode)
+    void init(const Cipher& cipher, const StaticKey& key, const int mode, const ProtoStats::Ptr& stats)
     {
       cipher_ = cipher;
       key_ = key;
       mode_ = mode;
+      stats_ = stats;
       ctx.erase();
 
       if (cipher.defined())
@@ -220,21 +222,37 @@ namespace openvpn {
       if (out_size < output_size(in_size))
 	throw cipher_output_buffer();
       if (!EVP_CipherInit_ex (c, NULL, NULL, NULL, iv, -1))
-	throw cipher_init();
+	{
+	  error();
+	  throw cipher_init();
+	}
       int outlen = out_size; // NOTE: minor change to OpenSSL semantics, pass size of output buffer
       if (!EVP_CipherUpdate (c, out, &outlen, in, int(in_size)))
-	throw cipher_update();
+	{
+	  error();
+	  throw cipher_update();
+	}
       int tmplen = out_size - outlen; // NOTE: minor change to OpenSSL semantics, pass size of output buffer
       if (!EVP_CipherFinal_ex (c, out + outlen, &tmplen))
-	throw cipher_final();
+	{
+	  error();
+	  throw cipher_final();
+	}
       return outlen + tmplen;
     }
 
   private:
+    void error()
+    {
+      if (stats_)
+	stats_->error(ProtoStats::CRYPTO_ERRORS);
+    }
+
     Cipher cipher_;
     StaticKey key_;
     int mode_;
     EVP_CIPHER_CTX_wrapper ctx;
+    ProtoStats::Ptr stats_;
   };
 
 } // namespace openvpn

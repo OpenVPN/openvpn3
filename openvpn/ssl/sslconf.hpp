@@ -34,7 +34,7 @@ namespace openvpn {
     std::string extra_certs;
     std::string pkey;
     std::string dh; // only needed by server
-    FramePtr frame;
+    Frame::Ptr frame;
   };
 
 } // namespace openvpn

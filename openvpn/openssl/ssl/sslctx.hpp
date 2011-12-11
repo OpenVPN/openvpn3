@@ -26,8 +26,14 @@ namespace openvpn {
   {
   public:
     OPENVPN_EXCEPTION(ssl_context_error);
+    OPENVPN_EXCEPTION(ssl_ciphertext_in_overflow);
 
+    typedef boost::intrusive_ptr<OpenSSLContext> Ptr;
     typedef CertCRLListTemplate<X509List, CRLList> CertCRLList;
+
+    enum {
+      MAX_CIPHERTEXT_IN = 64
+    };
 
     // The data needed to construct an OpenSSLContext.
     // Alternatively, SSLConfig can be used.
@@ -42,7 +48,7 @@ namespace openvpn {
       X509List extra_certs;
       PKey pkey;
       DH dh; // only needed in server mode
-      FramePtr frame;
+      Frame::Ptr frame;
     };
 
     // Represents an actual SSL session.
@@ -109,16 +115,21 @@ namespace openvpn {
 
       ssize_t read_cleartext(void *data, const size_t capacity)
       {
-	const int status = BIO_read(ssl_bio, data, capacity);
-	if (status < 0)
+	if (!overflow)
 	  {
-	    if (status == -1 && BIO_should_retry(ssl_bio))
-	      return SHOULD_RETRY;
+	    const int status = BIO_read(ssl_bio, data, capacity);
+	    if (status < 0)
+	      {
+		if (status == -1 && BIO_should_retry(ssl_bio))
+		  return SHOULD_RETRY;
+		else
+		  OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
+	      }
 	    else
-	      OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
+	      return status;
 	  }
 	else
-	  return status;
+	  throw ssl_ciphertext_in_overflow();
       }
 
       bool write_ciphertext_ready() const {
@@ -127,7 +138,11 @@ namespace openvpn {
 
       void write_ciphertext(const BufferPtr& buf)
       {
-	bmq_stream::memq_from_bio(ct_in)->write_buf(buf);
+	bmq_stream::MemQ* in = bmq_stream::memq_from_bio(ct_in);
+	if (in->size() < MAX_CIPHERTEXT_IN)
+	  in->write_buf(buf);
+	else
+	  overflow = true;
       }
 
       bool read_ciphertext_ready() const {
@@ -152,6 +167,7 @@ namespace openvpn {
 	ssl_bio = NULL;
 	ct_in = NULL;
 	ct_out = NULL;
+	overflow = false;
       }
 
       void ssl_erase()
@@ -170,7 +186,7 @@ namespace openvpn {
 	ssl_clear();
       }
 
-      static BIO* mem_bio(const FramePtr& frame)
+      static BIO* mem_bio(const Frame::Ptr& frame)
       {
 	BIO *bio = BIO_new(bmq_stream::BIO_s_memq());
 	if (!bio)
@@ -184,6 +200,7 @@ namespace openvpn {
       BIO *ct_in;          // write ciphertext to here
       BIO *ct_out;         // read ciphertext from here
       bool ssl_bio_linkage;
+      bool overflow;
     };
 
     typedef boost::intrusive_ptr<SSL> SSLPtr;
@@ -226,7 +243,7 @@ namespace openvpn {
 
     SSLConfig::Mode mode() const { return mode_; }
     SSLConfig::Flags flags() const { return flags_; }
-    const FramePtr& frame() const { return frame_; }
+    const Frame::Ptr& frame() const { return frame_; }
     SSL_CTX* raw_ctx() const { return ctx_; }
 
   private:
@@ -334,11 +351,11 @@ namespace openvpn {
 
     SSLConfig::Mode mode_;
     SSLConfig::Flags flags_;
-    FramePtr frame_;
+    Frame::Ptr frame_;
     SSL_CTX* ctx_;
   };
 
-  typedef boost::intrusive_ptr<OpenSSLContext> OpenSSLContextPtr;
+  typedef OpenSSLContext::Ptr OpenSSLContextPtr;
 
 } // namespace openvpn
 

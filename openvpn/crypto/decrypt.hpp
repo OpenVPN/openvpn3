@@ -12,14 +12,17 @@
 #include <openvpn/crypto/digest.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/protostats.hpp>
 
 namespace openvpn {
 
   class Decrypt {
   public:
     OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
-    OPENVPN_SIMPLE_EXCEPTION(decrypt_hmac_verify_failed);
-    OPENVPN_SIMPLE_EXCEPTION(decrypt_packet_id_verify_failed);
+
+    OPENVPN_SIMPLE_EXCEPTION(decrypt_verify_failed);
+    OPENVPN_SIMPLE_EXCEPTION_INHERIT(decrypt_verify_failed, decrypt_hmac_verify_failed);
+    OPENVPN_SIMPLE_EXCEPTION_INHERIT(decrypt_verify_failed, decrypt_packet_id_verify_failed);
 
     void decrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
@@ -31,7 +34,11 @@ namespace openvpn {
 	  const unsigned char *packet_hmac = buf.read_alloc(hmac_size);
 	  hmac.hmac(local_hmac, hmac_size, buf.c_data(), buf.size());
 	  if (std::memcmp(local_hmac, packet_hmac, hmac_size))
-	    throw decrypt_hmac_verify_failed();
+	    {
+	      if (stats)
+		stats->error(ProtoStats::HMAC_ERRORS);
+	      throw decrypt_hmac_verify_failed();
+	    }
 	}
 
       // decrypt packet ID + payload
@@ -70,10 +77,11 @@ namespace openvpn {
       buf.swap(work);
     }
 
-    FramePtr frame;
+    Frame::Ptr frame;
     CipherContext cipher;
     HMACContext hmac;
     PacketIDReceive pid_recv;
+    ProtoStats::Ptr stats;
 
   private:
     void verify_packet_id(BufferAllocated& buf, const PacketID::time_t now)
@@ -85,7 +93,11 @@ namespace openvpn {
 	  if (pid_recv.test(pid, now)) // verify packet ID
 	    pid_recv.add(pid, now);    // remember packet ID
 	  else
-	    throw decrypt_packet_id_verify_failed();
+	    {
+	      if (stats)
+		stats->error(ProtoStats::REPLAY_ERRORS);
+	      throw decrypt_packet_id_verify_failed();
+	    }
 	}
     }
 

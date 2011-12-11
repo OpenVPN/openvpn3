@@ -49,7 +49,6 @@ namespace openvpn {
       LONG_FORM = 1,  // long form of ID (8 bytes)
 
       UNDEF = 0,       // special undefined/null id_t value
-      SMALLEST_LEGAL_TIME = 256, // time value must be at least this value
     };
 
     id_t id;       // legal values are 1 through 2^32-1
@@ -57,7 +56,7 @@ namespace openvpn {
 
     bool is_valid() const
     {
-      return id != UNDEF && time >= SMALLEST_LEGAL_TIME;
+      return id != UNDEF;
     }
 
     void reset()
@@ -102,14 +101,12 @@ namespace openvpn {
 	}
     }
 
-#ifdef PACKET_ID_EXTRA_LOG_INFO
     std::string str() const
     {
       std::ostringstream os;
       os << "[" << time << "," << id << "]";
       return os.str();
     }
-#endif
   };
 
   struct PacketIDConstruct : public PacketID
@@ -264,7 +261,7 @@ namespace openvpn {
 
     void init(const int mode, const int form,
 	      const int seq_backtrack, const int time_backtrack,
-	      const char *name, const int unit, int debug_level)
+	      const char *name, const int unit, const int debug_level)
     {
       initialized_ = false;
       form_ = form;
@@ -519,9 +516,9 @@ namespace openvpn {
     void do_log (const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
 #ifdef PACKET_ID_EXTRA_LOG_INFO
-      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.id << "," << pin.time << "] info=" << info << " state=" << str(now));
+      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << str(now));
 #else
-      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.id << "," << pin.time << "] info=" << info << " state=" << name_ << "-" << unit_);
+      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << name_ << "-" << unit_);
 #endif
     }
 

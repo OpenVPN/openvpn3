@@ -25,12 +25,12 @@ namespace openvpn {
       using ReliableMessageBase<PACKET>::defined;
 
     public:
-      bool ready_retransmit(const Time now) const
+      bool ready_retransmit(const Time& now) const
       {
 	return defined() && now >= retransmit_at_;
       }
 
-      Time::Duration until_retransmit(const Time now) const
+      Time::Duration until_retransmit(const Time& now) const
       {
 	Time::Duration ret;
 	if (now < retransmit_at_)
@@ -38,7 +38,7 @@ namespace openvpn {
 	return ret;
       }
 
-      void reset_retransmit(const Time now)
+      void reset_retransmit(const Time& now)
       {
 	retransmit_at_ = now + Time::Duration::seconds(RETRANSMIT);
       }
@@ -74,7 +74,7 @@ namespace openvpn {
     }
 
     // Return the shortest duration for any pending retransmissions
-    Time::Duration until_retransmit(const Time now)
+    Time::Duration until_retransmit(const Time& now)
     {
       Time::Duration ret = Time::Duration::infinite();
       for (id_t i = head_id(); i < tail_id(); ++i)
@@ -90,10 +90,22 @@ namespace openvpn {
       return ret;
     }
 
+    // Return number of unacknowleged packets in send queue
+    unsigned int n_unacked()
+    {
+      unsigned int ret = 0;
+      for (id_t i = head_id(); i < tail_id(); ++i)
+	{
+	  if (ref_by_id(i).defined())
+	    ++ret;
+	}
+      return ret;
+    }
+
     // Return a fresh Message object that can be used to
     // construct the next packet in the sequence.  Don't call
     // unless ready() returns true.
-    Message& send(const Time now)
+    Message& send(const Time& now)
     {
       Message& msg = window_.ref_by_id(next);
       msg.id_ = next++;

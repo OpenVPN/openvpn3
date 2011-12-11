@@ -111,6 +111,8 @@ namespace openvpn {
 
   typedef TimeType<unsigned long> Time;
 
+  typedef const Time* TimePtr;
+
 } // namespace openvpn
 
 #endif // OPENVPN_TIME_TIME_H

@@ -21,9 +21,7 @@
 
 namespace openvpn {
   template <typename ReadHandler>
-  class TunLinux
-    : public TunPosix,
-      public boost::enable_shared_from_this< TunLinux<ReadHandler> >  // fixme -- don't need any more
+  class TunLinux : public TunPosix
   {
   public:
     // exceptions
@@ -31,7 +29,7 @@ namespace openvpn {
 
     TunLinux(boost::asio::io_service& io_service,
 	     ReadHandler read_handler,
-	     const FramePtr frame,
+	     const Frame::Ptr frame,
 	     const char *name=NULL,
 	     const bool ipv6=false,
 	     const bool tap=false,
@@ -171,14 +169,7 @@ namespace openvpn {
 	    {
 	      buf->set_size(bytes_recvd);
 	      stats_.add_read_bytes(bytes_recvd);
-	      try
-		{
-		  read_handler_(sbuf);
-		}
-	      catch (boost::bad_weak_ptr& e) // fixme -- don't really need any longer
-		{
-		  return; // read handler has gone out of scope, don't requeue
-		}
+	      read_handler_(sbuf);
 	    }
 	  else
 	    OPENVPN_LOG("TUN Read Error: " << error);
@@ -189,7 +180,7 @@ namespace openvpn {
     boost::asio::posix::stream_descriptor *sd;
     bool halt_;
     ReadHandler read_handler_;
-    const FramePtr frame_;
+    const Frame::Ptr frame_;
     IOStatsSingleThread stats_;
   };
 

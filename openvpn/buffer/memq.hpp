@@ -13,6 +13,11 @@ namespace openvpn {
   public:
     MemQBase() : length(0) {}
 
+    size_t size() const
+    {
+      return q.size();
+    }
+
     bool empty() const
     {
       return q.empty();

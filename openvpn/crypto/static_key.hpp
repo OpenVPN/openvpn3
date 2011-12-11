@@ -62,7 +62,7 @@ namespace openvpn {
 
     bool defined() const { return key_data_.defined(); }
 
-    StaticKey slice(unsigned int key_specifier)
+    StaticKey slice(unsigned int key_specifier) const
     {
       if (key_data_.size() != KEY_SIZE)
 	throw static_key_bad_size();
@@ -108,6 +108,17 @@ namespace openvpn {
 	out << render_hex(key_data_.c_data() + i, 16) << "\n";
       out << static_key_foot << "\n";
       return out.str();
+    }
+
+    unsigned char *raw_alloc()
+    {
+      key_data_.init(KEY_SIZE, key_t::DESTRUCT_ZERO|key_t::ARRAY);
+      return key_data_.data();
+    }
+
+    void erase()
+    {
+      key_data_.clear();
     }
 
   private:

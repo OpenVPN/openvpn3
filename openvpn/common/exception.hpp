@@ -39,7 +39,7 @@ namespace openvpn {
   }
 
   // define a simple custom exception class with no extra info that inherits from a custom base
-# define OPENVPN_SIMPLE_EXCEPTION_INHERIT(C, B)	\
+# define OPENVPN_SIMPLE_EXCEPTION_INHERIT(B, C)	\
   class C : public B { \
   public: \
     virtual const char* what() const throw() { return #C "/" OPENVPN_FILE_LINE; } \
@@ -54,7 +54,7 @@ namespace openvpn {
   }
 
   // define a custom exception class that allows extra info, and inherits from a custom base
-# define OPENVPN_EXCEPTION_INHERIT(C, B)		\
+# define OPENVPN_EXCEPTION_INHERIT(B, C)		\
   class C : public B { \
   public: \
     C() : B(#C "/" OPENVPN_FILE_LINE) {} \

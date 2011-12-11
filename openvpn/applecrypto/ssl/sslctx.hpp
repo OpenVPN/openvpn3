@@ -26,6 +26,13 @@ namespace openvpn {
   {
   public:
     OPENVPN_EXCEPTION(ssl_context_error);
+    OPENVPN_EXCEPTION(ssl_ciphertext_in_overflow);
+
+    typedef boost::intrusive_ptr<AppleSSLContext> Ptr;
+
+    enum {
+      MAX_CIPHERTEXT_IN = 64
+    };
 
     // The data needed to construct an AppleSSLContext.
     // Alternatively, SSLConfig can be used.
@@ -36,7 +43,7 @@ namespace openvpn {
       SSLConfig::Mode mode;
       SSLConfig::Flags flags;
       CF::Array identity; // as returned by load_identity
-      FramePtr frame;
+      Frame::Ptr frame;
     };
 
     // Represents an actual SSL session.
@@ -123,17 +130,22 @@ namespace openvpn {
 
       ssize_t read_cleartext(void *data, const size_t capacity)
       {
-	size_t actual = 0;
-	const OSStatus status = SSLRead(ssl, data, capacity, &actual);
-	if (status < 0)
+	if (!overflow)
 	  {
-	    if (status == errSSLWouldBlock)
-	      return SHOULD_RETRY;
+	    size_t actual = 0;
+	    const OSStatus status = SSLRead(ssl, data, capacity, &actual);
+	    if (status < 0)
+	      {
+		if (status == errSSLWouldBlock)
+		  return SHOULD_RETRY;
+		else
+		  throw CFException(status, "AppleSSLContext::SSL::read_cleartext failed");
+	      }
 	    else
-	      throw CFException(status, "AppleSSLContext::SSL::read_cleartext failed");
+	      return actual;
 	  }
 	else
-	  return actual;
+	  throw ssl_ciphertext_in_overflow();
       }
 
       bool write_ciphertext_ready() const {
@@ -142,7 +154,10 @@ namespace openvpn {
 
       void write_ciphertext(const BufferPtr& buf)
       {
-	ct_in.write_buf(buf);
+	if (ct_in.size() < MAX_CIPHERTEXT_IN)
+	  ct_in.write_buf(buf);
+	else
+	  overflow = true;
       }
 
       bool read_ciphertext_ready() const {
@@ -191,6 +206,7 @@ namespace openvpn {
       void ssl_clear()
       {
 	ssl = NULL;
+	overflow = false;
       }
 
       void ssl_erase()
@@ -203,6 +219,7 @@ namespace openvpn {
       SSLContextRef ssl; // underlying SSL connection object
       MemQStream ct_in;  // write ciphertext to here
       MemQStream ct_out; // read ciphertext from here
+      bool overflow;
     };
 
     typedef boost::intrusive_ptr<SSL> SSLPtr;
@@ -228,7 +245,7 @@ namespace openvpn {
 
     SSLConfig::Mode mode() const { return config_.mode; }
     SSLConfig::Flags flags() const { return config_.flags; }
-    const FramePtr& frame() const { return config_.frame; }
+    const Frame::Ptr& frame() const { return config_.frame; }
     const CF::Array& identity() const { return config_.identity; }
 
     // load an identity from keychain, return as an array that can
@@ -254,7 +271,7 @@ namespace openvpn {
     Config config_;
   };
 
-  typedef boost::intrusive_ptr<AppleSSLContext> AppleSSLContextPtr;
+  typedef AppleSSLContext::Ptr AppleSSLContextPtr;
 
 } // namespace openvpn
 

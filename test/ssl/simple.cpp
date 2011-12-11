@@ -65,7 +65,7 @@ int main(int /*argc*/, char* /*argv*/[])
     std::string dh_pem = read_text("dh.pem");
     std::string tls_auth_key = read_text("tls-auth.key");
 
-    FramePtr frame(new Frame(Frame::Context(128, 256, 128, 0, sizeof(size_t), 0)));
+    Frame::Ptr frame(new Frame(Frame::Context(128, 256, 128, 0, sizeof(size_t), 0)));
 
     // client config
     SSLConfig cc;
