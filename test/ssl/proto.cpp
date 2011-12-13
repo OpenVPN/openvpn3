@@ -8,7 +8,7 @@
 
 // Unit test for OpenVPN protocol
 
-#define PACKET_ID_EXTRA_LOG_INFO
+#define OPENVPN_PACKET_ID_EXTRA_LOG_INFO
 #define USE_TLS_AUTH
 
 // number of threads to use for test

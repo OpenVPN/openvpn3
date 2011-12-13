@@ -6,7 +6,7 @@
 #include <cstring>
 #include <limits>
 
-#define PACKET_ID_EXTRA_LOG_INFO
+#define OPENVPN_PACKET_ID_EXTRA_LOG_INFO
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
