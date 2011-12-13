@@ -18,6 +18,12 @@
 #include <openvpn/openssl/pki/x509store.hpp>
 #include <openvpn/openssl/bio/bio_memq_stream.hpp>
 
+// An SSL Context is essentially a configuration that can be used
+// to generate an arbitrary number of actual SSL connections objects.
+
+// OpenSSLContext is an SSL Context implementation that uses the
+// OpenSSL library as a backend.
+
 namespace openvpn {
 
   // Represents an SSL configuration that can be used

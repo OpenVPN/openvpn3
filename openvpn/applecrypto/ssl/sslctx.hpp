@@ -18,6 +18,12 @@
 #include <openvpn/applecrypto/cf/cfsec.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
 
+// An SSL Context is essentially a configuration that can be used
+// to generate an arbitrary number of actual SSL connections objects.
+
+// AppleSSLContext is an SSL Context implementation that uses the
+// Mac/iOS SSL library as a backend.
+
 namespace openvpn {
 
   // Represents an SSL configuration that can be used

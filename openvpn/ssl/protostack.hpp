@@ -14,6 +14,14 @@
 #include <openvpn/reliable/relack.hpp>
 #include <openvpn/frame/frame.hpp>
 
+// ProtoStackBase is designed to allow general-purpose protocols (including
+// but not limited to OpenVPN) to run over SSL, where the underlying transport
+// layer is unreliable, such as UDP.  The OpenVPN protocol implementation in
+// proto.hpp (ProtoContext) layers on top of ProtoStackBase.
+// ProtoStackBase is independent of any particular SSL implementation, and
+// accepts the SSL object type as a template parameter.  See OpenSSLContext
+// and AppleSSLContext for existing implementations.
+
 namespace openvpn {
 
   // PACKET type must define the following methods:
@@ -50,12 +58,12 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(proto_stack_invalidated);
 
-    ProtoStackBase(SSLContext& ctx,
-		   TimePtr now_arg,
-		   const Frame::Ptr& frame,
-		   const ProtoStats::Ptr& stats_arg,
-		   const id_t span,
-		   const size_t max_ack_list)
+    ProtoStackBase(SSLContext& ctx,                   // SSL context object that can be used to generate new SSL sessions
+		   TimePtr now_arg,                   // pointer to current time
+		   const Frame::Ptr& frame,           // contains info on how to allocate and align buffers
+		   const ProtoStats::Ptr& stats_arg,  // error statistics
+		   const id_t span,                   // basically the window size for our reliability layer
+		   const size_t max_ack_list)         // maximum number of ACK messages to bundle in one packet
       : ssl_(ctx.ssl()),
 	frame_(frame),
 	up_stack_reentry_level(0),
@@ -217,7 +225,7 @@ namespace openvpn {
     // a ready-to-use state.
     virtual void raw_recv(PACKET& raw_pkt) = 0;
 
-    // called if session is invalidated by an error
+    // called if session is invalidated by an error (optional)
     virtual void invalidate_callback() {}
 
     // END of VIRTUAL METHODS

@@ -140,22 +140,23 @@ namespace openvpn {
       int pid_time_backtrack;
       int pid_debug_level;     // PacketIDReceive::DEBUG_x levels
 
-      // timeout parameters
-      Time::Duration handshake_window;
-      Time::Duration become_primary;
-      Time::Duration renegotiate;
-      Time::Duration expire;
+      // timeout parameters, relative to construction of KeyContext object
+      Time::Duration handshake_window; // SSL/TLS negotiation must complete by this time
+      Time::Duration become_primary;   // KeyContext (that is ACTIVE) becomes primary at this time
+      Time::Duration renegotiate;      // start SSL/TLS renegotiation at this time
+      Time::Duration expire;           // KeyContext expires at this time
     };
 
+    // Used to describe an incoming network packet
     class PacketType
     {
       friend class ProtoContext;
 
       enum {
-	DEFINED=1<<0,
-	CONTROL=1<<1,
-	SECONDARY=1<<2,
-	SOFT_RESET=1<<3,
+	DEFINED=1<<0,     // packet is valid (otherwise invalid)
+	CONTROL=1<<1,     // packet for control channel (otherwise for data channel)
+	SECONDARY=1<<2,   // packet is associated with secondary KeyContext (otherwise primary)
+	SOFT_RESET=1<<3,  // packet is a CONTROL_SOFT_RESET_V1 message indicating a request for SSL/TLS renegotiation
       };
 
     public:
@@ -255,6 +256,9 @@ namespace openvpn {
     }
 
   protected:
+
+    // Packet structure for managing network packets, as passed as a template
+    // parameter to ProtoStackBase
     class Packet
     {
       friend class ProtoContext;
@@ -355,6 +359,7 @@ namespace openvpn {
 	next_event_time = construct_time + p.config->handshake_window;
       }
 
+      // need to call only on the initiator side of the connection (i.e. client)
       void start()
       {
 	if (state == C_INITIAL)
@@ -365,6 +370,7 @@ namespace openvpn {
 	  }
       }
 
+      // control channel flush
       void flush()
       {
 	if (dirty)
@@ -376,12 +382,14 @@ namespace openvpn {
 	  }
       }
 
+      // retransmit packets as part of reliability layer
       void retransmit()
       {
 	// note that we don't set dirty here
 	Base::retransmit();
       }
 
+      // when should we next call retransmit function
       Time next_retransmit() const
       {
 	const Time t = Base::next_retransmit();
@@ -391,6 +399,7 @@ namespace openvpn {
 	  return next_event_time;
       }
 
+      // send app-level cleartext data to peer via SSL
       void app_send(BufferPtr& bp)
       {
 	if (state >= ACTIVE)
@@ -402,12 +411,14 @@ namespace openvpn {
 	  app_pre_write_queue.push_back(bp);
       }
 
+      // pass received ciphertext packets on network to SSL/reliability layers
       void net_recv(Packet& pkt)
       {
 	Base::net_recv(pkt);
 	dirty = true;
       }
 
+      // data channel encrypt
       void encrypt(BufferAllocated& buf)
       {
 	if (state >= ACTIVE && !invalidated())
@@ -420,6 +431,7 @@ namespace openvpn {
 	  buf.reset_size(); // no crypto context available
       }
 
+      // data channel decrypt
       void decrypt(BufferAllocated& buf)
       {
 	if (state >= ACTIVE && !invalidated())
@@ -431,6 +443,8 @@ namespace openvpn {
 	  buf.reset_size(); // no crypto context available
       }
 
+      // usually called by parent ProtoContext object when this KeyContext
+      // has been retired.
       void prepare_expire()
       {
 	current_event = KEV_NONE;
@@ -438,6 +452,7 @@ namespace openvpn {
 	next_event_time = construct_time + proto.config->expire;
       }
 
+      // is an KEV_x event pending?
       bool event_pending()
       {
 	if (current_event == KEV_NONE && *now >= next_event_time)
@@ -445,92 +460,110 @@ namespace openvpn {
 	return current_event != KEV_NONE;
       }
 
+      // get KEV_x event
       EventType get_event() const { return current_event; }
+
+      // clear KEV_x event
       void reset_event() { current_event = KEV_NONE; }
 
-      // Was session invalidated by an exception?
+      // was session invalidated by an exception?
       bool invalidated() const { return Base::invalidated(); }
 
+      // our Key ID in the OpenVPN protocol
       unsigned int key_id() const { return key_id_; }
 
+      // indicates that data channel is keyed and ready to encrypt/decrypt packets
       bool data_channel_ready() const { return state >= ACTIVE; }
 
       bool is_dirty() const { return dirty; }
 
+      // time that our state transitioned to ACTIVE
       Time reached_active() const { return reached_active_time_; }
 
+      // validate the integrity of a packet
       static bool validate(const Buffer& net_buf, ProtoContext& proto, TimePtr now)
       {
-	Buffer recv(net_buf);
-	if (proto.use_tls_auth)
-	  {
-	    const unsigned char *orig_data = recv.data();
-	    const size_t orig_size = recv.size();
-
-	    // advance buffer past initial op byte
-	    recv.advance(1);
-
-	    // get source PSID
-	    ProtoSessionID src_psid(recv);
-
-	    // verify HMAC
+	try {
+	  Buffer recv(net_buf);
+	  if (proto.use_tls_auth)
 	    {
-	      const unsigned char *hmac = recv.read_alloc(proto.hmac_size);
-	      if (!proto.ta_hmac_recv.hmac2_cmp(hmac, proto.hmac_size, orig_data, orig_size))
+	      const unsigned char *orig_data = recv.data();
+	      const size_t orig_size = recv.size();
+
+	      // advance buffer past initial op byte
+	      recv.advance(1);
+
+	      // get source PSID
+	      ProtoSessionID src_psid(recv);
+
+	      // verify HMAC
+	      {
+		const unsigned char *hmac = recv.read_alloc(proto.hmac_size);
+		if (!proto.ta_hmac_recv.hmac2_cmp(hmac, proto.hmac_size, orig_data, orig_size))
+		  return false;
+	      }
+
+	      // verify source PSID
+	      if (!proto.psid_peer.match(src_psid))
 		return false;
+
+	      // read tls_auth packet ID
+	      const PacketID pid = proto.ta_pid_recv.read_next(recv);
+
+	      // get current time_t
+	      const PacketID::time_t t = now->seconds_since_epoch();
+
+	      // verify tls_auth packet ID
+	      const bool pid_ok = proto.ta_pid_recv.test(pid, t);
+
+	      // make sure that our own PSID is contained in packet received from peer
+	      if (ReliableAck::ack_skip(recv))
+		{
+		  ProtoSessionID dest_psid(recv);
+		  if (!proto.psid_self.match(dest_psid))
+		    return false;
+		}
+
+	      return pid_ok;
 	    }
+	  else
+	    {
+	      // advance buffer past initial op byte
+	      recv.advance(1);
 
-	    // verify source PSID
-	    if (!proto.psid_peer.match(src_psid))
-	      return false;
+	      // verify source PSID
+	      ProtoSessionID src_psid(recv);
+	      if (!proto.psid_peer.match(src_psid))
+		return false;
 
-	    // read tls_auth packet ID
-	    const PacketID pid = proto.ta_pid_recv.read_next(recv);
+	      // make sure that our own PSID is contained in packet received from peer
+	      if (ReliableAck::ack_skip(recv))
+		{
+		  ProtoSessionID dest_psid(recv);
+		  if (!proto.psid_self.match(dest_psid))
+		    return false;
+		}
 
-	    // get current time_t
-	    const PacketID::time_t t = now->seconds_since_epoch();
-
-	    // verify tls_auth packet ID
-	    const bool pid_ok = proto.ta_pid_recv.test(pid, t);
-
-	    // make sure that our own PSID is contained in packet received from peer
-	    if (ReliableAck::ack_skip(recv))
-	      {
-		ProtoSessionID dest_psid(recv);
-		if (!proto.psid_self.match(dest_psid))
-		  return false;
-	      }
-
-	    return pid_ok;
-	  }
-	else
+	      return true;
+	    }
+	}
+	catch (buffer_exception& e)
 	  {
-	    // advance buffer past initial op byte
-	    recv.advance(1);
-
-	    // verify source PSID
-	    ProtoSessionID src_psid(recv);
-	    if (!proto.psid_peer.match(src_psid))
-	      return false;
-
-	    // make sure that our own PSID is contained in packet received from peer
-	    if (ReliableAck::ack_skip(recv))
-	      {
-		ProtoSessionID dest_psid(recv);
-		if (!proto.psid_self.match(dest_psid))
-		  return false;
-	      }
-
-	    return true;
+	    return false;
 	  }
       }
 
     private:
+      // called by ProtoStackBase when session is invalidated
       virtual void invalidate_callback()
       {
 	reached_active_time_ = Time();
       }
 
+      // Trigger a new SSL/TLS negotiation if packet ID (a 32-bit unsigned int)
+      // is getting close to wrapping around.  If it wraps back to 0 without
+      // a renegotiation, it would cause the relay protection logic to wrongly
+      // think that all packets are replays.
       void test_pid_wrap()
       {
 	if (!handled_pid_wrap && crypto.encrypt.pid_send.wrap_warning())
@@ -710,6 +743,8 @@ namespace openvpn {
 	active_event();
       }
 
+      // use the TLS PRF construction to exchange session keys for building
+      // the data channel crypto context
       void generate_session_keys()
       {
 	OpenVPNStaticKey key;
@@ -720,6 +755,8 @@ namespace openvpn {
 	tlsprf_peer.erase();
       }
 
+      // given our ephemeral session key, initialize the components of the
+      // OpenVPN data channel protocol
       void init_data_channel_crypto_context(const OpenVPNStaticKey& key)
       {
 	const Config& c = *proto.config;
@@ -842,116 +879,122 @@ namespace openvpn {
 
       virtual bool decapsulate(Packet& pkt)
       {
-	Buffer& recv = *pkt.buf;
+	try {
+	  Buffer& recv = *pkt.buf;
 
-	if (proto.use_tls_auth)
-	  {
-	    const unsigned char *orig_data = recv.data();
-	    const size_t orig_size = recv.size();
-
-	    // advance buffer past initial op byte
-	    recv.advance(1);
-
-	    // get source PSID
-	    ProtoSessionID src_psid(recv);
-
-	    // verify HMAC
+	  if (proto.use_tls_auth)
 	    {
-	      const unsigned char *hmac = recv.read_alloc(proto.hmac_size);
-	      if (!proto.ta_hmac_recv.hmac2_cmp(hmac, proto.hmac_size, orig_data, orig_size))
+	      const unsigned char *orig_data = recv.data();
+	      const size_t orig_size = recv.size();
+
+	      // advance buffer past initial op byte
+	      recv.advance(1);
+
+	      // get source PSID
+	      ProtoSessionID src_psid(recv);
+
+	      // verify HMAC
+	      {
+		const unsigned char *hmac = recv.read_alloc(proto.hmac_size);
+		if (!proto.ta_hmac_recv.hmac2_cmp(hmac, proto.hmac_size, orig_data, orig_size))
+		  {
+		    proto.stats->error(ProtoStats::HMAC_ERRORS);
+		    return false;
+		  }      
+	      }
+
+	      // verify source PSID
+	      if (!verify_src_psid(src_psid))
+		return false;
+
+	      // read tls_auth packet ID
+	      const PacketID pid = proto.ta_pid_recv.read_next(recv);
+
+	      // get current time_t
+	      const PacketID::time_t t = now->seconds_since_epoch();
+
+	      // verify tls_auth packet ID
+	      const bool pid_ok = proto.ta_pid_recv.test(pid, t);
+
+	      // process ACKs sent by peer (if packet ID check failed,
+	      // read the ACK IDs, but don't modify the rel_send object).
+	      if (ReliableAck::ack(rel_send, recv, pid_ok))
 		{
-		  proto.stats->error(ProtoStats::HMAC_ERRORS);
-		  return false;
-		}      
+		  // make sure that our own PSID is contained in packet received from peer
+		  if (!verify_dest_psid(recv))
+		    return false;
+		}
+
+	      // for CONTROL packets only, not ACK
+	      if (pkt.opcode != ACK_V1)
+		{
+		  // get message sequence number
+		  const id_t id = ReliableAck::read_id(recv);
+
+		  if (pid_ok)
+		    {
+		      // try to push message into reliable receive object
+		      const unsigned int rflags = rel_recv.receive(pkt, id);
+
+		      // should we ACK packet back to sender?
+		      if (rflags & ReliableRecv::ACK_TO_SENDER)
+			xmit_acks.push_back(id); // ACK packet to sender
+
+		      // was packet accepted by reliable receive object?
+		      if (rflags & ReliableRecv::IN_WINDOW)
+			{
+			  proto.ta_pid_recv.add(pid, t); // remember tls_auth packet ID so that it can't be replayed
+			  return true;
+			}
+		    }
+		  else // treat as replay
+		    {
+		      proto.stats->error(ProtoStats::REPLAY_ERRORS);
+		      if (pid.is_valid())
+			xmit_acks.push_back(id); // even replayed packets must be ACKed or protocol could deadlock
+		    }
+		}
 	    }
+	  else // non tls_auth mode
+	    {
+	      // advance buffer past initial op byte
+	      recv.advance(1);
 
-	    // verify source PSID
-	    if (!verify_src_psid(src_psid))
-	      return false;
+	      // verify source PSID
+	      ProtoSessionID src_psid(recv);
+	      if (!verify_src_psid(src_psid))
+		return false;
 
-	    // read tls_auth packet ID
-	    const PacketID pid = proto.ta_pid_recv.read_next(recv);
+	      // process ACKs sent by peer
+	      if (ReliableAck::ack(rel_send, recv, true))
+		{
+		  // make sure that our own PSID is in packet received from peer
+		  if (!verify_dest_psid(recv))
+		    return false;
+		}
 
-	    // get current time_t
-	    const PacketID::time_t t = now->seconds_since_epoch();
+	      // for CONTROL packets only, not ACK
+	      if (pkt.opcode != ACK_V1)
+		{
+		  // get message sequence number
+		  const id_t id = ReliableAck::read_id(recv);
 
-	    // verify tls_auth packet ID
-	    const bool pid_ok = proto.ta_pid_recv.test(pid, t);
+		  // try to push message into reliable receive object
+		  const unsigned int rflags = rel_recv.receive(pkt, id);
 
-	    // process ACKs sent by peer (if packet ID check failed,
-	    // read the ACK IDs, but don't modify the rel_send object).
-	    if (ReliableAck::ack(rel_send, recv, pid_ok))
-	      {
-		// make sure that our own PSID is contained in packet received from peer
-		if (!verify_dest_psid(recv))
-		  return false;
-	      }
+		  // should we ACK packet back to sender?
+		  if (rflags & ReliableRecv::ACK_TO_SENDER)
+		    xmit_acks.push_back(id); // ACK packet to sender
 
-	    // for CONTROL packets only, not ACK
-	    if (pkt.opcode != ACK_V1)
-	      {
-		// get message sequence number
-		const id_t id = ReliableAck::read_id(recv);
-
-		if (pid_ok)
-		  {
-		    // try to push message into reliable receive object
-		    const unsigned int rflags = rel_recv.receive(pkt, id);
-
-		    // should we ACK packet back to sender?
-		    if (rflags & ReliableRecv::ACK_TO_SENDER)
-		      xmit_acks.push_back(id); // ACK packet to sender
-
-		    // was packet accepted by reliable receive object?
-		    if (rflags & ReliableRecv::IN_WINDOW)
-		      {
-			proto.ta_pid_recv.add(pid, t); // remember tls_auth packet ID so that it can't be replayed
-			return true;
-		      }
-		  }
-		else // treat as replay
-		  {
-		    proto.stats->error(ProtoStats::REPLAY_ERRORS);
-		    if (pid.is_valid())
-		      xmit_acks.push_back(id); // even replayed packets must be ACKed or protocol could deadlock
-		  }
-	      }
-	  }
-	else // non tls_auth mode
+		  // was packet accepted by reliable receive object?
+		  if (rflags & ReliableRecv::IN_WINDOW)
+		    return true;
+		}
+	    }
+	}
+	catch (buffer_exception& e)
 	  {
-	    // advance buffer past initial op byte
-	    recv.advance(1);
-
-	    // verify source PSID
-	    ProtoSessionID src_psid(recv);
-	    if (!verify_src_psid(src_psid))
-	      return false;
-
-	    // process ACKs sent by peer
-	    if (ReliableAck::ack(rel_send, recv, true))
-	      {
-		// make sure that our own PSID is in packet received from peer
-		if (!verify_dest_psid(recv))
-		  return false;
-	      }
-
-	    // for CONTROL packets only, not ACK
-	    if (pkt.opcode != ACK_V1)
-	      {
-		// get message sequence number
-		const id_t id = ReliableAck::read_id(recv);
-
-		// try to push message into reliable receive object
-		const unsigned int rflags = rel_recv.receive(pkt, id);
-
-		// should we ACK packet back to sender?
-		if (rflags & ReliableRecv::ACK_TO_SENDER)
-		  xmit_acks.push_back(id); // ACK packet to sender
-
-		// was packet accepted by reliable receive object?
-		if (rflags & ReliableRecv::IN_WINDOW)
-		  return true;
-	      }
+	    proto.stats->error(ProtoStats::BUFFER_ERRORS);
 	  }
 	return false;
       }
@@ -988,8 +1031,8 @@ namespace openvpn {
   public:
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
 
-    ProtoContext(const typename Config::Ptr& config_arg,
-		 const ProtoStats::Ptr& stats_arg)
+    ProtoContext(const typename Config::Ptr& config_arg,  // configuration
+		 const ProtoStats::Ptr& stats_arg)        // error stats
       : config(config_arg),
 	stats(stats_arg),
 	hmac_size(0),
@@ -1035,6 +1078,7 @@ namespace openvpn {
 
     virtual ~ProtoContext() {}
 
+    // return the PacketType of an incoming network packet
     PacketType packet_type(const Buffer& buf)
     {
       PacketType pt;
@@ -1058,11 +1102,13 @@ namespace openvpn {
       return pt;
     }
 
+    // start protocol negotiation
     void start()
     {
       primary->start();
     }
 
+    // trigger a protocol renegotiation
     void renegotiate()
     {
       // initialize secondary key context
@@ -1070,7 +1116,8 @@ namespace openvpn {
       secondary->start();
     }
 
-    // Should be called at the end of sequence of operations.
+    // Should be called at the end of sequence of send/recv
+    // operations on underlying protocol object.
     // If control_channel is true, do a full flush.
     // If control_channel is false, optimize flush for data
     // channel only.
@@ -1084,6 +1131,7 @@ namespace openvpn {
 	}
     }
 
+    // retransmit unacknowleged packets as part of the reliability layer
     void retransmit()
     {
       // primary
@@ -1094,6 +1142,7 @@ namespace openvpn {
 	secondary->retransmit();
     }
 
+    // when should we next call retransmit?
     Time next_retransmit() const
     {
       const Time p = primary->next_retransmit();
@@ -1105,6 +1154,8 @@ namespace openvpn {
 	}
       return p;
     }
+
+    // send app-level cleartext to remote peer
 
     void control_send(BufferPtr& app_bp)
     {
@@ -1118,10 +1169,13 @@ namespace openvpn {
       select_control_send_context().app_send(bp);
     }
 
+    // validate a control channel network packet
     bool control_net_validate(const PacketType& type, const Buffer& net_buf)
     {
       return type.is_defined() && KeyContext::validate(net_buf, *this, config->now);
     }
+
+    // pass received control channel network packets (ciphertext) into protocol object
 
     void control_net_recv(const PacketType& type, BufferAllocated& net_buf)
     {
@@ -1141,11 +1195,14 @@ namespace openvpn {
       select_key_context(type, true).net_recv(pkt);
     }
 
+    // encrypt a data channel packet using primary KeyContext
     void data_encrypt(BufferAllocated& in_out)
     {
       primary->encrypt(in_out);
     }
 
+    // decrypt a data channel packet (automatically select primary
+    // or secondary KeyContext based on packet content)
     void data_decrypt(const PacketType& type, BufferAllocated& in_out)
     {
       select_key_context(type, false).decrypt(in_out);
@@ -1160,7 +1217,7 @@ namespace openvpn {
     // can we call data_encrypt or data_decrypt yet?
     bool data_channel_ready() const { return primary->data_channel_ready(); }
 
-    // total number of SSL/TLS negotiations
+    // total number of SSL/TLS negotiations during lifetime of ProtoContext object
     unsigned int negotiations() const { return n_key_ids; }
 
     // total number of SSL/TLS negotiations that failed to complete during handshake window
@@ -1196,6 +1253,7 @@ namespace openvpn {
 	return false;
     }
 
+    // select a KeyContext (primary or secondary) for received network packets
     KeyContext& select_key_context(const PacketType& type, const bool control)
     {
       const unsigned int flags = type.flags & (PacketType::DEFINED|PacketType::SECONDARY|PacketType::CONTROL);
@@ -1216,15 +1274,13 @@ namespace openvpn {
       throw select_key_context_error();
     }
 
-    // Select a KeyContext (primary or secondar) for control channel sends.
-    // If only primary exists, choose primary.
-    // If both primary and secondary exists, choose the one that reached
-    // the active state most recently.
+    // Select a KeyContext (primary or secondary) for control channel sends.
     KeyContext& select_control_send_context()
     {
       return *primary;
     }
 
+    // Process KEV_x events
     bool process_events()
     {
       bool did_work;
@@ -1250,6 +1306,9 @@ namespace openvpn {
       return count > 1;
     }
 
+    // Promote a newly renegotiated KeyContext to primary status.
+    // This is usually triggered by become_primary variable (Time::Duration)
+    // in Config.
     void promote_secondary_to_primary()
     {
       if (!secondary->invalidated())

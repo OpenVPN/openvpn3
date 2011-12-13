@@ -6,13 +6,17 @@
 #include <cstring>
 #include <limits>
 
+// Unit test for OpenVPN protocol
+
 #define PACKET_ID_EXTRA_LOG_INFO
 #define USE_TLS_AUTH
 
+// number of threads to use for test
 #ifndef N_THREADS
 #define N_THREADS 1
 #endif
 
+// number of iterations
 #ifndef ITER
 #define ITER 1000000
 #endif
@@ -77,6 +81,9 @@ const char message[] =
 #endif
   ;
 
+// A "Drought" measures the maximum period of time between
+// any two successive events.  Used to measure worst-case
+// packet loss.
 class DroughtMeasure
 {
 public:
@@ -104,6 +111,7 @@ private:
   Time::Duration drought;
 };
 
+// test the OpenVPN protocol implementation in ProtoContext
 template <typename SSL_CONTEXT>
 class TestProto : public ProtoContext<SSL_CONTEXT>
 {
@@ -253,6 +261,8 @@ private:
   char progress_[11];
 };
 
+// Simulate a noisy transmission channel where packets can be dropped,
+// reordered, or corrupted.
 class NoisyWire
 {
 public:
@@ -404,6 +414,7 @@ private:
   std::deque<BufferPtr> wire;
 };
 
+// execute the unit test in one thread
 void test(const int thread_num)
 {
   try {
