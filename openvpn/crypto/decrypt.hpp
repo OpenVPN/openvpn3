@@ -20,12 +20,12 @@ namespace openvpn {
   public:
     OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
 
-    OPENVPN_SIMPLE_EXCEPTION(decrypt_verify_failed);
-    OPENVPN_SIMPLE_EXCEPTION_INHERIT(decrypt_verify_failed, decrypt_hmac_verify_failed);
-    OPENVPN_SIMPLE_EXCEPTION_INHERIT(decrypt_verify_failed, decrypt_packet_id_verify_failed);
-
     void decrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
+      // skip null packets
+      if (!buf.size())
+	return;
+
       // verify the HMAC
       if (hmac.defined())
 	{
@@ -35,9 +35,10 @@ namespace openvpn {
 	  hmac.hmac(local_hmac, hmac_size, buf.c_data(), buf.size());
 	  if (std::memcmp(local_hmac, packet_hmac, hmac_size))
 	    {
+	      buf.reset_size();
 	      if (stats)
 		stats->error(ProtoStats::HMAC_ERRORS);
-	      throw decrypt_hmac_verify_failed();
+	      return;
 	    }
 	}
 
@@ -55,26 +56,45 @@ namespace openvpn {
 
 	  // decrypt from buf -> work
 	  const size_t decrypt_bytes = cipher.decrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
+	  if (!decrypt_bytes)
+	    {
+	      buf.reset_size();
+	      if (stats)
+		stats->error(ProtoStats::CRYPTO_ERRORS);
+	      return;
+	    }
 	  work.set_size(decrypt_bytes);
 
 	  // handle different cipher modes
 	  const int cipher_mode = cipher.cipher_mode();
 	  if (cipher_mode == CipherContext::CIPH_CBC_MODE)
 	    {
-	      verify_packet_id(work, now);
+	      if (!verify_packet_id(work, now))
+		{
+		  buf.reset_size();
+		  if (stats)
+		    stats->error(ProtoStats::REPLAY_ERRORS);
+		  return;
+		}
 	    }
 	  else
 	    {
 	      throw unsupported_cipher_mode();
 	    }
+
+	  // return cleartext result in buf
+	  buf.swap(work);
 	}
       else // no encryption
 	{
-	  verify_packet_id(buf, now);
+	  if (!verify_packet_id(buf, now))
+	    {
+	      buf.reset_size();
+	      if (stats)
+		stats->error(ProtoStats::REPLAY_ERRORS);
+	      return;
+	    }
 	}
-
-      // return cleartext result in buf
-      buf.swap(work);
     }
 
     Frame::Ptr frame;
@@ -84,7 +104,7 @@ namespace openvpn {
     ProtoStats::Ptr stats;
 
   private:
-    void verify_packet_id(BufferAllocated& buf, const PacketID::time_t now)
+    bool verify_packet_id(BufferAllocated& buf, const PacketID::time_t now)
     {
       // ignore packet ID if pid_recv is not initialized
       if (pid_recv.initialized())
@@ -93,12 +113,9 @@ namespace openvpn {
 	  if (pid_recv.test(pid, now)) // verify packet ID
 	    pid_recv.add(pid, now);    // remember packet ID
 	  else
-	    {
-	      if (stats)
-		stats->error(ProtoStats::REPLAY_ERRORS);
-	      throw decrypt_packet_id_verify_failed();
-	    }
+	    return false;
 	}
+      return true;
     }
 
     BufferAllocated work;

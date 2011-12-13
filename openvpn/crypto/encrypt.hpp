@@ -20,6 +20,10 @@ namespace openvpn {
 
     void encrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
+      // skip null packets
+      if (!buf.size())
+	return;
+
       if (cipher.defined())
 	{
 	  // workspace for generating IV
@@ -46,6 +50,11 @@ namespace openvpn {
 
 	  // encrypt from buf -> work
 	  const size_t encrypt_bytes = cipher.encrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
+	  if (!encrypt_bytes)
+	    {
+	      buf.reset_size();
+	      return;
+	    }
 	  work.set_size(encrypt_bytes);
 
 	  // prepend the IV to the ciphertext

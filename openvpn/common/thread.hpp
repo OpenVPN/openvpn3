@@ -1,6 +1,8 @@
 #ifndef OPENVPN_COMMON_THREAD_H
 #define OPENVPN_COMMON_THREAD_H
 
+#include <boost/asio.hpp>
+
 #if defined(BOOST_HAS_THREADS) && !defined(BOOST_ASIO_DISABLE_THREADS)
 #define OPENVPN_MULTITHREAD 1
 #else

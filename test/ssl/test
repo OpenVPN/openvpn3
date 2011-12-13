@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+./proto &
+./proto &
+./proto &
+./proto &
+wait

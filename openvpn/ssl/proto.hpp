@@ -9,6 +9,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/log.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -138,6 +139,12 @@ namespace openvpn {
       int pid_seq_backtrack;
       int pid_time_backtrack;
       int pid_debug_level;     // PacketIDReceive::DEBUG_x levels
+
+      // timeout parameters
+      Time::Duration handshake_window;
+      Time::Duration become_primary;
+      Time::Duration renegotiate;
+      Time::Duration expire;
     };
 
     class PacketType
@@ -148,12 +155,14 @@ namespace openvpn {
 	DEFINED=1<<0,
 	CONTROL=1<<1,
 	SECONDARY=1<<2,
+	SOFT_RESET=1<<3,
       };
 
     public:
       bool is_defined() const { return flags & DEFINED; }
       bool is_control() const { return (flags & (CONTROL|DEFINED)) == (CONTROL|DEFINED); }
       bool is_data()    const { return (flags & (CONTROL|DEFINED)) == DEFINED; }
+      bool is_soft_reset() const { return (flags & (CONTROL|DEFINED|SECONDARY|SOFT_RESET)) == (CONTROL|DEFINED|SECONDARY|SOFT_RESET); }
 
     private:
       PacketType() : flags(0), opcode(INVALID_OPCODE) {}
@@ -305,24 +314,45 @@ namespace openvpn {
       using Base::start_handshake;
       using Base::raw_send;
       using Base::send_pending_acks;
+      using Base::invalidate;
 
     public:
       OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
 
       typedef boost::intrusive_ptr<KeyContext> Ptr;
 
-      KeyContext(ProtoContext& p)
+      // timeline of events for KeyContext (occurring in order)
+      enum EventType {
+	KEV_NONE,
+	KEV_ACTIVE,         // KeyContext has reached the ACTIVE state
+	KEV_NEGOTIATE,      // SSL/TLS negotiation must complete by this time
+	KEV_BECOME_PRIMARY, // KeyContext becomes primary for data channel traffic
+	KEV_RENEGOTIATE,    // start renegotiating a new KeyContext at this time
+	KEV_EXPIRE,         // expiration of KeyContext
+	KEV_NEGOTIATE_FAILED, // SSL/TLS negotiation failed
+      };
+
+      KeyContext(ProtoContext& p, const bool initiator)
 	: Base(*p.config->ssl_ctx, p.config->now, p.config->frame, p.stats,
 	       p.config->reliable_window, p.config->max_ack_list),
 	  proto(p),
 	  dirty(0),
+	  handled_pid_wrap(false),
 	  tlsprf_self(p.server_),
 	  tlsprf_peer(!p.server_)
       {
-	state = proto.server_ ? S_WAIT_RESET : C_INITIAL;
+	state = initiator ? C_INITIAL : S_WAIT_RESET;
 
 	// get key_id from parent
 	key_id_ = proto.next_key_id();
+
+	// remember when we were constructed
+	construct_time = *now;
+
+	// set must-negotiate-by time
+	current_event = KEV_NONE;
+	next_event = KEV_NEGOTIATE;
+	next_event_time = construct_time + p.config->handshake_window;
       }
 
       void start()
@@ -348,13 +378,17 @@ namespace openvpn {
 
       void retransmit()
       {
+	// note that we don't set dirty here
 	Base::retransmit();
-	dirty = true;
       }
 
       Time next_retransmit() const
       {
-	return Base::next_retransmit();
+	const Time t = Base::next_retransmit();
+	if (t <= next_event_time)
+	  return t;
+	else
+	  return next_event_time;
       }
 
       void app_send(BufferPtr& bp)
@@ -376,25 +410,46 @@ namespace openvpn {
 
       void encrypt(BufferAllocated& buf)
       {
-	if (state >= ACTIVE)
+	if (state >= ACTIVE && !invalidated())
 	  {
 	    crypto.encrypt.encrypt(buf, now->seconds_since_epoch());
 	    buf.push_front(op_compose(DATA_V1, key_id_));
+	    test_pid_wrap();
 	  }
 	else
-	  buf.reset_size(); // no crypto context available yet
+	  buf.reset_size(); // no crypto context available
       }
 
       void decrypt(BufferAllocated& buf)
       {
-	if (state >= ACTIVE)
+	if (state >= ACTIVE && !invalidated())
 	  {
 	    buf.advance(1); // knock off leading op from buffer
 	    crypto.decrypt.decrypt(buf, now->seconds_since_epoch());
 	  }
 	else
-	  buf.reset_size(); // no crypto context available yet
+	  buf.reset_size(); // no crypto context available
       }
+
+      void prepare_expire()
+      {
+	current_event = KEV_NONE;
+	next_event = KEV_EXPIRE;
+	next_event_time = construct_time + proto.config->expire;
+      }
+
+      bool event_pending()
+      {
+	if (current_event == KEV_NONE && *now >= next_event_time)
+	  process_next_event();
+	return current_event != KEV_NONE;
+      }
+
+      EventType get_event() const { return current_event; }
+      void reset_event() { current_event = KEV_NONE; }
+
+      // Was session invalidated by an exception?
+      bool invalidated() const { return Base::invalidated(); }
 
       unsigned int key_id() const { return key_id_; }
 
@@ -402,7 +457,149 @@ namespace openvpn {
 
       bool is_dirty() const { return dirty; }
 
+      Time reached_active() const { return reached_active_time_; }
+
+      static bool validate(const Buffer& net_buf, ProtoContext& proto, TimePtr now)
+      {
+	Buffer recv(net_buf);
+	if (proto.use_tls_auth)
+	  {
+	    const unsigned char *orig_data = recv.data();
+	    const size_t orig_size = recv.size();
+
+	    // advance buffer past initial op byte
+	    recv.advance(1);
+
+	    // get source PSID
+	    ProtoSessionID src_psid(recv);
+
+	    // verify HMAC
+	    {
+	      const unsigned char *hmac = recv.read_alloc(proto.hmac_size);
+	      if (!proto.ta_hmac_recv.hmac2_cmp(hmac, proto.hmac_size, orig_data, orig_size))
+		return false;
+	    }
+
+	    // verify source PSID
+	    if (!proto.psid_peer.match(src_psid))
+	      return false;
+
+	    // read tls_auth packet ID
+	    const PacketID pid = proto.ta_pid_recv.read_next(recv);
+
+	    // get current time_t
+	    const PacketID::time_t t = now->seconds_since_epoch();
+
+	    // verify tls_auth packet ID
+	    const bool pid_ok = proto.ta_pid_recv.test(pid, t);
+
+	    // make sure that our own PSID is contained in packet received from peer
+	    if (ReliableAck::ack_skip(recv))
+	      {
+		ProtoSessionID dest_psid(recv);
+		if (!proto.psid_self.match(dest_psid))
+		  return false;
+	      }
+
+	    return pid_ok;
+	  }
+	else
+	  {
+	    // advance buffer past initial op byte
+	    recv.advance(1);
+
+	    // verify source PSID
+	    ProtoSessionID src_psid(recv);
+	    if (!proto.psid_peer.match(src_psid))
+	      return false;
+
+	    // make sure that our own PSID is contained in packet received from peer
+	    if (ReliableAck::ack_skip(recv))
+	      {
+		ProtoSessionID dest_psid(recv);
+		if (!proto.psid_self.match(dest_psid))
+		  return false;
+	      }
+
+	    return true;
+	  }
+      }
+
     private:
+      virtual void invalidate_callback()
+      {
+	reached_active_time_ = Time();
+      }
+
+      void test_pid_wrap()
+      {
+	if (!handled_pid_wrap && crypto.encrypt.pid_send.wrap_warning())
+	  {
+	    trigger_renegotiation();
+	    handled_pid_wrap = true;
+	  }
+      }
+
+      void trigger_renegotiation()
+      {
+	if (state >= ACTIVE && !invalidated())
+	  {
+	    current_event = KEV_RENEGOTIATE;
+	    next_event = KEV_EXPIRE;
+	    next_event_time = construct_time + proto.config->expire;
+	  }
+      }
+
+      void active_event()
+      {
+	current_event = KEV_ACTIVE;
+	next_event = KEV_BECOME_PRIMARY;
+	next_event_time = construct_time + proto.config->become_primary;
+      }
+
+      void process_next_event()
+      {
+	if (*now >= next_event_time)
+	  {
+	    switch (next_event)
+	      {
+	      case KEV_NEGOTIATE:
+		if (state >= ACTIVE)
+		  {
+		    current_event = KEV_NEGOTIATE;
+		    next_event = KEV_BECOME_PRIMARY;
+		    next_event_time = construct_time + proto.config->become_primary;
+		  }
+		else
+		  {
+		    invalidate();
+		    current_event = KEV_NEGOTIATE_FAILED;
+		    next_event = KEV_NONE;
+		    next_event_time = Time::infinite();
+		  }
+		break;
+	      case KEV_BECOME_PRIMARY:
+		current_event = KEV_BECOME_PRIMARY;
+		next_event = KEV_RENEGOTIATE;
+		next_event_time = construct_time + proto.config->renegotiate;
+		break;
+	      case KEV_RENEGOTIATE:
+		current_event = KEV_RENEGOTIATE;
+		next_event = KEV_EXPIRE;
+		next_event_time = construct_time + proto.config->expire;
+		break;
+	      case KEV_EXPIRE:
+		invalidate();
+		current_event = KEV_EXPIRE;
+		next_event = KEV_NONE;
+		next_event_time = Time::infinite();
+		break;
+	      default:
+		break;
+	      }
+	  }
+      }
+
       unsigned int initial_op(const bool sender) const
       {
 	if (key_id_)
@@ -476,12 +673,10 @@ namespace openvpn {
 		state = S_WAIT_AUTH;
 		break;
 	      case C_WAIT_AUTH_ACK:
-		generate_session_keys();
 		active();
 		state = ACTIVE;
 		break;
 	      case S_WAIT_AUTH_ACK:
-		generate_session_keys();
 		active();
 		state = ACTIVE;
 		break;
@@ -505,18 +700,21 @@ namespace openvpn {
 
       void active()
       {
+	generate_session_keys();
 	while (!app_pre_write_queue.empty())
 	  {
 	    Base::app_send(app_pre_write_queue.front());
 	    app_pre_write_queue.pop_front();
 	  }
+	reached_active_time_ = *now;
+	active_event();
       }
 
       void generate_session_keys()
       {
 	OpenVPNStaticKey key;
 	tlsprf_self.generate_key_expansion(key, tlsprf_peer, proto.psid_self, proto.psid_peer);
-	//std::cout << "KEY " << proto.server_ << ' ' << key.render();
+	//OPENVPN_LOG("KEY " << proto.server_ << ' ' << key.render()); // fixme
 	init_data_channel_crypto_context(key);
 	tlsprf_self.erase();
 	tlsprf_peer.erase();
@@ -531,8 +729,7 @@ namespace openvpn {
 	crypto.encrypt.frame = c.frame;
 	crypto.encrypt.cipher.init(c.cipher,
 				   key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
-				   CipherContext::ENCRYPT,
-				   ProtoStats::Ptr());
+				   CipherContext::ENCRYPT);
 	crypto.encrypt.hmac.init(c.digest,
 				 key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
 	crypto.encrypt.pid_send.init(PacketID::SHORT_FORM);
@@ -543,14 +740,13 @@ namespace openvpn {
 	crypto.decrypt.stats = proto.stats;
 	crypto.decrypt.cipher.init(c.cipher,
 				   key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
-				   CipherContext::DECRYPT,
-				   proto.stats);
+				   CipherContext::DECRYPT);
 	crypto.decrypt.hmac.init(c.digest,
 				 key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 	crypto.decrypt.pid_recv.init(c.pid_mode,
 				     PacketID::SHORT_FORM,
 				     c.pid_seq_backtrack, c.pid_time_backtrack,
-				     "DC", int(key_id_),
+				     "DATA", int(key_id_),
 				     c.pid_debug_level);
       }
 
@@ -777,6 +973,12 @@ namespace openvpn {
       unsigned int state;
       unsigned int key_id_;
       bool dirty;
+      bool handled_pid_wrap;
+      Time construct_time;
+      Time reached_active_time_;
+      Time next_event_time;
+      EventType current_event;
+      EventType next_event;
       std::deque<BufferPtr> app_pre_write_queue;
       CryptoContext crypto;
       TLSPRF tlsprf_self;
@@ -792,7 +994,9 @@ namespace openvpn {
 	stats(stats_arg),
 	hmac_size(0),
 	use_tls_auth(false),
-	key_id(0)
+	upcoming_key_id(0),
+	n_key_ids(0),
+	n_negotiation_fails(0)
     {
       const Config& c = *config;
 
@@ -817,7 +1021,7 @@ namespace openvpn {
 	  ta_pid_recv.init(c.pid_mode,
 			   PacketID::LONG_FORM,
 			   c.pid_seq_backtrack, c.pid_time_backtrack,
-			   "SSL-CC", int(key_id),
+			   "SSL-CC", 0,
 			   c.pid_debug_level
 			   );
 	}
@@ -826,25 +1030,30 @@ namespace openvpn {
       psid_self.randomize(*c.prng);
 
       // initialize primary key context
-      primary.reset(new KeyContext(*this));
+      primary.reset(new KeyContext(*this, !server_));
     }
 
     virtual ~ProtoContext() {}
 
-    PacketType packet_type(Buffer& buf)
+    PacketType packet_type(const Buffer& buf)
     {
       PacketType pt;
-      const unsigned int op = buf[0];
-      pt.opcode = validate_opcode(op);
-      if (pt.opcode != INVALID_OPCODE)
+      if (buf.size())
 	{
-	  if (pt.opcode != DATA_V1)
-	    pt.flags |= PacketType::CONTROL;
-	  const unsigned int kid = key_id_extract(op);
-	  if (kid == primary->key_id())
-	    pt.flags |= PacketType::DEFINED;
-	  else if (secondary && kid == secondary->key_id())
-	    pt.flags |= (PacketType::DEFINED | PacketType::SECONDARY);
+	  const unsigned int op = buf[0];
+	  pt.opcode = validate_opcode(op);
+	  if (pt.opcode != INVALID_OPCODE)
+	    {
+	      if (pt.opcode != DATA_V1)
+		pt.flags |= PacketType::CONTROL;
+	      const unsigned int kid = key_id_extract(op);
+	      if (kid == primary->key_id())
+		pt.flags |= PacketType::DEFINED;
+	      else if (secondary && kid == secondary->key_id())
+		pt.flags |= (PacketType::DEFINED | PacketType::SECONDARY);
+	      else if (pt.opcode == CONTROL_SOFT_RESET_V1 && kid == upcoming_key_id)
+		pt.flags |= (PacketType::DEFINED | PacketType::SECONDARY | PacketType::SOFT_RESET);
+	    }
 	}
       return pt;
     }
@@ -854,16 +1063,33 @@ namespace openvpn {
       primary->start();
     }
 
-    void flush()
+    void renegotiate()
     {
-      primary->flush();
-      if (secondary)
-	secondary->flush();
+      // initialize secondary key context
+      secondary.reset(new KeyContext(*this, true));
+      secondary->start();
+    }
+
+    // Should be called at the end of sequence of operations.
+    // If control_channel is true, do a full flush.
+    // If control_channel is false, optimize flush for data
+    // channel only.
+    void flush(const bool control_channel)
+    {
+      if (process_events() || control_channel)
+	{
+	  primary->flush();
+	  if (secondary)
+	    secondary->flush();
+	}
     }
 
     void retransmit()
     {
+      // primary
       primary->retransmit();
+
+      // secondary
       if (secondary)
 	secondary->retransmit();
     }
@@ -882,30 +1108,37 @@ namespace openvpn {
 
     void control_send(BufferPtr& app_bp)
     {
-      primary->app_send(app_bp);
+      select_control_send_context().app_send(app_bp);
     }
 
     void control_send(BufferAllocated& app_buf)
     {
       BufferPtr bp = new BufferAllocated();
       bp->move(app_buf);
-      primary->app_send(bp);      
+      select_control_send_context().app_send(bp);
+    }
+
+    bool control_net_validate(const PacketType& type, const Buffer& net_buf)
+    {
+      return type.is_defined() && KeyContext::validate(net_buf, *this, config->now);
     }
 
     void control_net_recv(const PacketType& type, BufferAllocated& net_buf)
     {
-      KeyContext& kc = select_key_context(type, true);
       BufferPtr bp = new BufferAllocated();
       bp->move(net_buf);
       Packet pkt(bp, type.opcode);
-      kc.net_recv(pkt);
+      if (type.is_soft_reset() && !renegotiate_request(pkt))
+	return;
+      select_key_context(type, true).net_recv(pkt);
     }
 
     void control_net_recv(const PacketType& type, BufferPtr& net_bp)
     {
-      KeyContext& kc = select_key_context(type, true);
       Packet pkt(net_bp, type.opcode);
-      kc.net_recv(pkt);
+      if (type.is_soft_reset() && !renegotiate_request(pkt))
+	return;
+      select_key_context(type, true).net_recv(pkt);
     }
 
     void data_encrypt(BufferAllocated& in_out)
@@ -918,9 +1151,6 @@ namespace openvpn {
       select_key_context(type, false).decrypt(in_out);
     }
 
-    // was primary context invalidated by an exception?
-    bool invalidated() const { return primary->invalidated(); }
-
     // current time
     const Time& now() const { return *config->now; }
 
@@ -929,6 +1159,15 @@ namespace openvpn {
 
     // can we call data_encrypt or data_decrypt yet?
     bool data_channel_ready() const { return primary->data_channel_ready(); }
+
+    // total number of SSL/TLS negotiations
+    unsigned int negotiations() const { return n_key_ids; }
+
+    // total number of SSL/TLS negotiations that failed to complete during handshake window
+    unsigned int negotiation_fails() const { return n_negotiation_fails; }
+
+    // was primary context invalidated by an exception?
+    bool invalidated() const { return primary->invalidated(); }
 
   private:
     virtual void control_net_send(const Buffer& net_buf) = 0;
@@ -945,23 +1184,129 @@ namespace openvpn {
       control_recv(to_app_buf);
     }
 
+    // we're getting a request from peer to renegotiate.
+    bool renegotiate_request(Packet& pkt)
+    {
+      if (KeyContext::validate(pkt.buffer(), *this, config->now))
+	{
+	  secondary.reset(new KeyContext(*this, false));
+	  return true;
+	}
+      else
+	return false;
+    }
+
     KeyContext& select_key_context(const PacketType& type, const bool control)
     {
+      const unsigned int flags = type.flags & (PacketType::DEFINED|PacketType::SECONDARY|PacketType::CONTROL);
       if (!control)
 	{
-	  if (type.flags == (PacketType::DEFINED))
+	  if (flags == (PacketType::DEFINED))
 	    return *primary;
-	  else if (type.flags == (PacketType::DEFINED|PacketType::SECONDARY) && secondary)
+	  else if (flags == (PacketType::DEFINED|PacketType::SECONDARY) && secondary)
 	    return *secondary;
 	}
       else
 	{
-	  if (type.flags == (PacketType::DEFINED|PacketType::CONTROL))
+	  if (flags == (PacketType::DEFINED|PacketType::CONTROL))
 	    return *primary;
-	  else if (type.flags == (PacketType::DEFINED|PacketType::SECONDARY|PacketType::CONTROL) && secondary)
+	  else if (flags == (PacketType::DEFINED|PacketType::SECONDARY|PacketType::CONTROL) && secondary)
 	    return *secondary;
 	}
       throw select_key_context_error();
+    }
+
+    // Select a KeyContext (primary or secondar) for control channel sends.
+    // If only primary exists, choose primary.
+    // If both primary and secondary exists, choose the one that reached
+    // the active state most recently.
+    KeyContext& select_control_send_context()
+    {
+      return *primary;
+    }
+
+    bool process_events()
+    {
+      bool did_work;
+      unsigned int count = 0;
+      do {
+	did_work = false;
+	++count;
+
+	// primary
+	if (primary->event_pending())
+	  {
+	    process_primary_event();
+	    did_work = true;
+	  }
+
+	// secondary
+	if (secondary && secondary->event_pending())
+	  {
+	    process_secondary_event();
+	    did_work = true;
+	  }
+      } while (did_work);
+      return count > 1;
+    }
+
+    void promote_secondary_to_primary()
+    {
+      if (!secondary->invalidated())
+	{
+	  primary.swap(secondary);
+	  secondary->prepare_expire();
+	}
+    }
+
+    void process_primary_event()
+    {
+      const typename KeyContext::EventType ev = primary->get_event();
+      if (ev != KeyContext::KEV_NONE)
+	{
+	  primary->reset_event();
+	  switch (ev)
+	    {
+	    case KeyContext::KEV_RENEGOTIATE:
+	      renegotiate();
+	      break;
+	    case KeyContext::KEV_EXPIRE:
+	      promote_secondary_to_primary();
+	      break;
+	    case KeyContext::KEV_NEGOTIATE_FAILED:
+	      ++n_negotiation_fails;
+	      break;
+	    default:
+	      break;
+	    }
+	}
+    }
+
+    void process_secondary_event()
+    {
+      const typename KeyContext::EventType ev = secondary->get_event();
+      if (ev != KeyContext::KEV_NONE)
+	{
+	  secondary->reset_event();
+	  switch (ev)
+	    {
+	    case KeyContext::KEV_ACTIVE:
+	      primary->prepare_expire();
+	      break;
+	    case KeyContext::KEV_BECOME_PRIMARY:
+	      promote_secondary_to_primary();
+	      break;
+	    case KeyContext::KEV_EXPIRE:
+	      secondary.reset();
+	      break;
+	    case KeyContext::KEV_NEGOTIATE_FAILED:
+	      ++n_negotiation_fails;
+	      renegotiate();
+	      break;
+	    default:
+	      break;
+	    }
+	}
     }
 
     unsigned int validate_opcode(const unsigned int op)
@@ -991,9 +1336,10 @@ namespace openvpn {
     // Therefore, if key_id is 0, it is the first key.
     unsigned int next_key_id()
     {
-      unsigned int ret = key_id;
-      if ((key_id = (key_id + 1) & KEY_ID_MASK) == 0)
-	key_id = 1;
+      ++n_key_ids;
+      unsigned int ret = upcoming_key_id;
+      if ((upcoming_key_id = (upcoming_key_id + 1) & KEY_ID_MASK) == 0)
+	upcoming_key_id = 1;
       return ret;
     }
 
@@ -1005,7 +1351,9 @@ namespace openvpn {
     size_t hmac_size;
     bool use_tls_auth;
     bool server_;
-    unsigned int key_id;
+    unsigned int upcoming_key_id;
+    unsigned int n_key_ids;
+    unsigned int n_negotiation_fails;
 
     HMACContext ta_hmac_send;
     HMACContext ta_hmac_recv;

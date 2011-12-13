@@ -41,6 +41,14 @@ namespace openvpn {
       return len;
     }
 
+    static size_t ack_skip(Buffer& buf)
+    {
+      const size_t len = buf.pop_front();
+      for (size_t i = 0; i < len; ++i)
+	read_id(buf);
+      return len;
+    }
+
     // copy ACKs from buffer to self
     void read(Buffer& buf)
     {

@@ -3,6 +3,7 @@
 
 #include <cstring>
 
+#include <openvpn/common/log.hpp>
 #include <openvpn/common/rc.hpp>
 
 namespace openvpn {
@@ -38,7 +39,7 @@ namespace openvpn {
 
     void error(const size_t err_type)
     {
-      //std::cout << "*** ERROR " << err_type << std::endl; // fixme
+      //OPENVPN_LOG("*** ERROR " << err_type);
       if (err_type > HMAC_ERRORS && err_type < N_ITEMS)
 	++data[err_type];
     }

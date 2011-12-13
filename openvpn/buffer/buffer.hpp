@@ -150,7 +150,9 @@ namespace openvpn {
     const T& operator[](const size_t index) const
     {
       if (index >= size_)
-	throw buffer_const_index();
+	{
+	  throw buffer_const_index();
+	}
       return c_data()[index];
     }
 

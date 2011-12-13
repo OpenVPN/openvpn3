@@ -163,7 +163,7 @@ namespace openvpn {
      * start thinking about triggering a new
      * SSL/TLS handshake.
      */
-    bool wrap_trigger() const
+    bool wrap_warning() const
     {
       const PacketID::id_t wrap_at = 0xFF000000;
       return pid_.id >= wrap_at;

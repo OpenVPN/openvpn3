@@ -38,21 +38,24 @@ else
     CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
 fi
 
+# boost link libraries
+BOOST_LIBS="-lboost_system"
 if [ "$NOTHREADS" = "1" ]; then
     THREAD_FLAGS="-DBOOST_DISABLE_THREADS"
 else
+    BOOST_LIBS="$BOOST_LIBS -lboost_thread"
     THREAD_FLAGS="-pthread"
 fi
 
 if [ "$DEBUG" = "1" ]; then
     # debug build
-    CMD="g++ -Wall -g $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS"
+    CMD="g++ -Wall -g $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
 else
     # release build
     FLAGS=""
     [ "$LTO" = "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
-    CMD="g++ -Wall -O3 -fwhole-program $FLAGS $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 -lboost_system $CRYPTO_LIBS"
+    CMD="g++ -Wall -O3 -fwhole-program $FLAGS $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
 fi
 
 # execute CMD

@@ -32,15 +32,27 @@ namespace openvpn {
       bool defined() const { return duration_ != T(0); }
       bool operator!() const { return duration_ == T(0); }
       bool is_infinite() const { return duration_ == std::numeric_limits<T>::max(); }
+      void set_infinite() { duration_ = std::numeric_limits<T>::max(); }
 
-      Duration operator+(const Duration& d) const { return Duration(duration_ + d.duration_); }
+      Duration operator+(const Duration& d) const
+      {
+	if (is_infinite() || d.is_infinite())
+	  return infinite();
+	else
+	  return Duration(duration_ + d.duration_);
+      }
+
+      Duration& operator+=(const Duration& d)
+      {
+	if (is_infinite() || d.is_infinite())
+	  set_infinite();
+	else
+	  duration_ += d.duration_;
+	return *this;
+      }
+
       Duration operator-(const Duration& d) const { return Duration(duration_ - d.duration_); }
-
-      Duration& operator+=(const Duration& d) { duration_ += d.duration_; return *this; }
       Duration& operator-=(const Duration& d) { duration_ -= d.duration_; return *this; }
-
-      Duration operator*(const T mul) { return Duration(duration_ * mul); }
-      Duration& operator*=(const T mul) { duration_ *= mul; return *this; }
 
       T to_seconds() const { return duration_ / prec; }
       T to_binary_ms() const { return duration_; }
@@ -68,6 +80,10 @@ namespace openvpn {
     static TimeType zero() { return TimeType(T(0)); }
     static TimeType infinite() { return TimeType(std::numeric_limits<T>::max()); }
 
+    bool is_infinite() const { return time_ == std::numeric_limits<T>::max(); }
+
+    void set_infinite() { time_ = std::numeric_limits<T>::max(); }
+
     bool defined() const { return time_ != 0; }
     bool operator!() const { return time_ == 0; }
 
@@ -84,10 +100,27 @@ namespace openvpn {
 
     static void reset_base() { base_ = ::time(0); }
 
-    TimeType operator+(const Duration& d) const { return TimeType(time_ + d.duration_); }
-    TimeType& operator+=(const Duration& d) { time_ += d.duration_; return *this; }
+    TimeType operator+(const Duration& d) const
+    {
+      if (is_infinite() || d.is_infinite())
+	return infinite();
+      else
+	return TimeType(time_ + d.duration_);
+    }
 
-    Duration operator-(const TimeType& t) const { return Duration(time_ - t.time_); }
+    TimeType& operator+=(const Duration& d)
+    {
+      if (is_infinite() || d.is_infinite())
+	set_infinite();
+      else
+	time_ += d.duration_;
+      return *this;
+    }
+
+    Duration operator-(const TimeType& t) const
+    {
+      return Duration(time_ - t.time_);
+    }
 
 #   define OPENVPN_TIME_REL(OP) bool operator OP(const TimeType& t) const { return time_ OP t.time_; }
     OPENVPN_TIME_REL(==)

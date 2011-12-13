@@ -59,7 +59,7 @@ namespace openvpn {
       : ssl_(ctx.ssl()),
 	frame_(frame),
 	up_stack_reentry_level(0),
-	invalidate(false),
+	invalidated_(false),
 	ssl_started_(false),
 	next_retransmit_(Time::infinite()),
 	stats(stats_arg),
@@ -73,18 +73,20 @@ namespace openvpn {
     // Start SSL handshake on underlying SSL connection object.
     void start_handshake()
     {
-      test_invalidated();
-      ssl_->start_handshake();
-      ssl_started_ = true;
-      up_sequenced();
+      if (!invalidated())
+	{
+	  ssl_->start_handshake();
+	  ssl_started_ = true;
+	  up_sequenced();
+	}
     }
 
     // Incoming ciphertext packet arriving from network,
     // we will take ownership of pkt.
     void net_recv(PACKET& pkt)
     {
-      test_invalidated();
-      up_stack(pkt);
+      if (!invalidated())
+	up_stack(pkt);
     }
 
     // Outgoing application-level cleartext packet ready to send
@@ -92,8 +94,8 @@ namespace openvpn {
     // of buf.
     void app_send(BufferPtr& buf)
     {
-      test_invalidated();
-      app_write_queue.push_back(buf);
+      if (!invalidated())
+	app_write_queue.push_back(buf);
     }
 
     // Outgoing raw packet ready to send (will NOT be encrypted
@@ -101,8 +103,8 @@ namespace openvpn {
     // and tracked via reliability layer).
     void raw_send(const PACKET& pkt)
     {
-      test_invalidated();
-      raw_write_queue.push_back(pkt);
+      if (!invalidated())
+	raw_write_queue.push_back(pkt);
     }
 
     // Write any pending data to network and update retransmit
@@ -110,8 +112,7 @@ namespace openvpn {
     // net_recv, app_send, raw_send, or start_handshake calls.
     void flush()
     {
-      test_invalidated();
-      if (!up_stack_reentry_level)
+      if (!invalidated() && !up_stack_reentry_level)
 	{
 	  down_stack_raw();
 	  down_stack_app();
@@ -122,43 +123,60 @@ namespace openvpn {
     // Send pending ACKs back to sender for packets already received
     void send_pending_acks()
     {
-      test_invalidated();
-      while (!xmit_acks.empty())
+      if (!invalidated())
 	{
-	  ack_send_buf.frame_prepare(*frame_, Frame::WRITE_ACK_STANDALONE);
+	  while (!xmit_acks.empty())
+	    {
+	      ack_send_buf.frame_prepare(*frame_, Frame::WRITE_ACK_STANDALONE);
 
-	  // encapsulate standalone ACK
-	  generate_ack(ack_send_buf);
+	      // encapsulate standalone ACK
+	      generate_ack(ack_send_buf);
 
-	  // transmit it
-	  net_send(ack_send_buf);
+	      // transmit it
+	      net_send(ack_send_buf);
+	    }
 	}
     }
 
     // Send any pending retransmissions
     void retransmit()
     {
-      test_invalidated();
-      for (id_t i = rel_send.head_id(); i < rel_send.tail_id(); ++i)
+      if (!invalidated() && *now >= next_retransmit_)
 	{
-	  typename ReliableSend::Message& m = rel_send.ref_by_id(i);
-	  if (m.ready_retransmit(*now))
+	  for (id_t i = rel_send.head_id(); i < rel_send.tail_id(); ++i)
 	    {
-	      net_send(m.packet);
-	      m.reset_retransmit(*now);
+	      typename ReliableSend::Message& m = rel_send.ref_by_id(i);
+	      if (m.ready_retransmit(*now))
+		{
+		  net_send(m.packet);
+		  m.reset_retransmit(*now);
+		}
 	    }
+	  update_retransmit();
 	}
-      update_retransmit();
     }
 
     // When should we next call retransmit()
-    Time next_retransmit() const { return next_retransmit_; }
+    Time next_retransmit() const
+    {
+      if (!invalidated())
+	return next_retransmit_;
+      else
+	return Time::infinite();
+    }
 
     // Has SSL handshake been started yet?
     bool ssl_started() const { return ssl_started_; }
 
     // Was session invalidated by an exception?
-    bool invalidated() const { return invalidate; }
+    bool invalidated() const { return invalidated_; }
+
+    // Invalidate session
+    void invalidate()
+    {
+      invalidated_ = true;
+      invalidate_callback();
+    }
 
     virtual ~ProtoStackBase() {}
 
@@ -199,6 +217,9 @@ namespace openvpn {
     // a ready-to-use state.
     virtual void raw_recv(PACKET& raw_pkt) = 0;
 
+    // called if session is invalidated by an error
+    virtual void invalidate_callback() {}
+
     // END of VIRTUAL METHODS
 
 
@@ -220,7 +241,7 @@ namespace openvpn {
 		{
 		  if (stats)
 		    stats->error(ProtoStats::SSL_ERRORS);
-		  invalidate = true;
+		  invalidate();
 		  throw;
 		}
 	      app_write_queue.pop_front();
@@ -238,7 +259,7 @@ namespace openvpn {
 	      }
 	      catch (...)
 		{
-		  invalidate = true;
+		  invalidate();
 		  throw;
 		}
 
@@ -263,7 +284,7 @@ namespace openvpn {
 	  }
 	  catch (...)
 	    {
-	      invalidate = true;
+	      invalidate();
 	      throw;
 	    }
 
@@ -316,7 +337,7 @@ namespace openvpn {
 		// SSL fatal errors will invalidate the session
 		if (stats)
 		  stats->error(ProtoStats::SSL_ERRORS);
-		invalidate = true;
+		invalidate();
 		throw;
 	      }
 	    if (size == SSLContext::SSL::SHOULD_RETRY)
@@ -328,26 +349,16 @@ namespace openvpn {
 	  }
     }
 
-    void test_invalidated() const
-    {
-      if (invalidate)
-	throw proto_stack_invalidated();
-    }
-
     void update_retransmit()
     {
-      const Time::Duration d = rel_send.until_retransmit(*now);
-      if (d.is_infinite())
-	next_retransmit_ = Time::infinite();
-      else
-	next_retransmit_ = *now + d;
+      next_retransmit_ = *now + rel_send.until_retransmit(*now);
     }
 
   private:
     typename SSLContext::SSLPtr ssl_;
     Frame::Ptr frame_;
     int up_stack_reentry_level;
-    bool invalidate;
+    bool invalidated_;
     bool ssl_started_;
     Time next_retransmit_;
     BufferPtr to_app_buf; // cleartext data decrypted by SSL that is to be passed to app via app_recv method

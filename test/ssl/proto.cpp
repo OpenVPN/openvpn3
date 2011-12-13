@@ -7,7 +7,21 @@
 #include <limits>
 
 #define PACKET_ID_EXTRA_LOG_INFO
+#define USE_TLS_AUTH
 
+#ifndef N_THREADS
+#define N_THREADS 1
+#endif
+
+#ifndef ITER
+#define ITER 1000000
+#endif
+
+#if !defined(VERBOSE) && ITER <= 10000
+#define VERBOSE
+#endif
+
+#include <openvpn/common/thread.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/time/time.hpp>
@@ -17,19 +31,16 @@
 
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/init.hpp>
+
 #ifdef USE_APPLE_SSL
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
 #endif
 
+#if OPENVPN_MULTITHREAD
+#include <boost/bind.hpp>
+#endif
+
 using namespace openvpn;
-
-#ifndef ITER
-#define ITER 1000000
-#endif
-
-#if !defined(VERBOSE) && ITER <= 1000
-#define VERBOSE
-#endif
 
 const char message[] =
   "Message _->_ 0000000000 It was a bright cold day in April, and the clocks\n"
@@ -66,6 +77,33 @@ const char message[] =
 #endif
   ;
 
+class DroughtMeasure
+{
+public:
+  DroughtMeasure(TimePtr now_arg)
+    : now(now_arg)
+  {
+  }
+
+  void event()
+  {
+    if (last_event.defined())
+      {
+	Time::Duration since_last = *now - last_event;
+	if (since_last > drought)
+	  drought = since_last;
+      }
+    last_event = *now;
+  }
+
+  Time::Duration operator()() const { return drought; }
+
+private:
+  TimePtr now;
+  Time last_event;
+  Time::Duration drought;
+};
+
 template <typename SSL_CONTEXT>
 class TestProto : public ProtoContext<SSL_CONTEXT>
 {
@@ -83,6 +121,8 @@ public:
   TestProto(const typename Base::Config::Ptr& config,
 	    const ProtoStats::Ptr& stats)
     : Base(config, stats),
+      control_drought(config->now),
+      data_drought(config->now),
       frame(config->frame),
       app_bytes_(0),
       net_bytes_(0),
@@ -122,6 +162,8 @@ public:
   {
     data_bytes_ += in_out.size();
     Base::data_decrypt(type, in_out);
+    if (in_out.size())
+      data_drought.event();
   }
 
   void initial_app_send(const char *msg)
@@ -131,7 +173,7 @@ public:
     const size_t msglen = std::strlen(msg);
     BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
     control_send(app_buf);
-    flush();
+    flush(true);
   }
 
   size_t net_bytes() const { return net_bytes_; }
@@ -140,7 +182,16 @@ public:
 
   const char *progress() const { return progress_; }
 
+  void finalize()
+  {
+    data_drought.event();
+    control_drought.event();
+  }
+
   std::deque<BufferPtr> net_out;
+
+  DroughtMeasure control_drought;
+  DroughtMeasure data_drought;
 
 private:
   virtual void control_net_send(const Buffer& net_buf)
@@ -165,6 +216,7 @@ private:
 #endif
     modmsg(work);
     control_send(work);
+    control_drought.event();
   }
 
   void modmsg(BufferPtr& buf)
@@ -229,6 +281,7 @@ public:
 	std::cout << now->raw() << " " << title << " Retransmitting" << std::endl;
 #endif
 	a.retransmit();
+	a.flush(true);
       }
 
     // queue a data channel packet
@@ -257,7 +310,13 @@ public:
 	  break;
 	typename T2::PacketType pt = b.packet_type(*bp);
 	if (pt.is_control())
-	  b.control_net_recv(pt, bp);
+	  {
+#ifdef VERBOSE
+	    if (!b.control_net_validate(pt, *bp)) // not strictly necessary since control_net_recv will also validate
+	      std::cout << now->raw() << " " << title << " CONTROL PACKET VALIDATION FAILED" << std::endl;
+#endif
+	    b.control_net_recv(pt, bp);
+	  }
 	else if (pt.is_data())
 	  {
 	    try {
@@ -266,7 +325,7 @@ public:
 	      if (bp->size())
 		{
 		  const std::string show((char *)bp->data(), bp->size());
-		  std::cout << now->raw() << " " << title << " DATA CHANNEL DECRYPT: " << show <<  std::endl;
+		  std::cout << now->raw() << " " << title << " DATA CHANNEL DECRYPT: " << show << std::endl;
 		}
 #endif
 	    }
@@ -278,7 +337,7 @@ public:
 	      }
 	  }
       }
-    b.flush();
+    b.flush(true);
   }
 
 private:
@@ -313,7 +372,7 @@ private:
 	  }
 
 	// simulate corrupted packet
-	if (!rand(corrupt_prob))
+	if (bp->size() && !rand(corrupt_prob))
 	  {
 #ifdef VERBOSE
 	    std::cout << now->raw() << " " << title << " Simulating a corrupted packet" << std::endl;
@@ -345,12 +404,9 @@ private:
   std::deque<BufferPtr> wire;
 };
 
-int main(int /*argc*/, char* /*argv*/[])
+void test(const int thread_num)
 {
   try {
-    Time::reset_base();
-    openssl_init ossl_init;
-
     // frame
     Frame::Ptr frame(new Frame(Frame::Context(128, 256, 128, 0, 16, 0)));
 
@@ -401,14 +457,20 @@ int main(int /*argc*/, char* /*argv*/[])
     cp->prng = prng;
     cp->cipher = Cipher("AES-128-CBC");
     cp->digest = Digest("SHA1");
+#ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
     cp->tls_auth_digest = Digest("sha1");
+#endif
     cp->reliable_window = 4;
     cp->max_ack_list = 4;
     cp->pid_mode = PacketIDReceive::UDP_MODE;
     cp->pid_seq_backtrack = 64;
     cp->pid_time_backtrack = 30;
     cp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
+    cp->handshake_window = Time::Duration::seconds(30);
+    cp->become_primary = Time::Duration::seconds(30);
+    cp->renegotiate = Time::Duration::seconds(95);
+    cp->expire = Time::Duration::seconds(150);
 
     // server config
     SSLConfig sc;
@@ -432,22 +494,28 @@ int main(int /*argc*/, char* /*argv*/[])
     sp->prng = prng;
     sp->cipher = Cipher("AES-128-CBC");
     sp->digest = Digest("SHA1");
+#ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);
     sp->tls_auth_digest = Digest("sha1");
+#endif
     sp->reliable_window = 4;
     sp->max_ack_list = 4;
     sp->pid_mode = PacketIDReceive::UDP_MODE;
     sp->pid_seq_backtrack = 64;
     sp->pid_time_backtrack = 30;
     sp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
+    sp->handshake_window = Time::Duration::seconds(30); // 30
+    sp->become_primary = Time::Duration::seconds(30); // 60
+    sp->renegotiate = Time::Duration::seconds(90); // 90
+    sp->expire = Time::Duration::seconds(150); // 150
 
     // server stats
     ProtoStats::Ptr serv_stats(new ProtoStats);
 
     TestProto<ClientSSLContext> cli_proto(cp, cli_stats);
     TestProto<OpenSSLContext> serv_proto(sp, serv_stats);
-    NoisyWire client_to_server("Client -> Server", &time, rand, 8, 16, 32);
-    NoisyWire server_to_client("Server -> Client", &time, rand, 8, 16, 32);
+    NoisyWire client_to_server("Client -> Server", &time, rand, 8, 16, 32); // last value: 32
+    NoisyWire server_to_client("Server -> Client", &time, rand, 8, 16, 32); // last value: 32
 
     // start feedback loop
     cli_proto.initial_app_send(message);
@@ -460,16 +528,47 @@ int main(int /*argc*/, char* /*argv*/[])
 	time += time_step;
       }
 
+    cli_proto.finalize();
+    serv_proto.finalize();
+
     const size_t ab = cli_proto.app_bytes() + serv_proto.app_bytes();
     const size_t nb = cli_proto.net_bytes() + serv_proto.net_bytes();
     const size_t db = cli_proto.data_bytes() + serv_proto.data_bytes();
 
-    std::cout << "*** app bytes=" << ab << " net_bytes=" << nb << " data_bytes=" << db << " prog=" << cli_proto.progress() << '/' << serv_proto.progress() << std::endl;
+    std::cout << "*** app bytes=" << ab
+	      << " net_bytes=" << nb
+	      << " data_bytes=" << db
+	      << " prog=" << cli_proto.progress() << '/' << serv_proto.progress()
+              << " D=" << cli_proto.control_drought().raw() << '/' << cli_proto.data_drought().raw() << '/' << serv_proto.control_drought().raw() << '/' << serv_proto.data_drought().raw()
+              << " N=" << cli_proto.negotiations() << '/' << serv_proto.negotiations()
+              << " F=" << cli_proto.negotiation_fails() << '/' << serv_proto.negotiation_fails()
+	      << std::endl;
   }
   catch (std::exception& e)
     {
       std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
     }
+}
+
+int main(int /*argc*/, char* /*argv*/[])
+{
+  Time::reset_base();
+  openssl_init ossl_init;
+
+#if N_THREADS >= 2 && OPENVPN_MULTITHREAD
+  boost::thread* threads[N_THREADS];
+  size_t i;
+  for (i = 0; i < N_THREADS; ++i)
+    {
+      threads[i] = new boost::thread(boost::bind(&test, i));
+    }
+  for (i = 0; i < N_THREADS; ++i)
+    {
+      threads[i]->join();
+      delete threads[i];
+    }
+#else
+  test(1);
+#endif
   return 0;
 }
