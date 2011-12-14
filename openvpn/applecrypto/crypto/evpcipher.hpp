@@ -78,9 +78,29 @@ namespace openvpn {
     return cipher->CIPHER_key_length();
   }
 
+  inline int EVP_CIPHER_iv_length(const EVP_CIPHER *cipher)
+  {
+    return cipher->CIPHER_iv_length();
+  }
+
+  inline int EVP_CIPHER_block_size(const EVP_CIPHER *cipher)
+  {
+    return cipher->CIPHER_block_size();
+  }
+
+  inline int EVP_CIPHER_CTX_key_length(const EVP_CIPHER_CTX *ctx)
+  {
+    return ctx->cipher->CIPHER_key_length();
+  }
+
   inline int EVP_CIPHER_CTX_iv_length(const EVP_CIPHER_CTX *ctx)
   {
     return ctx->cipher->CIPHER_iv_length();
+  }
+
+  inline int EVP_CIPHER_CTX_block_size(const EVP_CIPHER_CTX *ctx)
+  {
+    return ctx->cipher->CIPHER_block_size();
   }
 
   inline int EVP_CIPHER_CTX_mode(const EVP_CIPHER_CTX *ctx)

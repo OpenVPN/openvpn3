@@ -8,7 +8,7 @@
 
 // Unit test for OpenVPN protocol
 
-#define OPENVPN_PACKET_ID_EXTRA_LOG_INFO
+#define OPENVPN_DEBUG
 #define USE_TLS_AUTH
 
 // number of threads to use for test
@@ -168,10 +168,12 @@ public:
 
   void data_decrypt(const PacketType& type, BufferAllocated& in_out)
   {
-    data_bytes_ += in_out.size();
     Base::data_decrypt(type, in_out);
     if (in_out.size())
-      data_drought.event();
+      {
+	data_bytes_ += in_out.size();
+	data_drought.event();
+      }
   }
 
   void initial_app_send(const char *msg)
@@ -466,7 +468,10 @@ void test(const int thread_num)
     cp->frame = frame;
     cp->now = &time;
     cp->prng = prng;
-    cp->cipher = Cipher("AES-128-CBC");
+    cp->protocol = Protocol(Protocol::UDPv4);
+    cp->layer = Layer(Layer::OSI_LAYER_3);
+    cp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
+    cp->cipher = Cipher("AES-256-CBC");
     cp->digest = Digest("SHA1");
 #ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
@@ -482,6 +487,12 @@ void test(const int thread_num)
     cp->become_primary = Time::Duration::seconds(30);
     cp->renegotiate = Time::Duration::seconds(95);
     cp->expire = Time::Duration::seconds(150);
+
+#ifdef VERBOSE
+    std::cout << "CLIENT OPTIONS: " << cp->options_string() << std::endl;
+    std::cout << "CLIENT PEER INFO:" << std::endl;
+    std::cout << cp->peer_info_string();
+#endif
 
     // server config
     SSLConfig sc;
@@ -503,7 +514,10 @@ void test(const int thread_num)
     sp->frame = frame;
     sp->now = &time;
     sp->prng = prng;
-    sp->cipher = Cipher("AES-128-CBC");
+    sp->protocol = Protocol(Protocol::UDPv4);
+    sp->layer = Layer(Layer::OSI_LAYER_3);
+    sp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
+    sp->cipher = Cipher("AES-256-CBC");
     sp->digest = Digest("SHA1");
 #ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);
@@ -519,6 +533,12 @@ void test(const int thread_num)
     sp->become_primary = Time::Duration::seconds(30); // 60
     sp->renegotiate = Time::Duration::seconds(90); // 90
     sp->expire = Time::Duration::seconds(150); // 150
+
+#ifdef VERBOSE
+    std::cout << "SERVER OPTIONS: " << sp->options_string() << std::endl;
+    std::cout << "SERVER PEER INFO:" << std::endl;
+    std::cout << sp->peer_info_string();
+#endif
 
     // server stats
     ProtoStats::Ptr serv_stats(new ProtoStats);

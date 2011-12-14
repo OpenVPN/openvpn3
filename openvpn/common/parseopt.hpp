@@ -14,7 +14,7 @@ namespace openvpn {
   class Option : public std::vector<std::string>
   {
   public:
-#ifdef OPENVPN_PARSEOPT_DEBUG
+#ifdef OPENVPN_DEBUG
     std::string debug_render() const
     {
       std::ostringstream out;
@@ -47,7 +47,7 @@ namespace openvpn {
       return ret;
     }
 
-#ifdef OPENVPN_PARSEOPT_DEBUG
+#ifdef OPENVPN_DEBUG
     std::string debug_render() const
     {
       std::ostringstream out;

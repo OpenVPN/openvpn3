@@ -7,6 +7,8 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/version.hpp>
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/log.hpp>
@@ -22,8 +24,37 @@
 #include <openvpn/ssl/psid.hpp>
 #include <openvpn/ssl/sslconf.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
+#include <openvpn/link/protocol.hpp>
+#include <openvpn/tun/layer.hpp>
+#include <openvpn/compress/compress.hpp>
 
-// OpenVPN protocol implementation
+/*
+
+OpenVPN protocol implementation
+
+Protocol negotiation states:
+
+Client:
+
+1. send client reset to server
+2. wait for server reset from server AND ack from 1 (C_WAIT_RESET, C_WAIT_RESET_ACK)
+3. start SSL handshake
+4. send auth message to server
+5. wait for server auth message AND ack from 4 (C_WAIT_AUTH, C_WAIT_AUTH_ACK)
+6. go active (ACTIVE)
+
+Server:
+
+1. wait for client reset (S_WAIT_RESET)
+2. send server reset to client
+3. wait for ACK from 2 (S_WAIT_RESET_ACK)
+4. start SSL handshake
+5. wait for auth message from client (S_WAIT_AUTH)
+6. send auth message to client
+7. wait for ACK from 6 (S_WAIT_AUTH_ACK)
+8. go active (ACTIVE)
+
+*/
 
 namespace openvpn {
 
@@ -96,8 +127,9 @@ namespace openvpn {
     typedef SSL_CONTEXT SSLContext;
 
     // configuration data passed to ProtoContext constructor
-    struct Config : public RC<thread_unsafe_refcount>
+    class Config : public RC<thread_unsafe_refcount>
     {
+    public:
       typedef boost::intrusive_ptr<Config> Ptr;
 
       Config()
@@ -122,6 +154,15 @@ namespace openvpn {
       // PRNG
       PRNG::Ptr prng;
 
+      // Transport protocol, i.e. UDPv4, etc.
+      Protocol protocol;
+
+      // OSI layer
+      Layer layer;
+
+      // compressor
+      CompressContext comp_ctx;
+
       // data channel parms
       Cipher cipher;
       Digest digest;
@@ -145,6 +186,75 @@ namespace openvpn {
       Time::Duration become_primary;   // KeyContext (that is ACTIVE) becomes primary at this time
       Time::Duration renegotiate;      // start SSL/TLS renegotiation at this time
       Time::Duration expire;           // KeyContext expires at this time
+
+      // generate a string summarizing options that will be
+      // transmitted to peer for options consistency check
+      std::string options_string() const
+      {
+	std::ostringstream out;
+	const unsigned int mtu = 1500;
+
+	const bool server = (ssl_ctx->mode() == SSLConfig::SERVER);
+
+	out << "V4";
+
+	out << ",dev-type " << layer.dev_type();
+	out << ",link-mtu " << mtu + link_mtu_adjust();
+	out << ",tun-mtu " << mtu;
+	out << ",proto " << protocol.str();
+	
+	{
+	  const char *compstr = comp_ctx.options_string();
+	  if (compstr)
+	    out << ',' << compstr;
+	}
+
+	if (server)
+	  out << ",keydir 0";
+	else
+	  out << ",keydir 1";
+
+	out << ",cipher " << cipher.name();
+	out << ",auth " << digest.name();
+	out << ",keysize " << cipher.key_length_in_bits();
+	if (tls_auth_key.defined())
+	  out << ",tls-auth";
+	out << ",key-method 2";
+
+	if (server)
+	  out << ",tls-server";
+	else
+	  out << ",tls-client";
+
+	return out.str();
+      }
+
+      // generate a string summarizing information about the client
+      // including capabilities
+      std::string peer_info_string() const
+      {
+	std::ostringstream out;
+	out << "IV_VER=" << OPENVPN_VERSION << '\n';
+	out << "IV_PLAT=" << platform_name() << '\n';
+	{
+	  const char *compstr = comp_ctx.peer_info_string();
+	  if (compstr)
+	    out << compstr;
+	}
+	return out.str();
+      }
+
+    private:
+      // used to generate link_mtu option sent to peer
+      unsigned int link_mtu_adjust() const
+      {
+	return 1 +                                    // leading op byte
+	  comp_ctx.extra_payload_bytes() +            // compression magic byte
+	  PacketID::size(PacketID::SHORT_FORM) +      // sequence number
+	  digest.size() +                             // HMAC
+	  cipher.iv_length() +                        // Cipher IV
+	  cipher.block_size();                        // worst-case cipher padding expansion
+      }
     };
 
     // Used to describe an incoming network packet
@@ -357,6 +467,9 @@ namespace openvpn {
 	current_event = KEV_NONE;
 	next_event = KEV_NEGOTIATE;
 	next_event_time = construct_time + p.config->handshake_window;
+
+	// construct compressor/decompressor
+	compress = p.config->comp_ctx.new_compressor(p.config->frame, proto.stats);
       }
 
       // need to call only on the initiator side of the connection (i.e. client)
@@ -423,6 +536,7 @@ namespace openvpn {
       {
 	if (state >= ACTIVE && !invalidated())
 	  {
+	    compress->compress(buf);
 	    crypto.encrypt.encrypt(buf, now->seconds_since_epoch());
 	    buf.push_front(op_compose(DATA_V1, key_id_));
 	    test_pid_wrap();
@@ -434,13 +548,21 @@ namespace openvpn {
       // data channel decrypt
       void decrypt(BufferAllocated& buf)
       {
-	if (state >= ACTIVE && !invalidated())
+	try {
+	  if (state >= ACTIVE && !invalidated())
+	    {
+	      buf.advance(1); // knock off leading op from buffer
+	      crypto.decrypt.decrypt(buf, now->seconds_since_epoch());
+	      compress->decompress(buf);
+	    }
+	  else
+	    buf.reset_size(); // no crypto context available
+	}
+	catch (buffer_exception& e)
 	  {
-	    buf.advance(1); // knock off leading op from buffer
-	    crypto.decrypt.decrypt(buf, now->seconds_since_epoch());
+	    proto.stats->error(ProtoStats::BUFFER_ERRORS);
+	    buf.reset_size();
 	  }
-	else
-	  buf.reset_size(); // no crypto context available
       }
 
       // usually called by parent ProtoContext object when this KeyContext
@@ -1022,6 +1144,7 @@ namespace openvpn {
       Time next_event_time;
       EventType current_event;
       EventType next_event;
+      Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
       CryptoContext crypto;
       TLSPRF tlsprf_self;

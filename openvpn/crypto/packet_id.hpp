@@ -54,6 +54,14 @@ namespace openvpn {
     id_t id;       // legal values are 1 through 2^32-1
     time_t time;   // converted to PacketID::net_time_t before transmission
 
+    static size_t size(const int form)
+    {
+      if (form == PacketID::LONG_FORM)
+	return sizeof(id_t) + sizeof(time_t);
+      else
+	return sizeof(id_t);
+    }
+
     bool is_valid() const
     {
       return id != UNDEF;
@@ -169,7 +177,7 @@ namespace openvpn {
       return pid_.id >= wrap_at;
     }
 
-#ifdef OPENVPN_PACKET_ID_EXTRA_LOG_INFO
+#ifdef OPENVPN_DEBUG
     std::string str() const
     {
       std::string ret;
@@ -450,7 +458,7 @@ namespace openvpn {
       return pid;
     }
 
-#ifdef OPENVPN_PACKET_ID_EXTRA_LOG_INFO
+#ifdef OPENVPN_DEBUG
     std::string str(const PacketID::time_t now) const
     {
       if (!initialized_)
@@ -515,7 +523,7 @@ namespace openvpn {
 
     void do_log (const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
-#ifdef OPENVPN_PACKET_ID_EXTRA_LOG_INFO
+#ifdef OPENVPN_DEBUG
       OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << str(now));
 #else
       OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << name_ << "-" << unit_);

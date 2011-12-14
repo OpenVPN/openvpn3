@@ -22,6 +22,7 @@ namespace openvpn {
       HMAC_ERRORS,        // HMAC verification failure (assumed to be first error by error() method below)
       REPLAY_ERRORS,      // error from PacketIDReceive
       CRYPTO_ERRORS,      // data channel encrypt/decrypt error
+      COMPRESS_ERRORS,    // compress/decompress errors on data channel
       BUFFER_ERRORS,      // exception thrown in Buffer methods
       CC_ERRORS,          // general control channel errors
       SSL_ERRORS,         // errors resulting from read/write on SSL object
@@ -34,7 +35,7 @@ namespace openvpn {
 
     ProtoStats()
     {
-      memset(data, 0, sizeof(data));
+      std::memset(data, 0, sizeof(data));
     }
 
     void error(const size_t err_type)

@@ -124,6 +124,8 @@ namespace openvpn {
       init(ref.digest_, ref.key_);
     }
 
+    const Digest& digest() const { return digest_; }
+
     bool defined() const { return ctx.is_initialized(); }
 
     void operator=(const HMACContext& ref)

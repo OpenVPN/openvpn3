@@ -41,6 +41,25 @@ namespace openvpn {
       return EVP_CIPHER_key_length (cipher_);
     }
 
+    size_t key_length_in_bits() const
+    {
+      return key_length() * 8;
+    }
+
+    size_t iv_length() const
+    {
+      if (!cipher_)
+	throw cipher_undefined();
+      return EVP_CIPHER_iv_length (cipher_);
+    }
+
+    size_t block_size() const
+    {
+      if (!cipher_)
+	throw cipher_undefined();
+      return EVP_CIPHER_block_size (cipher_);
+    }
+
     bool defined() const { return cipher_ != NULL; }
 
   private:
@@ -130,6 +149,8 @@ namespace openvpn {
     }
 
     bool defined() const { return ctx.is_initialized(); }
+
+    const Cipher& cipher() const { return cipher_; }
 
     void operator=(const CipherContext& ref)
     {

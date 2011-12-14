@@ -22,86 +22,78 @@ namespace openvpn {
 
     void decrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
-      try {
-	// skip null packets
-	if (!buf.size())
-	  return;
+      // skip null packets
+      if (!buf.size())
+	return;
 
-	// verify the HMAC
-	if (hmac.defined())
-	  {
-	    unsigned char local_hmac[HMACContext::MAX_HMAC_SIZE];
-	    const size_t hmac_size = hmac.output_size();
-	    const unsigned char *packet_hmac = buf.read_alloc(hmac_size);
-	    hmac.hmac(local_hmac, hmac_size, buf.c_data(), buf.size());
-	    if (std::memcmp(local_hmac, packet_hmac, hmac_size))
-	      {
-		buf.reset_size();
-		if (stats)
-		  stats->error(ProtoStats::HMAC_ERRORS);
-		return;
-	      }
-	  }
-
-	// decrypt packet ID + payload
-	if (cipher.defined())
-	  {
-	    unsigned char iv_buf[CipherContext::MAX_IV_SIZE];
-	    const size_t iv_size = cipher.iv_size();
-
-	    // extract IV from head of packet
-	    buf.read(iv_buf, iv_size);
-
-	    // initialize work buffer
-	    frame->prepare(Frame::DECRYPT_WORK, work);
-
-	    // decrypt from buf -> work
-	    const size_t decrypt_bytes = cipher.decrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
-	    if (!decrypt_bytes)
-	      {
-		buf.reset_size();
-		if (stats)
-		  stats->error(ProtoStats::CRYPTO_ERRORS);
-		return;
-	      }
-	    work.set_size(decrypt_bytes);
-
-	    // handle different cipher modes
-	    const int cipher_mode = cipher.cipher_mode();
-	    if (cipher_mode == CipherContext::CIPH_CBC_MODE)
-	      {
-		if (!verify_packet_id(work, now))
-		  {
-		    buf.reset_size();
-		    if (stats)
-		      stats->error(ProtoStats::REPLAY_ERRORS);
-		    return;
-		  }
-	      }
-	    else
-	      {
-		throw unsupported_cipher_mode();
-	      }
-
-	    // return cleartext result in buf
-	    buf.swap(work);
-	  }
-	else // no encryption
-	  {
-	    if (!verify_packet_id(buf, now))
-	      {
-		buf.reset_size();
-		if (stats)
-		  stats->error(ProtoStats::REPLAY_ERRORS);
-		return;
-	      }
-	  }
-      }
-      catch (buffer_exception& e)
+      // verify the HMAC
+      if (hmac.defined())
 	{
-	  buf.reset_size();
-	  if (stats)
-	    stats->error(ProtoStats::BUFFER_ERRORS);
+	  unsigned char local_hmac[HMACContext::MAX_HMAC_SIZE];
+	  const size_t hmac_size = hmac.output_size();
+	  const unsigned char *packet_hmac = buf.read_alloc(hmac_size);
+	  hmac.hmac(local_hmac, hmac_size, buf.c_data(), buf.size());
+	  if (std::memcmp(local_hmac, packet_hmac, hmac_size))
+	    {
+	      buf.reset_size();
+	      if (stats)
+		stats->error(ProtoStats::HMAC_ERRORS);
+	      return;
+	    }
+	}
+
+      // decrypt packet ID + payload
+      if (cipher.defined())
+	{
+	  unsigned char iv_buf[CipherContext::MAX_IV_SIZE];
+	  const size_t iv_size = cipher.iv_size();
+
+	  // extract IV from head of packet
+	  buf.read(iv_buf, iv_size);
+
+	  // initialize work buffer
+	  frame->prepare(Frame::DECRYPT_WORK, work);
+
+	  // decrypt from buf -> work
+	  const size_t decrypt_bytes = cipher.decrypt(iv_buf, work.data(), work.max_size(), buf.c_data(), buf.size());
+	  if (!decrypt_bytes)
+	    {
+	      buf.reset_size();
+	      if (stats)
+		stats->error(ProtoStats::CRYPTO_ERRORS);
+	      return;
+	    }
+	  work.set_size(decrypt_bytes);
+
+	  // handle different cipher modes
+	  const int cipher_mode = cipher.cipher_mode();
+	  if (cipher_mode == CipherContext::CIPH_CBC_MODE)
+	    {
+	      if (!verify_packet_id(work, now))
+		{
+		  buf.reset_size();
+		  if (stats)
+		    stats->error(ProtoStats::REPLAY_ERRORS);
+		  return;
+		}
+	    }
+	  else
+	    {
+	      throw unsupported_cipher_mode();
+	    }
+
+	  // return cleartext result in buf
+	  buf.swap(work);
+	}
+      else // no encryption
+	{
+	  if (!verify_packet_id(buf, now))
+	    {
+	      buf.reset_size();
+	      if (stats)
+		stats->error(ProtoStats::REPLAY_ERRORS);
+	      return;
+	    }
 	}
     }
 
