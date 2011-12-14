@@ -58,6 +58,10 @@ Server:
 
 namespace openvpn {
 
+  namespace proto_context_private {
+    static const unsigned char pre[] = { 0, 0, 0, 0, 2 }; // CONST GLOBAL
+  }
+
   template <typename SSL_CONTEXT>
   class ProtoContext : public RC<thread_unsafe_refcount>
   {
@@ -125,6 +129,9 @@ namespace openvpn {
 
   public:
     typedef SSL_CONTEXT SSLContext;
+
+    OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
+    OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
 
     // configuration data passed to ProtoContext constructor
     class Config : public RC<thread_unsafe_refcount>
@@ -367,7 +374,65 @@ namespace openvpn {
 
   protected:
 
-    // Packet structure for managing network packets, as passed as a template
+    // used for reading/writing authentication strings (username, password, etc.)
+
+    static void write_string_length(const size_t size, Buffer& buf)
+    {
+      const boost::uint16_t net_size = htons(size);
+      buf.write((const unsigned char *)&net_size, sizeof(net_size));
+    }
+
+    static size_t read_string_length(Buffer& buf)
+    {
+      if (buf.size())
+	{
+	  boost::uint16_t net_size;
+	  buf.read((unsigned char *)&net_size, sizeof(net_size));
+	  return ntohs(net_size);
+	}
+      else
+	return 0;
+    }
+
+    template <typename S>
+    static void write_string(const S& str, Buffer& buf)
+    {
+      const size_t len = str.length();
+      if (len)
+	{
+	  write_string_length(len+1, buf);
+	  buf.write((const unsigned char *)str.c_str(), len);
+	  buf.push_back(0);
+	}
+      else
+	write_string_length(0, buf);
+    }
+
+    template <typename S>
+    static S read_string(Buffer& buf)
+    {
+      const size_t len = read_string_length(buf);
+      if (len)
+	{
+	  const char *data = (const char *) buf.read_alloc(len);
+	  if (len > 1)
+	    return S(data, len-1);
+	}
+      return S();
+    }
+
+    static unsigned char *skip_string(Buffer& buf)
+    {
+      const size_t len = read_string_length(buf);
+      return buf.read_alloc(len);
+    }
+
+    static void write_empty_string(Buffer& buf)
+    {
+      write_string_length(0, buf);
+    }
+
+    // Packet structure for managing network packets, passed as a template
     // parameter to ProtoStackBase
     class Packet
     {
@@ -431,8 +496,6 @@ namespace openvpn {
       using Base::invalidate;
 
     public:
-      OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
-
       typedef boost::intrusive_ptr<KeyContext> Ptr;
 
       // timeline of events for KeyContext (occurring in order)
@@ -843,14 +906,37 @@ namespace openvpn {
       {
 	BufferPtr buf = new BufferAllocated();
 	proto.config->frame->prepare(Frame::WRITE_SSL_CLEARTEXT, *buf);
+	buf->write(proto_context_private::pre, sizeof(proto_context_private::pre));
 	tlsprf_self.randomize();
 	tlsprf_self.write(*buf);
+	const std::string options = proto.config->options_string();
+	write_string(options, *buf);
+	if (!proto.server_)
+	  {
+	    buf->or_flags(BufferAllocated::DESTRUCT_ZERO);
+	    proto.client_auth(*buf);
+	    const std::string peer_info = proto.config->peer_info_string();
+	    write_string(peer_info, *buf);
+	  }
 	Base::app_send(buf);
       }
 
-      void recv_auth(Buffer& buf)
+      void recv_auth(BufferAllocated& buf)
       {
+	const unsigned char *buf_pre = buf.read_alloc(sizeof(proto_context_private::pre));
+	if (std::memcmp(buf_pre, proto_context_private::pre, sizeof(proto_context_private::pre)))
+	  throw bad_auth_prefix();
 	tlsprf_peer.read(buf);
+	const std::string options = read_string<std::string>(buf);
+	if (proto.server_)
+	  {
+	    Buffer auth(buf);
+	    skip_string(buf); // username
+	    skip_string(buf); // password
+	    auth.set_size(buf.offset() - auth.offset());
+	    const std::string peer_info = read_string<std::string>(buf);
+	    proto.server_auth(auth, peer_info);
+	  }
       }
 
       void active()
@@ -1353,6 +1439,22 @@ namespace openvpn {
     virtual void control_net_send(const Buffer& net_buf) = 0;
 
     virtual void control_recv(BufferPtr& app_bp) = 0;
+
+    // Called on client to request username/password credentials.
+    // Should be overriden by derived class if credentials are required.
+    // username and password should be written into buf with write_string().
+    virtual void client_auth(Buffer& buf)
+    {
+      write_empty_string(buf); // username
+      write_empty_string(buf); // password
+    }
+
+    // Called on server with credentials and peer info provided by client.
+    // Should be overriden by derived class if credentials are required.
+    // Username and password should be read from buf with read_string().
+    virtual void server_auth(Buffer& buf, const std::string& peer_info)
+    {
+    }
 
     void net_send(const unsigned int key_id, const Packet& net_pkt)
     {

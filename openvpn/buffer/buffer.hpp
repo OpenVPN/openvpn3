@@ -409,6 +409,16 @@ namespace openvpn {
       size_ = offset_ = 0;
     }
 
+    void or_flags(const unsigned int flags)
+    {
+      flags_ |= flags;
+    }
+
+    void and_flags(const unsigned int flags)
+    {
+      flags_ &= flags;
+    }
+
     ~BufferAllocatedType()
     {
       if (data_)

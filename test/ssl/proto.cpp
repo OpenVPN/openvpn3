@@ -263,6 +263,55 @@ private:
   char progress_[11];
 };
 
+template <typename SSL_CONTEXT>
+class TestProtoClient : public TestProto<SSL_CONTEXT>
+{
+  typedef TestProto<SSL_CONTEXT> Base;
+public:
+  TestProtoClient(const typename Base::Config::Ptr& config,
+		  const ProtoStats::Ptr& stats)
+    : Base(config, stats)
+  {
+  }
+
+private:
+  virtual void client_auth(Buffer& buf)
+  {
+    const std::string username("foo");
+    const std::string password("bar");
+    Base::write_string(username, buf);
+    Base::write_string(password, buf);
+  }
+};
+
+template <typename SSL_CONTEXT>
+class TestProtoServer : public TestProto<SSL_CONTEXT>
+{
+  typedef TestProto<SSL_CONTEXT> Base;
+public:
+  OPENVPN_SIMPLE_EXCEPTION(auth_failed);
+
+  TestProtoServer(const typename Base::Config::Ptr& config,
+		  const ProtoStats::Ptr& stats)
+    : Base(config, stats)
+  {
+  }
+
+private:
+  virtual void server_auth(Buffer& buf, const std::string& peer_info)
+  {
+    const std::string username = Base::template read_string<std::string>(buf);
+    const std::string password = Base::template read_string<std::string>(buf);
+
+#ifdef VERBOSE
+    std::cout << "**** AUTHENTICATE " << username << '/' << password << " PEER INFO:" << std::endl;
+    std::cout << peer_info;
+#endif
+    if (username != "foo" || password != "bar")
+      throw auth_failed();
+  }
+};
+
 // Simulate a noisy transmission channel where packets can be dropped,
 // reordered, or corrupted.
 class NoisyWire
@@ -543,8 +592,8 @@ void test(const int thread_num)
     // server stats
     ProtoStats::Ptr serv_stats(new ProtoStats);
 
-    TestProto<ClientSSLContext> cli_proto(cp, cli_stats);
-    TestProto<OpenSSLContext> serv_proto(sp, serv_stats);
+    TestProtoClient<ClientSSLContext> cli_proto(cp, cli_stats);
+    TestProtoServer<OpenSSLContext> serv_proto(sp, serv_stats);
     NoisyWire client_to_server("Client -> Server", &time, rand, 8, 16, 32); // last value: 32
     NoisyWire server_to_client("Server -> Client", &time, rand, 8, 16, 32); // last value: 32
 
