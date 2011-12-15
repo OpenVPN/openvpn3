@@ -352,44 +352,50 @@ namespace openvpn {
 	else
 	  return "BAD_PACKET";
 
-	{
-	  ProtoSessionID src_psid(b);
-	  out << " SRC_PSID=" << src_psid.str();
-	}
-
-	if (use_tls_auth)
+	if (opcode == DATA_V1)
 	  {
-	    const unsigned char *hmac = b.read_alloc(hmac_size);
-	    out << " HMAC=" << render_hex(hmac, hmac_size);
-
-	    PacketID pid;
-	    pid.read(b, PacketID::LONG_FORM);
-	    out << " PID=" << pid.str();
-	  }
-
-	ReliableAck ack(0);
-	ack.read(b);
-	const bool dest_psid_defined = !ack.empty();
-	out << " ACK=[";
-	while (!ack.empty())
-	  {
-	    out << " " << ack.front();
-	    ack.pop_front();
-	  }
-	out << " ]";
-
-	if (dest_psid_defined)
-	  {
-	    ProtoSessionID dest_psid(b);
-	    out << " DEST_PSID=" << dest_psid.str();
-	  }
-
-	if (opcode != ACK_V1)
-	  {
-	    out << " MSG_ID=" << ReliableAck::read_id(b);
 	    out << " SIZE=" << b.size() << '/' << orig_size;
 	  }
+	else
+	  {
+	    {
+	      ProtoSessionID src_psid(b);
+	      out << " SRC_PSID=" << src_psid.str();
+	    }
 
+	    if (use_tls_auth)
+	      {
+		const unsigned char *hmac = b.read_alloc(hmac_size);
+		out << " HMAC=" << render_hex(hmac, hmac_size);
+
+		PacketID pid;
+		pid.read(b, PacketID::LONG_FORM);
+		out << " PID=" << pid.str();
+	      }
+
+	    ReliableAck ack(0);
+	    ack.read(b);
+	    const bool dest_psid_defined = !ack.empty();
+	    out << " ACK=[";
+	    while (!ack.empty())
+	      {
+		out << " " << ack.front();
+		ack.pop_front();
+	      }
+	    out << " ]";
+
+	    if (dest_psid_defined)
+	      {
+		ProtoSessionID dest_psid(b);
+		out << " DEST_PSID=" << dest_psid.str();
+	      }
+
+	    if (opcode != ACK_V1)
+	      {
+		out << " MSG_ID=" << ReliableAck::read_id(b);
+		out << " SIZE=" << b.size() << '/' << orig_size;
+	      }
+	  }
       }
       catch (std::exception& e)
 	{
