@@ -30,7 +30,7 @@
 
 /*
 
-OpenVPN protocol implementation
+ProtoContext -- OpenVPN protocol implementation
 
 Protocol negotiation states:
 
@@ -58,8 +58,30 @@ Server:
 
 namespace openvpn {
 
+  // utility namespace for ProtoContext
   namespace proto_context_private {
     static const unsigned char pre[] = { 0, 0, 0, 0, 2 }; // CONST GLOBAL
+
+    static const unsigned char keepalive_message[] = {    // CONST GLOBAL
+      0x2a, 0x18, 0x7b, 0xf3, 0x64, 0x1e, 0xb4, 0xcb,
+      0x07, 0xed, 0x2d, 0x0a, 0x98, 0x1f, 0xc7, 0x48
+    };
+
+    enum {
+      KEEPALIVE_FIRST_BYTE = 0x2a  // first byte of keepalive message
+    };
+
+    inline bool is_keepalive(const Buffer& buf)
+    {
+      return buf.size() >= sizeof(keepalive_message)
+	&& buf[0] == KEEPALIVE_FIRST_BYTE
+	&& !std::memcmp(keepalive_message, buf.c_data(), sizeof(keepalive_message));
+    }
+
+    inline void write_keepalive(Buffer& buf)
+    {
+      buf.write(keepalive_message, sizeof(keepalive_message));
+    }
   }
 
   template <typename SSL_CONTEXT>
@@ -193,6 +215,10 @@ namespace openvpn {
       Time::Duration become_primary;   // KeyContext (that is ACTIVE) becomes primary at this time
       Time::Duration renegotiate;      // start SSL/TLS renegotiation at this time
       Time::Duration expire;           // KeyContext expires at this time
+
+      // keepalive parameters
+      Time::Duration keepalive_ping;
+      Time::Duration keepalive_timeout;
 
       // generate a string summarizing options that will be
       // transmitted to peer for options consistency check
@@ -477,6 +503,7 @@ namespace openvpn {
       BufferPtr buf;
     };
 
+    // KeyContext encapsulates a single SSL/TLS session
     class KeyContext : ProtoStackBase<SSLContext, Packet>, public RC<thread_unsafe_refcount>
     {
       typedef ProtoStackBase<SSLContext, Packet> Base;
@@ -493,7 +520,6 @@ namespace openvpn {
       using Base::start_handshake;
       using Base::raw_send;
       using Base::send_pending_acks;
-      using Base::invalidate;
 
     public:
       typedef boost::intrusive_ptr<KeyContext> Ptr;
@@ -558,6 +584,11 @@ namespace openvpn {
 	  }
       }
 
+      void invalidate()
+      {
+	Base::invalidate();
+      }
+
       // retransmit packets as part of reliability layer
       void retransmit()
       {
@@ -565,7 +596,7 @@ namespace openvpn {
 	Base::retransmit();
       }
 
-      // when should we next call retransmit function
+      // when should we next call retransmit method
       Time next_retransmit() const
       {
 	const Time t = Base::next_retransmit();
@@ -599,9 +630,16 @@ namespace openvpn {
       {
 	if (state >= ACTIVE && !invalidated())
 	  {
-	    compress->compress(buf);
+	    // compress packet
+	    compress->compress(buf, true);
+
+	    // encrypt packet
 	    crypto.encrypt.encrypt(buf, now->seconds_since_epoch());
+
+	    // prepend op
 	    buf.push_front(op_compose(DATA_V1, key_id_));
+
+	    // check for rare situation where packet ID is near overflow
 	    test_pid_wrap();
 	  }
 	else
@@ -614,8 +652,13 @@ namespace openvpn {
 	try {
 	  if (state >= ACTIVE && !invalidated())
 	    {
-	      buf.advance(1); // knock off leading op from buffer
+	      // knock off leading op from buffer
+	      buf.advance(1);
+
+	      // decrypt packet
 	      crypto.decrypt.decrypt(buf, now->seconds_since_epoch());
+
+	      // decompress packet
 	      compress->decompress(buf);
 	    }
 	  else
@@ -664,6 +707,32 @@ namespace openvpn {
 
       // time that our state transitioned to ACTIVE
       Time reached_active() const { return reached_active_time_; }
+
+      // transmit a keepalive message to peer
+      void send_keepalive()
+      {
+	if (state >= ACTIVE && !invalidated())
+	  {
+	    // allocate packet
+	    Packet pkt;
+	    pkt.frame_prepare(*proto.config->frame, Frame::WRITE_KEEPALIVE);
+
+	    // write keepalive message
+	    proto_context_private::write_keepalive(*pkt.buf);
+
+	    // process packet for transmission
+	    compress->compress(*pkt.buf, false); // set compress hint to "no"
+	    crypto.encrypt.encrypt(*pkt.buf, now->seconds_since_epoch());
+	    pkt.buf->push_front(op_compose(DATA_V1, key_id_));
+
+	    // send it
+	    proto.net_send(key_id_, pkt);
+
+#ifdef VERBOSE
+	    OPENVPN_LOG("*** SENT KEEPALIVE"); // fixme
+#endif
+	  }
+      }
 
       // validate the integrity of a packet
       static bool validate(const Buffer& net_buf, ProtoContext& proto, TimePtr now)
@@ -743,12 +812,14 @@ namespace openvpn {
       virtual void invalidate_callback()
       {
 	reached_active_time_ = Time();
+	next_event = KEV_NONE;
+	next_event_time = Time::infinite();
       }
 
       // Trigger a new SSL/TLS negotiation if packet ID (a 32-bit unsigned int)
       // is getting close to wrapping around.  If it wraps back to 0 without
       // a renegotiation, it would cause the relay protection logic to wrongly
-      // think that all packets are replays.
+      // think that all further packets are replays.
       void test_pid_wrap()
       {
 	if (!handled_pid_wrap && crypto.encrypt.pid_send.wrap_warning())
@@ -792,8 +863,6 @@ namespace openvpn {
 		  {
 		    invalidate();
 		    current_event = KEV_NEGOTIATE_FAILED;
-		    next_event = KEV_NONE;
-		    next_event_time = Time::infinite();
 		  }
 		break;
 	      case KEV_BECOME_PRIMARY:
@@ -809,8 +878,6 @@ namespace openvpn {
 	      case KEV_EXPIRE:
 		invalidate();
 		current_event = KEV_EXPIRE;
-		next_event = KEV_NONE;
-		next_event_time = Time::infinite();
 		break;
 	      default:
 		break;
@@ -948,6 +1015,7 @@ namespace openvpn {
 	    app_pre_write_queue.pop_front();
 	  }
 	reached_active_time_ = *now;
+	proto.slowest_handshake_.max(reached_active_time_ - construct_time);
 	active_event();
       }
 
@@ -1111,6 +1179,9 @@ namespace openvpn {
 		  }      
 	      }
 
+	      // update our last-packet-received time
+	      proto.update_last_received();
+
 	      // verify source PSID
 	      if (!verify_src_psid(src_psid))
 		return false;
@@ -1165,6 +1236,9 @@ namespace openvpn {
 	    }
 	  else // non tls_auth mode
 	    {
+	      // update our last-packet-received time
+	      proto.update_last_received();
+
 	      // advance buffer past initial op byte
 	      recv.advance(1);
 
@@ -1248,7 +1322,9 @@ namespace openvpn {
 	use_tls_auth(false),
 	upcoming_key_id(0),
 	n_key_ids(0),
-	n_negotiation_fails(0)
+	now_(config_arg->now),
+	keepalive_ping(config_arg->keepalive_ping),
+	keepalive_timeout(config_arg->keepalive_timeout)
     {
       const Config& c = *config;
 
@@ -1283,6 +1359,10 @@ namespace openvpn {
 
       // initialize primary key context
       primary.reset(new KeyContext(*this, !server_));
+
+      // initialize keepalive timers
+      keepalive_expire = Time::infinite();   // initially disabled
+      update_last_sent();                    // set timer for initial keepalive send
     }
 
     virtual ~ProtoContext() {}
@@ -1315,6 +1395,7 @@ namespace openvpn {
     void start()
     {
       primary->start();
+      update_last_received(); // set an upper bound on when we expect a response
     }
 
     // trigger a protocol renegotiation
@@ -1340,28 +1421,40 @@ namespace openvpn {
 	}
     }
 
-    // retransmit unacknowleged packets as part of the reliability layer
-    void retransmit()
+    // Perform various time-based housekeeping tasks such as retransmiting
+    // unacknowleged packets as part of the reliability layer and testing
+    // for keepalive timouts.
+    // Should be called at the time returned by next_housekeeping.
+    void housekeeping()
     {
-      // primary
+      // handle control channel retransmissions on primary
       primary->retransmit();
 
-      // secondary
+      // handle control channel retransmissions on secondary
       if (secondary)
 	secondary->retransmit();
+
+      // process events on primary or secondary key contexts
+      process_events();
+
+      // handle keepalive/expiration
+      keepalive_housekeeping();
     }
 
-    // when should we next call retransmit?
-    Time next_retransmit() const
+    // When should we next call housekeeping?
+    Time next_housekeeping() const
     {
-      const Time p = primary->next_retransmit();
-      if (secondary)
+      if (!invalidated())
 	{
-	  const Time s = secondary->next_retransmit();
-	  if (s < p)
-	    return s;
+	  Time ret = primary->next_retransmit();
+	  if (secondary)
+	    ret.min(secondary->next_retransmit());
+	  ret.min(keepalive_xmit);
+	  ret.min(keepalive_expire);
+	  return ret;
 	}
-      return p;
+      else
+	return Time::infinite();
     }
 
     // send app-level cleartext to remote peer
@@ -1381,7 +1474,7 @@ namespace openvpn {
     // validate a control channel network packet
     bool control_net_validate(const PacketType& type, const Buffer& net_buf)
     {
-      return type.is_defined() && KeyContext::validate(net_buf, *this, config->now);
+      return type.is_defined() && KeyContext::validate(net_buf, *this, now_);
     }
 
     // pass received control channel network packets (ciphertext) into protocol object
@@ -1415,10 +1508,33 @@ namespace openvpn {
     void data_decrypt(const PacketType& type, BufferAllocated& in_out)
     {
       select_key_context(type, false).decrypt(in_out);
+
+      // update time of most recent packet received
+      if (in_out.size())
+	update_last_received();
+
+      // discard keepalive packets
+      if (proto_context_private::is_keepalive(in_out))
+	{
+#ifdef VERBOSE
+	  OPENVPN_LOG("*** RECEIVED KEEPALIVE"); // fixme
+#endif
+	  in_out.reset_size();
+	}
+    }
+
+    // enter disconnected state
+    void disconnect()
+    {
+      primary->invalidate();
+      if (secondary)
+	secondary->invalidate();
     }
 
     // current time
-    const Time& now() const { return *config->now; }
+    const Time& now() const { return *now_; }
+
+    void update_last_sent() { keepalive_xmit = *now_ + keepalive_ping; }
 
     // client or server?
     bool server() const { return server_; }
@@ -1429,8 +1545,8 @@ namespace openvpn {
     // total number of SSL/TLS negotiations during lifetime of ProtoContext object
     unsigned int negotiations() const { return n_key_ids; }
 
-    // total number of SSL/TLS negotiations that failed to complete during handshake window
-    unsigned int negotiation_fails() const { return n_negotiation_fails; }
+    // worst-case handshake time
+    const Time::Duration& slowest_handshake() { return slowest_handshake_; }
 
     // was primary context invalidated by an exception?
     bool invalidated() const { return primary->invalidated(); }
@@ -1456,6 +1572,8 @@ namespace openvpn {
     {
     }
 
+    void update_last_received() { keepalive_expire = *now_ + keepalive_timeout; }
+
     void net_send(const unsigned int key_id, const Packet& net_pkt)
     {
       control_net_send(net_pkt.buffer());
@@ -1469,7 +1587,7 @@ namespace openvpn {
     // we're getting a request from peer to renegotiate.
     bool renegotiate_request(Packet& pkt)
     {
-      if (KeyContext::validate(pkt.buffer(), *this, config->now))
+      if (KeyContext::validate(pkt.buffer(), *this, now_))
 	{
 	  secondary.reset(new KeyContext(*this, false));
 	  return true;
@@ -1505,7 +1623,28 @@ namespace openvpn {
       return *primary;
     }
 
+    // Possibly send a keepalive message, and check for expiration
+    // of session due to lack of received packets from peer.
+    void keepalive_housekeeping()
+    {
+      const Time now = *now_;
+
+      // check for keepalive timeouts
+      if (now >= keepalive_xmit)
+	{
+	  primary->send_keepalive();
+	  update_last_sent();
+	}
+      if (now >= keepalive_expire)
+	{
+	  // no contact with peer, disconnect
+	  stats->error(ProtoStats::KEEPALIVE_TIMEOUTS);
+	  disconnect();
+	}
+    }
+
     // Process KEV_x events
+    // Return true if any events were processed.
     bool process_events()
     {
       bool did_work;
@@ -1536,11 +1675,8 @@ namespace openvpn {
     // in Config.
     void promote_secondary_to_primary()
     {
-      if (!secondary->invalidated())
-	{
-	  primary.swap(secondary);
-	  secondary->prepare_expire();
-	}
+      primary.swap(secondary);
+      secondary->prepare_expire();
     }
 
     void process_primary_event()
@@ -1551,14 +1687,21 @@ namespace openvpn {
 	  primary->reset_event();
 	  switch (ev)
 	    {
+	    case KeyContext::KEV_ACTIVE:
+	      break;
 	    case KeyContext::KEV_RENEGOTIATE:
 	      renegotiate();
 	      break;
 	    case KeyContext::KEV_EXPIRE:
-	      promote_secondary_to_primary();
+	      if (secondary && !secondary->invalidated())
+		promote_secondary_to_primary();
+	      else
+		stats->error(ProtoStats::PRIMARY_EXPIRE);
+		disconnect(); // primary context expired and no secondary context available
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:
-	      ++n_negotiation_fails;
+	      stats->error(ProtoStats::HANDSHAKE_TIMEOUTS);
+	      disconnect(); // primary negotiation failed
 	      break;
 	    default:
 	      break;
@@ -1578,13 +1721,14 @@ namespace openvpn {
 	      primary->prepare_expire();
 	      break;
 	    case KeyContext::KEV_BECOME_PRIMARY:
-	      promote_secondary_to_primary();
+	      if (!secondary->invalidated())
+		promote_secondary_to_primary();
 	      break;
 	    case KeyContext::KEV_EXPIRE:
 	      secondary.reset();
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:
-	      ++n_negotiation_fails;
+	      stats->error(ProtoStats::HANDSHAKE_TIMEOUTS);
 	      renegotiate();
 	      break;
 	    default:
@@ -1637,7 +1781,14 @@ namespace openvpn {
     bool server_;
     unsigned int upcoming_key_id;
     unsigned int n_key_ids;
-    unsigned int n_negotiation_fails;
+
+    TimePtr now_;                      // pointer to current time (a clone of config->now)
+    Time::Duration keepalive_ping;     // copied from config
+    Time keepalive_xmit;               // time in future when we will transmit a keepalive (subject to continuous change)
+    Time::Duration keepalive_timeout;  // copied from config
+    Time keepalive_expire;             // time in future when we must have received a packet from peer or we will timeout session
+
+    Time::Duration slowest_handshake_; // longest time to reach a successful handshake
 
     HMACContext ta_hmac_send;
     HMACContext ta_hmac_recv;

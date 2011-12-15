@@ -19,17 +19,19 @@ namespace openvpn {
       BYTES_OUT,
 
       // error stats
-      HMAC_ERRORS,        // HMAC verification failure (assumed to be first error by error() method below)
-      REPLAY_ERRORS,      // error from PacketIDReceive
-      CRYPTO_ERRORS,      // data channel encrypt/decrypt error
-      COMPRESS_ERRORS,    // compress/decompress errors on data channel
-      BUFFER_ERRORS,      // exception thrown in Buffer methods
-      CC_ERRORS,          // general control channel errors
-      SSL_ERRORS,         // errors resulting from read/write on SSL object
-      HANDSHAKE_ERRORS,   // handshake failed to complete within given time frame
-      DISCONNECTS,        // unintentional disconnects
-      CERT_VERIFY_FAILS,  // peer certificate verification failure
-      AUTH_FAILS,         // general authentication failure
+      HMAC_ERRORS,          // HMAC verification failure (assumed to be first error by error() method below)
+      REPLAY_ERRORS,        // error from PacketIDReceive
+      CRYPTO_ERRORS,        // data channel encrypt/decrypt error
+      COMPRESS_ERRORS,      // compress/decompress errors on data channel
+      BUFFER_ERRORS,        // exception thrown in Buffer methods
+      CC_ERRORS,            // general control channel errors
+      SSL_ERRORS,           // errors resulting from read/write on SSL object
+      ENCAPSULATION_ERRORS, // exceptions thrown during packet encapsulation
+      HANDSHAKE_TIMEOUTS,   // handshake failed to complete within given time frame
+      KEEPALIVE_TIMEOUTS,   // lost contact with peer
+      PRIMARY_EXPIRE,       // primary key context expired
+      CERT_VERIFY_FAILS,    // peer certificate verification failure
+      AUTH_FAILS,           // general authentication failure
       N_ITEMS,
     };
 
@@ -43,6 +45,14 @@ namespace openvpn {
       //OPENVPN_LOG("*** ERROR " << err_type);
       if (err_type > HMAC_ERRORS && err_type < N_ITEMS)
 	++data[err_type];
+    }
+
+    count_t get(const size_t stat_type) const
+    {
+      if (stat_type < N_ITEMS)
+	return data[stat_type];
+      else
+	return 0;
     }
 
   private:

@@ -14,7 +14,12 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<Compress> Ptr;
 
-    virtual void compress(BufferAllocated& buf) = 0;
+    // Compression method implemented by underlying compression class
+    // hint should normally be true to compress the data.  If hint is
+    // false, the data may be uncompressible or already compressed.
+    virtual void compress(BufferAllocated& buf, const bool hint) = 0;
+
+    // Decompression method implemented by underlying compression class.
     virtual void decompress(BufferAllocated& buf) = 0;
 
   protected:

@@ -140,6 +140,18 @@ public:
     std::memset(progress_, 0, 11);
   }
 
+  bool do_housekeeping()
+  {
+    if (now() >= housekeeping_timer)
+      {
+	Base::housekeeping();
+	housekeeping_timer = Base::next_housekeeping();
+	return true;
+      }
+    else
+      return false;
+  }
+
   void control_send(BufferPtr& app_bp)
   {
     app_bytes_ += app_bp->size();
@@ -256,6 +268,7 @@ private:
       }
   }
 
+  Time housekeeping_timer;
   Frame::Ptr frame;
   size_t app_bytes_;
   size_t net_bytes_;
@@ -317,6 +330,8 @@ private:
 class NoisyWire
 {
 public:
+  OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
+
   NoisyWire(const std::string title_arg,
 	    TimePtr now_arg,
 	    RandomIntBase& rand_arg,
@@ -335,14 +350,16 @@ public:
   template <typename T1, typename T2>
   void xfer(T1& a, T2& b)
   {
+    // check for errors
+    if (a.invalidated() || b.invalidated())
+	throw session_invalidated();
+
     // need to retransmit?
-    if (*now >= a.next_retransmit())
+    if (a.do_housekeeping())
       {
 #ifdef VERBOSE
-	std::cout << now->raw() << " " << title << " Retransmitting" << std::endl;
+	std::cout << now->raw() << " " << title << " Housekeeping" << std::endl;
 #endif
-	a.retransmit();
-	a.flush(true);
       }
 
     // queue a data channel packet
@@ -532,10 +549,12 @@ void test(const int thread_num)
     cp->pid_seq_backtrack = 64;
     cp->pid_time_backtrack = 30;
     cp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
-    cp->handshake_window = Time::Duration::seconds(30);
+    cp->handshake_window = Time::Duration::seconds(18); // will cause a small number of handshake failures
     cp->become_primary = Time::Duration::seconds(30);
     cp->renegotiate = Time::Duration::seconds(95);
     cp->expire = Time::Duration::seconds(150);
+    cp->keepalive_ping = Time::Duration::seconds(5);
+    cp->keepalive_timeout = Time::Duration::seconds(60);
 
 #ifdef VERBOSE
     std::cout << "CLIENT OPTIONS: " << cp->options_string() << std::endl;
@@ -578,10 +597,12 @@ void test(const int thread_num)
     sp->pid_seq_backtrack = 64;
     sp->pid_time_backtrack = 30;
     sp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
-    sp->handshake_window = Time::Duration::seconds(30); // 30
-    sp->become_primary = Time::Duration::seconds(30); // 60
-    sp->renegotiate = Time::Duration::seconds(90); // 90
-    sp->expire = Time::Duration::seconds(150); // 150
+    sp->handshake_window = Time::Duration::seconds(17) + Time::Duration::binary_ms(512);
+    sp->become_primary = Time::Duration::seconds(30);
+    sp->renegotiate = Time::Duration::seconds(90);
+    sp->expire = Time::Duration::seconds(150);
+    sp->keepalive_ping = Time::Duration::seconds(5);
+    sp->keepalive_timeout = Time::Duration::seconds(60);
 
 #ifdef VERBOSE
     std::cout << "SERVER OPTIONS: " << sp->options_string() << std::endl;
@@ -621,7 +642,8 @@ void test(const int thread_num)
 	      << " prog=" << cli_proto.progress() << '/' << serv_proto.progress()
               << " D=" << cli_proto.control_drought().raw() << '/' << cli_proto.data_drought().raw() << '/' << serv_proto.control_drought().raw() << '/' << serv_proto.data_drought().raw()
               << " N=" << cli_proto.negotiations() << '/' << serv_proto.negotiations()
-              << " F=" << cli_proto.negotiation_fails() << '/' << serv_proto.negotiation_fails()
+              << " SH=" << cli_proto.slowest_handshake().raw() << '/' << serv_proto.slowest_handshake().raw()
+              << " HE=" << cli_stats->get(ProtoStats::HANDSHAKE_TIMEOUTS) << '/' << serv_stats->get(ProtoStats::HANDSHAKE_TIMEOUTS)
 	      << std::endl;
   }
   catch (std::exception& e)

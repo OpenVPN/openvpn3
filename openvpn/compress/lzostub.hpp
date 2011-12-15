@@ -18,7 +18,7 @@ namespace openvpn {
     }
 
   private:
-    virtual void compress(BufferAllocated& buf)
+    virtual void compress(BufferAllocated& buf, const bool hint)
     {
       // skip null packets
       if (!buf.size())

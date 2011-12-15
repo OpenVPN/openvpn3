@@ -51,6 +51,18 @@ namespace openvpn {
 	return *this;
       }
 
+      void min(const Duration& d)
+      {
+	if (d.duration_ < duration_)
+	  duration_ = d.duration_;
+      }
+
+      void max(const Duration& d)
+      {
+	if (d.duration_ > duration_)
+	  duration_ = d.duration_;
+      }
+
       Duration operator-(const Duration& d) const { return Duration(duration_ - d.duration_); }
       Duration& operator-=(const Duration& d) { duration_ -= d.duration_; return *this; }
 
@@ -120,6 +132,12 @@ namespace openvpn {
     Duration operator-(const TimeType& t) const
     {
       return Duration(time_ - t.time_);
+    }
+
+    void min(const TimeType& t)
+    {
+      if (t.time_ < time_)
+	time_ = t.time_;
     }
 
 #   define OPENVPN_TIME_REL(OP) bool operator OP(const TimeType& t) const { return time_ OP t.time_; }

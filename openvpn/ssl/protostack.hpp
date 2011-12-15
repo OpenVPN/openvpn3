@@ -267,6 +267,8 @@ namespace openvpn {
 	      }
 	      catch (...)
 		{
+		  if (stats)
+		    stats->error(ProtoStats::ENCAPSULATION_ERRORS);
 		  invalidate();
 		  throw;
 		}
@@ -292,6 +294,8 @@ namespace openvpn {
 	  }
 	  catch (...)
 	    {
+	      if (stats)
+		stats->error(ProtoStats::ENCAPSULATION_ERRORS);
 	      invalidate();
 	      throw;
 	    }
