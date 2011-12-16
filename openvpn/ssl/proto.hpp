@@ -161,6 +161,11 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
 
+    static unsigned int mtu()
+    {
+      return 1500;
+    }
+
     // configuration data passed to ProtoContext constructor
     class Config : public RC<thread_unsafe_refcount>
     {
@@ -231,15 +236,14 @@ namespace openvpn {
       std::string options_string() const
       {
 	std::ostringstream out;
-	const unsigned int mtu = 1500;
 
 	const bool server = (ssl_ctx->mode() == SSLConfig::SERVER);
 
 	out << "V4";
 
 	out << ",dev-type " << layer.dev_type();
-	out << ",link-mtu " << mtu + link_mtu_adjust();
-	out << ",tun-mtu " << mtu;
+	out << ",link-mtu " << mtu() + link_mtu_adjust();
+	out << ",tun-mtu " << mtu();
 	out << ",proto " << protocol.str();
 	
 	{
@@ -1681,6 +1685,10 @@ namespace openvpn {
     }
 
     // Select a KeyContext (primary or secondary) for control channel sends.
+    // NOTE: possible incompatibility with existing OpenVPN protocol.
+    // Even after new key context goes active, we still wait for
+    // KEV_BECOME_PRIMARY event before we use it for app-level control-channel
+    // transmissions.  Simulations have found this method to be more reliable.
     KeyContext& select_control_send_context()
     {
       return *primary;

@@ -7,16 +7,22 @@
 #include <net/if.h>
 #include <linux/if_tun.h>
 
+#include <string>
+#include <sstream>
+
 #include <boost/asio.hpp>
 #include <boost/weak_ptr.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/dispatch.hpp>
+#include <openvpn/common/parseopt.hpp>
+#include <openvpn/common/process.hpp>
 #include <openvpn/tun/tunposix.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/log.hpp>
 #include <openvpn/log/protostats.hpp>
+#include <openvpn/addr/ip.hpp>
 
 #ifdef OPENVPN_DEBUG_TUNLINUX
 #define OPENVPN_LOG_TUNLINUX(x) OPENVPN_LOG(x)
@@ -153,6 +159,30 @@ namespace openvpn {
     void stop() {
       halt_ = true;
       sd->close();
+    }
+
+    int ifconfig(const OptionList& opt, const unsigned int mtu)
+    {
+      // first verify topology
+      {
+	const Option& o = opt.get("topology");
+	o.min_args(2);
+	if (o[1] != "subnet")
+	  throw option_error("only topology subnet supported");
+      }
+
+      // configure tun interface
+      {
+	const Option& o = opt.get("ifconfig");
+	o.exact_args(3);
+	std::string ip = validate_ip_address("ifconfig-ip", o[1]);
+	std::string mask = validate_ip_address("ifconfig-net", o[2]);
+	std::ostringstream cmd;
+	cmd << "/sbin/ifconfig " << name() << ' ' << ip << " netmask " << mask << " mtu " << mtu;
+	const std::string cmd_str = cmd.str();
+	OPENVPN_LOG(cmd_str);
+	return ::system(cmd_str.c_str());
+      }
     }
 
     ~TunLinux() {

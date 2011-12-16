@@ -7,13 +7,45 @@
 
 #include <boost/unordered_map.hpp>
 
+#include <openvpn/common/exception.hpp>
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/split.hpp>
 
 namespace openvpn {
 
+  OPENVPN_EXCEPTION(option_error);
+
   class Option : public std::vector<std::string>
   {
   public:
+    void min_args(const size_t n) const
+    {
+      const size_t s = size();
+      if (s < n)
+	{
+	  std::ostringstream out;
+	  out << "option";
+	  if (n)
+	    out << " '" << (*this)[0] << '\'';
+	  out << " must have at least " << n << " arguments";
+	  throw option_error(out.str());
+	}
+    }
+
+    void exact_args(const size_t n) const
+    {
+      const size_t s = size();
+      if (s != n)
+	{
+	  std::ostringstream out;
+	  out << "option";
+	  if (n)
+	    out << " '" << (*this)[0] << '\'';
+	  out << " must have exactly " << n << " arguments";
+	  throw option_error(out.str());
+	}
+    }
+
 #ifdef OPENVPN_DEBUG
     std::string debug_render() const
     {
@@ -33,7 +65,7 @@ namespace openvpn {
     typedef boost::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
 
-    static OptionList parse_from_csv(const std::string str)
+    static OptionList parse_from_csv(const std::string& str)
     {
       OptionList ret;
       std::vector<std::string> list = split_by_char<std::vector<std::string>, Lex>(str, ',');
@@ -45,6 +77,35 @@ namespace openvpn {
 	}
       ret.build_map();
       return ret;
+    }
+
+    bool exists(const std::string& name) const
+    {
+      OptionList::IndexMap::const_iterator e = map_.find(name);
+      return e != map_.end() && !e->second.empty();
+    }
+
+    const Option& get(const std::string& name) const
+    {
+      OptionList::IndexMap::const_iterator e = map_.find(name);
+      if (e != map_.end() && !e->second.empty())
+	{
+	  if (e->second.size() == 1)
+	    return (*this)[e->second[0]];
+	  else
+	    OPENVPN_THROW(option_error, "more than one instance of option '" << name << '\'');
+	}
+      else
+	OPENVPN_THROW(option_error, "option '" << name << "' not found");
+    }
+
+    const Option* get_ptr(const std::string& name) const
+    {
+      OptionList::IndexMap::const_iterator e = map_.find(name);
+      if (e != map_.end() && e->second.size() == 1)
+	return &((*this)[e->second[0]]);
+      else
+	return NULL;
     }
 
 #ifdef OPENVPN_DEBUG

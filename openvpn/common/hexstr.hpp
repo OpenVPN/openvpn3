@@ -59,7 +59,7 @@ namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
 
   template <typename V>
-  inline void parse_hex(V& dest, std::string& str)
+  inline void parse_hex(V& dest, const std::string& str)
   {
     const int len = int(str.length());
     int i;
