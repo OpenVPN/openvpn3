@@ -6,7 +6,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/log.hpp>
+#include <openvpn/log/log.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/pki/cclist.hpp>
 #include <openvpn/ssl/sslconf.hpp>

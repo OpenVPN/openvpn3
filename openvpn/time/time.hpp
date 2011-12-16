@@ -94,6 +94,7 @@ namespace openvpn {
 
     bool is_infinite() const { return time_ == std::numeric_limits<T>::max(); }
 
+    void reset() { time_ = 0; }
     void set_infinite() { time_ = std::numeric_limits<T>::max(); }
 
     bool defined() const { return time_ != 0; }
@@ -102,15 +103,11 @@ namespace openvpn {
     base_type seconds_since_epoch() const { return base_ + time_ / prec; }
     T fractional_binary_ms() const { return time_ % prec; }
 
-    static TimeType now()
-    {
-      ::timeval tv;
-      if (::gettimeofday(&tv, NULL) != 0)
-	throw get_time_error();
-      return TimeType((tv.tv_sec - base_) * prec + tv.tv_usec * prec / 1000000);
-    }
+    static TimeType now() { return TimeType(now_()); }
 
     static void reset_base() { base_ = ::time(0); }
+
+    void update() { time_ = now_(); }
 
     TimeType operator+(const Duration& d) const
     {
@@ -140,6 +137,12 @@ namespace openvpn {
 	time_ = t.time_;
     }
 
+    void max(const TimeType& t)
+    {
+      if (t.time_ > time_)
+	time_ = t.time_;
+    }
+
 #   define OPENVPN_TIME_REL(OP) bool operator OP(const TimeType& t) const { return time_ OP t.time_; }
     OPENVPN_TIME_REL(==)
     OPENVPN_TIME_REL(!=)
@@ -154,6 +157,14 @@ namespace openvpn {
   private:
     explicit TimeType(const T time) : time_(time) {}
 
+    static T now_()
+    {
+      ::timeval tv;
+      if (::gettimeofday(&tv, NULL) != 0)
+	throw get_time_error();
+      return T((tv.tv_sec - base_) * prec + tv.tv_usec * prec / 1000000);
+    }
+
     static base_type base_;
     T time_;
   };
@@ -162,7 +173,7 @@ namespace openvpn {
 
   typedef TimeType<unsigned long> Time;
 
-  typedef const Time* TimePtr;
+  typedef Time* TimePtr;
 
 } // namespace openvpn
 

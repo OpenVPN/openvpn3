@@ -9,7 +9,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/log.hpp>
+#include <openvpn/log/log.hpp>
 #include <openvpn/common/circ_list.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
@@ -57,7 +57,7 @@ namespace openvpn {
     static size_t size(const int form)
     {
       if (form == PacketID::LONG_FORM)
-	return sizeof(id_t) + sizeof(time_t);
+	return sizeof(id_t) + sizeof(net_time_t);
       else
 	return sizeof(id_t);
     }

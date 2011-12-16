@@ -14,7 +14,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/log.hpp>
+#include <openvpn/log/log.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_dgram.hpp>
 

@@ -52,7 +52,7 @@ namespace openvpn {
 
     void init(const id_t span)
     {
-      next = 1;
+      next = 0;
       window_.init(next, span);
     }
 

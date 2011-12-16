@@ -12,7 +12,7 @@
 #include <openvpn/crypto/digest.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
-#include <openvpn/crypto/protostats.hpp>
+#include <openvpn/log/protostats.hpp>
 
 namespace openvpn {
 
@@ -37,7 +37,7 @@ namespace openvpn {
 	    {
 	      buf.reset_size();
 	      if (stats)
-		stats->error(ProtoStats::HMAC_ERRORS);
+		stats->error(ProtoStats::HMAC_ERROR);
 	      return;
 	    }
 	}
@@ -60,7 +60,7 @@ namespace openvpn {
 	    {
 	      buf.reset_size();
 	      if (stats)
-		stats->error(ProtoStats::CRYPTO_ERRORS);
+		stats->error(ProtoStats::CRYPTO_ERROR);
 	      return;
 	    }
 	  work.set_size(decrypt_bytes);
@@ -73,7 +73,7 @@ namespace openvpn {
 		{
 		  buf.reset_size();
 		  if (stats)
-		    stats->error(ProtoStats::REPLAY_ERRORS);
+		    stats->error(ProtoStats::REPLAY_ERROR);
 		  return;
 		}
 	    }
@@ -91,7 +91,7 @@ namespace openvpn {
 	    {
 	      buf.reset_size();
 	      if (stats)
-		stats->error(ProtoStats::REPLAY_ERRORS);
+		stats->error(ProtoStats::REPLAY_ERROR);
 	      return;
 	    }
 	}

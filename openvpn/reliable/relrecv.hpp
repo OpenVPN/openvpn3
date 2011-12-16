@@ -26,7 +26,7 @@ namespace openvpn {
 
     void init(const id_t span)
     {
-      window_.init(1, span);
+      window_.init(0, span);
     }
 
     // Call with unsequenced packet off of the wire.

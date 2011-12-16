@@ -8,8 +8,15 @@
 #include <boost/static_assert.hpp>
 
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/abort.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+
+#ifdef OPENVPN_BUFFER_ABORT
+#define OPENVPN_BUFFER_THROW(exc) { abort(); }
+#else
+#define OPENVPN_BUFFER_THROW(exc) { throw exc(); }
+#endif
 
 namespace openvpn {
 
@@ -46,7 +53,7 @@ namespace openvpn {
     void init_headroom(size_t headroom)
     {
       if (headroom > capacity_)
-	throw buffer_headroom();
+	OPENVPN_BUFFER_THROW(buffer_headroom);
       offset_ = headroom;
       size_ = 0;
     }
@@ -116,7 +123,7 @@ namespace openvpn {
     void push_front(const T& value)
     {
       if (!offset_)
-	throw buffer_push_front_headroom();
+	OPENVPN_BUFFER_THROW(buffer_push_front_headroom);
       --offset_;
       ++size_;
       *data() = value;
@@ -133,7 +140,7 @@ namespace openvpn {
     void advance(const size_t delta)
     {
       if (delta > size_)
-	throw buffer_overflow();
+	OPENVPN_BUFFER_THROW(buffer_overflow);
       offset_ += delta;
       size_ -= delta;
     }
@@ -142,7 +149,7 @@ namespace openvpn {
     T& operator[](const size_t index)
     {
       if (index >= size_)
-	throw buffer_index();
+	OPENVPN_BUFFER_THROW(buffer_index);
       return data()[index];
     }
 
@@ -150,9 +157,7 @@ namespace openvpn {
     const T& operator[](const size_t index) const
     {
       if (index >= size_)
-	{
-	  throw buffer_const_index();
-	}
+	OPENVPN_BUFFER_THROW(buffer_const_index);
       return c_data()[index];
     }
 
@@ -165,9 +170,9 @@ namespace openvpn {
 
     // return a boost::asio::const_buffers_1 object used by
     // asio write methods.
-    boost::asio::const_buffers_1 const_buffers_1()
+    boost::asio::const_buffers_1 const_buffers_1() const
     {
-      return boost::asio::const_buffers_1(data(), size());
+      return boost::asio::const_buffers_1(c_data(), size());
     }
 
     void write(const T* data, const size_t size)
@@ -203,7 +208,7 @@ namespace openvpn {
 	  return data();
 	}
       else
-	throw buffer_headroom();
+	OPENVPN_BUFFER_THROW(buffer_headroom);
     }
 
     T* read_alloc(const size_t size)
@@ -216,7 +221,7 @@ namespace openvpn {
 	  return ret;
 	}
       else
-	throw buffer_underflow();
+	OPENVPN_BUFFER_THROW(buffer_underflow);
     }
 
     void reset(const size_t min_capacity, const unsigned int flags)
@@ -229,7 +234,7 @@ namespace openvpn {
     // Called when reset method needs to expand the buffer size
     virtual void reset_impl(const size_t min_capacity, const unsigned int flags)
     {
-      throw buffer_no_reset_impl();
+      OPENVPN_BUFFER_THROW(buffer_no_reset_impl);
     }
 
     // Derived classes can implement buffer growing semantics
@@ -238,7 +243,7 @@ namespace openvpn {
     virtual void resize(const size_t new_capacity)
     {
       if (new_capacity > capacity_)
-	throw buffer_full();
+	OPENVPN_BUFFER_THROW(buffer_full);
     }
 
     T* data_;          // pointer to data
@@ -449,7 +454,7 @@ namespace openvpn {
 	      capacity_ = newcap;
 	    }
 	  else
-	    throw buffer_full();
+	    OPENVPN_BUFFER_THROW(buffer_full);
 	}
     }
 

@@ -3,6 +3,12 @@
 
 #include <cstring>
 
+#ifdef OPENVPN_DEBUG
+#include <string>
+#include <sstream>
+#include <openvpn/common/hexstr.hpp>
+#endif
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/random/rand.hpp>
@@ -70,6 +76,17 @@ namespace openvpn {
 	  initialized_ = false;
 	}
     }
+
+#ifdef OPENVPN_DEBUG
+    std::string dump(const char *title)
+    {
+      std::ostringstream out;
+      out << "*** TLSPRF " << title << " pre_master: " << render_hex(pre_master, sizeof(pre_master)) << std::endl;
+      out << "*** TLSPRF " << title << " random1: " << render_hex(random1, sizeof(random1)) << std::endl;
+      out << "*** TLSPRF " << title << " random2: " << render_hex(random2, sizeof(random2)) << std::endl;
+      return out.str();
+    }
+#endif
 
     ~TLSPRF()
     {

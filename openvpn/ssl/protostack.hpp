@@ -8,7 +8,7 @@
 #include <openvpn/common/usecount.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
-#include <openvpn/crypto/protostats.hpp>
+#include <openvpn/log/protostats.hpp>
 #include <openvpn/reliable/relrecv.hpp>
 #include <openvpn/reliable/relsend.hpp>
 #include <openvpn/reliable/relack.hpp>
@@ -248,7 +248,7 @@ namespace openvpn {
 	      catch (...)
 		{
 		  if (stats)
-		    stats->error(ProtoStats::SSL_ERRORS);
+		    stats->error(ProtoStats::SSL_ERROR);
 		  invalidate();
 		  throw;
 		}
@@ -268,7 +268,7 @@ namespace openvpn {
 	      catch (...)
 		{
 		  if (stats)
-		    stats->error(ProtoStats::ENCAPSULATION_ERRORS);
+		    stats->error(ProtoStats::ENCAPSULATION_ERROR);
 		  invalidate();
 		  throw;
 		}
@@ -295,7 +295,7 @@ namespace openvpn {
 	  catch (...)
 	    {
 	      if (stats)
-		stats->error(ProtoStats::ENCAPSULATION_ERRORS);
+		stats->error(ProtoStats::ENCAPSULATION_ERROR);
 	      invalidate();
 	      throw;
 	    }
@@ -348,7 +348,7 @@ namespace openvpn {
 	      {
 		// SSL fatal errors will invalidate the session
 		if (stats)
-		  stats->error(ProtoStats::SSL_ERRORS);
+		  stats->error(ProtoStats::SSL_ERROR);
 		invalidate();
 		throw;
 	      }

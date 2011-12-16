@@ -6,7 +6,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/crypto/protostats.hpp>
+#include <openvpn/log/protostats.hpp>
 
 namespace openvpn {
   class Compress : public RC<thread_unsafe_refcount>

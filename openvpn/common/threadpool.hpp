@@ -8,7 +8,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/thread.hpp>
-#include <openvpn/common/log.hpp>
+#include <openvpn/log/log.hpp>
 
 
 namespace openvpn {

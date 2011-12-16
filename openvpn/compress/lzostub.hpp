@@ -39,7 +39,7 @@ namespace openvpn {
 	return;
 
       // error
-      stats->error(ProtoStats::COMPRESS_ERRORS);
+      stats->error(ProtoStats::COMPRESS_ERROR);
       buf.reset_size();
     }
   };

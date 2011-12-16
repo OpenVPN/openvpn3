@@ -142,10 +142,9 @@ public:
 
   bool do_housekeeping()
   {
-    if (now() >= housekeeping_timer)
+    if (now() >= Base::next_housekeeping())
       {
 	Base::housekeeping();
-	housekeeping_timer = Base::next_housekeeping();
 	return true;
       }
     else
@@ -268,7 +267,6 @@ private:
       }
   }
 
-  Time housekeeping_timer;
   Frame::Ptr frame;
   size_t app_bytes_;
   size_t net_bytes_;
@@ -292,8 +290,8 @@ private:
   {
     const std::string username("foo");
     const std::string password("bar");
-    Base::write_string(username, buf);
-    Base::write_string(password, buf);
+    Base::write_auth_string(username, buf);
+    Base::write_auth_string(password, buf);
   }
 };
 
@@ -313,8 +311,8 @@ public:
 private:
   virtual void server_auth(Buffer& buf, const std::string& peer_info)
   {
-    const std::string username = Base::template read_string<std::string>(buf);
-    const std::string password = Base::template read_string<std::string>(buf);
+    const std::string username = Base::template read_auth_string<std::string>(buf);
+    const std::string password = Base::template read_auth_string<std::string>(buf);
 
 #ifdef VERBOSE
     std::cout << "**** AUTHENTICATE " << username << '/' << password << " PEER INFO:" << std::endl;
@@ -643,7 +641,7 @@ void test(const int thread_num)
               << " D=" << cli_proto.control_drought().raw() << '/' << cli_proto.data_drought().raw() << '/' << serv_proto.control_drought().raw() << '/' << serv_proto.data_drought().raw()
               << " N=" << cli_proto.negotiations() << '/' << serv_proto.negotiations()
               << " SH=" << cli_proto.slowest_handshake().raw() << '/' << serv_proto.slowest_handshake().raw()
-              << " HE=" << cli_stats->get(ProtoStats::HANDSHAKE_TIMEOUTS) << '/' << serv_stats->get(ProtoStats::HANDSHAKE_TIMEOUTS)
+              << " HE=" << cli_stats->get(ProtoStats::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get(ProtoStats::HANDSHAKE_TIMEOUT)
 	      << std::endl;
   }
   catch (std::exception& e)
