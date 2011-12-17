@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-./proto &
-./proto &
-./proto &
-./proto &
+./proto >log1 &
+./proto >log2 &
+./proto >log3 &
+./proto >log4 &
 wait
+for f in log1 log2 log3 log4 ; do
+    echo "*************" $f
+    tail -5 $f
+done

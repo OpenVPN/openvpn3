@@ -977,6 +977,7 @@ namespace openvpn {
 	    send_auth();	
 	    state = S_WAIT_AUTH_ACK;
 	    break;
+	  case S_WAIT_AUTH_ACK: // rare case where client receives auth, goes ACTIVE, but the ACK response is dropped
 	  case ACTIVE:
 	    proto.app_recv(key_id_, to_app_buf);
 	    break;
@@ -1032,6 +1033,7 @@ namespace openvpn {
 	    write_auth_string(peer_info, *buf);
 	  }
 	Base::app_send(buf);
+	dirty = true;
       }
 
       void recv_auth(BufferAllocated& buf)
@@ -1059,6 +1061,7 @@ namespace openvpn {
 	  {
 	    Base::app_send(app_pre_write_queue.front());
 	    app_pre_write_queue.pop_front();
+	    dirty = true;
 	  }
 	reached_active_time_ = *now;
 	proto.slowest_handshake_.max(reached_active_time_ - construct_time);
@@ -1370,18 +1373,13 @@ namespace openvpn {
 		 const ProtoStats::Ptr& stats_arg)        // error stats
       : config(config_arg),
 	stats(stats_arg),
-	hmac_size(0),
-	use_tls_auth(false),
-	upcoming_key_id(0),
+	server_(config_arg->ssl_ctx->mode() == SSLConfig::SERVER),
 	n_key_ids(0),
 	now_(config_arg->now),
 	keepalive_ping(config_arg->keepalive_ping),
 	keepalive_timeout(config_arg->keepalive_timeout)
     {
       const Config& c = *config;
-
-      // determine client/server status
-      server_ = (c.ssl_ctx->mode() == SSLConfig::SERVER);
 
       // tls-auth setup
       if (c.tls_auth_key.defined())
@@ -1390,7 +1388,29 @@ namespace openvpn {
 
 	  // get HMAC size from Digest object
 	  hmac_size = c.tls_auth_digest.size();
+	}
+      else
+	{
+	  use_tls_auth = false;
+	  hmac_size = 0;
+	}
+      reset();
+    }
 
+    void reset()
+    {
+      const Config& c = *config;
+
+      // clear key contexts
+      primary.reset();
+      secondary.reset();
+
+      // start with key ID 0
+      upcoming_key_id = 0;
+
+      // tls-auth initialization
+      if (use_tls_auth)
+	{
 	  // init tls_auth hmac
 	  const unsigned int key_dir = server_ ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
 	  ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
@@ -1408,8 +1428,9 @@ namespace openvpn {
 
       // initialize proto session ID
       psid_self.randomize(*c.prng);
+      psid_peer.reset();
 
-      // initialize primary key context
+      // initialize key contexts
       primary.reset(new KeyContext(*this, !server_));
 
       // initialize keepalive timers
@@ -1755,6 +1776,7 @@ namespace openvpn {
 	  switch (ev)
 	    {
 	    case KeyContext::KEV_ACTIVE:
+	      OPENVPN_LOG_PROTO("*** SESSION_ACTIVE");
 	      active();
 	      break;
 	    case KeyContext::KEV_RENEGOTIATE:

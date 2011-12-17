@@ -18,8 +18,13 @@ namespace openvpn {
     };
 
     ProtoSessionID()
-      : defined_(false)
     {
+      reset();
+    }
+
+    void reset()
+    {
+      defined_ = false;
       std::memset(id_, 0, SIZE);
     }
 

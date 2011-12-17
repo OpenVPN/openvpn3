@@ -21,6 +21,14 @@
 #define ITER 1000000
 #endif
 
+// number of high-level session iterations
+#ifndef SITER
+#define SITER 1
+#endif
+
+// abort if we reach this limit
+//#define DROUGHT_LIMIT 100000
+
 #if !defined(VERBOSE) && ITER <= 10000
 #define VERBOSE
 #endif
@@ -91,8 +99,10 @@ const char message[] =
 class DroughtMeasure
 {
 public:
-  DroughtMeasure(TimePtr now_arg)
-    : now(now_arg)
+  OPENVPN_SIMPLE_EXCEPTION(drought_limit_exceeded);
+
+  DroughtMeasure(const std::string& name_arg, TimePtr now_arg)
+    : now(now_arg), name(name_arg)
   {
   }
 
@@ -102,7 +112,21 @@ public:
       {
 	Time::Duration since_last = *now - last_event;
 	if (since_last > drought)
-	  drought = since_last;
+	  {
+	    drought = since_last;
+#if defined(VERBOSE) || defined(DROUGHT_LIMIT)
+	    {
+	      const unsigned int r = drought.raw();
+#ifdef VERBOSE
+	      std::cout << "*** Drought " << name << " has reached " << r << std::endl;
+#endif
+#ifdef DROUGHT_LIMIT
+	      if (r > DROUGHT_LIMIT)
+		throw drought_limit_exceeded();
+#endif
+	    }
+#endif
+	  }
       }
     last_event = *now;
   }
@@ -113,6 +137,7 @@ private:
   TimePtr now;
   Time last_event;
   Time::Duration drought;
+  std::string name;
 };
 
 // test the OpenVPN protocol implementation in ProtoContext
@@ -121,7 +146,6 @@ class TestProto : public ProtoContext<SSL_CONTEXT>
 {
   typedef ProtoContext<SSL_CONTEXT> Base;
 
-  using Base::start;
   using Base::now;
   using Base::server;
 
@@ -133,8 +157,8 @@ public:
   TestProto(const typename Base::Config::Ptr& config,
 	    const ProtoStats::Ptr& stats)
     : Base(config, stats),
-      control_drought(config->now),
-      data_drought(config->now),
+      control_drought("control", config->now),
+      data_drought("data", config->now),
       frame(config->frame),
       app_bytes_(0),
       net_bytes_(0),
@@ -142,6 +166,23 @@ public:
   {
     // zero progress value
     std::memset(progress_, 0, 11);
+  }
+
+  void reset()
+  {
+    net_out.clear();
+    Base::reset();
+  }
+
+  void initial_app_send(const char *msg)
+  {
+    Base::start();
+
+    const size_t msglen = std::strlen(msg);
+    BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
+    copy_progress(app_buf);
+    control_send(app_buf);
+    flush(true);
   }
 
   bool do_housekeeping()
@@ -191,16 +232,6 @@ public:
       }
   }
 
-  void initial_app_send(const char *msg)
-  {
-    start();
-
-    const size_t msglen = std::strlen(msg);
-    BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
-    control_send(app_buf);
-    flush(true);
-  }
-
   size_t net_bytes() const { return net_bytes_; }
   size_t app_bytes() const { return app_bytes_; }
   size_t data_bytes() const { return data_bytes_; }
@@ -242,6 +273,12 @@ private:
     modmsg(work);
     control_send(work);
     control_drought.event();
+  }
+
+  void copy_progress(Buffer& buf)
+  {
+    if (progress_[0]) // make sure progress was initialized
+      std::memcpy(buf.data()+13, progress_, 10);    
   }
 
   void modmsg(BufferPtr& buf)
@@ -551,7 +588,11 @@ void test(const int thread_num)
     cp->pid_seq_backtrack = 64;
     cp->pid_time_backtrack = 30;
     cp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
+#if SITER > 1
+    cp->handshake_window = Time::Duration::seconds(30);
+#else
     cp->handshake_window = Time::Duration::seconds(18); // will cause a small number of handshake failures
+#endif
     cp->become_primary = Time::Duration::seconds(30);
     cp->renegotiate = Time::Duration::seconds(95);
     cp->expire = Time::Duration::seconds(150);
@@ -599,7 +640,11 @@ void test(const int thread_num)
     sp->pid_seq_backtrack = 64;
     sp->pid_time_backtrack = 30;
     sp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
+#if SITER > 1
+    sp->handshake_window = Time::Duration::seconds(30);
+#else
     sp->handshake_window = Time::Duration::seconds(17) + Time::Duration::binary_ms(512);
+#endif
     sp->become_primary = Time::Duration::seconds(30);
     sp->renegotiate = Time::Duration::seconds(90);
     sp->expire = Time::Duration::seconds(150);
@@ -617,18 +662,29 @@ void test(const int thread_num)
 
     TestProtoClient<ClientSSLContext> cli_proto(cp, cli_stats);
     TestProtoServer<OpenSSLContext> serv_proto(sp, serv_stats);
-    NoisyWire client_to_server("Client -> Server", &time, rand, 8, 16, 32); // last value: 32
-    NoisyWire server_to_client("Server -> Client", &time, rand, 8, 16, 32); // last value: 32
 
-    // start feedback loop
-    cli_proto.initial_app_send(message);
-
-    // message loop
-    for (int j = 0; j < ITER; ++j)
+    for (int i = 0; i < SITER; ++i)
       {
-	client_to_server.xfer(cli_proto, serv_proto);
-	server_to_client.xfer(serv_proto, cli_proto);
-	time += time_step;
+#ifdef VERBOSE
+	std::cout << "***** SITER " << i << std::endl;
+#endif
+	cli_proto.reset();
+	serv_proto.reset();
+
+	NoisyWire client_to_server("Client -> Server", &time, rand, 8, 16, 32); // last value: 32
+	NoisyWire server_to_client("Server -> Client", &time, rand, 8, 16, 32); // last value: 32
+
+	// start feedback loop
+	cli_proto.initial_app_send(message);
+	serv_proto.start();
+
+	// message loop
+	for (int j = 0; j < ITER; ++j)
+	  {
+	    client_to_server.xfer(cli_proto, serv_proto);
+	    server_to_client.xfer(serv_proto, cli_proto);
+	    time += time_step;
+	  }
       }
 
     cli_proto.finalize();

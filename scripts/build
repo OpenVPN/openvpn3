@@ -7,6 +7,8 @@ if [ -z "$1" ]; then
     echo " STRIP=1 -- strip binary"
     echo " LTO=1 -- build with LTO"
     echo " GPROF=1 -- build for gprof profiling"
+    echo " PGEN=1 -- generate data for profile-guided optimization"
+    echo " PUSE=1 -- use data from previous run of PGEN=1 build"
     echo " OSSL=1 -- include OpenSSL on Mac"
     echo " SSL_BOTH=1 -- include OpenSSL and Apple SSL on Mac"
     echo " NOTHREADS=1 -- disable threads"
@@ -16,6 +18,9 @@ fi
 
 # remove previous build
 rm -f $1
+
+# build flags
+FLAGS=""
 
 # special Mac settings
 if [ "$PLATFORM" = "mac" ]; then
@@ -41,21 +46,27 @@ fi
 # boost link libraries
 BOOST_LIBS="-lboost_system"
 if [ "$NOTHREADS" = "1" ]; then
-    THREAD_FLAGS="-DBOOST_DISABLE_THREADS"
+    FLAGS="$FLAGS -DBOOST_DISABLE_THREADS"
 else
     BOOST_LIBS="$BOOST_LIBS -lboost_thread"
-    THREAD_FLAGS="-pthread"
+    FLAGS="$FLAGS -pthread"
+fi
+
+# profile-guided optimization
+if [ "$PGEN" = "1" ]; then
+    FLAGS="$FLAGS -fprofile-generate"
+elif [ "$PUSE" = "1" ]; then
+    FLAGS="$FLAGS -fprofile-use"
 fi
 
 if [ "$DEBUG" = "1" ]; then
     # debug build
-    CMD="g++ -Wall -g $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
+    CMD="g++ -Wall -g $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
 else
     # release build
-    FLAGS=""
     [ "$LTO" = "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
-    CMD="g++ -Wall -O3 -fwhole-program $FLAGS $THREAD_FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
+    CMD="g++ -Wall -O3 -fwhole-program $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
 fi
 
 # execute CMD
