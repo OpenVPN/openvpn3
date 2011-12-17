@@ -358,7 +358,6 @@ namespace openvpn {
 		  return true;
 		else
 		  {
-		    /* raised from DEBUG_LOW to reduce verbosity */
 		    debug_log (DEBUG_MEDIUM, pin, "UDP replay", diff, now);
 		    return false;
 		  }
@@ -515,6 +514,8 @@ namespace openvpn {
       last_reap_ = now;
     }
 
+#ifdef OPENVPN_DEBUG_PACKET_ID
+
     void debug_log (const int level, const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
       if (debug_level_ >= level)
@@ -523,12 +524,16 @@ namespace openvpn {
 
     void do_log (const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
-#ifdef OPENVPN_DEBUG
       OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << str(now));
-#else
-      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << name_ << "-" << unit_);
-#endif
     }
+
+#else
+
+    void debug_log (const int level, const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
+    {
+    }
+
+#endif
 
     bool initialized_;                     /* true if packet_id_init was called */
     int debug_level_;                      /* log more when higher */

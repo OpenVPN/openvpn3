@@ -40,6 +40,10 @@
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
 #endif
 
+#ifdef OPENSSL_AES_NI
+#include <openvpn/openssl/util/engine.hpp>
+#endif
+
 #if OPENVPN_MULTITHREAD
 #include <boost/bind.hpp>
 #endif
@@ -535,7 +539,7 @@ void test(const int thread_num)
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
     cp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    cp->cipher = Cipher("AES-256-CBC");
+    cp->cipher = Cipher("AES-128-CBC");
     cp->digest = Digest("SHA1");
 #ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
@@ -583,7 +587,7 @@ void test(const int thread_num)
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
     sp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    sp->cipher = Cipher("AES-256-CBC");
+    sp->cipher = Cipher("AES-128-CBC");
     sp->digest = Digest("SHA1");
 #ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);
@@ -654,6 +658,10 @@ int main(int /*argc*/, char* /*argv*/[])
 {
   Time::reset_base();
   openssl_init ossl_init;
+
+#ifdef OPENSSL_AES_NI
+  openssl_setup_engine("aesni");
+#endif
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
   boost::thread* threads[N_THREADS];
