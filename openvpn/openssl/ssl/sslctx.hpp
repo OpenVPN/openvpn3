@@ -6,10 +6,11 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/mode.hpp>
+#include <openvpn/common/options.hpp>
 #include <openvpn/log/log.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/pki/cclist.hpp>
-#include <openvpn/ssl/sslconf.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
@@ -42,19 +43,91 @@ namespace openvpn {
     };
 
     // The data needed to construct an OpenSSLContext.
-    // Alternatively, SSLConfig can be used.
     struct Config
     {
-      Config() : mode(SSLConfig::UNDEF), flags(0) {}
+      enum {
+	DEBUG = 1<<0,
+      };
+      typedef unsigned int Flags;
 
-      SSLConfig::Mode mode;
-      SSLConfig::Flags flags;
+      Config() : flags(0) {}
+
+      Mode mode;
       CertCRLList ca;
       X509 cert;
       X509List extra_certs;
       PKey pkey;
       DH dh; // only needed in server mode
       Frame::Ptr frame;
+      Flags flags;
+
+      void enable_debug()
+      {
+	flags |= DEBUG;
+      }
+
+      void load_ca(const std::string& ca_txt)
+      {
+	ca.parse_pem(ca_txt, "ca");
+      }
+
+      void load_cert(const std::string& cert_txt)
+      {
+	cert.parse_pem(cert_txt, "cert");
+      }
+
+      void load_extra_certs(const std::string& ec_txt)
+      {
+	if (!ec_txt.empty())
+	  CertCRLList::from_string(ec_txt, "extra-certs", &extra_certs, NULL);
+      }
+
+      void load_private_key(const std::string& key_txt)
+      {
+	pkey.parse_pem(key_txt, "private key");
+      }
+
+      void load_dh(const std::string& dh_txt)
+      {
+	dh.parse_pem(dh_txt);
+      }
+
+      void load(const OptionList& opt)
+      {
+	// client/server
+	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
+
+	// ca
+	{
+	  const std::string& ca_txt = opt.get("ca", 1);
+	  load_ca(ca_txt);
+	}
+
+	// cert
+	{
+	  const std::string& cert_txt = opt.get("cert", 1);
+	  load_cert(cert_txt);
+	}
+
+	// extra-certs
+	{
+	  const std::string& ec_txt = opt.get_optional("extra-certs", 1);
+	  load_extra_certs(ec_txt);
+	}
+
+	// private key
+	{
+	  const std::string& key_txt = opt.get("key", 1);
+	  load_private_key(key_txt);
+	}
+
+	// DH
+	if (mode.is_server())
+	  {
+	    const std::string& dh_txt = opt.get("dh", 1);
+	    load_dh(dh_txt);
+	  }
+      }
     };
 
     // Represents an actual SSL session.
@@ -81,9 +154,9 @@ namespace openvpn {
 	  ct_out = mem_bio(ctx.frame());
 
 	  // set client/server mode
-	  if (ctx.mode() == SSLConfig::SERVER)
+	  if (ctx.mode().is_server())
 	    SSL_set_accept_state(ssl);
-	  else if (ctx.mode() == SSLConfig::CLIENT)
+	  else if (ctx.mode().is_client())
 	    SSL_set_connect_state(ssl);
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext::SSL: unknown client/server mode");
@@ -217,23 +290,6 @@ namespace openvpn {
       init(config);
     }
 
-    explicit OpenSSLContext(const SSLConfig& config)
-      : ctx_(NULL)
-    {
-      Config c;
-      c.mode = config.mode;
-      c.flags = config.flags;
-      c.ca.parse_pem(config.ca, "CA_CRL_LIST");
-      c.cert.parse_pem(config.cert);
-      if (!config.extra_certs.empty())
-	CertCRLList::from_string(config.extra_certs, "EXTRA_CERTS_LIST", &c.extra_certs, NULL);
-      c.pkey.parse_pem(config.pkey);
-      if (!config.dh.empty())
-	c.dh.parse_pem(config.dh);
-      c.frame = config.frame;
-      init(c);
-    }
-
     SSLPtr ssl() const { return SSLPtr(new SSL(*this)); }
 
     void update_trust(const CertCRLList& cc)
@@ -247,8 +303,8 @@ namespace openvpn {
       erase();
     }
 
-    SSLConfig::Mode mode() const { return mode_; }
-    SSLConfig::Flags flags() const { return flags_; }
+    const Mode& mode() const { return mode_; }
+    Config::Flags flags() const { return flags_; }
     const Frame::Ptr& frame() const { return frame_; }
     SSL_CTX* raw_ctx() const { return ctx_; }
 
@@ -271,7 +327,7 @@ namespace openvpn {
       try
 	{
 	  // Create new SSL_CTX for server or client mode
-	  if (config.mode == SSLConfig::SERVER)
+	  if (config.mode.is_server())
 	    {
 	      ctx_ = SSL_CTX_new(TLSv1_server_method());
 	      if (ctx_ == NULL)
@@ -283,7 +339,7 @@ namespace openvpn {
 	      if (!SSL_CTX_set_tmp_dh(ctx_, config.dh.obj()))
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
 	    }
-	  else if (config.mode == SSLConfig::CLIENT)
+	  else if (config.mode.is_client())
 	    {
 	      ctx_ = SSL_CTX_new(TLSv1_client_method());
 	      if (ctx_ == NULL)
@@ -331,7 +387,7 @@ namespace openvpn {
 	  update_trust(config.ca);
 
 	  // Show handshake debugging info
-	  if (config.flags & SSLConfig::DEBUG)
+	  if (config.flags & Config::DEBUG)
 	    SSL_CTX_set_info_callback (ctx_, info_callback);
 
 	  // Keep a reference to vars so we can hand them off to SSL objects derived from us
@@ -355,8 +411,8 @@ namespace openvpn {
 	}
     }
 
-    SSLConfig::Mode mode_;
-    SSLConfig::Flags flags_;
+    Mode mode_;
+    Config::Flags flags_;
     Frame::Ptr frame_;
     SSL_CTX* ctx_;
   };

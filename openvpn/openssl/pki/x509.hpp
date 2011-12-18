@@ -66,9 +66,9 @@ namespace openvpn {
   public:
     X509() {}
 
-    explicit X509(const std::string& cert_txt)
+    X509(const std::string& cert_txt, const std::string& title)
     {
-      parse_pem(cert_txt);
+      parse_pem(cert_txt, title);
     }
 
     X509(const X509& other)
@@ -81,7 +81,7 @@ namespace openvpn {
       assign(other.x509_);
     }
 
-    void parse_pem(const std::string& cert_txt)
+    void parse_pem(const std::string& cert_txt, const std::string& title)
     {
       BIO *bio = BIO_new_mem_buf(const_cast<char *>(cert_txt.c_str()), cert_txt.length());
       if (!bio)
@@ -90,10 +90,7 @@ namespace openvpn {
       ::X509 *cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
       BIO_free(bio);
       if (!cert)
-	{
-	  std::abort();
-	  throw OpenSSLException("X509::parse_pem");
-	}
+	throw OpenSSLException(std::string("X509::parse_pem: error in ") + title + std::string(":"));
 
       erase();
       x509_ = cert;

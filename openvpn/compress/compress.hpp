@@ -48,7 +48,7 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(compress_instantiate);
 
     CompressContext() : type_(NONE) {}
-    CompressContext(const Type t) : type_(t) {}
+    explicit CompressContext(const Type t) : type_(t) {}
 
     unsigned int extra_payload_bytes() const { return 1; }
 

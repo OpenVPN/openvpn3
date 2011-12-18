@@ -1,5 +1,5 @@
-#ifndef OPENVPN_COMMON_ASIOTIMER_H
-#define OPENVPN_COMMON_ASIOTIMER_H
+#ifndef OPENVPN_TIME_ASIOTIMER_H
+#define OPENVPN_TIME_ASIOTIMER_H
 
 #include <boost/asio.hpp>
 
@@ -49,4 +49,4 @@ namespace openvpn {
   typedef boost::asio::basic_deadline_timer<Time> AsioTimer;
 }
 
-#endif // OPENVPN_COMMON_ASIOTIMER_H
+#endif // OPENVPN_TIME_ASIOTIMER_H

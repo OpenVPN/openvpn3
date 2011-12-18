@@ -14,8 +14,11 @@ namespace openvpn {
     };
 
     Protocol() : type_(NONE) {}
-    Protocol(const Type t) : type_(t) {}
+    explicit Protocol(const Type t) : type_(t) {}
     Type operator()() const { return type_; }
+
+    bool is_udp() const { return type_ == UDPv4 || type_ == UDPv6; }
+    bool is_tcp() const { return type_ == TCPv4 || type_ == TCPv6; }
 
     const char *str() const
     {

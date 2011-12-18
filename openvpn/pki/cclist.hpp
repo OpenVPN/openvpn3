@@ -24,12 +24,12 @@ namespace openvpn {
 
     CertCRLListTemplate() {}
 
-    explicit CertCRLListTemplate(const std::string& content, const std::string title)
+    explicit CertCRLListTemplate(const std::string& content, const std::string& title)
     {
       from_string(content, title, &certs, &crls);
     }
 
-    void parse_pem(const std::string& content, const std::string title)
+    void parse_pem(const std::string& content, const std::string& title)
     {
       from_string(content, title, &certs, &crls);
     }
@@ -44,7 +44,7 @@ namespace openvpn {
       return certs.render_pem() + crls.render_pem();
     }
 
-    static void from_istream(std::istream& in, const std::string title, CertList* cert_list, CRLList* crl_list)
+    static void from_istream(std::istream& in, const std::string& title, CertList* cert_list, CRLList* crl_list)
     {
       static const char cert_start[] = "-----BEGIN CERTIFICATE-----";
       static const char cert_end[] = "-----END CERTIFICATE-----";
@@ -89,7 +89,7 @@ namespace openvpn {
 	  if (state == S_IN_CERT && line == cert_end)
 	    {
 	      try {
-		typename CertList::ItemPtr x509(new typename CertList::Item(item));
+		typename CertList::ItemPtr x509(new typename CertList::Item(item, title));
 		cert_list->push_back(x509);
 	      }
 	      catch (std::exception& e)
@@ -117,7 +117,7 @@ namespace openvpn {
 	OPENVPN_THROW(parse_cert_crl_error, title << " : CERT/CRL content ended unexpectedly without END marker");
     }
 
-    static void from_string(const std::string content, const std::string title, CertList* cert_list, CRLList* crl_list = NULL)
+    static void from_string(const std::string content, const std::string& title, CertList* cert_list, CRLList* crl_list = NULL)
     {
       std::stringstream in(content);
       from_istream(in, title, cert_list, crl_list);

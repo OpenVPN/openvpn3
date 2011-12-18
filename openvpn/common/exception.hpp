@@ -7,10 +7,14 @@
 
 #include <boost/system/error_code.hpp>
 
-// preprocessor hack to get __FILE__:__LINE__ rendered as a string
-#define OPENVPN_STRINGIZE(x) OPENVPN_STRINGIZE2(x)
-#define OPENVPN_STRINGIZE2(x) #x
-#define OPENVPN_FILE_LINE __FILE__ ":" OPENVPN_STRINGIZE(__LINE__)
+#ifdef OPENVPN_DEBUG_EXCEPTION
+  // preprocessor hack to get __FILE__:__LINE__ rendered as a string
+# define OPENVPN_STRINGIZE(x) OPENVPN_STRINGIZE2(x)
+# define OPENVPN_STRINGIZE2(x) #x
+# define OPENVPN_FILE_LINE "/" __FILE__ ":" OPENVPN_STRINGIZE(__LINE__)
+#else
+# define OPENVPN_FILE_LINE
+#endif
 
 namespace openvpn {
   template <typename ErrorCode>
@@ -35,30 +39,30 @@ namespace openvpn {
 # define OPENVPN_SIMPLE_EXCEPTION(C) \
   class C : public std::exception { \
   public: \
-    virtual const char* what() const throw() { return #C "/" OPENVPN_FILE_LINE; } \
+    virtual const char* what() const throw() { return #C OPENVPN_FILE_LINE; } \
   }
 
   // define a simple custom exception class with no extra info that inherits from a custom base
 # define OPENVPN_SIMPLE_EXCEPTION_INHERIT(B, C)	\
   class C : public B { \
   public: \
-    virtual const char* what() const throw() { return #C "/" OPENVPN_FILE_LINE; } \
+    virtual const char* what() const throw() { return #C OPENVPN_FILE_LINE; } \
   }
 
   // define a custom exception class that allows extra info
 # define OPENVPN_EXCEPTION(C) \
   class C : public openvpn::Exception { \
   public: \
-    C() : openvpn::Exception(#C "/" OPENVPN_FILE_LINE) {} \
-    C(std::string err) : openvpn::Exception(#C "/" OPENVPN_FILE_LINE ": " + err) {} \
+    C() : openvpn::Exception(#C OPENVPN_FILE_LINE) {} \
+    C(std::string err) : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err) {} \
   }
 
   // define a custom exception class that allows extra info, and inherits from a custom base
 # define OPENVPN_EXCEPTION_INHERIT(B, C)		\
   class C : public B { \
   public: \
-    C() : B(#C "/" OPENVPN_FILE_LINE) {} \
-    C(std::string err) : B(#C "/" OPENVPN_FILE_LINE ": " + err) {} \
+    C() : B(#C OPENVPN_FILE_LINE) {} \
+    C(std::string err) : B(#C OPENVPN_FILE_LINE ": " + err) {} \
   }
 
   // throw an Exception with stringstream concatenation allowed

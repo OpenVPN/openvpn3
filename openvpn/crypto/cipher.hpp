@@ -1,6 +1,8 @@
 #ifndef OPENVPN_CRYPTO_CIPHER
 #define OPENVPN_CRYPTO_CIPHER
 
+#include <string>
+
 #include <boost/noncopyable.hpp>
 
 #include <openvpn/gencrypto/evpcipher.hpp>
@@ -20,9 +22,9 @@ namespace openvpn {
 
     Cipher() : cipher_(NULL) {}
 
-    Cipher(const char *name)
+    Cipher(const std::string& name)
     {
-      cipher_ = EVP_get_cipherbyname(name);
+      cipher_ = EVP_get_cipherbyname(name.c_str());
       if (!cipher_)
 	throw cipher_not_found();
     }

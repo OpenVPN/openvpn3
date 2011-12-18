@@ -1,6 +1,7 @@
 #ifndef OPENVPN_CRYPTO_DIGEST
 #define OPENVPN_CRYPTO_DIGEST
 
+#include <string>
 #include <cstring>
 
 #include <boost/noncopyable.hpp>
@@ -23,9 +24,9 @@ namespace openvpn {
 
     Digest() : digest_(NULL) {}
 
-    Digest(const char *name)
+    Digest(const std::string& name)
     {
-      digest_ = EVP_get_digestbyname(name);
+      digest_ = EVP_get_digestbyname(name.c_str());
       if (!digest_)
 	throw digest_not_found();
     }

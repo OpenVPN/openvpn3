@@ -12,7 +12,7 @@ namespace openvpn {
     };
 
     Layer() : type_(NONE) {}
-    Layer(const Type t) : type_(t) {}
+    explicit Layer(const Type t) : type_(t) {}
     Type operator()() const { return type_; }
 
     const char *dev_type() const
@@ -39,6 +39,16 @@ namespace openvpn {
 	default:
 	  return "UNDEF_LAYER";
 	}
+    }
+
+    bool operator==(const Layer& other)
+    {
+      return type_ == other.type_;
+    }
+
+    bool operator!=(const Layer& other)
+    {
+      return type_ != other.type_;
     }
 
   private:

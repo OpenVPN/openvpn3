@@ -1,7 +1,7 @@
 #ifndef OPENVPN_TIME_NOW_UPDATER_H
 #define OPENVPN_TIME_NOW_UPDATER_H
 
-#include <openvpn/common/asiotimer.hpp>
+#include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/now.hpp>
 #include <openvpn/common/dispatch.hpp>
 

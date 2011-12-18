@@ -17,10 +17,10 @@ namespace openvpn {
   public:
     PKey() : pkey_(NULL) {}
 
-    explicit PKey(const std::string& pkey_txt)
+    PKey(const std::string& pkey_txt, const std::string& title)
       : pkey_(NULL)
     {
-      parse_pem(pkey_txt);
+      parse_pem(pkey_txt, title);
     }
 
     PKey(const PKey& other)
@@ -37,7 +37,7 @@ namespace openvpn {
     bool defined() const { return pkey_ != NULL; }
     EVP_PKEY* obj() const { return pkey_; }
 
-    void parse_pem(const std::string& pkey_txt)
+    void parse_pem(const std::string& pkey_txt, const std::string& title)
     {
       BIO *bio = BIO_new_mem_buf(const_cast<char *>(pkey_txt.c_str()), pkey_txt.length());
       if (!bio)
@@ -46,7 +46,7 @@ namespace openvpn {
       EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
       BIO_free(bio);
       if (!pkey)
-	throw OpenSSLException("PKey::parse_pem");
+	throw OpenSSLException(std::string("PKey::parse_pem: error in ") + title + std::string(":"));
 
       erase();
       pkey_ = pkey;

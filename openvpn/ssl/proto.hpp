@@ -11,6 +11,8 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/options.hpp>
+#include <openvpn/common/mode.hpp>
 #include <openvpn/log/log.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
@@ -22,7 +24,6 @@
 #include <openvpn/log/protostats.hpp>
 #include <openvpn/ssl/protostack.hpp>
 #include <openvpn/ssl/psid.hpp>
-#include <openvpn/ssl/sslconf.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
 #include <openvpn/link/protocol.hpp>
 #include <openvpn/tun/layer.hpp>
@@ -231,13 +232,87 @@ namespace openvpn {
       Time::Duration keepalive_ping;
       Time::Duration keepalive_timeout;
 
+      void load(const OptionList& opt)
+      {
+	// first set defaults
+	reliable_window = 4;
+	max_ack_list = 4;
+	pid_seq_backtrack = 64;
+	pid_time_backtrack = 30;
+	pid_debug_level = PacketIDReceive::DEBUG_MEDIUM;
+	handshake_window = Time::Duration::seconds(60);
+	become_primary = Time::Duration::seconds(60);
+	renegotiate = Time::Duration::seconds(3600);
+	expire = Time::Duration::seconds(7200);
+	keepalive_ping = Time::Duration::seconds(8);
+	keepalive_timeout = Time::Duration::seconds(40);
+	comp_ctx = CompressContext(CompressContext::LZO_STUB);
+
+	// tcp/udp
+	{
+	  const Option& o = opt.get_first("remote");
+	  const std::string& proto = o.get(3);
+	  if (proto == "udp")
+	    {
+	      protocol = Protocol(Protocol::UDPv4);
+	      pid_mode = PacketIDReceive::UDP_MODE;
+	    }
+	  else if (proto == "tcp")
+	    {
+	      protocol = Protocol(Protocol::TCPv4);
+	      pid_mode = PacketIDReceive::TCP_MODE;
+	    }
+	  else
+	    throw option_error("bad protocol");
+	}
+
+	// layer
+	{
+	  const std::string& dev_type = opt.get("dev-type", 1);
+	  if (dev_type == "tun")
+	    layer = Layer(Layer::OSI_LAYER_3);
+	  else if (dev_type == "tap")
+	    layer = Layer(Layer::OSI_LAYER_2);
+	  else
+	    throw option_error("bad dev-type");
+	}
+
+	// cipher
+	{
+	  const Option *o = opt.get_ptr("cipher");
+	  if (o)
+	    cipher = Cipher(o->get(1));
+	  else
+	    cipher = Cipher("BF-CBC");
+	}
+
+	// digest
+	{
+	  const Option *o = opt.get_ptr("auth");
+	  if (o)
+	    digest = Digest(o->get(1));
+	  else
+	    digest = Digest("SHA1");
+	}
+
+	// tls-auth
+	{
+	  const Option *o = opt.get_ptr("tls-auth");
+	  if (o)
+	    {
+	      tls_auth_key.parse(o->get(1));
+	      tls_auth_digest = digest;
+	    }
+	}
+      }
+
       // generate a string summarizing options that will be
       // transmitted to peer for options consistency check
       std::string options_string() const
       {
 	std::ostringstream out;
 
-	const bool server = (ssl_ctx->mode() == SSLConfig::SERVER);
+	const bool server = ssl_ctx->mode().is_server();
 
 	out << "V4";
 
@@ -588,8 +663,8 @@ namespace openvpn {
 	  proto(p),
 	  dirty(0),
 	  handled_pid_wrap(false),
-	  tlsprf_self(p.server_),
-	  tlsprf_peer(!p.server_)
+	  tlsprf_self(p.is_server()),
+	  tlsprf_peer(!p.is_server())
       {
 	state = initiator ? C_INITIAL : S_WAIT_RESET;
 
@@ -936,7 +1011,7 @@ namespace openvpn {
 	if (key_id_)
 	  return CONTROL_SOFT_RESET_V1;
 	else
-	  return (proto.server_ == sender) ? CONTROL_HARD_RESET_SERVER_V2 : CONTROL_HARD_RESET_CLIENT_V2;
+	  return (proto.is_server() == sender) ? CONTROL_HARD_RESET_SERVER_V2 : CONTROL_HARD_RESET_CLIENT_V2;
       }
 
       void send_reset()
@@ -1025,7 +1100,7 @@ namespace openvpn {
 	tlsprf_self.write(*buf);
 	const std::string options = proto.config->options_string();
 	write_auth_string(options, *buf);
-	if (!proto.server_)
+	if (!proto.is_server())
 	  {
 	    buf->or_flags(BufferAllocated::DESTRUCT_ZERO);
 	    proto.client_auth(*buf);
@@ -1043,7 +1118,7 @@ namespace openvpn {
 	  throw bad_auth_prefix();
 	tlsprf_peer.read(buf);
 	const std::string options = read_auth_string<std::string>(buf);
-	if (proto.server_)
+	if (proto.is_server())
 	  {
 	    Buffer auth(buf);
 	    skip_string(buf); // username
@@ -1074,7 +1149,7 @@ namespace openvpn {
       {
 	OpenVPNStaticKey key;
 	tlsprf_self.generate_key_expansion(key, tlsprf_peer, proto.psid_self, proto.psid_peer);
-	OPENVPN_LOG_PROTO("KEY " << proto.server_ << ' ' << key.render());
+	OPENVPN_LOG_PROTO("KEY " << proto.mode().str() << ' ' << key.render());
 	init_data_channel_crypto_context(key);
 	tlsprf_self.erase();
 	tlsprf_peer.erase();
@@ -1085,7 +1160,7 @@ namespace openvpn {
       void init_data_channel_crypto_context(const OpenVPNStaticKey& key)
       {
 	const Config& c = *proto.config;
-	const unsigned int key_dir = proto.server_ ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
+	const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
 
 	// initialize CryptoContext encrypt
 	crypto.encrypt.frame = c.frame;
@@ -1373,7 +1448,7 @@ namespace openvpn {
 		 const ProtoStats::Ptr& stats_arg)        // error stats
       : config(config_arg),
 	stats(stats_arg),
-	server_(config_arg->ssl_ctx->mode() == SSLConfig::SERVER),
+	mode_(config_arg->ssl_ctx->mode()),
 	n_key_ids(0),
 	now_(config_arg->now),
 	keepalive_ping(config_arg->keepalive_ping),
@@ -1412,7 +1487,7 @@ namespace openvpn {
       if (use_tls_auth)
 	{
 	  // init tls_auth hmac
-	  const unsigned int key_dir = server_ ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
+	  const unsigned int key_dir = is_server() ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
 	  ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
 	  ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 
@@ -1431,7 +1506,7 @@ namespace openvpn {
       psid_peer.reset();
 
       // initialize key contexts
-      primary.reset(new KeyContext(*this, !server_));
+      primary.reset(new KeyContext(*this, is_client()));
 
       // initialize keepalive timers
       keepalive_expire = Time::infinite();   // initially disabled
@@ -1629,7 +1704,9 @@ namespace openvpn {
     const Frame::Ptr& frameptr() const { return config->frame; }
 
     // client or server?
-    bool server() const { return server_; }
+    const Mode& mode() const { return mode_; }
+    bool is_server() const { return mode_.is_server(); }
+    bool is_client() const { return mode_.is_client(); }
 
     // configuration
     const Config& conf() const { return *config; }
@@ -1835,7 +1912,7 @@ namespace openvpn {
       // validate opcode
       if (opcode >= CONTROL_SOFT_RESET_V1 && opcode <= DATA_V1)
 	return opcode;
-      if (server_)
+      if (is_server())
 	  {
 	    if (opcode == CONTROL_HARD_RESET_CLIENT_V2)
 	      return opcode;
@@ -1868,7 +1945,7 @@ namespace openvpn {
 
     size_t hmac_size;
     bool use_tls_auth;
-    bool server_;
+    Mode mode_;                        // client or server
     unsigned int upcoming_key_id;
     unsigned int n_key_ids;
 

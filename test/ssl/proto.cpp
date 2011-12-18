@@ -58,6 +58,16 @@
 
 using namespace openvpn;
 
+// server SSL implementation is always OpenSSL-based
+typedef OpenSSLContext ServerSSLContext;
+
+// client SSL implementation can be OpenSSL or Apple SSL
+#ifdef USE_APPLE_SSL
+typedef AppleSSLContext ClientSSLContext;
+#else
+typedef OpenSSLContext ClientSSLContext;
+#endif
+
 const char message[] =
   "Message _->_ 0000000000 It was a bright cold day in April, and the clocks\n"
   "were striking thirteen. Winston Smith, his chin nuzzled\n"
@@ -147,7 +157,8 @@ class TestProto : public ProtoContext<SSL_CONTEXT>
   typedef ProtoContext<SSL_CONTEXT> Base;
 
   using Base::now;
-  using Base::server;
+  using Base::mode;
+  using Base::is_server;
 
 public:
   using Base::flush;
@@ -267,7 +278,7 @@ private:
     {
       const ssize_t trunc = 64;
       const std::string show((char *)work->data(), trunc);
-      std::cout << now().raw() << " " << (server() ? "SERVER" : "CLIENT") << " " << show << std::endl;
+      std::cout << now().raw() << " " << mode().str() << " " << show << std::endl;
     }
 #endif
     modmsg(work);
@@ -284,7 +295,7 @@ private:
   void modmsg(BufferPtr& buf)
   {
     char *msg = (char *) buf->data();
-    if (server())
+    if (is_server())
       {
 	msg[8] = 'S';
 	msg[11] = 'C';
@@ -547,21 +558,19 @@ void test(const int thread_num)
     const std::string tls_auth_key = read_text("tls-auth.key");
 
     // client config
-    SSLConfig cc;
+    ClientSSLContext::Config cc;
+    cc.mode = Mode(Mode::CLIENT);
+    cc.frame = frame;
 #ifdef USE_APPLE_SSL
-    typedef AppleSSLContext ClientSSLContext;
     cc.identity = "etest";
 #else
-    typedef OpenSSLContext ClientSSLContext;
-    cc.ca = ca1_crt + ca2_crt;
-    cc.cert = client_crt;
-    cc.pkey = client_key;
+    cc.load_ca(ca1_crt + ca2_crt);
+    cc.load_cert(client_crt);
+    cc.load_private_key(client_key);
 #endif
-    cc.mode = SSLConfig::CLIENT;
 #ifdef VERBOSE
-    cc.flags = SSLConfig::DEBUG;
+    cc.enable_debug();
 #endif
-    cc.frame = frame;
 
     // client stats
     ProtoStats::Ptr cli_stats(new ProtoStats);
@@ -606,17 +615,16 @@ void test(const int thread_num)
 #endif
 
     // server config
-    SSLConfig sc;
-    typedef OpenSSLContext ServerSSLContext;
-    sc.mode = SSLConfig::SERVER;
-#ifdef VERBOSE
-    sc.flags = SSLConfig::DEBUG;
-#endif
-    sc.ca = ca1_crt + ca2_crt;
-    sc.cert = server_crt;
-    sc.pkey = server_key;
-    sc.dh = dh_pem;
+    ServerSSLContext::Config sc;
+    sc.mode = Mode(Mode::SERVER);
     sc.frame = frame;
+    sc.load_ca(ca1_crt + ca2_crt);
+    sc.load_cert(server_crt);
+    sc.load_private_key(server_key);
+    sc.load_dh(dh_pem);
+#ifdef VERBOSE
+    sc.enable_debug();
+#endif
 
     // server ProtoContext config
     typedef ProtoContext<ServerSSLContext> ServerProtoContext;

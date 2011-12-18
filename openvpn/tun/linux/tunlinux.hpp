@@ -16,7 +16,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/dispatch.hpp>
-#include <openvpn/common/parseopt.hpp>
+#include <openvpn/common/options.hpp>
 #include <openvpn/common/process.hpp>
 #include <openvpn/tun/tunposix.hpp>
 #include <openvpn/frame/frame.hpp>

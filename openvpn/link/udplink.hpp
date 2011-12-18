@@ -30,9 +30,9 @@ namespace openvpn {
   class UDPLink : private boost::noncopyable
   {
   public:
-    enum bind_type {
-      local_bind,       // (server) bind locally
-      remote_connect,   // (client) don't bind locally, connect to explicit remote endpoint
+    enum BindType {
+      LOCAL_BIND,       // (server) bind locally
+      REMOTE_CONNECT,   // (client) don't bind locally, connect to explicit remote endpoint
     };
 
     typedef UDPPacketFrom::Endpoint Endpoint;
@@ -41,28 +41,25 @@ namespace openvpn {
 	    ReadHandler read_handler,
 	    const Frame::Ptr& frame,
 	    const ProtoStats::Ptr& stats,
-	    bind_type bt,
-	    const boost::asio::ip::address& address,
-	    int port,
+	    BindType bt,
+	    const Endpoint& endpoint,
 	    const bool reuse_addr=false)
       : socket_(io_service),
 	read_handler_(read_handler),
 	frame_(frame),
 	stats_(stats)
     {
-      if (bt == local_bind)
+      if (bt == LOCAL_BIND)
 	{
-	  Endpoint local_endpoint(address, port);
-	  socket_.open(local_endpoint.protocol());
+	  socket_.open(endpoint.protocol());
 	  if (reuse_addr)
 	    socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-	  socket_.bind(local_endpoint);
+	  socket_.bind(endpoint);
 	}
-      else if (bt == remote_connect)
+      else if (bt == REMOTE_CONNECT)
 	{
-	  Endpoint remote_endpoint(address, port);
-	  socket_.open(remote_endpoint.protocol());
-	  socket_.connect(remote_endpoint);
+	  socket_.open(endpoint.protocol());
+	  socket_.connect(endpoint);
 	}
     }
 
