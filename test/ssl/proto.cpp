@@ -562,7 +562,7 @@ void test(const int thread_num)
     cc.mode = Mode(Mode::CLIENT);
     cc.frame = frame;
 #ifdef USE_APPLE_SSL
-    cc.identity = "etest";
+    cc.load_identity("etest");
 #else
     cc.load_ca(ca1_crt + ca2_crt);
     cc.load_cert(client_crt);

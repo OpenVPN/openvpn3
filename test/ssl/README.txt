@@ -4,11 +4,11 @@ On Apple:
 
   Build with Apple SSL client and OpenSSL server:
 
-    SSL_BOTH=1 build proto 2>&1 | g 'error:[^:]'
+    SSL_BOTH=1 GCC_EXTRA="-DITER=10001 -DSITER=100 -DN_THREADS=4" build proto 2>&1 | g 'error:[^:]'
 
   Build with OpenSSL client and OpenSSL server:
 
-    OSSL=1 build proto 2>&1 | g 'error:[^:]'
+    OSSL=1 GCC_EXTRA="-DITER=10001 -DSITER=100 -DN_THREADS=4" build proto 2>&1 | g 'error:[^:]'
 
 On other unix:
 

@@ -10,11 +10,11 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/mode.hpp>
 #include <openvpn/log/log.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_stream.hpp>
-#include <openvpn/ssl/sslconf.hpp>
 #include <openvpn/applecrypto/cf/cfsec.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
 
@@ -41,15 +41,43 @@ namespace openvpn {
     };
 
     // The data needed to construct an AppleSSLContext.
-    // Alternatively, SSLConfig can be used.
     struct Config
     {
-      Config() : mode(SSLConfig::UNDEF), flags(0) {}
+      enum {
+	DEBUG = 1<<0,
+      };
+      typedef unsigned int Flags;
 
-      SSLConfig::Mode mode;
-      SSLConfig::Flags flags;
+      Config() : flags(0) {}
+
+      Mode mode;
+      Flags flags;
       CF::Array identity; // as returned by load_identity
       Frame::Ptr frame;
+
+      void enable_debug()
+      {
+	flags |= DEBUG;
+      }
+
+      void load_identity(const std::string& subject_match)
+      {
+	identity = load_identity_(subject_match);
+	if (!identity())
+	  OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity '" << subject_match << "' undefined");	
+      }
+
+      void load(const OptionList& opt)
+      {
+	// client/server
+	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
+
+	// identity
+	{
+	  const std::string& subject_match = opt.get("identity", 1);
+	  load_identity(subject_match);
+	}
+      }
     };
 
     // Represents an actual SSL session.
@@ -68,9 +96,9 @@ namespace openvpn {
 	  OSStatus s;
 
 	  // init SSL object, select client or server mode
-	  if (ctx.mode() == SSLConfig::SERVER)
+	  if (ctx.mode().is_server())
 	    s = SSLNewContext(true, &ssl);
-	  else if (ctx.mode() == SSLConfig::CLIENT)
+	  else if (ctx.mode().is_client())
 	    s = SSLNewContext(false, &ssl);
 	  else
 	    OPENVPN_THROW(ssl_context_error, "AppleSSLContext::SSL: unknown client/server mode");
@@ -237,26 +265,16 @@ namespace openvpn {
 	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");	
     }
 
-    explicit AppleSSLContext(const SSLConfig& config)
-    {
-      config_.identity = load_identity(config.identity);
-      if (!config_.identity())
-	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");	
-      config_.mode = config.mode;
-      config_.flags = config.flags;
-      config_.frame = config.frame;
-    }
-
     SSLPtr ssl() const { return SSLPtr(new SSL(*this)); }
 
-    SSLConfig::Mode mode() const { return config_.mode; }
-    SSLConfig::Flags flags() const { return config_.flags; }
+    const Mode& mode() const { return config_.mode; }
+    Config::Flags flags() const { return config_.flags; }
     const Frame::Ptr& frame() const { return config_.frame; }
     const CF::Array& identity() const { return config_.identity; }
 
     // load an identity from keychain, return as an array that can
     // be passed to SSLSetCertificate
-    static CF::Array load_identity(const std::string& subj_match)
+    static CF::Array load_identity_(const std::string& subj_match)
     {
       const CF::String label = CF::string(subj_match);
       const void *keys[] =   { kSecClass,         kSecMatchSubjectContains, kSecMatchTrustedOnly, kSecReturnRef };
