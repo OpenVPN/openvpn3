@@ -1476,6 +1476,9 @@ namespace openvpn {
     {
       const Config& c = *config;
 
+      // by default, fast_transition is turned off
+      fast_transition = false;
+
       // clear key contexts
       primary.reset();
       secondary.reset();
@@ -1695,6 +1698,21 @@ namespace openvpn {
     // was primary context invalidated by an exception?
     bool invalidated() const { return primary->invalidated(); }
 
+    // Enable original OpenVPN behavior of switching to new SSL/TLS key
+    // context for control channel sends immediately after renegotiation
+    // reaches ACTIVE state.  By default, we will transition to new
+    // key context over the "become_primary" duration in Config.
+    // The default behavior is known to be more reliable, but the
+    // original behavior may be enabled by calling this method.
+    void enable_fast_transition() { fast_transition = true; }
+
+    // A placeholder for enabling strict OpenVPN 2.x protocol
+    // compatibility.
+    void enable_strict_openvpn_2x()
+    {
+      enable_fast_transition();
+    }
+
     // current time
     const Time& now() const { return *now_; }
     void update_now() { now_->update(); }
@@ -1787,9 +1805,22 @@ namespace openvpn {
     // Even after new key context goes active, we still wait for
     // KEV_BECOME_PRIMARY event before we use it for app-level control-channel
     // transmissions.  Simulations have found this method to be more reliable.
+    // To revert to old OpenVPN behavior, call enable_fast_transition() method.
     KeyContext& select_control_send_context()
     {
-      return *primary;
+      if (!fast_transition || !secondary)
+	{
+	  return *primary;
+	}
+      else
+	{
+	  const Time p = primary->reached_active();
+	  const Time s = secondary->reached_active();
+	  if (p.defined() && s.defined() && s > p)
+	    return *secondary;
+	  else
+	    return *primary;
+	}
     }
 
     // Possibly send a keepalive message, and check for expiration
@@ -1967,6 +1998,8 @@ namespace openvpn {
 
     typename KeyContext::Ptr primary;
     typename KeyContext::Ptr secondary;
+
+    bool fast_transition;
 
     // END ProtoContext data members
   };
