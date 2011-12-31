@@ -3,15 +3,23 @@
 
 #include <openvpn/common/types.hpp>
 
+#if defined(__linux__)
+#define OPENVPN_PLATFORM_LINUX
+#elif defined(__APPLE__)
+#define OPENVPN_PLATFORM_APPLE
+#elif defined(_WIN32)
+#define OPENVPN_PLATFORM_WIN
+#endif
+
 namespace openvpn {
 
   inline const char *platform_name()
   {
-#if defined(__linux__)
+#if defined(OPENVPN_PLATFORM_LINUX)
     return "linux";
-#elif defined(__APPLE__)
+#elif defined(OPENVPN_PLATFORM_APPLE)
     return "mac";
-#elif defined(_WIN32)
+#elif defined(OPENVPN_PLATFORM_WIN)
     return "win";
 #else
     return NULL;
