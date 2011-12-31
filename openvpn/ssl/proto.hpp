@@ -25,7 +25,7 @@
 #include <openvpn/ssl/protostack.hpp>
 #include <openvpn/ssl/psid.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
-#include <openvpn/link/protocol.hpp>
+#include <openvpn/transport/protocol.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/compress/compress.hpp>
 

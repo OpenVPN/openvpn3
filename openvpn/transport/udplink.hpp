@@ -1,5 +1,5 @@
-#ifndef OPENVPN_LINK_UDPLINK_H
-#define OPENVPN_LINK_UDPLINK_H
+#ifndef OPENVPN_TRANSPORT_UDPLINK_H
+#define OPENVPN_TRANSPORT_UDPLINK_H
 
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>

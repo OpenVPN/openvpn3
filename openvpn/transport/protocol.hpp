@@ -1,5 +1,5 @@
-#ifndef OPENVPN_LINK_PROTOCOL_H
-#define OPENVPN_LINK_PROTOCOL_H
+#ifndef OPENVPN_TRANSPORT_PROTOCOL_H
+#define OPENVPN_TRANSPORT_PROTOCOL_H
 
 namespace openvpn {
   class Protocol
@@ -42,4 +42,4 @@ namespace openvpn {
   };
 } // namespace openvpn
 
-#endif // OPENVPN_LINK_PROTOCOL_H
+#endif // OPENVPN_TRANSPORT_PROTOCOL_H
