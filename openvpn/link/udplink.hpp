@@ -10,7 +10,6 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/log.hpp>
 #include <openvpn/log/protostats.hpp>
-#include <openvpn/link/linkbase.hpp>
 
 #ifdef OPENVPN_DEBUG_UDPLINK
 #define OPENVPN_LOG_UDPLINK(x) OPENVPN_LOG(x)
