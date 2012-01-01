@@ -2,9 +2,9 @@
 #define OPENVPN_TRANSPORT_UDPLINK_H
 
 #include <boost/asio.hpp>
-#include <boost/noncopyable.hpp>
 
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/rc.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/dispatch.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -19,26 +19,32 @@
 
 namespace openvpn {
 
-  struct UDPPacketFrom
-  {
-    typedef boost::asio::ip::udp::endpoint Endpoint;
-    BufferAllocated buf;
-    Endpoint sender_endpoint;
-  };
-
-  template <typename ReadHandler>
-  class UDPLink : private boost::noncopyable
+  class UDPLink : public RC<thread_unsafe_refcount>
   {
   public:
+    typedef boost::intrusive_ptr<UDPLink> Ptr;
+
     enum BindType {
       LOCAL_BIND,       // (server) bind locally
       REMOTE_CONNECT,   // (client) don't bind locally, connect to explicit remote endpoint
     };
 
-    typedef UDPPacketFrom::Endpoint Endpoint;
+    typedef boost::asio::ip::udp::endpoint Endpoint;
+
+    struct PacketFrom
+    {
+      typedef ScopedPtr<PacketFrom> SPtr;
+      BufferAllocated buf;
+      Endpoint sender_endpoint;
+    };
+
+    struct ReadHandler
+    {
+      virtual void udp_read_handler(PacketFrom::SPtr& pkt) = 0;
+    };
 
     UDPLink(boost::asio::io_service& io_service,
-	    ReadHandler read_handler,
+	    ReadHandler& read_handler,
 	    const Frame::Ptr& frame,
 	    const ProtoStats::Ptr& stats,
 	    BindType bt,
@@ -102,11 +108,11 @@ namespace openvpn {
     }
 
   private:
-    void queue_read(UDPPacketFrom *udpfrom)
+    void queue_read(PacketFrom *udpfrom)
     {
       //OPENVPN_LOG_UDPLINK("UDPLink::queue_read");
       if (!udpfrom)
-	udpfrom = new UDPPacketFrom();
+	udpfrom = new PacketFrom();
       frame_->prepare(Frame::READ_LINK_UDP, udpfrom->buf);
 
       socket_.async_receive_from(udpfrom->buf.mutable_buffers_1(),
@@ -114,30 +120,30 @@ namespace openvpn {
 				 asio_dispatch_read(&UDPLink::handle_read, this, udpfrom)); // consider: this->shared_from_this()
     }
 
-    void handle_read(UDPPacketFrom *udpfrom, const boost::system::error_code& error, const size_t bytes_recvd)
+    void handle_read(PacketFrom *udpfrom, const boost::system::error_code& error, const size_t bytes_recvd)
     {
       //OPENVPN_LOG_UDPLINK("UDPLink::handle_read: " << error.message());
-      ScopedPtr<UDPPacketFrom> suf(udpfrom);
+      PacketFrom::SPtr pfp(udpfrom);
       if (!halt_)
 	{
 	  if (!error)
 	    {
-	      suf->buf.set_size(bytes_recvd);
+	      pfp->buf.set_size(bytes_recvd);
 	      stats_->inc_stat(ProtoStats::BYTES_IN, bytes_recvd);
-	      read_handler_(suf);
+	      read_handler_.udp_read_handler(pfp);
 	    }
 	  else
 	    {
 	      OPENVPN_LOG_UDPLINK("UDP Read Error: " << error);
 	      stats_->error(ProtoStats::NETWORK_ERROR);
 	    }
-	  queue_read(suf.release()); // reuse UDPPacketFrom object if still available
+	  queue_read(pfp.release()); // reuse PacketFrom object if still available
 	}
     }
 
     boost::asio::ip::udp::socket socket_;
     bool halt_;
-    ReadHandler read_handler_;
+    ReadHandler& read_handler_;
     const Frame::Ptr frame_;
     ProtoStats::Ptr stats_;
   };

@@ -1,11 +1,11 @@
 #ifndef OPENVPN_TUN_TUNPOSIX_H
 #define OPENVPN_TUN_TUNPOSIX_H
 
-#include <boost/noncopyable.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/rc.hpp>
 
 namespace openvpn {
 
@@ -39,7 +39,7 @@ namespace openvpn {
     std::string tun_name;
   };
 
-class TunPosix : boost::noncopyable {
+class TunPosix : public RC<thread_unsafe_refcount> {
 public:
   // exceptions
   OPENVPN_EXCEPTION(tun_open_error);

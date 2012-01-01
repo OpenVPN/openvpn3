@@ -31,15 +31,28 @@
 #endif
 
 namespace openvpn {
-  template <typename ReadHandler>
+
   class TunLinux : public TunPosix
   {
   public:
+    typedef boost::intrusive_ptr<TunLinux> Ptr;
+
     // exceptions
     OPENVPN_EXCEPTION(tun_tx_queue_len_error);
 
+    struct PacketFrom
+    {
+      typedef ScopedPtr<PacketFrom> SPtr;
+      BufferAllocated buf;
+    };
+
+    struct ReadHandler
+    {
+      virtual void tun_read_handler(PacketFrom::SPtr& pkt) = 0;
+    };
+
     TunLinux(boost::asio::io_service& io_service,
-	     ReadHandler read_handler,
+	     ReadHandler& read_handler,
 	     const Frame::Ptr& frame,
 	     const ProtoStats::Ptr& stats,
 	     const char *name=NULL,
@@ -190,41 +203,41 @@ namespace openvpn {
     }
 
   private:
-    void queue_read(BufferAllocated *buf)
+    void queue_read(PacketFrom *tunfrom)
     {
       //OPENVPN_LOG_TUNLINUX("TunLinux::queue_read");
-      if (!buf)
-	buf = new BufferAllocated();
-      frame_->prepare(Frame::READ_TUN, *buf);
+      if (!tunfrom)
+	tunfrom = new PacketFrom();
+      frame_->prepare(Frame::READ_TUN, tunfrom->buf);
 
-      sd->async_read_some(buf->mutable_buffers_1(),
-			  asio_dispatch_read(&TunLinux::handle_read, this, buf)); // consider: this->shared_from_this()
+      sd->async_read_some(tunfrom->buf.mutable_buffers_1(),
+			  asio_dispatch_read(&TunLinux::handle_read, this, tunfrom)); // consider: this->shared_from_this()
     }
 
-    void handle_read(BufferAllocated *buf, const boost::system::error_code& error, const size_t bytes_recvd)
+    void handle_read(PacketFrom *tunfrom, const boost::system::error_code& error, const size_t bytes_recvd)
     {
       //OPENVPN_LOG_TUNLINUX("TunLinux::handle_read: " << error.message());
-      ScopedPtr<BufferAllocated> sbuf(buf);
+      PacketFrom::SPtr pfp(tunfrom);
       if (!halt_)
 	{
 	  if (!error)
 	    {
-	      buf->set_size(bytes_recvd);
+	      pfp->buf.set_size(bytes_recvd);
 	      stats_->inc_stat(ProtoStats::TUN_BYTES_IN, bytes_recvd);
-	      read_handler_(sbuf);
+	      read_handler_.tun_read_handler(pfp);
 	    }
 	  else
 	    {
 	      OPENVPN_LOG_TUNLINUX("TUN Read Error: " << error);
 	      stats_->error(ProtoStats::TUN_ERROR);
 	    }
-	  queue_read(sbuf.release()); // reuse buffer if still available
+	  queue_read(pfp.release()); // reuse buffer if still available
 	}
     }
 
     boost::asio::posix::stream_descriptor *sd;
     bool halt_;
-    ReadHandler read_handler_;
+    ReadHandler& read_handler_;
     const Frame::Ptr frame_;
     ProtoStats::Ptr stats_;
   };
