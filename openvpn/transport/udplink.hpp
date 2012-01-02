@@ -19,10 +19,11 @@
 
 namespace openvpn {
 
-  class UDPLink : public RC<thread_unsafe_refcount>
+  template <typename ReadHandler>
+  class UDPLinkTemplate : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<UDPLink> Ptr;
+    typedef boost::intrusive_ptr<UDPLinkTemplate> Ptr;
 
     enum BindType {
       LOCAL_BIND,       // (server) bind locally
@@ -38,18 +39,13 @@ namespace openvpn {
       Endpoint sender_endpoint;
     };
 
-    struct ReadHandler
-    {
-      virtual void udp_read_handler(PacketFrom::SPtr& pkt) = 0;
-    };
-
-    UDPLink(boost::asio::io_service& io_service,
-	    ReadHandler& read_handler,
-	    const Frame::Ptr& frame,
-	    const ProtoStats::Ptr& stats,
-	    BindType bt,
-	    const Endpoint& endpoint,
-	    const bool reuse_addr=false)
+    UDPLinkTemplate(boost::asio::io_service& io_service,
+		    ReadHandler& read_handler,
+		    const Frame::Ptr& frame,
+		    const ProtoStats::Ptr& stats,
+		    BindType bt,
+		    const Endpoint& endpoint,
+		    const bool reuse_addr=false)
       : socket_(io_service),
 	read_handler_(read_handler),
 	frame_(frame),
@@ -104,7 +100,7 @@ namespace openvpn {
       socket_.close();
     }
 
-    virtual ~UDPLink() {
+    virtual ~UDPLinkTemplate() {
     }
 
   private:
@@ -117,13 +113,13 @@ namespace openvpn {
 
       socket_.async_receive_from(udpfrom->buf.mutable_buffers_1(),
 				 udpfrom->sender_endpoint,
-				 asio_dispatch_read(&UDPLink::handle_read, this, udpfrom)); // consider: this->shared_from_this()
+				 asio_dispatch_read(&UDPLinkTemplate::handle_read, this, udpfrom)); // consider: this->shared_from_this()
     }
 
     void handle_read(PacketFrom *udpfrom, const boost::system::error_code& error, const size_t bytes_recvd)
     {
       //OPENVPN_LOG_UDPLINK("UDPLink::handle_read: " << error.message());
-      PacketFrom::SPtr pfp(udpfrom);
+      typename PacketFrom::SPtr pfp(udpfrom);
       if (!halt_)
 	{
 	  if (!error)

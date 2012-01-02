@@ -32,10 +32,11 @@
 
 namespace openvpn {
 
-  class TunLinux : public TunPosix
+  template <typename ReadHandler>
+  class TunLinuxTemplate : public TunPosix
   {
   public:
-    typedef boost::intrusive_ptr<TunLinux> Ptr;
+    typedef boost::intrusive_ptr<TunLinuxTemplate> Ptr;
 
     // exceptions
     OPENVPN_EXCEPTION(tun_tx_queue_len_error);
@@ -46,19 +47,14 @@ namespace openvpn {
       BufferAllocated buf;
     };
 
-    struct ReadHandler
-    {
-      virtual void tun_read_handler(PacketFrom::SPtr& pkt) = 0;
-    };
-
-    TunLinux(boost::asio::io_service& io_service,
-	     ReadHandler& read_handler,
-	     const Frame::Ptr& frame,
-	     const ProtoStats::Ptr& stats,
-	     const char *name=NULL,
-	     const bool ipv6=false,
-	     const bool tap=false,
-	     const int txqueuelen=200)
+    TunLinuxTemplate(boost::asio::io_service& io_service,
+		     ReadHandler& read_handler,
+		     const Frame::Ptr& frame,
+		     const ProtoStats::Ptr& stats,
+		     const char *name=NULL,
+		     const bool ipv6=false,
+		     const bool tap=false,
+		     const int txqueuelen=200)
       : halt_(false),
 	read_handler_(read_handler),
 	frame_(frame),
@@ -198,7 +194,7 @@ namespace openvpn {
       }
     }
 
-    ~TunLinux() {
+    ~TunLinuxTemplate() {
       delete sd;
     }
 
@@ -211,13 +207,13 @@ namespace openvpn {
       frame_->prepare(Frame::READ_TUN, tunfrom->buf);
 
       sd->async_read_some(tunfrom->buf.mutable_buffers_1(),
-			  asio_dispatch_read(&TunLinux::handle_read, this, tunfrom)); // consider: this->shared_from_this()
+			  asio_dispatch_read(&TunLinuxTemplate::handle_read, this, tunfrom)); // consider: this->shared_from_this()
     }
 
     void handle_read(PacketFrom *tunfrom, const boost::system::error_code& error, const size_t bytes_recvd)
     {
       //OPENVPN_LOG_TUNLINUX("TunLinux::handle_read: " << error.message());
-      PacketFrom::SPtr pfp(tunfrom);
+      typename PacketFrom::SPtr pfp(tunfrom);
       if (!halt_)
 	{
 	  if (!error)
