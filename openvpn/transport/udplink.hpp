@@ -40,7 +40,7 @@ namespace openvpn {
     };
 
     UDPLinkTemplate(boost::asio::io_service& io_service,
-		    ReadHandler& read_handler,
+		    ReadHandler read_handler,
 		    const Frame::Ptr& frame,
 		    const ProtoStats::Ptr& stats,
 		    BindType bt,
@@ -100,9 +100,6 @@ namespace openvpn {
       socket_.close();
     }
 
-    virtual ~UDPLinkTemplate() {
-    }
-
   private:
     void queue_read(PacketFrom *udpfrom)
     {
@@ -126,7 +123,7 @@ namespace openvpn {
 	    {
 	      pfp->buf.set_size(bytes_recvd);
 	      stats_->inc_stat(ProtoStats::BYTES_IN, bytes_recvd);
-	      read_handler_.udp_read_handler(pfp);
+	      read_handler_->udp_read_handler(pfp);
 	    }
 	  else
 	    {
@@ -139,7 +136,7 @@ namespace openvpn {
 
     boost::asio::ip::udp::socket socket_;
     bool halt_;
-    ReadHandler& read_handler_;
+    ReadHandler read_handler_;
     const Frame::Ptr frame_;
     ProtoStats::Ptr stats_;
   };
