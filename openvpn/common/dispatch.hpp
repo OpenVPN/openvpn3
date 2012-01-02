@@ -20,7 +20,7 @@ namespace openvpn {
 
   private:
     Handler handle_read_;
-    C *obj_;
+    C* obj_;
     Data data_;
   };
 
@@ -46,7 +46,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    C *obj_;
+    C* obj_;
     Data data_;
   };
 
@@ -72,7 +72,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    C *obj_;
+    C* obj_;
   };
 
   template <typename C, typename Handler>
@@ -80,6 +80,25 @@ namespace openvpn {
   {
     return AsioDispatchTimer<C, Handler>(handler, obj);
   }
+
+  // Dispatcher for asynchronous resolver
+
+  template <typename C, typename Handler, typename EndpointIterator>
+  class AsioDispatchResolve
+  {
+  public:
+    AsioDispatchResolve(Handler handler, C* obj)
+      : handler_(handler), obj_(obj) {}
+
+    void operator()(const boost::system::error_code& error, EndpointIterator iter)
+    {
+      (obj_->*handler_)(error, iter);
+    }
+
+  private:
+    Handler handler_;
+    C* obj_;
+  };
 
   // General purpose dispatcher with data
 
@@ -97,7 +116,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    C *obj_;
+    C* obj_;
   };
 
 } // namespace openvpn

@@ -8,7 +8,7 @@ namespace openvpn {
   class ASIOSignals
   {
   public:
-    explicit ASIOSignals(boost::asio::io_service& io_service)
+    ASIOSignals(boost::asio::io_service& io_service)
       : signals_(io_service) {}
 
     enum {
@@ -32,6 +32,11 @@ namespace openvpn {
       if (sigmask & S_SIGHUP)
 	signals_.add(SIGHUP);
       signals_.async_wait(stop_handler);
+    }
+
+    void cancel()
+    {
+      signals_.cancel();
     }
 
     private:
