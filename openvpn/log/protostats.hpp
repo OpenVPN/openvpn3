@@ -23,6 +23,7 @@ namespace openvpn {
 
       // error stats
       NETWORK_ERROR,       // errors on network socket
+      RESOLVE_ERROR,       // DNS resolution error
       TUN_ERROR,           // errors on tun/tap interface
       HMAC_ERROR,          // HMAC verification failure
       REPLAY_ERROR,        // error from PacketIDReceive
@@ -80,6 +81,7 @@ namespace openvpn {
       "TUN_BYTES_IN",
       "TUN_BYTES_OUT",
       "NETWORK_ERROR",
+      "RESOLVE_ERROR",
       "TUN_ERROR",
       "HMAC_ERROR",
       "REPLAY_ERROR",

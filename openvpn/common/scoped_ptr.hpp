@@ -16,7 +16,8 @@ namespace openvpn {
     explicit ScopedPtr(T* p)
       : px(p) {}
 
-    T* release() {
+    T* release()
+    {
       T* ret = px;
       px = NULL;
       return ret;
@@ -24,19 +25,19 @@ namespace openvpn {
 
     T& operator*() const
     {
-        BOOST_ASSERT( px != 0 );
-        return *px;
+      BOOST_ASSERT( px != 0 );
+      return *px;
     }
 
     T* operator->() const
     {
-        BOOST_ASSERT( px != 0 );
-        return px;
+      BOOST_ASSERT( px != 0 );
+      return px;
     }
 
     T* get() const
     {
-        return px;
+      return px;
     }
 
     ~ScopedPtr() {
