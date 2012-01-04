@@ -1,10 +1,11 @@
-#ifndef OPENVPN_TRANSPORT_TRANSBASE_H
-#define OPENVPN_TRANSPORT_TRANSBASE_H
+#ifndef OPENVPN_TRANSPORT_CLIENT_TRANSBASE_H
+#define OPENVPN_TRANSPORT_CLIENT_TRANSBASE_H
 
 #include <string>
 
 #include <boost/asio.hpp>
 
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 
 namespace openvpn {
@@ -25,7 +26,7 @@ namespace openvpn {
   {
     virtual void transport_recv(BufferAllocated& buf) = 0;
     virtual void transport_connected() {}
-    virtual void transport_error(const std::string) {}
+    virtual void transport_error(const std::exception&) {}
   };
 
   struct TransportClientFactory : public RC<thread_unsafe_refcount>
@@ -38,4 +39,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_TRANSPORT_TRANSBASE_H
+#endif // OPENVPN_TRANSPORT_CLIENT_TRANSBASE_H

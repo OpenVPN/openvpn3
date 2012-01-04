@@ -1,15 +1,17 @@
-#ifndef OPENVPN_TRANSPORT_UDPCLI_H
-#define OPENVPN_TRANSPORT_UDPCLI_H
+#ifndef OPENVPN_TRANSPORT_CLIENT_UDPCLI_H
+#define OPENVPN_TRANSPORT_CLIENT_UDPCLI_H
 
 #include <sstream>
 
 #include <boost/asio.hpp>
 
 #include <openvpn/transport/udplink.hpp>
-#include <openvpn/transport/transbase.hpp>
+#include <openvpn/transport/client/transbase.hpp>
 
 namespace openvpn {
   namespace UDPTransport {
+
+    OPENVPN_EXCEPTION(udp_transport_resolve_error);
 
     class ClientConfig : public TransportClientFactory
     {
@@ -18,6 +20,7 @@ namespace openvpn {
 
       std::string server_host;
       std::string server_port;
+      bool server_addr_float;
       int n_parallel;
       Frame::Ptr frame;
       ProtoStats::Ptr stats;
@@ -30,7 +33,8 @@ namespace openvpn {
       virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 						  TransportClientParent& parent);
     private:
-      ClientConfig() {}
+      ClientConfig()
+	: server_addr_float(false), n_parallel(8) {}
     };
 
     class Client : public TransportClient
@@ -88,7 +92,6 @@ namespace openvpn {
 	:  io_service(io_service_arg),
 	   config(config_arg),
 	   parent(parent_arg),
-	   impl(NULL),
 	   resolver(io_service_arg),
 	   halt(false)
       {
@@ -104,7 +107,10 @@ namespace openvpn {
 
       void udp_read_handler(PacketFrom::SPtr& pfp) // called by LinkImpl
       {
-	parent.transport_recv(pfp->buf);
+	if (config->server_addr_float || pfp->sender_endpoint == server_endpoint)
+	  parent.transport_recv(pfp->buf);
+	else
+	  config->stats->error(ProtoStats::BAD_SRC_ADDR);
       }
 
       void stop_()
@@ -112,9 +118,9 @@ namespace openvpn {
 	if (impl)
 	  {
 	    impl->stop();
-	    delete impl;
-	    impl = NULL;
+	    impl.reset();
 	  }
+	resolver.cancel();
 	halt = true;
       }
 
@@ -128,13 +134,13 @@ namespace openvpn {
 		// get resolved endpoint
 		server_endpoint = *endpoint_iterator;
 
-		impl = new LinkImpl(io_service,
-				    this,
-				    server_endpoint,
-				    REMOTE_CONNECT,
-				    false,
-				    config->frame,
-				    config->stats);
+		impl.reset(new LinkImpl(io_service,
+					this,
+					server_endpoint,
+					REMOTE_CONNECT,
+					false,
+					config->frame,
+					config->stats));
 		impl->start(config->n_parallel);
 		parent.transport_connected();
 	      }
@@ -144,7 +150,8 @@ namespace openvpn {
 		os << "DNS resolve error on '" << config->server_host << "' for UDP session: " << error;
 		config->stats->error(ProtoStats::RESOLVE_ERROR);
 		stop();
-		parent.transport_error(os.str());
+		udp_transport_resolve_error err(os.str());
+		parent.transport_error(err);
 	      }
 	  }
       }
@@ -152,7 +159,7 @@ namespace openvpn {
       boost::asio::io_service& io_service;
       ClientConfig::Ptr config;
       TransportClientParent& parent;
-      LinkImpl* impl;
+      LinkImpl::Ptr impl;
       boost::asio::ip::udp::resolver resolver;
       UDPTransport::Endpoint server_endpoint;
       bool halt;

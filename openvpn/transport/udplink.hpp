@@ -1,12 +1,12 @@
 #ifndef OPENVPN_TRANSPORT_UDPLINK_H
 #define OPENVPN_TRANSPORT_UDPLINK_H
 
-#include <boost/noncopyable.hpp>
 #include <boost/asio.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/dispatch.hpp>
+#include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/log.hpp>
 #include <openvpn/log/protostats.hpp>
@@ -41,9 +41,11 @@ namespace openvpn {
     };
 
     template <typename ReadHandler>
-    class Link : boost::noncopyable
+    class Link : public RC<thread_unsafe_refcount>
     {
     public:
+      typedef boost::intrusive_ptr<Link> Ptr;
+
       Link(boost::asio::io_service& io_service,
 	   ReadHandler read_handler_arg,
 	   const Endpoint& endpoint,
@@ -73,38 +75,51 @@ namespace openvpn {
 
       bool send(const Buffer& buf, Endpoint* endpoint)
       {
-	try {
-	  const size_t wrote = endpoint
-	    ? socket.send_to(buf.const_buffers_1(), *endpoint)
-	    : socket.send(buf.const_buffers_1());
-	  stats->inc_stat(ProtoStats::BYTES_OUT, wrote);
-	  if (wrote == buf.size())
-	    return true;
-	  else
-	    {
-	      OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
-	      stats->error(ProtoStats::NETWORK_ERROR);
-	      return false;
-	    }
-	}
-	catch (boost::system::system_error& e)
+	if (!halt)
 	  {
-	    OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
-	    stats->error(ProtoStats::NETWORK_ERROR);
-	    return false;
+	    try {
+	      const size_t wrote = endpoint
+		? socket.send_to(buf.const_buffers_1(), *endpoint)
+		: socket.send(buf.const_buffers_1());
+	      stats->inc_stat(ProtoStats::BYTES_OUT, wrote);
+	      if (wrote == buf.size())
+		return true;
+	      else
+		{
+		  OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
+		  stats->error(ProtoStats::NETWORK_ERROR);
+		  return false;
+		}
+	    }
+	    catch (boost::system::system_error& e)
+	      {
+		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
+		stats->error(ProtoStats::NETWORK_ERROR);
+		return false;
+	      }
 	  }
+	else
+	  return false;
       }
 
       void start(const int n_parallel)
       {
-	for (int i = 0; i < n_parallel; i++)
-	  queue_read(NULL);
+	if (!halt)
+	  {
+	    for (int i = 0; i < n_parallel; i++)
+	      queue_read(NULL);
+	  }
       }
 
       void stop() {
-	halt = true;
-	socket.close();
+	if (!halt)
+	  {
+	    halt = true;
+	    socket.close();
+	  }
       }
+
+      ~Link() { stop(); }
 
     private:
       void queue_read(PacketFrom *udpfrom)

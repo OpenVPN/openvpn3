@@ -3,13 +3,13 @@
 
 #include <queue>
 
+#include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/thread.hpp>
 #include <openvpn/log/log.hpp>
-
 
 namespace openvpn {
 

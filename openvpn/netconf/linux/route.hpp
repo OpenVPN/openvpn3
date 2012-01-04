@@ -6,8 +6,8 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/process.hpp>
 #include <openvpn/common/file.hpp>

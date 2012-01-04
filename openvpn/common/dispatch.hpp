@@ -2,6 +2,7 @@
 #define OPENVPN_COMMON_DISPATCH_H
 
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/rc.hpp>
 
 namespace openvpn {
   // Dispatcher for asio async_read
@@ -15,12 +16,12 @@ namespace openvpn {
 
     void operator()(const boost::system::error_code& error, const size_t bytes_recvd)
     {
-      (obj_->*handle_read_)(data_, error, bytes_recvd);
+      (obj_.get()->*handle_read_)(data_, error, bytes_recvd);
     }
 
   private:
     Handler handle_read_;
-    C* obj_;
+    boost::intrusive_ptr<C> obj_;
     Data data_;
   };
 
@@ -41,12 +42,12 @@ namespace openvpn {
 
     void operator()(const boost::system::error_code& error)
     {
-      (obj_->*handler_)(data_, error);
+      (obj_.get()->*handler_)(data_, error);
     }
 
   private:
     Handler handler_;
-    C* obj_;
+    boost::intrusive_ptr<C> obj_;
     Data data_;
   };
 
@@ -67,12 +68,12 @@ namespace openvpn {
 
     void operator()(const boost::system::error_code& error)
     {
-      (obj_->*handler_)(error);
+      (obj_.get()->*handler_)(error);
     }
 
   private:
     Handler handler_;
-    C* obj_;
+    boost::intrusive_ptr<C> obj_;
   };
 
   template <typename C, typename Handler>
@@ -92,13 +93,38 @@ namespace openvpn {
 
     void operator()(const boost::system::error_code& error, EndpointIterator iter)
     {
-      (obj_->*handler_)(error, iter);
+      (obj_.get()->*handler_)(error, iter);
     }
 
   private:
     Handler handler_;
-    C* obj_;
+    boost::intrusive_ptr<C> obj_;
   };
+
+  // Dispatcher for asio signal
+
+  template <typename C, typename Handler>
+  class AsioDispatchSignal
+  {
+  public:
+    AsioDispatchSignal(Handler handler, C* obj)
+      : handler_(handler), obj_(obj) {}
+
+    void operator()(const boost::system::error_code& error, int signal_number)
+    {
+      (obj_.get()->*handler_)(error, signal_number);
+    }
+
+  private:
+    Handler handler_;
+    boost::intrusive_ptr<C> obj_;
+  };
+
+  template <typename C, typename Handler>
+  AsioDispatchSignal<C, Handler> asio_dispatch_signal(Handler handler, C* obj)
+  {
+    return AsioDispatchSignal<C, Handler>(handler, obj);
+  }
 
   // General purpose dispatcher with data
 

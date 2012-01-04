@@ -1,5 +1,5 @@
-#ifndef OPENVPN_TUN_LINUX_TUNLINUX_H
-#define OPENVPN_TUN_LINUX_TUNLINUX_H
+#ifndef OPENVPN_TUN_LINUX_TUN_H
+#define OPENVPN_TUN_LINUX_TUN_H
 
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -10,12 +10,11 @@
 #include <string>
 #include <sstream>
 
-#include <boost/noncopyable.hpp>
 #include <boost/asio.hpp>
 #include <boost/weak_ptr.hpp>
 
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/rc.hpp> // fixme
+#include <openvpn/common/rc.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/dispatch.hpp>
@@ -45,24 +44,24 @@ namespace openvpn {
     OPENVPN_EXCEPTION(tun_tx_queue_len_error);
 
     template <typename ReadHandler>
-    class Tun : public RC<thread_unsafe_refcount> // boost::noncopyable (fixme)
+    class Tun : public RC<thread_unsafe_refcount>
     {
     public:
       typedef boost::intrusive_ptr<Tun> Ptr;
 
       Tun(boost::asio::io_service& io_service,
-	  ReadHandler read_handler,
-	  const Frame::Ptr& frame,
-	  const ProtoStats::Ptr& stats,
-	  const char *name=NULL,
-	  const bool ipv6=false,
-	  const bool tap=false,
-	  const int txqueuelen=200)
+	  ReadHandler read_handler_arg,
+	  const Frame::Ptr& frame_arg,
+	  const ProtoStats::Ptr& stats_arg,
+	  const std::string name,
+	  const bool ipv6,
+	  const bool tap,
+	  const int txqueuelen)
 
-	: halt_(false),
-	  read_handler_(read_handler),
-	  frame_(frame),
-	  stats_(stats)
+	: halt(false),
+	  read_handler(read_handler_arg),
+	  frame(frame_arg),
+	  stats(stats_arg)
       {
 	static const char node[] = "/dev/net/tun";
 	ScopedFD fd(open(node, O_RDWR));
@@ -78,10 +77,10 @@ namespace openvpn {
 	  ifr.ifr_flags |= IFF_TAP;
 	else
 	  ifr.ifr_flags |= IFF_TUN;
-	if (name)
+	if (!name.empty())
 	  {
-	    if (::strlen(name) < IFNAMSIZ)
-	      ::strcpy (ifr.ifr_name, name);
+	    if (name.length() < IFNAMSIZ)
+	      ::strcpy (ifr.ifr_name, name.c_str());
 	    else
 	      throw tun_name_error();
 	  }
@@ -117,35 +116,48 @@ namespace openvpn {
 
       bool write(const Buffer& buf)
       {
-	try {
-	  const size_t wrote = sd->write_some(buf.const_buffers_1());
-	  stats_->inc_stat(ProtoStats::TUN_BYTES_OUT, wrote);
-	  if (wrote == buf.size())
-	    return true;
-	  else
-	    {
-	      OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-	      stats_->error(ProtoStats::TUN_ERROR);
-	      return false;
-	    }
-	}
-	catch (boost::system::system_error& e)
+	if (!halt)
 	  {
-	    OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
-	    stats_->error(ProtoStats::TUN_ERROR);
-	    return false;
+	    try {
+	      const size_t wrote = sd->write_some(buf.const_buffers_1());
+	      stats->inc_stat(ProtoStats::TUN_BYTES_OUT, wrote);
+	      if (wrote == buf.size())
+		return true;
+	      else
+		{
+		  OPENVPN_LOG_TUN_ERROR("TUN partial write error");
+		  stats->error(ProtoStats::TUN_ERROR);
+		  return false;
+		}
+	    }
+	    catch (boost::system::system_error& e)
+	      {
+		OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
+		stats->error(ProtoStats::TUN_ERROR);
+		return false;
+	      }
 	  }
+	else
+	  return false;
       }
 
       void start(const int n_parallel)
       {
-	for (int i = 0; i < n_parallel; i++)
-	  queue_read(NULL);
+	if (!halt)
+	  {
+	    for (int i = 0; i < n_parallel; i++)
+	      queue_read(NULL);
+	  }
       }
 
-      void stop() {
-	halt_ = true;
-	sd->close();
+      void stop()
+      {
+	if (!halt)
+	  {
+	    halt = true;
+	    sd->close();
+	    delete sd;
+	  }
       }
 
       int ifconfig(const OptionList& opt, const unsigned int mtu)
@@ -172,9 +184,7 @@ namespace openvpn {
 	}
       }
 
-      ~Tun() {
-	delete sd;
-      }
+      ~Tun() { stop(); }
 
       std::string name() const
       {
@@ -187,7 +197,7 @@ namespace openvpn {
 	OPENVPN_LOG_TUN_VERBOSE("TunLinux::queue_read");
 	if (!tunfrom)
 	  tunfrom = new PacketFrom();
-	frame_->prepare(Frame::READ_TUN, tunfrom->buf);
+	frame->prepare(Frame::READ_TUN, tunfrom->buf);
 
 	sd->async_read_some(tunfrom->buf.mutable_buffers_1(),
 			    asio_dispatch_read(&Tun::handle_read, this, tunfrom));
@@ -197,18 +207,18 @@ namespace openvpn {
       {
 	OPENVPN_LOG_TUN_VERBOSE("TunLinux::handle_read: " << error.message());
 	typename PacketFrom::SPtr pfp(tunfrom);
-	if (!halt_)
+	if (!halt)
 	  {
 	    if (!error)
 	      {
 		pfp->buf.set_size(bytes_recvd);
-		stats_->inc_stat(ProtoStats::TUN_BYTES_IN, bytes_recvd);
-		read_handler_->tun_read_handler(pfp);
+		stats->inc_stat(ProtoStats::TUN_BYTES_IN, bytes_recvd);
+		read_handler->tun_read_handler(pfp);
 	      }
 	    else
 	      {
 		OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error);
-		stats_->error(ProtoStats::TUN_ERROR);
+		stats->error(ProtoStats::TUN_ERROR);
 	      }
 	    queue_read(pfp.release()); // reuse buffer if still available
 	  }
@@ -216,13 +226,13 @@ namespace openvpn {
 
       std::string name_;
       boost::asio::posix::stream_descriptor *sd;
-      bool halt_;
-      ReadHandler read_handler_;
-      const Frame::Ptr frame_;
-      ProtoStats::Ptr stats_;
+      bool halt;
+      ReadHandler read_handler;
+      const Frame::Ptr frame;
+      ProtoStats::Ptr stats;
     };
 
   }
 } // namespace openvpn
 
-#endif // OPENVPN_TUN_LINUX_TUNLINUX_H
+#endif // OPENVPN_TUN_LINUX_TUN_H
