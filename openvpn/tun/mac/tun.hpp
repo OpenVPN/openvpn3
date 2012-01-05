@@ -1,11 +1,8 @@
-#ifndef OPENVPN_TUN_LINUX_TUN_H
-#define OPENVPN_TUN_LINUX_TUN_H
+#ifndef OPENVPN_TUN_MAC_TUN_H
+#define OPENVPN_TUN_MAC_TUN_H
 
-#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <net/if.h>
-#include <linux/if_tun.h>
 
 #include <string>
 #include <sstream>
@@ -26,7 +23,7 @@
 #include <openvpn/tun/tunlog.hpp>
 
 namespace openvpn {
-  namespace TunLinux {
+  namespace TunMac {
 
     struct PacketFrom
     {
@@ -36,10 +33,7 @@ namespace openvpn {
 
     // exceptions
     OPENVPN_EXCEPTION(tun_open_error);
-    OPENVPN_EXCEPTION(tun_ioctl_error);
     OPENVPN_EXCEPTION(tun_fcntl_error);
-    OPENVPN_EXCEPTION(tun_name_error);
-    OPENVPN_EXCEPTION(tun_tx_queue_len_error);
 
     template <typename ReadHandler>
     class Tun : public RC<thread_unsafe_refcount>
@@ -51,65 +45,39 @@ namespace openvpn {
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const ProtoStats::Ptr& stats_arg,
-	  const std::string name,
-	  const bool ipv6,
-	  const bool tap,
-	  const int txqueuelen)
+	  const bool tap)
 
 	: halt(false),
 	  read_handler(read_handler_arg),
 	  frame(frame_arg),
 	  stats(stats_arg)
       {
-	static const char node[] = "/dev/net/tun";
-	ScopedFD fd(open(node, O_RDWR));
-	if (!fd.defined())
-	  OPENVPN_THROW(tun_open_error, "error opening tun device " << node << ": " << errinfo(errno));
-
-	struct ifreq ifr;
-	std::memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_flags = IFF_ONE_QUEUE;
-	if (!ipv6)
-	  ifr.ifr_flags |= IFF_NO_PI;
-	if (tap)
-	  ifr.ifr_flags |= IFF_TAP;
-	else
-	  ifr.ifr_flags |= IFF_TUN;
-	if (!name.empty())
+	for (int i = 0; i < 256; ++i)
 	  {
-	    if (name.length() < IFNAMSIZ)
-	      ::strcpy (ifr.ifr_name, name.c_str());
+	    std::ostringstream node;
+	    if (tap)
+	      node << "tap";
 	    else
-	      throw tun_name_error();
-	  }
+	      node << "tun";
+	    node << i;
+	    const std::string node_str = node.str();
+	    const std::string node_fn = "/dev/" + node_str;
 
-	if (ioctl (fd(), TUNSETIFF, (void *) &ifr) < 0)
-	  throw tun_ioctl_error(errinfo(errno));
-
-	if (fcntl (fd(), F_SETFL, O_NONBLOCK) < 0)
-	  throw tun_fcntl_error(errinfo(errno));
-
-	// Set the TX send queue size
-	if (txqueuelen)
-	  {
-	    struct ifreq netifr;
-	    ScopedFD ctl_fd(socket (AF_INET, SOCK_DGRAM, 0));
-
-	    if (ctl_fd.defined())
+	    ScopedFD fd(open(node_fn.c_str(), O_RDWR));
+	    if (fd.defined())
 	      {
-		std::memset(&netifr, 0, sizeof(netifr));
-		strcpy (netifr.ifr_name, ifr.ifr_name);
-		netifr.ifr_qlen = txqueuelen;
-		if (ioctl (ctl_fd(), SIOCSIFTXQLEN, (void *) &netifr) < 0)
-		  throw tun_tx_queue_len_error(errinfo(errno));
+		// got it
+		if (fcntl (fd(), F_SETFL, O_NONBLOCK) < 0)
+		  throw tun_fcntl_error(errinfo(errno));
+
+		name_ = node_str;
+		sd = new boost::asio::posix::stream_descriptor(io_service, fd.release());
+		OPENVPN_LOG_TUN(node_fn << " opened");
+		return;
 	      }
-	    else
-	      throw tun_tx_queue_len_error(errinfo(errno));
 	  }
 
-	name_ = ifr.ifr_name;
-	sd = new boost::asio::posix::stream_descriptor(io_service, fd.release());
-	OPENVPN_LOG_TUN(name_ << " opened for " << (ipv6 ? "IPv6" : "IPv4"));
+	OPENVPN_THROW(tun_open_error, "error opening Mac " << (tap ? "tap" : "tun") << " device");
       }
 
       bool write(const Buffer& buf)
@@ -158,7 +126,7 @@ namespace openvpn {
 	  }
       }
 
-      int ifconfig(const OptionList& opt, const unsigned int mtu)
+      int ifconfig(const OptionList& opt, const unsigned int mtu) // fixme -- support IPv6
       {
 	// first verify topology
 	{
@@ -174,12 +142,22 @@ namespace openvpn {
 	  o.exact_args(3);
 	  std::string ip = validate_ip_address("ifconfig-ip", o[1]);
 	  std::string mask = validate_ip_address("ifconfig-net", o[2]);
-	  std::ostringstream cmd;
-	  cmd << "/sbin/ifconfig " << name() << ' ' << ip << " netmask " << mask << " mtu " << mtu;
-	  const std::string cmd_str = cmd.str();
-	  OPENVPN_LOG_TUN(cmd_str);
-	  return ::system(cmd_str.c_str());
+	  {
+	    std::ostringstream cmd;
+	    cmd << "/sbin/ifconfig " << name() << ' ' << ip << ' ' << ip << " netmask " << mask << " mtu " << mtu << " up";
+	    const std::string cmd_str = cmd.str();
+	    OPENVPN_LOG_TUN(cmd_str);
+	    const int status = ::system(cmd_str.c_str());
+	  }
+	  {
+	    std::ostringstream cmd;
+	    cmd << "/sbin/route add -net 5.5.8.0 " << ip << ' ' << mask; // fixme
+	    const std::string cmd_str = cmd.str();
+	    OPENVPN_LOG_TUN(cmd_str);
+	    const int status = ::system(cmd_str.c_str());
+	  }
 	}
+	return 0; // fixme -- maybe return system() status
       }
 
       ~Tun() { stop(); }
@@ -192,7 +170,7 @@ namespace openvpn {
     private:
       void queue_read(PacketFrom *tunfrom)
       {
-	OPENVPN_LOG_TUN_VERBOSE("TunLinux::queue_read");
+	OPENVPN_LOG_TUN_VERBOSE("TunMac::queue_read");
 	if (!tunfrom)
 	  tunfrom = new PacketFrom();
 	frame->prepare(Frame::READ_TUN, tunfrom->buf);
@@ -203,7 +181,7 @@ namespace openvpn {
 
       void handle_read(PacketFrom *tunfrom, const boost::system::error_code& error, const size_t bytes_recvd)
       {
-	OPENVPN_LOG_TUN_VERBOSE("TunLinux::handle_read: " << error.message());
+	OPENVPN_LOG_TUN_VERBOSE("TunMac::handle_read: " << error.message());
 	typename PacketFrom::SPtr pfp(tunfrom);
 	if (!halt)
 	  {
@@ -215,6 +193,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
+		::sleep(1);
 		OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error);
 		stats->error(ProtoStats::TUN_ERROR);
 	      }
@@ -233,4 +212,4 @@ namespace openvpn {
   }
 } // namespace openvpn
 
-#endif // OPENVPN_TUN_LINUX_TUN_H
+#endif // OPENVPN_TUN_MAC_TUN_H

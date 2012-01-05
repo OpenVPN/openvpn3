@@ -11,6 +11,8 @@ namespace openvpn {
   class ScopedFD : boost::noncopyable
   {
   public:
+    ScopedFD() : fd(-1) {}
+
     explicit ScopedFD(const int fd_arg)
       : fd(fd_arg) {}
 
@@ -31,10 +33,27 @@ namespace openvpn {
       return fd;
     }
 
-    ~ScopedFD()
+    void reset(const int fd_arg)
+    {
+      close();
+      fd = fd_arg;
+    }
+
+    int close()
     {
       if (defined())
-	close(fd);
+	{
+	  const int ret = ::close(fd);
+	  fd = -1;
+	  return ret;
+	}
+      else
+	return 0;
+    }
+
+    ~ScopedFD()
+    {
+      close();
     }
 
   private:

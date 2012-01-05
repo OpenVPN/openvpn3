@@ -108,11 +108,6 @@ namespace openvpn {
     return EVP_CIPH_CBC_MODE;
   }
 
-  inline int EVP_CIPHER_CTX_block_size(const EVP_CIPHER_CTX *ctx)
-  {
-    return ctx->cipher->CIPHER_block_size();
-  }
-
   inline void EVP_CIPHER_CTX_init(EVP_CIPHER_CTX *ctx)
   {
     ctx->cipher = NULL;

@@ -5,6 +5,7 @@ if [ -z "$1" ]; then
     echo " DEBUG=1 -- enable debug"
     echo ' ECHO=1 -- show commands'
     echo " STRIP=1 -- strip binary"
+    echo " STRICT=1 -- more warnings"
     echo " LTO=1 -- build with LTO"
     echo " GPROF=1 -- build for gprof profiling"
     echo " PGEN=1 -- generate data for profile-guided optimization"
@@ -20,7 +21,9 @@ fi
 rm -f $1
 
 # build flags
-FLAGS=""
+FLAGS="-Wall"
+[ "$STRICT" = "1" ] && FLAGS="$FLAGS -Wextra"
+FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # special Mac settings
 if [ "$PLATFORM" = "mac" ]; then
@@ -61,12 +64,12 @@ fi
 
 if [ "$DEBUG" = "1" ]; then
     # debug build
-    CMD="g++ -Wall -g $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
+    CMD="g++ -g $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
 else
     # release build
     [ "$LTO" = "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
-    CMD="g++ -Wall -O3 -fwhole-program $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
+    CMD="g++ -O3 -fwhole-program $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
 fi
 
 # execute CMD

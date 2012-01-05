@@ -279,7 +279,7 @@ namespace openvpn {
       const CF::String label = CF::string(subj_match);
       const void *keys[] =   { kSecClass,         kSecMatchSubjectContains, kSecMatchTrustedOnly, kSecReturnRef };
       const void *values[] = { kSecClassIdentity, label(),                  kCFBooleanTrue,       kCFBooleanTrue };
-      const CF::Dict query = CF::dict(keys, values, 4);
+      const CF::Dict query = CF::dict(keys, values, sizeof(keys)/sizeof(keys[0]));
       CF::Generic result;
       const OSStatus s = SecItemCopyMatching(query(), result.mod_ref());
       if (!s && result.defined())
