@@ -1,6 +1,8 @@
 #ifndef OPENVPN_ADDR_IPV4_H
 #define OPENVPN_ADDR_IPV4_H
 
+#include <cstring> // for std::memcpy
+
 #include <boost/cstdint.hpp> // for boost::uint32_t
 #include <boost/asio.hpp>
 
@@ -28,6 +30,13 @@ namespace openvpn {
       {
 	Addr ret;
 	ret.u.addr = addr;
+	return ret;
+      }
+
+      static Addr from_bytes(const unsigned char *bytes)
+      {
+	Addr ret;
+	std::memcpy(ret.u.bytes, bytes, 4);
 	return ret;
       }
 

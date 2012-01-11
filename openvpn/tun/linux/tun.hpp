@@ -176,8 +176,8 @@ namespace openvpn {
 	{
 	  const Option& o = opt.get("ifconfig");
 	  o.exact_args(3);
-	  std::string ip = IP::Addr::validate(o[1], "ifconfig-ip");
-	  std::string mask = IP::Addr::validate(o[2], "ifconfig-net");
+	  const IP::Addr ip = IP::Addr::from_string(o[1], "ifconfig-ip");
+	  const IP::Addr mask = IP::Addr::from_string(o[2], "ifconfig-net");
 	  std::ostringstream cmd;
 	  cmd << "/sbin/ifconfig " << name() << ' ' << ip << " netmask " << mask << " mtu " << mtu;
 	  const std::string cmd_str = cmd.str();

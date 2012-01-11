@@ -40,7 +40,7 @@ namespace openvpn {
     RouteListMac(const OptionList& opt, const IP::Addr& server_addr_arg)
       : stopped(false), rg_flags(0), did_redirect_gw(false), server_addr(server_addr_arg)
     {
-      local_gateway = get_default_gateway();
+      local_gateway = get_default_gateway_v4();
 
       // get route-gateway
       {
@@ -93,13 +93,13 @@ namespace openvpn {
       stop();
     }
 
-    static const IP::Addr& get_default_gateway()
+  private:
+    static const IP::Addr& get_default_gateway_v4()
     {
       MacGatewayInfoV4 gw; // fixme: handle IPv6
       return gw.gateway_addr();
     }
 
-  private:
     void add_del_reroute_gw_v4(const bool add)
     {
       const IP::Addr a_255_255_255_255 = IP::Addr::from_string("255.255.255.255");

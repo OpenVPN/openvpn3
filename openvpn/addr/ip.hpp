@@ -47,6 +47,22 @@ namespace openvpn {
 	return from_asio(a);
       }
 
+      static Addr from_ipv4(const IPv4::Addr& addr)
+      {
+	Addr a;
+	a.ver = V4;
+	a.u.v4 = addr;
+	return a;
+      }
+
+      static Addr from_ipv6(const IPv6::Addr& addr)
+      {
+	Addr a;
+	a.ver = V6;
+	a.u.v6 = addr;
+	return a;
+      }
+
       std::string to_string() const
       {
 	if (ver != UNSPEC)
