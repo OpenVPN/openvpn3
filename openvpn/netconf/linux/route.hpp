@@ -37,7 +37,7 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(route_error);
 
-    RouteListLinux(const OptionList& opt, const boost::asio::ip::address& server_addr_arg)
+    RouteListLinux(const OptionList& opt, const IP::Addr& server_addr_arg)
       : stopped(false), rg_flags(0), did_redirect_gw(false), server_addr(server_addr_arg)
     {
       local_gateway = get_default_gateway();
@@ -46,7 +46,7 @@ namespace openvpn {
       {
 	const Option& o = opt.get("route-gateway");
 	o.exact_args(2);
-	route_gateway = validate_ip_address("route-gateway", o[1]);
+	route_gateway = IP::Addr::validate(o[1], "route-gateway");
       }
 
       // do redirect-gateway
@@ -154,7 +154,7 @@ namespace openvpn {
     bool stopped;
     unsigned int rg_flags;
     bool did_redirect_gw;
-    boost::asio::ip::address server_addr;
+    IP::Addr server_addr;
     std::string route_gateway;
     std::string local_gateway;
   };

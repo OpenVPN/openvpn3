@@ -24,6 +24,7 @@
 #include <openvpn/log/protostats.hpp>
 #include <openvpn/tun/tunspec.hpp>
 #include <openvpn/tun/tunlog.hpp>
+#include <openvpn/tun/layer.hpp>
 
 namespace openvpn {
   namespace TunLinux {
@@ -36,6 +37,7 @@ namespace openvpn {
 
     // exceptions
     OPENVPN_EXCEPTION(tun_open_error);
+    OPENVPN_EXCEPTION(tun_layer_error);
     OPENVPN_EXCEPTION(tun_ioctl_error);
     OPENVPN_EXCEPTION(tun_fcntl_error);
     OPENVPN_EXCEPTION(tun_name_error);
@@ -53,7 +55,7 @@ namespace openvpn {
 	  const ProtoStats::Ptr& stats_arg,
 	  const std::string name,
 	  const bool ipv6,
-	  const bool tap,
+	  const Layer& layer,
 	  const int txqueuelen)
 
 	: halt(false),
@@ -71,10 +73,12 @@ namespace openvpn {
 	ifr.ifr_flags = IFF_ONE_QUEUE;
 	if (!ipv6)
 	  ifr.ifr_flags |= IFF_NO_PI;
-	if (tap)
+	if (layer() == Layer::OSI_LAYER_3)
+	  ifr.ifr_flags |= IFF_TUN;
+	else if (layer() == Layer::OSI_LAYER_2)
 	  ifr.ifr_flags |= IFF_TAP;
 	else
-	  ifr.ifr_flags |= IFF_TUN;
+	  throw tun_layer_error("unknown OSI layer");
 	if (!name.empty())
 	  {
 	    if (name.length() < IFNAMSIZ)
@@ -172,8 +176,8 @@ namespace openvpn {
 	{
 	  const Option& o = opt.get("ifconfig");
 	  o.exact_args(3);
-	  std::string ip = validate_ip_address("ifconfig-ip", o[1]);
-	  std::string mask = validate_ip_address("ifconfig-net", o[2]);
+	  std::string ip = IP::Addr::validate(o[1], "ifconfig-ip");
+	  std::string mask = IP::Addr::validate(o[2], "ifconfig-net");
 	  std::ostringstream cmd;
 	  cmd << "/sbin/ifconfig " << name() << ' ' << ip << " netmask " << mask << " mtu " << mtu;
 	  const std::string cmd_str = cmd.str();

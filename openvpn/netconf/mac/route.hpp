@@ -1,10 +1,9 @@
 #ifndef OPENVPN_NETCONF_MAC_ROUTE_H
 #define OPENVPN_NETCONF_MAC_ROUTE_H
 
+#include <cstring>
 #include <string>
 #include <sstream>
-
-#include <boost/lexical_cast.hpp>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
@@ -15,6 +14,7 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/log/log.hpp>
+#include <openvpn/netconf/mac/gwv4.hpp>
 
 namespace openvpn {
 
@@ -37,7 +37,7 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(route_error);
 
-    RouteListMac(const OptionList& opt, const boost::asio::ip::address& server_addr_arg)
+    RouteListMac(const OptionList& opt, const IP::Addr& server_addr_arg)
       : stopped(false), rg_flags(0), did_redirect_gw(false), server_addr(server_addr_arg)
     {
       local_gateway = get_default_gateway();
@@ -46,7 +46,7 @@ namespace openvpn {
       {
 	const Option& o = opt.get("route-gateway");
 	o.exact_args(2);
-	route_gateway = validate_ip_address("route-gateway", o[1]);
+	route_gateway = IP::Addr::from_string(o[1], "route-gateway");
       }
 
       // do redirect-gateway
@@ -69,9 +69,7 @@ namespace openvpn {
 	  }
 	if (rg_flags & RG_ENABLE)
 	  {
-	    add_del_route(true, server_addr.to_string(), "255.255.255.255", local_gateway);
-	    add_del_route(true, "0.0.0.0", "128.0.0.0", route_gateway);
-	    add_del_route(true, "128.0.0.0", "128.0.0.0", route_gateway);
+	    add_del_reroute_gw_v4(true);
 	    did_redirect_gw = true;
 	  }
       }
@@ -83,9 +81,7 @@ namespace openvpn {
 	{
 	  if (did_redirect_gw)
 	    {
-	      add_del_route(false, server_addr.to_string(), "255.255.255.255", local_gateway);
-	      add_del_route(false, "0.0.0.0", "128.0.0.0", route_gateway);
-	      add_del_route(false, "128.0.0.0", "128.0.0.0", route_gateway);
+	      add_del_reroute_gw_v4(false);
 	      did_redirect_gw = false;
 	    }
 	  stopped = true;
@@ -97,35 +93,47 @@ namespace openvpn {
       stop();
     }
 
-    static std::string get_default_gateway()
+    static const IP::Addr& get_default_gateway()
     {
-      return "10.10.0.1"; // fixme
+      MacGatewayInfoV4 gw; // fixme: handle IPv6
+      return gw.gateway_addr();
     }
 
   private:
-    int add_del_route(const bool add,
-		      const std::string& net,
-		      const std::string& mask,
-		      const std::string& gw)
+    void add_del_reroute_gw_v4(const bool add)
     {
-	std::ostringstream cmd;
-	cmd << "/sbin/route";
-	if (add)
-	  cmd << " add";
-	else
-	  cmd << " delete";
-	cmd << " -net " << net << ' ' << gw << ' ' << mask;
-	const std::string cmd_str = cmd.str();
-	OPENVPN_LOG(cmd_str);
-	return ::system(cmd_str.c_str());
+      const IP::Addr a_255_255_255_255 = IP::Addr::from_string("255.255.255.255");
+      const IP::Addr a_0_0_0_0 = IP::Addr::from_string("0.0.0.0");
+      const IP::Addr a_128_0_0_0 = IP::Addr::from_string("128.0.0.0");
+
+      add_del_route(add, server_addr, a_255_255_255_255, local_gateway);
+      add_del_route(add, a_0_0_0_0, a_128_0_0_0, route_gateway);
+      add_del_route(add, a_128_0_0_0, a_128_0_0_0, route_gateway);
+    }
+
+    int add_del_route(const bool add,
+		      const IP::Addr& net,
+		      const IP::Addr& mask,
+		      const IP::Addr& gw)
+    {
+      std::ostringstream cmd;
+      cmd << "/sbin/route";
+      if (add)
+	cmd << " add";
+      else
+	cmd << " delete";
+      cmd << " -net " << net << ' ' << gw << ' ' << mask;
+      const std::string cmd_str = cmd.str();
+      OPENVPN_LOG(cmd_str);
+      return ::system(cmd_str.c_str());
     }
 
     bool stopped;
     unsigned int rg_flags;
     bool did_redirect_gw;
-    boost::asio::ip::address server_addr;
-    std::string route_gateway;
-    std::string local_gateway;
+    IP::Addr server_addr;
+    IP::Addr route_gateway;
+    IP::Addr local_gateway;
   };
 
 } // namespace openvpn

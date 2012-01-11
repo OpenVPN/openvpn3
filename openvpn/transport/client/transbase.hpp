@@ -7,6 +7,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
 
@@ -19,7 +20,7 @@ namespace openvpn {
     virtual bool transport_send_const(const Buffer& buf) = 0;
     virtual bool transport_send(BufferAllocated& buf) = 0;
     virtual std::string server_endpoint_render() const = 0;
-    virtual boost::asio::ip::address server_endpoint_addr() const = 0;
+    virtual IP::Addr server_endpoint_addr() const = 0;
   };
 
   struct TransportClientParent

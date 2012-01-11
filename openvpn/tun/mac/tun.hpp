@@ -21,6 +21,7 @@
 #include <openvpn/log/protostats.hpp>
 #include <openvpn/tun/tunspec.hpp>
 #include <openvpn/tun/tunlog.hpp>
+#include <openvpn/tun/layer.hpp>
 
 namespace openvpn {
   namespace TunMac {
@@ -33,6 +34,7 @@ namespace openvpn {
 
     // exceptions
     OPENVPN_EXCEPTION(tun_open_error);
+    OPENVPN_EXCEPTION(tun_layer_error);
     OPENVPN_EXCEPTION(tun_fcntl_error);
 
     template <typename ReadHandler>
@@ -45,7 +47,7 @@ namespace openvpn {
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const ProtoStats::Ptr& stats_arg,
-	  const bool tap)
+	  const Layer& layer)
 
 	: halt(false),
 	  read_handler(read_handler_arg),
@@ -55,10 +57,12 @@ namespace openvpn {
 	for (int i = 0; i < 256; ++i)
 	  {
 	    std::ostringstream node;
-	    if (tap)
+	    if (layer() == Layer::OSI_LAYER_3)
+	      node << "tun";
+	    else if (layer() == Layer::OSI_LAYER_2)
 	      node << "tap";
 	    else
-	      node << "tun";
+	      throw tun_layer_error("unknown OSI layer");
 	    node << i;
 	    const std::string node_str = node.str();
 	    const std::string node_fn = "/dev/" + node_str;
@@ -77,7 +81,7 @@ namespace openvpn {
 	      }
 	  }
 
-	OPENVPN_THROW(tun_open_error, "error opening Mac " << (tap ? "tap" : "tun") << " device");
+	OPENVPN_THROW(tun_open_error, "error opening Mac " << layer.dev_type() << " device");
       }
 
       bool write(const Buffer& buf)
@@ -128,6 +132,8 @@ namespace openvpn {
 
       int ifconfig(const OptionList& opt, const unsigned int mtu) // fixme -- support IPv6
       {
+	int status = 0;
+
 	// first verify topology
 	{
 	  const Option& o = opt.get("topology");
@@ -140,24 +146,26 @@ namespace openvpn {
 	{
 	  const Option& o = opt.get("ifconfig");
 	  o.exact_args(3);
-	  std::string ip = validate_ip_address("ifconfig-ip", o[1]);
-	  std::string mask = validate_ip_address("ifconfig-net", o[2]);
+	  const IP::Addr ip = IP::Addr::from_string(o[1], "ifconfig-ip");
+	  const IP::Addr mask = IP::Addr::from_string(o[2], "ifconfig-net");
 	  {
 	    std::ostringstream cmd;
 	    cmd << "/sbin/ifconfig " << name() << ' ' << ip << ' ' << ip << " netmask " << mask << " mtu " << mtu << " up";
 	    const std::string cmd_str = cmd.str();
 	    OPENVPN_LOG_TUN(cmd_str);
-	    const int status = ::system(cmd_str.c_str());
+	    status = ::system(cmd_str.c_str());
 	  }
-	  {
-	    std::ostringstream cmd;
-	    cmd << "/sbin/route add -net 5.5.8.0 " << ip << ' ' << mask; // fixme
-	    const std::string cmd_str = cmd.str();
-	    OPENVPN_LOG_TUN(cmd_str);
-	    const int status = ::system(cmd_str.c_str());
-	  }
+	  if (!status)
+	    {
+	      std::ostringstream cmd;
+	      const IP::Addr net = ip & mask;
+	      cmd << "/sbin/route add -net " << net << ' ' << ip << ' ' << mask;
+	      const std::string cmd_str = cmd.str();
+	      OPENVPN_LOG_TUN(cmd_str);
+	      status = ::system(cmd_str.c_str());
+	    }
 	}
-	return 0; // fixme -- maybe return system() status
+	return status;
       }
 
       ~Tun() { stop(); }
@@ -193,7 +201,6 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		::sleep(1);
 		OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error);
 		stats->error(ProtoStats::TUN_ERROR);
 	      }

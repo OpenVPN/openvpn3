@@ -77,9 +77,9 @@ namespace openvpn {
 	return os.str();
       }
 
-      virtual boost::asio::ip::address server_endpoint_addr() const
+      virtual IP::Addr server_endpoint_addr() const
       {
-	return server_endpoint.address();
+	return IP::Addr::from_asio(server_endpoint.address());
       }
 
       virtual void stop() { stop_(); }

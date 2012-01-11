@@ -15,7 +15,7 @@ namespace openvpn {
 
       std::string name;
       bool ipv6;
-      bool tap;
+      Layer layer;
       int txqueuelen;
       unsigned int mtu;
 
@@ -32,7 +32,7 @@ namespace openvpn {
 					    TunClientParent& parent);
     private:
       ClientConfig()
-	: ipv6(false), tap(false), txqueuelen(200), mtu(1500), n_parallel(8) {}
+	: ipv6(false), txqueuelen(200), mtu(1500), n_parallel(8) {}
     };
 
     class Client : public TunClient
@@ -56,7 +56,7 @@ namespace openvpn {
 				     config->stats,
 				     config->name,
 				     config->ipv6,
-				     config->tap,
+				     config->layer,
 				     config->txqueuelen
 				     ));
 	      impl->start(config->n_parallel);

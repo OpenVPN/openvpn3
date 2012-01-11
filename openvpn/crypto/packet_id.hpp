@@ -4,13 +4,14 @@
 #include <string>
 #include <sstream>
 
-#include <boost/cstdint.hpp>
+#include <boost/cstdint.hpp> // for boost::uint32_t
 #include <boost/asio.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/log/log.hpp>
 #include <openvpn/common/circ_list.hpp>
+#include <openvpn/common/socktypes.hpp>
+#include <openvpn/log/log.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
 

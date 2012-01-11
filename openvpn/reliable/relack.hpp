@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <limits>
 
+#include <openvpn/common/socktypes.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/reliable/relcommon.hpp>

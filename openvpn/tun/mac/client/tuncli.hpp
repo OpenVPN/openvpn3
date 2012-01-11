@@ -13,7 +13,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<ClientConfig> Ptr;
 
-      bool tap;
+      Layer layer;
       unsigned int mtu;
 
       int n_parallel;
@@ -29,7 +29,7 @@ namespace openvpn {
 					    TunClientParent& parent);
     private:
       ClientConfig()
-	: tap(false), mtu(1500), n_parallel(8) {}
+	: mtu(1500), n_parallel(8) {}
     };
 
     class Client : public TunClient
@@ -51,7 +51,7 @@ namespace openvpn {
 				     this,
 				     config->frame,
 				     config->stats,
-				     config->tap
+				     config->layer
 				     ));
 	      impl->start(config->n_parallel);
 

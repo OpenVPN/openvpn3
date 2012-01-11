@@ -13,6 +13,7 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/mode.hpp>
+#include <openvpn/common/socktypes.hpp>
 #include <openvpn/log/log.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
