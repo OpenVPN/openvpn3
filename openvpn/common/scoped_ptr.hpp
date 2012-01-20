@@ -1,6 +1,8 @@
 #ifndef OPENVPN_COMMON_SCOPED_PTR_H
 #define OPENVPN_COMMON_SCOPED_PTR_H
 
+#include <algorithm>
+
 #include <boost/assert.hpp>
 #include <boost/noncopyable.hpp>
 
@@ -21,6 +23,11 @@ namespace openvpn {
       T* ret = px;
       px = NULL;
       return ret;
+    }
+
+    void swap(ScopedPtr& other)
+    {
+      std::swap(px, other.px);
     }
 
     T& operator*() const

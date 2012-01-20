@@ -52,6 +52,7 @@ namespace openvpn {
 	: halt(false),
 	  read_handler(read_handler_arg),
 	  frame(frame_arg),
+	  frame_context((*frame_arg)[Frame::READ_TUN]),
 	  stats(stats_arg)
       {
 	for (int i = 0; i < 256; ++i)
@@ -181,16 +182,15 @@ namespace openvpn {
 	OPENVPN_LOG_TUN_VERBOSE("TunMac::queue_read");
 	if (!tunfrom)
 	  tunfrom = new PacketFrom();
-	frame->prepare(Frame::READ_TUN, tunfrom->buf);
-
-	sd->async_read_some(tunfrom->buf.mutable_buffers_1(),
+	frame_context.prepare(tunfrom->buf);
+	sd->async_read_some(frame_context.mutable_buffers_1(tunfrom->buf),
 			    asio_dispatch_read(&Tun::handle_read, this, tunfrom));
       }
 
       void handle_read(PacketFrom *tunfrom, const boost::system::error_code& error, const size_t bytes_recvd)
       {
 	OPENVPN_LOG_TUN_VERBOSE("TunMac::handle_read: " << error.message());
-	typename PacketFrom::SPtr pfp(tunfrom);
+	PacketFrom::SPtr pfp(tunfrom);
 	if (!halt)
 	  {
 	    if (!error)
@@ -201,7 +201,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error);
+		OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error.message());
 		stats->error(ProtoStats::TUN_ERROR);
 	      }
 	    queue_read(pfp.release()); // reuse buffer if still available
@@ -213,6 +213,7 @@ namespace openvpn {
       bool halt;
       ReadHandler read_handler;
       const Frame::Ptr frame;
+      const Frame::Context& frame_context;
       ProtoStats::Ptr stats;
     };
 

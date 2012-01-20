@@ -10,6 +10,10 @@ On Apple:
 
     OSSL=1 GCC_EXTRA="-DITER=10001 -DSITER=100 -DN_THREADS=4" build proto 2>&1 | g 'error:[^:]'
 
-On other unix:
+On linux with AES NI:
 
-  LTO=1 build proto
+  GCC_EXTRA="-DOPENSSL_AES_NI" build proto
+
+On regular linux:
+
+  build proto

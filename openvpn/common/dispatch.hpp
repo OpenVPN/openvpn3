@@ -5,6 +5,31 @@
 #include <openvpn/common/rc.hpp>
 
 namespace openvpn {
+  // Dispatcher for asio async_write
+
+  template <typename C, typename Handler>
+  class AsioDispatchWrite
+  {
+  public:
+    AsioDispatchWrite(Handler handle_write, C* obj)
+      : handle_write_(handle_write), obj_(obj) {}
+
+    void operator()(const boost::system::error_code& error, const size_t bytes_sent)
+    {
+      (obj_.get()->*handle_write_)(error, bytes_sent);
+    }
+
+  private:
+    Handler handle_write_;
+    boost::intrusive_ptr<C> obj_;
+  };
+
+  template <typename C, typename Handler>
+  AsioDispatchWrite<C, Handler> asio_dispatch_write(Handler handle_write, C* obj)
+  {
+    return AsioDispatchWrite<C, Handler>(handle_write, obj);
+  }
+
   // Dispatcher for asio async_read
 
   template <typename C, typename Handler, typename Data>

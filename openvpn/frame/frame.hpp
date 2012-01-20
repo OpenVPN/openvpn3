@@ -18,7 +18,7 @@ namespace openvpn {
       ENCRYPT_WORK=0,
       DECRYPT_WORK,
       READ_LINK_UDP,
-      READ_STREAM_UDP,
+      READ_LINK_TCP,
       READ_TUN,
       READ_BIO_MEMQ_DGRAM,
       READ_BIO_MEMQ_STREAM,
@@ -79,6 +79,12 @@ namespace openvpn {
 	buf.init_headroom(actual_headroom(buf.c_data_raw()));
       }
 
+      // Realign a buffer to headroom
+      void realign(Buffer& buf) const
+      {
+	buf.realign(actual_headroom(buf.c_data_raw()));
+      }
+
       // Return a new BufferAllocated object initialized with the given data
       BufferPtr alloc_with_data(const unsigned char *data, const size_t size) const
       {
@@ -104,6 +110,13 @@ namespace openvpn {
       {
 	if (newcap > adj_capacity_)
 	  adj_capacity_ = newcap;
+      }
+
+      // return a boost::asio::mutable_buffers_1 object used by
+      // asio read methods.
+      boost::asio::mutable_buffers_1 mutable_buffers_1(Buffer& buf) const
+      {
+	return boost::asio::mutable_buffers_1(buf.data(), remaining_payload(buf));
       }
 
       std::string info() const

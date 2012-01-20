@@ -57,6 +57,7 @@ namespace openvpn {
 	  halt(false),
 	  read_handler(read_handler_arg),
 	  frame(frame_arg),
+	  frame_context((*frame_arg)[Frame::READ_LINK_UDP]),
 	  stats(stats_arg)
       {
 	if (bind_type == LOCAL_BIND)
@@ -127,9 +128,8 @@ namespace openvpn {
 	OPENVPN_LOG_UDPLINK_VERBOSE("UDPLink::queue_read");
 	if (!udpfrom)
 	  udpfrom = new PacketFrom();
-	frame->prepare(Frame::READ_LINK_UDP, udpfrom->buf);
-
-	socket.async_receive_from(udpfrom->buf.mutable_buffers_1(),
+	frame_context.prepare(udpfrom->buf);
+	socket.async_receive_from(frame_context.mutable_buffers_1(udpfrom->buf),
 				  udpfrom->sender_endpoint,
 				  asio_dispatch_read(&Link::handle_read, this, udpfrom));
       }
@@ -137,20 +137,23 @@ namespace openvpn {
       void handle_read(PacketFrom *udpfrom, const boost::system::error_code& error, const size_t bytes_recvd)
       {
 	OPENVPN_LOG_UDPLINK_VERBOSE("UDPLink::handle_read: " << error.message());
-	typename PacketFrom::SPtr pfp(udpfrom);
+	PacketFrom::SPtr pfp(udpfrom);
 	if (!halt)
 	  {
-	    if (!error)
+	    if (bytes_recvd)
 	      {
-		OPENVPN_LOG_UDPLINK_VERBOSE("UDP from " << pfp->sender_endpoint);
-		pfp->buf.set_size(bytes_recvd);
-		stats->inc_stat(ProtoStats::BYTES_IN, bytes_recvd);
-		read_handler->udp_read_handler(pfp);
-	      }
-	    else
-	      {
-		OPENVPN_LOG_UDPLINK_ERROR("UDP Read Error: " << error);
-		stats->error(ProtoStats::NETWORK_ERROR);
+		if (!error)
+		  {
+		    OPENVPN_LOG_UDPLINK_VERBOSE("UDP from " << pfp->sender_endpoint);
+		    pfp->buf.set_size(bytes_recvd);
+		    stats->inc_stat(ProtoStats::BYTES_IN, bytes_recvd);
+		    read_handler->udp_read_handler(pfp);
+		  }
+		else
+		  {
+		    OPENVPN_LOG_UDPLINK_ERROR("UDP recv error: " << error.message());
+		    stats->error(ProtoStats::NETWORK_ERROR);
+		  }
 	      }
 	    queue_read(pfp.release()); // reuse PacketFrom object if still available
 	  }
@@ -160,6 +163,7 @@ namespace openvpn {
       bool halt;
       ReadHandler read_handler;
       Frame::Ptr frame;
+      const Frame::Context& frame_context;
       ProtoStats::Ptr stats;
     };
   }

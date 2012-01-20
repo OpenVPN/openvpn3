@@ -58,6 +58,13 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(proto_stack_invalidated);
 
+    enum NetSendType {
+      NET_SEND_SSL,
+      NET_SEND_RAW,
+      NET_SEND_ACK,
+      NET_SEND_RETRANSMIT,
+    };
+
     ProtoStackBase(SSLContext& ctx,                   // SSL context object that can be used to generate new SSL sessions
 		   TimePtr now_arg,                   // pointer to current time
 		   const Frame::Ptr& frame,           // contains info on how to allocate and align buffers
@@ -141,7 +148,7 @@ namespace openvpn {
 	      generate_ack(ack_send_buf);
 
 	      // transmit it
-	      net_send(ack_send_buf);
+	      net_send(ack_send_buf, NET_SEND_ACK);
 	    }
 	}
     }
@@ -156,7 +163,7 @@ namespace openvpn {
 	      typename ReliableSend::Message& m = rel_send.ref_by_id(i);
 	      if (m.ready_retransmit(*now))
 		{
-		  net_send(m.packet);
+		  net_send(m.packet, NET_SEND_RETRANSMIT);
 		  m.reset_retransmit(*now);
 		}
 	    }
@@ -211,7 +218,7 @@ namespace openvpn {
 
     // Transmit encapsulated ciphertext packet to peer.  Method may not modify
     // or take ownership of net_pkt or underlying data unless it copies it.
-    virtual void net_send(const PACKET& net_pkt) = 0;
+    virtual void net_send(const PACKET& net_pkt, const NetSendType nstype) = 0;
 
     // Pass cleartext data up to application.  Method may take ownership
     // of to_app_buf by making private copy of BufferPtr then calling
@@ -274,7 +281,7 @@ namespace openvpn {
 		}
 
 	      // transmit it
-	      net_send(m.packet);
+	      net_send(m.packet, NET_SEND_SSL);
 	    }
 	}
     }
@@ -301,7 +308,7 @@ namespace openvpn {
 	    }
 
 	  // transmit it
-	  net_send(m.packet);
+	  net_send(m.packet, NET_SEND_RAW);
 	}
     }
 

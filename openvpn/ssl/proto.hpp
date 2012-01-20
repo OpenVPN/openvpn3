@@ -320,7 +320,7 @@ namespace openvpn {
 	out << ",dev-type " << layer.dev_type();
 	out << ",link-mtu " << mtu() + link_mtu_adjust();
 	out << ",tun-mtu " << mtu();
-	out << ",proto " << protocol.str();
+	out << ",proto " << protocol.str_client();
 	
 	{
 	  const char *compstr = comp_ctx.options_string();
@@ -367,7 +367,8 @@ namespace openvpn {
       // used to generate link_mtu option sent to peer
       unsigned int link_mtu_adjust() const
       {
-	return 1 +                                    // leading op byte
+	return protocol.extra_transport_bytes() +     // extra 2 bytes for TCP-streamed packet length
+          1 +                                         // leading op byte
 	  comp_ctx.extra_payload_bytes() +            // compression magic byte
 	  PacketID::size(PacketID::SHORT_FORM) +      // sequence number
 	  digest.size() +                             // HMAC
@@ -403,6 +404,7 @@ namespace openvpn {
       unsigned int opcode;
     };
 
+#ifdef OPENVPN_DEBUG
     static const char *opcode_name(const unsigned int opcode)
     {
       switch (opcode)
@@ -489,6 +491,7 @@ namespace openvpn {
 	}
       return out.str();
     }
+#endif
 
   protected:
 
@@ -664,6 +667,7 @@ namespace openvpn {
 	  proto(p),
 	  dirty(0),
 	  handled_pid_wrap(false),
+	  is_reliable(p.config->protocol.is_reliable()),
 	  tlsprf_self(p.is_server()),
 	  tlsprf_peer(!p.is_server())
       {
@@ -1060,9 +1064,10 @@ namespace openvpn {
 	  }
       }
 
-      virtual void net_send(const Packet& net_pkt)
+      virtual void net_send(const Packet& net_pkt, const typename Base::NetSendType nstype)
       {
-	proto.net_send(key_id_, net_pkt);
+	if (!is_reliable || nstype != Base::NET_SEND_RETRANSMIT) // retransmit packets on UDP only, not TCP
+	  proto.net_send(key_id_, net_pkt);
       }
 
       void post_ack_action()
@@ -1364,6 +1369,13 @@ namespace openvpn {
 			xmit_acks.push_back(id); // even replayed packets must be ACKed or protocol could deadlock
 		    }
 		}
+	      else
+		{
+		  if (pid_ok)
+		    proto.ta_pid_recv.add(pid, t); // remember tls_auth packet ID of ACK packet to prevent replay
+		  else
+		    proto.stats->error(ProtoStats::REPLAY_ERROR);
+		}
 	    }
 	  else // non tls_auth mode
 	    {
@@ -1430,6 +1442,7 @@ namespace openvpn {
       unsigned int key_id_;
       bool dirty;
       bool handled_pid_wrap;
+      bool is_reliable;
       Time construct_time;
       Time reached_active_time_;
       Time next_event_time;

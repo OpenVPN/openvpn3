@@ -26,6 +26,8 @@ namespace openvpn {
       RESOLVE_ERROR,       // DNS resolution error
       BAD_SRC_ADDR,        // packet from unknown source address
       TUN_ERROR,           // errors on tun/tap interface
+      TCP_OVERFLOW,        // TCP output queue overflow
+      TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
       HMAC_ERROR,          // HMAC verification failure
       REPLAY_ERROR,        // error from PacketIDReceive
       CRYPTO_ERROR,        // data channel encrypt/decrypt error
@@ -85,6 +87,8 @@ namespace openvpn {
       "RESOLVE_ERROR",
       "BAD_SRC_ADDR",
       "TUN_ERROR",
+      "TCP_OVERFLOW",
+      "TCP_SIZE_ERROR",
       "HMAC_ERROR",
       "REPLAY_ERROR",
       "CRYPTO_ERROR",

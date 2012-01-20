@@ -63,11 +63,22 @@ namespace openvpn {
       size_ = 0;
     }
 
+    void reset_content()
+    {
+      offset_ = size_ = 0;
+    }
+
     // return a const pointer to start of array
     const T* c_data() const { return data_ + offset_; }
 
     // return a mutable pointer to start of array
     T* data() { return data_ + offset_; }
+
+    // return a const pointer to end of array
+    const T* c_data_end() const { return data_ + offset_ + size_; }
+
+    // return a mutable pointer to end of array
+    T* data_end() { return data_ + offset_ + size_; }
 
     // return a const pointer to start of raw data
     const T* c_data_raw() const { return data_; }
@@ -87,12 +98,15 @@ namespace openvpn {
     // return true if array is not empty
     bool defined() const { return size_ > 0; }
 
+    // return true if data memory is defined
+    bool allocated() const { return data_ != NULL; }
+
     // return true if array is empty
     bool empty() const { return !size_; }
 
     // return the number of additional T objects that can be added before capacity is reached (without considering resize)
-    size_t remaining() const {
-      const size_t r = capacity_ - (offset_ + size_);
+    size_t remaining(const size_t tailroom = 0) const {
+      const size_t r = capacity_ - (offset_ + size_ + tailroom);
       return r <= capacity_ ? r : 0;
     }
 
@@ -109,6 +123,11 @@ namespace openvpn {
     void set_size(const size_t size)
     {
       size_ = std::min(max_size(), size);
+    }
+
+    void inc_size(const size_t size)
+    {
+      size_ = std::min(max_size(), size_ + size);
     }
 
     // append a T object to array, with possible resize
@@ -161,11 +180,23 @@ namespace openvpn {
       return c_data()[index];
     }
 
+    bool operator==(const BufferType& other) const
+    {
+      if (size_ != other.size_)
+	return false;
+      return std::memcmp(c_data(), other.c_data(), size_) == 0;
+    }
+
+    bool operator!=(const BufferType& other) const
+    {
+      return !(*this == other);
+    }
+
     // return a boost::asio::mutable_buffers_1 object used by
     // asio read methods.
-    boost::asio::mutable_buffers_1 mutable_buffers_1()
+    boost::asio::mutable_buffers_1 mutable_buffers_1(const size_t tailroom = 0)
     {
-      return boost::asio::mutable_buffers_1(data(), remaining());
+      return boost::asio::mutable_buffers_1(data(), remaining(tailroom));
     }
 
     // return a boost::asio::const_buffers_1 object used by
@@ -173,6 +204,14 @@ namespace openvpn {
     boost::asio::const_buffers_1 const_buffers_1() const
     {
       return boost::asio::const_buffers_1(c_data(), size());
+    }
+
+    void realign(size_t headroom)
+    {
+      if (headroom + size_ > capacity_)
+	OPENVPN_BUFFER_THROW(buffer_headroom);
+      std::memmove(data_ + headroom, data_ + offset_, size_);
+      offset_ = headroom;
     }
 
     void write(const T* data, const size_t size)
@@ -243,7 +282,9 @@ namespace openvpn {
     virtual void resize(const size_t new_capacity)
     {
       if (new_capacity > capacity_)
-	OPENVPN_BUFFER_THROW(buffer_full);
+	{
+	  OPENVPN_BUFFER_THROW(buffer_full);
+	}
     }
 
     T* data_;          // pointer to data
@@ -353,7 +394,9 @@ namespace openvpn {
 	{
 	  erase_();
 	  if (capacity)
+	    {
 	      data_ = new T[capacity];
+	    }
 	  capacity_ = capacity;
 	}
       if ((flags & CONSTRUCT_ZERO) && capacity)
@@ -454,7 +497,9 @@ namespace openvpn {
 	      capacity_ = newcap;
 	    }
 	  else
-	    OPENVPN_BUFFER_THROW(buffer_full);
+	    {
+	      OPENVPN_BUFFER_THROW(buffer_full);
+	    }
 	}
     }
 
