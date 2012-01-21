@@ -17,7 +17,7 @@ namespace openvpn {
 
     virtual void client_start(const OptionList&, TransportClient&) = 0;
     virtual void stop() = 0;
-    virtual bool tun_send(BufferAllocated& buf) = 0; 
+    virtual bool tun_send(BufferAllocated& buf) = 0; // return true if send succeeded
     virtual std::string tun_name() const = 0;
   };
 
