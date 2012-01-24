@@ -10,6 +10,7 @@
 #include <openvpn/gencrypto/evphmac.hpp>
 
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/memcmp.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
 
@@ -197,7 +198,7 @@ namespace openvpn {
       if (c)
 	{
 	  HMAC_Final (c, local_hmac, &outlen);
-	  return !std::memcmp(data + l1, local_hmac, l2);
+	  return !memcmp_secure(data + l1, local_hmac, l2);
 	}
       else
 	return false;

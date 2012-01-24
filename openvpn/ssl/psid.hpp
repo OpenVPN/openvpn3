@@ -7,6 +7,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/random/prng.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/memcmp.hpp>
 
 namespace openvpn {
 
@@ -60,7 +61,7 @@ namespace openvpn {
 
     bool match(const ProtoSessionID& other) const
     {
-      return defined_ && other.defined_ && !std::memcmp(id_, other.id_, SIZE);
+      return defined_ && other.defined_ && !memcmp_secure(id_, other.id_, SIZE);
     }
 
     std::string str() const
