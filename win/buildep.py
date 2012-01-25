@@ -1,6 +1,7 @@
 import os, re
 
 from utils import *
+from parms import *
 
 patch_mk1mf_match = r"""
 (.*)
@@ -54,14 +55,9 @@ def build_boost(parms):
         d = expand('boost', parms['DEP'])
         os.chdir(d)
         call("bootstrap", shell=True)
-        call("b2 --toolset=msvc-10.0 variant=release link=shared threading=multi runtime-link=shared stage", shell=True)
+        call("b2 --toolset=msvc-10.0 --build-type=complete stage", shell=True)
+        #call("b2 --toolset=msvc-10.0 variant=release link=shared threading=multi runtime-link=shared stage", shell=True)
 
-parms = {
-    "BUILD" : "c:/src/ovpn3-build",
-    "DEP" : "c:/src/ovpn3-dep",
-    "MSVC_DIR" : "c:/Program Files (x86)/Microsoft Visual Studio 10.0",
-}
-
-#wipetree(parms['BUILD'])
-#build_openssl(parms)
+wipetree(parms['BUILD'])
+build_openssl(parms)
 build_boost(parms)

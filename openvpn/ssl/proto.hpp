@@ -8,7 +8,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/version.hpp>
-#include <openvpn/common/platform.hpp>
+#include <openvpn/common/platform_name.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/options.hpp>
@@ -214,7 +214,7 @@ namespace openvpn {
       Digest tls_auth_digest;
 
       // reliability layer parms
-      id_t reliable_window;
+      reliable::id_t reliable_window;
       size_t max_ack_list;
 
       // packet_id parms for both data and control channels
@@ -791,7 +791,7 @@ namespace openvpn {
 	  else
 	    buf.reset_size(); // no crypto context available
 	}
-	catch (buffer_exception& e)
+	catch (buffer_exception&)
 	  {
 	    proto.stats->error(ProtoStats::BUFFER_ERROR);
 	    buf.reset_size();
@@ -927,7 +927,7 @@ namespace openvpn {
 	      return true;
 	    }
 	}
-	catch (buffer_exception& e)
+	catch (buffer_exception&)
 	  {
 	    return false;
 	  }
@@ -1417,7 +1417,7 @@ namespace openvpn {
 		}
 	    }
 	}
-	catch (buffer_exception& e)
+	catch (buffer_exception&)
 	  {
 	    proto.stats->error(ProtoStats::BUFFER_ERROR);
 	  }

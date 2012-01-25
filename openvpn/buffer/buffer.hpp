@@ -216,17 +216,17 @@ namespace openvpn {
 
     void write(const T* data, const size_t size)
     {
-      std::memcpy(write_alloc(size), data, sizeof(T[size]));
+      std::memcpy(write_alloc(size), data, size * sizeof(T));
     }
 
     void prepend(const T* data, const size_t size)
     {
-      std::memcpy(prepend_alloc(size), data, sizeof(T[size]));
+      std::memcpy(prepend_alloc(size), data, size * sizeof(T));
     }
 
     void read(T* data, const size_t size)
     {
-      std::memcpy(data, read_alloc(size), sizeof(T[size]));
+      std::memcpy(data, read_alloc(size), size * sizeof(T));
     }
 
     T* write_alloc(const size_t size)
@@ -319,7 +319,7 @@ namespace openvpn {
 	{
 	  data_ = new T[capacity];
 	  if (flags & CONSTRUCT_ZERO)
-	    std::memset(data_, 0, sizeof(T[capacity]));
+	    std::memset(data_, 0, capacity * sizeof(T));
 	  if (flags & ARRAY)
 	    size_ = capacity;
 	}
@@ -332,7 +332,7 @@ namespace openvpn {
       if (size)
 	{
 	  data_ = new T[size];
-	  std::memcpy(data_, data, sizeof(T[size]));
+	  std::memcpy(data_, data, size * sizeof(T));
 	}
     }
 
@@ -346,7 +346,7 @@ namespace openvpn {
         {
           data_ = new T[capacity_];
           if (size_)
-            std::memcpy(data_ + offset_, other.data_ + offset_, sizeof(T[size_]));
+            std::memcpy(data_ + offset_, other.data_ + offset_, size_ * sizeof(T));
         }
     }
 
@@ -362,7 +362,7 @@ namespace openvpn {
 	{
 	  data_ = new T[capacity_];
 	  if (size_)
-	    std::memcpy(data_ + offset_, other.c_data(), sizeof(T[size_]));
+	    std::memcpy(data_ + offset_, other.c_data(), size_ * sizeof(T));
 	}
     }
 
@@ -382,7 +382,7 @@ namespace openvpn {
 	  size_ = other.size_;
 	  flags_ = other.flags_;
 	  if (size_)
-	    std::memcpy(data_ + offset_, other.data_ + offset_, sizeof(T[size_]));
+	    std::memcpy(data_ + offset_, other.data_ + offset_, size_ * sizeof(T));
 	}
     }
 
@@ -400,7 +400,7 @@ namespace openvpn {
 	  capacity_ = capacity;
 	}
       if ((flags & CONSTRUCT_ZERO) && capacity)
-	std::memset(data_, 0, sizeof(T[capacity]));
+	std::memset(data_, 0, capacity * sizeof(T));
       if (flags & ARRAY)
 	size_ = capacity;
     }
@@ -417,7 +417,7 @@ namespace openvpn {
 	  capacity_ = size;
 	}
       size_ = size;
-      std::memcpy(data_, data, sizeof(T[size]));
+      std::memcpy(data_, data, size * sizeof(T));
     }
 
     void reset(const size_t min_capacity, const unsigned int flags)
@@ -490,7 +490,7 @@ namespace openvpn {
 	    {
 	      T* data = new T[newcap];
 	      if (size_)
-		std::memcpy(data + offset_, data_ + offset_, sizeof(T[size_]));
+		std::memcpy(data + offset_, data_ + offset_, size_ * sizeof(T));
 	      delete_(data_, capacity_, flags_);
 	      data_ = data;
 	      //std::cout << "*** RESIZE " << capacity_ << " -> " << newcap << std::endl; // fixme
@@ -516,7 +516,7 @@ namespace openvpn {
     static void delete_(T* data, const size_t size, const unsigned int flags)
     {
       if (size && (flags & DESTRUCT_ZERO))
-	std::memset(data, 0, sizeof(T[size]));
+	std::memset(data, 0, size * sizeof(T));
       delete [] data;
     }
 

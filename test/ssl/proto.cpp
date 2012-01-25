@@ -457,7 +457,7 @@ public:
 		}
 #endif
 	    }
-	    catch (std::exception& e)
+	    catch (std::exception&)
 	      {
 #ifdef VERBOSE
 		std::cout << now->raw() << " " << title << " Exception on data channel decrypt: " << e.what() << std::endl;

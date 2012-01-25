@@ -1,8 +1,6 @@
 #ifndef OPENVPN_COMMON_PLATFORM_H
 #define OPENVPN_COMMON_PLATFORM_H
 
-#include <openvpn/common/types.hpp>
-
 #if defined(_WIN32)
 # define OPENVPN_PLATFORM_WIN
 #elif defined(__APPLE__)
@@ -20,28 +18,5 @@
 #elif defined(__linux__)
 # define OPENVPN_PLATFORM_LINUX
 #endif
-
-namespace openvpn {
-
-  inline const char *platform_name()
-  {
-#if defined(OPENVPN_PLATFORM_WIN)
-    return "win";
-#elif defined(OPENVPN_PLATFORM_MAC)
-    return "mac";
-#elif defined(OPENVPN_PLATFORM_IPHONE)
-    return "ios";
-#elif defined(OPENVPN_PLATFORM_IPHONE_SIMULATOR)
-    return "iosim";
-#elif defined(OPENVPN_PLATFORM_ANDROID)
-    return "android";
-#elif defined(OPENVPN_PLATFORM_LINUX)
-    return "linux";
-#else
-    return NULL;
-#endif
-  }
-
-} // namespace openvpn
 
 #endif // OPENVPN_COMMON_PLATFORM_H

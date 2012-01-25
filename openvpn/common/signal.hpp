@@ -3,6 +3,8 @@
 
 #include <boost/asio.hpp>
 
+#include <openvpn/common/platform.hpp>
+
 namespace openvpn {
 
   class ASIOSignals
@@ -15,7 +17,9 @@ namespace openvpn {
       S_SIGINT  = (1<<0),
       S_SIGTERM = (1<<1),
       S_SIGQUIT = (1<<2),
+#ifndef OPENVPN_PLATFORM_WIN
       S_SIGHUP  = (1<<3)
+#endif
     };
 
     template <typename StopHandler>
@@ -29,8 +33,10 @@ namespace openvpn {
       if (sigmask & S_SIGQUIT)
 	signals_.add(SIGQUIT);
 #endif // defined(SIGQUIT)
+#ifndef OPENVPN_PLATFORM_WIN
       if (sigmask & S_SIGHUP)
 	signals_.add(SIGHUP);
+#endif
       signals_.async_wait(stop_handler);
     }
 

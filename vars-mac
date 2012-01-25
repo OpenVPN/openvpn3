@@ -1,3 +1,5 @@
 export BOOST=$HOME/src/boost_1_48_0
 export OVPN3=$HOME/src/ovpn3
 export PLATFORM=mac
+export PATH="$OVPN3/scripts:$PATH"
+export DYLD_LIBRARY_PATH="$BOOST/stage/lib"

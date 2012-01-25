@@ -3,9 +3,15 @@
 
 #include <limits>
 
-#include <sys/time.h>
-
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
+
+#ifdef OPENVPN_PLATFORM_WIN
+#include <time.h>     // for ::time() on Windows
+#include <windows.h>  // for GetTickCount
+#else
+#include <sys/time.h> // for ::time() and ::gettimeofday()
+#endif
 
 namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION(get_time_error);
@@ -105,8 +111,6 @@ namespace openvpn {
 
     static TimeType now() { return TimeType(now_()); }
 
-    static void reset_base() { base_ = ::time(0); }
-
     void update() { time_ = now_(); }
 
     TimeType operator+(const Duration& d) const
@@ -154,8 +158,39 @@ namespace openvpn {
 
     T raw() const { return time_; }
 
+    static void reset_base()
+    {
+      base_ = ::time(0);
+#     ifdef OPENVPN_PLATFORM_WIN
+        win_recalibrate(::GetTickCount());
+#     endif
+    }
+
   private:
     explicit TimeType(const T time) : time_(time) {}
+
+#ifdef OPENVPN_PLATFORM_WIN
+
+    static void win_recalibrate(const DWORD gtc)
+    {
+      gtc_last = gtc;
+      gtc_base = ::time(0) - gtc_last/1000;
+    }
+
+    static T now_()
+    {
+      const DWORD gtc = ::GetTickCount();
+      if (gtc < gtc_last)
+	win_recalibrate(gtc);
+      const time_t sec = gtc_base + gtc / 1000;
+      const unsigned int msec = gtc % 1000;
+      return T((sec - base_) * prec + msec * prec / 1000);
+    }
+
+    static DWORD gtc_last;
+    static time_t gtc_base;
+
+#else
 
     static T now_()
     {
@@ -165,9 +200,16 @@ namespace openvpn {
       return T((tv.tv_sec - base_) * prec + tv.tv_usec * prec / 1000000);
     }
 
+#endif
+
     static base_type base_;
     T time_;
   };
+
+#ifdef OPENVPN_PLATFORM_WIN
+  template <typename T> DWORD TimeType<T>::gtc_last;
+  template <typename T> time_t TimeType<T>::gtc_base;
+#endif
 
   template <typename T> typename TimeType<T>::base_type TimeType<T>::base_;
 

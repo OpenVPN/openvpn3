@@ -25,14 +25,14 @@ namespace openvpn {
 	size /= sizeof(altword);
 	while (size--)
 	  a |= (*u1++ ^ *u2++);
-	return a;
+	return bool(a);
       }
     else
       {
 	unsigned char a = 0;
 	while (size--)
 	  a |= (*p1++ ^ *p2++);
-	return a;
+	return bool(a);
       }
   }
 

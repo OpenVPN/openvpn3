@@ -34,7 +34,7 @@ namespace openvpn {
     ifs.seekg (0, std::ios::beg);
 
     // allocate buffer
-    BufferPtr b = new BufferAllocated(length, buffer_flags | BufferAllocated::ARRAY);
+    BufferPtr b = new BufferAllocated(size_t(length), buffer_flags | BufferAllocated::ARRAY);
 
     // read data
     ifs.read((char *)b->data(), length);
