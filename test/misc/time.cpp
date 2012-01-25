@@ -1,15 +1,41 @@
-#include <time.h>
 #include <iostream>
-#include <boost/asio/time_traits.hpp>
+
+#include <openvpn/common/types.hpp>
+#include <openvpn/common/exception.hpp>
+
+#include <openvpn/time/time.hpp>
+
+using namespace openvpn;
 
 int main()
 {
-  typedef boost::asio::time_traits<boost::posix_time::ptime> time_traits;
-  for (int i = 0; i < 1; ++i)
+  try {
+    Time::reset_base();
+
+    const Time until = Time::now() + Time::Duration::seconds(5);
+
+    Time::base_type last_sec = 0;
+    Time::type last_frac = 0;
+
+    while (true)
+      {
+	const Time t = Time::now();
+	if (t >= until)
+	  break;
+	const Time::base_type sec = t.seconds_since_epoch();
+	const Time::type frac = t.fractional_binary_ms();
+	if (sec != last_sec || frac != last_frac)
+	  {
+	    std::cout << sec << ' ' << frac << std::endl;
+	    last_sec = sec;
+	    last_frac = frac;
+	  }
+      }
+  }
+  catch (std::exception& e)
     {
-      //time_t t = time(NULL);
-      const time_traits::time_type t = time_traits::now();
-      std::cout << long(t) << std::endl;
+      std::cerr << "Exception: " << e.what() << std::endl;
+      return 1;
     }
   return 0;
 }
