@@ -1,0 +1,7 @@
+# like vars-linux but builds with a private OpenSSL dist at $HOME/openssl-dist
+export BOOST=$HOME/boost_1_48_0
+export OPENSSL=$HOME/openssl-dist
+export OVPN3=$HOME/ovpn3
+export PLATFORM=linux
+export LD_LIBRARY_PATH="$BOOST/stage/lib:$OPENSSL/lib"
+export PATH="$OVPN3/scripts:$PATH"
