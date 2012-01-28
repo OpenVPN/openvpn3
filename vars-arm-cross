@@ -1,0 +1,8 @@
+export BOOST=$HOME/arm/boost_1_48_0
+export OPENSSL=$HOME/arm/openssl
+export OVPN3=$HOME/ovpn3
+export PLATFORM=linux-arm
+#export LD_LIBRARY_PATH="$BOOST/stage/lib"
+export PATH="$OVPN3/scripts:$PATH"
+export GPP_CMD=arm-linux-gnueabi-g++-4.6
+export STRIP_CMD=arm-linux-gnueabi-strip

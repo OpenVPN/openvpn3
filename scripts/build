@@ -20,40 +20,62 @@ fi
 # remove previous build
 rm -f $1
 
+# build options
+CPPFLAGS=""
+LIBS=""
+LIBDIRS=""
+
+# default commands
+[ -z "$STRIP_CMD" ] && STRIP_CMD=strip
+[ -z "$GPP_CMD" ] && GPP_CMD=g++
+
 # build flags
 FLAGS="-Wall"
 [ "$STRICT" = "1" ] && FLAGS="$FLAGS -Wextra"
 FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
-# special Mac settings
+# OpenSSL
 if [ "$PLATFORM" = "mac" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, always link with OpenSSL.
     if [ "$SSL_BOTH" = "1" ]; then
-	CRYPTO_LIBS="-DUSE_APPLE_SSL -DUSE_OPENSSL -lcrypto -lssl -framework Security"
+	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL -DUSE_OPENSSL"
+	LIBS="$LIBS -lcrypto -lssl -framework Security"
     else
 	if [ "$OSSL" = "1" ]; then
-	    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
+	    CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
+	    LIBS="$LIBS -lcrypto -lssl"
 	else
-	    CRYPTO_LIBS="-DUSE_APPLE_SSL -framework Security"
+	    CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL"
+	    LIBS="$LIBS -framework Security"
 	fi
     fi
 
     # Include other Mac frameworks
     # -framework CoreServices
-    CRYPTO_LIBS="$CRYPTO_LIBS -framework CoreFoundation"
+    LIBS="$LIBS -framework CoreFoundation"
 else
-    CRYPTO_LIBS="-DUSE_OPENSSL -lcrypto -lssl"
+    CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
+    LIBS="$LIBS -lcrypto -lssl"
+fi
+if [ "$OPENSSL" ]; then
+    CPPFLAGS="$CPPFLAGS -I$OPENSSL/include"
+    LIBDIRS="$LIBDIRS -L$OPENSSL/lib"
 fi
 
-# boost link libraries
-BOOST_LIBS="-lboost_system"
+# boost
+CPPFLAGS="$CPPFLAGS -I$BOOST"
+LIBS="$LIBS -lboost_system"
+LIBDIRS="$LIBDIRS -L$BOOST/stage/lib"
 if [ "$NOTHREADS" = "1" ]; then
-    FLAGS="$FLAGS -DBOOST_DISABLE_THREADS"
+    CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
-    BOOST_LIBS="$BOOST_LIBS -lboost_thread"
+    LIBS="$LIBS -lboost_thread"
     FLAGS="$FLAGS -pthread"
 fi
+
+# ovpn3
+CPPFLAGS="$CPPFLAGS -I$OVPN3"
 
 # profile-guided optimization
 if [ "$PGEN" = "1" ]; then
@@ -64,12 +86,12 @@ fi
 
 if [ "$DEBUG" = "1" ]; then
     # debug build
-    CMD="g++ -g $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
+    CMD="$GPP_CMD -g $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp -o $1 $LIBS"
 else
     # release build
     [ "$LTO" = "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
-    CMD="g++ -O3 -fwhole-program $FLAGS $GCC_EXTRA -I$BOOST -I$OVPN3 -L$BOOST/stage/lib $1.cpp -o $1 $BOOST_LIBS $CRYPTO_LIBS"
+    CMD="$GPP_CMD -O3 -fwhole-program $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp -o $1 $LIBS"
 fi
 
 # execute CMD
@@ -77,5 +99,5 @@ fi
 $CMD
 
 # maybe strip
-[ "$STRIP" = "1" ] && strip $1
+[ "$STRIP" = "1" ] && $STRIP_CMD $1
 exit 0
