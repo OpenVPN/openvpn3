@@ -2,6 +2,7 @@
 . vars-reset
 export BOOST_DIR=$HOME/boost_1_48_0
 export SNAPPY_DIR=$HOME/snappy
+export LZ4_DIR=$HOME/lz4
 export OPENSSL_DIR=$HOME/openssl-dist
 export OVPN3_DIR=$HOME/ovpn3
 export PLATFORM=linux

@@ -15,6 +15,7 @@ if [ -z "$1" ]; then
     echo " NOTHREADS=1 -- disable threads"
     echo ' GCC_EXTRA="-DITER=5" -- add build flags'
     echo " LZO=1 -- build with LZO compression library"
+    echo " LZ4=1 -- build with LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
     exit 1
 fi
@@ -81,6 +82,12 @@ fi
 if [ "$LZO" = "1" ]; then
     LIBS="$LIBS -llzo2"
     CPPFLAGS="$CPPFLAGS -DUSE_LZO"
+fi
+
+# LZ4 compression
+if [ "$LZ4" = "1" ]; then
+    EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $LZ4_DIR/lz4.o"
+    CPPFLAGS="$CPPFLAGS -I$LZ4_DIR -DUSE_LZ4"
 fi
 
 # Snappy compression

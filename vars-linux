@@ -1,6 +1,7 @@
 . vars-reset
 export BOOST_DIR=$HOME/boost_1_48_0
 export SNAPPY_DIR=$HOME/snappy
+export LZ4_DIR=$HOME/lz4
 export OVPN3_DIR=$HOME/ovpn3
 export PLATFORM=linux
 export LD_LIBRARY_PATH="$BOOST_DIR/stage/lib:$SNAPPY_DIR/lib"
