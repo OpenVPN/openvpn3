@@ -1,5 +1,7 @@
-export BOOST=$HOME/src/boost_1_48_0
-export OVPN3=$HOME/src/ovpn3
+. vars-reset
+export BOOST_DIR=$HOME/src/boost_1_48_0
+export SNAPPY_DIR=$HOME/src/snappy
+export OVPN3_DIR=$HOME/src/ovpn3
 export PLATFORM=mac
-export PATH="$OVPN3/scripts:$PATH"
-export DYLD_LIBRARY_PATH="$BOOST/stage/lib"
+export PATH="$OVPN3_DIR/scripts:$PATH"
+export DYLD_LIBRARY_PATH="$BOOST_DIR/stage/lib:$SNAPPY_DIR/lib"

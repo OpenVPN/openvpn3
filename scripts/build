@@ -14,6 +14,8 @@ if [ -z "$1" ]; then
     echo " SSL_BOTH=1 -- include OpenSSL and Apple SSL on Mac"
     echo " NOTHREADS=1 -- disable threads"
     echo ' GCC_EXTRA="-DITER=5" -- add build flags'
+    echo " LZO=1 -- build with LZO compression library"
+    echo " SNAP=1 -- build with Snappy compression library"
     exit 1
 fi
 
@@ -24,6 +26,7 @@ rm -f $1
 CPPFLAGS=""
 LIBS=""
 LIBDIRS=""
+EXTRA_SRC_OBJ=""
 
 # default commands
 [ -z "$STRIP_CMD" ] && STRIP_CMD=strip
@@ -58,15 +61,15 @@ else
     CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
     LIBS="$LIBS -lcrypto -lssl"
 fi
-if [ "$OPENSSL" ]; then
-    CPPFLAGS="$CPPFLAGS -I$OPENSSL/include"
-    LIBDIRS="$LIBDIRS -L$OPENSSL/lib"
+if [ "$OPENSSL_DIR" ]; then
+    CPPFLAGS="$CPPFLAGS -I$OPENSSL_DIR/include"
+    LIBDIRS="$LIBDIRS -L$OPENSSL_DIR/lib"
 fi
 
 # boost
-CPPFLAGS="$CPPFLAGS -I$BOOST"
+CPPFLAGS="$CPPFLAGS -I$BOOST_DIR"
 LIBS="$LIBS -lboost_system"
-LIBDIRS="$LIBDIRS -L$BOOST/stage/lib"
+LIBDIRS="$LIBDIRS -L$BOOST_DIR/stage/lib"
 if [ "$NOTHREADS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
@@ -74,8 +77,24 @@ else
     FLAGS="$FLAGS -pthread"
 fi
 
+# LZO compression
+if [ "$LZO" = "1" ]; then
+    LIBS="$LIBS -llzo2"
+    CPPFLAGS="$CPPFLAGS -DUSE_LZO"
+fi
+
+# Snappy compression
+if [ "$SNAP" = "1" ]; then
+    if [ "$SNAPPY_DIR" ]; then
+	LIBDIRS="$LIBDIRS -L$SNAPPY_DIR/lib"
+	CPPFLAGS="$CPPFLAGS -I$SNAPPY_DIR/include"
+    fi
+    LIBS="$LIBS -lsnappy"
+    CPPFLAGS="$CPPFLAGS -DUSE_SNAPPY"
+fi
+
 # ovpn3
-CPPFLAGS="$CPPFLAGS -I$OVPN3"
+CPPFLAGS="$CPPFLAGS -I$OVPN3_DIR"
 
 # profile-guided optimization
 if [ "$PGEN" = "1" ]; then
@@ -86,12 +105,12 @@ fi
 
 if [ "$DEBUG" = "1" ]; then
     # debug build
-    CMD="$GPP_CMD -g $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp -o $1 $LIBS"
+    CMD="$GPP_CMD -g $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ -o $1 $LIBS"
 else
     # release build
     [ "$LTO" = "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
-    CMD="$GPP_CMD -O3 -fwhole-program $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp -o $1 $LIBS"
+    CMD="$GPP_CMD -O3 -fwhole-program $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ -o $1 $LIBS"
 fi
 
 # execute CMD
