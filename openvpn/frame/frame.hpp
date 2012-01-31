@@ -17,6 +17,8 @@ namespace openvpn {
     enum {
       ENCRYPT_WORK=0,
       DECRYPT_WORK,
+      COMPRESS_WORK,
+      DECOMPRESS_WORK,
       READ_LINK_UDP,
       READ_LINK_TCP,
       READ_TUN,
@@ -73,10 +75,11 @@ namespace openvpn {
 
       // Calculate a starting offset into a buffer object, dealing with
       // headroom and alignment issues.
-      void prepare(Buffer& buf) const
+      size_t prepare(Buffer& buf) const
       {
 	buf.reset(capacity(), buffer_flags());
 	buf.init_headroom(actual_headroom(buf.c_data_raw()));
+	return payload();
       }
 
       // Realign a buffer to headroom
@@ -177,10 +180,10 @@ namespace openvpn {
 
     // Calculate a starting offset into a buffer object, dealing with
     // headroom and alignment issues.  context should be one of
-    // the context types above.
-    void prepare(const unsigned int context, BufferAllocated& buf) const
+    // the context types above.  Returns payload size of buffer.
+    size_t prepare(const unsigned int context, BufferAllocated& buf) const
     {
-      (*this)[context].prepare(buf);
+      return (*this)[context].prepare(buf);
     }
 
     size_t n_contexts() const { return N_ALIGN_CONTEXTS; }

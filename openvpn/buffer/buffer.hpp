@@ -29,6 +29,8 @@ namespace openvpn {
   OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_const_index);
   OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_push_front_headroom);
   OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_no_reset_impl);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_pop_back);
+  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_set_size);
 
   template <typename T>
   class BufferType {
@@ -122,12 +124,9 @@ namespace openvpn {
     // of T objects.
     void set_size(const size_t size)
     {
-      size_ = std::min(max_size(), size);
-    }
-
-    void inc_size(const size_t size)
-    {
-      size_ = std::min(max_size(), size_ + size);
+      if (size > max_size())
+	OPENVPN_BUFFER_THROW(buffer_set_size);
+      size_ = size;
     }
 
     // append a T object to array, with possible resize
@@ -146,6 +145,13 @@ namespace openvpn {
       --offset_;
       ++size_;
       *data() = value;
+    }
+
+    T pop_back()
+    {
+      if (!size_)
+	OPENVPN_BUFFER_THROW(buffer_pop_back);
+      return *(data()+(--size_));
     }
 
     T pop_front()

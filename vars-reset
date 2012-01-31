@@ -5,4 +5,4 @@ unset OVPN3_DIR
 unset PLATFORM
 unset GPP_CMD
 unset STRIP_CMD
-[ "$ORIG_PATH" ] && export PATH="$ORIG_PATH"
+[ "$NEW_PATH" ] && export PATH="$NEW_PATH"

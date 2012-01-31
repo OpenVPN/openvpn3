@@ -162,6 +162,7 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
+    OPENVPN_EXCEPTION(process_server_push_error);
 
     static unsigned int mtu()
     {
@@ -247,7 +248,7 @@ namespace openvpn {
 	expire = Time::Duration::seconds(7200);
 	keepalive_ping = Time::Duration::seconds(8);
 	keepalive_timeout = Time::Duration::seconds(40);
-	comp_ctx = CompressContext(CompressContext::LZO_STUB);
+	comp_ctx = CompressContext(CompressContext::NONE);
 
 	// tcp/udp
 	{
@@ -305,6 +306,100 @@ namespace openvpn {
 	      tls_auth_digest = digest;
 	    }
 	}
+
+	// compression
+	{
+	  const Option *o;
+	  o = opt.get_ptr("compress");
+	  if (o)
+	    {
+	      if (o->size() >= 2)
+		{
+		  const std::string meth_name = (*o)[1];
+		  CompressContext::Type meth = CompressContext::parse_method(meth_name);
+		  if (meth == CompressContext::NONE)
+		    OPENVPN_THROW(option_error, "Unknown compressor: '" << meth_name << '\'');
+		  comp_ctx = CompressContext(meth);
+		}
+	      else
+		comp_ctx = CompressContext(CompressContext::ANY);
+	    }
+	  else
+	    {
+	      o = opt.get_ptr("comp-lzo");
+	      if (o)
+		{
+		  comp_ctx = CompressContext(CompressContext::ANY_LZO);
+		}
+	    }
+	}
+      }
+
+      void process_push(const OptionList& opt)
+      {
+	// cipher
+	std::string new_cipher;
+	try {
+	  const Option *o = opt.get_ptr("cipher");
+	  if (o)
+	    {
+	      new_cipher = o->get(1);
+	      cipher = Cipher(new_cipher);
+	    }
+	}
+	catch (std::exception& e)
+	  {
+	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed cipher '" << new_cipher << "': " << e.what());
+	  }
+
+	// digest
+	std::string new_digest;
+	try {
+	  const Option *o = opt.get_ptr("auth");
+	  if (o)
+	    {
+	      new_digest = o->get(1);
+	      digest = Digest(new_digest);
+	    }
+	}
+	catch (std::exception& e)
+	  {
+	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
+	  }
+
+	// compression
+	std::string new_comp;
+	try {
+	  const Option *o;
+	  o = opt.get_ptr("compress");
+	  if (o)
+	    {
+	      new_comp = o->get(1);
+	      CompressContext::Type meth = CompressContext::parse_method(new_comp);
+	      if (meth != CompressContext::NONE)
+		comp_ctx = CompressContext(meth);
+	    }
+	  else
+	    {
+	      o = opt.get_ptr("comp-lzo");
+	      if (o)
+		{
+		  if (o->size() == 1)
+		    comp_ctx = CompressContext(CompressContext::LZO);
+		  else if (o->size() >= 2)
+		    {
+		      if ((*o)[1] == "yes")
+			comp_ctx = CompressContext(CompressContext::LZO);
+		      else
+			comp_ctx = CompressContext(CompressContext::LZO_STUB);
+		    }
+		}
+	    }
+	}
+	catch (std::exception& e)
+	  {
+	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed compressor '" << new_comp << "': " << e.what());
+	  }
       }
 
       // generate a string summarizing options that will be
@@ -684,8 +779,13 @@ namespace openvpn {
 	next_event = KEV_NEGOTIATE;
 	next_event_time = construct_time + p.config->handshake_window;
 
-	// construct compressor/decompressor
-	compress = p.config->comp_ctx.new_compressor(p.config->frame, proto.stats);
+	construct_compressor();
+      }
+
+      // construct compressor/decompressor
+      void construct_compressor()
+      {
+	compress = proto.config->comp_ctx.new_compressor(proto.config->frame, proto.stats);
       }
 
       // need to call only on the initiator side of the connection (i.e. client)
@@ -1725,6 +1825,15 @@ namespace openvpn {
     void enable_strict_openvpn_2x()
     {
       enable_fast_transition();
+    }
+
+    // Call on client with server-pushed options
+    void process_push(const OptionList& opt)
+    {
+      config->process_push(opt);
+      primary->construct_compressor();
+      if (secondary)
+	secondary->construct_compressor();
     }
 
     // current time
