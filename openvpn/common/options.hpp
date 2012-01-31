@@ -124,7 +124,7 @@ namespace openvpn {
 	  if (opt.size())
 	    ret.push_back(opt);
 	}
-      ret.build_map();
+      ret.update_map();
       return ret;
     }
 
@@ -174,8 +174,15 @@ namespace openvpn {
 	}
       if (in_multiline)
 	OPENVPN_THROW(option_error, "option <" << multiline[0] << "> was not properly closed out");
-      ret.build_map();
+      ret.update_map();
       return ret;
+    }
+
+    void extend(const OptionList& other)
+    {
+      reserve(size() + other.size());
+      for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); i++)
+	push_back(*i);
     }
 
     const Option& get_first(const std::string& name) const
@@ -270,9 +277,9 @@ namespace openvpn {
 
     const IndexMap& map() const { return map_; }
 
-  private:
-    void build_map()
+    void update_map()
     {
+      map_.clear();
       for (size_t i = 0; i < size(); i++)
 	{
 	  const Option& opt = (*this)[i];
@@ -281,6 +288,7 @@ namespace openvpn {
 	}
     }
 
+  private:
     // return true if line is blank or a comment
     static bool ignore_line(const std::string& line)
     {
