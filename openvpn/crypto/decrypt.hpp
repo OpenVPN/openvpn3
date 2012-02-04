@@ -13,7 +13,7 @@
 #include <openvpn/crypto/digest.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
-#include <openvpn/log/protostats.hpp>
+#include <openvpn/log/sessionstats.hpp>
 
 namespace openvpn {
 
@@ -21,11 +21,11 @@ namespace openvpn {
   public:
     OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
 
-    void decrypt(BufferAllocated& buf, const PacketID::time_t now)
+    Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
       // skip null packets
       if (!buf.size())
-	return;
+	return Error::SUCCESS;
 
       // verify the HMAC
       if (hmac.defined())
@@ -37,9 +37,7 @@ namespace openvpn {
 	  if (memcmp_secure(local_hmac, packet_hmac, hmac_size))
 	    {
 	      buf.reset_size();
-	      if (stats)
-		stats->error(ProtoStats::HMAC_ERROR);
-	      return;
+	      return Error::HMAC_ERROR;
 	    }
 	}
 
@@ -60,9 +58,7 @@ namespace openvpn {
 	  if (!decrypt_bytes)
 	    {
 	      buf.reset_size();
-	      if (stats)
-		stats->error(ProtoStats::CRYPTO_ERROR);
-	      return;
+	      return Error::DECRYPT_ERROR;
 	    }
 	  work.set_size(decrypt_bytes);
 
@@ -73,9 +69,7 @@ namespace openvpn {
 	      if (!verify_packet_id(work, now))
 		{
 		  buf.reset_size();
-		  if (stats)
-		    stats->error(ProtoStats::REPLAY_ERROR);
-		  return;
+		  return Error::REPLAY_ERROR;
 		}
 	    }
 	  else
@@ -91,18 +85,16 @@ namespace openvpn {
 	  if (!verify_packet_id(buf, now))
 	    {
 	      buf.reset_size();
-	      if (stats)
-		stats->error(ProtoStats::REPLAY_ERROR);
-	      return;
+	      return Error::REPLAY_ERROR;
 	    }
 	}
+      return Error::SUCCESS;
     }
 
     Frame::Ptr frame;
     CipherContext cipher;
     HMACContext hmac;
     PacketIDReceive pid_recv;
-    ProtoStats::Ptr stats;
 
   private:
     bool verify_packet_id(BufferAllocated& buf, const PacketID::time_t now)

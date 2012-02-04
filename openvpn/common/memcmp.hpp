@@ -19,6 +19,7 @@ namespace openvpn {
     typedef unsigned int altword;
     if (is_aligned<const unsigned char *, altword>(p1) && is_aligned<const unsigned char *, altword>(p2) && is_aligned<size_t, altword>(size))
       {
+	//std::cout << "*** MEMCMP ALT" << std::endl; // fixme
 	altword *u1 = (altword *)p1;
 	altword *u2 = (altword *)p2;
 	altword a = 0;
@@ -29,6 +30,7 @@ namespace openvpn {
       }
     else
       {
+	//std::cout << "*** MEMCMP CHAR " << (size_t(p1) & (sizeof(altword)-1)) << ' ' << (size_t(p2) & (sizeof(altword)-1)) << ' ' << size << std::endl; // fixme
 	unsigned char a = 0;
 	while (size--)
 	  a |= (*p1++ ^ *p2++);

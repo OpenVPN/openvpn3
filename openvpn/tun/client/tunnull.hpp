@@ -13,7 +13,7 @@ namespace openvpn {
       typedef boost::intrusive_ptr<ClientConfig> Ptr;
 
       Frame::Ptr frame;
-      ProtoStats::Ptr stats;
+      SessionStats::Ptr stats;
 
       static Ptr new_obj()
       {
@@ -33,13 +33,13 @@ namespace openvpn {
     public:
       virtual void client_start(const OptionList& opt, TransportClient& transcli)
       {
-	// signal that we are connected
+	// signal that we are "connected"
 	parent.tun_connected();
       }
 
       virtual bool tun_send(BufferAllocated& buf)
       {
-	config->stats->inc_stat(ProtoStats::TUN_BYTES_OUT, buf.size());
+	config->stats->inc_stat(SessionStats::TUN_BYTES_OUT, buf.size());
 	return true;
       }
 

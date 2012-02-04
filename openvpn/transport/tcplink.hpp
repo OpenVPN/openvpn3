@@ -12,7 +12,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/log.hpp>
-#include <openvpn/log/protostats.hpp>
+#include <openvpn/log/sessionstats.hpp>
 #include <openvpn/transport/pktstream.hpp>
 
 #if defined(OPENVPN_DEBUG_TCPLINK) && OPENVPN_DEBUG_TCPLINK >= 1
@@ -59,7 +59,7 @@ namespace openvpn {
 	   const size_t send_queue_max_size_arg,
 	   const size_t free_list_max_size_arg,
 	   const Frame::Ptr& frame_arg,
-	   const ProtoStats::Ptr& stats_arg)
+	   const SessionStats::Ptr& stats_arg)
 	: socket(io_service),
 	  halt(false),
 	  read_handler(read_handler_arg),
@@ -108,7 +108,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		stats->error(ProtoStats::TCP_OVERFLOW);
+		stats->error(Error::TCP_OVERFLOW);
 		read_handler->tcp_error_handler("TCP_OVERFLOW");
 		stop();
 	      }
@@ -147,7 +147,7 @@ namespace openvpn {
 	    if (!error)
 	      {
 		OPENVPN_LOG_TCPLINK_VERBOSE("TCP send size=" << bytes_sent);
-		stats->inc_stat(ProtoStats::BYTES_OUT, bytes_sent);
+		stats->inc_stat(SessionStats::BYTES_OUT, bytes_sent);
 
 		BufferPtr buf = queue.front();
 		if (bytes_sent == buf->size())
@@ -163,7 +163,8 @@ namespace openvpn {
 		  buf->advance(bytes_sent);
 		else
 		  {
-		    read_handler->tcp_error_handler("INTERNAL_ERROR"); // error sent more bytes than we asked for
+		    stats->error(Error::TCP_OVERFLOW);
+		    read_handler->tcp_error_handler("TCP_INTERNAL_ERROR"); // error sent more bytes than we asked for
 		    stop();
 		    return;
 		  }
@@ -171,7 +172,7 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TCPLINK_ERROR("TCP send error: " << error.message());
-		stats->error(ProtoStats::NETWORK_ERROR);
+		stats->error(Error::NETWORK_ERROR);
 		read_handler->tcp_error_handler("NETWORK_ERROR");
 		stop();
 		return;
@@ -200,7 +201,7 @@ namespace openvpn {
 	    if (!error)
 	      {
 		OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv size=" << bytes_recvd);
-		stats->inc_stat(ProtoStats::BYTES_IN, bytes_recvd);
+		stats->inc_stat(SessionStats::BYTES_IN, bytes_recvd);
 		pfp->buf.set_size(bytes_recvd);
 
 		BufferAllocated pkt;
@@ -220,7 +221,7 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TCPLINK_ERROR("TCP recv error: " << error.message());
-		stats->error(ProtoStats::NETWORK_ERROR);
+		stats->error(Error::NETWORK_ERROR);
 		read_handler->tcp_error_handler("NETWORK_ERROR");
 		stop();
 	      }
@@ -232,7 +233,7 @@ namespace openvpn {
       ReadHandler read_handler;
       Frame::Ptr frame;
       const Frame::Context& frame_context;
-      ProtoStats::Ptr stats;
+      SessionStats::Ptr stats;
       const size_t send_queue_max_size;
       const size_t free_list_max_size;
       Queue queue;      // send queue

@@ -23,7 +23,7 @@ namespace openvpn {
       bool server_addr_float;
       int n_parallel;
       Frame::Ptr frame;
-      ProtoStats::Ptr stats;
+      SessionStats::Ptr stats;
 
       static Ptr new_obj()
       {
@@ -56,6 +56,7 @@ namespace openvpn {
 	    halt = false;
 	    boost::asio::ip::udp::resolver::query query(config->server_host,
 							config->server_port);
+	    parent.transport_pre_resolve();
 	    resolver.async_resolve(query, AsioDispatchResolveUDP(&Client::post_start_, this));
 	  }
       }
@@ -70,11 +71,14 @@ namespace openvpn {
 	return send(buf);
       }
 
-      virtual std::string server_endpoint_render() const
+      virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const
       {
-	std::ostringstream os;
-	os << "UDP " << server_endpoint;
-	return os.str();
+	host = config->server_host;
+	port = config->server_port;
+	const IP::Addr addr = server_endpoint_addr();
+	proto = "UDP";
+	proto += addr.version_string();
+	ip_addr = addr.to_string();
       }
 
       virtual IP::Addr server_endpoint_addr() const
@@ -110,7 +114,7 @@ namespace openvpn {
 	if (config->server_addr_float || pfp->sender_endpoint == server_endpoint)
 	  parent.transport_recv(pfp->buf);
 	else
-	  config->stats->error(ProtoStats::BAD_SRC_ADDR);
+	  config->stats->error(Error::BAD_SRC_ADDR);
       }
 
       void stop_()
@@ -142,13 +146,13 @@ namespace openvpn {
 					config->frame,
 					config->stats));
 		impl->start(config->n_parallel);
-		parent.transport_connected();
+		parent.transport_connecting();
 	      }
 	    else
 	      {
 		std::ostringstream os;
 		os << "DNS resolve error on '" << config->server_host << "' for UDP session: " << error;
-		config->stats->error(ProtoStats::RESOLVE_ERROR);
+		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		udp_transport_resolve_error err(os.str());
 		parent.transport_error(err);

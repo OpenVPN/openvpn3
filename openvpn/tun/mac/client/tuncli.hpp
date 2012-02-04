@@ -18,7 +18,7 @@ namespace openvpn {
 
       int n_parallel;
       Frame::Ptr frame;
-      ProtoStats::Ptr stats;
+      SessionStats::Ptr stats;
 
       static Ptr new_obj()
       {
@@ -56,9 +56,11 @@ namespace openvpn {
 	      impl->start(config->n_parallel);
 
 	      // do ifconfig
-	      impl->ifconfig(opt, config->mtu);
+	      parent.tun_pre_tun_config();
+	      vpn_ip_addr = impl->ifconfig(opt, config->mtu);
 
 	      // add routes
+	      parent.tun_pre_route_config();
 	      route_list.reset(new RouteListMac(opt, transcli.server_endpoint_addr()));
 
 	      // signal that we are connected
@@ -66,7 +68,7 @@ namespace openvpn {
 	    }
 	    catch (std::exception& e)
 	      {
-		config->stats->error(ProtoStats::TUN_ERROR);
+		config->stats->error(Error::TUN_ERROR);
 		stop();
 		parent.tun_error(e);
 	      }
@@ -84,6 +86,11 @@ namespace openvpn {
 	  return impl->name();
 	else
 	  return "UNDEF_TUN";
+      }
+
+      virtual std::string vpn_ip() const
+      {
+	return vpn_ip_addr;
       }
 
       virtual void stop() { stop_(); }
@@ -136,6 +143,7 @@ namespace openvpn {
       TunClientParent& parent;
       TunImpl::Ptr impl;
       RouteListMac::Ptr route_list;
+      std::string vpn_ip_addr;
       bool halt;
     };
 

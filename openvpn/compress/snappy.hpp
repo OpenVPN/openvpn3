@@ -16,7 +16,7 @@ namespace openvpn {
     };
 
   public:
-    CompressSnappy(const Frame::Ptr& frame, const ProtoStats::Ptr& stats)
+    CompressSnappy(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
       : Compress(frame, stats)
     {
     }

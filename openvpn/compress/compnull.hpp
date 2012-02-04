@@ -6,7 +6,7 @@ namespace openvpn {
   class CompressNull : public Compress
   {
   public:
-    CompressNull(const Frame::Ptr& frame, const ProtoStats::Ptr& stats)
+    CompressNull(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
       : Compress(frame, stats)
     {
     }

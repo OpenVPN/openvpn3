@@ -8,7 +8,7 @@
 #include <openvpn/common/usecount.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
-#include <openvpn/log/protostats.hpp>
+#include <openvpn/log/sessionstats.hpp>
 #include <openvpn/reliable/relrecv.hpp>
 #include <openvpn/reliable/relsend.hpp>
 #include <openvpn/reliable/relack.hpp>
@@ -68,7 +68,7 @@ namespace openvpn {
     ProtoStackBase(SSLContext& ctx,                   // SSL context object that can be used to generate new SSL sessions
 		   TimePtr now_arg,                   // pointer to current time
 		   const Frame::Ptr& frame,           // contains info on how to allocate and align buffers
-		   const ProtoStats::Ptr& stats_arg,  // error statistics
+		   const SessionStats::Ptr& stats_arg,  // error statistics
 		   const id_t span,                   // basically the window size for our reliability layer
 		   const size_t max_ack_list)         // maximum number of ACK messages to bundle in one packet
       : ssl_(ctx.ssl()),
@@ -189,8 +189,11 @@ namespace openvpn {
     // Invalidate session
     void invalidate()
     {
-      invalidated_ = true;
-      invalidate_callback();
+      if (!invalidated_)
+	{
+	  invalidated_ = true;
+	  invalidate_callback();
+	}
     }
 
     virtual ~ProtoStackBase() {}
@@ -255,7 +258,7 @@ namespace openvpn {
 	      catch (...)
 		{
 		  if (stats)
-		    stats->error(ProtoStats::SSL_ERROR);
+		    stats->error(Error::SSL_ERROR);
 		  invalidate();
 		  throw;
 		}
@@ -275,7 +278,7 @@ namespace openvpn {
 	      catch (...)
 		{
 		  if (stats)
-		    stats->error(ProtoStats::ENCAPSULATION_ERROR);
+		    stats->error(Error::ENCAPSULATION_ERROR);
 		  invalidate();
 		  throw;
 		}
@@ -302,7 +305,7 @@ namespace openvpn {
 	  catch (...)
 	    {
 	      if (stats)
-		stats->error(ProtoStats::ENCAPSULATION_ERROR);
+		stats->error(Error::ENCAPSULATION_ERROR);
 	      invalidate();
 	      throw;
 	    }
@@ -355,7 +358,7 @@ namespace openvpn {
 	      {
 		// SSL fatal errors will invalidate the session
 		if (stats)
-		  stats->error(ProtoStats::SSL_ERROR);
+		  stats->error(Error::SSL_ERROR);
 		invalidate();
 		throw;
 	      }
@@ -384,7 +387,7 @@ namespace openvpn {
     PACKET ack_send_buf;  // only used for standalone ACKs to be sent to peer
     std::deque<BufferPtr> app_write_queue;
     std::deque<PACKET> raw_write_queue;
-    ProtoStats::Ptr stats;
+    SessionStats::Ptr stats;
 
   protected:
     TimePtr now;

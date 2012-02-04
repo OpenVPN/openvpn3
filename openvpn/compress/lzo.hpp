@@ -20,7 +20,7 @@ namespace openvpn {
   public:
     OPENVPN_SIMPLE_EXCEPTION(lzo_init_failed);
 
-    CompressLZO(const Frame::Ptr& frame, const ProtoStats::Ptr& stats, const bool support_swap_arg)
+    CompressLZO(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool support_swap_arg)
       : Compress(frame, stats),
 	support_swap(support_swap_arg)
     {

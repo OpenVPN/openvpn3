@@ -6,7 +6,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/log/protostats.hpp>
+#include <openvpn/log/sessionstats.hpp>
 
 #if defined(OPENVPN_DEBUG_COMPRESS)
 #define OPENVPN_LOG_COMPRESS(x) OPENVPN_LOG(x)
@@ -37,12 +37,12 @@ namespace openvpn {
     };
 
     Compress(const Frame::Ptr& frame_arg,
-	     const ProtoStats::Ptr& stats_arg)
+	     const SessionStats::Ptr& stats_arg)
       : frame(frame_arg), stats(stats_arg) {}
 
     void error(BufferAllocated& buf)
     {
-      stats->error(ProtoStats::COMPRESS_ERROR);
+      stats->error(Error::COMPRESS_ERROR);
       buf.reset_size();
     }
 
@@ -67,7 +67,7 @@ namespace openvpn {
     }
 
     Frame::Ptr frame;
-    ProtoStats::Ptr stats;
+    SessionStats::Ptr stats;
   };
 }// namespace openvpn
 
@@ -114,7 +114,7 @@ namespace openvpn {
 
     unsigned int extra_payload_bytes() const { return type_ == NONE ? 0 : 1; }
 
-    Compress::Ptr new_compressor(const Frame::Ptr& frame, const ProtoStats::Ptr& stats)
+    Compress::Ptr new_compressor(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
     {
       switch (type_)
 	{

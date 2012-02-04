@@ -166,7 +166,7 @@ public:
   typedef typename Base::PacketType PacketType;
 
   TestProto(const typename Base::Config::Ptr& config,
-	    const ProtoStats::Ptr& stats)
+	    const SessionStats::Ptr& stats)
     : Base(config, stats),
       control_drought("control", config->now),
       data_drought("data", config->now),
@@ -332,7 +332,7 @@ class TestProtoClient : public TestProto<SSL_CONTEXT>
   typedef TestProto<SSL_CONTEXT> Base;
 public:
   TestProtoClient(const typename Base::Config::Ptr& config,
-		  const ProtoStats::Ptr& stats)
+		  const SessionStats::Ptr& stats)
     : Base(config, stats)
   {
   }
@@ -355,7 +355,7 @@ public:
   OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
   TestProtoServer(const typename Base::Config::Ptr& config,
-		  const ProtoStats::Ptr& stats)
+		  const SessionStats::Ptr& stats)
     : Base(config, stats)
   {
   }
@@ -532,6 +532,34 @@ private:
   std::deque<BufferPtr> wire;
 };
 
+class MySessionStats : public SessionStats
+{
+public:
+  typedef boost::intrusive_ptr<MySessionStats> Ptr;
+
+  MySessionStats()
+  {
+    std::memset(errors, 0, sizeof(errors));
+  }
+
+  virtual void error(const Error::Type err_type, const std::string* text=NULL)
+  {
+    if (err_type < Error::N_ERRORS)
+      ++errors[err_type];
+  }
+
+  count_t get_error_count(const Error::Type type) const
+  {
+    if (type < Error::N_ERRORS)
+      return errors[type];
+    else
+      return 0;
+  }
+
+private:
+  count_t errors[Error::N_ERRORS];
+};
+
 // execute the unit test in one thread
 void test(const int thread_num)
 {
@@ -573,7 +601,7 @@ void test(const int thread_num)
 #endif
 
     // client stats
-    ProtoStats::Ptr cli_stats(new ProtoStats);
+    MySessionStats::Ptr cli_stats(new MySessionStats);
 
     // client ProtoContext config
     typedef ProtoContext<ClientSSLContext> ClientProtoContext;
@@ -666,7 +694,7 @@ void test(const int thread_num)
 #endif
 
     // server stats
-    ProtoStats::Ptr serv_stats(new ProtoStats);
+    MySessionStats::Ptr serv_stats(new MySessionStats);
 
     TestProtoClient<ClientSSLContext> cli_proto(cp, cli_stats);
     TestProtoServer<OpenSSLContext> serv_proto(sp, serv_stats);
@@ -709,7 +737,7 @@ void test(const int thread_num)
               << " D=" << cli_proto.control_drought().raw() << '/' << cli_proto.data_drought().raw() << '/' << serv_proto.control_drought().raw() << '/' << serv_proto.data_drought().raw()
               << " N=" << cli_proto.negotiations() << '/' << serv_proto.negotiations()
               << " SH=" << cli_proto.slowest_handshake().raw() << '/' << serv_proto.slowest_handshake().raw()
-              << " HE=" << cli_stats->get(ProtoStats::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get(ProtoStats::HANDSHAKE_TIMEOUT)
+              << " HE=" << cli_stats->get_error_count(Error::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get_error_count(Error::HANDSHAKE_TIMEOUT)
 	      << std::endl;
   }
   catch (std::exception& e)

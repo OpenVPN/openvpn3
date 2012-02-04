@@ -18,7 +18,7 @@ namespace openvpn {
     };
 
   public:
-    CompressLZ4(const Frame::Ptr& frame, const ProtoStats::Ptr& stats)
+    CompressLZ4(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
       : Compress(frame, stats)
     {
     }

@@ -9,7 +9,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/log.hpp>
-#include <openvpn/log/protostats.hpp>
+#include <openvpn/log/sessionstats.hpp>
 
 #if defined(OPENVPN_DEBUG_UDPLINK) && OPENVPN_DEBUG_UDPLINK >= 1
 #define OPENVPN_LOG_UDPLINK_ERROR(x) OPENVPN_LOG(x)
@@ -52,7 +52,7 @@ namespace openvpn {
 	   BindType bind_type,
 	   const bool reuse_addr,
 	   const Frame::Ptr& frame_arg,
-	   const ProtoStats::Ptr& stats_arg)
+	   const SessionStats::Ptr& stats_arg)
 	: socket(io_service),
 	  halt(false),
 	  read_handler(read_handler_arg),
@@ -82,20 +82,20 @@ namespace openvpn {
 	      const size_t wrote = endpoint
 		? socket.send_to(buf.const_buffers_1(), *endpoint)
 		: socket.send(buf.const_buffers_1());
-	      stats->inc_stat(ProtoStats::BYTES_OUT, wrote);
+	      stats->inc_stat(SessionStats::BYTES_OUT, wrote);
 	      if (wrote == buf.size())
 		return true;
 	      else
 		{
 		  OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
-		  stats->error(ProtoStats::NETWORK_ERROR);
+		  stats->error(Error::NETWORK_ERROR);
 		  return false;
 		}
 	    }
 	    catch (boost::system::system_error& e)
 	      {
 		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
-		stats->error(ProtoStats::NETWORK_ERROR);
+		stats->error(Error::NETWORK_ERROR);
 		return false;
 	      }
 	  }
@@ -146,13 +146,13 @@ namespace openvpn {
 		  {
 		    OPENVPN_LOG_UDPLINK_VERBOSE("UDP from " << pfp->sender_endpoint);
 		    pfp->buf.set_size(bytes_recvd);
-		    stats->inc_stat(ProtoStats::BYTES_IN, bytes_recvd);
+		    stats->inc_stat(SessionStats::BYTES_IN, bytes_recvd);
 		    read_handler->udp_read_handler(pfp);
 		  }
 		else
 		  {
 		    OPENVPN_LOG_UDPLINK_ERROR("UDP recv error: " << error.message());
-		    stats->error(ProtoStats::NETWORK_ERROR);
+		    stats->error(Error::NETWORK_ERROR);
 		  }
 	      }
 	    queue_read(pfp.release()); // reuse PacketFrom object if still available
@@ -164,7 +164,7 @@ namespace openvpn {
       ReadHandler read_handler;
       Frame::Ptr frame;
       const Frame::Context& frame_context;
-      ProtoStats::Ptr stats;
+      SessionStats::Ptr stats;
     };
   }
 } // namespace openvpn

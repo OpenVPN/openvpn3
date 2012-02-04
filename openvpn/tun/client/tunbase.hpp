@@ -7,6 +7,7 @@
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 
 namespace openvpn {
@@ -19,13 +20,18 @@ namespace openvpn {
     virtual void stop() = 0;
     virtual bool tun_send(BufferAllocated& buf) = 0; // return true if send succeeded
     virtual std::string tun_name() const = 0;
+    virtual std::string vpn_ip() const = 0;
   };
 
   struct TunClientParent
   {
     virtual void tun_recv(BufferAllocated& buf) = 0;
-    virtual void tun_connected() {}
-    virtual void tun_error(const std::exception&) {}
+    virtual void tun_error(const std::exception&) = 0;
+
+    // progress notifications
+    virtual void tun_pre_tun_config() = 0;
+    virtual void tun_pre_route_config() = 0;
+    virtual void tun_connected() = 0;
   };
 
   struct TunClientFactory : public RC<thread_unsafe_refcount>

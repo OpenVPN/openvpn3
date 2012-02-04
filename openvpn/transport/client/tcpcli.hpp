@@ -24,7 +24,7 @@ namespace openvpn {
       size_t send_queue_max_size;
       size_t free_list_max_size;
       Frame::Ptr frame;
-      ProtoStats::Ptr stats;
+      SessionStats::Ptr stats;
 
       static Ptr new_obj()
       {
@@ -59,6 +59,7 @@ namespace openvpn {
 	    halt = false;
 	    boost::asio::ip::tcp::resolver::query query(config->server_host,
 							config->server_port);
+	    parent.transport_pre_resolve();
 	    resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::post_start_, this));
 	  }
       }
@@ -73,11 +74,14 @@ namespace openvpn {
 	return send(buf);
       }
 
-      virtual std::string server_endpoint_render() const
+      virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const
       {
-	std::ostringstream os;
-	os << "TCP " << server_endpoint;
-	return os.str();
+	host = config->server_host;
+	port = config->server_port;
+	const IP::Addr addr = server_endpoint_addr();
+	proto = "TCP";
+	proto += addr.version_string();
+	ip_addr = addr.to_string();
       }
 
       virtual IP::Addr server_endpoint_addr() const
@@ -164,13 +168,13 @@ namespace openvpn {
 					config->frame,
 					config->stats));
 		impl->start();
-		parent.transport_connected();
+		parent.transport_connecting();
 	      }
 	    else
 	      {
 		std::ostringstream os;
 		os << "DNS resolve error on '" << config->server_host << "' for TCP session: " << error;
-		config->stats->error(ProtoStats::RESOLVE_ERROR);
+		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		tcp_transport_resolve_error err(os.str());
 		parent.transport_error(err);

@@ -7,6 +7,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
@@ -19,15 +20,18 @@ namespace openvpn {
     virtual void stop() = 0;
     virtual bool transport_send_const(const Buffer& buf) = 0;
     virtual bool transport_send(BufferAllocated& buf) = 0;
-    virtual std::string server_endpoint_render() const = 0;
     virtual IP::Addr server_endpoint_addr() const = 0;
+    virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const = 0;
   };
 
   struct TransportClientParent
   {
     virtual void transport_recv(BufferAllocated& buf) = 0;
-    virtual void transport_connected() {}
-    virtual void transport_error(const std::exception&) {}
+    virtual void transport_error(const std::exception&) = 0;
+
+    // progress notifications
+    virtual void transport_pre_resolve() = 0;
+    virtual void transport_connecting() = 0;
   };
 
   struct TransportClientFactory : public RC<thread_unsafe_refcount>

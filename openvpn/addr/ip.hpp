@@ -178,6 +178,21 @@ namespace openvpn {
 	  }
       }
 
+      const char *version_string() const
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    return "v4";
+	  case V6:
+	    return "v6";
+	  default:
+	    return "v?";
+	  }
+      }
+
+      Version version() const { return ver; }
+
     private:
       union {
 	IPv4::Addr v4;

@@ -22,7 +22,7 @@
 #include <openvpn/crypto/crypto.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/crypto/static_key.hpp>
-#include <openvpn/log/protostats.hpp>
+#include <openvpn/log/sessionstats.hpp>
 #include <openvpn/ssl/protostack.hpp>
 #include <openvpn/ssl/psid.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
@@ -883,7 +883,13 @@ namespace openvpn {
 	      buf.advance(1);
 
 	      // decrypt packet
-	      crypto.decrypt.decrypt(buf, now->seconds_since_epoch());
+	      const Error::Type err = crypto.decrypt.decrypt(buf, now->seconds_since_epoch());
+	      if (err)
+		{
+		  proto.stats->error(err);
+		  if (proto.is_tcp() && (err == Error::DECRYPT_ERROR || err == Error::HMAC_ERROR))
+		    invalidate();
+		}
 
 	      // decompress packet
 	      compress->decompress(buf);
@@ -893,8 +899,10 @@ namespace openvpn {
 	}
 	catch (buffer_exception&)
 	  {
-	    proto.stats->error(ProtoStats::BUFFER_ERROR);
+	    proto.stats->error(Error::BUFFER_ERROR);
 	    buf.reset_size();
+	    if (proto.is_tcp())
+	      invalidate();
 	  }
       }
 
@@ -1280,7 +1288,6 @@ namespace openvpn {
 
 	// initialize CryptoContext decrypt
 	crypto.decrypt.frame = c.frame;
-	crypto.decrypt.stats = proto.stats;
 	crypto.decrypt.cipher.init(c.cipher,
 				   key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
 				   CipherContext::DECRYPT);
@@ -1335,7 +1342,7 @@ namespace openvpn {
 	      proto.psid_peer.prepend(buf);
 	    else
 	      {
-		proto.stats->error(ProtoStats::CC_ERROR);
+		proto.stats->error(Error::CC_ERROR);
 		throw peer_psid_undef();
 	      }
 	  }
@@ -1350,7 +1357,9 @@ namespace openvpn {
 	  {
 	    if (!proto.psid_peer.match(src_psid))
 	      {
-		proto.stats->error(ProtoStats::CC_ERROR);
+		proto.stats->error(Error::CC_ERROR);
+		if (proto.is_tcp())
+		  invalidate();
 		return false;
 	      }
 	  }
@@ -1366,7 +1375,9 @@ namespace openvpn {
 	ProtoSessionID dest_psid(buf);
 	if (!proto.psid_self.match(dest_psid))
 	  {
-	    proto.stats->error(ProtoStats::CC_ERROR);
+	    proto.stats->error(Error::CC_ERROR);
+	    if (proto.is_tcp())
+	      invalidate();
 	    return false;
 	  }
 	return true;
@@ -1410,7 +1421,9 @@ namespace openvpn {
 						  proto.hmac_size,
 						  PacketID::size(PacketID::LONG_FORM)))
 		  {
-		    proto.stats->error(ProtoStats::HMAC_ERROR);
+		    proto.stats->error(Error::HMAC_ERROR);
+		    if (proto.is_tcp())
+		      invalidate();
 		    return false;
 		  }      
 	      }
@@ -1464,7 +1477,7 @@ namespace openvpn {
 		    }
 		  else // treat as replay
 		    {
-		      proto.stats->error(ProtoStats::REPLAY_ERROR);
+		      proto.stats->error(Error::REPLAY_ERROR);
 		      if (pid.is_valid())
 			xmit_acks.push_back(id); // even replayed packets must be ACKed or protocol could deadlock
 		    }
@@ -1474,7 +1487,7 @@ namespace openvpn {
 		  if (pid_ok)
 		    proto.ta_pid_recv.add(pid, t); // remember tls_auth packet ID of ACK packet to prevent replay
 		  else
-		    proto.stats->error(ProtoStats::REPLAY_ERROR);
+		    proto.stats->error(Error::REPLAY_ERROR);
 		}
 	    }
 	  else // non tls_auth mode
@@ -1519,7 +1532,9 @@ namespace openvpn {
 	}
 	catch (buffer_exception&)
 	  {
-	    proto.stats->error(ProtoStats::BUFFER_ERROR);
+	    proto.stats->error(Error::BUFFER_ERROR);
+	    if (proto.is_tcp())
+	      invalidate();
 	  }
 	return false;
       }
@@ -1559,7 +1574,7 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
 
     ProtoContext(const typename Config::Ptr& config_arg,  // configuration
-		 const ProtoStats::Ptr& stats_arg)        // error stats
+		 const SessionStats::Ptr& stats_arg)        // error stats
       : config(config_arg),
 	stats(stats_arg),
 	mode_(config_arg->ssl_ctx->mode()),
@@ -1849,8 +1864,14 @@ namespace openvpn {
     bool is_server() const { return mode_.is_server(); }
     bool is_client() const { return mode_.is_client(); }
 
+    // tcp/udp mode
+    const bool is_tcp() { return config->protocol.is_tcp(); }
+
     // configuration
     const Config& conf() const { return *config; }
+
+    // stats
+    SessionStats& stat() const { return *stats; }
 
   private:
     virtual void control_net_send(const Buffer& net_buf) = 0;
@@ -1961,7 +1982,7 @@ namespace openvpn {
       if (now >= keepalive_expire)
 	{
 	  // no contact with peer, disconnect
-	  stats->error(ProtoStats::KEEPALIVE_TIMEOUT);
+	  stats->error(Error::KEEPALIVE_TIMEOUT);
 	  disconnect();
 	}
     }
@@ -2017,11 +2038,11 @@ namespace openvpn {
 	      if (secondary && !secondary->invalidated())
 		promote_secondary_to_primary();
 	      else
-		stats->error(ProtoStats::PRIMARY_EXPIRE);
+		stats->error(Error::PRIMARY_EXPIRE);
 		disconnect(); // primary context expired and no secondary context available
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:
-	      stats->error(ProtoStats::HANDSHAKE_TIMEOUT);
+	      stats->error(Error::HANDSHAKE_TIMEOUT);
 	      disconnect();   // primary negotiation failed
 	      break;
 	    default:
@@ -2049,7 +2070,7 @@ namespace openvpn {
 	      secondary.reset();
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:
-	      stats->error(ProtoStats::HANDSHAKE_TIMEOUT);
+	      stats->error(Error::HANDSHAKE_TIMEOUT);
 	      renegotiate();
 	      break;
 	    default:
@@ -2077,7 +2098,9 @@ namespace openvpn {
 	    return opcode;
 	}
 
-      stats->error(ProtoStats::CC_ERROR);
+      stats->error(Error::CC_ERROR);
+      if (is_tcp())
+	disconnect();
       return INVALID_OPCODE;
     }
 
@@ -2095,7 +2118,7 @@ namespace openvpn {
     // BEGIN ProtoContext data members
 
     typename Config::Ptr config;
-    ProtoStats::Ptr stats;
+    SessionStats::Ptr stats;
 
     size_t hmac_size;
     bool use_tls_auth;

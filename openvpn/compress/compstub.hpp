@@ -6,7 +6,7 @@ namespace openvpn {
   class CompressStub : public Compress
   {
   public:
-    CompressStub(const Frame::Ptr& frame, const ProtoStats::Ptr& stats, const bool support_swap_arg)
+    CompressStub(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool support_swap_arg)
       : Compress(frame, stats),
 	support_swap(support_swap_arg)
     {

@@ -18,7 +18,7 @@
 #include <openvpn/common/process.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/addr/ip.hpp>
-#include <openvpn/log/protostats.hpp>
+#include <openvpn/log/sessionstats.hpp>
 #include <openvpn/tun/tunspec.hpp>
 #include <openvpn/tun/tunlog.hpp>
 #include <openvpn/tun/layer.hpp>
@@ -36,6 +36,7 @@ namespace openvpn {
     OPENVPN_EXCEPTION(tun_open_error);
     OPENVPN_EXCEPTION(tun_layer_error);
     OPENVPN_EXCEPTION(tun_fcntl_error);
+    OPENVPN_EXCEPTION(tun_ifconfig_error);
 
     template <typename ReadHandler>
     class Tun : public RC<thread_unsafe_refcount>
@@ -46,7 +47,7 @@ namespace openvpn {
       Tun(boost::asio::io_service& io_service,
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
-	  const ProtoStats::Ptr& stats_arg,
+	  const SessionStats::Ptr& stats_arg,
 	  const Layer& layer)
 
 	: halt(false),
@@ -91,20 +92,20 @@ namespace openvpn {
 	  {
 	    try {
 	      const size_t wrote = sd->write_some(buf.const_buffers_1());
-	      stats->inc_stat(ProtoStats::TUN_BYTES_OUT, wrote);
+	      stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
 	      if (wrote == buf.size())
 		return true;
 	      else
 		{
 		  OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-		  stats->error(ProtoStats::TUN_ERROR);
+		  stats->error(Error::TUN_ERROR);
 		  return false;
 		}
 	    }
 	    catch (boost::system::system_error& e)
 	      {
 		OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
-		stats->error(ProtoStats::TUN_ERROR);
+		stats->error(Error::TUN_ERROR);
 		return false;
 	      }
 	  }
@@ -131,10 +132,8 @@ namespace openvpn {
 	  }
       }
 
-      int ifconfig(const OptionList& opt, const unsigned int mtu) // fixme -- support IPv6
+      std::string ifconfig(const OptionList& opt, const unsigned int mtu) // fixme -- support IPv6
       {
-	int status = 0;
-
 	// first verify topology
 	{
 	  const Option& o = opt.get("topology");
@@ -145,6 +144,7 @@ namespace openvpn {
 
 	// configure tun interface
 	{
+	  int status;
 	  const Option& o = opt.get("ifconfig");
 	  o.exact_args(3);
 	  const IP::Addr ip = IP::Addr::from_string(o[1], "ifconfig-ip");
@@ -165,8 +165,10 @@ namespace openvpn {
 	      OPENVPN_LOG_TUN(cmd_str);
 	      status = ::system(cmd_str.c_str());
 	    }
+	  if (status)
+	    throw tun_ifconfig_error();
+	  return ip.to_string();
 	}
-	return status;
       }
 
       ~Tun() { stop(); }
@@ -196,13 +198,13 @@ namespace openvpn {
 	    if (!error)
 	      {
 		pfp->buf.set_size(bytes_recvd);
-		stats->inc_stat(ProtoStats::TUN_BYTES_IN, bytes_recvd);
+		stats->inc_stat(SessionStats::TUN_BYTES_IN, bytes_recvd);
 		read_handler->tun_read_handler(pfp);
 	      }
 	    else
 	      {
 		OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error.message());
-		stats->error(ProtoStats::TUN_ERROR);
+		stats->error(Error::TUN_ERROR);
 	      }
 	    queue_read(pfp.release()); // reuse buffer if still available
 	  }
@@ -214,7 +216,7 @@ namespace openvpn {
       ReadHandler read_handler;
       const Frame::Ptr frame;
       const Frame::Context& frame_context;
-      ProtoStats::Ptr stats;
+      SessionStats::Ptr stats;
     };
 
   }
