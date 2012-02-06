@@ -187,7 +187,7 @@ namespace openvpn {
 
     const Option& get_first(const std::string& name) const
     {
-      OptionList::IndexMap::const_iterator e = map_.find(name);
+      IndexMap::const_iterator e = map_.find(name);
       if (e != map_.end() && !e->second.empty())
 	return (*this)[e->second[0]];
       else
@@ -196,7 +196,7 @@ namespace openvpn {
 
     const Option* get_ptr(const std::string& name) const
     {
-      OptionList::IndexMap::const_iterator e = map_.find(name);
+      IndexMap::const_iterator e = map_.find(name);
       if (e != map_.end() && !e->second.empty())
 	{
 	  if (e->second.size() == 1)
@@ -215,6 +215,24 @@ namespace openvpn {
 	return *o;
       else
 	OPENVPN_THROW(option_error, "option '" << name << "' not found");
+    }
+
+    const IndexList& get_index(const std::string& name) const
+    {
+      IndexMap::const_iterator e = map_.find(name);
+      if (e != map_.end() && !e->second.empty())
+	return e->second;
+      else
+	OPENVPN_THROW(option_error, "option '" << name << "' not found");
+    }
+
+    const IndexList* get_index_ptr(const std::string& name) const
+    {
+      IndexMap::const_iterator e = map_.find(name);
+      if (e != map_.end() && !e->second.empty())
+	return &e->second;
+      else
+	return NULL;
     }
 
     bool exists(const std::string& name) const

@@ -2,7 +2,8 @@
 #define OPENVPN_CLIENT_CLIPROTO_H
 
 #include <boost/asio.hpp>
-#include <boost/cstdint.hpp>
+#include <boost/cstdint.hpp> // for boost::uint...
+#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
@@ -21,7 +22,10 @@
 
 namespace openvpn {
 
-  // OpenVPN client
+  struct ClientProtoTerminateCallback {
+    virtual void client_proto_terminate() = 0;
+  };
+
   template <typename SSL_CONTEXT>
   class ClientProto : public ProtoContext<SSL_CONTEXT>, TransportClientParent, TunClientParent
   {
@@ -32,6 +36,7 @@ namespace openvpn {
 
   public:
     typedef boost::intrusive_ptr<ClientProto> Ptr;
+    typedef typename Base::Config ProtoConfig;
 
     OPENVPN_EXCEPTION(client_exception);
     OPENVPN_EXCEPTION(tun_exception);
@@ -39,28 +44,32 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
     OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
+    struct Config {
+      typename Base::Config::Ptr proto_context_config;
+      TransportClientFactory::Ptr transport_factory;
+      TunClientFactory::Ptr tun_factory;
+      SessionStats::Ptr cli_stats;
+      ClientEvent::Queue::Ptr cli_events;
+      std::string username;
+      std::string password;
+    };
+
     ClientProto(boost::asio::io_service& io_service_arg,
-		const typename Base::Config::Ptr& config,
-		const TransportClientFactory::Ptr& transport_factory_arg,
-		const TunClientFactory::Ptr& tun_factory_arg,
-		const SessionStats::Ptr& stats_arg,
-		const ClientEvent::Queue::Ptr& cli_events_arg,
-		const bool client_throw_arg,
-		const std::string& username_arg,
-		const std::string& password_arg)
-      : Base(config, stats_arg),
+		const Config& config,
+		ClientProtoTerminateCallback* terminate_callback_arg)
+      : Base(config.proto_context_config, config.cli_stats),
 	io_service(io_service_arg),
-	transport_factory(transport_factory_arg),
-	tun_factory(tun_factory_arg),
-	client_throw(client_throw_arg),
+	transport_factory(config.transport_factory),
+	tun_factory(config.tun_factory),
+	terminate_callback(terminate_callback_arg),
 	housekeeping_timer(io_service_arg),
 	push_request_timer(io_service_arg),
 	stopped(false),
-	username(username_arg),
-	password(password_arg),
-	first_packet_received(false),
+	username(config.username),
+	password(config.password),
+	first_packet_received_(false),
 	sent_push_request(false),
-	cli_events(cli_events_arg)
+	cli_events(config.cli_events)
     {
 #ifdef OPENVPN_PACKET_LOG
       packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -83,6 +92,8 @@ namespace openvpn {
     }
 #endif
 
+    bool first_packet_received() const { return first_packet_received_; }
+
     void start()
     {
       // coarse wakeup range
@@ -95,26 +106,28 @@ namespace openvpn {
 
     void stop_on_signal(const boost::system::error_code& error, int signal_number)
     {
-      stop();
+      stop(true);
     }
 
-    void stop()
+    void stop(const bool call_terminate_callback)
     {
       if (!stopped)
 	{
+	  stopped = true;
 	  housekeeping_timer.cancel();
 	  push_request_timer.cancel();
 	  if (tun)
 	    tun->stop();
 	  if (transport)
 	    transport->stop();
-	  stopped = true;
+	  if (terminate_callback && call_terminate_callback)
+	    terminate_callback->client_proto_terminate();
 	}
     }
 
     virtual ~ClientProto()
     {
-      stop();
+      stop(false);
     }
 
   private:
@@ -128,11 +141,11 @@ namespace openvpn {
 	Base::update_now();
 
 	// log connecting event (only on first packet received)
-	if (!first_packet_received)
+	if (!first_packet_received_)
 	  {
 	    ClientEvent::Base::Ptr ev = new ClientEvent::Connecting();
 	    cli_events->add_event(ev);
-	    first_packet_received = true;
+	    first_packet_received_ = true;
 	  }
 
 	// get packet type
@@ -241,13 +254,13 @@ namespace openvpn {
 
     virtual void transport_error(const std::exception& err)
     {
-      if (client_throw)
-	throw transport_exception(err.what());
-      else
+      if (terminate_callback)
 	{
 	  OPENVPN_LOG("Transport Error: " << err.what());
-	  stop();
+	  stop(true);
 	}
+      else
+	throw transport_exception(err.what());
     }
 
     void extract_auth_token(const OptionList& opt)
@@ -300,13 +313,13 @@ namespace openvpn {
       else if (boost::starts_with(msg, "AUTH_FAILED"))
 	{
 	  Base::stat().error(Error::AUTH_FAIL);
-	  if (client_throw)
-	    throw auth_failed();
-	  else
+	  if (terminate_callback)
 	    {
 	      OPENVPN_LOG("AUTH_FAILED");
-	      stop();
+	      stop(true);
 	    }
+	  else
+	    throw auth_failed();
 	}
     }
 
@@ -336,13 +349,13 @@ namespace openvpn {
 
     virtual void tun_error(const std::exception& err)
     {
-      if (client_throw)
-	throw tun_exception(err.what());
-      else
+      if (terminate_callback)
 	{
 	  OPENVPN_LOG("TUN Error: " << err.what());
-	  stop();
+	  stop(true);
 	}
+      else
+	throw tun_exception(err.what());
     }
 
     // proto base class calls here to get auth credentials
@@ -405,13 +418,13 @@ namespace openvpn {
 	    Base::housekeeping();
 	    if (Base::invalidated())
 	      {
-		if (client_throw)
-		  throw session_invalidated();
-		else
+		if (terminate_callback)
 		  {
 		    OPENVPN_LOG("Session invalidated");
-		    stop();
+		    stop(true);
 		  }
+		else
+		  throw session_invalidated();
 	      }
 	    set_housekeeping_timer();
 	  }
@@ -443,13 +456,13 @@ namespace openvpn {
 
     void process_exception(std::exception& e)
     {
-      if (client_throw)
-	throw client_exception(e.what());
-      else
+      if (terminate_callback)
 	{
 	  OPENVPN_LOG("Client exception: " << e.what());
-	  stop();
+	  stop(true);
 	}
+      else
+	throw client_exception(e.what());
     }
 
     boost::asio::io_service& io_service;
@@ -460,7 +473,7 @@ namespace openvpn {
     TunClientFactory::Ptr tun_factory;
     TunClient::Ptr tun;
 
-    bool client_throw;
+    ClientProtoTerminateCallback* terminate_callback;
 
     CoarseTime housekeeping_schedule;
     AsioTimer housekeeping_timer;
@@ -472,7 +485,7 @@ namespace openvpn {
     std::string username;
     std::string password;
 
-    bool first_packet_received;
+    bool first_packet_received_;
     bool sent_push_request;
     ClientEvent::Queue::Ptr cli_events;
 

@@ -29,6 +29,7 @@
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/compress/compress.hpp>
+#include <openvpn/options/remotelist.hpp>
 
 #ifdef OPENVPN_DEBUG_PROTO
 #define OPENVPN_LOG_PROTO(x) OPENVPN_LOG(x)
@@ -163,6 +164,7 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
     OPENVPN_EXCEPTION(process_server_push_error);
+    OPENVPN_EXCEPTION_INHERIT(option_error, proto_option_error);
 
     static unsigned int mtu()
     {
@@ -249,24 +251,8 @@ namespace openvpn {
 	keepalive_ping = Time::Duration::seconds(8);
 	keepalive_timeout = Time::Duration::seconds(40);
 	comp_ctx = CompressContext(CompressContext::NONE);
-
-	// tcp/udp
-	{
-	  const Option& o = opt.get_first("remote");
-	  const std::string& proto = o.get(3);
-	  if (proto == "udp")
-	    {
-	      protocol = Protocol(Protocol::UDPv4);
-	      pid_mode = PacketIDReceive::UDP_MODE;
-	    }
-	  else if (proto == "tcp")
-	    {
-	      protocol = Protocol(Protocol::TCPv4);
-	      pid_mode = PacketIDReceive::TCP_MODE;
-	    }
-	  else
-	    throw option_error("bad protocol");
-	}
+	protocol = Protocol();
+	pid_mode = PacketIDReceive::UDP_MODE;
 
 	// layer
 	{
@@ -276,7 +262,7 @@ namespace openvpn {
 	  else if (dev_type == "tap")
 	    layer = Layer(Layer::OSI_LAYER_2);
 	  else
-	    throw option_error("bad dev-type");
+	    throw proto_option_error("bad dev-type");
 	}
 
 	// cipher
@@ -318,7 +304,7 @@ namespace openvpn {
 		  const std::string meth_name = (*o)[1];
 		  CompressContext::Type meth = CompressContext::parse_method(meth_name);
 		  if (meth == CompressContext::NONE)
-		    OPENVPN_THROW(option_error, "Unknown compressor: '" << meth_name << '\'');
+		    OPENVPN_THROW(proto_option_error, "Unknown compressor: '" << meth_name << '\'');
 		  comp_ctx = CompressContext(meth);
 		}
 	      else
@@ -335,6 +321,7 @@ namespace openvpn {
 	}
       }
 
+      // load options string pushed by server
       void process_push(const OptionList& opt)
       {
 	// cipher
@@ -400,6 +387,24 @@ namespace openvpn {
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed compressor '" << new_comp << "': " << e.what());
 	  }
+      }
+
+      void remote_adjust(const RemoteList::Item& rli)
+      {
+	// adjust options for new transport protocol
+	protocol = rli.transport_protocol;
+	if (protocol.is_udp())
+	  pid_mode = PacketIDReceive::UDP_MODE;
+	else if (protocol.is_tcp())
+	  pid_mode = PacketIDReceive::TCP_MODE;
+	else
+	  throw proto_option_error("transport protocol undefined");
+      }
+
+      void validate_complete() const
+      {
+	if (!protocol.defined())
+	  throw proto_option_error("transport protocol undefined");
       }
 
       // generate a string summarizing options that will be
@@ -1604,6 +1609,9 @@ namespace openvpn {
     void reset()
     {
       const Config& c = *config;
+
+      // validate options
+      c.validate_complete();
 
       // by default, fast_transition is turned off
       fast_transition = false;
