@@ -1,5 +1,5 @@
-#ifndef OPENVPN_CRYPTO_CRYPTO
-#define OPENVPN_CRYPTO_CRYPTO
+#ifndef OPENVPN_CRYPTO_CRYPTO_H
+#define OPENVPN_CRYPTO_CRYPTO_H
 
 #include <openvpn/crypto/encrypt.hpp>
 #include <openvpn/crypto/decrypt.hpp>
@@ -14,4 +14,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_CRYPTO_CRYPTO
+#endif // OPENVPN_CRYPTO_CRYPTO_H

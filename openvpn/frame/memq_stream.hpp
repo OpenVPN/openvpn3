@@ -1,5 +1,5 @@
-#ifndef OPENVPN_FRAME_MEMQ_STREAM
-#define OPENVPN_FRAME_MEMQ_STREAM
+#ifndef OPENVPN_FRAME_MEMQ_STREAM_H
+#define OPENVPN_FRAME_MEMQ_STREAM_H
 
 #include <algorithm>
 
@@ -83,4 +83,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_FRAME_MEMQ_STREAM
+#endif // OPENVPN_FRAME_MEMQ_STREAM_H

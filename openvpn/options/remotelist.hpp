@@ -24,6 +24,8 @@ namespace openvpn {
       Protocol transport_protocol;
     };
 
+    RemoteList() {}
+
     RemoteList(const OptionList& opt)
     {
       const OptionList::IndexList& rem = opt.get_index("remote");

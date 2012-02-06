@@ -1,5 +1,5 @@
-#ifndef OPENVPN_FRAME_MEMQ_DGRAM
-#define OPENVPN_FRAME_MEMQ_DGRAM
+#ifndef OPENVPN_FRAME_MEMQ_DGRAM_H
+#define OPENVPN_FRAME_MEMQ_DGRAM_H
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -51,4 +51,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_FRAME_MEMQ_DGRAM
+#endif // OPENVPN_FRAME_MEMQ_DGRAM_H

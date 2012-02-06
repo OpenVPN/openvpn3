@@ -1,5 +1,5 @@
-#ifndef OPENVPN_CRYPTO_DIGEST
-#define OPENVPN_CRYPTO_DIGEST
+#ifndef OPENVPN_CRYPTO_DIGEST_H
+#define OPENVPN_CRYPTO_DIGEST_H
 
 #include <string>
 #include <cstring>
@@ -234,4 +234,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_CRYPTO_DIGEST
+#endif // OPENVPN_CRYPTO_DIGEST_H

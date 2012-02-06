@@ -1,24 +1,19 @@
 #ifndef OPENVPN_GENCRYPTO_CRYPTOINIT_H
 #define OPENVPN_GENCRYPTO_CRYPTOINIT_H
 
-#include <openvpn/gencrypto/gencrypto.hpp>
-
-#ifdef OPENVPN_APPLE_CRYPTO
-
-namespace openvpn {
-  struct crypto_init {
-    crypto_init() {}
-  };
-}
-
-#else
-
+#ifdef USE_OPENSSL
 #include <openvpn/openssl/util/init.hpp>
+#endif
 
 namespace openvpn {
-  typedef openssl_init crypto_init;
-}
 
-#endif // OPENVPN_APPLE_CRYPTO
+  class crypto_init
+  {
+#if defined(USE_OPENSSL)
+    openssl_init openssl_init_;
+#endif    
+  };
+
+}
 
 #endif // OPENVPN_GENCRYPTO_CRYPTOINIT_H

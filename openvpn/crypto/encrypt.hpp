@@ -1,5 +1,5 @@
-#ifndef OPENVPN_CRYPTO_ENCRYPT
-#define OPENVPN_CRYPTO_ENCRYPT
+#ifndef OPENVPN_CRYPTO_ENCRYPT_H
+#define OPENVPN_CRYPTO_ENCRYPT_H
 
 #include <cstring>
 
@@ -102,4 +102,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_CRYPTO_ENCRYPT
+#endif // OPENVPN_CRYPTO_ENCRYPT_H

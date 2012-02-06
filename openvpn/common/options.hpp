@@ -178,6 +178,7 @@ namespace openvpn {
       return ret;
     }
 
+    // caller must call update_map() after extend()
     void extend(const OptionList& other)
     {
       reserve(size() + other.size());

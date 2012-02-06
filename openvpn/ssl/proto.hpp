@@ -185,6 +185,7 @@ namespace openvpn {
 	pid_seq_backtrack = 0;
 	pid_time_backtrack = 0;
 	pid_debug_level = 0;
+	autologin = false;
       }
 
       // master SSL context
@@ -198,6 +199,10 @@ namespace openvpn {
 
       // PRNG
       PRNG::Ptr prng;
+
+      // if true, connect to server without presenting username or password
+      // (false if "auth-user-pass" directive is present in config, true otherwise)
+      bool autologin;
 
       // Transport protocol, i.e. UDPv4, etc.
       Protocol protocol;
@@ -253,6 +258,12 @@ namespace openvpn {
 	comp_ctx = CompressContext(CompressContext::NONE);
 	protocol = Protocol();
 	pid_mode = PacketIDReceive::UDP_MODE;
+
+	// autologin
+	{
+	  const Option *o = opt.get_ptr("auth-user-pass");
+	  autologin = o ? false : true;
+	}
 
 	// layer
 	{
@@ -1222,7 +1233,13 @@ namespace openvpn {
 	if (!proto.is_server())
 	  {
 	    buf->or_flags(BufferAllocated::DESTRUCT_ZERO);
-	    proto.client_auth(*buf);
+	    if (proto.config->autologin)
+	      {
+		write_empty_string(*buf); // username
+		write_empty_string(*buf); // password
+	      }
+	    else
+	      proto.client_auth(*buf);
 	    const std::string peer_info = proto.config->peer_info_string();
 	    write_auth_string(peer_info, *buf);
 	  }

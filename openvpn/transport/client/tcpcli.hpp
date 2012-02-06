@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 
 #include <openvpn/transport/tcplink.hpp>
+#include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 
 namespace openvpn {
@@ -33,6 +34,9 @@ namespace openvpn {
 
       virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 						  TransportClientParent& parent);
+
+      EndpointCache<TCPTransport::Endpoint> endpoint_cache;
+
     private:
       ClientConfig()
 	: send_queue_max_size(64),
@@ -57,10 +61,18 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    boost::asio::ip::tcp::resolver::query query(config->server_host,
-							config->server_port);
-	    parent.transport_pre_resolve();
-	    resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::post_start_, this));
+	    if (config->endpoint_cache.defined())
+	      {
+		server_endpoint = config->endpoint_cache.endpoint();
+		start_impl_();
+	      }
+	    else
+	      {
+		boost::asio::ip::tcp::resolver::query query(config->server_host,
+							    config->server_port);
+		parent.transport_pre_resolve();
+		resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::post_start_, this));
+	      }
 	  }
       }
 
@@ -157,18 +169,7 @@ namespace openvpn {
 	      {
 		// get resolved endpoint
 		server_endpoint = *endpoint_iterator;
-
-		impl.reset(new LinkImpl(io_service,
-					this,
-					server_endpoint,
-					REMOTE_CONNECT,
-					false,
-					config->send_queue_max_size,
-					config->free_list_max_size,
-					config->frame,
-					config->stats));
-		impl->start();
-		parent.transport_connecting();
+		start_impl_();
 	      }
 	    else
 	      {
@@ -180,6 +181,22 @@ namespace openvpn {
 		parent.transport_error(err);
 	      }
 	  }
+      }
+
+      void start_impl_()
+      {
+	config->endpoint_cache.set_endpoint(server_endpoint);
+	impl.reset(new LinkImpl(io_service,
+				this,
+				server_endpoint,
+				REMOTE_CONNECT,
+				false,
+				config->send_queue_max_size,
+				config->free_list_max_size,
+				config->frame,
+				config->stats));
+	impl->start();
+	parent.transport_connecting();
       }
 
       boost::asio::io_service& io_service;

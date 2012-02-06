@@ -1,5 +1,5 @@
-#ifndef OPENVPN_FRAME_FRAME
-#define OPENVPN_FRAME_FRAME
+#ifndef OPENVPN_FRAME_FRAME_H
+#define OPENVPN_FRAME_FRAME_H
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -236,4 +236,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_FRAME_FRAME
+#endif // OPENVPN_FRAME_FRAME_H
