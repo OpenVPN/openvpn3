@@ -64,14 +64,14 @@ namespace openvpn {
 	    if (config->endpoint_cache.defined())
 	      {
 		server_endpoint = config->endpoint_cache.endpoint();
-		start_impl_();
+		start_connect_();
 	      }
 	    else
 	      {
 		boost::asio::ip::tcp::resolver::query query(config->server_host,
 							    config->server_port);
 		parent.transport_pre_resolve();
-		resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::post_start_, this));
+		resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::do_resolve_, this));
 	      }
 	  }
       }
@@ -109,6 +109,7 @@ namespace openvpn {
 	     ClientConfig* config_arg,
 	     TransportClientParent& parent_arg)
 	:  io_service(io_service_arg),
+	   socket(io_service_arg),
 	   config(config_arg),
 	   parent(parent_arg),
 	   resolver(io_service_arg),
@@ -151,16 +152,21 @@ namespace openvpn {
 
       void stop_()
       {
-	if (impl)
+	if (!halt)
 	  {
-	    impl->stop();
-	    impl.reset();
+	    halt = true;
+	    if (impl)
+	      {
+		impl->stop();
+		impl.reset();
+	      }
+	    socket.close();
+	    resolver.cancel();
 	  }
-	resolver.cancel();
-	halt = true;
       }
 
-      void post_start_(const boost::system::error_code& error,
+      // do DNS resolve
+      void do_resolve_(const boost::system::error_code& error,
 		       boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
       {
 	if (!halt)
@@ -169,7 +175,7 @@ namespace openvpn {
 	      {
 		// get resolved endpoint
 		server_endpoint = *endpoint_iterator;
-		start_impl_();
+		start_connect_();
 	      }
 	    else
 	      {
@@ -183,23 +189,45 @@ namespace openvpn {
 	  }
       }
 
-      void start_impl_()
+      // do TCP connect
+      void start_connect_()
       {
-	config->endpoint_cache.set_endpoint(server_endpoint);
-	impl.reset(new LinkImpl(io_service,
-				this,
-				server_endpoint,
-				REMOTE_CONNECT,
-				false,
-				config->send_queue_max_size,
-				config->free_list_max_size,
-				config->frame,
-				config->stats));
-	impl->start();
-	parent.transport_connecting();
+	socket.open(server_endpoint.protocol());
+	socket.set_option(boost::asio::ip::tcp::no_delay(true));
+	socket.async_connect(server_endpoint, asio_dispatch_connect(&Client::start_impl_, this));
+      }
+
+      // start I/O on TCP socket
+      void start_impl_(const boost::system::error_code& error)
+      {
+	if (!halt)
+	  {
+	    if (!error)
+	      {
+		config->endpoint_cache.set_endpoint(server_endpoint);
+		impl.reset(new LinkImpl(this,
+					socket,
+					config->send_queue_max_size,
+					config->free_list_max_size,
+					config->frame,
+					config->stats));
+		impl->start();
+		parent.transport_connecting();
+	      }
+	    else
+	      {
+		std::ostringstream os;
+		os << "TCP connect error on '" << config->server_host << "' for TCP session: " << error.message();
+		config->stats->error(Error::TCP_CONNECT_ERROR);
+		stop();
+		tcp_transport_resolve_error err(os.str());
+		parent.transport_error(err);
+	      }
+	  }
       }
 
       boost::asio::io_service& io_service;
+      boost::asio::ip::tcp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent& parent;
       LinkImpl::Ptr impl;

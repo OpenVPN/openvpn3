@@ -38,7 +38,10 @@ namespace boost {
       /// Convert to POSIX duration type.
       static boost::posix_time::time_duration to_posix_duration(const duration_type& d)
       {
-	return boost::posix_time::microseconds(d.to_microseconds());
+	if (d.is_infinite())
+	  return boost::posix_time::seconds(86400*365);
+	else
+	  return boost::posix_time::milliseconds(d.to_milliseconds());
       }
     };
 

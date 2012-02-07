@@ -18,6 +18,7 @@ namespace openvpn {
       TUN_ERROR,           // errors on tun/tap interface
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
+      TCP_CONNECT_ERROR,   // client error on TCP connect
       SSL_ERROR,           // errors resulting from read/write on SSL object
       ENCAPSULATION_ERROR, // exceptions thrown during packet encapsulation
       HANDSHAKE_TIMEOUT,   // handshake failed to complete within given time frame
@@ -44,6 +45,7 @@ namespace openvpn {
 	"TUN_ERROR",
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",
+	"TCP_CONNECT_ERROR",
 	"SSL_ERROR",
 	"ENCAPSULATION_ERROR",
 	"HANDSHAKE_TIMEOUT",

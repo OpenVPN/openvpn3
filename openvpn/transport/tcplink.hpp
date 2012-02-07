@@ -38,11 +38,6 @@ namespace openvpn {
       BufferAllocated buf;
     };
 
-    enum BindType {
-      LOCAL_BIND,       // (server) bind locally
-      REMOTE_CONNECT,   // (client) don't bind locally, connect to explicit remote endpoint
-    };
-
     template <typename ReadHandler>
     class Link : public RC<thread_unsafe_refcount>
     {
@@ -51,16 +46,13 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<Link> Ptr;
 
-      Link(boost::asio::io_service& io_service,
-	   ReadHandler read_handler_arg,
-	   const Endpoint& endpoint,
-	   BindType bind_type,
-	   const bool reuse_addr,
+      Link(ReadHandler read_handler_arg,
+	   boost::asio::ip::tcp::socket& socket_arg,
 	   const size_t send_queue_max_size_arg,
 	   const size_t free_list_max_size_arg,
 	   const Frame::Ptr& frame_arg,
 	   const SessionStats::Ptr& stats_arg)
-	: socket(io_service),
+	: socket(socket_arg),
 	  halt(false),
 	  read_handler(read_handler_arg),
 	  frame(frame_arg),
@@ -69,20 +61,6 @@ namespace openvpn {
 	  send_queue_max_size(send_queue_max_size_arg),
 	  free_list_max_size(free_list_max_size_arg)
       {
-	if (bind_type == LOCAL_BIND)
-	  {
-	    socket.open(endpoint.protocol());
-	    socket.set_option(boost::asio::ip::tcp::no_delay(true));	    
-	    if (reuse_addr)
-	      socket.set_option(boost::asio::ip::tcp::socket::reuse_address(true));
-	    socket.bind(endpoint);
-	  }
-	else if (bind_type == REMOTE_CONNECT)
-	  {
-	    socket.open(endpoint.protocol());
-	    socket.set_option(boost::asio::ip::tcp::no_delay(true));	    
-	    socket.connect(endpoint);
-	  }
       }
 
       bool send(BufferAllocated& b)
@@ -123,11 +101,7 @@ namespace openvpn {
 
       void stop()
       {
-	if (!halt)
-	  {
-	    halt = true;
-	    socket.close();
-	  }
+	halt = true;
       }
 
       ~Link() { stop(); }
@@ -228,7 +202,7 @@ namespace openvpn {
 	  }
       }
 
-      boost::asio::ip::tcp::socket socket;
+      boost::asio::ip::tcp::socket& socket;
       bool halt;
       ReadHandler read_handler;
       Frame::Ptr frame;

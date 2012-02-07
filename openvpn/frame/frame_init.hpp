@@ -9,8 +9,8 @@ namespace openvpn {
   {
     const size_t payload = 1500;
     const size_t control_channel_payload = 1350;
-    const size_t headroom = 128;
-    const size_t tailroom = 128;
+    const size_t headroom = 512;
+    const size_t tailroom = 512;
     const size_t align_block = 16;
     const unsigned int buffer_flags = 0;
 

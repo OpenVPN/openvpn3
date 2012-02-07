@@ -39,6 +39,7 @@ namespace openvpn {
       bool operator!() const { return duration_ == T(0); }
       bool is_infinite() const { return duration_ == std::numeric_limits<T>::max(); }
       void set_infinite() { duration_ = std::numeric_limits<T>::max(); }
+      void set_zero() { duration_ = T(0); }
 
       Duration operator+(const Duration& d) const
       {
@@ -69,12 +70,32 @@ namespace openvpn {
 	  duration_ = d.duration_;
       }
 
-      Duration operator-(const Duration& d) const { return Duration(duration_ - d.duration_); }
-      Duration& operator-=(const Duration& d) { duration_ -= d.duration_; return *this; }
+      Duration operator-(const Duration& d) const
+      {
+	if (d.duration_ >= duration_)
+	  return Duration(0);
+	else if (is_infinite())
+	  return Duration::infinite();
+	else
+	  return Duration(duration_ - d.duration_);
+      }
+
+      Duration& operator-=(const Duration& d)
+      {
+	if (d.duration_ >= duration_)
+	  set_zero();
+	else if (!is_infinite())
+	  duration_ -= d.duration_;
+	return *this;
+      }
 
       T to_seconds() const { return duration_ / prec; }
       T to_binary_ms() const { return duration_; }
-      T to_microseconds() const { return duration_ * 1000000 / prec; }
+
+      T to_milliseconds() const
+      {
+	return duration_ - (duration_ * T(3) / T(128)); // NOTE: assumes that prec == 1024
+      }
 
       T raw() const { return duration_; }
 
@@ -132,7 +153,12 @@ namespace openvpn {
 
     Duration operator-(const TimeType& t) const
     {
-      return Duration(time_ - t.time_);
+      if (t.time_ >= time_)
+	return Duration(0);
+      else if (is_infinite())
+	return Duration::infinite();
+      else
+	return Duration(time_ - t.time_);
     }
 
     void min(const TimeType& t)

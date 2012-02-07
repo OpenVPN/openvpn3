@@ -107,6 +107,57 @@ namespace openvpn {
     return AsioDispatchTimer<C, Handler>(handler, obj);
   }
 
+  // Dispatcher for asio async_connect with argument
+
+  template <typename C, typename Handler, typename Data>
+  class AsioDispatchConnectArg
+  {
+  public:
+    AsioDispatchConnectArg(Handler handler, C* obj, Data data)
+      : handler_(handler), obj_(obj), data_(data) {}
+
+    void operator()(const boost::system::error_code& error)
+    {
+      (obj_.get()->*handler_)(data_, error);
+    }
+
+  private:
+    Handler handler_;
+    boost::intrusive_ptr<C> obj_;
+    Data data_;
+  };
+
+  template <typename C, typename Handler, typename Data>
+  AsioDispatchConnectArg<C, Handler, Data> asio_dispatch_connect_arg(Handler handler, C* obj, Data data)
+  {
+    return AsioDispatchConnectArg<C, Handler, Data>(handler, obj, data);
+  }
+
+  // Dispatcher for asio async_connect without argument
+
+  template <typename C, typename Handler>
+  class AsioDispatchConnect
+  {
+  public:
+    AsioDispatchConnect(Handler handler, C* obj)
+      : handler_(handler), obj_(obj) {}
+
+    void operator()(const boost::system::error_code& error)
+    {
+      (obj_.get()->*handler_)(error);
+    }
+
+  private:
+    Handler handler_;
+    boost::intrusive_ptr<C> obj_;
+  };
+
+  template <typename C, typename Handler>
+  AsioDispatchConnect<C, Handler> asio_dispatch_connect(Handler handler, C* obj)
+  {
+    return AsioDispatchConnect<C, Handler>(handler, obj);
+  }
+
   // Dispatcher for asio post with argument
 
   template <typename C, typename Handler, typename Data>

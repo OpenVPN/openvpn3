@@ -68,7 +68,7 @@ namespace openvpn {
 		boost::asio::ip::udp::resolver::query query(config->server_host,
 							    config->server_port);
 		parent.transport_pre_resolve();
-		resolver.async_resolve(query, AsioDispatchResolveUDP(&Client::post_start_, this));
+		resolver.async_resolve(query, AsioDispatchResolveUDP(&Client::do_resolve_, this));
 	      }
 	  }
       }
@@ -131,16 +131,19 @@ namespace openvpn {
 
       void stop_()
       {
-	if (impl)
+	if (!halt)
 	  {
-	    impl->stop();
-	    impl.reset();
+	    halt = true;
+	    if (impl)
+	      {
+		impl->stop();
+		impl.reset();
+	      }
+	    resolver.cancel();
 	  }
-	resolver.cancel();
-	halt = true;
       }
 
-      void post_start_(const boost::system::error_code& error,
+      void do_resolve_(const boost::system::error_code& error,
 		       boost::asio::ip::udp::resolver::iterator endpoint_iterator)
       {
 	if (!halt)
@@ -154,7 +157,7 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << config->server_host << "' for UDP session: " << error;
+		os << "DNS resolve error on '" << config->server_host << "' for UDP session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		udp_transport_resolve_error err(os.str());

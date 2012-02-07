@@ -95,6 +95,8 @@ namespace openvpn {
       {
 	if (!halt)
 	  {
+	    Base::update_now();
+
 	    // coarse wakeup range
 	    housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
 
@@ -139,7 +141,7 @@ namespace openvpn {
       virtual void transport_recv(BufferAllocated& buf)
       {
 	try {
-	  OPENVPN_LOG_CLIPROTO("Transport recv " << Base::dump_packet(buf));
+	  OPENVPN_LOG_CLIPROTO("Transport recv " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
 
 	  // update current time
 	  Base::update_now();
@@ -208,7 +210,7 @@ namespace openvpn {
 	  if (buf.size())
 	    {
 	      // send packet via transport to destination
-	      OPENVPN_LOG_CLIPROTO("Transport send " << Base::dump_packet(buf));
+	      OPENVPN_LOG_CLIPROTO("Transport send " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
 	      if (transport->transport_send(buf))
 		Base::update_last_sent();
 	    }
@@ -282,7 +284,7 @@ namespace openvpn {
       // proto base class calls here for control channel network sends
       virtual void control_net_send(const Buffer& net_buf)
       {
-	OPENVPN_LOG_CLIPROTO("Transport send " << Base::dump_packet(net_buf));
+	OPENVPN_LOG_CLIPROTO("Transport send " << server_endpoint_render() << ' ' << Base::dump_packet(net_buf));
 	if (transport->transport_send_const(net_buf))
 	  Base::update_last_sent();
       }
@@ -376,7 +378,7 @@ namespace openvpn {
       void send_push_request_callback(const boost::system::error_code& e)
       {
 	try {
-	  if (!e && !received_options.partial())
+	  if (!e && !halt && !received_options.partial())
 	    {
 	      Base::update_now();
 	      if (!sent_push_request)
@@ -417,7 +419,7 @@ namespace openvpn {
       void housekeeping_callback(const boost::system::error_code& e)
       {
 	try {
-	  if (!e)
+	  if (!e && !halt)
 	    {
 	      // update current time
 	      Base::update_now();
