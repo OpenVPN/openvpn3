@@ -15,6 +15,7 @@ namespace openvpn {
     enum Type {
       DISCONNECTED=0,
       CONNECTED,
+      RECONNECTING,
       ERROR,
       NEED_AUTH,
       RESOLVE,
@@ -31,6 +32,7 @@ namespace openvpn {
       static const char *names[] = {
 	"DISCONNECTED",
 	"CONNECTED",
+	"RECONNECTING",
 	"ERROR",
 	"NEED_AUTH",
 	"RESOLVE",
@@ -77,6 +79,11 @@ namespace openvpn {
     struct Connecting : public Base
     {
       Connecting() : Base(CONNECTING) {}
+    };
+
+    struct Reconnecting : public Base
+    {
+      Reconnecting() : Base(RECONNECTING) {}
     };
 
     struct GetConfig : public Base

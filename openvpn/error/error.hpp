@@ -24,7 +24,7 @@ namespace openvpn {
       KEEPALIVE_TIMEOUT,   // lost contact with peer
       PRIMARY_EXPIRE,      // primary key context expired
       CERT_VERIFY_FAIL,    // peer certificate verification failure
-      AUTH_FAIL,           // general authentication failure
+      AUTH_FAILED,         // general authentication failure
       N_ERRORS,
     };
 
@@ -50,7 +50,7 @@ namespace openvpn {
 	"KEEPALIVE_TIMEOUT",
 	"PRIMARY_EXPIRE",
 	"CERT_VERIFY_FAIL",
-	"AUTH_FAIL",
+	"AUTH_FAILED",
       };
 
       if (type < N_ERRORS)

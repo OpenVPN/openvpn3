@@ -27,4 +27,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_COMMON_PLATFORM_H
+#endif // OPENVPN_COMMON_PLATFORM_NAME_H

@@ -27,8 +27,9 @@
 namespace openvpn {
   namespace ClientProto {
 
-    struct TerminateCallback {
+    struct NotifyCallback {
       virtual void client_proto_terminate() = 0;
+      virtual void client_proto_connected() {}
     };
 
     template <typename SSL_CONTEXT>
@@ -47,7 +48,7 @@ namespace openvpn {
       OPENVPN_EXCEPTION(tun_exception);
       OPENVPN_EXCEPTION(transport_exception);
       OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
-      OPENVPN_SIMPLE_EXCEPTION(auth_failed);
+      OPENVPN_SIMPLE_EXCEPTION(authentication_failed);
 
       struct Config : public RC<thread_unsafe_refcount>
       {
@@ -64,20 +65,22 @@ namespace openvpn {
 
       Session(boost::asio::io_service& io_service_arg,
 	      const Config& config,
-	      TerminateCallback* terminate_callback_arg)
+	      NotifyCallback* notify_callback_arg)
 	: Base(config.proto_context_config, config.cli_stats),
 	  io_service(io_service_arg),
 	  transport_factory(config.transport_factory),
 	  tun_factory(config.tun_factory),
-	  terminate_callback(terminate_callback_arg),
+	  notify_callback(notify_callback_arg),
 	  housekeeping_timer(io_service_arg),
 	  push_request_timer(io_service_arg),
-	  stopped(false),
+	  halt(false),
 	  username(config.username),
 	  password(config.password),
 	  first_packet_received_(false),
 	  sent_push_request(false),
-	  cli_events(config.cli_events)
+	  cli_events(config.cli_events),
+	  connected_(false),
+	  auth_failed_(false)
       {
 #ifdef OPENVPN_PACKET_LOG
 	packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -90,12 +93,31 @@ namespace openvpn {
 
       void start()
       {
-	// coarse wakeup range
-	housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
+	if (!halt)
+	  {
+	    // coarse wakeup range
+	    housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
 
-	// initialize transport-layer packet handler
-	transport = transport_factory->new_client_obj(io_service, *this);
-	transport->start();
+	    // initialize transport-layer packet handler
+	    transport = transport_factory->new_client_obj(io_service, *this);
+	    transport->start();
+	  }
+      }
+
+      void stop(const bool call_terminate_callback)
+      {
+	if (!halt)
+	  {
+	    halt = true;
+	    housekeeping_timer.cancel();
+	    push_request_timer.cancel();
+	    if (tun)
+	      tun->stop();
+	    if (transport)
+	      transport->stop();
+	    if (notify_callback && call_terminate_callback)
+	      notify_callback->client_proto_terminate();
+	  }
       }
 
       void stop_on_signal(const boost::system::error_code& error, int signal_number)
@@ -103,21 +125,9 @@ namespace openvpn {
 	stop(true);
       }
 
-      void stop(const bool call_terminate_callback)
-      {
-	if (!stopped)
-	  {
-	    stopped = true;
-	    housekeeping_timer.cancel();
-	    push_request_timer.cancel();
-	    if (tun)
-	      tun->stop();
-	    if (transport)
-	      transport->stop();
-	    if (terminate_callback && call_terminate_callback)
-	      terminate_callback->client_proto_terminate();
-	  }
-      }
+      bool reached_connected_state() const { return connected_; }
+
+      bool auth_failed() const { return auth_failed_; }
 
       virtual ~Session()
       {
@@ -248,7 +258,7 @@ namespace openvpn {
 
       virtual void transport_error(const std::exception& err)
       {
-	if (terminate_callback)
+	if (notify_callback)
 	  {
 	    OPENVPN_LOG("Transport Error: " << err.what());
 	    stop(true);
@@ -306,14 +316,15 @@ namespace openvpn {
 	  }
 	else if (boost::starts_with(msg, "AUTH_FAILED"))
 	  {
-	    Base::stat().error(Error::AUTH_FAIL);
-	    if (terminate_callback)
+	    auth_failed_ = true;
+	    Base::stat().error(Error::AUTH_FAILED);
+	    if (notify_callback)
 	      {
 		OPENVPN_LOG("AUTH_FAILED");
 		stop(true);
 	      }
 	    else
-	      throw auth_failed();
+	      throw authentication_failed();
 	  }
       }
 
@@ -339,11 +350,14 @@ namespace openvpn {
 	ev->vpn_ip = tun->vpn_ip();
 	ev->tun_name = tun->tun_name();
 	cli_events->add_event(ev);
+	connected_ = true;
+	if (notify_callback)
+	  notify_callback->client_proto_connected();
       }
 
       virtual void tun_error(const std::exception& err)
       {
-	if (terminate_callback)
+	if (notify_callback)
 	  {
 	    OPENVPN_LOG("TUN Error: " << err.what());
 	    stop(true);
@@ -412,7 +426,7 @@ namespace openvpn {
 	      Base::housekeeping();
 	      if (Base::invalidated())
 		{
-		  if (terminate_callback)
+		  if (notify_callback)
 		    {
 		      OPENVPN_LOG("Session invalidated");
 		      stop(true);
@@ -450,7 +464,7 @@ namespace openvpn {
 
       void process_exception(std::exception& e)
       {
-	if (terminate_callback)
+	if (notify_callback)
 	  {
 	    OPENVPN_LOG("Client exception: " << e.what());
 	    stop(true);
@@ -481,12 +495,12 @@ namespace openvpn {
       TunClientFactory::Ptr tun_factory;
       TunClient::Ptr tun;
 
-      TerminateCallback* terminate_callback;
+      NotifyCallback* notify_callback;
 
       CoarseTime housekeeping_schedule;
       AsioTimer housekeeping_timer;
       AsioTimer push_request_timer;
-      bool stopped;
+      bool halt;
 
       OptionListContinuation received_options;
 
@@ -496,6 +510,9 @@ namespace openvpn {
       bool first_packet_received_;
       bool sent_push_request;
       ClientEvent::Queue::Ptr cli_events;
+
+      bool connected_;
+      bool auth_failed_;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;

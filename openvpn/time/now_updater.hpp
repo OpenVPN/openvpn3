@@ -3,7 +3,7 @@
 
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/now.hpp>
-#include <openvpn/common/dispatch.hpp>
+#include <openvpn/common/asiodispatch.hpp>
 
 namespace openvpn {
 

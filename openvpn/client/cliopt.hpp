@@ -7,7 +7,6 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/frame/frame_init.hpp>
-#include <openvpn/gencrypto/genengine.hpp>
 
 #include <openvpn/transport/client/udpcli.hpp>
 #include <openvpn/transport/client/tcpcli.hpp>
@@ -34,9 +33,11 @@ using namespace openvpn;
 
 namespace openvpn {
 
-  class ClientOptions
+  class ClientOptions : public RC<thread_unsafe_refcount>
   {
   public:
+    typedef boost::intrusive_ptr<ClientOptions> Ptr;
+
 #if defined(USE_OPENSSL)
     typedef OpenSSLContext ClientSSLContext;
 #elif defined(USE_APPLE_SSL)
@@ -51,15 +52,9 @@ namespace openvpn {
 		  const ClientEvent::Queue::Ptr& cli_events_arg)
       : session_iteration(0),
 	cli_stats(cli_stats_arg),
-	cli_events(cli_events_arg)
+	cli_events(cli_events_arg),
+	server_poll_timeout_(10)
     {
-      // initialize engine
-      {
-	const Option *o = opt.get_ptr("engine");
-	if (o)
-	  setup_crypto_engine(o->get(1));
-      }
-
       // initialize PRNG
       prng.reset(new PRNG("SHA1", 16));
 
@@ -81,7 +76,7 @@ namespace openvpn {
       cp->load(opt);
       cp->ssl_ctx.reset(new ClientSSLContext(cc));
       cp->frame = frame;
-      cp->now = &now;
+      cp->now = &now_;
       cp->prng = prng;
 
       // load remote list
@@ -113,6 +108,13 @@ namespace openvpn {
       tunconf->stats = cli_stats;
 #endif
       tun_factory = tunconf;
+
+      // server-poll-timeout
+      {
+	const Option *o = opt.get_ptr("server-poll-timeout");
+	if (o)
+	  server_poll_timeout_ = types<unsigned int>::parse(o->get(1));
+      }
     }
 
     void next()
@@ -144,6 +146,14 @@ namespace openvpn {
       username_ = username;
       password_ = password;
     }
+
+    Time::Duration server_poll_timeout() const
+    {
+      return Time::Duration::seconds(server_poll_timeout_);
+    }
+
+    SessionStats& stats() { return *cli_stats; }
+    ClientEvent::Queue& events() { return *cli_events; }
 
   private:
     void load_transport_config()
@@ -177,7 +187,7 @@ namespace openvpn {
 
     unsigned int session_iteration;
 
-    Time now; // current time
+    Time now_; // current time
     PRNG::Ptr prng;
     Frame::Ptr frame;
     ClientSSLContext::Config cc;
@@ -189,6 +199,7 @@ namespace openvpn {
     ClientEvent::Queue::Ptr cli_events;
     std::string username_;
     std::string password_;
+    unsigned int server_poll_timeout_;
   };
 }
 

@@ -5,7 +5,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
-#include <openvpn/common/dispatch.hpp>
+#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/log.hpp>

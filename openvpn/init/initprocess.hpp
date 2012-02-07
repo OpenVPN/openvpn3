@@ -1,5 +1,5 @@
-#ifndef OPENVPN_COMMON_INITPROCESS_H
-#define OPENVPN_COMMON_INITPROCESS_H
+#ifndef OPENVPN_INIT_INITPROCESS_H
+#define OPENVPN_INIT_INITPROCESS_H
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/time/time.hpp>
@@ -27,7 +27,7 @@ namespace openvpn {
     };
 
     // process-wide singular instance
-    Init* the_instance;
+    Init* volatile the_instance;
 
     inline void init()
     {

@@ -1,5 +1,5 @@
-#ifndef OPENVPN_COMMON_DISPATCH_H
-#define OPENVPN_COMMON_DISPATCH_H
+#ifndef OPENVPN_COMMON_ASIODISPATCH_H
+#define OPENVPN_COMMON_ASIODISPATCH_H
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
@@ -107,6 +107,57 @@ namespace openvpn {
     return AsioDispatchTimer<C, Handler>(handler, obj);
   }
 
+  // Dispatcher for asio post with argument
+
+  template <typename C, typename Handler, typename Data>
+  class AsioDispatchPostArg
+  {
+  public:
+    AsioDispatchPostArg(Handler handler, C* obj, Data data)
+      : handler_(handler), obj_(obj), data_(data) {}
+
+    void operator()()
+    {
+      (obj_.get()->*handler_)(data_);
+    }
+
+  private:
+    Handler handler_;
+    boost::intrusive_ptr<C> obj_;
+    Data data_;
+  };
+
+  template <typename C, typename Handler, typename Data>
+  AsioDispatchPostArg<C, Handler, Data> asio_dispatch_post_arg(Handler handler, C* obj, Data data)
+  {
+    return AsioDispatchPostArg<C, Handler, Data>(handler, obj, data);
+  }
+
+  // Dispatcher for asio post without argument
+
+  template <typename C, typename Handler>
+  class AsioDispatchPost
+  {
+  public:
+    AsioDispatchPost(Handler handler, C* obj)
+      : handler_(handler), obj_(obj) {}
+
+    void operator()()
+    {
+      (obj_.get()->*handler_)();
+    }
+
+  private:
+    Handler handler_;
+    boost::intrusive_ptr<C> obj_;
+  };
+
+  template <typename C, typename Handler>
+  AsioDispatchPost<C, Handler> asio_dispatch_post(Handler handler, C* obj)
+  {
+    return AsioDispatchPost<C, Handler>(handler, obj);
+  }
+
   // Dispatcher for asynchronous resolver
 
   template <typename C, typename Handler, typename EndpointIterator>
@@ -172,4 +223,4 @@ namespace openvpn {
 
 } // namespace openvpn
 
-#endif // OPENVPN_COMMON_DISPATCH_H
+#endif // OPENVPN_COMMON_ASIODISPATCH_H
