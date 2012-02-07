@@ -29,7 +29,7 @@
 // abort if we reach this limit
 //#define DROUGHT_LIMIT 100000
 
-#if !defined(VERBOSE) && ITER <= 10000
+#if !defined(VERBOSE) && !defined(QUIET) && ITER <= 10000
 #define VERBOSE
 #endif
 
@@ -457,7 +457,7 @@ public:
 		}
 #endif
 	    }
-	    catch (std::exception&)
+	    catch (std::exception& e)
 	      {
 #ifdef VERBOSE
 		std::cout << now->raw() << " " << title << " Exception on data channel decrypt: " << e.what() << std::endl;
@@ -757,7 +757,7 @@ int main(int /*argc*/, char* /*argv*/[])
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
   boost::thread* threads[N_THREADS];
-  size_t i;
+  int i;
   for (i = 0; i < N_THREADS; ++i)
     {
       threads[i] = new boost::thread(boost::bind(&test, i));
