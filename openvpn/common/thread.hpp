@@ -15,4 +15,8 @@
 #include <boost/asio/detail/mutex.hpp>
 #endif
 
+namespace openvpn {
+  typedef boost::asio::detail::mutex Mutex;
+}
+
 #endif // OPENVPN_COMMON_THREAD_H

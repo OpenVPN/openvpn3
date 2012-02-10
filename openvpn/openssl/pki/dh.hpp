@@ -10,6 +10,12 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
+// workaround for bug in DHparams_dup macro on OpenSSL 0.9.8 and lower
+#if SSLEAY_VERSION_NUMBER <= 0x00908000L
+#undef CHECKED_PTR_OF
+#define CHECKED_PTR_OF(type, p) ((char*) (1 ? p : (type*)0))
+#endif
+
 namespace openvpn {
 
   namespace DH_private {
