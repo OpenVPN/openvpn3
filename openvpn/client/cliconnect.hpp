@@ -57,6 +57,11 @@ namespace openvpn {
       io_service.post(asio_dispatch_post(&ClientConnect::stop, this));
     }
 
+    ~ClientConnect()
+    {
+      stop();
+    }
+
   private:
     void restart_wait_callback(unsigned int gen, const boost::system::error_code& e)
     {
@@ -75,13 +80,20 @@ namespace openvpn {
 
     virtual void client_proto_terminate()
     {
-      if (!halt && !client->auth_failed())
+      if (!halt)
 	{
-	  const unsigned int delay = 2;
-	  OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
-	  server_poll_timer.cancel();
-	  restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
-	  restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+	  if (client->auth_failed())
+	    {
+	      stop();
+	    }
+	  else
+	    {
+	      const unsigned int delay = 2;
+	      OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
+	      server_poll_timer.cancel();
+	      restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
+	      restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+	    }
 	}
     }
 

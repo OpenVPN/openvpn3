@@ -10,13 +10,20 @@
 
 namespace openvpn {
 
-  // like boost::scoped_ptr but has release method
+  // like boost::scoped_ptr but has release, reset methods and default constructor usage
   template <typename T>
   class ScopedPtr : boost::noncopyable
   {
   public:
-    explicit ScopedPtr(T* p)
+    explicit ScopedPtr(T* p = 0)
       : px(p) {}
+
+    void reset(T* p = 0)
+    {
+      if (px)
+	delete px;
+      px = p;
+    }
 
     T* release()
     {

@@ -22,7 +22,6 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/macaddr.hpp>
-#include <openvpn/log/log.hpp>
 
 namespace openvpn {
   class MacGatewayInfoV4

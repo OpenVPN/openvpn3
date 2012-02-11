@@ -8,7 +8,6 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/options.hpp>
-#include <openvpn/log/log.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/pki/cclist.hpp>
 #include <openvpn/openssl/util/error.hpp>

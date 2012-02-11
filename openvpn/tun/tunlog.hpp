@@ -1,8 +1,6 @@
 #ifndef OPENVPN_TUN_TUNLOG_H
 #define OPENVPN_TUN_TUNLOG_H
 
-#include <openvpn/log/log.hpp>
-
 #if defined(OPENVPN_DEBUG_TUN) && OPENVPN_DEBUG_TUN >= 1
 #define OPENVPN_LOG_TUN_ERROR(x) OPENVPN_LOG(x)
 #else

@@ -13,7 +13,6 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
-#include <openvpn/log/log.hpp>
 
 namespace openvpn {
 

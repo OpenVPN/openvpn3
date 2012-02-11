@@ -5,7 +5,6 @@
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
-#include <openvpn/init/initprocess.hpp>
 #include <openvpn/frame/frame_init.hpp>
 
 #include <openvpn/transport/client/udpcli.hpp>

@@ -7,6 +7,7 @@
 
 #include <boost/unordered_map.hpp>
 
+#include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/typeinfo.hpp>
@@ -109,28 +110,50 @@ namespace openvpn {
   class OptionList : public std::vector<Option>
   {
   public:
+    typedef boost::intrusive_ptr<OptionList> Ptr;
+
     typedef StandardLex Lex;
     typedef std::vector<unsigned int> IndexList;
     typedef boost::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
 
-    static OptionList parse_from_csv(const std::string& str)
+    static OptionList parse_from_csv_static(const std::string& str)
     {
       OptionList ret;
+      ret.parse_from_csv(str);
+      ret.update_map();
+      return ret;
+    }
+
+    static OptionList parse_from_config_static(const std::string& str)
+    {
+      OptionList ret;
+      ret.parse_from_config(str);
+      ret.update_map();
+      return ret;
+    }
+
+    void clear()
+    {
+      std::vector<Option>::clear();
+      map_.clear();
+    }
+
+    // caller should call update_map() after this function
+    void parse_from_csv(const std::string& str)
+    {
       std::vector<std::string> list = split_by_char<std::vector<std::string>, Lex>(str, ',');
       for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); i++)
 	{
 	  const Option opt = split_by_space<Option, Lex, SpaceMatch>(*i);
 	  if (opt.size())
-	    ret.push_back(opt);
+	    push_back(opt);
 	}
-      ret.update_map();
-      return ret;
     }
 
-    static OptionList parse_from_config(const std::string& str)
+    // caller should call update_map() after this function
+    void parse_from_config(const std::string& str)
     {
-      OptionList ret;
       std::stringstream in(str);
       std::string line;
       int line_num = 0;
@@ -143,7 +166,7 @@ namespace openvpn {
 	    {
 	      if (is_close_tag(line, multiline[0]))
 		{
-		  ret.push_back(multiline);
+		  push_back(multiline);
 		  multiline.clear();
 		  in_multiline = false;
 		}
@@ -168,17 +191,15 @@ namespace openvpn {
 		      in_multiline = true;
 		    }
 		  else
-		    ret.push_back(opt);
+		    push_back(opt);
 		}
 	    }
 	}
       if (in_multiline)
 	OPENVPN_THROW(option_error, "option <" << multiline[0] << "> was not properly closed out");
-      ret.update_map();
-      return ret;
     }
 
-    // caller must call update_map() after extend()
+    // caller should call update_map() after this function
     void extend(const OptionList& other)
     {
       reserve(size() + other.size());

@@ -13,7 +13,6 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/addr/ip.hpp>
-#include <openvpn/log/log.hpp>
 #include <openvpn/netconf/mac/gwv4.hpp>
 
 namespace openvpn {

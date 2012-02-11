@@ -5,7 +5,6 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/log/log.hpp>
 #include <openvpn/error/error.hpp>
 
 namespace openvpn {

@@ -11,7 +11,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/circ_list.hpp>
 #include <openvpn/common/socktypes.hpp>
-#include <openvpn/log/log.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
 

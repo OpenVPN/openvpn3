@@ -57,9 +57,14 @@ namespace openvpn {
 
       Type id() const { return id_; }
 
-      virtual std::string render() const
+      const char *name() const
       {
 	return event_name(id_);
+      }	
+
+      virtual std::string render() const
+      {
+	return name();
       }
 
     private:

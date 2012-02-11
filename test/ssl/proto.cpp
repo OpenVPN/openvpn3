@@ -33,6 +33,8 @@
 #define VERBOSE
 #endif
 
+#include <openvpn/log/logsimple.hpp>
+
 #include <openvpn/common/thread.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
@@ -40,16 +42,13 @@
 #include <openvpn/random/rand.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/ssl/proto.hpp>
+#include <openvpn/gencrypto/genengine.hpp>
 
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/init.hpp>
 
 #ifdef USE_APPLE_SSL
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
-#endif
-
-#ifdef OPENSSL_AES_NI
-#include <openvpn/openssl/util/engine.hpp>
 #endif
 
 #if OPENVPN_MULTITHREAD
@@ -751,9 +750,7 @@ int main(int /*argc*/, char* /*argv*/[])
   Time::reset_base();
   openssl_init ossl_init;
 
-#ifdef OPENSSL_AES_NI
-  openssl_setup_engine("aesni");
-#endif
+  setup_crypto_engine("auto");
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
   boost::thread* threads[N_THREADS];

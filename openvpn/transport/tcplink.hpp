@@ -11,7 +11,6 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/log/log.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/transport/pktstream.hpp>
 

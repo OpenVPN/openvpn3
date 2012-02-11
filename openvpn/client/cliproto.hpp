@@ -297,7 +297,7 @@ namespace openvpn {
 	if (!received_options.complete() && boost::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
-	    received_options.add(OptionList::parse_from_csv(msg.substr(11)));
+	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11)));
 	    if (received_options.complete())
 	      {
 		// show options

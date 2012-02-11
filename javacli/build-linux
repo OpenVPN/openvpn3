@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+swig -c++ -java ovpncli.i
+javac *.java
+gcc -O3 -fPIC -pthread \
+    -Wall -Wno-sign-compare -Wno-unused-parameter -Wno-strict-aliasing \
+    -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
+    -DUSE_OPENSSL \
+    -I$OVPN3_DIR \
+    -I$BOOST_DIR \
+    -I/usr/lib/jvm/java-7-openjdk-amd64/include \
+    -L$BOOST_DIR/stage/lib \
+    ovpncli_wrap.cxx \
+    -o libovpncli.so \
+    -shared -Wl,-soname,libovpncli.so \
+    -lcrypto -lssl \
+    -lboost_system -lboost_thread

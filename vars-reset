@@ -1,8 +1,11 @@
 unset BOOST_DIR
 unset OPENSSL_DIR
 unset SNAPPY_DIR
+unset LZ4_DIR
+unset JAVA_DIR
 unset OVPN3_DIR
 unset PLATFORM
 unset GPP_CMD
 unset STRIP_CMD
+unset LD_LIBRARY_PATH
 [ "$NEW_PATH" ] && export PATH="$NEW_PATH"

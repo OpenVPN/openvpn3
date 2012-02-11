@@ -8,7 +8,6 @@
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/log/log.hpp>
 #include <openvpn/log/sessionstats.hpp>
 
 #if defined(OPENVPN_DEBUG_UDPLINK) && OPENVPN_DEBUG_UDPLINK >= 1

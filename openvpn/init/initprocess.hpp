@@ -22,7 +22,7 @@ namespace openvpn {
 	// initialize compression
 	CompressContext::init_static();
 
-	// initialize crypto engines if available
+	// init crypto acceleration (if available)
 	setup_crypto_engine("auto");
       }
 
