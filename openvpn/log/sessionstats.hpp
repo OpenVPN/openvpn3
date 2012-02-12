@@ -28,15 +28,15 @@ namespace openvpn {
       std::memset(stats_, 0, sizeof(stats_));
     }
 
-    virtual void error(const Error::Type err, const std::string* text=NULL) = 0;
+    virtual void error(const size_t type, const std::string* text=NULL) = 0;
 
-    void inc_stat(const Stats type, const count_t value)
+    void inc_stat(const size_t type, const count_t value)
     {
       if (type < N_STATS)
 	stats_[type] += value;
     }
 
-    count_t get_stat(const Stats type) const
+    count_t get_stat(const size_t type) const
     {
       if (type < N_STATS)
 	return stats_[type];
@@ -44,7 +44,7 @@ namespace openvpn {
 	return 0;
     }
 
-    const char *stat_name(const Stats type)
+    static const char *stat_name(const size_t type)
     {
       static const char *names[] = {
 	"BYTES_IN",

@@ -57,8 +57,8 @@ public class Client extends OpenVPNClient implements Runnable {
 		// handle creds
 		ProvideCreds creds = new ProvideCreds();
 		RequestCreds need = client.needed_creds();
-		String auth_type = need.getAuthType();
-		if (auth_type.equals("auth"))
+		boolean autologin = need.getAutologin();
+		if (!autologin)
 		    {
 			if (args.length >= 3)
 			    {
@@ -92,6 +92,9 @@ public class Client extends OpenVPNClient implements Runnable {
 
 		// wait for work thread to complete
 		thread.join();
+
+		// show stats before exit
+		client.show_stats();
 	    }
 	else
 	    {
@@ -112,6 +115,17 @@ public class Client extends OpenVPNClient implements Runnable {
     public void run() {
 	Status status = super.connect(creds_);
 	System.out.format("END Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
+    }
+
+    public void show_stats() {
+	int n = super.stats_n();
+	for (int i = 0; i < n; ++i)
+	    {
+		String name = super.stats_name(i);
+		long value = super.stats_value(i);
+		if (value > 0)
+		    System.out.format("STAT %s=%s%n", name, value);
+	    }
     }
 
     @Override

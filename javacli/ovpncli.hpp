@@ -5,9 +5,9 @@ namespace openvpn {
     {
       // used by VPN client to indicate which credentials are required
       RequestCreds() : staticChallengeEcho(false) {}
-      std::string authType;              // "autologin" (no creds required) or "auth" (username/password required)
-      std::string staticChallenge;       // static challenge, may be empty
-      bool staticChallengeEcho;          // true if static challenge response should be echoed to UI
+      bool autologin;                    // true: no creds required, false: username/password required
+      std::string staticChallenge;       // static challenge, may be empty, ignored if autologin
+      bool staticChallengeEcho;          // true if static challenge response should be echoed to UI, ignored if autologin
     };
 
     // used to pass credentials to VPN client
@@ -48,14 +48,6 @@ namespace openvpn {
       std::string text;                         // log output (usually but not always one line)
     };
 
-    // used to pass operational statistics such as bandwidth usage
-    struct Stats
-    {
-      Stats() : bytesIn(0), bytesOut(0) {}
-      long long bytesIn;
-      long long bytesOut;
-    };
-
     namespace Private {
       struct ClientState;
     };
@@ -71,7 +63,7 @@ namespace openvpn {
 
       // Determine needed credentials, call after parse_config()
       // but before connect().
-      RequestCreds needed_creds();
+      RequestCreds needed_creds() const;
 
       // Primary VPN client connect method, doesn't return until disconnect.
       // Should be called by a worker thread.  This method will make callbacks
@@ -84,8 +76,10 @@ namespace openvpn {
       // when connect() is running.
       void stop();
 
-      // Return usage stats.
-      Stats stats() const;
+      // Get stats/error info
+      static int stats_n();                      // number of stats
+      static std::string stats_name(int index);  // return a stats name, index should be >= 0 and < stats_n()
+      long long stats_value(int index) const;    // return a stats value, index should be >= 0 and < stats_n()
 
       // Callback for delivering events during connect() call.
       virtual void event(const Event&) = 0;

@@ -42,13 +42,44 @@ namespace openvpn {
 	std::memset(errors, 0, sizeof(errors));
       }
 
-      virtual void error(const Error::Type err, const std::string* text=NULL)
+      static size_t combined_n()
+      {
+	return N_STATS + Error::N_ERRORS;
+      }
+
+      static std::string combined_name(const size_t index)
+      {
+	if (index < N_STATS + Error::N_ERRORS)
+	  {
+	    if (index < N_STATS)
+	      return stat_name(index);
+	    else
+	      return Error::name(index - N_STATS);
+	  }
+	else
+	  return "";
+      }
+
+      count_t combined_value(const size_t index) const
+      {
+	if (index < N_STATS + Error::N_ERRORS)
+	  {
+	    if (index < N_STATS)
+	      return get_stat(index);
+	    else
+	      return errors[index - N_STATS];
+	  }
+	else
+	  return 0;
+      }
+
+    private:
+      virtual void error(const size_t err, const std::string* text=NULL)
       {
 	if (err < Error::N_ERRORS)
 	  ++errors[err];
       }
 
-    private:
       OpenVPNClient* parent;
       count_t errors[Error::N_ERRORS];
     };
@@ -101,7 +132,7 @@ namespace openvpn {
 	// fill out RequestCreds struct
 	{
 	  const Option *o = state->options.get_ptr("auth-user-pass");
-	  state->req_creds.authType = o ? "auth" : "autologin";
+	  state->req_creds.autologin = !o;
 	}
 	{
 	  const Option *o = state->options.get_ptr("static-challenge");
@@ -121,7 +152,7 @@ namespace openvpn {
       return ret;
     }
 
-    inline RequestCreds OpenVPNClient::needed_creds()
+    inline RequestCreds OpenVPNClient::needed_creds() const
     {
       return state->req_creds;
     }
@@ -175,16 +206,23 @@ namespace openvpn {
       return ret;
     }
 
-    inline Stats OpenVPNClient::stats() const
+    int OpenVPNClient::stats_n()
     {
-      Stats ret;
+      return MySessionStats::combined_n();
+    }
+
+    std::string OpenVPNClient::stats_name(int index)
+    {
+      return MySessionStats::combined_name(index);
+    }
+
+    long long OpenVPNClient::stats_value(int index) const
+    {
       MySessionStats::Ptr stats = state->stats;
       if (stats)
-	{
-	  ret.bytesIn = stats->get_stat(SessionStats::BYTES_IN);
-	  ret.bytesOut = stats->get_stat(SessionStats::BYTES_OUT);
-	}
-      return ret;
+	return stats->combined_value(index);
+      else
+	return 0;
     }
 
     inline void OpenVPNClient::stop()
@@ -198,6 +236,5 @@ namespace openvpn {
     {
       delete state;
     }
-
   }
 }

@@ -29,7 +29,7 @@ namespace openvpn {
       N_ERRORS,
     };
 
-    inline const char *name(const Type type)
+    inline const char *name(const size_t type)
     {
       static const char *names[] = {
 	"SUCCESS",
