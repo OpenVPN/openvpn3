@@ -54,7 +54,8 @@ namespace openvpn {
     // like stop() but may be safely called by another thread
     void thread_safe_stop()
     {
-      io_service.post(asio_dispatch_post(&ClientConnect::stop, this));
+      if (!halt)
+	io_service.post(asio_dispatch_post(&ClientConnect::stop, this));
     }
 
     ~ClientConnect()
