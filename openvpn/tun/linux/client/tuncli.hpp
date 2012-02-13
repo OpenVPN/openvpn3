@@ -128,20 +128,18 @@ namespace openvpn {
 
       void stop_()
       {
-	// remove added routes
-	if (route_list)
+	if (!halt)
 	  {
-	    route_list->stop();
-	    route_list.reset();
-	  }
+	    halt = true;
 
-	// stop tun
-	if (impl)
-	  {
-	    impl->stop();
-	    impl.reset();
+	    // remove added routes
+	    if (route_list)
+	      route_list->stop();
+
+	    // stop tun
+	    if (impl)
+	      impl->stop();
 	  }
-	halt = true;
       }
 
       boost::asio::io_service& io_service;

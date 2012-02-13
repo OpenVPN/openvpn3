@@ -100,7 +100,11 @@ namespace openvpn {
 
       void stop()
       {
-	halt = true;
+	if (!halt)
+	  {
+	    halt = true;
+	    socket.close();
+	  }
       }
 
       ~Link() { stop(); }

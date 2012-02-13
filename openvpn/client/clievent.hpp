@@ -4,8 +4,6 @@
 #include <sstream>
 #include <deque>
 
-#include <boost/thread.hpp>
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/transport/protocol.hpp>

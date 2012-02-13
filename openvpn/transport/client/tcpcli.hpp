@@ -156,10 +156,8 @@ namespace openvpn {
 	  {
 	    halt = true;
 	    if (impl)
-	      {
-		impl->stop();
-		impl.reset();
-	      }
+	      impl->stop();
+
 	    socket.close();
 	    resolver.cancel();
 	  }

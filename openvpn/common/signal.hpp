@@ -4,14 +4,17 @@
 #include <boost/asio.hpp>
 
 #include <openvpn/common/platform.hpp>
+#include <openvpn/common/rc.hpp>
 
 namespace openvpn {
 
-  class ASIOSignals
+  class ASIOSignals : public RC<thread_safe_refcount>
   {
   public:
+    typedef boost::intrusive_ptr<ASIOSignals> Ptr;
+
     ASIOSignals(boost::asio::io_service& io_service)
-      : signals_(io_service) {}
+      : halt(false), signals_(io_service) {}
 
     enum {
       S_SIGINT  = (1<<0),
@@ -42,11 +45,16 @@ namespace openvpn {
 
     void cancel()
     {
-      signals_.cancel();
+      if (!halt)
+	{
+	  halt = true;
+	  signals_.cancel();
+	}
     }
 
-    private:
-      boost::asio::signal_set signals_;
+  private:
+    bool halt;
+    boost::asio::signal_set signals_;
   };
 
 } // namespace openvpn
