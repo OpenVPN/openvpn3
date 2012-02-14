@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -e
+swig -c++ -java ovpncli.i
+#javac *.java
+$GPP_CMD \
+    --sysroot=$NDK/platforms/android-9/arch-arm \
+    -O3 -fPIC \
+    -Wall -Wno-sign-compare -Wno-unused-parameter -Wno-strict-aliasing \
+    -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
+    -DUSE_OPENSSL \
+    -D__GLIBC__ \
+    -D_GLIBCXX_HAVE_FENV_H=1 \
+    -DBOOST_NO_INTRINSIC_WCHAR_T \
+    -I$BOOST_DIR \
+    -I$OPENSSL_DIR/include \
+    -I$OVPN3_DIR \
+    -L$BOOST_DIR/stage/lib \
+    -L$OPENSSL_DIR/lib \
+    ovpncli_wrap.cxx \
+    -o libovpncli.so \
+    -shared -Wl,-soname,libovpncli.so \
+    -lcrypto -lssl \
+    -lboost_system -lboost_thread
