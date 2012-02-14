@@ -1,4 +1,4 @@
-// OpenVPN client ("OpenVPNClient" class) intended for wrapping as a Java class using swig
+// OpenVPN client ("OpenVPNClientBase" class) intended for wrapping as a Java class using swig
 
 #include <iostream>
 
@@ -18,7 +18,7 @@
 //#define OPENVPN_PACKET_LOG "pkt.log"
 
 // log thread settings
-#define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClient
+#define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClientBase
 #define OPENVPN_LOG_INFO  openvpn::ClientAPI::LogInfo
 
 #include <openvpn/log/logthread.hpp>    // should be first included file from openvpn
@@ -36,7 +36,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<MySessionStats> Ptr;
 
-      MySessionStats(OpenVPNClient* parent_arg)
+      MySessionStats(OpenVPNClientBase* parent_arg)
 	: parent(parent_arg)
       {
 	std::memset(errors, 0, sizeof(errors));
@@ -80,7 +80,7 @@ namespace openvpn {
 	  ++errors[err];
       }
 
-      OpenVPNClient* parent;
+      OpenVPNClientBase* parent;
       count_t errors[Error::N_ERRORS];
     };
 
@@ -89,7 +89,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<MyClientEvents> Ptr;
 
-      MyClientEvents(OpenVPNClient* parent_arg) : parent(parent_arg) {}
+      MyClientEvents(OpenVPNClientBase* parent_arg) : parent(parent_arg) {}
 
       virtual void add_event(const ClientEvent::Base::Ptr& event)
       {
@@ -101,7 +101,7 @@ namespace openvpn {
       }
 
     private:
-      OpenVPNClient* parent;
+      OpenVPNClientBase* parent;
     };
 
     namespace Private {
@@ -115,13 +115,13 @@ namespace openvpn {
       };
     };
 
-    inline OpenVPNClient::OpenVPNClient()
+    inline OpenVPNClientBase::OpenVPNClientBase()
     {
       InitProcess::init();
       state = new Private::ClientState();
     }
 
-    inline Status OpenVPNClient::parse_config(const Config& config)
+    inline Status OpenVPNClientBase::parse_config(const Config& config)
     {
       Status ret;
       try {
@@ -152,12 +152,12 @@ namespace openvpn {
       return ret;
     }
 
-    inline RequestCreds OpenVPNClient::needed_creds() const
+    inline RequestCreds OpenVPNClientBase::needed_creds() const
     {
       return state->req_creds;
     }
 
-    inline Status OpenVPNClient::connect(const ProvideCreds& creds)
+    inline Status OpenVPNClientBase::connect(const ProvideCreds& creds)
     {
       boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
       Log::Context log_context(this);
@@ -206,17 +206,17 @@ namespace openvpn {
       return ret;
     }
 
-    int OpenVPNClient::stats_n()
+    int OpenVPNClientBase::stats_n()
     {
       return MySessionStats::combined_n();
     }
 
-    std::string OpenVPNClient::stats_name(int index)
+    std::string OpenVPNClientBase::stats_name(int index)
     {
       return MySessionStats::combined_name(index);
     }
 
-    long long OpenVPNClient::stats_value(int index) const
+    long long OpenVPNClientBase::stats_value(int index) const
     {
       MySessionStats::Ptr stats = state->stats;
       if (stats)
@@ -225,14 +225,14 @@ namespace openvpn {
 	return 0;
     }
 
-    inline void OpenVPNClient::stop()
+    inline void OpenVPNClientBase::stop()
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_stop();
     }
 
-    inline OpenVPNClient::~OpenVPNClient()
+    inline OpenVPNClientBase::~OpenVPNClientBase()
     {
       delete state;
     }

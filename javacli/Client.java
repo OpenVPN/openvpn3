@@ -1,7 +1,7 @@
 import java.io.*;
 import java.nio.charset.Charset;
 
-public class Client extends OpenVPNClient implements Runnable {
+public class Client extends OpenVPNClientBase implements Runnable {
     private ProvideCreds creds_;
 
     // utility method to read a text file
@@ -33,7 +33,7 @@ public class Client extends OpenVPNClient implements Runnable {
 	}
     }
 
-    // Load OpenVPN core (implements OpenVPNClient) from shared library 
+    // Load OpenVPN core (implements OpenVPNClientBase) from shared library 
     static {
 	System.loadLibrary("ovpncli");
     }

@@ -53,10 +53,10 @@ namespace openvpn {
     };
 
     // Top-level OpenVPN client class that is wrapped by swig
-    class OpenVPNClient {
+    class OpenVPNClientBase {
     public:
-      OpenVPNClient();
-      virtual ~OpenVPNClient();
+      OpenVPNClientBase();
+      virtual ~OpenVPNClientBase();
 
       // Parse OpenVPN configuration file.
       Status parse_config(const Config&);
@@ -89,8 +89,8 @@ namespace openvpn {
 
     private:
       // disable copy and assignment
-      OpenVPNClient(const OpenVPNClient&);
-      OpenVPNClient& operator=(const OpenVPNClient&);
+      OpenVPNClientBase(const OpenVPNClientBase&);
+      OpenVPNClientBase& operator=(const OpenVPNClientBase&);
 
       Private::ClientState* state;
     };
