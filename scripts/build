@@ -75,7 +75,7 @@ if [ "$NOTHREADS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
     LIBS="$LIBS -lboost_thread"
-    FLAGS="$FLAGS -pthread"
+    [ "$PLATFORM" != "android" ] && FLAGS="$FLAGS -pthread"
 fi
 
 # LZO compression
@@ -98,6 +98,14 @@ if [ "$SNAP" = "1" ]; then
     fi
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
+fi
+
+# Android NDK
+if [ "$PLATFORM" = "android" ]; then
+    FLAGS="$FLAGS --sysroot=$NDK/platforms/android-9/arch-arm"
+    CPPFLAGS="$CPPFLAGS -D__GLIBC__"
+    CPPFLAGS="$CPPFLAGS -D_GLIBCXX_HAVE_FENV_H=1"
+    CPPFLAGS="$CPPFLAGS -DBOOST_NO_INTRINSIC_WCHAR_T"
 fi
 
 # ovpn3

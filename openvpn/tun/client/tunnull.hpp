@@ -48,6 +48,11 @@ namespace openvpn {
 	return "TUN_NULL";
       }
 
+      virtual std::string vpn_ip() const
+      {
+	return "UNDEF_IP";
+      }
+
       virtual void stop() {}
 
     private:

@@ -1,0 +1,8 @@
+export BOOST_DIR=$HOME/src/android/boost_1_48_0
+export OPENSSL_DIR=$HOME/src/android/openssl
+export SNAPPY_DIR=$HOME/src/android/snappy
+export OVPN3_DIR=$HOME/src/ovpn3
+export PLATFORM=android
+export PATH="$OVPN3_DIR/scripts:$PATH"
+export GPP_CMD=arm-linux-androideabi-g++
+export STRIP_CMD=arm-linux-androideabi-strip

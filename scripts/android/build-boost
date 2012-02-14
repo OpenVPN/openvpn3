@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -e
+export BOOST=boost_1_48_0
+rm -rf $BOOST $DIST
+tar xfj ~/Downloads/$BOOST.tar.bz2
+cd $BOOST
+patch -p2 <$DL/changeset_75599.diff
+patch -p2 <$DL/changeset_75813.diff || true
+cat >>tools/build/v2/user-config.jam <<EOF
+using gcc : android : arm-linux-androideabi-g++
+            :
+	        <compileflags>--sysroot=$NDK/platforms/android-9/arch-arm
+                <compileflags>-g
+                <compileflags>-O3
+                <compileflags>-D__GLIBC__
+                <compileflags>-D_GLIBCXX_HAVE_FENV_H=1
+                <compileflags>-DBOOST_NO_INTRINSIC_WCHAR_T
+                <archiver>arm-linux-androideabi-ar
+		<ranlib>arm-linux-androideabi-ranlib
+            ; 
+EOF
+./bootstrap.sh
+./bjam -d2 toolset=gcc-android --with-system --with-thread variant=release link=static threading=multi runtime-link=static target-os=linux

@@ -1,0 +1,5 @@
+export AD=$(pwd)
+export SDK=$AD/android-sdk-macosx
+export NDK=$AD/android-ndk-r6b
+export TC=$NDK/toolchains/arm-linux-androideabi-4.6.2/prebuilt/darwin-x86
+export PATH="$SDK/tools:$SDK/platform-tools:$TC/bin:$PATH"
