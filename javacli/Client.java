@@ -45,9 +45,10 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	client_thread.connect(this);
 
 	// wait for worker thread to exit
-	Status status = client_thread.wait_thread();
+	client_thread.wait_thread();
 
 	// show connect status
+	Status status = client_thread.connect_status();
 	System.out.format("END Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
     }
 
