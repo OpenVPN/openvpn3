@@ -85,6 +85,9 @@ namespace openvpn {
 	{
 	  if (client->auth_failed())
 	    {
+	      ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(client->auth_failed_reason());
+	      client_options->events().add_event(ev);
+	      client_options->stats().error(Error::AUTH_FAILED);
 	      stop();
 	    }
 	  else

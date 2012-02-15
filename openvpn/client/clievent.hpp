@@ -14,7 +14,6 @@ namespace openvpn {
       DISCONNECTED=0,
       CONNECTED,
       RECONNECTING,
-      ERROR,
       NEED_AUTH,
       RESOLVE,
       WAIT,
@@ -22,7 +21,12 @@ namespace openvpn {
       GET_CONFIG,
       ASSIGN_IP,
       ADD_ROUTES,
+      AUTH_FAILED,
       N_TYPES
+    };
+
+    enum {
+      ERROR_START=AUTH_FAILED, // start of error events
     };
 
     inline const char *event_name(const Type type)
@@ -31,7 +35,6 @@ namespace openvpn {
 	"DISCONNECTED",
 	"CONNECTED",
 	"RECONNECTING",
-	"ERROR",
 	"NEED_AUTH",
 	"RESOLVE",
 	"WAIT",
@@ -39,6 +42,7 @@ namespace openvpn {
 	"GET_CONFIG",
 	"ASSIGN_IP",
 	"ADD_ROUTES",
+	"AUTH_FAILED",
       };
 
       if (type < N_TYPES)
@@ -58,7 +62,12 @@ namespace openvpn {
       const char *name() const
       {
 	return event_name(id_);
-      }	
+      }
+
+      bool is_error() const
+      {
+	return int(id_) >= ERROR_START;
+      }
 
       virtual std::string render() const
       {
@@ -134,23 +143,25 @@ namespace openvpn {
       }
     };
 
-    struct Error : public Base
+    struct AuthFailed : public Base
     {
-      Error() : Base(ERROR) {}
-
-      std::string error;
+      AuthFailed(const std::string& reason_arg)
+	: Base(AUTH_FAILED),
+	  reason(reason_arg)
+      {
+      }
 
       virtual std::string render() const
       {
 	std::ostringstream out;
-	out << "ERROR " << error;
+	if (!reason.empty())
+	  out << "AUTH_FAILED: " << reason;
+	else
+	  out << "AUTH_FAILED";
 	return out.str();
       }
-    };
 
-    struct NeedAuth : public Base
-    {
-      NeedAuth() : Base(NEED_AUTH) {}
+      std::string reason;
     };
 
     class Queue : public RC<thread_safe_refcount>

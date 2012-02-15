@@ -94,9 +94,9 @@ namespace openvpn {
       virtual void add_event(const ClientEvent::Base::Ptr& event)
       {
 	Event ev;
-	ev.error = false;
 	ev.name = event->name();
 	ev.info = event->render();
+	ev.error = event->is_error();
 	parent->event(ev);
       }
 

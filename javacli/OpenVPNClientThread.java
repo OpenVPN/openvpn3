@@ -16,7 +16,7 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
 	parent = parent_arg;
 
 	// execute client in a worker thread
-	Thread thread = new Thread(this);
+	Thread thread = new Thread(this, "OpenVPNClientThread");
 	thread.start();
 
 	// wait for worker thread to complete

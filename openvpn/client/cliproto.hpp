@@ -6,7 +6,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/cstdint.hpp> // for boost::uint...
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
+#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with and trim_left_copy
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
@@ -130,6 +130,8 @@ namespace openvpn {
       bool reached_connected_state() const { return connected_; }
 
       bool auth_failed() const { return auth_failed_; }
+
+      const std::string& auth_failed_reason() const { return auth_failed_reason_; }
 
       virtual ~Session()
       {
@@ -294,7 +296,7 @@ namespace openvpn {
       {
 	const std::string msg = Base::template read_control_string<std::string>(*app_bp);
 	OPENVPN_LOG("SERVER: " << msg);
-	if (!received_options.complete() && boost::starts_with(msg, "PUSH_REPLY,"))
+	if (!received_options.complete() && boost::algorithm::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
 	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11)));
@@ -316,10 +318,11 @@ namespace openvpn {
 	    else
 	      OPENVPN_LOG("Options continuation...");
 	  }
-	else if (boost::starts_with(msg, "AUTH_FAILED"))
+	else if (boost::algorithm::starts_with(msg, "AUTH_FAILED"))
 	  {
 	    auth_failed_ = true;
-	    Base::stat().error(Error::AUTH_FAILED);
+	    if (msg.length() >= 13)
+	      auth_failed_reason_ = boost::algorithm::trim_left_copy(std::string(msg, 12));
 	    if (notify_callback)
 	      {
 		OPENVPN_LOG("AUTH_FAILED");
@@ -515,6 +518,7 @@ namespace openvpn {
 
       bool connected_;
       bool auth_failed_;
+      std::string auth_failed_reason_;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;
