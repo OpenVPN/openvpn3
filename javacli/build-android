@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -e
-swig -c++ -java ovpncli.i
-#javac *.java
+swig -c++ -java -package net.openvpn.openvpn ovpncli.i
+# fixme -- remove -g
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
-    -O3 -fPIC \
+    -g -O3 -fPIC \
     -Wall -Wno-sign-compare -Wno-unused-parameter -Wno-strict-aliasing \
     -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
     -DUSE_OPENSSL \
