@@ -1,12 +1,17 @@
-public class ClientImpl extends OpenVPNClientBase implements Runnable {
-    private ClientEventReceiver parent;
+public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
+    private EventReceiver parent;
     private Status connect_status;
 
-    public ClientImpl() {
+    public interface EventReceiver {
+	void event(Event event);
+	void log(LogInfo loginfo);
+    }
+
+    public OpenVPNClientThread() {
 	parent = null;
     }
 
-    public Status connect(ClientEventReceiver parent_arg) {
+    public Status connect(EventReceiver parent_arg) {
 	// direct client callbacks to parent
 	parent = parent_arg;
 

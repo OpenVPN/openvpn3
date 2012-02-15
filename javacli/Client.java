@@ -1,11 +1,11 @@
-public class Client implements ClientEventReceiver {
-    private ClientImpl client_impl;
+public class Client implements OpenVPNClientThread.EventReceiver {
+    private OpenVPNClientThread client_impl;
 
-    static class ConfigError extends Exception {
+    public static class ConfigError extends Exception {
 	public ConfigError(String msg) { super(msg); }
     }
 
-    static class CredsUnspecifiedError extends Exception {
+    public static class CredsUnspecifiedError extends Exception {
 	public CredsUnspecifiedError(String msg) { super(msg); }
     }
 
@@ -16,7 +16,7 @@ public class Client implements ClientEventReceiver {
 
     public Client(String config_text, String username, String password) throws ConfigError, CredsUnspecifiedError {
 	// init client implementation object
-	client_impl = new ClientImpl();
+	client_impl = new OpenVPNClientThread();
 
 	// load/eval config
 	Config config = new Config();
