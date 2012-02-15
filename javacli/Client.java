@@ -1,36 +1,12 @@
-import java.io.*;
-import java.nio.charset.Charset;
+public class Client implements ClientEventReceiver {
+    private ClientImpl client_impl;
 
-public class Client extends OpenVPNClientBase implements Runnable {
-    private ProvideCreds creds_;
-
-    // utility method to read a text file
-    public static String readTextFile(String file, String csName)
-	throws IOException {
-	Charset cs = Charset.forName(csName);
-	return readTextFile(file, cs);
+    static class ConfigError extends Exception {
+	public ConfigError(String msg) { super(msg); }
     }
 
-    public static String readTextFile(String file, Charset cs)
-	throws IOException {
-	// No real need to close the BufferedReader/InputStreamReader
-	// as they're only wrapping the stream
-	FileInputStream stream = new FileInputStream(file);
-	try {
-	    Reader reader = new BufferedReader(new InputStreamReader(stream, cs));
-	    StringBuilder builder = new StringBuilder();
-	    char[] buffer = new char[8192];
-	    int read;
-	    while ((read = reader.read(buffer, 0, buffer.length)) > 0) {
-		builder.append(buffer, 0, read);
-	    }
-	    return builder.toString();
-	} finally {
-	    // Potential issue here: if this throws an IOException,
-	    // it will mask any others. Normally I'd use a utility
-	    // method which would log exceptions and swallow them
-	    stream.close();
-	}
+    static class CredsUnspecifiedError extends Exception {
+	public CredsUnspecifiedError(String msg) { super(msg); }
     }
 
     // Load OpenVPN core (implements OpenVPNClientBase) from shared library 
@@ -38,97 +14,55 @@ public class Client extends OpenVPNClientBase implements Runnable {
 	System.loadLibrary("ovpncli");
     }
 
-    public static void main(String[] args) throws InterruptedException, IOException {
-	if (args.length >= 1)
+    public Client(String config_text, String username, String password) throws ConfigError, CredsUnspecifiedError {
+	// init client implementation object
+	client_impl = new ClientImpl();
+
+	// load/eval config
+	Config config = new Config();
+	config.setContent(config_text);
+	EvalConfig ec = client_impl.eval_config(config);
+	if (ec.getError())
+	    throw new ConfigError("OpenVPN config file parse error: " + ec.getMessage());
+
+	// handle creds
+	ProvideCreds creds = new ProvideCreds();
+	if (!ec.getAutologin())
 	    {
-		// load config file
-		Config config = new Config();
-		config.setContent(readTextFile(args[0], "UTF-8"));
-
-		// parse config file
-		final Client client = new Client();
-		Status s = client.parse_config(config);
-		if (s.getError())
+		if (username.length() > 0)
 		    {
-			System.err.println("OpenVPN config file parse error: " + s.getMessage());
-			System.exit(1);
+			creds.setUsername(username);
+			creds.setPassword(password);
 		    }
-
-		// handle creds
-		ProvideCreds creds = new ProvideCreds();
-		RequestCreds need = client.needed_creds();
-		boolean autologin = need.getAutologin();
-		if (!autologin)
-		    {
-			if (args.length >= 3)
-			    {
-				creds.setUsername(args[1]);
-				creds.setPassword(args[2]);
-			    }
-			else
-			    {
-				System.err.println("OpenVPN config file requires username/password but none provided");
-				System.exit(1);
-			    }
-		    }
-		client.provide_creds(creds);
-
-		// catch signals
-		final Thread mainThread = Thread.currentThread();
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-			    client.stop();
-			    try {
-				mainThread.join();
-			    } catch (InterruptedException e) {
-			    }
-
-			}
-		    });
-
-		// execute client in a worker thread
-		Thread thread = new Thread(client);
-		thread.start();
-
-		// wait for work thread to complete
-		thread.join();
-
-		// show stats before exit
-		client.show_stats();
+		else
+		    throw new CredsUnspecifiedError("OpenVPN config file requires username/password but none provided");
 	    }
-	else
-	    {
-		System.err.println("OpenVPN Java client");
-		System.err.println("Usage: java Client <client.ovpn> [username] [password]");
-		System.exit(2);
-	    }
+	client_impl.provide_creds(creds);
     }
 
-    Client() {
-    }
+    public void connect() {
+	// connect
+	Status status = client_impl.connect(this);
 
-    public void provide_creds(ProvideCreds creds)
-    {
-	creds_ = creds;
-    }
-
-    public void run() {
-	Status status = super.connect(creds_);
+	// show connect status
 	System.out.format("END Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
     }
 
+    public void stop() {
+	client_impl.stop();
+    }
+
     public void show_stats() {
-	int n = super.stats_n();
+	int n = client_impl.stats_n();
 	for (int i = 0; i < n; ++i)
 	    {
-		String name = super.stats_name(i);
-		long value = super.stats_value(i);
+		String name = client_impl.stats_name(i);
+		long value = client_impl.stats_value(i);
 		if (value > 0)
 		    System.out.format("STAT %s=%s%n", name, value);
 	    }
     }
 
-    @Override
     public void event(Event event) {
 	boolean error = event.getError();
 	String name = event.getName();
@@ -136,7 +70,6 @@ public class Client extends OpenVPNClientBase implements Runnable {
 	System.out.format("EVENT: err=%b name=%s info='%s'%n", error, name, info);
     }
 
-    @Override
     public void log(LogInfo loginfo) {
 	String text = loginfo.getText();
 	System.out.format("LOG: %s", text);

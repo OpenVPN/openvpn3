@@ -108,7 +108,7 @@ namespace openvpn {
       struct ClientState
       {
 	OptionList options;
-	RequestCreds req_creds;
+	ProvideCreds creds;
 	MySessionStats::Ptr stats;
 	MyClientEvents::Ptr events;
 	ClientConnect::Ptr session;
@@ -121,43 +121,57 @@ namespace openvpn {
       state = new Private::ClientState();
     }
 
-    inline Status OpenVPNClientBase::parse_config(const Config& config)
+    inline void OpenVPNClientBase::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
     {
-      Status ret;
       try {
 	// parse config
-	state->options.parse_from_config(config.content);
-	state->options.update_map();
+	options.parse_from_config(config.content);
+	options.update_map();
 
 	// fill out RequestCreds struct
 	{
-	  const Option *o = state->options.get_ptr("auth-user-pass");
-	  state->req_creds.autologin = !o;
+	  const Option *o = options.get_ptr("auth-user-pass");
+	  eval.autologin = !o;
 	}
 	{
-	  const Option *o = state->options.get_ptr("static-challenge");
+	  const Option *o = options.get_ptr("static-challenge");
 	  if (o)
 	    {
-	      state->req_creds.staticChallenge = o->get(1);
+	      eval.staticChallenge = o->get(1);
 	      if (o->get(2) == "1")
-		state->req_creds.staticChallengeEcho = true;
+		eval.staticChallengeEcho = true;
 	    }
 	}
       }
       catch (std::exception& e)
 	{
-	  ret.error = true;
-	  ret.message = e.what();
+	  eval.error = true;
+	  eval.message = e.what();
 	}
-      return ret;
     }
 
-    inline RequestCreds OpenVPNClientBase::needed_creds() const
+    EvalConfig OpenVPNClientBase::eval_config_static(const Config& config)
     {
-      return state->req_creds;
+      EvalConfig eval;
+      OptionList options;
+      parse_config(config, eval, options);
+      return eval;
     }
 
-    inline Status OpenVPNClientBase::connect(const ProvideCreds& creds)
+    EvalConfig OpenVPNClientBase::eval_config(const Config& config) const
+    {
+      EvalConfig eval;
+      state->options.clear();
+      parse_config(config, eval, state->options);
+      return eval;      
+    }
+
+    void OpenVPNClientBase::provide_creds(const ProvideCreds& creds)
+    {
+      state->creds = creds;
+    }
+
+    inline Status OpenVPNClientBase::connect()
     {
       boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
       Log::Context log_context(this);
@@ -175,9 +189,8 @@ namespace openvpn {
 	// load options
 	ClientOptions::Ptr client_options = new ClientOptions(state->options, state->stats, state->events);
 
-	// get creds if needed
-	if (client_options->need_creds())
-	  client_options->submit_creds(creds.username, creds.password);
+	// configure creds in options
+	client_options->submit_creds(state->creds.username, state->creds.password);
 
 	// initialize the Asio io_service object
 	io_service.reset(new boost::asio::io_service(1)); // concurrency hint=1

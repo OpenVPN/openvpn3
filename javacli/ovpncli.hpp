@@ -1,10 +1,15 @@
 namespace openvpn {
-  namespace ClientAPI {
+  class OptionList;
 
-    struct RequestCreds
+  namespace ClientAPI {
+    // return properties of config
+    struct EvalConfig
     {
-      // used by VPN client to indicate which credentials are required
-      RequestCreds() : staticChallengeEcho(false) {}
+      EvalConfig() : error(false), staticChallengeEcho(false) {}
+
+      bool error;                        // true if error
+      std::string message;               // if error, message given here
+
       bool autologin;                    // true: no creds required, false: username/password required
       std::string staticChallenge;       // static challenge, may be empty, ignored if autologin
       bool staticChallengeEcho;          // true if static challenge response should be echoed to UI, ignored if autologin
@@ -58,21 +63,24 @@ namespace openvpn {
       OpenVPNClientBase();
       virtual ~OpenVPNClientBase();
 
-      // Parse OpenVPN configuration file.
-      Status parse_config(const Config&);
+      // Parse config file and determine needed credentials statically.
+      static EvalConfig eval_config_static(const Config&);
 
-      // Determine needed credentials, call after parse_config()
-      // but before connect().
-      RequestCreds needed_creds() const;
+      // Parse OpenVPN configuration file.
+      EvalConfig eval_config(const Config&) const;
+
+      // Provide credentials.  Call before connect() if needed_creds()
+      // indicates that credentials are needed.
+      void provide_creds(const ProvideCreds&);
 
       // Primary VPN client connect method, doesn't return until disconnect.
       // Should be called by a worker thread.  This method will make callbacks
-      // to event() and log() functions.  Make sure to call parse_config()
-      // before this function.
-      Status connect(const ProvideCreds&);
+      // to event() and log() functions.  Make sure to call eval_config()
+      // and possibly provide_creds() as well before this function.
+      Status connect();
 
       // Stop the client.  Only meaningful when connect() is running.
-      // Intended to be called asynchronously from a different thread
+      // May be called asynchronously from a different thread
       // when connect() is running.
       void stop();
 
@@ -88,6 +96,8 @@ namespace openvpn {
       virtual void log(const LogInfo&) = 0;
 
     private:
+      static void parse_config(const Config& config, EvalConfig& eval, OptionList& options);
+
       // disable copy and assignment
       OpenVPNClientBase(const OpenVPNClientBase&);
       OpenVPNClientBase& operator=(const OpenVPNClientBase&);
