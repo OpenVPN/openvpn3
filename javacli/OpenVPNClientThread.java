@@ -1,6 +1,7 @@
 public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
     private EventReceiver parent;
     private Status connect_status;
+    private Thread thread;
 
     public interface EventReceiver {
 	void event(Event event);
@@ -11,15 +12,22 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
 	parent = null;
     }
 
-    public Status connect(EventReceiver parent_arg) {
+    // start connect session in worker thread
+    public void connect(EventReceiver parent_arg) {
 	// direct client callbacks to parent
 	parent = parent_arg;
 
-	// execute client in a worker thread
-	Thread thread = new Thread(this, "OpenVPNClientThread");
-	thread.start();
+	// clear status
+	connect_status = null;
 
-	// wait for worker thread to complete
+	// execute client in a worker thread
+	thread = new Thread(this, "OpenVPNClientThread");
+	thread.start();
+    }
+
+    // wait for worker thread to complete; to stop thread,
+    // first call super stop() method then wait_thread().
+    public Status wait_thread() {
 	boolean interrupted;
 	do {
 	    interrupted = false;
@@ -34,6 +42,7 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
 
 	// dissassociate client callbacks from parent
 	parent = null;
+	thread = null;
 
 	return connect_status;
     }
