@@ -1,3 +1,5 @@
+// TESTING_ONLY
+
 public class Client implements OpenVPNClientThread.EventReceiver {
     private OpenVPNClientThread client_thread;
 

@@ -1619,7 +1619,6 @@ namespace openvpn {
 	  use_tls_auth = false;
 	  hmac_size = 0;
 	}
-      reset();
     }
 
     void reset()

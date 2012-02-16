@@ -1,11 +1,14 @@
+// package OPENVPN_PACKAGE
+
 public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
     private EventReceiver parent;
     private Thread thread;
     private Status connect_status_;
 
     public interface EventReceiver {
-	void event(Event event);
-	void log(LogInfo loginfo);
+	void event(Event event);    // called with events from core
+	void log(LogInfo loginfo);  // called with log text from core
+	void done(Status status);   // called when connect() thread exits
     }
 
     public OpenVPNClientThread() {
@@ -68,5 +71,7 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
     @Override
     public void run() {
 	connect_status_ = super.connect();
+	if (parent != null)
+	    parent.done(connect_status_);
     }
 }

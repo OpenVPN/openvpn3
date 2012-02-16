@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 swig -c++ -java -package net.openvpn.openvpn ovpncli.i
-# fixme -- remove -g
+# fixme -- note -g and strip
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
     -g -O3 -fPIC \
@@ -19,5 +19,6 @@ $GPP_CMD \
     ovpncli_wrap.cxx \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
-    -lcrypto -lssl \
+    -lssl -lcrypto \
     -lboost_system -lboost_thread
+# $STRIP_CMD libovpncli.so

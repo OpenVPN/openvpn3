@@ -7,7 +7,7 @@ export BIN=$TC/bin
 rm -rf $OPENSSL $DIST
 tar xfz ~/Downloads/$OPENSSL.tar.gz
 cd $OPENSSL
-./Configure linux-armv4 shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
+./Configure linux-armv4 no-shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
 for t in "" install ; do
     make CC="$BIN/$TPRE-gcc" AR="$BIN/$TPRE-ar r" RANLIB="$BIN/$TPRE-ranlib" $t
 done

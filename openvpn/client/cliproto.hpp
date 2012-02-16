@@ -87,6 +87,8 @@ namespace openvpn {
 	if (!packet_log)
 	  OPENVPN_THROW(open_file_error, "cannot open packet log for output: " << OPENVPN_PACKET_LOG);
 #endif
+	Base::update_now();
+	Base::reset();
       }
 
       bool first_packet_received() const { return first_packet_received_; }
