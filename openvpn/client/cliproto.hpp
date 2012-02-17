@@ -191,7 +191,7 @@ namespace openvpn {
 	  // schedule housekeeping wakeup
 	  set_housekeeping_timer();
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    process_exception(e);
 	  }
@@ -225,7 +225,7 @@ namespace openvpn {
 	  // schedule housekeeping wakeup
 	  set_housekeeping_timer();
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    process_exception(e);
 	  }
@@ -256,7 +256,7 @@ namespace openvpn {
 	  Base::flush(true);
 	  set_housekeeping_timer();
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    process_exception(e);
 	  }
@@ -399,7 +399,7 @@ namespace openvpn {
 	      schedule_push_request_callback(false);
 	    }
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    process_exception(e);
 	  }
@@ -444,7 +444,7 @@ namespace openvpn {
 	      set_housekeeping_timer();
 	    }
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    process_exception(e);
 	  }
@@ -469,7 +469,7 @@ namespace openvpn {
 	  }
       }
 
-      void process_exception(std::exception& e)
+      void process_exception(const std::exception& e)
       {
 	if (notify_callback)
 	  {

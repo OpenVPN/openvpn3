@@ -143,7 +143,7 @@ namespace openvpn {
 	    }
 	}
       }
-      catch (std::exception& e)
+      catch (const std::exception& e)
 	{
 	  eval.error = true;
 	  eval.message = e.what();
@@ -205,7 +205,7 @@ namespace openvpn {
 	in_run = true;	
 	io_service->run();
       }
-      catch (std::exception& e)
+      catch (const std::exception& e)
 	{
 	  if (in_run)
 	    {

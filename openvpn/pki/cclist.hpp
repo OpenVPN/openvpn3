@@ -92,7 +92,7 @@ namespace openvpn {
 		typename CertList::ItemPtr x509(new typename CertList::Item(item, title));
 		cert_list->push_back(x509);
 	      }
-	      catch (std::exception& e)
+	      catch (const std::exception& e)
 		{
 		  OPENVPN_THROW(parse_cert_crl_error, title << ":" << line_num << " : error parsing CERT: " << e.what());
 		}
@@ -105,7 +105,7 @@ namespace openvpn {
 		typename CRLList::ItemPtr crl(new typename CRLList::Item(item));
 		crl_list->push_back(crl);
 	      }
-	      catch (std::exception& e)
+	      catch (const std::exception& e)
 		{
 		  OPENVPN_THROW(parse_cert_crl_error, title << ":" << line_num << " : error parsing CRL: " << e.what());
 		}

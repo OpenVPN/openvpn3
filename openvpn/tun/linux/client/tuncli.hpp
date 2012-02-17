@@ -72,7 +72,7 @@ namespace openvpn {
 	      // signal that we are connected
 	      parent.tun_connected();
 	    }
-	    catch (std::exception& e)
+	    catch (const std::exception& e)
 	      {
 		config->stats->error(Error::TUN_ERROR);
 		stop();

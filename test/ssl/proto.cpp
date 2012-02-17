@@ -456,7 +456,7 @@ public:
 		}
 #endif
 	    }
-	    catch (std::exception& e)
+	    catch (const std::exception& e)
 	      {
 #ifdef VERBOSE
 		std::cout << now->raw() << " " << title << " Exception on data channel decrypt: " << e.what() << std::endl;
@@ -739,7 +739,7 @@ void test(const int thread_num)
               << " HE=" << cli_stats->get_error_count(Error::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get_error_count(Error::HANDSHAKE_TIMEOUT)
 	      << std::endl;
   }
-  catch (std::exception& e)
+  catch (const std::exception& e)
     {
       std::cerr << "Exception: " << e.what() << std::endl;
     }

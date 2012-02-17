@@ -146,7 +146,7 @@ int main(int /*argc*/, char* /*argv*/[])
 
     std::cout << count << " bytes" << std::endl;
   }
-  catch (std::exception& e)
+  catch (const std::exception& e)
     {
       std::cerr << "Exception: " << e.what() << std::endl;
       return 1;

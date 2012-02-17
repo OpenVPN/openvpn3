@@ -344,7 +344,7 @@ namespace openvpn {
 	      cipher = Cipher(new_cipher);
 	    }
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed cipher '" << new_cipher << "': " << e.what());
 	  }
@@ -359,7 +359,7 @@ namespace openvpn {
 	      digest = Digest(new_digest);
 	    }
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
 	  }
@@ -393,7 +393,7 @@ namespace openvpn {
 		}
 	    }
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed compressor '" << new_comp << "': " << e.what());
 	  }
@@ -595,7 +595,7 @@ namespace openvpn {
 	      }
 	  }
       }
-      catch (std::exception& e)
+      catch (const std::exception& e)
 	{
 	  out << " EXCEPTION: " << e.what();
 	}

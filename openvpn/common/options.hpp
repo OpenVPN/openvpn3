@@ -49,7 +49,7 @@ namespace openvpn {
       try {
 	return types<T>::parse((*this)[index]);
       }
-      catch (std::exception& e)
+      catch (const std::exception& e)
 	{
 	  throw option_error(type_error<T>(e, index));
 	}
@@ -62,7 +62,7 @@ namespace openvpn {
       try {
 	types<T>::parse((*this)[index], ret);
       }
-      catch (std::exception& e)
+      catch (const std::exception& e)
 	{
 	  throw option_error(type_error<T>(e, index));
 	}
@@ -98,7 +98,7 @@ namespace openvpn {
     }
 
     template <typename T>
-    std::string type_error(std::exception& e, const size_t index) const
+    std::string type_error(const std::exception& e, const size_t index) const
     {
       std::ostringstream out;
       out << "in " << err_ref() << ": unable to parse '" << (*this)[index]
