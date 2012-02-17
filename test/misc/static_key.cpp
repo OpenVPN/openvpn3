@@ -30,7 +30,7 @@ int main(int /*argc*/, char* /*argv*/[])
     std::string rend = sk.render();
     std::cout << rend;
   }
-  catch (std::exception& e)
+  catch (const std::exception& e)
     {
       std::cerr << "Exception: " << e.what() << std::endl;
       return 1;

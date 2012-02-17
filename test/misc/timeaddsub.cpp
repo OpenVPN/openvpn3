@@ -80,7 +80,7 @@ int main()
       add(inf, inf);
     }
   }
-  catch (std::exception& e)
+  catch (const std::exception& e)
     {
       std::cerr << "Exception: " << e.what() << std::endl;
       return 1;
