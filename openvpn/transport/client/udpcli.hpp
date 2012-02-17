@@ -14,6 +14,7 @@ namespace openvpn {
   namespace UDPTransport {
 
     OPENVPN_EXCEPTION(udp_transport_resolve_error);
+    OPENVPN_SIMPLE_EXCEPTION(udp_transport_socket_protect_error);
 
     class ClientConfig : public TransportClientFactory
     {
@@ -178,7 +179,16 @@ namespace openvpn {
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)
-	  config->socket_protect->socket_protect(socket.native_handle());
+	  {
+	    if (!config->socket_protect->socket_protect(socket.native_handle()))
+	      {
+		config->stats->error(Error::SOCKET_PROTECT_ERROR);
+		stop();
+		udp_transport_socket_protect_error err;
+		parent.transport_error(err);
+		return;
+	      }
+	  }
 #endif
 	socket.connect(server_endpoint);
 	impl.reset(new LinkImpl(this,

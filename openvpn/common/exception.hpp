@@ -81,6 +81,16 @@ namespace openvpn {
     throw exc(_ovpn_exc.str()); \
   } while (0)
 
+  // properly rethrow an exception that might be derived from Exception
+  inline void throw_ref(const std::exception& e)
+  {
+    const Exception* ex = dynamic_cast<const Exception*>(&e);
+    if (ex)
+      throw *ex;
+    else
+      throw e;
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_EXCEPTION_H

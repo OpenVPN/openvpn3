@@ -15,6 +15,7 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(tcp_transport_resolve_error);
     OPENVPN_EXCEPTION(tcp_transport_error);
+    OPENVPN_SIMPLE_EXCEPTION(tcp_transport_socket_protect_error);
 
     class ClientConfig : public TransportClientFactory
     {
@@ -145,7 +146,7 @@ namespace openvpn {
 	parent.transport_recv(buf);
       }
 
-      void tcp_error_handler(const char *error)
+      void tcp_error_handler(const char *error) // called by LinkImpl
       {
 	std::ostringstream os;
 	os << "Transport error on '" << config->server_host << ": " << error;
@@ -197,7 +198,16 @@ namespace openvpn {
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)
-	  config->socket_protect->socket_protect(socket.native_handle());
+	  {
+	    if (!config->socket_protect->socket_protect(socket.native_handle()))
+	      {
+		config->stats->error(Error::SOCKET_PROTECT_ERROR);
+		stop();
+		tcp_transport_socket_protect_error err;
+		parent.transport_error(err);
+		return;
+	      }
+	  }
 #endif
 	socket.set_option(boost::asio::ip::tcp::no_delay(true));
 	socket.async_connect(server_endpoint, asio_dispatch_connect(&Client::start_impl_, this));

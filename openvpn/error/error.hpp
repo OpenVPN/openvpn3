@@ -15,6 +15,7 @@ namespace openvpn {
       BAD_SRC_ADDR,        // packet from unknown source address
       COMPRESS_ERROR,      // compress/decompress errors on data channel
       RESOLVE_ERROR,       // DNS resolution error
+      SOCKET_PROTECT_ERROR, // Error calling protect() method on socket
       TUN_ERROR,           // errors on tun/tap interface
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
@@ -42,6 +43,7 @@ namespace openvpn {
 	"BAD_SRC_ADDR",
 	"COMPRESS_ERROR",
 	"RESOLVE_ERROR",
+	"SOCKET_PROTECT_ERROR",
 	"TUN_ERROR",
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",
