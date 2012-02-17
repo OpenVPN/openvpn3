@@ -8,6 +8,7 @@
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
+#include <openvpn/transport/socket_protect.hpp>
 
 namespace openvpn {
   namespace TCPTransport {
@@ -27,6 +28,8 @@ namespace openvpn {
       Frame::Ptr frame;
       SessionStats::Ptr stats;
 
+      SocketProtect* socket_protect;
+
       static Ptr new_obj()
       {
 	return new ClientConfig;
@@ -40,7 +43,8 @@ namespace openvpn {
     private:
       ClientConfig()
 	: send_queue_max_size(64),
-	  free_list_max_size(8)
+	  free_list_max_size(8),
+	  socket_protect(NULL)
       {}
     };
 
@@ -191,6 +195,10 @@ namespace openvpn {
       void start_connect_()
       {
 	socket.open(server_endpoint.protocol());
+#ifdef OPENVPN_PLATFORM_TYPE_UNIX
+	if (config->socket_protect)
+	  config->socket_protect->socket_protect(socket.native_handle());
+#endif
 	socket.set_option(boost::asio::ip::tcp::no_delay(true));
 	socket.async_connect(server_endpoint, asio_dispatch_connect(&Client::start_impl_, this));
       }

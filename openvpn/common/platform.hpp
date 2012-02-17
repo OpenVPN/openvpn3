@@ -19,4 +19,8 @@
 # define OPENVPN_PLATFORM_LINUX
 #endif
 
+#if !defined(_WIN32)
+#define OPENVPN_PLATFORM_TYPE_UNIX
+#endif
+
 #endif // OPENVPN_COMMON_PLATFORM_H

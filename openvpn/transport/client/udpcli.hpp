@@ -8,6 +8,7 @@
 #include <openvpn/transport/udplink.hpp>
 #include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
+#include <openvpn/transport/socket_protect.hpp>
 
 namespace openvpn {
   namespace UDPTransport {
@@ -26,6 +27,8 @@ namespace openvpn {
       Frame::Ptr frame;
       SessionStats::Ptr stats;
 
+      SocketProtect* socket_protect;
+
       static Ptr new_obj()
       {
 	return new ClientConfig;
@@ -38,7 +41,10 @@ namespace openvpn {
 
     private:
       ClientConfig()
-	: server_addr_float(false), n_parallel(8) {}
+	: server_addr_float(false),
+	  n_parallel(8),
+	  socket_protect(NULL)
+      {}
     };
 
     class Client : public TransportClient
@@ -106,6 +112,7 @@ namespace openvpn {
 	     ClientConfig* config_arg,
 	     TransportClientParent& parent_arg)
 	:  io_service(io_service_arg),
+	   socket(io_service_arg),
 	   config(config_arg),
 	   parent(parent_arg),
 	   resolver(io_service_arg),
@@ -137,6 +144,7 @@ namespace openvpn {
 	    if (impl)
 	      impl->stop();
 
+	    socket.close();
 	    resolver.cancel();
 	  }
       }
@@ -167,11 +175,14 @@ namespace openvpn {
       void start_impl_()
       {
 	config->endpoint_cache.set_endpoint(server_endpoint);
-	impl.reset(new LinkImpl(io_service,
-				this,
-				server_endpoint,
-				REMOTE_CONNECT,
-				false,
+	socket.open(server_endpoint.protocol());
+#ifdef OPENVPN_PLATFORM_TYPE_UNIX
+	if (config->socket_protect)
+	  config->socket_protect->socket_protect(socket.native_handle());
+#endif
+	socket.connect(server_endpoint);
+	impl.reset(new LinkImpl(this,
+				socket,
 				config->frame,
 				config->stats));
 	impl->start(config->n_parallel);
@@ -179,6 +190,7 @@ namespace openvpn {
       }
 
       boost::asio::io_service& io_service;
+      boost::asio::ip::udp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent& parent;
       LinkImpl::Ptr impl;

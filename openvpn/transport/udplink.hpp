@@ -34,43 +34,23 @@ namespace openvpn {
       Endpoint sender_endpoint;
     };
 
-    enum BindType {
-      LOCAL_BIND,       // (server) bind locally
-      REMOTE_CONNECT,   // (client) don't bind locally, connect to explicit remote endpoint
-    };
-
     template <typename ReadHandler>
     class Link : public RC<thread_unsafe_refcount>
     {
     public:
       typedef boost::intrusive_ptr<Link> Ptr;
 
-      Link(boost::asio::io_service& io_service,
-	   ReadHandler read_handler_arg,
-	   const Endpoint& endpoint,
-	   BindType bind_type,
-	   const bool reuse_addr,
+      Link(ReadHandler read_handler_arg,
+	   boost::asio::ip::udp::socket& socket_arg,
 	   const Frame::Ptr& frame_arg,
 	   const SessionStats::Ptr& stats_arg)
-	: socket(io_service),
+	: socket(socket_arg),
 	  halt(false),
 	  read_handler(read_handler_arg),
 	  frame(frame_arg),
 	  frame_context((*frame_arg)[Frame::READ_LINK_UDP]),
 	  stats(stats_arg)
       {
-	if (bind_type == LOCAL_BIND)
-	  {
-	    socket.open(endpoint.protocol());
-	    if (reuse_addr)
-	      socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-	    socket.bind(endpoint);
-	  }
-	else if (bind_type == REMOTE_CONNECT)
-	  {
-	    socket.open(endpoint.protocol());
-	    socket.connect(endpoint);
-	  }
       }
 
       bool send(const Buffer& buf, Endpoint* endpoint)
@@ -112,11 +92,7 @@ namespace openvpn {
       }
 
       void stop() {
-	if (!halt)
-	  {
-	    halt = true;
-	    socket.close();
-	  }
+	halt = true;
       }
 
       ~Link() { stop(); }
@@ -158,7 +134,7 @@ namespace openvpn {
 	  }
       }
 
-      boost::asio::ip::udp::socket socket;
+      boost::asio::ip::udp::socket& socket;
       bool halt;
       ReadHandler read_handler;
       Frame::Ptr frame;
