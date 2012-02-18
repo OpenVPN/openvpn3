@@ -38,7 +38,7 @@ namespace openvpn {
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
-      friend class Tun<Client*>;  // calls tun_read_handler
+      friend class TunUnixBase<Client*, PacketFrom>;  // calls tun_read_handler
 
       typedef Tun<Client*> TunImpl;
 

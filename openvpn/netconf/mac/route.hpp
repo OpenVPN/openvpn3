@@ -14,30 +14,19 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/netconf/mac/gwv4.hpp>
+#include <openvpn/options/rgopt.hpp>
 
 namespace openvpn {
 
   class RouteListMac : public RC<thread_unsafe_refcount>
   {
-    // redirect-gateway flags
-    enum {
-      RG_ENABLE      = (1<<0),
-      RG_REROUTE_GW  = (1<<1),
-      RG_LOCAL       = (1<<2),
-      RG_AUTO_LOCAL  = (1<<3),
-      RG_DEF1        = (1<<4),
-      RG_BYPASS_DHCP = (1<<5),
-      RG_BYPASS_DNS  = (1<<6),
-      RG_BLOCK_LOCAL = (1<<7),
-    };
-
   public:
     typedef boost::intrusive_ptr<RouteListMac> Ptr;
 
     OPENVPN_EXCEPTION(route_error);
 
     RouteListMac(const OptionList& opt, const IP::Addr& server_addr_arg)
-      : stopped(false), rg_flags(0), did_redirect_gw(false), server_addr(server_addr_arg)
+      : stopped(false), did_redirect_gw(false), server_addr(server_addr_arg)
     {
       local_gateway = get_default_gateway_v4();
 
@@ -49,29 +38,12 @@ namespace openvpn {
       }
 
       // do redirect-gateway
-      {
-	OptionList::IndexMap::const_iterator e = opt.map().find("redirect-gateway");
-	if (e != opt.map().end())
-	  {
-	    const OptionList::IndexList& idx = e->second;
-	    for (OptionList::IndexList::const_iterator i = idx.begin(); i != idx.end(); i++)
-	      {
-		const Option& o = opt[*i];
-		for (size_t j = 1; j < o.size(); ++j)
-		  {
-		    const std::string& f = o[j];
-		    rg_flags |= RG_ENABLE;
-		    if (f == "def1")
-		      rg_flags |= RG_DEF1;
-		  }
-	      }
-	  }
-	if (rg_flags & RG_ENABLE)
-	  {
-	    add_del_reroute_gw_v4(true);
-	    did_redirect_gw = true;
-	  }
-      }
+      rg_flags.init(opt);
+      if (rg_flags() & RedirectGatewayFlags::RG_ENABLE)
+	{
+	  add_del_reroute_gw_v4(true);
+	  did_redirect_gw = true;
+	}
     }
 
     void stop()
@@ -128,7 +100,7 @@ namespace openvpn {
     }
 
     bool stopped;
-    unsigned int rg_flags;
+    RedirectGatewayFlags rg_flags;
     bool did_redirect_gw;
     IP::Addr server_addr;
     IP::Addr route_gateway;
