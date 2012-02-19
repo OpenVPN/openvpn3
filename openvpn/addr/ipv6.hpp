@@ -17,6 +17,7 @@ namespace openvpn {
   namespace IPv6 {
 
     OPENVPN_SIMPLE_EXCEPTION(ipv6_render_exception);
+    OPENVPN_SIMPLE_EXCEPTION(ipv6_not_implemented);
     OPENVPN_EXCEPTION(ipv6_parse_exception);
 
     class Addr // NOTE: must be union-legal, so default constructor does not initialize
@@ -56,6 +57,27 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_zero()
+      {
+	Addr ret;
+	ret.zero();
+	return ret;
+      }
+
+      static Addr from_zero_complement()
+      {
+	Addr ret;
+	ret.zero();
+	ret.negate();
+	return ret;
+      }
+
+      // build a netmask using given prefix_len
+      static Addr netmask_from_prefix_len(const unsigned int prefix_len)
+      {
+	throw ipv6_not_implemented(); // fixme for ipv6
+      }
+
       boost::asio::ip::address_v6 to_asio() const
       {
 	boost::asio::ip::address_v6::bytes_type bytes;
@@ -79,9 +101,31 @@ namespace openvpn {
 	return ret;
       }
 
+      bool operator==(const Addr& other)
+      {
+	return u.u64[0] == other.u.u64[0] && u.u64[1] == other.u.u64[1];
+      }
+
       bool unspecified() const
       {
 	return u.u64[0] == 0 && u.u64[1] == 0;
+      }
+
+      unsigned int prefix_len() const
+      {
+	throw ipv6_not_implemented(); // fixme for ipv6
+      }
+
+      void negate()
+      {
+	u.u64[0] = ~u.u64[0];
+	u.u64[1] = ~u.u64[1];
+      }
+
+      void zero()
+      {
+	u.u64[0] = 0;
+	u.u64[1] = 0;
       }
 
     private:

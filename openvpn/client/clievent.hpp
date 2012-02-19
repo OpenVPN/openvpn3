@@ -22,6 +22,7 @@ namespace openvpn {
       ASSIGN_IP,
       ADD_ROUTES,
       AUTH_FAILED,
+      TUN_SETUP_FAILED,
       N_TYPES
     };
 
@@ -43,6 +44,7 @@ namespace openvpn {
 	"ASSIGN_IP",
 	"ADD_ROUTES",
 	"AUTH_FAILED",
+	"TUN_SETUP_FAILED",
       };
 
       if (type < N_TYPES)
@@ -158,6 +160,27 @@ namespace openvpn {
 	  out << "AUTH_FAILED: " << reason;
 	else
 	  out << "AUTH_FAILED";
+	return out.str();
+      }
+
+      std::string reason;
+    };
+
+    struct TunSetupFailed : public Base
+    {
+      TunSetupFailed(const std::string& reason_arg)
+	: Base(TUN_SETUP_FAILED),
+	  reason(reason_arg)
+      {
+      }
+
+      virtual std::string render() const
+      {
+	std::ostringstream out;
+	if (!reason.empty())
+	  out << "TUN_SETUP_FAILED: " << reason;
+	else
+	  out << "TUN_SETUP_FAILED";
 	return out.str();
       }
 

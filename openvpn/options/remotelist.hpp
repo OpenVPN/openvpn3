@@ -46,8 +46,7 @@ namespace openvpn {
     size_t size() const { return list.size(); }
     const Item& operator[](const size_t i) { return list[i]; }
 
-#ifdef OPENVPN_DEBUG
-    std::string debug_render() const
+    std::string render() const
     {
       std::ostringstream out;
       for (size_t i = 0; i < list.size(); ++i)
@@ -61,7 +60,6 @@ namespace openvpn {
 	}
       return out.str();
     }
-#endif
 
   private:
     std::vector<Item> list;

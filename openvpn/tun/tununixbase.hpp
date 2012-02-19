@@ -47,14 +47,14 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-		stats->error(Error::TUN_ERROR);
+		stats->error(Error::TUN_NET_ERROR);
 		return false;
 	      }
 	  }
 	  catch (boost::system::system_error& e)
 	    {
 	      OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
-	      stats->error(Error::TUN_ERROR);
+	      stats->error(Error::TUN_NET_ERROR);
 	      return false;
 	    }
 	}
@@ -113,13 +113,13 @@ namespace openvpn {
 	  else
 	    {
 	      OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error.message());
-	      stats->error(Error::TUN_ERROR);
+	      stats->error(Error::TUN_NET_ERROR);
 	    }
 	  queue_read(pfp.release()); // reuse buffer if still available
 	}
     }
 
-    std::string name_;
+    std::string name_;                         // should be set by derived class constructor
     boost::asio::posix::stream_descriptor *sd; // must be allocated by derived class constructor
     bool halt;
     ReadHandler read_handler;

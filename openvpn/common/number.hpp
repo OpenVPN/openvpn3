@@ -10,7 +10,7 @@ namespace openvpn {
 
   // note -- currently doesn't detect overflow
   template <typename T>
-  T parse_number(const char *str)
+  inline T parse_number(const char *str)
   {
     if (!str[0])
       throw type_exception(); // empty string
@@ -35,6 +35,20 @@ namespace openvpn {
 	else
 	  throw type_exception(); // non-digit
       }
+  }
+
+  inline bool is_number(const char *str)
+  {
+    char c;
+    bool found_digit = false;
+    while ((c = *str++))
+      {
+	if (c >= '0' && c <= '9')
+	  found_digit = true;
+	else
+	  return false;
+      }
+    return found_digit;
   }
 
 } // namespace openvpn

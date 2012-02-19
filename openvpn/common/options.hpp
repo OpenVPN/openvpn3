@@ -74,15 +74,21 @@ namespace openvpn {
       return (*this)[index];
     }
 
-#ifdef OPENVPN_DEBUG
-    std::string debug_render() const
+    std::string get_empty(const size_t index) const
+    {
+      if (index < size())
+	return (*this)[index];
+      else
+	return "";
+    }
+
+    std::string render() const
     {
       std::ostringstream out;
       for (const_iterator i = begin(); i != end(); i++)
 	out << '[' << *i << "] ";
       return out.str();
     }
-#endif
 
   private:
     std::string err_ref() const
@@ -292,16 +298,15 @@ namespace openvpn {
       o.get_type<T>(index, ret);
     }
 
-#ifdef OPENVPN_DEBUG
-    std::string debug_render() const
+    std::string render() const
     {
       std::ostringstream out;
       for (size_t i = 0; i < size(); i++)
-	out << i << ' ' << (*this)[i].debug_render() << std::endl;
+	out << i << ' ' << (*this)[i].render() << std::endl;
       return out.str();
     }
 
-    std::string debug_render_map() const
+    std::string render_map() const
     {
       std::ostringstream out;
       for (IndexMap::const_iterator i = map_.begin(); i != map_.end(); i++)
@@ -313,7 +318,6 @@ namespace openvpn {
 	}
       return out.str();
     }
-#endif
 
     const IndexMap& map() const { return map_; }
 

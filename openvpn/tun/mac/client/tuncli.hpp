@@ -35,7 +35,7 @@ namespace openvpn {
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
-      friend class Tun<Client*>;  // calls tun_read_handler
+      friend class TunUnixBase<Client*, PacketFrom>;  // calls tun_read_handler
 
       typedef Tun<Client*> TunImpl;
 
@@ -68,7 +68,7 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		config->stats->error(Error::TUN_ERROR);
+		config->stats->error(Error::TUN_SETUP_FAILED);
 		stop();
 		parent.tun_error(e);
 	      }

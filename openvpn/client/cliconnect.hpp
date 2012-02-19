@@ -15,6 +15,8 @@ namespace openvpn {
     typedef boost::intrusive_ptr<ClientConnect> Ptr;
     typedef ClientOptions::Client Client;
 
+    OPENVPN_SIMPLE_EXCEPTION(client_connect_unhandled_exception);
+
     ClientConnect(boost::asio::io_service& io_service_arg,
 		  const ClientOptions::Ptr& client_options_arg)
       : generation(0),
@@ -83,20 +85,33 @@ namespace openvpn {
     {
       if (!halt)
 	{
-	  if (client->auth_failed())
+	  switch (client->fatal())
 	    {
-	      ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(client->auth_failed_reason());
-	      client_options->events().add_event(ev);
-	      client_options->stats().error(Error::AUTH_FAILED);
-	      stop();
-	    }
-	  else
-	    {
-	      const unsigned int delay = 2;
-	      OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
-	      server_poll_timer.cancel();
-	      restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
-	      restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+	    case Error::SUCCESS: // doesn't necessarily mean success, just that there wasn't a fatal error
+	      {
+		const unsigned int delay = 2;
+		OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
+		server_poll_timer.cancel();
+		restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
+		restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+	      }
+	      break;
+	    case Error::AUTH_FAILED: // fixme -- handle auth challenge
+	      {
+		ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(client->fatal_reason());
+		client_options->events().add_event(ev);
+		client_options->stats().error(Error::AUTH_FAILED);
+		stop();
+	      }
+	      break;
+	    case Error::TUN_SETUP_FAILED:
+	      {
+		ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
+		client_options->events().add_event(ev);
+		stop();
+	      }
+	    default:
+	      throw client_connect_unhandled_exception();
 	    }
 	}
     }

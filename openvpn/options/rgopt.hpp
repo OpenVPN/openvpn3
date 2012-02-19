@@ -41,6 +41,11 @@ namespace openvpn {
 
     unsigned int operator()() const { return flags_; }
 
+    bool redirect_gateway_enabled() const
+    {
+      return (flags_ & (RG_ENABLE|RG_REROUTE_GW)) == (RG_ENABLE|RG_REROUTE_GW);
+    }
+
   private:
     void add_flags(const OptionList& opt, const OptionList::IndexList& idx, const bool redirect_gateway)
     {

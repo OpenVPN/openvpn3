@@ -108,7 +108,7 @@ namespace openvpn {
 	}
       }
 
-      ~Tun() { stop(); }
+      ~Tun() { Base::stop(); }
     };
 
   }

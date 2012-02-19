@@ -63,6 +63,36 @@ namespace openvpn {
 	return a;
       }
 
+      static Addr from_zero(Version v)
+      {
+	if (v == V4)
+	  return from_ipv4(IPv4::Addr::from_zero());
+	else if (v == V6)
+	  return from_ipv6(IPv6::Addr::from_zero());
+	else
+	  throw ip_addr_unspecified();
+      }
+
+      static Addr from_zero_complement(Version v)
+      {
+	if (v == V4)
+	  return from_ipv4(IPv4::Addr::from_zero_complement());
+	else if (v == V6)
+	  return from_ipv6(IPv6::Addr::from_zero_complement());
+	else
+	  throw ip_addr_unspecified();
+      }
+
+      static Addr netmask_from_prefix_len(Version v, const unsigned int prefix_len)
+      {
+	if (v == V4)
+	  return from_ipv4(IPv4::Addr::netmask_from_prefix_len(prefix_len));
+	else if (v == V6)
+	  return from_ipv6(IPv6::Addr::netmask_from_prefix_len(prefix_len));
+	else
+	  throw ip_addr_unspecified();
+      }
+
       std::string to_string() const
       {
 	if (ver != UNSPEC)
@@ -159,6 +189,24 @@ namespace openvpn {
 	  }
       }
 
+      bool operator==(const Addr& other)
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    if (ver == other.ver)
+	      return u.v4 == other.u.v4;
+	    break;
+	  case V6:
+	    if (ver == other.ver)
+	      return u.v6 == other.u.v6;
+	    break;
+	  case UNSPEC:
+	    return other.ver == UNSPEC;
+	  }
+	return false;
+      }
+
       void reset_ipv4_from_uint32(const IPv4::Addr::base_type addr)
       {
 	ver = V4;
@@ -193,6 +241,25 @@ namespace openvpn {
 
       Version version() const { return ver; }
 
+      void verify_version_consistency(const Addr& other) const
+      {
+	if (ver != other.ver)
+	  throw ip_addr_version_inconsistency();
+      }
+
+      unsigned int prefix_len() const
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    return u.v4.prefix_len();
+	  case V6:
+	    return u.v6.prefix_len();
+	  default:
+	    return true;
+	  }
+      }
+
     private:
       union {
 	IPv4::Addr v4;
@@ -202,18 +269,6 @@ namespace openvpn {
       Version ver;
     };
     OPENVPN_OSTREAM(Addr, to_string)
-
-    struct AddrMaskPair
-    {
-      Addr addr;
-      Addr netmask;
-
-      std::string to_string() const
-      {
-	return addr.to_string() + "/" + netmask.to_string();
-      }
-    };
-    OPENVPN_OSTREAM(AddrMaskPair, to_string)
 
   }
 } // namespace openvpn

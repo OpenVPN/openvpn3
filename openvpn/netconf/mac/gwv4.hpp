@@ -21,6 +21,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/addr/addrpair.hpp>
 #include <openvpn/addr/macaddr.hpp>
 
 namespace openvpn {

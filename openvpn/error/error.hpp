@@ -16,7 +16,8 @@ namespace openvpn {
       COMPRESS_ERROR,      // compress/decompress errors on data channel
       RESOLVE_ERROR,       // DNS resolution error
       SOCKET_PROTECT_ERROR, // Error calling protect() method on socket
-      TUN_ERROR,           // errors on tun/tap interface
+      TUN_NET_ERROR,       // read/write errors on tun/tap interface
+      TUN_SETUP_FAILED,    // error setting up tun/tap interface
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
       TCP_CONNECT_ERROR,   // client error on TCP connect
@@ -44,7 +45,8 @@ namespace openvpn {
 	"COMPRESS_ERROR",
 	"RESOLVE_ERROR",
 	"SOCKET_PROTECT_ERROR",
-	"TUN_ERROR",
+	"TUN_NET_ERROR",
+	"TUN_SETUP_FAILED",
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",
 	"TCP_CONNECT_ERROR",

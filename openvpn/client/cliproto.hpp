@@ -47,12 +47,17 @@ namespace openvpn {
       OPENVPN_EXCEPTION(client_exception);
       OPENVPN_EXCEPTION(tun_exception);
       OPENVPN_EXCEPTION(transport_exception);
+      OPENVPN_EXCEPTION(max_pushed_options_exceeded);
       OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
       OPENVPN_SIMPLE_EXCEPTION(authentication_failed);
 
       struct Config : public RC<thread_unsafe_refcount>
       {
 	typedef boost::intrusive_ptr<Config> Ptr;
+
+	Config()
+	  : max_pushed_options(256)
+	{}
 
 	typename Base::Config::Ptr proto_context_config;
 	TransportClientFactory::Ptr transport_factory;
@@ -61,6 +66,7 @@ namespace openvpn {
 	ClientEvent::Queue::Ptr cli_events;
 	std::string username;
 	std::string password;
+	unsigned int max_pushed_options;
       };
 
       Session(boost::asio::io_service& io_service_arg,
@@ -80,7 +86,8 @@ namespace openvpn {
 	  sent_push_request(false),
 	  cli_events(config.cli_events),
 	  connected_(false),
-	  auth_failed_(false)
+	  fatal_(Error::SUCCESS),
+	  max_pushed_options(config.max_pushed_options)
       {
 #ifdef OPENVPN_PACKET_LOG
 	packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -131,9 +138,10 @@ namespace openvpn {
 
       bool reached_connected_state() const { return connected_; }
 
-      bool auth_failed() const { return auth_failed_; }
-
-      const std::string& auth_failed_reason() const { return auth_failed_reason_; }
+      // Fatal error means that we shouldn't retry.
+      // Returns a value != Error::SUCCESS if error
+      Error::Type fatal() const { return fatal_; }
+      const std::string& fatal_reason() const { return fatal_reason_; }
 
       virtual ~Session()
       {
@@ -302,10 +310,12 @@ namespace openvpn {
 	  {
 	    // parse the received options
 	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11)));
+	    if (received_options.size() > max_pushed_options)
+	      OPENVPN_THROW(max_pushed_options_exceeded, "max number of allowed pushed options is " << max_pushed_options);
 	    if (received_options.complete())
 	      {
 		// show options
-		OPENVPN_LOG(received_options.debug_render());
+		OPENVPN_LOG(received_options.render());
 
 		// process auth-token
 		extract_auth_token(received_options);
@@ -322,9 +332,9 @@ namespace openvpn {
 	  }
 	else if (boost::algorithm::starts_with(msg, "AUTH_FAILED"))
 	  {
-	    auth_failed_ = true;
+	    fatal_ = Error::AUTH_FAILED;
 	    if (msg.length() >= 13)
-	      auth_failed_reason_ = boost::algorithm::trim_left_copy(std::string(msg, 12));
+	      fatal_reason_ = boost::algorithm::trim_left_copy(std::string(msg, 12));
 	    if (notify_callback)
 	      {
 		OPENVPN_LOG("AUTH_FAILED");
@@ -364,6 +374,8 @@ namespace openvpn {
 
       virtual void tun_error(const std::exception& err)
       {
+	fatal_ = Error::TUN_SETUP_FAILED;
+	fatal_reason_ = err.what();
 	if (notify_callback)
 	  {
 	    OPENVPN_LOG("TUN Error: " << err.what());
@@ -519,8 +531,11 @@ namespace openvpn {
       ClientEvent::Queue::Ptr cli_events;
 
       bool connected_;
-      bool auth_failed_;
-      std::string auth_failed_reason_;
+
+      Error::Type fatal_;
+      std::string fatal_reason_;
+
+      const unsigned int max_pushed_options;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;

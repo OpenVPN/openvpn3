@@ -39,7 +39,7 @@ namespace openvpn {
 
       // do redirect-gateway
       rg_flags.init(opt);
-      if (rg_flags() & RedirectGatewayFlags::RG_ENABLE)
+      if (rg_flags.redirect_gateway_enabled())
 	{
 	  add_del_reroute_gw_v4(true);
 	  did_redirect_gw = true;

@@ -17,6 +17,8 @@ namespace openvpn {
   namespace IPv4 {
 
     OPENVPN_SIMPLE_EXCEPTION(ipv4_render_exception);
+    OPENVPN_SIMPLE_EXCEPTION(ipv4_malformed_netmask);
+    OPENVPN_SIMPLE_EXCEPTION(ipv4_bad_prefix_len);
     OPENVPN_EXCEPTION(ipv4_parse_exception);
 
     class Addr // NOTE: must be union-legal, so default constructor does not initialize
@@ -37,6 +39,29 @@ namespace openvpn {
       {
 	Addr ret;
 	std::memcpy(ret.u.bytes, bytes, 4);
+	return ret;
+      }
+
+      static Addr from_zero()
+      {
+	Addr ret;
+	ret.zero();
+	return ret;
+      }
+
+      static Addr from_zero_complement()
+      {
+	Addr ret;
+	ret.zero();
+	ret.negate();
+	return ret;
+      }
+
+      // build a netmask using given prefix_len
+      static Addr netmask_from_prefix_len(const unsigned int prefix_len)
+      {
+	Addr ret;
+	ret.u.addr = prefix_len_to_netmask(prefix_len);
 	return ret;
       }
 
@@ -87,14 +112,67 @@ namespace openvpn {
 	return ret;
       }
 
+      bool operator==(const Addr& other)
+      {
+	return u.addr == other.u.addr;
+      }
+
       bool unspecified() const
       {
 	return u.addr == 0;
       }
 
+      // convert netmask in addr to prefix_len using binary search,
+      // throws ipv4_malformed_netmask if addr is not a netmask
+      unsigned int prefix_len() const
+      {
+	if (u.addr != ~0)
+	  {
+	    unsigned int high = 32;
+	    unsigned int low = 1;
+	    for (unsigned int i = 0; i < 5; ++i)
+	      {
+		const unsigned int mid = (high + low) / 2;
+		const IPv4::Addr::base_type test = prefix_len_to_netmask_unchecked(mid);
+		if (u.addr == test)
+		  return mid;
+		else if (u.addr > test)
+		  low = mid;
+		else
+		  high = mid;
+	      }
+	    throw ipv4_malformed_netmask();
+	  }
+	else
+	  return 32;
+      }
+
+      void negate()
+      {
+	u.addr = ~u.addr;
+      }
+
+      void zero()
+      {
+	u.addr = 0;
+      }
+
     private:
+      static base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
+      {
+	return ~((1 << (32 - prefix_len)) - 1);
+      }
+
+      static base_type prefix_len_to_netmask(const unsigned int prefix_len)
+      {
+	if (prefix_len >= 1 && prefix_len <= 32)
+	  return prefix_len_to_netmask_unchecked(prefix_len);
+	else
+	  throw ipv4_bad_prefix_len();
+      }
+
       union {
-	boost::uint32_t addr;
+	base_type addr;
 	unsigned char bytes[4];
       } u;
     };
