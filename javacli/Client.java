@@ -48,10 +48,6 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 
 	// wait for worker thread to exit
 	client_thread.wait_thread();
-
-	// show connect status
-	Status status = client_thread.connect_status();
-	System.out.format("END Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
     }
 
     public void stop() {
@@ -79,5 +75,9 @@ public class Client implements OpenVPNClientThread.EventReceiver {
     public void log(LogInfo loginfo) {
 	String text = loginfo.getText();
 	System.out.format("LOG: %s", text);
+    }
+
+    public void done(Status status) {
+	System.out.format("DONE Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
     }
  }
