@@ -65,6 +65,7 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	    }
     }
 
+    @Override
     public void event(Event event) {
 	boolean error = event.getError();
 	String name = event.getName();
@@ -72,12 +73,26 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	System.out.format("EVENT: err=%b name=%s info='%s'%n", error, name, info);
     }
 
+    @Override
     public void log(LogInfo loginfo) {
 	String text = loginfo.getText();
 	System.out.format("LOG: %s", text);
     }
 
+    @Override
     public void done(Status status) {
 	System.out.format("DONE Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
+    }
+
+    @Override
+    public boolean socket_protect(int socket)
+    {
+	return false;
+    }
+
+    @Override
+    public OpenVPNClientThread.TunBuilder tun_builder_new()
+    {
+	return null;
     }
  }

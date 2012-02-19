@@ -21,6 +21,11 @@
 #define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClientBase
 #define OPENVPN_LOG_INFO  openvpn::ClientAPI::LogInfo
 
+// on Android, use TunBuilderBase abstraction
+#if defined(OPENVPN_PLATFORM_ANDROID) && !defined(OPENVPN_FORCE_TUN_NULL)
+#define USE_TUN_BUILDER
+#endif
+
 #include <openvpn/log/logthread.hpp>    // should be first included file from openvpn
 
 #include <openvpn/init/initprocess.hpp>
@@ -231,7 +236,11 @@ namespace openvpn {
 	state->socket_protect.set_parent(this);
 
 	// load options
-	ClientOptions::Ptr client_options = new ClientOptions(state->options, state->stats, state->events, this);
+	ClientOptions::Ptr client_options = new ClientOptions(state->options, state->stats, state->events
+#if defined(USE_TUN_BUILDER)
+							      ,this
+#endif
+							      );
 
 	// configure creds in options
 	client_options->submit_creds(state->creds.username, state->creds.password);

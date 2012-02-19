@@ -12,12 +12,12 @@
 
 #include <openvpn/client/cliproto.hpp>
 
-#if defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
+#if defined(USE_TUN_BUILDER)
+#include <openvpn/tun/builder/client.hpp>
+#elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/linux/client/tuncli.hpp>
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/mac/client/tuncli.hpp>
-#elif defined(OPENVPN_PLATFORM_ANDROID) && !defined(OPENVPN_FORCE_TUN_NULL)
-#include <openvpn/tun/builder/client.hpp>
 #else
 #include <openvpn/tun/client/tunnull.hpp>
 #endif
@@ -49,10 +49,10 @@ namespace openvpn {
     typedef ClientProto::Session<ClientSSLContext> Client;
 
     ClientOptions(const OptionList& opt
-		  , const SessionStats::Ptr& cli_stats_arg
-		  , const ClientEvent::Queue::Ptr& cli_events_arg
-#if defined(OPENVPN_PLATFORM_ANDROID) && !defined(OPENVPN_FORCE_TUN_NULL)
-		  , TunBuilderBase* builder
+		  ,const SessionStats::Ptr& cli_stats_arg
+		  ,const ClientEvent::Queue::Ptr& cli_events_arg
+#if defined(USE_TUN_BUILDER)
+		  ,TunBuilderBase* builder
 #endif
 		  )
       : session_iteration(0),
@@ -97,7 +97,13 @@ namespace openvpn {
       load_transport_config();
 
       // initialize tun/tap
-#if defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
+#if defined(USE_TUN_BUILDER)
+      TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
+      tunconf->builder = builder;
+      tunconf->session_name = (*remote_list)[0].server_host;
+      tunconf->frame = frame;
+      tunconf->stats = cli_stats;
+#elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
       tunconf->layer = cp->layer;
       tunconf->frame = frame;
@@ -105,12 +111,6 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunMac::ClientConfig::Ptr tunconf = TunMac::ClientConfig::new_obj();
       tunconf->layer = cp->layer;
-      tunconf->frame = frame;
-      tunconf->stats = cli_stats;
-#elif defined(OPENVPN_PLATFORM_ANDROID) && !defined(OPENVPN_FORCE_TUN_NULL)
-      TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
-      tunconf->builder = builder;
-      tunconf->session_name = (*remote_list)[0].server_host;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
 #else

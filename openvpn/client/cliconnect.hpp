@@ -110,6 +110,7 @@ namespace openvpn {
 		client_options->events().add_event(ev);
 		stop();
 	      }
+	      break;
 	    default:
 	      throw client_connect_unhandled_exception();
 	    }
