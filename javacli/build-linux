@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-swig -c++ -java ovpncli.i
+swig -c++ -java -I$OVPN3_DIR ovpncli.i
 javac *.java
 gcc -O3 -fPIC -pthread \
     -Wall -Wno-sign-compare -Wno-unused-parameter -Wno-strict-aliasing \

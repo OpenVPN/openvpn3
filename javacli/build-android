@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-swig -c++ -java -package net.openvpn.openvpn ovpncli.i
+swig -c++ -java -package net.openvpn.openvpn -I$OVPN3_DIR ovpncli.i
 # fixme -- note -g and strip
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \

@@ -73,6 +73,11 @@ namespace openvpn {
 	  return 0;
       }
 
+      void detach_from_parent()
+      {
+	parent = NULL;
+      }
+
     private:
       virtual void error(const size_t err, const std::string* text=NULL)
       {
@@ -93,11 +98,46 @@ namespace openvpn {
 
       virtual void add_event(const ClientEvent::Base::Ptr& event)
       {
-	Event ev;
-	ev.name = event->name();
-	ev.info = event->render();
-	ev.error = event->is_error();
-	parent->event(ev);
+	if (parent)
+	  {
+	    Event ev;
+	    ev.name = event->name();
+	    ev.info = event->render();
+	    ev.error = event->is_error();
+	    parent->event(ev);
+	  }
+      }
+
+      void detach_from_parent()
+      {
+	parent = NULL;
+      }
+
+    private:
+      OpenVPNClientBase* parent;
+    };
+
+    class MySocketProtect : public SocketProtect
+    {
+    public:
+      MySocketProtect() : parent(NULL) {}
+
+      void set_parent(OpenVPNClientBase* parent_arg)
+      {
+	parent = parent_arg;
+      }
+
+      virtual bool socket_protect(int socket)
+      {
+	if (parent)
+	  return parent->socket_protect(socket);
+	else
+	  return true;
+      }
+
+      void detach_from_parent()
+      {
+	parent = NULL;
       }
 
     private:
@@ -109,6 +149,7 @@ namespace openvpn {
       {
 	OptionList options;
 	ProvideCreds creds;
+	MySocketProtect socket_protect;
 	MySessionStats::Ptr stats;
 	MyClientEvents::Ptr events;
 	ClientConnect::Ptr session;
@@ -186,8 +227,11 @@ namespace openvpn {
 	// client events
 	state->events.reset(new MyClientEvents(this));
 
+	// socket protect
+	state->socket_protect.set_parent(this);
+
 	// load options
-	ClientOptions::Ptr client_options = new ClientOptions(state->options, state->stats, state->events);
+	ClientOptions::Ptr client_options = new ClientOptions(state->options, state->stats, state->events, this);
 
 	// configure creds in options
 	client_options->submit_creds(state->creds.username, state->creds.password);
@@ -215,6 +259,9 @@ namespace openvpn {
 	  ret.error = true;
 	  ret.message = e.what();
 	}
+      state->socket_protect.detach_from_parent();
+      state->stats->detach_from_parent();
+      state->events->detach_from_parent();
       state->session.reset();
       return ret;
     }

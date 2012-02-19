@@ -60,7 +60,7 @@ if [ "$PLATFORM" = "mac" ]; then
     LIBS="$LIBS -framework CoreFoundation"
 else
     CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
-    LIBS="$LIBS -lcrypto -lssl"
+    LIBS="$LIBS -lssl -lcrypto"
 fi
 if [ "$OPENSSL_DIR" ]; then
     CPPFLAGS="$CPPFLAGS -I$OPENSSL_DIR/include"

@@ -12,4 +12,5 @@
 %}
 
 // interface to be bridged between C++ and java
+%include "openvpn/tun/builder/base.hpp"
 %include "ovpncli.hpp"

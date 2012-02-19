@@ -1,3 +1,7 @@
+#include <string>
+
+#include <openvpn/tun/builder/base.hpp>
+
 namespace openvpn {
   class OptionList;
 
@@ -58,7 +62,7 @@ namespace openvpn {
     };
 
     // Top-level OpenVPN client class that is wrapped by swig
-    class OpenVPNClientBase {
+    class OpenVPNClientBase : public TunBuilderBase {
     public:
       OpenVPNClientBase();
       virtual ~OpenVPNClientBase();
@@ -72,6 +76,9 @@ namespace openvpn {
       // Provide credentials.  Call before connect() if needed_creds()
       // indicates that credentials are needed.
       void provide_creds(const ProvideCreds&);
+
+      // Callback to "protect" a socket from being routed through the tunnel
+      virtual bool socket_protect(int socket) = 0;
 
       // Primary VPN client connect method, doesn't return until disconnect.
       // Should be called by a worker thread.  This method will make callbacks
