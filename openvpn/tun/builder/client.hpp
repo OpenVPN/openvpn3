@@ -225,9 +225,9 @@ namespace openvpn {
       {
 	// do redirect-gateway
 	const RedirectGatewayFlags rg_flags(opt);
-	if (rg_flags.redirect_gateway_enabled())
+	if (rg_flags.redirect_gateway_enabled()) // fixme -- support IPv6
 	  {
-	    if (!tb->tun_builder_add_route("0.0.0.0", 0)) // fixme -- support IPv6
+	    if (!tb->tun_builder_add_route("0.0.0.0", 0)) 
 	      throw tun_builder_route_error("tun_builder_add_route for redirect-gateway failed");
 	  }
 	else

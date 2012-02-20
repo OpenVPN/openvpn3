@@ -7,6 +7,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/frame/frame_init.hpp>
 
+#include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/client/udpcli.hpp>
 #include <openvpn/transport/client/tcpcli.hpp>
 
@@ -48,16 +49,29 @@ namespace openvpn {
 #endif
     typedef ClientProto::Session<ClientSSLContext> Client;
 
-    ClientOptions(const OptionList& opt
-		  ,const SessionStats::Ptr& cli_stats_arg
-		  ,const ClientEvent::Queue::Ptr& cli_events_arg
+    struct Config {
+      Config()
+      {
+	socket_protect = NULL;
 #if defined(USE_TUN_BUILDER)
-		  ,TunBuilderBase* builder
+	builder = NULL;
 #endif
-		  )
+      }
+
+      SessionStats::Ptr cli_stats;
+      ClientEvent::Queue::Ptr cli_events;
+      SocketProtect* socket_protect;       // must remain in scope for lifetime of ClientOptions object
+#if defined(USE_TUN_BUILDER)
+      TunBuilderBase* builder;             // must remain in scope for lifetime of ClientOptions object
+#endif
+    };
+
+    ClientOptions(const OptionList& opt,   // only needs to remain in scope for duration of constructor call
+		  const Config& config)
       : session_iteration(0),
-	cli_stats(cli_stats_arg),
-	cli_events(cli_events_arg),
+	socket_protect(config.socket_protect),
+	cli_stats(config.cli_stats),
+	cli_events(config.cli_events),
 	server_poll_timeout_(10)
     {
       // initialize PRNG
@@ -99,7 +113,7 @@ namespace openvpn {
       // initialize tun/tap
 #if defined(USE_TUN_BUILDER)
       TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
-      tunconf->builder = builder;
+      tunconf->builder = config.builder;
       tunconf->session_name = (*remote_list)[0].server_host;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
@@ -181,6 +195,7 @@ namespace openvpn {
 	  udpconf->server_port = rli.server_port;
 	  udpconf->frame = frame;
 	  udpconf->stats = cli_stats;
+	  udpconf->socket_protect = socket_protect;
 	  transport_factory = udpconf;
 	}
       else if (rli.transport_protocol.is_tcp())
@@ -190,6 +205,7 @@ namespace openvpn {
 	  tcpconf->server_port = rli.server_port;
 	  tcpconf->frame = frame;
 	  tcpconf->stats = cli_stats;
+	  tcpconf->socket_protect = socket_protect;
 	  transport_factory = tcpconf;
 	}
       else
@@ -206,6 +222,7 @@ namespace openvpn {
     RemoteList::Ptr remote_list;
     TransportClientFactory::Ptr transport_factory;
     TunClientFactory::Ptr tun_factory;
+    SocketProtect* socket_protect;
     SessionStats::Ptr cli_stats;
     ClientEvent::Queue::Ptr cli_events;
     std::string username_;
