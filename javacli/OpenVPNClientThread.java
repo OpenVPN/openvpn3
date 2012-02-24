@@ -6,6 +6,9 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
     private Thread thread;
     private Status connect_status_;
 
+    private int bytes_in_index = -1;
+    private int bytes_out_index = -1;
+
     public interface EventReceiver {
 	// Called with events from core
 	void event(Event event);
@@ -56,6 +59,16 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
 	tun_builder = null;
 	thread = null;
 	connect_status_ = null;
+
+	final int n = stats_n();
+	for (int i = 0; i < n; ++i)
+	    {
+		String name = stats_name(i);
+		if (name.equals("BYTES_IN"))
+		    bytes_in_index = i;
+		if (name.equals("BYTES_OUT"))
+		    bytes_out_index = i;
+	    }
     }
 
     // start connect session in worker thread
@@ -95,6 +108,16 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
 
     public Status connect_status() {
 	return connect_status_;
+    }
+
+    public long bytes_in()
+    {
+	return super.stats_value(bytes_in_index);
+    }
+
+    public long bytes_out()
+    {
+	return super.stats_value(bytes_out_index);
     }
 
     // Runnable overrides

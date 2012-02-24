@@ -71,7 +71,7 @@ namespace openvpn {
 
       virtual std::string render() const
       {
-	return name();
+	return "";
       }
 
     private:
@@ -135,8 +135,8 @@ namespace openvpn {
       virtual std::string render() const
       {
 	std::ostringstream out;
-	// eg. "CONNECTED godot@foo.bar.gov:443 (1.2.3.4) via TCPv4 on tun0/5.5.1.1"
-	out << "CONNECTED " << user << '@' << server_host << ':' << server_port
+	// eg. "godot@foo.bar.gov:443 (1.2.3.4) via TCPv4 on tun0/5.5.1.1"
+	out << user << '@' << server_host << ':' << server_port
 	    << " (" << server_ip << ") via " << server_proto
 	    << " on " << tun_name << '/' << vpn_ip;
 	return out.str();
@@ -153,12 +153,7 @@ namespace openvpn {
 
       virtual std::string render() const
       {
-	std::ostringstream out;
-	if (!reason.empty())
-	  out << "AUTH_FAILED: " << reason;
-	else
-	  out << "AUTH_FAILED";
-	return out.str();
+	return reason;
       }
 
       std::string reason;
@@ -174,12 +169,7 @@ namespace openvpn {
 
       virtual std::string render() const
       {
-	std::ostringstream out;
-	if (!reason.empty())
-	  out << "TUN_SETUP_FAILED: " << reason;
-	else
-	  out << "TUN_SETUP_FAILED";
-	return out.str();
+	return reason;
       }
 
       std::string reason;
