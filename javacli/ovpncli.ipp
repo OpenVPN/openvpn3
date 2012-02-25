@@ -240,8 +240,8 @@ namespace openvpn {
 	ClientOptions::Config cc;
 	cc.cli_stats = state->stats;
 	cc.cli_events = state->events;
-	cc.socket_protect = &state->socket_protect;
 #if defined(USE_TUN_BUILDER)
+	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
 #endif
 	ClientOptions::Ptr client_options = new ClientOptions(state->options, cc);

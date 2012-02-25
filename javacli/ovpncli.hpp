@@ -1,3 +1,9 @@
+// Java-callable API for OpenVPN Client.
+// Use ovpncli.i to wrap the API for Java.
+// The crux of the API is defined in OpenVPNClientBase (below)
+// and TunBuilderBase.  OpenVPNClientThread.java is used
+// to wrap the API on the Java side.
+
 #include <string>
 
 #include <openvpn/tun/builder/base.hpp>
@@ -11,12 +17,20 @@ namespace openvpn {
     {
       EvalConfig() : error(false), staticChallengeEcho(false) {}
 
-      bool error;                        // true if error
-      std::string message;               // if error, message given here
+      // true if error
+      bool error;
 
-      bool autologin;                    // true: no creds required, false: username/password required
-      std::string staticChallenge;       // static challenge, may be empty, ignored if autologin
-      bool staticChallengeEcho;          // true if static challenge response should be echoed to UI, ignored if autologin
+      // if error, message given here
+      std::string message;
+
+      // true: no creds required, false: username/password required
+      bool autologin;
+
+      // static challenge, may be empty, ignored if autologin
+      std::string staticChallenge;
+
+      // true if static challenge response should be echoed to UI, ignored if autologin
+      bool staticChallengeEcho;
     };
 
     // used to pass credentials to VPN client
@@ -54,7 +68,7 @@ namespace openvpn {
     struct LogInfo
     {
       LogInfo(const std::string& str) : text(str) {}
-      std::string text;                         // log output (usually but not always one line)
+      std::string text;     // log output (usually but not always one line)
     };
 
     namespace Private {
@@ -92,9 +106,15 @@ namespace openvpn {
       void stop();
 
       // Get stats/error info
-      static int stats_n();                      // number of stats
-      static std::string stats_name(int index);  // return a stats name, index should be >= 0 and < stats_n()
-      long long stats_value(int index) const;    // return a stats value, index should be >= 0 and < stats_n()
+
+      // number of stats
+      static int stats_n();
+
+      // return a stats name, index should be >= 0 and < stats_n()
+      static std::string stats_name(int index);
+
+      // return a stats value, index should be >= 0 and < stats_n()
+      long long stats_value(int index) const;
 
       // Callback for delivering events during connect() call.
       virtual void event(const Event&) = 0;
