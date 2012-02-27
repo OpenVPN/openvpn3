@@ -154,8 +154,8 @@ namespace openvpn {
       struct ClientState
       {
 	OptionList options;
-	ProvideCreds creds;
 	MySocketProtect socket_protect;
+	ClientCreds::Ptr creds;
 	MySessionStats::Ptr stats;
 	MyClientEvents::Ptr events;
 	ClientConnect::Ptr session;
@@ -215,7 +215,11 @@ namespace openvpn {
 
     inline void OpenVPNClientBase::provide_creds(const ProvideCreds& creds)
     {
-      state->creds = creds;
+      state->creds.reset(new ClientCreds());
+      state->creds->username = creds.username;
+      state->creds->password = creds.password;
+      state->creds->static_response = creds.staticResponse;
+      state->creds->replace_password_with_session_id = creds.replacePasswordWithSessionID;
     }
 
     inline Status OpenVPNClientBase::connect()
@@ -247,7 +251,7 @@ namespace openvpn {
 	ClientOptions::Ptr client_options = new ClientOptions(state->options, cc);
 
 	// configure creds in options
-	client_options->submit_creds(state->creds.username, state->creds.password);
+	client_options->submit_creds(state->creds);
 
 	// initialize the Asio io_service object
 	io_service.reset(new boost::asio::io_service(1)); // concurrency hint=1

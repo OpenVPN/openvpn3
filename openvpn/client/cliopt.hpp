@@ -156,8 +156,7 @@ namespace openvpn {
       cli_config->tun_factory = tun_factory;
       cli_config->cli_stats = cli_stats;
       cli_config->cli_events = cli_events;
-      cli_config->username = username_;
-      cli_config->password = password_;
+      cli_config->creds = creds;
       return cli_config;
     }
 
@@ -166,10 +165,9 @@ namespace openvpn {
       return !cp->autologin;
     }
 
-    void submit_creds(const std::string& username, const std::string& password)
+    void submit_creds(const ClientCreds::Ptr& creds_arg)
     {
-      username_ = username;
-      password_ = password;
+      creds = creds_arg;
     }
 
     Time::Duration server_poll_timeout() const
@@ -230,8 +228,7 @@ namespace openvpn {
     SocketProtect* socket_protect;
     SessionStats::Ptr cli_stats;
     ClientEvent::Queue::Ptr cli_events;
-    std::string username_;
-    std::string password_;
+    ClientCreds::Ptr creds;
     unsigned int server_poll_timeout_;
   };
 }

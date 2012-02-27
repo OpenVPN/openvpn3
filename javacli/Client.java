@@ -35,6 +35,7 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 		    {
 			creds.setUsername(username);
 			creds.setPassword(password);
+			creds.setReplacePasswordWithSessionID(true);
 		    }
 		else
 		    throw new CredsUnspecifiedError("OpenVPN config file requires username/password but none provided");

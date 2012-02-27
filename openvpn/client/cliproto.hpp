@@ -13,6 +13,7 @@
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/options/continuation.hpp>
 #include <openvpn/client/clievent.hpp>
+#include <openvpn/client/clicreds.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
 
@@ -64,8 +65,7 @@ namespace openvpn {
 	TunClientFactory::Ptr tun_factory;
 	SessionStats::Ptr cli_stats;
 	ClientEvent::Queue::Ptr cli_events;
-	std::string username;
-	std::string password;
+	ClientCreds::Ptr creds;
 	unsigned int max_pushed_options;
       };
 
@@ -80,8 +80,7 @@ namespace openvpn {
 	  housekeeping_timer(io_service_arg),
 	  push_request_timer(io_service_arg),
 	  halt(false),
-	  username(config.username),
-	  password(config.password),
+	  creds(config.creds),
 	  first_packet_received_(false),
 	  sent_push_request(false),
 	  cli_events(config.cli_events),
@@ -294,8 +293,9 @@ namespace openvpn {
 	if (o)
 	  {
 	    o->min_args(2);
-	    password = (*o)[1];
-	    OPENVPN_LOG("using session token " << password);
+	    if (creds->replace_password_with_session_id)
+	      creds->password = (*o)[1];
+	    OPENVPN_LOG("using session token " << (*o)[1]);
 	  }
       }
 
@@ -368,7 +368,8 @@ namespace openvpn {
 	OPENVPN_LOG("Connected via " + tun->tun_name());
 
 	ClientEvent::Connected::Ptr ev = new ClientEvent::Connected();
-	ev->user = username;
+	if (creds)
+	  ev->user = creds->username;
 	transport->server_endpoint_info(ev->server_host, ev->server_port, ev->server_proto, ev->server_ip);
 	ev->vpn_ip = tun->vpn_ip();
 	ev->tun_name = tun->tun_name();
@@ -394,8 +395,16 @@ namespace openvpn {
       // proto base class calls here to get auth credentials
       virtual void client_auth(Buffer& buf)
       {
-	Base::write_auth_string(username, buf);
-	Base::write_auth_string(password, buf);
+	if (creds)
+	  {
+	    Base::write_auth_string(creds->username, buf);
+	    Base::write_auth_string(creds->password, buf);
+	  }
+	else
+	  {
+	    Base::write_empty_string(buf); // username
+	    Base::write_empty_string(buf); // password
+	  }
       }
 
       void send_push_request_callback(const boost::system::error_code& e)
@@ -529,8 +538,7 @@ namespace openvpn {
 
       OptionListContinuation received_options;
 
-      std::string username;
-      std::string password;
+      ClientCreds::Ptr creds;
 
       bool first_packet_received_;
       bool sent_push_request;

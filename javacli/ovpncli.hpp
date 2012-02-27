@@ -36,9 +36,17 @@ namespace openvpn {
     // used to pass credentials to VPN client
     struct ProvideCreds
     {
+      ProvideCreds() : replacePasswordWithSessionID(false) {}
+
       std::string username;
       std::string password;
-      std::string staticResponse; // response to static challenge
+
+      // response to static challenge
+      std::string staticResponse;
+
+      // If true, on successful connect, we will replace the password
+      // with the session ID we receive from the server.
+      bool replacePasswordWithSessionID;
     };
 
     // OpenVPN config-file/profile
