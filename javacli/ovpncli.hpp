@@ -75,7 +75,7 @@ namespace openvpn {
       struct ClientState;
     };
 
-    // Top-level OpenVPN client class that is wrapped by swig
+    // Top-level OpenVPN client class that is wrapped by swig.
     class OpenVPNClientBase : public TunBuilderBase {
     public:
       OpenVPNClientBase();
@@ -91,7 +91,8 @@ namespace openvpn {
       // indicates that credentials are needed.
       void provide_creds(const ProvideCreds&);
 
-      // Callback to "protect" a socket from being routed through the tunnel
+      // Callback to "protect" a socket from being routed through the tunnel.
+      // Will be called from the thread executing connect().
       virtual bool socket_protect(int socket) = 0;
 
       // Primary VPN client connect method, doesn't return until disconnect.
@@ -105,7 +106,21 @@ namespace openvpn {
       // when connect() is running.
       void stop();
 
-      // Get stats/error info
+      // Pause the client -- useful to avoid continuous reconnection attempts
+      // when network is down.  May be called from a different thread
+      // when connect() is running.
+      void pause();
+
+      // Resume the client after it has been paused.  May be called from a
+      // different thread when connect() is running.
+      void resume();
+
+      // Do a disconnect/reconnect cycle n seconds from now.  May be called
+      // from a different thread when connect() is running.
+      void reconnect(int seconds);
+
+      // Get stats/error info.  May be called from a different thread
+      // when connect() is running.
 
       // number of stats
       static int stats_n();
@@ -117,9 +132,11 @@ namespace openvpn {
       long long stats_value(int index) const;
 
       // Callback for delivering events during connect() call.
+      // Will be called from the thread executing connect().
       virtual void event(const Event&) = 0;
 
       // Callback for logging.
+      // Will be called from the thread executing connect().
       virtual void log(const LogInfo&) = 0;
 
     private:

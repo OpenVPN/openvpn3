@@ -180,6 +180,11 @@ namespace openvpn {
     SessionStats& stats() { return *cli_stats; }
     ClientEvent::Queue& events() { return *cli_events; }
 
+    void update_now()
+    {
+      now_.update();
+    }
+
   private:
     void load_transport_config()
     {

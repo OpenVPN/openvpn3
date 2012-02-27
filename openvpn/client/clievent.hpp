@@ -20,6 +20,8 @@ namespace openvpn {
       GET_CONFIG,
       ASSIGN_IP,
       ADD_ROUTES,
+      PAUSE,
+      RESUME,
       AUTH_FAILED,
       TUN_SETUP_FAILED,
       N_TYPES
@@ -41,6 +43,8 @@ namespace openvpn {
 	"GET_CONFIG",
 	"ASSIGN_IP",
 	"ADD_ROUTES",
+	"PAUSE",
+	"RESUME",
 	"AUTH_FAILED",
 	"TUN_SETUP_FAILED",
       };
@@ -111,6 +115,16 @@ namespace openvpn {
     struct AddRoutes : public Base
     {
       AddRoutes() : Base(ADD_ROUTES) {}
+    };
+
+    struct Pause : public Base
+    {
+      Pause() : Base(PAUSE) {}
+    };
+
+    struct Resume : public Base
+    {
+      Resume() : Base(RESUME) {}
     };
 
     struct Disconnected : public Base

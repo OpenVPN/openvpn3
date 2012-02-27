@@ -4,6 +4,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/client/cliopt.hpp>
 #include <openvpn/time/asiotimer.hpp>
+#include <openvpn/common/scoped_ptr.hpp>
 
 namespace openvpn {
 
@@ -21,6 +22,7 @@ namespace openvpn {
 		  const ClientOptions::Ptr& client_options_arg)
       : generation(0),
 	halt(false),
+	paused(false),
 	io_service(io_service_arg),
 	client_options(client_options_arg),
 	server_poll_timer(io_service_arg),
@@ -60,6 +62,63 @@ namespace openvpn {
 	io_service.post(asio_dispatch_post(&ClientConnect::stop, this));
     }
 
+    void pause()
+    {
+      if (!halt && !paused)
+	{
+	  paused = true;
+	  if (client)
+	    client->stop(false);
+	  restart_wait_timer.cancel();
+	  server_poll_timer.cancel();
+	  asio_work.reset(new boost::asio::io_service::work(io_service));
+	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause();
+	  client_options->events().add_event(ev);
+	}
+    }
+
+    void resume()
+    {
+      if (!halt && paused)
+	{
+	  paused = false;
+	  ClientEvent::Base::Ptr ev = new ClientEvent::Resume();
+	  client_options->events().add_event(ev);
+	  new_client();
+	}
+    }
+
+    void reconnect(int seconds)
+    {
+      if (!halt)
+	{
+	  if (seconds < 0)
+	    seconds = 0;
+	  OPENVPN_LOG("Client terminated, reconnecting in " << seconds << "...");
+	  server_poll_timer.cancel();
+	  restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
+	  restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+	}
+    }
+
+    void thread_safe_pause()
+    {
+      if (!halt)
+	io_service.post(asio_dispatch_post(&ClientConnect::pause, this));
+    }
+
+    void thread_safe_resume()
+    {
+      if (!halt)
+	io_service.post(asio_dispatch_post(&ClientConnect::resume, this));
+    }
+
+    void thread_safe_reconnect(int seconds)
+    {
+      if (!halt)
+	io_service.post(asio_dispatch_post_arg(&ClientConnect::reconnect, this, seconds));
+    }
+
     ~ClientConnect()
     {
       stop();
@@ -69,7 +128,12 @@ namespace openvpn {
     void restart_wait_callback(unsigned int gen, const boost::system::error_code& e)
     {
       if (!e && gen == generation && !halt)
-	new_client();
+	{
+	  if (paused)
+	    resume();
+	  else
+	    new_client();
+	}
     }
 
     void server_poll_callback(unsigned int gen, const boost::system::error_code& e)
@@ -120,6 +184,7 @@ namespace openvpn {
     void new_client()
     {
       ++generation;
+      asio_work.reset();
       if (client)
 	client->stop(false);
       if (generation > 1)
@@ -139,11 +204,13 @@ namespace openvpn {
 
     unsigned int generation;
     bool halt;
+    bool paused;
     boost::asio::io_service& io_service;
     ClientOptions::Ptr client_options;
     Client::Ptr client;
     AsioTimer server_poll_timer;
     AsioTimer restart_wait_timer;
+    ScopedPtr<boost::asio::io_service::work> asio_work;
   };
 
 }

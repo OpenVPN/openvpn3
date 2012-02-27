@@ -7,7 +7,7 @@
 // debug settings
 
 #define OPENVPN_DEBUG
-//#define OPENVPN_DEBUG_CLIPROTO
+#define OPENVPN_DEBUG_CLIPROTO // fixme
 //#define OPENVPN_FORCE_TUN_NULL
 //#define OPENVPN_DEBUG_PROTO
 #define OPENVPN_DEBUG_TUN     2
@@ -197,7 +197,7 @@ namespace openvpn {
 	}
     }
 
-    EvalConfig OpenVPNClientBase::eval_config_static(const Config& config)
+    inline EvalConfig OpenVPNClientBase::eval_config_static(const Config& config)
     {
       EvalConfig eval;
       OptionList options;
@@ -205,7 +205,7 @@ namespace openvpn {
       return eval;
     }
 
-    EvalConfig OpenVPNClientBase::eval_config(const Config& config) const
+    inline EvalConfig OpenVPNClientBase::eval_config(const Config& config) const
     {
       EvalConfig eval;
       state->options.clear();
@@ -213,7 +213,7 @@ namespace openvpn {
       return eval;      
     }
 
-    void OpenVPNClientBase::provide_creds(const ProvideCreds& creds)
+    inline void OpenVPNClientBase::provide_creds(const ProvideCreds& creds)
     {
       state->creds = creds;
     }
@@ -279,17 +279,17 @@ namespace openvpn {
       return ret;
     }
 
-    int OpenVPNClientBase::stats_n()
+    inline int OpenVPNClientBase::stats_n()
     {
       return MySessionStats::combined_n();
     }
 
-    std::string OpenVPNClientBase::stats_name(int index)
+    inline std::string OpenVPNClientBase::stats_name(int index)
     {
       return MySessionStats::combined_name(index);
     }
 
-    long long OpenVPNClientBase::stats_value(int index) const
+    inline long long OpenVPNClientBase::stats_value(int index) const
     {
       MySessionStats::Ptr stats = state->stats;
       if (stats)
@@ -303,6 +303,27 @@ namespace openvpn {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_stop();
+    }
+
+    inline void OpenVPNClientBase::pause()
+    {
+      ClientConnect::Ptr session = state->session;
+      if (session)
+	session->thread_safe_pause();
+    }
+
+    inline void OpenVPNClientBase::resume()
+    {
+      ClientConnect::Ptr session = state->session;
+      if (session)
+	session->thread_safe_resume();
+    }
+
+    inline void OpenVPNClientBase::reconnect(int seconds)
+    {
+      ClientConnect::Ptr session = state->session;
+      if (session)
+	session->thread_safe_reconnect(seconds);
     }
 
     inline OpenVPNClientBase::~OpenVPNClientBase()
