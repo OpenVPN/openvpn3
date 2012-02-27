@@ -86,10 +86,15 @@ namespace openvpn {
 	&& !std::memcmp(keepalive_message, buf.c_data(), sizeof(keepalive_message));
     }
 
-    inline void write_keepalive(Buffer& buf)
-    {
-      buf.write(keepalive_message, sizeof(keepalive_message));
-    }
+    static const unsigned char explicit_exit_notify_message[] = {    // CONST GLOBAL
+      0x28, 0x7f, 0x34, 0x6b, 0xd4, 0xef, 0x7a, 0x81,
+      0x2d, 0x56, 0xb8, 0xd3, 0xaf, 0xc5, 0x45, 0x9c,
+      6 // OCC_EXIT
+    };
+
+    enum {
+      EXPLICIT_EXIT_NOTIFY_FIRST_BYTE = 0x28  // first byte of exit message
+    };
   }
 
   template <typename SSL_CONTEXT>
@@ -961,14 +966,29 @@ namespace openvpn {
       // transmit a keepalive message to peer
       void send_keepalive()
       {
+	send_data_channel_message(proto_context_private::keepalive_message,
+				  sizeof(proto_context_private::keepalive_message));
+      }
+
+      // send explicit-exit-notify message to peer
+      void send_explicit_exit_notify()
+      {
+	send_data_channel_message(proto_context_private::explicit_exit_notify_message,
+				  sizeof(proto_context_private::explicit_exit_notify_message));
+      }
+
+      // general purpose method for sending constant string messages
+      // to peer via data channel
+      void send_data_channel_message(const unsigned char *data, const size_t size)
+      {
 	if (state >= ACTIVE && !invalidated())
 	  {
 	    // allocate packet
 	    Packet pkt;
-	    pkt.frame_prepare(*proto.config->frame, Frame::WRITE_KEEPALIVE);
+	    pkt.frame_prepare(*proto.config->frame, Frame::WRITE_DC_MSG);
 
 	    // write keepalive message
-	    proto_context_private::write_keepalive(*pkt.buf);
+	    pkt.buf->write(data, size);
 
 	    // process packet for transmission
 	    compress->compress(*pkt.buf, false); // set compress hint to "no"
@@ -1835,6 +1855,14 @@ namespace openvpn {
 	secondary->invalidate();
     }
 
+    // normally used by UDP clients to tell the server that
+    // they are disconnecting
+    void send_explicit_exit_notify()
+    {
+      if (is_client() && is_udp())
+	primary->send_explicit_exit_notify();
+    }
+
     // should be called after a successful network packet transmit
     void update_last_sent() { keepalive_xmit = *now_ + keepalive_ping; }
 
@@ -1889,6 +1917,7 @@ namespace openvpn {
 
     // tcp/udp mode
     const bool is_tcp() { return config->protocol.is_tcp(); }
+    const bool is_udp() { return config->protocol.is_udp(); }
 
     // configuration
     const Config& conf() const { return *config; }

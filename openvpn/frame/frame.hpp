@@ -28,7 +28,7 @@ namespace openvpn {
       WRITE_SSL_INIT,
       WRITE_SSL_CLEARTEXT,
       WRITE_ACK_STANDALONE,
-      WRITE_KEEPALIVE,
+      WRITE_DC_MSG,
       N_ALIGN_CONTEXTS
     };
 

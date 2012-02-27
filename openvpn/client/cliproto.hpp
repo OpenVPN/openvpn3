@@ -120,6 +120,7 @@ namespace openvpn {
 	if (!halt)
 	  {
 	    halt = true;
+	    Base::send_explicit_exit_notify();
 	    housekeeping_timer.cancel();
 	    push_request_timer.cancel();
 	    if (tun)
