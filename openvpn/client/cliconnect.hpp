@@ -36,6 +36,13 @@ namespace openvpn {
 	new_client();
     }
 
+    void graceful_stop()
+    {
+      if (!halt && client)
+	  client->send_explicit_exit_notify();
+      stop();
+    }
+
     void stop()
     {
       if (!halt)
@@ -45,6 +52,7 @@ namespace openvpn {
 	    client->stop(false);
 	  restart_wait_timer.cancel();
 	  server_poll_timer.cancel();
+	  asio_work.reset();
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Disconnected();
 	  client_options->events().add_event(ev);
 	}
@@ -59,7 +67,7 @@ namespace openvpn {
     void thread_safe_stop()
     {
       if (!halt)
-	io_service.post(asio_dispatch_post(&ClientConnect::stop, this));
+	io_service.post(asio_dispatch_post(&ClientConnect::graceful_stop, this));
     }
 
     void pause()
@@ -68,7 +76,10 @@ namespace openvpn {
 	{
 	  paused = true;
 	  if (client)
-	    client->stop(false);
+	    {
+	      client->send_explicit_exit_notify();
+	      client->stop(false);
+	    }
 	  restart_wait_timer.cancel();
 	  server_poll_timer.cancel();
 	  asio_work.reset(new boost::asio::io_service::work(io_service));
