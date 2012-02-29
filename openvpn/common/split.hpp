@@ -43,11 +43,11 @@ namespace openvpn {
       {
 	const char c = *i;
 	lex.put(c);
-	const char tc = lex.get();
 	if (lex.in_quote())
 	  defined = true;
-	if (tc >= 0)
+	if (lex.available())
 	  {
+	    const char tc = lex.get();
 	    if (!SPACE::is_space(tc) || lex.in_quote())
 	      {
 		defined = true;

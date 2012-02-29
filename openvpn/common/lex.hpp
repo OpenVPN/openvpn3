@@ -42,6 +42,7 @@ namespace openvpn {
 	}
     }
 
+    bool available() const { return ch != -1; }
     int get() const { return ch; }
     void reset() { ch = -1; }
 
@@ -59,6 +60,7 @@ namespace openvpn {
     NullLex() : ch(-1) {}
 
     void put(char c) { ch = c; }
+    bool available() const { return ch != -1; }
     int get() const { return ch; }
     void reset() { ch = -1; }
     bool in_quote() const { return false; }
