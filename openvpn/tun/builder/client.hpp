@@ -214,7 +214,7 @@ namespace openvpn {
 	{
 	  const Option& o = opt.get("ifconfig");
 	  o.min_args(2);
-	  const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_empty(2), "ifconfig");
+	  const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "ifconfig");
 	  if (!tb->tun_builder_add_address(pair.addr.to_string(), pair.netmask.prefix_len()))
 	    throw tun_builder_error("tun_builder_add_address failed");
 	  vpn_ip_addr = pair.addr;
@@ -242,7 +242,7 @@ namespace openvpn {
 		      o.min_args(2);
 		      if (o.size() >= 4 && o[3] != "vpn_gateway")
 			throw tun_builder_route_error("only tunnel routes supported");
-		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_empty(2), "route");
+		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "route");
 		      if (!tb->tun_builder_add_route(pair.addr.to_string(), pair.netmask.prefix_len()))
 			throw tun_builder_route_error("tun_builder_add_route failed");
 		    }

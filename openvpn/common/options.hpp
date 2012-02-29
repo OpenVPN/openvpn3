@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <boost/unordered_map.hpp>
+#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
@@ -74,7 +75,7 @@ namespace openvpn {
       return (*this)[index];
     }
 
-    std::string get_empty(const size_t index) const
+    std::string get_optional(const size_t index) const
     {
       if (index < size())
 	return (*this)[index];
@@ -203,6 +204,59 @@ namespace openvpn {
 	}
       if (in_multiline)
 	OPENVPN_THROW(option_error, "option <" << multiline[0] << "> was not properly closed out");
+    }
+
+    // caller should call update_map() after this function
+    void parse_meta_from_config(const std::string& str, const std::string& tag)
+    {
+      std::stringstream in(str);
+      std::string line;
+      int line_num = 0;
+      bool in_multiline = false;
+      Option multiline;
+      const std::string prefix = tag + "_";
+      while (std::getline(in, line))
+	{
+	  ++line_num;
+	  if (boost::algorithm::starts_with(line, "# "))
+	    {
+	      line = std::string(line, 2);
+	      if (in_multiline)
+		{
+		  if (is_close_meta_tag(line, prefix, multiline[0]))
+		    {
+		      push_back(multiline);
+		      multiline.clear();
+		      in_multiline = false;
+		    }
+		  else
+		    {
+		      multiline[1] += line;
+		      multiline[1] += '\n';
+		    }
+		}
+	      else if (boost::algorithm::starts_with(line, prefix))
+		{
+		  Option opt = split_by_char<Option, NullLex>(std::string(line, prefix.length()), '=');
+		  if (opt.size())
+		    {
+		      if (is_open_meta_tag(opt[0]))
+			{
+			  if (opt.size() > 1)
+			    OPENVPN_THROW(option_error, "line " << line_num << ": meta option <" << opt[0] << "> is followed by extraneous text");
+			  untag_open_meta_tag(opt[0]);
+			  opt.push_back("");
+			  multiline = opt;
+			  in_multiline = true;
+			}
+		      else
+			push_back(opt);
+		    }
+		}
+	    }
+	}
+      if (in_multiline)
+	OPENVPN_THROW(option_error, "meta option <" << multiline[0] << "> was not properly closed out");
     }
 
     // caller should call update_map() after this function
@@ -345,6 +399,8 @@ namespace openvpn {
       return true;
     }
 
+    // multiline tagging
+
     // return true if string is a tag, e.g. "<ca>"
     static bool is_open_tag(const std::string& str)
     {
@@ -365,6 +421,28 @@ namespace openvpn {
       const size_t n = str.length();
       if (n >= 3)
 	str = str.substr(1, n-2);
+    }
+
+    // multiline tagging (meta)
+
+    // return true if string is a meta tag, e.g. WEB_CA_BUNDLE_START
+    static bool is_open_meta_tag(const std::string& str)
+    {
+      return boost::algorithm::ends_with(str, "_START");
+    }
+
+    // return true if string is a tag, e.g. WEB_CA_BUNDLE_STOP
+    static bool is_close_meta_tag(const std::string& str, const std::string& prefix, const std::string& tag)
+    {
+      return prefix + tag + "_STOP" == str;
+    }
+
+    // remove trailing "_START" from open tag
+    static void untag_open_meta_tag(std::string& str)
+    {
+      const size_t n = str.length();
+      if (n >= 6)
+	str = std::string(str, 0, n - 6);
     }
 
     IndexMap map_;
