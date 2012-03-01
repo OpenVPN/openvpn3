@@ -1,8 +1,9 @@
-// OpenVPN client ("OpenVPNClientBase" class) intended for wrapping as a Java class using swig
+// OpenVPN client ("OpenVPNClient" class) intended to be wrapped by swig
+// for a target language.
 
 #include <iostream>
 
-#include "ovpncli.hpp" // objects that we bridge with java
+#include "ovpncli.hpp" // objects that we bridge with wrapping language
 
 // debug settings
 
@@ -18,7 +19,7 @@
 //#define OPENVPN_PACKET_LOG "pkt.log"
 
 // log thread settings
-#define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClientBase
+#define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClient
 #define OPENVPN_LOG_INFO  openvpn::ClientAPI::LogInfo
 
 // on Android, use TunBuilderBase abstraction
@@ -42,7 +43,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<MySessionStats> Ptr;
 
-      MySessionStats(OpenVPNClientBase* parent_arg)
+      MySessionStats(OpenVPNClient* parent_arg)
 	: parent(parent_arg)
       {
 	std::memset(errors, 0, sizeof(errors));
@@ -91,7 +92,7 @@ namespace openvpn {
 	  ++errors[err];
       }
 
-      OpenVPNClientBase* parent;
+      OpenVPNClient* parent;
       count_t errors[Error::N_ERRORS];
     };
 
@@ -100,7 +101,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<MyClientEvents> Ptr;
 
-      MyClientEvents(OpenVPNClientBase* parent_arg) : parent(parent_arg) {}
+      MyClientEvents(OpenVPNClient* parent_arg) : parent(parent_arg) {}
 
       virtual void add_event(const ClientEvent::Base::Ptr& event)
       {
@@ -120,7 +121,7 @@ namespace openvpn {
       }
 
     private:
-      OpenVPNClientBase* parent;
+      OpenVPNClient* parent;
     };
 
     class MySocketProtect : public SocketProtect
@@ -128,7 +129,7 @@ namespace openvpn {
     public:
       MySocketProtect() : parent(NULL) {}
 
-      void set_parent(OpenVPNClientBase* parent_arg)
+      void set_parent(OpenVPNClient* parent_arg)
       {
 	parent = parent_arg;
       }
@@ -147,7 +148,7 @@ namespace openvpn {
       }
 
     private:
-      OpenVPNClientBase* parent;
+      OpenVPNClient* parent;
     };
 
     namespace Private {
@@ -162,31 +163,88 @@ namespace openvpn {
       };
     };
 
-    inline OpenVPNClientBase::OpenVPNClientBase()
+    inline OpenVPNClient::OpenVPNClient()
     {
       InitProcess::init();
       state = new Private::ClientState();
     }
 
-    inline void OpenVPNClientBase::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
+    inline void OpenVPNClient::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
     {
       try {
 	// parse config
 	options.parse_from_config(config.content);
+	options.parse_meta_from_config(config.content, "OVPN_ACCESS_SERVER");
 	options.update_map();
 
-	// fill out RequestCreds struct
+	// fill out EvalConfig struct
+
+	// userlocked username
+	{
+	  const Option *o = options.get_ptr("USERNAME");
+	  if (o)
+	    eval.userlockedUsername = o->get(1);
+	}
+
+	// autologin
 	{
 	  const Option *o = options.get_ptr("auth-user-pass");
 	  eval.autologin = !o;
+	  if (eval.autologin)
+	    {
+	      o = options.get_ptr("EXTERNAL_PKI");
+	      if (o)
+		{
+		  if (o->get(1) == "1")
+		    eval.autologin = false;
+		}
+	    }
 	}
+
+	// static challenge
 	{
 	  const Option *o = options.get_ptr("static-challenge");
 	  if (o)
 	    {
 	      eval.staticChallenge = o->get(1);
-	      if (o->get(2) == "1")
+	      if (o->get_optional(2) == "1")
 		eval.staticChallengeEcho = true;
+	    }
+	}
+
+	// profile name
+	{
+	  const Option *o = options.get_ptr("PROFILE");
+	  if (o)
+	    eval.profileName = o->get(1);
+	  else
+	    {
+	      RemoteList rl(options);
+	      if (rl.size() >= 1)
+		eval.profileName = rl[0].server_host;
+	    }
+	}
+
+	// friendly name
+	{
+	  const Option *o = options.get_ptr("FRIENDLY_NAME");
+	  if (o)
+	    eval.friendlyName = o->get(1);
+	}
+
+	// server list
+	{
+	  const Option *o = options.get_ptr("SITE_LIST");
+	  if (o)
+	    {
+	      std::stringstream in(o->get(1));
+	      std::string line;
+	      while (std::getline(in, line))
+		{
+		  ServerEntry se;
+		  se.server = line;
+		  eval.serverList.push_back(se);
+		}
 	    }
 	}
       }
@@ -197,7 +255,7 @@ namespace openvpn {
 	}
     }
 
-    inline EvalConfig OpenVPNClientBase::eval_config_static(const Config& config)
+    inline EvalConfig OpenVPNClient::eval_config_static(const Config& config)
     {
       EvalConfig eval;
       OptionList options;
@@ -205,7 +263,7 @@ namespace openvpn {
       return eval;
     }
 
-    inline EvalConfig OpenVPNClientBase::eval_config(const Config& config) const
+    inline EvalConfig OpenVPNClient::eval_config(const Config& config) const
     {
       EvalConfig eval;
       state->options.clear();
@@ -213,16 +271,16 @@ namespace openvpn {
       return eval;      
     }
 
-    inline void OpenVPNClientBase::provide_creds(const ProvideCreds& creds)
+    inline void OpenVPNClient::provide_creds(const ProvideCreds& creds)
     {
       state->creds.reset(new ClientCreds());
-      state->creds->username = creds.username;
-      state->creds->password = creds.password;
-      state->creds->static_response = creds.staticResponse;
-      state->creds->replace_password_with_session_id = creds.replacePasswordWithSessionID;
+      state->creds->set_username(creds.username);
+      state->creds->set_password(creds.password);
+      state->creds->set_response(creds.response);
+      state->creds->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
     }
 
-    inline Status OpenVPNClientBase::connect()
+    inline Status OpenVPNClient::connect()
     {
       boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
       Log::Context log_context(this);
@@ -283,17 +341,17 @@ namespace openvpn {
       return ret;
     }
 
-    inline int OpenVPNClientBase::stats_n()
+    inline int OpenVPNClient::stats_n()
     {
       return MySessionStats::combined_n();
     }
 
-    inline std::string OpenVPNClientBase::stats_name(int index)
+    inline std::string OpenVPNClient::stats_name(int index)
     {
       return MySessionStats::combined_name(index);
     }
 
-    inline long long OpenVPNClientBase::stats_value(int index) const
+    inline long long OpenVPNClient::stats_value(int index) const
     {
       MySessionStats::Ptr stats = state->stats;
       if (stats)
@@ -302,35 +360,35 @@ namespace openvpn {
 	return 0;
     }
 
-    inline void OpenVPNClientBase::stop()
+    inline void OpenVPNClient::stop()
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_stop();
     }
 
-    inline void OpenVPNClientBase::pause()
+    inline void OpenVPNClient::pause()
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_pause();
     }
 
-    inline void OpenVPNClientBase::resume()
+    inline void OpenVPNClient::resume()
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_resume();
     }
 
-    inline void OpenVPNClientBase::reconnect(int seconds)
+    inline void OpenVPNClient::reconnect(int seconds)
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_reconnect(seconds);
     }
 
-    inline OpenVPNClientBase::~OpenVPNClientBase()
+    inline OpenVPNClient::~OpenVPNClient()
     {
       delete state;
     }

@@ -1,23 +1,23 @@
 // package OPENVPN_PACKAGE
 
-public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
+public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runnable {
     private EventReceiver parent;
     private TunBuilder tun_builder;
     private Thread thread;
-    private Status connect_status_;
+    private ClientAPI_Status connect_status_;
 
     private int bytes_in_index = -1;
     private int bytes_out_index = -1;
 
     public interface EventReceiver {
 	// Called with events from core
-	void event(Event event);
+	void event(ClientAPI_Event event);
 
 	// Called with log text from core
-	void log(LogInfo loginfo);
+	void log(ClientAPI_LogInfo loginfo);
 
 	// Called when connect() thread exits
-	void done(Status status);
+	void done(ClientAPI_Status status);
 
 	// Called to "protect" a socket from being routed through the tunnel
 	boolean socket_protect(int socket);
@@ -106,7 +106,7 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
 	}
     }
 
-    public Status connect_status() {
+    public ClientAPI_Status connect_status() {
 	return connect_status_;
     }
 
@@ -129,7 +129,7 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
 	    parent.done(connect_status_);
     }
 
-    // OpenVPNClientBase (C++ class) overrides
+    // ClientAPI_OpenVPNClient (C++ class) overrides
 
     @Override
     public boolean socket_protect(int socket) {
@@ -140,13 +140,13 @@ public class OpenVPNClientThread extends OpenVPNClientBase implements Runnable {
     }
 
     @Override
-    public void event(Event event) {
+    public void event(ClientAPI_Event event) {
 	if (parent != null)
 	    parent.event(event);
     }
 
     @Override
-    public void log(LogInfo loginfo) {
+    public void log(ClientAPI_LogInfo loginfo) {
 	if (parent != null)
 	    parent.log(loginfo);
     }

@@ -293,9 +293,9 @@ namespace openvpn {
 	if (o)
 	  {
 	    o->min_args(2);
-	    if (creds->replace_password_with_session_id)
-	      creds->password = (*o)[1];
-	    OPENVPN_LOG("using session token " << (*o)[1]);
+	    const std::string& sess_id = (*o)[1];
+	    creds->set_session_id(sess_id);
+	    OPENVPN_LOG("using session token " << sess_id); // fixme -- probably should remove for security
 	  }
       }
 
@@ -369,7 +369,7 @@ namespace openvpn {
 
 	ClientEvent::Connected::Ptr ev = new ClientEvent::Connected();
 	if (creds)
-	  ev->user = creds->username;
+	  ev->user = creds->get_username();
 	transport->server_endpoint_info(ev->server_host, ev->server_port, ev->server_proto, ev->server_ip);
 	ev->vpn_ip = tun->vpn_ip();
 	ev->tun_name = tun->tun_name();
@@ -397,8 +397,8 @@ namespace openvpn {
       {
 	if (creds)
 	  {
-	    Base::write_auth_string(creds->username, buf);
-	    Base::write_auth_string(creds->password, buf);
+	    Base::write_auth_string(creds->get_username(), buf);
+	    Base::write_auth_string(creds->get_password(), buf);
 	  }
 	else
 	  {

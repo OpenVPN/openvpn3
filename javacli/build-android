@@ -4,7 +4,8 @@ swig -c++ -java -package net.openvpn.openvpn -I$OVPN3_DIR ovpncli.i
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
     -g -O3 -fPIC \
-    -Wall -Wno-sign-compare -Wno-unused-parameter -Wno-strict-aliasing \
+    -fno-strict-aliasing \
+    -Wall -Wno-sign-compare -Wno-unused-parameter \
     -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
     -DUSE_OPENSSL \
     -D__GLIBC__ \

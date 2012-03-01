@@ -1,10 +1,10 @@
-// Java-callable API for OpenVPN Client.
-// Use ovpncli.i to wrap the API for Java.
-// The crux of the API is defined in OpenVPNClientBase (below)
-// and TunBuilderBase.  OpenVPNClientThread.java is used
-// to wrap the API on the Java side.
+// API for OpenVPN Client, intended to be wrapped by swig.
+// Use ovpncli.i to wrap the API.
+// The crux of the API is defined in OpenVPNClient (below)
+// and TunBuilderBase.
 
 #include <string>
+#include <vector>
 
 #include <openvpn/tun/builder/base.hpp>
 
@@ -12,6 +12,12 @@ namespace openvpn {
   class OptionList;
 
   namespace ClientAPI {
+    // Represents an OpenVPN server and its friendly name
+    struct ServerEntry {
+      std::string server;
+      std::string friendlyName;
+    };
+
     // return properties of config
     struct EvalConfig
     {
@@ -23,6 +29,15 @@ namespace openvpn {
       // if error, message given here
       std::string message;
 
+      // this username must be used with profile
+      std::string userlockedUsername;
+
+      // profile name of config
+      std::string profileName;
+
+      // "friendly" name of config
+      std::string friendlyName;
+
       // true: no creds required, false: username/password required
       bool autologin;
 
@@ -31,6 +46,9 @@ namespace openvpn {
 
       // true if static challenge response should be echoed to UI, ignored if autologin
       bool staticChallengeEcho;
+
+      // optional list of user-selectable VPN servers
+      std::vector<ServerEntry> serverList;
     };
 
     // used to pass credentials to VPN client
@@ -41,8 +59,12 @@ namespace openvpn {
       std::string username;
       std::string password;
 
-      // response to static challenge
-      std::string staticResponse;
+      // response to challenge
+      std::string response;
+
+      // OpenVPN server to connect to (if omitted, value from config file
+      // will be used)
+      std::string server;
 
       // If true, on successful connect, we will replace the password
       // with the session ID we receive from the server.
@@ -84,10 +106,10 @@ namespace openvpn {
     };
 
     // Top-level OpenVPN client class that is wrapped by swig.
-    class OpenVPNClientBase : public TunBuilderBase {
+    class OpenVPNClient : public TunBuilderBase {
     public:
-      OpenVPNClientBase();
-      virtual ~OpenVPNClientBase();
+      OpenVPNClient();
+      virtual ~OpenVPNClient();
 
       // Parse config file and determine needed credentials statically.
       static EvalConfig eval_config_static(const Config&);
@@ -151,8 +173,8 @@ namespace openvpn {
       static void parse_config(const Config& config, EvalConfig& eval, OptionList& options);
 
       // disable copy and assignment
-      OpenVPNClientBase(const OpenVPNClientBase&);
-      OpenVPNClientBase& operator=(const OpenVPNClientBase&);
+      OpenVPNClient(const OpenVPNClient&);
+      OpenVPNClient& operator=(const OpenVPNClient&);
 
       Private::ClientState* state;
     };

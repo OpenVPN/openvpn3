@@ -3,7 +3,8 @@ set -e
 swig -c++ -java -I$OVPN3_DIR ovpncli.i
 javac *.java
 gcc -O3 -fPIC -pthread \
-    -Wall -Wno-sign-compare -Wno-unused-parameter -Wno-strict-aliasing \
+    -fno-strict-aliasing \
+    -Wall -Wno-sign-compare -Wno-unused-parameter \
     -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
     -DUSE_OPENSSL \
     -I$OVPN3_DIR \

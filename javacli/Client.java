@@ -11,7 +11,7 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	public CredsUnspecifiedError(String msg) { super(msg); }
     }
 
-    // Load OpenVPN core (implements OpenVPNClientBase) from shared library 
+    // Load OpenVPN core (implements ClientAPI_OpenVPNClient) from shared library 
     static {
 	System.loadLibrary("ovpncli");
     }
@@ -21,14 +21,14 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	client_thread = new OpenVPNClientThread();
 
 	// load/eval config
-	Config config = new Config();
+	ClientAPI_Config config = new ClientAPI_Config();
 	config.setContent(config_text);
-	EvalConfig ec = client_thread.eval_config(config);
+	ClientAPI_EvalConfig ec = client_thread.eval_config(config);
 	if (ec.getError())
 	    throw new ConfigError("OpenVPN config file parse error: " + ec.getMessage());
 
 	// handle creds
-	ProvideCreds creds = new ProvideCreds();
+	ClientAPI_ProvideCreds creds = new ClientAPI_ProvideCreds();
 	if (!ec.getAutologin())
 	    {
 		if (username.length() > 0)
@@ -67,7 +67,7 @@ public class Client implements OpenVPNClientThread.EventReceiver {
     }
 
     @Override
-    public void event(Event event) {
+    public void event(ClientAPI_Event event) {
 	boolean error = event.getError();
 	String name = event.getName();
 	String info = event.getInfo();
@@ -75,14 +75,14 @@ public class Client implements OpenVPNClientThread.EventReceiver {
     }
 
     @Override
-    public void log(LogInfo loginfo) {
+    public void log(ClientAPI_LogInfo loginfo) {
 	String text = loginfo.getText();
 	System.out.format("LOG: %s", text);
     }
 
     @Override
-    public void done(Status status) {
-	System.out.format("DONE Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
+    public void done(ClientAPI_Status status) {
+	System.out.format("DONE ClientAPI_Status: err=%b msg='%s'%n", status.getError(), status.getMessage());
     }
 
     @Override
