@@ -234,7 +234,7 @@ namespace openvpn {
 
 	// server list
 	{
-	  const Option *o = options.get_ptr("SITE_LIST");
+	  const Option *o = options.get_ptr("HOST_LIST");
 	  if (o)
 	    {
 	      std::stringstream in(o->get(1));
@@ -273,11 +273,16 @@ namespace openvpn {
 
     inline void OpenVPNClient::provide_creds(const ProvideCreds& creds)
     {
-      state->creds.reset(new ClientCreds());
-      state->creds->set_username(creds.username);
-      state->creds->set_password(creds.password);
-      state->creds->set_response(creds.response);
-      state->creds->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
+      ClientCreds::Ptr cc = new ClientCreds();
+      cc->set_username(creds.username);
+      cc->set_password(creds.password);
+      cc->set_response(creds.response);
+      cc->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
+
+      Base64::Ptr b64 = new Base64();
+      cc->set_base64(b64);
+
+      state->creds = cc;
     }
 
     inline Status OpenVPNClient::connect()
