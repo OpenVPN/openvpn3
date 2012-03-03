@@ -3,6 +3,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/thread.hpp>
+#include <openvpn/common/base64.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/gencrypto/cryptoinit.hpp>
@@ -24,6 +25,13 @@ namespace openvpn {
 
 	// init crypto acceleration (if available)
 	setup_crypto_engine("auto");
+
+	base64_init_static();
+      }
+
+      ~Init()
+      {
+	base64_uninit_static();
       }
 
     private:
@@ -32,8 +40,8 @@ namespace openvpn {
     };
 
     // process-wide singular instance
-    Init* volatile the_instance;
-    Mutex the_instance_mutex;
+    Init* the_instance; // GLOBAL
+    Mutex the_instance_mutex; // GLOBAL
 
     inline void init()
     {
@@ -51,6 +59,7 @@ namespace openvpn {
 	  the_instance = NULL;
 	}
     }
+
   }
 }
 

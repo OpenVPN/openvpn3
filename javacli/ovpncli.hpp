@@ -62,13 +62,29 @@ namespace openvpn {
       // response to challenge
       std::string response;
 
-      // OpenVPN server to connect to (if omitted, value from config file
-      // will be used)
-      std::string server;
+      // OpenVPN server to connect to -- overrides "remote" option
+      // in config file.
+      std::string serverOverride;
+
+      // Protocol override -- suggest "tcp" or "udp" protocol for transport
+      std::string protoOverride;
+
+      // Dynamic challenge/reponse cookie
+      std::string dynamicChallengeCookie;
 
       // If true, on successful connect, we will replace the password
       // with the session ID we receive from the server.
       bool replacePasswordWithSessionID;
+    };
+
+    // used to pass credentials to VPN client
+    struct DynamicChallenge
+    {
+      DynamicChallenge() : echo(false), responseRequired(false) {}
+
+      std::string challenge;
+      bool echo;
+      bool responseRequired;
     };
 
     // OpenVPN config-file/profile
@@ -114,12 +130,15 @@ namespace openvpn {
       // Parse config file and determine needed credentials statically.
       static EvalConfig eval_config_static(const Config&);
 
+      // Parse a dynamic challenge cookie, placing the result in dc.
+      // Return true on success or false if parse error.
+      static bool parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc);
+
       // Parse OpenVPN configuration file.
       EvalConfig eval_config(const Config&) const;
 
-      // Provide credentials.  Call before connect() if needed_creds()
-      // indicates that credentials are needed.
-      void provide_creds(const ProvideCreds&);
+      // Provide credentials and other options.  Call before connect().
+      Status provide_creds(const ProvideCreds&);
 
       // Callback to "protect" a socket from being routed through the tunnel.
       // Will be called from the thread executing connect().

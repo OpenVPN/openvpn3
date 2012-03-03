@@ -173,9 +173,18 @@ namespace openvpn {
 	      break;
 	    case Error::AUTH_FAILED: // fixme -- handle auth challenge
 	      {
-		ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(client->fatal_reason());
-		client_options->events().add_event(ev);
-		client_options->stats().error(Error::AUTH_FAILED);
+		const std::string& reason = client->fatal_reason();
+		if (ChallengeResponse::is_dynamic(reason)) // dynamic challenge/reponse?
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::DynamicChallenge(reason);
+		    client_options->events().add_event(ev);
+		  }
+		else
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(reason);
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::AUTH_FAILED);
+		  }
 		stop();
 	      }
 	      break;

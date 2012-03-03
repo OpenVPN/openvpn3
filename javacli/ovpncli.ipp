@@ -271,19 +271,43 @@ namespace openvpn {
       return eval;      
     }
 
-    inline void OpenVPNClient::provide_creds(const ProvideCreds& creds)
+    inline Status OpenVPNClient::provide_creds(const ProvideCreds& creds)
     {
-      ClientCreds::Ptr cc = new ClientCreds();
-      cc->set_username(creds.username);
-      cc->set_password(creds.password);
-      cc->set_response(creds.response);
-      cc->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
-
-      Base64::Ptr b64 = new Base64();
-      cc->set_base64(b64);
-
-      state->creds = cc;
+      Status ret;
+      try {
+	ClientCreds::Ptr cc = new ClientCreds();
+	cc->set_username(creds.username);
+	cc->set_password(creds.password);
+	cc->set_response(creds.response);
+	cc->set_server_override(creds.serverOverride);
+	cc->set_proto_override(creds.protoOverride);
+	cc->set_dynamic_challenge_cookie(creds.dynamicChallengeCookie);
+	cc->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
+	state->creds = cc;
+      }
+      catch (const std::exception& e)
+	{
+	  ret.error = true;
+	  ret.message = e.what();
+	}
+      return ret;
     }
+
+    inline bool OpenVPNClient::parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc)
+    {
+      try {
+	ChallengeResponse cr(cookie);
+	dc.challenge = cr.get_challenge_text();
+	dc.echo = cr.get_echo();
+	dc.responseRequired = cr.get_response_required();
+	return true;
+      }
+      catch (const std::exception&)
+	{
+	  return false;
+	}
+    }
+
 
     inline Status OpenVPNClient::connect()
     {

@@ -9,33 +9,39 @@
 namespace openvpn {
 
   template <typename V, typename LEX>
-  inline V split_by_char(const std::string& input, const char split_by)
+  inline void split_by_char_void(V& ret, const std::string& input, const char split_by, const unsigned int max_terms=~0)
   {
     LEX lex;
-    V ret;
-
+    unsigned int nterms = 0;
     std::string term;
     for (std::string::const_iterator i = input.begin(); i != input.end(); i++)
       {
 	const char c = *i;
 	lex.put(c);
-	if (!lex.in_quote() && c == split_by)
+	if (!lex.in_quote() && c == split_by && nterms < max_terms)
 	  {
 	    ret.push_back(term);
+	    ++nterms;
 	    term = "";
 	  }
 	else
 	  term += c;
       }
     ret.push_back(term);
+  }
+
+  template <typename V, typename LEX>
+  inline V split_by_char(const std::string& input, const char split_by, const unsigned int max_terms=~0)
+  {
+    V ret;
+    split_by_char_void<V, LEX>(ret, input, split_by, max_terms);
     return ret;
   }
 
   template <typename V, typename LEX, typename SPACE>
-  inline V split_by_space(const std::string& input)
+  inline void split_by_space_void(V& ret, const std::string& input)
   {
     LEX lex;
-    V ret;
 
     std::string term;
     bool defined = false;
@@ -63,6 +69,13 @@ namespace openvpn {
       }
     if (defined)
       ret.push_back(term);
+  }
+
+  template <typename V, typename LEX, typename SPACE>
+  inline V split_by_space(const std::string& input)
+  {
+    V ret;
+    split_by_space_void<V, LEX, SPACE>(ret, input);
     return ret;
   }
 

@@ -6,14 +6,11 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/rc.hpp>
 
 namespace openvpn {
 
-  class Base64 : public RC<thread_unsafe_refcount> {
+  class Base64 {
   public:
-    typedef boost::intrusive_ptr<Base64> Ptr;
-
     OPENVPN_SIMPLE_EXCEPTION(base64_bad_map);
     OPENVPN_SIMPLE_EXCEPTION(base64_decode_error);
 
@@ -86,9 +83,17 @@ namespace openvpn {
       return ret;
     }
 
+    std::string decode(const std::string& str) const
+    {
+      std::string ret;
+      decode(ret, str);
+      return ret;
+    }
+
     template <typename V>
     void decode(V& dest, const std::string& str) const
     {
+      dest.reserve(str.length());
       for (const char *p = str.c_str(); p != '\0' && (*p == equal || is_base64_char(*p)); p += 4)
 	{
 	  unsigned int marker;
@@ -145,6 +150,25 @@ namespace openvpn {
     unsigned char dec[128];
     unsigned char equal;
   };
+
+  // provide a static Base64 object
+
+  const Base64* base64; // GLOBAL
+
+  inline void base64_init_static()
+  {
+    if (!base64)
+      base64 = new Base64();
+  }
+
+  inline void base64_uninit_static()
+  {
+    if (base64)
+      {
+	delete base64;
+	base64 = NULL;
+      }
+  }
 
 }
 

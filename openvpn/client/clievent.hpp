@@ -22,8 +22,12 @@ namespace openvpn {
       ADD_ROUTES,
       PAUSE,
       RESUME,
+
+      // start of errors, must be marked by ERROR_START
       AUTH_FAILED,
+      DYNAMIC_CHALLENGE,
       TUN_SETUP_FAILED,
+
       N_TYPES
     };
 
@@ -46,6 +50,7 @@ namespace openvpn {
 	"PAUSE",
 	"RESUME",
 	"AUTH_FAILED",
+	"DYNAMIC_CHALLENGE",
 	"TUN_SETUP_FAILED",
       };
 
@@ -161,6 +166,22 @@ namespace openvpn {
     {
       AuthFailed(const std::string& reason_arg)
 	: Base(AUTH_FAILED),
+	  reason(reason_arg)
+      {
+      }
+
+      virtual std::string render() const
+      {
+	return reason;
+      }
+
+      std::string reason;
+    };
+
+    struct DynamicChallenge : public Base
+    {
+      DynamicChallenge(const std::string& reason_arg)
+	: Base(DYNAMIC_CHALLENGE),
 	  reason(reason_arg)
       {
       }
