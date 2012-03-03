@@ -52,6 +52,8 @@ namespace openvpn {
       Protocol ret;
       std::string s = str;
       boost::algorithm::to_lower(s);
+      if (s == "adaptive")
+	return ret;
       if (s.length() >= 3)
 	{
 	  const std::string s1 = s.substr(0, 3);

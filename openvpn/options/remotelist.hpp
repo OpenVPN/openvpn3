@@ -57,7 +57,7 @@ namespace openvpn {
       Item item = list[index % size];
       if (!server_override.empty())
 	item.server_host = server_override;
-      OPENVPN_LOG("****** GET REMOTE index=" << index << " so=" << server_override << " po=" << proto_override.str() << " item=" << item.render()); // fixme
+      // OPENVPN_LOG("****** GET REMOTE index=" << index << " so=" << server_override << " po=" << proto_override.str() << " item=" << item.render());
       return item;
     }
 
