@@ -32,6 +32,16 @@ namespace openvpn {
 
     bool is_reliable() const { return is_tcp(); }
 
+    bool operator==(const Protocol& other) const
+    {
+      return type_ == other.type_;
+    }
+
+    bool operator!=(const Protocol& other) const
+    {
+      return type_ != other.type_;
+    }
+
     unsigned int extra_transport_bytes() const
     {
       return is_tcp() ? sizeof(boost::uint16_t) : 0;

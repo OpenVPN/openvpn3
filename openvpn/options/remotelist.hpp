@@ -22,6 +22,15 @@ namespace openvpn {
       std::string server_host;
       std::string server_port;
       Protocol transport_protocol;
+
+      std::string render() const
+      {
+	std::ostringstream out;
+	out << "host=" << server_host
+	    << " port=" << server_port
+	    << " proto=" << transport_protocol.str();
+	return out.str();
+      }
     };
 
     RemoteList() {}
@@ -41,10 +50,19 @@ namespace openvpn {
     }
 
     // used to cycle through Item list
-    const Item& modulo_ref(const size_t i) { return list[i % list.size()]; } 
+    Item get(unsigned int& index, const std::string& server_override, const Protocol& proto_override) const
+    {
+      const unsigned int size = list.size();
+      index = find_with_proto_match(proto_override, index);
+      Item item = list[index % size];
+      if (!server_override.empty())
+	item.server_host = server_override;
+      OPENVPN_LOG("****** GET REMOTE index=" << index << " so=" << server_override << " po=" << proto_override.str() << " item=" << item.render()); // fixme
+      return item;
+    }
 
     size_t size() const { return list.size(); }
-    const Item& operator[](const size_t i) { return list[i]; }
+    const Item& operator[](const size_t i) const { return list[i]; }
 
     std::string render() const
     {
@@ -52,16 +70,28 @@ namespace openvpn {
       for (size_t i = 0; i < list.size(); ++i)
 	{
 	  const Item& e = list[i];
-	  out << '[' << i
-	      << "] host=" << e.server_host
-	      << " port=" << e.server_port
-	      << " proto=" << e.transport_protocol.str()
-	      << std::endl;
+	  out << '[' << i << "] " << e.render() << std::endl;
 	}
       return out.str();
     }
 
   private:
+    unsigned int find_with_proto_match(const Protocol& proto, const unsigned int index) const
+    {
+      if (proto.defined())
+	{
+	  const unsigned int size = list.size();
+	  const unsigned int limit = index + size;
+	  for (unsigned int i = index; i < limit; ++i)
+	    {
+	      const Item& item = list[i % size];
+	      if (proto == item.transport_protocol)
+		return i;
+	    }
+	}
+      return index;
+    }
+
     std::vector<Item> list;
   };
 

@@ -19,13 +19,6 @@ namespace openvpn {
     void set_username(const std::string& username_arg) { username = username_arg; }
     void set_password(const std::string& password_arg) { password = password_arg; }
     void set_response(const std::string& response_arg) { response = response_arg; }
-    void set_server_override(const std::string& server_override_arg) { server_override = server_override_arg; }
-
-    void set_proto_override(const std::string& proto_override_arg)
-    {
-      if (!proto_override_arg.empty())
-	proto_override = Protocol::parse(proto_override_arg);
-    }
 
     void set_dynamic_challenge_cookie(const std::string& cookie)
     {
@@ -41,12 +34,13 @@ namespace openvpn {
 	{
 	  password = sess_id;
 	  response = "";
-	  dynamic_challenge.reset();
+	  if (dynamic_challenge)
+	    {
+	      username = dynamic_challenge->get_username();
+	      dynamic_challenge.reset();
+	    }
 	}
     }
-
-    const Protocol& get_proto_override() const { return proto_override; }
-    const std::string& get_server_override() const { return server_override; }
 
     std::string get_username() const
     {
@@ -73,13 +67,6 @@ namespace openvpn {
 
     // Response to challenge
     std::string response;
-
-    // User wants to use a different server than that specified in "remote"
-    // option of config file
-    std::string server_override;
-
-    // User wants to force a given transport protocol
-    Protocol proto_override;
 
     // Info describing a dynamic challenge
     ChallengeResponse::Ptr dynamic_challenge;

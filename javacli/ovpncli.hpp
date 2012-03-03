@@ -62,13 +62,6 @@ namespace openvpn {
       // response to challenge
       std::string response;
 
-      // OpenVPN server to connect to -- overrides "remote" option
-      // in config file.
-      std::string serverOverride;
-
-      // Protocol override -- suggest "tcp" or "udp" protocol for transport
-      std::string protoOverride;
-
       // Dynamic challenge/reponse cookie
       std::string dynamicChallengeCookie;
 
@@ -90,7 +83,15 @@ namespace openvpn {
     // OpenVPN config-file/profile
     struct Config
     {
+      // OpenVPN config file (profile) as a string
       std::string content;
+
+      // User wants to use a different server than that specified in "remote"
+      // option of config file
+      std::string serverOverride;
+
+      // User wants to force a given transport protocol
+      std::string protoOverride;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.
@@ -135,7 +136,7 @@ namespace openvpn {
       static bool parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc);
 
       // Parse OpenVPN configuration file.
-      EvalConfig eval_config(const Config&) const;
+      EvalConfig eval_config(const Config&);
 
       // Provide credentials and other options.  Call before connect().
       Status provide_creds(const ProvideCreds&);
@@ -189,7 +190,8 @@ namespace openvpn {
       virtual void log(const LogInfo&) = 0;
 
     private:
-      static void parse_config(const Config& config, EvalConfig& eval, OptionList& options);
+      static void parse_config(const Config&, EvalConfig&, OptionList&);
+      void parse_extras(const Config&, EvalConfig&);
 
       // disable copy and assignment
       OpenVPNClient(const OpenVPNClient&);

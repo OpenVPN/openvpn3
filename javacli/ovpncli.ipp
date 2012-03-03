@@ -160,6 +160,10 @@ namespace openvpn {
 	MySessionStats::Ptr stats;
 	MyClientEvents::Ptr events;
 	ClientConnect::Ptr session;
+
+	// extra settings submitted by API client
+	std::string server_override;
+	Protocol proto_override;
       };
     };
 
@@ -172,6 +176,10 @@ namespace openvpn {
     inline void OpenVPNClient::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
     {
       try {
+	// validate proto_override
+	if (!config.protoOverride.empty())
+	  Protocol::parse(config.protoOverride);
+
 	// parse config
 	options.parse_from_config(config.content);
 	options.parse_meta_from_config(config.content, "OVPN_ACCESS_SERVER");
@@ -255,6 +263,20 @@ namespace openvpn {
 	}
     }
 
+    inline void OpenVPNClient::parse_extras(const Config& config, EvalConfig& eval)
+    {
+      try {
+	state->server_override = config.serverOverride;
+	if (!config.protoOverride.empty())
+	  state->proto_override = Protocol::parse(config.protoOverride);
+      }
+      catch (const std::exception& e)
+	{
+	  eval.error = true;
+	  eval.message = e.what();
+	}
+    }
+
     inline EvalConfig OpenVPNClient::eval_config_static(const Config& config)
     {
       EvalConfig eval;
@@ -263,11 +285,18 @@ namespace openvpn {
       return eval;
     }
 
-    inline EvalConfig OpenVPNClient::eval_config(const Config& config) const
+    // API client submits the configuration here before calling connect()
+    inline EvalConfig OpenVPNClient::eval_config(const Config& config)
     {
+      // parse and validate configuration file
       EvalConfig eval;
       state->options.clear();
       parse_config(config, eval, state->options);
+      if (eval.error)
+	return eval;
+
+      // handle extra settings in config
+      parse_extras(config, eval);
       return eval;      
     }
 
@@ -279,8 +308,6 @@ namespace openvpn {
 	cc->set_username(creds.username);
 	cc->set_password(creds.password);
 	cc->set_response(creds.response);
-	cc->set_server_override(creds.serverOverride);
-	cc->set_proto_override(creds.protoOverride);
 	cc->set_dynamic_challenge_cookie(creds.dynamicChallengeCookie);
 	cc->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
 	state->creds = cc;
@@ -331,6 +358,8 @@ namespace openvpn {
 	ClientOptions::Config cc;
 	cc.cli_stats = state->stats;
 	cc.cli_events = state->events;
+	cc.server_override = state->server_override;
+	cc.proto_override = state->proto_override;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;

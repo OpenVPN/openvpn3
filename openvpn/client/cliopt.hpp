@@ -58,6 +58,8 @@ namespace openvpn {
 #endif
       }
 
+      std::string server_override;
+      Protocol proto_override;
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
       SocketProtect* socket_protect;       // must remain in scope for lifetime of ClientOptions object
@@ -72,7 +74,9 @@ namespace openvpn {
 	socket_protect(config.socket_protect),
 	cli_stats(config.cli_stats),
 	cli_events(config.cli_events),
-	server_poll_timeout_(10)
+	server_poll_timeout_(10),
+	server_override(config.server_override),
+	proto_override(config.proto_override)
     {
       // initialize PRNG
       prng.reset(new PRNG("SHA1", 16));
@@ -108,13 +112,13 @@ namespace openvpn {
 	throw option_error("only layer 3 currently supported");
 
       // init transport config
-      load_transport_config();
+      const std::string session_name = load_transport_config();
 
       // initialize tun/tap
 #if defined(USE_TUN_BUILDER)
       TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
       tunconf->builder = config.builder;
-      tunconf->session_name = (*remote_list)[0].server_host;
+      tunconf->session_name = session_name;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
@@ -184,10 +188,10 @@ namespace openvpn {
     }
 
   private:
-    void load_transport_config()
+    std::string load_transport_config()
     {
-      // initialize remote item with first element
-      const RemoteList::Item& rli = remote_list->modulo_ref(session_iteration);
+      // initialize remote item with current element
+      const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto_override);
       cp->remote_adjust(rli);
 
       // initialize transport factory
@@ -213,6 +217,8 @@ namespace openvpn {
 	}
       else
 	throw option_error("unknown transport protocol");
+
+      return rli.server_host;
     }
 
     unsigned int session_iteration;
@@ -230,6 +236,8 @@ namespace openvpn {
     ClientEvent::Queue::Ptr cli_events;
     ClientCreds::Ptr creds;
     unsigned int server_poll_timeout_;
+    std::string server_override;
+    Protocol proto_override;
   };
 }
 

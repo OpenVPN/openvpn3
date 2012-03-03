@@ -171,7 +171,7 @@ namespace openvpn {
 		restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
 	      }
 	      break;
-	    case Error::AUTH_FAILED: // fixme -- handle auth challenge
+	    case Error::AUTH_FAILED:
 	      {
 		const std::string& reason = client->fatal_reason();
 		if (ChallengeResponse::is_dynamic(reason)) // dynamic challenge/reponse?
