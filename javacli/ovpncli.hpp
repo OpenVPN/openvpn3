@@ -41,6 +41,9 @@ namespace openvpn {
       // true: no creds required, false: username/password required
       bool autologin;
 
+      // if true, this is an External PKI profile (no cert or key directives)
+      bool externalPki;
+
       // static challenge, may be empty, ignored if autologin
       std::string staticChallenge;
 
@@ -92,6 +95,10 @@ namespace openvpn {
 
       // User wants to force a given transport protocol
       std::string protoOverride;
+
+      // An ID used for get certificate and RSA signing callbacks
+      // for External PKI profiles.
+      std::string externalPkiAlias;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

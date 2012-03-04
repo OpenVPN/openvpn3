@@ -1,6 +1,7 @@
 #ifndef OPENVPN_COMMON_STRING_H
 #define OPENVPN_COMMON_STRING_H
 
+#include <string>
 #include <cstring>
 
 #include <openvpn/common/types.hpp>
@@ -18,6 +19,11 @@ namespace openvpn {
       strncpy (dest, src, maxlen);
       if (maxlen > 0)
 	dest[maxlen - 1] = 0;
+    }
+
+    inline bool is_true(const std::string& str)
+    {
+      return str == "1" || !strcasecmp(str.c_str(), "true");
     }
   } // namespace string
 } // namespace openvpn

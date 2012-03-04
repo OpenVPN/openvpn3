@@ -8,6 +8,7 @@
 // debug settings
 
 #define OPENVPN_DEBUG
+#define OPENVPN_SSL_DEBUG // fixme
 //#define OPENVPN_DEBUG_CLIPROTO
 //#define OPENVPN_FORCE_TUN_NULL
 //#define OPENVPN_DEBUG_PROTO
@@ -32,6 +33,7 @@
 
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/client/cliconnect.hpp>
 
@@ -189,21 +191,46 @@ namespace openvpn {
 
 	// userlocked username
 	{
-	  const Option *o = options.get_ptr("USERNAME");
+	  const Option* o = options.get_ptr("USERNAME");
 	  if (o)
 	    eval.userlockedUsername = o->get(1);
 	}
 
+	// External PKI
+	{
+	  const Option* epki = options.get_ptr("EXTERNAL_PKI");
+	  if (epki)
+	    {
+	      eval.externalPki = string::is_true(epki->get_optional(1));
+	    }
+	  else
+	    {
+	      const Option* cert = options.get_ptr("cert");
+	      const Option* key = options.get_ptr("key");
+	      eval.externalPki = !cert || !key;
+	    }
+	}
+
 	// autologin
 	{
-	  const Option *o = options.get_ptr("auth-user-pass");
-	  eval.autologin = !o;
-	  if (eval.autologin)
+	  const Option* autologin = options.get_ptr("AUTOLOGIN");
+	  if (autologin)
 	    {
-	      o = options.get_ptr("EXTERNAL_PKI");
-	      if (o)
+	      eval.autologin = string::is_true(autologin->get_optional(1));
+	    }
+	  else
+	    {
+	      const Option* auth_user_pass = options.get_ptr("auth-user-pass");
+	      eval.autologin = !auth_user_pass;
+	      if (eval.autologin)
 		{
-		  if (o->get(1) == "1")
+		  // External PKI profiles from AS don't declare auth-user-pass,
+		  // and we have no way of knowing if they are autologin unless
+		  // we examine their cert, which requires accessing the system-level
+		  // cert store on the client.  For now, we are going to assume
+		  // that External PKI profiles from the AS are always userlogin.
+		  const Option* as = options.get_ptr("AUTOLOGIN_SPEC");
+		  if (as)
 		    eval.autologin = false;
 		}
 	    }
@@ -211,7 +238,7 @@ namespace openvpn {
 
 	// static challenge
 	{
-	  const Option *o = options.get_ptr("static-challenge");
+	  const Option* o = options.get_ptr("static-challenge");
 	  if (o)
 	    {
 	      eval.staticChallenge = o->get(1);
@@ -222,7 +249,7 @@ namespace openvpn {
 
 	// profile name
 	{
-	  const Option *o = options.get_ptr("PROFILE");
+	  const Option* o = options.get_ptr("PROFILE");
 	  if (o)
 	    eval.profileName = o->get(1);
 	  else
@@ -235,14 +262,14 @@ namespace openvpn {
 
 	// friendly name
 	{
-	  const Option *o = options.get_ptr("FRIENDLY_NAME");
+	  const Option* o = options.get_ptr("FRIENDLY_NAME");
 	  if (o)
 	    eval.friendlyName = o->get(1);
 	}
 
 	// server list
 	{
-	  const Option *o = options.get_ptr("HOST_LIST");
+	  const Option* o = options.get_ptr("HOST_LIST");
 	  if (o)
 	    {
 	      std::stringstream in(o->get(1));
