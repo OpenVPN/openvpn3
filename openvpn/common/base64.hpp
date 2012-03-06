@@ -86,6 +86,7 @@ namespace openvpn {
     std::string decode(const std::string& str) const
     {
       std::string ret;
+      ret.reserve(str.length());
       decode(ret, str);
       return ret;
     }
@@ -93,7 +94,6 @@ namespace openvpn {
     template <typename V>
     void decode(V& dest, const std::string& str) const
     {
-      dest.reserve(str.length());
       for (const char *p = str.c_str(); p != '\0' && (*p == equal || is_base64_char(*p)); p += 4)
 	{
 	  unsigned int marker;

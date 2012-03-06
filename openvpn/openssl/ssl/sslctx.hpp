@@ -1,6 +1,8 @@
 #ifndef OPENVPN_OPENSSL_SSL_SSLCTX_H
 #define OPENVPN_OPENSSL_SSL_SSLCTX_H
 
+#include <cstring>
+
 #include <openssl/ssl.h>
 
 #include <openvpn/common/types.hpp>
@@ -8,8 +10,11 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/common/base64.hpp>
 #include <openvpn/frame/frame.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
+#include <openvpn/pki/epkibase.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
@@ -49,7 +54,7 @@ namespace openvpn {
       };
       typedef unsigned int Flags;
 
-      Config() : flags(0) {}
+      Config() : external_pki(NULL), flags(0) {}
 
       Mode mode;
       CertCRLList ca;
@@ -57,12 +62,19 @@ namespace openvpn {
       X509List extra_certs;
       PKey pkey;
       DH dh; // only needed in server mode
+      ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       Flags flags;
 
       void enable_debug()
       {
 	flags |= DEBUG;
+      }
+
+      // if this callback is defined, no private key needs to be loaded
+      void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
+      {
+	external_pki = external_pki_arg;
       }
 
       void load_ca(const std::string& ca_txt)
@@ -115,10 +127,11 @@ namespace openvpn {
 	}
 
 	// private key
-	{
-	  const std::string& key_txt = opt.get("key", 1);
-	  load_private_key(key_txt);
-	}
+	if (!external_pki)
+	  {
+	    const std::string& key_txt = opt.get("key", 1);
+	    load_private_key(key_txt);
+	  }
 
 	// DH
 	if (mode.is_server())
@@ -281,47 +294,170 @@ namespace openvpn {
       bool overflow;
     };
 
+    class ExternalPKIImpl {
+    public:
+      ExternalPKIImpl(SSL_CTX* ssl_ctx, ::X509* cert, ExternalPKIBase* external_pki_arg)
+	: external_pki(external_pki_arg), n_errors(0)
+      {
+	RSA *rsa = NULL;
+	RSA_METHOD *rsa_meth = NULL;
+	RSA *pub_rsa = NULL;
+	const char *errtext = "";
+
+	/* allocate custom RSA method object */
+	rsa_meth = new RSA_METHOD;
+	std::memset(rsa_meth, 0, sizeof(RSA_METHOD));
+	rsa_meth->name = "OpenSSLContext::ExternalPKIImpl private key RSA Method";
+	rsa_meth->rsa_pub_enc = rsa_pub_enc;
+	rsa_meth->rsa_pub_dec = rsa_pub_dec;
+	rsa_meth->rsa_priv_enc = rsa_priv_enc;
+	rsa_meth->rsa_priv_dec = rsa_priv_dec;
+	rsa_meth->init = NULL;
+	rsa_meth->finish = rsa_finish;
+	rsa_meth->flags = RSA_METHOD_FLAG_NO_CHECK;
+	rsa_meth->app_data = (char *)this;
+
+	/* allocate RSA object */
+	rsa = RSA_new();
+	if (rsa == NULL)
+	  {
+	    SSLerr(SSL_F_SSL_USE_PRIVATEKEY, ERR_R_MALLOC_FAILURE);
+	    errtext = "RSA_new";
+	    goto err;
+	  }
+
+	/* get the public key */
+	if (cert->cert_info->key->pkey == NULL) /* NULL before SSL_CTX_use_certificate() is called */
+	  {
+	    errtext = "pkey is NULL";
+	    goto err;
+	  }
+	pub_rsa = cert->cert_info->key->pkey->pkey.rsa;
+
+	/* initialize RSA object */
+	rsa->n = BN_dup(pub_rsa->n);
+	rsa->flags |= RSA_FLAG_EXT_PKEY;
+	if (!RSA_set_method(rsa, rsa_meth))
+	  {
+	    errtext = "RSA_set_method";
+	    goto err;
+	  }
+
+	/* bind our custom RSA object to ssl_ctx */
+	if (!SSL_CTX_use_RSAPrivateKey(ssl_ctx, rsa))
+	  {
+	    errtext = "SSL_CTX_use_RSAPrivateKey";
+	    goto err;
+	  }
+
+	RSA_free(rsa); /* doesn't necessarily free, just decrements refcount */
+	return;
+
+      err:
+	if (rsa)
+	  RSA_free(rsa);
+	else
+	  {
+	    if (rsa_meth)
+	      free(rsa_meth);
+	  }
+	OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: " << errtext);
+      }
+
+      unsigned int get_n_errors() const { return n_errors; }
+
+    private:
+      OPENVPN_EXCEPTION(openssl_external_pki);
+
+      /* called at RSA_free */
+      static int rsa_finish(RSA *rsa)
+      {
+	free ((void*)rsa->meth);
+	rsa->meth = NULL;
+	return 1;
+      }
+
+      /* sign arbitrary data */
+      static int rsa_priv_enc(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int padding)
+      {
+	ExternalPKIImpl* self = (ExternalPKIImpl*)rsa->meth->app_data;
+
+	try {
+	  if (padding != RSA_PKCS1_PADDING)
+	    {
+	      RSAerr (RSA_F_RSA_EAY_PRIVATE_ENCRYPT, RSA_R_UNKNOWN_PADDING_TYPE);
+	      throw openssl_external_pki("bad padding size");
+	    }
+
+	  /* convert 'from' to base64 */
+	  ConstBuffer from_buf(from, flen, true);
+	  const std::string from_b64 = base64->encode(from_buf);
+
+	  /* get signature */
+	  std::string sig_b64;
+	  const bool status = self->external_pki->sign(from_b64, sig_b64);
+	  if (!status)
+	    throw openssl_external_pki("could not obtain signature");
+
+	  /* decode base64 signature to binary */
+	  const int len = RSA_size(rsa);
+	  Buffer sig(to, len, false);
+	  base64->decode(sig, sig_b64);
+
+	  /* verify length */
+	  if (sig.size() != len)
+	    throw openssl_external_pki("incorrect signature length");
+
+	  /* return length of signature */
+	  return len;
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("OpenSSLContext::ExternalPKIImpl::rsa_priv_enc: " << e.what());
+	    ++self->n_errors;
+	    return -1;
+	  }
+      }
+
+      static void not_implemented(RSA *rsa)
+      {
+	ExternalPKIImpl* self = (ExternalPKIImpl*)rsa->meth->app_data;
+	++self->n_errors;
+      }
+
+      /* encrypt */
+      static int rsa_pub_enc(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int padding)
+      {
+	not_implemented(rsa);
+	return -1;
+      }
+
+      /* verify arbitrary data */
+      static int
+      rsa_pub_dec(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int padding)
+      {
+	not_implemented(rsa);
+	return -1;
+      }
+
+      /* decrypt */
+      static int
+      rsa_priv_dec(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int padding)
+      {
+	not_implemented(rsa);
+	return -1;
+      }
+
+      ExternalPKIBase* external_pki;
+      unsigned int n_errors;
+    };
+
+    /////// start of main class implementation
+
     typedef boost::intrusive_ptr<SSL> SSLPtr;
 
     explicit OpenSSLContext(const Config& config)
-      : ctx_(NULL)
-    {
-      init(config);
-    }
-
-    SSLPtr ssl() const { return SSLPtr(new SSL(*this)); }
-
-    void update_trust(const CertCRLList& cc)
-    {
-      X509Store store(cc);
-      SSL_CTX_set_cert_store(ctx_, store.move());
-    }
-
-    ~OpenSSLContext()
-    {
-      erase();
-    }
-
-    const Mode& mode() const { return mode_; }
-    Config::Flags flags() const { return flags_; }
-    const Frame::Ptr& frame() const { return frame_; }
-    SSL_CTX* raw_ctx() const { return ctx_; }
-
-  private:
-    // Print debugging information on SSL/TLS session negotiation.
-    static void info_callback (const ::SSL *s, int where, int ret)
-    {
-      if (where & SSL_CB_LOOP)
-	{
-	  OPENVPN_LOG("SSL state (" << (where & SSL_ST_CONNECT ? "connect" : where & SSL_ST_ACCEPT ? "accept" : "undefined") << "): " << SSL_state_string_long(s));
-	}
-      else if (where & SSL_CB_ALERT)
-	{
-	  OPENVPN_LOG("SSL alert (" << (where & SSL_CB_READ ? "read" : "write") << "): " << SSL_alert_type_string_long(ret) << ": " << SSL_alert_desc_string_long(ret));
-	}
-    }
-
-    void init(const Config& config)
+      : ctx_(NULL), epki_(NULL)
     {
       try
 	{
@@ -359,11 +495,23 @@ namespace openvpn {
 	  if (SSL_CTX_use_certificate(ctx_, config.cert.obj()) != 1)
 	    throw OpenSSLException("OpenSSLContext: SSL_CTX_use_certificate failed");
 
-	  // Set private key, fixme -- add support for private key encryption and external PKI
-	  if (!config.pkey.defined())
-	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");
-	  if (SSL_CTX_use_PrivateKey(ctx_, config.pkey.obj()) != 1)
-	    throw OpenSSLException("OpenSSLContext: SSL_CTX_use_PrivateKey failed");
+	  // Set private key
+	  if (config.external_pki)
+	    {
+	      epki_ = new ExternalPKIImpl(ctx_, config.cert.obj(), config.external_pki);
+	    }
+	  else
+	    {
+	      // fixme -- add support for private key encryption
+	      if (!config.pkey.defined())
+		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");
+	      if (SSL_CTX_use_PrivateKey(ctx_, config.pkey.obj()) != 1)
+		throw OpenSSLException("OpenSSLContext: SSL_CTX_use_PrivateKey failed");
+
+	      // Check cert/private key compatibility
+	      if (!SSL_CTX_check_private_key(ctx_))
+		throw OpenSSLException("OpenSSLContext: private key does not match the certificate");
+	    }
 
 	  // Set extra certificates that are part of our own certificate
 	  // chain but shouldn't be included in the verify chain.
@@ -375,10 +523,6 @@ namespace openvpn {
 		    throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
 		}
 	    }
-
-	  // Check cert/private key compatibility
-	  if (!SSL_CTX_check_private_key(ctx_))
-	    throw OpenSSLException("OpenSSLContext: private key does not match the certificate");
 
 	  // Set CAs/CRLs
 	  if (!config.ca.certs.defined())
@@ -401,8 +545,45 @@ namespace openvpn {
 	}
     }
 
+    SSLPtr ssl() const { return SSLPtr(new SSL(*this)); }
+
+    void update_trust(const CertCRLList& cc)
+    {
+      X509Store store(cc);
+      SSL_CTX_set_cert_store(ctx_, store.move());
+    }
+
+    ~OpenSSLContext()
+    {
+      erase();
+    }
+
+    const Mode& mode() const { return mode_; }
+    Config::Flags flags() const { return flags_; }
+    const Frame::Ptr& frame() const { return frame_; }
+    SSL_CTX* raw_ctx() const { return ctx_; }
+
+  private:
+    // Print debugging information on SSL/TLS session negotiation.
+    static void info_callback (const ::SSL *s, int where, int ret)
+    {
+      if (where & SSL_CB_LOOP)
+	{
+	  OPENVPN_LOG("SSL state (" << (where & SSL_ST_CONNECT ? "connect" : where & SSL_ST_ACCEPT ? "accept" : "undefined") << "): " << SSL_state_string_long(s));
+	}
+      else if (where & SSL_CB_ALERT)
+	{
+	  OPENVPN_LOG("SSL alert (" << (where & SSL_CB_READ ? "read" : "write") << "): " << SSL_alert_type_string_long(ret) << ": " << SSL_alert_desc_string_long(ret));
+	}
+    }
+
     void erase()
     {
+      if (epki_)
+	{
+	  delete epki_;
+	  epki_ = NULL;
+	}
       if (ctx_)
 	{
 	  SSL_CTX_free(ctx_);
@@ -414,6 +595,7 @@ namespace openvpn {
     Config::Flags flags_;
     Frame::Ptr frame_;
     SSL_CTX* ctx_;
+    ExternalPKIImpl* epki_;
   };
 
   typedef OpenSSLContext::Ptr OpenSSLContextPtr;

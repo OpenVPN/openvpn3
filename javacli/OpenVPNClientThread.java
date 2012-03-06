@@ -24,6 +24,12 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 
 	// Callback to construct a new tun builder
 	TunBuilder tun_builder_new();
+
+	// Callback to get a certificate
+	void external_pki_cert_request(ClientAPI_ExternalPKICertRequest req);
+
+	// Callback to sign data
+	void external_pki_sign_request(ClientAPI_ExternalPKISignRequest req);
     }
 
     public interface TunBuilder {
@@ -149,6 +155,18 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     public void log(ClientAPI_LogInfo loginfo) {
 	if (parent != null)
 	    parent.log(loginfo);
+    }
+
+    @Override
+    public void external_pki_cert_request(ClientAPI_ExternalPKICertRequest req) {
+	if (parent != null)
+	    parent.external_pki_cert_request(req);
+    }
+
+    @Override
+    public void external_pki_sign_request(ClientAPI_ExternalPKISignRequest req) {
+	if (parent != null)
+	    parent.external_pki_sign_request(req);
     }
 
     // TunBuilderBase (C++ class) overrides

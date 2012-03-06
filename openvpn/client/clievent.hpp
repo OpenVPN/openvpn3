@@ -27,6 +27,8 @@ namespace openvpn {
       AUTH_FAILED,
       DYNAMIC_CHALLENGE,
       TUN_SETUP_FAILED,
+      EPKI_ERROR,
+      EPKI_INVALID_ALIAS,
 
       N_TYPES
     };
@@ -52,6 +54,8 @@ namespace openvpn {
 	"AUTH_FAILED",
 	"DYNAMIC_CHALLENGE",
 	"TUN_SETUP_FAILED",
+	"EPKI_ERROR",
+	"EPKI_INVALID_ALIAS",
       };
 
       if (type < N_TYPES)
@@ -162,10 +166,9 @@ namespace openvpn {
       }
     };
 
-    struct AuthFailed : public Base
-    {
-      AuthFailed(const std::string& reason_arg)
-	: Base(AUTH_FAILED),
+    struct ReasonBase : public Base {
+      ReasonBase(const Type id, const std::string& reason_arg)
+	: Base(id),
 	  reason(reason_arg)
       {
       }
@@ -178,36 +181,29 @@ namespace openvpn {
       std::string reason;
     };
 
-    struct DynamicChallenge : public Base
+    struct AuthFailed : public ReasonBase
     {
-      DynamicChallenge(const std::string& reason_arg)
-	: Base(DYNAMIC_CHALLENGE),
-	  reason(reason_arg)
-      {
-      }
-
-      virtual std::string render() const
-      {
-	return reason;
-      }
-
-      std::string reason;
+      AuthFailed(const std::string& reason) : ReasonBase(AUTH_FAILED, reason) {}
     };
 
-    struct TunSetupFailed : public Base
+    struct DynamicChallenge : public ReasonBase
     {
-      TunSetupFailed(const std::string& reason_arg)
-	: Base(TUN_SETUP_FAILED),
-	  reason(reason_arg)
-      {
-      }
+      DynamicChallenge(const std::string& reason) : ReasonBase(DYNAMIC_CHALLENGE, reason) {}
+    };
 
-      virtual std::string render() const
-      {
-	return reason;
-      }
+    struct TunSetupFailed : public ReasonBase
+    {
+      TunSetupFailed(const std::string& reason) : ReasonBase(TUN_SETUP_FAILED, reason) {}
+    };
 
-      std::string reason;
+    struct EpkiError : public ReasonBase
+    {
+      EpkiError(const std::string& reason) : ReasonBase(EPKI_ERROR, reason) {}
+    };
+
+    struct EpkiInvalidAlias : public ReasonBase
+    {
+      EpkiInvalidAlias(const std::string& reason) : ReasonBase(EPKI_INVALID_ALIAS, reason) {}
     };
 
     class Queue : public RC<thread_safe_refcount>

@@ -14,6 +14,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_stream.hpp>
+#include <openvpn/pki/epkibase.hpp>
 #include <openvpn/applecrypto/cf/cfsec.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
 
@@ -32,6 +33,7 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(ssl_context_error);
     OPENVPN_EXCEPTION(ssl_ciphertext_in_overflow);
+    OPENVPN_SIMPLE_EXCEPTION(external_pki_not_implemented);
 
     typedef boost::intrusive_ptr<AppleSSLContext> Ptr;
 
@@ -76,6 +78,11 @@ namespace openvpn {
 	  const std::string& subject_match = opt.get("identity", 1);
 	  load_identity(subject_match);
 	}
+      }
+
+      void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
+      {
+	throw external_pki_not_implemented();
       }
     };
 

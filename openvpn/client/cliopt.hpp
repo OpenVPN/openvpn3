@@ -6,6 +6,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/frame/frame_init.hpp>
+#include <openvpn/pki/epkibase.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/client/udpcli.hpp>
@@ -52,6 +53,7 @@ namespace openvpn {
     struct Config {
       Config()
       {
+	external_pki = NULL;
 	socket_protect = NULL;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
@@ -62,9 +64,12 @@ namespace openvpn {
       Protocol proto_override;
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
-      SocketProtect* socket_protect;       // must remain in scope for lifetime of ClientOptions object
+
+      // callbacks -- must remain in scope for lifetime of ClientOptions object
+      ExternalPKIBase* external_pki;
+      SocketProtect* socket_protect;
 #if defined(USE_TUN_BUILDER)
-      TunBuilderBase* builder;             // must remain in scope for lifetime of ClientOptions object
+      TunBuilderBase* builder;
 #endif
     };
 
@@ -86,11 +91,12 @@ namespace openvpn {
 
       // client config
       ClientSSLContext::Config cc;
-      cc.load(opt);
+      cc.set_external_pki_callback(config.external_pki);
       cc.frame = frame;
 #ifdef OPENVPN_SSL_DEBUG
       cc.enable_debug();
 #endif
+      cc.load(opt);
       if (!cc.mode.is_client())
 	throw option_error("only client configuration supported");
 

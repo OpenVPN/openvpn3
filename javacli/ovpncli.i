@@ -23,6 +23,9 @@
 %rename(ClientAPI_Event) Event;
 %rename(ClientAPI_Status) Status;
 %rename(ClientAPI_LogInfo) LogInfo;
+%rename(ClientAPI_ExternalPKIRequestBase) ExternalPKIRequestBase;
+%rename(ClientAPI_ExternalPKICertRequest) ExternalPKICertRequest;
+%rename(ClientAPI_ExternalPKISignRequest) ExternalPKISignRequest;
 
 // declare vectors
 namespace std {
@@ -30,5 +33,6 @@ namespace std {
 };
 
 // interface to be bridged between C++ and target language
+%include "openvpn/pki/epkibase.hpp"
 %include "openvpn/tun/builder/base.hpp"
 %include "ovpncli.hpp"

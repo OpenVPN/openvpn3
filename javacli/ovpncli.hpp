@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <openvpn/tun/builder/base.hpp>
+#include <openvpn/pki/epkibase.hpp>
 
 namespace openvpn {
   class OptionList;
@@ -96,7 +97,7 @@ namespace openvpn {
       // User wants to force a given transport protocol
       std::string protoOverride;
 
-      // An ID used for get certificate and RSA signing callbacks
+      // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
       std::string externalPkiAlias;
     };
@@ -125,12 +126,35 @@ namespace openvpn {
       std::string text;     // log output (usually but not always one line)
     };
 
+    // base class for External PKI queries
+    struct ExternalPKIRequestBase {
+      ExternalPKIRequestBase() : error(false), invalidAlias(false) {}
+
+      bool error;              // true if error occurred
+      std::string errorText;  // text describing error
+      bool invalidAlias;      // true if the error is caused by an invalid alias
+      std::string alias;       // the alias string, used to query cert/key
+    };
+
+    // used to query for External PKI certificate
+    struct ExternalPKICertRequest : public ExternalPKIRequestBase
+    {
+      std::string cert;
+    };
+
+    // used to request an RSA signature
+    struct ExternalPKISignRequest : public ExternalPKIRequestBase
+    {
+      std::string data;  // data rendered as base64
+      std::string sig;   // RSA signature, rendered as base64
+    };
+
     namespace Private {
       struct ClientState;
     };
 
     // Top-level OpenVPN client class that is wrapped by swig.
-    class OpenVPNClient : public TunBuilderBase {
+    class OpenVPNClient : public TunBuilderBase, private ExternalPKIBase {
     public:
       OpenVPNClient();
       virtual ~OpenVPNClient();
@@ -196,9 +220,18 @@ namespace openvpn {
       // Will be called from the thread executing connect().
       virtual void log(const LogInfo&) = 0;
 
+      // External PKI callbacks
+      // Will be called from the thread executing connect().
+      virtual void external_pki_cert_request(ExternalPKICertRequest&) = 0;
+      virtual void external_pki_sign_request(ExternalPKISignRequest&) = 0;
+
     private:
       static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
+      void external_pki_error(const ExternalPKIRequestBase&);
+
+      // from ExternalPKIBase
+      virtual bool sign(const std::string& data, std::string& sig);
 
       // disable copy and assignment
       OpenVPNClient(const OpenVPNClient&);

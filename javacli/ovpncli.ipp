@@ -33,9 +33,9 @@
 
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/string.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/client/cliconnect.hpp>
+#include <openvpn/options/cliopthelper.hpp>
 
 namespace openvpn {
   namespace ClientAPI {
@@ -157,6 +157,7 @@ namespace openvpn {
       struct ClientState
       {
 	OptionList options;
+	EvalConfig eval;
 	MySocketProtect socket_protect;
 	ClientCreds::Ptr creds;
 	MySessionStats::Ptr stats;
@@ -166,6 +167,7 @@ namespace openvpn {
 	// extra settings submitted by API client
 	std::string server_override;
 	Protocol proto_override;
+	std::string external_pki_alias;
       };
     };
 
@@ -197,44 +199,10 @@ namespace openvpn {
 	}
 
 	// External PKI
-	{
-	  const Option* epki = options.get_ptr("EXTERNAL_PKI");
-	  if (epki)
-	    {
-	      eval.externalPki = string::is_true(epki->get_optional(1));
-	    }
-	  else
-	    {
-	      const Option* cert = options.get_ptr("cert");
-	      const Option* key = options.get_ptr("key");
-	      eval.externalPki = !cert || !key;
-	    }
-	}
+	eval.externalPki = ClientOptionHelper::is_external_pki(options);
 
 	// autologin
-	{
-	  const Option* autologin = options.get_ptr("AUTOLOGIN");
-	  if (autologin)
-	    {
-	      eval.autologin = string::is_true(autologin->get_optional(1));
-	    }
-	  else
-	    {
-	      const Option* auth_user_pass = options.get_ptr("auth-user-pass");
-	      eval.autologin = !auth_user_pass;
-	      if (eval.autologin)
-		{
-		  // External PKI profiles from AS don't declare auth-user-pass,
-		  // and we have no way of knowing if they are autologin unless
-		  // we examine their cert, which requires accessing the system-level
-		  // cert store on the client.  For now, we are going to assume
-		  // that External PKI profiles from the AS are always userlogin.
-		  const Option* as = options.get_ptr("AUTOLOGIN_SPEC");
-		  if (as)
-		    eval.autologin = false;
-		}
-	    }
-	}
+	eval.autologin = ClientOptionHelper::is_autologin(options);
 
 	// static challenge
 	{
@@ -296,6 +264,8 @@ namespace openvpn {
 	state->server_override = config.serverOverride;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride);
+	if (eval.externalPki)
+	  state->external_pki_alias = config.externalPkiAlias;
       }
       catch (const std::exception& e)
 	{
@@ -324,6 +294,7 @@ namespace openvpn {
 
       // handle extra settings in config
       parse_extras(config, eval);
+      state->eval = eval;
       return eval;      
     }
 
@@ -362,7 +333,6 @@ namespace openvpn {
 	}
     }
 
-
     inline Status OpenVPNClient::connect()
     {
       boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
@@ -391,6 +361,38 @@ namespace openvpn {
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
 #endif
+
+	// external PKI
+	if (state->eval.externalPki)
+	  {
+	    if (!state->external_pki_alias.empty())
+	      {
+		ExternalPKICertRequest req;
+		req.alias = state->external_pki_alias;
+		external_pki_cert_request(req);
+		if (!req.error)
+		  {
+		    Option o;
+		    o.push_back("cert");
+		    o.push_back(req.cert);
+		    state->options.add_item(o);
+		    cc.external_pki = this;
+		  }
+		else
+		  {
+		    external_pki_error(req);
+		    return ret;
+		  }
+	      }
+	    else
+	      {
+		ret.error = true;
+		ret.message = "Missing External PKI alias";
+		return ret;
+	      }
+	  }
+
+	// build client options object
 	ClientOptions::Ptr client_options = new ClientOptions(state->options, cc);
 
 	// configure creds in options
@@ -424,6 +426,41 @@ namespace openvpn {
       state->events->detach_from_parent();
       state->session.reset();
       return ret;
+    }
+
+    inline void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req)
+    {
+      if (req.error)
+	{
+	  if (req.invalidAlias)
+	    {
+	      ClientEvent::Base::Ptr ev = new ClientEvent::EpkiInvalidAlias(req.alias);
+	      state->events->add_event(ev);
+	    }
+	  else 
+	    {
+	      ClientEvent::Base::Ptr ev = new ClientEvent::EpkiError(req.errorText);
+	      state->events->add_event(ev);
+	    }
+	}
+    }
+
+    inline bool OpenVPNClient::sign(const std::string& data, std::string& sig)
+    {
+      ExternalPKISignRequest req;
+      req.data = data;
+      req.alias = state->external_pki_alias;
+      external_pki_sign_request(req); // call out to derived class for RSA signature
+      if (!req.error)
+	{
+	  sig = req.sig;
+	  return true;
+	}
+      else
+	{
+	  external_pki_error(req);
+	  return false;
+	}
     }
 
     inline int OpenVPNClient::stats_n()

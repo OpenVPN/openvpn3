@@ -29,6 +29,7 @@
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/options/remotelist.hpp>
+#include <openvpn/options/cliopthelper.hpp>
 
 #ifdef OPENVPN_DEBUG_PROTO
 #define OPENVPN_LOG_PROTO(x) OPENVPN_LOG(x)
@@ -264,10 +265,7 @@ namespace openvpn {
 	pid_mode = PacketIDReceive::UDP_MODE;
 
 	// autologin
-	{
-	  const Option *o = opt.get_ptr("auth-user-pass");
-	  autologin = o ? false : true;
-	}
+	autologin = ClientOptionHelper::is_autologin(opt);
 
 	// layer
 	{

@@ -373,6 +373,16 @@ namespace openvpn {
       return out.str();
     }
 
+    void add_item(const Option& opt) // updates map as well
+    {
+      if (!opt.empty())
+	{
+	  const size_t i = size();
+	  push_back(opt);
+	  map_[opt[0]].push_back(i);
+	}
+    }
+
     const IndexMap& map() const { return map_; }
 
     void update_map()
