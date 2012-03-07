@@ -87,6 +87,8 @@ namespace openvpn {
     // OpenVPN config-file/profile
     struct Config
     {
+      Config() : connTimeout(0) {}
+
       // OpenVPN config file (profile) as a string
       std::string content;
 
@@ -96,6 +98,9 @@ namespace openvpn {
 
       // User wants to force a given transport protocol
       std::string protoOverride;
+
+      // Connection timeout in seconds, or 0 to retry indefinitely
+      int connTimeout;
 
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
@@ -212,6 +217,9 @@ namespace openvpn {
       // return a stats value, index should be >= 0 and < stats_n()
       long long stats_value(int index) const;
 
+      // return all stats in a bundle
+      std::vector<long long> stats_bundle() const;
+
       // Callback for delivering events during connect() call.
       // Will be called from the thread executing connect().
       virtual void event(const Event&) = 0;
@@ -228,7 +236,7 @@ namespace openvpn {
     private:
       static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
-      void external_pki_error(const ExternalPKIRequestBase&);
+      void external_pki_error(const ExternalPKIRequestBase&, const size_t err_type);
 
       // from ExternalPKIBase
       virtual bool sign(const std::string& data, std::string& sig);

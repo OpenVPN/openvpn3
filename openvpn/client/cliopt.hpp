@@ -55,6 +55,7 @@ namespace openvpn {
       {
 	external_pki = NULL;
 	socket_protect = NULL;
+	conn_timeout = 0;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
 #endif
@@ -62,6 +63,7 @@ namespace openvpn {
 
       std::string server_override;
       Protocol proto_override;
+      int conn_timeout;
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
 
@@ -81,7 +83,8 @@ namespace openvpn {
 	cli_events(config.cli_events),
 	server_poll_timeout_(10),
 	server_override(config.server_override),
-	proto_override(config.proto_override)
+	proto_override(config.proto_override),
+	conn_timeout_(config.conn_timeout)
     {
       // initialize PRNG
       prng.reset(new PRNG("SHA1", 16));
@@ -188,6 +191,8 @@ namespace openvpn {
     SessionStats& stats() { return *cli_stats; }
     ClientEvent::Queue& events() { return *cli_events; }
 
+    int conn_timeout() const { return conn_timeout_; }
+
     void update_now()
     {
       now_.update();
@@ -244,6 +249,7 @@ namespace openvpn {
     unsigned int server_poll_timeout_;
     std::string server_override;
     Protocol proto_override;
+    int conn_timeout_;
   };
 }
 

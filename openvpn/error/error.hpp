@@ -23,8 +23,11 @@ namespace openvpn {
       TCP_CONNECT_ERROR,   // client error on TCP connect
       SSL_ERROR,           // errors resulting from read/write on SSL object
       ENCAPSULATION_ERROR, // exceptions thrown during packet encapsulation
+      EPKI_CERT_ERROR,     // error obtaining certificate from External PKI provider
+      EPKI_SIGN_ERROR,     // error obtaining RSA signature from External PKI provider
       HANDSHAKE_TIMEOUT,   // handshake failed to complete within given time frame
       KEEPALIVE_TIMEOUT,   // lost contact with peer
+      CONNECTION_TIMEOUT,  // connection failed to establish within given time
       PRIMARY_EXPIRE,      // primary key context expired
       CERT_VERIFY_FAIL,    // peer certificate verification failure
       AUTH_FAILED,         // general authentication failure
@@ -52,8 +55,11 @@ namespace openvpn {
 	"TCP_CONNECT_ERROR",
 	"SSL_ERROR",
 	"ENCAPSULATION_ERROR",
+	"EPKI_CERT_ERROR",
+	"EPKI_SIGN_ERROR",
 	"HANDSHAKE_TIMEOUT",
 	"KEEPALIVE_TIMEOUT",
+	"CONNECTION_TIMEOUT",
 	"PRIMARY_EXPIRE",
 	"CERT_VERIFY_FAIL",
 	"AUTH_FAILED",

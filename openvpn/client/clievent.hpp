@@ -25,6 +25,7 @@ namespace openvpn {
 
       // start of errors, must be marked by ERROR_START
       AUTH_FAILED,
+      CONNECTION_TIMEOUT,
       DYNAMIC_CHALLENGE,
       TUN_SETUP_FAILED,
       EPKI_ERROR,
@@ -52,6 +53,7 @@ namespace openvpn {
 	"PAUSE",
 	"RESUME",
 	"AUTH_FAILED",
+	"CONNECTION_TIMEOUT",
 	"DYNAMIC_CHALLENGE",
 	"TUN_SETUP_FAILED",
 	"EPKI_ERROR",
@@ -139,6 +141,11 @@ namespace openvpn {
     struct Disconnected : public Base
     {
       Disconnected() : Base(DISCONNECTED) {}
+    };
+
+    struct ConnectionTimeout : public Base
+    {
+      ConnectionTimeout() : Base(CONNECTION_TIMEOUT) {}
     };
 
     struct Connected : public Base

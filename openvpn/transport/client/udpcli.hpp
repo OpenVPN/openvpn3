@@ -150,6 +150,7 @@ namespace openvpn {
 	  }
       }
 
+      // called after DNS resolution has succeeded or failed
       void do_resolve_(const boost::system::error_code& error,
 		       boost::asio::ip::udp::resolver::iterator endpoint_iterator)
       {

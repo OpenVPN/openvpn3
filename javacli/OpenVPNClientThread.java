@@ -1,13 +1,20 @@
 // package OPENVPN_PACKAGE
 
+import java.util.HashSet;
+
 public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runnable {
     private EventReceiver parent;
     private TunBuilder tun_builder;
     private Thread thread;
-    private ClientAPI_Status connect_status_;
+    private ClientAPI_Status m_connect_status;
+    private boolean connect_called = false;
 
     private int bytes_in_index = -1;
     private int bytes_out_index = -1;
+
+    // thrown if instantiator attempts to call connect more than once
+    public static class ConnectCalledTwice extends RuntimeException {
+    }
 
     public interface EventReceiver {
 	// Called with events from core
@@ -61,11 +68,6 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     public OpenVPNClientThread() {
-	parent = null;
-	tun_builder = null;
-	thread = null;
-	connect_status_ = null;
-
 	final int n = stats_n();
 	for (int i = 0; i < n; ++i)
 	    {
@@ -79,11 +81,15 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 
     // start connect session in worker thread
     public void connect(EventReceiver parent_arg) {
+	if (connect_called)
+	    throw new ConnectCalledTwice();
+	connect_called = true;
+
 	// direct client callbacks to parent
 	parent = parent_arg;
 
 	// clear status
-	connect_status_ = null;
+	m_connect_status = null;
 
 	// execute client in a worker thread
 	thread = new Thread(this, "OpenVPNClientThread");
@@ -93,27 +99,22 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     // wait for worker thread to complete; to stop thread,
     // first call super stop() method then wait_thread()
     public void wait_thread() {
-	if (thread != null) {
-	    boolean interrupted;
-	    do {
-		interrupted = false;
-		try {
-		    thread.join();
-		}
-		catch (InterruptedException e) {
-		    interrupted = true;
-		    super.stop(); // send thread a stop message
-		}
-	    } while (interrupted);
+	final int wait_millisecs = 1000; // max time that we will wait for thread to exit
+	Thread th = thread;
+	if (th != null) {
+	    try {
+		th.join(wait_millisecs);
+	    }
+	    catch (InterruptedException e) {
+	    }
 
-	    // dissassociate client callbacks from parent
-	    parent = null;
-	    thread = null;
+	    // thread failed to stop?
+	    if (th.isAlive()) {
+		// abandon thread and deliver our own status object to instantiator.
+		ClientAPI_Status status = new ClientAPI_Status();
+		call_done(status);
+	    }
 	}
-    }
-
-    public ClientAPI_Status connect_status() {
-	return connect_status_;
     }
 
     public long bytes_in()
@@ -126,55 +127,84 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	return super.stats_value(bytes_out_index);
     }
 
+    private void call_done(ClientAPI_Status status)
+    {
+	EventReceiver p = finalize_thread(status);
+	if (p != null)
+	    p.done(m_connect_status);
+    }
+
+    private synchronized EventReceiver finalize_thread(ClientAPI_Status connect_status)
+    {
+	EventReceiver p = parent;
+	if (p != null) {
+	    // save thread connection status
+	    m_connect_status = connect_status;
+
+	    // disassociate client callbacks from parent
+	    parent = null;
+	    tun_builder = null;
+	    thread = null;
+	}
+	return p;
+    }
+
     // Runnable overrides
 
     @Override
     public void run() {
-	connect_status_ = super.connect();
-	if (parent != null)
-	    parent.done(connect_status_);
+	// Call out to core to start connection.
+	// Doesn't return until connection has terminated.
+	ClientAPI_Status status = super.connect();
+	call_done(status);
     }
 
     // ClientAPI_OpenVPNClient (C++ class) overrides
 
     @Override
     public boolean socket_protect(int socket) {
-	if (parent != null)
-	    return parent.socket_protect(socket);
+	EventReceiver p = parent;
+	if (p != null)
+	    return p.socket_protect(socket);
 	else
 	    return false;
     }
 
     @Override
     public void event(ClientAPI_Event event) {
-	if (parent != null)
-	    parent.event(event);
+	EventReceiver p = parent;
+	if (p != null)
+	    p.event(event);
     }
 
     @Override
     public void log(ClientAPI_LogInfo loginfo) {
-	if (parent != null)
-	    parent.log(loginfo);
+	EventReceiver p = parent;
+	if (p != null)
+	    p.log(loginfo);
     }
 
     @Override
     public void external_pki_cert_request(ClientAPI_ExternalPKICertRequest req) {
-	if (parent != null)
-	    parent.external_pki_cert_request(req);
+	EventReceiver p = parent;
+	if (p != null)
+	    p.external_pki_cert_request(req);
     }
 
     @Override
     public void external_pki_sign_request(ClientAPI_ExternalPKISignRequest req) {
-	if (parent != null)
-	    parent.external_pki_sign_request(req);
+	EventReceiver p = parent;
+	if (p != null)
+	    p.external_pki_sign_request(req);
     }
 
     // TunBuilderBase (C++ class) overrides
 
     @Override
     public boolean tun_builder_new() {
-	if (parent != null) {
-	    tun_builder = parent.tun_builder_new();
+	EventReceiver p = parent;
+	if (p != null) {
+	    tun_builder = p.tun_builder_new();
 	    return tun_builder != null;
 	} else
 	    return false;
@@ -182,24 +212,27 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 
     @Override
     public boolean tun_builder_add_address(String address, int prefix_length) {
-	if (tun_builder != null)
-	    return tun_builder.tun_builder_add_address(address, prefix_length);
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_add_address(address, prefix_length);
 	else
 	    return false;
     }
 
     @Override
     public boolean tun_builder_add_route(String address, int prefix_length) {
-	if (tun_builder != null)
-	    return tun_builder.tun_builder_add_route(address, prefix_length);
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_add_route(address, prefix_length);
 	else
 	    return false;
     }
 
     @Override
     public boolean tun_builder_add_dns_server(String address) {
-	if (tun_builder != null)
-	    return tun_builder.tun_builder_add_dns_server(address);
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_add_dns_server(address);
 	else
 	    return false;
     }
@@ -207,16 +240,18 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     @Override
     public boolean tun_builder_add_search_domain(String domain)
     {
-	if (tun_builder != null)
-	    return tun_builder.tun_builder_add_search_domain(domain);
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_add_search_domain(domain);
 	else
 	    return false;
     }
 
     @Override
     public boolean tun_builder_set_mtu(int mtu) {
-	if (tun_builder != null)
-	    return tun_builder.tun_builder_set_mtu(mtu);
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_set_mtu(mtu);
 	else
 	    return false;
     }
@@ -224,16 +259,18 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     @Override
     public boolean tun_builder_set_session_name(String name)
     {
-	if (tun_builder != null)
-	    return tun_builder.tun_builder_set_session_name(name);
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_set_session_name(name);
 	else
 	    return false;
     }
 
     @Override
     public int tun_builder_establish() {
-	if (tun_builder != null)
-	    return tun_builder.tun_builder_establish();
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_establish();
 	else
 	    return -1;
     }

@@ -23,10 +23,13 @@ namespace openvpn {
       : generation(0),
 	halt(false),
 	paused(false),
+	conn_timeout(client_options_arg->conn_timeout()),
 	io_service(io_service_arg),
 	client_options(client_options_arg),
 	server_poll_timer(io_service_arg),
-	restart_wait_timer(io_service_arg)
+	restart_wait_timer(io_service_arg),
+	conn_timer(io_service_arg),
+	conn_timer_pending(false)
     {
     }
 
@@ -50,8 +53,7 @@ namespace openvpn {
 	  halt = true;
 	  if (client)
 	    client->stop(false);
-	  restart_wait_timer.cancel();
-	  server_poll_timer.cancel();
+	  cancel_timers();
 	  asio_work.reset();
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Disconnected();
 	  client_options->events().add_event(ev);
@@ -80,8 +82,7 @@ namespace openvpn {
 	      client->send_explicit_exit_notify();
 	      client->stop(false);
 	    }
-	  restart_wait_timer.cancel();
-	  server_poll_timer.cancel();
+	  cancel_timers();
 	  asio_work.reset(new boost::asio::io_service::work(io_service));
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause();
 	  client_options->events().add_event(ev);
@@ -136,6 +137,14 @@ namespace openvpn {
     }
 
   private:
+    void cancel_timers()
+    {
+      restart_wait_timer.cancel();
+      server_poll_timer.cancel();
+      conn_timer.cancel();
+      conn_timer_pending = false;
+    }
+
     void restart_wait_callback(unsigned int gen, const boost::system::error_code& e)
     {
       if (!e && gen == generation && !halt)
@@ -154,6 +163,33 @@ namespace openvpn {
 	  OPENVPN_LOG("Server poll timeout, trying next remote entry...");
 	  new_client();
 	}
+    }
+
+    void conn_timer_callback(unsigned int gen, const boost::system::error_code& e)
+    {
+      if (!e && !halt)
+	{
+	  ClientEvent::Base::Ptr ev = new ClientEvent::ConnectionTimeout();
+	  client_options->events().add_event(ev);
+	  client_options->stats().error(Error::CONNECTION_TIMEOUT);
+	  stop();
+	}
+    }
+
+    void conn_timer_start()
+    {
+      if (!conn_timer_pending && conn_timeout > 0)
+	{
+	  conn_timer.expires_at(Time::now() + Time::Duration::seconds(conn_timeout));
+	  conn_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::conn_timer_callback, this, generation));
+	  conn_timer_pending = true;
+	}
+    }
+
+    virtual void client_proto_connected()
+    {
+      conn_timer.cancel();
+      conn_timer_pending = false;
     }
 
     virtual void client_proto_terminate()
@@ -216,20 +252,25 @@ namespace openvpn {
 	}
       Client::Config::Ptr cli_config = client_options->client_config();
       client.reset(new Client(io_service, *cli_config, this));
+
       restart_wait_timer.cancel();
       server_poll_timer.expires_at(Time::now() + client_options->server_poll_timeout());
       server_poll_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::server_poll_callback, this, generation));
+      conn_timer_start();
       client->start();
     }
 
     unsigned int generation;
     bool halt;
     bool paused;
+    int conn_timeout;
     boost::asio::io_service& io_service;
     ClientOptions::Ptr client_options;
     Client::Ptr client;
     AsioTimer server_poll_timer;
     AsioTimer restart_wait_timer;
+    AsioTimer conn_timer;
+    bool conn_timer_pending;
     ScopedPtr<boost::asio::io_service::work> asio_work;
   };
 

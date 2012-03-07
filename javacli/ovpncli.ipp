@@ -87,13 +87,13 @@ namespace openvpn {
 	parent = NULL;
       }
 
-    private:
       virtual void error(const size_t err, const std::string* text=NULL)
       {
 	if (err < Error::N_ERRORS)
 	  ++errors[err];
       }
 
+    private:
       OpenVPNClient* parent;
       count_t errors[Error::N_ERRORS];
     };
@@ -156,6 +156,8 @@ namespace openvpn {
     namespace Private {
       struct ClientState
       {
+	ClientState() : conn_timeout(0) {}
+
 	OptionList options;
 	EvalConfig eval;
 	MySocketProtect socket_protect;
@@ -167,6 +169,7 @@ namespace openvpn {
 	// extra settings submitted by API client
 	std::string server_override;
 	Protocol proto_override;
+	int conn_timeout;
 	std::string external_pki_alias;
       };
     };
@@ -262,6 +265,7 @@ namespace openvpn {
     {
       try {
 	state->server_override = config.serverOverride;
+	state->conn_timeout = config.connTimeout;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride);
 	if (eval.externalPki)
@@ -357,6 +361,7 @@ namespace openvpn {
 	cc.cli_events = state->events;
 	cc.server_override = state->server_override;
 	cc.proto_override = state->proto_override;
+	cc.conn_timeout = state->conn_timeout;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
@@ -380,7 +385,7 @@ namespace openvpn {
 		  }
 		else
 		  {
-		    external_pki_error(req);
+		    external_pki_error(req, Error::EPKI_CERT_ERROR);
 		    return ret;
 		  }
 	      }
@@ -428,7 +433,7 @@ namespace openvpn {
       return ret;
     }
 
-    inline void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req)
+    inline void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req, const size_t err_type)
     {
       if (req.error)
 	{
@@ -442,6 +447,7 @@ namespace openvpn {
 	      ClientEvent::Base::Ptr ev = new ClientEvent::EpkiError(req.errorText);
 	      state->events->add_event(ev);
 	    }
+	  state->stats->error(err_type);
 	}
     }
 
@@ -458,7 +464,7 @@ namespace openvpn {
 	}
       else
 	{
-	  external_pki_error(req);
+	  external_pki_error(req, Error::EPKI_SIGN_ERROR);
 	  return false;
 	}
     }
@@ -480,6 +486,17 @@ namespace openvpn {
 	return stats->combined_value(index);
       else
 	return 0;
+    }
+
+    inline std::vector<long long> OpenVPNClient::stats_bundle() const
+    {
+      std::vector<long long> sv;
+      MySessionStats::Ptr stats = state->stats;
+      const size_t n = MySessionStats::combined_n();
+      sv.reserve(n);
+      for (size_t i = 0; i < n; ++i)
+	sv.push_back(stats ? stats->combined_value(i) : 0);
+      return sv;
     }
 
     inline void OpenVPNClient::stop()
