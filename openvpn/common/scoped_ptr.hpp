@@ -40,6 +40,8 @@ namespace openvpn {
     explicit ScopedPtr(T* p = 0)
       : px(p) {}
 
+    bool defined() const { return px != 0; }
+
     void reset(T* p = 0)
     {
       if (px)

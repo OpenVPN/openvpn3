@@ -10,6 +10,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/buffer/buffer.hpp>
@@ -22,6 +23,7 @@
 #include <openvpn/openssl/pki/dh.hpp>
 #include <openvpn/openssl/pki/x509store.hpp>
 #include <openvpn/openssl/bio/bio_memq_stream.hpp>
+#include <openvpn/openssl/util/free.hpp>
 
 // An SSL Context is essentially a configuration that can be used
 // to generate an arbitrary number of actual SSL connections objects.
@@ -54,7 +56,13 @@ namespace openvpn {
       };
       typedef unsigned int Flags;
 
-      Config() : external_pki(NULL), flags(0) {}
+      enum CertType {
+	CERT_TYPE_NONE,
+	CERT_TYPE_NS_CLIENT,
+	CERT_TYPE_NS_SERVER
+      };
+
+      Config() : external_pki(NULL), flags(0), cert_type(CERT_TYPE_NONE) {}
 
       Mode mode;
       CertCRLList ca;
@@ -65,6 +73,7 @@ namespace openvpn {
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       Flags flags;
+      CertType cert_type;
 
       void enable_debug()
       {
@@ -139,6 +148,31 @@ namespace openvpn {
 	    const std::string& dh_txt = opt.get("dh", 1);
 	    load_dh(dh_txt);
 	  }
+
+	// ns-cert-type
+	{
+	  const Option* o = opt.get_ptr("ns-cert-type");
+	  if (o)
+	    {
+	      const std::string& ct = o->get_optional(1);
+	      if (ct == "server")
+		cert_type = CERT_TYPE_NS_SERVER;
+	      else if (ct == "client")
+		cert_type = CERT_TYPE_NS_CLIENT;
+	      else
+		throw option_error("ns-cert-type must be 'client' or 'server'");
+	    }
+	}
+
+	// unsupported cert type checkers
+	{
+	  if (opt.get_ptr("remote-cert-tls"))
+	    throw option_error("remote-cert-tls not supported");
+	  if (opt.get_ptr("remote-cert-ku"))
+	    throw option_error("remote-cert-ku not supported");
+	  if (opt.get_ptr("remote-cert-eku"))
+	    throw option_error("remote-cert-eku not supported");
+	}
       }
     };
 
@@ -486,7 +520,8 @@ namespace openvpn {
 	  // Set SSL options
 	  SSL_CTX_set_session_cache_mode(ctx_, SSL_SESS_CACHE_OFF);
 	  SSL_CTX_set_options(ctx_, SSL_OP_SINGLE_DH_USE);
-	  SSL_CTX_set_verify (ctx_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL); // fixme -- add verify callback
+	  SSL_CTX_set_verify (ctx_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+
 	  // fixme -- support SSL_CTX_set_cipher_list
 
 	  // Set certificate
@@ -529,6 +564,12 @@ namespace openvpn {
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: CA not defined");
 	  update_trust(config.ca);
 
+	  // Set required cert type
+	  cert_type_ = config.cert_type;
+
+	  // keep a reference to this in ctx, for use by verify callback
+	  ctx_->app_verify_arg = this;
+
 	  // Show handshake debugging info
 	  if (config.flags & Config::DEBUG)
 	    SSL_CTX_set_info_callback (ctx_, info_callback);
@@ -562,8 +603,44 @@ namespace openvpn {
     Config::Flags flags() const { return flags_; }
     const Frame::Ptr& frame() const { return frame_; }
     SSL_CTX* raw_ctx() const { return ctx_; }
-
+ 
   private:
+    bool verify_ns_cert_type(const ::X509* cert) const
+    {
+      if (cert_type_ == Config::CERT_TYPE_NS_SERVER)
+	return (cert->ex_flags & EXFLAG_NSCERT) && (cert->ex_nscert & NS_SSL_SERVER);
+      else if (cert_type_ == Config::CERT_TYPE_NS_CLIENT)
+	return (cert->ex_flags & EXFLAG_NSCERT) && (cert->ex_nscert & NS_SSL_CLIENT);
+      else
+	return true;
+    }
+
+    static int verify_callback (int preverify_ok, X509_STORE_CTX *ctx)
+    {
+      // get the SSL object
+      ::SSL* ssl = (::SSL*) X509_STORE_CTX_get_ex_data (ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+
+      // get this
+      OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
+
+      // log subject
+      ScopedPtr<char, OpenSSLFree> subject(X509_NAME_oneline(X509_get_subject_name(ctx->current_cert), NULL, 0));
+      if (subject.defined())
+	OPENVPN_LOG("VERIFY "
+		    << (preverify_ok ? "OK" : "FAIL")
+		    << ": depth=" << ctx->error_depth
+		    << ", " << subject.get());
+
+      // verify ns-cert-type
+      if (ctx->error_depth == 0 && !self->verify_ns_cert_type(ctx->current_cert))
+	{
+	  OPENVPN_LOG("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	  preverify_ok = false;
+	}
+
+      return preverify_ok;
+    }
+
     // Print debugging information on SSL/TLS session negotiation.
     static void info_callback (const ::SSL *s, int where, int ret)
     {
@@ -593,6 +670,7 @@ namespace openvpn {
 
     Mode mode_;
     Config::Flags flags_;
+    Config::CertType cert_type_;
     Frame::Ptr frame_;
     SSL_CTX* ctx_;
     ExternalPKIImpl* epki_;

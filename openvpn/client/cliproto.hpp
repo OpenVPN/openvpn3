@@ -12,6 +12,7 @@
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/options/continuation.hpp>
+#include <openvpn/options/sanitize.hpp>
 #include <openvpn/client/clievent.hpp>
 #include <openvpn/client/clicreds.hpp>
 #include <openvpn/time/asiotimer.hpp>
@@ -295,7 +296,11 @@ namespace openvpn {
 	    o->min_args(2);
 	    const std::string& sess_id = (*o)[1];
 	    creds->set_session_id(sess_id);
-	    OPENVPN_LOG("using session token " << sess_id); // fixme -- probably should remove for security
+#ifdef OPENVPN_SHOW_SESSION_TOKEN
+	    OPENVPN_LOG("using session token " << sess_id);
+#else
+	    OPENVPN_LOG("using session token");
+#endif
 	  }
       }
 
@@ -311,7 +316,7 @@ namespace openvpn {
       virtual void control_recv(BufferPtr& app_bp)
       {
 	const std::string msg = Base::template read_control_string<std::string>(*app_bp);
-	OPENVPN_LOG("SERVER: " << msg);
+	OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 	if (!received_options.complete() && boost::algorithm::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
@@ -321,7 +326,7 @@ namespace openvpn {
 	    if (received_options.complete())
 	      {
 		// show options
-		OPENVPN_LOG(received_options.render());
+		OPENVPN_LOG(render_options_sanitized(received_options));
 
 		// process auth-token
 		extract_auth_token(received_options);
