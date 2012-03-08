@@ -10,8 +10,30 @@
 
 namespace openvpn {
 
-  // like boost::scoped_ptr but has release, reset methods and default constructor usage
+  // default delete method for ScopedPtr
   template <typename T>
+  class PtrFree {
+  public:
+    static void del(T* p)
+    {
+      delete p;
+    }
+  };
+
+  // array delete method for ScopedPtr
+  template <typename T>
+  class PtrArrayFree {
+  public:
+    static void del(T* p)
+    {
+      delete [] p;
+    }
+  };
+
+  // Similar to boost::scoped_ptr but has release, reset methods,
+  // and default constructor usage.  Also allows definition of
+  // alternative delete methods via second argument.
+  template <typename T, template <typename T> class F = PtrFree>
   class ScopedPtr : boost::noncopyable
   {
   public:
@@ -21,7 +43,7 @@ namespace openvpn {
     void reset(T* p = 0)
     {
       if (px)
-	delete px;
+	del(px);
       px = p;
     }
 
@@ -54,12 +76,18 @@ namespace openvpn {
       return px;
     }
 
-    ~ScopedPtr() {
+    ~ScopedPtr()
+    {
       if (px)
-	delete px;
+	del(px);
     }
 
-  private:
+    static void del(T* p)
+    {
+      F<T>::del(p);
+    }
+
+  protected:
     T* px;
   };
 
