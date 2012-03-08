@@ -48,7 +48,7 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	client_thread.connect(this);
 
 	// wait for worker thread to exit
-	client_thread.wait_thread();
+	client_thread.wait_thread_long();
     }
 
     public void stop() {
@@ -72,6 +72,20 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	String name = event.getName();
 	String info = event.getInfo();
 	System.out.format("EVENT: err=%b name=%s info='%s'%n", error, name, info);
+    }
+
+    // Callback to get a certificate
+    @Override
+    public void external_pki_cert_request(ClientAPI_ExternalPKICertRequest req) {
+	req.setError(true);
+	req.setErrorText("cert request failed: external PKI not implemented");
+    }
+
+    // Callback to sign data
+    @Override
+    public void external_pki_sign_request(ClientAPI_ExternalPKISignRequest req) {
+	req.setError(true);
+	req.setErrorText("sign request failed: external PKI not implemented");
     }
 
     @Override

@@ -96,9 +96,11 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	thread.start();
     }
 
-    // wait for worker thread to complete; to stop thread,
-    // first call super stop() method then wait_thread()
-    public void wait_thread() {
+    // Wait for worker thread to complete; to stop thread,
+    // first call super stop() method then wait_thread().
+    // This method will give the thread one second to
+    // exit and will abandon it after this time.
+    public void wait_thread_short() {
 	final int wait_millisecs = 1000; // max time that we will wait for thread to exit
 	Thread th = thread;
 	if (th != null) {
@@ -115,6 +117,25 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 		call_done(status);
 	    }
 	}
+    }
+
+    // Wait for worker thread to complete; to stop thread,
+    // first call super stop() method then wait_thread().
+    // This method will wait forever for the thread to exit.
+    public void wait_thread_long() {
+        if (thread != null) {
+            boolean interrupted;
+            do {
+                interrupted = false;
+                try {
+                    thread.join();
+                }
+                catch (InterruptedException e) {
+                    interrupted = true;
+                    super.stop(); // send thread a stop message
+                }
+            } while (interrupted);
+        }
     }
 
     public long bytes_in()

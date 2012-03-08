@@ -4,20 +4,18 @@ import java.io.*;
 import java.nio.charset.Charset;
 
 public class Main {
-    // utility method to read a text file
-    public static String readTextFile(String file, String csName) throws IOException {
-	Charset cs = Charset.forName(csName);
-	return readTextFile(file, cs);
+    // utility method to read a file and return as a String
+    public static String readFile(String filename) throws IOException {
+	return readStream(new FileInputStream(filename));
     }
 
-    public static String readTextFile(String file, Charset cs) throws IOException {
+    private static String readStream(InputStream stream) throws IOException {
 	// No real need to close the BufferedReader/InputStreamReader
 	// as they're only wrapping the stream
-	FileInputStream stream = new FileInputStream(file);
 	try {
-	    Reader reader = new BufferedReader(new InputStreamReader(stream, cs));
+	    Reader reader = new BufferedReader(new InputStreamReader(stream));
 	    StringBuilder builder = new StringBuilder();
-	    char[] buffer = new char[8192];
+	    char[] buffer = new char[4096];
 	    int read;
 	    while ((read = reader.read(buffer, 0, buffer.length)) > 0) {
 		builder.append(buffer, 0, read);
@@ -35,7 +33,7 @@ public class Main {
 	if (args.length >= 1)
 	    {
 		// load config file
-		String config = readTextFile(args[0], "UTF-8");
+		String config = readFile(args[0]);
 
 		// get creds
 		String username = "";
