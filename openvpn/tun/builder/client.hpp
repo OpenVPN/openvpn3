@@ -283,7 +283,7 @@ namespace openvpn {
 			throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
 		    }
 		  else
-		    throw tun_builder_dhcp_option_error("unknown DHCP option");
+		    OPENVPN_LOG("unknown DHCP option: " << o.render());
 		}
 		catch (const std::exception& e)
 		  {
