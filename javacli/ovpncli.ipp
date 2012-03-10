@@ -40,6 +40,8 @@
 namespace openvpn {
   namespace ClientAPI {
 
+    OPENVPN_SIMPLE_EXCEPTION(app_expired);
+
     class MySessionStats : public SessionStats
     {
     public:
@@ -409,6 +411,9 @@ namespace openvpn {
 	// instantiate top-level client session
 	state->session.reset(new ClientConnect(*io_service, client_options));
 
+	// raise an exception if app has expired
+	check_app_expired();
+
 	// start VPN
 	state->session->start(); // queue parallel async reads
 
@@ -525,6 +530,23 @@ namespace openvpn {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_reconnect(seconds);
+    }
+
+    inline int OpenVPNClient::app_expire()
+    {
+#ifdef APP_EXPIRE_TIME
+      return APP_EXPIRE_TIME;
+#else
+      return 0;
+#endif
+    }
+
+    inline void OpenVPNClient::check_app_expired()
+    {
+#ifdef APP_EXPIRE_TIME
+      if (Time::now().seconds_since_epoch() >= APP_EXPIRE_TIME)
+	throw app_expired();
+#endif
     }
 
     inline OpenVPNClient::~OpenVPNClient()

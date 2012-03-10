@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
+# generate expire time in python: time.mktime((2012, 5, 1, 0, 0, 0, 0, 0, -1))
 set -e
 swig -c++ -java -package net.openvpn.openvpn -I$OVPN3_DIR ovpncli.i
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
+    -DAPP_EXPIRE_TIME=1335852000 \
     -g -O3 -fPIC \
     -fno-strict-aliasing \
     -Wall -Wno-sign-compare -Wno-unused-parameter \

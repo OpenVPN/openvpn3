@@ -233,10 +233,14 @@ namespace openvpn {
       virtual void external_pki_cert_request(ExternalPKICertRequest&) = 0;
       virtual void external_pki_sign_request(ExternalPKISignRequest&) = 0;
 
+      // Returns date/time of app expiration as a unix time value
+      static int app_expire();
+
     private:
       static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
       void external_pki_error(const ExternalPKIRequestBase&, const size_t err_type);
+      void check_app_expired();
 
       // from ExternalPKIBase
       virtual bool sign(const std::string& data, std::string& sig);
