@@ -11,7 +11,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/random/rand.hpp>
+#include <openvpn/random/randbase.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/ssl/psid.hpp>
 #include <openvpn/gencrypto/evphmac.hpp>
@@ -27,12 +27,12 @@ namespace openvpn {
     TLSPRF(const bool server)
       : initialized_(false), server_(server) {}
 
-    void randomize()
+    void randomize(RandomBase& rng)
     {
       if (!server_)
-	rand_bytes(pre_master, sizeof(pre_master));
-      rand_bytes(random1, sizeof(random1));
-      rand_bytes(random2, sizeof(random2));
+	rng.rand_bytes(pre_master, sizeof(pre_master));
+      rng.rand_bytes(random1, sizeof(random1));
+      rng.rand_bytes(random2, sizeof(random2));
       initialized_ = true;
     }
 

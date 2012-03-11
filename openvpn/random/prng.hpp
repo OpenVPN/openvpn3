@@ -7,7 +7,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/random/rand.hpp>
+#include <openvpn/random/randbase.hpp>
 #include <openvpn/gencrypto/evpdigest.hpp>
 
 namespace openvpn {
@@ -30,13 +30,20 @@ namespace openvpn {
 
     PRNG() : nonce_md_(NULL), nonce_reseed_bytes_(0), n_processed_(0) {}
 
-    PRNG(const char *digest, const size_t nonce_secret_len, const size_t nonce_reseed_bytes = NONCE_DEFAULT_RESEED_BYTES)
+    PRNG(const char *digest,
+	 const RandomBase::Ptr& rng_arg,
+	 const size_t nonce_secret_len,
+	 const size_t nonce_reseed_bytes = NONCE_DEFAULT_RESEED_BYTES)
     {
-      init(digest, nonce_secret_len, nonce_reseed_bytes);
+      init(digest, rng_arg, nonce_secret_len, nonce_reseed_bytes);
     }
 
-    void init(const char *digest, const size_t nonce_secret_len, const size_t nonce_reseed_bytes = NONCE_DEFAULT_RESEED_BYTES)
+    void init(const char *digest,
+	      const RandomBase::Ptr& rng_arg,
+	      const size_t nonce_secret_len,
+	      const size_t nonce_reseed_bytes = NONCE_DEFAULT_RESEED_BYTES)
     {
+      rng = rng_arg;
       if (nonce_secret_len < NONCE_SECRET_LEN_MIN || nonce_secret_len > NONCE_SECRET_LEN_MAX)
 	throw prng_bad_nonce_len();
       const EVP_MD *md = EVP_get_digestbyname (digest);
@@ -89,14 +96,14 @@ namespace openvpn {
 	    }
 	}
       else
-	rand_bytes (output, len); // if init was not called, revert to rand_bytes
+	rng->rand_bytes (output, len); // if init was not called, revert to rand_bytes
     }
 
   private:
-    static void reseed (nonce_t& nd)
+    void reseed (nonce_t& nd)
     {
 #if 1 /* Must be 1 for real usage */
-      rand_bytes(nd.data(), nd.size());
+      rng->rand_bytes(nd.data(), nd.size());
 #else
 #pragma message ( "WARNING: predictable PRNG sequence" )
       /* Only for testing -- will cause a predictable PRNG sequence */
@@ -107,6 +114,7 @@ namespace openvpn {
 #endif
     }
 
+    RandomBase::Ptr rng;
     const EVP_MD *nonce_md_;
     size_t nonce_reseed_bytes_;
     size_t n_processed_;

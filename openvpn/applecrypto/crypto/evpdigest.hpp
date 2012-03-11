@@ -115,8 +115,8 @@ namespace openvpn {
     OPENVPN_DIGEST_DECLARE(SHA512);
   }
 
-  const EVP_MD *EVP_md5() { return &apple_digest::MD5; }
-  const EVP_MD *EVP_sha1() { return &apple_digest::SHA1; }
+  inline const EVP_MD *EVP_md5() { return &apple_digest::MD5; }
+  inline const EVP_MD *EVP_sha1() { return &apple_digest::SHA1; }
 
   inline const EVP_MD *EVP_get_digestbyname(const char *name)
   {

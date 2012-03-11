@@ -23,6 +23,9 @@
 #define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClient
 #define OPENVPN_LOG_INFO  openvpn::ClientAPI::LogInfo
 
+// log SSL handshake messages
+#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
+
 // on Android, use TunBuilderBase abstraction
 #include <openvpn/common/platform.hpp>
 #if defined(OPENVPN_PLATFORM_ANDROID) && !defined(OPENVPN_FORCE_TUN_NULL)

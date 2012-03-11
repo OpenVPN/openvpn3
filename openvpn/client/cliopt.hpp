@@ -26,10 +26,16 @@
 
 #ifdef USE_APPLE_SSL
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
+#include <openvpn/applecrypto/util/rand.hpp>
 #endif
 
 #ifdef USE_OPENSSL
 #include <openvpn/openssl/ssl/sslctx.hpp>
+#include <openvpn/openssl/util/rand.hpp>
+#endif
+
+#ifdef USE_POLARSSL
+#include <openvpn/polarssl/util/rand.hpp>
 #endif
 
 using namespace openvpn;
@@ -43,8 +49,13 @@ namespace openvpn {
 
 #if defined(USE_OPENSSL)
     typedef OpenSSLContext ClientSSLContext;
+    typedef RandomOpenSSL RandomContext;
 #elif defined(USE_APPLE_SSL)
     typedef AppleSSLContext ClientSSLContext;
+    typedef RandomAppleCrypto RandomContext;
+#elif defined(USE_POLAR_SSL)
+    typedef OpenSSLContext ClientSSLContext; // fixme
+    typedef RandomPolarSSL RandomContext;
 #else
 #error no SSL library defined
 #endif
@@ -86,8 +97,9 @@ namespace openvpn {
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout)
     {
-      // initialize PRNG
-      prng.reset(new PRNG("SHA1", 16));
+      // initialize RNG/PRNG
+      rng.reset(new RandomContext());
+      prng.reset(new PRNG("SHA1", rng, 16));
 
       // frame
       frame = frame_init();
@@ -109,6 +121,7 @@ namespace openvpn {
       cp->ssl_ctx.reset(new ClientSSLContext(cc));
       cp->frame = frame;
       cp->now = &now_;
+      cp->rng = rng;
       cp->prng = prng;
 
       // load remote list
@@ -235,6 +248,7 @@ namespace openvpn {
     unsigned int session_iteration;
 
     Time now_; // current time
+    RandomBase::Ptr rng;
     PRNG::Ptr prng;
     Frame::Ptr frame;
     ClientSSLContext::Config cc;

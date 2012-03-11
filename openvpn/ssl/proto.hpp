@@ -17,6 +17,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
+#include <openvpn/random/randbase.hpp>
 #include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/crypto.hpp>
 #include <openvpn/crypto/packet_id.hpp>
@@ -201,6 +202,9 @@ namespace openvpn {
 
       // (non-smart) pointer to current time
       TimePtr now;
+
+      // RNG
+      RandomBase::Ptr rng;
 
       // PRNG
       PRNG::Ptr prng;
@@ -1243,7 +1247,7 @@ namespace openvpn {
 	BufferPtr buf = new BufferAllocated();
 	proto.config->frame->prepare(Frame::WRITE_SSL_CLEARTEXT, *buf);
 	buf->write(proto_context_private::auth_prefix, sizeof(proto_context_private::auth_prefix));
-	tlsprf_self.randomize();
+	tlsprf_self.randomize(*proto.config->rng);
 	tlsprf_self.write(*buf);
 	const std::string options = proto.config->options_string();
 	write_auth_string(options, *buf);
@@ -1284,7 +1288,7 @@ namespace openvpn {
 
       void active()
       {
-	OPENVPN_LOG("SSL Handshake: " << Base::ssl_handshake_details());
+	OPENVPN_LOG_SSL("SSL Handshake: " << Base::ssl_handshake_details());
 	generate_session_keys();
 	while (!app_pre_write_queue.empty())
 	  {

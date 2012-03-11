@@ -59,7 +59,7 @@ namespace openvpn {
     EVP_CIPHER des3("DES-EDE3-CBC", kCCKeySize3DES, kCCBlockSize3DES, kCCBlockSize3DES, kCCAlgorithm3DES);
   }
 
-  const EVP_CIPHER *EVP_get_cipherbyname(const char *name)
+  inline const EVP_CIPHER *EVP_get_cipherbyname(const char *name)
   {
     OPENVPN_CIPHER_SELECT(aes128);
     OPENVPN_CIPHER_SELECT(aes192);
@@ -170,7 +170,7 @@ namespace openvpn {
     return 1;
   }
 
-  int EVP_CipherFinal_ex(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)
+  inline int EVP_CipherFinal_ex(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)
   {
     size_t dataOutMoved;
     const CCCryptorStatus status = CCCryptorFinal(ctx->cref, out, *outl, &dataOutMoved);

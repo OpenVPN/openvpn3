@@ -10,6 +10,7 @@ if [ -z "$1" ]; then
     echo " GPROF=1 -- build for gprof profiling"
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
+    echo " PSSL=1 -- include PolarSSL"
     echo " OSSL=1 -- include OpenSSL on Mac"
     echo " SSL_BOTH=1 -- include OpenSSL and Apple SSL on Mac"
     echo " NOTHREADS=1 -- disable threads"
@@ -76,6 +77,13 @@ if [ "$NOTHREADS" = "1" ]; then
 else
     LIBS="$LIBS -lboost_thread"
     [ "$PLATFORM" != "android" ] && FLAGS="$FLAGS -pthread"
+fi
+
+# PolarSSL
+if [ "$PSSL" = "1" ]; then
+    LIBS="$LIBS -lpolarssl"
+    CPPFLAGS="$CPPFLAGS -DHAVE_POLARSSL -I$POLARSSL_DIR/include"
+    LIBDIRS="$LIBDIRS -L$POLARSSL_DIR/library"
 fi
 
 # LZO compression

@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include <openssl/ssl.h>
+#include <openssl/x509v3.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -659,10 +660,10 @@ namespace openvpn {
       // log subject
       ScopedPtr<char, OpenSSLFree> subject(X509_NAME_oneline(X509_get_subject_name(ctx->current_cert), NULL, 0));
       if (subject.defined())
-	OPENVPN_LOG("VERIFY "
-		    << (preverify_ok ? "OK" : "FAIL")
-		    << ": depth=" << ctx->error_depth
-		    << ", " << subject.get());
+	OPENVPN_LOG_SSL("VERIFY "
+			<< (preverify_ok ? "OK" : "FAIL")
+			<< ": depth=" << ctx->error_depth
+			<< ", " << subject.get());
 
       // verify ns-cert-type
       if (ctx->error_depth == 0 && !self->verify_ns_cert_type(ctx->current_cert))

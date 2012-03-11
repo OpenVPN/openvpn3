@@ -11,6 +11,8 @@
 #define OPENVPN_DEBUG
 #define USE_TLS_AUTH
 
+#define OPENVPN_LOG_SSL(x) // disable
+
 // number of threads to use for test
 #ifndef N_THREADS
 #define N_THREADS 1
@@ -45,10 +47,16 @@
 #include <openvpn/gencrypto/genengine.hpp>
 
 #include <openvpn/openssl/ssl/sslctx.hpp>
+#include <openvpn/openssl/util/rand.hpp>
 #include <openvpn/openssl/util/init.hpp>
 
 #ifdef USE_APPLE_SSL
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
+#include <openvpn/applecrypto/util/rand.hpp>
+#endif
+
+#ifdef USE_POLARSSL
+#include <openvpn/polarssl/util/rand.hpp>
 #endif
 
 #if OPENVPN_MULTITHREAD
@@ -60,11 +68,18 @@ using namespace openvpn;
 // server SSL implementation is always OpenSSL-based
 typedef OpenSSLContext ServerSSLContext;
 
-// client SSL implementation can be OpenSSL or Apple SSL
-#ifdef USE_APPLE_SSL
-typedef AppleSSLContext ClientSSLContext;
-#else
+// client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
+#if defined(USE_OPENSSL)
 typedef OpenSSLContext ClientSSLContext;
+typedef RandomOpenSSL RandomContext;
+#elif defined(USE_APPLE_SSL)
+typedef AppleSSLContext ClientSSLContext;
+typedef RandomAppleCrypto RandomContext;
+#elif defined(USE_POLARSSL)
+typedef OpenSSLContext ClientSSLContext; // fixme
+typedef RandomPolarSSL RandomContext;
+#else
+#error No client SSL implementation defined
 #endif
 
 const char message[] =
@@ -567,8 +582,9 @@ void test(const int thread_num)
     Frame::Ptr frame(new Frame(Frame::Context(128, 256, 128, 0, 16, 0)));
 
     // RNG
-    RandomInt rand;
-    PRNG::Ptr prng(new PRNG("sha1", 16));
+    RandomBase::Ptr rng(new RandomContext());
+    RandomInt rand(*rng);
+    PRNG::Ptr prng(new PRNG("sha1", rng, 16));
 
     // init simulated time
     Time time;
@@ -608,6 +624,7 @@ void test(const int thread_num)
     cp->ssl_ctx.reset(new ClientSSLContext(cc));
     cp->frame = frame;
     cp->now = &time;
+    cp->rng = rng;
     cp->prng = prng;
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
@@ -659,6 +676,7 @@ void test(const int thread_num)
     sp->ssl_ctx.reset(new ServerSSLContext(sc));
     sp->frame = frame;
     sp->now = &time;
+    sp->rng = rng;
     sp->prng = prng;
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
