@@ -196,6 +196,11 @@ namespace openvpn {
 	}
     }
 
+    std::string ssl_handshake_details() const
+    {
+      return ssl_->ssl_handshake_details();
+    }
+
     virtual ~ProtoStackBase() {}
 
   private:

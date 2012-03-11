@@ -1284,6 +1284,7 @@ namespace openvpn {
 
       void active()
       {
+	OPENVPN_LOG("SSL Handshake: " << Base::ssl_handshake_details());
 	generate_session_keys();
 	while (!app_pre_write_queue.empty())
 	  {

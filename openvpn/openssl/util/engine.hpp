@@ -3,7 +3,9 @@
 
 #include <string>
 
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/util/error.hpp>
@@ -14,6 +16,7 @@ namespace openvpn {
 
   void openssl_setup_engine (const std::string& engine)
   {
+#ifndef OPENSSL_NO_ENGINE
     ENGINE_load_builtin_engines ();
 
     if (engine == "auto")
@@ -27,6 +30,7 @@ namespace openvpn {
       throw openssl_engine_error();
     if (!ENGINE_set_default (e, ENGINE_METHOD_ALL))
       throw openssl_engine_error();
+#endif
   }
 
 } // namespace openvpn

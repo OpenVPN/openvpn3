@@ -209,6 +209,11 @@ namespace openvpn {
 	return ct_out.read_buf();
       }
 
+      std::string ssl_handshake_details() const // fixme -- code me
+      {
+	return "[not implemented]";
+      }
+
       ~SSL()
       {
 	ssl_erase();

@@ -2,6 +2,7 @@
 #define OPENVPN_OPENSSL_SSL_SSLCTX_H
 
 #include <cstring>
+#include <sstream>
 
 #include <openssl/ssl.h>
 
@@ -279,12 +280,44 @@ namespace openvpn {
 	return bmq_stream::memq_from_bio(ct_out)->read_buf();
       }
 
+      std::string ssl_handshake_details() const
+      {
+	return ssl_handshake_details(ssl);
+      }
+
       ~SSL()
       {
 	ssl_erase();
       }
 
     private:
+      // Print a one line summary of SSL/TLS session handshake.
+      static std::string ssl_handshake_details (const ::SSL *c_ssl)
+      {
+	std::ostringstream os;
+
+	const SSL_CIPHER *ciph = SSL_get_current_cipher (c_ssl);
+	os << SSL_get_version (c_ssl) << ", cipher " << SSL_CIPHER_get_version (ciph) << ' ' << SSL_CIPHER_get_name (ciph);
+
+	::X509 *cert = SSL_get_peer_certificate (c_ssl);
+	if (cert != NULL)
+	  {
+	    EVP_PKEY *pkey = X509_get_pubkey (cert);
+	    if (pkey != NULL)
+	      {
+		if (pkey->type == EVP_PKEY_RSA && pkey->pkey.rsa != NULL && pkey->pkey.rsa->n != NULL)
+		  os << ", " << BN_num_bits (pkey->pkey.rsa->n) << " bit RSA";
+#ifndef OPENSSL_NO_DSA
+		else if (pkey->type == EVP_PKEY_DSA && pkey->pkey.dsa != NULL && pkey->pkey.dsa->p != NULL)
+		  os << ", " << BN_num_bits (pkey->pkey.dsa->p) << " bit DSA";
+#endif
+		EVP_PKEY_free (pkey);
+	      }
+	    X509_free (cert);
+	  }
+	return os.str();
+      }
+
       void ssl_clear()
       {
 	ssl_bio_linkage = false;
