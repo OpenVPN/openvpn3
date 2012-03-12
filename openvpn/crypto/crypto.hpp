@@ -6,10 +6,11 @@
 
 namespace openvpn {
 
+  template <typename RAND_API, typename CRYPTO_API>
   struct CryptoContext
   {
-    Encrypt encrypt;
-    Decrypt decrypt;
+    Encrypt<RAND_API, CRYPTO_API> encrypt;
+    Decrypt<CRYPTO_API> decrypt;
   };
 
 } // namespace openvpn

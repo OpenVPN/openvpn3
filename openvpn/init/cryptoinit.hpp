@@ -1,5 +1,5 @@
-#ifndef OPENVPN_GENCRYPTO_CRYPTOINIT_H
-#define OPENVPN_GENCRYPTO_CRYPTOINIT_H
+#ifndef OPENVPN_INIT_CRYPTOINIT_H
+#define OPENVPN_INIT_CRYPTOINIT_H
 
 #ifdef USE_OPENSSL
 #include <openvpn/openssl/util/init.hpp>
@@ -16,4 +16,4 @@ namespace openvpn {
 
 }
 
-#endif // OPENVPN_GENCRYPTO_CRYPTOINIT_H
+#endif

@@ -17,7 +17,6 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/random/randbase.hpp>
 #include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/crypto.hpp>
 #include <openvpn/crypto/packet_id.hpp>
@@ -99,7 +98,7 @@ namespace openvpn {
     };
   }
 
-  template <typename SSL_CONTEXT>
+  template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
   class ProtoContext : public RC<thread_unsafe_refcount>
   {
   protected:
@@ -165,7 +164,7 @@ namespace openvpn {
     }
 
   public:
-    typedef SSL_CONTEXT SSLContext;
+    typedef SSL_API SSLContext;
 
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
@@ -204,10 +203,10 @@ namespace openvpn {
       TimePtr now;
 
       // RNG
-      RandomBase::Ptr rng;
+      typename RAND_API::Ptr rng;
 
       // PRNG
-      PRNG::Ptr prng;
+      typename PRNG<RAND_API, CRYPTO_API>::Ptr prng;
 
       // if true, connect to server without presenting username or password
       // (false if "auth-user-pass" directive is present in config, true otherwise)
@@ -223,12 +222,12 @@ namespace openvpn {
       CompressContext comp_ctx;
 
       // data channel parms
-      Cipher cipher;
-      Digest digest;
+      typename CRYPTO_API::Cipher cipher;
+      typename CRYPTO_API::Digest digest;
 
       // tls_auth parms
       OpenVPNStaticKey tls_auth_key; // leave this undefined to disable tls_auth
-      Digest tls_auth_digest;
+      typename CRYPTO_API::Digest tls_auth_digest;
 
       // reliability layer parms
       reliable::id_t reliable_window;
@@ -286,18 +285,18 @@ namespace openvpn {
 	{
 	  const Option *o = opt.get_ptr("cipher");
 	  if (o)
-	    cipher = Cipher(o->get(1));
+	    cipher = typename CRYPTO_API::Cipher(o->get(1));
 	  else
-	    cipher = Cipher("BF-CBC");
+	    cipher = typename CRYPTO_API::Cipher("BF-CBC");
 	}
 
 	// digest
 	{
 	  const Option *o = opt.get_ptr("auth");
 	  if (o)
-	    digest = Digest(o->get(1));
+	    digest = typename CRYPTO_API::Digest(o->get(1));
 	  else
-	    digest = Digest("SHA1");
+	    digest = typename CRYPTO_API::Digest("SHA1");
 	}
 
 	// tls-auth
@@ -348,7 +347,7 @@ namespace openvpn {
 	  if (o)
 	    {
 	      new_cipher = o->get(1);
-	      cipher = Cipher(new_cipher);
+	      cipher = typename CRYPTO_API::Cipher(new_cipher);
 	    }
 	}
 	catch (const std::exception& e)
@@ -363,7 +362,7 @@ namespace openvpn {
 	  if (o)
 	    {
 	      new_digest = o->get(1);
-	      digest = Digest(new_digest);
+	      digest = typename CRYPTO_API::Digest(new_digest);
 	    }
 	}
 	catch (const std::exception& e)
@@ -1324,7 +1323,7 @@ namespace openvpn {
 	crypto.encrypt.frame = c.frame;
 	crypto.encrypt.cipher.init(c.cipher,
 				   key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
-				   CipherContext::ENCRYPT);
+				   CRYPTO_API::CipherContext::ENCRYPT);
 	crypto.encrypt.hmac.init(c.digest,
 				 key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
 	crypto.encrypt.pid_send.init(PacketID::SHORT_FORM);
@@ -1334,7 +1333,7 @@ namespace openvpn {
 	crypto.decrypt.frame = c.frame;
 	crypto.decrypt.cipher.init(c.cipher,
 				   key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
-				   CipherContext::DECRYPT);
+				   CRYPTO_API::CipherContext::DECRYPT);
 	crypto.decrypt.hmac.init(c.digest,
 				 key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 	crypto.decrypt.pid_recv.init(c.pid_mode,
@@ -1609,9 +1608,9 @@ namespace openvpn {
       EventType next_event;
       Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
-      CryptoContext crypto;
-      TLSPRF tlsprf_self;
-      TLSPRF tlsprf_peer;
+      CryptoContext<RAND_API, CRYPTO_API> crypto;
+      TLSPRF<CRYPTO_API> tlsprf_self;
+      TLSPRF<CRYPTO_API> tlsprf_peer;
     };
 
   public:
@@ -2189,8 +2188,8 @@ namespace openvpn {
 
     Time::Duration slowest_handshake_; // longest time to reach a successful handshake
 
-    HMACContext ta_hmac_send;
-    HMACContext ta_hmac_recv;
+    HMACContext<CRYPTO_API> ta_hmac_send;
+    HMACContext<CRYPTO_API> ta_hmac_recv;
     PacketIDSend ta_pid_send;
     PacketIDReceive ta_pid_recv;
 

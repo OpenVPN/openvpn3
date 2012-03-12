@@ -10,13 +10,14 @@
 #include <openvpn/random/prng.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
-#include <openvpn/crypto/digest.hpp>
+#include <openvpn/crypto/hmac.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/log/sessionstats.hpp>
 
 namespace openvpn {
 
+  template <typename CRYPTO_API>
   class Decrypt {
   public:
     OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
@@ -30,7 +31,7 @@ namespace openvpn {
       // verify the HMAC
       if (hmac.defined())
 	{
-	  unsigned char local_hmac[HMACContext::MAX_HMAC_SIZE];
+	  unsigned char local_hmac[CRYPTO_API::HMACContext::MAX_HMAC_SIZE];
 	  const size_t hmac_size = hmac.output_size();
 	  const unsigned char *packet_hmac = buf.read_alloc(hmac_size);
 	  hmac.hmac(local_hmac, hmac_size, buf.c_data(), buf.size());
@@ -44,11 +45,11 @@ namespace openvpn {
       // decrypt packet ID + payload
       if (cipher.defined())
 	{
-	  unsigned char iv_buf[CipherContext::MAX_IV_SIZE];
-	  const size_t iv_size = cipher.iv_size();
+	  unsigned char iv_buf[CRYPTO_API::CipherContext::MAX_IV_LENGTH];
+	  const size_t iv_length = cipher.iv_length();
 
 	  // extract IV from head of packet
-	  buf.read(iv_buf, iv_size);
+	  buf.read(iv_buf, iv_length);
 
 	  // initialize work buffer
 	  frame->prepare(Frame::DECRYPT_WORK, work);
@@ -64,7 +65,7 @@ namespace openvpn {
 
 	  // handle different cipher modes
 	  const int cipher_mode = cipher.cipher_mode();
-	  if (cipher_mode == CipherContext::CIPH_CBC_MODE)
+	  if (cipher_mode == CRYPTO_API::CipherContext::CIPH_CBC_MODE)
 	    {
 	      if (!verify_packet_id(work, now))
 		{
@@ -92,8 +93,8 @@ namespace openvpn {
     }
 
     Frame::Ptr frame;
-    CipherContext cipher;
-    HMACContext hmac;
+    CipherContext<CRYPTO_API> cipher;
+    HMACContext<CRYPTO_API> hmac;
     PacketIDReceive pid_recv;
 
   private:

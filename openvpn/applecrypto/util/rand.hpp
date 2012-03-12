@@ -3,19 +3,23 @@
 
 #include <Security/SecRandom.h>
 
-#include <openvpn/random/randbase.hpp>
+#include <openvpn/common/rc.hpp>
 
 namespace openvpn {
-  class RandomAppleCrypto : public RandomBase {
+  class AppleRandom : public RC<thread_unsafe_refcount> {
   public:
-    virtual const char *name() const {
-      return "SecRandom";
+    OPENVPN_EXCEPTION(rand_error_apple);
+
+    typedef boost::intrusive_ptr<AppleRandom> Ptr;
+
+    const char *name() const {
+      return "AppleRandom";
     }
 
-    virtual void rand_bytes(unsigned char *buf, const size_t size)
+    void rand_bytes(unsigned char *buf, const size_t size)
     {
       if (SecRandomCopyBytes(kSecRandomDefault, size, buf) == -1)
-	throw rand_error("SecRandom rand_bytes");
+	throw rand_error_apple("rand_bytes");
     }
   };
 }

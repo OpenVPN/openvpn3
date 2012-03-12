@@ -35,9 +35,10 @@ namespace openvpn {
       defined_ = true;
     }
 
-    void randomize(PRNG& prng)
+    template <typename PRNG_TYPE>
+    void randomize(PRNG_TYPE& prng)
     {
-      prng.bytes(id_, SIZE);
+      prng.rand_bytes(id_, SIZE);
       defined_ = true;
     }
 

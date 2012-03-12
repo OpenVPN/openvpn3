@@ -24,17 +24,21 @@
 #include <openvpn/tun/client/tunnull.hpp>
 #endif
 
-#ifdef USE_APPLE_SSL
-#include <openvpn/applecrypto/ssl/sslctx.hpp>
-#include <openvpn/applecrypto/util/rand.hpp>
-#endif
-
 #ifdef USE_OPENSSL
+#include <openvpn/openssl/crypto/api.hpp>
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/rand.hpp>
 #endif
 
+#ifdef USE_APPLE_SSL
+#include <openvpn/applecrypto/crypto/api.hpp>
+#include <openvpn/applecrypto/ssl/sslctx.hpp>
+#include <openvpn/applecrypto/util/rand.hpp>
+#endif
+
 #ifdef USE_POLARSSL
+#include <openvpn/polarssl/crypto/api.hpp>
+#include <openvpn/polarssl/ssl/sslctx.hpp> // fixme
 #include <openvpn/polarssl/util/rand.hpp>
 #endif
 
@@ -48,18 +52,21 @@ namespace openvpn {
     typedef boost::intrusive_ptr<ClientOptions> Ptr;
 
 #if defined(USE_OPENSSL)
-    typedef OpenSSLContext ClientSSLContext;
-    typedef RandomOpenSSL RandomContext;
+    typedef OpenSSLCryptoAPI ClientCryptoAPI;
+    typedef OpenSSLContext ClientSSLAPI;
+    typedef OpenSSLRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
-    typedef AppleSSLContext ClientSSLContext;
-    typedef RandomAppleCrypto RandomContext;
+    typedef AppleSSLCryptoAPI ClientCryptoAPI;
+    typedef AppleSSLContext ClientSSLAPI;
+    typedef AppleRandom RandomAPI;
 #elif defined(USE_POLAR_SSL)
-    typedef OpenSSLContext ClientSSLContext; // fixme
-    typedef RandomPolarSSL RandomContext;
+    typedef PolarSSLCryptoAPI ClientCryptoAPI;
+    typedef OpenSSLContext ClientSSLAPI; // fixme
+    typedef PolarSSLRandom RandomAPI;
 #else
 #error no SSL library defined
 #endif
-    typedef ClientProto::Session<ClientSSLContext> Client;
+    typedef ClientProto::Session<RandomAPI, ClientCryptoAPI, ClientSSLAPI> Client;
 
     struct Config {
       Config()
@@ -98,14 +105,14 @@ namespace openvpn {
 	conn_timeout_(config.conn_timeout)
     {
       // initialize RNG/PRNG
-      rng.reset(new RandomContext());
-      prng.reset(new PRNG("SHA1", rng, 16));
+      rng.reset(new RandomAPI());
+      prng.reset(new PRNG<RandomAPI, ClientCryptoAPI>("SHA1", rng, 16));
 
       // frame
       frame = frame_init();
 
       // client config
-      ClientSSLContext::Config cc;
+      ClientSSLAPI::Config cc;
       cc.set_external_pki_callback(config.external_pki);
       cc.frame = frame;
 #ifdef OPENVPN_SSL_DEBUG
@@ -118,7 +125,7 @@ namespace openvpn {
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig);
       cp->load(opt);
-      cp->ssl_ctx.reset(new ClientSSLContext(cc));
+      cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;
       cp->now = &now_;
       cp->rng = rng;
@@ -248,10 +255,10 @@ namespace openvpn {
     unsigned int session_iteration;
 
     Time now_; // current time
-    RandomBase::Ptr rng;
-    PRNG::Ptr prng;
+    RandomAPI::Ptr rng;
+    PRNG<RandomAPI, ClientCryptoAPI>::Ptr prng;
     Frame::Ptr frame;
-    ClientSSLContext::Config cc;
+    ClientSSLAPI::Config cc;
     Client::ProtoConfig::Ptr cp;
     RemoteList::Ptr remote_list;
     TransportClientFactory::Ptr transport_factory;

@@ -34,10 +34,10 @@ namespace openvpn {
       virtual void client_proto_connected() {}
     };
 
-    template <typename SSL_CONTEXT>
-    class Session : public ProtoContext<SSL_CONTEXT>, TransportClientParent, TunClientParent
+    template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
+    class Session : public ProtoContext<RAND_API, CRYPTO_API, SSL_API>, TransportClientParent, TunClientParent
     {
-      typedef ProtoContext<SSL_CONTEXT> Base;
+      typedef ProtoContext<RAND_API, CRYPTO_API, SSL_API> Base;
       typedef typename Base::PacketType PacketType;
 
       using Base::now;

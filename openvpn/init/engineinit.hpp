@@ -1,5 +1,5 @@
-#ifndef OPENVPN_GENCRYPTO_GENENGINE_H
-#define OPENVPN_GENCRYPTO_GENENGINE_H
+#ifndef OPENVPN_INIT_ENGINEINIT_H
+#define OPENVPN_INIT_ENGINEINIT_H
 
 #include <string>
 
@@ -16,6 +16,6 @@ namespace openvpn {
 #endif
   }
 
-} // namespace openvpn
+}
 
-#endif // OPENVPN_GENCRYPTO_GENENGINE_H
+#endif

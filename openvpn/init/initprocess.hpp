@@ -6,8 +6,8 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/compress/compress.hpp>
-#include <openvpn/gencrypto/cryptoinit.hpp>
-#include <openvpn/gencrypto/genengine.hpp>
+#include <openvpn/init/cryptoinit.hpp>
+#include <openvpn/init/engineinit.hpp>
 
 namespace openvpn {
   namespace InitProcess {

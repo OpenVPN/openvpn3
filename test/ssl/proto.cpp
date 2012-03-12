@@ -9,6 +9,7 @@
 // Unit test for OpenVPN protocol
 
 #define OPENVPN_DEBUG
+#define OPENVPN_ENABLE_ASSERT
 #define USE_TLS_AUTH
 
 #define OPENVPN_LOG_SSL(x) // disable
@@ -44,8 +45,9 @@
 #include <openvpn/random/rand.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/ssl/proto.hpp>
-#include <openvpn/gencrypto/genengine.hpp>
+#include <openvpn/init/initprocess.hpp>
 
+#include <openvpn/openssl/crypto/api.hpp>
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/rand.hpp>
 #include <openvpn/openssl/util/init.hpp>
@@ -65,19 +67,24 @@
 
 using namespace openvpn;
 
-// server SSL implementation is always OpenSSL-based
-typedef OpenSSLContext ServerSSLContext;
+// server Crypto/SSL/Rand implementation is always OpenSSL-based
+typedef OpenSSLCryptoAPI ServerCryptoAPI;
+typedef OpenSSLContext ServerSSLAPI;
+typedef OpenSSLRandom ServerRandomAPI;
 
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
 #if defined(USE_OPENSSL)
-typedef OpenSSLContext ClientSSLContext;
-typedef RandomOpenSSL RandomContext;
+typedef OpenSSLCryptoAPI ClientCryptoAPI;
+typedef OpenSSLContext ClientSSLAPI;
+typedef OpenSSLRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)
-typedef AppleSSLContext ClientSSLContext;
-typedef RandomAppleCrypto RandomContext;
+typedef AppleSSLCryptoAPI ClientCryptoAPI;
+typedef AppleSSLContext ClientSSLAPI;
+typedef AppleRandom ClientRandomAPI;
 #elif defined(USE_POLARSSL)
-typedef OpenSSLContext ClientSSLContext; // fixme
-typedef RandomPolarSSL RandomContext;
+typedef PolarSSLCryptoAPI ClientCryptoAPI;
+typedef OpenSSLContext ClientSSLAPI; // fixme
+typedef PolarSSLRandom ClientRandomAPI;
 #else
 #error No client SSL implementation defined
 #endif
@@ -165,10 +172,10 @@ private:
 };
 
 // test the OpenVPN protocol implementation in ProtoContext
-template <typename SSL_CONTEXT>
-class TestProto : public ProtoContext<SSL_CONTEXT>
+template <typename RAND_API, typename CRYPTO_API, typename SSL_CONTEXT>
+class TestProto : public ProtoContext<RAND_API, CRYPTO_API, SSL_CONTEXT>
 {
-  typedef ProtoContext<SSL_CONTEXT> Base;
+  typedef ProtoContext<RAND_API, CRYPTO_API, SSL_CONTEXT> Base;
 
   using Base::now;
   using Base::mode;
@@ -340,10 +347,10 @@ private:
   char progress_[11];
 };
 
-template <typename SSL_CONTEXT>
-class TestProtoClient : public TestProto<SSL_CONTEXT>
+template <typename RAND_API, typename CRYPTO_API, typename SSL_CONTEXT>
+class TestProtoClient : public TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT>
 {
-  typedef TestProto<SSL_CONTEXT> Base;
+  typedef TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT> Base;
 public:
   TestProtoClient(const typename Base::Config::Ptr& config,
 		  const SessionStats::Ptr& stats)
@@ -361,10 +368,10 @@ private:
   }
 };
 
-template <typename SSL_CONTEXT>
-class TestProtoServer : public TestProto<SSL_CONTEXT>
+template <typename RAND_API, typename CRYPTO_API, typename SSL_CONTEXT>
+class TestProtoServer : public TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT>
 {
-  typedef TestProto<SSL_CONTEXT> Base;
+  typedef TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT> Base;
 public:
   OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
@@ -582,9 +589,12 @@ void test(const int thread_num)
     Frame::Ptr frame(new Frame(Frame::Context(128, 256, 128, 0, 16, 0)));
 
     // RNG
-    RandomBase::Ptr rng(new RandomContext());
-    RandomInt rand(*rng);
-    PRNG::Ptr prng(new PRNG("sha1", rng, 16));
+    ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());
+    RandomInt<ClientRandomAPI> rand(*rng_cli);
+    PRNG<ClientRandomAPI, ClientCryptoAPI>::Ptr prng_cli(new PRNG<ClientRandomAPI, ClientCryptoAPI>("sha1", rng_cli, 16));
+
+    ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI());
+    PRNG<ServerRandomAPI, ServerCryptoAPI>::Ptr prng_serv(new PRNG<ServerRandomAPI, ServerCryptoAPI>("sha1", rng_serv, 16));
 
     // init simulated time
     Time time;
@@ -601,7 +611,7 @@ void test(const int thread_num)
     const std::string tls_auth_key = read_text("tls-auth.key");
 
     // client config
-    ClientSSLContext::Config cc;
+    ClientSSLAPI::Config cc;
     cc.mode = Mode(Mode::CLIENT);
     cc.frame = frame;
 #ifdef USE_APPLE_SSL
@@ -619,21 +629,21 @@ void test(const int thread_num)
     MySessionStats::Ptr cli_stats(new MySessionStats);
 
     // client ProtoContext config
-    typedef ProtoContext<ClientSSLContext> ClientProtoContext;
+    typedef ProtoContext<ClientRandomAPI, ClientCryptoAPI, ClientSSLAPI> ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
-    cp->ssl_ctx.reset(new ClientSSLContext(cc));
+    cp->ssl_ctx.reset(new ClientSSLAPI(cc));
     cp->frame = frame;
     cp->now = &time;
-    cp->rng = rng;
-    cp->prng = prng;
+    cp->rng = rng_cli;
+    cp->prng = prng_cli;
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
     cp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    cp->cipher = Cipher("AES-128-CBC");
-    cp->digest = Digest("SHA1");
+    cp->cipher = ClientCryptoAPI::Cipher("AES-128-CBC");
+    cp->digest = ClientCryptoAPI::Digest("SHA1");
 #ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
-    cp->tls_auth_digest = Digest("sha1");
+    cp->tls_auth_digest = ClientCryptoAPI::Digest("sha1");
 #endif
     cp->reliable_window = 4;
     cp->max_ack_list = 4;
@@ -659,7 +669,7 @@ void test(const int thread_num)
 #endif
 
     // server config
-    ServerSSLContext::Config sc;
+    ServerSSLAPI::Config sc;
     sc.mode = Mode(Mode::SERVER);
     sc.frame = frame;
     sc.load_ca(ca1_crt + ca2_crt);
@@ -671,21 +681,21 @@ void test(const int thread_num)
 #endif
 
     // server ProtoContext config
-    typedef ProtoContext<ServerSSLContext> ServerProtoContext;
+    typedef ProtoContext<ServerRandomAPI, ServerCryptoAPI, ServerSSLAPI> ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
-    sp->ssl_ctx.reset(new ServerSSLContext(sc));
+    sp->ssl_ctx.reset(new ServerSSLAPI(sc));
     sp->frame = frame;
     sp->now = &time;
-    sp->rng = rng;
-    sp->prng = prng;
+    sp->rng = rng_serv;
+    sp->prng = prng_serv;
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
     sp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    sp->cipher = Cipher("AES-128-CBC");
-    sp->digest = Digest("SHA1");
+    sp->cipher = ServerCryptoAPI::Cipher("AES-128-CBC");
+    sp->digest = ServerCryptoAPI::Digest("SHA1");
 #ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);
-    sp->tls_auth_digest = Digest("sha1");
+    sp->tls_auth_digest = ServerCryptoAPI::Digest("sha1");
 #endif
     sp->reliable_window = 4;
     sp->max_ack_list = 4;
@@ -713,8 +723,8 @@ void test(const int thread_num)
     // server stats
     MySessionStats::Ptr serv_stats(new MySessionStats);
 
-    TestProtoClient<ClientSSLContext> cli_proto(cp, cli_stats);
-    TestProtoServer<OpenSSLContext> serv_proto(sp, serv_stats);
+    TestProtoClient<ClientRandomAPI, ClientCryptoAPI, ClientSSLAPI> cli_proto(cp, cli_stats);
+    TestProtoServer<ServerRandomAPI, ServerCryptoAPI, ServerSSLAPI> serv_proto(sp, serv_stats);
 
     for (int i = 0; i < SITER; ++i)
       {
@@ -765,10 +775,8 @@ void test(const int thread_num)
 
 int main(int /*argc*/, char* /*argv*/[])
 {
-  Time::reset_base();
-  openssl_init ossl_init;
-
-  setup_crypto_engine("auto");
+  // process-wide initialization
+  InitProcess::init();
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
   boost::thread* threads[N_THREADS];

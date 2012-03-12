@@ -9,11 +9,12 @@
 #include <openvpn/random/prng.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
-#include <openvpn/crypto/digest.hpp>
+#include <openvpn/crypto/hmac.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 
 namespace openvpn {
+  template <typename RAND_API, typename CRYPTO_API>
   class Encrypt {
   public:
     OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
@@ -27,15 +28,15 @@ namespace openvpn {
       if (cipher.defined())
 	{
 	  // workspace for generating IV
-	  unsigned char iv_buf[CipherContext::MAX_IV_SIZE];
-	  const size_t iv_size = cipher.iv_size();
+	  unsigned char iv_buf[CRYPTO_API::CipherContext::MAX_IV_LENGTH];
+	  const size_t iv_length = cipher.iv_length();
 
 	  // IV and packet ID are generated differently depending on cipher mode
 	  const int cipher_mode = cipher.cipher_mode();
-	  if (cipher_mode == CipherContext::CIPH_CBC_MODE)
+	  if (cipher_mode == CRYPTO_API::CipherContext::CIPH_CBC_MODE)
 	    {
 	      // in CBC mode, use an explicit, random IV
-	      prng->bytes(iv_buf, iv_size);
+	      prng->rand_bytes(iv_buf, iv_length);
 
 	      // generate fresh outgoing packet ID and prepend to cleartext buffer
 	      pid_send.write_next(buf, true, now);
@@ -58,7 +59,7 @@ namespace openvpn {
 	  work.set_size(encrypt_bytes);
 
 	  // prepend the IV to the ciphertext
-	  work.prepend(iv_buf, iv_size);
+	  work.prepend(iv_buf, iv_length);
 
 	  // HMAC the ciphertext
 	  prepend_hmac(work);
@@ -77,10 +78,10 @@ namespace openvpn {
     }
 
     Frame::Ptr frame;
-    CipherContext cipher;
-    HMACContext hmac;
+    CipherContext<CRYPTO_API> cipher;
+    HMACContext<CRYPTO_API> hmac;
     PacketIDSend pid_send;
-    PRNG::Ptr prng;
+    typename PRNG<RAND_API, CRYPTO_API>::Ptr prng;
 
   private:
     // compute HMAC signature of data buffer,
