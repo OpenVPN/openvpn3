@@ -8,6 +8,7 @@
 // debug settings
 
 #define OPENVPN_DEBUG
+//#define OPENVPN_ENABLE_ASSERT
 //#define OPENVPN_SSL_DEBUG
 //#define OPENVPN_DEBUG_CLIPROTO
 //#define OPENVPN_FORCE_TUN_NULL
