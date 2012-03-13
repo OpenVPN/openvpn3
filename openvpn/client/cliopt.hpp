@@ -38,7 +38,7 @@
 
 #ifdef USE_POLARSSL
 #include <openvpn/polarssl/crypto/api.hpp>
-#include <openvpn/polarssl/ssl/sslctx.hpp> // fixme
+//#include <openvpn/polarssl/ssl/sslctx.hpp> // fixme
 #include <openvpn/polarssl/util/rand.hpp>
 #endif
 
@@ -51,18 +51,18 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<ClientOptions> Ptr;
 
-#if defined(USE_OPENSSL)
-    typedef OpenSSLCryptoAPI ClientCryptoAPI;
-    typedef OpenSSLContext ClientSSLAPI;
-    typedef OpenSSLRandom RandomAPI;
+#if defined(USE_POLARSSL)
+    typedef PolarSSLCryptoAPI ClientCryptoAPI;
+    typedef OpenSSLContext ClientSSLAPI; // fixme
+    typedef PolarSSLRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
     typedef AppleSSLCryptoAPI ClientCryptoAPI;
     typedef AppleSSLContext ClientSSLAPI;
     typedef AppleRandom RandomAPI;
-#elif defined(USE_POLAR_SSL)
-    typedef PolarSSLCryptoAPI ClientCryptoAPI;
-    typedef OpenSSLContext ClientSSLAPI; // fixme
-    typedef PolarSSLRandom RandomAPI;
+#elif defined(USE_OPENSSL)
+    typedef OpenSSLCryptoAPI ClientCryptoAPI;
+    typedef OpenSSLContext ClientSSLAPI;
+    typedef OpenSSLRandom RandomAPI;
 #else
 #error no SSL library defined
 #endif

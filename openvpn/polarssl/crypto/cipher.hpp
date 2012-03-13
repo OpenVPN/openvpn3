@@ -1,10 +1,9 @@
-#ifndef OPENVPN_OPENSSL_CRYPTO_CIPHER_H
-#define OPENVPN_OPENSSL_CRYPTO_CIPHER_H
+#ifndef OPENVPN_POLARSSL_CRYPTO_CIPHER_H
+#define OPENVPN_POLARSSL_CRYPTO_CIPHER_H
 
 #include <string>
 
-#include <openssl/objects.h>
-#include <openssl/evp.h>
+#include <polarssl/cipher.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -13,7 +12,7 @@
 #include <openvpn/crypto/static_key.hpp>
 
 namespace openvpn {
-  namespace OpenSSLCrypto {
+  namespace PolarSSLCrypto {
     class Cipher
     {
       friend class CipherContext;
@@ -26,7 +25,7 @@ namespace openvpn {
 
       Cipher(const std::string& name)
       {
-	cipher_ = EVP_get_cipherbyname(name.c_str());
+	cipher_ = cipher_info_from_string(name.c_str());
 	if (!cipher_)
 	  throw cipher_not_found();
       }
@@ -34,36 +33,37 @@ namespace openvpn {
       const char *name() const
       {
 	check_initialized();
-	return EVP_CIPHER_name (cipher_);
+	return cipher_->name;
       }
 
       size_t key_length() const
       {
 	check_initialized();
-	return EVP_CIPHER_key_length (cipher_);
+	return cipher_->key_length / 8;
       }
 
       size_t key_length_in_bits() const
       {
-	return key_length() * 8;
+	check_initialized();
+	return cipher_->key_length;
       }
 
       size_t iv_length() const
       {
 	check_initialized();
-	return EVP_CIPHER_iv_length (cipher_);
+	return cipher_->iv_size;
       }
 
       size_t block_size() const
       {
 	check_initialized();
-	return EVP_CIPHER_block_size (cipher_);
+	return cipher_->block_size;
       }
 
       bool defined() const { return cipher_ != NULL; }
 
     private:
-      const EVP_CIPHER *get() const
+      const cipher_info_t *get() const
       {
 	check_initialized();
 	return cipher_;
@@ -77,7 +77,7 @@ namespace openvpn {
 #endif
       }
 
-      const EVP_CIPHER *cipher_;
+      const cipher_info_t *cipher_;
     };
 
     class CipherContext : boost::noncopyable
@@ -85,19 +85,19 @@ namespace openvpn {
     public:
       OPENVPN_SIMPLE_EXCEPTION(cipher_mode_error);
       OPENVPN_SIMPLE_EXCEPTION(cipher_uninitialized);
-      OPENVPN_EXCEPTION(cipher_openssl_error);
+      OPENVPN_EXCEPTION(cipher_polarssl_error);
 
       // mode parameter for constructor
       enum {
-	MODE_UNDEF = -1,
-	ENCRYPT = 1,
-	DECRYPT = 0
+	MODE_UNDEF = POLARSSL_OPERATION_NONE,
+	ENCRYPT = POLARSSL_ENCRYPT,
+	DECRYPT = POLARSSL_DECRYPT
       };
 
       // OpenSSL cipher constants
       enum {
-	MAX_IV_LENGTH = EVP_MAX_IV_LENGTH,
-	CIPH_CBC_MODE = EVP_CIPH_CBC_MODE
+	MAX_IV_LENGTH = POLARSSL_MAX_IV_LENGTH,
+	CIPH_CBC_MODE = POLARSSL_MODE_CBC
       };
 
       CipherContext()
@@ -107,23 +107,37 @@ namespace openvpn {
 
       ~CipherContext() { erase() ; }
 
+      void init()
+      {
+      }
+
       void init(const Cipher& cipher, const unsigned char *key, const int mode)
       {
+	erase();
+
 	// check that mode is valid
 	if (!(mode == ENCRYPT || mode == DECRYPT))
 	  throw cipher_mode_error();
-	erase();
-	EVP_CIPHER_CTX_init (&ctx);
-	if (!EVP_CipherInit_ex (&ctx, cipher.get(), NULL, key, NULL, mode))
-	  throw cipher_openssl_error("EVP_CipherInit_ex (init)");
+
+	// get cipher type
+	const cipher_info_t *ci = cipher.get();
+
+	// initialize cipher context with cipher type
+	if (cipher_init_ctx(&ctx, ci) < 0)
+	  throw cipher_polarssl_error("cipher_init_ctx");
+
+	// set key and encrypt/decrypt mode
+	if (cipher_setkey(&ctx, key, ci->key_length, (operation_t)mode) < 0)
+	  throw cipher_polarssl_error("cipher_setkey");
+
 	initialized = true;
       }
 
       void reset(const unsigned char *iv)
       {
 	check_initialized();
-	if (!EVP_CipherInit_ex (&ctx, NULL, NULL, NULL, iv, -1))
-	  throw cipher_openssl_error("EVP_CipherInit_ex (reset)");
+	if (cipher_reset(&ctx, iv) < 0)
+	  throw cipher_polarssl_error("cipher_reset");
       }
 
       bool update(unsigned char *out, const size_t max_out_size,
@@ -131,8 +145,8 @@ namespace openvpn {
 		  size_t& out_acc)
       {
 	check_initialized();
-	int outlen;
-	if (EVP_CipherUpdate (&ctx, out, &outlen, in, int(in_size)))
+	size_t outlen;
+	if (cipher_update(&ctx, in, in_size, out, &outlen) >= 0)
 	  {
 	    out_acc += outlen;
 	    return true;
@@ -144,8 +158,8 @@ namespace openvpn {
       bool final(unsigned char *out, const size_t max_out_size, size_t& out_acc)
       {
 	check_initialized();
-	int outlen;
-	if (EVP_CipherFinal_ex (&ctx, out, &outlen))
+	size_t outlen;
+	if (cipher_finish (&ctx, out, &outlen) >= 0)
 	  {
 	    out_acc += outlen;
 	    return true;
@@ -159,20 +173,20 @@ namespace openvpn {
       size_t iv_length() const
       {
 	check_initialized();
-	return EVP_CIPHER_CTX_iv_length (&ctx);
+	return cipher_get_iv_size(&ctx);
       }
 
       size_t block_size() const
       {
 	check_initialized();
-	return EVP_CIPHER_CTX_block_size (&ctx);
+	return cipher_get_block_size(&ctx);
       }
 
       // return cipher mode (such as CIPH_CBC_MODE, etc.)
       int cipher_mode() const
       {
 	check_initialized();
-	return EVP_CIPHER_CTX_mode (&ctx);  
+	return cipher_get_cipher_mode(&ctx);
       }
 
     private:
@@ -180,7 +194,7 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    EVP_CIPHER_CTX_cleanup(&ctx);
+	    cipher_free_ctx(&ctx);
 	    initialized = false;
 	  }
       }
@@ -193,7 +207,7 @@ namespace openvpn {
 #endif
       }
 
-      EVP_CIPHER_CTX ctx;
+      cipher_context_t ctx;
       bool initialized;
     };
   }

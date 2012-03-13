@@ -159,10 +159,8 @@ namespace openvpn {
       typename CRYPTO_API::HMACContext ctx_tmp;
       const size_t chunk = md.size();
 
-      ctx.init();
-      ctx_tmp.init();
-      ctx.reset(md, sec, sec_len);
-      ctx_tmp.reset(md, sec, sec_len);
+      ctx.init(md, sec, sec_len);
+      ctx_tmp.init(md, sec, sec_len);
       ctx.update(seed, seed_len);
       A1_len = ctx.final(A1);
 

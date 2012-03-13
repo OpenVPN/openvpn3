@@ -39,16 +39,15 @@ namespace openvpn {
 	throw hmac_context_digest_size();
 
       // initialize HMAC context with digest type and key
-      ctx.init();
-      ctx.reset(digest, key.data(), digest.size());
+      ctx.init(digest, key.data(), digest.size());
     }
 
-    size_t hmac(unsigned char *out, const size_t out_size,
-		const unsigned char *in, const size_t in_size)
+    void hmac(unsigned char *out, const size_t out_size,
+	      const unsigned char *in, const size_t in_size)
     {
       ctx.reset();
       ctx.update(in, in_size);
-      return ctx.final(out, out_size);
+      ctx.final(out);
     }
 
     // Special HMAC for OpenVPN control packets
@@ -69,7 +68,7 @@ namespace openvpn {
       unsigned char local_hmac[CRYPTO_API::HMACContext::MAX_HMAC_SIZE];
       if (hmac3_pre(data, data_size, l1, l2, l3))
 	{
-	  ctx.final(local_hmac, sizeof(local_hmac));
+	  ctx.final(local_hmac);
 	  return !memcmp_secure(data + l1, local_hmac, l2);
 	}
       else

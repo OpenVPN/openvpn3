@@ -47,17 +47,21 @@
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/init/initprocess.hpp>
 
+#include <openvpn/openssl/util/init.hpp>
+
 #include <openvpn/openssl/crypto/api.hpp>
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/rand.hpp>
-#include <openvpn/openssl/util/init.hpp>
 
 #ifdef USE_APPLE_SSL
+#include <openvpn/applecrypto/crypto/api.hpp>
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
 #include <openvpn/applecrypto/util/rand.hpp>
 #endif
 
 #ifdef USE_POLARSSL
+#include <openvpn/polarssl/crypto/api.hpp>
+//#include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
 #endif
 
@@ -73,18 +77,18 @@ typedef OpenSSLContext ServerSSLAPI;
 typedef OpenSSLRandom ServerRandomAPI;
 
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
-#if defined(USE_OPENSSL)
-typedef OpenSSLCryptoAPI ClientCryptoAPI;
-typedef OpenSSLContext ClientSSLAPI;
-typedef OpenSSLRandom ClientRandomAPI;
+#if defined(USE_POLARSSL)
+typedef PolarSSLCryptoAPI ClientCryptoAPI;
+typedef OpenSSLContext ClientSSLAPI; // fixme
+typedef PolarSSLRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)
 typedef AppleSSLCryptoAPI ClientCryptoAPI;
 typedef AppleSSLContext ClientSSLAPI;
 typedef AppleRandom ClientRandomAPI;
-#elif defined(USE_POLARSSL)
-typedef PolarSSLCryptoAPI ClientCryptoAPI;
-typedef OpenSSLContext ClientSSLAPI; // fixme
-typedef PolarSSLRandom ClientRandomAPI;
+#elif defined(USE_OPENSSL)
+typedef OpenSSLCryptoAPI ClientCryptoAPI;
+typedef OpenSSLContext ClientSSLAPI;
+typedef OpenSSLRandom ClientRandomAPI;
 #else
 #error No client SSL implementation defined
 #endif

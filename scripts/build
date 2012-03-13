@@ -82,7 +82,7 @@ fi
 # PolarSSL
 if [ "$PSSL" = "1" ]; then
     LIBS="$LIBS -lpolarssl"
-    CPPFLAGS="$CPPFLAGS -DHAVE_POLARSSL -I$POLARSSL_DIR/include"
+    CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL -I$POLARSSL_DIR/include"
     LIBDIRS="$LIBDIRS -L$POLARSSL_DIR/library"
 fi
 

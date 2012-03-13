@@ -61,8 +61,7 @@ namespace openvpn {
 	throw cipher_internal_error();
 
       // initialize cipher context with cipher type, key, and encrypt/decrypt mode
-      ctx.init();
-      ctx.reset(cipher, key.data(), mode);
+      ctx.init(cipher, key.data(), mode);
 
       // save mode in object
       mode_ = mode;

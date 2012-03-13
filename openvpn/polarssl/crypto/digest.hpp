@@ -1,13 +1,9 @@
-#ifndef OPENVPN_OPENSSL_CRYPTO_DIGEST_H
-#define OPENVPN_OPENSSL_CRYPTO_DIGEST_H
+#ifndef OPENVPN_POLARSSL_CRYPTO_DIGEST_H
+#define OPENVPN_POLARSSL_CRYPTO_DIGEST_H
 
 #include <string>
 
-#include <openssl/objects.h>
-#include <openssl/evp.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-#include <openssl/hmac.h>
+#include <polarssl/md.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -15,7 +11,7 @@
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
-  namespace OpenSSLCrypto {
+  namespace PolarSSLCrypto {
     class Digest
     {
       friend class DigestContext;
@@ -29,7 +25,7 @@ namespace openvpn {
 
       Digest(const std::string& name)
       {
-	digest_ = EVP_get_digestbyname(name.c_str());
+	digest_ = md_info_from_string(name.c_str());
 	if (!digest_)
 	  throw digest_not_found();
       }
@@ -37,24 +33,25 @@ namespace openvpn {
       const char *name() const
       {
 	check_initialized();
-	return EVP_MD_name(digest_);
+	return md_get_name(digest_);
       }
 
       size_t size() const
       {
 	check_initialized();
-	return EVP_MD_size(digest_);
+	return md_get_size(digest_);
       }
 
       bool defined() const { return digest_ != NULL; }
 
       // convenience methods for common digests
-      static Digest md5() { return Digest(EVP_md5()); }
-      static Digest sha1() { return Digest(EVP_sha1()); }
+      static Digest md5() { return Digest(md_info_from_type(POLARSSL_MD_MD5)); }
+      static Digest sha1() { return Digest(md_info_from_type(POLARSSL_MD_SHA1)); }
 
     private:
-      Digest(const EVP_MD *digest) : digest_(digest) {}
-      const EVP_MD *get() const
+      Digest(const md_info_t *digest) : digest_(digest) {}
+
+      const md_info_t *get() const
       {
 	check_initialized();
 	return digest_;
@@ -68,17 +65,18 @@ namespace openvpn {
 #endif
       }
 
-      const EVP_MD *digest_;
+      const md_info_t *digest_;
     };
 
     class DigestContext : boost::noncopyable
     {
     public:
       OPENVPN_SIMPLE_EXCEPTION(digest_uninitialized);
-      OPENVPN_EXCEPTION(digest_openssl_error);
+      OPENVPN_SIMPLE_EXCEPTION(digest_final_overflow);
+      OPENVPN_EXCEPTION(digest_polarssl_error);
 
       enum {
-	MAX_DIGEST_SIZE = EVP_MAX_MD_SIZE
+	MAX_DIGEST_SIZE = POLARSSL_MD_MAX_SIZE
       };
 
       DigestContext()
@@ -97,31 +95,33 @@ namespace openvpn {
       void init(const Digest& digest)
       {
 	erase();
-	if (!EVP_DigestInit(&ctx, digest.get()))
-	  throw digest_openssl_error("EVP_DigestInit");
+	ctx.md_ctx = NULL;
+	if (md_init_ctx(&ctx, digest.get()) < 0)
+	  throw digest_polarssl_error("md_init_ctx");
+	if (md_starts(&ctx) < 0)
+	  throw digest_polarssl_error("md_starts");
 	initialized = true;
       }
 
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
-	if (!EVP_DigestUpdate(&ctx, in, int(size)))
-	  throw digest_openssl_error("EVP_DigestUpdate");
+	if (md_update(&ctx, in, size) < 0)
+	  throw digest_polarssl_error("md_update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
-	unsigned int outlen;
-	if (!EVP_DigestFinal(&ctx, out, &outlen))
-	  throw digest_openssl_error("EVP_DigestFinal");
-	return outlen;
+	if (md_finish(&ctx, out) < 0)
+	  throw digest_polarssl_error("md_finish");
+	return size_();
       }
 
       size_t size() const
       {
 	check_initialized();
-	return EVP_MD_CTX_size(&ctx);
+	return size_();
       }
 
       bool is_initialized() const { return initialized; }
@@ -131,9 +131,14 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    EVP_MD_CTX_cleanup(&ctx);
+	    md_free_ctx(&ctx);
 	    initialized = false;
 	  }
+      }
+
+      size_t size_() const
+      {
+	return ctx.md_info->size;
       }
 
       void check_initialized() const
@@ -145,7 +150,7 @@ namespace openvpn {
       }
 
       bool initialized;
-      EVP_MD_CTX ctx;
+      md_context_t ctx;
     };
   }
 }

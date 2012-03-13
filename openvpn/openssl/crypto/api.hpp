@@ -7,7 +7,7 @@
 
 namespace openvpn {
 
-  // type container for OpenSSL Crypto API
+  // type container for OpenSSL Crypto-level API
   struct OpenSSLCryptoAPI {
     // cipher
     typedef OpenSSLCrypto::Cipher Cipher;
