@@ -202,6 +202,8 @@ namespace openvpn {
 	CT_INTERNAL_ERROR = -0x8001
       };
 
+      friend class PolarSSLContext;
+
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
@@ -211,81 +213,6 @@ namespace openvpn {
       enum {
 	SHOULD_RETRY = -1
       };
-
-      SSL(const PolarSSLContext* ctx)
-      {
-	clear();
-	try {
-	  const Config& c = ctx->config;
-	  int status;
-
-	  // init SSL object
-	  ssl = new ssl_context;
-	  std::memset(ssl, 0, sizeof(ssl));
-	  status = ssl_init(ssl);
-	  if (status < 0)
-	    throw PolarSSLException("error in ssl_init", status);
-
-	  // set client/server mode
-	  if (c.mode.is_server())
-	    ssl_set_endpoint(ssl, SSL_IS_SERVER);
-	  else if (c.mode.is_client())
-	    ssl_set_endpoint(ssl, SSL_IS_CLIENT);
-	  else
-	    throw PolarSSLException("unknown client/server mode");
-
-	  // peer must present a valid certificate
-	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
-
-	  // set verify callback
-	  ssl_set_verify(ssl, verify_callback, (void *)ctx);
-
-	  // allocate session object, but don't support SSL-level session resume
-	  sess = new ssl_session;
-	  std::memset(sess, 0, sizeof(sess));
-	  ssl_set_session(ssl, 0, 0, sess);
-
-	  // set list of allowed ciphersuites
-	  ssl_set_ciphersuites(ssl, (int *)polarssl_ctx_private::default_ciphersuites); // fixme -- fix PolarSSL to not require cast
-
-	  // set CA chain
-	  if (c.ca_chain)
-	    ssl_set_ca_chain(ssl, c.ca_chain->get(), NULL, NULL);
-	  else
-	    throw PolarSSLException("CA chain not defined");
-
-	  // set our own certificate, supporting chain (i.e. extra-certs), and private key
-	  if (c.crt_chain && c.priv_key)
-	    ssl_set_own_cert(ssl, c.crt_chain->get(), c.priv_key->get());
-	  else
-	    throw PolarSSLException("cert and/or private key is undefined");
-
-	  // fixme -- set pkcs11
-
-	  // fixme -- set DH
-
-	  // configure ciphertext buffers
-	  ct_in.set_frame(c.frame);
-	  ct_out.set_frame(c.frame);
-
-	  // set BIO
-	  ssl_set_bio(ssl, ct_read_func, this, ct_write_func, this);
-
-	  // set RNG
-	  if (c.rng)
-	    {
-	      rng = c.rng;
-	      ssl_set_rng(ssl, rng_callback, this);
-	    }
-	  else
-	    throw PolarSSLException("RNG not defined");
-	}
-	catch (...)
-	  {
-	    erase();
-	    throw;
-	  }
-      }
 
       void start_handshake()
       {
@@ -361,6 +288,81 @@ namespace openvpn {
       }
 
     private:
+      SSL(const PolarSSLContext* ctx)
+      {
+	clear();
+	try {
+	  const Config& c = ctx->config;
+	  int status;
+
+	  // init SSL object
+	  ssl = new ssl_context;
+	  std::memset(ssl, 0, sizeof(ssl));
+	  status = ssl_init(ssl);
+	  if (status < 0)
+	    throw PolarSSLException("error in ssl_init", status);
+
+	  // set client/server mode
+	  if (c.mode.is_server())
+	    ssl_set_endpoint(ssl, SSL_IS_SERVER);
+	  else if (c.mode.is_client())
+	    ssl_set_endpoint(ssl, SSL_IS_CLIENT);
+	  else
+	    throw PolarSSLException("unknown client/server mode");
+
+	  // peer must present a valid certificate
+	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
+
+	  // set verify callback
+	  ssl_set_verify(ssl, verify_callback, (void *)ctx);
+
+	  // allocate session object, but don't support SSL-level session resume
+	  sess = new ssl_session;
+	  std::memset(sess, 0, sizeof(sess));
+	  ssl_set_session(ssl, 0, 0, sess);
+
+	  // set list of allowed ciphersuites
+	  ssl_set_ciphersuites(ssl, (int *)polarssl_ctx_private::default_ciphersuites); // fixme -- fix PolarSSL to not require cast
+
+	  // set CA chain
+	  if (c.ca_chain)
+	    ssl_set_ca_chain(ssl, c.ca_chain->get(), NULL, NULL);
+	  else
+	    throw PolarSSLException("CA chain not defined");
+
+	  // set our own certificate, supporting chain (i.e. extra-certs), and private key
+	  if (c.crt_chain && c.priv_key)
+	    ssl_set_own_cert(ssl, c.crt_chain->get(), c.priv_key->get());
+	  else
+	    throw PolarSSLException("cert and/or private key is undefined");
+
+	  // fixme -- set pkcs11
+
+	  // fixme -- set DH
+
+	  // configure ciphertext buffers
+	  ct_in.set_frame(c.frame);
+	  ct_out.set_frame(c.frame);
+
+	  // set BIO
+	  ssl_set_bio(ssl, ct_read_func, this, ct_write_func, this);
+
+	  // set RNG
+	  if (c.rng)
+	    {
+	      rng = c.rng;
+	      ssl_set_rng(ssl, rng_callback, this);
+	    }
+	  else
+	    throw PolarSSLException("RNG not defined");
+	}
+	catch (...)
+	  {
+	    erase();
+	    throw;
+	  }
+      }
+
       // cleartext read callback
       static int ct_read_func(void *arg, unsigned char *data, size_t length)
       {
@@ -423,7 +425,7 @@ namespace openvpn {
       MemQStream ct_out;   // read ciphertext from here
     };
 
-    // begin main class
+    /////// start of main class implementation
 
     explicit PolarSSLContext(const Config& config_arg)
     {

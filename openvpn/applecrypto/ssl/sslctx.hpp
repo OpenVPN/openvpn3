@@ -90,65 +90,14 @@ namespace openvpn {
     // Normally instantiated by AppleSSLContext::ssl().
     class SSL : public RC<thread_unsafe_refcount>
     {
+      friend class AppleSSLContext;
+
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
       enum {
 	SHOULD_RETRY = -1
       };
-
-      SSL(const AppleSSLContext& ctx)
-      {
-	ssl_clear();
-	try {
-	  OSStatus s;
-
-	  // init SSL object, select client or server mode
-	  if (ctx.mode().is_server())
-	    s = SSLNewContext(true, &ssl);
-	  else if (ctx.mode().is_client())
-	    s = SSLNewContext(false, &ssl);
-	  else
-	    OPENVPN_THROW(ssl_context_error, "AppleSSLContext::SSL: unknown client/server mode");
-	  if (s)
-	    throw CFException(s, "SSLNewContext failed");
-
-	  // use TLS v1
-	  s = SSLSetProtocolVersionEnabled(ssl, kSSLProtocol2, false);
-	  if (s)
-	    throw CFException(s, "SSLSetProtocolVersionEnabled !S2 failed");
-	  s = SSLSetProtocolVersionEnabled(ssl, kSSLProtocol3, false);
-	  if (s)
-	    throw CFException(s, "SSLSetProtocolVersionEnabled !S3 failed");
-	  s = SSLSetProtocolVersionEnabled(ssl, kTLSProtocol1, true);
-	  if (s)
-	    throw CFException(s, "SSLSetProtocolVersionEnabled T1 failed");
-
-	  // configure cert, private key, and supporting CAs via identity wrapper
-	  s = SSLSetCertificate(ssl, ctx.identity()());
-	  if (s)
-	    throw CFException(s, "SSLSetCertificate failed");
-
-	  // configure ciphertext buffers
-	  ct_in.set_frame(ctx.frame());
-	  ct_out.set_frame(ctx.frame());
-
-	  // configure the "connection" object to be self
-	  s = SSLSetConnection(ssl, this);
-	  if (s)
-	    throw CFException(s, "SSLSetConnection");
-
-	  // configure ciphertext read/write callbacks
-	  s = SSLSetIOFuncs(ssl, ct_read_func, ct_write_func);
-	  if (s)
-	    throw CFException(s, "SSLSetIOFuncs failed");
-	}
-	catch (...)
-	  {
-	    ssl_erase();
-	    throw;
-	  }
-      }
 
       void start_handshake()
       {
@@ -222,6 +171,59 @@ namespace openvpn {
       }
 
     private:
+      SSL(const AppleSSLContext& ctx)
+      {
+	ssl_clear();
+	try {
+	  OSStatus s;
+
+	  // init SSL object, select client or server mode
+	  if (ctx.mode().is_server())
+	    s = SSLNewContext(true, &ssl);
+	  else if (ctx.mode().is_client())
+	    s = SSLNewContext(false, &ssl);
+	  else
+	    OPENVPN_THROW(ssl_context_error, "AppleSSLContext::SSL: unknown client/server mode");
+	  if (s)
+	    throw CFException(s, "SSLNewContext failed");
+
+	  // use TLS v1
+	  s = SSLSetProtocolVersionEnabled(ssl, kSSLProtocol2, false);
+	  if (s)
+	    throw CFException(s, "SSLSetProtocolVersionEnabled !S2 failed");
+	  s = SSLSetProtocolVersionEnabled(ssl, kSSLProtocol3, false);
+	  if (s)
+	    throw CFException(s, "SSLSetProtocolVersionEnabled !S3 failed");
+	  s = SSLSetProtocolVersionEnabled(ssl, kTLSProtocol1, true);
+	  if (s)
+	    throw CFException(s, "SSLSetProtocolVersionEnabled T1 failed");
+
+	  // configure cert, private key, and supporting CAs via identity wrapper
+	  s = SSLSetCertificate(ssl, ctx.identity()());
+	  if (s)
+	    throw CFException(s, "SSLSetCertificate failed");
+
+	  // configure ciphertext buffers
+	  ct_in.set_frame(ctx.frame());
+	  ct_out.set_frame(ctx.frame());
+
+	  // configure the "connection" object to be self
+	  s = SSLSetConnection(ssl, this);
+	  if (s)
+	    throw CFException(s, "SSLSetConnection");
+
+	  // configure ciphertext read/write callbacks
+	  s = SSLSetIOFuncs(ssl, ct_read_func, ct_write_func);
+	  if (s)
+	    throw CFException(s, "SSLSetIOFuncs failed");
+	}
+	catch (...)
+	  {
+	    ssl_erase();
+	    throw;
+	  }
+      }
+
       static OSStatus ct_read_func(SSLConnectionRef cref, void *data, size_t *length)
       {
 	try {
@@ -269,6 +271,8 @@ namespace openvpn {
       bool overflow;
     };
 
+    /////// start of main class implementation
+
     explicit AppleSSLContext(const Config& config)
       : config_(config)
     {
@@ -279,6 +283,8 @@ namespace openvpn {
     SSL::Ptr ssl() const { return SSL::Ptr(new SSL(*this)); }
 
     const Mode& mode() const { return config_.mode; }
+
+  private:
     Config::Flags flags() const { return config_.flags; }
     const Frame::Ptr& frame() const { return config_.frame; }
     const CF::Array& identity() const { return config_.identity; }
@@ -302,7 +308,6 @@ namespace openvpn {
 	return CF::Array(); // not found
     }
 
-  private:
     Config config_;
   };
 

@@ -183,46 +183,14 @@ namespace openvpn {
     // Normally instantiated by OpenSSLContext::ssl().
     class SSL : public RC<thread_unsafe_refcount>
     {
+      friend class OpenSSLContext;
+
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
       enum {
 	SHOULD_RETRY = -1
       };
-
-      SSL(const OpenSSLContext& ctx)
-      {
-	ssl_clear();
-	try {
-	  // init SSL objects
-	  ssl = SSL_new(ctx.raw_ctx());
-	  if (!ssl)
-	    throw OpenSSLException("OpenSSLContext::SSL: SSL_new failed");
-	  ssl_bio = BIO_new(BIO_f_ssl());
-	  if (!ssl_bio)
-	    throw OpenSSLException("OpenSSLContext::SSL: BIO_new BIO_f_ssl failed");
-	  ct_in = mem_bio(ctx.frame());
-	  ct_out = mem_bio(ctx.frame());
-
-	  // set client/server mode
-	  if (ctx.mode().is_server())
-	    SSL_set_accept_state(ssl);
-	  else if (ctx.mode().is_client())
-	    SSL_set_connect_state(ssl);
-	  else
-	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext::SSL: unknown client/server mode");
-
-	  // effect SSL/BIO linkage
-	  ssl_bio_linkage = true; // after this point, no need to explicitly BIO_free ct_in/ct_out
-	  SSL_set_bio (ssl, ct_in, ct_out);
-	  BIO_set_ssl (ssl_bio, ssl, BIO_NOCLOSE);
-	}
-	catch (...)
-	  {
-	    ssl_erase();
-	    throw;
-	  }
-      }
 
       void start_handshake()
       {
@@ -295,6 +263,40 @@ namespace openvpn {
       }
 
     private:
+      SSL(const OpenSSLContext& ctx)
+      {
+	ssl_clear();
+	try {
+	  // init SSL objects
+	  ssl = SSL_new(ctx.raw_ctx());
+	  if (!ssl)
+	    throw OpenSSLException("OpenSSLContext::SSL: SSL_new failed");
+	  ssl_bio = BIO_new(BIO_f_ssl());
+	  if (!ssl_bio)
+	    throw OpenSSLException("OpenSSLContext::SSL: BIO_new BIO_f_ssl failed");
+	  ct_in = mem_bio(ctx.frame());
+	  ct_out = mem_bio(ctx.frame());
+
+	  // set client/server mode
+	  if (ctx.mode().is_server())
+	    SSL_set_accept_state(ssl);
+	  else if (ctx.mode().is_client())
+	    SSL_set_connect_state(ssl);
+	  else
+	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext::SSL: unknown client/server mode");
+
+	  // effect SSL/BIO linkage
+	  ssl_bio_linkage = true; // after this point, no need to explicitly BIO_free ct_in/ct_out
+	  SSL_set_bio (ssl, ct_in, ct_out);
+	  BIO_set_ssl (ssl_bio, ssl, BIO_NOCLOSE);
+	}
+	catch (...)
+	  {
+	    ssl_erase();
+	    throw;
+	  }
+      }
+
       // Print a one line summary of SSL/TLS session handshake.
       static std::string ssl_handshake_details (const ::SSL *c_ssl)
       {
@@ -365,6 +367,7 @@ namespace openvpn {
       bool overflow;
     };
 
+  private:
     class ExternalPKIImpl {
     public:
       ExternalPKIImpl(SSL_CTX* ssl_ctx, ::X509* cert, ExternalPKIBase* external_pki_arg)
@@ -525,6 +528,7 @@ namespace openvpn {
 
     /////// start of main class implementation
 
+  public:
     explicit OpenSSLContext(const Config& config)
       : ctx_(NULL), epki_(NULL)
     {
@@ -635,11 +639,12 @@ namespace openvpn {
     }
 
     const Mode& mode() const { return mode_; }
+ 
+  private:
     Config::Flags flags() const { return flags_; }
     const Frame::Ptr& frame() const { return frame_; }
     SSL_CTX* raw_ctx() const { return ctx_; }
- 
-  private:
+
     bool verify_ns_cert_type(const ::X509* cert) const
     {
       if (cert_type_ == Config::CERT_TYPE_NS_SERVER)

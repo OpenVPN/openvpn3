@@ -754,16 +754,23 @@ void test(const int thread_num)
 	NoisyWire client_to_server("Client -> Server", &time, rand, 8, 16, 32); // last value: 32
 	NoisyWire server_to_client("Server -> Client", &time, rand, 8, 16, 32); // last value: 32
 
-	// start feedback loop
-	cli_proto.initial_app_send(message);
-	serv_proto.start();
+	int j = -1;
+	try {
+	  // start feedback loop
+	  cli_proto.initial_app_send(message);
+	  serv_proto.start();
 
-	// message loop
-	for (int j = 0; j < ITER; ++j)
+	  // message loop
+	  for (j = 0; j < ITER; ++j)
+	    {
+	      client_to_server.xfer(cli_proto, serv_proto);
+	      server_to_client.xfer(serv_proto, cli_proto);
+	      time += time_step;
+	    }
+	}
+	catch (const std::exception& e)
 	  {
-	    client_to_server.xfer(cli_proto, serv_proto);
-	    server_to_client.xfer(serv_proto, cli_proto);
-	    time += time_step;
+	    std::cerr << "Exception[" << i << '/' << j << "]: " << e.what() << std::endl;
 	  }
       }
 
