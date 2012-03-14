@@ -18,7 +18,7 @@ namespace openvpn {
       friend class CipherContext;
 
     public:
-      OPENVPN_SIMPLE_EXCEPTION(cipher_not_found);
+      OPENVPN_EXCEPTION(cipher_not_found);
       OPENVPN_SIMPLE_EXCEPTION(cipher_undefined);
 
       Cipher() : cipher_(NULL) {}
@@ -27,7 +27,7 @@ namespace openvpn {
       {
 	cipher_ = cipher_info_from_string(name.c_str());
 	if (!cipher_)
-	  throw cipher_not_found();
+	  throw cipher_not_found(name);
       }
 
       const char *name() const

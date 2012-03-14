@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# generate expire time in python: time.mktime((2012, 5, 1, 0, 0, 0, 0, 0, -1))
+# -flto=4 -Wl,--no-as-needed \
+set -e
+swig -c++ -java -package net.openvpn.openvpn -I$OVPN3_DIR ovpncli.i
+$GPP_CMD \
+    --sysroot=$NDK/platforms/android-9/arch-arm \
+    -DAPP_EXPIRE_TIME=1335852000 \
+    -O3 -fPIC \
+    -fno-strict-aliasing \
+    -Wall -Wno-sign-compare -Wno-unused-parameter \
+    -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
+    -DUSE_POLARSSL \
+    -D__GLIBC__ \
+    -D_GLIBCXX_HAVE_FENV_H=1 \
+    -DBOOST_NO_INTRINSIC_WCHAR_T \
+    -I$BOOST_DIR \
+    -I$POLARSSL_DIR/include \
+    -I$OVPN3_DIR \
+    -L$BOOST_DIR/stage/lib \
+    -L$POLARSSL_DIR/library \
+    ovpncli_wrap.cxx \
+    -o libovpncli.so \
+    -shared -Wl,-soname,libovpncli.so \
+    -lpolarssl \
+    -lboost_system -lboost_thread
+$STRIP_CMD libovpncli.so

@@ -18,7 +18,7 @@ namespace openvpn {
       friend class HMACContext;
 
     public:
-      OPENVPN_SIMPLE_EXCEPTION(digest_not_found);
+      OPENVPN_EXCEPTION(digest_not_found);
       OPENVPN_SIMPLE_EXCEPTION(digest_undefined);
 
       Digest() : digest_(NULL) {}
@@ -27,7 +27,7 @@ namespace openvpn {
       {
 	digest_ = md_info_from_string(name.c_str());
 	if (!digest_)
-	  throw digest_not_found();
+	  throw digest_not_found(name);
       }
 
       const char *name() const
