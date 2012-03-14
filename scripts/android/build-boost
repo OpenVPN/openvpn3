@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 export BOOST=boost_1_48_0
-rm -rf $BOOST $DIST
+rm -rf $BOOST
 tar xfj ~/Downloads/$BOOST.tar.bz2
 cd $BOOST
 patch -p2 <$DL/changeset_75599.diff

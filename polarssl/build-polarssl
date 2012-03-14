@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Example:
+#   ./build-polarssl                   -> native build
+#   TARGET=linux-arm ./build-polarssl  -> cross build for Linux ARM
+#   TARGET=android ./build-polarssl    -> cross build for Android
+# when TARGET is specified, use $TARGET.cmake as toolchain file
+set -e
+PD=$OVPN3_DIR/polarssl
+export POLARSSL=polarssl-1.1.1
+rm -rf $POLARSSL
+tar xfz $DL/$POLARSSL-gpl.tgz
+cd $POLARSSL
+patch -p1 <$PD/polarssl.patch
+cp $PD/config.h include/polarssl/
+cp $PD/CMakeLists.txt .
+if [ "$TARGET" ]; then
+    cmake -DCMAKE_TOOLCHAIN_FILE=$PD/$TARGET.cmake . && make
+else
+    cmake . && make
+fi
