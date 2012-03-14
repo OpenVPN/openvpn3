@@ -11,112 +11,113 @@
 #include <openvpn/openssl/util/error.hpp>
 
 namespace openvpn {
+  namespace OpenSSLPKI {
 
-  class PKey
-  {
-  public:
-    PKey() : pkey_(NULL) {}
-
-    PKey(const std::string& pkey_txt, const std::string& title)
-      : pkey_(NULL)
+    class PKey
     {
-      parse_pem(pkey_txt, title);
-    }
+    public:
+      PKey() : pkey_(NULL) {}
 
-    PKey(const PKey& other)
-      : pkey_(NULL)
-    {
-      assign(other.pkey_);
-    }
+      PKey(const std::string& pkey_txt, const std::string& title)
+	: pkey_(NULL)
+      {
+	parse_pem(pkey_txt, title);
+      }
 
-    void operator=(const PKey& other)
-    {
-      assign(other.pkey_);
-    }
+      PKey(const PKey& other)
+	: pkey_(NULL)
+      {
+	assign(other.pkey_);
+      }
 
-    bool defined() const { return pkey_ != NULL; }
-    EVP_PKEY* obj() const { return pkey_; }
+      void operator=(const PKey& other)
+      {
+	assign(other.pkey_);
+      }
 
-    void parse_pem(const std::string& pkey_txt, const std::string& title)
-    {
-      BIO *bio = BIO_new_mem_buf(const_cast<char *>(pkey_txt.c_str()), pkey_txt.length());
-      if (!bio)
-	throw OpenSSLException();
+      bool defined() const { return pkey_ != NULL; }
+      EVP_PKEY* obj() const { return pkey_; }
 
-      EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
-      BIO_free(bio);
-      if (!pkey)
-	throw OpenSSLException(std::string("PKey::parse_pem: error in ") + title + std::string(":"));
+      void parse_pem(const std::string& pkey_txt, const std::string& title)
+      {
+	BIO *bio = BIO_new_mem_buf(const_cast<char *>(pkey_txt.c_str()), pkey_txt.length());
+	if (!bio)
+	  throw OpenSSLException();
 
-      erase();
-      pkey_ = pkey;
-    }
+	EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
+	BIO_free(bio);
+	if (!pkey)
+	  throw OpenSSLException(std::string("PKey::parse_pem: error in ") + title + std::string(":"));
 
-    std::string render_pem() const
-    {
-      if (pkey_)
-	{
-	  BIO *bio = BIO_new(BIO_s_mem());
-	  const int ret = PEM_write_bio_PrivateKey(bio, pkey_, NULL, NULL, 0, NULL, NULL);
-	  if (ret == 0)
-	    {
-	      BIO_free(bio);
-	      throw OpenSSLException("PKey::render_pem");
-	    }
+	erase();
+	pkey_ = pkey;
+      }
 
+      std::string render_pem() const
+      {
+	if (pkey_)
 	  {
-	    char *temp;
-	    const int buf_len = BIO_get_mem_data(bio, &temp);
-	    std::string ret = std::string(temp, buf_len);
-	    BIO_free(bio);
-	    return ret;
+	    BIO *bio = BIO_new(BIO_s_mem());
+	    const int ret = PEM_write_bio_PrivateKey(bio, pkey_, NULL, NULL, 0, NULL, NULL);
+	    if (ret == 0)
+	      {
+		BIO_free(bio);
+		throw OpenSSLException("PKey::render_pem");
+	      }
+
+	    {
+	      char *temp;
+	      const int buf_len = BIO_get_mem_data(bio, &temp);
+	      std::string ret = std::string(temp, buf_len);
+	      BIO_free(bio);
+	      return ret;
+	    }
 	  }
-	}
-      else
-	return "";
-    }
+	else
+	  return "";
+      }
 
-    void erase()
-    {
-      if (pkey_)
-	{
-	  EVP_PKEY_free(pkey_);
-	  pkey_ = NULL;
-	}
-    }
+      void erase()
+      {
+	if (pkey_)
+	  {
+	    EVP_PKEY_free(pkey_);
+	    pkey_ = NULL;
+	  }
+      }
 
-    ~PKey()
-    {
-      erase();
-    }
+      ~PKey()
+      {
+	erase();
+      }
 
-  private:
-    static EVP_PKEY *dup(const EVP_PKEY *pkey)
-    {
-      // No OpenSSL EVP_PKEY_dup method so we roll our own 
-      if (pkey)
-	{
-	  EVP_PKEY* pDupKey = EVP_PKEY_new();
-	  RSA* pRSA = EVP_PKEY_get1_RSA(const_cast<EVP_PKEY *>(pkey));
-	  RSA* pRSADupKey = RSAPrivateKey_dup(pRSA);
-	  RSA_free(pRSA);
-	  EVP_PKEY_set1_RSA(pDupKey, pRSADupKey);
-	  RSA_free(pRSADupKey);
-	  return pDupKey;
-	}
-      else
-	return NULL;
-    }
+    private:
+      static EVP_PKEY *dup(const EVP_PKEY *pkey)
+      {
+	// No OpenSSL EVP_PKEY_dup method so we roll our own 
+	if (pkey)
+	  {
+	    EVP_PKEY* pDupKey = EVP_PKEY_new();
+	    RSA* pRSA = EVP_PKEY_get1_RSA(const_cast<EVP_PKEY *>(pkey));
+	    RSA* pRSADupKey = RSAPrivateKey_dup(pRSA);
+	    RSA_free(pRSA);
+	    EVP_PKEY_set1_RSA(pDupKey, pRSADupKey);
+	    RSA_free(pRSADupKey);
+	    return pDupKey;
+	  }
+	else
+	  return NULL;
+      }
 
-    void assign(const EVP_PKEY *pkey)
-    {
-      erase();
-      pkey_ = dup(pkey);
-    }
+      void assign(const EVP_PKEY *pkey)
+      {
+	erase();
+	pkey_ = dup(pkey);
+      }
 
-    EVP_PKEY *pkey_;
-  };
-
+      EVP_PKEY *pkey_;
+    };
+  }
 } // namespace openvpn
 
 #endif // OPENVPN_OPENSSL_PKI_PKEY_H

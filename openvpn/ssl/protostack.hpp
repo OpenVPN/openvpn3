@@ -382,7 +382,7 @@ namespace openvpn {
     }
 
   private:
-    typename SSLContext::SSLPtr ssl_;
+    typename SSLContext::SSL::Ptr ssl_;
     Frame::Ptr frame_;
     int up_stack_reentry_level;
     bool invalidated_;

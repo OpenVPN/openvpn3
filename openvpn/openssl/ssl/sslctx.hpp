@@ -1,6 +1,7 @@
 #ifndef OPENVPN_OPENSSL_SSL_SSLCTX_H
 #define OPENVPN_OPENSSL_SSL_SSLCTX_H
 
+#include <string>
 #include <cstring>
 #include <sstream>
 
@@ -44,7 +45,7 @@ namespace openvpn {
     OPENVPN_EXCEPTION(ssl_ciphertext_in_overflow);
 
     typedef boost::intrusive_ptr<OpenSSLContext> Ptr;
-    typedef CertCRLListTemplate<X509List, CRLList> CertCRLList;
+    typedef CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList> CertCRLList;
 
     enum {
       MAX_CIPHERTEXT_IN = 64
@@ -68,10 +69,10 @@ namespace openvpn {
 
       Mode mode;
       CertCRLList ca;
-      X509 cert;
-      X509List extra_certs;
-      PKey pkey;
-      DH dh; // only needed in server mode
+      OpenSSLPKI::X509 cert;
+      OpenSSLPKI::X509List extra_certs;
+      OpenSSLPKI::PKey pkey;
+      OpenSSLPKI::DH dh; // only needed in server mode
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       Flags flags;
@@ -183,6 +184,8 @@ namespace openvpn {
     class SSL : public RC<thread_unsafe_refcount>
     {
     public:
+      typedef boost::intrusive_ptr<SSL> Ptr;
+
       enum {
 	SHOULD_RETRY = -1
       };
@@ -522,8 +525,6 @@ namespace openvpn {
 
     /////// start of main class implementation
 
-    typedef boost::intrusive_ptr<SSL> SSLPtr;
-
     explicit OpenSSLContext(const Config& config)
       : ctx_(NULL), epki_(NULL)
     {
@@ -586,7 +587,7 @@ namespace openvpn {
 	  // chain but shouldn't be included in the verify chain.
 	  if (config.extra_certs.defined())
 	    {
-	      for (X509List::const_iterator i = config.extra_certs.begin(); i != config.extra_certs.end(); i++)
+	      for (OpenSSLPKI::X509List::const_iterator i = config.extra_certs.begin(); i != config.extra_certs.end(); i++)
 		{
 		  if (SSL_CTX_add_extra_chain_cert(ctx_, (*i)->obj_dup()) != 1)
 		    throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
@@ -620,11 +621,11 @@ namespace openvpn {
 	}
     }
 
-    SSLPtr ssl() const { return SSLPtr(new SSL(*this)); }
+    SSL::Ptr ssl() const { return SSL::Ptr(new SSL(*this)); }
 
     void update_trust(const CertCRLList& cc)
     {
-      X509Store store(cc);
+      OpenSSLPKI::X509Store store(cc);
       SSL_CTX_set_cert_store(ctx_, store.move());
     }
 
@@ -710,8 +711,6 @@ namespace openvpn {
     ExternalPKIImpl* epki_;
   };
 
-  typedef OpenSSLContext::Ptr OpenSSLContextPtr;
+}
 
-} // namespace openvpn
-
-#endif // OPENVPN_OPENSSL_SSL_SSLCTX_H
+#endif

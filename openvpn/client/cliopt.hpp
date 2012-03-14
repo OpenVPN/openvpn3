@@ -38,7 +38,7 @@
 
 #ifdef USE_POLARSSL
 #include <openvpn/polarssl/crypto/api.hpp>
-//#include <openvpn/polarssl/ssl/sslctx.hpp> // fixme
+#include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
 #endif
 
@@ -53,7 +53,7 @@ namespace openvpn {
 
 #if defined(USE_POLARSSL)
     typedef PolarSSLCryptoAPI ClientCryptoAPI;
-    typedef OpenSSLContext ClientSSLAPI; // fixme
+    typedef PolarSSLContext ClientSSLAPI;
     typedef PolarSSLRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
     typedef AppleSSLCryptoAPI ClientCryptoAPI;
@@ -117,6 +117,9 @@ namespace openvpn {
       cc.frame = frame;
 #ifdef OPENVPN_SSL_DEBUG
       cc.enable_debug();
+#endif
+#if defined(USE_POLARSSL)
+      cc.rng = rng;
 #endif
       cc.load(opt);
       if (!cc.mode.is_client())

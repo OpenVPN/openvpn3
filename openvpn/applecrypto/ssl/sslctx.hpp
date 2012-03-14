@@ -91,6 +91,8 @@ namespace openvpn {
     class SSL : public RC<thread_unsafe_refcount>
     {
     public:
+      typedef boost::intrusive_ptr<SSL> Ptr;
+
       enum {
 	SHOULD_RETRY = -1
       };
@@ -211,7 +213,7 @@ namespace openvpn {
 
       std::string ssl_handshake_details() const // fixme -- code me
       {
-	return "[not implemented]";
+	return "[AppleSSL not implemented]";
       }
 
       ~SSL()
@@ -267,8 +269,6 @@ namespace openvpn {
       bool overflow;
     };
 
-    typedef boost::intrusive_ptr<SSL> SSLPtr;
-
     explicit AppleSSLContext(const Config& config)
       : config_(config)
     {
@@ -276,7 +276,7 @@ namespace openvpn {
 	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");	
     }
 
-    SSLPtr ssl() const { return SSLPtr(new SSL(*this)); }
+    SSL::Ptr ssl() const { return SSL::Ptr(new SSL(*this)); }
 
     const Mode& mode() const { return config_.mode; }
     Config::Flags flags() const { return config_.flags; }

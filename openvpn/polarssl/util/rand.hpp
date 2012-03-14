@@ -31,6 +31,11 @@ namespace openvpn {
 	throw rand_error_polarssl("CTR_DRBG rand_bytes");
     }
 
+    int rand_bytes_noexcept(unsigned char *buf, const size_t size)
+    {
+      return ctr_drbg_random(&ctx, buf, size);
+    }
+
   private:
     static int entropy_poll(void *data, unsigned char *output, size_t len)
     {

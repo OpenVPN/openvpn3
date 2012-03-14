@@ -53,6 +53,16 @@
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/rand.hpp>
 
+// kludge to work around symbol conflict between OpenSSL and PolarSSL
+#undef KU_DIGITAL_SIGNATURE
+#undef KU_NON_REPUDIATION
+#undef KU_KEY_ENCIPHERMENT
+#undef KU_DATA_ENCIPHERMENT
+#undef KU_KEY_AGREEMENT
+#undef KU_KEY_CERT_SIGN
+#undef KU_CRL_SIGN
+#undef SSL_VERIFY_NONE
+
 #ifdef USE_APPLE_SSL
 #include <openvpn/applecrypto/crypto/api.hpp>
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
@@ -61,7 +71,7 @@
 
 #ifdef USE_POLARSSL
 #include <openvpn/polarssl/crypto/api.hpp>
-//#include <openvpn/polarssl/ssl/sslctx.hpp>
+#include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
 #endif
 
@@ -79,7 +89,7 @@ typedef OpenSSLRandom ServerRandomAPI;
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
 #if defined(USE_POLARSSL)
 typedef PolarSSLCryptoAPI ClientCryptoAPI;
-typedef OpenSSLContext ClientSSLAPI; // fixme
+typedef PolarSSLContext ClientSSLAPI;
 typedef PolarSSLRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)
 typedef AppleSSLCryptoAPI ClientCryptoAPI;
@@ -627,6 +637,9 @@ void test(const int thread_num)
 #endif
 #ifdef VERBOSE
     cc.enable_debug();
+#endif
+#if defined(USE_POLARSSL)
+    cc.rng = rng_cli;
 #endif
 
     // client stats

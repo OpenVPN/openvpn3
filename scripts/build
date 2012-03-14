@@ -11,6 +11,7 @@ if [ -z "$1" ]; then
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
     echo " PSSL=1 -- include PolarSSL"
+    echo " NOSSL=1 -- don't include OpenSSL (non-mac)"
     echo " OSSL=1 -- include OpenSSL on Mac"
     echo " SSL_BOTH=1 -- include OpenSSL and Apple SSL on Mac"
     echo " NOTHREADS=1 -- disable threads"
@@ -60,10 +61,12 @@ if [ "$PLATFORM" = "mac" ]; then
     # -framework CoreServices
     LIBS="$LIBS -framework CoreFoundation"
 else
-    CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
-    LIBS="$LIBS -lssl -lcrypto"
+    if [ "$NOSSL" != "1" ]; then
+	CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
+	LIBS="$LIBS -lssl -lcrypto"
+    fi
 fi
-if [ "$OPENSSL_DIR" ]; then
+if [ "$OPENSSL_DIR" ] && [ "$NOSSL" != "1" ]; then
     CPPFLAGS="$CPPFLAGS -I$OPENSSL_DIR/include"
     LIBDIRS="$LIBDIRS -L$OPENSSL_DIR/lib"
 fi

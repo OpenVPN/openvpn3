@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -e
+swig -c++ -java -I$OVPN3_DIR ovpncli.i
+javac *.java
+#     -flto=4 -Wl,--no-as-needed \
+gcc -O3 -fPIC -pthread \
+    -fno-strict-aliasing \
+    -Wall -Wno-sign-compare -Wno-unused-parameter \
+    -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
+    -DUSE_POLARSSL \
+    -I$OVPN3_DIR \
+    -I$BOOST_DIR \
+    -I$POLARSSL_DIR/include \
+    -I/usr/lib/jvm/java-7-openjdk-amd64/include \
+    -L$BOOST_DIR/stage/lib \
+    -L$POLARSSL_DIR/library \
+    ovpncli_wrap.cxx \
+    -o libovpncli.so \
+    -shared -Wl,-soname,libovpncli.so \
+    -lpolarssl \
+    -lboost_system -lboost_thread
