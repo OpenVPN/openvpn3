@@ -50,6 +50,7 @@ namespace openvpn {
     typedef boost::intrusive_ptr<PolarSSLContext> Ptr;
 
     OPENVPN_SIMPLE_EXCEPTION(ssl_ciphertext_in_overflow);
+    OPENVPN_EXCEPTION(polarssl_external_pki);
 
     enum {
       MAX_CIPHERTEXT_IN = 64
@@ -288,7 +289,7 @@ namespace openvpn {
       }
 
     private:
-      SSL(const PolarSSLContext* ctx)
+      SSL(PolarSSLContext* ctx)
       {
 	clear();
 	try {
@@ -314,7 +315,7 @@ namespace openvpn {
 	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
 
 	  // set verify callback
-	  ssl_set_verify(ssl, verify_callback, (void *)ctx);
+	  ssl_set_verify(ssl, verify_callback, ctx);
 
 	  // allocate session object, but don't support SSL-level session resume
 	  sess = new ssl_session;
@@ -322,7 +323,7 @@ namespace openvpn {
 	  ssl_set_session(ssl, 0, 0, sess);
 
 	  // set list of allowed ciphersuites
-	  ssl_set_ciphersuites(ssl, (int *)polarssl_ctx_private::default_ciphersuites); // fixme -- fix PolarSSL to not require cast
+	  ssl_set_ciphersuites(ssl, polarssl_ctx_private::default_ciphersuites);
 
 	  // set CA chain
 	  if (c.ca_chain)
@@ -330,13 +331,22 @@ namespace openvpn {
 	  else
 	    throw PolarSSLException("CA chain not defined");
 
-	  // set our own certificate, supporting chain (i.e. extra-certs), and private key
-	  if (c.crt_chain && c.priv_key)
-	    ssl_set_own_cert(ssl, c.crt_chain->get(), c.priv_key->get());
+	  if (c.external_pki)
+	    {
+	      // set our own certificate, supporting chain (i.e. extra-certs), and external private key
+	      if (c.crt_chain)
+		ssl_set_own_cert_pkcs11(ssl, c.crt_chain->get(), &ctx->p11);
+	      else
+		throw PolarSSLException("cert is undefined");
+	    }
 	  else
-	    throw PolarSSLException("cert and/or private key is undefined");
-
-	  // fixme -- set pkcs11
+	    {
+	      // set our own certificate, supporting chain (i.e. extra-certs), and private key
+	      if (c.crt_chain && c.priv_key)
+		ssl_set_own_cert(ssl, c.crt_chain->get(), c.priv_key->get());
+	      else
+		throw PolarSSLException("cert and/or private key is undefined");
+	    }
 
 	  // fixme -- set DH
 
@@ -430,9 +440,19 @@ namespace openvpn {
     explicit PolarSSLContext(const Config& config_arg)
     {
       config = config_arg;
+
+      // Verify that cert is defined
+      if (!config.crt_chain)
+	throw PolarSSLException("cert is undefined");
+
+      // PKCS11 setup (always done, even if non-external-pki)
+      p11.parameter = this;
+      p11.f_decrypt = epki_decrypt;
+      p11.f_sign = epki_sign;
+      p11.len = config.crt_chain->get()->rsa.len;
     }
 
-    SSL::Ptr ssl() const { return SSL::Ptr(new SSL(this)); }
+    SSL::Ptr ssl() { return SSL::Ptr(new SSL(this)); }
 
     const Mode& mode() const { return config.mode; }
  
@@ -464,7 +484,7 @@ namespace openvpn {
       // verify ns-cert-type
       if (depth == 0 && !self->verify_ns_cert_type(cert))
 	{
-	  OPENVPN_LOG("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	  OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
 	  preverify_ok = false;
 	}
 
@@ -485,7 +505,67 @@ namespace openvpn {
     {
     }
 
+    static int epki_decrypt(pkcs11_context *ctx,
+			    int mode,
+			    size_t *olen,
+			    const unsigned char *input,
+			    unsigned char *output,
+			    unsigned int output_max_len)
+    {
+      OPENVPN_LOG_SSL("PolarSSLContext::epki_decrypt is unimplemented, mode=" << mode
+		      << " output_max_len=" << output_max_len);
+      return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+    }
+
+    static int epki_sign(pkcs11_context *ctx,
+			 int mode,
+			 int hash_id,
+			 unsigned int hashlen,
+			 const unsigned char *hash,
+			 unsigned char *sig)
+    {
+      PolarSSLContext *self = (PolarSSLContext *) ctx->parameter;
+      try {
+	if (mode == RSA_PRIVATE && hash_id == SIG_RSA_RAW)
+	  {
+	    /* convert 'hash' to base64 */
+	    ConstBuffer from_buf(hash, hashlen, true);
+	    const std::string from_b64 = base64->encode(from_buf);
+
+	    /* get signature */
+	    std::string sig_b64;
+	    const bool status = self->config.external_pki->sign(from_b64, sig_b64);
+	    if (!status)
+	      throw polarssl_external_pki("could not obtain signature");
+
+	    /* decode base64 signature to binary */
+	    const int len = ctx->len;
+	    Buffer sigbuf(sig, len, false);
+	    base64->decode(sigbuf, sig_b64);
+
+	    /* verify length */
+	    if (sigbuf.size() != len)
+	      throw polarssl_external_pki("incorrect signature length");
+
+	    /* success */
+	    return 0;
+	  }
+	else
+	  {
+	    OPENVPN_LOG_SSL("PolarSSLContext::epki_sign unrecognized parameters, mode=" << mode 
+			    << " hash_id=" << hash_id << " hashlen=" << hashlen);
+	    return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+	  }
+      }
+      catch (const std::exception& e)
+	{
+	  OPENVPN_LOG("PolarSSLContext::epki_sign: " << e.what());
+	  return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+	}
+    }
+
     Config config;
+    pkcs11_context p11;
   };
 
 } // namespace openvpn

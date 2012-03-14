@@ -544,8 +544,24 @@
  *
  * This module is required for SSL/TLS PKCS #11 smartcard support.
  * Requires the presence of the PKCS#11 helper library (libpkcs11-helper)
-#define POLARSSL_PKCS11_C
  */
+// JY added
+#define POLARSSL_PKCS11_C
+
+/**
+ * \def POLARSSL_GENERIC_EXTERNAL_PRIVATE_KEY
+ *
+ * Enable support for generic external private key implementations.
+ *
+ * Module:  library/ssl_srv.c
+ * Caller:  library/ssl_cli.c
+ *          library/ssl_srv.c
+ *
+ * Requires: POLARSSL_PKCS11_C
+ *
+ */
+// JY added
+#define POLARSSL_GENERIC_EXTERNAL_PRIVATE_KEY
 
 /**
  * \def POLARSSL_RSA_C

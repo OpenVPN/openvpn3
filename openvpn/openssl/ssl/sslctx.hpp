@@ -674,7 +674,7 @@ namespace openvpn {
       // verify ns-cert-type
       if (ctx->error_depth == 0 && !self->verify_ns_cert_type(ctx->current_cert))
 	{
-	  OPENVPN_LOG("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	  OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
 	  preverify_ok = false;
 	}
 
@@ -686,11 +686,11 @@ namespace openvpn {
     {
       if (where & SSL_CB_LOOP)
 	{
-	  OPENVPN_LOG("SSL state (" << (where & SSL_ST_CONNECT ? "connect" : where & SSL_ST_ACCEPT ? "accept" : "undefined") << "): " << SSL_state_string_long(s));
+	  OPENVPN_LOG_SSL("SSL state (" << (where & SSL_ST_CONNECT ? "connect" : where & SSL_ST_ACCEPT ? "accept" : "undefined") << "): " << SSL_state_string_long(s));
 	}
       else if (where & SSL_CB_ALERT)
 	{
-	  OPENVPN_LOG("SSL alert (" << (where & SSL_CB_READ ? "read" : "write") << "): " << SSL_alert_type_string_long(ret) << ": " << SSL_alert_desc_string_long(ret));
+	  OPENVPN_LOG_SSL("SSL alert (" << (where & SSL_CB_READ ? "read" : "write") << "): " << SSL_alert_type_string_long(ret) << ": " << SSL_alert_desc_string_long(ret));
 	}
     }
 

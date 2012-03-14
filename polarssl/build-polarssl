@@ -10,7 +10,9 @@ export POLARSSL=polarssl-1.1.1
 rm -rf $POLARSSL
 tar xfz $DL/$POLARSSL-gpl.tgz
 cd $POLARSSL
-patch -p1 <$PD/polarssl.patch
+patch -p1 <$PD/polarssl-enum.patch
+patch -p1 <$PD/polarssl-const-ciphersuite.patch
+patch -p1 <$PD/polarssl-epki.patch
 cp $PD/config.h include/polarssl/
 cp $PD/CMakeLists.txt .
 if [ "$TARGET" ]; then
