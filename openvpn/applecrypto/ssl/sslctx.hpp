@@ -33,7 +33,6 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(ssl_context_error);
     OPENVPN_EXCEPTION(ssl_ciphertext_in_overflow);
-    OPENVPN_SIMPLE_EXCEPTION(external_pki_not_implemented);
 
     typedef boost::intrusive_ptr<AppleSSLContext> Ptr;
 
@@ -82,7 +81,6 @@ namespace openvpn {
 
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
       {
-	throw external_pki_not_implemented();
       }
     };
 
@@ -113,7 +111,7 @@ namespace openvpn {
 	    if (status == errSSLWouldBlock)
 	      return SHOULD_RETRY;
 	    else
-	      throw CFException(status, "AppleSSLContext::SSL::write_cleartext failed");
+	      throw CFException("AppleSSLContext::SSL::write_cleartext failed", status);
 	  }
 	else
 	  return actual;
@@ -130,7 +128,7 @@ namespace openvpn {
 		if (status == errSSLWouldBlock)
 		  return SHOULD_RETRY;
 		else
-		  throw CFException(status, "AppleSSLContext::SSL::read_cleartext failed");
+		  throw CFException("AppleSSLContext::SSL::read_cleartext failed", status);
 	      }
 	    else
 	      return actual;
@@ -185,23 +183,23 @@ namespace openvpn {
 	  else
 	    OPENVPN_THROW(ssl_context_error, "AppleSSLContext::SSL: unknown client/server mode");
 	  if (s)
-	    throw CFException(s, "SSLNewContext failed");
+	    throw CFException("SSLNewContext failed", s);
 
 	  // use TLS v1
 	  s = SSLSetProtocolVersionEnabled(ssl, kSSLProtocol2, false);
 	  if (s)
-	    throw CFException(s, "SSLSetProtocolVersionEnabled !S2 failed");
+	    throw CFException("SSLSetProtocolVersionEnabled !S2 failed", s);
 	  s = SSLSetProtocolVersionEnabled(ssl, kSSLProtocol3, false);
 	  if (s)
-	    throw CFException(s, "SSLSetProtocolVersionEnabled !S3 failed");
+	    throw CFException("SSLSetProtocolVersionEnabled !S3 failed", s);
 	  s = SSLSetProtocolVersionEnabled(ssl, kTLSProtocol1, true);
 	  if (s)
-	    throw CFException(s, "SSLSetProtocolVersionEnabled T1 failed");
+	    throw CFException("SSLSetProtocolVersionEnabled T1 failed", s);
 
 	  // configure cert, private key, and supporting CAs via identity wrapper
 	  s = SSLSetCertificate(ssl, ctx.identity()());
 	  if (s)
-	    throw CFException(s, "SSLSetCertificate failed");
+	    throw CFException("SSLSetCertificate failed", s);
 
 	  // configure ciphertext buffers
 	  ct_in.set_frame(ctx.frame());
@@ -210,12 +208,12 @@ namespace openvpn {
 	  // configure the "connection" object to be self
 	  s = SSLSetConnection(ssl, this);
 	  if (s)
-	    throw CFException(s, "SSLSetConnection");
+	    throw CFException("SSLSetConnection", s);
 
 	  // configure ciphertext read/write callbacks
 	  s = SSLSetIOFuncs(ssl, ct_read_func, ct_write_func);
 	  if (s)
-	    throw CFException(s, "SSLSetIOFuncs failed");
+	    throw CFException("SSLSetIOFuncs failed", s);
 	}
 	catch (...)
 	  {

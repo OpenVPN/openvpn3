@@ -1,6 +1,10 @@
 #ifndef OPENVPN_APPLECRYPTO_CF_ERROR_H
 #define OPENVPN_APPLECRYPTO_CF_ERROR_H
 
+#include <string>
+
+#include <CoreFoundation/CFBase.h>
+
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
@@ -9,14 +13,14 @@ namespace openvpn {
   class CFException : public std::exception
   {
   public:
-    CFException(const OSStatus status)
+    CFException(const std::string& text)
     {
-      set_errtxt(status, NULL);
+      errtxt = text;
     }
 
-    CFException(const OSStatus status, const std::string& text)
+    CFException(const std::string& text, const OSStatus status)
     {
-      set_errtxt(status, &text);
+      set_errtxt(text, status);
     }
 
     virtual const char* what() const throw() { return errtxt.c_str(); }
@@ -25,12 +29,10 @@ namespace openvpn {
     virtual ~CFException() throw() {}
 
   private:
-    void set_errtxt(const OSStatus status, const std::string* text)
+    void set_errtxt(const std::string& text, const OSStatus status)
     {
       std::ostringstream s;
-      if (text)
-	s << *text << ": ";
-      s << "OSX Error code=" << status;
+      s << text << ": OSX Error code=" << status;
       errtxt = s.str();
     }
 

@@ -92,7 +92,7 @@ typedef PolarSSLCryptoAPI ClientCryptoAPI;
 typedef PolarSSLContext ClientSSLAPI;
 typedef PolarSSLRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)
-typedef AppleSSLCryptoAPI ClientCryptoAPI;
+typedef AppleCryptoAPI ClientCryptoAPI;
 typedef AppleSSLContext ClientSSLAPI;
 typedef AppleRandom ClientRandomAPI;
 #elif defined(USE_OPENSSL)

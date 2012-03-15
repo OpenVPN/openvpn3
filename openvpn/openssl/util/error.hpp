@@ -36,7 +36,7 @@ namespace openvpn {
       init_ssl_error(ssl_error, "OpenSSL");
     }
 
-    explicit OpenSSLException(const int ssl_error, const std::string error_text)
+    explicit OpenSSLException(const std::string error_text, const int ssl_error)
     {
       init_ssl_error(ssl_error, error_text.c_str());
     }

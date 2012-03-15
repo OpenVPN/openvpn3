@@ -56,7 +56,7 @@ namespace openvpn {
     typedef PolarSSLContext ClientSSLAPI;
     typedef PolarSSLRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
-    typedef AppleSSLCryptoAPI ClientCryptoAPI;
+    typedef AppleCryptoAPI ClientCryptoAPI;
     typedef AppleSSLContext ClientSSLAPI;
     typedef AppleRandom RandomAPI;
 #elif defined(USE_OPENSSL)

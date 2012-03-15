@@ -94,7 +94,7 @@ namespace openvpn {
 	DECRYPT = POLARSSL_DECRYPT
       };
 
-      // OpenSSL cipher constants
+      // PolarSSL cipher constants
       enum {
 	MAX_IV_LENGTH = POLARSSL_MAX_IV_LENGTH,
 	CIPH_CBC_MODE = POLARSSL_MODE_CBC
