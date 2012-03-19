@@ -23,6 +23,7 @@
 %rename(ClientAPI_Event) Event;
 %rename(ClientAPI_Status) Status;
 %rename(ClientAPI_LogInfo) LogInfo;
+%rename(ClientAPI_ExternalPKIBase) ExternalPKIBase;
 %rename(ClientAPI_ExternalPKIRequestBase) ExternalPKIRequestBase;
 %rename(ClientAPI_ExternalPKICertRequest) ExternalPKICertRequest;
 %rename(ClientAPI_ExternalPKISignRequest) ExternalPKISignRequest;
