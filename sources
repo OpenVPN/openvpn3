@@ -1,2 +1,12 @@
-##!/usr/bin/env bash
+#!/usr/bin/env bash
+top=$(pwd)
 find openvpn | grep -E '\.(cpp|hpp|c|h)$'
+echo javacli/ovpncli.hpp
+echo javacli/ovpncli.ipp
+echo javacli/OpenVPNClientThread.java
+android=android/OpenVPN/src/net/openvpn/openvpn
+cd $android
+for f in $(svn list | grep '\.java$') ; do
+    echo $android/$f
+done
+cd $top
