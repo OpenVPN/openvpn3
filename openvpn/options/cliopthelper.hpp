@@ -37,10 +37,10 @@ namespace openvpn {
 	      // and we have no way of knowing if they are autologin unless
 	      // we examine their cert, which requires accessing the system-level
 	      // cert store on the client.  For now, we are going to assume
-	      // that External PKI profiles from the AS are always userlogin.
-	      const Option* as = options.get_ptr("AUTOLOGIN_SPEC");
-	      if (as)
-		ret = false;
+	      // that External PKI profiles from the AS are always userlogin,
+	      // unless explicitly overriden by AUTOLOGIN above.
+	      if (is_external_pki(options))
+		return false;
 	    }
 	  return ret;
 	}
