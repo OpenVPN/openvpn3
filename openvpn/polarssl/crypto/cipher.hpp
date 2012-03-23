@@ -18,8 +18,8 @@ namespace openvpn {
       friend class CipherContext;
 
     public:
-      OPENVPN_EXCEPTION(cipher_not_found);
-      OPENVPN_SIMPLE_EXCEPTION(cipher_undefined);
+      OPENVPN_EXCEPTION(polarssl_cipher_not_found);
+      OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_undefined);
 
       Cipher() : cipher_(NULL) {}
 
@@ -27,7 +27,7 @@ namespace openvpn {
       {
 	cipher_ = cipher_info_from_string(name.c_str());
 	if (!cipher_)
-	  throw cipher_not_found(name);
+	  throw polarssl_cipher_not_found(name);
       }
 
       const char *name() const
@@ -73,7 +73,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!cipher_)
-	  throw cipher_undefined();
+	  throw polarssl_cipher_undefined();
 #endif
       }
 
@@ -83,9 +83,9 @@ namespace openvpn {
     class CipherContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(cipher_mode_error);
-      OPENVPN_SIMPLE_EXCEPTION(cipher_uninitialized);
-      OPENVPN_EXCEPTION(cipher_polarssl_error);
+      OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_mode_error);
+      OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_uninitialized);
+      OPENVPN_EXCEPTION(polarssl_cipher_error);
 
       // mode parameter for constructor
       enum {
@@ -117,18 +117,18 @@ namespace openvpn {
 
 	// check that mode is valid
 	if (!(mode == ENCRYPT || mode == DECRYPT))
-	  throw cipher_mode_error();
+	  throw polarssl_cipher_mode_error();
 
 	// get cipher type
 	const cipher_info_t *ci = cipher.get();
 
 	// initialize cipher context with cipher type
 	if (cipher_init_ctx(&ctx, ci) < 0)
-	  throw cipher_polarssl_error("cipher_init_ctx");
+	  throw polarssl_cipher_error("cipher_init_ctx");
 
 	// set key and encrypt/decrypt mode
 	if (cipher_setkey(&ctx, key, ci->key_length, (operation_t)mode) < 0)
-	  throw cipher_polarssl_error("cipher_setkey");
+	  throw polarssl_cipher_error("cipher_setkey");
 
 	initialized = true;
       }
@@ -137,7 +137,7 @@ namespace openvpn {
       {
 	check_initialized();
 	if (cipher_reset(&ctx, iv) < 0)
-	  throw cipher_polarssl_error("cipher_reset");
+	  throw polarssl_cipher_error("cipher_reset");
       }
 
       bool update(unsigned char *out, const size_t max_out_size,
@@ -203,7 +203,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw cipher_uninitialized();
+	  throw polarssl_cipher_uninitialized();
 #endif
       }
 

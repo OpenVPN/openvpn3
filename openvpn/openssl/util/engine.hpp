@@ -4,6 +4,7 @@
 #include <string>
 
 #ifndef OPENSSL_NO_ENGINE
+#error FOO
 #include <openssl/engine.h>
 #endif
 

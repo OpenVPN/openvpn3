@@ -18,8 +18,8 @@ namespace openvpn {
       friend class HMACContext;
 
     public:
-      OPENVPN_EXCEPTION(digest_not_found);
-      OPENVPN_SIMPLE_EXCEPTION(digest_undefined);
+      OPENVPN_EXCEPTION(polarssl_digest_not_found);
+      OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_undefined);
 
       Digest() : digest_(NULL) {}
 
@@ -27,7 +27,7 @@ namespace openvpn {
       {
 	digest_ = md_info_from_string(name.c_str());
 	if (!digest_)
-	  throw digest_not_found(name);
+	  throw polarssl_digest_not_found(name);
       }
 
       const char *name() const
@@ -61,7 +61,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!digest_)
-	  throw digest_undefined();
+	  throw polarssl_digest_undefined();
 #endif
       }
 
@@ -71,9 +71,9 @@ namespace openvpn {
     class DigestContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(digest_uninitialized);
-      OPENVPN_SIMPLE_EXCEPTION(digest_final_overflow);
-      OPENVPN_EXCEPTION(digest_polarssl_error);
+      OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_uninitialized);
+      OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_final_overflow);
+      OPENVPN_EXCEPTION(polarssl_digest_error);
 
       enum {
 	MAX_DIGEST_SIZE = POLARSSL_MD_MAX_SIZE
@@ -97,9 +97,9 @@ namespace openvpn {
 	erase();
 	ctx.md_ctx = NULL;
 	if (md_init_ctx(&ctx, digest.get()) < 0)
-	  throw digest_polarssl_error("md_init_ctx");
+	  throw polarssl_digest_error("md_init_ctx");
 	if (md_starts(&ctx) < 0)
-	  throw digest_polarssl_error("md_starts");
+	  throw polarssl_digest_error("md_starts");
 	initialized = true;
       }
 
@@ -107,14 +107,14 @@ namespace openvpn {
       {
 	check_initialized();
 	if (md_update(&ctx, in, size) < 0)
-	  throw digest_polarssl_error("md_update");
+	  throw polarssl_digest_error("md_update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
 	if (md_finish(&ctx, out) < 0)
-	  throw digest_polarssl_error("md_finish");
+	  throw polarssl_digest_error("md_finish");
 	return size_();
       }
 
@@ -145,7 +145,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw digest_uninitialized();
+	  throw polarssl_digest_uninitialized();
 #endif
       }
 

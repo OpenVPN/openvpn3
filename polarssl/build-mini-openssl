@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -e
+if [ -z "$1" ]; then
+    echo "usage: build-mini-openssl <ref|ref-aesni>"
+    exit 1
+fi
+if [ -z "$OPENSSL_DIR" ]; then
+    echo OPENSSL_DIR must be defined
+    exit 1
+fi
+[ -z "$NM_CMD" ] && NM_CMD=nm
+[ -z "$AR_CMD" ] && AR_CMD=ar
+[ -z "$GCC_CMD" ] && GCC_CMD=gcc
+PD=$OVPN3_DIR/polarssl
+cd $OPENSSL_DIR
+cd lib
+rm -rf tmp
+mkdir tmp
+$NM_CMD -f posix libcrypto.a >tmp/nm-file
+cd tmp
+python $OVPN3_DIR/scripts/sym.py $PD/$1 nm-file $AR_CMD ../libcrypto.a libminicrypto.a buildmini ../mini-undef.sh
+. buildmini
+
+# need any special initialization?
+. ../mini-undef.sh
+if [ "$SYM_UNDEF_OPENSSL_ia32cap_P" ] && [ "$SYM_UNDEF_OPENSSL_cpuid_setup" ]; then
+    $GCC_CMD -O3 -c $PD/intel_cpu.c
+    $AR_CMD rs libminicrypto.a intel_cpu.o
+fi
+
+mv libminicrypto.a ..

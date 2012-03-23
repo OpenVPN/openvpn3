@@ -19,8 +19,8 @@ namespace openvpn {
       friend class CipherContext;
 
     public:
-      OPENVPN_EXCEPTION(cipher_not_found);
-      OPENVPN_SIMPLE_EXCEPTION(cipher_undefined);
+      OPENVPN_EXCEPTION(openssl_cipher_not_found);
+      OPENVPN_SIMPLE_EXCEPTION(openssl_cipher_undefined);
 
       Cipher() : cipher_(NULL) {}
 
@@ -28,7 +28,7 @@ namespace openvpn {
       {
 	cipher_ = EVP_get_cipherbyname(name.c_str());
 	if (!cipher_)
-	  throw cipher_not_found(name);
+	  throw openssl_cipher_not_found(name);
       }
 
       const char *name() const
@@ -73,7 +73,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!cipher_)
-	  throw cipher_undefined();
+	  throw openssl_cipher_undefined();
 #endif
       }
 
@@ -83,9 +83,9 @@ namespace openvpn {
     class CipherContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(cipher_mode_error);
-      OPENVPN_SIMPLE_EXCEPTION(cipher_uninitialized);
-      OPENVPN_EXCEPTION(cipher_openssl_error);
+      OPENVPN_SIMPLE_EXCEPTION(openssl_cipher_mode_error);
+      OPENVPN_SIMPLE_EXCEPTION(openssl_cipher_uninitialized);
+      OPENVPN_EXCEPTION(openssl_cipher_error);
 
       // mode parameter for constructor
       enum {
@@ -111,11 +111,14 @@ namespace openvpn {
       {
 	// check that mode is valid
 	if (!(mode == ENCRYPT || mode == DECRYPT))
-	  throw cipher_mode_error();
+	  throw openssl_cipher_mode_error();
 	erase();
 	EVP_CIPHER_CTX_init (&ctx);
 	if (!EVP_CipherInit_ex (&ctx, cipher.get(), NULL, key, NULL, mode))
-	  throw cipher_openssl_error("EVP_CipherInit_ex (init)");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_cipher_error("EVP_CipherInit_ex (init)");
+	  }
 	initialized = true;
       }
 
@@ -123,7 +126,10 @@ namespace openvpn {
       {
 	check_initialized();
 	if (!EVP_CipherInit_ex (&ctx, NULL, NULL, NULL, iv, -1))
-	  throw cipher_openssl_error("EVP_CipherInit_ex (reset)");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_cipher_error("EVP_CipherInit_ex (reset)");
+	  }
       }
 
       bool update(unsigned char *out, const size_t max_out_size,
@@ -138,7 +144,10 @@ namespace openvpn {
 	    return true;
 	  }
 	else
-	  return false;
+	  {
+	    openssl_clear_error_stack();
+	    return false;
+	  }
       }
 
       bool final(unsigned char *out, const size_t max_out_size, size_t& out_acc)
@@ -151,7 +160,10 @@ namespace openvpn {
 	    return true;
 	  }
 	else
-	  return false;
+	  {
+	    openssl_clear_error_stack();
+	    return false;
+	  }
       }
 
       bool is_initialized() const { return initialized; }
@@ -189,7 +201,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw cipher_uninitialized();
+	  throw openssl_cipher_uninitialized();
 #endif
       }
 

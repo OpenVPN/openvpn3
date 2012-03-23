@@ -1,4 +1,3 @@
-. vars-reset
 export BOOST_DIR=$HOME/boost_1_48_0
 export SNAPPY_DIR=$HOME/snappy
 export LZ4_DIR=$HOME/lz4

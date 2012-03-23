@@ -1,4 +1,3 @@
-. vars-reset
 export BOOST_DIR=$HOME/src/boost_1_48_0
 export SNAPPY_DIR=$HOME/src/snappy
 export OVPN3_DIR=$HOME/src/ovpn3

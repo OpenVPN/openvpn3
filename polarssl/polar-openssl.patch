@@ -1,0 +1,571 @@
+diff -uNr polarssl-1.1.1/include/polarssl/aes.h polarssl-1.1.1.new/include/polarssl/aes.h
+--- polarssl-1.1.1/include/polarssl/aes.h	2011-10-06 07:11:08.000000000 -0600
++++ polarssl-1.1.1.new/include/polarssl/aes.h	2012-03-22 13:10:50.556358748 -0600
+@@ -35,6 +35,12 @@
+ #define POLARSSL_ERR_AES_INVALID_KEY_LENGTH                -0x0020  /**< Invalid key length. */
+ #define POLARSSL_ERR_AES_INVALID_INPUT_LENGTH              -0x0022  /**< Invalid data input length. */
+ 
++#ifdef POLARSSL_USE_OPENSSL_CRYPTO
++
++#include "polarssl/aes_openssl.h"
++
++#else
++
+ /**
+  * \brief          AES context structure
+  */
+@@ -172,5 +178,5 @@
+ #ifdef __cplusplus
+ }
+ #endif
+-
++#endif
+ #endif /* aes.h */
+diff -uNr polarssl-1.1.1/include/polarssl/aes_openssl.h polarssl-1.1.1.new/include/polarssl/aes_openssl.h
+--- polarssl-1.1.1/include/polarssl/aes_openssl.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl-1.1.1.new/include/polarssl/aes_openssl.h	2012-03-23 08:50:04.114890292 -0600
+@@ -0,0 +1,141 @@
++/*
++ * Use OpenSSL implementation of AES methods to get asm and hardware acceleration.
++ * Don't include this file directly, it is included by aes.h when
++ * POLARSSL_USE_OPENSSL_CRYPTO is defined.
++ */
++
++#ifdef _MSC_VER
++#include <basetsd.h>
++typedef UINT32 uint32_t;
++#else
++#include <inttypes.h>
++#endif
++
++/**
++ * \brief          AES context structure
++ */
++typedef struct
++{
++# define OPENSSL_AES_MAXNR 14
++  uint32_t rd_key[4 * (OPENSSL_AES_MAXNR + 1)];
++  int rounds;
++}
++aes_context;
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#if defined(POLARSSL_USE_OPENSSL_AES_NI)
++
++int aesni_set_encrypt_key(const unsigned char *userKey, const int bits,
++			  aes_context *key);
++int aesni_set_decrypt_key(const unsigned char *userKey, const int bits,
++			  aes_context *key);
++void aesni_ecb_encrypt(const unsigned char *in, unsigned char *out,
++		       size_t length, const aes_context *key, const int enc);
++void aesni_cbc_encrypt(const unsigned char *in, unsigned char *out,
++		       size_t length, const aes_context *key,
++		       unsigned char *ivec, const int enc);
++
++#define OPENSSL_AES_SET_ENCRYPT_KEY(k,b,c)    aesni_set_encrypt_key(k,b,c)
++#define OPENSSL_AES_SET_DECRYPT_KEY(k,b,c)    aesni_set_decrypt_key(k,b,c)
++#define OPENSSL_AES_ECB_ENCRYPT(i,o,k,e)      aesni_ecb_encrypt(i,o,16,k,e)
++#define OPENSSL_AES_CBC_ENCRYPT(i,o,l,k,iv,e) aesni_cbc_encrypt(i,o,l,k,iv,e)
++
++#else
++
++int AES_set_encrypt_key(const unsigned char *userKey, const int bits,
++			aes_context *key);
++int AES_set_decrypt_key(const unsigned char *userKey, const int bits,
++			aes_context *key);
++void AES_ecb_encrypt(const unsigned char *in, unsigned char *out,
++		     const aes_context *key, const int enc);
++void AES_cbc_encrypt(const unsigned char *in, unsigned char *out,
++		     size_t length, const aes_context *key,
++		     unsigned char *ivec, const int enc);
++
++#define OPENSSL_AES_SET_ENCRYPT_KEY(k,b,c)    AES_set_encrypt_key(k,b,c)
++#define OPENSSL_AES_SET_DECRYPT_KEY(k,b,c)    AES_set_decrypt_key(k,b,c)
++#define OPENSSL_AES_ECB_ENCRYPT(i,o,k,e)      AES_ecb_encrypt(i,o,k,e)
++#define OPENSSL_AES_CBC_ENCRYPT(i,o,l,k,iv,e) AES_cbc_encrypt(i,o,l,k,iv,e)
++
++#endif
++
++/**
++ * \brief          AES key schedule (encryption)
++ *
++ * \param ctx      AES context to be initialized
++ * \param key      encryption key
++ * \param keysize  must be 128, 192 or 256
++ *
++ * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
++ */
++static inline int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int keysize )
++{
++  const int status = OPENSSL_AES_SET_ENCRYPT_KEY(key, keysize, ctx);
++  return status ? POLARSSL_ERR_AES_INVALID_KEY_LENGTH : 0;
++}
++
++/**
++ * \brief          AES key schedule (decryption)
++ *
++ * \param ctx      AES context to be initialized
++ * \param key      decryption key
++ * \param keysize  must be 128, 192 or 256
++ *
++ * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
++ */
++static inline int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int keysize )
++{
++  const int status = OPENSSL_AES_SET_DECRYPT_KEY(key, keysize, ctx);
++  return status ? POLARSSL_ERR_AES_INVALID_KEY_LENGTH : 0;
++}
++
++/**
++ * \brief          AES-ECB block encryption/decryption
++ *
++ * \param ctx      AES context
++ * \param mode     AES_ENCRYPT or AES_DECRYPT
++ * \param input    16-byte input block
++ * \param output   16-byte output block
++ *
++ * \return         0 if successful
++ */
++static inline int aes_crypt_ecb( aes_context *ctx,
++				 int mode,
++				 const unsigned char input[16],
++				 unsigned char output[16] )
++{
++  OPENSSL_AES_ECB_ENCRYPT(input, output, ctx, mode);
++  return 0;
++}
++
++/**
++ * \brief          AES-CBC buffer encryption/decryption
++ *                 Length should be a multiple of the block
++ *                 size (16 bytes)
++ *
++ * \param ctx      AES context
++ * \param mode     AES_ENCRYPT or AES_DECRYPT
++ * \param length   length of the input data
++ * \param iv       initialization vector (updated after use)
++ * \param input    buffer holding the input data
++ * \param output   buffer holding the output data
++ *
++ * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_INPUT_LENGTH
++ */
++static inline int aes_crypt_cbc( aes_context *ctx,
++				 int mode,
++				 size_t length,
++				 unsigned char iv[16],
++				 const unsigned char *input,
++				 unsigned char *output )
++{
++  OPENSSL_AES_CBC_ENCRYPT(input, output, length, ctx, iv, mode);
++  return 0;
++}
++
++#ifdef __cplusplus
++}
++#endif
+diff -uNr polarssl-1.1.1/include/polarssl/cipher.h polarssl-1.1.1.new/include/polarssl/cipher.h
+--- polarssl-1.1.1/include/polarssl/cipher.h	2012-03-23 08:55:50.880507305 -0600
++++ polarssl-1.1.1.new/include/polarssl/cipher.h	2012-03-22 07:26:28.255497325 -0600
+@@ -52,6 +52,7 @@
+     POLARSSL_CIPHER_ID_DES,
+     POLARSSL_CIPHER_ID_3DES,
+     POLARSSL_CIPHER_ID_CAMELLIA,
++    POLARSSL_CIPHER_ID_BF,
+ } cipher_id_t;
+ 
+ typedef enum {
+@@ -76,7 +77,8 @@
+     POLARSSL_CIPHER_CAMELLIA_256_CTR,
+     POLARSSL_CIPHER_DES_CBC,
+     POLARSSL_CIPHER_DES_EDE_CBC,
+-    POLARSSL_CIPHER_DES_EDE3_CBC
++    POLARSSL_CIPHER_DES_EDE3_CBC,
++    POLARSSL_CIPHER_BF_128_CBC,
+ } cipher_type_t;
+ 
+ typedef enum {
+diff -uNr polarssl-1.1.1/include/polarssl/cipher_wrap.h polarssl-1.1.1.new/include/polarssl/cipher_wrap.h
+--- polarssl-1.1.1/include/polarssl/cipher_wrap.h	2011-11-18 07:26:47.000000000 -0700
++++ polarssl-1.1.1.new/include/polarssl/cipher_wrap.h	2012-03-22 07:23:01.921707551 -0600
+@@ -84,6 +84,10 @@
+ 
+ #endif /* defined(POLARSSL_DES_C) */
+ 
++#if defined(POLARSSL_USE_OPENSSL_BF)
++extern const cipher_info_t bf_128_cbc_info;
++#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff -uNr polarssl-1.1.1/include/polarssl/sha1.h polarssl-1.1.1.new/include/polarssl/sha1.h
+--- polarssl-1.1.1/include/polarssl/sha1.h	2011-12-11 09:35:09.000000000 -0700
++++ polarssl-1.1.1.new/include/polarssl/sha1.h	2012-03-22 13:37:27.160779075 -0600
+@@ -31,6 +31,48 @@
+ 
+ #define POLARSSL_ERR_SHA1_FILE_IO_ERROR                -0x0076  /**< Read/write error in file. */
+ 
++#ifdef POLARSSL_USE_OPENSSL_CRYPTO
++
++/*
++ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
++ * ! SHA_LONG has to be at least 32 bits wide. If it's wider, then !
++ * ! SHA_LONG_LOG2 has to be defined along.                        !
++ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
++ */
++
++#if defined(__LP32__)
++#define SHA_LONG unsigned long
++#elif defined(OPENSSL_SYS_CRAY) || defined(__ILP64__)
++#define SHA_LONG unsigned long
++#define SHA_LONG_LOG2 3
++#else
++#define SHA_LONG unsigned int
++#endif
++
++#define SHA_LBLOCK	16
++
++struct openssl_sha_context {
++  SHA_LONG h0,h1,h2,h3,h4;
++  SHA_LONG Nl,Nh;
++  SHA_LONG data[SHA_LBLOCK];
++  unsigned int num;
++};
++
++typedef struct
++{
++  struct openssl_sha_context octx;
++
++  unsigned char ipad[64];     /*!< HMAC: inner padding        */
++  unsigned char opad[64];     /*!< HMAC: outer padding        */
++}
++sha1_context;
++
++int SHA1_Init(struct openssl_sha_context *c);
++int SHA1_Update(struct openssl_sha_context *c, const void *data, size_t len);
++int SHA1_Final(unsigned char *md, struct openssl_sha_context *c);
++
++#else
++
+ /**
+  * \brief          SHA-1 context structure
+  */
+@@ -45,10 +87,31 @@
+ }
+ sha1_context;
+ 
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+ 
++#ifdef POLARSSL_USE_OPENSSL_CRYPTO
++
++static inline void sha1_starts( sha1_context *ctx )
++{
++  SHA1_Init(&ctx->octx);
++}
++
++static inline void sha1_update( sha1_context *ctx, const unsigned char *input, size_t ilen )
++{
++  SHA1_Update(&ctx->octx, input, ilen);
++}
++
++static inline void sha1_finish( sha1_context *ctx, unsigned char output[20] )
++{
++  SHA1_Final(output, &ctx->octx);
++}
++
++#else
++
+ /**
+  * \brief          SHA-1 context setup
+  *
+@@ -73,6 +136,8 @@
+  */
+ void sha1_finish( sha1_context *ctx, unsigned char output[20] );
+ 
++#endif
++
+ /**
+  * \brief          Output = SHA-1( input buffer )
+  *
+diff -uNr polarssl-1.1.1/library/aes.c polarssl-1.1.1.new/library/aes.c
+--- polarssl-1.1.1/library/aes.c	2011-06-09 07:55:13.000000000 -0600
++++ polarssl-1.1.1.new/library/aes.c	2012-03-22 06:26:38.870971347 -0600
+@@ -31,7 +31,7 @@
+ 
+ #include "polarssl/config.h"
+ 
+-#if defined(POLARSSL_AES_C)
++#if defined(POLARSSL_AES_C) && !defined(POLARSSL_USE_OPENSSL_CRYPTO)
+ 
+ #include "polarssl/aes.h"
+ #include "polarssl/padlock.h"
+diff -uNr polarssl-1.1.1/library/cipher.c polarssl-1.1.1.new/library/cipher.c
+--- polarssl-1.1.1/library/cipher.c	2012-01-23 02:57:38.000000000 -0700
++++ polarssl-1.1.1.new/library/cipher.c	2012-03-22 09:47:41.429259865 -0600
+@@ -86,6 +86,10 @@
+         POLARSSL_CIPHER_DES_EDE3_CBC,
+ #endif /* defined(POLARSSL_DES_C) */
+ 
++#if defined(POLARSSL_USE_OPENSSL_BF)
++        POLARSSL_CIPHER_BF_128_CBC,
++#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
++
+         0
+ };
+ 
+@@ -164,6 +168,11 @@
+             return &des_ede3_cbc_info;
+ #endif
+ 
++#if defined(POLARSSL_USE_OPENSSL_BF)
++    case POLARSSL_CIPHER_BF_128_CBC:
++      return &bf_128_cbc_info;
++#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
++
+         default:
+             return NULL;
+     }
+@@ -237,6 +246,11 @@
+     if( !strcasecmp( "DES-EDE3-CBC", cipher_name ) )
+         return cipher_info_from_type( POLARSSL_CIPHER_DES_EDE3_CBC );
+ #endif
++
++#if defined(POLARSSL_USE_OPENSSL_BF)
++    if( !strcasecmp( "BF-CBC", cipher_name ) )
++      return cipher_info_from_type( POLARSSL_CIPHER_BF_128_CBC );
++#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
+     return NULL;
+ }
+ 
+diff -uNr polarssl-1.1.1/library/cipher_wrap.c polarssl-1.1.1.new/library/cipher_wrap.c
+--- polarssl-1.1.1/library/cipher_wrap.c	2011-11-11 03:34:04.000000000 -0700
++++ polarssl-1.1.1.new/library/cipher_wrap.c	2012-03-22 09:47:41.429259865 -0600
+@@ -549,4 +549,87 @@
+ };
+ #endif
+ 
++#ifdef POLARSSL_USE_OPENSSL_BF
++
++#include "polarssl/bf.h"
++
++int bf_crypt_cbc_wrap( void *ctx, operation_t operation, size_t length,
++		       unsigned char *iv, const unsigned char *input, unsigned char *output )
++{
++  return bf_crypt_cbc( (bf_context *) ctx, operation, length, iv, input, output );
++}
++
++int bf_crypt_cfb128_wrap( void *ctx, operation_t operation, size_t length,
++			  size_t *iv_off, unsigned char *iv, const unsigned char *input,
++			  unsigned char *output )
++{
++  ((void) ctx);
++  ((void) operation);
++  ((void) length);
++  ((void) iv_off);
++  ((void) iv);
++  ((void) input);
++  ((void) output);
++
++  return POLARSSL_ERR_CIPHER_FEATURE_UNAVAILABLE;
++}
++
++int bf_crypt_ctr_wrap( void *ctx, size_t length,
++        size_t *nc_off, unsigned char *nonce_counter, unsigned char *stream_block,
++        const unsigned char *input, unsigned char *output )
++{
++  ((void) ctx);
++  ((void) length);
++  ((void) nc_off);
++  ((void) nonce_counter);
++  ((void) stream_block);
++  ((void) input);
++  ((void) output);
++
++  return POLARSSL_ERR_CIPHER_FEATURE_UNAVAILABLE;
++}
++
++int bf_setkey_dec_wrap( void *ctx, const unsigned char *key, unsigned int key_length )
++{
++  return bf_setkey_dec( (bf_context *) ctx, key, key_length );
++}
++
++int bf_setkey_enc_wrap( void *ctx, const unsigned char *key, unsigned int key_length )
++{
++  return bf_setkey_enc( (bf_context *) ctx, key, key_length );
++}
++
++static void * bf_ctx_alloc( void )
++{
++  return malloc( sizeof( bf_context ) );
++}
++
++static void bf_ctx_free( void *ctx )
++{
++  free( ctx );
++}
++
++const cipher_base_t bf_info = {
++  POLARSSL_CIPHER_ID_BF,
++  bf_crypt_cbc_wrap,
++  bf_crypt_cfb128_wrap,
++  bf_crypt_ctr_wrap,
++  bf_setkey_enc_wrap,
++  bf_setkey_dec_wrap,
++  bf_ctx_alloc,
++  bf_ctx_free
++};
++
++const cipher_info_t bf_128_cbc_info = {
++  POLARSSL_CIPHER_BF_128_CBC,
++  POLARSSL_MODE_CBC,
++  128,
++  "BF-CBC",
++  8,
++  8,
++  &bf_info
++};
++
++#endif
++
+ #endif
+diff -uNr polarssl-1.1.1/library/sha1.c polarssl-1.1.1.new/library/sha1.c
+--- polarssl-1.1.1/library/sha1.c	2011-12-11 09:35:09.000000000 -0700
++++ polarssl-1.1.1.new/library/sha1.c	2012-03-22 13:10:50.548358985 -0600
+@@ -38,6 +38,8 @@
+ #include <stdio.h>
+ #endif
+ 
++#ifndef POLARSSL_USE_OPENSSL_CRYPTO
++
+ /*
+  * 32-bit integer manipulation macros (big endian)
+  */
+@@ -313,6 +315,8 @@
+     PUT_ULONG_BE( ctx->state[4], output, 16 );
+ }
+ 
++#endif /* !POLARSSL_USE_OPENSSL_CRYPTO */
++
+ /*
+  * output = SHA-1( input buffer )
+  */
+diff -uNr polarssl-1.1.1/library/ssl_tls.c polarssl-1.1.1.new/library/ssl_tls.c
+--- polarssl-1.1.1/library/ssl_tls.c	2012-03-23 08:55:50.880507305 -0600
++++ polarssl-1.1.1.new/library/ssl_tls.c	2012-03-22 13:26:42.192010810 -0600
+@@ -1522,8 +1522,10 @@
+     SSL_DEBUG_BUF( 4, "finished  md5 state", (unsigned char *)
+                     md5->state, sizeof(  md5->state ) );
+ 
++#ifndef POLARSSL_USE_OPENSSL_CRYPTO
+     SSL_DEBUG_BUF( 4, "finished sha1 state", (unsigned char *)
+                    sha1->state, sizeof( sha1->state ) );
++#endif
+ 
+     if( ssl->minor_ver == SSL_MINOR_VERSION_0 )
+     {
+diff -uNr polarssl-1.1.1/include/polarssl/bf.h polarssl-1.1.1.new/include/polarssl/bf.h
+--- polarssl-1.1.1/include/polarssl/bf.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl-1.1.1.new/include/polarssl/bf.h	2012-03-23 12:55:44.425331517 -0600
+@@ -0,0 +1,95 @@
++#ifndef POLARSSL_BF_H
++#define POLARSSL_BF_H
++
++#if defined(POLARSSL_USE_OPENSSL_CRYPTO) && defined(POLARSSL_USE_OPENSSL_BF)
++
++#include <string.h>
++
++#define BF_ENCRYPT     1
++#define BF_DECRYPT     0
++
++/*
++ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
++ * ! BF_LONG has to be at least 32 bits wide. If it's wider, then !
++ * ! BF_LONG_LOG2 has to be defined along.                        !
++ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
++ */
++
++#if defined(__LP32__)
++#define BF_LONG unsigned long
++#elif defined(OPENSSL_SYS_CRAY) || defined(__ILP64__)
++#define BF_LONG unsigned long
++#define BF_LONG_LOG2 3
++/*
++ * _CRAY note. I could declare short, but I have no idea what impact
++ * does it have on performance on none-T3E machines. I could declare
++ * int, but at least on C90 sizeof(int) can be chosen at compile time.
++ * So I've chosen long...
++ *					<appro@fy.chalmers.se>
++ */
++#else
++#define BF_LONG unsigned int
++#endif
++
++#define BF_ROUNDS	16
++#define BF_BLOCK	8
++
++/**
++ * \brief          BF context structure
++ */
++typedef struct
++{
++  BF_LONG P[BF_ROUNDS+2];
++  BF_LONG S[4*256];
++}
++bf_context;
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++void BF_set_key(bf_context *key, int len, const unsigned char *data);
++
++void BF_ecb_encrypt(const unsigned char *in, unsigned char *out,
++		    const bf_context *key, int enc);
++
++void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
++		    const bf_context *schedule, unsigned char *ivec, int enc);
++
++static inline int bf_setkey_enc( bf_context *ctx, const unsigned char *key, unsigned int keysize )
++{
++  BF_set_key(ctx, keysize / 8, key);
++  return 0;
++}
++
++static inline int bf_setkey_dec( bf_context *ctx, const unsigned char *key, unsigned int keysize )
++{
++  BF_set_key(ctx, keysize / 8, key);
++  return 0;
++}
++
++static inline int bf_crypt_ecb( bf_context *ctx,
++				int mode,
++				const unsigned char input[8],
++				unsigned char output[8] )
++{
++  BF_ecb_encrypt(input, output, ctx, mode);
++  return 0;
++}
++
++static inline int bf_crypt_cbc( bf_context *ctx,
++				int mode,
++				size_t length,
++				unsigned char iv[8],
++				const unsigned char *input,
++				unsigned char *output )
++{
++  BF_cbc_encrypt(input, output, length, ctx, iv, mode);
++  return 0;
++}
++
++#ifdef __cplusplus
++}
++#endif
++#endif
++#endif /* bf.h */

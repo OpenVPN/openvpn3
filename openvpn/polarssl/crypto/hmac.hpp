@@ -14,8 +14,8 @@ namespace openvpn {
     class HMACContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(hmac_uninitialized);
-      OPENVPN_EXCEPTION(hmac_polarssl_error);
+      OPENVPN_SIMPLE_EXCEPTION(polarssl_hmac_uninitialized);
+      OPENVPN_EXCEPTION(polarssl_hmac_error);
 
       enum {
 	MAX_HMAC_SIZE = POLARSSL_MD_MAX_SIZE
@@ -33,9 +33,9 @@ namespace openvpn {
 	erase();
 	ctx.md_ctx = NULL;
 	if (md_init_ctx(&ctx, digest.get()) < 0)
-	  throw hmac_polarssl_error("md_init_ctx");
+	  throw polarssl_hmac_error("md_init_ctx");
 	if (md_hmac_starts(&ctx, key, key_size) < 0)
-	  throw hmac_polarssl_error("md_hmac_starts");
+	  throw polarssl_hmac_error("md_hmac_starts");
 	initialized = true;
       }
 
@@ -43,21 +43,21 @@ namespace openvpn {
       {
 	check_initialized();
 	if (md_hmac_reset(&ctx) < 0)
-	  throw hmac_polarssl_error("md_hmac_reset");
+	  throw polarssl_hmac_error("md_hmac_reset");
       }
 
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
 	if (md_hmac_update(&ctx, in, size) < 0)
-	  throw hmac_polarssl_error("md_hmac_update");
+	  throw polarssl_hmac_error("md_hmac_update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
 	if (md_hmac_finish(&ctx, out) < 0)
-	  throw hmac_polarssl_error("md_hmac_finish");
+	  throw polarssl_hmac_error("md_hmac_finish");
 	return size_();
       }
 
@@ -88,7 +88,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw hmac_uninitialized();
+	  throw polarssl_hmac_uninitialized();
 #endif
       }
 

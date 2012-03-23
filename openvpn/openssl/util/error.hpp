@@ -147,6 +147,12 @@ namespace openvpn {
     return err.what_str();
   }
 
+  inline void openssl_clear_error_stack()
+  {
+    while (ERR_get_error())
+      ;
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_OPENSSL_UTIL_ERROR_H

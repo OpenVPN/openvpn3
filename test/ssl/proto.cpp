@@ -36,6 +36,12 @@
 #define VERBOSE
 #endif
 
+#ifdef PROTO_BF
+#define PROTO_CIPHER "BF-CBC"
+#else
+#define PROTO_CIPHER "AES-128-CBC"
+#endif
+
 #include <openvpn/log/logsimple.hpp>
 
 #include <openvpn/common/thread.hpp>
@@ -656,7 +662,7 @@ void test(const int thread_num)
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
     cp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    cp->cipher = ClientCryptoAPI::Cipher("AES-128-CBC");
+    cp->cipher = ClientCryptoAPI::Cipher(PROTO_CIPHER);
     cp->digest = ClientCryptoAPI::Digest("SHA1");
 #ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
@@ -708,7 +714,7 @@ void test(const int thread_num)
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
     sp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    sp->cipher = ServerCryptoAPI::Cipher("AES-128-CBC");
+    sp->cipher = ServerCryptoAPI::Cipher(PROTO_CIPHER);
     sp->digest = ServerCryptoAPI::Digest("SHA1");
 #ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);

@@ -22,8 +22,8 @@ namespace openvpn {
       friend class HMACContext;
 
     public:
-      OPENVPN_EXCEPTION(digest_not_found);
-      OPENVPN_SIMPLE_EXCEPTION(digest_undefined);
+      OPENVPN_EXCEPTION(openssl_digest_not_found);
+      OPENVPN_SIMPLE_EXCEPTION(openssl_digest_undefined);
 
       Digest() : digest_(NULL) {}
 
@@ -31,7 +31,7 @@ namespace openvpn {
       {
 	digest_ = EVP_get_digestbyname(name.c_str());
 	if (!digest_)
-	  throw digest_not_found(name);
+	  throw openssl_digest_not_found(name);
       }
 
       const char *name() const
@@ -64,7 +64,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!digest_)
-	  throw digest_undefined();
+	  throw openssl_digest_undefined();
 #endif
       }
 
@@ -74,8 +74,8 @@ namespace openvpn {
     class DigestContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(digest_uninitialized);
-      OPENVPN_EXCEPTION(digest_openssl_error);
+      OPENVPN_SIMPLE_EXCEPTION(openssl_digest_uninitialized);
+      OPENVPN_EXCEPTION(openssl_digest_error);
 
       enum {
 	MAX_DIGEST_SIZE = EVP_MAX_MD_SIZE
@@ -98,7 +98,10 @@ namespace openvpn {
       {
 	erase();
 	if (!EVP_DigestInit(&ctx, digest.get()))
-	  throw digest_openssl_error("EVP_DigestInit");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_digest_error("EVP_DigestInit");
+	  }
 	initialized = true;
       }
 
@@ -106,7 +109,10 @@ namespace openvpn {
       {
 	check_initialized();
 	if (!EVP_DigestUpdate(&ctx, in, int(size)))
-	  throw digest_openssl_error("EVP_DigestUpdate");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_digest_error("EVP_DigestUpdate");
+	  }
       }
 
       size_t final(unsigned char *out)
@@ -114,7 +120,10 @@ namespace openvpn {
 	check_initialized();
 	unsigned int outlen;
 	if (!EVP_DigestFinal(&ctx, out, &outlen))
-	  throw digest_openssl_error("EVP_DigestFinal");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_digest_error("EVP_DigestFinal");
+	  }
 	return outlen;
       }
 
@@ -140,7 +149,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw digest_uninitialized();
+	  throw openssl_digest_uninitialized();
 #endif
       }
 

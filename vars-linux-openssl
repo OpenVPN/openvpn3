@@ -1,5 +1,4 @@
 # like vars-linux but builds with a private OpenSSL dist at $HOME/openssl-dist
-. vars-reset
 export BOOST_DIR=$HOME/boost_1_48_0
 export SNAPPY_DIR=$HOME/snappy
 export LZ4_DIR=$HOME/lz4

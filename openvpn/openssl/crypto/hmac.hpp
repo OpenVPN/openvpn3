@@ -14,8 +14,8 @@ namespace openvpn {
     class HMACContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(hmac_uninitialized);
-      OPENVPN_EXCEPTION(hmac_openssl_error);
+      OPENVPN_SIMPLE_EXCEPTION(openssl_hmac_uninitialized);
+      OPENVPN_EXCEPTION(openssl_hmac_error);
 
       enum {
 	MAX_HMAC_SIZE = EVP_MAX_MD_SIZE
@@ -34,7 +34,10 @@ namespace openvpn {
 	HMAC_CTX_init (&ctx);
 #if SSLEAY_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Init_ex (&ctx, key, int(key_size), digest.get(), NULL))
-	  throw hmac_openssl_error("HMAC_Init_ex (init)");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_hmac_error("HMAC_Init_ex (init)");
+	  }
 #else
 	HMAC_Init_ex (&ctx, key, int(key_size), digest.get(), NULL);
 #endif
@@ -46,7 +49,10 @@ namespace openvpn {
 	check_initialized();
 #if SSLEAY_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Init_ex (&ctx, NULL, 0, NULL, NULL))
-	  throw hmac_openssl_error("HMAC_Init_ex (reset)");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_hmac_error("HMAC_Init_ex (reset)");
+	  }
 #else
 	HMAC_Init_ex (&ctx, NULL, 0, NULL, NULL);
 #endif
@@ -57,7 +63,10 @@ namespace openvpn {
 	check_initialized();
 #if SSLEAY_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Update(&ctx, in, int(size)))
-	  throw hmac_openssl_error("HMAC_Update");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_hmac_error("HMAC_Update");
+	  }
 #else
 	HMAC_Update(&ctx, in, int(size));
 #endif
@@ -69,7 +78,10 @@ namespace openvpn {
 	unsigned int outlen;
 #if SSLEAY_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Final(&ctx, out, &outlen))
-	  throw hmac_openssl_error("HMAC_Final");
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_hmac_error("HMAC_Final");
+	  }
 #else
 	HMAC_Final(&ctx, out, &outlen);
 #endif
@@ -103,7 +115,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw hmac_uninitialized();
+	  throw openssl_hmac_uninitialized();
 #endif
       }
 

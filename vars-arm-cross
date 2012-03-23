@@ -1,4 +1,3 @@
-. vars-reset
 export BOOST_DIR=$HOME/arm/boost_1_48_0
 export OPENSSL_DIR=$HOME/arm/openssl
 export SNAPPY_DIR=$HOME/arm/snappy

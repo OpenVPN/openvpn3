@@ -125,14 +125,16 @@
  *
  * Enable Cipher Feedback mode (CFB) for symmetric ciphers.
  */
-#define POLARSSL_CIPHER_MODE_CFB
+// JY removed
+//#define POLARSSL_CIPHER_MODE_CFB
 
 /**
  * \def POLARSSL_CIPHER_MODE_CTR
  *
  * Enable Counter Block Cipher mode (CTR) for symmetric ciphers.
  */
-#define POLARSSL_CIPHER_MODE_CTR
+// JY removed
+//#define POLARSSL_CIPHER_MODE_CTR
 
 /**
  * \def POLARSSL_DEBUG_MSG
@@ -717,4 +719,10 @@
 //#define POLARSSL_XTEA_C
 /* \} name */
 
-#endif /* config.h */
+// JY added
+#define POLARSSL_USE_OPENSSL_CRYPTO
+#define POLARSSL_USE_OPENSSL_BF
+
+#include "config-extra.h"
+
+#endif
