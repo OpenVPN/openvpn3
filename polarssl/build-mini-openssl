@@ -24,7 +24,7 @@ python $OVPN3_DIR/scripts/sym.py $PD/$1 nm-file $AR_CMD ../libcrypto.a libminicr
 # need any special initialization?
 . ../mini-undef.sh
 if [ "$SYM_UNDEF_OPENSSL_ia32cap_P" ] && [ "$SYM_UNDEF_OPENSSL_cpuid_setup" ]; then
-    $GCC_CMD -O3 -c $PD/intel_cpu.c
+    $GCC_CMD -O3 -fPIC -c $PD/intel_cpu.c
     $AR_CMD rs libminicrypto.a intel_cpu.o
 fi
 

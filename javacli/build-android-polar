@@ -19,9 +19,10 @@ $GPP_CMD \
     -I$OVPN3_DIR \
     -L$BOOST_DIR/stage/lib \
     -L$POLARSSL_DIR/library \
+    -L$OPENSSL_DIR/lib \
     ovpncli_wrap.cxx \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
-    -lpolarssl \
+    -lpolarssl -lminicrypto \
     -lboost_system -lboost_thread
 $STRIP_CMD libovpncli.so

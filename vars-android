@@ -6,4 +6,7 @@ export OVPN3_DIR=$HOME/src/ovpn3
 export PLATFORM=android
 export PATH="$OVPN3_DIR/scripts:$PATH"
 export GPP_CMD=arm-linux-androideabi-g++
+export GCC_CMD=arm-linux-androideabi-gcc
+export NM_CMD=arm-linux-androideabi-nm
+export AR_CMD=arm-linux-androideabi-ar
 export STRIP_CMD=arm-linux-androideabi-strip
