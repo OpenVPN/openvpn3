@@ -9,7 +9,7 @@
 
 // top-level C++ implementation file
 %{
-#include "ovpncli.ipp"
+#include "ovpncli.hpp"
 %}
 
 // modify exported C++ class names to incorporate their enclosing namespace

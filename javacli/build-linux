@@ -1,18 +1,35 @@
 #!/usr/bin/env bash
 set -e
+
+echo SWIG
 swig -c++ -java -I$OVPN3_DIR ovpncli.i
+
+echo JAVA
 javac *.java
+
+echo CORE
 gcc -O3 -fPIC -pthread \
-    -fno-strict-aliasing \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
-    -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
+    -fwhole-program "-DOPENVPN_CLIENT_EXPORT=__attribute__((externally_visible))" \
     -DUSE_OPENSSL \
     -I$OVPN3_DIR \
     -I$BOOST_DIR \
+    -c ovpncli.cpp
+
+echo WRAP
+gcc -Os -fPIC -pthread \
+    -fno-strict-aliasing \
+    -Wall \
+    -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
+    -I$OVPN3_DIR \
     -I/usr/lib/jvm/java-7-openjdk-amd64/include \
     -L$BOOST_DIR/stage/lib \
     ovpncli_wrap.cxx \
+    ovpncli.o \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
     -lcrypto -lssl \
     -lboost_system -lboost_thread
+
+echo STRIP
+strip libovpncli.so

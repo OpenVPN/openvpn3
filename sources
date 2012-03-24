@@ -2,7 +2,7 @@
 top=$(pwd)
 find openvpn | grep -E '\.(cpp|hpp|c|h)$'
 echo javacli/ovpncli.hpp
-echo javacli/ovpncli.ipp
+echo javacli/ovpncli.cpp
 echo javacli/OpenVPNClientThread.java
 android=android/OpenVPN/src/net/openvpn/openvpn
 cd $android

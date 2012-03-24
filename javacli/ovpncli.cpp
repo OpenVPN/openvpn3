@@ -180,13 +180,13 @@ namespace openvpn {
       };
     };
 
-    inline OpenVPNClient::OpenVPNClient()
+    OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
     {
       InitProcess::init();
       state = new Private::ClientState();
     }
 
-    inline void OpenVPNClient::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
     {
       try {
 	// validate proto_override
@@ -267,7 +267,7 @@ namespace openvpn {
 	}
     }
 
-    inline void OpenVPNClient::parse_extras(const Config& config, EvalConfig& eval)
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::parse_extras(const Config& config, EvalConfig& eval)
     {
       try {
 	state->server_override = config.serverOverride;
@@ -284,7 +284,7 @@ namespace openvpn {
 	}
     }
 
-    inline EvalConfig OpenVPNClient::eval_config_static(const Config& config)
+    OPENVPN_CLIENT_EXPORT EvalConfig OpenVPNClient::eval_config_static(const Config& config)
     {
       EvalConfig eval;
       OptionList options;
@@ -293,7 +293,7 @@ namespace openvpn {
     }
 
     // API client submits the configuration here before calling connect()
-    inline EvalConfig OpenVPNClient::eval_config(const Config& config)
+    OPENVPN_CLIENT_EXPORT EvalConfig OpenVPNClient::eval_config(const Config& config)
     {
       // parse and validate configuration file
       EvalConfig eval;
@@ -308,7 +308,7 @@ namespace openvpn {
       return eval;      
     }
 
-    inline Status OpenVPNClient::provide_creds(const ProvideCreds& creds)
+    OPENVPN_CLIENT_EXPORT Status OpenVPNClient::provide_creds(const ProvideCreds& creds)
     {
       Status ret;
       try {
@@ -328,7 +328,7 @@ namespace openvpn {
       return ret;
     }
 
-    inline bool OpenVPNClient::parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc)
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc)
     {
       try {
 	ChallengeResponse cr(cookie);
@@ -343,7 +343,7 @@ namespace openvpn {
 	}
     }
 
-    inline Status OpenVPNClient::connect()
+    OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
     {
       boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
       Log::Context log_context(this);
@@ -442,7 +442,7 @@ namespace openvpn {
       return ret;
     }
 
-    inline void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req, const size_t err_type)
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req, const size_t err_type)
     {
       if (req.error)
 	{
@@ -460,7 +460,7 @@ namespace openvpn {
 	}
     }
 
-    inline bool OpenVPNClient::sign(const std::string& data, std::string& sig)
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string& data, std::string& sig)
     {
       ExternalPKISignRequest req;
       req.data = data;
@@ -478,17 +478,17 @@ namespace openvpn {
 	}
     }
 
-    inline int OpenVPNClient::stats_n()
+    OPENVPN_CLIENT_EXPORT int OpenVPNClient::stats_n()
     {
       return MySessionStats::combined_n();
     }
 
-    inline std::string OpenVPNClient::stats_name(int index)
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::stats_name(int index)
     {
       return MySessionStats::combined_name(index);
     }
 
-    inline long long OpenVPNClient::stats_value(int index) const
+    OPENVPN_CLIENT_EXPORT long long OpenVPNClient::stats_value(int index) const
     {
       MySessionStats::Ptr stats = state->stats;
       if (stats)
@@ -497,7 +497,7 @@ namespace openvpn {
 	return 0;
     }
 
-    inline std::vector<long long> OpenVPNClient::stats_bundle() const
+    OPENVPN_CLIENT_EXPORT std::vector<long long> OpenVPNClient::stats_bundle() const
     {
       std::vector<long long> sv;
       MySessionStats::Ptr stats = state->stats;
@@ -508,35 +508,35 @@ namespace openvpn {
       return sv;
     }
 
-    inline void OpenVPNClient::stop()
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::stop()
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_stop();
     }
 
-    inline void OpenVPNClient::pause()
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::pause()
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_pause();
     }
 
-    inline void OpenVPNClient::resume()
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::resume()
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_resume();
     }
 
-    inline void OpenVPNClient::reconnect(int seconds)
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::reconnect(int seconds)
     {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_reconnect(seconds);
     }
 
-    inline int OpenVPNClient::app_expire()
+    OPENVPN_CLIENT_EXPORT int OpenVPNClient::app_expire()
     {
 #ifdef APP_EXPIRE_TIME
       return APP_EXPIRE_TIME;
@@ -545,7 +545,7 @@ namespace openvpn {
 #endif
     }
 
-    inline void OpenVPNClient::check_app_expired()
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::check_app_expired()
     {
 #ifdef APP_EXPIRE_TIME
       if (Time::now().seconds_since_epoch() >= APP_EXPIRE_TIME)
@@ -553,9 +553,10 @@ namespace openvpn {
 #endif
     }
 
-    inline OpenVPNClient::~OpenVPNClient()
+    OPENVPN_CLIENT_EXPORT OpenVPNClient::~OpenVPNClient()
     {
       delete state;
     }
+
   }
 }
