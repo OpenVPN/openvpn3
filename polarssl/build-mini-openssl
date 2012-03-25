@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Examples:
+#   $OVPN3_DIR/polarssl/build-mini-openssl ref
+#   $OVPN3_DIR/polarssl/build-mini-openssl ref-aesni
+
 set -e
 if [ -z "$1" ]; then
     echo "usage: build-mini-openssl <ref|ref-aesni>"

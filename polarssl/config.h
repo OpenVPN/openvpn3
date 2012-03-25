@@ -211,8 +211,10 @@
  *
  * Enable the checkup functions (*_self_test).
  */
-// JY removed
-//#define POLARSSL_SELF_TEST
+// JY changed
+#ifdef ENABLE_TESTING
+#define POLARSSL_SELF_TEST
+#endif
 
 /**
  * \def POLARSSL_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
@@ -328,7 +330,10 @@
  *
  * This module is used for testing (ssl_client/server).
  */
+// JY changed
+#ifdef ENABLE_TESTING
 #define POLARSSL_CERTS_C
+#endif
 
 /**
  * \def POLARSSL_CIPHER_C
@@ -382,8 +387,10 @@
  *      SSL_RSA_DES_168_SHA
  *      SSL_EDH_RSA_DES_168_SHA
  */
-// JY removed
-//#define POLARSSL_DES_C
+// JY changed
+#ifdef ENABLE_TESTING
+#define POLARSSL_DES_C
+#endif
 
 /**
  * \def POLARSSL_DHM_C
@@ -718,11 +725,5 @@
 // JY removed
 //#define POLARSSL_XTEA_C
 /* \} name */
-
-// JY added
-#define POLARSSL_USE_OPENSSL_CRYPTO
-#define POLARSSL_USE_OPENSSL_BF
-
-#include "config-extra.h"
 
 #endif

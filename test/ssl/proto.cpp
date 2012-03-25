@@ -36,10 +36,17 @@
 #define VERBOSE
 #endif
 
-#ifdef PROTO_BF
-#define PROTO_CIPHER "BF-CBC"
-#else
-#define PROTO_CIPHER "AES-128-CBC"
+#define STRINGIZE1(x) #x
+#define STRINGIZE(x) STRINGIZE1(x)
+
+// setup cipher
+#ifndef PROTO_CIPHER
+#define PROTO_CIPHER AES-128-CBC
+#endif
+
+// setup digest
+#ifndef PROTO_DIGEST
+#define PROTO_DIGEST SHA1
 #endif
 
 #include <openvpn/log/logsimple.hpp>
@@ -611,10 +618,10 @@ void test(const int thread_num)
     // RNG
     ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());
     RandomInt<ClientRandomAPI> rand(*rng_cli);
-    PRNG<ClientRandomAPI, ClientCryptoAPI>::Ptr prng_cli(new PRNG<ClientRandomAPI, ClientCryptoAPI>("sha1", rng_cli, 16));
+    PRNG<ClientRandomAPI, ClientCryptoAPI>::Ptr prng_cli(new PRNG<ClientRandomAPI, ClientCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_cli, 16));
 
     ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI());
-    PRNG<ServerRandomAPI, ServerCryptoAPI>::Ptr prng_serv(new PRNG<ServerRandomAPI, ServerCryptoAPI>("sha1", rng_serv, 16));
+    PRNG<ServerRandomAPI, ServerCryptoAPI>::Ptr prng_serv(new PRNG<ServerRandomAPI, ServerCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_serv, 16));
 
     // init simulated time
     Time time;
@@ -662,11 +669,11 @@ void test(const int thread_num)
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
     cp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    cp->cipher = ClientCryptoAPI::Cipher(PROTO_CIPHER);
-    cp->digest = ClientCryptoAPI::Digest("SHA1");
+    cp->cipher = ClientCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
+    cp->digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
 #ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
-    cp->tls_auth_digest = ClientCryptoAPI::Digest("sha1");
+    cp->tls_auth_digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
 #endif
     cp->reliable_window = 4;
     cp->max_ack_list = 4;
@@ -714,11 +721,11 @@ void test(const int thread_num)
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
     sp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
-    sp->cipher = ServerCryptoAPI::Cipher(PROTO_CIPHER);
-    sp->digest = ServerCryptoAPI::Digest("SHA1");
+    sp->cipher = ServerCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
+    sp->digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
 #ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);
-    sp->tls_auth_digest = ServerCryptoAPI::Digest("sha1");
+    sp->tls_auth_digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
 #endif
     sp->reliable_window = 4;
     sp->max_ack_list = 4;

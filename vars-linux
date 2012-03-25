@@ -1,7 +1,7 @@
 export BOOST_DIR=$HOME/boost_1_48_0
 export SNAPPY_DIR=$HOME/snappy
 export LZ4_DIR=$HOME/lz4
-export POLARSSL_DIR=$HOME/polarssl-1.1.1
+export POLARSSL_DIR=$HOME/polarssl
 export JAVA_DIR=/usr/lib/jvm/java-7-openjdk-amd64
 export OVPN3_DIR=$HOME/ovpn3
 export PLATFORM=linux

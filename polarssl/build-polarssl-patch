@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -e
+POLARSSL_SRC=$HOME/polarssl-1.1.1
+PD=$OVPN3_DIR/polarssl
+PB=$(basename $POLARSSL_SRC)
+
+rm -rf polartmp
+mkdir polartmp
+cd polartmp
+cp -a $POLARSSL_SRC polarssl.new
+
+# extract the PolarSSL source
+tar xfz $DL/$PB-gpl.tgz
+
+cd $PB
+rm $(find . -type f | grep Makefile)
+patch -p1 <$PD/polarssl-enum.patch
+patch -p1 <$PD/polarssl-const-ciphersuite.patch
+patch -p1 <$PD/polarssl-epki.patch
+rm CMakeLists.txt include/polarssl/config.h
+
+cd ../polarssl.new
+mv CMakeLists.txt include/polarssl/config.h $PD
+cd ..
+
+diff -uNr $PB polarssl.new >$PD/polar-openssl.patch

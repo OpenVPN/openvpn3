@@ -1,7 +1,7 @@
 export BOOST_DIR=$HOME/src/android/boost_1_48_0
 export OPENSSL_DIR=$HOME/src/android/openssl
 export SNAPPY_DIR=$HOME/src/android/snappy
-export POLARSSL_DIR=$HOME/src/android/polarssl-1.1.1
+export POLARSSL_DIR=$HOME/src/android/polarssl
 export OVPN3_DIR=$HOME/src/ovpn3
 export PLATFORM=android
 export PATH="$OVPN3_DIR/scripts:$PATH"
