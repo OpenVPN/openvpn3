@@ -12,6 +12,7 @@ NO_FLAGS="no-engine no-hw no-ssl2 no-ssl3 no-zlib no-rc2 no-idea no-des no-cast 
 #sed -i "" -e 's|-O3|-O3 -flto|' Makefile
 #sed -i "" -e 's|^all:.*$|all: Makefile build_all libssl.pc libcrypto.pc|' Makefile
 #sed -i "" -e 's|^build_all:.*$|build_all: build_libs|' Makefile
+sed -i "" -e 's|-O3|-O3 -fPIC|' Makefile
 make CC="$BIN/$TPRE-gcc" AR="$BIN/$TPRE-ar r" RANLIB="$BIN/$TPRE-ranlib" build_libs
 touch apps/openssl
 touch openssl.pc

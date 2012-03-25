@@ -3,7 +3,15 @@
 
 #include <iostream>
 
-#include "ovpncli.hpp" // objects that we bridge with wrapping language
+// Set up export of our public interface
+#if defined(__GNUC__)
+#define OPENVPN_CLIENT_EXPORT
+#pragma GCC visibility push(default)
+#include "ovpncli.hpp" // public interface
+#pragma GCC visibility pop
+#else
+#error no public interface export defined for this compiler
+#endif
 
 // debug settings
 
