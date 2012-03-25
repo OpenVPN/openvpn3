@@ -117,8 +117,6 @@
  *
 #define POLARSSL_AES_ROM_TABLES
  */
-// JY added
-//#define POLARSSL_AES_ROM_TABLES
 
 /**
  * \def POLARSSL_CIPHER_MODE_CFB
