@@ -10,7 +10,7 @@ javac *.java
 echo CORE
 gcc -O3 -fPIC -pthread \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
-    -fwhole-program "-DOPENVPN_CLIENT_EXPORT=__attribute__((externally_visible))" \
+    -fvisibility=hidden \
     -DUSE_OPENSSL \
     -I$OVPN3_DIR \
     -I$BOOST_DIR \
@@ -20,7 +20,7 @@ echo WRAP
 gcc -Os -fPIC -pthread \
     -fno-strict-aliasing \
     -Wall \
-    -fwhole-program "-DSWIGEXPORT=__attribute__((externally_visible))" \
+    -fvisibility=hidden '-DSWIGEXPORT=__attribute__((visibility("default")))' \
     -I$OVPN3_DIR \
     -I/usr/lib/jvm/java-7-openjdk-amd64/include \
     -L$BOOST_DIR/stage/lib \
