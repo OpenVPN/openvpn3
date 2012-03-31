@@ -31,6 +31,8 @@ namespace openvpn {
       PRIMARY_EXPIRE,      // primary key context expired
       CERT_VERIFY_FAIL,    // peer certificate verification failure
       AUTH_FAILED,         // general authentication failure
+      CLIENT_HALT,         // HALT message from server received
+      CLIENT_RESTART,      // RESTART message from server received
       N_ERRORS,
     };
 
@@ -63,6 +65,8 @@ namespace openvpn {
 	"PRIMARY_EXPIRE",
 	"CERT_VERIFY_FAIL",
 	"AUTH_FAILED",
+	"CLIENT_HALT",
+	"CLIENT_RESTART",
       };
 
       if (type < N_ERRORS)

@@ -15,6 +15,7 @@
 #include <openvpn/options/sanitize.hpp>
 #include <openvpn/client/clievent.hpp>
 #include <openvpn/client/clicreds.hpp>
+#include <openvpn/options/clihalt.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
 
@@ -47,6 +48,7 @@ namespace openvpn {
       typedef typename Base::Config ProtoConfig;
 
       OPENVPN_EXCEPTION(client_exception);
+      OPENVPN_EXCEPTION(client_halt_restart);
       OPENVPN_EXCEPTION(tun_exception);
       OPENVPN_EXCEPTION(transport_exception);
       OPENVPN_EXCEPTION(max_pushed_options_exceeded);
@@ -295,7 +297,8 @@ namespace openvpn {
 	  {
 	    o->min_args(2);
 	    const std::string& sess_id = (*o)[1];
-	    creds->set_session_id(sess_id);
+	    if (creds)
+	      creds->set_session_id(sess_id);
 #ifdef OPENVPN_SHOW_SESSION_TOKEN
 	    OPENVPN_LOG("using session token " << sess_id);
 #else
@@ -353,6 +356,11 @@ namespace openvpn {
 	      }
 	    else
 	      throw authentication_failed();
+	  }
+	else if (ClientHalt::match(msg))
+	  {
+	    const ClientHalt ch(msg);
+	    process_halt_restart(ch);
 	  }
       }
 
@@ -510,6 +518,22 @@ namespace openvpn {
 	  }
 	else
 	  throw client_exception(e.what());
+      }
+
+      void process_halt_restart(const ClientHalt& ch)
+      {
+	if (ch.restart() && (ch.psid() || !creds || !creds->password_defined()))
+	  fatal_ = Error::CLIENT_RESTART;
+	else
+	  fatal_ = Error::CLIENT_HALT;
+	fatal_reason_ = ch.reason();
+	if (notify_callback)
+	  {
+	    OPENVPN_LOG("Client halt/restart: " << ch.render());
+	    stop(true);
+	  }
+	else
+	  throw client_halt_restart(ch.render());
       }
 
 #ifdef OPENVPN_PACKET_LOG

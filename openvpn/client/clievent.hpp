@@ -25,6 +25,8 @@ namespace openvpn {
 
       // start of errors, must be marked by ERROR_START
       AUTH_FAILED,
+      CLIENT_HALT,
+      CLIENT_RESTART,
       CONNECTION_TIMEOUT,
       DYNAMIC_CHALLENGE,
       TUN_SETUP_FAILED,
@@ -53,6 +55,8 @@ namespace openvpn {
 	"PAUSE",
 	"RESUME",
 	"AUTH_FAILED",
+	"CLIENT_HALT",
+	"CLIENT_RESTART",
 	"CONNECTION_TIMEOUT",
 	"DYNAMIC_CHALLENGE",
 	"TUN_SETUP_FAILED",
@@ -191,6 +195,16 @@ namespace openvpn {
     struct AuthFailed : public ReasonBase
     {
       AuthFailed(const std::string& reason) : ReasonBase(AUTH_FAILED, reason) {}
+    };
+
+    struct ClientHalt : public ReasonBase
+    {
+      ClientHalt(const std::string& reason) : ReasonBase(CLIENT_HALT, reason) {}
+    };
+
+    struct ClientRestart : public ReasonBase
+    {
+      ClientRestart(const std::string& reason) : ReasonBase(CLIENT_RESTART, reason) {}
     };
 
     struct DynamicChallenge : public ReasonBase

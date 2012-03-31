@@ -43,6 +43,7 @@ namespace openvpn {
     {
       if (!halt && client)
 	  client->send_explicit_exit_notify();
+      //sleep(5); // simulate slow stop (comment out for production)
       stop();
     }
 
@@ -192,6 +193,15 @@ namespace openvpn {
       conn_timer_pending = false;
     }
 
+    void queue_restart()
+    {
+      const unsigned int delay = 2;
+      OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
+      server_poll_timer.cancel();
+      restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
+      restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+    }
+
     virtual void client_proto_terminate()
     {
       if (!halt)
@@ -199,13 +209,7 @@ namespace openvpn {
 	  switch (client->fatal())
 	    {
 	    case Error::SUCCESS: // doesn't necessarily mean success, just that there wasn't a fatal error
-	      {
-		const unsigned int delay = 2;
-		OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
-		server_poll_timer.cancel();
-		restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
-		restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
-	      }
+	      queue_restart();
 	      break;
 	    case Error::AUTH_FAILED:
 	      {
@@ -228,7 +232,24 @@ namespace openvpn {
 	      {
 		ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
 		client_options->events().add_event(ev);
+		client_options->stats().error(Error::TUN_SETUP_FAILED);
 		stop();
+	      }
+	      break;
+	    case Error::CLIENT_HALT:
+	      {
+		ClientEvent::Base::Ptr ev = new ClientEvent::ClientHalt(client->fatal_reason());
+		client_options->events().add_event(ev);
+		client_options->stats().error(Error::CLIENT_HALT);
+		stop();
+	      }
+	      break;
+	    case Error::CLIENT_RESTART:
+	      {
+		ClientEvent::Base::Ptr ev = new ClientEvent::ClientRestart(client->fatal_reason());
+		client_options->events().add_event(ev);
+		client_options->stats().error(Error::CLIENT_RESTART);
+		queue_restart();
 	      }
 	      break;
 	    default:

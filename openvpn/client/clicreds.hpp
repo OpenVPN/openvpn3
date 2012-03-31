@@ -60,6 +60,16 @@ namespace openvpn {
 	return ChallengeResponse::construct_static_password(password, response);
     }
 
+    bool username_defined() const
+    {
+      return !username.empty();
+    }
+
+    bool password_defined() const
+    {
+      return !password.empty();
+    }
+
   private:
     // Standard credentials
     std::string username;

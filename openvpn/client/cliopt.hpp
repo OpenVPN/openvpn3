@@ -176,6 +176,13 @@ namespace openvpn {
 	if (o)
 	  server_poll_timeout_ = types<unsigned int>::parse(o->get(1));
       }
+
+      // userlocked username
+      {
+	const Option* o = opt.get_ptr("USERNAME");
+	if (o)
+	  userlocked_username = o->get(1);
+      }
     }
 
     void next()
@@ -203,6 +210,11 @@ namespace openvpn {
 
     void submit_creds(const ClientCreds::Ptr& creds_arg)
     {
+      // if no username is defined in creds and userlocked_username is defined
+      // in profile, set the creds username to be the userlocked_username
+      if (creds_arg && !creds_arg->username_defined() && !userlocked_username.empty())
+	creds_arg->set_username(userlocked_username);
+
       creds = creds_arg;
     }
 
@@ -274,6 +286,7 @@ namespace openvpn {
     std::string server_override;
     Protocol proto_override;
     int conn_timeout_;
+    std::string userlocked_username;
   };
 }
 
