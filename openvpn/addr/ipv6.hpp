@@ -5,7 +5,9 @@
 
 #include <boost/cstdint.hpp> // for boost::uint32_t
 #include <boost/asio.hpp>
+#include <boost/functional/hash.hpp>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/ostream.hpp>
 
@@ -101,7 +103,7 @@ namespace openvpn {
 	return ret;
       }
 
-      bool operator==(const Addr& other)
+      bool operator==(const Addr& other) const
       {
 	return u.u64[0] == other.u.u64[0] && u.u64[1] == other.u.u64[1];
       }
@@ -128,7 +130,19 @@ namespace openvpn {
 	u.u64[1] = 0;
       }
 
+      Addr& operator++()
+      {
+	for (int i = 15; i >= 0; --i)
+	  {
+	    if (++u.bytes[i])
+	      break;
+	  }
+	return *this;
+      }
+
     private:
+      friend std::size_t hash_value(const Addr&);
+
       union {
 	boost::uint64_t u64[2];
 	boost::uint32_t u32[4];
@@ -139,6 +153,16 @@ namespace openvpn {
     };
 
     OPENVPN_OSTREAM(Addr, to_string)
+
+    inline std::size_t hash_value(const Addr& addr)
+    {
+      std::size_t seed = 0;
+      boost::hash_combine(seed, addr.u.u32[0]);
+      boost::hash_combine(seed, addr.u.u32[1]);
+      boost::hash_combine(seed, addr.u.u32[2]);
+      boost::hash_combine(seed, addr.u.u32[3]);
+      return seed;
+    }
   }
 } // namespace openvpn
 

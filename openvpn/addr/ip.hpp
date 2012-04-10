@@ -5,6 +5,7 @@
 
 #include <boost/asio.hpp>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/ostream.hpp>
 #include <openvpn/addr/ipv4.hpp>
@@ -189,7 +190,7 @@ namespace openvpn {
 	  }
       }
 
-      bool operator==(const Addr& other)
+      bool operator==(const Addr& other) const
       {
 	switch (ver)
 	  {
@@ -205,6 +206,22 @@ namespace openvpn {
 	    return other.ver == UNSPEC;
 	  }
 	return false;
+      }
+
+      Addr& operator++()
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    ++u.v4;
+	    break;
+	  case V6:
+	    ++u.v6;
+	    break;
+	  default:
+	    break;
+	  }
+	return *this;
       }
 
       void reset_ipv4_from_uint32(const IPv4::Addr::base_type addr)
@@ -261,6 +278,8 @@ namespace openvpn {
       }
 
     private:
+      friend std::size_t hash_value(const Addr&);
+
       union {
 	IPv4::Addr v4;
 	IPv6::Addr v6;
@@ -268,8 +287,21 @@ namespace openvpn {
 
       Version ver;
     };
+
     OPENVPN_OSTREAM(Addr, to_string)
 
+    inline std::size_t hash_value(const Addr& addr)
+    {
+      switch (addr.ver)
+	{
+	case Addr::V4:
+	  return hash_value(addr.u.v4);
+	case Addr::V6:
+	  return hash_value(addr.u.v6);
+	default:
+	  return 0;
+	}
+    }
   }
 } // namespace openvpn
 
