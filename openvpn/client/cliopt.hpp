@@ -42,8 +42,6 @@
 #include <openvpn/polarssl/util/rand.hpp>
 #endif
 
-using namespace openvpn;
-
 namespace openvpn {
 
   class ClientOptions : public RC<thread_unsafe_refcount>

@@ -9,7 +9,8 @@
 namespace openvpn {
 
   // ClientConnect implements an "always-try-to-reconnect" approach, with remote
-  // list rotation.  Only gives up on auth failure.
+  // list rotation.  Only gives up on auth failure or other fatal errors that
+  // cannot be remedied by retrying.
   struct ClientConnect : ClientProto::NotifyCallback, public RC<thread_safe_refcount>
   {
   public:
