@@ -49,6 +49,9 @@
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/options/cliopthelper.hpp>
 
+// copyright
+#include <openvpn/legal/copyright.hpp>
+
 namespace openvpn {
   namespace ClientAPI {
 
@@ -559,6 +562,11 @@ namespace openvpn {
       if (Time::now().seconds_since_epoch() >= APP_EXPIRE_TIME)
 	throw app_expired();
 #endif
+    }
+
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::copyright()
+    {
+      return openvpn_copyright;
     }
 
     OPENVPN_CLIENT_EXPORT OpenVPNClient::~OpenVPNClient()

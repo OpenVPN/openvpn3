@@ -236,6 +236,9 @@ namespace openvpn {
       // Returns date/time of app expiration as a unix time value
       static int app_expire();
 
+      // Returns core copyright
+      static std::string copyright();
+
     private:
       static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
