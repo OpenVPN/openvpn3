@@ -180,8 +180,10 @@ namespace openvpn {
 	    }
 	}
 
-	// unsupported cert type checkers
+	// unsupported cert checkers
 	{
+	  if (opt.get_ptr("tls-remote"))
+	    throw option_error("tls-remote not supported");
 	  if (opt.get_ptr("remote-cert-tls"))
 	    throw option_error("remote-cert-tls not supported");
 	  if (opt.get_ptr("remote-cert-ku"))

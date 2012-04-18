@@ -37,16 +37,31 @@ namespace openvpn {
 
     RemoteList(const OptionList& opt)
     {
-      const OptionList::IndexList& rem = opt.get_index("remote");
-      for (OptionList::IndexList::const_iterator i = rem.begin(); i != rem.end(); i++)
-	{
-	  Item e;
-	  const Option& o = opt[*i];
-	  e.server_host = o.get(1);
-	  e.server_port = o.get(2);
-	  e.transport_protocol = Protocol::parse(o.get(3));
-	  list.push_back(e);
-	}
+      Protocol default_proto(Protocol::UDPv4);
+
+      // parse "proto" option if present
+      {
+	const Option* o = opt.get_ptr("proto");
+	if (o)
+	  default_proto = Protocol::parse(o->get(1));
+      }
+
+      // cycle through remote entries
+      {
+	const OptionList::IndexList& rem = opt.get_index("remote");
+	for (OptionList::IndexList::const_iterator i = rem.begin(); i != rem.end(); i++)
+	  {
+	    Item e;
+	    const Option& o = opt[*i];
+	    e.server_host = o.get(1);
+	    e.server_port = o.get(2);
+	    if (o.size() >= 4)
+	      e.transport_protocol = Protocol::parse(o.get(3));
+	    else
+	      e.transport_protocol = default_proto;
+	    list.push_back(e);
+	  }
+      }
     }
 
     // used to cycle through Item list
