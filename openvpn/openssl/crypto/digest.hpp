@@ -16,6 +16,9 @@
 
 namespace openvpn {
   namespace OpenSSLCrypto {
+
+    class HMACContext;
+
     class Digest
     {
       friend class DigestContext;

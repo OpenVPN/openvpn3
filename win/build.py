@@ -12,4 +12,4 @@ paths = {
 
 # add to link dynamically: /DBOOST_ALL_DYN_LINK 
 
-vc_cmd(parms, r"cl /D_WIN32_WINNT=0x0501 /DNOMINMAX /DUSE_OPENSSL /I %(openssl)s\include /I %(boost)s /I %(ovpn3)s /GL /EHsc /O2 /MD /W3 /nologo %(target)s.cpp /link /LIBPATH:%(boost)s\stage\lib /LIBPATH:%(openssl)s\lib libeay32.lib ssleay32.lib" % paths)
+vc_cmd(parms, r"cl /D_WIN32_WINNT=0x0501 /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DUSE_OPENSSL /I %(openssl)s\include /I %(boost)s /I %(ovpn3)s /GL /EHsc /O2 /MD /W3 /nologo %(target)s.cpp /link /LIBPATH:%(boost)s\stage\lib /LIBPATH:%(openssl)s\lib libeay32.lib ssleay32.lib" % paths)

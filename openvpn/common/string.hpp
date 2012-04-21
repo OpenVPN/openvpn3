@@ -1,6 +1,8 @@
 #ifndef OPENVPN_COMMON_STRING_H
 #define OPENVPN_COMMON_STRING_H
 
+#include <openvpn/common/platform.hpp>
+
 #include <string>
 #include <cstring>
 
@@ -10,7 +12,11 @@ namespace openvpn {
   namespace string {
     inline int strcasecmp(const char *s1, const char *s2)
     {
+#ifdef OPENVPN_PLATFORM_WIN
+      return ::_stricmp(s1, s2);
+#else
       return ::strcasecmp(s1, s2);
+#endif
     }
 
     /* Like strncpy but makes sure dest is always null terminated */

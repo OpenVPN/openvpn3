@@ -14,6 +14,9 @@
 
 namespace openvpn {
   namespace OpenSSLCrypto {
+
+    class CipherContext;
+
     class Cipher
     {
       friend class CipherContext;
