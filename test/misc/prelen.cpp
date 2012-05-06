@@ -62,9 +62,9 @@ void test32() // test using methods above
 
 void testaddr() // test using IPv4::Addr::prefix_len
 {
-  for (unsigned int i = 1; i <= 32; ++i)
+  for (unsigned int i = 0; i <= 32; ++i)
     {
-      IPv4::Addr mask = IPv4::Addr::from_prefix_len(i);
+      IPv4::Addr mask = IPv4::Addr::netmask_from_prefix_len(i);
       const unsigned int pl = mask.prefix_len();
       if (pl != i)
 	std::cout << "ERROR" << std::endl;
