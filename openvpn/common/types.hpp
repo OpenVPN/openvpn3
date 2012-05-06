@@ -19,7 +19,7 @@ namespace openvpn {
 
   OPENVPN_SIMPLE_EXCEPTION(type_exception);
 
-  template <typename T> struct types {};
+  template <typename T> struct types;
 
 } // namespace openvpn
 

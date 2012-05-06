@@ -29,6 +29,38 @@ namespace openvpn {
 	ver = UNSPEC;
       }
 
+      Addr(const Addr& other)
+	: ver(other.ver)
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    u.v4 = other.u.v4;
+	    break;
+	  case V6:
+	    u.v6 = other.u.v6;
+	    break;
+	  default:
+	    break;
+	  }
+      }
+
+      Addr& operator=(const Addr& other)
+      {
+	switch (ver = other.ver)
+	  {
+	  case V4:
+	    u.v4 = other.u.v4;
+	    break;
+	  case V6:
+	    u.v6 = other.u.v6;
+	    break;
+	  default:
+	    break;
+	  }
+	return *this;
+      }
+
       static std::string validate(const std::string& ipstr, const char *title = NULL)
       {
 	Addr a = from_string(ipstr, title);
@@ -190,6 +222,28 @@ namespace openvpn {
 	  }
       }
 
+      Addr network_addr(const unsigned int prefix_len) const {
+	switch (ver)
+	  {
+	  case V4:
+	    {
+	      Addr ret;
+	      ret.ver = V4;
+	      ret.u.v4 = u.v4.network_addr(prefix_len);
+	      return ret;
+	    }
+	  case V6:
+	    {
+	      Addr ret;
+	      ret.ver = V6;
+	      ret.u.v6 = u.v6.network_addr(prefix_len);
+	      return ret;
+	    }
+	  default:
+	    throw ip_addr_unspecified();
+	  }
+      }
+
       bool operator==(const Addr& other) const
       {
 	switch (ver)
@@ -292,15 +346,21 @@ namespace openvpn {
 
     inline std::size_t hash_value(const Addr& addr)
     {
+      std::size_t seed = 0;
       switch (addr.ver)
 	{
 	case Addr::V4:
-	  return hash_value(addr.u.v4);
+	  boost::hash_combine(seed, 4);
+	  boost::hash_combine(seed, addr.u.v4);
+	  break;
 	case Addr::V6:
-	  return hash_value(addr.u.v6);
+	  boost::hash_combine(seed, 6);
+	  boost::hash_combine(seed, addr.u.v6);
+	  break;
 	default:
-	  return 0;
+	  break;
 	}
+      return seed;
     }
   }
 } // namespace openvpn

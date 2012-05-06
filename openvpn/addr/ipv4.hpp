@@ -28,6 +28,8 @@ namespace openvpn {
       friend class IP::Addr;
 
     public:
+      enum { SIZE=32 };
+
       typedef boost::uint32_t base_type;
 
       static Addr from_uint32(const base_type addr)
@@ -114,6 +116,14 @@ namespace openvpn {
 	return ret;
       }
 
+      // return the network that contains the current address
+      Addr network_addr(const unsigned int prefix_len) const
+      {
+	Addr ret;
+	ret.u.addr = u.addr & prefix_len_to_netmask(prefix_len);
+	return ret;
+      }
+
       bool operator==(const Addr& other) const
       {
 	return u.addr == other.u.addr;
@@ -128,7 +138,11 @@ namespace openvpn {
       // throws ipv4_malformed_netmask if addr is not a netmask
       unsigned int prefix_len() const
       {
-	if (u.addr != ~0)
+	if (u.addr == ~0)
+	  return 32;
+	else if (u.addr == 0)
+	  return 0;
+	else
 	  {
 	    unsigned int high = 32;
 	    unsigned int low = 1;
@@ -145,8 +159,6 @@ namespace openvpn {
 	      }
 	    throw ipv4_malformed_netmask();
 	  }
-	else
-	  return 32;
       }
 
       void negate()
@@ -170,12 +182,15 @@ namespace openvpn {
 
       static base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
       {
-	return ~((1 << (32 - prefix_len)) - 1);
+	if (prefix_len)
+	  return ~((1 << (32 - prefix_len)) - 1);
+	else
+	  return 0;
       }
 
       static base_type prefix_len_to_netmask(const unsigned int prefix_len)
       {
-	if (prefix_len >= 1 && prefix_len <= 32)
+	if (prefix_len <= 32)
 	  return prefix_len_to_netmask_unchecked(prefix_len);
 	else
 	  throw ipv4_bad_prefix_len();

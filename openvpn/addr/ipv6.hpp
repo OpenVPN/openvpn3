@@ -27,6 +27,8 @@ namespace openvpn {
       friend class IP::Addr;
 
     public:
+      enum { SIZE=128 };
+
       static Addr from_string(const std::string& ipstr, const char *title = NULL)
       {
 	boost::system::error_code ec;
@@ -62,6 +64,7 @@ namespace openvpn {
       static Addr from_zero()
       {
 	Addr ret;
+	ret.scope_id_ = 0;
 	ret.zero();
 	return ret;
       }
@@ -69,6 +72,7 @@ namespace openvpn {
       static Addr from_zero_complement()
       {
 	Addr ret;
+	ret.scope_id_ = 0;
 	ret.zero();
 	ret.negate();
 	return ret;
@@ -101,6 +105,12 @@ namespace openvpn {
 	ret.u.u64[0] = u.u64[0] | other.u.u64[0];
 	ret.u.u64[1] = u.u64[1] | other.u.u64[1];
 	return ret;
+      }
+
+      // return the network that contains the current address
+      Addr network_addr(const unsigned int prefix_len) const
+      {
+	throw ipv6_not_implemented(); // fixme for ipv6
       }
 
       bool operator==(const Addr& other) const
