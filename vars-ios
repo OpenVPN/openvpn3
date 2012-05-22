@@ -1,0 +1,4 @@
+export BOOST_DIR=$HOME/src/ios/boost_1_49_0
+export OVPN3_DIR=$HOME/src/ovpn3
+export PLATFORM=ios
+export PATH="$OVPN3_DIR/scripts:$PATH"

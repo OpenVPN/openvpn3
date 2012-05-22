@@ -175,6 +175,22 @@ namespace openvpn {
 	try {
 	  OSStatus s;
 
+#ifdef OPENVPN_PLATFORM_IPHONE
+	  // init SSL object, select client or server mode
+	  if (ctx.mode().is_server())
+	    ssl = SSLCreateContext(kCFAllocatorDefault, kSSLServerSide, kSSLStreamType);
+	  else if (ctx.mode().is_client())
+	    ssl = SSLCreateContext(kCFAllocatorDefault, kSSLClientSide, kSSLStreamType);
+	  else
+	    OPENVPN_THROW(ssl_context_error, "AppleSSLContext::SSL: unknown client/server mode");
+	  if (ssl == NULL)
+	    throw CFException("SSLCreateContext failed");
+
+	  // use TLS v1
+	  s = SSLSetProtocolVersionMin(ssl, kTLSProtocol1);
+	  if (s)
+	    throw CFException("SSLSetProtocolVersionMin failed", s);
+#else
 	  // init SSL object, select client or server mode
 	  if (ctx.mode().is_server())
 	    s = SSLNewContext(true, &ssl);
@@ -195,7 +211,7 @@ namespace openvpn {
 	  s = SSLSetProtocolVersionEnabled(ssl, kTLSProtocol1, true);
 	  if (s)
 	    throw CFException("SSLSetProtocolVersionEnabled T1 failed", s);
-
+#endif
 	  // configure cert, private key, and supporting CAs via identity wrapper
 	  s = SSLSetCertificate(ssl, ctx.identity()());
 	  if (s)
@@ -259,7 +275,13 @@ namespace openvpn {
       void ssl_erase()
       {
 	if (ssl)
-	  SSLDisposeContext(ssl);
+	  {
+#ifdef OPENVPN_PLATFORM_IPHONE
+	    CFRelease(ssl);
+#else
+	    SSLDisposeContext(ssl);
+#endif
+	  }
 	ssl_clear();
       }
 

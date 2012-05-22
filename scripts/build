@@ -61,7 +61,7 @@ if [ "$PSSL" = "1" ]; then
 fi
 
 # OpenSSL
-if [ "$PLATFORM" = "mac" ]; then
+if [ "$PLATFORM" = "mac" ] || [ "$PLATFORM" = "ios" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, always link with OpenSSL.
     if [ "$SSL_BOTH" = "1" ]; then
@@ -130,6 +130,11 @@ if [ "$PLATFORM" = "android" ]; then
     CPPFLAGS="$CPPFLAGS -D__GLIBC__"
     CPPFLAGS="$CPPFLAGS -D_GLIBCXX_HAVE_FENV_H=1"
     CPPFLAGS="$CPPFLAGS -DBOOST_NO_INTRINSIC_WCHAR_T"
+fi
+
+# iOS
+if [ "$PLATFORM" = "ios" ]; then
+    FLAGS="$FLAGS -arch armv7 -miphoneos-version-min=5.0 -isysroot /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk"
 fi
 
 # ovpn3
