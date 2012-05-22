@@ -3,6 +3,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/assert.hpp>
 
 #include <openvpn/log/logsimple.hpp>
 
@@ -75,7 +76,7 @@ public:
 
   void set_client_instance_factory(ClientInstanceFactory* cif)
   {
-    factory.reset(cif);
+    client_factory.reset(cif);
   }
 
   // called by parent (RouterBase)
@@ -93,19 +94,16 @@ public:
   BackRef<RouterBase> backref;
 
 private:
-  ClientInstanceFactory::Ptr factory;
-};
-
-class TransportFactory : public RC<thread_unsafe_refcount>
-{
-public:
-  typedef boost::intrusive_ptr<TransportFactory> Ptr;
-
-  virtual TransportBase::Ptr new_transport_server() = 0;
+  ClientInstanceFactory::Ptr client_factory;
 };
 
 class RouterBase : public RC<thread_unsafe_refcount> {
 public:
+  typedef boost::intrusive_ptr<RouterBase> Ptr;
+
+  virtual void start() = 0;
+  virtual void stop() = 0;
+
   virtual bool to_tun(ClientInstanceBase* cib, BufferAllocated& buf) = 0;
   virtual bool to_transport(BufferAllocated& buf) = 0;
 };
@@ -160,9 +158,10 @@ public:
   };
 
   TransportUDP(boost::asio::io_service& io_service_arg,
-	       const typename Config::Ptr& config_arg)
+	       const Config& config_arg)
     : io_service(io_service_arg),
-      config(config_arg)
+      config(config_arg),
+      client_info_undef("CLIENT_INFO_UNDEF")
   {
   }
 
@@ -215,7 +214,7 @@ private:
 
   std::string client_info_undef;
 
-  typename Config::Ptr config;
+  Config config;
 
   boost::asio::io_service& io_service;
   boost::asio::ip::udp::socket socket;
@@ -233,9 +232,13 @@ class Router : public RouterBase
   typedef CIDRMap::Route<VPN_ADDR> Route;
 
 public:
-  // code me
+  void add_transport(const std::string& key, TransportBase* transport)
+  {
+    transport_map[key] = transport;
+  }
 
 private:
+  ClientInstanceFactory::Ptr client_factory;
   boost::unordered_map<std::string, TransportBase::Ptr> transport_map;
   CIDRMap::RoutingTable<Route, ClientInstanceBase::Ptr> routing_table;
 };
@@ -286,23 +289,27 @@ public:
   }
 };
 
-class ServerThread : public RouterBase
+class ServerThread : public RC<thread_unsafe_refcount>
 {
 public:
   typedef boost::intrusive_ptr<ServerThread> Ptr;
 
   struct Config
   {
+    ClientInstanceFactory::Ptr client_factory;
+    RouterBase::Ptr router;
   };
 
   ServerThread(boost::asio::io_service& io_service_arg,
-	       const Config& config)
-    : io_service(io_service_arg)
+	       const Config& config_arg)
+    : io_service(io_service_arg),
+      config(config_arg)
   {
   }
 
   void start()
   {
+    config.router->start();
   }
 
   void stop()
@@ -325,6 +332,7 @@ public:
 
 private:
   boost::asio::io_service& io_service;
+  Config config;
 };
 
 class MyRunContext : public RC<thread_safe_refcount>
