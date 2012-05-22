@@ -45,7 +45,7 @@ fi
 # build flags
 FLAGS="-Wall"
 [ "$STRICT" = "1" ] && FLAGS="$FLAGS -Wextra"
-[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-tautological-compare -Wno-deprecated-declarations"
+[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-tautological-compare"
 FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # PolarSSL
@@ -67,10 +67,12 @@ if [ "$PLATFORM" = "mac" ] || [ "$PLATFORM" = "ios" ]; then
     if [ "$SSL_BOTH" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL -DUSE_OPENSSL"
 	LIBS="$LIBS -lcrypto -lssl -framework Security"
+	[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-deprecated-declarations"
     else
 	if [ "$OSSL" = "1" ]; then
 	    CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
 	    LIBS="$LIBS -lcrypto -lssl"
+	    [ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-deprecated-declarations"
 	else
 	    CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL"
 	    LIBS="$LIBS -framework Security"
