@@ -12,6 +12,9 @@
 
 namespace openvpn {
   namespace PolarSSLCrypto {
+    class DigestContext;
+    class HMACContext;
+
     class Digest
     {
       friend class DigestContext;

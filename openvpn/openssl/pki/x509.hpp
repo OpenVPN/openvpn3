@@ -15,6 +15,8 @@
 namespace openvpn {
   namespace OpenSSLPKI {
 
+    class X509;
+
     class X509Base
     {
     public:

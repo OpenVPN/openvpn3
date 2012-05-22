@@ -60,6 +60,8 @@ namespace openvpn {
     const CipherInfo des3("DES-EDE3-CBC", kCCKeySize3DES, kCCBlockSize3DES, // CONST GLOBAL
 			  kCCBlockSize3DES, kCCAlgorithm3DES);
 
+    class CipherContext;
+
     class Cipher
     {
       friend class CipherContext;

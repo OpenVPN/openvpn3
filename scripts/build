@@ -2,6 +2,7 @@
 if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"
+    echo " CLANG=1 -- use clang instead of gcc"
     echo " DEBUG=1 -- enable debug"
     echo ' ECHO=1 -- show commands'
     echo " STRIP=1 -- strip binary"
@@ -32,6 +33,11 @@ LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
 
+# clang support
+if [ "$CLANG" = "1" ]; then
+    [ -z "$GPP_CMD" ] && GPP_CMD=clang++
+fi
+
 # default commands
 [ -z "$STRIP_CMD" ] && STRIP_CMD=strip
 [ -z "$GPP_CMD" ] && GPP_CMD=g++
@@ -39,6 +45,7 @@ EXTRA_SRC_OBJ=""
 # build flags
 FLAGS="-Wall"
 [ "$STRICT" = "1" ] && FLAGS="$FLAGS -Wextra"
+[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-tautological-compare -Wno-deprecated-declarations"
 FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # PolarSSL
@@ -135,14 +142,25 @@ elif [ "$PUSE" = "1" ]; then
     FLAGS="$FLAGS -fprofile-use"
 fi
 
+# optimization level
+if [ "$LTO" = "1" ] && [ "$CLANG" == "1" ]; then
+    FLAGS="-O4 $FLAGS"
+else
+    FLAGS="-O3 $FLAGS"
+fi
+
+# whole-program
+FLAGS="-fwhole-program $FLAGS"
+
+# release/debug builds
 if [ "$DEBUG" = "1" ]; then
     # debug build
     CMD="$GPP_CMD -g $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ -o $1 $LIBS"
 else
     # release build
-    [ "$LTO" = "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
+    [ "$LTO" = "1" ] && [ "$CLANG" != "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
-    CMD="$GPP_CMD -O3 -fwhole-program $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ -o $1 $LIBS"
+    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ -o $1 $LIBS"
 fi
 
 # execute CMD

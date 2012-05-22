@@ -33,7 +33,7 @@ namespace openvpn {
   // Similar to boost::scoped_ptr but has release, reset methods,
   // and default constructor usage.  Also allows definition of
   // alternative delete methods via second argument.
-  template <typename T, template <typename T> class F = PtrFree>
+  template <typename T, template <typename TF> class F = PtrFree>
   class ScopedPtr : boost::noncopyable
   {
   public:

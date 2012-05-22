@@ -13,6 +13,8 @@
 
 namespace openvpn {
   namespace PolarSSLCrypto {
+    class CipherContext;
+
     class Cipher
     {
       friend class CipherContext;

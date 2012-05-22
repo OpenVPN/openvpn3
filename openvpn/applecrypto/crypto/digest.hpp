@@ -19,6 +19,7 @@
   class DigestAlgorithm##TYPE : public DigestAlgorithm \
   { \
   public: \
+    DigestAlgorithm##TYPE() {} \
     virtual int init(DigestCTX& ctx) const \
     { \
       return CC_##TYPE##_Init(&ctx.u.TYPE##_ctx); \
@@ -114,6 +115,9 @@ namespace openvpn {
     OPENVPN_DIGEST_INFO_DECLARE(SHA256);
     OPENVPN_DIGEST_INFO_DECLARE(SHA384);
     OPENVPN_DIGEST_INFO_DECLARE(SHA512);
+
+    class DigestContext;
+    class HMACContext;
 
     class Digest
     {
