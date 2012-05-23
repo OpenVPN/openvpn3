@@ -385,6 +385,7 @@ namespace openvpn {
 #endif
 
 	// external PKI
+#if !defined(USE_APPLE_SSL)
 	if (state->eval.externalPki)
 	  {
 	    if (!state->external_pki_alias.empty())
@@ -413,6 +414,7 @@ namespace openvpn {
 		return ret;
 	      }
 	  }
+#endif
 
 	// build client options object
 	ClientOptions::Ptr client_options = new ClientOptions(state->options, cc);

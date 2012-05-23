@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -e
+
+g++ -O3 -fPIC -pthread \
+    -Wall -Wno-sign-compare -Wno-unused-parameter \
+    -fvisibility=hidden \
+    -DUSE_OPENSSL \
+    -I$OVPN3_DIR/client \
+    -I$OVPN3_DIR \
+    -I$BOOST_DIR \
+    -L$BOOST_DIR/stage/lib \
+    $OVPN3_DIR/client/ovpncli.cpp \
+    -shared \
+    -o libovpncli.so \
+    -lcrypto -lssl \
+    -lboost_system -lboost_thread
+
+strip libovpncli.so

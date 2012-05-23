@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+rm -rf dist
+mkdir dist
+mkdir -p dist/include/ovpncli
+mkdir dist/lib
+cp libovpncli.* dist/lib/
+cp ../openvpn/tun/builder/base.hpp dist/include/ovpncli/tunbuilderbase.hpp
+cp ../openvpn/pki/epkibase.hpp dist/include/ovpncli/epkibase.hpp
+sed 's#<openvpn/tun/builder/base\.hpp>#"tunbuilderbase.hpp"#g' <../client/ovpncli.hpp | sed 's#<openvpn/pki/epkibase\.hpp>#"epkibase.hpp"#g' >dist/include/ovpncli/ovpncli.hpp

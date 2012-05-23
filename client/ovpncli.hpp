@@ -1,5 +1,5 @@
-// API for OpenVPN Client, intended to be wrapped by swig.
-// Use ovpncli.i to wrap the API.
+// API for OpenVPN Client, may be used standalone or wrapped by swig.
+// Use ovpncli.i to wrap the API for swig.
 // The crux of the API is defined in OpenVPNClient (below)
 // and TunBuilderBase.
 
@@ -135,10 +135,10 @@ namespace openvpn {
     struct ExternalPKIRequestBase {
       ExternalPKIRequestBase() : error(false), invalidAlias(false) {}
 
-      bool error;              // true if error occurred
+      bool error;             // true if error occurred
       std::string errorText;  // text describing error
       bool invalidAlias;      // true if the error is caused by an invalid alias
-      std::string alias;       // the alias string, used to query cert/key
+      std::string alias;      // the alias string, used to query cert/key
     };
 
     // used to query for External PKI certificate

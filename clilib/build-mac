@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+clang++ -O4 -dynamic -pthread \
+    -Wall -Wno-tautological-compare \
+    -fvisibility=hidden \
+    -DBOOST_ASIO_DISABLE_KQUEUE \
+    -DUSE_APPLE_SSL \
+    -I$OVPN3_DIR/client \
+    -I$OVPN3_DIR \
+    -I$BOOST_DIR \
+    -L$BOOST_DIR/stage/lib \
+    $OVPN3_DIR/client/ovpncli.cpp \
+    -shared \
+    -Wl,-current_version,1.0 \
+    -Wl,-compatibility_version,1.0 \
+    -o libovpncli.dylib \
+    -framework Security \
+    -framework CoreFoundation \
+    -lboost_system -lboost_thread
+
+strip -x -S libovpncli.dylib
