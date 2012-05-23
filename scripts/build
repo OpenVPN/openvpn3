@@ -150,14 +150,18 @@ elif [ "$PUSE" = "1" ]; then
 fi
 
 # optimization level
-if [ "$LTO" = "1" ] && [ "$CLANG" == "1" ]; then
+if [ "$CLANG" == "1" ]; then
     FLAGS="-O4 $FLAGS"
 else
     FLAGS="-O3 $FLAGS"
 fi
 
 # whole-program
-FLAGS="-fwhole-program $FLAGS"
+if [ "$CLANG" == "1" ]; then
+    FLAGS="-fvisibility=hidden $FLAGS"
+else
+    FLAGS="-fwhole-program $FLAGS"
+fi
 
 # release/debug builds
 if [ "$DEBUG" = "1" ]; then
