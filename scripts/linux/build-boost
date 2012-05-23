@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -e
+export BOOST=boost_1_49_0
+rm -rf $BOOST
+tar xfj $DL/$BOOST.tar.bz2
+cd $BOOST
+cat >>tools/build/v2/user-config.jam <<EOF
+using gcc : linux : g++
+            :
+	        <compileflags>-fPIC
+            ; 
+EOF
+./bootstrap.sh
+./bjam -d2 toolset=gcc-linux --with-system --with-thread variant=release link=static threading=multi runtime-link=static target-os=linux
