@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 top=$(pwd)
 find openvpn | grep -E '\.(cpp|hpp|c|h)$'
-echo javacli/ovpncli.hpp
-echo javacli/ovpncli.cpp
+echo client/ovpncli.hpp
+echo client/ovpncli.cpp
 echo javacli/OpenVPNClientThread.java
 android=android/OpenVPN/src/net/openvpn/openvpn
 cd $android

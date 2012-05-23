@@ -3,7 +3,7 @@
 set -e
 
 echo SWIG
-swig -c++ -java -package net.openvpn.openvpn -I$OVPN3_DIR ovpncli.i
+swig -c++ -java -package net.openvpn.openvpn -I$OVPN3_DIR/client -I$OVPN3_DIR ovpncli.i
 
 echo CORE
 $GPP_CMD \
@@ -15,10 +15,11 @@ $GPP_CMD \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
     -DBOOST_NO_INTRINSIC_WCHAR_T \
+    -I$OVPN3_DIR/client \
     -I$OVPN3_DIR \
     -I$BOOST_DIR \
     -I$POLARSSL_DIR/include \
-    -c ovpncli.cpp
+    -c $OVPN3_DIR/client/ovpncli.cpp
 
 echo WRAP
 $GPP_CMD \
@@ -29,6 +30,7 @@ $GPP_CMD \
     -fvisibility=hidden '-DSWIGEXPORT=__attribute__((visibility("default")))' \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
+    -I$OVPN3_DIR/client \
     -I$OVPN3_DIR \
     -L$BOOST_DIR/stage/lib \
     -L$POLARSSL_DIR/library \

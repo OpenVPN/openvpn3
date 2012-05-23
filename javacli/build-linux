@@ -2,7 +2,7 @@
 set -e
 
 echo SWIG
-swig -c++ -java -I$OVPN3_DIR ovpncli.i
+swig -c++ -java -I$OVPN3_DIR/client -I$OVPN3_DIR ovpncli.i
 
 echo JAVA
 javac *.java
@@ -12,15 +12,17 @@ gcc -O3 -fPIC -pthread \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
     -fvisibility=hidden \
     -DUSE_OPENSSL \
+    -I$OVPN3_DIR/client \
     -I$OVPN3_DIR \
     -I$BOOST_DIR \
-    -c ovpncli.cpp
+    -c $OVPN3_DIR/client/ovpncli.cpp
 
 echo WRAP
 gcc -Os -fPIC -pthread \
     -fno-strict-aliasing \
     -Wall \
     -fvisibility=hidden '-DSWIGEXPORT=__attribute__((visibility("default")))' \
+    -I$OVPN3_DIR/client \
     -I$OVPN3_DIR \
     -I/usr/lib/jvm/java-7-openjdk-amd64/include \
     -L$BOOST_DIR/stage/lib \
