@@ -10,6 +10,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
@@ -60,6 +61,11 @@ namespace openvpn {
     const CipherInfo des3("DES-EDE3-CBC", kCCKeySize3DES, kCCBlockSize3DES, // CONST GLOBAL
 			  kCCBlockSize3DES, kCCAlgorithm3DES);
 
+#ifdef OPENVPN_PLATFORM_IPHONE
+    const CipherInfo bf("BF-CBC", 16, kCCBlockSizeBlowfish, // CONST GLOBAL
+			kCCBlockSizeBlowfish, kCCAlgorithmBlowfish);
+#endif
+
     class CipherContext;
 
     class Cipher
@@ -76,6 +82,9 @@ namespace openvpn {
       Cipher(const std::string& name)
       {
 #       define OPENVPN_CIPHER_SELECT(TYPE) if (TYPE.name_match(name.c_str())) { cipher_ = &TYPE; return; }
+#       ifdef OPENVPN_PLATFORM_IPHONE
+          OPENVPN_CIPHER_SELECT(bf);
+#       endif
 	OPENVPN_CIPHER_SELECT(aes128);
 	OPENVPN_CIPHER_SELECT(aes192);
 	OPENVPN_CIPHER_SELECT(aes256);
