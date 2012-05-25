@@ -136,7 +136,7 @@ fi
 
 # iOS
 if [ "$PLATFORM" = "ios" ]; then
-    FLAGS="$FLAGS -arch armv7 -miphoneos-version-min=5.0 -isysroot /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk"
+    FLAGS="$FLAGS -arch armv7 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
 fi
 
 # ovpn3

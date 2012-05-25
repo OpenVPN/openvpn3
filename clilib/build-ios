@@ -4,6 +4,7 @@ set -e
 clang++ -O4 -dynamic -pthread \
     -Wall -Wno-tautological-compare \
     -fvisibility=hidden \
+    -arch armv7 -miphoneos-version-min=5.0 -isysroot $IOS_SDK \
     -DBOOST_ASIO_DISABLE_KQUEUE \
     -DUSE_APPLE_SSL \
     -I$OVPN3_DIR/client \
@@ -20,4 +21,4 @@ clang++ -O4 -dynamic -pthread \
     -lboost_system -lboost_thread
 
 strip -x -S libovpncli.dylib
-./make-dist dist-mac
+./make-dist dist-ios

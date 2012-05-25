@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
+if ! [ -n "$1" ]; then
+    echo "usage: make-dist <dir>"
+    exit 1
+fi
 set -e
-rm -rf dist
-mkdir dist
-mkdir -p dist/include/ovpncli
-mkdir dist/lib
-cp libovpncli.* dist/lib/
-cp ../openvpn/tun/builder/base.hpp dist/include/ovpncli/tunbuilderbase.hpp
-cp ../openvpn/pki/epkibase.hpp dist/include/ovpncli/epkibase.hpp
-sed 's#<openvpn/tun/builder/base\.hpp>#"tunbuilderbase.hpp"#g' <../client/ovpncli.hpp | sed 's#<openvpn/pki/epkibase\.hpp>#"epkibase.hpp"#g' >dist/include/ovpncli/ovpncli.hpp
+rm -rf $1
+mkdir $1
+mkdir -p $1/include/ovpncli
+mkdir $1/lib
+cp libovpncli.* $1/lib/
+cp ../openvpn/tun/builder/base.hpp $1/include/ovpncli/tunbuilderbase.hpp
+cp ../openvpn/pki/epkibase.hpp $1/include/ovpncli/epkibase.hpp
+sed 's#<openvpn/tun/builder/base\.hpp>#"tunbuilderbase.hpp"#g' <../client/ovpncli.hpp | sed 's#<openvpn/pki/epkibase\.hpp>#"epkibase.hpp"#g' >$1/include/ovpncli/ovpncli.hpp

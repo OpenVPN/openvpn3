@@ -16,3 +16,4 @@ g++ -O3 -fPIC -pthread \
     -lboost_system -lboost_thread
 
 strip libovpncli.so
+./make-dist dist-linux
