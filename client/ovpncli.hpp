@@ -14,12 +14,14 @@ namespace openvpn {
 
   namespace ClientAPI {
     // Represents an OpenVPN server and its friendly name
+    // (client reads)
     struct ServerEntry {
       std::string server;
       std::string friendlyName;
     };
 
     // return properties of config
+    // (client reads)
     struct EvalConfig
     {
       EvalConfig() : error(false), staticChallengeEcho(false) {}
@@ -56,6 +58,7 @@ namespace openvpn {
     };
 
     // used to pass credentials to VPN client
+    // (client writes)
     struct ProvideCreds
     {
       ProvideCreds() : replacePasswordWithSessionID(false) {}
@@ -74,7 +77,8 @@ namespace openvpn {
       bool replacePasswordWithSessionID;
     };
 
-    // used to pass credentials to VPN client
+    // used to query challenge/response from user
+    // (client reads)
     struct DynamicChallenge
     {
       DynamicChallenge() : echo(false), responseRequired(false) {}
@@ -85,6 +89,7 @@ namespace openvpn {
     };
 
     // OpenVPN config-file/profile
+    // (client writes)
     struct Config
     {
       Config() : connTimeout(0) {}
@@ -108,6 +113,7 @@ namespace openvpn {
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.
+    // (client reads)
     struct Event
     {
       Event() : error(false) {}
@@ -117,6 +123,7 @@ namespace openvpn {
     };
 
     // returned by some methods as a status/error indication
+    // (client reads)
     struct Status
     {
       Status() : error(false) {}
@@ -125,6 +132,7 @@ namespace openvpn {
     };
 
     // used to pass log lines
+    // (client reads)
     struct LogInfo
     {
       LogInfo(const std::string& str) : text(str) {}
@@ -135,23 +143,23 @@ namespace openvpn {
     struct ExternalPKIRequestBase {
       ExternalPKIRequestBase() : error(false), invalidAlias(false) {}
 
-      bool error;             // true if error occurred
-      std::string errorText;  // text describing error
-      bool invalidAlias;      // true if the error is caused by an invalid alias
-      std::string alias;      // the alias string, used to query cert/key
+      bool error;             // true if error occurred (client writes)
+      std::string errorText;  // text describing error (client writes)
+      bool invalidAlias;      // true if the error is caused by an invalid alias (client writes)
+      std::string alias;      // the alias string, used to query cert/key (client reads)
     };
 
     // used to query for External PKI certificate
     struct ExternalPKICertRequest : public ExternalPKIRequestBase
     {
-      std::string cert;
+      std::string cert; // (client writes)
     };
 
     // used to request an RSA signature
     struct ExternalPKISignRequest : public ExternalPKIRequestBase
     {
-      std::string data;  // data rendered as base64
-      std::string sig;   // RSA signature, rendered as base64
+      std::string data;  // data rendered as base64 (client reads)
+      std::string sig;   // RSA signature, rendered as base64 (client writes)
     };
 
     namespace Private {
