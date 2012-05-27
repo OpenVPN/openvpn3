@@ -4,12 +4,13 @@ set -e
 clang++ -O4 -dynamic -pthread \
     -Wall -Wno-tautological-compare \
     -fvisibility=hidden \
+    $PLATFORM_FLAGS \
     -DBOOST_ASIO_DISABLE_KQUEUE \
     -DUSE_APPLE_SSL \
     -I$OVPN3_DIR/client \
     -I$OVPN3_DIR \
     -I$BOOST_DIR \
-    -L$BOOST_DIR/stage/lib \
+    -L$BOOST_DIR/$BOOST_STAGE \
     $OVPN3_DIR/client/ovpncli.cpp \
     -shared \
     -Wl,-current_version,1.0 \
@@ -20,4 +21,4 @@ clang++ -O4 -dynamic -pthread \
     -lboost_system -lboost_thread
 
 strip -x -S libovpncli.dylib
-./make-dist dist-mac
+./make-dist dist-$PLATFORM

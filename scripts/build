@@ -33,6 +33,14 @@ LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
 
+# building on Mac OS X?
+if [ "$PLATFORM" = "osx" ] || [ "$PLATFORM" = "ios" ] || [ "$PLATFORM" = "iossim" ]; then
+    MAC=1
+    [ -z "$CLANG" ] && CLANG=1
+else
+    MAC=0
+fi
+
 # clang support
 if [ "$CLANG" = "1" ]; then
     [ -z "$GPP_CMD" ] && GPP_CMD=clang++
@@ -48,6 +56,11 @@ FLAGS="-Wall"
 [ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-tautological-compare"
 FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
+# Mac flags
+if [ "$MAC" = "1" ]; then
+    CPPFLAGS="$CPPFLAGS -DBOOST_ASIO_DISABLE_KQUEUE"
+fi
+
 # PolarSSL
 if [ "$PSSL" = "1" ]; then
     LIBS="$LIBS -lpolarssl"
@@ -61,7 +74,7 @@ if [ "$PSSL" = "1" ]; then
 fi
 
 # OpenSSL
-if [ "$PLATFORM" = "mac" ] || [ "$PLATFORM" = "ios" ]; then
+if [ "$MAC" = "1" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, always link with OpenSSL.
     if [ "$SSL_BOTH" = "1" ]; then
@@ -94,9 +107,10 @@ if [ "$OPENSSL_DIR" ] && [ "$NOSSL" != "1" ]; then
 fi
 
 # boost
+[ -z "$BOOST_STAGE" ] && BOOST_STAGE="stage/lib"
 CPPFLAGS="$CPPFLAGS -I$BOOST_DIR"
 LIBS="$LIBS -lboost_system"
-LIBDIRS="$LIBDIRS -L$BOOST_DIR/stage/lib"
+LIBDIRS="$LIBDIRS -L$BOOST_DIR/$BOOST_STAGE"
 if [ "$NOTHREADS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
@@ -134,9 +148,9 @@ if [ "$PLATFORM" = "android" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_NO_INTRINSIC_WCHAR_T"
 fi
 
-# iOS
-if [ "$PLATFORM" = "ios" ]; then
-    FLAGS="$FLAGS -arch armv7 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
+# Special platform flags
+if [ "$PLATFORM_FLAGS" ]; then
+    FLAGS="$FLAGS $PLATFORM_FLAGS"
 fi
 
 # ovpn3

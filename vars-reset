@@ -1,4 +1,8 @@
+unset PLATFORM
+unset PLATFORM_FLAGS
+unset IOS_SDK
 unset BOOST_DIR
+unset BOOST_STAGE
 unset OPENSSL_DIR
 unset SNAPPY_DIR
 unset LZ4_DIR
@@ -8,4 +12,3 @@ unset PLATFORM
 unset GPP_CMD
 unset STRIP_CMD
 unset LD_LIBRARY_PATH
-[ "$NEW_PATH" ] && export PATH="$NEW_PATH"

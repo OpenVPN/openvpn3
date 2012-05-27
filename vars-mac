@@ -1,6 +1,8 @@
 export BOOST_DIR=$HOME/src/boost_1_49_0
 export SNAPPY_DIR=$HOME/src/snappy
 export OVPN3_DIR=$HOME/src/ovpn3
-export PLATFORM=mac
+export PLATFORM=osx
+export BOOST_STAGE=stage-$PLATFORM/lib
 export PATH="$OVPN3_DIR/scripts:$PATH"
+export PLATFORM_FLAGS=""
 #export DYLD_LIBRARY_PATH="$BOOST_DIR/stage/lib:$SNAPPY_DIR/lib"

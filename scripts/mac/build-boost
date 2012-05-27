@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+export BOOST=boost_1_49_0
+. $O3/vars-iossim
+export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
+. $O3/vars-ios
+rm -rf $BOOST
+tar xfj ~/Downloads/$BOOST.tar.bz2
+cd $BOOST
+cat >>tools/build/v2/user-config.jam <<EOF
+using clang : ios : clang++
+            :
+                <compileflags>-Wno-unused-function
+                <compileflags>"$PLATFORM_FLAGS"
+            ;
+using clang : iossim : clang++
+            :
+                <compileflags>-Wno-unused-function
+                <compileflags>"$PLATFORM_FLAGS_SIM"
+            ;
+using clang : osx : clang++
+            :
+                <compileflags>-Wno-unused-function
+            ;
+EOF
+./bootstrap.sh
+for target in ios iossim osx ; do
+    ./bjam -d2 toolset=clang-$target --stagedir=stage-$target --with-system --with-thread variant=release link=static threading=multi runtime-link=static
+done
