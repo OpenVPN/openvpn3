@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-
+rm -f libovpncli.dylib
 clang++ -O4 -dynamic -pthread \
     -Wall -Wno-tautological-compare \
     -fvisibility=hidden \
@@ -19,6 +19,5 @@ clang++ -O4 -dynamic -pthread \
     -framework Security \
     -framework CoreFoundation \
     -lboost_system -lboost_thread
-
 strip -x -S libovpncli.dylib
-./make-dist dist-$PLATFORM
+./make-dist dist-$PLATFORM libovpncli.dylib

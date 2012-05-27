@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+rm -f libovpncli.a ovpncli.o
+clang++ -g -O3 -pthread \
+    -Wall -Wno-tautological-compare \
+    -fvisibility=hidden \
+    $PLATFORM_FLAGS \
+    -DBOOST_ASIO_DISABLE_KQUEUE \
+    -DUSE_APPLE_SSL \
+    -I$OVPN3_DIR/client \
+    -I$OVPN3_DIR \
+    -I$BOOST_DIR \
+    -c $OVPN3_DIR/client/ovpncli.cpp
+ar crs libovpncli.a ovpncli.o
+./make-dist dist-static-$PLATFORM libovpncli.a
+cp $BOOST_DIR/$BOOST_STAGE/*.a dist-static-$PLATFORM/lib

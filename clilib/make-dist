@@ -8,7 +8,7 @@ rm -rf $1
 mkdir $1
 mkdir -p $1/include/ovpncli
 mkdir $1/lib
-cp libovpncli.* $1/lib/
+cp $2 $1/lib/
 cp ../openvpn/tun/builder/base.hpp $1/include/ovpncli/tunbuilderbase.hpp
 cp ../openvpn/pki/epkibase.hpp $1/include/ovpncli/epkibase.hpp
 sed 's#<openvpn/tun/builder/base\.hpp>#"tunbuilderbase.hpp"#g' <../client/ovpncli.hpp | sed 's#<openvpn/pki/epkibase\.hpp>#"epkibase.hpp"#g' >$1/include/ovpncli/ovpncli.hpp
