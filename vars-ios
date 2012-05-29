@@ -4,6 +4,7 @@ export PLATFORM=ios
 export APPLE_FAMILY=1
 export BOOST_STAGE=stage-$PLATFORM/lib
 export OPENSSL_DIR=$HOME/src/mac/openssl-$PLATFORM
+export POLARSSL_DIR=$HOME/src/mac/polarssl-$PLATFORM
 export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.1.sdk"
 export PLATFORM_FLAGS="-arch armv7 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
 export LIB_OPT_LEVEL="-O3"

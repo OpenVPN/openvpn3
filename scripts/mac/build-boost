@@ -7,6 +7,7 @@ export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
 rm -rf $BOOST
 tar xfj ~/Downloads/$BOOST.tar.bz2
 cd $BOOST
+patch -p1 <$DL/asio-engine.patch
 cat >>tools/build/v2/user-config.jam <<EOF
 using clang : ios : clang++
             :

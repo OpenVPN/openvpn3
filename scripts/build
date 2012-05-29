@@ -4,6 +4,8 @@ if [ -z "$1" ]; then
     echo "options:"
     echo " CLANG=1 -- use clang instead of gcc"
     echo " DEBUG=1 -- enable debug"
+    echo " CO=1 -- compile only"
+    echo " OBJC=1 -- top-level source file is Obj-C"
     echo ' ECHO=1 -- show commands'
     echo " STRIP=1 -- strip binary"
     echo " STRICT=1 -- more warnings"
@@ -74,22 +76,24 @@ fi
 if [ "$APPLE_FAMILY" = "1" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, usually link with OpenSSL.
-    if [ "$PSSL" = "1" ]; then
-	true
+    NO_DEPRECATE="-Wno-deprecated-declarations"
+    if [ "$OPENSSL_DIR" ]; then
+	NO_DEPRECATE=""
+    fi
+    if [ "$OSSL" = "1" ]; then
+	CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
+	LIBS="$LIBS -lcrypto -lssl"
+	[ "$CLANG" = "1" ] && [ "$NO_DEPRECATE" ] && FLAGS="$FLAGS $NO_DEPRECATE"
     elif [ "$SSL_BOTH" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL -DUSE_OPENSSL"
-	LIBS="$LIBS -lcrypto -lssl -framework Security"
-	[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-deprecated-declarations"
+	LIBS="$LIBS -lcrypto -lssl"
+	[ "$CLANG" = "1" ] && [ "$NO_DEPRECATE" ] && FLAGS="$FLAGS $NO_DEPRECATE"
+    elif [ "$PSSL" = "1" ]; then
+	true
     else
-	if [ "$OSSL" = "1" ]; then
-	    CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
-	    LIBS="$LIBS -lcrypto -lssl"
-	    [ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-deprecated-declarations"
-	else
-	    CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL"
-	    LIBS="$LIBS -framework Security"
-	fi
+	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL"
     fi
+    LIBS="$LIBS -framework Security"
 else
     if [ "$NOSSL" != "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
@@ -164,11 +168,7 @@ elif [ "$PUSE" = "1" ]; then
 fi
 
 # optimization level
-if [ "$CLANG" == "1" ]; then
-    FLAGS="-O4 $FLAGS"
-else
-    FLAGS="-O3 $FLAGS"
-fi
+FLAGS="$LIB_OPT_LEVEL $FLAGS"
 
 # whole-program
 if [ "$CLANG" == "1" ]; then
@@ -177,15 +177,37 @@ else
     FLAGS="-fwhole-program $FLAGS"
 fi
 
+# compile only
+if [ "$CO" == "1" ]; then
+    OUTPUT="-c"
+    LIBDIRS=""
+    LIBS=""
+else
+    OUTPUT="-o $1"
+fi
+
 # release/debug builds
 if [ "$DEBUG" = "1" ]; then
     # debug build
-    CMD="$GPP_CMD -g $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ -o $1 $LIBS"
+    FLAGS="-g $FLAGS"
 else
     # release build
     [ "$LTO" = "1" ] && [ "$CLANG" != "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
-    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ -o $1 $LIBS"
+fi
+
+# Construct command
+if [ "$OBJC" == "1" ]; then
+    FLAGS="$FLAGS -fobjc-arc"
+    CPPFLAGS=""
+    CPPFLAGS="$CPPFLAGS -I$OVPN3_DIR/cliobjc"
+    CPPFLAGS="$CPPFLAGS -I$OVPN3_DIR/clilib/dist-static-$PLATFORM/include"
+    LIBDIRS="-L$OVPN3_DIR/clilib/dist-static-$PLATFORM/lib"
+    LIBS="-lovpncli -framework Foundation $LIBS"
+    SRC="$1.m $OVPN3_DIR/cliobjc/ovpncli.mm "
+    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $SRC $EXTRA_SRC_OBJ $OUTPUT $LIBS"
+else
+    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 fi
 
 # execute CMD

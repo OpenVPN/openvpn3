@@ -7,7 +7,7 @@ tar xfz ~/Downloads/$OPENSSL.tar.gz
 cd $OPENSSL
 NO_FLAGS="no-engine no-hw no-ssl2 no-ssl3 no-zlib no-rc2 no-idea no-des no-cast no-md2 no-mdc2 no-ripemd no-rc5 no-camellia no-seed no-krb5 no-socks no-ecdsa no-ec no-ecdh no-md2 no-md4 no-whirlpool no-dsa no-cms no-jpake no-gost"
 ./Configure $OPENSSL_TARGET no-shared threads no-idea no-mdc2 no-rc5 $NO_FLAGS --prefix=$DIST
-sed -i "" -e "s|-O3|-O3 $PLATFORM_FLAGS|" Makefile
+sed -i "" -e "s|-O3|$LIB_OPT_LEVEL $PLATFORM_FLAGS|" Makefile
 make CC="clang" build_libs
 touch apps/openssl
 touch openssl.pc

@@ -2,13 +2,21 @@ Building proto.cpp sample:
 
 On Apple:
 
-  Build with Apple SSL client and OpenSSL server:
+  Build with Apple SSL client and OpenSSL (osx default) server:
 
-    SSL_BOTH=1 GCC_EXTRA="-DN_THREADS=4 -DITER=10001 -DSITER=100" build proto
+    OPENSSL_DIR="" SSL_BOTH=1 build proto
 
-  Build with OpenSSL client and OpenSSL server:
+  Build with Apple SSL client and OpenSSL (custom build) server:
 
-    OSSL=1 GCC_EXTRA="-DITER=10001 -DSITER=100 -DN_THREADS=4" build proto
+    SSL_BOTH=1 build proto
+
+  Build with OpenSSL client and OpenSSL server (custom build):
+
+    OSSL=1 build proto
+
+  Build with PolarSSL client and OpenSSL server (custom build):
+
+    PSSL=1 OSSL=1 build proto
 
 On linux:
 
