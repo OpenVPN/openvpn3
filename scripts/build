@@ -33,12 +33,9 @@ LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
 
-# building on Mac OS X?
-if [ "$PLATFORM" = "osx" ] || [ "$PLATFORM" = "ios" ] || [ "$PLATFORM" = "iossim" ]; then
-    MAC=1
+# building on Mac OS X for osx, ios, or iossim?
+if [ "$APPLE_FAMILY" = "1" ]; then
     [ -z "$CLANG" ] && CLANG=1
-else
-    MAC=0
 fi
 
 # clang support
@@ -57,7 +54,7 @@ FLAGS="-Wall"
 FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # Mac flags
-if [ "$MAC" = "1" ]; then
+if [ "$APPLE_FAMILY" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_ASIO_DISABLE_KQUEUE"
 fi
 
@@ -74,10 +71,12 @@ if [ "$PSSL" = "1" ]; then
 fi
 
 # OpenSSL
-if [ "$MAC" = "1" ]; then
+if [ "$APPLE_FAMILY" = "1" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
-    # On other platforms, always link with OpenSSL.
-    if [ "$SSL_BOTH" = "1" ]; then
+    # On other platforms, usually link with OpenSSL.
+    if [ "$PSSL" = "1" ]; then
+	true
+    elif [ "$SSL_BOTH" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL -DUSE_OPENSSL"
 	LIBS="$LIBS -lcrypto -lssl -framework Security"
 	[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-deprecated-declarations"
@@ -91,10 +90,6 @@ if [ "$MAC" = "1" ]; then
 	    LIBS="$LIBS -framework Security"
 	fi
     fi
-
-    # Include other Mac frameworks
-    # -framework CoreServices
-    LIBS="$LIBS -framework CoreFoundation"
 else
     if [ "$NOSSL" != "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
@@ -104,6 +99,11 @@ fi
 if [ "$OPENSSL_DIR" ] && [ "$NOSSL" != "1" ]; then
     CPPFLAGS="$CPPFLAGS -I$OPENSSL_DIR/include"
     LIBDIRS="$LIBDIRS -L$OPENSSL_DIR/lib"
+fi
+
+# Apple libs
+if [ "$APPLE_FAMILY" = "1" ]; then
+    LIBS="$LIBS -framework CoreFoundation"
 fi
 
 # boost

@@ -1,11 +1,11 @@
 export BOOST_DIR=$HOME/src/boost_1_49_0
 export OVPN3_DIR=$HOME/src/ovpn3
-export PLATFORM=ios
+export PLATFORM=iossim
 export APPLE_FAMILY=1
 export BOOST_STAGE=stage-$PLATFORM/lib
 export OPENSSL_DIR=$HOME/src/mac/openssl-$PLATFORM
-export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.1.sdk"
-export PLATFORM_FLAGS="-arch armv7 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
+export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator5.1.sdk"
+export PLATFORM_FLAGS="-arch i386 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
 export PATH="$OVPN3_DIR/scripts:$PATH"

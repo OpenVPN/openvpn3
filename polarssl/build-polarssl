@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Examples:
 #   AES_NI=1 $OVPN3_DIR/polarssl/build-polarssl
-#   AES_NI=1 ENABLE_TESTING=1 $OVPN3_DIR/polarssl/build-polarssl
+#   AES_NI=1 ENABLE_TESTING=1 VERBOSE=1 $OVPN3_DIR/polarssl/build-polarssl
 #   TARGET=android $OVPN3_DIR/polarssl/build-polarssl
 #
 # when TARGET is specified, use $TARGET.cmake as toolchain file
@@ -14,8 +14,8 @@ fi
 
 # extract the PolarSSL source
 PD=$OVPN3_DIR/polarssl
-POLARSSL=polarssl-1.1.1
-DIST=polarssl
+POLARSSL=polarssl-1.1.3
+DIST=polarssl-$PLATFORM
 rm -rf $POLARSSL $DIST
 mkdir $DIST
 tar xfz $DL/$POLARSSL-gpl.tgz
@@ -52,6 +52,8 @@ fi
 OPT_TARGET=""
 if [ "$TARGET" ]; then
     OPT_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/$TARGET.cmake"
+elif [ "$APPLE_FAMILY" = "1" ]; then
+    OPT_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/apple.cmake"
 fi
 
 # combine options
@@ -62,7 +64,11 @@ echo OPTIONS $OPT
 pwd
 cd ../$DIST
 cmake $OPT ../$POLARSSL
-make
+if [ "$VERBOSE" = "1" ]; then
+    make VERBOSE=1
+else
+    make
+fi
 
 # test it
 if [ "$ENABLE_TESTING" = "1" ]; then

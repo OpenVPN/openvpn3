@@ -300,7 +300,6 @@ namespace openvpn {
 
 	  // init SSL object
 	  ssl = new ssl_context;
-	  std::memset(ssl, 0, sizeof(ssl));
 	  status = ssl_init(ssl);
 	  if (status < 0)
 	    throw PolarSSLException("error in ssl_init", status);
@@ -321,7 +320,7 @@ namespace openvpn {
 
 	  // allocate session object, but don't support SSL-level session resume
 	  sess = new ssl_session;
-	  std::memset(sess, 0, sizeof(sess));
+	  std::memset(sess, 0, sizeof(*sess));
 	  ssl_set_session(ssl, 0, 0, sess);
 
 	  // set list of allowed ciphersuites

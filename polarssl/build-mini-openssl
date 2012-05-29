@@ -12,6 +12,21 @@ if [ -z "$OPENSSL_DIR" ]; then
     echo OPENSSL_DIR must be defined
     exit 1
 fi
+
+if [ "$APPLE_FAMILY" = "1" ] && [ -z "$GCC_CMD" ]; then
+    GCC_CMD=clang
+fi
+
+if [ "$APPLE_FAMILY" = "1" ]; then
+    NM_FLAGS=-P
+    BSD_SYMBOLS="1"
+    VISIBILITY="-fvisibility=hidden"
+else
+    NM_FLAGS=-f posix
+    BSD_SYMBOLS="0"
+    VISIBILITY=""
+fi
+
 [ -z "$NM_CMD" ] && NM_CMD=nm
 [ -z "$AR_CMD" ] && AR_CMD=ar
 [ -z "$GCC_CMD" ] && GCC_CMD=gcc
@@ -20,15 +35,17 @@ cd $OPENSSL_DIR
 cd lib
 rm -rf tmp
 mkdir tmp
-$NM_CMD -f posix libcrypto.a >tmp/nm-file
+$NM_CMD $NM_FLAGS libcrypto.a >tmp/nm-file
+echo "NOTE: on BSD systems, don't worry about any 'no name list' errors above"
 cd tmp
-python $OVPN3_DIR/scripts/sym.py $PD/$1 nm-file $AR_CMD ../libcrypto.a libminicrypto.a buildmini ../mini-undef.sh
+python $OVPN3_DIR/scripts/sym.py $PD/$1 nm-file $AR_CMD ../libcrypto.a libminicrypto.a buildmini ../mini-undef.sh $BSD_SYMBOLS
 . buildmini
 
 # need any special initialization?
 . ../mini-undef.sh
 if [ "$SYM_UNDEF_OPENSSL_ia32cap_P" ] && [ "$SYM_UNDEF_OPENSSL_cpuid_setup" ]; then
-    $GCC_CMD -O3 -fPIC -c $PD/intel_cpu.c
+    echo BUILDING STUB intel_cpu.c
+    $GCC_CMD $VISIBILITY $LIB_OPT_LEVEL $LIB_FPIC -c $PD/intel_cpu.c
     $AR_CMD rs libminicrypto.a intel_cpu.o
 fi
 

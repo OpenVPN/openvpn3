@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.6)
 project(POLARSSL C)
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -O3 -Wall -W -Wdeclaration-after-statement")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} $ENV{LIB_FPIC} $ENV{LIB_OPT_LEVEL} $ENV{PLATFORM_FLAGS} -Wall -W -Wdeclaration-after-statement")
 endif(CMAKE_COMPILER_IS_GNUCC)
 
 if(OPENSSL_DIR)

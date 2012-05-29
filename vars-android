@@ -1,7 +1,7 @@
 export BOOST_DIR=$HOME/src/android/boost_1_48_0
 export OPENSSL_DIR=$HOME/src/android/openssl
 export SNAPPY_DIR=$HOME/src/android/snappy
-export POLARSSL_DIR=$HOME/src/android/polarssl
+export POLARSSL_DIR=$HOME/src/android/polarssl-android
 export OVPN3_DIR=$HOME/src/ovpn3
 export PLATFORM=android
 export PATH="$OVPN3_DIR/scripts:$PATH"
@@ -10,3 +10,5 @@ export GCC_CMD=arm-linux-androideabi-gcc
 export NM_CMD=arm-linux-androideabi-nm
 export AR_CMD=arm-linux-androideabi-ar
 export STRIP_CMD=arm-linux-androideabi-strip
+export LIB_OPT_LEVEL="-O3"
+export LIB_FPIC="-fPIC"
