@@ -5,4 +5,7 @@
 
 #define OPENVPN_LOG(args) std::cout << args << std::endl
 
+// like OPENVPN_LOG but no trailing newline
+#define OPENVPN_LOG_NTNL(args) std::cout << args
+
 #endif // OPENVPN_LOG_LOGSIMPLE_H

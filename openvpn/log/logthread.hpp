@@ -21,6 +21,16 @@
     } \
   } while (0)
 
+// like OPENVPN_LOG but no trailing newline
+#define OPENVPN_LOG_NTNL(args) \
+  do { \
+    if (openvpn::Log::global_log != NULL) { \
+      std::ostringstream _ovpn_log; \
+      _ovpn_log << args; \
+      ((OPENVPN_LOG_CLASS*)openvpn::Log::global_log)->log(OPENVPN_LOG_INFO(_ovpn_log.str())); \
+    } \
+  } while (0)
+
 namespace openvpn {
   namespace Log {
 

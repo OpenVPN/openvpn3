@@ -12,4 +12,10 @@ On Apple:
 
 On linux:
 
-  build proto
+  Build with OpenSSL:
+
+    build proto
+
+  Build with PolarSSL:
+
+    PSSL=1 build proto

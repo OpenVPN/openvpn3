@@ -366,6 +366,10 @@ namespace openvpn {
 	    }
 	  else
 	    throw PolarSSLException("RNG not defined");
+
+	  // set debug callback
+	  if (c.flags & Config::DEBUG)
+	    ssl_set_dbg(ssl, dbg_callback, this);
 	}
 	catch (...)
 	  {
@@ -407,6 +411,12 @@ namespace openvpn {
       {
 	SSL *self = (SSL *)arg;
 	return self->rng->rand_bytes_noexcept(data, len);
+      }
+
+      static void dbg_callback(void *arg, int level, const char *text)
+      {
+	if (level <= 1)
+	  OPENVPN_LOG_NTNL("PolarSSL[" << level << "]: " << text);
       }
 
       void clear()

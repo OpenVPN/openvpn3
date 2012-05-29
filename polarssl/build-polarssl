@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
+#
+# Parameters:
+#   TARGET -- use $TARGET.cmake as toolchain file
+#   AES_NI=1 -- enable AES_NI processor optimization
+#   ENABLE_TESTING=1 -- run PolarSSL test scripts after build
+#   VERBOSE=1 -- see build commands
+#   NO_OPENSSL=1 -- don't merge polar-openssl.patch
+#   NO_WIPE=1 -- don't wipe source tree and reunzip tarball
+#
 # Examples:
 #   AES_NI=1 $OVPN3_DIR/polarssl/build-polarssl
 #   AES_NI=1 ENABLE_TESTING=1 VERBOSE=1 $OVPN3_DIR/polarssl/build-polarssl
 #   TARGET=android $OVPN3_DIR/polarssl/build-polarssl
-#
-# when TARGET is specified, use $TARGET.cmake as toolchain file
 
 set -e
 if [ -z "$OPENSSL_DIR" ]; then
@@ -13,28 +20,42 @@ if [ -z "$OPENSSL_DIR" ]; then
 fi
 
 # extract the PolarSSL source
-PD=$OVPN3_DIR/polarssl
 POLARSSL=polarssl-1.1.3
+PD=$OVPN3_DIR/polarssl
 DIST=polarssl-$PLATFORM
-rm -rf $POLARSSL $DIST
+
+rm -rf $DIST
 mkdir $DIST
-tar xfz $DL/$POLARSSL-gpl.tgz
-cd $POLARSSL
 
-# delete makefiles (apparently not needed)
-rm $(find . -type f | grep Makefile)
+if [ "$NO_WIPE" = "1" ]; then
+    echo RETAIN existing source
+    cd $POLARSSL
+else
+    echo WIPE and reunzip source
+    rm -rf $POLARSSL
+    tar xfz $DL/$POLARSSL-gpl.tgz
 
-# patch it
-patch -p1 <$PD/polarssl-enum.patch
-patch -p1 <$PD/polarssl-const-ciphersuite.patch
-patch -p1 <$PD/polarssl-epki.patch
+    cd $POLARSSL
 
-# do the big polar-openssl patch
-patch -p1 <$PD/polar-openssl.patch
+    # delete makefiles (apparently not needed)
+    rm $(find . -type f | grep Makefile)
 
-# define configs
-cp $PD/config.h include/polarssl/
-cp $PD/CMakeLists.txt .
+    # patch it
+    patch -p1 <$PD/polarssl-enum.patch
+    patch -p1 <$PD/polarssl-const-ciphersuite.patch
+    patch -p1 <$PD/polarssl-epki.patch
+    patch -p1 <$PD/polarssl-invalid-mac.patch 
+
+    # do the big polar-openssl patch
+    if [ "$NO_OPENSSL" != "1" ]; then
+	echo MERGING polar-openssl.patch
+	patch -p1 <$PD/polar-openssl.patch
+    fi
+
+    # define configs
+    cp $PD/config.h include/polarssl/
+    cp $PD/CMakeLists.txt .
+fi
 
 # add special support for AES-NI?
 OPT_AES_NI=""

@@ -22,7 +22,7 @@ if [ "$APPLE_FAMILY" = "1" ]; then
     BSD_SYMBOLS="1"
     VISIBILITY="-fvisibility=hidden"
 else
-    NM_FLAGS=-f posix
+    NM_FLAGS="-f posix"
     BSD_SYMBOLS="0"
     VISIBILITY=""
 fi
