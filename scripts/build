@@ -55,8 +55,9 @@ FLAGS="-Wall"
 [ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-tautological-compare"
 FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
-# Mac flags
-if [ "$APPLE_FAMILY" = "1" ]; then
+# The Mac OS X tun/tap driver doesn't seem to play with with kqueue
+# fixme
+if [ "$PLATFORM" = "osx" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_ASIO_DISABLE_KQUEUE"
 fi
 
