@@ -11,7 +11,7 @@ swig -c++ -java -package net.openvpn.privatetunnel -I$OVPN3_DIR/client -I$OVPN3_
 echo CORE
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
-    -DAPP_EXPIRE_TIME=1338530400 \
+    -DAPP_EXPIRE_TIME=1346479200 \
     -O3 -fPIC \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
     -fvisibility=hidden \

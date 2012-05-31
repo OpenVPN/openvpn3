@@ -1,4 +1,4 @@
-export BOOST_DIR=$HOME/src/android/boost_1_48_0
+export BOOST_DIR=$HOME/src/android/boost_1_49_0
 export OPENSSL_DIR=$HOME/src/android/openssl
 export SNAPPY_DIR=$HOME/src/android/snappy
 export POLARSSL_DIR=$HOME/src/android/polarssl-android

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -e
-export BOOST=boost_1_48_0
+export BOOST=boost_1_49_0
 rm -rf $BOOST
 tar xfj ~/Downloads/$BOOST.tar.bz2
 cd $BOOST
-patch -p2 <$DL/changeset_75599.diff
-patch -p2 <$DL/changeset_75813.diff || true
+patch -p1 <$DL/asio-engine.patch
+#patch -p2 <$DL/changeset_75599.diff
+#patch -p2 <$DL/changeset_75813.diff || true
 cat >>tools/build/v2/user-config.jam <<EOF
 using gcc : android : arm-linux-androideabi-g++
             :

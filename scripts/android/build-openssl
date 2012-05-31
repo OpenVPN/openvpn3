@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -e
-export OPENSSL=openssl-1.0.0g
+export OPENSSL=openssl-1.0.1c
 export TPRE=arm-linux-androideabi
 export DIST=$(pwd)/openssl
 export BIN=$TC/bin
 rm -rf $OPENSSL $DIST
 tar xfz ~/Downloads/$OPENSSL.tar.gz
 cd $OPENSSL
-./Configure linux-armv4 no-shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
+CC="$BIN/$TPRE-gcc" AR="$BIN/$TPRE-ar" RANLIB="$BIN/$TPRE-ranlib" ./Configure linux-armv4 no-shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
 sed -i "" -e 's|-O3|-O3 -fPIC|' Makefile
 for t in "" install ; do
-    make CC="$BIN/$TPRE-gcc" AR="$BIN/$TPRE-ar r" RANLIB="$BIN/$TPRE-ranlib" $t
+    make $t
 done
