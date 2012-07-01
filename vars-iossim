@@ -8,4 +8,3 @@ export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimul
 export PLATFORM_FLAGS="-arch i386 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
-export PATH="$OVPN3_DIR/scripts:$PATH"

@@ -40,6 +40,7 @@ namespace openvpn {
       virtual bool tun_send(BufferAllocated& buf)
       {
 	config->stats->inc_stat(SessionStats::TUN_BYTES_OUT, buf.size());
+	config->stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
 	return true;
       }
 

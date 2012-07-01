@@ -113,7 +113,7 @@ namespace openvpn {
       {
       }
 
-      bool send(const Buffer& buf)
+      bool send(Buffer& buf)
       {
 	if (impl)
 	  return impl->write(buf);

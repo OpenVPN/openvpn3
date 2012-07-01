@@ -19,42 +19,74 @@ namespace openvpn {
     // This interface is based on Android's VpnService.Builder.
 
     // Callback to construct a new tun builder
+    // Should be called first.
     virtual bool tun_builder_new()
     {
       return false;
     }
 
-    // Callback to to add network address to VPN interface
-    virtual bool tun_builder_add_address(const std::string& address, int prefix_length)
+    // Callback to set address of remote server
+    // Never called more than once per tun_builder session.
+    virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
+    {
+      return false;
+    }
+
+    // Callback to add network address to VPN interface
+    // May be called more than once per tun_builder session
+    virtual bool tun_builder_add_address(const std::string& address, int prefix_length, bool ipv6)
+    {
+      return false;
+    }
+
+    // Callback to reroute default gateway to VPN interface.
+    // server_address is provided so that the implementation may exclude
+    // it from the default route.
+    // server_address_ipv6 is true if server_address is an IPv6 address.
+    // ipv6 is true if the default route to be added should be IPv6.
+    // Never called more than once per tun_builder session.
+    virtual bool tun_builder_reroute_gw(const std::string& server_address, bool server_address_ipv6, bool ipv6)
     {
       return false;
     }
 
     // Callback to add route to VPN interface
-    virtual bool tun_builder_add_route(const std::string& address, int prefix_length)
+    // May be called more than once per tun_builder session
+    virtual bool tun_builder_add_route(const std::string& address, int prefix_length, bool ipv6)
+    {
+      return false;
+    }
+
+    // Callback to exclude route from VPN interface
+    // May be called more than once per tun_builder session
+    virtual bool tun_builder_exclude_route(const std::string& address, int prefix_length, bool ipv6)
     {
       return false;
     }
 
     // Callback to add DNS server to VPN interface
-    virtual bool tun_builder_add_dns_server(const std::string& address)
+    // May be called more than once per tun_builder session
+    virtual bool tun_builder_add_dns_server(const std::string& address, bool ipv6, bool reroute_gw)
     {
       return false;
     }
 
     // Callback to add search domain to DNS resolver
-    virtual bool tun_builder_add_search_domain(const std::string& domain)
+    // May be called more than once per tun_builder session
+    virtual bool tun_builder_add_search_domain(const std::string& domain, bool reroute_gw)
     {
       return false;
     }
 
     // Callback to set MTU of the VPN interface
+    // Never called more than once per tun_builder session.
     virtual bool tun_builder_set_mtu(int mtu)
     {
       return false;
     }
 
     // Callback to set the session name
+    // Never called more than once per tun_builder session.
     virtual bool tun_builder_set_session_name(const std::string& name)
     {
       return false;
@@ -63,9 +95,15 @@ namespace openvpn {
     // Callback to establish the VPN tunnel, returning a file descriptor
     // to the tunnel, which the caller will henceforth own.  Returns -1
     // if the tunnel could not be established.
+    // Always called last after tun_builder session has been configured.
     virtual int tun_builder_establish()
     {
       return -1;
+    }
+
+    // Called just before tunnel socket is closed
+    virtual void tun_builder_teardown()
+    {
     }
   };
 }

@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include <boost/asio.hpp>
+
 #include <boost/static_assert.hpp>
 
 #include <openvpn/common/types.hpp>

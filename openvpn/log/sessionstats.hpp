@@ -18,8 +18,12 @@ namespace openvpn {
       // operating stats
       BYTES_IN = 0,
       BYTES_OUT,
+      PACKETS_IN,
+      PACKETS_OUT,
       TUN_BYTES_IN,
       TUN_BYTES_OUT,
+      TUN_PACKETS_IN,
+      TUN_PACKETS_OUT,
       N_STATS,
     };
 
@@ -44,13 +48,22 @@ namespace openvpn {
 	return 0;
     }
 
+    count_t get_stat_fast(const size_t type) const
+    {
+      return stats_[type];
+    }
+
     static const char *stat_name(const size_t type)
     {
       static const char *names[] = {
 	"BYTES_IN",
 	"BYTES_OUT",
+	"PACKETS_IN",
+	"PACKETS_OUT",
 	"TUN_BYTES_IN",
 	"TUN_BYTES_OUT",
+	"TUN_PACKETS_IN",
+	"TUN_PACKETS_OUT",
       };
 
       if (type < N_STATS)

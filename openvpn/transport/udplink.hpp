@@ -62,19 +62,20 @@ namespace openvpn {
 		? socket.send_to(buf.const_buffers_1(), *endpoint)
 		: socket.send(buf.const_buffers_1());
 	      stats->inc_stat(SessionStats::BYTES_OUT, wrote);
+	      stats->inc_stat(SessionStats::PACKETS_OUT, 1);
 	      if (wrote == buf.size())
 		return true;
 	      else
 		{
 		  OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
-		  stats->error(Error::NETWORK_ERROR);
+		  stats->error(Error::NETWORK_SEND_ERROR);
 		  return false;
 		}
 	    }
 	    catch (boost::system::system_error& e)
 	      {
 		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
-		stats->error(Error::NETWORK_ERROR);
+		stats->error(Error::NETWORK_SEND_ERROR);
 		return false;
 	      }
 	  }
@@ -122,12 +123,13 @@ namespace openvpn {
 		    OPENVPN_LOG_UDPLINK_VERBOSE("UDP from " << pfp->sender_endpoint);
 		    pfp->buf.set_size(bytes_recvd);
 		    stats->inc_stat(SessionStats::BYTES_IN, bytes_recvd);
+		    stats->inc_stat(SessionStats::PACKETS_IN, 1);
 		    read_handler->udp_read_handler(pfp);
 		  }
 		else
 		  {
 		    OPENVPN_LOG_UDPLINK_ERROR("UDP recv error: " << error.message());
-		    stats->error(Error::NETWORK_ERROR);
+		    stats->error(Error::NETWORK_RECV_ERROR);
 		  }
 	      }
 	    queue_read(pfp.release()); // reuse PacketFrom object if still available

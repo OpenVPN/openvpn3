@@ -184,6 +184,12 @@
 #define POLARSSL_NO_PLATFORM_ENTROPY
  */
 
+// JY added
+#ifdef EXTERNAL_RNG
+#define POLARSSL_NO_DEFAULT_ENTROPY_SOURCES
+#define POLARSSL_NO_PLATFORM_ENTROPY
+#endif
+
 /**
  * \def POLARSSL_PKCS1_V21
  *
@@ -357,7 +363,10 @@
  *
  * This module provides the CTR_DRBG AES-256 random number generator.
  */
+// JY added
+#ifndef EXTERNAL_RNG
 #define POLARSSL_CTR_DRBG_C
+#endif
 
 /**
  * \def POLARSSL_DEBUG_C

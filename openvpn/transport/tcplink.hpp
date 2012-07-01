@@ -121,6 +121,7 @@ namespace openvpn {
 	      {
 		OPENVPN_LOG_TCPLINK_VERBOSE("TCP send size=" << bytes_sent);
 		stats->inc_stat(SessionStats::BYTES_OUT, bytes_sent);
+		stats->inc_stat(SessionStats::PACKETS_OUT, 1);
 
 		BufferPtr buf = queue.front();
 		if (bytes_sent == buf->size())
@@ -145,8 +146,8 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TCPLINK_ERROR("TCP send error: " << error.message());
-		stats->error(Error::NETWORK_ERROR);
-		read_handler->tcp_error_handler("NETWORK_ERROR");
+		stats->error(Error::NETWORK_SEND_ERROR);
+		read_handler->tcp_error_handler("NETWORK_SEND_ERROR");
 		stop();
 		return;
 	      }
@@ -175,6 +176,7 @@ namespace openvpn {
 	      {
 		OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv size=" << bytes_recvd);
 		stats->inc_stat(SessionStats::BYTES_IN, bytes_recvd);
+		stats->inc_stat(SessionStats::PACKETS_IN, 1);
 		pfp->buf.set_size(bytes_recvd);
 
 		BufferAllocated pkt;
@@ -194,8 +196,8 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TCPLINK_ERROR("TCP recv error: " << error.message());
-		stats->error(Error::NETWORK_ERROR);
-		read_handler->tcp_error_handler("NETWORK_ERROR");
+		stats->error(Error::NETWORK_RECV_ERROR);
+		read_handler->tcp_error_handler("NETWORK_RECV_ERROR");
 		stop();
 	      }
 	  }

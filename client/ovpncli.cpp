@@ -3,12 +3,17 @@
 
 #include <iostream>
 
-// Set up export of our public interface
+// Set up export of our public interface unless
+// CLIENT_API_VISIBILITY_HIDDEN is defined
 #if defined(__GNUC__)
 #define OPENVPN_CLIENT_EXPORT
+#ifndef CLIENT_API_VISIBILITY_HIDDEN
 #pragma GCC visibility push(default)
+#endif
 #include "ovpncli.hpp" // public interface
+#ifndef CLIENT_API_VISIBILITY_HIDDEN
 #pragma GCC visibility pop
+#endif
 #else
 #error no public interface export defined for this compiler
 #endif
@@ -35,9 +40,9 @@
 // log SSL handshake messages
 #define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
 
-// on Android, use TunBuilderBase abstraction
+// on Android and iOS, use TunBuilderBase abstraction
 #include <openvpn/common/platform.hpp>
-#if defined(OPENVPN_PLATFORM_ANDROID) && !defined(OPENVPN_FORCE_TUN_NULL)
+#if (defined(OPENVPN_PLATFORM_ANDROID) || defined(OPENVPN_PLATFORM_IPHONE)) && !defined(OPENVPN_FORCE_TUN_NULL)
 #define USE_TUN_BUILDER
 #endif
 
@@ -97,6 +102,16 @@ namespace openvpn {
 	  }
 	else
 	  return 0;
+      }
+
+      count_t stat_count(const size_t index) const
+      {
+	return get_stat_fast(index);
+      }
+
+      count_t error_count(const size_t index) const
+      {
+	return errors[index];
       }
 
       void detach_from_parent()
@@ -191,9 +206,13 @@ namespace openvpn {
       };
     };
 
-    OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::init_process()
     {
       InitProcess::init();
+    }
+
+    OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
+    {
       state = new Private::ClientState();
     }
 
@@ -519,6 +538,24 @@ namespace openvpn {
       for (size_t i = 0; i < n; ++i)
 	sv.push_back(stats ? stats->combined_value(i) : 0);
       return sv;
+    }
+
+    OPENVPN_CLIENT_EXPORT InterfaceStats OpenVPNClient::tun_stats() const
+    {
+      MySessionStats::Ptr stats = state->stats;
+      InterfaceStats ret;
+
+      // The reason for the apparent inversion between in/out below is
+      // that TUN_*_OUT stats refer to data written to tun device,
+      // but from the perspective of tun interface, this is incoming
+      // data.  Vice versa for TUN_*_IN.
+      ret.bytes_out = stats->stat_count(SessionStats::TUN_BYTES_IN);
+      ret.bytes_in = stats->stat_count(SessionStats::TUN_BYTES_OUT);
+      ret.packets_out = stats->stat_count(SessionStats::TUN_PACKETS_IN);
+      ret.packets_in = stats->stat_count(SessionStats::TUN_PACKETS_OUT);
+      ret.errors_out = stats->error_count(Error::TUN_READ_ERROR);
+      ret.errors_in = stats->error_count(Error::TUN_WRITE_ERROR);
+      return ret;
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::stop()

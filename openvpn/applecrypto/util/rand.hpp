@@ -18,8 +18,15 @@ namespace openvpn {
 
     void rand_bytes(unsigned char *buf, const size_t size)
     {
-      if (SecRandomCopyBytes(kSecRandomDefault, size, buf) == -1)
+      if (!rand_bytes_noexcept(buf, size))
 	throw rand_error_apple("rand_bytes");
+    }
+
+    // Like rand_bytes, but don't throw exception.
+    // Return true on successs, false on fail.
+    bool rand_bytes_noexcept(unsigned char *buf, const size_t size)
+    {
+      return SecRandomCopyBytes(kSecRandomDefault, size, buf) ? false : true;
     }
   };
 }

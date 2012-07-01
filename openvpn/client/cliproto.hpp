@@ -209,7 +209,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    process_exception(e);
+	    process_exception(e, "transport_recv");
 	  }
       }
 
@@ -243,7 +243,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    process_exception(e);
+	    process_exception(e, "tun_recv");
 	  }
       }
 
@@ -274,7 +274,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    process_exception(e);
+	    process_exception(e, "transport_connecting");
 	  }
       }
 
@@ -441,7 +441,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    process_exception(e);
+	    process_exception(e, "send_push_request_callback");
 	  }
       }
 
@@ -486,7 +486,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    process_exception(e);
+	    process_exception(e, "housekeeping_callback");
 	  }
       }
 
@@ -509,11 +509,11 @@ namespace openvpn {
 	  }
       }
 
-      void process_exception(const std::exception& e)
+      void process_exception(const std::exception& e, const char *method_name)
       {
 	if (notify_callback)
 	  {
-	    OPENVPN_LOG("Client exception: " << e.what());
+	    OPENVPN_LOG("Client exception in " << method_name << ": " << e.what());
 	    stop(true);
 	  }
 	else

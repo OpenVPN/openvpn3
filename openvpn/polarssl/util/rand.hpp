@@ -27,13 +27,15 @@ namespace openvpn {
 
     void rand_bytes(unsigned char *buf, const size_t size)
     {
-      if (ctr_drbg_random(&ctx, buf, size) < 0)
+      if (!rand_bytes_noexcept(buf, size))
 	throw rand_error_polarssl("CTR_DRBG rand_bytes");
     }
 
-    int rand_bytes_noexcept(unsigned char *buf, const size_t size)
+    // Like rand_bytes, but don't throw exception.
+    // Return true on successs, false on fail.
+    bool rand_bytes_noexcept(unsigned char *buf, const size_t size)
     {
-      return ctr_drbg_random(&ctx, buf, size);
+      return ctr_drbg_random(&ctx, buf, size) < 0 ? false : true;
     }
 
   private:

@@ -6,7 +6,8 @@ namespace openvpn {
 
     enum Type {
       SUCCESS=0,           // no error
-      NETWORK_ERROR,       // errors on network socket
+      NETWORK_RECV_ERROR,  // errors receiving on network socket
+      NETWORK_SEND_ERROR,  // errors sending on network socket
       DECRYPT_ERROR,       // data channel encrypt/decrypt error
       HMAC_ERROR,          // HMAC verification failure
       REPLAY_ERROR,        // error from PacketIDReceive
@@ -16,7 +17,9 @@ namespace openvpn {
       COMPRESS_ERROR,      // compress/decompress errors on data channel
       RESOLVE_ERROR,       // DNS resolution error
       SOCKET_PROTECT_ERROR, // Error calling protect() method on socket
-      TUN_NET_ERROR,       // read/write errors on tun/tap interface
+      TUN_READ_ERROR,      // read errors on tun/tap interface
+      TUN_WRITE_ERROR,     // write errors on tun/tap interface
+      TUN_FRAMING_ERROR,   // error with tun PF_INET/PF_INET6 prefix
       TUN_SETUP_FAILED,    // error setting up tun/tap interface
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
@@ -40,7 +43,8 @@ namespace openvpn {
     {
       static const char *names[] = {
 	"SUCCESS",
-	"NETWORK_ERROR",
+	"NETWORK_RECV_ERROR",
+	"NETWORK_SEND_ERROR",
 	"DECRYPT_ERROR",
 	"HMAC_ERROR",
 	"REPLAY_ERROR",
@@ -50,7 +54,9 @@ namespace openvpn {
 	"COMPRESS_ERROR",
 	"RESOLVE_ERROR",
 	"SOCKET_PROTECT_ERROR",
-	"TUN_NET_ERROR",
+	"TUN_READ_ERROR",
+	"TUN_WRITE_ERROR",
+	"TUN_FRAMING_ERROR",
 	"TUN_SETUP_FAILED",
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",

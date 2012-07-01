@@ -142,6 +142,16 @@ namespace openvpn {
 	return (addr & netmask) == addr;
       }
 
+      Addr::Version version() const
+      {
+	const Addr::Version v1 = addr.version();
+	const Addr::Version v2 = netmask.version();
+	if (v1 == v2)
+	  return v1;
+	else
+	  return Addr::UNSPEC;
+      }
+
       Addr addr;
       Addr netmask;
 

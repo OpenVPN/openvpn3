@@ -69,7 +69,7 @@ namespace openvpn {
       // response to challenge
       std::string response;
 
-      // Dynamic challenge/reponse cookie
+      // Dynamic challenge/response cookie
       std::string dynamicChallengeCookie;
 
       // If true, on successful connect, we will replace the password
@@ -139,6 +139,17 @@ namespace openvpn {
       std::string text;     // log output (usually but not always one line)
     };
 
+    // used to pass stats for an interface
+    struct InterfaceStats
+    {
+      long long bytes_in;
+      long long packets_in;
+      long long errors_in;
+      long long bytes_out;
+      long long packets_out;
+      long long errors_out;
+    };
+
     // base class for External PKI queries
     struct ExternalPKIRequestBase {
       ExternalPKIRequestBase() : error(false), invalidAlias(false) {}
@@ -166,11 +177,15 @@ namespace openvpn {
       struct ClientState;
     };
 
-    // Top-level OpenVPN client class that is wrapped by swig.
+    // Top-level OpenVPN client class.
     class OpenVPNClient : public TunBuilderBase, private ExternalPKIBase {
     public:
       OpenVPNClient();
       virtual ~OpenVPNClient();
+
+      // Call me first, before calling any other method (static or instance methods)
+      // in this class.
+      static void init_process();
 
       // Parse config file and determine needed credentials statically.
       static EvalConfig eval_config_static(const Config&);
@@ -227,6 +242,9 @@ namespace openvpn {
 
       // return all stats in a bundle
       std::vector<long long> stats_bundle() const;
+
+      // return tun stats only
+      InterfaceStats tun_stats() const;
 
       // Callback for delivering events during connect() call.
       // Will be called from the thread executing connect().

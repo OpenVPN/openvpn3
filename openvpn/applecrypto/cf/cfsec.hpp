@@ -18,6 +18,7 @@
 namespace openvpn {
   namespace CF {
     OPENVPN_CF_WRAP(Cert, cert_cast, SecCertificateRef, SecCertificateGetTypeID)
+    OPENVPN_CF_WRAP(Key, key_cast, SecKeyRef, SecKeyGetTypeID)
     OPENVPN_CF_WRAP(Identity, identity_cast, SecIdentityRef, SecIdentityGetTypeID)
 #ifndef OPENVPN_PLATFORM_IPHONE
     OPENVPN_CF_WRAP(Keychain, keychain_cast, SecKeychainRef, SecKeychainGetTypeID)

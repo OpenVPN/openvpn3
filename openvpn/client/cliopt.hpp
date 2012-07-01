@@ -42,6 +42,12 @@
 #include <openvpn/polarssl/util/rand.hpp>
 #endif
 
+#ifdef USE_POLARSSL_APPLE_HYBRID
+#include <openvpn/applecrypto/crypto/api.hpp>
+#include <openvpn/polarssl/ssl/sslctx.hpp>
+#include <openvpn/applecrypto/util/rand.hpp>
+#endif
+
 namespace openvpn {
 
   class ClientOptions : public RC<thread_unsafe_refcount>
@@ -51,8 +57,13 @@ namespace openvpn {
 
 #if defined(USE_POLARSSL)
     typedef PolarSSLCryptoAPI ClientCryptoAPI;
-    typedef PolarSSLContext ClientSSLAPI;
+    typedef PolarSSLContext<PolarSSLRandom> ClientSSLAPI;
     typedef PolarSSLRandom RandomAPI;
+#elif defined(USE_POLARSSL_APPLE_HYBRID)
+    // Uses Apple framework for RandomAPI and ClientCryptoAPI and PolarSSL for ClientSSLAPI
+    typedef AppleCryptoAPI ClientCryptoAPI;
+    typedef PolarSSLContext<AppleRandom> ClientSSLAPI;
+    typedef AppleRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
     typedef AppleCryptoAPI ClientCryptoAPI;
     typedef AppleSSLContext ClientSSLAPI;
@@ -116,7 +127,7 @@ namespace openvpn {
 #ifdef OPENVPN_SSL_DEBUG
       cc.enable_debug();
 #endif
-#if defined(USE_POLARSSL)
+#if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
       cc.rng = rng;
 #endif
       cc.load(opt);
@@ -151,6 +162,10 @@ namespace openvpn {
       tunconf->session_name = session_name;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
+#if defined(OPENVPN_PLATFORM_IPHONE)
+      tunconf->retain_sd = true;
+      tunconf->tun_prefix = true;
+#endif
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
       tunconf->layer = cp->layer;

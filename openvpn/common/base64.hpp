@@ -49,6 +49,16 @@ namespace openvpn {
       }
     }
 
+    static size_t decode_size_max(const size_t encode_size)
+    {
+      return encode_size;
+    }
+
+    static size_t encode_size_max(const size_t decode_size)
+    {
+      return decode_size * 4 / 3 + 4;
+    }
+
     template <typename V>
     std::string encode(const V& data) const
     {
@@ -57,7 +67,7 @@ namespace openvpn {
       unsigned int c;
       const size_t size = data.size();
 
-      p = s = new char[size * 4 / 3 + 4];
+      p = s = new char[encode_size_max(size)];
       for (i = 0; i < size; ) {
 	c = data[i++] << 8;
 	if (i < size)

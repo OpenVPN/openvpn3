@@ -65,6 +65,11 @@ namespace openvpn {
 	return *this;
       }
 
+      void swap(Wrap& other)
+      {
+	std::swap(obj_, other.obj_);
+      }
+
       void reset(T obj, const Own own=OWN)
       {
 	if (own == BORROW && obj)
@@ -78,7 +83,14 @@ namespace openvpn {
 
       T operator()() const { return obj_; }
 
-      // Intended for use with Apple methods that require
+      T release()
+      {
+	T ret = obj_;
+	obj_ = NULL;
+	return ret;
+      }
+
+      // Intended for use with Core Foundation methods that require
       // a T* for saving a (non-borrowed) return value
       T* mod_ref()
       {
@@ -117,9 +129,13 @@ namespace openvpn {
 
     OPENVPN_CF_WRAP(String, string_cast, CFStringRef, CFStringGetTypeID)
     OPENVPN_CF_WRAP(Number, number_cast, CFNumberRef, CFNumberGetTypeID)
-    OPENVPN_CF_WRAP(Array, array_cast, CFArrayRef, CFArrayGetTypeID)
-    OPENVPN_CF_WRAP(Dict, dict_cast, CFDictionaryRef, CFDictionaryGetTypeID)
+    OPENVPN_CF_WRAP(Bool, bool_cast, CFBooleanRef, CFBooleanGetTypeID)
     OPENVPN_CF_WRAP(Data, data_cast, CFDataRef, CFDataGetTypeID)
+    OPENVPN_CF_WRAP(Array, array_cast, CFArrayRef, CFArrayGetTypeID)
+    OPENVPN_CF_WRAP(MutableArray, mutable_array_cast, CFMutableArrayRef, CFArrayGetTypeID)
+    OPENVPN_CF_WRAP(Dict, dict_cast, CFDictionaryRef, CFDictionaryGetTypeID)
+    OPENVPN_CF_WRAP(MutableDict, mutable_dict_cast, CFMutableDictionaryRef, CFDictionaryGetTypeID)
+    OPENVPN_CF_WRAP(Error, error_cast, CFErrorRef, CFErrorGetTypeID);
 
     // generic CFTypeRef wrapper
 
@@ -142,9 +158,19 @@ namespace openvpn {
       return String(CFStringCreateWithCString(kCFAllocatorDefault, str.c_str(), kCFStringEncodingUTF8));
     }
 
-    inline Number number(const int n)
+    inline Number number_from_int(const int n)
     {
       return Number(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &n));
+    }
+
+    inline Number number_from_int32(const SInt32 n)
+    {
+      return Number(CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &n));
+    }
+
+    inline Number number_from_index(const CFIndex n)
+    {
+      return Number(CFNumberCreate(kCFAllocatorDefault, kCFNumberCFIndexType, &n));
     }
 
     inline Data data(const void *bytes, CFIndex length)
@@ -177,9 +203,25 @@ namespace openvpn {
       return dict((const void **)keys.c_data(), (const void **)values.c_data(), std::min(keys.size(), values.size()));
     }
 
+    inline MutableArray mutable_array()
+    {
+      return MutableArray(CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks));
+    }
+
+    inline MutableDict mutable_dict()
+    {
+      return MutableDict(CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+    }
+
+    inline Error error(CFStringRef domain, CFIndex code, CFDictionaryRef userInfo)
+    {
+      return Error(CFErrorCreate(kCFAllocatorDefault, domain, code, userInfo));
+    }
+
     // accessors
 
-    inline CFIndex array_len(const Array& array)
+    template <typename ARRAY>
+    inline CFIndex array_len(const ARRAY& array)
     {
       if (array.defined())
 	return CFArrayGetCount(array());
@@ -187,7 +229,8 @@ namespace openvpn {
 	return 0;
     }
 
-    inline CFTypeRef array_index(const Array& array, const CFIndex idx)
+    template <typename ARRAY>
+    inline CFTypeRef array_index(const ARRAY& array, const CFIndex idx)
     {
       if (array.defined() && CFArrayGetCount(array()) > idx)
 	return CFArrayGetValueAtIndex(array(), idx);
@@ -195,7 +238,8 @@ namespace openvpn {
 	return NULL;
     }
 
-    inline CFTypeRef dict_index(const Dict& dict, const char *key)
+    template <typename DICT>
+    inline CFTypeRef dict_index(const DICT& dict, const char *key)
     {
       if (dict.defined())
 	{
@@ -206,7 +250,8 @@ namespace openvpn {
 	return NULL;
     }
 
-    inline CFTypeRef dict_index(const Dict& dict, CFStringRef key)
+    template <typename DICT>
+    inline CFTypeRef dict_index(const DICT& dict, CFStringRef key)
     {
       if (dict.defined() && key)
 	return CFDictionaryGetValue(dict(), key);
@@ -214,7 +259,49 @@ namespace openvpn {
 	return NULL;
     }
 
-    // comparison
+    // string methods
+
+    OPENVPN_SIMPLE_EXCEPTION(cppstring_error);
+
+    inline std::string cppstring(CFStringRef str)
+    {
+      const CFStringEncoding encoding = kCFStringEncodingUTF8;
+      if (str)
+	{
+	  const CFIndex len = CFStringGetLength(str);
+	  const CFIndex maxsize = CFStringGetMaximumSizeForEncoding(len, encoding);
+	  char *buf = new char[maxsize];
+	  const Boolean status = CFStringGetCString(str, buf, maxsize, encoding);
+	  if (status)
+	    {
+	      std::string ret(buf);
+	      delete [] buf;
+	      return ret;
+	    }
+	  else
+	    {
+	      delete [] buf;
+	      throw cppstring_error();
+	    }
+	}
+      return "";
+    }
+
+    inline std::string cppstring(const String& str)
+    {
+      return cppstring(str());
+    }
+
+    inline std::string description(CFTypeRef obj)
+    {
+      if (obj)
+	{
+	  String s(CFCopyDescription(obj));
+	  return cppstring(s);
+	}
+      else
+	return "UNDEF";
+    }
 
     inline bool string_equal(const String& s1, const String& s2, const CFStringCompareFlags compareOptions = 0)
     {

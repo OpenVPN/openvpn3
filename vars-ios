@@ -6,7 +6,7 @@ export BOOST_STAGE=stage-$PLATFORM/lib
 export OPENSSL_DIR=$HOME/src/mac/openssl-$PLATFORM
 export POLARSSL_DIR=$HOME/src/mac/polarssl-$PLATFORM
 export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.1.sdk"
-export PLATFORM_FLAGS="-arch armv7 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
+export PLATFORM_FLAGS="-arch armv7 -mthumb -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
+export OTHER_COMPILER_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
-export PATH="$OVPN3_DIR/scripts:$PATH"

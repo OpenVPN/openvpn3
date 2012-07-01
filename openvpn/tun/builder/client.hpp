@@ -36,6 +36,8 @@ namespace openvpn {
 
       Tun(boost::asio::io_service& io_service,
 	  const int socket,
+	  const bool retain_sd_arg,
+	  const bool tun_prefix_arg,
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg)
@@ -43,6 +45,8 @@ namespace openvpn {
       {
 	Base::sd = new boost::asio::posix::stream_descriptor(io_service, socket);
 	Base::name_ = "tun";
+	Base::retain_sd = retain_sd_arg;
+	Base::tun_prefix = tun_prefix_arg;
       }
 
       ~Tun() { Base::stop(); }
@@ -57,6 +61,8 @@ namespace openvpn {
       std::string session_name;
       int mtu;                   // optional
       int n_parallel;            // number of parallel async reads on tun socket
+      bool retain_sd;
+      bool tun_prefix;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
 
@@ -71,7 +77,7 @@ namespace openvpn {
 					    TunClientParent& parent);
     private:
       ClientConfig()
-	: mtu(0), n_parallel(8), builder(NULL) {}
+	: mtu(0), n_parallel(8), retain_sd(false), tun_prefix(false), builder(NULL) {}
     };
 
     // The tun interface
@@ -90,6 +96,7 @@ namespace openvpn {
 	    halt = false;
 	    try {
 	      TunBuilderBase* tb = config->builder;
+	      const IP::Addr server_addr = transcli.server_endpoint_addr();
 
 	      // reset target tun builder object
 	      if (!tb->tun_builder_new())
@@ -97,13 +104,18 @@ namespace openvpn {
 
 	      // do ifconfig
 	      parent.tun_pre_tun_config();
-	      tun_ifconfig(opt, tb);
+	      const IP::Addr::Version iface_ver = tun_ifconfig(opt);
 
 	      // add routes
-	      add_routes(opt, tb);
+	      const bool reroute_gw = add_routes(opt, server_addr, iface_ver);
 
 	      // add DNS servers and domain prefixes
-	      add_dns(opt, tb);
+	      add_dns(opt, reroute_gw);
+
+	      // set remote server address
+	      if (!tb->tun_builder_set_remote_address(server_addr.to_string(),
+						      server_addr.version() == IP::Addr::V6))
+		throw tun_builder_error("tun_builder_set_remote_address failed");
 
 	      // set MTU
 	      if (config->mtu)
@@ -125,6 +137,8 @@ namespace openvpn {
 		throw tun_builder_error("cannot acquire tun interface socket");
 	      impl.reset(new TunImpl(io_service,
 				     sd,
+				     config->retain_sd,
+				     config->tun_prefix,
 				     this,
 				     config->frame,
 				     config->stats
@@ -175,7 +189,7 @@ namespace openvpn {
       {
       }
 
-      bool send(const Buffer& buf)
+      bool send(Buffer& buf)
       {
 	if (impl)
 	  return impl->write(buf);
@@ -190,18 +204,24 @@ namespace openvpn {
 
       void stop_()
       {
+	TunBuilderBase* tb = config->builder;
 	if (!halt)
 	  {
 	    halt = true;
 
 	    // stop tun
 	    if (impl)
-	      impl->stop();
+	      {
+		tb->tun_builder_teardown();
+		impl->stop();
+	      }
 	  }
       }
 
-      void tun_ifconfig(const OptionList& opt, TunBuilderBase* tb)
+      IP::Addr::Version tun_ifconfig(const OptionList& opt)
       {
+	TunBuilderBase* tb = config->builder;
+
 	// first verify topology
 	{
 	  const Option& o = opt.get("topology");
@@ -215,20 +235,34 @@ namespace openvpn {
 	  const Option& o = opt.get("ifconfig");
 	  o.min_args(2);
 	  const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "ifconfig");
-	  if (!tb->tun_builder_add_address(pair.addr.to_string(), pair.netmask.prefix_len()))
+	  const IP::Addr::Version iface_ver = pair.version();
+	  if (iface_ver == IP::Addr::UNSPEC)
+	    throw tun_builder_error("tun_builder_add_address: cannot determine IPv4 vs. IPv6");
+	  if (!tb->tun_builder_add_address(pair.addr.to_string(),
+					   pair.netmask.prefix_len(),
+					   iface_ver == IP::Addr::V6))
 	    throw tun_builder_error("tun_builder_add_address failed");
 	  vpn_ip_addr = pair.addr;
+	  return iface_ver;
 	}
       }
 
-      void add_routes(const OptionList& opt, TunBuilderBase* tb)
+    bool add_routes(const OptionList& opt,
+		    const IP::Addr& server_addr,
+		    const IP::Addr::Version iface_ver)
       {
+	TunBuilderBase* tb = config->builder;
+	bool reroute_gw = false;
+
 	// do redirect-gateway
 	const RedirectGatewayFlags rg_flags(opt);
-	if (rg_flags.redirect_gateway_enabled()) // fixme -- support IPv6
+	if (rg_flags.redirect_gateway_enabled())
 	  {
-	    if (!tb->tun_builder_add_route("0.0.0.0", 0)) 
-	      throw tun_builder_route_error("tun_builder_add_route for redirect-gateway failed");
+	    if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
+					    server_addr.version() == IP::Addr::V6,
+					    iface_ver == IP::Addr::V6))
+	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway failed");
+	    reroute_gw = true;
 	  }
 	else
 	  {
@@ -243,7 +277,9 @@ namespace openvpn {
 		      if (o.size() >= 4 && o[3] != "vpn_gateway")
 			throw tun_builder_route_error("only tunnel routes supported");
 		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "route");
-		      if (!tb->tun_builder_add_route(pair.addr.to_string(), pair.netmask.prefix_len()))
+		      if (!tb->tun_builder_add_route(pair.addr.to_string(),
+						     pair.netmask.prefix_len(),
+						     pair.version() == IP::Addr::V6))
 			throw tun_builder_route_error("tun_builder_add_route failed");
 		    }
 		    catch (const std::exception& e)
@@ -253,14 +289,16 @@ namespace openvpn {
 		  }
 	      }
 	  }
+	return reroute_gw;
       }
 
-      void add_dns(const OptionList& opt, TunBuilderBase* tb)
+      void add_dns(const OptionList& opt, const bool reroute_gw)
       {
 	// Example:
 	//   [dhcp-option] [DNS] [172.16.0.23] 
 	//   [dhcp-option] [DOMAIN] [openvpn.net] 
 	//   [dhcp-option] [DOMAIN] [example.com] 
+	TunBuilderBase* tb = config->builder;
 	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option");
 	if (dopt != opt.map().end())
 	  {
@@ -273,13 +311,15 @@ namespace openvpn {
 		    {
 		      o.exact_args(3);
 		      const IP::Addr ip = IP::Addr::from_string(o[2], "dns-server-ip");
-		      if (!tb->tun_builder_add_dns_server(ip.to_string()))
+		      if (!tb->tun_builder_add_dns_server(ip.to_string(),
+							  ip.version() == IP::Addr::V6,
+							  reroute_gw))
 			throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed");
 		    }
 		  else if (type == "DOMAIN")
 		    {
 		      o.exact_args(3);
-		      if (!tb->tun_builder_add_search_domain(o[2]))
+		      if (!tb->tun_builder_add_search_domain(o[2], reroute_gw))
 			throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
 		    }
 		  else

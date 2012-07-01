@@ -215,7 +215,7 @@ namespace openvpn {
 	    case Error::AUTH_FAILED:
 	      {
 		const std::string& reason = client->fatal_reason();
-		if (ChallengeResponse::is_dynamic(reason)) // dynamic challenge/reponse?
+		if (ChallengeResponse::is_dynamic(reason)) // dynamic challenge/response?
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::DynamicChallenge(reason);
 		    client_options->events().add_event(ev);

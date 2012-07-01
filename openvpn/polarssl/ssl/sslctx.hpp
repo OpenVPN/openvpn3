@@ -22,7 +22,6 @@
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
 #include <openvpn/polarssl/pki/rsactx.hpp>
-#include <openvpn/polarssl/util/rand.hpp>
 #include <openvpn/polarssl/util/error.hpp>
 
 // An SSL Context is essentially a configuration that can be used
@@ -44,6 +43,7 @@ namespace openvpn {
 
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
+  template <typename RAND_API>
   class PolarSSLContext : public RC<thread_unsafe_refcount>
   {
   public:
@@ -82,7 +82,7 @@ namespace openvpn {
       Frame::Ptr frame;
       Flags flags;
       CertType cert_type;
-      PolarSSLRandom::Ptr rng; // random data source
+      typename RAND_API::Ptr rng; // random data source
 
       void enable_debug()
       {
@@ -410,7 +410,7 @@ namespace openvpn {
       static int rng_callback(void *arg, unsigned char *data, size_t len)
       {
 	SSL *self = (SSL *)arg;
-	return self->rng->rand_bytes_noexcept(data, len);
+	return self->rng->rand_bytes_noexcept(data, len) ? 0 : -1; // using -1 as a general-purpose PolarSSL error code
       }
 
       static void dbg_callback(void *arg, int level, const char *text)
@@ -440,7 +440,7 @@ namespace openvpn {
 
       ssl_context *ssl;	       // underlying SSL connection object
       ssl_session *sess;       // SSL session (tied to ssl object above)
-      PolarSSLRandom::Ptr rng; // random data source
+      typename RAND_API::Ptr rng;       // random data source
       bool overflow;
       MemQStream ct_in;    // write ciphertext to here
       MemQStream ct_out;   // read ciphertext from here
@@ -463,7 +463,7 @@ namespace openvpn {
       p11.len = config.crt_chain->get()->rsa.len;
     }
 
-    SSL::Ptr ssl() { return SSL::Ptr(new SSL(this)); }
+    typename SSL::Ptr ssl() { return typename SSL::Ptr(new SSL(this)); }
 
     const Mode& mode() const { return config.mode; }
  
