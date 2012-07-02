@@ -24,7 +24,7 @@ namespace openvpn {
     // (client reads)
     struct EvalConfig
     {
-      EvalConfig() : error(false), staticChallengeEcho(false) {}
+      EvalConfig() : error(false), autologin(false), externalPki(false), staticChallengeEcho(false) {}
 
       // true if error
       bool error;
@@ -122,6 +122,22 @@ namespace openvpn {
       std::string info;      // additional event info
     };
 
+    // used to communicate extra details about successful connection
+    // (client reads)
+    struct ConnectionInfo
+    {
+      ConnectionInfo() : defined(false) {}
+
+      bool defined;
+      std::string user;
+      std::string serverHost;
+      std::string serverPort;
+      std::string serverProto;
+      std::string serverIp;
+      std::string vpnIp;
+      std::string tunName;
+    };
+
     // returned by some methods as a status/error indication
     // (client reads)
     struct Status
@@ -209,6 +225,10 @@ namespace openvpn {
       // to event() and log() functions.  Make sure to call eval_config()
       // and possibly provide_creds() as well before this function.
       Status connect();
+
+      // Return information about the most recent connection.  Should be called
+      // after an event of type "CONNECTED".
+      ConnectionInfo connection_info();
 
       // Stop the client.  Only meaningful when connect() is running.
       // May be called asynchronously from a different thread

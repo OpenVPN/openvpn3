@@ -268,7 +268,7 @@ namespace openvpn {
 	pid_mode = PacketIDReceive::UDP_MODE;
 
 	// autologin
-	autologin = ClientOptionHelper::is_autologin(opt);
+	autologin = ParseClientConfig::is_autologin(opt);
 
 	// layer
 	{

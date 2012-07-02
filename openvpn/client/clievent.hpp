@@ -4,6 +4,7 @@
 #include <sstream>
 #include <deque>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/transport/protocol.hpp>
@@ -70,7 +71,9 @@ namespace openvpn {
 	return "UNKNOWN_EVENT_TYPE";
     }
 
-    class Base : public RC<thread_unsafe_refcount>
+    struct Connected;
+
+    class Base : public RC<thread_safe_refcount>
     {
     public:
       typedef boost::intrusive_ptr<Base> Ptr;
@@ -91,6 +94,14 @@ namespace openvpn {
       virtual std::string render() const
       {
 	return "";
+      }
+
+      const Connected* connected_cast() const
+      {
+	if (id_ == CONNECTED)
+	  return (const Connected*)this;
+	else
+	  return NULL;
       }
 
     private:

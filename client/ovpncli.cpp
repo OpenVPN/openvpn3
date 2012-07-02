@@ -145,8 +145,35 @@ namespace openvpn {
 	    ev.name = event->name();
 	    ev.info = event->render();
 	    ev.error = event->is_error();
+
+	    // save connected event
+	    if (event->id() == ClientEvent::CONNECTED)
+	      last_connected = event;
+
 	    parent->event(ev);
 	  }
+      }
+
+      void get_connection_info(ConnectionInfo& ci)
+      {
+	ClientEvent::Base::Ptr connected = last_connected;
+	if (connected)
+	  {
+	    const ClientEvent::Connected* c = connected->connected_cast();
+	    if (c)
+	      {
+		ci.user = c->user;
+		ci.serverHost = c->server_host;
+		ci.serverPort = c->server_port;
+		ci.serverProto = c->server_proto;
+		ci.serverIp = c->server_ip;
+		ci.vpnIp = c->vpn_ip;
+		ci.tunName = c->tun_name;
+		ci.defined = true;
+		return;
+	      }
+	  }
+	ci.defined = false;
       }
 
       void detach_from_parent()
@@ -156,6 +183,7 @@ namespace openvpn {
 
     private:
       OpenVPNClient* parent;
+      ClientEvent::Base::Ptr last_connected;
     };
 
     class MySocketProtect : public SocketProtect
@@ -224,71 +252,23 @@ namespace openvpn {
 	  Protocol::parse(config.protoOverride);
 
 	// parse config
-	options.parse_from_config(config.content);
-	options.parse_meta_from_config(config.content, "OVPN_ACCESS_SERVER");
-	options.update_map();
-
-	// fill out EvalConfig struct
-
-	// userlocked username
-	{
-	  const Option* o = options.get_ptr("USERNAME");
-	  if (o)
-	    eval.userlockedUsername = o->get(1);
-	}
-
-	// External PKI
-	eval.externalPki = ClientOptionHelper::is_external_pki(options);
-
-	// autologin
-	eval.autologin = ClientOptionHelper::is_autologin(options);
-
-	// static challenge
-	{
-	  const Option* o = options.get_ptr("static-challenge");
-	  if (o)
-	    {
-	      eval.staticChallenge = o->get(1);
-	      if (o->get_optional(2) == "1")
-		eval.staticChallengeEcho = true;
-	    }
-	}
-
-	// profile name
-	{
-	  const Option* o = options.get_ptr("PROFILE");
-	  if (o)
-	    eval.profileName = o->get(1);
-	  else
-	    {
-	      RemoteList rl(options);
-	      if (rl.size() >= 1)
-		eval.profileName = rl[0].server_host;
-	    }
-	}
-
-	// friendly name
-	{
-	  const Option* o = options.get_ptr("FRIENDLY_NAME");
-	  if (o)
-	    eval.friendlyName = o->get(1);
-	}
-
-	// server list
-	{
-	  const Option* o = options.get_ptr("HOST_LIST");
-	  if (o)
-	    {
-	      std::stringstream in(o->get(1));
-	      std::string line;
-	      while (std::getline(in, line))
-		{
-		  ServerEntry se;
-		  se.server = line;
-		  eval.serverList.push_back(se);
-		}
-	    }
-	}
+	const ParseClientConfig cc = ParseClientConfig::parse(config.content, options);
+	eval.error = cc.error();
+	eval.message = cc.message();
+	eval.userlockedUsername = cc.userlockedUsername();
+	eval.profileName = cc.profileName();
+	eval.friendlyName = cc.friendlyName();
+	eval.autologin = cc.autologin();
+	eval.externalPki = cc.externalPki();
+	eval.staticChallenge = cc.staticChallenge();
+	eval.staticChallengeEcho = cc.staticChallengeEcho();
+	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
+	  {
+	    ServerEntry se;
+	    se.server = i->server;
+	    se.friendlyName = i->friendlyName;
+	    eval.serverList.push_back(se);
+	  }
       }
       catch (const std::exception& e)
 	{
@@ -327,7 +307,6 @@ namespace openvpn {
     {
       // parse and validate configuration file
       EvalConfig eval;
-      state->options.clear();
       parse_config(config, eval, state->options);
       if (eval.error)
 	return eval;
@@ -474,6 +453,15 @@ namespace openvpn {
       return ret;
     }
 
+    OPENVPN_CLIENT_EXPORT ConnectionInfo OpenVPNClient::connection_info()
+    {
+      ConnectionInfo ci;
+      MyClientEvents::Ptr events = state->events;
+      if (events)
+	events->get_connection_info(ci);
+      return ci;
+    }
+
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req, const size_t err_type)
     {
       if (req.error)
@@ -549,12 +537,24 @@ namespace openvpn {
       // that TUN_*_OUT stats refer to data written to tun device,
       // but from the perspective of tun interface, this is incoming
       // data.  Vice versa for TUN_*_IN.
-      ret.bytes_out = stats->stat_count(SessionStats::TUN_BYTES_IN);
-      ret.bytes_in = stats->stat_count(SessionStats::TUN_BYTES_OUT);
-      ret.packets_out = stats->stat_count(SessionStats::TUN_PACKETS_IN);
-      ret.packets_in = stats->stat_count(SessionStats::TUN_PACKETS_OUT);
-      ret.errors_out = stats->error_count(Error::TUN_READ_ERROR);
-      ret.errors_in = stats->error_count(Error::TUN_WRITE_ERROR);
+      if (stats)
+	{
+	  ret.bytes_out = stats->stat_count(SessionStats::TUN_BYTES_IN);
+	  ret.bytes_in = stats->stat_count(SessionStats::TUN_BYTES_OUT);
+	  ret.packets_out = stats->stat_count(SessionStats::TUN_PACKETS_IN);
+	  ret.packets_in = stats->stat_count(SessionStats::TUN_PACKETS_OUT);
+	  ret.errors_out = stats->error_count(Error::TUN_READ_ERROR);
+	  ret.errors_in = stats->error_count(Error::TUN_WRITE_ERROR);
+	}
+      else
+	{
+	  ret.bytes_out = 0;
+	  ret.bytes_in = 0;
+	  ret.packets_out = 0;
+	  ret.packets_in = 0;
+	  ret.errors_out = 0;
+	  ret.errors_in = 0;
+	}
       return ret;
     }
 
