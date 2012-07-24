@@ -161,6 +161,19 @@ namespace openvpn {
       CFDictionarySetValue(dict(), keystr(), num());
     }
 
+    inline void dict_set_num_long_long(MutableDict& dict, CFStringRef key, long long value)
+    {
+      Number num = number_from_long_long(value);
+      CFDictionarySetValue(dict(), key, num());
+    }
+
+    inline void dict_set_num_long_long(MutableDict& dict, const char *key, long long value)
+    {
+      String keystr = string(key);
+      Number num = number_from_long_long(value);
+      CFDictionarySetValue(dict(), keystr(), num());
+    }
+
     inline void dict_set_num_index(MutableDict& dict, CFStringRef key, CFIndex value)
     {
       Number num = number_from_index(value);

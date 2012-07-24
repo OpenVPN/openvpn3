@@ -168,6 +168,11 @@ namespace openvpn {
       return Number(CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &n));
     }
 
+    inline Number number_from_long_long(const long long n)
+    {
+      return Number(CFNumberCreate(kCFAllocatorDefault, kCFNumberLongLongType, &n));
+    }
+
     inline Number number_from_index(const CFIndex n)
     {
       return Number(CFNumberCreate(kCFAllocatorDefault, kCFNumberCFIndexType, &n));
@@ -269,19 +274,22 @@ namespace openvpn {
       if (str)
 	{
 	  const CFIndex len = CFStringGetLength(str);
-	  const CFIndex maxsize = CFStringGetMaximumSizeForEncoding(len, encoding);
-	  char *buf = new char[maxsize];
-	  const Boolean status = CFStringGetCString(str, buf, maxsize, encoding);
-	  if (status)
+	  if (len > 0)
 	    {
-	      std::string ret(buf);
-	      delete [] buf;
-	      return ret;
-	    }
-	  else
-	    {
-	      delete [] buf;
-	      throw cppstring_error();
+	      const CFIndex maxsize = CFStringGetMaximumSizeForEncoding(len, encoding);
+	      char *buf = new char[maxsize];
+	      const Boolean status = CFStringGetCString(str, buf, maxsize, encoding);
+	      if (status)
+		{
+		  std::string ret(buf);
+		  delete [] buf;
+		  return ret;
+		}
+	      else
+		{
+		  delete [] buf;
+		  throw cppstring_error();
+		}
 	    }
 	}
       return "";
