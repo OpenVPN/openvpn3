@@ -558,6 +558,28 @@ namespace openvpn {
       return ret;
     }
 
+    OPENVPN_CLIENT_EXPORT TransportStats OpenVPNClient::transport_stats() const
+    {
+      MySessionStats::Ptr stats = state->stats;
+      TransportStats ret;
+
+      if (stats)
+	{
+	  ret.bytes_out = stats->stat_count(SessionStats::BYTES_OUT);
+	  ret.bytes_in = stats->stat_count(SessionStats::BYTES_IN);
+	  ret.packets_out = stats->stat_count(SessionStats::PACKETS_OUT);
+	  ret.packets_in = stats->stat_count(SessionStats::PACKETS_IN);
+	}
+      else
+	{
+	  ret.bytes_out = 0;
+	  ret.bytes_in = 0;
+	  ret.packets_out = 0;
+	  ret.packets_in = 0;
+	}
+      return ret;
+    }
+
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::stop()
     {
       ClientConnect::Ptr session = state->session;

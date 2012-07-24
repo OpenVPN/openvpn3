@@ -166,6 +166,15 @@ namespace openvpn {
       long long errors_out;
     };
 
+    // used to pass basic transport stats
+    struct TransportStats
+    {
+      long long bytes_in;
+      long long bytes_out;
+      long long packets_in;
+      long long packets_out;
+    };
+
     // base class for External PKI queries
     struct ExternalPKIRequestBase {
       ExternalPKIRequestBase() : error(false), invalidAlias(false) {}
@@ -265,6 +274,9 @@ namespace openvpn {
 
       // return tun stats only
       InterfaceStats tun_stats() const;
+
+      // return transport stats only
+      TransportStats transport_stats() const;
 
       // Callback for delivering events during connect() call.
       // Will be called from the thread executing connect().
