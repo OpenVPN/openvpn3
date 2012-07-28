@@ -135,52 +135,52 @@ namespace openvpn {
 
     // set a number in a mutable dictionary
 
-    inline void dict_set_num_int(MutableDict& dict, CFStringRef key, int value)
+    inline void dict_set_int(MutableDict& dict, CFStringRef key, int value)
     {
       Number num = number_from_int(value);
       CFDictionarySetValue(dict(), key, num());
     }
 
-    inline void dict_set_num_int(MutableDict& dict, const char *key, int value)
+    inline void dict_set_int(MutableDict& dict, const char *key, int value)
     {
       String keystr = string(key);
       Number num = number_from_int(value);
       CFDictionarySetValue(dict(), keystr(), num());
     }
 
-    inline void dict_set_num_int32(MutableDict& dict, CFStringRef key, SInt32 value)
+    inline void dict_set_int32(MutableDict& dict, CFStringRef key, SInt32 value)
     {
       Number num = number_from_int32(value);
       CFDictionarySetValue(dict(), key, num());
     }
 
-    inline void dict_set_num_int32(MutableDict& dict, const char *key, SInt32 value)
+    inline void dict_set_int32(MutableDict& dict, const char *key, SInt32 value)
     {
       String keystr = string(key);
       Number num = number_from_int32(value);
       CFDictionarySetValue(dict(), keystr(), num());
     }
 
-    inline void dict_set_num_long_long(MutableDict& dict, CFStringRef key, long long value)
+    inline void dict_set_long_long(MutableDict& dict, CFStringRef key, long long value)
     {
       Number num = number_from_long_long(value);
       CFDictionarySetValue(dict(), key, num());
     }
 
-    inline void dict_set_num_long_long(MutableDict& dict, const char *key, long long value)
+    inline void dict_set_long_long(MutableDict& dict, const char *key, long long value)
     {
       String keystr = string(key);
       Number num = number_from_long_long(value);
       CFDictionarySetValue(dict(), keystr(), num());
     }
 
-    inline void dict_set_num_index(MutableDict& dict, CFStringRef key, CFIndex value)
+    inline void dict_set_index(MutableDict& dict, CFStringRef key, CFIndex value)
     {
       Number num = number_from_index(value);
       CFDictionarySetValue(dict(), key, num());
     }
 
-    inline void dict_set_num_index(MutableDict& dict, const char *key, CFIndex value)
+    inline void dict_set_index(MutableDict& dict, const char *key, CFIndex value)
     {
       String keystr = string(key);
       Number num = number_from_index(value);
@@ -189,19 +189,19 @@ namespace openvpn {
 
     // append number to a mutable array
 
-    inline void array_append_num_int(MutableArray& array, int value)
+    inline void array_append_int(MutableArray& array, int value)
     {
       Number num = number_from_int(value);
       CFArrayAppendValue(array(), num());
     }
 
-    inline void array_append_num_int32(MutableArray& array, SInt32 value)
+    inline void array_append_int32(MutableArray& array, SInt32 value)
     {
       Number num = number_from_int32(value);
       CFArrayAppendValue(array(), num());
     }
 
-    inline void array_append_num_index(MutableArray& array, CFIndex value)
+    inline void array_append_index(MutableArray& array, CFIndex value)
     {
       Number num = number_from_index(value);
       CFArrayAppendValue(array(), num());

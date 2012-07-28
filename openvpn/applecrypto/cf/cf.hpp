@@ -70,7 +70,7 @@ namespace openvpn {
 	std::swap(obj_, other.obj_);
       }
 
-      void reset(T obj, const Own own=OWN)
+      void reset(T obj=NULL, const Own own=OWN)
       {
 	if (own == BORROW && obj)
 	  CFRetain(obj);
@@ -208,14 +208,19 @@ namespace openvpn {
       return dict((const void **)keys.c_data(), (const void **)values.c_data(), std::min(keys.size(), values.size()));
     }
 
-    inline MutableArray mutable_array()
+    inline Dict const_dict(MutableDict& mdict)
     {
-      return MutableArray(CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks));
+      return Dict(mdict(), CF::BORROW);
     }
 
-    inline MutableDict mutable_dict()
+    inline MutableArray mutable_array(const CFIndex capacity=0)
     {
-      return MutableDict(CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+      return MutableArray(CFArrayCreateMutable(kCFAllocatorDefault, capacity, &kCFTypeArrayCallBacks));
+    }
+
+    inline MutableDict mutable_dict(const CFIndex capacity=0)
+    {
+      return MutableDict(CFDictionaryCreateMutable(kCFAllocatorDefault, capacity, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     }
 
     inline Error error(CFStringRef domain, CFIndex code, CFDictionaryRef userInfo)
@@ -314,6 +319,16 @@ namespace openvpn {
     inline bool string_equal(const String& s1, const String& s2, const CFStringCompareFlags compareOptions = 0)
     {
       return s1.defined() && s2.defined() && CFStringCompare(s1(), s2(), compareOptions) == kCFCompareEqualTo;
+    }
+
+    // property lists
+    inline Data plist(CFTypeRef obj)
+    {
+      return Data(CFPropertyListCreateData(kCFAllocatorDefault,
+					   obj,
+					   kCFPropertyListBinaryFormat_v1_0,
+					   0,
+					   NULL));
     }
 
   } // namespace CF

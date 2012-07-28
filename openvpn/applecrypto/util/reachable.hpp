@@ -28,7 +28,17 @@ namespace openvpn {
     bool defined() const { return bool(didRetrieveFlags); }
     bool reachable() const { return bool(flags & kSCNetworkReachabilityFlagsReachable); }
     bool connectionRequired() const { return bool(flags & kSCNetworkReachabilityFlagsConnectionRequired); }
-    bool isWWAN() const { return bool(flags & kSCNetworkReachabilityFlagsIsWWAN); }
+    bool isWWAN() const { return bool(flags & kSCNetworkReachabilityFlagsIsWWAN); } // cellular
+
+    bool reachableVia(const std::string& net_type) const
+    {
+      if (net_type == "cellular")
+	return reachable() && isWWAN();
+      else if (net_type == "wifi")
+	return reachable() && !isWWAN();
+      else
+	return reachable();
+    }
 
     std::string to_string() const {
       std::ostringstream out;
