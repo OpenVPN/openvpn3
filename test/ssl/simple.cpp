@@ -71,7 +71,7 @@ int main(int /*argc*/, char* /*argv*/[])
     SSLConfig cc;
     cc.mode = SSLConfig::CLIENT;
 #if ITER <= 10
-    cc.flags = SSLConfig::DEBUG;
+    cc.flags = SSLConfig::SSL_DEBUG_FLAG;
 #endif
     cc.ca = ca1_crt + ca2_crt;
     cc.cert = client_crt;
@@ -83,7 +83,7 @@ int main(int /*argc*/, char* /*argv*/[])
     SSLConfig sc;
     sc.mode = SSLConfig::SERVER;
 #if ITER <= 10
-    sc.flags = SSLConfig::DEBUG;
+    sc.flags = SSLConfig::SSL_DEBUG_FLAG;
 #endif
     sc.ca = ca1_crt + ca2_crt;
     sc.cert = server_crt;

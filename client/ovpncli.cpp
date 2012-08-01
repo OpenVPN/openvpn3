@@ -4,14 +4,14 @@
 #include <iostream>
 
 // Set up export of our public interface unless
-// CLIENT_API_VISIBILITY_HIDDEN is defined
+// OPENVPN_CORE_API_VISIBILITY_HIDDEN is defined
 #if defined(__GNUC__)
 #define OPENVPN_CLIENT_EXPORT
-#ifndef CLIENT_API_VISIBILITY_HIDDEN
+#ifndef OPENVPN_CORE_API_VISIBILITY_HIDDEN
 #pragma GCC visibility push(default)
 #endif
 #include "ovpncli.hpp" // public interface
-#ifndef CLIENT_API_VISIBILITY_HIDDEN
+#ifndef OPENVPN_CORE_API_VISIBILITY_HIDDEN
 #pragma GCC visibility pop
 #endif
 #else

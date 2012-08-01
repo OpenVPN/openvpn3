@@ -44,7 +44,7 @@ namespace openvpn {
     struct Config
     {
       enum {
-	DEBUG = 1<<0,
+	SSL_DEBUG_FLAG = 1<<0,
       };
       typedef unsigned int Flags;
 
@@ -57,7 +57,7 @@ namespace openvpn {
 
       void enable_debug()
       {
-	flags |= DEBUG;
+	flags |= SSL_DEBUG_FLAG;
       }
 
       void load_identity(const std::string& subject_match)

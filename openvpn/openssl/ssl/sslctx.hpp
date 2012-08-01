@@ -55,7 +55,7 @@ namespace openvpn {
     struct Config
     {
       enum {
-	DEBUG = 1<<0,
+	SSL_DEBUG_FLAG = 1<<0,
       };
       typedef unsigned int Flags;
 
@@ -80,7 +80,7 @@ namespace openvpn {
 
       void enable_debug()
       {
-	flags |= DEBUG;
+	flags |= SSL_DEBUG_FLAG;
       }
 
       // if this callback is defined, no private key needs to be loaded
@@ -612,7 +612,7 @@ namespace openvpn {
 	  ctx_->app_verify_arg = this;
 
 	  // Show handshake debugging info
-	  if (config.flags & Config::DEBUG)
+	  if (config.flags & Config::SSL_DEBUG_FLAG)
 	    SSL_CTX_set_info_callback (ctx_, info_callback);
 
 	  // Keep a reference to vars so we can hand them off to SSL objects derived from us

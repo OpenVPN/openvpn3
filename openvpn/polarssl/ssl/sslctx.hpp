@@ -60,7 +60,7 @@ namespace openvpn {
     struct Config
     {
       enum {
-	DEBUG = 1<<0,
+	SSL_DEBUG_FLAG = 1<<0,
       };
       typedef unsigned int Flags;
 
@@ -86,7 +86,7 @@ namespace openvpn {
 
       void enable_debug()
       {
-	flags |= DEBUG;
+	flags |= SSL_DEBUG_FLAG;
       }
 
       // if this callback is defined, no private key needs to be loaded
@@ -368,7 +368,7 @@ namespace openvpn {
 	    throw PolarSSLException("RNG not defined");
 
 	  // set debug callback
-	  if (c.flags & Config::DEBUG)
+	  if (c.flags & Config::SSL_DEBUG_FLAG)
 	    ssl_set_dbg(ssl, dbg_callback, this);
 	}
 	catch (...)

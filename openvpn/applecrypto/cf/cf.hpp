@@ -5,12 +5,7 @@
 #include <string>
 #include <algorithm>
 
-#include <CoreFoundation/CFBase.h>
-#include <CoreFoundation/CFString.h>
-#include <CoreFoundation/CFArray.h>
-#include <CoreFoundation/CFDictionary.h>
-#include <CoreFoundation/CFData.h>
-#include <CoreFoundation/CFNumber.h>
+#include <CoreFoundation/CoreFoundation.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -83,11 +78,20 @@ namespace openvpn {
 
       T operator()() const { return obj_; }
 
+      CFTypeRef generic() const { return (CFTypeRef)obj_; }
+
       T release()
       {
 	T ret = obj_;
 	obj_ = NULL;
 	return ret;
+      }
+
+      CFTypeRef generic_release()
+      {
+	T ret = obj_;
+	obj_ = NULL;
+	return (CFTypeRef)ret;
       }
 
       // Intended for use with Core Foundation methods that require
@@ -153,9 +157,19 @@ namespace openvpn {
       return String(CFStringCreateWithCString(kCFAllocatorDefault, str, kCFStringEncodingUTF8));
     }
 
+    inline String string(CFStringRef str)
+    {
+      return String(str, BORROW);
+    }
+
     inline String string(const std::string& str)
     {
       return String(CFStringCreateWithCString(kCFAllocatorDefault, str.c_str(), kCFStringEncodingUTF8));
+    }
+
+    inline String string(const std::string* str)
+    {
+      return String(CFStringCreateWithCString(kCFAllocatorDefault, str->c_str(), kCFStringEncodingUTF8));
     }
 
     inline Number number_from_int(const int n)
@@ -248,23 +262,14 @@ namespace openvpn {
 	return NULL;
     }
 
-    template <typename DICT>
-    inline CFTypeRef dict_index(const DICT& dict, const char *key)
+    template <typename DICT, typename KEY>
+    inline CFTypeRef dict_index(const DICT& dict, const KEY key)
     {
       if (dict.defined())
 	{
 	  String keystr = string(key);
 	  return CFDictionaryGetValue(dict(), keystr());
 	}
-      else
-	return NULL;
-    }
-
-    template <typename DICT>
-    inline CFTypeRef dict_index(const DICT& dict, CFStringRef key)
-    {
-      if (dict.defined() && key)
-	return CFDictionaryGetValue(dict(), key);
       else
 	return NULL;
     }
