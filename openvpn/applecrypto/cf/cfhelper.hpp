@@ -96,13 +96,26 @@ namespace openvpn {
       return default_value;
     }
 
-    // set a CFTypeRef in a mutable dictionary
+    // like CFDictionarySetValue, but no-op if any args are NULL
+    inline void dictionarySetValue(CFMutableDictionaryRef theDict, const void *key, const void *value)
+    {
+      if (theDict && key && value)
+	CFDictionarySetValue(theDict, key, value);
+    }
 
+    // like CFArrayAppendValue, but no-op if any args are NULL
+    inline void arrayAppendValue(CFMutableArrayRef theArray, const void *value)
+    {
+      if (theArray && value)
+	CFArrayAppendValue(theArray, value);
+    }
+
+    // set a CFTypeRef in a mutable dictionary
     template <typename KEY>
     inline void dict_set_obj(MutableDict& dict, const KEY& key, CFTypeRef value)
     {
       String keystr = string(key);
-      CFDictionarySetValue(dict(), keystr(), value);
+      dictionarySetValue(dict(), keystr(), value);
     }
 
     // set a string in a mutable dictionary
@@ -112,7 +125,7 @@ namespace openvpn {
     {
       String keystr = string(key);
       String valstr = string(value);
-      CFDictionarySetValue(dict(), keystr(), valstr());
+      dictionarySetValue(dict(), keystr(), valstr());
     }
 
     // set a number in a mutable dictionary
@@ -122,7 +135,7 @@ namespace openvpn {
     {
       String keystr = string(key);
       Number num = number_from_int(value);
-      CFDictionarySetValue(dict(), keystr(), num());
+      dictionarySetValue(dict(), keystr(), num());
     }
 
     template <typename KEY>
@@ -130,7 +143,7 @@ namespace openvpn {
     {
       String keystr = string(key);
       Number num = number_from_int32(value);
-      CFDictionarySetValue(dict(), keystr(), num());
+      dictionarySetValue(dict(), keystr(), num());
     }
 
     template <typename KEY>
@@ -138,7 +151,7 @@ namespace openvpn {
     {
       String keystr = string(key);
       Number num = number_from_long_long(value);
-      CFDictionarySetValue(dict(), keystr(), num());
+      dictionarySetValue(dict(), keystr(), num());
     }
 
     template <typename KEY>
@@ -146,7 +159,7 @@ namespace openvpn {
     {
       String keystr = string(key);
       Number num = number_from_index(value);
-      CFDictionarySetValue((CFMutableDictionaryRef)dict(), keystr(), num());
+      dictionarySetValue((CFMutableDictionaryRef)dict(), keystr(), num());
     }
 
     // set a boolean in a mutable dictionary
@@ -156,7 +169,7 @@ namespace openvpn {
     {
       String keystr = string(key);
       CFBooleanRef boolref = value ? kCFBooleanTrue : kCFBooleanFalse;
-      CFDictionarySetValue(dict(), keystr(), boolref);
+      dictionarySetValue(dict(), keystr(), boolref);
     }
 
     // append string to a mutable array
@@ -165,7 +178,7 @@ namespace openvpn {
     inline void array_append_str(MutableArray& array, const VALUE& value)
     {
       String valstr = string(value);
-      CFArrayAppendValue(array(), valstr());
+      arrayAppendValue(array(), valstr());
     }
 
     // append a number to a mutable array
@@ -173,25 +186,25 @@ namespace openvpn {
     inline void array_append_int(MutableArray& array, int value)
     {
       Number num = number_from_int(value);
-      CFArrayAppendValue(array(), num());
+      arrayAppendValue(array(), num());
     }
 
     inline void array_append_int32(MutableArray& array, SInt32 value)
     {
       Number num = number_from_int32(value);
-      CFArrayAppendValue(array(), num());
+      arrayAppendValue(array(), num());
     }
 
     inline void array_append_long_long(MutableArray& array, long long value)
     {
       Number num = number_from_long_long(value);
-      CFArrayAppendValue(array(), num());
+      arrayAppendValue(array(), num());
     }
 
     inline void array_append_index(MutableArray& array, CFIndex value)
     {
       Number num = number_from_index(value);
-      CFArrayAppendValue(array(), num());
+      arrayAppendValue(array(), num());
     }
   }
 }

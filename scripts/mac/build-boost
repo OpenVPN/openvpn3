@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+REL_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 export BOOST=boost_1_49_0
 . $O3/vars-iossim
 export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
@@ -15,18 +16,38 @@ patch -p1 <$DL/asio-engine.patch
 cat >>tools/build/v2/user-config.jam <<EOF
 using clang : ios : clang++
             :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS"
+                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $REL_FLAGS"
             ;
 using clang : iossim : clang++
             :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS_SIM $OTHER_COMPILER_FLAGS"
+                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS_SIM $REL_FLAGS"
             ;
 using clang : osx : clang++
             :
-                <compileflags>"-Wno-unused-function $OTHER_COMPILER_FLAGS"
+                <compileflags>"-Wno-unused-function $REL_FLAGS"
+            ;
+using clang : iosdbg : clang++
+            :
+                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS"
+            ;
+using clang : iossimdbg : clang++
+            :
+                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS_SIM"
+            ;
+using clang : osxdbg : clang++
+            :
+                <compileflags>"-Wno-unused-function"
             ;
 EOF
 ./bootstrap.sh
-for target in ios iossim osx ; do
-    ./bjam -d2 toolset=clang-$target --stagedir=stage-$target --with-system --with-thread variant=release link=static threading=multi runtime-link=static
+for target in ios iossim osx iosdbg iossimdbg osxdbg ; do
+    if [ "${target:(-3)}" == "dbg" ]; then
+	variant=debug
+	stage=stage-${target%dbg}-dbg
+    else
+	variant=release
+	stage=stage-$target
+    fi
+    echo "************************ $target $variant $stage"
+    ./bjam -d2 toolset=clang-$target --stagedir=$stage --with-system --with-thread variant=$variant link=static threading=multi runtime-link=static
 done

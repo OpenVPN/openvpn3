@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Parameters:
-#   TARGET -- use $TARGET.cmake as toolchain file
+#   CMAKE_TARGET -- use $CMAKE_TARGET.cmake as toolchain file
 #   AES_NI=1 -- enable AES_NI processor optimization
 #   EXTERNAL_RNG=1 -- disable all internal RNG implementations (caller must provide)
 #   ENABLE_TESTING=1 -- run PolarSSL test scripts after build
@@ -10,19 +10,26 @@
 #   NO_WIPE=1 -- don't wipe source tree and reunzip tarball
 #
 # Examples:
-#   AES_NI=1 $OVPN3_DIR/polarssl/build-polarssl
-#   AES_NI=1 ENABLE_TESTING=1 VERBOSE=1 $OVPN3_DIR/polarssl/build-polarssl
-#   TARGET=android $OVPN3_DIR/polarssl/build-polarssl
+#   AES_NI=1 $O3/polarssl/build-polarssl
+#   AES_NI=1 ENABLE_TESTING=1 VERBOSE=1 $O3/polarssl/build-polarssl
+#   TARGET=android $O3/polarssl/build-polarssl
 
 set -e
-if [ -z "$OPENSSL_DIR" ]; then
-    echo OPENSSL_DIR must be defined
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+if [ -z "$TARGET" ]; then
+    echo TARGET var must be defined
     exit 1
 fi
 
+# source vars
+. $O3/vars-${TARGET}
+
 # extract the PolarSSL source
 POLARSSL=polarssl-1.1.4
-PD=$OVPN3_DIR/polarssl
+PD=$O3/polarssl
 DIST=polarssl-$PLATFORM
 
 rm -rf $DIST
@@ -34,7 +41,7 @@ if [ "$NO_WIPE" = "1" ]; then
 else
     echo WIPE and reunzip source
     rm -rf $POLARSSL
-    tar xfz $DL/$POLARSSL-gpl.tgz
+    tar xfz ~/Downloads/$POLARSSL-gpl.tgz
 
     cd $POLARSSL
 
@@ -64,7 +71,7 @@ fi
 
 # add special support for AES-NI?
 OPT_AES_NI=""
-if [ "$AES_NI" = "1" ]; then
+if [ "$AES_NI" = "1" ] && [ "$NO_OPENSSL" != "1" ]; then
     OPT_AES_NI="-DOPENSSL_AES_NI=1"
 fi
 
@@ -81,15 +88,21 @@ if [ "$ENABLE_TESTING" = "1" ]; then
 fi
 
 # configure target
-OPT_TARGET=""
-if [ "$TARGET" ]; then
-    OPT_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/$TARGET.cmake"
+OPT_CMAKE_TARGET=""
+if [ "$CMAKE_TARGET" ]; then
+    OPT_CMAKE_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/$CMAKE_TARGET.cmake"
 elif [ "$APPLE_FAMILY" = "1" ]; then
-    OPT_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/apple.cmake"
+    OPT_CMAKE_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/apple.cmake"
+fi
+
+# OpenSSL
+OPT_OPENSSL_DIR=""
+if [ "$OPENSSL_DIR" ] && [ "$NO_OPENSSL" != "1" ]; then
+    OPT_OPENSSL_DIR="-DOPENSSL_DIR=$OPENSSL_DIR"
 fi
 
 # combine options
-OPT="-DOPENSSL_DIR=$OPENSSL_DIR $OPT_AES_NI $OPT_EXTERNAL_RNG $OPT_ENABLE_TESTING $OPT_TARGET"
+OPT="$OPT_OPENSSL_DIR $OPT_AES_NI $OPT_EXTERNAL_RNG $OPT_ENABLE_TESTING $OPT_CMAKE_TARGET"
 echo OPTIONS $OPT
 
 # build it

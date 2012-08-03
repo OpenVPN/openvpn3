@@ -162,6 +162,11 @@ namespace openvpn {
       return String(str, BORROW);
     }
 
+    inline String string(const String& str)
+    {
+      return String(str);
+    }
+
     inline String string(const std::string& str)
     {
       return String(CFStringCreateWithCString(kCFAllocatorDefault, str.c_str(), kCFStringEncodingUTF8));
@@ -263,15 +268,15 @@ namespace openvpn {
     }
 
     template <typename DICT, typename KEY>
-    inline CFTypeRef dict_index(const DICT& dict, const KEY key)
+    inline CFTypeRef dict_index(const DICT& dict, const KEY& key)
     {
       if (dict.defined())
 	{
 	  String keystr = string(key);
-	  return CFDictionaryGetValue(dict(), keystr());
+	  if (keystr.defined())
+	    return CFDictionaryGetValue(dict(), keystr());
 	}
-      else
-	return NULL;
+      return NULL;
     }
 
     // string methods
