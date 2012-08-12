@@ -11,7 +11,7 @@ namespace openvpn {
 
   OPENVPN_EXCEPTION(open_file_error);
 
-  std::string read_text(const std::string& filename)
+  inline std::string read_text(const std::string& filename)
   {
     std::ifstream ifs(filename.c_str());
     if (!ifs)
@@ -22,7 +22,7 @@ namespace openvpn {
     return str;
   }
 
-  BufferPtr read_binary(const std::string& filename, const unsigned int buffer_flags = 0)
+  inline BufferPtr read_binary(const std::string& filename, const unsigned int buffer_flags = 0)
   {
     std::ifstream ifs(filename.c_str(), std::ios::binary);
     if (!ifs)
@@ -48,6 +48,11 @@ namespace openvpn {
     return b;
   }
 
+  inline std::string read_text_fast(const std::string& filename)
+  {
+    BufferPtr bp = read_binary(filename);
+    return std::string((const char *)bp->c_data(), bp->size());
+  }
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_FILE_H
