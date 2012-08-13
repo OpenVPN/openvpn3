@@ -329,7 +329,7 @@ namespace openvpn {
 	    if (received_options.complete())
 	      {
 		// show options
-		OPENVPN_LOG(render_options_sanitized(received_options));
+		//OPENVPN_LOG(render_options_sanitized(received_options));
 
 		// process auth-token
 		extract_auth_token(received_options);
