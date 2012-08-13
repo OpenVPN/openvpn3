@@ -49,7 +49,7 @@ namespace openvpn {
       // cycle through remote entries
       {
 	const OptionList::IndexList& rem = opt.get_index("remote");
-	for (OptionList::IndexList::const_iterator i = rem.begin(); i != rem.end(); i++)
+	for (OptionList::IndexList::const_iterator i = rem.begin(); i != rem.end(); ++i)
 	  {
 	    Item e;
 	    const Option& o = opt[*i];

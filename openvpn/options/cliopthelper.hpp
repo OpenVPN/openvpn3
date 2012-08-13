@@ -28,6 +28,25 @@ namespace openvpn {
 	// reset POD types
 	reset_pod();
 
+	// server-locked profiles not supported
+	{
+	  const OptionList::IndexList* se = options.get_index_ptr("setenv");
+	  if (se)
+	    {
+	      for (OptionList::IndexList::const_iterator i = se->begin(); i != se->end(); ++i)
+		{
+		  const Option& o = options[*i];
+		  const std::string arg1 = o.get_optional(1);
+		  if (arg1 == "GENERIC_CONFIG")
+		    {
+		      error_ = true;
+		      message_ = "SERVER_LOCKED_UNSUPPORTED: server locked profiles are currently unsupported";
+		      return;
+		    }
+		}
+	    }
+	}
+
 	// userlocked username
 	{
 	  const Option* o = options.get_ptr("USERNAME");
