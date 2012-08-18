@@ -242,6 +242,12 @@ namespace openvpn {
       return MutableDict(CFDictionaryCreateMutable(kCFAllocatorDefault, capacity, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     }
 
+    template <typename DICT>
+    inline MutableDict mutable_dict_copy(const DICT& dict, const CFIndex capacity=0)
+    {
+      return MutableDict(CFDictionaryCreateMutableCopy(kCFAllocatorDefault, capacity, dict()));
+    }
+
     inline Error error(CFStringRef domain, CFIndex code, CFDictionaryRef userInfo)
     {
       return Error(CFErrorCreate(kCFAllocatorDefault, domain, code, userInfo));
