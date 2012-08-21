@@ -462,6 +462,19 @@ namespace openvpn {
       return ci;
     }
 
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::session_token(SessionToken& tok)
+    {
+      ClientCreds::Ptr cc = state->creds;
+      if (cc && cc->session_id_defined())
+	{
+	  tok.username = cc->get_username();
+	  tok.session_id = cc->get_password();
+	  return true;
+	}
+      else
+	return false;
+    }
+
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req, const size_t err_type)
     {
       if (req.error)

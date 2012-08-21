@@ -57,7 +57,7 @@ namespace openvpn {
       std::vector<ServerEntry> serverList;
     };
 
-    // used to pass credentials to VPN client
+    // used to pass credentials to VPN core
     // (client writes)
     struct ProvideCreds
     {
@@ -75,6 +75,14 @@ namespace openvpn {
       // If true, on successful connect, we will replace the password
       // with the session ID we receive from the server.
       bool replacePasswordWithSessionID;
+    };
+
+    // used to get session token from VPN core
+    // (client reads)
+    struct SessionToken
+    {
+      std::string username;
+      std::string session_id; // an OpenVPN Session ID, used as a proxy for password
     };
 
     // used to query challenge/response from user
@@ -238,6 +246,11 @@ namespace openvpn {
       // Return information about the most recent connection.  Should be called
       // after an event of type "CONNECTED".
       ConnectionInfo connection_info();
+
+      // Writes current session token to tok and returns true.
+      // If session token is unavailable, false is returned and
+      // tok is unmodified.
+      bool session_token(SessionToken& tok);
 
       // Stop the client.  Only meaningful when connect() is running.
       // May be called asynchronously from a different thread

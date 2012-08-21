@@ -14,11 +14,24 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<ClientCreds> Ptr;
 
-    ClientCreds() : replace_password_with_session_id(false) {}
+    ClientCreds() : replace_password_with_session_id(false),
+		    did_replace_password_with_session_id(false) {}
 
-    void set_username(const std::string& username_arg) { username = username_arg; }
-    void set_password(const std::string& password_arg) { password = password_arg; }
-    void set_response(const std::string& response_arg) { response = response_arg; }
+    void set_username(const std::string& username_arg)
+    {
+      username = username_arg;
+    }
+
+    void set_password(const std::string& password_arg)
+    {
+      password = password_arg;
+      did_replace_password_with_session_id = false;
+    }
+
+    void set_response(const std::string& response_arg)
+    {
+      response = response_arg;
+    }
 
     void set_dynamic_challenge_cookie(const std::string& cookie)
     {
@@ -39,6 +52,7 @@ namespace openvpn {
 	      username = dynamic_challenge->get_username();
 	      dynamic_challenge.reset();
 	    }
+	  did_replace_password_with_session_id = true;
 	}
     }
 
@@ -70,6 +84,11 @@ namespace openvpn {
       return !password.empty();
     }
 
+    bool session_id_defined() const
+    {
+      return did_replace_password_with_session_id;
+    }
+
   private:
     // Standard credentials
     std::string username;
@@ -84,6 +103,9 @@ namespace openvpn {
     // If true, on successful connect, we will replace the password
     // with the session ID we receive from the server.
     bool replace_password_with_session_id;
+
+    // true if password has been replaced with Session ID
+    bool did_replace_password_with_session_id;
   };
 
 }
