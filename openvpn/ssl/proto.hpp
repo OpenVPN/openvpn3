@@ -5,6 +5,8 @@
 #include <string>
 #include <sstream>
 
+#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/version.hpp>
@@ -272,10 +274,15 @@ namespace openvpn {
 
 	// layer
 	{
-	  const std::string& dev_type = opt.get("dev-type", 1);
-	  if (dev_type == "tun")
+	  const Option* dev = opt.get_ptr("dev-type");
+	  if (!dev)
+	    dev = opt.get_ptr("dev");
+	  if (!dev)
+	    throw proto_option_error("missing dev-type or dev option");
+	  const std::string& dev_type = dev->get(1);
+	  if (boost::algorithm::starts_with(dev_type, "tun"))
 	    layer = Layer(Layer::OSI_LAYER_3);
-	  else if (dev_type == "tap")
+	  else if (boost::algorithm::starts_with(dev_type, "tap"))
 	    layer = Layer(Layer::OSI_LAYER_2);
 	  else
 	    throw proto_option_error("bad dev-type");
