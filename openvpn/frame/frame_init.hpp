@@ -7,7 +7,7 @@ namespace openvpn {
 
   inline Frame::Ptr frame_init()
   {
-    const size_t payload = 1500;
+    const size_t payload = 2048;
     const size_t control_channel_payload = 1350;
     const size_t headroom = 512;
     const size_t tailroom = 512;
