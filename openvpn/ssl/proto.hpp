@@ -338,7 +338,10 @@ namespace openvpn {
 	      o = opt.get_ptr("comp-lzo");
 	      if (o)
 		{
-		  comp_ctx = CompressContext(CompressContext::ANY_LZO);
+		  if (o->size() == 1)
+		    comp_ctx = CompressContext(CompressContext::LZO);
+		  else
+		    comp_ctx = CompressContext(CompressContext::ANY_LZO);
 		}
 	    }
 	}
@@ -483,7 +486,9 @@ namespace openvpn {
 	  if (compstr)
 	    out << compstr;
 	}
-	return out.str();
+	const std::string ret = out.str();
+	OPENVPN_LOG_PROTO("Peer Info:" << std::endl << ret);
+	return ret;
       }
 
     private:
@@ -1313,7 +1318,7 @@ namespace openvpn {
       {
 	OpenVPNStaticKey key;
 	tlsprf_self.generate_key_expansion(key, tlsprf_peer, proto.psid_self, proto.psid_peer);
-	OPENVPN_LOG_PROTO("KEY " << proto.mode().str() << ' ' << key.render());
+	//OPENVPN_LOG_PROTO("KEY " << proto.mode().str() << ' ' << key.render());
 	init_data_channel_crypto_context(key);
 	tlsprf_self.erase();
 	tlsprf_peer.erase();
@@ -2089,7 +2094,7 @@ namespace openvpn {
 	  switch (ev)
 	    {
 	    case KeyContext::KEV_ACTIVE:
-	      OPENVPN_LOG_PROTO("*** SESSION_ACTIVE");
+	      //OPENVPN_LOG_PROTO("*** SESSION_ACTIVE");
 	      active();
 	      break;
 	    case KeyContext::KEV_RENEGOTIATE:

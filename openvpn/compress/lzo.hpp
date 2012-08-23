@@ -24,6 +24,7 @@ namespace openvpn {
       : Compress(frame, stats),
 	support_swap(support_swap_arg)
     {
+      OPENVPN_LOG_COMPRESS("LZO init swap=" << support_swap_arg);
       lzo_workspace.init(LZO1X_1_15_MEM_COMPRESS, BufferAllocated::ARRAY);
     }
 
