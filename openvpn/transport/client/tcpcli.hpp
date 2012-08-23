@@ -43,7 +43,7 @@ namespace openvpn {
 
     private:
       ClientConfig()
-	: send_queue_max_size(64),
+	: send_queue_max_size(1024),
 	  free_list_max_size(8),
 	  socket_protect(NULL)
       {}
