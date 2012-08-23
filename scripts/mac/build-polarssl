@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -e
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+
+rm -rf polarssl
+mkdir polarssl
+
+for target in osx osx-dbg ios ios-dbg iossim iossim-dbg ; do
+    echo '***************' TARGET $target
+    VERBOSE=1 NO_OPENSSL=1 TARGET=$target $O3/polarssl/build-polarssl
+    mv polarssl-$target polarssl
+done

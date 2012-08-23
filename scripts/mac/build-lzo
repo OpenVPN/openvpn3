@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -e
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+
+LZO=lzo-2.06
+
+rm -rf lzo
+mkdir lzo
+
+for target in osx osx-dbg ios ios-dbg iossim iossim-dbg ; do
+#for target in ios ios-dbg iossim iossim-dbg ; do
+    echo '***************' TARGET $target
+    . $O3/vars-${target}
+    DIST=$(pwd)/lzo/lzo-$PLATFORM
+    rm -rf $LZO
+    tar xfz ~/Downloads/$LZO.tar.gz
+    cd $LZO
+    CC=clang CFLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC" ./configure --prefix=$DIST --host=x86_64-apple-darwin --target=arm
+    make
+    make install
+    cd ..
+done

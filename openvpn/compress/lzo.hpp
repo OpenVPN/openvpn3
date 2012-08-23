@@ -66,13 +66,13 @@ namespace openvpn {
 	  // did compression actually reduce data length?
 	  if (zlen < buf.size())
 	    {
+	      OPENVPN_LOG_COMPRESS("LZO compress " << buf.size() << " -> " << zlen);
 	      work.set_size(zlen);
 	      if (support_swap)
 		do_swap(work, LZO_COMPRESS_SWAP);
 	      else
 		work.push_front(LZO_COMPRESS);
 	      buf.swap(work);
-	      OPENVPN_LOG_COMPRESS("LZO compress");
 	      return;
 	    }
 	}
@@ -111,9 +111,9 @@ namespace openvpn {
 		error(buf);
 		break;
 	      }
+	    OPENVPN_LOG_COMPRESS("LZO uncompress " << buf.size() << " -> " << zlen);
 	    work.set_size(zlen);
 	    buf.swap(work);
-	    OPENVPN_LOG_COMPRESS("LZO uncompress");
 	  }
 	  break;
 	default: 
