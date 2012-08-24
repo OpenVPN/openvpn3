@@ -1,12 +1,30 @@
 #!/usr/bin/env bash
 top=$(pwd)
+
+# openvpn core
 find openvpn | grep -E '\.(cpp|hpp|c|h)$'
+
+# core API
 echo client/ovpncli.hpp
 echo client/ovpncli.cpp
+
+# Java API
 echo javacli/OpenVPNClientThread.java
+
+# Android client
 android=android/OpenVPN/src/net/openvpn/openvpn
 cd $android
 for f in $(svn list | grep '\.java$') ; do
     echo $android/$f
+done
+cd $top
+
+# iOS client
+echo ios/OpenVPN/OpenVPNPlugin/OpenVPNPlugin.h
+echo ios/OpenVPN/OpenVPNPlugin/OpenVPNPlugin.cpp
+iosapp=ios/OpenVPN/OpenVPNApp-iOS
+cd $iosapp
+for f in *.h *.m *.hpp *.cpp ; do
+    echo $iosapp/$f
 done
 cd $top
