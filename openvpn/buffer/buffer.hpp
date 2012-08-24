@@ -1,3 +1,10 @@
+//
+//  buffer.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_BUFFER_BUFFER_H
 #define OPENVPN_BUFFER_BUFFER_H
 

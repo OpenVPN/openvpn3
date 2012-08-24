@@ -1,3 +1,10 @@
+//
+//  ovpncli.cpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 // OpenVPN client ("OpenVPNClient" class) intended to be wrapped by swig
 // for a target language.
 

@@ -1,3 +1,10 @@
+//
+//  memq_stream.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_FRAME_MEMQ_STREAM_H
 #define OPENVPN_FRAME_MEMQ_STREAM_H
 

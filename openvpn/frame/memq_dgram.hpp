@@ -1,3 +1,10 @@
+//
+//  memq_dgram.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_FRAME_MEMQ_DGRAM_H
 #define OPENVPN_FRAME_MEMQ_DGRAM_H
 

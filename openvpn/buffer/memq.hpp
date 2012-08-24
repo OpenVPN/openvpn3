@@ -1,3 +1,10 @@
+//
+//  memq.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_BUFFER_MEMQ_H
 #define OPENVPN_BUFFER_MEMQ_H
 

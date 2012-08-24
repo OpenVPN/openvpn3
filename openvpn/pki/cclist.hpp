@@ -1,3 +1,10 @@
+//
+//  cclist.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_PKI_CCLIST_H
 #define OPENVPN_PKI_CCLIST_H
 

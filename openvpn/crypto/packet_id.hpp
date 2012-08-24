@@ -1,3 +1,10 @@
+//
+//  packet_id.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_CRYPTO_PACKET_ID_H
 #define OPENVPN_CRYPTO_PACKET_ID_H
 

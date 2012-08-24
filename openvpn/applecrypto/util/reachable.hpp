@@ -1,3 +1,10 @@
+//
+//  reachable.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_APPLECRYPTO_UTIL_REACHABLE_H
 #define OPENVPN_APPLECRYPTO_UTIL_REACHABLE_H
 

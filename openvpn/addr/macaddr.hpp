@@ -1,3 +1,10 @@
+//
+//  macaddr.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_ADDR_MACADDR_H
 #define OPENVPN_ADDR_MACADDR_H
 

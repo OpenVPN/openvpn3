@@ -1,3 +1,10 @@
+//
+//  sslctx.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_POLARSSL_SSL_SSLCTX_H
 #define OPENVPN_POLARSSL_SSL_SSLCTX_H
 

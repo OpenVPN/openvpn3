@@ -1,3 +1,10 @@
+//
+//  ovpncli.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 // API for OpenVPN Client, may be used standalone or wrapped by swig.
 // Use ovpncli.i to wrap the API for swig.
 // The crux of the API is defined in OpenVPNClient (below)

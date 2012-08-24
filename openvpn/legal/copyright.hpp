@@ -2,7 +2,7 @@
 #define OPENVPN_LEGAL_COPYRIGHT_H
 
 const char openvpn_copyright[] = // CONST GLOBAL
-  "OpenVPN Copyright (C) 2012 OpenVPN Technologies Inc.  All Rights reserved.\n"
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
   "\n"
   "----------------------------\n"
   "\n"

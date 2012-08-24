@@ -1,3 +1,10 @@
+//
+//  scoped_fd.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_COMMON_SCOPED_FD_H
 #define OPENVPN_COMMON_SCOPED_FD_H
 

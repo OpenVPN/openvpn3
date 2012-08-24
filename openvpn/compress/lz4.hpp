@@ -1,3 +1,10 @@
+//
+//  lz4.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_COMPRESS_LZ4_H
 #define OPENVPN_COMPRESS_LZ4_H
 

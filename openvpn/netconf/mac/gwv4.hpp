@@ -1,3 +1,10 @@
+//
+//  gwv4.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_NETCONF_MAC_GWV4_H
 #define OPENVPN_NETCONF_MAC_GWV4_H
 

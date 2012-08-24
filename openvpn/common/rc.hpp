@@ -1,3 +1,10 @@
+//
+//  rc.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 /*
  * A simple reference-counting garbage collection scheme that works
  * with boost::intrusive_ptr.  Simply inherit from RC to create an

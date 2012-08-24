@@ -1,3 +1,10 @@
+//
+//  api.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_POLARSSL_CRYPTO_API_H
 #define OPENVPN_POLARSSL_CRYPTO_API_H
 

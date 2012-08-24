@@ -1,3 +1,10 @@
+//
+//  hmac.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_APPLECRYPTO_CRYPTO_HMAC_H
 #define OPENVPN_APPLECRYPTO_CRYPTO_HMAC_H
 

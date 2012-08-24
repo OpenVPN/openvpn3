@@ -1,3 +1,10 @@
+//
+//  epkibase.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_PKI_EPKIBASE_H
 #define OPENVPN_PKI_EPKIBASE_H
 

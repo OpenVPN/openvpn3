@@ -1,3 +1,10 @@
+//
+//  static_key.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_CRYPTO_STATIC_KEY_H
 #define OPENVPN_CRYPTO_STATIC_KEY_H
 

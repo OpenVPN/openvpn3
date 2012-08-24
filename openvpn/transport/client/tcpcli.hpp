@@ -1,3 +1,10 @@
+//
+//  tcpcli.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_TRANSPORT_CLIENT_TCPCLI_H
 #define OPENVPN_TRANSPORT_CLIENT_TCPCLI_H
 

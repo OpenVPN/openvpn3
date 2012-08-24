@@ -1,3 +1,10 @@
+//
+//  engineinit.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_INIT_ENGINEINIT_H
 #define OPENVPN_INIT_ENGINEINIT_H
 

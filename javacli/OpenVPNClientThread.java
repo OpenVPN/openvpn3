@@ -1,3 +1,10 @@
+//
+//  OpenVPNClientThread.java
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 // package OPENVPN_PACKAGE
 
 import java.util.HashSet;

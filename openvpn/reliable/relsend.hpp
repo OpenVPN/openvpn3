@@ -1,3 +1,10 @@
+//
+//  relsend.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_RELIABLE_RELSEND_H
 #define OPENVPN_RELIABLE_RELSEND_H
 

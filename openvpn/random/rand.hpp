@@ -1,3 +1,10 @@
+//
+//  rand.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_RANDOM_RAND_H
 #define OPENVPN_RANDOM_RAND_H
 

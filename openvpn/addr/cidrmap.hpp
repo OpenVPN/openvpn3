@@ -1,3 +1,10 @@
+//
+//  cidrmap.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_ADDR_CIDRMAP_H
 #define OPENVPN_ADDR_CIDRMAP_H
 

@@ -1,3 +1,10 @@
+//
+//  asiotimer.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_TIME_ASIOTIMER_H
 #define OPENVPN_TIME_ASIOTIMER_H
 

@@ -1,3 +1,10 @@
+//
+//  logsimple.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_LOG_LOGSIMPLE_H
 #define OPENVPN_LOG_LOGSIMPLE_H
 

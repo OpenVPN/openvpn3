@@ -1,3 +1,10 @@
+//
+//  frame_init.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_FRAME_FRAME_INIT_H
 #define OPENVPN_FRAME_FRAME_INIT_H
 

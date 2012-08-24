@@ -1,3 +1,10 @@
+//
+//  route.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_NETCONF_MAC_ROUTE_H
 #define OPENVPN_NETCONF_MAC_ROUTE_H
 

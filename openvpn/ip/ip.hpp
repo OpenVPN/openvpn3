@@ -1,3 +1,10 @@
+//
+//  ip.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_IP_IP_H
 #define OPENVPN_IP_IP_H
 

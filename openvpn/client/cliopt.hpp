@@ -1,3 +1,10 @@
+//
+//  cliopt.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_CLIENT_CLIOPT_H
 #define OPENVPN_CLIENT_CLIOPT_H
 

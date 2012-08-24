@@ -1,3 +1,10 @@
+//
+//  socket_protect.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_TRANSPORT_SOCKET_PROTECT_H
 #define OPENVPN_TRANSPORT_SOCKET_PROTECT_H
 

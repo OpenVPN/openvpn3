@@ -1,3 +1,10 @@
+//
+//  time.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_TIME_TIME_H
 #define OPENVPN_TIME_TIME_H
 

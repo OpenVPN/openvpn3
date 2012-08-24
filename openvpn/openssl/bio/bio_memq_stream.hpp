@@ -1,3 +1,10 @@
+//
+//  bio_memq_stream.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 /*
  * This code implements an OpenSSL BIO object based on the MemQ buffer
  * queue object.  This is done to provide a memory BIO with datagram

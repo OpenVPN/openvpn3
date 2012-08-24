@@ -1,3 +1,10 @@
+//
+//  tunspec.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_TUN_TUNSPEC_H
 #define OPENVPN_TUN_TUNSPEC_H
 

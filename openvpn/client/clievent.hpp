@@ -1,3 +1,10 @@
+//
+//  clievent.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #ifndef OPENVPN_CLIENT_CLIEVENT_H
 #define OPENVPN_CLIENT_CLIEVENT_H
 
