@@ -15,15 +15,19 @@
 // modify exported C++ class names to incorporate their enclosing namespace
 %rename(ClientAPI_OpenVPNClient) OpenVPNClient;
 %rename(ClientAPI_TunBuilderBase) TunBuilderBase;
+%rename(ClientAPI_ExternalPKIBase) ExternalPKIBase;
 %rename(ClientAPI_ServerEntry) ServerEntry;
 %rename(ClientAPI_EvalConfig) EvalConfig;
-%rename(ClientAPI_DynamicChallenge) DynamicChallenge;
 %rename(ClientAPI_ProvideCreds) ProvideCreds;
+%rename(ClientAPI_SessionToken) SessionToken;
+%rename(ClientAPI_DynamicChallenge) DynamicChallenge;
 %rename(ClientAPI_Config) Config;
 %rename(ClientAPI_Event) Event;
+%rename(ClientAPI_ConnectionInfo) ConnectionInfo;
 %rename(ClientAPI_Status) Status;
 %rename(ClientAPI_LogInfo) LogInfo;
-%rename(ClientAPI_ExternalPKIBase) ExternalPKIBase;
+%rename(ClientAPI_InterfaceStats) InterfaceStats;
+%rename(ClientAPI_TransportStats) TransportStats;
 %rename(ClientAPI_ExternalPKIRequestBase) ExternalPKIRequestBase;
 %rename(ClientAPI_ExternalPKICertRequest) ExternalPKICertRequest;
 %rename(ClientAPI_ExternalPKISignRequest) ExternalPKISignRequest;

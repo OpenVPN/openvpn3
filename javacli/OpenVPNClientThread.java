@@ -47,31 +47,20 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     public interface TunBuilder {
-	// Tun builder methods.  All methods returning boolean use the return
-	// value to indicate success (true) or fail (false).
+	// Tun builder methods.
+	// Methods documented in openvpn/tun/builder/base.hpp
 
-	// Callback to to add network address to VPN interface
-	boolean tun_builder_add_address(String address, int prefix_length);
-
-	// Callback to add route to VPN interface
-	boolean tun_builder_add_route(String address, int prefix_length);
-
-	// Callback to add DNS server to VPN interface
-	boolean tun_builder_add_dns_server(String address);
-
-	// Callback to add search domain to DNS resolver
-	boolean tun_builder_add_search_domain(String domain);
-
-	// Callback to set MTU of the VPN interface
+	boolean tun_builder_set_remote_address(String address, boolean ipv6);
+	boolean tun_builder_add_address(String address, int prefix_length, boolean ipv6);
+	boolean tun_builder_reroute_gw(String server_address, boolean server_address_ipv6, boolean ipv6);
+	boolean tun_builder_add_route(String address, int prefix_length, boolean ipv6);
+	boolean tun_builder_exclude_route(String address, int prefix_length, boolean ipv6);
+	boolean tun_builder_add_dns_server(String address, boolean ipv6, boolean reroute_gw);
+	boolean tun_builder_add_search_domain(String domain, boolean reroute_gw);
 	boolean tun_builder_set_mtu(int mtu);
-
-	// Callback to set the session name
 	boolean tun_builder_set_session_name(String name);
-
-	// Callback to establish the VPN tunnel, returning a file descriptor
-	// to the tunnel, which the caller will henceforth own.  Returns -1
-	// if the tunnel could not be established.
 	int tun_builder_establish();
+	void tun_builder_teardown();
     }
 
     public OpenVPNClientThread() {
@@ -241,38 +230,65 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     @Override
-    public boolean tun_builder_add_address(String address, int prefix_length) {
+    public boolean tun_builder_set_remote_address(String address, boolean ipv6) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    return tb.tun_builder_add_address(address, prefix_length);
+	    return tb.tun_builder_set_remote_address(address, ipv6);
 	else
 	    return false;
     }
 
     @Override
-    public boolean tun_builder_add_route(String address, int prefix_length) {
+    public boolean tun_builder_add_address(String address, int prefix_length, boolean ipv6) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    return tb.tun_builder_add_route(address, prefix_length);
+	    return tb.tun_builder_add_address(address, prefix_length, ipv6);
 	else
 	    return false;
     }
 
     @Override
-    public boolean tun_builder_add_dns_server(String address) {
+    public boolean tun_builder_reroute_gw(String server_address, boolean server_address_ipv6, boolean ipv6) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    return tb.tun_builder_add_dns_server(address);
+	    return tb.tun_builder_reroute_gw(server_address, server_address_ipv6, ipv6);
 	else
 	    return false;
     }
 
     @Override
-    public boolean tun_builder_add_search_domain(String domain)
+    public boolean tun_builder_add_route(String address, int prefix_length, boolean ipv6) {
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_add_route(address, prefix_length, ipv6);
+	else
+	    return false;
+    }
+
+    @Override
+    public boolean tun_builder_exclude_route(String address, int prefix_length, boolean ipv6) {
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_exclude_route(address, prefix_length, ipv6);
+	else
+	    return false;
+    }
+
+    @Override
+    public boolean tun_builder_add_dns_server(String address, boolean ipv6, boolean reroute_gw) {
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    return tb.tun_builder_add_dns_server(address, ipv6, reroute_gw);
+	else
+	    return false;
+    }
+
+    @Override
+    public boolean tun_builder_add_search_domain(String domain, boolean reroute_gw)
     {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    return tb.tun_builder_add_search_domain(domain);
+	    return tb.tun_builder_add_search_domain(domain, reroute_gw);
 	else
 	    return false;
     }
@@ -303,5 +319,12 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	    return tb.tun_builder_establish();
 	else
 	    return -1;
+    }
+
+    @Override
+    public void tun_builder_teardown() {
+	TunBuilder tb = tun_builder;
+	if (tb != null)
+	    tb.tun_builder_teardown();
     }
 }
