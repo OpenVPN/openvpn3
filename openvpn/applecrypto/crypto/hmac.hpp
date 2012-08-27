@@ -35,24 +35,33 @@ namespace openvpn {
       HMACContext()
       {
 	clear();
+	need_to_dealloc = false;
+      }
+
+      ~HMACContext()
+      {
+	dealloc();
       }
 
       void init(const Digest& digest, const unsigned char *key, const size_t key_size)
       {
 	clear();
+	dealloc();
 	info = digest.get();
 	alg = info->hmac_alg();
 	if (key_size > MAX_HMAC_KEY_SIZE)
 	  throw hmac_keysize_error();
 	std::memcpy(key_, key, key_size_ = key_size);
 	CCHmacInit(&ctx, alg, key_, key_size_);
-	initialized = true;
+	initialized = need_to_dealloc = true;
       }
 
       void reset() // Apple HMAC API is missing reset method, so we have to reinit
       {
 	check_initialized();
+	dealloc();
 	CCHmacInit(&ctx, alg, key_, key_size_);
+	need_to_dealloc = true;
       }
 
       void update(const unsigned char *in, const size_t size)
@@ -65,6 +74,7 @@ namespace openvpn {
       {
 	check_initialized();
 	CCHmacFinal(&ctx, out);
+	need_to_dealloc = false;
 	return info->size();
       }
 
@@ -82,6 +92,15 @@ namespace openvpn {
 	initialized = false;
       }
 
+      void dealloc()
+      {
+	if (need_to_dealloc)
+	  {
+	    CCHmacFinal(&ctx, NULL);
+	    need_to_dealloc = false;
+	  }
+      }
+
       void check_initialized() const
       {
 #ifdef OPENVPN_ENABLE_ASSERT
@@ -91,6 +110,7 @@ namespace openvpn {
       }
 
       bool initialized;
+      bool need_to_dealloc;
       const DigestInfo *info;
       CCHmacAlgorithm alg;
       size_t key_size_;
