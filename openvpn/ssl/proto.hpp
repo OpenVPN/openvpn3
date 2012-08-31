@@ -815,9 +815,7 @@ namespace openvpn {
 	construct_time = *now;
 
 	// set must-negotiate-by time
-	current_event = KEV_NONE;
-	next_event = KEV_NEGOTIATE;
-	next_event_time = construct_time + p.config->handshake_window;
+	set_event(KEV_NONE, KEV_NEGOTIATE, construct_time + p.config->handshake_window);
 
 	construct_compressor();
       }
@@ -950,9 +948,7 @@ namespace openvpn {
       // has been retired.
       void prepare_expire()
       {
-	current_event = KEV_NONE;
-	next_event = KEV_EXPIRE;
-	next_event_time = construct_time + proto.config->expire;
+	set_event(KEV_NONE, KEV_EXPIRE, construct_time + proto.config->expire);
       }
 
       // is an KEV_x event pending?
@@ -967,7 +963,7 @@ namespace openvpn {
       EventType get_event() const { return current_event; }
 
       // clear KEV_x event
-      void reset_event() { current_event = KEV_NONE; }
+      void reset_event() { set_event(KEV_NONE); }
 
       // was session invalidated by an exception?
       bool invalidated() const { return Base::invalidated(); }
@@ -1097,12 +1093,28 @@ namespace openvpn {
       }
 
     private:
+      void set_event(const EventType current)
+      {
+	current_event = current;
+      }
+
+      void set_event(const EventType next, const Time& next_time)
+      {
+	next_event = next;
+	next_event_time = next_time;
+      }
+
+      void set_event(const EventType current, const EventType next, const Time& next_time)
+      {
+	set_event(current);
+	set_event(next, next_time);
+      }
+
       // called by ProtoStackBase when session is invalidated
       virtual void invalidate_callback()
       {
 	reached_active_time_ = Time();
-	next_event = KEV_NONE;
-	next_event_time = Time::infinite();
+	set_event(KEV_NONE, Time::infinite());
       }
 
       // Trigger a new SSL/TLS negotiation if packet ID (a 32-bit unsigned int)
@@ -1121,18 +1133,12 @@ namespace openvpn {
       void trigger_renegotiation()
       {
 	if (state >= ACTIVE && !invalidated())
-	  {
-	    current_event = KEV_RENEGOTIATE;
-	    next_event = KEV_EXPIRE;
-	    next_event_time = construct_time + proto.config->expire;
-	  }
+	  set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
       }
 
       void active_event()
       {
-	current_event = KEV_ACTIVE;
-	next_event = KEV_BECOME_PRIMARY;
-	next_event_time = construct_time + proto.config->become_primary;
+	set_event(KEV_ACTIVE, KEV_BECOME_PRIMARY, construct_time + proto.config->become_primary);
       }
 
       void process_next_event()
@@ -1143,31 +1149,23 @@ namespace openvpn {
 	      {
 	      case KEV_NEGOTIATE:
 		if (state >= ACTIVE)
-		  {
-		    current_event = KEV_NEGOTIATE;
-		    next_event = KEV_BECOME_PRIMARY;
-		    next_event_time = construct_time + proto.config->become_primary;
-		  }
+		  set_event(KEV_NEGOTIATE, KEV_BECOME_PRIMARY, construct_time + proto.config->become_primary);
 		else
 		  {
 		    invalidate();
-		    current_event = KEV_NEGOTIATE_FAILED;
+		    set_event(KEV_NEGOTIATE_FAILED);
 		  }
 		break;
 	      case KEV_BECOME_PRIMARY:
-		current_event = KEV_BECOME_PRIMARY;
-		next_event = KEV_RENEGOTIATE;
-		next_event_time = construct_time + proto.config->renegotiate;
+		set_event(KEV_BECOME_PRIMARY, KEV_RENEGOTIATE, construct_time + proto.config->renegotiate);
 		break;
 	      case KEV_RENEGOTIATE:
-		current_event = KEV_RENEGOTIATE;
-		next_event = KEV_EXPIRE;
-		next_event_time = construct_time + proto.config->expire;
+		set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
 		break;
 	      case KEV_EXPIRE:
 		//OPENVPN_LOG("**** INVALIDATE KEV_EXPIRE"); // fixme
 		invalidate();
-		current_event = KEV_EXPIRE;
+		set_event(KEV_EXPIRE);
 		break;
 	      default:
 		break;

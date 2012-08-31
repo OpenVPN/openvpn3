@@ -609,7 +609,7 @@ private:
 };
 
 // execute the unit test in one thread
-void test(const int thread_num)
+int test(const int thread_num)
 {
   try {
     // frame
@@ -784,6 +784,7 @@ void test(const int thread_num)
 	catch (const std::exception& e)
 	  {
 	    std::cerr << "Exception[" << i << '/' << j << "]: " << e.what() << std::endl;
+	    return 1;
 	  }
       }
 
@@ -794,7 +795,7 @@ void test(const int thread_num)
     const size_t nb = cli_proto.net_bytes() + serv_proto.net_bytes();
     const size_t db = cli_proto.data_bytes() + serv_proto.data_bytes();
 
-    std::cout << "*** app bytes=" << ab
+    std::cerr << "*** app bytes=" << ab
 	      << " net_bytes=" << nb
 	      << " data_bytes=" << db
 	      << " prog=" << cli_proto.progress() << '/' << serv_proto.progress()
@@ -807,7 +808,9 @@ void test(const int thread_num)
   catch (const std::exception& e)
     {
       std::cerr << "Exception: " << e.what() << std::endl;
+      return 1;
     }
+  return 0;
 }
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -827,8 +830,8 @@ int main(int /*argc*/, char* /*argv*/[])
       threads[i]->join();
       delete threads[i];
     }
-#else
-  test(1);
-#endif
   return 0;
+#else
+  return test(1);
+#endif
 }

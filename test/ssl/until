@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# run tests until we hit an exception
+# build with:
+#  GCC_EXTRA="-DITER=1000 -DSITER=1" build proto
+set -e
+while true; do
+    ./proto >/dev/shm/log
+done
