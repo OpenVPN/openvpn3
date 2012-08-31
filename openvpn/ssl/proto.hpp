@@ -1165,6 +1165,7 @@ namespace openvpn {
 		next_event_time = construct_time + proto.config->expire;
 		break;
 	      case KEV_EXPIRE:
+		//OPENVPN_LOG("**** INVALIDATE KEV_EXPIRE"); // fixme
 		invalidate();
 		current_event = KEV_EXPIRE;
 		break;
@@ -2111,8 +2112,10 @@ namespace openvpn {
 	      if (secondary && !secondary->invalidated())
 		promote_secondary_to_primary();
 	      else
-		stats->error(Error::PRIMARY_EXPIRE);
-		disconnect(); // primary context expired and no secondary context available
+		{
+		  stats->error(Error::PRIMARY_EXPIRE);
+		  disconnect(); // primary context expired and no secondary context available
+		}
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:
 	      stats->error(Error::HANDSHAKE_TIMEOUT);
