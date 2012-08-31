@@ -1093,21 +1093,59 @@ namespace openvpn {
       }
 
     private:
+      // for debugging
+      static const char *event_type_string(const EventType et)
+      {
+	switch (et)
+	  {
+	  case KEV_NONE:
+	    return "KEV_NONE";
+	  case KEV_ACTIVE:
+	    return "KEV_ACTIVE";
+	  case KEV_NEGOTIATE:
+	    return "KEV_NEGOTIATE";
+	  case KEV_BECOME_PRIMARY:
+	    return "KEV_BECOME_PRIMARY";
+	  case KEV_RENEGOTIATE:
+	    return "KEV_RENEGOTIATE";
+	  case KEV_EXPIRE:
+	    return "KEV_EXPIRE";
+	  case KEV_NEGOTIATE_FAILED:
+	    return "KEV_NEGOTIATE_FAILED";
+	  default:
+	    return "KEV_?";
+	  }
+      }
+
+      // for debugging
+      int seconds_until(const Time& next_time)
+      {
+	Time::Duration d = next_time - *now;
+	if (d.is_infinite())
+	  return -1;
+	else
+	  return d.to_seconds();
+      }
+
       void set_event(const EventType current)
       {
+	//OPENVPN_LOG_PROTO("KeyContext " << event_type_string(current));
 	current_event = current;
       }
 
       void set_event(const EventType next, const Time& next_time)
       {
+	//OPENVPN_LOG_PROTO("KeyContext " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
 	next_event = next;
 	next_event_time = next_time;
       }
 
       void set_event(const EventType current, const EventType next, const Time& next_time)
       {
-	set_event(current);
-	set_event(next, next_time);
+	//OPENVPN_LOG_PROTO("KeyContext " << event_type_string(current) << " -> " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
+	current_event = current;
+	next_event = next;
+	next_event_time = next_time;
       }
 
       // called by ProtoStackBase when session is invalidated

@@ -681,7 +681,9 @@ int test(const int thread_num)
     cp->pid_seq_backtrack = 64;
     cp->pid_time_backtrack = 30;
     cp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
-#if SITER > 1
+#if defined(HANDSHAKE_WINDOW)
+    cp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
+#elif SITER > 1
     cp->handshake_window = Time::Duration::seconds(30);
 #else
     cp->handshake_window = Time::Duration::seconds(18); // will cause a small number of handshake failures
@@ -733,7 +735,9 @@ int test(const int thread_num)
     sp->pid_seq_backtrack = 64;
     sp->pid_time_backtrack = 30;
     sp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
-#if SITER > 1
+#if defined(HANDSHAKE_WINDOW)
+    sp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
+#elif SITER > 1
     sp->handshake_window = Time::Duration::seconds(30);
 #else
     sp->handshake_window = Time::Duration::seconds(17) + Time::Duration::binary_ms(512);

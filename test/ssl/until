@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # run tests until we hit an exception
 # build with:
-#  GCC_EXTRA="-DITER=1000 -DSITER=1" build proto
-set -e
+#  GCC_EXTRA="-DITER=1000 -DSITER=1 -DHANDSHAKE_WINDOW=60" build proto
 while true; do
-    ./proto >/dev/shm/log
+    if ! ./proto >/dev/shm/log ; then
+	cp /dev/shm/log log
+	exit 1
+    fi
 done
