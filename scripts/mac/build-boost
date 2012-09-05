@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -e
 REL_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
-export BOOST=boost_1_51_0
+. $O3/lib-versions
 . $O3/vars-iossim
 export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
 . $O3/vars-ios
-rm -rf boost $BOOST
+rm -rf boost $BOOST_VERSION
 mkdir boost
 if [ "$SRCDIR" ]; then
-    cp -a "$SRCDIR" $BOOST
+    cp -a "$SRCDIR" $BOOST_VERSION
 else
-    tar xfz ~/Downloads/$BOOST.tar.gz
+    tar xfz ~/Downloads/$BOOST_VERSION.tar.gz
 fi
-cd $BOOST
+cd $BOOST_VERSION
 #patch -p1 <$DL/asio-engine.patch
 cat >>tools/build/v2/user-config.jam <<EOF
 using clang : ios : clang++

@@ -7,11 +7,11 @@ clang++ -O4 -dynamic -pthread \
     $PLATFORM_FLAGS \
     -DBOOST_ASIO_DISABLE_KQUEUE \
     -DUSE_APPLE_SSL \
-    -I$OVPN3_DIR/client \
-    -I$OVPN3_DIR \
+    -I$O3/client \
+    -I$O3 \
     -I$BOOST_DIR \
     -L$BOOST_DIR/$BOOST_STAGE \
-    $OVPN3_DIR/client/ovpncli.cpp \
+    $O3/client/ovpncli.cpp \
     -shared \
     -Wl,-current_version,1.0 \
     -Wl,-compatibility_version,1.0 \

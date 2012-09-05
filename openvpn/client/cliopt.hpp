@@ -90,6 +90,7 @@ namespace openvpn {
 	external_pki = NULL;
 	socket_protect = NULL;
 	conn_timeout = 0;
+	allow_compression = true;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
 #endif
@@ -100,6 +101,7 @@ namespace openvpn {
       int conn_timeout;
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
+      bool allow_compression;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -141,9 +143,13 @@ namespace openvpn {
       if (!cc.mode.is_client())
 	throw option_error("only client configuration supported");
 
+      // ProtoConfig override
+      proto_config_override.reset(new Client::ProtoConfig::OverrideOptions());
+      proto_config_override->compress = config.allow_compression;
+
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig);
-      cp->load(opt);
+      cp->load(opt, *proto_config_override);
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;
       cp->now = &now_;
@@ -215,6 +221,7 @@ namespace openvpn {
     {
       Client::Config::Ptr cli_config = new Client::Config;
       cli_config->proto_context_config = cp;
+      cli_config->proto_config_override = proto_config_override;
       cli_config->transport_factory = transport_factory;
       cli_config->tun_factory = tun_factory;
       cli_config->cli_stats = cli_stats;
@@ -306,6 +313,7 @@ namespace openvpn {
     std::string server_override;
     Protocol proto_override;
     int conn_timeout_;
+    Client::ProtoConfig::OverrideOptions::Ptr proto_config_override;
     std::string userlocked_username;
   };
 }

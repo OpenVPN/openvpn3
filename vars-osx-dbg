@@ -1,12 +1,8 @@
-export BOOST_DIR=$HOME/src/boost_1_49_0
-export SNAPPY_DIR=$HOME/src/snappy
-export OVPN3_DIR=$HOME/src/ovpn3
 export PLATFORM=osx-dbg
 export APPLE_FAMILY=1
-export BOOST_STAGE=stage-$PLATFORM/lib
-export OPENSSL_DIR=$HOME/src/mac/openssl-$PLATFORM
-export OPENSSL_TARGET=darwin64-x86_64-cc
-export POLARSSL_DIR=$HOME/src/mac/polarssl-$PLATFORM
+export DEBUG_BUILD=1
+export GPP_CMD=clang++
+export GCC_CMD=clang
 export PLATFORM_FLAGS="-arch x86_64"
 export OTHER_COMPILER_FLAGS="-g"
 export LIB_OPT_LEVEL="-O0"

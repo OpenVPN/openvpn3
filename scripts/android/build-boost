@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
+# Note: thread library may fail with PAGE_SIZE undefined.
+# The pthread.h header makes reference to the PAGE_SIZE define however
+# this only gets defined in <asm/page.h> which is not pulled in by any
+# of the pthread.h includes.  A google-suggested fix was to add
+# #include <sys/mman.h>, which does indeed work, but may not be the
+# correct solution for all cases.
 set -e
-export BOOST=boost_1_49_0
-rm -rf $BOOST
-tar xfj ~/Downloads/$BOOST.tar.bz2
-cd $BOOST
-patch -p1 <$DL/asio-engine.patch
+. $O3/lib-versions
+rm -rf boost $BOOST_VERSION
+mkdir boost
+if [ "$SRCDIR" ]; then
+    cp -a "$SRCDIR" $BOOST_VERSION
+else
+    tar xfz ~/Downloads/$BOOST_VERSION.tar.gz
+fi
+cd $BOOST_VERSION
+#patch -p1 <$DL/asio-engine.patch
 #patch -p2 <$DL/changeset_75599.diff
 #patch -p2 <$DL/changeset_75813.diff || true
 cat >>tools/build/v2/user-config.jam <<EOF
@@ -19,6 +30,29 @@ using gcc : android : arm-linux-androideabi-g++
                 <archiver>arm-linux-androideabi-ar
 		<ranlib>arm-linux-androideabi-ranlib
             ; 
+using gcc : androiddbg : arm-linux-androideabi-g++
+            :
+	        <compileflags>--sysroot=$NDK/platforms/android-9/arch-arm
+                <compileflags>-g
+                <compileflags>-O0
+                <compileflags>-D__GLIBC__
+                <compileflags>-D_GLIBCXX_HAVE_FENV_H=1
+                <compileflags>-DBOOST_NO_INTRINSIC_WCHAR_T
+                <archiver>arm-linux-androideabi-ar
+		<ranlib>arm-linux-androideabi-ranlib
+            ; 
 EOF
 ./bootstrap.sh
-./bjam -d2 toolset=gcc-android --with-system --with-thread variant=release link=static threading=multi runtime-link=static target-os=linux
+for target in android androiddbg ; do
+    if [ "${target:(-3)}" == "dbg" ]; then
+	variant=debug
+	stage=stage-${target%dbg}-dbg
+    else
+	variant=release
+	stage=stage-$target
+    fi
+    echo "************************ $target $variant $stage"
+    ./bjam -d2 toolset=gcc-$target --stagedir=$stage --with-system --with-thread variant=$variant link=static threading=multi runtime-link=static
+done
+mv stage-* ../boost/
+cp -a boost ../boost/

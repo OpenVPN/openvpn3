@@ -1,7 +1,3 @@
-export BOOST_DIR=$HOME/arm/boost_1_48_0
-export OPENSSL_DIR=$HOME/arm/openssl
-export SNAPPY_DIR=$HOME/arm/snappy
-export OVPN3_DIR=$HOME/ovpn3
 export PLATFORM=linux-arm
 export GPP_CMD=arm-linux-gnueabi-g++-4.6
 export STRIP_CMD=arm-linux-gnueabi-strip

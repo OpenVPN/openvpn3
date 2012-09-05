@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 POLARSSL_SRC=$HOME/polarssl-1.1.1
-PD=$OVPN3_DIR/polarssl
+PD=$O3/polarssl
 PB=$(basename $POLARSSL_SRC)
 
 rm -rf polartmp

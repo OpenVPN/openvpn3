@@ -9,7 +9,7 @@
 #define OPENVPN_COMPRESS_LZO_H
 
 // Implement LZO compression.
-// Should only be included by compress.hpp
+// Should only be included by compress.hpp and compstub.hpp
 
 #include "lzo/lzoutil.h"
 #include "lzo/lzo1x.h"
@@ -18,13 +18,13 @@ namespace openvpn {
 
   class CompressLZO : public Compress
   {
+  public:
     // magic number for LZO compression
     enum {
       LZO_COMPRESS = 0x66,
       LZO_COMPRESS_SWAP = 0x67,
     };
 
-  public:
     OPENVPN_SIMPLE_EXCEPTION(lzo_init_failed);
 
     CompressLZO(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool support_swap_arg)
@@ -39,6 +39,23 @@ namespace openvpn {
     {
       if (::lzo_init() != LZO_E_OK)
 	throw lzo_init_failed();
+    }
+
+    void decompress_work(BufferAllocated& buf)
+    {
+      // initialize work buffer
+      lzo_uint zlen = frame->prepare(Frame::DECOMPRESS_WORK, work);
+
+      // do uncompress
+      const int err = lzo1x_decompress_safe(buf.c_data(), buf.size(), work.data(), &zlen, lzo_workspace.data());
+      if (err != LZO_E_OK)
+	{
+	  error(buf);
+	  return;
+	}
+      OPENVPN_LOG_COMPRESS("LZO uncompress " << buf.size() << " -> " << zlen);
+      work.set_size(zlen);
+      buf.swap(work);
     }
 
   private:
@@ -108,21 +125,7 @@ namespace openvpn {
 	case LZO_COMPRESS_SWAP:
 	  do_unswap(buf);
 	case LZO_COMPRESS:
-	  {
-	    // initialize work buffer
-	    lzo_uint zlen = frame->prepare(Frame::DECOMPRESS_WORK, work);
-
-	    // do uncompress
-	    const int err = lzo1x_decompress_safe(buf.c_data(), buf.size(), work.data(), &zlen, lzo_workspace.data());
-	    if (err != LZO_E_OK)
-	      {
-		error(buf);
-		break;
-	      }
-	    OPENVPN_LOG_COMPRESS("LZO uncompress " << buf.size() << " -> " << zlen);
-	    work.set_size(zlen);
-	    buf.swap(work);
-	  }
+	  decompress_work(buf);
 	  break;
 	default: 
 	  error(buf); // unknown op

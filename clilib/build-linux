@@ -5,11 +5,11 @@ g++ -O3 -fPIC -pthread \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
     -fvisibility=hidden \
     -DUSE_OPENSSL \
-    -I$OVPN3_DIR/client \
-    -I$OVPN3_DIR \
+    -I$O3/client \
+    -I$O3 \
     -I$BOOST_DIR \
     -L$BOOST_DIR/stage/lib \
-    $OVPN3_DIR/client/ovpncli.cpp \
+    $O3/client/ovpncli.cpp \
     -shared \
     -o libovpncli.so \
     -lcrypto -lssl \

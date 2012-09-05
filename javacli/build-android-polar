@@ -3,44 +3,61 @@
 set -e
 
 echo SWIG
-swig -c++ -java -package net.openvpn.openvpn -I$OVPN3_DIR/client -I$OVPN3_DIR ovpncli.i
+swig -c++ -java -package net.openvpn.openvpn -I$O3/client -I$O3 ovpncli.i
+
+if [ "$DEBUG_BUILD" = "1" ]; then
+    vis1=""
+    vis2=""
+    opt2="$LIB_OPT_LEVEL"
+else
+    vis1="-fvisibility=hidden"
+    vis2='-DSWIGEXPORT=__attribute__((visibility("default")))'
+    opt2="-Os"
+fi
 
 echo CORE
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
-    -O3 -fPIC \
+    -DAPP_EXPIRE_TIME=1354345200 \
+    $LIB_OPT_LEVEL $LIB_FPIC \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
-    -fvisibility=hidden \
+    $vis1 \
     -DUSE_POLARSSL \
+    -DHAVE_LZO \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
     -DBOOST_NO_INTRINSIC_WCHAR_T \
-    -I$OVPN3_DIR/client \
-    -I$OVPN3_DIR \
-    -I$BOOST_DIR \
-    -I$POLARSSL_DIR/include \
-    -c $OVPN3_DIR/client/ovpncli.cpp
+    -I$O3/client \
+    -I$O3 \
+    -I$DEP_DIR/boost \
+    -I$DEP_DIR/polarssl/polarssl-$PLATFORM/include \
+    -I$DEP_DIR/lzo/lzo-$PLATFORM/include \
+    -c $O3/client/ovpncli.cpp
 
 echo WRAP
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
-    -Os -fPIC \
+    $opt2 $LIB_FPIC \
     -fno-strict-aliasing \
     -Wall \
-    -fvisibility=hidden '-DSWIGEXPORT=__attribute__((visibility("default")))' \
+    $vis1 $vis2 \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
-    -I$OVPN3_DIR/client \
-    -I$OVPN3_DIR \
-    -L$BOOST_DIR/stage/lib \
-    -L$POLARSSL_DIR/library \
-    -L$OPENSSL_DIR/lib \
+    -I$O3/client \
+    -I$O3 \
+    -L$DEP_DIR/boost/stage-$PLATFORM/lib \
+    -L$DEP_DIR/polarssl/polarssl-$PLATFORM/library \
+    -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
+    -L$DEP_DIR/lzo/lzo-$PLATFORM/lib \
     ovpncli_wrap.cxx \
     ovpncli.o \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
     -lpolarssl -lminicrypto \
-    -lboost_system -lboost_thread
+    -lboost_system -lboost_thread \
+    -llzo2
 
-echo STRIP
-$STRIP_CMD libovpncli.so
+if [ "$DEBUG_BUILD" != "1" ]; then
+    echo STRIP
+    $STRIP_CMD libovpncli.so
+fi

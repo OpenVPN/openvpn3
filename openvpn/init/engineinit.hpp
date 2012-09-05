@@ -14,6 +14,12 @@
 #include <openvpn/openssl/util/engine.hpp>
 #endif
 
+#if 0
+extern "C" {
+  void OPENSSL_cpuid_setup();
+}
+#endif
+
 namespace openvpn {
 
   void setup_crypto_engine(const std::string& engine)
@@ -23,6 +29,9 @@ namespace openvpn {
 #endif
   }
 
+#if 0
+  OPENSSL_cpuid_setup();
+#endif
 }
 
 #endif

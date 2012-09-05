@@ -6,7 +6,7 @@ rm -rf pt
 mkdir pt
 
 echo SWIG
-swig -c++ -java -package net.openvpn.privatetunnel -I$OVPN3_DIR/client -I$OVPN3_DIR ovpncli.i
+swig -c++ -java -package net.openvpn.privatetunnel -I$O3/client -I$O3 ovpncli.i
 
 echo CORE
 $GPP_CMD \
@@ -19,11 +19,11 @@ $GPP_CMD \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
     -DBOOST_NO_INTRINSIC_WCHAR_T \
-    -I$OVPN3_DIR/client \
-    -I$OVPN3_DIR \
+    -I$O3/client \
+    -I$O3 \
     -I$BOOST_DIR \
     -I$OPENSSL_DIR/include \
-    -c $OVPN3_DIR/client/ovpncli.cpp
+    -c $O3/client/ovpncli.cpp
 
 echo WRAP
 $GPP_CMD \
@@ -34,8 +34,8 @@ $GPP_CMD \
     -fvisibility=hidden '-DSWIGEXPORT=__attribute__((visibility("default")))' \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
-    -I$OVPN3_DIR/client \
-    -I$OVPN3_DIR \
+    -I$O3/client \
+    -I$O3 \
     -L$BOOST_DIR/stage/lib \
     -L$OPENSSL_DIR/lib \
     ovpncli_wrap.cxx \

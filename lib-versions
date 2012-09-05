@@ -1,0 +1,4 @@
+export LZO_VERSION=lzo-2.06
+export POLARSSL_VERSION=polarssl-1.1.4
+export OPENSSL_VERSION=openssl-1.0.1c
+export BOOST_VERSION=boost_1_51_0

@@ -158,7 +158,7 @@ if [ "$PLATFORM_FLAGS" ]; then
 fi
 
 # ovpn3
-CPPFLAGS="$CPPFLAGS -I$OVPN3_DIR"
+CPPFLAGS="$CPPFLAGS -I$O3"
 
 # profile-guided optimization
 if [ "$PGEN" = "1" ]; then
@@ -200,11 +200,11 @@ fi
 if [ "$OBJC" == "1" ]; then
     FLAGS="$FLAGS -fobjc-arc"
     CPPFLAGS=""
-    CPPFLAGS="$CPPFLAGS -I$OVPN3_DIR/cliobjc"
-    CPPFLAGS="$CPPFLAGS -I$OVPN3_DIR/clilib/dist-static-$PLATFORM/include"
-    LIBDIRS="-L$OVPN3_DIR/clilib/dist-static-$PLATFORM/lib"
+    CPPFLAGS="$CPPFLAGS -I$O3/cliobjc"
+    CPPFLAGS="$CPPFLAGS -I$O3/clilib/dist-static-$PLATFORM/include"
+    LIBDIRS="-L$O3/clilib/dist-static-$PLATFORM/lib"
     LIBS="-lovpncli -framework Foundation $LIBS"
-    SRC="$1.m $OVPN3_DIR/cliobjc/ovpncli.mm "
+    SRC="$1.m $O3/cliobjc/ovpncli.mm "
     CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $SRC $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 else
     CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ $OUTPUT $LIBS"

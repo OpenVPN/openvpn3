@@ -2,7 +2,7 @@
 # sample usage: PSSL=1 MINI=1 ./build-mac-static
 set -e
 rm -f libovpncli.a ovpncli.o
-ECHO=1 CO=1 build $OVPN3_DIR/client/ovpncli
+ECHO=1 CO=1 build $O3/client/ovpncli
 ar crs libovpncli.a ovpncli.o
 ./make-dist dist-static-$PLATFORM libovpncli.a
 if [ -d "$OPENSSL_DIR" ]; then

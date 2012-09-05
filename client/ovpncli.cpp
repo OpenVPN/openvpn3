@@ -223,7 +223,7 @@ namespace openvpn {
     namespace Private {
       struct ClientState
       {
-	ClientState() : conn_timeout(0) {}
+	ClientState() : conn_timeout(0), allow_compression(true) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -238,6 +238,7 @@ namespace openvpn {
 	Protocol proto_override;
 	int conn_timeout;
 	std::string external_pki_alias;
+	bool allow_compression;
       };
     };
 
@@ -289,6 +290,7 @@ namespace openvpn {
       try {
 	state->server_override = config.serverOverride;
 	state->conn_timeout = config.connTimeout;
+	state->allow_compression = config.allowCompression;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride);
 	if (eval.externalPki)
@@ -384,6 +386,7 @@ namespace openvpn {
 	cc.server_override = state->server_override;
 	cc.proto_override = state->proto_override;
 	cc.conn_timeout = state->conn_timeout;
+	cc.allow_compression = state->allow_compression;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;

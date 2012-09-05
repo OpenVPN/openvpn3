@@ -6,13 +6,12 @@
 #   EXTERNAL_RNG=1 -- disable all internal RNG implementations (caller must provide)
 #   ENABLE_TESTING=1 -- run PolarSSL test scripts after build
 #   VERBOSE=1 -- see build commands
-#   NO_OPENSSL=1 -- don't merge polar-openssl.patch
+#   USE_MINICRYPTO=1 -- use minicrypto library
 #   NO_WIPE=1 -- don't wipe source tree and reunzip tarball
 #
 # Examples:
 #   AES_NI=1 $O3/polarssl/build-polarssl
 #   AES_NI=1 ENABLE_TESTING=1 VERBOSE=1 $O3/polarssl/build-polarssl
-#   TARGET=android $O3/polarssl/build-polarssl
 
 set -e
 if [ -z "$O3" ]; then
@@ -26,9 +25,9 @@ fi
 
 # source vars
 . $O3/vars-${TARGET}
+. $O3/lib-versions
 
 # extract the PolarSSL source
-POLARSSL=polarssl-1.1.4
 PD=$O3/polarssl
 DIST=polarssl-$PLATFORM
 
@@ -37,13 +36,13 @@ mkdir $DIST
 
 if [ "$NO_WIPE" = "1" ]; then
     echo RETAIN existing source
-    cd $POLARSSL
+    cd $POLARSSL_VERSION
 else
     echo WIPE and reunzip source
-    rm -rf $POLARSSL
-    tar xfz ~/Downloads/$POLARSSL-gpl.tgz
+    rm -rf $POLARSSL_VERSION
+    tar xfz ~/Downloads/$POLARSSL_VERSION-gpl.tgz
 
-    cd $POLARSSL
+    cd $POLARSSL_VERSION
 
     # delete makefiles (apparently not needed)
     rm $(find . -type f | grep Makefile)
@@ -59,7 +58,7 @@ else
     #patch -p1 <$PD/polarssl-invalid-mac.patch 
 
     # do the big polar-openssl patch
-    if [ "$NO_OPENSSL" != "1" ]; then
+    if [ "$USE_MINICRYPTO" = "1" ]; then
 	echo MERGING polar-openssl.patch
 	patch -p1 <$PD/polar-openssl.patch
     fi
@@ -71,7 +70,7 @@ fi
 
 # add special support for AES-NI?
 OPT_AES_NI=""
-if [ "$AES_NI" = "1" ] && [ "$NO_OPENSSL" != "1" ]; then
+if [ "$AES_NI" = "1" ] && [ "$USE_MINICRYPTO" = "1" ]; then
     OPT_AES_NI="-DOPENSSL_AES_NI=1"
 fi
 
@@ -84,7 +83,10 @@ fi
 # enable testing?
 OPT_ENABLE_TESTING=""
 if [ "$ENABLE_TESTING" = "1" ]; then
-    OPT_ENABLE_TESTING="-DENABLE_TESTING=1"
+    OPT_ENABLE_TESTING="$OPT_ENABLE_TESTING -DENABLE_TESTING=1"
+fi
+if [ "$DEBUG_BUILD" = "1" ]; then
+    OPT_ENABLE_TESTING="$OPT_ENABLE_TESTING -DENABLE_SELF_TEST=1"
 fi
 
 # configure target
@@ -96,19 +98,19 @@ elif [ "$APPLE_FAMILY" = "1" ]; then
 fi
 
 # OpenSSL
-OPT_OPENSSL_DIR=""
-if [ "$OPENSSL_DIR" ] && [ "$NO_OPENSSL" != "1" ]; then
-    OPT_OPENSSL_DIR="-DOPENSSL_DIR=$OPENSSL_DIR"
+OPT_MINICRYPTO_DIR=""
+if [ "$MINICRYPTO_DIR" ] && [ "$USE_MINICRYPTO" = "1" ]; then
+    OPT_MINICRYPTO_DIR="-DMINICRYPTO_DIR=$MINICRYPTO_DIR"
 fi
 
 # combine options
-OPT="$OPT_OPENSSL_DIR $OPT_AES_NI $OPT_EXTERNAL_RNG $OPT_ENABLE_TESTING $OPT_CMAKE_TARGET"
+OPT="$OPT_MINICRYPTO_DIR $OPT_AES_NI $OPT_EXTERNAL_RNG $OPT_ENABLE_TESTING $OPT_CMAKE_TARGET"
 echo OPTIONS $OPT
 
 # build it
 pwd
 cd ../$DIST
-cmake $OPT ../$POLARSSL
+cmake $OPT ../$POLARSSL_VERSION
 if [ "$VERBOSE" = "1" ]; then
     make VERBOSE=1
 else
@@ -121,4 +123,4 @@ if [ "$ENABLE_TESTING" = "1" ]; then
 fi
 
 # copy headers
-cp -a ../$POLARSSL/include/polarssl include/
+cp -a ../$POLARSSL_VERSION/include/polarssl include/

@@ -191,6 +191,14 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<Config> Ptr;
 
+      struct OverrideOptions : public RC<thread_unsafe_refcount>
+      {
+	typedef boost::intrusive_ptr<OverrideOptions> Ptr;
+
+	OverrideOptions() : compress(false) {}
+	bool compress;
+      };
+
       Config()
       {
 	reliable_window = 0;
@@ -258,7 +266,7 @@ namespace openvpn {
       Time::Duration keepalive_ping;
       Time::Duration keepalive_timeout;
 
-      void load(const OptionList& opt)
+      void load(const OptionList& opt, const OverrideOptions& oo)
       {
 	// first set defaults
 	reliable_window = 4;
@@ -335,10 +343,10 @@ namespace openvpn {
 		  CompressContext::Type meth = CompressContext::parse_method(meth_name);
 		  if (meth == CompressContext::NONE)
 		    OPENVPN_THROW(proto_option_error, "Unknown compressor: '" << meth_name << '\'');
-		  comp_ctx = CompressContext(meth);
+		  comp_ctx = CompressContext(oo.compress ? meth : CompressContext::COMP_STUB);
 		}
 	      else
-		comp_ctx = CompressContext(CompressContext::ANY);
+		comp_ctx = CompressContext(oo.compress ? CompressContext::ANY : CompressContext::COMP_STUB);
 	    }
 	  else
 	    {
@@ -346,16 +354,16 @@ namespace openvpn {
 	      if (o)
 		{
 		  if (o->size() == 1)
-		    comp_ctx = CompressContext(CompressContext::LZO);
+		    comp_ctx = CompressContext(oo.compress ? CompressContext::LZO : CompressContext::LZO_STUB);
 		  else
-		    comp_ctx = CompressContext(CompressContext::ANY_LZO);
+		    comp_ctx = CompressContext(oo.compress ? CompressContext::ANY_LZO : CompressContext::LZO_STUB);
 		}
 	    }
 	}
       }
 
       // load options string pushed by server
-      void process_push(const OptionList& opt)
+      void process_push(const OptionList& opt, const OverrideOptions& oo)
       {
 	// cipher
 	std::string new_cipher;
@@ -397,7 +405,7 @@ namespace openvpn {
 	      new_comp = o->get(1);
 	      CompressContext::Type meth = CompressContext::parse_method(new_comp);
 	      if (meth != CompressContext::NONE)
-		comp_ctx = CompressContext(meth);
+		comp_ctx = CompressContext(oo.compress ? meth : CompressContext::COMP_STUB);
 	    }
 	  else
 	    {
@@ -405,11 +413,11 @@ namespace openvpn {
 	      if (o)
 		{
 		  if (o->size() == 1)
-		    comp_ctx = CompressContext(CompressContext::LZO);
+		    comp_ctx = CompressContext(oo.compress ? CompressContext::LZO : CompressContext::LZO_STUB);
 		  else if (o->size() >= 2)
 		    {
 		      if ((*o)[1] == "yes")
-			comp_ctx = CompressContext(CompressContext::LZO);
+			comp_ctx = CompressContext(oo.compress ? CompressContext::LZO : CompressContext::LZO_STUB);
 		      else
 			comp_ctx = CompressContext(CompressContext::LZO_STUB);
 		    }
@@ -803,6 +811,7 @@ namespace openvpn {
 	  dirty(0),
 	  handled_pid_wrap(false),
 	  is_reliable(p.config->protocol.is_reliable()),
+	  kev_expire_line(-1), // fixme-kev-expire
 	  tlsprf_self(p.is_server()),
 	  tlsprf_peer(!p.is_server())
       {
@@ -946,8 +955,9 @@ namespace openvpn {
 
       // usually called by parent ProtoContext object when this KeyContext
       // has been retired.
-      void prepare_expire()
+      void prepare_expire(const int line) // fixme-kev-expire
       {
+	kev_expire_line = line; // fixme-kev-expire
 	set_event(KEV_NONE, KEV_EXPIRE, construct_time + proto.config->expire);
       }
 
@@ -1171,7 +1181,10 @@ namespace openvpn {
       void trigger_renegotiation()
       {
 	if (state >= ACTIVE && !invalidated())
-	  set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
+	  {
+	    kev_expire_line = __LINE__; // fixme-kev-expire
+	    set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
+	  }
       }
 
       void active_event()
@@ -1198,10 +1211,11 @@ namespace openvpn {
 		set_event(KEV_BECOME_PRIMARY, KEV_RENEGOTIATE, construct_time + proto.config->renegotiate);
 		break;
 	      case KEV_RENEGOTIATE:
+		kev_expire_line = __LINE__; // fixme-kev-expire
 		set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
 		break;
 	      case KEV_EXPIRE:
-		//OPENVPN_LOG("**** INVALIDATE KEV_EXPIRE"); // fixme
+		OPENVPN_LOG("**** INVALIDATE KEV_EXPIRE line=" << kev_expire_line); // fixme-kev-expire
 		invalidate();
 		set_event(KEV_EXPIRE);
 		break;
@@ -1662,6 +1676,7 @@ namespace openvpn {
       Time next_event_time;
       EventType current_event;
       EventType next_event;
+      int kev_expire_line; // fixme-kev-expire -- for debugging
       Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
       CryptoContext<RAND_API, CRYPTO_API> crypto;
@@ -1952,9 +1967,9 @@ namespace openvpn {
     }
 
     // Call on client with server-pushed options
-    void process_push(const OptionList& opt)
+    void process_push(const OptionList& opt, const typename Config::OverrideOptions& oo)
     {
-      config->process_push(opt);
+      config->process_push(opt, oo);
       primary->construct_compressor();
       if (secondary)
 	secondary->construct_compressor();
@@ -2123,10 +2138,10 @@ namespace openvpn {
     // Promote a newly renegotiated KeyContext to primary status.
     // This is usually triggered by become_primary variable (Time::Duration)
     // in Config.
-    void promote_secondary_to_primary()
+    void promote_secondary_to_primary(const int line) // fixme-kev-expire
     {
       primary.swap(secondary);
-      secondary->prepare_expire();
+      secondary->prepare_expire(line); // fixme-kev-expire
     }
 
     void process_primary_event()
@@ -2146,7 +2161,7 @@ namespace openvpn {
 	      break;
 	    case KeyContext::KEV_EXPIRE:
 	      if (secondary && !secondary->invalidated())
-		promote_secondary_to_primary();
+		promote_secondary_to_primary(__LINE__); // fixme-kev-expire
 	      else
 		{
 		  stats->error(Error::PRIMARY_EXPIRE);
@@ -2172,11 +2187,11 @@ namespace openvpn {
 	  switch (ev)
 	    {
 	    case KeyContext::KEV_ACTIVE:
-	      primary->prepare_expire();
+	      primary->prepare_expire(__LINE__); // fixme-kev-expire
 	      break;
 	    case KeyContext::KEV_BECOME_PRIMARY:
 	      if (!secondary->invalidated())
-		promote_secondary_to_primary();
+		promote_secondary_to_primary(__LINE__); // fixme-kev-expire
 	      break;
 	    case KeyContext::KEV_EXPIRE:
 	      secondary.reset();

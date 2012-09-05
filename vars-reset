@@ -9,8 +9,6 @@ unset OPENSSL_TARGET
 unset SNAPPY_DIR
 unset LZ4_DIR
 unset JAVA_DIR
-unset OVPN3_DIR
-unset PLATFORM
 unset GPP_CMD
 unset GCC_CMD
 unset STRIP_CMD
@@ -18,3 +16,4 @@ unset LD_LIBRARY_PATH
 unset APPLE_FAMILY
 unset LIB_OPT_LEVEL
 unset LIB_FPIC
+unset DEBUG_BUILD

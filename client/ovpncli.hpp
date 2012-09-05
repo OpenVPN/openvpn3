@@ -107,7 +107,7 @@ namespace openvpn {
     // (client writes)
     struct Config
     {
-      Config() : connTimeout(0) {}
+      Config() : connTimeout(0), allowCompression(true) {}
 
       // OpenVPN config file (profile) as a string
       std::string content;
@@ -125,6 +125,9 @@ namespace openvpn {
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
       std::string externalPkiAlias;
+
+      // If true, allow compression
+      bool allowCompression;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

@@ -9,7 +9,7 @@ fi
 rm -rf lzo
 mkdir lzo
 
-for target in ios ios-dbg iossim iossim-dbg osx osx-dbg ; do
+for target in android android-dbg ; do
     echo '***************' TARGET $target
     TARGET=$target $O3/lzo/build-lzo
 done

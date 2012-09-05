@@ -5,8 +5,8 @@ First, build static OpenSSL for PolarSSL/OpenSSL bridge
 
 Next build libminicrypto.a from libcrypto.a :
 
-  $OVPN3_DIR/polarssl/build-mini-openssl ref
+  $O3/polarssl/build-mini-openssl ref
 
 Finally, build PolarSSL:
 
-  TARGET=android $OVPN3_DIR/polarssl/build-polarssl
+  TARGET=android $O3/polarssl/build-polarssl

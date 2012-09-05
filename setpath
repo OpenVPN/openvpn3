@@ -1,1 +1,1 @@
-export PATH="$OVPN3_DIR/scripts:$PATH"
+export PATH="$O3/scripts:$PATH"
