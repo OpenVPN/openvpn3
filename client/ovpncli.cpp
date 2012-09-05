@@ -562,21 +562,21 @@ namespace openvpn {
       // data.  Vice versa for TUN_*_IN.
       if (stats)
 	{
-	  ret.bytes_out = stats->stat_count(SessionStats::TUN_BYTES_IN);
-	  ret.bytes_in = stats->stat_count(SessionStats::TUN_BYTES_OUT);
-	  ret.packets_out = stats->stat_count(SessionStats::TUN_PACKETS_IN);
-	  ret.packets_in = stats->stat_count(SessionStats::TUN_PACKETS_OUT);
-	  ret.errors_out = stats->error_count(Error::TUN_READ_ERROR);
-	  ret.errors_in = stats->error_count(Error::TUN_WRITE_ERROR);
+	  ret.bytesOut = stats->stat_count(SessionStats::TUN_BYTES_IN);
+	  ret.bytesIn = stats->stat_count(SessionStats::TUN_BYTES_OUT);
+	  ret.packetsOut = stats->stat_count(SessionStats::TUN_PACKETS_IN);
+	  ret.packetsIn = stats->stat_count(SessionStats::TUN_PACKETS_OUT);
+	  ret.errorsOut = stats->error_count(Error::TUN_READ_ERROR);
+	  ret.errorsIn = stats->error_count(Error::TUN_WRITE_ERROR);
 	}
       else
 	{
-	  ret.bytes_out = 0;
-	  ret.bytes_in = 0;
-	  ret.packets_out = 0;
-	  ret.packets_in = 0;
-	  ret.errors_out = 0;
-	  ret.errors_in = 0;
+	  ret.bytesOut = 0;
+	  ret.bytesIn = 0;
+	  ret.packetsOut = 0;
+	  ret.packetsIn = 0;
+	  ret.errorsOut = 0;
+	  ret.errorsIn = 0;
 	}
       return ret;
     }
@@ -586,19 +586,32 @@ namespace openvpn {
       MySessionStats::Ptr stats = state->stats;
       TransportStats ret;
 
+      ret.lastPacketReceived = -1; // undefined
       if (stats)
 	{
-	  ret.bytes_out = stats->stat_count(SessionStats::BYTES_OUT);
-	  ret.bytes_in = stats->stat_count(SessionStats::BYTES_IN);
-	  ret.packets_out = stats->stat_count(SessionStats::PACKETS_OUT);
-	  ret.packets_in = stats->stat_count(SessionStats::PACKETS_IN);
+	  ret.bytesOut = stats->stat_count(SessionStats::BYTES_OUT);
+	  ret.bytesIn = stats->stat_count(SessionStats::BYTES_IN);
+	  ret.packetsOut = stats->stat_count(SessionStats::PACKETS_OUT);
+	  ret.packetsIn = stats->stat_count(SessionStats::PACKETS_IN);
+
+	  // calculate time since last packet received
+	  {
+	    const Time& lpr = stats->last_packet_received();
+	    if (lpr.defined())
+	      {
+		const Time::Duration dur = Time::now() - lpr;
+		const unsigned int delta = dur.to_binary_ms();
+		if (delta <= 60*60*24*1024) // only define for time periods <= 1 day
+		  ret.lastPacketReceived = delta;
+	      }
+	  }
 	}
       else
 	{
-	  ret.bytes_out = 0;
-	  ret.bytes_in = 0;
-	  ret.packets_out = 0;
-	  ret.packets_in = 0;
+	  ret.bytesOut = 0;
+	  ret.bytesIn = 0;
+	  ret.packetsOut = 0;
+	  ret.packetsIn = 0;
 	}
       return ret;
     }

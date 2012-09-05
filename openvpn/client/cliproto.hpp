@@ -49,6 +49,7 @@ namespace openvpn {
       typedef typename Base::PacketType PacketType;
 
       using Base::now;
+      using Base::stat;
 
     public:
       typedef boost::intrusive_ptr<Session> Ptr;
@@ -174,6 +175,9 @@ namespace openvpn {
 
 	  // update current time
 	  Base::update_now();
+
+	  // update last packet received
+	  stat().update_last_packet_received(now());
 
 	  // log connecting event (only on first packet received)
 	  if (!first_packet_received_)

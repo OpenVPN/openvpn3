@@ -79,7 +79,15 @@ namespace openvpn {
 	return "UNKNOWN_STAT_TYPE";
     }
 
+    void update_last_packet_received(const Time& now)
+    {
+      last_packet_received_ = now;
+    }
+
+    const Time& last_packet_received() const { return last_packet_received_; }
+
   private:
+    Time last_packet_received_;
     count_t stats_[N_STATS];
   };
 

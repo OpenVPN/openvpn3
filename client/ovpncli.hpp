@@ -176,21 +176,25 @@ namespace openvpn {
     // used to pass stats for an interface
     struct InterfaceStats
     {
-      long long bytes_in;
-      long long packets_in;
-      long long errors_in;
-      long long bytes_out;
-      long long packets_out;
-      long long errors_out;
+      long long bytesIn;
+      long long packetsIn;
+      long long errorsIn;
+      long long bytesOut;
+      long long packetsOut;
+      long long errorsOut;
     };
 
     // used to pass basic transport stats
     struct TransportStats
     {
-      long long bytes_in;
-      long long bytes_out;
-      long long packets_in;
-      long long packets_out;
+      long long bytesIn;
+      long long bytesOut;
+      long long packetsIn;
+      long long packetsOut;
+
+      // number of binary milliseconds (1/1024th of a second) since
+      // last packet was received, or -1 if undefined
+      int lastPacketReceived;
     };
 
     // base class for External PKI queries
