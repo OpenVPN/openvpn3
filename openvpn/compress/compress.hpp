@@ -82,9 +82,7 @@ namespace openvpn {
 #include <openvpn/compress/compnull.hpp>
 #include <openvpn/compress/compstub.hpp>
 
-#ifdef HAVE_LZO
-#include <openvpn/compress/lzo.hpp>
-#endif
+#include <openvpn/compress/lzoselect.hpp>
 #ifdef HAVE_LZ4
 #include <openvpn/compress/lz4.hpp>
 #endif
@@ -112,7 +110,8 @@ namespace openvpn {
 
     CompressContext() : type_(NONE) {}
 
-    explicit CompressContext(const Type t)
+    explicit CompressContext(const Type t, const bool asym)
+      : asym_(asym) // compress on peer -> self only
     {
       if (!compressor_available(t))
 	throw compressor_unavailable();
@@ -133,19 +132,17 @@ namespace openvpn {
 	  return new CompressStub(frame, stats, false);
 	case COMP_STUB:
 	  return new CompressStub(frame, stats, true);
-#ifdef HAVE_LZO
 	case LZO:
-	  return new CompressLZO(frame, stats, false);
+	  return new CompressLZO(frame, stats, false, asym_);
 	case LZO_SWAP:
-	  return new CompressLZO(frame, stats, true);
-#endif
+	  return new CompressLZO(frame, stats, true, asym_);
 #ifdef HAVE_LZ4
 	case LZ4:
-	  return new CompressLZ4(frame, stats);
+	  return new CompressLZ4(frame, stats, asym_);
 #endif
 #ifdef HAVE_SNAPPY
 	case SNAPPY:
-	  return new CompressSnappy(frame, stats);
+	  return new CompressSnappy(frame, stats, asym_);
 #endif
 	default:
 	  throw compressor_unavailable();
@@ -164,11 +161,7 @@ namespace openvpn {
 	  return true;
 	case LZO:
 	case LZO_SWAP:
-#ifdef HAVE_LZO
 	  return true;
-#else
-	  return false;
-#endif
 	case LZ4:
 #ifdef HAVE_LZ4
 	  return true;
@@ -186,16 +179,15 @@ namespace openvpn {
 	}
     }
 
+    // On the client, used to tell server which compression methods we support.
     const char *peer_info_string() const
     {
       switch (type_)
 	{
-#ifdef HAVE_LZO
 	case LZO:
 	  return "IV_LZO=1\n";
 	case LZO_SWAP:
 	  return "IV_LZO_SWAP=1\n";
-#endif
 #ifdef HAVE_LZ4
 	case LZ4:
 	  return "IV_LZ4=1\n";
@@ -210,28 +202,20 @@ namespace openvpn {
 	  return "IV_COMP_STUB=1\n";
 	case ANY:
 	  return
-#ifdef HAVE_LZO
-	    "IV_LZO=1\n"
-	    "IV_LZO_SWAP=1\n"
-#else
-	    "IV_LZO_STUB=1\n"
-#endif
-#ifdef HAVE_LZ4
-	    "IV_LZ4=1\n"
-#endif
 #ifdef HAVE_SNAPPY
 	    "IV_SNAPPY=1\n"
+#endif
+	    "IV_LZO=1\n"
+	    "IV_LZO_SWAP=1\n"
+#ifdef HAVE_LZ4
+	    "IV_LZ4=1\n"
 #endif
 	    "IV_COMP_STUB=1\n"
 	    ;
 	case ANY_LZO:
 	  return
-#ifdef HAVE_LZO
 	    "IV_LZO=1\n"
 	    "IV_LZO_SWAP=1\n"
-#else
-	    "IV_LZO_STUB=1\n"
-#endif
 	    ;
 	default:
 	  return NULL;
@@ -301,14 +285,13 @@ namespace openvpn {
 
     static void init_static()
     {
-#ifdef HAVE_LZO
       CompressLZO::init_static();
-#endif
     }
 
   private:
     Type type_;
-    };
+    bool asym_;
+  };
 
 } // namespace openvpn
 

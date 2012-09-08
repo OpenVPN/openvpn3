@@ -9,7 +9,7 @@
 #define OPENVPN_COMPRESS_LZO_H
 
 // Implement LZO compression.
-// Should only be included by compress.hpp and compstub.hpp
+// Should only be included by lzoselect.hpp
 
 #include "lzo/lzoutil.h"
 #include "lzo/lzo1x.h"
@@ -27,11 +27,15 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(lzo_init_failed);
 
-    CompressLZO(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool support_swap_arg)
+    CompressLZO(const Frame::Ptr& frame,
+		const SessionStats::Ptr& stats,
+		const bool support_swap_arg,
+		const bool asym_arg)
       : Compress(frame, stats),
-	support_swap(support_swap_arg)
+	support_swap(support_swap_arg),
+	asym(asym_arg)
     {
-      OPENVPN_LOG_COMPRESS("LZO init swap=" << support_swap_arg);
+      OPENVPN_LOG_COMPRESS("LZO init swap=" << support_swap_arg << " asym=" << asym_arg);
       lzo_workspace.init(LZO1X_1_15_MEM_COMPRESS, BufferAllocated::ARRAY);
     }
 
@@ -65,7 +69,7 @@ namespace openvpn {
       if (!buf.size())
 	return;
 
-      if (hint)
+      if (hint && !asym)
 	{
 	  // initialize work buffer
 	  frame->prepare(Frame::COMPRESS_WORK, work);
@@ -139,6 +143,7 @@ namespace openvpn {
     }
 
     const bool support_swap;
+    const bool asym;
     BufferAllocated work;
     BufferAllocated lzo_workspace;
   };

@@ -223,7 +223,7 @@ namespace openvpn {
     namespace Private {
       struct ClientState
       {
-	ClientState() : conn_timeout(0), allow_compression(true) {}
+	ClientState() : conn_timeout(0) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -238,7 +238,7 @@ namespace openvpn {
 	Protocol proto_override;
 	int conn_timeout;
 	std::string external_pki_alias;
-	bool allow_compression;
+	ProtoContextOptions::Ptr proto_context_options;
       };
     };
 
@@ -250,6 +250,7 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
     {
       state = new Private::ClientState();
+      state->proto_context_options = new ProtoContextOptions();
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
@@ -290,9 +291,10 @@ namespace openvpn {
       try {
 	state->server_override = config.serverOverride;
 	state->conn_timeout = config.connTimeout;
-	state->allow_compression = config.allowCompression;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride);
+	if (!config.compressionMode.empty())
+	  state->proto_context_options->parse_compression_mode(config.compressionMode);
 	if (eval.externalPki)
 	  state->external_pki_alias = config.externalPkiAlias;
       }
@@ -386,7 +388,7 @@ namespace openvpn {
 	cc.server_override = state->server_override;
 	cc.proto_override = state->proto_override;
 	cc.conn_timeout = state->conn_timeout;
-	cc.allow_compression = state->allow_compression;
+	cc.proto_context_options = state->proto_context_options;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;

@@ -39,6 +39,7 @@
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/options/remotelist.hpp>
 #include <openvpn/options/cliopthelper.hpp>
+#include <openvpn/ssl/proto_context_options.hpp>
 
 #ifdef OPENVPN_DEBUG_PROTO
 #define OPENVPN_LOG_PROTO(x) OPENVPN_LOG(x)
@@ -191,14 +192,6 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<Config> Ptr;
 
-      struct OverrideOptions : public RC<thread_unsafe_refcount>
-      {
-	typedef boost::intrusive_ptr<OverrideOptions> Ptr;
-
-	OverrideOptions() : compress(false) {}
-	bool compress;
-      };
-
       Config()
       {
 	reliable_window = 0;
@@ -266,7 +259,7 @@ namespace openvpn {
       Time::Duration keepalive_ping;
       Time::Duration keepalive_timeout;
 
-      void load(const OptionList& opt, const OverrideOptions& oo)
+      void load(const OptionList& opt, const ProtoContextOptions& pco)
       {
 	// first set defaults
 	reliable_window = 4;
@@ -280,7 +273,7 @@ namespace openvpn {
 	expire = Time::Duration::seconds(7200);
 	keepalive_ping = Time::Duration::seconds(8);
 	keepalive_timeout = Time::Duration::seconds(40);
-	comp_ctx = CompressContext(CompressContext::NONE);
+	comp_ctx = CompressContext(CompressContext::NONE, false);
 	protocol = Protocol();
 	pid_mode = PacketIDReceive::UDP_MODE;
 
@@ -343,10 +336,10 @@ namespace openvpn {
 		  CompressContext::Type meth = CompressContext::parse_method(meth_name);
 		  if (meth == CompressContext::NONE)
 		    OPENVPN_THROW(proto_option_error, "Unknown compressor: '" << meth_name << '\'');
-		  comp_ctx = CompressContext(oo.compress ? meth : CompressContext::COMP_STUB);
+		  comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::COMP_STUB, pco.is_comp_asym());
 		}
 	      else
-		comp_ctx = CompressContext(oo.compress ? CompressContext::ANY : CompressContext::COMP_STUB);
+		comp_ctx = CompressContext(pco.is_comp() ? CompressContext::ANY : CompressContext::COMP_STUB, pco.is_comp_asym());
 	    }
 	  else
 	    {
@@ -354,16 +347,20 @@ namespace openvpn {
 	      if (o)
 		{
 		  if (o->size() == 1)
-		    comp_ctx = CompressContext(oo.compress ? CompressContext::LZO : CompressContext::LZO_STUB);
+		    comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
 		  else
-		    comp_ctx = CompressContext(oo.compress ? CompressContext::ANY_LZO : CompressContext::LZO_STUB);
+		    {
+		      // On the client, by using ANY instead of ANY_LZO, we are telling the server
+		      // that it's okay to use any of our supported compression methods.
+		      comp_ctx = CompressContext(pco.is_comp() ? CompressContext::ANY : CompressContext::LZO_STUB, pco.is_comp_asym());
+		    }
 		}
 	    }
 	}
       }
 
       // load options string pushed by server
-      void process_push(const OptionList& opt, const OverrideOptions& oo)
+      void process_push(const OptionList& opt, const ProtoContextOptions& pco)
       {
 	// cipher
 	std::string new_cipher;
@@ -405,7 +402,7 @@ namespace openvpn {
 	      new_comp = o->get(1);
 	      CompressContext::Type meth = CompressContext::parse_method(new_comp);
 	      if (meth != CompressContext::NONE)
-		comp_ctx = CompressContext(oo.compress ? meth : CompressContext::COMP_STUB);
+		comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::COMP_STUB, pco.is_comp_asym());
 	    }
 	  else
 	    {
@@ -413,13 +410,13 @@ namespace openvpn {
 	      if (o)
 		{
 		  if (o->size() == 1)
-		    comp_ctx = CompressContext(oo.compress ? CompressContext::LZO : CompressContext::LZO_STUB);
+		    comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
 		  else if (o->size() >= 2)
 		    {
 		      if ((*o)[1] == "yes")
-			comp_ctx = CompressContext(oo.compress ? CompressContext::LZO : CompressContext::LZO_STUB);
+			comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
 		      else
-			comp_ctx = CompressContext(CompressContext::LZO_STUB);
+			comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
 		    }
 		}
 	    }
@@ -1967,9 +1964,9 @@ namespace openvpn {
     }
 
     // Call on client with server-pushed options
-    void process_push(const OptionList& opt, const typename Config::OverrideOptions& oo)
+    void process_push(const OptionList& opt, const ProtoContextOptions& pco)
     {
-      config->process_push(opt, oo);
+      config->process_push(opt, pco);
       primary->construct_compressor();
       if (secondary)
 	secondary->construct_compressor();

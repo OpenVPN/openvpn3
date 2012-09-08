@@ -72,7 +72,7 @@ namespace openvpn {
 	{}
 
 	typename ProtoConfig::Ptr proto_context_config;
-	typename ProtoConfig::OverrideOptions::Ptr proto_config_override;
+	ProtoContextOptions::Ptr proto_context_options;
 	TransportClientFactory::Ptr transport_factory;
 	TunClientFactory::Ptr tun_factory;
 	SessionStats::Ptr cli_stats;
@@ -93,7 +93,7 @@ namespace openvpn {
 	  push_request_timer(io_service_arg),
 	  halt(false),
 	  creds(config.creds),
-	  proto_config_override(config.proto_config_override),
+	  proto_context_options(config.proto_context_options),
 	  first_packet_received_(false),
 	  sent_push_request(false),
 	  cli_events(config.cli_events),
@@ -348,7 +348,7 @@ namespace openvpn {
 		extract_auth_token(received_options);
 
 		// modify proto config (cipher, auth, and compression methods)
-		Base::process_push(received_options, *proto_config_override);
+		Base::process_push(received_options, *proto_context_options);
 
 		// initialize tun/routing
 		tun = tun_factory->new_client_obj(io_service, *this);
@@ -582,7 +582,7 @@ namespace openvpn {
 
       ClientCreds::Ptr creds;
 
-      typename ProtoConfig::OverrideOptions::Ptr proto_config_override;
+      ProtoContextOptions::Ptr proto_context_options;
 
       bool first_packet_received_;
       bool sent_push_request;

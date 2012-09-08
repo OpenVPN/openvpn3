@@ -44,10 +44,14 @@ if [ "$host" ]; then
     host_opt="--host=$host"
 fi
 
+if [ "$NO_WIPE" != "1" ]; then
+    rm -rf $LZO_VERSION
+    tar xfz ~/Downloads/$LZO_VERSION.tar.gz
+fi
+
 DIST=$(pwd)/lzo/lzo-$PLATFORM
-rm -rf $DIST $LZO_VERSION
+rm -rf $DIST
 mkdir -p $DIST
-tar xfz ~/Downloads/$LZO_VERSION.tar.gz
 cd $LZO_VERSION
 echo 'OPTIONS' $CC $LD $AR $RANLIB $host_opt $targ_opt
 CFLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC" ./configure --prefix=$DIST $host_opt $targ_opt

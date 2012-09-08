@@ -8,9 +8,7 @@
 #ifndef OPENVPN_COMPRESS_COMPSTUB_H
 #define OPENVPN_COMPRESS_COMPSTUB_H
 
-#ifdef HAVE_LZO
-#include <openvpn/compress/lzo.hpp>
-#endif
+#include <openvpn/compress/lzoselect.hpp>
 
 namespace openvpn {
 
@@ -19,10 +17,8 @@ namespace openvpn {
   public:
     CompressStub(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool support_swap_arg)
       : Compress(frame, stats),
-	support_swap(support_swap_arg)
-#ifdef HAVE_LZO
-        ,lzo(frame, stats, false)
-#endif
+	support_swap(support_swap_arg),
+        lzo(frame, stats, false, true)
     {
     }
 
@@ -53,7 +49,6 @@ namespace openvpn {
 	  do_unswap(buf);
 	case NO_COMPRESS:
 	  break;
-#ifdef HAVE_LZO
 	// special mode to support older servers that ignore
 	// compression handshake -- this will handle receiving
 	// compressed packets even if we didn't ask for them
@@ -61,7 +56,6 @@ namespace openvpn {
 	  OPENVPN_LOG_COMPRESS("CompressStub: handled unsolicited LZO packet");
 	  lzo.decompress_work(buf);
 	  break;
-#endif
 	default: 
 	  OPENVPN_LOG_COMPRESS("CompressStub: unable to handle op=" << int(c));
 	  error(buf);
@@ -69,10 +63,7 @@ namespace openvpn {
     }
 
     const bool support_swap;
-
-#ifdef HAVE_LZO
     CompressLZO lzo;
-#endif
   };
 
 } // namespace openvpn

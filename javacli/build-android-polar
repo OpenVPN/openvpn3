@@ -18,7 +18,7 @@ fi
 echo CORE
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
-    -DAPP_EXPIRE_TIME=1354345200 \
+    -DAPP_EXPIRE_TIME=1364796000 \
     $LIB_OPT_LEVEL $LIB_FPIC \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
     $vis1 \

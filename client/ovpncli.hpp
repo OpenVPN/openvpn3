@@ -107,7 +107,7 @@ namespace openvpn {
     // (client writes)
     struct Config
     {
-      Config() : connTimeout(0), allowCompression(true) {}
+      Config() : connTimeout(0) {}
 
       // OpenVPN config file (profile) as a string
       std::string content;
@@ -126,8 +126,11 @@ namespace openvpn {
       // for External PKI profiles.
       std::string externalPkiAlias;
 
-      // If true, allow compression
-      bool allowCompression;
+      // Compression mode, one of:
+      // yes -- support compression on both uplink and downlink
+      // asym -- support compression on downlink only (i.e. server -> client)
+      // no (default if empty) -- support compression stubs only
+      std::string compressionMode;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.
