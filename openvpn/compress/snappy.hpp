@@ -23,9 +23,11 @@ namespace openvpn {
     };
 
   public:
-    CompressSnappy(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
-      : Compress(frame, stats)
+    CompressSnappy(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool asym_arg)
+      : Compress(frame, stats),
+	asym(asym_arg)
     {
+      OPENVPN_LOG_COMPRESS("SNAPPY init asym=" << asym_arg);
     }
 
   private:
@@ -35,7 +37,7 @@ namespace openvpn {
       if (!buf.size())
 	return;
 
-      if (hint)
+      if (hint && !asym)
 	{
 	  // initialize work buffer
 	  frame->prepare(Frame::COMPRESS_WORK, work);
@@ -54,10 +56,10 @@ namespace openvpn {
 	  // did compression actually reduce data length?
 	  if (comp_size < buf.size())
 	    {
+	      OPENVPN_LOG_COMPRESS_VERBOSE("SNAPPY compress " << buf.size() << " -> " << comp_size);
 	      work.set_size(comp_size);
 	      do_swap(work, SNAPPY_COMPRESS);
 	      buf.swap(work);
-	      OPENVPN_LOG_COMPRESS("SNAPPY compress");
 	      return;
 	    }
 	}
@@ -98,9 +100,9 @@ namespace openvpn {
 		error(buf);
 		break;
 	      }
+	    OPENVPN_LOG_COMPRESS_VERBOSE("SNAPPY uncompress " << buf.size() << " -> " << decomp_size);
 	    work.set_size(decomp_size);
 	    buf.swap(work);
-	    OPENVPN_LOG_COMPRESS("SNAPPY uncompress");
 	  }
 	  break;
 	default: 
@@ -108,6 +110,7 @@ namespace openvpn {
 	}
     }
 
+    const bool asym;
     BufferAllocated work;
   };
 

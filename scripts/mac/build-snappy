@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+
+rm -rf snappy
+mkdir snappy
+
+for target in ios ios-dbg iossim iossim-dbg osx osx-dbg ; do
+    echo '***************' TARGET $target
+    TARGET=$target $O3/snappy/build-snappy
+done

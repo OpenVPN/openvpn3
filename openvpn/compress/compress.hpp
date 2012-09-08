@@ -15,10 +15,18 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
 
-#if defined(OPENVPN_DEBUG_COMPRESS)
-#define OPENVPN_LOG_COMPRESS(x) OPENVPN_LOG(x)
-#else
 #define OPENVPN_LOG_COMPRESS(x)
+#define OPENVPN_LOG_COMPRESS_VERBOSE(x)
+
+#if defined(OPENVPN_DEBUG_COMPRESS)
+#if OPENVPN_DEBUG_COMPRESS >= 1
+#undef OPENVPN_LOG_COMPRESS
+#define OPENVPN_LOG_COMPRESS(x) OPENVPN_LOG(x)
+#endif
+#if OPENVPN_DEBUG_COMPRESS >= 2
+#undef OPENVPN_LOG_COMPRESS_VERBOSE
+#define OPENVPN_LOG_COMPRESS_VERBOSE(x) OPENVPN_LOG(x)
+#endif
 #endif
 
 namespace openvpn {

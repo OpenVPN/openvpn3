@@ -127,8 +127,8 @@ namespace openvpn {
       std::string externalPkiAlias;
 
       // Compression mode, one of:
-      // yes -- support compression on both uplink and downlink
-      // asym -- support compression on downlink only (i.e. server -> client)
+      // yes -- allow compression on both uplink and downlink
+      // asym -- allow compression on downlink only (i.e. server -> client)
       // no (default if empty) -- support compression stubs only
       std::string compressionMode;
     };

@@ -24,6 +24,7 @@ $GPP_CMD \
     $vis1 \
     -DUSE_POLARSSL \
     -DHAVE_LZO \
+    -DHAVE_SNAPPY \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
     -DBOOST_NO_INTRINSIC_WCHAR_T \
@@ -32,6 +33,7 @@ $GPP_CMD \
     -I$DEP_DIR/boost \
     -I$DEP_DIR/polarssl/polarssl-$PLATFORM/include \
     -I$DEP_DIR/lzo/lzo-$PLATFORM/include \
+    -I$DEP_DIR/snappy/snappy-$PLATFORM/include \
     -c $O3/client/ovpncli.cpp
 
 echo WRAP
@@ -49,13 +51,14 @@ $GPP_CMD \
     -L$DEP_DIR/polarssl/polarssl-$PLATFORM/library \
     -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
     -L$DEP_DIR/lzo/lzo-$PLATFORM/lib \
+    -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
     ovpncli_wrap.cxx \
     ovpncli.o \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
     -lpolarssl -lminicrypto \
     -lboost_system -lboost_thread \
-    -llzo2
+    -llzo2 -lsnappy
 
 if [ "$DEBUG_BUILD" != "1" ]; then
     echo STRIP

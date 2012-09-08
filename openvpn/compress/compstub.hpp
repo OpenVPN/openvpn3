@@ -53,11 +53,11 @@ namespace openvpn {
 	// compression handshake -- this will handle receiving
 	// compressed packets even if we didn't ask for them
 	case CompressLZO::LZO_COMPRESS:
-	  OPENVPN_LOG_COMPRESS("CompressStub: handled unsolicited LZO packet");
+	  OPENVPN_LOG_COMPRESS_VERBOSE("CompressStub: handled unsolicited LZO packet");
 	  lzo.decompress_work(buf);
 	  break;
 	default: 
-	  OPENVPN_LOG_COMPRESS("CompressStub: unable to handle op=" << int(c));
+	  OPENVPN_LOG_COMPRESS_VERBOSE("CompressStub: unable to handle op=" << int(c));
 	  error(buf);
 	}
     }
