@@ -2,8 +2,20 @@
 # generate expire time in python: time.mktime((2012, 5, 1, 0, 0, 0, 0, 0, -1))
 set -e
 
-echo SWIG
-swig -c++ -java -package net.openvpn.openvpn -I$O3/client -I$O3 ovpncli.i
+rm_generated_files()
+{
+    svn status --no-ignore | perl -nle 's/\\/\//g; print "rm -rf '\''$1'\''" if /^[\?I]\s+([\S\t\x20]+)/;' | sh
+}
+
+rm_generated_files
+
+if [ "$PT" = "1" ]; then
+    pkg=net.openvpn.privatetunnel
+    rm -rf pt
+    mkdir pt
+else
+    pkg=net.openvpn.openvpn
+fi
 
 if [ "$DEBUG_BUILD" = "1" ]; then
     vis1=""
@@ -15,6 +27,9 @@ else
     opt2="-Os"
 fi
 
+echo SWIG
+swig -c++ -java -package $pkg -I$O3/client -I$O3 ovpncli.i
+
 echo CORE
 $GPP_CMD \
     --sysroot=$NDK/platforms/android-9/arch-arm \
@@ -23,7 +38,6 @@ $GPP_CMD \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
     $vis1 \
     -DUSE_POLARSSL \
-    -DHAVE_LZO \
     -DHAVE_SNAPPY \
     -D__GLIBC__ \
     -D_GLIBCXX_HAVE_FENV_H=1 \
@@ -63,4 +77,8 @@ $GPP_CMD \
 if [ "$DEBUG_BUILD" != "1" ]; then
     echo STRIP
     $STRIP_CMD libovpncli.so
+fi
+
+if [ "$PT" = "1" ]; then
+    mv SWIGTYPE_p_std__string.java ClientAPI_*.java libovpncli.so pt/
 fi
