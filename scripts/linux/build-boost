@@ -8,7 +8,7 @@ cd $BOOST_VERSION
 cat >>tools/build/v2/user-config.jam <<EOF
 using gcc : linux : g++
             :
-	        <compileflags>-g -fPIC
+	        <compileflags>-fPIC
             ; 
 EOF
 ./bootstrap.sh

@@ -5,6 +5,6 @@ export DIST=$(pwd)/lzo
 rm -rf $LZO_VERSION $DIST
 tar xfz $DL/$LZO_VERSION.tar.gz
 cd $LZO_VERSION
-CFLAGS="-g" ./configure --prefix=$DIST --enable-shared --disable-static
+CFLAGS="" ./configure --prefix=$DIST --enable-shared --disable-static
 make
 make install
