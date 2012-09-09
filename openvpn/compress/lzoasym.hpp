@@ -52,7 +52,7 @@ namespace openvpn {
 	  error(buf);
 	  return;
 	}
-      OPENVPN_LOG_COMPRESS("LZO ASYM uncompress " << buf.size() << " -> " << zlen);
+      OPENVPN_LOG_COMPRESS_VERBOSE("LZO ASYM uncompress " << buf.size() << " -> " << zlen);
       work.set_size(zlen);
       buf.swap(work);
     }
