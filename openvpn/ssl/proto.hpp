@@ -808,7 +808,6 @@ namespace openvpn {
 	  dirty(0),
 	  handled_pid_wrap(false),
 	  is_reliable(p.config->protocol.is_reliable()),
-	  kev_expire_line(-1), // fixme-kev-expire
 	  tlsprf_self(p.is_server()),
 	  tlsprf_peer(!p.is_server())
       {
@@ -952,9 +951,8 @@ namespace openvpn {
 
       // usually called by parent ProtoContext object when this KeyContext
       // has been retired.
-      void prepare_expire(const int line) // fixme-kev-expire
+      void prepare_expire()
       {
-	kev_expire_line = line; // fixme-kev-expire
 	set_event(KEV_NONE, KEV_EXPIRE, construct_time + proto.config->expire);
       }
 
@@ -1178,10 +1176,7 @@ namespace openvpn {
       void trigger_renegotiation()
       {
 	if (state >= ACTIVE && !invalidated())
-	  {
-	    kev_expire_line = __LINE__; // fixme-kev-expire
-	    set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
-	  }
+	  set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
       }
 
       void active_event()
@@ -1208,11 +1203,9 @@ namespace openvpn {
 		set_event(KEV_BECOME_PRIMARY, KEV_RENEGOTIATE, construct_time + proto.config->renegotiate);
 		break;
 	      case KEV_RENEGOTIATE:
-		kev_expire_line = __LINE__; // fixme-kev-expire
 		set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
 		break;
 	      case KEV_EXPIRE:
-		OPENVPN_LOG("**** INVALIDATE KEV_EXPIRE line=" << kev_expire_line); // fixme-kev-expire
 		invalidate();
 		set_event(KEV_EXPIRE);
 		break;
@@ -1673,7 +1666,6 @@ namespace openvpn {
       Time next_event_time;
       EventType current_event;
       EventType next_event;
-      int kev_expire_line; // fixme-kev-expire -- for debugging
       Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
       CryptoContext<RAND_API, CRYPTO_API> crypto;
@@ -2135,10 +2127,10 @@ namespace openvpn {
     // Promote a newly renegotiated KeyContext to primary status.
     // This is usually triggered by become_primary variable (Time::Duration)
     // in Config.
-    void promote_secondary_to_primary(const int line) // fixme-kev-expire
+    void promote_secondary_to_primary()
     {
       primary.swap(secondary);
-      secondary->prepare_expire(line); // fixme-kev-expire
+      secondary->prepare_expire();
     }
 
     void process_primary_event()
@@ -2158,7 +2150,7 @@ namespace openvpn {
 	      break;
 	    case KeyContext::KEV_EXPIRE:
 	      if (secondary && !secondary->invalidated())
-		promote_secondary_to_primary(__LINE__); // fixme-kev-expire
+		promote_secondary_to_primary();
 	      else
 		{
 		  stats->error(Error::PRIMARY_EXPIRE);
@@ -2184,11 +2176,11 @@ namespace openvpn {
 	  switch (ev)
 	    {
 	    case KeyContext::KEV_ACTIVE:
-	      primary->prepare_expire(__LINE__); // fixme-kev-expire
+	      primary->prepare_expire();
 	      break;
 	    case KeyContext::KEV_BECOME_PRIMARY:
 	      if (!secondary->invalidated())
-		promote_secondary_to_primary(__LINE__); // fixme-kev-expire
+		promote_secondary_to_primary();
 	      break;
 	    case KeyContext::KEV_EXPIRE:
 	      secondary.reset();
