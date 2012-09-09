@@ -1,5 +1,8 @@
 export JAVA_DIR=/usr/lib/jvm/java-7-openjdk-amd64
+export DEP_DIR=$HOME/linux
 export PLATFORM=linux
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
-export LD_LIBRARY_PATH="$BOOST_DIR/stage/lib:$SNAPPY_DIR/lib:$O3/javacli"
+export OTHER_COMPILER_FLAGS=""
+export LIB_OPT_LEVEL="-O3"
+export LIB_FPIC="-fPIC"

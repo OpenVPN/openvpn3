@@ -23,6 +23,7 @@ public class Client implements OpenVPNClientThread.EventReceiver {
 	// load/eval config
 	ClientAPI_Config config = new ClientAPI_Config();
 	config.setContent(config_text);
+	config.setCompressionMode("yes");
 	ClientAPI_EvalConfig ec = client_thread.eval_config(config);
 	if (ec.getError())
 	    throw new ConfigError("OpenVPN config file parse error: " + ec.getMessage());

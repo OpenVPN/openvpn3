@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+. $O3/lib-versions
+export DIST=$(pwd)/snappy
+rm -rf $SNAPPY_VERSION $DIST
+tar xfz $DL/$SNAPPY_VERSION.tar.gz
+cd $SNAPPY_VERSION
+CFLAGS="-g" ./configure --prefix=$DIST
+make
+make install

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+. $O3/lib-versions
+export DIST=$(pwd)/openssl
+rm -rf $OPENSSL_VERSION $DIST
+tar xfz $DL/$OPENSSL_VERSION.tar.gz
+cd $OPENSSL_VERSION
+./Configure linux-x86_64 shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
+sed -i -e 's|-O3|-O3 -fPIC -g|' Makefile
+make -j 4 build_libs
+touch apps/openssl
+touch openssl.pc
+touch libcrypto.pc
+touch libssl.pc
+make install_sw

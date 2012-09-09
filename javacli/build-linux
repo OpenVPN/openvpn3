@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -e
+
+rm_generated_files()
+{
+    svn status --no-ignore | perl -nle 's/\\/\//g; print "rm -rf '\''$1'\''" if /^[\?I]\s+([\S\t\x20]+)/;' | sh
+}
+
+rm_generated_files
+
+echo SWIG
+swig -c++ -java -I$O3/client -I$O3 ovpncli.i
+
+echo JAVA
+javac *.java
+
+echo CORE
+gcc -O3 -fPIC -pthread \
+    -Wall -Wno-sign-compare -Wno-unused-parameter \
+    -fvisibility=hidden \
+    -DUSE_OPENSSL \
+    -DHAVE_SNAPPY \
+    -I$O3/client \
+    -I$O3 \
+    -I$DEP_DIR/boost \
+    -I$DEP_DIR/openssl/include \
+    -I$DEP_DIR/snappy/include \
+    -c $O3/client/ovpncli.cpp
+
+echo WRAP
+gcc -Os -fPIC -pthread \
+    -fno-strict-aliasing \
+    -Wall \
+    -fvisibility=hidden '-DSWIGEXPORT=__attribute__((visibility("default")))' \
+    -I$O3/client \
+    -I$O3 \
+    -I/usr/lib/jvm/java-7-openjdk-amd64/include \
+    -L$DEP_DIR/boost/stage/lib \
+    -L$DEP_DIR/openssl/lib \
+    -L$DEP_DIR/snappy/lib \
+    ovpncli_wrap.cxx \
+    ovpncli.o \
+    -o libovpncli.so \
+    -shared -Wl,-soname,libovpncli.so \
+    -lcrypto -lssl \
+    -lboost_system -lboost_thread \
+    -lsnappy
+
+echo STRIP
+strip libovpncli.so

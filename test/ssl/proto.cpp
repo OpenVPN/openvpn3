@@ -668,7 +668,7 @@ int test(const int thread_num)
     cp->prng = prng_cli;
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
-    cp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
+    cp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
     cp->cipher = ClientCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
     cp->digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
 #ifdef USE_TLS_AUTH
@@ -722,7 +722,7 @@ int test(const int thread_num)
     sp->prng = prng_serv;
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
-    sp->comp_ctx = CompressContext(CompressContext::LZO_STUB);
+    sp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
     sp->cipher = ServerCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
     sp->digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
 #ifdef USE_TLS_AUTH
