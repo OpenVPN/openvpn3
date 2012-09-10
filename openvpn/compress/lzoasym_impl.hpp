@@ -26,10 +26,6 @@
 
 namespace openvpn {
   namespace lzo_asym_impl {
-    typedef boost::uint16_t lzo_uint16;
-    typedef boost::uint32_t lzo_uint32;
-    typedef boost::uint64_t lzo_uint64;
-
     template <typename T>
     inline T get_mem(const void *p)
     {
@@ -132,12 +128,12 @@ namespace openvpn {
 	  t += 3;
 	  if (t >= 8)
 	    do {
-	      copy_mem<lzo_uint64>(op,ip);
+	      copy_mem<boost::uint64_t>(op,ip);
 	      op += 8; ip += 8; t -= 8;
 	    } while (t >= 8);
 	  if (t >= 4)
 	    {
-	      copy_mem<lzo_uint32>(op,ip);
+	      copy_mem<boost::uint32_t>(op,ip);
 	      op += 4; ip += 4; t -= 4;
 	    }
 	  if (t > 0)
@@ -150,14 +146,14 @@ namespace openvpn {
 	  if (ptr_aligned_4(op,ip))
 	    {
 #endif
-	      copy_mem<lzo_uint32>(op,ip);
+	      copy_mem<boost::uint32_t>(op,ip);
 	      op += 4; ip += 4;
 	      if (--t > 0)
 		{
 		  if (t >= 4)
 		    {
 		      do {
-			copy_mem<lzo_uint32>(op,ip);
+			copy_mem<boost::uint32_t>(op,ip);
 			op += 4; ip += 4; t -= 4;
 		      } while (t >= 4);
 		      if (t > 0) do *op++ = *ip++; while (--t > 0);
@@ -222,7 +218,7 @@ namespace openvpn {
 
 		m_pos = op - 1;
 #if defined(LZOASYM_UNALIGNED_OK_2) && defined(LZOASYM_LITTLE_ENDIAN)
-		m_pos -= get_mem<lzo_uint16>(ip) >> 2;
+		m_pos -= get_mem<boost::uint16_t>(ip) >> 2;
 #else
 		m_pos -= (ip[0] >> 2) + (ip[1] << 6);
 #endif
@@ -246,7 +242,7 @@ namespace openvpn {
 		  }
 
 #if defined(LZOASYM_UNALIGNED_OK_2) && defined(LZOASYM_LITTLE_ENDIAN)
-		m_pos -= get_mem<lzo_uint16>(ip) >> 2;
+		m_pos -= get_mem<boost::uint16_t>(ip) >> 2;
 #else
 		m_pos -= (ip[0] >> 2) + (ip[1] << 6);
 #endif
@@ -276,12 +272,12 @@ namespace openvpn {
 		t += (3 - 1);
 		if (t >= 8)
 		  do {
-		    copy_mem<lzo_uint64>(op,m_pos);
+		    copy_mem<boost::uint64_t>(op,m_pos);
 		    op += 8; m_pos += 8; t -= 8;
 		  } while (t >= 8);
 		if (t >= 4)
 		  {
-		    copy_mem<lzo_uint32>(op,m_pos);
+		    copy_mem<boost::uint32_t>(op,m_pos);
 		    op += 4; m_pos += 4; t -= 4;
 		  }
 		if (t > 0)
@@ -300,10 +296,10 @@ namespace openvpn {
 		  if (t >= 2 * 4 - (3 - 1) && (op - m_pos) >= 4)
 		    {
 #endif
-		      copy_mem<lzo_uint32>(op,m_pos);
+		      copy_mem<boost::uint32_t>(op,m_pos);
 		      op += 4; m_pos += 4; t -= 4 - (3 - 1);
 		      do {
-			copy_mem<lzo_uint32>(op,m_pos);
+			copy_mem<boost::uint32_t>(op,m_pos);
 			op += 4; m_pos += 4; t -= 4;
 		      } while (t >= 4);
 		      if (t > 0) do *op++ = *m_pos++; while (--t > 0);

@@ -13,6 +13,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/error/error.hpp>
+#include <openvpn/time/time.hpp>
 
 namespace openvpn {
 
