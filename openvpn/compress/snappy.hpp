@@ -30,7 +30,8 @@ namespace openvpn {
       OPENVPN_LOG_COMPRESS("SNAPPY init asym=" << asym_arg);
     }
 
-  private:
+    virtual const char *name() const { return "snappy"; }
+
     virtual void compress(BufferAllocated& buf, const bool hint)
     {
       // skip null packets
@@ -110,6 +111,7 @@ namespace openvpn {
 	}
     }
 
+  private:
     const bool asym;
     BufferAllocated work;
   };

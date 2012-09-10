@@ -45,6 +45,8 @@ namespace openvpn {
 	throw lzo_init_failed();
     }
 
+    virtual const char *name() const { return "lzo"; }
+
     void decompress_work(BufferAllocated& buf)
     {
       // initialize work buffer
@@ -62,7 +64,6 @@ namespace openvpn {
       buf.swap(work);
     }
 
-  private:
     virtual void compress(BufferAllocated& buf, const bool hint)
     {
       // skip null packets
@@ -136,6 +137,7 @@ namespace openvpn {
 	}
     }
 
+  private:
     // worst case size expansion on compress
     size_t lzo_extra_buffer(const size_t len)
     {

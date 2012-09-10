@@ -40,6 +40,8 @@ namespace openvpn {
     {
     }
 
+    virtual const char *name() const { return "lzo-asym"; }
+
     void decompress_work(BufferAllocated& buf)
     {
       // initialize work buffer
@@ -57,7 +59,6 @@ namespace openvpn {
       buf.swap(work);
     }
 
-  private:
     virtual void compress(BufferAllocated& buf, const bool hint)
     {
       // skip null packets
@@ -94,6 +95,7 @@ namespace openvpn {
 	}
     }
 
+  private:
     const bool support_swap;
     BufferAllocated work;
   };

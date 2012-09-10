@@ -35,6 +35,9 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<Compress> Ptr;
 
+    // Compressor name
+    virtual const char *name() const = 0;
+
     // Compression method implemented by underlying compression class.
     // hint should normally be true to compress the data.  If hint is
     // false, the data may be uncompressible or already compressed,

@@ -32,7 +32,8 @@ namespace openvpn {
       OPENVPN_LOG_COMPRESS("LZ4 init asym=" << asym_arg);
     }
 
-  private:
+    virtual const char *name() const { return "lz4"; }
+
     virtual void compress(BufferAllocated& buf, const bool hint)
     {
       // skip null packets
@@ -110,6 +111,7 @@ namespace openvpn {
 	}
     }
 
+  private:
     // worst case size expansion on compress
     // from LZ4 docs: worst case size is : "inputsize + 0.4%", with "0.4%" being at least 8 bytes.
     size_t lz4_extra_buffer(const size_t len)

@@ -22,7 +22,8 @@ namespace openvpn {
     {
     }
 
-  private:
+    virtual const char *name() const { return "stub"; }
+
     virtual void compress(BufferAllocated& buf, const bool hint)
     {
       // skip null packets
@@ -62,6 +63,7 @@ namespace openvpn {
 	}
     }
 
+  private:
     const bool support_swap;
     CompressLZO lzo;
   };

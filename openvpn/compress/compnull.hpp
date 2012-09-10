@@ -18,7 +18,7 @@ namespace openvpn {
     {
     }
 
-  private:
+    virtual const char *name() const { return "null"; }
     virtual void compress(BufferAllocated& buf, const bool hint) {}
     virtual void decompress(BufferAllocated& buf) {}
   };
