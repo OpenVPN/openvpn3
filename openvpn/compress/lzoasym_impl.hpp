@@ -19,10 +19,10 @@
 
 #define LZOASYM_LITTLE_ENDIAN
 
-#define LZOASYM_NEED_IP(x)  if ((size_t)(ip_end - ip) < (size_t)(x))  goto input_overrun
-#define LZOASYM_NEED_OP(x)  if ((size_t)(op_end - op) < (size_t)(x))  goto output_overrun
-#define LZOASYM_TEST_LB(m_pos)        if (m_pos < out || m_pos >= op) goto lookbehind_overrun
-#define LZOASYM_ASSERT(cond)                             if (!(cond)) goto assertion_failed
+#define LZOASYM_NEED_IP(x)  if (size_t(ip_end - ip) < size_t(x))  goto input_overrun
+#define LZOASYM_NEED_OP(x)  if (size_t(op_end - op) < size_t(x))  goto output_overrun
+#define LZOASYM_TEST_LB(m_pos)    if (m_pos < out || m_pos >= op) goto lookbehind_overrun
+#define LZOASYM_ASSERT(cond)                         if (!(cond)) goto assertion_failed
 
 namespace openvpn {
   namespace lzo_asym_impl {
@@ -62,12 +62,12 @@ namespace openvpn {
 
     enum {
       LZOASYM_E_OK=0,
-      LZOASYM_E_EOF_NOT_FOUND=-7,
-      LZOASYM_E_INPUT_NOT_CONSUMED=-8,
-      LZOASYM_E_INPUT_OVERRUN=-4,
-      LZOASYM_E_OUTPUT_OVERRUN=-5,
-      LZOASYM_E_LOOKBEHIND_OVERRUN=-6,
-      LZOASYM_E_ASSERT_FAILED=-9,
+      LZOASYM_E_EOF_NOT_FOUND=-1,
+      LZOASYM_E_INPUT_NOT_CONSUMED=-2,
+      LZOASYM_E_INPUT_OVERRUN=-3,
+      LZOASYM_E_OUTPUT_OVERRUN=-4,
+      LZOASYM_E_LOOKBEHIND_OVERRUN=-5,
+      LZOASYM_E_ASSERT_FAILED=-6,
     };
 
     enum {
