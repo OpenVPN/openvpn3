@@ -1,13 +1,37 @@
 #!/usr/bin/env bash
 set -e
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+if [ -z "$1" ]; then
+    echo "usage: build-openssl x64|arm"
+    exit 1
+fi
+
+case $1 in
+x64*)
+  OPENSSL_TARGET=linux-x86_64
+  JOBS=4
+  ;;
+arm*)
+  OPENSSL_TARGET=linux-armv4
+  JOBS=1
+  ;;
+*)
+  echo "unknown platform"
+  exit 1
+  ;;
+esac
+
 . $O3/lib-versions
 export DIST=$(pwd)/openssl
 rm -rf $OPENSSL_VERSION $DIST
 tar xfz $DL/$OPENSSL_VERSION.tar.gz
 cd $OPENSSL_VERSION
-./Configure linux-x86_64 shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
-sed -i -e 's|-O3|-O3 -fPIC|' Makefile
-make -j 4 build_libs
+./Configure $OPENSSL_TARGET shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
+#sed -i -e 's|-O3|-O3 -fPIC|' Makefile
+make -j $JOBS build_libs
 touch apps/openssl
 touch openssl.pc
 touch libcrypto.pc
