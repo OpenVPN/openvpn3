@@ -103,7 +103,7 @@ namespace openvpn {
       cmd << " -net " << net << ' ' << gw << ' ' << mask;
       const std::string cmd_str = cmd.str();
       OPENVPN_LOG(cmd_str);
-      return ::system(cmd_str.c_str());
+      return system_cmd(cmd_str);
     }
 
     bool stopped;

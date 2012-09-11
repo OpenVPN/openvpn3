@@ -14,7 +14,7 @@ if [ -z "$1" ]; then
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
     echo " PSSL=1 -- include PolarSSL"
-    echo " NOSSL=1 -- don't include OpenSSL (non-mac)"
+    echo " NOSSL=1 -- don't include OpenSSL"
     echo " OPENSSL_SYS=1 -- include system OpenSSL"
     echo " MINI=1 -- link with OpenSSL mini crypto lib"
     echo " OSSL=1 -- include OpenSSL on Mac"
@@ -35,6 +35,11 @@ CPPFLAGS=""
 LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
+
+# if vars defined a debug build, set DEBUG=1
+if [ "$DEBUG_BUILD" = "1" ]; then
+    DEBUG=1
+fi
 
 # building on Mac OS X for osx, ios, or iossim?
 if [ "$APPLE_FAMILY" = "1" ]; then
@@ -64,11 +69,11 @@ fi
 # PolarSSL
 if [ "$PSSL" = "1" ]; then
     LIBS="$LIBS -lpolarssl"
-    CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL -I$DEP_DIR/polarssl/include"
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/library"
+    CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL -I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
     if [ "$MINI" = "1" ]; then
 	LIBS="$LIBS -lminicrypto"
-	LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/lib"
+	LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
 	NOSSL=1
     fi
 fi
@@ -102,8 +107,8 @@ else
     fi
 fi
 if [ "$OPENSSL_SYS" != "1" ] && [ "$NOSSL" != "1" ]; then
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/openssl/include"
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/lib"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/openssl/openssl-$PLATFORM/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
 fi
 
 # Apple libs
@@ -115,7 +120,7 @@ fi
 [ -z "$BOOST_STAGE" ] && BOOST_STAGE="stage/lib"
 CPPFLAGS="$CPPFLAGS -I$DEP_DIR/boost"
 LIBS="$LIBS -lboost_system"
-LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage/lib"
+LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM/lib"
 if [ "$NOTHREADS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
@@ -125,20 +130,22 @@ fi
 
 # LZO compression
 if [ "$LZO" = "1" ]; then
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/lzo/lzo-$PLATFORM/lib"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/lzo/lzo-$PLATFORM/include"
     LIBS="$LIBS -llzo2"
     CPPFLAGS="$CPPFLAGS -DHAVE_LZO"
 fi
 
 # LZ4 compression
 if [ "$LZ4" = "1" ]; then
-    EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $DEP_DIR/lz4/lz4.o"
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/lz4 -DHAVE_LZ4"
+    EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $DEP_DIR/lz4/lz4-$PLATFORM/lz4.o"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/lz4/lz4-$PLATFORM -DHAVE_LZ4"
 fi
 
 # Snappy compression
 if [ "$SNAP" = "1" ]; then
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/snappy/lib"
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/snappy/snappy-$PLATFORM/lib"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM/include"
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
 fi

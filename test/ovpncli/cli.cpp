@@ -10,19 +10,11 @@
 
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
 
+#include <openvpn/common/exception.hpp>
+
 #include <client/ovpncli.cpp>
 
 using namespace openvpn::ClientAPI;
-
-class MyException : public std::exception
-{
-public:
-  MyException(std::string err) : err_(err) {}
-  virtual const char* what() const throw() { return err_.c_str(); }
-  virtual ~MyException() throw() {}
-private:
-  std::string err_;
-};
 
 class Client : public OpenVPNClient
 {
@@ -62,10 +54,10 @@ std::string read_text(const std::string& filename)
 {
   std::ifstream ifs(filename.c_str());
   if (!ifs)
-    throw MyException("cannot open " + filename);
+    OPENVPN_THROW_EXCEPTION("cannot open " << filename);
   const std::string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
   if (!ifs)
-    throw MyException("cannot read " + filename);
+    OPENVPN_THROW_EXCEPTION("cannot read " << filename);
   return str;
 }
 
@@ -87,18 +79,25 @@ void worker_thread()
   std::cout << "Thread finished" << std::endl;
 }
 
-void stop_handler(int signum)
+void handler(int signum)
 {
-  std::cerr << "received stop signal " << signum << std::endl;
-  if (the_client)
-    the_client->stop();
-}
-
-void reconnect_handler(int signum)
-{
-  std::cerr << "received reconnect signal " << signum << std::endl;
-  if (the_client)
-    the_client->reconnect(2);
+  switch (signum)
+    {
+    case SIGTERM:
+    case SIGINT:
+      std::cerr << "received stop signal " << signum << std::endl;
+      if (the_client)
+	the_client->stop();
+      break;
+    case SIGHUP:
+      std::cerr << "received reconnect signal " << signum << std::endl;
+      if (the_client)
+	the_client->reconnect(2);
+      break;
+    default:
+      std::cerr << "received unknown signal " << signum << std::endl;
+      break;
+    }
 }
 
 int main(int argc, char *argv[])
@@ -113,7 +112,7 @@ int main(int argc, char *argv[])
 	config.compressionMode = "yes";
 	EvalConfig eval = client.eval_config(config);
 	if (eval.error)
-	  throw MyException("eval config error: " + eval.message);
+	  OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
 	if (eval.autologin)
 	  {
 	    if (argc > 2)
@@ -122,22 +121,27 @@ int main(int argc, char *argv[])
 	else
 	  {
 	    if (argc < 4)
-	      throw MyException("need creds");
+	      OPENVPN_THROW_EXCEPTION("need creds");
 	    ProvideCreds creds;
 	    creds.username = argv[2];
 	    creds.password = argv[3];
 	    creds.replacePasswordWithSessionID = true;
 	    Status creds_status = client.provide_creds(creds);
 	    if (creds_status.error)
-	      throw MyException("creds error: " + creds_status.message);
+	      OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
 	  }
 
 	std::cout << "CONNECTING..." << std::endl;
 
 	// catch signals
-	signal(SIGINT, stop_handler);
-	signal(SIGTERM, stop_handler);
-	signal(SIGHUP, reconnect_handler);
+	struct sigaction sa;
+	sa.sa_handler = handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART; /* Restart functions if interrupted by handler */
+	if (sigaction(SIGINT, &sa, NULL) == -1
+	    || sigaction(SIGTERM, &sa, NULL) == -1
+	    || sigaction(SIGHUP, &sa, NULL) == -1)
+	  OPENVPN_THROW_EXCEPTION("error setting signal handler");
 
 	// start connect thread
 	the_client = &client;

@@ -17,6 +17,7 @@
 #include <string>
 #include <sstream>
 
+#include <openvpn/common/process.hpp>
 #include <openvpn/tun/tununixbase.hpp>
 
 namespace openvpn {
@@ -129,7 +130,7 @@ namespace openvpn {
 	  cmd << "/sbin/ifconfig " << Base::name() << ' ' << ip << " netmask " << mask << " mtu " << mtu;
 	  const std::string cmd_str = cmd.str();
 	  OPENVPN_LOG_TUN(cmd_str);
-	  status = ::system(cmd_str.c_str());
+	  status = system_cmd(cmd_str);
 	  if (status)
 	    throw tun_ifconfig_error();
 	  return ip.to_string();

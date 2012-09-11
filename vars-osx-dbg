@@ -1,4 +1,5 @@
 export PLATFORM=osx-dbg
+export DEP_DIR=$HOME/src/mac
 export APPLE_FAMILY=1
 export DEBUG_BUILD=1
 export GPP_CMD=clang++
@@ -7,4 +8,3 @@ export PLATFORM_FLAGS="-arch x86_64"
 export OTHER_COMPILER_FLAGS="-g"
 export LIB_OPT_LEVEL="-O0"
 export LIB_FPIC=""
-#export DYLD_LIBRARY_PATH="$BOOST_DIR/stage/lib:$SNAPPY_DIR/lib"

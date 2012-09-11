@@ -118,7 +118,7 @@ namespace openvpn {
 	cmd << " -net " << net << " netmask " << mask << " gw " << gw;
 	const std::string cmd_str = cmd.str();
 	OPENVPN_LOG(cmd_str);
-	return ::system(cmd_str.c_str());
+	return system_cmd(cmd_str);
     }
 
     static IP::Addr cvt_pnr_ip_v4(const std::string& hexaddr)

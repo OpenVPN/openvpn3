@@ -16,7 +16,6 @@
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/options.hpp>
-#include <openvpn/common/process.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/ip/ip.hpp>
