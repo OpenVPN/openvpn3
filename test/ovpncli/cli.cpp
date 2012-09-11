@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
   try {
     if (argc >= 2)
       {
+	Client::init_process();
 	Client client;
 	Config config;
 	config.content = read_text(argv[1]);
