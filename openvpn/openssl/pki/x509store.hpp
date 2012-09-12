@@ -36,7 +36,7 @@ namespace openvpn {
 
 	// Load cert list
 	{
-	  for (X509List::const_iterator i = cc.certs.begin(); i != cc.certs.end(); i++)
+	  for (X509List::const_iterator i = cc.certs.begin(); i != cc.certs.end(); ++i)
 	    {
 	      if (!X509_STORE_add_cert(x509_store_, (*i)->obj()))
 		throw x509_store_add_cert_error();
@@ -48,7 +48,7 @@ namespace openvpn {
 	  if (cc.crls.defined())
 	    {
 	      X509_STORE_set_flags(x509_store_, X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
-	      for (CRLList::const_iterator i = cc.crls.begin(); i != cc.crls.end(); i++)
+	      for (CRLList::const_iterator i = cc.crls.begin(); i != cc.crls.end(); ++i)
 		{
 		  if (!X509_STORE_add_crl(x509_store_, (*i)->obj()))
 		    throw x509_store_add_crl_error();

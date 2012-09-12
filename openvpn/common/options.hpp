@@ -93,7 +93,7 @@ namespace openvpn {
     std::string render() const
     {
       std::ostringstream out;
-      for (const_iterator i = begin(); i != end(); i++)
+      for (const_iterator i = begin(); i != end(); ++i)
 	out << '[' << *i << "] ";
       return out.str();
     }
@@ -157,7 +157,7 @@ namespace openvpn {
     void parse_from_csv(const std::string& str)
     {
       std::vector<std::string> list = split_by_char<std::vector<std::string>, Lex>(str, ',');
-      for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); i++)
+      for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); ++i)
 	{
 	  const Option opt = split_by_space<Option, Lex, SpaceMatch>(*i);
 	  if (opt.size())
@@ -270,7 +270,7 @@ namespace openvpn {
     void extend(const OptionList& other)
     {
       reserve(size() + other.size());
-      for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); i++)
+      for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); ++i)
 	push_back(*i);
     }
 
@@ -362,7 +362,7 @@ namespace openvpn {
     std::string render() const
     {
       std::ostringstream out;
-      for (size_t i = 0; i < size(); i++)
+      for (size_t i = 0; i < size(); ++i)
 	out << i << ' ' << (*this)[i].render() << std::endl;
       return out.str();
     }
@@ -370,10 +370,10 @@ namespace openvpn {
     std::string render_map() const
     {
       std::ostringstream out;
-      for (IndexMap::const_iterator i = map_.begin(); i != map_.end(); i++)
+      for (IndexMap::const_iterator i = map_.begin(); i != map_.end(); ++i)
 	{
 	  out << i->first << " [";
-	  for (IndexList::const_iterator j = i->second.begin(); j != i->second.end(); j++)
+	  for (IndexList::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 	    out << ' ' << *j;
 	  out << " ]" << std::endl;
 	}
@@ -395,7 +395,7 @@ namespace openvpn {
     void update_map()
     {
       map_.clear();
-      for (size_t i = 0; i < size(); i++)
+      for (size_t i = 0; i < size(); ++i)
 	{
 	  const Option& opt = (*this)[i];
 	  if (!opt.empty())
@@ -407,7 +407,7 @@ namespace openvpn {
     // return true if line is blank or a comment
     static bool ignore_line(const std::string& line)
     {
-      for (std::string::const_iterator i = line.begin(); i != line.end(); i++)
+      for (std::string::const_iterator i = line.begin(); i != line.end(); ++i)
 	{
 	  const char c = *i;
 	  if (!SpaceMatch::is_space(c))

@@ -94,16 +94,18 @@ namespace openvpn {
 		      const IP::Addr& mask,
 		      const IP::Addr& gw)
     {
-      std::ostringstream cmd;
-      cmd << "/sbin/route";
+      Argv argv;
+      argv.push_back("/sbin/route");
       if (add)
-	cmd << " add";
+	argv.push_back("add");
       else
-	cmd << " delete";
-      cmd << " -net " << net << ' ' << gw << ' ' << mask;
-      const std::string cmd_str = cmd.str();
-      OPENVPN_LOG(cmd_str);
-      return system_cmd(cmd_str);
+	argv.push_back("delete");
+      argv.push_back("-net");
+      argv.push_back(net.to_string());
+      argv.push_back(gw.to_string());
+      argv.push_back(mask.to_string());
+      OPENVPN_LOG(argv.to_string());
+      return system_cmd(argv[0], argv);
     }
 
     bool stopped;

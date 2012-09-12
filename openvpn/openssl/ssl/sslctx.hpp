@@ -600,7 +600,7 @@ namespace openvpn {
 	  // chain but shouldn't be included in the verify chain.
 	  if (config.extra_certs.defined())
 	    {
-	      for (OpenSSLPKI::X509List::const_iterator i = config.extra_certs.begin(); i != config.extra_certs.end(); i++)
+	      for (OpenSSLPKI::X509List::const_iterator i = config.extra_certs.begin(); i != config.extra_certs.end(); ++i)
 		{
 		  if (SSL_CTX_add_extra_chain_cert(ctx_, (*i)->obj_dup()) != 1)
 		    throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");

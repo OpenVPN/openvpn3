@@ -69,7 +69,7 @@ namespace openvpn {
 	StringList opt;
 	opt.reserve(2);
 	split_by_char_void<StringList, NullLex>(opt, sl[1], ',');
-	for (StringList::const_iterator i = opt.begin(); i != opt.end(); i++)
+	for (StringList::const_iterator i = opt.begin(); i != opt.end(); ++i)
 	  {
 	    if (*i == "E")
 	      echo = true;

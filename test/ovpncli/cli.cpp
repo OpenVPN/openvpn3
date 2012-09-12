@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 	struct sigaction sa;
 	sa.sa_handler = handler;
 	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART; /* Restart functions if interrupted by handler */
+	sa.sa_flags = SA_RESTART; // restart functions if interrupted by handler
 	if (sigaction(SIGINT, &sa, NULL) == -1
 	    || sigaction(SIGTERM, &sa, NULL) == -1
 	    || sigaction(SIGHUP, &sa, NULL) == -1)

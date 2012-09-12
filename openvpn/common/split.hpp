@@ -21,7 +21,7 @@ namespace openvpn {
     LEX lex;
     unsigned int nterms = 0;
     std::string term;
-    for (std::string::const_iterator i = input.begin(); i != input.end(); i++)
+    for (std::string::const_iterator i = input.begin(); i != input.end(); ++i)
       {
 	const char c = *i;
 	lex.put(c);
@@ -52,7 +52,7 @@ namespace openvpn {
 
     std::string term;
     bool defined = false;
-    for (std::string::const_iterator i = input.begin(); i != input.end(); i++)
+    for (std::string::const_iterator i = input.begin(); i != input.end(); ++i)
       {
 	const char c = *i;
 	lex.put(c);

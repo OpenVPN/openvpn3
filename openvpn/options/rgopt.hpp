@@ -59,7 +59,7 @@ namespace openvpn {
       flags_ |= RG_ENABLE;
       if (redirect_gateway)
 	flags_ |= RG_REROUTE_GW;
-      for (OptionList::IndexList::const_iterator i = idx.begin(); i != idx.end(); i++)
+      for (OptionList::IndexList::const_iterator i = idx.begin(); i != idx.end(); ++i)
 	{
 	  const Option& o = opt[*i];
 	  for (size_t j = 1; j < o.size(); ++j)

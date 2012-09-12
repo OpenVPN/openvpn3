@@ -133,7 +133,7 @@ namespace openvpn {
       std::string render_pem() const
       {
 	std::string ret;
-	for (const_iterator i = begin(); i != end(); i++)
+	for (const_iterator i = begin(); i != end(); ++i)
 	  ret += (*i)->render_pem();
 	return ret;
       }

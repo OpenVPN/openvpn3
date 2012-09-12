@@ -276,7 +276,7 @@ namespace openvpn {
 	    OptionList::IndexMap::const_iterator dopt = opt.map().find("route");
 	    if (dopt != opt.map().end())
 	      {
-		for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); i++)
+		for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
 		  {
 		    const Option& o = opt[*i];
 		    try {
@@ -309,7 +309,7 @@ namespace openvpn {
 	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option");
 	if (dopt != opt.map().end())
 	  {
-	    for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); i++)
+	    for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
 	      {
 		const Option& o = opt[*i];
 		try {
