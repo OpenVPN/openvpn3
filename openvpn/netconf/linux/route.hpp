@@ -109,16 +109,20 @@ namespace openvpn {
 		      const IP::Addr& mask,
 		      const IP::Addr& gw)
     {
-	std::ostringstream cmd;
-	cmd << "/sbin/route";
-	if (add)
-	  cmd << " add";
-	else
-	  cmd << " del";
-	cmd << " -net " << net << " netmask " << mask << " gw " << gw;
-	const std::string cmd_str = cmd.str();
-	OPENVPN_LOG(cmd_str);
-	return system_cmd(cmd_str);
+      Argv argv;
+      argv.push_back("/sbin/route");
+      if (add)
+	argv.push_back("add");
+      else
+	argv.push_back("del");
+      argv.push_back("-net");
+      argv.push_back(net.to_string());
+      argv.push_back("netmask");
+      argv.push_back(mask.to_string());
+      argv.push_back("gw");
+      argv.push_back(gw.to_string());
+      OPENVPN_LOG(argv.to_string());
+      return system_cmd(argv[0], argv);
     }
 
     static IP::Addr cvt_pnr_ip_v4(const std::string& hexaddr)
