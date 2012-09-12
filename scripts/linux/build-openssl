@@ -25,8 +25,9 @@ arm*)
 esac
 
 . $O3/lib-versions
-export DIST=$(pwd)/openssl
+export DIST=$(pwd)/openssl/openssl-linux
 rm -rf $OPENSSL_VERSION $DIST
+mkdir -p $DIST
 tar xfz $DL/$OPENSSL_VERSION.tar.gz
 cd $OPENSSL_VERSION
 ./Configure $OPENSSL_TARGET shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST

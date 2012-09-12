@@ -23,8 +23,8 @@ gcc -O3 -fPIC -pthread \
     -I$O3/client \
     -I$O3 \
     -I$DEP_DIR/boost \
-    -I$DEP_DIR/openssl/include \
-    -I$DEP_DIR/snappy/include \
+    -I$DEP_DIR/openssl/openssl-linux/include \
+    -I$DEP_DIR/snappy/snappy-linux/include \
     -c $O3/client/ovpncli.cpp
 
 echo WRAP
@@ -35,9 +35,9 @@ gcc -Os -fPIC -pthread \
     -I$O3/client \
     -I$O3 \
     -I/usr/lib/jvm/java-7-openjdk-amd64/include \
-    -L$DEP_DIR/boost/stage/lib \
-    -L$DEP_DIR/openssl/lib \
-    -L$DEP_DIR/snappy/lib \
+    -L$DEP_DIR/boost/stage-linux/lib \
+    -L$DEP_DIR/openssl/openssl-linux/lib \
+    -L$DEP_DIR/snappy/snappy-linux/lib \
     ovpncli_wrap.cxx \
     ovpncli.o \
     -o libovpncli.so \
