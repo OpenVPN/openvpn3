@@ -51,6 +51,30 @@ namespace openvpn {
 	  add_del_reroute_gw_v4(true);
 	  did_redirect_gw = true;
 	}
+      else
+	{
+	  OptionList::IndexMap::const_iterator dopt = opt.map().find("route");
+	  if (dopt != opt.map().end())
+	    {
+	      for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
+		{
+		  const Option& o = opt[*i];
+		  try {
+		    o.min_args(2);
+		    if (o.size() >= 4 && o[3] != "vpn_gateway")
+		      throw route_error("only tunnel routes supported");
+		    const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "route");
+		    if (!pair.is_canonical())
+		      throw route_error("route is not canonical");
+		    add_del_route(true, pair.addr, pair.netmask, route_gateway);
+		  }
+		  catch (const std::exception& e)
+		    {
+		      OPENVPN_THROW(route_error, "error parsing received route: " << o.render() << " : " << e.what());
+		    }
+		}
+	    }
+	}
     }
 
     void stop()
