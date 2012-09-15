@@ -19,7 +19,7 @@ if [ "$OSX_ONLY" != "1" ]; then
     done
 
     # ios simulators
-    for target in osx osx-dbg iossim iossim-dbg ; do
+    for target in iossim iossim-dbg ; do
 	echo '***************' TARGET $target
 	VERBOSE=1 TARGET=$target $O3/polarssl/build-polarssl
 	mv polarssl-$target polarssl/
