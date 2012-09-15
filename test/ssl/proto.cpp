@@ -36,6 +36,10 @@
 #define VERBOSE
 #endif
 
+#ifdef VERBOSE
+#define OPENVPN_DEBUG_PROTO
+#endif
+
 #define STRINGIZE1(x) #x
 #define STRINGIZE(x) STRINGIZE1(x)
 
@@ -60,6 +64,7 @@
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/init/initprocess.hpp>
 
+#if defined(USE_OPENSSL) || defined(USE_OPENSSL_SERVER)
 #include <openvpn/openssl/util/init.hpp>
 
 #include <openvpn/openssl/crypto/api.hpp>
@@ -75,14 +80,15 @@
 #undef KU_KEY_CERT_SIGN
 #undef KU_CRL_SIGN
 #undef SSL_VERIFY_NONE
+#endif
 
-#ifdef USE_APPLE_SSL
+#if defined(USE_APPLE_SSL)
 #include <openvpn/applecrypto/crypto/api.hpp>
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
 #include <openvpn/applecrypto/util/rand.hpp>
 #endif
 
-#ifdef USE_POLARSSL
+#if defined(USE_POLARSSL) || defined(USE_POLARSSL_SERVER)
 #include <openvpn/polarssl/crypto/api.hpp>
 #include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
@@ -94,15 +100,23 @@
 
 using namespace openvpn;
 
-// server Crypto/SSL/Rand implementation is always OpenSSL-based
+// server Crypto/SSL/Rand implementation (usually OpenSSL-based)
+#if defined(USE_POLARSSL_SERVER)
+typedef PolarSSLCryptoAPI ServerCryptoAPI;
+typedef PolarSSLContext<PolarSSLRandom> ServerSSLAPI;
+typedef PolarSSLRandom ServerRandomAPI;
+#elif defined(USE_OPENSSL_SERVER)
 typedef OpenSSLCryptoAPI ServerCryptoAPI;
 typedef OpenSSLContext ServerSSLAPI;
 typedef OpenSSLRandom ServerRandomAPI;
+#else
+#error No server SSL implementation defined
+#endif
 
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
 #if defined(USE_POLARSSL)
 typedef PolarSSLCryptoAPI ClientCryptoAPI;
-typedef PolarSSLContext ClientSSLAPI;
+typedef PolarSSLContext<PolarSSLRandom> ClientSSLAPI;
 typedef PolarSSLRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)
 typedef AppleCryptoAPI ClientCryptoAPI;
@@ -689,8 +703,12 @@ int test(const int thread_num)
     cp->handshake_window = Time::Duration::seconds(18); // will cause a small number of handshake failures
 #endif
     cp->become_primary = Time::Duration::seconds(30);
-    cp->renegotiate = Time::Duration::seconds(95);
-    cp->expire = Time::Duration::seconds(150);
+#if defined(CLIENT_NO_RENEG)
+    cp->renegotiate = Time::Duration::infinite();
+#else
+    cp->renegotiate = Time::Duration::seconds(90);
+#endif
+    cp->expire = cp->renegotiate + cp->renegotiate;
     cp->keepalive_ping = Time::Duration::seconds(5);
     cp->keepalive_timeout = Time::Duration::seconds(60);
 
@@ -708,6 +726,9 @@ int test(const int thread_num)
     sc.load_cert(server_crt);
     sc.load_private_key(server_key);
     sc.load_dh(dh_pem);
+#if defined(USE_POLARSSL_SERVER)
+    sc.rng = rng_serv;
+#endif
 #ifdef VERBOSE
     sc.enable_debug();
 #endif
@@ -743,8 +764,12 @@ int test(const int thread_num)
     sp->handshake_window = Time::Duration::seconds(17) + Time::Duration::binary_ms(512);
 #endif
     sp->become_primary = Time::Duration::seconds(30);
+#if defined(SERVER_NO_RENEG)
+    sp->renegotiate = Time::Duration::infinite();
+#else
     sp->renegotiate = Time::Duration::seconds(90);
-    sp->expire = Time::Duration::seconds(150);
+#endif
+    sp->expire = sp->renegotiate + sp->renegotiate;
     sp->keepalive_ping = Time::Duration::seconds(5);
     sp->keepalive_timeout = Time::Duration::seconds(60);
 

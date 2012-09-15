@@ -108,6 +108,7 @@ namespace openvpn {
 #endif
 	Base::update_now();
 	Base::reset();
+	//Base::enable_strict_openvpn_2x();
       }
 
       bool first_packet_received() const { return first_packet_received_; }
@@ -171,7 +172,7 @@ namespace openvpn {
       virtual void transport_recv(BufferAllocated& buf)
       {
 	try {
-	  OPENVPN_LOG_CLIPROTO("Transport recv " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
+	  OPENVPN_LOG_CLIPROTO("Transport RECV " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
 
 	  // update current time
 	  Base::update_now();
@@ -243,7 +244,7 @@ namespace openvpn {
 	  if (buf.size())
 	    {
 	      // send packet via transport to destination
-	      OPENVPN_LOG_CLIPROTO("Transport send " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
+	      OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
 	      if (transport->transport_send(buf))
 		Base::update_last_sent();
 	    }
@@ -323,7 +324,7 @@ namespace openvpn {
       // proto base class calls here for control channel network sends
       virtual void control_net_send(const Buffer& net_buf)
       {
-	OPENVPN_LOG_CLIPROTO("Transport send " << server_endpoint_render() << ' ' << Base::dump_packet(net_buf));
+	OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(net_buf));
 	if (transport->transport_send_const(net_buf))
 	  Base::update_last_sent();
       }

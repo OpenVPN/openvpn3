@@ -28,6 +28,7 @@
 #include <openvpn/pki/epkibase.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
+#include <openvpn/polarssl/pki/dh.hpp>
 #include <openvpn/polarssl/pki/rsactx.hpp>
 #include <openvpn/polarssl/util/error.hpp>
 
@@ -85,6 +86,7 @@ namespace openvpn {
       PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
       PolarSSLPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
       PolarSSLPKI::RSAContext::Ptr priv_key; // private key
+      PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       Flags flags;
@@ -128,15 +130,16 @@ namespace openvpn {
       void load_private_key(const std::string& key_txt)
       {
 	PolarSSLPKI::RSAContext::Ptr p = new PolarSSLPKI::RSAContext();
-	p->parse(key_txt, "private key");
+	p->parse(key_txt, "config");
 	priv_key = p;
       }
 
-#if 0 // fixme -- implement PolarSSL DH
       void load_dh(const std::string& dh_txt)
       {
+	PolarSSLPKI::DH::Ptr mydh = new PolarSSLPKI::DH();
+	mydh->parse(dh_txt, "server-config");
+	dh = mydh;
       }
-#endif
 
       void load(const OptionList& opt)
       {
@@ -163,14 +166,12 @@ namespace openvpn {
 	    load_private_key(key_txt);
 	  }
 
-#if 0 // fixme -- implement PolarSSL DH
 	// DH
 	if (mode.is_server())
 	  {
 	    const std::string& dh_txt = opt.get("dh", 1);
 	    load_dh(dh_txt);
 	  }
-#endif
 
 	// ns-cert-type
 	{
@@ -356,7 +357,13 @@ namespace openvpn {
 		throw PolarSSLException("cert and/or private key is undefined");
 	    }
 
-	  // fixme -- set DH
+	  // set DH
+	  if (c.dh)
+	    {
+	      status = ssl_set_dh_param_ctx(ssl, c.dh->get());
+	      if (status < 0)
+		throw PolarSSLException("error in ssl_set_dh_param_ctx", status);
+	    }
 
 	  // configure ciphertext buffers
 	  ct_in.set_frame(c.frame);

@@ -7,6 +7,10 @@ if(CMAKE_COMPILER_IS_GNUCC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} $ENV{LIB_FPIC} $ENV{LIB_OPT_LEVEL} $ENV{PLATFORM_FLAGS} $ENV{OTHER_COMPILER_FLAGS} -Wall -W -Wdeclaration-after-statement")
 endif(CMAKE_COMPILER_IS_GNUCC)
 
+if(ENABLE_SERVER)
+  add_definitions(-DPOLARSSL_SSL_SRV_C)
+endif()
+
 if(MINICRYPTO_DIR)
   add_library(minicrypto STATIC IMPORTED)
   set_property(TARGET minicrypto PROPERTY IMPORTED_LOCATION "${MINICRYPTO_DIR}/libminicrypto.a")

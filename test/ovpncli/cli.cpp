@@ -1,7 +1,9 @@
+#include <getopt.h> // for getopt_long
+#include <stdlib.h> // for atoi
+
 #include <string>
 #include <iostream>
 #include <fstream>
-
 #include <signal.h>
 
 #include <boost/asio.hpp>
@@ -11,12 +13,14 @@
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/file.hpp>
+#include <openvpn/time/timestr.hpp>
 
 #include <client/ovpncli.cpp>
 
-using namespace openvpn::ClientAPI;
+using namespace openvpn;
 
-class Client : public OpenVPNClient
+class Client : public ClientAPI::OpenVPNClient
 {
 private:
   virtual bool socket_protect(int socket)
@@ -25,41 +29,35 @@ private:
     return true;
   }
 
-  virtual void event(const Event& ev)
+  virtual void event(const ClientAPI::Event& ev)
   {
-    std::cout << "EVENT: " << ev.name << ' ' << ev.info << " err=" << ev.error << std::endl;
+    std::cout << date_time() << " EVENT: " << ev.name;
+    if (!ev.info.empty())
+      std::cout << ' ' << ev.info;
+    if (ev.error)
+      std::cout << " [ERR]";
+    std::cout << std::endl << std::flush;
   }
 
-  virtual void log(const LogInfo& log)
+  virtual void log(const ClientAPI::LogInfo& log)
   {
-    std::cout << "LOG: " << log.text;
+    std::cout << date_time() << ' ' << log.text << std::flush;
   }
 
-  virtual void external_pki_cert_request(ExternalPKICertRequest& certreq)
+  virtual void external_pki_cert_request(ClientAPI::ExternalPKICertRequest& certreq)
   {
     std::cout << "*** external_pki_cert_request" << std::endl;
     certreq.error = true;
     certreq.errorText = "external_pki_cert_request not implemented";
   }
 
-  virtual void external_pki_sign_request(ExternalPKISignRequest& signreq)
+  virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signreq)
   {
     std::cout << "*** external_pki_sign_request" << std::endl;
     signreq.error = true;
     signreq.errorText = "external_pki_sign_request not implemented";
   }
 };
-
-std::string read_text(const std::string& filename)
-{
-  std::ifstream ifs(filename.c_str());
-  if (!ifs)
-    OPENVPN_THROW_EXCEPTION("cannot open " << filename);
-  const std::string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-  if (!ifs)
-    OPENVPN_THROW_EXCEPTION("cannot read " << filename);
-  return str;
-}
 
 Client *the_client = NULL;
 
@@ -68,13 +66,13 @@ void worker_thread()
   boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
   try {
     std::cout << "Thread starting..." << std::endl;
-    Status connect_status = the_client->connect();
+    ClientAPI::Status connect_status = the_client->connect();
     if (connect_status.error)
-      std::cerr << "connect error: " <<  connect_status.message << std::endl;
+      std::cout << "connect error: " <<  connect_status.message << std::endl;
   }
   catch (const std::exception& e)
     {
-      std::cerr << "Connect thread exception: " << e.what() << std::endl;
+      std::cout << "Connect thread exception: " << e.what() << std::endl;
     }
   std::cout << "Thread finished" << std::endl;
 }
@@ -85,48 +83,100 @@ void handler(int signum)
     {
     case SIGTERM:
     case SIGINT:
-      std::cerr << "received stop signal " << signum << std::endl;
+      std::cout << "received stop signal " << signum << std::endl;
       if (the_client)
 	the_client->stop();
       break;
     case SIGHUP:
-      std::cerr << "received reconnect signal " << signum << std::endl;
+      std::cout << "received reconnect signal " << signum << std::endl;
       if (the_client)
 	the_client->reconnect(2);
       break;
     default:
-      std::cerr << "received unknown signal " << signum << std::endl;
+      std::cout << "received unknown signal " << signum << std::endl;
       break;
     }
 }
 
 int main(int argc, char *argv[])
 {
+  static const struct option longopts[] = {
+    { "username",   required_argument,      NULL,           'u' },
+    { "password",   required_argument,      NULL,           'p' },
+    { "proto",      required_argument,      NULL,           'P' },
+    { "server",     required_argument,      NULL,           's' },
+    { "timeout",    required_argument,      NULL,           't' },
+    { "compress",   required_argument,      NULL,           'c' },
+    { NULL,         0,                      NULL,           0 }
+  };
+
   try {
     if (argc >= 2)
       {
+	std::string username;
+	std::string password;
+	std::string proto;
+	std::string server;
+	int timeout = 0;
+	std::string compress;
+	int ch;
+
+	while ((ch = getopt_long(argc, argv, "u:p:P:s:t:c:", longopts, NULL)) != -1)
+	  {
+	    switch (ch)
+	      {
+	      case 'u':
+		username = optarg;
+		break;
+	      case 'p':
+		password = optarg;
+		break;
+	      case 'P':
+		proto = optarg;
+		break;
+	      case 's':
+		server = optarg;
+		break;
+	      case 't':
+		timeout = atoi(optarg);
+		break;
+	      case 'c':
+		compress = optarg;
+		break;
+	      default:
+		goto usage;
+	      }
+	  }
+	argc -= optind;
+	argv += optind;
+
 	Client::init_process();
 	Client client;
-	Config config;
-	config.content = read_text(argv[1]);
-	config.compressionMode = "yes";
-	EvalConfig eval = client.eval_config(config);
+	ClientAPI::Config config;
+	if (argc != 1)
+	  goto usage;
+	config.content = read_text(argv[0]);
+	config.serverOverride = server;
+	config.protoOverride = proto;
+	config.connTimeout = timeout;
+	config.compressionMode = compress;
+	ClientAPI::EvalConfig eval = client.eval_config(config);
 	if (eval.error)
 	  OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
 	if (eval.autologin)
 	  {
-	    if (argc > 2)
+	    if (!username.empty() || !password.empty())
 	      std::cout << "NOTE: creds were not needed" << std::endl;
 	  }
 	else
 	  {
-	    if (argc < 4)
+	    if (username.empty())
 	      OPENVPN_THROW_EXCEPTION("need creds");
-	    ProvideCreds creds;
-	    creds.username = argv[2];
-	    creds.password = argv[3];
+	    ClientAPI::ProvideCreds creds;
+	    creds.username = username;
+	    creds.password = password;
 	    creds.replacePasswordWithSessionID = true;
-	    Status creds_status = client.provide_creds(creds);
+	    ClientAPI::Status creds_status = client.provide_creds(creds);
 	    if (creds_status.error)
 	      OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
 	  }
@@ -150,19 +200,45 @@ int main(int argc, char *argv[])
 	// wait for connect thread to exit
 	thread->join();
 	the_client = NULL;
+
+	// print closing stats
+	{
+	  const int n = client.stats_n();
+	  std::vector<long long> stats = client.stats_bundle();
+
+	  std::cout << "STATS:" << std::endl;
+	  for (int i = 0; i < n; ++i)
+	    {
+	      const long long value = stats[i];
+	      if (value)
+		std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+	    }
+	}
 	return 0;
       }
     else
       {
-	std::cerr << "OpenVPN Client (ovpncli)" << std::endl;
-	std::cerr << "usage: " << argv[0] << " <config-file> [user] [password]" << std::endl;
+	goto usage;
 	return 2;
       }
   }
   catch (const std::exception& e)
     {
       the_client = NULL;
-      std::cerr << "Main thread exception: " << e.what() << std::endl;
+      std::cout << "Main thread exception: " << e.what() << std::endl;
       return 1;
     }
+
+  return 0;
+
+ usage:
+  std::cout << "OpenVPN Client (ovpncli)" << std::endl;
+  std::cout << "usage: cli <config-file> [options]" << std::endl;
+  std::cout << "--username, -u : username" << std::endl;
+  std::cout << "--password, -p : password" << std::endl;
+  std::cout << "--proto, -P    : protocol override (udp|tcp)" << std::endl;
+  std::cout << "--server, -S   : server override" << std::endl;
+  std::cout << "--timeout, -t  : timeout" << std::endl;
+  std::cout << "--compress, -c : compression mode (yes|no|asym)" << std::endl;
+  return 2;
 }

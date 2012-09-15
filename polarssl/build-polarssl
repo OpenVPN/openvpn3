@@ -5,6 +5,7 @@
 #   AES_NI=1 -- enable AES_NI processor optimization
 #   EXTERNAL_RNG=1 -- disable all internal RNG implementations (caller must provide)
 #   ENABLE_TESTING=1 -- run PolarSSL test scripts after build
+#   ENABLE_SERVER=1  -- enable SSL/TLS server code
 #   VERBOSE=1 -- see build commands
 #   USE_MINICRYPTO=1 -- use minicrypto library
 #   NO_WIPE=1 -- don't wipe source tree and reunzip tarball
@@ -68,43 +69,50 @@ else
     cp $PD/CMakeLists.txt .
 fi
 
+# set options
+OPT=""
+
 # add special support for AES-NI?
-OPT_AES_NI=""
 if [ "$AES_NI" = "1" ] && [ "$USE_MINICRYPTO" = "1" ]; then
-    OPT_AES_NI="-DOPENSSL_AES_NI=1"
+    OPT="$OPT -DOPENSSL_AES_NI=1"
 fi
 
 # RNG
-OPT_EXTERNAL_RNG=""
 if [ "$EXTERNAL_RNG" = "1" ]; then
-    OPT_EXTERNAL_RNG="-DEXTERNAL_RNG=1"
+    OPT="$OPT -DEXTERNAL_RNG=1"
 fi
 
 # enable testing?
-OPT_ENABLE_TESTING=""
 if [ "$ENABLE_TESTING" = "1" ]; then
-    OPT_ENABLE_TESTING="$OPT_ENABLE_TESTING -DENABLE_TESTING=1"
+    OPT="$OPT -DENABLE_TESTING=1"
 fi
 if [ "$DEBUG_BUILD" = "1" ]; then
-    OPT_ENABLE_TESTING="$OPT_ENABLE_TESTING -DENABLE_SELF_TEST=1"
+    OPT="$OPT -DENABLE_SELF_TEST=1"
 fi
 
 # configure target
-OPT_CMAKE_TARGET=""
 if [ "$CMAKE_TARGET" ]; then
-    OPT_CMAKE_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/$CMAKE_TARGET.cmake"
+    OPT="$OPT -DCMAKE_TOOLCHAIN_FILE=$PD/$CMAKE_TARGET.cmake"
 elif [ "$APPLE_FAMILY" = "1" ]; then
-    OPT_CMAKE_TARGET="-DCMAKE_TOOLCHAIN_FILE=$PD/apple.cmake"
+    OPT="$OPT -DCMAKE_TOOLCHAIN_FILE=$PD/apple.cmake"
 fi
 
 # OpenSSL
-OPT_MINICRYPTO_DIR=""
 if [ "$MINICRYPTO_DIR" ] && [ "$USE_MINICRYPTO" = "1" ]; then
-    OPT_MINICRYPTO_DIR="-DMINICRYPTO_DIR=$MINICRYPTO_DIR"
+    OPT="$OPT -DMINICRYPTO_DIR=$MINICRYPTO_DIR"
 fi
 
-# combine options
-OPT="$OPT_MINICRYPTO_DIR $OPT_AES_NI $OPT_EXTERNAL_RNG $OPT_ENABLE_TESTING $OPT_CMAKE_TARGET"
+# OpenSSL
+if [ "$MINICRYPTO_DIR" ] && [ "$USE_MINICRYPTO" = "1" ]; then
+    OPT="$OPT -DMINICRYPTO_DIR=$MINICRYPTO_DIR"
+fi
+
+# Enable SSL/TLS server
+if [ "$ENABLE_SERVER" = "1" ]; then
+    OPT="$OPT -DENABLE_SERVER=1"
+fi
+
+# echo options
 echo OPTIONS $OPT
 
 # build it

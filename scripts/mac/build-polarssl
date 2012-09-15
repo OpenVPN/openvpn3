@@ -9,18 +9,26 @@ fi
 rm -rf polarssl
 mkdir polarssl
 
-# for ios, build with minicrypto
-for target in ios-dbg ios ; do
-    echo '***************' TARGET $target
-    VERBOSE=1 TARGET=$target USE_MINICRYPTO=1 MINICRYPTO_DIR=$(pwd)/minicrypto/minicrypto-$target $O3/polarssl/build-polarssl
-    mv polarssl-$target polarssl
+if [ "$OSX_ONLY" != "1" ]; then
+    # for ios, build with minicrypto
+    for target in ios-dbg ios ; do
+	echo '***************' TARGET $target
+	VERBOSE=1 TARGET=$target USE_MINICRYPTO=1 MINICRYPTO_DIR=$(pwd)/minicrypto/minicrypto-$target $O3/polarssl/build-polarssl
+	mv polarssl-$target polarssl
+	[ "$IOS_DBG_ONLY" = "1" ] && exit
+    done
 
-    [ "$IOS_DBG_ONLY" = "1" ] && exit
-done
+    # ios simulators
+    for target in osx osx-dbg iossim iossim-dbg ; do
+	echo '***************' TARGET $target
+	VERBOSE=1 TARGET=$target $O3/polarssl/build-polarssl
+	mv polarssl-$target polarssl/
+    done
+fi
 
-# all except ios device
-for target in osx osx-dbg iossim iossim-dbg ; do
+# osx
+for target in osx osx-dbg ; do
     echo '***************' TARGET $target
-    VERBOSE=1 TARGET=$target $O3/polarssl/build-polarssl
+    VERBOSE=1 TARGET=$target ENABLE_SERVER=1 $O3/polarssl/build-polarssl
     mv polarssl-$target polarssl/
 done
