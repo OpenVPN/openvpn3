@@ -284,6 +284,8 @@ namespace openvpn {
 		      if (o.size() >= 4 && o[3] != "vpn_gateway")
 			throw tun_builder_route_error("only tunnel routes supported");
 		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "route");
+		      if (!pair.is_canonical())
+			throw tun_builder_error("route is not canonical");
 		      if (!tb->tun_builder_add_route(pair.addr.to_string(),
 						     pair.netmask.prefix_len(),
 						     pair.version() == IP::Addr::V6))
