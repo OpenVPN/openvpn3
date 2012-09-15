@@ -139,6 +139,7 @@ namespace openvpn {
       // S_x : server states
 
       // ACK states -- must be first before other states
+      STATE_UNDEF=-1,
       C_WAIT_RESET_ACK=0,
       C_WAIT_AUTH_ACK=1,
       S_WAIT_RESET_ACK=2,
@@ -147,15 +148,16 @@ namespace openvpn {
 
       // key negotiation states (client)
       C_INITIAL=4,
-      C_WAIT_RESET=5,
+      C_WAIT_RESET=5,   // must be C_INITIAL+1
       C_WAIT_AUTH=6,
 
       // key negotiation states (server)
-      S_WAIT_RESET=7,
-      S_WAIT_AUTH=8,
+      S_INITIAL=7,
+      S_WAIT_RESET=8,   // must be S_INITIAL+1
+      S_WAIT_AUTH=9,
 
       // key negotiation states (client and server)
-      ACTIVE=9,
+      ACTIVE=10,
     };
 
     static unsigned int opcode_extract(const unsigned int op)
@@ -805,13 +807,15 @@ namespace openvpn {
 	: Base(*p.config->ssl_ctx, p.config->now, p.config->frame, p.stats,
 	       p.config->reliable_window, p.config->max_ack_list),
 	  proto(p),
+	  state(STATE_UNDEF),
 	  dirty(0),
 	  handled_pid_wrap(false),
 	  is_reliable(p.config->protocol.is_reliable()),
 	  tlsprf_self(p.is_server()),
 	  tlsprf_peer(!p.is_server())
       {
-	state = initiator ? C_INITIAL : S_WAIT_RESET;
+	// set initial state
+	set_state((proto.is_server() ? S_INITIAL : C_INITIAL) + (initiator ? 0 : 1));
 
 	// get key_id from parent
 	key_id_ = proto.next_key_id();
@@ -831,15 +835,15 @@ namespace openvpn {
 	compress = proto.config->comp_ctx.new_compressor(proto.config->frame, proto.stats);
       }
 
-      // need to call only on the initiator side of the connection (i.e. client)
+      // need to call only on the initiator side of the connection
       void start()
       {
-	if (state == C_INITIAL)
+	if (state == C_INITIAL || state == S_INITIAL)
 	  {
 	    send_reset();
-	    state = C_WAIT_RESET;
+	    set_state(state+1);
 	    dirty = true;
-	  }
+	  }  
       }
 
       // control channel flush
@@ -1123,6 +1127,38 @@ namespace openvpn {
       }
 
       // for debugging
+      static const char *state_string(const int s)
+      {
+	switch (s)
+	  {
+	  case C_WAIT_RESET_ACK:
+	    return "C_WAIT_RESET_ACK";
+	  case C_WAIT_AUTH_ACK:
+	    return "C_WAIT_AUTH_ACK";
+	  case S_WAIT_RESET_ACK:
+	    return "S_WAIT_RESET_ACK";
+	  case S_WAIT_AUTH_ACK:
+	    return "S_WAIT_AUTH_ACK";
+	  case C_INITIAL:
+	    return "C_INITIAL";
+	  case C_WAIT_RESET:
+	    return "C_WAIT_RESET";
+	  case C_WAIT_AUTH:
+	    return "C_WAIT_AUTH";
+	  case S_INITIAL:
+	    return "S_INITIAL";
+	  case S_WAIT_RESET:
+	    return "S_WAIT_RESET";
+	  case S_WAIT_AUTH:
+	    return "S_WAIT_AUTH";
+	  case ACTIVE:
+	    return "ACTIVE";
+	  default:
+	    return "STATE_UNDEF";
+	  }
+      }
+
+      // for debugging
       int seconds_until(const Time& next_time)
       {
 	Time::Duration d = next_time - *now;
@@ -1130,6 +1166,12 @@ namespace openvpn {
 	  return -1;
 	else
 	  return d.to_seconds();
+      }
+
+      void set_state(const int newstate)
+      {
+	//OPENVPN_LOG_PROTO("KeyContext " << (proto.is_server() ? "SERVER " : "CLIENT ") << state_string(state) << " -> " << state_string(newstate));
+	state = newstate;
       }
 
       void set_event(const EventType current)
@@ -1238,11 +1280,12 @@ namespace openvpn {
 	    switch (state)
 	      {
 	      case C_WAIT_RESET:
-		state = C_WAIT_RESET_ACK;
+		send_reset();
+		set_state(C_WAIT_RESET_ACK);
 		break;
 	      case S_WAIT_RESET:
 		send_reset();
-		state = S_WAIT_RESET_ACK;
+		set_state(S_WAIT_RESET_ACK);
 		break;
 	      }
 	  }
@@ -1254,12 +1297,12 @@ namespace openvpn {
 	  {
 	  case C_WAIT_AUTH:
 	    recv_auth(*to_app_buf);
-	    state = C_WAIT_AUTH_ACK;
+	    set_state(C_WAIT_AUTH_ACK);
 	    break;
 	  case S_WAIT_AUTH:
 	    recv_auth(*to_app_buf);
 	    send_auth();	
-	    state = S_WAIT_AUTH_ACK;
+	    set_state(S_WAIT_AUTH_ACK);
 	    break;
 	  case S_WAIT_AUTH_ACK: // rare case where client receives auth, goes ACTIVE, but the ACK response is dropped
 	  case ACTIVE:
@@ -1283,19 +1326,19 @@ namespace openvpn {
 	      case C_WAIT_RESET_ACK:
 		start_handshake();
 		send_auth();
-		state = C_WAIT_AUTH;
+		set_state(C_WAIT_AUTH);
 		break;
 	      case S_WAIT_RESET_ACK:
 		start_handshake();
-		state = S_WAIT_AUTH;
+		set_state(S_WAIT_AUTH);
 		break;
 	      case C_WAIT_AUTH_ACK:
 		active();
-		state = ACTIVE;
+		set_state(ACTIVE);
 		break;
 	      case S_WAIT_AUTH_ACK:
 		active();
-		state = ACTIVE;
+		set_state(ACTIVE);
 		break;
 	      }
 	  }
@@ -1656,7 +1699,7 @@ namespace openvpn {
       // BEGIN KeyContext data members
 
       ProtoContext& proto; // parent
-      unsigned int state;
+      int state;
       unsigned int key_id_;
       bool dirty;
       bool handled_pid_wrap;
