@@ -108,6 +108,7 @@ namespace openvpn {
 	  break;
 	default: 
 	  error(buf); // unknown op
+	  break;
 	}
     }
 

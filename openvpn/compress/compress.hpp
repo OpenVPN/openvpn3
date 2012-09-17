@@ -218,9 +218,11 @@ namespace openvpn {
 	  return "IV_SNAPPY=1\n";
 #endif
 	case LZO_STUB:
-	  return "IV_LZO_STUB=1\n";
 	case COMP_STUB:
-	  return "IV_COMP_STUB=1\n";
+	  return
+	    "IV_LZO_STUB=1\n"
+	    "IV_COMP_STUB=1\n"
+	    ;
 	case ANY:
 	  return
 #ifdef HAVE_SNAPPY
@@ -245,6 +247,7 @@ namespace openvpn {
 #else
 	    "IV_LZO_STUB=1\n"
 #endif
+	    "IV_COMP_STUB=1\n"
 	    ;
 	default:
 	  return NULL;

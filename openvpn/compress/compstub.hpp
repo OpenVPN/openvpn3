@@ -24,6 +24,7 @@ namespace openvpn {
         ,lzo(frame, stats, false, true)
 #endif
     {
+      OPENVPN_LOG_COMPRESS("Comp-stub init swap=" << support_swap_arg);
     }
 
     virtual const char *name() const { return "stub"; }
