@@ -11,6 +11,7 @@
 #include <cstring>
 #include <string>
 #include <sstream>
+#include <algorithm>                  // for std::min
 
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 
@@ -270,14 +271,26 @@ namespace openvpn {
 	pid_time_backtrack = 30;
 	pid_debug_level = PacketIDReceive::DEBUG_MEDIUM;
 	handshake_window = Time::Duration::seconds(60);
-	become_primary = Time::Duration::seconds(60);
 	renegotiate = Time::Duration::seconds(3600);
-	expire = Time::Duration::seconds(7200);
 	keepalive_ping = Time::Duration::seconds(8);
 	keepalive_timeout = Time::Duration::seconds(40);
 	comp_ctx = CompressContext(CompressContext::NONE, false);
 	protocol = Protocol();
 	pid_mode = PacketIDReceive::UDP_MODE;
+
+	// load parameters that can be present in both config file or pushed options
+	load_common(opt, pco);
+
+	// duration parms
+	{
+	  load_duration_parm(renegotiate, "reneg-sec", opt);
+	  expire = renegotiate;
+	  load_duration_parm(expire, "tran-window", opt);
+	  expire += renegotiate;
+	  load_duration_parm(handshake_window, "hand-window", opt);
+	  become_primary = Time::Duration::seconds(std::min(handshake_window.to_seconds(),
+							    renegotiate.to_seconds() / 2));
+	}
 
 	// autologin
 	autologin = ParseClientConfig::is_autologin(opt);
@@ -364,6 +377,15 @@ namespace openvpn {
       // load options string pushed by server
       void process_push(const OptionList& opt, const ProtoContextOptions& pco)
       {
+	try {
+	  // load parameters that can be present in both config file or pushed options
+	  load_common(opt, pco);
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
+	  }
+
 	// cipher
 	std::string new_cipher;
 	try {
@@ -506,6 +528,25 @@ namespace openvpn {
       }
 
     private:
+      unsigned int load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
+      {
+	unsigned int ret = dur.to_seconds();
+	const Option *o = opt.get_ptr(name);
+	if (o)
+	  {
+	    ret = types<unsigned int>::parse(o->get(1));
+	    dur = Time::Duration::seconds(ret);
+	  }
+	return ret;
+      }
+
+      // load parameters that can be present in both config file or pushed options
+      void load_common(const OptionList& opt, const ProtoContextOptions& pco)
+      {
+	load_duration_parm(keepalive_ping, "ping", opt);
+	load_duration_parm(keepalive_timeout, "ping-restart", opt);
+      }
+
       // used to generate link_mtu option sent to peer
       unsigned int link_mtu_adjust() const
       {
