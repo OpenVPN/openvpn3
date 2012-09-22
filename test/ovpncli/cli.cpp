@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
   std::cout << "--username, -u : username" << std::endl;
   std::cout << "--password, -p : password" << std::endl;
   std::cout << "--proto, -P    : protocol override (udp|tcp)" << std::endl;
-  std::cout << "--server, -S   : server override" << std::endl;
+  std::cout << "--server, -s   : server override" << std::endl;
   std::cout << "--timeout, -t  : timeout" << std::endl;
   std::cout << "--compress, -c : compression mode (yes|no|asym)" << std::endl;
   return 2;
