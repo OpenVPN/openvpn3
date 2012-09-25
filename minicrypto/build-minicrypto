@@ -13,6 +13,13 @@ fi
 . $O3/vars-$TARGET
 . $O3/lib-versions
 
+# Build ASM files with clang 3.0
+GCC_AS_CMD=$HOME/clang3/clang
+if ! [ -f "$GCC_AS_CMD" ]; then
+    echo "clang 3.0 binary must be present in $GCC_AS_CMD to assemble ARM crypto algorithms"
+    exit 1
+fi
+
 DEST=minicrypto/minicrypto-$PLATFORM
 
 GLOBAL_COMPILE_FLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -DSHA1_ASM -DBF_PTR -DOPENSSL_VERSION_PTEXT= -D__LP32__"
@@ -114,7 +121,7 @@ done
 
 # build armv4cpuid.S
 #$O3/minicrypto/arm-as-to-ios <armv4cpuid.pre >armv4cpuid.S
-#CMD="$GCC_CMD $GLOBAL_COMPILE_FLAGS -DSYS_macosx -DNO_THUMB -c armv4cpuid.S"
+#CMD="$GCC_AS_CMD $GLOBAL_COMPILE_FLAGS -DSYS_macosx -DNO_THUMB -c armv4cpuid.S"
 #echo $CMD
 #$CMD
 
@@ -132,7 +139,7 @@ for f in *.pl ; do
     else
 	perl $f >$S	
     fi
-    CMD="$GCC_CMD $GLOBAL_COMPILE_FLAGS $COMPILE_FLAGS -DSYS_macosx -c $S"
+    CMD="$GCC_AS_CMD $GLOBAL_COMPILE_FLAGS $COMPILE_FLAGS -DSYS_macosx -c $S"
     echo $CMD
     $CMD
 done

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+echo "******* BOOST"
+$O3/scripts/mac/build-boost
+echo "******* MINICRYPTO"
+$O3/scripts/mac/build-minicrypto
+echo "******* POLARSSL"
+$O3/scripts/mac/build-polarssl
+echo "******* LZO"
+$O3/scripts/mac/build-lzo
+echo "******* SNAPPY"
+$O3/scripts/mac/build-snappy

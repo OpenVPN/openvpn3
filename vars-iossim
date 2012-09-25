@@ -2,7 +2,7 @@ export PLATFORM=iossim
 export APPLE_FAMILY=1
 export GPP_CMD=clang++
 export GCC_CMD=clang
-export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator5.1.sdk"
+export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator6.0.sdk"
 export PLATFORM_FLAGS="-arch i386 -miphoneos-version-min=5.0 -isysroot $IOS_SDK"
 export OTHER_COMPILER_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 export LIB_OPT_LEVEL="-O3"

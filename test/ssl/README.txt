@@ -2,21 +2,9 @@ Building proto.cpp sample:
 
 On Apple:
 
-  Build with Apple SSL client and OpenSSL (osx default) server:
+  Build with PolarSSL client and server (no ASM crypto algs):
 
-    OPENSSL_DIR="" SSL_BOTH=1 build proto
-
-  Build with Apple SSL client and OpenSSL (custom build) server:
-
-    SSL_BOTH=1 build proto
-
-  Build with OpenSSL client and OpenSSL server (custom build):
-
-    OSSL=1 build proto
-
-  Build with PolarSSL client and OpenSSL server (custom build):
-
-    PSSL=1 OSSL=1 build proto
+    PSSL=1 NOSSL=1 GCC_EXTRA="-DUSE_POLARSSL_SERVER" build proto
 
 On linux:
 
@@ -24,6 +12,6 @@ On linux:
 
     build proto
 
-  Build with PolarSSL:
+  Build with PolarSSL client:
 
     PSSL=1 build proto
