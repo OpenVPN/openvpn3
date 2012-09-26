@@ -20,7 +20,6 @@ gcc -O3 -fPIC -pthread \
     -fvisibility=hidden \
     -DUSE_OPENSSL \
     -DHAVE_SNAPPY \
-    -DHAVE_LZO \
     -I$O3/client \
     -I$O3 \
     -I$DEP_DIR/boost \
