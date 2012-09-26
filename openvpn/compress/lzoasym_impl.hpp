@@ -22,9 +22,9 @@
 #endif
 
 // Failure modes
-#define LZOASYM_CHECK_INPUT_OVERRUN(x) if (LZOASYM_UNLIKELY(size_t(input_ptr_end - input_ptr) < size_t(x))) goto input_overrun
-#define LZOASYM_CHECK_OUTPUT_OVERRUN(x) if (LZOASYM_UNLIKELY(size_t(output_ptr_end - output_ptr) < size_t(x))) goto output_overrun
-#define LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr) if (LZOASYM_UNLIKELY(match_ptr < output) || LZOASYM_UNLIKELY(match_ptr >= output_ptr)) goto lookbehind_overrun
+#define LZOASYM_CHECK_INPUT_OVERFLOW(x) if (LZOASYM_UNLIKELY(int(input_ptr_end - input_ptr) < int(x))) goto input_overflow
+#define LZOASYM_CHECK_OUTPUT_OVERFLOW(x) if (LZOASYM_UNLIKELY(int(output_ptr_end - output_ptr) < int(x))) goto output_overflow
+#define LZOASYM_CHECK_MATCH_OVERFLOW(match_ptr) if (LZOASYM_UNLIKELY(match_ptr < output) || LZOASYM_UNLIKELY(match_ptr >= output_ptr)) goto match_overflow
 #define LZOASYM_ASSERT(cond) if (LZOASYM_UNLIKELY(!(cond))) goto assert_fail
 
 namespace openvpn {
@@ -34,9 +34,9 @@ namespace openvpn {
       LZOASYM_E_OK=0,
       LZOASYM_E_EOF_NOT_FOUND=-1,
       LZOASYM_E_INPUT_NOT_CONSUMED=-2,
-      LZOASYM_E_INPUT_OVERRUN=-3,
-      LZOASYM_E_OUTPUT_OVERRUN=-4,
-      LZOASYM_E_LOOKBEHIND_OVERRUN=-5,
+      LZOASYM_E_INPUT_OVERFLOW=-3,
+      LZOASYM_E_OUTPUT_OVERFLOW=-4,
+      LZOASYM_E_MATCH_OVERFLOW=-5,
       LZOASYM_E_ASSERT_FAILED=-6,
     };
 
@@ -185,17 +185,16 @@ namespace openvpn {
 	  while (LZOASYM_LIKELY(input_ptr < input_ptr_end) && LZOASYM_LIKELY(output_ptr <= output_ptr_end))
 	    {
 	      z = *input_ptr++;
-	      if (z < 16)
+	      if (z < 16) // literal data?
 		{
-		  // a literal run
 		  if (LZOASYM_UNLIKELY(z == 0))
 		    {
-		      LZOASYM_CHECK_INPUT_OVERRUN(1);
+		      LZOASYM_CHECK_INPUT_OVERFLOW(1);
 		      while (LZOASYM_UNLIKELY(*input_ptr == 0))
 			{
 			  z += 255;
 			  input_ptr++;
-			  LZOASYM_CHECK_INPUT_OVERRUN(1);
+			  LZOASYM_CHECK_INPUT_OVERFLOW(1);
 			}
 		      z += 15 + *input_ptr++;
 		    }
@@ -204,14 +203,14 @@ namespace openvpn {
 		  {
 		    LZOASYM_ASSERT(z > 0);
 		    const size_t len = z + 3;
-		    LZOASYM_CHECK_OUTPUT_OVERRUN(len);
-		    LZOASYM_CHECK_INPUT_OVERRUN(len+1);
+		    LZOASYM_CHECK_OUTPUT_OVERFLOW(len);
+		    LZOASYM_CHECK_INPUT_OVERFLOW(len+1);
 		    copy_fast(output_ptr, input_ptr, len);
 		    input_ptr += len;
 		    output_ptr += len;
 		  }
 
-		initial_literal_run:
+		initial_literal:
 		  z = *input_ptr++;
 		  if (LZOASYM_UNLIKELY(z < 16))
 		    {
@@ -219,12 +218,12 @@ namespace openvpn {
 		      match_ptr -= z >> 2;
 		      match_ptr -= *input_ptr++ << 2;
 
-		      LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr);
-		      LZOASYM_CHECK_OUTPUT_OVERRUN(3);
+		      LZOASYM_CHECK_MATCH_OVERFLOW(match_ptr);
+		      LZOASYM_CHECK_OUTPUT_OVERFLOW(3);
 		      *output_ptr++ = *match_ptr++;
 		      *output_ptr++ = *match_ptr++;
 		      *output_ptr++ = *match_ptr;
-		      goto match_done;
+		      goto match_complete;
 		    }
 		}
 
@@ -242,12 +241,12 @@ namespace openvpn {
 		    z &= 31;
 		    if (LZOASYM_UNLIKELY(z == 0))
 		      {
-			LZOASYM_CHECK_INPUT_OVERRUN(1);
+			LZOASYM_CHECK_INPUT_OVERFLOW(1);
 			while (LZOASYM_UNLIKELY(*input_ptr == 0))
 			  {
 			    z += 255;
 			    input_ptr++;
-			    LZOASYM_CHECK_INPUT_OVERRUN(1);
+			    LZOASYM_CHECK_INPUT_OVERFLOW(1);
 			  }
 			z += 31 + *input_ptr++;
 		      }
@@ -263,12 +262,12 @@ namespace openvpn {
 		    z &= 7;
 		    if (LZOASYM_UNLIKELY(z == 0))
 		      {
-			LZOASYM_CHECK_INPUT_OVERRUN(1);
+			LZOASYM_CHECK_INPUT_OVERFLOW(1);
 			while (LZOASYM_UNLIKELY(*input_ptr == 0))
 			  {
 			    z += 255;
 			    input_ptr++;
-			    LZOASYM_CHECK_INPUT_OVERRUN(1);
+			    LZOASYM_CHECK_INPUT_OVERFLOW(1);
 			  }
 			z += 7 + *input_ptr++;
 		      }
@@ -285,18 +284,18 @@ namespace openvpn {
 		    match_ptr -= z >> 2;
 		    match_ptr -= *input_ptr++ << 2;
 
-		    LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr);
-		    LZOASYM_CHECK_OUTPUT_OVERRUN(2);
+		    LZOASYM_CHECK_MATCH_OVERFLOW(match_ptr);
+		    LZOASYM_CHECK_OUTPUT_OVERFLOW(2);
 		    *output_ptr++ = *match_ptr++;
 		    *output_ptr++ = *match_ptr;
-		    goto match_done;
+		    goto match_complete;
 		  }
 
 		// copy the match we found above
 		{
-		  LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr);
+		  LZOASYM_CHECK_MATCH_OVERFLOW(match_ptr);
 		  LZOASYM_ASSERT(z > 0);
-		  LZOASYM_CHECK_OUTPUT_OVERRUN(z+3-1);
+		  LZOASYM_CHECK_OUTPUT_OVERFLOW(z+3-1);
 
 		  const size_t len = z + 2;
 		  // Should we use optimized incremental copy?
@@ -310,17 +309,17 @@ namespace openvpn {
 		  output_ptr += len;
 		}
 
-	      match_done:
+	      match_complete:
 		z = input_ptr[-2] & 3;
 		if (LZOASYM_LIKELY(z == 0))
 		  break;
 
-	      match_next:
+	      match_continue:
 		// copy literal data
 		LZOASYM_ASSERT(z > 0);
 		LZOASYM_ASSERT(z < 4);
-		LZOASYM_CHECK_OUTPUT_OVERRUN(z);
-		LZOASYM_CHECK_INPUT_OVERRUN(z+1);
+		LZOASYM_CHECK_OUTPUT_OVERFLOW(z);
+		LZOASYM_CHECK_INPUT_OVERFLOW(z+1);
 		*output_ptr++ = *input_ptr++;
 		if (LZOASYM_LIKELY(z > 1))
 		  {
@@ -334,17 +333,17 @@ namespace openvpn {
 	}
       else
 	{
-	  // input began with a match or a literal run (rare)
+	  // input began with a match or a literal (rare)
 	  z = *input_ptr++ - 17;
 	  if (z < 4)
-	    goto match_next;
+	    goto match_continue;
 	  LZOASYM_ASSERT(z > 0);
-	  LZOASYM_CHECK_OUTPUT_OVERRUN(z);
-	  LZOASYM_CHECK_INPUT_OVERRUN(z+1);
+	  LZOASYM_CHECK_OUTPUT_OVERFLOW(z);
+	  LZOASYM_CHECK_INPUT_OVERFLOW(z+1);
 	  do {
 	    *output_ptr++ = *input_ptr++;
 	  } while (--z > 0);
-	  goto initial_literal_run;
+	  goto initial_literal;
 	}
 
       *output_length = ptr_diff(output_ptr, output);
@@ -354,19 +353,19 @@ namespace openvpn {
       LZOASYM_ASSERT(z == 1);
       *output_length = ptr_diff(output_ptr, output);
       return (input_ptr == input_ptr_end ? LZOASYM_E_OK :
-	      (input_ptr < input_ptr_end  ? LZOASYM_E_INPUT_NOT_CONSUMED : LZOASYM_E_INPUT_OVERRUN));
+	      (input_ptr < input_ptr_end  ? LZOASYM_E_INPUT_NOT_CONSUMED : LZOASYM_E_INPUT_OVERFLOW));
 
-    input_overrun:
+    input_overflow:
       *output_length = ptr_diff(output_ptr, output);
-      return LZOASYM_E_INPUT_OVERRUN;
+      return LZOASYM_E_INPUT_OVERFLOW;
 
-    output_overrun:
+    output_overflow:
       *output_length = ptr_diff(output_ptr, output);
-      return LZOASYM_E_OUTPUT_OVERRUN;
+      return LZOASYM_E_OUTPUT_OVERFLOW;
 
-    lookbehind_overrun:
+    match_overflow:
       *output_length = ptr_diff(output_ptr, output);
-      return LZOASYM_E_LOOKBEHIND_OVERRUN;
+      return LZOASYM_E_MATCH_OVERFLOW;
 
     assert_fail:
       return LZOASYM_E_ASSERT_FAILED;
@@ -374,9 +373,9 @@ namespace openvpn {
   }
 }
 
-#undef LZOASYM_CHECK_INPUT_OVERRUN
-#undef LZOASYM_CHECK_OUTPUT_OVERRUN
-#undef LZOASYM_CHECK_LOOKBEHIND_OVERRUN
+#undef LZOASYM_CHECK_INPUT_OVERFLOW
+#undef LZOASYM_CHECK_OUTPUT_OVERFLOW
+#undef LZOASYM_CHECK_MATCH_OVERFLOW
 #undef LZOASYM_ASSERT
 #undef LZOASYM_LIKELY
 #undef LZOASYM_UNLIKELY
