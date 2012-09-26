@@ -8,24 +8,34 @@
 #ifndef OPENVPN_COMPRESS_LZOASYM_IMPL_H
 #define OPENVPN_COMPRESS_LZOASYM_IMPL_H
 
+#include <cstring> // for std::memcpy
+
 #include <boost/cstdint.hpp> // for boost::uint32_t, etc.
 
-// Implementation of asymmetrical LZO compression (only uncompress, don't compress)
+// Implementation of asymmetrical LZO compression (only uncompress, don'z compress)
 
-#define LZOASYM_UNALIGNED_OK_2
-#define LZOASYM_UNALIGNED_OK_4
-#define LZOASYM_ALIGNED_OK_4
-//#define LZOASYM_UNALIGNED_OK_8
-
-#define LZOASYM_LITTLE_ENDIAN
-
-#define LZOASYM_NEED_IP(x)  if (size_t(ip_end - ip) < size_t(x))  goto input_overrun
-#define LZOASYM_NEED_OP(x)  if (size_t(op_end - op) < size_t(x))  goto output_overrun
-#define LZOASYM_TEST_LB(m_pos)    if (m_pos < out || m_pos >= op) goto lookbehind_overrun
-#define LZOASYM_ASSERT(cond)                         if (!(cond)) goto assertion_failed
+#define LZOASYM_CHECK_INPUT_OVERRUN(x) if (size_t(input_ptr_end - input_ptr) < size_t(x)) goto input_overrun
+#define LZOASYM_CHECK_OUTPUT_OVERRUN(x) if (size_t(output_ptr_end - output_ptr) < size_t(x)) goto output_overrun
+#define LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr) if (match_ptr < output || match_ptr >= output_ptr) goto lookbehind_overrun
+#define LZOASYM_ASSERT(cond) if (!(cond)) goto assert_fail
 
 namespace openvpn {
   namespace lzo_asym_impl {
+    enum {
+      LZOASYM_E_OK=0,
+      LZOASYM_E_EOF_NOT_FOUND=-1,
+      LZOASYM_E_INPUT_NOT_CONSUMED=-2,
+      LZOASYM_E_INPUT_OVERRUN=-3,
+      LZOASYM_E_OUTPUT_OVERRUN=-4,
+      LZOASYM_E_LOOKBEHIND_OVERRUN=-5,
+      LZOASYM_E_ASSERT_FAILED=-6,
+    };
+
+    enum {
+      LZOASYM_EOF_CODE=1,
+      LZOASYM_M2_MAX_OFFSET=0x0800,
+    };
+
     template <typename T>
     inline T get_mem(const void *p)
     {
@@ -60,314 +70,290 @@ namespace openvpn {
       return a - b;
     }
 
-    enum {
-      LZOASYM_E_OK=0,
-      LZOASYM_E_EOF_NOT_FOUND=-1,
-      LZOASYM_E_INPUT_NOT_CONSUMED=-2,
-      LZOASYM_E_INPUT_OVERRUN=-3,
-      LZOASYM_E_OUTPUT_OVERRUN=-4,
-      LZOASYM_E_LOOKBEHIND_OVERRUN=-5,
-      LZOASYM_E_ASSERT_FAILED=-6,
-    };
-
-    enum {
-      LZOASYM_EOF_CODE=1,
-      LZOASYM_M2_MAX_OFFSET=0x0800,
-    };
-
-    int lzo1x_decompress_safe(const unsigned char *in, size_t in_len, unsigned char *out, size_t *out_len)
+    inline size_t get_u16(const unsigned char *p)
     {
-      unsigned char *op;
-      const unsigned char *ip;
-      size_t t;
-      const unsigned char *m_pos;
-      const unsigned char *const ip_end = in + in_len;
-      unsigned char *const op_end = out + *out_len;
+      // NOTE: assumes little-endian and unaligned 16-bit access is okay.
+      // For a slower alternative without these assumptions, try: p[0] | (p[1] << 8)
+      return get_mem<boost::uint16_t>(p);
+    }
 
-      *out_len = 0;
-
-      ip = in;
-      op = out;
-
-      if (*ip > 17)
+    inline void copy_64(unsigned char *dest, const unsigned char *src)
+    {
+      // NOTE: assumes that 64-bit machines can do 64-bit unaligned access, and
+      // 32-bit machines can do 32-bit unaligned access.
+      if (sizeof(void *) == 8)
 	{
-	  t = *ip++ - 17;
-	  if (t < 4)
+	  copy_mem<boost::uint64_t>(dest, src);
+	}
+      else
+	{
+	  copy_mem<boost::uint32_t>(dest, src);
+	  copy_mem<boost::uint32_t>(dest+4, src+4);
+	}
+    }
+
+    // NOTE: we might write up to ten extra bytes after the end of the copy
+    inline void incremental_copy_fast(unsigned char *dest, const unsigned char *src, int len)
+    {
+      while (dest - src < 8)
+	{
+	  copy_64(dest, src);
+	  len -= dest - src;
+	  dest += dest - src;
+	}
+      while (len > 0)
+	{
+	  copy_64(dest, src);
+	  src += 8;
+	  dest += 8;
+	  len -= 8;
+	}
+    }
+
+    inline void incremental_copy(unsigned char *dest, const unsigned char *src, int len)
+    {
+      do {
+	*dest++ = *src++;
+      } while (--len);
+    }
+
+    inline void memcpy_fast(unsigned char *dest, const unsigned char *src, int len)
+    {
+      while (len >= 8)
+	{
+	  copy_64(dest, src);
+	  src += 8;
+	  dest += 8;
+	  len -= 8;
+	}
+      if (len >= 4)
+	{
+	  copy_mem<boost::uint32_t>(dest, src);
+	  src += 4;
+	  dest += 4;
+	  len -= 4;
+	}
+      switch (len)
+	{
+	case 3:
+	  *dest++ = *src++;
+	case 2:
+	  *dest++ = *src++;
+	case 1:
+	  *dest++ = *src++;
+	}
+    }
+
+    int lzo1x_decompress_safe(const unsigned char *input,
+			      size_t input_length,
+			      unsigned char *output,
+			      size_t *output_length)
+    {
+      unsigned char *output_ptr;
+      const unsigned char *input_ptr;
+      size_t z;
+      const unsigned char *match_ptr;
+      const unsigned char *const input_ptr_end = input + input_length;
+      unsigned char *const output_ptr_end = output + *output_length;
+
+      *output_length = 0;
+
+      input_ptr = input;
+      output_ptr = output;
+
+      if (*input_ptr > 17)
+	{
+	  z = *input_ptr++ - 17;
+	  if (z < 4)
 	    goto match_next;
-	  LZOASYM_ASSERT(t > 0);
-	  LZOASYM_NEED_OP(t);
-	  LZOASYM_NEED_IP(t+1);
-	  do *op++ = *ip++; while (--t > 0);
+	  LZOASYM_ASSERT(z > 0);
+	  LZOASYM_CHECK_OUTPUT_OVERRUN(z);
+	  LZOASYM_CHECK_INPUT_OVERRUN(z+1);
+	  do {
+	    *output_ptr++ = *input_ptr++;
+	  } while (--z > 0);
 	  goto first_literal_run;
 	}
 
-      while ((ip < ip_end) && (op <= op_end))
+      while ((input_ptr < input_ptr_end) && (output_ptr <= output_ptr_end))
 	{
-	  t = *ip++;
-	  if (t >= 16)
-	    goto match;
+	  z = *input_ptr++;
+	  if (z >= 16)
+	    goto match_found;
 
 	  // a literal run
-	  if (t == 0)
+	  if (z == 0)
 	    {
-	      LZOASYM_NEED_IP(1);
-	      while (*ip == 0)
+	      LZOASYM_CHECK_INPUT_OVERRUN(1);
+	      while (*input_ptr == 0)
 		{
-		  t += 255;
-		  ip++;
-		  LZOASYM_NEED_IP(1);
+		  z += 255;
+		  input_ptr++;
+		  LZOASYM_CHECK_INPUT_OVERRUN(1);
 		}
-	      t += 15 + *ip++;
+	      z += 15 + *input_ptr++;
 	    }
 
 	  // copy literals
-	  LZOASYM_ASSERT(t > 0);
-	  LZOASYM_NEED_OP(t+3);
-	  LZOASYM_NEED_IP(t+4);
-#if defined(LZOASYM_UNALIGNED_OK_8) && defined(LZOASYM_UNALIGNED_OK_4)
-	  t += 3;
-	  if (t >= 8)
-	    do {
-	      copy_mem<boost::uint64_t>(op,ip);
-	      op += 8; ip += 8; t -= 8;
-	    } while (t >= 8);
-	  if (t >= 4)
-	    {
-	      copy_mem<boost::uint32_t>(op,ip);
-	      op += 4; ip += 4; t -= 4;
-	    }
-	  if (t > 0)
-	    {
-	      *op++ = *ip++;
-	      if (t > 1) { *op++ = *ip++; if (t > 2) { *op++ = *ip++; } }
-	    }
-#elif defined(LZOASYM_UNALIGNED_OK_4) || defined(LZOASYM_ALIGNED_OK_4)
-#if !defined(LZOASYM_UNALIGNED_OK_4)
-	  if (ptr_aligned_4(op,ip))
-	    {
-#endif
-	      copy_mem<boost::uint32_t>(op,ip);
-	      op += 4; ip += 4;
-	      if (--t > 0)
-		{
-		  if (t >= 4)
-		    {
-		      do {
-			copy_mem<boost::uint32_t>(op,ip);
-			op += 4; ip += 4; t -= 4;
-		      } while (t >= 4);
-		      if (t > 0) do *op++ = *ip++; while (--t > 0);
-		    }
-		  else
-		    do *op++ = *ip++; while (--t > 0);
-		}
-#if !defined(LZOASYM_UNALIGNED_OK_4)
-	    }
-	  else
-#endif
-#endif
-#if !defined(LZOASYM_UNALIGNED_OK_4) && !defined(LZOASYM_UNALIGNED_OK_8)
-	    {
-	      *op++ = *ip++; *op++ = *ip++; *op++ = *ip++;
-	      do *op++ = *ip++; while (--t > 0);
-	    }
-#endif
+	  {
+	    LZOASYM_ASSERT(z > 0);
+	    const size_t len = z + 3;
+	    LZOASYM_CHECK_OUTPUT_OVERRUN(len);
+	    LZOASYM_CHECK_INPUT_OVERRUN(len+1);
+	    memcpy_fast(output_ptr, input_ptr, len);
+	    input_ptr += len;
+	    output_ptr += len;
+	  }
 
 	first_literal_run:
-	  t = *ip++;
-	  if (t >= 16)
-	    goto match;
+	  z = *input_ptr++;
+	  if (z >= 16)
+	    goto match_found;
 
-	  m_pos = op - (1 + LZOASYM_M2_MAX_OFFSET);
-	  m_pos -= t >> 2;
-	  m_pos -= *ip++ << 2;
+	  match_ptr = output_ptr - (1 + LZOASYM_M2_MAX_OFFSET);
+	  match_ptr -= z >> 2;
+	  match_ptr -= *input_ptr++ << 2;
 
-	  LZOASYM_TEST_LB(m_pos);
-	  LZOASYM_NEED_OP(3);
-	  *op++ = *m_pos++; *op++ = *m_pos++; *op++ = *m_pos;
+	  LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr);
+	  LZOASYM_CHECK_OUTPUT_OVERRUN(3);
+	  *output_ptr++ = *match_ptr++;
+	  *output_ptr++ = *match_ptr++;
+	  *output_ptr++ = *match_ptr;
 	  goto match_done;
 
 	  // handle matches
 	  do {
-	  match:
-	    if (t >= 64)            // M2 match
+	  match_found:
+	    if (z >= 64)            // LZO "M2" match
 	      {
-		m_pos = op - 1;
-		m_pos -= (t >> 2) & 7;
-		m_pos -= *ip++ << 3;
-		t = (t >> 5) - 1;
-		LZOASYM_TEST_LB(m_pos);
-		LZOASYM_ASSERT(t > 0);
-		LZOASYM_NEED_OP(t+3-1);
+		match_ptr = output_ptr - 1;
+		match_ptr -= (z >> 2) & 7;
+		match_ptr -= *input_ptr++ << 3;
+		z = (z >> 5) - 1;
 		goto copy_match;
 	      }
-	    else if (t >= 32)       // M3 match
+	    else if (z >= 32)       // LZO "M3" match
 	      {
-		t &= 31;
-		if (t == 0)
+		z &= 31;
+		if (z == 0)
 		  {
-		    LZOASYM_NEED_IP(1);
-		    while (*ip == 0)
+		    LZOASYM_CHECK_INPUT_OVERRUN(1);
+		    while (*input_ptr == 0)
 		      {
-			t += 255;
-			ip++;
-			LZOASYM_NEED_IP(1);
+			z += 255;
+			input_ptr++;
+			LZOASYM_CHECK_INPUT_OVERRUN(1);
 		      }
-		    t += 31 + *ip++;
+		    z += 31 + *input_ptr++;
 		  }
 
-		m_pos = op - 1;
-#if defined(LZOASYM_UNALIGNED_OK_2) && defined(LZOASYM_LITTLE_ENDIAN)
-		m_pos -= get_mem<boost::uint16_t>(ip) >> 2;
-#else
-		m_pos -= (ip[0] >> 2) + (ip[1] << 6);
-#endif
-		ip += 2;
+		match_ptr = output_ptr - 1;
+		match_ptr -= get_u16(input_ptr) >> 2;
+		input_ptr += 2;
 	      }
-	    else if (t >= 16)       // M4 match
+	    else if (z >= 16)       // LZO "M4" match
 	      {
-		m_pos = op;
-		m_pos -= (t & 8) << 11;
-		t &= 7;
-		if (t == 0)
+		match_ptr = output_ptr;
+		match_ptr -= (z & 8) << 11;
+		z &= 7;
+		if (z == 0)
 		  {
-		    LZOASYM_NEED_IP(1);
-		    while (*ip == 0)
+		    LZOASYM_CHECK_INPUT_OVERRUN(1);
+		    while (*input_ptr == 0)
 		      {
-			t += 255;
-			ip++;
-			LZOASYM_NEED_IP(1);
+			z += 255;
+			input_ptr++;
+			LZOASYM_CHECK_INPUT_OVERRUN(1);
 		      }
-		    t += 7 + *ip++;
+		    z += 7 + *input_ptr++;
 		  }
 
-#if defined(LZOASYM_UNALIGNED_OK_2) && defined(LZOASYM_LITTLE_ENDIAN)
-		m_pos -= get_mem<boost::uint16_t>(ip) >> 2;
-#else
-		m_pos -= (ip[0] >> 2) + (ip[1] << 6);
-#endif
-		ip += 2;
-		if (m_pos == op)
-		  goto eof_found;
-		m_pos -= 0x4000;
+		match_ptr -= get_u16(input_ptr) >> 2;
+		input_ptr += 2;
+		if (match_ptr == output_ptr)
+		  {
+		    LZOASYM_ASSERT(z == 1);
+		    *output_length = ptr_diff(output_ptr, output);
+		    return (input_ptr == input_ptr_end ? LZOASYM_E_OK :
+			    (input_ptr < input_ptr_end  ? LZOASYM_E_INPUT_NOT_CONSUMED : LZOASYM_E_INPUT_OVERRUN));
+		  }
+		match_ptr -= 0x4000;
 	      }
-	    else                    // M1 match
+	    else                    // LZO "M1" match
 	      {
-		m_pos = op - 1;
-		m_pos -= t >> 2;
-		m_pos -= *ip++ << 2;
+		match_ptr = output_ptr - 1;
+		match_ptr -= z >> 2;
+		match_ptr -= *input_ptr++ << 2;
 
-		LZOASYM_TEST_LB(m_pos); LZOASYM_NEED_OP(2);
-		*op++ = *m_pos++; *op++ = *m_pos;
+		LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr);
+		LZOASYM_CHECK_OUTPUT_OVERRUN(2);
+		*output_ptr++ = *match_ptr++;
+		*output_ptr++ = *match_ptr;
 		goto match_done;
 	      }
 
-	    // copy match
-	    LZOASYM_TEST_LB(m_pos);
-	    LZOASYM_ASSERT(t > 0);
-	    LZOASYM_NEED_OP(t+3-1);
-#if defined(LZOASYM_UNALIGNED_OK_8) && defined(LZOASYM_UNALIGNED_OK_4)
-	    if (op - m_pos >= 8)
+	  copy_match:
+	    {
+	      LZOASYM_CHECK_LOOKBEHIND_OVERRUN(match_ptr);
+	      LZOASYM_ASSERT(z > 0);
+	      LZOASYM_CHECK_OUTPUT_OVERRUN(z+3-1);
+
+	      const size_t len = z + 2;
+	      if (size_t(output_ptr_end - output_ptr) >= len + 10) // incremental_copy_fast might copy 10 more bytes than needed
+		incremental_copy_fast(output_ptr, match_ptr, len);
+	      else
+		incremental_copy(output_ptr, match_ptr, len);
+	      match_ptr += len;
+	      output_ptr += len;
+	    }
+
+	  match_done:
+	    z = input_ptr[-2] & 3;
+	    if (z == 0)
+	      break;
+
+	  match_next:
+	    // copy literals
+	    LZOASYM_ASSERT(z > 0);
+	    LZOASYM_ASSERT(z < 4);
+	    LZOASYM_CHECK_OUTPUT_OVERRUN(z);
+	    LZOASYM_CHECK_INPUT_OVERRUN(z+1);
+	    *output_ptr++ = *input_ptr++;
+	    if (z > 1)
 	      {
-		t += (3 - 1);
-		if (t >= 8)
-		  do {
-		    copy_mem<boost::uint64_t>(op,m_pos);
-		    op += 8; m_pos += 8; t -= 8;
-		  } while (t >= 8);
-		if (t >= 4)
-		  {
-		    copy_mem<boost::uint32_t>(op,m_pos);
-		    op += 4; m_pos += 4; t -= 4;
-		  }
-		if (t > 0)
-		  {
-		    *op++ = m_pos[0];
-		    if (t > 1) { *op++ = m_pos[1]; if (t > 2) { *op++ = m_pos[2]; } }
-		  }
+		*output_ptr++ = *input_ptr++;
+		if (z > 2)
+		  *output_ptr++ = *input_ptr++;
 	      }
-	    else
-#elif defined(LZOASYM_UNALIGNED_OK_4) || defined(LZOASYM_ALIGNED_OK_4)
-#if !defined(LZOASYM_UNALIGNED_OK_4)
-	      if (t >= 2 * 4 - (3 - 1) && ptr_aligned_4(op,m_pos))
-		{
-		  LZOASYM_ASSERT((op - m_pos) >= 4);
-#else
-		  if (t >= 2 * 4 - (3 - 1) && (op - m_pos) >= 4)
-		    {
-#endif
-		      copy_mem<boost::uint32_t>(op,m_pos);
-		      op += 4; m_pos += 4; t -= 4 - (3 - 1);
-		      do {
-			copy_mem<boost::uint32_t>(op,m_pos);
-			op += 4; m_pos += 4; t -= 4;
-		      } while (t >= 4);
-		      if (t > 0) do *op++ = *m_pos++; while (--t > 0);
-		    }
-		  else
-#endif
-		    {
-		    copy_match:
-		      *op++ = *m_pos++; *op++ = *m_pos++;
-		      do *op++ = *m_pos++; while (--t > 0);
-		    }
-
-		match_done:
-		  t = ip[-2] & 3;
-		  if (t == 0)
-		    break;
-
-		match_next:
-		  // copy literals
-		  LZOASYM_ASSERT(t > 0);
-		  LZOASYM_ASSERT(t < 4);
-		  LZOASYM_NEED_OP(t);
-		  LZOASYM_NEED_IP(t+1);
-		  *op++ = *ip++;
-		  if (t > 1) { *op++ = *ip++; if (t > 2) { *op++ = *ip++; } }
-		  t = *ip++;
-		} while ((ip < ip_end) && (op <= op_end));
-	  }
-
-	  // no EOF code was found
-	  *out_len = ptr_diff(op, out);
-	  return LZOASYM_E_EOF_NOT_FOUND;
-
-	eof_found:
-	  LZOASYM_ASSERT(t == 1);
-	  *out_len = ptr_diff(op, out);
-	  return (ip == ip_end ? LZOASYM_E_OK :
-		  (ip < ip_end  ? LZOASYM_E_INPUT_NOT_CONSUMED : LZOASYM_E_INPUT_OVERRUN));
-
-	input_overrun:
-	  *out_len = ptr_diff(op, out);
-	  return LZOASYM_E_INPUT_OVERRUN;
-
-	output_overrun:
-	  *out_len = ptr_diff(op, out);
-	  return LZOASYM_E_OUTPUT_OVERRUN;
-
-	lookbehind_overrun:
-	  *out_len = ptr_diff(op, out);
-	  return LZOASYM_E_LOOKBEHIND_OVERRUN;
-
-	assertion_failed:
-	  return LZOASYM_E_ASSERT_FAILED;
+	    z = *input_ptr++;
+	  } while ((input_ptr < input_ptr_end) && (output_ptr <= output_ptr_end));
 	}
 
+      // no EOF code was found
+      *output_length = ptr_diff(output_ptr, output);
+      return LZOASYM_E_EOF_NOT_FOUND;
+
+    input_overrun:
+      *output_length = ptr_diff(output_ptr, output);
+      return LZOASYM_E_INPUT_OVERRUN;
+
+    output_overrun:
+      *output_length = ptr_diff(output_ptr, output);
+      return LZOASYM_E_OUTPUT_OVERRUN;
+
+    lookbehind_overrun:
+      *output_length = ptr_diff(output_ptr, output);
+      return LZOASYM_E_LOOKBEHIND_OVERRUN;
+
+    assert_fail:
+      return LZOASYM_E_ASSERT_FAILED;
     }
   }
+}
 
-#undef LZOASYM_NEED_IP
-#undef LZOASYM_NEED_OP
-#undef LZOASYM_TEST_LB
+#undef LZOASYM_CHECK_INPUT_OVERRUN
+#undef LZOASYM_CHECK_OUTPUT_OVERRUN
+#undef LZOASYM_CHECK_LOOKBEHIND_OVERRUN
 #undef LZOASYM_ASSERT
-
-#undef LZOASYM_UNALIGNED_OK_2
-#undef LZOASYM_UNALIGNED_OK_4
-#undef LZOASYM_ALIGNED_OK_4
-#undef LZOASYM_UNALIGNED_OK_8
-
-#undef LZOASYM_LITTLE_ENDIAN
 
 #endif
