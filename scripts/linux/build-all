@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+cd ~/linux
+$O3/scripts/linux/build-boost
+$O3/scripts/linux/build-openssl x64
+$O3/scripts/linux/build-snappy
+$O3/scripts/linux/build-lzo
+$O3/scripts/linux/consolidate-so
