@@ -105,12 +105,10 @@ using namespace openvpn;
 typedef PolarSSLCryptoAPI ServerCryptoAPI;
 typedef PolarSSLContext<PolarSSLRandom> ServerSSLAPI;
 typedef PolarSSLRandom ServerRandomAPI;
-#elif defined(USE_OPENSSL_SERVER)
+#else // if defined(USE_OPENSSL_SERVER)
 typedef OpenSSLCryptoAPI ServerCryptoAPI;
 typedef OpenSSLContext ServerSSLAPI;
 typedef OpenSSLRandom ServerRandomAPI;
-#else
-#error No server SSL implementation defined
 #endif
 
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
