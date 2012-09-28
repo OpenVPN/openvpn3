@@ -517,6 +517,7 @@ namespace openvpn {
 	std::ostringstream out;
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
+	out << "IV_NCP=1\n"; // negotiable crypto parameters
 	{
 	  const char *compstr = comp_ctx.peer_info_string();
 	  if (compstr)
