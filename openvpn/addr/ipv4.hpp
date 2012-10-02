@@ -39,14 +39,14 @@ namespace openvpn {
 
       typedef boost::uint32_t base_type;
 
-      static Addr from_uint32(const base_type addr)
+      static Addr from_uint32(const base_type addr) // host byte order
       {
 	Addr ret;
 	ret.u.addr = addr;
 	return ret;
       }
 
-      static Addr from_bytes(const unsigned char *bytes)
+      static Addr from_bytes(const unsigned char *bytes) // host byte order
       {
 	Addr ret;
 	std::memcpy(ret.u.bytes, bytes, 4);
@@ -141,13 +141,23 @@ namespace openvpn {
 	return u.addr == 0;
       }
 
-      // convert netmask in addr to prefix_len using binary search,
+      // convert netmask in u.addr to prefix_len using binary search,
       // throws ipv4_malformed_netmask if addr is not a netmask
       unsigned int prefix_len() const
       {
-	if (u.addr == ~0)
+	const int ret = prefix_len_32(u.addr);
+	if (ret >= 0)
+	  return ret;
+	else
+	  throw ipv4_malformed_netmask();
+      }
+
+      // convert netmask in addr to prefix_len, will return -1 on error
+      static int prefix_len_32(const uint32_t addr)
+      {
+	if (addr == ~0)
 	  return 32;
-	else if (u.addr == 0)
+	else if (addr == 0)
 	  return 0;
 	else
 	  {
@@ -157,14 +167,14 @@ namespace openvpn {
 	      {
 		const unsigned int mid = (high + low) / 2;
 		const IPv4::Addr::base_type test = prefix_len_to_netmask_unchecked(mid);
-		if (u.addr == test)
+		if (addr == test)
 		  return mid;
-		else if (u.addr > test)
+		else if (addr > test)
 		  low = mid;
 		else
 		  high = mid;
 	      }
-	    throw ipv4_malformed_netmask();
+	    return -1;
 	  }
       }
 
@@ -204,7 +214,7 @@ namespace openvpn {
       }
 
       union {
-	base_type addr;
+	base_type addr; // host byte order
 	unsigned char bytes[4];
       } u;
     };
