@@ -55,8 +55,8 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	boolean tun_builder_reroute_gw(String server_address, boolean server_address_ipv6, boolean ipv6);
 	boolean tun_builder_add_route(String address, int prefix_length, boolean ipv6);
 	boolean tun_builder_exclude_route(String address, int prefix_length, boolean ipv6);
-	boolean tun_builder_add_dns_server(String address, boolean ipv6, boolean reroute_gw);
-	boolean tun_builder_add_search_domain(String domain, boolean reroute_gw);
+	boolean tun_builder_add_dns_server(String address, boolean ipv6, boolean reroute_dns);
+	boolean tun_builder_add_search_domain(String domain, boolean reroute_dns);
 	boolean tun_builder_set_mtu(int mtu);
 	boolean tun_builder_set_session_name(String name);
 	int tun_builder_establish();
@@ -275,20 +275,20 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     @Override
-    public boolean tun_builder_add_dns_server(String address, boolean ipv6, boolean reroute_gw) {
+    public boolean tun_builder_add_dns_server(String address, boolean ipv6, boolean reroute_dns) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    return tb.tun_builder_add_dns_server(address, ipv6, reroute_gw);
+	    return tb.tun_builder_add_dns_server(address, ipv6, reroute_dns);
 	else
 	    return false;
     }
 
     @Override
-    public boolean tun_builder_add_search_domain(String domain, boolean reroute_gw)
+    public boolean tun_builder_add_search_domain(String domain, boolean reroute_dns)
     {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    return tb.tun_builder_add_search_domain(domain, reroute_gw);
+	    return tb.tun_builder_add_search_domain(domain, reroute_dns);
 	else
 	    return false;
     }

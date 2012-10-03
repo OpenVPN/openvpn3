@@ -95,6 +95,12 @@ namespace openvpn {
 
       typedef Tun<Client*> TunImpl;
 
+      // IP version flags
+      enum {
+	F_IPv4=(1<<0),
+	F_IPv6=(1<<1),
+      };
+
     public:
       virtual void client_start(const OptionList& opt, TransportClient& transcli)
       {
@@ -111,13 +117,18 @@ namespace openvpn {
 
 	      // do ifconfig
 	      parent.tun_pre_tun_config();
-	      const IP::Addr::Version iface_ver = tun_ifconfig(opt);
+	      const unsigned int ip_ver_flags = tun_ifconfig(opt);
 
 	      // add routes
-	      const bool reroute_gw = add_routes(opt, server_addr, iface_ver);
+	      const unsigned int reroute_gw_ver_flags = add_routes(opt, server_addr, ip_ver_flags);
+
+	      // Should all DNS requests be rerouted through pushed DNS servers?
+	      // (If false, only DNS requests that correspond to pushed domain prefixes
+	      // will be routed).
+	      const bool reroute_dns = should_reroute_dns(opt, reroute_gw_ver_flags);
 
 	      // add DNS servers and domain prefixes
-	      add_dns(opt, reroute_gw);
+	      add_dns(opt, reroute_dns);
 
 	      // set remote server address
 	      if (!tb->tun_builder_set_remote_address(server_addr.to_string(),
@@ -177,9 +188,20 @@ namespace openvpn {
 	  return "UNDEF_TUN";
       }
 
-      virtual std::string vpn_ip() const
+      virtual std::string vpn_ip4() const
       {
-	return vpn_ip_addr.to_string();
+	if (vpn_ip4_addr.defined())
+	  return vpn_ip4_addr.to_string();
+	else
+	  return "";
+      }
+
+      virtual std::string vpn_ip6() const
+      {
+	if (vpn_ip6_addr.defined())
+	  return vpn_ip6_addr.to_string();
+	else
+	  return "";
       }
 
       virtual void stop() { stop_(); }
@@ -225,13 +247,37 @@ namespace openvpn {
 	  }
       }
 
-      IP::Addr::Version tun_ifconfig(const OptionList& opt)
+      bool should_reroute_dns(const OptionList& opt, const unsigned int reroute_gw_ver_flags)
       {
+	
+	bool ret = bool(reroute_gw_ver_flags & F_IPv4);
+	try {
+	  const std::string& yes_no = opt.get_optional("redirect-dns", 1); // DIRECTIVE
+	  if (!yes_no.empty())
+	    {
+	      if (yes_no == "yes")
+		ret = true;
+	      else if (yes_no == "no")
+		ret = false;
+	      else
+		OPENVPN_LOG("unknown redirect-dns option: " << yes_no);
+	    }
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("error parsing redirect-dns: " << e.what());
+	  }
+	return ret;
+      }
+
+      unsigned int tun_ifconfig(const OptionList& opt)
+      {
+	unsigned int ip_ver_flags = 0;
 	TunBuilderBase* tb = config->builder;
 
 	// first verify topology
 	{
-	  const Option& o = opt.get("topology");
+	  const Option& o = opt.get("topology"); // DIRECTIVE
 	  o.min_args(2);
 	  if (o[1] != "subnet")
 	    throw option_error("only topology subnet supported");
@@ -239,41 +285,75 @@ namespace openvpn {
 
 	// configure tun interface
 	{
-	  const Option& o = opt.get("ifconfig");
-	  o.min_args(2);
-	  const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "ifconfig");
-	  const IP::Addr::Version iface_ver = pair.version();
-	  if (iface_ver == IP::Addr::UNSPEC)
-	    throw tun_builder_error("tun_builder_add_address: cannot determine IPv4 vs. IPv6");
-	  if (!tb->tun_builder_add_address(pair.addr.to_string(),
-					   pair.netmask.prefix_len(),
-					   iface_ver == IP::Addr::V6))
-	    throw tun_builder_error("tun_builder_add_address failed");
-	  vpn_ip_addr = pair.addr;
-	  return iface_ver;
+	  const Option* o;
+	  o = opt.get_ptr("ifconfig"); // DIRECTIVE
+	  if (o)
+	    {
+	      o->min_args(2);
+	      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string((*o)[1], o->get_optional(2), "ifconfig");
+	      if (pair.version() != IP::Addr::V4)
+		throw tun_builder_error("ifconfig address is not IPv4");
+	      if (!tb->tun_builder_add_address(pair.addr.to_string(),
+					       pair.netmask.prefix_len(),
+					       false))
+		throw tun_builder_error("tun_builder_add_address IPv4 failed");
+	      vpn_ip4_addr = pair.addr;
+	      ip_ver_flags |= F_IPv4;
+	    }
+
+	  o = opt.get_ptr("ifconfig-ipv6"); // DIRECTIVE
+	  if (o)
+	    {
+	      o->min_args(2);
+	      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string((*o)[1], "ifconfig-ipv6");
+	      if (pair.version() != IP::Addr::V6)
+		throw tun_builder_error("ifconfig-ipv6 address is not IPv6");
+	      if (!tb->tun_builder_add_address(pair.addr.to_string(),
+					       pair.netmask.prefix_len(),
+					       true))
+		throw tun_builder_error("tun_builder_add_address IPv6 failed");
+	      vpn_ip6_addr = pair.addr;
+	      ip_ver_flags |= F_IPv6;
+	    }
+
+	  if (!ip_ver_flags)
+	    throw tun_builder_error("one of ifconfig or ifconfig-ipv6 must be specified");
+	  return ip_ver_flags;
 	}
       }
 
-    bool add_routes(const OptionList& opt,
-		    const IP::Addr& server_addr,
-		    const IP::Addr::Version iface_ver)
+      unsigned int add_routes(const OptionList& opt,
+			      const IP::Addr& server_addr,
+			      const unsigned int ip_ver_flags)
       {
 	TunBuilderBase* tb = config->builder;
-	bool reroute_gw = false;
-
-	// do redirect-gateway
+	unsigned int reroute_gw_ver_flags = 0;
 	const RedirectGatewayFlags rg_flags(opt);
-	if (rg_flags.redirect_gateway_enabled())
+
+	// do redirect-gateway for IPv4
+	if (rg_flags.redirect_gateway_ipv4_enabled() && (ip_ver_flags & F_IPv4))
 	  {
 	    if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
 					    server_addr.version() == IP::Addr::V6,
-					    iface_ver == IP::Addr::V6))
-	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway failed");
-	    reroute_gw = true;
+					    false))
+	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway IPv4 failed");
+	    reroute_gw_ver_flags |= F_IPv4;
 	  }
-	else
+
+	// do redirect-gateway for IPv6
+	if (rg_flags.redirect_gateway_ipv6_enabled() && (ip_ver_flags & F_IPv6))
 	  {
-	    OptionList::IndexMap::const_iterator dopt = opt.map().find("route");
+	    if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
+					    server_addr.version() == IP::Addr::V6,
+					    true))
+	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway IPv6 failed");
+	    reroute_gw_ver_flags |= F_IPv6;
+	  }
+	
+	// add IPv4 routes (if redirect-gateway IPv4 wasn't applied)
+	if (!(reroute_gw_ver_flags & F_IPv4))
+	  {
+	    OptionList::IndexMap::const_iterator dopt = opt.map().find("route"); // DIRECTIVE
 	    if (dopt != opt.map().end())
 	      {
 		for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
@@ -286,29 +366,62 @@ namespace openvpn {
 		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "route");
 		      if (!pair.is_canonical())
 			throw tun_builder_error("route is not canonical");
+		      if (pair.version() != IP::Addr::V4)
+			throw tun_builder_error("route is not IPv4");
 		      if (!tb->tun_builder_add_route(pair.addr.to_string(),
 						     pair.netmask.prefix_len(),
-						     pair.version() == IP::Addr::V6))
+						     false))
 			throw tun_builder_route_error("tun_builder_add_route failed");
 		    }
 		    catch (const std::exception& e)
 		      {
-			OPENVPN_THROW(tun_builder_error, "error parsing received route: " << o.render() << " : " << e.what());
+			OPENVPN_THROW(tun_builder_error, "error parsing IPv4 route: " << o.render() << " : " << e.what());
 		      }
 		  }
 	      }
 	  }
-	return reroute_gw;
+
+	// add IPv6 routes (if redirect-gateway IPv6 wasn't applied)
+	if (!(reroute_gw_ver_flags & F_IPv6))
+	  {
+	    OptionList::IndexMap::const_iterator dopt = opt.map().find("route-ipv6"); // DIRECTIVE
+	    if (dopt != opt.map().end())
+	      {
+		for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
+		  {
+		    const Option& o = opt[*i];
+		    try {
+		      o.min_args(2);
+		      if (o.size() >= 3 && o[2] != "vpn_gateway")
+			throw tun_builder_route_error("only tunnel routes supported");
+		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], "route-ipv6");
+		      if (!pair.is_canonical())
+			throw tun_builder_error("route is not canonical");
+		      if (pair.version() != IP::Addr::V6)
+			throw tun_builder_error("route is not IPv6");
+		      if (!tb->tun_builder_add_route(pair.addr.to_string(),
+						     pair.netmask.prefix_len(),
+						     true))
+			throw tun_builder_route_error("tun_builder_add_route failed");
+		    }
+		    catch (const std::exception& e)
+		      {
+			OPENVPN_THROW(tun_builder_error, "error parsing IPv6 route: " << o.render() << " : " << e.what());
+		      }
+		  }
+	      }
+	  }
+	return reroute_gw_ver_flags;
       }
 
-      void add_dns(const OptionList& opt, const bool reroute_gw)
+      void add_dns(const OptionList& opt, const bool reroute_dns)
       {
 	// Example:
 	//   [dhcp-option] [DNS] [172.16.0.23] 
 	//   [dhcp-option] [DOMAIN] [openvpn.net] 
 	//   [dhcp-option] [DOMAIN] [example.com] 
 	TunBuilderBase* tb = config->builder;
-	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option");
+	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
 	if (dopt != opt.map().end())
 	  {
 	    for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
@@ -322,13 +435,13 @@ namespace openvpn {
 		      const IP::Addr ip = IP::Addr::from_string(o[2], "dns-server-ip");
 		      if (!tb->tun_builder_add_dns_server(ip.to_string(),
 							  ip.version() == IP::Addr::V6,
-							  reroute_gw))
+							  reroute_dns))
 			throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed");
 		    }
 		  else if (type == "DOMAIN")
 		    {
 		      o.exact_args(3);
-		      if (!tb->tun_builder_add_search_domain(o[2], reroute_gw))
+		      if (!tb->tun_builder_add_search_domain(o[2], reroute_dns))
 			throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
 		    }
 		  else
@@ -336,7 +449,7 @@ namespace openvpn {
 		}
 		catch (const std::exception& e)
 		  {
-		    OPENVPN_THROW(tun_builder_error, "error parsing received dhcp-option: " << o.render() << " : " << e.what());
+		    OPENVPN_THROW(tun_builder_error, "error parsing dhcp-option: " << o.render() << " : " << e.what());
 		  }
 	      }
 	  }
@@ -348,7 +461,8 @@ namespace openvpn {
       TunImpl::Ptr impl;
       bool halt;
 
-      IP::Addr vpn_ip_addr;
+      IP::Addr vpn_ip4_addr;
+      IP::Addr vpn_ip6_addr;
     };
 
     inline TunClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service,

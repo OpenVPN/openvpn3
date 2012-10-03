@@ -101,9 +101,14 @@ namespace openvpn {
 	  return "UNDEF_TUN";
       }
 
-      virtual std::string vpn_ip() const
+      virtual std::string vpn_ip4() const
       {
 	return vpn_ip_addr;
+      }
+
+      virtual std::string vpn_ip6() const // fixme ipv6
+      {
+	return "";
       }
 
       virtual void stop() { stop_(); }

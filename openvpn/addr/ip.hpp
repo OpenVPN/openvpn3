@@ -304,6 +304,11 @@ namespace openvpn {
 	  }
       }
 
+      bool defined() const
+      {
+	return !unspecified();
+      }
+
       const char *version_string() const
       {
 	switch (ver)

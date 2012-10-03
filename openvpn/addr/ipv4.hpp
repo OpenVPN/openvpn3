@@ -141,6 +141,11 @@ namespace openvpn {
 	return u.addr == 0;
       }
 
+      bool defined() const
+      {
+	return !unspecified();
+      }
+
       // convert netmask in u.addr to prefix_len using binary search,
       // throws ipv4_malformed_netmask if addr is not a netmask
       unsigned int prefix_len() const

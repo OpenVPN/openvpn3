@@ -73,6 +73,7 @@ namespace openvpn {
 
 	typename ProtoConfig::Ptr proto_context_config;
 	ProtoContextOptions::Ptr proto_context_options;
+	PushOptionsBase::Ptr push_base;
 	TransportClientFactory::Ptr transport_factory;
 	TunClientFactory::Ptr tun_factory;
 	SessionStats::Ptr cli_stats;
@@ -92,6 +93,7 @@ namespace openvpn {
 	  housekeeping_timer(io_service_arg),
 	  push_request_timer(io_service_arg),
 	  halt(false),
+	  received_options(config.push_base),
 	  creds(config.creds),
 	  proto_context_options(config.proto_context_options),
 	  first_packet_received_(false),
@@ -333,7 +335,7 @@ namespace openvpn {
       virtual void control_recv(BufferPtr& app_bp)
       {
 	const std::string msg = Base::template read_control_string<std::string>(*app_bp);
-	OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
+	//OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 	if (!received_options.complete() && boost::algorithm::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
@@ -343,7 +345,7 @@ namespace openvpn {
 	    if (received_options.complete())
 	      {
 		// show options
-		//OPENVPN_LOG(render_options_sanitized(received_options));
+		OPENVPN_LOG("OPTIONS:" << std::endl << render_options_sanitized(received_options));
 
 		// process auth-token
 		extract_auth_token(received_options);
@@ -398,7 +400,17 @@ namespace openvpn {
 	if (creds)
 	  ev->user = creds->get_username();
 	transport->server_endpoint_info(ev->server_host, ev->server_port, ev->server_proto, ev->server_ip);
-	ev->vpn_ip = tun->vpn_ip();
+	ev->vpn_ip4 = tun->vpn_ip4();
+	ev->vpn_ip6 = tun->vpn_ip6();
+	try {
+	  std::string client_ip = received_options.get_optional("client-ip", 1);
+	  if (client_ip.length() <= 64)
+	    ev->client_ip = client_ip;
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("Error parsing client-ip: " << e.what());
+	  }
 	ev->tun_name = tun->tun_name();
 	cli_events->add_event(ev);
 	connected_ = true;

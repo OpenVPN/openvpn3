@@ -155,7 +155,9 @@ namespace openvpn {
       std::string serverPort;
       std::string serverProto;
       std::string serverIp;
-      std::string vpnIp;
+      std::string vpnIp4;
+      std::string vpnIp6;
+      std::string clientIp;
       std::string tunName;
     };
 

@@ -144,7 +144,7 @@ namespace openvpn {
 	throw option_error("only client configuration supported");
 
       // client ProtoContext config
-      cp.reset(new Client::ProtoConfig);
+      cp.reset(new Client::ProtoConfig());
       cp->load(opt, *proto_context_options);
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;
@@ -205,6 +205,22 @@ namespace openvpn {
 	if (o)
 	  userlocked_username = o->get(1);
       }
+
+      // configure push_base, a set of base options that will be combined with
+      // options pushed by server.
+      {
+	push_base.reset(new PushOptionsBase());
+
+	// base options where multiple options of the same type can aggregate
+	push_base->multi.extend(opt, "route");
+	push_base->multi.extend(opt, "route-ipv6");
+	push_base->multi.extend(opt, "redirect-gateway");
+	push_base->multi.extend(opt, "redirect-private");
+	push_base->multi.extend(opt, "dhcp-option");
+
+	// base options where only a single instance of each option makes sense
+	push_base->singleton.extend(opt, "redirect-dns");
+      }
     }
 
     void next()
@@ -218,6 +234,7 @@ namespace openvpn {
       Client::Config::Ptr cli_config = new Client::Config;
       cli_config->proto_context_config = cp;
       cli_config->proto_context_options = proto_context_options;
+      cli_config->push_base = push_base;
       cli_config->transport_factory = transport_factory;
       cli_config->tun_factory = tun_factory;
       cli_config->cli_stats = cli_stats;
@@ -311,6 +328,7 @@ namespace openvpn {
     int conn_timeout_;
     ProtoContextOptions::Ptr proto_context_options;
     std::string userlocked_username;
+    PushOptionsBase::Ptr push_base;
   };
 }
 

@@ -45,7 +45,7 @@ namespace openvpn {
 
       // do redirect-gateway
       rg_flags.init(opt);
-      if (rg_flags.redirect_gateway_enabled())
+      if (rg_flags.redirect_gateway_ipv4_enabled()) // fixme ipv6
 	{
 	  add_del_reroute_gw_v4(true);
 	  did_redirect_gw = true;

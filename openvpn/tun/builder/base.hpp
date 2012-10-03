@@ -51,7 +51,7 @@ namespace openvpn {
     // it from the default route.
     // server_address_ipv6 is true if server_address is an IPv6 address.
     // ipv6 is true if the default route to be added should be IPv6.
-    // Never called more than once per tun_builder session.
+    // May be called up to 2 times, for ipv6=true|false
     virtual bool tun_builder_reroute_gw(const std::string& server_address, bool server_address_ipv6, bool ipv6)
     {
       return false;
@@ -73,14 +73,14 @@ namespace openvpn {
 
     // Callback to add DNS server to VPN interface
     // May be called more than once per tun_builder session
-    virtual bool tun_builder_add_dns_server(const std::string& address, bool ipv6, bool reroute_gw)
+    virtual bool tun_builder_add_dns_server(const std::string& address, bool ipv6, bool reroute_dns)
     {
       return false;
     }
 
     // Callback to add search domain to DNS resolver
     // May be called more than once per tun_builder session
-    virtual bool tun_builder_add_search_domain(const std::string& domain, bool reroute_gw)
+    virtual bool tun_builder_add_search_domain(const std::string& domain, bool reroute_dns)
     {
       return false;
     }

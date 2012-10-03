@@ -14,7 +14,7 @@
 #include <openvpn/common/options.hpp>
 
 namespace openvpn {
-  struct ProtoContextOptions : public RC<thread_unsafe_refcount>
+  struct ProtoContextOptions : public RC<thread_safe_refcount>
   {
     typedef boost::intrusive_ptr<ProtoContextOptions> Ptr;
 

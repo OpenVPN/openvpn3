@@ -13,6 +13,14 @@
 
 namespace openvpn {
 
+  struct PushOptionsBase : public RC<thread_unsafe_refcount>
+  {
+    typedef boost::intrusive_ptr<PushOptionsBase> Ptr;
+
+    OptionList multi;
+    OptionList singleton;
+  };
+
   // Aggregate pushed option continuations into a singular option list.
   // Note that map is not updated until list is complete.
   class OptionListContinuation : public OptionList
@@ -20,8 +28,14 @@ namespace openvpn {
   public:
     OPENVPN_SIMPLE_EXCEPTION(olc_complete); // add called when object is already complete
 
-    OptionListContinuation()
-      : partial_(false), complete_(false) {}
+    OptionListContinuation(const PushOptionsBase::Ptr& push_base_arg)
+      : partial_(false),
+	complete_(false),
+	push_base(push_base_arg)
+    {
+      if (push_base)
+	extend(push_base->multi);
+    }
 
     // call with option list fragments
     void add(const OptionList& other)
@@ -32,6 +46,8 @@ namespace openvpn {
 	  extend(other);
 	  if (!continuation(other))
 	    {
+	      if (push_base)
+		extend_nonexistent(push_base->singleton);
 	      update_map();
 	      complete_ = true;
 	    }
@@ -55,6 +71,8 @@ namespace openvpn {
 
     bool partial_;
     bool complete_;
+
+    PushOptionsBase::Ptr push_base;
   };
 
 } // namespace openvpn

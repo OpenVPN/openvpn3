@@ -181,7 +181,9 @@ namespace openvpn {
       std::string server_port;
       std::string server_proto;
       std::string server_ip;
-      std::string vpn_ip;
+      std::string vpn_ip4;
+      std::string vpn_ip6;
+      std::string client_ip;
       std::string tun_name;
 
       virtual std::string render() const
@@ -189,8 +191,8 @@ namespace openvpn {
 	std::ostringstream out;
 	// eg. "godot@foo.bar.gov:443 (1.2.3.4) via TCPv4 on tun0/5.5.1.1"
 	out << user << '@' << server_host << ':' << server_port
-	    << " (" << server_ip << ") via " << server_proto
-	    << " on " << tun_name << '/' << vpn_ip;
+	    << " (" << server_ip << ") via " << client_ip << '/' << server_proto
+	    << " on " << tun_name << '/' << vpn_ip4 << '/' << vpn_ip6;
 	return out.str();
       }
     };

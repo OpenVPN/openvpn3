@@ -27,7 +27,8 @@ namespace openvpn {
     virtual void stop() = 0;
     virtual bool tun_send(BufferAllocated& buf) = 0; // return true if send succeeded
     virtual std::string tun_name() const = 0;
-    virtual std::string vpn_ip() const = 0;
+    virtual std::string vpn_ip4() const = 0;
+    virtual std::string vpn_ip6() const = 0;
   };
 
   struct TunClientParent

@@ -137,6 +137,11 @@ namespace openvpn {
 	return all_zeros();
       }
 
+      bool defined() const
+      {
+	return !unspecified();
+      }
+
       unsigned int prefix_len() const
       {
 	int idx = -1;

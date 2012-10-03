@@ -124,8 +124,6 @@ namespace openvpn {
   class OptionList : public std::vector<Option>
   {
   public:
-    typedef boost::intrusive_ptr<OptionList> Ptr;
-
     typedef StandardLex Lex;
     typedef std::vector<unsigned int> IndexList;
     typedef boost::unordered_map<std::string, IndexList> IndexMap;
@@ -266,12 +264,35 @@ namespace openvpn {
 	OPENVPN_THROW(option_error, "meta option <" << multiline[0] << "> was not properly closed out");
     }
 
-    // caller should call update_map() after this function
+    // Append elements in other to self,
+    // caller should call update_map() after this function.
     void extend(const OptionList& other)
     {
       reserve(size() + other.size());
       for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); ++i)
 	push_back(*i);
+    }
+
+    // Append elements in other having given name to self,
+    // caller should call update_map() after this function.
+    void extend(const OptionList& other, const std::string& name)
+    {
+      IndexMap::const_iterator oi = other.map().find(name);
+      if (oi != other.map().end())
+	for (IndexList::const_iterator i = oi->second.begin(); i != oi->second.end(); ++i)
+	  push_back(other[*i]);
+    }
+
+    // Append to self only those elements in other that do not exist
+    // in self, caller should call update_map() after this function.
+    void extend_nonexistent(const OptionList& other)
+    {
+      for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); ++i)
+	{
+	  const Option& opt = *i;
+	  if (map().find(opt.get(0)) == map().end())
+	      push_back(*i);
+	}
     }
 
     const Option& get_first(const std::string& name) const
