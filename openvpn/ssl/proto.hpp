@@ -1394,7 +1394,7 @@ namespace openvpn {
 	tlsprf_self.randomize(*proto.config->rng);
 	tlsprf_self.write(*buf);
 	const std::string options = proto.config->options_string();
-	OPENVPN_LOG_PROTO("Tunnel options:" << options);
+	OPENVPN_LOG_PROTO("Tunnel Options:" << options);
 	write_auth_string(options, *buf);
 	if (!proto.is_server())
 	  {
