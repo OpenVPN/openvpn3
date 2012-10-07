@@ -14,10 +14,12 @@ fi
 . $O3/lib-versions
 
 # Build ASM files with clang 3.0
-GCC_AS_CMD=$HOME/clang3/clang
-if ! [ -f "$GCC_AS_CMD" ]; then
-    echo "clang 3.0 binary must be present in $GCC_AS_CMD to assemble ARM crypto algorithms"
-    exit 1
+if [ "$APPLE_FAMILY" = "1" ]; then
+    GCC_AS_CMD=$HOME/clang3/clang
+    if ! [ -f "$GCC_AS_CMD" ]; then
+	echo "clang 3.0 binary must be present in $GCC_AS_CMD to assemble ARM crypto algorithms"
+	exit 1
+    fi
 fi
 
 DEST=minicrypto/minicrypto-$PLATFORM
@@ -25,6 +27,7 @@ DEST=minicrypto/minicrypto-$PLATFORM
 GLOBAL_COMPILE_FLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -DSHA1_ASM -DBF_PTR -DOPENSSL_VERSION_PTEXT= -D__LP32__"
 
 [ -z "$GCC_CMD" ] && GCC_CMD=gcc
+[ -z "$GCC_AS_CMD" ] && GCC_AS_CMD="$GCC_CMD"
 [ -z "$AR_CMD" ] && AR_CMD=ar
 # the directory where this script lives
 H=$O3/minicrypto
