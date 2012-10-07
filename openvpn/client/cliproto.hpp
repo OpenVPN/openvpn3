@@ -404,8 +404,8 @@ namespace openvpn {
 	ev->vpn_ip6 = tun->vpn_ip6();
 	try {
 	  std::string client_ip = received_options.get_optional("client-ip", 1);
-	  if (client_ip.length() <= 64)
-	    ev->client_ip = client_ip;
+	  if (!client_ip.empty())
+	    ev->client_ip = IP::Addr::validate(client_ip, "client-ip");
 	}
 	catch (const std::exception& e)
 	  {
