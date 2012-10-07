@@ -504,6 +504,7 @@ namespace openvpn {
 	      state->events->add_event(ev);
 	    }
 	  state->stats->error(err_type);
+	  state->session->dont_restart();
 	}
     }
 

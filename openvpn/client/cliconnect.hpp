@@ -31,6 +31,7 @@ namespace openvpn {
       : generation(0),
 	halt(false),
 	paused(false),
+	dont_restart_(false),
 	conn_timeout(client_options_arg->conn_timeout()),
 	io_service(io_service_arg),
 	client_options(client_options_arg),
@@ -140,6 +141,11 @@ namespace openvpn {
 	io_service.post(asio_dispatch_post_arg(&ClientConnect::reconnect, this, seconds));
     }
 
+    void dont_restart()
+    {
+      dont_restart_ = true;
+    }
+
     ~ClientConnect()
     {
       stop();
@@ -214,54 +220,61 @@ namespace openvpn {
     {
       if (!halt)
 	{
-	  switch (client->fatal())
+	  if (dont_restart_)
 	    {
-	    case Error::SUCCESS: // doesn't necessarily mean success, just that there wasn't a fatal error
-	      queue_restart();
-	      break;
-	    case Error::AUTH_FAILED:
-	      {
-		const std::string& reason = client->fatal_reason();
-		if (ChallengeResponse::is_dynamic(reason)) // dynamic challenge/response?
+	      stop();
+	    }
+	  else
+	    {
+	      switch (client->fatal())
+		{
+		case Error::SUCCESS: // doesn't necessarily mean success, just that there wasn't a fatal error
+		  queue_restart();
+		  break;
+		case Error::AUTH_FAILED:
 		  {
-		    ClientEvent::Base::Ptr ev = new ClientEvent::DynamicChallenge(reason);
-		    client_options->events().add_event(ev);
+		    const std::string& reason = client->fatal_reason();
+		    if (ChallengeResponse::is_dynamic(reason)) // dynamic challenge/response?
+		      {
+			ClientEvent::Base::Ptr ev = new ClientEvent::DynamicChallenge(reason);
+			client_options->events().add_event(ev);
+		      }
+		    else
+		      {
+			ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(reason);
+			client_options->events().add_event(ev);
+			client_options->stats().error(Error::AUTH_FAILED);
+		      }
+		    stop();
 		  }
-		else
+		  break;
+		case Error::TUN_SETUP_FAILED:
 		  {
-		    ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(reason);
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
 		    client_options->events().add_event(ev);
-		    client_options->stats().error(Error::AUTH_FAILED);
+		    client_options->stats().error(Error::TUN_SETUP_FAILED);
+		    stop();
 		  }
-		stop();
-	      }
-	      break;
-	    case Error::TUN_SETUP_FAILED:
-	      {
-		ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
-		client_options->events().add_event(ev);
-		client_options->stats().error(Error::TUN_SETUP_FAILED);
-		stop();
-	      }
-	      break;
-	    case Error::CLIENT_HALT:
-	      {
-		ClientEvent::Base::Ptr ev = new ClientEvent::ClientHalt(client->fatal_reason());
-		client_options->events().add_event(ev);
-		client_options->stats().error(Error::CLIENT_HALT);
-		stop();
-	      }
-	      break;
-	    case Error::CLIENT_RESTART:
-	      {
-		ClientEvent::Base::Ptr ev = new ClientEvent::ClientRestart(client->fatal_reason());
-		client_options->events().add_event(ev);
-		client_options->stats().error(Error::CLIENT_RESTART);
-		queue_restart();
-	      }
-	      break;
-	    default:
-	      throw client_connect_unhandled_exception();
+		  break;
+		case Error::CLIENT_HALT:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientHalt(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::CLIENT_HALT);
+		    stop();
+		  }
+		  break;
+		case Error::CLIENT_RESTART:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientRestart(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::CLIENT_RESTART);
+		    queue_restart();
+		  }
+		  break;
+		default:
+		  throw client_connect_unhandled_exception();
+		}
 	    }
 	}
     }
@@ -292,6 +305,7 @@ namespace openvpn {
     unsigned int generation;
     bool halt;
     bool paused;
+    bool dont_restart_;
     int conn_timeout;
     boost::asio::io_service& io_service;
     ClientOptions::Ptr client_options;
