@@ -97,7 +97,7 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     // This method will give the thread one second to
     // exit and will abandon it after this time.
     public void wait_thread_short() {
-	final int wait_millisecs = 2500; // max time that we will wait for thread to exit
+	final int wait_millisecs = 5000; // max time that we will wait for thread to exit
 	Thread th = thread;
 	if (th != null) {
 	    try {
