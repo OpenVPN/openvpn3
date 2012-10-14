@@ -107,7 +107,7 @@ namespace openvpn {
 	  for (unsigned int i = index; i < limit; ++i)
 	    {
 	      const Item& item = list[i % size];
-	      if (proto == item.transport_protocol)
+	      if (proto.transport_match(item.transport_protocol))
 		return i;
 	    }
 	}

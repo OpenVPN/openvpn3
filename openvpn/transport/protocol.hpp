@@ -49,6 +49,11 @@ namespace openvpn {
       return type_ != other.type_;
     }
 
+    bool transport_match(const Protocol& other) const
+    {
+      return transport_proto() == other.transport_proto();
+    }
+
     unsigned int extra_transport_bytes() const
     {
       return is_tcp() ? sizeof(boost::uint16_t) : 0;
@@ -83,6 +88,23 @@ namespace openvpn {
       if (ret.type_ == NONE)
 	OPENVPN_THROW(option_error, "error parsing protocol: " << s);
       return ret;
+    }
+
+    int transport_proto() const
+    {
+      switch (type_)
+	{
+	case UDPv4:
+	  return 0;
+	case TCPv4:
+	  return 1;
+	case UDPv6:
+	  return 0;
+	case TCPv6:
+	  return 1;
+	default:
+	  return -1;
+	}
     }
 
     const char *str() const
