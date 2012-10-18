@@ -28,6 +28,7 @@
 %rename(ClientAPI_LogInfo) LogInfo;
 %rename(ClientAPI_InterfaceStats) InterfaceStats;
 %rename(ClientAPI_TransportStats) TransportStats;
+%rename(ClientAPI_MergeConfig) MergeConfig;
 %rename(ClientAPI_ExternalPKIRequestBase) ExternalPKIRequestBase;
 %rename(ClientAPI_ExternalPKICertRequest) ExternalPKICertRequest;
 %rename(ClientAPI_ExternalPKISignRequest) ExternalPKISignRequest;

@@ -48,6 +48,39 @@ namespace openvpn {
     {
       return str == "1" || !strcasecmp(str.c_str(), "true");
     }
+
+    // make sure that string ends with char c, if not append it
+    inline std::string add_trailing(const std::string& str, const char c)
+    {
+      const size_t len = str.length();
+      if (len > 0 && str[len-1] == c)
+	return str;
+      else
+	return str + c;
+    }
+
+    // make sure that string ends with char c, if not append it
+    inline void add_trailing_in_place(std::string& str, const char c)
+    {
+      const size_t len = str.length();
+      if (!(len > 0 && str[len-1] == c))
+	str += c;
+    }
+
+    // remove trailing \r or \n chars
+    inline void trim_crlf(std::string& str)
+    {
+      static const char crlf[] = "\r\n";
+      const size_t pos = str.find_last_not_of(crlf);
+      if (pos == std::string::npos)
+	str = "";
+      else
+	{
+	  const size_t p = pos + 1;
+	  if (p < str.length())
+	    str = str.substr(0, p);
+	}
+    }
   } // namespace string
 } // namespace openvpn
 

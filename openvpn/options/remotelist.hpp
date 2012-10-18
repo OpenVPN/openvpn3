@@ -45,12 +45,21 @@ namespace openvpn {
     RemoteList(const OptionList& opt)
     {
       Protocol default_proto(Protocol::UDPv4);
+      std::string default_port = "1194";
 
       // parse "proto" option if present
       {
 	const Option* o = opt.get_ptr("proto");
 	if (o)
 	  default_proto = Protocol::parse(o->get(1));
+      }
+
+      // parse "port" option if present
+      // fixme -- validate port
+      {
+	const Option* o = opt.get_ptr("port");
+	if (o)
+	  default_port = o->get(1);
       }
 
       // cycle through remote entries
@@ -61,7 +70,10 @@ namespace openvpn {
 	    Item e;
 	    const Option& o = opt[*i];
 	    e.server_host = o.get(1);
-	    e.server_port = o.get(2);
+	    if (o.size() >= 3)
+	      e.server_port = o.get(2);
+	    else
+	      e.server_port = default_port;
 	    if (o.size() >= 4)
 	      e.transport_protocol = Protocol::parse(o.get(3));
 	    else

@@ -19,6 +19,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/typeinfo.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/common/split.hpp>
 
 namespace openvpn {
@@ -173,6 +174,7 @@ namespace openvpn {
       Option multiline;
       while (std::getline(in, line))
 	{
+	  string::trim_crlf(line);
 	  ++line_num;
 	  if (in_multiline)
 	    {
@@ -222,6 +224,7 @@ namespace openvpn {
       const std::string prefix = tag + "_";
       while (std::getline(in, line))
 	{
+	  string::trim_crlf(line);
 	  ++line_num;
 	  if (boost::algorithm::starts_with(line, "# "))
 	    {
@@ -424,7 +427,6 @@ namespace openvpn {
 	}
     }
 
-  private:
     // return true if line is blank or a comment
     static bool ignore_line(const std::string& line)
     {
@@ -461,6 +463,7 @@ namespace openvpn {
 	str = str.substr(1, n-2);
     }
 
+  private:
     // multiline tagging (meta)
 
     // return true if string is a meta tag, e.g. WEB_CA_BUNDLE_START

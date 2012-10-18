@@ -22,7 +22,8 @@ namespace openvpn {
   namespace ClientAPI {
     // Represents an OpenVPN server and its friendly name
     // (client reads)
-    struct ServerEntry {
+    struct ServerEntry
+    {
       std::string server;
       std::string friendlyName;
     };
@@ -109,11 +110,11 @@ namespace openvpn {
     {
       Config() : connTimeout(0) {}
 
-      // OpenVPN config file (profile) as a string
+      // OpenVPN profile as a string
       std::string content;
 
       // User wants to use a different server than that specified in "remote"
-      // option of config file
+      // option of profile
       std::string serverOverride;
 
       // User wants to force a given transport protocol
@@ -202,8 +203,19 @@ namespace openvpn {
       int lastPacketReceived;
     };
 
+    // return value of merge_config_static
+    struct MergeConfig
+    {
+      std::string status;                   // ProfileMerge::Status codes rendered as string
+      std::string errorText;                // error string (augments status)
+      std::string basename;                 // profile basename
+      std::string profileContent;           // unified profile
+      std::vector<std::string> refPathList; // list of all reference paths successfully read
+    };
+
     // base class for External PKI queries
-    struct ExternalPKIRequestBase {
+    struct ExternalPKIRequestBase
+    {
       ExternalPKIRequestBase() : error(false), invalidAlias(false) {}
 
       bool error;             // true if error occurred (client writes)
@@ -239,7 +251,11 @@ namespace openvpn {
       // in this class.
       static void init_process();
 
-      // Parse config file and determine needed credentials statically.
+      // Read an OpenVPN profile that might contain external
+      // file references, returning a unified profile.
+      static MergeConfig merge_config_static(const std::string& path);
+
+      // Parse profile and determine needed credentials statically.
       static EvalConfig eval_config_static(const Config&);
 
       // Parse a dynamic challenge cookie, placing the result in dc.

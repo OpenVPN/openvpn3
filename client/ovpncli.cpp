@@ -60,6 +60,7 @@
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/options/cliopthelper.hpp>
+#include <openvpn/options/merge.hpp>
 
 // copyright
 #include <openvpn/legal/copyright.hpp>
@@ -305,6 +306,24 @@ namespace openvpn {
 	  eval.error = true;
 	  eval.message = e.what();
 	}
+    }
+
+    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_static(const std::string& path)
+    {
+      ProfileMerge pm(path);
+      MergeConfig ret;
+      ret.status = pm.status_string();
+      ret.basename = pm.basename();
+      if (pm.status() == ProfileMerge::MERGE_SUCCESS)
+	{
+	  ret.refPathList = pm.ref_path_list();
+	  ret.profileContent = pm.profile_content();
+	}
+      else
+	{
+	  ret.errorText = pm.error();
+	}
+      return ret;
     }
 
     OPENVPN_CLIENT_EXPORT EvalConfig OpenVPNClient::eval_config_static(const Config& config)
