@@ -26,6 +26,16 @@ namespace openvpn {
 #endif
     }
 
+    inline int strcasecmp(const std::string& s1, const char *s2)
+    {
+      return strcasecmp(s1.c_str(), s2);
+    }
+
+    inline int strcasecmp(const std::string& s1, const std::string& s2)
+    {
+      return strcasecmp(s1.c_str(), s2.c_str());
+    }
+
     /* Like strncpy but makes sure dest is always null terminated */
     inline void strncpynt (char *dest, const char *src, size_t maxlen)
     {
