@@ -272,15 +272,25 @@ namespace openvpn {
 
       unsigned int tun_ifconfig(const OptionList& opt)
       {
+	enum Topology {
+	  NET30,
+	  SUBNET,
+	};
+
 	unsigned int ip_ver_flags = 0;
 	TunBuilderBase* tb = config->builder;
 
-	// first verify topology
+	// get topology
+	Topology top = NET30;
 	{
 	  const Option& o = opt.get("topology"); // DIRECTIVE
 	  o.min_args(2);
-	  if (o[1] != "subnet")
-	    throw option_error("only topology subnet supported");
+	  if (o[1] == "subnet")
+	    top = SUBNET;
+	  else if (o[1] == "net30")
+	    top = NET30;
+	  else
+	    throw option_error("only topology 'subnet' and 'net30' supported");
 	}
 
 	// configure tun interface
@@ -289,21 +299,45 @@ namespace openvpn {
 	  o = opt.get_ptr("ifconfig"); // DIRECTIVE
 	  if (o)
 	    {
-	      o->min_args(2);
-	      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string((*o)[1], o->get_optional(2), "ifconfig");
-	      if (pair.version() != IP::Addr::V4)
-		throw tun_builder_error("ifconfig address is not IPv4");
-	      if (!tb->tun_builder_add_address(pair.addr.to_string(),
-					       pair.netmask.prefix_len(),
-					       false))
-		throw tun_builder_error("tun_builder_add_address IPv4 failed");
-	      vpn_ip4_addr = pair.addr;
-	      ip_ver_flags |= F_IPv4;
+	      if (top == SUBNET)
+		{
+		  o->min_args(2);
+		  const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string((*o)[1], o->get_optional(2), "ifconfig");
+		  if (pair.version() != IP::Addr::V4)
+		    throw tun_builder_error("ifconfig address is not IPv4 (topology subnet)");
+		  if (!tb->tun_builder_add_address(pair.addr.to_string(),
+						   pair.netmask.prefix_len(),
+						   false))
+		    throw tun_builder_error("tun_builder_add_address IPv4 failed (topology subnet)");
+		  vpn_ip4_addr = pair.addr;
+		  ip_ver_flags |= F_IPv4;
+		}
+	      else if (top == NET30)
+		{
+		  o->min_args(3);
+		  const IP::Addr local = IP::Addr::from_string((*o)[1]);
+		  const IP::Addr remote = IP::Addr::from_string((*o)[2]);
+		  const IP::Addr netmask = IP::Addr::from_string("255.255.255.252");
+		  if (local.version() != IP::Addr::V4 || remote.version() != IP::Addr::V4)
+		    throw tun_builder_error("ifconfig address is not IPv4 (topology net30)");
+		  if ((local & netmask) != (remote & netmask))
+		    throw tun_builder_error("ifconfig addresses are not in the same /30 subnet (topology net30)");
+		  if (!tb->tun_builder_add_address(local.to_string(),
+						   netmask.prefix_len(),
+						   false))
+		    throw tun_builder_error("tun_builder_add_address IPv4 failed (topology net30)");
+		  vpn_ip4_addr = local;
+		  ip_ver_flags |= F_IPv4;
+		}
+	      else
+		throw option_error("internal topology error");
 	    }
 
 	  o = opt.get_ptr("ifconfig-ipv6"); // DIRECTIVE
 	  if (o)
 	    {
+	      if (top != SUBNET)
+		throw option_error("only topology 'subnet' supported with IPv6");
 	      o->min_args(2);
 	      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string((*o)[1], "ifconfig-ipv6");
 	      if (pair.version() != IP::Addr::V6)

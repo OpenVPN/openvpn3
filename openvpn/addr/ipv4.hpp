@@ -136,6 +136,11 @@ namespace openvpn {
 	return u.addr == other.u.addr;
       }
 
+      bool operator!=(const Addr& other) const
+      {
+	return !operator==(other);
+      }
+
       bool unspecified() const
       {
 	return u.addr == 0;

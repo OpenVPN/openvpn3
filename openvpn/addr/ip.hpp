@@ -269,6 +269,11 @@ namespace openvpn {
 	return false;
       }
 
+      bool operator!=(const Addr& other) const
+      {
+	return !operator==(other);
+      }
+
       Addr& operator++()
       {
 	switch (ver)

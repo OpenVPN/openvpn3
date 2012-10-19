@@ -132,6 +132,11 @@ namespace openvpn {
 	return u.u64[0] == other.u.u64[0] && u.u64[1] == other.u.u64[1];
       }
 
+      bool operator!=(const Addr& other) const
+      {
+	return !operator==(other);
+      }
+
       bool unspecified() const
       {
 	return all_zeros();
