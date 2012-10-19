@@ -13,6 +13,12 @@
 
 #include <android/log.h>
 
+#ifdef SWIGEXPORT
+#define EXPORT SWIGEXPORT
+#else
+#define EXPORT
+#endif
+
 #ifdef PRIVATE_TUNNEL
 #define RSA_SIGN_INIT Java_net_openvpn_privatetunnel_JellyBeanHack_rsa_1sign_1init
 #define RSA_SIGN      Java_net_openvpn_privatetunnel_JellyBeanHack_rsa_1sign
@@ -71,7 +77,7 @@ inline bool callbacks_defined()
     && CRYPTO_add_lock != NULL;
 }
 
-SWIGEXPORT jint RSA_SIGN_INIT(JNIEnv* env, jclass)
+EXPORT jint RSA_SIGN_INIT(JNIEnv* env, jclass)
 {
   if (!initialized)
     {
@@ -106,7 +112,7 @@ static int jni_throw(JNIEnv* env, const char* className, const char* msg)
   return 0;
 }
 
-SWIGEXPORT jbyteArray RSA_SIGN(JNIEnv* env, jclass, jbyteArray from, jint pkeyRef)
+EXPORT jbyteArray RSA_SIGN(JNIEnv* env, jclass, jbyteArray from, jint pkeyRef)
 {
   if (!callbacks_defined())
     {
@@ -146,7 +152,7 @@ SWIGEXPORT jbyteArray RSA_SIGN(JNIEnv* env, jclass, jbyteArray from, jint pkeyRe
   return jb;
 }
 
-SWIGEXPORT void PKEY_RETAIN(JNIEnv* env, jclass, jint pkeyRef)
+EXPORT void PKEY_RETAIN(JNIEnv* env, jclass, jint pkeyRef)
 {
   EVP_PKEY* pkey = reinterpret_cast<EVP_PKEY*>(pkeyRef);
   if (pkey && CRYPTO_add_lock)

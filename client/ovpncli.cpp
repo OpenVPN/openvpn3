@@ -392,16 +392,19 @@ namespace openvpn {
       bool in_run = false;
       ScopedPtr<boost::asio::io_service> io_service;
 
+      // client stats
+      state->stats.reset(new MySessionStats(this));
+
+      // client events
+      state->events.reset(new MyClientEvents(this));
+
+      // socket protect
+      state->socket_protect.set_parent(this);
+
+      // session
+      state->session.reset();
+
       try {
-	// client stats
-	state->stats.reset(new MySessionStats(this));
-
-	// client events
-	state->events.reset(new MyClientEvents(this));
-
-	// socket protect
-	state->socket_protect.set_parent(this);
-
 	// load options
 	ClientOptions::Config cc;
 	cc.cli_stats = state->stats;
@@ -482,7 +485,8 @@ namespace openvpn {
       state->socket_protect.detach_from_parent();
       state->stats->detach_from_parent();
       state->events->detach_from_parent();
-      state->session.reset();
+      if (state->session)
+	state->session.reset();
       return ret;
     }
 
@@ -517,13 +521,13 @@ namespace openvpn {
 	      ClientEvent::Base::Ptr ev = new ClientEvent::EpkiInvalidAlias(req.alias);
 	      state->events->add_event(ev);
 	    }
-	  else 
-	    {
-	      ClientEvent::Base::Ptr ev = new ClientEvent::EpkiError(req.errorText);
-	      state->events->add_event(ev);
-	    }
+
+	  ClientEvent::Base::Ptr ev = new ClientEvent::EpkiError(req.errorText);
+	  state->events->add_event(ev);
+
 	  state->stats->error(err_type);
-	  state->session->dont_restart();
+	  if (state->session)
+	    state->session->dont_restart();
 	}
     }
 
