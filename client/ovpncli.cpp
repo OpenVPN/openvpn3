@@ -384,6 +384,39 @@ namespace openvpn {
 	}
     }
 
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::process_epki_cert_chain(const ExternalPKICertRequest& req)
+    {
+      // Get cert and add to options list
+      {
+	Option o;
+	o.push_back("cert");
+	o.push_back(req.cert);
+	state->options.add_item(o);
+      }
+      
+      // Get the supporting chain, if it exists, and use
+      // it for ca (if ca isn't defined), or otherwise use
+      // it for extra-certs (if ca is defined but extra-certs
+      // is not).
+      if (!req.supportingChain.empty())
+	{
+	  if (!state->options.exists("ca"))
+	    {
+	      Option o;
+	      o.push_back("ca");
+	      o.push_back(req.supportingChain);
+	      state->options.add_item(o);
+	    }
+	  else if (!state->options.exists("extra-certs"))
+	    {
+	      Option o;
+	      o.push_back("extra-certs");
+	      o.push_back(req.supportingChain);
+	      state->options.add_item(o);
+	    }
+	}
+    }
+
     OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
     {
       boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
@@ -429,11 +462,8 @@ namespace openvpn {
 		external_pki_cert_request(req);
 		if (!req.error)
 		  {
-		    Option o;
-		    o.push_back("cert");
-		    o.push_back(req.cert);
-		    state->options.add_item(o);
 		    cc.external_pki = this;
+		    process_epki_cert_chain(req);
 		  }
 		else
 		  {

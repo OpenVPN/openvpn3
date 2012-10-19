@@ -227,7 +227,11 @@ namespace openvpn {
     // used to query for External PKI certificate
     struct ExternalPKICertRequest : public ExternalPKIRequestBase
     {
+      // leaf cert
       std::string cert; // (client writes)
+
+      // chain of intermediates and root (optional)
+      std::string supportingChain; // (client writes)
     };
 
     // used to request an RSA signature
@@ -349,6 +353,7 @@ namespace openvpn {
       static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
       void external_pki_error(const ExternalPKIRequestBase&, const size_t err_type);
+      void process_epki_cert_chain(const ExternalPKICertRequest& req);
       void check_app_expired();
 
       // from ExternalPKIBase
