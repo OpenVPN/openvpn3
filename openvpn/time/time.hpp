@@ -191,6 +191,17 @@ namespace openvpn {
 
     T raw() const { return time_; }
 
+    static void reset_base_conditional()
+    {
+      // on 32-bit systems, reset time base after 30 days
+      if (sizeof(T) == 4)
+	{
+	  const base_type newbase = ::time(0);
+	  if (newbase - base_ >= (60*60*24*30))
+	    reset_base();
+	}
+    }
+
     static void reset_base()
     {
       base_ = ::time(0);
