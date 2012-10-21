@@ -90,6 +90,7 @@ namespace openvpn {
 	external_pki = NULL;
 	socket_protect = NULL;
 	conn_timeout = 0;
+	tun_persist = false;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
 #endif
@@ -101,6 +102,7 @@ namespace openvpn {
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
       ProtoContextOptions::Ptr proto_context_options;
+      bool tun_persist;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -174,6 +176,9 @@ namespace openvpn {
 #if defined(OPENVPN_PLATFORM_IPHONE)
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
+#else
+      if (config.tun_persist)
+	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist);
 #endif
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();

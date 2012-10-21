@@ -108,7 +108,7 @@ namespace openvpn {
     // (client writes)
     struct Config
     {
-      Config() : connTimeout(0) {}
+      Config() : connTimeout(0), tunPersist(false) {}
 
       // OpenVPN profile as a string
       std::string content;
@@ -122,6 +122,10 @@ namespace openvpn {
 
       // Connection timeout in seconds, or 0 to retry indefinitely
       int connTimeout;
+
+      // Keep tun interface active during pauses or reconnections
+      // (Can't work on iOS due to tun socket semantics of Apple VPN API)
+      bool tunPersist;
 
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.

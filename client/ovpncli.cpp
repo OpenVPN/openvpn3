@@ -226,7 +226,7 @@ namespace openvpn {
     namespace Private {
       struct ClientState
       {
-	ClientState() : conn_timeout(0) {}
+	ClientState() : conn_timeout(0), tun_persist(false) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -240,6 +240,7 @@ namespace openvpn {
 	std::string server_override;
 	Protocol proto_override;
 	int conn_timeout;
+	bool tun_persist;
 	std::string external_pki_alias;
 	ProtoContextOptions::Ptr proto_context_options;
       };
@@ -299,6 +300,7 @@ namespace openvpn {
       try {
 	state->server_override = config.serverOverride;
 	state->conn_timeout = config.connTimeout;
+	state->tun_persist = config.tunPersist;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride);
 	if (!config.compressionMode.empty())
@@ -450,6 +452,7 @@ namespace openvpn {
 	cc.server_override = state->server_override;
 	cc.proto_override = state->proto_override;
 	cc.conn_timeout = state->conn_timeout;
+	cc.tun_persist = state->tun_persist;
 	cc.proto_context_options = state->proto_context_options;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
