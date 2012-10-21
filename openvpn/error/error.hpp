@@ -43,6 +43,8 @@ namespace openvpn {
       AUTH_FAILED,         // general authentication failure
       CLIENT_HALT,         // HALT message from server received
       CLIENT_RESTART,      // RESTART message from server received
+      N_PAUSE,             // Number of transitions to Pause state
+      N_RECONNECT,         // Number of reconnections
       N_ERRORS,
     };
 
@@ -80,6 +82,8 @@ namespace openvpn {
 	"AUTH_FAILED",
 	"CLIENT_HALT",
 	"CLIENT_RESTART",
+	"N_PAUSE",
+	"N_RECONNECT",
       };
 
       if (type < N_ERRORS)

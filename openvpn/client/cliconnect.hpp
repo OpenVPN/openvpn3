@@ -96,6 +96,7 @@ namespace openvpn {
 	  asio_work.reset(new boost::asio::io_service::work(io_service));
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause();
 	  client_options->events().add_event(ev);
+	  client_options->stats().error(Error::N_PAUSE);
 	}
     }
 
@@ -289,6 +290,7 @@ namespace openvpn {
 	{
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Reconnecting();
 	  client_options->events().add_event(ev);
+	  client_options->stats().error(Error::N_RECONNECT);
 	  if (!(client && client->reached_connected_state()))
 	    client_options->next();
 	}
