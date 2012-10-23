@@ -219,7 +219,7 @@ namespace openvpn {
 		}
 
 	      if (sd == -1)
-		throw tun_builder_error("cannot acquire tun interface socket");
+		throw tun_builder_error("cannot acquire tun interface socket"); // NOTE: this string is quoted in OpenVPNClientBase.java
 
 	      // persist state
 	      if (copt && !use_persisted_tun)
