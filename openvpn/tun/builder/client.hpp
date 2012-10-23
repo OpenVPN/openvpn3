@@ -403,14 +403,17 @@ namespace openvpn {
 	// get topology
 	Topology top = NET30;
 	{
-	  const Option& o = opt.get("topology"); // DIRECTIVE
-	  o.min_args(2);
-	  if (o[1] == "subnet")
-	    top = SUBNET;
-	  else if (o[1] == "net30")
-	    top = NET30;
-	  else
-	    throw option_error("only topology 'subnet' and 'net30' supported");
+	  const Option* o = opt.get_ptr("topology"); // DIRECTIVE
+	  if (o)
+	    {
+	      o->min_args(2);
+	      if ((*o)[1] == "subnet")
+		top = SUBNET;
+	      else if ((*o)[1] == "net30")
+		top = NET30;
+	      else
+		throw option_error("only topology 'subnet' and 'net30' supported");
+	    }
 	}
 
 	// configure tun interface
