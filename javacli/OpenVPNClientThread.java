@@ -36,6 +36,12 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	// Called to "protect" a socket from being routed through the tunnel
 	boolean socket_protect(int socket);
 
+	// When a connection is close to timeout, the core will call this
+	// method.  If it returns false, the core will disconnect with a
+	// CONNECTION_TIMEOUT event.  If true, the core will enter a PAUSE
+	// state.
+	boolean pause_on_connection_timeout();
+
 	// Callback to construct a new tun builder
 	TunBuilder tun_builder_new();
 
@@ -185,6 +191,15 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	EventReceiver p = parent;
 	if (p != null)
 	    return p.socket_protect(socket);
+	else
+	    return false;
+    }
+
+    @Override
+    public boolean pause_on_connection_timeout() {
+	EventReceiver p = parent;
+	if (p != null)
+	    return p.pause_on_connection_timeout();
 	else
 	    return false;
     }

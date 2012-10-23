@@ -8,44 +8,63 @@
 #ifndef OPENVPN_TRANSPORT_ENDPOINT_CACHE_H
 #define OPENVPN_TRANSPORT_ENDPOINT_CACHE_H
 
+#include <string>
+
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/rc.hpp>
+#include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
 
-  template <typename EP>
-  class EndpointCache
+  class EndpointCache : public RC<thread_unsafe_refcount>
   {
   public:
-    OPENVPN_SIMPLE_EXCEPTION(endpoint_cache_undefined);
+    typedef boost::intrusive_ptr<EndpointCache> Ptr;
 
-    EndpointCache() : defined_(false) {}
-
-    void reset()
+    template <class EP>
+    bool get_endpoint(const std::string& host, const std::string& port, EP& server_endpoint) const
     {
-      defined_ = false;
+      if (host == name && addr.defined())
+	{
+	  //OPENVPN_LOG("***** EndpointCache cache hit " << host << ':' << port << " -> " << addr);
+	  server_endpoint.address(addr.to_asio());
+	  server_endpoint.port(types<unsigned int>::parse(port));
+	  return true;
+	}
+      else
+	{
+	  //OPENVPN_LOG("***** EndpointCache cache miss " << host << ':' << port);
+	  return false;
+	}
     }
 
-    void set_endpoint(const EP& endpoint)
-      {
-	defined_ = true;
-	endpoint_ = endpoint;
-      }
+    template <class EP>
+    void set_endpoint(const std::string& host, const EP& server_endpoint)
+    {
+      name = host;
+      addr = IP::Addr::from_asio(server_endpoint.address());
+      //OPENVPN_LOG("***** EndpointCache set " << host << " -> " << addr);
+    }
+
+    bool has_endpoint(const std::string& host) const
+    {
+      return host == name && addr.defined();
+    }
 
     bool defined() const
     {
-      return defined_;
+      return addr.defined();
     }
 
-    const EP& endpoint() const
+    void invalidate()
     {
-      if (!defined_)
-	throw endpoint_cache_undefined();
-      return endpoint_;
+      name = "";
+      addr.reset();
     }
 
   private:
-    bool defined_;
-    EP endpoint_;
+    std::string name;
+    IP::Addr addr;
   };
 
 } // namespace openvpn

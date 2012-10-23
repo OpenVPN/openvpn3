@@ -185,10 +185,18 @@ namespace openvpn {
     {
       if (!e && !halt)
 	{
-	  ClientEvent::Base::Ptr ev = new ClientEvent::ConnectionTimeout();
-	  client_options->events().add_event(ev);
 	  client_options->stats().error(Error::CONNECTION_TIMEOUT);
-	  stop();
+	  if (!paused && client_options->pause_on_connection_timeout())
+	    {
+	      // go into pause state instead of disconnect
+	      pause();
+	    }
+	  else
+	    {
+	      ClientEvent::Base::Ptr ev = new ClientEvent::ConnectionTimeout();
+	      client_options->events().add_event(ev);
+	      stop();
+	    }
 	}
     }
 

@@ -32,8 +32,8 @@ namespace openvpn {
       enum Version { UNSPEC, V4, V6 };
 
       Addr()
+	: ver(UNSPEC)
       {
-	ver = UNSPEC;
       }
 
       Addr(const Addr& other)
@@ -50,6 +50,11 @@ namespace openvpn {
 	  default:
 	    break;
 	  }
+      }
+
+      void reset()
+      {
+	ver = UNSPEC;
       }
 
       Addr& operator=(const Addr& other)

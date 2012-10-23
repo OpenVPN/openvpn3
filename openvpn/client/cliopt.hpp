@@ -16,6 +16,7 @@
 #include <openvpn/pki/epkibase.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
+#include <openvpn/transport/reconnect_notify.hpp>
 #include <openvpn/transport/client/udpcli.hpp>
 #include <openvpn/transport/client/tcpcli.hpp>
 
@@ -89,6 +90,7 @@ namespace openvpn {
       {
 	external_pki = NULL;
 	socket_protect = NULL;
+	reconnect_notify = NULL;
 	conn_timeout = 0;
 	tun_persist = false;
 #if defined(USE_TUN_BUILDER)
@@ -107,6 +109,7 @@ namespace openvpn {
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
       SocketProtect* socket_protect;
+      ReconnectNotify* reconnect_notify;
 #if defined(USE_TUN_BUILDER)
       TunBuilderBase* builder;
 #endif
@@ -116,13 +119,15 @@ namespace openvpn {
 		  const Config& config)
       : session_iteration(0),
 	socket_protect(config.socket_protect),
+	reconnect_notify(config.reconnect_notify),
 	cli_stats(config.cli_stats),
 	cli_events(config.cli_events),
 	server_poll_timeout_(10),
 	server_override(config.server_override),
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout),
-	proto_context_options(config.proto_context_options)
+	proto_context_options(config.proto_context_options),
+	tun_persist(config.tun_persist)
     {
       // initialize RNG/PRNG
       rng.reset(new RandomAPI());
@@ -130,6 +135,12 @@ namespace openvpn {
 
       // frame
       frame = frame_init();
+
+      // If running in tun_persist mode, we need to do basic DNS caching so that
+      // we can avoid emitting DNS requests while the tunnel is blocked during
+      // reconnections.
+      if (tun_persist)
+	endpoint_cache.reset(new EndpointCache());
 
       // client config
       ClientSSLAPI::Config cc;
@@ -177,7 +188,7 @@ namespace openvpn {
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
 #else
-      if (config.tun_persist)
+      if (tun_persist)
 	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist);
 #endif
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
@@ -234,6 +245,14 @@ namespace openvpn {
       load_transport_config();
     }
 
+    bool pause_on_connection_timeout()
+    {
+      if (reconnect_notify)
+	return reconnect_notify->pause_on_connection_timeout();
+      else
+	return false;
+    }
+
     Client::Config::Ptr client_config()
     {
       Client::Config::Ptr cli_config = new Client::Config;
@@ -281,8 +300,17 @@ namespace openvpn {
   private:
     std::string load_transport_config()
     {
+      // During reconnects, if tun_persist is enabled and endpoint cache is enabled,
+      // remote list scan should bypass any hosts not in endpoint cache.  This is done
+      // because in tun_persist mode, DNS resolve requests are usually not viable
+      // during reconnections because internet access (other than the tunnel itself)
+      // is blocked.
+      EndpointCache::Ptr ec;
+      if (tun_persist && endpoint_cache && endpoint_cache->defined())
+	ec = endpoint_cache;
+
       // initialize remote item with current element
-      const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto_override);
+      const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto_override, ec.get());
       cp->remote_adjust(rli);
 
       // initialize transport factory
@@ -294,6 +322,7 @@ namespace openvpn {
 	  udpconf->frame = frame;
 	  udpconf->stats = cli_stats;
 	  udpconf->socket_protect = socket_protect;
+	  udpconf->endpoint_cache = endpoint_cache;
 	  transport_factory = udpconf;
 	}
       else if (rli.transport_protocol.is_tcp())
@@ -304,6 +333,7 @@ namespace openvpn {
 	  tcpconf->frame = frame;
 	  tcpconf->stats = cli_stats;
 	  tcpconf->socket_protect = socket_protect;
+	  tcpconf->endpoint_cache = endpoint_cache;
 	  transport_factory = tcpconf;
 	}
       else
@@ -323,7 +353,9 @@ namespace openvpn {
     RemoteList::Ptr remote_list;
     TransportClientFactory::Ptr transport_factory;
     TunClientFactory::Ptr tun_factory;
+    EndpointCache::Ptr endpoint_cache;
     SocketProtect* socket_protect;
+    ReconnectNotify* reconnect_notify;
     SessionStats::Ptr cli_stats;
     ClientEvent::Queue::Ptr cli_events;
     ClientCreds::Ptr creds;
@@ -334,6 +366,7 @@ namespace openvpn {
     ProtoContextOptions::Ptr proto_context_options;
     std::string userlocked_username;
     PushOptionsBase::Ptr push_base;
+    bool tun_persist;
   };
 }
 

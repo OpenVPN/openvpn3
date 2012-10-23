@@ -16,6 +16,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/transport/protocol.hpp>
+#include <openvpn/transport/endpoint_cache.hpp>
 
 namespace openvpn {
 
@@ -84,10 +85,13 @@ namespace openvpn {
     }
 
     // used to cycle through Item list
-    Item get(unsigned int& index, const std::string& server_override, const Protocol& proto_override) const
+    Item get(unsigned int& index,
+	     const std::string& server_override,
+	     const Protocol& proto_override,
+	     const EndpointCache* endpoint_cache) const
     {
       const unsigned int size = list.size();
-      index = find_with_proto_match(proto_override, index);
+      index = find_with_proto_match(proto_override, index, endpoint_cache);
       Item item = list[index % size];
       if (!server_override.empty())
 	item.server_host = server_override;
@@ -110,18 +114,18 @@ namespace openvpn {
     }
 
   private:
-    unsigned int find_with_proto_match(const Protocol& proto, const unsigned int index) const
+    unsigned int find_with_proto_match(const Protocol& proto,
+				       const unsigned int index,
+				       const EndpointCache* ec) const
     {
-      if (proto.defined())
+      const unsigned int size = list.size();
+      const unsigned int limit = index + size;
+      for (unsigned int i = index; i < limit; ++i)
 	{
-	  const unsigned int size = list.size();
-	  const unsigned int limit = index + size;
-	  for (unsigned int i = index; i < limit; ++i)
-	    {
-	      const Item& item = list[i % size];
-	      if (proto.transport_match(item.transport_protocol))
-		return i;
-	    }
+	  const Item& item = list[i % size];
+	  if ((!proto.defined() || proto.transport_match(item.transport_protocol))
+	      && (!ec || ec->has_endpoint(item.server_host)))
+	    return i;
 	}
       return index;
     }

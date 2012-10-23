@@ -45,7 +45,7 @@ namespace openvpn {
       virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 						  TransportClientParent& parent);
 
-      EndpointCache<UDPTransport::Endpoint> endpoint_cache;
+      EndpointCache::Ptr endpoint_cache;
 
     private:
       ClientConfig()
@@ -72,9 +72,9 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    if (config->endpoint_cache.defined())
+	    if (config->endpoint_cache
+		&& config->endpoint_cache->get_endpoint(config->server_host, config->server_port, server_endpoint))
 	      {
-		server_endpoint = config->endpoint_cache.endpoint();
 		start_impl_();
 	      }
 	    else
@@ -182,7 +182,8 @@ namespace openvpn {
 
       void start_impl_()
       {
-	config->endpoint_cache.set_endpoint(server_endpoint);
+	if (config->endpoint_cache)
+	  config->endpoint_cache->set_endpoint(config->server_host, server_endpoint);
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)

@@ -223,6 +223,33 @@ namespace openvpn {
       OpenVPNClient* parent;
     };
 
+    class MyReconnectNotify : public ReconnectNotify
+    {
+    public:
+      MyReconnectNotify() : parent(NULL) {}
+
+      void set_parent(OpenVPNClient* parent_arg)
+      {
+	parent = parent_arg;
+      }
+
+      void detach_from_parent()
+      {
+	parent = NULL;
+      }
+
+      virtual bool pause_on_connection_timeout()
+      {
+	if (parent)
+	  return parent->pause_on_connection_timeout();
+	else
+	  return false;
+      }
+
+    private:
+      OpenVPNClient* parent;
+    };
+
     namespace Private {
       struct ClientState
       {
@@ -231,6 +258,7 @@ namespace openvpn {
 	OptionList options;
 	EvalConfig eval;
 	MySocketProtect socket_protect;
+	MyReconnectNotify reconnect_notify;
 	ClientCreds::Ptr creds;
 	MySessionStats::Ptr stats;
 	MyClientEvents::Ptr events;
@@ -441,6 +469,9 @@ namespace openvpn {
       // socket protect
       state->socket_protect.set_parent(this);
 
+      // reconnect notifications
+      state->reconnect_notify.set_parent(this);
+
       // session
       state->session.reset();
 
@@ -454,6 +485,7 @@ namespace openvpn {
 	cc.conn_timeout = state->conn_timeout;
 	cc.tun_persist = state->tun_persist;
 	cc.proto_context_options = state->proto_context_options;
+	cc.reconnect_notify = &state->reconnect_notify;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
@@ -521,6 +553,7 @@ namespace openvpn {
 	  ret.message = e.what();
 	}
       state->socket_protect.detach_from_parent();
+      state->reconnect_notify.detach_from_parent();
       state->stats->detach_from_parent();
       state->events->detach_from_parent();
       if (state->session)
