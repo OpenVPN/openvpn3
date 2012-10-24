@@ -253,7 +253,7 @@ namespace openvpn {
     namespace Private {
       struct ClientState
       {
-	ClientState() : conn_timeout(0), tun_persist(false) {}
+	ClientState() : conn_timeout(0), tun_persist(false), google_dns_fallback(false) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -269,6 +269,7 @@ namespace openvpn {
 	Protocol proto_override;
 	int conn_timeout;
 	bool tun_persist;
+	bool google_dns_fallback;
 	std::string external_pki_alias;
 	ProtoContextOptions::Ptr proto_context_options;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
@@ -330,6 +331,7 @@ namespace openvpn {
 	state->server_override = config.serverOverride;
 	state->conn_timeout = config.connTimeout;
 	state->tun_persist = config.tunPersist;
+	state->google_dns_fallback = config.googleDnsFallback;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride);
 	if (!config.compressionMode.empty())
@@ -494,6 +496,7 @@ namespace openvpn {
 	cc.proto_override = state->proto_override;
 	cc.conn_timeout = state->conn_timeout;
 	cc.tun_persist = state->tun_persist;
+	cc.google_dns_fallback = state->google_dns_fallback;
 	cc.proto_context_options = state->proto_context_options;
 	cc.http_proxy_options = state->http_proxy_options;
 	cc.reconnect_notify = &state->reconnect_notify;

@@ -94,6 +94,7 @@ namespace openvpn {
 	reconnect_notify = NULL;
 	conn_timeout = 0;
 	tun_persist = false;
+	google_dns_fallback = false;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
 #endif
@@ -107,6 +108,7 @@ namespace openvpn {
       ProtoContextOptions::Ptr proto_context_options;
       HTTPProxyTransport::Options::Ptr http_proxy_options;
       bool tun_persist;
+      bool google_dns_fallback;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -186,6 +188,7 @@ namespace openvpn {
       tunconf->session_name = session_name;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
+      tunconf->google_dns_fallback = config.google_dns_fallback;
 #if defined(OPENVPN_PLATFORM_IPHONE)
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;

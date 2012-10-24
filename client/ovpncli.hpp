@@ -108,7 +108,7 @@ namespace openvpn {
     // (client writes)
     struct Config
     {
-      Config() : connTimeout(0), tunPersist(false) {}
+      Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false) {}
 
       // OpenVPN profile as a string
       std::string content;
@@ -126,6 +126,10 @@ namespace openvpn {
       // Keep tun interface active during pauses or reconnections
       // (Can't work on iOS due to tun socket semantics of Apple VPN API)
       bool tunPersist;
+
+      // If true and a redirect-gateway profile doesn't also define
+      // DNS servers, use the standard Google DNS servers.
+      bool googleDnsFallback;
 
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.

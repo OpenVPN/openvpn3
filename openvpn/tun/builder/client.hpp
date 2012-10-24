@@ -135,6 +135,7 @@ namespace openvpn {
       int n_parallel;            // number of parallel async reads on tun socket
       bool retain_sd;
       bool tun_prefix;
+      bool google_dns_fallback;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
 
@@ -151,7 +152,7 @@ namespace openvpn {
 					    TunClientParent& parent);
     private:
       ClientConfig()
-	: mtu(0), n_parallel(8), retain_sd(false), tun_prefix(false), builder(NULL) {}
+	: mtu(0), n_parallel(8), retain_sd(false), tun_prefix(false), google_dns_fallback(false), builder(NULL) {}
     };
 
     // The tun interface
@@ -359,6 +360,15 @@ namespace openvpn {
 	// add DNS servers and domain prefixes
 	const unsigned int add_dns_flags = add_dns(tb, opt, reroute_dns, quiet);
 
+	// DNS fallback
+	if ((reroute_gw_ver_flags & F_IPv4) && !(add_dns_flags & F_ADD_DNS))
+	  {
+	    if (config.google_dns_fallback)
+	      add_google_dns(tb, reroute_dns);
+	    else if (stats)
+	      stats->error(Error::REROUTE_GW_NO_DNS);
+	  }
+
 	// set remote server address
 	if (!tb->tun_builder_set_remote_address(server_addr.to_string(),
 						server_addr.version() == IP::Addr::V6))
@@ -376,13 +386,6 @@ namespace openvpn {
 	  {
 	    if (!tb->tun_builder_set_session_name(config.session_name))
 	      throw tun_builder_error("tun_builder_set_session_name failed");
-	  }
-
-	// warnings
-	if (stats)
-	  {
-	    if ((reroute_gw_ver_flags & F_IPv4) && !(add_dns_flags & F_ADD_DNS))
-	      stats->error(Error::REROUTE_GW_NO_DNS);
 	  }
       }
 
@@ -635,6 +638,13 @@ namespace openvpn {
 	      }
 	  }
 	return flags;
+      }
+
+      static void add_google_dns(TunBuilderBase* tb, const bool reroute_dns)
+      {
+	if (!tb->tun_builder_add_dns_server("8.8.8.8", false, reroute_dns)
+	    || !tb->tun_builder_add_dns_server("8.8.4.4", false, reroute_dns))
+	  throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed for Google DNS");
       }
 
       boost::asio::io_service& io_service;
