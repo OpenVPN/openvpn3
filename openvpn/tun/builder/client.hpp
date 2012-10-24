@@ -79,6 +79,11 @@ namespace openvpn {
 
       TunPersist() {}
 
+      bool defined() const
+      {
+	return sd_.defined();
+      }
+
       bool match(const std::string& options) const
       {
 	return options == options_ && !options_.empty();

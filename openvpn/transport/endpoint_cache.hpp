@@ -24,16 +24,24 @@ namespace openvpn {
     template <class EP>
     bool get_endpoint(const std::string& host, const std::string& port, EP& server_endpoint) const
     {
-      if (host == name && addr.defined())
+      if (IP::Addr::is_valid(host))
 	{
-	  //OPENVPN_LOG("***** EndpointCache cache hit " << host << ':' << port << " -> " << addr);
+	  //OPENVPN_LOG("***** EndpointCache cache IP ADDR " << host << ':' << port << " -> " << addr);
+	  const IP::Addr ip_addr = IP::Addr::from_string(host);
+	  server_endpoint.address(ip_addr.to_asio());
+	  server_endpoint.port(types<unsigned int>::parse(port));
+	  return true;
+	}
+      else if (host == name && addr.defined())
+	{
+	  //OPENVPN_LOG("***** EndpointCache cache HIT " << host << ':' << port << " -> " << addr);
 	  server_endpoint.address(addr.to_asio());
 	  server_endpoint.port(types<unsigned int>::parse(port));
 	  return true;
 	}
       else
 	{
-	  //OPENVPN_LOG("***** EndpointCache cache miss " << host << ':' << port);
+	  //OPENVPN_LOG("***** EndpointCache cache MISS " << host << ':' << port);
 	  return false;
 	}
     }
@@ -41,19 +49,17 @@ namespace openvpn {
     template <class EP>
     void set_endpoint(const std::string& host, const EP& server_endpoint)
     {
-      name = host;
-      addr = IP::Addr::from_asio(server_endpoint.address());
-      //OPENVPN_LOG("***** EndpointCache set " << host << " -> " << addr);
+      if (!IP::Addr::is_valid(host))
+	{
+	  name = host;
+	  addr = IP::Addr::from_asio(server_endpoint.address());
+	  //OPENVPN_LOG("***** EndpointCache SET " << host << " -> " << addr);
+	}
     }
 
     bool has_endpoint(const std::string& host) const
     {
-      return host == name && addr.defined();
-    }
-
-    bool defined() const
-    {
-      return addr.defined();
+      return IP::Addr::is_valid(host) || (host == name && addr.defined());
     }
 
     void invalidate()

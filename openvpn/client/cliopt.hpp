@@ -129,8 +129,7 @@ namespace openvpn {
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout),
 	proto_context_options(config.proto_context_options),
-	http_proxy_options(config.http_proxy_options),
-	tun_persist(config.tun_persist)
+	http_proxy_options(config.http_proxy_options)
     {
       // initialize RNG/PRNG
       rng.reset(new RandomAPI());
@@ -142,7 +141,7 @@ namespace openvpn {
       // If running in tun_persist mode, we need to do basic DNS caching so that
       // we can avoid emitting DNS requests while the tunnel is blocked during
       // reconnections.
-      if (tun_persist)
+      if (config.tun_persist)
 	endpoint_cache.reset(new EndpointCache());
 
       // client config
@@ -191,8 +190,11 @@ namespace openvpn {
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
 #else
-      if (tun_persist)
-	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist);
+      if (config.tun_persist)
+	{
+	  tun_persist.reset(new TunBuilderClient::TunPersist);
+	  tunconf->tun_persist = tun_persist;
+	}
 #endif
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
@@ -322,8 +324,10 @@ namespace openvpn {
       // during reconnections because internet access (other than the tunnel itself)
       // is blocked.
       EndpointCache::Ptr ec;
-      if (tun_persist && endpoint_cache && endpoint_cache->defined())
+#if defined(USE_TUN_BUILDER)
+      if (tun_persist && tun_persist->defined())
 	ec = endpoint_cache;
+#endif
 
       if (http_proxy_options)
 	{
@@ -413,7 +417,10 @@ namespace openvpn {
     HTTPProxyTransport::Options::Ptr http_proxy_options;
     std::string userlocked_username;
     PushOptionsBase::Ptr push_base;
-    bool tun_persist;
+
+#if defined(USE_TUN_BUILDER)
+    TunBuilderClient::TunPersist::Ptr tun_persist;
+#endif
   };
 }
 

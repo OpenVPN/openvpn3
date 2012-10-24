@@ -79,6 +79,27 @@ namespace openvpn {
 	return a.to_string();
       }
 
+      static bool is_valid(const std::string& ipstr)
+      {
+	// fast path -- rule out validity if invalid chars
+	for (size_t i = 0; i < ipstr.length(); ++i)
+	  {
+	    const char c = ipstr[i];
+	    if (!((c >= '0' && c <= '9')
+		  || (c >= 'a' && c <= 'f')
+		  || (c >= 'A' && c <= 'F')
+		  || (c == '.' || c == ':' || c == '%')))
+	      return false;
+	  }
+
+	// slow path
+	{
+	  boost::system::error_code ec;
+	  boost::asio::ip::address::from_string(ipstr, ec);
+	  return !ec;
+	}
+      }
+
       static Addr from_string(const std::string& ipstr, const char *title = NULL)
       {
 	boost::system::error_code ec;
