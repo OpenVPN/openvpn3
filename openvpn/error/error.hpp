@@ -29,6 +29,8 @@ namespace openvpn {
       TUN_WRITE_ERROR,     // write errors on tun/tap interface
       TUN_FRAMING_ERROR,   // error with tun PF_INET/PF_INET6 prefix
       TUN_SETUP_FAILED,    // error setting up tun/tap interface
+      TUN_IFACE_CREATE,    // error creating tun/tap interface
+      REROUTE_GW_NO_DNS,   // redirect-gateway specified without alt DNS servers
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
       TCP_CONNECT_ERROR,   // client error on TCP connect
@@ -49,6 +51,9 @@ namespace openvpn {
       PROXY_ERROR,         // HTTP proxy error
       PROXY_NEED_CREDS,    // HTTP proxy needs credentials
       N_ERRORS,
+
+      // undefined error
+      UNDEF=SUCCESS,
     };
 
     inline const char *name(const size_t type)
@@ -71,6 +76,8 @@ namespace openvpn {
 	"TUN_WRITE_ERROR",
 	"TUN_FRAMING_ERROR",
 	"TUN_SETUP_FAILED",
+	"TUN_IFACE_CREATE",
+	"REROUTE_GW_NO_DNS",
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",
 	"TCP_CONNECT_ERROR",

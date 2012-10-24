@@ -171,7 +171,7 @@ namespace openvpn {
 		os << "DNS resolve error on '" << config->server_host << "' for UDP session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
-		parent.transport_error(os.str());
+		parent.transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
@@ -188,7 +188,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		parent.transport_error("socket_protect error (UDP)");
+		parent.transport_error(Error::UNDEF, "socket_protect error (UDP)");
 		return;
 	      }
 	  }

@@ -34,8 +34,8 @@ namespace openvpn {
   struct TransportClientParent
   {
     virtual void transport_recv(BufferAllocated& buf) = 0;
-    virtual void transport_error(const std::string& err) = 0;
-    virtual void proxy_error(const std::string& err, const bool need_creds) = 0;
+    virtual void transport_error(const Error::Type fatal_err, const std::string& err_text) = 0;
+    virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text) = 0;
 
     // progress notifications
     virtual void transport_pre_resolve() = 0;

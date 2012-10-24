@@ -163,6 +163,11 @@ namespace openvpn {
 	F_IPv6=(1<<1),
       };
 
+      // add_dns flags
+      enum {
+	F_ADD_DNS=(1<<0),
+      };
+
     public:
       virtual void client_start(const OptionList& opt, TransportClient& transcli)
       {
@@ -184,7 +189,7 @@ namespace openvpn {
 		{
 		  copt.reset(new TunBuilderCapture());
 		  try {
-		    configure_builder(copt.get(), NULL, server_addr, *config, opt, true);
+		    configure_builder(copt.get(), NULL, NULL, server_addr, *config, opt, true);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -212,14 +217,17 @@ namespace openvpn {
 		  parent.tun_pre_tun_config();
 
 		  // configure the tun builder
-		  configure_builder(tb, state.get(), server_addr, *config, opt, false);
+		  configure_builder(tb, state.get(), config->stats.get(), server_addr, *config, opt, false);
 
 		  // start tun
 		  sd = tb->tun_builder_establish();
 		}
 
 	      if (sd == -1)
-		throw tun_builder_error("cannot acquire tun interface socket"); // NOTE: this string is quoted in OpenVPNClientBase.java
+		{
+		  parent.tun_error(Error::TUN_IFACE_CREATE, "cannot acquire tun interface socket");
+		  return;
+		}
 
 	      // persist state
 	      if (copt && !use_persisted_tun)
@@ -243,11 +251,10 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		config->stats->error(Error::TUN_SETUP_FAILED);
 		stop();
 		if (tun_persist)
 		  tun_persist->close();
-		parent.tun_error(e.what());
+		parent.tun_error(Error::TUN_SETUP_FAILED, e.what());
 	      }
 	  }
       }
@@ -327,6 +334,7 @@ namespace openvpn {
 
       static void configure_builder(TunBuilderBase* tb,
 				    ClientState* state,
+				    SessionStats* stats,
 				    const IP::Addr& server_addr,
 				    const ClientConfig& config,
 				    const OptionList& opt,
@@ -344,7 +352,7 @@ namespace openvpn {
 	const bool reroute_dns = should_reroute_dns(opt, reroute_gw_ver_flags, quiet);
 
 	// add DNS servers and domain prefixes
-	add_dns(tb, opt, reroute_dns, quiet);
+	const unsigned int add_dns_flags = add_dns(tb, opt, reroute_dns, quiet);
 
 	// set remote server address
 	if (!tb->tun_builder_set_remote_address(server_addr.to_string(),
@@ -363,6 +371,13 @@ namespace openvpn {
 	  {
 	    if (!tb->tun_builder_set_session_name(config.session_name))
 	      throw tun_builder_error("tun_builder_set_session_name failed");
+	  }
+
+	// warnings
+	if (stats)
+	  {
+	    if ((reroute_gw_ver_flags & F_IPv4) && !(add_dns_flags & F_ADD_DNS))
+	      stats->error(Error::REROUTE_GW_NO_DNS);
 	  }
       }
 
@@ -574,12 +589,13 @@ namespace openvpn {
 	return reroute_gw_ver_flags;
       }
 
-      static void add_dns(TunBuilderBase* tb, const OptionList& opt, const bool reroute_dns, const bool quiet)
+      static unsigned int add_dns(TunBuilderBase* tb, const OptionList& opt, const bool reroute_dns, const bool quiet)
       {
 	// Example:
 	//   [dhcp-option] [DNS] [172.16.0.23]
 	//   [dhcp-option] [DOMAIN] [openvpn.net]
 	//   [dhcp-option] [DOMAIN] [example.com]
+	unsigned int flags = 0;
 	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
 	if (dopt != opt.map().end())
 	  {
@@ -596,6 +612,7 @@ namespace openvpn {
 							  ip.version() == IP::Addr::V6,
 							  reroute_dns))
 			throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed");
+		      flags |= F_ADD_DNS;
 		    }
 		  else if (type == "DOMAIN")
 		    {
@@ -612,6 +629,7 @@ namespace openvpn {
 		  }
 	      }
 	  }
+	return flags;
       }
 
       boost::asio::io_service& io_service;

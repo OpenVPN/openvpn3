@@ -34,7 +34,7 @@ namespace openvpn {
   struct TunClientParent
   {
     virtual void tun_recv(BufferAllocated& buf) = 0;
-    virtual void tun_error(const std::string&) = 0;
+    virtual void tun_error(const Error::Type fatal_err, const std::string& err_text) = 0;
 
     // progress notifications
     virtual void tun_pre_tun_config() = 0;

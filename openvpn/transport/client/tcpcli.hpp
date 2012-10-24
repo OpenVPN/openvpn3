@@ -160,7 +160,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "Transport error on '" << config->server_host << ": " << error;
 	stop();
-	parent.transport_error(os.str());
+	parent.transport_error(Error::UNDEF, os.str());
       }
 
       void stop_()
@@ -194,7 +194,7 @@ namespace openvpn {
 		os << "DNS resolve error on '" << config->server_host << "' for TCP session: " << error;
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
-		parent.transport_error(os.str());
+		parent.transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
@@ -210,7 +210,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		parent.transport_error("socket_protect error (TCP)");
+		parent.transport_error(Error::UNDEF, "socket_protect error (TCP)");
 		return;
 	      }
 	  }
@@ -243,7 +243,7 @@ namespace openvpn {
 		os << "TCP connect error on '" << config->server_host << "' for TCP session: " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
-		parent.transport_error(os.str());
+		parent.transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }

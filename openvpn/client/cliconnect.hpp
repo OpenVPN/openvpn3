@@ -237,7 +237,7 @@ namespace openvpn {
 	    {
 	      switch (client->fatal())
 		{
-		case Error::SUCCESS: // doesn't necessarily mean success, just that there wasn't a fatal error
+		case Error::UNDEF: // means that there wasn't a fatal error
 		  queue_restart();
 		  break;
 
@@ -265,6 +265,14 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
 		    client_options->events().add_event(ev);
 		    client_options->stats().error(Error::TUN_SETUP_FAILED);
+		    stop();
+		  }
+		  break;
+		case Error::TUN_IFACE_CREATE:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunIfaceCreate(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::TUN_IFACE_CREATE);
 		    stop();
 		  }
 		  break;

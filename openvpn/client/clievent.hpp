@@ -40,6 +40,7 @@ namespace openvpn {
       PROXY_NEED_CREDS,
       PROXY_ERROR,
       TUN_SETUP_FAILED,
+      TUN_IFACE_CREATE,
       EPKI_ERROR,
       EPKI_INVALID_ALIAS,
 
@@ -72,6 +73,7 @@ namespace openvpn {
 	"PROXY_NEED_CREDS",
 	"PROXY_ERROR",
 	"TUN_SETUP_FAILED",
+	"TUN_IFACE_CREATE",
 	"EPKI_ERROR",
 	"EPKI_INVALID_ALIAS",
       };
@@ -249,6 +251,11 @@ namespace openvpn {
     struct TunSetupFailed : public ReasonBase
     {
       TunSetupFailed(const std::string& reason) : ReasonBase(TUN_SETUP_FAILED, reason) {}
+    };
+
+    struct TunIfaceCreate : public ReasonBase
+    {
+      TunIfaceCreate(const std::string& reason) : ReasonBase(TUN_IFACE_CREATE, reason) {}
     };
 
     struct EpkiError : public ReasonBase

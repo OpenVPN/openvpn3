@@ -102,7 +102,7 @@ namespace openvpn {
 	  sent_push_request(false),
 	  cli_events(config.cli_events),
 	  connected_(false),
-	  fatal_(Error::SUCCESS),
+	  fatal_(Error::UNDEF),
 	  max_pushed_options(config.max_pushed_options)
       {
 #ifdef OPENVPN_PACKET_LOG
@@ -162,7 +162,7 @@ namespace openvpn {
       bool reached_connected_state() const { return connected_; }
 
       // Fatal error means that we shouldn't retry.
-      // Returns a value != Error::SUCCESS if error
+      // Returns a value != Error::UNDEF if error
       Error::Type fatal() const { return fatal_; }
       const std::string& fatal_reason() const { return fatal_reason_; }
 
@@ -296,28 +296,36 @@ namespace openvpn {
 	  }
       }
 
-      virtual void transport_error(const std::string& err)
+      virtual void transport_error(const Error::Type fatal_err, const std::string& err_text)
       {
+	if (fatal_err != Error::UNDEF)
+	  {
+	    fatal_ = fatal_err;
+	    fatal_reason_ = err_text;
+	  }
 	if (notify_callback)
 	  {
-	    OPENVPN_LOG("Transport Error: " << err);
+	    OPENVPN_LOG("Transport Error: " << err_text);
 	    stop(true);
 	  }
 	else
-	  throw transport_exception(err);
+	  throw transport_exception(err_text);
       }
 
-      virtual void proxy_error(const std::string& err, const bool need_creds)
+      virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text)
       {
-	fatal_ = need_creds ? Error::PROXY_NEED_CREDS : Error::PROXY_ERROR;
-	fatal_reason_ = err;
+	if (fatal_err != Error::UNDEF)
+	  {
+	    fatal_ = fatal_err;
+	    fatal_reason_ = err_text;
+	  }
 	if (notify_callback)
 	  {
-	    OPENVPN_LOG("Proxy Error: " << err);
+	    OPENVPN_LOG("Proxy Error: " << err_text);
 	    stop(true);
 	  }
 	else
-	  throw proxy_exception(err);
+	  throw proxy_exception(err_text);
       }
 
       void extract_auth_token(const OptionList& opt)
@@ -433,17 +441,20 @@ namespace openvpn {
 	  notify_callback->client_proto_connected();
       }
 
-      virtual void tun_error(const std::string& err)
+      virtual void tun_error(const Error::Type fatal_err, const std::string& err_text)
       {
-	fatal_ = Error::TUN_SETUP_FAILED;
-	fatal_reason_ = err;
+	if (fatal_err != Error::UNDEF)
+	  {
+	    fatal_ = fatal_err;
+	    fatal_reason_ = err_text;
+	  }
 	if (notify_callback)
 	  {
-	    OPENVPN_LOG("TUN Error: " << err);
+	    OPENVPN_LOG("TUN Error: " << err_text);
 	    stop(true);
 	  }
 	else
-	  throw tun_exception(err);
+	  throw tun_exception(err_text);
       }
 
       // proto base class calls here to get auth credentials

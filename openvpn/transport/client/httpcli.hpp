@@ -109,7 +109,7 @@ namespace openvpn {
 	  {
 	    if (!config->http_proxy_options)
 	      {
-		parent.proxy_error("http_proxy_options not defined", false);
+		parent.proxy_error(Error::PROXY_ERROR, "http_proxy_options not defined");
 		return;
 	      }
 
@@ -201,15 +201,15 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "Transport error on '" << config->server_host << ": " << error << " (HTTP proxy)";
 	stop();
-	parent.transport_error(os.str());
+	parent.transport_error(Error::UNDEF, os.str());
       }
 
-      void proxy_error(const char *what, const bool need_creds)
+      void proxy_error(const Error::Type fatal_err, const char *what)
       {
 	std::ostringstream os;
 	os << "on " << config->http_proxy_options->host << ':' << config->http_proxy_options->port << ": " << what;
 	stop();
-	parent.proxy_error(os.str(), need_creds);
+	parent.proxy_error(fatal_err, os.str());
       }
 
       void tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
@@ -223,7 +223,7 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		proxy_error(e.what(), false);
+		proxy_error(Error::PROXY_ERROR, e.what());
 	      }
 	  }
       }
@@ -242,7 +242,7 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		proxy_error(e.what(), false);
+		proxy_error(Error::PROXY_ERROR, e.what());
 	      }
 	  }
       }
@@ -315,7 +315,7 @@ namespace openvpn {
 
 		if (config->http_proxy_options->username.empty())
 		  {
-		    proxy_error("HTTP proxy requires credentials", true);
+		    proxy_error(Error::PROXY_NEED_CREDS, "HTTP proxy requires credentials");
 		    return;
 		  }
 
@@ -348,7 +348,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		proxy_error("credentials were not accepted", true);
+		proxy_error(Error::PROXY_NEED_CREDS, "HTTP proxy credentials were not accepted");
 		return;
 	      }
 	  }
@@ -418,7 +418,7 @@ namespace openvpn {
 		os << "DNS resolve error on '" << config->server_host << "' for TCP (HTTP proxy): " << error;
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
-		parent.transport_error(os.str());
+		parent.transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
@@ -445,7 +445,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		parent.transport_error("socket_protect error (HTTP Proxy)");
+		parent.transport_error(Error::UNDEF, "socket_protect error (HTTP Proxy)");
 		return;
 	      }
 	  }
@@ -484,7 +484,7 @@ namespace openvpn {
 		os << "TCP connect error on '" << config->server_host << "' for TCP-via-HTTP-proxy session: " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
-		parent.transport_error(os.str());
+		parent.transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
