@@ -88,10 +88,11 @@ namespace openvpn {
     Item get(unsigned int& index,
 	     const std::string& server_override,
 	     const Protocol& proto_override,
+	     bool* proto_override_fail,
 	     const EndpointCache* endpoint_cache) const
     {
       const unsigned int size = list.size();
-      index = find_with_proto_match(proto_override, index, endpoint_cache);
+      index = find_with_proto_match(proto_override, index, proto_override_fail, endpoint_cache);
       Item item = list[index % size];
       if (!server_override.empty())
 	item.server_host = server_override;
@@ -116,6 +117,7 @@ namespace openvpn {
   private:
     unsigned int find_with_proto_match(const Protocol& proto,
 				       const unsigned int index,
+				       bool* proto_override_fail,
 				       const EndpointCache* ec) const
     {
       const unsigned int size = list.size();
@@ -127,6 +129,8 @@ namespace openvpn {
 	      && (!ec || ec->has_endpoint(item.server_host)))
 	    return i;
 	}
+      if (proto_override_fail)
+	*proto_override_fail = true;
       return index;
     }
 

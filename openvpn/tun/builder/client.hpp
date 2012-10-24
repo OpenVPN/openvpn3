@@ -247,7 +247,7 @@ namespace openvpn {
 		stop();
 		if (tun_persist)
 		  tun_persist->close();
-		parent.tun_error(e);
+		parent.tun_error(e.what());
 	      }
 	  }
       }

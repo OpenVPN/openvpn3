@@ -26,6 +26,8 @@ namespace openvpn {
       TCPv4,
       UDPv6,
       TCPv6,
+      UDP=UDPv4,
+      TCP=TCPv4,
     };
 
     Protocol() : type_(NONE) {}

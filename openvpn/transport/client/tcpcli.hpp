@@ -20,10 +20,6 @@
 namespace openvpn {
   namespace TCPTransport {
 
-    OPENVPN_EXCEPTION(tcp_transport_resolve_error);
-    OPENVPN_EXCEPTION(tcp_transport_error);
-    OPENVPN_SIMPLE_EXCEPTION(tcp_transport_socket_protect_error);
-
     class ClientConfig : public TransportClientFactory
     {
     public:
@@ -58,10 +54,10 @@ namespace openvpn {
 
     class Client : public TransportClient
     {
-      friend class ClientConfig;  // calls constructor
-      friend class Link<Client*>; // calls tcp_read_handler
+      friend class ClientConfig;         // calls constructor
+      friend class Link<Client*, false>; // calls tcp_read_handler
 
-      typedef Link<Client*> LinkImpl;
+      typedef Link<Client*, false> LinkImpl;
 
       typedef AsioDispatchResolve<Client,
 				  void (Client::*)(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator),
@@ -148,6 +144,12 @@ namespace openvpn {
 	  return false;
       }
 
+      void tcp_eof_handler() // called by LinkImpl
+      {
+	config->stats->error(Error::NETWORK_EOF_ERROR);
+	tcp_error_handler("NETWORK_EOF_ERROR");
+      }
+
       void tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
       {
 	parent.transport_recv(buf);
@@ -158,8 +160,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "Transport error on '" << config->server_host << ": " << error;
 	stop();
-	tcp_transport_error err(os.str());
-	parent.transport_error(err);
+	parent.transport_error(os.str());
       }
 
       void stop_()
@@ -193,8 +194,7 @@ namespace openvpn {
 		os << "DNS resolve error on '" << config->server_host << "' for TCP session: " << error;
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
-		tcp_transport_resolve_error err(os.str());
-		parent.transport_error(err);
+		parent.transport_error(os.str());
 	      }
 	  }
       }
@@ -210,8 +210,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		tcp_transport_socket_protect_error err;
-		parent.transport_error(err);
+		parent.transport_error("socket_protect error (TCP)");
 		return;
 	      }
 	  }
@@ -233,7 +232,7 @@ namespace openvpn {
 					socket,
 					config->send_queue_max_size,
 					config->free_list_max_size,
-					config->frame,
+					(*config->frame)[Frame::READ_LINK_TCP],
 					config->stats));
 		impl->start();
 		parent.transport_connecting();
@@ -244,8 +243,7 @@ namespace openvpn {
 		os << "TCP connect error on '" << config->server_host << "' for TCP session: " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
-		tcp_transport_resolve_error err(os.str());
-		parent.transport_error(err);
+		parent.transport_error(os.str());
 	      }
 	  }
       }

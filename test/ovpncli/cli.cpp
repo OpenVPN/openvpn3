@@ -57,6 +57,11 @@ private:
     signreq.error = true;
     signreq.errorText = "external_pki_sign_request not implemented";
   }
+
+  virtual bool pause_on_connection_timeout()
+  {
+    return false;
+  }
 };
 
 Client *the_client = NULL;
@@ -101,13 +106,17 @@ void handler(int signum)
 int main(int argc, char *argv[])
 {
   static const struct option longopts[] = {
-    { "username",   required_argument,      NULL,           'u' },
-    { "password",   required_argument,      NULL,           'p' },
-    { "proto",      required_argument,      NULL,           'P' },
-    { "server",     required_argument,      NULL,           's' },
-    { "timeout",    required_argument,      NULL,           't' },
-    { "compress",   required_argument,      NULL,           'c' },
-    { NULL,         0,                      NULL,           0 }
+    { "username",   required_argument,      NULL,       'u' },
+    { "password",   required_argument,      NULL,       'p' },
+    { "proto",      required_argument,      NULL,       'P' },
+    { "server",     required_argument,      NULL,       's' },
+    { "timeout",    required_argument,      NULL,       't' },
+    { "compress",   required_argument,      NULL,       'c' },
+    { "proxy-host",     required_argument,  NULL,       'h' },
+    { "proxy-port",     required_argument,  NULL,       'q' },
+    { "proxy-username", required_argument,  NULL,       'U' },
+    { "proxy-password", required_argument,  NULL,       'W' },
+    { NULL,         0,                      NULL,       0 }
   };
 
   try {
@@ -119,9 +128,14 @@ int main(int argc, char *argv[])
 	std::string server;
 	int timeout = 0;
 	std::string compress;
+	std::string proxyHost;
+	std::string proxyPort;
+	std::string proxyUsername;
+	std::string proxyPassword;
+
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "u:p:P:s:t:c:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "u:p:P:s:t:c:h:q:U:W:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -143,6 +157,18 @@ int main(int argc, char *argv[])
 	      case 'c':
 		compress = optarg;
 		break;
+	      case 'h':
+		proxyHost = optarg;
+		break;
+	      case 'q':
+		proxyPort = optarg;
+		break;
+	      case 'U':
+		proxyUsername = optarg;
+		break;
+	      case 'W':
+		proxyPassword = optarg;
+		break;
 	      default:
 		goto usage;
 	      }
@@ -160,6 +186,10 @@ int main(int argc, char *argv[])
 	config.protoOverride = proto;
 	config.connTimeout = timeout;
 	config.compressionMode = compress;
+	config.proxyHost = proxyHost;
+	config.proxyPort = proxyPort;
+	config.proxyUsername = proxyUsername;
+	config.proxyPassword = proxyPassword;
 	ClientAPI::EvalConfig eval = client.eval_config(config);
 	if (eval.error)
 	  OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
@@ -234,11 +264,16 @@ int main(int argc, char *argv[])
  usage:
   std::cout << "OpenVPN Client (ovpncli)" << std::endl;
   std::cout << "usage: cli <config-file> [options]" << std::endl;
-  std::cout << "--username, -u : username" << std::endl;
-  std::cout << "--password, -p : password" << std::endl;
-  std::cout << "--proto, -P    : protocol override (udp|tcp)" << std::endl;
-  std::cout << "--server, -s   : server override" << std::endl;
-  std::cout << "--timeout, -t  : timeout" << std::endl;
-  std::cout << "--compress, -c : compression mode (yes|no|asym)" << std::endl;
+  std::cout << "--username, -u       : username" << std::endl;
+  std::cout << "--password, -p       : password" << std::endl;
+  std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
+  std::cout << "--server, -s         : server override" << std::endl;
+  std::cout << "--timeout, -t        : timeout" << std::endl;
+  std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
+  std::cout << "--proxy-host, -h     : HTTP proxy hostname/IP" << std::endl;
+  std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
+  std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
+  std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
+  std::cout << "" << std::endl;
   return 2;
 }

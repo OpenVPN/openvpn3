@@ -44,7 +44,7 @@ namespace openvpn {
       BufferAllocated buf;
     };
 
-    template <typename ReadHandler>
+    template <typename ReadHandler, bool RAW_MODE_ONLY>
     class Link : public RC<thread_unsafe_refcount>
     {
       typedef std::deque<BufferPtr> Queue;
@@ -56,17 +56,37 @@ namespace openvpn {
 	   boost::asio::ip::tcp::socket& socket_arg,
 	   const size_t send_queue_max_size_arg,
 	   const size_t free_list_max_size_arg,
-	   const Frame::Ptr& frame_arg,
+	   const Frame::Context& frame_context_arg,
 	   const SessionStats::Ptr& stats_arg)
 	: socket(socket_arg),
 	  halt(false),
 	  read_handler(read_handler_arg),
-	  frame(frame_arg),
-	  frame_context((*frame_arg)[Frame::READ_LINK_TCP]),
+	  frame_context(frame_context_arg),
 	  stats(stats_arg),
 	  send_queue_max_size(send_queue_max_size_arg),
 	  free_list_max_size(free_list_max_size_arg)
       {
+	set_raw_mode(false);
+      }
+
+      // In raw mode, data is sent and received without any special encapsulation.
+      // In non-raw mode, data is packetized by prepending a 16-bit length word
+      // onto each packet.  The OpenVPN protocol runs in non-raw mode, while other
+      // TCP protocols such as HTTP or HTTPS would run in raw mode.
+      // This method is a no-op if RAW_MODE_ONLY is true.
+      void set_raw_mode(const bool mode)
+      {
+	if (RAW_MODE_ONLY)
+	  raw_mode = true;
+	else
+	  raw_mode = mode;
+      }
+
+      bool is_raw_mode() const {
+	if (RAW_MODE_ONLY)
+	  return true;
+	else
+	  return raw_mode;
       }
 
       bool send(BufferAllocated& b)
@@ -84,7 +104,8 @@ namespace openvpn {
 		else
 		  buf.reset(new BufferAllocated());
 		buf->swap(b);
-		PacketStream::prepend_size(*buf);
+		if (!is_raw_mode())
+		  PacketStream::prepend_size(*buf);
 		queue.push_back(buf);
 		if (queue.size() == 1) // send operation not currently active?
 		  queue_send();
@@ -98,6 +119,20 @@ namespace openvpn {
 	      }
 	  }
 	return false;
+      }
+
+      void inject(const BufferAllocated& src)
+      {
+	const size_t size = src.size();
+	OPENVPN_LOG_TCPLINK_VERBOSE("TCP inject size=" << size);
+       	if (size && !RAW_MODE_ONLY)
+	  {
+	    BufferAllocated buf;
+	    frame_context.prepare(buf);
+	    buf.write(src.c_data(), size);
+	    BufferAllocated pkt;
+	    put_pktstream(buf, pkt);
+	  }
       }
 
       void start()
@@ -126,7 +161,7 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		OPENVPN_LOG_TCPLINK_VERBOSE("TCP send size=" << bytes_sent);
+		OPENVPN_LOG_TCPLINK_VERBOSE("TCP send raw=" << raw_mode << " size=" << bytes_sent);
 		stats->inc_stat(SessionStats::BYTES_OUT, bytes_sent);
 		stats->inc_stat(SessionStats::PACKETS_OUT, 1);
 
@@ -181,24 +216,23 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv size=" << bytes_recvd);
-		stats->inc_stat(SessionStats::BYTES_IN, bytes_recvd);
-		stats->inc_stat(SessionStats::PACKETS_IN, 1);
+		OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv raw=" << raw_mode << " size=" << bytes_recvd);
 		pfp->buf.set_size(bytes_recvd);
-
-		BufferAllocated pkt;
-		while (pfp->buf.size())
+		if (!is_raw_mode())
 		  {
-		    pktstream.put(pfp->buf, frame_context);
-		    if (pktstream.ready())
-		      {
-			pktstream.get(pkt);
-			read_handler->tcp_read_handler(pkt);
-		      }
+		    BufferAllocated pkt;
+		    put_pktstream(pfp->buf, pkt);
+		    if (!pfp->buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
+		      pfp->buf.move(pkt);
 		  }
-		if (!pfp->buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
-		  pfp->buf.move(pkt);
+		else
+		  read_handler->tcp_read_handler(pfp->buf);
 		queue_recv(pfp.release()); // reuse PacketFrom object
+	      }
+	    else if (error == boost::asio::error::eof)
+	      {
+		OPENVPN_LOG_TCPLINK_ERROR("TCP recv EOF");
+		read_handler->tcp_eof_handler();
 	      }
 	    else
 	      {
@@ -210,11 +244,26 @@ namespace openvpn {
 	  }
       }
 
+      void put_pktstream(BufferAllocated& buf, BufferAllocated& pkt)
+      {
+	stats->inc_stat(SessionStats::BYTES_IN, buf.size());
+	stats->inc_stat(SessionStats::PACKETS_IN, 1);
+	while (buf.size())
+	  {
+	    pktstream.put(buf, frame_context);
+	    if (pktstream.ready())
+	      {
+		pktstream.get(pkt);
+		read_handler->tcp_read_handler(pkt);
+	      }
+	  }
+      }
+
       boost::asio::ip::tcp::socket& socket;
       bool halt;
+      bool raw_mode;
       ReadHandler read_handler;
-      Frame::Ptr frame;
-      const Frame::Context& frame_context;
+      const Frame::Context frame_context;
       SessionStats::Ptr stats;
       const size_t send_queue_max_size;
       const size_t free_list_max_size;

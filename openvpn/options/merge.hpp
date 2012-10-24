@@ -131,7 +131,7 @@ namespace openvpn {
 		}
 	      else if (!OptionList::ignore_line(line))
 		{
-		  Option opt = split_by_space<Option, OptionList::Lex, SpaceMatch>(line);
+		  Option opt = Split::by_space<Option, OptionList::Lex, SpaceMatch>(line);
 		  if (opt.size())
 		    {
 		      if (OptionList::is_open_tag(opt[0]) && opt.size() == 1)

@@ -19,6 +19,7 @@
 #include <openvpn/transport/reconnect_notify.hpp>
 #include <openvpn/transport/client/udpcli.hpp>
 #include <openvpn/transport/client/tcpcli.hpp>
+#include <openvpn/transport/client/httpcli.hpp>
 
 #include <openvpn/client/cliproto.hpp>
 
@@ -104,6 +105,7 @@ namespace openvpn {
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
       ProtoContextOptions::Ptr proto_context_options;
+      HTTPProxyTransport::Options::Ptr http_proxy_options;
       bool tun_persist;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
@@ -127,6 +129,7 @@ namespace openvpn {
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout),
 	proto_context_options(config.proto_context_options),
+	http_proxy_options(config.http_proxy_options),
 	tun_persist(config.tun_persist)
     {
       // initialize RNG/PRNG
@@ -222,6 +225,12 @@ namespace openvpn {
 	  userlocked_username = o->get(1);
       }
 
+      // create default creds object in case submit_creds is not called
+      {
+	ClientCreds::Ptr cc = new ClientCreds();
+	submit_creds(cc);
+      }
+
       // configure push_base, a set of base options that will be combined with
       // options pushed by server.
       {
@@ -274,12 +283,19 @@ namespace openvpn {
 
     void submit_creds(const ClientCreds::Ptr& creds_arg)
     {
-      // if no username is defined in creds and userlocked_username is defined
-      // in profile, set the creds username to be the userlocked_username
-      if (creds_arg && !creds_arg->username_defined() && !userlocked_username.empty())
-	creds_arg->set_username(userlocked_username);
+      if (creds_arg)
+	{
+	  // if no username is defined in creds and userlocked_username is defined
+	  // in profile, set the creds username to be the userlocked_username
+	  if (!creds_arg->username_defined() && !userlocked_username.empty())
+	    creds_arg->set_username(userlocked_username);
+	  creds = creds_arg;
+	}
+    }
 
-      creds = creds_arg;
+    bool server_poll_timeout_enabled() const
+    {
+      return !http_proxy_options;
     }
 
     Time::Duration server_poll_timeout() const
@@ -309,37 +325,67 @@ namespace openvpn {
       if (tun_persist && endpoint_cache && endpoint_cache->defined())
 	ec = endpoint_cache;
 
-      // initialize remote item with current element
-      const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto_override, ec.get());
-      cp->remote_adjust(rli);
+      if (http_proxy_options)
+	{
+	  // special handling for HTTP proxy transport
+	  const Protocol proto(Protocol::TCP);
+	  bool proto_fail = false;
+	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto, &proto_fail, ec.get());
+	  if (!proto_fail)
+	    {
+	      cp->remote_adjust(rli);
 
-      // initialize transport factory
-      if (rli.transport_protocol.is_udp())
-	{
-	  UDPTransport::ClientConfig::Ptr udpconf = UDPTransport::ClientConfig::new_obj();
-	  udpconf->server_host = rli.server_host;
-	  udpconf->server_port = rli.server_port;
-	  udpconf->frame = frame;
-	  udpconf->stats = cli_stats;
-	  udpconf->socket_protect = socket_protect;
-	  udpconf->endpoint_cache = endpoint_cache;
-	  transport_factory = udpconf;
-	}
-      else if (rli.transport_protocol.is_tcp())
-	{
-	  TCPTransport::ClientConfig::Ptr tcpconf = TCPTransport::ClientConfig::new_obj();
-	  tcpconf->server_host = rli.server_host;
-	  tcpconf->server_port = rli.server_port;
-	  tcpconf->frame = frame;
-	  tcpconf->stats = cli_stats;
-	  tcpconf->socket_protect = socket_protect;
-	  tcpconf->endpoint_cache = endpoint_cache;
-	  transport_factory = tcpconf;
+	      // HTTP Proxy transport
+	      HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::Ptr tcpconf = HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::new_obj();
+	      tcpconf->server_host = rli.server_host;
+	      tcpconf->server_port = rli.server_port;
+	      tcpconf->frame = frame;
+	      tcpconf->stats = cli_stats;
+	      tcpconf->socket_protect = socket_protect;
+	      tcpconf->endpoint_cache = endpoint_cache;
+	      tcpconf->http_proxy_options = http_proxy_options;
+	      tcpconf->rng = rng;
+	      transport_factory = tcpconf;
+	      return rli.server_host;
+	    }
+	  else
+	    throw option_error("cannot connect via HTTP proxy because no TCP server entries exist in profile");
 	}
       else
-	throw option_error("unknown transport protocol");
+	{
+	  // initialize remote item with current element
+	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto_override, NULL, ec.get());
+	  cp->remote_adjust(rli);
 
-      return rli.server_host;
+	  // initialize transport factory
+	  if (rli.transport_protocol.is_udp())
+	    {
+	      // UDP transport
+	      UDPTransport::ClientConfig::Ptr udpconf = UDPTransport::ClientConfig::new_obj();
+	      udpconf->server_host = rli.server_host;
+	      udpconf->server_port = rli.server_port;
+	      udpconf->frame = frame;
+	      udpconf->stats = cli_stats;
+	      udpconf->socket_protect = socket_protect;
+	      udpconf->endpoint_cache = endpoint_cache;
+	      transport_factory = udpconf;
+	    }
+	  else if (rli.transport_protocol.is_tcp())
+	    {
+	      // TCP transport
+	      TCPTransport::ClientConfig::Ptr tcpconf = TCPTransport::ClientConfig::new_obj();
+	      tcpconf->server_host = rli.server_host;
+	      tcpconf->server_port = rli.server_port;
+	      tcpconf->frame = frame;
+	      tcpconf->stats = cli_stats;
+	      tcpconf->socket_protect = socket_protect;
+	      tcpconf->endpoint_cache = endpoint_cache;
+	      transport_factory = tcpconf;
+	    }
+	  else
+	    throw option_error("unknown transport protocol");
+	  return rli.server_host;
+	}
     }
 
     unsigned int session_iteration;
@@ -364,6 +410,7 @@ namespace openvpn {
     Protocol proto_override;
     int conn_timeout_;
     ProtoContextOptions::Ptr proto_context_options;
+    HTTPProxyTransport::Options::Ptr http_proxy_options;
     std::string userlocked_username;
     PushOptionsBase::Ptr push_base;
     bool tun_persist;

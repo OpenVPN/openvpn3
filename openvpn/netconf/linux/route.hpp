@@ -80,7 +80,7 @@ namespace openvpn {
       std::string best_gw;
       while (std::getline(in, line))
 	{
-	  strvec v = split_by_space<strvec, StandardLex, SpaceMatch>(line);
+	  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch>(line);
 	  if (v.size() >= 8)
 	    {
 	      if (v[1] == "00000000" && v[7] == "00000000")

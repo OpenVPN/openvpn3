@@ -20,9 +20,6 @@
 namespace openvpn {
   namespace UDPTransport {
 
-    OPENVPN_EXCEPTION(udp_transport_resolve_error);
-    OPENVPN_SIMPLE_EXCEPTION(udp_transport_socket_protect_error);
-
     class ClientConfig : public TransportClientFactory
     {
     public:
@@ -174,8 +171,7 @@ namespace openvpn {
 		os << "DNS resolve error on '" << config->server_host << "' for UDP session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
-		udp_transport_resolve_error err(os.str());
-		parent.transport_error(err);
+		parent.transport_error(os.str());
 	      }
 	  }
       }
@@ -192,8 +188,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		udp_transport_socket_protect_error err;
-		parent.transport_error(err);
+		parent.transport_error("socket_protect error (UDP)");
 		return;
 	      }
 	  }
@@ -201,7 +196,7 @@ namespace openvpn {
 	socket.connect(server_endpoint);
 	impl.reset(new LinkImpl(this,
 				socket,
-				config->frame,
+				(*config->frame)[Frame::READ_LINK_UDP],
 				config->stats));
 	impl->start(config->n_parallel);
 	parent.transport_connecting();

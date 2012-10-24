@@ -113,11 +113,11 @@ namespace openvpn {
       // OpenVPN profile as a string
       std::string content;
 
-      // User wants to use a different server than that specified in "remote"
+      // Use a different server than that specified in "remote"
       // option of profile
       std::string serverOverride;
 
-      // User wants to force a given transport protocol
+      // Force a given transport protocol
       std::string protoOverride;
 
       // Connection timeout in seconds, or 0 to retry indefinitely
@@ -136,6 +136,12 @@ namespace openvpn {
       // asym -- allow compression on downlink only (i.e. server -> client)
       // no (default if empty) -- support compression stubs only
       std::string compressionMode;
+
+      // HTTP Proxy parameters (optional)
+      std::string proxyHost;      // hostname or IP address of proxy
+      std::string proxyPort;      // port number of proxy
+      std::string proxyUsername;  // proxy credentials (optional)
+      std::string proxyPassword;  // proxy credentials (optional)
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

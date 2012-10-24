@@ -49,13 +49,12 @@ namespace openvpn {
 
       Link(ReadHandler read_handler_arg,
 	   boost::asio::ip::udp::socket& socket_arg,
-	   const Frame::Ptr& frame_arg,
+	   const Frame::Context& frame_context_arg,
 	   const SessionStats::Ptr& stats_arg)
 	: socket(socket_arg),
 	  halt(false),
 	  read_handler(read_handler_arg),
-	  frame(frame_arg),
-	  frame_context((*frame_arg)[Frame::READ_LINK_UDP]),
+	  frame_context(frame_context_arg),
 	  stats(stats_arg)
       {
       }
@@ -146,8 +145,7 @@ namespace openvpn {
       boost::asio::ip::udp::socket& socket;
       bool halt;
       ReadHandler read_handler;
-      Frame::Ptr frame;
-      const Frame::Context& frame_context;
+      const Frame::Context frame_context;
       SessionStats::Ptr stats;
     };
   }

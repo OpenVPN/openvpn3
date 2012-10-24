@@ -155,10 +155,10 @@ namespace openvpn {
     // caller should call update_map() after this function
     void parse_from_csv(const std::string& str)
     {
-      std::vector<std::string> list = split_by_char<std::vector<std::string>, Lex>(str, ',');
+      std::vector<std::string> list = Split::by_char<std::vector<std::string>, Lex>(str, ',');
       for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); ++i)
 	{
-	  const Option opt = split_by_space<Option, Lex, SpaceMatch>(*i);
+	  const Option opt = Split::by_space<Option, Lex, SpaceMatch>(*i);
 	  if (opt.size())
 	    push_back(opt);
 	}
@@ -192,7 +192,7 @@ namespace openvpn {
 	    }
 	  else if (!ignore_line(line))
 	    {
-	      Option opt = split_by_space<Option, Lex, SpaceMatch>(line);
+	      Option opt = Split::by_space<Option, Lex, SpaceMatch>(line);
 	      if (opt.size())
 		{
 		  if (is_open_tag(opt[0]))
@@ -245,7 +245,7 @@ namespace openvpn {
 		}
 	      else if (boost::algorithm::starts_with(line, prefix))
 		{
-		  Option opt = split_by_char<Option, NullLex>(std::string(line, prefix.length()), '=');
+		  Option opt = Split::by_char<Option, NullLex>(std::string(line, prefix.length()), '=');
 		  if (opt.size())
 		    {
 		      if (is_open_meta_tag(opt[0]))

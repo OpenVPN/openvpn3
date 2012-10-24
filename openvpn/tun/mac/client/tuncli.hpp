@@ -77,7 +77,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::TUN_SETUP_FAILED);
 		stop();
-		parent.tun_error(e);
+		parent.tun_error(e.what());
 	      }
 	  }
       }

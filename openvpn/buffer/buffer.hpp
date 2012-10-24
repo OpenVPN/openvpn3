@@ -8,6 +8,7 @@
 #ifndef OPENVPN_BUFFER_BUFFER_H
 #define OPENVPN_BUFFER_BUFFER_H
 
+#include <string>
 #include <cstring>
 #include <algorithm>
 
@@ -113,6 +114,12 @@ namespace openvpn {
 
     // return true if array is empty
     bool empty() const { return !size_; }
+
+    // return contents of buffer as a std::string
+    std::string to_string() const
+    {
+      return std::string((const char *)c_data(), size());
+    }
 
     // return the number of additional T objects that can be added before capacity is reached (without considering resize)
     size_t remaining(const size_t tailroom = 0) const {

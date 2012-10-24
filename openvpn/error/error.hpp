@@ -14,6 +14,7 @@ namespace openvpn {
     enum Type {
       SUCCESS=0,           // no error
       NETWORK_RECV_ERROR,  // errors receiving on network socket
+      NETWORK_EOF_ERROR,   // EOF received on TCP network socket
       NETWORK_SEND_ERROR,  // errors sending on network socket
       DECRYPT_ERROR,       // data channel encrypt/decrypt error
       HMAC_ERROR,          // HMAC verification failure
@@ -45,6 +46,8 @@ namespace openvpn {
       CLIENT_RESTART,      // RESTART message from server received
       N_PAUSE,             // Number of transitions to Pause state
       N_RECONNECT,         // Number of reconnections
+      PROXY_ERROR,         // HTTP proxy error
+      PROXY_NEED_CREDS,    // HTTP proxy needs credentials
       N_ERRORS,
     };
 
@@ -53,6 +56,7 @@ namespace openvpn {
       static const char *names[] = {
 	"SUCCESS",
 	"NETWORK_RECV_ERROR",
+	"NETWORK_EOF_ERROR",
 	"NETWORK_SEND_ERROR",
 	"DECRYPT_ERROR",
 	"HMAC_ERROR",
@@ -84,6 +88,8 @@ namespace openvpn {
 	"CLIENT_RESTART",
 	"N_PAUSE",
 	"N_RECONNECT",
+	"PROXY_ERROR",
+	"PROXY_NEED_CREDS",
       };
 
       if (type < N_ERRORS)

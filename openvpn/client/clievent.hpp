@@ -37,6 +37,8 @@ namespace openvpn {
       CLIENT_RESTART,
       CONNECTION_TIMEOUT,
       DYNAMIC_CHALLENGE,
+      PROXY_NEED_CREDS,
+      PROXY_ERROR,
       TUN_SETUP_FAILED,
       EPKI_ERROR,
       EPKI_INVALID_ALIAS,
@@ -67,6 +69,8 @@ namespace openvpn {
 	"CLIENT_RESTART",
 	"CONNECTION_TIMEOUT",
 	"DYNAMIC_CHALLENGE",
+	"PROXY_NEED_CREDS",
+	"PROXY_ERROR",
 	"TUN_SETUP_FAILED",
 	"EPKI_ERROR",
 	"EPKI_INVALID_ALIAS",
@@ -230,6 +234,16 @@ namespace openvpn {
     struct DynamicChallenge : public ReasonBase
     {
       DynamicChallenge(const std::string& reason) : ReasonBase(DYNAMIC_CHALLENGE, reason) {}
+    };
+
+    struct ProxyError : public ReasonBase
+    {
+      ProxyError(const std::string& reason) : ReasonBase(PROXY_ERROR, reason) {}
+    };
+
+    struct ProxyNeedCreds : public ReasonBase
+    {
+      ProxyNeedCreds(const std::string& reason) : ReasonBase(PROXY_NEED_CREDS, reason) {}
     };
 
     struct TunSetupFailed : public ReasonBase

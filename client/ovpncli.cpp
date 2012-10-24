@@ -271,6 +271,7 @@ namespace openvpn {
 	bool tun_persist;
 	std::string external_pki_alias;
 	ProtoContextOptions::Ptr proto_context_options;
+	HTTPProxyTransport::Options::Ptr http_proxy_options;
       };
     };
 
@@ -335,6 +336,15 @@ namespace openvpn {
 	  state->proto_context_options->parse_compression_mode(config.compressionMode);
 	if (eval.externalPki)
 	  state->external_pki_alias = config.externalPkiAlias;
+	if (!config.proxyHost.empty())
+	  {
+	    HTTPProxyTransport::Options::Ptr ho(new HTTPProxyTransport::Options());
+	    ho->host = config.proxyHost;
+	    ho->port = config.proxyPort;
+	    ho->username = config.proxyUsername;
+	    ho->password = config.proxyPassword;
+	    state->http_proxy_options = ho;
+	  }
       }
       catch (const std::exception& e)
 	{
@@ -485,6 +495,7 @@ namespace openvpn {
 	cc.conn_timeout = state->conn_timeout;
 	cc.tun_persist = state->tun_persist;
 	cc.proto_context_options = state->proto_context_options;
+	cc.http_proxy_options = state->http_proxy_options;
 	cc.reconnect_notify = &state->reconnect_notify;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;

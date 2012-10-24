@@ -31,6 +31,11 @@ namespace openvpn {
       return strcasecmp(s1.c_str(), s2);
     }
 
+    inline int strcasecmp(const char *s1, const std::string& s2)
+    {
+      return strcasecmp(s1, s2.c_str());
+    }
+
     inline int strcasecmp(const std::string& s1, const std::string& s2)
     {
       return strcasecmp(s1.c_str(), s2.c_str());

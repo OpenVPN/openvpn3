@@ -63,6 +63,8 @@ namespace openvpn {
       OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
       OPENVPN_SIMPLE_EXCEPTION(authentication_failed);
 
+      OPENVPN_EXCEPTION(proxy_exception);
+
       struct Config : public RC<thread_unsafe_refcount>
       {
 	typedef boost::intrusive_ptr<Config> Ptr;
@@ -294,15 +296,28 @@ namespace openvpn {
 	  }
       }
 
-      virtual void transport_error(const std::exception& err)
+      virtual void transport_error(const std::string& err)
       {
 	if (notify_callback)
 	  {
-	    OPENVPN_LOG("Transport Error: " << err.what());
+	    OPENVPN_LOG("Transport Error: " << err);
 	    stop(true);
 	  }
 	else
-	  throw transport_exception(err.what());
+	  throw transport_exception(err);
+      }
+
+      virtual void proxy_error(const std::string& err, const bool need_creds)
+      {
+	fatal_ = need_creds ? Error::PROXY_NEED_CREDS : Error::PROXY_ERROR;
+	fatal_reason_ = err;
+	if (notify_callback)
+	  {
+	    OPENVPN_LOG("Proxy Error: " << err);
+	    stop(true);
+	  }
+	else
+	  throw proxy_exception(err);
       }
 
       void extract_auth_token(const OptionList& opt)
@@ -418,17 +433,17 @@ namespace openvpn {
 	  notify_callback->client_proto_connected();
       }
 
-      virtual void tun_error(const std::exception& err)
+      virtual void tun_error(const std::string& err)
       {
 	fatal_ = Error::TUN_SETUP_FAILED;
-	fatal_reason_ = err.what();
+	fatal_reason_ = err;
 	if (notify_callback)
 	  {
-	    OPENVPN_LOG("TUN Error: " << err.what());
+	    OPENVPN_LOG("TUN Error: " << err);
 	    stop(true);
 	  }
 	else
-	  throw tun_exception(err.what());
+	  throw tun_exception(err);
       }
 
       // proto base class calls here to get auth credentials

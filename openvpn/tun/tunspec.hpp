@@ -21,7 +21,7 @@ namespace openvpn {
     ParseTunSpec(const std::string& tun_spec)
       : ipv6(false)
     {
-      std::vector<std::string> s = split_by_char<std::vector<std::string>, NullLex>(tun_spec, '/');
+      std::vector<std::string> s = Split::by_char<std::vector<std::string>, NullLex>(tun_spec, '/');
       if (s.size() == 1)
 	{
 	  tun_name = s[0];

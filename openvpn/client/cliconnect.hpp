@@ -240,6 +240,9 @@ namespace openvpn {
 		case Error::SUCCESS: // doesn't necessarily mean success, just that there wasn't a fatal error
 		  queue_restart();
 		  break;
+
+		// Errors below will cause the client to NOT retry the connection
+
 		case Error::AUTH_FAILED:
 		  {
 		    const std::string& reason = client->fatal_reason();
@@ -262,6 +265,22 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
 		    client_options->events().add_event(ev);
 		    client_options->stats().error(Error::TUN_SETUP_FAILED);
+		    stop();
+		  }
+		  break;
+		case Error::PROXY_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::ProxyError(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::PROXY_ERROR);
+		    stop();
+		  }
+		  break;
+		case Error::PROXY_NEED_CREDS:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::ProxyNeedCreds(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::PROXY_NEED_CREDS);
 		    stop();
 		  }
 		  break;
@@ -306,8 +325,11 @@ namespace openvpn {
       client.reset(new Client(io_service, *cli_config, this));
 
       restart_wait_timer.cancel();
-      server_poll_timer.expires_at(Time::now() + client_options->server_poll_timeout());
-      server_poll_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::server_poll_callback, this, generation));
+      if (client_options->server_poll_timeout_enabled())
+	{
+	  server_poll_timer.expires_at(Time::now() + client_options->server_poll_timeout());
+	  server_poll_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::server_poll_callback, this, generation));
+	}
       conn_timer_start();
       client->start();
     }
