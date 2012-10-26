@@ -45,6 +45,15 @@ namespace openvpn {
 	return NULL;
       }
 
+      const std::string get_value(const std::string& key) const
+      {
+	const Header* h = get(key);
+	if (h)
+	  return h->value;
+	else
+	  return "";
+      }
+
       std::string to_string() const
       {
 	std::ostringstream out;

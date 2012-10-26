@@ -9,6 +9,7 @@
 #define OPENVPN_COMMON_STRING_H
 
 #include <openvpn/common/platform.hpp>
+#include <openvpn/common/rc.hpp>
 
 #include <string>
 #include <cstring>
@@ -87,6 +88,20 @@ namespace openvpn {
 	}
     }
   } // namespace string
+
+  // Reference-counted string
+  struct String : public std::string, RC<thread_unsafe_refcount>
+  {
+    typedef boost::intrusive_ptr<String> Ptr;
+
+    String() {}
+    explicit String(const std::string& str) : std::string(str) {}
+    explicit String(const std::string& str, size_t pos, size_t n = std::string::npos) : std::string(str, pos, npos) {}
+    explicit String(const char *s, size_t n) : std::string(s, n) {}
+    explicit String(const char *s) : std::string(s) {}
+    explicit String(size_t n, char c) : std::string(n, c) {}
+  };
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_STRING_H

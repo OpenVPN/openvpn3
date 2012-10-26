@@ -23,6 +23,8 @@
 #include <openvpn/http/request.hpp> // fixme
 #include <openvpn/http/reply.hpp>
 #include <openvpn/proxy/proxyauth.hpp>
+#include <openvpn/proxy/httpdigest.hpp>
+#include <openvpn/proxy/ntlm.hpp>
 
 namespace openvpn {
   namespace HTTPProxyTransport {
@@ -36,14 +38,6 @@ namespace openvpn {
       std::string port;
       std::string username;
       std::string password;
-
-      // previously generated cookie being returned to us,
-      // minus any prefix.
-      //std::string cookie; // fixme
-
-      // opaque string that we will prepend to any generated
-      // cookies.
-      //std::string cookie_prefix; // fixme
     };
 
     // We need access to RAND_API and CRYPTO_API implementations, because proxy
@@ -358,16 +352,6 @@ namespace openvpn {
 	  throw Exception("HTTP proxy general error");
       }
 
-      void ntlm_auth_phase_1(HTTPProxy::ProxyAuthenticate& pa)
-      {
-	OPENVPN_LOG("Proxy method: NTLM" << std::endl << pa.to_string()); // fixme
-      }
-
-      void digest_auth(HTTPProxy::ProxyAuthenticate& pa)
-      {
-	OPENVPN_LOG("Proxy method: Digest" << std::endl << pa.to_string()); // fixme
-      }
-
       void basic_auth(HTTPProxy::ProxyAuthenticate& pa)
       {
 	OPENVPN_LOG("Proxy method: Basic" << std::endl << pa.to_string()); // fixme
@@ -380,6 +364,68 @@ namespace openvpn {
 	http_request = os.str();
 	reset();
 	start_connect_();
+      }
+
+      void digest_auth(HTTPProxy::ProxyAuthenticate& pa)
+      {
+	OPENVPN_LOG("Proxy method: Digest" << std::endl << pa.to_string()); // fixme
+
+	// constants
+	const std::string http_method = "CONNECT";
+	const std::string nonce_count = "00000001";
+	const std::string qop = "auth";
+
+	// get values from Proxy-Authenticate header
+	const std::string realm = pa.parms.get_value("realm");
+	const std::string nonce = pa.parms.get_value("nonce");
+	const std::string algorithm = pa.parms.get_value("algorithm");
+	const std::string opaque = pa.parms.get_value("opaque");
+
+	// generate a client nonce
+	unsigned char cnonce_raw[8];
+	config->rng->rand_bytes(cnonce_raw, sizeof(cnonce_raw));
+	const std::string cnonce = render_hex(cnonce_raw, sizeof(cnonce_raw));
+
+	// build URI
+	const std::string uri = config->server_host + ":" + config->server_port;
+
+	// calculate session key
+	const std::string session_key = HTTPProxy::Digest<CRYPTO_API>::calcHA1(
+	    algorithm,
+	    config->http_proxy_options->username,
+	    realm,
+	    config->http_proxy_options->password,
+	    nonce,
+	    cnonce);
+
+	// calculate response
+	const std::string response = HTTPProxy::Digest<CRYPTO_API>::calcResponse(
+            session_key,
+	    nonce,
+	    nonce_count,
+	    cnonce,
+	    qop,
+	    http_method,
+	    uri,
+	    "");
+
+	// generate proxy request
+	std::ostringstream os;
+	gen_user_agent(os);
+	os << "Host: " << config->server_host << "\r\n";
+	os << "Proxy-Authorization: Digest username=\"" << config->http_proxy_options->username << "\", realm=\"" << realm << "\", nonce=\"" << nonce << "\", uri=\"" << uri << "\", qop=" << qop << ", nc=" << nonce_count << ", cnonce=\"" << cnonce << "\", response=\"" << response << "\"";
+	if (!opaque.empty())
+	  os << ", opaque=\"" + opaque + "\"";
+	os << "\r\n";
+
+	http_request = os.str();
+	reset();
+	start_connect_();
+      }
+
+      void ntlm_auth_phase_1(HTTPProxy::ProxyAuthenticate& pa)
+      {
+	OPENVPN_LOG("Proxy method: NTLM" << std::endl << pa.to_string()); // fixme
       }
 
       void gen_user_agent(std::ostringstream& os)
