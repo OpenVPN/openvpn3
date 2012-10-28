@@ -10,6 +10,8 @@
 
 #include <limits>
 
+#include <boost/cstdint.hpp> // for boost::uint32_t, uint64_t
+
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 
@@ -101,7 +103,9 @@ namespace openvpn {
 
       T to_milliseconds() const
       {
-	return duration_ - (duration_ * T(3) / T(128)); // NOTE: assumes that prec == 1024
+	// NOTE: assumes that prec == 1024
+	// Also note that this might wrap if duration_ is larger than 1/3 of max size of T
+	return duration_ - (duration_ * T(3) / T(128));
       }
 
       T raw() const { return duration_; }
@@ -208,6 +212,13 @@ namespace openvpn {
 #     ifdef OPENVPN_PLATFORM_WIN
         win_recalibrate(::GetTickCount());
 #     endif
+    }
+
+    // number of tenths of a microsecond since January 1, 1601.
+    static uint64_t win_time()
+    {
+      // NOTE: assumes that prec == 1024
+      return ((11644473600ULL * uint64_t(prec)) + (uint64_t(base_) * uint64_t(prec)) + uint64_t(now_())) * 78125ULL / 8ULL;
     }
 
   private:

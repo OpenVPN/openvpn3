@@ -10,7 +10,6 @@
 
 #include <cstddef> // defines size_t and NULL
 
-#include <openvpn/common/exception.hpp>
 #include <openvpn/common/platform.hpp>
 
 #ifdef OPENVPN_PLATFORM_WIN
@@ -23,8 +22,6 @@ typedef SSIZE_T ssize_t;
 namespace openvpn {
 
   typedef long long count_t;
-
-  OPENVPN_SIMPLE_EXCEPTION(type_exception);
 
   template <typename T> struct types;
 

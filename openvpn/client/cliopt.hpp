@@ -321,7 +321,7 @@ namespace openvpn {
   private:
     std::string load_transport_config()
     {
-      // During reconnects, if tun_persist is enabled and endpoint cache is enabled,
+      // During reconnects, if both tun_persist and endpoint cache are enabled,
       // remote list scan should bypass any hosts not in endpoint cache.  This is done
       // because in tun_persist mode, DNS resolve requests are usually not viable
       // during reconnections because internet access (other than the tunnel itself)

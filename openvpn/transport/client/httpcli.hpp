@@ -8,19 +8,21 @@
 #ifndef OPENVPN_TRANSPORT_CLIENT_HTTPCLI_H
 #define OPENVPN_TRANSPORT_CLIENT_HTTPCLI_H
 
+#include <vector>
 #include <string>
 #include <sstream>
 
 #include <boost/asio.hpp>
+#include <boost/algorithm/string.hpp> // for boost::algorithm::trim_copy
 
-#include <openvpn/common/hexstr.hpp> // fixme
+#include <openvpn/common/typeinfo.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/common/split.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
-#include <openvpn/http/request.hpp> // fixme
 #include <openvpn/http/reply.hpp>
 #include <openvpn/proxy/proxyauth.hpp>
 #include <openvpn/proxy/httpdigest.hpp>
@@ -34,10 +36,13 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<Options> Ptr;
 
+      Options() : allow_cleartext_auth(false) {}
+
       std::string host;
       std::string port;
       std::string username;
       std::string password;
+      bool allow_cleartext_auth;
     };
 
     // We need access to RAND_API and CRYPTO_API implementations, because proxy
@@ -94,6 +99,8 @@ namespace openvpn {
       enum {
 	Connected=200,
 	ProxyAuthenticationRequired=407,
+	ProxyError=502,
+	ServiceUnavailable=503,
       };
 
     public:
@@ -167,7 +174,8 @@ namespace openvpn {
 	   n_transactions(0),
 	   proxy_data_bytes(0),
 	   proxy_established(false),
-	   http_reply_status(HTTP::ReplyParser::pending)
+	   http_reply_status(HTTP::ReplyParser::pending),
+	   ntlm_phase_2_response_pending(false)
       {
       }
 
@@ -243,7 +251,7 @@ namespace openvpn {
 
       void proxy_read_handler(BufferAllocated& buf)
       {
-	OPENVPN_LOG("FROM PROXY: " << buf.to_string()); // fixme
+	OPENVPN_LOG_NTNL("FROM PROXY: " << buf.to_string());
 
 	if (http_reply_status == HTTP::ReplyParser::pending)
 	  {
@@ -260,8 +268,8 @@ namespace openvpn {
 		    buf.advance(i+1);
 		    if (http_reply_status == HTTP::ReplyParser::success)
 		      {
-			OPENVPN_LOG("*** HTTP header parse complete, resid_size=" << buf.size()); // fixme
-			OPENVPN_LOG(http_reply.to_string()); // fixme
+			//OPENVPN_LOG("*** HTTP header parse complete, resid_size=" << buf.size());
+			//OPENVPN_LOG(http_reply.to_string());
 			    
 			// we are connected, switch socket to tunnel mode
 			if (http_reply.status_code == Connected)
@@ -272,6 +280,8 @@ namespace openvpn {
 			    impl->inject(buf);
 			    parent.transport_connecting();
 			  }
+			else if (ntlm_phase_2_response_pending)
+			  ntlm_auth_phase_2();
 		      }
 		    else
 		      {
@@ -300,51 +310,67 @@ namespace openvpn {
 
       void proxy_eof_handler()
       {
-	if (http_reply_status == HTTP::ReplyParser::success
-	    && http_reply.status_code == ProxyAuthenticationRequired)
+	if (http_reply_status == HTTP::ReplyParser::success)
 	  {
-	    if (n_transactions <= 1)
+	    if (http_reply.status_code == ProxyAuthenticationRequired)
 	      {
-		OPENVPN_LOG("*** PROXY AUTHENTICATION REQUIRED"); // fixme
-
-		if (config->http_proxy_options->username.empty())
+		if (n_transactions <= 1)
 		  {
-		    proxy_error(Error::PROXY_NEED_CREDS, "HTTP proxy requires credentials");
+		    //OPENVPN_LOG("*** PROXY AUTHENTICATION REQUIRED");
+
+		    if (config->http_proxy_options->username.empty())
+		      {
+			proxy_error(Error::PROXY_NEED_CREDS, "HTTP proxy requires credentials");
+			return;
+		      }
+
+		    HTTPProxy::ProxyAuthenticate::Ptr pa;
+
+		    // NTLM
+		    pa = get_proxy_authenticate_header("ntlm");
+		    if (pa)
+		      {
+			ntlm_auth_phase_1(*pa);
+			return;
+		      }
+
+		    // Digest
+		    pa = get_proxy_authenticate_header("digest");
+		    if (pa)
+		      {
+			digest_auth(*pa);
+			return;
+		      }
+
+		    // Basic
+		    pa = get_proxy_authenticate_header("basic");
+		    if (pa)
+		      {
+			if (config->http_proxy_options->allow_cleartext_auth)
+			  {
+			    basic_auth(*pa);
+			    return;
+			  }
+			else
+			  throw Exception("HTTP proxy Basic authentication not allowed by user preference");
+		      }
+		    throw Exception("HTTP proxy-authenticate method must be Basic, Digest, or NTLM");
+		  }
+		else
+		  {
+		    proxy_error(Error::PROXY_NEED_CREDS, "HTTP proxy credentials were not accepted");
 		    return;
 		  }
-
-		HTTPProxy::ProxyAuthenticate::Ptr pa;
-
-		// NTLM
-		pa = get_proxy_authenticate_header("ntlm");
-		if (pa)
-		  {
-		    ntlm_auth_phase_1(*pa);
-		    return;
-		  }
-
-		// Digest
-		pa = get_proxy_authenticate_header("digest");
-		if (pa)
-		  {
-		    digest_auth(*pa);
-		    return;
-		  }
-
-		// Digest
-		pa = get_proxy_authenticate_header("basic");
-		if (pa)
-		  {
-		    basic_auth(*pa);
-		    return;
-		  }
-		throw Exception("HTTP proxy-authenticate method must be Basic, Digest, or NTLM");
 	      }
-	    else
+	    else if (http_reply.status_code == ProxyError || http_reply.status_code == ServiceUnavailable)
 	      {
-		proxy_error(Error::PROXY_NEED_CREDS, "HTTP proxy credentials were not accepted");
+		// this is a nonfatal error, so we pass Error::UNDEF to tell the upper layer to
+		// retry the connection
+		proxy_error(Error::UNDEF, "HTTP proxy server could not connect to OpenVPN server");
 		return;
 	      }
+	    else
+	      OPENVPN_THROW_EXCEPTION("HTTP proxy unrecognized status code: " << http_reply.status_code);
 	  }
 	else if (http_reply_status == HTTP::ReplyParser::pending)
 	  throw Exception("HTTP proxy unexpected EOF: reply incomplete");
@@ -354,7 +380,7 @@ namespace openvpn {
 
       void basic_auth(HTTPProxy::ProxyAuthenticate& pa)
       {
-	OPENVPN_LOG("Proxy method: Basic" << std::endl << pa.to_string()); // fixme
+	OPENVPN_LOG("Proxy method: Basic" << std::endl << pa.to_string());
 
 	std::ostringstream os;
 	gen_user_agent(os);
@@ -368,69 +394,148 @@ namespace openvpn {
 
       void digest_auth(HTTPProxy::ProxyAuthenticate& pa)
       {
-	OPENVPN_LOG("Proxy method: Digest" << std::endl << pa.to_string()); // fixme
+	try {
+	  OPENVPN_LOG("Proxy method: Digest" << std::endl << pa.to_string());
 
-	// constants
-	const std::string http_method = "CONNECT";
-	const std::string nonce_count = "00000001";
-	const std::string qop = "auth";
+	  // constants
+	  const std::string http_method = "CONNECT";
+	  const std::string nonce_count = "00000001";
+	  const std::string qop = "auth";
 
-	// get values from Proxy-Authenticate header
-	const std::string realm = pa.parms.get_value("realm");
-	const std::string nonce = pa.parms.get_value("nonce");
-	const std::string algorithm = pa.parms.get_value("algorithm");
-	const std::string opaque = pa.parms.get_value("opaque");
+	  // get values from Proxy-Authenticate header
+	  const std::string realm = pa.parms.get_value("realm");
+	  const std::string nonce = pa.parms.get_value("nonce");
+	  const std::string algorithm = pa.parms.get_value("algorithm");
+	  const std::string opaque = pa.parms.get_value("opaque");
 
-	// generate a client nonce
-	unsigned char cnonce_raw[8];
-	config->rng->rand_bytes(cnonce_raw, sizeof(cnonce_raw));
-	const std::string cnonce = render_hex(cnonce_raw, sizeof(cnonce_raw));
+	  // generate a client nonce
+	  unsigned char cnonce_raw[8];
+	  config->rng->rand_bytes(cnonce_raw, sizeof(cnonce_raw));
+	  const std::string cnonce = render_hex(cnonce_raw, sizeof(cnonce_raw));
 
-	// build URI
-	const std::string uri = config->server_host + ":" + config->server_port;
+	  // build URI
+	  const std::string uri = config->server_host + ":" + config->server_port;
 
-	// calculate session key
-	const std::string session_key = HTTPProxy::Digest<CRYPTO_API>::calcHA1(
-	    algorithm,
-	    config->http_proxy_options->username,
-	    realm,
-	    config->http_proxy_options->password,
-	    nonce,
-	    cnonce);
+	  // calculate session key
+	  const std::string session_key = HTTPProxy::Digest<CRYPTO_API>::calcHA1(
+	      algorithm,
+	      config->http_proxy_options->username,
+	      realm,
+	      config->http_proxy_options->password,
+	      nonce,
+	      cnonce);
 
-	// calculate response
-	const std::string response = HTTPProxy::Digest<CRYPTO_API>::calcResponse(
-            session_key,
-	    nonce,
-	    nonce_count,
-	    cnonce,
-	    qop,
-	    http_method,
-	    uri,
-	    "");
+	  // calculate response
+	  const std::string response = HTTPProxy::Digest<CRYPTO_API>::calcResponse(
+	      session_key,
+	      nonce,
+	      nonce_count,
+	      cnonce,
+	      qop,
+	      http_method,
+	      uri,
+	      "");
 
-	// generate proxy request
-	std::ostringstream os;
-	gen_user_agent(os);
-	os << "Host: " << config->server_host << "\r\n";
-	os << "Proxy-Authorization: Digest username=\"" << config->http_proxy_options->username << "\", realm=\"" << realm << "\", nonce=\"" << nonce << "\", uri=\"" << uri << "\", qop=" << qop << ", nc=" << nonce_count << ", cnonce=\"" << cnonce << "\", response=\"" << response << "\"";
-	if (!opaque.empty())
-	  os << ", opaque=\"" + opaque + "\"";
-	os << "\r\n";
+	  // generate proxy request
+	  std::ostringstream os;
+	  gen_user_agent(os);
+	  os << "Host: " << config->server_host << "\r\n";
+	  os << "Proxy-Authorization: Digest username=\"" << config->http_proxy_options->username << "\", realm=\"" << realm << "\", nonce=\"" << nonce << "\", uri=\"" << uri << "\", qop=" << qop << ", nc=" << nonce_count << ", cnonce=\"" << cnonce << "\", response=\"" << response << "\"";
+	  if (!opaque.empty())
+	    os << ", opaque=\"" + opaque + "\"";
+	  os << "\r\n";
 
-	http_request = os.str();
-	reset();
-	start_connect_();
+	  http_request = os.str();
+	  reset();
+	  start_connect_();
+	}
+	catch (const std::exception& e)
+	  {
+	    throw Exception(std::string("Digest Auth: ") + e.what());
+	  }
+      }
+
+      std::string get_ntlm_phase_2_response()
+      {
+	for (HTTP::HeaderList::const_iterator i = http_reply.headers.begin(); i != http_reply.headers.end(); ++i)
+	  {
+	    const HTTP::Header& h = *i;
+	    if (string::strcasecmp(h.name, "proxy-authenticate") == 0)
+	      {
+		std::vector<std::string> v = Split::by_space<std::vector<std::string>, StandardLex, SpaceMatch>(h.value);
+		if (v.size() >= 2 && string::strcasecmp("ntlm", v[0]) == 0)
+		  return v[1];
+	      }
+	  }
+	return "";
       }
 
       void ntlm_auth_phase_1(HTTPProxy::ProxyAuthenticate& pa)
       {
-	OPENVPN_LOG("Proxy method: NTLM" << std::endl << pa.to_string()); // fixme
+	OPENVPN_LOG("Proxy method: NTLM" << std::endl << pa.to_string());
+
+	const std::string phase_1_reply = HTTPProxy::NTLM<RAND_API, CRYPTO_API>::phase_1();
+
+	std::ostringstream os;
+	gen_user_agent(os);
+	os << "Proxy-Connection: Keep-Alive\r\n";
+	os << "Proxy-Authorization: NTLM " << phase_1_reply << "\r\n";
+
+	http_request = os.str();
+	reset();
+	ntlm_phase_2_response_pending = true;
+	start_connect_();
+      }
+
+      void ntlm_auth_phase_2()
+      {
+	ntlm_phase_2_response_pending = false;
+
+	const std::string content_length_str = boost::algorithm::trim_copy(http_reply.headers.get_value("content-length"));
+	const unsigned int content_length = types<unsigned int>::parse(content_length_str);
+	if (content_length != 0)
+	  throw Exception("NTLM phase-2 Content-Length is not zero");
+
+	if (http_reply.status_code != ProxyAuthenticationRequired)
+	  throw Exception("NTLM phase-2 status is not ProxyAuthenticationRequired");
+
+	const std::string phase_2_response = get_ntlm_phase_2_response();
+	if (!phase_2_response.empty())
+	  ntlm_auth_phase_3(phase_2_response);
+	else
+	  throw Exception("NTLM phase-2 response missing");
+      }
+
+      void ntlm_auth_phase_3(const std::string& phase_2_response)
+      {
+	// do the NTLMv2 handshake
+	try {
+	  //OPENVPN_LOG("NTLM phase 3: " << phase_2_response);
+
+	  const std::string phase_3_reply = HTTPProxy::NTLM<RAND_API, CRYPTO_API>::phase_3(
+	      phase_2_response,
+	      config->http_proxy_options->username,
+	      config->http_proxy_options->password,
+	      *config->rng);
+
+	  std::ostringstream os;
+	  gen_user_agent(os);
+	  os << "Proxy-Connection: Keep-Alive\r\n";
+	  os << "Proxy-Authorization: NTLM " << phase_3_reply << "\r\n";
+
+	  http_request = os.str();
+	  reset_partial();
+	  http_proxy_send();
+	}
+	catch (const std::exception& e)
+	  {
+	    throw Exception(std::string("NTLM Auth: ") + e.what());
+	  }
       }
 
       void gen_user_agent(std::ostringstream& os)
       {
-	os << "User-Agent: OpenVPN\r\n";
+	//os << "User-Agent: OpenVPN\r\n";
       }
 
       void stop_()
@@ -475,9 +580,15 @@ namespace openvpn {
 	halt = false;
 	proxy_data_bytes = 0;
 	proxy_established = false;
+	reset_partial();
+      }
+
+      void reset_partial()
+      {
 	http_reply_status = HTTP::ReplyParser::pending;
 	http_reply.reset();
 	http_parser.reset();
+	ntlm_phase_2_response_pending = false;
       }
 
       // do TCP connect
@@ -520,9 +631,7 @@ namespace openvpn {
 		++n_transactions;
 
 		// tell proxy to connect through to OpenVPN server
-		BufferAllocated buf;
-		create_http_connect_msg(buf);
-		send(buf);
+		http_proxy_send();
 	      }
 	    else
 	      {
@@ -535,6 +644,13 @@ namespace openvpn {
 	  }
       }
 
+      void http_proxy_send()
+      {
+	BufferAllocated buf;
+	create_http_connect_msg(buf);
+	send(buf);
+      }
+
       // create HTTP CONNECT message
       void create_http_connect_msg(BufferAllocated& buf)
       {
@@ -544,7 +660,7 @@ namespace openvpn {
 	const std::string str = os.str();
 	http_request = "";
 
-	OPENVPN_LOG("TO PROXY: " << str); // fixme
+	OPENVPN_LOG_NTNL("TO PROXY: " << str);
 
 	config->frame->prepare(Frame::WRITE_HTTP_PROXY, buf);
 	buf.write((const unsigned char *)str.c_str(), str.length());
@@ -566,6 +682,8 @@ namespace openvpn {
       HTTP::Reply http_reply;
       HTTP::ReplyParser http_parser;
       std::string http_request;
+
+      bool ntlm_phase_2_response_pending;
     };
 
     template <typename RAND_API, typename CRYPTO_API>

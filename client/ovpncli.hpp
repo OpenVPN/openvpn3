@@ -108,7 +108,7 @@ namespace openvpn {
     // (client writes)
     struct Config
     {
-      Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false) {}
+      Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false), proxyAllowCleartextAuth(false) {}
 
       // OpenVPN profile as a string
       std::string content;
@@ -142,10 +142,11 @@ namespace openvpn {
       std::string compressionMode;
 
       // HTTP Proxy parameters (optional)
-      std::string proxyHost;      // hostname or IP address of proxy
-      std::string proxyPort;      // port number of proxy
-      std::string proxyUsername;  // proxy credentials (optional)
-      std::string proxyPassword;  // proxy credentials (optional)
+      std::string proxyHost;         // hostname or IP address of proxy
+      std::string proxyPort;         // port number of proxy
+      std::string proxyUsername;     // proxy credentials (optional)
+      std::string proxyPassword;     // proxy credentials (optional)
+      bool proxyAllowCleartextAuth;  // enables HTTP Basic auth
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

@@ -254,7 +254,7 @@ namespace openvpn {
     {
       if (size > remaining())
 	resize(offset_ + size_ + size);
-      T* ret = data()+size_;
+      T* ret = data() + size_;
       size_ += size;
       return ret;
     }

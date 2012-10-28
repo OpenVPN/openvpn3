@@ -12,15 +12,18 @@
 #include <limits>
 
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/exception.hpp>
 
 namespace openvpn {
+
+  OPENVPN_SIMPLE_EXCEPTION(number_parse_exception);
 
   // note -- currently doesn't detect overflow
   template <typename T>
   inline T parse_number(const char *str)
   {
     if (!str[0])
-      throw type_exception(); // empty string
+      throw number_parse_exception(); // empty string
     bool neg = false;
     size_t i = 0;
     if (std::numeric_limits<T>::min() < 0 && str[0] == '-')
@@ -40,7 +43,7 @@ namespace openvpn {
 	else if (!c)
 	  return neg ? -ret : ret;
 	else
-	  throw type_exception(); // non-digit
+	  throw number_parse_exception(); // non-digit
       }
   }
 

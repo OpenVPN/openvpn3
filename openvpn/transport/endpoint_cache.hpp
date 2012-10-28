@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include <openvpn/common/typeinfo.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/addr/ip.hpp>

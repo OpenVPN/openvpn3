@@ -52,6 +52,7 @@ namespace openvpn {
 
     struct DigestCTX {
       union {
+	OPENVPN_DIGEST_CONTEXT(MD4);
 	OPENVPN_DIGEST_CONTEXT(MD5);
 	OPENVPN_DIGEST_CONTEXT(SHA1);
 	OPENVPN_DIGEST_CONTEXT(SHA224);
@@ -68,6 +69,7 @@ namespace openvpn {
     };
 
     // individual digest algorithm classes (each inherits from DigestAlgorithm)
+    OPENVPN_DIGEST_ALG_CLASS(MD4);
     OPENVPN_DIGEST_ALG_CLASS(MD5);
     OPENVPN_DIGEST_ALG_CLASS(SHA1);
     OPENVPN_DIGEST_ALG_CLASS(SHA224);
@@ -107,6 +109,7 @@ namespace openvpn {
 
     // instantiate individual digest algorithm class instances (each inherits from DigestAlgorithm),
     // naming convention is alg_TYPE
+    OPENVPN_DIGEST_ALG_DECLARE(MD4);
     OPENVPN_DIGEST_ALG_DECLARE(MD5);
     OPENVPN_DIGEST_ALG_DECLARE(SHA1);
     OPENVPN_DIGEST_ALG_DECLARE(SHA224);
@@ -116,6 +119,7 @@ namespace openvpn {
 
     // instantiate individual digest info class instances (each is a DigestInfo),
     // naming convention is info_TYPE
+    OPENVPN_DIGEST_INFO_DECLARE(MD4);
     OPENVPN_DIGEST_INFO_DECLARE(MD5);
     OPENVPN_DIGEST_INFO_DECLARE(SHA1);
     OPENVPN_DIGEST_INFO_DECLARE(SHA224);
@@ -141,6 +145,7 @@ namespace openvpn {
       {
 #       define OPENVPN_DIGEST_SELECT(TYPE) if (info_##TYPE.name_match(name.c_str())) \
 	  { digest_ = &info_##TYPE; return; }
+	OPENVPN_DIGEST_SELECT(MD4);
 	OPENVPN_DIGEST_SELECT(MD5);
 	OPENVPN_DIGEST_SELECT(SHA1);
 	OPENVPN_DIGEST_SELECT(SHA224);
@@ -166,6 +171,7 @@ namespace openvpn {
       bool defined() const { return digest_ != NULL; }
 
       // convenience methods for common digests
+      static Digest md4() { return Digest(&info_MD4); }
       static Digest md5() { return Digest(&info_MD5); }
       static Digest sha1() { return Digest(&info_SHA1); }
 

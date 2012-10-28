@@ -68,7 +68,6 @@
  * Uncomment if the compiler supports long long.
 #define POLARSSL_HAVE_LONGLONG
  */
-
 // JY added
 #define POLARSSL_HAVE_LONGLONG
 
@@ -491,8 +490,9 @@
  *
  * Uncomment to enable support for (rare) MD4-signed X.509 certs.
  *
-#define POLARSSL_MD4_C
  */
+// JY Added for NTLM proxy auth
+#define POLARSSL_MD4_C
 
 /**
  * \def POLARSSL_MD5_C

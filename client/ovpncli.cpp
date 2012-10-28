@@ -345,6 +345,7 @@ namespace openvpn {
 	    ho->port = config.proxyPort;
 	    ho->username = config.proxyUsername;
 	    ho->password = config.proxyPassword;
+	    ho->allow_cleartext_auth = config.proxyAllowCleartextAuth;
 	    state->http_proxy_options = ho;
 	  }
       }

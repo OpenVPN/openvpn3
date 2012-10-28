@@ -55,6 +55,7 @@ namespace openvpn {
       bool defined() const { return digest_ != NULL; }
 
       // convenience methods for common digests
+      static Digest md4() { return Digest(md_info_from_type(POLARSSL_MD_MD4)); }
       static Digest md5() { return Digest(md_info_from_type(POLARSSL_MD_MD5)); }
       static Digest sha1() { return Digest(md_info_from_type(POLARSSL_MD_SHA1)); }
 

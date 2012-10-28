@@ -38,6 +38,13 @@ namespace openvpn {
 	need_to_dealloc = false;
       }
 
+      HMACContext(const Digest& digest, const unsigned char *key, const size_t key_size)
+      {
+	clear();
+	need_to_dealloc = false;
+	init(digest, key, key_size);
+      }
+
       ~HMACContext()
       {
 	dealloc();

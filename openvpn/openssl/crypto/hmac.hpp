@@ -33,6 +33,12 @@ namespace openvpn {
       {
       }
 
+      HMACContext(const Digest& digest, const unsigned char *key, const size_t key_size)
+	: initialized(false)
+      {
+	init(digest, key, key_size);
+      }
+
       ~HMACContext() { erase() ; }
 
       void init(const Digest& digest, const unsigned char *key, const size_t key_size)

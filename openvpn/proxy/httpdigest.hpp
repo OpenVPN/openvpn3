@@ -31,12 +31,12 @@ namespace openvpn {
 	  ctx.update((unsigned char *)str.c_str(), str.length());
 	}
 
-	void update(const const char *str)
+	void update(const char *str)
 	{
 	  ctx.update((unsigned char *)str, strlen(str));
 	}
 
-	void update(const const char c)
+	void update(const char c)
 	{
 	  ctx.update((unsigned char *)&c, 1);
 	}
