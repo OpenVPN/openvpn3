@@ -82,7 +82,7 @@ namespace openvpn {
     static void parse_msg(StringList& sl, const std::string& msg)
     {
       sl.reserve(2);
-      Split::by_char_void<StringList, NullLex>(sl, msg, ',', 0, 2);
+      Split::by_char_void<StringList, NullLex>(sl, msg, ',', 0, 1);
     }
 
     static bool is_halt(const StringList& sl)
