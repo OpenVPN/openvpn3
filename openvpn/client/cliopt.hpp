@@ -337,7 +337,7 @@ namespace openvpn {
 	  // special handling for HTTP proxy transport
 	  const Protocol proto(Protocol::TCP);
 	  bool proto_fail = false;
-	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto, &proto_fail, ec.get());
+	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto, &proto_fail, NULL);
 	  if (!proto_fail)
 	    {
 	      cp->remote_adjust(rli);

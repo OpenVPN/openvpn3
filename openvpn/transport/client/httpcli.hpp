@@ -636,7 +636,9 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << "TCP connect error on '" << config->server_host << "' for TCP-via-HTTP-proxy session: " << error.message();
+		os << "TCP connect error on '"
+		   << config->http_proxy_options->host << ':' << config->http_proxy_options->port
+		   << "' for TCP-via-HTTP-proxy session: " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
 		parent.transport_error(Error::UNDEF, os.str());

@@ -22,6 +22,11 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<EndpointCache> Ptr;
 
+    EndpointCache()
+    {
+      //OPENVPN_LOG("***** EndpointCache INIT");
+    }
+
     template <class EP>
     bool get_endpoint(const std::string& host, const std::string& port, EP& server_endpoint) const
     {
