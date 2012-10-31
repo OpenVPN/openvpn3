@@ -201,7 +201,7 @@ namespace openvpn {
       void tcp_error_handler(const char *error) // called by LinkImpl and internally
       {
 	std::ostringstream os;
-	os << "Transport error on '" << config->server_host << ": " << error << " (HTTP proxy)";
+	os << "Transport error on '" << config->server_host << "' via HTTP proxy " << config->http_proxy_options->host << ':' << config->http_proxy_options->port << " : " << error;
 	stop();
 	parent.transport_error(Error::UNDEF, os.str());
       }
@@ -566,7 +566,7 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << config->server_host << "' for TCP (HTTP proxy): " << error;
+		os << "DNS resolve error on '" << config->http_proxy_options->host << "' for TCP (HTTP proxy): " << error;
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		parent.transport_error(Error::UNDEF, os.str());
