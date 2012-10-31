@@ -13,11 +13,12 @@
 #include <polarssl/error.h>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/error/error.hpp>
 
 namespace openvpn {
 
   // string exception class
-  class PolarSSLException : public std::exception
+  class PolarSSLException : public ExceptionCode
   {
   public:
     PolarSSLException()
@@ -36,6 +37,13 @@ namespace openvpn {
     {
       errnum = polarssl_errnum;
       errtxt = "PolarSSL: " + error_text + " : " + polarssl_errtext(polarssl_errnum);
+
+      // for certain PolarSSL errors, translate them to an OpenVPN error code
+      switch (errnum) {
+      case POLARSSL_ERR_X509_CERT_VERIFY_FAILED:
+	set_code(Error::CERT_VERIFY_FAIL, true);
+	break;
+      }
     }
 
     virtual const char* what() const throw() { return errtxt.c_str(); }

@@ -292,6 +292,14 @@ namespace openvpn {
 		    stop();
 		  }
 		  break;
+		case Error::CERT_VERIFY_FAIL:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::CertVerifyFail(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::CERT_VERIFY_FAIL);
+		    stop();
+		  }
+		  break;
 		case Error::CLIENT_HALT:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientHalt(client->fatal_reason());

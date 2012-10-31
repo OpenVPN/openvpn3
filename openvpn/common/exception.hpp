@@ -31,8 +31,49 @@ namespace openvpn {
     return e.message();
   }
 
+  class ExceptionCode : public std::exception
+  {
+    enum {
+      FATAL_FLAG = 0x80000000
+    };
+
+  public:
+    ExceptionCode()
+      : code_(0) {}
+    ExceptionCode(const unsigned int code)
+      : code_(code) {}
+    ExceptionCode(const unsigned int code, const bool fatal)
+      : code_(mkcode(code, fatal)) {}
+
+    void set_code(const unsigned int code)
+    {
+      code_ = code;
+    }
+
+    void set_code(const unsigned int code, const bool fatal)
+    {
+      code_ = mkcode(code, fatal);
+    }
+
+    unsigned int code() const { return code_ & ~FATAL_FLAG; }
+    bool fatal() const { return (code_ & FATAL_FLAG) != 0; }
+
+    virtual ~ExceptionCode() throw() {}
+
+  private:
+    static unsigned int mkcode(const unsigned int code, const bool fatal)
+    {
+      unsigned int ret = code;
+      if (fatal)
+	ret |= FATAL_FLAG;
+      return ret;
+    }
+
+    unsigned int code_;
+  };
+
   // string exception class
-  class Exception : public std::exception
+  class Exception : public openvpn::ExceptionCode
   {
   public:
     Exception(std::string err) : err_(err) {}
@@ -44,7 +85,7 @@ namespace openvpn {
 
   // define a simple custom exception class with no extra info
 # define OPENVPN_SIMPLE_EXCEPTION(C) \
-  class C : public std::exception { \
+  class C : public openvpn::ExceptionCode { \
   public: \
     virtual const char* what() const throw() { return #C OPENVPN_FILE_LINE; } \
   }
@@ -65,7 +106,7 @@ namespace openvpn {
   }
 
   // define a custom exception class that allows extra info, and inherits from a custom base
-# define OPENVPN_EXCEPTION_INHERIT(B, C)		\
+# define OPENVPN_EXCEPTION_INHERIT(B, C) \
   class C : public B { \
   public: \
     C() : B(#C OPENVPN_FILE_LINE) {} \

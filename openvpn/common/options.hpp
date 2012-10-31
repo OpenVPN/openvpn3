@@ -91,6 +91,14 @@ namespace openvpn {
 	return "";
     }
 
+    const std::string* get_ptr(const size_t index) const
+    {
+      if (index < size())
+	return &(*this)[index];
+      else
+	return NULL;
+    }
+
     std::string render() const
     {
       std::ostringstream out;

@@ -76,11 +76,6 @@ fi
 # set options
 OPT=""
 
-# add special support for AES-NI?
-if [ "$AES_NI" = "1" ] && [ "$USE_MINICRYPTO" = "1" ]; then
-    OPT="$OPT -DOPENSSL_AES_NI=1"
-fi
-
 # RNG
 if [ "$EXTERNAL_RNG" = "1" ]; then
     OPT="$OPT -DEXTERNAL_RNG=1"
@@ -102,13 +97,14 @@ elif [ "$APPLE_FAMILY" = "1" ]; then
 fi
 
 # OpenSSL
-if [ "$MINICRYPTO_DIR" ] && [ "$USE_MINICRYPTO" = "1" ]; then
-    OPT="$OPT -DMINICRYPTO_DIR=$MINICRYPTO_DIR"
-fi
-
-# OpenSSL
-if [ "$MINICRYPTO_DIR" ] && [ "$USE_MINICRYPTO" = "1" ]; then
-    OPT="$OPT -DMINICRYPTO_DIR=$MINICRYPTO_DIR"
+if [ "$USE_MINICRYPTO" = "1" ]; then
+    OPT="$OPT -DMINICRYPTO=1"
+    if [ "$MINICRYPTO_DIR" ]; then
+	OPT="$OPT -DMINICRYPTO_DIR=$MINICRYPTO_DIR"
+    fi
+    if [ "$AES_NI" = "1" ]; then
+	OPT="$OPT -DOPENSSL_AES_NI=1"
+    fi
 fi
 
 # Enable SSL/TLS server

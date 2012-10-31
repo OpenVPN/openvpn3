@@ -100,6 +100,7 @@ namespace openvpn {
 	  proto_context_options(config.proto_context_options),
 	  first_packet_received_(false),
 	  sent_push_request(false),
+	  cli_stats(config.cli_stats),
 	  cli_events(config.cli_events),
 	  connected_(false),
 	  fatal_(Error::UNDEF),
@@ -225,6 +226,13 @@ namespace openvpn {
 	  // schedule housekeeping wakeup
 	  set_housekeeping_timer();
 	}
+	catch (const ExceptionCode& e)
+	  {
+	    if (e.fatal())
+	      transport_error((Error::Type)e.code(), e.what());
+	    else
+	      cli_stats->error((Error::Type)e.code());
+	  }
 	catch (const std::exception& e)
 	  {
 	    process_exception(e, "transport_recv");
@@ -625,6 +633,8 @@ namespace openvpn {
 
       bool first_packet_received_;
       bool sent_push_request;
+
+      SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
 
       bool connected_;

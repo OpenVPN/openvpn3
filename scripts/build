@@ -82,11 +82,14 @@ fi
 if [ "$APPLE_FAMILY" = "1" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, usually link with OpenSSL.
-    NO_DEPRECATE="-Wno-deprecated-declarations"
-    if [ "$OPENSSL_SYS" != "1" ]; then
+    if [ "$OPENSSL_SYS" == "1" ]; then
+	NO_DEPRECATE="-Wno-deprecated-declarations"
+    else
 	NO_DEPRECATE=""
     fi
-    if [ "$OSSL" = "1" ]; then
+    if [ "$OPENSSL_LINK" = "1" ]; then
+	LIBS="$LIBS -lcrypto -lssl"
+    elif [ "$OSSL" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
 	LIBS="$LIBS -lcrypto -lssl"
 	[ "$CLANG" = "1" ] && [ "$NO_DEPRECATE" ] && FLAGS="$FLAGS $NO_DEPRECATE"
@@ -97,6 +100,7 @@ if [ "$APPLE_FAMILY" = "1" ]; then
     elif [ "$PSSL" = "1" ]; then
 	true
     else
+	NOSSL=1
 	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL"
     fi
     LIBS="$LIBS -framework Security"
@@ -106,7 +110,7 @@ else
 	LIBS="$LIBS -lssl -lcrypto -ldl"
     fi
 fi
-if [ "$OPENSSL_SYS" != "1" ] && [ "$NOSSL" != "1" ]; then
+if [ "$OPENSSL_SYS" != "1" ] && [ "$OPENSSL_LINK" != "1" ] && [ "$NOSSL" != "1" ]; then
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/openssl/openssl-$PLATFORM/include"
     LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
 fi

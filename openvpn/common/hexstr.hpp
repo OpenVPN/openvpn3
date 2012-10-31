@@ -82,6 +82,30 @@ namespace openvpn {
       throw parse_hex_error(); // straggler char      
   }
 
+  // note -- currently doesn't detect overflow
+  template <typename T>
+  inline T parse_hex_number(const char *str)
+  {
+    if (!str[0])
+      throw parse_hex_error(); // empty string
+    size_t i = 0;
+    T ret = T(0);
+    while (true)
+      {
+	const char c = str[i++];
+	const int hd = parse_hex_char(c);
+	if (hd >= 0)
+	  {
+	    ret *= T(16);
+	    ret += T(hd);
+	  }
+	else if (!c)
+	  return ret;
+	else
+	  throw parse_hex_error(); // non-hex-digit
+      }
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_HEXSTR_H

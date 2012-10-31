@@ -8,6 +8,7 @@
 #ifndef OPENVPN_POLARSSL_SSL_SSLCTX_H
 #define OPENVPN_POLARSSL_SSL_SSLCTX_H
 
+#include <vector>
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -26,6 +27,8 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
 #include <openvpn/pki/epkibase.hpp>
+#include <openvpn/ssl/kuparse.hpp>
+#include <openvpn/ssl/nscert.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
 #include <openvpn/polarssl/pki/dh.hpp>
@@ -72,15 +75,9 @@ namespace openvpn {
       };
       typedef unsigned int Flags;
 
-      enum CertType {
-	CERT_TYPE_NONE,
-	CERT_TYPE_NS_CLIENT,
-	CERT_TYPE_NS_SERVER
-      };
-
       Config() : external_pki(NULL),
 		 flags(0),
-		 cert_type(CERT_TYPE_NONE) {}
+		 ns_cert_type(NSCert::NONE) {}
 
       Mode mode;
       PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
@@ -90,8 +87,10 @@ namespace openvpn {
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       Flags flags;
-      CertType cert_type;
-      typename RAND_API::Ptr rng; // random data source
+      NSCert::Type ns_cert_type;
+      std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
+      std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
+      typename RAND_API::Ptr rng;   // random data source
 
       void enable_debug()
       {
@@ -173,31 +172,18 @@ namespace openvpn {
 	    load_dh(dh_txt);
 	  }
 
-	// ns-cert-type
-	{
-	  const Option* o = opt.get_ptr("ns-cert-type");
-	  if (o)
-	    {
-	      const std::string& ct = o->get_optional(1);
-	      if (ct == "server")
-		cert_type = CERT_TYPE_NS_SERVER;
-	      else if (ct == "client")
-		cert_type = CERT_TYPE_NS_CLIENT;
-	      else
-		throw option_error("ns-cert-type must be 'client' or 'server'");
-	    }
-	}
+	// parse ns-cert-type
+	ns_cert_type = NSCert::ns_cert_type(opt);
 
-	// unsupported cert checkers
+	// parse remote-cert-x options
+	KUParse::remote_cert_tls(opt, ku, eku);
+	KUParse::remote_cert_ku(opt, ku);
+	KUParse::remote_cert_eku(opt, eku);
+
+	// unsupported cert verification options
 	{
 	  if (opt.get_ptr("tls-remote"))
 	    throw option_error("tls-remote not supported");
-	  if (opt.get_ptr("remote-cert-tls"))
-	    throw option_error("remote-cert-tls not supported");
-	  if (opt.get_ptr("remote-cert-ku"))
-	    throw option_error("remote-cert-ku not supported");
-	  if (opt.get_ptr("remote-cert-eku"))
-	    throw option_error("remote-cert-eku not supported");
 	}
       }
     };
@@ -487,14 +473,78 @@ namespace openvpn {
     }
 
   private:
+    // ns-cert-type verification
+
+    bool ns_cert_type_defined() const
+    {
+      return config.ns_cert_type != NSCert::NONE;
+    }
+
     bool verify_ns_cert_type(const x509_cert *cert) const
     {
-      if (config.cert_type == Config::CERT_TYPE_NS_SERVER)
+      if (config.ns_cert_type == NSCert::SERVER)
 	return bool(cert->ns_cert_type & NS_CERT_TYPE_SSL_SERVER);
-      else if (config.cert_type == Config::CERT_TYPE_NS_CLIENT)
+      else if (config.ns_cert_type == NSCert::CLIENT)
 	return bool(cert->ns_cert_type & NS_CERT_TYPE_SSL_CLIENT);
       else
-	return true;
+	return false;
+    }
+
+    // remote-cert-ku verification
+
+    bool x509_cert_ku_defined() const
+    {
+      return config.ku.size() > 0;
+    }
+
+    bool verify_x509_cert_ku(const x509_cert *cert)
+    {
+      if (cert->ext_types & EXT_KEY_USAGE)
+	{
+	  const unsigned int ku = cert->key_usage;
+	  for (std::vector<unsigned int>::const_iterator i = config.ku.begin(); i != config.ku.end(); ++i)
+	    {
+	      if (ku == *i)
+		return true;
+	    }
+	}
+      return false;
+    }
+
+    // remote-cert-eku verification
+
+    bool x509_cert_eku_defined() const
+    {
+      return !config.eku.empty();
+    }
+
+    bool verify_x509_cert_eku(x509_cert *cert)
+    {
+      if (cert->ext_types & EXT_EXTENDED_KEY_USAGE)
+	{
+	  x509_sequence *oid_seq = &cert->ext_key_usage;
+	  while (oid_seq != NULL)
+	    {
+	      x509_buf *oid = &oid_seq->buf;
+
+	      // first compare against description
+	      {
+		const char *oid_str = x509_oid_get_description(oid);
+		if (oid_str && config.eku == oid_str)
+		  return true;
+	      }
+
+	      // next compare against OID numeric string
+	      {
+		char oid_num_str[256];
+		const int status = x509_oid_get_numeric_string(oid_num_str, sizeof(oid_num_str), oid);
+		if (status >= 0 && config.eku == oid_num_str)
+		  return true;
+	      }
+	      oid_seq = oid_seq->next;
+	    }
+	}
+      return false;
     }
 
     static int verify_callback(void *arg, x509_cert *cert, int depth, int preverify_ok)
@@ -506,11 +556,29 @@ namespace openvpn {
 		      << ": depth=" << depth
 		      << std::endl << cert_info(cert));
 
-      // verify ns-cert-type
-      if (depth == 0 && !self->verify_ns_cert_type(cert))
+      // leaf-cert verification
+      if (depth == 0)
 	{
-	  OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
-	  preverify_ok = false;
+	  // verify ns-cert-type
+	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	      preverify_ok = false;
+	    }
+
+	  // verify X509 key usage
+	  if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+	      preverify_ok = false;
+	    }
+
+	  // verify X509 extended key usage
+	  if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+	      preverify_ok = false;
+	    }
 	}
 
       return preverify_ok ? 0 : POLARSSL_ERR_SSL_PEER_VERIFY_FAILED;

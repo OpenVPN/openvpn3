@@ -33,6 +33,7 @@ namespace openvpn {
 
       // start of errors, must be marked by ERROR_START
       AUTH_FAILED,
+      CERT_VERIFY_FAIL,
       CLIENT_HALT,
       CLIENT_RESTART,
       CONNECTION_TIMEOUT,
@@ -66,6 +67,7 @@ namespace openvpn {
 	"PAUSE",
 	"RESUME",
 	"AUTH_FAILED",
+	"CERT_VERIFY_FAIL",
 	"CLIENT_HALT",
 	"CLIENT_RESTART",
 	"CONNECTION_TIMEOUT",
@@ -221,6 +223,11 @@ namespace openvpn {
     struct AuthFailed : public ReasonBase
     {
       AuthFailed(const std::string& reason) : ReasonBase(AUTH_FAILED, reason) {}
+    };
+
+    struct CertVerifyFail : public ReasonBase
+    {
+      CertVerifyFail(const std::string& reason) : ReasonBase(CERT_VERIFY_FAIL, reason) {}
     };
 
     struct ClientHalt : public ReasonBase
