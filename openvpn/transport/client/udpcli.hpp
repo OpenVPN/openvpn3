@@ -180,6 +180,7 @@ namespace openvpn {
       {
 	if (config->endpoint_cache)
 	  config->endpoint_cache->set_endpoint(config->server_host, server_endpoint);
+	parent.transport_wait();
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)

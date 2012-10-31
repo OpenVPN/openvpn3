@@ -24,6 +24,7 @@ namespace openvpn {
       RECONNECTING,
       RESOLVE,
       WAIT,
+      WAIT_PROXY,
       CONNECTING,
       GET_CONFIG,
       ASSIGN_IP,
@@ -60,6 +61,7 @@ namespace openvpn {
 	"RECONNECTING",
 	"RESOLVE",
 	"WAIT",
+	"WAIT_PROXY",
 	"CONNECTING",
 	"GET_CONFIG",
 	"ASSIGN_IP",
@@ -131,6 +133,11 @@ namespace openvpn {
     struct Wait : public Base
     {
       Wait() : Base(WAIT) {}
+    };
+
+    struct WaitProxy : public Base
+    {
+      WaitProxy() : Base(WAIT_PROXY) {}
     };
 
     struct Connecting : public Base

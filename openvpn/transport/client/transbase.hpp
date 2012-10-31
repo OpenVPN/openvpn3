@@ -39,6 +39,8 @@ namespace openvpn {
 
     // progress notifications
     virtual void transport_pre_resolve() = 0;
+    virtual void transport_wait_proxy() = 0;
+    virtual void transport_wait() = 0;
     virtual void transport_connecting() = 0;
   };
 

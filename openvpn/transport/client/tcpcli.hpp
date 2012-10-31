@@ -202,6 +202,7 @@ namespace openvpn {
       // do TCP connect
       void start_connect_()
       {
+	parent.transport_wait();
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)

@@ -288,12 +288,22 @@ namespace openvpn {
 	return out.str();
       }
 
+      virtual void transport_wait_proxy()
+      {
+	ClientEvent::Base::Ptr ev = new ClientEvent::WaitProxy();
+	cli_events->add_event(ev);
+      }
+
+      virtual void transport_wait()
+      {
+	ClientEvent::Base::Ptr ev = new ClientEvent::Wait();
+	cli_events->add_event(ev);
+      }
+
       virtual void transport_connecting()
       {
 	try {
 	  OPENVPN_LOG("Connecting to " << server_endpoint_render());
-	  ClientEvent::Base::Ptr ev = new ClientEvent::Wait();
-	  cli_events->add_event(ev);
 	  Base::start();
 	  Base::flush(true);
 	  set_housekeeping_timer();
