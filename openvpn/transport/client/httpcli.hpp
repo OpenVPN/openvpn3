@@ -206,7 +206,7 @@ namespace openvpn {
 	parent.transport_error(Error::UNDEF, os.str());
       }
 
-      void proxy_error(const Error::Type fatal_err, const char *what)
+      void proxy_error(const Error::Type fatal_err, const std::string& what)
       {
 	std::ostringstream os;
 	os << "on " << config->http_proxy_options->host << ':' << config->http_proxy_options->port << ": " << what;
@@ -451,7 +451,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    throw Exception(std::string("Digest Auth: ") + e.what());
+	    proxy_error(Error::PROXY_NEED_CREDS, std::string("Digest Auth: ") + e.what());
 	  }
       }
 
@@ -529,7 +529,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    throw Exception(std::string("NTLM Auth: ") + e.what());
+	    proxy_error(Error::PROXY_NEED_CREDS, std::string("NTLM Auth: ") + e.what());
 	  }
       }
 
