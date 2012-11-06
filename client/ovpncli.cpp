@@ -300,7 +300,14 @@ namespace openvpn {
 	  Protocol::parse(config.protoOverride);
 
 	// parse config
-	const ParseClientConfig cc = ParseClientConfig::parse(config.content, options);
+	OptionList::KeyValueList kvl;
+	kvl.reserve(config.contentList.size());
+	for (size_t i = 0; i < config.contentList.size(); ++i)
+	  {
+	    const KeyValue& kv = config.contentList[i];
+	    kvl.push_back(new OptionList::KeyValue(kv.key, kv.value));
+	  }
+	const ParseClientConfig cc = ParseClientConfig::parse(config.content, &kvl, options);
 	eval.error = cc.error();
 	eval.message = cc.message();
 	eval.userlockedUsername = cc.userlockedUsername();

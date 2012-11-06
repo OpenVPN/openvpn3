@@ -204,6 +204,7 @@ namespace openvpn {
 	pid_time_backtrack = 0;
 	pid_debug_level = 0;
 	autologin = false;
+	key_direction = -1;
       }
 
       // master SSL context
@@ -241,6 +242,7 @@ namespace openvpn {
       // tls_auth parms
       OpenVPNStaticKey tls_auth_key; // leave this undefined to disable tls_auth
       typename CRYPTO_API::Digest tls_auth_digest;
+      int key_direction; // -1 if undefined
 
       // reliability layer parms
       reliable::id_t reliable_window;
@@ -277,6 +279,7 @@ namespace openvpn {
 	comp_ctx = CompressContext(CompressContext::NONE, false);
 	protocol = Protocol();
 	pid_mode = PacketIDReceive::UDP_MODE;
+	key_direction = -1;
 
 	// load parameters that can be present in both config file or pushed options
 	load_common(opt, pco);
@@ -336,6 +339,21 @@ namespace openvpn {
 	    {
 	      tls_auth_key.parse(o->get(1));
 	      tls_auth_digest = digest;
+	    }
+	}
+
+	// key-direction
+	{
+	  const Option *o = opt.get_ptr("key-direction");
+	  if (o)
+	    {
+	      const std::string& dir = o->get(1);
+	      if (dir == "0")
+		key_direction = 0;
+	      else if (dir == "1")
+		key_direction = 1;
+	      else
+		throw proto_option_error("bad key-direction parameter");
 	    }
 	}
 
@@ -1810,7 +1828,7 @@ namespace openvpn {
       if (use_tls_auth)
 	{
 	  // init tls_auth hmac
-	  const unsigned int key_dir = is_server() ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
+	  const unsigned int key_dir = (c.key_direction >= 0 ? !c.key_direction : is_server()) ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
 	  ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
 	  ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 

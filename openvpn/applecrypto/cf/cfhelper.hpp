@@ -76,6 +76,17 @@ namespace openvpn {
       return cppstring(string_cast(dict_index(dict, key)));
     }
 
+    // lookup a string in a dictionary (DICT should be a Dict or a MutableDict)
+    template <typename DICT, typename KEY>
+    inline std::string dict_get_str(const DICT& dict, const KEY& key, const std::string& default_value)
+    {
+      String str(string_cast(dict_index(dict, key)));
+      if (str.defined())
+	return cppstring(str());
+      else
+	return default_value;
+    }
+
     // lookup an integer in a dictionary (DICT should be a Dict or a MutableDict)
     template <typename DICT, typename KEY>
     inline int dict_get_int(const DICT& dict, const KEY& key, const int default_value)

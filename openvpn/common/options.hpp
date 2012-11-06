@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <algorithm> // for std::sort
 
 #include <boost/unordered_map.hpp>
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
@@ -19,6 +20,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/typeinfo.hpp>
+#include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/split.hpp>
 
@@ -138,6 +140,143 @@ namespace openvpn {
     typedef boost::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
 
+    class KeyValue : public RC<thread_unsafe_refcount>
+    {
+    public:
+      typedef boost::intrusive_ptr<KeyValue> Ptr;
+
+      KeyValue() : key_priority(0) {}
+      KeyValue(const std::string& key_arg, const std::string& value_arg, const int key_priority_arg=0)
+	: key(key_arg), value(value_arg), key_priority(key_priority_arg) {}
+
+      Option convert_to_option() const
+      {
+	bool newline_present = false;
+	Option opt;
+	const std::string unesc_value = unescape(value, newline_present);
+	opt.push_back(key);
+	if (newline_present || singular_arg(key))
+	  opt.push_back(unesc_value);
+	else if (unesc_value != "NOARGS")
+	  Split::by_space_void<Option, Lex, SpaceMatch>(opt, unesc_value);
+	return opt;
+      }
+
+      void split_priority()
+      {
+	// look for usage such as: remote.7
+	const size_t dp = key.find_last_of(".");
+	if (dp != std::string::npos)
+	  {
+	    const size_t tp = dp + 1;
+	    if (tp < key.length())
+	      {
+		const char *tail = key.c_str() + tp;
+		try {
+		  key_priority = parse_number<int>(tail);
+		  key = key.substr(0, dp);
+		}
+		catch (const number_parse_exception& e)
+		  {
+		    ;
+		  }
+	      }
+	  }
+      }
+
+      static bool compare(const Ptr& a, const Ptr& b)
+      {
+	const int cmp = a->key.compare(b->key);
+	if (cmp < 0)
+	  return true;
+	else if (cmp > 0)
+	  return false;
+	else
+	  return a->key_priority < b->key_priority;
+      }
+
+      std::string key;
+      std::string value;
+      int key_priority;
+
+    private:
+      static std::string unescape(const std::string& value, bool& newline_present)
+      {
+	std::string ret;
+	ret.reserve(value.length());
+
+	bool bs = false;
+	for (size_t i = 0; i < value.length(); ++i)
+	  {
+	    const char c = value[i];
+	    if (bs)
+	      {
+		if (c == 'n')
+		  {
+		    ret += '\n';
+		    newline_present = true;
+		  }
+		else if (c == '\\')
+		  ret += '\\';
+		else
+		  {
+		    ret += '\\';
+		    ret += c;
+		  }
+		bs = false;
+	      }
+	    else
+	      {
+		if (c == '\\')
+		  bs = true;
+		else
+		  ret += c;
+	      }
+	  }
+	if (bs)
+	  ret += '\\';
+	return ret;
+      }
+
+      static bool singular_arg(const std::string& key)
+      {
+	bool upper = false;
+	bool lower = false;
+	for (size_t i = 0; i < key.length(); ++i)
+	  {
+	    const char c = key[i];
+	    if (c >= 'a' && c <= 'z')
+	      lower = true;
+	    else if (c >= 'A' && c <= 'Z')
+	      upper = true;
+	  }
+	return upper && !lower;
+      }
+    };
+
+    struct KeyValueList : public std::vector<KeyValue::Ptr>
+    {
+      void preprocess()
+      {
+	split_priority();
+	sort();
+      }
+
+      void split_priority()
+      {
+	for (iterator i = begin(); i != end(); ++i)
+	  {
+	    KeyValue& kv = **i;
+	    kv.split_priority();
+	  }
+      }
+
+      void sort()
+      {
+	std::sort(begin(), end(), KeyValue::compare);
+      }
+    };
+
     static OptionList parse_from_csv_static(const std::string& str)
     {
       OptionList ret;
@@ -170,6 +309,14 @@ namespace openvpn {
 	  if (opt.size())
 	    push_back(opt);
 	}
+    }
+
+    // caller may want to call list.preprocess() before this function
+    // caller should call update_map() after this function
+    void parse_from_key_value_list(const KeyValueList& list)
+    {
+      for (KeyValueList::const_iterator i = list.begin(); i != list.end(); ++i)
+	push_back((*i)->convert_to_option());
     }
 
     // caller should call update_map() after this function

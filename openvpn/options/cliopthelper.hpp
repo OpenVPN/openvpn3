@@ -130,19 +130,51 @@ namespace openvpn {
 	}
     }
 
-    static ParseClientConfig parse(const std::string& content)
+    static ParseClientConfig parse(const std::string& content, OptionList::KeyValueList* content_list)
     {
       OptionList options;
-      return parse(content, options);
+      return parse(content, content_list, options);
     }
 
-    static ParseClientConfig parse(const std::string& content, OptionList& options)
+    static ParseClientConfig parse(const std::string& content,
+				   OptionList::KeyValueList* content_list,
+				   OptionList& options)
     {
       try {
 	options.clear();
 	options.parse_from_config(content);
 	options.parse_meta_from_config(content, "OVPN_ACCESS_SERVER");
+	if (content_list)
+	  {
+	    content_list->preprocess();
+	    options.parse_from_key_value_list(*content_list);
+	  }
 	options.update_map();
+
+	// add in missing options
+	bool added = false;
+
+	// client
+	if (!options.exists("client"))
+	  {
+	    Option opt;
+	    opt.push_back("client");
+	    options.push_back(opt);
+	    added = true;
+	  }
+
+	// dev
+	if (!options.exists("dev"))
+	  {
+	    Option opt;
+	    opt.push_back("dev");
+	    opt.push_back("tun");
+	    options.push_back(opt);
+	    added = true;
+	  }
+	if (added)
+	  options.update_map();
+
 	return ParseClientConfig(options);
       }
       catch (const std::exception& e)

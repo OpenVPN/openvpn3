@@ -104,6 +104,14 @@ namespace openvpn {
       bool responseRequired;
     };
 
+    // a basic key/value pair, used in Config below when OpenVPN profile is
+    // passed as a dictionary
+    struct KeyValue
+    {
+      std::string key;
+      std::string value;
+    };
+
     // OpenVPN config-file/profile
     // (client writes)
     struct Config
@@ -112,6 +120,10 @@ namespace openvpn {
 
       // OpenVPN profile as a string
       std::string content;
+
+      // OpenVPN profile as series of key/value pairs (may be provided exclusively
+      // or in addition to content string above).
+      std::vector<KeyValue> contentList;
 
       // Use a different server than that specified in "remote"
       // option of profile

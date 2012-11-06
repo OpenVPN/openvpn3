@@ -21,6 +21,7 @@
 %rename(ClientAPI_ProvideCreds) ProvideCreds;
 %rename(ClientAPI_SessionToken) SessionToken;
 %rename(ClientAPI_DynamicChallenge) DynamicChallenge;
+%rename(ClientAPI_KeyValue) KeyValue;
 %rename(ClientAPI_Config) Config;
 %rename(ClientAPI_Event) Event;
 %rename(ClientAPI_ConnectionInfo) ConnectionInfo;
