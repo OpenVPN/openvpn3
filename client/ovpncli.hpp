@@ -130,6 +130,7 @@ namespace openvpn {
       std::string serverOverride;
 
       // Force a given transport protocol
+      // Should be tcp, udp, or adaptive.
       std::string protoOverride;
 
       // Connection timeout in seconds, or 0 to retry indefinitely

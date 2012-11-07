@@ -204,7 +204,7 @@ namespace openvpn {
 				      }
 
 				      // save file we referenced
-				      ref_succeed_list_.push_back(fn);
+				      ref_succeed_list_.push_back(path);
 				    }
 				}
 			    }
