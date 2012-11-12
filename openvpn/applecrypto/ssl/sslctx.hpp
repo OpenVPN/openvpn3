@@ -77,7 +77,7 @@ namespace openvpn {
       void load(const OptionList& opt)
       {
 	// client/server
-	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
+	mode = opt.exists_unique("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
 
 	// identity
 	{

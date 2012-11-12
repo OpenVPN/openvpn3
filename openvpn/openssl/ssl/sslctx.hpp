@@ -125,11 +125,11 @@ namespace openvpn {
       void load(const OptionList& opt)
       {
 	// client/server
-	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
+	mode = opt.exists_unique("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
 
 	// ca
 	{
-	  const std::string& ca_txt = opt.get("ca", 1);
+	  const std::string ca_txt = opt.cat("ca");
 	  load_ca(ca_txt);
 	}
 
@@ -141,7 +141,7 @@ namespace openvpn {
 
 	// extra-certs
 	{
-	  const std::string& ec_txt = opt.get_optional("extra-certs", 1);
+	  const std::string ec_txt = opt.cat("extra-certs");
 	  load_extra_certs(ec_txt);
 	}
 

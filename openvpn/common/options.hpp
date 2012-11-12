@@ -610,10 +610,47 @@ namespace openvpn {
 	return NULL;
     }
 
-    bool exists(const std::string& name) const
+    // concatenate all one-arg directives of a given name, in index order
+    std::string cat(const std::string& name) const
+    {
+      std::string ret;
+      const OptionList::IndexList* il = get_index_ptr(name);
+      if (il)
+	{
+	  size_t size = 0;
+	  OptionList::IndexList::const_iterator i;
+	  for (i = il->begin(); i != il->end(); ++i)
+	    {
+	      const Option& o = (*this)[*i];
+	      if (o.size() == 2)
+		size += o[1].length() + 1;
+	      else
+		OPENVPN_THROW(option_error, "option '" << name << "' (" << o.size() << ") must have exactly one parameter");
+	    }
+	  ret.reserve(size);
+	  for (i = il->begin(); i != il->end(); ++i)
+	    {
+	      const Option& o = (*this)[*i];
+	      if (o.size() >= 2)
+		{
+		  ret += o[1];
+		  string::add_trailing_in_place(ret, '\n');
+		}
+	    }
+	}
+      return ret;
+    }
+
+    bool exists_unique(const std::string& name) const
     {
       const Option* o = get_ptr(name);
       return o != NULL;
+    }
+
+    bool exists(const std::string& name) const
+    {
+      const OptionList::IndexList* il = get_index_ptr(name);
+      return il != NULL;
     }
 
     const std::string& get(const std::string& name, size_t index) const

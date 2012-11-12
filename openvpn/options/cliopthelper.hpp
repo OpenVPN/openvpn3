@@ -161,7 +161,7 @@ namespace openvpn {
 	bool added = false;
 
 	// client
-	if (!options.exists("client"))
+	if (!options.exists_unique("client"))
 	  {
 	    Option opt;
 	    opt.push_back("client");
@@ -170,7 +170,7 @@ namespace openvpn {
 	  }
 
 	// dev
-	if (!options.exists("dev"))
+	if (!options.exists_unique("dev"))
 	  {
 	    Option opt;
 	    opt.push_back("dev");
