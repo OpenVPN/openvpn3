@@ -157,7 +157,7 @@ namespace openvpn {
       Option multiline;
 
       profile_content_.reserve(orig_profile_content.length());
-      while (in())
+      while (in(true))
 	{
 	  if (in.line_overflow())
 	    {
@@ -165,8 +165,7 @@ namespace openvpn {
 	      error_ = "line too long";
 	      return;
 	    }
-	  std::string& line = in.line_ref();
-	  string::trim_crlf(line);
+	  const std::string& line = in.line_ref();
 	  bool echo = true;
 	  ++line_num;
 	  if (in_multiline)

@@ -17,6 +17,7 @@
 #include <openvpn/common/process.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/split.hpp>
+#include <openvpn/common/splitlines.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
@@ -75,11 +76,11 @@ namespace openvpn {
     {
       typedef std::vector<std::string> strvec;
       const std::string proc_net_route = read_text_simple("/proc/net/route");
-      std::stringstream in(proc_net_route);
-      std::string line;
+      SplitLines in(proc_net_route, 0);
       std::string best_gw;
-      while (std::getline(in, line))
+      while (in(true))
 	{
+	  const std::string& line = in.line_ref();
 	  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(line);
 	  if (v.size() >= 8)
 	    {

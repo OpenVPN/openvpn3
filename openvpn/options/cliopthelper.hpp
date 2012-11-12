@@ -15,6 +15,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/splitlines.hpp>
 #include <openvpn/options/remotelist.hpp>
 #include <openvpn/client/cliconstants.hpp>
 
@@ -112,12 +113,11 @@ namespace openvpn {
 	  const Option* o = options.get_ptr("HOST_LIST");
 	  if (o)
 	    {
-	      std::stringstream in(o->get(1));
-	      std::string line;
-	      while (std::getline(in, line))
+	      SplitLines in(o->get(1), 0);
+	      while (in(true))
 		{
 		  ServerEntry se;
-		  se.server = line;
+		  se.server = in.line_ref();
 		  se.friendlyName = se.server;
 		  serverList_.push_back(se);
 		}

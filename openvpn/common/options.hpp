@@ -419,13 +419,12 @@ namespace openvpn {
       int line_num = 0;
       bool in_multiline = false;
       Option multiline;
-      while (in())
+      while (in(true))
 	{
 	  ++line_num;
 	  if (in.line_overflow())
 	    OPENVPN_THROW(option_error, "line " << line_num << " is too long");
-	  std::string& line = in.line_ref();
-	  string::trim_crlf(line);
+	  const std::string& line = in.line_ref();
 	  if (in_multiline)
 	    {
 	      if (is_close_tag(line, multiline[0]))
@@ -477,13 +476,12 @@ namespace openvpn {
       bool in_multiline = false;
       Option multiline;
       const std::string prefix = tag + "_";
-      while (in())
+      while (in(true))
 	{
 	  ++line_num;
 	  if (in.line_overflow())
 	    OPENVPN_THROW(option_error, "line " << line_num << " is too long");
 	  std::string& line = in.line_ref();
-	  string::trim_crlf(line);
 	  if (boost::algorithm::starts_with(line, "# "))
 	    {
 	      line = std::string(line, 2);

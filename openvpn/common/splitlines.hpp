@@ -8,6 +8,8 @@
 #ifndef OPENVPN_COMMON_SPLITLINES_H
 #define OPENVPN_COMMON_SPLITLINES_H
 
+#include <openvpn/common/string.hpp>
+
 namespace openvpn {
   class SplitLines
   {
@@ -19,7 +21,7 @@ namespace openvpn {
 	index(0),
 	overflow(false) {}
 
-    bool operator()()
+    bool operator()(const bool trim)
     {
       line.clear();
       overflow = false;
@@ -34,7 +36,11 @@ namespace openvpn {
 	  const char c = data[index++];
 	  line += c;
 	  if (c == '\n')
-	    return true;
+	    {
+	      if (trim)
+		string::trim_crlf(line);
+	      return true;
+	    }
 	}
       return false;
     }
