@@ -74,13 +74,13 @@ namespace openvpn {
     static IP::Addr get_default_gateway_v4()
     {
       typedef std::vector<std::string> strvec;
-      const std::string proc_net_route = read_text("/proc/net/route");
+      const std::string proc_net_route = read_text_simple("/proc/net/route");
       std::stringstream in(proc_net_route);
       std::string line;
       std::string best_gw;
       while (std::getline(in, line))
 	{
-	  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch>(line);
+	  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(line);
 	  if (v.size() >= 8)
 	    {
 	      if (v[1] == "00000000" && v[7] == "00000000")

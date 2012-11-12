@@ -363,9 +363,29 @@ namespace openvpn {
 	}
     }
 
-    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_static(const std::string& path)
+
+    OPENVPN_CLIENT_EXPORT long OpenVPNClient::max_profile_size()
     {
-      ProfileMerge pm(path);
+      return ProfileParseLimits::MAX_PROFILE_SIZE;
+    }
+
+    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_static(const std::string& path,
+									 bool follow_references)
+    {
+      ProfileMerge pm(path, "", follow_references,
+		      ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
+      return build_merge_config(pm);
+    }
+
+    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_string_static(const std::string& config_content)
+    {
+      ProfileMergeFromString pm(config_content, "", false,
+				ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
+      return build_merge_config(pm);
+    }
+
+    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::build_merge_config(const ProfileMerge& pm)
+    {
       MergeConfig ret;
       ret.status = pm.status_string();
       ret.basename = pm.basename();

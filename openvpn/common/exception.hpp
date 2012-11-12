@@ -58,6 +58,8 @@ namespace openvpn {
     unsigned int code() const { return code_ & ~FATAL_FLAG; }
     bool fatal() const { return (code_ & FATAL_FLAG) != 0; }
 
+    bool code_defined() const { return code_ != 0; }
+
     virtual ~ExceptionCode() throw() {}
 
   private:
@@ -105,12 +107,27 @@ namespace openvpn {
     C(std::string err) : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err) {} \
   }
 
+  // define a custom exception class that allows extra info, but does not emit a tag
+# define OPENVPN_UNTAGGED_EXCEPTION(C) \
+  class C : public openvpn::Exception { \
+  public: \
+    C(std::string err) : openvpn::Exception(err) {} \
+  }
+
   // define a custom exception class that allows extra info, and inherits from a custom base
 # define OPENVPN_EXCEPTION_INHERIT(B, C) \
   class C : public B { \
   public: \
     C() : B(#C OPENVPN_FILE_LINE) {} \
     C(std::string err) : B(#C OPENVPN_FILE_LINE ": " + err) {} \
+  }
+
+  // define a custom exception class that allows extra info, and inherits from a custom base,
+  // but does not emit a tag
+# define OPENVPN_UNTAGGED_EXCEPTION_INHERIT(B, C) \
+  class C : public B { \
+  public: \
+    C(std::string err) : B(err) {} \
   }
 
   // throw an Exception with stringstream concatenation allowed

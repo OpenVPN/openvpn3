@@ -16,6 +16,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/options/remotelist.hpp>
+#include <openvpn/client/cliconstants.hpp>
 
 namespace openvpn {
   class ParseClientConfig {
@@ -141,13 +142,18 @@ namespace openvpn {
 				   OptionList& options)
     {
       try {
+	OptionList::Limits limits("profile is too large",
+				  ProfileParseLimits::MAX_PROFILE_SIZE,
+				  ProfileParseLimits::OPT_OVERHEAD,
+				  ProfileParseLimits::TERM_OVERHEAD,
+				  ProfileParseLimits::MAX_LINE_SIZE);
 	options.clear();
-	options.parse_from_config(content);
-	options.parse_meta_from_config(content, "OVPN_ACCESS_SERVER");
+	options.parse_from_config(content, &limits);
+	options.parse_meta_from_config(content, "OVPN_ACCESS_SERVER", &limits);
 	if (content_list)
 	  {
 	    content_list->preprocess();
-	    options.parse_from_key_value_list(*content_list);
+	    options.parse_from_key_value_list(*content_list, &limits);
 	  }
 	options.update_map();
 

@@ -188,7 +188,7 @@ namespace openvpn {
 	typedef std::vector<std::string> StringList;
 	StringList sl;
 	sl.reserve(2);
-	Split::by_char_void<StringList, NullLex>(sl, combined, '\\', 1);
+	Split::by_char_void<StringList, NullLex, Split::NullLimit>(sl, combined, '\\', 1);
 	if (sl.size() == 1)
 	  {
 	    domain = "";

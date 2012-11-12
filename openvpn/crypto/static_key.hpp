@@ -15,8 +15,10 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/file.hpp>
+#include <openvpn/common/string.hpp>
+#include <openvpn/common/splitlines.hpp>
+#include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
 
@@ -86,13 +88,13 @@ namespace openvpn {
 
     void parse(const std::string& key_text)
     {
-      std::stringstream in(key_text);
+      SplitLines in(key_text, 0);
       key_t data(KEY_SIZE, key_t::DESTRUCT_ZERO);
-      std::string line;
       bool in_body = false;
-      while (std::getline(in, line))
+      while (in())
 	{
-	  boost::trim(line);
+	  std::string& line = in.line_ref();
+	  string::trim_crlf(line);
 	  if (line == static_key_head)
 	    in_body = true;
 	  else if (line == static_key_foot)

@@ -18,6 +18,7 @@
 
 namespace openvpn {
   class OptionList;
+  class ProfileMerge;
 
   namespace ClientAPI {
     // Represents an OpenVPN server and its friendly name
@@ -231,7 +232,7 @@ namespace openvpn {
       int lastPacketReceived;
     };
 
-    // return value of merge_config_static
+    // return value of merge_config methods
     struct MergeConfig
     {
       std::string status;                   // ProfileMerge::Status codes rendered as string
@@ -285,10 +286,17 @@ namespace openvpn {
 
       // Read an OpenVPN profile that might contain external
       // file references, returning a unified profile.
-      static MergeConfig merge_config_static(const std::string& path);
+      static MergeConfig merge_config_static(const std::string& path, bool follow_references);
+
+      // Read an OpenVPN profile that might contain external
+      // file references, returning a unified profile.
+      static MergeConfig merge_config_string_static(const std::string& config_content);
 
       // Parse profile and determine needed credentials statically.
       static EvalConfig eval_config_static(const Config&);
+
+      // Maximum size of profile that should be allowed
+      static long max_profile_size();
 
       // Parse a dynamic challenge cookie, placing the result in dc.
       // Return true on success or false if parse error.
@@ -389,6 +397,7 @@ namespace openvpn {
       void external_pki_error(const ExternalPKIRequestBase&, const size_t err_type);
       void process_epki_cert_chain(const ExternalPKICertRequest& req);
       void check_app_expired();
+      static MergeConfig build_merge_config(const ProfileMerge&);
 
       // from ExternalPKIBase
       virtual bool sign(const std::string& data, std::string& sig);

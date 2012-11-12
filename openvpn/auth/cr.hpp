@@ -55,7 +55,7 @@ namespace openvpn {
       typedef std::vector<std::string> StringList;
       StringList sl;
       sl.reserve(5);
-      Split::by_char_void<StringList, NullLex>(sl, cookie, ':', 0, 4);
+      Split::by_char_void<StringList, NullLex, Split::NullLimit>(sl, cookie, ':', 0, 4);
       if (sl.size() != 5)
 	throw dynamic_challenge_parse_error();
       if (sl[0] != "CRV1")
@@ -68,7 +68,7 @@ namespace openvpn {
       {
 	StringList opt;
 	opt.reserve(2);
-	Split::by_char_void<StringList, NullLex>(opt, sl[1], ',');
+	Split::by_char_void<StringList, NullLex, Split::NullLimit>(opt, sl[1], ',');
 	for (StringList::const_iterator i = opt.begin(); i != opt.end(); ++i)
 	  {
 	    if (*i == "E")

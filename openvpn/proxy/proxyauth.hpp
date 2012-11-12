@@ -51,15 +51,15 @@ namespace openvpn {
     private:
       void do_parse(const std::string& line)
       {
-	std::vector<std::string> tuple = Split::by_char<std::vector<std::string>, StandardLex>(line, ' ', 0, 1);
+	std::vector<std::string> tuple = Split::by_char<std::vector<std::string>, StandardLex, Split::NullLimit>(line, ' ', 0, 1);
 	if (tuple.size() >= 1)
 	  method = tuple[0];
 	if (tuple.size() == 2)
 	  {
-	    std::vector<std::string> list = Split::by_char<std::vector<std::string>, StandardLex>(tuple[1], ',', Split::TRIM_LEADING_SPACES|Split::TRIM_SPECIAL);
+	    std::vector<std::string> list = Split::by_char<std::vector<std::string>, StandardLex, Split::NullLimit>(tuple[1], ',', Split::TRIM_LEADING_SPACES|Split::TRIM_SPECIAL);
 	    for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); ++i)
 	      {
-		std::vector<std::string> pair = Split::by_char<std::vector<std::string>, StandardLex>(*i, '=', 0, 1);
+		std::vector<std::string> pair = Split::by_char<std::vector<std::string>, StandardLex, Split::NullLimit>(*i, '=', 0, 1);
 		if (pair.size() == 2)
 		  parms.push_back(HTTP::Header(pair[0], pair[1]));
 	      }

@@ -181,7 +181,11 @@ int main(int argc, char *argv[])
 	ClientAPI::Config config;
 	if (argc != 1)
 	  goto usage;
-	config.content = read_text(argv[0]);
+	ProfileMerge pm(argv[0], "", true,
+			ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
+	if (pm.status() != ProfileMerge::MERGE_SUCCESS)
+	  OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+	config.content = pm.profile_content();
 	config.serverOverride = server;
 	config.protoOverride = proto;
 	config.connTimeout = timeout;

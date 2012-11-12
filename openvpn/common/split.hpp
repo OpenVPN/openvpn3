@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/lex.hpp>
 
 namespace openvpn {
@@ -20,8 +21,13 @@ namespace openvpn {
       TRIM_SPECIAL=(1<<1), // trims quotes (but respects their content)
     };
 
-    template <typename V, typename LEX>
-    inline void by_char_void(V& ret, const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0)
+    struct NullLimit
+    {
+      void add_term() {}
+    };
+
+    template <typename V, typename LEX, typename LIM>
+    inline void by_char_void(V& ret, const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=NULL)
     {
       LEX lex;
       unsigned int nterms = 0;
@@ -32,6 +38,8 @@ namespace openvpn {
 	  lex.put(c);
 	  if (!lex.in_quote() && c == split_by && nterms < max_terms)
 	    {
+	      if (lim)
+		lim->add_term();
 	      ret.push_back(term);
 	      ++nterms;
 	      term = "";
@@ -40,19 +48,21 @@ namespace openvpn {
 		   && (!(flags & TRIM_LEADING_SPACES) || !term.empty() || !SpaceMatch::is_space(c)))
 	    term += c;
 	}
+      if (lim)
+	lim->add_term();
       ret.push_back(term);
     }
 
-    template <typename V, typename LEX>
-    inline V by_char(const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0)
+    template <typename V, typename LEX, typename LIM>
+    inline V by_char(const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=NULL)
     {
       V ret;
-      by_char_void<V, LEX>(ret, input, split_by, flags, max_terms);
+      by_char_void<V, LEX, LIM>(ret, input, split_by, flags, max_terms, lim);
       return ret;
     }
 
-    template <typename V, typename LEX, typename SPACE>
-    inline void by_space_void(V& ret, const std::string& input)
+    template <typename V, typename LEX, typename SPACE, typename LIM>
+    inline void by_space_void(V& ret, const std::string& input, LIM* lim=NULL)
     {
       LEX lex;
 
@@ -74,6 +84,8 @@ namespace openvpn {
 		}
 	      else if (defined)
 		{
+		  if (lim)
+		    lim->add_term();
 		  ret.push_back(term);
 		  term = "";
 		  defined = false;
@@ -81,14 +93,18 @@ namespace openvpn {
 	    }
 	}
       if (defined)
-	ret.push_back(term);
+	{
+	  if (lim)
+	    lim->add_term();
+	  ret.push_back(term);
+	}
     }
 
-    template <typename V, typename LEX, typename SPACE>
-    inline V by_space(const std::string& input)
+    template <typename V, typename LEX, typename SPACE, typename LIM>
+    inline V by_space(const std::string& input, LIM* lim=NULL)
     {
       V ret;
-      by_space_void<V, LEX, SPACE>(ret, input);
+      by_space_void<V, LEX, SPACE, LIM>(ret, input, lim);
       return ret;
     }
   }

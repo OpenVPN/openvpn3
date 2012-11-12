@@ -462,7 +462,7 @@ namespace openvpn {
 	    const HTTP::Header& h = *i;
 	    if (string::strcasecmp(h.name, "proxy-authenticate") == 0)
 	      {
-		std::vector<std::string> v = Split::by_space<std::vector<std::string>, StandardLex, SpaceMatch>(h.value);
+		std::vector<std::string> v = Split::by_space<std::vector<std::string>, StandardLex, SpaceMatch, Split::NullLimit>(h.value);
 		if (v.size() >= 2 && string::strcasecmp("ntlm", v[0]) == 0)
 		  return v[1];
 	      }

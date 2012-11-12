@@ -92,7 +92,7 @@ namespace openvpn {
 	try {
 	  if (s2.empty())
 	    {
-	      const StringPair pair = Split::by_char<StringPair, NullLex>(s1, '/');
+	      const StringPair pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s1, '/');
 	      return from_string_impl(pair, title);
 	    }
 	  else
@@ -112,7 +112,7 @@ namespace openvpn {
       static AddrMaskPair from_string(const std::string& s, const char *title = NULL)
       {
 	try {
-	  const StringPair pair = Split::by_char<StringPair, NullLex>(s, '/');
+	  const StringPair pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s, '/');
 	  return from_string_impl(pair, title);
 	}
 	catch (const std::exception& e)

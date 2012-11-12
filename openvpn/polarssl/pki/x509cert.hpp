@@ -56,7 +56,11 @@ namespace openvpn {
 	  {
 	    std::ostringstream os;
 	    os << status << " certificate(s) in " << title << " bundle failed to parse";
+#if 1 // PolarSSL cert parse error 
 	    throw PolarSSLException(os.str());
+#else
+	    OPENVPN_LOG("POLARSSL: " << os.str());
+#endif
 	  }
       }
 

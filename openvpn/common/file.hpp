@@ -11,33 +11,44 @@
 #include <string>
 #include <fstream>
 
+#include <boost/cstdint.hpp> // for boost::uint64_t
+
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/unicode.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
 
-  OPENVPN_EXCEPTION(open_file_error);
+  OPENVPN_UNTAGGED_EXCEPTION(file_exception);
+  OPENVPN_UNTAGGED_EXCEPTION_INHERIT(file_exception, open_file_error);
+  OPENVPN_UNTAGGED_EXCEPTION_INHERIT(file_exception, file_too_large);
+  OPENVPN_UNTAGGED_EXCEPTION_INHERIT(file_exception, file_is_binary);
+  OPENVPN_UNTAGGED_EXCEPTION_INHERIT(file_exception, file_not_utf8);
 
-  inline std::string read_text(const std::string& filename)
+  inline std::string read_text_simple(const std::string& filename)
   {
     std::ifstream ifs(filename.c_str());
     if (!ifs)
-      OPENVPN_THROW(open_file_error, "cannot open " << filename);
+      OPENVPN_THROW(open_file_error, "cannot open: " << filename);
     const std::string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
     if (!ifs)
-      OPENVPN_THROW(open_file_error, "cannot read " << filename);
+      OPENVPN_THROW(open_file_error, "cannot read: " << filename);
     return str;
   }
 
-  inline BufferPtr read_binary(const std::string& filename, const unsigned int buffer_flags = 0)
+  inline BufferPtr read_binary(const std::string& filename,
+			       const boost::uint64_t max_size = 0,
+			       const unsigned int buffer_flags = 0)
   {
     std::ifstream ifs(filename.c_str(), std::ios::binary);
     if (!ifs)
-      OPENVPN_THROW(open_file_error, "cannot open " << filename);
+      OPENVPN_THROW(open_file_error, "cannot open: " << filename);
 
     // get length of file
     ifs.seekg (0, std::ios::end);
     const std::streamsize length = ifs.tellg();
+    if (max_size && boost::uint64_t(length) > max_size)
+      OPENVPN_THROW(file_too_large, "file too large [" << length << '/' << max_size << "]: " << filename);
     ifs.seekg (0, std::ios::beg);
 
     // allocate buffer
@@ -48,16 +59,28 @@ namespace openvpn {
 
     // check for errors
     if (ifs.gcount() != length)
-      OPENVPN_THROW(open_file_error, "read length inconsistency " << filename);
+      OPENVPN_THROW(open_file_error, "read length inconsistency: " << filename);
     if (!ifs)
-      OPENVPN_THROW(open_file_error, "cannot read " << filename);
+      OPENVPN_THROW(open_file_error, "cannot read: " << filename);
 
     return b;
   }
 
-  inline std::string read_text_fast(const std::string& filename)
+  inline std::string read_text(const std::string& filename, const boost::uint64_t max_size = 0)
   {
-    BufferPtr bp = read_binary(filename);
+    BufferPtr bp = read_binary(filename, max_size);
+    if (bp->contains_null())
+      OPENVPN_THROW(file_is_binary, "file is binary: " << filename);
+    return std::string((const char *)bp->c_data(), bp->size());
+  }
+
+  inline std::string read_text_utf8(const std::string& filename, const boost::uint64_t max_size = 0)
+  {
+    BufferPtr bp = read_binary(filename, max_size);
+    if (bp->contains_null())
+      OPENVPN_THROW(file_is_binary, "file is binary: " << filename);
+    if (!Unicode::is_valid_utf8(bp->c_data(), bp->size()))
+      OPENVPN_THROW(file_not_utf8, "file is not UTF8: " << filename);
     return std::string((const char *)bp->c_data(), bp->size());
   }
 } // namespace openvpn

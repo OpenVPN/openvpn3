@@ -22,9 +22,10 @@ cd $top
 # iOS client
 echo ios/OpenVPN/OpenVPNPlugin/OpenVPNPlugin.h
 echo ios/OpenVPN/OpenVPNPlugin/OpenVPNPlugin.cpp
+ls ios/OpenVPN/OpenVPNPlugin/pluginutil.*
 iosapp=ios/OpenVPN/OpenVPNApp-iOS
 cd $iosapp
-for f in *.h *.m *.hpp *.cpp ; do
+for f in *.h *.m *.mm *.hpp *.cpp ; do
     echo $iosapp/$f
 done
 cd $top

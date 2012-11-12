@@ -8,6 +8,7 @@
 #ifndef OPENVPN_COMMON_UNICODE_H
 #define OPENVPN_COMMON_UNICODE_H
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/buffer/buffer.hpp>
@@ -662,6 +663,24 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(unicode_src_overflow);
     OPENVPN_SIMPLE_EXCEPTION(unicode_dest_overflow);
     OPENVPN_SIMPLE_EXCEPTION(unicode_malformed);
+
+    inline bool is_valid_utf8(const unsigned char *source, size_t size)
+    {
+      while (size)
+	{
+	  const char c = *source;
+	  if (c == '\0')
+	    return false;
+	  const size_t length = trailingBytesForUTF8[(size_t)c]+1;
+	  if (length > size)
+	    return false;
+	  if (!isLegalUTF8(source, (int)length))
+	    return false;
+	  source += length;
+	  size -= length;
+	}
+      return true;
+    }
 
     inline void conversion_result_throw(const ConversionResult res)
     {

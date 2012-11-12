@@ -22,6 +22,7 @@
 #include <openvpn/options/sanitize.hpp>
 #include <openvpn/client/clievent.hpp>
 #include <openvpn/client/clicreds.hpp>
+#include <openvpn/client/cliconstants.hpp>
 #include <openvpn/options/clihalt.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
@@ -70,7 +71,11 @@ namespace openvpn {
 	typedef boost::intrusive_ptr<Config> Ptr;
 
 	Config()
-	  : max_pushed_options(256)
+	  : pushed_options_limit("server-pushed options data too large",
+				 ProfileParseLimits::MAX_PUSH_SIZE,
+				 ProfileParseLimits::OPT_OVERHEAD,
+				 ProfileParseLimits::TERM_OVERHEAD,
+				 0)
 	{}
 
 	typename ProtoConfig::Ptr proto_context_config;
@@ -81,7 +86,7 @@ namespace openvpn {
 	SessionStats::Ptr cli_stats;
 	ClientEvent::Queue::Ptr cli_events;
 	ClientCreds::Ptr creds;
-	unsigned int max_pushed_options;
+	OptionList::Limits pushed_options_limit;
       };
 
       Session(boost::asio::io_service& io_service_arg,
@@ -104,7 +109,7 @@ namespace openvpn {
 	  cli_events(config.cli_events),
 	  connected_(false),
 	  fatal_(Error::UNDEF),
-	  max_pushed_options(config.max_pushed_options)
+	  pushed_options_limit(config.pushed_options_limit)
       {
 #ifdef OPENVPN_PACKET_LOG
 	packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -228,14 +233,15 @@ namespace openvpn {
 	}
 	catch (const ExceptionCode& e)
 	  {
-	    if (e.fatal())
-	      transport_error((Error::Type)e.code(), e.what());
+	    if (e.code_defined())
+	      {
+		if (e.fatal())
+		  transport_error((Error::Type)e.code(), e.what());
+		else
+		  cli_stats->error((Error::Type)e.code());
+	      }
 	    else
-	      cli_stats->error((Error::Type)e.code());
-	  }
-	catch (const std::exception& e)
-	  {
-	    process_exception(e, "transport_recv");
+	      process_exception(e, "transport_recv");
 	  }
       }
 
@@ -377,12 +383,11 @@ namespace openvpn {
       {
 	const std::string msg = Base::template read_control_string<std::string>(*app_bp);
 	//OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
+
 	if (!received_options.complete() && boost::algorithm::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
-	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11)));
-	    if (received_options.size() > max_pushed_options)
-	      OPENVPN_THROW(max_pushed_options_exceeded, "max number of allowed pushed options is " << max_pushed_options);
+	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11), &pushed_options_limit));
 	    if (received_options.complete())
 	      {
 		// show options
@@ -652,7 +657,7 @@ namespace openvpn {
       Error::Type fatal_;
       std::string fatal_reason_;
 
-      const unsigned int max_pushed_options;
+      OptionList::Limits pushed_options_limit;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;

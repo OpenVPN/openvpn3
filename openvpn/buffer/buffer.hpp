@@ -185,6 +185,17 @@ namespace openvpn {
       size_ -= delta;
     }
 
+    bool contains_null() const
+    {
+      const T* end = c_data_end();
+      for (const T* p = c_data(); p < end; ++p)
+	{
+	  if (!*p)
+	    return true;
+	}
+      return false;
+    }
+
     // mutable index into array
     T& operator[](const size_t index)
     {

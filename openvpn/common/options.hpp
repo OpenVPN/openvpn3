@@ -13,8 +13,9 @@
 #include <vector>
 #include <algorithm> // for std::sort
 
-#include <boost/unordered_map.hpp>
+#include <boost/cstdint.hpp> // for boost::uint64_t
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
+#include <boost/unordered_map.hpp>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
@@ -23,6 +24,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/split.hpp>
+#include <openvpn/common/splitlines.hpp>
 
 namespace openvpn {
 
@@ -140,6 +142,75 @@ namespace openvpn {
     typedef boost::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
 
+    class Limits
+    {
+    public:
+      Limits(const std::string& error_message,
+	     const boost::uint64_t max_bytes_arg,
+	     const size_t extra_bytes_per_opt_arg,
+	     const size_t extra_bytes_per_term_arg,
+	     const size_t max_line_len_arg)
+	: bytes(0),
+	  max_bytes(max_bytes_arg),
+	  extra_bytes_per_opt(extra_bytes_per_opt_arg),
+	  extra_bytes_per_term(extra_bytes_per_term_arg),
+	  max_line_len(max_line_len_arg),
+	  err(error_message) {}
+
+      void add_bytes(const size_t n)
+      {
+	bytes += n;
+	check_overflow();
+      }
+
+      void add_string(const std::string& str)
+      {
+	bytes += str.length();
+	check_overflow();
+      }
+
+      void add_term()
+      {
+	bytes += extra_bytes_per_term;
+	check_overflow();
+      }
+
+      void add_opt()
+      {
+	bytes += extra_bytes_per_opt;
+	check_overflow();
+      }
+
+      size_t get_max_line_len() const
+      {
+	return max_line_len;
+      }
+
+      boost::uint64_t get_bytes() const
+      {
+	return bytes;
+      }
+
+    private:
+      void check_overflow()
+      {
+	if (bytes >= max_bytes)
+	  error();
+      }
+
+      void error()
+      {
+	throw option_error(err);
+      }
+
+      boost::uint64_t bytes;
+      const boost::uint64_t max_bytes;
+      const size_t extra_bytes_per_opt;
+      const size_t extra_bytes_per_term;
+      const size_t max_line_len;
+      const std::string err;
+    };
+
     class KeyValue : public RC<thread_unsafe_refcount>
     {
     public:
@@ -149,7 +220,12 @@ namespace openvpn {
       KeyValue(const std::string& key_arg, const std::string& value_arg, const int key_priority_arg=0)
 	: key(key_arg), value(value_arg), key_priority(key_priority_arg) {}
 
-      Option convert_to_option() const
+      size_t combined_length() const
+      {
+	return key.length() + value.length();
+      }
+
+      Option convert_to_option(Limits* lim) const
       {
 	bool newline_present = false;
 	Option opt;
@@ -158,7 +234,7 @@ namespace openvpn {
 	if (newline_present || singular_arg(key))
 	  opt.push_back(unesc_value);
 	else if (unesc_value != "NOARGS")
-	  Split::by_space_void<Option, Lex, SpaceMatch>(opt, unesc_value);
+	  Split::by_space_void<Option, Lex, SpaceMatch, Limits>(opt, unesc_value, lim);
 	return opt;
       }
 
@@ -277,18 +353,18 @@ namespace openvpn {
       }
     };
 
-    static OptionList parse_from_csv_static(const std::string& str)
+    static OptionList parse_from_csv_static(const std::string& str, Limits* lim)
     {
       OptionList ret;
-      ret.parse_from_csv(str);
+      ret.parse_from_csv(str, lim);
       ret.update_map();
       return ret;
     }
 
-    static OptionList parse_from_config_static(const std::string& str)
+    static OptionList parse_from_config_static(const std::string& str, Limits* lim)
     {
       OptionList ret;
-      ret.parse_from_config(str);
+      ret.parse_from_config(str, lim);
       ret.update_map();
       return ret;
     }
@@ -300,41 +376,62 @@ namespace openvpn {
     }
 
     // caller should call update_map() after this function
-    void parse_from_csv(const std::string& str)
+    void parse_from_csv(const std::string& str, Limits* lim)
     {
-      std::vector<std::string> list = Split::by_char<std::vector<std::string>, Lex>(str, ',');
+      if (lim)
+	lim->add_string(str);
+      std::vector<std::string> list = Split::by_char<std::vector<std::string>, Lex, Limits>(str, ',', 0, ~0, lim);
       for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); ++i)
 	{
-	  const Option opt = Split::by_space<Option, Lex, SpaceMatch>(*i);
+	  const Option opt = Split::by_space<Option, Lex, SpaceMatch, Limits>(*i, lim);
 	  if (opt.size())
-	    push_back(opt);
+	    {
+	      if (lim)
+		lim->add_opt();
+	      push_back(opt);
+	    }
 	}
     }
 
     // caller may want to call list.preprocess() before this function
     // caller should call update_map() after this function
-    void parse_from_key_value_list(const KeyValueList& list)
+    void parse_from_key_value_list(const KeyValueList& list, Limits* lim)
     {
       for (KeyValueList::const_iterator i = list.begin(); i != list.end(); ++i)
-	push_back((*i)->convert_to_option());
+	{
+	  const KeyValue& kv = **i;
+	  if (lim)
+	    lim->add_bytes(kv.combined_length());
+	  const Option opt = kv.convert_to_option(lim);
+	  if (lim)
+	    lim->add_opt();
+	  push_back(opt);
+	}
     }
 
     // caller should call update_map() after this function
-    void parse_from_config(const std::string& str)
+    void parse_from_config(const std::string& str, Limits* lim)
     {
-      std::stringstream in(str);
-      std::string line;
+      if (lim)
+	lim->add_string(str);
+
+      SplitLines in(str, lim ? lim->get_max_line_len() : 0);
       int line_num = 0;
       bool in_multiline = false;
       Option multiline;
-      while (std::getline(in, line))
+      while (in())
 	{
-	  string::trim_crlf(line);
 	  ++line_num;
+	  if (in.line_overflow())
+	    OPENVPN_THROW(option_error, "line " << line_num << " is too long");
+	  std::string& line = in.line_ref();
+	  string::trim_crlf(line);
 	  if (in_multiline)
 	    {
 	      if (is_close_tag(line, multiline[0]))
 		{
+		  if (lim)
+		    lim->add_opt();
 		  push_back(multiline);
 		  multiline.clear();
 		  in_multiline = false;
@@ -347,7 +444,7 @@ namespace openvpn {
 	    }
 	  else if (!ignore_line(line))
 	    {
-	      Option opt = Split::by_space<Option, Lex, SpaceMatch>(line);
+	      Option opt = Split::by_space<Option, Lex, SpaceMatch, Limits>(line, lim);
 	      if (opt.size())
 		{
 		  if (is_open_tag(opt[0]))
@@ -360,7 +457,11 @@ namespace openvpn {
 		      in_multiline = true;
 		    }
 		  else
-		    push_back(opt);
+		    {
+		      if (lim)
+			lim->add_opt();
+		      push_back(opt);
+		    }
 		}
 	    }
 	}
@@ -369,18 +470,20 @@ namespace openvpn {
     }
 
     // caller should call update_map() after this function
-    void parse_meta_from_config(const std::string& str, const std::string& tag)
+    void parse_meta_from_config(const std::string& str, const std::string& tag, Limits* lim)
     {
-      std::stringstream in(str);
-      std::string line;
+      SplitLines in(str, lim ? lim->get_max_line_len() : 0);
       int line_num = 0;
       bool in_multiline = false;
       Option multiline;
       const std::string prefix = tag + "_";
-      while (std::getline(in, line))
+      while (in())
 	{
-	  string::trim_crlf(line);
 	  ++line_num;
+	  if (in.line_overflow())
+	    OPENVPN_THROW(option_error, "line " << line_num << " is too long");
+	  std::string& line = in.line_ref();
+	  string::trim_crlf(line);
 	  if (boost::algorithm::starts_with(line, "# "))
 	    {
 	      line = std::string(line, 2);
@@ -388,6 +491,8 @@ namespace openvpn {
 		{
 		  if (is_close_meta_tag(line, prefix, multiline[0]))
 		    {
+		      if (lim)
+			lim->add_opt();
 		      push_back(multiline);
 		      multiline.clear();
 		      in_multiline = false;
@@ -400,7 +505,7 @@ namespace openvpn {
 		}
 	      else if (boost::algorithm::starts_with(line, prefix))
 		{
-		  Option opt = Split::by_char<Option, NullLex>(std::string(line, prefix.length()), '=');
+		  Option opt = Split::by_char<Option, NullLex, Limits>(std::string(line, prefix.length()), '=', 0, 1, lim);
 		  if (opt.size())
 		    {
 		      if (is_open_meta_tag(opt[0]))
@@ -413,7 +518,11 @@ namespace openvpn {
 			  in_multiline = true;
 			}
 		      else
-			push_back(opt);
+			{
+			  if (lim)
+			    lim->add_opt();
+			  push_back(opt);
+			}
 		    }
 		}
 	    }
