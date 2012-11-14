@@ -41,7 +41,7 @@ namespace openvpn {
       {
 	const Option& o = opt.get("route-gateway");
 	o.exact_args(2);
-	route_gateway = IP::Addr::from_string(o[1], "route-gateway");
+	route_gateway = IP::Addr::from_string(o.get(1, 256), "route-gateway");
       }
 
       // do redirect-gateway
@@ -61,9 +61,9 @@ namespace openvpn {
 		  const Option& o = opt[*i];
 		  try {
 		    o.min_args(2);
-		    if (o.size() >= 4 && o[3] != "vpn_gateway")
+		    if (o.size() >= 4 && o.ref(3) != "vpn_gateway")
 		      throw route_error("only tunnel routes supported");
-		    const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "route");
+		    const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o.get(1, 256), o.get_optional(2, 256), "route");
 		    if (!pair.is_canonical())
 		      throw route_error("route is not canonical");
 		    add_del_route(true, pair.addr, pair.netmask, route_gateway);

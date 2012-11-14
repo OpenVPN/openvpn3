@@ -16,6 +16,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/split.hpp>
+#include <openvpn/common/unicode.hpp>
 
 // Process halt/restart messages from server:
 //   HALT,<client_reason>        -> disconnect
@@ -52,7 +53,7 @@ namespace openvpn {
 	      psid_ = true;
 	      reason_pos = 4;
 	    }
-	  reason_ = sl[1].substr(reason_pos);
+	  reason_ = Unicode::utf8_printable(sl[1].substr(reason_pos), 256);
 	}
     }
 

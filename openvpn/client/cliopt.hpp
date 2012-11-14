@@ -220,14 +220,14 @@ namespace openvpn {
       {
 	const Option *o = opt.get_ptr("server-poll-timeout");
 	if (o)
-	  server_poll_timeout_ = types<unsigned int>::parse(o->get(1));
+	  server_poll_timeout_ = types<unsigned int>::parse(o->get(1, 16));
       }
 
       // userlocked username
       {
 	const Option* o = opt.get_ptr("USERNAME");
 	if (o)
-	  userlocked_username = o->get(1);
+	  userlocked_username = o->get(1, 256);
       }
 
       // create default creds object in case submit_creds is not called

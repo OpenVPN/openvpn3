@@ -395,7 +395,7 @@ namespace openvpn {
       {
 	bool ret = bool(reroute_gw_ver_flags & F_IPv4);
 	try {
-	  const std::string& yes_no = opt.get_optional("redirect-dns", 1); // DIRECTIVE
+	  const std::string& yes_no = opt.get_optional("redirect-dns", 1, 16); // DIRECTIVE
 	  if (!yes_no.empty())
 	    {
 	      if (yes_no == "yes")
@@ -429,10 +429,10 @@ namespace openvpn {
 	  const Option* o = opt.get_ptr("topology"); // DIRECTIVE
 	  if (o)
 	    {
-	      o->min_args(2);
-	      if ((*o)[1] == "subnet")
+              const std::string& topstr = o->get(1, 16);
+	      if (topstr == "subnet")
 		top = SUBNET;
-	      else if ((*o)[1] == "net30")
+	      else if (topstr == "net30")
 		top = NET30;
 	      else
 		throw option_error("only topology 'subnet' and 'net30' supported");
@@ -447,8 +447,7 @@ namespace openvpn {
 	    {
 	      if (top == SUBNET)
 		{
-		  o->min_args(2);
-		  const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string((*o)[1], o->get_optional(2), "ifconfig");
+		  const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o->get(1, 256), o->get_optional(2, 256), "ifconfig");
 		  if (pair.version() != IP::Addr::V4)
 		    throw tun_builder_error("ifconfig address is not IPv4 (topology subnet)");
 		  if (!tb->tun_builder_add_address(pair.addr.to_string(),
@@ -461,9 +460,8 @@ namespace openvpn {
 		}
 	      else if (top == NET30)
 		{
-		  o->min_args(3);
-		  const IP::Addr local = IP::Addr::from_string((*o)[1]);
-		  const IP::Addr remote = IP::Addr::from_string((*o)[2]);
+		  const IP::Addr remote = IP::Addr::from_string(o->get(2, 256));
+		  const IP::Addr local = IP::Addr::from_string(o->get(1, 256));
 		  const IP::Addr netmask = IP::Addr::from_string("255.255.255.252");
 		  if (local.version() != IP::Addr::V4 || remote.version() != IP::Addr::V4)
 		    throw tun_builder_error("ifconfig address is not IPv4 (topology net30)");
@@ -486,8 +484,7 @@ namespace openvpn {
 	    {
 	      if (top != SUBNET)
 		throw option_error("only topology 'subnet' supported with IPv6");
-	      o->min_args(2);
-	      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string((*o)[1], "ifconfig-ipv6");
+	      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o->get(1, 256), "ifconfig-ipv6");
 	      if (pair.version() != IP::Addr::V6)
 		throw tun_builder_error("ifconfig-ipv6 address is not IPv6");
 	      if (!tb->tun_builder_add_address(pair.addr.to_string(),
@@ -543,10 +540,9 @@ namespace openvpn {
 		  {
 		    const Option& o = opt[*i];
 		    try {
-		      o.min_args(2);
-		      if (o.size() >= 4 && o[3] != "vpn_gateway")
+                      if (o.size() >= 4 && o.ref(3) != "vpn_gateway")
 			throw tun_builder_route_error("only tunnel routes supported");
-		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], o.get_optional(2), "route");
+		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o.get(1, 256), o.get_optional(2, 256), "route");
 		      if (!pair.is_canonical())
 			throw tun_builder_error("route is not canonical");
 		      if (pair.version() != IP::Addr::V4)
@@ -574,10 +570,9 @@ namespace openvpn {
 		  {
 		    const Option& o = opt[*i];
 		    try {
-		      o.min_args(2);
-		      if (o.size() >= 3 && o[2] != "vpn_gateway")
+		      if (o.size() >= 3 && o.ref(2) != "vpn_gateway")
 			throw tun_builder_route_error("only tunnel routes supported");
-		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o[1], "route-ipv6");
+		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o.get(1, 256), "route-ipv6");
 		      if (!pair.is_canonical())
 			throw tun_builder_error("route is not canonical");
 		      if (pair.version() != IP::Addr::V6)
@@ -611,11 +606,11 @@ namespace openvpn {
 	      {
 		const Option& o = opt[*i];
 		try {
-		  const std::string& type = o.get(1);
+		  const std::string& type = o.get(1, 64);
 		  if (type == "DNS")
 		    {
 		      o.exact_args(3);
-		      const IP::Addr ip = IP::Addr::from_string(o[2], "dns-server-ip");
+		      const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
 		      if (!tb->tun_builder_add_dns_server(ip.to_string(),
 							  ip.version() == IP::Addr::V6,
 							  reroute_dns))
@@ -625,7 +620,7 @@ namespace openvpn {
 		  else if (type == "DOMAIN")
 		    {
 		      o.exact_args(3);
-		      if (!tb->tun_builder_add_search_domain(o[2], reroute_dns))
+		      if (!tb->tun_builder_add_search_domain(o.get(2, 256), reroute_dns))
 			throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
 		    }
 		  else if (!quiet)

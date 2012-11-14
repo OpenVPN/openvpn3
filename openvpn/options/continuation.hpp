@@ -66,7 +66,7 @@ namespace openvpn {
     static bool continuation(const OptionList& opt)
     {
       const Option *o = opt.get_ptr("push-continuation");
-      return o && o->size() >= 2 && (*o)[1] == "2";
+      return o && o->size() >= 2 && o->ref(1) == "2";
     }
 
     bool partial_;

@@ -12,6 +12,7 @@
 #include <string>
 #include <sstream>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>
@@ -45,7 +46,7 @@ namespace openvpn {
 	      for (OptionList::IndexList::const_iterator i = se->begin(); i != se->end(); ++i)
 		{
 		  const Option& o = options[*i];
-		  const std::string arg1 = o.get_optional(1);
+		  const std::string arg1 = o.get_optional(1, 256);
 		  if (arg1 == "GENERIC_CONFIG")
 		    {
 		      error_ = true;
@@ -60,7 +61,7 @@ namespace openvpn {
 	{
 	  const Option* o = options.get_ptr("USERNAME");
 	  if (o)
-	    userlockedUsername_ = o->get(1);
+	    userlockedUsername_ = o->get(1, 256);
 	}
 
 	// External PKI
@@ -74,11 +75,14 @@ namespace openvpn {
 	  const Option* o = options.get_ptr("static-challenge");
 	  if (o)
 	    {
-	      staticChallenge_ = o->get(1);
-	      if (o->get_optional(2) == "1")
+	      staticChallenge_ = o->get(1, 256);
+	      if (o->get_optional(2, 16) == "1")
 		staticChallengeEcho_ = true;
 	    }
 	}
+
+	// validate remote list
+	RemoteList rl(options);
 
 	// profile name
 	{
@@ -86,7 +90,7 @@ namespace openvpn {
 	  if (o)
 	    {
 	      // take PROFILE substring up to '/'
-	      const std::string& pn = o->get(1);
+	      const std::string& pn = o->get(1, 256);
 	      const size_t slashpos = pn.find('/');
 	      if (slashpos != std::string::npos)
 		profileName_ = pn.substr(0, slashpos);
@@ -95,7 +99,6 @@ namespace openvpn {
 	    }
 	  else
 	    {
-	      RemoteList rl(options);
 	      if (rl.size() >= 1)
 		profileName_ = rl[0].server_host;
 	    }
@@ -105,21 +108,28 @@ namespace openvpn {
 	{
 	  const Option* o = options.get_ptr("FRIENDLY_NAME");
 	  if (o)
-	    friendlyName_ = o->get(1);
+	    friendlyName_ = o->get(1, 256);
 	}
 
 	// server list
 	{
+	  const size_t max_server_list_size = 64;
 	  const Option* o = options.get_ptr("HOST_LIST");
 	  if (o)
 	    {
-	      SplitLines in(o->get(1), 0);
+	      SplitLines in(o->get(1, 4096 | Option::MULTILINE), 0);
+	      size_t count = 0;
 	      while (in(true))
 		{
+		  if (count >= max_server_list_size)
+		    break;
 		  ServerEntry se;
 		  se.server = in.line_ref();
 		  se.friendlyName = se.server;
+		  Option::validate_string("HOST_LIST server", se.server, 256);
+		  Option::validate_string("HOST_LIST friendly name", se.friendlyName, 256);
 		  serverList_.push_back(se);
+		  ++count;
 		}
 	    }
 	}
@@ -146,7 +156,8 @@ namespace openvpn {
 				  ProfileParseLimits::MAX_PROFILE_SIZE,
 				  ProfileParseLimits::OPT_OVERHEAD,
 				  ProfileParseLimits::TERM_OVERHEAD,
-				  ProfileParseLimits::MAX_LINE_SIZE);
+				  ProfileParseLimits::MAX_LINE_SIZE,
+				  ProfileParseLimits::MAX_DIRECTIVE_SIZE);
 	options.clear();
 	options.parse_from_config(content, &limits);
 	options.parse_meta_from_config(content, "OVPN_ACCESS_SERVER", &limits);
@@ -239,7 +250,7 @@ namespace openvpn {
     {
       const Option* epki = options.get_ptr("EXTERNAL_PKI");
       if (epki)
-	return string::is_true(epki->get_optional(1));
+	return string::is_true(epki->get_optional(1, 16));
       else
 	{
 	  const Option* cert = options.get_ptr("cert");
@@ -252,7 +263,7 @@ namespace openvpn {
     {
       const Option* autologin = options.get_ptr("AUTOLOGIN");
       if (autologin)
-	return string::is_true(autologin->get_optional(1));
+	return string::is_true(autologin->get_optional(1, 16));
       else
 	{
 	  const Option* auth_user_pass = options.get_ptr("auth-user-pass");

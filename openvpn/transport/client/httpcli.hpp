@@ -15,10 +15,14 @@
 #include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp> // for boost::algorithm::trim_copy
 
+#include <openvpn/common/types.hpp>
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/typeinfo.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/split.hpp>
+#include <openvpn/common/options.hpp>
+#include <openvpn/common/number.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
@@ -43,6 +47,12 @@ namespace openvpn {
       std::string username;
       std::string password;
       bool allow_cleartext_auth;
+
+      void validate()
+      {
+	if (!validate_number<unsigned int>(port, 5, 1, 65535))
+	  OPENVPN_THROW(option_error, "bad proxy port number: " << port);
+      }
     };
 
     // We need access to RAND_API and CRYPTO_API implementations, because proxy

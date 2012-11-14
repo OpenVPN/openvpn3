@@ -204,7 +204,7 @@ namespace openvpn {
     // (client reads)
     struct LogInfo
     {
-      LogInfo(const std::string& str) : text(str) {}
+      LogInfo(const std::string& str);
       std::string text;     // log output (usually but not always one line)
     };
 
@@ -293,7 +293,7 @@ namespace openvpn {
       static MergeConfig merge_config_string_static(const std::string& config_content);
 
       // Parse profile and determine needed credentials statically.
-      static EvalConfig eval_config_static(const Config&);
+      static EvalConfig eval_config_static(const Config& config);
 
       // Maximum size of profile that should be allowed
       static long max_profile_size();

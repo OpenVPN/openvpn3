@@ -79,11 +79,11 @@ namespace openvpn {
 	  const Option& o = opt[*i];
 	  for (size_t j = 1; j < o.size(); ++j)
 	    {
-	      const std::string& f = o[j];
+	      const std::string& f = o.get(j, 64);
 	      if (f == "local")
-		flags_ |= RG_LOCAL;		
+		flags_ |= RG_LOCAL;
 	      else if (f == "autolocal")
-		flags_ |= RG_AUTO_LOCAL;		
+		flags_ |= RG_AUTO_LOCAL;
 	      else if (f == "def1")
 		flags_ |= RG_DEF1;
 	      else if (f == "bypass-dhcp")

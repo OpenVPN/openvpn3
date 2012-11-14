@@ -180,7 +180,7 @@ namespace openvpn {
 	      {
 		if (is_number(pair[1].c_str()))
 		  ret.netmask = Addr::netmask_from_prefix_len(ret.addr.version(),
-							      parse_number<unsigned int>(pair[1].c_str()));
+							      parse_number_str<unsigned int>(pair[1]));
 		else
 		  ret.netmask = Addr::from_string(pair[1]);
 		ret.netmask.prefix_len(); // verify that netmask is ok

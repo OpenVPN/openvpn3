@@ -104,7 +104,7 @@ namespace openvpn {
 	  const std::string ext = path::ext(basename_);
 	  if (string::strcasecmp(ext, "ovpn") == 0)
 	    {
-	      orig_profile_content = read_text(profile_path, max_size);
+	      orig_profile_content = read_text_utf8(profile_path, max_size);
 	      total_size = orig_profile_content.size();
 	    }
 	  else
@@ -170,7 +170,7 @@ namespace openvpn {
 	  ++line_num;
 	  if (in_multiline)
 	    {
-	      if (OptionList::is_close_tag(line, multiline[0]))
+	      if (OptionList::is_close_tag(line, multiline.ref(0)))
 		{
 		  multiline.clear();
 		  in_multiline = false;
@@ -182,26 +182,26 @@ namespace openvpn {
 	      Option opt = Split::by_space<Option, OptionList::Lex, SpaceMatch, Split::NullLimit>(line);
 	      if (opt.size())
 		{
-		  if (OptionList::is_open_tag(opt[0]) && opt.size() == 1)
+		  if (OptionList::is_open_tag(opt.ref(0)) && opt.size() == 1)
 		    {
-		      OptionList::untag_open_tag(opt[0]);
+		      OptionList::untag_open_tag(opt.ref(0));
 		      multiline = opt;
 		      in_multiline = true;
 		      unsigned int flags = 0; // not used
-		      opaque_multiline = is_fileref_directive(multiline[0], flags);
+		      opaque_multiline = is_fileref_directive(multiline.ref(0), flags);
 		    }
 		  else
 		    {
 		      unsigned int flags = 0;
 		      if (!opaque_multiline
 			  && opt.size() >= 2
-			  && is_fileref_directive(opt[0], flags))
+			  && is_fileref_directive(opt.ref(0), flags))
 			{
 			  // found a directive referencing a file
 
 			  // get basename of file and make sure that it doesn't
 			  // attempt to traverse directories
-			  std::string fn = path::basename(opt[1]);
+			  std::string fn = path::basename(opt.get(1, 256));
 			  if (fn.empty())
 			    {
 			      echo = false;
@@ -228,7 +228,7 @@ namespace openvpn {
 				    return;
 				  }
 				path = path::join(profile_dir, fn);
-				file_content = read_text(path, max_size);
+				file_content = read_text_utf8(path, max_size);
 				total_size += file_content.size();
 				if (total_size > max_size)
 				  {
@@ -254,15 +254,16 @@ namespace openvpn {
 				  // tls-auth or secret directive may include key-direction parameter
 				  if ((flags & F_MAY_INCLUDE_KEY_DIRECTION) && opt.size() >= 3)
 				    {
-				      const std::string kd = "key-direction " + opt[2] + "\n";
+				      const std::string kd = "key-direction " + opt.get(2, 16) + "\n";
 				      profile_content_ += kd;
 				    }
 
 				  // format file_content for appending to profile
 				  {
 				    std::ostringstream os;
+				    const std::string& tag = opt.ref(0);
 				    string::add_trailing_in_place(file_content, '\n');
-				    os << '<' << opt[0] << ">\n" << file_content << "</" << opt[0] << ">\n";
+				    os << '<' << tag << ">\n" << file_content << "</" << tag << ">\n";
 				    profile_content_ += os.str();
 				  }
 

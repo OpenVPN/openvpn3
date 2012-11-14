@@ -151,7 +151,7 @@ namespace openvpn {
 	  {
 	    Event ev;
 	    ev.name = event->name();
-	    ev.info = event->render();
+	    ev.info = Unicode::utf8_printable(event->render(), 256);
 	    ev.error = event->is_error();
 
 	    // save connected event
@@ -328,7 +328,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  eval.error = true;
-	  eval.message = e.what();
+	  eval.message = Unicode::utf8_printable(e.what(), 256);
 	}
     }
 
@@ -353,13 +353,14 @@ namespace openvpn {
 	    ho->username = config.proxyUsername;
 	    ho->password = config.proxyPassword;
 	    ho->allow_cleartext_auth = config.proxyAllowCleartextAuth;
+	    ho->validate();
 	    state->http_proxy_options = ho;
 	  }
       }
       catch (const std::exception& e)
 	{
 	  eval.error = true;
-	  eval.message = e.what();
+	  eval.message = Unicode::utf8_printable(e.what(), 256);
 	}
     }
 
@@ -439,7 +440,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  ret.error = true;
-	  ret.message = e.what();
+	  ret.message = Unicode::utf8_printable(e.what(), 256);
 	}
       return ret;
     }
@@ -592,7 +593,7 @@ namespace openvpn {
 	      io_service->poll();     //   and execute completion handlers.
 	    }
 	  ret.error = true;
-	  ret.message = e.what();
+	  ret.message = Unicode::utf8_printable(e.what(), 256);
 	}
       state->socket_protect.detach_from_parent();
       state->reconnect_notify.detach_from_parent();
@@ -812,5 +813,7 @@ namespace openvpn {
       delete state;
     }
 
+    OPENVPN_CLIENT_EXPORT LogInfo::LogInfo(const std::string& str)
+      : text(Unicode::utf8_printable(str, 4096 | Unicode::UTF8_PASS_FMT)) {}
   }
 }

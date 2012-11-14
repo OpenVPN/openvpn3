@@ -13,8 +13,9 @@
 #include <vector>
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/options.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/options.hpp>
+#include <openvpn/common/number.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/transport/endpoint_cache.hpp>
 
@@ -52,15 +53,17 @@ namespace openvpn {
       {
 	const Option* o = opt.get_ptr("proto");
 	if (o)
-	  default_proto = Protocol::parse(o->get(1));
+	  default_proto = Protocol::parse(o->get(1, 16));
       }
 
       // parse "port" option if present
-      // fixme -- validate port
       {
 	const Option* o = opt.get_ptr("port");
 	if (o)
-	  default_port = o->get(1);
+	  {
+	    default_port = o->get(1, 16);
+	    validate_port(default_port);
+	  }
       }
 
       // cycle through remote entries
@@ -70,13 +73,16 @@ namespace openvpn {
 	  {
 	    Item e;
 	    const Option& o = opt[*i];
-	    e.server_host = o.get(1);
+	    e.server_host = o.get(1, 256);
 	    if (o.size() >= 3)
-	      e.server_port = o.get(2);
+	      {
+		e.server_port = o.get(2, 16);
+		validate_port(e.server_port);
+	      }
 	    else
 	      e.server_port = default_port;
 	    if (o.size() >= 4)
-	      e.transport_protocol = Protocol::parse(o.get(3));
+	      e.transport_protocol = Protocol::parse(o.get(3, 16));
 	    else
 	      e.transport_protocol = default_proto;
 	    list.push_back(e);
@@ -132,6 +138,12 @@ namespace openvpn {
       if (proto_override_fail)
 	*proto_override_fail = true;
       return index;
+    }
+
+    void validate_port(const std::string& port)
+    {
+      if (!validate_number<unsigned int>(port, 5, 1, 65535))
+	OPENVPN_THROW(option_error, "bad port number: " << port);
     }
 
     std::vector<Item> list;

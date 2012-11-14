@@ -84,7 +84,7 @@ namespace openvpn {
 	{
 	  const Option& o = opt.get("topology");
 	  o.min_args(2);
-	  if (o[1] != "subnet")
+	  if (o.ref(1) != "subnet")
 	    throw option_error("only topology subnet supported");
 	}
 
@@ -93,8 +93,8 @@ namespace openvpn {
 	  int status;
 	  const Option& o = opt.get("ifconfig");
 	  o.exact_args(3);
-	  const IP::Addr ip = IP::Addr::from_string(o[1], "ifconfig-ip");
-	  const IP::Addr mask = IP::Addr::from_string(o[2], "ifconfig-net");
+	  const IP::Addr ip = IP::Addr::from_string(o.get(1, 256), "ifconfig-ip");
+	  const IP::Addr mask = IP::Addr::from_string(o.get(2, 256), "ifconfig-net");
 	  {
 	    Argv argv;
 	    argv.push_back("/sbin/ifconfig");

@@ -153,7 +153,7 @@ namespace openvpn {
 
 	// cert/extra-certs
 	{
-	  const std::string& cert_txt = opt.get("cert", 1);
+	  const std::string& cert_txt = opt.get("cert", 1, Option::MULTILINE);
 	  const std::string ec_txt = opt.cat("extra-certs");
 	  load_cert(cert_txt, ec_txt);
 	}
@@ -161,14 +161,14 @@ namespace openvpn {
 	// private key
 	if (!external_pki)
 	  {
-	    const std::string& key_txt = opt.get("key", 1);
+	    const std::string& key_txt = opt.get("key", 1, Option::MULTILINE);
 	    load_private_key(key_txt);
 	  }
 
 	// DH
 	if (mode.is_server())
 	  {
-	    const std::string& dh_txt = opt.get("dh", 1);
+	    const std::string& dh_txt = opt.get("dh", 1, Option::MULTILINE);
 	    load_dh(dh_txt);
 	  }
 
@@ -182,7 +182,7 @@ namespace openvpn {
 
 	// unsupported cert verification options
 	{
-	  if (opt.get_ptr("tls-remote"))
+	  if (opt.exists("tls-remote"))
 	    throw option_error("tls-remote not supported");
 	}
       }

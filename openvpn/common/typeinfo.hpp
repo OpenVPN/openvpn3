@@ -20,11 +20,11 @@
     static const char *name() { return #T; } \
     static T parse(const std::string& str) \
       { \
-        return parse_number<T>(str.c_str()); \
+        return parse_number_str<T>(str); \
       } \
     static void parse(const std::string& str, T& ret) \
     { \
-      ret = parse_number<T>(str.c_str()); \
+      ret = parse_number_str<T>(str); \
     } \
   }
 

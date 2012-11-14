@@ -23,7 +23,7 @@ namespace openvpn {
       const Option* o = opt.get_ptr("remote-cert-tls");
       if (o)
 	{
-	  const std::string& ct = o->get_optional(1);
+	  const std::string& ct = o->get_optional(1, 16);
 	  if (ct == "server")
 	    {
 	      ku.push_back(0xa0);
@@ -49,11 +49,13 @@ namespace openvpn {
 	{
 	  if (o->empty())
 	    throw option_error("remote-cert-ku: no hex values specified");
+	  else if (o->size() >= 64)
+	    throw option_error("remote-cert-ku: too many parameters");
 	  else
 	    {
 	      try {
 		for (size_t i = 1; i < o->size(); ++i)
-		  ku.push_back(parse_hex_number<unsigned int>((*o)[i].c_str()));
+		  ku.push_back(parse_hex_number<unsigned int>(o->get(i, 16).c_str()));
 	      }
 	      catch (parse_hex_error& e)
 		{
@@ -67,7 +69,7 @@ namespace openvpn {
     {
       const Option* o = opt.get_ptr("remote-cert-eku");
       if (o)
-	eku = o->get(1);
+	eku = o->get(1, 256);
     }
   }
 }

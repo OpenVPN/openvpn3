@@ -75,7 +75,8 @@ namespace openvpn {
 				 ProfileParseLimits::MAX_PUSH_SIZE,
 				 ProfileParseLimits::OPT_OVERHEAD,
 				 ProfileParseLimits::TERM_OVERHEAD,
-				 0)
+				 0,
+				 ProfileParseLimits::MAX_DIRECTIVE_SIZE)
 	{}
 
 	typename ProtoConfig::Ptr proto_context_config;
@@ -358,8 +359,7 @@ namespace openvpn {
 	const Option* o = opt.get_ptr("auth-token");
 	if (o)
 	  {
-	    o->min_args(2);
-	    const std::string& sess_id = (*o)[1];
+	    const std::string& sess_id = o->get(1, 256);
 	    if (creds)
 	      creds->set_session_id(sess_id);
 #ifdef OPENVPN_SHOW_SESSION_TOKEN
@@ -381,7 +381,9 @@ namespace openvpn {
       // proto base class calls here for app-level control-channel messages received
       virtual void control_recv(BufferPtr& app_bp)
       {
-	const std::string msg = Base::template read_control_string<std::string>(*app_bp);
+	const std::string msg = Unicode::utf8_printable(Base::template read_control_string<std::string>(*app_bp),
+							Unicode::UTF8_FILTER);
+
 	//OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 
 	if (!received_options.complete() && boost::algorithm::starts_with(msg, "PUSH_REPLY,"))
@@ -449,7 +451,7 @@ namespace openvpn {
 	ev->vpn_ip4 = tun->vpn_ip4();
 	ev->vpn_ip6 = tun->vpn_ip6();
 	try {
-	  std::string client_ip = received_options.get_optional("client-ip", 1);
+	  std::string client_ip = received_options.get_optional("client-ip", 1, 256);
 	  if (!client_ip.empty())
 	    ev->client_ip = IP::Addr::validate(client_ip, "client-ip");
 	}

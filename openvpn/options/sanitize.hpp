@@ -23,7 +23,7 @@ namespace openvpn {
       {
 	const Option& o = opt[i];
 #ifndef OPENVPN_SHOW_SESSION_TOKEN
-	if (o.get_optional(0) == "auth-token")
+	if (o.get_optional(0, 0) == "auth-token")
 	  out << i << " [auth-token] ..." << std::endl;
 	else
 #endif

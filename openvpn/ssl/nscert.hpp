@@ -26,7 +26,7 @@ namespace openvpn {
       const Option* o = opt.get_ptr("ns-cert-type");
       if (o)
 	{
-	  const std::string& ct = o->get_optional(1);
+	  const std::string& ct = o->get_optional(1, 16);
 	  if (ct == "server")
 	    return SERVER;
 	  else if (ct == "client")

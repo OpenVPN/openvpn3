@@ -25,80 +25,115 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/splitlines.hpp>
+#include <openvpn/common/unicode.hpp>
 
 namespace openvpn {
 
   OPENVPN_EXCEPTION(option_error);
 
-  class Option : public std::vector<std::string>
+  class Option
   {
   public:
+    enum {
+      MULTILINE = 0x8000000,
+    };
+
+    // Validate string by size and multiline status.
+    // OR max_len with MULTILINE to allow multiline string.
+    // Return values:
+    enum validate_status {
+      STATUS_GOOD,
+      STATUS_MULTILINE,
+      STATUS_LENGTH,
+    };
+
+    static validate_status validate(const std::string& str, const size_t max_len)
+    {
+      const size_t pos = str.find_first_of("\r\n");
+      const size_t len = max_len & ((size_t)MULTILINE-1); // NOTE -- use smallest flag value here
+      if (pos != std::string::npos && !(max_len & MULTILINE))
+	return STATUS_MULTILINE;
+      else if (len > 0 && Unicode::utf8_length(str) > len)
+	return STATUS_LENGTH;
+      else
+	return STATUS_GOOD;
+    }
+
+    static const char *validate_status_description(const validate_status status)
+    {
+      switch (status)
+	{
+	case STATUS_GOOD:
+	  return "good";
+	case STATUS_MULTILINE:
+	  return "multiline";
+	case STATUS_LENGTH:
+	  return "too long";
+	default:
+	  return "unknown";
+	}
+    }
+
     void min_args(const size_t n) const
     {
-      const size_t s = size();
+      const size_t s = data.size();
       if (s < n)
-	{
-	  std::ostringstream out;
-	  out << err_ref() << " must have at least " << n << " arguments";
-	  throw option_error(out.str());
-	}
+	OPENVPN_THROW(option_error, err_ref() << " must have at least " << n << " arguments");
     }
 
     void exact_args(const size_t n) const
     {
-      const size_t s = size();
+      const size_t s = data.size();
       if (s != n)
+	OPENVPN_THROW(option_error, err_ref() << " must have exactly " << n << " arguments");
+    }
+
+    void validate_arg(const size_t index, const size_t max_len) const
+    {
+      if (max_len > 0 && index < data.size())
 	{
-	  std::ostringstream out;
-	  out << err_ref() << " must have exactly " << n << " arguments";
-	  throw option_error(out.str());
+	  const validate_status status = validate(data[index], max_len);
+	  if (status != STATUS_GOOD)
+	    OPENVPN_THROW(option_error, err_ref() << " is " << validate_status_description(status));
 	}
     }
 
-    template <typename T>
-    T get_type(const size_t index) const
+    static void validate_string(const std::string& name, const std::string& str, const size_t max_len)
     {
-      min_args(index+1);
-      try {
-	return types<T>::parse((*this)[index]);
-      }
-      catch (const std::exception& e)
-	{
-	  throw option_error(type_error<T>(e, index));
-	}
+      const validate_status status = validate(str, max_len);
+      if (status != STATUS_GOOD)
+	OPENVPN_THROW(option_error, name << " is " << validate_status_description(status));
     }
 
-    template <typename T>
-    void get_type(const size_t index, T& ret) const
+    std::string printable_directive() const
     {
-      min_args(index+1);
-      try {
-	types<T>::parse((*this)[index], ret);
-      }
-      catch (const std::exception& e)
-	{
-	  throw option_error(type_error<T>(e, index));
-	}
-    }
-
-    const std::string& get(const size_t index) const
-    {
-      min_args(index+1);
-      return (*this)[index];
-    }
-
-    std::string get_optional(const size_t index) const
-    {
-      if (index < size())
-	return (*this)[index];
+      if (data.size() > 0)
+	return Unicode::utf8_printable(data[0], 32);
       else
 	return "";
     }
 
-    const std::string* get_ptr(const size_t index) const
+    const std::string& get(const size_t index, const size_t max_len) const
     {
-      if (index < size())
-	return &(*this)[index];
+      min_args(index+1);
+      validate_arg(index, max_len);
+      return data[index];
+    }
+
+    std::string get_optional(const size_t index, const size_t max_len) const
+    {
+      validate_arg(index, max_len);
+      if (index < data.size())
+	return data[index];
+      else
+	return "";
+    }
+
+    const std::string* get_ptr(const size_t index, const size_t max_len) const
+    {
+      validate_arg(index, max_len);
+      if (index < data.size())
+	return &data[index];
       else
 	return NULL;
     }
@@ -106,32 +141,36 @@ namespace openvpn {
     std::string render() const
     {
       std::ostringstream out;
-      for (const_iterator i = begin(); i != end(); ++i)
-	out << '[' << *i << "] ";
+      for (std::vector<std::string>::const_iterator i = data.begin(); i != data.end(); ++i)
+	out << '[' << Unicode::utf8_printable(*i, 0) << "] ";
       return out.str();
     }
+
+    // delegate to data
+    size_t size() const { return data.size(); }
+    bool empty() const { return data.empty(); }
+    void push_back(const std::string& item) { data.push_back(item); }
+    void clear() { data.clear(); }
+    void reserve(const size_t n) { data.reserve(n); }
+
+    // raw references to data
+    const std::string& ref(const size_t i) const { return data[i]; }
+    std::string& ref(const size_t i) { return data[i]; }
 
   private:
     std::string err_ref() const
     {
       std::string ret = "option";
-      if (size())
+      if (data.size())
 	{
 	  ret += " '";
-	  ret += (*this)[0];
+	  ret += printable_directive();
 	  ret += '\'';
 	}
       return ret;
     }
 
-    template <typename T>
-    std::string type_error(const std::exception& e, const size_t index) const
-    {
-      std::ostringstream out;
-      out << "in " << err_ref() << ": unable to parse '" << (*this)[index]
-	  << "' as type " << types<T>::name() << ": " << e.what();
-      return out.str();
-    }
+    std::vector<std::string> data;
   };
 
   class OptionList : public std::vector<Option>
@@ -149,12 +188,14 @@ namespace openvpn {
 	     const boost::uint64_t max_bytes_arg,
 	     const size_t extra_bytes_per_opt_arg,
 	     const size_t extra_bytes_per_term_arg,
-	     const size_t max_line_len_arg)
+	     const size_t max_line_len_arg,
+	     const size_t max_directive_len_arg)
 	: bytes(0),
 	  max_bytes(max_bytes_arg),
 	  extra_bytes_per_opt(extra_bytes_per_opt_arg),
 	  extra_bytes_per_term(extra_bytes_per_term_arg),
 	  max_line_len(max_line_len_arg),
+	  max_directive_len(max_directive_len_arg),
 	  err(error_message) {}
 
       void add_bytes(const size_t n)
@@ -191,6 +232,11 @@ namespace openvpn {
 	return bytes;
       }
 
+      void validate_directive(const Option& opt)
+      {
+	opt.validate_arg(0, max_directive_len);
+      }
+
     private:
       void check_overflow()
       {
@@ -208,6 +254,7 @@ namespace openvpn {
       const size_t extra_bytes_per_opt;
       const size_t extra_bytes_per_term;
       const size_t max_line_len;
+      const size_t max_directive_len;
       const std::string err;
     };
 
@@ -387,7 +434,10 @@ namespace openvpn {
 	  if (opt.size())
 	    {
 	      if (lim)
-		lim->add_opt();
+		{
+		  lim->add_opt();
+		  lim->validate_directive(opt);
+		}
 	      push_back(opt);
 	    }
 	}
@@ -404,7 +454,10 @@ namespace openvpn {
 	    lim->add_bytes(kv.combined_length());
 	  const Option opt = kv.convert_to_option(lim);
 	  if (lim)
-	    lim->add_opt();
+	    {
+	      lim->add_opt();
+	      lim->validate_directive(opt);
+	    }
 	  push_back(opt);
 	}
     }
@@ -423,22 +476,26 @@ namespace openvpn {
 	{
 	  ++line_num;
 	  if (in.line_overflow())
-	    OPENVPN_THROW(option_error, "line " << line_num << " is too long");
+	    line_too_long(line_num);
 	  const std::string& line = in.line_ref();
 	  if (in_multiline)
 	    {
-	      if (is_close_tag(line, multiline[0]))
+	      if (is_close_tag(line, multiline.ref(0)))
 		{
 		  if (lim)
-		    lim->add_opt();
+		    {
+		      lim->add_opt();
+		      lim->validate_directive(multiline);
+		    }
 		  push_back(multiline);
 		  multiline.clear();
 		  in_multiline = false;
 		}
 	      else
 		{
-		  multiline[1] += line;
-		  multiline[1] += '\n';
+		  std::string& mref = multiline.ref(1);
+		  mref += line;
+		  mref += '\n';
 		}
 	    }
 	  else if (!ignore_line(line))
@@ -446,11 +503,11 @@ namespace openvpn {
 	      Option opt = Split::by_space<Option, Lex, SpaceMatch, Limits>(line, lim);
 	      if (opt.size())
 		{
-		  if (is_open_tag(opt[0]))
+		  if (is_open_tag(opt.ref(0)))
 		    {
 		      if (opt.size() > 1)
-			OPENVPN_THROW(option_error, "line " << line_num << ": option <" << opt[0] << "> is followed by extraneous text");
-		      untag_open_tag(opt[0]);
+			extraneous_err(line_num, "option", opt);
+		      untag_open_tag(opt.ref(0));
 		      opt.push_back("");
 		      multiline = opt;
 		      in_multiline = true;
@@ -458,16 +515,19 @@ namespace openvpn {
 		  else
 		    {
 		      if (lim)
-			lim->add_opt();
+			{
+			  lim->add_opt();
+			  lim->validate_directive(opt);
+			}
 		      push_back(opt);
 		    }
 		}
 	    }
 	}
       if (in_multiline)
-	OPENVPN_THROW(option_error, "option <" << multiline[0] << "> was not properly closed out");
+	not_closed_out_err("option", multiline);
     }
-
+    
     // caller should call update_map() after this function
     void parse_meta_from_config(const std::string& str, const std::string& tag, Limits* lim)
     {
@@ -480,25 +540,29 @@ namespace openvpn {
 	{
 	  ++line_num;
 	  if (in.line_overflow())
-	    OPENVPN_THROW(option_error, "line " << line_num << " is too long");
+	    line_too_long(line_num);
 	  std::string& line = in.line_ref();
 	  if (boost::algorithm::starts_with(line, "# "))
 	    {
 	      line = std::string(line, 2);
 	      if (in_multiline)
 		{
-		  if (is_close_meta_tag(line, prefix, multiline[0]))
+		  if (is_close_meta_tag(line, prefix, multiline.ref(0)))
 		    {
 		      if (lim)
-			lim->add_opt();
+			{
+			  lim->add_opt();
+			  lim->validate_directive(multiline);
+			}
 		      push_back(multiline);
 		      multiline.clear();
 		      in_multiline = false;
 		    }
 		  else
 		    {
-		      multiline[1] += line;
-		      multiline[1] += '\n';
+		      std::string& mref = multiline.ref(1);
+		      mref += line;
+		      mref += '\n';
 		    }
 		}
 	      else if (boost::algorithm::starts_with(line, prefix))
@@ -506,11 +570,11 @@ namespace openvpn {
 		  Option opt = Split::by_char<Option, NullLex, Limits>(std::string(line, prefix.length()), '=', 0, 1, lim);
 		  if (opt.size())
 		    {
-		      if (is_open_meta_tag(opt[0]))
+		      if (is_open_meta_tag(opt.ref(0)))
 			{
 			  if (opt.size() > 1)
-			    OPENVPN_THROW(option_error, "line " << line_num << ": meta option <" << opt[0] << "> is followed by extraneous text");
-			  untag_open_meta_tag(opt[0]);
+			    extraneous_err(line_num, "meta option", opt);
+			  untag_open_meta_tag(opt.ref(0));
 			  opt.push_back("");
 			  multiline = opt;
 			  in_multiline = true;
@@ -518,7 +582,10 @@ namespace openvpn {
 		      else
 			{
 			  if (lim)
-			    lim->add_opt();
+			    {
+			      lim->add_opt();
+			      lim->validate_directive(opt);
+			    }
 			  push_back(opt);
 			}
 		    }
@@ -526,7 +593,7 @@ namespace openvpn {
 	    }
 	}
       if (in_multiline)
-	OPENVPN_THROW(option_error, "meta option <" << multiline[0] << "> was not properly closed out");
+	not_closed_out_err("meta option", multiline);
     }
 
     // Append elements in other to self,
@@ -555,7 +622,7 @@ namespace openvpn {
       for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); ++i)
 	{
 	  const Option& opt = *i;
-	  if (map().find(opt.get(0)) == map().end())
+	  if (map().find(opt.ref(0)) == map().end())
 	      push_back(*i);
 	}
     }
@@ -623,7 +690,7 @@ namespace openvpn {
 	    {
 	      const Option& o = (*this)[*i];
 	      if (o.size() == 2)
-		size += o[1].length() + 1;
+		size += o.ref(1).length() + 1;
 	      else
 		OPENVPN_THROW(option_error, "option '" << name << "' (" << o.size() << ") must have exactly one parameter");
 	    }
@@ -633,7 +700,7 @@ namespace openvpn {
 	      const Option& o = (*this)[*i];
 	      if (o.size() >= 2)
 		{
-		  ret += o[1];
+		  ret += o.ref(1);
 		  string::add_trailing_in_place(ret, '\n');
 		}
 	    }
@@ -653,33 +720,19 @@ namespace openvpn {
       return il != NULL;
     }
 
-    const std::string& get(const std::string& name, size_t index) const
+    const std::string& get(const std::string& name, size_t index, const size_t max_len) const
     {
       const Option& o = get(name);
-      return o.get(index);
+      return o.get(index, max_len);
     }
 
-    const std::string get_optional(const std::string& name, size_t index) const
+    const std::string get_optional(const std::string& name, size_t index, const size_t max_len) const
     {
       const Option* o = get_ptr(name);
       if (o)
-	return o->get(index);
+	return o->get(index, max_len);
       else
 	return "";
-    }
-
-    template <typename T>
-    T get_type(const std::string& name, size_t index) const
-    {
-      const Option& o = get(name);
-      return o.get_type<T>(index);
-    }
-
-    template <typename T>
-    void get_type(const std::string& name, size_t index, T& ret) const
-    {
-      const Option& o = get(name);
-      o.get_type<T>(index, ret);
     }
 
     std::string render() const
@@ -709,7 +762,7 @@ namespace openvpn {
 	{
 	  const size_t i = size();
 	  push_back(opt);
-	  map_[opt[0]].push_back(i);
+	  map_[opt.ref(0)].push_back(i);
 	}
     }
 
@@ -722,7 +775,7 @@ namespace openvpn {
 	{
 	  const Option& opt = (*this)[i];
 	  if (!opt.empty())
-	    map_[opt[0]].push_back(i);
+	    map_[opt.ref(0)].push_back(i);
 	}
     }
 
@@ -783,6 +836,21 @@ namespace openvpn {
       const size_t n = str.length();
       if (n >= 6)
 	str = std::string(str, 0, n - 6);
+    }
+
+    static void extraneous_err(const int line_num, const char *type, const Option& opt)
+    {
+      OPENVPN_THROW(option_error, "line " << line_num << ": " << type << " <" << opt.printable_directive() << "> is followed by extraneous text");
+    }
+
+    static void not_closed_out_err(const char *type, const Option& opt)
+    {
+      OPENVPN_THROW(option_error, type << " <" << opt.printable_directive() << "> was not properly closed out");
+    }
+
+    static void line_too_long(const int line_num)
+    {
+      OPENVPN_THROW(option_error, "line " << line_num << " is too long");
     }
 
     IndexMap map_;

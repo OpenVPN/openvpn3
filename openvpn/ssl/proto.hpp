@@ -305,7 +305,7 @@ namespace openvpn {
 	    dev = opt.get_ptr("dev");
 	  if (!dev)
 	    throw proto_option_error("missing dev-type or dev option");
-	  const std::string& dev_type = dev->get(1);
+	  const std::string& dev_type = dev->get(1, 64);
 	  if (boost::algorithm::starts_with(dev_type, "tun"))
 	    layer = Layer(Layer::OSI_LAYER_3);
 	  else if (boost::algorithm::starts_with(dev_type, "tap"))
@@ -318,7 +318,7 @@ namespace openvpn {
 	{
 	  const Option *o = opt.get_ptr("cipher");
 	  if (o)
-	    cipher = typename CRYPTO_API::Cipher(o->get(1));
+	    cipher = typename CRYPTO_API::Cipher(o->get(1, 128));
 	  else
 	    cipher = typename CRYPTO_API::Cipher("BF-CBC");
 	}
@@ -327,7 +327,7 @@ namespace openvpn {
 	{
 	  const Option *o = opt.get_ptr("auth");
 	  if (o)
-	    digest = typename CRYPTO_API::Digest(o->get(1));
+	    digest = typename CRYPTO_API::Digest(o->get(1, 128));
 	  else
 	    digest = typename CRYPTO_API::Digest("SHA1");
 	}
@@ -337,7 +337,7 @@ namespace openvpn {
 	  const Option *o = opt.get_ptr("tls-auth");
 	  if (o)
 	    {
-	      tls_auth_key.parse(o->get(1));
+	      tls_auth_key.parse(o->get(1, 0));
 	      tls_auth_digest = digest;
 	    }
 	}
@@ -347,7 +347,7 @@ namespace openvpn {
 	  const Option *o = opt.get_ptr("key-direction");
 	  if (o)
 	    {
-	      const std::string& dir = o->get(1);
+	      const std::string& dir = o->get(1, 16);
 	      if (dir == "0")
 		key_direction = 0;
 	      else if (dir == "1")
@@ -365,7 +365,7 @@ namespace openvpn {
 	    {
 	      if (o->size() >= 2)
 		{
-		  const std::string meth_name = (*o)[1];
+		  const std::string meth_name = o->get(1, 128);
 		  CompressContext::Type meth = CompressContext::parse_method(meth_name);
 		  if (meth == CompressContext::NONE)
 		    OPENVPN_THROW(proto_option_error, "Unknown compressor: '" << meth_name << '\'');
@@ -410,7 +410,7 @@ namespace openvpn {
 	  const Option *o = opt.get_ptr("cipher");
 	  if (o)
 	    {
-	      new_cipher = o->get(1);
+	      new_cipher = o->get(1, 128);
 	      cipher = typename CRYPTO_API::Cipher(new_cipher);
 	    }
 	}
@@ -425,7 +425,7 @@ namespace openvpn {
 	  const Option *o = opt.get_ptr("auth");
 	  if (o)
 	    {
-	      new_digest = o->get(1);
+	      new_digest = o->get(1, 128);
 	      digest = typename CRYPTO_API::Digest(new_digest);
 	    }
 	}
@@ -441,7 +441,7 @@ namespace openvpn {
 	  o = opt.get_ptr("compress");
 	  if (o)
 	    {
-	      new_comp = o->get(1);
+	      new_comp = o->get(1, 128);
 	      CompressContext::Type meth = CompressContext::parse_method(new_comp);
 	      if (meth != CompressContext::NONE)
 		comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::COMP_STUB, pco.is_comp_asym());
@@ -455,7 +455,7 @@ namespace openvpn {
 		    comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
 		  else if (o->size() >= 2)
 		    {
-		      if ((*o)[1] == "yes")
+		      if (o->ref(1) == "yes")
 			comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
 		      else
 			comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
@@ -553,7 +553,7 @@ namespace openvpn {
 	const Option *o = opt.get_ptr(name);
 	if (o)
 	  {
-	    ret = types<unsigned int>::parse(o->get(1));
+	    ret = types<unsigned int>::parse(o->get(1, 16));
 	    dur = Time::Duration::seconds(ret);
 	  }
 	return ret;
