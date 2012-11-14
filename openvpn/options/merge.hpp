@@ -179,7 +179,7 @@ namespace openvpn {
 	    }
 	  else if (!OptionList::ignore_line(line))
 	    {
-	      Option opt = Split::by_space<Option, OptionList::Lex, SpaceMatch, Split::NullLimit>(line);
+	      Option opt = Split::by_space<Option, OptionList::LexComment, SpaceMatch, Split::NullLimit>(line);
 	      if (opt.size())
 		{
 		  if (OptionList::is_open_tag(opt.ref(0)) && opt.size() == 1)

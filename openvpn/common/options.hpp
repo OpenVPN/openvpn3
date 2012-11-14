@@ -176,10 +176,68 @@ namespace openvpn {
   class OptionList : public std::vector<Option>
   {
   public:
-    typedef StandardLex Lex;
     typedef std::vector<unsigned int> IndexList;
     typedef boost::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
+
+    static bool is_comment(const char c)
+    {
+      return c == '#' || c == ';';
+    }
+
+    // standard lex filter that doesn't understand end-of-line comments
+    typedef StandardLex Lex;
+
+    // special lex filter that recognizes end-of-line comments
+    class LexComment
+    {
+    public:
+      LexComment() : in_quote_(false), in_comment(false), backslash(false), ch(-1) {}
+
+      void put(char c)
+      {
+	if (in_comment)
+	  {
+	    ch = -1;
+	  }
+	else if (backslash)
+	  {
+	    ch = c;
+	    backslash = false;
+	  }
+	else if (c == '\\')
+	  {
+	    backslash = true;
+	    ch = -1;
+	  }
+	else if (c == '\"')
+	  {
+	    in_quote_ = !in_quote_;
+	    ch = -1;
+	  }
+	else if (is_comment(c) && !in_quote_)
+	  {
+	    in_comment = true;
+	    ch = -1;
+	  }
+	else
+	  {
+	    ch = c;
+	  }
+      }
+
+      bool available() const { return ch != -1; }
+      int get() const { return ch; }
+      void reset() { ch = -1; }
+
+      bool in_quote() const { return in_quote_; }
+
+    private:
+      bool in_quote_;
+      bool in_comment;
+      bool backslash;
+      int ch;
+    };
 
     class Limits
     {
@@ -500,7 +558,7 @@ namespace openvpn {
 	    }
 	  else if (!ignore_line(line))
 	    {
-	      Option opt = Split::by_space<Option, Lex, SpaceMatch, Limits>(line, lim);
+	      Option opt = Split::by_space<Option, LexComment, SpaceMatch, Limits>(line, lim);
 	      if (opt.size())
 		{
 		  if (is_open_tag(opt.ref(0)))
@@ -786,7 +844,7 @@ namespace openvpn {
 	{
 	  const char c = *i;
 	  if (!SpaceMatch::is_space(c))
-	    return c == '#' || c == ';';
+	    return is_comment(c);
 	}
       return true;
     }
