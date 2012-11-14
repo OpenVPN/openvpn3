@@ -18,6 +18,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/transport/endpoint_cache.hpp>
+#include <openvpn/client/cliconstants.hpp>
 
 namespace openvpn {
 
@@ -46,48 +47,46 @@ namespace openvpn {
 
     RemoteList(const OptionList& opt)
     {
+      // handle remote, port, and proto at the top-level
       Protocol default_proto(Protocol::UDPv4);
       std::string default_port = "1194";
+      add(opt, default_proto, default_port);
 
-      // parse "proto" option if present
+      // cycle through <connection> blocks
       {
-	const Option* o = opt.get_ptr("proto");
-	if (o)
-	  default_proto = Protocol::parse(o->get(1, 16));
-      }
-
-      // parse "port" option if present
-      {
-	const Option* o = opt.get_ptr("port");
-	if (o)
+	const size_t max_conn_block_size = 4096;
+	const OptionList::IndexList* conn = opt.get_index_ptr("connection");
+	if (conn)
 	  {
-	    default_port = o->get(1, 16);
-	    validate_port(default_port);
-	  }
-      }
-
-      // cycle through remote entries
-      {
-	const OptionList::IndexList& rem = opt.get_index("remote");
-	for (OptionList::IndexList::const_iterator i = rem.begin(); i != rem.end(); ++i)
-	  {
-	    Item e;
-	    const Option& o = opt[*i];
-	    e.server_host = o.get(1, 256);
-	    if (o.size() >= 3)
+	    for (OptionList::IndexList::const_iterator i = conn->begin(); i != conn->end(); ++i)
 	      {
-		e.server_port = o.get(2, 16);
-		validate_port(e.server_port);
+		try {
+		  const Option& o = opt[*i];
+		  const std::string& conn_block_text = o.get(1, Option::MULTILINE);
+		  OptionList::Limits limits("<connection> block is too large",
+					    max_conn_block_size,
+					    ProfileParseLimits::OPT_OVERHEAD,
+					    ProfileParseLimits::TERM_OVERHEAD,
+					    ProfileParseLimits::MAX_LINE_SIZE,
+					    ProfileParseLimits::MAX_DIRECTIVE_SIZE);
+		  const OptionList conn_block = OptionList::parse_from_config_static(conn_block_text, &limits);
+		  Protocol proto(default_proto);
+		  std::string port(default_port);
+		  add(conn_block, proto, port);
+		}
+		catch (Exception& e)
+		  {
+		    e.replace_label("connection_block");
+		    throw;
+		  }
 	      }
-	    else
-	      e.server_port = default_port;
-	    if (o.size() >= 4)
-	      e.transport_protocol = Protocol::parse(o.get(3, 16));
-	    else
-	      e.transport_protocol = default_proto;
-	    list.push_back(e);
 	  }
       }
+
+      if (list.empty())
+	OPENVPN_THROW(option_error, "remote option not specified");
+
+      //OPENVPN_LOG(render());
     }
 
     // used to cycle through Item list
@@ -121,6 +120,52 @@ namespace openvpn {
     }
 
   private:
+    void add(const OptionList& opt, Protocol& default_proto, std::string& default_port)
+    {
+      // parse "proto" option if present
+      {
+	const Option* o = opt.get_ptr("proto");
+	if (o)
+	  default_proto = Protocol::parse(o->get(1, 16));
+      }
+
+      // parse "port" option if present
+      {
+	const Option* o = opt.get_ptr("port");
+	if (o)
+	  {
+	    default_port = o->get(1, 16);
+	    validate_port(default_port);
+	  }
+      }
+
+      // cycle through remote entries
+      {
+	const OptionList::IndexList* rem = opt.get_index_ptr("remote");
+	if (rem)
+	  {
+	    for (OptionList::IndexList::const_iterator i = rem->begin(); i != rem->end(); ++i)
+	      {
+		Item e;
+		const Option& o = opt[*i];
+		e.server_host = o.get(1, 256);
+		if (o.size() >= 3)
+		  {
+		    e.server_port = o.get(2, 16);
+		    validate_port(e.server_port);
+		  }
+		else
+		  e.server_port = default_port;
+		if (o.size() >= 4)
+		  e.transport_protocol = Protocol::parse(o.get(3, 16));
+		else
+		  e.transport_protocol = default_proto;
+		list.push_back(e);
+	      }
+	  }
+      }
+    }
+
     unsigned int find_with_proto_match(const Protocol& proto,
 				       const unsigned int index,
 				       bool* proto_override_fail,

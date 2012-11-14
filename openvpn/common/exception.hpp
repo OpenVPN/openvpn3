@@ -80,7 +80,50 @@ namespace openvpn {
   public:
     Exception(std::string err) : err_(err) {}
     virtual const char* what() const throw() { return err_.c_str(); }
+    const std::string& err() const { return err_; }
     virtual ~Exception() throw() {}
+
+    void add_label(const std::string& label)
+    {
+      err_ = label + ": " + err_;
+    }
+
+    bool lose_label()
+    {
+      int state = 0;
+      for (size_t i = 0; i < err_.size(); ++i)
+	{
+	  const char c = err_[i];
+	  if (state == 0)
+	    {
+	      if ((c >= 'a' && c <= 'z')
+		  || (c >= 'A' && c <= 'Z')
+		  || (c >= '0' && c <= '9')
+		  || c == '_')
+		;
+	      else if (c == ':')
+		state = 1;
+	      else
+		return false;
+	    }
+	  else if (state == 1)
+	    {
+	      if (c != ' ')
+		{
+		  err_ = err_.substr(i);
+		  return true;
+		}
+	    }
+	}
+      return false;
+    }
+
+    void replace_label(const std::string& label)
+    {
+      lose_label();
+      add_label(label);
+    }
+
   private:
     std::string err_;
   };

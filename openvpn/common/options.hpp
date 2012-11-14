@@ -142,7 +142,7 @@ namespace openvpn {
     {
       std::ostringstream out;
       for (std::vector<std::string>::const_iterator i = data.begin(); i != data.end(); ++i)
-	out << '[' << Unicode::utf8_printable(*i, 0) << "] ";
+	out << '[' << Unicode::utf8_printable(*i, 0 | Unicode::UTF8_PASS_FMT) << "] ";
       return out.str();
     }
 
