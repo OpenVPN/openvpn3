@@ -108,6 +108,7 @@ namespace openvpn {
 
       enum {
 	Connected=200,
+	Forbidden=403,
 	ProxyAuthenticationRequired=407,
 	ProxyError=502,
 	ServiceUnavailable=503,
@@ -379,8 +380,10 @@ namespace openvpn {
 		proxy_error(Error::UNDEF, "HTTP proxy server could not connect to OpenVPN server");
 		return;
 	      }
+	    else if (http_reply.status_code == Forbidden)
+	      OPENVPN_THROW_EXCEPTION("HTTP proxy returned Forbidden status code");
 	    else
-	      OPENVPN_THROW_EXCEPTION("HTTP proxy unrecognized status code: " << http_reply.status_code);
+	      OPENVPN_THROW_EXCEPTION("HTTP proxy status code: " << http_reply.status_code);
 	  }
 	else if (http_reply_status == HTTP::ReplyParser::pending)
 	  throw Exception("HTTP proxy unexpected EOF: reply incomplete");
