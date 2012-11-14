@@ -76,7 +76,8 @@ namespace openvpn {
 		}
 		catch (Exception& e)
 		  {
-		    e.replace_label("connection_block");
+		    e.remove_label("option_error");
+		    e.add_label("connection_block");
 		    throw;
 		  }
 	      }

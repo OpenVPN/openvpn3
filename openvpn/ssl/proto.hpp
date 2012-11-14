@@ -1004,7 +1004,7 @@ namespace openvpn {
 	  else
 	    buf.reset_size(); // no crypto context available
 	}
-	catch (buffer_exception&)
+	catch (BufferException&)
 	  {
 	    proto.stats->error(Error::BUFFER_ERROR);
 	    buf.reset_size();
@@ -1155,7 +1155,7 @@ namespace openvpn {
 	      return true;
 	    }
 	}
-	catch (buffer_exception&)
+	catch (BufferException&)
 	  {
 	    return false;
 	  }
@@ -1737,7 +1737,7 @@ namespace openvpn {
 		}
 	    }
 	}
-	catch (buffer_exception&)
+	catch (BufferException&)
 	  {
 	    proto.stats->error(Error::BUFFER_ERROR);
 	    if (proto.is_tcp())

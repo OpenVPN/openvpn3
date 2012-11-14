@@ -12,6 +12,7 @@
 #include <sstream>
 #include <exception>
 
+#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 #include <boost/system/error_code.hpp>
 
 #ifdef OPENVPN_DEBUG_EXCEPTION
@@ -31,51 +32,8 @@ namespace openvpn {
     return e.message();
   }
 
-  class ExceptionCode : public std::exception
-  {
-    enum {
-      FATAL_FLAG = 0x80000000
-    };
-
-  public:
-    ExceptionCode()
-      : code_(0) {}
-    ExceptionCode(const unsigned int code)
-      : code_(code) {}
-    ExceptionCode(const unsigned int code, const bool fatal)
-      : code_(mkcode(code, fatal)) {}
-
-    void set_code(const unsigned int code)
-    {
-      code_ = code;
-    }
-
-    void set_code(const unsigned int code, const bool fatal)
-    {
-      code_ = mkcode(code, fatal);
-    }
-
-    unsigned int code() const { return code_ & ~FATAL_FLAG; }
-    bool fatal() const { return (code_ & FATAL_FLAG) != 0; }
-
-    bool code_defined() const { return code_ != 0; }
-
-    virtual ~ExceptionCode() throw() {}
-
-  private:
-    static unsigned int mkcode(const unsigned int code, const bool fatal)
-    {
-      unsigned int ret = code;
-      if (fatal)
-	ret |= FATAL_FLAG;
-      return ret;
-    }
-
-    unsigned int code_;
-  };
-
   // string exception class
-  class Exception : public openvpn::ExceptionCode
+  class Exception : public std::exception
   {
   public:
     Exception(std::string err) : err_(err) {}
@@ -88,40 +46,11 @@ namespace openvpn {
       err_ = label + ": " + err_;
     }
 
-    bool lose_label()
+    void remove_label(const std::string& label)
     {
-      int state = 0;
-      for (size_t i = 0; i < err_.size(); ++i)
-	{
-	  const char c = err_[i];
-	  if (state == 0)
-	    {
-	      if ((c >= 'a' && c <= 'z')
-		  || (c >= 'A' && c <= 'Z')
-		  || (c >= '0' && c <= '9')
-		  || c == '_')
-		;
-	      else if (c == ':')
-		state = 1;
-	      else
-		return false;
-	    }
-	  else if (state == 1)
-	    {
-	      if (c != ' ')
-		{
-		  err_ = err_.substr(i);
-		  return true;
-		}
-	    }
-	}
-      return false;
-    }
-
-    void replace_label(const std::string& label)
-    {
-      lose_label();
-      add_label(label);
+      const std::string head = label + ": ";
+      if (boost::algorithm::starts_with(err_, head))
+	err_ = err_.substr(head.length());
     }
 
   private:
@@ -130,7 +59,7 @@ namespace openvpn {
 
   // define a simple custom exception class with no extra info
 # define OPENVPN_SIMPLE_EXCEPTION(C) \
-  class C : public openvpn::ExceptionCode { \
+  class C : public std::exception { \
   public: \
     virtual const char* what() const throw() { return #C OPENVPN_FILE_LINE; } \
   }

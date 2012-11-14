@@ -24,22 +24,69 @@
 #ifdef OPENVPN_BUFFER_ABORT
 #define OPENVPN_BUFFER_THROW(exc) { abort(); }
 #else
-#define OPENVPN_BUFFER_THROW(exc) { throw exc(); }
+#define OPENVPN_BUFFER_THROW(exc) { throw BufferException(BufferException::exc); }
 #endif
 
 namespace openvpn {
 
-  OPENVPN_SIMPLE_EXCEPTION(buffer_exception);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_full);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_headroom);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_underflow);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_overflow);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_index);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_const_index);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_push_front_headroom);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_no_reset_impl);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_pop_back);
-  OPENVPN_SIMPLE_EXCEPTION_INHERIT(buffer_exception, buffer_set_size);
+class BufferException : public std::exception
+  {
+  public:
+    enum Status {
+      buffer_full,
+      buffer_headroom,
+      buffer_underflow,
+      buffer_overflow,
+      buffer_index,
+      buffer_const_index,
+      buffer_push_front_headroom,
+      buffer_no_reset_impl,
+      buffer_pop_back,
+      buffer_set_size,
+    };
+
+    BufferException(Status status)
+      : status_(status) {}
+
+    Status status() const { return status_; }
+
+    const char *status_string() const
+    {
+      switch (status_)
+	{
+	case buffer_full:
+	  return "buffer_full";
+	case buffer_headroom:
+	  return "buffer_headroom";
+	case buffer_underflow:
+	  return "buffer_underflow";
+	case buffer_overflow:
+	  return "buffer_overflow";
+	case buffer_index:
+	  return "buffer_index";
+	case buffer_const_index:
+	  return "buffer_const_index";
+	case buffer_push_front_headroom:
+	  return "buffer_push_front_headroom";
+	case buffer_no_reset_impl:
+	  return "buffer_no_reset_impl";
+	case buffer_pop_back:
+	  return "buffer_pop_back";
+	case buffer_set_size:
+	  return "buffer_set_size";
+	default:
+	  return "buffer_???";
+	}
+    }
+
+    virtual const char* what() const throw() {
+      return status_string();
+    }
+    virtual ~BufferException() throw() {}
+
+  private:
+    Status status_;
+  };
 
   template <typename T>
   class BufferType {

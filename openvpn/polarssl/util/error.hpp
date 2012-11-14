@@ -14,6 +14,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/error/error.hpp>
+#include <openvpn/error/excode.hpp>
 
 namespace openvpn {
 

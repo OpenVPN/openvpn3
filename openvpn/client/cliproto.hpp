@@ -26,6 +26,7 @@
 #include <openvpn/options/clihalt.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
+#include <openvpn/error/excode.hpp>
 
 #include <openvpn/ssl/proto.hpp>
 
@@ -242,7 +243,11 @@ namespace openvpn {
 		  cli_stats->error((Error::Type)e.code());
 	      }
 	    else
-	      process_exception(e, "transport_recv");
+	      process_exception(e, "transport_recv_excode");
+	  }
+	catch (const std::exception& e)
+	  {
+	    process_exception(e, "transport_recv");
 	  }
       }
 
