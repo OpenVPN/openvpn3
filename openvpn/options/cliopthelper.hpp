@@ -128,8 +128,11 @@ namespace openvpn {
 		  se.friendlyName = se.server;
 		  Option::validate_string("HOST_LIST server", se.server, 256);
 		  Option::validate_string("HOST_LIST friendly name", se.friendlyName, 256);
-		  serverList_.push_back(se);
-		  ++count;
+		  if (!se.server.empty() && !se.friendlyName.empty())
+		    {
+		      serverList_.push_back(se);
+		      ++count;
+		    }
 		}
 	    }
 	}
@@ -137,7 +140,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  error_ = true;
-	  message_ = e.what();
+	  message_ = Unicode::utf8_printable(e.what(), 256);
 	}
     }
 
@@ -198,7 +201,7 @@ namespace openvpn {
 	{
 	  ParseClientConfig ret;
 	  ret.error_ = true;
-	  ret.message_ = e.what();
+	  ret.message_ = Unicode::utf8_printable(e.what(), 256);
           return ret;
 	}
     }

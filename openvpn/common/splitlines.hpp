@@ -37,7 +37,7 @@ namespace openvpn {
 	    }
 	  const char c = data[index++];
 	  line += c;
-	  if (c == '\n')
+	  if (c == '\n' || index >= size)
 	    {
 	      if (trim)
 		string::trim_crlf(line);
