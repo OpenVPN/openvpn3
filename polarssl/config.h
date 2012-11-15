@@ -393,10 +393,8 @@
  *      SSL_RSA_DES_168_SHA
  *      SSL_EDH_RSA_DES_168_SHA
  */
-// JY changed
-#ifdef ENABLE_TESTING
+// JY changed -- needed for PEM key decryption
 #define POLARSSL_DES_C
-#endif
 
 /**
  * \def POLARSSL_DHM_C

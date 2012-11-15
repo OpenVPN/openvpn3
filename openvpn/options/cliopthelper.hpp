@@ -84,6 +84,17 @@ namespace openvpn {
 	// validate remote list
 	RemoteList rl(options);
 
+	// determine if private key is encrypted
+	{
+	  const Option* o = options.get_ptr("key");
+	  if (o)
+	    {
+	      const std::string& key_txt = o->get(1, Option::MULTILINE);
+	      const size_t idx = key_txt.find("-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\n");
+	      privateKeyPasswordRequired_ = (idx != std::string::npos);
+	    }
+	}
+
 	// profile name
 	{
 	  const Option* o = options.get_ptr("PROFILE");
@@ -233,6 +244,9 @@ namespace openvpn {
     // true if static challenge response should be echoed to UI, ignored if autologin
     bool staticChallengeEcho() const { return staticChallengeEcho_; }
 
+    // true if this profile requires a private key password
+    bool privateKeyPasswordRequired() const { return privateKeyPasswordRequired_; }
+
     // optional list of user-selectable VPN servers
     const ServerList& serverList() const { return serverList_; }
 
@@ -294,7 +308,7 @@ namespace openvpn {
 
     void reset_pod()
     {
-      error_ = autologin_ = externalPki_ = staticChallengeEcho_ = false;
+      error_ = autologin_ = externalPki_ = staticChallengeEcho_ = privateKeyPasswordRequired_ = false;
     }
 
     bool error_;
@@ -306,6 +320,7 @@ namespace openvpn {
     bool externalPki_;
     std::string staticChallenge_;
     bool staticChallengeEcho_;
+    bool privateKeyPasswordRequired_;
     ServerList serverList_;
   };
 }

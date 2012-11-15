@@ -33,7 +33,7 @@ namespace openvpn {
     // (client reads)
     struct EvalConfig
     {
-      EvalConfig() : error(false), autologin(false), externalPki(false), staticChallengeEcho(false) {}
+      EvalConfig() : error(false), autologin(false), externalPki(false), staticChallengeEcho(false), privateKeyPasswordRequired(false) {}
 
       // true if error
       bool error;
@@ -61,6 +61,9 @@ namespace openvpn {
 
       // true if static challenge response should be echoed to UI, ignored if autologin
       bool staticChallengeEcho;
+
+      // true if this profile requires a private key password
+      bool privateKeyPasswordRequired;
 
       // optional list of user-selectable VPN servers
       std::vector<ServerEntry> serverList;
@@ -154,6 +157,9 @@ namespace openvpn {
       // asym -- allow compression on downlink only (i.e. server -> client)
       // no (default if empty) -- support compression stubs only
       std::string compressionMode;
+
+      // private key password (optional)
+      std::string privateKeyPassword;
 
       // HTTP Proxy parameters (optional)
       std::string proxyHost;         // hostname or IP address of proxy

@@ -109,6 +109,7 @@ namespace openvpn {
       HTTPProxyTransport::Options::Ptr http_proxy_options;
       bool tun_persist;
       bool google_dns_fallback;
+      std::string private_key_password;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -155,6 +156,9 @@ namespace openvpn {
 #endif
 #if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
       cc.rng = rng;
+#endif
+#if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID) || defined(USE_OPENSSL)
+      cc.priv_key_pwd = config.private_key_password;
 #endif
       cc.load(opt);
       if (!cc.mode.is_client())

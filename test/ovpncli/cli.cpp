@@ -106,17 +106,19 @@ void handler(int signum)
 int main(int argc, char *argv[])
 {
   static const struct option longopts[] = {
-    { "username",   required_argument,      NULL,       'u' },
-    { "password",   required_argument,      NULL,       'p' },
-    { "proto",      required_argument,      NULL,       'P' },
-    { "server",     required_argument,      NULL,       's' },
-    { "timeout",    required_argument,      NULL,       't' },
-    { "compress",   required_argument,      NULL,       'c' },
-    { "proxy-host",     required_argument,  NULL,       'h' },
-    { "proxy-port",     required_argument,  NULL,       'q' },
-    { "proxy-username", required_argument,  NULL,       'U' },
-    { "proxy-password", required_argument,  NULL,       'W' },
-    { NULL,         0,                      NULL,       0 }
+    { "username",       required_argument,  NULL,      'u' },
+    { "password",       required_argument,  NULL,      'p' },
+    { "proto",          required_argument,  NULL,      'P' },
+    { "server",         required_argument,  NULL,      's' },
+    { "timeout",        required_argument,  NULL,      't' },
+    { "compress",       required_argument,  NULL,      'c' },
+    { "pk-password",    required_argument,  NULL,      'z' },
+    { "proxy-host",     required_argument,  NULL,      'h' },
+    { "proxy-port",     required_argument,  NULL,      'q' },
+    { "proxy-username", required_argument,  NULL,      'U' },
+    { "proxy-password", required_argument,  NULL,      'W' },
+    { "eval",           no_argument,        NULL,      'e' },
+    { NULL,             0,                  NULL,       0  }
   };
 
   try {
@@ -128,17 +130,22 @@ int main(int argc, char *argv[])
 	std::string server;
 	int timeout = 0;
 	std::string compress;
+	std::string privateKeyPassword;
 	std::string proxyHost;
 	std::string proxyPort;
 	std::string proxyUsername;
 	std::string proxyPassword;
+	bool eval = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "u:p:P:s:t:c:h:q:U:W:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "eu:p:P:s:t:c:z:h:q:U:W:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
+	      case 'e':
+		eval = true;
+		break;
 	      case 'u':
 		username = optarg;
 		break;
@@ -156,6 +163,9 @@ int main(int argc, char *argv[])
 		break;
 	      case 'c':
 		compress = optarg;
+		break;
+	      case 'z':
+		privateKeyPassword = optarg;
 		break;
 	      case 'h':
 		proxyHost = optarg;
@@ -177,84 +187,109 @@ int main(int argc, char *argv[])
 	argv += optind;
 
 	Client::init_process();
-	Client client;
-	ClientAPI::Config config;
+
 	if (argc != 1)
 	  goto usage;
 	ProfileMerge pm(argv[0], "", true,
 			ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
 	if (pm.status() != ProfileMerge::MERGE_SUCCESS)
 	  OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+
+	ClientAPI::Config config;
 	config.content = pm.profile_content();
 	config.serverOverride = server;
 	config.protoOverride = proto;
 	config.connTimeout = timeout;
 	config.compressionMode = compress;
+	config.privateKeyPassword = privateKeyPassword;
 	config.proxyHost = proxyHost;
 	config.proxyPort = proxyPort;
 	config.proxyUsername = proxyUsername;
 	config.proxyPassword = proxyPassword;
-	ClientAPI::EvalConfig eval = client.eval_config(config);
-	if (eval.error)
-	  OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
-	if (eval.autologin)
+
+	if (eval)
 	  {
-	    if (!username.empty() || !password.empty())
-	      std::cout << "NOTE: creds were not needed" << std::endl;
+	    ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
+	    std::cout << "EVAL PROFILE" << std::endl;
+	    std::cout << "error=" << eval.error << std::endl;
+	    std::cout << "message=" << eval.message << std::endl;
+	    std::cout << "userlockedUsername=" << eval.userlockedUsername << std::endl;
+	    std::cout << "profileName=" << eval.profileName << std::endl;
+	    std::cout << "friendlyName=" << eval.friendlyName << std::endl;
+	    std::cout << "autologin=" << eval.autologin << std::endl;
+	    std::cout << "externalPki=" << eval.externalPki << std::endl;
+	    std::cout << "staticChallenge=" << eval.staticChallenge << std::endl;
+	    std::cout << "staticChallengeEcho=" << eval.staticChallengeEcho << std::endl;
+	    std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
+
+	    for (size_t i = 0; i < eval.serverList.size(); ++i)
+	      {
+		const ClientAPI::ServerEntry& se = eval.serverList[i];
+		std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << std::endl;
+	      }
 	  }
 	else
 	  {
-	    if (username.empty())
-	      OPENVPN_THROW_EXCEPTION("need creds");
-	    ClientAPI::ProvideCreds creds;
-	    creds.username = username;
-	    creds.password = password;
-	    creds.replacePasswordWithSessionID = true;
-	    ClientAPI::Status creds_status = client.provide_creds(creds);
-	    if (creds_status.error)
-	      OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
-	  }
+	    Client client;
+	    ClientAPI::EvalConfig eval = client.eval_config(config);
+	    if (eval.error)
+	      OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
+	    if (eval.autologin)
+	      {
+		if (!username.empty() || !password.empty())
+		  std::cout << "NOTE: creds were not needed" << std::endl;
+	      }
+	    else
+	      {
+		if (username.empty())
+		  OPENVPN_THROW_EXCEPTION("need creds");
+		ClientAPI::ProvideCreds creds;
+		creds.username = username;
+		creds.password = password;
+		creds.replacePasswordWithSessionID = true;
+		ClientAPI::Status creds_status = client.provide_creds(creds);
+		if (creds_status.error)
+		  OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
+	      }
 
-	std::cout << "CONNECTING..." << std::endl;
+	    std::cout << "CONNECTING..." << std::endl;
 
-	// catch signals
-	struct sigaction sa;
-	sa.sa_handler = handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART; // restart functions if interrupted by handler
-	if (sigaction(SIGINT, &sa, NULL) == -1
-	    || sigaction(SIGTERM, &sa, NULL) == -1
-	    || sigaction(SIGHUP, &sa, NULL) == -1)
-	  OPENVPN_THROW_EXCEPTION("error setting signal handler");
+	    // catch signals
+	    struct sigaction sa;
+	    sa.sa_handler = handler;
+	    sigemptyset(&sa.sa_mask);
+	    sa.sa_flags = SA_RESTART; // restart functions if interrupted by handler
+	    if (sigaction(SIGINT, &sa, NULL) == -1
+		|| sigaction(SIGTERM, &sa, NULL) == -1
+		|| sigaction(SIGHUP, &sa, NULL) == -1)
+	      OPENVPN_THROW_EXCEPTION("error setting signal handler");
 
-	// start connect thread
-	the_client = &client;
-	boost::thread* thread = new boost::thread(boost::bind(&worker_thread));
+	    // start connect thread
+	    the_client = &client;
+	    boost::thread* thread = new boost::thread(boost::bind(&worker_thread));
 
-	// wait for connect thread to exit
-	thread->join();
-	the_client = NULL;
+	    // wait for connect thread to exit
+	    thread->join();
+	    the_client = NULL;
 
-	// print closing stats
-	{
-	  const int n = client.stats_n();
-	  std::vector<long long> stats = client.stats_bundle();
-
-	  std::cout << "STATS:" << std::endl;
-	  for (int i = 0; i < n; ++i)
+	    // print closing stats
 	    {
-	      const long long value = stats[i];
-	      if (value)
-		std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+	      const int n = client.stats_n();
+	      std::vector<long long> stats = client.stats_bundle();
+
+	      std::cout << "STATS:" << std::endl;
+	      for (int i = 0; i < n; ++i)
+		{
+		  const long long value = stats[i];
+		  if (value)
+		    std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+		}
 	    }
-	}
+	  }
 	return 0;
       }
     else
-      {
 	goto usage;
-	return 2;
-      }
   }
   catch (const std::exception& e)
     {
@@ -267,13 +302,15 @@ int main(int argc, char *argv[])
 
  usage:
   std::cout << "OpenVPN Client (ovpncli)" << std::endl;
-  std::cout << "usage: cli <config-file> [options]" << std::endl;
+  std::cout << "usage: cli [options] <config-file>" << std::endl;
+  std::cout << "--eval, -e           : evaluate profile only" << std::endl;
   std::cout << "--username, -u       : username" << std::endl;
   std::cout << "--password, -p       : password" << std::endl;
   std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
   std::cout << "--server, -s         : server override" << std::endl;
   std::cout << "--timeout, -t        : timeout" << std::endl;
   std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
+  std::cout << "--pk-password, -z    : private key password" << std::endl;
   std::cout << "--proxy-host, -h     : HTTP proxy hostname/IP" << std::endl;
   std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
   std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;

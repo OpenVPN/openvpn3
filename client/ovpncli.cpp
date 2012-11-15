@@ -270,6 +270,7 @@ namespace openvpn {
 	int conn_timeout;
 	bool tun_persist;
 	bool google_dns_fallback;
+	std::string private_key_password;
 	std::string external_pki_alias;
 	ProtoContextOptions::Ptr proto_context_options;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
@@ -317,6 +318,7 @@ namespace openvpn {
 	eval.externalPki = cc.externalPki();
 	eval.staticChallenge = cc.staticChallenge();
 	eval.staticChallengeEcho = cc.staticChallengeEcho();
+	eval.privateKeyPasswordRequired = cc.privateKeyPasswordRequired();
 	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
 	  {
 	    ServerEntry se;
@@ -339,6 +341,7 @@ namespace openvpn {
 	state->conn_timeout = config.connTimeout;
 	state->tun_persist = config.tunPersist;
 	state->google_dns_fallback = config.googleDnsFallback;
+	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride);
 	if (!config.compressionMode.empty())
@@ -529,6 +532,7 @@ namespace openvpn {
 	cc.proto_context_options = state->proto_context_options;
 	cc.http_proxy_options = state->http_proxy_options;
 	cc.reconnect_notify = &state->reconnect_notify;
+	cc.private_key_password = state->private_key_password;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;

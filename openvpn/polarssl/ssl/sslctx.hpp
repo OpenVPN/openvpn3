@@ -83,6 +83,7 @@ namespace openvpn {
       PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
       PolarSSLPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
       PolarSSLPKI::RSAContext::Ptr priv_key; // private key
+      std::string priv_key_pwd;              // private key password
       PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
@@ -129,7 +130,7 @@ namespace openvpn {
       void load_private_key(const std::string& key_txt)
       {
 	PolarSSLPKI::RSAContext::Ptr p = new PolarSSLPKI::RSAContext();
-	p->parse(key_txt, "config");
+	p->parse(key_txt, "config", priv_key_pwd);
 	priv_key = p;
       }
 

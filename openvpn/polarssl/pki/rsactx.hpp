@@ -29,11 +29,11 @@ namespace openvpn {
 
       RSAContext() : ctx(NULL) {}
 
-      RSAContext(const std::string& key_txt, const std::string& title)
+      RSAContext(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
 	: ctx(NULL)
       {
 	try {
-	  parse(key_txt, title);
+	  parse(key_txt, title, priv_key_pwd);
 	}
 	catch (...)
 	  {
@@ -42,13 +42,14 @@ namespace openvpn {
 	  }
       }
 
-      void parse(const std::string& key_txt, const std::string& title)
+      void parse(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
       {
 	alloc();
 	const int status = x509parse_key(ctx,
 					 (const unsigned char *)key_txt.c_str(),
 					 key_txt.length(),
-					 NULL, 0);
+					 (const unsigned char *)priv_key_pwd.c_str(),
+					 priv_key_pwd.length());
 	if (status < 0)
 	  throw PolarSSLException("error parsing " + title + " private key", status);
       }
