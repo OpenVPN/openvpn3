@@ -73,7 +73,12 @@ void worker_thread()
     std::cout << "Thread starting..." << std::endl;
     ClientAPI::Status connect_status = the_client->connect();
     if (connect_status.error)
-      std::cout << "connect error: " <<  connect_status.message << std::endl;
+      {
+	std::cout << "connect error: ";
+	if (!connect_status.status.empty())
+	  std::cout << connect_status.status << ": ";
+	std::cout << connect_status.message << std::endl;
+      }
   }
   catch (const std::exception& e)
     {

@@ -43,6 +43,7 @@ namespace openvpn {
       CONNECTION_TIMEOUT,  // connection failed to establish within given time
       PRIMARY_EXPIRE,      // primary key context expired
       CERT_VERIFY_FAIL,    // peer certificate verification failure
+      PEM_PASSWORD_FAIL,   // incorrect or missing PEM private key decryption password
       AUTH_FAILED,         // general authentication failure
       CLIENT_HALT,         // HALT message from server received
       CLIENT_RESTART,      // RESTART message from server received
@@ -90,6 +91,7 @@ namespace openvpn {
 	"CONNECTION_TIMEOUT",
 	"PRIMARY_EXPIRE",
 	"CERT_VERIFY_FAIL",
+	"PEM_PASSWORD_FAIL",
 	"AUTH_FAILED",
 	"CLIENT_HALT",
 	"CLIENT_RESTART",

@@ -61,6 +61,7 @@
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/options/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>
+#include <openvpn/error/excode.hpp>
 
 // copyright
 #include <openvpn/legal/copyright.hpp>
@@ -598,6 +599,14 @@ namespace openvpn {
 	    }
 	  ret.error = true;
 	  ret.message = Unicode::utf8_printable(e.what(), 256);
+
+	  // if exception is an ExceptionCode, translate the code
+	  // to return status string
+	  {
+	    const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
+	    if (ec && ec->code_defined())
+	      ret.status = Error::name(ec->code());
+	  }
 	}
       state->socket_protect.detach_from_parent();
       state->reconnect_notify.detach_from_parent();

@@ -10,6 +10,8 @@
 
 #include <exception>
 
+#include <openvpn/error/error.hpp>
+
 namespace openvpn {
 
   class ExceptionCode : public std::exception
@@ -21,22 +23,22 @@ namespace openvpn {
   public:
     ExceptionCode()
       : code_(0) {}
-    ExceptionCode(const unsigned int code)
+    ExceptionCode(const Error::Type code)
       : code_(code) {}
-    ExceptionCode(const unsigned int code, const bool fatal)
+    ExceptionCode(const Error::Type code, const bool fatal)
       : code_(mkcode(code, fatal)) {}
 
-    void set_code(const unsigned int code)
+    void set_code(const Error::Type code)
     {
       code_ = code;
     }
 
-    void set_code(const unsigned int code, const bool fatal)
+    void set_code(const Error::Type code, const bool fatal)
     {
       code_ = mkcode(code, fatal);
     }
 
-    unsigned int code() const { return code_ & ~FATAL_FLAG; }
+    Error::Type code() const { return Error::Type(code_ & ~FATAL_FLAG); }
     bool fatal() const { return (code_ & FATAL_FLAG) != 0; }
 
     bool code_defined() const { return code_ != 0; }
@@ -44,7 +46,7 @@ namespace openvpn {
     virtual ~ExceptionCode() throw() {}
 
   private:
-    static unsigned int mkcode(const unsigned int code, const bool fatal)
+    static unsigned int mkcode(const Error::Type code, const bool fatal)
     {
       unsigned int ret = code;
       if (fatal)

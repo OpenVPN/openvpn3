@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include <polarssl/pem.h>
 #include <polarssl/error.h>
 
 #include <openvpn/common/exception.hpp>
@@ -43,6 +44,10 @@ namespace openvpn {
       switch (errnum) {
       case POLARSSL_ERR_X509_CERT_VERIFY_FAILED:
 	set_code(Error::CERT_VERIFY_FAIL, true);
+	break;
+      case POLARSSL_ERR_PEM_PASSWORD_REQUIRED:
+      case POLARSSL_ERR_PEM_PASSWORD_MISMATCH:
+	set_code(Error::PEM_PASSWORD_FAIL, true);
 	break;
       }
     }

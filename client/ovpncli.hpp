@@ -203,6 +203,7 @@ namespace openvpn {
     {
       Status() : error(false) {}
       bool error;           // true if error
+      std::string status;   // an optional short error label that identifies the error
       std::string message;  // if error, message given here
     };
 
