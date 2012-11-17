@@ -85,15 +85,16 @@ namespace openvpn {
 	RemoteList rl(options);
 
 	// determine if private key is encrypted
-	{
-	  const Option* o = options.get_ptr("key");
-	  if (o)
-	    {
-	      const std::string& key_txt = o->get(1, Option::MULTILINE);
-	      const size_t idx = key_txt.find("-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\n");
-	      privateKeyPasswordRequired_ = (idx != std::string::npos);
-	    }
-	}
+	if (!externalPki_)
+	  {
+	    const Option* o = options.get_ptr("key");
+	    if (o)
+	      {
+		const std::string& key_txt = o->get(1, Option::MULTILINE);
+		const size_t idx = key_txt.find("-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\n");
+		privateKeyPasswordRequired_ = (idx != std::string::npos);
+	      }
+	  }
 
 	// profile name
 	{
