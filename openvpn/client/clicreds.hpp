@@ -48,8 +48,17 @@ namespace openvpn {
 
     void set_replace_password_with_session_id(const bool value) { replace_password_with_session_id = value; };
 
+    bool get_replace_password_with_session_id() const
+    {
+      return replace_password_with_session_id;
+    }
+
     void set_session_id(const std::string& sess_id)
     {
+      // force Session ID use if dynamic challenge is enabled
+      if (dynamic_challenge && !replace_password_with_session_id)
+	replace_password_with_session_id = true;
+
       if (replace_password_with_session_id)
 	{
 	  password = sess_id;

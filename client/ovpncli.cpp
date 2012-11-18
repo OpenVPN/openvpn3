@@ -540,6 +540,13 @@ namespace openvpn {
 	cc.builder = this;
 #endif
 
+	// force Session ID use if static challenge is enabled
+	if (state->creds
+	    && !state->creds->get_replace_password_with_session_id()
+	    && !state->eval.autologin
+	    && !state->eval.staticChallenge.empty())
+	  state->creds->set_replace_password_with_session_id(true);
+
 	// external PKI
 #if !defined(USE_APPLE_SSL)
 	if (state->eval.externalPki)

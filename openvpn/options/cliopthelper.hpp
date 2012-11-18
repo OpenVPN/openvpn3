@@ -69,8 +69,19 @@ namespace openvpn {
 	// External PKI
 	externalPki_ = is_external_pki(options);
 
+	// allow password save
+	{
+	  const Option* o = options.get_ptr("allow-password-save");
+	  if (o)
+	    allowPasswordSave_ = parse_bool(*o, "allow-password-save", 1);
+	}
+
 	// autologin
-	autologin_ = is_autologin(options);
+	{
+	  autologin_ = is_autologin(options);
+	  if (autologin_)
+	    allowPasswordSave_ = false; // saving passwords is incompatible with autologin
+	}
 
 	// static challenge
 	{
@@ -80,14 +91,8 @@ namespace openvpn {
 	      staticChallenge_ = o->get(1, 256);
 	      if (o->get_optional(2, 16) == "1")
 		staticChallengeEcho_ = true;
+	      allowPasswordSave_ = false; // saving passwords is incompatible with challenge/response
 	    }
-	}
-
-	// allow password save
-	{
-	  const Option* o = options.get_ptr("allow-password-save");
-	  if (o)
-	    allowPasswordSave_ = parse_bool(*o, "allow-password-save", 1);
 	}
 
 	// validate remote list

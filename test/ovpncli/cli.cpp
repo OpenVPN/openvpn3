@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
   static const struct option longopts[] = {
     { "username",       required_argument,  NULL,      'u' },
     { "password",       required_argument,  NULL,      'p' },
+    { "response",       required_argument,  NULL,      'r' },
     { "proto",          required_argument,  NULL,      'P' },
     { "server",         required_argument,  NULL,      's' },
     { "timeout",        required_argument,  NULL,      't' },
@@ -123,6 +124,7 @@ int main(int argc, char *argv[])
     { "proxy-username", required_argument,  NULL,      'U' },
     { "proxy-password", required_argument,  NULL,      'W' },
     { "eval",           no_argument,        NULL,      'e' },
+    { "cache-password", no_argument,        NULL,      'C' },
     { NULL,             0,                  NULL,       0  }
   };
 
@@ -131,6 +133,7 @@ int main(int argc, char *argv[])
       {
 	std::string username;
 	std::string password;
+	std::string response;
 	std::string proto;
 	std::string server;
 	int timeout = 0;
@@ -141,21 +144,28 @@ int main(int argc, char *argv[])
 	std::string proxyUsername;
 	std::string proxyPassword;
 	bool eval = false;
+	bool cachePassword = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "eu:p:P:s:t:c:z:h:q:U:W:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "eCu:p:r:P:s:t:c:z:h:q:U:W:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
 	      case 'e':
 		eval = true;
 		break;
+	      case 'C':
+		cachePassword = true;
+		break;
 	      case 'u':
 		username = optarg;
 		break;
 	      case 'p':
 		password = optarg;
+		break;
+	      case 'r':
+		response = optarg;
 		break;
 	      case 'P':
 		proto = optarg;
@@ -252,7 +262,8 @@ int main(int argc, char *argv[])
 		ClientAPI::ProvideCreds creds;
 		creds.username = username;
 		creds.password = password;
-		creds.replacePasswordWithSessionID = true;
+		creds.response = response;
+		creds.replacePasswordWithSessionID = !cachePassword;
 		ClientAPI::Status creds_status = client.provide_creds(creds);
 		if (creds_status.error)
 		  OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
@@ -312,6 +323,7 @@ int main(int argc, char *argv[])
   std::cout << "--eval, -e           : evaluate profile only" << std::endl;
   std::cout << "--username, -u       : username" << std::endl;
   std::cout << "--password, -p       : password" << std::endl;
+  std::cout << "--response, -r       : static response" << std::endl;
   std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
   std::cout << "--server, -s         : server override" << std::endl;
   std::cout << "--timeout, -t        : timeout" << std::endl;
@@ -321,6 +333,7 @@ int main(int argc, char *argv[])
   std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
   std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
   std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
+  std::cout << "--cache-password, -C : cache password rather than use Session ID" << std::endl;
   std::cout << "" << std::endl;
   return 2;
 }
