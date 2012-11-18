@@ -53,6 +53,8 @@ namespace openvpn {
 		      message_ = "SERVER_LOCKED_UNSUPPORTED: server locked profiles are currently unsupported";
 		      return;
 		    }
+		  else if (arg1 == "ALLOW_PASSWORD_SAVE")
+		    allowPasswordSave_ = parse_bool(o, "setenv ALLOW_PASSWORD_SAVE", 2);
 		}
 	    }
 	}
@@ -79,6 +81,13 @@ namespace openvpn {
 	      if (o->get_optional(2, 16) == "1")
 		staticChallengeEcho_ = true;
 	    }
+	}
+
+	// allow password save
+	{
+	  const Option* o = options.get_ptr("allow-password-save");
+	  if (o)
+	    allowPasswordSave_ = parse_bool(*o, "allow-password-save", 1);
 	}
 
 	// validate remote list
@@ -248,6 +257,9 @@ namespace openvpn {
     // true if this profile requires a private key password
     bool privateKeyPasswordRequired() const { return privateKeyPasswordRequired_; }
 
+    // true if user is allowed to save authentication password in UI
+    bool allowPasswordSave() const { return allowPasswordSave_; }
+
     // optional list of user-selectable VPN servers
     const ServerList& serverList() const { return serverList_; }
 
@@ -310,6 +322,18 @@ namespace openvpn {
     void reset_pod()
     {
       error_ = autologin_ = externalPki_ = staticChallengeEcho_ = privateKeyPasswordRequired_ = false;
+      allowPasswordSave_ = true;
+    }
+
+    bool parse_bool(const Option& o, const std::string& title, const size_t index)
+    {
+      const std::string parm = o.get(index, 16);
+      if (parm == "0")
+	return false;
+      else if (parm == "1")
+	return true;
+      else
+	throw option_error(title + ": parameter must be 0 or 1");
     }
 
     bool error_;
@@ -322,6 +346,7 @@ namespace openvpn {
     std::string staticChallenge_;
     bool staticChallengeEcho_;
     bool privateKeyPasswordRequired_;
+    bool allowPasswordSave_;
     ServerList serverList_;
   };
 }

@@ -226,6 +226,7 @@ int main(int argc, char *argv[])
 	    std::cout << "staticChallenge=" << eval.staticChallenge << std::endl;
 	    std::cout << "staticChallengeEcho=" << eval.staticChallengeEcho << std::endl;
 	    std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
+	    std::cout << "allowPasswordSave=" << eval.allowPasswordSave << std::endl;
 
 	    for (size_t i = 0; i < eval.serverList.size(); ++i)
 	      {

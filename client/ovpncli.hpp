@@ -33,7 +33,7 @@ namespace openvpn {
     // (client reads)
     struct EvalConfig
     {
-      EvalConfig() : error(false), autologin(false), externalPki(false), staticChallengeEcho(false), privateKeyPasswordRequired(false) {}
+      EvalConfig() : error(false), autologin(false), externalPki(false), staticChallengeEcho(false), privateKeyPasswordRequired(false), allowPasswordSave(false) {}
 
       // true if error
       bool error;
@@ -64,6 +64,9 @@ namespace openvpn {
 
       // true if this profile requires a private key password
       bool privateKeyPasswordRequired;
+
+      // true if user is allowed to save authentication password in UI
+      bool allowPasswordSave;
 
       // optional list of user-selectable VPN servers
       std::vector<ServerEntry> serverList;

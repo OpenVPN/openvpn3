@@ -320,6 +320,7 @@ namespace openvpn {
 	eval.staticChallenge = cc.staticChallenge();
 	eval.staticChallengeEcho = cc.staticChallengeEcho();
 	eval.privateKeyPasswordRequired = cc.privateKeyPasswordRequired();
+	eval.allowPasswordSave = cc.allowPasswordSave();
 	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
 	  {
 	    ServerEntry se;
