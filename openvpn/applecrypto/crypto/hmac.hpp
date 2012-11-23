@@ -8,6 +8,9 @@
 #ifndef OPENVPN_APPLECRYPTO_CRYPTO_HMAC_H
 #define OPENVPN_APPLECRYPTO_CRYPTO_HMAC_H
 
+// Wrap the Apple HMAC API defined in <CommonCrypto/CommonHMAC.h> so that
+// it can be used as part of the crypto layer of the OpenVPN core.
+
 #include <string>
 #include <cstring>
 

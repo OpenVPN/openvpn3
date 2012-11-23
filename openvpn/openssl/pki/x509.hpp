@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap an OpenSSL X509 object
+
 #ifndef OPENVPN_OPENSSL_PKI_X509_H
 #define OPENVPN_OPENSSL_PKI_X509_H
 

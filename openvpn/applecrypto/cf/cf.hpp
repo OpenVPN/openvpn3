@@ -18,6 +18,8 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
+// Wrapper classes for Apple Core Foundation objects.
+
 #define OPENVPN_CF_WRAP(cls, fname, cftype, idmeth) \
     typedef Wrap<cftype> cls; \
     inline cls fname(CFTypeRef obj) \

@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the OpenSSL cipher API defined in <openssl/evp.h> so
+// that it can be used as part of the crypto layer of the OpenVPN core.
+
 #ifndef OPENVPN_OPENSSL_CRYPTO_CIPHER_H
 #define OPENVPN_OPENSSL_CRYPTO_CIPHER_H
 

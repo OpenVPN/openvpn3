@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Process-wide static initialization
+
 #ifndef OPENVPN_INIT_INITPROCESS_H
 #define OPENVPN_INIT_INITPROCESS_H
 

@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Define the IP protocol header
+
 #ifndef OPENVPN_IP_IP_H
 #define OPENVPN_IP_IP_H
 

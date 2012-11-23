@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Create an Asio time_traits class to allow Asio to natively handle
+// our Time and Time::Duration classes.
+
 #ifndef OPENVPN_TIME_ASIOTIMER_H
 #define OPENVPN_TIME_ASIOTIMER_H
 

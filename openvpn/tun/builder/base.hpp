@@ -14,7 +14,8 @@ namespace openvpn {
   class TunBuilderBase
   {
   public:
-    // Tun builder methods.  These methods comprise an abstraction layer that
+    // Tun builder methods, loosely based on the Android VpnService.Builder
+    // abstraction.  These methods comprise an abstraction layer that
     // allows the OpenVPN C++ core to call out to external methods for
     // establishing the tunnel, adding routes, etc.
 

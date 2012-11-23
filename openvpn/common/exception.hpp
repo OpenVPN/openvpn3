@@ -5,6 +5,10 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Basic exception handling.  Allow exception classes for specific errors
+// to be easily defined, and allow exceptions to be thrown with a consise
+// syntax that allows stringstream concatenation using <<
+
 #ifndef OPENVPN_COMMON_EXCEPTION_H
 #define OPENVPN_COMMON_EXCEPTION_H
 
@@ -16,7 +20,7 @@
 #include <boost/system/error_code.hpp>
 
 #ifdef OPENVPN_DEBUG_EXCEPTION
-  // preprocessor hack to get __FILE__:__LINE__ rendered as a string
+  // well-known preprocessor hack to get __FILE__:__LINE__ rendered as a string
 # define OPENVPN_STRINGIZE(x) OPENVPN_STRINGIZE2(x)
 # define OPENVPN_STRINGIZE2(x) #x
 # define OPENVPN_FILE_LINE "/" __FILE__ ":" OPENVPN_STRINGIZE(__LINE__)
@@ -25,6 +29,7 @@
 #endif
 
 namespace openvpn {
+  // returns a string describing a boost::system error code
   template <typename ErrorCode>
   inline std::string errinfo(ErrorCode err)
   {
@@ -32,7 +37,7 @@ namespace openvpn {
     return e.message();
   }
 
-  // string exception class
+  // string exception class, where the exception is described by a std::string
   class Exception : public std::exception
   {
   public:

@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Client tun interface for Mac OS X.
+
 #ifndef OPENVPN_TUN_MAC_CLIENT_TUNCLI_H
 #define OPENVPN_TUN_MAC_CLIENT_TUNCLI_H
 

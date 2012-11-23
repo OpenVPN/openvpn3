@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Non-cryptographic random number generator based on boost::mt19937
+
 #ifndef OPENVPN_RANDOM_BOOSTRAND_H
 #define OPENVPN_RANDOM_BOOSTRAND_H
 

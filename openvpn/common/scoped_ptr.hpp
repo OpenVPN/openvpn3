@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A scoped pointer class similar to boost::scoped_ptr.
+
 #ifndef OPENVPN_COMMON_SCOPED_PTR_H
 #define OPENVPN_COMMON_SCOPED_PTR_H
 

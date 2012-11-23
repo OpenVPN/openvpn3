@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Get IPv4 gateway info on Mac OS X.
+
 #ifndef OPENVPN_NETCONF_MAC_GWV4_H
 #define OPENVPN_NETCONF_MAC_GWV4_H
 

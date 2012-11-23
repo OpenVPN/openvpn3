@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Define null logging macros
+
 #ifndef OPENVPN_LOG_LOGNULL_H
 #define OPENVPN_LOG_LOGNULL_H
 

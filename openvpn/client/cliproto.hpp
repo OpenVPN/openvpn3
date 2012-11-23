@@ -8,6 +8,21 @@
 #ifndef OPENVPN_CLIENT_CLIPROTO_H
 #define OPENVPN_CLIENT_CLIPROTO_H
 
+// This is a middle-layer object in the OpenVPN client protocol stack.
+// It is above the general OpenVPN protocol implementation in
+// ProtoContext<RAND_API, CRYPTO_API, SSL_API> but below the top
+// level object in a client connect (ClientConnect).  See ClientConnect for
+// a fuller description of the full client stack.
+//
+// This layer deals with setting up an OpenVPN client connection:
+//
+// 1. handles creation of transport-layer handler via TransportClientFactory
+// 2. handles creation of tun-layer handler via TunClientFactory
+// 3. handles sending PUSH_REQUEST to server and processing reply of server-pushed options
+// 4. manages the underlying OpenVPN protocol object (ProtoContext<RAND_API, CRYPTO_API, SSL_API>)
+// 5. handles timers on behalf of the underlying OpenVPN protocol object
+// 6. acts as an exception dispatcher for errors occuring in any of the underlying layers
+
 #include <string>
 #include <vector>
 

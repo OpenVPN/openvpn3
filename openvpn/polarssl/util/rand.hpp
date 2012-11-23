@@ -5,6 +5,10 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the PolarSSL Cryptographic Random API defined in <polarssl/ctr_drbg.h>
+// so that it can be used as the primary source of cryptographic entropy by
+// the OpenVPN core.
+
 #ifndef OPENVPN_POLARSSL_UTIL_RAND_H
 #define OPENVPN_POLARSSL_UTIL_RAND_H
 

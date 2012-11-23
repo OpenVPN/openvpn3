@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This file describes the basic set of OpenVPN client events, including the
+// normal events leading up to a connection as well as error events.
+
 #ifndef OPENVPN_CLIENT_CLIEVENT_H
 #define OPENVPN_CLIENT_CLIEVENT_H
 
@@ -19,6 +22,7 @@
 namespace openvpn {
   namespace ClientEvent {
     enum Type {
+      // normal events including disconnected, connected, and other transitional events
       DISCONNECTED=0,
       CONNECTED,
       RECONNECTING,
@@ -32,7 +36,7 @@ namespace openvpn {
       PAUSE,
       RESUME,
 
-      // start of errors, must be marked by ERROR_START
+      // start of errors, must be marked by ERROR_START below
       AUTH_FAILED,
       CERT_VERIFY_FAIL,
       CLIENT_HALT,
@@ -43,8 +47,8 @@ namespace openvpn {
       PROXY_ERROR,
       TUN_SETUP_FAILED,
       TUN_IFACE_CREATE,
-      EPKI_ERROR,
-      EPKI_INVALID_ALIAS,
+      EPKI_ERROR,          // EPKI refers to External PKI errors, i.e. errors in accessing external
+      EPKI_INVALID_ALIAS,  //    certificates or keys.
 
       N_TYPES
     };
@@ -90,6 +94,7 @@ namespace openvpn {
 
     struct Connected;
 
+    // The base class for all events.
     class Base : public RC<thread_safe_refcount>
     {
     public:
@@ -124,6 +129,9 @@ namespace openvpn {
     private:
       Type id_;
     };
+
+    // Specific client events.  Some events have no additional data attached to them,
+    // while other events (such as Connected) have many additional data fields.
 
     struct Resolve : public Base
     {

@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// useful constructions for template methods that want to parse or get
+// information about particular types
+
 #ifndef OPENVPN_COMMON_TYPEINFO_H
 #define OPENVPN_COMMON_TYPEINFO_H
 

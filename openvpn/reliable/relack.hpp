@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Handle ACK tracking for reliability layer
+
 #ifndef OPENVPN_RELIABLE_RELACK_H
 #define OPENVPN_RELIABLE_RELACK_H
 

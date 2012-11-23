@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This is a general-purpose logging framework that allows for OPENVPN_LOG and
+// OPENVPN_LOG_NTNL macros to dispatch logging data to a thread-local handler.
+
 #ifndef OPENVPN_LOG_LOGTHREAD_H
 #define OPENVPN_LOG_LOGTHREAD_H
 

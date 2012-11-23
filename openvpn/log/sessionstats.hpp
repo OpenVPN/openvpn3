@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A class that handles statistics tracking in an OpenVPN session
+
 #ifndef OPENVPN_LOG_SESSIONSTATS_H
 #define OPENVPN_LOG_SESSIONSTATS_H
 

@@ -4,6 +4,8 @@
 //
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 
+// Denote the data in an HTTP header
+
 #ifndef OPENVPN_HTTP_HEADER_H
 #define OPENVPN_HTTP_HEADER_H
 

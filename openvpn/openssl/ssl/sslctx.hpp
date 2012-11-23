@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the OpenSSL SSL API as defined in <openssl/ssl.h>
+// so that it can be used as the SSL layer by the OpenVPN core.
+
 #ifndef OPENVPN_OPENSSL_SSL_SSLCTX_H
 #define OPENVPN_OPENSSL_SSL_SSLCTX_H
 

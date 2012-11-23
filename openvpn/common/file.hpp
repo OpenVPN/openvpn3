@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Basic file-handling methods.
+
 #ifndef OPENVPN_COMMON_FILE_H
 #define OPENVPN_COMMON_FILE_H
 
@@ -25,6 +27,8 @@ namespace openvpn {
   OPENVPN_UNTAGGED_EXCEPTION_INHERIT(file_exception, file_is_binary);
   OPENVPN_UNTAGGED_EXCEPTION_INHERIT(file_exception, file_not_utf8);
 
+  // Read text from file via stream approach that doesn't require that we
+  // establish the length of the file in advance.
   inline std::string read_text_simple(const std::string& filename)
   {
     std::ifstream ifs(filename.c_str());
@@ -36,6 +40,7 @@ namespace openvpn {
     return str;
   }
 
+  // Read a file (may be text or binary).
   inline BufferPtr read_binary(const std::string& filename,
 			       const boost::uint64_t max_size = 0,
 			       const unsigned int buffer_flags = 0)
@@ -66,6 +71,7 @@ namespace openvpn {
     return b;
   }
 
+  // Read a text file as a std::string, throw error if file is binary
   inline std::string read_text(const std::string& filename, const boost::uint64_t max_size = 0)
   {
     BufferPtr bp = read_binary(filename, max_size);
@@ -74,6 +80,7 @@ namespace openvpn {
     return std::string((const char *)bp->c_data(), bp->size());
   }
 
+  // Read a UTF-8 file as a std::string, throw errors if file is binary or malformed UTF-8
   inline std::string read_text_utf8(const std::string& filename, const boost::uint64_t max_size = 0)
   {
     BufferPtr bp = read_binary(filename, max_size);

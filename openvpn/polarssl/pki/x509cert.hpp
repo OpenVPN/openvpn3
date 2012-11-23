@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap a PolarSSL x509_cert object
+
 #ifndef OPENVPN_POLARSSL_PKI_X509CERT_H
 #define OPENVPN_POLARSSL_PKI_X509CERT_H
 

@@ -5,11 +5,17 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A set of lexical analyzer classes.  These classes can be combined
+// with the methods in split.hpp to create parsers.
+
 #ifndef OPENVPN_COMMON_LEX_H
 #define OPENVPN_COMMON_LEX_H
 
 namespace openvpn {
 
+  // Define a common interpretation of what constitutes a space character.
+  // This class (or others that define an is_space method) is used as a
+  // template parameter to methods in split.hpp.
   struct SpaceMatch
   {
     static bool is_space(char c)
@@ -21,6 +27,7 @@ namespace openvpn {
     }
   };
 
+  // A basic lexical analyzer that understands quoting
   class StandardLex
   {
   public:
@@ -61,6 +68,8 @@ namespace openvpn {
     int ch;
   };
 
+  // A null lexical analyzer has no special understanding
+  // of any particular string character.
   class NullLex
   {
   public:

@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// process-wide initialization for underlying cryptographic engines
+
 #ifndef OPENVPN_INIT_ENGINEINIT_H
 #define OPENVPN_INIT_ENGINEINIT_H
 

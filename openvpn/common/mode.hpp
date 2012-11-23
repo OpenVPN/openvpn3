@@ -8,6 +8,8 @@
 #ifndef OPENVPN_COMMON_MODE_H
 #define OPENVPN_COMMON_MODE_H
 
+// A client/server mode class.
+
 namespace openvpn {
   class Mode
   {

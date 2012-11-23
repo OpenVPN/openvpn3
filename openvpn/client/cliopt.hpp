@@ -5,6 +5,12 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// These classes encapsulate the basic setup of the various objects needed to
+// create an OpenVPN client session.  The basic idea here is to look at both
+// compile time settings (i.e. crypto/SSL/random libraries), and run-time
+// (such as transport layer using UDP, TCP, or HTTP-proxy), and
+// build the actual objects that will be used to construct a client session.
+
 #ifndef OPENVPN_CLIENT_CLIOPT_H
 #define OPENVPN_CLIENT_CLIOPT_H
 

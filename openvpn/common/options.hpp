@@ -5,6 +5,31 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// General-purpose options parser, used to parse the OpenVPN configuration
+// file as well as the server-pushed options list.  Note that these classes
+// don't get into the interpretation or typing of options -- they only care
+// about parsing the options into lists of strings, and then presenting the
+// complete configuration file as a list of options.
+//
+// The parser understands the general grammar of OpenVPN configuration
+// files including:
+//
+// 1. option/argument parsing, quoting, escaping, and comments,
+// 2. inline directives such as
+//      <ca>
+//      ...
+//      </ca>
+// 3. and meta-directives such as those used by OpenVPN Access Server such as:
+//    # OVPN_ACCESS_SERVER_USERNAME=test
+//
+// The basic organization of the parser is as follows:
+//
+//   Option -- a list of strings, where the first string is the
+//     option/directive name, and subsequent strings are arguments.
+//
+//   OptionList -- a list of Options that also contains a map for
+//     optimal lookup of specific options
+
 #ifndef OPENVPN_COMMON_OPTIONS_H
 #define OPENVPN_COMMON_OPTIONS_H
 

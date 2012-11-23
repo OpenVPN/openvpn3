@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Pseudo-random number generator used for medium strength cryptographic
+// items such as IVs but not keys.
+
 #ifndef OPENVPN_RANDOM_PRNG_H
 #define OPENVPN_RANDOM_PRNG_H
 

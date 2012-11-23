@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// General purpose class to split a multi-line string into lines.
+
 #ifndef OPENVPN_COMMON_SPLITLINES_H
 #define OPENVPN_COMMON_SPLITLINES_H
 

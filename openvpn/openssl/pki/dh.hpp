@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap an OpenSSL DH object
+
 #ifndef OPENVPN_OPENSSL_PKI_DH_H
 #define OPENVPN_OPENSSL_PKI_DH_H
 

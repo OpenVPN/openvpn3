@@ -5,6 +5,12 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This class encapsulates the state of authentication credentials
+// maintained by an OpenVPN client.  It understands dynamic
+// challenge/response cookies, and Session Token IDs (where the
+// password in the object is wiped and replaced by a token used
+// for further authentications).
+
 #ifndef OPENVPN_CLIENT_CLICREDS_H
 #define OPENVPN_CLIENT_CLICREDS_H
 

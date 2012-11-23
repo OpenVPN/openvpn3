@@ -10,6 +10,9 @@
 
 #include <cstddef> // defines size_t and NULL
 
+// Constant-time memory comparison method.  Can be used in
+// security-sensitive contexts to inhibit timing attacks.
+
 namespace openvpn {
 
   // Is value of type T aligned on A boundary?

@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// fixme-ovpn3 -- move to unused
+
 #ifndef OPENVPN_COMMON_WEAKBIND_H
 #define OPENVPN_COMMON_WEAKBIND_H
 

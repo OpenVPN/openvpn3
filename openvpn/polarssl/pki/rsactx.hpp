@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap a PolarSSL rsa_context object.
+
 #ifndef OPENVPN_POLARSSL_PKI_RSACTX_H
 #define OPENVPN_POLARSSL_PKI_RSACTX_H
 

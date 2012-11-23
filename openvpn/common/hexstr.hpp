@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A collection of functions for rendering and parsing hexadecimal strings
+
 #ifndef OPENVPN_COMMON_HEXSTR_H
 #define OPENVPN_COMMON_HEXSTR_H
 

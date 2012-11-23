@@ -17,6 +17,9 @@
 #include <openvpn/common/hexstr.hpp>
 
 namespace openvpn {
+
+  // Fundamental class for representing an ethernet MAC address.
+
   class MACAddr {
   public:
     MACAddr()

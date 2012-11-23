@@ -5,6 +5,11 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Handle pushed option list "continuations".  This is where multiple
+// option lists are pushed by the server, if an option list doesn't fit
+// into the standard 1024 byte buffer.  This class will aggregate the
+// options.
+
 #ifndef OPENVPN_OPTIONS_CONTINUATION_H
 #define OPENVPN_OPTIONS_CONTINUATION_H
 

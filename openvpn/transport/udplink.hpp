@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Low-level UDP transport object.
+
 #ifndef OPENVPN_TRANSPORT_UDPLINK_H
 #define OPENVPN_TRANSPORT_UDPLINK_H
 

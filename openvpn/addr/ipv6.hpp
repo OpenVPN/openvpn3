@@ -25,6 +25,8 @@ namespace openvpn {
     class Addr;
   }
 
+  // Fundamental classes for representing an IPv6 IP address.
+
   namespace IPv6 {
 
     OPENVPN_SIMPLE_EXCEPTION(ipv6_render_exception);

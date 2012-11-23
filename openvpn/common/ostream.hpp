@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A helper macro for setting up an arbitrary class
+// to support stringstream concatenation using <<
+
 #ifndef OPENVPN_COMMON_OSTREAM_H
 #define OPENVPN_COMMON_OSTREAM_H
 

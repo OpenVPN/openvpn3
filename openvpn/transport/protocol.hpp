@@ -17,6 +17,7 @@
 #include <openvpn/common/options.hpp>
 
 namespace openvpn {
+// A class that encapsulates a transport protocol.
   class Protocol
   {
   public:

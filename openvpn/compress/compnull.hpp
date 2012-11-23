@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A null compression class.
+
 #ifndef OPENVPN_COMPRESS_COMPNULL_H
 #define OPENVPN_COMPRESS_COMPNULL_H
 

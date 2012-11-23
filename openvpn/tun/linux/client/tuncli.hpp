@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Client tun interface for Linux.
+
 #ifndef OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H
 #define OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H
 

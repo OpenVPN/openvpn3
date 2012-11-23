@@ -5,6 +5,34 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// These templates define the fundamental data buffer classes used by the
+// OpenVPN core.  Normally OpenVPN uses buffers of unsigned chars, but the
+// templatization of the classes would allow buffers of other types to
+// be defined.
+//
+// Fundamentally a buffer is an object with 4 fields:
+//
+// 1. a pointer to underlying data array
+// 2. the capacity of the underlying data array
+// 3. an offset into the data array
+// 4. the size of the referenced data within the array
+//
+// The BufferType template is the lowest-level buffer class template.  It refers
+// to a buffer but without any notion of ownership of the underlying data.
+//
+// The BufferAllocatedType template is a higher-level template that inherits
+// from BufferType but which asserts ownership over the resources of the buffer --
+// for example, it will free the underlying buffer in its destructor.
+//
+// Since most of the time, we want our buffers to be made out of unsigned chars,
+// some typedefs at the end of the file define common instantations for the
+// BufferType and BufferAllocatedType templates.
+//
+// Buffer            : a simple buffer of unsigned char without ownership semantics
+// ConstBuffer       : like buffer but where the data pointed to by the buffer is const
+// BufferAllocated   : an allocated Buffer with ownership semantics
+// BufferPtr         : a smart, reference-counted pointer to a BufferAllocated
+
 #ifndef OPENVPN_BUFFER_BUFFER_H
 #define OPENVPN_BUFFER_BUFFER_H
 
@@ -29,7 +57,8 @@
 
 namespace openvpn {
 
-class BufferException : public std::exception
+  // special-purpose exception class for Buffer classes
+  class BufferException : public std::exception
   {
   public:
     enum Status {

@@ -26,8 +26,7 @@
 // layer is unreliable, such as UDP.  The OpenVPN protocol implementation in
 // proto.hpp (ProtoContext) layers on top of ProtoStackBase.
 // ProtoStackBase is independent of any particular SSL implementation, and
-// accepts the SSL object type as a template parameter.  See OpenSSLContext
-// and AppleSSLContext for existing implementations.
+// accepts the SSL object type as a template parameter.
 
 namespace openvpn {
 

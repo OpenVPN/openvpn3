@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A scoped file descriptor that is automatically closed by its destructor.
+
 #ifndef OPENVPN_COMMON_SCOPED_FD_H
 #define OPENVPN_COMMON_SCOPED_FD_H
 
@@ -14,7 +16,6 @@
 
 namespace openvpn {
 
-  // like boost::scoped_ptr but has release method
   class ScopedFD : boost::noncopyable
   {
   public:

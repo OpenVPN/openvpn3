@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// fixme-ovpn3 -- move to plugin
+
 #ifndef OPENVPN_APPLECRYPTO_UTIL_REACHABLE_H
 #define OPENVPN_APPLECRYPTO_UTIL_REACHABLE_H
 

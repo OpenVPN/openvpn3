@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// ProtoContext, the fundamental OpenVPN protocol implementation.
+// It can be used by OpenVPN clients, servers, or unit tests.
+
 #ifndef OPENVPN_SSL_PROTO_H
 #define OPENVPN_SSL_PROTO_H
 

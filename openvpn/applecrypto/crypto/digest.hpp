@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the Apple digest API defined in <CommonCrypto/CommonDigest.h>
+// so that it can be used as part of the crypto layer of the OpenVPN core.
+
 #ifndef OPENVPN_APPLECRYPTO_CRYPTO_DIGEST_H
 #define OPENVPN_APPLECRYPTO_CRYPTO_DIGEST_H
 

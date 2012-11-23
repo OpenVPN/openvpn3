@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Basic definitions and includes for multi-threaded code.
+
 #ifndef OPENVPN_COMMON_THREAD_H
 #define OPENVPN_COMMON_THREAD_H
 

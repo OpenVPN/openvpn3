@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Implement the TLS-PRF function, used by ProtoContext.
+
 #ifndef OPENVPN_SSL_TLSPRF_H
 #define OPENVPN_SSL_TLSPRF_H
 

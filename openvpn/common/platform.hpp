@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// define a TARGET_x macro that describes our build target
+
 #ifndef OPENVPN_COMMON_PLATFORM_H
 #define OPENVPN_COMMON_PLATFORM_H
 

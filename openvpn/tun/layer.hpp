@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Class that encapsulates the definition of an OSI layer.
+
 #ifndef OPENVPN_TUN_LAYER_H
 #define OPENVPN_TUN_LAYER_H
 

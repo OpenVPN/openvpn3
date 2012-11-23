@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A general-purpose circular list collection class.
+// Used by the OpenVPN anti-replay logic.
+
 #ifndef OPENVPN_COMMON_CIRC_LIST_H
 #define OPENVPN_COMMON_CIRC_LIST_H
 

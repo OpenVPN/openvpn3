@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// If we are linked with the LZO library, use it.  Otherwise default
+// to an intrinstic LZO implementation that only handles decompression.
+
 #ifndef OPENVPN_COMPRESS_LZOSELECT_H
 #define OPENVPN_COMPRESS_LZOSELECT_H
 

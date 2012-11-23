@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// General-purpose HMAC classes that are independent of the underlying CRYPTO_API
+
 #ifndef OPENVPN_CRYPTO_HMAC_H
 #define OPENVPN_CRYPTO_HMAC_H
 

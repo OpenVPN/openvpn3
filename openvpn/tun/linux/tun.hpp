@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Low-level tun interface driver for Linux, client/server independent.
+
 #ifndef OPENVPN_TUN_LINUX_TUN_H
 #define OPENVPN_TUN_LINUX_TUN_H
 

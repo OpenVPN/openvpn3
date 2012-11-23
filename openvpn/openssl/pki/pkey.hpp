@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap an OpenSSL EVP_PKEY object
+
 #ifndef OPENVPN_OPENSSL_PKI_PKEY_H
 #define OPENVPN_OPENSSL_PKI_PKEY_H
 

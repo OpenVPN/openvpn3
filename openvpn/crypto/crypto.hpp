@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A general purpose container for OpenVPN protocol encrypt and decrypt objects.
+
 #ifndef OPENVPN_CRYPTO_CRYPTO_H
 #define OPENVPN_CRYPTO_CRYPTO_H
 

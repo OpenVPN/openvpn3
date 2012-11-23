@@ -22,6 +22,8 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/applecrypto/cf/cf.hpp>
 
+// Define C++ wrappings for Apple security-related objects.
+
 namespace openvpn {
   namespace CF {
     OPENVPN_CF_WRAP(Cert, cert_cast, SecCertificateRef, SecCertificateGetTypeID)

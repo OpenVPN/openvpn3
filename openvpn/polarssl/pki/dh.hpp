@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap a PolarSSL dhm_context object (Diffie Hellman parameters).
+
 #ifndef OPENVPN_POLARSSL_PKI_DH_H
 #define OPENVPN_POLARSSL_PKI_DH_H
 

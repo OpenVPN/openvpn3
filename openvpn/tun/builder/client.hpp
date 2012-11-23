@@ -5,6 +5,10 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Generic, cross-platform tun interface that drives a TunBuilderBase API.
+// Fully supports IPv6.  To make this work on a given platform, define
+// a TunBuilderBase for the platform.
+
 #ifndef OPENVPN_TUN_BUILDER_CLIENT_H
 #define OPENVPN_TUN_BUILDER_CLIENT_H
 
@@ -20,9 +24,6 @@
 #include <openvpn/options/rgopt.hpp>
 
 namespace openvpn {
-
-  // Generic tun interface that drives a TunBuilderBase API.
-  // Used on Android and iOS.
   namespace TunBuilderClient {
 
     // struct used to pass received tun packets

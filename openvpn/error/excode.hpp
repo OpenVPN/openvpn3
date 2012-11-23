@@ -14,6 +14,7 @@
 
 namespace openvpn {
 
+  // Define an exception object that allows an Error::Type code to be thrown
   class ExceptionCode : public std::exception
   {
     enum {

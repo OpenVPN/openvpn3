@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A 64-bit session ID, used by ProtoContext.
+
 #ifndef OPENVPN_SSL_PSID_H
 #define OPENVPN_SSL_PSID_H
 

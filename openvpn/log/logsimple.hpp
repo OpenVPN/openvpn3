@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Define simple logging macros that simply output to stdout
+
 #ifndef OPENVPN_LOG_LOGSIMPLE_H
 #define OPENVPN_LOG_LOGSIMPLE_H
 

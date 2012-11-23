@@ -5,6 +5,14 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This is a special OpenVPN-specific implementation of LZO decompression.
+// It is generally only used when OpenVPN is built without linkage to the
+// actual LZO library, but where we want to maintain compatibility with
+// peers that might send us LZO-compressed packets.
+//
+// It is significantly faster than LZO 2 on ARM because it makes heavy use
+// of branch prediction hints.
+
 #ifndef OPENVPN_COMPRESS_LZOASYM_IMPL_H
 #define OPENVPN_COMPRESS_LZOASYM_IMPL_H
 

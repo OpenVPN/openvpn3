@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// PolarSSL exception class that allows a PolarSSL error code
+// to be represented.
+
 #ifndef OPENVPN_POLARSSL_UTIL_ERROR_H
 #define OPENVPN_POLARSSL_UTIL_ERROR_H
 
@@ -40,7 +43,8 @@ namespace openvpn {
       errnum = polarssl_errnum;
       errtxt = "PolarSSL: " + error_text + " : " + polarssl_errtext(polarssl_errnum);
 
-      // for certain PolarSSL errors, translate them to an OpenVPN error code
+      // for certain PolarSSL errors, translate them to an OpenVPN error code,
+      // so they can be propagated up to the higher levels (such as UI level)
       switch (errnum) {
       case POLARSSL_ERR_X509_CERT_VERIFY_FAILED:
 	set_code(Error::CERT_VERIFY_FAIL, true);

@@ -5,6 +5,10 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the Apple Cryptographic Random API defined in <Security/SecRandom.h>
+// so that it can be used as the primary source of cryptographic entropy by
+// the OpenVPN core.
+
 #ifndef OPENVPN_APPLECRYPTO_UTIL_RAND_H
 #define OPENVPN_APPLECRYPTO_UTIL_RAND_H
 

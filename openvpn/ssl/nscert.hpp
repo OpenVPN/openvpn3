@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Parse the ns-cert-type option.
+
 #ifndef OPENVPN_SSL_NSCERT_H
 #define OPENVPN_SSL_NSCERT_H
 

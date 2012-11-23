@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Low-level methods used to implement NTLMv2 proxy authentication
+
 #ifndef OPENVPN_PROXY_NTLM_H
 #define OPENVPN_PROXY_NTLM_H
 

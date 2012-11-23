@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This class handles parsing and representation of redirect-gateway
+// and redirect-private directives.
+
 #ifndef OPENVPN_OPTIONS_RGOPT_H
 #define OPENVPN_OPTIONS_RGOPT_H
 

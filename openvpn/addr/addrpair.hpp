@@ -18,6 +18,8 @@
 namespace openvpn {
   namespace IP {
 
+    // AddrMaskPair is basically an object that combines an IP address (v4 or v6)
+    // with a netmask or prefix length.
     struct AddrMaskPair
     {
     public:

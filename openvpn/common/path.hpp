@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// General-purpose methods for handling filesystem pathnames
+
 #ifndef OPENVPN_COMMON_PATH_H
 #define OPENVPN_COMMON_PATH_H
 

@@ -12,6 +12,7 @@
 
 namespace openvpn {
 
+  // A hasher that combines a data hash with a stateful seed.
   template <typename T>
   class HashInitialSeed
   {

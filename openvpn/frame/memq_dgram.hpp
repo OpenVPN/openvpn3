@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A queue of datagram buffers for handling sequences of UDP packets
+
 #ifndef OPENVPN_FRAME_MEMQ_DGRAM_H
 #define OPENVPN_FRAME_MEMQ_DGRAM_H
 

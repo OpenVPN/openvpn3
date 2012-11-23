@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Method to set up a particular OpenSSL engine type
+
 #ifndef OPENVPN_OPENSSL_UTIL_ENGINE_H
 #define OPENVPN_OPENSSL_UTIL_ENGINE_H
 

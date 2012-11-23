@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// General purpose string-manipulation functions.
+
 #ifndef OPENVPN_COMMON_STRING_H
 #define OPENVPN_COMMON_STRING_H
 
@@ -18,6 +20,8 @@
 
 namespace openvpn {
   namespace string {
+    // case insensitive compare functions
+
     inline int strcasecmp(const char *s1, const char *s2)
     {
 #ifdef OPENVPN_PLATFORM_WIN
@@ -42,7 +46,7 @@ namespace openvpn {
       return strcasecmp(s1.c_str(), s2.c_str());
     }
 
-    /* Like strncpy but makes sure dest is always null terminated */
+    // Like strncpy but makes sure dest is always null terminated
     inline void strncpynt (char *dest, const char *src, size_t maxlen)
     {
       strncpy (dest, src, maxlen);

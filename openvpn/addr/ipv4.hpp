@@ -23,6 +23,8 @@ namespace openvpn {
     class Addr;
   }
 
+  // Fundamental classes for representing an IPv4 IP address.
+
   namespace IPv4 {
 
     OPENVPN_SIMPLE_EXCEPTION(ipv4_render_exception);

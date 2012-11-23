@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the PolarSSL cipher API defined in <polarssl/cipher.h> so
+// that it can be used as part of the crypto layer of the OpenVPN core.
+
 #ifndef OPENVPN_POLARSSL_CRYPTO_CIPHER_H
 #define OPENVPN_POLARSSL_CRYPTO_CIPHER_H
 

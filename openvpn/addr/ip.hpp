@@ -19,6 +19,9 @@
 #include <openvpn/addr/ipv6.hpp>
 
 namespace openvpn {
+  // This is our fundamental IP address class that handles IPv4 or IPv6
+  // IP addresses.  It is implemented as a discriminated union of IPv4::Addr
+  // and IPv6::Addr.
   namespace IP {
 
     OPENVPN_SIMPLE_EXCEPTION(ip_addr_unspecified);

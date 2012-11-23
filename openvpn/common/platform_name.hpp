@@ -13,6 +13,7 @@
 
 namespace openvpn {
 
+  // return a string that describes our platform
   inline const char *platform_name()
   {
 #if defined(OPENVPN_PLATFORM_WIN)

@@ -13,6 +13,7 @@
 
 namespace openvpn {
 
+  // Given a random API (RAND_API), return a T object that has been filled with random bits
   template <typename T, typename RAND_API>
   inline T rand_type(RAND_API& rng)
   {
@@ -21,6 +22,7 @@ namespace openvpn {
     return ret;
   }
 
+  // Return a RandomIntBase object that has been seeded using provided random API (RAND_API)
   template <typename RAND_API>
   class RandomInt : public RandomIntBase
   {

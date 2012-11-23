@@ -14,6 +14,8 @@
 
 #include <openvpn/common/exception.hpp>
 
+// An exception object that encapsulates Apple Core Foundation errors.
+
 namespace openvpn {
 
   // string exception class

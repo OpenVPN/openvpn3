@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// HTTP proxy transport object.
+
 #ifndef OPENVPN_TRANSPORT_CLIENT_HTTPCLI_H
 #define OPENVPN_TRANSPORT_CLIENT_HTTPCLI_H
 

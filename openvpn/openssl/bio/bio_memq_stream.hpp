@@ -5,11 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-/*
- * This code implements an OpenSSL BIO object based on the MemQ buffer
- * queue object.  This is done to provide a memory BIO with datagram
- * semantics to use with DTLS sessions.
- */
+// This code implements an OpenSSL BIO object for streams based on the
+// MemQ buffer queue object.
 
 #ifndef OPENVPN_OPENSSL_BIO_BIO_MEMQ_STREAM_H
 #define OPENVPN_OPENSSL_BIO_BIO_MEMQ_STREAM_H

@@ -10,6 +10,10 @@
 
 #include <openvpn/applecrypto/cf/cf.hpp>
 
+// These methods build on the Wrapper classes for Apple Core Foundation objects
+// defined in cf.hpp.  They add additional convenience methods, such as dictionary
+// lookup.
+
 namespace openvpn {
   namespace CF {
 

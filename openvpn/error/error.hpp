@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Define OpenVPN error codes and a method to convert them to a string representation
+
 #ifndef OPENVPN_ERROR_ERROR_H
 #define OPENVPN_ERROR_ERROR_H
 

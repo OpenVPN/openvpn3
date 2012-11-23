@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A queue of buffers for handling streamed data such as data received
+// from or to be sent to a TCP socket
+
 #ifndef OPENVPN_FRAME_MEMQ_STREAM_H
 #define OPENVPN_FRAME_MEMQ_STREAM_H
 

@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Parse the remote-cert-tls, remote-cert-ku, and remote-cert-eku options.
+
 #ifndef OPENVPN_SSL_KUPARSE_H
 #define OPENVPN_SSL_KUPARSE_H
 

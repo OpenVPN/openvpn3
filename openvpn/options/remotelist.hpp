@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// These classes handle parsing and representation of OpenVPN "remote" directives.
+// <connection> blocks are supported.
+
 #ifndef OPENVPN_OPTIONS_REMOTELIST_H
 #define OPENVPN_OPTIONS_REMOTELIST_H
 

@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Helper class to parse certain options needed by ProtoContext.
+
 #ifndef OPENVPN_SSL_PROTO_CONTEXT_OPTIONS_H
 #define OPENVPN_SSL_PROTO_CONTEXT_OPTIONS_H
 

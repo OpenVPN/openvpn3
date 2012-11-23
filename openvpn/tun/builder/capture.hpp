@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// An artificial TunBuilder object, used to log the tun builder settings,
+// but doesn't actually configure anything.
+
 #ifndef OPENVPN_TUN_BUILDER_CAPTURE_H
 #define OPENVPN_TUN_BUILDER_CAPTURE_H
 

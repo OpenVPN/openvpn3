@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Function to return the current date/time as a string.
+
 #ifndef OPENVPN_TIME_TIMESTR_H
 #define OPENVPN_TIME_TIMESTR_H
 

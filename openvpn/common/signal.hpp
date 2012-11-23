@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A simple class that allows an arbitrary set of posix signals to be
+// associated with an Asio handler.
+
 #ifndef OPENVPN_COMMON_SIGNAL_H
 #define OPENVPN_COMMON_SIGNAL_H
 
@@ -32,8 +35,8 @@ namespace openvpn {
 #endif
     };
 
-    template <typename StopHandler>
-    void register_signals(StopHandler stop_handler, unsigned int sigmask = (S_SIGINT|S_SIGTERM|S_SIGQUIT))
+    template <typename SignalHandler>
+    void register_signals(SignalHandler stop_handler, unsigned int sigmask = (S_SIGINT|S_SIGTERM|S_SIGQUIT))
     {
       if (sigmask & S_SIGINT)
 	signals_.add(SIGINT);

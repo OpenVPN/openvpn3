@@ -14,6 +14,7 @@
 
 namespace openvpn {
 
+  // process-wide initialization for crypto subsystem
   class crypto_init
   {
 #if defined(USE_OPENSSL)

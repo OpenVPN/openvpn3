@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Base class and factory for compression/decompression objects.
+// Currently we support LZO, Snappy, and LZ4 implementations.
+
 #ifndef OPENVPN_COMPRESS_COMPRESS_H
 #define OPENVPN_COMPRESS_COMPRESS_H
 
@@ -124,7 +127,7 @@ namespace openvpn {
     CompressContext() : type_(NONE) {}
 
     explicit CompressContext(const Type t, const bool asym)
-      : asym_(asym) // compress on peer -> self only
+      : asym_(asym) // asym indicates asymmetrical compression where only downlink is compressed
     {
       if (!compressor_available(t))
 	throw compressor_unavailable();

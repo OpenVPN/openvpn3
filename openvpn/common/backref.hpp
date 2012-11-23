@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A low-level backward reference object.
+
 #ifndef OPENVPN_COMMON_BACKREF_H
 #define OPENVPN_COMMON_BACKREF_H
 

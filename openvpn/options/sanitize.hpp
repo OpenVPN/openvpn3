@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Sanitize certain kinds of strings before they are output to the log file.
+
 #ifndef OPENVPN_OPTIONS_SANITIZE_H
 #define OPENVPN_OPTIONS_SANITIZE_H
 

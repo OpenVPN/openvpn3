@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Abstract base classes for client tun interface objects.
+
 #ifndef OPENVPN_TUN_CLIENT_TUNBASE_H
 #define OPENVPN_TUN_CLIENT_TUNBASE_H
 
@@ -19,6 +21,7 @@
 
 namespace openvpn {
 
+  // Base class for objects that implement a client tun interface.
   struct TunClient : public RC<thread_unsafe_refcount>
   {
     typedef boost::intrusive_ptr<TunClient> Ptr;
@@ -31,6 +34,9 @@ namespace openvpn {
     virtual std::string vpn_ip6() const = 0;
   };
 
+  // Base class for parent of tun interface object, used to
+  // communicate received data packets, exceptions, and progress
+  // notifications.
   struct TunClientParent
   {
     virtual void tun_recv(BufferAllocated& buf) = 0;
@@ -42,6 +48,7 @@ namespace openvpn {
     virtual void tun_connected() = 0;
   };
 
+  // Factory for tun interface objects.
   struct TunClientFactory : public RC<thread_unsafe_refcount>
   {
     typedef boost::intrusive_ptr<TunClientFactory> Ptr;

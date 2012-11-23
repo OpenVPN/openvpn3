@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Encapsulate the state of a static or dynamic authentication challenge.
+
 #ifndef OPENVPN_AUTH_CR_H
 #define OPENVPN_AUTH_CR_H
 

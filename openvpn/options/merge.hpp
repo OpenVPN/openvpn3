@@ -5,6 +5,11 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This class will read a standard OpenVPN config file that might contain
+// references to other files, and it will merge the included files into the
+// config file, using inline configuration syntax, to produce a single,
+// unified config file.
+
 #ifndef OPENVPN_OPTIONS_MERGE_H
 #define OPENVPN_OPTIONS_MERGE_H
 

@@ -5,6 +5,22 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// These are our fundamental Time and Time Duration classes.
+// We normally deal with time in units of 1/1024 of a second.
+// This allows us to use 32-bit values to represent most time
+// and time duration values, but still gives us reasonable
+// accuracy.  Using units of 1/1024 of a second vs. straight
+// milliseconds gives us an advantage of not needing to do
+// very much integer multiplication and division which can
+// help us on platforms such as ARM that lack integer division
+// instructions.  Note that the core data type used to store
+// the time is an unsigned long, so it will automatically
+// expand to 64 bits on 64 bit machines.  Using a 32-bit
+// data type for time durations is normally fine for clients,
+// but imposes a wraparound limit of ~ 48 days.  Servers
+// should always use a 64-bit data type to avoid this
+// limitation.
+
 #ifndef OPENVPN_TIME_TIME_H
 #define OPENVPN_TIME_TIME_H
 

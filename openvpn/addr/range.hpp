@@ -16,6 +16,11 @@
 
 namespace openvpn {
   namespace IP {
+
+    // Denote a range of IP addresses with a start and extent,
+    // where A represents an address class.
+    // A should be a network address class such as IP::Addr, IPv4::Addr, or IPv6::Addr.
+
     template <typename A>
     class Range
     {

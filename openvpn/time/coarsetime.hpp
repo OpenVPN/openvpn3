@@ -12,41 +12,44 @@
 
 namespace openvpn {
 
-class CoarseTime
-{
-public:
-  CoarseTime() {}
+  // Used to compare two time objects within the accuracy limits
+  // defined by pre and post.
 
-  CoarseTime(const Time::Duration& pre, const Time::Duration& post)
-    : pre_(pre), post_(post) {}
-
-  void init(const Time::Duration& pre, const Time::Duration& post)
+  class CoarseTime
   {
-    pre_ = pre;
-    post_ = post;
-  }
+  public:
+    CoarseTime() {}
 
-  void reset(const Time& t) { time_ = t; }
-  void reset() { time_.reset(); }
+    CoarseTime(const Time::Duration& pre, const Time::Duration& post)
+      : pre_(pre), post_(post) {}
 
-  bool similar(const Time& t) const
-  {
-    if (time_.defined())
-      {
-	if (t >= time_)
-	  return (t - time_) <= post_;
-	else
-	  return (time_ - t) <= pre_;
-      }
-    else
-      return false;
-  }
+    void init(const Time::Duration& pre, const Time::Duration& post)
+    {
+      pre_ = pre;
+      post_ = post;
+    }
 
-private:
-  Time time_;
-  Time::Duration pre_;
-  Time::Duration post_;
-};
+    void reset(const Time& t) { time_ = t; }
+    void reset() { time_.reset(); }
+
+    bool similar(const Time& t) const
+    {
+      if (time_.defined())
+	{
+	  if (t >= time_)
+	    return (t - time_) <= post_;
+	  else
+	    return (time_ - t) <= pre_;
+	}
+      else
+	return false;
+    }
+
+  private:
+    Time time_;
+    Time::Duration pre_;
+    Time::Duration post_;
+  };
 
 } // namespace openvpn
 

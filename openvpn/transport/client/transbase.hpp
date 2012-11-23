@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Abstract base classes for client transport objects that implement UDP, TCP,
+// HTTP Proxy, etc.
+
 #ifndef OPENVPN_TRANSPORT_CLIENT_TRANSBASE_H
 #define OPENVPN_TRANSPORT_CLIENT_TRANSBASE_H
 
@@ -19,6 +22,7 @@
 
 namespace openvpn {
 
+  // Base class for client transport object.
   struct TransportClient : public RC<thread_unsafe_refcount>
   {
     typedef boost::intrusive_ptr<TransportClient> Ptr;
@@ -31,6 +35,9 @@ namespace openvpn {
     virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const = 0;
   };
 
+  // Base class for parent of client transport object, used by client transport
+  // objects to communicate received data packets, exceptions, and progress
+  // notifications.
   struct TransportClientParent
   {
     virtual void transport_recv(BufferAllocated& buf) = 0;
@@ -44,6 +51,7 @@ namespace openvpn {
     virtual void transport_connecting() = 0;
   };
 
+  // Factory for client transport object.
   struct TransportClientFactory : public RC<thread_unsafe_refcount>
   {
     typedef boost::intrusive_ptr<TransportClientFactory> Ptr;

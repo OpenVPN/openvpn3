@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// A basic DNS cache.
+
 #ifndef OPENVPN_TRANSPORT_ENDPOINT_CACHE_H
 #define OPENVPN_TRANSPORT_ENDPOINT_CACHE_H
 

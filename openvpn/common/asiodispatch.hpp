@@ -5,6 +5,11 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// These classes define function objects to be used as asynchronous callbacks
+// for Asio methods.  Think of these as optimized special cases of function
+// objects that could be more generally (but perhaps less optimally) defined
+// with boost::bind.
+
 #ifndef OPENVPN_COMMON_ASIODISPATCH_H
 #define OPENVPN_COMMON_ASIODISPATCH_H
 

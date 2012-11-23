@@ -5,6 +5,33 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This file implements the top-level connection logic for an OpenVPN client
+// connection.  It is concerned with starting, stopping, pausing, and resuming
+// OpenVPN client connections.  It deals with retrying a connection and handles
+// the connection timeout.  It also deals with connection exceptions and understands
+// the difference between an exception that should halt any further reconnection
+// attempts (such as AUTH_FAILED), and other exceptions such as network errors
+// that would justify a retry.
+//
+// Some of the methods in the class (such as stop, pause, and reconnect) are often
+// called by another thread that is controlling the connection, therefore
+// thread-safe methods are provided where the thread-safe function posts a message
+// to the actual connection thread.
+//
+// In an OpenVPN client connection, the following object stack would be used:
+//
+// 1. class ClientConnect --
+//      The top level object in an OpenVPN client connection.
+// 2. class ClientProto::Session<RandomAPI, ClientCryptoAPI, ClientSSLAPI> --
+//      The OpenVPN client protocol object.
+// 3. ProtoContext<RAND_API, CRYPTO_API, SSL_API> --
+//      The core OpenVPN protocol implementation that is common to both
+//      client and server.
+// 4. ProtoStackBase<SSLContext, Packet> --
+//      The lowest-level class that implements the basic functionality of
+//      tunneling a protocol over a reliable or unreliable transport
+//      layer, but isn't specific to OpenVPN per-se.
+
 #ifndef OPENVPN_CLIENT_CLICONNECT_H
 #define OPENVPN_CLIENT_CLICONNECT_H
 
@@ -18,7 +45,7 @@ namespace openvpn {
   // ClientConnect implements an "always-try-to-reconnect" approach, with remote
   // list rotation.  Only gives up on auth failure or other fatal errors that
   // cannot be remedied by retrying.
-  struct ClientConnect : ClientProto::NotifyCallback, public RC<thread_safe_refcount>
+  class ClientConnect : ClientProto::NotifyCallback, public RC<thread_safe_refcount>
   {
   public:
     typedef boost::intrusive_ptr<ClientConnect> Ptr;

@@ -5,6 +5,10 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the OpenSSL Cryptographic Random API defined in <openssl/rand.h>
+// so that it can be used as the primary source of cryptographic entropy by
+// the OpenVPN core.
+
 #ifndef OPENVPN_OPENSSL_UTIL_RAND_H
 #define OPENVPN_OPENSSL_UTIL_RAND_H
 

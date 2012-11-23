@@ -9,6 +9,8 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+// Parse an HTTP reply
+
 #ifndef OPENVPN_HTTP_REPLY_H
 #define OPENVPN_HTTP_REPLY_H
 

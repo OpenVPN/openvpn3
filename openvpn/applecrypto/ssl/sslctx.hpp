@@ -5,6 +5,16 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Wrap the Apple SSL API as defined in <Security/SecureTransport.h>
+// so that it can be used as the SSL layer by the OpenVPN core.
+
+// Note that the Apple SSL API is missing some functionality (as of
+// Mac OS X 10.8) that makes it difficult to use as a drop in replacement
+// for OpenSSL or PolarSSL.  The biggest issue is that the API doesn't
+// allow an SSL context to be built out of PEM-based certificates and
+// keys.  It requires an "Identity" in the Keychain that was imported
+// by the user as a PKCS#12 file.
+
 #ifndef OPENVPN_APPLECRYPTO_SSL_SSLCTX_H
 #define OPENVPN_APPLECRYPTO_SSL_SSLCTX_H
 

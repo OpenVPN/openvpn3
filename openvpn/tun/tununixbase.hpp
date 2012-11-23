@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Low level tun device class for unix-family OSes.
+
 #ifndef OPENVPN_TUN_TUNUNIXBASE_H
 #define OPENVPN_TUN_TUNUNIXBASE_H
 

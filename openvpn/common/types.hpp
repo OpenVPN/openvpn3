@@ -5,6 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// define very basic types such as NULL, size_t, ssize_t, and count_t
+
 #ifndef OPENVPN_COMMON_TYPES_H
 #define OPENVPN_COMMON_TYPES_H
 

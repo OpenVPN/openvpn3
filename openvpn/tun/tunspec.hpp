@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Parse the argument of a "tun" or "tap" directive.  Also parse an optional
+// "/v4" or "/v6" after the tun name to denote IPv4 or IPv6 usage.
+
 #ifndef OPENVPN_TUN_TUNSPEC_H
 #define OPENVPN_TUN_TUNSPEC_H
 

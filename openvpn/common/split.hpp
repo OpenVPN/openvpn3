@@ -5,6 +5,10 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// General string-splitting methods.  These methods along with lexical analyzer
+// classes (such as those defined in lex.hpp and OptionList::LexComment) can be
+// used as a basis for parsers.
+
 #ifndef OPENVPN_COMMON_SPLIT_H
 #define OPENVPN_COMMON_SPLIT_H
 
@@ -26,6 +30,19 @@ namespace openvpn {
       void add_term() {}
     };
 
+    // Split a string using a character (such as ',') as a separator.
+    // Types:
+    //   V : string vector of return data
+    //   LEX : lexical analyzer class such as StandardLex
+    //   LIM : limit class such as OptionList::Limits
+    // Args:
+    //   ret : return data -- a list of strings
+    //   input : input string to be split
+    //   split_by : separator
+    //   flags : TRIM_LEADING_SPACES, TRIM_SPECIAL
+    //   max_terms : the size of the returned string list will be, at most, this value + 1.  Pass
+    //               ~0 to disable.
+    //   lim : an optional limits object such as OptionList::Limits
     template <typename V, typename LEX, typename LIM>
     inline void by_char_void(V& ret, const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=NULL)
     {
@@ -53,6 +70,7 @@ namespace openvpn {
       ret.push_back(term);
     }
 
+    // convenience method that returns data rather than modifying an in-place argument
     template <typename V, typename LEX, typename LIM>
     inline V by_char(const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=NULL)
     {
@@ -61,6 +79,16 @@ namespace openvpn {
       return ret;
     }
 
+    // Split a string using spaces as a separator.
+    // Types:
+    //   V : string vector of return data
+    //   LEX : lexical analyzer class such as StandardLex
+    //   SPACE : class that we use to differentiate between space and non-space chars
+    //   LIM : limit class such as OptionList::Limits
+    // Args:
+    //   ret : return data -- a list of strings
+    //   input : input string to be split
+    //   lim : an optional limits object such as OptionList::Limits
     template <typename V, typename LEX, typename SPACE, typename LIM>
     inline void by_space_void(V& ret, const std::string& input, LIM* lim=NULL)
     {
@@ -100,6 +128,7 @@ namespace openvpn {
 	}
     }
 
+    // convenience method that returns data rather than modifying an in-place argument
     template <typename V, typename LEX, typename SPACE, typename LIM>
     inline V by_space(const std::string& input, LIM* lim=NULL)
     {

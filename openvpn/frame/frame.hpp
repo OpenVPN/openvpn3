@@ -5,6 +5,9 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// Define Frame classes.  These classes act as a factory for standard protocol
+// buffers and also try to optimize the buffers for alignment.
+
 #ifndef OPENVPN_FRAME_FRAME_H
 #define OPENVPN_FRAME_FRAME_H
 

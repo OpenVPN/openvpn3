@@ -12,6 +12,8 @@
 
 namespace openvpn {
 
+  // Abstract base class used to provide an interface where core SSL implementation
+  // can use an external private key.
   class ExternalPKIBase
   {
   public:

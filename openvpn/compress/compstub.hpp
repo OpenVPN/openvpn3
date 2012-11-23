@@ -5,6 +5,13 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+// This is a "stub" compression object.  It acts like a compressor
+// in the sense that it plays along with compression framing in
+// the OpenVPN protocol, but it always sends packets with NO_COMPRESS
+// or NO_COMPRESS_SWAP compression status.  While it's not designed
+// to receive compressed packets, it will try to handle received LZO
+// packets, but it will never send compressed packets.
+
 #ifndef OPENVPN_COMPRESS_COMPSTUB_H
 #define OPENVPN_COMPRESS_COMPSTUB_H
 
