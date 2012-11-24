@@ -183,7 +183,7 @@ public:
   {
     Value* vp = cib->backref.value<Value>();
     if (vp)
-      return vp.client_info;
+      return vp->client_info;
     else
       return client_info_undef;
   }
@@ -376,7 +376,7 @@ private:
 void work(const char *config_fn, ServerThread::Ptr& serv)
 {
   // parse options from server config file
-  OptionList opt = OptionList::parse_from_config_static(read_text(config_fn));
+  OptionList opt = OptionList::parse_from_config_static(read_text(config_fn), NULL);
 
   // set up server config
   ServerThread::Config server_config;
