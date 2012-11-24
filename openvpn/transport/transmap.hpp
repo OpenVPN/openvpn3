@@ -80,7 +80,7 @@ namespace openvpn {
 	    if (i->second->defined())
 	      ++i;
 	    else
-	      map.erase(i++);
+	      i = map.erase(i);
 	  }
       }
 
