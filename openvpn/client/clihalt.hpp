@@ -5,8 +5,8 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-#ifndef OPENVPN_OPTIONS_CLIHALT_H
-#define OPENVPN_OPTIONS_CLIHALT_H
+#ifndef OPENVPN_CLIENT_CLIHALT_H
+#define OPENVPN_CLIENT_CLIHALT_H
 
 #include <string>
 #include <sstream>

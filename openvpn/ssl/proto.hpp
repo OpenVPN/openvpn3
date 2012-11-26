@@ -41,8 +41,6 @@
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/compress/compress.hpp>
-#include <openvpn/options/remotelist.hpp>
-#include <openvpn/options/cliopthelper.hpp>
 #include <openvpn/ssl/proto_context_options.hpp>
 
 #ifdef OPENVPN_DEBUG_PROTO
@@ -298,9 +296,6 @@ namespace openvpn {
 							    renegotiate.to_seconds() / 2));
 	}
 
-	// autologin
-	autologin = ParseClientConfig::is_autologin(opt);
-
 	// layer
 	{
 	  const Option* dev = opt.get_ptr("dev-type");
@@ -472,16 +467,21 @@ namespace openvpn {
 	  }
       }
 
-      void remote_adjust(const RemoteList::Item& rli)
+      void set_protocol(const Protocol& p)
       {
 	// adjust options for new transport protocol
-	protocol = rli.transport_protocol;
+	protocol = p;
 	if (protocol.is_udp())
 	  pid_mode = PacketIDReceive::UDP_MODE;
 	else if (protocol.is_tcp())
 	  pid_mode = PacketIDReceive::TCP_MODE;
 	else
 	  throw proto_option_error("transport protocol undefined");
+      }
+
+      void set_autologin(const bool autologin_arg)
+      {
+	autologin = autologin_arg;
       }
 
       void validate_complete() const

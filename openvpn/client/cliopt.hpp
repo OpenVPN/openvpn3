@@ -28,6 +28,7 @@
 #include <openvpn/transport/client/httpcli.hpp>
 
 #include <openvpn/client/cliproto.hpp>
+#include <openvpn/client/cliopthelper.hpp>
 
 #if defined(USE_TUN_BUILDER)
 #include <openvpn/tun/builder/client.hpp>
@@ -173,6 +174,7 @@ namespace openvpn {
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
       cp->load(opt, *proto_context_options);
+      cp->set_autologin(ParseClientConfig::is_autologin(opt));
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;
       cp->now = &now_;
@@ -350,7 +352,7 @@ namespace openvpn {
 	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto, &proto_fail, NULL);
 	  if (!proto_fail)
 	    {
-	      cp->remote_adjust(rli);
+	      cp->set_protocol(rli.transport_protocol);
 
 	      // HTTP Proxy transport
 	      HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::Ptr tcpconf = HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::new_obj();
@@ -372,7 +374,7 @@ namespace openvpn {
 	{
 	  // initialize remote item with current element
 	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto_override, NULL, ec.get());
-	  cp->remote_adjust(rli);
+	  cp->set_protocol(rli.transport_protocol);
 
 	  // initialize transport factory
 	  if (rli.transport_protocol.is_udp())

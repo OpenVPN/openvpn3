@@ -5,68 +5,63 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-// A simple class that allows an arbitrary set of posix signals to be
-// associated with an Asio handler.
-
 #ifndef OPENVPN_COMMON_SIGNAL_H
 #define OPENVPN_COMMON_SIGNAL_H
 
-#include <boost/asio.hpp>
+#include <signal.h>
 
-#include <openvpn/common/platform.hpp>
-#include <openvpn/common/rc.hpp>
+#include <openvpn/common/exception.hpp>
 
 namespace openvpn {
-
-  class ASIOSignals : public RC<thread_safe_refcount>
+  class Signal
   {
   public:
-    typedef boost::intrusive_ptr<ASIOSignals> Ptr;
+    OPENVPN_SIMPLE_EXCEPTION(signal_error);
 
-    ASIOSignals(boost::asio::io_service& io_service)
-      : halt(false), signals_(io_service) {}
+    typedef void (*handler_t)(int signum);
 
     enum {
-      S_SIGINT  = (1<<0),
-      S_SIGTERM = (1<<1),
-      S_SIGQUIT = (1<<2),
-#ifndef OPENVPN_PLATFORM_WIN
-      S_SIGHUP  = (1<<3)
-#endif
+      F_SIGINT  = (1<<0),
+      F_SIGTERM = (1<<1),
+      F_SIGHUP  = (1<<2),
     };
 
-    template <typename SignalHandler>
-    void register_signals(SignalHandler stop_handler, unsigned int sigmask = (S_SIGINT|S_SIGTERM|S_SIGQUIT))
+    Signal(const handler_t handler, const unsigned int flags)
     {
-      if (sigmask & S_SIGINT)
-	signals_.add(SIGINT);
-      if (sigmask & S_SIGTERM)
-	signals_.add(SIGTERM);
-#if defined(SIGQUIT)
-      if (sigmask & S_SIGQUIT)
-	signals_.add(SIGQUIT);
-#endif // defined(SIGQUIT)
-#ifndef OPENVPN_PLATFORM_WIN
-      if (sigmask & S_SIGHUP)
-	signals_.add(SIGHUP);
-#endif
-      signals_.async_wait(stop_handler);
+      struct sigaction sa;
+      sa.sa_handler = handler;
+      sigemptyset(&sa.sa_mask);
+      sa.sa_flags = SA_RESTART; // restart functions if interrupted by handler
+      sigconf(sa, flags_ = flags);
     }
 
-    void cancel()
+    ~Signal()
     {
-      if (!halt)
-	{
-	  halt = true;
-	  signals_.cancel();
-	}
+      struct sigaction sa;
+      sa.sa_handler = SIG_DFL;
+      sigemptyset(&sa.sa_mask);
+      sa.sa_flags = 0;
+      sigconf(sa, flags_);
     }
 
   private:
-    bool halt;
-    boost::asio::signal_set signals_;
+    static void sigconf(struct sigaction& sa, const unsigned int flags)
+    {
+      if (flags & F_SIGINT)
+	sigact(sa, SIGINT);
+      if (flags & F_SIGTERM)
+	sigact(sa, SIGTERM);
+      if (flags & F_SIGHUP)
+	sigact(sa, SIGHUP);
+    }
+
+    static void sigact(struct sigaction& sa, const int sig)
+    {
+      if (sigaction(sig, &sa, NULL) == -1)
+	throw signal_error();
+    }
+
+    unsigned int flags_;
   };
-
-} // namespace openvpn
-
-#endif // OPENVPN_COMMON_SIGNAL_H
+}
+#endif

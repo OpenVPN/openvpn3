@@ -3,8 +3,7 @@
 
 #include <string>
 #include <iostream>
-#include <fstream>
-#include <signal.h>
+//#include <fstream> // fixme
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -13,6 +12,7 @@
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/signal.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/time/timestr.hpp>
 
@@ -64,7 +64,7 @@ private:
   }
 };
 
-Client *the_client = NULL;
+Client *the_client = NULL; // GLOBAL
 
 void worker_thread()
 {
@@ -272,14 +272,7 @@ int main(int argc, char *argv[])
 	    std::cout << "CONNECTING..." << std::endl;
 
 	    // catch signals
-	    struct sigaction sa;
-	    sa.sa_handler = handler;
-	    sigemptyset(&sa.sa_mask);
-	    sa.sa_flags = SA_RESTART; // restart functions if interrupted by handler
-	    if (sigaction(SIGINT, &sa, NULL) == -1
-		|| sigaction(SIGTERM, &sa, NULL) == -1
-		|| sigaction(SIGHUP, &sa, NULL) == -1)
-	      OPENVPN_THROW_EXCEPTION("error setting signal handler");
+	    Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP);
 
 	    // start connect thread
 	    the_client = &client;

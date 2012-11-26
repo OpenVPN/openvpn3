@@ -286,7 +286,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		map.erase(i++);
+		i = map.erase(i);
 	      }
 	  }
 	prefix_set.compile();

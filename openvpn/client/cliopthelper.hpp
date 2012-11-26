@@ -7,8 +7,8 @@
 
 // A preliminary parser for OpenVPN client configuration files.
 
-#ifndef OPENVPN_OPTIONS_CLIOPTHELPER_H
-#define OPENVPN_OPTIONS_CLIOPTHELPER_H
+#ifndef OPENVPN_CLIENT_CLIOPTHELPER_H
+#define OPENVPN_CLIENT_CLIOPTHELPER_H
 
 #include <vector>
 #include <string>
@@ -19,7 +19,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/splitlines.hpp>
-#include <openvpn/options/remotelist.hpp>
+#include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/cliconstants.hpp>
 
 namespace openvpn {

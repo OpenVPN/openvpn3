@@ -1,3 +1,3 @@
 Build on Mac:
 
-  PSSL=1 NOSSL=1 SNAP=1 build cli
+  GCC_EXTRA="-ferror-limit=4" STRIP=1 PSSL=1 SNAP=1 OPENSSL_LINK=1 build cli

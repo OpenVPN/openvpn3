@@ -8,8 +8,8 @@
 // This class handles parsing and representation of redirect-gateway
 // and redirect-private directives.
 
-#ifndef OPENVPN_OPTIONS_RGOPT_H
-#define OPENVPN_OPTIONS_RGOPT_H
+#ifndef OPENVPN_CLIENT_RGOPT_H
+#define OPENVPN_CLIENT_RGOPT_H
 
 #include <openvpn/common/options.hpp>
 

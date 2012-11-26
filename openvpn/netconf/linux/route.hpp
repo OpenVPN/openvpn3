@@ -23,7 +23,7 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
-#include <openvpn/options/rgopt.hpp>
+#include <openvpn/client/rgopt.hpp>
 
 namespace openvpn {
 

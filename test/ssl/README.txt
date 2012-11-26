@@ -4,7 +4,7 @@ On Apple:
 
   Build with PolarSSL client and server (no ASM crypto algs):
 
-    PSSL=1 NOSSL=1 GCC_EXTRA="-DUSE_POLARSSL_SERVER" build proto
+    GCC_EXTRA="-ferror-limit=4 -DUSE_POLARSSL_SERVER" PSSL=1 SNAP=1 OPENSSL_LINK=1 build proto
 
 On linux:
 

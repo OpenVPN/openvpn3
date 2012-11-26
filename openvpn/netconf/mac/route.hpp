@@ -23,7 +23,7 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/netconf/mac/gwv4.hpp>
-#include <openvpn/options/rgopt.hpp>
+#include <openvpn/client/rgopt.hpp>
 
 namespace openvpn {
 

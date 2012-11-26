@@ -8,8 +8,8 @@
 // These classes handle parsing and representation of OpenVPN "remote" directives.
 // <connection> blocks are supported.
 
-#ifndef OPENVPN_OPTIONS_REMOTELIST_H
-#define OPENVPN_OPTIONS_REMOTELIST_H
+#ifndef OPENVPN_CLIENT_REMOTELIST_H
+#define OPENVPN_CLIENT_REMOTELIST_H
 
 #include <string>
 #include <sstream>

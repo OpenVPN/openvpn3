@@ -59,7 +59,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/client/cliconnect.hpp>
-#include <openvpn/options/cliopthelper.hpp>
+#include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>
 #include <openvpn/error/excode.hpp>
 

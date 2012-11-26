@@ -38,7 +38,7 @@
 #include <openvpn/client/clievent.hpp>
 #include <openvpn/client/clicreds.hpp>
 #include <openvpn/client/cliconstants.hpp>
-#include <openvpn/options/clihalt.hpp>
+#include <openvpn/client/clihalt.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
 #include <openvpn/error/excode.hpp>

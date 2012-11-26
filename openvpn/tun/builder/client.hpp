@@ -21,7 +21,7 @@
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/addr/addrpair.hpp>
-#include <openvpn/options/rgopt.hpp>
+#include <openvpn/client/rgopt.hpp>
 
 namespace openvpn {
   namespace TunBuilderClient {
