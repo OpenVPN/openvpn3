@@ -67,7 +67,7 @@ namespace openvpn {
     OPENVPN_EXCEPTION(polarssl_external_pki);
 
     enum {
-      MAX_CIPHERTEXT_IN = 64
+      MAX_CIPHERTEXT_IN = 64 // maximum number of queued input ciphertext packets
     };
 
     // The data needed to construct a PolarSSLContext.
@@ -87,7 +87,7 @@ namespace openvpn {
       PolarSSLPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
       PolarSSLPKI::RSAContext::Ptr priv_key; // private key
       std::string priv_key_pwd;              // private key password
-      PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters
+      PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters (only needed in server mode)
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       Flags flags;
@@ -105,6 +105,11 @@ namespace openvpn {
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
       {
 	external_pki = external_pki_arg;
+      }
+
+      void set_private_key_password(const std::string& pwd)
+      {
+	priv_key_pwd = pwd;
       }
 
       void load_ca(const std::string& ca_txt)

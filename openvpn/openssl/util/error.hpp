@@ -16,11 +16,13 @@
 #include <openssl/ssl.h>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/error/error.hpp>
+#include <openvpn/error/excode.hpp>
 
 namespace openvpn {
 
   // string exception class
-  class OpenSSLException : public std::exception
+  class OpenSSLException : public ExceptionCode
   {
   public:
     OPENVPN_EXCEPTION(ssl_exception_index);
@@ -113,6 +115,19 @@ namespace openvpn {
 	  ERR_error_string_n(err, buf, sizeof(buf));
 	  tmp << prefix << buf;
 	  prefix = " / ";
+
+	  // for certain OpenSSL errors, translate them to an OpenVPN error code,
+	  // so they can be propagated up to the higher levels (such as UI level)
+	  switch (ERR_GET_REASON(err))
+	    {
+	    case SSL_R_CERTIFICATE_VERIFY_FAILED:
+	      set_code(Error::CERT_VERIFY_FAIL, true);
+	      break;
+	    case PEM_R_BAD_PASSWORD_READ:
+	    case PEM_R_BAD_DECRYPT:
+	      set_code(Error::PEM_PASSWORD_FAIL, true); 
+	      break;
+	    }
 	}
       errtxt = tmp.str();
     }

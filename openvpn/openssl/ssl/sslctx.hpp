@@ -25,10 +25,13 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
 #include <openvpn/pki/epkibase.hpp>
+#include <openvpn/ssl/kuparse.hpp>
+#include <openvpn/ssl/nscert.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
@@ -58,7 +61,7 @@ namespace openvpn {
     typedef CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList> CertCRLList;
 
     enum {
-      MAX_CIPHERTEXT_IN = 64
+      MAX_CIPHERTEXT_IN = 64 // maximum number of queued input ciphertext packets
     };
 
     // The data needed to construct an OpenSSLContext.
@@ -69,24 +72,20 @@ namespace openvpn {
       };
       typedef unsigned int Flags;
 
-      enum CertType {
-	CERT_TYPE_NONE,
-	CERT_TYPE_NS_CLIENT,
-	CERT_TYPE_NS_SERVER
-      };
-
-      Config() : external_pki(NULL), flags(0), cert_type(CERT_TYPE_NONE) {}
+      Config() : external_pki(NULL), flags(0), ns_cert_type(NSCert::NONE) {}
 
       Mode mode;
-      CertCRLList ca;
-      OpenSSLPKI::X509 cert;
-      OpenSSLPKI::X509List extra_certs;
-      OpenSSLPKI::PKey pkey;
-      OpenSSLPKI::DH dh; // only needed in server mode
+      CertCRLList ca;                   // from OpenVPN "ca" optino
+      OpenSSLPKI::X509 cert;            // from OpenVPN "cert" option
+      OpenSSLPKI::X509List extra_certs; // from OpenVPN "extra-certs" option
+      OpenSSLPKI::PKey pkey;            // private key
+      OpenSSLPKI::DH dh;                // diffie-hellman parameters (only needed in server mode)
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       Flags flags;
-      CertType cert_type;
+      NSCert::Type ns_cert_type;
+      std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
+      std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
 
       void enable_debug()
       {
@@ -97,6 +96,11 @@ namespace openvpn {
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
       {
 	external_pki = external_pki_arg;
+      }
+
+      void set_private_key_password(const std::string& pwd)
+      {
+	pkey.set_private_key_password(pwd);
       }
 
       void load_ca(const std::string& ca_txt)
@@ -138,7 +142,7 @@ namespace openvpn {
 
 	// cert
 	{
-	  const std::string& cert_txt = opt.get("cert", 1);
+	  const std::string& cert_txt = opt.get("cert", 1, Option::MULTILINE);
 	  load_cert(cert_txt);
 	}
 
@@ -151,42 +155,29 @@ namespace openvpn {
 	// private key
 	if (!external_pki)
 	  {
-	    const std::string& key_txt = opt.get("key", 1);
+	    const std::string& key_txt = opt.get("key", 1, Option::MULTILINE);
 	    load_private_key(key_txt);
 	  }
 
 	// DH
 	if (mode.is_server())
 	  {
-	    const std::string& dh_txt = opt.get("dh", 1);
+	    const std::string& dh_txt = opt.get("dh", 1, Option::MULTILINE);
 	    load_dh(dh_txt);
 	  }
 
 	// ns-cert-type
-	{
-	  const Option* o = opt.get_ptr("ns-cert-type");
-	  if (o)
-	    {
-	      const std::string& ct = o->get_optional(1);
-	      if (ct == "server")
-		cert_type = CERT_TYPE_NS_SERVER;
-	      else if (ct == "client")
-		cert_type = CERT_TYPE_NS_CLIENT;
-	      else
-		throw option_error("ns-cert-type must be 'client' or 'server'");
-	    }
-	}
+	ns_cert_type = NSCert::ns_cert_type(opt);
+
+	// parse remote-cert-x options
+	KUParse::remote_cert_tls(opt, ku, eku);
+	KUParse::remote_cert_ku(opt, ku);
+	KUParse::remote_cert_eku(opt, eku);
 
 	// unsupported cert checkers
 	{
 	  if (opt.exists("tls-remote"))
 	    throw option_error("tls-remote not supported");
-	  if (opt.exists("remote-cert-tls"))
-	    throw option_error("remote-cert-tls not supported");
-	  if (opt.exists("remote-cert-ku"))
-	    throw option_error("remote-cert-ku not supported");
-	  if (opt.exists("remote-cert-eku"))
-	    throw option_error("remote-cert-eku not supported");
 	}
       }
     };
@@ -280,19 +271,19 @@ namespace openvpn {
 	ssl_clear();
 	try {
 	  // init SSL objects
-	  ssl = SSL_new(ctx.raw_ctx());
+	  ssl = SSL_new(ctx.ctx);
 	  if (!ssl)
 	    throw OpenSSLException("OpenSSLContext::SSL: SSL_new failed");
 	  ssl_bio = BIO_new(BIO_f_ssl());
 	  if (!ssl_bio)
 	    throw OpenSSLException("OpenSSLContext::SSL: BIO_new BIO_f_ssl failed");
-	  ct_in = mem_bio(ctx.frame());
-	  ct_out = mem_bio(ctx.frame());
+	  ct_in = mem_bio(ctx.config.frame);
+	  ct_out = mem_bio(ctx.config.frame);
 
 	  // set client/server mode
-	  if (ctx.mode().is_server())
+	  if (ctx.config.mode.is_server())
 	    SSL_set_accept_state(ssl);
-	  else if (ctx.mode().is_client())
+	  else if (ctx.config.mode.is_client())
 	    SSL_set_connect_state(ssl);
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext::SSL: unknown client/server mode");
@@ -541,61 +532,60 @@ namespace openvpn {
     /////// start of main class implementation
 
   public:
-    explicit OpenSSLContext(const Config& config)
-      : ctx_(NULL), epki_(NULL)
+    explicit OpenSSLContext(const Config& config_arg)
+      : config(config_arg), ctx(NULL), epki(NULL)
     {
       try
 	{
 	  // Create new SSL_CTX for server or client mode
 	  if (config.mode.is_server())
 	    {
-	      ctx_ = SSL_CTX_new(TLSv1_server_method());
-	      if (ctx_ == NULL)
+	      ctx = SSL_CTX_new(TLSv1_server_method());
+	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
 
 	      // Set DH object
 	      if (!config.dh.defined())
 		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: DH not defined");
-	      if (!SSL_CTX_set_tmp_dh(ctx_, config.dh.obj()))
+	      if (!SSL_CTX_set_tmp_dh(ctx, config.dh.obj()))
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
 	    }
 	  else if (config.mode.is_client())
 	    {
-	      ctx_ = SSL_CTX_new(TLSv1_client_method());
-	      if (ctx_ == NULL)
+	      ctx = SSL_CTX_new(TLSv1_client_method());
+	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
 	    }
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: unknown config.mode");
 
 	  // Set SSL options
-	  SSL_CTX_set_session_cache_mode(ctx_, SSL_SESS_CACHE_OFF);
-	  SSL_CTX_set_options(ctx_, SSL_OP_SINGLE_DH_USE);
-	  SSL_CTX_set_verify (ctx_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+	  SSL_CTX_set_options(ctx, SSL_OP_SINGLE_DH_USE);
+	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 
 	  // fixme -- support SSL_CTX_set_cipher_list
 
 	  // Set certificate
 	  if (!config.cert.defined())
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: cert not defined");
-	  if (SSL_CTX_use_certificate(ctx_, config.cert.obj()) != 1)
+	  if (SSL_CTX_use_certificate(ctx, config.cert.obj()) != 1)
 	    throw OpenSSLException("OpenSSLContext: SSL_CTX_use_certificate failed");
 
 	  // Set private key
 	  if (config.external_pki)
 	    {
-	      epki_ = new ExternalPKIImpl(ctx_, config.cert.obj(), config.external_pki);
+	      epki = new ExternalPKIImpl(ctx, config.cert.obj(), config.external_pki);
 	    }
 	  else
 	    {
-	      // fixme -- add support for private key encryption
 	      if (!config.pkey.defined())
 		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");
-	      if (SSL_CTX_use_PrivateKey(ctx_, config.pkey.obj()) != 1)
+	      if (SSL_CTX_use_PrivateKey(ctx, config.pkey.obj()) != 1)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_use_PrivateKey failed");
 
 	      // Check cert/private key compatibility
-	      if (!SSL_CTX_check_private_key(ctx_))
+	      if (!SSL_CTX_check_private_key(ctx))
 		throw OpenSSLException("OpenSSLContext: private key does not match the certificate");
 	    }
 
@@ -605,7 +595,7 @@ namespace openvpn {
 	    {
 	      for (OpenSSLPKI::X509List::const_iterator i = config.extra_certs.begin(); i != config.extra_certs.end(); ++i)
 		{
-		  if (SSL_CTX_add_extra_chain_cert(ctx_, (*i)->obj_dup()) != 1)
+		  if (SSL_CTX_add_extra_chain_cert(ctx, (*i)->obj_dup()) != 1)
 		    throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
 		}
 	    }
@@ -615,20 +605,12 @@ namespace openvpn {
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: CA not defined");
 	  update_trust(config.ca);
 
-	  // Set required cert type
-	  cert_type_ = config.cert_type;
-
 	  // keep a reference to this in ctx, for use by verify callback
-	  ctx_->app_verify_arg = this;
+	  ctx->app_verify_arg = this;
 
 	  // Show handshake debugging info
 	  if (config.flags & Config::SSL_DEBUG_FLAG)
-	    SSL_CTX_set_info_callback (ctx_, info_callback);
-
-	  // Keep a reference to vars so we can hand them off to SSL objects derived from us
-	  mode_ = config.mode;
-	  flags_ = config.flags;
-	  frame_ = config.frame;
+	    SSL_CTX_set_info_callback (ctx, info_callback);
 	}
       catch (...)
 	{
@@ -642,7 +624,7 @@ namespace openvpn {
     void update_trust(const CertCRLList& cc)
     {
       OpenSSLPKI::X509Store store(cc);
-      SSL_CTX_set_cert_store(ctx_, store.move());
+      SSL_CTX_set_cert_store(ctx, store.move());
     }
 
     ~OpenSSLContext()
@@ -650,30 +632,118 @@ namespace openvpn {
       erase();
     }
 
-    const Mode& mode() const { return mode_; }
+    const Mode& mode() const { return config.mode; }
  
   private:
-    Config::Flags flags() const { return flags_; }
-    const Frame::Ptr& frame() const { return frame_; }
-    SSL_CTX* raw_ctx() const { return ctx_; }
+    // ns-cert-type verification
+
+    bool ns_cert_type_defined() const
+    {
+      return config.ns_cert_type != NSCert::NONE;
+    }
 
     bool verify_ns_cert_type(const ::X509* cert) const
     {
-      if (cert_type_ == Config::CERT_TYPE_NS_SERVER)
+      if (config.ns_cert_type == NSCert::SERVER)
 	return (cert->ex_flags & EXFLAG_NSCERT) && (cert->ex_nscert & NS_SSL_SERVER);
-      else if (cert_type_ == Config::CERT_TYPE_NS_CLIENT)
+      else if (config.ns_cert_type == NSCert::CLIENT)
 	return (cert->ex_flags & EXFLAG_NSCERT) && (cert->ex_nscert & NS_SSL_CLIENT);
       else
 	return true;
     }
 
-    static int verify_callback (int preverify_ok, X509_STORE_CTX *ctx)
+    // remote-cert-ku verification
+
+    bool x509_cert_ku_defined() const
+    {
+      return config.ku.size() > 0;
+    }
+
+    bool verify_x509_cert_ku(::X509 *cert) const
+    {
+      bool found = false;
+      ASN1_BIT_STRING *ku = (ASN1_BIT_STRING *)X509_get_ext_d2i(cert, NID_key_usage, NULL, NULL);
+
+      if (ku)
+	{
+	  // Extract key usage bits
+	  unsigned int nku = 0;
+	  {
+	    for (int i = 0; i < 8; i++)
+	      {
+		if (ASN1_BIT_STRING_get_bit(ku, i))
+		  nku |= 1 << (7 - i);
+	      }
+	  }
+
+	  // Fixup if no LSB bits
+	  if ((nku & 0xff) == 0)
+	    nku >>= 8;
+
+	  // Validating certificate key usage
+	  {
+	    for (std::vector<unsigned int>::const_iterator i = config.ku.begin(); i != config.ku.end(); ++i)
+	      {
+		if (nku == *i)
+		  {
+		    found = true;
+		    break;
+		  }
+	      }
+	  }
+
+	  ASN1_BIT_STRING_free(ku);
+	}
+      return found;
+    }
+
+    // remote-cert-eku verification
+
+    bool x509_cert_eku_defined() const
+    {
+      return !config.eku.empty();
+    }
+
+    bool verify_x509_cert_eku(::X509 *cert) const
+    {
+      bool found = false;
+      EXTENDED_KEY_USAGE *eku = (EXTENDED_KEY_USAGE *)X509_get_ext_d2i(cert, NID_ext_key_usage, NULL, NULL);
+
+      if (eku)
+	{
+	  // Validating certificate extended key usage
+	  for (int i = 0; !found && i < sk_ASN1_OBJECT_num(eku); i++)
+	    {
+	      ASN1_OBJECT *oid = sk_ASN1_OBJECT_value(eku, i);
+	      char oid_str[256];
+
+	      if (!found && OBJ_obj2txt(oid_str, sizeof(oid_str), oid, 0) != -1)
+		{
+		  // Compare EKU against string
+		  if (config.eku == oid_str)
+		    found = true;
+		}
+
+	      if (!found && OBJ_obj2txt(oid_str, sizeof(oid_str), oid, 1) != -1)
+		{
+		  // Compare EKU against OID
+		  if (config.eku == oid_str)
+		    found = true;
+		}
+	    }
+
+	  sk_ASN1_OBJECT_pop_free(eku, ASN1_OBJECT_free);
+	}
+      return found;
+    }
+
+    static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
     {
       // get the SSL object
       ::SSL* ssl = (::SSL*) X509_STORE_CTX_get_ex_data (ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
 
       // get this
-      OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
+      const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
 
       // log subject
       ScopedPtr<char, OpenSSLFree> subject(X509_NAME_oneline(X509_get_subject_name(ctx->current_cert), NULL, 0));
@@ -683,13 +753,30 @@ namespace openvpn {
 			<< ": depth=" << ctx->error_depth
 			<< ", " << subject.get());
 
-      // verify ns-cert-type
-      if (ctx->error_depth == 0 && !self->verify_ns_cert_type(ctx->current_cert))
+      // leaf-cert verification
+      if (ctx->error_depth == 0)
 	{
-	  OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
-	  preverify_ok = false;
-	}
+	  // verify ns-cert-type
+	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(ctx->current_cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	      preverify_ok = false;
+	    }
 
+	  // verify X509 key usage
+	  if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(ctx->current_cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+	      preverify_ok = false;
+	    }
+
+	  // verify X509 extended key usage
+	  if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(ctx->current_cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+	      preverify_ok = false;
+	    }
+	}
       return preverify_ok;
     }
 
@@ -708,24 +795,21 @@ namespace openvpn {
 
     void erase()
     {
-      if (epki_)
+      if (epki)
 	{
-	  delete epki_;
-	  epki_ = NULL;
+	  delete epki;
+	  epki = NULL;
 	}
-      if (ctx_)
+      if (ctx)
 	{
-	  SSL_CTX_free(ctx_);
-	  ctx_ = NULL;
+	  SSL_CTX_free(ctx);
+	  ctx = NULL;
 	}
     }
 
-    Mode mode_;
-    Config::Flags flags_;
-    Config::CertType cert_type_;
-    Frame::Ptr frame_;
-    SSL_CTX* ctx_;
-    ExternalPKIImpl* epki_;
+    Config config;
+    SSL_CTX* ctx;
+    ExternalPKIImpl* epki;
   };
 
 }

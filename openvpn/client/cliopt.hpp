@@ -165,7 +165,7 @@ namespace openvpn {
       cc.rng = rng;
 #endif
 #if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID) || defined(USE_OPENSSL)
-      cc.priv_key_pwd = config.private_key_password;
+      cc.set_private_key_password(config.private_key_password);
 #endif
       cc.load(opt);
       if (!cc.mode.is_client())

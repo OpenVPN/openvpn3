@@ -42,10 +42,16 @@ namespace openvpn {
       void operator=(const PKey& other)
       {
 	assign(other.pkey_);
+	priv_key_pwd = other.priv_key_pwd;
       }
 
       bool defined() const { return pkey_ != NULL; }
       EVP_PKEY* obj() const { return pkey_; }
+
+      void set_private_key_password(const std::string& pwd)
+      {
+	priv_key_pwd = pwd;
+      }
 
       void parse_pem(const std::string& pkey_txt, const std::string& title)
       {
@@ -53,7 +59,7 @@ namespace openvpn {
 	if (!bio)
 	  throw OpenSSLException();
 
-	EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
+	EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, pem_password_callback, this);
 	BIO_free(bio);
 	if (!pkey)
 	  throw OpenSSLException(std::string("PKey::parse_pem: error in ") + title + std::string(":"));
@@ -101,6 +107,18 @@ namespace openvpn {
       }
 
     private:
+      static int pem_password_callback (char *buf, int size, int rwflag, void *userdata)
+      {
+	// get this
+	const PKey* self = (PKey*) userdata;	
+	if (buf)
+	  {
+	    string::strncpynt(buf, self->priv_key_pwd.c_str(), size);
+	    return std::strlen(buf);
+	  }
+	return 0;
+      }
+
       static EVP_PKEY *dup(const EVP_PKEY *pkey)
       {
 	// No OpenSSL EVP_PKEY_dup method so we roll our own 
@@ -124,6 +142,7 @@ namespace openvpn {
 	pkey_ = dup(pkey);
       }
 
+      std::string priv_key_pwd;
       EVP_PKEY *pkey_;
     };
   }

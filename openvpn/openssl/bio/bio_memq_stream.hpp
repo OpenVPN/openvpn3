@@ -11,7 +11,7 @@
 #ifndef OPENVPN_OPENSSL_BIO_BIO_MEMQ_STREAM_H
 #define OPENVPN_OPENSSL_BIO_BIO_MEMQ_STREAM_H
 
-#include <cstring>
+#include <cstring> // for std::strlen and others
 
 #include <openssl/err.h>
 #include <openssl/bio.h>
@@ -158,7 +158,7 @@ namespace openvpn {
 
       inline int memq_puts (BIO *b, const char *str)
       {
-	const int len = strlen (str);
+	const int len = std::strlen (str);
 	const int ret = memq_write (b, str, len);
 	return ret;
       }

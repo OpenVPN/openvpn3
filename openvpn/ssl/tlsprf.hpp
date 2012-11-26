@@ -10,7 +10,7 @@
 #ifndef OPENVPN_SSL_TLSPRF_H
 #define OPENVPN_SSL_TLSPRF_H
 
-#include <cstring>
+#include <cstring> // for std::strlen and others
 
 #ifdef OPENVPN_DEBUG
 #include <string>
@@ -114,7 +114,7 @@ namespace openvpn {
 			     unsigned char *output,
 			     const size_t output_len)
     {
-      const size_t label_len = strlen(label);
+      const size_t label_len = std::strlen(label);
       BufferAllocated seed(label_len
 			   + client_seed_len
 			   + server_seed_len

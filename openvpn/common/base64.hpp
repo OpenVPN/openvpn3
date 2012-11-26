@@ -11,7 +11,7 @@
 #define OPENVPN_COMMON_BASE64_H
 
 #include <string>
-#include <cstring> // for std::memset
+#include <cstring> // for std::memset, std::strlen
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -148,7 +148,7 @@ namespace openvpn {
       size_t i;
       unsigned int val = 0;
       marker = 0; // number of equal chars seen
-      if (strlen(token) < 4)
+      if (std::strlen(token) < 4)
 	throw base64_decode_error();
       for (i = 0; i < 4; i++)
 	{

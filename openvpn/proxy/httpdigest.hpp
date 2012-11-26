@@ -10,7 +10,7 @@
 #ifndef OPENVPN_PROXY_HTTPDIGEST_H
 #define OPENVPN_PROXY_HTTPDIGEST_H
 
-#include <cstring>
+#include <cstring> // for std::strlen and others
 #include <string>
 
 #include <openvpn/buffer/buffer.hpp>
@@ -35,7 +35,7 @@ namespace openvpn {
 
 	void update(const char *str)
 	{
-	  ctx.update((unsigned char *)str, strlen(str));
+	  ctx.update((unsigned char *)str, std::strlen(str));
 	}
 
 	void update(const char c)

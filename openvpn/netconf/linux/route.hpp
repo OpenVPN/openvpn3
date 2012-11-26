@@ -43,7 +43,7 @@ namespace openvpn {
       {
 	const Option& o = opt.get("route-gateway");
 	o.exact_args(2);
-	route_gateway = IP::Addr::from_string(o[1], "route-gateway");
+	route_gateway = IP::Addr::from_string(o.get(1, 256), "route-gateway");
       }
 
       // do redirect-gateway
