@@ -105,7 +105,9 @@ if [ "$APPLE_FAMILY" = "1" ]; then
     fi
     LIBS="$LIBS -framework Security"
 else
-    if [ "$NOSSL" != "1" ]; then
+    if [ "$OPENSSL_LINK" = "1" ]; then
+	LIBS="$LIBS -lcrypto -lssl"
+    elif [ "$NOSSL" != "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL"
 	LIBS="$LIBS -lssl -lcrypto -ldl"
     fi

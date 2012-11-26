@@ -41,7 +41,8 @@ if [ "$NO_WIPE" = "1" ]; then
 else
     echo WIPE and reunzip source
     rm -rf $POLARSSL_VERSION
-    tar xfz ~/Downloads/$POLARSSL_VERSION-gpl.tgz
+    [ -z "$DL" ] && DL=~/Downloads
+    tar xfz $DL/$POLARSSL_VERSION-gpl.tgz
 
     cd $POLARSSL_VERSION
 
@@ -111,6 +112,9 @@ fi
 if [ "$ENABLE_SERVER" = "1" ]; then
     OPT="$OPT -DENABLE_SERVER=1"
 fi
+
+# Build shared library (fixme)
+OPT="$OPT -DUSE_SHARED_POLARSSL_LIBRARY=1"
 
 # echo options
 echo OPTIONS $OPT

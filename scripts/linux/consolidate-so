@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 rm -rf so
 mkdir so
-cp boost/stage-linux/lib/lib* so/
-cp lzo/lzo-linux/lib/lib* so/
-cp openssl/openssl-linux/lib/lib* so/
-cp snappy/snappy-linux/lib/lib* so/
+OPT=-d
+cp $OPT boost/stage-linux/lib/lib* so/
+cp $OPT lzo/lzo-linux/lib/lib* so/
+cp $OPT openssl/openssl-linux/lib/lib* so/
+cp $OPT snappy/snappy-linux/lib/lib* so/
+cp $OPT polarssl/polarssl-linux/library/lib* so/

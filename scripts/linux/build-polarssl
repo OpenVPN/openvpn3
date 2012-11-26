@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+rm -rf polarssl
+mkdir polarssl
+VERBOSE=1 TARGET=linux USE_MINICRYPTO=1 ENABLE_SERVER=1 SHARED=1 $O3/polarssl/build-polarssl
+mv polarssl-linux polarssl
