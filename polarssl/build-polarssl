@@ -103,6 +103,9 @@ if [ "$USE_MINICRYPTO" = "1" ]; then
     if [ "$MINICRYPTO_DIR" ]; then
 	OPT="$OPT -DMINICRYPTO_DIR=$MINICRYPTO_DIR"
     fi
+    if [ "$OSSLCRYPTO_DIR" ]; then
+	OPT="$OPT -DOSSLCRYPTO_DIR=$OSSLCRYPTO_DIR"
+    fi
     if [ "$AES_NI" = "1" ]; then
 	OPT="$OPT -DOPENSSL_AES_NI=1"
     fi

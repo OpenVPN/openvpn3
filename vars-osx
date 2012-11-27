@@ -7,3 +7,4 @@ export PLATFORM_FLAGS="-arch x86_64"
 export OTHER_COMPILER_FLAGS=""
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
+export OPENSSL_TARGET=darwin64-x86_64-cc

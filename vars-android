@@ -11,3 +11,4 @@ export STRIP_CMD=arm-linux-androideabi-strip
 export OTHER_COMPILER_FLAGS=""
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC="-fPIC"
+export PLATFORM_FLAGS=""

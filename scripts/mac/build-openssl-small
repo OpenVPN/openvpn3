@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 set -e
-export OPENSSL=openssl-1.0.1c
-export DIST=$(pwd)/openssl-$PLATFORM
-rm -rf $OPENSSL $DIST
-tar xfz ~/Downloads/$OPENSSL.tar.gz
-cd $OPENSSL
-NO_FLAGS="no-engine no-hw no-ssl2 no-ssl3 no-zlib no-rc2 no-idea no-des no-cast no-md2 no-mdc2 no-ripemd no-rc5 no-camellia no-seed no-krb5 no-socks no-ecdsa no-ec no-ecdh no-md2 no-md4 no-whirlpool no-dsa no-cms no-jpake no-gost"
-./Configure $OPENSSL_TARGET no-shared threads no-idea no-mdc2 no-rc5 $NO_FLAGS --prefix=$DIST
-sed -i "" -e "s|-O3|$LIB_OPT_LEVEL $PLATFORM_FLAGS|" Makefile
-make CC="clang" build_libs
-touch apps/openssl
-touch openssl.pc
-touch libcrypto.pc
-touch libssl.pc
-make install_sw
+. $O3/lib-versions
+rm -rf openssl
+mkdir openssl
+for TARGET in osx ; do
+    . $O3/vars-$TARGET
+    export OPENSSL=$OPENSSL_VERSION
+    export DIST=$(pwd)/openssl-$PLATFORM
+    rm -rf $OPENSSL $DIST
+    tar xfz ~/Downloads/$OPENSSL.tar.gz
+    pushd $OPENSSL
+    OSSL_FLAGS="no-shared threads no-idea no-mdc2 no-rc5 no-engine no-comp no-hw no-ssl2 no-ssl3 no-zlib no-rc2 no-cast no-md2 no-ripemd no-camellia no-seed no-krb5 no-socks no-ecdsa no-ec no-ecdh no-md2 no-whirlpool no-dsa no-cms no-jpake no-gost"
+    #OSSL_FLAGS="no-shared threads no-comp no-zlib"
+    ./Configure $OPENSSL_TARGET $OSSL_FLAGS --prefix=$DIST
+    sed -i "" -e "s|-O3|$LIB_OPT_LEVEL $PLATFORM_FLAGS|" Makefile
+    sed -i "" -e "s|ERR_load_COMP_strings()|//ERR_load_COMP_strings()|" crypto/err/err_all.c
+    make CC="clang" -j 4 build_libs
+    touch apps/openssl
+    touch openssl.pc
+    touch libcrypto.pc
+    touch libssl.pc
+    make install_sw
+    popd
+    mv $DIST openssl
+done

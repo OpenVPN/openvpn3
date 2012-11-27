@@ -30,6 +30,18 @@ else
     opt2="$ptdef -Os"
 fi
 
+if [ "$OPENSSL" = "1" ]; then
+    ssl_def="-DUSE_OPENSSL"
+    ssl_inc="-I$DEP_DIR/openssl/openssl-$PLATFORM/include"
+    ssl_lib="-lssl -lcrypto"
+    ssl_libdir="-L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
+else
+    ssl_def="-DUSE_POLARSSL"
+    ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
+    ssl_lib="-lpolarssl -lminicrypto"
+    ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
+fi
+
 if [ "$WRAP_ONLY" != "1" ]; then
     echo SWIG
     swig -c++ -java -package $pkg -I$O3/client -I$O3 ovpncli.i
@@ -40,7 +52,7 @@ if [ "$WRAP_ONLY" != "1" ]; then
 	$LIB_OPT_LEVEL $LIB_FPIC \
 	-Wall -Wno-sign-compare -Wno-unused-parameter \
 	$vis1 \
-	-DUSE_POLARSSL \
+	$ssl_def \
 	-DHAVE_SNAPPY \
 	-D__GLIBC__ \
 	-D_GLIBCXX_HAVE_FENV_H=1 \
@@ -48,7 +60,7 @@ if [ "$WRAP_ONLY" != "1" ]; then
 	-I$O3/client \
 	-I$O3 \
 	-I$DEP_DIR/boost \
-	-I$DEP_DIR/polarssl/polarssl-$PLATFORM/include \
+	$ssl_inc \
 	-I$DEP_DIR/snappy/snappy-$PLATFORM/include \
 	-c $O3/client/ovpncli.cpp
 fi
@@ -65,7 +77,7 @@ $GPP_CMD \
     -I$O3/client \
     -I$O3 \
     -L$DEP_DIR/boost/stage-$PLATFORM/lib \
-    -L$DEP_DIR/polarssl/polarssl-$PLATFORM/library \
+    $ssl_libdir \
     -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
     -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
     ovpncli_wrap.cxx \
@@ -73,7 +85,7 @@ $GPP_CMD \
     ovpncli.o \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
-    -lpolarssl -lminicrypto \
+    $ssl_lib \
     -lboost_system -lboost_thread \
     -lsnappy \
     -llog

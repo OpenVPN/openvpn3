@@ -1,21 +1,31 @@
 #!/usr/bin/env bash
 set -e
-export OPENSSL=openssl-1.0.1c
-export TPRE=arm-linux-androideabi
-export DIST=$(pwd)/openssl
-export BIN=$TC/bin
-rm -rf $OPENSSL $DIST
-tar xfz ~/Downloads/$OPENSSL.tar.gz
-cd $OPENSSL
-NO_FLAGS="no-engine no-hw no-ssl2 no-ssl3 no-zlib no-rc2 no-idea no-des no-cast no-md2 no-mdc2 no-ripemd no-rc5 no-camellia no-seed no-krb5 no-socks no-ecdsa no-ec no-ecdh no-md2 no-md4 no-whirlpool no-dsa no-cms no-jpake no-gost"
-CC="$BIN/$TPRE-gcc" AR="$BIN/$TPRE-ar" RANLIB="$BIN/$TPRE-ranlib" ./Configure linux-armv4 no-shared threads no-idea no-mdc2 no-rc5 $NO_FLAGS --prefix=$DIST
-#sed -i "" -e 's|-O3|-O3 -flto|' Makefile
-#sed -i "" -e 's|^all:.*$|all: Makefile build_all libssl.pc libcrypto.pc|' Makefile
-#sed -i "" -e 's|^build_all:.*$|build_all: build_libs|' Makefile
-sed -i "" -e 's|-O3|-O3 -fPIC|' Makefile
-make build_libs
-touch apps/openssl
-touch openssl.pc
-touch libcrypto.pc
-touch libssl.pc
-make install_sw
+. $O3/lib-versions
+. $O3/scripts/android/vars
+rm -rf openssl
+mkdir openssl
+for TARGET in android ; do
+    . $O3/vars-$TARGET
+    export OPENSSL=$OPENSSL_VERSION
+    export TPRE=arm-linux-androideabi
+    export DIST=$(pwd)/openssl-$PLATFORM
+    export BIN=$TC/bin
+    rm -rf $DIST
+    rm -rf $OPENSSL
+    tar xfz ~/Downloads/$OPENSSL.tar.gz
+    pushd $OPENSSL
+    OSSL_FLAGS="no-shared threads no-idea no-mdc2 no-rc5 no-engine no-comp no-hw no-ssl2 no-ssl3 no-zlib no-rc2 no-cast no-md2 no-ripemd no-camellia no-seed no-krb5 no-socks no-ecdsa no-ec no-ecdh no-md2 no-whirlpool no-dsa no-cms no-jpake no-gost"
+    #OSSL_FLAGS="no-shared threads no-comp no-zlib"
+    CC="$BIN/$TPRE-gcc" AR="$BIN/$TPRE-ar" RANLIB="$BIN/$TPRE-ranlib" ./Configure linux-armv4 $OSSL_FLAGS --prefix=$DIST
+    sed -i "" -e "s|-O3|$LIB_OPT_LEVEL $LIB_FPIC $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS|" Makefile
+    sed -i "" -e "s|ERR_load_COMP_strings()|//ERR_load_COMP_strings()|" crypto/err/err_all.c
+    make -j 4 build_libs
+    touch apps/openssl
+    touch openssl.pc
+    touch libcrypto.pc
+    touch libssl.pc
+    make install_sw
+    popd
+    mv $DIST openssl
+done
+

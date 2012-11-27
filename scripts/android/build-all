@@ -6,7 +6,9 @@ echo "******* MINICRYPTO"
 $O3/scripts/android/build-minicrypto
 echo "******* POLARSSL"
 $O3/scripts/android/build-polarssl
-echo "******* LZO"
-$O3/scripts/android/build-lzo
+echo "******* OpenSSL"
+$O3/scripts/android/build-openssl-small
+#echo "******* LZO"
+#$O3/scripts/android/build-lzo
 echo "******* SNAPPY"
 $O3/scripts/android/build-snappy

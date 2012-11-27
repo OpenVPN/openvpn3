@@ -6,6 +6,8 @@ echo "******* MINICRYPTO"
 $O3/scripts/mac/build-minicrypto
 echo "******* POLARSSL"
 $O3/scripts/mac/build-polarssl
+echo "******* OPENSSL"
+$O3/scripts/mac/build-openssl-small
 #echo "******* LZO"
 #$O3/scripts/mac/build-lzo
 echo "******* SNAPPY"
