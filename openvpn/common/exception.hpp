@@ -41,7 +41,7 @@ namespace openvpn {
   class Exception : public std::exception
   {
   public:
-    Exception(std::string err) : err_(err) {}
+    Exception(const std::string& err) : err_(err) {}
     virtual const char* what() const throw() { return err_.c_str(); }
     const std::string& err() const { return err_; }
     virtual ~Exception() throw() {}

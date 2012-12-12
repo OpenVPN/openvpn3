@@ -16,6 +16,8 @@
 
 #include <string>
 
+#include <openvpn/error/excode.hpp>
+
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/frame/frame_init.hpp>
@@ -188,7 +190,7 @@ namespace openvpn {
 
       // initialize transport layer
       if (cp->layer != Layer(Layer::OSI_LAYER_3))
-	throw option_error("only layer 3 currently supported");
+	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "only layer 3 currently supported");
 
       // init transport config
       const std::string session_name = load_transport_config();

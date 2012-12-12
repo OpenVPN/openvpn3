@@ -8,6 +8,7 @@
 #ifndef OPENVPN_ERROR_EXCODE_H
 #define OPENVPN_ERROR_EXCODE_H
 
+#include <string>
 #include <exception>
 
 #include <openvpn/error/error.hpp>
@@ -56,6 +57,20 @@ namespace openvpn {
     }
 
     unsigned int code_;
+  };
+
+  class ErrorCode : public ExceptionCode
+  {
+  public:
+    ErrorCode(const Error::Type code, const bool fatal, const std::string& err)
+      : ExceptionCode(code, fatal) , err_(err) {}
+
+    virtual const char* what() const throw() { return err_.c_str(); }
+
+    virtual ~ErrorCode() throw() {}
+
+  private:
+    std::string err_;
   };
 
 }

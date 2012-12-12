@@ -32,6 +32,7 @@ namespace openvpn {
       TUN_FRAMING_ERROR,   // error with tun PF_INET/PF_INET6 prefix
       TUN_SETUP_FAILED,    // error setting up tun/tap interface
       TUN_IFACE_CREATE,    // error creating tun/tap interface
+      TAP_NOT_SUPPORTED,   // dev tap is present in profile but not supported
       REROUTE_GW_NO_DNS,   // redirect-gateway specified without alt DNS servers
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
@@ -80,6 +81,7 @@ namespace openvpn {
 	"TUN_FRAMING_ERROR",
 	"TUN_SETUP_FAILED",
 	"TUN_IFACE_CREATE",
+	"TAP_NOT_SUPPORTED",
 	"REROUTE_GW_NO_DNS",
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",
