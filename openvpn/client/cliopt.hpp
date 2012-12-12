@@ -190,7 +190,7 @@ namespace openvpn {
 
       // initialize transport layer
       if (cp->layer != Layer(Layer::OSI_LAYER_3))
-	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "only layer 3 currently supported");
+	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "only OSI layer 3 tunnels currently supported");
 
       // init transport config
       const std::string session_name = load_transport_config();
