@@ -32,6 +32,7 @@
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/ssl/kuparse.hpp>
 #include <openvpn/ssl/nscert.hpp>
+#include <openvpn/ssl/tls_remote.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
 #include <openvpn/polarssl/pki/dh.hpp>
@@ -94,6 +95,7 @@ namespace openvpn {
       NSCert::Type ns_cert_type;
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
+      std::string tls_remote;
       typename RAND_API::Ptr rng;   // random data source
 
       void enable_debug()
@@ -189,10 +191,11 @@ namespace openvpn {
 	KUParse::remote_cert_ku(opt, ku);
 	KUParse::remote_cert_eku(opt, eku);
 
+	// parse tls-remote
+	tls_remote = opt.get_optional("tls-remote", 1, 256);
+
 	// unsupported cert verification options
 	{
-	  if (opt.exists("tls-remote"))
-	    throw option_error("tls-remote not supported");
 	}
       }
     };
@@ -556,6 +559,34 @@ namespace openvpn {
       return false;
     }
 
+    static std::string x509_get_subject(const x509_cert *cert)
+    {
+      char subj[256];
+      const int status = x509parse_dn_gets(subj, sizeof(subj), &cert->subject);
+      if (status > 0)
+	return std::string(subj);
+      else
+	return std::string("");
+    }
+
+    static std::string x509_get_common_name(const x509_cert *cert)
+    {
+      const x509_name *name = &cert->subject;
+
+      // find common name
+      while (name != NULL)
+	{
+	  if (std::memcmp(name->oid.p, OID_CN, OID_SIZE(OID_CN)) == 0)
+	    break;
+	  name = name->next;
+	}
+
+      if (name)
+	return std::string((const char *)name->val.p, name->val.len);
+      else
+	return std::string("");
+    }
+
     static int verify_callback(void *arg, x509_cert *cert, int depth, int preverify_ok)
     {
       PolarSSLContext *self = (PolarSSLContext *)arg;
@@ -587,6 +618,18 @@ namespace openvpn {
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
 	      preverify_ok = false;
+	    }
+
+	  // verify tls-remote
+	  if (!self->config.tls_remote.empty())
+	    {
+	      const std::string subject = x509_get_subject(cert);
+	      const std::string common_name = x509_get_common_name(cert);
+	      if (!TLSRemote::test(self->config.tls_remote, subject, common_name))
+		{
+		  OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
+		  preverify_ok = false;
+		}
 	    }
 	}
 
