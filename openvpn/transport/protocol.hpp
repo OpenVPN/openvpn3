@@ -11,7 +11,7 @@
 #include <string>
 
 #include <boost/cstdint.hpp> // for boost::uint32_t, etc.
-#include <boost/algorithm/string.hpp> // for boost::algorithm::to_lower
+#include <boost/algorithm/string.hpp> // for boost::algorithm::to_lower, ends_with
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
@@ -62,13 +62,15 @@ namespace openvpn {
       return is_tcp() ? sizeof(boost::uint16_t) : 0;
     }
 
-    static Protocol parse(const std::string& str)
+    static Protocol parse(const std::string& str, const bool allow_client_suffix)
     {
       Protocol ret;
       std::string s = str;
       boost::algorithm::to_lower(s);
       if (s == "adaptive")
 	return ret;
+      if (allow_client_suffix && boost::algorithm::ends_with(s, "-client"))
+	s = s.substr(0, s.length()-7);
       if (s.length() >= 3)
 	{
 	  const std::string s1 = s.substr(0, 3);

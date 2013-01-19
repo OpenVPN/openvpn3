@@ -299,7 +299,7 @@ namespace openvpn {
       try {
 	// validate proto_override
 	if (!config.protoOverride.empty())
-	  Protocol::parse(config.protoOverride);
+	  Protocol::parse(config.protoOverride, false);
 
 	// parse config
 	OptionList::KeyValueList kvl;
@@ -345,7 +345,7 @@ namespace openvpn {
 	state->google_dns_fallback = config.googleDnsFallback;
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
-	  state->proto_override = Protocol::parse(config.protoOverride);
+	  state->proto_override = Protocol::parse(config.protoOverride, false);
 	if (!config.compressionMode.empty())
 	  state->proto_context_options->parse_compression_mode(config.compressionMode);
 	if (eval.externalPki)

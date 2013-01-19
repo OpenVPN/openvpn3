@@ -130,7 +130,7 @@ namespace openvpn {
       {
 	const Option* o = opt.get_ptr("proto");
 	if (o)
-	  default_proto = Protocol::parse(o->get(1, 16));
+	  default_proto = Protocol::parse(o->get(1, 16), true);
       }
 
       // parse "port" option if present
@@ -161,7 +161,7 @@ namespace openvpn {
 		else
 		  e.server_port = default_port;
 		if (o.size() >= 4)
-		  e.transport_protocol = Protocol::parse(o.get(3, 16));
+		  e.transport_protocol = Protocol::parse(o.get(3, 16), false);
 		else
 		  e.transport_protocol = default_proto;
 		list.push_back(e);
