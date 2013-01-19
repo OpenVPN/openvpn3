@@ -205,7 +205,7 @@ namespace openvpn {
 	pid_time_backtrack = 0;
 	pid_debug_level = 0;
 	autologin = false;
-	key_direction = -1;
+	key_direction = -1; // bidirectional
       }
 
       // master SSL context
@@ -243,7 +243,7 @@ namespace openvpn {
       // tls_auth parms
       OpenVPNStaticKey tls_auth_key; // leave this undefined to disable tls_auth
       typename CRYPTO_API::Digest tls_auth_digest;
-      int key_direction; // -1 if undefined
+      int key_direction; // 0, 1, or -1 for bidirectional
 
       // reliability layer parms
       reliable::id_t reliable_window;
@@ -280,7 +280,7 @@ namespace openvpn {
 	comp_ctx = CompressContext(CompressContext::NONE, false);
 	protocol = Protocol();
 	pid_mode = PacketIDReceive::UDP_MODE;
-	key_direction = -1;
+	key_direction = -1; // bidirectional
 
 	// load parameters that can be present in both config file or pushed options
 	load_common(opt, pco);
@@ -511,10 +511,8 @@ namespace openvpn {
 	    out << ',' << compstr;
 	}
 
-	if (server)
-	  out << ",keydir 0";
-	else
-	  out << ",keydir 1";
+	if (key_direction >= 0)
+	  out << ",keydir " << key_direction;
 
 	out << ",cipher " << cipher.name();
 	out << ",auth " << digest.name();
@@ -1831,9 +1829,19 @@ namespace openvpn {
       if (use_tls_auth)
 	{
 	  // init tls_auth hmac
-	  const unsigned int key_dir = (c.key_direction >= 0 ? !c.key_direction : is_server()) ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
-	  ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
-	  ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	  if (c.key_direction >= 0)
+	    {
+	      // key-direction is 0 or 1
+	      const unsigned int key_dir = c.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
+	      ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+	      ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	    }
+	  else
+	    {
+	      // key-direction bidirectional mode
+	      ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+	      ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+	    }
 
 	  // init tls_auth packet ID
 	  ta_pid_send.init(PacketID::LONG_FORM);
