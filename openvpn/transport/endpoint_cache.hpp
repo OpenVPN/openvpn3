@@ -12,10 +12,10 @@
 
 #include <string>
 
-#include <openvpn/common/typeinfo.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/common/number.hpp>
 
 namespace openvpn {
 
@@ -37,14 +37,14 @@ namespace openvpn {
 	  //OPENVPN_LOG("***** EndpointCache cache IP ADDR " << host << ':' << port << " -> " << addr);
 	  const IP::Addr ip_addr = IP::Addr::from_string(host);
 	  server_endpoint.address(ip_addr.to_asio());
-	  server_endpoint.port(types<unsigned int>::parse(port));
+	  server_endpoint.port(parse_number_throw<unsigned int>(port, "port"));
 	  return true;
 	}
       else if (host == name && addr.defined())
 	{
 	  //OPENVPN_LOG("***** EndpointCache cache HIT " << host << ':' << port << " -> " << addr);
 	  server_endpoint.address(addr.to_asio());
-	  server_endpoint.port(types<unsigned int>::parse(port));
+	  server_endpoint.port(parse_number_throw<unsigned int>(port, "port"));
 	  return true;
 	}
       else

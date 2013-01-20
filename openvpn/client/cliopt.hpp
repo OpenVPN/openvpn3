@@ -234,7 +234,7 @@ namespace openvpn {
       {
 	const Option *o = opt.get_ptr("server-poll-timeout");
 	if (o)
-	  server_poll_timeout_ = types<unsigned int>::parse(o->get(1, 16));
+	  server_poll_timeout_ = parse_number_throw<unsigned int>(o->get(1, 16), "server-poll-timeout");
       }
 
       // userlocked username

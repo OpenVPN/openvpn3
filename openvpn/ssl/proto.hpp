@@ -27,6 +27,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/socktypes.hpp>
+#include <openvpn/common/number.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -554,16 +555,20 @@ namespace openvpn {
       }
 
     private:
-      unsigned int load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
+      void load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
       {
-	unsigned int ret = dur.to_seconds();
+	const unsigned int maxdur = 60*60*24*7; // maximum duration -- 7 days
 	const Option *o = opt.get_ptr(name);
 	if (o)
 	  {
-	    ret = types<unsigned int>::parse(o->get(1, 16));
-	    dur = Time::Duration::seconds(ret);
+	    unsigned int value = 0;
+	    const bool status = parse_number<unsigned int>(o->get(1, 16), value);
+	    if (!status)
+	      OPENVPN_THROW(proto_option_error, name << ": error parsing number");
+	    if (value == 0 || value > maxdur)
+	      value = maxdur;
+	    dur = Time::Duration::seconds(value);
 	  }
-	return ret;
       }
 
       // load parameters that can be present in both config file or pushed options

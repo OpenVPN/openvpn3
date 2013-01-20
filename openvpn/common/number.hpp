@@ -18,7 +18,7 @@
 
 namespace openvpn {
 
-  OPENVPN_SIMPLE_EXCEPTION(number_parse_exception);
+  OPENVPN_EXCEPTION(number_parse_exception);
 
   // Parse the number of type T in str, returning
   // value in retval.  Returns true on success.
@@ -54,44 +54,39 @@ namespace openvpn {
       }
   }
 
-  // like parse_number above, but throw exception on error
+  // like parse_number above, but accepts std::string
   template <typename T>
-  inline T parse_number(const char *str)
+  inline bool parse_number(const std::string& str, T& retval)
+  {
+    return parse_number<T>(str.c_str(), retval);
+  }
+
+  template <typename T>
+  inline T parse_number_throw(const std::string& str, const char *error)
+  {
+    T ret;
+    if (parse_number<T>(str.c_str(), ret))
+      return ret;
+    else
+      throw number_parse_exception(std::string(error));
+  }
+
+  template <typename T>
+  inline T parse_number_throw(const char *str, const char *error)
   {
     T ret;
     if (parse_number<T>(str, ret))
       return ret;
     else
-      throw number_parse_exception();
-  }
-
-  // like parse_number above, but accepts std::string
-  template <typename T>
-  inline T parse_number_str(const std::string& str)
-  {
-    return parse_number<T>(str.c_str());
-  }
-
-  inline bool is_number(const char *str)
-  {
-    char c;
-    bool found_digit = false;
-    while ((c = *str++))
-      {
-	if (c >= '0' && c <= '9')
-	  found_digit = true;
-	else
-	  return false;
-      }
-    return found_digit;
+      throw number_parse_exception(std::string(error));
   }
 
   template <typename T>
-  inline bool validate_number(const std::string& numstr,
-			      const size_t max_len,
-			      const T minimum,
-			      const T maximum,
-			      T* value_return = NULL)
+  inline bool parse_number_validate(const std::string& numstr,
+				    const size_t max_len,
+				    const T minimum,
+				    const T maximum,
+				    T* value_return = NULL)
   {
     if (numstr.length() <= max_len)
       {
@@ -107,6 +102,20 @@ namespace openvpn {
 	  }
       }
     return false;
+  }
+
+  inline bool is_number(const char *str)
+  {
+    char c;
+    bool found_digit = false;
+    while ((c = *str++))
+      {
+	if (c >= '0' && c <= '9')
+	  found_digit = true;
+	else
+	  return false;
+      }
+    return found_digit;
   }
 
 } // namespace openvpn

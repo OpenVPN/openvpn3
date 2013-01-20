@@ -191,7 +191,7 @@ namespace openvpn {
 
     void validate_port(const std::string& port)
     {
-      if (!validate_number<unsigned int>(port, 5, 1, 65535))
+      if (!parse_number_validate<unsigned int>(port, 5, 1, 65535))
 	OPENVPN_THROW(option_error, "bad port number: " << port);
     }
 

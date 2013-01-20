@@ -25,8 +25,6 @@ namespace openvpn {
 
   typedef long long count_t;
 
-  template <typename T> struct types;
-
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_TYPES_H

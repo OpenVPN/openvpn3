@@ -45,7 +45,6 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/typeinfo.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/split.hpp>
@@ -379,7 +378,7 @@ namespace openvpn {
 	      {
 		const char *tail = key.c_str() + tp;
 		try {
-		  key_priority = parse_number<int>(tail);
+		  key_priority = parse_number_throw<int>(tail, "option priority");
 		  key = key.substr(0, dp);
 		}
 		catch (const number_parse_exception& e)

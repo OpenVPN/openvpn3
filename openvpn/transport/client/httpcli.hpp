@@ -19,7 +19,6 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/typeinfo.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/split.hpp>
@@ -52,7 +51,7 @@ namespace openvpn {
 
       void validate()
       {
-	if (!validate_number<unsigned int>(port, 5, 1, 65535))
+	if (!parse_number_validate<unsigned int>(port, 5, 1, 65535))
 	  OPENVPN_THROW(option_error, "bad proxy port number: " << port);
       }
     };
@@ -507,7 +506,7 @@ namespace openvpn {
 	ntlm_phase_2_response_pending = false;
 
 	const std::string content_length_str = boost::algorithm::trim_copy(http_reply.headers.get_value("content-length"));
-	const unsigned int content_length = types<unsigned int>::parse(content_length_str);
+	const unsigned int content_length = parse_number_throw<unsigned int>(content_length_str, "content-length");
 	if (content_length != 0)
 	  throw Exception("NTLM phase-2 Content-Length is not zero");
 
