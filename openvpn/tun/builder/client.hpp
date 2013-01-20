@@ -503,6 +503,42 @@ namespace openvpn {
 	}
       }
 
+      static void add_exclude_route(TunBuilderBase* tb, 
+				    bool add,
+				    const std::string& address,
+				    int prefix_length,
+				    bool ipv6)
+      {
+	if (add)
+	  {
+	    if (!tb->tun_builder_add_route(address, prefix_length, ipv6))
+	      throw tun_builder_route_error("tun_builder_add_route failed");
+	  }
+	else
+	  {
+	    if (!tb->tun_builder_exclude_route(address, prefix_length, ipv6))
+	      throw tun_builder_route_error("tun_builder_exclude_route failed");
+	  }
+      }
+
+      // Check the target of a route.
+      // Return true if route should be added or false if route should be excluded.
+      static bool route_target(const Option& o, const size_t target_index)
+      {
+	if (o.size() >= (target_index+1))
+	  {
+	    const std::string& target = o.ref(target_index);
+	    if (target == "vpn_gateway")
+	      return true;
+	    else if (target == "net_gateway")
+	      return false;
+	    else
+	      throw tun_builder_route_error("route destinations other than vpn_gateway or net_gateway are not supported");
+	  }
+	else
+	  return true;
+      }
+
       static unsigned int add_routes(TunBuilderBase* tb,
 				     const OptionList& opt,
 				     const IP::Addr& server_addr,
@@ -530,9 +566,9 @@ namespace openvpn {
 	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway IPv6 failed");
 	    reroute_gw_ver_flags |= F_IPv6;
 	  }
-	
-	// add IPv4 routes (if redirect-gateway IPv4 wasn't applied)
-	if (!(reroute_gw_ver_flags & F_IPv4))
+
+	// add IPv4 routes
+	if (ip_ver_flags & F_IPv4)
 	  {
 	    OptionList::IndexMap::const_iterator dopt = opt.map().find("route"); // DIRECTIVE
 	    if (dopt != opt.map().end())
@@ -541,17 +577,14 @@ namespace openvpn {
 		  {
 		    const Option& o = opt[*i];
 		    try {
-                      if (o.size() >= 4 && o.ref(3) != "vpn_gateway")
-			throw tun_builder_route_error("only tunnel routes supported");
 		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o.get(1, 256), o.get_optional(2, 256), "route");
 		      if (!pair.is_canonical())
 			throw tun_builder_error("route is not canonical");
 		      if (pair.version() != IP::Addr::V4)
 			throw tun_builder_error("route is not IPv4");
-		      if (!tb->tun_builder_add_route(pair.addr.to_string(),
-						     pair.netmask.prefix_len(),
-						     false))
-			throw tun_builder_route_error("tun_builder_add_route failed");
+		      const bool add = route_target(o, 3);
+		      if (!(reroute_gw_ver_flags & F_IPv4) || !add)
+			add_exclude_route(tb, add, pair.addr.to_string(), pair.netmask.prefix_len(), false);
 		    }
 		    catch (const std::exception& e)
 		      {
@@ -561,8 +594,8 @@ namespace openvpn {
 	      }
 	  }
 
-	// add IPv6 routes (if redirect-gateway IPv6 wasn't applied)
-	if (!(reroute_gw_ver_flags & F_IPv6))
+	// add IPv6 routes
+	if (ip_ver_flags & F_IPv6)
 	  {
 	    OptionList::IndexMap::const_iterator dopt = opt.map().find("route-ipv6"); // DIRECTIVE
 	    if (dopt != opt.map().end())
@@ -571,17 +604,14 @@ namespace openvpn {
 		  {
 		    const Option& o = opt[*i];
 		    try {
-		      if (o.size() >= 3 && o.ref(2) != "vpn_gateway")
-			throw tun_builder_route_error("only tunnel routes supported");
 		      const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o.get(1, 256), "route-ipv6");
 		      if (!pair.is_canonical())
 			throw tun_builder_error("route is not canonical");
 		      if (pair.version() != IP::Addr::V6)
 			throw tun_builder_error("route is not IPv6");
-		      if (!tb->tun_builder_add_route(pair.addr.to_string(),
-						     pair.netmask.prefix_len(),
-						     true))
-			throw tun_builder_route_error("tun_builder_add_route failed");
+		      const bool add = route_target(o, 2);
+		      if (!(reroute_gw_ver_flags & F_IPv6) || !add)
+			add_exclude_route(tb, add, pair.addr.to_string(), pair.netmask.prefix_len(), true);
 		    }
 		    catch (const std::exception& e)
 		      {
