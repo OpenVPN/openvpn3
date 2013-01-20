@@ -43,10 +43,16 @@
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/ssl/proto_context_options.hpp>
 
-#ifdef OPENVPN_DEBUG_PROTO
+#if OPENVPN_DEBUG_PROTO >= 1
 #define OPENVPN_LOG_PROTO(x) OPENVPN_LOG(x)
 #else
 #define OPENVPN_LOG_PROTO(x)
+#endif
+
+#if OPENVPN_DEBUG_PROTO >= 2
+#define OPENVPN_LOG_PROTO_VERBOSE(x) OPENVPN_LOG(x)
+#else
+#define OPENVPN_LOG_PROTO_VERBOSE(x)
 #endif
 
 /*
@@ -1231,26 +1237,26 @@ namespace openvpn {
 
       void set_state(const int newstate)
       {
-	//OPENVPN_LOG_PROTO("KeyContext " << (proto.is_server() ? "SERVER " : "CLIENT ") << state_string(state) << " -> " << state_string(newstate));
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << (proto.is_server() ? "SERVER " : "CLIENT ") << state_string(state) << " -> " << state_string(newstate));
 	state = newstate;
       }
 
       void set_event(const EventType current)
       {
-	//OPENVPN_LOG_PROTO("KeyContext " << event_type_string(current));
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << event_type_string(current));
 	current_event = current;
       }
 
       void set_event(const EventType next, const Time& next_time)
       {
-	//OPENVPN_LOG_PROTO("KeyContext " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
 	next_event = next;
 	next_event_time = next_time;
       }
 
       void set_event(const EventType current, const EventType next, const Time& next_time)
       {
-	//OPENVPN_LOG_PROTO("KeyContext " << event_type_string(current) << " -> " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << event_type_string(current) << " -> " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
 	current_event = current;
 	next_event = next;
 	next_event_time = next_time;
@@ -1471,7 +1477,7 @@ namespace openvpn {
       {
 	OpenVPNStaticKey key;
 	tlsprf_self.generate_key_expansion(key, tlsprf_peer, proto.psid_self, proto.psid_peer);
-	//OPENVPN_LOG_PROTO("KEY " << proto.mode().str() << ' ' << key.render());
+	OPENVPN_LOG_PROTO_VERBOSE("KEY " << proto.mode().str() << ' ' << key.render());
 	init_data_channel_crypto_context(key);
 	tlsprf_self.erase();
 	tlsprf_peer.erase();
@@ -2257,7 +2263,7 @@ namespace openvpn {
 	  switch (ev)
 	    {
 	    case KeyContext::KEV_ACTIVE:
-	      //OPENVPN_LOG_PROTO("*** SESSION_ACTIVE");
+	      OPENVPN_LOG_PROTO_VERBOSE("*** SESSION_ACTIVE");
 	      active();
 	      break;
 	    case KeyContext::KEV_RENEGOTIATE:
