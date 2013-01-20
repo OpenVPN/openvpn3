@@ -23,6 +23,11 @@ namespace openvpn {
     {
       return tls_remote == subject || boost::algorithm::starts_with(common_name, tls_remote);
     }
+
+    inline void log(const std::string& tls_remote, const std::string& subject, const std::string& common_name)
+    {
+      OPENVPN_LOG("tls-remote validation" << std::endl << "  tls-remote: '" << tls_remote << '\'' << std::endl << "  Subj: '" << subject << '\'' << std::endl << "  CN: '" << common_name << '\'');
+    }
   }
 }
 

@@ -843,6 +843,7 @@ namespace openvpn {
 	  if (!self->config.tls_remote.empty())
 	    {
 	      const std::string common_name = x509_get_field(ctx->current_cert, NID_commonName);
+	      TLSRemote::log(self->config.tls_remote, subject, common_name);
 	      if (!TLSRemote::test(self->config.tls_remote, subject, common_name))
 		{
 		  OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");

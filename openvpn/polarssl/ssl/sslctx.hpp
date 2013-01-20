@@ -14,7 +14,6 @@
 #include <vector>
 #include <string>
 #include <cstring>
-#include <sstream>
 
 #include <polarssl/ssl.h>
 
@@ -559,14 +558,54 @@ namespace openvpn {
       return false;
     }
 
+    // Try to return the x509 subject formatted like the OpenSSL X509_NAME_oneline method.
+    // Only attributes matched in the switch statements below will be rendered.  All other
+    // attributes will be ignored.
     static std::string x509_get_subject(const x509_cert *cert)
     {
-      char subj[256];
-      const int status = x509parse_dn_gets(subj, sizeof(subj), &cert->subject);
-      if (status > 0)
-	return std::string(subj);
-      else
-	return std::string("");
+      std::string ret;
+      for (const x509_name *name = &cert->subject; name != NULL; name = name->next)
+	{
+	  const char *key = NULL;
+	  if (memcmp(name->oid.p, OID_X520, 2) == 0)
+	    {
+	      switch (name->oid.p[2])
+		{
+		case X520_COMMON_NAME:
+		  key = "CN";
+		  break;
+		case X520_COUNTRY:
+		  key = "C";
+		  break;
+		case X520_LOCALITY:
+		  key = "L";
+		  break;
+		case X520_STATE:
+		  key = "ST";
+		  break;
+		case X520_ORGANIZATION:
+		  key = "O";
+		  break;
+		case X520_ORG_UNIT:
+		  key = "OU";
+		  break;
+                break;
+		}
+	    }
+	  else if (memcmp(name->oid.p, OID_PKCS9, 8) == 0)
+	    {
+	      switch (name->oid.p[8] )
+		{
+		case PKCS9_EMAIL:
+		  key = "emailAddress";
+		  break;
+		}
+	    }
+	  // make sure that key is defined and value has no embedded nulls
+	  if (key && !string::embedded_null((const char *)name->val.p, name->val.len))
+	    ret += "/" + std::string(key) + "=" + std::string((const char *)name->val.p, name->val.len);
+	}
+      return ret;
     }
 
     static std::string x509_get_common_name(const x509_cert *cert)
@@ -625,6 +664,7 @@ namespace openvpn {
 	    {
 	      const std::string subject = x509_get_subject(cert);
 	      const std::string common_name = x509_get_common_name(cert);
+	      TLSRemote::log(self->config.tls_remote, subject, common_name);
 	      if (!TLSRemote::test(self->config.tls_remote, subject, common_name))
 		{
 		  OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");

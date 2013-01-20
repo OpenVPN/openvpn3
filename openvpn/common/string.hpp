@@ -91,6 +91,15 @@ namespace openvpn {
 	    str = str.substr(0, p);
 	}
     }
+
+    // return true if str of size len contains an embedded null
+    inline bool embedded_null(const char *str, size_t len)
+    {
+      while (len--)
+	if (!*str++)
+	  return true;
+      return false;
+    }
   } // namespace string
 
   // Reference-counted string
