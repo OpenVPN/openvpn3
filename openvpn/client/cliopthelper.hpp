@@ -18,6 +18,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/split.hpp>
 #include <openvpn/common/splitlines.hpp>
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/cliconstants.hpp>
@@ -40,6 +41,9 @@ namespace openvpn {
 	// reset POD types
 	reset_pod();
 
+	// limits
+	const size_t max_server_list_size = 64;
+
 	// server-locked profiles not supported
 	{
 	  const OptionList::IndexList* se = options.get_index_ptr("setenv");
@@ -59,6 +63,28 @@ namespace openvpn {
 		    allowPasswordSave_ = parse_bool(o, "setenv ALLOW_PASSWORD_SAVE", 2);
 		  else if (arg1 == "CLIENT_CERT")
 		    clientCertEnabled_ = parse_bool(o, "setenv CLIENT_CERT", 2);
+		  else if (arg1 == "USERNAME")
+		    userlockedUsername_ = o.get(2, 256);
+		  else if (arg1 == "FRIENDLY_NAME")
+		    friendlyName_ = o.get(2, 256);
+		  else if (arg1 == "SERVER")
+		    {
+		      const std::string& serv = o.get(2, 256);
+		      std::vector<std::string> slist = Split::by_char<std::vector<std::string>, NullLex, Split::NullLimit>(serv, '/', 0, 1);
+		      ServerEntry se;
+		      if (slist.size() == 1)
+			{
+			  se.server = slist[0];
+			  se.friendlyName = slist[0];
+			}
+		      else if (slist.size() == 2)
+			{
+			  se.server = slist[0];
+			  se.friendlyName = slist[1];
+			}
+		      if (!se.server.empty() && !se.friendlyName.empty() && serverList_.size() < max_server_list_size)
+			serverList_.push_back(se);
+		    }
 		}
 	    }
 	}
@@ -143,26 +169,19 @@ namespace openvpn {
 
 	// server list
 	{
-	  const size_t max_server_list_size = 64;
 	  const Option* o = options.get_ptr("HOST_LIST");
 	  if (o)
 	    {
 	      SplitLines in(o->get(1, 4096 | Option::MULTILINE), 0);
-	      size_t count = 0;
 	      while (in(true))
 		{
-		  if (count >= max_server_list_size)
-		    break;
 		  ServerEntry se;
 		  se.server = in.line_ref();
 		  se.friendlyName = se.server;
 		  Option::validate_string("HOST_LIST server", se.server, 256);
 		  Option::validate_string("HOST_LIST friendly name", se.friendlyName, 256);
-		  if (!se.server.empty() && !se.friendlyName.empty())
-		    {
-		      serverList_.push_back(se);
-		      ++count;
-		    }
+		  if (!se.server.empty() && !se.friendlyName.empty() && serverList_.size() < max_server_list_size)
+		    serverList_.push_back(se);
 		}
 	    }
 	}
