@@ -80,7 +80,8 @@ namespace openvpn {
 
       Config() : external_pki(NULL),
 		 flags(0),
-		 ns_cert_type(NSCert::NONE) {}
+		 ns_cert_type(NSCert::NONE),
+		 local_cert_enabled(true) {}
 
       Mode mode;
       PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
@@ -95,6 +96,7 @@ namespace openvpn {
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
+      bool local_cert_enabled;
       typename RAND_API::Ptr rng;   // random data source
 
       void enable_debug()
@@ -161,18 +163,22 @@ namespace openvpn {
 	  load_ca(ca_txt);
 	}
 
-	// cert/extra-certs
-	{
-	  const std::string& cert_txt = opt.get("cert", 1, Option::MULTILINE);
-	  const std::string ec_txt = opt.cat("extra-certs");
-	  load_cert(cert_txt, ec_txt);
-	}
-
-	// private key
-	if (!external_pki)
+	// local cert/key
+	if (local_cert_enabled)
 	  {
-	    const std::string& key_txt = opt.get("key", 1, Option::MULTILINE);
-	    load_private_key(key_txt);
+	    // cert/extra-certs
+	    {
+	      const std::string& cert_txt = opt.get("cert", 1, Option::MULTILINE);
+	      const std::string ec_txt = opt.cat("extra-certs");
+	      load_cert(cert_txt, ec_txt);
+	    }
+
+	    // private key
+	    if (!external_pki)
+	      {
+		const std::string& key_txt = opt.get("key", 1, Option::MULTILINE);
+		load_private_key(key_txt);
+	      }
 	  }
 
 	// DH
@@ -337,21 +343,25 @@ namespace openvpn {
 	  else
 	    throw PolarSSLException("CA chain not defined");
 
-	  if (c.external_pki)
+	  // client cert+key
+	  if (c.local_cert_enabled)
 	    {
-	      // set our own certificate, supporting chain (i.e. extra-certs), and external private key
-	      if (c.crt_chain)
-		ssl_set_own_cert_pkcs11(ssl, c.crt_chain->get(), &ctx->p11);
+	      if (c.external_pki)
+		{
+		  // set our own certificate, supporting chain (i.e. extra-certs), and external private key
+		  if (c.crt_chain)
+		    ssl_set_own_cert_pkcs11(ssl, c.crt_chain->get(), &ctx->p11);
+		  else
+		    throw PolarSSLException("cert is undefined");
+		}
 	      else
-		throw PolarSSLException("cert is undefined");
-	    }
-	  else
-	    {
-	      // set our own certificate, supporting chain (i.e. extra-certs), and private key
-	      if (c.crt_chain && c.priv_key)
-		ssl_set_own_cert(ssl, c.crt_chain->get(), c.priv_key->get());
-	      else
-		throw PolarSSLException("cert and/or private key is undefined");
+		{
+		  // set our own certificate, supporting chain (i.e. extra-certs), and private key
+		  if (c.crt_chain && c.priv_key)
+		    ssl_set_own_cert(ssl, c.crt_chain->get(), c.priv_key->get());
+		  else
+		    throw PolarSSLException("cert and/or private key is undefined");
+		}
 	    }
 
 	  // set DH
@@ -463,15 +473,18 @@ namespace openvpn {
     {
       config = config_arg;
 
-      // Verify that cert is defined
-      if (!config.crt_chain)
-	throw PolarSSLException("cert is undefined");
+      if (config.local_cert_enabled)
+	{
+	  // Verify that cert is defined
+	  if (!config.crt_chain)
+	    throw PolarSSLException("cert is undefined");
 
-      // PKCS11 setup (always done, even if non-external-pki)
-      p11.parameter = this;
-      p11.f_decrypt = epki_decrypt;
-      p11.f_sign = epki_sign;
-      p11.len = config.crt_chain->get()->rsa.len;
+	  // PKCS11 setup (always done, even if non-external-pki)
+	  p11.parameter = this;
+	  p11.f_decrypt = epki_decrypt;
+	  p11.f_sign = epki_sign;
+	  p11.len = config.crt_chain->get()->rsa.len;
+	}
     }
 
     typename SSL::Ptr ssl() { return typename SSL::Ptr(new SSL(this)); }

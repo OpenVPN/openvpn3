@@ -57,6 +57,8 @@ namespace openvpn {
 		    }
 		  else if (arg1 == "ALLOW_PASSWORD_SAVE")
 		    allowPasswordSave_ = parse_bool(o, "setenv ALLOW_PASSWORD_SAVE", 2);
+		  else if (arg1 == "CLIENT_CERT")
+		    clientCertEnabled_ = parse_bool(o, "setenv CLIENT_CERT", 2);
 		}
 	    }
 	}
@@ -69,7 +71,7 @@ namespace openvpn {
 	}
 
 	// External PKI
-	externalPki_ = is_external_pki(options);
+	externalPki_ = (clientCertEnabled_ && is_external_pki(options));
 
 	// allow password save
 	{
@@ -252,6 +254,9 @@ namespace openvpn {
     // true: no creds required, false: username/password required
     bool autologin() const { return autologin_; }
 
+    // true: no client cert/key required, false: client cert/key required
+    bool clientCertEnabled() const { return clientCertEnabled_; }
+
     // if true, this is an External PKI profile (no cert or key directives)
     bool externalPki() const { return externalPki_; }
 
@@ -283,19 +288,7 @@ namespace openvpn {
       return os.str();
     }
 
-    static bool is_external_pki(const OptionList& options)
-    {
-      const Option* epki = options.get_ptr("EXTERNAL_PKI");
-      if (epki)
-	return string::is_true(epki->get_optional(1, 16));
-      else
-	{
-	  const Option* cert = options.get_ptr("cert");
-	  const Option* key = options.get_ptr("key");
-	  return !cert || !key;
-	}
-    }
-
+  private:
     static bool is_autologin(const OptionList& options)
     {
       const Option* autologin = options.get_ptr("AUTOLOGIN");
@@ -313,14 +306,26 @@ namespace openvpn {
 	      // cert store on the client.  For now, we are going to assume
 	      // that External PKI profiles from the AS are always userlogin,
 	      // unless explicitly overriden by AUTOLOGIN above.
-	      if (is_external_pki(options))
+	      if (options.exists_unique("EXTERNAL_PKI"))
 		return false;
 	    }
 	  return ret;
 	}
     }
 
-  private:
+    static bool is_external_pki(const OptionList& options)
+    {
+      const Option* epki = options.get_ptr("EXTERNAL_PKI");
+      if (epki)
+	return string::is_true(epki->get_optional(1, 16));
+      else
+	{
+	  const Option* cert = options.get_ptr("cert");
+	  const Option* key = options.get_ptr("key");
+	  return !cert || !key;
+	}
+    }
+
     ParseClientConfig()
     {
       reset_pod();
@@ -329,7 +334,7 @@ namespace openvpn {
     void reset_pod()
     {
       error_ = autologin_ = externalPki_ = staticChallengeEcho_ = privateKeyPasswordRequired_ = false;
-      allowPasswordSave_ = true;
+      allowPasswordSave_ = clientCertEnabled_ = true;
     }
 
     bool parse_bool(const Option& o, const std::string& title, const size_t index)
@@ -349,6 +354,7 @@ namespace openvpn {
     std::string profileName_;
     std::string friendlyName_;
     bool autologin_;
+    bool clientCertEnabled_;
     bool externalPki_;
     std::string staticChallenge_;
     bool staticChallengeEcho_;

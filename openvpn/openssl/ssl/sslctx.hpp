@@ -73,10 +73,13 @@ namespace openvpn {
       };
       typedef unsigned int Flags;
 
-      Config() : external_pki(NULL), flags(0), ns_cert_type(NSCert::NONE) {}
+      Config() : external_pki(NULL),
+		 flags(0),
+		 ns_cert_type(NSCert::NONE),
+		 local_cert_enabled(true) {}
 
       Mode mode;
-      CertCRLList ca;                   // from OpenVPN "ca" optino
+      CertCRLList ca;                   // from OpenVPN "ca" option
       OpenSSLPKI::X509 cert;            // from OpenVPN "cert" option
       OpenSSLPKI::X509List extra_certs; // from OpenVPN "extra-certs" option
       OpenSSLPKI::PKey pkey;            // private key
@@ -88,6 +91,7 @@ namespace openvpn {
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
+      bool local_cert_enabled;
 
       void enable_debug()
       {
@@ -142,23 +146,27 @@ namespace openvpn {
 	  load_ca(ca_txt);
 	}
 
-	// cert
-	{
-	  const std::string& cert_txt = opt.get("cert", 1, Option::MULTILINE);
-	  load_cert(cert_txt);
-	}
-
-	// extra-certs
-	{
-	  const std::string ec_txt = opt.cat("extra-certs");
-	  load_extra_certs(ec_txt);
-	}
-
-	// private key
-	if (!external_pki)
+	// local cert/key
+	if (local_cert_enabled)
 	  {
-	    const std::string& key_txt = opt.get("key", 1, Option::MULTILINE);
-	    load_private_key(key_txt);
+	    // cert
+	    {
+	      const std::string& cert_txt = opt.get("cert", 1, Option::MULTILINE);
+	      load_cert(cert_txt);
+	    }
+
+	    // extra-certs
+	    {
+	      const std::string ec_txt = opt.cat("extra-certs");
+	      load_extra_certs(ec_txt);
+	    }
+
+	    // private key
+	    if (!external_pki)
+	      {
+		const std::string& key_txt = opt.get("key", 1, Option::MULTILINE);
+		load_private_key(key_txt);
+	      }
 	  }
 
 	// DH
@@ -569,37 +577,40 @@ namespace openvpn {
 
 	  // fixme -- support SSL_CTX_set_cipher_list
 
-	  // Set certificate
-	  if (!config.cert.defined())
-	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: cert not defined");
-	  if (SSL_CTX_use_certificate(ctx, config.cert.obj()) != 1)
-	    throw OpenSSLException("OpenSSLContext: SSL_CTX_use_certificate failed");
-
-	  // Set private key
-	  if (config.external_pki)
+	  if (config.local_cert_enabled)
 	    {
-	      epki = new ExternalPKIImpl(ctx, config.cert.obj(), config.external_pki);
-	    }
-	  else
-	    {
-	      if (!config.pkey.defined())
-		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");
-	      if (SSL_CTX_use_PrivateKey(ctx, config.pkey.obj()) != 1)
-		throw OpenSSLException("OpenSSLContext: SSL_CTX_use_PrivateKey failed");
+	      // Set certificate
+	      if (!config.cert.defined())
+		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: cert not defined");
+	      if (SSL_CTX_use_certificate(ctx, config.cert.obj()) != 1)
+		throw OpenSSLException("OpenSSLContext: SSL_CTX_use_certificate failed");
 
-	      // Check cert/private key compatibility
-	      if (!SSL_CTX_check_private_key(ctx))
-		throw OpenSSLException("OpenSSLContext: private key does not match the certificate");
-	    }
-
-	  // Set extra certificates that are part of our own certificate
-	  // chain but shouldn't be included in the verify chain.
-	  if (config.extra_certs.defined())
-	    {
-	      for (OpenSSLPKI::X509List::const_iterator i = config.extra_certs.begin(); i != config.extra_certs.end(); ++i)
+	      // Set private key
+	      if (config.external_pki)
 		{
-		  if (SSL_CTX_add_extra_chain_cert(ctx, (*i)->obj_dup()) != 1)
-		    throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
+		  epki = new ExternalPKIImpl(ctx, config.cert.obj(), config.external_pki);
+		}
+	      else
+		{
+		  if (!config.pkey.defined())
+		    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");
+		  if (SSL_CTX_use_PrivateKey(ctx, config.pkey.obj()) != 1)
+		    throw OpenSSLException("OpenSSLContext: SSL_CTX_use_PrivateKey failed");
+
+		  // Check cert/private key compatibility
+		  if (!SSL_CTX_check_private_key(ctx))
+		    throw OpenSSLException("OpenSSLContext: private key does not match the certificate");
+		}
+
+	      // Set extra certificates that are part of our own certificate
+	      // chain but shouldn't be included in the verify chain.
+	      if (config.extra_certs.defined())
+		{
+		  for (OpenSSLPKI::X509List::const_iterator i = config.extra_certs.begin(); i != config.extra_certs.end(); ++i)
+		    {
+		      if (SSL_CTX_add_extra_chain_cert(ctx, (*i)->obj_dup()) != 1)
+			throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
+		    }
 		}
 	    }
 

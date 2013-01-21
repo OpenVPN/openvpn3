@@ -143,6 +143,9 @@ namespace openvpn {
 	proto_context_options(config.proto_context_options),
 	http_proxy_options(config.http_proxy_options)
     {
+      // parse general client options
+      const ParseClientConfig pcc(opt);
+
       // initialize RNG/PRNG
       rng.reset(new RandomAPI());
       prng.reset(new PRNG<RandomAPI, ClientCryptoAPI>("SHA1", rng, 16));
@@ -156,7 +159,7 @@ namespace openvpn {
       if (config.tun_persist)
 	endpoint_cache.reset(new EndpointCache());
 
-      // client config
+      // client SSL config
       ClientSSLAPI::Config cc;
       cc.set_external_pki_callback(config.external_pki);
       cc.frame = frame;
@@ -167,6 +170,7 @@ namespace openvpn {
       cc.rng = rng;
 #endif
 #if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID) || defined(USE_OPENSSL)
+      cc.local_cert_enabled = pcc.clientCertEnabled();
       cc.set_private_key_password(config.private_key_password);
 #endif
       cc.load(opt);
@@ -176,7 +180,7 @@ namespace openvpn {
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
       cp->load(opt, *proto_context_options);
-      cp->set_autologin(ParseClientConfig::is_autologin(opt));
+      cp->set_autologin(pcc.autologin());
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;
       cp->now = &now_;
