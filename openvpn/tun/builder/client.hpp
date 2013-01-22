@@ -17,6 +17,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/common/split.hpp>
 #include <openvpn/tun/tununixbase.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/builder/capture.hpp>
@@ -629,6 +630,8 @@ namespace openvpn {
 	//   [dhcp-option] [DNS] [172.16.0.23]
 	//   [dhcp-option] [DOMAIN] [openvpn.net]
 	//   [dhcp-option] [DOMAIN] [example.com]
+	//   [dhcp-option] [DOMAIN] [foo1.com foo2.com foo3.com]
+	//   [dhcp-option] [DOMAIN] [bar1.com] [bar2.com] [bar3.com]
 	unsigned int flags = 0;
 	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
 	if (dopt != opt.map().end())
@@ -650,9 +653,17 @@ namespace openvpn {
 		    }
 		  else if (type == "DOMAIN")
 		    {
-		      o.exact_args(3);
-		      if (!tb->tun_builder_add_search_domain(o.get(2, 256), reroute_dns))
-			throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
+		      o.min_args(3);
+		      for (size_t j = 2; j < o.size(); ++j)
+			{
+			  typedef std::vector<std::string> strvec;
+			  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(j, 256));
+			  for (size_t k = 0; k < v.size(); ++k)
+			    {
+			      if (!tb->tun_builder_add_search_domain(v[k], reroute_dns))
+				throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
+			    }
+			}
 		    }
 		  else if (!quiet)
 		    OPENVPN_LOG("unknown DHCP option: " << o.render());
