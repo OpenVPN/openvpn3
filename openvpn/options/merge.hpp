@@ -257,10 +257,14 @@ namespace openvpn {
 				  echo = false;
 
 				  // tls-auth or secret directive may include key-direction parameter
-				  if ((flags & F_MAY_INCLUDE_KEY_DIRECTION) && opt.size() >= 3)
+				  if (flags & F_MAY_INCLUDE_KEY_DIRECTION)
 				    {
-				      const std::string kd = "key-direction " + opt.get(2, 16) + "\n";
-				      profile_content_ += kd;
+				      std::string key_direction;
+				      if (opt.size() >= 3)
+					key_direction = opt.get(2, 16);
+				      else
+					key_direction = "bidirectional";
+				      profile_content_ += "key-direction " + key_direction + "\n";
 				    }
 
 				  // format file_content for appending to profile
@@ -326,13 +330,6 @@ namespace openvpn {
 		}
 	      return false;
 #endif
-	    case 's':
-	      if (d == "secret")
-		{
-		  flags |= F_MAY_INCLUDE_KEY_DIRECTION;
-		  return true;
-		}
-	      return false;
 	    case 't':
 	      if (d == "tls-auth")
 		{

@@ -254,7 +254,8 @@ namespace openvpn {
     namespace Private {
       struct ClientState
       {
-	ClientState() : conn_timeout(0), tun_persist(false), google_dns_fallback(false) {}
+	ClientState() : conn_timeout(0), tun_persist(false),
+			google_dns_fallback(false), disable_client_cert(false) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -273,6 +274,7 @@ namespace openvpn {
 	bool google_dns_fallback;
 	std::string private_key_password;
 	std::string external_pki_alias;
+	bool disable_client_cert;
 	ProtoContextOptions::Ptr proto_context_options;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
       };
@@ -350,6 +352,7 @@ namespace openvpn {
 	  state->proto_context_options->parse_compression_mode(config.compressionMode);
 	if (eval.externalPki)
 	  state->external_pki_alias = config.externalPkiAlias;
+	state->disable_client_cert = config.disableClientCert;
 	if (!config.proxyHost.empty())
 	  {
 	    HTTPProxyTransport::Options::Ptr ho(new HTTPProxyTransport::Options());
@@ -535,6 +538,7 @@ namespace openvpn {
 	cc.http_proxy_options = state->http_proxy_options;
 	cc.reconnect_notify = &state->reconnect_notify;
 	cc.private_key_password = state->private_key_password;
+	cc.disable_client_cert = state->disable_client_cert;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
@@ -549,7 +553,7 @@ namespace openvpn {
 
 	// external PKI
 #if !defined(USE_APPLE_SSL)
-	if (state->eval.externalPki)
+	if (state->eval.externalPki && !state->disable_client_cert)
 	  {
 	    if (!state->external_pki_alias.empty())
 	      {

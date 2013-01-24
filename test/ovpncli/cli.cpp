@@ -125,6 +125,7 @@ int main(int argc, char *argv[])
     { "proxy-password", required_argument,  NULL,      'W' },
     { "eval",           no_argument,        NULL,      'e' },
     { "cache-password", no_argument,        NULL,      'C' },
+    { "no-cert",        no_argument,        NULL,      'x' },
     { NULL,             0,                  NULL,       0  }
   };
 
@@ -145,10 +146,11 @@ int main(int argc, char *argv[])
 	std::string proxyPassword;
 	bool eval = false;
 	bool cachePassword = false;
+	bool disableClientCert = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "eCu:p:r:P:s:t:c:z:h:q:U:W:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "eCxu:p:r:P:s:t:c:z:h:q:U:W:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -157,6 +159,9 @@ int main(int argc, char *argv[])
 		break;
 	      case 'C':
 		cachePassword = true;
+		break;
+	      case 'x':
+		disableClientCert = true;
 		break;
 	      case 'u':
 		username = optarg;
@@ -217,6 +222,7 @@ int main(int argc, char *argv[])
 	config.connTimeout = timeout;
 	config.compressionMode = compress;
 	config.privateKeyPassword = privateKeyPassword;
+	config.disableClientCert = disableClientCert;
 	config.proxyHost = proxyHost;
 	config.proxyPort = proxyPort;
 	config.proxyUsername = proxyUsername;
@@ -327,6 +333,7 @@ int main(int argc, char *argv[])
   std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
   std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
   std::cout << "--cache-password, -C : cache password rather than use Session ID" << std::endl;
+  std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
   std::cout << "" << std::endl;
   return 2;
 }

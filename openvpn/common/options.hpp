@@ -181,6 +181,10 @@ namespace openvpn {
     const std::string& ref(const size_t i) const { return data[i]; }
     std::string& ref(const size_t i) { return data[i]; }
 
+    // equality
+    bool operator==(const Option& other) const { return data == other.data; }
+    bool operator!=(const Option& other) const { return data != other.data; }
+
   private:
     std::string err_ref() const
     {
@@ -727,6 +731,24 @@ namespace openvpn {
 	    return &((*this)[e->second[0]]);
 	  else
 	    OPENVPN_THROW(option_error, "more than one instance of option '" << name << '\'');
+	}
+      else
+	return NULL;
+    }
+
+    const Option* get_consistent(const std::string& name) const
+    {
+      IndexMap::const_iterator e = map_.find(name);
+      if (e != map_.end() && !e->second.empty())
+	{
+	  const Option *first = &((*this)[e->second[0]]);
+	  if (e->second.size() >= 2)
+	    {
+	      for (size_t i = 1; i < e->second.size(); ++i)
+		if (((*this)[e->second[i]]) != *first)
+		  OPENVPN_THROW(option_error, "more than one instance of option '" << name << "' with inconsistent argument(s)");
+	    }
+	  return first;
 	}
       else
 	return NULL;

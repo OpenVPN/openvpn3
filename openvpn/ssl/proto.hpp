@@ -272,7 +272,7 @@ namespace openvpn {
       Time::Duration keepalive_ping;
       Time::Duration keepalive_timeout;
 
-      void load(const OptionList& opt, const ProtoContextOptions& pco)
+      void load(const OptionList& opt, const ProtoContextOptions& pco, const int default_key_direction)
       {
 	// first set defaults
 	reliable_window = 4;
@@ -287,7 +287,7 @@ namespace openvpn {
 	comp_ctx = CompressContext(CompressContext::NONE, false);
 	protocol = Protocol();
 	pid_mode = PacketIDReceive::UDP_MODE;
-	key_direction = -1; // bidirectional
+	key_direction = default_key_direction;
 
 	// load parameters that can be present in both config file or pushed options
 	load_common(opt, pco);
@@ -349,7 +349,7 @@ namespace openvpn {
 
 	// key-direction
 	{
-	  const Option *o = opt.get_ptr("key-direction");
+	  const Option *o = opt.get_consistent("key-direction");
 	  if (o)
 	    {
 	      const std::string& dir = o->get(1, 16);
@@ -357,6 +357,8 @@ namespace openvpn {
 		key_direction = 0;
 	      else if (dir == "1")
 		key_direction = 1;
+	      else if (dir == "bidirectional")
+		key_direction = -1;
 	      else
 		throw proto_option_error("bad key-direction parameter");
 	    }

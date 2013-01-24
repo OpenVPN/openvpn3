@@ -23,7 +23,8 @@ namespace openvpn {
     // value to indicate success (true) or fail (false).
     // tun_builder_new() should be called first, then arbitrary setter methods,
     // and finally tun_builder_establish to return the socket descriptor
-    // for the session.
+    // for the session.  IP addresses are pre-validated before being passed to
+    // these methods.
     // This interface is based on Android's VpnService.Builder.
 
     // Callback to construct a new tun builder
@@ -51,9 +52,11 @@ namespace openvpn {
     // server_address is provided so that the implementation may exclude
     // it from the default route.
     // server_address_ipv6 is true if server_address is an IPv6 address.
+    // ipv4 is true if the default route to be added should be IPv4.
     // ipv6 is true if the default route to be added should be IPv6.
-    // May be called up to 2 times, for ipv6=true|false
-    virtual bool tun_builder_reroute_gw(const std::string& server_address, bool server_address_ipv6, bool ipv6)
+    // flags are defined in RedirectGatewayFlags
+    // Never called more than once per tun_builder session.
+    virtual bool tun_builder_reroute_gw(const std::string& server_address, bool server_address_ipv6, bool ipv4, bool ipv6, unsigned int flags)
     {
       return false;
     }

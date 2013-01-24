@@ -33,6 +33,8 @@ namespace openvpn {
 
     RedirectGatewayFlags() : flags_(RG_DEFAULT) {}
 
+    RedirectGatewayFlags(unsigned int flags) : flags_(flags) {}
+
     explicit RedirectGatewayFlags(const OptionList& opt)
     {
       init(opt);
@@ -55,6 +57,34 @@ namespace openvpn {
     bool redirect_gateway_ipv6_enabled() const
     {
       return rg_enabled() && (flags_ & RG_IPv6);
+    }
+
+    std::string to_string() const
+    {
+      std::string ret;
+      ret += "[ ";
+      if (flags_ & RG_ENABLE)
+	ret += "ENABLE ";
+      if (flags_ & RG_REROUTE_GW)
+	ret += "REROUTE_GW ";
+      if (flags_ & RG_LOCAL)
+	ret += "LOCAL ";
+      if (flags_ & RG_AUTO_LOCAL)
+	ret += "AUTO_LOCAL ";
+      if (flags_ & RG_DEF1)
+	ret += "DEF1 ";
+      if (flags_ & RG_BYPASS_DHCP)
+	ret += "BYPASS_DHCP ";
+      if (flags_ & RG_BYPASS_DNS)
+	ret += "BYPASS_DNS ";
+      if (flags_ & RG_BLOCK_LOCAL)
+	ret += "BLOCK_LOCAL ";
+      if (flags_ & RG_IPv4)
+	ret += "IPv4 ";
+      if (flags_ & RG_IPv6)
+	ret += "IPv6 ";
+      ret += "]";
+      return ret;
     }
 
   private:

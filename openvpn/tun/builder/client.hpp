@@ -206,7 +206,7 @@ namespace openvpn {
 		}
 
 	      // Check if persisted tun session matches properties of to-be-created session
-	      if (copt && tun_persist->match(copt->os.str()))
+	      if (copt && tun_persist->match(copt->to_string()))
 		{
 		  sd = tun_persist->sd();
 		  state = tun_persist->state();
@@ -240,7 +240,7 @@ namespace openvpn {
 	      // persist state
 	      if (copt && !use_persisted_tun)
 		{
-		  tun_persist->persist(sd, state, copt->os.str());
+		  tun_persist->persist(sd, state, copt->to_string());
 		  OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 		}
 
@@ -548,25 +548,21 @@ namespace openvpn {
 	unsigned int reroute_gw_ver_flags = 0;
 	const RedirectGatewayFlags rg_flags(opt);
 
-	// do redirect-gateway for IPv4
+	// redirect-gateway enabled for IPv4?
 	if (rg_flags.redirect_gateway_ipv4_enabled() && (ip_ver_flags & F_IPv4))
-	  {
-	    if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
-					    server_addr.version() == IP::Addr::V6,
-					    false))
-	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway IPv4 failed");
-	    reroute_gw_ver_flags |= F_IPv4;
-	  }
+	  reroute_gw_ver_flags |= F_IPv4;
 
-	// do redirect-gateway for IPv6
+	// redirect-gateway enabled for IPv6?
 	if (rg_flags.redirect_gateway_ipv6_enabled() && (ip_ver_flags & F_IPv6))
-	  {
-	    if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
-					    server_addr.version() == IP::Addr::V6,
-					    true))
-	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway IPv6 failed");
-	    reroute_gw_ver_flags |= F_IPv6;
-	  }
+	  reroute_gw_ver_flags |= F_IPv6;
+
+	// call reroute_gw builder method
+	if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
+					server_addr.version() == IP::Addr::V6,
+					(reroute_gw_ver_flags & F_IPv4) ? true : false,
+					(reroute_gw_ver_flags & F_IPv6) ? true : false,
+					rg_flags()))
+	  throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway failed");
 
 	// add IPv4 routes
 	if (ip_ver_flags & F_IPv4)

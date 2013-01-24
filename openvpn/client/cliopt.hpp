@@ -104,6 +104,7 @@ namespace openvpn {
 	conn_timeout = 0;
 	tun_persist = false;
 	google_dns_fallback = false;
+	disable_client_cert = false;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
 #endif
@@ -119,6 +120,7 @@ namespace openvpn {
       bool tun_persist;
       bool google_dns_fallback;
       std::string private_key_password;
+      bool disable_client_cert;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -170,7 +172,7 @@ namespace openvpn {
       cc.rng = rng;
 #endif
 #if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID) || defined(USE_OPENSSL)
-      cc.local_cert_enabled = pcc.clientCertEnabled();
+      cc.local_cert_enabled = (pcc.clientCertEnabled() && !config.disable_client_cert);
       cc.set_private_key_password(config.private_key_password);
 #endif
       cc.load(opt);
@@ -179,7 +181,7 @@ namespace openvpn {
 
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
-      cp->load(opt, *proto_context_options);
+      cp->load(opt, *proto_context_options, 1);
       cp->set_autologin(pcc.autologin());
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;
@@ -195,6 +197,10 @@ namespace openvpn {
       // initialize transport layer
       if (cp->layer != Layer(Layer::OSI_LAYER_3))
 	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "only OSI layer 3 tunnels currently supported");
+
+      // fragment option not supported
+      if (opt.exists("fragment"))
+	throw option_error("sorry, fragment directive not supported");
 
       // init transport config
       const std::string session_name = load_transport_config();

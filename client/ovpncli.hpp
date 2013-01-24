@@ -123,7 +123,8 @@ namespace openvpn {
     // (client writes)
     struct Config
     {
-      Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false), proxyAllowCleartextAuth(false) {}
+      Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false),
+		 disableClientCert(false), proxyAllowCleartextAuth(false) {}
 
       // OpenVPN profile as a string
       std::string content;
@@ -154,6 +155,9 @@ namespace openvpn {
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
       std::string externalPkiAlias;
+
+      // If true, don't send client cert/key to peer.
+      bool disableClientCert;
 
       // Compression mode, one of:
       // yes -- allow compression on both uplink and downlink
