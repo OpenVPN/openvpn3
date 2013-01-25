@@ -269,7 +269,8 @@ int main(int argc, char *argv[])
 		creds.username = username;
 		creds.password = password;
 		creds.response = response;
-		creds.replacePasswordWithSessionID = !cachePassword;
+		creds.replacePasswordWithSessionID = true;
+		creds.cachePassword = cachePassword;
 		ClientAPI::Status creds_status = client.provide_creds(creds);
 		if (creds_status.error)
 		  OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
@@ -332,7 +333,7 @@ int main(int argc, char *argv[])
   std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
   std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
   std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
-  std::cout << "--cache-password, -C : cache password rather than use Session ID" << std::endl;
+  std::cout << "--cache-password, -C : cache password" << std::endl;
   std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
   std::cout << "" << std::endl;
   return 2;

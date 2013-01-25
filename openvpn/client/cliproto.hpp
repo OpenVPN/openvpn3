@@ -430,12 +430,29 @@ namespace openvpn {
 	  }
 	else if (boost::algorithm::starts_with(msg, "AUTH_FAILED"))
 	  {
-	    fatal_ = Error::AUTH_FAILED;
+	    std::string reason;
+	    std::string log_reason;
+
+	    // get reason (if it exists) for authentication failure
 	    if (msg.length() >= 13)
-	      fatal_reason_ = boost::algorithm::trim_left_copy(std::string(msg, 12));
+	      reason = boost::algorithm::trim_left_copy(std::string(msg, 12));
+
+	    // If session token problem (such as expiration), and we have a cached
+	    // password, retry with it.  Otherwise, fail without retry.
+	    if (boost::algorithm::starts_with(reason, "SESSION:")
+		&& creds && creds->can_retry_auth_with_cached_password())
+	      {
+		log_reason = "SESSION_AUTH_FAILED";
+	      }
+	    else
+	      {
+		fatal_ = Error::AUTH_FAILED;
+		fatal_reason_ = reason;
+		log_reason = "AUTH_FAILED";
+	      }
 	    if (notify_callback)
 	      {
-		OPENVPN_LOG("AUTH_FAILED");
+		OPENVPN_LOG(log_reason);
 		stop(true);
 	      }
 	    else

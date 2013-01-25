@@ -27,7 +27,9 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<ClientCreds> Ptr;
 
-    ClientCreds() : replace_password_with_session_id(false),
+    ClientCreds() : allow_cache_password(false),
+		    password_save_defined(false),
+		    replace_password_with_session_id(false),
 		    did_replace_password_with_session_id(false) {}
 
     void set_username(const std::string& username_arg)
@@ -52,7 +54,15 @@ namespace openvpn {
 	dynamic_challenge.reset(new ChallengeResponse(cookie));
     }
 
-    void set_replace_password_with_session_id(const bool value) { replace_password_with_session_id = value; };
+    void set_replace_password_with_session_id(const bool value)
+    {
+      replace_password_with_session_id = value;
+    }
+
+    void enable_password_cache(const bool value)
+    {
+      allow_cache_password = value;
+    }
 
     bool get_replace_password_with_session_id() const
     {
@@ -67,6 +77,11 @@ namespace openvpn {
 
       if (replace_password_with_session_id)
 	{
+	  if (allow_cache_password && !password_save_defined)
+	    {
+	      password_save = password;
+	      password_save_defined = true;
+	    }
 	  password = sess_id;
 	  response = "";
 	  if (dynamic_challenge)
@@ -111,10 +126,28 @@ namespace openvpn {
       return did_replace_password_with_session_id;
     }
 
+    bool can_retry_auth_with_cached_password()
+    {
+      if (password_save_defined)
+	{
+	  password = password_save;
+	  password_save = "";
+	  password_save_defined = false;
+	  return true;
+	}
+      else
+	return false;
+    }
+
   private:
     // Standard credentials
     std::string username;
     std::string password;
+
+    // Password caching
+    bool allow_cache_password;
+    bool password_save_defined;
+    std::string password_save;
 
     // Response to challenge
     std::string response;

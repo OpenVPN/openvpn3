@@ -443,6 +443,7 @@ namespace openvpn {
 	cc->set_response(creds.response);
 	cc->set_dynamic_challenge_cookie(creds.dynamicChallengeCookie);
 	cc->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
+	cc->enable_password_cache(creds.cachePassword);
 	state->creds = cc;
       }
       catch (const std::exception& e)
@@ -544,12 +545,15 @@ namespace openvpn {
 	cc.builder = this;
 #endif
 
-	// force Session ID use if static challenge is enabled
+	// force Session ID use and disable password cache if static challenge is enabled
 	if (state->creds
 	    && !state->creds->get_replace_password_with_session_id()
 	    && !state->eval.autologin
 	    && !state->eval.staticChallenge.empty())
-	  state->creds->set_replace_password_with_session_id(true);
+	  {
+	    state->creds->set_replace_password_with_session_id(true);
+	    state->creds->enable_password_cache(false);
+	  }
 
 	// external PKI
 #if !defined(USE_APPLE_SSL)

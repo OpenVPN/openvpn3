@@ -76,7 +76,7 @@ namespace openvpn {
     // (client writes)
     struct ProvideCreds
     {
-      ProvideCreds() : replacePasswordWithSessionID(false) {}
+      ProvideCreds() : replacePasswordWithSessionID(false), cachePassword(false) {}
 
       std::string username;
       std::string password;
@@ -90,6 +90,11 @@ namespace openvpn {
       // If true, on successful connect, we will replace the password
       // with the session ID we receive from the server.
       bool replacePasswordWithSessionID;
+
+      // If true, allow the authentication password to be cached by the
+      // backend.  If false, we will discard the password as soon as we
+      // receive the session ID from the server.
+      bool cachePassword;
     };
 
     // used to get session token from VPN core
