@@ -38,6 +38,13 @@ namespace openvpn {
       errtxt = "PolarSSL: " + error_text;
     }
 
+    explicit PolarSSLException(const std::string& error_text, const Error::Type code, const bool fatal)
+      : ExceptionCode(code, fatal)
+    {
+      errnum = 0;
+      errtxt = "PolarSSL: " + error_text;
+    }
+
     explicit PolarSSLException(const std::string& error_text, const int polarssl_errnum)
     {
       errnum = polarssl_errnum;

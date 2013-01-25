@@ -47,6 +47,10 @@ namespace openvpn {
       void parse(const std::string& cert_txt, const std::string& title)
       {
 	alloc();
+
+	if (cert_txt.empty())
+	  throw PolarSSLException(title + " certificate is undefined");
+
 	const int status = x509parse_crt(chain,
 					 (const unsigned char *)cert_txt.c_str(),
 					 cert_txt.length());
