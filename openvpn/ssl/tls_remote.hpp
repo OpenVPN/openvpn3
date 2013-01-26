@@ -28,6 +28,56 @@ namespace openvpn {
     {
       OPENVPN_LOG("tls-remote validation" << std::endl << "  tls-remote: '" << tls_remote << '\'' << std::endl << "  Subj: '" << subject << '\'' << std::endl << "  CN: '" << common_name << '\'');
     }
+
+    // modifies x509 name in a way that is compatible with
+    // name remapping behavior on OpenVPN 2.x
+    inline std::string sanitize_x509_name(const std::string& str)
+    {
+      std::string ret;
+      bool leading_dash = true;
+      ret.reserve(str.length());
+      for (size_t i = 0; i < str.length(); ++i)
+	{
+	  const char c = str[i];
+	  if (c == '-' && leading_dash)
+	    {
+	      ret += '_';
+	      continue;
+	    }
+	  leading_dash = false;
+	  if ((c >= 'a' && c <= 'z')
+	      || (c >= 'A' && c <= 'Z')
+	      || (c >= '0' && c <= '9')
+	      || c == '_' || c == '-' || c == '.'
+	      || c == '@' || c == ':' || c == '/'
+	      || c == '=')
+	    ret += c;
+	  else
+	    ret += '_';
+	}
+      return ret;
+    }
+
+    // modifies common name in a way that is compatible with
+    // name remapping behavior on OpenVPN 2.x
+    inline std::string sanitize_common_name(const std::string& str)
+    {
+      std::string ret;
+      ret.reserve(str.length());
+      for (size_t i = 0; i < str.length(); ++i)
+	{
+	  const char c = str[i];
+	  if ((c >= 'a' && c <= 'z')
+	      || (c >= 'A' && c <= 'Z')
+	      || (c >= '0' && c <= '9')
+	      || c == '_' || c == '-' || c == '.'
+	      || c == '@' || c == '/')
+	    ret += c;
+	  else
+	    ret += '_';
+	}
+      return ret;
+    }
   }
 }
 

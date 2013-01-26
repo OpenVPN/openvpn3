@@ -675,8 +675,8 @@ namespace openvpn {
 	  // verify tls-remote
 	  if (!self->config.tls_remote.empty())
 	    {
-	      const std::string subject = x509_get_subject(cert);
-	      const std::string common_name = x509_get_common_name(cert);
+	      const std::string subject = TLSRemote::sanitize_x509_name(x509_get_subject(cert));
+	      const std::string common_name = TLSRemote::sanitize_common_name(x509_get_common_name(cert));
 	      TLSRemote::log(self->config.tls_remote, subject, common_name);
 	      if (!TLSRemote::test(self->config.tls_remote, subject, common_name))
 		{
