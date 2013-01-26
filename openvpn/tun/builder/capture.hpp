@@ -97,17 +97,6 @@ namespace openvpn {
 
     TunBuilderCapture() : mtu(1500) {}
 
-
-    virtual bool tun_builder_new()
-    {
-      return false;
-    }
-
-    virtual int tun_builder_establish()
-    {
-      return -1;
-    }
-
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
     {
       remote_address.address = address;
