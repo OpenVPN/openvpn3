@@ -95,7 +95,18 @@ namespace openvpn {
       }
     };
 
-    TunBuilderCapture() : mtu(1500), reroute_dns(false) {}
+    TunBuilderCapture() : mtu(1500) {}
+
+
+    virtual bool tun_builder_new()
+    {
+      return false;
+    }
+
+    virtual int tun_builder_establish()
+    {
+      return -1;
+    }
 
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
     {
@@ -142,22 +153,20 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_add_dns_server(const std::string& address, bool ipv6, bool reroute_dns)
+    virtual bool tun_builder_add_dns_server(const std::string& address, bool ipv6)
     {
       DNSServer dns;
       dns.address = address;
       dns.ipv6 = ipv6;
       dns_servers.push_back(dns);
-      this->reroute_dns = reroute_dns;
       return true;
     }
 
-    virtual bool tun_builder_add_search_domain(const std::string& domain, bool reroute_dns)
+    virtual bool tun_builder_add_search_domain(const std::string& domain)
     {
       SearchDomain dom;
       dom.domain = domain;
       search_domains.push_back(dom);
-      this->reroute_dns = reroute_dns;
       return true;
     }
 
@@ -181,7 +190,6 @@ namespace openvpn {
       os << "Remote Address: " << remote_address.to_string() << std::endl;
       render_route_list(os, "Tunnel Addresses", tunnel_addresses);
       os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
-      os << "Reroute DNS: " << reroute_dns << std::endl;
       render_route_list(os, "Add Routes", add_routes);
       render_route_list(os, "Exclude Routes", exclude_routes);
       {
@@ -203,7 +211,6 @@ namespace openvpn {
     RemoteAddress remote_address;          // real address of server
     std::vector<Route> tunnel_addresses;   // local tunnel addresses
     RerouteGW reroute_gw;                  // redirect-gateway info for ipv4
-    bool reroute_dns;                      // redirect DNS requests through tunnel
     std::vector<Route> add_routes;         // routes that should be added to tunnel
     std::vector<Route> exclude_routes;     // routes that should be excluded from tunnel
     std::vector<DNSServer> dns_servers;    // VPN DNS servers

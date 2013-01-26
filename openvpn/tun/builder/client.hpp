@@ -354,19 +354,14 @@ namespace openvpn {
 	// add routes
 	const unsigned int reroute_gw_ver_flags = add_routes(tb, opt, server_addr, ip_ver_flags);
 
-	// Should all DNS requests be rerouted through pushed DNS servers?
-	// (If false, only DNS requests that correspond to pushed domain prefixes
-	// will be routed).
-	const bool reroute_dns = should_reroute_dns(opt, reroute_gw_ver_flags, quiet);
-
 	// add DNS servers and domain prefixes
-	const unsigned int add_dns_flags = add_dns(tb, opt, reroute_dns, quiet);
+	const unsigned int add_dns_flags = add_dns(tb, opt, quiet);
 
 	// DNS fallback
 	if ((reroute_gw_ver_flags & F_IPv4) && !(add_dns_flags & F_ADD_DNS))
 	  {
 	    if (config.google_dns_fallback)
-	      add_google_dns(tb, reroute_dns);
+	      add_google_dns(tb);
 	    else if (stats)
 	      stats->error(Error::REROUTE_GW_NO_DNS);
 	  }
@@ -389,31 +384,6 @@ namespace openvpn {
 	    if (!tb->tun_builder_set_session_name(config.session_name))
 	      throw tun_builder_error("tun_builder_set_session_name failed");
 	  }
-      }
-
-      static bool should_reroute_dns(const OptionList& opt,
-				     const unsigned int reroute_gw_ver_flags,
-				     const bool quiet)
-      {
-	bool ret = bool(reroute_gw_ver_flags & F_IPv4);
-	try {
-	  const std::string& yes_no = opt.get_optional("redirect-dns", 1, 16); // DIRECTIVE
-	  if (!yes_no.empty())
-	    {
-	      if (yes_no == "yes")
-		ret = true;
-	      else if (yes_no == "no")
-		ret = false;
-	      else if (!quiet)
-		OPENVPN_LOG("unknown redirect-dns option: " << yes_no);
-	    }
-	}
-	catch (const std::exception& e)
-	  {
-	    if (!quiet)
-	      OPENVPN_LOG("error parsing redirect-dns: " << e.what());
-	  }
-	return ret;
       }
 
       static unsigned int tun_ifconfig(TunBuilderBase* tb, ClientState* state, const OptionList& opt)
@@ -620,7 +590,7 @@ namespace openvpn {
 	return reroute_gw_ver_flags;
       }
 
-      static unsigned int add_dns(TunBuilderBase* tb, const OptionList& opt, const bool reroute_dns, const bool quiet)
+      static unsigned int add_dns(TunBuilderBase* tb, const OptionList& opt, const bool quiet)
       {
 	// Example:
 	//   [dhcp-option] [DNS] [172.16.0.23]
@@ -642,8 +612,7 @@ namespace openvpn {
 		      o.exact_args(3);
 		      const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
 		      if (!tb->tun_builder_add_dns_server(ip.to_string(),
-							  ip.version() == IP::Addr::V6,
-							  reroute_dns))
+							  ip.version() == IP::Addr::V6))
 			throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed");
 		      flags |= F_ADD_DNS;
 		    }
@@ -656,7 +625,7 @@ namespace openvpn {
 			  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(j, 256));
 			  for (size_t k = 0; k < v.size(); ++k)
 			    {
-			      if (!tb->tun_builder_add_search_domain(v[k], reroute_dns))
+			      if (!tb->tun_builder_add_search_domain(v[k]))
 				throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
 			    }
 			}
@@ -673,10 +642,32 @@ namespace openvpn {
 	return flags;
       }
 
-      static void add_google_dns(TunBuilderBase* tb, const bool reroute_dns)
+      static bool search_domains_exist(const OptionList& opt)
       {
-	if (!tb->tun_builder_add_dns_server("8.8.8.8", false, reroute_dns)
-	    || !tb->tun_builder_add_dns_server("8.8.4.4", false, reroute_dns))
+	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
+	if (dopt != opt.map().end())
+	  {
+	    for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
+	      {
+		const Option& o = opt[*i];
+		try {
+		  const std::string& type = o.get(1, 64);
+		  if (type == "DOMAIN")
+		    return true;
+		}
+		catch (const std::exception& e)
+		  {
+		    OPENVPN_THROW(tun_builder_error, "error parsing dhcp-option: " << o.render() << " : " << e.what());
+		  }
+	      }
+	  }
+	return false;
+      }
+
+      static void add_google_dns(TunBuilderBase* tb)
+      {
+	if (!tb->tun_builder_add_dns_server("8.8.8.8", false)
+	    || !tb->tun_builder_add_dns_server("8.8.4.4", false))
 	  throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed for Google DNS");
       }
 
