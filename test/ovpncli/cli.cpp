@@ -335,6 +335,5 @@ int main(int argc, char *argv[])
   std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
   std::cout << "--cache-password, -C : cache password" << std::endl;
   std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
-  std::cout << "" << std::endl;
   return 2;
 }
