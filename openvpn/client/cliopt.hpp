@@ -105,6 +105,7 @@ namespace openvpn {
 	tun_persist = false;
 	google_dns_fallback = false;
 	disable_client_cert = false;
+	default_key_direction = -1;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
 #endif
@@ -121,6 +122,7 @@ namespace openvpn {
       bool google_dns_fallback;
       std::string private_key_password;
       bool disable_client_cert;
+      int default_key_direction;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -181,7 +183,7 @@ namespace openvpn {
 
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
-      cp->load(opt, *proto_context_options, 1);
+      cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_autologin(pcc.autologin());
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;

@@ -349,19 +349,24 @@ namespace openvpn {
 
 	// key-direction
 	{
-	  const Option *o = opt.get_consistent("key-direction");
-	  if (o)
+	  if (key_direction >= -1 && key_direction <= 1)
 	    {
-	      const std::string& dir = o->get(1, 16);
-	      if (dir == "0")
-		key_direction = 0;
-	      else if (dir == "1")
-		key_direction = 1;
-	      else if (dir == "bidirectional")
-		key_direction = -1;
-	      else
-		throw proto_option_error("bad key-direction parameter");
+	      const Option *o = opt.get_consistent("key-direction");
+	      if (o)
+		{
+		  const std::string& dir = o->get(1, 16);
+		  if (dir == "0")
+		    key_direction = 0;
+		  else if (dir == "1")
+		    key_direction = 1;
+		  else if (dir == "bidirectional" || dir == "bi")
+		    key_direction = -1;
+		  else
+		    throw proto_option_error("bad key-direction parameter");
+		}
 	    }
+	  else
+	    throw proto_option_error("bad key-direction default");
 	}
 
 	// compression

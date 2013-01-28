@@ -129,7 +129,8 @@ namespace openvpn {
     struct Config
     {
       Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false),
-		 disableClientCert(false), proxyAllowCleartextAuth(false) {}
+		 disableClientCert(false), defaultKeyDirection(-1),
+		 proxyAllowCleartextAuth(false) {}
 
       // OpenVPN profile as a string
       std::string content;
@@ -172,6 +173,12 @@ namespace openvpn {
 
       // private key password (optional)
       std::string privateKeyPassword;
+
+      // Default key direction parameter for tls-auth (0, 1, or
+      // -1 (bidirectional -- default)) if no key-direction parameter
+      // defined in profile.  Generally should be -1 (bidirectional)
+      // for compatibility with 2.x branch
+      int defaultKeyDirection;
 
       // HTTP Proxy parameters (optional)
       std::string proxyHost;         // hostname or IP address of proxy
