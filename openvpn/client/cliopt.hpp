@@ -202,7 +202,7 @@ namespace openvpn {
 
       // fragment option not supported
       if (opt.exists("fragment"))
-	throw option_error("sorry, fragment directive not supported");
+	throw option_error("sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
 
       // init transport config
       const std::string session_name = load_transport_config();

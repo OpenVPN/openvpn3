@@ -391,13 +391,15 @@ namespace openvpn {
 	      o = opt.get_ptr("comp-lzo");
 	      if (o)
 		{
-		  if (o->size() == 1)
-		    comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
-		  else
+		  if (o->size() == 2 && o->ref(1) == "no")
 		    {
 		      // On the client, by using ANY instead of ANY_LZO, we are telling the server
 		      // that it's okay to use any of our supported compression methods.
 		      comp_ctx = CompressContext(pco.is_comp() ? CompressContext::ANY : CompressContext::LZO_STUB, pco.is_comp_asym());
+		    }
+		  else
+		    {
+		      comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
 		    }
 		}
 	    }
@@ -463,14 +465,13 @@ namespace openvpn {
 	      o = opt.get_ptr("comp-lzo");
 	      if (o)
 		{
-		  if (o->size() == 1)
-		    comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
-		  else if (o->size() >= 2)
+		  if (o->size() == 2 && o->ref(1) == "no")
 		    {
-		      if (o->ref(1) == "yes")
-			comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
-		      else
-			comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
+		      comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
+		    }
+		  else
+		    {
+		      comp_ctx = CompressContext(pco.is_comp() ? CompressContext::LZO : CompressContext::LZO_STUB, pco.is_comp_asym());
 		    }
 		}
 	    }
