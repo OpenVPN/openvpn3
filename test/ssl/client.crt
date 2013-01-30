@@ -1,12 +1,71 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 2 (0x2)
+    Signature Algorithm: sha1WithRSAEncryption
+        Issuer: C=US, ST=CA, L=SanFrancisco, O=Fort-Funston, CN=Fort-Funston CA/emailAddress=me@myhost.mydomain
+        Validity
+            Not Before: Jan 30 19:40:15 2013 GMT
+            Not After : Jan 28 19:40:15 2023 GMT
+        Subject: C=US, ST=CA, L=SanFrancisco, O=Fort-Funston, CN=client/emailAddress=me@myhost.mydomain
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (1024 bit)
+                Modulus:
+                    00:9a:95:68:9a:53:66:9f:5b:23:67:ef:66:7c:6b:
+                    c3:56:6e:bc:b0:21:df:e2:b7:20:a7:7f:af:f4:8f:
+                    95:76:89:b8:1c:3c:33:9f:8c:2e:4c:80:60:b2:8b:
+                    59:20:83:ce:c8:24:8e:f7:e7:60:1a:c5:0a:c3:8a:
+                    75:4d:64:b7:6d:70:ac:ad:38:44:36:c7:af:62:75:
+                    7a:5e:7b:8a:41:5d:df:e8:4e:c5:f4:eb:b6:ae:f0:
+                    09:b2:c6:42:cc:6d:6e:00:c2:ec:5c:8c:f8:e5:e2:
+                    0e:a8:24:0a:d7:30:b2:2c:6b:17:61:4f:b9:99:ab:
+                    fa:95:ad:60:17:30:8e:b0:a5
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Comment: 
+                Easy-RSA Generated Certificate
+            X509v3 Subject Key Identifier: 
+                BF:5E:FE:6D:49:90:66:D8:D0:4A:BF:49:F3:00:23:01:1C:91:8B:12
+            X509v3 Authority Key Identifier: 
+                keyid:B3:53:61:C5:BA:F9:53:E8:E7:B9:FA:BA:25:B8:65:80:36:FB:3C:C6
+                DirName:/C=US/ST=CA/L=SanFrancisco/O=Fort-Funston/CN=Fort-Funston CA/emailAddress=me@myhost.mydomain
+                serial:D4:B4:21:6D:FD:A1:89:CE
+
+            X509v3 Extended Key Usage: 
+                TLS Web Client Authentication
+            X509v3 Key Usage: 
+                Digital Signature
+    Signature Algorithm: sha1WithRSAEncryption
+         1c:7f:36:16:18:65:ec:a3:ce:0e:ba:a3:2f:7c:e1:bb:91:af:
+         8c:1a:d0:0e:20:e7:3e:0d:57:73:83:aa:25:45:8b:9a:21:97:
+         d2:50:85:ea:c3:a4:81:bf:61:ba:82:7f:b4:7f:7e:2a:8f:e9:
+         f6:b8:04:96:30:69:82:01:40:fc:5f:ff:ea:7d:7c:7c:2d:33:
+         57:17:69:3a:d8:11:f5:e8:fe:e8:e5:53:79:32:00:7d:d7:94:
+         09:8b:9d:14:45:6a:95:32:22:f7:58:e3:b8:97:a2:26:c7:1e:
+         f6:c3:87:92:8b:2d:b3:17:51:57:3e:05:0e:db:bd:d8:9d:b2:
+         c0:32
 -----BEGIN CERTIFICATE-----
-MIIBwjCCASugAwIBAgIBAjANBgkqhkiG9w0BAQUFADAcMRowGAYDVQQDExFFUEtJ
-IEludGVybWVkaWF0ZTAeFw0xMTAzMTAwNTI3MDVaFw0yMTAzMTQwNTI3MDVaMBAx
-DjAMBgNVBAMTBWV0ZXN0MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCW1a9V
-fg6SebK0KyU/nnOkSIpGE+cPA5mZumQN/vdh4bDg2BNgGUx68wvlpeSMja6saFDa
-ngiLVzh0yWD5NsSgbbVcZFAfJtg5Wp3Zq5AL3GQQrQd7EIjmipcMQz+QdeOh36ub
-+Cj5ab5hyTcNEpwj1iDsUTG+osQXYofxEohWuQIDAQABoyAwHjAJBgNVHRMEAjAA
-MBEGCWCGSAGG+EIBAQQEAwIHgDANBgkqhkiG9w0BAQUFAAOBgQCzIh+miB2Pc/So
-cnH1YPVuqphEFU4wYMr5XUbELIfXO2AFW3+uhHkpq/m/UfIO3PTTp/3u978J38Xq
-aCUsChWt/2IPOOmF4gBQpQK6T45ogXNRTuQyq6FiA1GxPjSAWIUjKF9aV8pVeY9V
-6rv2qV83wB2kcWkGjnzQqNnrm68Rpw==
+MIIDtjCCAx+gAwIBAgIBAjANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMCVVMx
+CzAJBgNVBAgTAkNBMRUwEwYDVQQHEwxTYW5GcmFuY2lzY28xFTATBgNVBAoTDEZv
+cnQtRnVuc3RvbjEYMBYGA1UEAxMPRm9ydC1GdW5zdG9uIENBMSEwHwYJKoZIhvcN
+AQkBFhJtZUBteWhvc3QubXlkb21haW4wHhcNMTMwMTMwMTk0MDE1WhcNMjMwMTI4
+MTk0MDE1WjB8MQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFTATBgNVBAcTDFNh
+bkZyYW5jaXNjbzEVMBMGA1UEChMMRm9ydC1GdW5zdG9uMQ8wDQYDVQQDEwZjbGll
+bnQxITAfBgkqhkiG9w0BCQEWEm1lQG15aG9zdC5teWRvbWFpbjCBnzANBgkqhkiG
+9w0BAQEFAAOBjQAwgYkCgYEAmpVomlNmn1sjZ+9mfGvDVm68sCHf4rcgp3+v9I+V
+dom4HDwzn4wuTIBgsotZIIPOyCSO9+dgGsUKw4p1TWS3bXCsrThENsevYnV6XnuK
+QV3f6E7F9Ou2rvAJssZCzG1uAMLsXIz45eIOqCQK1zCyLGsXYU+5mav6la1gFzCO
+sKUCAwEAAaOCATwwggE4MAkGA1UdEwQCMAAwLQYJYIZIAYb4QgENBCAWHkVhc3kt
+UlNBIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTAdBgNVHQ4EFgQUv17+bUmQZtjQSr9J
+8wAjARyRixIwgboGA1UdIwSBsjCBr4AUs1Nhxbr5U+jnufq6JbhlgDb7PMahgYuk
+gYgwgYUxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEVMBMGA1UEBxMMU2FuRnJh
+bmNpc2NvMRUwEwYDVQQKEwxGb3J0LUZ1bnN0b24xGDAWBgNVBAMTD0ZvcnQtRnVu
+c3RvbiBDQTEhMB8GCSqGSIb3DQEJARYSbWVAbXlob3N0Lm15ZG9tYWluggkA1LQh
+bf2hic4wEwYDVR0lBAwwCgYIKwYBBQUHAwIwCwYDVR0PBAQDAgeAMA0GCSqGSIb3
+DQEBBQUAA4GBABx/NhYYZeyjzg66oy984buRr4wa0A4g5z4NV3ODqiVFi5ohl9JQ
+herDpIG/YbqCf7R/fiqP6fa4BJYwaYIBQPxf/+p9fHwtM1cXaTrYEfXo/ujlU3ky
+AH3XlAmLnRRFapUyIvdY47iXoibHHvbDh5KLLbMXUVc+BQ7bvdidssAy
 -----END CERTIFICATE-----

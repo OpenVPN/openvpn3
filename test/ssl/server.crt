@@ -1,12 +1,74 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+    Signature Algorithm: sha1WithRSAEncryption
+        Issuer: C=US, ST=CA, L=SanFrancisco, O=Fort-Funston, CN=Fort-Funston CA/emailAddress=me@myhost.mydomain
+        Validity
+            Not Before: Jan 30 19:40:03 2013 GMT
+            Not After : Jan 28 19:40:03 2023 GMT
+        Subject: C=US, ST=CA, L=SanFrancisco, O=Fort-Funston, CN=server/emailAddress=me@myhost.mydomain
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (1024 bit)
+                Modulus:
+                    00:b5:c2:0b:43:62:44:c5:38:3e:d2:01:0d:49:4c:
+                    0d:87:a9:e3:12:74:c1:fd:5e:56:22:98:9a:59:da:
+                    3a:1a:9b:ad:7c:d6:58:11:5c:66:b6:3f:d2:98:30:
+                    ee:81:ec:82:af:7b:b3:95:cc:f5:53:16:14:a9:15:
+                    93:21:92:a3:f1:80:98:26:e0:7c:62:d6:83:6a:9d:
+                    e8:bc:3f:bd:b3:a3:b5:2b:b7:c0:eb:fd:a8:c1:18:
+                    5d:af:bd:13:25:73:a2:63:61:6b:43:75:b5:18:b0:
+                    23:c8:eb:09:60:b3:b8:e7:d8:98:44:94:0b:ac:24:
+                    6b:74:95:7b:42:17:17:64:cb
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Cert Type: 
+                SSL Server
+            Netscape Comment: 
+                Easy-RSA Generated Server Certificate
+            X509v3 Subject Key Identifier: 
+                D3:B4:E8:94:50:41:9F:39:D4:73:7E:8E:29:FF:0A:10:65:28:5D:15
+            X509v3 Authority Key Identifier: 
+                keyid:B3:53:61:C5:BA:F9:53:E8:E7:B9:FA:BA:25:B8:65:80:36:FB:3C:C6
+                DirName:/C=US/ST=CA/L=SanFrancisco/O=Fort-Funston/CN=Fort-Funston CA/emailAddress=me@myhost.mydomain
+                serial:D4:B4:21:6D:FD:A1:89:CE
+
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Key Usage: 
+                Digital Signature, Key Encipherment
+    Signature Algorithm: sha1WithRSAEncryption
+         36:06:77:00:ff:75:0d:90:5b:80:32:8f:c7:b4:57:66:88:89:
+         49:1e:7d:ee:9e:e8:01:02:cd:fc:24:27:1c:cc:ce:b6:cf:36:
+         4c:bc:18:a3:22:4f:a3:33:cb:8b:a6:5e:27:a6:52:3c:50:35:
+         8d:7a:df:59:8b:84:47:2f:d9:cc:a1:b0:6f:fc:58:c9:58:30:
+         09:bb:76:f0:a1:4f:1d:a2:08:8d:83:d5:0a:c3:c8:74:29:1c:
+         e2:7d:d3:fc:e8:e7:ed:42:af:07:55:8a:94:d3:f7:c4:73:8d:
+         ae:aa:35:d9:68:7d:fd:0d:c9:31:c8:33:aa:9a:51:75:7d:59:
+         28:61
 -----BEGIN CERTIFICATE-----
-MIIBwzCCASygAwIBAgIBATANBgkqhkiG9w0BAQUFADAcMRowGAYDVQQDExFFUEtJ
-IEludGVybWVkaWF0ZTAeFw0xMTAzMTAwNTI2NTJaFw0yMTAzMTQwNTI2NTJaMBEx
-DzANBgNVBAMTBnNlcnZlcjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA2Yph
-yjDqMaUMHctMHkWZ3Kb/7+ZI4xdCLAG2x5uAz6UZJYchG5b1p7TBH/t0BbGwUN+v
-wCxaZPUAlJgzm08E80HMlF/6vMaVy2uh/8u1GCOmY+mCLaAmRLReDXO4BDrQtt8S
-QooocZicI6dOSXMQM9NfbYy/2uYNuu73i4VEYhcCAwEAAaMgMB4wCQYDVR0TBAIw
-ADARBglghkgBhvhCAQEEBAMCBkAwDQYJKoZIhvcNAQEFBQADgYEAQCM21P9B4WqK
-6S8b/Ij515gFzZ1Fq3PVt7oan0qFe+pDKQ4lf/gAqet2C9IC0hBQVS5+Ja07EyuZ
-JmVNV9mYIcpG+0QxFW2NKohk8Trx0fh8+3s8kE0VeRjXghegm2c9JRaSudBIdeLM
-54n+vizz6o3dZMne7Vs7FvO8v0cOy+Q=
+MIID0DCCAzmgAwIBAgIBATANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMCVVMx
+CzAJBgNVBAgTAkNBMRUwEwYDVQQHEwxTYW5GcmFuY2lzY28xFTATBgNVBAoTDEZv
+cnQtRnVuc3RvbjEYMBYGA1UEAxMPRm9ydC1GdW5zdG9uIENBMSEwHwYJKoZIhvcN
+AQkBFhJtZUBteWhvc3QubXlkb21haW4wHhcNMTMwMTMwMTk0MDAzWhcNMjMwMTI4
+MTk0MDAzWjB8MQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFTATBgNVBAcTDFNh
+bkZyYW5jaXNjbzEVMBMGA1UEChMMRm9ydC1GdW5zdG9uMQ8wDQYDVQQDEwZzZXJ2
+ZXIxITAfBgkqhkiG9w0BCQEWEm1lQG15aG9zdC5teWRvbWFpbjCBnzANBgkqhkiG
+9w0BAQEFAAOBjQAwgYkCgYEAtcILQ2JExTg+0gENSUwNh6njEnTB/V5WIpiaWdo6
+GputfNZYEVxmtj/SmDDugeyCr3uzlcz1UxYUqRWTIZKj8YCYJuB8YtaDap3ovD+9
+s6O1K7fA6/2owRhdr70TJXOiY2FrQ3W1GLAjyOsJYLO459iYRJQLrCRrdJV7QhcX
+ZMsCAwEAAaOCAVYwggFSMAkGA1UdEwQCMAAwEQYJYIZIAYb4QgEBBAQDAgZAMDQG
+CWCGSAGG+EIBDQQnFiVFYXN5LVJTQSBHZW5lcmF0ZWQgU2VydmVyIENlcnRpZmlj
+YXRlMB0GA1UdDgQWBBTTtOiUUEGfOdRzfo4p/woQZShdFTCBugYDVR0jBIGyMIGv
+gBSzU2HFuvlT6Oe5+roluGWANvs8xqGBi6SBiDCBhTELMAkGA1UEBhMCVVMxCzAJ
+BgNVBAgTAkNBMRUwEwYDVQQHEwxTYW5GcmFuY2lzY28xFTATBgNVBAoTDEZvcnQt
+RnVuc3RvbjEYMBYGA1UEAxMPRm9ydC1GdW5zdG9uIENBMSEwHwYJKoZIhvcNAQkB
+FhJtZUBteWhvc3QubXlkb21haW6CCQDUtCFt/aGJzjATBgNVHSUEDDAKBggrBgEF
+BQcDATALBgNVHQ8EBAMCBaAwDQYJKoZIhvcNAQEFBQADgYEANgZ3AP91DZBbgDKP
+x7RXZoiJSR597p7oAQLN/CQnHMzOts82TLwYoyJPozPLi6ZeJ6ZSPFA1jXrfWYuE
+Ry/ZzKGwb/xYyVgwCbt28KFPHaIIjYPVCsPIdCkc4n3T/Ojn7UKvB1WKlNP3xHON
+rqo12Wh9/Q3JMcgzqppRdX1ZKGE=
 -----END CERTIFICATE-----

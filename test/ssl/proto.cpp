@@ -640,8 +640,7 @@ int test(const int thread_num)
     const Time::Duration time_step = Time::Duration::binary_ms(100);
 
     // client config files
-    const std::string ca1_crt = read_text("ca1.crt");
-    const std::string ca2_crt = read_text("ca2.crt");
+    const std::string ca_crt = read_text("ca.crt");
     const std::string client_crt = read_text("client.crt");
     const std::string client_key = read_text("client.key");
     const std::string server_crt = read_text("server.crt");
@@ -656,7 +655,7 @@ int test(const int thread_num)
 #ifdef USE_APPLE_SSL
     cc.load_identity("etest");
 #else
-    cc.load_ca(ca1_crt + ca2_crt);
+    cc.load_ca(ca_crt);
     cc.load_cert(client_crt);
     cc.load_private_key(client_key);
 #endif
@@ -721,7 +720,7 @@ int test(const int thread_num)
     ServerSSLAPI::Config sc;
     sc.mode = Mode(Mode::SERVER);
     sc.frame = frame;
-    sc.load_ca(ca1_crt + ca2_crt);
+    sc.load_ca(ca_crt);
     sc.load_cert(server_crt);
     sc.load_private_key(server_key);
     sc.load_dh(dh_pem);
