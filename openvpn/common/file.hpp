@@ -84,10 +84,23 @@ namespace openvpn {
   inline std::string read_text_utf8(const std::string& filename, const boost::uint64_t max_size = 0)
   {
     BufferPtr bp = read_binary(filename, max_size);
+
+    // check if binary
     if (bp->contains_null())
       OPENVPN_THROW(file_is_binary, "file is binary: " << filename);
+
+    // remove Windows UTF-8 BOM if present
+    if (bp->size() >= 3)
+      {
+	const unsigned char *data = bp->c_data();
+	if (data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF)
+	  bp->advance(3);
+      }
+
+    // verify that file is valid UTF-8
     if (!Unicode::is_valid_utf8(bp->c_data(), bp->size()))
       OPENVPN_THROW(file_not_utf8, "file is not UTF8: " << filename);
+
     return std::string((const char *)bp->c_data(), bp->size());
   }
 } // namespace openvpn
