@@ -107,6 +107,12 @@ public class Client implements OpenVPNClientThread.EventReceiver {
     }
 
     @Override
+    public boolean pause_on_connection_timeout()
+    {
+	return false;
+    }
+
+    @Override
     public OpenVPNClientThread.TunBuilder tun_builder_new()
     {
 	return null;
