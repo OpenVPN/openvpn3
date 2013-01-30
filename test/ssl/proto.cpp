@@ -1,3 +1,5 @@
+// Unit test for OpenVPN Protocol implementation (class ProtoContext)
+
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -5,8 +7,6 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
-
-// Unit test for OpenVPN protocol
 
 #define OPENVPN_DEBUG
 #define OPENVPN_ENABLE_ASSERT
@@ -37,7 +37,7 @@
 #endif
 
 #ifdef VERBOSE
-#define OPENVPN_DEBUG_PROTO
+#define OPENVPN_DEBUG_PROTO 1
 #endif
 
 #define STRINGIZE1(x) #x
@@ -686,6 +686,7 @@ int test(const int thread_num)
 #ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
     cp->tls_auth_digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
+    cp->key_direction = 0;
 #endif
     cp->reliable_window = 4;
     cp->max_ack_list = 4;
@@ -747,6 +748,7 @@ int test(const int thread_num)
 #ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);
     sp->tls_auth_digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
+    sp->key_direction = 1;
 #endif
     sp->reliable_window = 4;
     sp->max_ack_list = 4;
