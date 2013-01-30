@@ -5,8 +5,7 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-// OpenVPN client ("OpenVPNClient" class) intended to be wrapped by swig
-// for a target language.
+// Implementation file for OpenVPNClient API defined in ovpncli.hpp.
 
 #include <iostream>
 
@@ -30,7 +29,7 @@
 #define OPENVPN_DEBUG
 //#define OPENVPN_ENABLE_ASSERT
 //#define OPENVPN_SSL_DEBUG
-//#define OPENVPN_DEBUG_CLIPROTO
+//#define OPENVPN_DEBUG_CLIPROTO // shows packets in/out
 //#define OPENVPN_FORCE_TUN_NULL
 #define OPENVPN_DEBUG_PROTO   1
 #define OPENVPN_DEBUG_TUN     2

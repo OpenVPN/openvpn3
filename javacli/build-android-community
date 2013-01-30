@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -e
+
+pkg=net.openvpn.openvpn
+
+if [ "$DEBUG_BUILD" = "1" ]; then
+    vis1=""
+    vis2=""
+    opt2="$LIB_OPT_LEVEL"
+else
+    vis1="-fvisibility=hidden"
+    vis2='-DSWIGEXPORT=__attribute__((visibility("default")))'
+    opt2="-Os"
+fi
+
+if [ "$OPENSSL" = "1" ]; then
+    ssl_def="-DUSE_OPENSSL"
+    ssl_inc="-I$DEP_DIR/openssl/openssl-$PLATFORM/include"
+    ssl_lib="-lssl -lcrypto"
+    ssl_libdir="-L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
+else
+    ssl_def="-DUSE_POLARSSL"
+    ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
+    ssl_lib="-lpolarssl -lminicrypto"
+    ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
+fi
+
+if [ "$WRAP_ONLY" != "1" ]; then
+    echo SWIG
+    swig -c++ -java -package $pkg -I$O3/client -I$O3 ovpncli.i
+
+    echo CORE
+    $GPP_CMD \
+	--sysroot=$NDK/platforms/android-9/arch-arm \
+	$LIB_OPT_LEVEL $LIB_FPIC \
+	-Wall -Wno-sign-compare -Wno-unused-parameter \
+	$vis1 \
+	$ssl_def \
+	-DHAVE_SNAPPY \
+	-D__GLIBC__ \
+	-D_GLIBCXX_HAVE_FENV_H=1 \
+	-DBOOST_NO_INTRINSIC_WCHAR_T \
+	-I$O3/client \
+	-I$O3 \
+	-I$DEP_DIR/boost \
+	$ssl_inc \
+	-I$DEP_DIR/snappy/snappy-$PLATFORM/include \
+	-c $O3/client/ovpncli.cpp
+fi
+
+echo WRAP
+$GPP_CMD \
+    --sysroot=$NDK/platforms/android-9/arch-arm \
+    $opt2 $LIB_FPIC \
+    -fno-strict-aliasing \
+    -Wall \
+    $vis1 $vis2 \
+    -D__GLIBC__ \
+    -D_GLIBCXX_HAVE_FENV_H=1 \
+    -I$O3/client \
+    -I$O3 \
+    -L$DEP_DIR/boost/stage-$PLATFORM/lib \
+    $ssl_libdir \
+    -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
+    -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
+    ovpncli_wrap.cxx \
+    ovpncli.o \
+    -o libovpncli.so \
+    -shared -Wl,-soname,libovpncli.so \
+    $ssl_lib \
+    -lboost_system -lboost_thread \
+    -lsnappy \
+    -llog
+
+if [ "$DEBUG_BUILD" != "1" ]; then
+    echo STRIP
+    $STRIP_CMD libovpncli.so
+fi
