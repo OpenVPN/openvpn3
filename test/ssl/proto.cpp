@@ -1,3 +1,10 @@
+//
+//  proto.cpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 // Unit test for OpenVPN Protocol implementation (class ProtoContext)
 
 #include <iostream>

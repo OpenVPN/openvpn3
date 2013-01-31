@@ -1,3 +1,10 @@
+//
+//  Client.java
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 // TESTING_ONLY
 
 public class Client implements OpenVPNClientThread.EventReceiver {

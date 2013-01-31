@@ -1,3 +1,10 @@
+//
+//  cli.cpp
+//  OpenVPN
+//
+//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//
+
 #include <getopt.h> // for getopt_long
 #include <stdlib.h> // for atoi
 
