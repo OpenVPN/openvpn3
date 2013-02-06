@@ -200,6 +200,10 @@ namespace openvpn {
       if (cp->layer != Layer(Layer::OSI_LAYER_3))
 	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "only OSI layer 3 tunnels currently supported");
 
+      // secret option not supported
+      if (opt.exists("secret"))
+	throw option_error("sorry, static key encryption mode (non-SSL/TLS) is not supported");
+
       // fragment option not supported
       if (opt.exists("fragment"))
 	throw option_error("sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
