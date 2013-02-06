@@ -398,7 +398,7 @@ namespace openvpn {
 	// get topology
 	Topology top = NET30;
 	{
-	  const Option* o = opt.get_ptr("topology"); // DIRECTIVE
+	  const Option* o = opt.get_consistent("topology"); // DIRECTIVE
 	  if (o)
 	    {
               const std::string& topstr = o->get(1, 16);
