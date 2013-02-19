@@ -58,7 +58,7 @@ fi
 # build flags
 FLAGS="-Wall"
 [ "$STRICT" = "1" ] && FLAGS="$FLAGS -Wextra"
-[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-tautological-compare"
+[ "$CLANG" = "1" ] && FLAGS="$FLAGS -Wno-tautological-compare -Wno-unused-private-field"
 FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # The Mac OS X tun/tap driver doesn't seem to play with with kqueue

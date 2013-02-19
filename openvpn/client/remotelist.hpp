@@ -161,7 +161,7 @@ namespace openvpn {
 		else
 		  e.server_port = default_port;
 		if (o.size() >= 4)
-		  e.transport_protocol = Protocol::parse(o.get(3, 16), false);
+		  e.transport_protocol = Protocol::parse(o.get(3, 16), true);
 		else
 		  e.transport_protocol = default_proto;
 		list.push_back(e);
