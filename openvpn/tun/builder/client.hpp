@@ -79,7 +79,8 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<TunPersist> Ptr;
 
-      TunPersist() {}
+      TunPersist(const bool retain_sd, TunBuilderBase* tb)
+	: retain_sd_(retain_sd), tb_(tb) {}
 
       bool defined() const
       {
@@ -93,7 +94,10 @@ namespace openvpn {
 
       void persist(const int sd, const ClientState::Ptr& state, const std::string& options)
       {
-	sd_.reset(sd);
+	if (retain_sd_)
+	  sd_.replace(sd);
+	else
+	  sd_.reset(sd);
 	state_ = state;
 	options_ = options;
       }
@@ -108,9 +112,19 @@ namespace openvpn {
 	return state_;
       }
 
+      ~TunPersist()
+      {
+	close();
+      }
+
       void close()
       {
-	sd_.close();
+	if (tb_)
+	  tb_->tun_builder_teardown();
+	if (retain_sd_)
+	  sd_.release();
+	else
+	  sd_.close();
 	state_.reset();
 	options_ = "";
       }
@@ -121,6 +135,8 @@ namespace openvpn {
       }
 
     private:
+      bool retain_sd_;
+      TunBuilderBase* tb_;
       ScopedFD sd_;
       ClientState::Ptr state_;
       std::string options_;
@@ -334,7 +350,9 @@ namespace openvpn {
 	    // stop tun
 	    if (impl)
 	      {
-		tb->tun_builder_teardown();
+		// if tun_persist is defined, it owns the sd and takes responsibility for teardown
+		if (!config->tun_persist)
+		  tb->tun_builder_teardown();
 		impl->stop();
 	      }
 	  }

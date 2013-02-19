@@ -28,6 +28,7 @@ namespace openvpn {
     {
       const int ret = fd;
       fd = -1;
+      //OPENVPN_LOG("**** SFD RELEASE=" << ret);
       return ret;
     }
 
@@ -45,6 +46,14 @@ namespace openvpn {
     {
       close();
       fd = fd_arg;
+      //OPENVPN_LOG("**** SFD RESET=" << fd);
+    }
+
+    // unusual semantics: replace fd without closing it first
+    void replace(const int fd_arg)
+    {
+      //OPENVPN_LOG("**** SFD REPLACE " << fd << " -> " << fd_arg);
+      fd = fd_arg;
     }
 
     int close()
@@ -53,6 +62,7 @@ namespace openvpn {
 	{
 	  const int ret = ::close(fd);
 	  fd = -1;
+	  //OPENVPN_LOG("**** SFD CLOSE=" << ret);
 	  return ret;
 	}
       else

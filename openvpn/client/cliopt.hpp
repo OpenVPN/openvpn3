@@ -222,13 +222,12 @@ namespace openvpn {
 #if defined(OPENVPN_PLATFORM_IPHONE)
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
-#else
+#endif
       if (config.tun_persist)
 	{
-	  tun_persist.reset(new TunBuilderClient::TunPersist);
+	  tun_persist.reset(new TunBuilderClient::TunPersist(tunconf->retain_sd, config.builder));
 	  tunconf->tun_persist = tun_persist;
 	}
-#endif
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
       tunconf->layer = cp->layer;
