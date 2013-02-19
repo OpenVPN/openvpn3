@@ -518,7 +518,7 @@ namespace openvpn {
 	out << ",dev-type " << layer.dev_type();
 	out << ",link-mtu " << mtu() + link_mtu_adjust();
 	out << ",tun-mtu " << mtu();
-	out << ",proto " << protocol.str_client();
+	out << ",proto " << protocol.str_client(true);
 	
 	{
 	  const char *compstr = comp_ctx.options_string();

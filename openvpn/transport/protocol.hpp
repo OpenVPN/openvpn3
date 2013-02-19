@@ -129,7 +129,7 @@ namespace openvpn {
 	}
     }
 
-    const char *str_client() const
+    const char *str_client(const bool force_ipv4) const
     {
       switch (type_)
 	{
@@ -138,9 +138,9 @@ namespace openvpn {
 	case TCPv4:
 	  return "TCPv4_CLIENT";
 	case UDPv6:
-	  return "UDPv6";
+	  return force_ipv4 ? "UDPv4" : "UDPv6";
 	case TCPv6:
-	  return "TCPv6_CLIENT";
+	  return force_ipv4 ? "TCPv4_CLIENT" : "TCPv6_CLIENT";
 	default:
 	  return "UNDEF_PROTO";
 	}
