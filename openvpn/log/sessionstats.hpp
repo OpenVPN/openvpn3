@@ -26,14 +26,14 @@ namespace openvpn {
 
     enum Stats {
       // operating stats
-      BYTES_IN = 0,
-      BYTES_OUT,
-      PACKETS_IN,
-      PACKETS_OUT,
-      TUN_BYTES_IN,
-      TUN_BYTES_OUT,
-      TUN_PACKETS_IN,
-      TUN_PACKETS_OUT,
+      BYTES_IN = 0,        // network bytes in
+      BYTES_OUT,           // network bytes out
+      PACKETS_IN,          // network packets in
+      PACKETS_OUT,         // network packets out
+      TUN_BYTES_IN,        // tun/tap bytes in
+      TUN_BYTES_OUT,       // tun/tap bytes out
+      TUN_PACKETS_IN,      // tun/tap packets in
+      TUN_PACKETS_OUT,     // tun/tap packets out
       N_STATS,
     };
 

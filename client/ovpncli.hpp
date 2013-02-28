@@ -33,7 +33,9 @@ namespace openvpn {
     // (client reads)
     struct EvalConfig
     {
-      EvalConfig() : error(false), autologin(false), externalPki(false), staticChallengeEcho(false), privateKeyPasswordRequired(false), allowPasswordSave(false) {}
+      EvalConfig() : error(false), autologin(false), externalPki(false),
+		     staticChallengeEcho(false), privateKeyPasswordRequired(false),
+		     allowPasswordSave(false) {}
 
       // true if error
       bool error;
