@@ -573,7 +573,7 @@ namespace openvpn {
 		    }
 		    catch (const std::exception& e)
 		      {
-			OPENVPN_THROW(tun_builder_error, "error parsing IPv4 route: " << o.render() << " : " << e.what());
+			OPENVPN_LOG("Error parsing IPv4 route: " << o.render() << " : " << e.what());
 		      }
 		  }
 	      }
@@ -600,7 +600,7 @@ namespace openvpn {
 		    }
 		    catch (const std::exception& e)
 		      {
-			OPENVPN_THROW(tun_builder_error, "error parsing IPv6 route: " << o.render() << " : " << e.what());
+			OPENVPN_LOG("Error parsing IPv6 route: " << o.render() << " : " << e.what());
 		      }
 		  }
 	      }
@@ -649,11 +649,11 @@ namespace openvpn {
 			}
 		    }
 		  else if (!quiet)
-		    OPENVPN_LOG("unknown DHCP option: " << o.render());
+		    OPENVPN_LOG("Unknown pushed DHCP option: " << o.render());
 		}
 		catch (const std::exception& e)
 		  {
-		    OPENVPN_THROW(tun_builder_error, "error parsing dhcp-option: " << o.render() << " : " << e.what());
+		    OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
 		  }
 	      }
 	  }
@@ -675,7 +675,7 @@ namespace openvpn {
 		}
 		catch (const std::exception& e)
 		  {
-		    OPENVPN_THROW(tun_builder_error, "error parsing dhcp-option: " << o.render() << " : " << e.what());
+		    OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
 		  }
 	      }
 	  }
