@@ -19,15 +19,16 @@
 #define EXPORT
 #endif
 
-#ifdef PRIVATE_TUNNEL
-#define RSA_SIGN_INIT Java_net_openvpn_privatetunnel_JellyBeanHack_rsa_1sign_1init
-#define RSA_SIGN      Java_net_openvpn_privatetunnel_JellyBeanHack_rsa_1sign
-#define PKEY_RETAIN   Java_net_openvpn_privatetunnel_JellyBeanHack_pkey_1retain
-#else
-#define RSA_SIGN_INIT Java_net_openvpn_openvpn_JellyBeanHack_rsa_1sign_1init
-#define RSA_SIGN      Java_net_openvpn_openvpn_JellyBeanHack_rsa_1sign
-#define PKEY_RETAIN   Java_net_openvpn_openvpn_JellyBeanHack_pkey_1retain
+#ifndef PACKAGE_ID
+#error PACKAGE_ID must be defined
 #endif
+
+#define MAKE_SYM2(pkg_id, suffix) Java_ ## pkg_id ## _JellyBeanHack_ ## suffix
+#define MAKE_SYM(pkg_id, suffix) MAKE_SYM2(pkg_id, suffix)
+
+#define RSA_SIGN_INIT MAKE_SYM(PACKAGE_ID, rsa_1sign_1init)
+#define RSA_SIGN      MAKE_SYM(PACKAGE_ID, rsa_1sign)
+#define PKEY_RETAIN   MAKE_SYM(PACKAGE_ID, pkey_1retain)
 
 extern "C" {
   jint RSA_SIGN_INIT(JNIEnv* env, jclass);

@@ -12,22 +12,24 @@ if [ "$WRAP_ONLY" != "1" ]; then
     rm_generated_files
 fi
 
-if [ "$PT" = "1" ]; then
-    pkg=net.openvpn.privatetunnel
-    ptdef="-DPRIVATE_TUNNEL"
+if [ "$PKG" ]; then
+    pkg=$PKG
+    pkg_id_def="-DPACKAGE_ID=${PKG//./_}"
+    mk_build=1
 else
     pkg=net.openvpn.openvpn
-    ptdef=""
+    pkg_id_def="-DPACKAGE_ID=net_openvpn_openvpn"
+    mk_build=0
 fi
 
 if [ "$DEBUG_BUILD" = "1" ]; then
     vis1=""
     vis2=""
-    opt2="$ptdef $LIB_OPT_LEVEL"
+    opt2="$pkg_id_def $LIB_OPT_LEVEL"
 else
     vis1="-fvisibility=hidden"
     vis2='-DSWIGEXPORT=__attribute__((visibility("default")))'
-    opt2="$ptdef -Os"
+    opt2="$pkg_id_def -Os"
 fi
 
 if [ "$OPENSSL" = "1" ]; then
@@ -95,8 +97,8 @@ if [ "$DEBUG_BUILD" != "1" ]; then
     $STRIP_CMD libovpncli.so
 fi
 
-if [ "$PT" = "1" ]; then
-    rm -rf pt
-    mkdir pt
-    cp SWIGTYPE_*.java ClientAPI_*.java libovpncli.so pt/
+if [ $mk_build -eq 1 ]; then
+    rm -rf build
+    mkdir build
+    cp SWIGTYPE_*.java ClientAPI_*.java libovpncli.so build/
 fi
