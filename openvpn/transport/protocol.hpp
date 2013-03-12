@@ -15,6 +15,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
 // A class that encapsulates a transport protocol.
@@ -36,6 +37,8 @@ namespace openvpn {
     Type operator()() const { return type_; }
 
     bool defined() const { return type_ != NONE; }
+
+    void reset() { type_ = NONE; }
 
     bool is_udp() const { return type_ == UDPv4 || type_ == UDPv6; }
     bool is_tcp() const { return type_ == TCPv4 || type_ == TCPv6; }
@@ -60,6 +63,27 @@ namespace openvpn {
     unsigned int extra_transport_bytes() const
     {
       return is_tcp() ? sizeof(boost::uint16_t) : 0;
+    }
+
+    void mod_addr_version(const IP::Addr& addr)
+    {
+      switch (addr.version())
+	{
+	case IP::Addr::UNSPEC:
+	  break;
+	case IP::Addr::V4:
+	  if (is_udp())
+	    type_ = UDPv4;
+	  else if (is_tcp())
+	    type_ = TCPv4;
+	  break;
+	case IP::Addr::V6:
+	  if (is_udp())
+	    type_ = UDPv6;
+	  else if (is_tcp())
+	    type_ = TCPv6;
+	  break;
+	}
     }
 
     static Protocol parse(const std::string& str, const bool allow_client_suffix)

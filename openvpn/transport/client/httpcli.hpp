@@ -25,13 +25,14 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/transport/tcplink.hpp>
-#include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
+#include <openvpn/transport/protocol.hpp>
 #include <openvpn/http/reply.hpp>
 #include <openvpn/proxy/proxyauth.hpp>
 #include <openvpn/proxy/httpdigest.hpp>
 #include <openvpn/proxy/ntlm.hpp>
+#include <openvpn/client/remotelist.hpp>
 
 namespace openvpn {
   namespace HTTPProxyTransport {
@@ -43,16 +44,19 @@ namespace openvpn {
 
       Options() : allow_cleartext_auth(false) {}
 
-      std::string host;
-      std::string port;
+      RemoteList::Ptr proxy_server;
       std::string username;
       std::string password;
       bool allow_cleartext_auth;
 
-      void validate()
+      void set_proxy_server(const std::string& host, const std::string& port)
       {
-	if (!parse_number_validate<unsigned int>(port, 5, 1, 65535))
-	  OPENVPN_THROW(option_error, "bad proxy port number: " << port);
+	proxy_server.reset(new RemoteList(host, port, Protocol(Protocol::TCP), "http proxy port"));
+      }
+
+      void proxy_server_set_enable_cache(const bool enable_cache)
+      {
+	proxy_server->set_enable_cache(enable_cache);
       }
     };
 
@@ -64,8 +68,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<ClientConfig> Ptr;
 
-      std::string server_host;
-      std::string server_port;
+      RemoteList::Ptr remote_list;
       size_t send_queue_max_size;
       size_t free_list_max_size;
       Frame::Ptr frame;
@@ -84,8 +87,6 @@ namespace openvpn {
 
       virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 						  TransportClientParent& parent);
-
-      EndpointCache::Ptr endpoint_cache;
 
     private:
       ClientConfig()
@@ -110,6 +111,7 @@ namespace openvpn {
       enum {
 	Connected=200,
 	Forbidden=403,
+	NotFound=404,
 	ProxyAuthenticationRequired=407,
 	ProxyError=502,
 	ServiceUnavailable=503,
@@ -127,17 +129,22 @@ namespace openvpn {
 	      }
 
 	    halt = false;
-	    if (config->endpoint_cache
-		&& config->endpoint_cache->get_endpoint(config->http_proxy_options->host,
-							config->http_proxy_options->port,
-							server_endpoint))
+
+	    // Get target server host:port.  We don't care about resolving it
+	    // since proxy server will do that for us.
+	    remote_list().endpoint_available(&server_host, &server_port, NULL);
+
+	    // Get proxy server host:port, and resolve it if not already cached
+	    if (proxy_remote_list().endpoint_available(&proxy_host, &proxy_port, NULL))
 	      {
+		// already cached
 		start_connect_();
 	      }
 	    else
 	      {
-		boost::asio::ip::tcp::resolver::query query(config->http_proxy_options->host,
-							    config->http_proxy_options->port);
+		// resolve it
+		boost::asio::ip::tcp::resolver::query query(proxy_host,
+							    proxy_port);
 		parent.transport_pre_resolve();
 		resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::do_resolve_, this));
 	      }
@@ -156,8 +163,8 @@ namespace openvpn {
 
       virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const
       {
-	host = config->server_host;
-	port = config->server_port;
+	host = server_host;
+	port = server_port;
 	const IP::Addr addr = server_endpoint_addr();
 	proto = "TCP";
 	proto += addr.version_string();
@@ -213,7 +220,7 @@ namespace openvpn {
       void tcp_error_handler(const char *error) // called by LinkImpl and internally
       {
 	std::ostringstream os;
-	os << "Transport error on '" << config->server_host << "' via HTTP proxy " << config->http_proxy_options->host << ':' << config->http_proxy_options->port << " : " << error;
+	os << "Transport error on '" << server_host << "' via HTTP proxy " << proxy_host << ':' << proxy_port << " : " << error;
 	stop();
 	parent.transport_error(Error::UNDEF, os.str());
       }
@@ -221,7 +228,7 @@ namespace openvpn {
       void proxy_error(const Error::Type fatal_err, const std::string& what)
       {
 	std::ostringstream os;
-	os << "on " << config->http_proxy_options->host << ':' << config->http_proxy_options->port << ": " << what;
+	os << "on " << proxy_host << ':' << proxy_port << ": " << what;
 	stop();
 	parent.proxy_error(fatal_err, os.str());
       }
@@ -374,7 +381,9 @@ namespace openvpn {
 		    return;
 		  }
 	      }
-	    else if (http_reply.status_code == ProxyError || http_reply.status_code == ServiceUnavailable)
+	    else if (http_reply.status_code == ProxyError
+		     || http_reply.status_code == NotFound
+		     || http_reply.status_code == ServiceUnavailable)
 	      {
 		// this is a nonfatal error, so we pass Error::UNDEF to tell the upper layer to
 		// retry the connection
@@ -428,7 +437,7 @@ namespace openvpn {
 	  const std::string cnonce = render_hex(cnonce_raw, sizeof(cnonce_raw));
 
 	  // build URI
-	  const std::string uri = config->server_host + ":" + config->server_port;
+	  const std::string uri = server_host + ":" + server_port;
 
 	  // calculate session key
 	  const std::string session_key = HTTPProxy::Digest<CRYPTO_API>::calcHA1(
@@ -453,7 +462,7 @@ namespace openvpn {
 	  // generate proxy request
 	  std::ostringstream os;
 	  gen_user_agent(os);
-	  os << "Host: " << config->server_host << "\r\n";
+	  os << "Host: " << server_host << "\r\n";
 	  os << "Proxy-Authorization: Digest username=\"" << config->http_proxy_options->username << "\", realm=\"" << realm << "\", nonce=\"" << nonce << "\", uri=\"" << uri << "\", qop=" << qop << ", nc=" << nonce_count << ", cnonce=\"" << cnonce << "\", response=\"" << response << "\"";
 	  if (!opaque.empty())
 	    os << ", opaque=\"" + opaque + "\"";
@@ -573,14 +582,14 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		// get resolved endpoint
-		server_endpoint = *endpoint_iterator;
+		// save resolved endpoint list in proxy remote_list
+		proxy_remote_list().set_endpoint_list(endpoint_iterator);
 		start_connect_();
 	      }
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << config->http_proxy_options->host << "' for TCP (HTTP proxy): " << error;
+		os << "DNS resolve error on '" << proxy_host << "' for TCP (HTTP proxy): " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		parent.transport_error(Error::UNDEF, os.str());
@@ -608,6 +617,8 @@ namespace openvpn {
       // do TCP connect
       void start_connect_()
       {
+	proxy_remote_list().get_endpoint(server_endpoint);
+	OPENVPN_LOG("Contacting " << server_endpoint << " via HTTP Proxy");
 	parent.transport_wait_proxy();
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
@@ -633,8 +644,6 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		if (config->endpoint_cache)
-		  config->endpoint_cache->set_endpoint(config->http_proxy_options->host, server_endpoint);
 		parent.transport_wait();
 		impl.reset(new LinkImpl(this,
 					socket,
@@ -651,10 +660,10 @@ namespace openvpn {
 	      }
 	    else
 	      {
+		proxy_remote_list().next();
+
 		std::ostringstream os;
-		os << "TCP connect error on '"
-		   << config->http_proxy_options->host << ':' << config->http_proxy_options->port
-		   << "' for TCP-via-HTTP-proxy session: " << error.message();
+		os << "TCP connect error on '" << proxy_host << ':' << proxy_port << "' (" << server_endpoint << ") for TCP-via-HTTP-proxy session: " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
 		parent.transport_error(Error::UNDEF, os.str());
@@ -673,7 +682,7 @@ namespace openvpn {
       void create_http_connect_msg(BufferAllocated& buf)
       {
 	std::ostringstream os;
-	os << "CONNECT " << config->server_host << ':' << config->server_port << " HTTP/1.0\r\n"
+	os << "CONNECT " << server_host << ':' << server_port << " HTTP/1.0\r\n"
 	   << http_request<< "\r\n";
 	const std::string str = os.str();
 	http_request = "";
@@ -683,6 +692,15 @@ namespace openvpn {
 	config->frame->prepare(Frame::WRITE_HTTP_PROXY, buf);
 	buf.write((const unsigned char *)str.c_str(), str.length());
       }
+
+      RemoteList& remote_list() const { return *config->remote_list; }
+      RemoteList& proxy_remote_list() const { return *config->http_proxy_options->proxy_server; }
+
+      std::string proxy_host;
+      std::string proxy_port;
+
+      std::string server_host;
+      std::string server_port;
 
       boost::asio::io_service& io_service;
       boost::asio::ip::tcp::socket socket;

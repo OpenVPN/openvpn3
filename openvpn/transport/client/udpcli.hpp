@@ -15,9 +15,9 @@
 #include <boost/asio.hpp>
 
 #include <openvpn/transport/udplink.hpp>
-#include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
+#include <openvpn/client/remotelist.hpp>
 
 namespace openvpn {
   namespace UDPTransport {
@@ -27,8 +27,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<ClientConfig> Ptr;
 
-      std::string server_host;
-      std::string server_port;
+      RemoteList::Ptr remote_list;
       bool server_addr_float;
       int n_parallel;
       Frame::Ptr frame;
@@ -43,8 +42,6 @@ namespace openvpn {
 
       virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 						  TransportClientParent& parent);
-
-      EndpointCache::Ptr endpoint_cache;
 
     private:
       ClientConfig()
@@ -62,7 +59,8 @@ namespace openvpn {
       typedef Link<Client*> LinkImpl;
 
       typedef AsioDispatchResolve<Client,
-				  void (Client::*)(const boost::system::error_code&, boost::asio::ip::udp::resolver::iterator),
+				  void (Client::*)(const boost::system::error_code&,
+						   boost::asio::ip::udp::resolver::iterator),
 				  boost::asio::ip::udp::resolver::iterator> AsioDispatchResolveUDP;
 
     public:
@@ -71,15 +69,14 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    if (config->endpoint_cache
-		&& config->endpoint_cache->get_endpoint(config->server_host, config->server_port, server_endpoint))
+	    if (config->remote_list->endpoint_available(&server_host, &server_port, NULL))
 	      {
-		start_impl_();
+		start_connect_();
 	      }
 	    else
 	      {
-		boost::asio::ip::udp::resolver::query query(config->server_host,
-							    config->server_port);
+		boost::asio::ip::udp::resolver::query query(server_host,
+							    server_port);
 		parent.transport_pre_resolve();
 		resolver.async_resolve(query, AsioDispatchResolveUDP(&Client::do_resolve_, this));
 	      }
@@ -98,8 +95,8 @@ namespace openvpn {
 
       virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const
       {
-	host = config->server_host;
-	port = config->server_port;
+	host = server_host;
+	port = server_port;
 	const IP::Addr addr = server_endpoint_addr();
 	proto = "UDP";
 	proto += addr.version_string();
@@ -163,14 +160,14 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		// get resolved endpoint
-		server_endpoint = *endpoint_iterator;
-		start_impl_();
+		// save resolved endpoint list in remote_list
+		config->remote_list->set_endpoint_list(endpoint_iterator);
+		start_connect_();
 	      }
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << config->server_host << "' for UDP session: " << error.message();
+		os << "DNS resolve error on '" << server_host << "' for UDP session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		parent.transport_error(Error::UNDEF, os.str());
@@ -178,10 +175,11 @@ namespace openvpn {
 	  }
       }
 
-      void start_impl_()
+      // do UDP connect
+      void start_connect_()
       {
-	if (config->endpoint_cache)
-	  config->endpoint_cache->set_endpoint(config->server_host, server_endpoint);
+	config->remote_list->get_endpoint(server_endpoint);
+	OPENVPN_LOG("Contacting " << server_endpoint << " via UDP");
 	parent.transport_wait();
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
@@ -196,14 +194,36 @@ namespace openvpn {
 	      }
 	  }
 #endif
-	socket.connect(server_endpoint);
-	impl.reset(new LinkImpl(this,
-				socket,
-				(*config->frame)[Frame::READ_LINK_UDP],
-				config->stats));
-	impl->start(config->n_parallel);
-	parent.transport_connecting();
+	socket.async_connect(server_endpoint, asio_dispatch_connect(&Client::start_impl_, this));
       }
+
+      // start I/O on UDP socket
+      void start_impl_(const boost::system::error_code& error)
+      {
+	if (!halt)
+	  {
+	    if (!error)
+	      {
+		impl.reset(new LinkImpl(this,
+					socket,
+					(*config->frame)[Frame::READ_LINK_UDP],
+					config->stats));
+		impl->start(config->n_parallel);
+		parent.transport_connecting();
+	      }
+	    else
+	      {
+		std::ostringstream os;
+		os << "UDP connect error on '" << server_host << ':' << server_port << "' (" << server_endpoint << "): " << error.message();
+		config->stats->error(Error::UDP_CONNECT_ERROR);
+		stop();
+		parent.transport_error(Error::UNDEF, os.str());
+	      }
+	  }
+      }
+
+      std::string server_host;
+      std::string server_port;
 
       boost::asio::io_service& io_service;
       boost::asio::ip::udp::socket socket;

@@ -14,11 +14,11 @@ fi
 
 if [ "$PKG" ]; then
     pkg=$PKG
-    pkg_id_def="-DPACKAGE_ID=${PKG//./_}"
+    pkg_id_def="-DOPENVPN_PACKAGE_ID=${PKG//./_}"
     mk_build=1
 else
     pkg=net.openvpn.openvpn
-    pkg_id_def="-DPACKAGE_ID=net_openvpn_openvpn"
+    pkg_id_def="-DOPENVPN_PACKAGE_ID=net_openvpn_openvpn"
     mk_build=0
 fi
 

@@ -37,6 +37,7 @@ namespace openvpn {
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
       TCP_CONNECT_ERROR,   // client error on TCP connect
+      UDP_CONNECT_ERROR,   // client error on UDP connect
       SSL_ERROR,           // errors resulting from read/write on SSL object
       ENCAPSULATION_ERROR, // exceptions thrown during packet encapsulation
       EPKI_CERT_ERROR,     // error obtaining certificate from External PKI provider
@@ -86,6 +87,7 @@ namespace openvpn {
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",
 	"TCP_CONNECT_ERROR",
+	"UDP_CONNECT_ERROR",
 	"SSL_ERROR",
 	"ENCAPSULATION_ERROR",
 	"EPKI_CERT_ERROR",

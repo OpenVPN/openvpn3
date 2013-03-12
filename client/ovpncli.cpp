@@ -36,6 +36,7 @@
 #define OPENVPN_DEBUG_UDPLINK 2
 #define OPENVPN_DEBUG_TCPLINK 2
 #define OPENVPN_DEBUG_COMPRESS 1
+#define OPENVPN_DEBUG_REMOTELIST 0
 //#define OPENVPN_DEBUG_PACKET_ID
 //#define OPENVPN_PACKET_LOG "pkt.log"
 
@@ -358,12 +359,10 @@ namespace openvpn {
 	if (!config.proxyHost.empty())
 	  {
 	    HTTPProxyTransport::Options::Ptr ho(new HTTPProxyTransport::Options());
-	    ho->host = config.proxyHost;
-	    ho->port = config.proxyPort;
+	    ho->set_proxy_server(config.proxyHost, config.proxyPort);
 	    ho->username = config.proxyUsername;
 	    ho->password = config.proxyPassword;
 	    ho->allow_cleartext_auth = config.proxyAllowCleartextAuth;
-	    ho->validate();
 	    state->http_proxy_options = ho;
 	  }
       }
@@ -373,7 +372,6 @@ namespace openvpn {
 	  eval.message = Unicode::utf8_printable(e.what(), 256);
 	}
     }
-
 
     OPENVPN_CLIENT_EXPORT long OpenVPNClient::max_profile_size()
     {

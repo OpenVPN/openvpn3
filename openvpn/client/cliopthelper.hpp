@@ -155,8 +155,8 @@ namespace openvpn {
 	    }
 	  else
 	    {
-	      if (rl.size() >= 1)
-		profileName_ = rl[0].server_host;
+	      if (rl.defined())
+		profileName_ = rl.first_server_host();
 	    }
 	}
 

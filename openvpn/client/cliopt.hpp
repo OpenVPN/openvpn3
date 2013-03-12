@@ -135,8 +135,7 @@ namespace openvpn {
 
     ClientOptions(const OptionList& opt,   // only needs to remain in scope for duration of constructor call
 		  const Config& config)
-      : session_iteration(0),
-	socket_protect(config.socket_protect),
+      : socket_protect(config.socket_protect),
 	reconnect_notify(config.reconnect_notify),
 	cli_stats(config.cli_stats),
 	cli_events(config.cli_events),
@@ -156,12 +155,6 @@ namespace openvpn {
 
       // frame
       frame = frame_init();
-
-      // If running in tun_persist mode, we need to do basic DNS caching so that
-      // we can avoid emitting DNS requests while the tunnel is blocked during
-      // reconnections.
-      if (config.tun_persist)
-	endpoint_cache.reset(new EndpointCache());
 
       // client SSL config
       ClientSSLAPI::Config cc;
@@ -193,8 +186,30 @@ namespace openvpn {
 
       // load remote list
       remote_list.reset(new RemoteList(opt));
-      if (!remote_list->size())
+      if (!remote_list->defined())
 	throw option_error("no remote option specified");
+
+      // If running in tun_persist mode, we need to do basic DNS caching so that
+      // we can avoid emitting DNS requests while the tunnel is blocked during
+      // reconnections.
+      remote_list->set_enable_cache(config.tun_persist);
+
+      // process server override
+      remote_list->set_server_override(config.server_override);
+
+      // process protocol override, should be called after set_enable_cache
+      remote_list->handle_proto_override(config.proto_override, bool(http_proxy_options));
+
+      // process remote-random
+      if (opt.exists("remote-random"))
+	remote_list->randomize(*prng);
+
+      // special remote cache handling for HTTP proxy
+      if (http_proxy_options)
+	{
+	  remote_list->set_enable_cache(false); // remote server addresses will be resolved by proxy
+	  http_proxy_options->proxy_server_set_enable_cache(config.tun_persist);
+	}
 
       // initialize transport layer
       if (cp->layer != Layer(Layer::OSI_LAYER_3))
@@ -284,7 +299,7 @@ namespace openvpn {
 
     void next()
     {
-      ++session_iteration;
+      remote_list->next();
       load_transport_config();
     }
 
@@ -338,7 +353,9 @@ namespace openvpn {
     }
 
     SessionStats& stats() { return *cli_stats; }
+    const SessionStats::Ptr& stats_ptr() const { return cli_stats; }
     ClientEvent::Queue& events() { return *cli_events; }
+    const RemoteList::Ptr& remote_list_ptr() const { return remote_list; }
 
     int conn_timeout() const { return conn_timeout_; }
 
@@ -350,81 +367,57 @@ namespace openvpn {
   private:
     std::string load_transport_config()
     {
-      // During reconnects, if both tun_persist and endpoint cache are enabled,
-      // remote list scan should bypass any hosts not in endpoint cache.  This is done
-      // because in tun_persist mode, DNS resolve requests are usually not viable
-      // during reconnections because internet access (other than the tunnel itself)
-      // is blocked.
-      EndpointCache::Ptr ec;
-#if defined(USE_TUN_BUILDER)
-      if (tun_persist && tun_persist->defined())
-	ec = endpoint_cache;
-#endif
+      // get current transport protocol
+      const Protocol& transport_protocol = remote_list->current_transport_protocol();
 
+      // set transport protocol in Client::ProtoConfig
+      cp->set_protocol(transport_protocol);
+
+      // construct transport object
       if (http_proxy_options)
 	{
-	  // special handling for HTTP proxy transport
-	  const Protocol proto(Protocol::TCP);
-	  bool proto_fail = false;
-	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto, &proto_fail, NULL);
-	  if (!proto_fail)
-	    {
-	      cp->set_protocol(rli.transport_protocol);
+	  // HTTP proxy always uses TCP.  If current transport protocol is not TCP, this is
+	  // an error that should have been caught earlier in RemoteList::handle_proto_override.
+	  if (!transport_protocol.is_tcp())
+	    throw option_error("internal error: no TCP server entries for HTTP proxy transport");
 
-	      // HTTP Proxy transport
-	      HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::Ptr tcpconf = HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::new_obj();
-	      tcpconf->server_host = rli.server_host;
-	      tcpconf->server_port = rli.server_port;
-	      tcpconf->frame = frame;
-	      tcpconf->stats = cli_stats;
-	      tcpconf->socket_protect = socket_protect;
-	      tcpconf->endpoint_cache = endpoint_cache;
-	      tcpconf->http_proxy_options = http_proxy_options;
-	      tcpconf->rng = rng;
-	      transport_factory = tcpconf;
-	      return rli.server_host;
-	    }
-	  else
-	    throw option_error("cannot connect via HTTP proxy because no TCP server entries exist in profile");
+	  // HTTP Proxy transport
+	  HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::Ptr httpconf = HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::new_obj();
+	  httpconf->remote_list = remote_list;
+	  httpconf->frame = frame;
+	  httpconf->stats = cli_stats;
+	  httpconf->socket_protect = socket_protect;
+	  httpconf->http_proxy_options = http_proxy_options;
+	  httpconf->rng = rng;
+	  transport_factory = httpconf;
 	}
       else
 	{
-	  // initialize remote item with current element
-	  const RemoteList::Item rli = remote_list->get(session_iteration, server_override, proto_override, NULL, ec.get());
-	  cp->set_protocol(rli.transport_protocol);
-
-	  // initialize transport factory
-	  if (rli.transport_protocol.is_udp())
+	  if (transport_protocol.is_udp())
 	    {
 	      // UDP transport
 	      UDPTransport::ClientConfig::Ptr udpconf = UDPTransport::ClientConfig::new_obj();
-	      udpconf->server_host = rli.server_host;
-	      udpconf->server_port = rli.server_port;
+	      udpconf->remote_list = remote_list;
 	      udpconf->frame = frame;
 	      udpconf->stats = cli_stats;
 	      udpconf->socket_protect = socket_protect;
-	      udpconf->endpoint_cache = endpoint_cache;
 	      transport_factory = udpconf;
 	    }
-	  else if (rli.transport_protocol.is_tcp())
+	  else if (transport_protocol.is_tcp())
 	    {
 	      // TCP transport
 	      TCPTransport::ClientConfig::Ptr tcpconf = TCPTransport::ClientConfig::new_obj();
-	      tcpconf->server_host = rli.server_host;
-	      tcpconf->server_port = rli.server_port;
+	      tcpconf->remote_list = remote_list;
 	      tcpconf->frame = frame;
 	      tcpconf->stats = cli_stats;
 	      tcpconf->socket_protect = socket_protect;
-	      tcpconf->endpoint_cache = endpoint_cache;
 	      transport_factory = tcpconf;
 	    }
 	  else
-	    throw option_error("unknown transport protocol");
-	  return rli.server_host;
+	    throw option_error("internal error: unknown transport protocol");
 	}
+      return remote_list->current_server_host();
     }
-
-    unsigned int session_iteration;
 
     Time now_; // current time
     RandomAPI::Ptr rng;
@@ -433,9 +426,9 @@ namespace openvpn {
     ClientSSLAPI::Config cc;
     Client::ProtoConfig::Ptr cp;
     RemoteList::Ptr remote_list;
+    RemoteList::Ptr remote_list_proxy;
     TransportClientFactory::Ptr transport_factory;
     TunClientFactory::Ptr tun_factory;
-    EndpointCache::Ptr endpoint_cache;
     SocketProtect* socket_protect;
     ReconnectNotify* reconnect_notify;
     SessionStats::Ptr cli_stats;

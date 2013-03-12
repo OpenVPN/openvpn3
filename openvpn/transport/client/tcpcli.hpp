@@ -15,9 +15,9 @@
 #include <boost/asio.hpp>
 
 #include <openvpn/transport/tcplink.hpp>
-#include <openvpn/transport/endpoint_cache.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
+#include <openvpn/client/remotelist.hpp>
 
 namespace openvpn {
   namespace TCPTransport {
@@ -27,8 +27,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<ClientConfig> Ptr;
 
-      std::string server_host;
-      std::string server_port;
+      RemoteList::Ptr remote_list;
       size_t send_queue_max_size;
       size_t free_list_max_size;
       Frame::Ptr frame;
@@ -43,8 +42,6 @@ namespace openvpn {
 
       virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 						  TransportClientParent& parent);
-
-      EndpointCache::Ptr endpoint_cache;
 
     private:
       ClientConfig()
@@ -62,7 +59,8 @@ namespace openvpn {
       typedef Link<Client*, false> LinkImpl;
 
       typedef AsioDispatchResolve<Client,
-				  void (Client::*)(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator),
+				  void (Client::*)(const boost::system::error_code&,
+						   boost::asio::ip::tcp::resolver::iterator),
 				  boost::asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
 
     public:
@@ -71,15 +69,14 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    if (config->endpoint_cache
-		&& config->endpoint_cache->get_endpoint(config->server_host, config->server_port, server_endpoint))
+	    if (config->remote_list->endpoint_available(&server_host, &server_port, NULL))
 	      {
 		start_connect_();
 	      }
 	    else
 	      {
-		boost::asio::ip::tcp::resolver::query query(config->server_host,
-							    config->server_port);
+		boost::asio::ip::tcp::resolver::query query(server_host,
+							    server_port);
 		parent.transport_pre_resolve();
 		resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::do_resolve_, this));
 	      }
@@ -98,8 +95,8 @@ namespace openvpn {
 
       virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const
       {
-	host = config->server_host;
-	port = config->server_port;
+	host = server_host;
+	port = server_port;
 	const IP::Addr addr = server_endpoint_addr();
 	proto = "TCP";
 	proto += addr.version_string();
@@ -160,7 +157,7 @@ namespace openvpn {
       void tcp_error_handler(const char *error) // called by LinkImpl
       {
 	std::ostringstream os;
-	os << "Transport error on '" << config->server_host << ": " << error;
+	os << "Transport error on '" << server_host << ": " << error;
 	stop();
 	parent.transport_error(Error::UNDEF, os.str());
       }
@@ -186,14 +183,14 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		// get resolved endpoint
-		server_endpoint = *endpoint_iterator;
+		// save resolved endpoint list in remote_list
+		config->remote_list->set_endpoint_list(endpoint_iterator);
 		start_connect_();
 	      }
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << config->server_host << "' for TCP session: " << error;
+		os << "DNS resolve error on '" << server_host << "' for TCP session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		parent.transport_error(Error::UNDEF, os.str());
@@ -204,6 +201,8 @@ namespace openvpn {
       // do TCP connect
       void start_connect_()
       {
+	config->remote_list->get_endpoint(server_endpoint);
+	OPENVPN_LOG("Contacting " << server_endpoint << " via TCP");
 	parent.transport_wait();
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
@@ -229,8 +228,6 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		if (config->endpoint_cache)
-		  config->endpoint_cache->set_endpoint(config->server_host, server_endpoint);
 		impl.reset(new LinkImpl(this,
 					socket,
 					config->send_queue_max_size,
@@ -243,13 +240,16 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << "TCP connect error on '" << config->server_host << "' for TCP session: " << error.message();
+		os << "TCP connect error on '" << server_host << ':' << server_port << "' (" << server_endpoint << "): " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
 		parent.transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
+
+      std::string server_host;
+      std::string server_port;
 
       boost::asio::io_service& io_service;
       boost::asio::ip::tcp::socket socket;

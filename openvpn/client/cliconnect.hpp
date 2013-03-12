@@ -36,16 +36,19 @@
 #define OPENVPN_CLIENT_CLICONNECT_H
 
 #include <openvpn/common/rc.hpp>
-#include <openvpn/client/cliopt.hpp>
-#include <openvpn/time/asiotimer.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
+#include <openvpn/time/asiotimer.hpp>
+#include <openvpn/client/cliopt.hpp>
+#include <openvpn/client/remotelist.hpp>
 
 namespace openvpn {
 
   // ClientConnect implements an "always-try-to-reconnect" approach, with remote
   // list rotation.  Only gives up on auth failure or other fatal errors that
   // cannot be remedied by retrying.
-  class ClientConnect : ClientProto::NotifyCallback, public RC<thread_safe_refcount>
+  class ClientConnect : ClientProto::NotifyCallback,
+			RemoteList::PreResolve::NotifyCallback,
+			public RC<thread_safe_refcount>
   {
   public:
     typedef boost::intrusive_ptr<ClientConnect> Ptr;
@@ -72,7 +75,20 @@ namespace openvpn {
     void start()
     {
       if (!client && !halt)
-	new_client();
+	{
+	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_service,
+									client_options->remote_list_ptr(),
+									client_options->stats_ptr()));
+	  if (preres->work_available())
+	    {
+	      ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
+	      client_options->events().add_event(ev);
+	      pre_resolve = preres;
+	      pre_resolve->start(this); // asynchronous -- will call back to pre_resolve_done
+	    }
+	  else
+	    new_client();
+	}
     }
 
     void graceful_stop()
@@ -88,10 +104,13 @@ namespace openvpn {
       if (!halt)
 	{
 	  halt = true;
+	  if (pre_resolve)
+	    pre_resolve->cancel();
 	  if (client)
 	    client->stop(false);
 	  cancel_timers();
 	  asio_work.reset();
+
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Disconnected();
 	  client_options->events().add_event(ev);
 	}
@@ -180,6 +199,12 @@ namespace openvpn {
     }
 
   private:
+    virtual void pre_resolve_done()
+    {
+      if (!halt)
+	new_client();
+    }
+
     void cancel_timers()
     {
       restart_wait_timer.cancel();
@@ -390,6 +415,7 @@ namespace openvpn {
     AsioTimer conn_timer;
     bool conn_timer_pending;
     ScopedPtr<boost::asio::io_service::work> asio_work;
+    RemoteList::PreResolve::Ptr pre_resolve;
   };
 
 }
