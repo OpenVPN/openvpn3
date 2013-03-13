@@ -234,6 +234,7 @@ namespace openvpn {
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
       tunconf->google_dns_fallback = config.google_dns_fallback;
+      tunconf->route_nopull = opt.exists("route-nopull");
 #if defined(OPENVPN_PLATFORM_IPHONE)
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
