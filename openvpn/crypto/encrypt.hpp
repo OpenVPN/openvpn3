@@ -72,6 +72,9 @@ namespace openvpn {
 
 	  // HMAC the ciphertext
 	  prepend_hmac(work);
+
+	  // return ciphertext result in buf
+	  buf.swap(work);
 	}
       else // no encryption
 	{
@@ -79,11 +82,8 @@ namespace openvpn {
 	  pid_send.write_next(buf, true, now);
 
 	  // HMAC the cleartext
-	  prepend_hmac(work);
+	  prepend_hmac(buf);
 	}
-
-      // return ciphertext result in buf
-      buf.swap(work);
     }
 
     Frame::Ptr frame;

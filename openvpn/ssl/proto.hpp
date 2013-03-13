@@ -323,7 +323,13 @@ namespace openvpn {
 	{
 	  const Option *o = opt.get_ptr("cipher");
 	  if (o)
-	    cipher = typename CRYPTO_API::Cipher(o->get(1, 128));
+	    {
+	      const std::string& cipher_name = o->get(1, 128);
+	      if (cipher_name != "none")
+		cipher = typename CRYPTO_API::Cipher(cipher_name);
+	      else
+		cipher = typename CRYPTO_API::Cipher();
+	    }
 	  else
 	    cipher = typename CRYPTO_API::Cipher("BF-CBC");
 	}
@@ -332,7 +338,13 @@ namespace openvpn {
 	{
 	  const Option *o = opt.get_ptr("auth");
 	  if (o)
-	    digest = typename CRYPTO_API::Digest(o->get(1, 128));
+	    {
+	      const std::string& auth_name = o->get(1, 128);
+	      if (auth_name != "none")
+		digest = typename CRYPTO_API::Digest(auth_name);
+	      else
+		digest = typename CRYPTO_API::Digest();
+	    }
 	  else
 	    digest = typename CRYPTO_API::Digest("SHA1");
 	}
@@ -425,7 +437,10 @@ namespace openvpn {
 	  if (o)
 	    {
 	      new_cipher = o->get(1, 128);
-	      cipher = typename CRYPTO_API::Cipher(new_cipher);
+	      if (new_cipher != "none")
+		cipher = typename CRYPTO_API::Cipher(new_cipher);
+	      else
+		cipher = typename CRYPTO_API::Cipher();
 	    }
 	}
 	catch (const std::exception& e)
@@ -440,7 +455,10 @@ namespace openvpn {
 	  if (o)
 	    {
 	      new_digest = o->get(1, 128);
-	      digest = typename CRYPTO_API::Digest(new_digest);
+	      if (new_digest != "none")
+		digest = typename CRYPTO_API::Digest(new_digest);
+	      else
+		digest = typename CRYPTO_API::Digest();
 	    }
 	}
 	catch (const std::exception& e)
@@ -529,9 +547,9 @@ namespace openvpn {
 	if (key_direction >= 0)
 	  out << ",keydir " << key_direction;
 
-	out << ",cipher " << cipher.name();
-	out << ",auth " << digest.name();
-	out << ",keysize " << cipher.key_length_in_bits();
+	out << ",cipher " << (cipher.defined() ? cipher.name() : "[null-cipher]");
+	out << ",auth " << (digest.defined() ? digest.name() : "[null-digest]");
+	out << ",keysize " << (cipher.defined() ? cipher.key_length_in_bits() : 0);
 	if (tls_auth_key.defined())
 	  out << ",tls-auth";
 	out << ",key-method 2";
@@ -589,13 +607,13 @@ namespace openvpn {
       // used to generate link_mtu option sent to peer
       unsigned int link_mtu_adjust() const
       {
-	return protocol.extra_transport_bytes() +     // extra 2 bytes for TCP-streamed packet length
-          1 +                                         // leading op byte
-	  comp_ctx.extra_payload_bytes() +            // compression magic byte
-	  PacketID::size(PacketID::SHORT_FORM) +      // sequence number
-	  digest.size() +                             // HMAC
-	  cipher.iv_length() +                        // Cipher IV
-	  cipher.block_size();                        // worst-case cipher padding expansion
+	return protocol.extra_transport_bytes() +        // extra 2 bytes for TCP-streamed packet length
+          1 +                                            // leading op byte
+	  comp_ctx.extra_payload_bytes() +               // compression magic byte
+	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
+	  (digest.defined() ? digest.size() : 0) +       // HMAC
+	  (cipher.defined() ? cipher.iv_length() : 0) +  // Cipher IV
+	  (cipher.defined() ? cipher.block_size() : 0);  // worst-case cipher padding expansion
       }
     };
 
@@ -1505,21 +1523,25 @@ namespace openvpn {
 
 	// initialize CryptoContext encrypt
 	crypto.encrypt.frame = c.frame;
-	crypto.encrypt.cipher.init(c.cipher,
-				   key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
-				   CRYPTO_API::CipherContext::ENCRYPT);
-	crypto.encrypt.hmac.init(c.digest,
-				 key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+	if (c.cipher.defined())
+	  crypto.encrypt.cipher.init(c.cipher,
+				     key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
+				     CRYPTO_API::CipherContext::ENCRYPT);
+	if (c.digest.defined())
+	  crypto.encrypt.hmac.init(c.digest,
+				   key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
 	crypto.encrypt.pid_send.init(PacketID::SHORT_FORM);
 	crypto.encrypt.prng = c.prng;
 
 	// initialize CryptoContext decrypt
 	crypto.decrypt.frame = c.frame;
-	crypto.decrypt.cipher.init(c.cipher,
-				   key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
-				   CRYPTO_API::CipherContext::DECRYPT);
-	crypto.decrypt.hmac.init(c.digest,
-				 key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	if (c.cipher.defined())
+	  crypto.decrypt.cipher.init(c.cipher,
+				     key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
+				     CRYPTO_API::CipherContext::DECRYPT);
+	if (c.digest.defined())
+	  crypto.decrypt.hmac.init(c.digest,
+				   key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 	crypto.decrypt.pid_recv.init(c.pid_mode,
 				     PacketID::SHORT_FORM,
 				     c.pid_seq_backtrack, c.pid_time_backtrack,
@@ -1813,7 +1835,7 @@ namespace openvpn {
       const Config& c = *config;
 
       // tls-auth setup
-      if (c.tls_auth_key.defined())
+      if (c.tls_auth_key.defined() && c.tls_auth_digest.defined())
 	{
 	  use_tls_auth = true;
 
