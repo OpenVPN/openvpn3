@@ -39,16 +39,16 @@ namespace openvpn {
 	push_base(push_base_arg)
     {
       if (push_base)
-	extend(push_base->multi);
+	extend(push_base->multi, NULL);
     }
 
     // call with option list fragments
-    void add(const OptionList& other)
+    void add(const OptionList& other, OptionList::FilterBase* filt)
     {
       if (!complete_)
 	{
 	  partial_ = true;
-	  extend(other);
+	  extend(other, filt);
 	  if (!continuation(other))
 	    {
 	      if (push_base)

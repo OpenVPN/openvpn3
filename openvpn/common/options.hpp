@@ -344,6 +344,13 @@ namespace openvpn {
       const std::string err;
     };
 
+    // Used by extend() to optionally control which options are copied.
+    struct FilterBase : public RC<thread_unsafe_refcount>
+    {
+      typedef boost::intrusive_ptr<FilterBase> Ptr;
+      virtual bool filter(const Option& opt) = 0;
+    };
+
     class KeyValue : public RC<thread_unsafe_refcount>
     {
     public:
@@ -684,11 +691,15 @@ namespace openvpn {
 
     // Append elements in other to self,
     // caller should call update_map() after this function.
-    void extend(const OptionList& other)
+    void extend(const OptionList& other, FilterBase* filt)
     {
       reserve(size() + other.size());
       for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); ++i)
-	push_back(*i);
+	{
+	  const Option& opt = *i;
+	  if (!filt || filt->filter(opt))
+	    push_back(opt);
+	}
     }
 
     // Append elements in other having given name to self,
@@ -709,7 +720,7 @@ namespace openvpn {
 	{
 	  const Option& opt = *i;
 	  if (map().find(opt.ref(0)) == map().end())
-	      push_back(*i);
+	    push_back(opt);
 	}
     }
 

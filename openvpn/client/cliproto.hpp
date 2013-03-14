@@ -104,6 +104,7 @@ namespace openvpn {
 	ClientEvent::Queue::Ptr cli_events;
 	ClientCreds::Ptr creds;
 	OptionList::Limits pushed_options_limit;
+	OptionList::FilterBase::Ptr pushed_options_filter;
       };
 
       Session(boost::asio::io_service& io_service_arg,
@@ -126,7 +127,8 @@ namespace openvpn {
 	  cli_events(config.cli_events),
 	  connected_(false),
 	  fatal_(Error::UNDEF),
-	  pushed_options_limit(config.pushed_options_limit)
+	  pushed_options_limit(config.pushed_options_limit),
+	  pushed_options_filter(config.pushed_options_filter)
       {
 #ifdef OPENVPN_PACKET_LOG
 	packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -409,7 +411,8 @@ namespace openvpn {
 	if (!received_options.complete() && boost::algorithm::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
-	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11), &pushed_options_limit));
+	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11), &pushed_options_limit),
+				 pushed_options_filter.get());
 	    if (received_options.complete())
 	      {
 		// show options
@@ -697,6 +700,7 @@ namespace openvpn {
       std::string fatal_reason_;
 
       OptionList::Limits pushed_options_limit;
+      OptionList::FilterBase::Ptr pushed_options_filter;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;

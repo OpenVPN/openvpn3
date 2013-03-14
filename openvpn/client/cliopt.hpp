@@ -31,6 +31,7 @@
 
 #include <openvpn/client/cliproto.hpp>
 #include <openvpn/client/cliopthelper.hpp>
+#include <openvpn/client/optfilt.hpp>
 
 #if defined(USE_TUN_BUILDER)
 #include <openvpn/tun/builder/client.hpp>
@@ -155,6 +156,9 @@ namespace openvpn {
 
       // frame
       frame = frame_init();
+
+      // route-nopull
+      pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
 
       // client SSL config
       ClientSSLAPI::Config cc;
@@ -322,6 +326,7 @@ namespace openvpn {
       cli_config->cli_stats = cli_stats;
       cli_config->cli_events = cli_events;
       cli_config->creds = creds;
+      cli_config->pushed_options_filter = pushed_options_filter;
       return cli_config;
     }
 
@@ -442,6 +447,7 @@ namespace openvpn {
     HTTPProxyTransport::Options::Ptr http_proxy_options;
     std::string userlocked_username;
     PushOptionsBase::Ptr push_base;
+    OptionList::FilterBase::Ptr pushed_options_filter;
 
 #if defined(USE_TUN_BUILDER)
     TunBuilderClient::TunPersist::Ptr tun_persist;
