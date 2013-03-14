@@ -51,8 +51,8 @@ else
 
     # patch it
     cd library
-    echo PATCH trustex.patch
-    patch <$PD/trustex.patch
+    #echo PATCH trustex.patch
+    #patch <$PD/trustex.patch
     cd ..
     echo PATCH polarssl-enum.patch
     patch -p1 <$PD/polarssl-enum.patch

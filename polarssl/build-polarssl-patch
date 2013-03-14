@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-POLARSSL_SRC=$HOME/polarssl-1.1.1
+POLARSSL_SRC=$HOME/src/mac/polarssl-1.1.6
 PD=$O3/polarssl
 PB=$(basename $POLARSSL_SRC)
 
