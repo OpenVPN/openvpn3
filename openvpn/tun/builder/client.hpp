@@ -154,7 +154,6 @@ namespace openvpn {
       bool retain_sd;
       bool tun_prefix;
       bool google_dns_fallback;
-      bool route_nopull;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
 
@@ -171,8 +170,7 @@ namespace openvpn {
 					    TunClientParent& parent);
     private:
       ClientConfig()
-	: mtu(0), n_parallel(8), retain_sd(false), tun_prefix(false),
-	  google_dns_fallback(false), route_nopull(false), builder(NULL) {}
+	: mtu(0), n_parallel(8), retain_sd(false), tun_prefix(false), google_dns_fallback(false), builder(NULL) {}
     };
 
     // The tun interface
@@ -372,13 +370,13 @@ namespace openvpn {
 	const unsigned int ip_ver_flags = tun_ifconfig(tb, state, opt);
 
 	// add routes
-	const unsigned int reroute_gw_ver_flags = add_routes(tb, opt, server_addr, ip_ver_flags, config.route_nopull);
+	const unsigned int reroute_gw_ver_flags = add_routes(tb, opt, server_addr, ip_ver_flags);
 
 	// add DNS servers and domain prefixes
-	const unsigned int add_dns_flags = add_dns(tb, opt, quiet, config.route_nopull);
+	const unsigned int add_dns_flags = add_dns(tb, opt, quiet);
 
 	// DNS fallback
-	if ((reroute_gw_ver_flags & F_IPv4) && !(add_dns_flags & F_ADD_DNS) && !config.route_nopull)
+	if ((reroute_gw_ver_flags & F_IPv4) && !(add_dns_flags & F_ADD_DNS))
 	  {
 	    if (config.google_dns_fallback)
 	      add_google_dns(tb);
@@ -533,8 +531,7 @@ namespace openvpn {
       static unsigned int add_routes(TunBuilderBase* tb,
 				     const OptionList& opt,
 				     const IP::Addr& server_addr,
-				     const unsigned int ip_ver_flags,
-				     const bool route_nopull)
+				     const unsigned int ip_ver_flags)
       {
 	unsigned int reroute_gw_ver_flags = 0;
 	const RedirectGatewayFlags rg_flags(opt);
@@ -548,15 +545,12 @@ namespace openvpn {
 	  reroute_gw_ver_flags |= F_IPv6;
 
 	// call reroute_gw builder method
-	if (!route_nopull)
-	  {
-	    if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
-					    server_addr.version() == IP::Addr::V6,
-					    (reroute_gw_ver_flags & F_IPv4) ? true : false,
-					    (reroute_gw_ver_flags & F_IPv6) ? true : false,
-					    rg_flags()))
-	      throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway failed");
-	  }
+	if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
+					server_addr.version() == IP::Addr::V6,
+					(reroute_gw_ver_flags & F_IPv4) ? true : false,
+					(reroute_gw_ver_flags & F_IPv6) ? true : false,
+					rg_flags()))
+	  throw tun_builder_route_error("tun_builder_reroute_gw for redirect-gateway failed");
 
 	// add IPv4 routes
 	if (ip_ver_flags & F_IPv4)
@@ -574,7 +568,7 @@ namespace openvpn {
 		      if (pair.version() != IP::Addr::V4)
 			throw tun_builder_error("route is not IPv4");
 		      const bool add = route_target(o, 3);
-		      if ((!(reroute_gw_ver_flags & F_IPv4) || !add) && !route_nopull)
+		      if (!(reroute_gw_ver_flags & F_IPv4) || !add)
 			add_exclude_route(tb, add, pair.addr.to_string(), pair.netmask.prefix_len(), false);
 		    }
 		    catch (const std::exception& e)
@@ -601,7 +595,7 @@ namespace openvpn {
 		      if (pair.version() != IP::Addr::V6)
 			throw tun_builder_error("route is not IPv6");
 		      const bool add = route_target(o, 2);
-		      if ((!(reroute_gw_ver_flags & F_IPv6) || !add) && !route_nopull)
+		      if (!(reroute_gw_ver_flags & F_IPv6) || !add)
 			add_exclude_route(tb, add, pair.addr.to_string(), pair.netmask.prefix_len(), true);
 		    }
 		    catch (const std::exception& e)
@@ -614,8 +608,7 @@ namespace openvpn {
 	return reroute_gw_ver_flags;
       }
 
-      static unsigned int add_dns(TunBuilderBase* tb, const OptionList& opt, const bool quiet,
-				  const bool route_nopull)
+      static unsigned int add_dns(TunBuilderBase* tb, const OptionList& opt, const bool quiet)
       {
 	// Example:
 	//   [dhcp-option] [DNS] [172.16.0.23]
@@ -636,12 +629,9 @@ namespace openvpn {
 		    {
 		      o.exact_args(3);
 		      const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
-		      if (!route_nopull)
-			{
-			  if (!tb->tun_builder_add_dns_server(ip.to_string(),
-							      ip.version() == IP::Addr::V6))
-			    throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed");
-			}
+		      if (!tb->tun_builder_add_dns_server(ip.to_string(),
+							  ip.version() == IP::Addr::V6))
+			throw tun_builder_dhcp_option_error("tun_builder_add_dns_server failed");
 		      flags |= F_ADD_DNS;
 		    }
 		  else if (type == "DOMAIN")
@@ -653,11 +643,8 @@ namespace openvpn {
 			  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(j, 256));
 			  for (size_t k = 0; k < v.size(); ++k)
 			    {
-			      if (!route_nopull)
-				{
-				  if (!tb->tun_builder_add_search_domain(v[k]))
-				    throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
-				}
+			      if (!tb->tun_builder_add_search_domain(v[k]))
+				throw tun_builder_dhcp_option_error("tun_builder_add_search_domain failed");
 			    }
 			}
 		    }
