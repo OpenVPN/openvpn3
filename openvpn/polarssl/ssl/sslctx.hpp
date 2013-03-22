@@ -580,7 +580,7 @@ namespace openvpn {
       for (const x509_name *name = &cert->subject; name != NULL; name = name->next)
 	{
 	  const char *key = NULL;
-	  if (memcmp(name->oid.p, OID_X520, 2) == 0)
+	  if (std::memcmp(name->oid.p, OID_X520, 2) == 0)
 	    {
 	      switch (name->oid.p[2])
 		{
@@ -605,7 +605,7 @@ namespace openvpn {
                 break;
 		}
 	    }
-	  else if (memcmp(name->oid.p, OID_PKCS9, 8) == 0)
+	  else if (std::memcmp(name->oid.p, OID_PKCS9, 8) == 0)
 	    {
 	      switch (name->oid.p[8] )
 		{
