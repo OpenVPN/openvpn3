@@ -130,6 +130,7 @@ int main(int argc, char *argv[])
     { "proxy-port",     required_argument,  NULL,      'q' },
     { "proxy-username", required_argument,  NULL,      'U' },
     { "proxy-password", required_argument,  NULL,      'W' },
+    { "proxy-basic",    no_argument      ,  NULL,      'B' },
     { "eval",           no_argument,        NULL,      'e' },
     { "cache-password", no_argument,        NULL,      'C' },
     { "no-cert",        no_argument,        NULL,      'x' },
@@ -155,11 +156,12 @@ int main(int argc, char *argv[])
 	bool eval = false;
 	bool cachePassword = false;
 	bool disableClientCert = false;
+	bool proxyAllowCleartextAuth = false;
 	int defaultKeyDirection = -1;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "eCxu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BeCxu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -208,6 +210,9 @@ int main(int argc, char *argv[])
 	      case 'W':
 		proxyPassword = optarg;
 		break;
+	      case 'B':
+		proxyAllowCleartextAuth = true;
+		break;
 	      case 'k':
 		{
 		  const std::string arg = optarg;
@@ -249,6 +254,7 @@ int main(int argc, char *argv[])
 	config.proxyPort = proxyPort;
 	config.proxyUsername = proxyUsername;
 	config.proxyPassword = proxyPassword;
+	config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
 	config.defaultKeyDirection = defaultKeyDirection;
 
 	if (eval)
@@ -356,6 +362,7 @@ int main(int argc, char *argv[])
   std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
   std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
   std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
+  std::cout << "--proxy-basic, -B    : allow HTTP basic auth" << std::endl;
   std::cout << "--cache-password, -C : cache password" << std::endl;
   std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
   std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;

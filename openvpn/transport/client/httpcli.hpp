@@ -13,6 +13,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <algorithm>                  // for std::min
 
 #include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp> // for boost::algorithm::trim_copy
@@ -181,6 +182,46 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
+      class ProxyResponseLimit
+      {
+      public:
+	enum {
+	  MaxLines=1024,
+	  MaxBytes=65536,
+	};
+
+	ProxyResponseLimit()
+	{
+	  reset();
+	}
+
+	void reset()
+	{
+	  n_bytes = n_lines = 0;
+	}
+
+	void add(const Buffer& buf)
+	{
+	  size_t size = buf.size();
+	  if ((n_bytes += size) > MaxBytes)
+	    OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << MaxBytes << " bytes)");
+	  const unsigned char *p = buf.c_data();
+	  while (size--)
+	    {
+	      const unsigned char c = *p++;
+	      if (c == '\n')
+		{
+		  if (++n_lines > MaxLines)
+		    OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << MaxLines << " lines)");
+		}
+	    }
+	}
+
+      private:
+	size_t n_bytes;
+	size_t n_lines;
+      };
+
       Client(boost::asio::io_service& io_service_arg,
 	     ClientConfig<RAND_API, CRYPTO_API>* config_arg,
 	     TransportClientParent& parent_arg)
@@ -191,10 +232,10 @@ namespace openvpn {
 	   resolver(io_service_arg),
 	   halt(false),
 	   n_transactions(0),
-	   proxy_data_bytes(0),
 	   proxy_established(false),
 	   http_reply_status(HTTP::ReplyParser::pending),
-	   ntlm_phase_2_response_pending(false)
+	   ntlm_phase_2_response_pending(false),
+	   drain_content_length(0)
       {
       }
 
@@ -270,15 +311,12 @@ namespace openvpn {
 
       void proxy_read_handler(BufferAllocated& buf)
       {
-	OPENVPN_LOG_NTNL("FROM PROXY: " << buf.to_string());
+	// for anti-DoS, only allow a maximum number of chars in HTTP response
+	proxy_response_limit.add(buf);
 
 	if (http_reply_status == HTTP::ReplyParser::pending)
 	  {
-	    // for anti-DoS, only allow a maximum number of chars in HTTP response
-	    proxy_data_bytes += buf.size();
-	    if (proxy_data_bytes > 16384)
-	      throw Exception("HTTP proxy header too large");
-	    
+	    OPENVPN_LOG_NTNL("FROM PROXY: " << buf.to_string());
 	    for (size_t i = 0; i < buf.size(); ++i)
 	      {
 		http_reply_status = http_parser.consume(http_reply, (char)buf[i]);
@@ -300,7 +338,7 @@ namespace openvpn {
 			    parent.transport_connecting();
 			  }
 			else if (ntlm_phase_2_response_pending)
-			  ntlm_auth_phase_2();
+			  ntlm_auth_phase_2_pre();
 		      }
 		    else
 		      {
@@ -308,6 +346,19 @@ namespace openvpn {
 		      }
 		    break;
 		  }
+	      }
+	  }
+
+	// handle draining of content
+	if (drain_content_length)
+	  {
+	    const size_t drain = std::min(drain_content_length, buf.size());
+	    buf.advance(drain);
+	    drain_content_length -= drain;
+	    if (!drain_content_length)
+	      {
+		if (ntlm_phase_2_response_pending)
+		  ntlm_auth_phase_2();
 	      }
 	  }
       }
@@ -510,14 +561,20 @@ namespace openvpn {
 	start_connect_();
       }
 
+      void ntlm_auth_phase_2_pre()
+      {
+	// if content exists, drain it first, then progress to ntlm_auth_phase_2
+	const std::string content_length_str = boost::algorithm::trim_copy(http_reply.headers.get_value("content-length"));
+	const unsigned int content_length = parse_number_throw<unsigned int>(content_length_str, "content-length");
+	if (content_length)
+	  drain_content_length = content_length;
+	else
+	  ntlm_auth_phase_2();
+      }
+
       void ntlm_auth_phase_2()
       {
 	ntlm_phase_2_response_pending = false;
-
-	const std::string content_length_str = boost::algorithm::trim_copy(http_reply.headers.get_value("content-length"));
-	const unsigned int content_length = parse_number_throw<unsigned int>(content_length_str, "content-length");
-	if (content_length != 0)
-	  throw Exception("NTLM phase-2 Content-Length is not zero");
 
 	if (http_reply.status_code != ProxyAuthenticationRequired)
 	  throw Exception("NTLM phase-2 status is not ProxyAuthenticationRequired");
@@ -601,7 +658,7 @@ namespace openvpn {
       {
 	stop();
 	halt = false;
-	proxy_data_bytes = 0;
+	proxy_response_limit.reset();
 	proxy_established = false;
 	reset_partial();
       }
@@ -612,6 +669,7 @@ namespace openvpn {
 	http_reply.reset();
 	http_parser.reset();
 	ntlm_phase_2_response_pending = false;
+	drain_content_length = 0;
       }
 
       // do TCP connect
@@ -712,7 +770,7 @@ namespace openvpn {
       bool halt;
 
       unsigned int n_transactions;
-      size_t proxy_data_bytes;
+      ProxyResponseLimit proxy_response_limit;
       bool proxy_established;
       HTTP::ReplyParser::status http_reply_status;
       HTTP::Reply http_reply;
@@ -720,6 +778,7 @@ namespace openvpn {
       std::string http_request;
 
       bool ntlm_phase_2_response_pending;
+      size_t drain_content_length;
     };
 
     template <typename RAND_API, typename CRYPTO_API>
