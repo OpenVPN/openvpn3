@@ -298,7 +298,7 @@ namespace openvpn {
 
       virtual std::string vpn_ip4() const
       {
-	if (state->vpn_ip4_addr.defined())
+	if (state->vpn_ip4_addr.specified())
 	  return state->vpn_ip4_addr.to_string();
 	else
 	  return "";
@@ -306,7 +306,7 @@ namespace openvpn {
 
       virtual std::string vpn_ip6() const
       {
-	if (state->vpn_ip6_addr.defined())
+	if (state->vpn_ip6_addr.specified())
 	  return state->vpn_ip6_addr.to_string();
 	else
 	  return "";
