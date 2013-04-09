@@ -17,6 +17,7 @@
 #include <openvpn/common/ostream.hpp>
 #include <openvpn/addr/ipv4.hpp>
 #include <openvpn/addr/ipv6.hpp>
+#include <openvpn/addr/iperr.hpp>
 
 namespace openvpn {
   // This is our fundamental IP address class that handles IPv4 or IPv6
@@ -30,6 +31,11 @@ namespace openvpn {
     {
     public:
       enum Version { UNSPEC, V4, V6 };
+
+      enum VersionSize {
+	V4_SIZE = IPv4::Addr::SIZE,
+	V6_SIZE = IPv6::Addr::SIZE,
+      };
 
       Addr(const Addr& other, const char *title = NULL)
 	: ver(other.ver)
@@ -84,11 +90,7 @@ namespace openvpn {
 	boost::system::error_code ec;
 	boost::asio::ip::address a = boost::asio::ip::address::from_string(ipstr, ec);
 	if (ec)
-	  {
-	    if (!title)
-	      title = "";
-	    OPENVPN_THROW(ip_exception, "error parsing " << title << " IP address '" << ipstr << "' : " << ec.message());
-	  }
+	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
 	return from_asio(a);
       }
 
@@ -475,6 +477,11 @@ namespace openvpn {
 
       const char *version_string() const
       {
+	return version_string_static(ver);
+      }
+
+      static const char *version_string_static(Version ver)
+      {
 	switch (ver)
 	  {
 	  case V4:
@@ -497,6 +504,12 @@ namespace openvpn {
       {
 	if (!is_compatible(other))
 	  throw ip_exception("version inconsistency");
+      }
+
+      // throw exception if address is not a valid netmask
+      void validate_netmask()
+      {
+	prefix_len();
       }
 
       // number of network bits in netmask,

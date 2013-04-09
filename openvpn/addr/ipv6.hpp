@@ -21,6 +21,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/ffs.hpp>
 #include <openvpn/addr/ipv4.hpp>
+#include <openvpn/addr/iperr.hpp>
 
 namespace openvpn {
   namespace IP {
@@ -50,11 +51,7 @@ namespace openvpn {
 	boost::system::error_code ec;
 	boost::asio::ip::address_v6 a = boost::asio::ip::address_v6::from_string(ipstr, ec);
 	if (ec)
-	  {
-	    if (!title)
-	      title = "";
-	    OPENVPN_THROW(ipv6_exception, "error parsing " << title << " IPv6 address '" << ipstr << "' : " << ec.message());
-	  }
+	  throw ipv6_exception(IP::internal::format_error(ipstr, title, "v6", ec));
 	return from_asio(a);
       }
 
