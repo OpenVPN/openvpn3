@@ -198,7 +198,7 @@ namespace openvpn {
     }
 
     // configuration data passed to ProtoContext constructor
-    class Config : public RC<thread_unsafe_refcount>
+    class Config : public RCCopyable<thread_unsafe_refcount>
     {
     public:
       typedef boost::intrusive_ptr<Config> Ptr;

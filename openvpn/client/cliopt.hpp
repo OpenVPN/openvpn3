@@ -318,7 +318,11 @@ namespace openvpn {
     Client::Config::Ptr client_config()
     {
       Client::Config::Ptr cli_config = new Client::Config;
-      cli_config->proto_context_config = cp;
+
+      // Copy ProtoConfig so that modifications due to server push will
+      // not persist across client instantiations.
+      cli_config->proto_context_config.reset(new Client::ProtoConfig(*cp));
+
       cli_config->proto_context_options = proto_context_options;
       cli_config->push_base = push_base;
       cli_config->transport_factory = transport_factory;

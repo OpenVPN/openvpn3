@@ -55,12 +55,29 @@ namespace openvpn {
   typedef boost::detail::atomic_count thread_safe_refcount;
   typedef long thread_unsafe_refcount;
 
+  // Reference count base class for objects tracked by boost::intrusive_ptr.
+  // Disallows copying and assignment.
   template <typename RCImpl> // RCImpl = thread_safe_refcount or thread_unsafe_refcount
   class RC : boost::noncopyable
   {
   public:
     RC() : refcount_(0) {}
     virtual ~RC() {}
+  private:
+    template <typename R> friend void intrusive_ptr_add_ref(R* p);
+    template <typename R> friend void intrusive_ptr_release(R* p);
+    RCImpl refcount_;
+  };
+
+  // Like RC, but allows object to be copied and assigned.
+  template <typename RCImpl> // RCImpl = thread_safe_refcount or thread_unsafe_refcount
+  class RCCopyable
+  {
+  public:
+    RCCopyable() : refcount_(0) {}
+    RCCopyable(const RCCopyable&) : refcount_(0) {}
+    RCCopyable& operator=(const RCCopyable&) { return *this; }
+    virtual ~RCCopyable() {}
   private:
     template <typename R> friend void intrusive_ptr_add_ref(R* p);
     template <typename R> friend void intrusive_ptr_release(R* p);
