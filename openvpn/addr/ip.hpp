@@ -37,9 +37,11 @@ namespace openvpn {
 	V6_SIZE = IPv6::Addr::SIZE,
       };
 
-      Addr(const Addr& other, const char *title = NULL)
+      Addr(const Addr& other, const char *title = NULL, Version required_version = UNSPEC)
 	: ver(other.ver)
       {
+	if (required_version != UNSPEC && required_version != ver)
+	  throw ip_exception(internal::format_error(other.to_string(), title, version_string_static(required_version), "wrong IP version"));
 	switch (ver)
 	  {
 	  case V4:
@@ -53,14 +55,14 @@ namespace openvpn {
 	  }
       }
 
-      Addr(const std::string& ipstr, const char *title = NULL)
+      Addr(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
       {
-	*this = from_string(ipstr, title);
+	*this = from_string(ipstr, title, required_version);
       }
 
-      static std::string validate(const std::string& ipstr, const char *title = NULL)
+      static std::string validate(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
       {
-	Addr a = from_string(ipstr, title);
+	Addr a = from_string(ipstr, title, required_version);
 	return a.to_string();
       }
 
@@ -85,13 +87,16 @@ namespace openvpn {
 	}
       }
 
-      static Addr from_string(const std::string& ipstr, const char *title = NULL)
+      static Addr from_string(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
       {
 	boost::system::error_code ec;
 	boost::asio::ip::address a = boost::asio::ip::address::from_string(ipstr, ec);
 	if (ec)
 	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
-	return from_asio(a);
+	const Addr ret = from_asio(a);
+	if (required_version != UNSPEC && required_version != ret.ver)
+	  throw ip_exception(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
+	return ret;
       }
 
       static Addr from_ipv4(const IPv4::Addr& addr)
@@ -282,6 +287,30 @@ namespace openvpn {
 	  }
       }
 
+      Addr operator+(const Addr& other) const {
+	if (ver != other.ver)
+	  throw ip_exception("version inconsistency");
+	switch (ver)
+	  {
+	  case V4:
+	    {
+	      Addr ret;
+	      ret.ver = V4;
+	      ret.u.v4 = u.v4 + other.u.v4;
+	      return ret;
+	    }
+	  case V6:
+	    {
+	      Addr ret;
+	      ret.ver = V6;
+	      ret.u.v6 = u.v6 + other.u.v6;
+	      return ret;
+	    }
+	  default:
+	    throw ip_exception("address unspecified");
+	  }
+      }
+
       Addr operator-(const long delta) const {
 	return operator+(-delta);
       }
@@ -441,20 +470,25 @@ namespace openvpn {
 
       bool unspecified() const
       {
-	switch (ver)
-	  {
-	  case V4:
-	    return u.v4.unspecified();
-	  case V6:
-	    return u.v6.unspecified();
-	  default:
-	    return true;
-	  }
+	return all_zeros();
       }
 
       bool specified() const
       {
 	return !unspecified();
+      }
+
+      bool all_zeros() const
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    return u.v4.all_zeros();
+	  case V6:
+	    return u.v6.all_zeros();
+	  default:
+	    return true;
+	  }
       }
 
       bool all_ones() const

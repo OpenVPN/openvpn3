@@ -145,6 +145,16 @@ namespace openvpn {
 	return ret;
       }
 
+      Addr operator+(const Addr& other) const {
+	Addr ret = *this;
+        ret.u.u64[Endian::e2(0)] += other.u.u64[Endian::e2(0)];
+        ret.u.u64[Endian::e2(1)] += other.u.u64[Endian::e2(1)];
+        // check for overflow of low 64 bits, add carry to high
+        if (ret.u.u64[Endian::e2(0)] < u.u64[Endian::e2(0)])
+            ++ret.u.u64[Endian::e2(1)];
+	return ret;
+      }
+
       Addr operator-(const long delta) const {
 	return operator+(-delta);
       }
@@ -230,6 +240,11 @@ namespace openvpn {
       bool specified() const
       {
 	return !unspecified();
+      }
+
+      bool all_zeros() const
+      {
+	return u.u64[0] == 0 && u.u64[1] == 0;
       }
 
       bool all_ones() const
@@ -328,11 +343,6 @@ namespace openvpn {
 	unsigned char bytes[16];
 	boost::asio::ip::address_v6::bytes_type asio_bytes;
       };
-
-      bool all_zeros() const
-      {
-	return u.u64[0] == 0 && u.u64[1] == 0;
-      }
 
       void prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
       {

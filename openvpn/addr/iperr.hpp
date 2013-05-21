@@ -16,6 +16,7 @@ namespace openvpn {
   namespace IP {
     namespace internal {
       // Called internally by IP, IPv4, and IPv6 classes
+
       inline std::string format_error(const std::string& ipstr, const char *title, const char *ipver, const boost::system::error_code& ec)
       {
 	std::string err = "error parsing";
@@ -30,6 +31,27 @@ namespace openvpn {
 	err += ipstr;
 	err += "' : ";
 	err += ec.message();
+	return err;
+      }
+
+      inline std::string format_error(const std::string& ipstr, const char *title, const char *ipver, const char *message)
+      {
+	std::string err = "error parsing";
+	if (title)
+	  {
+	    err += ' ';
+	    err += title;
+	  }
+	err += " IP";
+	err += ipver;
+	err += " address '";
+	err += ipstr;
+	err += '\'';
+	if (message)
+	  {
+	    err += " : ";
+	    err += message;
+	  }
 	return err;
       }
     }

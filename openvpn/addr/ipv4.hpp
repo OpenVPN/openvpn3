@@ -151,6 +151,12 @@ namespace openvpn {
 	return ret;
       }
 
+      Addr operator+(const Addr& other) const {
+	Addr ret;
+	ret.u.addr = u.addr + other.u.addr;
+	return ret;
+      }
+
       Addr operator-(const long delta) const {
 	return operator+(-delta);
       }
@@ -217,12 +223,17 @@ namespace openvpn {
 
       bool unspecified() const
       {
-	return u.addr == 0;
+	return all_zeros();
       }
 
       bool specified() const
       {
 	return !unspecified();
+      }
+
+      bool all_zeros() const
+      {
+	return u.addr == 0;
       }
 
       bool all_ones() const
