@@ -12,6 +12,8 @@
 
 #include <Security/SecCertificate.h>
 #include <Security/SecIdentity.h>
+#include <Security/SecPolicy.h>
+#include <Security/SecTrust.h>
 
 #ifndef OPENVPN_PLATFORM_IPHONE
 #include <Security/SecKeychain.h>
@@ -29,6 +31,8 @@ namespace openvpn {
     OPENVPN_CF_WRAP(Cert, cert_cast, SecCertificateRef, SecCertificateGetTypeID)
     OPENVPN_CF_WRAP(Key, key_cast, SecKeyRef, SecKeyGetTypeID)
     OPENVPN_CF_WRAP(Identity, identity_cast, SecIdentityRef, SecIdentityGetTypeID)
+    OPENVPN_CF_WRAP(Policy, policy_cast, SecPolicyRef, SecPolicyGetTypeID)
+    OPENVPN_CF_WRAP(Trust, trust_cast, SecTrustRef, SecTrustGetTypeID)
 #ifndef OPENVPN_PLATFORM_IPHONE
     OPENVPN_CF_WRAP(Keychain, keychain_cast, SecKeychainRef, SecKeychainGetTypeID)
     OPENVPN_CF_WRAP(Access, access_cast, SecAccessRef, SecAccessGetTypeID)
