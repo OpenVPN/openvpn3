@@ -44,7 +44,7 @@ namespace openvpn {
 	// limits
 	const size_t max_server_list_size = 64;
 
-	// server-locked profiles not supported
+	// process setenv directives
 	{
 	  const OptionList::IndexList* se = options.get_index_ptr("setenv");
 	  if (se)
@@ -53,6 +53,8 @@ namespace openvpn {
 		{
 		  const Option& o = options[*i];
 		  const std::string arg1 = o.get_optional(1, 256);
+
+		  // server-locked profiles not supported
 		  if (arg1 == "GENERIC_CONFIG")
 		    {
 		      error_ = true;
@@ -88,6 +90,11 @@ namespace openvpn {
 		}
 	    }
 	}
+
+	// Alternative to "setenv CLIENT_CERT 0".  Note that as of OpenVPN 2.3, this option
+	// is only supported server-side, so this extends its meaning into the client realm.
+	if (options.exists("client-cert-not-required"))
+	  clientCertEnabled_ = false;
 
 	// userlocked username
 	{
