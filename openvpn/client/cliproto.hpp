@@ -221,7 +221,7 @@ namespace openvpn {
 	  typename Base::PacketType pt = Base::packet_type(buf);
 
 	  // process packet
-	  if (tun && pt.is_data())
+	  if (pt.is_data())
 	    {
 	      // data packet
 	      Base::data_decrypt(pt, buf);
@@ -231,8 +231,11 @@ namespace openvpn {
 		  log_packet(buf, false);
 #endif
 		  // make packet appear as incoming on tun interface
-		  OPENVPN_LOG_CLIPROTO("TUN send, size=" << buf.size());
-		  tun->tun_send(buf);
+		  if (tun)
+		    {
+		      OPENVPN_LOG_CLIPROTO("TUN send, size=" << buf.size());
+		      tun->tun_send(buf);
+		    }
 		}
 
 	      // do a lightweight flush
