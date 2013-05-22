@@ -595,7 +595,7 @@ namespace openvpn {
 		{
 		  if (notify_callback)
 		    {
-		      OPENVPN_LOG("Session invalidated");
+		      OPENVPN_LOG("Session invalidated: " << Error::name(Base::invalidation_reason()));
 		      stop(true);
 		    }
 		  else

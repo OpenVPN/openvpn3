@@ -56,6 +56,10 @@ namespace openvpn {
       PROXY_ERROR,         // HTTP proxy error
       PROXY_NEED_CREDS,    // HTTP proxy needs credentials
 
+      // key event errors
+      KEV_NEGOTIATE_ERROR,
+      KEV_EXPIRE_ERROR,
+
       // Packet ID error detail
       PKTID_INVALID,
       PKTID_UDP_REPLAY_WINDOW_BACKTRACK,
@@ -116,6 +120,8 @@ namespace openvpn {
 	"N_RECONNECT",
 	"PROXY_ERROR",
 	"PROXY_NEED_CREDS",
+	"KEV_NEGOTIATE_ERROR",
+	"KEV_EXPIRE_ERROR",
 	"PKTID_INVALID",
 	"PKTID_UDP_REPLAY_WINDOW_BACKTRACK",
 	"PKTID_UDP_LARGE_DIFF",

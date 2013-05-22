@@ -81,6 +81,7 @@ namespace openvpn {
 	frame_(frame),
 	up_stack_reentry_level(0),
 	invalidated_(false),
+	invalidation_reason_(Error::SUCCESS),
 	ssl_started_(false),
 	next_retransmit_(Time::infinite()),
 	stats(stats_arg),
@@ -192,12 +193,16 @@ namespace openvpn {
     // Was session invalidated by an exception?
     bool invalidated() const { return invalidated_; }
 
+    // Reason for invalidation
+    Error::Type invalidation_reason() const { return invalidation_reason_; }
+
     // Invalidate session
-    void invalidate()
+    void invalidate(const Error::Type reason)
     {
       if (!invalidated_)
 	{
 	  invalidated_ = true;
+	  invalidation_reason_ = reason;
 	  invalidate_callback();
 	}
     }
@@ -270,7 +275,7 @@ namespace openvpn {
 		{
 		  if (stats)
 		    stats->error(Error::SSL_ERROR);
-		  invalidate();
+		  invalidate(Error::SSL_ERROR);
 		  throw;
 		}
 	      app_write_queue.pop_front();
@@ -290,7 +295,7 @@ namespace openvpn {
 		{
 		  if (stats)
 		    stats->error(Error::ENCAPSULATION_ERROR);
-		  invalidate();
+		  invalidate(Error::ENCAPSULATION_ERROR);
 		  throw;
 		}
 
@@ -317,7 +322,7 @@ namespace openvpn {
 	    {
 	      if (stats)
 		stats->error(Error::ENCAPSULATION_ERROR);
-	      invalidate();
+	      invalidate(Error::ENCAPSULATION_ERROR);
 	      throw;
 	    }
 
@@ -370,7 +375,7 @@ namespace openvpn {
 		// SSL fatal errors will invalidate the session
 		if (stats)
 		  stats->error(Error::SSL_ERROR);
-		invalidate();
+		invalidate(Error::SSL_ERROR);
 		throw;
 	      }
 	    if (size == SSLContext::SSL::SHOULD_RETRY)
@@ -392,6 +397,7 @@ namespace openvpn {
     Frame::Ptr frame_;
     int up_stack_reentry_level;
     bool invalidated_;
+    Error::Type invalidation_reason_;
     bool ssl_started_;
     Time next_retransmit_;
     BufferPtr to_app_buf; // cleartext data decrypted by SSL that is to be passed to app via app_recv method

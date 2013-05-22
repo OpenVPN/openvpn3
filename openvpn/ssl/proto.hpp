@@ -958,9 +958,9 @@ namespace openvpn {
 	  }
       }
 
-      void invalidate()
+      void invalidate(const Error::Type reason)
       {
-	Base::invalidate();
+	Base::invalidate(reason);
       }
 
       // retransmit packets as part of reliability layer
@@ -1035,7 +1035,7 @@ namespace openvpn {
 		{
 		  proto.stats->error(err);
 		  if (proto.is_tcp() && (err == Error::DECRYPT_ERROR || err == Error::HMAC_ERROR))
-		    invalidate();
+		    invalidate(err);
 		}
 
 	      // decompress packet
@@ -1049,7 +1049,7 @@ namespace openvpn {
 	    proto.stats->error(Error::BUFFER_ERROR);
 	    buf.reset_size();
 	    if (proto.is_tcp())
-	      invalidate();
+	      invalidate(Error::BUFFER_ERROR);
 	  }
       }
 
@@ -1076,6 +1076,9 @@ namespace openvpn {
 
       // was session invalidated by an exception?
       bool invalidated() const { return Base::invalidated(); }
+
+      // Reason for invalidation
+      Error::Type invalidation_reason() const { return Base::invalidation_reason(); }
 
       // our Key ID in the OpenVPN protocol
       unsigned int key_id() const { return key_id_; }
@@ -1337,7 +1340,7 @@ namespace openvpn {
 		  set_event(KEV_NEGOTIATE, KEV_BECOME_PRIMARY, construct_time + proto.config->become_primary);
 		else
 		  {
-		    invalidate();
+		    invalidate(Error::KEV_NEGOTIATE_ERROR);
 		    set_event(KEV_NEGOTIATE_FAILED);
 		  }
 		break;
@@ -1348,7 +1351,7 @@ namespace openvpn {
 		set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
 		break;
 	      case KEV_EXPIRE:
-		invalidate();
+		invalidate(Error::KEV_EXPIRE_ERROR);
 		set_event(KEV_EXPIRE);
 		break;
 	      default:
@@ -1610,7 +1613,7 @@ namespace openvpn {
 	      {
 		proto.stats->error(Error::CC_ERROR);
 		if (proto.is_tcp())
-		  invalidate();
+		  invalidate(Error::CC_ERROR);
 		return false;
 	      }
 	  }
@@ -1628,7 +1631,7 @@ namespace openvpn {
 	  {
 	    proto.stats->error(Error::CC_ERROR);
 	    if (proto.is_tcp())
-	      invalidate();
+	      invalidate(Error::CC_ERROR);
 	    return false;
 	  }
 	return true;
@@ -1674,7 +1677,7 @@ namespace openvpn {
 		  {
 		    proto.stats->error(Error::HMAC_ERROR);
 		    if (proto.is_tcp())
-		      invalidate();
+		      invalidate(Error::HMAC_ERROR);
 		    return false;
 		  }      
 	      }
@@ -1785,7 +1788,7 @@ namespace openvpn {
 	  {
 	    proto.stats->error(Error::BUFFER_ERROR);
 	    if (proto.is_tcp())
-	      invalidate();
+	      invalidate(Error::BUFFER_ERROR);
 	  }
 	return false;
       }
@@ -2067,11 +2070,11 @@ namespace openvpn {
     }
 
     // enter disconnected state
-    void disconnect()
+    void disconnect(const Error::Type reason)
     {
-      primary->invalidate();
+      primary->invalidate(reason);
       if (secondary)
-	secondary->invalidate();
+	secondary->invalidate(reason);
     }
 
     // normally used by UDP clients to tell the server that
@@ -2096,6 +2099,9 @@ namespace openvpn {
 
     // was primary context invalidated by an exception?
     bool invalidated() const { return primary->invalidated(); }
+
+    // reason for invalidation if invalidated() above returns true
+    Error::Type invalidation_reason() const { return primary->invalidation_reason(); }
 
     // Enable original OpenVPN behavior of switching to new SSL/TLS key
     // context for control channel sends immediately after renegotiation
@@ -2254,7 +2260,7 @@ namespace openvpn {
 	{
 	  // no contact with peer, disconnect
 	  stats->error(Error::KEEPALIVE_TIMEOUT);
-	  disconnect();
+	  disconnect(Error::KEEPALIVE_TIMEOUT);
 	}
     }
 
@@ -2311,12 +2317,12 @@ namespace openvpn {
 	      else
 		{
 		  stats->error(Error::PRIMARY_EXPIRE);
-		  disconnect(); // primary context expired and no secondary context available
+		  disconnect(Error::PRIMARY_EXPIRE); // primary context expired and no secondary context available
 		}
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:
 	      stats->error(Error::HANDSHAKE_TIMEOUT);
-	      disconnect();   // primary negotiation failed
+	      disconnect(Error::HANDSHAKE_TIMEOUT);   // primary negotiation failed
 	      break;
 	    default:
 	      break;
@@ -2373,7 +2379,7 @@ namespace openvpn {
 
       stats->error(Error::CC_ERROR);
       if (is_tcp())
-	disconnect();
+	disconnect(Error::CC_ERROR);
       return INVALID_OPCODE;
     }
 
