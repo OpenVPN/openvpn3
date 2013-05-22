@@ -210,7 +210,6 @@ namespace openvpn {
 	pid_mode = 0;
 	pid_seq_backtrack = 0;
 	pid_time_backtrack = 0;
-	pid_debug_level = 0;
 	autologin = false;
 	key_direction = -1; // bidirectional
       }
@@ -260,7 +259,6 @@ namespace openvpn {
       int pid_mode;            // PacketIDReceive::UDP_MODE or PacketIDReceive::TCP_MODE
       int pid_seq_backtrack;
       int pid_time_backtrack;
-      int pid_debug_level;     // PacketIDReceive::DEBUG_x levels
 
       // timeout parameters, relative to construction of KeyContext object
       Time::Duration handshake_window; // SSL/TLS negotiation must complete by this time
@@ -279,7 +277,6 @@ namespace openvpn {
 	max_ack_list = 4;
 	pid_seq_backtrack = 64;
 	pid_time_backtrack = 30;
-	pid_debug_level = PacketIDReceive::DEBUG_MEDIUM;
 	handshake_window = Time::Duration::seconds(60);
 	renegotiate = Time::Duration::seconds(3600);
 	keepalive_ping = Time::Duration::seconds(8);
@@ -644,7 +641,7 @@ namespace openvpn {
       unsigned int opcode;
     };
 
-#ifdef OPENVPN_DEBUG
+#ifdef OPENVPN_INSTRUMENTATION
     static const char *opcode_name(const unsigned int opcode)
     {
       switch (opcode)
@@ -730,6 +727,11 @@ namespace openvpn {
 	  out << " EXCEPTION: " << e.what();
 	}
       return out.str();
+    }
+#else
+    std::string dump_packet(const Buffer& buf)
+    {
+      return "";
     }
 #endif
 
@@ -1546,7 +1548,7 @@ namespace openvpn {
 				     PacketID::SHORT_FORM,
 				     c.pid_seq_backtrack, c.pid_time_backtrack,
 				     "DATA", int(key_id_),
-				     c.pid_debug_level);
+				     proto.stats);
       }
 
       // generate message head
@@ -1890,8 +1892,7 @@ namespace openvpn {
 			   PacketID::LONG_FORM,
 			   c.pid_seq_backtrack, c.pid_time_backtrack,
 			   "SSL-CC", 0,
-			   c.pid_debug_level
-			   );
+			   stats);
 	}
 
       // initialize proto session ID

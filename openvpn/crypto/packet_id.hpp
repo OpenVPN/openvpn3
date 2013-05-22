@@ -22,6 +22,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/log/sessionstats.hpp>
 
 namespace openvpn {
   /*
@@ -118,12 +119,14 @@ namespace openvpn {
 	}
     }
 
+#ifdef OPENVPN_INSTRUMENTATION
     std::string str() const
     {
       std::ostringstream os;
       os << "[" << time << "," << id << "]";
       return os.str();
     }
+#endif
   };
 
   struct PacketIDConstruct : public PacketID
@@ -186,7 +189,7 @@ namespace openvpn {
       return pid_.id >= wrap_at;
     }
 
-#ifdef OPENVPN_DEBUG
+#ifdef OPENVPN_INSTRUMENTATION
     std::string str() const
     {
       std::string ret;
@@ -255,17 +258,6 @@ namespace openvpn {
       SEQ_REAP_PERIOD = 5
     };
 
-    /*
-     * Debug levels.
-     */
-    enum {
-      DEBUG_QUIET=0,
-      DEBUG_LOW,
-      DEBUG_MEDIUM,
-      DEBUG_HIGH,
-      DEBUG_VERBOSE,
-    };
-
     /* mode */
     enum {
       UDP_MODE = 0,
@@ -278,11 +270,11 @@ namespace openvpn {
 
     void init(const int mode, const int form,
 	      const int seq_backtrack, const int time_backtrack,
-	      const char *name, const int unit, const int debug_level)
+	      const char *name, const int unit,
+	      const SessionStats::Ptr& stats_arg)
     {
       initialized_ = false;
       form_ = form;
-      debug_level_ = debug_level;
       id_ = 0;
       time_ = 0;
       last_reap_ = 0;
@@ -291,6 +283,7 @@ namespace openvpn {
       time_backtrack_ = 0;
       name_ = name;
       unit_ = unit;
+      stats = stats_arg;
       if (seq_backtrack && mode == UDP_MODE)
 	{
 	  if (MIN_SEQ_BACKTRACK <= seq_backtrack
@@ -327,7 +320,7 @@ namespace openvpn {
       // test for invalid packet ID
       if (!pin.is_valid())
 	{
-	  debug_log (DEBUG_LOW, pin, "PID is invalid", 0, now);
+	  debug_log (Error::PKTID_INVALID, pin, "PID is invalid", 0, now);
 	  return false;
 	}
 
@@ -352,12 +345,12 @@ namespace openvpn {
 	      if (diff > max_backtrack_stat_)
 		{
 		  max_backtrack_stat_ = diff;
-		  debug_log (DEBUG_LOW, pin, "UDP replay-window backtrack occurred", max_backtrack_stat_, now);
+		  debug_log (Error::PKTID_UDP_REPLAY_WINDOW_BACKTRACK, pin, "UDP replay-window backtrack occurred", max_backtrack_stat_, now);
 		}
 
 	      if (diff >= seq_list_.size())
 		{
-		  debug_log (DEBUG_LOW, pin, "UDP large diff", diff, now);
+		  debug_log (Error::PKTID_UDP_LARGE_DIFF, pin, "UDP large diff", diff, now);
 		  return false;
 		}
 
@@ -367,14 +360,14 @@ namespace openvpn {
 		  return true;
 		else
 		  {
-		    debug_log (DEBUG_MEDIUM, pin, "UDP replay", diff, now);
+		    debug_log (Error::PKTID_UDP_REPLAY, pin, "UDP replay", diff, now);
 		    return false;
 		  }
 	      }
 	    }
 	  else if (pin.time < time_) /* if time goes back, reject */
 	    {
-	      debug_log (DEBUG_LOW, pin, "UDP time backtrack", 0, now);
+	      debug_log (Error::PKTID_UDP_TIME_BACKTRACK, pin, "UDP time backtrack", 0, now);
 	      return false;
 	    }
 	  else                       /* time moved forward */
@@ -394,13 +387,13 @@ namespace openvpn {
 		return true;
 	      else
 		{
-		  debug_log (DEBUG_MEDIUM, pin, "TCP packet ID out of sequence", 0, now);
+		  debug_log (Error::PKTID_TCP_OUT_OF_SEQ, pin, "TCP packet ID out of sequence", 0, now);
 		  return false;
 		}
 	    }
 	  else if (pin.time < time_)    /* if time goes back, reject */
 	    {
-	      debug_log (DEBUG_LOW, pin, "TCP time backtrack", 0, now);
+	      debug_log (Error::PKTID_TCP_TIME_BACKTRACK, pin, "TCP time backtrack", 0, now);
 	      return false;
 	    }
 	  else                          /* time moved forward */
@@ -409,7 +402,7 @@ namespace openvpn {
 		return true;
 	      else
 		{
-		  debug_log (DEBUG_LOW, pin, "bad initial TCP packet ID", pin.id, now);
+		  debug_log (Error::PKTID_TCP_BAD_INITIAL, pin, "bad initial TCP packet ID", 0, now);
 		  return false;
 		}
 	    }
@@ -466,7 +459,7 @@ namespace openvpn {
       return pid;
     }
 
-#ifdef OPENVPN_DEBUG
+#ifdef OPENVPN_INSTRUMENTATION
     std::string str(const PacketID::time_t now) const
     {
       if (!initialized_)
@@ -523,29 +516,29 @@ namespace openvpn {
       last_reap_ = now;
     }
 
-#ifdef OPENVPN_DEBUG_PACKET_ID
-
-    void debug_log (const int level, const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
+    void debug_log (const Error::Type err_type, const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
-      if (debug_level_ >= level)
-	do_log(pin, description, info, now);
+#ifdef OPENVPN_INSTRUMENTATION
+      if (stats->verbose())
+	{
+	  const std::string text = fmt_info(pin, description, info, now);
+	  stats->error(err_type, &text);
+	}
+      else
+#endif
+      stats->error(err_type);
     }
 
-    void do_log (const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
+#ifdef OPENVPN_INSTRUMENTATION
+    std::string fmt_info (const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
     {
-      OPENVPN_LOG("PACKET_ID: '" << description << "' pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << str(now));
+      std::ostringstream os;
+      os << description << " pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << str(now);
+      return os.str();
     }
-
-#else
-
-    void debug_log (const int level, const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
-    {
-    }
-
 #endif
 
     bool initialized_;                     /* true if packet_id_init was called */
-    int debug_level_;                      /* log more when higher */
     PacketID::id_t id_;                    /* highest sequence number received */
     PacketID::time_t time_;                /* highest time stamp received */
     PacketID::time_t last_reap_;           /* last call of packet_id_reap */
@@ -555,6 +548,7 @@ namespace openvpn {
     std::string name_;                     /* name of this object (for debugging) */
     int unit_;                             /* unit number of this object (for debugging) */
     int form_;                             /* PacketID::LONG_FORM or PacketID::SHORT_FORM */
+    SessionStats::Ptr stats;               /* used for error logging */
     CircList<PacketID::time_t> seq_list_;  /* packet-id "memory" */
   };
 

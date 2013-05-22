@@ -12,7 +12,7 @@
 
 #include <cstring> // for std::strlen and others
 
-#ifdef OPENVPN_DEBUG
+#ifdef OPENVPN_INSTRUMENTATION
 #include <string>
 #include <sstream>
 #include <openvpn/common/hexstr.hpp>
@@ -86,7 +86,7 @@ namespace openvpn {
 	}
     }
 
-#ifdef OPENVPN_DEBUG
+#ifdef OPENVPN_INSTRUMENTATION
     std::string dump(const char *title)
     {
       std::ostringstream out;

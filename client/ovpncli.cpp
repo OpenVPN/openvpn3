@@ -26,18 +26,25 @@
 
 // debug settings
 
-#define OPENVPN_DEBUG
+#define OPENVPN_INSTRUMENTATION        // include debug instrumentation for classes
+//#define OPENVPN_DEBUG_CLIPROTO       // shows packets in/out (comment out)
+#define OPENVPN_DEBUG_PROTO   1        // increases low-level protocol verbosity (1)
+//#define OPENVPN_DEBUG_VERBOSE_ERRORS // verbosely log Error::Type errors (comment out)
+
+//#define OPENVPN_SSL_DEBUG          // show verbose SSL debug info (comment out)
+#define OPENVPN_DEBUG_TUN     2      // debug level for tun object (2)
+#define OPENVPN_DEBUG_UDPLINK 2      // debug level for UDP link object (2)
+#define OPENVPN_DEBUG_TCPLINK 2      // debug level for TCP link object (2)
+#define OPENVPN_DEBUG_COMPRESS 1     // debug level for compression objects (1)
+#define OPENVPN_DEBUG_REMOTELIST 0   // debug level for RemoteList object
+
+// enable assertion checks (can safely be disabled in production)
 //#define OPENVPN_ENABLE_ASSERT
-//#define OPENVPN_SSL_DEBUG
-//#define OPENVPN_DEBUG_CLIPROTO // shows packets in/out
+
+// force null tun device (useful for testing)
 //#define OPENVPN_FORCE_TUN_NULL
-#define OPENVPN_DEBUG_PROTO   1
-#define OPENVPN_DEBUG_TUN     2
-#define OPENVPN_DEBUG_UDPLINK 2
-#define OPENVPN_DEBUG_TCPLINK 2
-#define OPENVPN_DEBUG_COMPRESS 1
-#define OPENVPN_DEBUG_REMOTELIST 0
-//#define OPENVPN_DEBUG_PACKET_ID
+
+// log cleartext tunnel packets to file for debugging/analysis
 //#define OPENVPN_PACKET_LOG "pkt.log"
 
 // log thread settings
@@ -80,6 +87,9 @@ namespace openvpn {
 	: parent(parent_arg)
       {
 	std::memset(errors, 0, sizeof(errors));
+#ifdef OPENVPN_DEBUG_VERBOSE_ERRORS
+	session_stats_set_verbose(true);
+#endif
       }
 
       static size_t combined_n()
@@ -131,7 +141,15 @@ namespace openvpn {
       virtual void error(const size_t err, const std::string* text=NULL)
       {
 	if (err < Error::N_ERRORS)
-	  ++errors[err];
+	  {
+#ifdef OPENVPN_DEBUG_VERBOSE_ERRORS
+	    if (text)
+	      OPENVPN_LOG("ERROR: " << Error::name(err) << " : " << *text);
+	    else
+	      OPENVPN_LOG("ERROR: " << Error::name(err));
+#endif
+	    ++errors[err];
+	  }
       }
 
     private:

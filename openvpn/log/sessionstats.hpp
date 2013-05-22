@@ -38,11 +38,16 @@ namespace openvpn {
     };
 
     SessionStats()
+      : verbose_(false)
     {
       std::memset(stats_, 0, sizeof(stats_));
     }
 
     virtual void error(const size_t type, const std::string* text=NULL) = 0;
+
+    // if true, clients may provide additional detail to error() method above
+    // via text argument.
+    bool verbose() const { return verbose_; }
 
     void inc_stat(const size_t type, const count_t value)
     {
@@ -89,7 +94,11 @@ namespace openvpn {
 
     const Time& last_packet_received() const { return last_packet_received_; }
 
+  protected:
+    void session_stats_set_verbose(const bool v) { verbose_ = v; }
+
   private:
+    bool verbose_;
     Time last_packet_received_;
     count_t stats_[N_STATS];
   };

@@ -66,7 +66,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/time/time.hpp>
-#include <openvpn/random/rand.hpp>
+#include <openvpn/random/randint.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/init/initprocess.hpp>
@@ -699,7 +699,6 @@ int test(const int thread_num)
     cp->pid_mode = PacketIDReceive::UDP_MODE;
     cp->pid_seq_backtrack = 64;
     cp->pid_time_backtrack = 30;
-    cp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
 #if defined(HANDSHAKE_WINDOW)
     cp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1
@@ -761,7 +760,6 @@ int test(const int thread_num)
     sp->pid_mode = PacketIDReceive::UDP_MODE;
     sp->pid_seq_backtrack = 64;
     sp->pid_time_backtrack = 30;
-    sp->pid_debug_level = PacketIDReceive::DEBUG_QUIET;
 #if defined(HANDSHAKE_WINDOW)
     sp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1

@@ -55,6 +55,17 @@ namespace openvpn {
       N_RECONNECT,         // Number of reconnections
       PROXY_ERROR,         // HTTP proxy error
       PROXY_NEED_CREDS,    // HTTP proxy needs credentials
+
+      // Packet ID error detail
+      PKTID_INVALID,
+      PKTID_UDP_REPLAY_WINDOW_BACKTRACK,
+      PKTID_UDP_LARGE_DIFF,
+      PKTID_UDP_REPLAY,
+      PKTID_UDP_TIME_BACKTRACK,
+      PKTID_TCP_OUT_OF_SEQ,
+      PKTID_TCP_TIME_BACKTRACK,
+      PKTID_TCP_BAD_INITIAL,
+
       N_ERRORS,
 
       // undefined error
@@ -105,6 +116,14 @@ namespace openvpn {
 	"N_RECONNECT",
 	"PROXY_ERROR",
 	"PROXY_NEED_CREDS",
+	"PKTID_INVALID",
+	"PKTID_UDP_REPLAY_WINDOW_BACKTRACK",
+	"PKTID_UDP_LARGE_DIFF",
+	"PKTID_UDP_REPLAY",
+	"PKTID_UDP_TIME_BACKTRACK",
+	"PKTID_TCP_OUT_OF_SEQ",
+	"PKTID_TCP_TIME_BACKTRACK",
+	"PKTID_TCP_BAD_INITIAL",
       };
 
       if (type < N_ERRORS)
