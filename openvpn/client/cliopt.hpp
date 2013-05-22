@@ -230,6 +230,14 @@ namespace openvpn {
       // init transport config
       const std::string session_name = load_transport_config();
 
+      // get tun-mtu parameter from config
+      unsigned int tun_mtu = 0;
+      {
+	const Option *o = opt.get_ptr("tun-mtu");
+	if (o)
+	  tun_mtu = parse_number_throw<unsigned int>(o->get(1, 16), "tun-mtu");
+      }
+
       // initialize tun/tap
 #if defined(USE_TUN_BUILDER)
       TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
@@ -238,6 +246,8 @@ namespace openvpn {
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
       tunconf->google_dns_fallback = config.google_dns_fallback;
+      if (tun_mtu)
+	tunconf->mtu = tun_mtu;
 #if defined(OPENVPN_PLATFORM_IPHONE)
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
@@ -252,11 +262,15 @@ namespace openvpn {
       tunconf->layer = cp->layer;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
+      if (tun_mtu)
+	tunconf->mtu = tun_mtu;
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunMac::ClientConfig::Ptr tunconf = TunMac::ClientConfig::new_obj();
       tunconf->layer = cp->layer;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
+      if (tun_mtu)
+	tunconf->mtu = tun_mtu;
 #else
       TunNull::ClientConfig::Ptr tunconf = TunNull::ClientConfig::new_obj();
       tunconf->frame = frame;

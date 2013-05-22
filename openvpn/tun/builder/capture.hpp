@@ -95,7 +95,7 @@ namespace openvpn {
       }
     };
 
-    TunBuilderCapture() : mtu(1500) {}
+    TunBuilderCapture() : mtu(0) {}
 
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
     {
@@ -175,7 +175,8 @@ namespace openvpn {
     {
       std::ostringstream os;
       os << "Session Name: " << session_name << std::endl;
-      os << "MTU: " << mtu << std::endl;
+      if (mtu)
+	os << "MTU: " << mtu << std::endl;
       os << "Remote Address: " << remote_address.to_string() << std::endl;
       render_route_list(os, "Tunnel Addresses", tunnel_addresses);
       os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
