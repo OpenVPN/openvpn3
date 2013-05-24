@@ -95,6 +95,46 @@ namespace openvpn {
       }
     };
 
+    struct ProxyBypass {
+      std::string bypass_host;
+
+      std::string to_string() const
+      {
+	return bypass_host;
+      }
+    };
+
+    struct ProxyAutoConfigURL {
+      std::string url;
+
+      bool defined() const {
+	return !url.empty();
+      }
+
+      std::string to_string() const
+      {
+	return url;
+      }
+    };
+
+    struct ProxyHostPort {
+      std::string host;
+      int port;
+
+      ProxyHostPort() : port(0) {}
+
+      bool defined() const {
+	return !host.empty();
+      }
+
+      std::string to_string() const
+      {
+	std::ostringstream os;
+	os << host << ' ' << port;
+	return os.str();
+      }
+    };
+
     TunBuilderCapture() : mtu(0) {}
 
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
@@ -171,6 +211,34 @@ namespace openvpn {
       return true;
     }
 
+    virtual bool tun_builder_add_proxy_bypass(const std::string& bypass_host)
+    {
+      ProxyBypass b;
+      b.bypass_host = bypass_host;
+      proxy_bypass.push_back(b);
+      return true;
+    }
+
+    virtual bool tun_builder_set_proxy_auto_config_url(const std::string& url)
+    {
+      proxy_auto_config_url.url = url;
+      return true;
+    }
+
+    virtual bool tun_builder_set_proxy_http(const std::string& host, int port)
+    {
+      http_proxy.host = host;
+      http_proxy.port = port;      
+      return true;
+    }
+
+    virtual bool tun_builder_set_proxy_https(const std::string& host, int port)
+    {
+      https_proxy.host = host;
+      https_proxy.port = port;      
+      return true;
+    }
+
     std::string to_string() const
     {
       std::ostringstream os;
@@ -192,6 +260,17 @@ namespace openvpn {
 	for (std::vector<SearchDomain>::const_iterator i = search_domains.begin(); i != search_domains.end(); ++i)
 	  os << "  " << i->to_string() << std::endl;
       }
+      if (!proxy_bypass.empty()) {
+	os << "Proxy Bypass:" << std::endl;
+	for (std::vector<ProxyBypass>::const_iterator i = proxy_bypass.begin(); i != proxy_bypass.end(); ++i)
+	  os << "  " << i->to_string() << std::endl;
+      }
+      if (proxy_auto_config_url.defined())
+	os << "Proxy Auto Config URL: " << proxy_auto_config_url.to_string() << std::endl;
+      if (http_proxy.defined())
+	os << "HTTP Proxy: " << http_proxy.to_string() << std::endl;
+      if (https_proxy.defined())
+	os << "HTTPS Proxy: " << https_proxy.to_string() << std::endl;
       return os.str();
     }
 
@@ -205,6 +284,11 @@ namespace openvpn {
     std::vector<Route> exclude_routes;     // routes that should be excluded from tunnel
     std::vector<DNSServer> dns_servers;    // VPN DNS servers
     std::vector<SearchDomain> search_domains;  // domain suffixes whose DNS requests should be tunnel-routed
+
+    std::vector<ProxyBypass> proxy_bypass; // hosts that should bypass proxy
+    ProxyAutoConfigURL proxy_auto_config_url;
+    ProxyHostPort http_proxy;
+    ProxyHostPort https_proxy;
 
   private:
     void render_route_list(std::ostream& os, const char *title, const std::vector<Route>& list) const

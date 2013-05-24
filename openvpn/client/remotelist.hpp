@@ -22,6 +22,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/port.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/transport/protocol.hpp>
@@ -699,12 +700,6 @@ namespace openvpn {
 	      }
 	  }
       }
-    }
-
-    void validate_port(const std::string& port, const std::string& title)
-    {
-      if (!parse_number_validate<unsigned int>(port, 5, 1, 65535))
-	OPENVPN_THROW(option_error, "bad " << title << " number: " << port);
     }
 
     bool enable_cache;

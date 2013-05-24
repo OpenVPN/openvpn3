@@ -120,6 +120,34 @@ namespace openvpn {
       return false;
     }
 
+    // Callback to add a host which should bypass the proxy
+    // May be called more than once per tun_builder session
+    virtual bool tun_builder_add_proxy_bypass(const std::string& bypass_host)
+    {
+      return false;
+    }
+
+    // Callback to set the proxy "Auto Config URL"
+    // Never called more than once per tun_builder session.
+    virtual bool tun_builder_set_proxy_auto_config_url(const std::string& url)
+    {
+      return false;
+    }
+
+    // Callback to set the HTTP proxy
+    // Never called more than once per tun_builder session.
+    virtual bool tun_builder_set_proxy_http(const std::string& host, int port)
+    {
+      return false;
+    }
+
+    // Callback to set the HTTPS proxy
+    // Never called more than once per tun_builder session.
+    virtual bool tun_builder_set_proxy_https(const std::string& host, int port)
+    {
+      return false;
+    }
+
     // Callback to establish the VPN tunnel, returning a file descriptor
     // to the tunnel, which the caller will henceforth own.  Returns -1
     // if the tunnel could not be established.

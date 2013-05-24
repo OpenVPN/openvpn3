@@ -18,6 +18,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/split.hpp>
+#include <openvpn/common/port.hpp>
 #include <openvpn/tun/tununixbase.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/builder/capture.hpp>
@@ -207,6 +208,20 @@ namespace openvpn {
 
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
 
+#if OPENVPN_DEBUG_TUN_BUILDER > 0
+	      {
+		TunBuilderCapture::Ptr capture = new TunBuilderCapture();
+		try {
+		  configure_builder(capture.get(), NULL, NULL, server_addr, *config, opt, true);
+		  OPENVPN_LOG("*** TUN BUILDER CAPTURE" << std::endl << capture->to_string());
+		}
+		catch (const std::exception& e)
+		  {
+		    OPENVPN_LOG("*** TUN BUILDER CAPTURE ERROR: " << e.what());
+		  }
+	      }
+#endif
+
 	      // In tun_persist mode, capture tun builder settings so we can
 	      // compare them to persisted settings.
 	      if (tun_persist)
@@ -370,13 +385,13 @@ namespace openvpn {
 	const unsigned int ip_ver_flags = tun_ifconfig(tb, state, opt);
 
 	// add routes
-	const unsigned int reroute_gw_ver_flags = add_routes(tb, opt, server_addr, ip_ver_flags);
+	const unsigned int reroute_gw_ver_flags = add_routes(tb, opt, server_addr, ip_ver_flags, quiet);
 
 	// add DNS servers and domain prefixes
-	const unsigned int add_dns_flags = add_dns(tb, opt, quiet);
+	const unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
 
 	// DNS fallback
-	if ((reroute_gw_ver_flags & F_IPv4) && !(add_dns_flags & F_ADD_DNS))
+	if ((reroute_gw_ver_flags & F_IPv4) && !(dhcp_option_flags & F_ADD_DNS))
 	  {
 	    if (config.google_dns_fallback)
 	      add_google_dns(tb);
@@ -531,7 +546,8 @@ namespace openvpn {
       static unsigned int add_routes(TunBuilderBase* tb,
 				     const OptionList& opt,
 				     const IP::Addr& server_addr,
-				     const unsigned int ip_ver_flags)
+				     const unsigned int ip_ver_flags,
+				     const bool quiet)
       {
 	unsigned int reroute_gw_ver_flags = 0;
 	const RedirectGatewayFlags rg_flags(opt);
@@ -573,7 +589,8 @@ namespace openvpn {
 		    }
 		    catch (const std::exception& e)
 		      {
-			OPENVPN_LOG("Error parsing IPv4 route: " << o.render() << " : " << e.what());
+			if (!quiet)
+			  OPENVPN_LOG("Error parsing IPv4 route: " << o.render() << " : " << e.what());
 		      }
 		  }
 	      }
@@ -600,7 +617,8 @@ namespace openvpn {
 		    }
 		    catch (const std::exception& e)
 		      {
-			OPENVPN_LOG("Error parsing IPv6 route: " << o.render() << " : " << e.what());
+			if (!quiet)
+			  OPENVPN_LOG("Error parsing IPv6 route: " << o.render() << " : " << e.what());
 		      }
 		  }
 	      }
@@ -608,18 +626,27 @@ namespace openvpn {
 	return reroute_gw_ver_flags;
       }
 
-      static unsigned int add_dns(TunBuilderBase* tb, const OptionList& opt, const bool quiet)
+      static unsigned int add_dhcp_options(TunBuilderBase* tb, const OptionList& opt, const bool quiet)
       {
 	// Example:
 	//   [dhcp-option] [DNS] [172.16.0.23]
 	//   [dhcp-option] [DOMAIN] [openvpn.net]
 	//   [dhcp-option] [DOMAIN] [example.com]
-	//   [dhcp-option] [DOMAIN] [foo1.com foo2.com foo3.com]
-	//   [dhcp-option] [DOMAIN] [bar1.com] [bar2.com] [bar3.com]
+	//   [dhcp-option] [DOMAIN] [foo1.com foo2.com foo3.com ...]
+	//   [dhcp-option] [DOMAIN] [bar1.com] [bar2.com] [bar3.com] ...
+	//   [dhcp-option] [PROXY_HTTP] [foo.bar.gov] [1234]
+	//   [dhcp-option] [PROXY_HTTPS] [foo.bar.gov] [1234]
+	//   [dhcp-option] [PROXY_BYPASS] [server1] [server2] ...
+	//   [dhcp-option] [PROXY_AUTO_CONFIG_URL] [http://...]
 	unsigned int flags = 0;
 	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
 	if (dopt != opt.map().end())
 	  {
+	    std::string auto_config_url;
+	    std::string http_host;
+	    unsigned int http_port;
+	    std::string https_host;
+	    unsigned int https_port;
 	    for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
 	      {
 		const Option& o = opt[*i];
@@ -648,19 +675,73 @@ namespace openvpn {
 			    }
 			}
 		    }
+		  else if (type == "PROXY_BYPASS")
+		    {
+		      o.min_args(3);
+		      for (size_t j = 2; j < o.size(); ++j)
+			{
+			  typedef std::vector<std::string> strvec;
+			  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(o.get(j, 256));
+			  for (size_t k = 0; k < v.size(); ++k)
+			    {
+			      if (!tb->tun_builder_add_proxy_bypass(v[k]))
+				throw tun_builder_dhcp_option_error("tun_builder_add_proxy_bypass");
+			    }
+			}
+		    }
+		  else if (type == "PROXY_AUTO_CONFIG_URL")
+		    {
+		      o.exact_args(3);
+		      auto_config_url = o.get(2, 256);
+		    }
+		  else if (type == "PROXY_HTTP")
+		    {
+		      o.exact_args(4);
+		      http_host = o.get(2, 256);
+		      validate_port(o.get(3, 256), "PROXY_HTTP port", &http_port);
+		    }
+		  else if (type == "PROXY_HTTPS")
+		    {
+		      o.exact_args(4);
+		      https_host = o.get(2, 256);
+		      validate_port(o.get(3, 256), "PROXY_HTTPS port", &https_port);
+		    }
 		  else if (!quiet)
 		    OPENVPN_LOG("Unknown pushed DHCP option: " << o.render());
 		}
 		catch (const std::exception& e)
 		  {
-		    OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
+		    if (!quiet)
+		      OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
 		  }
+	      }
+	    try {
+	      if (!http_host.empty())
+		{
+		  if (!tb->tun_builder_set_proxy_http(http_host, http_port))
+		    throw tun_builder_dhcp_option_error("tun_builder_set_proxy_http");
+		}
+	      if (!https_host.empty())
+		{
+		  if (!tb->tun_builder_set_proxy_https(https_host, https_port))
+		    throw tun_builder_dhcp_option_error("tun_builder_set_proxy_https");
+		}
+	      if (!auto_config_url.empty())
+		{
+		  if (!tb->tun_builder_set_proxy_auto_config_url(auto_config_url))
+		    throw tun_builder_dhcp_option_error("tun_builder_set_proxy_auto_config_url");
+		}
+	    }
+	    catch (const std::exception& e)
+	      {
+		if (!quiet)
+		  OPENVPN_LOG("Error setting dhcp-option for proxy: " << e.what());
 	      }
 	  }
 	return flags;
       }
 
-      static bool search_domains_exist(const OptionList& opt)
+      static bool search_domains_exist(const OptionList& opt, const bool quiet)
       {
 	OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
 	if (dopt != opt.map().end())
@@ -675,7 +756,8 @@ namespace openvpn {
 		}
 		catch (const std::exception& e)
 		  {
-		    OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
+		    if (!quiet)
+		      OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
 		  }
 	      }
 	  }
