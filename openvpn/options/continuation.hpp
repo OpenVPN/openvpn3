@@ -38,6 +38,8 @@ namespace openvpn {
 	complete_(false),
 	push_base(push_base_arg)
     {
+      // Prepend from base where multiple options of the same type can aggregate,
+      // so that server-pushed options will be at the end of list.
       if (push_base)
 	extend(push_base->multi, NULL);
     }
@@ -52,7 +54,12 @@ namespace openvpn {
 	  if (!continuation(other))
 	    {
 	      if (push_base)
-		extend_nonexistent(push_base->singleton);
+		{
+		  // Append from base where only a single instance of each option makes sense,
+		  // provided that option wasn't already pushed by server.
+		  update_map();
+		  extend_nonexistent(push_base->singleton);
+		}
 	      update_map();
 	      complete_ = true;
 	    }

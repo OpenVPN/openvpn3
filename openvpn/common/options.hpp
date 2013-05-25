@@ -714,12 +714,14 @@ namespace openvpn {
 
     // Append to self only those elements in other that do not exist
     // in self, caller should call update_map() after this function.
+    // Caller should also consider calling update_map() before this function,
+    // to ensure that lookups on this->map will see up-to-date data.
     void extend_nonexistent(const OptionList& other)
     {
       for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); ++i)
 	{
 	  const Option& opt = *i;
-	  if (map().find(opt.ref(0)) == map().end())
+	  if (!opt.empty() && map().find(opt.ref(0)) == map().end())
 	    push_back(opt);
 	}
     }
