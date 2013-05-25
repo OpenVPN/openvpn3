@@ -44,6 +44,7 @@ namespace openvpn {
       EPKI_SIGN_ERROR,     // error obtaining RSA signature from External PKI provider
       HANDSHAKE_TIMEOUT,   // handshake failed to complete within given time frame
       KEEPALIVE_TIMEOUT,   // lost contact with peer
+      INACTIVE_TIMEOUT,    // disconnected due to inactive timer
       CONNECTION_TIMEOUT,  // connection failed to establish within given time
       PRIMARY_EXPIRE,      // primary key context expired
       CERT_VERIFY_FAIL,    // peer certificate verification failure
@@ -109,6 +110,7 @@ namespace openvpn {
 	"EPKI_SIGN_ERROR",
 	"HANDSHAKE_TIMEOUT",
 	"KEEPALIVE_TIMEOUT",
+	"INACTIVE_TIMEOUT",
 	"CONNECTION_TIMEOUT",
 	"PRIMARY_EXPIRE",
 	"CERT_VERIFY_FAIL",

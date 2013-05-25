@@ -312,6 +312,7 @@ namespace openvpn {
 
 	// base options where only a single instance of each option makes sense
 	push_base->singleton.extend(opt, "redirect-dns");
+	push_base->singleton.extend(opt, "inactive");
       }
     }
 

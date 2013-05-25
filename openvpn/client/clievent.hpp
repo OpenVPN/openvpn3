@@ -42,6 +42,7 @@ namespace openvpn {
       CLIENT_HALT,
       CLIENT_RESTART,
       CONNECTION_TIMEOUT,
+      INACTIVE_TIMEOUT,
       DYNAMIC_CHALLENGE,
       PROXY_NEED_CREDS,
       PROXY_ERROR,
@@ -77,6 +78,7 @@ namespace openvpn {
 	"CLIENT_HALT",
 	"CLIENT_RESTART",
 	"CONNECTION_TIMEOUT",
+	"INACTIVE_TIMEOUT",
 	"DYNAMIC_CHALLENGE",
 	"PROXY_NEED_CREDS",
 	"PROXY_ERROR",
@@ -191,6 +193,11 @@ namespace openvpn {
     struct ConnectionTimeout : public Base
     {
       ConnectionTimeout() : Base(CONNECTION_TIMEOUT) {}
+    };
+
+    struct InactiveTimeout : public Base
+    {
+      InactiveTimeout() : Base(INACTIVE_TIMEOUT) {}
     };
 
     struct Connected : public Base

@@ -368,6 +368,14 @@ namespace openvpn {
 		    queue_restart();
 		  }
 		  break;
+		case Error::INACTIVE_TIMEOUT:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::InactiveTimeout();
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::INACTIVE_TIMEOUT);
+		    stop();
+		  }
+		  break;
 		default:
 		  throw client_connect_unhandled_exception();
 		}

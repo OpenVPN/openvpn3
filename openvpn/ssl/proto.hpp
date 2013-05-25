@@ -577,8 +577,7 @@ namespace openvpn {
 	return ret;
       }
 
-    private:
-      void load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
+      static const Option *load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
       {
 	const unsigned int maxdur = 60*60*24*7; // maximum duration -- 7 days
 	const Option *o = opt.get_ptr(name);
@@ -587,13 +586,15 @@ namespace openvpn {
 	    unsigned int value = 0;
 	    const bool status = parse_number<unsigned int>(o->get(1, 16), value);
 	    if (!status)
-	      OPENVPN_THROW(proto_option_error, name << ": error parsing number");
+	      OPENVPN_THROW(proto_option_error, name << ": error parsing number of seconds");
 	    if (value == 0 || value > maxdur)
 	      value = maxdur;
 	    dur = Time::Duration::seconds(value);
 	  }
+	return o;
       }
 
+    private:
       // load parameters that can be present in both config file or pushed options
       void load_common(const OptionList& opt, const ProtoContextOptions& pco)
       {

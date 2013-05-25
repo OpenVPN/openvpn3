@@ -79,6 +79,7 @@ namespace openvpn {
       OPENVPN_EXCEPTION(max_pushed_options_exceeded);
       OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
       OPENVPN_SIMPLE_EXCEPTION(authentication_failed);
+      OPENVPN_SIMPLE_EXCEPTION(inactive_timer_expired);
 
       OPENVPN_EXCEPTION(proxy_exception);
 
@@ -128,7 +129,10 @@ namespace openvpn {
 	  connected_(false),
 	  fatal_(Error::UNDEF),
 	  pushed_options_limit(config.pushed_options_limit),
-	  pushed_options_filter(config.pushed_options_filter)
+	  pushed_options_filter(config.pushed_options_filter),
+	  inactive_timer(io_service_arg),
+	  inactive_bytes(0),
+	  inactive_last_sample(0)
       {
 #ifdef OPENVPN_PACKET_LOG
 	packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -170,6 +174,7 @@ namespace openvpn {
 	    halt = true;
 	    housekeeping_timer.cancel();
 	    push_request_timer.cancel();
+	    inactive_timer.cancel();
 	    if (tun)
 	      tun->stop();
 	    if (transport)
@@ -430,6 +435,9 @@ namespace openvpn {
 		// initialize tun/routing
 		tun = tun_factory->new_client_obj(io_service, *this);
 		tun->client_start(received_options, *transport);
+
+		// process "inactive" directive
+		extract_inactive(received_options);
 	      }
 	    else
 	      OPENVPN_LOG("Options continuation...");
@@ -629,6 +637,64 @@ namespace openvpn {
 	  }
       }
 
+      void extract_inactive(const OptionList& opt)
+      {
+	try {
+	  const Option *o = Base::Config::load_duration_parm(inactive_duration, "inactive", opt);
+	  if (o)
+	    {
+	      if (o->size() >= 3)
+		inactive_bytes = parse_number_throw<unsigned int>(o->get(2, 16), "inactive bytes");
+	      schedule_inactive_timer();
+	    }
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("Error parsing inactive: " << e.what());
+	  }
+      }
+
+      void schedule_inactive_timer()
+      {
+	inactive_timer.expires_at(now() + inactive_duration);
+	inactive_timer.async_wait(asio_dispatch_timer(&Session::inactive_callback, this));
+      }
+
+      void inactive_callback(const boost::system::error_code& e)
+      {
+	try {
+	  if (!e && !halt)
+	    {
+	      // update current time
+	      Base::update_now();
+	      const count_t sample = cli_stats->get_stat(SessionStats::TUN_BYTES_IN) + cli_stats->get_stat(SessionStats::TUN_BYTES_OUT);
+	      const count_t delta = sample - inactive_last_sample;
+	      //OPENVPN_LOG("*** INACTIVE SAMPLE " << delta << ' ' << inactive_bytes);
+	      if (delta <= count_t(inactive_bytes))
+		{
+		  fatal_ = Error::INACTIVE_TIMEOUT;
+		  send_explicit_exit_notify();
+		  if (notify_callback)
+		    {
+		      OPENVPN_LOG("inactive timer expired");
+		      stop(true);
+		    }
+		  else
+		    throw inactive_timer_expired();
+		}
+	      else
+		{
+		  inactive_last_sample = sample;
+		  schedule_inactive_timer();
+		}
+	    }
+	}
+	catch (const std::exception& e)
+	  {
+	    process_exception(e, "inactive_callback");
+	  }
+      }
+
       void process_exception(const std::exception& e, const char *method_name)
       {
 	if (notify_callback)
@@ -704,6 +770,11 @@ namespace openvpn {
 
       OptionList::Limits pushed_options_limit;
       OptionList::FilterBase::Ptr pushed_options_filter;
+
+      AsioTimer inactive_timer;
+      Time::Duration inactive_duration;
+      unsigned int inactive_bytes;
+      count_t inactive_last_sample;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;
