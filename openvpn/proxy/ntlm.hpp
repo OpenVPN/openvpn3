@@ -15,7 +15,7 @@
 #include <vector>
 
 #include <boost/cstdint.hpp> // for boost::uint32_t, uint64_t
-#include <boost/algorithm/string.hpp> // for boost::to_upper_copy
+#include <boost/algorithm/string.hpp> // for boost::algorithm::to_upper_copy
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -79,7 +79,7 @@ namespace openvpn {
 	// concatenate uppercase(username) + domain,
 	// convert to utf-16, and run it through HMAC-MD5
 	// keyed to md4_hash
-	const std::string ud = boost::to_upper_copy(username) + domain;
+	const std::string ud = boost::algorithm::to_upper_copy(username) + domain;
 	BufferPtr ud_u = Unicode::string_to_utf16(ud);
 	typename CRYPTO_API::HMACContext hmac_ctx1(CRYPTO_API::Digest::md5(), md4_hash, 16);
 	hmac_ctx1.update(ud_u->c_data(), ud_u->size());

@@ -159,7 +159,7 @@ namespace openvpn {
 #       undef OPENVPN_DIGEST_SELECT
       }
 
-      const char *name() const
+      std::string name() const
       {
 	check_initialized();
 	return digest_->name();

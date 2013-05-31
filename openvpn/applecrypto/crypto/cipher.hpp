@@ -103,7 +103,7 @@ namespace openvpn {
 #       undef OPENVPN_CIPHER_SELECT
       }
 
-      const char *name() const
+      std::string name() const
       {
 	check_initialized();
 	return cipher_->name();

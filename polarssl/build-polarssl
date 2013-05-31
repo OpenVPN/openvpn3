@@ -38,6 +38,13 @@ mkdir $DIST
 if [ "$NO_WIPE" = "1" ]; then
     echo RETAIN existing source
     cd $POLARSSL_VERSION
+elif [ "$NO_WIPE" = "partial" ]; then
+    echo RETAIN existing source but copy config.h and CMakeLists.txt
+    cd $POLARSSL_VERSION
+
+    # define configs
+    cp $PD/config.h include/polarssl/
+    cp $PD/CMakeLists.txt .
 else
     echo WIPE and reunzip source
     rm -rf $POLARSSL_VERSION
@@ -50,18 +57,8 @@ else
     rm $(find . -type f | grep Makefile)
 
     # patch it
-    cd library
-    #echo PATCH trustex.patch
-    #patch <$PD/trustex.patch
-    cd ..
-    echo PATCH polarssl-enum.patch
-    patch -p1 <$PD/polarssl-enum.patch
-    echo PATCH polarssl-const-ciphersuite.patch
-    patch -p1 <$PD/polarssl-const-ciphersuite.patch
-    echo PATCH polarssl-epki.patch
-    patch -p1 <$PD/polarssl-epki.patch
-    #echo PATCH polarssl-invalid-mac.patch
-    #patch -p1 <$PD/polarssl-invalid-mac.patch 
+    #echo PATCH X.patch
+    #patch -p1 <$PD/X.patch 
 
     # do the big polar-openssl patch
     if [ "$USE_MINICRYPTO" = "1" ]; then

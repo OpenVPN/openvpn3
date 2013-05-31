@@ -1,7 +1,7 @@
-diff -uNr polarssl-1.1.6/include/polarssl/aes.h polarssl.new/include/polarssl/aes.h
---- polarssl-1.1.6/include/polarssl/aes.h	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/include/polarssl/aes.h	2013-03-13 22:21:58.000000000 -0600
-@@ -35,6 +35,12 @@
+diff -uNr polarssl-1.2.7/include/polarssl/aes.h polarssl.new/include/polarssl/aes.h
+--- polarssl-1.2.7/include/polarssl/aes.h	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/include/polarssl/aes.h	2013-05-30 23:42:06.000000000 -0600
+@@ -42,6 +42,12 @@
  #define POLARSSL_ERR_AES_INVALID_KEY_LENGTH                -0x0020  /**< Invalid key length. */
  #define POLARSSL_ERR_AES_INVALID_INPUT_LENGTH              -0x0022  /**< Invalid data input length. */
  
@@ -14,7 +14,7 @@ diff -uNr polarssl-1.1.6/include/polarssl/aes.h polarssl.new/include/polarssl/ae
  /**
   * \brief          AES context structure
   */
-@@ -162,6 +168,9 @@
+@@ -169,6 +175,9 @@
                         unsigned char stream_block[16],
                         const unsigned char *input,
                         unsigned char *output );
@@ -24,15 +24,15 @@ diff -uNr polarssl-1.1.6/include/polarssl/aes.h polarssl.new/include/polarssl/ae
  /**
   * \brief          Checkup routine
   *
-@@ -172,5 +181,4 @@
+@@ -179,5 +188,4 @@
  #ifdef __cplusplus
  }
  #endif
 -
  #endif /* aes.h */
-diff -uNr polarssl-1.1.6/include/polarssl/aes_openssl.h polarssl.new/include/polarssl/aes_openssl.h
---- polarssl-1.1.6/include/polarssl/aes_openssl.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/aes_openssl.h	2013-03-13 22:21:58.000000000 -0600
+diff -uNr polarssl-1.2.7/include/polarssl/aes_openssl.h polarssl.new/include/polarssl/aes_openssl.h
+--- polarssl-1.2.7/include/polarssl/aes_openssl.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/aes_openssl.h	2013-05-30 23:42:06.000000000 -0600
 @@ -0,0 +1,145 @@
 +/*
 + * Use OpenSSL implementation of AES methods to get asm and hardware acceleration.
@@ -179,144 +179,10 @@ diff -uNr polarssl-1.1.6/include/polarssl/aes_openssl.h polarssl.new/include/pol
 +#ifdef __cplusplus
 +}
 +#endif
-diff -uNr polarssl-1.1.6/include/polarssl/bf.h polarssl.new/include/polarssl/bf.h
---- polarssl-1.1.6/include/polarssl/bf.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/bf.h	2013-03-13 22:21:58.000000000 -0600
-@@ -0,0 +1,95 @@
-+#ifndef POLARSSL_BF_H
-+#define POLARSSL_BF_H
-+
-+#if defined(POLARSSL_USE_OPENSSL_BF)
-+
-+#include <string.h>
-+
-+#define BF_ENCRYPT     1
-+#define BF_DECRYPT     0
-+
-+/*
-+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-+ * ! BF_LONG has to be at least 32 bits wide. If it's wider, then !
-+ * ! BF_LONG_LOG2 has to be defined along.                        !
-+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-+ */
-+
-+#if defined(__LP32__)
-+#define BF_LONG unsigned long
-+#elif defined(OPENSSL_SYS_CRAY) || defined(__ILP64__)
-+#define BF_LONG unsigned long
-+#define BF_LONG_LOG2 3
-+/*
-+ * _CRAY note. I could declare short, but I have no idea what impact
-+ * does it have on performance on none-T3E machines. I could declare
-+ * int, but at least on C90 sizeof(int) can be chosen at compile time.
-+ * So I've chosen long...
-+ *					<appro@fy.chalmers.se>
-+ */
-+#else
-+#define BF_LONG unsigned int
-+#endif
-+
-+#define BF_ROUNDS	16
-+#define BF_BLOCK	8
-+
-+/**
-+ * \brief          BF context structure
-+ */
-+typedef struct
-+{
-+  BF_LONG P[BF_ROUNDS+2];
-+  BF_LONG S[4*256];
-+}
-+bf_context;
-+
-+#ifdef __cplusplus
-+extern "C" {
-+#endif
-+
-+void BF_set_key(bf_context *key, int len, const unsigned char *data);
-+
-+void BF_ecb_encrypt(const unsigned char *in, unsigned char *out,
-+		    const bf_context *key, int enc);
-+
-+void BF_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
-+		    const bf_context *schedule, unsigned char *ivec, int enc);
-+
-+static inline int bf_setkey_enc( bf_context *ctx, const unsigned char *key, unsigned int keysize )
-+{
-+  BF_set_key(ctx, keysize / 8, key);
-+  return 0;
-+}
-+
-+static inline int bf_setkey_dec( bf_context *ctx, const unsigned char *key, unsigned int keysize )
-+{
-+  BF_set_key(ctx, keysize / 8, key);
-+  return 0;
-+}
-+
-+static inline int bf_crypt_ecb( bf_context *ctx,
-+				int mode,
-+				const unsigned char input[8],
-+				unsigned char output[8] )
-+{
-+  BF_ecb_encrypt(input, output, ctx, mode);
-+  return 0;
-+}
-+
-+static inline int bf_crypt_cbc( bf_context *ctx,
-+				int mode,
-+				size_t length,
-+				unsigned char iv[8],
-+				const unsigned char *input,
-+				unsigned char *output )
-+{
-+  BF_cbc_encrypt(input, output, length, ctx, iv, mode);
-+  return 0;
-+}
-+
-+#ifdef __cplusplus
-+}
-+#endif
-+#endif
-+#endif /* bf.h */
-diff -uNr polarssl-1.1.6/include/polarssl/cipher.h polarssl.new/include/polarssl/cipher.h
---- polarssl-1.1.6/include/polarssl/cipher.h	2013-03-13 23:33:17.000000000 -0600
-+++ polarssl.new/include/polarssl/cipher.h	2013-03-13 22:21:58.000000000 -0600
-@@ -52,6 +52,7 @@
-     POLARSSL_CIPHER_ID_DES,
-     POLARSSL_CIPHER_ID_3DES,
-     POLARSSL_CIPHER_ID_CAMELLIA,
-+    POLARSSL_CIPHER_ID_BF,
- } cipher_id_t;
- 
- typedef enum {
-@@ -76,7 +77,8 @@
-     POLARSSL_CIPHER_CAMELLIA_256_CTR,
-     POLARSSL_CIPHER_DES_CBC,
-     POLARSSL_CIPHER_DES_EDE_CBC,
--    POLARSSL_CIPHER_DES_EDE3_CBC
-+    POLARSSL_CIPHER_DES_EDE3_CBC,
-+    POLARSSL_CIPHER_BF_128_CBC,
- } cipher_type_t;
- 
- typedef enum {
-diff -uNr polarssl-1.1.6/include/polarssl/cipher_wrap.h polarssl.new/include/polarssl/cipher_wrap.h
---- polarssl-1.1.6/include/polarssl/cipher_wrap.h	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/include/polarssl/cipher_wrap.h	2013-03-13 22:21:58.000000000 -0600
-@@ -84,6 +84,10 @@
- 
- #endif /* defined(POLARSSL_DES_C) */
- 
-+#if defined(POLARSSL_USE_OPENSSL_BF)
-+extern const cipher_info_t bf_128_cbc_info;
-+#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
-+
- #ifdef __cplusplus
- }
- #endif
-diff -uNr polarssl-1.1.6/include/polarssl/sha1.h polarssl.new/include/polarssl/sha1.h
---- polarssl-1.1.6/include/polarssl/sha1.h	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/include/polarssl/sha1.h	2013-03-13 23:22:29.000000000 -0600
-@@ -31,6 +31,33 @@
+diff -uNr polarssl-1.2.7/include/polarssl/sha1.h polarssl.new/include/polarssl/sha1.h
+--- polarssl-1.2.7/include/polarssl/sha1.h	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/include/polarssl/sha1.h	2013-05-30 23:42:06.000000000 -0600
+@@ -38,6 +38,33 @@
  
  #define POLARSSL_ERR_SHA1_FILE_IO_ERROR                -0x0076  /**< Read/write error in file. */
  
@@ -350,7 +216,7 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha1.h polarssl.new/include/polarssl/s
  /**
   * \brief          SHA-1 context structure
   */
-@@ -45,10 +72,36 @@
+@@ -52,10 +79,36 @@
  }
  sha1_context;
  
@@ -387,7 +253,7 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha1.h polarssl.new/include/polarssl/s
  /**
   * \brief          SHA-1 context setup
   *
-@@ -73,6 +126,11 @@
+@@ -80,6 +133,11 @@
   */
  void sha1_finish( sha1_context *ctx, unsigned char output[20] );
  
@@ -399,7 +265,7 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha1.h polarssl.new/include/polarssl/s
  /**
   * \brief          Output = SHA-1( input buffer )
   *
-@@ -145,9 +203,6 @@
+@@ -152,9 +210,6 @@
   */
  int sha1_self_test( int verbose );
  
@@ -409,10 +275,10 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha1.h polarssl.new/include/polarssl/s
  #ifdef __cplusplus
  }
  #endif
-diff -uNr polarssl-1.1.6/include/polarssl/sha2.h polarssl.new/include/polarssl/sha2.h
---- polarssl-1.1.6/include/polarssl/sha2.h	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/include/polarssl/sha2.h	2013-03-13 22:21:58.000000000 -0600
-@@ -31,6 +31,37 @@
+diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/sha2.h
+--- polarssl-1.2.7/include/polarssl/sha2.h	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/include/polarssl/sha2.h	2013-05-31 00:01:17.000000000 -0600
+@@ -38,6 +38,39 @@
  
  #define POLARSSL_ERR_SHA2_FILE_IO_ERROR                -0x0078  /**< Read/write error in file. */
  
@@ -445,12 +311,14 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha2.h polarssl.new/include/polarssl/s
 +int SHA256_Update(struct openssl_sha2_context *c, const void *data, size_t len);
 +int SHA256_Final(unsigned char *md, struct openssl_sha2_context *c);
 +
++void sha256_block_data_order(struct openssl_sha2_context *c, const void *p, size_t num);
++
 +#else
 +
  /**
   * \brief          SHA-256 context structure
   */
-@@ -46,10 +77,40 @@
+@@ -53,10 +86,45 @@
  }
  sha2_context;
  
@@ -486,26 +354,44 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha2.h polarssl.new/include/polarssl/s
 +    SHA256_Final(output, &ctx->octx);
 +}
 +
++static inline void sha2_process( sha2_context *ctx, const unsigned char data[64] )
++{
++  sha256_block_data_order(&ctx->octx, data, 1);
++}
++
 +#else
 +
  /**
   * \brief          SHA-256 context setup
   *
-@@ -75,6 +136,8 @@
+@@ -82,6 +150,11 @@
   */
  void sha2_finish( sha2_context *ctx, unsigned char output[32] );
  
++/* Internal use */
++void sha2_process( sha2_context *ctx, const unsigned char data[64] );
++
 +#endif
 +
  /**
   * \brief          Output = SHA-256( input buffer )
   *
-diff -uNr polarssl-1.1.6/include/polarssl/sha4.h polarssl.new/include/polarssl/sha4.h
---- polarssl-1.1.6/include/polarssl/sha4.h	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/include/polarssl/sha4.h	2013-03-13 22:21:58.000000000 -0600
-@@ -39,6 +39,40 @@
-   #define long64 long long
+@@ -160,9 +233,6 @@
+  */
+ int sha2_self_test( int verbose );
+ 
+-/* Internal use */
+-void sha2_process( sha2_context *ctx, const unsigned char data[64] );
+-
+ #ifdef __cplusplus
+ }
  #endif
+diff -uNr polarssl-1.2.7/include/polarssl/sha4.h polarssl.new/include/polarssl/sha4.h
+--- polarssl-1.2.7/include/polarssl/sha4.h	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/include/polarssl/sha4.h	2013-05-30 23:42:06.000000000 -0600
+@@ -39,6 +39,40 @@
+ 
+ #define POLARSSL_ERR_SHA4_FILE_IO_ERROR                -0x007A  /**< Read/write error in file. */
  
 +#ifdef POLARSSL_USE_OPENSSL_SHA4
 +
@@ -594,9 +480,9 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha4.h polarssl.new/include/polarssl/s
  /**
   * \brief          Output = SHA-512( input buffer )
   *
-diff -uNr polarssl-1.1.6/include/polarssl/sha_openssl.h polarssl.new/include/polarssl/sha_openssl.h
---- polarssl-1.1.6/include/polarssl/sha_openssl.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha_openssl.h	2013-03-13 22:21:58.000000000 -0600
+diff -uNr polarssl-1.2.7/include/polarssl/sha_openssl.h polarssl.new/include/polarssl/sha_openssl.h
+--- polarssl-1.2.7/include/polarssl/sha_openssl.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/sha_openssl.h	2013-05-30 23:42:06.000000000 -0600
 @@ -0,0 +1,38 @@
 +#ifndef POLARSSL_SHA_OPENSSL_H
 +#define POLARSSL_SHA_OPENSSL_H
@@ -636,35 +522,19 @@ diff -uNr polarssl-1.1.6/include/polarssl/sha_openssl.h polarssl.new/include/pol
 +#endif
 +
 +#endif
-diff -uNr polarssl-1.1.6/library/CMakeLists.txt polarssl.new/library/CMakeLists.txt
---- polarssl-1.1.6/library/CMakeLists.txt	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/CMakeLists.txt	2013-03-13 22:21:58.000000000 -0600
-@@ -51,6 +51,12 @@
- 
- endif(NOT USE_SHARED_POLARSSL_LIBRARY)
- 
-+if(OPENSSL_DIR)
-+target_link_libraries(polarssl minicrypto)
-+else()
-+target_link_libraries(polarssl)
-+endif()
-+
- install(TARGETS polarssl
-         DESTINATION ${LIB_INSTALL_DIR}
-         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-diff -uNr polarssl-1.1.6/library/aes.c polarssl.new/library/aes.c
---- polarssl-1.1.6/library/aes.c	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/aes.c	2013-03-13 22:21:58.000000000 -0600
-@@ -36,6 +36,8 @@
- #include "polarssl/aes.h"
+diff -uNr polarssl-1.2.7/library/aes.c polarssl.new/library/aes.c
+--- polarssl-1.2.7/library/aes.c	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/library/aes.c	2013-05-30 23:42:06.000000000 -0600
+@@ -38,6 +38,8 @@
  #include "polarssl/padlock.h"
+ #endif
  
 +#if !defined(POLARSSL_USE_OPENSSL_AES)
 +
  /*
   * 32-bit integer manipulation macros (little endian)
   */
-@@ -901,6 +903,7 @@
+@@ -914,6 +916,7 @@
      return( 0 );
  }
  #endif /* POLARSSL_CIPHER_MODE_CTR */
@@ -672,138 +542,9 @@ diff -uNr polarssl-1.1.6/library/aes.c polarssl.new/library/aes.c
  
  #if defined(POLARSSL_SELF_TEST)
  
-diff -uNr polarssl-1.1.6/library/cipher.c polarssl.new/library/cipher.c
---- polarssl-1.1.6/library/cipher.c	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/cipher.c	2013-03-13 22:21:58.000000000 -0600
-@@ -86,6 +86,10 @@
-         POLARSSL_CIPHER_DES_EDE3_CBC,
- #endif /* defined(POLARSSL_DES_C) */
- 
-+#if defined(POLARSSL_USE_OPENSSL_BF)
-+        POLARSSL_CIPHER_BF_128_CBC,
-+#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
-+
-         0
- };
- 
-@@ -164,6 +168,11 @@
-             return &des_ede3_cbc_info;
- #endif
- 
-+#if defined(POLARSSL_USE_OPENSSL_BF)
-+    case POLARSSL_CIPHER_BF_128_CBC:
-+      return &bf_128_cbc_info;
-+#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
-+
-         default:
-             return NULL;
-     }
-@@ -237,6 +246,11 @@
-     if( !strcasecmp( "DES-EDE3-CBC", cipher_name ) )
-         return cipher_info_from_type( POLARSSL_CIPHER_DES_EDE3_CBC );
- #endif
-+
-+#if defined(POLARSSL_USE_OPENSSL_BF)
-+    if( !strcasecmp( "BF-CBC", cipher_name ) )
-+      return cipher_info_from_type( POLARSSL_CIPHER_BF_128_CBC );
-+#endif /* defined(POLARSSL_USE_OPENSSL_BF) */
-     return NULL;
- }
- 
-diff -uNr polarssl-1.1.6/library/cipher_wrap.c polarssl.new/library/cipher_wrap.c
---- polarssl-1.1.6/library/cipher_wrap.c	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/cipher_wrap.c	2013-03-13 22:21:58.000000000 -0600
-@@ -549,4 +549,87 @@
- };
- #endif
- 
-+#ifdef POLARSSL_USE_OPENSSL_BF
-+
-+#include "polarssl/bf.h"
-+
-+int bf_crypt_cbc_wrap( void *ctx, operation_t operation, size_t length,
-+		       unsigned char *iv, const unsigned char *input, unsigned char *output )
-+{
-+  return bf_crypt_cbc( (bf_context *) ctx, operation, length, iv, input, output );
-+}
-+
-+int bf_crypt_cfb128_wrap( void *ctx, operation_t operation, size_t length,
-+			  size_t *iv_off, unsigned char *iv, const unsigned char *input,
-+			  unsigned char *output )
-+{
-+  ((void) ctx);
-+  ((void) operation);
-+  ((void) length);
-+  ((void) iv_off);
-+  ((void) iv);
-+  ((void) input);
-+  ((void) output);
-+
-+  return POLARSSL_ERR_CIPHER_FEATURE_UNAVAILABLE;
-+}
-+
-+int bf_crypt_ctr_wrap( void *ctx, size_t length,
-+        size_t *nc_off, unsigned char *nonce_counter, unsigned char *stream_block,
-+        const unsigned char *input, unsigned char *output )
-+{
-+  ((void) ctx);
-+  ((void) length);
-+  ((void) nc_off);
-+  ((void) nonce_counter);
-+  ((void) stream_block);
-+  ((void) input);
-+  ((void) output);
-+
-+  return POLARSSL_ERR_CIPHER_FEATURE_UNAVAILABLE;
-+}
-+
-+int bf_setkey_dec_wrap( void *ctx, const unsigned char *key, unsigned int key_length )
-+{
-+  return bf_setkey_dec( (bf_context *) ctx, key, key_length );
-+}
-+
-+int bf_setkey_enc_wrap( void *ctx, const unsigned char *key, unsigned int key_length )
-+{
-+  return bf_setkey_enc( (bf_context *) ctx, key, key_length );
-+}
-+
-+static void * bf_ctx_alloc( void )
-+{
-+  return malloc( sizeof( bf_context ) );
-+}
-+
-+static void bf_ctx_free( void *ctx )
-+{
-+  free( ctx );
-+}
-+
-+const cipher_base_t bf_info = {
-+  POLARSSL_CIPHER_ID_BF,
-+  bf_crypt_cbc_wrap,
-+  bf_crypt_cfb128_wrap,
-+  bf_crypt_ctr_wrap,
-+  bf_setkey_enc_wrap,
-+  bf_setkey_dec_wrap,
-+  bf_ctx_alloc,
-+  bf_ctx_free
-+};
-+
-+const cipher_info_t bf_128_cbc_info = {
-+  POLARSSL_CIPHER_BF_128_CBC,
-+  POLARSSL_MODE_CBC,
-+  128,
-+  "BF-CBC",
-+  8,
-+  8,
-+  &bf_info
-+};
-+
-+#endif
-+
- #endif
-diff -uNr polarssl-1.1.6/library/sha1.c polarssl.new/library/sha1.c
---- polarssl-1.1.6/library/sha1.c	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/sha1.c	2013-03-13 22:21:58.000000000 -0600
+diff -uNr polarssl-1.2.7/library/sha1.c polarssl.new/library/sha1.c
+--- polarssl-1.2.7/library/sha1.c	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/library/sha1.c	2013-05-30 23:42:06.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
@@ -814,7 +555,7 @@ diff -uNr polarssl-1.1.6/library/sha1.c polarssl.new/library/sha1.c
   * 32-bit integer manipulation macros (big endian)
   */
 @@ -313,6 +315,8 @@
-     PUT_ULONG_BE( ctx->state[4], output, 16 );
+     PUT_UINT32_BE( ctx->state[4], output, 16 );
  }
  
 +#endif /* !POLARSSL_USE_OPENSSL_SHA1 */
@@ -822,9 +563,9 @@ diff -uNr polarssl-1.1.6/library/sha1.c polarssl.new/library/sha1.c
  /*
   * output = SHA-1( input buffer )
   */
-diff -uNr polarssl-1.1.6/library/sha2.c polarssl.new/library/sha2.c
---- polarssl-1.1.6/library/sha2.c	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/sha2.c	2013-03-13 22:21:58.000000000 -0600
+diff -uNr polarssl-1.2.7/library/sha2.c polarssl.new/library/sha2.c
+--- polarssl-1.2.7/library/sha2.c	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/library/sha2.c	2013-05-30 23:42:06.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
@@ -835,7 +576,7 @@ diff -uNr polarssl-1.1.6/library/sha2.c polarssl.new/library/sha2.c
   * 32-bit integer manipulation macros (big endian)
   */
 @@ -314,6 +316,8 @@
-         PUT_ULONG_BE( ctx->state[7], output, 28 );
+         PUT_UINT32_BE( ctx->state[7], output, 28 );
  }
  
 +#endif /* !POLARSSL_USE_OPENSSL_SHA2 */
@@ -843,9 +584,9 @@ diff -uNr polarssl-1.1.6/library/sha2.c polarssl.new/library/sha2.c
  /*
   * output = SHA-256( input buffer )
   */
-diff -uNr polarssl-1.1.6/library/sha4.c polarssl.new/library/sha4.c
---- polarssl-1.1.6/library/sha4.c	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/sha4.c	2013-03-13 22:21:58.000000000 -0600
+diff -uNr polarssl-1.2.7/library/sha4.c polarssl.new/library/sha4.c
+--- polarssl-1.2.7/library/sha4.c	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/library/sha4.c	2013-05-30 23:42:06.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
@@ -864,44 +605,65 @@ diff -uNr polarssl-1.1.6/library/sha4.c polarssl.new/library/sha4.c
  /*
   * output = SHA-512( input buffer )
   */
-diff -uNr polarssl-1.1.6/library/ssl_tls.c polarssl.new/library/ssl_tls.c
---- polarssl-1.1.6/library/ssl_tls.c	2013-03-13 23:33:17.000000000 -0600
-+++ polarssl.new/library/ssl_tls.c	2013-03-13 22:43:06.000000000 -0600
-@@ -1595,8 +1595,10 @@
+diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
+--- polarssl-1.2.7/library/ssl_tls.c	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/library/ssl_tls.c	2013-05-30 23:42:06.000000000 -0600
+@@ -2550,8 +2550,10 @@
      SSL_DEBUG_BUF( 4, "finished  md5 state", (unsigned char *)
-                     md5->state, sizeof(  md5->state ) );
+                     md5.state, sizeof(  md5.state ) );
  
 +#ifndef POLARSSL_USE_OPENSSL_SHA1
      SSL_DEBUG_BUF( 4, "finished sha1 state", (unsigned char *)
-                    sha1->state, sizeof( sha1->state ) );
+                    sha1.state, sizeof( sha1.state ) );
 +#endif
  
-     if( ssl->minor_ver == SSL_MINOR_VERSION_0 )
-     {
-diff -uNr polarssl-1.1.6/library/ssl_tls.c.orig polarssl.new/library/ssl_tls.c.orig
---- polarssl-1.1.6/library/ssl_tls.c.orig	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/library/ssl_tls.c.orig	2013-03-13 22:21:58.000000000 -0600
-@@ -1911,7 +1911,7 @@
-     ssl->session    = session;
- }
+     sender = ( from == SSL_IS_CLIENT ) ? (char *) "CLNT"
+                                        : (char *) "SRVR";
+@@ -2621,8 +2623,10 @@
+     SSL_DEBUG_BUF( 4, "finished  md5 state", (unsigned char *)
+                     md5.state, sizeof(  md5.state ) );
  
--void ssl_set_ciphersuites( ssl_context *ssl, int *ciphersuites )
-+void ssl_set_ciphersuites( ssl_context *ssl, const int *ciphersuites )
- {
-     ssl->ciphersuites    = ciphersuites;
- }
-diff -uNr polarssl-1.1.6/tests/suites/test_suite_aes.function polarssl.new/tests/suites/test_suite_aes.function
---- polarssl-1.1.6/tests/suites/test_suite_aes.function	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/tests/suites/test_suite_aes.function	2013-03-13 22:21:58.000000000 -0600
++#ifndef POLARSSL_USE_OPENSSL_SHA1
+     SSL_DEBUG_BUF( 4, "finished sha1 state", (unsigned char *)
+                    sha1.state, sizeof( sha1.state ) );
++#endif
+ 
+     sender = ( from == SSL_IS_CLIENT )
+              ? (char *) "client finished"
+@@ -2666,8 +2670,10 @@
+      *               Hash( handshake ) )[0.11]
+      */
+ 
++#ifndef POLARSSL_USE_OPENSSL_SHA2
+     SSL_DEBUG_BUF( 4, "finished sha2 state", (unsigned char *)
+                    sha2.state, sizeof( sha2.state ) );
++#endif
+ 
+     sender = ( from == SSL_IS_CLIENT )
+              ? (char *) "client finished"
+@@ -2710,8 +2716,10 @@
+      *               Hash( handshake ) )[0.11]
+      */
+ 
++#ifndef POLARSSL_USE_OPENSSL_SHA4
+     SSL_DEBUG_BUF( 4, "finished sha4 state", (unsigned char *)
+                    sha4.state, sizeof( sha4.state ) );
++#endif
+ 
+     sender = ( from == SSL_IS_CLIENT )
+              ? (char *) "client finished"
+diff -uNr polarssl-1.2.7/tests/suites/test_suite_aes.function polarssl.new/tests/suites/test_suite_aes.function
+--- polarssl-1.2.7/tests/suites/test_suite_aes.function	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/tests/suites/test_suite_aes.function	2013-05-30 23:42:06.000000000 -0600
 @@ -1,4 +1,5 @@
  BEGIN_HEADER
 +#include <polarssl/config.h>
  #include <polarssl/aes.h>
  END_HEADER
  
-diff -uNr polarssl-1.1.6/tests/suites/test_suite_ctr_drbg.function polarssl.new/tests/suites/test_suite_ctr_drbg.function
---- polarssl-1.1.6/tests/suites/test_suite_ctr_drbg.function	2013-03-11 10:02:58.000000000 -0600
-+++ polarssl.new/tests/suites/test_suite_ctr_drbg.function	2013-03-13 22:21:58.000000000 -0600
+diff -uNr polarssl-1.2.7/tests/suites/test_suite_ctr_drbg.function polarssl.new/tests/suites/test_suite_ctr_drbg.function
+--- polarssl-1.2.7/tests/suites/test_suite_ctr_drbg.function	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/tests/suites/test_suite_ctr_drbg.function	2013-05-30 23:42:06.000000000 -0600
 @@ -1,4 +1,5 @@
  BEGIN_HEADER
 +#include <polarssl/config.h>

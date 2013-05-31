@@ -16,6 +16,7 @@
 #include <polarssl/cipher.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, to_upper_copy
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -37,15 +38,16 @@ namespace openvpn {
 
       Cipher(const std::string& name)
       {
-	cipher_ = cipher_info_from_string(name.c_str());
+	const std::string translated_name = openvpn_to_cipher_name(name.c_str());
+	cipher_ = cipher_info_from_string(translated_name.c_str());
 	if (!cipher_)
-	  throw polarssl_cipher_not_found(name);
+	  throw polarssl_cipher_not_found(translated_name);
       }
 
-      const char *name() const
+      std::string name() const
       {
 	check_initialized();
-	return cipher_->name;
+	return cipher_name_to_openvpn(cipher_->name);
       }
 
       size_t key_length() const
@@ -87,6 +89,23 @@ namespace openvpn {
 	if (!cipher_)
 	  throw polarssl_cipher_undefined();
 #endif
+      }
+
+      static std::string openvpn_to_cipher_name(const std::string& name)
+      {
+	const std::string n = boost::algorithm::to_upper_copy(name);
+	if (boost::algorithm::starts_with(n, "BF-"))
+	  return "BLOWFISH-" + n.substr(3);
+	else
+	  return n;
+      }
+
+      static std::string cipher_name_to_openvpn(const std::string& name)
+      {
+	if (boost::algorithm::starts_with(name, "BLOWFISH-"))
+	  return "BF-" + name.substr(9);
+	else
+	  return name;
       }
 
       const cipher_info_t *cipher_;

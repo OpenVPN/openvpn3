@@ -1,16 +1,34 @@
-# cmake -DENABLE_TESTING=1 -DMINICRYPTO_DIR=$MINICRYPTO_DIR -DOPENSSL_AES_NI=1 ../polarssl-1.1.1 && make
-
 cmake_minimum_required(VERSION 2.6)
 project(POLARSSL C)
 
-if(CMAKE_COMPILER_IS_GNUCC)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} $ENV{LIB_FPIC} $ENV{LIB_OPT_LEVEL} $ENV{PLATFORM_FLAGS} $ENV{OTHER_COMPILER_FLAGS} -Wall -W -Wdeclaration-after-statement")
-endif(CMAKE_COMPILER_IS_GNUCC)
+enable_testing()
 
+if(CMAKE_COMPILER_IS_GNUCC)
+  # JY Added
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} $ENV{LIB_FPIC} $ENV{LIB_OPT_LEVEL} $ENV{PLATFORM_FLAGS} $ENV{OTHER_COMPILER_FLAGS} -Wall -W -Wdeclaration-after-statement")
+
+  # JY Commented out
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -Wall -Wextra -W -Wdeclaration-after-statement")
+  #set(CMAKE_C_FLAGS_DEBUG "-g3 -O0")
+  #set(CMAKE_C_FLAGS_COVERAGE "-g3 -O0 -fprofile-arcs -ftest-coverage -lgcov")
+endif(CMAKE_COMPILER_IS_GNUCC)
+ 
+if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+  if(CMAKE_COMPILER_IS_GNUCC)
+    set(CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
+  endif(CMAKE_COMPILER_IS_GNUCC)
+endif(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+
+option(USE_PKCS11_HELPER_LIBRARY "Build PolarSSL with the pkcs11-helper library." OFF)
+
+option(ENABLE_ZLIB_SUPPORT "Build PolarSSL with zlib library." OFF)
+
+# JY added
 if(ENABLE_SERVER)
   add_definitions(-DPOLARSSL_SSL_SRV_C)
 endif()
 
+# JY added
 if(MINICRYPTO)
   if(MINICRYPTO_DIR)
     add_library(minicrypto STATIC IMPORTED)
@@ -24,27 +42,27 @@ if(MINICRYPTO)
   add_definitions(-DPOLARSSL_USE_OPENSSL_SHA1)
   add_definitions(-DPOLARSSL_USE_OPENSSL_SHA2)
   add_definitions(-DPOLARSSL_USE_OPENSSL_SHA4)
-  add_definitions(-DPOLARSSL_USE_OPENSSL_BF)
   if(OPENSSL_AES_NI)
     add_definitions(-DPOLARSSL_USE_OPENSSL_AES_NI)
   endif()
 endif()
 
+# JY added
 if(EXTERNAL_RNG)
   add_definitions(-DEXTERNAL_RNG)
 endif()
 
-# include self-test functions only (for cross development)
+# include self-test functions only (for cross development) (JY added)
 if(ENABLE_SELF_TEST)
   add_definitions(-DPOLARSSL_SELF_TEST)	
 endif()
  
-# include full testing infrastructure
+# include full testing infrastructure (JY added)
 if(ENABLE_TESTING)
   add_definitions(-DENABLE_TESTING)
   enable_testing()
 endif()
- 
+
 if(LIB_INSTALL_DIR)
 else()
 set(LIB_INSTALL_DIR lib)
@@ -52,13 +70,25 @@ endif()
 
 include_directories(include/)
 
+if(ENABLE_ZLIB_SUPPORT)
+  find_package(ZLIB)
+
+  if(ZLIB_FOUND)
+    include_directories(ZLIB_INCLUDE_DIR)
+  endif(ZLIB_FOUND)
+endif(ENABLE_ZLIB_SUPPORT)
+
 add_subdirectory(library)
 add_subdirectory(include)
 
-# include full testing infrastructure
+# include full testing infrastructure (JY modified)
 if(ENABLE_TESTING)
   if(CMAKE_COMPILER_IS_GNUCC)
     add_subdirectory(tests)
   endif(CMAKE_COMPILER_IS_GNUCC)
   add_subdirectory(programs)
 endif()
+
+ADD_CUSTOM_TARGET(apidoc
+                  COMMAND doxygen doxygen/polarssl.doxyfile
+                  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

@@ -43,7 +43,7 @@ namespace openvpn {
 	  throw polarssl_digest_not_found(name);
       }
 
-      const char *name() const
+      std::string name() const
       {
 	check_initialized();
 	return md_get_name(digest_);

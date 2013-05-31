@@ -48,7 +48,7 @@ namespace openvpn {
 	  throw openssl_digest_not_found(name);
       }
 
-      const char *name() const
+      std::string name() const
       {
 	check_initialized();
 	return EVP_MD_name(digest_);

@@ -5,7 +5,7 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-// Wrap the PolarSSL SSL API as defined in <polarssl/ssl.h>
+// Wrap the PolarSSL 1.2 SSL API as defined in <polarssl/ssl.h>
 // so that it can be used as the SSL layer by the OpenVPN core.
 
 #ifndef OPENVPN_POLARSSL_SSL_SSLCTX_H
@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 #include <cstring>
 
 #include <polarssl/ssl.h>
@@ -45,15 +46,6 @@
 // PolarSSL library as a backend.
 
 namespace openvpn {
-
-  namespace polarssl_ctx_private {
-    static const int default_ciphersuites[] = // CONST GLOBAL
-      {
-	SSL_EDH_RSA_AES_256_SHA,
-	SSL_EDH_RSA_AES_128_SHA,
-	0
-      };
-  };
 
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
@@ -332,10 +324,7 @@ namespace openvpn {
 	  // allocate session object, but don't support SSL-level session resume
 	  sess = new ssl_session;
 	  std::memset(sess, 0, sizeof(*sess));
-	  ssl_set_session(ssl, 0, 0, sess);
-
-	  // set list of allowed ciphersuites
-	  ssl_set_ciphersuites(ssl, polarssl_ctx_private::default_ciphersuites);
+	  ssl_set_session(ssl, sess);
 
 	  // set CA chain
 	  if (c.ca_chain)
@@ -350,7 +339,7 @@ namespace openvpn {
 		{
 		  // set our own certificate, supporting chain (i.e. extra-certs), and external private key
 		  if (c.crt_chain)
-		    ssl_set_own_cert_pkcs11(ssl, c.crt_chain->get(), &ctx->p11);
+		    ssl_set_own_cert_alt(ssl, c.crt_chain->get(), ctx, epki_decrypt, epki_sign, epki_key_len);
 		  else
 		    throw PolarSSLException("cert is undefined");
 		}
@@ -478,12 +467,6 @@ namespace openvpn {
 	  // Verify that cert is defined
 	  if (!config.crt_chain)
 	    throw PolarSSLException("cert is undefined");
-
-	  // PKCS11 setup (always done, even if non-external-pki)
-	  p11.parameter = this;
-	  p11.f_decrypt = epki_decrypt;
-	  p11.f_sign = epki_sign;
-	  p11.len = config.crt_chain->get()->rsa.len;
 	}
     }
 
@@ -497,6 +480,11 @@ namespace openvpn {
     }
 
   private:
+    size_t key_len() const
+    {
+      return config.crt_chain->get()->rsa.len;
+    }
+
     // ns-cert-type verification
 
     bool ns_cert_type_defined() const
@@ -639,14 +627,45 @@ namespace openvpn {
 	return std::string("");
     }
 
-    static int verify_callback(void *arg, x509_cert *cert, int depth, int preverify_ok)
+    static std::string fmt_polarssl_verify_flags(const int flags)
+    {
+      std::ostringstream os;
+      if (flags & BADCERT_EXPIRED)
+	os << "CERT_EXPIRED ";
+      if (flags & BADCERT_REVOKED)
+	os << "CERT_REVOKED ";
+      if (flags & BADCERT_CN_MISMATCH)
+	os << "CN_MISMATCH ";
+      if (flags & BADCERT_NOT_TRUSTED)
+	os << "CERT_NOT_TRUSTED ";
+      if (flags & BADCRL_NOT_TRUSTED)
+	os << "CRL_NOT_TRUSTED ";
+      if (flags & BADCRL_EXPIRED)
+	os << "CRL_EXPIRED ";
+      if (flags & BADCERT_MISSING)
+	os << "CERT_MISSING ";
+      if (flags & BADCERT_SKIP_VERIFY)
+	os << "CERT_SKIP_VERIFY ";
+      if (flags & BADCERT_OTHER)
+	os << "CERT_OTHER ";
+      return os.str();
+    }
+
+    static int verify_callback(void *arg, x509_cert *cert, int depth, int *flags)
     {
       PolarSSLContext *self = (PolarSSLContext *)arg;
+      bool fail = false;
 
-      OPENVPN_LOG_SSL("VERIFY "
-		      << (preverify_ok ? "OK" : "FAIL")
-		      << ": depth=" << depth
-		      << std::endl << cert_info(cert));
+      // log status
+      {
+	std::string status_str = "OK";
+	if (*flags)
+	  status_str = "FAIL " + fmt_polarssl_verify_flags(*flags);
+	OPENVPN_LOG_SSL("VERIFY "
+			<< status_str
+			<< ": depth=" << depth
+			<< std::endl << cert_info(cert));
+      }
 
       // leaf-cert verification
       if (depth == 0)
@@ -655,21 +674,21 @@ namespace openvpn {
 	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(cert))
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
-	      preverify_ok = false;
+	      fail = true;
 	    }
 
 	  // verify X509 key usage
 	  if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(cert))
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
-	      preverify_ok = false;
+	      fail = true;
 	    }
 
 	  // verify X509 extended key usage
 	  if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(cert))
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
-	      preverify_ok = false;
+	      fail = true;
 	    }
 
 	  // verify tls-remote
@@ -681,12 +700,14 @@ namespace openvpn {
 	      if (!TLSRemote::test(self->config.tls_remote, subject, common_name))
 		{
 		  OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
-		  preverify_ok = false;
+		  fail = true;
 		}
 	    }
 	}
 
-      return preverify_ok ? 0 : POLARSSL_ERR_SSL_PEER_VERIFY_FAILED;
+      if (fail)
+	*flags |= BADCERT_OTHER;
+      return 0;
     }
 
     static std::string cert_info(const x509_cert *cert, const char *prefix = NULL)
@@ -703,26 +724,28 @@ namespace openvpn {
     {
     }
 
-    static int epki_decrypt(pkcs11_context *ctx,
+    static int epki_decrypt(void *arg,
 			    int mode,
 			    size_t *olen,
 			    const unsigned char *input,
 			    unsigned char *output,
-			    unsigned int output_max_len)
+			    size_t output_max_len)
     {
       OPENVPN_LOG_SSL("PolarSSLContext::epki_decrypt is unimplemented, mode=" << mode
 		      << " output_max_len=" << output_max_len);
       return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
     }
 
-    static int epki_sign(pkcs11_context *ctx,
+    static int epki_sign(void *arg,
+			 int (*f_rng)(void *, unsigned char *, size_t),
+			 void *p_rng,
 			 int mode,
 			 int hash_id,
 			 unsigned int hashlen,
 			 const unsigned char *hash,
 			 unsigned char *sig)
     {
-      PolarSSLContext *self = (PolarSSLContext *) ctx->parameter;
+      PolarSSLContext *self = (PolarSSLContext *) arg;
       try {
 	if (mode == RSA_PRIVATE && hash_id == SIG_RSA_RAW)
 	  {
@@ -737,7 +760,7 @@ namespace openvpn {
 	      throw polarssl_external_pki("could not obtain signature");
 
 	    /* decode base64 signature to binary */
-	    const int len = ctx->len;
+	    const size_t len = self->key_len();
 	    Buffer sigbuf(sig, len, false);
 	    base64->decode(sigbuf, sig_b64);
 
@@ -762,8 +785,13 @@ namespace openvpn {
 	}
     }
 
+    static size_t epki_key_len(void *arg)
+    {
+      PolarSSLContext *self = (PolarSSLContext *) arg;
+      return self->key_len();
+    }
+
     Config config;
-    pkcs11_context p11;
   };
 
 } // namespace openvpn

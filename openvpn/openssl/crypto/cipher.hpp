@@ -44,7 +44,7 @@ namespace openvpn {
 	  throw openssl_cipher_not_found(name);
       }
 
-      const char *name() const
+      std::string name() const
       {
 	check_initialized();
 	return EVP_CIPHER_name (cipher_);
