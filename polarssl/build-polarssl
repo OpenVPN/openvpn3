@@ -56,15 +56,9 @@ else
     # delete makefiles (apparently not needed)
     rm $(find . -type f | grep Makefile)
 
-    # patch it
-    #echo PATCH X.patch
-    #patch -p1 <$PD/X.patch 
-
     # do the big polar-openssl patch
-    if [ "$USE_MINICRYPTO" = "1" ]; then
-	echo MERGING polar-openssl.patch
-	patch -p1 <$PD/polar-openssl.patch
-    fi
+    echo MERGING polar-openssl.patch
+    patch -p1 <$PD/polar-openssl.patch
 
     # define configs
     cp $PD/config.h include/polarssl/

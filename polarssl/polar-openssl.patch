@@ -1,43 +1,45 @@
 diff -uNr polarssl-1.2.7/include/polarssl/aes.h polarssl.new/include/polarssl/aes.h
 --- polarssl-1.2.7/include/polarssl/aes.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/aes.h	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/include/polarssl/aes.h	2013-05-31 10:34:58.000000000 -0600
 @@ -42,6 +42,12 @@
  #define POLARSSL_ERR_AES_INVALID_KEY_LENGTH                -0x0020  /**< Invalid key length. */
  #define POLARSSL_ERR_AES_INVALID_INPUT_LENGTH              -0x0022  /**< Invalid data input length. */
  
-+#ifdef POLARSSL_USE_OPENSSL_AES
++#ifdef POLARSSL_AES_ALT
 +
-+#include "polarssl/aes_openssl.h"
++#include "polarssl/aes_alt.h"
 +
 +#else
 +
  /**
   * \brief          AES context structure
   */
-@@ -169,6 +175,9 @@
+@@ -169,6 +175,17 @@
                         unsigned char stream_block[16],
                         const unsigned char *input,
                         unsigned char *output );
 +
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* POLARSSL_AES_ALT */
++
++#ifdef __cplusplus
++extern "C" {
 +#endif
 +
  /**
   * \brief          Checkup routine
   *
-@@ -179,5 +188,4 @@
- #ifdef __cplusplus
- }
- #endif
--
- #endif /* aes.h */
-diff -uNr polarssl-1.2.7/include/polarssl/aes_openssl.h polarssl.new/include/polarssl/aes_openssl.h
---- polarssl-1.2.7/include/polarssl/aes_openssl.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/aes_openssl.h	2013-05-30 23:42:06.000000000 -0600
+diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarssl/aes_alt.h
+--- polarssl-1.2.7/include/polarssl/aes_alt.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/aes_alt.h	2013-05-31 10:29:50.000000000 -0600
 @@ -0,0 +1,145 @@
 +/*
 + * Use OpenSSL implementation of AES methods to get asm and hardware acceleration.
 + * Don't include this file directly, it is included by aes.h when
-+ * POLARSSL_USE_OPENSSL_AES is defined.
++ * POLARSSL_AES_ALT is defined.
 + */
 +
 +#ifdef _MSC_VER
@@ -181,14 +183,61 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_openssl.h polarssl.new/include/pol
 +#endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha1.h polarssl.new/include/polarssl/sha1.h
 --- polarssl-1.2.7/include/polarssl/sha1.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/sha1.h	2013-05-30 23:42:06.000000000 -0600
-@@ -38,6 +38,33 @@
++++ polarssl.new/include/polarssl/sha1.h	2013-05-31 10:51:03.000000000 -0600
+@@ -38,6 +38,12 @@
  
  #define POLARSSL_ERR_SHA1_FILE_IO_ERROR                -0x0076  /**< Read/write error in file. */
  
-+#ifdef POLARSSL_USE_OPENSSL_SHA1
++#ifdef POLARSSL_SHA1_ALT
 +
-+#include "sha_openssl.h"
++#include "polarssl/sha1_alt.h"
++
++#else
++
+ /**
+  * \brief          SHA-1 context structure
+  */
+@@ -80,6 +86,19 @@
+  */
+ void sha1_finish( sha1_context *ctx, unsigned char output[20] );
+ 
++/* Internal use */
++void sha1_process( sha1_context *ctx, const unsigned char data[64] );
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* POLARSSL_SHA1_ALT */
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ /**
+  * \brief          Output = SHA-1( input buffer )
+  *
+@@ -152,9 +171,6 @@
+  */
+ int sha1_self_test( int verbose );
+ 
+-/* Internal use */
+-void sha1_process( sha1_context *ctx, const unsigned char data[64] );
+-
+ #ifdef __cplusplus
+ }
+ #endif
+diff -uNr polarssl-1.2.7/include/polarssl/sha1_alt.h polarssl.new/include/polarssl/sha1_alt.h
+--- polarssl-1.2.7/include/polarssl/sha1_alt.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/sha1_alt.h	2013-05-31 11:03:45.000000000 -0600
+@@ -0,0 +1,56 @@
++/*
++ * Use OpenSSL implementation of SHA1 methods to get asm and hardware acceleration.
++ * Don't include this file directly, it is included by sha1.h when
++ * POLARSSL_SHA1_ALT is defined.
++ */
++
++#include "polarssl/sha_openssl.h"
 +
 +struct openssl_sha_context {
 +  SHA_LONG h0,h1,h2,h3,h4;
@@ -206,27 +255,14 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha1.h polarssl.new/include/polarssl/s
 +}
 +sha1_context;
 +
++#ifdef __cplusplus
++extern "C" {
++#endif
++
 +int SHA1_Init(struct openssl_sha_context *c);
 +int SHA1_Update(struct openssl_sha_context *c, const void *data, size_t len);
 +int SHA1_Final(unsigned char *md, struct openssl_sha_context *c);
 +void sha1_block_data_order(struct openssl_sha_context *c, const void *p, size_t num);
-+
-+#else
-+
- /**
-  * \brief          SHA-1 context structure
-  */
-@@ -52,10 +79,36 @@
- }
- sha1_context;
- 
-+#endif
-+
- #ifdef __cplusplus
- extern "C" {
- #endif
- 
-+#ifdef POLARSSL_USE_OPENSSL_SHA1
 +
 +static inline void sha1_starts( sha1_context *ctx )
 +{
@@ -248,43 +284,66 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha1.h polarssl.new/include/polarssl/s
 +  sha1_block_data_order(&ctx->octx, data, 1);
 +}
 +
++#ifdef __cplusplus
++}
++#endif
+diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/sha2.h
+--- polarssl-1.2.7/include/polarssl/sha2.h	2013-04-13 03:56:17.000000000 -0600
++++ polarssl.new/include/polarssl/sha2.h	2013-05-31 11:03:31.000000000 -0600
+@@ -38,6 +38,12 @@
+ 
+ #define POLARSSL_ERR_SHA2_FILE_IO_ERROR                -0x0078  /**< Read/write error in file. */
+ 
++#ifdef POLARSSL_SHA2_ALT
++
++#include "polarssl/sha2_alt.h"
++
 +#else
 +
  /**
-  * \brief          SHA-1 context setup
-  *
-@@ -80,6 +133,11 @@
+  * \brief          SHA-256 context structure
   */
- void sha1_finish( sha1_context *ctx, unsigned char output[20] );
+@@ -82,6 +88,19 @@
+  */
+ void sha2_finish( sha2_context *ctx, unsigned char output[32] );
  
 +/* Internal use */
-+void sha1_process( sha1_context *ctx, const unsigned char data[64] );
++void sha2_process( sha2_context *ctx, const unsigned char data[64] );
 +
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* POLARSSL_SHA2_ALT */
++
++#ifdef __cplusplus
++extern "C" {
 +#endif
 +
  /**
-  * \brief          Output = SHA-1( input buffer )
+  * \brief          Output = SHA-256( input buffer )
   *
-@@ -152,9 +210,6 @@
+@@ -160,9 +179,6 @@
   */
- int sha1_self_test( int verbose );
+ int sha2_self_test( int verbose );
  
 -/* Internal use */
--void sha1_process( sha1_context *ctx, const unsigned char data[64] );
+-void sha2_process( sha2_context *ctx, const unsigned char data[64] );
 -
  #ifdef __cplusplus
  }
  #endif
-diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/sha2.h
---- polarssl-1.2.7/include/polarssl/sha2.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/sha2.h	2013-05-31 00:01:17.000000000 -0600
-@@ -38,6 +38,39 @@
- 
- #define POLARSSL_ERR_SHA2_FILE_IO_ERROR                -0x0078  /**< Read/write error in file. */
- 
-+#ifdef POLARSSL_USE_OPENSSL_SHA2
+diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polarssl/sha2_alt.h
+--- polarssl-1.2.7/include/polarssl/sha2_alt.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/sha2_alt.h	2013-05-31 11:03:30.000000000 -0600
+@@ -0,0 +1,71 @@
++/*
++ * Use OpenSSL implementation of SHA2 methods to get asm and hardware acceleration.
++ * Don't include this file directly, it is included by sha2.h when
++ * POLARSSL_SHA2_ALT is defined.
++ */
 +
-+#include "sha_openssl.h"
++#include "polarssl/sha_openssl.h"
 +
 +struct openssl_sha2_context {
 +  SHA_LONG h[8];
@@ -303,6 +362,10 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/s
 +}
 +sha2_context;
 +
++#ifdef __cplusplus
++extern "C" {
++#endif
++
 +int SHA224_Init(struct openssl_sha2_context *c);
 +int SHA224_Update(struct openssl_sha2_context *c, const void *data, size_t len);
 +int SHA224_Final(unsigned char *md, struct openssl_sha2_context *c);
@@ -312,23 +375,6 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/s
 +int SHA256_Final(unsigned char *md, struct openssl_sha2_context *c);
 +
 +void sha256_block_data_order(struct openssl_sha2_context *c, const void *p, size_t num);
-+
-+#else
-+
- /**
-  * \brief          SHA-256 context structure
-  */
-@@ -53,10 +86,45 @@
- }
- sha2_context;
- 
-+#endif
-+
- #ifdef __cplusplus
- extern "C" {
- #endif
- 
-+#ifdef POLARSSL_USE_OPENSSL_SHA2
 +
 +static inline void sha2_starts( sha2_context *ctx, int is224 )
 +{
@@ -359,43 +405,53 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/s
 +  sha256_block_data_order(&ctx->octx, data, 1);
 +}
 +
-+#else
-+
- /**
-  * \brief          SHA-256 context setup
-  *
-@@ -82,6 +150,11 @@
-  */
- void sha2_finish( sha2_context *ctx, unsigned char output[32] );
- 
-+/* Internal use */
-+void sha2_process( sha2_context *ctx, const unsigned char data[64] );
-+
++#ifdef __cplusplus
++}
 +#endif
-+
- /**
-  * \brief          Output = SHA-256( input buffer )
-  *
-@@ -160,9 +233,6 @@
-  */
- int sha2_self_test( int verbose );
- 
--/* Internal use */
--void sha2_process( sha2_context *ctx, const unsigned char data[64] );
--
- #ifdef __cplusplus
- }
- #endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha4.h polarssl.new/include/polarssl/sha4.h
 --- polarssl-1.2.7/include/polarssl/sha4.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/sha4.h	2013-05-30 23:42:06.000000000 -0600
-@@ -39,6 +39,40 @@
++++ polarssl.new/include/polarssl/sha4.h	2013-05-31 11:08:15.000000000 -0600
+@@ -39,6 +39,12 @@
  
  #define POLARSSL_ERR_SHA4_FILE_IO_ERROR                -0x007A  /**< Read/write error in file. */
  
-+#ifdef POLARSSL_USE_OPENSSL_SHA4
++#ifdef POLARSSL_SHA4_ALT
 +
-+#include "sha_openssl.h"
++#include "polarssl/sha4_alt.h"
++
++#else
++
+ /**
+  * \brief          SHA-512 context structure
+  */
+@@ -83,6 +89,16 @@
+  */
+ void sha4_finish( sha4_context *ctx, unsigned char output[64] );
+ 
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* POLARSSL_SHA4_ALT */
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ /**
+  * \brief          Output = SHA-512( input buffer )
+  *
+diff -uNr polarssl-1.2.7/include/polarssl/sha4_alt.h polarssl.new/include/polarssl/sha4_alt.h
+--- polarssl-1.2.7/include/polarssl/sha4_alt.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/sha4_alt.h	2013-05-31 11:08:15.000000000 -0600
+@@ -0,0 +1,67 @@
++/*
++ * Use OpenSSL implementation of SHA4 methods to get asm and hardware acceleration.
++ * Don't include this file directly, it is included by sha4.h when
++ * POLARSSL_SHA4_ALT is defined.
++ */
++
++#include "polarssl/sha_openssl.h"
 +
 +struct openssl_sha4_context {
 +  SHA_LONG64 h[8];
@@ -417,6 +473,10 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4.h polarssl.new/include/polarssl/s
 +}
 +sha4_context;
 +
++#ifdef __cplusplus
++extern "C" {
++#endif
++
 +int SHA384_Init(struct openssl_sha4_context *c);
 +int SHA384_Update(struct openssl_sha4_context *c, const void *data, size_t len);
 +int SHA384_Final(unsigned char *md, struct openssl_sha4_context *c);
@@ -424,23 +484,6 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4.h polarssl.new/include/polarssl/s
 +int SHA512_Init(struct openssl_sha4_context *c);
 +int SHA512_Update(struct openssl_sha4_context *c, const void *data, size_t len);
 +int SHA512_Final(unsigned char *md, struct openssl_sha4_context *c);
-+
-+#else
-+
- /**
-  * \brief          SHA-512 context structure
-  */
-@@ -54,10 +88,40 @@
- }
- sha4_context;
- 
-+#endif
-+
- #ifdef __cplusplus
- extern "C" {
- #endif
- 
-+#ifdef POLARSSL_USE_OPENSSL_SHA4
 +
 +static inline void sha4_starts( sha4_context *ctx, int is384 )
 +{
@@ -466,24 +509,17 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4.h polarssl.new/include/polarssl/s
 +    SHA512_Final(output, &ctx->octx);
 +}
 +
-+#else
-+
- /**
-  * \brief          SHA-512 context setup
-  *
-@@ -83,6 +147,8 @@
-  */
- void sha4_finish( sha4_context *ctx, unsigned char output[64] );
- 
++#ifdef __cplusplus
++}
 +#endif
-+
- /**
-  * \brief          Output = SHA-512( input buffer )
-  *
 diff -uNr polarssl-1.2.7/include/polarssl/sha_openssl.h polarssl.new/include/polarssl/sha_openssl.h
 --- polarssl-1.2.7/include/polarssl/sha_openssl.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha_openssl.h	2013-05-30 23:42:06.000000000 -0600
-@@ -0,0 +1,38 @@
++++ polarssl.new/include/polarssl/sha_openssl.h	2013-05-31 10:30:35.000000000 -0600
+@@ -0,0 +1,42 @@
++/*
++ * Common header file for all OpenSSL-imported SHA methods
++ */
++
 +#ifndef POLARSSL_SHA_OPENSSL_H
 +#define POLARSSL_SHA_OPENSSL_H
 +
@@ -524,12 +560,12 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha_openssl.h polarssl.new/include/pol
 +#endif
 diff -uNr polarssl-1.2.7/library/aes.c polarssl.new/library/aes.c
 --- polarssl-1.2.7/library/aes.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/aes.c	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/library/aes.c	2013-05-31 11:27:45.000000000 -0600
 @@ -38,6 +38,8 @@
  #include "polarssl/padlock.h"
  #endif
  
-+#if !defined(POLARSSL_USE_OPENSSL_AES)
++#ifndef POLARSSL_AES_ALT
 +
  /*
   * 32-bit integer manipulation macros (little endian)
@@ -538,18 +574,18 @@ diff -uNr polarssl-1.2.7/library/aes.c polarssl.new/library/aes.c
      return( 0 );
  }
  #endif /* POLARSSL_CIPHER_MODE_CTR */
-+#endif /* !defined(POLARSSL_USE_OPENSSL_AES) */
++#endif /* !POLARSSL_AES_ALT */
  
  #if defined(POLARSSL_SELF_TEST)
  
 diff -uNr polarssl-1.2.7/library/sha1.c polarssl.new/library/sha1.c
 --- polarssl-1.2.7/library/sha1.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/sha1.c	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/library/sha1.c	2013-05-31 11:27:45.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
  
-+#ifndef POLARSSL_USE_OPENSSL_SHA1
++#ifndef POLARSSL_SHA1_ALT
 +
  /*
   * 32-bit integer manipulation macros (big endian)
@@ -558,19 +594,19 @@ diff -uNr polarssl-1.2.7/library/sha1.c polarssl.new/library/sha1.c
      PUT_UINT32_BE( ctx->state[4], output, 16 );
  }
  
-+#endif /* !POLARSSL_USE_OPENSSL_SHA1 */
++#endif /* !POLARSSL_SHA1_ALT */
 +
  /*
   * output = SHA-1( input buffer )
   */
 diff -uNr polarssl-1.2.7/library/sha2.c polarssl.new/library/sha2.c
 --- polarssl-1.2.7/library/sha2.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/sha2.c	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/library/sha2.c	2013-05-31 12:08:27.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
  
-+#ifndef POLARSSL_USE_OPENSSL_SHA2
++#ifndef POLARSSL_SHA2_ALT
 +
  /*
   * 32-bit integer manipulation macros (big endian)
@@ -579,19 +615,19 @@ diff -uNr polarssl-1.2.7/library/sha2.c polarssl.new/library/sha2.c
          PUT_UINT32_BE( ctx->state[7], output, 28 );
  }
  
-+#endif /* !POLARSSL_USE_OPENSSL_SHA2 */
++#endif /* !POLARSSL_SHA2_ALT */
 +
  /*
   * output = SHA-256( input buffer )
   */
 diff -uNr polarssl-1.2.7/library/sha4.c polarssl.new/library/sha4.c
 --- polarssl-1.2.7/library/sha4.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/sha4.c	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/library/sha4.c	2013-05-31 11:33:05.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
  
-+#ifndef POLARSSL_USE_OPENSSL_SHA4
++#ifndef POLARSSL_SHA4_ALT
 +
  /*
   * 64-bit integer manipulation macros (big endian)
@@ -600,19 +636,19 @@ diff -uNr polarssl-1.2.7/library/sha4.c polarssl.new/library/sha4.c
      }
  }
  
-+#endif /* !POLARSSL_USE_OPENSSL_SHA4 */
++#endif /* !POLARSSL_SHA4_ALT */
 +
  /*
   * output = SHA-512( input buffer )
   */
 diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
 --- polarssl-1.2.7/library/ssl_tls.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/ssl_tls.c	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/library/ssl_tls.c	2013-05-31 11:51:32.000000000 -0600
 @@ -2550,8 +2550,10 @@
      SSL_DEBUG_BUF( 4, "finished  md5 state", (unsigned char *)
                      md5.state, sizeof(  md5.state ) );
  
-+#ifndef POLARSSL_USE_OPENSSL_SHA1
++#ifndef POLARSSL_SHA1_ALT
      SSL_DEBUG_BUF( 4, "finished sha1 state", (unsigned char *)
                     sha1.state, sizeof( sha1.state ) );
 +#endif
@@ -623,7 +659,7 @@ diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
      SSL_DEBUG_BUF( 4, "finished  md5 state", (unsigned char *)
                      md5.state, sizeof(  md5.state ) );
  
-+#ifndef POLARSSL_USE_OPENSSL_SHA1
++#ifndef POLARSSL_SHA1_ALT
      SSL_DEBUG_BUF( 4, "finished sha1 state", (unsigned char *)
                     sha1.state, sizeof( sha1.state ) );
 +#endif
@@ -634,7 +670,7 @@ diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
       *               Hash( handshake ) )[0.11]
       */
  
-+#ifndef POLARSSL_USE_OPENSSL_SHA2
++#ifndef POLARSSL_SHA2_ALT
      SSL_DEBUG_BUF( 4, "finished sha2 state", (unsigned char *)
                     sha2.state, sizeof( sha2.state ) );
 +#endif
@@ -645,7 +681,7 @@ diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
       *               Hash( handshake ) )[0.11]
       */
  
-+#ifndef POLARSSL_USE_OPENSSL_SHA4
++#ifndef POLARSSL_SHA4_ALT
      SSL_DEBUG_BUF( 4, "finished sha4 state", (unsigned char *)
                     sha4.state, sizeof( sha4.state ) );
 +#endif
@@ -654,7 +690,7 @@ diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
               ? (char *) "client finished"
 diff -uNr polarssl-1.2.7/tests/suites/test_suite_aes.function polarssl.new/tests/suites/test_suite_aes.function
 --- polarssl-1.2.7/tests/suites/test_suite_aes.function	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/tests/suites/test_suite_aes.function	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/tests/suites/test_suite_aes.function	2013-05-31 10:02:57.000000000 -0600
 @@ -1,4 +1,5 @@
  BEGIN_HEADER
 +#include <polarssl/config.h>
@@ -663,7 +699,7 @@ diff -uNr polarssl-1.2.7/tests/suites/test_suite_aes.function polarssl.new/tests
  
 diff -uNr polarssl-1.2.7/tests/suites/test_suite_ctr_drbg.function polarssl.new/tests/suites/test_suite_ctr_drbg.function
 --- polarssl-1.2.7/tests/suites/test_suite_ctr_drbg.function	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/tests/suites/test_suite_ctr_drbg.function	2013-05-30 23:42:06.000000000 -0600
++++ polarssl.new/tests/suites/test_suite_ctr_drbg.function	2013-05-31 10:02:57.000000000 -0600
 @@ -1,4 +1,5 @@
  BEGIN_HEADER
 +#include <polarssl/config.h>

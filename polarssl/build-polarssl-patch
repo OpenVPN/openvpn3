@@ -17,7 +17,7 @@ rm $(find . -type f | grep -E 'Makefile|\.orig$|\.rej$')
 rm CMakeLists.txt include/polarssl/config.h
 
 cd ../polarssl.new
-mv CMakeLists.txt include/polarssl/config.h $PD
+rm CMakeLists.txt include/polarssl/config.h
 cd ..
 
 diff -uNr $PB polarssl.new >$PD/polar-openssl.patch
