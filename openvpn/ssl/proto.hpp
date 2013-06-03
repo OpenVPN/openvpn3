@@ -360,7 +360,7 @@ namespace openvpn {
 	{
 	  if (key_direction >= -1 && key_direction <= 1)
 	    {
-	      const Option *o = opt.get_consistent("key-direction");
+	      const Option *o = opt.get_ptr("key-direction");
 	      if (o)
 		{
 		  const std::string& dir = o->get(1, 16);

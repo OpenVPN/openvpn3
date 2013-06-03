@@ -726,16 +726,23 @@ namespace openvpn {
 	}
     }
 
-    const Option& get_first(const std::string& name) const
+    // Get the last instance of an option, or return NULL if option
+    // doesn't exist.
+    const Option* get_ptr(const std::string& name) const
     {
       IndexMap::const_iterator e = map_.find(name);
-      if (e != map_.end() && !e->second.empty())
-	return (*this)[e->second[0]];
-      else
-	OPENVPN_THROW(option_error, "option '" << name << "' not found");
+      if (e != map_.end())
+	{
+	  const size_t size = e->second.size();
+	  if (size)
+	    return &((*this)[e->second[size-1]]);
+	}
+      return NULL;
     }
 
-    const Option* get_ptr(const std::string& name) const
+    // Get an option, return NULL if option doesn't exist, or
+    // throw an error if more than one instance exists.
+    const Option* get_unique_ptr(const std::string& name) const
     {
       IndexMap::const_iterator e = map_.find(name);
       if (e != map_.end() && !e->second.empty())
@@ -749,6 +756,8 @@ namespace openvpn {
 	return NULL;
     }
 
+    // Get an option, throw an error if more than one instance exists and the instances
+    // are not exact duplicates of one other.
     const Option* get_consistent(const std::string& name) const
     {
       IndexMap::const_iterator e = map_.find(name);
@@ -767,6 +776,9 @@ namespace openvpn {
 	return NULL;
     }
 
+    // Get option, throw error if not found
+    // If multiple options of the same name exist, return
+    // the last one.
     const Option& get(const std::string& name) const
     {
       const Option* o = get_ptr(name);
@@ -776,6 +788,8 @@ namespace openvpn {
 	OPENVPN_THROW(option_error, "option '" << name << "' not found");
     }
 
+    // Get the list of options having the same name (by index),
+    // throw an exception if option is not found.
     const IndexList& get_index(const std::string& name) const
     {
       IndexMap::const_iterator e = map_.find(name);
@@ -785,6 +799,8 @@ namespace openvpn {
 	OPENVPN_THROW(option_error, "option '" << name << "' not found");
     }
 
+    // Get the list of options having the same name (by index),
+    // return NULL is option is not found.
     const IndexList* get_index_ptr(const std::string& name) const
     {
       IndexMap::const_iterator e = map_.find(name);
@@ -794,7 +810,7 @@ namespace openvpn {
 	return NULL;
     }
 
-    // concatenate all one-arg directives of a given name, in index order
+    // Concatenate all one-arg directives of a given name, in index order.
     std::string cat(const std::string& name) const
     {
       std::string ret;
@@ -825,24 +841,33 @@ namespace openvpn {
       return ret;
     }
 
+    // Return true if option exists, but raise an exception if multiple
+    // instances of the option exist.
     bool exists_unique(const std::string& name) const
     {
-      const Option* o = get_ptr(name);
+      const Option* o = get_unique_ptr(name);
       return o != NULL;
     }
 
+    // Return true if one or more instances of a given option exist.
     bool exists(const std::string& name) const
     {
       const OptionList::IndexList* il = get_index_ptr(name);
       return il != NULL;
     }
 
+    // Convenience method that gets a particular argument index within an option,
+    // while raising an exception if option doesn't exist or if argument index
+    // is out-of-bounds.
     const std::string& get(const std::string& name, size_t index, const size_t max_len) const
     {
       const Option& o = get(name);
       return o.get(index, max_len);
     }
 
+    // Convenience method that gets a particular argument index within an option,
+    // while returning the empty string if option doesn't exist, and raising an
+    // exception if argument index is out-of-bounds.
     const std::string get_optional(const std::string& name, size_t index, const size_t max_len) const
     {
       const Option* o = get_ptr(name);

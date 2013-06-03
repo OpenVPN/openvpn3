@@ -231,7 +231,7 @@ namespace openvpn {
 	bool added = false;
 
 	// client
-	if (!options.exists_unique("client"))
+	if (!options.exists("client"))
 	  {
 	    Option opt;
 	    opt.push_back("client");
@@ -240,7 +240,7 @@ namespace openvpn {
 	  }
 
 	// dev
-	if (!options.exists_unique("dev"))
+	if (!options.exists("dev"))
 	  {
 	    Option opt;
 	    opt.push_back("dev");
@@ -332,7 +332,7 @@ namespace openvpn {
 	      // cert store on the client.  For now, we are going to assume
 	      // that External PKI profiles from the AS are always userlogin,
 	      // unless explicitly overriden by AUTOLOGIN above.
-	      if (options.exists_unique("EXTERNAL_PKI"))
+	      if (options.exists("EXTERNAL_PKI"))
 		return false;
 	    }
 	  return ret;
