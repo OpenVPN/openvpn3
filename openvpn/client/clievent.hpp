@@ -39,6 +39,7 @@ namespace openvpn {
       // start of errors, must be marked by ERROR_START below
       AUTH_FAILED,
       CERT_VERIFY_FAIL,
+      TLS_VERSION_MIN,
       CLIENT_HALT,
       CLIENT_RESTART,
       CONNECTION_TIMEOUT,
@@ -75,6 +76,7 @@ namespace openvpn {
 	"RESUME",
 	"AUTH_FAILED",
 	"CERT_VERIFY_FAIL",
+	"TLS_VERSION_MIN",
 	"CLIENT_HALT",
 	"CLIENT_RESTART",
 	"CONNECTION_TIMEOUT",
@@ -198,6 +200,11 @@ namespace openvpn {
     struct InactiveTimeout : public Base
     {
       InactiveTimeout() : Base(INACTIVE_TIMEOUT) {}
+    };
+
+    struct TLSVersionMinFail : public Base
+    {
+      TLSVersionMinFail() : Base(TLS_VERSION_MIN) {}
     };
 
     struct Connected : public Base

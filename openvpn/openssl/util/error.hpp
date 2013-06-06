@@ -127,6 +127,9 @@ namespace openvpn {
 	    case PEM_R_BAD_DECRYPT:
 	      set_code(Error::PEM_PASSWORD_FAIL, true); 
 	      break;
+	    case SSL_R_UNSUPPORTED_PROTOCOL:
+	      set_code(Error::TLS_VERSION_MIN, true);
+	      break;
 	    }
 	}
       errtxt = tmp.str();

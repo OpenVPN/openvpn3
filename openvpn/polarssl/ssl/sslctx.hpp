@@ -32,6 +32,7 @@
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/ssl/kuparse.hpp>
 #include <openvpn/ssl/nscert.hpp>
+#include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
@@ -88,6 +89,7 @@ namespace openvpn {
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
+      TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
       typename RAND_API::Ptr rng;   // random data source
 
@@ -190,6 +192,9 @@ namespace openvpn {
 
 	// parse tls-remote
 	tls_remote = opt.get_optional("tls-remote", 1, 256);
+
+	// parse tls-version-min option
+	tls_version_min = TLSVersion::parse_tls_version_min(opt, TLSVersion::V1_2);
 
 	// unsupported cert verification options
 	{
@@ -315,6 +320,9 @@ namespace openvpn {
 	  else
 	    throw PolarSSLException("unknown client/server mode");
 
+	  // set minimum TLS version
+	  ssl_set_min_version(ssl, SSL_MAJOR_VERSION_3, ssl_minor_version(c.tls_version_min));
+
 	  // peer must present a valid certificate
 	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
 
@@ -385,6 +393,21 @@ namespace openvpn {
 	  {
 	    erase();
 	    throw;
+	  }
+      }
+
+      // translate TLSVersion::Type t to a PolarSSL minor version code
+      static int ssl_minor_version(const TLSVersion::Type t)
+      {
+	switch (t)
+	  {
+	  case TLSVersion::V1_0:
+	  default:
+	    return SSL_MINOR_VERSION_1;
+	  case TLSVersion::V1_1:
+	    return SSL_MINOR_VERSION_2;
+	  case TLSVersion::V1_2:
+	    return SSL_MINOR_VERSION_3;
 	  }
       }
 

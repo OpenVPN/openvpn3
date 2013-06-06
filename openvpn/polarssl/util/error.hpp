@@ -60,6 +60,9 @@ namespace openvpn {
       case POLARSSL_ERR_PEM_PASSWORD_MISMATCH:
 	set_code(Error::PEM_PASSWORD_FAIL, true);
 	break;
+      case POLARSSL_ERR_SSL_BAD_HS_PROTOCOL_VERSION:
+	set_code(Error::TLS_VERSION_MIN, true);
+	break;
       }
     }
 

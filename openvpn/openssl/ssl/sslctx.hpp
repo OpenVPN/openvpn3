@@ -32,6 +32,7 @@
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/ssl/kuparse.hpp>
 #include <openvpn/ssl/nscert.hpp>
+#include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
@@ -91,6 +92,7 @@ namespace openvpn {
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
+      TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
 
       void enable_debug()
@@ -186,6 +188,9 @@ namespace openvpn {
 
 	// parse tls-remote
 	tls_remote = opt.get_optional("tls-remote", 1, 256);
+
+	// parse tls-version-min option
+	tls_version_min = TLSVersion::parse_tls_version_min(opt, TLSVersion::V1_2);
 
 	// unsupported cert checkers
 	{
@@ -551,7 +556,7 @@ namespace openvpn {
 	  // Create new SSL_CTX for server or client mode
 	  if (config.mode.is_server())
 	    {
-	      ctx = SSL_CTX_new(TLSv1_server_method());
+	      ctx = SSL_CTX_new(SSLv23_server_method());
 	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
 
@@ -563,7 +568,7 @@ namespace openvpn {
 	    }
 	  else if (config.mode.is_client())
 	    {
-	      ctx = SSL_CTX_new(TLSv1_client_method());
+	      ctx = SSL_CTX_new(SSLv23_client_method());
 	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
 	    }
@@ -572,8 +577,17 @@ namespace openvpn {
 
 	  // Set SSL options
 	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
-	  SSL_CTX_set_options(ctx, SSL_OP_SINGLE_DH_USE);
 	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+	  {
+	    long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+	    if (config.tls_version_min > TLSVersion::V1_0)
+	      sslopt |= SSL_OP_NO_TLSv1;
+	    if (config.tls_version_min > TLSVersion::V1_1)
+	      sslopt |= SSL_OP_NO_TLSv1_1;
+	    if (config.tls_version_min > TLSVersion::V1_2)
+	      sslopt |= SSL_OP_NO_TLSv1_2;
+	    SSL_CTX_set_options(ctx, sslopt);
+	  }
 
 	  // fixme -- support SSL_CTX_set_cipher_list
 

@@ -352,6 +352,14 @@ namespace openvpn {
 		    stop();
 		  }
 		  break;
+		case Error::TLS_VERSION_MIN:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TLSVersionMinFail();
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::TLS_VERSION_MIN);
+		    stop();
+		  }
+		  break;
 		case Error::CLIENT_HALT:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientHalt(client->fatal_reason());
