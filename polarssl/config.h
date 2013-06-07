@@ -31,6 +31,8 @@
 #ifndef POLARSSL_CONFIG_H
 #define POLARSSL_CONFIG_H
 
+#include "openvpn-polarssl.h"
+
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE 1
 #endif
@@ -247,7 +249,7 @@
  * Enable the checkup functions (*_self_test).
  */
 // JY changed
-#ifdef ENABLE_TESTING
+#if defined(ENABLE_TESTING) && !defined(POLARSSL_SELF_TEST)
 #define POLARSSL_SELF_TEST
 #endif
 

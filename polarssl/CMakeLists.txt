@@ -24,11 +24,6 @@ option(USE_PKCS11_HELPER_LIBRARY "Build PolarSSL with the pkcs11-helper library.
 option(ENABLE_ZLIB_SUPPORT "Build PolarSSL with zlib library." OFF)
 
 # JY added
-if(ENABLE_SERVER)
-  add_definitions(-DPOLARSSL_SSL_SRV_C)
-endif()
-
-# JY added
 if(MINICRYPTO)
   if(MINICRYPTO_DIR)
     add_library(minicrypto STATIC IMPORTED)
@@ -38,28 +33,10 @@ if(MINICRYPTO)
     add_library(crypto STATIC IMPORTED)
     set_property(TARGET crypto PROPERTY IMPORTED_LOCATION "${OSSLCRYPTO_DIR}/libcrypto.a")
   endif()
-  add_definitions(-DPOLARSSL_AES_ALT)
-  add_definitions(-DPOLARSSL_SHA1_ALT)
-  add_definitions(-DPOLARSSL_SHA2_ALT)
-  add_definitions(-DPOLARSSL_SHA4_ALT)
-  if(OPENSSL_AES_NI)
-    add_definitions(-DPOLARSSL_USE_OPENSSL_AES_NI)
-  endif()
 endif()
 
-# JY added
-if(EXTERNAL_RNG)
-  add_definitions(-DEXTERNAL_RNG)
-endif()
-
-# include self-test functions only (for cross development) (JY added)
-if(ENABLE_SELF_TEST)
-  add_definitions(-DPOLARSSL_SELF_TEST)	
-endif()
- 
 # include full testing infrastructure (JY added)
 if(ENABLE_TESTING)
-  add_definitions(-DENABLE_TESTING)
   enable_testing()
 endif()
 
