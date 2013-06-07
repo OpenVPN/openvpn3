@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 POLARSSL_SRC=$HOME/src/mac/polarssl-1.2.7
 PD=$O3/polarssl
 PB=$(basename $POLARSSL_SRC)
@@ -21,3 +20,5 @@ rm -f CMakeLists.txt include/polarssl/config.h include/polarssl/openvpn-polarssl
 cd ..
 
 diff -uNr $PB polarssl.new >$PD/polar-openssl.patch
+cp $PD/crypto-alt.txt $PD/polarssl-crypto-alt.patch
+diff -ur $PB polarssl.new | grep -v '^Only in' >>$PD/polarssl-crypto-alt.patch
