@@ -24,14 +24,14 @@
 #error no public interface export defined for this compiler
 #endif
 
-// debug settings (production setting in parenthesis)
+// debug settings (production setting in parentheses)
 
 #define OPENVPN_INSTRUMENTATION        // include debug instrumentation for classes (define)
 //#define OPENVPN_DEBUG_CLIPROTO       // shows packets in/out (comment out)
 #define OPENVPN_DEBUG_PROTO   1        // increases low-level protocol verbosity (1)
 //#define OPENVPN_DEBUG_VERBOSE_ERRORS // verbosely log Error::Type errors (comment out)
 
-//#define OPENVPN_SSL_DEBUG          // show verbose SSL debug info (comment out)
+#define OPENVPN_SSL_DEBUG     0      // show verbose SSL debug info (0)
 #define OPENVPN_DEBUG_TUN     2      // debug level for tun object (2)
 #define OPENVPN_DEBUG_UDPLINK 2      // debug level for UDP link object (2)
 #define OPENVPN_DEBUG_TCPLINK 2      // debug level for TCP link object (2)

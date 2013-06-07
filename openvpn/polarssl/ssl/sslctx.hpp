@@ -66,13 +66,8 @@ namespace openvpn {
     // The data needed to construct a PolarSSLContext.
     struct Config
     {
-      enum {
-	SSL_DEBUG_FLAG = 1<<0,
-      };
-      typedef unsigned int Flags;
-
       Config() : external_pki(NULL),
-		 flags(0),
+		 ssl_debug_level(0),
 		 ns_cert_type(NSCert::NONE),
 		 local_cert_enabled(true) {}
 
@@ -84,7 +79,7 @@ namespace openvpn {
       PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters (only needed in server mode)
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
-      Flags flags;
+      int ssl_debug_level;
       NSCert::Type ns_cert_type;
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
@@ -92,11 +87,6 @@ namespace openvpn {
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
       typename RAND_API::Ptr rng;   // random data source
-
-      void enable_debug()
-      {
-	flags |= SSL_DEBUG_FLAG;
-      }
 
       // if this callback is defined, no private key needs to be loaded
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
@@ -386,8 +376,8 @@ namespace openvpn {
 	    throw PolarSSLException("RNG not defined");
 
 	  // set debug callback
-	  if (c.flags & Config::SSL_DEBUG_FLAG)
-	    ssl_set_dbg(ssl, dbg_callback, this);
+	  if (c.ssl_debug_level)
+	    ssl_set_dbg(ssl, dbg_callback, ctx);
 	}
 	catch (...)
 	  {
@@ -448,7 +438,8 @@ namespace openvpn {
 
       static void dbg_callback(void *arg, int level, const char *text)
       {
-	if (level <= 1)
+	PolarSSLContext *self = (PolarSSLContext *)arg;
+	if (level <= self->config.ssl_debug_level)
 	  OPENVPN_LOG_NTNL("PolarSSL[" << level << "]: " << text);
       }
 

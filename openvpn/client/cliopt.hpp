@@ -165,7 +165,7 @@ namespace openvpn {
       cc.set_external_pki_callback(config.external_pki);
       cc.frame = frame;
 #ifdef OPENVPN_SSL_DEBUG
-      cc.enable_debug();
+      cc.ssl_debug_level = OPENVPN_SSL_DEBUG;
 #endif
 #if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
       cc.rng = rng;

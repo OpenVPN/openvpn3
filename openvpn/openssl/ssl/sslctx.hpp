@@ -69,13 +69,8 @@ namespace openvpn {
     // The data needed to construct an OpenSSLContext.
     struct Config
     {
-      enum {
-	SSL_DEBUG_FLAG = 1<<0,
-      };
-      typedef unsigned int Flags;
-
       Config() : external_pki(NULL),
-		 flags(0),
+		 ssl_debug_level(0),
 		 ns_cert_type(NSCert::NONE),
 		 local_cert_enabled(true) {}
 
@@ -87,18 +82,13 @@ namespace openvpn {
       OpenSSLPKI::DH dh;                // diffie-hellman parameters (only needed in server mode)
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
-      Flags flags;
+      int ssl_debug_level;
       NSCert::Type ns_cert_type;
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
-
-      void enable_debug()
-      {
-	flags |= SSL_DEBUG_FLAG;
-      }
 
       // if this callback is defined, no private key needs to be loaded
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
@@ -637,7 +627,7 @@ namespace openvpn {
 	  ctx->app_verify_arg = this;
 
 	  // Show handshake debugging info
-	  if (config.flags & Config::SSL_DEBUG_FLAG)
+	  if (config.ssl_debug_level)
 	    SSL_CTX_set_info_callback (ctx, info_callback);
 	}
       catch (...)

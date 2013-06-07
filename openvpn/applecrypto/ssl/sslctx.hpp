@@ -60,22 +60,12 @@ namespace openvpn {
     // The data needed to construct an AppleSSLContext.
     struct Config
     {
-      enum {
-	SSL_DEBUG_FLAG = 1<<0,
-      };
-      typedef unsigned int Flags;
-
-      Config() : flags(0) {}
+      Config() : ssl_debug_level(0) {}
 
       Mode mode;
-      Flags flags;
+      int ssl_debug_level;
       CF::Array identity; // as returned by load_identity
       Frame::Ptr frame;
-
-      void enable_debug()
-      {
-	flags |= SSL_DEBUG_FLAG;
-      }
 
       void load_identity(const std::string& subject_match)
       {
@@ -322,7 +312,6 @@ namespace openvpn {
     const Mode& mode() const { return config_.mode; }
 
   private:
-    Config::Flags flags() const { return config_.flags; }
     const Frame::Ptr& frame() const { return config_.frame; }
     const CF::Array& identity() const { return config_.identity; }
 
