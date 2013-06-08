@@ -27,6 +27,7 @@
 // debug settings (production setting in parentheses)
 
 #define OPENVPN_INSTRUMENTATION        // include debug instrumentation for classes (define)
+//#define OPENVPN_DUMP_CONFIG          // dump parsed configuration (comment out)
 //#define OPENVPN_DEBUG_CLIPROTO       // shows packets in/out (comment out)
 #define OPENVPN_DEBUG_PROTO   1        // increases low-level protocol verbosity (1)
 //#define OPENVPN_DEBUG_VERBOSE_ERRORS // verbosely log Error::Type errors (comment out)
@@ -333,6 +334,12 @@ namespace openvpn {
 	    kvl.push_back(new OptionList::KeyValue(kv.key, kv.value));
 	  }
 	const ParseClientConfig cc = ParseClientConfig::parse(config.content, &kvl, options);
+#ifdef OPENVPN_DUMP_CONFIG
+	std::cout << "---------- ARGS ----------" << std::endl;
+	std::cout << options.render() << std::endl;
+	std::cout << "---------- MAP ----------" << std::endl;
+	std::cout << options.render_map() << std::endl;
+#endif
 	eval.error = cc.error();
 	eval.message = cc.message();
 	eval.userlockedUsername = cc.userlockedUsername();

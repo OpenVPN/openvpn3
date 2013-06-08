@@ -225,6 +225,7 @@ namespace openvpn {
 	    content_list->preprocess();
 	    options.parse_from_key_value_list(*content_list, &limits);
 	  }
+	process_setenv_opt(options);
 	options.update_map();
 
 	// add in missing options
@@ -315,6 +316,16 @@ namespace openvpn {
     }
 
   private:
+    static void process_setenv_opt(OptionList& options)
+    {
+      for (OptionList::iterator i = options.begin(); i != options.end(); ++i)
+	{
+	  Option& o = *i;
+	  if (o.size() >= 3 && o.ref(0) == "setenv" && o.ref(1) == "opt")
+	    o.remove_first(2);
+	}
+    }
+
     static bool is_autologin(const OptionList& options)
     {
       const Option* autologin = options.get_ptr("AUTOLOGIN");

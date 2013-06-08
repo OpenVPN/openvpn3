@@ -36,7 +36,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <algorithm> // for std::sort
+#include <algorithm> // for std::sort, std::min
 
 #include <boost/cstdint.hpp> // for boost::uint64_t
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
@@ -184,6 +184,14 @@ namespace openvpn {
     // equality
     bool operator==(const Option& other) const { return data == other.data; }
     bool operator!=(const Option& other) const { return data != other.data; }
+
+    // remove first n elements
+    void remove_first(const size_t n_elements)
+    {
+      const size_t n = std::min(data.size(), n_elements);
+      if (n)
+	data.erase(data.begin(), data.begin() + n);
+    }
 
   private:
     std::string err_ref() const
