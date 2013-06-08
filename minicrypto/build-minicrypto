@@ -51,31 +51,13 @@ mkdir openssl
 
 # ARM
 cp $OPENSSL_DIR/crypto/arm_arch.h .
-#cp $OPENSSL_DIR/crypto/armcap.c .
-#cp $OPENSSL_DIR/crypto/armv4cpuid.S armv4cpuid.pre
 
 # SHA general
 cp $OPENSSL_DIR/crypto/md32_common.h .
 cp $OPENSSL_DIR/crypto/sha/sha.h openssl
 
-# Crypto general
-cp $OPENSSL_DIR/crypto/modes/modes.h openssl
-cp $OPENSSL_DIR/crypto/modes/modes_lcl.h .
-
 # AES
-cp $OPENSSL_DIR/crypto/aes/aes.h openssl
 cp $OPENSSL_DIR/crypto/aes/asm/aes-armv4.pl .
-cp $OPENSSL_DIR/crypto/aes/aes_cbc.c .
-cp $OPENSSL_DIR/crypto/aes/aes_ecb.c .
-cp $OPENSSL_DIR/crypto/modes/cbc128.c .
-
-# Blowfish
-cp $OPENSSL_DIR/crypto/bf/blowfish.h openssl
-cp $OPENSSL_DIR/crypto/bf/bf_locl.h .
-cp $OPENSSL_DIR/crypto/bf/bf_pi.h .
-cp $OPENSSL_DIR/crypto/bf/bf_skey.c .
-cp $OPENSSL_DIR/crypto/bf/bf_ecb.c .
-cp $OPENSSL_DIR/crypto/bf/bf_enc.c .
 
 # SHA1
 cp $OPENSSL_DIR/crypto/sha/asm/sha1-armv4-large.pl .

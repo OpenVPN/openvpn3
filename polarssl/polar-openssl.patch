@@ -1,6 +1,6 @@
 diff -uNr polarssl-1.2.7/include/polarssl/aes.h polarssl.new/include/polarssl/aes.h
 --- polarssl-1.2.7/include/polarssl/aes.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/aes.h	2013-06-07 15:06:11.000000000 -0600
++++ polarssl.new/include/polarssl/aes.h	2013-06-07 17:43:56.000000000 -0600
 @@ -29,6 +29,8 @@
  
  #include <string.h>
@@ -43,8 +43,8 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes.h polarssl.new/include/polarssl/ae
   *
 diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarssl/aes_alt.h
 --- polarssl-1.2.7/include/polarssl/aes_alt.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/aes_alt.h	2013-06-07 15:00:34.000000000 -0600
-@@ -0,0 +1,145 @@
++++ polarssl.new/include/polarssl/aes_alt.h	2013-06-07 18:18:37.000000000 -0600
+@@ -0,0 +1,183 @@
 +/*
 + * Use OpenSSL implementation of AES methods to get asm and hardware acceleration.
 + * Don't include this file directly, it is included by aes.h when
@@ -89,7 +89,8 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarss
 +
 +#define OPENSSL_AES_SET_ENCRYPT_KEY(k,b,c)    aesni_set_encrypt_key(k,b,c)
 +#define OPENSSL_AES_SET_DECRYPT_KEY(k,b,c)    aesni_set_decrypt_key(k,b,c)
-+#define OPENSSL_AES_ECB_ENCRYPT(i,o,k,e)      aesni_ecb_encrypt(i,o,16,k,e)
++#define OPENSSL_AES_ECB_ENCRYPT(i,o,k)        aesni_ecb_encrypt(i,o,16,k,AES_ENCRYPT)
++#define OPENSSL_AES_ECB_DECRYPT(i,o,k)        aesni_ecb_encrypt(i,o,16,k,AES_DECRYPT)
 +#define OPENSSL_AES_CBC_ENCRYPT(i,o,l,k,iv,e) aesni_cbc_encrypt(i,o,l,k,iv,e)
 +
 +#else
@@ -98,16 +99,15 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarss
 +			aes_context *key);
 +int AES_set_decrypt_key(const unsigned char *userKey, const int bits,
 +			aes_context *key);
-+void AES_ecb_encrypt(const unsigned char *in, unsigned char *out,
-+		     const aes_context *key, const int enc);
-+void AES_cbc_encrypt(const unsigned char *in, unsigned char *out,
-+		     size_t length, const aes_context *key,
-+		     unsigned char *ivec, const int enc);
++
++void AES_encrypt(const unsigned char *in, unsigned char *out, const aes_context *key);
++void AES_decrypt(const unsigned char *in, unsigned char *out, const aes_context *key);
++
 +
 +#define OPENSSL_AES_SET_ENCRYPT_KEY(k,b,c)    AES_set_encrypt_key(k,b,c)
 +#define OPENSSL_AES_SET_DECRYPT_KEY(k,b,c)    AES_set_decrypt_key(k,b,c)
-+#define OPENSSL_AES_ECB_ENCRYPT(i,o,k,e)      AES_ecb_encrypt(i,o,k,e)
-+#define OPENSSL_AES_CBC_ENCRYPT(i,o,l,k,iv,e) AES_cbc_encrypt(i,o,l,k,iv,e)
++#define OPENSSL_AES_ECB_ENCRYPT(i,o,k)        AES_encrypt(i,o,k)
++#define OPENSSL_AES_ECB_DECRYPT(i,o,k)        AES_decrypt(i,o,k)
 +
 +#endif
 +
@@ -120,7 +120,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarss
 + *
 + * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
 + */
-+static inline int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int keysize )
++static inline int aes_setkey_enc( aes_context *ctx, const unsigned char *key, const unsigned int keysize )
 +{
 +  const int status = OPENSSL_AES_SET_ENCRYPT_KEY(key, keysize, ctx);
 +  return status ? POLARSSL_ERR_AES_INVALID_KEY_LENGTH : 0;
@@ -135,7 +135,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarss
 + *
 + * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
 + */
-+static inline int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int keysize )
++static inline int aes_setkey_dec( aes_context *ctx, const unsigned char *key, const unsigned int keysize )
 +{
 +  const int status = OPENSSL_AES_SET_DECRYPT_KEY(key, keysize, ctx);
 +  return status ? POLARSSL_ERR_AES_INVALID_KEY_LENGTH : 0;
@@ -152,11 +152,14 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarss
 + * \return         0 if successful
 + */
 +static inline int aes_crypt_ecb( aes_context *ctx,
-+				 int mode,
++				 const int mode,
 +				 const unsigned char input[16],
 +				 unsigned char output[16] )
 +{
-+  OPENSSL_AES_ECB_ENCRYPT(input, output, ctx, mode);
++  if (mode == AES_DECRYPT)
++    OPENSSL_AES_ECB_DECRYPT(input, output, ctx);
++  else
++    OPENSSL_AES_ECB_ENCRYPT(input, output, ctx);
 +  return 0;
 +}
 +
@@ -175,16 +178,51 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarss
 + * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_INPUT_LENGTH
 + */
 +static inline int aes_crypt_cbc( aes_context *ctx,
-+				 int mode,
++				 const int mode,
 +				 size_t length,
 +				 unsigned char iv[16],
 +				 const unsigned char *input,
 +				 unsigned char *output )
 +{
++#ifdef OPENSSL_AES_CBC_ENCRYPT
 +  if (length & (OPENSSL_AES_BLOCK_SIZE-1))
 +    return POLARSSL_ERR_AES_INVALID_INPUT_LENGTH;
 +  OPENSSL_AES_CBC_ENCRYPT(input, output, length, ctx, iv, mode);
 +  return 0;
++#else
++    int i;
++    unsigned char temp[16];
++    if (length & (OPENSSL_AES_BLOCK_SIZE-1))
++      return POLARSSL_ERR_AES_INVALID_INPUT_LENGTH;
++    if( mode == AES_DECRYPT )
++    {
++        while( length > 0 )
++        {
++            memcpy( temp, input, 16 );
++	    OPENSSL_AES_ECB_DECRYPT(input, output, ctx);
++            for( i = 0; i < 16; i++ )
++                output[i] = (unsigned char)( output[i] ^ iv[i] );
++            memcpy( iv, temp, 16 );
++            input  += 16;
++            output += 16;
++            length -= 16;
++        }
++    }
++    else
++    {
++        while( length > 0 )
++        {
++            for( i = 0; i < 16; i++ )
++                output[i] = (unsigned char)( input[i] ^ iv[i] );
++	    OPENSSL_AES_ECB_ENCRYPT(output, output, ctx);
++            memcpy( iv, output, 16 );
++            input  += 16;
++            output += 16;
++            length -= 16;
++        }
++    }
++    return( 0 );
++#endif
 +}
 +
 +#ifdef __cplusplus
@@ -192,7 +230,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/aes_alt.h polarssl.new/include/polarss
 +#endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha1.h polarssl.new/include/polarssl/sha1.h
 --- polarssl-1.2.7/include/polarssl/sha1.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/sha1.h	2013-06-07 15:06:47.000000000 -0600
++++ polarssl.new/include/polarssl/sha1.h	2013-06-07 17:43:56.000000000 -0600
 @@ -29,6 +29,8 @@
  
  #include <string.h>
@@ -247,7 +285,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha1.h polarssl.new/include/polarssl/s
  #endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha1_alt.h polarssl.new/include/polarssl/sha1_alt.h
 --- polarssl-1.2.7/include/polarssl/sha1_alt.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha1_alt.h	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/include/polarssl/sha1_alt.h	2013-06-07 17:43:56.000000000 -0600
 @@ -0,0 +1,56 @@
 +/*
 + * Use OpenSSL implementation of SHA1 methods to get asm and hardware acceleration.
@@ -307,7 +345,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha1_alt.h polarssl.new/include/polars
 +#endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/sha2.h
 --- polarssl-1.2.7/include/polarssl/sha2.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/sha2.h	2013-06-07 15:06:47.000000000 -0600
++++ polarssl.new/include/polarssl/sha2.h	2013-06-07 17:43:56.000000000 -0600
 @@ -29,6 +29,8 @@
  
  #include <string.h>
@@ -362,7 +400,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2.h polarssl.new/include/polarssl/s
  #endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polarssl/sha2_alt.h
 --- polarssl-1.2.7/include/polarssl/sha2_alt.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha2_alt.h	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/include/polarssl/sha2_alt.h	2013-06-07 17:43:56.000000000 -0600
 @@ -0,0 +1,71 @@
 +/*
 + * Use OpenSSL implementation of SHA2 methods to get asm and hardware acceleration.
@@ -437,7 +475,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polars
 +#endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha4.h polarssl.new/include/polarssl/sha4.h
 --- polarssl-1.2.7/include/polarssl/sha4.h	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/include/polarssl/sha4.h	2013-06-07 15:06:47.000000000 -0600
++++ polarssl.new/include/polarssl/sha4.h	2013-06-07 17:43:56.000000000 -0600
 @@ -29,6 +29,8 @@
  
  #include <string.h>
@@ -479,7 +517,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4.h polarssl.new/include/polarssl/s
   *
 diff -uNr polarssl-1.2.7/include/polarssl/sha4_alt.h polarssl.new/include/polarssl/sha4_alt.h
 --- polarssl-1.2.7/include/polarssl/sha4_alt.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha4_alt.h	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/include/polarssl/sha4_alt.h	2013-06-07 17:43:56.000000000 -0600
 @@ -0,0 +1,67 @@
 +/*
 + * Use OpenSSL implementation of SHA4 methods to get asm and hardware acceleration.
@@ -550,7 +588,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4_alt.h polarssl.new/include/polars
 +#endif
 diff -uNr polarssl-1.2.7/include/polarssl/sha_openssl.h polarssl.new/include/polarssl/sha_openssl.h
 --- polarssl-1.2.7/include/polarssl/sha_openssl.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha_openssl.h	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/include/polarssl/sha_openssl.h	2013-06-07 17:43:56.000000000 -0600
 @@ -0,0 +1,42 @@
 +/*
 + * Common header file for all OpenSSL-imported SHA methods
@@ -596,7 +634,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha_openssl.h polarssl.new/include/pol
 +#endif
 diff -uNr polarssl-1.2.7/library/aes.c polarssl.new/library/aes.c
 --- polarssl-1.2.7/library/aes.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/aes.c	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/library/aes.c	2013-06-07 17:43:56.000000000 -0600
 @@ -38,6 +38,8 @@
  #include "polarssl/padlock.h"
  #endif
@@ -616,7 +654,7 @@ diff -uNr polarssl-1.2.7/library/aes.c polarssl.new/library/aes.c
  
 diff -uNr polarssl-1.2.7/library/sha1.c polarssl.new/library/sha1.c
 --- polarssl-1.2.7/library/sha1.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/sha1.c	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/library/sha1.c	2013-06-07 17:43:56.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
@@ -637,7 +675,7 @@ diff -uNr polarssl-1.2.7/library/sha1.c polarssl.new/library/sha1.c
   */
 diff -uNr polarssl-1.2.7/library/sha2.c polarssl.new/library/sha2.c
 --- polarssl-1.2.7/library/sha2.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/sha2.c	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/library/sha2.c	2013-06-07 17:43:56.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
@@ -658,7 +696,7 @@ diff -uNr polarssl-1.2.7/library/sha2.c polarssl.new/library/sha2.c
   */
 diff -uNr polarssl-1.2.7/library/sha4.c polarssl.new/library/sha4.c
 --- polarssl-1.2.7/library/sha4.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/sha4.c	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/library/sha4.c	2013-06-07 17:43:56.000000000 -0600
 @@ -38,6 +38,8 @@
  #include <stdio.h>
  #endif
@@ -679,7 +717,7 @@ diff -uNr polarssl-1.2.7/library/sha4.c polarssl.new/library/sha4.c
   */
 diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
 --- polarssl-1.2.7/library/ssl_tls.c	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/library/ssl_tls.c	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/library/ssl_tls.c	2013-06-07 17:43:56.000000000 -0600
 @@ -2550,8 +2550,10 @@
      SSL_DEBUG_BUF( 4, "finished  md5 state", (unsigned char *)
                      md5.state, sizeof(  md5.state ) );
@@ -726,7 +764,7 @@ diff -uNr polarssl-1.2.7/library/ssl_tls.c polarssl.new/library/ssl_tls.c
               ? (char *) "client finished"
 diff -uNr polarssl-1.2.7/tests/suites/test_suite_aes.function polarssl.new/tests/suites/test_suite_aes.function
 --- polarssl-1.2.7/tests/suites/test_suite_aes.function	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/tests/suites/test_suite_aes.function	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/tests/suites/test_suite_aes.function	2013-06-07 17:43:56.000000000 -0600
 @@ -1,4 +1,5 @@
  BEGIN_HEADER
 +#include <polarssl/config.h>
@@ -735,7 +773,7 @@ diff -uNr polarssl-1.2.7/tests/suites/test_suite_aes.function polarssl.new/tests
  
 diff -uNr polarssl-1.2.7/tests/suites/test_suite_ctr_drbg.function polarssl.new/tests/suites/test_suite_ctr_drbg.function
 --- polarssl-1.2.7/tests/suites/test_suite_ctr_drbg.function	2013-04-13 03:56:17.000000000 -0600
-+++ polarssl.new/tests/suites/test_suite_ctr_drbg.function	2013-06-07 15:00:34.000000000 -0600
++++ polarssl.new/tests/suites/test_suite_ctr_drbg.function	2013-06-07 17:43:56.000000000 -0600
 @@ -1,4 +1,5 @@
  BEGIN_HEADER
 +#include <polarssl/config.h>
