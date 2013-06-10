@@ -24,7 +24,7 @@ namespace openvpn {
     {
       const bool ret = filt(opt);
       if (!ret)
-	OPENVPN_LOG("Ignored due to route-nopull: " << opt.render());
+	OPENVPN_LOG("Ignored due to route-nopull: " << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_BRACKET));
       return ret;
     }
 

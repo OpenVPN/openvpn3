@@ -71,6 +71,17 @@ namespace openvpn {
       STATUS_LENGTH,
     };
 
+    // Options for render methods
+    enum render_flags {
+      RENDER_TRUNC_64 = (1<<0),  // truncate option after 64 chars
+      RENDER_PASS_FMT = (1<<1),  // pass \r\n\t
+      RENDER_NUMBER   = (1<<2),  // number lines
+      RENDER_BRACKET  = (1<<3),  // quote options using []
+      RENDER_UNUSED   = (1<<4),  // only show unused options
+    };
+
+    Option() : touched_(false) {}
+
     static validate_status validate(const std::string& str, const size_t max_len)
     {
       const size_t pos = str.find_first_of("\r\n");
@@ -162,11 +173,20 @@ namespace openvpn {
 	return NULL;
     }
 
-    std::string render() const
+    std::string render(const unsigned int flags) const
     {
       std::ostringstream out;
+      size_t max_len_flags = (flags & RENDER_TRUNC_64) ? 64 : 0;
+      if (flags & RENDER_PASS_FMT)
+	max_len_flags |= Unicode::UTF8_PASS_FMT;
       for (std::vector<std::string>::const_iterator i = data.begin(); i != data.end(); ++i)
-	out << '[' << Unicode::utf8_printable(*i, 0 | Unicode::UTF8_PASS_FMT) << "] ";
+	{
+	  if (flags & RENDER_BRACKET)
+	    out << '[';
+	  out << Unicode::utf8_printable(*i, max_len_flags);
+	  if (flags & RENDER_BRACKET)
+	    out << "] ";
+	}
       return out.str();
     }
 
@@ -193,6 +213,18 @@ namespace openvpn {
 	data.erase(data.begin(), data.begin() + n);
     }
 
+    // indicate that this option was processed
+    void touch() const
+    {
+      // Note that we violate constness here, which is done
+      // because the touched bit is considered to be option metadata.
+      Option *self = const_cast<Option *>(this);
+      self->touched_ = true;
+    }
+
+    // was this option processed?
+    bool touched() const { return touched_; }
+
   private:
     std::string err_ref() const
     {
@@ -206,6 +238,7 @@ namespace openvpn {
       return ret;
     }
 
+    bool touched_;
     std::vector<std::string> data;
   };
 
@@ -706,7 +739,10 @@ namespace openvpn {
 	{
 	  const Option& opt = *i;
 	  if (!filt || filt->filter(opt))
-	    push_back(opt);
+	    {
+	      push_back(opt);
+	      opt.touch();
+	    }
 	}
     }
 
@@ -717,7 +753,11 @@ namespace openvpn {
       IndexMap::const_iterator oi = other.map().find(name);
       if (oi != other.map().end())
 	for (IndexList::const_iterator i = oi->second.begin(); i != oi->second.end(); ++i)
-	  push_back(other[*i]);
+	  {
+	    const Option& opt = other[*i];
+	    push_back(opt);
+	    opt.touch();
+	  }
     }
 
     // Append to self only those elements in other that do not exist
@@ -730,7 +770,10 @@ namespace openvpn {
 	{
 	  const Option& opt = *i;
 	  if (!opt.empty() && map().find(opt.ref(0)) == map().end())
-	    push_back(opt);
+	    {
+	      push_back(opt);
+	      opt.touch();
+	    }
 	}
     }
 
@@ -743,7 +786,11 @@ namespace openvpn {
 	{
 	  const size_t size = e->second.size();
 	  if (size)
-	    return &((*this)[e->second[size-1]]);
+	    {
+	      const Option* ret = &((*this)[e->second[size-1]]);
+	      ret->touch();
+	      return ret;
+	    }
 	}
       return NULL;
     }
@@ -756,7 +803,11 @@ namespace openvpn {
       if (e != map_.end() && !e->second.empty())
 	{
 	  if (e->second.size() == 1)
-	    return &((*this)[e->second[0]]);
+	    {
+	      const Option* ret = &((*this)[e->second[0]]);
+	      ret->touch();
+	      return ret;
+	    }
 	  else
 	    OPENVPN_THROW(option_error, "more than one instance of option '" << name << '\'');
 	}
@@ -772,11 +823,16 @@ namespace openvpn {
       if (e != map_.end() && !e->second.empty())
 	{
 	  const Option *first = &((*this)[e->second[0]]);
+	  first->touch();
 	  if (e->second.size() >= 2)
 	    {
 	      for (size_t i = 1; i < e->second.size(); ++i)
-		if (((*this)[e->second[i]]) != *first)
-		  OPENVPN_THROW(option_error, "more than one instance of option '" << name << "' with inconsistent argument(s)");
+		{
+		  const Option *other = &(*this)[e->second[i]];
+		  other->touch();
+		  if (*other != *first)
+		    OPENVPN_THROW(option_error, "more than one instance of option '" << name << "' with inconsistent argument(s)");
+		}
 	    }
 	  return first;
 	}
@@ -841,6 +897,7 @@ namespace openvpn {
 	      const Option& o = (*this)[*i];
 	      if (o.size() >= 2)
 		{
+		  o.touch();
 		  ret += o.ref(1);
 		  string::add_trailing_in_place(ret, '\n');
 		}
@@ -853,15 +910,13 @@ namespace openvpn {
     // instances of the option exist.
     bool exists_unique(const std::string& name) const
     {
-      const Option* o = get_unique_ptr(name);
-      return o != NULL;
+      return get_unique_ptr(name) != NULL;
     }
 
     // Return true if one or more instances of a given option exist.
     bool exists(const std::string& name) const
     {
-      const OptionList::IndexList* il = get_index_ptr(name);
-      return il != NULL;
+      return get_ptr(name) != NULL;
     }
 
     // Convenience method that gets a particular argument index within an option,
@@ -885,14 +940,34 @@ namespace openvpn {
 	return "";
     }
 
-    std::string render() const
+    // Touch an option, if it exists.
+    void touch(const std::string& name) const
+    {
+      const Option* o = get_ptr(name);
+      if (o)
+	o->touch();
+    }
+
+    // Render object as a string.
+    // flags should be given as Option::render_flags.
+    std::string render(const unsigned int flags) const
     {
       std::ostringstream out;
       for (size_t i = 0; i < size(); ++i)
-	out << i << ' ' << (*this)[i].render() << std::endl;
+	{
+	  const Option& o = (*this)[i];
+	  if (!(flags & Option::RENDER_UNUSED) || !o.touched())
+	    {
+	      if (flags & Option::RENDER_NUMBER)
+		out << i << ' ';
+	      out << o.render(flags) << std::endl;
+	    }
+	}
       return out.str();
     }
 
+    // Render contents of hash map used to locate options after underlying option list
+    // has been modified.
     std::string render_map() const
     {
       std::ostringstream out;
@@ -906,7 +981,22 @@ namespace openvpn {
       return out.str();
     }
 
-    void add_item(const Option& opt) // updates map as well
+    // Return number of unused options based on the notion that
+    // all used options have been touched.
+    size_t n_unused() const
+    {
+      size_t n = 0;
+      for (std::vector<Option>::const_iterator i = begin(); i != end(); ++i)
+	{
+	  const Option& opt = *i;
+	  if (!opt.touched())
+	    ++n;
+	}
+      return n;
+    }
+
+    // Add item to underlying option list while updating map as well.
+    void add_item(const Option& opt) 
     {
       if (!opt.empty())
 	{
@@ -916,8 +1006,11 @@ namespace openvpn {
 	}
     }
 
+    // Return hash map used to locate options.
     const IndexMap& map() const { return map_; }
 
+    // Rebuild hash map used to locate options after underlying option list
+    // has been modified.
     void update_map()
     {
       map_.clear();

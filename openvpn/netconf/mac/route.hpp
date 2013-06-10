@@ -72,7 +72,7 @@ namespace openvpn {
 		  }
 		  catch (const std::exception& e)
 		    {
-		      OPENVPN_THROW(route_error, "error parsing received route: " << o.render() << " : " << e.what());
+		      OPENVPN_THROW(route_error, "error parsing received route: " << o.render(Option::RENDER_TRUNC_64|Option::RENDER_BRACKET) << " : " << e.what());
 		    }
 		}
 	    }

@@ -314,6 +314,10 @@ namespace openvpn {
 	push_base->singleton.extend(opt, "redirect-dns");
 	push_base->singleton.extend(opt, "inactive");
       }
+
+      // show unused options
+      if (opt.n_unused())
+	OPENVPN_LOG("UNUSED OPTIONS" << std::endl << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
     }
 
     void next()

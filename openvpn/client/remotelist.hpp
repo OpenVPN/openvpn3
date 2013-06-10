@@ -368,6 +368,7 @@ namespace openvpn {
 	      {
 		try {
 		  const Option& o = opt[*i];
+		  o.touch();
 		  const std::string& conn_block_text = o.get(1, Option::MULTILINE);
 		  OptionList::Limits limits("<connection> block is too large",
 					    max_conn_block_size,
@@ -684,6 +685,7 @@ namespace openvpn {
 	      {
 		Item::Ptr e(new Item());
 		const Option& o = opt[*i];
+		o.touch();
 		e->server_host = o.get(1, 256);
 		if (o.size() >= 3)
 		  {

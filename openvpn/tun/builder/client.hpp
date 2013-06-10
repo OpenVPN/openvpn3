@@ -193,6 +193,11 @@ namespace openvpn {
 	F_ADD_DNS=(1<<0),
       };
 
+      // render option flags
+      enum {
+	OPT_RENDER_FLAGS = Option::RENDER_TRUNC_64 | Option::RENDER_BRACKET
+      };
+
     public:
       virtual void client_start(const OptionList& opt, TransportClient& transcli)
       {
@@ -590,7 +595,7 @@ namespace openvpn {
 		    catch (const std::exception& e)
 		      {
 			if (!quiet)
-			  OPENVPN_LOG("Error parsing IPv4 route: " << o.render() << " : " << e.what());
+			  OPENVPN_LOG("Error parsing IPv4 route: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		      }
 		  }
 	      }
@@ -618,7 +623,7 @@ namespace openvpn {
 		    catch (const std::exception& e)
 		      {
 			if (!quiet)
-			  OPENVPN_LOG("Error parsing IPv6 route: " << o.render() << " : " << e.what());
+			  OPENVPN_LOG("Error parsing IPv6 route: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		      }
 		  }
 	      }
@@ -707,12 +712,12 @@ namespace openvpn {
 		      validate_port(o.get(3, 256), "PROXY_HTTPS port", &https_port);
 		    }
 		  else if (!quiet)
-		    OPENVPN_LOG("Unknown pushed DHCP option: " << o.render());
+		    OPENVPN_LOG("Unknown pushed DHCP option: " << o.render(OPT_RENDER_FLAGS));
 		}
 		catch (const std::exception& e)
 		  {
 		    if (!quiet)
-		      OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
+		      OPENVPN_LOG("Error parsing dhcp-option: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		  }
 	      }
 	    try {
@@ -757,7 +762,7 @@ namespace openvpn {
 		catch (const std::exception& e)
 		  {
 		    if (!quiet)
-		      OPENVPN_LOG("Error parsing dhcp-option: " << o.render() << " : " << e.what());
+		      OPENVPN_LOG("Error parsing dhcp-option: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		  }
 	      }
 	  }

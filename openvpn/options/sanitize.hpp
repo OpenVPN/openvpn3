@@ -18,7 +18,7 @@
 
 namespace openvpn {
 
-  inline std::string render_options_sanitized(const OptionList& opt)
+  inline std::string render_options_sanitized(const OptionList& opt, const unsigned int render_flags)
   {
     std::ostringstream out;
     for (size_t i = 0; i < opt.size(); i++)
@@ -29,7 +29,7 @@ namespace openvpn {
 	  out << i << " [auth-token] ..." << std::endl;
 	else
 #endif
-	  out << i << ' ' << o.render() << std::endl;
+	  out << i << ' ' << o.render(render_flags) << std::endl;
       }
     return out.str();
   }

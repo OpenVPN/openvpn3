@@ -424,7 +424,7 @@ namespace openvpn {
 	    if (received_options.complete())
 	      {
 		// show options
-		OPENVPN_LOG("OPTIONS:" << std::endl << render_options_sanitized(received_options));
+		OPENVPN_LOG("OPTIONS:" << std::endl << render_options_sanitized(received_options, Option::RENDER_PASS_FMT|Option::RENDER_NUMBER|Option::RENDER_BRACKET));
 
 		// process auth-token
 		extract_auth_token(received_options);

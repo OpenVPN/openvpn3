@@ -336,7 +336,7 @@ namespace openvpn {
 	const ParseClientConfig cc = ParseClientConfig::parse(config.content, &kvl, options);
 #ifdef OPENVPN_DUMP_CONFIG
 	std::cout << "---------- ARGS ----------" << std::endl;
-	std::cout << options.render() << std::endl;
+	std::cout << options.render(Option::RENDER_PASS_FMT|Option::RENDER_NUMBER|Option::RENDER_BRACKET) << std::endl;
 	std::cout << "---------- MAP ----------" << std::endl;
 	std::cout << options.render_map() << std::endl;
 #endif
