@@ -179,8 +179,19 @@ namespace openvpn {
 	// parse tls-remote
 	tls_remote = opt.get_optional("tls-remote", 1, 256);
 
-	// parse tls-version-min option
-	tls_version_min = TLSVersion::parse_tls_version_min(opt, TLSVersion::V1_2);
+	// Parse tls-version-min option.
+	// Assume that presence of SSL_OP_NO_TLSvX macro indicates
+	// that local OpenSSL library implements TLSvX.
+	{
+#         if defined(SSL_OP_NO_TLSv1_2)
+	    const TLSVersion::Type maxver = TLSVersion::V1_2;
+#         elif defined(SSL_OP_NO_TLSv1_1)
+	    const TLSVersion::Type maxver = TLSVersion::V1_1;
+#         else
+            const TLSVersion::Type maxver = TLSVersion::V1_0;
+#         endif
+	  tls_version_min = TLSVersion::parse_tls_version_min(opt, maxver);
+	}
 
 	// unsupported cert checkers
 	{
@@ -572,10 +583,14 @@ namespace openvpn {
 	    long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 	    if (config.tls_version_min > TLSVersion::V1_0)
 	      sslopt |= SSL_OP_NO_TLSv1;
-	    if (config.tls_version_min > TLSVersion::V1_1)
-	      sslopt |= SSL_OP_NO_TLSv1_1;
-	    if (config.tls_version_min > TLSVersion::V1_2)
-	      sslopt |= SSL_OP_NO_TLSv1_2;
+#           ifdef SSL_OP_NO_TLSv1_1
+	      if (config.tls_version_min > TLSVersion::V1_1)
+	        sslopt |= SSL_OP_NO_TLSv1_1;
+#           endif
+#           ifdef SSL_OP_NO_TLSv1_2
+	      if (config.tls_version_min > TLSVersion::V1_2)
+	        sslopt |= SSL_OP_NO_TLSv1_2;
+#           endif
 	    SSL_CTX_set_options(ctx, sslopt);
 	  }
 

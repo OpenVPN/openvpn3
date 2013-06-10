@@ -184,7 +184,16 @@ namespace openvpn {
 	tls_remote = opt.get_optional("tls-remote", 1, 256);
 
 	// parse tls-version-min option
-	tls_version_min = TLSVersion::parse_tls_version_min(opt, TLSVersion::V1_2);
+	{
+#         if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_3)
+	    const TLSVersion::Type maxver = TLSVersion::V1_2;
+#         elif defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_2)
+	    const TLSVersion::Type maxver = TLSVersion::V1_1;
+#         else
+            const TLSVersion::Type maxver = TLSVersion::V1_0;
+#         endif
+	  tls_version_min = TLSVersion::parse_tls_version_min(opt, maxver);
+	}
 
 	// unsupported cert verification options
 	{
@@ -311,7 +320,31 @@ namespace openvpn {
 	    throw PolarSSLException("unknown client/server mode");
 
 	  // set minimum TLS version
-	  ssl_set_min_version(ssl, SSL_MAJOR_VERSION_3, ssl_minor_version(c.tls_version_min));
+	  {
+	    int polar_major;
+	    int polar_minor;
+	    switch (c.tls_version_min)
+	      {
+	      case TLSVersion::V1_0:
+	      default:
+		polar_major = SSL_MAJOR_VERSION_3;
+		polar_minor = SSL_MINOR_VERSION_1;
+		break;
+#             if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_2)
+	        case TLSVersion::V1_1:
+		  polar_major = SSL_MAJOR_VERSION_3;
+		  polar_minor = SSL_MINOR_VERSION_2;
+		  break;
+#             endif
+#             if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_3)
+	        case TLSVersion::V1_2:
+		  polar_major = SSL_MAJOR_VERSION_3;
+		  polar_minor = SSL_MINOR_VERSION_3;
+		  break;
+#             endif
+	      }
+	    ssl_set_min_version(ssl, polar_major, polar_minor);
+	  }
 
 	  // peer must present a valid certificate
 	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
@@ -383,21 +416,6 @@ namespace openvpn {
 	  {
 	    erase();
 	    throw;
-	  }
-      }
-
-      // translate TLSVersion::Type t to a PolarSSL minor version code
-      static int ssl_minor_version(const TLSVersion::Type t)
-      {
-	switch (t)
-	  {
-	  case TLSVersion::V1_0:
-	  default:
-	    return SSL_MINOR_VERSION_1;
-	  case TLSVersion::V1_1:
-	    return SSL_MINOR_VERSION_2;
-	  case TLSVersion::V1_2:
-	    return SSL_MINOR_VERSION_3;
 	  }
       }
 
