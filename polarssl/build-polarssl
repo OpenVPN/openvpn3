@@ -7,13 +7,10 @@
 #   ENABLE_TESTING=1 -- run PolarSSL test scripts after build
 #   DEBUG_BUILD=1 -- enable minimal testing on target
 #   ENABLE_SERVER=1  -- enable SSL/TLS server code
+#   ENABLE_FS_IO=1 -- enable PolarSSL file I/O
 #   VERBOSE=1 -- see build commands
 #   USE_MINICRYPTO=1 -- use minicrypto library
 #   NO_WIPE=1 -- don't wipe source tree and reunzip tarball
-#
-# Examples:
-#   AES_NI=1 $O3/polarssl/build-polarssl
-#   AES_NI=1 ENABLE_TESTING=1 VERBOSE=1 $O3/polarssl/build-polarssl
 
 set -e
 if [ -z "$O3" ]; then
@@ -118,6 +115,11 @@ fi
 # Enable SSL/TLS server
 if [ "$ENABLE_SERVER" = "1" ]; then
     echo "#define POLARSSL_SSL_SRV_C" >>$OPC
+fi
+
+# enable PolarSSL file I/O
+if [ "$ENABLE_FS_IO" = "1" ]; then
+    echo "#define POLARSSL_FS_IO" >>$OPC
 fi
 
 # Build shared library
