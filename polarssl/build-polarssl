@@ -54,6 +54,9 @@ else
     # delete makefiles (apparently not needed)
     rm $(find . -type f | grep Makefile)
 
+    echo MERGING bignum-arm.patch
+    patch -p1 <$PD/bignum-arm.patch
+
     # do the big polar-openssl patch
     echo MERGING polar-openssl.patch
     patch -p1 <$PD/polar-openssl.patch

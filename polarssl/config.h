@@ -31,7 +31,7 @@
 #ifndef POLARSSL_CONFIG_H
 #define POLARSSL_CONFIG_H
 
-#include "openvpn-polarssl.h"
+#include <polarssl/openvpn-polarssl.h>
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
 #define _CRT_SECURE_NO_DEPRECATE 1
@@ -85,8 +85,7 @@
  *      include/polarssl/bn_mul.h
  *
  */
-// JY fixme
-//#define POLARSSL_HAVE_ASM
+#define POLARSSL_HAVE_ASM
 
 /**
  * \def POLARSSL_HAVE_SSE2

@@ -31,14 +31,13 @@
 //#define OPENVPN_DEBUG_CLIPROTO       // shows packets in/out (comment out)
 #define OPENVPN_DEBUG_PROTO   1        // increases low-level protocol verbosity (1)
 //#define OPENVPN_DEBUG_VERBOSE_ERRORS // verbosely log Error::Type errors (comment out)
-
-#define OPENVPN_SSL_DEBUG     0      // show verbose SSL debug info (0)
-#define OPENVPN_DEBUG_TUN     2      // debug level for tun object (2)
-#define OPENVPN_DEBUG_UDPLINK 2      // debug level for UDP link object (2)
-#define OPENVPN_DEBUG_TCPLINK 2      // debug level for TCP link object (2)
-#define OPENVPN_DEBUG_COMPRESS 1     // debug level for compression objects (1)
-#define OPENVPN_DEBUG_REMOTELIST 0   // debug level for RemoteList object (0)
-#define OPENVPN_DEBUG_TUN_BUILDER 0  // debug level for tun/builder/client.hpp (0)
+#define OPENVPN_SSL_DEBUG     0        // show verbose SSL debug info (0)
+#define OPENVPN_DEBUG_TUN     2        // debug level for tun object (2)
+#define OPENVPN_DEBUG_UDPLINK 2        // debug level for UDP link object (2)
+#define OPENVPN_DEBUG_TCPLINK 2        // debug level for TCP link object (2)
+#define OPENVPN_DEBUG_COMPRESS 1       // debug level for compression objects (1)
+#define OPENVPN_DEBUG_REMOTELIST 0     // debug level for RemoteList object (0)
+#define OPENVPN_DEBUG_TUN_BUILDER 0    // debug level for tun/builder/client.hpp (0)
 
 // enable assertion checks (can safely be disabled in production)
 //#define OPENVPN_ENABLE_ASSERT
@@ -71,6 +70,7 @@
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>
 #include <openvpn/error/excode.hpp>
+#include <openvpn/crypto/selftest.hpp>
 
 // copyright
 #include <openvpn/legal/copyright.hpp>
@@ -840,6 +840,11 @@ namespace openvpn {
       ClientConnect::Ptr session = state->session;
       if (session)
 	session->thread_safe_reconnect(seconds);
+    }
+
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::crypto_self_test()
+    {
+      return SelfTest::crypto_self_test();
     }
 
     OPENVPN_CLIENT_EXPORT int OpenVPNClient::app_expire()

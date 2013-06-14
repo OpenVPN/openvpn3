@@ -26,10 +26,12 @@ if [ "$DEBUG_BUILD" = "1" ]; then
     vis1=""
     vis2=""
     opt2="$pkg_id_def $LIB_OPT_LEVEL"
+    DBG_DIR_SUFFIX="-dbg"
 else
     vis1="-fvisibility=hidden"
     vis2='-DSWIGEXPORT=__attribute__((visibility("default")))'
     opt2="$pkg_id_def -Os"
+    DBG_DIR_SUFFIX=""
 fi
 
 if [ "$OPENSSL" = "1" ]; then
@@ -39,9 +41,9 @@ if [ "$OPENSSL" = "1" ]; then
     ssl_libdir="-L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
 else
     ssl_def="-DUSE_POLARSSL"
-    ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
+    ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/include"
     ssl_lib="-lpolarssl -lminicrypto"
-    ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
+    ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/library"
 fi
 
 if [ "$WRAP_ONLY" != "1" ]; then
@@ -63,7 +65,7 @@ if [ "$WRAP_ONLY" != "1" ]; then
 	-I$O3 \
 	-I$DEP_DIR/boost \
 	$ssl_inc \
-	-I$DEP_DIR/snappy/snappy-$PLATFORM/include \
+	-I$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/include \
 	-c $O3/client/ovpncli.cpp
 fi
 
@@ -78,10 +80,10 @@ $GPP_CMD \
     -D_GLIBCXX_HAVE_FENV_H=1 \
     -I$O3/client \
     -I$O3 \
-    -L$DEP_DIR/boost/stage-$PLATFORM/lib \
+    -L$DEP_DIR/boost/stage-$PLATFORM$DBG_DIR_SUFFIX/lib \
     $ssl_libdir \
     -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
-    -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
+    -L$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/lib \
     ovpncli_wrap.cxx \
     android/jellybean_hack.cpp \
     ovpncli.o \

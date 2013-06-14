@@ -413,6 +413,9 @@ namespace openvpn {
       virtual void external_pki_cert_request(ExternalPKICertRequest&) = 0;
       virtual void external_pki_sign_request(ExternalPKISignRequest&) = 0;
 
+      // Do a crypto library self test
+      static std::string crypto_self_test();
+
       // Returns date/time of app expiration as a unix time value
       static int app_expire();
 

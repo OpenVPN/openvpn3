@@ -132,6 +132,7 @@ int main(int argc, char *argv[])
     { "proxy-password", required_argument,  NULL,      'W' },
     { "proxy-basic",    no_argument      ,  NULL,      'B' },
     { "eval",           no_argument,        NULL,      'e' },
+    { "self-test",      no_argument,        NULL,      'T' },
     { "cache-password", no_argument,        NULL,      'C' },
     { "no-cert",        no_argument,        NULL,      'x' },
     { "def-keydir",     required_argument,  NULL,      'k' },
@@ -154,6 +155,7 @@ int main(int argc, char *argv[])
 	std::string proxyUsername;
 	std::string proxyPassword;
 	bool eval = false;
+	bool self_test = false;
 	bool cachePassword = false;
 	bool disableClientCert = false;
 	bool proxyAllowCleartextAuth = false;
@@ -161,12 +163,15 @@ int main(int argc, char *argv[])
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BeCxu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BeTCxu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
 	      case 'e':
 		eval = true;
+		break;
+	      case 'T':
+		self_test = true;
 		break;
 	      case 'C':
 		cachePassword = true;
@@ -235,115 +240,120 @@ int main(int argc, char *argv[])
 
 	Client::init_process();
 
-	if (argc != 1)
-	  goto usage;
-	ProfileMerge pm(argv[0], "", true,
-			ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
-	if (pm.status() != ProfileMerge::MERGE_SUCCESS)
-	  OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
-
-	ClientAPI::Config config;
-	config.content = pm.profile_content();
-	config.serverOverride = server;
-	config.protoOverride = proto;
-	config.connTimeout = timeout;
-	config.compressionMode = compress;
-	config.privateKeyPassword = privateKeyPassword;
-	config.disableClientCert = disableClientCert;
-	config.proxyHost = proxyHost;
-	config.proxyPort = proxyPort;
-	config.proxyUsername = proxyUsername;
-	config.proxyPassword = proxyPassword;
-	config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
-	config.defaultKeyDirection = defaultKeyDirection;
-
-	if (eval)
+	if (self_test)
 	  {
-	    ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
-	    std::cout << "EVAL PROFILE" << std::endl;
-	    std::cout << "error=" << eval.error << std::endl;
-	    std::cout << "message=" << eval.message << std::endl;
-	    std::cout << "userlockedUsername=" << eval.userlockedUsername << std::endl;
-	    std::cout << "profileName=" << eval.profileName << std::endl;
-	    std::cout << "friendlyName=" << eval.friendlyName << std::endl;
-	    std::cout << "autologin=" << eval.autologin << std::endl;
-	    std::cout << "externalPki=" << eval.externalPki << std::endl;
-	    std::cout << "staticChallenge=" << eval.staticChallenge << std::endl;
-	    std::cout << "staticChallengeEcho=" << eval.staticChallengeEcho << std::endl;
-	    std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
-	    std::cout << "allowPasswordSave=" << eval.allowPasswordSave << std::endl;
-
-	    for (size_t i = 0; i < eval.serverList.size(); ++i)
-	      {
-		const ClientAPI::ServerEntry& se = eval.serverList[i];
-		std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << std::endl;
-	      }
+	    std::cout << ClientAPI::OpenVPNClient::crypto_self_test();
 	  }
 	else
 	  {
-	    Client client;
-	    ClientAPI::EvalConfig eval = client.eval_config(config);
-	    if (eval.error)
-	      OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
-	    if (eval.autologin)
+	    if (argc != 1)
+	      goto usage;
+	    ProfileMerge pm(argv[0], "", true,
+			    ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
+	    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
+	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+
+	    ClientAPI::Config config;
+	    config.content = pm.profile_content();
+	    config.serverOverride = server;
+	    config.protoOverride = proto;
+	    config.connTimeout = timeout;
+	    config.compressionMode = compress;
+	    config.privateKeyPassword = privateKeyPassword;
+	    config.disableClientCert = disableClientCert;
+	    config.proxyHost = proxyHost;
+	    config.proxyPort = proxyPort;
+	    config.proxyUsername = proxyUsername;
+	    config.proxyPassword = proxyPassword;
+	    config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
+	    config.defaultKeyDirection = defaultKeyDirection;
+
+	    if (eval)
 	      {
-		if (!username.empty() || !password.empty())
-		  std::cout << "NOTE: creds were not needed" << std::endl;
+		ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
+		std::cout << "EVAL PROFILE" << std::endl;
+		std::cout << "error=" << eval.error << std::endl;
+		std::cout << "message=" << eval.message << std::endl;
+		std::cout << "userlockedUsername=" << eval.userlockedUsername << std::endl;
+		std::cout << "profileName=" << eval.profileName << std::endl;
+		std::cout << "friendlyName=" << eval.friendlyName << std::endl;
+		std::cout << "autologin=" << eval.autologin << std::endl;
+		std::cout << "externalPki=" << eval.externalPki << std::endl;
+		std::cout << "staticChallenge=" << eval.staticChallenge << std::endl;
+		std::cout << "staticChallengeEcho=" << eval.staticChallengeEcho << std::endl;
+		std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
+		std::cout << "allowPasswordSave=" << eval.allowPasswordSave << std::endl;
+
+		for (size_t i = 0; i < eval.serverList.size(); ++i)
+		  {
+		    const ClientAPI::ServerEntry& se = eval.serverList[i];
+		    std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << std::endl;
+		  }
 	      }
 	    else
 	      {
-		if (username.empty())
-		  OPENVPN_THROW_EXCEPTION("need creds");
-		ClientAPI::ProvideCreds creds;
-		creds.username = username;
-		creds.password = password;
-		creds.response = response;
-		creds.replacePasswordWithSessionID = true;
-		creds.cachePassword = cachePassword;
-		ClientAPI::Status creds_status = client.provide_creds(creds);
-		if (creds_status.error)
-		  OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
-	      }
+		Client client;
+		ClientAPI::EvalConfig eval = client.eval_config(config);
+		if (eval.error)
+		  OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
+		if (eval.autologin)
+		  {
+		    if (!username.empty() || !password.empty())
+		      std::cout << "NOTE: creds were not needed" << std::endl;
+		  }
+		else
+		  {
+		    if (username.empty())
+		      OPENVPN_THROW_EXCEPTION("need creds");
+		    ClientAPI::ProvideCreds creds;
+		    creds.username = username;
+		    creds.password = password;
+		    creds.response = response;
+		    creds.replacePasswordWithSessionID = true;
+		    creds.cachePassword = cachePassword;
+		    ClientAPI::Status creds_status = client.provide_creds(creds);
+		    if (creds_status.error)
+		      OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
+		  }
 
-	    std::cout << "CONNECTING..." << std::endl;
+		std::cout << "CONNECTING..." << std::endl;
 
-	    // catch signals
-	    Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP);
+		// catch signals
+		Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP);
 
-	    // start connect thread
-	    the_client = &client;
-	    boost::thread* thread = new boost::thread(boost::bind(&worker_thread));
+		// start connect thread
+		the_client = &client;
+		boost::thread* thread = new boost::thread(boost::bind(&worker_thread));
 
-	    // wait for connect thread to exit
-	    thread->join();
-	    the_client = NULL;
+		// wait for connect thread to exit
+		thread->join();
+		the_client = NULL;
 
-	    // print closing stats
-	    {
-	      const int n = client.stats_n();
-	      std::vector<long long> stats = client.stats_bundle();
-
-	      std::cout << "STATS:" << std::endl;
-	      for (int i = 0; i < n; ++i)
+		// print closing stats
 		{
-		  const long long value = stats[i];
-		  if (value)
-		    std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+		  const int n = client.stats_n();
+		  std::vector<long long> stats = client.stats_bundle();
+		  
+		  std::cout << "STATS:" << std::endl;
+		  for (int i = 0; i < n; ++i)
+		    {
+		      const long long value = stats[i];
+		      if (value)
+			std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+		    }
 		}
-	    }
+	      }
 	  }
-	return 0;
       }
     else
-	goto usage;
+      goto usage;
   }
   catch (const std::exception& e)
     {
       the_client = NULL;
       std::cout << "Main thread exception: " << e.what() << std::endl;
       return 1;
-    }
-
+    }  
   return 0;
 
  usage:

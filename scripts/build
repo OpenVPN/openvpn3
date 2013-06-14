@@ -35,10 +35,16 @@ CPPFLAGS=""
 LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
+DBG_DIR_SUFFIX=""
 
 # if vars defined a debug build, set DEBUG=1
 if [ "$DEBUG_BUILD" = "1" ]; then
     DEBUG=1
+fi
+
+# set debug suffix for include dirs/libs
+if [ "$DEBUG" = "1" ]; then
+    DBG_DIR_SUFFIX="-dbg"
 fi
 
 # building on Mac OS X for osx, ios, or iossim?
@@ -69,8 +75,8 @@ fi
 # PolarSSL
 if [ "$PSSL" = "1" ]; then
     LIBS="$LIBS -lpolarssl"
-    CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL -I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
+    CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL -I$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/library"
     if [ "$MINI" = "1" ]; then
 	LIBS="$LIBS -lminicrypto"
 	LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
@@ -125,7 +131,7 @@ fi
 # boost
 CPPFLAGS="$CPPFLAGS -I$DEP_DIR/boost"
 LIBS="$LIBS -lboost_system"
-LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM/lib"
+LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM$DBG_DIR_SUFFIX/lib"
 if [ "$NOTHREADS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
@@ -149,8 +155,8 @@ fi
 
 # Snappy compression
 if [ "$SNAP" = "1" ]; then
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/snappy/snappy-$PLATFORM/lib"
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/lib"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/include"
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
 fi
