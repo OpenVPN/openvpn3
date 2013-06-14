@@ -142,8 +142,10 @@ namespace openvpn {
 	    if (o)
 	      {
 		const std::string& key_txt = o->get(1, Option::MULTILINE);
-		const size_t idx = key_txt.find("-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\n");
-		privateKeyPasswordRequired_ = (idx != std::string::npos);
+		privateKeyPasswordRequired_ = (
+	            key_txt.find("-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\n") != std::string::npos
+		 || key_txt.find("-----BEGIN ENCRYPTED PRIVATE KEY-----") != std::string::npos
+		);
 	      }
 	  }
 
