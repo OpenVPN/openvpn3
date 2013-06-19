@@ -54,14 +54,16 @@ else
     # delete makefiles (apparently not needed)
     rm $(find . -type f | grep Makefile)
 
-    echo MERGING bignum-arm.patch
-    patch -p1 <$PD/bignum-arm.patch
+    #echo MERGING bignum-arm.patch
+    #patch -p1 <$PD/bignum-arm.patch
 
     # do the big polar-openssl patch
-    echo MERGING polar-openssl.patch
-    patch -p1 <$PD/polar-openssl.patch
+    echo MERGING polarssl-minicrypto.patch
+    patch -p1 <$PD/polarssl-minicrypto.patch
 
     # define configs
+    cp include/polarssl/config.h include/polarssl/config.h.orig
+    cp CMakeLists.txt CMakeLists.txt.orig
     cp $PD/config.h include/polarssl/
     cp $PD/CMakeLists.txt .
 fi
