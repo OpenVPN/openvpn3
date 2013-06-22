@@ -1,5 +1,5 @@
 export LZO_VERSION=lzo-2.06
 export SNAPPY_VERSION=snappy-1.1.0
-export POLARSSL_VERSION=polarssl-1.2
+export POLARSSL_VERSION=polarssl-1.2.8
 export OPENSSL_VERSION=openssl-1.0.1e
 export BOOST_VERSION=boost_1_53_0
