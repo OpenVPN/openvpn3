@@ -9,7 +9,14 @@ fi
 rm -rf snappy
 mkdir snappy
 
-for target in ios ios-dbg iossim iossim-dbg osx osx-dbg ; do
+if [ "$OSX_ONLY" != "1" ]; then
+    for target in ios ios-dbg iossim iossim-dbg ; do
+	echo '***************' TARGET $target
+	TARGET=$target $O3/snappy/build-snappy
+    done
+fi
+
+for target in osx osx-dbg ; do
     echo '***************' TARGET $target
     TARGET=$target $O3/snappy/build-snappy
 done

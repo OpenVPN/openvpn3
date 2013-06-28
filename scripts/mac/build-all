@@ -2,12 +2,16 @@
 set -e
 echo "******* BOOST"
 $O3/scripts/mac/build-boost
-echo "******* MINICRYPTO"
-$O3/scripts/mac/build-minicrypto
+if [ "$OSX_ONLY" != "1" ]; then
+    echo "******* MINICRYPTO"
+    $O3/scripts/mac/build-minicrypto
+fi
 echo "******* POLARSSL"
 $O3/scripts/mac/build-polarssl
-echo "******* OPENSSL"
-$O3/scripts/mac/build-openssl-small
+if [ "$OSX_ONLY" != "1" ]; then
+    echo "******* OPENSSL"
+    $O3/scripts/mac/build-openssl-small
+fi
 #echo "******* LZO"
 #$O3/scripts/mac/build-lzo
 echo "******* SNAPPY"

@@ -2,19 +2,23 @@
 set -e
 REL_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 . $O3/lib-versions
-. $O3/vars-iossim
-export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
-. $O3/vars-ios
-rm -rf boost $BOOST_VERSION
-mkdir boost
-if [ "$SRCDIR" ]; then
-    cp -a "$SRCDIR" $BOOST_VERSION
-else
-    tar xfz ~/Downloads/$BOOST_VERSION.tar.gz
+if [ "$OSX_ONLY" != "1" ]; then
+    . $O3/vars-iossim
+    export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
+    . $O3/vars-ios
 fi
-cd $BOOST_VERSION
-#patch -p1 <$DL/asio-engine.patch
-cat >>tools/build/v2/user-config.jam <<EOF
+if [ "$NO_WIPE" != "1" ]; then
+    echo WIPE and reunzip source
+    rm -rf boost $BOOST_VERSION
+    mkdir boost
+    if [ "$SRCDIR" ]; then
+	cp -a "$SRCDIR" $BOOST_VERSION
+    else
+	tar xfz ~/Downloads/$BOOST_VERSION.tar.gz
+    fi
+    cd $BOOST_VERSION
+    #patch -p1 <$DL/asio-engine.patch
+    cat >>tools/build/v2/user-config.jam <<EOF
 using clang : ios : clang++
             :
                 <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $REL_FLAGS"
@@ -40,8 +44,18 @@ using clang : osxdbg : clang++
                 <compileflags>"-Wno-unused-function"
             ;
 EOF
-./bootstrap.sh
-for target in ios iossim osx iosdbg iossimdbg osxdbg ; do
+    ./bootstrap.sh
+else
+    echo RETAIN existing source
+    cd $BOOST_VERSION
+fi
+TARGETS=""
+if [ "$OSX_ONLY" != "1" ]; then
+    TARGETS="ios iosdbg iossim iossimdbg"
+fi
+TARGETS="$TARGETS osx osxdbg"
+
+for target in $TARGETS ; do
     if [ "${target:(-3)}" == "dbg" ]; then
 	variant=debug
 	stage=stage-${target%dbg}-dbg
@@ -50,7 +64,9 @@ for target in ios iossim osx iosdbg iossimdbg osxdbg ; do
 	stage=stage-$target
     fi
     echo "************************ $target $variant $stage"
-    ./bjam -d2 toolset=clang-$target --stagedir=$stage --with-system --with-thread variant=$variant link=static threading=multi runtime-link=static
+    cmd="./bjam -d2 toolset=clang-$target --stagedir=$stage --with-system --with-thread variant=$variant link=static threading=multi runtime-link=static"
+    echo $cmd
+    $cmd
 done
 mv stage-* ../boost/
 cp -a boost ../boost/

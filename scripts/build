@@ -104,7 +104,7 @@ if [ "$APPLE_FAMILY" = "1" ]; then
 	LIBS="$LIBS -lcrypto -lssl"
 	[ "$CLANG" = "1" ] && [ "$NO_DEPRECATE" ] && FLAGS="$FLAGS $NO_DEPRECATE"
     elif [ "$PSSL" = "1" ]; then
-	true
+	NOSSL=1
     else
 	NOSSL=1
 	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL"
