@@ -10,6 +10,8 @@
 #ifndef OPENVPN_APPLECRYPTO_UTIL_REACHABLE_H
 #define OPENVPN_APPLECRYPTO_UTIL_REACHABLE_H
 
+#import "TargetConditionals.h"
+
 #include <netinet/in.h>
 #include <SystemConfiguration/SCNetworkReachability.h>
 
@@ -37,7 +39,12 @@ namespace openvpn {
     bool defined() const { return bool(didRetrieveFlags); }
     bool reachable() const { return bool(flags & kSCNetworkReachabilityFlagsReachable); }
     bool connectionRequired() const { return bool(flags & kSCNetworkReachabilityFlagsConnectionRequired); }
+
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR // iOS device or simulator
     bool isWWAN() const { return bool(flags & kSCNetworkReachabilityFlagsIsWWAN); } // cellular
+#else
+    bool isWWAN() const { return false; }
+#endif
 
     bool reachableVia(const std::string& net_type) const
     {
