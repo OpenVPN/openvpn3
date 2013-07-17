@@ -128,7 +128,6 @@ namespace openvpn {
 	      staticChallenge_ = o->get(1, 256);
 	      if (o->get_optional(2, 16) == "1")
 		staticChallengeEcho_ = true;
-	      allowPasswordSave_ = false; // saving passwords is incompatible with challenge/response
 	    }
 	}
 
