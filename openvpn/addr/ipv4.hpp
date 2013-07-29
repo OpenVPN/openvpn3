@@ -21,6 +21,7 @@
 #include <openvpn/common/ostream.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/ffs.hpp>
+#include <openvpn/common/hexstr.hpp>
 #include <openvpn/addr/iperr.hpp>
 
 namespace openvpn {
@@ -55,6 +56,19 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_ulong(unsigned long ul)
+      {
+	Addr ret;
+	ret.u.addr = (base_type)ul;
+	return ret;
+      }
+
+      // return *this as a unsigned long
+      unsigned long to_ulong() const
+      {
+	return (unsigned long)u.addr;
+      }
+
       static Addr from_bytes(const unsigned char *bytes) // host byte order
       {
 	Addr ret;
@@ -69,11 +83,17 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_one()
+      {
+	Addr ret;
+	ret.one();
+	return ret;
+      }
+
       static Addr from_zero_complement()
       {
 	Addr ret;
-	ret.zero();
-	ret.negate();
+	ret.zero_complement();
 	return ret;
       }
 
@@ -86,9 +106,9 @@ namespace openvpn {
       }
 
       // build a netmask using given extent
-      static Addr netmask_from_extent(const unsigned int extent)
+      Addr netmask_from_extent() const
       {
-	const int lb = find_last_set(extent - 1);
+	const int lb = find_last_set(u.addr - 1);
 	return netmask_from_prefix_len(SIZE - lb);
       }
 
@@ -108,6 +128,54 @@ namespace openvpn {
 	std::string ret = a.to_string(ec);
 	if (ec)
 	  throw ipv4_exception("to_string");
+	return ret;
+      }
+
+      static Addr from_hex(const std::string& s)
+      {
+	Addr ret;
+	ret.u.addr = 0;
+	size_t len = s.length();
+	size_t base = 0;
+	if (len > 0 && s[len-1] == 'L')
+	  len -= 1;
+	if (len >= 2 && s[0] == '0' && s[1] == 'x')
+	  {
+	    base = 2;
+	    len -= 2;
+	  }
+	if (len < 1 || len > 8)
+	  throw ipv4_exception("parse hex error");
+	size_t di = (len-1)>>1;
+	for (int i = (len & 1) ? -1 : 0; i < int(len); i += 2)
+	  {
+	    const size_t idx = base + i;
+	    const int bh = (i >= 0) ? parse_hex_char(s[idx]) : 0;
+	    const int bl = parse_hex_char(s[idx+1]);
+	    if (bh == -1 || bl == -1)
+	      throw ipv4_exception("parse hex error");
+	    ret.u.bytes[Endian::e4(di--)] = (bh<<4) + bl;
+	  }
+	return ret;
+      }
+
+      std::string to_hex() const
+      {
+	std::string ret;
+	ret.reserve(8);
+	bool firstnonzero = false;
+	for (size_t i = 0; i < 4; ++i)
+	  {
+	    const unsigned char b = u.bytes[Endian::e4rev(i)];
+	    if (b || firstnonzero || i == 3)
+	      {
+		const char bh = b >> 4;
+		if (bh || firstnonzero)
+		  ret += render_hex_char(bh);
+		ret += render_hex_char(b & 0x0F);
+		firstnonzero = true;
+	      }
+	  }
 	return ret;
       }
 
@@ -161,8 +229,28 @@ namespace openvpn {
 	return operator+(-delta);
       }
 
-      long operator-(const Addr& other) const {
-	return long(u.addr) - long(other.u.addr);
+      Addr operator-(const Addr& other) const {
+	Addr ret;
+	ret.u.addr = u.addr - other.u.addr;
+	return ret;
+      }
+
+      Addr operator*(const Addr& other) const {
+	Addr ret;
+	ret.u.addr = u.addr * other.u.addr;
+	return ret;
+      }
+
+      Addr operator/(const Addr& other) const {
+	Addr ret;
+	ret.u.addr = u.addr / other.u.addr;
+	return ret;
+      }
+
+      Addr operator%(const Addr& other) const {
+	Addr ret;
+	ret.u.addr = u.addr % other.u.addr;
+	return ret;
       }
 
       Addr operator<<(const unsigned int shift) const {
@@ -259,21 +347,29 @@ namespace openvpn {
       }
 
       // return the number of host addresses contained within netmask
-      unsigned int extent() const
+      Addr extent_from_netmask() const
       {
 	const unsigned int hl = host_len();
-	if (hl < 32)
-	  return 1 << hl;
-	else if (hl == 32)
-	  return 0;
+	if (hl < SIZE)
+	  {
+	    Addr ret;
+	    ret.u.addr = 1 << hl;
+	    return ret;
+	  }
+	else if (hl == SIZE)
+	  {
+	    Addr ret;
+	    ret.u.addr = 0;
+	    return ret;
+	  }
 	else
 	  throw ipv4_exception("extent overflow");
       }
 
       // convert netmask in addr to prefix_len, will return -1 on error
-      static int prefix_len_32(const uint32_t addr)
+      static int prefix_len_32(const boost::uint32_t addr)
       {
-	if (addr == uint32_t(~0))
+	if (addr == ~boost::uint32_t(0))
 	  return 32;
 	else if (addr == 0)
 	  return 0;
@@ -317,6 +413,16 @@ namespace openvpn {
 	u.addr = 0;
       }
 
+      void zero_complement()
+      {
+	u.addr = ~0;
+      }
+
+      void one()
+      {
+	u.addr = 1;
+      }
+
       Addr& operator++()
       {
 	++u.addr;
@@ -327,14 +433,14 @@ namespace openvpn {
       static base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
       {
 	if (prefix_len)
-	  return ~((1 << (32 - prefix_len)) - 1);
+	  return ~((1 << (SIZE - prefix_len)) - 1);
 	else
 	  return 0;
       }
 
       static base_type prefix_len_to_netmask(const unsigned int prefix_len)
       {
-	if (prefix_len <= 32)
+	if (prefix_len <= SIZE)
 	  return prefix_len_to_netmask_unchecked(prefix_len);
 	else
 	  throw ipv4_exception("bad prefix len");

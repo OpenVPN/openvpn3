@@ -99,6 +99,16 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_hex(Version v, const std::string& s)
+      {
+	if (v == V4)
+	  return from_ipv4(IPv4::Addr::from_hex(s));
+	else if (v == V6)
+	  return from_ipv6(IPv6::Addr::from_hex(s));
+	else
+	  throw ip_exception("address unspecified");
+      }
+
       static Addr from_ipv4(const IPv4::Addr& addr)
       {
 	Addr a;
@@ -115,6 +125,27 @@ namespace openvpn {
 	return a;
       }
 
+      static Addr from_ulong(Version v, unsigned long ul)
+      {
+	if (v == V4)
+	  return from_ipv4(IPv4::Addr::from_ulong(ul));
+	else if (v == V6)
+	  return from_ipv6(IPv6::Addr::from_ulong(ul));
+	else
+	  throw ip_exception("address unspecified");
+      }
+
+      // return *this as a ulong, will raise exception on overflow
+      unsigned long to_ulong() const
+      {
+	if (ver == V4)
+	  return u.v4.to_ulong();
+	else if (ver == V6)
+	  return u.v6.to_ulong();
+	else
+	  throw ip_exception("address unspecified");
+      }
+
       // construct an address where all bits are zero
       static Addr from_zero(Version v)
       {
@@ -122,6 +153,17 @@ namespace openvpn {
 	  return from_ipv4(IPv4::Addr::from_zero());
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_zero());
+	else
+	  throw ip_exception("address unspecified");
+      }
+
+      // construct an address where all bits are zero
+      static Addr from_one(Version v)
+      {
+	if (v == V4)
+	  return from_ipv4(IPv4::Addr::from_one());
+	else if (v == V6)
+	  return from_ipv6(IPv6::Addr::from_one());
 	else
 	  throw ip_exception("address unspecified");
       }
@@ -148,13 +190,13 @@ namespace openvpn {
 	  throw ip_exception("address unspecified");
       }
 
-      // build a netmask using given extent
-      static Addr netmask_from_extent(Version v, const unsigned int extent)
+      // build a netmask using *this as extent
+      Addr netmask_from_extent() const
       {
-	if (v == V4)
-	  return from_ipv4(IPv4::Addr::netmask_from_extent(extent));
-	else if (v == V6)
-	  return from_ipv6(IPv6::Addr::netmask_from_extent(extent));
+	if (ver == V4)
+	  return from_ipv4(u.v4.netmask_from_extent());
+	else if (ver == V6)
+	  return from_ipv6(u.v6.netmask_from_extent());
 	else
 	  throw ip_exception("address unspecified");
       }
@@ -172,6 +214,16 @@ namespace openvpn {
 	  }
 	else
 	  return "UNSPEC";
+      }
+
+      std::string to_hex() const
+      {
+	if (ver == V4)
+	  return u.v4.to_hex();
+	else if (ver == V6)
+	  return u.v6.to_hex();
+	else
+	  throw ip_exception("address unspecified");
       }
 
       std::string arpa() const
@@ -217,54 +269,6 @@ namespace openvpn {
 	  }
       }
 
-      Addr operator&(const Addr& other) const {
-	if (ver != other.ver)
-	  throw ip_exception("version inconsistency");
-	switch (ver)
-	  {
-	  case V4:
-	    {
-	      Addr ret;
-	      ret.ver = V4;
-	      ret.u.v4 = u.v4 & other.u.v4;
-	      return ret;
-	    }
-	  case V6:
-	    {
-	      Addr ret;
-	      ret.ver = V6;
-	      ret.u.v6 = u.v6 & other.u.v6;
-	      return ret;
-	    }
-	  default:
-	    throw ip_exception("address unspecified");
-	  }
-      }
-
-      Addr operator|(const Addr& other) const {
-	if (ver != other.ver)
-	  throw ip_exception("version inconsistency");
-	switch (ver)
-	  {
-	  case V4:
-	    {
-	      Addr ret;
-	      ret.ver = V4;
-	      ret.u.v4 = u.v4 | other.u.v4;
-	      return ret;
-	    }
-	  case V6:
-	    {
-	      Addr ret;
-	      ret.ver = V6;
-	      ret.u.v6 = u.v6 | other.u.v6;
-	      return ret;
-	    }
-	  default:
-	    throw ip_exception("address unspecified");
-	  }
-      }
-
       Addr operator+(const long delta) const {
 	switch (ver)
 	  {
@@ -287,47 +291,44 @@ namespace openvpn {
 	  }
       }
 
-      Addr operator+(const Addr& other) const {
-	if (ver != other.ver)
-	  throw ip_exception("version inconsistency");
-	switch (ver)
-	  {
-	  case V4:
-	    {
-	      Addr ret;
-	      ret.ver = V4;
-	      ret.u.v4 = u.v4 + other.u.v4;
-	      return ret;
-	    }
-	  case V6:
-	    {
-	      Addr ret;
-	      ret.ver = V6;
-	      ret.u.v6 = u.v6 + other.u.v6;
-	      return ret;
-	    }
-	  default:
-	    throw ip_exception("address unspecified");
-	  }
-      }
-
       Addr operator-(const long delta) const {
 	return operator+(-delta);
       }
 
-      long operator-(const Addr& other) const {
-	if (ver != other.ver)
-	  throw ip_exception("version inconsistency");
-	switch (ver)
-	  {
-	  case V4:
-	    return u.v4 - other.u.v4;
-	  case V6:
-	    return u.v6 - other.u.v6;
-	  default:
-	    throw ip_exception("address unspecified");
-	  }
+#define OPENVPN_IP_OPERATOR_BINOP(OP)		       \
+      Addr operator OP (const Addr& other) const {     \
+	if (ver != other.ver)                          \
+	  throw ip_exception("version inconsistency"); \
+	switch (ver)                                   \
+	  {                                            \
+	  case V4:                                     \
+	    {                                          \
+	      Addr ret;                                \
+	      ret.ver = V4;                            \
+	      ret.u.v4 = u.v4 OP other.u.v4;           \
+	      return ret;                              \
+	    }                                          \
+	  case V6:                                     \
+	    {                                          \
+	      Addr ret;                                \
+	      ret.ver = V6;                            \
+	      ret.u.v6 = u.v6 OP other.u.v6;           \
+	      return ret;                              \
+	    }                                          \
+	  default:                                     \
+	    throw ip_exception("address unspecified"); \
+	  }                                            \
       }
+
+      OPENVPN_IP_OPERATOR_BINOP(+)
+      OPENVPN_IP_OPERATOR_BINOP(-)
+      OPENVPN_IP_OPERATOR_BINOP(*)
+      OPENVPN_IP_OPERATOR_BINOP(/)
+      OPENVPN_IP_OPERATOR_BINOP(%)
+      OPENVPN_IP_OPERATOR_BINOP(&)
+      OPENVPN_IP_OPERATOR_BINOP(|)
+
+#undef OPENVPN_IP_OPERATOR_BINOP
 
       Addr operator<<(const unsigned int shift) const {
 	switch (ver)
@@ -576,14 +577,14 @@ namespace openvpn {
       }
 
       // return the number of host addresses contained within netmask
-      unsigned int extent() const
+      Addr extent_from_netmask() const
       {
 	switch (ver)
 	  {
 	  case V4:
-	    return u.v4.extent();
+	    return from_ipv4(u.v4.extent_from_netmask());
 	  case V6:
-	    return u.v6.extent();
+	    return from_ipv6(u.v6.extent_from_netmask());
 	  default:
 	    throw ip_exception("address unspecified");
 	  }

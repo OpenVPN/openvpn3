@@ -15,6 +15,14 @@
 namespace openvpn {
   namespace Endian {
 #   ifdef BOOST_LITTLE_ENDIAN
+    inline size_t e16(const size_t v)
+    {
+      return v;
+    }
+    inline size_t e16rev(const size_t v)
+    {
+      return 15-v;
+    }
     inline size_t e4(const size_t v)
     {
       return v;
@@ -32,6 +40,14 @@ namespace openvpn {
       return 1-v;
     }
 #   elif BOOST_BIG_ENDIAN
+    inline size_t e16rev(const size_t v)
+    {
+      return v;
+    }
+    inline size_t e16(const size_t v)
+    {
+      return 15-v;
+    }
     inline size_t e4rev(const size_t v)
     {
       return v;

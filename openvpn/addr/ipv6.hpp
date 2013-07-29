@@ -20,6 +20,7 @@
 #include <openvpn/common/ostream.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/ffs.hpp>
+#include <openvpn/common/hexstr.hpp>
 #include <openvpn/addr/ipv4.hpp>
 #include <openvpn/addr/iperr.hpp>
 
@@ -65,6 +66,74 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_hex(const std::string& s)
+      {
+	Addr ret;
+	ret.scope_id_ = 0;
+	ret.zero();
+	size_t len = s.length();
+	size_t base = 0;
+	if (len > 0 && s[len-1] == 'L')
+	  len -= 1;
+	if (len >= 2 && s[0] == '0' && s[1] == 'x')
+	  {
+	    base = 2;
+	    len -= 2;
+	  }
+	if (len < 1 || len > 32)
+	  throw ipv6_exception("parse hex error");
+	size_t di = (len-1)>>1;
+	for (int i = (len & 1) ? -1 : 0; i < int(len); i += 2)
+	  {
+	    const size_t idx = base + i;
+	    const int bh = (i >= 0) ? parse_hex_char(s[idx]) : 0;
+	    const int bl = parse_hex_char(s[idx+1]);
+	    if (bh == -1 || bl == -1)
+	      throw ipv6_exception("parse hex error");
+	    ret.u.bytes[Endian::e16(di--)] = (bh<<4) + bl;
+	  }
+	return ret;
+      }
+
+      std::string to_hex() const
+      {
+	std::string ret;
+	ret.reserve(32);
+	bool firstnonzero = false;
+	for (size_t i = 0; i < 16; ++i)
+	  {
+	    const unsigned char b = u.bytes[Endian::e16rev(i)];
+	    if (b || firstnonzero || i == 15)
+	      {
+		const char bh = b >> 4;
+		if (bh || firstnonzero)
+		  ret += render_hex_char(bh);
+		ret += render_hex_char(b & 0x0F);
+		firstnonzero = true;
+	      }
+	  }
+	return ret;
+      }
+
+      static Addr from_ulong(unsigned long ul)
+      {
+	Addr ret;
+	ret.scope_id_ = 0;
+	ret.u.u64[Endian::e2(0)] = boost::uint64_t(ul);
+	ret.u.u64[Endian::e2(1)] = 0;
+	return ret;
+      }
+
+      // return *this as a unsigned long
+      unsigned long to_ulong() const
+      {
+	const unsigned long ret = (unsigned long)u.u64[Endian::e2(0)];
+	const boost::uint64_t cmp = boost::uint64_t(ret);
+	if (u.u64[Endian::e2(1)] || cmp != u.u64[Endian::e2(0)])
+	  throw ipv6_exception("overflow in conversion from IPv6.Addr to unsigned long");
+	return ret;
+      }
+
       std::string arpa() const
       {
 	throw ipv6_exception("arpa() not implemented");
@@ -95,12 +164,19 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_one()
+      {
+	Addr ret;
+	ret.scope_id_ = 0;
+	ret.one();
+	return ret;
+      }
+
       static Addr from_zero_complement()
       {
 	Addr ret;
 	ret.scope_id_ = 0;
-	ret.zero();
-	ret.negate();
+	ret.zero_complement();
 	return ret;
       }
 
@@ -114,10 +190,16 @@ namespace openvpn {
       }
 
       // build a netmask using given extent
-      static Addr netmask_from_extent(const unsigned int extent)
+      Addr netmask_from_extent() const
       {
-	const int lb = find_last_set(extent - 1);
-	return netmask_from_prefix_len(SIZE - lb);
+	const Addr lb = *this - 1;
+	for (size_t i = 3; i --> 0 ;)
+	  {
+	    const boost::uint32_t v = lb.u.u32[Endian::e4(i)];
+	    if (v)
+	      return netmask_from_prefix_len(SIZE - ((i<<5) + find_last_set(v)));
+	  }
+	return from_zero_complement();
       }
 
       Addr operator&(const Addr& other) const {
@@ -147,11 +229,7 @@ namespace openvpn {
 
       Addr operator+(const Addr& other) const {
 	Addr ret = *this;
-        ret.u.u64[Endian::e2(0)] += other.u.u64[Endian::e2(0)];
-        ret.u.u64[Endian::e2(1)] += other.u.u64[Endian::e2(1)];
-        // check for overflow of low 64 bits, add carry to high
-        if (ret.u.u64[Endian::e2(0)] < u.u64[Endian::e2(0)])
-            ++ret.u.u64[Endian::e2(1)];
+	add(ret.u, other.u);
 	return ret;
       }
 
@@ -159,16 +237,34 @@ namespace openvpn {
 	return operator+(-delta);
       }
 
-      long operator-(const Addr& other) const {
-	ipv6addr res = u;
-	res.u64[Endian::e2(0)] = u.u64[Endian::e2(0)] - other.u.u64[Endian::e2(0)];
-	res.u64[Endian::e2(1)] = u.u64[Endian::e2(1)] - other.u.u64[Endian::e2(1)]
-	  - (u.u64[Endian::e2(0)] < other.u.u64[Endian::e2(0)]);
-	const long ret = res.u64[Endian::e2(0)];
-	const boost::uint64_t backto = ret;
-	if (res.u64[Endian::e2(1)] + (ret < 0) || backto != res.u64[Endian::e2(0)])
-	  throw ipv6_exception("operator-() overflow");
+      Addr operator-(const Addr& other) const {
+	Addr ret = *this;
+	sub(ret.u, other.u);
 	return ret;
+      }
+
+      Addr operator*(const Addr& d) const {
+	Addr m = d;
+	Addr ret = from_zero();
+	for (unsigned int i = 0; i < SIZE; ++i)
+	  {
+	    if (bit(i))
+	      ret += m;
+	    m <<= 1;
+	  }
+	return ret;
+      }
+
+      Addr operator/(const Addr& d) const {
+	Addr q, r;
+	div(*this, d, q, r);
+	return q;
+      }
+
+      Addr operator%(const Addr& d) const {
+	Addr q, r;
+	div(*this, d, q, r);
+	return r;
       }
 
       Addr operator<<(const unsigned int shift) const {
@@ -249,7 +345,15 @@ namespace openvpn {
 
       bool all_ones() const
       {
-	return u.u64[0] == ~(uint64_t)0 && u.u64[1] == ~(uint64_t)0;
+	return u.u64[0] == ~boost::uint64_t(0) && u.u64[1] == ~boost::uint64_t(0);
+      }
+
+      bool bit(unsigned int pos) const
+      {
+	if (pos < 64)
+	  return (u.u64[Endian::e2(0)] & (boost::uint64_t(1)<<pos)) != 0;
+	else
+	  return (u.u64[Endian::e2(1)] & (boost::uint64_t(1)<<(pos-64))) != 0;
       }
 
       // number of network bits in netmask,
@@ -258,17 +362,17 @@ namespace openvpn {
       {
 	int idx = -1;
 
-	if (u.u32[Endian::e4(3)] != uint32_t(~0))
+	if (u.u32[Endian::e4(3)] != ~boost::uint32_t(0))
 	  {
 	    if (!u.u32[Endian::e4(0)] && !u.u32[Endian::e4(1)] && !u.u32[Endian::e4(2)])
 	      idx = 0;
 	  }
-	else if (u.u32[Endian::e4(2)] != uint32_t(~0))
+	else if (u.u32[Endian::e4(2)] != ~boost::uint32_t(0))
 	  {
 	    if (!u.u32[Endian::e4(0)] && !u.u32[Endian::e4(1)])
 	      idx = 1;
 	  }
-	else if (u.u32[Endian::e4(1)] != uint32_t(~0))
+	else if (u.u32[Endian::e4(1)] != ~boost::uint32_t(0))
 	  {
 	    if (!u.u32[Endian::e4(0)])
 	      idx = 2;
@@ -292,13 +396,18 @@ namespace openvpn {
       }
 
       // return the number of host addresses contained within netmask
-      unsigned int extent() const
+      Addr extent_from_netmask() const
       {
 	const unsigned int hl = host_len();
-	if (hl < 32)
-	  return 1 << hl;
-	else if (hl == 32)
-	  return 0;
+	if (hl < SIZE)
+	  {
+	    Addr a;
+	    a.scope_id_ = 0;
+	    a.one();
+	    return a << hl;
+	  }
+	else if (hl == SIZE)
+	  return from_zero();
 	else
 	  throw ipv6_exception("extent overflow");
       }
@@ -329,11 +438,97 @@ namespace openvpn {
 	u.u64[1] = 0;
       }
 
+      void zero_complement()
+      {
+	u.u64[0] = ~boost::uint64_t(0);
+	u.u64[1] = ~boost::uint64_t(0);
+      }
+
+      void one()
+      {
+	u.u64[0] = 1;
+	u.u64[1] = 0;
+      }
+
       Addr& operator++()
       {
-	const Addr a = *this + 1;
-	u = a.u;
+	if (++u.u64[Endian::e2(0)] == 0)
+	  ++u.u64[Endian::e2(1)];
 	return *this;
+      }
+
+      Addr& operator+=(const Addr& other) {
+	add(u, other.u);
+	return *this;
+      }
+
+      Addr& operator-=(const Addr& other) {
+	sub(u, other.u);
+	return *this;
+      }
+
+      Addr& operator<<=(const unsigned int shift) {
+	shiftl128(u.u64[Endian::e2(0)],
+		  u.u64[Endian::e2(1)],
+		  shift);
+	return *this;
+      }
+
+      Addr& operator>>=(const unsigned int shift) {
+	shiftr128(u.u64[Endian::e2(0)],
+		  u.u64[Endian::e2(1)],
+		  shift);
+	return *this;
+      }
+
+      void set_clear_bit(unsigned int pos, bool value)
+      {
+	if (pos < 64)
+	  {
+	    if (value)
+	      u.u64[Endian::e2(0)] |= (boost::uint64_t(1)<<pos);
+	    else
+	      u.u64[Endian::e2(0)] &= ~(boost::uint64_t(1)<<pos);
+	  }
+	else
+	  {
+	    if (value)
+	      u.u64[Endian::e2(1)] |= (boost::uint64_t(1)<<(pos-64));
+	    else
+	      u.u64[Endian::e2(1)] &= ~(boost::uint64_t(1)<<(pos-64));
+	  }
+      }
+
+      void set_bit(unsigned int pos, bool value)
+      {
+	if (value)
+	  {
+	    if (pos < 64)
+	      u.u64[Endian::e2(0)] |= (boost::uint64_t(1)<<pos);
+	    else
+	      u.u64[Endian::e2(1)] |= (boost::uint64_t(1)<<(pos-64));
+	  }
+      }
+
+      static void div(const Addr& n, const Addr& d, Addr& q, Addr& r)
+      {
+	if (d.all_zeros())
+	  throw ipv6_exception("division by 0");
+	q = from_zero();        // quotient
+	r = n;                  // remainder (init to numerator)
+	Addr ml = from_zero();  // mask low
+	Addr mh = d;            // mask high (init to denominator)
+	for (unsigned int i = 0; i < SIZE; ++i)
+	  {
+	    ml >>= 1;
+	    ml.set_bit(SIZE-1, mh.bit(0));
+	    mh >>= 1;
+	    if (mh.all_zeros() && r >= ml)
+	      {
+		r -= ml;
+		q.set_bit((SIZE-1)-i, true);
+	      }
+	  }
       }
 
     private:
@@ -384,7 +579,7 @@ namespace openvpn {
 
       void prefix_len_to_netmask(const unsigned int prefix_len)
       {
-	if (prefix_len <= 128)
+	if (prefix_len <= SIZE)
 	  return prefix_len_to_netmask_unchecked(prefix_len);
 	else
 	  throw ipv6_exception("bad prefix len");
@@ -410,7 +605,14 @@ namespace openvpn {
 			    boost::uint64_t& high,
 			    unsigned int shift)
       {
-	if (shift == 0)
+	if (shift == 1)
+	  {
+	    high <<= 1;
+	    if (low & (boost::uint64_t(1) << 63))
+	      high |= 1;
+	    low <<= 1;
+	  }
+	else if (shift == 0)
 	  ;
 	else if (shift <= 128)
 	  {
@@ -423,7 +625,7 @@ namespace openvpn {
 	    if (shift < 64)
 	      {
 		high = (high << shift) | (low >> (64-shift));
-		low = (low << shift);
+		low <<= shift;
 	      }
 	    else // shift == 64
 	      high = 0;
@@ -436,7 +638,14 @@ namespace openvpn {
 			    boost::uint64_t& high,
 			    unsigned int shift)
       {
-	if (shift == 0)
+	if (shift == 1)
+	  {
+	    low >>= 1;
+	    if (high & 1)
+	      low |= (boost::uint64_t(1) << 63);
+	    high >>= 1;
+	  }
+	else if (shift == 0)
 	  ;
 	else if (shift <= 128)
 	  {
@@ -449,13 +658,29 @@ namespace openvpn {
 	    if (shift < 64)
 	      {
 		low = (low >> shift) | (high << (64-shift));
-		high = (high >> shift);
+		high >>= shift;
 	      }
 	    else // shift == 64
 	      low = 0;
 	  }
 	else
 	  throw ipv6_exception("r-shift too large");
+      }
+
+      static void add(ipv6addr& dest, const ipv6addr& src) {
+	const boost::uint64_t dorigl = dest.u64[Endian::e2(0)];
+        dest.u64[Endian::e2(0)] += src.u64[Endian::e2(0)];
+        dest.u64[Endian::e2(1)] += src.u64[Endian::e2(1)];
+        // check for overflow of low 64 bits, add carry to high
+        if (dest.u64[Endian::e2(0)] < dorigl)
+            ++dest.u64[Endian::e2(1)];
+      }
+
+      static void sub(ipv6addr& dest, const ipv6addr& src) {
+	const boost::uint64_t dorigl = dest.u64[Endian::e2(0)];
+        dest.u64[Endian::e2(0)] -= src.u64[Endian::e2(0)];
+        dest.u64[Endian::e2(1)] -= src.u64[Endian::e2(1)]
+	  + (dorigl < dest.u64[Endian::e2(0)]);
       }
 
       union ipv6addr u;
