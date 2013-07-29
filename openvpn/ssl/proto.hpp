@@ -1834,9 +1834,7 @@ namespace openvpn {
 	stats(stats_arg),
 	mode_(config_arg->ssl_ctx->mode()),
 	n_key_ids(0),
-	now_(config_arg->now),
-	keepalive_ping(config_arg->keepalive_ping),
-	keepalive_timeout(config_arg->keepalive_timeout)
+	now_(config_arg->now)
     {
       const Config& c = *config;
 
@@ -2087,7 +2085,10 @@ namespace openvpn {
     }
 
     // should be called after a successful network packet transmit
-    void update_last_sent() { keepalive_xmit = *now_ + keepalive_ping; }
+    void update_last_sent()
+    {
+      keepalive_xmit = *now_ + config->keepalive_ping;
+    }
 
     // can we call data_encrypt or data_decrypt yet?
     bool data_channel_ready() const { return primary->data_channel_ready(); }
@@ -2126,6 +2127,9 @@ namespace openvpn {
       primary->construct_compressor();
       if (secondary)
 	secondary->construct_compressor();
+
+      // in case keepalive parms were modified by push
+      keepalive_parms_modified();
     }
 
     // current time
@@ -2177,7 +2181,10 @@ namespace openvpn {
     {
     }
 
-    void update_last_received() { keepalive_expire = *now_ + keepalive_timeout; }
+    void update_last_received()
+    {
+      keepalive_expire = *now_ + config->keepalive_timeout;
+    }
 
     void net_send(const unsigned int key_id, const Packet& net_pkt)
     {
@@ -2395,6 +2402,20 @@ namespace openvpn {
       return ret;
     }
 
+    // call whenever keepalive parms are modified,
+    // to reset timers
+    void keepalive_parms_modified()
+    {
+      update_last_received();
+
+      // For keepalive_xmit timer, don't reschedule current cycle
+      // unless it would fire earlier.  Subsequent cycles will
+      // time according to new keepalive_ping value.
+      const Time kx = *now_ + config->keepalive_ping;
+      if (kx < keepalive_xmit)
+	keepalive_xmit = kx;
+    }
+
     // BEGIN ProtoContext data members
 
     typename Config::Ptr config;
@@ -2407,9 +2428,7 @@ namespace openvpn {
     unsigned int n_key_ids;
 
     TimePtr now_;                      // pointer to current time (a clone of config->now)
-    Time::Duration keepalive_ping;     // copied from config
     Time keepalive_xmit;               // time in future when we will transmit a keepalive (subject to continuous change)
-    Time::Duration keepalive_timeout;  // copied from config
     Time keepalive_expire;             // time in future when we must have received a packet from peer or we will timeout session
 
     Time::Duration slowest_handshake_; // longest time to reach a successful handshake
