@@ -38,6 +38,7 @@
 #define OPENVPN_DEBUG_COMPRESS 1       // debug level for compression objects (1)
 #define OPENVPN_DEBUG_REMOTELIST 0     // debug level for RemoteList object (0)
 #define OPENVPN_DEBUG_TUN_BUILDER 0    // debug level for tun/builder/client.hpp (0)
+//#define OPENVPN_SHOW_SESSION_TOKEN   // show server-pushed auth-token (comment out)
 
 // enable assertion checks (can safely be disabled in production)
 //#define OPENVPN_ENABLE_ASSERT
