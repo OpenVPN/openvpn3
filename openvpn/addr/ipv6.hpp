@@ -145,7 +145,7 @@ namespace openvpn {
 	union ipv6addr addr;
 	addr.asio_bytes = asio_addr.to_bytes();
 	network_to_host_order(&ret.u, &addr);
-	ret.scope_id_ = asio_addr.scope_id();
+	ret.scope_id_ = (unsigned int)asio_addr.scope_id();
 	return ret;
       }
 
@@ -197,7 +197,7 @@ namespace openvpn {
 	  {
 	    const boost::uint32_t v = lb.u.u32[Endian::e4(i)];
 	    if (v)
-	      return netmask_from_prefix_len(SIZE - ((i<<5) + find_last_set(v)));
+	      return netmask_from_prefix_len(SIZE - (((unsigned int)i<<5) + find_last_set(v)));
 	  }
 	return from_zero_complement();
       }

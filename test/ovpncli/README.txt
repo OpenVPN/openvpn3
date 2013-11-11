@@ -1,5 +1,8 @@
 Build on Mac:
 
+  With PolarSSL/AppleCrypto hybrid:
+    GCC_EXTRA="-ferror-limit=4" STRIP=1 HYBRID=1 SNAP=1 build cli
+
   With PolarSSL:
     GCC_EXTRA="-ferror-limit=4" STRIP=1 PSSL=1 SNAP=1 build cli
 

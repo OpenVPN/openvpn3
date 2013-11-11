@@ -14,7 +14,7 @@ echo javacli/OpenVPNClientThread.java
 # Android client
 android=android/OpenVPN/src/net/openvpn/openvpn
 cd $android
-for f in $(svn list | grep '\.java$') ; do
+for f in $(git ls-files | grep '\.java$') ; do
     echo $android/$f
 done
 cd $top

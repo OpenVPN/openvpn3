@@ -192,7 +192,7 @@ namespace openvpn {
       static Addr from_asio(const boost::asio::ip::address_v4& asio_addr)
       {
 	Addr ret;
-	ret.u.addr = asio_addr.to_ulong();
+	ret.u.addr = (boost::uint32_t)asio_addr.to_ulong();
 	return ret;
       }
 
@@ -215,7 +215,7 @@ namespace openvpn {
 
       Addr operator+(const long delta) const {
 	Addr ret;
-	ret.u.addr = u.addr + delta;
+	ret.u.addr = u.addr + (boost::uint32_t)delta;
 	return ret;
       }
 

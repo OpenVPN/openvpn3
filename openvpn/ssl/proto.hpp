@@ -605,13 +605,14 @@ namespace openvpn {
       // used to generate link_mtu option sent to peer
       unsigned int link_mtu_adjust() const
       {
-	return protocol.extra_transport_bytes() +        // extra 2 bytes for TCP-streamed packet length
+	const size_t adj = protocol.extra_transport_bytes() + // extra 2 bytes for TCP-streamed packet length
           1 +                                            // leading op byte
 	  comp_ctx.extra_payload_bytes() +               // compression magic byte
 	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
 	  (digest.defined() ? digest.size() : 0) +       // HMAC
 	  (cipher.defined() ? cipher.iv_length() : 0) +  // Cipher IV
 	  (cipher.defined() ? cipher.block_size() : 0);  // worst-case cipher padding expansion
+	return (unsigned int)adj;
       }
     };
 

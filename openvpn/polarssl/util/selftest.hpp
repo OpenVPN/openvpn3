@@ -14,6 +14,7 @@
 
 #include <polarssl/config.h>
 #include <polarssl/cipher.h>
+#include <polarssl/aes.h>
 
 namespace openvpn {
   inline std::string crypto_self_test_polarssl()

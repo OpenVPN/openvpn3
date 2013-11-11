@@ -14,6 +14,7 @@ if [ -z "$1" ]; then
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
     echo " PSSL=1 -- include PolarSSL"
+    echo " HYBRID=1 -- use PolarSSL/AppleCrypto hybrid"
     echo " NOSSL=1 -- don't include OpenSSL"
     echo " OPENSSL_SYS=1 -- include system OpenSSL"
     echo " MINI=1 -- link with OpenSSL mini crypto lib"
@@ -47,6 +48,11 @@ if [ "$DEBUG" = "1" ]; then
     DBG_DIR_SUFFIX="-dbg"
 fi
 
+# PolarSSL/AppleCrypto hybrid
+if [ "$HYBRID" = "1" ]; then
+    PSSL=1
+fi
+
 # building on Mac OS X for osx, ios, or iossim?
 if [ "$APPLE_FAMILY" = "1" ]; then
     [ -z "$CLANG" ] && CLANG=1
@@ -75,7 +81,12 @@ fi
 # PolarSSL
 if [ "$PSSL" = "1" ]; then
     LIBS="$LIBS -lpolarssl"
-    CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL -I$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/include"
+    if [ "$HYBRID" = "1" ]; then
+	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL_APPLE_HYBRID"
+    else
+	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL"
+    fi
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/include"
     LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/library"
     if [ "$MINI" = "1" ]; then
 	LIBS="$LIBS -lminicrypto"

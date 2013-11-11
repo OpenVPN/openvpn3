@@ -425,7 +425,7 @@ namespace openvpn {
 	try {
 	  SSL *self = (SSL *)arg;
 	  const size_t actual = self->ct_in.read(data, length);
-	  return actual > 0 ? actual : CT_WOULD_BLOCK;
+	  return actual > 0 ? (int)actual : CT_WOULD_BLOCK;
 	}
 	catch (...)
 	  {
@@ -439,7 +439,7 @@ namespace openvpn {
 	try {
 	  SSL *self = (SSL *)arg;
 	  self->ct_out.write(data, length);
-	  return length;
+	  return (int)length;
 	}
 	catch (...)
 	  {
@@ -757,6 +757,8 @@ namespace openvpn {
     }
 
     static int epki_decrypt(void *arg,
+			    int (*f_rng)(void *, unsigned char *, size_t),
+			    void *p_rng,
 			    int mode,
 			    size_t *olen,
 			    const unsigned char *input,

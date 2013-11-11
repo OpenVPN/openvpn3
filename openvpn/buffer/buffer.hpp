@@ -628,7 +628,7 @@ namespace openvpn {
       delete [] data;
     }
 
-    unsigned long flags_;
+    unsigned int flags_;
   };
 
   typedef BufferType<unsigned char> Buffer;

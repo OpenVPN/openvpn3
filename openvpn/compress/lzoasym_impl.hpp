@@ -18,6 +18,8 @@
 
 #include <boost/cstdint.hpp> // for boost::uint32_t, etc.
 
+#include <openvpn/common/types.hpp> // for ssize_t
+
 // Implementation of asymmetrical LZO compression (only uncompress, don't compress)
 
 // Branch prediction hints (these make a difference on ARM)
@@ -118,7 +120,7 @@ namespace openvpn {
 
     // Fast version of incremental copy.
     // NOTE: we might write up to ten extra bytes after the end of the copy.
-    inline void incremental_copy_fast(unsigned char *dest, const unsigned char *src, int len)
+    inline void incremental_copy_fast(unsigned char *dest, const unsigned char *src, ssize_t len)
     {
       while (LZOASYM_UNLIKELY(dest - src < 8))
 	{
@@ -136,7 +138,7 @@ namespace openvpn {
     }
 
     // Slow version of incremental copy
-    inline void incremental_copy(unsigned char *dest, const unsigned char *src, int len)
+    inline void incremental_copy(unsigned char *dest, const unsigned char *src, ssize_t len)
     {
       do {
 	*dest++ = *src++;
@@ -144,7 +146,7 @@ namespace openvpn {
     }
 
     // Faster version of memcpy
-    inline void copy_fast(unsigned char *dest, const unsigned char *src, int len)
+    inline void copy_fast(unsigned char *dest, const unsigned char *src, ssize_t len)
     {
       while (len >= 8)
 	{

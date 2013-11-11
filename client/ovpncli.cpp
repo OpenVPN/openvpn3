@@ -722,7 +722,7 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT int OpenVPNClient::stats_n()
     {
-      return MySessionStats::combined_n();
+      return (int)MySessionStats::combined_n();
     }
 
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::stats_name(int index)
@@ -799,7 +799,7 @@ namespace openvpn {
 	    if (lpr.defined())
 	      {
 		const Time::Duration dur = Time::now() - lpr;
-		const unsigned int delta = dur.to_binary_ms();
+		const unsigned int delta = (unsigned int)dur.to_binary_ms();
 		if (delta <= 60*60*24*1024) // only define for time periods <= 1 day
 		  ret.lastPacketReceived = delta;
 	      }

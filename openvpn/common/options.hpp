@@ -1002,7 +1002,7 @@ namespace openvpn {
 	{
 	  const size_t i = size();
 	  push_back(opt);
-	  map_[opt.ref(0)].push_back(i);
+	  map_[opt.ref(0)].push_back((unsigned int)i);
 	}
     }
 
@@ -1018,7 +1018,7 @@ namespace openvpn {
 	{
 	  const Option& opt = (*this)[i];
 	  if (!opt.empty())
-	    map_[opt.ref(0)].push_back(i);
+	    map_[opt.ref(0)].push_back((unsigned int)i);
 	}
     }
 

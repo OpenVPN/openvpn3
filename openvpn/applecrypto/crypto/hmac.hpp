@@ -27,6 +27,7 @@ namespace openvpn {
     class HMACContext : boost::noncopyable
     {
     public:
+      OPENVPN_EXCEPTION(digest_cannot_be_used_with_hmac);
       OPENVPN_SIMPLE_EXCEPTION(hmac_uninitialized);
       OPENVPN_SIMPLE_EXCEPTION(hmac_keysize_error);
 
@@ -37,90 +38,84 @@ namespace openvpn {
 
       HMACContext()
       {
-	clear();
-	need_to_dealloc = false;
+	state = PRE;
       }
 
       HMACContext(const Digest& digest, const unsigned char *key, const size_t key_size)
       {
-	clear();
-	need_to_dealloc = false;
 	init(digest, key, key_size);
       }
 
       ~HMACContext()
       {
-	dealloc();
       }
 
       void init(const Digest& digest, const unsigned char *key, const size_t key_size)
       {
-	clear();
-	dealloc();
+	state = PRE;
 	info = digest.get();
 	alg = info->hmac_alg();
+	if (alg == DigestInfo::NO_HMAC_ALG)
+	  throw digest_cannot_be_used_with_hmac(info->name());
 	if (key_size > MAX_HMAC_KEY_SIZE)
 	  throw hmac_keysize_error();
 	std::memcpy(key_, key, key_size_ = key_size);
-	CCHmacInit(&ctx, alg, key_, key_size_);
-	initialized = need_to_dealloc = true;
+	state = PARTIAL;
       }
 
       void reset() // Apple HMAC API is missing reset method, so we have to reinit
       {
-	check_initialized();
-	dealloc();
-	CCHmacInit(&ctx, alg, key_, key_size_);
-	need_to_dealloc = true;
+	cond_reset(true);
       }
 
       void update(const unsigned char *in, const size_t size)
       {
-	check_initialized();
+	cond_reset(false);
 	CCHmacUpdate(&ctx, in, size);
       }
 
       size_t final(unsigned char *out)
       {
-	check_initialized();
+	cond_reset(false);
 	CCHmacFinal(&ctx, out);
-	need_to_dealloc = false;
 	return info->size();
       }
 
       size_t size() const
       {
-	check_initialized();
+	if (!is_initialized())
+	  throw hmac_uninitialized();
 	return info->size();
       }
 
-      bool is_initialized() const { return initialized; }
-
-    private:
-      void clear()
+      bool is_initialized() const
       {
-	initialized = false;
+	return state >= PARTIAL;
       }
 
-      void dealloc()
+    private:
+      void cond_reset(const bool force_init)
       {
-	if (need_to_dealloc)
+	switch (state)
 	  {
-	    CCHmacFinal(&ctx, NULL);
-	    need_to_dealloc = false;
+	  case PRE:
+	    throw hmac_uninitialized();
+	  case READY:
+	    if (!force_init)
+	      return;
+	  case PARTIAL:
+	    CCHmacInit(&ctx, alg, key_, key_size_);
+	    state = READY;
 	  }
       }
 
-      void check_initialized() const
-      {
-#ifdef OPENVPN_ENABLE_ASSERT
-	if (!initialized)
-	  throw hmac_uninitialized();
-#endif
-      }
+      enum State {
+	PRE=0,
+	PARTIAL,
+	READY
+      };
+      int state;
 
-      bool initialized;
-      bool need_to_dealloc;
       const DigestInfo *info;
       CCHmacAlgorithm alg;
       size_t key_size_;

@@ -82,7 +82,7 @@ namespace openvpn {
       size_t payload() const { return payload_; }
       size_t tailroom() const { return tailroom_; }
       size_t capacity() const { return adj_capacity_; }
-      size_t buffer_flags() const { return buffer_flags_; }
+      unsigned int buffer_flags() const { return buffer_flags_; }
 
       // Calculate a starting offset into a buffer object, dealing with
       // headroom and alignment issues.

@@ -64,7 +64,7 @@ for target in $TARGETS ; do
 	stage=stage-$target
     fi
     echo "************************ $target $variant $stage"
-    cmd="./bjam -d2 toolset=clang-$target --stagedir=$stage --with-system --with-thread variant=$variant link=static threading=multi runtime-link=static"
+    cmd="./bjam -d2 toolset=clang-$target --stagedir=$stage --with-system --with-thread --with-atomic variant=$variant link=static threading=multi runtime-link=static"
     echo $cmd
     $cmd
 done

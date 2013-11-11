@@ -6,8 +6,8 @@ if [ -z "$O3" ]; then
     exit 1
 fi
 
-mini=1
-[ "$DISABLE_MINICRYPTO" = "1" ] && mini=0
+mini=0
+#[ "$DISABLE_MINICRYPTO" = "1" ] && mini=0
 
 rm -rf polarssl
 mkdir polarssl

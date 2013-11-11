@@ -48,6 +48,8 @@
 
 #define OPENVPN_DIGEST_INFO_DECLARE(TYPE) const DigestInfo info_##TYPE(#TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, kCCHmacAlg##TYPE)
 
+#define OPENVPN_DIGEST_INFO_DECLARE_NO_HMAC(TYPE) const DigestInfo info_##TYPE(#TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, DigestInfo::NO_HMAC_ALG)
+
 namespace openvpn {
   namespace AppleCrypto {
     typedef CC_SHA256_CTX CC_SHA224_CTX;
@@ -83,6 +85,10 @@ namespace openvpn {
     class DigestInfo
     {
     public:
+      enum {
+	NO_HMAC_ALG = -1
+      };
+
       DigestInfo(const char *name,
 		 const int md_size,
 		 const DigestAlgorithm* digest_alg,
@@ -122,7 +128,7 @@ namespace openvpn {
 
     // instantiate individual digest info class instances (each is a DigestInfo),
     // naming convention is info_TYPE
-    OPENVPN_DIGEST_INFO_DECLARE(MD4);
+    OPENVPN_DIGEST_INFO_DECLARE_NO_HMAC(MD4);
     OPENVPN_DIGEST_INFO_DECLARE(MD5);
     OPENVPN_DIGEST_INFO_DECLARE(SHA1);
     OPENVPN_DIGEST_INFO_DECLARE(SHA224);
