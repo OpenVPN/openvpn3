@@ -103,6 +103,19 @@ namespace openvpn {
 	    userlockedUsername_ = o->get(1, 256);
 	}
 
+	// userlocked username/password via <auth-user-pass>
+	std::vector<std::string> user_pass;
+	const bool auth_user_pass = parse_auth_user_pass(options, &user_pass);
+	if (auth_user_pass && user_pass.size() >= 1)
+	  {
+	    userlockedUsername_ = user_pass[0];
+	    if (user_pass.size() >= 2)
+	      {
+		hasEmbeddedPassword_ = true;
+		embeddedPassword_ = user_pass[1];
+	      }
+	  }
+
 	// External PKI
 	externalPki_ = (clientCertEnabled_ && is_external_pki(options));
 
@@ -115,7 +128,7 @@ namespace openvpn {
 
 	// autologin
 	{
-	  autologin_ = is_autologin(options);
+	  autologin_ = is_autologin(options, auth_user_pass, user_pass);
 	  if (autologin_)
 	    allowPasswordSave_ = false; // saving passwords is incompatible with autologin
 	}
@@ -282,6 +295,10 @@ namespace openvpn {
     // true: no creds required, false: username/password required
     bool autologin() const { return autologin_; }
 
+    // profile embedded password via <auth-user-pass>
+    bool hasEmbeddedPassword() const { return hasEmbeddedPassword_; }
+    const std::string& embeddedPassword() const { return embeddedPassword_; }
+
     // true: no client cert/key required, false: client cert/key required
     bool clientCertEnabled() const { return clientCertEnabled_; }
 
@@ -310,6 +327,7 @@ namespace openvpn {
 	 << " pn=" << profileName_
 	 << " fn=" << friendlyName_
 	 << " auto=" << autologin_
+	 << " embed_pw=" << hasEmbeddedPassword_
 	 << " epki=" << externalPki_
 	 << " schal=" << staticChallenge_
 	 << " scecho=" << staticChallengeEcho_;
@@ -317,6 +335,23 @@ namespace openvpn {
     }
 
   private:
+    static bool parse_auth_user_pass(const OptionList& options, std::vector<std::string>* user_pass)
+    {
+      const Option* auth_user_pass = options.get_ptr("auth-user-pass");
+      if (auth_user_pass)
+	{
+	  if (user_pass && auth_user_pass->size() == 2)
+	    {
+	      SplitLines in(auth_user_pass->get(1, 512 | Option::MULTILINE), 256);
+	      for (int i = 0; in(true) && i < 2; ++i)
+		user_pass->push_back(in.line_ref());
+	    }
+	  return true;
+	}
+      else
+	return false;
+    }
+
     static void process_setenv_opt(OptionList& options)
     {
       for (OptionList::iterator i = options.begin(); i != options.end(); ++i)
@@ -327,27 +362,33 @@ namespace openvpn {
 	}
     }
 
-    static bool is_autologin(const OptionList& options)
+    static bool is_autologin(const OptionList& options,
+			     const bool auth_user_pass,
+			     const std::vector<std::string>& user_pass)
     {
-      const Option* autologin = options.get_ptr("AUTOLOGIN");
-      if (autologin)
-	return string::is_true(autologin->get_optional(1, 16));
+      if (auth_user_pass && user_pass.size() >= 2) // embedded password?
+	return true;
       else
 	{
-	  const Option* auth_user_pass = options.get_ptr("auth-user-pass");
-	  bool ret = !auth_user_pass;
-	  if (ret)
+	  const Option* autologin = options.get_ptr("AUTOLOGIN");
+	  if (autologin)
+	    return string::is_true(autologin->get_optional(1, 16));
+	  else
 	    {
-	      // External PKI profiles from AS don't declare auth-user-pass,
-	      // and we have no way of knowing if they are autologin unless
-	      // we examine their cert, which requires accessing the system-level
-	      // cert store on the client.  For now, we are going to assume
-	      // that External PKI profiles from the AS are always userlogin,
-	      // unless explicitly overriden by AUTOLOGIN above.
-	      if (options.exists("EXTERNAL_PKI"))
-		return false;
+	      bool ret = !auth_user_pass;
+	      if (ret)
+		{
+		  // External PKI profiles from AS don't declare auth-user-pass,
+		  // and we have no way of knowing if they are autologin unless
+		  // we examine their cert, which requires accessing the system-level
+		  // cert store on the client.  For now, we are going to assume
+		  // that External PKI profiles from the AS are always userlogin,
+		  // unless explicitly overriden by AUTOLOGIN above.
+		  if (options.exists("EXTERNAL_PKI"))
+		    return false;
+		}
+	      return ret;
 	    }
-	  return ret;
 	}
     }
 
@@ -371,7 +412,8 @@ namespace openvpn {
 
     void reset_pod()
     {
-      error_ = autologin_ = externalPki_ = staticChallengeEcho_ = privateKeyPasswordRequired_ = false;
+      error_ = autologin_ = externalPki_ = staticChallengeEcho_ = false;
+      privateKeyPasswordRequired_ = hasEmbeddedPassword_ = false;
       allowPasswordSave_ = clientCertEnabled_ = true;
     }
 
@@ -399,6 +441,8 @@ namespace openvpn {
     bool privateKeyPasswordRequired_;
     bool allowPasswordSave_;
     ServerList serverList_;
+    bool hasEmbeddedPassword_;
+    std::string embeddedPassword_;
   };
 }
 

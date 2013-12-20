@@ -145,10 +145,16 @@ namespace openvpn {
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout),
 	proto_context_options(config.proto_context_options),
-	http_proxy_options(config.http_proxy_options)
+	http_proxy_options(config.http_proxy_options),
+	autologin(false),
+	creds_locked(false)
     {
       // parse general client options
       const ParseClientConfig pcc(opt);
+
+      // creds
+      userlocked_username = pcc.userlockedUsername();
+      autologin = pcc.autologin();
 
       // initialize RNG/PRNG
       rng.reset(new RandomAPI());
@@ -181,7 +187,7 @@ namespace openvpn {
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
       cp->load(opt, *proto_context_options, config.default_key_direction);
-      cp->set_autologin(pcc.autologin());
+      cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
       cp->frame = frame;
       cp->now = &now_;
@@ -285,17 +291,19 @@ namespace openvpn {
 	  server_poll_timeout_ = parse_number_throw<unsigned int>(o->get(1, 16), "server-poll-timeout");
       }
 
-      // userlocked username
-      {
-	const Option* o = opt.get_ptr("USERNAME");
-	if (o)
-	  userlocked_username = o->get(1, 256);
-      }
-
-      // create default creds object in case submit_creds is not called
+      // create default creds object in case submit_creds is not called,
+      // and populate it with embedded creds, if available
       {
 	ClientCreds::Ptr cc = new ClientCreds();
-	submit_creds(cc);
+	if (pcc.hasEmbeddedPassword())
+	  {
+	    cc->set_username(userlocked_username);
+	    cc->set_password(pcc.embeddedPassword());
+	    submit_creds(cc);
+	    creds_locked = true;
+	  }
+	else
+	  submit_creds(cc);
       }
 
       // configure push_base, a set of base options that will be combined with
@@ -355,12 +363,12 @@ namespace openvpn {
 
     bool need_creds() const
     {
-      return !cp->autologin;
+      return !autologin;
     }
 
     void submit_creds(const ClientCreds::Ptr& creds_arg)
     {
-      if (creds_arg)
+      if (creds_arg && !creds_locked)
 	{
 	  // if no username is defined in creds and userlocked_username is defined
 	  // in profile, set the creds username to be the userlocked_username
@@ -469,6 +477,8 @@ namespace openvpn {
     ProtoContextOptions::Ptr proto_context_options;
     HTTPProxyTransport::Options::Ptr http_proxy_options;
     std::string userlocked_username;
+    bool autologin;
+    bool creds_locked;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
 

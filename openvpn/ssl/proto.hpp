@@ -210,7 +210,7 @@ namespace openvpn {
 	pid_mode = 0;
 	pid_seq_backtrack = 0;
 	pid_time_backtrack = 0;
-	autologin = false;
+	xmit_creds = true;
 	key_direction = -1; // bidirectional
       }
 
@@ -229,9 +229,8 @@ namespace openvpn {
       // PRNG
       typename PRNG<RAND_API, CRYPTO_API>::Ptr prng;
 
-      // if true, connect to server without presenting username or password
-      // (false if "auth-user-pass" directive is present in config, true otherwise)
-      bool autologin;
+      // transmit username/password creds to server
+      bool xmit_creds;
 
       // Transport protocol, i.e. UDPv4, etc.
       Protocol protocol;
@@ -509,9 +508,9 @@ namespace openvpn {
 	  throw proto_option_error("transport protocol undefined");
       }
 
-      void set_autologin(const bool autologin_arg)
+      void set_xmit_creds(const bool xmit_creds_arg)
       {
-	autologin = autologin_arg;
+	xmit_creds = xmit_creds_arg;
       }
 
       void validate_complete() const
@@ -1462,13 +1461,13 @@ namespace openvpn {
 	if (!proto.is_server())
 	  {
 	    buf->or_flags(BufferAllocated::DESTRUCT_ZERO);
-	    if (proto.config->autologin)
+	    if (proto.config->xmit_creds)
+	      proto.client_auth(*buf);
+	    else
 	      {
 		write_empty_string(*buf); // username
 		write_empty_string(*buf); // password
 	      }
-	    else
-	      proto.client_auth(*buf);
 	    const std::string peer_info = proto.config->peer_info_string();
 	    write_auth_string(peer_info, *buf);
 	  }
