@@ -70,6 +70,8 @@ namespace openvpn {
 			    kCCBlockSizeAES128, kCCAlgorithmAES128);
     const CipherInfo des3("DES-EDE3-CBC", kCCKeySize3DES, kCCBlockSize3DES, // CONST GLOBAL
 			  kCCBlockSize3DES, kCCAlgorithm3DES);
+    const CipherInfo des("DES-CBC", kCCKeySizeDES, kCCBlockSizeDES, // CONST GLOBAL
+			 kCCBlockSizeDES, kCCAlgorithmDES);
 
 #ifdef OPENVPN_PLATFORM_IPHONE
     const CipherInfo bf("BF-CBC", 16, kCCBlockSizeBlowfish, // CONST GLOBAL
@@ -99,6 +101,7 @@ namespace openvpn {
 	OPENVPN_CIPHER_SELECT(aes192);
 	OPENVPN_CIPHER_SELECT(aes256);
 	OPENVPN_CIPHER_SELECT(des3);
+	OPENVPN_CIPHER_SELECT(des);
 	throw cipher_not_found(name);
 #       undef OPENVPN_CIPHER_SELECT
       }
