@@ -313,6 +313,8 @@ namespace openvpn {
 	{
 	  switch (d[0])
 	    {
+	    case 'a':
+	      return d == "auth-user-pass";
 	    case 'c':
 	      return d == "ca" || d == "cert";
 	    case 'd':
