@@ -4,7 +4,7 @@ export APPLE_FAMILY=1
 export GPP_CMD=clang++
 export GCC_CMD=clang
 export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.0.sdk"
-export PLATFORM_FLAGS="-arch i386 -miphoneos-version-min=5.1.1 -isysroot $IOS_SDK"
+export PLATFORM_FLAGS="-arch i386 -arch x86_64 -miphoneos-version-min=5.1.1 -isysroot $IOS_SDK"
 export OTHER_COMPILER_FLAGS="-g"
 export LIB_OPT_LEVEL="-O0"
 export LIB_FPIC=""
