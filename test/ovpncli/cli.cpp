@@ -135,6 +135,7 @@ int main(int argc, char *argv[])
     { "self-test",      no_argument,        NULL,      'T' },
     { "cache-password", no_argument,        NULL,      'C' },
     { "no-cert",        no_argument,        NULL,      'x' },
+    { "force-aes-cbc",  no_argument,        NULL,      'f' },
     { "def-keydir",     required_argument,  NULL,      'k' },
     { NULL,             0,                  NULL,       0  }
   };
@@ -160,10 +161,11 @@ int main(int argc, char *argv[])
 	bool disableClientCert = false;
 	bool proxyAllowCleartextAuth = false;
 	int defaultKeyDirection = -1;
+	bool forceAesCbcCiphersuites = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BeTCxu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BeTCxfu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -218,6 +220,9 @@ int main(int argc, char *argv[])
 	      case 'B':
 		proxyAllowCleartextAuth = true;
 		break;
+	      case 'f':
+		forceAesCbcCiphersuites = true;
+		break;
 	      case 'k':
 		{
 		  const std::string arg = optarg;
@@ -267,6 +272,7 @@ int main(int argc, char *argv[])
 	    config.proxyPassword = proxyPassword;
 	    config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
 	    config.defaultKeyDirection = defaultKeyDirection;
+	    config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 
 	    if (eval)
 	      {
@@ -376,5 +382,6 @@ int main(int argc, char *argv[])
   std::cout << "--cache-password, -C : cache password" << std::endl;
   std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
   std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
+  std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
   return 2;
 }

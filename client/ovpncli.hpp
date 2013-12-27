@@ -132,6 +132,7 @@ namespace openvpn {
     {
       Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false),
 		 disableClientCert(false), defaultKeyDirection(-1),
+		 forceAesCbcCiphersuites(false),
 		 proxyAllowCleartextAuth(false) {}
 
       // OpenVPN profile as a string
@@ -181,6 +182,13 @@ namespace openvpn {
       // defined in profile.  Generally should be -1 (bidirectional)
       // for compatibility with 2.x branch
       int defaultKeyDirection;
+
+      // If true, force ciphersuite to be one of:
+      // 1. TLS_DHE_RSA_WITH_AES_256_CBC_SHA, or
+      // 2. TLS_DHE_RSA_WITH_AES_128_CBC_SHA
+      // and disable setting TLS minimum version.
+      // This is intended for compatibility with legacy systems.
+      bool forceAesCbcCiphersuites;
 
       // HTTP Proxy parameters (optional)
       std::string proxyHost;         // hostname or IP address of proxy

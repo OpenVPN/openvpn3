@@ -107,6 +107,7 @@ namespace openvpn {
 	google_dns_fallback = false;
 	disable_client_cert = false;
 	default_key_direction = -1;
+	force_aes_cbc_ciphersuites = false;
 #if defined(USE_TUN_BUILDER)
 	builder = NULL;
 #endif
@@ -124,6 +125,7 @@ namespace openvpn {
       std::string private_key_password;
       bool disable_client_cert;
       int default_key_direction;
+      bool force_aes_cbc_ciphersuites;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -179,6 +181,7 @@ namespace openvpn {
 #if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID) || defined(USE_OPENSSL)
       cc.local_cert_enabled = (pcc.clientCertEnabled() && !config.disable_client_cert);
       cc.set_private_key_password(config.private_key_password);
+      cc.force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites;
 #endif
       cc.load(opt);
       if (!cc.mode.is_client())

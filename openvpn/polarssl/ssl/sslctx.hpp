@@ -48,6 +48,15 @@
 
 namespace openvpn {
 
+  namespace polarssl_ctx_private {
+    static const int aes_cbc_ciphersuites[] = // CONST GLOBAL
+      {
+	TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
+	TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+	0
+      };
+  };
+
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
   template <typename RAND_API>
@@ -69,7 +78,8 @@ namespace openvpn {
       Config() : external_pki(NULL),
 		 ssl_debug_level(0),
 		 ns_cert_type(NSCert::NONE),
-		 local_cert_enabled(true) {}
+		 local_cert_enabled(true),
+                 force_aes_cbc_ciphersuites(false) {}
 
       Mode mode;
       PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
@@ -86,6 +96,7 @@ namespace openvpn {
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
+      bool force_aes_cbc_ciphersuites;
       typename RAND_API::Ptr rng;   // random data source
 
       // if this callback is defined, no private key needs to be loaded
@@ -320,31 +331,32 @@ namespace openvpn {
 	    throw PolarSSLException("unknown client/server mode");
 
 	  // set minimum TLS version
-	  {
-	    int polar_major;
-	    int polar_minor;
-	    switch (c.tls_version_min)
-	      {
-	      case TLSVersion::V1_0:
-	      default:
-		polar_major = SSL_MAJOR_VERSION_3;
-		polar_minor = SSL_MINOR_VERSION_1;
-		break;
-#             if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_2)
-	        case TLSVersion::V1_1:
+	  if (!c.force_aes_cbc_ciphersuites)
+	    {
+	      int polar_major;
+	      int polar_minor;
+	      switch (c.tls_version_min)
+		{
+		case TLSVersion::V1_0:
+		default:
 		  polar_major = SSL_MAJOR_VERSION_3;
-		  polar_minor = SSL_MINOR_VERSION_2;
+		  polar_minor = SSL_MINOR_VERSION_1;
 		  break;
-#             endif
-#             if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_3)
-	        case TLSVersion::V1_2:
-		  polar_major = SSL_MAJOR_VERSION_3;
-		  polar_minor = SSL_MINOR_VERSION_3;
-		  break;
-#             endif
-	      }
-	    ssl_set_min_version(ssl, polar_major, polar_minor);
-	  }
+#               if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_2)
+	          case TLSVersion::V1_1:
+		    polar_major = SSL_MAJOR_VERSION_3;
+		    polar_minor = SSL_MINOR_VERSION_2;
+		    break;
+#               endif
+#               if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_3)
+	          case TLSVersion::V1_2:
+		    polar_major = SSL_MAJOR_VERSION_3;
+		    polar_minor = SSL_MINOR_VERSION_3;
+		    break;
+#               endif
+	        }
+	      ssl_set_min_version(ssl, polar_major, polar_minor);
+	    }
 
 	  // peer must present a valid certificate
 	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
@@ -356,6 +368,9 @@ namespace openvpn {
 	  sess = new ssl_session;
 	  std::memset(sess, 0, sizeof(*sess));
 	  ssl_set_session(ssl, sess);
+
+	  if (c.force_aes_cbc_ciphersuites)
+	    ssl_set_ciphersuites(ssl, polarssl_ctx_private::aes_cbc_ciphersuites);
 
 	  // set CA chain
 	  if (c.ca_chain)
