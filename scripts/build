@@ -160,8 +160,8 @@ fi
 
 # LZ4 compression
 if [ "$LZ4" = "1" ]; then
-    EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $DEP_DIR/lz4/lz4-$PLATFORM/lz4.o"
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/lz4/lz4-$PLATFORM -DHAVE_LZ4"
+    EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $DEP_DIR/lz4/lz4-$PLATFORM/lib/liblz4.a"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/lz4/lz4-$PLATFORM/include -DHAVE_LZ4"
 fi
 
 # Snappy compression

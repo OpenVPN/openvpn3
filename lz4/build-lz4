@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+set -e
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+if [ -z "$TARGET" ]; then
+    echo TARGET var must be defined
+    exit 1
+fi
+
+# source vars
+. $O3/vars-${TARGET}
+. $O3/lib-versions
+
+
+CC=cc
+LD=ld
+AR=ar
+RANLIB=ranlib
+[ "$GCC_CMD" ] && CC=$GCC_CMD
+[ "$LD_CMD" ] && LD=$LD_CMD
+[ "$AR_CMD" ] && AR=$AR_CMD
+[ "$RANLIB_CMD" ] && RANLIB=$RANLIB_CMD
+
+case $PLATFORM in
+android*)
+  echo PLATFORM android
+  host="x86_64-apple-darwin"
+  target=arm
+  ;;
+ios*)
+  echo PLATFORM ios
+  host="x86_64-apple-darwin"
+  target=arm
+  ;;
+*)
+  host=""
+  target=""
+  ;;
+esac
+
+if [ "$target" ]; then
+    targ_opt="--target=$target"
+fi
+
+if [ "$host" ]; then
+    host_opt="--host=$host"
+fi
+
+if [ "$NO_WIPE" != "1" ]; then
+    rm -rf $LZ4_VERSION
+    tar xfz ~/Downloads/$LZ4_VERSION.tar.gz
+fi
+
+DIST=$(pwd)/lz4/lz4-$PLATFORM
+rm -rf $DIST
+mkdir -p $DIST/include
+mkdir $DIST/lib
+cd $LZ4_VERSION
+CMD="$CC $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c lz4.c"
+echo $CMD
+$CMD
+$AR rc $DIST/lib/liblz4.a lz4.o
+$RANLIB $DIST/lib/liblz4.a
+cp lz4.h $DIST/include/

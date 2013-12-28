@@ -1,4 +1,5 @@
 export LZO_VERSION=lzo-2.06
+export LZ4_VERSION=lz4-r109
 export SNAPPY_VERSION=snappy-1.1.0
 export POLARSSL_VERSION=polarssl-1.2.10
 export OPENSSL_VERSION=openssl-1.0.1e

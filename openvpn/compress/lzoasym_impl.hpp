@@ -18,18 +18,14 @@
 
 #include <boost/cstdint.hpp> // for boost::uint32_t, etc.
 
-#include <openvpn/common/types.hpp> // for ssize_t
+#include <openvpn/common/types.hpp>  // for ssize_t
+#include <openvpn/common/likely.hpp> // for likely/unlikely
 
 // Implementation of asymmetrical LZO compression (only uncompress, don't compress)
 
 // Branch prediction hints (these make a difference on ARM)
-#if defined(__GNUC__)
-# define LZOASYM_LIKELY(x)       __builtin_expect((x),1)
-# define LZOASYM_UNLIKELY(x)     __builtin_expect((x),0)
-#else
-# define LZOASYM_LIKELY(x)      (x)
-# define LZOASYM_UNLIKELY(x)    (x)
-#endif
+# define LZOASYM_LIKELY(x)   likely(x)
+# define LZOASYM_UNLIKELY(x) unlikely(x)
 
 // Failure modes
 #define LZOASYM_CHECK_INPUT_OVERFLOW(x) if (LZOASYM_UNLIKELY(int(input_ptr_end - input_ptr) < int(x))) goto input_overflow

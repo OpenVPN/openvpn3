@@ -6,3 +6,5 @@ echo "******* POLARSSL"
 $O3/scripts/mac/build-polarssl
 echo "******* SNAPPY"
 $O3/scripts/mac/build-snappy
+echo "******* LZ4"
+$O3/scripts/mac/build-lz4

@@ -53,7 +53,7 @@ namespace openvpn {
 	    }
 
 	  // do compress
-	  const int comp_size = LZ4_compress((char *)buf.c_data(), (char *)work.data(), (int)buf.size());
+	  const int comp_size = LZ4_compress((const char *)buf.c_data(), (char *)work.data(), (int)buf.size());
 
 	  // did compression actually reduce data length?
 	  if (comp_size < buf.size())
@@ -95,7 +95,7 @@ namespace openvpn {
 	    const int payload_size = frame->prepare(Frame::DECOMPRESS_WORK, work);
 
 	    // do uncompress
-	    const int decomp_size = LZ4_uncompress_unknownOutputSize((const char *)buf.c_data(), (char *)work.data(), (int)buf.size(), payload_size);
+	    const int decomp_size = LZ4_decompress_safe((const char *)buf.c_data(), (char *)work.data(), (int)buf.size(), payload_size);
 	    if (decomp_size < 0)
 		{
 		  error(buf);
@@ -112,11 +112,17 @@ namespace openvpn {
     }
 
   private:
-    // worst case size expansion on compress
-    // from LZ4 docs: worst case size is : "inputsize + 0.4%", with "0.4%" being at least 8 bytes.
+    // Worst case size expansion on compress.
+    // Official LZ4 worst-case size expansion alg is
+    // LZ4_COMPRESSBOUND macro in lz4.h.
+    // However we optimize it slightly here to lose the integer division
+    // when len < 65535.
     size_t lz4_extra_buffer(const size_t len)
     {
-      return len + std::max(len/128, size_t(8)); // for speed, use a more conservative 0.78%
+      if (likely(len < 65535))
+	return len + len/256 + 17;
+      else
+	return len + len/255 + 16;
     }
 
     const bool asym;
