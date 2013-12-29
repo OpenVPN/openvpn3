@@ -190,12 +190,41 @@ namespace openvpn {
       return out.str();
     }
 
+    // Render the option args into a string format such that it could be parsed back to
+    // the equivalent option args.
+    std::string escape() const
+    {
+      std::ostringstream out;
+      bool more = false;
+      for (std::vector<std::string>::const_iterator i = data.begin(); i != data.end(); ++i)
+	{
+	  const std::string& term = *i;
+	  const bool mustquote = string::contains_space(term);
+	  if (more)
+	    out << ' ';
+	  if (mustquote)
+	    out << '\"';
+	  for (std::string::const_iterator j = term.begin(); j != term.end(); ++j)
+	    {
+	      const char c = *j;
+	      if (c == '\"' || c == '\\')
+		out << '\\';
+	      out << c;
+	    }
+	  if (mustquote)
+	    out << '\"';
+	  more = true;
+	}
+      return out.str();
+    }
+
     // delegate to data
     size_t size() const { return data.size(); }
     bool empty() const { return data.empty(); }
     void push_back(const std::string& item) { data.push_back(item); }
     void clear() { data.clear(); }
     void reserve(const size_t n) { data.reserve(n); }
+    void resize(const size_t n) { data.resize(n); }
 
     // raw references to data
     const std::string& ref(const size_t i) const { return data[i]; }

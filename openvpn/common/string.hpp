@@ -100,6 +100,26 @@ namespace openvpn {
 	  return true;
       return false;
     }
+
+    // Define a common interpretation of what constitutes a space character.
+    // Return true if c is a space char.
+    inline bool is_space(char c)
+    {
+      return (c == ' ' ||
+	      c == '\t' ||
+	      c == '\n' ||
+	      c == '\r');
+    }
+
+    // return true if str contains at least one space char
+    inline bool contains_space(const std::string& str)
+    {
+      for (std::string::const_iterator i = str.begin(); i != str.end(); ++i)
+	if (is_space(*i))
+	  return true;
+      return false;
+    }
+
   } // namespace string
 
   // Reference-counted string

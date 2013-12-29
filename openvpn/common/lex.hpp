@@ -11,19 +11,17 @@
 #ifndef OPENVPN_COMMON_LEX_H
 #define OPENVPN_COMMON_LEX_H
 
+#include <openvpn/common/string.hpp>
+
 namespace openvpn {
 
-  // Define a common interpretation of what constitutes a space character.
   // This class (or others that define an is_space method) is used as a
   // template parameter to methods in split.hpp.
   struct SpaceMatch
   {
     static bool is_space(char c)
     {
-      return (c == ' ' ||
-	      c == '\t' ||
-	      c == '\n' ||
-	      c == '\r');
+      return string::is_space(c);
     }
   };
 
