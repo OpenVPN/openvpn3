@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
     { "no-cert",        no_argument,        NULL,      'x' },
     { "force-aes-cbc",  no_argument,        NULL,      'f' },
     { "def-keydir",     required_argument,  NULL,      'k' },
+    { "merge",          no_argument      ,  NULL,      'm' },
     { NULL,             0,                  NULL,       0  }
   };
 
@@ -162,10 +163,11 @@ int main(int argc, char *argv[])
 	bool proxyAllowCleartextAuth = false;
 	int defaultKeyDirection = -1;
 	bool forceAesCbcCiphersuites = false;
+	bool merge = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BeTCxfu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BeTCxfmu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -223,6 +225,9 @@ int main(int argc, char *argv[])
 	      case 'f':
 		forceAesCbcCiphersuites = true;
 		break;
+	      case 'm':
+		merge = true;
+		break;
 	      case 'k':
 		{
 		  const std::string arg = optarg;
@@ -248,6 +253,16 @@ int main(int argc, char *argv[])
 	if (self_test)
 	  {
 	    std::cout << ClientAPI::OpenVPNClient::crypto_self_test();
+	  }
+	else if (merge)
+	  {
+	    if (argc != 1)
+	      goto usage;
+	    ProfileMerge pm(argv[0], "", true,
+			    ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
+	    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
+	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+	    std::cout << pm.profile_content();
 	  }
 	else
 	  {
@@ -365,7 +380,8 @@ int main(int argc, char *argv[])
  usage:
   std::cout << "OpenVPN Client (ovpncli)" << std::endl;
   std::cout << "usage: cli [options] <config-file>" << std::endl;
-  std::cout << "--eval, -e           : evaluate profile only" << std::endl;
+  std::cout << "--eval, -e           : evaluate profile only (standalone)" << std::endl;
+  std::cout << "--merge, -m          : merge profile into unified format (standalone)" << std::endl;
   std::cout << "--username, -u       : username" << std::endl;
   std::cout << "--password, -p       : password" << std::endl;
   std::cout << "--response, -r       : static response" << std::endl;
