@@ -349,7 +349,7 @@ namespace openvpn {
     }
 
     // create a remote list from config file option list
-    RemoteList(const OptionList& opt)
+    RemoteList(const OptionList& opt, bool warn)
     {
       init();
 
@@ -379,6 +379,15 @@ namespace openvpn {
 		  const OptionList conn_block = OptionList::parse_from_config_static(conn_block_text, &limits);
 		  Protocol proto(default_proto);
 		  std::string port(default_port);
+
+		  // unsupported options
+		  if (warn)
+		    {
+		      unsupported_in_connection_block(conn_block, "http-proxy");
+		      unsupported_in_connection_block(conn_block, "http-proxy-option");
+		      unsupported_in_connection_block(conn_block, "http-proxy-user-pass");
+		    }
+
 		  add(conn_block, proto, port);
 		}
 		catch (Exception& e)
@@ -702,6 +711,12 @@ namespace openvpn {
 	      }
 	  }
       }
+    }
+
+    void unsupported_in_connection_block(const OptionList& options, const std::string& option)
+    {
+      if (options.exists(option))
+	OPENVPN_LOG("NOTE: " << option << " directive is not currently supported in <connection> blocks");
     }
 
     bool enable_cache;

@@ -25,6 +25,7 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/userpass.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
@@ -41,6 +42,18 @@ namespace openvpn {
     class Options : public RC<thread_safe_refcount>
     {
     public:
+      struct CustomHeader : public RC<thread_unsafe_refcount>
+      {
+	typedef boost::intrusive_ptr<CustomHeader> Ptr;
+
+	std::string p1;
+	std::string p2;
+      };
+
+      struct CustomHeaderList : public std::vector<CustomHeader::Ptr>
+      {
+      };
+
       typedef boost::intrusive_ptr<Options> Ptr;
 
       Options() : allow_cleartext_auth(false) {}
@@ -50,6 +63,11 @@ namespace openvpn {
       std::string password;
       bool allow_cleartext_auth;
 
+      std::string http_version;
+      std::string user_agent;
+
+      CustomHeaderList headers;
+
       void set_proxy_server(const std::string& host, const std::string& port)
       {
 	proxy_server.reset(new RemoteList(host, port, Protocol(Protocol::TCP), "http proxy port"));
@@ -58,6 +76,75 @@ namespace openvpn {
       void proxy_server_set_enable_cache(const bool enable_cache)
       {
 	proxy_server->set_enable_cache(enable_cache);
+      }
+
+      static Ptr parse(const OptionList& opt)
+      {
+	if (opt.exists("http-proxy"))
+	  {
+	    Ptr obj(new Options);
+	    if (obj->parse_options(opt))
+	      return obj;
+	  }
+	return Ptr();
+      }
+
+    private:
+      bool parse_options(const OptionList& opt)
+      {
+	const Option* hp = opt.get_ptr("http-proxy");
+	if (hp)
+	  {
+	    // get server/port
+	    set_proxy_server(hp->get(1, 256), hp->get(2, 16));
+
+	    // get creds
+	    {
+	      std::vector<std::string> user_pass;
+	      if (parse_user_pass(opt, "http-proxy-user-pass", &user_pass))
+		{
+		  if (user_pass.size() >= 1)
+		    username = user_pass[0];
+		  if (user_pass.size() >= 2)
+		    password = user_pass[1];
+		}
+	    }
+
+	    // allow cleartext auth?
+	    allow_cleartext_auth = (hp->get_optional(3, 16) != "auto-nct");
+
+	    // get options
+	    const OptionList::IndexList* hpo = opt.get_index_ptr("http-proxy-option");
+	    if (hpo)
+	      {
+		for (OptionList::IndexList::const_iterator i = hpo->begin(); i != hpo->end(); ++i)
+		  {
+		    const Option& o = opt[*i];
+		    const std::string& type = o.get(1, 64);
+		    if (type == "VERSION")
+		      {
+			http_version = o.get(2, 16);
+			o.touch();
+		      }
+		    else if (type == "AGENT")
+		      {
+			user_agent = o.get(2, 256);
+			o.touch();
+		      }
+		    else if (type == "EXT1" || type == "EXT2" || type == "CUSTOM-HEADER")
+		      {
+			CustomHeader::Ptr h(new CustomHeader());
+			h->p1 = o.get(2, 512);
+			h->p2 = o.get_optional(3, 512);
+			headers.push_back(h);
+			o.touch();
+		      }
+		  }
+	      }
+	    return true;
+	  }
+	else
+	  return false;
       }
     };
 
@@ -457,7 +544,7 @@ namespace openvpn {
 	OPENVPN_LOG("Proxy method: Basic" << std::endl << pa.to_string());
 
 	std::ostringstream os;
-	gen_user_agent(os);
+	gen_headers(os);
 	os << "Proxy-Authorization: Basic "
 	   << base64->encode(config->http_proxy_options->username + ':' + config->http_proxy_options->password)
 	   << "\r\n";
@@ -512,8 +599,7 @@ namespace openvpn {
 
 	  // generate proxy request
 	  std::ostringstream os;
-	  gen_user_agent(os);
-	  os << "Host: " << server_host << "\r\n";
+	  gen_headers(os);
 	  os << "Proxy-Authorization: Digest username=\"" << config->http_proxy_options->username << "\", realm=\"" << realm << "\", nonce=\"" << nonce << "\", uri=\"" << uri << "\", qop=" << qop << ", nc=" << nonce_count << ", cnonce=\"" << cnonce << "\", response=\"" << response << "\"";
 	  if (!opaque.empty())
 	    os << ", opaque=\"" + opaque + "\"";
@@ -551,7 +637,7 @@ namespace openvpn {
 	const std::string phase_1_reply = HTTPProxy::NTLM<RAND_API, CRYPTO_API>::phase_1();
 
 	std::ostringstream os;
-	gen_user_agent(os);
+	gen_headers(os);
 	os << "Proxy-Connection: Keep-Alive\r\n";
 	os << "Proxy-Authorization: NTLM " << phase_1_reply << "\r\n";
 
@@ -599,7 +685,7 @@ namespace openvpn {
 	      *config->rng);
 
 	  std::ostringstream os;
-	  gen_user_agent(os);
+	  gen_headers(os);
 	  os << "Proxy-Connection: Keep-Alive\r\n";
 	  os << "Proxy-Authorization: NTLM " << phase_3_reply << "\r\n";
 
@@ -613,9 +699,42 @@ namespace openvpn {
 	  }
       }
 
-      void gen_user_agent(std::ostringstream& os)
+      void gen_headers(std::ostringstream& os)
       {
-	//os << "User-Agent: OpenVPN\r\n";
+	bool host_header_sent = false;
+
+	// emit custom headers
+	{
+	  const Options::CustomHeaderList& headers = config->http_proxy_options->headers;
+	  for (Options::CustomHeaderList::const_iterator i = headers.begin(); i != headers.end(); ++i)
+	    {
+	      const Options::CustomHeader& h = **i;
+	      if (!h.p2.empty())
+		{
+		  os << h.p1 << ": " << h.p2 << "\r\n";
+		  if (!string::strcasecmp(h.p1, "host"))
+		    host_header_sent = true;
+		}
+	      else
+		{
+		  os << h.p1 << "\r\n";
+		  const std::string h5 = h.p1.substr(0, 5);
+		  if (!string::strcasecmp(h5, "host:"))
+		    host_header_sent = true;
+		}
+	    }
+	}
+
+	// emit user-agent header
+	{
+	  const std::string& user_agent = config->http_proxy_options->user_agent;
+	  if (!user_agent.empty())
+	    os << "User-Agent: " << user_agent << "\r\n";
+	}
+
+	// emit host header
+	if (!host_header_sent)
+	  os << "Host: " << server_host << "\r\n";
       }
 
       void stop_()
@@ -740,8 +859,18 @@ namespace openvpn {
       void create_http_connect_msg(BufferAllocated& buf)
       {
 	std::ostringstream os;
-	os << "CONNECT " << server_host << ':' << server_port << " HTTP/1.0\r\n"
-	   << http_request<< "\r\n";
+	const std::string& http_version = config->http_proxy_options->http_version;
+	os << "CONNECT " << server_host << ':' << server_port << " HTTP/";
+	if (!http_version.empty())
+	  os << http_version;
+	else
+	  os << "1.0";
+	os << "\r\n";
+	if (!http_request.empty())
+	  os << http_request;
+	else
+	  gen_headers(os);
+	os << "\r\n";
 	const std::string str = os.str();
 	http_request = "";
 

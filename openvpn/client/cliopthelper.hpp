@@ -20,6 +20,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/splitlines.hpp>
+#include <openvpn/common/userpass.hpp>
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/cliconstants.hpp>
 
@@ -145,7 +146,7 @@ namespace openvpn {
 	}
 
 	// validate remote list
-	RemoteList rl(options);
+	RemoteList rl(options, false);
 
 	// determine if private key is encrypted
 	if (!externalPki_)
@@ -337,19 +338,7 @@ namespace openvpn {
   private:
     static bool parse_auth_user_pass(const OptionList& options, std::vector<std::string>* user_pass)
     {
-      const Option* auth_user_pass = options.get_ptr("auth-user-pass");
-      if (auth_user_pass)
-	{
-	  if (user_pass && auth_user_pass->size() == 2)
-	    {
-	      SplitLines in(auth_user_pass->get(1, 512 | Option::MULTILINE), 256);
-	      for (int i = 0; in(true) && i < 2; ++i)
-		user_pass->push_back(in.line_ref());
-	    }
-	  return true;
-	}
-      else
-	return false;
+      return parse_user_pass(options, "auth-user-pass", user_pass);
     }
 
     static void process_setenv_opt(OptionList& options)

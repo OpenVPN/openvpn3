@@ -34,6 +34,7 @@ namespace openvpn {
     enum {
       F_MAY_INCLUDE_KEY_DIRECTION = (1<<0),
       F_PKCS12 = (1<<1),
+      F_HTTP_PROXY = (1<<2),
     };
 
     // limits
@@ -198,15 +199,38 @@ namespace openvpn {
 		  else
 		    {
 		      unsigned int flags = 0;
-		      if (!opaque_multiline
-			  && opt.size() >= 2
-			  && is_fileref_directive(opt.ref(0), flags))
+		      bool is_fileref = (!opaque_multiline
+					 && opt.size() >= 2
+					 && is_fileref_directive(opt.ref(0), flags));
+		      if (is_fileref)
+			{
+			  // check if http-proxy directive references a creds file
+			  if (flags & F_HTTP_PROXY)
+			    {
+			      is_fileref = false;
+			      if (opt.size() >= 4)
+				{
+				  const std::string authfile = opt.get(3, 256);
+				  if (authfile != "auto" && authfile != "auth-nct")
+				    {
+				      opt.ref(3) = "auto";
+				      profile_content_ += opt.escape();
+				      profile_content_ += '\n';
+				      opt.ref(0) = "http-proxy-user-pass";
+				      opt.ref(1) = authfile;
+				      opt.resize(2);
+				      is_fileref = true;
+				    }
+				}
+			    }
+			}
+		      if (is_fileref)
 			{
 			  // found a directive referencing a file
 
 			  // get basename of file and make sure that it doesn't
 			  // attempt to traverse directories
-			  std::string fn = path::basename(opt.get(1, 256));
+			  const std::string fn = path::basename(opt.get(1, 256));
 			  if (fn.empty())
 			    {
 			      echo = false;
@@ -321,6 +345,13 @@ namespace openvpn {
 	      return d == "dh";
 	    case 'e':
 	      return d == "extra-certs";
+	    case 'h':
+	      if (d == "http-proxy")
+		{
+		  flags |= F_HTTP_PROXY;
+		  return true;
+		}
+	      return false;
 	    case 'k':
 	      return d == "key";
 #if 0 // define when we have capability to parse out pkcs12 from profile and add to Keychain (fixme)

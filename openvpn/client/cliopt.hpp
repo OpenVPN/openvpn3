@@ -197,8 +197,12 @@ namespace openvpn {
       cp->rng = rng;
       cp->prng = prng;
 
+      // If HTTP proxy parameters are not supplied by API, try to get them from config
+      if (!http_proxy_options)
+	http_proxy_options = HTTPProxyTransport::Options::parse(opt);
+
       // load remote list
-      remote_list.reset(new RemoteList(opt));
+      remote_list.reset(new RemoteList(opt, true));
       if (!remote_list->defined())
 	throw option_error("no remote option specified");
 
@@ -465,7 +469,6 @@ namespace openvpn {
     ClientSSLAPI::Config cc;
     Client::ProtoConfig::Ptr cp;
     RemoteList::Ptr remote_list;
-    RemoteList::Ptr remote_list_proxy;
     TransportClientFactory::Ptr transport_factory;
     TunClientFactory::Ptr tun_factory;
     SocketProtect* socket_protect;
