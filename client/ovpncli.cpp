@@ -705,9 +705,10 @@ namespace openvpn {
 	}
     }
 
-    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string& data, std::string& sig)
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string& sig_type, const std::string& data, std::string& sig)
     {
       ExternalPKISignRequest req;
+      req.sig_type = sig_type;
       req.data = data;
       req.alias = state->external_pki_alias;
       external_pki_sign_request(req); // call out to derived class for RSA signature

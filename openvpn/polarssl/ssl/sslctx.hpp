@@ -796,15 +796,52 @@ namespace openvpn {
     {
       PolarSSLContext *self = (PolarSSLContext *) arg;
       try {
-	if (mode == RSA_PRIVATE && hash_id == SIG_RSA_RAW)
+	if (mode == RSA_PRIVATE)
 	  {
+	    std::string sig_type;
+
+	    /* get signature type */
+	    switch (hash_id) {
+	    case SIG_RSA_RAW:
+	      sig_type = "RSA_RAW";
+	      break;
+	    case SIG_RSA_MD2:
+	      sig_type = "RSA_MD2";
+	      break;
+	    case SIG_RSA_MD4:
+	      sig_type = "RSA_MD4";
+	      break;
+	    case SIG_RSA_MD5:
+	      sig_type = "RSA_MD5";
+	      break;
+	    case SIG_RSA_SHA1:
+	      sig_type = "RSA_SHA1";
+	      break;
+	    case SIG_RSA_SHA224:
+	      sig_type = "RSA_SHA224";
+	      break;
+	    case SIG_RSA_SHA256:
+	      sig_type = "RSA_SHA256";
+	      break;
+	    case SIG_RSA_SHA384:
+	      sig_type = "RSA_SHA384";
+	      break;
+	    case SIG_RSA_SHA512:
+	      sig_type = "RSA_SHA512";
+	      break;
+	    default:
+	      OPENVPN_LOG_SSL("PolarSSLContext::epki_sign unrecognized hash_id, mode=" << mode
+			      << " hash_id=" << hash_id << " hashlen=" << hashlen);
+	      return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+	    }
+
 	    /* convert 'hash' to base64 */
 	    ConstBuffer from_buf(hash, hashlen, true);
 	    const std::string from_b64 = base64->encode(from_buf);
 
 	    /* get signature */
 	    std::string sig_b64;
-	    const bool status = self->config.external_pki->sign(from_b64, sig_b64);
+	    const bool status = self->config.external_pki->sign(sig_type, from_b64, sig_b64);
 	    if (!status)
 	      throw polarssl_external_pki("could not obtain signature");
 
