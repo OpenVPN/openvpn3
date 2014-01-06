@@ -399,7 +399,11 @@ namespace openvpn {
 	if ((reroute_gw_ver_flags & F_IPv4) && !(dhcp_option_flags & F_ADD_DNS))
 	  {
 	    if (config.google_dns_fallback)
-	      add_google_dns(tb);
+	      {
+		if (!quiet)
+		  OPENVPN_LOG("Google DNS fallback enabled");
+		add_google_dns(tb);
+	      }
 	    else if (stats)
 	      stats->error(Error::REROUTE_GW_NO_DNS);
 	  }
