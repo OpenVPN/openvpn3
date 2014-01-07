@@ -274,6 +274,7 @@ int main(int argc, char *argv[])
 	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
 
 	    ClientAPI::Config config;
+	    config.guiVersion = "cli 1.0";
 	    config.content = pm.profile_content();
 	    config.serverOverride = server;
 	    config.protoOverride = proto;

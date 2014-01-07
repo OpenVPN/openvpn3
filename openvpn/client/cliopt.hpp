@@ -113,6 +113,7 @@ namespace openvpn {
 #endif
       }
 
+      std::string gui_version;
       std::string server_override;
       Protocol proto_override;
       int conn_timeout;
@@ -192,6 +193,7 @@ namespace openvpn {
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->ssl_ctx.reset(new ClientSSLAPI(cc));
+      cp->gui_version = config.gui_version;
       cp->frame = frame;
       cp->now = &now_;
       cp->rng = rng;

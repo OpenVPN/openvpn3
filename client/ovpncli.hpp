@@ -142,6 +142,11 @@ namespace openvpn {
       // or in addition to content string above).
       std::vector<KeyValue> contentList;
 
+      // Set to identity OpenVPN GUI version.
+      // Format should be "<gui_identifier><space><version>"
+      // Passed to server as IV_OPENVPN_GUI_VERSION.
+      std::string guiVersion;
+
       // Use a different server than that specified in "remote"
       // option of profile
       std::string serverOverride;
