@@ -133,10 +133,42 @@ namespace openvpn {
 	  password = password_save;
 	  password_save = "";
 	  password_save_defined = false;
+	  did_replace_password_with_session_id = false;
 	  return true;
 	}
       else
 	return false;
+    }
+
+    std::string auth_info() const
+    {
+      std::string ret;
+      if (dynamic_challenge)
+	{
+	  ret = "DynamicChallenge";
+	}
+      else if (response.empty())
+	{
+	  if (!username.empty())
+	    ret += "Username";
+	  else
+	    ret += "UsernameEmpty";
+	  ret += '/';
+	  if (!password.empty())
+	    {
+	      if (did_replace_password_with_session_id)
+		ret += "SessionID";
+	      else
+		ret += "Password";
+	    }
+	  else
+	    ret += "PasswordEmpty";
+	}
+      else
+	{
+	  ret = "StaticChallenge";
+	}
+      return ret;
     }
 
   private:

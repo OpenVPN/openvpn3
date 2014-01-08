@@ -538,11 +538,13 @@ namespace openvpn {
       {
 	if (creds)
 	  {
+	    OPENVPN_LOG("Creds: " << creds->auth_info());
 	    Base::write_auth_string(creds->get_username(), buf);
 	    Base::write_auth_string(creds->get_password(), buf);
 	  }
 	else
 	  {
+	    OPENVPN_LOG("Creds: None");
 	    Base::write_empty_string(buf); // username
 	    Base::write_empty_string(buf); // password
 	  }
@@ -708,7 +710,9 @@ namespace openvpn {
 
       void process_halt_restart(const ClientHalt& ch)
       {
-	if (ch.restart() && (ch.psid() || !creds || !creds->password_defined()))
+	if (!ch.psid() && creds)
+	  creds->can_retry_auth_with_cached_password(); // purge session ID
+	if (ch.restart())
 	  fatal_ = Error::CLIENT_RESTART;
 	else
 	  fatal_ = Error::CLIENT_HALT;

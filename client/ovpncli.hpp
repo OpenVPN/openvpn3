@@ -90,12 +90,16 @@ namespace openvpn {
       std::string dynamicChallengeCookie;
 
       // If true, on successful connect, we will replace the password
-      // with the session ID we receive from the server.
+      // with the session ID we receive from the server (if provided).
+      // If false, the password will be cached for future reconnects
+      // and will not be replaced with a session ID, even if the
+      // server provides one.
       bool replacePasswordWithSessionID;
 
-      // If true, allow the authentication password to be cached by the
-      // backend.  If false, we will discard the password as soon as we
-      // receive the session ID from the server.
+      // If true, and if replacePasswordWithSessionID is true, and if
+      // we actually receive a session ID from the server, cache
+      // the user-provided password for future use before replacing
+      // the active password with the session ID.
       bool cachePassword;
     };
 
