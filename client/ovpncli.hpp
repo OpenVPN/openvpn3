@@ -148,7 +148,7 @@ namespace openvpn {
 
       // Set to identity OpenVPN GUI version.
       // Format should be "<gui_identifier><space><version>"
-      // Passed to server as IV_OPENVPN_GUI_VERSION.
+      // Passed to server as IV_GUI_VER.
       std::string guiVersion;
 
       // Use a different server than that specified in "remote"

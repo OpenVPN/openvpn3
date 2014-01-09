@@ -269,7 +269,7 @@ namespace openvpn {
       Time::Duration keepalive_ping;
       Time::Duration keepalive_timeout;
 
-      // GUI version, passed to server as IV_OPENVPN_GUI_VERSION
+      // GUI version, passed to server as IV_GUI_VER
       std::string gui_version;
 
       void load(const OptionList& opt, const ProtoContextOptions& pco, const int default_key_direction)
@@ -567,7 +567,7 @@ namespace openvpn {
       {
 	std::ostringstream out;
 	if (!gui_version.empty())
-	  out << "IV_OPENVPN_GUI_VERSION=" << gui_version << '\n';
+	  out << "IV_GUI_VER=" << gui_version << '\n';
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
 	out << "IV_NCP=1\n"; // negotiable crypto parameters
