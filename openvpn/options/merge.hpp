@@ -211,7 +211,7 @@ namespace openvpn {
 			      if (opt.size() >= 4)
 				{
 				  const std::string authfile = opt.get(3, 256);
-				  if (authfile != "auto" && authfile != "auth-nct")
+				  if (authfile != "auto" && authfile != "auto-nct")
 				    {
 				      opt.ref(3) = "auto";
 				      profile_content_ += opt.escape();
