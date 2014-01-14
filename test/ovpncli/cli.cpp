@@ -130,14 +130,15 @@ int main(int argc, char *argv[])
     { "proxy-port",     required_argument,  NULL,      'q' },
     { "proxy-username", required_argument,  NULL,      'U' },
     { "proxy-password", required_argument,  NULL,      'W' },
-    { "proxy-basic",    no_argument      ,  NULL,      'B' },
+    { "proxy-basic",    no_argument,        NULL,      'B' },
     { "eval",           no_argument,        NULL,      'e' },
     { "self-test",      no_argument,        NULL,      'T' },
     { "cache-password", no_argument,        NULL,      'C' },
     { "no-cert",        no_argument,        NULL,      'x' },
     { "force-aes-cbc",  no_argument,        NULL,      'f' },
     { "def-keydir",     required_argument,  NULL,      'k' },
-    { "merge",          no_argument      ,  NULL,      'm' },
+    { "merge",          no_argument,        NULL,      'm' },
+    { "version",        no_argument,        NULL,      'v' },
     { NULL,             0,                  NULL,       0  }
   };
 
@@ -164,10 +165,11 @@ int main(int argc, char *argv[])
 	int defaultKeyDirection = -1;
 	bool forceAesCbcCiphersuites = false;
 	bool merge = false;
+	bool version = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BeTCxfmu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BeTCxfmvu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -228,6 +230,9 @@ int main(int argc, char *argv[])
 	      case 'm':
 		merge = true;
 		break;
+	      case 'v':
+		version = true;
+		break;
 	      case 'k':
 		{
 		  const std::string arg = optarg;
@@ -250,7 +255,13 @@ int main(int argc, char *argv[])
 
 	Client::init_process();
 
-	if (self_test)
+	if (version)
+	  {
+	    std::cout << "OpenVPN cli 1.0" << std::endl;
+	    std::cout << ClientAPI::OpenVPNClient::platform() << std::endl;
+	    std::cout << ClientAPI::OpenVPNClient::copyright() << std::endl;
+	  }
+	else if (self_test)
 	  {
 	    std::cout << ClientAPI::OpenVPNClient::crypto_self_test();
 	  }
@@ -381,6 +392,7 @@ int main(int argc, char *argv[])
  usage:
   std::cout << "OpenVPN Client (ovpncli)" << std::endl;
   std::cout << "usage: cli [options] <config-file>" << std::endl;
+  std::cout << "--version, -v        : show version info" << std::endl;
   std::cout << "--eval, -e           : evaluate profile only (standalone)" << std::endl;
   std::cout << "--merge, -m          : merge profile into unified format (standalone)" << std::endl;
   std::cout << "--username, -u       : username" << std::endl;
