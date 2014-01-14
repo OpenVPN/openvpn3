@@ -14,7 +14,7 @@ mini=1
 rm -rf polarssl
 mkdir polarssl
 
-for target in android-dbg android ; do
+for target in android-dbg android android-a7a android-a7a-dbg ; do
     echo '***************' TARGET $target
     VERBOSE=1 TARGET=$target CMAKE_TARGET=android USE_MINICRYPTO=$mini MINICRYPTO_DIR=$(pwd)/minicrypto/minicrypto-$target $O3/polarssl/build-polarssl
     mv polarssl-$target polarssl/

@@ -1,0 +1,8 @@
+export DEP_DIR=$HOME/src/android
+export PLATFORM=android-a7a-dbg
+export ABI=armeabi-v7a
+export DEBUG_BUILD=1
+export OTHER_COMPILER_FLAGS="-g"
+export LIB_OPT_LEVEL="-O0"
+export LIB_FPIC="-fPIC"
+export PLATFORM_FLAGS="-march=armv7-a -mthumb -fomit-frame-pointer --sysroot=$DEP_DIR/tc/sysroot"

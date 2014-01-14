@@ -11,7 +11,7 @@ fi
 rm -rf snappy
 mkdir snappy
 
-for target in android android-dbg ; do
+for target in android android-dbg android-a7a android-a7a-dbg ; do
     echo '***************' TARGET $target
     TARGET=$target $O3/snappy/build-snappy
 done

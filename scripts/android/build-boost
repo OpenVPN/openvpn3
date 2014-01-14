@@ -6,8 +6,9 @@
 # #include <sys/mman.h>, which does indeed work, but may not be the
 # correct solution for all cases.
 set -e
+
+# Download Boost
 . $O3/lib-versions
-. $O3/vars-android
 rm -rf boost $BOOST_VERSION
 mkdir boost
 if [ "$SRCDIR" ]; then
@@ -16,35 +17,45 @@ else
     tar xfz ~/Downloads/$BOOST_VERSION.tar.gz
 fi
 cd $BOOST_VERSION
+
+# Patch it
 #patch -p1 <$DL/asio-engine.patch
 #patch -p2 <$DL/changeset_75599.diff
 #patch -p2 <$DL/changeset_75813.diff || true
+
+# Build builder
+./bootstrap.sh
+
+# Put Android NDK cross compiler in PATH
+. $O3/android-sdk-path
+
+# Loop over build variants
+for TARGET in android android-dbg android-a7a android-a7a-dbg ; do
+
+echo "************************ $TARGET"
+
+. $O3/vars-${TARGET}
+btarg="${TARGET//-/}"
+
 cat >>tools/build/v2/user-config.jam <<EOF
-using gcc : android : g++
+using gcc : $btarg : g++
             :
-	        <compileflags>$PLATFORM_FLAGS
-                <compileflags>-g
-                <compileflags>-O3
-            ; 
-using gcc : androiddbg : g++
-            :
-	        <compileflags>$PLATFORM_FLAGS
-                <compileflags>-g
-                <compileflags>-O0
+	        <compileflags>"$PLATFORM_FLAGS"
+                <compileflags>"$LIB_OPT_LEVEL"
+                <compileflags>"$OTHER_COMPILER_FLAGS"
             ; 
 EOF
-./bootstrap.sh
-. $O3/android-sdk-path
-for target in android androiddbg ; do
-    if [ "${target:(-3)}" == "dbg" ]; then
+
+stage=stage-$PLATFORM
+
+if [ "$DEBUG_BUILD" = "1" ]; then
 	variant=debug
-	stage=stage-${target%dbg}-dbg
-    else
+else
 	variant=release
-	stage=stage-$target
-    fi
-    echo "************************ $target $variant $stage"
-    ./bjam -d2 toolset=gcc-$target --stagedir=$stage --with-system --with-thread variant=$variant link=static threading=multi runtime-link=static
+fi
+
+./bjam -d2 toolset=gcc-$btarg --stagedir=$stage --with-system --with-thread variant=$variant link=static threading=multi runtime-link=static
+
 done
 mv stage-* ../boost/
 cp -a boost ../boost/

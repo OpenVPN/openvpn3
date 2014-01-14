@@ -4,7 +4,7 @@ set -e
 . $O3/android-sdk-path
 rm -rf openssl
 mkdir openssl
-for TARGET in android ; do
+for TARGET in android android-dbg android-a7a android-a7a-dbg ; do
     . $O3/vars-$TARGET
     export OPENSSL=$OPENSSL_VERSION
     export DIST=$(pwd)/openssl-$PLATFORM

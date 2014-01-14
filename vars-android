@@ -1,8 +1,8 @@
 export DEP_DIR=$HOME/src/android
 export PLATFORM=android
+export ABI=armeabi
 export DEBUG_BUILD=0
 export OTHER_COMPILER_FLAGS=""
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC="-fPIC"
-#export PLATFORM_FLAGS="-march=armv7-a -mthumb -fomit-frame-pointer --sysroot=$DEP_DIR/tc/sysroot"
 export PLATFORM_FLAGS="--sysroot=$DEP_DIR/tc/sysroot"

@@ -1,5 +1,6 @@
 export DEP_DIR=$HOME/src/android
 export PLATFORM=android-dbg
+export ABI=armeabi
 export DEBUG_BUILD=1
 export OTHER_COMPILER_FLAGS="-g"
 export LIB_OPT_LEVEL="-O0"
