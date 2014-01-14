@@ -152,3 +152,5 @@ fi
 
 # copy headers
 cp -a ../$POLARSSL_VERSION/include/polarssl include/
+
+exit 0

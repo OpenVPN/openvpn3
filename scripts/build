@@ -174,7 +174,6 @@ fi
 
 # Android NDK
 if [ "$PLATFORM" = "android" ]; then
-    FLAGS="$FLAGS --sysroot=$NDK/platforms/android-9/arch-arm"
     CPPFLAGS="$CPPFLAGS -D__GLIBC__"
     CPPFLAGS="$CPPFLAGS -D_GLIBCXX_HAVE_FENV_H=1"
     CPPFLAGS="$CPPFLAGS -DBOOST_NO_INTRINSIC_WCHAR_T"

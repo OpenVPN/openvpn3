@@ -132,3 +132,4 @@ done
 CMD="$AR_CMD crs ../libminicrypto.a *.o"
 echo $CMD
 $CMD
+exit 0

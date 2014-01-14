@@ -1,0 +1,5 @@
+# setup PATH for Android SDK and NDK
+AD=$HOME/src/android
+export SDK=$AD/adt-bundle-mac-x86_64-20131030/sdk
+export NDK=$AD/android-ndk-r9c
+[ "$NO_MOD_PATH" != "1" ] && export PATH="$SDK/tools:$SDK/platform-tools:$AD/tc/bin:$AD/tc/arm-linux-androideabi/bin:$PATH"

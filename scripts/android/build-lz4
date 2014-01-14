@@ -8,11 +8,11 @@ fi
 
 . $O3/android-sdk-path
 
-rm -rf minicrypto
-mkdir minicrypto
+rm -rf lz4
+mkdir lz4
 
 for target in android android-dbg ; do
     echo '***************' TARGET $target
-    TARGET=$target $O3/minicrypto/build-minicrypto
+    TARGET=$target $O3/lz4/build-lz4
 done
 exit 0

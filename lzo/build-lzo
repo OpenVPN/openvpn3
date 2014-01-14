@@ -22,7 +22,7 @@ fi
 case $PLATFORM in
 android*)
   echo PLATFORM android
-  host="x86_64-apple-darwin"
+  host=arm
   target=arm
   ;;
 ios*)
@@ -57,3 +57,4 @@ echo 'OPTIONS' $CC $LD $AR $RANLIB $host_opt $targ_opt
 CFLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC" ./configure --prefix=$DIST $host_opt $targ_opt
 make
 make install
+exit 0

@@ -1,21 +1,8 @@
 export DEP_DIR=$HOME/src/android
 export PLATFORM=android
 export DEBUG_BUILD=0
-export GPP_CMD=arm-linux-androideabi-g++
-export GCC_CMD=arm-linux-androideabi-gcc
-export NM_CMD=arm-linux-androideabi-nm
-export AR_CMD=arm-linux-androideabi-ar
-export LD_CMD=arm-linux-androideabi-ld
-export RANLIB_CMD=arm-linux-androideabi-ranlib
-export STRIP_CMD=arm-linux-androideabi-strip
 export OTHER_COMPILER_FLAGS=""
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC="-fPIC"
-export PLATFORM_FLAGS=""
-
-# setup NDK
-export AD=$DEP_DIR
-export SDK=$AD/android-sdk-macosx
-export NDK=$AD/android-ndk-r6b
-export TC=$NDK/toolchains/arm-linux-androideabi-4.6.2/prebuilt/darwin-x86
-[ "$NO_MOD_PATH" != "1" ] && export PATH="$SDK/tools:$SDK/platform-tools:$TC/bin:$PATH"
+#export PLATFORM_FLAGS="-march=armv7-a -mthumb -fomit-frame-pointer --sysroot=$DEP_DIR/tc/sysroot"
+export PLATFORM_FLAGS="--sysroot=$DEP_DIR/tc/sysroot"

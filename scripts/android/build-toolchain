@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Build the Android toolchain (run first)
+set -e
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+cd ~/src/android
+export NO_MOD_PATH=1
+. $O3/android-sdk-path
+DEST=$(pwd)/tc
+rm -rf $DEST
+$NDK/build/tools/make-standalone-toolchain.sh \
+    --verbose \
+    --ndk-dir=$NDK \
+    --toolchain=arm-linux-androideabi-4.8 \
+    --stl=gnustl \
+    --arch=arm \
+    --platform=android-14 \
+    --install-dir=$DEST
+cd $DEST/arm-linux-androideabi/bin
+ln -s ../../bin/arm-linux-androideabi-gcc cc
+exit 0

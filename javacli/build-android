@@ -3,24 +3,32 @@
 #    -DAPP_EXPIRE_TIME=1364796000 \
 set -e
 
-rm_generated_files()
-{
-    svn status --no-ignore | perl -nle 's/\\/\//g; print "rm -rf '\''$1'\''" if /^[\?I]\s+([\S\t\x20]+)/;' | sh
-}
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
 
+cd $O3
+. android-sdk-path
+if [ "$DEBUG_BUILD" = "1" ]; then
+    . vars-android-dbg
+else
+    . vars-android
+fi
+cd javacli
 if [ "$WRAP_ONLY" != "1" ]; then
-    rm_generated_files
+    git clean -q -fX .
+    git clean -q -fd .
 fi
 
 if [ "$PKG" ]; then
     pkg=$PKG
     pkg_id_def="-DOPENVPN_PACKAGE_ID=${PKG//./_}"
-    mk_build=1
 else
     pkg=net.openvpn.openvpn
     pkg_id_def="-DOPENVPN_PACKAGE_ID=net_openvpn_openvpn"
-    mk_build=0
 fi
+echo PACKAGE $PKG
 
 if [ "$DEBUG_BUILD" = "1" ]; then
     vis1=""
@@ -51,39 +59,39 @@ if [ "$WRAP_ONLY" != "1" ]; then
     swig -c++ -java -package $pkg -I$O3/client -I$O3 ovpncli.i
 
     echo CORE
-    $GPP_CMD \
-	--sysroot=$NDK/platforms/android-9/arch-arm \
+    g++ \
+	$PLATFORM_FLAGS \
 	$LIB_OPT_LEVEL $LIB_FPIC \
 	-Wall -Wno-sign-compare -Wno-unused-parameter \
+	-Wno-unused-local-typedefs \
 	$vis1 \
 	$ssl_def \
 	-DHAVE_SNAPPY \
-	-D__GLIBC__ \
-	-D_GLIBCXX_HAVE_FENV_H=1 \
-	-DBOOST_NO_INTRINSIC_WCHAR_T \
+	-DHAVE_LZ4 \
 	-I$O3/client \
 	-I$O3 \
 	-I$DEP_DIR/boost \
 	$ssl_inc \
 	-I$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/include \
+	-I$DEP_DIR/lz4/lz4-$PLATFORM$DBG_DIR_SUFFIX/include \
 	-c $O3/client/ovpncli.cpp
 fi
 
 echo WRAP
-$GPP_CMD \
-    --sysroot=$NDK/platforms/android-9/arch-arm \
+g++ \
+    $PLATFORM_FLAGS \
     $opt2 $LIB_FPIC \
     -fno-strict-aliasing \
     -Wall \
     $vis1 $vis2 \
     -D__GLIBC__ \
-    -D_GLIBCXX_HAVE_FENV_H=1 \
     -I$O3/client \
     -I$O3 \
     -L$DEP_DIR/boost/stage-$PLATFORM$DBG_DIR_SUFFIX/lib \
     $ssl_libdir \
     -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
     -L$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/lib \
+    -L$DEP_DIR/lz4/lz4-$PLATFORM$DBG_DIR_SUFFIX/lib \
     ovpncli_wrap.cxx \
     android/jellybean_hack.cpp \
     ovpncli.o \
@@ -92,15 +100,19 @@ $GPP_CMD \
     $ssl_lib \
     -lboost_system -lboost_thread \
     -lsnappy \
+    -llz4 \
     -llog
 
 if [ "$DEBUG_BUILD" != "1" ]; then
     echo STRIP
-    $STRIP_CMD libovpncli.so
+    strip libovpncli.so
 fi
 
-if [ $mk_build -eq 1 ]; then
-    rm -rf build
-    mkdir build
-    cp SWIGTYPE_*.java ClientAPI_*.java libovpncli.so build/
+rm -rf build
+mkdir build
+mv ovpncli.java ovpncliJNI.java SWIGTYPE_*.java ClientAPI_*.java libovpncli.so build/
+
+if [ "$WRAP_ONLY" != "1" ] && [ "$POST_CLEAN" != "0" ]; then
+    git clean -q -fX .
+    git clean -q -f .
 fi

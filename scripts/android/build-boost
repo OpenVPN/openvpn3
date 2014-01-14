@@ -7,7 +7,7 @@
 # correct solution for all cases.
 set -e
 . $O3/lib-versions
-. $O3/scripts/android/vars
+. $O3/vars-android
 rm -rf boost $BOOST_VERSION
 mkdir boost
 if [ "$SRCDIR" ]; then
@@ -20,30 +20,21 @@ cd $BOOST_VERSION
 #patch -p2 <$DL/changeset_75599.diff
 #patch -p2 <$DL/changeset_75813.diff || true
 cat >>tools/build/v2/user-config.jam <<EOF
-using gcc : android : arm-linux-androideabi-g++
+using gcc : android : g++
             :
-	        <compileflags>--sysroot=$NDK/platforms/android-9/arch-arm
+	        <compileflags>$PLATFORM_FLAGS
                 <compileflags>-g
                 <compileflags>-O3
-                <compileflags>-D__GLIBC__
-                <compileflags>-D_GLIBCXX_HAVE_FENV_H=1
-                <compileflags>-DBOOST_NO_INTRINSIC_WCHAR_T
-                <archiver>arm-linux-androideabi-ar
-		<ranlib>arm-linux-androideabi-ranlib
             ; 
-using gcc : androiddbg : arm-linux-androideabi-g++
+using gcc : androiddbg : g++
             :
-	        <compileflags>--sysroot=$NDK/platforms/android-9/arch-arm
+	        <compileflags>$PLATFORM_FLAGS
                 <compileflags>-g
                 <compileflags>-O0
-                <compileflags>-D__GLIBC__
-                <compileflags>-D_GLIBCXX_HAVE_FENV_H=1
-                <compileflags>-DBOOST_NO_INTRINSIC_WCHAR_T
-                <archiver>arm-linux-androideabi-ar
-		<ranlib>arm-linux-androideabi-ranlib
             ; 
 EOF
 ./bootstrap.sh
+. $O3/android-sdk-path
 for target in android androiddbg ; do
     if [ "${target:(-3)}" == "dbg" ]; then
 	variant=debug
@@ -57,3 +48,4 @@ for target in android androiddbg ; do
 done
 mv stage-* ../boost/
 cp -a boost ../boost/
+exit 0

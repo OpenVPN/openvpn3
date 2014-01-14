@@ -6,6 +6,8 @@ if [ -z "$O3" ]; then
     exit 1
 fi
 
+. $O3/android-sdk-path
+
 mini=1
 [ "$DISABLE_MINICRYPTO" = "1" ] && mini=0
 
@@ -18,3 +20,4 @@ for target in android-dbg android ; do
     mv polarssl-$target polarssl/
     [ "$ANDROID_DBG_ONLY" = "1" ] && exit
 done
+exit 0

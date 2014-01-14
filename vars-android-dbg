@@ -1,14 +1,7 @@
 export DEP_DIR=$HOME/src/android
 export PLATFORM=android-dbg
 export DEBUG_BUILD=1
-export GPP_CMD=arm-linux-androideabi-g++
-export GCC_CMD=arm-linux-androideabi-gcc
-export NM_CMD=arm-linux-androideabi-nm
-export AR_CMD=arm-linux-androideabi-ar
-export LD_CMD=arm-linux-androideabi-ld
-export RANLIB_CMD=arm-linux-androideabi-ranlib
-export STRIP_CMD=arm-linux-androideabi-strip
 export OTHER_COMPILER_FLAGS="-g"
 export LIB_OPT_LEVEL="-O0"
 export LIB_FPIC="-fPIC"
-export PLATFORM_FLAGS=""
+export PLATFORM_FLAGS="--sysroot=$DEP_DIR/tc/sysroot"

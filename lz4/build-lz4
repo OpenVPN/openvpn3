@@ -65,3 +65,4 @@ $CMD
 $AR rc $DIST/lib/liblz4.a lz4.o
 $RANLIB $DIST/lib/liblz4.a
 cp lz4.h $DIST/include/
+exit 0
