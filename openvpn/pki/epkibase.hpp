@@ -20,6 +20,8 @@ namespace openvpn {
     // Sign data (base64) and return signature as sig (base64).
     // Return true on success or false on error.
     virtual bool sign(const std::string& sig_type, const std::string& data, std::string& sig) = 0;
+
+    virtual ~ExternalPKIBase() {}
   };
 }
 

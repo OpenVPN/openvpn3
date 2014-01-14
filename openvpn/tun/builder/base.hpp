@@ -159,6 +159,8 @@ namespace openvpn {
 
     // Called just before tunnel socket is closed
     virtual void tun_builder_teardown() {}
+
+    virtual ~TunBuilderBase() {}
   };
 }
 
