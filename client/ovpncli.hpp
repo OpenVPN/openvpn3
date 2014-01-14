@@ -311,7 +311,7 @@ namespace openvpn {
     // used to request an RSA signature
     struct ExternalPKISignRequest : public ExternalPKIRequestBase
     {
-      std::string sig_type; // signature type
+      std::string sigType; // signature type
       std::string data;  // data rendered as base64 (client reads)
       std::string sig;   // RSA signature, rendered as base64 (client writes)
     };

@@ -30,6 +30,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
 #include <openvpn/pki/epkibase.hpp>
+#include <openvpn/pki/pkcs1.hpp>
 #include <openvpn/ssl/kuparse.hpp>
 #include <openvpn/ssl/nscert.hpp>
 #include <openvpn/ssl/tlsver.hpp>
@@ -798,36 +799,36 @@ namespace openvpn {
       try {
 	if (mode == RSA_PRIVATE)
 	  {
-	    std::string sig_type;
+	    size_t digest_prefix_len = 0;
+	    const unsigned char *digest_prefix = NULL;
 
 	    /* get signature type */
 	    switch (hash_id) {
 	    case SIG_RSA_RAW:
-	      sig_type = "RSA_RAW";
 	      break;
 	    case SIG_RSA_MD2:
-	      sig_type = "RSA_MD2";
-	      break;
-	    case SIG_RSA_MD4:
-	      sig_type = "RSA_MD4";
+	      digest_prefix = PKCS1::DigestPrefix::MD2;
+	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD2);
 	      break;
 	    case SIG_RSA_MD5:
-	      sig_type = "RSA_MD5";
+	      digest_prefix = PKCS1::DigestPrefix::MD5;
+	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD5);
 	      break;
 	    case SIG_RSA_SHA1:
-	      sig_type = "RSA_SHA1";
-	      break;
-	    case SIG_RSA_SHA224:
-	      sig_type = "RSA_SHA224";
+	      digest_prefix = PKCS1::DigestPrefix::SHA1;
+	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA1);
 	      break;
 	    case SIG_RSA_SHA256:
-	      sig_type = "RSA_SHA256";
+	      digest_prefix = PKCS1::DigestPrefix::SHA256;
+	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA256);
 	      break;
 	    case SIG_RSA_SHA384:
-	      sig_type = "RSA_SHA384";
+	      digest_prefix = PKCS1::DigestPrefix::SHA384;
+	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA384);
 	      break;
 	    case SIG_RSA_SHA512:
-	      sig_type = "RSA_SHA512";
+	      digest_prefix = PKCS1::DigestPrefix::SHA512;
+	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA512);
 	      break;
 	    default:
 	      OPENVPN_LOG_SSL("PolarSSLContext::epki_sign unrecognized hash_id, mode=" << mode
@@ -835,13 +836,18 @@ namespace openvpn {
 	      return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
 	    }
 
-	    /* convert 'hash' to base64 */
-	    ConstBuffer from_buf(hash, hashlen, true);
+	    /* concatenate digest prefix with hash */
+	    BufferAllocated from_buf(digest_prefix_len + hashlen, 0);
+	    if (digest_prefix_len)
+	      from_buf.write(digest_prefix, digest_prefix_len);
+	    from_buf.write(hash, hashlen);
+
+	    /* convert from_buf to base64 */
 	    const std::string from_b64 = base64->encode(from_buf);
 
 	    /* get signature */
 	    std::string sig_b64;
-	    const bool status = self->config.external_pki->sign(sig_type, from_b64, sig_b64);
+	    const bool status = self->config.external_pki->sign("RSA_RAW", from_b64, sig_b64);
 	    if (!status)
 	      throw polarssl_external_pki("could not obtain signature");
 
