@@ -8,6 +8,7 @@
 // Implementation file for OpenVPNClient API defined in ovpncli.hpp.
 
 #include <iostream>
+#include <string>
 
 // Set up export of our public interface unless
 // OPENVPN_CORE_API_VISIBILITY_HIDDEN is defined
@@ -67,6 +68,7 @@
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
+#include <openvpn/common/platform_string.hpp>
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>
@@ -875,6 +877,11 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::copyright()
     {
       return openvpn_copyright;
+    }
+
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::platform()
+    {
+      return platform_string();
     }
 
     OPENVPN_CLIENT_EXPORT OpenVPNClient::~OpenVPNClient()

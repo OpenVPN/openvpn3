@@ -437,6 +437,9 @@ namespace openvpn {
       // Returns date/time of app expiration as a unix time value
       static int app_expire();
 
+      // Returns platform description string
+      static std::string platform();
+
       // Returns core copyright
       static std::string copyright();
 
