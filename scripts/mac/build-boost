@@ -70,3 +70,4 @@ for target in $TARGETS ; do
 done
 mv stage-* ../boost/
 cp -a boost ../boost/
+exit 0

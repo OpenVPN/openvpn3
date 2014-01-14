@@ -36,3 +36,4 @@ for target in osx osx-dbg ; do
     VERBOSE=1 TARGET=$target USE_MINICRYPTO=$OSX_MINICRYPTO ENABLE_SERVER=1 $O3/polarssl/build-polarssl
     mv polarssl-$target polarssl/
 done
+exit 0
