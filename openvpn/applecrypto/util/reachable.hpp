@@ -144,9 +144,11 @@ namespace openvpn {
     static std::string render_flags(const SCNetworkReachabilityFlags flags)
     {
       std::string ret;
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR // Mac OS X doesn't define WWAN flags
       if (flags & kSCNetworkReachabilityFlagsIsWWAN)
 	ret += 'W';
       else
+#endif
 	ret += '-';
       if (flags & kSCNetworkReachabilityFlagsReachable)
 	ret += 'R';
@@ -242,12 +244,14 @@ namespace openvpn {
 	    }
 	}
 
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR // Mac OS X doesn't define WWAN flags
       if ((flags & kSCNetworkReachabilityFlagsIsWWAN) == kSCNetworkReachabilityFlagsIsWWAN)
 	{
 	  // ... but WWAN connections are OK if the calling application
 	  // is using the CFNetwork APIs.
 	  ret = ReachableViaWWAN;
 	}
+#endif
 
       return ret;
     }
