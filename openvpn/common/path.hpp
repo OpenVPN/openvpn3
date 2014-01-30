@@ -19,10 +19,15 @@
 namespace openvpn {
   namespace path {
 
+    // Directory separators.  The first char in dirsep is the primary
+    // separator for the platform, while subsequent chars are also
+    // recognized as separators.
 #if defined(OPENVPN_PLATFORM_WIN) || defined(OPENVPN_PATH_SIMULATE_WINDOWS)
-    const char dirsep[] = "\\/";
+    // Windows
+    const char dirsep[] = "\\/"; // CONST GLOBAL
 #else
-    const char dirsep[] = "/";
+    // Unix
+    const char dirsep[] = "/\\"; // CONST GLOBAL
 #endif
 
     // true if char is a directory separator
