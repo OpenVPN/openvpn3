@@ -54,6 +54,7 @@ namespace openvpn {
       {
 	TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
 	TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+	TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
 	0
       };
   };
