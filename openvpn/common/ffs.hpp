@@ -8,52 +8,55 @@
 #ifndef OPENVPN_COMMON_FFS_H
 #define OPENVPN_COMMON_FFS_H
 
-#include <strings.h> // for ffs (and fls on BSD)
+// find_first_set: find the one-based position of the first 1 bit in
+// a word (scanning from least significant bit to most significant)
 
-#include <openvpn/common/platform.hpp>
+// find_last_set: find the one-based position of the last 1 bit in
+// a word (scanning from most significant bit to least significant)
 
 namespace openvpn {
-  // find the zero-based position of the first 1 bit in a word
-  // (scanning from least significant bit to most significant)
-  inline const int find_first_set(unsigned int v)
-  {
-    return ffs(v) - 1;
-  }
 
-  // find the one-based position of the last 1 bit in a word
-  // (scanning from most significant bit to least significant)
-  inline const int find_last_set(unsigned int v)
-  {
-#if defined(OPENVPN_PLATFORM_TYPE_APPLE)
-    return fls(v); // apparently only BSD-based platforms have this
-#else
-    int r = 32;
+#if defined(__GNUC__)
 
+  inline int find_first_set(unsigned int v)
+  {
     if (!v)
       return 0;
-    if (!(v & 0xffff0000u)) {
-      v <<= 16;
-      r -= 16;
-    }
-    if (!(v & 0xff000000u)) {
-      v <<= 8;
-      r -= 8;
-    }
-    if (!(v & 0xf0000000u)) {
-      v <<= 4;
-      r -= 4;
-    }
-    if (!(v & 0xc0000000u)) {
-      v <<= 2;
-      r -= 2;
-    }
-    if (!(v & 0x80000000u)) {
-      v <<= 1;
-      r -= 1;
-    }
-    return r;
-#endif
+    return __builtin_ffs(v);
   }
+
+  inline int find_last_set(unsigned int v)
+  {
+    if (!v)
+      return 0;
+    return 32 - __builtin_clz(v);
+  }
+
+#elif defined(_MSC_VER)
+
+#include <intrin.h>
+
+  inline int find_first_set(unsigned int x)
+  {
+    if (!x)
+      return 0;
+    unsigned int r = 0;
+    _BitScanForward((unsigned long *)&r, x);
+    return r + 1;
+  }
+
+  inline int find_last_set(unsigned int x)
+  {
+    if (!x)
+      return 0;
+    unsigned int r = 0;
+    _BitScanReverse((unsigned long *)&r, x);
+    return r + 1;
+  }
+
+#else
+#error no find_first_set / find_last_set implementation for this platform
+#endif
 
 } // namespace openvpn
 
