@@ -72,7 +72,8 @@ namespace openvpn {
       Config() : external_pki(NULL),
 		 ssl_debug_level(0),
 		 ns_cert_type(NSCert::NONE),
-		 local_cert_enabled(true) {}
+		 local_cert_enabled(true),
+		 force_aes_cbc_ciphersuites(false) {}
 
       Mode mode;
       CertCRLList ca;                   // from OpenVPN "ca" option
@@ -89,6 +90,7 @@ namespace openvpn {
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
+      bool force_aes_cbc_ciphersuites; // fixme -- implement for OpenSSL
 
       // if this callback is defined, no private key needs to be loaded
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
