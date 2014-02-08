@@ -5,7 +5,6 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-#include <getopt.h> // for getopt_long
 #include <stdlib.h> // for atoi
 
 #include <string>
@@ -22,6 +21,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/file.hpp>
+#include <openvpn/common/getopt.hpp>
 #include <openvpn/time/timestr.hpp>
 
 #include <client/ovpncli.cpp>
