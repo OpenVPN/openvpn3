@@ -59,7 +59,7 @@ namespace openvpn {
 		for (size_t i = 1; i < o->size(); ++i)
 		  ku.push_back(parse_hex_number<unsigned int>(o->get(i, 16).c_str()));
 	      }
-	      catch (parse_hex_error& e)
+	      catch (parse_hex_error&)
 		{
 		  throw option_error("remote-cert-ku: error parsing hex value list");
 		}

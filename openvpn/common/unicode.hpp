@@ -35,7 +35,7 @@ namespace openvpn {
 	  if (c == '\0')
 	    return false;
 	  const int length = trailingBytesForUTF8[c]+1;
-	  if (length > size)
+	  if ((size_t)length > size)
 	    return false;
 	  if (!isLegalUTF8(source, length))
 	    return false;

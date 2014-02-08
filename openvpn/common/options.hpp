@@ -462,7 +462,7 @@ namespace openvpn {
 		  key_priority = parse_number_throw<int>(tail, "option priority");
 		  key = key.substr(0, dp);
 		}
-		catch (const number_parse_exception& e)
+		catch (const number_parse_exception&)
 		  {
 		    ;
 		  }

@@ -175,14 +175,14 @@ namespace openvpn {
       static void store_win_time(unsigned char *dest)
       {
 	const boost::uint64_t wt = Time::win_time();
-	dest[0]= wt;
-	dest[1]= (wt  >> 8);
-	dest[2]= (wt  >> 16);
-	dest[3]= (wt  >> 24);
-	dest[4]= (wt  >> 32);
-	dest[5]= (wt  >> 40);
-	dest[6]= (wt  >> 48);
-	dest[7]= (wt  >> 56);
+	dest[0]= (unsigned char)wt;
+	dest[1]= (unsigned char)(wt  >> 8);
+	dest[2]= (unsigned char)(wt  >> 16);
+	dest[3]= (unsigned char)(wt  >> 24);
+	dest[4]= (unsigned char)(wt  >> 32);
+	dest[5]= (unsigned char)(wt  >> 40);
+	dest[6]= (unsigned char)(wt  >> 48);
+	dest[7]= (unsigned char)(wt  >> 56);
       }
 
       static void split_domain_username(const std::string& combined, std::string& domain, std::string& username)
