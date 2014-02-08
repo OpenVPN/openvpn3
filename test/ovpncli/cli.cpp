@@ -18,6 +18,7 @@
 
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/file.hpp>
@@ -94,6 +95,7 @@ void worker_thread()
   std::cout << "Thread finished" << std::endl;
 }
 
+#if !defined(OPENVPN_PLATFORM_WIN)
 void handler(int signum)
 {
   switch (signum)
@@ -114,6 +116,7 @@ void handler(int signum)
       break;
     }
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -351,8 +354,10 @@ int main(int argc, char *argv[])
 
 		std::cout << "CONNECTING..." << std::endl;
 
+#if !defined(OPENVPN_PLATFORM_WIN)
 		// catch signals
 		Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP);
+#endif
 
 		// start connect thread
 		the_client = &client;

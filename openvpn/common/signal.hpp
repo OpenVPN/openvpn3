@@ -8,8 +8,13 @@
 #ifndef OPENVPN_COMMON_SIGNAL_H
 #define OPENVPN_COMMON_SIGNAL_H
 
+#include <openvpn/common/platform.hpp>
+
+#if !defined(OPENVPN_PLATFORM_WIN)
+
 #include <signal.h>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
@@ -64,4 +69,5 @@ namespace openvpn {
     unsigned int flags_;
   };
 }
+#endif
 #endif
