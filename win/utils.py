@@ -53,6 +53,10 @@ def makedirs(dir):
     print "MAKEDIRS", dir
     os.makedirs(dir)
 
+def cp(src, dest):
+    print "COPY %s %s" % (src, dest)
+    shutil.copy2(src, dest)
+
 def wipetree(dir):
     print "WIPETREE", dir
     shutil.rmtree(dir, ignore_errors=True)
@@ -67,17 +71,17 @@ def extract_dict(d, k, default=None):
         v = default
     return v
 
-def scan_prefixes(prefix, dir):
+def scan_prefixes(prefix, dir, filt=None):
     fns = []
     for dirpath, dirnames, filenames in os.walk(dir):
         for f in filenames:
-            if f.startswith(prefix):
+            if f.startswith(prefix) and (filt is None or filt(f)):
                 fns.append(f)
         break
     return fns
 
-def one_prefix(prefix, dir):
-    f = scan_prefixes(prefix, dir)
+def one_prefix(prefix, dir, filt=None):
+    f = scan_prefixes(prefix, dir, filt)
     if len(f) == 0:
         raise ValueError("prefix %r not found in dir %r" % (prefix, dir))
     elif len(f) >= 2:
@@ -85,15 +89,32 @@ def one_prefix(prefix, dir):
     return f[0]
 
 def tarsplit(fn):
-    if fn.endswith(".tar.gz") or fn.endswith(".tgz"):
+    if fn.endswith(".tar.gz"):
         t = 'gz'
         b = fn[:-7]
-    elif fn.endswith(".tar.bz2") or fn.endswith(".tbz"):
+    elif fn.endswith(".tgz"):
+        t = 'gz'
+        b = fn[:-4]
+    elif fn.endswith(".tar.bz2"):
         t = 'bz2'
         b = fn[:-8]
+    elif fn.endswith(".tbz"):
+        t = 'bz2'
+        b = fn[:-4]
+    elif fn.endswith(".tar.xz"):
+        t = 'xz'
+        b = fn[:-7]
     else:
         raise ValueError("unrecognized tar file type: %r" % (fn,))
     return b, t
+
+def tarsplit_filt(fn):
+    try:
+        tarsplit(fn)
+    except:
+        return False
+    else:
+        return True
 
 def tarextract(fn, t):
     print "TAR EXTRACT %s [%s]" % (fn, t)
@@ -103,15 +124,19 @@ def tarextract(fn, t):
     finally:
         tar.close()
 
-def expand(pkg_prefix, srcdir):
-    f = one_prefix(pkg_prefix, srcdir)
+def expand(pkg_prefix, srcdir, lib_versions=None, noop=False):
+    if lib_versions and pkg_prefix in lib_versions:
+        f = one_prefix(lib_versions[pkg_prefix], srcdir, tarsplit_filt)
+    else:
+        f = one_prefix(pkg_prefix, srcdir, tarsplit_filt)
     b, t = tarsplit(f)
 
-    # remove previous directory
-    rmtree(b)
+    if not noop:
+        # remove previous directory
+        rmtree(b)
 
-    # expand it
-    tarextract(os.path.join(srcdir, f), t)
+        # expand it
+        tarextract(os.path.join(srcdir, f), t)
 
     return b
 
@@ -126,10 +151,30 @@ def call(cmd, **kw):
         kw['env'] = env
     succeed = extract_dict(kw, 'succeed', 0)
 
+    # show environment
+    se = kw.get('env')
+    if se:
+        show_env(se)
+        print "***"
+
     ret = subprocess.call(cmd, **kw)
     if not ignore_errors and ret != succeed:
         raise ValueError("command failed with status %r (expected %r)" % (ret, succeed))
 
-def vc_cmd(parms, cmd, succeed=0):
+def vc_cmd(parms, cmd, arch=None, succeed=0):
+    # arch should be one of amd64 (alias x64), x86, or None
+    # (if None, use parms.py value)
+    if arch is None:
+        arch = parms['ARCH']
+    if arch == "x64":
+        arch = "amd64"
     with ModEnv('PATH', "%s;%s\\VC" % (os.environ['PATH'], parms['MSVC_DIR'])):
-        status = call('vcvarsall.bat x86 && %s' % (cmd,), shell=True, succeed=succeed)
+        status = call('vcvarsall.bat %s && %s' % (arch, cmd), shell=True, succeed=succeed)
+
+def patchfile(pkg_prefix, patchdir):
+    return os.path.join(patchdir, one_prefix(pkg_prefix, patchdir))
+
+def patch(pkg_prefix, patchdir):
+    patch_fn = patchfile(pkg_prefix, patchdir)
+    print "PATCH", patch_fn
+    call(['patch', '-p1', '-i', patch_fn])

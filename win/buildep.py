@@ -1,63 +1,59 @@
 import os, re
 
 from utils import *
-from parms import *
-
-patch_mk1mf_match = r"""
-(.*)
-([ \t]*chop\;[ \t]*[\r\n]+
-[ \t]*\(\$key\,\$val\)\=\/\^\(\[\^\=\]\+\)\=\(\.\*\)\/\;[ \t]*[\r\n]+)
-([ \t]*if \(\$key eq \"RELATIVE_DIRECTORY\"\)[ \t]*[\r\n]+
-[ \t]*\{[ \t]*[\r\n]+
-[ \t]*if \(\$lib ne \"\"\)[ \t]*[\r\n]+)
-(.*)
-"""
-
-patch_mk1mf_add = """\
-
-	# On some Windows machines, $val has linefeeds at the end, which confuses
-	# subsequent code in this file. So we strip all whitespace at the end.
-	$val =~ s/\s+$//;
-
-"""
+from parms import PARMS
 
 def build_openssl(parms):
-    def patch_mk1mf():
-        r = re.compile(patch_mk1mf_match.replace('\n', ''), re.DOTALL)
-        fn = "util/mk1mf.pl"
-        with open(fn) as f:
-            content = f.read()
-        m = re.match(r, content)
-        if m:
-            print "PATCHING", fn
-            g = m.groups()
-            with open(fn, "w") as f:
-                f.write(g[0] + g[1] + patch_mk1mf_add + g[2] + g[3])
-        else:
-            raise ValueError("error patching " + fn)
-
     print "**************** OpenSSL"
     with Cd(parms['BUILD']) as cd:
-        dist = os.path.realpath('openssl')
-        rmtree(dist)
-        d = expand('openssl', parms['DEP'])
-        os.chdir(d)
-        patch_mk1mf()
-        makedirs(dist)
-        call(['perl', 'Configure', 'VC-WIN32', 'no-idea', 'no-mdc2', 'no-rc5', '--prefix=%s' % (dist,)])
-        vc_cmd(parms, "ms\\do_nasm") # was: "ms\\do_masm"
-        vc_cmd(parms, "nmake -f ms\\ntdll.mak")
-        vc_cmd(parms, "nmake -f ms\\ntdll.mak install")
+        with ModEnv('PATH', "%s;%s\\bin;%s" % (parms.get('NASM'), parms.get('GIT'), os.environ['PATH'])):
+            dist = os.path.realpath('openssl')
+            rmtree(dist)
+            d = expand('openssl', parms['DEP'], parms.get('LIB_VERSIONS'))
+            os.chdir(d)
+            patch("ossl-win", parms['PATCH'])
+            makedirs(dist)
+            # needs more work for x64, see:
+            # http://stackoverflow.com/questions/158232/how-do-you-compile-openssl-for-x64
+            targets = {
+                'x86' : "VC-WIN32",
+                'amd64' : "VC-WIN64A",
+                }
+            call(['perl', 'Configure', targets[parms['ARCH']], 'no-idea', 'no-mdc2', 'no-rc5', '--prefix=%s' % (dist,)])
+            archscripts = {
+                'x86'   : "ms\\do_nasm",
+                'amd64' : "ms\\do_win64a",
+                }
+            vc_cmd(parms, archscripts[parms['ARCH']])
+            vc_cmd(parms, "nmake -f ms\\ntdll.mak")
+            vc_cmd(parms, "nmake -f ms\\ntdll.mak install")
+
+            # copy DLLs to PARMS['DIST']
+            cp(os.path.join(dist, "bin", "libeay32.dll"), PARMS['DIST'])
+            cp(os.path.join(dist, "bin", "ssleay32.dll"), PARMS['DIST'])
 
 def build_boost(parms):
     print "**************** Boost"
     with Cd(parms['BUILD']) as cd:
-        d = expand('boost', parms['DEP'])
+        d = expand('boost', parms['DEP'], parms.get('LIB_VERSIONS'))
         os.chdir(d)
-        call("bootstrap", shell=True)
-        call("b2 --toolset=msvc-10.0 --build-type=complete stage", shell=True)
-        #call("b2 --toolset=msvc-10.0 variant=release link=shared threading=multi runtime-link=shared stage", shell=True)
+        archopts = {
+            'x86'   : "",
+            'amd64' : "architecture=x86 address-model=64",
+            }
+        vc_cmd(parms, "bootstrap", arch="x86")
+        vc_cmd(parms, "b2 --toolset=msvc-12.0 --with-system --with-thread --with-atomic --with-date_time --with-regex link=shared threading=multi runtime-link=shared %s stage" % (archopts[parms['ARCH']],))
 
-wipetree(parms['BUILD'])
-build_openssl(parms)
-build_boost(parms)
+        # copy DLLs to PARMS['DIST']
+        r = re.compile(r"boost_(atomic|chrono|system|thread)-vc\d+-mt-[\d_]+\.dll")
+        os.chdir(os.path.join("stage", "lib"))
+        for dirpath, dirnames, filenames in os.walk('.'):
+            for f in filenames:
+                if re.match(r, f):
+                    cp(f, PARMS['DIST'])
+            break
+
+wipetree(PARMS['BUILD'])
+wipetree(PARMS['DIST'])
+build_openssl(PARMS)
+build_boost(PARMS)
