@@ -193,7 +193,7 @@ namespace openvpn {
       Addr netmask_from_extent() const
       {
 	const Addr lb = *this - 1;
-	for (size_t i = 3; i --> 0 ;)
+	for (size_t i = 4; i --> 0 ;)
 	  {
 	    const boost::uint32_t v = lb.u.u32[Endian::e4(i)];
 	    if (v)
