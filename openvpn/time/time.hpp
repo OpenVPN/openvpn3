@@ -13,9 +13,9 @@
 // milliseconds gives us an advantage of not needing to do
 // very much integer multiplication and division which can
 // help us on platforms such as ARM that lack integer division
-// instructions.  Note that the core data type used to store
-// the time is an unsigned long, so it will automatically
-// expand to 64 bits on 64 bit machines.  Using a 32-bit
+// instructions.  Note that the data type used to store the time
+// is an oulong, so it will automatically expand to 64 bits on
+// 64-bit machines (see olong.hpp).  Using a 32-bit
 // data type for time durations is normally fine for clients,
 // but imposes a wraparound limit of ~ 48 days.  Servers
 // should always use a 64-bit data type to avoid this
@@ -30,6 +30,7 @@
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/olong.hpp>
 
 #ifdef OPENVPN_PLATFORM_WIN
 #include <time.h>     // for ::time() on Windows
@@ -284,7 +285,7 @@ namespace openvpn {
 
   template <typename T> typename TimeType<T>::base_type TimeType<T>::base_;
 
-  typedef TimeType<unsigned long> Time;
+  typedef TimeType<oulong> Time;
 
   typedef Time* TimePtr;
 
