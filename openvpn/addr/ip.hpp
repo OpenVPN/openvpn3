@@ -146,6 +146,27 @@ namespace openvpn {
 	  throw ip_exception("address unspecified");
       }
 
+      static Addr from_long(Version v, long ul)
+      {
+	if (v == V4)
+	  return from_ipv4(IPv4::Addr::from_long(ul));
+	else if (v == V6)
+	  return from_ipv6(IPv6::Addr::from_long(ul));
+	else
+	  throw ip_exception("address unspecified");
+      }
+
+      // return *this as a long, will raise exception on overflow
+      long to_long() const
+      {
+	if (ver == V4)
+	  return u.v4.to_long();
+	else if (ver == V6)
+	  return u.v6.to_long();
+	else
+	  throw ip_exception("address unspecified");
+      }
+
       // construct an address where all bits are zero
       static Addr from_zero(Version v)
       {

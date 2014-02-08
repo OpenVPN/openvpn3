@@ -134,6 +134,40 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_long(long ul)
+      {
+	bool neg = false;
+	Addr ret;
+	ret.scope_id_ = 0;
+	if (ul < 0)
+	  {
+	    ul = -(ul + 1);
+	    neg = true;
+	  }
+	ret.u.u64[Endian::e2(0)] = boost::uint64_t(ul);
+	ret.u.u64[Endian::e2(1)] = 0;
+	if (neg)
+	  ret.negate();
+	return ret;
+      }
+
+      // return *this as a long
+      long to_long() const
+      {
+	bool neg = false;
+	Addr a = *this;
+	if (a.u.u64[Endian::e2(1)])
+	  {
+	    a.negate();
+	    neg = true;
+	  }
+	const long ret = (long)a.u.u64[Endian::e2(0)];
+	const boost::uint64_t cmp = boost::uint64_t(ret);
+	if (a.u.u64[Endian::e2(1)] || cmp != a.u.u64[Endian::e2(0)])
+	  throw ipv6_exception("overflow in conversion from IPv6.Addr to long");
+	return neg ? -(ret + 1) : ret;
+      }
+
       std::string arpa() const
       {
 	throw ipv6_exception("arpa() not implemented");

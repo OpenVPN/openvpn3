@@ -43,6 +43,7 @@ namespace openvpn {
       enum { SIZE=32 };
 
       typedef boost::uint32_t base_type;
+      typedef boost::int32_t signed_base_type;
 
       static Addr from_addr(const Addr& addr)
       {
@@ -67,6 +68,19 @@ namespace openvpn {
       unsigned long to_ulong() const
       {
 	return (unsigned long)u.addr;
+      }
+
+      static Addr from_long(long ul)
+      {
+	Addr ret;
+	ret.u.addr = (base_type)(signed_base_type)ul;
+	return ret;
+      }
+
+      // return *this as a long
+      long to_long() const
+      {
+	return (long)(signed_base_type)u.addr;
       }
 
       static Addr from_bytes(const unsigned char *bytes) // host byte order
