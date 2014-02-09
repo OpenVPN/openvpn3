@@ -7,3 +7,4 @@ OPT=-d
 [ -d openssl ] && cp $OPT openssl/openssl-linux/lib/lib* so/
 [ -d snappy ] && cp $OPT snappy/snappy-linux/lib/lib* so/
 [ -d polarssl ] && cp $OPT polarssl/polarssl-linux/library/lib* so/
+exit 0

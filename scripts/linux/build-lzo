@@ -9,3 +9,4 @@ cd $LZO_VERSION
 CFLAGS="" ./configure --prefix=$DIST --enable-shared --disable-static
 make
 make install
+exit 0

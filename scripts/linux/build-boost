@@ -15,3 +15,4 @@ EOF
 ./bjam -d2 toolset=gcc-linux --with-system --with-thread variant=release link=shared threading=multi runtime-link=shared target-os=linux
 mv stage ../boost/stage-linux
 cp -a boost ../boost/
+exit 0

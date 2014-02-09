@@ -9,3 +9,4 @@ cd $SNAPPY_VERSION
 CFLAGS="" ./configure --prefix=$DIST
 make
 make install
+exit 0

@@ -8,3 +8,4 @@ rm -rf polarssl
 mkdir polarssl
 VERBOSE=1 TARGET=linux ENABLE_SERVER=1 ENABLE_FS_IO=1 $O3/polarssl/build-polarssl
 mv polarssl-linux polarssl
+exit 0
