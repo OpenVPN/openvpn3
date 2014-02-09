@@ -10,6 +10,8 @@ if [ -z "$TARGET" ]; then
     exit 1
 fi
 
+[ -z "$DL" ] && DL=~/Downloads
+
 . $O3/vars-$TARGET
 . $O3/lib-versions
 
@@ -35,7 +37,7 @@ H=$O3/minicrypto
 if [ "$NO_WIPE" != "1" ]; then
     # unzip OpenSSL
     rm -rf $OPENSSL_VERSION
-    tar xfz ~/Downloads/$OPENSSL_VERSION.tar.gz
+    tar xfz $DL/$OPENSSL_VERSION.tar.gz
 fi
 
 OPENSSL_DIR=$(pwd)/$OPENSSL_VERSION

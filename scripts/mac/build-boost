@@ -2,6 +2,7 @@
 set -e
 REL_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 . $O3/lib-versions
+[ -z "$DL" ] && DL=~/Downloads
 if [ "$OSX_ONLY" != "1" ]; then
     . $O3/vars-iossim
     export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
@@ -14,7 +15,7 @@ if [ "$NO_WIPE" != "1" ]; then
     if [ "$SRCDIR" ]; then
 	cp -a "$SRCDIR" $BOOST_VERSION
     else
-	tar xfz ~/Downloads/$BOOST_VERSION.tar.gz
+	tar xfz $DL/$BOOST_VERSION.tar.gz
     fi
     cd $BOOST_VERSION
     #patch -p1 <$DL/asio-engine.patch

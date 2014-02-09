@@ -9,12 +9,13 @@ set -e
 
 # Download Boost
 . $O3/lib-versions
+[ -z "$DL" ] && DL=~/Downloads
 rm -rf boost $BOOST_VERSION
 mkdir boost
 if [ "$SRCDIR" ]; then
     cp -a "$SRCDIR" $BOOST_VERSION
 else
-    tar xfz ~/Downloads/$BOOST_VERSION.tar.gz
+    tar xfz $DL/$BOOST_VERSION.tar.gz
 fi
 cd $BOOST_VERSION
 
