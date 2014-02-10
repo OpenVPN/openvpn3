@@ -257,12 +257,12 @@ namespace openvpn {
 #if defined(USE_TUN_BUILDER)
       TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
       tunconf->builder = config.builder;
-      tunconf->session_name = session_name;
+      tunconf->tun_prop.session_name = session_name;
+      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+      if (tun_mtu)
+	tunconf->tun_prop.mtu = tun_mtu;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
-      tunconf->google_dns_fallback = config.google_dns_fallback;
-      if (tun_mtu)
-	tunconf->mtu = tun_mtu;
 #if defined(OPENVPN_PLATFORM_IPHONE)
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
