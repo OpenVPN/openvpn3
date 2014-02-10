@@ -152,7 +152,8 @@ namespace openvpn {
 		  throw tun_prop_error("ifconfig address is not IPv4 (topology subnet)");
 		if (!tb->tun_builder_add_address(pair.addr.to_string(),
 						 pair.netmask.prefix_len(),
-						 false))
+						 false,  // IPv6
+						 false)) // net30
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology subnet)");
 		if (state)
 		  state->vpn_ip4_addr = pair.addr;
@@ -169,7 +170,8 @@ namespace openvpn {
 		  throw tun_prop_error("ifconfig addresses are not in the same /30 subnet (topology net30)");
 		if (!tb->tun_builder_add_address(local.to_string(),
 						 netmask.prefix_len(),
-						 false))
+						 false, // IPv6
+						 true)) // net30
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology net30)");
 		if (state)
 		  state->vpn_ip4_addr = local;
@@ -189,7 +191,8 @@ namespace openvpn {
 	      throw tun_prop_error("ifconfig-ipv6 address is not IPv6");
 	    if (!tb->tun_builder_add_address(pair.addr.to_string(),
 					     pair.netmask.prefix_len(),
-					     true))
+					     true,   // IPv6
+					     false)) // net30
 	      throw tun_prop_error("tun_builder_add_address IPv6 failed");
 	    if (state)
 	      state->vpn_ip6_addr = pair.addr;

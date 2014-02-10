@@ -45,7 +45,8 @@ namespace openvpn {
     // May be called more than once per tun_builder session
     virtual bool tun_builder_add_address(const std::string& address,
 					 int prefix_length,
-					 bool ipv6)
+					 bool ipv6,
+					 bool net30)
     {
       return false;
     }

@@ -57,7 +57,7 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	// Methods documented in openvpn/tun/builder/base.hpp
 
 	boolean tun_builder_set_remote_address(String address, boolean ipv6);
-	boolean tun_builder_add_address(String address, int prefix_length, boolean ipv6);
+	boolean tun_builder_add_address(String address, int prefix_length, boolean ipv6, boolean net30);
 	boolean tun_builder_reroute_gw(String server_address, boolean server_address_ipv6, boolean ipv4, boolean ipv6, long flags);
 	boolean tun_builder_add_route(String address, int prefix_length, boolean ipv6);
 	boolean tun_builder_exclude_route(String address, int prefix_length, boolean ipv6);
@@ -254,10 +254,10 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     @Override
-    public boolean tun_builder_add_address(String address, int prefix_length, boolean ipv6) {
+    public boolean tun_builder_add_address(String address, int prefix_length, boolean ipv6, boolean net30) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    return tb.tun_builder_add_address(address, prefix_length, ipv6);
+	    return tb.tun_builder_add_address(address, prefix_length, ipv6, net30);
 	else
 	    return false;
     }
