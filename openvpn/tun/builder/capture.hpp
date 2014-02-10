@@ -138,7 +138,7 @@ namespace openvpn {
       }
     };
 
-    TunBuilderCapture() : mtu(0) {}
+    TunBuilderCapture() : mtu(0), tunnel_address_index_ipv4(-1), tunnel_address_index_ipv6(-1) {}
 
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
     {
@@ -154,6 +154,10 @@ namespace openvpn {
       r.prefix_length = prefix_length;
       r.ipv6 = ipv6;
       r.net30 = net30;
+      if (ipv6)
+	tunnel_address_index_ipv6 = (int)tunnel_addresses.size();
+      else
+	tunnel_address_index_ipv4 = (int)tunnel_addresses.size();
       tunnel_addresses.push_back(r);
       return true;
     }
@@ -283,7 +287,9 @@ namespace openvpn {
     int mtu;
     RemoteAddress remote_address;          // real address of server
     std::vector<Route> tunnel_addresses;   // local tunnel addresses
-    RerouteGW reroute_gw;                  // redirect-gateway info for ipv4
+    int tunnel_address_index_ipv4;         // index into tunnel_addresses for IPv4 entry (or -1 if undef)
+    int tunnel_address_index_ipv6;         // index into tunnel_addresses for IPv6 entry (or -1 if undef)
+    RerouteGW reroute_gw;                  // redirect-gateway info
     std::vector<Route> add_routes;         // routes that should be added to tunnel
     std::vector<Route> exclude_routes;     // routes that should be excluded from tunnel
     std::vector<DNSServer> dns_servers;    // VPN DNS servers
