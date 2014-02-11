@@ -36,9 +36,14 @@ namespace openvpn {
       return ret;
     }
 
-    bool defined() const
+    static bool defined_static(int fd)
     {
       return fd >= 0;
+    }
+
+    bool defined() const
+    {
+      return defined_static(fd);
     }
 
     int operator()() const
