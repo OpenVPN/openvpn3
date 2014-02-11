@@ -19,10 +19,14 @@ namespace openvpn {
   class ScopedFD : boost::noncopyable
   {
   public:
-    ScopedFD() : fd(-1) {}
+    typedef int base_type;
+
+    ScopedFD() : fd(undefined()) {}
 
     explicit ScopedFD(const int fd_arg)
       : fd(fd_arg) {}
+
+    static int undefined() { return -1; }
 
     int release()
     {
