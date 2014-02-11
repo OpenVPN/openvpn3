@@ -268,10 +268,7 @@ namespace openvpn {
       tunconf->tun_prefix = true;
 #endif
       if (config.tun_persist)
-	{
-	  tun_persist.reset(new TunBuilderClient::TunPersist(tunconf->retain_sd, config.builder));
-	  tunconf->tun_persist = tun_persist;
-	}
+	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(tunconf->retain_sd, config.builder));
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
       tunconf->layer = cp->layer;
@@ -489,10 +486,6 @@ namespace openvpn {
     bool creds_locked;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
-
-#if defined(USE_TUN_BUILDER)
-    TunBuilderClient::TunPersist::Ptr tun_persist;
-#endif
   };
 }
 
