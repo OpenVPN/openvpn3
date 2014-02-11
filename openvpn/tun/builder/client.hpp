@@ -12,16 +12,15 @@
 #ifndef OPENVPN_TUN_BUILDER_CLIENT_H
 #define OPENVPN_TUN_BUILDER_CLIENT_H
 
-#include <string>
-
 #include <openvpn/tun/client/tunprop.hpp>
-
+#include <openvpn/tun/builder/tunpersist.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/tun/tununixbase.hpp>
-#include <openvpn/tun/builder/capture.hpp>
 
 namespace openvpn {
   namespace TunBuilderClient {
+
+    OPENVPN_EXCEPTION(tun_builder_error);
 
     // struct used to pass received tun packets
     struct PacketFrom
@@ -30,7 +29,8 @@ namespace openvpn {
       BufferAllocated buf;
     };
 
-    OPENVPN_EXCEPTION(tun_builder_error);
+    // our TunPersist class, specialized for Unix file descriptors
+    typedef TunPersistTemplate<ScopedFD> TunPersist;
 
     // A simplified tun interface where pre-existing
     // socket is provided.
@@ -58,74 +58,6 @@ namespace openvpn {
       }
 
       ~Tun() { Base::stop(); }
-    };
-
-    class TunPersist : public RC<thread_unsafe_refcount>
-    {
-    public:
-      typedef boost::intrusive_ptr<TunPersist> Ptr;
-
-      TunPersist(const bool retain_sd, TunBuilderBase* tb)
-	: retain_sd_(retain_sd), tb_(tb) {}
-
-      bool defined() const
-      {
-	return sd_.defined();
-      }
-
-      bool match(const std::string& options) const
-      {
-	return options == options_ && !options_.empty();
-      }
-
-      void persist(const int sd, const TunProp::State::Ptr& state, const std::string& options)
-      {
-	if (retain_sd_)
-	  sd_.replace(sd);
-	else
-	  sd_.reset(sd);
-	state_ = state;
-	options_ = options;
-      }
-
-      int sd() const
-      {
-	return sd_();
-      }
-
-      const TunProp::State::Ptr& state() const
-      {
-	return state_;
-      }
-
-      ~TunPersist()
-      {
-	close();
-      }
-
-      void close()
-      {
-	if (tb_)
-	  tb_->tun_builder_teardown();
-	if (retain_sd_)
-	  sd_.release();
-	else
-	  sd_.close();
-	state_.reset();
-	options_ = "";
-      }
-
-      const std::string& options()
-      {
-	return options_;
-      }
-
-    private:
-      bool retain_sd_;
-      TunBuilderBase* tb_;
-      ScopedFD sd_;
-      TunProp::State::Ptr state_;
-      std::string options_;
     };
 
     // A factory for the Client class
@@ -175,45 +107,14 @@ namespace openvpn {
 
 	    try {
 	      int sd = -1;
-	      bool use_persisted_tun = false;
-	      TunBuilderCapture::Ptr copt;
-
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
-
-#if OPENVPN_DEBUG_TUN_BUILDER > 0
-	      {
-		TunBuilderCapture::Ptr capture = new TunBuilderCapture();
-		try {
-		  TunProp::configure_builder(capture.get(), NULL, NULL, server_addr, config->tun_prop, opt, true);
-		  OPENVPN_LOG("*** TUN BUILDER CAPTURE" << std::endl << capture->to_string());
-		}
-		catch (const std::exception& e)
-		  {
-		    OPENVPN_LOG("*** TUN BUILDER CAPTURE ERROR: " << e.what());
-		  }
-	      }
-#endif
-
-	      // In tun_persist mode, capture tun builder settings so we can
-	      // compare them to persisted settings.
-	      if (tun_persist)
-		{
-		  copt.reset(new TunBuilderCapture());
-		  try {
-		    TunProp::configure_builder(copt.get(), NULL, NULL, server_addr, config->tun_prop, opt, true);
-		  }
-		  catch (const std::exception& e)
-		    {
-		      copt.reset();
-		    }
-		}
+	      TunPersistHelper<ScopedFD> tun_persist_helper(tun_persist, config->tun_prop, opt, server_addr);
 
 	      // Check if persisted tun session matches properties of to-be-created session
-	      if (copt && tun_persist->match(copt->to_string()))
+	      if (tun_persist_helper.use_persisted_tun())
 		{
-		  sd = tun_persist->sd();
+		  sd = tun_persist->obj();
 		  state = tun_persist->state();
-		  use_persisted_tun = true;
 		  OPENVPN_LOG("TunPersist: reused tun context");
 		}
 	      else
@@ -242,15 +143,15 @@ namespace openvpn {
 		}
 
 	      // persist state
-	      if (copt && !use_persisted_tun)
+	      if (tun_persist_helper.should_persist())
 		{
-		  tun_persist->persist(sd, state, copt->to_string());
+		  tun_persist->persist(sd, state, tun_persist_helper.options());
 		  OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 		}
 
 	      impl.reset(new TunImpl(io_service,
 				     sd,
-				     (copt || use_persisted_tun) ? true : config->retain_sd,
+				     tun_persist_helper.retain() ? true : config->retain_sd,
 				     config->tun_prefix,
 				     this,
 				     config->frame,
