@@ -268,7 +268,7 @@ namespace openvpn {
       tunconf->tun_prefix = true;
 #endif
       if (config.tun_persist)
-	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(tunconf->retain_sd, config.builder));
+	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd, config.builder));
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
       tunconf->layer = cp->layer;

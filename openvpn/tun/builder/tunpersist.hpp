@@ -13,45 +13,31 @@
 
 namespace openvpn {
 
-  // TunPersistTemplate is used in the implementation of the OpenVPN
-  // client-side persist-tun directive.
-  // SCOPED_OBJ is generally a ScopedFD (unix) or a ScopedHANDLE (Windows).
+  // TunPersistTemplate is used client-side to store the underlying tun
+  // interface fd/handle.  It also implements logic for the persist-tun
+  // directive.  SCOPED_OBJ is generally a ScopedFD (unix) or a
+  // ScopedHANDLE (Windows).
   template <typename SCOPED_OBJ>
   class TunPersistTemplate : public RC<thread_unsafe_refcount>
   {
   public:
     typedef boost::intrusive_ptr<TunPersistTemplate> Ptr;
 
-    TunPersistTemplate(const bool retain_obj, TunBuilderBase* tb)
-      : retain_obj_(retain_obj), tb_(tb) {}
-
-    bool defined() const
+    TunPersistTemplate(const bool enable_persistence, const bool retain_obj, TunBuilderBase* tb)
+      : enable_persistence_(enable_persistence),
+	retain_obj_(retain_obj),
+	tb_(tb),
+	use_persisted_tun_(false)
     {
-      return obj_.defined();
     }
 
-    bool match(const std::string& options) const
-    {
-      return options == options_ && !options_.empty();
-    }
-
-    void persist(const typename SCOPED_OBJ::base_type obj,
-		 const TunProp::State::Ptr& state,
-		 const std::string& options)
-    {
-      if (retain_obj_)
-	obj_.replace(obj);
-      else
-	obj_.reset(obj);
-      state_ = state;
-      options_ = options;
-    }
-
+    // Current persisted tun fd/handle
     typename SCOPED_OBJ::base_type obj() const
     {
       return obj_();
     }
 
+    // Current persisted state
     const TunProp::State::Ptr& state() const
     {
       return state_;
@@ -74,31 +60,17 @@ namespace openvpn {
       options_ = "";
     }
 
+    // Current persisted options
     const std::string& options()
     {
       return options_;
     }
 
-  private:
-    bool retain_obj_;
-    TunBuilderBase* tb_;
-    SCOPED_OBJ obj_;
-    TunProp::State::Ptr state_;
-    std::string options_;
-  };
-
-  template <typename SCOPED_OBJ>
-  class TunPersistHelper
-  {
-  public:
-    typedef TunPersistTemplate<SCOPED_OBJ> TunPersist;
-
-    TunPersistHelper(const typename TunPersist::Ptr& tun_persist_arg,
-		     const TunProp::Config& tun_prop,
-		     const OptionList& opt,
-		     const IP::Addr server_addr)
-      : tun_persist(tun_persist_arg),
-	use_persisted_tun_(false)
+    // Return true if we should use previously persisted
+    // tun socket descriptor/handle
+    bool use_persisted_tun(const IP::Addr server_addr,
+			   const TunProp::Config& tun_prop,
+			   const OptionList& opt)
     {
 #if OPENVPN_DEBUG_TUN_BUILDER > 0
       {
@@ -115,42 +87,61 @@ namespace openvpn {
 #endif
 
       // In tun_persist mode, capture tun builder settings so we can
-      // compare them to persisted settings.
-      if (tun_persist)
+      // compare them to previous persisted settings.
+      if (enable_persistence_)
 	{
-	  copt.reset(new TunBuilderCapture());
+	  copt_.reset(new TunBuilderCapture());
 	  try {
-	    TunProp::configure_builder(copt.get(), NULL, NULL, server_addr, tun_prop, opt, true);
+	    TunProp::configure_builder(copt_.get(), NULL, NULL, server_addr, tun_prop, opt, true);
 	  }
 	  catch (const std::exception& e)
 	    {
-	      copt.reset();
+	      copt_.reset();
 	    }
 	}
 
-      // Check if persisted tun session matches properties of to-be-created session
-      use_persisted_tun_ = (copt && tun_persist->match(copt->to_string()));
+      // Check if previous tun session matches properties of to-be-created session
+      use_persisted_tun_ = (copt_ && !options_.empty() && options_ == copt_->to_string());
+      return use_persisted_tun_;
     }
 
-    // New tun properties exactly match persisted tun properties,
-    // so continue to use persisted tun object.
-    bool use_persisted_tun() const { return use_persisted_tun_; }
-
-    // Return true if new tun properties should be persisted.
-    bool should_persist() const { return copt && !use_persisted_tun_; }
-
-    // Return true if tun socket/handle should be retained.
-    bool retain() const { return copt || use_persisted_tun_; }
-
-    // Return current tun properties string.
-    std::string options() const { return copt->to_string(); }
+    // Possibly save tunnel fd/handle, state, and options.
+    bool persist_tun_state(const typename SCOPED_OBJ::base_type obj,
+		       const TunProp::State::Ptr& state)
+    {
+      if (!enable_persistence_ || !use_persisted_tun_)
+	{
+	  save_replace_sock(obj);
+	}
+      if (enable_persistence_ && copt_ && !use_persisted_tun_)
+	{
+	  state_ = state;
+	  options_ = copt_->to_string();
+	  return true;
+	}
+      else
+	return false;
+    }
 
   private:
-    typename TunPersist::Ptr tun_persist;
-    TunBuilderCapture::Ptr copt;
+    void save_replace_sock(const typename SCOPED_OBJ::base_type obj)
+    {
+      if (retain_obj_)
+	obj_.replace(obj);
+      else
+	obj_.reset(obj);
+    }
+
+    const bool enable_persistence_;
+    const bool retain_obj_;
+    TunBuilderBase * const tb_;
+    SCOPED_OBJ obj_;
+    TunProp::State::Ptr state_;
+    std::string options_;
+
+    TunBuilderCapture::Ptr copt_;
     bool use_persisted_tun_;
   };
 
 }
-
 #endif

@@ -109,16 +109,18 @@ namespace openvpn {
       {
 	if (!impl)
 	  {
-	    TunPersist::Ptr tun_persist = config->tun_persist;
 	    halt = false;
+	    if (config->tun_persist)
+	      tun_persist = config->tun_persist; // long-term persistent
+	    else
+	      tun_persist.reset(new TunPersist(false, config->retain_sd, config->builder)); // short-term
 
 	    try {
 	      int sd = -1;
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
-	      TunPersistHelper<ScopedFD> tun_persist_helper(tun_persist, config->tun_prop, opt, server_addr);
 
 	      // Check if persisted tun session matches properties of to-be-created session
-	      if (tun_persist_helper.use_persisted_tun())
+	      if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
 		{
 		  sd = tun_persist->obj();
 		  state = tun_persist->state();
@@ -150,15 +152,12 @@ namespace openvpn {
 		}
 
 	      // persist state
-	      if (tun_persist_helper.should_persist())
-		{
-		  tun_persist->persist(sd, state, tun_persist_helper.options());
+	      if (tun_persist->persist_tun_state(sd, state))
 		  OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
-		}
 
 	      impl.reset(new TunImpl(io_service,
 				     sd,
-				     tun_persist_helper.retain() ? true : config->retain_sd,
+				     true,
 				     config->tun_prefix,
 				     this,
 				     config->frame,
@@ -238,24 +237,20 @@ namespace openvpn {
 
       void stop_()
       {
-	TunBuilderBase* tb = config->builder;
 	if (!halt)
 	  {
 	    halt = true;
 
 	    // stop tun
 	    if (impl)
-	      {
-		// if tun_persist is defined, it owns the sd and takes responsibility for teardown
-		if (!config->tun_persist)
-		  tb->tun_builder_teardown();
-		impl->stop();
-	      }
+	      impl->stop();
+	    tun_persist.reset();
 	  }
       }
 
 
       boost::asio::io_service& io_service;
+      TunPersist::Ptr tun_persist; // owns the tun socket descriptor
       ClientConfig::Ptr config;
       TunClientParent& parent;
       TunImpl::Ptr impl;
