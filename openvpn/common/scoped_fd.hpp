@@ -65,21 +65,23 @@ namespace openvpn {
       fd = fd_arg;
     }
 
-    int close()
+    // return false if close error
+    bool close()
     {
       if (defined())
 	{
-	  const int ret = ::close(fd);
+	  const int status = ::close(fd);
+	  //OPENVPN_LOG("**** SFD CLOSE fd=" << fd << " status=" << status);
 	  fd = -1;
-	  //OPENVPN_LOG("**** SFD CLOSE=" << ret);
-	  return ret;
+	  return status == 0;
 	}
       else
-	return 0;
+	return true;
     }
 
     ~ScopedFD()
     {
+      //OPENVPN_LOG("**** SFD DESTRUCTOR");
       close();
     }
 
