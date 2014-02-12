@@ -47,6 +47,12 @@ namespace openvpn {
       {
       }
 
+    virtual ~TunUnixBase()
+    {
+      stop();
+      delete sd;
+    }
+
     bool write(Buffer& buf)
     {
       if (!halt)
@@ -118,11 +124,11 @@ namespace openvpn {
       if (!halt)
 	{
 	  halt = true;
+	  sd->cancel();
 	  if (!retain_sd)
 	    sd->close();
 	  else
 	    sd->release();
-	  delete sd;
 	}
     }
 
