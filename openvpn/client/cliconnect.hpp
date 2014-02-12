@@ -111,6 +111,8 @@ namespace openvpn {
 	  cancel_timers();
 	  asio_work.reset();
 
+	  client_options->close_persistent();
+
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Disconnected();
 	  client_options->events().add_event(ev);
 	}

@@ -406,6 +406,12 @@ namespace openvpn {
       now_.update();
     }
 
+    void close_persistent()
+    {
+      if (tun_factory)
+	tun_factory->close_persistent();
+    }
+
   private:
     std::string load_transport_config()
     {
