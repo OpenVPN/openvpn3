@@ -1,43 +1,37 @@
 //
-//  tununixbase.hpp
+//  tunio.hpp
 //  OpenVPN
 //
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-// Low level tun device class for unix-family OSes.
+// Low level tun device I/O class for all platforms (Unix and Windows)
 
-#ifndef OPENVPN_TUN_TUNUNIXBASE_H
-#define OPENVPN_TUN_TUNUNIXBASE_H
+#ifndef OPENVPN_TUN_TUNIO_H
+#define OPENVPN_TUN_TUNIO_H
 
 #include <boost/asio.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
-#include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/asiodispatch.hpp>
-#include <openvpn/common/options.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/addr/ip.hpp>
 #include <openvpn/ip/ip.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/log/sessionstats.hpp>
-#include <openvpn/tun/tunspec.hpp>
 #include <openvpn/tun/tunlog.hpp>
-#include <openvpn/tun/layer.hpp>
 
 namespace openvpn {
 
-  template <typename ReadHandler, typename PacketFrom>
-  class TunUnixBase : public RC<thread_unsafe_refcount>
+  template <typename ReadHandler, typename PacketFrom, typename STREAM>
+  class TunIO : public RC<thread_unsafe_refcount>
   {
   public:
-    TunUnixBase(ReadHandler read_handler_arg,
-		const Frame::Ptr& frame_arg,
-		const SessionStats::Ptr& stats_arg)
-      : sd(NULL),
-	retain_sd(false),
+    TunIO(ReadHandler read_handler_arg,
+	  const Frame::Ptr& frame_arg,
+	  const SessionStats::Ptr& stats_arg)
+      : stream(NULL),
+	retain_stream(false),
 	tun_prefix(false),
 	halt(false),
 	read_handler(read_handler_arg),
@@ -47,10 +41,11 @@ namespace openvpn {
       {
       }
 
-    virtual ~TunUnixBase()
+    virtual ~TunIO()
     {
+      //OPENVPN_LOG("**** TUNIO destruct");
       stop();
-      delete sd;
+      delete stream;
     }
 
     bool write(Buffer& buf)
@@ -86,7 +81,7 @@ namespace openvpn {
 	      }
 
 	    // write data to tun device
-	    const size_t wrote = sd->write_some(buf.const_buffers_1());
+	    const size_t wrote = stream->write_some(buf.const_buffers_1());
 	    stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
 	    stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
 	    if (wrote == buf.size())
@@ -124,11 +119,17 @@ namespace openvpn {
       if (!halt)
 	{
 	  halt = true;
-	  sd->cancel();
-	  if (!retain_sd)
-	    sd->close();
-	  else
-	    sd->release();
+	  if (stream)
+	    {
+	      stream->cancel();
+	      if (!retain_stream)
+		{
+		  //OPENVPN_LOG("**** TUNIO close");
+		  stream->close();
+		}
+	      else
+		stream->release();
+	    }
 	}
     }
 
@@ -147,19 +148,19 @@ namespace openvpn {
   protected:
     void queue_read(PacketFrom *tunfrom)
     {
-      OPENVPN_LOG_TUN_VERBOSE("TunUnixBase::queue_read");
+      OPENVPN_LOG_TUN_VERBOSE("TunIO::queue_read");
       if (!tunfrom)
 	tunfrom = new PacketFrom();
       frame_context.prepare(tunfrom->buf);
 
       // queue read on tun device
-      sd->async_read_some(frame_context.mutable_buffers_1(tunfrom->buf),
-			  asio_dispatch_read(&TunUnixBase::handle_read, this, tunfrom));
+      stream->async_read_some(frame_context.mutable_buffers_1(tunfrom->buf),
+			      asio_dispatch_read(&TunIO::handle_read, this, tunfrom));
     }
 
     void handle_read(PacketFrom *tunfrom, const boost::system::error_code& error, const size_t bytes_recvd)
     {
-      OPENVPN_LOG_TUN_VERBOSE("TunUnixBase::handle_read: " << error.message());
+      OPENVPN_LOG_TUN_VERBOSE("TunIO::handle_read: " << error.message());
       typename PacketFrom::SPtr pfp(tunfrom);
       if (!halt)
 	{
@@ -195,8 +196,8 @@ namespace openvpn {
 
     // should be set by derived class constructor
     std::string name_;
-    boost::asio::posix::stream_descriptor *sd;
-    bool retain_sd;  // don't close tun socket
+    STREAM *stream;
+    bool retain_stream;  // don't close tun stream
     bool tun_prefix;
 
     bool halt;

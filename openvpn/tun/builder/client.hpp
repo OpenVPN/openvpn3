@@ -15,7 +15,7 @@
 #include <openvpn/tun/client/tunprop.hpp>
 #include <openvpn/tun/builder/tunpersist.hpp>
 #include <openvpn/common/scoped_fd.hpp>
-#include <openvpn/tun/tununixbase.hpp>
+#include <openvpn/tun/tunio.hpp>
 
 namespace openvpn {
   namespace TunBuilderClient {
@@ -35,9 +35,9 @@ namespace openvpn {
     // A simplified tun interface where pre-existing
     // socket is provided.
     template <typename ReadHandler>
-    class Tun : public TunUnixBase<ReadHandler, PacketFrom>
+    class Tun : public TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor>
     {
-      typedef TunUnixBase<ReadHandler, PacketFrom> Base;
+      typedef TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor> Base;
 
     public:
       typedef boost::intrusive_ptr<Tun> Ptr;
@@ -51,9 +51,9 @@ namespace openvpn {
 	  const SessionStats::Ptr& stats_arg)
 	: Base(read_handler_arg, frame_arg, stats_arg)
       {
-	Base::sd = new boost::asio::posix::stream_descriptor(io_service, socket);
+	Base::stream = new boost::asio::posix::stream_descriptor(io_service, socket);
 	Base::name_ = "tun";
-	Base::retain_sd = retain_sd_arg;
+	Base::retain_stream = retain_sd_arg;
 	Base::tun_prefix = tun_prefix_arg;
       }
 
@@ -100,7 +100,7 @@ namespace openvpn {
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
-      friend class TunUnixBase<Client*, PacketFrom>;  // calls tun_read_handler
+      friend class TunIO<Client*, PacketFrom, boost::asio::posix::stream_descriptor>;  // calls tun_read_handler
 
       typedef Tun<Client*> TunImpl;
 

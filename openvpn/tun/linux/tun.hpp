@@ -21,7 +21,8 @@
 
 #include <openvpn/common/process.hpp>
 #include <openvpn/common/format.hpp>
-#include <openvpn/tun/tununixbase.hpp>
+#include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/tun/tunio.hpp>
 
 namespace openvpn {
   namespace TunLinux {
@@ -42,9 +43,9 @@ namespace openvpn {
     OPENVPN_EXCEPTION(tun_ifconfig_error);
 
     template <typename ReadHandler>
-    class Tun : public TunUnixBase<ReadHandler, PacketFrom>
+    class Tun : public TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor>
     {
-      typedef TunUnixBase<ReadHandler, PacketFrom> Base;
+      typedef TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor> Base;
 
     public:
       typedef boost::intrusive_ptr<Tun> Ptr;
@@ -108,7 +109,7 @@ namespace openvpn {
 	  }
 
 	Base::name_ = ifr.ifr_name;
-	Base::sd = new boost::asio::posix::stream_descriptor(io_service, fd.release());
+	Base::stream = new boost::asio::posix::stream_descriptor(io_service, fd.release());
 	OPENVPN_LOG_TUN(Base::name_ << " opened for " << (ipv6 ? "IPv6" : "IPv4"));
       }
 
