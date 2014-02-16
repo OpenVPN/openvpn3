@@ -200,8 +200,7 @@ namespace openvpn {
 	o = opt.get_ptr("ifconfig-ipv6"); // DIRECTIVE
 	if (o)
 	  {
-	    if (top != SUBNET)
-	      throw option_error("only topology 'subnet' supported with IPv6");
+	    // We don't check topology setting here since it doesn't really affect IPv6
 	    const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o->get(1, 256), "ifconfig-ipv6");
 	    if (pair.version() != IP::Addr::V6)
 	      throw tun_prop_error("ifconfig-ipv6 address is not IPv6");
