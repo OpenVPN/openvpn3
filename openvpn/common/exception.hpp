@@ -19,10 +19,10 @@
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 #include <boost/system/error_code.hpp>
 
+#include <openvpn/common/stringize.hpp> // for OPENVPN_STRINGIZE
+
 #ifdef OPENVPN_DEBUG_EXCEPTION
   // well-known preprocessor hack to get __FILE__:__LINE__ rendered as a string
-# define OPENVPN_STRINGIZE(x) OPENVPN_STRINGIZE2(x)
-# define OPENVPN_STRINGIZE2(x) #x
 # define OPENVPN_FILE_LINE "/" __FILE__ ":" OPENVPN_STRINGIZE(__LINE__)
 #else
 # define OPENVPN_FILE_LINE
