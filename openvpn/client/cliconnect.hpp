@@ -222,7 +222,11 @@ namespace openvpn {
 	  if (paused)
 	    resume();
 	  else
-	    new_client();
+	    {
+	      if (client)
+		client->send_explicit_exit_notify();
+	      new_client();
+	    }
 	}
     }
 
