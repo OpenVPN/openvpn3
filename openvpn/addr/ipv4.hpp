@@ -57,6 +57,11 @@ namespace openvpn {
 	return ret;
       }
 
+      boost::uint32_t to_uint32() const
+      {
+	return u.addr;
+      }
+
       static Addr from_ulong(unsigned long ul)
       {
 	Addr ret;

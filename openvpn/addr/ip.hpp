@@ -125,6 +125,22 @@ namespace openvpn {
 	return a;
       }
 
+      const IPv4::Addr& to_ipv4() const
+      {
+	if (ver == V4)
+	  return u.v4;
+	else
+	  throw ip_exception("address is not IPv4");
+      }
+
+      const IPv6::Addr& to_ipv6() const
+      {
+	if (ver == V6)
+	  return u.v6;
+	else
+	  throw ip_exception("address is not IPv6");
+      }
+
       static Addr from_ulong(Version v, unsigned long ul)
       {
 	if (v == V4)
