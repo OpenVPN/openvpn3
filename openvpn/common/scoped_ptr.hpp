@@ -87,6 +87,11 @@ namespace openvpn {
       return px;
     }
 
+    T* operator()() const
+    {
+      return px;
+    }
+
     ~ScopedPtr()
     {
       if (px)
