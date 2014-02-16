@@ -13,6 +13,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/chrono.hpp>
 #include <boost/thread/thread.hpp>
 
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
@@ -23,6 +24,10 @@
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/getopt.hpp>
 #include <openvpn/time/timestr.hpp>
+
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <openvpn/win/console.hpp>
+#endif
 
 #include <client/ovpncli.cpp>
 
@@ -109,7 +114,7 @@ void handler(int signum)
     case SIGHUP:
       std::cout << "received reconnect signal " << signum << std::endl;
       if (the_client)
-	the_client->reconnect(2);
+	the_client->reconnect(0);
       break;
     default:
       std::cout << "received unknown signal " << signum << std::endl;
@@ -117,6 +122,20 @@ void handler(int signum)
     }
 }
 #endif
+
+void print_stats(const Client& client)
+{
+  const int n = client.stats_n();
+  std::vector<long long> stats = client.stats_bundle();
+
+  std::cout << "STATS:" << std::endl;
+  for (int i = 0; i < n; ++i)
+    {
+      const long long value = stats[i];
+      if (value)
+	std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -361,9 +380,7 @@ int main(int argc, char *argv[])
 		std::cout << "CONNECTING..." << std::endl;
 
 #if !defined(OPENVPN_PLATFORM_WIN)
-		// catch signals
 		Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP);
-#endif
 
 		// start connect thread
 		the_client = &client;
@@ -372,20 +389,34 @@ int main(int argc, char *argv[])
 		// wait for connect thread to exit
 		thread->join();
 		the_client = NULL;
+#else
+		// Set Windows title bar
+		const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
+		Win::Console::Title title(ClientAPI::OpenVPNClient::platform() + "     " + title_text);
+		Win::Console::Input console;
+
+		// start connect thread
+		the_client = &client;
+		boost::thread* thread = new boost::thread(boost::bind(&worker_thread));
+
+		// wait for connect thread to exit, also check for keypresses
+		while (!thread->try_join_for(boost::chrono::milliseconds(1000)))
+		  {
+		    const unsigned int c = console.get();
+		    if (c == 0x3C) // F2
+		      print_stats(*the_client);
+		    else if (c == 0x3D) // F3
+		      the_client->reconnect(0);
+		    else if (c == 0x3E) // F4
+		      the_client->stop();
+		    else if (c == 0x3F) // F5
+		      the_client->pause();
+		  }
+		the_client = NULL;
+#endif
 
 		// print closing stats
-		{
-		  const int n = client.stats_n();
-		  std::vector<long long> stats = client.stats_bundle();
-		  
-		  std::cout << "STATS:" << std::endl;
-		  for (int i = 0; i < n; ++i)
-		    {
-		      const long long value = stats[i];
-		      if (value)
-			std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
-		    }
-		}
+		print_stats(client);
 	      }
 	  }
       }

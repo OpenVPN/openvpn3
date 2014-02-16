@@ -39,6 +39,8 @@
 #include <openvpn/tun/linux/client/tuncli.hpp>
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/mac/client/tuncli.hpp>
+#elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
+#include <openvpn/tun/win/client/tuncli.hpp>
 #else
 #include <openvpn/tun/client/tunnull.hpp>
 #endif
@@ -283,6 +285,16 @@ namespace openvpn {
       tunconf->stats = cli_stats;
       if (tun_mtu)
 	tunconf->mtu = tun_mtu;
+#elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
+      TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
+      tunconf->tun_prop.session_name = session_name;
+      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+      if (tun_mtu)
+	tunconf->tun_prop.mtu = tun_mtu;
+      tunconf->frame = frame;
+      tunconf->stats = cli_stats;
+      if (config.tun_persist)
+	tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, NULL));
 #else
       TunNull::ClientConfig::Ptr tunconf = TunNull::ClientConfig::new_obj();
       tunconf->frame = frame;

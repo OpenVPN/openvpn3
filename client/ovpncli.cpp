@@ -42,6 +42,7 @@
 #define OPENVPN_DEBUG_REMOTELIST 0     // debug level for RemoteList object (0)
 #define OPENVPN_DEBUG_TUN_BUILDER 0    // debug level for tun/builder/client.hpp (0)
 //#define OPENVPN_SHOW_SESSION_TOKEN   // show server-pushed auth-token (comment out)
+//#define OPENVPN_DEBUG_TAPWIN           // shows Windows TAP driver debug logging (comment out)
 
 // enable assertion checks (can safely be disabled in production)
 //#define OPENVPN_ENABLE_ASSERT

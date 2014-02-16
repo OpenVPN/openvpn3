@@ -1,7 +1,10 @@
 PARMS = {
+    "DEBUG" : False,
+    "OVPN3" : "c:\\src\\ovpn3",
+    "TAP" : "c:\\src\\tap-windows",
+    "TAP_WIN_COMPONENT_ID" : "tapoas",
     "DEP" : "z:\\james\\downloads",
     "BUILD" : "c:\\src\\ovpn3-build",
-    "OVPN3" : "c:\\src\\ovpn3",
     "DIST" : "c:\\src\\ovpn3\\dist",
     "PATCH" : "c:\\src\\as\\pyovpn\\patch",
     "GIT" : "c:\\Program Files (x86)\\Git",
