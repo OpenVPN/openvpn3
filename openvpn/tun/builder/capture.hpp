@@ -51,7 +51,7 @@ namespace openvpn {
       {
 	std::ostringstream os;
 	const RedirectGatewayFlags rgf(flags);
-	os << "IPv4=" << ipv4 << "  IPv6=" << ipv6 << " flags=" << rgf.to_string();
+	os << "IPv4=" << ipv4 << " IPv6=" << ipv6 << " flags=" << rgf.to_string();
 	return os.str();
       }
     };
