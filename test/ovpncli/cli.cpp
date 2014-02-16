@@ -139,6 +139,7 @@ int main(int argc, char *argv[])
     { "cache-password", no_argument,        NULL,      'C' },
     { "no-cert",        no_argument,        NULL,      'x' },
     { "force-aes-cbc",  no_argument,        NULL,      'f' },
+    { "persist-tun",    no_argument,        NULL,      'j' },
     { "def-keydir",     required_argument,  NULL,      'k' },
     { "merge",          no_argument,        NULL,      'm' },
     { "version",        no_argument,        NULL,      'v' },
@@ -167,12 +168,13 @@ int main(int argc, char *argv[])
 	bool proxyAllowCleartextAuth = false;
 	int defaultKeyDirection = -1;
 	bool forceAesCbcCiphersuites = false;
+	bool tunPersist = false;
 	bool merge = false;
 	bool version = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BeTCxfmvu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BeTCxfjmvu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -229,6 +231,9 @@ int main(int argc, char *argv[])
 		break;
 	      case 'f':
 		forceAesCbcCiphersuites = true;
+		break;
+	      case 'j':
+		tunPersist = true;
 		break;
 	      case 'm':
 		merge = true;
@@ -303,6 +308,7 @@ int main(int argc, char *argv[])
 	    config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
 	    config.defaultKeyDirection = defaultKeyDirection;
 	    config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
+	    config.tunPersist = tunPersist;
 
 	    if (eval)
 	      {
@@ -417,5 +423,6 @@ int main(int argc, char *argv[])
   std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
   std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
   std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
+  std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
   return 2;
 }
