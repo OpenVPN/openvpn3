@@ -13,7 +13,7 @@
 #define OPENVPN_TUN_BUILDER_CLIENT_H
 
 #include <openvpn/tun/client/tunprop.hpp>
-#include <openvpn/tun/builder/tunpersist.hpp>
+#include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/tun/tunio.hpp>
 

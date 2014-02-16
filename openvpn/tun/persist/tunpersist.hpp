@@ -5,8 +5,8 @@
 //  Copyright (c) 2014 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-#ifndef OPENVPN_TUN_BUILDER_TUNPERSIST_H
-#define OPENVPN_TUN_BUILDER_TUNPERSIST_H
+#ifndef OPENVPN_TUN_PERSIST_TUNPERSIST_H
+#define OPENVPN_TUN_PERSIST_TUNPERSIST_H
 
 #include <openvpn/tun/client/tunprop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
