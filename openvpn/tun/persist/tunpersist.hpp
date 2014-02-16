@@ -8,6 +8,8 @@
 #ifndef OPENVPN_TUN_PERSIST_TUNPERSIST_H
 #define OPENVPN_TUN_PERSIST_TUNPERSIST_H
 
+#include <openvpn/common/types.hpp>
+#include <openvpn/common/destruct.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
@@ -16,7 +18,7 @@ namespace openvpn {
   // TunPersistTemplate is used client-side to store the underlying tun
   // interface fd/handle.  It also implements logic for the persist-tun
   // directive.  SCOPED_OBJ is generally a ScopedFD (unix) or a
-  // ScopedHANDLE (Windows).
+  // ScopedHANDLE (Windows).  It can also be a ScopedAsioStream.
   template <typename SCOPED_OBJ>
   class TunPersistTemplate : public RC<thread_unsafe_refcount>
   {
@@ -55,9 +57,34 @@ namespace openvpn {
       if (retain_obj_)
 	obj_.release();
       else
-	obj_.close();
+	{
+	  close_destructor();
+	  obj_.close();
+	}
       state_.reset();
       options_ = "";
+    }
+
+    bool destructor_defined() const
+    {
+      return bool(destruct_);
+    }
+
+    // destruct object performs cleanup prior to TAP device
+    // HANDLE close, such as removing added routes.
+    void add_destructor(const DestructorBase::Ptr& destruct)
+    {
+      close_destructor();
+      destruct_ = destruct;
+    }
+
+    void close_destructor()
+    {
+      if (destruct_)
+	{
+	  destruct_->destroy();
+	  destruct_.reset();
+	}
     }
 
     // Current persisted options
@@ -94,20 +121,23 @@ namespace openvpn {
 	  try {
 	    TunProp::configure_builder(copt_.get(), NULL, NULL, server_addr, tun_prop, opt, true);
 	  }
-	  catch (const std::exception& e)
+	  catch (const std::exception&)
 	    {
 	      copt_.reset();
 	    }
 	}
 
       // Check if previous tun session matches properties of to-be-created session
-      use_persisted_tun_ = (copt_ && !options_.empty() && options_ == copt_->to_string());
+      use_persisted_tun_ = (obj_.defined()
+			    && copt_
+			    && !options_.empty()
+			    && options_ == copt_->to_string());
       return use_persisted_tun_;
     }
 
     // Possibly save tunnel fd/handle, state, and options.
     bool persist_tun_state(const typename SCOPED_OBJ::base_type obj,
-		       const TunProp::State::Ptr& state)
+			   const TunProp::State::Ptr& state)
     {
       if (!enable_persistence_ || !use_persisted_tun_)
 	{
@@ -138,6 +168,7 @@ namespace openvpn {
     SCOPED_OBJ obj_;
     TunProp::State::Ptr state_;
     std::string options_;
+    DestructorBase::Ptr destruct_;
 
     TunBuilderCapture::Ptr copt_;
     bool use_persisted_tun_;
