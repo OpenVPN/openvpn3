@@ -60,6 +60,7 @@ namespace openvpn {
       Route() : prefix_length(0), ipv6(false), net30(false) {}
       std::string address;
       int prefix_length;
+      std::string gateway; // optional
       bool ipv6;
       bool net30;
 
@@ -67,6 +68,8 @@ namespace openvpn {
       {
 	std::ostringstream os;
 	os << address << '/' << prefix_length;
+	if (!gateway.empty())
+	  os << " -> " << gateway;
 	if (ipv6)
 	  os << " [IPv6]";
 	if (net30)
@@ -147,11 +150,12 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_add_address(const std::string& address, int prefix_length, bool ipv6, bool net30)
+    virtual bool tun_builder_add_address(const std::string& address, int prefix_length, const std::string& gateway, bool ipv6, bool net30)
     {
       Route r;
       r.address = address;
       r.prefix_length = prefix_length;
+      r.gateway = gateway;
       r.ipv6 = ipv6;
       r.net30 = net30;
       if (ipv6)

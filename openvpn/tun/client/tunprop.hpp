@@ -114,6 +114,20 @@ namespace openvpn {
 
   private:
 
+    static std::string route_gateway(const OptionList& opt)
+    {
+      std::string ret;
+      const Option* o = opt.get_ptr("route-gateway"); // DIRECTIVE
+      if (o)
+	{
+	  const IP::Addr gateway = IP::Addr::from_string(o->get(1, 256), "route-gateway");
+	  if (gateway.version() != IP::Addr::V4)
+	    throw tun_prop_error("route-gateway is not IPv4 (IPv6 route-gateway is passed with ifconfig-ipv6 directive)");
+	  ret = gateway.to_string();
+	}
+      return ret;
+    }
+
     static unsigned int tun_ifconfig(TunBuilderBase* tb, State* state, const OptionList& opt)
     {
       enum Topology {
@@ -152,6 +166,7 @@ namespace openvpn {
 		  throw tun_prop_error("ifconfig address is not IPv4 (topology subnet)");
 		if (!tb->tun_builder_add_address(pair.addr.to_string(),
 						 pair.netmask.prefix_len(),
+						 route_gateway(opt),
 						 false,  // IPv6
 						 false)) // net30
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology subnet)");
@@ -170,6 +185,7 @@ namespace openvpn {
 		  throw tun_prop_error("ifconfig addresses are not in the same /30 subnet (topology net30)");
 		if (!tb->tun_builder_add_address(local.to_string(),
 						 netmask.prefix_len(),
+						 route_gateway(opt),
 						 false, // IPv6
 						 true)) // net30
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology net30)");
@@ -189,8 +205,17 @@ namespace openvpn {
 	    const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o->get(1, 256), "ifconfig-ipv6");
 	    if (pair.version() != IP::Addr::V6)
 	      throw tun_prop_error("ifconfig-ipv6 address is not IPv6");
+	    std::string gateway_str;
+	    if (o->size() >= 3)
+	      {
+		const IP::Addr gateway = IP::Addr::from_string(o->get(2, 256), "ifconfig-ipv6");
+		if (gateway.version() != IP::Addr::V6)
+		  throw tun_prop_error("ifconfig-ipv6 gateway is not IPv6");
+		gateway_str = gateway.to_string();
+	      }
 	    if (!tb->tun_builder_add_address(pair.addr.to_string(),
 					     pair.netmask.prefix_len(),
+					     gateway_str,
 					     true,   // IPv6
 					     false)) // net30
 	      throw tun_prop_error("tun_builder_add_address IPv6 failed");
