@@ -141,6 +141,17 @@ namespace openvpn {
       }
     };
 
+    struct WINSServer {
+      WINSServer() {}
+      std::string address;
+
+      std::string to_string() const
+      {
+	std::string ret = address;
+	return ret;
+      }
+    };
+
     TunBuilderCapture() : mtu(0), tunnel_address_index_ipv4(-1), tunnel_address_index_ipv6(-1) {}
 
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
@@ -251,6 +262,14 @@ namespace openvpn {
       return true;
     }
 
+    virtual bool tun_builder_add_wins_server(const std::string& address)
+    {
+      WINSServer wins;
+      wins.address = address;
+      wins_servers.push_back(wins);
+      return true;
+    }
+
     std::string to_string() const
     {
       std::ostringstream os;
@@ -283,6 +302,13 @@ namespace openvpn {
 	os << "HTTP Proxy: " << http_proxy.to_string() << std::endl;
       if (https_proxy.defined())
 	os << "HTTPS Proxy: " << https_proxy.to_string() << std::endl;
+
+      if (!wins_servers.empty()) {
+	os << "WINS Servers:" << std::endl;
+	for (std::vector<WINSServer>::const_iterator i = wins_servers.begin(); i != wins_servers.end(); ++i)
+	  os << "  " << i->to_string() << std::endl;
+      }
+
       return os.str();
     }
 
@@ -303,6 +329,8 @@ namespace openvpn {
     ProxyAutoConfigURL proxy_auto_config_url;
     ProxyHostPort http_proxy;
     ProxyHostPort https_proxy;
+
+    std::vector<WINSServer> wins_servers;  // Windows WINS servers
 
   private:
     void render_route_list(std::ostream& os, const char *title, const std::vector<Route>& list) const

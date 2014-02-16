@@ -150,6 +150,15 @@ namespace openvpn {
       return false;
     }
 
+    // Callback to add Windows WINS server to VPN interface.
+    // WINS server addresses are always IPv4.
+    // May be called more than once per tun_builder session.
+    // Guaranteed to be called after tun_builder_reroute_gw.
+    virtual bool tun_builder_add_wins_server(const std::string& address)
+    {
+      return false;
+    }
+
     // Callback to establish the VPN tunnel, returning a file descriptor
     // to the tunnel, which the caller will henceforth own.  Returns -1
     // if the tunnel could not be established.

@@ -353,6 +353,7 @@ namespace openvpn {
     {
       // Example:
       //   [dhcp-option] [DNS] [172.16.0.23]
+      //   [dhcp-option] [WINS] [172.16.0.23]
       //   [dhcp-option] [DOMAIN] [openvpn.net]
       //   [dhcp-option] [DOMAIN] [example.com]
       //   [dhcp-option] [DOMAIN] [foo1.com foo2.com foo3.com ...]
@@ -428,6 +429,15 @@ namespace openvpn {
 		    o.exact_args(4);
 		    https_host = o.get(2, 256);
 		    validate_port(o.get(3, 256), "PROXY_HTTPS port", &https_port);
+		  }
+		else if (type == "WINS")
+		  {
+		    o.exact_args(3);
+		    const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "wins-server-ip");
+		    if (ip.version() != IP::Addr::V4)
+		      throw tun_prop_dhcp_option_error("WINS addresses must be IPv4");
+		    if (!tb->tun_builder_add_wins_server(ip.to_string()))
+		      throw tun_prop_dhcp_option_error("tun_builder_add_wins_server failed");
 		  }
 		else if (!quiet)
 		  OPENVPN_LOG("Unknown pushed DHCP option: " << o.render(OPT_RENDER_FLAGS));
