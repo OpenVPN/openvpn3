@@ -68,14 +68,14 @@ namespace openvpn {
 			break;
 		      default:
 			OPENVPN_LOG_TUN_ERROR("TUN write error: cannot identify IP version for prefix");
-			stats->error(Error::TUN_FRAMING_ERROR);
+			tun_error(Error::TUN_FRAMING_ERROR, NULL);
 			return false;
 		      }
 		  }
 		else
 		  {
 		    OPENVPN_LOG_TUN_ERROR("TUN write error: cannot write prefix");
-		    stats->error(Error::TUN_FRAMING_ERROR);
+		    tun_error(Error::TUN_FRAMING_ERROR, NULL);
 		    return false;
 		  }
 	      }
@@ -89,14 +89,14 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-		stats->error(Error::TUN_WRITE_ERROR);
+		tun_error(Error::TUN_WRITE_ERROR, NULL);
 		return false;
 	      }
 	  }
 	  catch (boost::system::system_error& e)
 	    {
 	      OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
-	      stats->error(Error::TUN_WRITE_ERROR);
+	      tun_error(Error::TUN_WRITE_ERROR, &e.code());
 	      return false;
 	    }
 	}
@@ -182,16 +182,23 @@ namespace openvpn {
 	      else
 		{
 		  OPENVPN_LOG_TUN_ERROR("TUN Read Error: cannot read prefix");
-		  stats->error(Error::TUN_READ_ERROR);
+		  tun_error(Error::TUN_READ_ERROR, NULL);
 		}
 	    }
 	  else
 	    {
 	      OPENVPN_LOG_TUN_ERROR("TUN Read Error: " << error.message());
-	      stats->error(Error::TUN_READ_ERROR);
+	      tun_error(Error::TUN_READ_ERROR, &error);
 	    }
-	  queue_read(pfp.release()); // reuse buffer if still available
+	  if (!halt)
+	    queue_read(pfp.release()); // reuse buffer if still available
 	}
+    }
+
+    void tun_error(const Error::Type errtype, const boost::system::error_code* error)
+    {
+      stats->error(errtype);
+      read_handler->tun_error_handler(errtype, error);
     }
 
     // should be set by derived class constructor

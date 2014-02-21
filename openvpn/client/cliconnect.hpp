@@ -334,6 +334,14 @@ namespace openvpn {
 		    stop();
 		  }
 		  break;
+		case Error::TUN_IFACE_DISABLED:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunIfaceDisabled(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::TUN_IFACE_DISABLED);
+		    stop();
+		  }
+		  break;
 		case Error::PROXY_ERROR:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::ProxyError(client->fatal_reason());

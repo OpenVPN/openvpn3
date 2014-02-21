@@ -133,6 +133,11 @@ namespace openvpn {
 	parent.tun_recv(pfp->buf);
       }
 
+      void tun_error_handler(const Error::Type errtype, // called by TunImpl
+			     const boost::system::error_code* error)
+      {
+      }
+
       void stop_()
       {
 	if (!halt)

@@ -49,6 +49,7 @@ namespace openvpn {
       PROXY_ERROR,
       TUN_SETUP_FAILED,
       TUN_IFACE_CREATE,
+      TUN_IFACE_DISABLED,
       EPKI_ERROR,          // EPKI refers to External PKI errors, i.e. errors in accessing external
       EPKI_INVALID_ALIAS,  //    certificates or keys.
 
@@ -86,6 +87,7 @@ namespace openvpn {
 	"PROXY_ERROR",
 	"TUN_SETUP_FAILED",
 	"TUN_IFACE_CREATE",
+	"TUN_IFACE_DISABLED",
 	"EPKI_ERROR",
 	"EPKI_INVALID_ALIAS",
       };
@@ -292,6 +294,11 @@ namespace openvpn {
     struct TunIfaceCreate : public ReasonBase
     {
       TunIfaceCreate(const std::string& reason) : ReasonBase(TUN_IFACE_CREATE, reason) {}
+    };
+
+    struct TunIfaceDisabled : public ReasonBase
+    {
+      TunIfaceDisabled(const std::string& reason) : ReasonBase(TUN_IFACE_DISABLED, reason) {}
     };
 
     struct EpkiError : public ReasonBase

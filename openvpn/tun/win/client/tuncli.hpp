@@ -495,6 +495,13 @@ namespace openvpn {
 #endif
       }
 
+      void tun_error_handler(const Error::Type errtype, // called by TunImpl
+			     const boost::system::error_code* error)
+      {
+	if (errtype == Error::TUN_READ_ERROR && error && error->value() == 995)
+	  parent.tun_error(Error::TUN_IFACE_DISABLED, "TAP adapter is disabled");
+      }
+
       void stop_()
       {
 	if (!halt)
