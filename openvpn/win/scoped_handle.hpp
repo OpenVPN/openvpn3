@@ -46,6 +46,11 @@ namespace openvpn {
 	return handle;
       }
 
+      HANDLE* ref()
+      {
+	return &handle;
+      }
+
       void reset(HANDLE h)
       {
 	close();
