@@ -170,9 +170,9 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		stop();
 		if (tun_persist)
 		  tun_persist->close();
+		stop();
 		parent.tun_error(Error::TUN_SETUP_FAILED, e.what());
 	      }
 	  }
