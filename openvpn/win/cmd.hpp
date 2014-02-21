@@ -13,7 +13,9 @@
 #include <string>
 #include <vector>
 
+#include <openvpn/common/string.hpp>
 #include <openvpn/common/destruct.hpp>
+#include <openvpn/win/call.hpp>
 
 namespace openvpn {
 
@@ -62,7 +64,9 @@ namespace openvpn {
     void call(const Cmd& cmd)
     {
       OPENVPN_LOG(cmd.cmd);
-      system(cmd.cmd.c_str()); // fixme -- use CreateProcess
+      std::string out = Win::call(cmd.cmd);
+      string::trim_crlf(out);
+      OPENVPN_LOG(out);
     }
 
   private:
