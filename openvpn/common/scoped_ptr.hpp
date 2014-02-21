@@ -92,6 +92,11 @@ namespace openvpn {
       return px;
     }
 
+    T** ref()
+    {
+      return &px;
+    }
+
     ~ScopedPtr()
     {
       if (px)
