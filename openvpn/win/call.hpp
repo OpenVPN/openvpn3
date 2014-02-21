@@ -46,20 +46,33 @@ namespace openvpn {
       else
 	name = cmd;
 
-      // get system path
+#if _WIN32_WINNT >= 0x0600
+      // get system path (Vista and higher)
       ScopedPtr<wchar_t, FreeCoTask> syspath;
       if (SHGetKnownFolderPath(FOLDERID_System, 0, NULL, syspath.ref()) != S_OK)
-	throw win_call("cannot get system path");
+	throw win_call("cannot get system path using SHGetKnownFolderPath");
+#     define SYSPATH_FMT_CHAR L"s"
+#     define SYSPATH_LEN_METH(x) wcslen(x)
+#else
+      // get system path (XP and higher)
+      ScopedPtr<TCHAR, FreeCoTask> syspath(new char[MAX_PATH]);
+      if (SHGetFolderPath(NULL, CSIDL_SYSTEM, NULL, 0, syspath()) != S_OK)
+	throw win_call("cannot get system path using SHGetFolderPath");
+#     define SYSPATH_FMT_CHAR L"S"
+#     define SYSPATH_LEN_METH(x) strlen(x)
+#endif
 
       // build command line
-      const size_t wcmdlen = wcslen(syspath()) + name.length() + args.length() + 64;
+      const size_t wcmdlen = SYSPATH_LEN_METH(syspath()) + name.length() + args.length() + 64;
       ScopedPtr<wchar_t, PtrArrayFree> wcmd(new wchar_t[wcmdlen]);
       const char *spc = "";
       if (!args.empty())
 	spc = " ";
-      _snwprintf(wcmd(), wcmdlen, L"\"%s\\%S.exe\"%S%S", syspath(), name.c_str(), spc, args.c_str());
+      _snwprintf(wcmd(), wcmdlen, L"\"%" SYSPATH_FMT_CHAR L"\\%S.exe\"%S%S", syspath(), name.c_str(), spc, args.c_str());
       wcmd()[wcmdlen-1] = 0;
       //wprintf(L"CMD[%d]: %s\n", (int)wcslen(wcmd()), wcmd());
+#     undef SYSPATH_FMT_CHAR
+#     undef SYSPATH_LEN_METH
 
       // Set the bInheritHandle flag so pipe handles are inherited.
       SECURITY_ATTRIBUTES saAttr;
