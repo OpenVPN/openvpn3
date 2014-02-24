@@ -419,7 +419,7 @@ namespace openvpn {
 	ULONG info[3];
       };
 
-      const MIB_IPFORWARDTABLE* windows_routing_table()
+      inline const MIB_IPFORWARDTABLE* windows_routing_table()
       {
 	ULONG size = 0;
 	DWORD status;
