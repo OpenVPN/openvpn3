@@ -13,8 +13,6 @@
 #include <string>
 #include <sstream>
 
-#include <process.h> // for system()
-
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/scoped_asio_stream.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
