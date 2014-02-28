@@ -73,6 +73,7 @@ namespace openvpn {
 # define OPENVPN_SIMPLE_EXCEPTION_INHERIT(B, C)	\
   class C : public B { \
   public: \
+    C() : B(#C OPENVPN_FILE_LINE) {} \
     virtual const char* what() const throw() { return #C OPENVPN_FILE_LINE; } \
   }
 
