@@ -56,6 +56,9 @@ namespace openvpn {
     virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 					  TunClientParent& parent) = 0;
 
+    // return true if layer 2 tunnels are supported
+    virtual bool layer_2_supported() const { return false; }
+
     // called just prior to emission of Disconnect event
     virtual void close_persistent() {}
   };

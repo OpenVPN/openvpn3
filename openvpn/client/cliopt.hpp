@@ -232,10 +232,6 @@ namespace openvpn {
 	  http_proxy_options->proxy_server_set_enable_cache(config.tun_persist);
 	}
 
-      // initialize transport layer
-      if (cp->layer != Layer(Layer::OSI_LAYER_3))
-	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "only OSI layer 3 tunnels currently supported");
-
       // secret option not supported
       if (opt.exists("secret"))
 	throw option_error("sorry, static key encryption mode (non-SSL/TLS) is not supported");
@@ -304,6 +300,12 @@ namespace openvpn {
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
 #endif
+
+      // verify that tun implementation can handle OSI layer declared by config
+      if (cp->layer == Layer(Layer::OSI_LAYER_2) && !tunconf->layer_2_supported())
+	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "OSI layer 2 tunnels are not currently supported");
+
+      // save tun factory
       tun_factory = tunconf;
 
       // server-poll-timeout

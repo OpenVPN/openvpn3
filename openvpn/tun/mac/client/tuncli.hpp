@@ -92,6 +92,16 @@ namespace openvpn {
       virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 					    TunClientParent& parent);
 
+      // return true if layer 2 tunnels are supported
+      virtual bool layer_2_supported() const
+      {
+#       if defined(MAC_TUNTAP_FALLBACK)
+	  return false; // change to true after TAP support is added
+#       else
+	  return false; // utun device doesn't support TAP
+#       endif
+      }
+
       // called just prior to transmission of Disconnect event
       virtual void close_persistent()
       {
@@ -155,23 +165,32 @@ namespace openvpn {
 		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string()); // fixme
 
 		  // Open tun device.  Try Mac OS X integrated utun device first
-		  // (layer 3 only), then fall back to TunTap third-party device.
+		  // (layer 3 only).  If utun fails and MAC_TUNTAP_FALLBACK is defined,
+		  // then fall back to TunTap third-party device.
 		  // If successful, state->iface_name will be set to tun iface name.
 		  int fd = -1;
 		  try {
-		    if (config->layer() == Layer::OSI_LAYER_3)
-		      {
-			try {
-			  fd = UTun::utun_open(state->iface_name);
-			  tun_prefix = true;
-			}
-			catch (const std::exception& e)
-			  {
-			    OPENVPN_LOG(e.what());
+#                   if defined(MAC_TUNTAP_FALLBACK)
+#                     if !defined(BOOST_ASIO_DISABLE_KQUEUE)
+#                       error Mac OS X TunTap adapter is incompatible with kqueue; rebuild with BOOST_ASIO_DISABLE_KQUEUE
+#                     endif
+		      if (config->layer() == Layer::OSI_LAYER_3)
+			{
+			  try {
+			    fd = UTun::utun_open(state->iface_name);
+			    tun_prefix = true;
 			  }
-		      }
-		    if (fd == -1)
-		      fd = Util::tuntap_open(config->layer, state->iface_name);
+			  catch (const std::exception& e)
+			    {
+			      OPENVPN_LOG(e.what());
+			    }
+			}
+		      if (fd == -1)
+			fd = Util::tuntap_open(config->layer, state->iface_name);
+#                   else
+		      fd = UTun::utun_open(state->iface_name);
+		      tun_prefix = true;
+#                   endif
 		  }
 		  catch (const std::exception& e)
 		    {
