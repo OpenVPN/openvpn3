@@ -23,6 +23,7 @@
 #include <openvpn/tun/tunio.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/tun/mac/tunutil.hpp>
+#include <openvpn/tun/mac/utun.hpp>
 #include <openvpn/tun/mac/gwv4.hpp>
 #include <openvpn/tun/mac/macdns_watchdog.hpp>
 
@@ -50,6 +51,7 @@ namespace openvpn {
       Tun(const typename TunPersist::Ptr& tun_persist,
 	  const std::string& name,
 	  const bool retain_stream,
+	  const bool tun_prefix,
 	  ReadHandler read_handler,
 	  const Frame::Ptr& frame,
 	  const SessionStats::Ptr& stats)
@@ -57,6 +59,7 @@ namespace openvpn {
       {
 	Base::name_ = name;
 	Base::retain_stream = retain_stream;
+	Base::tun_prefix = tun_prefix;
 	Base::stream = new TunPersistAsioStream<TunPersist>(tun_persist);
       }
     };
@@ -118,6 +121,7 @@ namespace openvpn {
 	      tun_persist.reset(new TunPersist(false, false, NULL)); // short-term
 
 	    try {
+	      bool tun_prefix = false;
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
 
 	      // Check if persisted tun session matches properties of to-be-created session
@@ -150,10 +154,24 @@ namespace openvpn {
 
 		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string()); // fixme
 
-		  // open tun device fd
+		  // Open tun device.  Try Mac OS X integrated utun device first
+		  // (layer 3 only), then fall back to TunTap third-party device.
+		  // If successful, state->iface_name will be set to tun iface name.
 		  int fd = -1;
 		  try {
-		    fd = Util::tuntap_open(config->layer, state->iface_name); // state->iface_name is set by method
+		    if (config->layer() == Layer::OSI_LAYER_3)
+		      {
+			try {
+			  fd = UTun::utun_open(state->iface_name);
+			  tun_prefix = true;
+			}
+			catch (const std::exception& e)
+			  {
+			    OPENVPN_LOG(e.what());
+			  }
+		      }
+		    if (fd == -1)
+		      fd = Util::tuntap_open(config->layer, state->iface_name);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -183,6 +201,7 @@ namespace openvpn {
 	      impl.reset(new TunImpl(tun_persist,
 				     state->iface_name,
 				     true,
+				     tun_prefix,
 				     this,
 				     config->frame,
 				     config->stats
