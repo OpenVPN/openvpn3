@@ -2,13 +2,13 @@
 //  gwv4.hpp
 //  OpenVPN
 //
-//  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
+//  Copyright (c) 2012-2014 OpenVPN Technologies, Inc. All rights reserved.
 //
 
 // Get IPv4 gateway info on Mac OS X.
 
-#ifndef OPENVPN_NETCONF_MAC_GWV4_H
-#define OPENVPN_NETCONF_MAC_GWV4_H
+#ifndef OPENVPN_TUN_MAC_GWV4_H
+#define OPENVPN_TUN_MAC_GWV4_H
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -239,9 +239,16 @@ namespace openvpn {
 
     unsigned int flags() const { return flags_; }
     const IP::Addr& gateway_addr() const { return gateway_.addr; }
+    std::string gateway_addr_str() const { return gateway_addr().to_string(); }
     const IP::Addr& gateway_netmask() const { return gateway_.netmask; }
+    std::string gateway_netmask_str() const { return gateway_netmask().to_string(); }
     std::string iface() const { return iface_; }
     const MACAddr& hwaddr() const { return hwaddr_; }
+
+    bool iface_addr_defined() const
+    {
+      return (flags_ & (ADDR_DEFINED|IFACE_DEFINED)) == (ADDR_DEFINED|IFACE_DEFINED);
+    }
 
   private:
     unsigned int flags_;
@@ -250,6 +257,6 @@ namespace openvpn {
     MACAddr hwaddr_;
   };
 
-} // namespace openvpn
+}
 
-#endif // OPENVPN_NETCONF_MAC_GWV4_H
+#endif

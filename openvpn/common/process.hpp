@@ -21,6 +21,7 @@
 #include <boost/noncopyable.hpp>
 
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/action.hpp>
 
 extern char **environ;
 
@@ -29,6 +30,11 @@ namespace openvpn {
   class Argv : public std::vector<std::string>
   {
   public:
+    Argv(const size_t capacity=16)
+    {
+      reserve(capacity);
+    }
+
     std::string to_string() const
     {
       std::string ret;
@@ -103,6 +109,44 @@ namespace openvpn {
       }
     return ret;
   }
+
+  inline int system_cmd(const Argv& argv)
+  {
+    int ret = -1;
+    if (argv.size())
+      ret = system_cmd(argv[0], argv);
+    return ret;
+  }
+
+  struct Command : public Action
+  {
+    typedef boost::intrusive_ptr<Command> Ptr;
+
+    Command* copy() const
+    {
+      Command* ret = new Command;
+      ret->argv = argv;
+      return ret;
+    }
+
+    virtual void execute()
+    {
+      if (!argv.empty())
+	{
+	  OPENVPN_LOG(to_string());
+	  system_cmd(argv[0], argv);
+	}
+      else
+	OPENVPN_LOG("WARNING: Command::execute called with empty argv");
+    }
+
+    virtual std::string to_string() const
+    {
+      return argv.to_string();
+    }
+
+    Argv argv;
+  };
 
 }
 

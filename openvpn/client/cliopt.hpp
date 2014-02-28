@@ -163,7 +163,7 @@ namespace openvpn {
 
       // initialize RNG/PRNG
       rng.reset(new RandomAPI());
-      prng.reset(new PRNG<RandomAPI, ClientCryptoAPI>("SHA1", rng, 16));
+      prng.reset(new PRNG<RandomAPI, ClientCryptoAPI>("SHA1", rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
 
       // frame
       frame = frame_init();
@@ -281,10 +281,14 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunMac::ClientConfig::Ptr tunconf = TunMac::ClientConfig::new_obj();
       tunconf->layer = cp->layer;
+      tunconf->tun_prop.session_name = session_name;
+      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+      if (tun_mtu)
+	tunconf->tun_prop.mtu = tun_mtu;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
-      if (tun_mtu)
-	tunconf->mtu = tun_mtu;
+      if (config.tun_persist)
+	tunconf->tun_persist.reset(new TunMac::TunPersist(true, false, NULL));
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
       tunconf->tun_prop.session_name = session_name;
