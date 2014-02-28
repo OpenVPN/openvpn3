@@ -53,16 +53,11 @@ namespace openvpn {
     }
 
     // Callback to reroute default gateway to VPN interface.
-    // server_address is provided so that the implementation may exclude
-    // it from the default route.
-    // server_address_ipv6 is true if server_address is an IPv6 address.
     // ipv4 is true if the default route to be added should be IPv4.
     // ipv6 is true if the default route to be added should be IPv6.
     // flags are defined in RedirectGatewayFlags
     // Never called more than once per tun_builder session.
-    virtual bool tun_builder_reroute_gw(const std::string& server_address,
-					bool server_address_ipv6,
-					bool ipv4,
+    virtual bool tun_builder_reroute_gw(bool ipv4,
 					bool ipv6,
 					unsigned int flags)
     {

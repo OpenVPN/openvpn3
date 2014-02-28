@@ -177,7 +177,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_reroute_gw(const std::string& server_address, bool server_address_ipv6, bool ipv4, bool ipv6, unsigned int flags)
+    virtual bool tun_builder_reroute_gw(bool ipv4, bool ipv6, unsigned int flags)
     {
       reroute_gw.ipv4 = ipv4;
       reroute_gw.ipv6 = ipv6;

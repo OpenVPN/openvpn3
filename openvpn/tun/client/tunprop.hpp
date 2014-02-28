@@ -284,9 +284,7 @@ namespace openvpn {
 	reroute_gw_ver_flags |= F_IPv6;
 
       // call reroute_gw builder method
-      if (!tb->tun_builder_reroute_gw(server_addr.to_string(),
-				      server_addr.version() == IP::Addr::V6,
-				      (reroute_gw_ver_flags & F_IPv4) ? true : false,
+      if (!tb->tun_builder_reroute_gw((reroute_gw_ver_flags & F_IPv4) ? true : false,
 				      (reroute_gw_ver_flags & F_IPv6) ? true : false,
 				      rg_flags()))
 	throw tun_prop_route_error("tun_builder_reroute_gw for redirect-gateway failed");
