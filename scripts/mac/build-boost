@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
 set -e
-REL_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 . $O3/lib-versions
 [ -z "$DL" ] && DL=~/Downloads
-if [ "$OSX_ONLY" != "1" ]; then
-    . $O3/vars-iossim
-    export PLATFORM_FLAGS_SIM="$PLATFORM_FLAGS"
-    . $O3/vars-ios
-fi
 if [ "$NO_WIPE" != "1" ]; then
     echo WIPE and reunzip source
     rm -rf boost $BOOST_VERSION
@@ -19,32 +13,21 @@ if [ "$NO_WIPE" != "1" ]; then
     fi
     cd $BOOST_VERSION
     #patch -p1 <$DL/asio-engine.patch
-    cat >>tools/build/v2/user-config.jam <<EOF
-using clang : ios : clang++
+
+    for T in osx osx-dbg ios ios-dbg iossim iossim-dbg ; do
+	TS="${T//-/}"
+	. $O3/vars-$T
+	cat >>tools/build/v2/user-config.jam <<EOF
+using clang : $TS : clang++
             :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $REL_FLAGS"
-            ;
-using clang : iossim : clang++
-            :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS_SIM $REL_FLAGS"
-            ;
-using clang : osx : clang++
-            :
-                <compileflags>"-Wno-unused-function $REL_FLAGS"
-            ;
-using clang : iosdbg : clang++
-            :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS"
-            ;
-using clang : iossimdbg : clang++
-            :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS_SIM"
-            ;
-using clang : osxdbg : clang++
-            :
-                <compileflags>"-Wno-unused-function"
+                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_FPIC"
             ;
 EOF
+    done
+    . $O3/vars-reset
+    echo '********** BOOST CONFIG'
+    tail -30 tools/build/v2/user-config.jam
+    echo '********** END BOOST CONFIG'
     ./bootstrap.sh
 else
     echo RETAIN existing source

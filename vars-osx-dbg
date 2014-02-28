@@ -4,7 +4,7 @@ export APPLE_FAMILY=1
 export DEBUG_BUILD=1
 export GPP_CMD=clang++
 export GCC_CMD=clang
-export PLATFORM_FLAGS="-arch x86_64"
+export PLATFORM_FLAGS="-arch x86_64 -arch i386 -mmacosx-version-min=10.6"
 export OTHER_COMPILER_FLAGS="-g"
 export LIB_OPT_LEVEL="-O0"
 export LIB_FPIC=""
