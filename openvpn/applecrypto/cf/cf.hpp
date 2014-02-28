@@ -8,9 +8,11 @@
 #ifndef OPENVPN_APPLECRYPTO_CF_CF_H
 #define OPENVPN_APPLECRYPTO_CF_CF_H
 
-#include <iostream>
 #include <string>
+#include <sstream>
 #include <algorithm>
+
+#include <boost/config.hpp> // for BOOST_NO_CXX11_RVALUE_REFERENCES
 
 #include <CoreFoundation/CoreFoundation.h>
 
@@ -20,12 +22,24 @@
 
 // Wrapper classes for Apple Core Foundation objects.
 
-#define OPENVPN_CF_WRAP(cls, fname, cftype, idmeth) \
-    typedef Wrap<cftype> cls; \
-    inline cls fname(CFTypeRef obj) \
+#define OPENVPN_CF_WRAP(cls, castmeth, cftype, idmeth) \
+    template <> \
+    struct Type<cftype> \
     { \
-      if (obj && CFGetTypeID(obj) == idmeth()) \
-	return cls((cftype)obj, BORROW); \
+      static CFTypeRef cast(CFTypeRef obj) \
+      { \
+	if (obj && CFGetTypeID(obj) == idmeth()) \
+	  return obj; \
+	else \
+	  return NULL; \
+      } \
+    }; \
+    typedef Wrap<cftype> cls; \
+    inline cls castmeth(CFTypeRef obj) \
+    { \
+      CFTypeRef o = Type<cftype>::cast(obj); \
+      if (o) \
+	return cls(cftype(o), BORROW);	\
       else \
 	return cls(); \
     }
@@ -37,6 +51,8 @@ namespace openvpn {
       OWN,
       BORROW
     };
+
+    template <typename T> struct Type {};
 
     template <typename T>
     class Wrap
@@ -69,6 +85,25 @@ namespace openvpn {
 	return *this;
       }
 
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+
+      Wrap(Wrap&& other)
+      {
+	obj_ = other.obj_;
+	other.obj_ = NULL;
+      }
+
+      Wrap& operator=(Wrap&& other)
+      {
+	if (obj_)
+	  CFRelease(obj_);
+	obj_ = other.obj_;
+	other.obj_ = NULL;
+	return *this;
+      }
+
+#endif
+
       void swap(Wrap& other)
       {
 	std::swap(obj_, other.obj_);
@@ -88,6 +123,8 @@ namespace openvpn {
       T operator()() const { return obj_; }
 
       CFTypeRef generic() const { return (CFTypeRef)obj_; }
+
+      static T cast(CFTypeRef obj) { return T(Type<T>::cast(obj)); }
 
       T release()
       {
@@ -241,6 +278,21 @@ namespace openvpn {
       return Dict(mdict(), CF::BORROW);
     }
 
+    inline Array const_array(MutableArray& marray)
+    {
+      return Array(marray(), CF::BORROW);
+    }
+
+    inline Dict empty_dict()
+    {
+      return Dict(CFDictionaryCreate(kCFAllocatorDefault,
+				     NULL,
+				     NULL,
+				     0,
+				     &kCFTypeDictionaryKeyCallBacks,
+				     &kCFTypeDictionaryValueCallBacks));
+    }
+
     inline MutableArray mutable_array(const CFIndex capacity=0)
     {
       return MutableArray(CFArrayCreateMutable(kCFAllocatorDefault, capacity, &kCFTypeArrayCallBacks));
@@ -254,7 +306,10 @@ namespace openvpn {
     template <typename DICT>
     inline MutableDict mutable_dict_copy(const DICT& dict, const CFIndex capacity=0)
     {
-      return MutableDict(CFDictionaryCreateMutableCopy(kCFAllocatorDefault, capacity, dict()));
+      if (dict.defined())
+	return MutableDict(CFDictionaryCreateMutableCopy(kCFAllocatorDefault, capacity, dict()));
+      else
+	return mutable_dict(capacity);
     }
 
     inline Error error(CFStringRef domain, CFIndex code, CFDictionaryRef userInfo)
@@ -269,6 +324,15 @@ namespace openvpn {
     {
       if (array.defined())
 	return CFArrayGetCount(array());
+      else
+	return 0;
+    }
+
+    template <typename DICT>
+    inline CFIndex dict_len(const DICT& dict)
+    {
+      if (dict.defined())
+	return CFDictionaryGetCount(dict());
       else
 	return 0;
     }
@@ -339,6 +403,30 @@ namespace openvpn {
 	}
       else
 	return "UNDEF";
+    }
+
+    // format an array of strings (non-string elements in array are ignored)
+    template <typename ARRAY>
+    inline std::string array_to_string(const ARRAY& array, const char delim=',')
+    {
+      std::ostringstream os;
+      const CFIndex len = array_len(array);
+      if (len)
+	{
+	  bool sep = false;
+	  for (CFIndex i = 0; i < len; ++i)
+	    {
+	      const String v(string_cast(array_index(array, i)));
+	      if (v.defined())
+		{
+		  if (sep)
+		    os << delim;
+		  os << cppstring(v);
+		  sep = true;
+		}
+	    }
+	}
+      return os.str();
     }
 
     inline bool string_equal(const String& s1, const String& s2, const CFStringCompareFlags compareOptions = 0)
