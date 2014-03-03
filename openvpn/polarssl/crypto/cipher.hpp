@@ -167,8 +167,10 @@ namespace openvpn {
       void reset(const unsigned char *iv)
       {
 	check_initialized();
-	if (cipher_reset(&ctx, iv) < 0)
+	if (cipher_reset(&ctx) < 0)
 	  throw polarssl_cipher_error("cipher_reset");
+	if (cipher_set_iv(&ctx, iv, iv_length()))
+	  throw polarssl_cipher_error("cipher_set_iv");
       }
 
       bool update(unsigned char *out, const size_t max_out_size,

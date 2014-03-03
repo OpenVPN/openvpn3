@@ -56,12 +56,8 @@ namespace openvpn {
       case POLARSSL_ERR_X509_CERT_VERIFY_FAILED:
 	set_code(Error::CERT_VERIFY_FAIL, true);
 	break;
-#if 0 // As of PolarSSL 1.2.8, it appears that these codes are no longer returned
-      case POLARSSL_ERR_PEM_PASSWORD_REQUIRED:
-      case POLARSSL_ERR_PEM_PASSWORD_MISMATCH:
-#endif
-      case POLARSSL_ERR_X509_PASSWORD_REQUIRED:
-      case POLARSSL_ERR_X509_PASSWORD_MISMATCH:
+      case POLARSSL_ERR_PK_PASSWORD_REQUIRED:
+      case POLARSSL_ERR_PK_PASSWORD_MISMATCH:
 	set_code(Error::PEM_PASSWORD_FAIL, true);
 	break;
       case POLARSSL_ERR_SSL_BAD_HS_PROTOCOL_VERSION:
@@ -80,7 +76,7 @@ namespace openvpn {
     static std::string polarssl_errtext(int errnum)
     {
       char buf[256];
-      error_strerror(errnum, buf, sizeof(buf));
+      polarssl_strerror(errnum, buf, sizeof(buf));
       return buf;
     }
 

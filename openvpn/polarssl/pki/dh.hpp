@@ -47,7 +47,7 @@ namespace openvpn {
       void parse(const std::string& dh_txt, const std::string& title)
       {
 	alloc();
-	const int status = x509parse_dhm(dhc,
+	const int status = dhm_parse_dhm(dhc,
 					 (const unsigned char *)dh_txt.c_str(),
 					 dh_txt.length());
 	if (status < 0)

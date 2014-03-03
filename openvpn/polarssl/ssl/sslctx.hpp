@@ -17,6 +17,7 @@
 #include <cstring>
 
 #include <polarssl/ssl.h>
+#include <polarssl/oid.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -38,7 +39,7 @@
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
 #include <openvpn/polarssl/pki/dh.hpp>
-#include <openvpn/polarssl/pki/rsactx.hpp>
+#include <openvpn/polarssl/pki/pkctx.hpp>
 #include <openvpn/polarssl/util/error.hpp>
 
 // An SSL Context is essentially a configuration that can be used
@@ -56,7 +57,7 @@ namespace openvpn {
 	TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
 	0
       };
-  };
+  }
 
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
@@ -85,7 +86,7 @@ namespace openvpn {
       Mode mode;
       PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
       PolarSSLPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
-      PolarSSLPKI::RSAContext::Ptr priv_key; // private key
+      PolarSSLPKI::PKContext::Ptr priv_key;  // private key
       std::string priv_key_pwd;              // private key password
       PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters (only needed in server mode)
       ExternalPKIBase* external_pki;
@@ -136,7 +137,7 @@ namespace openvpn {
 
       void load_private_key(const std::string& key_txt)
       {
-	PolarSSLPKI::RSAContext::Ptr p = new PolarSSLPKI::RSAContext();
+	PolarSSLPKI::PKContext::Ptr p = new PolarSSLPKI::PKContext();
 	p->parse(key_txt, "config", priv_key_pwd);
 	priv_key = p;
       }
@@ -530,7 +531,7 @@ namespace openvpn {
   private:
     size_t key_len() const
     {
-      return config.crt_chain->get()->rsa.len;
+      return pk_get_size(&config.crt_chain->get()->pk) / 8;
     }
 
     // ns-cert-type verification
@@ -540,7 +541,7 @@ namespace openvpn {
       return config.ns_cert_type != NSCert::NONE;
     }
 
-    bool verify_ns_cert_type(const x509_cert *cert) const
+    bool verify_ns_cert_type(const x509_crt *cert) const
     {
       if (config.ns_cert_type == NSCert::SERVER)
 	return bool(cert->ns_cert_type & NS_CERT_TYPE_SSL_SERVER);
@@ -557,7 +558,7 @@ namespace openvpn {
       return config.ku.size() > 0;
     }
 
-    bool verify_x509_cert_ku(const x509_cert *cert)
+    bool verify_x509_cert_ku(const x509_crt *cert)
     {
       if (cert->ext_types & EXT_KEY_USAGE)
 	{
@@ -578,7 +579,7 @@ namespace openvpn {
       return !config.eku.empty();
     }
 
-    bool verify_x509_cert_eku(x509_cert *cert)
+    bool verify_x509_cert_eku(x509_crt *cert)
     {
       if (cert->ext_types & EXT_EXTENDED_KEY_USAGE)
 	{
@@ -610,46 +611,27 @@ namespace openvpn {
     // Try to return the x509 subject formatted like the OpenSSL X509_NAME_oneline method.
     // Only attributes matched in the switch statements below will be rendered.  All other
     // attributes will be ignored.
-    static std::string x509_get_subject(const x509_cert *cert)
+    static std::string x509_get_subject(const x509_crt *cert)
     {
       std::string ret;
       for (const x509_name *name = &cert->subject; name != NULL; name = name->next)
 	{
 	  const char *key = NULL;
-	  if (std::memcmp(name->oid.p, OID_X520, 2) == 0)
-	    {
-	      switch (name->oid.p[2])
-		{
-		case X520_COMMON_NAME:
-		  key = "CN";
-		  break;
-		case X520_COUNTRY:
-		  key = "C";
-		  break;
-		case X520_LOCALITY:
-		  key = "L";
-		  break;
-		case X520_STATE:
-		  key = "ST";
-		  break;
-		case X520_ORGANIZATION:
-		  key = "O";
-		  break;
-		case X520_ORG_UNIT:
-		  key = "OU";
-		  break;
-                break;
-		}
-	    }
-	  else if (std::memcmp(name->oid.p, OID_PKCS9, 8) == 0)
-	    {
-	      switch (name->oid.p[8] )
-		{
-		case PKCS9_EMAIL:
-		  key = "emailAddress";
-		  break;
-		}
-	    }
+	  if (OID_CMP(OID_AT_CN, &name->oid))
+	    key = "CN";
+	  else if (OID_CMP(OID_AT_COUNTRY, &name->oid))
+	    key = "C";
+	  else if (OID_CMP(OID_AT_LOCALITY, &name->oid))
+	    key = "L";
+	  else if (OID_CMP(OID_AT_STATE, &name->oid))
+	    key = "ST";
+	  else if (OID_CMP(OID_AT_ORGANIZATION, &name->oid))
+	    key = "O";
+	  else if (OID_CMP(OID_AT_ORG_UNIT, &name->oid))
+	    key = "OU";
+	  else if (OID_CMP(OID_PKCS9_EMAIL, &name->oid))
+	    key = "emailAddress";
+
 	  // make sure that key is defined and value has no embedded nulls
 	  if (key && !string::embedded_null((const char *)name->val.p, name->val.len))
 	    ret += "/" + std::string(key) + "=" + std::string((const char *)name->val.p, name->val.len);
@@ -657,14 +639,14 @@ namespace openvpn {
       return ret;
     }
 
-    static std::string x509_get_common_name(const x509_cert *cert)
+    static std::string x509_get_common_name(const x509_crt *cert)
     {
       const x509_name *name = &cert->subject;
 
       // find common name
       while (name != NULL)
 	{
-	  if (std::memcmp(name->oid.p, OID_CN, OID_SIZE(OID_CN)) == 0)
+	  if (OID_CMP(OID_AT_CN, &name->oid))
 	    break;
 	  name = name->next;
 	}
@@ -699,21 +681,26 @@ namespace openvpn {
       return os.str();
     }
 
-    static int verify_callback(void *arg, x509_cert *cert, int depth, int *flags)
+    static std::string status_string(const x509_crt *cert, const int depth, const int *flags)
+    {
+      std::ostringstream os;
+      std::string status_str = "OK";
+      if (*flags)
+	status_str = "FAIL " + fmt_polarssl_verify_flags(*flags);
+      os << "VERIFY "
+	 << status_str
+	 << ": depth=" << depth
+	 << std::endl << cert_info(cert);
+      return os.str();
+    }
+
+    static int verify_callback(void *arg, x509_crt *cert, int depth, int *flags)
     {
       PolarSSLContext *self = (PolarSSLContext *)arg;
       bool fail = false;
 
       // log status
-      {
-	std::string status_str = "OK";
-	if (*flags)
-	  status_str = "FAIL " + fmt_polarssl_verify_flags(*flags);
-	OPENVPN_LOG_SSL("VERIFY "
-			<< status_str
-			<< ": depth=" << depth
-			<< std::endl << cert_info(cert));
-      }
+      OPENVPN_LOG_SSL(status_string(cert, depth, flags));
 
       // leaf-cert verification
       if (depth == 0)
@@ -758,10 +745,10 @@ namespace openvpn {
       return 0;
     }
 
-    static std::string cert_info(const x509_cert *cert, const char *prefix = NULL)
+    static std::string cert_info(const x509_crt *cert, const char *prefix = NULL)
     {
       char buf[512];
-      const int size = x509parse_cert_info(buf, sizeof(buf), prefix ? prefix : "", cert);
+      const int size = x509_crt_info(buf, sizeof(buf), prefix ? prefix : "", cert);
       if (size >= 0)
 	return buf;
       else
@@ -773,8 +760,6 @@ namespace openvpn {
     }
 
     static int epki_decrypt(void *arg,
-			    int (*f_rng)(void *, unsigned char *, size_t),
-			    void *p_rng,
 			    int mode,
 			    size_t *olen,
 			    const unsigned char *input,
@@ -790,7 +775,7 @@ namespace openvpn {
 			 int (*f_rng)(void *, unsigned char *, size_t),
 			 void *p_rng,
 			 int mode,
-			 int hash_id,
+			 md_type_t md_alg,
 			 unsigned int hashlen,
 			 const unsigned char *hash,
 			 unsigned char *sig)
@@ -803,36 +788,36 @@ namespace openvpn {
 	    const unsigned char *digest_prefix = NULL;
 
 	    /* get signature type */
-	    switch (hash_id) {
-	    case SIG_RSA_RAW:
+	    switch (md_alg) {
+	    case POLARSSL_MD_NONE:
 	      break;
-	    case SIG_RSA_MD2:
+	    case POLARSSL_MD_MD2:
 	      digest_prefix = PKCS1::DigestPrefix::MD2;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD2);
 	      break;
-	    case SIG_RSA_MD5:
+	    case POLARSSL_MD_MD5:
 	      digest_prefix = PKCS1::DigestPrefix::MD5;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD5);
 	      break;
-	    case SIG_RSA_SHA1:
+	    case POLARSSL_MD_SHA1:
 	      digest_prefix = PKCS1::DigestPrefix::SHA1;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA1);
 	      break;
-	    case SIG_RSA_SHA256:
+	    case POLARSSL_MD_SHA256:
 	      digest_prefix = PKCS1::DigestPrefix::SHA256;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA256);
 	      break;
-	    case SIG_RSA_SHA384:
+	    case POLARSSL_MD_SHA384:
 	      digest_prefix = PKCS1::DigestPrefix::SHA384;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA384);
 	      break;
-	    case SIG_RSA_SHA512:
+	    case POLARSSL_MD_SHA512:
 	      digest_prefix = PKCS1::DigestPrefix::SHA512;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA512);
 	      break;
 	    default:
 	      OPENVPN_LOG_SSL("PolarSSLContext::epki_sign unrecognized hash_id, mode=" << mode
-			      << " hash_id=" << hash_id << " hashlen=" << hashlen);
+			      << " md_alg=" << md_alg << " hashlen=" << hashlen);
 	      return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
 	    }
 
@@ -866,7 +851,7 @@ namespace openvpn {
 	else
 	  {
 	    OPENVPN_LOG_SSL("PolarSSLContext::epki_sign unrecognized parameters, mode=" << mode 
-			    << " hash_id=" << hash_id << " hashlen=" << hashlen);
+			    << " md_alg=" << md_alg << " hashlen=" << hashlen);
 	    return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
 	  }
       }

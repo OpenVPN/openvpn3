@@ -1,20 +1,20 @@
 //
-//  rsactx.hpp
+//  pkctx.hpp
 //  OpenVPN
 //
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-// Wrap a PolarSSL rsa_context object.
+// Wrap a PolarSSL pk_context object.
 
-#ifndef OPENVPN_POLARSSL_PKI_RSACTX_H
-#define OPENVPN_POLARSSL_PKI_RSACTX_H
+#ifndef OPENVPN_POLARSSL_PKI_PKCTX_H
+#define OPENVPN_POLARSSL_PKI_PKCTX_H
 
 #include <string>
 #include <sstream>
 #include <cstring>
 
-#include <polarssl/x509.h>
+#include <polarssl/pk.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -24,14 +24,14 @@
 namespace openvpn {
   namespace PolarSSLPKI {
 
-    class RSAContext : public RC<thread_unsafe_refcount>
+    class PKContext : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<RSAContext> Ptr;
+      typedef boost::intrusive_ptr<PKContext> Ptr;
 
-      RSAContext() : ctx(NULL) {}
+      PKContext() : ctx(NULL) {}
 
-      RSAContext(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
+      PKContext(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
 	: ctx(NULL)
       {
 	try {
@@ -47,21 +47,21 @@ namespace openvpn {
       void parse(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
       {
 	alloc();
-	const int status = x509parse_key(ctx,
-					 (const unsigned char *)key_txt.c_str(),
-					 key_txt.length(),
-					 (const unsigned char *)priv_key_pwd.c_str(),
-					 priv_key_pwd.length());
+	const int status = pk_parse_key(ctx,
+					(const unsigned char *)key_txt.c_str(),
+					key_txt.length(),
+					(const unsigned char *)priv_key_pwd.c_str(),
+					priv_key_pwd.length());
 	if (status < 0)
 	  throw PolarSSLException("error parsing " + title + " private key", status);
       }
 
-      rsa_context* get() const
+      pk_context* get() const
       {
 	return ctx;
       }
 
-      ~RSAContext()
+      ~PKContext()
       {
 	dealloc();
       }
@@ -71,8 +71,8 @@ namespace openvpn {
       {
 	if (!ctx)
 	  {
-	    ctx = new rsa_context;
-	    std::memset(ctx, 0, sizeof(rsa_context));
+	    ctx = new pk_context;
+	    pk_init(ctx);
 	  }
       }
 
@@ -80,13 +80,13 @@ namespace openvpn {
       {
 	if (ctx)
 	  {
-	    rsa_free(ctx);
+	    pk_free(ctx);
 	    delete ctx;
 	    ctx = NULL;
 	  }
       }
 
-      rsa_context *ctx;
+      pk_context *ctx;
     };
 
   }

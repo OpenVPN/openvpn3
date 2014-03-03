@@ -5,7 +5,7 @@
 //  Copyright (c) 2012 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-// Wrap a PolarSSL x509_cert object
+// Wrap a PolarSSL x509_crt object
 
 #ifndef OPENVPN_POLARSSL_PKI_X509CERT_H
 #define OPENVPN_POLARSSL_PKI_X509CERT_H
@@ -51,9 +51,9 @@ namespace openvpn {
 	if (cert_txt.empty())
 	  throw PolarSSLException(title + " certificate is undefined");
 
-	const int status = x509parse_crt(chain,
-					 (const unsigned char *)cert_txt.c_str(),
-					 cert_txt.length());
+	const int status = x509_crt_parse(chain,
+					  (const unsigned char *)cert_txt.c_str(),
+					  cert_txt.length());
 	if (status < 0)
 	  {
 	    throw PolarSSLException("error parsing " + title + " certificate", status);
@@ -70,7 +70,7 @@ namespace openvpn {
 	  }
       }
 
-      x509_cert* get() const
+      x509_crt* get() const
       {
 	return chain;
       }
@@ -85,8 +85,8 @@ namespace openvpn {
       {
 	if (!chain)
 	  {
-	    chain = new x509_cert;
-	    std::memset(chain, 0, sizeof(x509_cert));
+	    chain = new x509_crt;
+	    std::memset(chain, 0, sizeof(x509_crt));
 	  }
       }
 
@@ -94,13 +94,13 @@ namespace openvpn {
       {
 	if (chain)
 	  {
-	    x509_free(chain);
+	    x509_crt_free(chain);
 	    delete chain;
 	    chain = NULL;
 	  }
       }
 
-      x509_cert *chain;
+      x509_crt *chain;
     };
   }
 }
