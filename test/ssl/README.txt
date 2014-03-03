@@ -20,7 +20,16 @@ On Linux:
 
     PSSL=1 build proto
 
+  Build with PolarSSL client and server:
+
+    GCC_EXTRA="-DUSE_POLARSSL_SERVER" PSSL=1 build proto
+
 Variations:
+
+  To simulate more data-channel activity and less SSL renegotiations
+  (RENEG default is 90):
+
+  GCC_EXTRA="-DRENEG=900" build proto
 
   For verbose output, lower the number of xmit/recv iterations by defining
   ITER to be 10000 or less, e.g.

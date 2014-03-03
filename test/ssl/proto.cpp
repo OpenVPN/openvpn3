@@ -21,6 +21,11 @@
 
 #define OPENVPN_LOG_SSL(x) // disable
 
+// how many virtual seconds between SSL renegotiations
+#ifndef RENEG
+#define RENEG 90
+#endif
+
 // number of threads to use for test
 #ifndef N_THREADS
 #define N_THREADS 1
@@ -667,7 +672,7 @@ int test(const int thread_num)
     cc.load_private_key(client_key);
 #endif
 #ifdef VERBOSE
-    cc.enable_debug();
+    cc.ssl_debug_level = 1;
 #endif
 #if defined(USE_POLARSSL)
     cc.rng = rng_cli;
@@ -710,7 +715,7 @@ int test(const int thread_num)
 #if defined(CLIENT_NO_RENEG)
     cp->renegotiate = Time::Duration::infinite();
 #else
-    cp->renegotiate = Time::Duration::seconds(90);
+    cp->renegotiate = Time::Duration::seconds(RENEG);
 #endif
     cp->expire = cp->renegotiate + cp->renegotiate;
     cp->keepalive_ping = Time::Duration::seconds(5);
@@ -734,7 +739,7 @@ int test(const int thread_num)
     sc.rng = rng_serv;
 #endif
 #ifdef VERBOSE
-    sc.enable_debug();
+    sc.ssl_debug_level = 1;
 #endif
 
     // server ProtoContext config
@@ -771,7 +776,7 @@ int test(const int thread_num)
 #if defined(SERVER_NO_RENEG)
     sp->renegotiate = Time::Duration::infinite();
 #else
-    sp->renegotiate = Time::Duration::seconds(90);
+    sp->renegotiate = Time::Duration::seconds(RENEG);
 #endif
     sp->expire = sp->renegotiate + sp->renegotiate;
     sp->keepalive_ping = Time::Duration::seconds(5);
