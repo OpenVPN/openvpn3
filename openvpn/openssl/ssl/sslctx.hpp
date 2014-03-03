@@ -90,7 +90,7 @@ namespace openvpn {
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
-      bool force_aes_cbc_ciphersuites; // fixme -- implement for OpenSSL
+      bool force_aes_cbc_ciphersuites;
 
       // if this callback is defined, no private key needs to be loaded
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
@@ -582,21 +582,29 @@ namespace openvpn {
 	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 	  {
-	    long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
-	    if (config.tls_version_min > TLSVersion::V1_0)
-	      sslopt |= SSL_OP_NO_TLSv1;
-#           ifdef SSL_OP_NO_TLSv1_1
-	      if (config.tls_version_min > TLSVersion::V1_1)
-	        sslopt |= SSL_OP_NO_TLSv1_1;
-#           endif
-#           ifdef SSL_OP_NO_TLSv1_2
-	      if (config.tls_version_min > TLSVersion::V1_2)
-	        sslopt |= SSL_OP_NO_TLSv1_2;
-#           endif
+	    long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2;
+	    if (!config.force_aes_cbc_ciphersuites)
+	      {
+		sslopt |= SSL_OP_NO_SSLv3;
+		if (config.tls_version_min > TLSVersion::V1_0)
+		  sslopt |= SSL_OP_NO_TLSv1;
+#               ifdef SSL_OP_NO_TLSv1_1
+		  if (config.tls_version_min > TLSVersion::V1_1)
+		    sslopt |= SSL_OP_NO_TLSv1_1;
+#               endif
+#               ifdef SSL_OP_NO_TLSv1_2
+		  if (config.tls_version_min > TLSVersion::V1_2)
+		    sslopt |= SSL_OP_NO_TLSv1_2;
+#               endif
+	      }
 	    SSL_CTX_set_options(ctx, sslopt);
 	  }
 
-	  // fixme -- support SSL_CTX_set_cipher_list
+	  if (config.force_aes_cbc_ciphersuites)
+	    {
+	      if (!SSL_CTX_set_cipher_list(ctx, "DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA"))
+		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed for force_aes_cbc_ciphersuites");
+	    }
 
 	  if (config.local_cert_enabled)
 	    {
