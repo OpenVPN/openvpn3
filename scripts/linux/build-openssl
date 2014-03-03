@@ -8,6 +8,14 @@ if [ -z "$1" ]; then
     echo "usage: build-openssl x64|arm"
     exit 1
 fi
+if [ -z "$DEP_DIR" ]; then
+    echo DEP_DIR var must point to ovpn3 dependency tree
+    exit 1
+fi
+cd $DEP_DIR
+
+[ -z "$LINK_MODE" ] && LINK_MODE=static
+[ "$LINK_MODE" = "static" ] && LINK_MODE=no-shared
 
 case $1 in
 x64*)
@@ -30,8 +38,9 @@ rm -rf $OPENSSL_VERSION $DIST
 mkdir -p $DIST
 tar xfz $DL/$OPENSSL_VERSION.tar.gz
 cd $OPENSSL_VERSION
-./Configure $OPENSSL_TARGET shared threads no-idea no-mdc2 no-rc5 --prefix=$DIST
-#sed -i -e 's|-O3|-O3 -fPIC|' Makefile
+. $O3/vars-linux
+./Configure $OPENSSL_TARGET $LINK_MODE threads no-idea no-mdc2 no-rc5 --prefix=$DIST
+sed -i -e "s|-O3|$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_FPIC $LIB_OPT_LEVEL|" Makefile
 make -j $JOBS build_libs
 touch apps/openssl
 touch openssl.pc

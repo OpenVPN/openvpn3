@@ -1,57 +1,24 @@
 #!/usr/bin/env bash
 set -e
-. $O3/lib-versions
-[ -z "$DL" ] && DL=~/Downloads
-if [ "$NO_WIPE" != "1" ]; then
-    echo WIPE and reunzip source
-    rm -rf boost $BOOST_VERSION
-    mkdir boost
-    if [ "$SRCDIR" ]; then
-	cp -a "$SRCDIR" $BOOST_VERSION
-    else
-	tar xfz $DL/$BOOST_VERSION.tar.gz
-    fi
-    cd $BOOST_VERSION
-    #patch -p1 <$DL/asio-engine.patch
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+if [ -z "$DEP_DIR" ]; then
+    echo DEP_DIR var must point to ovpn3 dependency tree
+    exit 1
+fi
+cd $DEP_DIR
 
-    for T in osx osx-dbg ios ios-dbg iossim iossim-dbg ; do
-	TS="${T//-/}"
-	. $O3/vars-$T
-	cat >>tools/build/v2/user-config.jam <<EOF
-using clang : $TS : clang++
-            :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_FPIC"
-            ;
-EOF
-    done
-    . $O3/vars-reset
-    echo '********** BOOST CONFIG'
-    tail -30 tools/build/v2/user-config.jam
-    echo '********** END BOOST CONFIG'
-    ./bootstrap.sh
+rm -rf boost
+mkdir boost
+
+export LINK_MODE=static
+if [ "$OSX_ONLY" == "1" ]; then
+    export TARGETS="osx osx-dbg"
 else
-    echo RETAIN existing source
-    cd $BOOST_VERSION
+    export TARGETS="ios ios-dbg iossim iossim-dbg osx osx-dbg"
 fi
-TARGETS=""
-if [ "$OSX_ONLY" != "1" ]; then
-    TARGETS="ios iosdbg iossim iossimdbg"
-fi
-TARGETS="$TARGETS osx osxdbg"
 
-for target in $TARGETS ; do
-    if [ "${target:(-3)}" == "dbg" ]; then
-	variant=debug
-	stage=stage-${target%dbg}-dbg
-    else
-	variant=release
-	stage=stage-$target
-    fi
-    echo "************************ $target $variant $stage"
-    cmd="./bjam -d2 toolset=clang-$target --stagedir=$stage --with-system --with-thread --with-atomic variant=$variant link=static threading=multi runtime-link=static"
-    echo $cmd
-    $cmd
-done
-mv stage-* ../boost/
-cp -a boost ../boost/
+$O3/boost/build-boost
 exit 0

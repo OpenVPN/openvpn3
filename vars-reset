@@ -17,3 +17,4 @@ unset APPLE_FAMILY
 unset LIB_OPT_LEVEL
 unset LIB_FPIC
 unset DEBUG_BUILD
+unset LINK_MODE

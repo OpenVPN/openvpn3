@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 set -e
-. $O3/lib-versions
-export DIST=$(pwd)/lzo/lzo-linux
-rm -rf $LZO_VERSION $DIST
-mkdir -p $DIST
-tar xfz $DL/$LZO_VERSION.tar.gz
-cd $LZO_VERSION
-CFLAGS="" ./configure --prefix=$DIST --enable-shared --disable-static
-make
-make install
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
+if [ -z "$DEP_DIR" ]; then
+    echo DEP_DIR var must point to ovpn3 dependency tree
+    exit 1
+fi
+cd $DEP_DIR
+rm -rf lzo
+mkdir lzo
+TARGET=linux $O3/lzo/build-lzo
 exit 0
