@@ -408,15 +408,20 @@ int main(int argc, char *argv[])
 		// wait for connect thread to exit, also check for keypresses
 		while (!thread->try_join_for(boost::chrono::milliseconds(1000)))
 		  {
-		    const unsigned int c = console.get();
-		    if (c == 0x3C) // F2
-		      print_stats(*the_client);
-		    else if (c == 0x3D) // F3
-		      the_client->reconnect(0);
-		    else if (c == 0x3E) // F4
-		      the_client->stop();
-		    else if (c == 0x3F) // F5
-		      the_client->pause();
+		    while (true)
+		      {
+			const unsigned int c = console.get();
+			if (!c)
+			  break;
+			else if (c == 0x3C) // F2
+			  print_stats(*the_client);
+			else if (c == 0x3D) // F3
+			  the_client->reconnect(0);
+			else if (c == 0x3E) // F4
+			  the_client->stop();
+			else if (c == 0x3F) // F5
+			  the_client->pause();
+		      }
 		  }
 		the_client = NULL;
 #endif
