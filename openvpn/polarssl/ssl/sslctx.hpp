@@ -80,6 +80,7 @@ namespace openvpn {
       Config() : external_pki(NULL),
 		 ssl_debug_level(0),
 		 ns_cert_type(NSCert::NONE),
+		 tls_version_min(TLSVersion::UNDEF),
 		 local_cert_enabled(true),
                  force_aes_cbc_ciphersuites(false) {}
 

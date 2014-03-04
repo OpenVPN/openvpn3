@@ -72,6 +72,7 @@ namespace openvpn {
       Config() : external_pki(NULL),
 		 ssl_debug_level(0),
 		 ns_cert_type(NSCert::NONE),
+		 tls_version_min(TLSVersion::UNDEF),
 		 local_cert_enabled(true),
 		 force_aes_cbc_ciphersuites(false) {}
 
@@ -557,9 +558,10 @@ namespace openvpn {
       try
 	{
 	  // Create new SSL_CTX for server or client mode
+	  const bool ssl23 = (config.force_aes_cbc_ciphersuites || (config.tls_version_min > TLSVersion::UNDEF));
 	  if (config.mode.is_server())
 	    {
-	      ctx = SSL_CTX_new(SSLv23_server_method());
+	      ctx = SSL_CTX_new(ssl23 ? SSLv23_server_method() : TLSv1_server_method());
 	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
 
@@ -571,7 +573,7 @@ namespace openvpn {
 	    }
 	  else if (config.mode.is_client())
 	    {
-	      ctx = SSL_CTX_new(SSLv23_client_method());
+	      ctx = SSL_CTX_new(ssl23 ? SSLv23_client_method() : TLSv1_client_method());
 	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
 	    }
@@ -581,24 +583,26 @@ namespace openvpn {
 	  // Set SSL options
 	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-	  {
-	    long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2;
-	    if (!config.force_aes_cbc_ciphersuites)
-	      {
-		sslopt |= SSL_OP_NO_SSLv3;
-		if (config.tls_version_min > TLSVersion::V1_0)
-		  sslopt |= SSL_OP_NO_TLSv1;
-#               ifdef SSL_OP_NO_TLSv1_1
-		  if (config.tls_version_min > TLSVersion::V1_1)
-		    sslopt |= SSL_OP_NO_TLSv1_1;
-#               endif
-#               ifdef SSL_OP_NO_TLSv1_2
-		  if (config.tls_version_min > TLSVersion::V1_2)
-		    sslopt |= SSL_OP_NO_TLSv1_2;
-#               endif
-	      }
-	    SSL_CTX_set_options(ctx, sslopt);
-	  }
+	  long sslopt = SSL_OP_SINGLE_DH_USE;
+	  if (ssl23)
+	    {
+	      sslopt |= SSL_OP_NO_SSLv2;
+	      if (!config.force_aes_cbc_ciphersuites)
+	        {
+		  sslopt |= SSL_OP_NO_SSLv3;
+		  if (config.tls_version_min > TLSVersion::V1_0)
+		    sslopt |= SSL_OP_NO_TLSv1;
+#                 ifdef SSL_OP_NO_TLSv1_1
+		    if (config.tls_version_min > TLSVersion::V1_1)
+		      sslopt |= SSL_OP_NO_TLSv1_1;
+#                 endif
+#                 ifdef SSL_OP_NO_TLSv1_2
+		    if (config.tls_version_min > TLSVersion::V1_2)
+		      sslopt |= SSL_OP_NO_TLSv1_2;
+#                 endif
+	        }
+	    }
+	  SSL_CTX_set_options(ctx, sslopt);
 
 	  if (config.force_aes_cbc_ciphersuites)
 	    {

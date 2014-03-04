@@ -19,7 +19,8 @@
 namespace openvpn {
   namespace TLSVersion {
     enum Type {
-      V1_0=0,
+      UNDEF=0,
+      V1_0,
       V1_1,
       V1_2
     };
@@ -40,7 +41,7 @@ namespace openvpn {
 	  else
 	    throw option_error("tls-version-min: unrecognized TLS version");
 	}
-      return V1_0;
+      return UNDEF;
     }
   }
 }
