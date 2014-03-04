@@ -15,6 +15,12 @@
 #include <cstring>
 #include <limits>
 
+#include <openvpn/common/platform.hpp>
+
+#ifdef OPENVPN_PLATFORM_WIN
+#include "protowin.h"
+#endif
+
 #define OPENVPN_DEBUG
 #define OPENVPN_ENABLE_ASSERT
 #define USE_TLS_AUTH
@@ -671,6 +677,7 @@ int test(const int thread_num)
     cc.load_cert(client_crt);
     cc.load_private_key(client_key);
 #endif
+    cc.tls_version_min = TLSVersion::UNDEF;
 #ifdef VERBOSE
     cc.ssl_debug_level = 1;
 #endif
@@ -735,6 +742,7 @@ int test(const int thread_num)
     sc.load_cert(server_crt);
     sc.load_private_key(server_key);
     sc.load_dh(dh_pem);
+    sc.tls_version_min = TLSVersion::UNDEF;
 #if defined(USE_POLARSSL_SERVER)
     sc.rng = rng_serv;
 #endif
