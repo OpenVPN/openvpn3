@@ -22,11 +22,11 @@ namespace openvpn {
     std::ostringstream os;
 #ifdef POLARSSL_SELF_TEST
     const int verbose = 1;
-    os << "PolarSSL self test:" << std::endl;
+    os << "PolarSSL self test (tests return 0 if successful):" << std::endl;
     os << "  aes_self_test status=" << aes_self_test(verbose) << std::endl;
     os << "  sha1_self_test status=" << sha1_self_test(verbose) << std::endl;
-    os << "  sha2_self_test status=" << sha2_self_test(verbose) << std::endl;
-    os << "  sha4_self_test status=" << sha4_self_test(verbose) << std::endl;
+    os << "  sha256_self_test status=" << sha256_self_test(verbose) << std::endl;
+    os << "  sha512_self_test status=" << sha512_self_test(verbose) << std::endl;
     os << "  mpi_self_test status=" << mpi_self_test(verbose) << std::endl;
 #else
     os << "PolarSSL self test: not compiled" << std::endl;

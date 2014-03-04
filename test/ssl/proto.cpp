@@ -116,6 +116,8 @@
 #include <boost/bind.hpp>
 #endif
 
+#include <openvpn/crypto/selftest.hpp>
+
 using namespace openvpn;
 
 // server Crypto/SSL/Rand implementation (usually OpenSSL-based)
@@ -863,6 +865,7 @@ int main(int /*argc*/, char* /*argv*/[])
 {
   // process-wide initialization
   InitProcess::init();
+  SelfTest::crypto_self_test();
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
   boost::thread* threads[N_THREADS];
