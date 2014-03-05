@@ -35,7 +35,8 @@ namespace openvpn {
     typedef boost::intrusive_ptr<ActionList> Ptr;
 
     ActionList(const size_t capacity=16)
-      : enable_destroy_(false)
+      : enable_destroy_(false),
+	halt_(false)
     {
       actions.reserve(capacity);
     }
@@ -45,18 +46,26 @@ namespace openvpn {
       actions.push_back(action);
     }
 
-    void execute()
+    bool execute()
     {
       for (ActionVec::iterator i = actions.begin(); i != actions.end(); ++i)
 	{
 	  Action& a = **i;
+	  if (halt_)
+	    return false;
 	  a.execute();
 	}
+      return true;
     }
 
     void enable_destroy(const bool state)
     {
       enable_destroy_ = state;
+    }
+
+    void halt()
+    {
+      halt_ = true;
     }
 
     virtual void destroy()
@@ -71,6 +80,7 @@ namespace openvpn {
   private:
     ActionVec actions;
     bool enable_destroy_;
+    volatile bool halt_;
   };
 
 }

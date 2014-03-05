@@ -11,71 +11,39 @@
 #include <windows.h>
 
 #include <string>
-#include <vector>
 
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/destruct.hpp>
+#include <openvpn/common/action.hpp>
 #include <openvpn/win/call.hpp>
 
 namespace openvpn {
 
-  class WinCommandList : public DestructorBase
+  class WinCmd : public Action
   {
   public:
-    typedef boost::intrusive_ptr<WinCommandList> Ptr;
+    typedef boost::intrusive_ptr<WinCmd> Ptr;
 
-    struct Cmd
+    WinCmd(const std::string& command)
+      : cmd(command)
     {
-      std::string cmd;
-    };
-
-    WinCommandList() : enable_destroy_(false) {}
-
-    void add(const std::string& command)
-    {
-      Cmd c;
-      c.cmd = command;
-      commands.push_back(c);
     }
 
-    void execute()
+    virtual void execute()
     {
-      for (CmdVec::const_iterator i = commands.begin(); i != commands.end(); ++i)
-	{
-	  const Cmd& c = *i;
-	  call(c);
-	}
-    }
-
-    void enable_destroy(const bool state)
-    {
-      enable_destroy_ = state;
-    }
-
-    virtual void destroy()
-    {
-      if (enable_destroy_)
-	{
-	  execute();
-	  enable_destroy_ = false;
-	}
-    }
-
-    void call(const Cmd& cmd)
-    {
-      OPENVPN_LOG(cmd.cmd);
-      std::string out = Win::call(cmd.cmd);
+      OPENVPN_LOG(cmd);
+      std::string out = Win::call(cmd);
       string::trim_crlf(out);
       OPENVPN_LOG(out);
     }
 
-  private:
-    typedef std::vector<Cmd> CmdVec;
+    virtual std::string to_string() const
+    {
+      return cmd;
+    }
 
-    CmdVec commands;
-    bool enable_destroy_;
+  private:
+    std::string cmd;
   };
 
 }
-
 #endif
