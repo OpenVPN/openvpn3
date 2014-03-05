@@ -5,7 +5,7 @@
 #   AES_NI=1 -- enable AES_NI processor optimization
 #   EXTERNAL_RNG=1 -- disable all internal RNG implementations (caller must provide)
 #   ENABLE_TESTING=1 -- run PolarSSL test scripts after build
-#   DEBUG_BUILD=1 -- enable minimal testing on target
+#   DEBUG_BUILD=1 or SELF_TEST=1 -- enable minimal testing on target
 #   ENABLE_SERVER=1  -- enable SSL/TLS server code
 #   ENABLE_FS_IO=1 -- enable PolarSSL file I/O
 #   VERBOSE=1 -- see build commands
@@ -88,7 +88,7 @@ if [ "$ENABLE_TESTING" = "1" ]; then
 fi
 
 # enable minimal testing on target
-if [ "$DEBUG_BUILD" = "1" ]; then
+if [ "$DEBUG_BUILD" = "1" ] || [ "$SELF_TEST" = "1" ]; then
     echo "#define POLARSSL_SELF_TEST" >>$OPC
 fi
 
@@ -99,7 +99,7 @@ elif [ "$APPLE_FAMILY" = "1" ]; then
     OPT="$OPT -DCMAKE_TOOLCHAIN_FILE=$PD/apple.cmake"
 fi
 
-# OpenSSL
+# Minicrypto
 if [ "$USE_MINICRYPTO" = "1" ]; then
     OPT="$OPT -DMINICRYPTO=1"
     if [ "$MINICRYPTO_DIR" ]; then
@@ -108,11 +108,13 @@ if [ "$USE_MINICRYPTO" = "1" ]; then
     if [ "$OSSLCRYPTO_DIR" ]; then
 	OPT="$OPT -DOSSLCRYPTO_DIR=$OSSLCRYPTO_DIR"
     fi
-    echo "#define POLARSSL_AES_ALT" >>$OPC
+    if [ "$MINICRYPTO_NO_AES" != "1" ]; then
+	echo "#define POLARSSL_AES_ALT" >>$OPC
+    fi
     echo "#define POLARSSL_SHA1_ALT" >>$OPC
-    echo "#define POLARSSL_SHA2_ALT" >>$OPC
-    echo "#define POLARSSL_SHA4_ALT" >>$OPC
-    if [ "$AES_NI" = "1" ]; then
+    echo "#define POLARSSL_SHA256_ALT" >>$OPC
+    echo "#define POLARSSL_SHA512_ALT" >>$OPC
+    if [ "$AES_NI" = "1" ] && [ "$MINICRYPTO_NO_AES" != "1" ]; then
 	echo "#define POLARSSL_USE_OPENSSL_AES_NI" >>$OPC
     fi
 fi
@@ -152,5 +154,4 @@ fi
 
 # copy headers
 cp -a ../$POLARSSL_VERSION/include/polarssl include/
-
 exit 0

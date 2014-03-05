@@ -15,8 +15,14 @@ cd $DEP_DIR
 rm -rf minicrypto
 mkdir minicrypto
 
-for target in ios-dbg ios ; do
-    echo '***************' TARGET $target
-    TARGET=$target $O3/minicrypto/build-minicrypto
+for target in osx osx-dbg ; do
+    echo '***************' Minicrypto-32 $target
+    TARGET=$target ARCH=i386 $O3/minicrypto/build-minicrypto-osx
+    echo '***************' Minicrypto-64 $target
+    TARGET=$target ARCH=x86_64 $O3/minicrypto/build-minicrypto-osx
+    cd minicrypto/minicrypto-$target
+    lipo -create */libminicrypto.a -output libminicrypto.a
+    lipo -info libminicrypto.a
+    cd ../..
 done
 exit 0

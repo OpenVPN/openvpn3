@@ -29,7 +29,7 @@
 
 // how many virtual seconds between SSL renegotiations
 #ifndef RENEG
-#define RENEG 90
+#define RENEG 900
 #endif
 
 // number of threads to use for test
@@ -82,6 +82,21 @@
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/init/initprocess.hpp>
 
+#if !(defined(USE_OPENSSL) || defined(USE_POLARSSL) || defined(USE_APPLE_SSL))
+#error Must define one or more of USE_OPENSSL, USE_POLARSSL, USE_APPLE_SSL.
+#endif
+
+#if defined(USE_OPENSSL) && (defined(USE_POLARSSL) || defined(USE_APPLE_SSL))
+#undef USE_OPENSSL
+#define USE_OPENSSL_SERVER
+#elif !defined(USE_OPENSSL) && defined(USE_POLARSSL)
+#define USE_POLARSSL_SERVER
+#elif defined(USE_OPENSSL) && !defined(USE_POLARSSL)
+#define USE_OPENSSL_SERVER
+#else
+#error no server setup
+#endif
+
 #if defined(USE_OPENSSL) || defined(USE_OPENSSL_SERVER)
 #include <openvpn/openssl/util/init.hpp>
 
@@ -120,15 +135,17 @@
 
 using namespace openvpn;
 
-// server Crypto/SSL/Rand implementation (usually OpenSSL-based)
+// server Crypto/SSL/Rand implementation
 #if defined(USE_POLARSSL_SERVER)
 typedef PolarSSLCryptoAPI ServerCryptoAPI;
 typedef PolarSSLContext<PolarSSLRandom> ServerSSLAPI;
 typedef PolarSSLRandom ServerRandomAPI;
-#else // if defined(USE_OPENSSL_SERVER)
+#elif defined(USE_OPENSSL_SERVER)
 typedef OpenSSLCryptoAPI ServerCryptoAPI;
 typedef OpenSSLContext ServerSSLAPI;
 typedef OpenSSLRandom ServerRandomAPI;
+#else
+#error No server SSL implementation defined
 #endif
 
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
@@ -861,11 +878,17 @@ int test(const int thread_num)
   return 0;
 }
 
-int main(int /*argc*/, char* /*argv*/[])
+int main(int argc, char* argv[])
 {
   // process-wide initialization
   InitProcess::init();
-  SelfTest::crypto_self_test();
+
+  if (argc >= 2 && !strcmp(argv[1], "test"))
+    {
+      const std::string out = SelfTest::crypto_self_test();
+      OPENVPN_LOG(out);
+      return 0;
+    }
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
   boost::thread* threads[N_THREADS];

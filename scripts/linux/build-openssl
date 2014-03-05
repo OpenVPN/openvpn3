@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
-if [ -z "$O3" ]; then
-    echo O3 var must point to ovpn3 tree
-    exit 1
-fi
 if [ -z "$1" ]; then
     echo "usage: build-openssl x64|arm"
+    exit 1
+fi
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
     exit 1
 fi
 if [ -z "$DEP_DIR" ]; then
@@ -14,17 +14,15 @@ if [ -z "$DEP_DIR" ]; then
 fi
 cd $DEP_DIR
 
-[ -z "$LINK_MODE" ] && LINK_MODE=static
-[ "$LINK_MODE" = "static" ] && LINK_MODE=no-shared
+rm -rf openssl
+mkdir openssl
 
 case $1 in
 x64*)
-  OPENSSL_TARGET=linux-x86_64
-  JOBS=4
+  export OPENSSL_TARGET=linux-x86_64
   ;;
 arm*)
-  OPENSSL_TARGET=linux-armv4
-  JOBS=1
+  export OPENSSL_TARGET=linux-armv4
   ;;
 *)
   echo "unknown platform"
@@ -32,19 +30,5 @@ arm*)
   ;;
 esac
 
-. $O3/lib-versions
-export DIST=$(pwd)/openssl/openssl-linux
-rm -rf $OPENSSL_VERSION $DIST
-mkdir -p $DIST
-tar xfz $DL/$OPENSSL_VERSION.tar.gz
-cd $OPENSSL_VERSION
-. $O3/vars-linux
-./Configure $OPENSSL_TARGET $LINK_MODE threads no-idea no-mdc2 no-rc5 --prefix=$DIST
-sed -i -e "s|-O3|$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_FPIC $LIB_OPT_LEVEL|" Makefile
-make -j $JOBS build_libs
-touch apps/openssl
-touch openssl.pc
-touch libcrypto.pc
-touch libssl.pc
-make install_sw
+TARGET=linux $O3/openssl/build-openssl
 exit 0

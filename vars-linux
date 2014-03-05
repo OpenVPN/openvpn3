@@ -1,8 +1,6 @@
 export JAVA_DIR=/usr/lib/jvm/java-7-openjdk-amd64
 [ -z "$DEP_DIR" ] && export DEP_DIR=$HOME/linux
 export PLATFORM=linux
-export LIB_OPT_LEVEL="-O3"
-export LIB_FPIC=""
 export OTHER_COMPILER_FLAGS=""
 export LIB_OPT_LEVEL="-O3"
-export LIB_FPIC="-fPIC"
+export LIB_FPIC=""

@@ -1,40 +1,43 @@
 Building proto.cpp sample:
 
-On Mac:
+On Mac/Linux:
+
+  Build with PolarSSL client and server + minicrypto lib:
+
+    PSSL=1 MINI=1 build proto
 
   Build with PolarSSL client and server (no ASM crypto algs):
 
-    GCC_EXTRA="-ferror-limit=4 -DUSE_POLARSSL_SERVER" PSSL=1 SNAP=1 LZ4=1 build proto
-
-  Build with PolarSSL client and OpenSSL server:
-
-    GCC_EXTRA="-ferror-limit=4 -Wno-deprecated-declarations" PSSL=1 SNAP=1 LZ4=1 OSSL=1 build proto
-
-On Linux:
+    PSSL=1 build proto
 
   Build with OpenSSL client and server:
 
-    build proto
+    OSSL=1 build proto
 
   Build with PolarSSL client and OpenSSL server:
 
-    PSSL=1 build proto
-
-  Build with PolarSSL client and server:
-
-    GCC_EXTRA="-DUSE_POLARSSL_SERVER" PSSL=1 build proto
+    PSSL=1 OSSL=1 build proto
 
 Variations:
 
-  To simulate more data-channel activity and less SSL renegotiations
-  (RENEG default is 90):
+  To simulate less data-channel activity and more SSL renegotiations
+  (RENEG default is 900):
 
-  GCC_EXTRA="-DRENEG=900" build proto
+  GCC_EXTRA="-DRENEG=90" build proto
 
   For verbose output, lower the number of xmit/recv iterations by defining
   ITER to be 10000 or less, e.g.
 
     GCC_EXTRA="-DITER=1000" build proto
+
+  Crypto self-test (PolarSSL must be built with DEBUG_BUILD=1 or SELF_TEST=1):
+
+    ./proto test
+
+Caveats:
+
+ When using PolarSSL as both client and server, make sure to build
+ PolarSSL on Mac OS X with OSX_SERVER=1.
 
 Typical output:
 

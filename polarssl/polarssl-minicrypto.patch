@@ -245,19 +245,19 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha1_alt.h polarssl.new/include/polars
 +#ifdef __cplusplus
 +}
 +#endif
-diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polarssl/sha2_alt.h
---- polarssl-1.2.7/include/polarssl/sha2_alt.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha2_alt.h	2013-06-07 17:43:56.000000000 -0600
+diff -uNr polarssl-1.2.7/include/polarssl/sha256_alt.h polarssl.new/include/polarssl/sha256_alt.h
+--- polarssl-1.2.7/include/polarssl/sha256_alt.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/sha256_alt.h	2013-06-07 17:43:56.000000000 -0600
 @@ -0,0 +1,71 @@
 +/*
-+ * Use OpenSSL implementation of SHA2 methods to get asm and hardware acceleration.
-+ * Don't include this file directly, it is included by sha2.h when
-+ * POLARSSL_SHA2_ALT is defined.
++ * Use OpenSSL implementation of SHA256 methods to get asm and hardware acceleration.
++ * Don't include this file directly, it is included by sha256.h when
++ * POLARSSL_SHA256_ALT is defined.
 + */
 +
 +#include "polarssl/sha_openssl.h"
 +
-+struct openssl_sha2_context {
++struct openssl_sha256_context {
 +  SHA_LONG h[8];
 +  SHA_LONG Nl,Nh;
 +  SHA_LONG data[SHA_LBLOCK];
@@ -266,29 +266,29 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polars
 +
 +typedef struct
 +{
-+  struct openssl_sha2_context octx;
++  struct openssl_sha256_context octx;
 +
 +  unsigned char ipad[64];     /*!< HMAC: inner padding        */
 +  unsigned char opad[64];     /*!< HMAC: outer padding        */
 +  int is224;                  /*!< 0 => SHA-256, else SHA-224 */
 +}
-+sha2_context;
++sha256_context;
 +
 +#ifdef __cplusplus
 +extern "C" {
 +#endif
 +
-+int SHA224_Init(struct openssl_sha2_context *c);
-+int SHA224_Update(struct openssl_sha2_context *c, const void *data, size_t len);
-+int SHA224_Final(unsigned char *md, struct openssl_sha2_context *c);
++int SHA224_Init(struct openssl_sha256_context *c);
++int SHA224_Update(struct openssl_sha256_context *c, const void *data, size_t len);
++int SHA224_Final(unsigned char *md, struct openssl_sha256_context *c);
 +
-+int SHA256_Init(struct openssl_sha2_context *c);
-+int SHA256_Update(struct openssl_sha2_context *c, const void *data, size_t len);
-+int SHA256_Final(unsigned char *md, struct openssl_sha2_context *c);
++int SHA256_Init(struct openssl_sha256_context *c);
++int SHA256_Update(struct openssl_sha256_context *c, const void *data, size_t len);
++int SHA256_Final(unsigned char *md, struct openssl_sha256_context *c);
 +
-+void sha256_block_data_order(struct openssl_sha2_context *c, const void *p, size_t num);
++void sha256_block_data_order(struct openssl_sha256_context *c, const void *p, size_t num);
 +
-+static inline void sha2_starts( sha2_context *ctx, int is224 )
++static inline void sha256_starts( sha256_context *ctx, int is224 )
 +{
 +  if ((ctx->is224 = is224))
 +    SHA224_Init(&ctx->octx);
@@ -296,7 +296,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polars
 +    SHA256_Init(&ctx->octx);
 +}
 +
-+static inline void sha2_update( sha2_context *ctx, const unsigned char *input, size_t ilen )
++static inline void sha256_update( sha256_context *ctx, const unsigned char *input, size_t ilen )
 +{
 +  if (ctx->is224)
 +    SHA224_Update(&ctx->octx, input, ilen);
@@ -304,7 +304,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polars
 +    SHA256_Update(&ctx->octx, input, ilen);
 +}
 +
-+static inline void sha2_finish( sha2_context *ctx, unsigned char output[32] )
++static inline void sha256_finish( sha256_context *ctx, unsigned char output[32] )
 +{
 +  if (ctx->is224)
 +    SHA224_Final(output, &ctx->octx);
@@ -312,7 +312,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polars
 +    SHA256_Final(output, &ctx->octx);
 +}
 +
-+static inline void sha2_process( sha2_context *ctx, const unsigned char data[64] )
++static inline void sha256_process( sha256_context *ctx, const unsigned char data[64] )
 +{
 +  sha256_block_data_order(&ctx->octx, data, 1);
 +}
@@ -320,19 +320,19 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha2_alt.h polarssl.new/include/polars
 +#ifdef __cplusplus
 +}
 +#endif
-diff -uNr polarssl-1.2.7/include/polarssl/sha4_alt.h polarssl.new/include/polarssl/sha4_alt.h
---- polarssl-1.2.7/include/polarssl/sha4_alt.h	1969-12-31 17:00:00.000000000 -0700
-+++ polarssl.new/include/polarssl/sha4_alt.h	2013-06-07 17:43:56.000000000 -0600
-@@ -0,0 +1,67 @@
+diff -uNr polarssl-1.2.7/include/polarssl/sha512_alt.h polarssl.new/include/polarssl/sha512_alt.h
+--- polarssl-1.2.7/include/polarssl/sha512_alt.h	1969-12-31 17:00:00.000000000 -0700
++++ polarssl.new/include/polarssl/sha512_alt.h	2013-06-07 17:43:56.000000000 -0600
+@@ -0,0 +1,74 @@
 +/*
-+ * Use OpenSSL implementation of SHA4 methods to get asm and hardware acceleration.
-+ * Don't include this file directly, it is included by sha4.h when
-+ * POLARSSL_SHA4_ALT is defined.
++ * Use OpenSSL implementation of SHA512 methods to get asm and hardware acceleration.
++ * Don't include this file directly, it is included by sha512.h when
++ * POLARSSL_SHA512_ALT is defined.
 + */
 +
 +#include "polarssl/sha_openssl.h"
 +
-+struct openssl_sha4_context {
++struct openssl_sha512_context {
 +  SHA_LONG64 h[8];
 +  SHA_LONG64 Nl,Nh;
 +  union {
@@ -344,27 +344,29 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4_alt.h polarssl.new/include/polars
 +
 +typedef struct
 +{
-+  struct openssl_sha4_context octx;
++  struct openssl_sha512_context octx;
 +
 +  unsigned char ipad[128];    /*!< HMAC: inner padding        */
 +  unsigned char opad[128];    /*!< HMAC: outer padding        */
 +  int is384;                  /*!< 0 => SHA-512, else SHA-384 */
 +}
-+sha4_context;
++sha512_context;
 +
 +#ifdef __cplusplus
 +extern "C" {
 +#endif
 +
-+int SHA384_Init(struct openssl_sha4_context *c);
-+int SHA384_Update(struct openssl_sha4_context *c, const void *data, size_t len);
-+int SHA384_Final(unsigned char *md, struct openssl_sha4_context *c);
++int SHA384_Init(struct openssl_sha512_context *c);
++int SHA384_Update(struct openssl_sha512_context *c, const void *data, size_t len);
++int SHA384_Final(unsigned char *md, struct openssl_sha512_context *c);
 +
-+int SHA512_Init(struct openssl_sha4_context *c);
-+int SHA512_Update(struct openssl_sha4_context *c, const void *data, size_t len);
-+int SHA512_Final(unsigned char *md, struct openssl_sha4_context *c);
++int SHA512_Init(struct openssl_sha512_context *c);
++int SHA512_Update(struct openssl_sha512_context *c, const void *data, size_t len);
++int SHA512_Final(unsigned char *md, struct openssl_sha512_context *c);
 +
-+static inline void sha4_starts( sha4_context *ctx, int is384 )
++void sha512_block_data_order(struct openssl_sha512_context *c, const void *p, size_t num);
++
++static inline void sha512_starts( sha512_context *ctx, int is384 )
 +{
 +  if ((ctx->is384 = is384))
 +    SHA384_Init(&ctx->octx);
@@ -372,7 +374,7 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4_alt.h polarssl.new/include/polars
 +    SHA512_Init(&ctx->octx);
 +}
 +
-+static inline void sha4_update( sha4_context *ctx, const unsigned char *input, size_t ilen )
++static inline void sha512_update( sha512_context *ctx, const unsigned char *input, size_t ilen )
 +{
 +  if (ctx->is384)
 +    SHA384_Update(&ctx->octx, input, ilen);
@@ -380,12 +382,17 @@ diff -uNr polarssl-1.2.7/include/polarssl/sha4_alt.h polarssl.new/include/polars
 +    SHA512_Update(&ctx->octx, input, ilen);
 +}
 +
-+static inline void sha4_finish( sha4_context *ctx, unsigned char output[64] )
++static inline void sha512_finish( sha512_context *ctx, unsigned char output[64] )
 +{
 +  if (ctx->is384)
 +    SHA384_Final(output, &ctx->octx);
 +  else
 +    SHA512_Final(output, &ctx->octx);
++}
++
++static inline void sha512_process( sha512_context *ctx, const unsigned char data[128] )
++{
++  sha512_block_data_order(&ctx->octx, data, 1);
 +}
 +
 +#ifdef __cplusplus

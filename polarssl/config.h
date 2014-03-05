@@ -917,7 +917,10 @@
  *
  * This modules adds support for the AES-NI instructions on x86-64
  */
+// JY added
+#ifndef POLARSSL_AES_ALT
 #define POLARSSL_AESNI_C
+#endif
 
 /**
  * \def POLARSSL_AES_C

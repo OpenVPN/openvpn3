@@ -91,7 +91,8 @@ if [ "$PSSL" = "1" ]; then
     LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/library"
     if [ "$MINI" = "1" ]; then
 	LIBS="$LIBS -lminicrypto"
-	LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
+	LIBDIRS="$LIBDIRS -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM"
+	CPPFLAGS="$CPPFLAGS -DUSE_MINICRYPTO"
 	NOSSL=1
     fi
 fi

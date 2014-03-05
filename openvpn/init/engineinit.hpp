@@ -12,11 +12,13 @@
 
 #include <string>
 
+#include <openvpn/common/arch.hpp>
+
 #if defined(USE_OPENSSL)
 #include <openvpn/openssl/util/engine.hpp>
 #endif
 
-#if 0
+#if defined(USE_MINICRYPTO) && (defined(OPENVPN_ARCH_x86_64) || defined(OPENVPN_ARCH_i386))
 extern "C" {
   void OPENSSL_cpuid_setup();
 }
@@ -28,12 +30,10 @@ namespace openvpn {
   {
 #if defined(USE_OPENSSL)
     openssl_setup_engine(engine);
+#elif defined(USE_MINICRYPTO) && (defined(OPENVPN_ARCH_x86_64) || defined(OPENVPN_ARCH_i386))
+    OPENSSL_cpuid_setup();
 #endif
   }
 
-#if 0
-  OPENSSL_cpuid_setup();
-#endif
 }
-
 #endif

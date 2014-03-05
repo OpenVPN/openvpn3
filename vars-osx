@@ -3,8 +3,8 @@ export DEP_DIR=$HOME/src/mac
 export APPLE_FAMILY=1
 export GPP_CMD=clang++
 export GCC_CMD=clang
-export PLATFORM_FLAGS="-arch x86_64 -arch i386 -mmacosx-version-min=10.6"
+export MIN_DEPLOY_TARGET="-mmacosx-version-min=10.6"
+export PLATFORM_FLAGS="-arch x86_64 -arch i386 $MIN_DEPLOY_TARGET"
 export OTHER_COMPILER_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
-export OPENSSL_TARGET=darwin64-x86_64-cc
