@@ -168,8 +168,8 @@ namespace openvpn {
 
 		  // configure adapter properties
 		  // fixme -- try to delete any stale routes on interface left over from previous session
-		  WinCommandList::Ptr add_cmds = new WinCommandList();
-		  remove_cmds.reset(new WinCommandList());
+		  ActionList::Ptr add_cmds = new ActionList();
+		  remove_cmds.reset(new ActionList());
 		  remove_cmds->enable_destroy(true);
 		  tun_persist->add_destructor(remove_cmds);
 		  adapter_config(th, tap, *po, *add_cmds, *remove_cmds);
@@ -249,8 +249,8 @@ namespace openvpn {
       static void adapter_config(HANDLE th,
 				 const Util::TapNameGuidPair& tap,
 				 const TunBuilderCapture& pull,
-				 WinCommandList& create,
-				 WinCommandList& destroy)
+				 ActionList& create,
+				 ActionList& destroy)
       {
 	// Windows interface index
 	const std::string tap_index_name = tap.index_or_name();
@@ -290,8 +290,8 @@ namespace openvpn {
 	      Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
 	    else
 	      Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
-	    create.add("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " store=active");
-	    destroy.add("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " all store=active");
+	    create.add(new WinCmd("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " gateway=" + local4->gateway + " store=active"));
+	    destroy.add(new WinCmd("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " gateway=all store=active"));
 	  }
 
 	// Set IPv6 Interface
@@ -305,11 +305,11 @@ namespace openvpn {
 	//  [[store=]active|persistent]
 	if (local6)
 	  {
-	    create.add("netsh interface ipv6 set address " + tap_index_name + ' ' + local6->address + " store=active");
-	    destroy.add("netsh interface ipv6 delete address " + tap_index_name + ' ' + local6->address + " store=active");
+	    create.add(new WinCmd("netsh interface ipv6 set address " + tap_index_name + ' ' + local6->address + " store=active"));
+	    destroy.add(new WinCmd("netsh interface ipv6 delete address " + tap_index_name + ' ' + local6->address + " store=active"));
 
-	    create.add("netsh interface ipv6 add route " + local6->gateway + '/' + to_string(local6->prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active");
-	    destroy.add("netsh interface ipv6 delete route " + local6->gateway + '/' + to_string(local6->prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active");
+	    create.add(new WinCmd("netsh interface ipv6 add route " + local6->gateway + '/' + to_string(local6->prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+	    destroy.add(new WinCmd("netsh interface ipv6 delete route " + local6->gateway + '/' + to_string(local6->prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
 	  }
 
 	// Process Routes
@@ -339,15 +339,15 @@ namespace openvpn {
 	      const TunBuilderCapture::Route& route = *i;
 	      if (route.ipv6)
 		{
-		  create.add("netsh interface ipv6 add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active");
-		  destroy.add("netsh interface ipv6 delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active");
+		  create.add(new WinCmd("netsh interface ipv6 add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+		  destroy.add(new WinCmd("netsh interface ipv6 delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
 		}
 	      else
 		{
 		  if (local4)
 		    {
-		      create.add("netsh interface ip add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + local4->gateway + " store=active");
-		      destroy.add("netsh interface ip delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + local4->gateway + " store=active");
+		      create.add(new WinCmd("netsh interface ip add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + local4->gateway + " store=active"));
+		      destroy.add(new WinCmd("netsh interface ip delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + local4->gateway + " store=active"));
 		    }
 		  else
 		    throw tun_win_error("IPv4 routes pushed without IPv4 ifconfig");
@@ -370,8 +370,8 @@ namespace openvpn {
 		      }
 		    else
 		      {
-			create.add("netsh interface ip add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active");
-			destroy.add("netsh interface ip delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active");
+			create.add(new WinCmd("netsh interface ip add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
+			destroy.add(new WinCmd("netsh interface ip delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
 		      }
 		  }
 		if (ipv6_error)
@@ -389,26 +389,26 @@ namespace openvpn {
 	      {
 		if (!pull.remote_address.ipv6)
 		  {
-		    create.add("netsh interface ip add route " + pull.remote_address.address + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active");
-		    destroy.add("netsh interface ip delete route " + pull.remote_address.address + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active");
+		    create.add(new WinCmd("netsh interface ip add route " + pull.remote_address.address + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
+		    destroy.add(new WinCmd("netsh interface ip delete route " + pull.remote_address.address + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
 		  }
 	      }
 	    else
 	      throw tun_win_error("redirect-gateway error: cannot detect default gateway");
 
-	    create.add("netsh interface ip add route 0.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active");
-	    create.add("netsh interface ip add route 128.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active");
-	    destroy.add("netsh interface ip delete route 0.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active");
-	    destroy.add("netsh interface ip delete route 128.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active");
+	    create.add(new WinCmd("netsh interface ip add route 0.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active"));
+	    create.add(new WinCmd("netsh interface ip add route 128.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active"));
+	    destroy.add(new WinCmd("netsh interface ip delete route 0.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active"));
+	    destroy.add(new WinCmd("netsh interface ip delete route 128.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active"));
 	  }
 
 	// Process IPv6 redirect-gateway
 	if (pull.reroute_gw.ipv6)
 	  {
-	    create.add("netsh interface ipv6 add route 0::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active");
-	    create.add("netsh interface ipv6 add route 8000::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active");
-	    destroy.add("netsh interface ipv6 delete route 0::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active");
-	    destroy.add("netsh interface ipv6 delete route 8000::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active");
+	    create.add(new WinCmd("netsh interface ipv6 add route 0::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+	    create.add(new WinCmd("netsh interface ipv6 add route 8000::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+	    destroy.add(new WinCmd("netsh interface ipv6 delete route 0::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+	    destroy.add(new WinCmd("netsh interface ipv6 delete route 8000::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
 	  }
 
 	// Process DNS Servers
@@ -436,11 +436,11 @@ namespace openvpn {
 	      const std::string proto = ds.ipv6 ? "ipv6" : "ip";
 	      const int idx = indices[bool(ds.ipv6)]++;
 	      if (idx)
-		create.add("netsh interface " + proto + " add dnsservers " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + " validate=no");
+		create.add(new WinCmd("netsh interface " + proto + " add dnsservers " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + " validate=no"));
 	      else
 		{
-		  create.add("netsh interface " + proto + " set dnsservers " + tap_index_name + " static " + ds.address + " register=none validate=no");
-		  destroy.add("netsh interface " + proto + " delete dnsservers " + tap_index_name + " all validate=no");
+		  create.add(new WinCmd("netsh interface " + proto + " set dnsservers " + tap_index_name + " static " + ds.address + " register=none validate=no"));
+		  destroy.add(new WinCmd("netsh interface " + proto + " delete dnsservers " + tap_index_name + " all validate=no"));
 		}
 	    }
 	}
@@ -460,18 +460,18 @@ namespace openvpn {
 	    {
 	      const TunBuilderCapture::WINSServer& ws = pull.wins_servers[i];
 	      if (i)
-		create.add("netsh interface ip add winsservers " + tap_index_name + ' ' + ws.address + ' ' + to_string(i+1));
+		create.add(new WinCmd("netsh interface ip add winsservers " + tap_index_name + ' ' + ws.address + ' ' + to_string(i+1)));
 	      else
 		{
-		  create.add("netsh interface ip set winsservers " + tap_index_name + " static " + ws.address);
-		  destroy.add("netsh interface ip delete winsservers " + tap_index_name + " all");
+		  create.add(new WinCmd("netsh interface ip set winsservers " + tap_index_name + " static " + ws.address));
+		  destroy.add(new WinCmd("netsh interface ip delete winsservers " + tap_index_name + " all"));
 		}
 	    }
 	}
 
 	// flush DNS cache
-	create.add("ipconfig /flushdns");
-	destroy.add("ipconfig /flushdns");
+	create.add(new WinCmd("ipconfig /flushdns"));
+	destroy.add(new WinCmd("ipconfig /flushdns"));
       }
 
       bool send(Buffer& buf)
@@ -538,7 +538,7 @@ namespace openvpn {
       TunImpl::Ptr impl;
       bool halt;
       TunProp::State::Ptr state;
-      WinCommandList::Ptr remove_cmds;
+      ActionList::Ptr remove_cmds;
     };
 
     inline TunClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service,
