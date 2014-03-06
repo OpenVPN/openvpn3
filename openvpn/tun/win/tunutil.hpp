@@ -33,9 +33,11 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/stringize.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
+#include <openvpn/common/action.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/scoped_handle.hpp>
+#include <openvpn/win/unicode.hpp>
 
 namespace openvpn {
   namespace TunWin {
@@ -417,6 +419,54 @@ namespace openvpn {
       private:
 	bool defined;
 	ULONG info[3];
+      };
+
+      // An action to set the DNS "Connection-specific DNS Suffix"
+      class ActionSetSearchDomain : public Action
+      {
+      public:
+	ActionSetSearchDomain(const std::string& search_domain_arg,
+			      const std::string& tap_guid_arg)
+	  : search_domain(search_domain_arg),
+	    tap_guid(tap_guid_arg)
+	{
+	}
+
+	virtual void execute()
+	{
+	  OPENVPN_LOG(to_string());
+
+	  LONG status;
+	  Win::RegKey key;
+	  const std::string reg_key_name = "SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces\\" + tap_guid;
+	  status = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+				reg_key_name.c_str(),
+				0,
+				KEY_READ|KEY_WRITE,
+				key.ref());
+	  if (status != ERROR_SUCCESS)
+	    OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error opening registry key: " << reg_key_name);
+
+	  Win::UTF16 dom(Win::utf16(search_domain));
+	  status = RegSetValueExW(key(),
+				  L"Domain",
+				  0,
+				  REG_SZ,
+				  (const BYTE *)dom(),
+				  (Win::utf16_strlen(dom())+1)*2);
+	  if (status != ERROR_SUCCESS)
+	    OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error writing Domain registry key: " << reg_key_name);
+
+	}
+
+	virtual std::string to_string() const
+	{
+	  return "Set DNS search domain: '" + search_domain + "' " + tap_guid;
+	}
+
+      private:
+	const std::string search_domain;
+	const std::string tap_guid;
       };
 
       inline const MIB_IPFORWARDTABLE* windows_routing_table()

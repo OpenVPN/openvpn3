@@ -445,9 +445,13 @@ namespace openvpn {
 	    }
 	}
 
-	// fixme -- Process DNS search domains (it doesn't appear that netsh supports this)
+	// Process DNS search domains
 	if (!pull.search_domains.empty())
-	  OPENVPN_LOG("NOTE: DNS search domains not currently supported");
+	  {
+	    // Only the first search domain is used (Windows limitation?)
+	    create.add(new Util::ActionSetSearchDomain(pull.search_domains[0].domain, tap.guid));
+	    destroy.add(new Util::ActionSetSearchDomain("", tap.guid));
+	  }
 
 	// Process WINS Servers
 	//
