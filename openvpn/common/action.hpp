@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/destruct.hpp>
@@ -53,7 +54,13 @@ namespace openvpn {
 	  Action& a = **i;
 	  if (halt_)
 	    return false;
-	  a.execute();
+	  try {
+	    a.execute();
+	  }
+	  catch (const std::exception& e)
+	    {
+	      OPENVPN_LOG("action exception: " << e.what());
+	    }
 	}
       return true;
     }
