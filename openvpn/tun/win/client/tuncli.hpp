@@ -439,7 +439,7 @@ namespace openvpn {
 		create.add(new WinCmd("netsh interface " + proto + " add dnsservers " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + " validate=no"));
 	      else
 		{
-		  create.add(new WinCmd("netsh interface " + proto + " set dnsservers " + tap_index_name + " static " + ds.address + " register=none validate=no"));
+		  create.add(new WinCmd("netsh interface " + proto + " set dnsservers " + tap_index_name + " static " + ds.address + " register=primary validate=no"));
 		  destroy.add(new WinCmd("netsh interface " + proto + " delete dnsservers " + tap_index_name + " all validate=no"));
 		}
 	    }
