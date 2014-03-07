@@ -128,6 +128,7 @@ namespace openvpn {
 		  // close old TAP handle if persisted
 		  tun_persist->close();
 
+		  // enumerate available TAP adapters
 		  Util::TapNameGuidPairList guids;
 		  OPENVPN_LOG("TAP ADAPTERS:" << std::endl << guids.to_string());
 
@@ -162,23 +163,30 @@ namespace openvpn {
 		  // create ASIO wrapper for HANDLE
 		  TAPStream* ts = new TAPStream(io_service, th);
 
-		  // persist state
+		  // persist tun settings state
 		  if (tun_persist->persist_tun_state(ts, state))
 		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 
-		  // configure adapter properties
-		  // fixme -- try to delete any stale routes on interface left over from previous session
+		  // set TAP media status to CONNECTED
+		  Util::tap_set_media_status(th, true);
+
+		  // set up ActionLists for setting up and removing adapter properties
 		  ActionList::Ptr add_cmds = new ActionList();
 		  remove_cmds.reset(new ActionList());
 		  remove_cmds->enable_destroy(true);
 		  tun_persist->add_destructor(remove_cmds);
-		  adapter_config(th, tap, *po, *add_cmds, *remove_cmds);
-		  add_cmds->execute();
 
-		  // set TAP media status to CONNECTED
-		  Util::tap_set_media_status(th, true);
+		  // try to delete any stale routes on interface left over from previous session
+		  add_cmds->add(new Util::ActionDeleteAllRoutesOnInterface(tap.index));
+
+		  // populate add/remove lists with actions
+		  adapter_config(th, tap, *po, *add_cmds, *remove_cmds);
+
+		  // execute the add actions
+		  add_cmds->execute();
 		}
 
+	      // configure tun interface packet forwarding
 	      impl.reset(new TunImpl(tun_persist,
 				     "TUN_WIN",
 				     true,

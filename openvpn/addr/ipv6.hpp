@@ -183,6 +183,14 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_byte_string(const unsigned char *bytestr)
+      {
+	Addr ret;
+	network_to_host_order(&ret.u, (const union ipv6addr *)bytestr);
+	ret.scope_id_ = 0;
+	return ret;
+      }
+
       boost::asio::ip::address_v6 to_asio() const
       {
 	union ipv6addr addr;

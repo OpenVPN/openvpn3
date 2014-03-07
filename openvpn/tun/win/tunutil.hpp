@@ -38,6 +38,7 @@
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/unicode.hpp>
+#include <openvpn/win/cmd.hpp>
 
 namespace openvpn {
   namespace TunWin {
@@ -469,6 +470,7 @@ namespace openvpn {
 	const std::string tap_guid;
       };
 
+      // get the Windows IPv4 routing table
       inline const MIB_IPFORWARDTABLE* windows_routing_table()
       {
 	ULONG size = 0;
@@ -487,6 +489,28 @@ namespace openvpn {
 	      }
 	  }
 	return rt.release();
+      }
+
+      // delete method for PMIB_IPFORWARD_TABLE2
+      template <typename T>
+      class FreeFwdTable2 {
+      public:
+	static void del(T* p)
+	{
+	  FreeMibTable((PVOID)p);
+	}
+      };
+
+      // Get the Windows IPv4/IPv6 routing table.
+      // Note that returned pointer must be freed with FreeMibTable.
+      inline const MIB_IPFORWARD_TABLE2* windows_routing_table2(ADDRESS_FAMILY af)
+      {
+	MIB_IPFORWARD_TABLE2* routes = NULL;
+	int res = GetIpForwardTable2(af, &routes);
+	if (res == NO_ERROR)
+	  return routes;
+	else
+	  return NULL;
       }
 
       // Get the current default gateway
@@ -533,6 +557,89 @@ namespace openvpn {
       private:
 	DWORD index;
 	std::string addr;
+      };
+
+      // An action to delete all routes on an interface
+      class ActionDeleteAllRoutesOnInterface : public Action
+      {
+      public:
+	ActionDeleteAllRoutesOnInterface(const DWORD iface_index_arg)
+	  : iface_index(iface_index_arg)
+	{
+	}
+
+	virtual void execute()
+	{
+	  ActionList::Ptr actions = new ActionList();
+	  remove_all_ipv4_routes_on_iface(iface_index, *actions);
+	  remove_all_ipv6_routes_on_iface(iface_index, *actions);
+	  actions->execute();
+	}
+
+	virtual std::string to_string() const
+	{
+	  return "ActionDeleteAllRoutesOnInterface";
+	}
+
+      private:
+	static void remove_all_ipv4_routes_on_iface(DWORD index, ActionList& actions)
+	{
+	  ScopedPtr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
+	  if (rt.defined())
+	    {
+	      for (size_t i = 0; i < rt()->dwNumEntries; ++i)
+		{
+		  const MIB_IPFORWARDROW* row = &rt()->table[i];
+		  if (row->dwForwardIfIndex == index)
+		    {
+		      const IPv4::Addr net = IPv4::Addr::from_uint32(ntohl(row->dwForwardDest));
+		      const IPv4::Addr mask = IPv4::Addr::from_uint32(ntohl(row->dwForwardMask));
+		      const std::string net_str = net.to_string();
+		      const unsigned int pl = mask.prefix_len();
+
+		      // don't remove multicast route or other Windows-assigned routes
+		      if (net_str == "224.0.0.0" && pl == 4)
+			continue;
+		      if (net_str == "255.255.255.255" && pl == 32)
+			continue;
+
+		      actions.add(new WinCmd("netsh interface ip delete route " + net_str + '/' + openvpn::to_string(pl) + ' ' + openvpn::to_string(index) + " store=active"));
+		    }
+		}
+	    }
+	}
+
+	static void remove_all_ipv6_routes_on_iface(DWORD index, ActionList& actions)
+	{
+	  ScopedPtr<const MIB_IPFORWARD_TABLE2, FreeFwdTable2> rt2(windows_routing_table2(AF_INET6));
+	  if (rt2.defined())
+	    {
+	      const IPv6::Addr ll_net = IPv6::Addr::from_string("fe80::");
+	      const IPv6::Addr ll_mask = IPv6::Addr::netmask_from_prefix_len(64);
+	      for (size_t i = 0; i < rt2()->NumEntries; ++i)
+		{
+		  const MIB_IPFORWARD_ROW2* row = &rt2()->Table[i];
+		  if (row->InterfaceIndex == index)
+		    {
+		      const unsigned int pl = row->DestinationPrefix.PrefixLength;
+		      if (row->DestinationPrefix.Prefix.si_family == AF_INET6)
+			{
+			  const IPv6::Addr net = IPv6::Addr::from_byte_string(row->DestinationPrefix.Prefix.Ipv6.sin6_addr.u.Byte);
+			  const std::string net_str = net.to_string();
+
+			  // don't remove multicast route or other Windows-assigned routes
+			  if (net_str == "ff00::" && pl == 8)
+			    continue;
+			  if ((net & ll_mask) == ll_net && pl >= 64)
+			    continue;
+			  actions.add(new WinCmd("netsh interface ipv6 delete route " + net_str + '/' + openvpn::to_string(pl) + ' ' + openvpn::to_string(index) + " store=active"));
+			}
+		    }
+		}
+	    }
+	}
+
+	const DWORD iface_index;
       };
 
     }
