@@ -367,7 +367,13 @@ namespace openvpn {
 	  // set verify callback
 	  ssl_set_verify(ssl, verify_callback, ctx);
 
-	  // allocate session object, but don't support SSL-level session resume
+	  // Allocate session object, but don't support SSL-level session resume.
+	  // Note: SSL resume is not enabled because ssl_set_session_cache is not called.
+	  // Note: SSL renegotiation is not enabled because ssl_set_renegotiation
+	  //       defaults to SSL_RENEGOTIATION_DISABLED and ssl_legacy_renegotiation
+	  //       defaults to SSL_LEGACY_NO_RENEGOTIATION.
+	  // Also, POLARSSL_SSL_SESSION_TICKETS (compile flag) should be left undefined
+	  // in PolarSSL config.h.
 	  sess = new ssl_session;
 	  std::memset(sess, 0, sizeof(*sess));
 	  ssl_set_session(ssl, sess);

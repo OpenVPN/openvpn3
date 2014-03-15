@@ -583,7 +583,7 @@ namespace openvpn {
 	  // Set SSL options
 	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-	  long sslopt = SSL_OP_SINGLE_DH_USE;
+	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_NO_TICKET;
 	  if (ssl23)
 	    {
 	      sslopt |= SSL_OP_NO_SSLv2;

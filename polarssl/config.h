@@ -817,7 +817,8 @@
  *
  * Comment this macro to disable support for SSL session tickets
  */
-#define POLARSSL_SSL_SESSION_TICKETS
+// JY removed
+//#define POLARSSL_SSL_SESSION_TICKETS
 
 /**
  * \def POLARSSL_SSL_SERVER_NAME_INDICATION
