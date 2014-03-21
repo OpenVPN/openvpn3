@@ -102,28 +102,28 @@ namespace openvpn {
     {
     }
 
-    bool os_x_version_less_than_10_8() const
-    {
-      return ver.major() < 12;
-    }
-
     void flush_cache()
     {
-      {
-	Argv args;
-	args.push_back("/usr/bin/dscacheutil");
-	args.push_back("-flushcache");
-	OPENVPN_LOG(args.to_string());
-	system_cmd(args);
-      }
-      {
-	Argv args;
-	args.push_back("/usr/bin/killall");
-	args.push_back("-HUP");
-	args.push_back("mDNSResponder");
-	OPENVPN_LOG(args.to_string());
-	system_cmd(args);
-      }
+      const int v = ver.major();
+      if (v < Mac::Version::OSX_10_6)
+	OPENVPN_LOG("MacDNS: Error: No support for Mac OS X versions earlier than 10.6");
+      if (v == Mac::Version::OSX_10_6 || v >= Mac::Version::OSX_10_9)
+	{
+	  Argv args;
+	  args.push_back("/usr/bin/dscacheutil");
+	  args.push_back("-flushcache");
+	  OPENVPN_LOG(args.to_string());
+	  system_cmd(args);
+	}
+      if (v >= Mac::Version::OSX_10_7)
+	{
+	  Argv args;
+	  args.push_back("/usr/bin/killall");
+	  args.push_back("-HUP");
+	  args.push_back("mDNSResponder");
+	  OPENVPN_LOG(args.to_string());
+	  system_cmd(args);
+	}
     }
 
     bool signal_network_reconfiguration()
@@ -221,7 +221,7 @@ namespace openvpn {
       try {
 	CF::DynamicStore sc = ds_create();
 	Info info(sc, sname);
-	if (os_x_version_less_than_10_8())
+	if (ver.major() < Mac::Version::OSX_10_8)
 	  {
 	    // Mac OS X 10.7 and lower.
 	    //

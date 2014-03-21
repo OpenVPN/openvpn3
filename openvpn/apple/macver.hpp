@@ -33,6 +33,14 @@ namespace openvpn {
       //  7.x.x  OS X 10.3.x Panther
       //  6.x.x  OS X 10.2.x Jaguar
       //  5.x    OS X 10.1.x Puma
+
+      enum {
+	OSX_10_9=13,
+	OSX_10_8=12,
+	OSX_10_7=11,
+	OSX_10_6=10,
+      };
+
       Version()
       {
 	typedef std::vector<std::string> StringList;
