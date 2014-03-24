@@ -100,6 +100,20 @@ void worker_thread()
   std::cout << "Thread finished" << std::endl;
 }
 
+void print_stats(const Client& client)
+{
+  const int n = client.stats_n();
+  std::vector<long long> stats = client.stats_bundle();
+
+  std::cout << "STATS:" << std::endl;
+  for (int i = 0; i < n; ++i)
+    {
+      const long long value = stats[i];
+      if (value)
+	std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+    }
+}
+
 #if !defined(OPENVPN_PLATFORM_WIN)
 void handler(int signum)
 {
@@ -116,26 +130,31 @@ void handler(int signum)
       if (the_client)
 	the_client->reconnect(0);
       break;
+    case SIGUSR1:
+      if (the_client)
+	print_stats(*the_client);
+      break;
+    case SIGUSR2:
+      {
+	// toggle pause/resume
+	static bool hup = false;
+	std::cout << "received pause/resume toggle signal " << signum << std::endl;
+	if (the_client)
+	  {
+	    if (hup)
+	      the_client->resume();
+	    else
+	      the_client->pause("pause-resume-signal");
+	    hup = !hup;
+	  }
+      }
+      break;
     default:
       std::cout << "received unknown signal " << signum << std::endl;
       break;
     }
 }
 #endif
-
-void print_stats(const Client& client)
-{
-  const int n = client.stats_n();
-  std::vector<long long> stats = client.stats_bundle();
-
-  std::cout << "STATS:" << std::endl;
-  for (int i = 0; i < n; ++i)
-    {
-      const long long value = stats[i];
-      if (value)
-	std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -386,7 +405,7 @@ int main(int argc, char *argv[])
 		std::cout << "CONNECTING..." << std::endl;
 
 #if !defined(OPENVPN_PLATFORM_WIN)
-		Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP);
+		Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
 
 		// start connect thread
 		the_client = &client;
@@ -420,7 +439,7 @@ int main(int argc, char *argv[])
 			else if (c == 0x3E) // F4
 			  the_client->stop();
 			else if (c == 0x3F) // F5
-			  the_client->pause();
+			  the_client->pause("user-pause");
 		      }
 		  }
 		the_client = NULL;

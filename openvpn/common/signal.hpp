@@ -29,6 +29,8 @@ namespace openvpn {
       F_SIGINT  = (1<<0),
       F_SIGTERM = (1<<1),
       F_SIGHUP  = (1<<2),
+      F_SIGUSR1  = (1<<3),
+      F_SIGUSR2  = (1<<4),
     };
 
     Signal(const handler_t handler, const unsigned int flags)
@@ -58,6 +60,10 @@ namespace openvpn {
 	sigact(sa, SIGTERM);
       if (flags & F_SIGHUP)
 	sigact(sa, SIGHUP);
+      if (flags & F_SIGUSR1)
+	sigact(sa, SIGUSR1);
+      if (flags & F_SIGUSR2)
+	sigact(sa, SIGUSR2);
     }
 
     static void sigact(struct sigaction& sa, const int sig)
