@@ -32,6 +32,7 @@
 #include <openvpn/client/cliproto.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/client/optfilt.hpp>
+#include <openvpn/client/clilife.hpp>
 
 #if defined(USE_TUN_BUILDER)
 #include <openvpn/tun/builder/client.hpp>
@@ -39,6 +40,7 @@
 #include <openvpn/tun/linux/client/tuncli.hpp>
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/mac/client/tuncli.hpp>
+#include <openvpn/apple/maclife.hpp>
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/win/client/tuncli.hpp>
 #else
@@ -285,6 +287,7 @@ namespace openvpn {
       tunconf->stats = cli_stats;
       if (config.tun_persist)
 	tunconf->tun_persist.reset(new TunMac::TunPersist(true, false, NULL));
+      client_lifecycle.reset(new MacLifeCycle);
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
       tunconf->tun_prop.session_name = session_name;
@@ -416,6 +419,7 @@ namespace openvpn {
     const SessionStats::Ptr& stats_ptr() const { return cli_stats; }
     ClientEvent::Queue& events() { return *cli_events; }
     const RemoteList::Ptr& remote_list_ptr() const { return remote_list; }
+    ClientLifeCycle* lifecycle() { return client_lifecycle.get(); }
 
     int conn_timeout() const { return conn_timeout_; }
 
@@ -510,6 +514,7 @@ namespace openvpn {
     bool creds_locked;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
+    ClientLifeCycle::Ptr client_lifecycle;
   };
 }
 

@@ -1,0 +1,308 @@
+//
+//  maclife.hpp
+//  OpenVPN
+//
+//  Copyright (c) 2014 OpenVPN Technologies, Inc. All rights reserved.
+//
+
+#ifndef OPENVPN_APPLE_MACLIFE_H
+#define OPENVPN_APPLE_MACLIFE_H
+
+#include <string>
+#include <sstream>
+
+#include <openvpn/common/thread.hpp>
+#include <openvpn/log/logthread.hpp>
+#include <openvpn/applecrypto/cf/cftimer.hpp>
+#include <openvpn/applecrypto/cf/cfhelper.hpp>
+#include <openvpn/applecrypto/util/reachable.hpp>
+#include <openvpn/client/clilife.hpp>
+#include <openvpn/apple/runloop.hpp>
+#include <openvpn/apple/macsleep.hpp>
+#include <openvpn/apple/scdynstore.hpp>
+
+namespace openvpn {
+  class MacLifeCycle : public ClientLifeCycle, MacSleep, ReachabilityTracker
+  {
+  public:
+    OPENVPN_EXCEPTION(mac_lifecycle_error);
+
+    MacLifeCycle()
+      : nc(NULL),
+	thread(NULL),
+	paused(false)
+    {
+    }
+
+    virtual ~MacLifeCycle()
+    {
+      stop_thread();
+    }
+
+    virtual bool network_available()
+    {
+      return net_up();
+    }
+
+    virtual void start(NotifyCallback* nc_arg)
+    {
+      if (!thread && nc_arg)
+	{
+	  nc = nc_arg;
+	  thread = new boost::thread(&MacLifeCycle::thread_func, this);
+	}
+    }
+
+    virtual void stop()
+    {
+      stop_thread();
+    }
+
+  private:
+    struct State
+    {
+      State()
+	: net_up(false),
+	  sleep(false)
+      {
+      }
+
+      State(bool net_up_arg, const std::string& iface_arg, bool sleep_arg)
+	: net_up(net_up_arg),
+	  iface(iface_arg),
+	  sleep(sleep_arg)
+      {
+      }
+
+      bool operator==(const State& other) const
+      {
+	return net_up == other.net_up && iface == other.iface && sleep == other.sleep;
+      }
+
+      bool operator!=(const State& other) const
+      {
+	return !operator==(other);
+      }
+
+      std::string to_string() const
+      {
+	std::ostringstream os;
+	os << "[net_up=" << net_up << " iface=" << iface << " sleep=" << sleep << ']';
+	return os.str();
+      }
+
+      bool net_up;
+      std::string iface;
+      bool sleep;
+    };
+
+    void stop_thread()
+    {
+      if (thread)
+	{
+	  if (runloop.defined())
+	    CFRunLoopStop(runloop());
+	  thread->join();
+	  delete thread;
+	  thread = NULL;
+	}
+    }
+
+    void thread_func()
+    {
+      runloop.reset(CFRunLoopGetCurrent(), CF::BORROW);
+      Log::Context logctx(logwrap);
+      try {
+	// set up dynamic store query object
+	dstore.reset(SCDynamicStoreCreate(kCFAllocatorDefault,
+					  CFSTR("OpenVPN_MacLifeCycle"),
+					  NULL,
+					  NULL));
+
+	// init state
+	state = State(net_up(), primary_interface(), false);
+	prev_state = state;
+	paused = false;
+
+	// enable sleep/wakeup notifications
+	mac_sleep_start();
+
+	// enable network reachability notifications
+	reachability_tracker_schedule();
+
+	// enable interface change notifications
+	iface_watch();
+
+	// process event loop until CFRunLoopStop is called from parent thread
+	CFRunLoopRun();
+      }
+      catch (const std::exception& e)
+	{
+	  OPENVPN_LOG("MacLifeCycle Exception: " << e.what());
+	}
+
+      // cleanup
+      cancel_action_timer();
+      mac_sleep_stop();
+      reachability_tracker_cancel();
+      dstore.reset();
+    }
+
+    std::string primary_interface()
+    {
+      CF::Dict dict(CF::DynamicStoreCopyDict(dstore, "State:/Network/Global/IPv4"));
+      return CF::dict_get_str(dict, "PrimaryInterface");
+    }
+
+    bool net_up()
+    {
+      ReachabilityViaWiFi r;
+      return ReachabilityViaWiFi::status_from_flags(r.flags()) != ReachabilityBase::NotReachable;
+    }
+
+    void iface_watch()
+    {
+      SCDynamicStoreContext context = {0, this, NULL, NULL, NULL};
+      CF::DynamicStore ds(SCDynamicStoreCreate(kCFAllocatorDefault,
+					       CFSTR("OpenVPN_MacLifeCycle_iface_watch"),
+					       iface_watch_callback_static,
+					       &context));
+      if (!ds.defined())
+	throw mac_lifecycle_error("SCDynamicStoreCreate");
+      CF::MutableArray watched_keys(CF::mutable_array());
+      CF::array_append_str(watched_keys, "State:/Network/Global/IPv4");
+      //CF::array_append_str(watched_keys, "State:/Network/Global/IPv6");
+      if (!watched_keys.defined())
+	throw mac_lifecycle_error("watched_keys is undefined");
+      if (!SCDynamicStoreSetNotificationKeys(ds(),
+					     watched_keys(),
+					     NULL))
+	throw mac_lifecycle_error("SCDynamicStoreSetNotificationKeys failed");
+      CF::RunLoopSource rls(SCDynamicStoreCreateRunLoopSource(kCFAllocatorDefault, ds(), 0));
+      if (!rls.defined())
+	throw mac_lifecycle_error("SCDynamicStoreCreateRunLoopSource failed");
+      CFRunLoopAddSource(CFRunLoopGetCurrent(), rls(), kCFRunLoopDefaultMode);
+    }
+
+    static void iface_watch_callback_static(SCDynamicStoreRef store, CFArrayRef changedKeys, void *arg)
+    {
+      MacLifeCycle *self = (MacLifeCycle *)arg;
+      self->iface_watch_callback(store, changedKeys);
+    }
+
+    void iface_watch_callback(SCDynamicStoreRef store, CFArrayRef changedKeys)
+    {
+      state.iface = primary_interface();
+      OPENVPN_LOG("MacLifeCycle NET_IFACE " << state.iface);
+      schedule_action_timer(1);
+    }
+
+    virtual void notify_sleep()
+    {
+      OPENVPN_LOG("MacLifeCycle SLEEP");
+      state.sleep = true;
+      schedule_action_timer(0);
+    }
+
+    virtual void notify_wakeup()
+    {
+      OPENVPN_LOG("MacLifeCycle WAKEUP");
+      state.sleep = false;
+      schedule_action_timer(1);
+    }
+
+    virtual void reachability_tracker_event(const ReachabilityBase& rb, SCNetworkReachabilityFlags flags)
+    {
+      if (rb.vtype() == ReachabilityBase::WiFi)
+	{
+	  state.net_up = (rb.vstatus(flags) != ReachabilityBase::NotReachable);
+	  OPENVPN_LOG("MacLifeCycle NET_STATE " << state.net_up);
+	  schedule_action_timer(1);
+	}
+    }
+
+    void schedule_action_timer(const int seconds)
+    {
+      cancel_action_timer();
+      if (seconds)
+	{
+	  CFRunLoopTimerContext context = { 0, this, NULL, NULL, NULL };
+	  action_timer.reset(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + seconds, 0, 0, 0, action_timer_callback_static, &context));
+	  if (action_timer.defined())
+	    CFRunLoopAddTimer(CFRunLoopGetCurrent(), action_timer(), kCFRunLoopCommonModes);
+	  else
+	    OPENVPN_LOG("MacLifeCycle::schedule_action_timer: failed to create timer");
+	}
+      else
+	action_timer_callback(NULL);
+    }
+
+    void cancel_action_timer()
+    {
+      if (action_timer.defined())
+	{
+	  CFRunLoopTimerInvalidate(action_timer());
+	  action_timer.reset(NULL);
+	}
+    }
+
+    static void action_timer_callback_static(CFRunLoopTimerRef timer, void *info)
+    {
+      MacLifeCycle* self = (MacLifeCycle*)info;
+      self->action_timer_callback(timer);
+    }
+
+    void action_timer_callback(CFRunLoopTimerRef timer)
+    {
+      try {
+	if (state != prev_state)
+	  {
+	    OPENVPN_LOG("MacLifeCycle ACTION pause=" << paused << " state=" << state.to_string() << " prev=" << prev_state.to_string());
+	    if (paused)
+	      {
+		if (!state.sleep && state.net_up)
+		  {
+		    nc->cln_resume();
+		    paused = false;
+		  }
+	      }
+	    else
+	      {
+		if (state.sleep)
+		  {
+		    nc->cln_pause("sleep");
+		    paused = true;
+		  }
+		else if (!state.net_up)
+		  {
+		    nc->cln_pause("network-unavailable");
+		    paused = true;
+		  }
+		else
+		  {
+		    if (state.iface != prev_state.iface)
+		      nc->cln_reconnect(0);
+		  }
+	      }
+	    prev_state = state;
+	  }
+      }
+      catch (const std::exception& e)
+	{
+	  OPENVPN_LOG("MacLifeCycle::action_timer_callback: " << e.what());
+	}
+    }
+
+    NotifyCallback* nc;
+    boost::thread* thread;
+    CF::RunLoop runloop;           // run loop in thread
+    CF::DynamicStore dstore;
+    State state;
+    State prev_state;
+    bool paused;
+    CF::Timer action_timer;
+    Log::Context::Wrapper logwrap; // used to carry forward the log context from parent thread
+  };
+}
+
+#endif

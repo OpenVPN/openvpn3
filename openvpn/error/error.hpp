@@ -18,6 +18,7 @@ namespace openvpn {
       NETWORK_RECV_ERROR,  // errors receiving on network socket
       NETWORK_EOF_ERROR,   // EOF received on TCP network socket
       NETWORK_SEND_ERROR,  // errors sending on network socket
+      NETWORK_UNAVAILABLE, // network unavailable
       DECRYPT_ERROR,       // data channel encrypt/decrypt error
       HMAC_ERROR,          // HMAC verification failure
       REPLAY_ERROR,        // error from PacketIDReceive
@@ -86,6 +87,7 @@ namespace openvpn {
 	"NETWORK_RECV_ERROR",
 	"NETWORK_EOF_ERROR",
 	"NETWORK_SEND_ERROR",
+	"NETWORK_UNAVAILABLE",
 	"DECRYPT_ERROR",
 	"HMAC_ERROR",
 	"REPLAY_ERROR",

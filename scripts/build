@@ -138,7 +138,7 @@ fi
 
 # Apple libs
 if [ "$APPLE_FAMILY" = "1" ]; then
-    LIBS="$LIBS -framework CoreFoundation -framework SystemConfiguration"
+    LIBS="$LIBS -framework CoreFoundation -framework SystemConfiguration -framework IOKit"
 fi
 
 # boost

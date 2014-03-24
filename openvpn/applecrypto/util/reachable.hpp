@@ -363,7 +363,7 @@ namespace openvpn {
 					       &context) == FALSE)
 	    return false;
 	  if (SCNetworkReachabilityScheduleWithRunLoop(rb.reach(),
-						       CFRunLoopGetMain(),
+						       CFRunLoopGetCurrent(),
 						       kCFRunLoopCommonModes) == FALSE)
 	    return false;
 	  return true;
@@ -375,7 +375,7 @@ namespace openvpn {
     void cancel(ReachabilityBase& rb)
     {
       if (rb.reach.defined())
-	SCNetworkReachabilityUnscheduleFromRunLoop(rb.reach(), CFRunLoopGetMain(), kCFRunLoopCommonModes);
+	SCNetworkReachabilityUnscheduleFromRunLoop(rb.reach(), CFRunLoopGetCurrent(), kCFRunLoopCommonModes);
     }
 
     static void internet_callback_static(SCNetworkReachabilityRef target,

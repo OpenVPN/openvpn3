@@ -179,11 +179,6 @@ namespace openvpn {
       AddRoutes() : Base(ADD_ROUTES) {}
     };
 
-    struct Pause : public Base
-    {
-      Pause() : Base(PAUSE) {}
-    };
-
     struct Resume : public Base
     {
       Resume() : Base(RESUME) {}
@@ -274,6 +269,11 @@ namespace openvpn {
     struct DynamicChallenge : public ReasonBase
     {
       DynamicChallenge(const std::string& reason) : ReasonBase(DYNAMIC_CHALLENGE, reason) {}
+    };
+
+    struct Pause : public ReasonBase
+    {
+      Pause(const std::string& reason) : ReasonBase(PAUSE, reason) {}
     };
 
     struct ProxyError : public ReasonBase

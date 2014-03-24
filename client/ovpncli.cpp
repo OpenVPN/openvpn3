@@ -834,11 +834,11 @@ namespace openvpn {
 	session->thread_safe_stop();
     }
 
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::pause()
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::pause(const std::string& reason)
     {
       ClientConnect::Ptr session = state->session;
       if (session)
-	session->thread_safe_pause();
+	session->thread_safe_pause(reason);
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::resume()

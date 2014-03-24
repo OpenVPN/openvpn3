@@ -381,7 +381,7 @@ namespace openvpn {
       // Pause the client -- useful to avoid continuous reconnection attempts
       // when network is down.  May be called from a different thread
       // when connect() is running.
-      void pause();
+      void pause(const std::string& reason);
 
       // Resume the client after it has been paused.  May be called from a
       // different thread when connect() is running.

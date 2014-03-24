@@ -37,9 +37,11 @@
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
+#include <openvpn/error/excode.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/client/cliopt.hpp>
 #include <openvpn/client/remotelist.hpp>
+#include <openvpn/client/clilife.hpp>
 
 namespace openvpn {
 
@@ -48,6 +50,7 @@ namespace openvpn {
   // cannot be remedied by retrying.
   class ClientConnect : ClientProto::NotifyCallback,
 			RemoteList::PreResolve::NotifyCallback,
+			ClientLifeCycle::NotifyCallback,
 			public RC<thread_safe_refcount>
   {
   public:
@@ -62,6 +65,7 @@ namespace openvpn {
 	halt(false),
 	paused(false),
 	dont_restart_(false),
+	lifecycle_started(false),
 	conn_timeout(client_options_arg->conn_timeout()),
 	io_service(io_service_arg),
 	client_options(client_options_arg),
@@ -76,6 +80,9 @@ namespace openvpn {
     {
       if (!client && !halt)
 	{
+	  if (!test_network())
+	    throw ErrorCode(Error::NETWORK_UNAVAILABLE, true, "Network Unavailable");
+
 	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_service,
 									client_options->remote_list_ptr(),
 									client_options->stats_ptr()));
@@ -113,6 +120,13 @@ namespace openvpn {
 
 	  client_options->close_persistent();
 
+	  if (lifecycle_started)
+	    {
+	      ClientLifeCycle* lc = client_options->lifecycle();
+	      if (lc)
+		lc->stop();
+	    }
+
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Disconnected();
 	  client_options->events().add_event(ev);
 	}
@@ -130,7 +144,7 @@ namespace openvpn {
 	io_service.post(asio_dispatch_post(&ClientConnect::graceful_stop, this));
     }
 
-    void pause()
+    void pause(const std::string& reason)
     {
       if (!halt && !paused)
 	{
@@ -142,7 +156,7 @@ namespace openvpn {
 	    }
 	  cancel_timers();
 	  asio_work.reset(new boost::asio::io_service::work(io_service));
-	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause();
+	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause(reason);
 	  client_options->events().add_event(ev);
 	  client_options->stats().error(Error::N_PAUSE);
 	}
@@ -172,10 +186,10 @@ namespace openvpn {
 	}
     }
 
-    void thread_safe_pause()
+    void thread_safe_pause(const std::string& reason)
     {
       if (!halt)
-	io_service.post(asio_dispatch_post(&ClientConnect::pause, this));
+	io_service.post(asio_dispatch_post_arg(&ClientConnect::pause, this, reason));
     }
 
     void thread_safe_resume()
@@ -247,7 +261,7 @@ namespace openvpn {
 	  if (!paused && client_options->pause_on_connection_timeout())
 	    {
 	      // go into pause state instead of disconnect
-	      pause();
+	      pause("");
 	    }
 	  else
 	    {
@@ -268,10 +282,37 @@ namespace openvpn {
 	}
     }
 
+    bool test_network() const
+    {
+      ClientLifeCycle* lc = client_options->lifecycle();
+      if (lc)
+	{
+	  if (!lc->network_available())
+	    return false;
+	}
+      return true;
+    }
+
     virtual void client_proto_connected()
     {
       conn_timer.cancel();
       conn_timer_pending = false;
+
+      // Monitor connection lifecycle notifications, such as sleep,
+      // wakeup, network-unavailable, and network-available.
+      // Not all platforms define a lifecycle object.  Some platforms
+      // such as Android and iOS manage lifecycle notifications
+      // in the UI, and they call pause(), resume(), reconnect(), etc.
+      // as needed using the main ovpncli API.
+      if (!lifecycle_started)
+	{
+	  ClientLifeCycle* lc = client_options->lifecycle(); // lifecycle is defined by platform, and may be NULL
+	  if (lc)
+	    {
+	      lc->start(this);
+	      lifecycle_started = true;
+	    }
+	}
     }
 
     void queue_restart()
@@ -419,8 +460,8 @@ namespace openvpn {
 	  if (!(client && client->reached_connected_state()))
 	    client_options->next();
 	}
-      Client::Config::Ptr cli_config = client_options->client_config();
-      client.reset(new Client(io_service, *cli_config, this));
+      Client::Config::Ptr cli_config = client_options->client_config(); // client_config in cliopt.hpp
+      client.reset(new Client(io_service, *cli_config, this)); // build ClientProto::Session<> from cliproto.hpp
 
       restart_wait_timer.cancel();
       if (client_options->server_poll_timeout_enabled())
@@ -432,10 +473,33 @@ namespace openvpn {
       client->start();
     }
 
+    // ClientLifeCycle::NotifyCallback callbacks
+
+    virtual void cln_stop()
+    {
+      thread_safe_stop();
+    }
+
+    virtual void cln_pause(const std::string& reason)
+    {
+      thread_safe_pause(reason);
+    }
+
+    virtual void cln_resume()
+    {
+      thread_safe_resume();
+    }
+
+    virtual void cln_reconnect(int seconds)
+    {
+      thread_safe_reconnect(seconds);
+    }
+
     unsigned int generation;
     bool halt;
     bool paused;
     bool dont_restart_;
+    bool lifecycle_started;
     int conn_timeout;
     boost::asio::io_service& io_service;
     ClientOptions::Ptr client_options;
