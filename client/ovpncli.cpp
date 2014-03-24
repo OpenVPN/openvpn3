@@ -32,7 +32,6 @@
 #define OPENVPN_INSTRUMENTATION        // include debug instrumentation for classes (define)
 //#define OPENVPN_DUMP_CONFIG          // dump parsed configuration (comment out)
 //#define OPENVPN_DEBUG_CLIPROTO       // shows packets in/out (comment out)
-#define OPENVPN_DEBUG_DNS              // debug DNS (Mac only) (comment out) fixme
 #define OPENVPN_DEBUG_PROTO   1        // increases low-level protocol verbosity (1)
 //#define OPENVPN_DEBUG_VERBOSE_ERRORS // verbosely log Error::Type errors (comment out)
 #define OPENVPN_SSL_DEBUG     0        // show verbose SSL debug info (0)

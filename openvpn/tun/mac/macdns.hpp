@@ -204,9 +204,8 @@ namespace openvpn {
 	      }
 	  }
 
-#ifdef OPENVPN_DEBUG_DNS
-	OPENVPN_LOG("MacDNS: SETDNS " << ver.to_string() << std::endl << info.to_string());
-#endif
+	if (mod)
+	  OPENVPN_LOG("MacDNS: SETDNS " << ver.to_string() << std::endl << info.to_string());
       }
       catch (const std::exception& e)
 	{
@@ -249,9 +248,8 @@ namespace openvpn {
 	if (CF::dict_len(info.info.dict))
 	  mod |= info.info.remove_from_store();
 
-#ifdef OPENVPN_DEBUG_DNS
-	OPENVPN_LOG("MacDNS: RESETDNS " << ver.to_string() << std::endl << info.to_string());
-#endif
+	if (mod)
+	  OPENVPN_LOG("MacDNS: RESETDNS " << ver.to_string() << std::endl << info.to_string());
       }
       catch (const std::exception& e)
 	{
@@ -265,6 +263,18 @@ namespace openvpn {
       CF::DynamicStore sc = ds_create();
       Info info(sc, sname);
       return info.to_string();
+    }
+
+    CF::Array dskey_array() const
+    {
+      CF::DynamicStore sc = ds_create();
+      Info info(sc, sname);
+      CF::MutableArray ret(CF::mutable_array());
+      CF::array_append_str(ret, info.ipv4.dskey);
+      CF::array_append_str(ret, info.info.dskey);
+      CF::array_append_str(ret, info.ovpn.dskey);
+      CF::array_append_str(ret, info.dns.dskey);
+      return CF::const_array(ret);
     }
 
   private:

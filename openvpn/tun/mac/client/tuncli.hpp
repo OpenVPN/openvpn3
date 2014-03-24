@@ -213,7 +213,7 @@ namespace openvpn {
 		  remove_cmds->enable_destroy(true);
 		  tun_persist->add_destructor(remove_cmds);
 		  tun_config(state->iface_name, *po, *add_cmds, *remove_cmds);
-		  MacDNSWatchdog::add_actions(io_service, *po, "OpenVPNConnect", *add_cmds, *remove_cmds);
+		  MacDNSWatchdog::add_actions(*po, "OpenVPNConnect", *add_cmds, *remove_cmds);
 		  add_cmds->execute();
 		}
 
