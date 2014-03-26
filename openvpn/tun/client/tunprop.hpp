@@ -186,7 +186,7 @@ namespace openvpn {
 		  throw tun_prop_error("ifconfig addresses are not in the same /30 subnet (topology net30)");
 		if (!tb->tun_builder_add_address(local.to_string(),
 						 netmask.prefix_len(),
-						 route_gateway(opt),
+						 remote.to_string(),
 						 false, // IPv6
 						 true)) // net30
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology net30)");
