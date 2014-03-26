@@ -23,6 +23,7 @@
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/getopt.hpp>
+#include <openvpn/common/getpw.hpp>
 #include <openvpn/time/timestr.hpp>
 
 #if defined(OPENVPN_PLATFORM_WIN)
@@ -392,6 +393,8 @@ int main(int argc, char *argv[])
 		    if (username.empty())
 		      OPENVPN_THROW_EXCEPTION("need creds");
 		    ClientAPI::ProvideCreds creds;
+		    if (password.empty())
+		      password = get_password("Password:");
 		    creds.username = username;
 		    creds.password = password;
 		    creds.response = response;
