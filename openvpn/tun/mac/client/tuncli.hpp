@@ -401,13 +401,13 @@ namespace openvpn {
 	    {
 	      const TunBuilderCapture::Route& route = *i;
 	      if (route.ipv6)
-		add_del_route(route.address, route.prefix_length, route.gateway, iface_name, R_IPv6, create, destroy);
+		add_del_route(route.address, route.prefix_length, local6->gateway, iface_name, R_IPv6, create, destroy);
 	      else
 		{
-		  if (local4)
-		    add_del_route(route.address, route.prefix_length, route.gateway, iface_name, 0, create, destroy);
+		  if (local4 && !local4->gateway.empty())
+		    add_del_route(route.address, route.prefix_length, local4->gateway, iface_name, 0, create, destroy);
 		  else
-		    throw tun_mac_error("IPv4 routes pushed without IPv4 ifconfig");
+		    OPENVPN_LOG("ERROR: IPv4 route pushed without IPv4 ifconfig and/or route-gateway");
 		}
 	    }
 	}
