@@ -8,35 +8,26 @@
 #ifndef OPENVPN_TUN_PERSIST_TUNPERSIST_H
 #define OPENVPN_TUN_PERSIST_TUNPERSIST_H
 
-#include <openvpn/common/types.hpp>
-#include <openvpn/common/destruct.hpp>
+#include <openvpn/tun/persist/tunwrap.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
 namespace openvpn {
 
-  // TunPersistTemplate is used client-side to store the underlying tun
-  // interface fd/handle.  It also implements logic for the persist-tun
-  // directive.  SCOPED_OBJ is generally a ScopedFD (unix) or a
-  // ScopedHANDLE (Windows).  It can also be a ScopedAsioStream.
+  // TunPersistTemplate adds persistence capabilities onto TunWrapTemplate,
+  // in order to implement logic for the persist-tun directive.
   template <typename SCOPED_OBJ>
-  class TunPersistTemplate : public RC<thread_unsafe_refcount>
+  class TunPersistTemplate : public TunWrapTemplate<SCOPED_OBJ>
   {
   public:
     typedef boost::intrusive_ptr<TunPersistTemplate> Ptr;
 
     TunPersistTemplate(const bool enable_persistence, const bool retain_obj, TunBuilderBase* tb)
-      : enable_persistence_(enable_persistence),
-	retain_obj_(retain_obj),
+      : TunWrapTemplate<SCOPED_OBJ>(retain_obj),
+	enable_persistence_(enable_persistence),
 	tb_(tb),
 	use_persisted_tun_(false)
     {
-    }
-
-    // Current persisted tun fd/handle
-    typename SCOPED_OBJ::base_type obj() const
-    {
-      return obj_();
     }
 
     // Current persisted state
@@ -45,46 +36,15 @@ namespace openvpn {
       return state_;
     }
 
-    ~TunPersistTemplate()
+    virtual ~TunPersistTemplate()
     {
-      close();
+      close_local();
     }
 
     void close()
     {
-      if (tb_)
-	tb_->tun_builder_teardown();
-      if (retain_obj_)
-	obj_.release();
-      else
-	{
-	  close_destructor();
-	  obj_.close();
-	}
-      state_.reset();
-      options_ = "";
-    }
-
-    bool destructor_defined() const
-    {
-      return bool(destruct_);
-    }
-
-    // destruct object performs cleanup prior to TAP device
-    // HANDLE close, such as removing added routes.
-    void add_destructor(const DestructorBase::Ptr& destruct)
-    {
-      close_destructor();
-      destruct_ = destruct;
-    }
-
-    void close_destructor()
-    {
-      if (destruct_)
-	{
-	  destruct_->destroy();
-	  destruct_.reset();
-	}
+      close_local();
+      TunWrapTemplate<SCOPED_OBJ>::close();
     }
 
     // Current persisted options
@@ -128,7 +88,7 @@ namespace openvpn {
 	}
 
       // Check if previous tun session matches properties of to-be-created session
-      use_persisted_tun_ = (obj_.defined()
+      use_persisted_tun_ = (TunWrapTemplate<SCOPED_OBJ>::obj_defined()
 			    && copt_
 			    && !options_.empty()
 			    && options_ == copt_->to_string());
@@ -141,7 +101,7 @@ namespace openvpn {
     {
       if (!enable_persistence_ || !use_persisted_tun_)
 	{
-	  save_replace_sock(obj);
+	  TunWrapTemplate<SCOPED_OBJ>::save_replace_sock(obj);
 	}
       if (enable_persistence_ && copt_ && !use_persisted_tun_)
 	{
@@ -154,21 +114,18 @@ namespace openvpn {
     }
 
   private:
-    void save_replace_sock(const typename SCOPED_OBJ::base_type obj)
+    void close_local()
     {
-      if (retain_obj_)
-	obj_.replace(obj);
-      else
-	obj_.reset(obj);
+      if (tb_)
+	tb_->tun_builder_teardown();
+      state_.reset();
+      options_ = "";
     }
 
     const bool enable_persistence_;
-    const bool retain_obj_;
     TunBuilderBase * const tb_;
-    SCOPED_OBJ obj_;
     TunProp::State::Ptr state_;
     std::string options_;
-    DestructorBase::Ptr destruct_;
 
     TunBuilderCapture::Ptr copt_;
     bool use_persisted_tun_;

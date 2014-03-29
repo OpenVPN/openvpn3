@@ -17,7 +17,8 @@
 #include <openvpn/common/scoped_asio_stream.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
-#include <openvpn/tun/persist/tunpersistasio.hpp>
+#include <openvpn/tun/persist/tunpersist.hpp>
+#include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
 #include <openvpn/tun/win/tunutil.hpp>
 #include <openvpn/win/cmd.hpp>
@@ -36,9 +37,9 @@ namespace openvpn {
 
     // tun interface wrapper for Windows
     template <typename ReadHandler, typename TunPersist>
-    class Tun : public TunIO<ReadHandler, PacketFrom, TunPersistAsioStream<TunPersist> >
+    class Tun : public TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunPersist> >
     {
-      typedef TunIO<ReadHandler, PacketFrom, TunPersistAsioStream<TunPersist>  > Base;
+      typedef TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunPersist>  > Base;
 
     public:
       typedef boost::intrusive_ptr<Tun> Ptr;
@@ -53,7 +54,7 @@ namespace openvpn {
       {
 	Base::name_ = name;
 	Base::retain_stream = retain_stream;
-	Base::stream = new TunPersistAsioStream<TunPersist>(tun_persist);
+	Base::stream = new TunWrapAsioStream<TunPersist>(tun_persist);
       }
     };
 
@@ -96,7 +97,7 @@ namespace openvpn {
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
-      friend class TunIO<Client*, PacketFrom, TunPersistAsioStream<TunPersist> >;  // calls tun_read_handler
+      friend class TunIO<Client*, PacketFrom, TunWrapAsioStream<TunPersist> >;  // calls tun_read_handler
 
       typedef Tun<Client*, TunPersist> TunImpl;
 

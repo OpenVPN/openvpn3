@@ -19,7 +19,8 @@
 #include <openvpn/common/action.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
-#include <openvpn/tun/persist/tunpersistasio.hpp>
+#include <openvpn/tun/persist/tunwrap.hpp>
+#include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/tun/mac/tunutil.hpp>
@@ -40,15 +41,15 @@ namespace openvpn {
     };
 
     // tun interface wrapper for Mac OS X
-    template <typename ReadHandler, typename TunPersist>
-    class Tun : public TunIO<ReadHandler, PacketFrom, TunPersistAsioStream<TunPersist> >
+    template <typename ReadHandler, typename TunWrap>
+    class Tun : public TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunWrap> >
     {
-      typedef TunIO<ReadHandler, PacketFrom, TunPersistAsioStream<TunPersist>  > Base;
+      typedef TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunWrap>  > Base;
 
     public:
       typedef boost::intrusive_ptr<Tun> Ptr;
 
-      Tun(const typename TunPersist::Ptr& tun_persist,
+      Tun(const typename TunWrap::Ptr& tun_wrap,
 	  const std::string& name,
 	  const bool retain_stream,
 	  const bool tun_prefix,
@@ -60,14 +61,14 @@ namespace openvpn {
 	Base::name_ = name;
 	Base::retain_stream = retain_stream;
 	Base::tun_prefix = tun_prefix;
-	Base::stream = new TunPersistAsioStream<TunPersist>(tun_persist);
+	Base::stream = new TunWrapAsioStream<TunWrap>(tun_wrap);
       }
     };
 
     // These types manage the underlying tun driver fd
     typedef boost::asio::posix::stream_descriptor TUNStream;
     typedef ScopedAsioStream<TUNStream> ScopedTUNStream;
-    typedef TunPersistTemplate<ScopedTUNStream> TunPersist;
+    typedef TunWrapTemplate<ScopedTUNStream> TunWrap;
 
     class ClientConfig : public TunClientFactory
     {
@@ -81,8 +82,6 @@ namespace openvpn {
 
       Frame::Ptr frame;
       SessionStats::Ptr stats;
-
-      TunPersist::Ptr tun_persist;
 
       static Ptr new_obj()
       {
@@ -105,7 +104,6 @@ namespace openvpn {
       // called just prior to transmission of Disconnect event
       virtual void close_persistent()
       {
-	tun_persist.reset();
       }
 
     private:
@@ -115,9 +113,9 @@ namespace openvpn {
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
-      friend class TunIO<Client*, PacketFrom, TunPersistAsioStream<TunPersist> >;  // calls tun_read_handler
+      friend class TunIO<Client*, PacketFrom, TunWrapAsioStream<TunWrap> >;  // calls tun_read_handler
 
-      typedef Tun<Client*, TunPersist> TunImpl;
+      typedef Tun<Client*, TunWrap> TunImpl;
 
     public:
       virtual void client_start(const OptionList& opt, TransportClient& transcli)
@@ -125,99 +123,80 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    if (config->tun_persist)
-	      tun_persist = config->tun_persist; // long-term persistent
-	    else
-	      tun_persist.reset(new TunPersist(false, false, NULL)); // short-term
+	    tun_wrap.reset(new TunWrap(false));
 
 	    try {
 	      bool tun_prefix = false;
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
 
-	      // Check if persisted tun session matches properties of to-be-created session
-	      if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
-		{
-		  state = tun_persist->state();
-		  OPENVPN_LOG("TunPersist: reused tun context");
-		}
-	      else
-		{
-		  // notify parent
-		  parent.tun_pre_tun_config();
+	      // notify parent
+	      parent.tun_pre_tun_config();
 
-		  // close old tun handle if persisted
-		  tun_persist->close();
+	      // parse pushed options
+	      TunBuilderCapture::Ptr po(new TunBuilderCapture());
+	      TunProp::configure_builder(po.get(),
+					 state.get(),
+					 config->stats.get(),
+					 server_addr,
+					 config->tun_prop,
+					 opt,
+					 false);
 
-		  // parse pushed options
-		  TunBuilderCapture::Ptr po(new TunBuilderCapture());
-		  TunProp::configure_builder(po.get(),
-					     state.get(),
-					     config->stats.get(),
-					     server_addr,
-					     config->tun_prop,
-					     opt,
-					     false);
+	      // handle MTU default
+	      if (!po->mtu)
+		po->mtu = 1500;
 
-		  // handle MTU default
-		  if (!po->mtu)
-		    po->mtu = 1500;
+	      OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string()); // fixme
 
-		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string()); // fixme
-
-		  // Open tun device.  Try Mac OS X integrated utun device first
-		  // (layer 3 only).  If utun fails and MAC_TUNTAP_FALLBACK is defined,
-		  // then fall back to TunTap third-party device.
-		  // If successful, state->iface_name will be set to tun iface name.
-		  int fd = -1;
-		  try {
+	      // Open tun device.  Try Mac OS X integrated utun device first
+	      // (layer 3 only).  If utun fails and MAC_TUNTAP_FALLBACK is defined,
+	      // then fall back to TunTap third-party device.
+	      // If successful, state->iface_name will be set to tun iface name.
+	      int fd = -1;
+	      try {
 #                   if defined(MAC_TUNTAP_FALLBACK)
 #                     if !defined(BOOST_ASIO_DISABLE_KQUEUE)
 #                       error Mac OS X TunTap adapter is incompatible with kqueue; rebuild with BOOST_ASIO_DISABLE_KQUEUE
 #                     endif
-		      if (config->layer() == Layer::OSI_LAYER_3)
-			{
-			  try {
-			    fd = UTun::utun_open(state->iface_name);
-			    tun_prefix = true;
-			  }
-			  catch (const std::exception& e)
-			    {
-			      OPENVPN_LOG(e.what());
-			    }
-			}
-		      if (fd == -1)
-			fd = Util::tuntap_open(config->layer, state->iface_name);
-#                   else
+		if (config->layer() == Layer::OSI_LAYER_3)
+		  {
+		    try {
 		      fd = UTun::utun_open(state->iface_name);
 		      tun_prefix = true;
-#                   endif
-		  }
-		  catch (const std::exception& e)
-		    {
-		      parent.tun_error(Error::TUN_IFACE_CREATE, e.what());
-		      return;
 		    }
-
-		  OPENVPN_LOG("open " << state->iface_name << " SUCCEEDED");
-
-		  // create ASIO wrapper for tun fd
-		  TUNStream* ts = new TUNStream(io_service, fd);
-
-		  // persist state
-		  if (tun_persist->persist_tun_state(ts, state))
-		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
-
-		  // configure adapter properties
-		  ActionList::Ptr add_cmds = new ActionList();
-		  remove_cmds.reset(new ActionList());
-		  remove_cmds->enable_destroy(true);
-		  tun_persist->add_destructor(remove_cmds);
-		  tun_config(state->iface_name, *po, *add_cmds, *remove_cmds);
-		  MacDNSWatchdog::add_actions(*po, "OpenVPNConnect", *add_cmds, *remove_cmds);
-		  add_cmds->execute();
+		    catch (const std::exception& e)
+		      {
+			OPENVPN_LOG(e.what());
+		      }
+		  }
+		if (fd == -1)
+		  fd = Util::tuntap_open(config->layer, state->iface_name);
+#                   else
+		fd = UTun::utun_open(state->iface_name);
+		tun_prefix = true;
+#                   endif
+	      }
+	      catch (const std::exception& e)
+		{
+		  parent.tun_error(Error::TUN_IFACE_CREATE, e.what());
+		  return;
 		}
 
-	      impl.reset(new TunImpl(tun_persist,
+	      OPENVPN_LOG("open " << state->iface_name << " SUCCEEDED");
+
+	      // create ASIO wrapper for tun fd
+	      tun_wrap->save_replace_sock(new TUNStream(io_service, fd));
+
+	      // configure adapter properties
+	      ActionList::Ptr add_cmds = new ActionList();
+	      remove_cmds.reset(new ActionList());
+	      remove_cmds->enable_destroy(true);
+	      tun_wrap->add_destructor(remove_cmds);
+	      tun_config(state->iface_name, *po, *add_cmds, *remove_cmds);
+	      MacDNSWatchdog::add_actions(*po, "OpenVPNConnect", *add_cmds, *remove_cmds);
+	      add_cmds->execute();
+
+	      impl.reset(new TunImpl(tun_wrap,
 				     state->iface_name,
 				     true,
 				     tun_prefix,
@@ -232,8 +211,8 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		if (tun_persist)
-		  tun_persist->close();
+		if (tun_wrap)
+		  tun_wrap->close();
 		stop();
 		parent.tun_error(Error::TUN_SETUP_FAILED, e.what());
 	      }
@@ -508,12 +487,12 @@ namespace openvpn {
 	    // stop tun
 	    if (impl)
 	      impl->stop();
-	    tun_persist.reset();
+	    tun_wrap.reset();
 	  }
       }
 
       boost::asio::io_service& io_service;
-      TunPersist::Ptr tun_persist; // contains the tun device fd
+      TunWrap::Ptr tun_wrap; // contains the tun device fd
       ClientConfig::Ptr config;
       TunClientParent& parent;
       TunImpl::Ptr impl;

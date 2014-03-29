@@ -1,35 +1,33 @@
 //
-//  tunpersistasio.hpp
+//  tunwrapasio.hpp
 //  OpenVPN
 //
 //  Copyright (c) 2014 OpenVPN Technologies, Inc. All rights reserved.
 //
 
-#ifndef OPENVPN_TUN_PERSIST_TUNPERSISTASIO_H
-#define OPENVPN_TUN_PERSIST_TUNPERSISTASIO_H
-
-#include <openvpn/tun/persist/tunpersist.hpp>
+#ifndef OPENVPN_TUN_PERSIST_TUNWRAPASIO_H
+#define OPENVPN_TUN_PERSIST_TUNWRAPASIO_H
 
 namespace openvpn {
 
   // This object supports that subset of the Asio stream
   // interface required by TunIO, and is intended to wrap
-  // a ScopedAsioStream embedded in a TunPersist object.
+  // a ScopedAsioStream embedded in a TunWrap object.
   // It is used primarily on Windows to wrap the TAP
   // interface HANDLE in way that plays well with Windows
   // I/O completion ports (once a HANDLE is bound to an
   // I/O completion port it cannot be unbound).
-  template <typename TunPersist>
-  class TunPersistAsioStream
+  template <typename TunWrap>
+  class TunWrapAsioStream
   {
   public:
-    TunPersistAsioStream(const typename TunPersist::Ptr& tun_persist_arg)
-      : tun_persist(tun_persist_arg) {}
+    TunWrapAsioStream(const typename TunWrap::Ptr& tun_wrap_arg)
+      : tun_wrap(tun_wrap_arg) {}
 
 
     void release()
     {
-      tun_persist.reset();
+      tun_wrap.reset();
     }
 
     // Delegate STREAM methods (only need to support the
@@ -42,27 +40,27 @@ namespace openvpn {
     async_read_some(const MutableBufferSequence& buffers,
 		    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
     {
-      return tun_persist->obj()->async_read_some(buffers, handler);
+      return tun_wrap->obj()->async_read_some(buffers, handler);
     }
 
     template <typename ConstBufferSequence>
     std::size_t write_some(const ConstBufferSequence& buffers)
     {
-      return tun_persist->obj()->write_some(buffers);
+      return tun_wrap->obj()->write_some(buffers);
     }
 
     void cancel()
     {
-      tun_persist->obj()->cancel();
+      tun_wrap->obj()->cancel();
     }
 
     void close()
     {
-      tun_persist->obj()->close();
+      tun_wrap->obj()->close();
     }
 
   private:
-    typename TunPersist::Ptr tun_persist;
+    typename TunWrap::Ptr tun_wrap;
   };
 
 }

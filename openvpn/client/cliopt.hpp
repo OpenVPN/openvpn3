@@ -285,8 +285,6 @@ namespace openvpn {
 	tunconf->tun_prop.mtu = tun_mtu;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
-      if (config.tun_persist)
-	tunconf->tun_persist.reset(new TunMac::TunPersist(true, false, NULL));
       client_lifecycle.reset(new MacLifeCycle);
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
