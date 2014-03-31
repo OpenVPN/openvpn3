@@ -44,6 +44,11 @@ namespace openvpn {
     virtual void transport_error(const Error::Type fatal_err, const std::string& err_text) = 0;
     virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text) = 0;
 
+    // Called just prior to transport layer opening up a socket to addr.
+    // Allows the implementation to ensure connectivity for outgoing
+    // transport connection to server.
+    virtual void ip_hole_punch(const IP::Addr& addr) = 0;
+
     // progress notifications
     virtual void transport_pre_resolve() = 0;
     virtual void transport_wait_proxy() = 0;

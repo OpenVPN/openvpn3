@@ -85,10 +85,10 @@ namespace openvpn {
       virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 					    TunClientParent& parent);
 
-      // called just prior to emission of Disconnect event
-      virtual void close_persistent()
+      virtual void finalize(const bool disconnected)
       {
-	tun_persist.reset();
+	if (disconnected)
+	  tun_persist.reset();
       }
 
     private:

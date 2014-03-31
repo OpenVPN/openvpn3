@@ -28,10 +28,8 @@ namespace openvpn {
     virtual ~Action() {}
   };
 
-  class ActionList : public DestructorBase
+  class ActionList : public std::vector<Action::Ptr>, public DestructorBase
   {
-    typedef std::vector<Action::Ptr> ActionVec;
-
   public:
     typedef boost::intrusive_ptr<ActionList> Ptr;
 
@@ -39,17 +37,38 @@ namespace openvpn {
       : enable_destroy_(false),
 	halt_(false)
     {
-      actions.reserve(capacity);
+      reserve(capacity);
     }
 
     void add(const Action::Ptr& action)
     {
-      actions.push_back(action);
+      if (action)
+	push_back(action);
+    }
+
+    void add(const ActionList& other)
+    {
+      insert(end(), other.begin(), other.end());
+    }
+
+    bool exists(const Action::Ptr& action) const
+    {
+      if (action)
+	{
+	  const std::string cmp = action->to_string();
+	  for (const_iterator i = begin(); i != end(); ++i)
+	    {
+	      const Action& a = **i;
+	      if (a.to_string() == cmp)
+		return true;
+	    }
+	}
+      return false;
     }
 
     bool execute()
     {
-      for (ActionVec::iterator i = actions.begin(); i != actions.end(); ++i)
+      for (iterator i = begin(); i != end(); ++i)
 	{
 	  Action& a = **i;
 	  if (halt_)
@@ -85,7 +104,6 @@ namespace openvpn {
     }
 
   private:
-    ActionVec actions;
     bool enable_destroy_;
     volatile bool halt_;
   };

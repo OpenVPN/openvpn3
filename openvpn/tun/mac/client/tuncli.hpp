@@ -33,6 +33,101 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(tun_mac_error);
 
+    enum { // add_del_route flags
+      R_IPv6=(1<<0),
+      R_IFACE=(1<<1),
+      R_ONLINK=(1<<2),
+    };
+
+    inline void add_del_route(const std::string& addr_str,
+			      const int prefix_len,
+			      const std::string& gateway_str,
+			      const std::string& iface,
+			      const unsigned int flags,
+			      Action::Ptr& create,
+			      Action::Ptr& destroy)
+    {
+      if (flags & R_IPv6)
+	{
+	  const IPv6::Addr addr = IPv6::Addr::from_string(addr_str);
+	  const IPv6::Addr netmask = IPv6::Addr::netmask_from_prefix_len(prefix_len);
+	  const IPv6::Addr net = addr & netmask;
+
+	  Command::Ptr add(new Command);
+	  add->argv.push_back("/sbin/route");
+	  add->argv.push_back("add");
+	  add->argv.push_back("-inet6");
+	  add->argv.push_back(net.to_string());
+	  add->argv.push_back("-prefixlen");
+	  add->argv.push_back(to_string(prefix_len));
+	  if ((flags & R_IFACE) && !iface.empty())
+	    {
+	      add->argv.push_back("-iface");
+	      add->argv.push_back(iface);
+	    }
+	  else
+	    add->argv.push_back(gateway_str);
+	  create = add;
+
+	  // for the destroy command, copy the add command but replace "add" with "delete"
+	  Command::Ptr del(add->copy());
+	  del->argv[1] = "delete";
+	  destroy = del;
+	}
+      else
+	{
+	  const IPv4::Addr addr = IPv4::Addr::from_string(addr_str);
+	  const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(prefix_len);
+	  const IPv4::Addr net = addr & netmask;
+
+	  Command::Ptr add(new Command);
+	  add->argv.push_back("/sbin/route");
+	  add->argv.push_back("add");
+	  if (flags & R_ONLINK)
+	    {
+	      add->argv.push_back("-cloning");
+	      add->argv.push_back("-net");
+	      add->argv.push_back(net.to_string());
+	      add->argv.push_back("-netmask");
+	      add->argv.push_back(netmask.to_string());
+	      add->argv.push_back("-interface");
+	      add->argv.push_back(iface);
+	    }
+	  else
+	    {
+	      add->argv.push_back("-net");
+	      if ((flags & R_IFACE) && !iface.empty())
+		{
+		  add->argv.push_back("-ifscope");
+		  add->argv.push_back(iface);
+		}
+	      add->argv.push_back(net.to_string());
+	      add->argv.push_back(gateway_str);
+	      add->argv.push_back(netmask.to_string());
+	    }
+	  create = add;
+
+	  // for the destroy command, copy the add command but replace "add" with "delete"
+	  Command::Ptr del(add->copy());
+	  del->argv[1] = "delete";
+	  destroy = del;
+	}
+    }
+
+    inline void add_del_route(const std::string& addr_str,
+			      const int prefix_len,
+			      const std::string& gateway_str,
+			      const std::string& iface,
+			      const unsigned int flags,
+			      ActionList& create,
+			      ActionList& destroy)
+    {
+      Action::Ptr c, d;
+      add_del_route(addr_str, prefix_len, gateway_str, iface, flags, c, d);
+      create.add(c);
+      destroy.add(d);
+    }
+
     // struct used to pass received tun packets
     struct PacketFrom
     {
@@ -70,8 +165,213 @@ namespace openvpn {
     typedef ScopedAsioStream<TUNStream> ScopedTUNStream;
     typedef TunWrapTemplate<ScopedTUNStream> TunWrap;
 
+    // Failsafe blocker.  Try to prevent leakage of unencrypted data
+    // to internet during pause/reconnect states.
+    class FailsafeBlock : public RC<thread_unsafe_refcount>
+    {
+    public:
+      typedef boost::intrusive_ptr<FailsafeBlock> Ptr;
+
+      FailsafeBlock()
+	: halt(false),
+	  block_v4(false),
+	  block_v6(false)
+      {
+      }
+
+      ~FailsafeBlock()
+      {
+	finalize(true);
+      }
+
+      const bool ip_hole_punch_exists(const Action::Ptr& action)
+      {
+	if (ip_hole_punch_added)
+	  return ip_hole_punch_added->exists(action);
+	else
+	  return false;
+      }
+
+      void init()
+      {
+	block_v4 = false;
+	block_v6 = false;
+	dns.reset();
+      }
+
+      void add_dns(const MacDNS::Config::Ptr& dns_arg)
+      {
+	dns = dns_arg;
+      }
+
+      void add_block_v4()
+      {
+	block_v4 = true;
+      }
+
+      void add_block_v6()
+      {
+	block_v6 = true;
+      }
+
+      void ip_hole_punch(const IP::Addr& addr)
+      {
+	if (!halt && (((addr.version() == IP::Addr::V4) && block_v4_teardown)
+		   || ((addr.version() == IP::Addr::V6) && block_v6_teardown)))
+	  {
+	    if (!ip_hole_punch_added)
+	      ip_hole_punch_added.reset(new ActionList);
+	    if (!ip_hole_punch_teardown)
+	      ip_hole_punch_teardown.reset(new ActionList);
+
+	    Action::Ptr create, destroy;
+	    if (addr.version() == IP::Addr::V4)
+	      {
+		const MacGatewayInfoV4 gw;
+		if (gw.iface_addr_defined())
+		  add_del_route(addr.to_string(), 32, gw.gateway_addr_str(), gw.iface(), 0, create, destroy);
+		else
+		  OPENVPN_LOG("FailsafeBlock::ip_hole_punch: IPv4 gateway undefined");
+	      }
+	    else if (addr.version() == IP::Addr::V6)
+	      {
+		OPENVPN_LOG("FailsafeBlock::ip_hole_punch: IPv6 gateway undefined"); // fixme -- need to determine IPv6 default gateway
+	      }
+
+	    if (!ip_hole_punch_added->exists(create))
+	      {
+		ip_hole_punch_added->add(create);
+		ip_hole_punch_teardown->add(destroy);
+
+		ActionList::Ptr add_cmds = new ActionList();
+		add_cmds->add(create);
+		add_cmds->execute();
+	      }
+	  }
+      }
+
+      void establish(ActionList& create, ActionList& destroy)
+      {
+	if (!halt)
+	  {
+	    // block IPv4
+	    if (block_v4 && !block_v4_teardown)
+	      {
+		block_v4_teardown.reset(new ActionList);
+		add_del_route("0.0.0.0", 1, "127.0.0.1", "lo0", 0, create, *block_v4_teardown);
+		add_del_route("128.0.0.0", 1, "127.0.0.1", "lo0", 0, create, *block_v4_teardown);
+	      }
+	    else if (!block_v4 && block_v4_teardown)
+	      {
+		create.add(*block_v4_teardown);
+		block_v4_teardown.reset();
+	      }
+
+	    // block IPv6
+	    if (block_v6 && !block_v6_teardown)
+	      {
+		block_v6_teardown.reset(new ActionList);
+		add_del_route("0000::", 1, "fe80::1", "lo0", R_IPv6, create, *block_v6_teardown);
+		add_del_route("8000::", 1, "fe80::1", "lo0", R_IPv6, create, *block_v6_teardown);
+	      }
+	    else if (!block_v6 && block_v6_teardown)
+	      {
+		create.add(*block_v6_teardown);
+		block_v6_teardown.reset();
+	      }
+
+	    // IP hole punch
+	    if (ip_hole_punch_teardown)
+	      {
+		destroy.add(*ip_hole_punch_teardown);
+		ip_hole_punch_teardown.reset();
+		ip_hole_punch_added.reset();
+	      }
+
+	    // DNS
+	    if (dns || dns_watchdog)
+	      {
+		if (!dns_watchdog)
+		  dns_watchdog.reset(new MacDNSWatchdog);
+		MacDNSWatchdog::DNSAction::Ptr da(new MacDNSWatchdog::DNSAction(dns_watchdog, dns, MacDNSWatchdog::FLUSH_RECONFIG));
+		create.add(da);
+		teardown_dns = MacDNS::Config::block(dns.get());
+	      }
+	    else
+	      teardown_dns.reset();
+	  }
+      }
+
+      void finalize(const bool disconnected)
+      {
+	if (!halt)
+	  {
+	    halt = disconnected;
+	    ActionList::Ptr cmds = new ActionList();
+
+	    // IP hole punch
+	    if (ip_hole_punch_teardown)
+	      {
+		cmds->add(*ip_hole_punch_teardown);
+		ip_hole_punch_teardown.reset();
+		ip_hole_punch_added.reset();
+	      }
+
+	    if (disconnected)
+	      {
+		// block IPv4
+		if (block_v4_teardown)
+		  {
+		    cmds->add(*block_v4_teardown);
+		    block_v4_teardown.reset();
+		  }
+
+		// block IPv6
+		if (block_v6_teardown)
+		  {
+		    cmds->add(*block_v6_teardown);
+		    block_v6_teardown.reset();
+		  }
+
+		// DNS
+		teardown_dns.reset();
+	      }
+
+	    // DNS
+	    if (dns_watchdog)
+	      {
+		MacDNSWatchdog::DNSAction::Ptr da(new MacDNSWatchdog::DNSAction(dns_watchdog,
+										teardown_dns,
+										teardown_dns ? 0 : MacDNSWatchdog::FLUSH_RECONFIG));
+		cmds->add(da);
+	      }
+
+	    // execute commands
+	    cmds->execute();
+	  }
+      }
+
+    private:
+      bool halt;
+
+      bool block_v4;
+      bool block_v6;
+      MacDNS::Config::Ptr dns;
+      MacDNS::Config::Ptr teardown_dns;
+
+      MacDNSWatchdog::Ptr dns_watchdog;
+      ActionList::Ptr ip_hole_punch_added;
+      ActionList::Ptr ip_hole_punch_teardown;
+      ActionList::Ptr block_v4_teardown;
+      ActionList::Ptr block_v6_teardown;
+    };
+
+    class Client;
+
     class ClientConfig : public TunClientFactory
     {
+      friend class Client; // accesses fsblock
+
     public:
       typedef boost::intrusive_ptr<ClientConfig> Ptr;
 
@@ -79,6 +379,8 @@ namespace openvpn {
 
       TunProp::Config tun_prop;
       int n_parallel;            // number of parallel async reads on tun socket
+
+      bool enable_failsafe_block;
 
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -102,12 +404,25 @@ namespace openvpn {
       }
 
       // called just prior to transmission of Disconnect event
-      virtual void close_persistent()
+      virtual void finalize(const bool disconnected)
       {
+	if (fsblock)
+	  fsblock->finalize(disconnected);
+      }
+
+      // Called just prior to transport layer opening up a socket to addr.
+      // Allows the implementation to ensure connectivity for outgoing
+      // transport connection to server.
+      virtual void ip_hole_punch(const IP::Addr& addr)
+      {
+	if (fsblock)
+	  fsblock->ip_hole_punch(addr);
       }
 
     private:
       ClientConfig() : n_parallel(8) {}
+
+      FailsafeBlock::Ptr fsblock;
     };
 
     class Client : public TunClient
@@ -187,13 +502,34 @@ namespace openvpn {
 	      // create ASIO wrapper for tun fd
 	      tun_wrap->save_replace_sock(new TUNStream(io_service, fd));
 
-	      // configure adapter properties
+	      // initialize failsafe blocker
+	      if (config->enable_failsafe_block && !config->fsblock)
+		config->fsblock.reset(new FailsafeBlock);
+	      FailsafeBlock* fsblock = config->fsblock.get();
+
+	      // configure tun/tap interface properties
 	      ActionList::Ptr add_cmds = new ActionList();
 	      remove_cmds.reset(new ActionList());
 	      remove_cmds->enable_destroy(true);
 	      tun_wrap->add_destructor(remove_cmds);
-	      tun_config(state->iface_name, *po, *add_cmds, *remove_cmds);
-	      MacDNSWatchdog::add_actions(*po, "OpenVPNConnect", *add_cmds, *remove_cmds);
+
+	      // configure tun properties
+	      tun_config(state->iface_name, *po, fsblock, *add_cmds, *remove_cmds);
+
+	      // configure DNS
+	      {
+		MacDNS::Config::Ptr dns(new MacDNS::Config(*po));
+		if (fsblock)
+		  fsblock->add_dns(dns);
+		else
+		  MacDNSWatchdog::add_actions(dns, MacDNSWatchdog::FLUSH_RECONFIG, *add_cmds, *remove_cmds);
+	      }
+
+	      // configure failsafe blocker
+	      if (fsblock)
+		fsblock->establish(*add_cmds, *remove_cmds);
+
+	      // execute commands to bring up interface
 	      add_cmds->execute();
 
 	      impl.reset(new TunImpl(tun_wrap,
@@ -263,89 +599,9 @@ namespace openvpn {
       {
       }
 
-      enum { // add_del_route flags
-	R_IPv6=(1<<0),
-	R_IFACE=(1<<1),
-	R_ONLINK=(1<<2),
-      };
-
-      static void add_del_route(const std::string& addr_str,
-				const int prefix_len,
-				const std::string& gateway_str,
-				const std::string& iface,
-				const unsigned int flags,
-				ActionList& create,
-				ActionList& destroy)
-      {
-	if (flags & R_IPv6)
-	  {
-	    const IPv6::Addr addr = IPv6::Addr::from_string(addr_str);
-	    const IPv6::Addr netmask = IPv6::Addr::netmask_from_prefix_len(prefix_len);
-	    const IPv6::Addr net = addr & netmask;
-
-	    Command::Ptr add(new Command);
-	    add->argv.push_back("/sbin/route");
-	    add->argv.push_back("add");
-	    add->argv.push_back("-inet6");
-	    add->argv.push_back(net.to_string());
-	    add->argv.push_back("-prefixlen");
-	    add->argv.push_back(to_string(prefix_len));
-	    if ((flags & R_IFACE) && !iface.empty())
-	      {
-		add->argv.push_back("-iface");
-		add->argv.push_back(iface);
-	      }
-	    else
-	      add->argv.push_back(gateway_str);
-	    create.add(add);
-
-	    // for the destroy command, copy the add command but replace "add" with "delete"
-	    Command::Ptr del(add->copy());
-	    del->argv[1] = "delete";
-	    destroy.add(del);
-	  }
-	else
-	  {
-	    const IPv4::Addr addr = IPv4::Addr::from_string(addr_str);
-	    const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(prefix_len);
-	    const IPv4::Addr net = addr & netmask;
-
-	    Command::Ptr add(new Command);
-	    add->argv.push_back("/sbin/route");
-	    add->argv.push_back("add");
-	    if (flags & R_ONLINK)
-	      {
-		add->argv.push_back("-cloning");
-		add->argv.push_back("-net");
-		add->argv.push_back(net.to_string());
-		add->argv.push_back("-netmask");
-		add->argv.push_back(netmask.to_string());
-		add->argv.push_back("-interface");
-		add->argv.push_back(iface);
-	      }
-	    else
-	      {
-		add->argv.push_back("-net");
-		if ((flags & R_IFACE) && !iface.empty())
-		  {
-		    add->argv.push_back("-ifscope");
-		    add->argv.push_back(iface);
-		  }
-		add->argv.push_back(net.to_string());
-		add->argv.push_back(gateway_str);
-		add->argv.push_back(netmask.to_string());
-	      }
-	    create.add(add);
-
-	    // for the destroy command, copy the add command but replace "add" with "delete"
-	    Command::Ptr del(add->copy());
-	    del->argv[1] = "delete";
-	    destroy.add(del);
-	  }
-      }
-
       static void tun_config(const std::string& iface_name,
 			     const TunBuilderCapture& pull,
+			     FailsafeBlock* fsblock,
 			     ActionList& create,
 			     ActionList& destroy)
       {
@@ -415,27 +671,45 @@ namespace openvpn {
 	// Process IPv4 redirect-gateway
 	if (pull.reroute_gw.ipv4)
 	  {
+	    if (fsblock)
+	      fsblock->add_block_v4();
+
 	    // add server bypass route
 	    if (gw.iface_addr_defined())
 	      {
 		if (!pull.remote_address.ipv6)
 		  {
-		    add_del_route(pull.remote_address.address, 32, gw.gateway_addr_str(), gw.iface(), 0, create, destroy);
-		    add_del_route(gw.gateway_addr_str(), 32, "", gw.iface(), R_ONLINK, create, destroy);
+		    Action::Ptr c, d;
+		    add_del_route(pull.remote_address.address, 32, gw.gateway_addr_str(), gw.iface(), 0, c, d);
+		    if (!fsblock || !fsblock->ip_hole_punch_exists(c))
+		      {
+			create.add(c);
+			destroy.add(d);
+		      }
+		    //add_del_route(gw.gateway_addr_str(), 32, "", gw.iface(), R_ONLINK, create, destroy); // fixme -- needed for block-local
 		  }
 	      }
 	    else
-	      throw tun_mac_error("redirect-gateway error: cannot detect default gateway");
+	      OPENVPN_LOG("ERROR: cannot detect IPv4 default gateway");
 
-	    add_del_route("0.0.0.0", 1, local4->gateway, iface_name, 0, create, destroy);
-	    add_del_route("128.0.0.0", 1, local4->gateway, iface_name, 0, create, destroy);
+	    add_del_route("0.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+	    add_del_route("64.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+	    add_del_route("128.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+	    add_del_route("192.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
 	  }
 
 	// Process IPv6 redirect-gateway
 	if (pull.reroute_gw.ipv6)
 	  {
-	    add_del_route("0000::", 1, local6->gateway, iface_name, R_IPv6, create, destroy);
-	    add_del_route("8000::", 1, local6->gateway, iface_name, R_IPv6, create, destroy);
+	    if (fsblock)
+	      fsblock->add_block_v6();
+
+	    OPENVPN_LOG("ERROR: cannot detect IPv6 default gateway"); // fixme -- add server bypass IPv6 route
+
+	    add_del_route("0000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
+	    add_del_route("4000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
+	    add_del_route("8000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
+	    add_del_route("C000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
 	  }
 
 	// Process exclude routes

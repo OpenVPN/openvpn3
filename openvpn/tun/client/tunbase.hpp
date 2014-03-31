@@ -59,8 +59,16 @@ namespace openvpn {
     // return true if layer 2 tunnels are supported
     virtual bool layer_2_supported() const { return false; }
 
-    // called just prior to emission of Disconnect event
-    virtual void close_persistent() {}
+    // Called on TunClient close, after TunClient::stop has been called.
+    // disconnected ->
+    //   true: this is the final disconnect, or
+    //   false: we are in a pause/reconnecting state.
+    virtual void finalize(const bool disconnected) {}
+
+    // Called just prior to transport layer opening up a socket to addr.
+    // Allows the implementation to ensure connectivity for outgoing
+    // transport connection to server.
+    virtual void ip_hole_punch(const IP::Addr& addr) {}
   };
 
 } // namespace openvpn

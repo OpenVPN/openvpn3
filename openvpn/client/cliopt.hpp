@@ -285,6 +285,7 @@ namespace openvpn {
 	tunconf->tun_prop.mtu = tun_mtu;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
+      tunconf->enable_failsafe_block = config.tun_persist;
       client_lifecycle.reset(new MacLifeCycle);
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
       TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
@@ -426,10 +427,10 @@ namespace openvpn {
       now_.update();
     }
 
-    void close_persistent()
+    void finalize(const bool disconnected)
     {
       if (tun_factory)
-	tun_factory->close_persistent();
+	tun_factory->finalize(disconnected);
     }
 
   private:

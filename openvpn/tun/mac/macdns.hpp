@@ -28,12 +28,14 @@
 namespace openvpn {
   class MacDNS : public RC<thread_unsafe_refcount>
   {
+    class Info;
+
   public:
     typedef boost::intrusive_ptr<MacDNS> Ptr;
 
     OPENVPN_EXCEPTION(macdns_error);
 
-    class Config : public RC<thread_unsafe_refcount>
+    class Config : public RC<thread_safe_refcount>
     {
     public:
       typedef boost::intrusive_ptr<Config> Ptr;
@@ -52,6 +54,34 @@ namespace openvpn {
 	  dns_servers(get_dns_servers(settings)),
 	  search_domains(get_search_domains(settings))
       {
+      }
+
+      static Config::Ptr block(const Config* orig)
+      {
+	Config::Ptr ret;
+	if (orig && orig->redirect_gateway_setting())
+	  {
+	    ret.reset(new Config);
+
+	    ret->redirect_gateway = orig->redirect_gateway;
+	    ret->reroute_dns_partial = orig->reroute_dns_partial;
+	    ret->search_order = orig->search_order;
+
+	    {
+	      CF::MutableArray a(CF::mutable_array());
+	      CF::array_append_str(a, "127.0.0.1");
+	      ret->dns_servers = CF::const_array(a);
+	    }
+	  }
+	return ret;
+      }
+
+      bool redirect_gateway_setting() const
+      {
+	bool rg = redirect_gateway;
+	if (reroute_dns_partial && rg && search_domains.defined())
+	  rg = false;
+	return rg;
       }
 
       std::string to_string() const
@@ -140,54 +170,55 @@ namespace openvpn {
       bool mod = false;
 
       try {
-	bool redirect_gateway = config.redirect_gateway;
-	if (config.reroute_dns_partial && redirect_gateway && config.search_domains.defined())
-	  redirect_gateway = false;
+	const bool redirect_gateway = config.redirect_gateway_setting();
 
 	int search_order = config.search_order;
 	if (!search_order)
 	  search_order = 5000;
 
 	CF::DynamicStore sc = ds_create();
-	Info info(sc, sname);
+	Info::Ptr info(new Info(sc, sname));
+
+	// cleanup settings applied to previous interface
+	interface_change_cleanup(info.get());
 
 	if (redirect_gateway)
 	  {
-	    info.dns.will_modify();
+	    info->dns.will_modify();
 
 	    // set DNS servers
 	    if (CF::array_len(config.dns_servers))
 	      {
-		info.dns.backup_orig("ServerAddresses");
-		CF::dict_set_obj(info.dns.mod, "ServerAddresses", config.dns_servers());
+		info->dns.backup_orig("ServerAddresses");
+		CF::dict_set_obj(info->dns.mod, "ServerAddresses", config.dns_servers());
 	      }
 
 	    // set search domains
-	    info.dns.backup_orig("SearchDomains");
+	    info->dns.backup_orig("SearchDomains");
 	    if (CF::array_len(config.search_domains))
-	      CF::dict_set_obj(info.dns.mod, "SearchDomains", config.search_domains());
+	      CF::dict_set_obj(info->dns.mod, "SearchDomains", config.search_domains());
 
 	    // set search order
-	    info.dns.backup_orig("SearchOrder");
-	    CF::dict_set_int(info.dns.mod, "SearchOrder", search_order);
+	    info->dns.backup_orig("SearchOrder");
+	    CF::dict_set_int(info->dns.mod, "SearchOrder", search_order);
 
 	    // push it
-	    mod |= info.dns.push_to_store();
+	    mod |= info->dns.push_to_store();
 	  }
 	else
 	  {
-	    info.ovpn.mod_reset();
+	    info->ovpn.mod_reset();
 	    if (CF::array_len(config.dns_servers) && CF::array_len(config.search_domains))
 	      {
 		// set DNS servers
-		CF::dict_set_obj(info.ovpn.mod, "ServerAddresses", config.dns_servers());
+		CF::dict_set_obj(info->ovpn.mod, "ServerAddresses", config.dns_servers());
 
 		// set search domains, reverse domains can be added here as well
-		CF::dict_set_obj(info.ovpn.mod, "SupplementalMatchDomains", config.search_domains());
+		CF::dict_set_obj(info->ovpn.mod, "SupplementalMatchDomains", config.search_domains());
 	      }
 
 	    // push it
-	    mod |= info.ovpn.push_to_store();
+	    mod |= info->ovpn.push_to_store();
 	  }
 
 	if (mod)
@@ -195,17 +226,18 @@ namespace openvpn {
             // As a backup, save PrimaryService in private dict (if network goes down while
             // we are set, we can lose info about PrimaryService in State:/Network/Global/IPv4
             // and be unable to reset ourselves).
-	    const CFTypeRef ps = CF::dict_get_obj(info.ipv4.dict, "PrimaryService");
+	    const CFTypeRef ps = CF::dict_get_obj(info->ipv4.dict, "PrimaryService");
 	    if (ps)
 	      {
-		info.info.mod_reset();
-		CF::dict_set_obj(info.info.mod, "PrimaryService", ps);
-		info.info.push_to_store();
+		info->info.mod_reset();
+		CF::dict_set_obj(info->info.mod, "PrimaryService", ps);
+		info->info.push_to_store();
 	      }
 	  }
 
+	prev = info;
 	if (mod)
-	  OPENVPN_LOG("MacDNS: SETDNS " << ver.to_string() << std::endl << info.to_string());
+	  OPENVPN_LOG("MacDNS: SETDNS " << ver.to_string() << std::endl << info->to_string());
       }
       catch (const std::exception& e)
 	{
@@ -219,37 +251,24 @@ namespace openvpn {
       bool mod = false;
       try {
 	CF::DynamicStore sc = ds_create();
-	Info info(sc, sname);
-	if (ver.major() < Mac::Version::OSX_10_8)
-	  {
-	    // Mac OS X 10.7 and lower.
-	    //
-            // We want to avoid executing this code block on OS X 10.8+
-            // because it might cause our VPN DNS settings to persist after
-            // disconnect.  Conversely, for 10.7 and earlier, we should
-            // execute this code to prevent our VPN DNS settings from
-            // persisting after disconnect.
-	    info.dns.will_modify();
-	    info.dns.restore_orig();
-	    mod |= info.dns.push_to_store();
-	  }
-	else
-	  {
-	    // Mac OS X 10.8 and higher
-	    info.dns.mod_reset();
-	    mod |= info.dns.push_to_store();
-	  }
+	Info::Ptr info(new Info(sc, sname));
+
+	// cleanup settings applied to previous interface
+	interface_change_cleanup(info.get());
+
+	// undo primary dns changes
+	mod |= reset_primary_dns(info.get());
 
 	// undo non-redirect-gateway changes
-	if (CF::dict_len(info.ovpn.dict))
-	  mod |= info.ovpn.remove_from_store();
+	if (CF::dict_len(info->ovpn.dict))
+	  mod |= info->ovpn.remove_from_store();
 
 	// remove private info dict
-	if (CF::dict_len(info.info.dict))
-	  mod |= info.info.remove_from_store();
+	if (CF::dict_len(info->info.dict))
+	  mod |= info->info.remove_from_store();
 
 	if (mod)
-	  OPENVPN_LOG("MacDNS: RESETDNS " << ver.to_string() << std::endl << info.to_string());
+	  OPENVPN_LOG("MacDNS: RESETDNS " << ver.to_string() << std::endl << info->to_string());
       }
       catch (const std::exception& e)
 	{
@@ -261,23 +280,60 @@ namespace openvpn {
     std::string to_string() const
     {
       CF::DynamicStore sc = ds_create();
-      Info info(sc, sname);
-      return info.to_string();
+      Info::Ptr info(new Info(sc, sname));
+      return info->to_string();
     }
 
     CF::Array dskey_array() const
     {
       CF::DynamicStore sc = ds_create();
-      Info info(sc, sname);
+      Info::Ptr info(new Info(sc, sname));
       CF::MutableArray ret(CF::mutable_array());
-      CF::array_append_str(ret, info.ipv4.dskey);
-      CF::array_append_str(ret, info.info.dskey);
-      CF::array_append_str(ret, info.ovpn.dskey);
-      CF::array_append_str(ret, info.dns.dskey);
+      CF::array_append_str(ret, info->ipv4.dskey);
+      CF::array_append_str(ret, info->info.dskey);
+      CF::array_append_str(ret, info->ovpn.dskey);
+      CF::array_append_str(ret, info->dns.dskey);
       return CF::const_array(ret);
     }
 
   private:
+    void interface_change_cleanup(Info* info)
+    {
+      if (info->interface_change(prev.get()))
+	{
+	  reset_primary_dns(prev.get());
+	  prev.reset();
+	}
+    }
+
+    bool reset_primary_dns(Info* info)
+    {
+      bool mod = false;
+      if (info)
+	{
+	  if (ver.major() < Mac::Version::OSX_10_8)
+	    {
+	      // Mac OS X 10.7 and lower.
+	      //
+	      // We want to avoid executing this code block on OS X 10.8+
+	      // because it might cause our VPN DNS settings to persist after
+	      // disconnect.  Conversely, for 10.7 and earlier, we should
+	      // execute this code to prevent our VPN DNS settings from
+	      // persisting after disconnect.
+	      info->dns.will_modify();
+	      info->dns.restore_orig();
+	      mod |= info->dns.push_to_store();
+	    }
+	  else
+	    {
+	      // Mac OS X 10.8 and higher
+	      info->dns.mod_reset();
+	      mod |= info->dns.push_to_store();
+	    }
+	}
+      return mod;
+    }
+
     class DSDict {
     public:
       DSDict(CF::DynamicStore& sc_arg, const std::string& sname_arg, const std::string& dskey_arg)
@@ -423,9 +479,11 @@ namespace openvpn {
       }
     };
 
-    class Info
+    class Info : public RC<thread_unsafe_refcount>
     {
     public:
+      typedef boost::intrusive_ptr<Info> Ptr;
+
       Info(CF::DynamicStore& sc, const std::string& sname)
 	: ipv4(sc, sname, "State:/Network/Global/IPv4"),
 	  info(sc, sname, "State:/Network/Service/" + sname + "/Info"),
@@ -442,6 +500,11 @@ namespace openvpn {
 	os << ovpn.to_string();
 	os << dns.to_string();
 	return os.str();
+      }
+
+      bool interface_change(Info* other) const
+      {
+	return other && dns.dskey != other->dns.dskey;
       }
 
       DSDict ipv4;
@@ -469,6 +532,7 @@ namespace openvpn {
 
     const std::string sname;
     Mac::Version ver;
+    Info::Ptr prev;
   };
 }
 

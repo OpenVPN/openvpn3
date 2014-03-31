@@ -64,6 +64,7 @@ namespace openvpn {
       : generation(0),
 	halt(false),
 	paused(false),
+	client_finalized(false),
 	dont_restart_(false),
 	lifecycle_started(false),
 	conn_timeout(client_options_arg->conn_timeout()),
@@ -118,7 +119,7 @@ namespace openvpn {
 	  cancel_timers();
 	  asio_work.reset();
 
-	  client_options->close_persistent();
+	  client_options->finalize(true);
 
 	  if (lifecycle_started)
 	    {
@@ -153,6 +154,7 @@ namespace openvpn {
 	    {
 	      client->send_explicit_exit_notify();
 	      client->stop(false);
+	      interim_finalize();
 	    }
 	  cancel_timers();
 	  asio_work.reset(new boost::asio::io_service::work(io_service));
@@ -215,6 +217,15 @@ namespace openvpn {
     }
 
   private:
+    void interim_finalize()
+    {
+      if (!client_finalized)
+	{
+	  client_options->finalize(false);
+	  client_finalized = true;
+	}
+    }
+
     virtual void pre_resolve_done()
     {
       if (!halt)
@@ -320,6 +331,7 @@ namespace openvpn {
       const unsigned int delay = 2;
       OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
       server_poll_timer.cancel();
+      interim_finalize();
       restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
       restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
     }
@@ -451,7 +463,10 @@ namespace openvpn {
       ++generation;
       asio_work.reset();
       if (client)
-	client->stop(false);
+	{
+	  client->stop(false);
+	  interim_finalize();
+	}
       if (generation > 1)
 	{
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Reconnecting();
@@ -462,6 +477,7 @@ namespace openvpn {
 	}
       Client::Config::Ptr cli_config = client_options->client_config(); // client_config in cliopt.hpp
       client.reset(new Client(io_service, *cli_config, this)); // build ClientProto::Session<> from cliproto.hpp
+      client_finalized = false;
 
       restart_wait_timer.cancel();
       if (client_options->server_poll_timeout_enabled())
@@ -498,6 +514,7 @@ namespace openvpn {
     unsigned int generation;
     bool halt;
     bool paused;
+    bool client_finalized;
     bool dont_restart_;
     bool lifecycle_started;
     int conn_timeout;

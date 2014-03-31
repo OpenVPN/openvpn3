@@ -25,32 +25,24 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<MacDNSWatchdog> Ptr;
 
-    static void add_actions(const TunBuilderCapture& settings,
-			    const std::string& sname,
-			    ActionList& create,
-			    ActionList& destroy)
-    {
-      MacDNSWatchdog::Ptr watchdog(new MacDNSWatchdog(settings, sname));
-      DNSAction::Ptr create_action(new DNSAction(true, watchdog));
-      DNSAction::Ptr destroy_action(new DNSAction(false, watchdog));
-      create.add(create_action);
-      destroy.add(destroy_action);
-    }
+    // flags
+    enum {
+      ENABLE_WATCHDOG  = (1<<0),
+      SYNCHRONOUS      = (1<<1),
+      FLUSH_RECONFIG   = (1<<2),
+    };
 
-    virtual ~MacDNSWatchdog()
-    {
-      stop_thread();
-    }
-
-  private:
     class DNSAction : public Action
     {
     public:
       typedef boost::intrusive_ptr<DNSAction> Ptr;
 
-      DNSAction(const bool state_arg, const MacDNSWatchdog::Ptr& parent_arg)
-	: state(state_arg),
-	  parent(parent_arg)
+      DNSAction(const MacDNSWatchdog::Ptr& parent_arg,
+		const MacDNS::Config::Ptr& config_arg,
+		const unsigned int flags_arg)
+	: parent(parent_arg),
+	  config(config_arg),
+	  flags(flags_arg)
       {
       }
 
@@ -58,66 +50,102 @@ namespace openvpn {
       {
 	OPENVPN_LOG(to_string());
 	if (parent)
-	  parent->setdns(state);
+	  parent->setdns(config, flags);
       }
 
       virtual std::string to_string() const
       {
 	std::ostringstream os;
-	os << "MacDNS: ";
-	if (state)
-	  os << "setdns ";
+	os << "MacDNS:";
+	if (config)
+	  os << ' ' << config->to_string();
 	else
-	  os << "resetdns ";
-	if (parent)
-	  os << parent->to_string();
-	else
-	  os << "UNDEF";
+	  os << " UNDEF";
+	if (flags & ENABLE_WATCHDOG)
+	  os << " ENABLE_WATCHDOG";
+	if (flags & SYNCHRONOUS)
+	  os << " SYNCHRONOUS";
+	if (flags & FLUSH_RECONFIG)
+	  os << " FLUSH_RECONFIG";
 	return os.str();
       }
 
     private:
-      bool state;
-      MacDNSWatchdog::Ptr parent;
+      const MacDNSWatchdog::Ptr parent;
+      const MacDNS::Config::Ptr config;
+      const unsigned int flags;
     };
 
-    MacDNSWatchdog(const TunBuilderCapture& settings,
-		   const std::string& sname)
-      : config(new MacDNS::Config(settings)),
-	macdns(new MacDNS(sname)),
+    MacDNSWatchdog()
+      : macdns(new MacDNS("OpenVPNConnect")),
 	thread(NULL)
     {
     }
 
-    bool setdns(const bool state)
+    virtual ~MacDNSWatchdog()
+    {
+      stop_thread();
+    }
+
+    static void add_actions(const MacDNS::Config::Ptr& dns,
+			    const unsigned int flags,
+			    ActionList& create,
+			    ActionList& destroy)
+    {
+      MacDNSWatchdog::Ptr watchdog(new MacDNSWatchdog);
+      MacDNS::Config::Ptr dns_remove;
+      DNSAction::Ptr create_action(new DNSAction(watchdog, dns, flags));
+      DNSAction::Ptr destroy_action(new DNSAction(watchdog, dns_remove, flags));
+      create.add(create_action);
+      destroy.add(destroy_action);
+    }
+
+  private:
+    bool setdns(const MacDNS::Config::Ptr& config, const unsigned int flags)
     {
       bool mod = false;
-      if (macdns && config)
+      if (config)
 	{
-	  if (state)
+	  if ((flags & SYNCHRONOUS) || !(flags & ENABLE_WATCHDOG))
+	    stop_thread();
+	  config_ = config;
+	  if (flags & ENABLE_WATCHDOG)
 	    {
 	      if (!thread)
 		{
-		  mod = macdns->setdns(*config);
+		  mod = macdns->setdns(*config_);
 		  thread = new boost::thread(&MacDNSWatchdog::thread_func, this);
+		}
+	      else
+		{
+		  if (runloop.defined())
+		    schedule_push_timer(0);
+		  else
+		    OPENVPN_LOG("MacDNSWatchdog::setdns: runloop undefined");
 		}
 	    }
 	  else
 	    {
-	      stop_thread();
-	      mod = macdns->resetdns();
+	      mod = macdns->setdns(*config_);
 	    }
-	  if (mod)
-	    {
-	      macdns->flush_cache();
-	      macdns->signal_network_reconfiguration();
-	    }
+	}
+      else
+	{
+	  stop_thread();
+	  config_.reset();
+	  mod = macdns->resetdns();
+	}
+      if (mod && (flags & FLUSH_RECONFIG))
+	{
+	  macdns->flush_cache();
+	  macdns->signal_network_reconfiguration();
 	}
       return mod;
     }
 
     std::string to_string() const
     {
+      const MacDNS::Config::Ptr config(config_);
       if (config)
 	return config->to_string();
       else
@@ -136,8 +164,9 @@ namespace openvpn {
 	}
     }
 
-    // All methods below this point called in the context of watchdog thread.
-
+    // All methods below this point called in the context of watchdog thread
+    // except for schedule_push_timer which may be called from parent thread
+    // as well.
     void thread_func()
     {
       runloop.reset(CFRunLoopGetCurrent(), CF::BORROW);
@@ -181,27 +210,36 @@ namespace openvpn {
 
     void callback(SCDynamicStoreRef store, CFArrayRef changedKeys)
     {
-      schedule_push_timer(3);
+      // DNS Watchdog delay from the time that change is detected
+      // to when we forcibly revert it (seconds).
+      schedule_push_timer(1);
     }
 
     void schedule_push_timer(const int seconds)
     {
+      Mutex::scoped_lock lock(push_timer_lock);
       CFRunLoopTimerContext context = { 0, this, NULL, NULL, NULL };
-      cancel_push_timer();
+      cancel_push_timer_nolock();
       push_timer.reset(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + seconds, 0, 0, 0, push_timer_callback_static, &context));
       if (push_timer.defined())
-	CFRunLoopAddTimer(CFRunLoopGetCurrent(), push_timer(), kCFRunLoopCommonModes);
+	CFRunLoopAddTimer(runloop(), push_timer(), kCFRunLoopCommonModes);
       else
 	OPENVPN_LOG("MacDNSWatchdog::schedule_push_timer: failed to create timer");
     }
 
-    void cancel_push_timer()
+    void cancel_push_timer_nolock()
     {
       if (push_timer.defined())
 	{
 	  CFRunLoopTimerInvalidate(push_timer());
 	  push_timer.reset(NULL);
 	}
+    }
+
+    void cancel_push_timer()
+    {
+      Mutex::scoped_lock lock(push_timer_lock);
+      cancel_push_timer_nolock();
     }
 
     static void push_timer_callback_static(CFRunLoopTimerRef timer, void *info)
@@ -214,8 +252,9 @@ namespace openvpn {
     {
       try {
 	// reset DNS settings after watcher detected modifications by third party
+	const MacDNS::Config::Ptr config(config_);
 	if (macdns->setdns(*config))
-	  OPENVPN_LOG("MacDNSWatchdog: DNS watchdog triggered");
+	  OPENVPN_LOG("MacDNSWatchdog: updated DNS settings");
       }
       catch (const std::exception& e)
 	{
@@ -223,12 +262,14 @@ namespace openvpn {
 	}
     }
 
-    MacDNS::Config::Ptr config;
+
+    MacDNS::Config::Ptr config_;
     MacDNS::Ptr macdns;
 
     boost::thread* thread;         // watcher thread
     CF::RunLoop runloop;           // run loop in watcher thread
     CF::Timer push_timer;          // watcher thread timer
+    Mutex push_timer_lock;
     Log::Context::Wrapper logwrap; // used to carry forward the log context from parent thread
   };
 }
