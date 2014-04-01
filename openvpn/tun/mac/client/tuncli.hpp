@@ -25,7 +25,7 @@
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/tun/mac/tunutil.hpp>
 #include <openvpn/tun/mac/utun.hpp>
-#include <openvpn/tun/mac/gwv4.hpp>
+#include <openvpn/tun/mac/macgw.hpp>
 #include <openvpn/tun/mac/macdns_watchdog.hpp>
 
 namespace openvpn {
@@ -225,17 +225,20 @@ namespace openvpn {
 	      ip_hole_punch_teardown.reset(new ActionList);
 
 	    Action::Ptr create, destroy;
+	    MacGWInfo gw;
 	    if (addr.version() == IP::Addr::V4)
 	      {
-		const MacGatewayInfoV4 gw;
-		if (gw.iface_addr_defined())
-		  add_del_route(addr.to_string(), 32, gw.gateway_addr_str(), gw.iface(), 0, create, destroy);
+		if (gw.v4.defined())
+		  add_del_route(addr.to_string(), 32, gw.v4.router.to_string(), gw.v4.iface, 0, create, destroy);
 		else
 		  OPENVPN_LOG("FailsafeBlock::ip_hole_punch: IPv4 gateway undefined");
 	      }
 	    else if (addr.version() == IP::Addr::V6)
 	      {
-		OPENVPN_LOG("FailsafeBlock::ip_hole_punch: IPv6 gateway undefined"); // fixme -- need to determine IPv6 default gateway
+		if (gw.v6.defined())
+		  add_del_route(addr.to_string(), 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6, create, destroy);
+		else
+		  OPENVPN_LOG("FailsafeBlock::ip_hole_punch: IPv6 gateway undefined");
 	      }
 
 	    if (!ip_hole_punch_added->exists(create))
@@ -606,7 +609,7 @@ namespace openvpn {
 			     ActionList& destroy)
       {
 	// get default gateway
-	const MacGatewayInfoV4 gw;
+	MacGWInfo gw;
 
 	// set local4 and local6 to point to IPv4/6 route configurations
 	const TunBuilderCapture::Route* local4 = NULL;
@@ -668,6 +671,29 @@ namespace openvpn {
 	    }
 	}
 
+	// Process exclude routes
+	if (!pull.exclude_routes.empty())
+	  {
+	    for (std::vector<TunBuilderCapture::Route>::const_iterator i = pull.exclude_routes.begin(); i != pull.exclude_routes.end(); ++i)
+	      {
+		const TunBuilderCapture::Route& route = *i;
+		if (route.ipv6)
+		  {
+		    if (gw.v6.defined())
+		      add_del_route(route.address, route.prefix_length, gw.v6.router.to_string(), gw.v6.iface, R_IPv6, create, destroy);
+		    else
+		      OPENVPN_LOG("NOTE: cannot determine gateway for exclude IPv6 routes");
+		  }
+		else
+		  {
+		    if (gw.v4.defined())
+		      add_del_route(route.address, route.prefix_length, gw.v4.router.to_string(), gw.v4.iface, 0, create, destroy);
+		    else
+		      OPENVPN_LOG("NOTE: cannot determine gateway for exclude IPv4 routes");
+		  }
+	      }
+	  }
+
 	// Process IPv4 redirect-gateway
 	if (pull.reroute_gw.ipv4)
 	  {
@@ -675,18 +701,18 @@ namespace openvpn {
 	      fsblock->add_block_v4();
 
 	    // add server bypass route
-	    if (gw.iface_addr_defined())
+	    if (gw.v4.defined())
 	      {
 		if (!pull.remote_address.ipv6)
 		  {
 		    Action::Ptr c, d;
-		    add_del_route(pull.remote_address.address, 32, gw.gateway_addr_str(), gw.iface(), 0, c, d);
+		    add_del_route(pull.remote_address.address, 32, gw.v4.router.to_string(), gw.v4.iface, 0, c, d);
 		    if (!fsblock || !fsblock->ip_hole_punch_exists(c))
 		      {
 			create.add(c);
 			destroy.add(d);
 		      }
-		    //add_del_route(gw.gateway_addr_str(), 32, "", gw.iface(), R_ONLINK, create, destroy); // fixme -- needed for block-local
+		    //add_del_route(gw.v4.router.to_string(), 32, "", gw.v4.iface, R_ONLINK, create, destroy); // fixme -- needed for block-local
 		  }
 	      }
 	    else
@@ -704,33 +730,28 @@ namespace openvpn {
 	    if (fsblock)
 	      fsblock->add_block_v6();
 
-	    OPENVPN_LOG("ERROR: cannot detect IPv6 default gateway"); // fixme -- add server bypass IPv6 route
+	    // add server bypass route
+	    if (gw.v6.defined())
+	      {
+		if (pull.remote_address.ipv6)
+		  {
+		    Action::Ptr c, d;
+		    add_del_route(pull.remote_address.address, 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6, c, d);
+		    if (!fsblock || !fsblock->ip_hole_punch_exists(c))
+		      {
+			create.add(c);
+			destroy.add(d);
+		      }
+		    //add_del_route(gw.v6.router.to_string(), 128, "", gw.v6.iface, R_IPv6|R_ONLINK, create, destroy); // fixme -- needed for block-local
+		  }
+	      }
+	    else
+	      OPENVPN_LOG("ERROR: cannot detect IPv6 default gateway");
 
 	    add_del_route("0000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
 	    add_del_route("4000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
 	    add_del_route("8000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
 	    add_del_route("C000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
-	  }
-
-	// Process exclude routes
-	if (!pull.exclude_routes.empty())
-	  {
-	    if (gw.iface_addr_defined())
-	      {
-		bool ipv6_error = false;
-		for (std::vector<TunBuilderCapture::Route>::const_iterator i = pull.exclude_routes.begin(); i != pull.exclude_routes.end(); ++i)
-		  {
-		    const TunBuilderCapture::Route& route = *i;
-		    if (route.ipv6)
-		      ipv6_error = true;
-		    else
-		      add_del_route(route.address, route.prefix_length, gw.gateway_addr_str(), gw.iface(), 0, create, destroy);
-		  }
-		if (ipv6_error)
-		  OPENVPN_LOG("NOTE: exclude IPv6 routes not currently supported");
-	      }
-	    else
-	      OPENVPN_LOG("NOTE: exclude routes error: cannot detect default gateway");
 	  }
       }
 
