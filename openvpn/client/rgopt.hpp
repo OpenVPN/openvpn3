@@ -123,7 +123,7 @@ namespace openvpn {
 		flags_ |= RG_BYPASS_DHCP;
 	      else if (f == "bypass-dns")
 		flags_ |= RG_BYPASS_DNS;
-	      else if (f == "block_local")
+	      else if (f == "block-local")
 		flags_ |= RG_BLOCK_LOCAL;
 	      else if (f == "ipv4")
 		flags_ |= RG_IPv4;
