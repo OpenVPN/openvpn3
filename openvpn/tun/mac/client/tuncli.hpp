@@ -36,7 +36,10 @@ namespace openvpn {
     enum { // add_del_route flags
       R_IPv6=(1<<0),
       R_IFACE=(1<<1),
-      R_ONLINK=(1<<2),
+      R_IFACE_HINT=(1<<2),
+      R_ONLINK=(1<<3),
+      R_REJECT=(1<<4),
+      R_BLACKHOLE=(1<<5),
     };
 
     inline void add_del_route(const std::string& addr_str,
@@ -56,17 +59,30 @@ namespace openvpn {
 	  Command::Ptr add(new Command);
 	  add->argv.push_back("/sbin/route");
 	  add->argv.push_back("add");
+	  add->argv.push_back("-net");
 	  add->argv.push_back("-inet6");
 	  add->argv.push_back(net.to_string());
 	  add->argv.push_back("-prefixlen");
 	  add->argv.push_back(to_string(prefix_len));
-	  if ((flags & R_IFACE) && !iface.empty())
+	  if (flags & R_REJECT)
+	    add->argv.push_back("-reject");
+	  if (flags & R_BLACKHOLE)
+	    add->argv.push_back("-blackhole");
+	  if (!iface.empty())
 	    {
-	      add->argv.push_back("-iface");
-	      add->argv.push_back(iface);
+	      if (flags & R_IFACE)
+		{
+		  add->argv.push_back("-iface");
+		  add->argv.push_back(iface);
+		}
 	    }
-	  else
-	    add->argv.push_back(gateway_str);
+	  if (!gateway_str.empty())
+	    {
+	      std::string g = gateway_str;
+	      if (flags & R_IFACE_HINT)
+		g += '%' + iface;
+	      add->argv.push_back(g);
+	    }
 	  create = add;
 
 	  // for the destroy command, copy the add command but replace "add" with "delete"
@@ -96,14 +112,22 @@ namespace openvpn {
 	  else
 	    {
 	      add->argv.push_back("-net");
-	      if ((flags & R_IFACE) && !iface.empty())
-		{
-		  add->argv.push_back("-ifscope");
-		  add->argv.push_back(iface);
-		}
 	      add->argv.push_back(net.to_string());
-	      add->argv.push_back(gateway_str);
+	      add->argv.push_back("-netmask");
 	      add->argv.push_back(netmask.to_string());
+	      if (flags & R_REJECT)
+		add->argv.push_back("-reject");
+	      if (flags & R_BLACKHOLE)
+		add->argv.push_back("-blackhole");
+	      if (!iface.empty())
+		{
+		  if (flags & R_IFACE)
+		    {
+		      add->argv.push_back("-iface");
+		      add->argv.push_back(iface);
+		    }
+		}
+	      add->argv.push_back(gateway_str);
 	    }
 	  create = add;
 
@@ -175,7 +199,8 @@ namespace openvpn {
       FailsafeBlock()
 	: halt(false),
 	  block_v4(false),
-	  block_v6(false)
+	  block_v6(false),
+	  block_v6_public(false)
       {
       }
 
@@ -212,6 +237,11 @@ namespace openvpn {
       void add_block_v6()
       {
 	block_v6 = true;
+      }
+
+      void add_block_v6_public()
+      {
+	block_v6_public = true;
       }
 
       void ip_hole_punch(const IP::Addr& addr)
@@ -261,8 +291,8 @@ namespace openvpn {
 	    if (block_v4 && !block_v4_teardown)
 	      {
 		block_v4_teardown.reset(new ActionList);
-		add_del_route("0.0.0.0", 1, "127.0.0.1", "lo0", 0, create, *block_v4_teardown);
-		add_del_route("128.0.0.0", 1, "127.0.0.1", "lo0", 0, create, *block_v4_teardown);
+		add_del_route("0.0.0.0", 1, "127.0.0.1", "lo0", R_BLACKHOLE, create, *block_v4_teardown);
+		add_del_route("128.0.0.0", 1, "127.0.0.1", "lo0", R_BLACKHOLE, create, *block_v4_teardown);
 	      }
 	    else if (!block_v4 && block_v4_teardown)
 	      {
@@ -271,13 +301,24 @@ namespace openvpn {
 	      }
 
 	    // block IPv6
-	    if (block_v6 && !block_v6_teardown)
+	    if ((block_v6 || block_v6_public) && !block_v6_teardown)
 	      {
 		block_v6_teardown.reset(new ActionList);
-		add_del_route("0000::", 1, "fe80::1", "lo0", R_IPv6, create, *block_v6_teardown);
-		add_del_route("8000::", 1, "fe80::1", "lo0", R_IPv6, create, *block_v6_teardown);
+		if (block_v6_public)
+		  {
+		    add_del_route("2000::", 4, "::1", "lo0", R_IPv6|R_REJECT|R_IFACE_HINT, create, *block_v6_teardown);
+		    add_del_route("3000::", 4, "::1", "lo0", R_IPv6|R_REJECT|R_IFACE_HINT, create, *block_v6_teardown);
+		    add_del_route("fc00::", 7, "::1", "lo0", R_IPv6|R_REJECT|R_IFACE_HINT, create, *block_v6_teardown);
+		  }
+		else
+		  {
+#if 0 // fixme -- strangely, this code blocks ALL subsequently added routes, even with higher prefix lengths!
+		    add_del_route("0000::", 1, "::1", "lo0", R_IPv6|R_BLACKHOLE|R_IFACE_HINT, create, *block_v6_teardown);
+		    add_del_route("8000::", 1, "::1", "lo0", R_IPv6|R_BLACKHOLE|R_IFACE_HINT, create, *block_v6_teardown);
+#endif
+		  }
 	      }
-	    else if (!block_v6 && block_v6_teardown)
+	    else if (!(block_v6 || block_v6_public) && block_v6_teardown)
 	      {
 		create.add(*block_v6_teardown);
 		block_v6_teardown.reset();
@@ -359,6 +400,7 @@ namespace openvpn {
 
       bool block_v4;
       bool block_v6;
+      bool block_v6_public;
       MacDNS::Config::Ptr dns;
       MacDNS::Config::Ptr teardown_dns;
 
@@ -619,6 +661,13 @@ namespace openvpn {
 	if (pull.tunnel_address_index_ipv6 >= 0)
 	  local6 = &pull.tunnel_addresses[pull.tunnel_address_index_ipv6];
 
+	// Interface down
+	Command::Ptr iface_down(new Command);
+	iface_down->argv.push_back("/sbin/ifconfig");
+	iface_down->argv.push_back(iface_name);
+	iface_down->argv.push_back("down");
+	create.add(iface_down);
+
 	// Set IPv4 Interface
 	if (local4)
 	  {
@@ -649,9 +698,10 @@ namespace openvpn {
 	      cmd->argv.push_back(iface_name);
 	      cmd->argv.push_back("inet6");
 	      cmd->argv.push_back(local6->address + '/' + to_string(local6->prefix_length));
+	      cmd->argv.push_back("up");
 	      create.add(cmd);
 	    }
-	    add_del_route(local6->address, local6->prefix_length, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+	    add_del_route(local6->address, local6->prefix_length, "", iface_name, R_IPv6|R_IFACE, create, destroy);
 	  }
 
 	// Process Routes
@@ -753,6 +803,13 @@ namespace openvpn {
 	    add_del_route("8000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
 	    add_del_route("C000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
 	  }
+
+	// Interface down
+	destroy.add(iface_down);
+
+	// Block IPv6
+	if (pull.block_ipv6 && fsblock)
+	  fsblock->add_block_v6_public();
       }
 
       bool send(Buffer& buf)

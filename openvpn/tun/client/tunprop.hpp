@@ -80,6 +80,9 @@ namespace openvpn {
       // add DNS servers and domain prefixes
       const unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
 
+      // Block IPv6?
+      tb->tun_builder_set_block_ipv6(opt.exists("block-ipv6") && !(ip_ver_flags & F_IPv6));
+
       // DNS fallback
       if ((reroute_gw_ver_flags & F_IPv4) && !(dhcp_option_flags & F_ADD_DNS))
 	{

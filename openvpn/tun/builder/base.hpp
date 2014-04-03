@@ -154,6 +154,15 @@ namespace openvpn {
       return false;
     }
 
+    // Optional callback that indicates whether IPv6 traffic should be
+    // blocked, to prevent unencrypted IPv6 packet leakage when the
+    // tunnel is IPv4-only, but the local machine has IPv6 connectivity
+    // to the internet.  Enabled by "block-ipv6" config var.
+    virtual bool tun_builder_set_block_ipv6(bool block_ipv6)
+    {
+      return true;
+    }
+
     // Callback to establish the VPN tunnel, returning a file descriptor
     // to the tunnel, which the caller will henceforth own.  Returns -1
     // if the tunnel could not be established.

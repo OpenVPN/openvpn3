@@ -152,7 +152,12 @@ namespace openvpn {
       }
     };
 
-    TunBuilderCapture() : mtu(0), tunnel_address_index_ipv4(-1), tunnel_address_index_ipv6(-1) {}
+    TunBuilderCapture() : mtu(0),
+			  tunnel_address_index_ipv4(-1),
+			  tunnel_address_index_ipv6(-1),
+			  block_ipv6(false)
+    {
+    }
 
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
     {
@@ -270,6 +275,12 @@ namespace openvpn {
       return true;
     }
 
+    virtual bool tun_builder_set_block_ipv6(bool value)
+    {
+      block_ipv6 = value;
+      return true;
+    }
+
     std::string to_string() const
     {
       std::ostringstream os;
@@ -279,6 +290,7 @@ namespace openvpn {
       os << "Remote Address: " << remote_address.to_string() << std::endl;
       render_route_list(os, "Tunnel Addresses", tunnel_addresses);
       os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
+      os << "Block IPv6: " << (block_ipv6 ? "yes" : "no") << std::endl;
       render_route_list(os, "Add Routes", add_routes);
       render_route_list(os, "Exclude Routes", exclude_routes);
       {
@@ -320,6 +332,7 @@ namespace openvpn {
     int tunnel_address_index_ipv4;         // index into tunnel_addresses for IPv4 entry (or -1 if undef)
     int tunnel_address_index_ipv6;         // index into tunnel_addresses for IPv6 entry (or -1 if undef)
     RerouteGW reroute_gw;                  // redirect-gateway info
+    bool block_ipv6;                       // block IPv6 traffic while VPN is active
     std::vector<Route> add_routes;         // routes that should be added to tunnel
     std::vector<Route> exclude_routes;     // routes that should be excluded from tunnel
     std::vector<DNSServer> dns_servers;    // VPN DNS servers
