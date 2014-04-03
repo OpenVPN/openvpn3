@@ -76,7 +76,7 @@ namespace openvpn {
 		  add->argv.push_back(iface);
 		}
 	    }
-	  if (!gateway_str.empty())
+	  if (!gateway_str.empty() && !(flags & R_IFACE))
 	    {
 	      std::string g = gateway_str;
 	      if (flags & R_IFACE_HINT)
@@ -266,7 +266,7 @@ namespace openvpn {
 	    else if (addr.version() == IP::Addr::V6)
 	      {
 		if (gw.v6.defined())
-		  add_del_route(addr.to_string(), 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6, create, destroy);
+		  add_del_route(addr.to_string(), 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6|R_IFACE_HINT, create, destroy);
 		else
 		  OPENVPN_LOG("FailsafeBlock::ip_hole_punch: IPv6 gateway undefined");
 	      }
@@ -710,7 +710,7 @@ namespace openvpn {
 	    {
 	      const TunBuilderCapture::Route& route = *i;
 	      if (route.ipv6)
-		add_del_route(route.address, route.prefix_length, local6->gateway, iface_name, R_IPv6, create, destroy);
+		add_del_route(route.address, route.prefix_length, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
 	      else
 		{
 		  if (local4 && !local4->gateway.empty())
@@ -730,7 +730,7 @@ namespace openvpn {
 		if (route.ipv6)
 		  {
 		    if (gw.v6.defined())
-		      add_del_route(route.address, route.prefix_length, gw.v6.router.to_string(), gw.v6.iface, R_IPv6, create, destroy);
+		      add_del_route(route.address, route.prefix_length, gw.v6.router.to_string(), gw.v6.iface, R_IPv6|R_IFACE_HINT, create, destroy);
 		    else
 		      OPENVPN_LOG("NOTE: cannot determine gateway for exclude IPv6 routes");
 		  }
@@ -786,7 +786,7 @@ namespace openvpn {
 		if (pull.remote_address.ipv6)
 		  {
 		    Action::Ptr c, d;
-		    add_del_route(pull.remote_address.address, 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6, c, d);
+		    add_del_route(pull.remote_address.address, 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6|R_IFACE_HINT, c, d);
 		    if (!fsblock || !fsblock->ip_hole_punch_exists(c))
 		      {
 			create.add(c);
@@ -798,10 +798,10 @@ namespace openvpn {
 	    else
 	      OPENVPN_LOG("ERROR: cannot detect IPv6 default gateway");
 
-	    add_del_route("0000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
-	    add_del_route("4000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
-	    add_del_route("8000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
-	    add_del_route("C000::", 2, local6->gateway, iface_name, R_IPv6, create, destroy);
+	    add_del_route("0000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+	    add_del_route("4000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+	    add_del_route("8000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+	    add_del_route("C000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
 	  }
 
 	// Interface down
