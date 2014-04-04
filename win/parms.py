@@ -1,8 +1,8 @@
 PARMS = {
     "DEBUG" : False,
     "OVPN3" : "c:\\src\\ovpn3",
-    "TAP" : "c:\\src\\tap-windows",
-    "TAP_WIN_COMPONENT_ID" : "tapoas",
+    "TAP" : "c:\\src\\tap-windows6",
+    "TAP_WIN_COMPONENT_ID" : "tap0901",  # Community: tap0901, Access Server: tapoas
     "DEP" : "z:\\james\\downloads",
     "BUILD" : "c:\\src\\ovpn3-build",
     "DIST" : "c:\\src\\ovpn3\\dist",
