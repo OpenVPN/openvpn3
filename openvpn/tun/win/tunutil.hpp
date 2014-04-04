@@ -345,13 +345,16 @@ namespace openvpn {
       }
 
       // set TAP adapter to topology net30
-      inline void tap_configure_topology_net30(HANDLE th, const IP::Addr& local, const unsigned int prefix_len)
+      inline void tap_configure_topology_net30(HANDLE th, const IP::Addr& local_addr, const unsigned int prefix_len)
       {
+	const IPv4::Addr local = local_addr.to_ipv4();
 	const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(prefix_len);
+	const IPv4::Addr network = local & netmask;
+	const IPv4::Addr remote = network + 1;
 
 	boost::uint32_t ep[2];
-	ep[0] = htonl(local.to_ipv4().to_uint32());
-	ep[1] = htonl(netmask.to_uint32());
+	ep[0] = htonl(local.to_uint32());
+	ep[1] = htonl(remote.to_uint32());
 
 	DWORD len;
 	if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT,
