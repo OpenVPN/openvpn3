@@ -1851,8 +1851,7 @@
  *
  * This module is required for X.509 CRL parsing.
  */
-// JY removed -- PKI
-//#define POLARSSL_X509_CRL_PARSE_C
+#define POLARSSL_X509_CRL_PARSE_C
 
 /**
  * \def POLARSSL_X509_CSR_PARSE_C

@@ -340,7 +340,7 @@ namespace openvpn {
 	    case 'a':
 	      return d == "auth-user-pass";
 	    case 'c':
-	      return d == "ca" || d == "cert";
+	      return d == "ca" || d == "cert" || d == "crl-verify";
 	    case 'd':
 	      return d == "dh";
 	    case 'e':

@@ -38,6 +38,7 @@
 #include <openvpn/ssl/tls_remote.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
+#include <openvpn/polarssl/pki/x509crl.hpp>
 #include <openvpn/polarssl/pki/dh.hpp>
 #include <openvpn/polarssl/pki/pkctx.hpp>
 #include <openvpn/polarssl/util/error.hpp>
@@ -87,6 +88,7 @@ namespace openvpn {
       Mode mode;
       PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
       PolarSSLPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
+      PolarSSLPKI::X509CRL::Ptr crl_chain;   // CRL chain for remote verification
       PolarSSLPKI::PKContext::Ptr priv_key;  // private key
       std::string priv_key_pwd;              // private key password
       PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters (only needed in server mode)
@@ -118,6 +120,13 @@ namespace openvpn {
 	PolarSSLPKI::X509Cert::Ptr c = new PolarSSLPKI::X509Cert();
 	c->parse(ca_txt, "ca");
 	ca_chain = c;
+      }
+
+      void load_crl(const std::string& crl_txt)
+      {
+	PolarSSLPKI::X509CRL::Ptr c = new PolarSSLPKI::X509CRL();
+	c->parse(crl_txt);
+	crl_chain = c;
       }
 
       void load_cert(const std::string& cert_txt)
@@ -159,6 +168,13 @@ namespace openvpn {
 	{
 	  const std::string ca_txt = opt.cat("ca");
 	  load_ca(ca_txt);
+	}
+
+	// CRL
+	{
+	  const std::string crl_txt = opt.cat("crl-verify");
+	  if (!crl_txt.empty())
+	    load_crl(crl_txt);
 	}
 
 	// local cert/key
@@ -383,7 +399,10 @@ namespace openvpn {
 
 	  // set CA chain
 	  if (c.ca_chain)
-	    ssl_set_ca_chain(ssl, c.ca_chain->get(), NULL, NULL);
+	    ssl_set_ca_chain(ssl,
+			     c.ca_chain->get(),
+			     c.crl_chain ? c.crl_chain->get() : NULL,
+			     NULL);
 	  else
 	    throw PolarSSLException("CA chain not defined");
 
