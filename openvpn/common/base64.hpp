@@ -113,7 +113,7 @@ namespace openvpn {
     template <typename V>
     void decode(V& dest, const std::string& str) const
     {
-      for (const char *p = str.c_str(); p != '\0' && (*p == equal || is_base64_char(*p)); p += 4)
+      for (const char *p = str.c_str(); *p != '\0' && (*p == equal || is_base64_char(*p)); p += 4)
 	{
 	  unsigned int marker;
 	  const unsigned int val = token_decode(p, marker);
