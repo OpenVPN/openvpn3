@@ -32,7 +32,7 @@ if [ "$OSX_ONLY" != "1" ]; then
 fi
 
 # osx
-[ -z "$OSX_MINICRYPTO" ] && OSX_MINICRYPTO=1
+[ -z "$OSX_MINICRYPTO" ] && OSX_MINICRYPTO=0
 [ -z "$OSX_SERVER" ] && OSX_SERVER=1
 for target in osx osx-dbg ; do
     echo '***************' TARGET $target

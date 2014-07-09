@@ -24,6 +24,7 @@ if [ "$NO_WIPE" != "1" ]; then
     tar xfz $DL/$BOOST_VERSION.tar.gz
     cd $BOOST_VERSION
     #patch -p1 <$DL/asio-engine.patch
+    patch -p0 <$O3/boost/atomic-1.55.0.patch
 
     for T in $TARGETS ; do
 	TS="${T//-/}"

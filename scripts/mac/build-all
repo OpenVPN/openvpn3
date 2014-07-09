@@ -9,8 +9,8 @@ cd $DEP_DIR
 rm -rf boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
 echo "******* BOOST"
 $O3/scripts/mac/build-boost
-echo "******* MINICRYPTO"
-$O3/scripts/mac/build-minicrypto
+#echo "******* MINICRYPTO"
+#$O3/scripts/mac/build-minicrypto
 echo "******* POLARSSL"
 OSX_SERVER=0 $O3/scripts/mac/build-polarssl
 echo "******* SNAPPY"
