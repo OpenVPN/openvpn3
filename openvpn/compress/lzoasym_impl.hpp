@@ -44,6 +44,7 @@ namespace openvpn {
       LZOASYM_E_OUTPUT_OVERFLOW=-4,
       LZOASYM_E_MATCH_OVERFLOW=-5,
       LZOASYM_E_ASSERT_FAILED=-6,
+      LZOASYM_E_INPUT_TOO_LARGE=-7,
     };
 
     // Internal constants
@@ -185,6 +186,9 @@ namespace openvpn {
 
       input_ptr = input;
       output_ptr = output;
+
+      if (LZOASYM_UNLIKELY(input_length > 65536)) // quick fix to prevent 16MB integer overflow vulnerability
+	goto input_too_large;
 
       if (LZOASYM_LIKELY(*input_ptr <= 17))
 	{
@@ -375,6 +379,9 @@ namespace openvpn {
 
     assert_fail:
       return LZOASYM_E_ASSERT_FAILED;
+
+    input_too_large:
+      return LZOASYM_E_INPUT_TOO_LARGE;
     }
   }
 }
