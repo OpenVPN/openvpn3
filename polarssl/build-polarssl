@@ -55,9 +55,8 @@ else
     # delete makefiles (apparently not needed)
     rm $(find . -type f | grep Makefile)
 
-    echo MERGING dhm.patch
-    patch -p1 <$PD/dhm.patch
-    patch -p1 <$PD/entropy-printf.patch
+    #patch -p1 <$PD/dhm.patch
+    #patch -p1 <$PD/entropy-printf.patch
 
     # do the big polar-openssl patch
     echo MERGING polarssl-minicrypto.patch
