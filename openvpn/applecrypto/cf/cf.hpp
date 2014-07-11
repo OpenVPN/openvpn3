@@ -126,6 +126,11 @@ namespace openvpn {
 
       static T cast(CFTypeRef obj) { return T(Type<T>::cast(obj)); }
 
+      static Wrap from_generic(CFTypeRef obj, const Own own=OWN)
+      {
+	return Wrap(cast(obj), own);
+      }
+
       T release()
       {
 	T ret = obj_;
