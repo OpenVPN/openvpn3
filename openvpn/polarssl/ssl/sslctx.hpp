@@ -19,7 +19,7 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL 1.2 SSL API as defined in <polarssl/ssl.h>
+// Wrap the PolarSSL 1.3 SSL API as defined in <polarssl/ssl.h>
 // so that it can be used as the SSL layer by the OpenVPN core.
 
 #ifndef OPENVPN_POLARSSL_SSL_SSLCTX_H
@@ -397,16 +397,13 @@ namespace openvpn {
 	  // set verify callback
 	  ssl_set_verify(ssl, verify_callback, ctx);
 
-	  // Allocate session object, but don't support SSL-level session resume.
+	  // Notes on SSL resume/renegotiation:
 	  // Note: SSL resume is not enabled because ssl_set_session_cache is not called.
 	  // Note: SSL renegotiation is not enabled because ssl_set_renegotiation
 	  //       defaults to SSL_RENEGOTIATION_DISABLED and ssl_legacy_renegotiation
 	  //       defaults to SSL_LEGACY_NO_RENEGOTIATION.
 	  // Also, POLARSSL_SSL_SESSION_TICKETS (compile flag) should be left undefined
 	  // in PolarSSL config.h.
-	  sess = new ssl_session;
-	  std::memset(sess, 0, sizeof(*sess));
-	  ssl_set_session(ssl, sess);
 
 	  if (c.force_aes_cbc_ciphersuites)
 	    ssl_set_ciphersuites(ssl, polarssl_ctx_private::aes_cbc_ciphersuites);
@@ -521,7 +518,6 @@ namespace openvpn {
       void clear()
       {
 	ssl = NULL;
-	sess = NULL;
 	overflow = false;
       }
 
@@ -532,13 +528,10 @@ namespace openvpn {
 	    ssl_free(ssl);
 	    delete ssl;
 	  }
-	if (sess)
-	  delete sess;
 	clear();
       }
 
       ssl_context *ssl;	       // underlying SSL connection object
-      ssl_session *sess;       // SSL session (tied to ssl object above)
       typename RAND_API::Ptr rng;       // random data source
       bool overflow;
       MemQStream ct_in;    // write ciphertext to here
