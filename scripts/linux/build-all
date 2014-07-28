@@ -7,7 +7,7 @@ fi
 export DEP_DIR=${DEP_DIR:-$HOME/linux}
 cd $DEP_DIR
 $O3/scripts/linux/build-boost
-$O3/scripts/linux/build-openssl x64
+#$O3/scripts/linux/build-openssl x64
 $O3/scripts/linux/build-polarssl
 $O3/scripts/linux/build-snappy
 $O3/scripts/linux/build-lz4

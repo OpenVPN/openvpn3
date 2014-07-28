@@ -20,8 +20,8 @@ Build on Mac:
 
 Build on Linux:
 
+  With PolarSSL:
+    STRIP=1 SNAP=1 LZ4=1 PSSL=1 NOSSL=1 build cli
+
   With OpenSSL:
     STRIP=1 SNAP=1 LZ4=1 build cli
-
-  With PolarSSL:
-    STRIP=1 SNAP=1 LZ4=1 PSSL=1 OPENSSL_LINK=1 build cli

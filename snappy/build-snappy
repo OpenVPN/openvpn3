@@ -57,7 +57,7 @@ rm -rf $DIST
 mkdir -p $DIST
 cd $SNAPPY_VERSION
 echo 'OPTIONS' CC=$CC LD=$LD AR=$AR RANLIB=$RANLIB host_opt=$host_opt targ_opt=$targ_opt
-export CFLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC"
+export CFLAGS="$PLATFORM_FLAGS $CXX_COMPILER_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC"
 echo 'CFLAGS' $CFLAGS
 export CXXFLAGS="$CFLAGS"
 ./configure --prefix=$DIST $host_opt $targ_opt --enable-static --disable-shared

@@ -3,7 +3,7 @@ if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"
     echo " CLANG=1 -- use clang instead of gcc"
-    echo " DEBUG=1 -- enable debug"
+    echo " DEBUG=1 -- enable debug symbols"
     echo " CO=1 -- compile only"
     echo " OBJC=1 -- top-level source file is Obj-C"
     echo ' ECHO=1 -- show commands'
@@ -37,16 +37,6 @@ LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
 DBG_DIR_SUFFIX=""
-
-# if vars defined a debug build, set DEBUG=1
-if [ "$DEBUG_BUILD" = "1" ]; then
-    DEBUG=1
-fi
-
-# set debug suffix for include dirs/libs
-if [ "$DEBUG" = "1" ]; then
-    DBG_DIR_SUFFIX="-dbg"
-fi
 
 # PolarSSL/AppleCrypto hybrid
 if [ "$HYBRID" = "1" ]; then
@@ -186,6 +176,16 @@ if [ "$PLATFORM_FLAGS" ]; then
     FLAGS="$FLAGS $PLATFORM_FLAGS"
 fi
 
+# C++ compiler flags
+if [ "$CXX_COMPILER_FLAGS" ]; then
+    FLAGS="$FLAGS $CXX_COMPILER_FLAGS"
+fi
+
+# Other compiler flags
+if [ "$OTHER_COMPILER_FLAGS" ]; then
+    FLAGS="$FLAGS $OTHER_COMPILER_FLAGS"
+fi
+
 # ovpn3
 CPPFLAGS="$CPPFLAGS -I$O3"
 
@@ -196,13 +196,11 @@ elif [ "$PUSE" = "1" ]; then
     FLAGS="$FLAGS -fprofile-use"
 fi
 
-# optimization level
+# compiler flags
 FLAGS="$LIB_OPT_LEVEL $FLAGS"
 
 # whole-program
-if [ "$CLANG" == "1" ]; then
-    FLAGS="-fvisibility=hidden $FLAGS"
-else
+if [ "$CLANG" != "1" ]; then
     FLAGS="-fwhole-program $FLAGS"
 fi
 

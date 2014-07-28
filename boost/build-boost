@@ -32,7 +32,7 @@ if [ "$NO_WIPE" != "1" ]; then
 	cat >>tools/build/v2/user-config.jam <<EOF
 using $GCC_CMD : $TS : $GPP_CMD
             :
-                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_FPIC $LIB_OPT_LEVEL"
+                <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $CXX_COMPILER_FLAGS $OTHER_COMPILER_FLAGS $LIB_FPIC $LIB_OPT_LEVEL"
             ;
 EOF
     done
