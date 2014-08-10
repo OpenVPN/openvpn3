@@ -40,6 +40,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/userpass.hpp>
+#include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
@@ -417,7 +418,7 @@ namespace openvpn {
 
 	if (http_reply_status == HTTP::ReplyParser::pending)
 	  {
-	    OPENVPN_LOG_NTNL("FROM PROXY: " << buf.to_string());
+	    OPENVPN_LOG_NTNL("FROM PROXY: " << buf_to_string(buf));
 	    for (size_t i = 0; i < buf.size(); ++i)
 	      {
 		http_reply_status = http_parser.consume(http_reply, (char)buf[i]);
@@ -892,7 +893,7 @@ namespace openvpn {
 	OPENVPN_LOG_NTNL("TO PROXY: " << str);
 
 	config->frame->prepare(Frame::WRITE_HTTP_PROXY, buf);
-	buf.write((const unsigned char *)str.c_str(), str.length());
+	buf_write_string(buf, str);
       }
 
       RemoteList& remote_list() const { return *config->remote_list; }
