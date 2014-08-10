@@ -186,7 +186,11 @@ int main(int argc, char *argv[])
     { NULL,             0,                  NULL,       0  }
   };
 
+  int ret = 0;
+  boost::thread* thread = NULL;
+
   try {
+    Client::init_process();
     if (argc >= 2)
       {
 	std::string username;
@@ -305,8 +309,6 @@ int main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	Client::init_process();
-
 	if (version)
 	  {
 	    std::cout << "OpenVPN cli 1.0" << std::endl;
@@ -412,7 +414,7 @@ int main(int argc, char *argv[])
 
 		// start connect thread
 		the_client = &client;
-		boost::thread* thread = new boost::thread(boost::bind(&worker_thread));
+		thread = new boost::thread(boost::bind(&worker_thread));
 
 		// wait for connect thread to exit
 		thread->join();
@@ -425,7 +427,7 @@ int main(int argc, char *argv[])
 
 		// start connect thread
 		the_client = &client;
-		boost::thread* thread = new boost::thread(boost::bind(&worker_thread));
+		thread = new boost::thread(boost::bind(&worker_thread));
 
 		// wait for connect thread to exit, also check for keypresses
 		while (!thread->try_join_for(boost::chrono::milliseconds(1000)))
@@ -460,9 +462,10 @@ int main(int argc, char *argv[])
     {
       the_client = NULL;
       std::cout << "Main thread exception: " << e.what() << std::endl;
-      return 1;
+      Client::uninit_process();
+      ret = 1;
     }  
-  return 0;
+  goto done;
 
  usage:
   std::cout << "OpenVPN Client (ovpncli)" << std::endl;
@@ -489,5 +492,11 @@ int main(int argc, char *argv[])
   std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
   std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
   std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
-  return 2;
+  ret = 2;
+  goto done;
+
+ done:
+  delete thread;
+  Client::uninit_process();
+  return ret;
 }

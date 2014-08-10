@@ -329,6 +329,11 @@ namespace openvpn {
       InitProcess::init();
     }
 
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::uninit_process()
+    {
+      InitProcess::uninit();
+    }
+
     OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
     {
       // We keep track of time as binary milliseconds since a time base, and
