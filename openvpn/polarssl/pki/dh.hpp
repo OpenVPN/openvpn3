@@ -92,7 +92,7 @@ namespace openvpn {
 	if (!dhc)
 	  {
 	    dhc = new dhm_context;
-	    //std::memset(dhc, 0, sizeof(dhm_context)); // not needed because x509parse_dhm does this
+	    dhm_init(dhc);
 	  }
       }
 
