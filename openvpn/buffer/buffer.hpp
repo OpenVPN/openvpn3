@@ -552,15 +552,7 @@ namespace openvpn {
     {
       if (data_)
 	delete_(data_, capacity_, flags_);
-
-      data_ = other.data_;
-      offset_ = other.offset_;
-      size_ = other.size_;
-      capacity_ = other.capacity_;
-      flags_ = other.flags_;
-
-      other.data_ = NULL;
-      other.offset_ = other.size_ = other.capacity_ = 0;
+      move_(other);
     }
 
     void swap(BufferAllocatedType& other)
@@ -571,6 +563,21 @@ namespace openvpn {
       std::swap(capacity_, other.capacity_);
       std::swap(flags_, other.flags_);
     }
+
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+
+    BufferAllocatedType(BufferAllocatedType&& other) BOOST_NOEXCEPT
+    {
+      move_(other);
+    }
+
+    BufferAllocatedType& operator=(BufferAllocatedType&& other) BOOST_NOEXCEPT
+    {
+      move(other);
+      return *this;
+    }
+
+#endif
 
     void clear()
     {
@@ -623,6 +630,18 @@ namespace openvpn {
 	      OPENVPN_BUFFER_THROW(buffer_full);
 	    }
 	}
+    }
+
+    void move_(BufferAllocatedType& other)
+    {
+      data_ = other.data_;
+      offset_ = other.offset_;
+      size_ = other.size_;
+      capacity_ = other.capacity_;
+      flags_ = other.flags_;
+
+      other.data_ = NULL;
+      other.offset_ = other.size_ = other.capacity_ = 0;
     }
 
     void erase_()

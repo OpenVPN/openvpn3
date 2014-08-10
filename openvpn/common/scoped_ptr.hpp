@@ -117,12 +117,31 @@ namespace openvpn {
 	del(px);
     }
 
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+
+      ScopedPtr(ScopedPtr&& other) BOOST_NOEXCEPT
+      {
+	px = other.px;
+	other.px = NULL;
+      }
+
+      ScopedPtr& operator=(ScopedPtr&& other) BOOST_NOEXCEPT
+      {
+	if (px)
+	  del(px);
+	px = other.px;
+	other.px = NULL;
+	return *this;
+      }
+
+#endif
+
+  private:
     static void del(T* p)
     {
       F<T>::del(p);
     }
 
-  protected:
     T* px;
   };
 

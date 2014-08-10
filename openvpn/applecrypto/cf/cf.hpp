@@ -101,13 +101,13 @@ namespace openvpn {
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 
-      Wrap(Wrap&& other)
+      Wrap(Wrap&& other) BOOST_NOEXCEPT
       {
 	obj_ = other.obj_;
 	other.obj_ = NULL;
       }
 
-      Wrap& operator=(Wrap&& other)
+      Wrap& operator=(Wrap&& other) BOOST_NOEXCEPT
       {
 	if (obj_)
 	  CFRelease(obj_);
