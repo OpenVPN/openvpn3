@@ -184,6 +184,32 @@ namespace openvpn {
     return AsioDispatchConnect<C, Handler>(handler, obj);
   }
 
+  // Dispatcher for asio async_connect (ComposedConnectHandler) without argument
+
+  template <typename C, typename Handler>
+  class AsioDispatchComposedConnect
+  {
+  public:
+    AsioDispatchComposedConnect(Handler handler, C* obj)
+      : handler_(handler), obj_(obj) {}
+
+    void operator()(const boost::system::error_code& error,
+		    boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
+    {
+      (obj_.get()->*handler_)(error, endpoint_iterator);
+    }
+
+  private:
+    Handler handler_;
+    boost::intrusive_ptr<C> obj_;
+  };
+
+  template <typename C, typename Handler>
+  AsioDispatchComposedConnect<C, Handler> asio_dispatch_composed_connect(Handler handler, C* obj)
+  {
+    return AsioDispatchComposedConnect<C, Handler>(handler, obj);
+  }
+
   // Dispatcher for asio post with argument
 
   template <typename C, typename Handler, typename Data>
