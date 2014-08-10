@@ -1,14 +1,24 @@
 Building proto.cpp sample:
 
-On Mac/Linux:
+On Mac
+
+  Build with PolarSSL client and server (no ASM crypto algs):
+
+    GCC_EXTRA="-Wno-deprecated-register" PSSL=1 build proto
+
+  Build with PolarSSL client and server using 4 concurrent threads (no ASM crypto algs):
+
+    GCC_EXTRA="-Wno-deprecated-register -DN_THREADS=4" PSSL=1 build proto
 
   Build with PolarSSL client and server + minicrypto lib:
 
     PSSL=1 MINI=1 build proto
 
+On Linux:
+
   Build with PolarSSL client and server (no ASM crypto algs):
 
-    PSSL=1 build proto
+    PSSL=1 NOSSL=1 build proto
 
   Build with OpenSSL client and server:
 
