@@ -333,7 +333,14 @@ namespace openvpn {
 
       std::string ssl_handshake_details() const
       {
-	return ssl_get_version(ssl) + std::string("/") + ssl_get_ciphersuite(ssl);
+	if (ssl)
+	  {
+	    const char *ver = ssl_get_version(ssl);
+	    const char *cs = ssl_get_ciphersuite(ssl);
+	    if (ver && cs)
+	      return ver + std::string("/") + cs;
+	  }
+	return "";
       }
 
       ~SSL()
