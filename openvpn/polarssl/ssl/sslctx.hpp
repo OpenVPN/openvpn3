@@ -787,10 +787,11 @@ namespace openvpn {
 
     static std::string cert_info(const x509_crt *cert, const char *prefix = NULL)
     {
-      char buf[512];
-      const int size = x509_crt_info(buf, sizeof(buf), prefix ? prefix : "", cert);
+      const size_t buf_size = 4096;
+      ScopedPtr<char, PtrArrayFree> buf(new char[buf_size]);
+      const int size = x509_crt_info(buf(), buf_size, prefix ? prefix : "", cert);
       if (size >= 0)
-	return buf;
+	return std::string(buf());
       else
 	return "error rendering cert";
     }
