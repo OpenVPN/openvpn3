@@ -29,7 +29,7 @@ namespace openvpn {
   template <typename REF>
   class BackRef {
   public:
-    BackRef() { reset(); }
+    BackRef() : ref_(NULL) {}
 
     bool defined() const
     {
@@ -39,36 +39,17 @@ namespace openvpn {
     void reset()
     {
       ref_ = NULL;
-      value_ = NULL;
     }
 
-    void set(REF* ref, void* value)
-    {
-      ref_ = ref;
-      value_ = value;
-    }
-
-    void set_ref(REF* ref)
+    void set(REF* ref)
     {
       ref_ = ref;
     }
 
-    void set_value(void* value)
-    {
-      value_ = value;
-    }
-
-    template <typename VALUE>
-    VALUE* value() const
-    {
-      return (VALUE*)value_;
-    }
-
-    REF* ref() const { return ref_; }
+    REF* operator()() const { return ref_; }
 
   private:
     REF* ref_;
-    void* value_;
   };
 
 }
