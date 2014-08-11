@@ -11,6 +11,7 @@
 #   VERBOSE=1 -- see build commands
 #   USE_MINICRYPTO=1 -- use minicrypto library
 #   NO_WIPE=1 -- don't wipe source tree and reunzip tarball
+#   STOCK_CONFIG=1 -- use stock PolarSSL config.h
 
 set -e
 if [ -z "$O3" ]; then
@@ -41,7 +42,9 @@ elif [ "$NO_WIPE" = "partial" ]; then
     cd $POLARSSL_VERSION
 
     # define configs
-    cp $PD/config.h include/polarssl/
+    if [ "$STOCK_CONFIG" != "1" ]; then
+	cp $PD/config.h include/polarssl/
+    fi
     cp $PD/CMakeLists.txt .
 else
     echo WIPE and reunzip source
