@@ -57,7 +57,7 @@ namespace openvpn {
       std::memset(stats_, 0, sizeof(stats_));
     }
 
-    virtual void error(const size_t type, const std::string* text=NULL) = 0;
+    virtual void error(const size_t type, const std::string* text=NULL) {}
 
     // if true, clients may provide additional detail to error() method above
     // via text argument.
