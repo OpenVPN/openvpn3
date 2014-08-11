@@ -59,7 +59,7 @@ cd $SNAPPY_VERSION
 echo 'OPTIONS' CC=$CC LD=$LD AR=$AR RANLIB=$RANLIB host_opt=$host_opt targ_opt=$targ_opt
 export CFLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC"
 echo 'CFLAGS' $CFLAGS
-export CXXFLAGS="$CFLAGS"
+export CXXFLAGS="$CFLAGS $CXX_COMPILER_FLAGS"
 ./configure --prefix=$DIST $host_opt $targ_opt --enable-static --disable-shared
 make
 make install
