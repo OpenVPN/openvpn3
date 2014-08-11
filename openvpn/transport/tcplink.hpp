@@ -153,7 +153,8 @@ namespace openvpn {
 
       void start()
       {
-	queue_recv(NULL);
+	if (!halt)
+	  queue_recv(NULL);
       }
 
       void stop()
@@ -245,7 +246,8 @@ namespace openvpn {
 		  }
 		else
 		  read_handler->tcp_read_handler(pfp->buf);
-		queue_recv(pfp.release()); // reuse PacketFrom object
+		if (!halt)
+		  queue_recv(pfp.release()); // reuse PacketFrom object
 	      }
 	    else if (error == boost::asio::error::eof)
 	      {

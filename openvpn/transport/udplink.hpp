@@ -154,7 +154,8 @@ namespace openvpn {
 		    stats->error(Error::NETWORK_RECV_ERROR);
 		  }
 	      }
-	    queue_read(pfp.release()); // reuse PacketFrom object if still available
+	    if (!halt)
+	      queue_read(pfp.release()); // reuse PacketFrom object if still available
 	  }
       }
 
