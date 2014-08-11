@@ -97,6 +97,7 @@ namespace openvpn {
 		 ns_cert_type(NSCert::NONE),
 		 tls_version_min(TLSVersion::UNDEF),
 		 local_cert_enabled(true),
+		 enable_renegotiation(false),
                  force_aes_cbc_ciphersuites(false) {}
 
       Mode mode;
@@ -115,6 +116,7 @@ namespace openvpn {
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       bool local_cert_enabled;
+      bool enable_renegotiation;
       bool force_aes_cbc_ciphersuites;
       typename RAND_API::Ptr rng;   // random data source
 
@@ -405,12 +407,14 @@ namespace openvpn {
 	  ssl_set_verify(ssl, verify_callback, ctx);
 
 	  // Notes on SSL resume/renegotiation:
-	  // Note: SSL resume is not enabled because ssl_set_session_cache is not called.
-	  // Note: SSL renegotiation is not enabled because ssl_set_renegotiation
-	  //       defaults to SSL_RENEGOTIATION_DISABLED and ssl_legacy_renegotiation
-	  //       defaults to SSL_LEGACY_NO_RENEGOTIATION.
-	  // Also, POLARSSL_SSL_SESSION_TICKETS (compile flag) should be left undefined
+	  // SSL resume on server side is controlled by ssl_set_session_cache.
+	  // SSL renegotiation on/off is handled here via ssl_set_renegotiation.
+	  // Without calling ssl_set_renegotiation, it defaults to
+	  // SSL_RENEGOTIATION_DISABLED and ssl_legacy_renegotiation defaults to
+	  // SSL_LEGACY_NO_RENEGOTIATION.  To enable session tickets,
+	  // POLARSSL_SSL_SESSION_TICKETS (compile flag) must be defined
 	  // in PolarSSL config.h.
+	  ssl_set_renegotiation(ssl, c.enable_renegotiation ? SSL_RENEGOTIATION_ENABLED : SSL_RENEGOTIATION_DISABLED);
 
 	  if (c.force_aes_cbc_ciphersuites)
 	    ssl_set_ciphersuites(ssl, polarssl_ctx_private::aes_cbc_ciphersuites);
