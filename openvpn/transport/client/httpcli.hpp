@@ -30,7 +30,6 @@
 #include <algorithm>                  // for std::min
 
 #include <boost/asio.hpp>
-#include <boost/algorithm/string.hpp> // for boost::algorithm::trim_copy
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -669,7 +668,7 @@ namespace openvpn {
       void ntlm_auth_phase_2_pre()
       {
 	// if content exists, drain it first, then progress to ntlm_auth_phase_2
-	const std::string content_length_str = boost::algorithm::trim_copy(http_reply.headers.get_value("content-length"));
+	const std::string content_length_str = http_reply.headers.get_value_trim("content-length");
 	const unsigned int content_length = parse_number_throw<unsigned int>(content_length_str, "content-length");
 	if (content_length)
 	  drain_content_length = content_length;
