@@ -200,7 +200,7 @@ fi
 FLAGS="$LIB_OPT_LEVEL $FLAGS"
 
 # whole-program
-if [ "$CLANG" != "1" ]; then
+if [ "$CLANG" != "1" ] && [ "$DEBUG_BUILD" != "1" ]; then
     FLAGS="-fwhole-program $FLAGS"
 fi
 
