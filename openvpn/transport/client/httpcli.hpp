@@ -40,6 +40,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/userpass.hpp>
 #include <openvpn/buffer/bufstr.hpp>
+#include <openvpn/buffer/buflimit.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
@@ -275,44 +276,17 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      class ProxyResponseLimit
+      struct ProxyResponseLimit : public BufferLimit<size_t>
       {
-      public:
-	enum {
-	  MaxLines=1024,
-	  MaxBytes=65536,
-	};
+	ProxyResponseLimit() : BufferLimit(1024, 65536) {}
 
-	ProxyResponseLimit()
-	{
-	  reset();
+	virtual void bytes_exceeded() {
+	  OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << max_bytes << " bytes)");
 	}
 
-	void reset()
-	{
-	  n_bytes = n_lines = 0;
+	virtual void lines_exceeded() {
+	  OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << max_lines << " lines)");
 	}
-
-	void add(const Buffer& buf)
-	{
-	  size_t size = buf.size();
-	  if ((n_bytes += size) > MaxBytes)
-	    OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << MaxBytes << " bytes)");
-	  const unsigned char *p = buf.c_data();
-	  while (size--)
-	    {
-	      const unsigned char c = *p++;
-	      if (c == '\n')
-		{
-		  if (++n_lines > MaxLines)
-		    OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << MaxLines << " lines)");
-		}
-	    }
-	}
-
-      private:
-	size_t n_bytes;
-	size_t n_lines;
       };
 
       Client(boost::asio::io_service& io_service_arg,
