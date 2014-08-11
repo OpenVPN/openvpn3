@@ -168,6 +168,10 @@ namespace openvpn {
 	parent.transport_recv(buf);
       }
 
+      void tcp_write_queue_empty() // called by LinkImpl
+      {
+      }
+
       void tcp_error_handler(const char *error) // called by LinkImpl
       {
 	std::ostringstream os;

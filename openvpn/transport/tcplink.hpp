@@ -211,6 +211,8 @@ namespace openvpn {
 	      }
 	    if (!queue.empty())
 	      queue_send();
+	    else
+	      read_handler->tcp_write_queue_empty();
 	  }
       }
 

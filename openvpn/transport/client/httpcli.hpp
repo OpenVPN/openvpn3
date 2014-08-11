@@ -392,6 +392,10 @@ namespace openvpn {
 	  }
       }
 
+      void tcp_write_queue_empty() // called by LinkImpl
+      {
+      }
+
       void tcp_eof_handler() // called by LinkImpl
       {
 	if (proxy_established)
