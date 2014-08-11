@@ -45,6 +45,7 @@
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/http/reply.hpp>
+#include <openvpn/http/status.hpp>
 #include <openvpn/proxy/proxyauth.hpp>
 #include <openvpn/proxy/httpdigest.hpp>
 #include <openvpn/proxy/ntlm.hpp>
@@ -209,15 +210,6 @@ namespace openvpn {
       typedef AsioDispatchResolve<Client,
 				  void (Client::*)(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator),
 				  boost::asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
-
-      enum {
-	Connected=200,
-	Forbidden=403,
-	NotFound=404,
-	ProxyAuthenticationRequired=407,
-	ProxyError=502,
-	ServiceUnavailable=503,
-      };
 
     public:
       virtual void start()
@@ -432,9 +424,9 @@ namespace openvpn {
 		      {
 			//OPENVPN_LOG("*** HTTP header parse complete, resid_size=" << buf.size());
 			//OPENVPN_LOG(http_reply.to_string());
-			    
+
 			// we are connected, switch socket to tunnel mode
-			if (http_reply.status_code == Connected)
+			if (http_reply.status_code == HTTP::Status::Connected)
 			  {
 			    // switch socket from HTTP proxy handshake mode to OpenVPN protocol mode
 			    proxy_established = true;
@@ -487,7 +479,7 @@ namespace openvpn {
       {
 	if (http_reply_status == HTTP::ReplyParser::success)
 	  {
-	    if (http_reply.status_code == ProxyAuthenticationRequired)
+	    if (http_reply.status_code == HTTP::Status::ProxyAuthenticationRequired)
 	      {
 		if (n_transactions <= 1)
 		  {
@@ -537,16 +529,16 @@ namespace openvpn {
 		    return;
 		  }
 	      }
-	    else if (http_reply.status_code == ProxyError
-		     || http_reply.status_code == NotFound
-		     || http_reply.status_code == ServiceUnavailable)
+	    else if (http_reply.status_code == HTTP::Status::ProxyError
+		     || http_reply.status_code == HTTP::Status::NotFound
+		     || http_reply.status_code == HTTP::Status::ServiceUnavailable)
 	      {
 		// this is a nonfatal error, so we pass Error::UNDEF to tell the upper layer to
 		// retry the connection
 		proxy_error(Error::UNDEF, "HTTP proxy server could not connect to OpenVPN server");
 		return;
 	      }
-	    else if (http_reply.status_code == Forbidden)
+	    else if (http_reply.status_code == HTTP::Status::Forbidden)
 	      OPENVPN_THROW_EXCEPTION("HTTP proxy returned Forbidden status code");
 	    else
 	      OPENVPN_THROW_EXCEPTION("HTTP proxy status code: " << http_reply.status_code);
@@ -680,7 +672,7 @@ namespace openvpn {
       {
 	ntlm_phase_2_response_pending = false;
 
-	if (http_reply.status_code != ProxyAuthenticationRequired)
+	if (http_reply.status_code != HTTP::Status::ProxyAuthenticationRequired)
 	  throw Exception("NTLM phase-2 status is not ProxyAuthenticationRequired");
 
 	const std::string phase_2_response = get_ntlm_phase_2_response();
