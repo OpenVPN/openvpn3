@@ -45,11 +45,11 @@ namespace openvpn {
 
       X509Cert() : chain(NULL) {}
 
-      X509Cert(const std::string& cert_txt, const std::string& title)
+      X509Cert(const std::string& cert_txt, const std::string& title, const bool strict)
 	: chain(NULL)
       {
 	try {
-	  parse(cert_txt, title);
+	  parse(cert_txt, title, strict);
 	}
 	catch (...)
 	  {
@@ -58,7 +58,7 @@ namespace openvpn {
 	  }
       }
 
-      void parse(const std::string& cert_txt, const std::string& title)
+      void parse(const std::string& cert_txt, const std::string& title, const bool strict)
       {
 	alloc();
 
@@ -76,11 +76,10 @@ namespace openvpn {
 	  {
 	    std::ostringstream os;
 	    os << status << " certificate(s) in " << title << " bundle failed to parse";
-#if 1 // PolarSSL cert parse error
-	    throw PolarSSLException(os.str());
-#else
-	    OPENVPN_LOG("POLARSSL: " << os.str());
-#endif
+	    if (strict)
+	      throw PolarSSLException(os.str());
+	    else
+	      OPENVPN_LOG("POLARSSL: " << os.str());
 	  }
       }
 

@@ -129,10 +129,10 @@ namespace openvpn {
 	priv_key_pwd = pwd;
       }
 
-      void load_ca(const std::string& ca_txt)
+      void load_ca(const std::string& ca_txt, bool strict=true)
       {
 	PolarSSLPKI::X509Cert::Ptr c = new PolarSSLPKI::X509Cert();
-	c->parse(ca_txt, "ca");
+	c->parse(ca_txt, "ca", strict);
 	ca_chain = c;
       }
 
@@ -146,16 +146,16 @@ namespace openvpn {
       void load_cert(const std::string& cert_txt)
       {
 	PolarSSLPKI::X509Cert::Ptr c = new PolarSSLPKI::X509Cert();
-	c->parse(cert_txt, "cert");
+	c->parse(cert_txt, "cert", true);
 	crt_chain = c;
       }
 
       void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt)
       {
 	PolarSSLPKI::X509Cert::Ptr c = new PolarSSLPKI::X509Cert();
-	c->parse(cert_txt, "cert");
+	c->parse(cert_txt, "cert", true);
 	if (!extra_certs_txt.empty())
-	  c->parse(extra_certs_txt, "extra-certs");
+	  c->parse(extra_certs_txt, "extra-certs", true);
 	crt_chain = c;
       }
 
