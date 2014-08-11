@@ -196,7 +196,7 @@ namespace openvpn {
 	  struct ifreq *ifr;
 	  const int bufsize = 4096;
 
-	  ScopedPtr<char> buffer(new char[bufsize]);
+	  ScopedPtr<char, PtrArrayFree> buffer(new char[bufsize]);
 	  std::memset(buffer.get(), 0, bufsize);
 	  sockfd.reset(socket(AF_INET, SOCK_DGRAM, 0));
 	  if (!sockfd.defined())
