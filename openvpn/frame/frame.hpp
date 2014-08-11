@@ -113,8 +113,8 @@ namespace openvpn {
 	buf.realign(actual_headroom(buf.c_data_raw()));
       }
 
-      // Return a new BufferAllocated object initialized with the given data
-      BufferPtr alloc_with_data(const unsigned char *data, const size_t size) const
+      // Return a new BufferAllocated object initialized with the given data.
+      BufferPtr copy(const unsigned char *data, const size_t size) const
       {
 	const size_t cap = size + headroom() + tailroom();
 	BufferPtr b = new BufferAllocated(cap, buffer_flags());

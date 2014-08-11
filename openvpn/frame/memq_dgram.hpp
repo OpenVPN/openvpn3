@@ -49,7 +49,7 @@ namespace openvpn {
       if (frame_)
 	{
 	  const Frame::Context& fc = (*frame_)[Frame::READ_BIO_MEMQ_STREAM];
-	  q.push_back(fc.alloc_with_data(data, size));
+	  q.push_back(fc.copy(data, size));
 	  length += size;
 	}
       else
