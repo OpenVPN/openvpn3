@@ -123,6 +123,19 @@ namespace openvpn {
 	return b;
       }
 
+      // Return a new BufferAllocated object initialized with
+      // the data in given buffer.  buf may be empty or undefined.
+      BufferPtr copy(const BufferPtr& buf) const
+      {
+	const size_t size = buf ? buf->size() : 0;
+	const size_t cap = size + headroom() + tailroom();
+	BufferPtr b = new BufferAllocated(cap, buffer_flags());
+	b->init_headroom(actual_headroom(b->c_data_raw()));
+	if (size)
+	  b->write(buf->c_data(), size);
+	return b;
+      }
+
       // How much payload space left in buffer
       size_t remaining_payload(const Buffer& buf) const
       {
