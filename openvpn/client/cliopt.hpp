@@ -191,6 +191,7 @@ namespace openvpn {
       ClientSSLAPI::Config cc;
       cc.set_external_pki_callback(config.external_pki);
       cc.frame = frame;
+      cc.flags = SSLConst::LOG_VERIFY_STATUS;
 #ifdef OPENVPN_SSL_DEBUG
       cc.ssl_debug_level = OPENVPN_SSL_DEBUG;
 #endif

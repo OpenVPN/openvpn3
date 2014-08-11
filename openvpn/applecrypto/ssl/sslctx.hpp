@@ -48,6 +48,7 @@
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/applecrypto/cf/cfsec.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
+#include <openvpn/ssl/sslconsts.hpp>
 
 // An SSL Context is essentially a configuration that can be used
 // to generate an arbitrary number of actual SSL connections objects.
@@ -74,10 +75,12 @@ namespace openvpn {
     // The data needed to construct an AppleSSLContext.
     struct Config
     {
-      Config() : ssl_debug_level(0) {}
+      Config() : ssl_debug_level(0),
+		 flags(0) {}
 
       Mode mode;
       int ssl_debug_level;
+      unsigned int flags; // defined in sslconsts.hpp
       CF::Array identity; // as returned by load_identity
       Frame::Ptr frame;
 
@@ -114,10 +117,6 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
-      enum {
-	SHOULD_RETRY = -1
-      };
-
       void start_handshake()
       {
 	SSLHandshake(ssl);
@@ -127,10 +126,10 @@ namespace openvpn {
       {
 	size_t actual = 0;
 	const OSStatus status = SSLWrite(ssl, data, size, &actual);
-	if (status < 0 || actual != size)
+	if (status < 0)
 	  {
 	    if (status == errSSLWouldBlock)
-	      return SHOULD_RETRY;
+	      return SSLConst::SHOULD_RETRY;
 	    else
 	      throw CFException("AppleSSLContext::SSL::write_cleartext failed", status);
 	  }
@@ -147,7 +146,7 @@ namespace openvpn {
 	    if (status < 0)
 	      {
 		if (status == errSSLWouldBlock)
-		  return SHOULD_RETRY;
+		  return SSLConst::SHOULD_RETRY;
 		else
 		  throw CFException("AppleSSLContext::SSL::read_cleartext failed", status);
 	      }
@@ -158,7 +157,8 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      bool write_ciphertext_ready() const {
+      bool read_cleartext_ready() const {
+	// fixme: need to detect data buffered at SSL layer
 	return !ct_in.empty();
       }
 

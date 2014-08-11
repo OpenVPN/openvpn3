@@ -34,6 +34,8 @@
 #include <openvpn/reliable/relsend.hpp>
 #include <openvpn/reliable/relack.hpp>
 #include <openvpn/frame/frame.hpp>
+#include <openvpn/error/excode.hpp>
+#include <openvpn/ssl/sslconsts.hpp>
 
 // ProtoStackBase is designed to allow general-purpose protocols (including
 // but not limited to OpenVPN) to run over SSL, where the underlying transport
@@ -77,6 +79,7 @@ namespace openvpn {
     typedef ReliableRecvTemplate<PACKET> ReliableRecv;
 
     OPENVPN_SIMPLE_EXCEPTION(proto_stack_invalidated);
+    OPENVPN_SIMPLE_EXCEPTION(unknown_status_from_ssl_layer);
 
     enum NetSendType {
       NET_SEND_SSL,
@@ -270,7 +273,6 @@ namespace openvpn {
 
     // END of VIRTUAL METHODS
 
-
     // app data -> SSL -> protocol encapsulation -> reliability layer -> network
     void down_stack_app()
     {
@@ -280,19 +282,30 @@ namespace openvpn {
 	  while (!app_write_queue.empty())
 	    {
 	      BufferPtr& buf = app_write_queue.front();
+	      ssize_t size;
 	      try {
-		const ssize_t size = ssl_->write_cleartext_unbuffered(buf->data(), buf->size());
-		if (size == SSLContext::SSL::SHOULD_RETRY)
-		  break;
+		size = ssl_->write_cleartext_unbuffered(buf->data(), buf->size());
 	      }
 	      catch (...)
 		{
-		  if (stats)
-		    stats->error(Error::SSL_ERROR);
-		  invalidate(Error::SSL_ERROR);
+		  error(Error::SSL_ERROR);
 		  throw;
 		}
-	      app_write_queue.pop_front();
+	      if (size == buf->size())
+		app_write_queue.pop_front();
+	      else if (size == SSLConst::SHOULD_RETRY)
+		break;
+	      else if (size >= 0)
+		{
+		  // error if written size is different from what we asked for
+		  error(Error::SSL_PARTIAL_WRITE);
+		  break;
+		}
+	      else
+		{
+		  error(Error::SSL_ERROR);
+		  throw unknown_status_from_ssl_layer();
+		}
 	    }
 
 	  // encapsulate SSL ciphertext packets
@@ -307,9 +320,7 @@ namespace openvpn {
 	      }
 	      catch (...)
 		{
-		  if (stats)
-		    stats->error(Error::ENCAPSULATION_ERROR);
-		  invalidate(Error::ENCAPSULATION_ERROR);
+		  error(Error::ENCAPSULATION_ERROR);
 		  throw;
 		}
 
@@ -334,9 +345,7 @@ namespace openvpn {
 	  }
 	  catch (...)
 	    {
-	      if (stats)
-		stats->error(Error::ENCAPSULATION_ERROR);
-	      invalidate(Error::ENCAPSULATION_ERROR);
+	      error(Error::ENCAPSULATION_ERROR);
 	      throw;
 	    }
 
@@ -375,7 +384,7 @@ namespace openvpn {
 
       // read cleartext data from SSL object
       if (ssl_started_)
-	while (ssl_->write_ciphertext_ready())
+	while (ssl_->read_cleartext_ready())
 	  {
 	    ssize_t size;
 	    if (!to_app_buf)
@@ -387,23 +396,41 @@ namespace openvpn {
 	    catch (...)
 	      {
 		// SSL fatal errors will invalidate the session
-		if (stats)
-		  stats->error(Error::SSL_ERROR);
-		invalidate(Error::SSL_ERROR);
+		error(Error::SSL_ERROR);
 		throw;
 	      }
-	    if (size == SSLContext::SSL::SHOULD_RETRY)
-	      break;
-	    to_app_buf->set_size(size);
+	    if (size >= 0)
+	      {
+		to_app_buf->set_size(size);
 
-	    // pass cleartext data to app
-	    app_recv(to_app_buf);
+		// pass cleartext data to app
+		app_recv(to_app_buf);
+	      }
+	    else if (size == SSLConst::SHOULD_RETRY)
+	      break;
+	    else if (size == SSLConst::PEER_CLOSE_NOTIFY)
+	      {
+		error(Error::SSL_ERROR);
+		throw ErrorCode(Error::CLIENT_HALT, true, "SSL Close Notify received");
+	      }
+	    else
+	      {
+		error(Error::SSL_ERROR);
+		throw unknown_status_from_ssl_layer();
+	      }
 	  }
     }
 
     void update_retransmit()
     {
       next_retransmit_ = *now + rel_send.until_retransmit(*now);
+    }
+
+    void error(const Error::Type reason)
+    {
+      if (stats)
+	stats->error(reason);
+      invalidate(reason);
     }
 
   private:

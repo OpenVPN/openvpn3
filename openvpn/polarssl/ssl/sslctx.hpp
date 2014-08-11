@@ -50,6 +50,7 @@
 #include <openvpn/ssl/nscert.hpp>
 #include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
+#include <openvpn/ssl/sslconsts.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
 #include <openvpn/polarssl/pki/x509crl.hpp>
@@ -94,6 +95,7 @@ namespace openvpn {
     {
       Config() : external_pki(NULL),
 		 ssl_debug_level(0),
+		 flags(0),
 		 ns_cert_type(NSCert::NONE),
 		 tls_version_min(TLSVersion::UNDEF),
 		 local_cert_enabled(true),
@@ -110,6 +112,7 @@ namespace openvpn {
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       int ssl_debug_level;
+      unsigned int flags;           // defined in sslconsts.hpp
       NSCert::Type ns_cert_type;
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
@@ -263,13 +266,6 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
-      // special return value from read functions -- indicates
-      // that no cleartext data is available now (until more
-      // ciphertext is pushed into the SSL engine)
-      enum {
-	SHOULD_RETRY = -1
-      };
-
       void start_handshake()
       {
 	ssl_handshake(ssl);
@@ -281,7 +277,7 @@ namespace openvpn {
 	if (status < 0)
 	  {
 	    if (status == CT_WOULD_BLOCK)
-	      return SHOULD_RETRY;
+	      return SSLConst::SHOULD_RETRY;
 	    else if (status == CT_INTERNAL_ERROR)
 	      throw PolarSSLException("SSL write: internal error");
 	    else
@@ -299,7 +295,9 @@ namespace openvpn {
 	    if (status < 0)
 	      {
 		if (status == CT_WOULD_BLOCK)
-		  return SHOULD_RETRY;
+		  return SSLConst::SHOULD_RETRY;
+		else if (status == POLARSSL_ERR_SSL_PEER_CLOSE_NOTIFY)
+		  return SSLConst::PEER_CLOSE_NOTIFY;
 		else if (status == CT_INTERNAL_ERROR)
 		  throw PolarSSLException("SSL read: internal error");
 		else
@@ -312,8 +310,8 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      bool write_ciphertext_ready() const {
-	return !ct_in.empty();
+      bool read_cleartext_ready() const {
+	return !ct_in.empty() || ssl_get_bytes_avail(ssl);
       }
 
       void write_ciphertext(const BufferPtr& buf)
@@ -754,7 +752,8 @@ namespace openvpn {
       bool fail = false;
 
       // log status
-      OPENVPN_LOG_SSL(status_string(cert, depth, flags));
+      if (self->config.flags & SSLConst::LOG_VERIFY_STATUS)
+	OPENVPN_LOG_SSL(status_string(cert, depth, flags));
 
       // leaf-cert verification
       if (depth == 0)

@@ -55,6 +55,7 @@ namespace openvpn {
       TCP_CONNECT_ERROR,   // client error on TCP connect
       UDP_CONNECT_ERROR,   // client error on UDP connect
       SSL_ERROR,           // errors resulting from read/write on SSL object
+      SSL_PARTIAL_WRITE,   // SSL object did not process all written cleartext
       ENCAPSULATION_ERROR, // exceptions thrown during packet encapsulation
       EPKI_CERT_ERROR,     // error obtaining certificate from External PKI provider
       EPKI_SIGN_ERROR,     // error obtaining RSA signature from External PKI provider
@@ -124,6 +125,7 @@ namespace openvpn {
 	"TCP_CONNECT_ERROR",
 	"UDP_CONNECT_ERROR",
 	"SSL_ERROR",
+	"SSL_PARTIAL_WRITE",
 	"ENCAPSULATION_ERROR",
 	"EPKI_CERT_ERROR",
 	"EPKI_SIGN_ERROR",

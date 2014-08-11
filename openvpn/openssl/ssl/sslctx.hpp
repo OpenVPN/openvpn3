@@ -48,6 +48,7 @@
 #include <openvpn/ssl/nscert.hpp>
 #include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
+#include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
@@ -85,6 +86,7 @@ namespace openvpn {
     {
       Config() : external_pki(NULL),
 		 ssl_debug_level(0),
+		 flags(0),
 		 ns_cert_type(NSCert::NONE),
 		 tls_version_min(TLSVersion::UNDEF),
 		 local_cert_enabled(true),
@@ -99,6 +101,7 @@ namespace openvpn {
       ExternalPKIBase* external_pki;
       Frame::Ptr frame;
       int ssl_debug_level;
+      unsigned int flags;           // defined in sslconsts.hpp
       NSCert::Type ns_cert_type;
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
@@ -225,10 +228,6 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
-      enum {
-	SHOULD_RETRY = -1
-      };
-
       void start_handshake()
       {
 	SSL_do_handshake(ssl);
@@ -237,10 +236,10 @@ namespace openvpn {
       ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
       {
 	const int status = BIO_write(ssl_bio, data, size);
-	if (status != int(size))
+	if (status < 0)
 	  {
 	    if (status == -1 && BIO_should_retry(ssl_bio))
-	      return SHOULD_RETRY;
+	      return SSLConst::SHOULD_RETRY;
 	    else
 	      OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::write_cleartext: BIO_write failed, size=" << size << " status=" << status);
 	  }
@@ -256,7 +255,7 @@ namespace openvpn {
 	    if (status < 0)
 	      {
 		if (status == -1 && BIO_should_retry(ssl_bio))
-		  return SHOULD_RETRY;
+		  return SSLConst::SHOULD_RETRY;
 		else
 		  OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
 	      }
@@ -267,7 +266,8 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      bool write_ciphertext_ready() const {
+      bool read_cleartext_ready() const {
+	// fixme: need to detect data buffered at SSL layer
 	return !bmq_stream::memq_from_bio(ct_in)->empty();
       }
 
