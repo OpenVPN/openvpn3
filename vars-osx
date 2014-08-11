@@ -7,5 +7,6 @@ export GCC_CMD=clang
 export MIN_DEPLOY_TARGET="-mmacosx-version-min=10.6"
 export PLATFORM_FLAGS="-arch x86_64 -arch i386 $MIN_DEPLOY_TARGET"
 export OTHER_COMPILER_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
+export CXX_COMPILER_FLAGS="-std=c++11"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
