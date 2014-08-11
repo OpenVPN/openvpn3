@@ -70,7 +70,7 @@ namespace openvpn {
 
       Link(ReadHandler read_handler_arg,
 	   boost::asio::ip::tcp::socket& socket_arg,
-	   const size_t send_queue_max_size_arg,
+	   const size_t send_queue_max_size_arg, // 0 to disable
 	   const size_t free_list_max_size_arg,
 	   const Frame::Context& frame_context_arg,
 	   const SessionStats::Ptr& stats_arg)
@@ -107,34 +107,32 @@ namespace openvpn {
 
       bool send(BufferAllocated& b)
       {
-	if (!halt && b.size() <= 0xFFFF)
+	if (halt)
+	  return false;
+
+	if (send_queue_max_size && queue.size() >= send_queue_max_size)
 	  {
-	    if (queue.size() < send_queue_max_size)
-	      {
-		BufferPtr buf;
-		if (!free_list.empty())
-		  {
-		    buf = free_list.front();
-		    free_list.pop_front();
-		  }
-		else
-		  buf.reset(new BufferAllocated());
-		buf->swap(b);
-		if (!is_raw_mode())
-		  PacketStream::prepend_size(*buf);
-		queue.push_back(buf);
-		if (queue.size() == 1) // send operation not currently active?
-		  queue_send();
-		return true;
-	      }
-	    else
-	      {
-		stats->error(Error::TCP_OVERFLOW);
-		read_handler->tcp_error_handler("TCP_OVERFLOW");
-		stop();
-	      }
+	    stats->error(Error::TCP_OVERFLOW);
+	    read_handler->tcp_error_handler("TCP_OVERFLOW");
+	    stop();
+	    return false;
 	  }
-	return false;
+
+	BufferPtr buf;
+	if (!free_list.empty())
+	  {
+	    buf = free_list.front();
+	    free_list.pop_front();
+	  }
+	else
+	  buf.reset(new BufferAllocated());
+	buf->swap(b);
+	if (!is_raw_mode())
+	  PacketStream::prepend_size(*buf);
+	queue.push_back(buf);
+	if (queue.size() == 1) // send operation not currently active?
+	  queue_send();
+	return true;
       }
 
       void inject(const BufferAllocated& src)
