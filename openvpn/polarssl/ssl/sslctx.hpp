@@ -349,7 +349,7 @@ namespace openvpn {
       }
 
     private:
-      SSL(PolarSSLContext* ctx)
+      SSL(PolarSSLContext* ctx, const char *hostname)
       {
 	clear();
 	try {
@@ -420,7 +420,7 @@ namespace openvpn {
 	    ssl_set_ca_chain(ssl,
 			     c.ca_chain->get(),
 			     c.crl_chain ? c.crl_chain->get() : NULL,
-			     NULL);
+			     hostname);
 	  else
 	    throw PolarSSLException("CA chain not defined");
 
@@ -559,7 +559,17 @@ namespace openvpn {
 	}
     }
 
-    typename SSL::Ptr ssl() { return typename SSL::Ptr(new SSL(this)); }
+    // create a new SSL instance
+    typename SSL::Ptr ssl()
+    {
+      return typename SSL::Ptr(new SSL(this, NULL));
+    }
+
+    // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
+    typename SSL::Ptr ssl(const std::string& hostname)
+    {
+      return typename SSL::Ptr(new SSL(this, hostname.c_str()));
+    }
 
     const Mode& mode() const { return config.mode; }
  
