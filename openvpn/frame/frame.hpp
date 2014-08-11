@@ -53,7 +53,7 @@ namespace openvpn {
       WRITE_SSL_CLEARTEXT,
       WRITE_ACK_STANDALONE,
       WRITE_DC_MSG,
-      WRITE_HTTP_PROXY,
+      WRITE_HTTP,
       N_ALIGN_CONTEXTS
     };
 

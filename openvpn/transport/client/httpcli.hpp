@@ -895,7 +895,7 @@ namespace openvpn {
 
 	OPENVPN_LOG_NTNL("TO PROXY: " << str);
 
-	config->frame->prepare(Frame::WRITE_HTTP_PROXY, buf);
+	config->frame->prepare(Frame::WRITE_HTTP, buf);
 	buf_write_string(buf, str);
       }
 
