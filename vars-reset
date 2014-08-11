@@ -18,3 +18,4 @@ unset LIB_OPT_LEVEL
 unset LIB_FPIC
 unset DEBUG_BUILD
 unset LINK_MODE
+unset CXX_COMPILER_FLAGS
