@@ -25,6 +25,7 @@ if [ -z "$1" ]; then
     echo " LZO=1 -- build with LZO compression library"
     echo " LZ4=1 -- build with LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
+    echo " JSON=1 -- build with JsonCpp library"
     exit 1
 fi
 
@@ -162,6 +163,12 @@ if [ "$SNAP" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/include"
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
+fi
+
+# JsonCpp
+if [ "$JSON" = "1" ]; then
+    EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $DEP_DIR/jsoncpp/jsoncpp-$PLATFORM/lib/libjsoncpp.a"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/jsoncpp/jsoncpp-$PLATFORM/include -DHAVE_JSONCPP"
 fi
 
 # Android NDK
