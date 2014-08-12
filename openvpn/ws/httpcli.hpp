@@ -19,6 +19,24 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
+// General purpose HTTP/HTTPS/Web-services client.
+// Supports:
+//   * asynchronous I/O through Asio
+//   * http/https
+//   * chunking
+//   * keepalive
+//   * connect and overall timeouts
+//   * GET, POST, etc.
+//   * any OpenVPN SSL module (OpenSSL, PolarSSL)
+//   * server CA bundle
+//   * client certificate
+//   * HTTP basic auth
+//   * limits on content-size, header-size, and number of headers
+//   * cURL not needed
+//
+//  See test/ws/wstest.cpp for usage examples including Dropwizard REST/JSON API client.
+//  See test/ws/asprof.cpp for sample AS REST API client.
+
 #ifndef OPENVPN_WS_HTTPCLI_H
 #define OPENVPN_WS_HTTPCLI_H
 
