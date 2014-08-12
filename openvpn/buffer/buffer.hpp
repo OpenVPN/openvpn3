@@ -385,6 +385,11 @@ namespace openvpn {
 	reset_impl(min_capacity, flags);
     }
 
+    void append(const BufferType& other)
+    {
+      write(other.c_data(), other.size());
+    }
+
   protected:
     // Called when reset method needs to expand the buffer size
     virtual void reset_impl(const size_t min_capacity, const unsigned int flags)
