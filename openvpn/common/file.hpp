@@ -47,7 +47,7 @@ namespace openvpn {
   {
     std::ifstream ifs(filename.c_str());
     if (!ifs)
-      OPENVPN_THROW(open_file_error, "cannot open: " << filename);
+      OPENVPN_THROW(open_file_error, "cannot open for read: " << filename);
     const std::string str((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
     if (!ifs)
       OPENVPN_THROW(open_file_error, "cannot read: " << filename);
@@ -61,7 +61,7 @@ namespace openvpn {
   {
     std::ifstream ifs(filename.c_str(), std::ios::binary);
     if (!ifs)
-      OPENVPN_THROW(open_file_error, "cannot open: " << filename);
+      OPENVPN_THROW(open_file_error, "cannot open for read: " << filename);
 
     // get length of file
     ifs.seekg (0, std::ios::end);
@@ -117,6 +117,18 @@ namespace openvpn {
 
     return std::string((const char *)bp->c_data(), bp->size());
   }
+
+  // Write binary buffer to file
+  inline void write_binary(const std::string& filename, const Buffer& buf)
+  {
+    std::ofstream ofs(filename.c_str(), std::ios::binary);
+    if (!ofs)
+      OPENVPN_THROW(open_file_error, "cannot open for write: " << filename);
+    ofs.write((const char *)buf.c_data(), buf.size());
+    if (!ofs)
+      OPENVPN_THROW(open_file_error, "cannot write: " << filename);
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_FILE_H
