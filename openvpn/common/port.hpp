@@ -36,6 +36,13 @@ namespace openvpn {
       OPENVPN_THROW(option_error, "bad " << title << " number: " << port);
   }
 
+  inline unsigned short parse_port(const std::string& port, const std::string& title)
+  {
+    unsigned int ret = 0;
+    validate_port(port, title, &ret);
+    return ret;
+  }
+
 } // namespace openvpn
 
 #endif
