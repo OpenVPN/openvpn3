@@ -52,7 +52,7 @@
 namespace openvpn {
   namespace TCPTransport {
 
-    typedef boost::asio::ip::tcp::endpoint Endpoint;
+    typedef boost::asio::ip::tcp::endpoint AsioEndpoint;
 
     struct PacketFrom
     {

@@ -48,13 +48,13 @@
 namespace openvpn {
   namespace UDPTransport {
 
-    typedef boost::asio::ip::udp::endpoint Endpoint;
+    typedef boost::asio::ip::udp::endpoint AsioEndpoint;
 
     struct PacketFrom
     {
       typedef ScopedPtr<PacketFrom> SPtr;
       BufferAllocated buf;
-      Endpoint sender_endpoint;
+      AsioEndpoint sender_endpoint;
     };
 
     template <typename ReadHandler>
@@ -75,7 +75,7 @@ namespace openvpn {
       {
       }
 
-      bool send(const Buffer& buf, Endpoint* endpoint)
+      bool send(const Buffer& buf, const AsioEndpoint* endpoint)
       {
 	if (!halt)
 	  {

@@ -246,7 +246,7 @@ namespace openvpn {
       TransportClientParent& parent;
       LinkImpl::Ptr impl;
       boost::asio::ip::udp::resolver resolver;
-      UDPTransport::Endpoint server_endpoint;
+      UDPTransport::AsioEndpoint server_endpoint;
       bool halt;
     };
 

@@ -880,7 +880,7 @@ namespace openvpn {
       TransportClientParent& parent;
       typename LinkImpl::Ptr impl;
       boost::asio::ip::tcp::resolver resolver;
-      TCPTransport::Endpoint server_endpoint;
+      TCPTransport::AsioEndpoint server_endpoint;
       bool halt;
 
       unsigned int n_transactions;
