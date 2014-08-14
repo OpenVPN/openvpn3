@@ -132,7 +132,7 @@ namespace openvpn {
   }
 
   template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
-  class ProtoContext : public RC<thread_unsafe_refcount>
+  class ProtoContext
   {
   protected:
     enum {

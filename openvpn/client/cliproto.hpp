@@ -74,7 +74,10 @@ namespace openvpn {
     };
 
     template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
-    class Session : public ProtoContext<RAND_API, CRYPTO_API, SSL_API>, TransportClientParent, TunClientParent
+    class Session : public ProtoContext<RAND_API, CRYPTO_API, SSL_API>,
+                    TransportClientParent,
+                    TunClientParent,
+		    public RC<thread_unsafe_refcount>
     {
       typedef ProtoContext<RAND_API, CRYPTO_API, SSL_API> Base;
       typedef typename Base::PacketType PacketType;
