@@ -137,7 +137,7 @@ namespace openvpn {
   } // namespace string
 
   // Reference-counted string
-  struct String : public std::string, RC<thread_unsafe_refcount>
+  struct String : public std::string, public RC<thread_unsafe_refcount>
   {
     typedef boost::intrusive_ptr<String> Ptr;
 
