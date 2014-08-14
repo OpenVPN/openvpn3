@@ -142,7 +142,7 @@ namespace openvpn {
 	      {
 		if (!error)
 		  {
-		    OPENVPN_LOG_UDPLINK_VERBOSE("UDP from " << pfp->sender_endpoint);
+		    OPENVPN_LOG_UDPLINK_VERBOSE("UDP[" << bytes_recvd << "] from " << pfp->sender_endpoint);
 		    pfp->buf.set_size(bytes_recvd);
 		    stats->inc_stat(SessionStats::BYTES_IN, bytes_recvd);
 		    stats->inc_stat(SessionStats::PACKETS_IN, 1);
