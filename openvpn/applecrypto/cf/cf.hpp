@@ -23,6 +23,7 @@
 #define OPENVPN_APPLECRYPTO_CF_CF_H
 
 #include <string>
+#include <iostream>
 #include <sstream>
 #include <algorithm>
 
