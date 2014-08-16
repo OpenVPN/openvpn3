@@ -312,11 +312,21 @@ namespace openvpn {
     bool reachableVia(const std::string& net_type) const
     {
       if (net_type == "cellular")
-	return internet.status() == ReachabilityBase::ReachableViaWWAN;
+	return reachableViaCellular();
       else if (net_type == "wifi")
-	return internet.status() == ReachabilityBase::ReachableViaWiFi;
+	return reachableViaWiFi();
       else
-	return internet.status() != ReachabilityBase::NotReachable;
+	return reachableViaWiFi() || reachableViaCellular();
+    }
+
+    bool reachableViaCellular() const
+    {
+      return internet.status() == ReachabilityBase::ReachableViaWWAN;
+    }
+
+    bool reachableViaWiFi() const {
+      return internet.status() == ReachabilityBase::ReachableViaWiFi
+	      && wifi.status() == ReachabilityBase::ReachableViaWiFi;
     }
 
     std::string to_string() const
