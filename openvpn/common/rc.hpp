@@ -75,11 +75,11 @@ namespace openvpn {
   class RC : boost::noncopyable
   {
   public:
-    RC() : refcount_(0) {}
+    RC() BOOST_NOEXCEPT : refcount_(0) {}
     virtual ~RC() {}
   private:
-    template <typename R> friend void intrusive_ptr_add_ref(R* p);
-    template <typename R> friend void intrusive_ptr_release(R* p);
+    template <typename R> friend void intrusive_ptr_add_ref(R* p) BOOST_NOEXCEPT;
+    template <typename R> friend void intrusive_ptr_release(R* p) BOOST_NOEXCEPT;
     RCImpl refcount_;
   };
 
@@ -88,24 +88,24 @@ namespace openvpn {
   class RCCopyable
   {
   public:
-    RCCopyable() : refcount_(0) {}
-    RCCopyable(const RCCopyable&) : refcount_(0) {}
-    RCCopyable& operator=(const RCCopyable&) { return *this; }
+    RCCopyable() BOOST_NOEXCEPT : refcount_(0) {}
+    RCCopyable(const RCCopyable&) BOOST_NOEXCEPT : refcount_(0) {}
+    RCCopyable& operator=(const RCCopyable&) BOOST_NOEXCEPT { return *this; }
     virtual ~RCCopyable() {}
   private:
-    template <typename R> friend void intrusive_ptr_add_ref(R* p);
-    template <typename R> friend void intrusive_ptr_release(R* p);
+    template <typename R> friend void intrusive_ptr_add_ref(R* p) BOOST_NOEXCEPT;
+    template <typename R> friend void intrusive_ptr_release(R* p) BOOST_NOEXCEPT;
     RCImpl refcount_;
   };
 
   template <typename R>
-  inline void intrusive_ptr_add_ref(R *p)
+  inline void intrusive_ptr_add_ref(R *p) BOOST_NOEXCEPT
   {
     ++p->refcount_;
   }
 
   template <typename R>
-  inline void intrusive_ptr_release(R *p)
+  inline void intrusive_ptr_release(R *p) BOOST_NOEXCEPT
   {
     if (--p->refcount_ == 0)
       delete p;
