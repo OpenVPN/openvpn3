@@ -13,6 +13,9 @@ if [ -z "$TARGETS" ]; then
     exit 1
 fi
 
+# NOTE: in Boost 1.55 and earlier, set BCONF=tools/build/v2
+BCONF=tools/build/src
+
 . $O3/lib-versions
 [ -z "$DL" ] && DL=~/Downloads
 [ -z "$GPP_CMD" ] && export GPP_CMD=g++
@@ -24,12 +27,13 @@ if [ "$NO_WIPE" != "1" ]; then
     tar xfz $DL/$BOOST_VERSION.tar.gz
     cd $BOOST_VERSION
     #patch -p1 <$DL/asio-engine.patch
-    patch -p0 <$O3/boost/atomic-1.55.0.patch
+    #patch -p0 <$O3/boost/atomic-1.55.0.patch
+    patch -p1 <$O3/boost/intrusive_ptr.patch
 
     for T in $TARGETS ; do
 	TS="${T//-/}"
 	. $O3/vars-$T
-	cat >>tools/build/v2/user-config.jam <<EOF
+	cat >>$BCONF/user-config.jam <<EOF
 using $GCC_CMD : $TS : $GPP_CMD
             :
                 <compileflags>"-Wno-unused-function $PLATFORM_FLAGS $CXX_COMPILER_FLAGS $OTHER_COMPILER_FLAGS $LIB_FPIC $LIB_OPT_LEVEL"
@@ -37,7 +41,7 @@ using $GCC_CMD : $TS : $GPP_CMD
 EOF
     done
     echo '********** BOOST CONFIG'
-    tail -30 tools/build/v2/user-config.jam
+    tail -30 $BCONF/user-config.jam
     echo '********** END BOOST CONFIG'
     ./bootstrap.sh
 else
