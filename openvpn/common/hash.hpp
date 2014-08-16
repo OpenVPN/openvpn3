@@ -22,6 +22,10 @@
 #ifndef OPENVPN_COMMON_HASH_H
 #define OPENVPN_COMMON_HASH_H
 
+#include <boost/cstdint.hpp> // for boost::uint32_t, uint64_t
+
+#include <boost/functional/hash.hpp>
+
 #include <openvpn/common/types.hpp>
 
 namespace openvpn {
@@ -43,6 +47,29 @@ namespace openvpn {
   private:
     std::size_t seed_;
   };
+
+  inline void hash_combine_data(std::size_t& seed, const void *data, std::size_t size)
+  {
+    while (size >= sizeof(boost::uint32_t))
+      {
+	boost::hash_combine(seed, static_cast<const boost::uint32_t*>(data)[0]);
+	data = static_cast<const boost::uint8_t*>(data) + sizeof(boost::uint32_t);
+	size -= sizeof(boost::uint32_t);
+      }
+    switch (size)
+      {
+      case 1:
+	boost::hash_combine(seed, static_cast<const boost::uint8_t*>(data)[0]);
+	break;
+      case 2:
+	boost::hash_combine(seed, static_cast<const boost::uint16_t*>(data)[0]);
+	break;
+      case 3:
+	boost::hash_combine(seed, static_cast<const boost::uint16_t*>(data)[0]);
+	boost::hash_combine(seed, static_cast<const boost::uint8_t*>(data)[2]);
+	break;
+      }
+  }
 }
 
 #endif
