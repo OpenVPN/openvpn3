@@ -12,7 +12,8 @@ $O3/scripts/mac/build-boost
 #echo "******* MINICRYPTO"
 #$O3/scripts/mac/build-minicrypto
 echo "******* POLARSSL"
-OSX_SERVER=0 $O3/scripts/mac/build-polarssl
+# consider OSX_SERVER=0
+$O3/scripts/mac/build-polarssl
 echo "******* SNAPPY"
 $O3/scripts/mac/build-snappy
 echo "******* LZ4"
