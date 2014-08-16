@@ -298,6 +298,8 @@ namespace openvpn {
 	  {
 	    cc->set_username(userlocked_username);
 	    cc->set_password(pcc.embeddedPassword());
+	    cc->enable_password_cache(true);
+	    cc->set_replace_password_with_session_id(true);
 	    submit_creds(cc);
 	    creds_locked = true;
 	  }
