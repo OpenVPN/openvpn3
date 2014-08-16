@@ -48,6 +48,8 @@
 #include <openvpn/client/optfilt.hpp>
 #include <openvpn/client/clilife.hpp>
 
+#include <openvpn/ssl/sslchoose.hpp>
+
 #if defined(USE_TUN_BUILDER)
 #include <openvpn/tun/builder/client.hpp>
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
@@ -61,30 +63,6 @@
 #include <openvpn/tun/client/tunnull.hpp>
 #endif
 
-#ifdef USE_OPENSSL
-#include <openvpn/openssl/crypto/api.hpp>
-#include <openvpn/openssl/ssl/sslctx.hpp>
-#include <openvpn/openssl/util/rand.hpp>
-#endif
-
-#ifdef USE_APPLE_SSL
-#include <openvpn/applecrypto/crypto/api.hpp>
-#include <openvpn/applecrypto/ssl/sslctx.hpp>
-#include <openvpn/applecrypto/util/rand.hpp>
-#endif
-
-#ifdef USE_POLARSSL
-#include <openvpn/polarssl/crypto/api.hpp>
-#include <openvpn/polarssl/ssl/sslctx.hpp>
-#include <openvpn/polarssl/util/rand.hpp>
-#endif
-
-#ifdef USE_POLARSSL_APPLE_HYBRID
-#include <openvpn/applecrypto/crypto/api.hpp>
-#include <openvpn/polarssl/ssl/sslctx.hpp>
-#include <openvpn/applecrypto/util/rand.hpp>
-#endif
-
 namespace openvpn {
 
   class ClientOptions : public RC<thread_unsafe_refcount>
@@ -92,27 +70,7 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<ClientOptions> Ptr;
 
-#if defined(USE_POLARSSL)
-    typedef PolarSSLCryptoAPI ClientCryptoAPI;
-    typedef PolarSSLContext<PolarSSLRandom> ClientSSLAPI;
-    typedef PolarSSLRandom RandomAPI;
-#elif defined(USE_POLARSSL_APPLE_HYBRID)
-    // Uses Apple framework for RandomAPI and ClientCryptoAPI and PolarSSL for ClientSSLAPI
-    typedef AppleCryptoAPI ClientCryptoAPI;
-    typedef PolarSSLContext<AppleRandom> ClientSSLAPI;
-    typedef AppleRandom RandomAPI;
-#elif defined(USE_APPLE_SSL)
-    typedef AppleCryptoAPI ClientCryptoAPI;
-    typedef AppleSSLContext ClientSSLAPI;
-    typedef AppleRandom RandomAPI;
-#elif defined(USE_OPENSSL)
-    typedef OpenSSLCryptoAPI ClientCryptoAPI;
-    typedef OpenSSLContext ClientSSLAPI;
-    typedef OpenSSLRandom RandomAPI;
-#else
-#error no SSL library defined
-#endif
-    typedef ClientProto::Session<RandomAPI, ClientCryptoAPI, ClientSSLAPI> Client;
+    typedef ClientProto::Session<SSLLib::RandomAPI, SSLLib::CryptoAPI, SSLLib::SSLAPI> Client;
 
     struct Config {
       Config()
@@ -178,8 +136,8 @@ namespace openvpn {
       autologin = pcc.autologin();
 
       // initialize RNG/PRNG
-      rng.reset(new RandomAPI());
-      prng.reset(new PRNG<RandomAPI, ClientCryptoAPI>("SHA1", rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
+      rng.reset(new SSLLib::RandomAPI());
+      prng.reset(new PRNG<SSLLib::RandomAPI, SSLLib::CryptoAPI>("SHA1", rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
 
       // frame
       frame = frame_init();
@@ -188,7 +146,7 @@ namespace openvpn {
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
 
       // client SSL config
-      ClientSSLAPI::Config cc;
+      SSLLib::SSLAPI::Config cc;
       cc.set_external_pki_callback(config.external_pki);
       cc.frame = frame;
       cc.flags = SSLConst::LOG_VERIFY_STATUS;
@@ -211,7 +169,7 @@ namespace openvpn {
       cp.reset(new Client::ProtoConfig());
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
-      cp->ssl_ctx.reset(new ClientSSLAPI(cc));
+      cp->ssl_ctx.reset(new SSLLib::SSLAPI(cc));
       cp->gui_version = config.gui_version;
       cp->frame = frame;
       cp->now = &now_;
@@ -466,7 +424,7 @@ namespace openvpn {
 	    throw option_error("internal error: no TCP server entries for HTTP proxy transport");
 
 	  // HTTP Proxy transport
-	  HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::Ptr httpconf = HTTPProxyTransport::ClientConfig<RandomAPI, ClientCryptoAPI>::new_obj();
+	  HTTPProxyTransport::ClientConfig<SSLLib::RandomAPI, SSLLib::CryptoAPI>::Ptr httpconf = HTTPProxyTransport::ClientConfig<SSLLib::RandomAPI, SSLLib::CryptoAPI>::new_obj();
 	  httpconf->remote_list = remote_list;
 	  httpconf->frame = frame;
 	  httpconf->stats = cli_stats;
@@ -504,10 +462,10 @@ namespace openvpn {
     }
 
     Time now_; // current time
-    RandomAPI::Ptr rng;
-    PRNG<RandomAPI, ClientCryptoAPI>::Ptr prng;
+    SSLLib::RandomAPI::Ptr rng;
+    PRNG<SSLLib::RandomAPI, SSLLib::CryptoAPI>::Ptr prng;
     Frame::Ptr frame;
-    ClientSSLAPI::Config cc;
+    SSLLib::SSLAPI::Config cc;
     Client::ProtoConfig::Ptr cp;
     RemoteList::Ptr remote_list;
     TransportClientFactory::Ptr transport_factory;
