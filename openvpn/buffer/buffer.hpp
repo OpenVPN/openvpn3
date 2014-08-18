@@ -64,7 +64,7 @@
 #include <openvpn/common/rc.hpp>
 
 #ifdef OPENVPN_BUFFER_ABORT
-#define OPENVPN_BUFFER_THROW(exc) { abort(); }
+#define OPENVPN_BUFFER_THROW(exc) { std::abort(); }
 #else
 #define OPENVPN_BUFFER_THROW(exc) { throw BufferException(BufferException::exc); }
 #endif
