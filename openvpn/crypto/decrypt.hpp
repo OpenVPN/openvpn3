@@ -28,7 +28,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/memcmp.hpp>
+#include <openvpn/common/memneq.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/random/prng.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -58,7 +58,7 @@ namespace openvpn {
 	  const size_t hmac_size = hmac.output_size();
 	  const unsigned char *packet_hmac = buf.read_alloc(hmac_size);
 	  hmac.hmac(local_hmac, hmac_size, buf.c_data(), buf.size());
-	  if (memcmp_secure(local_hmac, packet_hmac, hmac_size))
+	  if (crypto::memneq(local_hmac, packet_hmac, hmac_size))
 	    {
 	      buf.reset_size();
 	      return Error::HMAC_ERROR;
