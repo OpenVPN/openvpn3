@@ -221,6 +221,7 @@ void work(const char *config_fn, ServerThread::Ptr& serv)
   usc->frame = frame;
   usc->stats = stats;
   usc->client_instance_factory = spf;
+  prng->rand_fill(usc->transport_map_seed);
 
   // set up server config
   ServerThread::Config server_config;
