@@ -23,6 +23,8 @@
 #define OPENVPN_TRANSPORT_TRANSMAP_H
 
 #include <cstring>
+#include <string>
+#include <sstream>
 
 #include <boost/unordered_map.hpp>
 
@@ -48,9 +50,25 @@ namespace openvpn {
       {
 	return port == other.port && addr == other.addr;
       }
+
+      std::string to_string()
+      {
+	std::ostringstream os;
+	os << '[' << addr << "]:" << port;
+	return os.str();
+      }
+
+      template <typename ASIO_ENDPOINT>
+      static Endpoint from_asio(const ASIO_ENDPOINT& ae)
+      {
+	Endpoint ret;
+	ret.addr = IP::Addr::from_asio(ae.address());
+	ret.port = ae.port();
+	return ret;
+      }
     };
 
-    // Compute hash value of Endpoint
+    // Compute hash value of our Endpoint (above)
     template <typename ADDR>
     inline std::size_t hash_value(const Endpoint<ADDR>& endpoint)
     {
@@ -66,6 +84,9 @@ namespace openvpn {
       typedef boost::unordered_map<ENDPOINT, typename VALUE::Ptr, HashInitialSeed<ENDPOINT> > map_type;
 
     public:
+      typedef typename map_type::iterator iterator;
+      typedef typename map_type::const_iterator const_iterator;
+
       enum {
 	INITIAL_BUCKETS = 2048,
 	REAP_TRIGGER = 1024,
@@ -80,22 +101,32 @@ namespace openvpn {
 
       void add(const ENDPOINT& r, const typename VALUE::Ptr& vp)
       {
-	if (++insertions_since_reap > REAP_TRIGGER)
-	  reap();
 	map[r] = vp;
       }
 
-      void reap()
+      const_iterator begin() const
       {
-	insertions_since_reap = 0;
-	typename map_type::const_iterator i = map.begin();
-	while (i != map.end())
-	  {
-	    if (i->second->defined())
-	      ++i;
-	    else
-	      i = map.erase(i);
-	  }
+	return map.begin();
+      }
+
+      const_iterator end() const
+      {
+	return map.end();
+      }
+
+      iterator find(const ENDPOINT& ep)
+      {
+	return map.find(ep);
+      }
+
+      iterator erase(const_iterator i)
+      {
+	return map.erase(i);
+      }
+
+      void clear()
+      {
+	map.clear();
       }
 
     private:

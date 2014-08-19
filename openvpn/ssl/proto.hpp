@@ -243,11 +243,11 @@ namespace openvpn {
       // PRNG
       typename PRNG<RAND_API, CRYPTO_API>::Ptr prng;
 
-      // transmit username/password creds to server
+      // transmit username/password creds to server (client-only)
       bool xmit_creds;
 
       // Transport protocol, i.e. UDPv4, etc.
-      Protocol protocol;
+      Protocol protocol; // set with set_protocol()
 
       // OSI layer
       Layer layer;
@@ -528,6 +528,11 @@ namespace openvpn {
       void set_xmit_creds(const bool xmit_creds_arg)
       {
 	xmit_creds = xmit_creds_arg;
+      }
+
+      bool tls_auth_enabled() const
+      {
+	return tls_auth_key.defined() && tls_auth_digest.defined();
       }
 
       void validate_complete() const
@@ -1845,6 +1850,52 @@ namespace openvpn {
     };
 
   public:
+
+    // Validate the integrity of a packet, only considering tls-auth HMAC.
+    class TLSAuthPreValidate : public RC<thread_unsafe_refcount>
+    {
+    public:
+      typedef boost::intrusive_ptr<TLSAuthPreValidate> Ptr;
+
+      OPENVPN_SIMPLE_EXCEPTION(tls_auth_pre_validate);
+
+      TLSAuthPreValidate(const Config& c)
+      {
+	if (!c.tls_auth_enabled())
+	  throw tls_auth_pre_validate();
+
+	// init tls_auth hmac
+	if (c.key_direction >= 0)
+	  {
+	    // key-direction is 0 or 1
+	    const unsigned int key_dir = c.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
+	    ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	  }
+	else
+	  {
+	    // key-direction bidirectional mode
+	    ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+	  }
+      }
+
+      bool validate(const Buffer& net_buf)
+      {
+	try {
+	  return ta_hmac_recv.hmac3_cmp(net_buf.c_data(), net_buf.size(),
+					1 + ProtoSessionID::SIZE,
+					ta_hmac_recv.output_size(),
+					PacketID::size(PacketID::LONG_FORM));
+	}
+	catch (BufferException&)
+	  {
+	    return false;
+	  }
+      }
+
+    private:
+      HMACContext<CRYPTO_API> ta_hmac_recv;
+    };
+
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
 
     ProtoContext(const typename Config::Ptr& config_arg,  // configuration
@@ -1858,7 +1909,7 @@ namespace openvpn {
       const Config& c = *config;
 
       // tls-auth setup
-      if (c.tls_auth_key.defined() && c.tls_auth_digest.defined())
+      if (c.tls_auth_enabled())
 	{
 	  use_tls_auth = true;
 
@@ -1926,6 +1977,14 @@ namespace openvpn {
       // initialize keepalive timers
       keepalive_expire = Time::infinite();   // initially disabled
       update_last_sent();                    // set timer for initial keepalive send
+    }
+
+    // Free up space when parent object has been halted but
+    // object destruction is not immediately scheduled.
+    void pre_destroy()
+    {
+      primary.reset();
+      secondary.reset();
     }
 
     virtual ~ProtoContext() {}
