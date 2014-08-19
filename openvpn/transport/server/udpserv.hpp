@@ -49,6 +49,7 @@ namespace openvpn {
       Frame::Ptr frame;
       SessionStats::Ptr stats;
       int n_parallel;
+      size_t transport_map_seed;
 
       TransportClientInstanceFactory::Ptr client_instance_factory;
 
@@ -61,7 +62,7 @@ namespace openvpn {
 
     private:
       ServerConfig()
-	: n_parallel(8)
+	: n_parallel(8), transport_map_seed(0)
       {}
     };
 
@@ -187,7 +188,7 @@ namespace openvpn {
 	   socket(io_service_arg),
 	   config(config_arg),
 	   halt(false),
-	   clients(0), // fixme -- provide initial random seed
+	   clients(config_arg->transport_map_seed),
 	   next_instance_id(1)
       {
       }

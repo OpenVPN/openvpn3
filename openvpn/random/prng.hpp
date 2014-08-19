@@ -85,6 +85,12 @@ namespace openvpn {
       nonce_data.move(nd);
     }
 
+    template <typename T>
+    void rand_fill(T& obj)
+    {
+      rand_bytes(reinterpret_cast<unsigned char *>(&obj), sizeof(T));
+    }
+
     void
     rand_bytes (unsigned char *output, size_t len)
     {
