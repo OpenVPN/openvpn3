@@ -48,10 +48,6 @@ public:
   }
 };
 
-struct MyTransportParent : public TransportServerParent
-{
-};
-
 class ServerThread : public RC<thread_unsafe_refcount>
 {
 public:
@@ -68,7 +64,7 @@ public:
       config(config_arg),
       halt(false)
   {
-    transport_server = config.transport_factory->new_server_obj(io_service, transport_parent);
+    transport_server = config.transport_factory->new_server_obj(io_service);
   }
 
   void start()
@@ -104,7 +100,6 @@ private:
   Config config;
   bool halt;
 
-  MyTransportParent transport_parent;
   TransportServer::Ptr transport_server;
 };
 
