@@ -98,6 +98,8 @@ namespace openvpn {
     RCImpl refcount_;
   };
 
+#if !defined(OPENVPN_RC_USERDEF)
+
   template <typename R>
   inline void intrusive_ptr_add_ref(R *p) BOOST_NOEXCEPT
   {
@@ -110,6 +112,8 @@ namespace openvpn {
     if (--p->refcount_ == 0)
       delete p;
   }
+
+#endif
 
 } // namespace openvpn
 
