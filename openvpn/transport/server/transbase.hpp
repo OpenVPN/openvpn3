@@ -46,19 +46,12 @@ namespace openvpn {
     virtual std::string local_endpoint_info() const = 0;
   };
 
-  // Base class for parent of server transport object, used by server transport
-  // objects to communicate status info to TransportServer owner.
-  struct TransportServerParent
-  {
-  };
-
   // Factory for server transport object.
   struct TransportServerFactory : public RC<thread_unsafe_refcount>
   {
     typedef boost::intrusive_ptr<TransportServerFactory> Ptr;
 
-    virtual TransportServer::Ptr new_server_obj(boost::asio::io_service& io_service,
-						TransportServerParent& parent) = 0;
+    virtual TransportServer::Ptr new_server_obj(boost::asio::io_service& io_service) = 0;
   };
 
   // Base class for the per-client-instance state of the TransportServer.

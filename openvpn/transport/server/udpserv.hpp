@@ -57,8 +57,7 @@ namespace openvpn {
 	return new ServerConfig;
       }
 
-      virtual TransportServer::Ptr new_server_obj(boost::asio::io_service& io_service,
-						  TransportServerParent& parent);
+      virtual TransportServer::Ptr new_server_obj(boost::asio::io_service& io_service);
 
     private:
       ServerConfig()
@@ -183,12 +182,10 @@ namespace openvpn {
 
     private:
       Server(boost::asio::io_service& io_service_arg,
-	     ServerConfig* config_arg,
-	     TransportServerParent& parent_arg)
+	     ServerConfig* config_arg)
 	:  io_service(io_service_arg),
 	   socket(io_service_arg),
 	   config(config_arg),
-	   parent(parent_arg),
 	   halt(false),
 	   clients(0), // fixme -- provide initial random seed
 	   next_instance_id(1)
@@ -306,7 +303,6 @@ namespace openvpn {
       boost::asio::io_service& io_service;
       boost::asio::ip::udp::socket socket;
       ServerConfig::Ptr config;
-      TransportServerParent& parent;
       LinkImpl::Ptr impl;
       AsioEndpoint local_endpoint;
       bool halt;
@@ -315,10 +311,9 @@ namespace openvpn {
       size_t next_instance_id;
     };
 
-    inline TransportServer::Ptr ServerConfig::new_server_obj(boost::asio::io_service& io_service,
-							     TransportServerParent& parent)
+    inline TransportServer::Ptr ServerConfig::new_server_obj(boost::asio::io_service& io_service)
     {
-      return TransportServer::Ptr(new Server(io_service, this, parent));
+      return TransportServer::Ptr(new Server(io_service, this));
     }
   }
 } // namespace openvpn
