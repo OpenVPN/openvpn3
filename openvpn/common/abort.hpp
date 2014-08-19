@@ -20,11 +20,11 @@
 //    If not, see <http://www.gnu.org/licenses/>.
 
 // The file should include any platform-specific files necessary
-// to declare the abort() function.
+// to declare the std::abort() function.
 
 #ifndef OPENVPN_COMMON_ABORT_H
 #define OPENVPN_COMMON_ABORT_H
 
-#include <stdlib.h> // defines abort()
+#include <stdlib.h> // defines std::abort()
 
 #endif // OPENVPN_COMMON_ABORT_H

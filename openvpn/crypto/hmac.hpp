@@ -28,7 +28,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/memcmp.hpp>
+#include <openvpn/common/memneq.hpp>
 #include <openvpn/crypto/static_key.hpp>
 
 namespace openvpn {
@@ -92,7 +92,7 @@ namespace openvpn {
       if (hmac3_pre(data, data_size, l1, l2, l3))
 	{
 	  ctx.final(local_hmac);
-	  return !memcmp_secure(data + l1, local_hmac, l2);
+	  return !crypto::memneq(data + l1, local_hmac, l2);
 	}
       else
 	return false;

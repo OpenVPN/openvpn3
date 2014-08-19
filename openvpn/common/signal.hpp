@@ -22,6 +22,8 @@
 #ifndef OPENVPN_COMMON_SIGNAL_H
 #define OPENVPN_COMMON_SIGNAL_H
 
+#include <boost/noncopyable.hpp>
+
 #include <openvpn/common/platform.hpp>
 
 #if !defined(OPENVPN_PLATFORM_WIN)
@@ -87,6 +89,43 @@ namespace openvpn {
     }
 
     unsigned int flags_;
+  };
+
+  // Like Asio posix_signal_blocker, but only block certain signals
+  class SignalBlocker : private boost::noncopyable
+  {
+  public:
+    SignalBlocker(const unsigned int flags) // use signal mask from class Signal
+      : blocked_(false)
+    {
+      sigset_t new_mask;
+      sigemptyset(&new_mask);
+      if (flags & Signal::F_SIGINT)
+	sigaddset(&new_mask, SIGINT);
+      if (flags & Signal::F_SIGTERM)
+	sigaddset(&new_mask, SIGTERM);
+      if (flags & Signal::F_SIGHUP)
+	sigaddset(&new_mask, SIGHUP);
+      if (flags & Signal::F_SIGUSR1)
+	sigaddset(&new_mask, SIGUSR1);
+      if (flags & Signal::F_SIGUSR2)
+	sigaddset(&new_mask, SIGUSR2);
+      blocked_ = (pthread_sigmask(SIG_BLOCK, &new_mask, &old_mask_) == 0);
+    }
+
+    // Destructor restores the previous signal mask.
+    ~SignalBlocker()
+    {
+      if (blocked_)
+	pthread_sigmask(SIG_SETMASK, &old_mask_, 0);
+    }
+
+  private:
+    // Have signals been blocked.
+    bool blocked_;
+
+    // The previous signal mask.
+    sigset_t old_mask_;
   };
 }
 #endif

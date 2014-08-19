@@ -115,7 +115,8 @@ namespace openvpn {
 
     ClientOptions(const OptionList& opt,   // only needs to remain in scope for duration of constructor call
 		  const Config& config)
-      : socket_protect(config.socket_protect),
+      : server_addr_float(false),
+        socket_protect(config.socket_protect),
 	reconnect_notify(config.reconnect_notify),
 	cli_stats(config.cli_stats),
 	cli_events(config.cli_events),
@@ -199,6 +200,9 @@ namespace openvpn {
       // process remote-random
       if (opt.exists("remote-random"))
 	remote_list->randomize(*prng);
+
+      // get "float" option
+      server_addr_float = opt.exists("float");
 
       // special remote cache handling for HTTP proxy
       if (http_proxy_options)
@@ -445,6 +449,7 @@ namespace openvpn {
 	      udpconf->frame = frame;
 	      udpconf->stats = cli_stats;
 	      udpconf->socket_protect = socket_protect;
+	      udpconf->server_addr_float = server_addr_float;
 	      transport_factory = udpconf;
 	    }
 	  else if (transport_protocol.is_tcp())
@@ -470,6 +475,7 @@ namespace openvpn {
     SSLLib::SSLAPI::Config cc;
     Client::ProtoConfig::Ptr cp;
     RemoteList::Ptr remote_list;
+    bool server_addr_float;
     TransportClientFactory::Ptr transport_factory;
     TunClientFactory::Ptr tun_factory;
     SocketProtect* socket_protect;

@@ -39,6 +39,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>         // for std::min
 
 #include <boost/asio.hpp>
 #include <boost/cstdint.hpp> // for boost::uint...
@@ -572,7 +573,8 @@ namespace openvpn {
 	  }
       }
 
-      void send_push_request_callback(const boost::system::error_code& e)
+      void send_push_request_callback(const Time::Duration& dur,
+				      const boost::system::error_code& e)
       {
 	try {
 	  if (!e && !halt && !received_options.partial())
@@ -588,7 +590,12 @@ namespace openvpn {
 	      Base::write_control_string(std::string("PUSH_REQUEST"));
 	      Base::flush(true);
 	      set_housekeeping_timer();
-	      schedule_push_request_callback(false);
+
+	      {
+		const Time::Duration newdur = std::min(dur + Time::Duration::seconds(1),
+						             Time::Duration::seconds(3));
+		schedule_push_request_callback(newdur);
+	      }
 	    }
 	}
 	catch (const std::exception& e)
@@ -597,12 +604,12 @@ namespace openvpn {
 	  }
       }
 
-      void schedule_push_request_callback(bool short_time)
+      void schedule_push_request_callback(const Time::Duration& dur)
       {
 	if (!received_options.partial())
 	  {
-	    push_request_timer.expires_at(now() + (short_time ? Time::Duration::seconds(1) : Time::Duration::seconds(3)));
-	    push_request_timer.async_wait(asio_dispatch_timer(&Session::send_push_request_callback, this));
+	    push_request_timer.expires_at(now() + dur);
+	    push_request_timer.async_wait(asio_dispatch_timer_arg(&Session::send_push_request_callback, this, dur));
 	  }
       }
 
@@ -610,7 +617,7 @@ namespace openvpn {
       virtual void active()
       {
 	OPENVPN_LOG("Session is ACTIVE");
-	schedule_push_request_callback(true);
+	schedule_push_request_callback(Time::Duration::seconds(0));
       }
 
       void housekeeping_callback(const boost::system::error_code& e)
