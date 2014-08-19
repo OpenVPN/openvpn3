@@ -28,11 +28,12 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/abort.hpp>
+#include <openvpn/common/link.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
 #include <openvpn/ssl/proto.hpp>
-#include <openvpn/server/inst.hpp>
 #include <openvpn/server/manage.hpp>
+#include <openvpn/transport/server/transbase.hpp>
 
 #ifdef OPENVPN_DEBUG_SERVPROTO
 #define OPENVPN_LOG_SERVPROTO(x) OPENVPN_LOG(x)
@@ -46,11 +47,12 @@ namespace openvpn {
   class ServerProto
   {
     typedef ProtoContext<RAND_API, CRYPTO_API, SSL_API> Base;
+    typedef Link<TransportClientInstanceSend, TransportClientInstanceRecv> TransportLink;
 
   public:
     class Session;
 
-    class Factory : public ClientInstanceFactory
+    class Factory : public TransportClientInstanceFactory
     {
     public:
       typedef boost::intrusive_ptr<Factory> Ptr;
@@ -64,7 +66,7 @@ namespace openvpn {
 	  preval.reset(new typename Base::TLSAuthPreValidate(c));
       }
 
-      virtual ClientInstanceBase::Ptr new_client_instance();
+      virtual TransportClientInstanceRecv::Ptr new_client_instance();
 
       virtual bool validate_initial_packet(const Buffer& net_buf)
       {
@@ -87,7 +89,9 @@ namespace openvpn {
       typename Base::TLSAuthPreValidate::Ptr preval;
     };
 
-    class Session : Base, public ClientInstanceBase
+    // This is the main server-side client instance object
+    class Session : Base,                  // OpenVPN protocol implementation
+		    public TransportLink   // Transport layer
     {
       friend class Factory; // calls constructor
 
@@ -101,19 +105,19 @@ namespace openvpn {
 
       virtual bool defined() const
       {
-	return !halt && parent;
+	return defined_();
       }
 
-      virtual void start(TransportClientInstance* tci)
+      virtual void start(const TransportClientInstanceSend::Ptr& parent)
       {
-	if (halt || !tci)
+	if (halt || !parent)
 	  return;
 
 	OPENVPN_LOG("Servproto start called"); // fixme
 
-	parent = tci;
+	TransportLink::send = parent;
 
-	// start OpenVPN protocol handshake
+	// init OpenVPN protocol handshake
 	Base::update_now();
 	Base::reset();
 	Base::start();
@@ -130,12 +134,13 @@ namespace openvpn {
 	if (!halt)
 	  {
 	    halt = true;
-	    TransportClientInstance* tci = parent;
-	    parent = NULL;
 	    housekeeping_timer.cancel();
 	    Base::pre_destroy();
-	    if (tci)
-	      tci->stop();
+	    if (TransportLink::send)
+	      {
+		TransportLink::send->stop();
+		TransportLink::send.reset();
+	      }
 	  }
       }
 
@@ -206,7 +211,7 @@ namespace openvpn {
       virtual ~Session()
       {
 	// fatal error if destructor called while Session is active
-	if (defined())
+	if (defined_())
 	  std::abort();
       }
 
@@ -216,16 +221,20 @@ namespace openvpn {
 	: Base(factory.proto_context_config, factory.stats),
 	  io_service(io_service_arg),
 	  halt(false),
-	  parent(NULL),
 	  housekeeping_timer(io_service_arg),
 	  stats(factory.stats)
       {}
+
+      bool defined_() const
+      {
+	return !halt && TransportLink::send;
+      }
 
       // proto base class calls here for control channel network sends
       virtual void control_net_send(const Buffer& net_buf)
       {
 	OPENVPN_LOG_SERVPROTO("Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(net_buf));
-	if (parent->transport_send_const(net_buf))
+	if (TransportLink::send->transport_send_const(net_buf))
 	  Base::update_last_sent();
       }
 
@@ -286,8 +295,8 @@ namespace openvpn {
 
       std::string client_endpoint_render()
       {
-	if (parent)
-	  return parent->info();
+	if (TransportLink::send)
+	  return TransportLink::send->info();
 	else
 	  return "";
       }
@@ -306,8 +315,6 @@ namespace openvpn {
       boost::asio::io_service& io_service;
       bool halt;
 
-      TransportClientInstance* parent;
-
       CoarseTime housekeeping_schedule;
       AsioTimer housekeeping_timer;
 
@@ -316,9 +323,9 @@ namespace openvpn {
   };
 
   template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
-  inline ClientInstanceBase::Ptr ServerProto<RAND_API, CRYPTO_API, SSL_API>::Factory::new_client_instance()
+  inline TransportClientInstanceRecv::Ptr ServerProto<RAND_API, CRYPTO_API, SSL_API>::Factory::new_client_instance()
   {
-    return ClientInstanceBase::Ptr(new Session(io_service, *this));
+    return TransportClientInstanceRecv::Ptr(new Session(io_service, *this));
   }
 }
 

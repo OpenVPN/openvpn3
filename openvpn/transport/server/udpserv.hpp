@@ -35,7 +35,6 @@
 #include <openvpn/transport/server/transbase.hpp>
 #include <openvpn/transport/udplink.hpp>
 #include <openvpn/transport/transmap.hpp>
-#include <openvpn/server/inst.hpp>
 
 namespace openvpn {
   namespace UDPTransport {
@@ -51,7 +50,7 @@ namespace openvpn {
       SessionStats::Ptr stats;
       int n_parallel;
 
-      ClientInstanceFactory::Ptr client_instance_factory;
+      TransportClientInstanceFactory::Ptr client_instance_factory;
 
       static Ptr new_obj()
       {
@@ -76,7 +75,7 @@ namespace openvpn {
 
       typedef TransportMap::Endpoint<IP::Addr> Endpoint;
 
-      class Instance : public TransportClientInstance, public RC<thread_unsafe_refcount>
+      class Instance : public TransportClientInstanceSend
       {
 	friend class Server;
 
@@ -136,7 +135,7 @@ namespace openvpn {
 	std::string info_;
 
 	// the client instance
-	ClientInstanceBase::Ptr instance;
+	TransportClientInstanceRecv::Ptr instance;
 
 	// our parent
 	Server* parent;
@@ -235,7 +234,7 @@ namespace openvpn {
 		OPENVPN_LOG("UDP existing client"); // fixme
 
 		// found client instance matching endpoint
-		ClientInstanceBase* ci = e->second->instance.get();
+		TransportClientInstanceRecv* ci = e->second->instance.get();
 		if (ci->defined())
 		  {
 		    blame = e->second;
@@ -252,7 +251,7 @@ namespace openvpn {
 
 	  // new client is connecting
 	  {
-	    ClientInstanceFactory* cif = config->client_instance_factory.get();
+	    TransportClientInstanceFactory* cif = config->client_instance_factory.get();
 	    OPENVPN_LOG("UDP new client"); // fixme
 	    if (cif->validate_initial_packet(pfp->buf))
 	      {
@@ -265,7 +264,7 @@ namespace openvpn {
 		newinst->parent = this;
 		clients.add(from, newinst);
 		blame = newinst;
-		newinst->instance->start(newinst.get());
+		newinst->instance->start(newinst);
 		newinst->instance->transport_recv(pfp->buf);
 	      }
 	  }

@@ -37,9 +37,8 @@
 namespace openvpn {
 
   // Base class for server transport object.
-  class TransportServer : public RC<thread_unsafe_refcount>
+  struct TransportServer : public RC<thread_unsafe_refcount>
   {
-  public:
     typedef boost::intrusive_ptr<TransportServer> Ptr;
 
     virtual void start() = 0;
@@ -54,22 +53,20 @@ namespace openvpn {
   };
 
   // Factory for server transport object.
-  class TransportServerFactory : public RC<thread_unsafe_refcount>
+  struct TransportServerFactory : public RC<thread_unsafe_refcount>
   {
-  public:
     typedef boost::intrusive_ptr<TransportServerFactory> Ptr;
 
     virtual TransportServer::Ptr new_server_obj(boost::asio::io_service& io_service,
 						TransportServerParent& parent) = 0;
   };
 
-  // Abstract base class for the per-client-instance state of the TransportServer.
+  // Base class for the per-client-instance state of the TransportServer.
   // Each client instance uses this class to send data to the transport layer.
-  // This object is considered the "parent" of a ClientInstanceBase object, and
-  // is passed to new ClientInstanceBase objects via the start method.
-  class TransportClientInstance
+  struct TransportClientInstanceSend : public RC<thread_unsafe_refcount>
   {
-  public:
+    typedef boost::intrusive_ptr<TransportClientInstanceSend> Ptr;
+
     virtual bool defined() const = 0;
     virtual void stop() = 0;
 
@@ -77,6 +74,32 @@ namespace openvpn {
     virtual bool transport_send(BufferAllocated& buf) = 0;
 
     virtual const std::string& info() const = 0;
+  };
+
+  // Base class for the client instance receiver.  Note that all
+  // client instance receivers (transport, routing, management,
+  // etc.) must inherit virtually from RC because the client instance
+  // object will inherit from multiple receivers.
+  struct TransportClientInstanceRecv : public virtual RC<thread_unsafe_refcount>
+  {
+    typedef boost::intrusive_ptr<TransportClientInstanceRecv> Ptr;
+
+    virtual bool defined() const = 0;
+    virtual void stop() = 0;
+
+    virtual void start(const TransportClientInstanceSend::Ptr& parent) = 0;
+
+    // Called with OpenVPN-encapsulated packets from transport layer.
+    virtual void transport_recv(BufferAllocated& buf) = 0;
+  };
+
+  // Base class for factory used to create TransportClientInstanceRecv objects.
+  struct TransportClientInstanceFactory : public RC<thread_unsafe_refcount>
+  {
+    typedef boost::intrusive_ptr<TransportClientInstanceFactory> Ptr;
+
+    virtual TransportClientInstanceRecv::Ptr new_client_instance() = 0;
+    virtual bool validate_initial_packet(const Buffer& net_buf) = 0;
   };
 
 } // namespace openvpn
