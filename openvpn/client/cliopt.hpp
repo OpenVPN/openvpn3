@@ -240,9 +240,12 @@ namespace openvpn {
 	tunconf->tun_prop.mtu = tun_mtu;
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
+      tunconf->tun_prop.remote_list = remote_list;
 #if defined(OPENVPN_PLATFORM_IPHONE)
       tunconf->retain_sd = true;
       tunconf->tun_prefix = true;
+      if (config.tun_persist)
+	tunconf->tun_prop.remote_bypass = true;
 #endif
       if (config.tun_persist)
 	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd, config.builder));

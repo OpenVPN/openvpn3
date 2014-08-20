@@ -39,6 +39,7 @@
 #include <openvpn/common/port.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/addr/addrlist.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/client/cliconstants.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -567,6 +568,24 @@ namespace openvpn {
 	  out << '[' << i << "] " << e.to_string() << std::endl;
 	}
       return out.str();
+    }
+
+    // return a list of unique, cached IP addresses
+    void cached_ip_address_list(IP::AddrList& addrlist) const
+    {
+      for (std::vector<Item::Ptr>::const_iterator i = list.begin(); i != list.end(); ++i)
+	{
+	  const Item& item = **i;
+	  if (item.res_addr_list_defined())
+	    {
+	      const ResolvedAddrList& ral = *item.res_addr_list;
+	      for (ResolvedAddrList::const_iterator j = ral.begin(); j != ral.end(); ++j)
+		{
+		  const ResolvedAddr& addr = **j;
+		  addrlist.add(addr.addr);
+		}
+	    }
+	}
     }
 
   private:
