@@ -19,8 +19,8 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_APPLE_MACVER_H
-#define OPENVPN_APPLE_MACVER_H
+#ifndef OPENVPN_APPLE_VER_H
+#define OPENVPN_APPLE_VER_H
 
 #include <errno.h>
 #include <sys/sysctl.h>
@@ -31,41 +31,51 @@
 
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/number.hpp>
-#include <openvpn/apple/ver.hpp>
 
 namespace openvpn {
-  namespace Mac {
-    class Version : public AppleVersion
+  class AppleVersion
+  {
+  public:
+    int major() const { return ver[0]; }
+    int minor() const { return ver[1]; }
+    int build() const { return ver[2]; }
+
+    std::string to_string() const
     {
-    public:
-      // Mac OS X versions
-      // 13.x.x  OS X 10.9.x Mavericks
-      // 12.x.x  OS X 10.8.x Mountain Lion
-      // 11.x.x  OS X 10.7.x Lion
-      // 10.x.x  OS X 10.6.x Snow Leopard
-      //  9.x.x  OS X 10.5.x Leopard
-      //  8.x.x  OS X 10.4.x Tiger
-      //  7.x.x  OS X 10.3.x Panther
-      //  6.x.x  OS X 10.2.x Jaguar
-      //  5.x    OS X 10.1.x Puma
+      std::ostringstream os;
+      os << major() << '.' << minor() << '.' << build();
+      return os.str();
+    }
 
-      enum {
-	OSX_10_9=13,
-	OSX_10_8=12,
-	OSX_10_7=11,
-	OSX_10_6=10,
-      };
+  protected:
+    AppleVersion()
+    {
+      reset();
+    }
 
-      Version()
-      {
-	char str[256];
-	size_t size = sizeof(str);
-	int ret = sysctlbyname("kern.osrelease", str, &size, NULL, 0);
-	if (!ret)
-	  init(std::string(str, size));
-      }
-    };
-  }
+    // verstr should be in the form major.minor.build
+    void init(const std::string& verstr)
+    {
+      typedef std::vector<std::string> StringList;
+      reset();
+      StringList sl;
+      sl.reserve(3);
+      Split::by_char_void<StringList, NullLex, Split::NullLimit>(sl, verstr, '.');
+      for (size_t i = 0; i < 3; ++i)
+	{
+	  if (i < sl.size())
+	    parse_number(sl[i], ver[i]);
+	}
+    }
+
+  private:
+    void reset()
+    {
+      ver[0] = ver[1] = ver[2] = -1;
+    }
+
+    int ver[3];
+  };
 }
 
 #endif
