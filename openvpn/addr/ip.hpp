@@ -155,6 +155,21 @@ namespace openvpn {
 	  throw ip_exception("address is not IPv6");
       }
 
+      static Addr from_sockaddr(const struct sockaddr *sa)
+      {
+	if (sa->sa_family == AF_INET)
+	  return from_ipv4(IPv4::Addr::from_sockaddr((struct sockaddr_in *)sa));
+	else if (sa->sa_family == AF_INET6)
+	  return from_ipv6(IPv6::Addr::from_sockaddr((struct sockaddr_in6 *)sa));
+	else
+	  return Addr();
+      }
+
+      static bool sockaddr_defined(const struct sockaddr *sa)
+      {
+	return sa && (sa->sa_family == AF_INET || sa->sa_family == AF_INET6);
+      }
+
       static Addr from_ulong(Version v, unsigned long ul)
       {
 	if (v == V4)
