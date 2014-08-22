@@ -28,6 +28,8 @@
 
 #include <boost/asio.hpp>
 
+#include <openvpn/common/likely.hpp>
+#include <openvpn/common/platform.hpp>
 #include <openvpn/transport/udplink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
@@ -141,7 +143,24 @@ namespace openvpn {
       bool send(const Buffer& buf)
       {
 	if (impl)
-	  return impl->send(buf, NULL);
+	  {
+	    const int err = impl->send(buf, NULL);
+	    if (unlikely(err))
+	      {
+		// While UDP errors are generally ignored, certain
+		// errors should be forwarded up to the higher levels.
+#ifdef OPENVPN_PLATFORM_IPHONE
+		if (err == EADDRNOTAVAIL)
+		  {
+		    stop();
+		    parent.transport_error(Error::TRANSPORT_ERROR, "EADDRNOTAVAIL: Can't assign requested address");
+		  }
+#endif
+		return false;
+	      }
+	    else
+	      return true;
+	  }
 	else
 	  return false;
       }

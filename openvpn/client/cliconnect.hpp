@@ -340,9 +340,8 @@ namespace openvpn {
 	}
     }
 
-    void queue_restart()
+    void queue_restart(const unsigned int delay = 2)
     {
-      const unsigned int delay = 2;
       OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
       server_poll_timer.cancel();
       interim_finalize();
@@ -366,7 +365,8 @@ namespace openvpn {
 		  queue_restart();
 		  break;
 
-		// Errors below will cause the client to NOT retry the connection
+		// Errors below will cause the client to NOT retry the connection,
+		// or otherwise give the error special handling.
 
 		case Error::AUTH_FAILED:
 		  {
@@ -463,6 +463,14 @@ namespace openvpn {
 		    client_options->events().add_event(ev);
 		    client_options->stats().error(Error::INACTIVE_TIMEOUT);
 		    stop();
+		  }
+		  break;
+		case Error::TRANSPORT_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TransportError(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::TRANSPORT_ERROR);
+		    queue_restart(5); // use a larger timeout to allow preemption from higher levels
 		  }
 		  break;
 		default:

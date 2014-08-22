@@ -50,6 +50,7 @@ namespace openvpn {
       TUN_IFACE_DISABLED,  // tun/tap interface is disabled
       TAP_NOT_SUPPORTED,   // dev tap is present in profile but not supported
       REROUTE_GW_NO_DNS,   // redirect-gateway specified without alt DNS servers
+      TRANSPORT_ERROR,     // general transport error
       TCP_OVERFLOW,        // TCP output queue overflow
       TCP_SIZE_ERROR,      // bad embedded uint16_t TCP packet size
       TCP_CONNECT_ERROR,   // client error on TCP connect
@@ -120,6 +121,7 @@ namespace openvpn {
 	"TUN_IFACE_DISABLED",
 	"TAP_NOT_SUPPORTED",
 	"REROUTE_GW_NO_DNS",
+	"TRANSPORT_ERROR",
 	"TCP_OVERFLOW",
 	"TCP_SIZE_ERROR",
 	"TCP_CONNECT_ERROR",

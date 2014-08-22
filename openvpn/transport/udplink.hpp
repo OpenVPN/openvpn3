@@ -50,6 +50,11 @@ namespace openvpn {
 
     typedef boost::asio::ip::udp::endpoint AsioEndpoint;
 
+    enum {
+      SEND_SOCKET_HALTED=-1,
+      SEND_PARTIAL=-2,
+    };
+
     struct PacketFrom
     {
       typedef ScopedPtr<PacketFrom> SPtr;
@@ -75,7 +80,9 @@ namespace openvpn {
       {
       }
 
-      bool send(const Buffer& buf, const AsioEndpoint* endpoint)
+      // Returns 0 on success, or a system error code on error.
+      // May also return SEND_PARTIAL or SEND_SOCKET_HALTED.
+      int send(const Buffer& buf, const AsioEndpoint* endpoint)
       {
 	if (!halt)
 	  {
@@ -86,23 +93,23 @@ namespace openvpn {
 	      stats->inc_stat(SessionStats::BYTES_OUT, wrote);
 	      stats->inc_stat(SessionStats::PACKETS_OUT, 1);
 	      if (wrote == buf.size())
-		return true;
+		return 0;
 	      else
 		{
 		  OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
 		  stats->error(Error::NETWORK_SEND_ERROR);
-		  return false;
+		  return SEND_PARTIAL;
 		}
 	    }
 	    catch (boost::system::system_error& e)
 	      {
 		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
 		stats->error(Error::NETWORK_SEND_ERROR);
-		return false;
+		return e.code().value();
 	      }
 	  }
 	else
-	  return false;
+	  return SEND_SOCKET_HALTED;
       }
 
       void start(const int n_parallel)

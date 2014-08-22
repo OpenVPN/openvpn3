@@ -330,7 +330,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "Transport error on '" << server_host << "' via HTTP proxy " << proxy_host << ':' << proxy_port << " : " << error;
 	stop();
-	parent.transport_error(Error::UNDEF, os.str());
+	parent.transport_error(Error::TRANSPORT_ERROR, os.str());
       }
 
       void proxy_error(const Error::Type fatal_err, const std::string& what)
