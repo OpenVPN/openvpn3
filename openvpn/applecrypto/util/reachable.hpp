@@ -77,6 +77,7 @@
 
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/applecrypto/cf/cf.hpp>
+#include <openvpn/applecrypto/util/reach.hpp>
 
 namespace openvpn {
   namespace CF {
@@ -86,11 +87,7 @@ namespace openvpn {
   class ReachabilityBase
   {
   public:
-    enum Status {
-      NotReachable,
-      ReachableViaWiFi,
-      ReachableViaWWAN
-    };
+    typedef ReachabilityInterface::Status Status;
 
     enum Type {
       Internet,
@@ -145,11 +142,11 @@ namespace openvpn {
     static std::string render_status(const Status status)
     {
       switch (status) {
-      case NotReachable:
+      case ReachabilityInterface::NotReachable:
 	return "NotReachable";
-      case ReachableViaWiFi:
+      case ReachabilityInterface::ReachableViaWiFi:
 	return "ReachableViaWiFi";
-      case ReachableViaWWAN:
+      case ReachabilityInterface::ReachableViaWWAN:
 	return "ReachableViaWWAN";
       default:
 	return "ReachableVia???";
@@ -234,16 +231,16 @@ namespace openvpn {
       if ((flags & kSCNetworkReachabilityFlagsReachable) == 0)
 	{
 	  // The target host is not reachable.
-	  return NotReachable;
+	  return ReachabilityInterface::NotReachable;
 	}
 
-      Status ret = NotReachable;
+      Status ret = ReachabilityInterface::NotReachable;
 
       if ((flags & kSCNetworkReachabilityFlagsConnectionRequired) == 0)
 	{
 	  // If the target host is reachable and no connection is required then
 	  // we'll assume (for now) that you're on Wi-Fi...
-	  ret = ReachableViaWiFi;
+	  ret = ReachabilityInterface::ReachableViaWiFi;
 	}
 
       if ((((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) ||
@@ -255,7 +252,7 @@ namespace openvpn {
 	  if ((flags & kSCNetworkReachabilityFlagsInterventionRequired) == 0)
 	    {
 	      // ... and no [user] intervention is needed...
-	      ret = ReachableViaWiFi;
+	      ret = ReachabilityInterface::ReachableViaWiFi;
 	    }
 	}
 
@@ -264,7 +261,7 @@ namespace openvpn {
 	{
 	  // ... but WWAN connections are OK if the calling application
 	  // is using the CFNetwork APIs.
-	  ret = ReachableViaWWAN;
+	  ret = ReachabilityInterface::ReachableViaWWAN;
 	}
 #endif
 
@@ -297,19 +294,39 @@ namespace openvpn {
 
     static Status status_from_flags(const SCNetworkReachabilityFlags flags)
     {
-      Status ret = NotReachable;
+      Status ret = ReachabilityInterface::NotReachable;
       if ((flags & kSCNetworkReachabilityFlagsReachable) && (flags & kSCNetworkReachabilityFlagsIsDirect))
-	ret = ReachableViaWiFi;
+	ret = ReachabilityInterface::ReachableViaWiFi;
       return ret;
     }
   };
 
-  class Reachability
+  class Reachability : public ReachabilityInterface
   {
   public:
     Reachability() {}
 
-    bool reachableVia(const std::string& net_type) const
+    bool reachableViaWiFi() const {
+      return internet.status() == ReachableViaWiFi
+	      && wifi.status() == ReachableViaWiFi;
+    }
+
+    bool reachableViaCellular() const
+    {
+      return internet.status() == ReachableViaWWAN;
+    }
+
+    virtual Status reachable() const
+    {
+      if (reachableViaWiFi())
+	return ReachableViaWiFi;
+      else if (reachableViaCellular())
+	return ReachableViaWWAN;
+      else
+	return NotReachable;
+    }
+
+    virtual bool reachableVia(const std::string& net_type) const
     {
       if (net_type == "cellular")
 	return reachableViaCellular();
@@ -319,17 +336,7 @@ namespace openvpn {
 	return reachableViaWiFi() || reachableViaCellular();
     }
 
-    bool reachableViaCellular() const
-    {
-      return internet.status() == ReachabilityBase::ReachableViaWWAN;
-    }
-
-    bool reachableViaWiFi() const {
-      return internet.status() == ReachabilityBase::ReachableViaWiFi
-	      && wifi.status() == ReachabilityBase::ReachableViaWiFi;
-    }
-
-    std::string to_string() const
+    virtual std::string to_string() const
     {
       std::string ret;
       ret += internet.to_string();

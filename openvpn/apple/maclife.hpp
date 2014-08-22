@@ -171,7 +171,7 @@ namespace openvpn {
     bool net_up()
     {
       ReachabilityViaWiFi r;
-      return ReachabilityViaWiFi::status_from_flags(r.flags()) != ReachabilityBase::NotReachable;
+      return ReachabilityViaWiFi::status_from_flags(r.flags()) != ReachabilityInterface::NotReachable;
     }
 
     void iface_watch()
@@ -229,7 +229,7 @@ namespace openvpn {
     {
       if (rb.vtype() == ReachabilityBase::WiFi)
 	{
-	  state.net_up = (rb.vstatus(flags) != ReachabilityBase::NotReachable);
+	  state.net_up = (rb.vstatus(flags) != ReachabilityInterface::NotReachable);
 	  OPENVPN_LOG("MacLifeCycle NET_STATE " << state.net_up);
 	  schedule_action_timer(1);
 	}
