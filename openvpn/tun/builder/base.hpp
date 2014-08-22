@@ -186,6 +186,11 @@ namespace openvpn {
       return -1;
     }
 
+    // Indicates a reconnection with persisted tun state.
+    virtual void tun_builder_establish_lite()
+    {
+    }
+
     // Called just before tunnel socket is closed
     virtual void tun_builder_teardown() {}
 
