@@ -61,6 +61,14 @@ namespace openvpn {
 	return addr;
       }
 
+      static Addr from_sockaddr(const struct sockaddr_in6 *sa)
+      {
+	Addr ret;
+	network_to_host_order(&ret.u, (const union ipv6addr *)sa->sin6_addr.s6_addr);
+	ret.scope_id_ = sa->sin6_scope_id;
+	return ret;
+      }
+
       static Addr from_string(const std::string& ipstr, const char *title = NULL)
       {
 	boost::system::error_code ec;

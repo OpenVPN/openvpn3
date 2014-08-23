@@ -19,53 +19,25 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_APPLE_MACVER_H
-#define OPENVPN_APPLE_MACVER_H
+#ifndef OPENVPN_APPLECRYPTO_UTIL_REACH_H
+#define OPENVPN_APPLECRYPTO_UTIL_REACH_H
 
-#include <errno.h>
-#include <sys/sysctl.h>
-
-#include <string>
-#include <sstream>
-#include <vector>
-
-#include <openvpn/common/split.hpp>
-#include <openvpn/common/number.hpp>
-#include <openvpn/apple/ver.hpp>
+// An interface to various network reachability implementations,
+// primarily for iOS.
 
 namespace openvpn {
-  namespace Mac {
-    class Version : public AppleVersion
-    {
-    public:
-      // Mac OS X versions
-      // 13.x.x  OS X 10.9.x Mavericks
-      // 12.x.x  OS X 10.8.x Mountain Lion
-      // 11.x.x  OS X 10.7.x Lion
-      // 10.x.x  OS X 10.6.x Snow Leopard
-      //  9.x.x  OS X 10.5.x Leopard
-      //  8.x.x  OS X 10.4.x Tiger
-      //  7.x.x  OS X 10.3.x Panther
-      //  6.x.x  OS X 10.2.x Jaguar
-      //  5.x    OS X 10.1.x Puma
-
-      enum {
-	OSX_10_9=13,
-	OSX_10_8=12,
-	OSX_10_7=11,
-	OSX_10_6=10,
-      };
-
-      Version()
-      {
-	char str[256];
-	size_t size = sizeof(str);
-	int ret = sysctlbyname("kern.osrelease", str, &size, NULL, 0);
-	if (!ret)
-	  init(std::string(str, size));
-      }
+  struct ReachabilityInterface
+  {
+    enum Status {
+      NotReachable,
+      ReachableViaWiFi,
+      ReachableViaWWAN
     };
-  }
-}
 
+    virtual Status reachable() const = 0;
+    virtual bool reachableVia(const std::string& net_type) const = 0;
+    virtual std::string to_string() const = 0;
+    virtual ~ReachabilityInterface() {}
+  };
+}
 #endif

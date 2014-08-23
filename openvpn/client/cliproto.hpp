@@ -209,8 +209,12 @@ namespace openvpn {
 
       bool reached_connected_state() const { return connected_; }
 
-      // Fatal error means that we shouldn't retry.
-      // Returns a value != Error::UNDEF if error
+      // If fatal() returns something other than Error::UNDEF, it
+      // is intended to flag the higher levels (cliconnect.hpp)
+      // that special handling is required.  This handling might include
+      // considering the error to be fatal and stopping future connect
+      // retries, or emitting a special event.  See cliconnect.hpp
+      // for actual implementation.
       Error::Type fatal() const { return fatal_; }
       const std::string& fatal_reason() const { return fatal_reason_; }
 
@@ -314,6 +318,8 @@ namespace openvpn {
 	      OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
 	      if (transport->transport_send(buf))
 		Base::update_last_sent();
+	      else if (halt)
+		return;
 	    }
 
 	  // do a lightweight flush

@@ -177,7 +177,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "Transport error on '" << server_host << ": " << error;
 	stop();
-	parent.transport_error(Error::UNDEF, os.str());
+	parent.transport_error(Error::TRANSPORT_ERROR, os.str());
       }
 
       void stop_()

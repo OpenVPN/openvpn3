@@ -19,51 +19,45 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_APPLE_MACVER_H
-#define OPENVPN_APPLE_MACVER_H
+#ifndef OPENVPN_ADDR_ADDRLIST_H
+#define OPENVPN_ADDR_ADDRLIST_H
 
-#include <errno.h>
-#include <sys/sysctl.h>
-
-#include <string>
-#include <sstream>
-#include <vector>
-
-#include <openvpn/common/split.hpp>
-#include <openvpn/common/number.hpp>
-#include <openvpn/apple/ver.hpp>
+#include <openvpn/common/rc.hpp>
+#include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
-  namespace Mac {
-    class Version : public AppleVersion
+  namespace IP {
+
+    // A list of unique IP addresses
+    class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
     {
     public:
-      // Mac OS X versions
-      // 13.x.x  OS X 10.9.x Mavericks
-      // 12.x.x  OS X 10.8.x Mountain Lion
-      // 11.x.x  OS X 10.7.x Lion
-      // 10.x.x  OS X 10.6.x Snow Leopard
-      //  9.x.x  OS X 10.5.x Leopard
-      //  8.x.x  OS X 10.4.x Tiger
-      //  7.x.x  OS X 10.3.x Panther
-      //  6.x.x  OS X 10.2.x Jaguar
-      //  5.x    OS X 10.1.x Puma
+      typedef boost::intrusive_ptr<AddrList> Ptr;
 
-      enum {
-	OSX_10_9=13,
-	OSX_10_8=12,
-	OSX_10_7=11,
-	OSX_10_6=10,
-      };
-
-      Version()
+      void add(const IP::Addr& a)
       {
-	char str[256];
-	size_t size = sizeof(str);
-	int ret = sysctlbyname("kern.osrelease", str, &size, NULL, 0);
-	if (!ret)
-	  init(std::string(str, size));
+	if (!exists(a))
+	  push_back(a);
       }
+
+      bool exists(const IP::Addr& a) const
+      {
+	for (const_iterator i = begin(); i != end(); ++i)
+	  {
+	    if (a == *i)
+	      return true;
+	  }
+	return false;
+      }
+
+#if 0
+      void dump() const
+      {
+	OPENVPN_LOG("******* AddrList::dump");
+	for (const_iterator i = begin(); i != end(); ++i)
+	  OPENVPN_LOG(i->to_string());
+      }
+#endif
     };
   }
 }

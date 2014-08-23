@@ -139,6 +139,9 @@ namespace openvpn {
 		  sd = tun_persist->obj();
 		  state = tun_persist->state();
 		  OPENVPN_LOG("TunPersist: reused tun context");
+
+		  // indicate reconnection with persisted state
+		  config->builder->tun_builder_establish_lite();
 		}
 	      else
 		{

@@ -64,6 +64,13 @@ namespace openvpn {
 	return addr;
       }
 
+      static Addr from_sockaddr(const struct sockaddr_in *sa)
+      {
+	Addr ret;
+	ret.u.addr = ntohl(sa->sin_addr.s_addr);
+	return ret;
+      }
+
       static Addr from_uint32(const base_type addr) // host byte order
       {
 	Addr ret;

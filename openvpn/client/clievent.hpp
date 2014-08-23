@@ -58,6 +58,7 @@ namespace openvpn {
       CLIENT_RESTART,
       CONNECTION_TIMEOUT,
       INACTIVE_TIMEOUT,
+      TRANSPORT_ERROR,
       DYNAMIC_CHALLENGE,
       PROXY_NEED_CREDS,
       PROXY_ERROR,
@@ -96,6 +97,7 @@ namespace openvpn {
 	"CLIENT_RESTART",
 	"CONNECTION_TIMEOUT",
 	"INACTIVE_TIMEOUT",
+	"TRANSPORT_ERROR",
 	"DYNAMIC_CHALLENGE",
 	"PROXY_NEED_CREDS",
 	"PROXY_ERROR",
@@ -298,6 +300,11 @@ namespace openvpn {
     struct ProxyNeedCreds : public ReasonBase
     {
       ProxyNeedCreds(const std::string& reason) : ReasonBase(PROXY_NEED_CREDS, reason) {}
+    };
+
+    struct TransportError : public ReasonBase
+    {
+      TransportError(const std::string& reason) : ReasonBase(TRANSPORT_ERROR, reason) {}
     };
 
     struct TunSetupFailed : public ReasonBase

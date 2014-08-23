@@ -35,6 +35,7 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/addrpair.hpp>
 #include <openvpn/client/rgopt.hpp>
+#include <openvpn/client/remotelist.hpp>
 
 namespace openvpn {
   class TunProp {
@@ -61,11 +62,23 @@ namespace openvpn {
 
     struct Config
     {
-      Config() : mtu(0), google_dns_fallback(false) {}
+      Config() : mtu(0), google_dns_fallback(false), remote_bypass(false) {}
 
       std::string session_name;
       int mtu;
       bool google_dns_fallback;
+
+      // If remote_bypass is true, obtain cached remote IPs from
+      // remote_list, and preconfigure exclude route rules for them.
+      // Note that the primary remote IP is not included in the
+      // exclusion list because existing pathways already exist
+      // (i.e. redirect-gateway) for routing this particular address.
+      // This feature is intended to work with tun_persist, so that
+      // the client is not locked out of contacting subsequent
+      // servers in the remote list after the routing configuration
+      // for the initial connection has taken effect.
+      RemoteList::Ptr remote_list;
+      bool remote_bypass;
     };
 
     struct State : public RC<thread_unsafe_refcount>
@@ -87,6 +100,10 @@ namespace openvpn {
     {
       // do ifconfig
       const unsigned int ip_ver_flags = tun_ifconfig(tb, state, opt);
+
+      // add remote bypass routes
+      if (config.remote_list && config.remote_bypass)
+	add_remote_bypass_routes(tb, *config.remote_list, server_addr, quiet);
 
       // add routes
       const unsigned int reroute_gw_ver_flags = add_routes(tb, opt, server_addr, ip_ver_flags, quiet);
@@ -362,6 +379,31 @@ namespace openvpn {
 	    }
 	}
       return reroute_gw_ver_flags;
+    }
+
+    static void add_remote_bypass_routes(TunBuilderBase* tb,
+					 const RemoteList& remote_list,
+					 const IP::Addr& server_addr,
+					 const bool quiet)
+    {
+      IP::AddrList addrlist;
+      remote_list.cached_ip_address_list(addrlist);
+      for (IP::AddrList::const_iterator i = addrlist.begin(); i != addrlist.end(); ++i)
+	{
+	  const IP::Addr& addr = *i;
+	  if (addr != server_addr)
+	    {
+	      try {
+		const IP::Addr::Version ver = addr.version();
+		add_exclude_route(tb, false, addr.to_string(), IP::Addr::version_size(ver), ver == IP::Addr::V6);
+	      }
+	      catch (const std::exception& e)
+		{
+		  if (!quiet)
+		    OPENVPN_LOG("Error adding remote bypass route: " << addr.to_string() << " : " << e.what());
+		}
+	    }
+	}
     }
 
     static unsigned int add_dhcp_options(TunBuilderBase* tb, const OptionList& opt, const bool quiet)
