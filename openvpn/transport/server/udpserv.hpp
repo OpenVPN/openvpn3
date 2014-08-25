@@ -206,7 +206,7 @@ namespace openvpn {
       bool send(const Buffer& buf, const AsioEndpoint* ep)
       {
 	if (impl)
-	  return impl->send(buf, ep);
+	  return !impl->send(buf, ep);
 	else
 	  return false;
       }
