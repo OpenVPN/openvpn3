@@ -129,7 +129,10 @@ namespace openvpn {
 	  if (pre_resolve)
 	    pre_resolve->cancel();
 	  if (client)
-	    client->stop(false);
+	    {
+	      client->tun_set_disconnect();
+	      client->stop(false);
+	    }
 	  cancel_timers();
 	  asio_work.reset();
 

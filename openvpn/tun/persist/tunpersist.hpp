@@ -40,7 +40,8 @@ namespace openvpn {
       : TunWrapTemplate<SCOPED_OBJ>(retain_obj),
 	enable_persistence_(enable_persistence),
 	tb_(tb),
-	use_persisted_tun_(false)
+	use_persisted_tun_(false),
+	disconnect(false)
     {
     }
 
@@ -59,6 +60,11 @@ namespace openvpn {
     {
       close_local();
       TunWrapTemplate<SCOPED_OBJ>::close();
+    }
+
+    void set_disconnect()
+    {
+      disconnect = true;
     }
 
     // Current persisted options
@@ -131,7 +137,7 @@ namespace openvpn {
     void close_local()
     {
       if (tb_)
-	tb_->tun_builder_teardown();
+	tb_->tun_builder_teardown(disconnect);
       state_.reset();
       options_ = "";
     }
@@ -143,6 +149,8 @@ namespace openvpn {
 
     TunBuilderCapture::Ptr copt_;
     bool use_persisted_tun_;
+
+    bool disconnect;
   };
 
 }

@@ -224,6 +224,12 @@ namespace openvpn {
 	  return "";
       }
 
+      virtual void set_disconnect()
+      {
+	if (tun_persist)
+	  tun_persist->set_disconnect();
+      }
+
       virtual void stop() { stop_(); }
       virtual ~Client() { stop_(); }
 

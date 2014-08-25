@@ -185,6 +185,12 @@ namespace openvpn {
 	  Base::send_explicit_exit_notify();
       }
 
+      void tun_set_disconnect()
+      {
+	if (tun)
+	  tun->set_disconnect();
+      }
+
       void stop(const bool call_terminate_callback)
       {
 	if (!halt)
@@ -193,12 +199,12 @@ namespace openvpn {
 	    housekeeping_timer.cancel();
 	    push_request_timer.cancel();
 	    inactive_timer.cancel();
-	    if (tun)
-	      tun->stop();
-	    if (transport)
-	      transport->stop();
 	    if (notify_callback && call_terminate_callback)
 	      notify_callback->client_proto_terminate();
+	    if (tun)
+	      tun->stop(); // call after client_proto_terminate() so it can call back to tun_set_disconnect
+	    if (transport)
+	      transport->stop();
 	  }
       }
 

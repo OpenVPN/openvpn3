@@ -191,8 +191,10 @@ namespace openvpn {
     {
     }
 
-    // Called just before tunnel socket is closed
-    virtual void tun_builder_teardown() {}
+    // Indicates that tunnel is being torn down.
+    // If disconnect == true, then the teardown is occurring
+    // prior to final disconnect.
+    virtual void tun_builder_teardown(bool disconnect) {}
 
     virtual ~TunBuilderBase() {}
   };

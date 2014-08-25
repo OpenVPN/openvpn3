@@ -66,7 +66,7 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
 	boolean tun_builder_set_mtu(int mtu);
 	boolean tun_builder_set_session_name(String name);
 	int tun_builder_establish();
-	void tun_builder_teardown();
+	void tun_builder_teardown(boolean disconnect);
     }
 
     public OpenVPNClientThread() {
@@ -337,9 +337,9 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     @Override
-    public void tun_builder_teardown() {
+    public void tun_builder_teardown(boolean disconnect) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
-	    tb.tun_builder_teardown();
+	    tb.tun_builder_teardown(disconnect);
     }
 }

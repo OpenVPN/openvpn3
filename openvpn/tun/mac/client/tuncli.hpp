@@ -643,6 +643,10 @@ namespace openvpn {
 	  return "";
       }
 
+      virtual void set_disconnect()
+      {
+      }
+
       virtual void stop() { stop_(); }
       virtual ~Client() { stop_(); }
 
