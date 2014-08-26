@@ -111,7 +111,8 @@ namespace openvpn {
       use_persisted_tun_ = (TunWrapTemplate<SCOPED_OBJ>::obj_defined()
 			    && copt_
 			    && !options_.empty()
-			    && options_ == copt_->to_string());
+			    && options_ == copt_->to_string()
+			    && (tb_ ? tb_->tun_builder_persist() : true));
       return use_persisted_tun_;
     }
 

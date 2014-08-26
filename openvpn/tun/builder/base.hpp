@@ -186,6 +186,18 @@ namespace openvpn {
       return -1;
     }
 
+    // Return true if tun interface may be persisted, i.e. rolled
+    // into a new session with properties untouched.  This method
+    // is only called after all other tests of persistence
+    // allowability succeed, therefore it can veto persistence.
+    // If persistence is ultimately enabled,
+    // tun_builder_establish_lite() will be called.  Otherwise,
+    // tun_builder_establish() will be called.
+    virtual bool tun_builder_persist()
+    {
+      return true;
+    }
+
     // Indicates a reconnection with persisted tun state.
     virtual void tun_builder_establish_lite()
     {
