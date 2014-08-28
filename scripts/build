@@ -40,7 +40,6 @@ CPPFLAGS=""
 LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
-DBG_DIR_SUFFIX=""
 
 # PolarSSL/AppleCrypto hybrid
 if [ "$HYBRID" = "1" ]; then
@@ -81,8 +80,8 @@ if [ "$PSSL" = "1" ]; then
     else
 	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL"
     fi
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/include"
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/library"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
     if [ "$MINI" = "1" ]; then
 	LIBS="$LIBS -lminicrypto"
 	LIBDIRS="$LIBDIRS -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM"
@@ -138,7 +137,7 @@ fi
 # boost
 CPPFLAGS="$CPPFLAGS -I$DEP_DIR/boost"
 LIBS="$LIBS -lboost_system"
-LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM$DBG_DIR_SUFFIX/lib"
+LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM/lib"
 if [ "$NOTHREADS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
@@ -162,8 +161,8 @@ fi
 
 # Snappy compression
 if [ "$SNAP" = "1" ]; then
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/lib"
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/snappy/snappy-$PLATFORM/lib"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM/include"
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
 fi
