@@ -2,6 +2,11 @@
 
 O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 
+enum_build_extras()
+{
+    ls -d $(echo $O3/../*/scripts/build-extras/*) | sort
+}
+
 if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"
@@ -28,7 +33,9 @@ if [ -z "$1" ]; then
     echo " LZO=1 -- build with LZO compression library"
     echo " LZ4=1 -- build with LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
-    echo " JSON=1 -- build with JsonCpp library"
+    for s in $(enum_build_extras) ; do
+	. $s args
+    done
     exit 1
 fi
 
@@ -167,11 +174,10 @@ if [ "$SNAP" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
 fi
 
-# JsonCpp
-if [ "$JSON" = "1" ]; then
-    EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $DEP_DIR/jsoncpp/jsoncpp-$PLATFORM/lib/libjsoncpp.a"
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/jsoncpp/jsoncpp-$PLATFORM/include -DHAVE_JSONCPP"
-fi
+# other environments
+for s in $(enum_build_extras) ; do
+    . $s deps
+done
 
 # Android NDK
 if [ "$PLATFORM" = "android" ]; then
