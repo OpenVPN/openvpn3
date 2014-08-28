@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -e
-if [ -z "$O3" ]; then
-    echo O3 var must point to ovpn3 tree
-    exit 1
-fi
 export DEP_DIR=${DEP_DIR:-$HOME/src/mac}
+if [ -z "$O3" ]; then
+    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+fi
 cd $DEP_DIR
 rm -rf boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
 echo "******* BOOST"

@@ -4,6 +4,10 @@
 #
 # POLARSSL_CFLAGS="-I$HOME/linux/polarssl/polarssl-linux/include" POLARSSL_LIBS="-L$HOME/linux/polarssl/polarssl-linux/library -lpolarssl" ./configure --with-crypto-library=polarssl
 
+if [ -z "$O3" ]; then
+    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+fi
+
 rm -rf polarssl
 mkdir polarssl
 VERBOSE=1 TARGET=linux ENABLE_SERVER=1 ENABLE_FS_IO=1 $O3/polarssl/build-polarssl

@@ -2,8 +2,7 @@
 
 set -e
 if [ -z "$O3" ]; then
-    echo O3 var must point to ovpn3 tree
-    exit 1
+    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
 fi
 if [ -z "$DEP_DIR" ]; then
     echo DEP_DIR var must point to ovpn3 dependency tree
@@ -17,12 +16,12 @@ mkdir snappy
 if [ "$OSX_ONLY" != "1" ]; then
     for target in ios ios-dbg iossim iossim-dbg ; do
 	echo '***************' TARGET $target
-	TARGET=$target $O3/snappy/build-snappy
+	TARGET=$target $O3/deps/snappy/build-snappy
     done
 fi
 
 for target in osx osx-dbg ; do
     echo '***************' TARGET $target
-    TARGET=$target $O3/snappy/build-snappy
+    TARGET=$target $O3/deps/snappy/build-snappy
 done
 exit 0

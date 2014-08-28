@@ -16,7 +16,7 @@ fi
 # NOTE: in Boost 1.55 and earlier, set BCONF=tools/build/v2
 BCONF=tools/build/src
 
-. $O3/lib-versions
+. $O3/deps/lib-versions
 [ -z "$DL" ] && DL=~/Downloads
 [ -z "$GPP_CMD" ] && export GPP_CMD=g++
 [ -z "$GCC_CMD" ] && export GCC_CMD=gcc
@@ -27,12 +27,12 @@ if [ "$NO_WIPE" != "1" ]; then
     tar xfz $DL/$BOOST_VERSION.tar.gz
     cd $BOOST_VERSION
     #patch -p1 <$DL/asio-engine.patch
-    #patch -p0 <$O3/boost/atomic-1.55.0.patch
-    patch -p1 <$O3/boost/intrusive_ptr.patch
+    #patch -p0 <$O3/deps/boost/atomic-1.55.0.patch
+    patch -p1 <$O3/deps/boost/intrusive_ptr.patch
 
     for T in $TARGETS ; do
 	TS="${T//-/}"
-	. $O3/vars-$T
+	. $O3/vars/vars-$T
 	cat >>$BCONF/user-config.jam <<EOF
 using $GCC_CMD : $TS : $GPP_CMD
             :
@@ -49,12 +49,12 @@ else
     cd $BOOST_VERSION
     for T in $TARGETS ; do
 	TS="${T//-/}"
-	. $O3/vars-$T
+	. $O3/vars/vars-$T
     done
 fi
 [ "$SDK_PATH_SCRIPT" ] && . $SDK_PATH_SCRIPT
 for T in $TARGETS ; do
-    . $O3/vars-$T
+    . $O3/vars/vars-$T
     target="${T//-/}"
     stage=stage-$T
     if [ "${target:(-3)}" == "dbg" ]; then

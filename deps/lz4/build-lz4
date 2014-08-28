@@ -13,8 +13,8 @@ fi
 [ -z "$DL" ] && DL=~/Downloads
 
 # source vars
-. $O3/vars-${TARGET}
-. $O3/lib-versions
+. $O3/vars/vars-${TARGET}
+. $O3/deps/lib-versions
 
 
 CC=cc

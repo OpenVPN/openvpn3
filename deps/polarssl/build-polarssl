@@ -24,11 +24,11 @@ if [ -z "$TARGET" ]; then
 fi
 
 # source vars
-. $O3/vars-${TARGET}
-. $O3/lib-versions
+. $O3/vars/vars-${TARGET}
+. $O3/deps/lib-versions
 
 # extract the PolarSSL source
-PD=$O3/polarssl
+PD=$O3/deps/polarssl
 DIST=polarssl-$PLATFORM
 
 rm -rf $DIST

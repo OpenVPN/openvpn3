@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
 if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"

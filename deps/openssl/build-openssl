@@ -27,8 +27,8 @@ fi
 
 [ -z "$DL" ] && DL=~/Downloads
 
-. $O3/vars-$TARGET
-. $O3/lib-versions
+. $O3/vars/vars-$TARGET
+. $O3/deps/lib-versions
 
 OPENSSL=$OPENSSL_VERSION
 DIST=$(pwd)/openssl/openssl-$PLATFORM
