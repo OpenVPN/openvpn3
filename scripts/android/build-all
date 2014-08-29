@@ -12,7 +12,7 @@ $O3/scripts/android/build-boost
 echo "******* MINICRYPTO"
 $O3/scripts/android/build-minicrypto
 echo "******* POLARSSL"
-$O3/scripts/android/build-polarssl
+DISABLE_MINICRYPTO=1 $O3/scripts/android/build-polarssl
 #echo "******* OpenSSL"
 #$O3/scripts/android/build-openssl-small
 #echo "******* LZO"

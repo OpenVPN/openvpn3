@@ -3,13 +3,10 @@
 #    -DAPP_EXPIRE_TIME=1364796000 \
 set -e
 
-if [ -z "$O3" ]; then
-    echo O3 var must point to ovpn3 tree
-    exit 1
-fi
+[ -z "$O3" ] && export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 
 cd $O3
-. android-sdk-path
+. vars/android-sdk-path
 cd javacli
 git clean -q -fX .
 git clean -q -fd .
@@ -29,13 +26,13 @@ swig -c++ -java -package $pkg -I$O3/client -I$O3 ovpncli.i
 for TARGET in android android-a7a ; do
 
 if [ "$DEBUG_BUILD" = "1" ]; then
-    . ../vars-${TARGET}-dbg
+    . ../vars/vars-${TARGET}-dbg
     vis1=""
     vis2=""
     opt2="$pkg_id_def $LIB_OPT_LEVEL"
     DBG_DIR_SUFFIX="-dbg"
 else
-    . ../vars-${TARGET}
+    . ../vars/vars-${TARGET}
     vis1="-fvisibility=hidden"
     vis2='-DSWIGEXPORT=__attribute__((visibility("default")))'
     opt2="$pkg_id_def -Os"

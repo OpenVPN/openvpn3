@@ -10,7 +10,7 @@ if [ -z "$DEP_DIR" ]; then
 fi
 cd $DEP_DIR
 
-. $O3/android-sdk-path
+. $O3/vars/android-sdk-path
 
 mini=1
 [ "$DISABLE_MINICRYPTO" = "1" ] && mini=0
@@ -20,7 +20,7 @@ mkdir polarssl
 
 for target in android-dbg android android-a7a android-a7a-dbg ; do
     echo '***************' TARGET $target
-    VERBOSE=1 TARGET=$target CMAKE_TARGET=android USE_MINICRYPTO=$mini MINICRYPTO_DIR=$(pwd)/minicrypto/minicrypto-$target $O3/polarssl/build-polarssl
+    VERBOSE=1 TARGET=$target CMAKE_TARGET=android USE_MINICRYPTO=$mini MINICRYPTO_DIR=$(pwd)/minicrypto/minicrypto-$target $O3/deps/polarssl/build-polarssl
     mv polarssl-$target polarssl/
     [ "$ANDROID_DBG_ONLY" = "1" ] && exit
 done

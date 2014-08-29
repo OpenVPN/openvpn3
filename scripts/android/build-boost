@@ -18,6 +18,6 @@ rm -rf boost
 mkdir boost
 export LINK_MODE=static
 export TARGETS="android android-dbg android-a7a android-a7a-dbg"
-export SDK_PATH_SCRIPT=$O3/android-sdk-path
-$O3/boost/build-boost
+export SDK_PATH_SCRIPT=$O3/vars/android-sdk-path
+$O3/deps/boost/build-boost
 exit 0

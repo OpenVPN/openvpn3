@@ -10,13 +10,13 @@ if [ -z "$DEP_DIR" ]; then
 fi
 cd $DEP_DIR
 
-. $O3/android-sdk-path
+. $O3/vars/android-sdk-path
 
 rm -rf minicrypto
 mkdir minicrypto
 
 for target in android android-dbg android-a7a android-a7a-dbg ; do
     echo '***************' TARGET $target
-    TARGET=$target $O3/minicrypto/build-minicrypto
+    TARGET=$target $O3/deps/minicrypto/build-minicrypto
 done
 exit 0

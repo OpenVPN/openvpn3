@@ -10,13 +10,13 @@ if [ -z "$DEP_DIR" ]; then
 fi
 cd $DEP_DIR
 
-. $O3/android-sdk-path
+. $O3/vars/android-sdk-path
 
 rm -rf lz4
 mkdir lz4
 
 for target in android android-dbg android-a7a android-a7a-dbg ; do
     echo '***************' TARGET $target
-    TARGET=$target $O3/lz4/build-lz4
+    TARGET=$target $O3/deps/lz4/build-lz4
 done
 exit 0

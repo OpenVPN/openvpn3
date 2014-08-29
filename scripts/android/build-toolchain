@@ -7,7 +7,7 @@ fi
 export DEP_DIR=${DEP_DIR:-$HOME/src/android}
 cd $DEP_DIR
 export NO_MOD_PATH=1
-. $O3/android-sdk-path
+. $O3/vars/android-sdk-path
 DEST=$(pwd)/tc
 rm -rf $DEST
 $NDK/build/tools/make-standalone-toolchain.sh \

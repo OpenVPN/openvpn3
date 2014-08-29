@@ -10,13 +10,13 @@ if [ -z "$DEP_DIR" ]; then
 fi
 cd $DEP_DIR
 
-. $O3/android-sdk-path
+. $O3/vars/android-sdk-path
 
 rm -rf snappy
 mkdir snappy
 
 for target in android android-dbg android-a7a android-a7a-dbg ; do
     echo '***************' TARGET $target
-    TARGET=$target $O3/snappy/build-snappy
+    TARGET=$target $O3/deps/snappy/build-snappy
 done
 exit 0

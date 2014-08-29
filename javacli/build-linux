@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+[ -z "$O3" ] && export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
 rm_generated_files()
 {
     svn status --no-ignore | perl -nle 's/\\/\//g; print "rm -rf '\''$1'\''" if /^[\?I]\s+([\S\t\x20]+)/;' | sh

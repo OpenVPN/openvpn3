@@ -8,13 +8,13 @@ if [ -z "$DEP_DIR" ]; then
     exit 1
 fi
 cd $DEP_DIR
-. $O3/lib-versions
-. $O3/android-sdk-path
+. $O3/deps/lib-versions
+. $O3/vars/android-sdk-path
 [ -z "$DL" ] && DL=~/Downloads
 rm -rf openssl
 mkdir openssl
 for TARGET in android android-dbg android-a7a android-a7a-dbg ; do
-    . $O3/vars-$TARGET
+    . $O3/vars/vars-$TARGET
     export OPENSSL=$OPENSSL_VERSION
     export DIST=$(pwd)/openssl-$PLATFORM
     export BIN=$TC/bin
