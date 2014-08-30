@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
-. $O3/lib-versions
+. $O3/core/deps/lib-versions
 POLARSSL_SRC=$HOME/src/mac/$POLARSSL_VERSION
-PD=$O3/polarssl
+PD=$O3/core/deps/polarssl
 PB=$(basename $POLARSSL_SRC)
 
 rm -rf polartmp

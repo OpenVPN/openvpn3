@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Examples:
-#   $O3/polarssl/build-mini-openssl ref
-#   $O3/polarssl/build-mini-openssl ref-aesni
+#   $O3/core/deps/polarssl/build-mini-openssl ref
+#   $O3/core/deps/polarssl/build-mini-openssl ref-aesni
 
 set -e
 if [ -z "$1" ]; then
@@ -30,7 +30,7 @@ fi
 [ -z "$NM_CMD" ] && NM_CMD=nm
 [ -z "$AR_CMD" ] && AR_CMD=ar
 [ -z "$GCC_CMD" ] && GCC_CMD=gcc
-PD=$O3/polarssl
+PD=$O3/core/deps/polarssl
 cd $OPENSSL_DIR
 cd lib
 rm -rf tmp
@@ -38,7 +38,7 @@ mkdir tmp
 $NM_CMD $NM_FLAGS libcrypto.a >tmp/nm-file
 echo "NOTE: on BSD systems, don't worry about any 'no name list' errors above"
 cd tmp
-python $O3/scripts/sym.py $PD/$1 nm-file $AR_CMD ../libcrypto.a libminicrypto.a buildmini ../mini-undef.sh $BSD_SYMBOLS
+python $O3/common/scripts/sym.py $PD/$1 nm-file $AR_CMD ../libcrypto.a libminicrypto.a buildmini ../mini-undef.sh $BSD_SYMBOLS
 . buildmini
 
 # need any special initialization?

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 
-O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
 
 enum_build_extras()
 {
-    ls -d $(echo $O3/../*/scripts/build-extras/*) | sort
+    ls -d $(echo $O3/*/scripts/build-extras/*) | sort
 }
 
 if [ -z "$1" ]; then
@@ -202,7 +205,7 @@ if [ "$OTHER_COMPILER_FLAGS" ]; then
 fi
 
 # ovpn3
-CPPFLAGS="$CPPFLAGS -I$O3"
+CPPFLAGS="$CPPFLAGS -I$O3/core"
 
 # profile-guided optimization
 if [ "$PGEN" = "1" ]; then

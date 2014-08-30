@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 if [ -z "$O3" ]; then
-    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+    echo O3 var must point to ovpn3 tree ; exit 1
 fi
 if [ -z "$DEP_DIR" ]; then
     echo DEP_DIR var must point to ovpn3 dependency tree
@@ -10,5 +10,5 @@ fi
 cd $DEP_DIR
 rm -rf lz4
 mkdir lz4
-TARGET=linux $O3/lz4/build-lz4
+TARGET=linux $O3/core/deps/lz4/build-lz4
 exit 0

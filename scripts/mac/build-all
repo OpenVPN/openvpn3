@@ -2,19 +2,19 @@
 set -e
 export DEP_DIR=${DEP_DIR:-$HOME/src/mac}
 if [ -z "$O3" ]; then
-    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+    echo O3 var must point to ovpn3 tree ; exit 1
 fi
 cd $DEP_DIR
 rm -rf boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
 echo "******* BOOST"
-$O3/scripts/mac/build-boost
+$O3/core/scripts/mac/build-boost
 #echo "******* MINICRYPTO"
-#$O3/scripts/mac/build-minicrypto
+#$O3/core/scripts/mac/build-minicrypto
 echo "******* POLARSSL"
 # consider OSX_SERVER=0
-$O3/scripts/mac/build-polarssl
+$O3/core/scripts/mac/build-polarssl
 echo "******* SNAPPY"
-$O3/scripts/mac/build-snappy
+$O3/core/scripts/mac/build-snappy
 echo "******* LZ4"
-$O3/scripts/mac/build-lz4
+$O3/core/scripts/mac/build-lz4
 exit 0

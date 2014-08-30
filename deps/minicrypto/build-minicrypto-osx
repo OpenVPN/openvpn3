@@ -16,8 +16,8 @@ fi
 
 [ -z "$DL" ] && DL=~/Downloads
 
-. $O3/vars-$TARGET
-. $O3/lib-versions
+. $O3/core/vars-$TARGET
+. $O3/core/deps/lib-versions
 
 DEST=minicrypto/minicrypto-$PLATFORM
 
@@ -28,7 +28,7 @@ GLOBAL_COMPILE_FLAGS="$MIN_DEPLOY_TARGET $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $L
 [ -z "$AR_CMD" ] && AR_CMD=ar
 
 # the directory where this script lives
-H=$O3/minicrypto
+H=$O3/core/deps/minicrypto
 
 if [ "$NO_WIPE" != "1" ]; then
     # unzip OpenSSL
@@ -52,7 +52,7 @@ mkdir openssl
 
 if [ "$ARCH" = "x86_64" ]; then
     # General
-    cp $O3/polarssl/intel_cpu.c .
+    cp $O3/core/deps/polarssl/intel_cpu.c .
     cp $OPENSSL_DIR/crypto/perlasm/x86_64-xlate.pl .
     cp $OPENSSL_DIR/crypto/x86_64cpuid.pl .
 
@@ -80,7 +80,7 @@ if [ "$ARCH" = "x86_64" ]; then
     perl sha512-x86_64.pl macosx sha256-x86_64.s
 elif [ "$ARCH" = "i386" ]; then
     # General
-    cp $O3/polarssl/intel_cpu.c .
+    cp $O3/core/deps/polarssl/intel_cpu.c .
     cp $OPENSSL_DIR/crypto/perlasm/x86asm.pl .
     cp $OPENSSL_DIR/crypto/perlasm/x86gas.pl .
     cp $OPENSSL_DIR/crypto/x86cpuid.pl .

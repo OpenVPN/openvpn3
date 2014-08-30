@@ -2,12 +2,12 @@
 # Build the Android toolchain (run first)
 set -e
 if [ -z "$O3" ]; then
-    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+    echo O3 var must point to ovpn3 tree ; exit 1
 fi
 export DEP_DIR=${DEP_DIR:-$HOME/src/android}
 cd $DEP_DIR
 export NO_MOD_PATH=1
-. $O3/vars/android-sdk-path
+. $O3/core/vars/android-sdk-path
 DEST=$(pwd)/tc
 rm -rf $DEST
 $NDK/build/tools/make-standalone-toolchain.sh \

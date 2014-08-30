@@ -3,9 +3,12 @@
 #    -DAPP_EXPIRE_TIME=1364796000 \
 set -e
 
-[ -z "$O3" ] && export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
 
-cd $O3
+cd $O3/core
 . vars/android-sdk-path
 cd javacli
 git clean -q -fX .
@@ -21,7 +24,7 @@ fi
 echo PACKAGE $PKG
 
 echo SWIG
-swig -c++ -java -package $pkg -I$O3/client -I$O3 ovpncli.i
+swig -c++ -java -package $pkg -I$O3/core/client -I$O3/core ovpncli.i
 
 for TARGET in android android-a7a ; do
 
@@ -61,13 +64,13 @@ g++ \
     $ssl_def \
     -DHAVE_SNAPPY \
     -DHAVE_LZ4 \
-    -I$O3/client \
-    -I$O3 \
+    -I$O3/core/client \
+    -I$O3/core \
     -I$DEP_DIR/boost \
     $ssl_inc \
     -I$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/include \
     -I$DEP_DIR/lz4/lz4-$PLATFORM$DBG_DIR_SUFFIX/include \
-    -c $O3/client/ovpncli.cpp
+    -c $O3/core/client/ovpncli.cpp
 
 echo WRAP $ABI
 g++ \
@@ -76,8 +79,8 @@ g++ \
     -fno-strict-aliasing \
     -Wall \
     $vis1 $vis2 \
-    -I$O3/client \
-    -I$O3 \
+    -I$O3/core/client \
+    -I$O3/core \
     -L$DEP_DIR/boost/stage-$PLATFORM$DBG_DIR_SUFFIX/lib \
     $ssl_libdir \
     -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \

@@ -13,8 +13,8 @@ fi
 [ -z "$DL" ] && DL=~/Downloads
 
 # source vars
-. $O3/vars/vars-${TARGET}
-. $O3/deps/lib-versions
+. $O3/core/vars/vars-${TARGET}
+. $O3/core/deps/lib-versions
 
 [ "$GCC_CMD" ] && export CC=$GCC_CMD
 [ "$GPP_CMD" ] && export CXX=$GPP_CMD

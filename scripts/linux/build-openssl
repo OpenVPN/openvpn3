@@ -5,7 +5,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 if [ -z "$O3" ]; then
-    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+    echo O3 var must point to ovpn3 tree ; exit 1
 fi
 if [ -z "$DEP_DIR" ]; then
     echo DEP_DIR var must point to ovpn3 dependency tree
@@ -29,5 +29,5 @@ arm*)
   ;;
 esac
 
-TARGET=linux $O3/openssl/build-openssl
+TARGET=linux $O3/core/deps/openssl/build-openssl
 exit 0

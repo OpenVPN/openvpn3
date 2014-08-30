@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. $O3/lib-versions
+. $O3/core/deps/lib-versions
 rm -rf gitar.tmp
 mkdir gitar.tmp
 cd gitar.tmp

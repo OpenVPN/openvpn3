@@ -7,7 +7,7 @@
 # correct solution for all cases.
 set -e
 if [ -z "$O3" ]; then
-    export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+    echo O3 var must point to ovpn3 tree ; exit 1
 fi
 if [ -z "$DEP_DIR" ]; then
     echo DEP_DIR var must point to ovpn3 dependency tree
@@ -18,6 +18,6 @@ rm -rf boost
 mkdir boost
 export LINK_MODE=static
 export TARGETS="android android-dbg android-a7a android-a7a-dbg"
-export SDK_PATH_SCRIPT=$O3/vars/android-sdk-path
-$O3/deps/boost/build-boost
+export SDK_PATH_SCRIPT=$O3/core/vars/android-sdk-path
+$O3/core/deps/boost/build-boost
 exit 0

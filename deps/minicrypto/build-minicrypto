@@ -12,8 +12,8 @@ fi
 
 [ -z "$DL" ] && DL=~/Downloads
 
-. $O3/vars/vars-$TARGET
-. $O3/deps/lib-versions
+. $O3/core/vars/vars-$TARGET
+. $O3/core/deps/lib-versions
 
 # Build ASM files with clang 3.0
 if [ "$APPLE_FAMILY" = "1" ]; then
@@ -32,7 +32,7 @@ GLOBAL_COMPILE_FLAGS="$PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_
 [ -z "$GCC_AS_CMD" ] && GCC_AS_CMD="$GCC_CMD"
 [ -z "$AR_CMD" ] && AR_CMD=ar
 # the directory where this script lives
-H=$O3/deps/minicrypto
+H=$O3/core/deps/minicrypto
 
 if [ "$NO_WIPE" != "1" ]; then
     # unzip OpenSSL
@@ -107,7 +107,7 @@ for f in *.c ; do
 done
 
 # build armv4cpuid.S
-#$O3/deps/minicrypto/arm-as-to-ios <armv4cpuid.pre >armv4cpuid.S
+#$O3/core/deps/minicrypto/arm-as-to-ios <armv4cpuid.pre >armv4cpuid.S
 #CMD="$GCC_AS_CMD $GLOBAL_COMPILE_FLAGS -DSYS_macosx -DNO_THUMB -c armv4cpuid.S"
 #echo $CMD
 #$CMD
@@ -122,7 +122,7 @@ for f in *.pl ; do
 	COMPILE_FLAGS="$COMPILE_FLAGS -DNO_THUMB"
 	[ "$bn" = "aes-armv4" ] && CVT_FLAGS="$CVT_FLAGS --global=!ad1,!ad2,!ad3"
 	[ "$bn" = "sha512-armv4" ] && CVT_FLAGS="$CVT_FLAGS --global=!HI,!LO"
-	perl $f | $O3/deps/minicrypto/arm-as-to-ios --stdin $CVT_FLAGS >$S
+	perl $f | $O3/core/deps/minicrypto/arm-as-to-ios --stdin $CVT_FLAGS >$S
     else
 	perl $f >$S	
     fi

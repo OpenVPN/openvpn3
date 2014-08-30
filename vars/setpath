@@ -1,3 +1,1 @@
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd $DIR/..
-export PATH="$(pwd)/scripts:$PATH"
+export PATH="$O3/core/scripts:$PATH"

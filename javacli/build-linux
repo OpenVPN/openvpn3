@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-[ -z "$O3" ] && export O3="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+if [ -z "$O3" ]; then
+    echo O3 var must point to ovpn3 tree
+    exit 1
+fi
 
 rm_generated_files()
 {
@@ -11,7 +14,7 @@ rm_generated_files()
 rm_generated_files
 
 echo SWIG
-swig -c++ -java -I$O3/client -I$O3 ovpncli.i
+swig -c++ -java -I$O3/core/client -I$O3/core ovpncli.i
 
 echo JAVA
 javac *.java
@@ -22,20 +25,20 @@ gcc -O3 -fPIC -pthread \
     -fvisibility=hidden \
     -DUSE_OPENSSL \
     -DHAVE_SNAPPY \
-    -I$O3/client \
-    -I$O3 \
+    -I$O3/core/client \
+    -I$O3/core \
     -I$DEP_DIR/boost \
     -I$DEP_DIR/openssl/openssl-linux/include \
     -I$DEP_DIR/snappy/snappy-linux/include \
-    -c $O3/client/ovpncli.cpp
+    -c $O3/core/client/ovpncli.cpp
 
 echo WRAP
 gcc -Os -fPIC -pthread \
     -fno-strict-aliasing \
     -Wall \
     -fvisibility=hidden '-DSWIGEXPORT=__attribute__((visibility("default")))' \
-    -I$O3/client \
-    -I$O3 \
+    -I$O3/core/client \
+    -I$O3/core \
     -I/usr/lib/jvm/java-7-openjdk-amd64/include \
     -L$DEP_DIR/boost/stage-linux/lib \
     -L$DEP_DIR/openssl/openssl-linux/lib \
