@@ -5,4 +5,4 @@ export DEBUG_BUILD=1
 export OTHER_COMPILER_FLAGS="-g -Wno-unused-local-typedefs"
 export CXX_COMPILER_FLAGS="-std=c++11"
 export LIB_OPT_LEVEL="-O0"
-export LIB_FPIC=""
+export LIB_FPIC="-fPIC"
