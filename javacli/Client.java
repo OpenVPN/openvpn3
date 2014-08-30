@@ -35,6 +35,9 @@ public class Client implements OpenVPNClientThread.EventReceiver {
     // Load OpenVPN core (implements ClientAPI_OpenVPNClient) from shared library 
     static {
 	System.loadLibrary("ovpncli");
+	ClientAPI_OpenVPNClient.init_process();
+	String test = ClientAPI_OpenVPNClient.crypto_self_test();
+	System.out.format("CRYPTO SELF TEST: %s", test);
     }
 
     public Client(String config_text, String username, String password) throws ConfigError, CredsUnspecifiedError {
