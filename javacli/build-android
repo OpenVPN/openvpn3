@@ -11,7 +11,7 @@ fi
 cd $O3/core
 . vars/android-sdk-path
 cd javacli
-git clean -q -fX .
+git clean -q -fXd .
 git clean -q -fd .
 
 if [ "$PKG" ]; then
@@ -33,13 +33,11 @@ if [ "$DEBUG_BUILD" = "1" ]; then
     vis1=""
     vis2=""
     opt2="$pkg_id_def $LIB_OPT_LEVEL"
-    DBG_DIR_SUFFIX="-dbg"
 else
     . ../vars/vars-${TARGET}
     vis1="-fvisibility=hidden"
     vis2='-DSWIGEXPORT=__attribute__((visibility("default")))'
     opt2="$pkg_id_def -Os"
-    DBG_DIR_SUFFIX=""
 fi
 
 if [ "$OPENSSL" = "1" ]; then
@@ -49,13 +47,14 @@ if [ "$OPENSSL" = "1" ]; then
     ssl_libdir="-L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
 else
     ssl_def="-DUSE_POLARSSL"
-    ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/include"
+    ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
     ssl_lib="-lpolarssl -lminicrypto"
-    ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM$DBG_DIR_SUFFIX/library"
+    ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
 fi
 
 echo CORE $ABI
 g++ \
+    $CXX_COMPILER_FLAGS \
     $PLATFORM_FLAGS \
     $LIB_OPT_LEVEL $LIB_FPIC \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
@@ -68,12 +67,13 @@ g++ \
     -I$O3/core \
     -I$DEP_DIR/boost \
     $ssl_inc \
-    -I$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/include \
-    -I$DEP_DIR/lz4/lz4-$PLATFORM$DBG_DIR_SUFFIX/include \
+    -I$DEP_DIR/snappy/snappy-$PLATFORM/include \
+    -I$DEP_DIR/lz4/lz4-$PLATFORM/include \
     -c $O3/core/client/ovpncli.cpp
 
 echo WRAP $ABI
 g++ \
+    $CXX_COMPILER_FLAGS \
     $PLATFORM_FLAGS \
     $opt2 $LIB_FPIC \
     -fno-strict-aliasing \
@@ -81,11 +81,11 @@ g++ \
     $vis1 $vis2 \
     -I$O3/core/client \
     -I$O3/core \
-    -L$DEP_DIR/boost/stage-$PLATFORM$DBG_DIR_SUFFIX/lib \
+    -L$DEP_DIR/boost/stage-$PLATFORM/lib \
     $ssl_libdir \
     -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
-    -L$DEP_DIR/snappy/snappy-$PLATFORM$DBG_DIR_SUFFIX/lib \
-    -L$DEP_DIR/lz4/lz4-$PLATFORM$DBG_DIR_SUFFIX/lib \
+    -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
+    -L$DEP_DIR/lz4/lz4-$PLATFORM/lib \
     ovpncli_wrap.cxx \
     android/jellybean_hack.cpp \
     android/cpu.cpp \
