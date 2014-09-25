@@ -27,6 +27,7 @@
 
 #include <string>
 
+#include <polarssl/ssl.h>
 #include <polarssl/pem.h>
 #include <polarssl/error.h>
 
