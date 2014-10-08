@@ -96,6 +96,8 @@
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/init/initprocess.hpp>
 
+#include <openvpn/crypto/crypto_chm.hpp>
+
 #if !(defined(USE_OPENSSL) || defined(USE_POLARSSL) || defined(USE_APPLE_SSL))
 #error Must define one or more of USE_OPENSSL, USE_POLARSSL, USE_APPLE_SSL.
 #endif
@@ -725,6 +727,7 @@ int test(const int thread_num)
     typedef ProtoContext<ClientRandomAPI, ClientCryptoAPI, ClientSSLAPI> ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_ctx.reset(new ClientSSLAPI(cc));
+    cp->cc_factory.reset(new CryptoContextCHMFactory<ClientRandomAPI, ClientCryptoAPI>());
     cp->frame = frame;
     cp->now = &time;
     cp->rng = rng_cli;
@@ -787,6 +790,7 @@ int test(const int thread_num)
     typedef ProtoContext<ServerRandomAPI, ServerCryptoAPI, ServerSSLAPI> ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
     sp->ssl_ctx.reset(new ServerSSLAPI(sc));
+    sp->cc_factory.reset(new CryptoContextCHMFactory<ServerRandomAPI, ServerCryptoAPI>());
     sp->frame = frame;
     sp->now = &time;
     sp->rng = rng_serv;

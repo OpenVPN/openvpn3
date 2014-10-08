@@ -36,6 +36,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/pki/epkibase.hpp>
+#include <openvpn/crypto/crypto_chm.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/reconnect_notify.hpp>
@@ -171,6 +172,7 @@ namespace openvpn {
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->ssl_ctx.reset(new SSLLib::SSLAPI(cc));
+      cp->cc_factory.reset(new CryptoContextCHMFactory<SSLLib::RandomAPI, SSLLib::CryptoAPI>());
       cp->gui_version = config.gui_version;
       cp->frame = frame;
       cp->now = &now_;

@@ -46,7 +46,9 @@
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/random/prng.hpp>
-#include <openvpn/crypto/crypto.hpp>
+#include <openvpn/crypto/cryptobase.hpp>
+#include <openvpn/crypto/cipher.hpp>
+#include <openvpn/crypto/hmac.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -201,6 +203,9 @@ namespace openvpn {
   public:
     typedef SSL_API SSLContext;
 
+    typedef CryptoContextBase<RAND_API, CRYPTO_API> CC;
+    typedef CryptoContextFactory<RAND_API, CRYPTO_API> CCFactory;
+
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
     OPENVPN_EXCEPTION(process_server_push_error);
@@ -230,6 +235,9 @@ namespace openvpn {
 
       // master SSL context
       typename SSLContext::Ptr ssl_ctx;
+
+      // master crypto context factory
+      typename CCFactory::Ptr cc_factory;
 
       // master Frame object
       Frame::Ptr frame;
@@ -945,12 +953,16 @@ namespace openvpn {
 	// get key_id from parent
 	key_id_ = proto.next_key_id();
 
+	// build crypto context for data channel encryption/decryption
+	crypto = proto.config->cc_factory->new_obj(key_id_);
+
 	// remember when we were constructed
 	construct_time = *now;
 
 	// set must-negotiate-by time
 	set_event(KEV_NONE, KEV_NEGOTIATE, construct_time + p.config->handshake_window);
 
+	// build compressor object
 	construct_compressor();
       }
 
@@ -1033,13 +1045,13 @@ namespace openvpn {
 	    compress->compress(buf, true);
 
 	    // encrypt packet
-	    crypto.encrypt.encrypt(buf, now->seconds_since_epoch());
+	    const bool pid_wrap = crypto->encrypt(buf, now->seconds_since_epoch());
 
 	    // prepend op
 	    buf.push_front(op_compose(DATA_V1, key_id_));
 
 	    // check for rare situation where packet ID is near overflow
-	    test_pid_wrap();
+	    test_pid_wrap(pid_wrap);
 	  }
 	else
 	  buf.reset_size(); // no crypto context available
@@ -1055,7 +1067,7 @@ namespace openvpn {
 	      buf.advance(1);
 
 	      // decrypt packet
-	      const Error::Type err = crypto.decrypt.decrypt(buf, now->seconds_since_epoch());
+	      const Error::Type err = crypto->decrypt(buf, now->seconds_since_epoch());
 	      if (err)
 		{
 		  proto.stats->error(err);
@@ -1113,6 +1125,13 @@ namespace openvpn {
 
       bool is_dirty() const { return dirty; }
 
+      // notification from parent of rekey operation
+      void rekey(const typename CC::RekeyType type)
+      {
+	if (crypto)
+	  crypto->rekey(type);
+      }
+
       // time that our state transitioned to ACTIVE
       Time reached_active() const { return reached_active_time_; }
 
@@ -1145,7 +1164,7 @@ namespace openvpn {
 
 	    // process packet for transmission
 	    compress->compress(*pkt.buf, false); // set compress hint to "no"
-	    crypto.encrypt.encrypt(*pkt.buf, now->seconds_since_epoch());
+	    crypto->encrypt(*pkt.buf, now->seconds_since_epoch());
 	    pkt.buf->push_front(op_compose(DATA_V1, key_id_));
 
 	    // send it
@@ -1334,9 +1353,9 @@ namespace openvpn {
       // is getting close to wrapping around.  If it wraps back to 0 without
       // a renegotiation, it would cause the relay protection logic to wrongly
       // think that all further packets are replays.
-      void test_pid_wrap()
+      void test_pid_wrap(const bool pid_wrap)
       {
-	if (!handled_pid_wrap && crypto.encrypt.pid_send.wrap_warning())
+	if (pid_wrap && !handled_pid_wrap)
 	  {
 	    trigger_renegotiation();
 	    handled_pid_wrap = true;
@@ -1551,32 +1570,33 @@ namespace openvpn {
 	const Config& c = *proto.config;
 	const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
 
+	// initialize CryptoContext
+	crypto->init_frame(c.frame);
+	crypto->init_prng(c.prng);
+
 	// initialize CryptoContext encrypt
-	crypto.encrypt.frame = c.frame;
 	if (c.cipher.defined())
-	  crypto.encrypt.cipher.init(c.cipher,
-				     key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
-				     CRYPTO_API::CipherContext::ENCRYPT);
+	  crypto->init_encrypt_cipher(c.cipher,
+				      key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
+				      CRYPTO_API::CipherContext::ENCRYPT);
 	if (c.digest.defined())
-	  crypto.encrypt.hmac.init(c.digest,
-				   key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
-	crypto.encrypt.pid_send.init(PacketID::SHORT_FORM);
-	crypto.encrypt.prng = c.prng;
+	  crypto->init_encrypt_hmac(c.digest,
+				    key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+	crypto->init_encrypt_pid_send(PacketID::SHORT_FORM);
 
 	// initialize CryptoContext decrypt
-	crypto.decrypt.frame = c.frame;
 	if (c.cipher.defined())
-	  crypto.decrypt.cipher.init(c.cipher,
-				     key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
-				     CRYPTO_API::CipherContext::DECRYPT);
+	  crypto->init_decrypt_cipher(c.cipher,
+				      key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
+				      CRYPTO_API::CipherContext::DECRYPT);
 	if (c.digest.defined())
-	  crypto.decrypt.hmac.init(c.digest,
-				   key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
-	crypto.decrypt.pid_recv.init(c.pid_mode,
-				     PacketID::SHORT_FORM,
-				     c.pid_seq_backtrack, c.pid_time_backtrack,
-				     "DATA", int(key_id_),
-				     proto.stats);
+	  crypto->init_decrypt_hmac(c.digest,
+				    key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	crypto->init_decrypt_pid_recv(c.pid_mode,
+				      PacketID::SHORT_FORM,
+				      c.pid_seq_backtrack, c.pid_time_backtrack,
+				      "DATA", int(key_id_),
+				      proto.stats);
       }
 
       // generate message head
@@ -1844,7 +1864,7 @@ namespace openvpn {
       EventType next_event;
       Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
-      CryptoContext<RAND_API, CRYPTO_API> crypto;
+      typename CC::Ptr crypto;
       TLSPRF<CRYPTO_API> tlsprf_self;
       TLSPRF<CRYPTO_API> tlsprf_peer;
     };
@@ -1934,8 +1954,7 @@ namespace openvpn {
       fast_transition = false;
 
       // clear key contexts
-      primary.reset();
-      secondary.reset();
+      reset_all();
 
       // start with key ID 0
       upcoming_key_id = 0;
@@ -1983,8 +2002,7 @@ namespace openvpn {
     // object destruction is not immediately scheduled.
     void pre_destroy()
     {
-      primary.reset();
-      secondary.reset();
+      reset_all();
     }
 
     virtual ~ProtoContext() {}
@@ -2234,6 +2252,14 @@ namespace openvpn {
     SessionStats& stat() const { return *stats; }
 
   private:
+    void reset_all()
+    {
+      if (primary)
+	primary->rekey(CC::DEACTIVATE_ALL);
+      primary.reset();
+      secondary.reset();
+    }
+
     virtual void control_net_send(const Buffer& net_buf) = 0;
 
     virtual void control_recv(BufferPtr& app_bp) = 0;
@@ -2379,6 +2405,7 @@ namespace openvpn {
     void promote_secondary_to_primary()
     {
       primary.swap(secondary);
+      primary->rekey(CC::PROMOTE_SECONDARY_TO_PRIMARY);
       secondary->prepare_expire();
     }
 
@@ -2392,6 +2419,7 @@ namespace openvpn {
 	    {
 	    case KeyContext::KEV_ACTIVE:
 	      OPENVPN_LOG_PROTO_VERBOSE("*** SESSION_ACTIVE");
+	      primary->rekey(CC::ACTIVATE_PRIMARY);
 	      active();
 	      break;
 	    case KeyContext::KEV_RENEGOTIATE:
@@ -2432,6 +2460,7 @@ namespace openvpn {
 		promote_secondary_to_primary();
 	      break;
 	    case KeyContext::KEV_EXPIRE:
+	      secondary->rekey(CC::DEACTIVATE_SECONDARY);
 	      secondary.reset();
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:
