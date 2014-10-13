@@ -96,8 +96,11 @@ namespace openvpn {
 
 	    // write data to tun device
 	    const size_t wrote = stream->write_some(buf.const_buffers_1());
-	    stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
-	    stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
+	    if (stats)
+	      {
+		stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
+		stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
+	      }
 	    if (wrote == buf.size())
 	      return true;
 	    else
@@ -181,8 +184,11 @@ namespace openvpn {
 	  if (!error)
 	    {
 	      pfp->buf.set_size(bytes_recvd);
-	      stats->inc_stat(SessionStats::TUN_BYTES_IN, bytes_recvd);
-	      stats->inc_stat(SessionStats::TUN_PACKETS_IN, 1);
+	      if (stats)
+		{
+		  stats->inc_stat(SessionStats::TUN_BYTES_IN, bytes_recvd);
+		  stats->inc_stat(SessionStats::TUN_PACKETS_IN, 1);
+		}
 	      if (!tun_prefix)
 		{
 		  read_handler->tun_read_handler(pfp);
@@ -211,7 +217,8 @@ namespace openvpn {
 
     void tun_error(const Error::Type errtype, const boost::system::error_code* error)
     {
-      stats->error(errtype);
+      if (stats)
+	stats->error(errtype);
       read_handler->tun_error_handler(errtype, error);
     }
 
