@@ -30,10 +30,10 @@
 
 namespace openvpn {
 
-  template <typename RAND_API, typename CRYPTO_API>
-  class CryptoContextCHM : public CryptoContextBase<RAND_API, CRYPTO_API>
+  template <typename CRYPTO_API>
+  class CryptoContextCHM : public CryptoContextBase<CRYPTO_API>
   {
-    typedef CryptoContextBase<RAND_API, CRYPTO_API> Base;
+    typedef CryptoContextBase<CRYPTO_API> Base;
 
     virtual void init_frame(const Frame::Ptr& frame)
     {
@@ -41,7 +41,7 @@ namespace openvpn {
       decrypt_.frame = frame;
     }
 
-    virtual void init_prng(const typename PRNG<RAND_API, CRYPTO_API>::Ptr& prng)
+    virtual void init_prng(const typename PRNG<CRYPTO_API>::Ptr& prng)
     {
       encrypt_.prng = prng;
     }
@@ -100,16 +100,16 @@ namespace openvpn {
     }
 
   private:
-    Encrypt<RAND_API, CRYPTO_API> encrypt_;
+    Encrypt<CRYPTO_API> encrypt_;
     Decrypt<CRYPTO_API> decrypt_;
   };
 
-  template <typename RAND_API, typename CRYPTO_API>
-  class CryptoContextCHMFactory : public CryptoContextFactory<RAND_API, CRYPTO_API>
+  template <typename CRYPTO_API>
+  class CryptoContextCHMFactory : public CryptoContextFactory<CRYPTO_API>
   {
-    virtual typename CryptoContextBase<RAND_API, CRYPTO_API>::Ptr new_obj(const unsigned int key_id)
+    virtual typename CryptoContextBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id)
     {
-      return new CryptoContextCHM<RAND_API, CRYPTO_API>();
+      return new CryptoContextCHM<CRYPTO_API>();
     }
   };
 

@@ -37,7 +37,7 @@
 #include <openvpn/crypto/packet_id.hpp>
 
 namespace openvpn {
-  template <typename RAND_API, typename CRYPTO_API>
+  template <typename CRYPTO_API>
   class Encrypt {
   public:
     OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
@@ -104,7 +104,7 @@ namespace openvpn {
     CipherContext<CRYPTO_API> cipher;
     HMACContext<CRYPTO_API> hmac;
     PacketIDSend pid_send;
-    typename PRNG<RAND_API, CRYPTO_API>::Ptr prng;
+    typename PRNG<CRYPTO_API>::Ptr prng;
 
   private:
     // compute HMAC signature of data buffer,

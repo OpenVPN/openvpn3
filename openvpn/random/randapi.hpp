@@ -19,22 +19,34 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_RANDOM_RANDTYPE_H
-#define OPENVPN_RANDOM_RANDTYPE_H
+// API for random number implementations.
 
-#include <openvpn/random/randapi.hpp>
+#ifndef OPENVPN_POLARSSL_UTIL_RANDAPI_H
+#define OPENVPN_POLARSSL_UTIL_RANDAPI_H
+
+#include <string>
+
+#include <openvpn/common/types.hpp>
+#include <openvpn/common/rc.hpp>
 
 namespace openvpn {
 
-  // Given a RandomAPI object, return a T object that has been filled with random bits
-  template <typename T>
-  inline T rand_type(RandomAPI& rng)
+  class RandomAPI : public RC<thread_unsafe_refcount>
   {
-    T ret;
-    rng.rand_bytes((unsigned char *)&ret, sizeof(ret));
-    return ret;
-  }
+  public:
+    typedef boost::intrusive_ptr<RandomAPI> Ptr;
 
-} // namespace openvpn
+    // Random algorithm name
+    virtual std::string name() const = 0;
+
+    // Fill buffer with random bytes
+    virtual void rand_bytes(unsigned char *buf, size_t size) = 0;
+
+    // Like rand_bytes, but don't throw exception.
+    // Return true on successs, false on fail.
+    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size) = 0;
+  };
+
+}
 
 #endif

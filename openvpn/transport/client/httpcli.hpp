@@ -164,9 +164,9 @@ namespace openvpn {
       }
     };
 
-    // We need access to RAND_API and CRYPTO_API implementations, because proxy
-    // authentication methods tend to require crypto and random functionality.
-    template <typename RAND_API, typename CRYPTO_API>
+    // We need access to CRYPTO_API implementation, because proxy
+    // authentication methods tend to require crypto functionality.
+    template <typename CRYPTO_API>
     class ClientConfig : public TransportClientFactory
     {
     public:
@@ -180,7 +180,7 @@ namespace openvpn {
 
       Options::Ptr http_proxy_options;
 
-      typename RAND_API::Ptr rng; // random data source
+      RandomAPI::Ptr rng; // random data source
 
       SocketProtect* socket_protect;
 
@@ -200,10 +200,10 @@ namespace openvpn {
       {}
     };
 
-    template <typename RAND_API, typename CRYPTO_API>
+    template <typename CRYPTO_API>
     class Client : public TransportClient
     {
-      friend class ClientConfig<RAND_API, CRYPTO_API>;  // calls constructor
+      friend class ClientConfig<CRYPTO_API>;  // calls constructor
       friend class TCPTransport::Link<Client*, false>;  // calls tcp_read_handler
 
       typedef TCPTransport::Link<Client*, false> LinkImpl;
@@ -290,7 +290,7 @@ namespace openvpn {
       };
 
       Client(boost::asio::io_service& io_service_arg,
-	     ClientConfig<RAND_API, CRYPTO_API>* config_arg,
+	     ClientConfig<CRYPTO_API>* config_arg,
 	     TransportClientParent& parent_arg)
 	:  io_service(io_service_arg),
 	   socket(io_service_arg),
@@ -618,7 +618,7 @@ namespace openvpn {
       {
 	OPENVPN_LOG("Proxy method: NTLM" << std::endl << pa.to_string());
 
-	const std::string phase_1_reply = HTTPProxy::NTLM<RAND_API, CRYPTO_API>::phase_1();
+	const std::string phase_1_reply = HTTPProxy::NTLM<CRYPTO_API>::phase_1();
 
 	std::ostringstream os;
 	gen_headers(os);
@@ -662,7 +662,7 @@ namespace openvpn {
 	try {
 	  //OPENVPN_LOG("NTLM phase 3: " << phase_2_response);
 
-	  const std::string phase_3_reply = HTTPProxy::NTLM<RAND_API, CRYPTO_API>::phase_3(
+	  const std::string phase_3_reply = HTTPProxy::NTLM<CRYPTO_API>::phase_3(
 	      phase_2_response,
 	      config->http_proxy_options->username,
 	      config->http_proxy_options->password,
@@ -876,7 +876,7 @@ namespace openvpn {
 
       boost::asio::io_service& io_service;
       boost::asio::ip::tcp::socket socket;
-      typename ClientConfig<RAND_API, CRYPTO_API>::Ptr config;
+      typename ClientConfig<CRYPTO_API>::Ptr config;
       TransportClientParent& parent;
       typename LinkImpl::Ptr impl;
       boost::asio::ip::tcp::resolver resolver;
@@ -895,10 +895,10 @@ namespace openvpn {
       size_t drain_content_length;
     };
 
-    template <typename RAND_API, typename CRYPTO_API>
-    inline TransportClient::Ptr ClientConfig<RAND_API, CRYPTO_API>::new_client_obj(boost::asio::io_service& io_service, TransportClientParent& parent)
+    template <typename CRYPTO_API>
+    inline TransportClient::Ptr ClientConfig<CRYPTO_API>::new_client_obj(boost::asio::io_service& io_service, TransportClientParent& parent)
     {
-      return TransportClient::Ptr(new Client<RAND_API, CRYPTO_API>(io_service, this, parent));
+      return TransportClient::Ptr(new Client<CRYPTO_API>(io_service, this, parent));
     }
   }
 } // namespace openvpn

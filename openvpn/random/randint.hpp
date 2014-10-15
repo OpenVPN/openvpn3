@@ -25,15 +25,16 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/random/boostrand.hpp>
 #include <openvpn/random/randtype.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
-  // Return a RandomIntBase object that has been seeded using provided random API (RAND_API)
-  template <typename RAND_API>
+  // Return a RandomIntBase object that has been seeded using provided
+  // random source (RandomAPI object).
   class RandomInt : public RandomIntBase
   {
   public:
-    RandomInt(RAND_API& rng) : RandomIntBase(rand_type<unsigned int, RAND_API>(rng)) {}
+    RandomInt(RandomAPI& rng) : RandomIntBase(rand_type<unsigned int>(rng)) {}
   };
 
 } // namespace openvpn

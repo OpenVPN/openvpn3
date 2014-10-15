@@ -42,7 +42,7 @@
 namespace openvpn {
   namespace HTTPProxy {
 
-    template <typename RAND_API, typename CRYPTO_API>
+    template <typename CRYPTO_API>
     class NTLM
     {
     public:
@@ -60,7 +60,7 @@ namespace openvpn {
       static std::string phase_3(const std::string& phase_2_response,
 				 const std::string& dom_username,
 				 const std::string& password,
-				 RAND_API& rng)
+				 RandomAPI& rng)
       {
 	// sanity checks
 	if (dom_username.empty())

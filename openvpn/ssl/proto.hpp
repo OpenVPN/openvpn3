@@ -45,6 +45,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
+#include <openvpn/random/randapi.hpp>
 #include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/cryptobase.hpp>
 #include <openvpn/crypto/cipher.hpp>
@@ -133,7 +134,7 @@ namespace openvpn {
     };
   }
 
-  template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
+  template <typename CRYPTO_API, typename SSL_API>
   class ProtoContext
   {
   protected:
@@ -203,8 +204,8 @@ namespace openvpn {
   public:
     typedef SSL_API SSLContext;
 
-    typedef CryptoContextBase<RAND_API, CRYPTO_API> CC;
-    typedef CryptoContextFactory<RAND_API, CRYPTO_API> CCFactory;
+    typedef CryptoContextBase<CRYPTO_API> CC;
+    typedef CryptoContextFactory<CRYPTO_API> CCFactory;
 
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
@@ -246,10 +247,10 @@ namespace openvpn {
       TimePtr now;
 
       // RNG
-      typename RAND_API::Ptr rng;
+      RandomAPI::Ptr rng;
 
       // PRNG
-      typename PRNG<RAND_API, CRYPTO_API>::Ptr prng;
+      typename PRNG<CRYPTO_API>::Ptr prng;
 
       // transmit username/password creds to server (client-only)
       bool xmit_creds;

@@ -50,12 +50,12 @@ namespace openvpn {
   namespace SSLLib {
 #if defined(USE_POLARSSL)
     typedef PolarSSLCryptoAPI CryptoAPI;
-    typedef PolarSSLContext<PolarSSLRandom> SSLAPI;
+    typedef PolarSSLContext SSLAPI;
     typedef PolarSSLRandom RandomAPI;
 #elif defined(USE_POLARSSL_APPLE_HYBRID)
     // Uses Apple framework for RandomAPI and CryptoAPI and PolarSSL for SSLAPI
     typedef AppleCryptoAPI CryptoAPI;
-    typedef PolarSSLContext<AppleRandom> SSLAPI;
+    typedef PolarSSLContext SSLAPI;
     typedef AppleRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
     typedef AppleCryptoAPI CryptoAPI;

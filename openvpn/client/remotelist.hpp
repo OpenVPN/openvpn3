@@ -443,12 +443,11 @@ namespace openvpn {
     }
 
     // randomize item list, used to implement remote-random directive
-    template <typename PRNG_TYPE>
-    void randomize(PRNG_TYPE& prng)
+    void randomize(RandomAPI& rng)
     {
       for (size_t i = 0; i < list.size(); ++i)
 	{
-	  const size_t swapidx = i + rand_type<size_t, PRNG_TYPE>(prng) % (list.size() - i);
+	  const size_t swapidx = i + rand_type<size_t>(rng) % (list.size() - i);
 	  if (swapidx != i && swapidx < list.size())
 	    list[i].swap(list[swapidx]);
 	}

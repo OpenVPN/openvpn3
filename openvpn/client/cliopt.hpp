@@ -71,7 +71,7 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<ClientOptions> Ptr;
 
-    typedef ClientProto::Session<SSLLib::RandomAPI, SSLLib::CryptoAPI, SSLLib::SSLAPI> Client;
+    typedef ClientProto::Session<SSLLib::CryptoAPI, SSLLib::SSLAPI> Client;
 
     struct Config {
       Config()
@@ -139,7 +139,7 @@ namespace openvpn {
 
       // initialize RNG/PRNG
       rng.reset(new SSLLib::RandomAPI());
-      prng.reset(new PRNG<SSLLib::RandomAPI, SSLLib::CryptoAPI>("SHA1", rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
+      prng.reset(new PRNG<SSLLib::CryptoAPI>("SHA1", rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
 
       // frame
       frame = frame_init();
@@ -172,7 +172,7 @@ namespace openvpn {
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->ssl_ctx.reset(new SSLLib::SSLAPI(cc));
-      cp->cc_factory.reset(new CryptoContextCHMFactory<SSLLib::RandomAPI, SSLLib::CryptoAPI>());
+      cp->cc_factory.reset(new CryptoContextCHMFactory<SSLLib::CryptoAPI>());
       cp->gui_version = config.gui_version;
       cp->frame = frame;
       cp->now = &now_;
@@ -435,7 +435,7 @@ namespace openvpn {
 	    throw option_error("internal error: no TCP server entries for HTTP proxy transport");
 
 	  // HTTP Proxy transport
-	  HTTPProxyTransport::ClientConfig<SSLLib::RandomAPI, SSLLib::CryptoAPI>::Ptr httpconf = HTTPProxyTransport::ClientConfig<SSLLib::RandomAPI, SSLLib::CryptoAPI>::new_obj();
+	  HTTPProxyTransport::ClientConfig<SSLLib::CryptoAPI>::Ptr httpconf = HTTPProxyTransport::ClientConfig<SSLLib::CryptoAPI>::new_obj();
 	  httpconf->remote_list = remote_list;
 	  httpconf->frame = frame;
 	  httpconf->stats = cli_stats;
@@ -475,7 +475,7 @@ namespace openvpn {
 
     Time now_; // current time
     SSLLib::RandomAPI::Ptr rng;
-    PRNG<SSLLib::RandomAPI, SSLLib::CryptoAPI>::Ptr prng;
+    PRNG<SSLLib::CryptoAPI>::Ptr prng;
     Frame::Ptr frame;
     SSLLib::SSLAPI::Config cc;
     Client::ProtoConfig::Ptr cp;

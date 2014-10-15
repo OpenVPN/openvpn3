@@ -4,11 +4,19 @@ On Mac
 
   Build with PolarSSL client and server (no ASM crypto algs):
 
-    GCC_EXTRA="-Wno-deprecated-register" PSSL=1 build proto
+    PSSL=1 build proto
 
   Build with PolarSSL client and server using 4 concurrent threads (no ASM crypto algs):
 
-    GCC_EXTRA="-Wno-deprecated-register -DN_THREADS=4" PSSL=1 build proto
+    -DN_THREADS=4" PSSL=1 build proto
+
+  Build with PolarSSL client and OpenSSL server (no ASM crypto algs):
+
+    PSSL=1 OSSL=1 OPENSSL_SYS=1 build proto
+
+  Build with OpenSSL client and server (no ASM crypto algs):
+
+    OSSL=1 OPENSSL_SYS=1 build proto
 
   Build with PolarSSL client and server + minicrypto lib:
 

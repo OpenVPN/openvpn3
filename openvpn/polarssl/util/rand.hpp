@@ -29,12 +29,12 @@
 #include <polarssl/entropy_poll.h>
 #include <polarssl/ctr_drbg.h>
 
-#include <openvpn/common/types.hpp>
-#include <openvpn/common/rc.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
-  class PolarSSLRandom : public RC<thread_unsafe_refcount> {
+  class PolarSSLRandom : public RandomAPI
+  {
   public:
     OPENVPN_EXCEPTION(rand_error_polarssl);
 
@@ -46,11 +46,14 @@ namespace openvpn {
 	throw rand_error_polarssl("CTR_DRBG init");
     }
 
-    const char *name() const {
-      return "CTR_DRBG";
+    // Random algorithm name
+    virtual std::string name() const
+    {
+      return "PolarSSL-CTR_DRBG";
     }
 
-    void rand_bytes(unsigned char *buf, const size_t size)
+    // Fill buffer with random bytes
+    virtual void rand_bytes(unsigned char *buf, size_t size)
     {
       if (!rand_bytes_noexcept(buf, size))
 	throw rand_error_polarssl("CTR_DRBG rand_bytes");
@@ -58,7 +61,7 @@ namespace openvpn {
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
-    bool rand_bytes_noexcept(unsigned char *buf, const size_t size)
+    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
     {
       return ctr_drbg_random(&ctx, buf, size) < 0 ? false : true;
     }

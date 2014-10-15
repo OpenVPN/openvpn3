@@ -154,7 +154,7 @@ using namespace openvpn;
 // server Crypto/SSL/Rand implementation
 #if defined(USE_POLARSSL_SERVER)
 typedef PolarSSLCryptoAPI ServerCryptoAPI;
-typedef PolarSSLContext<PolarSSLRandom> ServerSSLAPI;
+typedef PolarSSLContext ServerSSLAPI;
 typedef PolarSSLRandom ServerRandomAPI;
 #elif defined(USE_OPENSSL_SERVER)
 typedef OpenSSLCryptoAPI ServerCryptoAPI;
@@ -167,7 +167,7 @@ typedef OpenSSLRandom ServerRandomAPI;
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
 #if defined(USE_POLARSSL)
 typedef PolarSSLCryptoAPI ClientCryptoAPI;
-typedef PolarSSLContext<PolarSSLRandom> ClientSSLAPI;
+typedef PolarSSLContext ClientSSLAPI;
 typedef PolarSSLRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)
 typedef AppleCryptoAPI ClientCryptoAPI;
@@ -264,10 +264,10 @@ private:
 };
 
 // test the OpenVPN protocol implementation in ProtoContext
-template <typename RAND_API, typename CRYPTO_API, typename SSL_CONTEXT>
-class TestProto : public ProtoContext<RAND_API, CRYPTO_API, SSL_CONTEXT>
+template <typename CRYPTO_API, typename SSL_CONTEXT>
+class TestProto : public ProtoContext<CRYPTO_API, SSL_CONTEXT>
 {
-  typedef ProtoContext<RAND_API, CRYPTO_API, SSL_CONTEXT> Base;
+  typedef ProtoContext<CRYPTO_API, SSL_CONTEXT> Base;
 
   using Base::now;
   using Base::mode;
@@ -439,10 +439,10 @@ private:
   char progress_[11];
 };
 
-template <typename RAND_API, typename CRYPTO_API, typename SSL_CONTEXT>
-class TestProtoClient : public TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT>
+template <typename CRYPTO_API, typename SSL_CONTEXT>
+class TestProtoClient : public TestProto<CRYPTO_API, SSL_CONTEXT>
 {
-  typedef TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT> Base;
+  typedef TestProto<CRYPTO_API, SSL_CONTEXT> Base;
 public:
   TestProtoClient(const typename Base::Config::Ptr& config,
 		  const SessionStats::Ptr& stats)
@@ -460,10 +460,10 @@ private:
   }
 };
 
-template <typename RAND_API, typename CRYPTO_API, typename SSL_CONTEXT>
-class TestProtoServer : public TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT>
+template <typename CRYPTO_API, typename SSL_CONTEXT>
+class TestProtoServer : public TestProto<CRYPTO_API, SSL_CONTEXT>
 {
-  typedef TestProto<RAND_API, CRYPTO_API, SSL_CONTEXT> Base;
+  typedef TestProto<CRYPTO_API, SSL_CONTEXT> Base;
 public:
   OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
@@ -682,11 +682,11 @@ int test(const int thread_num)
 
     // RNG
     ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());
-    RandomInt<ClientRandomAPI> rand(*rng_cli);
-    PRNG<ClientRandomAPI, ClientCryptoAPI>::Ptr prng_cli(new PRNG<ClientRandomAPI, ClientCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_cli, 16));
+    RandomInt rand(*rng_cli);
+    PRNG<ClientCryptoAPI>::Ptr prng_cli(new PRNG<ClientCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_cli, 16));
 
     ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI());
-    PRNG<ServerRandomAPI, ServerCryptoAPI>::Ptr prng_serv(new PRNG<ServerRandomAPI, ServerCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_serv, 16));
+    PRNG<ServerCryptoAPI>::Ptr prng_serv(new PRNG<ServerCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_serv, 16));
 
     // init simulated time
     Time time;
@@ -724,10 +724,10 @@ int test(const int thread_num)
     MySessionStats::Ptr cli_stats(new MySessionStats);
 
     // client ProtoContext config
-    typedef ProtoContext<ClientRandomAPI, ClientCryptoAPI, ClientSSLAPI> ClientProtoContext;
+    typedef ProtoContext<ClientCryptoAPI, ClientSSLAPI> ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_ctx.reset(new ClientSSLAPI(cc));
-    cp->cc_factory.reset(new CryptoContextCHMFactory<ClientRandomAPI, ClientCryptoAPI>());
+    cp->cc_factory.reset(new CryptoContextCHMFactory<ClientCryptoAPI>());
     cp->frame = frame;
     cp->now = &time;
     cp->rng = rng_cli;
@@ -787,10 +787,10 @@ int test(const int thread_num)
 #endif
 
     // server ProtoContext config
-    typedef ProtoContext<ServerRandomAPI, ServerCryptoAPI, ServerSSLAPI> ServerProtoContext;
+    typedef ProtoContext<ServerCryptoAPI, ServerSSLAPI> ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
     sp->ssl_ctx.reset(new ServerSSLAPI(sc));
-    sp->cc_factory.reset(new CryptoContextCHMFactory<ServerRandomAPI, ServerCryptoAPI>());
+    sp->cc_factory.reset(new CryptoContextCHMFactory<ServerCryptoAPI>());
     sp->frame = frame;
     sp->now = &time;
     sp->rng = rng_serv;
@@ -836,8 +836,8 @@ int test(const int thread_num)
     // server stats
     MySessionStats::Ptr serv_stats(new MySessionStats);
 
-    TestProtoClient<ClientRandomAPI, ClientCryptoAPI, ClientSSLAPI> cli_proto(cp, cli_stats);
-    TestProtoServer<ServerRandomAPI, ServerCryptoAPI, ServerSSLAPI> serv_proto(sp, serv_stats);
+    TestProtoClient<ClientCryptoAPI, ClientSSLAPI> cli_proto(cp, cli_stats);
+    TestProtoServer<ServerCryptoAPI, ServerSSLAPI> serv_proto(sp, serv_stats);
 
     for (int i = 0; i < SITER; ++i)
       {

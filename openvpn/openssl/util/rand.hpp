@@ -28,20 +28,23 @@
 
 #include <openssl/rand.h>
 
-#include <openvpn/common/rc.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
-  class OpenSSLRandom : public RC<thread_unsafe_refcount> {
+  class OpenSSLRandom : public RandomAPI
+  {
   public:
     OPENVPN_EXCEPTION(rand_error_openssl);
 
     typedef boost::intrusive_ptr<OpenSSLRandom> Ptr;
 
-    const char *name() const {
+    virtual std::string name() const
+    {
       return "OpenSSLRandom";
     }
 
-    void rand_bytes(unsigned char *buf, const size_t size)
+    // Fill buffer with random bytes
+    virtual void rand_bytes(unsigned char *buf, size_t size)
     {
       if (!rand_bytes_noexcept(buf, size))
 	throw rand_error_openssl("rand_bytes");
@@ -49,7 +52,7 @@ namespace openvpn {
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
-    bool rand_bytes_noexcept(unsigned char *buf, const size_t size)
+    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
     {
       return RAND_bytes(buf, size) ? true : false;
     }

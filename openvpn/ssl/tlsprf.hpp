@@ -36,6 +36,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/ssl/psid.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
@@ -49,8 +50,7 @@ namespace openvpn {
     TLSPRF(const bool server)
       : initialized_(false), server_(server) {}
 
-    template <typename RAND_API>
-    void randomize(RAND_API& rng)
+    void randomize(RandomAPI& rng)
     {
       if (!server_)
 	rng.rand_bytes(pre_master, sizeof(pre_master));

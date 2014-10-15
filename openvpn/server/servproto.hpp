@@ -43,10 +43,10 @@
 
 namespace openvpn {
 
-  template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
+  template <typename CRYPTO_API, typename SSL_API>
   class ServerProto
   {
-    typedef ProtoContext<RAND_API, CRYPTO_API, SSL_API> Base;
+    typedef ProtoContext<CRYPTO_API, SSL_API> Base;
     typedef Link<TransportClientInstanceSend, TransportClientInstanceRecv> TransportLink;
 
   public:
@@ -322,8 +322,8 @@ namespace openvpn {
     };
   };
 
-  template <typename RAND_API, typename CRYPTO_API, typename SSL_API>
-  inline TransportClientInstanceRecv::Ptr ServerProto<RAND_API, CRYPTO_API, SSL_API>::Factory::new_client_instance()
+  template <typename CRYPTO_API, typename SSL_API>
+  inline TransportClientInstanceRecv::Ptr ServerProto<CRYPTO_API, SSL_API>::Factory::new_client_instance()
   {
     return TransportClientInstanceRecv::Ptr(new Session(io_service, *this));
   }

@@ -34,7 +34,7 @@
 
 namespace openvpn {
 
-  template <typename RAND_API, typename CRYPTO_API>
+  template <typename CRYPTO_API>
   class CryptoContextBase : public RC<thread_unsafe_refcount>
   {
   public:
@@ -62,7 +62,7 @@ namespace openvpn {
 
     virtual void init_frame(const Frame::Ptr& frame) = 0;
 
-    virtual void init_prng(const typename PRNG<RAND_API, CRYPTO_API>::Ptr& prng) = 0;
+    virtual void init_prng(const typename PRNG<CRYPTO_API>::Ptr& prng) = 0;
 
     virtual void init_encrypt_cipher(const typename CRYPTO_API::Cipher& cipher,
 				     const StaticKey& key, const int mode) = 0;
@@ -85,13 +85,13 @@ namespace openvpn {
   };
 
   // Factory for CryptoContextBase objects
-  template <typename RAND_API, typename CRYPTO_API>
+  template <typename CRYPTO_API>
   class CryptoContextFactory : public RC<thread_unsafe_refcount>
   {
   public:
     typedef boost::intrusive_ptr<CryptoContextFactory> Ptr;
 
-    virtual typename CryptoContextBase<RAND_API, CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
+    virtual typename CryptoContextBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
   };
 }
 

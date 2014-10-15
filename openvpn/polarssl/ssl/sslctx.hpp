@@ -51,6 +51,7 @@
 #include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
+#include <openvpn/random/randapi.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
 #include <openvpn/polarssl/pki/x509crl.hpp>
@@ -77,7 +78,6 @@ namespace openvpn {
 
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
-  template <typename RAND_API>
   class PolarSSLContext : public RC<thread_unsafe_refcount>
   {
   public:
@@ -121,7 +121,7 @@ namespace openvpn {
       bool local_cert_enabled;
       bool enable_renegotiation;
       bool force_aes_cbc_ciphersuites;
-      typename RAND_API::Ptr rng;   // random data source
+      RandomAPI::Ptr rng;   // random data source
 
       // if this callback is defined, no private key needs to be loaded
       void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
@@ -541,7 +541,7 @@ namespace openvpn {
       }
 
       ssl_context *ssl;	       // underlying SSL connection object
-      typename RAND_API::Ptr rng;       // random data source
+      RandomAPI::Ptr rng;      // random data source
       bool overflow;
       MemQStream ct_in;    // write ciphertext to here
       MemQStream ct_out;   // read ciphertext from here

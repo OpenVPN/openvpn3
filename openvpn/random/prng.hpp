@@ -31,11 +31,12 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
-  template <typename RAND_API, typename CRYPTO_API>
-  class PRNG : public RC<thread_unsafe_refcount>
+  template <typename CRYPTO_API>
+  class PRNG : public RandomAPI
   {
     typedef BufferAllocatedType<unsigned char> nonce_t;
   public:
@@ -54,7 +55,7 @@ namespace openvpn {
     PRNG() : nonce_reseed_bytes(0), n_processed(0) {}
 
     PRNG(const char *digest,
-	 const typename RAND_API::Ptr& rng_arg,
+	 const RandomAPI::Ptr& rng_arg,
 	 const size_t nonce_secret_len,
 	 const size_t nonce_reseed_bytes_arg = NONCE_DEFAULT_RESEED_BYTES)
       : nonce_reseed_bytes(0), n_processed(0)
@@ -63,7 +64,7 @@ namespace openvpn {
     }
 
     void init(const char *digest,
-	      const typename RAND_API::Ptr& rng_arg,
+	      const RandomAPI::Ptr& rng_arg,
 	      const size_t nonce_secret_len,
 	      const size_t nonce_reseed_bytes_arg = NONCE_DEFAULT_RESEED_BYTES)
     {
@@ -91,8 +92,14 @@ namespace openvpn {
       rand_bytes(reinterpret_cast<unsigned char *>(&obj), sizeof(T));
     }
 
-    void
-    rand_bytes (unsigned char *output, size_t len)
+    // Random algorithm name
+    virtual std::string name() const
+    {
+      return "PRNG/" + rng->name();
+    }
+
+    // Fill buffer with random bytes
+    virtual void rand_bytes (unsigned char *output, size_t len)
     {
       if (nonce_digest.defined())
 	{
@@ -124,8 +131,22 @@ namespace openvpn {
 	rng->rand_bytes (output, len); // if init was not called, revert to rand_bytes
     }
 
+    // Like rand_bytes, but don't throw exception.
+    // Return true on successs, false on fail.
+    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
+    {
+      try {
+	rand_bytes(buf, size);
+	return true;
+      }
+      catch (std::exception&)
+	{
+	  return false;
+	}
+    }
+
   private:
-    static void reseed (nonce_t& nd, RAND_API& rng)
+    static void reseed (nonce_t& nd, RandomAPI& rng)
     {
 #if 1 /* Must be 1 for real usage */
       rng.rand_bytes(nd.data(), nd.size());
@@ -139,7 +160,7 @@ namespace openvpn {
 #endif
     }
 
-    typename RAND_API::Ptr rng;
+    RandomAPI::Ptr rng;
     typename CRYPTO_API::Digest nonce_digest;
     size_t nonce_reseed_bytes;
     size_t n_processed;
