@@ -953,9 +953,6 @@ namespace openvpn {
 	// get key_id from parent
 	key_id_ = proto.next_key_id();
 
-	// build crypto context for data channel encryption/decryption
-	crypto = proto.config->cc_factory->new_obj(key_id_);
-
 	// remember when we were constructed
 	construct_time = *now;
 
@@ -1039,7 +1036,7 @@ namespace openvpn {
       // data channel encrypt
       void encrypt(BufferAllocated& buf)
       {
-	if (state >= ACTIVE && !invalidated())
+	if (state >= ACTIVE && crypto && !invalidated())
 	  {
 	    // compress packet
 	    compress->compress(buf, true);
@@ -1061,7 +1058,7 @@ namespace openvpn {
       void decrypt(BufferAllocated& buf)
       {
 	try {
-	  if (state >= ACTIVE && !invalidated())
+	  if (state >= ACTIVE && crypto && !invalidated())
 	    {
 	      // knock off leading op from buffer
 	      buf.advance(1);
@@ -1153,7 +1150,7 @@ namespace openvpn {
       // to peer via data channel
       void send_data_channel_message(const unsigned char *data, const size_t size)
       {
-	if (state >= ACTIVE && !invalidated())
+	if (state >= ACTIVE && crypto && !invalidated())
 	  {
 	    // allocate packet
 	    Packet pkt;
@@ -1569,6 +1566,9 @@ namespace openvpn {
       {
 	const Config& c = *proto.config;
 	const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
+
+	// build crypto context for data channel encryption/decryption
+	crypto = proto.config->cc_factory->new_obj(key_id_);
 
 	// initialize CryptoContext
 	crypto->init_frame(c.frame);
