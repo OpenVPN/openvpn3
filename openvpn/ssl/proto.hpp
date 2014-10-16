@@ -134,7 +134,7 @@ namespace openvpn {
     };
   }
 
-  template <typename CRYPTO_API, typename SSL_API>
+  template <typename CRYPTO_API>
   class ProtoContext
   {
   protected:
@@ -202,8 +202,6 @@ namespace openvpn {
     }
 
   public:
-    typedef SSL_API SSLContext;
-
     typedef CryptoContextBase<CRYPTO_API> CC;
     typedef CryptoContextFactory<CRYPTO_API> CCFactory;
 
@@ -234,8 +232,8 @@ namespace openvpn {
 	key_direction = -1; // bidirectional
       }
 
-      // master SSL context
-      typename SSLContext::Ptr ssl_ctx;
+      // master SSL context factory
+      SSLFactoryAPI::Ptr ssl_factory;
 
       // master crypto context factory
       typename CCFactory::Ptr cc_factory;
@@ -556,7 +554,7 @@ namespace openvpn {
       {
 	std::ostringstream out;
 
-	const bool server = ssl_ctx->mode().is_server();
+	const bool server = ssl_factory->mode().is_server();
 
 	out << "V4";
 
@@ -906,9 +904,9 @@ namespace openvpn {
     };
 
     // KeyContext encapsulates a single SSL/TLS session
-    class KeyContext : ProtoStackBase<SSLContext, Packet>, public RC<thread_unsafe_refcount>
+    class KeyContext : ProtoStackBase<Packet>, public RC<thread_unsafe_refcount>
     {
-      typedef ProtoStackBase<SSLContext, Packet> Base;
+      typedef ProtoStackBase<Packet> Base;
       typedef typename Base::ReliableSend ReliableSend;
       typedef typename Base::ReliableRecv ReliableRecv;
 
@@ -938,7 +936,7 @@ namespace openvpn {
       };
 
       KeyContext(ProtoContext& p, const bool initiator)
-	: Base(*p.config->ssl_ctx, p.config->now, p.config->frame, p.stats,
+	: Base(*p.config->ssl_factory, p.config->now, p.config->frame, p.stats,
 	       p.config->reliable_window, p.config->max_ack_list),
 	  proto(p),
 	  state(STATE_UNDEF),
@@ -1923,7 +1921,7 @@ namespace openvpn {
 		 const SessionStats::Ptr& stats_arg)        // error stats
       : config(config_arg),
 	stats(stats_arg),
-	mode_(config_arg->ssl_ctx->mode()),
+	mode_(config_arg->ssl_factory->mode()),
 	n_key_ids(0),
 	now_(config_arg->now)
     {

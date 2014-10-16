@@ -34,7 +34,6 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/rc.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
@@ -49,6 +48,7 @@
 #include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
+#include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
@@ -68,7 +68,7 @@ namespace openvpn {
 
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
-  class OpenSSLContext : public RC<thread_unsafe_refcount>
+  class OpenSSLContext : public SSLFactoryAPI
   {
   public:
     OPENVPN_EXCEPTION(ssl_context_error);
@@ -221,19 +221,19 @@ namespace openvpn {
 
     // Represents an actual SSL session.
     // Normally instantiated by OpenSSLContext::ssl().
-    class SSL : public RC<thread_unsafe_refcount>
+    class SSL : public SSLAPI
     {
       friend class OpenSSLContext;
 
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
-      void start_handshake()
+      virtual void start_handshake()
       {
 	SSL_do_handshake(ssl);
       }
 
-      ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
+      virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
       {
 	const int status = BIO_write(ssl_bio, data, size);
 	if (status < 0)
@@ -247,7 +247,7 @@ namespace openvpn {
 	  return status;
       }
 
-      ssize_t read_cleartext(void *data, const size_t capacity)
+      virtual ssize_t read_cleartext(void *data, const size_t capacity)
       {
 	if (!overflow)
 	  {
@@ -266,12 +266,13 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      bool read_cleartext_ready() const {
+      virtual bool read_cleartext_ready() const
+      {
 	// fixme: need to detect data buffered at SSL layer
 	return !bmq_stream::memq_from_bio(ct_in)->empty();
       }
 
-      void write_ciphertext(const BufferPtr& buf)
+      virtual void write_ciphertext(const BufferPtr& buf)
       {
 	bmq_stream::MemQ* in = bmq_stream::memq_from_bio(ct_in);
 	if (in->size() < MAX_CIPHERTEXT_IN)
@@ -280,16 +281,17 @@ namespace openvpn {
 	  overflow = true;
       }
 
-      bool read_ciphertext_ready() const {
+      virtual bool read_ciphertext_ready() const
+      {
 	return !bmq_stream::memq_from_bio(ct_out)->empty();
       }
 
-      BufferPtr read_ciphertext()
+      virtual BufferPtr read_ciphertext()
       {
 	return bmq_stream::memq_from_bio(ct_out)->read_buf();
       }
 
-      std::string ssl_handshake_details() const
+      virtual std::string ssl_handshake_details() const
       {
 	return ssl_handshake_details(ssl);
       }
@@ -680,7 +682,17 @@ namespace openvpn {
 	}
     }
 
-    SSL::Ptr ssl() const { return SSL::Ptr(new SSL(*this)); }
+    // create a new SSL instance
+    virtual SSLAPI::Ptr ssl()
+    {
+      return SSL::Ptr(new SSL(*this));
+    }
+
+    // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
+    virtual SSLAPI::Ptr ssl(const std::string& hostname)
+    {
+      throw OpenSSLException("OpenSSLContext: ssl session with CommonName and/or SubjectAltName verification not implemented");
+    }
 
     void update_trust(const CertCRLList& cc)
     {
@@ -693,7 +705,10 @@ namespace openvpn {
       erase();
     }
 
-    const Mode& mode() const { return config.mode; }
+    virtual const Mode& mode() const
+    {
+      return config.mode;
+    }
  
   private:
     // ns-cert-type verification

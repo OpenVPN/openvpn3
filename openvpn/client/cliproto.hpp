@@ -24,7 +24,7 @@
 
 // This is a middle-layer object in the OpenVPN client protocol stack.
 // It is above the general OpenVPN protocol implementation in
-// ProtoContext<CRYPTO_API, SSL_API> but below the top
+// ProtoContext<CRYPTO_API> but below the top
 // level object in a client connect (ClientConnect).  See ClientConnect for
 // a fuller description of the full client stack.
 //
@@ -33,7 +33,7 @@
 // 1. handles creation of transport-layer handler via TransportClientFactory
 // 2. handles creation of tun-layer handler via TunClientFactory
 // 3. handles sending PUSH_REQUEST to server and processing reply of server-pushed options
-// 4. manages the underlying OpenVPN protocol object (ProtoContext<CRYPTO_API, SSL_API>)
+// 4. manages the underlying OpenVPN protocol object (ProtoContext<CRYPTO_API>)
 // 5. handles timers on behalf of the underlying OpenVPN protocol object
 // 6. acts as an exception dispatcher for errors occuring in any of the underlying layers
 
@@ -74,13 +74,13 @@ namespace openvpn {
       virtual void client_proto_connected() {}
     };
 
-    template <typename CRYPTO_API, typename SSL_API>
-    class Session : ProtoContext<CRYPTO_API, SSL_API>,
+    template <typename CRYPTO_API>
+    class Session : ProtoContext<CRYPTO_API>,
                     TransportClientParent,
                     TunClientParent,
 		    public RC<thread_unsafe_refcount>
     {
-      typedef ProtoContext<CRYPTO_API, SSL_API> Base;
+      typedef ProtoContext<CRYPTO_API> Base;
       typedef typename Base::PacketType PacketType;
 
       using Base::now;

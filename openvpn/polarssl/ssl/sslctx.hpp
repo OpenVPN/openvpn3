@@ -35,7 +35,6 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/rc.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
@@ -51,6 +50,7 @@
 #include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
+#include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/random/randapi.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
@@ -78,7 +78,7 @@ namespace openvpn {
 
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
-  class PolarSSLContext : public RC<thread_unsafe_refcount>
+  class PolarSSLContext : public SSLFactoryAPI
   {
   public:
     typedef boost::intrusive_ptr<PolarSSLContext> Ptr;
@@ -252,7 +252,7 @@ namespace openvpn {
 
     // Represents an actual SSL session.
     // Normally instantiated by PolarSSLContext::ssl().
-    class SSL : public RC<thread_unsafe_refcount>
+    class SSL : public SSLAPI
     {
       // read/write callback errors
       enum {
@@ -266,12 +266,12 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
-      void start_handshake()
+      virtual void start_handshake()
       {
 	ssl_handshake(ssl);
       }
 
-      ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
+      virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
       {
 	const int status = ssl_write(ssl, (const unsigned char*)data, size);
 	if (status < 0)
@@ -287,7 +287,7 @@ namespace openvpn {
 	  return status;
       }
 
-      ssize_t read_cleartext(void *data, const size_t capacity)
+      virtual ssize_t read_cleartext(void *data, const size_t capacity)
       {
 	if (!overflow)
 	  {
@@ -310,11 +310,12 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      bool read_cleartext_ready() const {
+      virtual bool read_cleartext_ready() const
+      {
 	return !ct_in.empty() || ssl_get_bytes_avail(ssl);
       }
 
-      void write_ciphertext(const BufferPtr& buf)
+      virtual void write_ciphertext(const BufferPtr& buf)
       {
 	if (ct_in.size() < MAX_CIPHERTEXT_IN)
 	  ct_in.write_buf(buf);
@@ -322,16 +323,17 @@ namespace openvpn {
 	  overflow = true;
       }
 
-      bool read_ciphertext_ready() const {
+      virtual bool read_ciphertext_ready() const
+      {
 	return !ct_out.empty();
       }
 
-      BufferPtr read_ciphertext()
+      virtual BufferPtr read_ciphertext()
       {
 	return ct_out.read_buf();
       }
 
-      std::string ssl_handshake_details() const
+      virtual std::string ssl_handshake_details() const
       {
 	if (ssl)
 	  {
@@ -562,18 +564,21 @@ namespace openvpn {
     }
 
     // create a new SSL instance
-    typename SSL::Ptr ssl()
+    virtual SSLAPI::Ptr ssl()
     {
-      return typename SSL::Ptr(new SSL(this, NULL));
+      return SSL::Ptr(new SSL(this, NULL));
     }
 
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
-    typename SSL::Ptr ssl(const std::string& hostname)
+    virtual SSLAPI::Ptr ssl(const std::string& hostname)
     {
-      return typename SSL::Ptr(new SSL(this, hostname.c_str()));
+      return SSL::Ptr(new SSL(this, hostname.c_str()));
     }
 
-    const Mode& mode() const { return config.mode; }
+    virtual const Mode& mode() const
+    {
+      return config.mode;
+    }
  
     ~PolarSSLContext()
     {

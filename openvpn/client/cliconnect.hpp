@@ -38,10 +38,10 @@
 //      The top level object in an OpenVPN client connection.
 // 2. class ClientProto::Session<ClientCryptoAPI, ClientSSLAPI> --
 //      The OpenVPN client protocol object.
-// 3. ProtoContext<CRYPTO_API, SSL_API> --
+// 3. ProtoContext<CRYPTO_API> --
 //      The core OpenVPN protocol implementation that is common to both
 //      client and server.
-// 4. ProtoStackBase<SSLContext, Packet> --
+// 4. ProtoStackBase<Packet> --
 //      The lowest-level class that implements the basic functionality of
 //      tunneling a protocol over a reliable or unreliable transport
 //      layer, but isn't specific to OpenVPN per-se.

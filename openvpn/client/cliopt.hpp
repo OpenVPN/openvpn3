@@ -71,7 +71,7 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<ClientOptions> Ptr;
 
-    typedef ClientProto::Session<SSLLib::CryptoAPI, SSLLib::SSLAPI> Client;
+    typedef ClientProto::Session<SSLLib::CryptoAPI> Client;
 
     struct Config {
       Config()
@@ -171,7 +171,7 @@ namespace openvpn {
       cp.reset(new Client::ProtoConfig());
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
-      cp->ssl_ctx.reset(new SSLLib::SSLAPI(cc));
+      cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));
       cp->cc_factory.reset(new CryptoContextCHMFactory<SSLLib::CryptoAPI>());
       cp->gui_version = config.gui_version;
       cp->frame = frame;

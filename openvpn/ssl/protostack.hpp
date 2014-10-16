@@ -36,6 +36,7 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
+#include <openvpn/ssl/sslapi.hpp>
 
 // ProtoStackBase is designed to allow general-purpose protocols (including
 // but not limited to OpenVPN) to run over SSL, where the underlying transport
@@ -69,11 +70,10 @@ namespace openvpn {
   // Call frame.prepare on internal buffer:
   //   void frame_prepare(const Frame& frame, const unsigned int context)
 
-  template <typename SSL_CONTEXT, typename PACKET>
+  template <typename PACKET>
   class ProtoStackBase
   {
   public:
-    typedef SSL_CONTEXT SSLContext;
     typedef reliable::id_t id_t;
     typedef ReliableSendTemplate<PACKET> ReliableSend;
     typedef ReliableRecvTemplate<PACKET> ReliableRecv;
@@ -88,13 +88,13 @@ namespace openvpn {
       NET_SEND_RETRANSMIT,
     };
 
-    ProtoStackBase(SSLContext& ctx,                   // SSL context object that can be used to generate new SSL sessions
+    ProtoStackBase(SSLFactoryAPI& ssl_factory, // SSL factory object that can be used to generate new SSL sessions
 		   TimePtr now_arg,                   // pointer to current time
 		   const Frame::Ptr& frame,           // contains info on how to allocate and align buffers
 		   const SessionStats::Ptr& stats_arg,  // error statistics
 		   const id_t span,                   // basically the window size for our reliability layer
 		   const size_t max_ack_list)         // maximum number of ACK messages to bundle in one packet
-      : ssl_(ctx.ssl()),
+      : ssl_(ssl_factory.ssl()),
 	frame_(frame),
 	up_stack_reentry_level(0),
 	invalidated_(false),
@@ -434,7 +434,7 @@ namespace openvpn {
     }
 
   private:
-    typename SSLContext::SSL::Ptr ssl_;
+    typename SSLAPI::Ptr ssl_;
     Frame::Ptr frame_;
     int up_stack_reentry_level;
     bool invalidated_;

@@ -264,10 +264,10 @@ private:
 };
 
 // test the OpenVPN protocol implementation in ProtoContext
-template <typename CRYPTO_API, typename SSL_CONTEXT>
-class TestProto : public ProtoContext<CRYPTO_API, SSL_CONTEXT>
+template <typename CRYPTO_API>
+class TestProto : public ProtoContext<CRYPTO_API>
 {
-  typedef ProtoContext<CRYPTO_API, SSL_CONTEXT> Base;
+  typedef ProtoContext<CRYPTO_API> Base;
 
   using Base::now;
   using Base::mode;
@@ -439,10 +439,10 @@ private:
   char progress_[11];
 };
 
-template <typename CRYPTO_API, typename SSL_CONTEXT>
-class TestProtoClient : public TestProto<CRYPTO_API, SSL_CONTEXT>
+template <typename CRYPTO_API>
+class TestProtoClient : public TestProto<CRYPTO_API>
 {
-  typedef TestProto<CRYPTO_API, SSL_CONTEXT> Base;
+  typedef TestProto<CRYPTO_API> Base;
 public:
   TestProtoClient(const typename Base::Config::Ptr& config,
 		  const SessionStats::Ptr& stats)
@@ -460,10 +460,10 @@ private:
   }
 };
 
-template <typename CRYPTO_API, typename SSL_CONTEXT>
-class TestProtoServer : public TestProto<CRYPTO_API, SSL_CONTEXT>
+template <typename CRYPTO_API>
+class TestProtoServer : public TestProto<CRYPTO_API>
 {
-  typedef TestProto<CRYPTO_API, SSL_CONTEXT> Base;
+  typedef TestProto<CRYPTO_API> Base;
 public:
   OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
@@ -724,9 +724,9 @@ int test(const int thread_num)
     MySessionStats::Ptr cli_stats(new MySessionStats);
 
     // client ProtoContext config
-    typedef ProtoContext<ClientCryptoAPI, ClientSSLAPI> ClientProtoContext;
+    typedef ProtoContext<ClientCryptoAPI> ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
-    cp->ssl_ctx.reset(new ClientSSLAPI(cc));
+    cp->ssl_factory.reset(new ClientSSLAPI(cc));
     cp->cc_factory.reset(new CryptoContextCHMFactory<ClientCryptoAPI>());
     cp->frame = frame;
     cp->now = &time;
@@ -787,9 +787,9 @@ int test(const int thread_num)
 #endif
 
     // server ProtoContext config
-    typedef ProtoContext<ServerCryptoAPI, ServerSSLAPI> ServerProtoContext;
+    typedef ProtoContext<ServerCryptoAPI> ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
-    sp->ssl_ctx.reset(new ServerSSLAPI(sc));
+    sp->ssl_factory.reset(new ServerSSLAPI(sc));
     sp->cc_factory.reset(new CryptoContextCHMFactory<ServerCryptoAPI>());
     sp->frame = frame;
     sp->now = &time;
@@ -836,8 +836,8 @@ int test(const int thread_num)
     // server stats
     MySessionStats::Ptr serv_stats(new MySessionStats);
 
-    TestProtoClient<ClientCryptoAPI, ClientSSLAPI> cli_proto(cp, cli_stats);
-    TestProtoServer<ServerCryptoAPI, ServerSSLAPI> serv_proto(sp, serv_stats);
+    TestProtoClient<ClientCryptoAPI> cli_proto(cp, cli_stats);
+    TestProtoServer<ServerCryptoAPI> serv_proto(sp, serv_stats);
 
     for (int i = 0; i < SITER; ++i)
       {

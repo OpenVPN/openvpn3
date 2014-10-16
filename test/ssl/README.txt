@@ -2,21 +2,25 @@ Building proto.cpp sample:
 
 On Mac
 
-  Build with PolarSSL client and server (no ASM crypto algs):
+  Build with PolarSSL client and server (no minicrypto ASM algs for PolarSSL):
 
     PSSL=1 build proto
 
-  Build with PolarSSL client and server using 4 concurrent threads (no ASM crypto algs):
+  Build with PolarSSL client and server using 4 concurrent threads (no minicrypto ASM algs for PolarSSL):
 
     -DN_THREADS=4" PSSL=1 build proto
 
-  Build with PolarSSL client and OpenSSL server (no ASM crypto algs):
+  Build with PolarSSL client and OpenSSL server (no minicrypto ASM algs for PolarSSL):
 
     PSSL=1 OSSL=1 OPENSSL_SYS=1 build proto
 
-  Build with OpenSSL client and server (no ASM crypto algs):
+  Build with OpenSSL client and server:
 
     OSSL=1 OPENSSL_SYS=1 build proto
+
+  Build with AppleSSL client and OpenSSL server:
+
+    SSL_BOTH=1 OPENSSL_SYS=1 build proto
 
   Build with PolarSSL client and server + minicrypto lib:
 

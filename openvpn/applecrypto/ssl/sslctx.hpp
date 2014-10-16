@@ -37,10 +37,10 @@
 #include <Security/SecImportExport.h>
 #include <Security/SecItem.h>
 #include <Security/SecureTransport.h>
+#include <Security/SecKey.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/rc.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -48,7 +48,9 @@
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/applecrypto/cf/cfsec.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
+#include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
+#include <openvpn/ssl/sslapi.hpp>
 
 // An SSL Context is essentially a configuration that can be used
 // to generate an arbitrary number of actual SSL connections objects.
@@ -60,7 +62,7 @@ namespace openvpn {
 
   // Represents an SSL configuration that can be used
   // to instantiate actual SSL sessions.
-  class AppleSSLContext : public RC<thread_unsafe_refcount>
+  class AppleSSLContext : public SSLFactoryAPI
   {
   public:
     OPENVPN_EXCEPTION(ssl_context_error);
@@ -76,12 +78,14 @@ namespace openvpn {
     struct Config
     {
       Config() : ssl_debug_level(0),
-		 flags(0) {}
+		 flags(0),
+		 tls_version_min(TLSVersion::UNDEF) {}
 
       Mode mode;
       int ssl_debug_level;
       unsigned int flags; // defined in sslconsts.hpp
       CF::Array identity; // as returned by load_identity
+      TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate (fixme -- not implemented)
       Frame::Ptr frame;
 
       void load_identity(const std::string& subject_match)
@@ -98,7 +102,7 @@ namespace openvpn {
 
 	// identity
 	{
-	  const std::string& subject_match = opt.get("identity", 1);
+	  const std::string& subject_match = opt.get("identity", 1, 256);
 	  load_identity(subject_match);
 	}
       }
@@ -110,19 +114,19 @@ namespace openvpn {
 
     // Represents an actual SSL session.
     // Normally instantiated by AppleSSLContext::ssl().
-    class SSL : public RC<thread_unsafe_refcount>
+    class SSL : public SSLAPI
     {
       friend class AppleSSLContext;
 
     public:
       typedef boost::intrusive_ptr<SSL> Ptr;
 
-      void start_handshake()
+      virtual void start_handshake()
       {
 	SSLHandshake(ssl);
       }
 
-      ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
+      virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
       {
 	size_t actual = 0;
 	const OSStatus status = SSLWrite(ssl, data, size, &actual);
@@ -137,7 +141,7 @@ namespace openvpn {
 	  return actual;
       }
 
-      ssize_t read_cleartext(void *data, const size_t capacity)
+      virtual ssize_t read_cleartext(void *data, const size_t capacity)
       {
 	if (!overflow)
 	  {
@@ -157,12 +161,13 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      bool read_cleartext_ready() const {
+      virtual bool read_cleartext_ready() const
+      {
 	// fixme: need to detect data buffered at SSL layer
 	return !ct_in.empty();
       }
 
-      void write_ciphertext(const BufferPtr& buf)
+      virtual void write_ciphertext(const BufferPtr& buf)
       {
 	if (ct_in.size() < MAX_CIPHERTEXT_IN)
 	  ct_in.write_buf(buf);
@@ -170,16 +175,17 @@ namespace openvpn {
 	  overflow = true;
       }
 
-      bool read_ciphertext_ready() const {
+      virtual bool read_ciphertext_ready() const
+      {
 	return !ct_out.empty();
       }
 
-      BufferPtr read_ciphertext()
+      virtual BufferPtr read_ciphertext()
       {
 	return ct_out.read_buf();
       }
 
-      std::string ssl_handshake_details() const // fixme -- code me
+      virtual std::string ssl_handshake_details() const // fixme -- code me
       {
 	return "[AppleSSL not implemented]";
       }
@@ -321,9 +327,22 @@ namespace openvpn {
 	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");	
     }
 
-    SSL::Ptr ssl() const { return SSL::Ptr(new SSL(*this)); }
+    // create a new SSL instance
+    virtual SSLAPI::Ptr ssl()
+    {
+      return SSL::Ptr(new SSL(*this));
+    }
 
-    const Mode& mode() const { return config_.mode; }
+    // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
+    virtual SSLAPI::Ptr ssl(const std::string& hostname)
+    {
+      OPENVPN_THROW(ssl_context_error, "AppleSSLContext: ssl session with CommonName and/or SubjectAltName verification not implemented");
+    }
+
+    virtual const Mode& mode() const
+    {
+      return config_.mode;
+    }
 
   private:
     const Frame::Ptr& frame() const { return config_.frame; }
