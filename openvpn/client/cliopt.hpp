@@ -172,7 +172,7 @@ namespace openvpn {
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));
-      cp->cc_factory.reset(new CryptoContextCHMFactory<SSLLib::CryptoAPI>());
+      cp->cc_factory.reset(new CryptoCHMFactory<SSLLib::CryptoAPI>());
       cp->gui_version = config.gui_version;
       cp->frame = frame;
       cp->now = &now_;

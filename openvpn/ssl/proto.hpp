@@ -47,7 +47,7 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/random/randapi.hpp>
 #include <openvpn/random/prng.hpp>
-#include <openvpn/crypto/cryptobase.hpp>
+#include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/hmac.hpp>
 #include <openvpn/crypto/packet_id.hpp>
@@ -202,8 +202,8 @@ namespace openvpn {
     }
 
   public:
-    typedef CryptoContextBase<CRYPTO_API> CC;
-    typedef CryptoContextFactory<CRYPTO_API> CCFactory;
+    typedef CryptoDCBase<CRYPTO_API> DC;
+    typedef CryptoDCFactory<CRYPTO_API> DCFactory;
 
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
@@ -236,7 +236,7 @@ namespace openvpn {
       SSLFactoryAPI::Ptr ssl_factory;
 
       // master crypto context factory
-      typename CCFactory::Ptr cc_factory;
+      typename DCFactory::Ptr cc_factory;
 
       // master Frame object
       Frame::Ptr frame;
@@ -1122,7 +1122,7 @@ namespace openvpn {
       bool is_dirty() const { return dirty; }
 
       // notification from parent of rekey operation
-      void rekey(const typename CC::RekeyType type)
+      void rekey(const typename DC::RekeyType type)
       {
 	if (crypto)
 	  crypto->rekey(type);
@@ -1863,7 +1863,7 @@ namespace openvpn {
       EventType next_event;
       Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
-      typename CC::Ptr crypto;
+      typename DC::Ptr crypto;
       TLSPRF<CRYPTO_API> tlsprf_self;
       TLSPRF<CRYPTO_API> tlsprf_peer;
     };
@@ -2254,7 +2254,7 @@ namespace openvpn {
     void reset_all()
     {
       if (primary)
-	primary->rekey(CC::DEACTIVATE_ALL);
+	primary->rekey(DC::DEACTIVATE_ALL);
       primary.reset();
       secondary.reset();
     }
@@ -2404,7 +2404,7 @@ namespace openvpn {
     void promote_secondary_to_primary()
     {
       primary.swap(secondary);
-      primary->rekey(CC::PROMOTE_SECONDARY_TO_PRIMARY);
+      primary->rekey(DC::PROMOTE_SECONDARY_TO_PRIMARY);
       secondary->prepare_expire();
     }
 
@@ -2418,7 +2418,7 @@ namespace openvpn {
 	    {
 	    case KeyContext::KEV_ACTIVE:
 	      OPENVPN_LOG_PROTO_VERBOSE("*** SESSION_ACTIVE");
-	      primary->rekey(CC::ACTIVATE_PRIMARY);
+	      primary->rekey(DC::ACTIVATE_PRIMARY);
 	      active();
 	      break;
 	    case KeyContext::KEV_RENEGOTIATE:
@@ -2459,7 +2459,7 @@ namespace openvpn {
 		promote_secondary_to_primary();
 	      break;
 	    case KeyContext::KEV_EXPIRE:
-	      secondary->rekey(CC::DEACTIVATE_SECONDARY);
+	      secondary->rekey(DC::DEACTIVATE_SECONDARY);
 	      secondary.reset();
 	      break;
 	    case KeyContext::KEV_NEGOTIATE_FAILED:

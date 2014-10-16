@@ -26,14 +26,14 @@
 
 #include <openvpn/crypto/encrypt.hpp>
 #include <openvpn/crypto/decrypt.hpp>
-#include <openvpn/crypto/cryptobase.hpp>
+#include <openvpn/crypto/cryptodc.hpp>
 
 namespace openvpn {
 
   template <typename CRYPTO_API>
-  class CryptoContextCHM : public CryptoContextBase<CRYPTO_API>
+  class CryptoCHM : public CryptoDCBase<CRYPTO_API>
   {
-    typedef CryptoContextBase<CRYPTO_API> Base;
+    typedef CryptoDCBase<CRYPTO_API> Base;
 
     virtual void init_frame(const Frame::Ptr& frame)
     {
@@ -105,11 +105,11 @@ namespace openvpn {
   };
 
   template <typename CRYPTO_API>
-  class CryptoContextCHMFactory : public CryptoContextFactory<CRYPTO_API>
+  class CryptoCHMFactory : public CryptoDCFactory<CRYPTO_API>
   {
-    virtual typename CryptoContextBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id)
+    virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id)
     {
-      return new CryptoContextCHM<CRYPTO_API>();
+      return new CryptoCHM<CRYPTO_API>();
     }
   };
 

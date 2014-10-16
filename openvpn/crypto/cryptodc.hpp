@@ -21,8 +21,8 @@
 
 // Base class for OpenVPN data channel encryption/decryption
 
-#ifndef OPENVPN_CRYPTO_CRYPTOBASE_H
-#define OPENVPN_CRYPTO_CRYPTOBASE_H
+#ifndef OPENVPN_CRYPTO_CRYPTODC_H
+#define OPENVPN_CRYPTO_CRYPTODC_H
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/error/error.hpp>
@@ -34,11 +34,12 @@
 
 namespace openvpn {
 
+  // Base class for encryption/decryption of data channel
   template <typename CRYPTO_API>
-  class CryptoContextBase : public RC<thread_unsafe_refcount>
+  class CryptoDCBase : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<CryptoContextBase> Ptr;
+    typedef boost::intrusive_ptr<CryptoDCBase> Ptr;
 
     // Encrypt/Decrypt
 
@@ -84,14 +85,15 @@ namespace openvpn {
 				       const SessionStats::Ptr& stats_arg) = 0;
   };
 
-  // Factory for CryptoContextBase objects
+  // Factory for CryptoDCBase objects
+  // proto.hpp calls new_obj to instantiate data channel encrypt/decrypt session.
   template <typename CRYPTO_API>
-  class CryptoContextFactory : public RC<thread_unsafe_refcount>
+  class CryptoDCFactory : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<CryptoContextFactory> Ptr;
+    typedef boost::intrusive_ptr<CryptoDCFactory> Ptr;
 
-    virtual typename CryptoContextBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
+    virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
   };
 }
 

@@ -727,7 +727,7 @@ int test(const int thread_num)
     typedef ProtoContext<ClientCryptoAPI> ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_factory.reset(new ClientSSLAPI(cc));
-    cp->cc_factory.reset(new CryptoContextCHMFactory<ClientCryptoAPI>());
+    cp->cc_factory.reset(new CryptoCHMFactory<ClientCryptoAPI>());
     cp->frame = frame;
     cp->now = &time;
     cp->rng = rng_cli;
@@ -790,7 +790,7 @@ int test(const int thread_num)
     typedef ProtoContext<ServerCryptoAPI> ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
     sp->ssl_factory.reset(new ServerSSLAPI(sc));
-    sp->cc_factory.reset(new CryptoContextCHMFactory<ServerCryptoAPI>());
+    sp->cc_factory.reset(new CryptoCHMFactory<ServerCryptoAPI>());
     sp->frame = frame;
     sp->now = &time;
     sp->rng = rng_serv;
