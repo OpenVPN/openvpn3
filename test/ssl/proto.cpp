@@ -96,7 +96,7 @@
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/init/initprocess.hpp>
 
-#include <openvpn/crypto/crypto_chm.hpp>
+#include <openvpn/crypto/cryptodcsel.hpp>
 
 #if !(defined(USE_OPENSSL) || defined(USE_POLARSSL) || defined(USE_APPLE_SSL))
 #error Must define one or more of USE_OPENSSL, USE_POLARSSL, USE_APPLE_SSL.
@@ -727,7 +727,7 @@ int test(const int thread_num)
     typedef ProtoContext<ClientCryptoAPI> ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_factory.reset(new ClientSSLAPI(cc));
-    cp->cc_factory.reset(new CryptoCHMFactory<ClientCryptoAPI>());
+    cp->dc_factory.reset(new CryptoDCSelect<ClientCryptoAPI>(frame, prng_cli));
     cp->frame = frame;
     cp->now = &time;
     cp->rng = rng_cli;
@@ -737,6 +737,7 @@ int test(const int thread_num)
     cp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
     cp->cipher = ClientCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
     cp->digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
+    cp->set_cipher_digest();
 #ifdef USE_TLS_AUTH
     cp->tls_auth_key.parse(tls_auth_key);
     cp->tls_auth_digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
@@ -790,7 +791,7 @@ int test(const int thread_num)
     typedef ProtoContext<ServerCryptoAPI> ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
     sp->ssl_factory.reset(new ServerSSLAPI(sc));
-    sp->cc_factory.reset(new CryptoCHMFactory<ServerCryptoAPI>());
+    sp->dc_factory.reset(new CryptoDCSelect<ServerCryptoAPI>(frame, prng_serv));
     sp->frame = frame;
     sp->now = &time;
     sp->rng = rng_serv;
@@ -800,6 +801,7 @@ int test(const int thread_num)
     sp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
     sp->cipher = ServerCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
     sp->digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
+    sp->set_cipher_digest();
 #ifdef USE_TLS_AUTH
     sp->tls_auth_key.parse(tls_auth_key);
     sp->tls_auth_digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));

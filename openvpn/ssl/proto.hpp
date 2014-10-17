@@ -203,6 +203,7 @@ namespace openvpn {
 
   public:
     typedef CryptoDCBase<CRYPTO_API> DC;
+    typedef CryptoDCContext<CRYPTO_API> DCContext;
     typedef CryptoDCFactory<CRYPTO_API> DCFactory;
 
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
@@ -235,8 +236,9 @@ namespace openvpn {
       // master SSL context factory
       SSLFactoryAPI::Ptr ssl_factory;
 
-      // master crypto context factory
-      typename DCFactory::Ptr cc_factory;
+      // data channel context and factory
+      typename DCContext::Ptr dc_context; // set with set_cipher_digest
+      typename DCFactory::Ptr dc_factory;
 
       // master Frame object
       Frame::Ptr frame;
@@ -263,8 +265,8 @@ namespace openvpn {
       CompressContext comp_ctx;
 
       // data channel parms
-      typename CRYPTO_API::Cipher cipher;
-      typename CRYPTO_API::Digest digest;
+      typename CRYPTO_API::Cipher cipher; // set with set_cipher_digest
+      typename CRYPTO_API::Digest digest; // set with set_cipher_digest
 
       // tls_auth parms
       OpenVPNStaticKey tls_auth_key; // leave this undefined to disable tls_auth
@@ -368,6 +370,7 @@ namespace openvpn {
 	  else
 	    digest = typename CRYPTO_API::Digest("SHA1");
 	}
+	set_cipher_digest(); // fixme
 
 	// tls-auth
 	{
@@ -485,6 +488,7 @@ namespace openvpn {
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
 	  }
+	set_cipher_digest(); // fixme
 
 	// compression
 	std::string new_comp;
@@ -530,6 +534,11 @@ namespace openvpn {
 	  pid_mode = PacketIDReceive::TCP_MODE;
 	else
 	  throw proto_option_error("transport protocol undefined");
+      }
+
+      void set_cipher_digest() // fixme
+      {
+	dc_context = dc_factory->new_obj(cipher, digest);
       }
 
       void set_xmit_creds(const bool xmit_creds_arg)
@@ -1567,30 +1576,22 @@ namespace openvpn {
 	const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
 
 	// build crypto context for data channel encryption/decryption
-	crypto = proto.config->cc_factory->new_obj(key_id_);
-
-	// initialize CryptoContext
-	crypto->init_frame(c.frame);
-	crypto->init_prng(c.prng);
+	crypto = proto.config->dc_context->new_obj(key_id_);
 
 	// initialize CryptoContext encrypt
 	if (c.cipher.defined())
-	  crypto->init_encrypt_cipher(c.cipher,
-				      key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
+	  crypto->init_encrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
 				      CRYPTO_API::CipherContext::ENCRYPT);
 	if (c.digest.defined())
-	  crypto->init_encrypt_hmac(c.digest,
-				    key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+	  crypto->init_encrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
 	crypto->init_encrypt_pid_send(PacketID::SHORT_FORM);
 
 	// initialize CryptoContext decrypt
 	if (c.cipher.defined())
-	  crypto->init_decrypt_cipher(c.cipher,
-				      key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
+	  crypto->init_decrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
 				      CRYPTO_API::CipherContext::DECRYPT);
 	if (c.digest.defined())
-	  crypto->init_decrypt_hmac(c.digest,
-				    key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	  crypto->init_decrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 	crypto->init_decrypt_pid_recv(c.pid_mode,
 				      PacketID::SHORT_FORM,
 				      c.pid_seq_backtrack, c.pid_time_backtrack,

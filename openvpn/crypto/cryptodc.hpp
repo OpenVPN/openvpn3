@@ -41,6 +41,23 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<CryptoDCBase> Ptr;
 
+    // Initialization
+
+    virtual void init_encrypt_cipher(const StaticKey& key, const int mode) = 0;
+
+    virtual void init_encrypt_hmac(const StaticKey& key) = 0;
+
+    virtual void init_encrypt_pid_send(const int form) = 0;
+
+    virtual void init_decrypt_cipher(const StaticKey& key, const int mode) = 0;
+
+    virtual void init_decrypt_hmac(const StaticKey& key) = 0;
+
+    virtual void init_decrypt_pid_recv(const int mode, const int form,
+				       const int seq_backtrack, const int time_backtrack,
+				       const char *name, const int unit,
+				       const SessionStats::Ptr& stats_arg) = 0;
+
     // Encrypt/Decrypt
 
     // returns true if packet ID is close to wrapping
@@ -58,42 +75,27 @@ namespace openvpn {
     };
 
     virtual void rekey(const RekeyType type) = 0;
-
-    // Initialization
-
-    virtual void init_frame(const Frame::Ptr& frame) = 0;
-
-    virtual void init_prng(const typename PRNG<CRYPTO_API>::Ptr& prng) = 0;
-
-    virtual void init_encrypt_cipher(const typename CRYPTO_API::Cipher& cipher,
-				     const StaticKey& key, const int mode) = 0;
-
-    virtual void init_encrypt_hmac(const typename CRYPTO_API::Digest& digest,
-				   const StaticKey& key) = 0;
-
-    virtual void init_encrypt_pid_send(const int form) = 0;
-
-    virtual void init_decrypt_cipher(const typename CRYPTO_API::Cipher& cipher,
-				     const StaticKey& key, const int mode) = 0;
-
-    virtual void init_decrypt_hmac(const typename CRYPTO_API::Digest& digest,
-				   const StaticKey& key) = 0;
-
-    virtual void init_decrypt_pid_recv(const int mode, const int form,
-				       const int seq_backtrack, const int time_backtrack,
-				       const char *name, const int unit,
-				       const SessionStats::Ptr& stats_arg) = 0;
   };
 
   // Factory for CryptoDCBase objects
-  // proto.hpp calls new_obj to instantiate data channel encrypt/decrypt session.
+  template <typename CRYPTO_API>
+  class CryptoDCContext : public RC<thread_unsafe_refcount>
+  {
+  public:
+    typedef boost::intrusive_ptr<CryptoDCContext> Ptr;
+
+    virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
+  };
+
+  // Factory for CryptoDCContext objects
   template <typename CRYPTO_API>
   class CryptoDCFactory : public RC<thread_unsafe_refcount>
   {
   public:
     typedef boost::intrusive_ptr<CryptoDCFactory> Ptr;
 
-    virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
+    virtual typename CryptoDCContext<CRYPTO_API>::Ptr new_obj(const typename CRYPTO_API::Cipher& cipher,
+							      const typename CRYPTO_API::Digest& digest) = 0;
   };
 }
 

@@ -33,27 +33,29 @@ namespace openvpn {
   template <typename CRYPTO_API>
   class CryptoCHM : public CryptoDCBase<CRYPTO_API>
   {
+  public:
     typedef CryptoDCBase<CRYPTO_API> Base;
 
-    virtual void init_frame(const Frame::Ptr& frame)
+    CryptoCHM(const typename CRYPTO_API::Cipher& cipher_arg,
+	      const typename CRYPTO_API::Digest& digest_arg,
+	      const Frame::Ptr& frame_arg,
+	      const typename PRNG<CRYPTO_API>::Ptr& prng_arg)
+      : cipher(cipher_arg),
+	digest(digest_arg),
+	frame(frame_arg),
+	prng(prng_arg)
     {
       encrypt_.frame = frame;
       decrypt_.frame = frame;
-    }
-
-    virtual void init_prng(const typename PRNG<CRYPTO_API>::Ptr& prng)
-    {
       encrypt_.prng = prng;
     }
 
-    virtual void init_encrypt_cipher(const typename CRYPTO_API::Cipher& cipher,
-				     const StaticKey& key, const int mode)
+    virtual void init_encrypt_cipher(const StaticKey& key, const int mode)
     {
       encrypt_.cipher.init(cipher, key, mode);
     }
 
-    virtual void init_encrypt_hmac(const typename CRYPTO_API::Digest& digest,
-				   const StaticKey& key)
+    virtual void init_encrypt_hmac(const StaticKey& key)
     {
       encrypt_.hmac.init(digest, key);
     }
@@ -63,14 +65,12 @@ namespace openvpn {
       encrypt_.pid_send.init(form);
     }
 
-    virtual void init_decrypt_cipher(const typename CRYPTO_API::Cipher& cipher,
-				     const StaticKey& key, const int mode)
+    virtual void init_decrypt_cipher(const StaticKey& key, const int mode)
     {
       decrypt_.cipher.init(cipher, key, mode);
     }
 
-    virtual void init_decrypt_hmac(const typename CRYPTO_API::Digest& digest,
-				   const StaticKey& key)
+    virtual void init_decrypt_hmac(const StaticKey& key)
     {
       decrypt_.hmac.init(digest, key);
     }
@@ -100,19 +100,43 @@ namespace openvpn {
     }
 
   private:
+    typename CRYPTO_API::Cipher cipher;
+    typename CRYPTO_API::Digest digest;
+    Frame::Ptr frame;
+    const typename PRNG<CRYPTO_API>::Ptr prng;
+
     Encrypt<CRYPTO_API> encrypt_;
     Decrypt<CRYPTO_API> decrypt_;
   };
 
   template <typename CRYPTO_API>
-  class CryptoCHMFactory : public CryptoDCFactory<CRYPTO_API>
+  class CryptoContextCHM : public CryptoDCContext<CRYPTO_API>
   {
+  public:
+    typedef boost::intrusive_ptr<CryptoContextCHM> Ptr;
+
+    CryptoContextCHM(const typename CRYPTO_API::Cipher& cipher_arg,
+		     const typename CRYPTO_API::Digest& digest_arg,
+		     const Frame::Ptr& frame_arg,
+		     const typename PRNG<CRYPTO_API>::Ptr& prng_arg)
+      : cipher(cipher_arg),
+	digest(digest_arg),
+	frame(frame_arg),
+	prng(prng_arg)
+    {
+    }
+
     virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id)
     {
-      return new CryptoCHM<CRYPTO_API>();
+      return new CryptoCHM<CRYPTO_API>(cipher, digest, frame, prng);
     }
-  };
 
+  private:
+    typename CRYPTO_API::Cipher cipher;
+    typename CRYPTO_API::Digest digest;
+    Frame::Ptr frame;
+    const typename PRNG<CRYPTO_API>::Ptr prng;
+  };
 }
 
 #endif
