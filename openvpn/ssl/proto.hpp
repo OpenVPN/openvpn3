@@ -47,6 +47,7 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/random/randapi.hpp>
 #include <openvpn/random/prng.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/hmac.hpp>
@@ -237,8 +238,8 @@ namespace openvpn {
       SSLFactoryAPI::Ptr ssl_factory;
 
       // data channel context and factory
-      typename DCContext::Ptr dc_context; // set with set_cipher_digest
       typename DCFactory::Ptr dc_factory;
+      typename DCContext::Ptr dc_context; // set with set_cipher_digest
 
       // master Frame object
       Frame::Ptr frame;
@@ -263,10 +264,6 @@ namespace openvpn {
 
       // compressor
       CompressContext comp_ctx;
-
-      // data channel parms
-      typename CRYPTO_API::Cipher cipher; // set with set_cipher_digest
-      typename CRYPTO_API::Digest digest; // set with set_cipher_digest
 
       // tls_auth parms
       OpenVPNStaticKey tls_auth_key; // leave this undefined to disable tls_auth
@@ -341,36 +338,39 @@ namespace openvpn {
 	    throw proto_option_error("bad dev-type");
 	}
 
-	// cipher
+	// data channel
 	{
-	  const Option *o = opt.get_ptr("cipher");
-	  if (o)
-	    {
-	      const std::string& cipher_name = o->get(1, 128);
-	      if (cipher_name != "none")
-		cipher = typename CRYPTO_API::Cipher(cipher_name);
-	      else
-		cipher = typename CRYPTO_API::Cipher();
-	    }
-	  else
-	    cipher = typename CRYPTO_API::Cipher("BF-CBC");
-	}
+	  CryptoAlgs::Type cipher = CryptoAlgs::NONE;
+	  CryptoAlgs::Type digest = CryptoAlgs::NONE;
 
-	// digest
-	{
-	  const Option *o = opt.get_ptr("auth");
-	  if (o)
-	    {
-	      const std::string& auth_name = o->get(1, 128);
-	      if (auth_name != "none")
-		digest = typename CRYPTO_API::Digest(auth_name);
-	      else
-		digest = typename CRYPTO_API::Digest();
-	    }
-	  else
-	    digest = typename CRYPTO_API::Digest("SHA1");
+	  // cipher
+	  {
+	    const Option *o = opt.get_ptr("cipher");
+	    if (o)
+	      {
+		const std::string& cipher_name = o->get(1, 128);
+		if (cipher_name != "none")
+		  cipher = CryptoAlgs::lookup(cipher_name);
+	      }
+	    else
+	      cipher = CryptoAlgs::lookup("BF-CBC");
+	  }
+
+	  // digest
+	  {
+	    const Option *o = opt.get_ptr("auth");
+	    if (o)
+	      {
+		const std::string& auth_name = o->get(1, 128);
+		if (auth_name != "none")
+		  digest = CryptoAlgs::lookup(auth_name);
+	      }
+	    else
+	      digest = CryptoAlgs::lookup("SHA1");
+	  }
+	  OPENVPN_LOG("************* CRYPTO CONFIG cipher=" << cipher << " digest=" << digest); // fixme
+	  set_cipher_digest(cipher, digest);
 	}
-	set_cipher_digest(); // fixme
 
 	// tls-auth
 	{
@@ -378,7 +378,7 @@ namespace openvpn {
 	  if (o)
 	    {
 	      tls_auth_key.parse(o->get(1, 0));
-	      tls_auth_digest = digest;
+	      tls_auth_digest = typename CRYPTO_API::Digest("SHA256"); // fixme
 	    }
 	}
 
@@ -453,42 +453,45 @@ namespace openvpn {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
 	  }
 
-	// cipher
-	std::string new_cipher;
-	try {
-	  const Option *o = opt.get_ptr("cipher");
-	  if (o)
-	    {
-	      new_cipher = o->get(1, 128);
-	      if (new_cipher != "none")
-		cipher = typename CRYPTO_API::Cipher(new_cipher);
-	      else
-		cipher = typename CRYPTO_API::Cipher();
-	    }
-	}
-	catch (const std::exception& e)
-	  {
-	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed cipher '" << new_cipher << "': " << e.what());
-	  }
+	// data channel
+	{
+	  CryptoAlgs::Type cipher = CryptoAlgs::NONE;
+	  CryptoAlgs::Type digest = CryptoAlgs::NONE;
 
-	// digest
-	std::string new_digest;
-	try {
-	  const Option *o = opt.get_ptr("auth");
-	  if (o)
-	    {
-	      new_digest = o->get(1, 128);
-	      if (new_digest != "none")
-		digest = typename CRYPTO_API::Digest(new_digest);
-	      else
-		digest = typename CRYPTO_API::Digest();
-	    }
-	}
-	catch (const std::exception& e)
-	  {
-	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
+	  // cipher
+	  std::string new_cipher;
+	  try {
+	    const Option *o = opt.get_ptr("cipher");
+	    if (o)
+	      {
+		new_cipher = o->get(1, 128);
+		if (new_cipher != "none")
+		  cipher = CryptoAlgs::lookup(new_cipher);
+	      }
 	  }
-	set_cipher_digest(); // fixme
+	  catch (const std::exception& e)
+	    {
+	      OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed cipher '" << new_cipher << "': " << e.what());
+	    }
+
+	  // digest
+	  std::string new_digest;
+	  try {
+	    const Option *o = opt.get_ptr("auth");
+	    if (o)
+	      {
+		new_digest = o->get(1, 128);
+		if (new_digest != "none")
+		  digest = CryptoAlgs::lookup(new_digest);
+	      }
+	  }
+	  catch (const std::exception& e)
+	    {
+	      OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
+	    }
+	  OPENVPN_LOG("************* CRYPTO PULL cipher=" << cipher << " digest=" << digest); // fixme
+	  set_cipher_digest(cipher, digest);
+	}
 
 	// compression
 	std::string new_comp;
@@ -536,7 +539,7 @@ namespace openvpn {
 	  throw proto_option_error("transport protocol undefined");
       }
 
-      void set_cipher_digest() // fixme
+      void set_cipher_digest(const CryptoAlgs::Type cipher, const CryptoAlgs::Type digest)
       {
 	dc_context = dc_factory->new_obj(cipher, digest);
       }
@@ -581,9 +584,12 @@ namespace openvpn {
 	if (key_direction >= 0)
 	  out << ",keydir " << key_direction;
 
-	out << ",cipher " << (cipher.defined() ? cipher.name() : "[null-cipher]");
-	out << ",auth " << (digest.defined() ? digest.name() : "[null-digest]");
-	out << ",keysize " << (cipher.defined() ? cipher.key_length_in_bits() : 0);
+	if (dc_context)
+	  {
+	    out << ",cipher " << dc_context->cipher_name();
+	    out << ",auth " << dc_context->digest_name();
+	    out << ",keysize " << dc_context->key_size();
+	  }
 	if (tls_auth_key.defined())
 	  out << ",tls-auth";
 	out << ",key-method 2";
@@ -648,9 +654,7 @@ namespace openvpn {
           1 +                                            // leading op byte
 	  comp_ctx.extra_payload_bytes() +               // compression magic byte
 	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
-	  (digest.defined() ? digest.size() : 0) +       // HMAC
-	  (cipher.defined() ? cipher.iv_length() : 0) +  // Cipher IV
-	  (cipher.defined() ? cipher.block_size() : 0);  // worst-case cipher padding expansion
+	  (dc_context ? dc_context->encap_overhead() : 0); // data channel crypto layer overhead
 	return (unsigned int)adj;
       }
     };
@@ -1572,26 +1576,24 @@ namespace openvpn {
       // OpenVPN data channel protocol
       void init_data_channel_crypto_context(const OpenVPNStaticKey& key)
       {
+	// fixme -- this method is being called too early, and is preventing cipher/digest algs from being pushed by server
 	const Config& c = *proto.config;
 	const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
 
 	// build crypto context for data channel encryption/decryption
+	OPENVPN_LOG("************* NEW_OBJ KEY_ID=" << key_id_); // fixme
 	crypto = proto.config->dc_context->new_obj(key_id_);
-
-	// initialize CryptoContext encrypt
-	if (c.cipher.defined())
-	  crypto->init_encrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
-				      CRYPTO_API::CipherContext::ENCRYPT);
-	if (c.digest.defined())
-	  crypto->init_encrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+	if (crypto->cipher_defined())
+	  {
+	    crypto->init_encrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir));
+	    crypto->init_decrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
+	  }
+	if (crypto->digest_defined())
+	  {
+	    crypto->init_encrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+	    crypto->init_decrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	  }
 	crypto->init_encrypt_pid_send(PacketID::SHORT_FORM);
-
-	// initialize CryptoContext decrypt
-	if (c.cipher.defined())
-	  crypto->init_decrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir),
-				      CRYPTO_API::CipherContext::DECRYPT);
-	if (c.digest.defined())
-	  crypto->init_decrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 	crypto->init_decrypt_pid_recv(c.pid_mode,
 				      PacketID::SHORT_FORM,
 				      c.pid_seq_backtrack, c.pid_time_backtrack,

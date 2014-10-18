@@ -35,6 +35,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
   namespace PolarSSLCrypto {
@@ -45,23 +46,47 @@ namespace openvpn {
       friend class CipherContext;
 
     public:
-      OPENVPN_EXCEPTION(polarssl_cipher_not_found);
+      OPENVPN_EXCEPTION(polarssl_cipher);
       OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_undefined);
 
-      Cipher() : cipher_(NULL) {}
-
-      Cipher(const std::string& name)
+      Cipher()
       {
-	const std::string translated_name = openvpn_to_cipher_name(name.c_str());
-	cipher_ = cipher_info_from_string(translated_name.c_str());
-	if (!cipher_)
-	  throw polarssl_cipher_not_found(translated_name);
+	reset();
+      }
+
+      Cipher(const CryptoAlgs::Type alg)
+      {
+	switch (type_ = alg)
+	  {
+	  case CryptoAlgs::NONE:
+	    reset();
+	    break;
+	  case CryptoAlgs::AES_128_CBC:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_128_CBC);
+	    break;
+	  case CryptoAlgs::AES_192_CBC:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_192_CBC);
+	    break;
+	  case CryptoAlgs::AES_256_CBC:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_256_CBC);
+	    break;
+	  case CryptoAlgs::DES_CBC:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_DES_CBC);
+	    break;
+	  case CryptoAlgs::DES_EDE3_CBC:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_DES_EDE3_CBC);
+	    break;
+	  case CryptoAlgs::BF_CBC:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_BLOWFISH_CBC);
+	    break;
+	  default:
+	    OPENVPN_THROW(polarssl_cipher, CryptoAlgs::name(alg) << ": not usable");
+	  }
       }
 
       std::string name() const
       {
-	check_initialized();
-	return cipher_name_to_openvpn(cipher_->name);
+	return CryptoAlgs::name(type_);
       }
 
       size_t key_length() const
@@ -91,6 +116,12 @@ namespace openvpn {
       bool defined() const { return cipher_ != NULL; }
 
     private:
+      void reset()
+      {
+	cipher_ = NULL;
+	type_ = CryptoAlgs::NONE;
+      }
+
       const cipher_info_t *get() const
       {
 	check_initialized();
@@ -105,24 +136,8 @@ namespace openvpn {
 #endif
       }
 
-      static std::string openvpn_to_cipher_name(const std::string& name)
-      {
-	const std::string n = boost::algorithm::to_upper_copy(name);
-	if (boost::algorithm::starts_with(n, "BF-"))
-	  return "BLOWFISH-" + n.substr(3);
-	else
-	  return n;
-      }
-
-      static std::string cipher_name_to_openvpn(const std::string& name)
-      {
-	if (boost::algorithm::starts_with(name, "BLOWFISH-"))
-	  return "BF-" + name.substr(9);
-	else
-	  return name;
-      }
-
       const cipher_info_t *cipher_;
+      CryptoAlgs::Type type_;
     };
 
     class CipherContext : boost::noncopyable

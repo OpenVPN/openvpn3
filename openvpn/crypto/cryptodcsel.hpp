@@ -39,14 +39,14 @@ namespace openvpn {
     typedef boost::intrusive_ptr<CryptoDCSelect> Ptr;
 
     CryptoDCSelect(const Frame::Ptr& frame_arg,
-		     const typename PRNG<CRYPTO_API>::Ptr& prng_arg)
+		   const typename PRNG<CRYPTO_API>::Ptr& prng_arg)
       : frame(frame_arg),
 	prng(prng_arg)
     {
     }
 
-    virtual typename CryptoDCContext<CRYPTO_API>::Ptr new_obj(const typename CRYPTO_API::Cipher& cipher,
-							      const typename CRYPTO_API::Digest& digest)
+    virtual typename CryptoDCContext<CRYPTO_API>::Ptr new_obj(const CryptoAlgs::Type cipher,
+							      const CryptoAlgs::Type digest)
     {
       // fixme -- handle AEAD modes as well
       return new CryptoContextCHM<CRYPTO_API>(cipher, digest, frame, prng);

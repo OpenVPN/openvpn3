@@ -50,9 +50,25 @@ namespace openvpn {
       encrypt_.prng = prng;
     }
 
-    virtual void init_encrypt_cipher(const StaticKey& key, const int mode)
+    // Encrypt/Decrypt
+
+    /* returns true if packet ID is close to wrapping */
+    virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
-      encrypt_.cipher.init(cipher, key, mode);
+      encrypt_.encrypt(buf, now);
+      return encrypt_.pid_send.wrap_warning();
+    }
+
+    virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now)
+    {
+      return decrypt_.decrypt(buf, now);
+    }
+
+    // Initialization
+
+    virtual void init_encrypt_cipher(const StaticKey& key)
+    {
+      encrypt_.cipher.init(cipher, key, CRYPTO_API::CipherContext::ENCRYPT);
     }
 
     virtual void init_encrypt_hmac(const StaticKey& key)
@@ -65,9 +81,9 @@ namespace openvpn {
       encrypt_.pid_send.init(form);
     }
 
-    virtual void init_decrypt_cipher(const StaticKey& key, const int mode)
+    virtual void init_decrypt_cipher(const StaticKey& key)
     {
-      decrypt_.cipher.init(cipher, key, mode);
+      decrypt_.cipher.init(cipher, key, CRYPTO_API::CipherContext::DECRYPT);
     }
 
     virtual void init_decrypt_hmac(const StaticKey& key)
@@ -83,17 +99,19 @@ namespace openvpn {
       decrypt_.pid_recv.init(mode, form, seq_backtrack, time_backtrack, name, unit, stats_arg);
     }
 
-    /* returns true if packet ID is close to wrapping */
-    virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now)
+    // Indicate whether or not cipher/digest is defined
+
+    virtual bool cipher_defined() const
     {
-      encrypt_.encrypt(buf, now);
-      return encrypt_.pid_send.wrap_warning();
+      return cipher.defined();
     }
 
-    virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now)
+    virtual bool digest_defined() const
     {
-      return decrypt_.decrypt(buf, now);
+      return digest.defined();
     }
+
+    // Rekeying
 
     virtual void rekey(const typename Base::RekeyType type)
     {
@@ -115,12 +133,12 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<CryptoContextCHM> Ptr;
 
-    CryptoContextCHM(const typename CRYPTO_API::Cipher& cipher_arg,
-		     const typename CRYPTO_API::Digest& digest_arg,
+    CryptoContextCHM(const CryptoAlgs::Type cipher_arg,
+		     const CryptoAlgs::Type digest_arg,
 		     const Frame::Ptr& frame_arg,
 		     const typename PRNG<CRYPTO_API>::Ptr& prng_arg)
-      : cipher(cipher_arg),
-	digest(digest_arg),
+      : cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
+	digest(CryptoAlgs::legal_dc_digest(digest_arg)),
 	frame(frame_arg),
 	prng(prng_arg)
     {
@@ -129,6 +147,32 @@ namespace openvpn {
     virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id)
     {
       return new CryptoCHM<CRYPTO_API>(cipher, digest, frame, prng);
+    }
+
+    // Info for ProtoContext::options_string
+
+    virtual std::string cipher_name() const
+    {
+      return cipher.defined() ? cipher.name() : "[null-cipher]";
+    }
+
+    virtual std::string digest_name() const
+    {
+      return digest.defined() ? digest.name() : "[null-digest]";
+    }
+
+    virtual size_t key_size() const
+    {
+      return cipher.defined() ? cipher.key_length_in_bits() : 0;
+    }
+
+    // Info for ProtoContext::link_mtu_adjust
+
+    virtual size_t encap_overhead() const
+    {
+      return (digest.defined() ? digest.size() : 0) +       // HMAC
+	     (cipher.defined() ? cipher.iv_length() : 0) +  // Cipher IV
+	     (cipher.defined() ? cipher.block_size() : 0);  // worst-case cipher padding expansion
     }
 
   private:

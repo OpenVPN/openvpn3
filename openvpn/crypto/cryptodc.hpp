@@ -31,6 +31,7 @@
 #include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
 
@@ -41,29 +42,29 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<CryptoDCBase> Ptr;
 
-    // Initialization
-
-    virtual void init_encrypt_cipher(const StaticKey& key, const int mode) = 0;
-
-    virtual void init_encrypt_hmac(const StaticKey& key) = 0;
-
-    virtual void init_encrypt_pid_send(const int form) = 0;
-
-    virtual void init_decrypt_cipher(const StaticKey& key, const int mode) = 0;
-
-    virtual void init_decrypt_hmac(const StaticKey& key) = 0;
-
-    virtual void init_decrypt_pid_recv(const int mode, const int form,
-				       const int seq_backtrack, const int time_backtrack,
-				       const char *name, const int unit,
-				       const SessionStats::Ptr& stats_arg) = 0;
-
     // Encrypt/Decrypt
 
     // returns true if packet ID is close to wrapping
     virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now) = 0;
 
     virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now) = 0;
+
+    // Initialization
+
+    virtual void init_encrypt_cipher(const StaticKey& key) = 0;
+    virtual void init_encrypt_hmac(const StaticKey& key) = 0;
+    virtual void init_encrypt_pid_send(const int form) = 0;
+    virtual void init_decrypt_cipher(const StaticKey& key) = 0;
+    virtual void init_decrypt_hmac(const StaticKey& key) = 0;
+    virtual void init_decrypt_pid_recv(const int mode, const int form,
+				       const int seq_backtrack, const int time_backtrack,
+				       const char *name, const int unit,
+				       const SessionStats::Ptr& stats_arg) = 0;
+
+    // Indicate whether or not cipher/digest is defined
+
+    virtual bool cipher_defined() const = 0;
+    virtual bool digest_defined() const = 0;
 
     // Rekeying
 
@@ -85,6 +86,16 @@ namespace openvpn {
     typedef boost::intrusive_ptr<CryptoDCContext> Ptr;
 
     virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
+
+    // Info for ProtoContext::options_string
+
+    virtual std::string cipher_name() const = 0;
+    virtual std::string digest_name() const = 0;
+    virtual size_t key_size() const = 0;
+
+    // Info for ProtoContext::link_mtu_adjust
+
+    virtual size_t encap_overhead() const = 0;
   };
 
   // Factory for CryptoDCContext objects
@@ -94,8 +105,8 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<CryptoDCFactory> Ptr;
 
-    virtual typename CryptoDCContext<CRYPTO_API>::Ptr new_obj(const typename CRYPTO_API::Cipher& cipher,
-							      const typename CRYPTO_API::Digest& digest) = 0;
+    virtual typename CryptoDCContext<CRYPTO_API>::Ptr new_obj(const CryptoAlgs::Type cipher,
+							      const CryptoAlgs::Type digest) = 0;
   };
 }
 

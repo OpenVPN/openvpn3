@@ -45,22 +45,58 @@ namespace openvpn {
       friend class HMACContext;
 
     public:
-      OPENVPN_EXCEPTION(polarssl_digest_not_found);
+      OPENVPN_EXCEPTION(polarssl_digest_not_found); // fixme
+      OPENVPN_EXCEPTION(polarssl_digest);
       OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_undefined);
 
-      Digest() : digest_(NULL) {}
+      Digest()
+      {
+	reset();
+      }
 
-      Digest(const std::string& name)
+      Digest(const std::string& name) // fixme
       {
 	digest_ = md_info_from_string(name.c_str());
 	if (!digest_)
 	  throw polarssl_digest_not_found(name);
       }
 
+      Digest(const CryptoAlgs::Type alg)
+      {
+	switch (type_ = alg)
+	  {
+	  case CryptoAlgs::NONE:
+	    reset();
+	    break;
+	  case CryptoAlgs::MD4:
+	    digest_ = md_info_from_type(POLARSSL_MD_MD4);
+	    break;
+	  case CryptoAlgs::MD5:
+	    digest_ = md_info_from_type(POLARSSL_MD_MD5);
+	    break;
+	  case CryptoAlgs::SHA1:
+	    digest_ = md_info_from_type(POLARSSL_MD_SHA1);
+	    break;
+	  case CryptoAlgs::SHA224:
+	    digest_ = md_info_from_type(POLARSSL_MD_SHA224);
+	    break;
+	  case CryptoAlgs::SHA256:
+	    digest_ = md_info_from_type(POLARSSL_MD_SHA256);
+	    break;
+	  case CryptoAlgs::SHA384:
+	    digest_ = md_info_from_type(POLARSSL_MD_SHA384);
+	    break;
+	  case CryptoAlgs::SHA512:
+	    digest_ = md_info_from_type(POLARSSL_MD_SHA512);
+	    break;
+	  default:
+	    OPENVPN_THROW(polarssl_digest, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
       std::string name() const
       {
-	check_initialized();
-	return md_get_name(digest_);
+	return CryptoAlgs::name(type_);
       }
 
       size_t size() const
@@ -79,6 +115,12 @@ namespace openvpn {
     private:
       Digest(const md_info_t *digest) : digest_(digest) {}
 
+      void reset()
+      {
+	digest_ = NULL;
+	type_ = CryptoAlgs::NONE;
+      }
+
       const md_info_t *get() const
       {
 	check_initialized();
@@ -94,6 +136,7 @@ namespace openvpn {
       }
 
       const md_info_t *digest_;
+      CryptoAlgs::Type type_;
     };
 
     class DigestContext : boost::noncopyable
