@@ -19,10 +19,10 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// General-purpose OpenVPN protocol decrypt method that is independent of the underlying CRYPTO_API
+// General-purpose OpenVPN protocol decrypt method (CBC/HMAC) that is independent of the underlying CRYPTO_API
 
-#ifndef OPENVPN_CRYPTO_DECRYPT_H
-#define OPENVPN_CRYPTO_DECRYPT_H
+#ifndef OPENVPN_CRYPTO_DECRYPT_CHM_H
+#define OPENVPN_CRYPTO_DECRYPT_CHM_H
 
 #include <cstring>
 
@@ -41,9 +41,9 @@
 namespace openvpn {
 
   template <typename CRYPTO_API>
-  class Decrypt {
+  class DecryptCHM {
   public:
-    OPENVPN_SIMPLE_EXCEPTION(unsupported_cipher_mode);
+    OPENVPN_SIMPLE_EXCEPTION(chm_unsupported_cipher_mode);
 
     Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now)
     {
@@ -98,7 +98,7 @@ namespace openvpn {
 	    }
 	  else
 	    {
-	      throw unsupported_cipher_mode();
+	      throw chm_unsupported_cipher_mode();
 	    }
 
 	  // return cleartext result in buf

@@ -24,8 +24,8 @@
 #ifndef OPENVPN_CRYPTO_CRYPTO_CHM_H
 #define OPENVPN_CRYPTO_CRYPTO_CHM_H
 
-#include <openvpn/crypto/encrypt.hpp>
-#include <openvpn/crypto/decrypt.hpp>
+#include <openvpn/crypto/encrypt_chm.hpp>
+#include <openvpn/crypto/decrypt_chm.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 
 namespace openvpn {
@@ -124,8 +124,8 @@ namespace openvpn {
     Frame::Ptr frame;
     const typename PRNG<CRYPTO_API>::Ptr prng;
 
-    Encrypt<CRYPTO_API> encrypt_;
-    Decrypt<CRYPTO_API> decrypt_;
+    EncryptCHM<CRYPTO_API> encrypt_;
+    DecryptCHM<CRYPTO_API> decrypt_;
   };
 
   template <typename CRYPTO_API>
