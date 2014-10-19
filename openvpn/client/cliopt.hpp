@@ -170,6 +170,7 @@ namespace openvpn {
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
       cp->dc_factory.reset(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, prng));
+      cp->dc_deferred = true; // defer data channel setup until after options pull
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));

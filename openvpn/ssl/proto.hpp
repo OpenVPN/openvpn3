@@ -42,6 +42,7 @@
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -232,6 +233,7 @@ namespace openvpn {
 	pid_time_backtrack = 0;
 	xmit_creds = true;
 	key_direction = -1; // bidirectional
+	dc_deferred = false;
       }
 
       // master SSL context factory
@@ -252,6 +254,9 @@ namespace openvpn {
 
       // PRNG
       typename PRNG<CRYPTO_API>::Ptr prng;
+
+      // defer data channel initialization until after client options pull
+      bool dc_deferred;
 
       // transmit username/password creds to server (client-only)
       bool xmit_creds;
@@ -490,7 +495,8 @@ namespace openvpn {
 	      OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
 	    }
 	  OPENVPN_LOG("************* CRYPTO PULL cipher=" << cipher << " digest=" << digest); // fixme
-	  set_cipher_digest(cipher, digest);
+	  if (cipher != CryptoAlgs::NONE)
+	    set_cipher_digest(cipher, digest);
 	}
 
 	// compression
@@ -934,6 +940,17 @@ namespace openvpn {
       using Base::raw_send;
       using Base::send_pending_acks;
 
+      // Helper for handling deferred data channel setup,
+      // for example if cipher/digest are pushed.
+      struct DataChannelKey
+      {
+	DataChannelKey() : rekey_defined(false) {}
+
+	OpenVPNStaticKey key;
+	bool rekey_defined;
+	typename DC::RekeyType rekey_type;
+      };
+
     public:
       typedef boost::intrusive_ptr<KeyContext> Ptr;
 
@@ -1139,6 +1156,12 @@ namespace openvpn {
       {
 	if (crypto)
 	  crypto->rekey(type);
+	else if (data_channel_key.defined())
+	  {
+	    // save for deferred processing
+	    data_channel_key->rekey_type = type;
+	    data_channel_key->rekey_defined = true;
+	  }
       }
 
       // time that our state transitioned to ACTIVE
@@ -1254,6 +1277,40 @@ namespace openvpn {
 	catch (BufferException&)
 	  {
 	    return false;
+	  }
+      }
+
+      // Initialize the components of the OpenVPN data channel protocol
+      void init_data_channel_crypto_context()
+      {
+	if (data_channel_key.defined())
+	  {
+	    const Config& c = *proto.config;
+	    const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
+	    OpenVPNStaticKey& key = data_channel_key->key;
+
+	    // build crypto context for data channel encryption/decryption
+	    OPENVPN_LOG("************* NEW_OBJ KEY_ID=" << key_id_); // fixme
+	    crypto = proto.config->dc_context->new_obj(key_id_);
+	    if (crypto->cipher_defined())
+	      {
+		crypto->init_encrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir));
+		crypto->init_decrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
+	      }
+	    if (crypto->digest_defined())
+	      {
+		crypto->init_encrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+		crypto->init_decrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	      }
+	    crypto->init_encrypt_pid_send(PacketID::SHORT_FORM);
+	    crypto->init_decrypt_pid_recv(c.pid_mode,
+					  PacketID::SHORT_FORM,
+					  c.pid_seq_backtrack, c.pid_time_backtrack,
+					  "DATA", int(key_id_),
+					  proto.stats);
+	    if (data_channel_key->rekey_defined)
+	      crypto->rekey(data_channel_key->rekey_type);
+	    data_channel_key.reset();
 	  }
       }
 
@@ -1564,41 +1621,14 @@ namespace openvpn {
       // the data channel crypto context
       void generate_session_keys()
       {
-	OpenVPNStaticKey key;
-	tlsprf_self.generate_key_expansion(key, tlsprf_peer, proto.psid_self, proto.psid_peer);
-	OPENVPN_LOG_PROTO_VERBOSE("KEY " << proto.mode().str() << ' ' << key.render());
-	init_data_channel_crypto_context(key);
+	ScopedPtr<DataChannelKey> dck(new DataChannelKey());
+	tlsprf_self.generate_key_expansion(dck->key, tlsprf_peer, proto.psid_self, proto.psid_peer);
+	OPENVPN_LOG_PROTO_VERBOSE("KEY " << proto.mode().str() << ' ' << dck->key.render());
 	tlsprf_self.erase();
 	tlsprf_peer.erase();
-      }
-
-      // given our ephemeral session key, initialize the components of the
-      // OpenVPN data channel protocol
-      void init_data_channel_crypto_context(const OpenVPNStaticKey& key)
-      {
-	// fixme -- this method is being called too early, and is preventing cipher/digest algs from being pushed by server
-	const Config& c = *proto.config;
-	const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
-
-	// build crypto context for data channel encryption/decryption
-	OPENVPN_LOG("************* NEW_OBJ KEY_ID=" << key_id_); // fixme
-	crypto = proto.config->dc_context->new_obj(key_id_);
-	if (crypto->cipher_defined())
-	  {
-	    crypto->init_encrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir));
-	    crypto->init_decrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
-	  }
-	if (crypto->digest_defined())
-	  {
-	    crypto->init_encrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
-	    crypto->init_decrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
-	  }
-	crypto->init_encrypt_pid_send(PacketID::SHORT_FORM);
-	crypto->init_decrypt_pid_recv(c.pid_mode,
-				      PacketID::SHORT_FORM,
-				      c.pid_seq_backtrack, c.pid_time_backtrack,
-				      "DATA", int(key_id_),
-				      proto.stats);
+	dck.swap(data_channel_key);
+	if (!proto.dc_deferred)
+	  init_data_channel_crypto_context();
       }
 
       // generate message head
@@ -1869,6 +1899,7 @@ namespace openvpn {
       typename DC::Ptr crypto;
       TLSPRF<CRYPTO_API> tlsprf_self;
       TLSPRF<CRYPTO_API> tlsprf_peer;
+      ScopedPtr<DataChannelKey> data_channel_key;
     };
 
   public:
@@ -1954,6 +1985,9 @@ namespace openvpn {
 
       // by default, fast_transition is turned off
       fast_transition = false;
+
+      // defer data channel initialization until after client options pull?
+      dc_deferred = c.dc_deferred;
 
       // clear key contexts
       reset_all();
@@ -2222,9 +2256,14 @@ namespace openvpn {
     void process_push(const OptionList& opt, const ProtoContextOptions& pco)
     {
       config->process_push(opt, pco);
+      primary->init_data_channel_crypto_context();
       primary->construct_compressor();
       if (secondary)
-	secondary->construct_compressor();
+	{
+	  secondary->init_data_channel_crypto_context();
+	  secondary->construct_compressor();
+	}
+      dc_deferred = false;
 
       // in case keepalive parms were modified by push
       keepalive_parms_modified();
@@ -2552,6 +2591,7 @@ namespace openvpn {
 
     typename KeyContext::Ptr primary;
     typename KeyContext::Ptr secondary;
+    bool dc_deferred;
 
     bool fast_transition;
 
