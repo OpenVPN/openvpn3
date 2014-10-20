@@ -239,6 +239,9 @@ namespace openvpn {
       CryptoDCFactory::Ptr dc_factory;
       CryptoDCContext::Ptr dc_context; // set with set_cipher_digest
 
+      // TLSPRF factory
+      TLSPRFFactory::Ptr tlsprf_factory;
+
       // master Frame object
       Frame::Ptr frame;
 
@@ -975,8 +978,7 @@ namespace openvpn {
 	  dirty(0),
 	  handled_pid_wrap(false),
 	  is_reliable(p.config->protocol.is_reliable()),
-	  tlsprf_self(p.is_server()),
-	  tlsprf_peer(!p.is_server())
+	  tlsprf(p.config->tlsprf_factory->new_obj(p.is_server()))
       {
 	// set initial state
 	set_state((proto.is_server() ? S_INITIAL : C_INITIAL) + (initiator ? 0 : 1));
@@ -1564,8 +1566,8 @@ namespace openvpn {
 	BufferPtr buf = new BufferAllocated();
 	proto.config->frame->prepare(Frame::WRITE_SSL_CLEARTEXT, *buf);
 	buf->write(proto_context_private::auth_prefix, sizeof(proto_context_private::auth_prefix));
-	tlsprf_self.randomize(*proto.config->rng);
-	tlsprf_self.write(*buf);
+	tlsprf->self_randomize(*proto.config->rng);
+	tlsprf->self_write(*buf);
 	const std::string options = proto.config->options_string();
 	OPENVPN_LOG_PROTO("Tunnel Options:" << options);
 	write_auth_string(options, *buf);
@@ -1591,7 +1593,7 @@ namespace openvpn {
 	const unsigned char *buf_pre = buf.read_alloc(sizeof(proto_context_private::auth_prefix));
 	if (std::memcmp(buf_pre, proto_context_private::auth_prefix, sizeof(proto_context_private::auth_prefix)))
 	  throw bad_auth_prefix();
-	tlsprf_peer.read(buf);
+	tlsprf->peer_read(buf);
 	const std::string options = read_auth_string<std::string>(buf);
 	if (proto.is_server())
 	  {
@@ -1624,10 +1626,9 @@ namespace openvpn {
       void generate_session_keys()
       {
 	ScopedPtr<DataChannelKey> dck(new DataChannelKey());
-	tlsprf_self.generate_key_expansion(dck->key, tlsprf_peer, proto.psid_self, proto.psid_peer);
+	tlsprf->generate_key_expansion(dck->key, proto.psid_self, proto.psid_peer);
 	OPENVPN_LOG_PROTO_VERBOSE("KEY " << proto.mode().str() << ' ' << dck->key.render());
-	tlsprf_self.erase();
-	tlsprf_peer.erase();
+	tlsprf->erase();
 	dck.swap(data_channel_key);
 	if (!proto.dc_deferred)
 	  init_data_channel_crypto_context();
@@ -1899,8 +1900,7 @@ namespace openvpn {
       Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
       CryptoDCInstance::Ptr crypto;
-      TLSPRF<CRYPTO_API> tlsprf_self;
-      TLSPRF<CRYPTO_API> tlsprf_peer;
+      TLSPRFInstance::Ptr tlsprf;
       ScopedPtr<DataChannelKey> data_channel_key;
     };
 
