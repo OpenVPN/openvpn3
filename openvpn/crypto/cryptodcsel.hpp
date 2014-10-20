@@ -39,7 +39,7 @@ namespace openvpn {
     typedef boost::intrusive_ptr<CryptoDCSelect> Ptr;
 
     CryptoDCSelect(const Frame::Ptr& frame_arg,
-		   const typename PRNG<CRYPTO_API>::Ptr& prng_arg)
+		   const PRNG::Ptr& prng_arg)
       : frame(frame_arg),
 	prng(prng_arg)
     {
@@ -54,7 +54,7 @@ namespace openvpn {
 
   private:
     Frame::Ptr frame;
-    const typename PRNG<CRYPTO_API>::Ptr prng;
+    PRNG::Ptr prng;
   };
 
 }

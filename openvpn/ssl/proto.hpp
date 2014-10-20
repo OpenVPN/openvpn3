@@ -253,7 +253,7 @@ namespace openvpn {
       RandomAPI::Ptr rng;
 
       // PRNG
-      typename PRNG<CRYPTO_API>::Ptr prng;
+      typename PRNG::Ptr prng;
 
       // defer data channel initialization until after client options pull
       bool dc_deferred;

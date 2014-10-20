@@ -104,7 +104,7 @@ namespace openvpn {
     CipherContext<CRYPTO_API> cipher;
     HMACContext<CRYPTO_API> hmac;
     PacketIDSend pid_send;
-    typename PRNG<CRYPTO_API>::Ptr prng;
+    PRNG::Ptr prng;
 
   private:
     // compute HMAC signature of data buffer,
