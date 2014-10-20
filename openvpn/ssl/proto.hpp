@@ -204,8 +204,6 @@ namespace openvpn {
     }
 
   public:
-    typedef CryptoDCInstance DC;
-
     OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
     OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
     OPENVPN_EXCEPTION(process_server_push_error);
@@ -251,7 +249,7 @@ namespace openvpn {
       RandomAPI::Ptr rng;
 
       // PRNG
-      typename PRNG::Ptr prng;
+      PRNG::Ptr prng;
 
       // defer data channel initialization until after client options pull
       bool dc_deferred;
@@ -270,7 +268,8 @@ namespace openvpn {
 
       // tls_auth parms
       OpenVPNStaticKey tls_auth_key; // leave this undefined to disable tls_auth
-      typename CRYPTO_API::Digest tls_auth_digest;
+      OvpnHMACFactory::Ptr tls_auth_factory;
+      OvpnHMACContext::Ptr tls_auth_context;
       int key_direction; // 0, 1, or -1 for bidirectional
 
       // reliability layer parms
@@ -341,12 +340,12 @@ namespace openvpn {
 	    throw proto_option_error("bad dev-type");
 	}
 
-	// data channel
+	// cipher/digest/tls-auth
 	{
 	  CryptoAlgs::Type cipher = CryptoAlgs::NONE;
 	  CryptoAlgs::Type digest = CryptoAlgs::NONE;
 
-	  // cipher
+	  // data channel cipher
 	  {
 	    const Option *o = opt.get_ptr("cipher");
 	    if (o)
@@ -359,7 +358,7 @@ namespace openvpn {
 	      cipher = CryptoAlgs::lookup("BF-CBC");
 	  }
 
-	  // digest
+	  // data channel HMAC
 	  {
 	    const Option *o = opt.get_ptr("auth");
 	    if (o)
@@ -373,16 +372,21 @@ namespace openvpn {
 	  }
 	  OPENVPN_LOG("************* CRYPTO CONFIG cipher=" << cipher << " digest=" << digest); // fixme
 	  set_cipher_digest(cipher, digest);
-	}
 
-	// tls-auth
-	{
-	  const Option *o = opt.get_ptr("tls-auth");
-	  if (o)
-	    {
-	      tls_auth_key.parse(o->get(1, 0));
-	      tls_auth_digest = typename CRYPTO_API::Digest("SHA256"); // fixme
-	    }
+	  // tls-auth
+	  {
+	    const Option *o = opt.get_ptr("tls-auth");
+	    if (o)
+	      {
+		tls_auth_key.parse(o->get(1, 0));
+
+		const Option *tad = opt.get_ptr("tls-auth-digest");
+		if (tad)
+		  digest = CryptoAlgs::lookup(tad->get(1, 128));
+
+		tls_auth_context = tls_auth_factory->new_obj(digest);
+	      }
+	  }
 	}
 
 	// key-direction
@@ -555,7 +559,7 @@ namespace openvpn {
 
       bool tls_auth_enabled() const
       {
-	return tls_auth_key.defined() && tls_auth_digest.defined();
+	return tls_auth_key.defined() && tls_auth_context;
       }
 
       void validate_complete() const
@@ -1221,10 +1225,10 @@ namespace openvpn {
 	      // verify HMAC
 	      {
 		recv.advance(proto.hmac_size);
-		if (!proto.ta_hmac_recv.ovpn_hmac_cmp(orig_data, orig_size,
-						      1 + ProtoSessionID::SIZE,
-						      proto.hmac_size,
-						      PacketID::size(PacketID::LONG_FORM)))
+		if (!proto.ta_hmac_recv->ovpn_hmac_cmp(orig_data, orig_size,
+						       1 + ProtoSessionID::SIZE,
+						       proto.hmac_size,
+						       PacketID::size(PacketID::LONG_FORM)))
 		  return false;
 	      }
 
@@ -1647,10 +1651,10 @@ namespace openvpn {
 	    buf.push_front(op_compose(opcode, key_id_));
 
 	    // write hmac
-	    proto.ta_hmac_send.ovpn_hmac_gen(buf.data(), buf.size(),
-					     1 + ProtoSessionID::SIZE,
-					     proto.hmac_size,
-					     PacketID::size(PacketID::LONG_FORM));
+	    proto.ta_hmac_send->ovpn_hmac_gen(buf.data(), buf.size(),
+					      1 + ProtoSessionID::SIZE,
+					      proto.hmac_size,
+					      PacketID::size(PacketID::LONG_FORM));
 	  }
 	else
 	  {
@@ -1745,10 +1749,10 @@ namespace openvpn {
 	      // verify HMAC
 	      {
 		recv.advance(proto.hmac_size);
-		if (!proto.ta_hmac_recv.ovpn_hmac_cmp(orig_data, orig_size,
-						      1 + ProtoSessionID::SIZE,
-						      proto.hmac_size,
-						      PacketID::size(PacketID::LONG_FORM)))
+		if (!proto.ta_hmac_recv->ovpn_hmac_cmp(orig_data, orig_size,
+						       1 + ProtoSessionID::SIZE,
+						       proto.hmac_size,
+						       PacketID::size(PacketID::LONG_FORM)))
 		  {
 		    proto.stats->error(Error::HMAC_ERROR);
 		    if (proto.is_tcp())
@@ -1915,27 +1919,30 @@ namespace openvpn {
 	if (!c.tls_auth_enabled())
 	  throw tls_auth_pre_validate();
 
+	// init OvpnHMACInstance
+	ta_hmac_recv = c.tls_auth_context->new_obj();
+
 	// init tls_auth hmac
 	if (c.key_direction >= 0)
 	  {
 	    // key-direction is 0 or 1
 	    const unsigned int key_dir = c.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
-	    ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	    ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 	  }
 	else
 	  {
 	    // key-direction bidirectional mode
-	    ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+	    ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
 	  }
       }
 
       bool validate(const Buffer& net_buf)
       {
 	try {
-	  return ta_hmac_recv.ovpn_hmac_cmp(net_buf.c_data(), net_buf.size(),
-					    1 + ProtoSessionID::SIZE,
-					    ta_hmac_recv.output_size(),
-					    PacketID::size(PacketID::LONG_FORM));
+	  return ta_hmac_recv->ovpn_hmac_cmp(net_buf.c_data(), net_buf.size(),
+					     1 + ProtoSessionID::SIZE,
+					     ta_hmac_recv->output_size(),
+					     PacketID::size(PacketID::LONG_FORM));
 	}
 	catch (BufferException&)
 	  {
@@ -1944,7 +1951,7 @@ namespace openvpn {
       }
 
     private:
-      OvpnHMAC<CRYPTO_API> ta_hmac_recv;
+      OvpnHMACInstance::Ptr ta_hmac_recv;
     };
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
@@ -1960,12 +1967,12 @@ namespace openvpn {
       const Config& c = *config;
 
       // tls-auth setup
-      if (c.tls_auth_enabled())
+      if (c.tls_auth_context)
 	{
 	  use_tls_auth = true;
 
 	  // get HMAC size from Digest object
-	  hmac_size = c.tls_auth_digest.size();
+	  hmac_size = c.tls_auth_context->size();
 	}
       else
 	{
@@ -1996,19 +2003,23 @@ namespace openvpn {
       // tls-auth initialization
       if (use_tls_auth)
 	{
+	  // init OvpnHMACInstance
+	  ta_hmac_send = c.tls_auth_context->new_obj();
+	  ta_hmac_recv = c.tls_auth_context->new_obj();
+
 	  // init tls_auth hmac
 	  if (c.key_direction >= 0)
 	    {
 	      // key-direction is 0 or 1
 	      const unsigned int key_dir = c.key_direction ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
-	      ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
-	      ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+	      ta_hmac_send->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
+	      ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 	    }
 	  else
 	    {
 	      // key-direction bidirectional mode
-	      ta_hmac_send.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
-	      ta_hmac_recv.init(c.tls_auth_digest, c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+	      ta_hmac_send->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
+	      ta_hmac_recv->init(c.tls_auth_key.slice(OpenVPNStaticKey::HMAC));
 	    }
 
 	  // init tls_auth packet ID
@@ -2579,8 +2590,8 @@ namespace openvpn {
 
     Time::Duration slowest_handshake_; // longest time to reach a successful handshake
 
-    OvpnHMAC<CRYPTO_API> ta_hmac_send;
-    OvpnHMAC<CRYPTO_API> ta_hmac_recv;
+    OvpnHMACInstance::Ptr ta_hmac_send;
+    OvpnHMACInstance::Ptr ta_hmac_recv;
     PacketIDSend ta_pid_send;
     PacketIDReceive ta_pid_recv;
 

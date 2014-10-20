@@ -19,7 +19,7 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// OpenVPN HMAC classes that are independent of the underlying CRYPTO_API
+// OpenVPN HMAC classes
 
 #ifndef OPENVPN_CRYPTO_OVPNHMAC_H
 #define OPENVPN_CRYPTO_OVPNHMAC_H
@@ -31,8 +31,12 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/memneq.hpp>
 #include <openvpn/crypto/static_key.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
+
+  // OpenVPN protocol HMAC usage for HMAC/CBC integrity checking and tls-auth
+
   template <typename CRYPTO_API>
   class OvpnHMAC
   {
@@ -121,6 +125,114 @@ namespace openvpn {
 
     typename CRYPTO_API::HMACContext ctx;
   };
+
+  // OvpnHMAC wrapper API using dynamic polymorphism
+
+  class OvpnHMACInstance : public RC<thread_unsafe_refcount>
+  {
+  public:
+    typedef boost::intrusive_ptr<OvpnHMACInstance> Ptr;
+
+    virtual void init(const StaticKey& key) = 0;
+
+    virtual size_t output_size() const = 0;
+
+    virtual void ovpn_hmac_gen(unsigned char *data, const size_t data_size,
+			       const size_t l1, const size_t l2, const size_t l3) = 0;
+
+    virtual bool ovpn_hmac_cmp(const unsigned char *data, const size_t data_size,
+			       const size_t l1, const size_t l2, const size_t l3) = 0;
+  };
+
+  class OvpnHMACContext : public RC<thread_unsafe_refcount>
+  {
+  public:
+    typedef boost::intrusive_ptr<OvpnHMACContext> Ptr;
+
+    virtual size_t size() const = 0;
+
+    virtual OvpnHMACInstance::Ptr new_obj() = 0;
+  };
+
+  class OvpnHMACFactory : public RC<thread_unsafe_refcount>
+  {
+  public:
+    typedef boost::intrusive_ptr<OvpnHMACFactory> Ptr;
+
+    virtual OvpnHMACContext::Ptr new_obj(const CryptoAlgs::Type digest_type) = 0;
+  };
+
+  // OvpnHMAC wrapper implementation using dynamic polymorphism
+
+  template <typename CRYPTO_API>
+  class CryptoOvpnHMACInstance : public OvpnHMACInstance
+  {
+  public:
+    CryptoOvpnHMACInstance(const typename CRYPTO_API::Digest& digest_arg)
+      : digest(digest_arg)
+    {
+    }
+
+    virtual void init(const StaticKey& key)
+    {
+      ovpn_hmac.init(digest, key);
+    }
+
+    virtual size_t output_size() const
+    {
+      return ovpn_hmac.output_size();
+    }
+
+    virtual void ovpn_hmac_gen(unsigned char *data, const size_t data_size,
+			       const size_t l1, const size_t l2, const size_t l3)
+    {
+      ovpn_hmac.ovpn_hmac_gen(data, data_size, l1, l2, l3);
+    }
+
+    virtual bool ovpn_hmac_cmp(const unsigned char *data, const size_t data_size,
+			       const size_t l1, const size_t l2, const size_t l3)
+    {
+      return ovpn_hmac.ovpn_hmac_cmp(data, data_size, l1, l2, l3);
+    }
+
+  private:
+    typename CRYPTO_API::Digest digest;
+    OvpnHMAC<CRYPTO_API> ovpn_hmac;
+  };
+
+  template <typename CRYPTO_API>
+  class CryptoOvpnHMACContext : public OvpnHMACContext
+  {
+  public:
+    CryptoOvpnHMACContext(const CryptoAlgs::Type digest_type)
+      : digest(CryptoAlgs::legal_dc_digest(digest_type))
+    {
+    }
+
+    virtual size_t size() const
+    {
+      return digest.size();
+    }
+
+    virtual OvpnHMACInstance::Ptr new_obj()
+    {
+      return new CryptoOvpnHMACInstance<CRYPTO_API>(digest);
+    }
+
+  private:
+    typename CRYPTO_API::Digest digest;
+  };
+
+  template <typename CRYPTO_API>
+  class CryptoOvpnHMACFactory : public OvpnHMACFactory
+  {
+  public:
+    virtual OvpnHMACContext::Ptr new_obj(const CryptoAlgs::Type digest_type)
+    {
+      return new CryptoOvpnHMACContext<CRYPTO_API>(digest_type);
+    }
+  };
+
 }
 
 #endif

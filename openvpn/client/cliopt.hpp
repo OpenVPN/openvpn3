@@ -139,7 +139,7 @@ namespace openvpn {
 
       // initialize RNG/PRNG
       rng.reset(new SSLLib::RandomAPI());
-      digest_factory.reset(new CryptoDigestFactory<SSLLib::CryptoAPI>());
+      DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
       prng.reset(new PRNG("SHA1", digest_factory, rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
 
       // frame
@@ -172,6 +172,7 @@ namespace openvpn {
       cp.reset(new Client::ProtoConfig());
       cp->dc_factory.reset(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, prng));
       cp->dc_deferred = true; // defer data channel setup until after options pull
+      cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));
@@ -477,7 +478,6 @@ namespace openvpn {
 
     Time now_; // current time
     SSLLib::RandomAPI::Ptr rng;
-    DigestFactory::Ptr digest_factory;
     PRNG::Ptr prng;
     Frame::Ptr frame;
     SSLLib::SSLAPI::Config cc;
