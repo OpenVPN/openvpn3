@@ -136,7 +136,6 @@ namespace openvpn {
     };
   }
 
-  template <typename CRYPTO_API>
   class ProtoContext
   {
   protected:

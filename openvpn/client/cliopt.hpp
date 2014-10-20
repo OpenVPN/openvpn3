@@ -71,7 +71,7 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<ClientOptions> Ptr;
 
-    typedef ClientProto::Session<SSLLib::CryptoAPI> Client;
+    typedef ClientProto::Session Client;
 
     struct Config {
       Config()
