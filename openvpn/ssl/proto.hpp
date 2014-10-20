@@ -930,8 +930,8 @@ namespace openvpn {
     class KeyContext : ProtoStackBase<Packet>, public RC<thread_unsafe_refcount>
     {
       typedef ProtoStackBase<Packet> Base;
-      typedef typename Base::ReliableSend ReliableSend;
-      typedef typename Base::ReliableRecv ReliableRecv;
+      typedef Base::ReliableSend ReliableSend;
+      typedef Base::ReliableRecv ReliableRecv;
 
       // ProtoStackBase protected vars
       using Base::now;
@@ -1527,7 +1527,7 @@ namespace openvpn {
 	  }
       }
 
-      virtual void net_send(const Packet& net_pkt, const typename Base::NetSendType nstype)
+      virtual void net_send(const Packet& net_pkt, const Base::NetSendType nstype)
       {
 	if (!is_reliable || nstype != Base::NET_SEND_RETRANSMIT) // retransmit packets on UDP only, not TCP
 	  proto.net_send(key_id_, net_pkt);
@@ -1955,7 +1955,7 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
 
-    ProtoContext(const typename Config::Ptr& config_arg,  // configuration
+    ProtoContext(const Config::Ptr& config_arg,             // configuration
 		 const SessionStats::Ptr& stats_arg)        // error stats
       : config(config_arg),
 	stats(stats_arg),
@@ -2460,7 +2460,7 @@ namespace openvpn {
 
     void process_primary_event()
     {
-      const typename KeyContext::EventType ev = primary->get_event();
+      const KeyContext::EventType ev = primary->get_event();
       if (ev != KeyContext::KEV_NONE)
 	{
 	  primary->reset_event();
@@ -2495,7 +2495,7 @@ namespace openvpn {
 
     void process_secondary_event()
     {
-      const typename KeyContext::EventType ev = secondary->get_event();
+      const KeyContext::EventType ev = secondary->get_event();
       if (ev != KeyContext::KEV_NONE)
 	{
 	  secondary->reset_event();
@@ -2574,7 +2574,7 @@ namespace openvpn {
 
     // BEGIN ProtoContext data members
 
-    typename Config::Ptr config;
+    Config::Ptr config;
     SessionStats::Ptr stats;
 
     size_t hmac_size;
@@ -2597,8 +2597,8 @@ namespace openvpn {
     ProtoSessionID psid_self;
     ProtoSessionID psid_peer;
 
-    typename KeyContext::Ptr primary;
-    typename KeyContext::Ptr secondary;
+    KeyContext::Ptr primary;
+    KeyContext::Ptr secondary;
     bool dc_deferred;
 
     bool fast_transition;

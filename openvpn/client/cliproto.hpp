@@ -80,14 +80,14 @@ namespace openvpn {
 		    public RC<thread_unsafe_refcount>
     {
       typedef ProtoContext Base;
-      typedef typename Base::PacketType PacketType;
+      typedef Base::PacketType PacketType;
 
       using Base::now;
       using Base::stat;
 
     public:
       typedef boost::intrusive_ptr<Session> Ptr;
-      typedef typename Base::Config ProtoConfig;
+      typedef Base::Config ProtoConfig;
 
       OPENVPN_EXCEPTION(client_exception);
       OPENVPN_EXCEPTION(client_halt_restart);
@@ -113,7 +113,7 @@ namespace openvpn {
 				 ProfileParseLimits::MAX_DIRECTIVE_SIZE)
 	{}
 
-	typename ProtoConfig::Ptr proto_context_config;
+	ProtoConfig::Ptr proto_context_config;
 	ProtoContextOptions::Ptr proto_context_options;
 	PushOptionsBase::Ptr push_base;
 	TransportClientFactory::Ptr transport_factory;
@@ -250,7 +250,7 @@ namespace openvpn {
 	    }
 
 	  // get packet type
-	  typename Base::PacketType pt = Base::packet_type(buf);
+	  Base::PacketType pt = Base::packet_type(buf);
 
 	  // process packet
 	  if (pt.is_data())
