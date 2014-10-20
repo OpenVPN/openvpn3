@@ -51,7 +51,7 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/cipher.hpp>
-#include <openvpn/crypto/hmac.hpp>
+#include <openvpn/crypto/ovpnhmac.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -1221,10 +1221,10 @@ namespace openvpn {
 	      // verify HMAC
 	      {
 		recv.advance(proto.hmac_size);
-		if (!proto.ta_hmac_recv.hmac3_cmp(orig_data, orig_size,
-						  1 + ProtoSessionID::SIZE,
-						  proto.hmac_size,
-						  PacketID::size(PacketID::LONG_FORM)))
+		if (!proto.ta_hmac_recv.ovpn_hmac_cmp(orig_data, orig_size,
+						      1 + ProtoSessionID::SIZE,
+						      proto.hmac_size,
+						      PacketID::size(PacketID::LONG_FORM)))
 		  return false;
 	      }
 
@@ -1647,10 +1647,10 @@ namespace openvpn {
 	    buf.push_front(op_compose(opcode, key_id_));
 
 	    // write hmac
-	    proto.ta_hmac_send.hmac3_gen(buf.data(), buf.size(),
-					 1 + ProtoSessionID::SIZE,
-					 proto.hmac_size,
-					 PacketID::size(PacketID::LONG_FORM));
+	    proto.ta_hmac_send.ovpn_hmac_gen(buf.data(), buf.size(),
+					     1 + ProtoSessionID::SIZE,
+					     proto.hmac_size,
+					     PacketID::size(PacketID::LONG_FORM));
 	  }
 	else
 	  {
@@ -1745,10 +1745,10 @@ namespace openvpn {
 	      // verify HMAC
 	      {
 		recv.advance(proto.hmac_size);
-		if (!proto.ta_hmac_recv.hmac3_cmp(orig_data, orig_size,
-						  1 + ProtoSessionID::SIZE,
-						  proto.hmac_size,
-						  PacketID::size(PacketID::LONG_FORM)))
+		if (!proto.ta_hmac_recv.ovpn_hmac_cmp(orig_data, orig_size,
+						      1 + ProtoSessionID::SIZE,
+						      proto.hmac_size,
+						      PacketID::size(PacketID::LONG_FORM)))
 		  {
 		    proto.stats->error(Error::HMAC_ERROR);
 		    if (proto.is_tcp())
@@ -1932,10 +1932,10 @@ namespace openvpn {
       bool validate(const Buffer& net_buf)
       {
 	try {
-	  return ta_hmac_recv.hmac3_cmp(net_buf.c_data(), net_buf.size(),
-					1 + ProtoSessionID::SIZE,
-					ta_hmac_recv.output_size(),
-					PacketID::size(PacketID::LONG_FORM));
+	  return ta_hmac_recv.ovpn_hmac_cmp(net_buf.c_data(), net_buf.size(),
+					    1 + ProtoSessionID::SIZE,
+					    ta_hmac_recv.output_size(),
+					    PacketID::size(PacketID::LONG_FORM));
 	}
 	catch (BufferException&)
 	  {
@@ -1944,7 +1944,7 @@ namespace openvpn {
       }
 
     private:
-      HMACContext<CRYPTO_API> ta_hmac_recv;
+      OvpnHMAC<CRYPTO_API> ta_hmac_recv;
     };
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
@@ -2579,8 +2579,8 @@ namespace openvpn {
 
     Time::Duration slowest_handshake_; // longest time to reach a successful handshake
 
-    HMACContext<CRYPTO_API> ta_hmac_send;
-    HMACContext<CRYPTO_API> ta_hmac_recv;
+    OvpnHMAC<CRYPTO_API> ta_hmac_send;
+    OvpnHMAC<CRYPTO_API> ta_hmac_recv;
     PacketIDSend ta_pid_send;
     PacketIDReceive ta_pid_recv;
 

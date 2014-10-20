@@ -32,7 +32,7 @@
 #include <openvpn/random/prng.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
-#include <openvpn/crypto/hmac.hpp>
+#include <openvpn/crypto/ovpnhmac.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 
@@ -102,7 +102,7 @@ namespace openvpn {
 
     Frame::Ptr frame;
     CipherContext<CRYPTO_API> cipher;
-    HMACContext<CRYPTO_API> hmac;
+    OvpnHMAC<CRYPTO_API> hmac;
     PacketIDSend pid_send;
     PRNG::Ptr prng;
 
