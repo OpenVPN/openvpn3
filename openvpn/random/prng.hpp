@@ -32,10 +32,10 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/random/randapi.hpp>
+#include <openvpn/crypto/digestapi.hpp>
 
 namespace openvpn {
 
-  template <typename CRYPTO_API>
   class PRNG : public RandomAPI
   {
     typedef BufferAllocatedType<unsigned char> nonce_t;
@@ -54,16 +54,18 @@ namespace openvpn {
 
     PRNG() : nonce_reseed_bytes(0), n_processed(0) {}
 
-    PRNG(const char *digest,
+    PRNG(const char *digest_name,
+	 const DigestFactory::Ptr& digest_factory,
 	 const RandomAPI::Ptr& rng_arg,
 	 const size_t nonce_secret_len,
 	 const size_t nonce_reseed_bytes_arg = NONCE_DEFAULT_RESEED_BYTES)
       : nonce_reseed_bytes(0), n_processed(0)
     {
-      init(digest, rng_arg, nonce_secret_len, nonce_reseed_bytes_arg);
+      init(digest_name, digest_factory, rng_arg, nonce_secret_len, nonce_reseed_bytes_arg);
     }
 
-    void init(const char *digest,
+    void init(const char *digest_name,
+	      const DigestFactory::Ptr& digest_factory,
 	      const RandomAPI::Ptr& rng_arg,
 	      const size_t nonce_secret_len,
 	      const size_t nonce_reseed_bytes_arg = NONCE_DEFAULT_RESEED_BYTES)
@@ -71,18 +73,18 @@ namespace openvpn {
       if (nonce_secret_len < NONCE_SECRET_LEN_MIN || nonce_secret_len > NONCE_SECRET_LEN_MAX)
 	throw prng_bad_nonce_len();
 
-      typename CRYPTO_API::Digest md = typename CRYPTO_API::Digest(digest);
+      DigestContext::Ptr dc = digest_factory->new_obj(CryptoAlgs::lookup(digest_name));
 
       // allocate array for nonce and seed it
-      nonce_t nd(md.size() + nonce_secret_len, nonce_t::DESTRUCT_ZERO|nonce_t::ARRAY);
+      nonce_t nd(dc->size() + nonce_secret_len, nonce_t::DESTRUCT_ZERO|nonce_t::ARRAY);
       reseed(nd, *rng_arg);
 
       // Move all items into *this as a last step to avoid
       // exceptions putting us in an inconsistent state.
-      n_processed = 0;
       rng = rng_arg;
+      digest_context = dc;
       nonce_reseed_bytes = nonce_reseed_bytes_arg;
-      nonce_digest = md;
+      n_processed = 0;
       nonce_data.move(nd);
     }
 
@@ -101,15 +103,15 @@ namespace openvpn {
     // Fill buffer with random bytes
     virtual void rand_bytes (unsigned char *output, size_t len)
     {
-      if (nonce_digest.defined())
+      if (digest_context)
 	{
-	  const size_t md_size = nonce_digest.size();
+	  const size_t md_size = digest_context->size();
 	  while (len > 0)
 	    {
 	      const size_t blen = std::min(len, md_size);
-	      typename CRYPTO_API::DigestContext ctx(nonce_digest);
-	      ctx.update(nonce_data.c_data(), nonce_data.size());
-	      if (ctx.final(nonce_data.data()) != md_size)
+	      DigestInstance::Ptr digest(digest_context->new_obj());
+	      digest->update(nonce_data.c_data(), nonce_data.size());
+	      if (digest->final(nonce_data.data()) != md_size)
 		throw prng_internal_error();
 	      memcpy (output, nonce_data.data(), blen);
 	      output += blen;
@@ -161,7 +163,7 @@ namespace openvpn {
     }
 
     RandomAPI::Ptr rng;
-    typename CRYPTO_API::Digest nonce_digest;
+    DigestContext::Ptr digest_context;
     size_t nonce_reseed_bytes;
     size_t n_processed;
     nonce_t nonce_data;
