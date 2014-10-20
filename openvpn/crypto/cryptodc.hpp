@@ -36,11 +36,10 @@
 namespace openvpn {
 
   // Base class for encryption/decryption of data channel
-  template <typename CRYPTO_API>
-  class CryptoDCBase : public RC<thread_unsafe_refcount>
+  class CryptoDCInstance : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<CryptoDCBase> Ptr;
+    typedef boost::intrusive_ptr<CryptoDCInstance> Ptr;
 
     // Encrypt/Decrypt
 
@@ -78,14 +77,13 @@ namespace openvpn {
     virtual void rekey(const RekeyType type) = 0;
   };
 
-  // Factory for CryptoDCBase objects
-  template <typename CRYPTO_API>
+  // Factory for CryptoDCInstance objects
   class CryptoDCContext : public RC<thread_unsafe_refcount>
   {
   public:
     typedef boost::intrusive_ptr<CryptoDCContext> Ptr;
 
-    virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id) = 0;
+    virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id) = 0;
 
     // Info for ProtoContext::options_string
 
@@ -99,14 +97,13 @@ namespace openvpn {
   };
 
   // Factory for CryptoDCContext objects
-  template <typename CRYPTO_API>
   class CryptoDCFactory : public RC<thread_unsafe_refcount>
   {
   public:
     typedef boost::intrusive_ptr<CryptoDCFactory> Ptr;
 
-    virtual typename CryptoDCContext<CRYPTO_API>::Ptr new_obj(const CryptoAlgs::Type cipher,
-							      const CryptoAlgs::Type digest) = 0;
+    virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
+					 const CryptoAlgs::Type digest) = 0;
   };
 }
 

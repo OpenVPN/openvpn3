@@ -31,10 +31,10 @@
 namespace openvpn {
 
   template <typename CRYPTO_API>
-  class CryptoCHM : public CryptoDCBase<CRYPTO_API>
+  class CryptoCHM : public CryptoDCInstance
   {
   public:
-    typedef CryptoDCBase<CRYPTO_API> Base;
+    typedef CryptoDCInstance Base;
 
     CryptoCHM(const typename CRYPTO_API::Cipher& cipher_arg,
 	      const typename CRYPTO_API::Digest& digest_arg,
@@ -129,7 +129,7 @@ namespace openvpn {
   };
 
   template <typename CRYPTO_API>
-  class CryptoContextCHM : public CryptoDCContext<CRYPTO_API>
+  class CryptoContextCHM : public CryptoDCContext
   {
   public:
     typedef boost::intrusive_ptr<CryptoContextCHM> Ptr;
@@ -145,7 +145,7 @@ namespace openvpn {
     {
     }
 
-    virtual typename CryptoDCBase<CRYPTO_API>::Ptr new_obj(const unsigned int key_id)
+    virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id)
     {
       return new CryptoCHM<CRYPTO_API>(cipher, digest, frame, prng);
     }

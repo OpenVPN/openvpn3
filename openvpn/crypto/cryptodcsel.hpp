@@ -33,7 +33,7 @@ namespace openvpn {
   OPENVPN_EXCEPTION(crypto_dc_select);
 
   template <typename CRYPTO_API>
-  class CryptoDCSelect : public CryptoDCFactory<CRYPTO_API>
+  class CryptoDCSelect : public CryptoDCFactory
   {
   public:
     typedef boost::intrusive_ptr<CryptoDCSelect> Ptr;
@@ -45,8 +45,8 @@ namespace openvpn {
     {
     }
 
-    virtual typename CryptoDCContext<CRYPTO_API>::Ptr new_obj(const CryptoAlgs::Type cipher,
-							      const CryptoAlgs::Type digest)
+    virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
+					 const CryptoAlgs::Type digest)
     {
       // fixme -- handle AEAD modes as well
       return new CryptoContextCHM<CRYPTO_API>(cipher, digest, frame, prng);
