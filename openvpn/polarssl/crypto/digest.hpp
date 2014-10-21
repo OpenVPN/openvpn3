@@ -46,20 +46,12 @@ namespace openvpn {
       friend class HMACContext;
 
     public:
-      OPENVPN_EXCEPTION(polarssl_digest_not_found); // fixme
       OPENVPN_EXCEPTION(polarssl_digest);
       OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_undefined);
 
       Digest()
       {
 	reset();
-      }
-
-      Digest(const std::string& name) // fixme
-      {
-	digest_ = md_info_from_string(name.c_str());
-	if (!digest_)
-	  throw polarssl_digest_not_found(name);
       }
 
       Digest(const CryptoAlgs::Type alg)
@@ -95,11 +87,10 @@ namespace openvpn {
 	  }
       }
 
-
-      // convenience methods for common digests (fixme)
-      static Digest md4() { return Digest(md_info_from_type(POLARSSL_MD_MD4)); }
-      static Digest md5() { return Digest(md_info_from_type(POLARSSL_MD_MD5)); }
-      static Digest sha1() { return Digest(md_info_from_type(POLARSSL_MD_SHA1)); }
+      // convenience methods for common digests
+      static Digest md4() { return Digest(CryptoAlgs::MD4); }
+      static Digest md5() { return Digest(CryptoAlgs::MD5); }
+      static Digest sha1() { return Digest(CryptoAlgs::SHA1); }
 
       std::string name() const
       {
@@ -115,8 +106,6 @@ namespace openvpn {
       bool defined() const { return digest_ != NULL; }
 
     private:
-      Digest(const md_info_t *digest) : digest_(digest) {} // fixme
-
       void reset()
       {
 	digest_ = NULL;
