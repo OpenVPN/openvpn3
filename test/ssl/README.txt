@@ -45,6 +45,11 @@ On Linux:
 
     PSSL=1 OSSL=1 build proto
 
+  Build with PolarSSL client and server (no ASM crypto algs)
+  using Profile-Guided Optimization:
+
+    PGEN=1 PSSL=1 NOSSL=1 build proto && ./proto && PUSE=1 PSSL=1 NOSSL=1 build proto
+
 Variations:
 
   To simulate less data-channel activity and more SSL renegotiations
