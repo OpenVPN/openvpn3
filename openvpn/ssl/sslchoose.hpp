@@ -43,7 +43,7 @@
 #ifdef USE_POLARSSL_APPLE_HYBRID
 #include <openvpn/applecrypto/crypto/api.hpp>
 #include <openvpn/polarssl/ssl/sslctx.hpp>
-#include <openvpn/applecrypto/util/rand.hpp>
+#include <openvpn/polarssl/util/rand.hpp>
 #endif
 
 namespace openvpn {
@@ -53,10 +53,10 @@ namespace openvpn {
     typedef PolarSSLContext SSLAPI;
     typedef PolarSSLRandom RandomAPI;
 #elif defined(USE_POLARSSL_APPLE_HYBRID)
-    // Uses Apple framework for RandomAPI and CryptoAPI and PolarSSL for SSLAPI
+    // Uses Apple framework for CryptoAPI and PolarSSL for SSLAPI and RandomAPI
     typedef AppleCryptoAPI CryptoAPI;
     typedef PolarSSLContext SSLAPI;
-    typedef AppleRandom RandomAPI;
+    typedef PolarSSLRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
     typedef AppleCryptoAPI CryptoAPI;
     typedef AppleSSLContext SSLAPI;
