@@ -35,6 +35,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
 
 #define OPENVPN_DIGEST_CONTEXT(TYPE) CC_##TYPE##_CTX TYPE##_ctx
@@ -159,30 +160,55 @@ namespace openvpn {
       friend class HMACContext;
 
     public:
-      OPENVPN_EXCEPTION(digest_not_found);
-      OPENVPN_SIMPLE_EXCEPTION(digest_undefined);
+      OPENVPN_EXCEPTION(apple_digest);
+      OPENVPN_SIMPLE_EXCEPTION(apple_digest_undefined);
 
-      Digest() : digest_(NULL) {}
-
-      Digest(const std::string& name)
+      Digest()
       {
-#       define OPENVPN_DIGEST_SELECT(TYPE) if (info_##TYPE.name_match(name.c_str())) \
-	  { digest_ = &info_##TYPE; return; }
-	OPENVPN_DIGEST_SELECT(MD4);
-	OPENVPN_DIGEST_SELECT(MD5);
-	OPENVPN_DIGEST_SELECT(SHA1);
-	OPENVPN_DIGEST_SELECT(SHA224);
-	OPENVPN_DIGEST_SELECT(SHA256);
-	OPENVPN_DIGEST_SELECT(SHA384);
-	OPENVPN_DIGEST_SELECT(SHA512);
-	throw digest_not_found(name);
-#       undef OPENVPN_DIGEST_SELECT
+	reset();
       }
+
+      Digest(const CryptoAlgs::Type alg)
+      {
+	switch (type_ = alg)
+	  {
+	  case CryptoAlgs::NONE:
+	    reset();
+	    break;
+	  case CryptoAlgs::MD4:
+	    digest_ = &info_MD4;
+	    break;
+	  case CryptoAlgs::MD5:
+	    digest_ = &info_MD5;
+	    break;
+	  case CryptoAlgs::SHA1:
+	    digest_ = &info_SHA1;
+	    break;
+	  case CryptoAlgs::SHA224:
+	    digest_ = &info_SHA224;
+	    break;
+	  case CryptoAlgs::SHA256:
+	    digest_ = &info_SHA256;
+	    break;
+	  case CryptoAlgs::SHA384:
+	    digest_ = &info_SHA384;
+	    break;
+	  case CryptoAlgs::SHA512:
+	    digest_ = &info_SHA512;
+	    break;
+	  default:
+	    OPENVPN_THROW(apple_digest, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
+      // convenience methods for common digests
+      static Digest md4() { return Digest(CryptoAlgs::MD4); }
+      static Digest md5() { return Digest(CryptoAlgs::MD5); }
+      static Digest sha1() { return Digest(CryptoAlgs::SHA1); }
 
       std::string name() const
       {
-	check_initialized();
-	return digest_->name();
+	return CryptoAlgs::name(type_);
       }
 
       size_t size() const
@@ -193,13 +219,12 @@ namespace openvpn {
 
       bool defined() const { return digest_ != NULL; }
 
-      // convenience methods for common digests
-      static Digest md4() { return Digest(&info_MD4); }
-      static Digest md5() { return Digest(&info_MD5); }
-      static Digest sha1() { return Digest(&info_SHA1); }
-
     private:
-      Digest(const DigestInfo *digest) : digest_(digest) {}
+      void reset()
+      {
+	digest_ = NULL;
+	type_ = CryptoAlgs::NONE;
+      }
 
       const DigestInfo *get() const
       {
@@ -211,11 +236,12 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!digest_)
-	  throw digest_undefined();
+	  throw apple_digest_undefined();
 #endif
       }
 
       const DigestInfo *digest_;
+      CryptoAlgs::Type type_;
     };
 
     class DigestContext : boost::noncopyable

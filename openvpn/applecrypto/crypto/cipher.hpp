@@ -37,6 +37,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/crypto/static_key.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/applecrypto/cf/error.hpp>
 
 namespace openvpn {
@@ -99,31 +100,49 @@ namespace openvpn {
       friend class CipherContext;
 
     public:
-      OPENVPN_EXCEPTION(cipher_not_found);
-      OPENVPN_SIMPLE_EXCEPTION(cipher_undefined);
+      OPENVPN_EXCEPTION(apple_cipher);
+      OPENVPN_SIMPLE_EXCEPTION(apple_cipher_undefined);
 
-      Cipher() : cipher_(NULL) {}
-
-
-      Cipher(const std::string& name)
+      Cipher()
       {
-#       define OPENVPN_CIPHER_SELECT(TYPE) if (TYPE.name_match(name.c_str())) { cipher_ = &TYPE; return; }
-#       ifdef OPENVPN_PLATFORM_IPHONE
-          OPENVPN_CIPHER_SELECT(bf);
-#       endif
-	OPENVPN_CIPHER_SELECT(aes128);
-	OPENVPN_CIPHER_SELECT(aes192);
-	OPENVPN_CIPHER_SELECT(aes256);
-	OPENVPN_CIPHER_SELECT(des3);
-	OPENVPN_CIPHER_SELECT(des);
-	throw cipher_not_found(name);
-#       undef OPENVPN_CIPHER_SELECT
+	reset();
+      }
+
+      Cipher(const CryptoAlgs::Type alg)
+      {
+	switch (type_ = alg)
+	  {
+	  case CryptoAlgs::NONE:
+	    reset();
+	    break;
+	  case CryptoAlgs::AES_128_CBC:
+	    cipher_ = &aes128;
+	    break;
+	  case CryptoAlgs::AES_192_CBC:
+	    cipher_ = &aes192;
+	    break;
+	  case CryptoAlgs::AES_256_CBC:
+	    cipher_ = &aes256;
+	    break;
+	  case CryptoAlgs::DES_CBC:
+	    cipher_ = &des;
+	    break;
+	  case CryptoAlgs::DES_EDE3_CBC:
+	    cipher_ = &des3;
+	    break;
+#ifdef OPENVPN_PLATFORM_IPHONE
+	    case CryptoAlgs::BF_CBC:
+	      cipher_ = &bf;
+	      break;
+#endif
+	  default:
+	    OPENVPN_THROW(apple_cipher, CryptoAlgs::name(alg) << ": not usable");
+	  }
       }
 
       std::string name() const
       {
-	check_initialized();
-	return cipher_->name();
+	return CryptoAlgs::name(type_);
       }
 
       size_t key_length() const
@@ -153,6 +172,12 @@ namespace openvpn {
       bool defined() const { return cipher_ != NULL; }
 
     private:
+      void reset()
+      {
+	cipher_ = NULL;
+	type_ = CryptoAlgs::NONE;
+      }
+
       const CipherInfo *get() const
       {
 	check_initialized();
@@ -163,11 +188,12 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!cipher_)
-	  throw cipher_undefined();
+	  throw apple_cipher_undefined();
 #endif
       }
 
       const CipherInfo *cipher_;
+      CryptoAlgs::Type type_;
     };
 
     class CipherContext : boost::noncopyable
