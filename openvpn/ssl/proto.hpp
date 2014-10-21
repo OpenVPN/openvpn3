@@ -372,7 +372,6 @@ namespace openvpn {
 	    else
 	      digest = CryptoAlgs::lookup("SHA1");
 	  }
-	  OPENVPN_LOG("************* CRYPTO CONFIG cipher=" << cipher << " digest=" << digest); // fixme
 	  set_cipher_digest(cipher, digest);
 
 	  // tls-auth
@@ -385,8 +384,7 @@ namespace openvpn {
 		const Option *tad = opt.get_ptr("tls-auth-digest");
 		if (tad)
 		  digest = CryptoAlgs::lookup(tad->get(1, 128));
-
-		tls_auth_context = tls_auth_factory->new_obj(digest);
+		set_tls_auth_digest(digest);
 	      }
 	  }
 	}
@@ -498,7 +496,6 @@ namespace openvpn {
 	    {
 	      OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
 	    }
-	  OPENVPN_LOG("************* CRYPTO PULL cipher=" << cipher << " digest=" << digest); // fixme
 	  if (cipher != CryptoAlgs::NONE)
 	    set_cipher_digest(cipher, digest);
 	}
@@ -552,6 +549,11 @@ namespace openvpn {
       void set_cipher_digest(const CryptoAlgs::Type cipher, const CryptoAlgs::Type digest)
       {
 	dc_context = dc_factory->new_obj(cipher, digest);
+      }
+
+      void set_tls_auth_digest(const CryptoAlgs::Type digest)
+      {
+	tls_auth_context = tls_auth_factory->new_obj(digest);
       }
 
       void set_xmit_creds(const bool xmit_creds_arg)
@@ -1293,7 +1295,6 @@ namespace openvpn {
 	    OpenVPNStaticKey& key = data_channel_key->key;
 
 	    // build crypto context for data channel encryption/decryption
-	    OPENVPN_LOG("************* NEW_OBJ KEY_ID=" << key_id_); // fixme
 	    crypto = proto.config->dc_context->new_obj(key_id_);
 	    if (crypto->cipher_defined())
 	      {

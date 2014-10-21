@@ -115,7 +115,6 @@ namespace openvpn {
 
     virtual void rekey(const typename Base::RekeyType type)
     {
-      OPENVPN_LOG("************* REKEY " << type); // fixme
     }
 
   private:

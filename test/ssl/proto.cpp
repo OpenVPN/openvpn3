@@ -39,6 +39,11 @@
 #define OPENVPN_ENABLE_ASSERT
 #define USE_TLS_AUTH
 
+// NoisyWire
+#define SIMULATE_OOO
+#define SIMULATE_DROPPED
+#define SIMULATE_CORRUPTED
+
 #define OPENVPN_LOG_SSL(x) // disable
 
 // how many virtual seconds between SSL renegotiations
@@ -69,7 +74,7 @@
 #endif
 
 #ifdef VERBOSE
-#define OPENVPN_DEBUG_PROTO 1
+#define OPENVPN_DEBUG_PROTO 2
 #endif
 
 #define STRINGIZE1(x) #x
@@ -264,10 +269,9 @@ private:
 };
 
 // test the OpenVPN protocol implementation in ProtoContext
-template <typename CRYPTO_API>
-class TestProto : public ProtoContext<CRYPTO_API>
+class TestProto : public ProtoContext
 {
-  typedef ProtoContext<CRYPTO_API> Base;
+  typedef ProtoContext Base;
 
   using Base::now;
   using Base::mode;
@@ -439,10 +443,9 @@ private:
   char progress_[11];
 };
 
-template <typename CRYPTO_API>
-class TestProtoClient : public TestProto<CRYPTO_API>
+class TestProtoClient : public TestProto
 {
-  typedef TestProto<CRYPTO_API> Base;
+  typedef TestProto Base;
 public:
   TestProtoClient(const typename Base::Config::Ptr& config,
 		  const SessionStats::Ptr& stats)
@@ -460,10 +463,9 @@ private:
   }
 };
 
-template <typename CRYPTO_API>
-class TestProtoServer : public TestProto<CRYPTO_API>
+class TestProtoServer : public TestProto
 {
-  typedef TestProto<CRYPTO_API> Base;
+  typedef TestProto Base;
 public:
   OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
@@ -584,6 +586,7 @@ public:
 private:
   BufferPtr recv()
   {
+#ifdef SIMULATE_OOO
     // simulate packets being received out of order
     if (wire.size() >= 2 && !rand(reorder_prob))
       {
@@ -593,6 +596,7 @@ private:
 #endif
 	std::swap(wire[0], wire[i]);
       }
+#endif
 
     if (wire.size())
       {
@@ -603,6 +607,7 @@ private:
 	std::cout << now->raw() << " " << title << " Received packet, size=" << bp->size() << std::endl;
 #endif
 
+#ifdef SIMULATE_DROPPED
 	// simulate dropped packet
 	if (!rand(drop_prob))
 	  {
@@ -611,7 +616,9 @@ private:
 #endif
 	    return BufferPtr();
 	  }
+#endif
 
+#ifdef SIMULATE_CORRUPTED
 	// simulate corrupted packet
 	if (bp->size() && !rand(corrupt_prob))
 	  {
@@ -622,6 +629,7 @@ private:
 	    const unsigned char value = random.randrange(256);
 	    (*bp)[pos] = value;
 	  }
+#endif
 	return bp;
       }
 
@@ -683,10 +691,12 @@ int test(const int thread_num)
     // RNG
     ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());
     RandomInt rand(*rng_cli);
-    PRNG<ClientCryptoAPI>::Ptr prng_cli(new PRNG<ClientCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_cli, 16));
+    DigestFactory::Ptr rng_digest_cli(new CryptoDigestFactory<ClientCryptoAPI>());
+    PRNG::Ptr prng_cli(new PRNG(STRINGIZE(PROTO_DIGEST), rng_digest_cli, rng_cli, 16));
 
     ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI());
-    PRNG<ServerCryptoAPI>::Ptr prng_serv(new PRNG<ServerCryptoAPI>(STRINGIZE(PROTO_DIGEST), rng_serv, 16));
+    DigestFactory::Ptr rng_digest_serv(new CryptoDigestFactory<ServerCryptoAPI>());
+    PRNG::Ptr prng_serv(new PRNG(STRINGIZE(PROTO_DIGEST), rng_digest_serv, rng_serv, 16));
 
     // init simulated time
     Time time;
@@ -724,10 +734,11 @@ int test(const int thread_num)
     MySessionStats::Ptr cli_stats(new MySessionStats);
 
     // client ProtoContext config
-    typedef ProtoContext<ClientCryptoAPI> ClientProtoContext;
+    typedef ProtoContext ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_factory.reset(new ClientSSLAPI(cc));
     cp->dc_factory.reset(new CryptoDCSelect<ClientCryptoAPI>(frame, prng_cli));
+    cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ClientCryptoAPI>());
     cp->frame = frame;
     cp->now = &time;
     cp->rng = rng_cli;
@@ -735,12 +746,12 @@ int test(const int thread_num)
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
     cp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
-    cp->cipher = ClientCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
-    cp->digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
-    cp->set_cipher_digest();
+    cp->set_cipher_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)),
+			  CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
 #ifdef USE_TLS_AUTH
+    cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ClientCryptoAPI>());
     cp->tls_auth_key.parse(tls_auth_key);
-    cp->tls_auth_digest = ClientCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
+    cp->set_tls_auth_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
     cp->key_direction = 0;
 #endif
     cp->reliable_window = 4;
@@ -788,10 +799,11 @@ int test(const int thread_num)
 #endif
 
     // server ProtoContext config
-    typedef ProtoContext<ServerCryptoAPI> ServerProtoContext;
+    typedef ProtoContext ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
     sp->ssl_factory.reset(new ServerSSLAPI(sc));
     sp->dc_factory.reset(new CryptoDCSelect<ServerCryptoAPI>(frame, prng_serv));
+    sp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ServerCryptoAPI>());
     sp->frame = frame;
     sp->now = &time;
     sp->rng = rng_serv;
@@ -799,12 +811,12 @@ int test(const int thread_num)
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
     sp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
-    sp->cipher = ServerCryptoAPI::Cipher(STRINGIZE(PROTO_CIPHER));
-    sp->digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
-    sp->set_cipher_digest();
+    sp->set_cipher_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)),
+			  CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
 #ifdef USE_TLS_AUTH
+    sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
     sp->tls_auth_key.parse(tls_auth_key);
-    sp->tls_auth_digest = ServerCryptoAPI::Digest(STRINGIZE(PROTO_DIGEST));
+    sp->set_tls_auth_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
     sp->key_direction = 1;
 #endif
     sp->reliable_window = 4;
@@ -838,8 +850,8 @@ int test(const int thread_num)
     // server stats
     MySessionStats::Ptr serv_stats(new MySessionStats);
 
-    TestProtoClient<ClientCryptoAPI> cli_proto(cp, cli_stats);
-    TestProtoServer<ServerCryptoAPI> serv_proto(sp, serv_stats);
+    TestProtoClient cli_proto(cp, cli_stats);
+    TestProtoServer serv_proto(sp, serv_stats);
 
     for (int i = 0; i < SITER; ++i)
       {
