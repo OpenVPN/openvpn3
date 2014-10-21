@@ -27,6 +27,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/crypto_chm.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
@@ -39,7 +40,7 @@ namespace openvpn {
     typedef boost::intrusive_ptr<CryptoDCSelect> Ptr;
 
     CryptoDCSelect(const Frame::Ptr& frame_arg,
-		   const PRNG::Ptr& prng_arg)
+		   const RandomAPI::Ptr& prng_arg)
       : frame(frame_arg),
 	prng(prng_arg)
     {
@@ -54,7 +55,7 @@ namespace openvpn {
 
   private:
     Frame::Ptr frame;
-    PRNG::Ptr prng;
+    RandomAPI::Ptr prng;
   };
 
 }

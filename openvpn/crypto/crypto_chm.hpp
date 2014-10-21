@@ -27,6 +27,7 @@
 #include <openvpn/crypto/encrypt_chm.hpp>
 #include <openvpn/crypto/decrypt_chm.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
@@ -39,7 +40,7 @@ namespace openvpn {
     CryptoCHM(const typename CRYPTO_API::Cipher& cipher_arg,
 	      const typename CRYPTO_API::Digest& digest_arg,
 	      const Frame::Ptr& frame_arg,
-	      const PRNG::Ptr& prng_arg)
+	      const RandomAPI::Ptr& prng_arg)
       : cipher(cipher_arg),
 	digest(digest_arg),
 	frame(frame_arg),
@@ -121,7 +122,7 @@ namespace openvpn {
     typename CRYPTO_API::Cipher cipher;
     typename CRYPTO_API::Digest digest;
     Frame::Ptr frame;
-    PRNG::Ptr prng;
+    RandomAPI::Ptr prng;
 
     EncryptCHM<CRYPTO_API> encrypt_;
     DecryptCHM<CRYPTO_API> decrypt_;
@@ -136,7 +137,7 @@ namespace openvpn {
     CryptoContextCHM(const CryptoAlgs::Type cipher_arg,
 		     const CryptoAlgs::Type digest_arg,
 		     const Frame::Ptr& frame_arg,
-		     const PRNG::Ptr& prng_arg)
+		     const RandomAPI::Ptr& prng_arg)
       : cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
 	digest(CryptoAlgs::legal_dc_digest(digest_arg)),
 	frame(frame_arg),
@@ -179,7 +180,7 @@ namespace openvpn {
     typename CRYPTO_API::Cipher cipher;
     typename CRYPTO_API::Digest digest;
     Frame::Ptr frame;
-    PRNG::Ptr prng;
+    RandomAPI::Ptr prng;
   };
 }
 

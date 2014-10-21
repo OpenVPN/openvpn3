@@ -28,7 +28,6 @@
 #include <openvpn/error/error.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>

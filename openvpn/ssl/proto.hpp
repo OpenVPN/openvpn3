@@ -47,7 +47,6 @@
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/random/randapi.hpp>
-#include <openvpn/random/prng.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/cipher.hpp>
@@ -247,11 +246,16 @@ namespace openvpn {
       // (non-smart) pointer to current time
       TimePtr now;
 
-      // RNG
+      // Random number generator.
+      // Use-cases demand highest cryptographic strength
+      // such as key generation.
       RandomAPI::Ptr rng;
 
-      // PRNG
-      PRNG::Ptr prng;
+      // Pseudo-random number generator.
+      // Use-cases demand cryptographic strength
+      // combined with high performance.  Used for
+      // IV and ProtoSessionID generation.
+      RandomAPI::Ptr prng;
 
       // defer data channel initialization until after client options pull
       bool dc_deferred;

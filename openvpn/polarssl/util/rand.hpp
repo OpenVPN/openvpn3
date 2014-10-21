@@ -40,10 +40,15 @@ namespace openvpn {
 
     typedef boost::intrusive_ptr<PolarSSLRandom> Ptr;
 
-    PolarSSLRandom()
+    PolarSSLRandom(const bool prng)
     {
       if (ctr_drbg_init(&ctx, entropy_poll, NULL, NULL, 0) < 0)
 	throw rand_error_polarssl("CTR_DRBG init");
+
+      // If prng is set, configure for higher performance
+      // by reseeding less frequently.
+      if (prng)
+	ctr_drbg_set_reseed_interval(&ctx, 1000000);
     }
 
     // Random algorithm name
@@ -55,7 +60,7 @@ namespace openvpn {
     // Fill buffer with random bytes
     virtual void rand_bytes(unsigned char *buf, size_t size)
     {
-      if (!rand_bytes_noexcept(buf, size))
+      if (!rndbytes(buf, size))
 	throw rand_error_polarssl("CTR_DRBG rand_bytes");
     }
 
@@ -63,10 +68,15 @@ namespace openvpn {
     // Return true on successs, false on fail.
     virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
     {
-      return ctr_drbg_random(&ctx, buf, size) < 0 ? false : true;
+      return rndbytes(buf, size);
     }
 
   private:
+    bool rndbytes(unsigned char *buf, size_t size)
+    {
+      return ctr_drbg_random(&ctx, buf, size) < 0 ? false : true;
+    }
+
     static int entropy_poll(void *data, unsigned char *output, size_t len)
     {
       size_t olen;

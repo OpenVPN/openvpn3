@@ -29,7 +29,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/random/prng.hpp>
+#include <openvpn/random/randapi.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/ovpnhmac.hpp>
@@ -104,7 +104,7 @@ namespace openvpn {
     CipherContext<CRYPTO_API> cipher;
     OvpnHMAC<CRYPTO_API> hmac;
     PacketIDSend pid_send;
-    PRNG::Ptr prng;
+    RandomAPI::Ptr prng;
 
   private:
     // compute HMAC signature of data buffer,

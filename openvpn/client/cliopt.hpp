@@ -51,6 +51,10 @@
 
 #include <openvpn/ssl/sslchoose.hpp>
 
+#if ENABLE_PRNG
+#include <openvpn/random/prng.hpp>
+#endif
+
 #if defined(USE_TUN_BUILDER)
 #include <openvpn/tun/builder/client.hpp>
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
@@ -138,9 +142,13 @@ namespace openvpn {
       autologin = pcc.autologin();
 
       // initialize RNG/PRNG
-      rng.reset(new SSLLib::RandomAPI());
+      rng.reset(new SSLLib::RandomAPI(false));
+#if ENABLE_PRNG
       DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
       prng.reset(new PRNG("SHA1", digest_factory, rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
+#else
+      prng.reset(new SSLLib::RandomAPI(true));
+#endif
 
       // frame
       frame = frame_init();
@@ -478,8 +486,8 @@ namespace openvpn {
     }
 
     Time now_; // current time
-    SSLLib::RandomAPI::Ptr rng;
-    PRNG::Ptr prng;
+    RandomAPI::Ptr rng;
+    RandomAPI::Ptr prng;
     Frame::Ptr frame;
     SSLLib::SSLAPI::Config cc;
     Client::ProtoConfig::Ptr cp;

@@ -39,6 +39,10 @@
 #define OPENVPN_ENABLE_ASSERT
 #define USE_TLS_AUTH
 
+#ifndef ENABLE_PRNG
+#define ENABLE_PRNG 0
+#endif
+
 // NoisyWire
 #define SIMULATE_OOO
 #define SIMULATE_DROPPED
@@ -102,6 +106,10 @@
 #include <openvpn/init/initprocess.hpp>
 
 #include <openvpn/crypto/cryptodcsel.hpp>
+
+#if ENABLE_PRNG
+#include <openvpn/random/prng.hpp>
+#endif
 
 #if defined(USE_POLARSSL_APPLE_HYBRID)
 #define USE_POLARSSL
@@ -697,14 +705,22 @@ int test(const int thread_num)
     Frame::Ptr frame(new Frame(Frame::Context(128, 256, 128, 0, 16, 0)));
 
     // RNG
-    ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());
+    ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI(false));
     RandomInt rand(*rng_cli);
+#if ENABLE_PRNG
     DigestFactory::Ptr rng_digest_cli(new CryptoDigestFactory<ClientCryptoAPI>());
     PRNG::Ptr prng_cli(new PRNG(STRINGIZE(PROTO_DIGEST), rng_digest_cli, rng_cli, 16));
+#else
+    ClientRandomAPI::Ptr prng_cli(new ClientRandomAPI(true));
+#endif
 
-    ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI());
+    ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI(false));
+#if ENABLE_PRNG
     DigestFactory::Ptr rng_digest_serv(new CryptoDigestFactory<ServerCryptoAPI>());
     PRNG::Ptr prng_serv(new PRNG(STRINGIZE(PROTO_DIGEST), rng_digest_serv, rng_serv, 16));
+#else
+    ServerRandomAPI::Ptr prng_serv(new ServerRandomAPI(true));
+#endif
 
     // init simulated time
     Time time;

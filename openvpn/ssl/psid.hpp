@@ -28,7 +28,6 @@
 #include <cstring>
 
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/random/prng.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/memneq.hpp>
 

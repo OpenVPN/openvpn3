@@ -38,6 +38,10 @@ namespace openvpn {
 
     typedef boost::intrusive_ptr<AppleRandom> Ptr;
 
+    AppleRandom(const bool prng)
+    {
+    }
+
     virtual std::string name() const
     {
       return "AppleRandom";
@@ -46,13 +50,19 @@ namespace openvpn {
     // Fill buffer with random bytes
     virtual void rand_bytes(unsigned char *buf, size_t size)
     {
-      if (!rand_bytes_noexcept(buf, size))
+      if (!rndbytes(buf, size))
 	throw rand_error_apple("rand_bytes");
     }
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
     virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
+    {
+      return rndbytes(buf, size);
+    }
+
+  private:
+    bool rndbytes(unsigned char *buf, size_t size)
     {
       return SecRandomCopyBytes(kSecRandomDefault, size, buf) ? false : true;
     }

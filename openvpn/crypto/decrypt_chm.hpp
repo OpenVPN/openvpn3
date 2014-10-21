@@ -30,7 +30,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/memneq.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/random/prng.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/ovpnhmac.hpp>
