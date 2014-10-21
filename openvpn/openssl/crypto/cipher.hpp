@@ -35,6 +35,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
   namespace OpenSSLCrypto {
@@ -46,22 +47,47 @@ namespace openvpn {
       friend class CipherContext;
 
     public:
-      OPENVPN_EXCEPTION(openssl_cipher_not_found);
+      OPENVPN_EXCEPTION(openssl_cipher);
       OPENVPN_SIMPLE_EXCEPTION(openssl_cipher_undefined);
 
-      Cipher() : cipher_(NULL) {}
-
-      Cipher(const std::string& name)
+      Cipher()
       {
-	cipher_ = EVP_get_cipherbyname(name.c_str());
-	if (!cipher_)
-	  throw openssl_cipher_not_found(name);
+	reset();
+      }
+
+      Cipher(const CryptoAlgs::Type alg)
+      {
+	switch (type_ = alg)
+	  {
+	  case CryptoAlgs::NONE:
+	    reset();
+	    break;
+	  case CryptoAlgs::AES_128_CBC:
+	    cipher_ = EVP_aes_128_cbc();
+	    break;
+	  case CryptoAlgs::AES_192_CBC:
+	    cipher_ = EVP_aes_192_cbc();
+	    break;
+	  case CryptoAlgs::AES_256_CBC:
+	    cipher_ = EVP_aes_256_cbc();
+	    break;
+	  case CryptoAlgs::DES_CBC:
+	    cipher_ = EVP_des_cbc();
+	    break;
+	  case CryptoAlgs::DES_EDE3_CBC:
+	    cipher_ = EVP_des_ede3_cbc();
+	    break;
+	  case CryptoAlgs::BF_CBC:
+	    cipher_ = EVP_bf_cbc();
+	    break;
+	  default:
+	    OPENVPN_THROW(openssl_cipher, CryptoAlgs::name(alg) << ": not usable");
+	  }
       }
 
       std::string name() const
       {
-	check_initialized();
-	return EVP_CIPHER_name (cipher_);
+	return CryptoAlgs::name(type_);
       }
 
       size_t key_length() const
@@ -90,6 +116,12 @@ namespace openvpn {
       bool defined() const { return cipher_ != NULL; }
 
     private:
+      void reset()
+      {
+	cipher_ = NULL;
+	type_ = CryptoAlgs::NONE;
+      }
+
       const EVP_CIPHER *get() const
       {
 	check_initialized();
@@ -105,6 +137,7 @@ namespace openvpn {
       }
 
       const EVP_CIPHER *cipher_;
+      CryptoAlgs::Type type_;
     };
 
     class CipherContext : boost::noncopyable

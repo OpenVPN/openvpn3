@@ -38,6 +38,7 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
   namespace OpenSSLCrypto {
@@ -50,22 +51,55 @@ namespace openvpn {
       friend class HMACContext;
 
     public:
-      OPENVPN_EXCEPTION(openssl_digest_not_found);
+      OPENVPN_EXCEPTION(openssl_digest);
       OPENVPN_SIMPLE_EXCEPTION(openssl_digest_undefined);
 
-      Digest() : digest_(NULL) {}
-
-      Digest(const std::string& name)
+      Digest()
       {
-	digest_ = EVP_get_digestbyname(name.c_str());
-	if (!digest_)
-	  throw openssl_digest_not_found(name);
+	reset();
       }
+
+      Digest(const CryptoAlgs::Type alg)
+      {
+	switch (type_ = alg)
+	  {
+	  case CryptoAlgs::NONE:
+	    reset();
+	    break;
+	  case CryptoAlgs::MD4:
+	    digest_ = EVP_md4();
+	    break;
+	  case CryptoAlgs::MD5:
+	    digest_ = EVP_md5();
+	    break;
+	  case CryptoAlgs::SHA1:
+	    digest_ = EVP_sha1();
+	    break;
+	  case CryptoAlgs::SHA224:
+	    digest_ = EVP_sha224();
+	    break;
+	  case CryptoAlgs::SHA256:
+	    digest_ = EVP_sha256();
+	    break;
+	  case CryptoAlgs::SHA384:
+	    digest_ = EVP_sha384();
+	    break;
+	  case CryptoAlgs::SHA512:
+	    digest_ = EVP_sha512();
+	    break;
+	  default:
+	    OPENVPN_THROW(openssl_digest, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
+      // convenience methods for common digests
+      static Digest md4() { return Digest(CryptoAlgs::MD4); }
+      static Digest md5() { return Digest(CryptoAlgs::MD5); }
+      static Digest sha1() { return Digest(CryptoAlgs::SHA1); }
 
       std::string name() const
       {
-	check_initialized();
-	return EVP_MD_name(digest_);
+	return CryptoAlgs::name(type_);
       }
 
       size_t size() const
@@ -76,13 +110,13 @@ namespace openvpn {
 
       bool defined() const { return digest_ != NULL; }
 
-      // convenience methods for common digests
-      static Digest md4() { return Digest(EVP_md4()); }
-      static Digest md5() { return Digest(EVP_md5()); }
-      static Digest sha1() { return Digest(EVP_sha1()); }
-
     private:
-      Digest(const EVP_MD *digest) : digest_(digest) {}
+      void reset()
+      {
+	digest_ = NULL;
+	type_ = CryptoAlgs::NONE;
+      }
+
       const EVP_MD *get() const
       {
 	check_initialized();
@@ -98,6 +132,7 @@ namespace openvpn {
       }
 
       const EVP_MD *digest_;
+      CryptoAlgs::Type type_;
     };
 
     class DigestContext : boost::noncopyable
