@@ -103,6 +103,10 @@
 
 #include <openvpn/crypto/cryptodcsel.hpp>
 
+#if defined(USE_POLARSSL_APPLE_HYBRID)
+#define USE_POLARSSL
+#endif
+
 #if !(defined(USE_OPENSSL) || defined(USE_POLARSSL) || defined(USE_APPLE_SSL))
 #error Must define one or more of USE_OPENSSL, USE_POLARSSL, USE_APPLE_SSL.
 #endif
@@ -136,7 +140,7 @@
 #undef SSL_VERIFY_NONE
 #endif
 
-#if defined(USE_APPLE_SSL)
+#if defined(USE_APPLE_SSL) || defined(USE_POLARSSL_APPLE_HYBRID)
 #include <openvpn/applecrypto/crypto/api.hpp>
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
 #include <openvpn/applecrypto/util/rand.hpp>
@@ -171,7 +175,11 @@ typedef OpenSSLRandom ServerRandomAPI;
 
 // client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
 #if defined(USE_POLARSSL)
+#if defined(USE_POLARSSL_APPLE_HYBRID)
+typedef AppleCryptoAPI ClientCryptoAPI;
+#else
 typedef PolarSSLCryptoAPI ClientCryptoAPI;
+#endif
 typedef PolarSSLContext ClientSSLAPI;
 typedef PolarSSLRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)

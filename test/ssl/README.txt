@@ -26,6 +26,11 @@ On Mac
 
     PSSL=1 MINI=1 build proto
 
+  Build with PolarSSL client and server (no minicrypto ASM algs for PolarSSL),
+  except substitute AppleSSL crypto algs for the client side:
+
+    HYBRID=1 build proto
+
 On Linux:
 
   Build with PolarSSL client and server (no ASM crypto algs):
