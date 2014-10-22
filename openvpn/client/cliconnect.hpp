@@ -36,7 +36,7 @@
 //
 // 1. class ClientConnect --
 //      The top level object in an OpenVPN client connection.
-// 2. class ClientProto::Session<ClientCryptoAPI, ClientSSLAPI> --
+// 2. class ClientProto::Session --
 //      The OpenVPN client protocol object.
 // 3. class ProtoContext --
 //      The core OpenVPN protocol implementation that is common to both
@@ -501,7 +501,7 @@ namespace openvpn {
 	    client_options->next();
 	}
       Client::Config::Ptr cli_config = client_options->client_config(); // client_config in cliopt.hpp
-      client.reset(new Client(io_service, *cli_config, this)); // build ClientProto::Session<> from cliproto.hpp
+      client.reset(new Client(io_service, *cli_config, this)); // build ClientProto::Session from cliproto.hpp
       client_finalized = false;
 
       restart_wait_timer.cancel();
