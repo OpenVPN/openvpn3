@@ -45,6 +45,12 @@ namespace openvpn {
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
     virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size) = 0;
+
+    template <typename T>
+    void rand_fill(T& obj)
+    {
+      rand_bytes(reinterpret_cast<unsigned char *>(&obj), sizeof(T));
+    }
   };
 
 }
