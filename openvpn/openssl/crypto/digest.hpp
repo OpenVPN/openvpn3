@@ -61,7 +61,7 @@ namespace openvpn {
 
       Digest(const CryptoAlgs::Type alg)
       {
-	switch (type_ = alg)
+	switch (alg)
 	  {
 	  case CryptoAlgs::NONE:
 	    reset();
@@ -92,6 +92,34 @@ namespace openvpn {
 	  }
       }
 
+      CryptoAlgs::Type type() const
+      {
+	if (digest_)
+	  {
+	    switch (digest_->type)
+	      {
+	      case NID_md4:
+		return CryptoAlgs::MD4;
+	      case NID_md5:
+		return CryptoAlgs::MD5;
+	      case NID_sha1:
+		return CryptoAlgs::SHA1;
+	      case NID_sha224:
+		return CryptoAlgs::SHA224;
+	      case NID_sha256:
+		return CryptoAlgs::SHA256;
+	      case NID_sha384:
+		return CryptoAlgs::SHA384;
+	      case NID_sha512:
+		return CryptoAlgs::SHA512;
+	      default:
+		OPENVPN_THROW(openssl_digest, "unknown type");
+	      }
+	  }
+	else
+	  return CryptoAlgs::NONE;
+      }
+
       // convenience methods for common digests
       static Digest md4() { return Digest(CryptoAlgs::MD4); }
       static Digest md5() { return Digest(CryptoAlgs::MD5); }
@@ -99,7 +127,7 @@ namespace openvpn {
 
       std::string name() const
       {
-	return CryptoAlgs::name(type_);
+	return CryptoAlgs::name(type());
       }
 
       size_t size() const
@@ -114,7 +142,6 @@ namespace openvpn {
       void reset()
       {
 	digest_ = NULL;
-	type_ = CryptoAlgs::NONE;
       }
 
       const EVP_MD *get() const
@@ -132,7 +159,6 @@ namespace openvpn {
       }
 
       const EVP_MD *digest_;
-      CryptoAlgs::Type type_;
     };
 
     class DigestContext : boost::noncopyable

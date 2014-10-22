@@ -46,23 +46,18 @@ namespace openvpn {
     class CipherInfo
     {
     public:
-      CipherInfo(const char *name,
+      CipherInfo(CryptoAlgs::Type type,
 		 const size_t key_size,
 		 const size_t iv_length,
 		 const size_t block_size,
 		 const CCAlgorithm algorithm)
-	: name_(name),
+	: type_(type),
 	  key_size_(key_size),
 	  iv_length_(iv_length),
 	  block_size_(block_size),
 	  algorithm_(algorithm) {}
 
-      bool name_match(const char *name) const
-      {
-	return string::strcasecmp(name, name_) == 0;
-      }
-
-      const char *name() const { return name_; }
+      CryptoAlgs::Type type() const { return type_; }
       size_t key_length() const { return key_size_; }
       size_t iv_length() const { return iv_length_; }
       size_t block_size() const { return block_size_; }
@@ -70,26 +65,32 @@ namespace openvpn {
       CCAlgorithm algorithm() const { return algorithm_; }
 
     private:
-      const char *name_;
+      CryptoAlgs::Type type_;
       size_t key_size_;
       size_t iv_length_;
       size_t block_size_;
       CCAlgorithm algorithm_;
     };
 
-    const CipherInfo aes128("AES-128-CBC", kCCKeySizeAES128, kCCBlockSizeAES128, // CONST GLOBAL
+    const CipherInfo aes128(CryptoAlgs::AES_128_CBC,  // CONST GLOBAL
+			    kCCKeySizeAES128, kCCBlockSizeAES128,
 			    kCCBlockSizeAES128, kCCAlgorithmAES128);
-    const CipherInfo aes192("AES-192-CBC", kCCKeySizeAES192, kCCBlockSizeAES128, // CONST GLOBAL
+    const CipherInfo aes192(CryptoAlgs::AES_192_CBC, // CONST GLOBAL
+			    kCCKeySizeAES192, kCCBlockSizeAES128,
 			    kCCBlockSizeAES128, kCCAlgorithmAES128);
-    const CipherInfo aes256("AES-256-CBC", kCCKeySizeAES256, kCCBlockSizeAES128, // CONST GLOBAL
+    const CipherInfo aes256(CryptoAlgs::AES_256_CBC, // CONST GLOBAL
+			    kCCKeySizeAES256, kCCBlockSizeAES128,
 			    kCCBlockSizeAES128, kCCAlgorithmAES128);
-    const CipherInfo des3("DES-EDE3-CBC", kCCKeySize3DES, kCCBlockSize3DES, // CONST GLOBAL
+    const CipherInfo des3(CryptoAlgs::DES_EDE3_CBC, // CONST GLOBAL
+			  kCCKeySize3DES, kCCBlockSize3DES,
 			  kCCBlockSize3DES, kCCAlgorithm3DES);
-    const CipherInfo des("DES-CBC", kCCKeySizeDES, kCCBlockSizeDES, // CONST GLOBAL
+    const CipherInfo des(CryptoAlgs::DES_CBC, // CONST GLOBAL
+			 kCCKeySizeDES, kCCBlockSizeDES,
 			 kCCBlockSizeDES, kCCAlgorithmDES);
 
 #ifdef OPENVPN_PLATFORM_IPHONE
-    const CipherInfo bf("BF-CBC", 16, kCCBlockSizeBlowfish, // CONST GLOBAL
+    const CipherInfo bf(CryptoAlgs::BF_CBC,  // CONST GLOBAL
+			16, kCCBlockSizeBlowfish,
 			kCCBlockSizeBlowfish, kCCAlgorithmBlowfish);
 #endif
 
@@ -110,7 +111,7 @@ namespace openvpn {
 
       Cipher(const CryptoAlgs::Type alg)
       {
-	switch (type_ = alg)
+	switch (alg)
 	  {
 	  case CryptoAlgs::NONE:
 	    reset();
@@ -140,9 +141,17 @@ namespace openvpn {
 	  }
       }
 
+      CryptoAlgs::Type type() const
+      {
+	if (cipher_)
+	  return cipher_->type();
+	else
+	  return CryptoAlgs::NONE;
+      }
+
       std::string name() const
       {
-	return CryptoAlgs::name(type_);
+	return CryptoAlgs::name(type());
       }
 
       size_t key_length() const
@@ -175,7 +184,6 @@ namespace openvpn {
       void reset()
       {
 	cipher_ = NULL;
-	type_ = CryptoAlgs::NONE;
       }
 
       const CipherInfo *get() const
@@ -193,7 +201,6 @@ namespace openvpn {
       }
 
       const CipherInfo *cipher_;
-      CryptoAlgs::Type type_;
     };
 
     class CipherContext : boost::noncopyable

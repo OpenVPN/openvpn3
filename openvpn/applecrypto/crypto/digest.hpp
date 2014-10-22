@@ -61,9 +61,9 @@
 
 #define OPENVPN_DIGEST_ALG_DECLARE(TYPE) const DigestAlgorithm##TYPE alg_##TYPE;
 
-#define OPENVPN_DIGEST_INFO_DECLARE(TYPE) const DigestInfo info_##TYPE(#TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, kCCHmacAlg##TYPE)
+#define OPENVPN_DIGEST_INFO_DECLARE(TYPE) const DigestInfo info_##TYPE(CryptoAlgs::TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, kCCHmacAlg##TYPE)
 
-#define OPENVPN_DIGEST_INFO_DECLARE_NO_HMAC(TYPE) const DigestInfo info_##TYPE(#TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, DigestInfo::NO_HMAC_ALG)
+#define OPENVPN_DIGEST_INFO_DECLARE_NO_HMAC(TYPE) const DigestInfo info_##TYPE(CryptoAlgs::TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, DigestInfo::NO_HMAC_ALG)
 
 namespace openvpn {
   namespace AppleCrypto {
@@ -104,28 +104,24 @@ namespace openvpn {
 	NO_HMAC_ALG = -1
       };
 
-      DigestInfo(const char *name,
+      DigestInfo(CryptoAlgs::Type type,
 		 const int md_size,
 		 const DigestAlgorithm* digest_alg,
 		 const CCHmacAlgorithm hmac_alg)
-	: name_(name),
+	: type_(type),
 	  md_size_(md_size),
 	  digest_alg_(digest_alg),
 	  hmac_alg_(hmac_alg) {}
 
-      bool name_match(const char *name) const
-      {
-	return string::strcasecmp(name, name_) == 0;
-      }
-
+      CryptoAlgs::Type type() const { return type_; }
+      std::string name() const { return CryptoAlgs::name(type_); }
       size_t size() const { return md_size_; }
-      const char *name() const { return name_; }
 
       const DigestAlgorithm* digest_alg() const { return digest_alg_; }
       CCHmacAlgorithm hmac_alg() const { return hmac_alg_; }
 
     private:
-      const char *name_;
+      CryptoAlgs::Type type_;
       int md_size_;
       const DigestAlgorithm* digest_alg_;
       CCHmacAlgorithm hmac_alg_;
@@ -170,7 +166,7 @@ namespace openvpn {
 
       Digest(const CryptoAlgs::Type alg)
       {
-	switch (type_ = alg)
+	switch (alg)
 	  {
 	  case CryptoAlgs::NONE:
 	    reset();
@@ -201,6 +197,14 @@ namespace openvpn {
 	  }
       }
 
+      CryptoAlgs::Type type() const
+      {
+	if (digest_)
+	  return digest_->type();
+	else
+	  return CryptoAlgs::NONE;
+      }
+
       // convenience methods for common digests
       static Digest md4() { return Digest(CryptoAlgs::MD4); }
       static Digest md5() { return Digest(CryptoAlgs::MD5); }
@@ -208,7 +212,7 @@ namespace openvpn {
 
       std::string name() const
       {
-	return CryptoAlgs::name(type_);
+	return CryptoAlgs::name(type());
       }
 
       size_t size() const
@@ -223,7 +227,6 @@ namespace openvpn {
       void reset()
       {
 	digest_ = NULL;
-	type_ = CryptoAlgs::NONE;
       }
 
       const DigestInfo *get() const
@@ -241,7 +244,6 @@ namespace openvpn {
       }
 
       const DigestInfo *digest_;
-      CryptoAlgs::Type type_;
     };
 
     class DigestContext : boost::noncopyable

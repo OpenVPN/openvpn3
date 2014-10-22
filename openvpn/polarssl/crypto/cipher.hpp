@@ -56,7 +56,7 @@ namespace openvpn {
 
       Cipher(const CryptoAlgs::Type alg)
       {
-	switch (type_ = alg)
+	switch (alg)
 	  {
 	  case CryptoAlgs::NONE:
 	    reset();
@@ -84,9 +84,35 @@ namespace openvpn {
 	  }
       }
 
+      CryptoAlgs::Type type() const
+      {
+	if (cipher_)
+	  {
+	    switch (cipher_->type)
+	      {
+	      case POLARSSL_CIPHER_AES_128_CBC:
+		return CryptoAlgs::AES_128_CBC;
+	      case POLARSSL_CIPHER_AES_192_CBC:
+		return CryptoAlgs::AES_192_CBC;
+	      case POLARSSL_CIPHER_AES_256_CBC:
+		return CryptoAlgs::AES_256_CBC;
+	      case POLARSSL_CIPHER_DES_CBC:
+		return CryptoAlgs::DES_CBC;
+	      case POLARSSL_CIPHER_DES_EDE3_CBC:
+		return CryptoAlgs::DES_EDE3_CBC;
+	      case POLARSSL_CIPHER_BLOWFISH_CBC:
+		return CryptoAlgs::BF_CBC;
+	      default:
+		OPENVPN_THROW(polarssl_cipher, "unknown type");
+	      }
+	  }
+	else
+	  return CryptoAlgs::NONE;
+      }
+
       std::string name() const
       {
-	return CryptoAlgs::name(type_);
+	return CryptoAlgs::name(type());
       }
 
       size_t key_length() const
@@ -119,7 +145,6 @@ namespace openvpn {
       void reset()
       {
 	cipher_ = NULL;
-	type_ = CryptoAlgs::NONE;
       }
 
       const cipher_info_t *get() const
@@ -137,7 +162,6 @@ namespace openvpn {
       }
 
       const cipher_info_t *cipher_;
-      CryptoAlgs::Type type_;
     };
 
     class CipherContext : boost::noncopyable
