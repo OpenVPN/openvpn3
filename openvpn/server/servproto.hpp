@@ -43,10 +43,9 @@
 
 namespace openvpn {
 
-  template <typename CRYPTO_API>
   class ServerProto
   {
-    typedef ProtoContext<CRYPTO_API> Base;
+    typedef ProtoContext Base;
     typedef Link<TransportClientInstanceSend, TransportClientInstanceRecv> TransportLink;
 
   public:
@@ -56,14 +55,14 @@ namespace openvpn {
     {
     public:
       typedef boost::intrusive_ptr<Factory> Ptr;
-      typedef typename Base::Config ProtoConfig;
+      typedef Base::Config ProtoConfig;
 
       Factory(boost::asio::io_service& io_service_arg,
-	      const typename Base::Config& c)
+	      const Base::Config& c)
 	: io_service(io_service_arg)
       {
 	if (c.tls_auth_enabled())
-	  preval.reset(new typename Base::TLSAuthPreValidate(c));
+	  preval.reset(new Base::TLSAuthPreValidate(c));
       }
 
       virtual TransportClientInstanceRecv::Ptr new_client_instance();
@@ -82,11 +81,11 @@ namespace openvpn {
       }
 
       boost::asio::io_service& io_service;
-      typename ProtoConfig::Ptr proto_context_config;
+      ProtoConfig::Ptr proto_context_config;
       SessionStats::Ptr stats;
 
     private:
-      typename Base::TLSAuthPreValidate::Ptr preval;
+      Base::TLSAuthPreValidate::Ptr preval;
     };
 
     // This is the main server-side client instance object
@@ -95,7 +94,7 @@ namespace openvpn {
     {
       friend class Factory; // calls constructor
 
-      typedef typename Base::PacketType PacketType;
+      typedef Base::PacketType PacketType;
 
       using Base::now;
       using Base::stat;
@@ -154,7 +153,7 @@ namespace openvpn {
 	  Base::update_now();
 
 	  // get packet type
-	  typename Base::PacketType pt = Base::packet_type(buf);
+	  Base::PacketType pt = Base::packet_type(buf);
 
 	  // process packet
 	  if (pt.is_data())
@@ -322,8 +321,7 @@ namespace openvpn {
     };
   };
 
-  template <typename CRYPTO_API>
-  inline TransportClientInstanceRecv::Ptr ServerProto<CRYPTO_API>::Factory::new_client_instance()
+  inline TransportClientInstanceRecv::Ptr ServerProto::Factory::new_client_instance()
   {
     return TransportClientInstanceRecv::Ptr(new Session(io_service, *this));
   }
