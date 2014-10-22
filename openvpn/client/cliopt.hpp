@@ -447,10 +447,11 @@ namespace openvpn {
 	    throw option_error("internal error: no TCP server entries for HTTP proxy transport");
 
 	  // HTTP Proxy transport
-	  HTTPProxyTransport::ClientConfig<SSLLib::CryptoAPI>::Ptr httpconf = HTTPProxyTransport::ClientConfig<SSLLib::CryptoAPI>::new_obj();
+	  HTTPProxyTransport::ClientConfig::Ptr httpconf = HTTPProxyTransport::ClientConfig::new_obj();
 	  httpconf->remote_list = remote_list;
 	  httpconf->frame = frame;
 	  httpconf->stats = cli_stats;
+	  httpconf->digest_factory.reset(new CryptoDigestFactory<SSLLib::CryptoAPI>());
 	  httpconf->socket_protect = socket_protect;
 	  httpconf->http_proxy_options = http_proxy_options;
 	  httpconf->rng = rng;

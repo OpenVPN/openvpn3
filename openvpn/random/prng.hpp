@@ -73,7 +73,7 @@ namespace openvpn {
       if (nonce_secret_len < NONCE_SECRET_LEN_MIN || nonce_secret_len > NONCE_SECRET_LEN_MAX)
 	throw prng_bad_nonce_len();
 
-      DigestContext::Ptr dc = digest_factory->new_obj(CryptoAlgs::lookup(digest_name));
+      DigestContext::Ptr dc = digest_factory->new_context(CryptoAlgs::lookup(digest_name));
 
       // allocate array for nonce and seed it
       nonce_t nd(dc->size() + nonce_secret_len, nonce_t::DESTRUCT_ZERO|nonce_t::ARRAY);
@@ -109,7 +109,7 @@ namespace openvpn {
 	  while (len > 0)
 	    {
 	      const size_t blen = std::min(len, md_size);
-	      DigestInstance::Ptr digest(digest_context->new_obj());
+	      DigestInstance::Ptr digest(digest_context->new_digest());
 	      digest->update(nonce_data.c_data(), nonce_data.size());
 	      if (digest->final(nonce_data.data()) != md_size)
 		throw prng_internal_error();

@@ -38,11 +38,11 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/crypto/digestapi.hpp>
 
 namespace openvpn {
   namespace HTTPProxy {
 
-    template <typename CRYPTO_API>
     class NTLM
     {
     public:
@@ -57,7 +57,8 @@ namespace openvpn {
 	return "TlRMTVNTUAABAAAAAgIAAA==";
       }
 
-      static std::string phase_3(const std::string& phase_2_response,
+      static std::string phase_3(DigestFactory& digest_factory,
+				 const std::string& phase_2_response,
 				 const std::string& dom_username,
 				 const std::string& password,
 				 RandomAPI& rng)
@@ -75,10 +76,10 @@ namespace openvpn {
 
 	// convert password from utf-8 to utf-16 and take an MD4 hash of it
 	BufferPtr password_u = Unicode::string_to_utf16(password);
-	typename CRYPTO_API::DigestContext md4_ctx(CRYPTO_API::Digest::md4());
-	md4_ctx.update(password_u->c_data(), password_u->size());
+	DigestInstance::Ptr md4_ctx(digest_factory.new_digest(CryptoAlgs::MD4));
+	md4_ctx->update(password_u->c_data(), password_u->size());
 	unsigned char md4_hash[21];
-	md4_ctx.final(md4_hash);
+	md4_ctx->final(md4_hash);
 	std::memset(md4_hash + 16, 0, 5); // pad to 21 bytes
 
 	// decode phase_2_response from base64 to raw data
@@ -95,10 +96,10 @@ namespace openvpn {
 	// keyed to md4_hash
 	const std::string ud = boost::algorithm::to_upper_copy(username) + domain;
 	BufferPtr ud_u = Unicode::string_to_utf16(ud);
-	typename CRYPTO_API::HMACContext hmac_ctx1(CRYPTO_API::Digest::md5(), md4_hash, 16);
-	hmac_ctx1.update(ud_u->c_data(), ud_u->size());
+	HMACInstance::Ptr hmac_ctx1(digest_factory.new_hmac(CryptoAlgs::MD5, md4_hash, 16));
+	hmac_ctx1->update(ud_u->c_data(), ud_u->size());
 	unsigned char ntlmv2_hash[16];
-	hmac_ctx1.final(ntlmv2_hash);
+	hmac_ctx1->final(ntlmv2_hash);
 
 	// NTLMv2 Blob
 	unsigned char ntlmv2_response[144];
@@ -136,10 +137,10 @@ namespace openvpn {
 	std::memcpy(&ntlmv2_response[8], challenge, 8);
 
 	// hmac-md5
-	typename CRYPTO_API::HMACContext hmac_ctx2(CRYPTO_API::Digest::md5(), ntlmv2_hash, 16);
-	hmac_ctx2.update(&ntlmv2_response[8], ntlmv2_blob_size + 8);
+	HMACInstance::Ptr hmac_ctx2(digest_factory.new_hmac(CryptoAlgs::MD5, ntlmv2_hash, 16));
+	hmac_ctx2->update(&ntlmv2_response[8], ntlmv2_blob_size + 8);
 	unsigned char ntlmv2_hmacmd5[16];
-	hmac_ctx2.final(ntlmv2_hmacmd5);
+	hmac_ctx2->final(ntlmv2_hmacmd5);
 
 	// add hmac-md5 result to the blob
 	// Note: This overwrites challenge previously written at ntlmv2_response[8..15]

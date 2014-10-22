@@ -29,43 +29,46 @@
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/crypto/digestapi.hpp>
 
 namespace openvpn {
   namespace HTTPProxy {
 
-    template <typename CRYPTO_API>
     class Digest
     {
       class HashString
       {
       public:
-	HashString(const typename CRYPTO_API::Digest& md)
-	  : ctx(md) {}
+	HashString(DigestFactory& digest_factory,
+		   const CryptoAlgs::Type digest_type)
+	  : ctx(digest_factory.new_digest(digest_type))
+	{
+	}
 
 	void update(const std::string& str)
 	{
-	  ctx.update((unsigned char *)str.c_str(), str.length());
+	  ctx->update((unsigned char *)str.c_str(), str.length());
 	}
 
 	void update(const char *str)
 	{
-	  ctx.update((unsigned char *)str, std::strlen(str));
+	  ctx->update((unsigned char *)str, std::strlen(str));
 	}
 
 	void update(const char c)
 	{
-	  ctx.update((unsigned char *)&c, 1);
+	  ctx->update((unsigned char *)&c, 1);
 	}
 
 	void update(const Buffer& buf)
 	{
-	  ctx.update(buf.c_data(), buf.size());
+	  ctx->update(buf.c_data(), buf.size());
 	}
 
 	BufferPtr final()
 	{
-	  BufferPtr ret(new BufferAllocated(ctx.size(), BufferAllocated::ARRAY));
-	  ctx.final(ret->data());
+	  BufferPtr ret(new BufferAllocated(ctx->size(), BufferAllocated::ARRAY));
+	  ctx->final(ret->data());
 	  return ret;
 	}
 
@@ -76,19 +79,20 @@ namespace openvpn {
 	}
 
       private:
-	typename CRYPTO_API::DigestContext ctx;
+	DigestInstance::Ptr ctx;
       };
 
     public:
       // calculate H(A1) as per spec
-      static std::string calcHA1(const std::string& alg,
+      static std::string calcHA1(DigestFactory& digest_factory,
+				 const std::string& alg,
 				 const std::string& username,
 				 const std::string& realm,
 				 const std::string& password,
 				 const std::string& nonce,
 				 const std::string& cnonce)
       {
-	HashString h1(CRYPTO_API::Digest::md5());
+	HashString h1(digest_factory, CryptoAlgs::MD5);
 	h1.update(username);
 	h1.update(':');
 	h1.update(realm);
@@ -98,7 +102,7 @@ namespace openvpn {
 
 	if (string::strcasecmp(alg, "md5-sess") == 0)
 	  {
-	    HashString h2(CRYPTO_API::Digest::md5());
+	    HashString h2(digest_factory, CryptoAlgs::MD5);
 	    h2.update(*result);
 	    h2.update(':');
 	    h2.update(nonce);
@@ -110,7 +114,8 @@ namespace openvpn {
       }
 
       // calculate request-digest/response-digest as per HTTP Digest spec
-      static std::string calcResponse(const std::string& hA1,         // H(A1)
+      static std::string calcResponse(DigestFactory& digest_factory,
+				      const std::string& hA1,         // H(A1)
 				      const std::string& nonce,       // nonce from server
 				      const std::string& nonce_count, // 8 hex digits
 				      const std::string& cnonce,      // client nonce
@@ -120,7 +125,7 @@ namespace openvpn {
 				      const std::string& hEntity)     // H(entity body) if qop="auth-int"
       {
 	// calculate H(A2)
-	HashString h1(CRYPTO_API::Digest::md5());
+	HashString h1(digest_factory, CryptoAlgs::MD5);
 	h1.update(method);
 	h1.update(':');
 	h1.update(digestUri);
@@ -132,7 +137,7 @@ namespace openvpn {
 	const std::string hA2 = h1.final_hex();
 
 	// calculate response
-	HashString h2(CRYPTO_API::Digest::md5());
+	HashString h2(digest_factory, CryptoAlgs::MD5);
 	h2.update(hA1);
 	h2.update(':');
 	h2.update(nonce);

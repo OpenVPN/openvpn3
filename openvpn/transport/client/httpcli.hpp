@@ -51,6 +51,7 @@
 #include <openvpn/proxy/httpdigest.hpp>
 #include <openvpn/proxy/ntlm.hpp>
 #include <openvpn/client/remotelist.hpp>
+#include <openvpn/crypto/digestapi.hpp>
 
 namespace openvpn {
   namespace HTTPProxyTransport {
@@ -164,9 +165,6 @@ namespace openvpn {
       }
     };
 
-    // We need access to CRYPTO_API implementation, because proxy
-    // authentication methods tend to require crypto functionality.
-    template <typename CRYPTO_API>
     class ClientConfig : public TransportClientFactory
     {
     public:
@@ -181,6 +179,8 @@ namespace openvpn {
       Options::Ptr http_proxy_options;
 
       RandomAPI::Ptr rng; // random data source
+
+      DigestFactory::Ptr digest_factory; // needed by proxy auth methods
 
       SocketProtect* socket_protect;
 
@@ -200,10 +200,9 @@ namespace openvpn {
       {}
     };
 
-    template <typename CRYPTO_API>
     class Client : public TransportClient
     {
-      friend class ClientConfig<CRYPTO_API>;  // calls constructor
+      friend class ClientConfig;                        // calls constructor
       friend class TCPTransport::Link<Client*, false>;  // calls tcp_read_handler
 
       typedef TCPTransport::Link<Client*, false> LinkImpl;
@@ -290,7 +289,7 @@ namespace openvpn {
       };
 
       Client(boost::asio::io_service& io_service_arg,
-	     ClientConfig<CRYPTO_API>* config_arg,
+	     ClientConfig* config_arg,
 	     TransportClientParent& parent_arg)
 	:  io_service(io_service_arg),
 	   socket(io_service_arg),
@@ -562,7 +561,8 @@ namespace openvpn {
 	  const std::string uri = server_host + ":" + server_port;
 
 	  // calculate session key
-	  const std::string session_key = HTTPProxy::Digest<CRYPTO_API>::calcHA1(
+	  const std::string session_key = HTTPProxy::Digest::calcHA1(
+	      *config->digest_factory,
 	      algorithm,
 	      config->http_proxy_options->username,
 	      realm,
@@ -571,7 +571,8 @@ namespace openvpn {
 	      cnonce);
 
 	  // calculate response
-	  const std::string response = HTTPProxy::Digest<CRYPTO_API>::calcResponse(
+	  const std::string response = HTTPProxy::Digest::calcResponse(
+	      *config->digest_factory,
 	      session_key,
 	      nonce,
 	      nonce_count,
@@ -618,7 +619,7 @@ namespace openvpn {
       {
 	OPENVPN_LOG("Proxy method: NTLM" << std::endl << pa.to_string());
 
-	const std::string phase_1_reply = HTTPProxy::NTLM<CRYPTO_API>::phase_1();
+	const std::string phase_1_reply = HTTPProxy::NTLM::phase_1();
 
 	std::ostringstream os;
 	gen_headers(os);
@@ -662,7 +663,8 @@ namespace openvpn {
 	try {
 	  //OPENVPN_LOG("NTLM phase 3: " << phase_2_response);
 
-	  const std::string phase_3_reply = HTTPProxy::NTLM<CRYPTO_API>::phase_3(
+	  const std::string phase_3_reply = HTTPProxy::NTLM::phase_3(
+	      *config->digest_factory,
 	      phase_2_response,
 	      config->http_proxy_options->username,
 	      config->http_proxy_options->password,
@@ -876,9 +878,9 @@ namespace openvpn {
 
       boost::asio::io_service& io_service;
       boost::asio::ip::tcp::socket socket;
-      typename ClientConfig<CRYPTO_API>::Ptr config;
+      ClientConfig::Ptr config;
       TransportClientParent& parent;
-      typename LinkImpl::Ptr impl;
+      LinkImpl::Ptr impl;
       boost::asio::ip::tcp::resolver resolver;
       TCPTransport::AsioEndpoint server_endpoint;
       bool halt;
@@ -895,10 +897,9 @@ namespace openvpn {
       size_t drain_content_length;
     };
 
-    template <typename CRYPTO_API>
-    inline TransportClient::Ptr ClientConfig<CRYPTO_API>::new_client_obj(boost::asio::io_service& io_service, TransportClientParent& parent)
+    inline TransportClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service, TransportClientParent& parent)
     {
-      return TransportClient::Ptr(new Client<CRYPTO_API>(io_service, this, parent));
+      return TransportClient::Ptr(new Client(io_service, this, parent));
     }
   }
 } // namespace openvpn
