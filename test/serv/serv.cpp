@@ -28,6 +28,7 @@
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
+#include <openvpn/crypto/cryptodcsel.hpp>
 
 #include <openvpn/transport/server/udpserv.hpp>
 #include <openvpn/server/servproto.hpp>
@@ -156,7 +157,7 @@ private:
 
 void work(const char *config_fn, ServerThread::Ptr& serv)
 {
-  typedef ServerProto<SSLLib::RandomAPI, SSLLib::CryptoAPI, SSLLib::SSLAPI>::Factory ServerProtoFactory;
+  typedef ServerProto::Factory ServerProtoFactory;
 
   // set global PolarSSL debug level
 #if defined(USE_POLARSSL) && defined(OPENVPN_SSL_DEBUG)
@@ -173,8 +174,8 @@ void work(const char *config_fn, ServerThread::Ptr& serv)
   boost::asio::io_service io_service(1); // concurrency hint=1
 
   // initialize RNG/PRNG
-  SSLLib::RandomAPI::Ptr rng(new SSLLib::RandomAPI());
-  PRNG<SSLLib::RandomAPI, SSLLib::CryptoAPI>::Ptr prng(new PRNG<SSLLib::RandomAPI, SSLLib::CryptoAPI>("SHA1", rng, 16));
+  RandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
+  RandomAPI::Ptr prng(new SSLLib::RandomAPI(true));
 
   // initialize frame
   Frame::Ptr frame = frame_init();
@@ -201,8 +202,11 @@ void work(const char *config_fn, ServerThread::Ptr& serv)
 
   // initialize main OpenVPN protocol config
   ServerProtoFactory::ProtoConfig::Ptr pcfg(new ServerProtoFactory::ProtoConfig());
+  pcfg->dc_factory.reset(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, prng));
+  pcfg->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
+  pcfg->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
+  pcfg->ssl_factory.reset(new SSLLib::SSLAPI(ssl));
   pcfg->load(opt, pco, -1);
-  pcfg->ssl_ctx.reset(new SSLLib::SSLAPI(ssl));
   pcfg->set_protocol(Protocol(Protocol::UDP));
   pcfg->frame = frame;
   pcfg->now = &now;
