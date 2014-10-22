@@ -182,9 +182,9 @@ namespace openvpn {
       cp->dc_deferred = true; // defer data channel setup until after options pull
       cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
+      cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));
       cp->load(opt, *proto_context_options, config.default_key_direction);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
-      cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));
       cp->gui_version = config.gui_version;
       cp->frame = frame;
       cp->now = &now_;
