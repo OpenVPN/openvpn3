@@ -24,6 +24,8 @@
 #ifndef OPENVPN_ERROR_ERROR_H
 #define OPENVPN_ERROR_ERROR_H
 
+#include <openvpn/common/types.hpp>
+
 namespace openvpn {
   namespace Error {
 
@@ -160,6 +162,7 @@ namespace openvpn {
 	"PKTID_TCP_BAD_INITIAL",
       };
 
+      static_assert(N_ERRORS == array_size(names), "error names array inconsistency");
       if (type < N_ERRORS)
 	return names[type];
       else

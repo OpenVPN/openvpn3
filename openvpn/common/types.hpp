@@ -39,6 +39,11 @@ namespace openvpn {
 
   typedef long long count_t;
 
+  template <typename T, std::size_t N>
+  constexpr std::size_t array_size( T (&)[N] ) {
+    return N;
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_TYPES_H
