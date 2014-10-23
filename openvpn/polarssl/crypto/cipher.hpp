@@ -70,6 +70,15 @@ namespace openvpn {
 	  case CryptoAlgs::AES_256_CBC:
 	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_256_CBC);
 	    break;
+	  case CryptoAlgs::AES_128_GCM:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_128_GCM);
+	    break;
+	  case CryptoAlgs::AES_192_GCM:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_192_GCM);
+	    break;
+	  case CryptoAlgs::AES_256_GCM:
+	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_256_GCM);
+	    break;
 	  case CryptoAlgs::DES_CBC:
 	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_DES_CBC);
 	    break;
