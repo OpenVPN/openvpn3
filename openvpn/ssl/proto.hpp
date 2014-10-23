@@ -602,9 +602,10 @@ namespace openvpn {
 
 	if (dc_context)
 	  {
-	    out << ",cipher " << dc_context->cipher_name();
-	    out << ",auth " << dc_context->digest_name();
-	    out << ",keysize " << dc_context->key_size();
+	    const CryptoDCContext::Info ci = dc_context->crypto_info();
+	    out << ",cipher " << CryptoAlgs::name(ci.cipher_alg, "[null-cipher]");
+	    out << ",auth " << CryptoAlgs::name(ci.hmac_alg, "[null-digest]");
+	    out << ",keysize " << (ci.cipher_key_size * 8);
 	  }
 	if (tls_auth_key.defined())
 	  out << ",tls-auth";
@@ -1296,26 +1297,27 @@ namespace openvpn {
 	  {
 	    const Config& c = *proto.config;
 	    const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
-	    OpenVPNStaticKey& key = data_channel_key->key;
+	    const OpenVPNStaticKey& key = data_channel_key->key;
 
 	    // build crypto context for data channel encryption/decryption
 	    crypto = proto.config->dc_context->new_obj(key_id_);
-	    if (crypto->cipher_defined())
-	      {
-		crypto->init_encrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir));
-		crypto->init_decrypt_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
-	      }
-	    if (crypto->digest_defined())
-	      {
-		crypto->init_encrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir));
-		crypto->init_decrypt_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
-	      }
-	    crypto->init_encrypt_pid_send(PacketID::SHORT_FORM);
-	    crypto->init_decrypt_pid_recv(c.pid_mode,
-					  PacketID::SHORT_FORM,
-					  c.pid_seq_backtrack, c.pid_time_backtrack,
-					  "DATA", int(key_id_),
-					  proto.stats);
+	    const unsigned int def = crypto->defined();
+
+	    if (def & CryptoDCInstance::CIPHER_DEFINED)
+	      crypto->init_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
+				  key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
+
+	    if (def & CryptoDCInstance::HMAC_DEFINED)
+	      crypto->init_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir),
+				key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
+
+	    crypto->init_pid(PacketID::SHORT_FORM,
+			     c.pid_mode,
+			     PacketID::SHORT_FORM,
+			     c.pid_seq_backtrack, c.pid_time_backtrack,
+			     "DATA", int(key_id_),
+			     proto.stats);
+
 	    if (data_channel_key->rekey_defined)
 	      crypto->rekey(data_channel_key->rekey_type);
 	    data_channel_key.reset();

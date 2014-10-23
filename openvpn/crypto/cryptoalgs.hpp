@@ -126,6 +126,14 @@ namespace openvpn {
       return get(type).name;
     }
 
+    inline const char *name(const Type type, const char *default_name)
+    {
+      if (type == NONE)
+	return default_name;
+      else
+	return get(type).name;
+    }
+
     inline Type legal_dc_cipher(const Type type)
     {
       const Alg& alg = get(type);

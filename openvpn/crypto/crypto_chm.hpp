@@ -67,49 +67,44 @@ namespace openvpn {
 
     // Initialization
 
-    virtual void init_encrypt_cipher(const StaticKey& key)
+    virtual void init_cipher(StaticKey&& encrypt_key,
+			     StaticKey&& decrypt_key)
     {
-      encrypt_.cipher.init(cipher, key, CRYPTO_API::CipherContext::ENCRYPT);
+      encrypt_.cipher.init(cipher, encrypt_key, CRYPTO_API::CipherContext::ENCRYPT);
+      decrypt_.cipher.init(cipher, decrypt_key, CRYPTO_API::CipherContext::DECRYPT);
     }
 
-    virtual void init_encrypt_hmac(const StaticKey& key)
+    virtual void init_hmac(StaticKey&& encrypt_key,
+			   StaticKey&& decrypt_key)
     {
-      encrypt_.hmac.init(digest, key);
+      encrypt_.hmac.init(digest, encrypt_key);
+      decrypt_.hmac.init(digest, decrypt_key);
     }
 
-    virtual void init_encrypt_pid_send(const int form)
+    virtual void init_pid(const int send_form,
+			  const int recv_mode,
+			  const int recv_form,
+			  const int recv_seq_backtrack,
+			  const int recv_time_backtrack,
+			  const char *recv_name,
+			  const int recv_unit,
+			  const SessionStats::Ptr& recv_stats_arg)
     {
-      encrypt_.pid_send.init(form);
-    }
-
-    virtual void init_decrypt_cipher(const StaticKey& key)
-    {
-      decrypt_.cipher.init(cipher, key, CRYPTO_API::CipherContext::DECRYPT);
-    }
-
-    virtual void init_decrypt_hmac(const StaticKey& key)
-    {
-      decrypt_.hmac.init(digest, key);
-    }
-
-    virtual void init_decrypt_pid_recv(const int mode, const int form,
-				       const int seq_backtrack, const int time_backtrack,
-				       const char *name, const int unit,
-				       const SessionStats::Ptr& stats_arg)
-    {
-      decrypt_.pid_recv.init(mode, form, seq_backtrack, time_backtrack, name, unit, stats_arg);
+      encrypt_.pid_send.init(send_form);
+      decrypt_.pid_recv.init(recv_mode, recv_form, recv_seq_backtrack, recv_time_backtrack,
+			     recv_name, recv_unit, recv_stats_arg);
     }
 
     // Indicate whether or not cipher/digest is defined
 
-    virtual bool cipher_defined() const
+    virtual unsigned int defined() const
     {
-      return cipher.defined();
-    }
-
-    virtual bool digest_defined() const
-    {
-      return digest.defined();
+      unsigned int ret = 0;
+      if (cipher.defined())
+	ret |= CIPHER_DEFINED;
+      if (digest.defined())
+	ret |= HMAC_DEFINED;
+      return ret;
     }
 
     // Rekeying
@@ -150,21 +145,15 @@ namespace openvpn {
       return new CryptoCHM<CRYPTO_API>(cipher, digest, frame, prng);
     }
 
-    // Info for ProtoContext::options_string
-
-    virtual std::string cipher_name() const
+    // cipher/HMAC/key info
+    virtual Info crypto_info()
     {
-      return cipher.defined() ? cipher.name() : "[null-cipher]";
-    }
-
-    virtual std::string digest_name() const
-    {
-      return digest.defined() ? digest.name() : "[null-digest]";
-    }
-
-    virtual size_t key_size() const
-    {
-      return cipher.defined() ? cipher.key_length_in_bits() : 0;
+      Info ret;
+      ret.cipher_alg = cipher.type();
+      ret.hmac_alg = digest.type();
+      ret.cipher_key_size = (cipher.defined() ? cipher.key_length() : 0);
+      ret.hmac_key_size = (digest.defined() ? digest.size() : 0);
+      return ret;
     }
 
     // Info for ProtoContext::link_mtu_adjust

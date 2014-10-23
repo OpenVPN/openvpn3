@@ -49,20 +49,27 @@ namespace openvpn {
 
     // Initialization
 
-    virtual void init_encrypt_cipher(const StaticKey& key) = 0;
-    virtual void init_encrypt_hmac(const StaticKey& key) = 0;
-    virtual void init_encrypt_pid_send(const int form) = 0;
-    virtual void init_decrypt_cipher(const StaticKey& key) = 0;
-    virtual void init_decrypt_hmac(const StaticKey& key) = 0;
-    virtual void init_decrypt_pid_recv(const int mode, const int form,
-				       const int seq_backtrack, const int time_backtrack,
-				       const char *name, const int unit,
-				       const SessionStats::Ptr& stats_arg) = 0;
+    // return value of defined()
+    enum {
+      CIPHER_DEFINED=(1<<0),
+      HMAC_DEFINED=(1<<1)
+    };
+    virtual unsigned int defined() const = 0;
 
-    // Indicate whether or not cipher/digest is defined
+    virtual void init_cipher(StaticKey&& encrypt_key,
+			     StaticKey&& decrypt_key) = 0;
 
-    virtual bool cipher_defined() const = 0;
-    virtual bool digest_defined() const = 0;
+    virtual void init_hmac(StaticKey&& encrypt_key,
+			   StaticKey&& decrypt_key) = 0;
+
+    virtual void init_pid(const int send_form,
+			  const int recv_mode,
+			  const int recv_form,
+			  const int recv_seq_backtrack,
+			  const int recv_time_backtrack,
+			  const char *recv_name,
+			  const int recv_unit,
+			  const SessionStats::Ptr& recv_stats_arg) = 0;
 
     // Rekeying
 
@@ -84,14 +91,16 @@ namespace openvpn {
 
     virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id) = 0;
 
-    // Info for ProtoContext::options_string
-
-    virtual std::string cipher_name() const = 0;
-    virtual std::string digest_name() const = 0;
-    virtual size_t key_size() const = 0;
+    // cipher/HMAC/key info
+    struct Info {
+      CryptoAlgs::Type cipher_alg;
+      CryptoAlgs::Type hmac_alg;
+      unsigned int cipher_key_size;
+      unsigned int hmac_key_size;
+    };
+    virtual Info crypto_info() = 0;
 
     // Info for ProtoContext::link_mtu_adjust
-
     virtual size_t encap_overhead() const = 0;
   };
 
