@@ -605,7 +605,7 @@ namespace openvpn {
 	    const CryptoDCContext::Info ci = dc_context->crypto_info();
 	    out << ",cipher " << CryptoAlgs::name(ci.cipher_alg, "[null-cipher]");
 	    out << ",auth " << CryptoAlgs::name(ci.hmac_alg, "[null-digest]");
-	    out << ",keysize " << (ci.cipher_key_size * 8);
+	    out << ",keysize " << (CryptoAlgs::key_length(ci.cipher_alg) * 8);
 	  }
 	if (tls_auth_key.defined())
 	  out << ",tls-auth";

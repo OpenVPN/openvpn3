@@ -151,8 +151,6 @@ namespace openvpn {
       Info ret;
       ret.cipher_alg = cipher;
       ret.hmac_alg = digest;
-      ret.cipher_key_size = CryptoAlgs::key_length(cipher);
-      ret.hmac_key_size = CryptoAlgs::size(digest);
       return ret;
     }
 
