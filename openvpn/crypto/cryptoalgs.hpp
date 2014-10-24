@@ -98,10 +98,10 @@ namespace openvpn {
       const char *name() const { return name_; }
       unsigned int flags() const { return flags_; }
       unsigned int mode() const { return flags_ & MODE_MASK; }
-      unsigned int size() const { return size_; }              // digest size
-      unsigned int key_length() const { return size_; }        // cipher key length
-      unsigned int iv_length() const { return iv_length_; }    // cipher only
-      unsigned int block_size() const { return block_size_; }  // cipher only
+      size_t size() const { return size_; }              // digest size
+      size_t key_length() const { return size_; }        // cipher key length
+      size_t iv_length() const { return iv_length_; }    // cipher only
+      size_t block_size() const { return block_size_; }  // cipher only
 
     private:
       const char *name_;
@@ -183,25 +183,25 @@ namespace openvpn {
 	return get(type).name();
     }
 
-    inline unsigned int size(const Type type)
+    inline size_t size(const Type type)
     {
       const Alg& alg = get(type);
       return alg.size();
     }
 
-    inline unsigned int key_length(const Type type)
+    inline size_t key_length(const Type type)
     {
       const Alg& alg = get(type);
       return alg.key_length();
     }
 
-    inline unsigned int iv_length(const Type type)
+    inline size_t iv_length(const Type type)
     {
       const Alg& alg = get(type);
       return alg.iv_length();
     }
 
-    inline unsigned int block_size(const Type type)
+    inline size_t block_size(const Type type)
     {
       const Alg& alg = get(type);
       return alg.block_size();

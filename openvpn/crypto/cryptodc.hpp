@@ -95,8 +95,8 @@ namespace openvpn {
     struct Info {
       CryptoAlgs::Type cipher_alg;
       CryptoAlgs::Type hmac_alg;
-      unsigned int cipher_key_size;
-      unsigned int hmac_key_size;
+      size_t cipher_key_size;
+      size_t hmac_key_size;
     };
     virtual Info crypto_info() = 0;
 
