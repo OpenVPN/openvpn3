@@ -47,7 +47,7 @@ namespace openvpn {
   public:
     OvpnHMAC() {}
 
-    OvpnHMAC(const typename CRYPTO_API::Digest& digest, const StaticKey& key)
+    OvpnHMAC(const CryptoAlgs::Type digest, const StaticKey& key)
     {
       init(digest, key);
     }
@@ -60,14 +60,16 @@ namespace openvpn {
       return ctx.size();
     }
 
-    void init(const typename CRYPTO_API::Digest& digest, const StaticKey& key)
+    void init(const CryptoAlgs::Type digest, const StaticKey& key)
     {
+      const CryptoAlgs::Alg& alg = CryptoAlgs::get(digest);
+
       // check that key is large enough
-      if (key.size() < digest.size())
+      if (key.size() < alg.size())
 	throw ovpn_hmac_context_digest_size();
 
       // initialize HMAC context with digest type and key
-      ctx.init(digest, key.data(), digest.size());
+      ctx.init(digest, key.data(), alg.size());
     }
 
     void hmac(unsigned char *out, const size_t out_size,
@@ -168,7 +170,7 @@ namespace openvpn {
   class CryptoOvpnHMACInstance : public OvpnHMACInstance
   {
   public:
-    CryptoOvpnHMACInstance(const typename CRYPTO_API::Digest& digest_arg)
+    CryptoOvpnHMACInstance(const CryptoAlgs::Type digest_arg)
       : digest(digest_arg)
     {
     }
@@ -196,7 +198,7 @@ namespace openvpn {
     }
 
   private:
-    typename CRYPTO_API::Digest digest;
+    typename CryptoAlgs::Type digest;
     OvpnHMAC<CRYPTO_API> ovpn_hmac;
   };
 
@@ -211,7 +213,7 @@ namespace openvpn {
 
     virtual size_t size() const
     {
-      return digest.size();
+      return CryptoAlgs::size(digest);
     }
 
     virtual OvpnHMACInstance::Ptr new_obj()
@@ -220,7 +222,7 @@ namespace openvpn {
     }
 
   private:
-    typename CRYPTO_API::Digest digest;
+    CryptoAlgs::Type digest;
   };
 
   template <typename CRYPTO_API>

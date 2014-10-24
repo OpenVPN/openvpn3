@@ -55,7 +55,7 @@ namespace openvpn {
 	state = PRE;
       }
 
-      HMACContext(const Digest& digest, const unsigned char *key, const size_t key_size)
+      HMACContext(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
       {
 	init(digest, key, key_size);
       }
@@ -64,12 +64,13 @@ namespace openvpn {
       {
       }
 
-      void init(const Digest& digest, const unsigned char *key, const size_t key_size)
+      void init(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
       {
 	state = PRE;
-	info = digest.get();
-	alg = info->hmac_alg();
-	if (alg == DigestInfo::NO_HMAC_ALG)
+	info = DigestContext::digest_type(digest);
+	digest_size_ = CryptoAlgs::size(digest);
+	hmac_alg = info->hmac_alg();
+	if (hmac_alg == DigestInfo::NO_HMAC_ALG)
 	  throw digest_cannot_be_used_with_hmac(info->name());
 	if (key_size > MAX_HMAC_KEY_SIZE)
 	  throw hmac_keysize_error();
@@ -92,14 +93,14 @@ namespace openvpn {
       {
 	cond_reset(false);
 	CCHmacFinal(&ctx, out);
-	return info->size();
+	return digest_size_;
       }
 
       size_t size() const
       {
 	if (!is_initialized())
 	  throw hmac_uninitialized();
-	return info->size();
+	return digest_size_;
       }
 
       bool is_initialized() const
@@ -118,7 +119,7 @@ namespace openvpn {
 	    if (!force_init)
 	      return;
 	  case PARTIAL:
-	    CCHmacInit(&ctx, alg, key_, key_size_);
+	    CCHmacInit(&ctx, hmac_alg, key_, key_size_);
 	    state = READY;
 	  }
       }
@@ -131,8 +132,9 @@ namespace openvpn {
       int state;
 
       const DigestInfo *info;
-      CCHmacAlgorithm alg;
+      CCHmacAlgorithm hmac_alg;
       size_t key_size_;
+      size_t digest_size_;
       unsigned char key_[MAX_HMAC_KEY_SIZE];
       CCHmacContext ctx;
     };

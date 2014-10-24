@@ -37,128 +37,13 @@
 
 namespace openvpn {
   namespace PolarSSLCrypto {
-    class DigestContext;
     class HMACContext;
-
-    class Digest
-    {
-      friend class DigestContext;
-      friend class HMACContext;
-
-    public:
-      OPENVPN_EXCEPTION(polarssl_digest);
-      OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_undefined);
-
-      Digest()
-      {
-	reset();
-      }
-
-      Digest(const CryptoAlgs::Type alg)
-      {
-	switch (alg)
-	  {
-	  case CryptoAlgs::NONE:
-	    reset();
-	    break;
-	  case CryptoAlgs::MD4:
-	    digest_ = md_info_from_type(POLARSSL_MD_MD4);
-	    break;
-	  case CryptoAlgs::MD5:
-	    digest_ = md_info_from_type(POLARSSL_MD_MD5);
-	    break;
-	  case CryptoAlgs::SHA1:
-	    digest_ = md_info_from_type(POLARSSL_MD_SHA1);
-	    break;
-	  case CryptoAlgs::SHA224:
-	    digest_ = md_info_from_type(POLARSSL_MD_SHA224);
-	    break;
-	  case CryptoAlgs::SHA256:
-	    digest_ = md_info_from_type(POLARSSL_MD_SHA256);
-	    break;
-	  case CryptoAlgs::SHA384:
-	    digest_ = md_info_from_type(POLARSSL_MD_SHA384);
-	    break;
-	  case CryptoAlgs::SHA512:
-	    digest_ = md_info_from_type(POLARSSL_MD_SHA512);
-	    break;
-	  default:
-	    OPENVPN_THROW(polarssl_digest, CryptoAlgs::name(alg) << ": not usable");
-	  }
-      }
-
-      CryptoAlgs::Type type() const
-      {
-	if (digest_)
-	  {
-	    switch (md_get_type(digest_))
-	      {
-	      case POLARSSL_MD_MD4:
-		return CryptoAlgs::MD4;
-	      case POLARSSL_MD_MD5:
-		return CryptoAlgs::MD5;
-	      case POLARSSL_MD_SHA1:
-		return CryptoAlgs::SHA1;
-	      case POLARSSL_MD_SHA224:
-		return CryptoAlgs::SHA224;
-	      case POLARSSL_MD_SHA256:
-		return CryptoAlgs::SHA256;
-	      case POLARSSL_MD_SHA384:
-		return CryptoAlgs::SHA384;
-	      case POLARSSL_MD_SHA512:
-		return CryptoAlgs::SHA512;
-	      default:
-		OPENVPN_THROW(polarssl_digest, "unknown type");
-	      }
-	  }
-	else
-	  return CryptoAlgs::NONE;
-      }
-
-      // convenience methods for common digests
-      static Digest md4() { return Digest(CryptoAlgs::MD4); }
-      static Digest md5() { return Digest(CryptoAlgs::MD5); }
-      static Digest sha1() { return Digest(CryptoAlgs::SHA1); }
-
-      std::string name() const
-      {
-	return CryptoAlgs::name(type());
-      }
-
-      size_t size() const
-      {
-	check_initialized();
-	return md_get_size(digest_);
-      }
-
-      bool defined() const { return digest_ != NULL; }
-
-    private:
-      void reset()
-      {
-	digest_ = NULL;
-      }
-
-      const md_info_t *get() const
-      {
-	check_initialized();
-	return digest_;
-      }
-
-      void check_initialized() const
-      {
-#ifdef OPENVPN_ENABLE_ASSERT
-	if (!digest_)
-	  throw polarssl_digest_undefined();
-#endif
-      }
-
-      const md_info_t *digest_;
-    };
 
     class DigestContext : boost::noncopyable
     {
     public:
+      friend class HMACContext;
+
       OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_uninitialized);
       OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_final_overflow);
       OPENVPN_EXCEPTION(polarssl_digest_error);
@@ -172,19 +57,19 @@ namespace openvpn {
       {
       }
 
-      DigestContext(const Digest& digest)
+      DigestContext(const CryptoAlgs::Type alg)
 	: initialized(false)
       {
-	init(digest);
+	init(alg);
       }
 
       ~DigestContext() { erase() ; }
 
-      void init(const Digest& digest)
+      void init(const CryptoAlgs::Type alg)
       {
 	erase();
 	ctx.md_ctx = NULL;
-	if (md_init_ctx(&ctx, digest.get()) < 0)
+	if (md_init_ctx(&ctx, digest_type(alg)) < 0)
 	  throw polarssl_digest_error("md_init_ctx");
 	if (md_starts(&ctx) < 0)
 	  throw polarssl_digest_error("md_starts");
@@ -215,6 +100,29 @@ namespace openvpn {
       bool is_initialized() const { return initialized; }
 
     private:
+      static const md_info_t *digest_type(const CryptoAlgs::Type alg)
+      {
+	switch (alg)
+	  {
+	  case CryptoAlgs::MD4:
+	    return md_info_from_type(POLARSSL_MD_MD4);
+	  case CryptoAlgs::MD5:
+	    return md_info_from_type(POLARSSL_MD_MD5);
+	  case CryptoAlgs::SHA1:
+	    return md_info_from_type(POLARSSL_MD_SHA1);
+	  case CryptoAlgs::SHA224:
+	    return md_info_from_type(POLARSSL_MD_SHA224);
+	  case CryptoAlgs::SHA256:
+	    return md_info_from_type(POLARSSL_MD_SHA256);
+	  case CryptoAlgs::SHA384:
+	    return md_info_from_type(POLARSSL_MD_SHA384);
+	  case CryptoAlgs::SHA512:
+	    return md_info_from_type(POLARSSL_MD_SHA512);
+	  default:
+	    OPENVPN_THROW(polarssl_digest_error, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
       void erase()
       {
 	if (initialized)

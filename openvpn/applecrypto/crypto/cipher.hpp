@@ -42,172 +42,12 @@
 
 namespace openvpn {
   namespace AppleCrypto {
-
-    class CipherInfo
-    {
-    public:
-      CipherInfo(CryptoAlgs::Type type,
-		 const size_t key_size,
-		 const size_t iv_length,
-		 const size_t block_size,
-		 const CCAlgorithm algorithm)
-	: type_(type),
-	  key_size_(key_size),
-	  iv_length_(iv_length),
-	  block_size_(block_size),
-	  algorithm_(algorithm) {}
-
-      CryptoAlgs::Type type() const { return type_; }
-      size_t key_length() const { return key_size_; }
-      size_t iv_length() const { return iv_length_; }
-      size_t block_size() const { return block_size_; }
-
-      CCAlgorithm algorithm() const { return algorithm_; }
-
-    private:
-      CryptoAlgs::Type type_;
-      size_t key_size_;
-      size_t iv_length_;
-      size_t block_size_;
-      CCAlgorithm algorithm_;
-    };
-
-    const CipherInfo aes128(CryptoAlgs::AES_128_CBC,  // CONST GLOBAL
-			    kCCKeySizeAES128, kCCBlockSizeAES128,
-			    kCCBlockSizeAES128, kCCAlgorithmAES128);
-    const CipherInfo aes192(CryptoAlgs::AES_192_CBC, // CONST GLOBAL
-			    kCCKeySizeAES192, kCCBlockSizeAES128,
-			    kCCBlockSizeAES128, kCCAlgorithmAES128);
-    const CipherInfo aes256(CryptoAlgs::AES_256_CBC, // CONST GLOBAL
-			    kCCKeySizeAES256, kCCBlockSizeAES128,
-			    kCCBlockSizeAES128, kCCAlgorithmAES128);
-    const CipherInfo des3(CryptoAlgs::DES_EDE3_CBC, // CONST GLOBAL
-			  kCCKeySize3DES, kCCBlockSize3DES,
-			  kCCBlockSize3DES, kCCAlgorithm3DES);
-    const CipherInfo des(CryptoAlgs::DES_CBC, // CONST GLOBAL
-			 kCCKeySizeDES, kCCBlockSizeDES,
-			 kCCBlockSizeDES, kCCAlgorithmDES);
-
-#ifdef OPENVPN_PLATFORM_IPHONE
-    const CipherInfo bf(CryptoAlgs::BF_CBC,  // CONST GLOBAL
-			16, kCCBlockSizeBlowfish,
-			kCCBlockSizeBlowfish, kCCAlgorithmBlowfish);
-#endif
-
-    class CipherContext;
-
-    class Cipher
-    {
-      friend class CipherContext;
-
-    public:
-      OPENVPN_EXCEPTION(apple_cipher);
-      OPENVPN_SIMPLE_EXCEPTION(apple_cipher_undefined);
-
-      Cipher()
-      {
-	reset();
-      }
-
-      Cipher(const CryptoAlgs::Type alg)
-      {
-	switch (alg)
-	  {
-	  case CryptoAlgs::NONE:
-	    reset();
-	    break;
-	  case CryptoAlgs::AES_128_CBC:
-	    cipher_ = &aes128;
-	    break;
-	  case CryptoAlgs::AES_192_CBC:
-	    cipher_ = &aes192;
-	    break;
-	  case CryptoAlgs::AES_256_CBC:
-	    cipher_ = &aes256;
-	    break;
-	  case CryptoAlgs::DES_CBC:
-	    cipher_ = &des;
-	    break;
-	  case CryptoAlgs::DES_EDE3_CBC:
-	    cipher_ = &des3;
-	    break;
-#ifdef OPENVPN_PLATFORM_IPHONE
-	    case CryptoAlgs::BF_CBC:
-	      cipher_ = &bf;
-	      break;
-#endif
-	  default:
-	    OPENVPN_THROW(apple_cipher, CryptoAlgs::name(alg) << ": not usable");
-	  }
-      }
-
-      CryptoAlgs::Type type() const
-      {
-	if (cipher_)
-	  return cipher_->type();
-	else
-	  return CryptoAlgs::NONE;
-      }
-
-      std::string name() const
-      {
-	return CryptoAlgs::name(type());
-      }
-
-      size_t key_length() const
-      {
-	check_initialized();
-	return cipher_->key_length();
-      }
-
-      size_t key_length_in_bits() const
-      {
-	check_initialized();
-	return cipher_->key_length() * 8;
-      }
-
-      size_t iv_length() const
-      {
-	check_initialized();
-	return cipher_->iv_length();
-      }
-
-      size_t block_size() const
-      {
-	check_initialized();
-	return cipher_->block_size();
-      }
-
-      bool defined() const { return cipher_ != NULL; }
-
-    private:
-      void reset()
-      {
-	cipher_ = NULL;
-      }
-
-      const CipherInfo *get() const
-      {
-	check_initialized();
-	return cipher_;
-      }
-
-      void check_initialized() const
-      {
-#ifdef OPENVPN_ENABLE_ASSERT
-	if (!cipher_)
-	  throw apple_cipher_undefined();
-#endif
-      }
-
-      const CipherInfo *cipher_;
-    };
-
     class CipherContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(cipher_mode_error);
-      OPENVPN_SIMPLE_EXCEPTION(cipher_uninitialized);
+      OPENVPN_SIMPLE_EXCEPTION(apple_cipher_mode_error);
+      OPENVPN_SIMPLE_EXCEPTION(apple_cipher_uninitialized);
+      OPENVPN_EXCEPTION(apple_cipher_error);
 
       // mode parameter for constructor
       enum {
@@ -228,33 +68,26 @@ namespace openvpn {
 
       ~CipherContext() { erase() ; }
 
-      void init()
-      {
-      }
-
-      void init(const Cipher& cipher, const unsigned char *key, const int mode)
+      void init(const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
       {
 	erase();
 
 	// check that mode is valid
 	if (!(mode == ENCRYPT || mode == DECRYPT))
-	  throw cipher_mode_error();
-
-	// get cipher type
-	const CipherInfo *ci = cipher.get();
+	  throw apple_cipher_mode_error();
 
 	// initialize cipher context with cipher type
 	const CCCryptorStatus status = CCCryptorCreate(mode,
-						       ci->algorithm(),
+						       cipher_type(alg),
 						       kCCOptionPKCS7Padding,
 						       key,
-						       ci->key_length(),
+						       CryptoAlgs::key_length(alg),
 						       NULL,
 						       &cref);
 	if (status != kCCSuccess)
 	  throw CFException("CipherContext: CCCryptorCreate", status);
 
-	cinfo = ci;
+	cinfo = CryptoAlgs::get_ptr(alg);
       }
 
       void reset(const unsigned char *iv)
@@ -317,6 +150,27 @@ namespace openvpn {
       }
 
     private:
+      static CCAlgorithm cipher_type(const CryptoAlgs::Type alg)
+      {
+	switch (alg)
+	  {
+	  case CryptoAlgs::AES_128_CBC:
+	  case CryptoAlgs::AES_192_CBC:
+	  case CryptoAlgs::AES_256_CBC:
+	    return kCCAlgorithmAES128;
+	  case CryptoAlgs::DES_CBC:
+	    return kCCAlgorithmDES;
+	  case CryptoAlgs::DES_EDE3_CBC:
+	    return kCCAlgorithm3DES;
+#ifdef OPENVPN_PLATFORM_IPHONE
+	  case CryptoAlgs::BF_CBC:
+	    return kCCAlgorithmBlowfish;
+#endif
+	  default:
+	    OPENVPN_THROW(apple_cipher_error, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
       void erase()
       {
 	if (cinfo)
@@ -332,11 +186,11 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!cinfo)
-	  throw cipher_uninitialized();
+	  throw apple_cipher_uninitialized();
 #endif
       }
 
-      const CipherInfo *cinfo;
+      const CryptoAlgs::Alg* cinfo;
       CCCryptorRef cref;
     };
   }

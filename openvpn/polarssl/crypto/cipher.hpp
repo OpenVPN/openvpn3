@@ -39,140 +39,6 @@
 
 namespace openvpn {
   namespace PolarSSLCrypto {
-    class CipherContext;
-
-    class Cipher
-    {
-      friend class CipherContext;
-
-    public:
-      OPENVPN_EXCEPTION(polarssl_cipher);
-      OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_undefined);
-
-      Cipher()
-      {
-	reset();
-      }
-
-      Cipher(const CryptoAlgs::Type alg)
-      {
-	switch (alg)
-	  {
-	  case CryptoAlgs::NONE:
-	    reset();
-	    break;
-	  case CryptoAlgs::AES_128_CBC:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_128_CBC);
-	    break;
-	  case CryptoAlgs::AES_192_CBC:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_192_CBC);
-	    break;
-	  case CryptoAlgs::AES_256_CBC:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_256_CBC);
-	    break;
-	  case CryptoAlgs::AES_128_GCM:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_128_GCM);
-	    break;
-	  case CryptoAlgs::AES_192_GCM:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_192_GCM);
-	    break;
-	  case CryptoAlgs::AES_256_GCM:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_AES_256_GCM);
-	    break;
-	  case CryptoAlgs::DES_CBC:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_DES_CBC);
-	    break;
-	  case CryptoAlgs::DES_EDE3_CBC:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_DES_EDE3_CBC);
-	    break;
-	  case CryptoAlgs::BF_CBC:
-	    cipher_ = cipher_info_from_type(POLARSSL_CIPHER_BLOWFISH_CBC);
-	    break;
-	  default:
-	    OPENVPN_THROW(polarssl_cipher, CryptoAlgs::name(alg) << ": not usable");
-	  }
-      }
-
-      CryptoAlgs::Type type() const
-      {
-	if (cipher_)
-	  {
-	    switch (cipher_->type)
-	      {
-	      case POLARSSL_CIPHER_AES_128_CBC:
-		return CryptoAlgs::AES_128_CBC;
-	      case POLARSSL_CIPHER_AES_192_CBC:
-		return CryptoAlgs::AES_192_CBC;
-	      case POLARSSL_CIPHER_AES_256_CBC:
-		return CryptoAlgs::AES_256_CBC;
-	      case POLARSSL_CIPHER_DES_CBC:
-		return CryptoAlgs::DES_CBC;
-	      case POLARSSL_CIPHER_DES_EDE3_CBC:
-		return CryptoAlgs::DES_EDE3_CBC;
-	      case POLARSSL_CIPHER_BLOWFISH_CBC:
-		return CryptoAlgs::BF_CBC;
-	      default:
-		OPENVPN_THROW(polarssl_cipher, "unknown type");
-	      }
-	  }
-	else
-	  return CryptoAlgs::NONE;
-      }
-
-      std::string name() const
-      {
-	return CryptoAlgs::name(type());
-      }
-
-      size_t key_length() const
-      {
-	check_initialized();
-	return cipher_->key_length / 8;
-      }
-
-      size_t key_length_in_bits() const
-      {
-	check_initialized();
-	return cipher_->key_length;
-      }
-
-      size_t iv_length() const
-      {
-	check_initialized();
-	return cipher_->iv_size;
-      }
-
-      size_t block_size() const
-      {
-	check_initialized();
-	return cipher_->block_size;
-      }
-
-      bool defined() const { return cipher_ != NULL; }
-
-    private:
-      void reset()
-      {
-	cipher_ = NULL;
-      }
-
-      const cipher_info_t *get() const
-      {
-	check_initialized();
-	return cipher_;
-      }
-
-      void check_initialized() const
-      {
-#ifdef OPENVPN_ENABLE_ASSERT
-	if (!cipher_)
-	  throw polarssl_cipher_undefined();
-#endif
-      }
-
-      const cipher_info_t *cipher_;
-    };
-
     class CipherContext : boost::noncopyable
     {
     public:
@@ -200,11 +66,7 @@ namespace openvpn {
 
       ~CipherContext() { erase() ; }
 
-      void init()
-      {
-      }
-
-      void init(const Cipher& cipher, const unsigned char *key, const int mode)
+      void init(const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
       {
 	erase();
 
@@ -213,7 +75,7 @@ namespace openvpn {
 	  throw polarssl_cipher_mode_error();
 
 	// get cipher type
-	const cipher_info_t *ci = cipher.get();
+	const cipher_info_t *ci = cipher_type(alg);
 
 	// initialize cipher context with cipher type
 	if (cipher_init_ctx(&ctx, ci) < 0)
@@ -285,6 +147,33 @@ namespace openvpn {
       }
 
     private:
+      static const cipher_info_t *cipher_type(const CryptoAlgs::Type alg)
+      {
+	switch (alg)
+	  {
+	  case CryptoAlgs::AES_128_CBC:
+	    return cipher_info_from_type(POLARSSL_CIPHER_AES_128_CBC);
+	  case CryptoAlgs::AES_192_CBC:
+	    return cipher_info_from_type(POLARSSL_CIPHER_AES_192_CBC);
+	  case CryptoAlgs::AES_256_CBC:
+	    return cipher_info_from_type(POLARSSL_CIPHER_AES_256_CBC);
+	  case CryptoAlgs::AES_128_GCM:
+	    return cipher_info_from_type(POLARSSL_CIPHER_AES_128_GCM);
+	  case CryptoAlgs::AES_192_GCM:
+	    return cipher_info_from_type(POLARSSL_CIPHER_AES_192_GCM);
+	  case CryptoAlgs::AES_256_GCM:
+	    return cipher_info_from_type(POLARSSL_CIPHER_AES_256_GCM);
+	  case CryptoAlgs::DES_CBC:
+	    return cipher_info_from_type(POLARSSL_CIPHER_DES_CBC);
+	  case CryptoAlgs::DES_EDE3_CBC:
+	    return cipher_info_from_type(POLARSSL_CIPHER_DES_EDE3_CBC);
+	  case CryptoAlgs::BF_CBC:
+	    return cipher_info_from_type(POLARSSL_CIPHER_BLOWFISH_CBC);
+	  default:
+	    OPENVPN_THROW(polarssl_cipher_error, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
       void erase()
       {
 	if (initialized)
@@ -302,8 +191,8 @@ namespace openvpn {
 #endif
       }
 
-      cipher_context_t ctx;
       bool initialized;
+      cipher_context_t ctx;
     };
   }
 }

@@ -31,11 +31,9 @@ namespace openvpn {
   // type container for OpenSSL Crypto-level API
   struct OpenSSLCryptoAPI {
     // cipher
-    typedef OpenSSLCrypto::Cipher Cipher;
     typedef OpenSSLCrypto::CipherContext CipherContext;
 
     // digest
-    typedef OpenSSLCrypto::Digest Digest;
     typedef OpenSSLCrypto::DigestContext DigestContext;
 
     // HMAC

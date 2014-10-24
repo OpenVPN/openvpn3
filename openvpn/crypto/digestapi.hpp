@@ -86,7 +86,7 @@ namespace openvpn {
   class CryptoDigestInstance : public DigestInstance
   {
   public:
-    CryptoDigestInstance(const typename CRYPTO_API::Digest& digest)
+    CryptoDigestInstance(const CryptoAlgs::Type digest)
       : impl(digest)
     {
     }
@@ -114,7 +114,7 @@ namespace openvpn {
   class CryptoHMACInstance : public HMACInstance
   {
   public:
-    CryptoHMACInstance(const typename CRYPTO_API::Digest& digest,
+    CryptoHMACInstance(const CryptoAlgs::Type digest,
 		       const unsigned char *key,
 		       const size_t key_size)
       : impl(digest, key, key_size)
@@ -156,12 +156,12 @@ namespace openvpn {
 
     virtual std::string name() const
     {
-      return digest.name();
+      return CryptoAlgs::name(digest);
     }
 
     virtual size_t size() const
     {
-      return digest.size();
+      return CryptoAlgs::size(digest);
     }
 
     virtual DigestInstance::Ptr new_digest()
@@ -178,7 +178,7 @@ namespace openvpn {
   }
 
 private:
-  typename CRYPTO_API::Digest digest;
+    CryptoAlgs::Type digest;
 };
 
 template <typename CRYPTO_API>
@@ -192,14 +192,14 @@ public:
 
   virtual DigestInstance::Ptr new_digest(const CryptoAlgs::Type digest_type)
   {
-    return new CryptoDigestInstance<CRYPTO_API>(typename CRYPTO_API::Digest(digest_type));
+    return new CryptoDigestInstance<CRYPTO_API>(digest_type);
   }
 
   virtual HMACInstance::Ptr new_hmac(const CryptoAlgs::Type digest_type,
 				     const unsigned char *key,
 				     const size_t key_size)
   {
-    return new CryptoHMACInstance<CRYPTO_API>(typename CRYPTO_API::Digest(digest_type),
+    return new CryptoHMACInstance<CRYPTO_API>(digest_type,
 					      key,
 					      key_size);
   }

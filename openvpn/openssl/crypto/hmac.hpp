@@ -50,7 +50,7 @@ namespace openvpn {
       {
       }
 
-      HMACContext(const Digest& digest, const unsigned char *key, const size_t key_size)
+      HMACContext(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
 	: initialized(false)
       {
 	init(digest, key, key_size);
@@ -58,18 +58,18 @@ namespace openvpn {
 
       ~HMACContext() { erase() ; }
 
-      void init(const Digest& digest, const unsigned char *key, const size_t key_size)
+      void init(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
       {
 	erase();
 	HMAC_CTX_init (&ctx);
 #if SSLEAY_VERSION_NUMBER >= 0x10000000L
-	if (!HMAC_Init_ex (&ctx, key, int(key_size), digest.get(), NULL))
+	if (!HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), NULL))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Init_ex (init)");
 	  }
 #else
-	HMAC_Init_ex (&ctx, key, int(key_size), digest.get(), NULL);
+	HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), NULL);
 #endif
 	initialized = true;
       }

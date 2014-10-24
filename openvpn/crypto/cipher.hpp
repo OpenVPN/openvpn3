@@ -31,6 +31,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
   template <typename CRYPTO_API>
@@ -46,7 +47,7 @@ namespace openvpn {
   public:
     CipherContext() : mode_(CRYPTO_API::CipherContext::MODE_UNDEF) {}
 
-    CipherContext(const typename CRYPTO_API::Cipher& cipher, const StaticKey& key, const int mode)
+    CipherContext(const CryptoAlgs::Type cipher, const StaticKey& key, const int mode)
       : mode_(CRYPTO_API::CipherContext::MODE_UNDEF)
     {
       init(cipher, key, mode);
@@ -72,15 +73,16 @@ namespace openvpn {
       return in_size + ctx.block_size();
     }
 
-    void init(const typename CRYPTO_API::Cipher& cipher, const StaticKey& key, const int mode)
+    void init(const CryptoAlgs::Type cipher, const StaticKey& key, const int mode)
     {
-      // check that key is large enough
-      if (key.size() < cipher.key_length())
+      const CryptoAlgs::Alg& alg = CryptoAlgs::get(cipher);
+
+      // check that provided key is large enough
+      if (key.size() < alg.key_length())
 	throw cipher_init_insufficient_key_material();
 
-      // This could occur if we were built with a different version of
-      // OpenSSL headers than the underlying library.
-      if (cipher.iv_length() > CRYPTO_API::CipherContext::MAX_IV_LENGTH)
+      // IV consistency check
+      if (alg.iv_length() > CRYPTO_API::CipherContext::MAX_IV_LENGTH)
 	throw cipher_internal_error();
 
       // initialize cipher context with cipher type, key, and encrypt/decrypt mode

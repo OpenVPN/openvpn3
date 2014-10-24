@@ -37,8 +37,8 @@ namespace openvpn {
   public:
     typedef CryptoDCInstance Base;
 
-    CryptoCHM(const typename CRYPTO_API::Cipher& cipher_arg,
-	      const typename CRYPTO_API::Digest& digest_arg,
+    CryptoCHM(const CryptoAlgs::Type cipher_arg,
+	      const CryptoAlgs::Type digest_arg,
 	      const Frame::Ptr& frame_arg,
 	      const RandomAPI::Ptr& prng_arg)
       : cipher(cipher_arg),
@@ -100,9 +100,9 @@ namespace openvpn {
     virtual unsigned int defined() const
     {
       unsigned int ret = 0;
-      if (cipher.defined())
+      if (CryptoAlgs::defined(cipher))
 	ret |= CIPHER_DEFINED;
-      if (digest.defined())
+      if (CryptoAlgs::defined(digest))
 	ret |= HMAC_DEFINED;
       return ret;
     }
@@ -114,8 +114,8 @@ namespace openvpn {
     }
 
   private:
-    typename CRYPTO_API::Cipher cipher;
-    typename CRYPTO_API::Digest digest;
+    CryptoAlgs::Type cipher;
+    CryptoAlgs::Type digest;
     Frame::Ptr frame;
     RandomAPI::Ptr prng;
 
@@ -149,10 +149,10 @@ namespace openvpn {
     virtual Info crypto_info()
     {
       Info ret;
-      ret.cipher_alg = cipher.type();
-      ret.hmac_alg = digest.type();
-      ret.cipher_key_size = (cipher.defined() ? cipher.key_length() : 0);
-      ret.hmac_key_size = (digest.defined() ? digest.size() : 0);
+      ret.cipher_alg = cipher;
+      ret.hmac_alg = digest;
+      ret.cipher_key_size = CryptoAlgs::key_length(cipher);
+      ret.hmac_key_size = CryptoAlgs::size(digest);
       return ret;
     }
 
@@ -160,14 +160,14 @@ namespace openvpn {
 
     virtual size_t encap_overhead() const
     {
-      return (digest.defined() ? digest.size() : 0) +       // HMAC
-	     (cipher.defined() ? cipher.iv_length() : 0) +  // Cipher IV
-	     (cipher.defined() ? cipher.block_size() : 0);  // worst-case cipher padding expansion
+      return CryptoAlgs::size(digest) +       // HMAC
+	CryptoAlgs::iv_length(cipher) +       // Cipher IV
+	CryptoAlgs::block_size(cipher);       // worst-case cipher padding expansion
     }
 
   private:
-    typename CRYPTO_API::Cipher cipher;
-    typename CRYPTO_API::Digest digest;
+    CryptoAlgs::Type cipher;
+    CryptoAlgs::Type digest;
     Frame::Ptr frame;
     RandomAPI::Ptr prng;
   };

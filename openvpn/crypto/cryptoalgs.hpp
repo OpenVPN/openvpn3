@@ -29,6 +29,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/likely.hpp>
 
 namespace openvpn {
   namespace CryptoAlgs {
@@ -130,17 +131,32 @@ namespace openvpn {
       { "SHA512",       F_DIGEST|F_ALLOW_DC,                   64,  0,  0 },
     };
 
-    inline const Alg& getindex(const size_t i)
+    inline bool defined(const Type type)
+    {
+      return type != NONE;
+    }
+
+    inline const Alg* get_index_ptr(const size_t i)
     {
       static_assert(SIZE == array_size(algs), "algs array inconsistency");
-      if (i >= SIZE)
+      if (unlikely(i >= SIZE))
 	throw crypto_alg_index();
-      return algs[i];
+      return &algs[i];
+    }
+
+    inline const Alg& get_index(const size_t i)
+    {
+      return *get_index_ptr(i);
+    }
+
+    inline const Alg* get_ptr(const Type type)
+    {
+      return get_index_ptr(static_cast<size_t>(type));
     }
 
     inline const Alg& get(const Type type)
     {
-      return getindex(static_cast<size_t>(type));
+      return get_index(static_cast<size_t>(type));
     }
 
     inline Type lookup(const std::string& name)
@@ -167,6 +183,30 @@ namespace openvpn {
 	return get(type).name();
     }
 
+    inline unsigned int size(const Type type)
+    {
+      const Alg& alg = get(type);
+      return alg.size();
+    }
+
+    inline unsigned int key_length(const Type type)
+    {
+      const Alg& alg = get(type);
+      return alg.key_length();
+    }
+
+    inline unsigned int iv_length(const Type type)
+    {
+      const Alg& alg = get(type);
+      return alg.iv_length();
+    }
+
+    inline unsigned int block_size(const Type type)
+    {
+      const Alg& alg = get(type);
+      return alg.block_size();
+    }
+
     inline Type legal_dc_cipher(const Type type)
     {
       const Alg& alg = get(type);
@@ -182,6 +222,7 @@ namespace openvpn {
 	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest");
       return type;
     }
+
   }
 }
 

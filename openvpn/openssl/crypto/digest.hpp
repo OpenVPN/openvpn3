@@ -42,128 +42,13 @@
 
 namespace openvpn {
   namespace OpenSSLCrypto {
-
     class HMACContext;
-
-    class Digest
-    {
-      friend class DigestContext;
-      friend class HMACContext;
-
-    public:
-      OPENVPN_EXCEPTION(openssl_digest);
-      OPENVPN_SIMPLE_EXCEPTION(openssl_digest_undefined);
-
-      Digest()
-      {
-	reset();
-      }
-
-      Digest(const CryptoAlgs::Type alg)
-      {
-	switch (alg)
-	  {
-	  case CryptoAlgs::NONE:
-	    reset();
-	    break;
-	  case CryptoAlgs::MD4:
-	    digest_ = EVP_md4();
-	    break;
-	  case CryptoAlgs::MD5:
-	    digest_ = EVP_md5();
-	    break;
-	  case CryptoAlgs::SHA1:
-	    digest_ = EVP_sha1();
-	    break;
-	  case CryptoAlgs::SHA224:
-	    digest_ = EVP_sha224();
-	    break;
-	  case CryptoAlgs::SHA256:
-	    digest_ = EVP_sha256();
-	    break;
-	  case CryptoAlgs::SHA384:
-	    digest_ = EVP_sha384();
-	    break;
-	  case CryptoAlgs::SHA512:
-	    digest_ = EVP_sha512();
-	    break;
-	  default:
-	    OPENVPN_THROW(openssl_digest, CryptoAlgs::name(alg) << ": not usable");
-	  }
-      }
-
-      CryptoAlgs::Type type() const
-      {
-	if (digest_)
-	  {
-	    switch (digest_->type)
-	      {
-	      case NID_md4:
-		return CryptoAlgs::MD4;
-	      case NID_md5:
-		return CryptoAlgs::MD5;
-	      case NID_sha1:
-		return CryptoAlgs::SHA1;
-	      case NID_sha224:
-		return CryptoAlgs::SHA224;
-	      case NID_sha256:
-		return CryptoAlgs::SHA256;
-	      case NID_sha384:
-		return CryptoAlgs::SHA384;
-	      case NID_sha512:
-		return CryptoAlgs::SHA512;
-	      default:
-		OPENVPN_THROW(openssl_digest, "unknown type");
-	      }
-	  }
-	else
-	  return CryptoAlgs::NONE;
-      }
-
-      // convenience methods for common digests
-      static Digest md4() { return Digest(CryptoAlgs::MD4); }
-      static Digest md5() { return Digest(CryptoAlgs::MD5); }
-      static Digest sha1() { return Digest(CryptoAlgs::SHA1); }
-
-      std::string name() const
-      {
-	return CryptoAlgs::name(type());
-      }
-
-      size_t size() const
-      {
-	check_initialized();
-	return EVP_MD_size(digest_);
-      }
-
-      bool defined() const { return digest_ != NULL; }
-
-    private:
-      void reset()
-      {
-	digest_ = NULL;
-      }
-
-      const EVP_MD *get() const
-      {
-	check_initialized();
-	return digest_;
-      }
-
-      void check_initialized() const
-      {
-#ifdef OPENVPN_ENABLE_ASSERT
-	if (!digest_)
-	  throw openssl_digest_undefined();
-#endif
-      }
-
-      const EVP_MD *digest_;
-    };
 
     class DigestContext : boost::noncopyable
     {
     public:
+      friend class HMACContext;
+
       OPENVPN_SIMPLE_EXCEPTION(openssl_digest_uninitialized);
       OPENVPN_EXCEPTION(openssl_digest_error);
 
@@ -176,18 +61,18 @@ namespace openvpn {
       {
       }
 
-      DigestContext(const Digest& digest)
+      DigestContext(const CryptoAlgs::Type alg)
 	: initialized(false)
       {
-	init(digest);
+	init(alg);
       }
 
       ~DigestContext() { erase() ; }
 
-      void init(const Digest& digest)
+      void init(const CryptoAlgs::Type alg)
       {
 	erase();
-	if (!EVP_DigestInit(&ctx, digest.get()))
+	if (!EVP_DigestInit(&ctx, digest_type(alg)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_digest_error("EVP_DigestInit");
@@ -226,6 +111,29 @@ namespace openvpn {
       bool is_initialized() const { return initialized; }
 
     private:
+      static const EVP_MD *digest_type(const CryptoAlgs::Type alg)
+      {
+	switch (alg)
+	  {
+	  case CryptoAlgs::MD4:
+	    return EVP_md4();
+	  case CryptoAlgs::MD5:
+	    return EVP_md5();
+	  case CryptoAlgs::SHA1:
+	    return EVP_sha1();
+	  case CryptoAlgs::SHA224:
+	    return EVP_sha224();
+	  case CryptoAlgs::SHA256:
+	    return EVP_sha256();
+	  case CryptoAlgs::SHA384:
+	    return EVP_sha384();
+	  case CryptoAlgs::SHA512:
+	    return EVP_sha512();
+	  default:
+	    OPENVPN_THROW(openssl_digest_error, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
       void erase()
       {
 	if (initialized)

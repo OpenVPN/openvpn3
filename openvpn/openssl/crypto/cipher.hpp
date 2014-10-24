@@ -39,131 +39,6 @@
 
 namespace openvpn {
   namespace OpenSSLCrypto {
-
-    class CipherContext;
-
-    class Cipher
-    {
-      friend class CipherContext;
-
-    public:
-      OPENVPN_EXCEPTION(openssl_cipher);
-      OPENVPN_SIMPLE_EXCEPTION(openssl_cipher_undefined);
-
-      Cipher()
-      {
-	reset();
-      }
-
-      Cipher(const CryptoAlgs::Type alg)
-      {
-	switch (alg)
-	  {
-	  case CryptoAlgs::NONE:
-	    reset();
-	    break;
-	  case CryptoAlgs::AES_128_CBC:
-	    cipher_ = EVP_aes_128_cbc();
-	    break;
-	  case CryptoAlgs::AES_192_CBC:
-	    cipher_ = EVP_aes_192_cbc();
-	    break;
-	  case CryptoAlgs::AES_256_CBC:
-	    cipher_ = EVP_aes_256_cbc();
-	    break;
-	  case CryptoAlgs::DES_CBC:
-	    cipher_ = EVP_des_cbc();
-	    break;
-	  case CryptoAlgs::DES_EDE3_CBC:
-	    cipher_ = EVP_des_ede3_cbc();
-	    break;
-	  case CryptoAlgs::BF_CBC:
-	    cipher_ = EVP_bf_cbc();
-	    break;
-	  default:
-	    OPENVPN_THROW(openssl_cipher, CryptoAlgs::name(alg) << ": not usable");
-	  }
-      }
-
-      CryptoAlgs::Type type() const
-      {
-	if (cipher_)
-	  {
-	    switch (cipher_->nid)
-	      {
-	      case NID_aes_128_cbc:
-		return CryptoAlgs::AES_128_CBC;
-	      case NID_aes_192_cbc:
-		return CryptoAlgs::AES_192_CBC;
-	      case NID_aes_256_cbc:
-		return CryptoAlgs::AES_256_CBC;
-	      case NID_des_cbc:
-		return CryptoAlgs::DES_CBC;
-	      case NID_des_ede3_cbc:
-		return CryptoAlgs::DES_EDE3_CBC;
-	      case NID_bf_cbc:
-		return CryptoAlgs::BF_CBC;
-	      default:
-		OPENVPN_THROW(openssl_cipher, "unknown type");
-	      }
-	  }
-	else
-	  return CryptoAlgs::NONE;
-      }
-
-      std::string name() const
-      {
-	return CryptoAlgs::name(type());
-      }
-
-      size_t key_length() const
-      {
-	check_initialized();
-	return EVP_CIPHER_key_length (cipher_);
-      }
-
-      size_t key_length_in_bits() const
-      {
-	return key_length() * 8;
-      }
-
-      size_t iv_length() const
-      {
-	check_initialized();
-	return EVP_CIPHER_iv_length (cipher_);
-      }
-
-      size_t block_size() const
-      {
-	check_initialized();
-	return EVP_CIPHER_block_size (cipher_);
-      }
-
-      bool defined() const { return cipher_ != NULL; }
-
-    private:
-      void reset()
-      {
-	cipher_ = NULL;
-      }
-
-      const EVP_CIPHER *get() const
-      {
-	check_initialized();
-	return cipher_;
-      }
-
-      void check_initialized() const
-      {
-#ifdef OPENVPN_ENABLE_ASSERT
-	if (!cipher_)
-	  throw openssl_cipher_undefined();
-#endif
-      }
-
-      const EVP_CIPHER *cipher_;
-    };
-
     class CipherContext : boost::noncopyable
     {
     public:
@@ -191,14 +66,14 @@ namespace openvpn {
 
       ~CipherContext() { erase() ; }
 
-      void init(const Cipher& cipher, const unsigned char *key, const int mode)
+      void init(const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
       {
 	// check that mode is valid
 	if (!(mode == ENCRYPT || mode == DECRYPT))
 	  throw openssl_cipher_mode_error();
 	erase();
 	EVP_CIPHER_CTX_init (&ctx);
-	if (!EVP_CipherInit_ex (&ctx, cipher.get(), NULL, key, NULL, mode))
+	if (!EVP_CipherInit_ex (&ctx, cipher_type(alg), NULL, key, NULL, mode))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_cipher_error("EVP_CipherInit_ex (init)");
@@ -272,6 +147,27 @@ namespace openvpn {
       }
 
     private:
+      static const EVP_CIPHER *cipher_type(const CryptoAlgs::Type alg)
+      {
+	switch (alg)
+	  {
+	  case CryptoAlgs::AES_128_CBC:
+	    return EVP_aes_128_cbc();
+	  case CryptoAlgs::AES_192_CBC:
+	    return EVP_aes_192_cbc();
+	  case CryptoAlgs::AES_256_CBC:
+	    return EVP_aes_256_cbc();
+	  case CryptoAlgs::DES_CBC:
+	    return EVP_des_cbc();
+	  case CryptoAlgs::DES_EDE3_CBC:
+	    return EVP_des_ede3_cbc();
+	  case CryptoAlgs::BF_CBC:
+	    return EVP_bf_cbc();
+	  default:
+	    OPENVPN_THROW(openssl_cipher_error, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
       void erase()
       {
 	if (initialized)

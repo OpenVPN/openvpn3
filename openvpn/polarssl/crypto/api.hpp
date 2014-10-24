@@ -31,11 +31,9 @@ namespace openvpn {
   // type container for PolarSSL Crypto-level API
   struct PolarSSLCryptoAPI {
     // cipher
-    typedef PolarSSLCrypto::Cipher Cipher;
     typedef PolarSSLCrypto::CipherContext CipherContext;
 
     // digest
-    typedef PolarSSLCrypto::Digest Digest;
     typedef PolarSSLCrypto::DigestContext DigestContext;
 
     // HMAC

@@ -61,9 +61,9 @@
 
 #define OPENVPN_DIGEST_ALG_DECLARE(TYPE) const DigestAlgorithm##TYPE alg_##TYPE;
 
-#define OPENVPN_DIGEST_INFO_DECLARE(TYPE) const DigestInfo info_##TYPE(CryptoAlgs::TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, kCCHmacAlg##TYPE)
+#define OPENVPN_DIGEST_INFO_DECLARE(TYPE) const DigestInfo info_##TYPE(CryptoAlgs::TYPE, &alg_##TYPE, kCCHmacAlg##TYPE)
 
-#define OPENVPN_DIGEST_INFO_DECLARE_NO_HMAC(TYPE) const DigestInfo info_##TYPE(CryptoAlgs::TYPE, CC_##TYPE##_DIGEST_LENGTH, &alg_##TYPE, DigestInfo::NO_HMAC_ALG)
+#define OPENVPN_DIGEST_INFO_DECLARE_NO_HMAC(TYPE) const DigestInfo info_##TYPE(CryptoAlgs::TYPE, &alg_##TYPE, DigestInfo::NO_HMAC_ALG)
 
 namespace openvpn {
   namespace AppleCrypto {
@@ -105,24 +105,20 @@ namespace openvpn {
       };
 
       DigestInfo(CryptoAlgs::Type type,
-		 const int md_size,
 		 const DigestAlgorithm* digest_alg,
 		 const CCHmacAlgorithm hmac_alg)
 	: type_(type),
-	  md_size_(md_size),
 	  digest_alg_(digest_alg),
 	  hmac_alg_(hmac_alg) {}
 
       CryptoAlgs::Type type() const { return type_; }
-      std::string name() const { return CryptoAlgs::name(type_); }
-      size_t size() const { return md_size_; }
-
+      const char *name() const { return CryptoAlgs::name(type_); }
+      size_t size() const { return CryptoAlgs::size(type_); }
       const DigestAlgorithm* digest_alg() const { return digest_alg_; }
       CCHmacAlgorithm hmac_alg() const { return hmac_alg_; }
 
     private:
       CryptoAlgs::Type type_;
-      int md_size_;
       const DigestAlgorithm* digest_alg_;
       CCHmacAlgorithm hmac_alg_;
     };
@@ -147,111 +143,16 @@ namespace openvpn {
     OPENVPN_DIGEST_INFO_DECLARE(SHA384);
     OPENVPN_DIGEST_INFO_DECLARE(SHA512);
 
-    class DigestContext;
     class HMACContext;
-
-    class Digest
-    {
-      friend class DigestContext;
-      friend class HMACContext;
-
-    public:
-      OPENVPN_EXCEPTION(apple_digest);
-      OPENVPN_SIMPLE_EXCEPTION(apple_digest_undefined);
-
-      Digest()
-      {
-	reset();
-      }
-
-      Digest(const CryptoAlgs::Type alg)
-      {
-	switch (alg)
-	  {
-	  case CryptoAlgs::NONE:
-	    reset();
-	    break;
-	  case CryptoAlgs::MD4:
-	    digest_ = &info_MD4;
-	    break;
-	  case CryptoAlgs::MD5:
-	    digest_ = &info_MD5;
-	    break;
-	  case CryptoAlgs::SHA1:
-	    digest_ = &info_SHA1;
-	    break;
-	  case CryptoAlgs::SHA224:
-	    digest_ = &info_SHA224;
-	    break;
-	  case CryptoAlgs::SHA256:
-	    digest_ = &info_SHA256;
-	    break;
-	  case CryptoAlgs::SHA384:
-	    digest_ = &info_SHA384;
-	    break;
-	  case CryptoAlgs::SHA512:
-	    digest_ = &info_SHA512;
-	    break;
-	  default:
-	    OPENVPN_THROW(apple_digest, CryptoAlgs::name(alg) << ": not usable");
-	  }
-      }
-
-      CryptoAlgs::Type type() const
-      {
-	if (digest_)
-	  return digest_->type();
-	else
-	  return CryptoAlgs::NONE;
-      }
-
-      // convenience methods for common digests
-      static Digest md4() { return Digest(CryptoAlgs::MD4); }
-      static Digest md5() { return Digest(CryptoAlgs::MD5); }
-      static Digest sha1() { return Digest(CryptoAlgs::SHA1); }
-
-      std::string name() const
-      {
-	return CryptoAlgs::name(type());
-      }
-
-      size_t size() const
-      {
-	check_initialized();
-	return digest_->size();
-      }
-
-      bool defined() const { return digest_ != NULL; }
-
-    private:
-      void reset()
-      {
-	digest_ = NULL;
-      }
-
-      const DigestInfo *get() const
-      {
-	check_initialized();
-	return digest_;
-      }
-
-      void check_initialized() const
-      {
-#ifdef OPENVPN_ENABLE_ASSERT
-	if (!digest_)
-	  throw apple_digest_undefined();
-#endif
-      }
-
-      const DigestInfo *digest_;
-    };
 
     class DigestContext : boost::noncopyable
     {
     public:
-      OPENVPN_SIMPLE_EXCEPTION(digest_uninitialized);
-      OPENVPN_SIMPLE_EXCEPTION(digest_final_overflow);
-      OPENVPN_EXCEPTION(digest_applecrypto_error);
+      friend class HMACContext;
+
+      OPENVPN_SIMPLE_EXCEPTION(apple_digest_uninitialized);
+      OPENVPN_SIMPLE_EXCEPTION(apple_digest_final_overflow);
+      OPENVPN_EXCEPTION(apple_digest_error);
 
       enum {
 	MAX_DIGEST_SIZE = CC_SHA512_DIGEST_LENGTH // largest known is SHA512
@@ -262,33 +163,33 @@ namespace openvpn {
 	clear();
       }
 
-      DigestContext(const Digest& digest)
+      DigestContext(const CryptoAlgs::Type alg)
       {
-	init(digest);
+	init(alg);
       }
 
-      void init(const Digest& digest)
+      void init(const CryptoAlgs::Type alg)
       {
 	clear();
-	info = digest.get();
-	alg = info->digest_alg();
-	if (alg->init(ctx) != 1)
-	  throw digest_applecrypto_error("init");
+	info = digest_type(alg);
+	meth = info->digest_alg();
+	if (meth->init(ctx) != 1)
+	  throw apple_digest_error("init");
 	initialized = true;
       }
 
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
-	if (alg->update(ctx, in, size) != 1)
-	  throw digest_applecrypto_error("update");
+	if (meth->update(ctx, in, size) != 1)
+	  throw apple_digest_error("update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
-	if (alg->final(ctx, out) != 1)
-	  throw digest_applecrypto_error("final");
+	if (meth->final(ctx, out) != 1)
+	  throw apple_digest_error("final");
 	return info->size();
       }
 
@@ -301,6 +202,29 @@ namespace openvpn {
       bool is_initialized() const { return initialized; }
 
     private:
+      static const DigestInfo *digest_type(const CryptoAlgs::Type alg)
+      {
+	switch (alg)
+	  {
+	  case CryptoAlgs::MD4:
+	    return &info_MD4;
+	  case CryptoAlgs::MD5:
+	    return &info_MD5;
+	  case CryptoAlgs::SHA1:
+	    return &info_SHA1;
+	  case CryptoAlgs::SHA224:
+	    return &info_SHA224;
+	  case CryptoAlgs::SHA256:
+	    return &info_SHA256;
+	  case CryptoAlgs::SHA384:
+	    return &info_SHA384;
+	  case CryptoAlgs::SHA512:
+	    return &info_SHA512;
+	  default:
+	    OPENVPN_THROW(apple_digest_error, CryptoAlgs::name(alg) << ": not usable");
+	  }
+      }
+
       void clear()
       {
 	initialized = false;
@@ -310,13 +234,13 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw digest_uninitialized();
+	  throw apple_digest_uninitialized();
 #endif
       }
 
       bool initialized;
       const DigestInfo *info;
-      const DigestAlgorithm *alg;
+      const DigestAlgorithm *meth;
       DigestCTX ctx;
     };
   }

@@ -50,7 +50,7 @@ namespace openvpn {
       {
       }
 
-      HMACContext(const Digest& digest, const unsigned char *key, const size_t key_size)
+      HMACContext(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
 	: initialized(false)
       {
 	init(digest, key, key_size);
@@ -58,11 +58,11 @@ namespace openvpn {
 
       ~HMACContext() { erase() ; }
 
-      void init(const Digest& digest, const unsigned char *key, const size_t key_size)
+      void init(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
       {
 	erase();
 	ctx.md_ctx = NULL;
-	if (md_init_ctx(&ctx, digest.get()) < 0)
+	if (md_init_ctx(&ctx, DigestContext::digest_type(digest)) < 0)
 	  throw polarssl_hmac_error("md_init_ctx");
 	if (md_hmac_starts(&ctx, key, key_size) < 0)
 	  throw polarssl_hmac_error("md_hmac_starts");
