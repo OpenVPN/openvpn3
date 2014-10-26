@@ -1,0 +1,14 @@
+#!/bin/bash
+if [ "$(uname)" == "Darwin" ]; then
+    cd $O3/core
+    . vars/vars-osx64
+    . vars/setpath
+    cd test/serv
+    PSSL=1 SNAP=1 LZ4=1 build serv 2>&1
+else
+    cd $O3/core
+    . vars/vars-linux
+    . vars/setpath
+    cd test/serv
+    PSSL=1 SNAP=1 LZ4=1 NOSSL=1 build serv 2>&1
+fi
