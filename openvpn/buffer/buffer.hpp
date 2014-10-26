@@ -143,7 +143,7 @@ namespace openvpn {
       offset_ = size_ = capacity_ = 0;
     }
 
-    BufferType(T* data, size_t size, bool filled)
+    BufferType(T* data, const size_t size, const bool filled)
     {
       data_ = data;
       offset_ = 0;
@@ -151,7 +151,7 @@ namespace openvpn {
       size_ = filled ? size : 0;
     }
 
-    void init_headroom(size_t headroom)
+    void init_headroom(const size_t headroom)
     {
       if (headroom > capacity_)
 	OPENVPN_BUFFER_THROW(buffer_headroom);
