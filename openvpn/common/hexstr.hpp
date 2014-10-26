@@ -25,6 +25,8 @@
 #define OPENVPN_COMMON_HEXSTR_H
 
 #include <string>
+#include <iomanip>
+#include <sstream>
 
 #include <openvpn/common/exception.hpp>
 
@@ -77,6 +79,25 @@ namespace openvpn {
 	ret += render_hex_char(c & 0x0F);
       }
     return ret;
+  }
+
+  template <typename V>
+  inline std::string render_hex_pretty(const V& data)
+  {
+    std::ostringstream os;
+    os << std::hex;
+    for (size_t i = 0; i < data.size(); ++i)
+      {
+	if (!(i & 0xF))
+	  {
+	    if (i)
+	      os << std::endl;
+	    os << std::setfill(' ') << std::setw(8) << i << ":";
+	  }
+	os << ' ' << std::setfill('0') << std::setw(2) << (int)data[i];
+      }
+    os << std::endl;
+    return os.str();
   }
 
   OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
