@@ -56,7 +56,7 @@ namespace openvpn {
 
   // Base class for the per-client-instance state of the TransportServer.
   // Each client instance uses this class to send data to the transport layer.
-  struct TransportClientInstanceSend : public RC<thread_unsafe_refcount>
+  struct TransportClientInstanceSend : public virtual RC<thread_unsafe_refcount>
   {
     typedef boost::intrusive_ptr<TransportClientInstanceSend> Ptr;
 
