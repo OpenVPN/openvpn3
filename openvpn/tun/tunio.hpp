@@ -121,6 +121,39 @@ namespace openvpn {
 	return false;
     }
 
+    template <class BUFSEQ>
+    bool write_seq(const BUFSEQ& bs)
+    {
+      if (!halt)
+	{
+	  try {
+	    // write data to tun device
+	    const size_t wrote = stream->write_some(bs);
+	    if (stats)
+	      {
+		stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
+		stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
+	      }
+	    if (wrote == bs.size())
+	      return true;
+	    else
+	      {
+		OPENVPN_LOG_TUN_ERROR("TUN partial write error");
+		tun_error(Error::TUN_WRITE_ERROR, NULL);
+		return false;
+	      }
+	  }
+	  catch (boost::system::system_error& e)
+	    {
+	      OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
+	      tun_error(Error::TUN_WRITE_ERROR, &e.code());
+	      return false;
+	    }
+	}
+      else
+	return false;
+    }
+
     void start(const int n_parallel)
     {
       if (!halt)
