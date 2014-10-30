@@ -72,7 +72,7 @@ namespace openvpn {
       MODE_MASK=0x03,
     };
 
-    enum AlgFlags {
+    enum AlgFlags {       // bits below must start after Mode bits
       F_CIPHER=(1<<2),    // alg is a cipher
       F_DIGEST=(1<<3),    // alg is a digest
       F_ALLOW_DC=(1<<4),  // alg may be used in OpenVPN data channel
@@ -96,8 +96,8 @@ namespace openvpn {
       }
 
       const char *name() const { return name_; }
-      unsigned int flags() const { return flags_; }
-      unsigned int mode() const { return flags_ & MODE_MASK; }
+      unsigned int flags() const { return flags_; }      // contains Mode and AlgFlags
+      Mode mode() const { return Mode(flags_ & MODE_MASK); }
       size_t size() const { return size_; }              // digest size
       size_t key_length() const { return size_; }        // cipher key length
       size_t iv_length() const { return iv_length_; }    // cipher only

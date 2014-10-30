@@ -26,13 +26,16 @@
 #define OPENVPN_TRANSPORT_SERVER_TRANSBASE_H
 
 #include <string>
+#include <vector>
 
 #include <boost/asio.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/addr/ip.hpp>
+#include <openvpn/addr/route.hpp>
+#include <openvpn/crypto/cryptodc.hpp>
+#include <openvpn/tun/server/tunbase.hpp>
 
 namespace openvpn {
 
@@ -66,7 +69,7 @@ namespace openvpn {
     virtual bool transport_send_const(const Buffer& buf) = 0;
     virtual bool transport_send(BufferAllocated& buf) = 0;
 
-    virtual const std::string& info() const = 0;
+    virtual const std::string& transport_info() const = 0;
   };
 
   // Base class for the client instance receiver.  Note that all
@@ -84,6 +87,15 @@ namespace openvpn {
 
     // Called with OpenVPN-encapsulated packets from transport layer.
     virtual void transport_recv(BufferAllocated& buf) = 0;
+
+    // disable keepalive for rest of session
+    virtual void disable_keepalive() = 0;
+
+    // override the data channel factory
+    virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory) = 0;
+
+    // override the tun provider
+    virtual TunClientInstanceRecv* override_tun(TunClientInstanceSend* tun) = 0;
   };
 
   // Base class for factory used to create TransportClientInstanceRecv objects.

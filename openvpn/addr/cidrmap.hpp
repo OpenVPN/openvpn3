@@ -30,6 +30,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/addr/route.hpp>
 
 namespace openvpn {
   namespace CIDRMap {
@@ -87,31 +88,6 @@ namespace openvpn {
       unsigned char sparse[N+1]; // data indexed by prefix
     };
 
-    // Basic route object
-    template <typename ADDR>
-    struct Route
-    {
-      typedef ADDR Addr;
-
-      ADDR addr;
-      unsigned int prefix_len;
-
-      bool operator==(const Route& other) const
-      {
-	return prefix_len == other.prefix_len && addr == other.addr;
-      }
-    };
-
-    // Compute hash value of Route
-    template <typename ADDR>
-    inline std::size_t hash_value(const Route<ADDR>& route)
-    {
-      std::size_t seed = 0;
-      boost::hash_combine(seed, route.addr);
-      boost::hash_combine(seed, route.prefix_len);
-      return seed;
-    }
-
     // Set of route prefix_lengths with iterator
     template <typename ROUTE>
     class RoutePrefixSet
@@ -165,9 +141,9 @@ namespace openvpn {
     // Since IP::Addr is run-time polymorphic (underlying address can be IPv4
     // or IPv6), we need some special handling here.
     template <>
-    class RoutePrefixSet<Route<IP::Addr> >
+    class RoutePrefixSet<IP::RouteType<IP::Addr>>
     {
-      typedef Route<IP::Addr> ROUTE;
+      typedef IP::RouteType<IP::Addr> ROUTE;
 
     public:
       class Iterator
@@ -247,7 +223,7 @@ namespace openvpn {
     template <typename ROUTE, typename VALUE>
     class RoutingTable
     {
-      typedef boost::unordered_map<ROUTE, typename VALUE::Ptr, HashInitialSeed<ROUTE> > map_type;
+      typedef boost::unordered_map<ROUTE, typename VALUE::Ptr, HashInitialSeed<ROUTE>> map_type;
 
     public:
       enum {

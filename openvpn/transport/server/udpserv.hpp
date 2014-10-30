@@ -105,7 +105,7 @@ namespace openvpn {
 	  do_stop(true);
 	}
 
-	virtual const std::string& info() const
+	virtual const std::string& transport_info() const
 	{
 	  return info_;
 	}

@@ -24,6 +24,8 @@
 #ifndef OPENVPN_CRYPTO_CRYPTODC_H
 #define OPENVPN_CRYPTO_CRYPTODC_H
 
+#include <utility> // for std::move
+
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/common/rc.hpp>
@@ -51,8 +53,9 @@ namespace openvpn {
 
     // return value of defined()
     enum {
-      CIPHER_DEFINED=(1<<0),
-      HMAC_DEFINED=(1<<1)
+      CIPHER_DEFINED=(1<<0),  // may call init_cipher method
+      HMAC_DEFINED=(1<<1),    // may call init_hmac method
+      CRYPTO_DEFINED=(1<<2),  // may call encrypt or decrypt methods
     };
     virtual unsigned int defined() const = 0;
 

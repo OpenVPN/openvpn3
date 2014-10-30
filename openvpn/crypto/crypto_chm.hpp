@@ -99,7 +99,7 @@ namespace openvpn {
 
     virtual unsigned int defined() const
     {
-      unsigned int ret = 0;
+      unsigned int ret = CRYPTO_DEFINED;
       if (CryptoAlgs::defined(cipher))
 	ret |= CIPHER_DEFINED;
       if (CryptoAlgs::defined(digest))

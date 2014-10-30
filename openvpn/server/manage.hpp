@@ -24,11 +24,53 @@
 #ifndef OPENVPN_SERVER_MANAGE_H
 #define OPENVPN_SERVER_MANAGE_H
 
+#include <string>
+#include <vector>
+
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/tun/server/tunbase.hpp>
+#include <openvpn/addr/route.hpp>
+#include <openvpn/auth/authcreds.hpp>
 
 namespace openvpn {
+  // Base class for the per-client-instance state of the ManServer.
+  // Each client instance uses this class to send data to the man layer.
+  struct ManClientInstanceSend : public virtual RC<thread_unsafe_refcount>
+  {
+    typedef boost::intrusive_ptr<ManClientInstanceSend> Ptr;
+
+    //virtual bool defined() const = 0;
+    virtual void stop() = 0;
+
+    virtual void auth_request(const AuthCreds::Ptr& auth_creds) = 0;
+    virtual void push_request() = 0;
+  };
+
+  // Base class for the client instance receiver.  Note that all
+  // client instance receivers (transport, routing, management,
+  // etc.) must inherit virtually from RC because the client instance
+  // object will inherit from multiple receivers.
+  struct ManClientInstanceRecv : public virtual RC<thread_unsafe_refcount>
+  {
+    typedef boost::intrusive_ptr<ManClientInstanceRecv> Ptr;
+
+    //virtual bool defined() const = 0;
+    virtual void stop() = 0;
+
+    virtual void auth_failed(const std::string& client_reason) = 0;
+    virtual void push_reply(BufferPtr& push_data,
+			    const std::vector<IP::Route>& routes) = 0;
+  };
+
+  struct ManClientInstanceFactory : public RC<thread_unsafe_refcount>
+  {
+    typedef boost::intrusive_ptr<ManClientInstanceFactory> Ptr;
+
+    virtual ManClientInstanceSend::Ptr new_obj(ManClientInstanceRecv* parent) = 0;
+  };
+
 }
 
 #endif

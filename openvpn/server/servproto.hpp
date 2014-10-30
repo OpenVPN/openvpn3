@@ -24,16 +24,22 @@
 #ifndef OPENVPN_SERVER_SERVPROTO_H
 #define OPENVPN_SERVER_SERVPROTO_H
 
+#include <utility> // for std::move
+
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/rc.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/abort.hpp>
 #include <openvpn/common/link.hpp>
+#include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
+#include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/ssl/proto.hpp>
-#include <openvpn/server/manage.hpp>
 #include <openvpn/transport/server/transbase.hpp>
+#include <openvpn/tun/server/tunbase.hpp>
+#include <openvpn/server/manage.hpp>
 
 #ifdef OPENVPN_DEBUG_SERVPROTO
 #define OPENVPN_LOG_SERVPROTO(x) OPENVPN_LOG(x)
@@ -47,6 +53,8 @@ namespace openvpn {
   {
     typedef ProtoContext Base;
     typedef Link<TransportClientInstanceSend, TransportClientInstanceRecv> TransportLink;
+    typedef Link<TunClientInstanceSend, TunClientInstanceRecv> TunLink;
+    typedef Link<ManClientInstanceSend, ManClientInstanceRecv> ManLink;
 
   public:
     class Session;
@@ -80,8 +88,17 @@ namespace openvpn {
 	  return true;
       }
 
+      ProtoConfig::Ptr clone_proto_config() const
+      {
+	return new ProtoConfig(*proto_context_config);
+      }
+
       boost::asio::io_service& io_service;
       ProtoConfig::Ptr proto_context_config;
+
+      ManClientInstanceFactory::Ptr man_factory;
+      TunClientInstanceFactory::Ptr tun_factory;
+
       SessionStats::Ptr stats;
 
     private:
@@ -90,7 +107,9 @@ namespace openvpn {
 
     // This is the main server-side client instance object
     class Session : Base,                  // OpenVPN protocol implementation
-		    public TransportLink   // Transport layer
+		    public TransportLink,  // Transport layer
+		    public TunLink,        // Tun/routing layer
+		    public ManLink         // Management layer
     {
       friend class Factory; // calls constructor
 
@@ -107,13 +126,14 @@ namespace openvpn {
 	return defined_();
       }
 
+      virtual TunClientInstanceRecv* override_tun(TunClientInstanceSend* tun)
+      {
+	TunLink::send.reset(tun);
+	return this;
+      }
+
       virtual void start(const TransportClientInstanceSend::Ptr& parent)
       {
-	if (halt || !parent)
-	  return;
-
-	OPENVPN_LOG("Servproto start called"); // fixme
-
 	TransportLink::send = parent;
 
 	// init OpenVPN protocol handshake
@@ -124,8 +144,6 @@ namespace openvpn {
 
 	// coarse wakeup range
 	housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
-
-	OPENVPN_LOG("Servproto start finished"); // fixme
       }
 
       virtual void stop()
@@ -139,6 +157,16 @@ namespace openvpn {
 	      {
 		TransportLink::send->stop();
 		TransportLink::send.reset();
+	      }
+	    if (TunLink::send)
+	      {
+		TunLink::send->stop();
+		TunLink::send.reset();
+	      }
+	    if (ManLink::send)
+	      {
+		ManLink::send->stop();
+		ManLink::send.reset();
 	      }
 	  }
       }
@@ -200,11 +228,16 @@ namespace openvpn {
 	// fixme -- code me
       }
 
-      // Called with control channel push commands to
-      // newly connected client by manager layer.
-      virtual void push(BufferPtr& buf, bool auth_status)
+      // disable keepalive for rest of session
+      virtual void disable_keepalive()
       {
-	// fixme -- code me
+	Base::disable_keepalive();
+      }
+
+      // override the data channel factory
+      virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory)
+      {
+	Base::override_dc_factory(dc_factory);
       }
 
       virtual ~Session()
@@ -216,12 +249,16 @@ namespace openvpn {
 
     private:
       Session(boost::asio::io_service& io_service_arg,
-	      const Factory& factory)
-	: Base(factory.proto_context_config, factory.stats),
+	      const Factory& factory,
+	      ManClientInstanceFactory::Ptr man_factory_arg,
+	      TunClientInstanceFactory::Ptr tun_factory_arg)
+	: Base(factory.clone_proto_config(), factory.stats),
 	  io_service(io_service_arg),
 	  halt(false),
 	  housekeeping_timer(io_service_arg),
-	  stats(factory.stats)
+	  stats(factory.stats),
+	  man_factory(man_factory_arg),
+	  tun_factory(tun_factory_arg)
       {}
 
       bool defined_() const
@@ -233,8 +270,26 @@ namespace openvpn {
       virtual void control_net_send(const Buffer& net_buf)
       {
 	OPENVPN_LOG_SERVPROTO("Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(net_buf));
-	if (TransportLink::send->transport_send_const(net_buf))
-	  Base::update_last_sent();
+	if (TransportLink::send)
+	  {
+	    if (TransportLink::send->transport_send_const(net_buf))
+	      Base::update_last_sent();
+	  }
+      }
+
+      // Called on server with credentials and peer info provided by client.
+      // Should be overriden by derived class if credentials are required.
+      virtual void server_auth(const std::string& username,
+			       const SafeString& password,
+			       const std::string& peer_info)
+      {
+	if (get_management())
+	  {
+	    AuthCreds::Ptr auth_creds(new AuthCreds(Unicode::utf8_printable(username, Unicode::UTF8_FILTER),
+						    Unicode::utf8_printable(password, Unicode::UTF8_FILTER),
+						    Unicode::utf8_printable(peer_info, Unicode::UTF8_FILTER|Unicode::UTF8_PASS_FMT)));
+	    ManLink::send->auth_request(auth_creds);
+	  }
       }
 
       // proto base class calls here for app-level control-channel messages received
@@ -242,13 +297,77 @@ namespace openvpn {
       {
 	const std::string msg = Unicode::utf8_printable(Base::template read_control_string<std::string>(*app_bp),
 							Unicode::UTF8_FILTER);
+	if (msg == "PUSH_REQUEST")
+	  {
+	    if (get_management())
+	      ManLink::send->push_request();
+	    else
+	      {
+		auth_failed("");
+		OPENVPN_LOG("AUTH_FAILED: no management provider");
+	      }
+	  }
+	else
+	  {
+	    OPENVPN_LOG("Unrecognized client request: " << msg);
+	  }
+      }
 
-	OPENVPN_LOG_SERVPROTO("************************************ CLIENT MSG: " << msg); // fixme
+      virtual void auth_failed(const std::string& client_reason)
+      {
+	if (halt)
+	  return;
 
-	// fixme -- handle messages from client
-	Base::write_control_string(std::string("AUTH_FAILED"));
+	BufferPtr buf(new BufferAllocated(64, BufferAllocated::GROW));
+	BufferStreamOut os(*buf);
+
+	os << "AUTH_FAILED";
+	if (!client_reason.empty())
+	  os << ',' << client_reason;
+
+	Base::control_send(buf);
 	Base::flush(true);
 	set_housekeeping_timer();
+      }
+
+      virtual void push_reply(BufferPtr& push_data,
+			      const std::vector<IP::Route>& rtvec)
+      {
+	if (halt)
+	  return;
+
+	if (get_tun())
+	  {
+	    TunLink::send->add_routes(rtvec);
+	    Base::control_send(push_data);
+	    Base::flush(true);
+	    set_housekeeping_timer();
+	  }
+	else
+	  {
+	    auth_failed("");
+	    OPENVPN_LOG("AUTH_FAILED: no tun provider");
+	  }
+      }
+
+      bool get_management()
+      {
+	if (!ManLink::send)
+	  {
+	    if (man_factory)
+	      ManLink::send = man_factory->new_obj(this);
+	  }
+	return bool(ManLink::send);
+      }
+
+      bool get_tun()
+      {
+	if (!TunLink::send)
+	  {
+	    if (tun_factory)
+	      TunLink::send = tun_factory->new_obj(this);
+	  }
+	return bool(TunLink::send);
       }
 
       void housekeeping_callback(const boost::system::error_code& e)
@@ -295,7 +414,7 @@ namespace openvpn {
       std::string client_endpoint_render()
       {
 	if (TransportLink::send)
-	  return TransportLink::send->info();
+	  return TransportLink::send->transport_info();
 	else
 	  return "";
       }
@@ -318,12 +437,15 @@ namespace openvpn {
       AsioTimer housekeeping_timer;
 
       SessionStats::Ptr stats;
+
+      ManClientInstanceFactory::Ptr man_factory;
+      TunClientInstanceFactory::Ptr tun_factory;
     };
   };
 
   inline TransportClientInstanceRecv::Ptr ServerProto::Factory::new_client_instance()
   {
-    return TransportClientInstanceRecv::Ptr(new Session(io_service, *this));
+    return new Session(io_service, *this, man_factory, tun_factory);
   }
 }
 

@@ -44,6 +44,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/buffer/safestr.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/random/randapi.hpp>
@@ -555,6 +556,16 @@ namespace openvpn {
 	dc_context = dc_factory->new_obj(cipher, digest);
       }
 
+      void update_dc_factory(CryptoDCFactory::Ptr dcf)
+      {
+	dc_factory = dcf;
+	if (dc_context)
+	  {
+	    CryptoDCContext::Info ci = dc_context->crypto_info();
+	    set_cipher_digest(ci.cipher_alg, ci.hmac_alg);
+	  }
+      }
+
       void set_tls_auth_digest(const CryptoAlgs::Type digest)
       {
 	tls_auth_context = tls_auth_factory->new_obj(digest);
@@ -981,6 +992,7 @@ namespace openvpn {
 	       p.config->reliable_window, p.config->max_ack_list),
 	  proto(p),
 	  state(STATE_UNDEF),
+	  crypto_flags(0),
 	  dirty(0),
 	  handled_pid_wrap(false),
 	  is_reliable(p.config->protocol.is_reliable()),
@@ -1075,7 +1087,9 @@ namespace openvpn {
       // data channel encrypt
       void encrypt(BufferAllocated& buf)
       {
-	if (state >= ACTIVE && crypto && !invalidated())
+	if (state >= ACTIVE
+	    && (crypto_flags & CryptoDCInstance::CRYPTO_DEFINED)
+	    && !invalidated())
 	  {
 	    // compress packet
 	    compress->compress(buf, true);
@@ -1097,7 +1111,9 @@ namespace openvpn {
       void decrypt(BufferAllocated& buf)
       {
 	try {
-	  if (state >= ACTIVE && crypto && !invalidated())
+	  if (state >= ACTIVE
+	      && (crypto_flags & CryptoDCInstance::CRYPTO_DEFINED)
+	      && !invalidated())
 	    {
 	      // knock off leading op from buffer
 	      buf.advance(1);
@@ -1195,7 +1211,9 @@ namespace openvpn {
       // to peer via data channel
       void send_data_channel_message(const unsigned char *data, const size_t size)
       {
-	if (state >= ACTIVE && crypto && !invalidated())
+	if (state >= ACTIVE
+	    && (crypto_flags & CryptoDCInstance::CRYPTO_DEFINED)
+	    && !invalidated())
 	  {
 	    // allocate packet
 	    Packet pkt;
@@ -1301,13 +1319,13 @@ namespace openvpn {
 
 	    // build crypto context for data channel encryption/decryption
 	    crypto = proto.config->dc_context->new_obj(key_id_);
-	    const unsigned int def = crypto->defined();
+	    crypto_flags = crypto->defined();
 
-	    if (def & CryptoDCInstance::CIPHER_DEFINED)
+	    if (crypto_flags & CryptoDCInstance::CIPHER_DEFINED)
 	      crypto->init_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
 				  key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
 
-	    if (def & CryptoDCInstance::HMAC_DEFINED)
+	    if (crypto_flags & CryptoDCInstance::HMAC_DEFINED)
 	      crypto->init_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir),
 				key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 
@@ -1603,12 +1621,10 @@ namespace openvpn {
 	const std::string options = read_auth_string<std::string>(buf);
 	if (proto.is_server())
 	  {
-	    Buffer auth(buf);
-	    skip_string(buf); // username
-	    skip_string(buf); // password
-	    auth.set_size(buf.offset() - auth.offset());
+	    const std::string username = read_auth_string<std::string>(buf);
+	    const SafeString password = read_auth_string<SafeString>(buf);
 	    const std::string peer_info = read_auth_string<std::string>(buf);
-	    proto.server_auth(auth, peer_info);
+	    proto.server_auth(username, password, peer_info);
 	  }
       }
 
@@ -1895,18 +1911,19 @@ namespace openvpn {
       ProtoContext& proto; // parent
       int state;
       unsigned int key_id_;
+      unsigned int crypto_flags;
       bool dirty;
       bool handled_pid_wrap;
       bool is_reliable;
+      Compress::Ptr compress;
+      CryptoDCInstance::Ptr crypto;
+      TLSPRFInstance::Ptr tlsprf;
       Time construct_time;
       Time reached_active_time_;
       Time next_event_time;
       EventType current_event;
       EventType next_event;
-      Compress::Ptr compress;
       std::deque<BufferPtr> app_pre_write_queue;
-      CryptoDCInstance::Ptr crypto;
-      TLSPRFInstance::Ptr tlsprf;
       ScopedPtr<DataChannelKey> data_channel_key;
     };
 
@@ -2157,13 +2174,14 @@ namespace openvpn {
     void control_send(BufferPtr& app_bp)
     {
       select_control_send_context().app_send(app_bp);
+      app_bp.reset();
     }
 
     void control_send(BufferAllocated& app_buf)
     {
       BufferPtr bp = new BufferAllocated();
       bp->move(app_buf);
-      select_control_send_context().app_send(bp);
+      control_send(bp);
     }
 
     // validate a control channel network packet
@@ -2284,6 +2302,20 @@ namespace openvpn {
       keepalive_parms_modified();
     }
 
+    // disable keepalive for rest of session
+    void disable_keepalive()
+    {
+      config->keepalive_ping = Time::Duration::infinite();
+      config->keepalive_timeout = Time::Duration::infinite();
+      keepalive_parms_modified();
+    }
+
+    // override the data channel factory
+    void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory)
+    {
+      config->update_dc_factory(dc_factory);
+    }
+
     // current time
     const Time& now() const { return *now_; }
     void update_now() { now_->update(); }
@@ -2331,8 +2363,9 @@ namespace openvpn {
 
     // Called on server with credentials and peer info provided by client.
     // Should be overriden by derived class if credentials are required.
-    // Username and password should be read from buf with read_auth_string().
-    virtual void server_auth(Buffer& buf, const std::string& peer_info)
+    virtual void server_auth(const std::string& username,
+			     const SafeString& password,
+			     const std::string& peer_info)
     {
     }
 
