@@ -70,8 +70,8 @@ namespace openvpn {
       }
 
       Addr(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
+	: Addr(from_string(ipstr, title, required_version))
       {
-	*this = from_string(ipstr, title, required_version);
       }
 
       static std::string validate(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
@@ -147,12 +147,14 @@ namespace openvpn {
 	  throw ip_exception("address is not IPv4");
       }
 
-      const IPv6::Addr& to_ipv6() const
+      const IPv4::Addr& to_ipv4_nocheck() const
       {
-	if (ver == V6)
-	  return u.v6;
-	else
-	  throw ip_exception("address is not IPv6");
+	return u.v4;
+      }
+
+      const IPv6::Addr& to_ipv6_nocheck() const
+      {
+	return u.v6;
       }
 
       static Addr from_sockaddr(const struct sockaddr *sa)
@@ -626,6 +628,12 @@ namespace openvpn {
 	  default:
 	    throw ip_exception("address unspecified");
 	  }
+      }
+
+      // IPv6 scope ID or -1 if not IPv6
+      int scope_id() const
+      {
+	return ver == V6 ? u.v6.scope_id() : -1;
       }
 
       // number of host bits in netmask

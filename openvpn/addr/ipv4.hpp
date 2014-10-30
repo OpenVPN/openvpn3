@@ -22,7 +22,7 @@
 #ifndef OPENVPN_ADDR_IPV4_H
 #define OPENVPN_ADDR_IPV4_H
 
-#include <cstring> // for std::memcpy
+#include <cstring>           // for std::memcpy, std::memset
 #include <sstream>
 
 #include <boost/cstdint.hpp> // for boost::uint32_t
@@ -64,10 +64,34 @@ namespace openvpn {
 	return addr;
       }
 
+      static Addr from_in_addr(const struct in_addr *in4)
+      {
+	Addr ret;
+	ret.u.addr = ntohl(in4->s_addr);
+	return ret;
+      }
+
+      struct in_addr to_in_addr() const
+      {
+	struct in_addr ret;
+	ret.s_addr = htonl(u.addr);
+	return ret;
+      }
+
       static Addr from_sockaddr(const struct sockaddr_in *sa)
       {
 	Addr ret;
 	ret.u.addr = ntohl(sa->sin_addr.s_addr);
+	return ret;
+      }
+
+      struct sockaddr_in to_sockaddr() const
+      {
+	struct sockaddr_in ret;
+	std::memset(&ret, 0, sizeof(ret));
+	ret.sin_family = AF_INET;
+	ret.sin_port = 0;
+	ret.sin_addr.s_addr = htonl(u.addr);;
 	return ret;
       }
 
@@ -430,6 +454,12 @@ namespace openvpn {
 	      }
 	    return -1;
 	  }
+      }
+
+      // address size in bits
+      static unsigned int size()
+      {
+	return SIZE;
       }
 
       std::size_t hashval() const

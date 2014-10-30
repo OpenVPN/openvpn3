@@ -22,7 +22,7 @@
 #ifndef OPENVPN_ADDR_IPV6_H
 #define OPENVPN_ADDR_IPV6_H
 
-#include <cstring>           // for std::memcpy
+#include <cstring>           // for std::memcpy, std::memset
 #include <algorithm>         // for std::min
 
 #include <boost/cstdint.hpp> // for boost::uint32_t
@@ -61,11 +61,37 @@ namespace openvpn {
 	return addr;
       }
 
+      static Addr from_in6_addr(const struct in6_addr *in6)
+      {
+	Addr ret;
+	network_to_host_order(&ret.u, (const union ipv6addr *)in6->s6_addr);
+	ret.scope_id_ = 0;
+	return ret;
+      }
+
+      struct in6_addr to_in6_addr() const
+      {
+	struct in6_addr ret;
+	host_to_network_order((union ipv6addr *)&ret, &u);
+	return ret;
+      }
+
       static Addr from_sockaddr(const struct sockaddr_in6 *sa)
       {
 	Addr ret;
 	network_to_host_order(&ret.u, (const union ipv6addr *)sa->sin6_addr.s6_addr);
 	ret.scope_id_ = sa->sin6_scope_id;
+	return ret;
+      }
+
+      struct sockaddr_in6 to_sockaddr() const
+      {
+	struct sockaddr_in6 ret;
+	std::memset(&ret, 0, sizeof(ret));
+	ret.sin6_family = AF_INET6;
+	ret.sin6_port = 0;
+	host_to_network_order((union ipv6addr *)&ret.sin6_addr.s6_addr, &u);
+	ret.sin6_scope_id = scope_id_;
 	return ret;
       }
 
@@ -476,6 +502,12 @@ namespace openvpn {
 	  throw ipv6_exception("extent overflow");
       }
 
+      // address size in bits
+      static unsigned int size()
+      {
+	return SIZE;
+      }
+
       std::size_t hashval() const
       {
 	std::size_t seed = 0;
@@ -593,6 +625,11 @@ namespace openvpn {
 		q.set_bit((SIZE-1)-i, true);
 	      }
 	  }
+      }
+
+      int scope_id() const
+      {
+	return scope_id_;
       }
 
     private:
