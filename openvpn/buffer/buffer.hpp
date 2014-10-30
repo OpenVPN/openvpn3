@@ -86,6 +86,7 @@ namespace openvpn {
       buffer_no_reset_impl,
       buffer_pop_back,
       buffer_set_size,
+      buffer_range,
     };
 
     BufferException(Status status)
@@ -117,6 +118,8 @@ namespace openvpn {
 	  return "buffer_pop_back";
 	case buffer_set_size:
 	  return "buffer_set_size";
+	case buffer_range:
+	  return "buffer_range";
 	default:
 	  return "buffer_???";
 	}
@@ -149,6 +152,12 @@ namespace openvpn {
       offset_ = 0;
       capacity_ = size;
       size_ = filled ? size : 0;
+    }
+
+    void reserve(const size_t n)
+    {
+      if (n > capacity_)
+	resize(n);
     }
 
     void init_headroom(const size_t headroom)
@@ -261,6 +270,18 @@ namespace openvpn {
       return ret;
     }
 
+    // Place a T object after the last object in the
+    // array, with possible resize to contain it,
+    // however don't actually change the size of the
+    // array to reflect the added object.  Useful
+    // for maintaining null-terminated strings.
+    void set_trailer(const T& value)
+    {
+      if (!remaining())
+	resize(offset_ + size_ + 1);
+      *(data()+size_) = value;
+    }
+
     void advance(const size_t delta)
     {
       if (delta > size_)
@@ -294,6 +315,22 @@ namespace openvpn {
       if (index >= size_)
 	OPENVPN_BUFFER_THROW(buffer_const_index);
       return c_data()[index];
+    }
+
+    // mutable index into array
+    T* index(const size_t index)
+    {
+      if (index >= size_)
+	OPENVPN_BUFFER_THROW(buffer_index);
+      return &data()[index];
+    }
+
+    // const index into array
+    const T* c_index(const size_t index) const
+    {
+      if (index >= size_)
+	OPENVPN_BUFFER_THROW(buffer_const_index);
+      return &c_data()[index];
     }
 
     bool operator==(const BufferType& other) const
@@ -390,7 +427,28 @@ namespace openvpn {
       write(other.c_data(), other.size());
     }
 
+    BufferType range(size_t offset, size_t len) const
+    {
+      if (offset + len > size())
+	{
+	  if (offset < size())
+	    len = size() - offset;
+	  else
+	    len = 0;
+	}
+      return BufferType(datac(), offset, len, len);
+    }
+
   protected:
+    BufferType(T* data, const size_t offset, const size_t size, const size_t capacity)
+      : data_(data), offset_(offset), size_(size), capacity_(capacity)
+    {
+    }
+
+    // return a mutable pointer to start of array but
+    // remain const with respect to *this.
+    T* datac() const { return data_ + offset_; }
+
     // Called when reset method needs to expand the buffer size
     virtual void reset_impl(const size_t min_capacity, const unsigned int flags)
     {
