@@ -51,6 +51,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm> // for std::sort, std::min
+#include <utility> // for std::move
 
 #include <boost/cstdint.hpp> // for boost::uint64_t
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
@@ -199,7 +200,8 @@ namespace openvpn {
 	    out << '[';
 	  out << Unicode::utf8_printable(*i, max_len_flags);
 	  if (flags & RENDER_BRACKET)
-	    out << "] ";
+	    out << ']';
+	  out << ' ';
 	}
       return out.str();
     }
@@ -236,6 +238,7 @@ namespace openvpn {
     size_t size() const { return data.size(); }
     bool empty() const { return data.empty(); }
     void push_back(const std::string& item) { data.push_back(item); }
+    void push_back(std::string&& item) { data.push_back(std::move(item)); }
     void clear() { data.clear(); }
     void reserve(const size_t n) { data.reserve(n); }
     void resize(const size_t n) { data.resize(n); }
@@ -615,7 +618,31 @@ namespace openvpn {
 		  lim->add_opt();
 		  lim->validate_directive(opt);
 		}
-	      push_back(opt);
+	      push_back(std::move(opt));
+	    }
+	}
+    }
+
+    // caller should call update_map() after this function
+    void parse_from_peer_info(const std::string& str, Limits* lim)
+    {
+      if (lim)
+	lim->add_string(str);
+      SplitLines in(str, 0);
+      while (in(true))
+	{
+	  const std::string& line = in.line_ref();
+	  Option opt;
+	  opt.reserve(2);
+	  Split::by_char_void<Option, NullLex, Limits>(opt, line, '=', 0, 1, lim);
+	  if (opt.size())
+	    {
+	      if (lim)
+		{
+		  lim->add_opt();
+		  lim->validate_directive(opt);
+		}
+	      push_back(std::move(opt));
 	    }
 	}
     }
@@ -635,7 +662,7 @@ namespace openvpn {
 	      lim->add_opt();
 	      lim->validate_directive(opt);
 	    }
-	  push_back(opt);
+	  push_back(std::move(opt));
 	}
     }
 
@@ -664,7 +691,7 @@ namespace openvpn {
 		      lim->add_opt();
 		      lim->validate_directive(multiline);
 		    }
-		  push_back(multiline);
+		  push_back(std::move(multiline));
 		  multiline.clear();
 		  in_multiline = false;
 		}
@@ -696,7 +723,7 @@ namespace openvpn {
 			  lim->add_opt();
 			  lim->validate_directive(opt);
 			}
-		      push_back(opt);
+		      push_back(std::move(opt));
 		    }
 		}
 	    }
@@ -731,7 +758,7 @@ namespace openvpn {
 			  lim->add_opt();
 			  lim->validate_directive(multiline);
 			}
-		      push_back(multiline);
+		      push_back(std::move(multiline));
 		      multiline.clear();
 		      in_multiline = false;
 		    }
@@ -763,7 +790,7 @@ namespace openvpn {
 			      lim->add_opt();
 			      lim->validate_directive(opt);
 			    }
-			  push_back(opt);
+			  push_back(std::move(opt));
 			}
 		    }
 		}
