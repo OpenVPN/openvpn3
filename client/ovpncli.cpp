@@ -394,7 +394,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  eval.error = true;
-	  eval.message = Unicode::utf8_printable(e.what(), 256);
+	  eval.message = Unicode::utf8_printable<std::string>(e.what(), 256);
 	}
     }
 
@@ -429,7 +429,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  eval.error = true;
-	  eval.message = Unicode::utf8_printable(e.what(), 256);
+	  eval.message = Unicode::utf8_printable<std::string>(e.what(), 256);
 	}
     }
 
@@ -509,7 +509,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  ret.error = true;
-	  ret.message = Unicode::utf8_printable(e.what(), 256);
+	  ret.message = Unicode::utf8_printable<std::string>(e.what(), 256);
 	}
       return ret;
     }
@@ -677,7 +677,7 @@ namespace openvpn {
 	      io_service->poll();     //   and execute completion handlers.
 	    }
 	  ret.error = true;
-	  ret.message = Unicode::utf8_printable(e.what(), 256);
+	  ret.message = Unicode::utf8_printable<std::string>(e.what(), 256);
 
 	  // if exception is an ExceptionCode, translate the code
 	  // to return status string

@@ -59,7 +59,8 @@ namespace openvpn {
       return true;
     }
 
-    inline bool is_valid_utf8(const std::string& str)
+    template <typename STRING>
+    inline bool is_valid_utf8(const STRING& str)
     {
       return is_valid_utf8((const unsigned char *)str.c_str(), str.length());
     }
@@ -71,7 +72,8 @@ namespace openvpn {
       UTF8_BAD,    // failed, string is not legal UTF8
       UTF8_RANGE,  // failed, index is beyond end of string
     };
-    inline int utf8_index(std::string& str, size_t& index)
+    template <typename STRING>
+    inline int utf8_index(STRING& str, size_t& index)
     {
       const size_t size = str.length();
       size_t upos = 0;
@@ -93,7 +95,8 @@ namespace openvpn {
     }
 
     // Truncate a UTF8 string if its length exceeds max_len
-    inline void utf8_truncate(std::string& str, size_t max_len)
+    template <typename STRING>
+    inline void utf8_truncate(STRING& str, size_t max_len)
     {
       const int status = utf8_index(str, max_len);
       if (status == UTF8_GOOD || status == UTF8_BAD)
@@ -108,9 +111,10 @@ namespace openvpn {
       UTF8_PASS_FMT=(1<<31),
       UTF8_FILTER=(1<<30),
     };
-    inline std::string utf8_printable(const std::string& str, size_t max_len_flags)
+    template <typename STRING>
+    inline STRING utf8_printable(const STRING& str, size_t max_len_flags)
     {
-      std::string ret;
+      STRING ret;
       const size_t size = str.length();
       const size_t max_len = max_len_flags & ((size_t)UTF8_FILTER-1); // NOTE -- use smallest flag value here
       size_t upos = 0;
@@ -157,7 +161,8 @@ namespace openvpn {
       return ret;
     }
 
-    inline size_t utf8_length(const std::string& str)
+    template <typename STRING>
+    inline size_t utf8_length(const STRING& str)
     {
       const size_t size = str.length();
       size_t upos = 0;
@@ -188,8 +193,9 @@ namespace openvpn {
 	}
     }
 
-    // Convert a UTF-8 std::string to UTF-16 little endian (no null termination in return)
-    inline BufferPtr string_to_utf16(const std::string& str)
+    // Convert a UTF-8 string to UTF-16 little endian (no null termination in return)
+    template <typename STRING>
+    inline BufferPtr string_to_utf16(const STRING& str)
     {
       ScopedPtr<UTF16, PtrArrayFree> utf16_dest(new UTF16[str.length()]);    
       const UTF8 *src = (UTF8 *)str.c_str();

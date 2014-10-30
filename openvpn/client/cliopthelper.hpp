@@ -225,7 +225,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  error_ = true;
-	  message_ = Unicode::utf8_printable(e.what(), 256);
+	  message_ = Unicode::utf8_printable<std::string>(e.what(), 256);
 	}
     }
 
@@ -287,7 +287,7 @@ namespace openvpn {
 	{
 	  ParseClientConfig ret;
 	  ret.error_ = true;
-	  ret.message_ = Unicode::utf8_printable(e.what(), 256);
+	  ret.message_ = Unicode::utf8_printable<std::string>(e.what(), 256);
           return ret;
 	}
     }
