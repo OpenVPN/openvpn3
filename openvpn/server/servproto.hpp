@@ -228,10 +228,12 @@ namespace openvpn {
 	// fixme -- code me
       }
 
-      // disable keepalive for rest of session
-      virtual void disable_keepalive()
+      // Disable keepalive for rest of session, but fetch
+      // the keepalive parameters (in seconds).
+      virtual void disable_keepalive(unsigned int &keepalive_ping,
+				     unsigned int &keepalive_timeout)
       {
-	Base::disable_keepalive();
+	Base::disable_keepalive(keepalive_ping, keepalive_timeout);
       }
 
       // override the data channel factory

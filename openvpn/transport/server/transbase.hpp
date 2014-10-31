@@ -88,8 +88,10 @@ namespace openvpn {
     // Called with OpenVPN-encapsulated packets from transport layer.
     virtual void transport_recv(BufferAllocated& buf) = 0;
 
-    // disable keepalive for rest of session
-    virtual void disable_keepalive() = 0;
+    // Disable keepalive for rest of session, but fetch
+    // the keepalive parameters (in seconds).
+    virtual void disable_keepalive(unsigned int &keepalive_ping,
+				   unsigned int &keepalive_timeout) = 0;
 
     // override the data channel factory
     virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory) = 0;

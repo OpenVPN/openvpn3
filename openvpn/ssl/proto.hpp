@@ -2302,9 +2302,13 @@ namespace openvpn {
       keepalive_parms_modified();
     }
 
-    // disable keepalive for rest of session
-    void disable_keepalive()
+    // Disable keepalive for rest of session,
+    // but return the previous keepalive parameters.
+    virtual void disable_keepalive(unsigned int &keepalive_ping,
+				   unsigned int &keepalive_timeout)
     {
+      keepalive_ping = config->keepalive_ping.to_seconds();
+      keepalive_timeout = config->keepalive_timeout.to_seconds();
       config->keepalive_ping = Time::Duration::infinite();
       config->keepalive_timeout = Time::Duration::infinite();
       keepalive_parms_modified();
