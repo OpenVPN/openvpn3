@@ -68,7 +68,9 @@ namespace openvpn {
   {
     typedef boost::intrusive_ptr<ManClientInstanceFactory> Ptr;
 
-    virtual ManClientInstanceSend::Ptr new_obj(ManClientInstanceRecv* parent) = 0;
+    virtual void start() = 0;
+
+    virtual ManClientInstanceSend::Ptr new_obj(ManClientInstanceRecv* instance) = 0;
   };
 
 }

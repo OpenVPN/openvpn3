@@ -258,6 +258,7 @@ namespace openvpn {
 	  io_service(io_service_arg),
 	  halt(false),
 	  housekeeping_timer(io_service_arg),
+	  disconnect_at(Time::infinite()),
 	  stats(factory.stats),
 	  man_factory(man_factory_arg),
 	  tun_factory(tun_factory_arg)
@@ -327,6 +328,8 @@ namespace openvpn {
 	if (!client_reason.empty())
 	  os << ',' << client_reason;
 
+	disconnect_in(Time::Duration::seconds(1));
+
 	Base::control_send(buf);
 	Base::flush(true);
 	set_housekeeping_timer();
@@ -372,6 +375,11 @@ namespace openvpn {
 	return bool(TunLink::send);
       }
 
+      void disconnect_in(const Time::Duration& dur)
+      {
+	disconnect_at = now() + dur;
+      }
+
       void housekeeping_callback(const boost::system::error_code& e)
       {
 	try {
@@ -384,6 +392,8 @@ namespace openvpn {
 	      Base::housekeeping();
 	      if (Base::invalidated())
 		error(std::string("Session invalidated: ") + Error::name(Base::invalidation_reason()));
+	      else if (now() > disconnect_at)
+		error("disconnect triggered");
 	      else
 		set_housekeeping_timer();
 	    }
@@ -397,6 +407,7 @@ namespace openvpn {
       void set_housekeeping_timer()
       {
 	Time next = Base::next_housekeeping();
+	next.min(disconnect_at);
 	if (!housekeeping_schedule.similar(next))
 	  {
 	    if (!next.is_infinite())
@@ -437,6 +448,8 @@ namespace openvpn {
 
       CoarseTime housekeeping_schedule;
       AsioTimer housekeeping_timer;
+
+      Time disconnect_at;
 
       SessionStats::Ptr stats;
 
