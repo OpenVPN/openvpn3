@@ -499,6 +499,17 @@ namespace openvpn {
 	return *this;
       }
 
+      Addr& operator+=(const long delta)
+      {
+	u.addr += (boost::uint32_t)delta;
+	return *this;
+      }
+
+      Addr& operator-=(const long delta)
+      {
+	return operator+=(-delta);
+      }
+
     private:
       static base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
       {

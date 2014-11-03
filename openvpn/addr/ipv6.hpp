@@ -553,6 +553,17 @@ namespace openvpn {
 	return *this;
       }
 
+      Addr& operator+=(const long delta)
+      {
+	*this = *this + delta;
+	return *this;
+      }
+
+      Addr& operator-=(const long delta)
+      {
+	return operator+=(-delta);
+      }
+
       Addr& operator+=(const Addr& other) {
 	add(u, other.u);
 	return *this;

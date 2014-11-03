@@ -746,6 +746,38 @@ namespace openvpn {
 	return *this;
       }
 
+      Addr& operator+=(const long delta)
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    u.v4 += delta;
+	    break;
+	  case V6:
+	    u.v6 += delta;
+	    break;
+	  default:
+	    break;
+	  }
+	return *this;
+      }
+
+      Addr& operator-=(const long delta)
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    u.v4 -= delta;
+	    break;
+	  case V6:
+	    u.v6 -= delta;
+	    break;
+	  default:
+	    break;
+	  }
+	return *this;
+      }
+
       void reset_ipv4_from_uint32(const IPv4::Addr::base_type addr)
       {
 	ver = V4;
