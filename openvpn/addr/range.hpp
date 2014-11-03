@@ -28,6 +28,8 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 
+#include <openvpn/addr/ip.hpp>
+
 namespace openvpn {
   namespace IP {
 
@@ -35,17 +37,17 @@ namespace openvpn {
     // where A represents an address class.
     // A should be a network address class such as IP::Addr, IPv4::Addr, or IPv6::Addr.
 
-    template <typename A>
-    class Range
+    template <typename ADDR>
+    class RangeType
     {
     public:
       class Iterator
       {
-	friend class Range;
+	friend class RangeType;
       public:
 	bool more() const { return remaining_ > 0; }
 
-	const A& addr() const { return addr_; }
+	const ADDR& addr() const { return addr_; }
 
 	void next()
 	{
@@ -57,19 +59,33 @@ namespace openvpn {
 	}
 
       private:
-	Iterator(const Range& range)
+	Iterator(const RangeType& range)
 	  : addr_(range.start_), remaining_(range.extent_) {}
 
-	A addr_;
+	ADDR addr_;
 	size_t remaining_;
       };
 
-      Range() : extent_(0) {}
+      RangeType() : extent_(0) {}
 
-      Range(const A& start, const size_t extent)
+      RangeType(const ADDR& start, const size_t extent)
 	: start_(start), extent_(extent) {}
 
       Iterator iterator() const { return Iterator(*this); }
+
+      const bool defined() const { return extent_ > 0; }
+      const ADDR& start() const { return start_; }
+      size_t extent() const { return extent_; }
+
+      RangeType pull_front(size_t extent)
+      {
+	if (extent > extent_)
+	  extent = extent_;
+	RangeType ret(start_, extent);
+	start_ += extent;
+	extent_ -= extent;
+	return ret;
+      }
 
       std::string to_string() const
       {
@@ -79,9 +95,42 @@ namespace openvpn {
       }
 
     private:
-      A start_;
+      ADDR start_;
       size_t extent_;
     };
+
+    template <typename ADDR>
+    class RangePartitionType
+    {
+    public:
+      RangePartitionType(const RangeType<ADDR>& src_range, const size_t n_partitions)
+	: range(src_range),
+	  remaining(n_partitions)
+      {
+      }
+
+      bool next(RangeType<ADDR>& r)
+      {
+	if (remaining)
+	  {
+	    if (remaining > 1)
+	      r = range.pull_front(range.extent() / remaining);
+	    else
+	      r = range;
+	    --remaining;
+	    return r.defined();
+	  }
+	else
+	  return false;
+      }
+
+    private:
+      RangeType<ADDR> range;
+      size_t remaining;
+    };
+
+    typedef RangeType<IP::Addr> Range;
+    typedef RangePartitionType<IP::Addr> RangePartition;
   }
 }
 

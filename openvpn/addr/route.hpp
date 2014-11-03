@@ -54,6 +54,12 @@ namespace openvpn {
       {
       }
 
+      RouteType(const ADDR& addr_arg, const unsigned int prefix_len_arg)
+	: addr(addr_arg),
+	  prefix_len(prefix_len_arg)
+      {
+      }
+
       static RouteType from_string(const std::string& rtstr, const char *title = NULL)
       {
 	RouteType r;
@@ -70,6 +76,31 @@ namespace openvpn {
 	else
 	  r.prefix_len = r.addr.size();
 	return r;
+      }
+
+      IP::Addr::Version version() const
+      {
+	return addr.version();
+      }
+
+      ADDR netmask() const
+      {
+	return ADDR::netmask_from_prefix_len(version(), prefix_len);
+      }
+
+      size_t extent() const
+      {
+	return netmask().extent_from_netmask().to_ulong();
+      }
+
+      bool is_canonical() const
+      {
+	return (addr & netmask()) == addr;
+      }
+
+      void force_canonical()
+      {
+	addr = addr & netmask();
       }
 
       std::string to_string() const
