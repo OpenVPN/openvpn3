@@ -25,6 +25,7 @@
 #include <cstring> // for std::strlen, and std::memset
 #include <ostream>
 
+#include <openvpn/common/memneq.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
@@ -81,6 +82,14 @@ namespace openvpn {
     const char& operator[](size_t pos) const
     {
       return *reinterpret_cast<const char *>(data.c_index(pos));
+    }
+
+    bool operator==(const char *str) const
+    {
+      const size_t len = std::strlen(str);
+      if (len != length())
+	return false;
+      return !crypto::memneq(str, c_str(), len);
     }
 
     SafeString& operator+=(char c)
