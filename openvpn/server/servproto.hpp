@@ -196,7 +196,7 @@ namespace openvpn {
 		  // make packet appear as incoming on tun interface
 		  if (true) // fixme: was tun
 		    {
-		      OPENVPN_LOG_SERVPROTO("TUN SEND[" << buf.size()) << ']';
+		      OPENVPN_LOG_SERVPROTO("TUN SEND[" << buf.size() << ']');
 		      // fixme -- code me
 		    }
 		}
