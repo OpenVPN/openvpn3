@@ -24,8 +24,6 @@
 
 #include <streambuf>
 
-#include <openvpn/log/logsimple.hpp>
-
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
