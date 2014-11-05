@@ -771,7 +771,7 @@ namespace openvpn {
 	    // add server bypass route
 	    if (gw.v4.defined())
 	      {
-		if (!pull.remote_address.ipv6)
+		if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
 		  {
 		    Action::Ptr c, d;
 		    add_del_route(pull.remote_address.address, 32, gw.v4.router.to_string(), gw.v4.iface, 0, c, d);
@@ -801,7 +801,7 @@ namespace openvpn {
 	    // add server bypass route
 	    if (gw.v6.defined())
 	      {
-		if (pull.remote_address.ipv6)
+		if (pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
 		  {
 		    Action::Ptr c, d;
 		    add_del_route(pull.remote_address.address, 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6|R_IFACE_HINT, c, d);
