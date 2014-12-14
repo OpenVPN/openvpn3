@@ -19,8 +19,6 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Server-side network met
-
 #ifndef OPENVPN_SERVER_VPNSERVNETBLOCK_H
 #define OPENVPN_SERVER_VPNSERVNETBLOCK_H
 
@@ -124,30 +122,33 @@ namespace openvpn {
 	  }
       }
 
-      // IPv4 per-thread partition
-      {
-	IP::RangePartition rp(snb4.clients, n_threads);
-	IP::Range crange;
-	for (unsigned int i = 0; i < n_threads; ++i)
-	  {
-	    if (!rp.next(crange))
-	      throw vpn_serv_netblock("unexpected ServerNetblock4 partition fail");
-	    PerThread pt;
-	    pt.range4_ = crange;
-	    thr.push_back(pt);
-	  }
-      }
-
-      // IPv6 per-thread partition
-      if (snb6.defined())
+      if (n_threads)
 	{
-	  IP::RangePartition rp(snb6.clients, n_threads);
-	  IP::Range crange;
-	  for (unsigned int i = 0; i < n_threads; ++i)
+	  // IPv4 per-thread partition
+	  {
+	    IP::RangePartition rp(snb4.clients, n_threads);
+	    IP::Range crange;
+	    for (unsigned int i = 0; i < n_threads; ++i)
+	      {
+		if (!rp.next(crange))
+		  throw vpn_serv_netblock("unexpected ServerNetblock4 partition fail");
+		PerThread pt;
+		pt.range4_ = crange;
+		thr.push_back(pt);
+	      }
+	  }
+
+	  // IPv6 per-thread partition
+	  if (snb6.defined())
 	    {
-	      if (!rp.next(crange))
-		throw vpn_serv_netblock("unexpected ServerNetblock6 partition fail");
-	      thr[i].range6_ = crange;
+	      IP::RangePartition rp(snb6.clients, n_threads);
+	      IP::Range crange;
+	      for (unsigned int i = 0; i < n_threads; ++i)
+		{
+		  if (!rp.next(crange))
+		    throw vpn_serv_netblock("unexpected ServerNetblock6 partition fail");
+		  thr[i].range6_ = crange;
+		}
 	    }
 	}
     }
