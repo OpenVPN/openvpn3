@@ -56,8 +56,8 @@ namespace openvpn {
 
     bool is_udp() const { return type_ == UDPv4 || type_ == UDPv6; }
     bool is_tcp() const { return type_ == TCPv4 || type_ == TCPv6; }
-
     bool is_reliable() const { return is_tcp(); }
+    bool is_ipv6() const { return type_ == UDPv6 || type_ == TCPv6; }
 
     bool operator==(const Protocol& other) const
     {
@@ -100,7 +100,9 @@ namespace openvpn {
 	}
     }
 
-    static Protocol parse(const std::string& str, const bool allow_client_suffix)
+    static Protocol parse(const std::string& str,
+			  const bool allow_client_suffix,
+			  const char *title = NULL)
     {
       Protocol ret;
       std::string s = str;
@@ -129,7 +131,11 @@ namespace openvpn {
 	    }
 	}
       if (ret.type_ == NONE)
-	OPENVPN_THROW(option_error, "error parsing protocol: " << s);
+	{
+	  if (!title)
+	    title = "protocol";
+	  OPENVPN_THROW(option_error, "error parsing " << title << ": " << s);
+	}
       return ret;
     }
 
