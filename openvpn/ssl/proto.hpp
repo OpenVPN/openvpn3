@@ -539,11 +539,11 @@ namespace openvpn {
 	  }
       }
 
-      void set_protocol(const Protocol& p)
+      void set_protocol(const Protocol& p, const bool tcp_linear=true)
       {
 	// adjust options for new transport protocol
 	protocol = p;
-	if (protocol.is_udp())
+	if (protocol.is_udp() || !tcp_linear)
 	  pid_mode = PacketIDReceive::UDP_MODE;
 	else if (protocol.is_tcp())
 	  pid_mode = PacketIDReceive::TCP_MODE;
