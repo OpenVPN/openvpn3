@@ -179,6 +179,15 @@ namespace openvpn {
 	return "";
     }
 
+    std::string get_default(const size_t index, const size_t max_len, const std::string& default_value) const
+    {
+      validate_arg(index, max_len);
+      if (index < data.size())
+	return data[index];
+      else
+	return default_value;
+    }
+
     const std::string* get_ptr(const size_t index, const size_t max_len) const
     {
       validate_arg(index, max_len);
