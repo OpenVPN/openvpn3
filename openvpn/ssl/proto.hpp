@@ -650,20 +650,23 @@ namespace openvpn {
 	return ret;
       }
 
-      static const Option *load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
+      static void set_duration_parm(Time::Duration& dur, const char *name, const std::string& valstr)
       {
 	const unsigned int maxdur = 60*60*24*7; // maximum duration -- 7 days
+	unsigned int value = 0;
+	const bool status = parse_number<unsigned int>(valstr, value);
+	if (!status)
+	  OPENVPN_THROW(proto_option_error, name << ": error parsing number of seconds");
+	if (value == 0 || value > maxdur)
+	  value = maxdur;
+	dur = Time::Duration::seconds(value);
+      }
+
+      static const Option *load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
+      {
 	const Option *o = opt.get_ptr(name);
 	if (o)
-	  {
-	    unsigned int value = 0;
-	    const bool status = parse_number<unsigned int>(o->get(1, 16), value);
-	    if (!status)
-	      OPENVPN_THROW(proto_option_error, name << ": error parsing number of seconds");
-	    if (value == 0 || value > maxdur)
-	      value = maxdur;
-	    dur = Time::Duration::seconds(value);
-	  }
+	  set_duration_parm(dur, name, o->get(1, 16));
 	return o;
       }
 
@@ -671,8 +674,17 @@ namespace openvpn {
       // load parameters that can be present in both config file or pushed options
       void load_common(const OptionList& opt, const ProtoContextOptions& pco)
       {
-	load_duration_parm(keepalive_ping, "ping", opt);
-	load_duration_parm(keepalive_timeout, "ping-restart", opt);
+	const Option *o = opt.get_ptr("keepalive");
+	if (o)
+	  {
+	    set_duration_parm(keepalive_ping, "keepalive ping", o->get(1, 16));
+	    set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16));
+	  }
+	else
+	  {
+	    load_duration_parm(keepalive_ping, "ping", opt);
+	    load_duration_parm(keepalive_timeout, "ping-restart", opt);
+	  }
       }
 
       // used to generate link_mtu option sent to peer
