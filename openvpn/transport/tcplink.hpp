@@ -160,6 +160,11 @@ namespace openvpn {
 	halt = true;
       }
 
+      void reset_align_adjust(const size_t align_adjust)
+      {
+	frame_context.reset_align_adjust(align_adjust + (is_raw_mode() ? 0 : 2));
+      }
+
       ~Link() { stop(); }
 
     private:
@@ -281,7 +286,7 @@ namespace openvpn {
       bool halt;
       bool raw_mode;
       ReadHandler read_handler;
-      const Frame::Context frame_context;
+      Frame::Context frame_context;
       SessionStats::Ptr stats;
       const size_t send_queue_max_size;
       const size_t free_list_max_size;

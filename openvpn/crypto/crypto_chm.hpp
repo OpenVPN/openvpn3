@@ -40,10 +40,12 @@ namespace openvpn {
     CryptoCHM(const CryptoAlgs::Type cipher_arg,
 	      const CryptoAlgs::Type digest_arg,
 	      const Frame::Ptr& frame_arg,
+	      const SessionStats::Ptr& stats_arg,
 	      const RandomAPI::Ptr& prng_arg)
       : cipher(cipher_arg),
 	digest(digest_arg),
 	frame(frame_arg),
+	stats(stats_arg),
 	prng(prng_arg)
     {
       encrypt_.frame = frame;
@@ -54,13 +56,13 @@ namespace openvpn {
     // Encrypt/Decrypt
 
     /* returns true if packet ID is close to wrapping */
-    virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now)
+    virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32)
     {
       encrypt_.encrypt(buf, now);
       return encrypt_.pid_send.wrap_warning();
     }
 
-    virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now)
+    virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32)
     {
       return decrypt_.decrypt(buf, now);
     }
@@ -95,6 +97,11 @@ namespace openvpn {
 			     recv_name, recv_unit, recv_stats_arg);
     }
 
+    virtual bool consider_compression(const CompressContext& comp_ctx)
+    {
+      return true;
+    }
+
     // Indicate whether or not cipher/digest is defined
 
     virtual unsigned int defined() const
@@ -117,6 +124,7 @@ namespace openvpn {
     CryptoAlgs::Type cipher;
     CryptoAlgs::Type digest;
     Frame::Ptr frame;
+    SessionStats::Ptr stats;
     RandomAPI::Ptr prng;
 
     EncryptCHM<CRYPTO_API> encrypt_;
@@ -132,17 +140,19 @@ namespace openvpn {
     CryptoContextCHM(const CryptoAlgs::Type cipher_arg,
 		     const CryptoAlgs::Type digest_arg,
 		     const Frame::Ptr& frame_arg,
+		     const SessionStats::Ptr& stats_arg,
 		     const RandomAPI::Ptr& prng_arg)
       : cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
 	digest(CryptoAlgs::legal_dc_digest(digest_arg)),
 	frame(frame_arg),
+	stats(stats_arg),
 	prng(prng_arg)
     {
     }
 
     virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id)
     {
-      return new CryptoCHM<CRYPTO_API>(cipher, digest, frame, prng);
+      return new CryptoCHM<CRYPTO_API>(cipher, digest, frame, stats, prng);
     }
 
     // cipher/HMAC/key info
@@ -167,6 +177,7 @@ namespace openvpn {
     CryptoAlgs::Type cipher;
     CryptoAlgs::Type digest;
     Frame::Ptr frame;
+    SessionStats::Ptr stats;
     RandomAPI::Ptr prng;
   };
 }

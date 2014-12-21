@@ -107,6 +107,12 @@ namespace openvpn {
 	return send(buf);
       }
 
+      virtual void reset_align_adjust(const size_t align_adjust)
+      {
+	if (impl)
+	  impl->reset_align_adjust(align_adjust);
+      }
+
       virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const
       {
 	host = server_host;

@@ -28,6 +28,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/likely.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -71,6 +72,15 @@ namespace openvpn {
       NO_COMPRESS_SWAP = 0xFB, // for better alignment handling, replace this byte with last byte of packet
     };
 
+    // Compress V2 constants
+    enum {
+      COMPRESS_V2_ESCAPE=0x50,
+
+      // Compression algs
+      OVPN_COMPv2_NONE=0,
+      OVPN_COMPv2_LZ4=1,
+    };
+
     Compress(const Frame::Ptr& frame_arg,
 	     const SessionStats::Ptr& stats_arg)
       : frame(frame_arg), stats(stats_arg) {}
@@ -101,10 +111,35 @@ namespace openvpn {
 	}
     }
 
+    // Push a COMPRESS_V2 header byte (value).
+    // Pass value == 0 to omit push.
+    void v2_push(Buffer& buf, int value)
+    {
+      unsigned char uc = buf[0];
+      if (value == 0 && uc != COMPRESS_V2_ESCAPE)
+	return;
+      unsigned char *esc = buf.prepend_alloc(2);
+      esc[0] = COMPRESS_V2_ESCAPE;
+      esc[1] = value;
+    }
+
+    // Pull a COMPRESS_V2 header byte.
+    // Returns the compress op (> 0) on success.
+    // Returns 0 if no compress op.
+    int v2_pull(Buffer& buf)
+    {
+      unsigned char uc = buf[0];
+      if (uc != COMPRESS_V2_ESCAPE)
+	return 0;
+      uc = buf[1];
+      buf.advance(2);
+      return uc;
+    }
+
     Frame::Ptr frame;
     SessionStats::Ptr stats;
   };
-}// namespace openvpn
+}
 
 // include compressor implementations here
 #include <openvpn/compress/compnull.hpp>
@@ -127,12 +162,14 @@ namespace openvpn {
     enum Type {
       NONE,
       COMP_STUB,  // generic compression stub
+      COMP_STUBv2,  // generic compression stub using v2 protocol
       ANY,        // placeholder for any method on client, before server assigns it
       ANY_LZO,    // placeholder for LZO or LZO_STUB methods on client, before server assigns it
       LZO,
       LZO_SWAP,
       LZO_STUB,
       LZ4,
+      LZ4v2,
       SNAPPY,
     };
 
@@ -148,7 +185,22 @@ namespace openvpn {
       type_ = t;
     }
 
-    unsigned int extra_payload_bytes() const { return type_ == NONE ? 0 : 1; }
+    Type type() const { return type_; }
+    bool asym() const { return asym_; }
+
+    unsigned int extra_payload_bytes() const
+    {
+      switch (type_)
+	{
+	case NONE:
+	  return 0;
+	case COMP_STUBv2:
+	case LZ4v2:
+	  return 2; // worst case
+	default:
+	  return 1;
+	}
+    }
 
     Compress::Ptr new_compressor(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
     {
@@ -162,6 +214,8 @@ namespace openvpn {
 	  return new CompressStub(frame, stats, false);
 	case COMP_STUB:
 	  return new CompressStub(frame, stats, true);
+	case COMP_STUBv2:
+	  return new CompressStubV2(frame, stats);
 #ifndef NO_LZO
 	case LZO:
 	  return new CompressLZO(frame, stats, false, asym_);
@@ -171,6 +225,8 @@ namespace openvpn {
 #ifdef HAVE_LZ4
 	case LZ4:
 	  return new CompressLZ4(frame, stats, asym_);
+	case LZ4v2:
+	  return new CompressLZ4v2(frame, stats, asym_);
 #endif
 #ifdef HAVE_SNAPPY
 	case SNAPPY:
@@ -190,6 +246,7 @@ namespace openvpn {
 	case ANY_LZO:
 	case LZO_STUB:
 	case COMP_STUB:
+	case COMP_STUBv2:
 	  return true;
 	case LZO:
 	case LZO_SWAP:
@@ -199,6 +256,12 @@ namespace openvpn {
 	  return false;
 #endif
 	case LZ4:
+#ifdef HAVE_LZ4
+	  return true;
+#else
+	  return false;
+#endif
+	case LZ4v2:
 #ifdef HAVE_LZ4
 	  return true;
 #else
@@ -230,15 +293,21 @@ namespace openvpn {
 	case LZ4:
 	  return "IV_LZ4=1\n";
 #endif
+#ifdef HAVE_LZ4
+	case LZ4v2:
+	  return "IV_LZ4v2=1\n";
+#endif
 #ifdef HAVE_SNAPPY
 	case SNAPPY:
 	  return "IV_SNAPPY=1\n";
 #endif
 	case LZO_STUB:
 	case COMP_STUB:
+	case COMP_STUBv2:
 	  return
 	    "IV_LZO_STUB=1\n"
 	    "IV_COMP_STUB=1\n"
+	    "IV_COMP_STUBv2=1\n"
 	    ;
 	case ANY:
 	  return
@@ -253,8 +322,10 @@ namespace openvpn {
 #endif
 #ifdef HAVE_LZ4
 	    "IV_LZ4=1\n"
+	    "IV_LZ4v2=1\n"
 #endif
 	    "IV_COMP_STUB=1\n"
+	    "IV_COMP_STUBv2=1\n"
 	    ;
 	case ANY_LZO:
 	  return
@@ -265,6 +336,7 @@ namespace openvpn {
 	    "IV_LZO_STUB=1\n"
 #endif
 	    "IV_COMP_STUB=1\n"
+	    "IV_COMP_STUBv2=1\n"
 	    ;
 	default:
 	  return NULL;
@@ -279,8 +351,10 @@ namespace openvpn {
 	case LZO_STUB:
 	case SNAPPY:
 	case LZ4:
+	case LZ4v2:
 	case LZO_SWAP:
 	case COMP_STUB:
+	case COMP_STUBv2:
 	case ANY:
 	case ANY_LZO:
 	  return "comp-lzo";
@@ -299,12 +373,16 @@ namespace openvpn {
 	  return "LZO_SWAP";
 	case LZ4:
 	  return "LZ4";
+	case LZ4v2:
+	  return "LZ4v2";
 	case SNAPPY:
 	  return "SNAPPY";
 	case LZO_STUB:
 	  return "LZO_STUB";
 	case COMP_STUB:
 	  return "COMP_STUB";
+	case COMP_STUBv2:
+	  return "COMP_STUBv2";
 	case ANY:
 	  return "ANY";
 	case ANY_LZO:
@@ -324,12 +402,28 @@ namespace openvpn {
 	return LZO_STUB;
       else if (method == "lz4")
 	return LZ4;
+      else if (method == "lz4-v2")
+	return LZ4v2;
       else if (method == "snappy")
 	return SNAPPY;
       else if (method == "stub")
 	return COMP_STUB;
+      else if (method == "stub-v2")
+	return COMP_STUBv2;
       else
 	return NONE;
+    }
+
+    static Type stub(const Type t)
+    {
+      switch (t)
+	{
+	case COMP_STUBv2:
+	case LZ4v2:
+	  return COMP_STUBv2;
+	default:
+	  return COMP_STUB;
+	}
     }
 
     static void init_static()

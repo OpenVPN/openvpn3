@@ -151,7 +151,7 @@ namespace openvpn {
 #endif
 
       // frame
-      frame = frame_init();
+      frame = frame_init(true);
 
       // route-nopull
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
@@ -178,7 +178,7 @@ namespace openvpn {
 
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
-      cp->dc_factory.reset(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, prng));
+      cp->dc_factory.reset(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, cli_stats, prng));
       cp->dc_deferred = true; // defer data channel setup until after options pull
       cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
@@ -436,7 +436,7 @@ namespace openvpn {
       const Protocol& transport_protocol = remote_list->current_transport_protocol();
 
       // set transport protocol in Client::ProtoConfig
-      cp->set_protocol(transport_protocol);
+      cp->set_protocol(transport_protocol, false);
 
       // construct transport object
       if (http_proxy_options)

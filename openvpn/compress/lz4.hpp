@@ -31,7 +31,82 @@
 
 namespace openvpn {
 
-  class CompressLZ4 : public Compress
+  class CompressLZ4Base : public Compress
+  {
+  protected:
+    CompressLZ4Base(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
+      : Compress(frame, stats)
+    {
+    }
+
+    bool do_decompress(BufferAllocated& buf)
+    {
+      // initialize work buffer
+      const int payload_size = frame->prepare(Frame::DECOMPRESS_WORK, work);
+
+      // do uncompress
+      const int decomp_size = LZ4_decompress_safe((const char *)buf.c_data(), (char *)work.data(),
+						  (int)buf.size(), payload_size);
+      if (decomp_size < 0)
+	{
+	  error(buf);
+	  return false;
+	}
+      OPENVPN_LOG_COMPRESS_VERBOSE("LZ4 uncompress " << buf.size() << " -> " << decomp_size);
+      work.set_size(decomp_size);
+      buf.swap(work);
+      return true;
+    }
+
+    bool do_compress(BufferAllocated& buf)
+    {
+      // initialize work buffer
+      frame->prepare(Frame::COMPRESS_WORK, work);
+
+      // verify that input data length is not too large
+      if (lz4_extra_buffer(buf.size()) > work.max_size())
+	{
+	  error(buf);
+	  return false;
+	}
+
+      // do compress
+      const int comp_size = LZ4_compress((const char *)buf.c_data(), (char *)work.data(), (int)buf.size());
+
+      // did compression actually reduce data length?
+      if (comp_size < buf.size())
+	{
+	  if (comp_size < 0)
+	    {
+	      error(buf);
+	      return false;
+	    }
+	  OPENVPN_LOG_COMPRESS_VERBOSE("LZ4 compress " << buf.size() << " -> " << comp_size);
+	  work.set_size(comp_size);
+	  buf.swap(work);
+	  return true;
+	}
+      else
+	return false;
+    }
+
+    // Worst case size expansion on compress.
+    // Official LZ4 worst-case size expansion alg is
+    // LZ4_COMPRESSBOUND macro in lz4.h.
+    // However we optimize it slightly here to lose the integer division
+    // when len < 65535.
+    size_t lz4_extra_buffer(const size_t len)
+    {
+      if (likely(len < 65535))
+	return len + len/256 + 17;
+      else
+	return len + len/255 + 16;
+    }
+
+    BufferAllocated work;
+  };
+
+  class CompressLZ4 : public CompressLZ4Base
   {
     // magic number for LZ4 compression
     enum {
@@ -40,7 +115,7 @@ namespace openvpn {
 
   public:
     CompressLZ4(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool asym_arg)
-      : Compress(frame, stats),
+      : CompressLZ4Base(frame, stats),
 	asym(asym_arg)
     {
       OPENVPN_LOG_COMPRESS("LZ4 init asym=" << asym_arg);
@@ -56,31 +131,9 @@ namespace openvpn {
 
       if (hint && !asym)
 	{
-	  // initialize work buffer
-	  frame->prepare(Frame::COMPRESS_WORK, work);
-
-	  // verify that input data length is not too large
-	  if (lz4_extra_buffer(buf.size()) > work.max_size())
+	  if (do_compress(buf))
 	    {
-	      error(buf);
-	      return;
-	    }
-
-	  // do compress
-	  const int comp_size = LZ4_compress((const char *)buf.c_data(), (char *)work.data(), (int)buf.size());
-
-	  // did compression actually reduce data length?
-	  if (comp_size < buf.size())
-	    {
-	      if (comp_size < 0)
-		{
-		  error(buf);
-		  return;
-		}
-	      OPENVPN_LOG_COMPRESS_VERBOSE("LZ4 compress " << buf.size() << " -> " << comp_size);
-	      work.set_size(comp_size);
-	      do_swap(work, LZ4_COMPRESS);
-	      buf.swap(work);
+	      do_swap(buf, LZ4_COMPRESS);
 	      return;
 	    }
 	}
@@ -102,23 +155,8 @@ namespace openvpn {
 	  do_unswap(buf);
 	  break;
 	case LZ4_COMPRESS:
-	  {
-	    do_unswap(buf);
-
-	    // initialize work buffer
-	    const int payload_size = frame->prepare(Frame::DECOMPRESS_WORK, work);
-
-	    // do uncompress
-	    const int decomp_size = LZ4_decompress_safe((const char *)buf.c_data(), (char *)work.data(), (int)buf.size(), payload_size);
-	    if (decomp_size < 0)
-		{
-		  error(buf);
-		  return;
-		}
-	    OPENVPN_LOG_COMPRESS_VERBOSE("LZ4 uncompress " << buf.size() << " -> " << decomp_size);
-	    work.set_size(decomp_size);
-	    buf.swap(work);
-	  }
+	  do_unswap(buf);
+	  do_decompress(buf);
 	  break;
 	default: 
 	  error(buf); // unknown op
@@ -126,23 +164,63 @@ namespace openvpn {
     }
 
   private:
-    // Worst case size expansion on compress.
-    // Official LZ4 worst-case size expansion alg is
-    // LZ4_COMPRESSBOUND macro in lz4.h.
-    // However we optimize it slightly here to lose the integer division
-    // when len < 65535.
-    size_t lz4_extra_buffer(const size_t len)
-    {
-      if (likely(len < 65535))
-	return len + len/256 + 17;
-      else
-	return len + len/255 + 16;
-    }
-
     const bool asym;
-    BufferAllocated work;
   };
 
-} // namespace openvpn
+  class CompressLZ4v2 : public CompressLZ4Base
+  {
+  public:
+    CompressLZ4v2(const Frame::Ptr& frame, const SessionStats::Ptr& stats, const bool asym_arg)
+      : CompressLZ4Base(frame, stats),
+	asym(asym_arg)
+    {
+      OPENVPN_LOG_COMPRESS("LZ4v2 init asym=" << asym_arg);
+    }
 
-#endif // OPENVPN_COMPRESS_LZ4_H
+    virtual const char *name() const { return "lz4v2"; }
+
+    virtual void compress(BufferAllocated& buf, const bool hint)
+    {
+      // skip null packets
+      if (!buf.size())
+	return;
+
+      if (hint && !asym)
+	{
+	  if (do_compress(buf))
+	    {
+	      v2_push(buf, OVPN_COMPv2_LZ4);
+	      return;
+	    }
+	}
+
+      // indicate that we didn't compress
+      v2_push(buf, OVPN_COMPv2_NONE);
+    }
+
+    virtual void decompress(BufferAllocated& buf)
+    {
+      // skip null packets
+      if (!buf.size())
+	return;
+
+      const int c = v2_pull(buf);
+      switch (c)
+	{
+	case OVPN_COMPv2_NONE:
+	  break;
+	case OVPN_COMPv2_LZ4:
+	  do_decompress(buf);
+	  break;
+	default:
+	  error(buf); // unknown op
+	}
+    }
+
+  private:
+    const bool asym;
+  };
+
+}
+
+#endif

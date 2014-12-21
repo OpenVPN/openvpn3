@@ -466,6 +466,10 @@ namespace openvpn {
 		// modify proto config (cipher, auth, and compression methods)
 		Base::process_push(received_options, *proto_context_options);
 
+		// Allow ProtoContext to suggest an alignment adjustment
+		// hint for transport layer.
+		transport->reset_align_adjust(Base::align_adjust_hint());
+
 		// initialize tun/routing
 		tun = tun_factory->new_client_obj(io_service, *this);
 		tun->client_start(received_options, *transport);

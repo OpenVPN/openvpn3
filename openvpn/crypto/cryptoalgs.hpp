@@ -211,7 +211,7 @@ namespace openvpn {
     {
       const Alg& alg = get(type);
       if ((alg.flags() & (F_CIPHER|F_ALLOW_DC)) != (F_CIPHER|F_ALLOW_DC))
-	OPENVPN_THROW(crypto_alg, alg.name() << ": bad cipher");
+	OPENVPN_THROW(crypto_alg, alg.name() << ": bad cipher for data channel use");
       return type;
     }
 
@@ -219,7 +219,7 @@ namespace openvpn {
     {
       const Alg& alg = get(type);
       if ((alg.flags() & (F_DIGEST|F_ALLOW_DC)) != (F_DIGEST|F_ALLOW_DC))
-	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest");
+	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest for data channel use");
       return type;
     }
 

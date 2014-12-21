@@ -125,6 +125,11 @@ namespace openvpn {
 	halt = true;
       }
 
+      void reset_align_adjust(const size_t align_adjust)
+      {
+	frame_context.reset_align_adjust(align_adjust);
+      }
+
       ~Link() { stop(); }
 
     private:
@@ -169,7 +174,7 @@ namespace openvpn {
       boost::asio::ip::udp::socket& socket;
       bool halt;
       ReadHandler read_handler;
-      const Frame::Context frame_context;
+      Frame::Context frame_context;
       SessionStats::Ptr stats;
     };
   }

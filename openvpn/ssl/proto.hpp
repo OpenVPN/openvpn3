@@ -30,6 +30,7 @@
 #include <sstream>
 #include <algorithm>                  // for std::min
 
+#include <boost/cstdint.hpp>          // for boost::uint32_t, etc.
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 
 #include <openvpn/common/exception.hpp>
@@ -43,6 +44,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
+#include <openvpn/common/likely.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
 #include <openvpn/time/time.hpp>
@@ -150,7 +152,8 @@ namespace openvpn {
       CONTROL_SOFT_RESET_V1 =        3,   // new key, graceful transition from old to new key
       CONTROL_V1 =                   4,   // control channel packet (usually TLS ciphertext)
       ACK_V1 =                       5,   // acknowledgement for packets received
-      DATA_V1 =                      6,   // data channel packet
+      DATA_V1 =                      6,   // data channel packet with 1-byte header
+      DATA_V2 =                      9,   // data channel packet with 4-byte header
 
       // indicates key_method >= 2
       CONTROL_HARD_RESET_CLIENT_V2 = 7,   // initial key from client, forget previous state
@@ -158,8 +161,12 @@ namespace openvpn {
 
       // define the range of legal opcodes
       FIRST_OPCODE =                3,
-      LAST_OPCODE =                 8,
+      LAST_OPCODE =                 9,
       INVALID_OPCODE =              0,
+
+      // DATA_V2 constants
+      OP_SIZE_V2 = 4,                // size of initial packet opcode
+      OP_PEER_ID_UNDEF = 0x00FFFFFF, // indicates that Peer ID is undefined
 
       // states
       // C_x : client states
@@ -197,9 +204,21 @@ namespace openvpn {
       return op & KEY_ID_MASK;
     }
 
-    static unsigned char op_compose(const unsigned int opcode, const unsigned int key_id)
+    static size_t op_head_size(const unsigned int op)
+    {
+      return opcode_extract(op) == DATA_V2 ? OP_SIZE_V2 : 1;
+    }
+
+    static unsigned int op_compose(const unsigned int opcode, const unsigned int key_id)
     {
       return (opcode << OPCODE_SHIFT) | key_id;
+    }
+
+    static unsigned int op32_compose(const unsigned int opcode,
+				     const unsigned int key_id,
+				     const int op_peer_id)
+    {
+      return (op_compose(opcode, key_id) << 24) | (op_peer_id & 0x00FFFFFF);
     }
 
   public:
@@ -229,6 +248,8 @@ namespace openvpn {
 	xmit_creds = true;
 	key_direction = -1; // bidirectional
 	dc_deferred = false;
+	enable_op32 = false;
+	remote_peer_id = -1;
       }
 
       // master SSL context factory
@@ -300,6 +321,10 @@ namespace openvpn {
 
       // GUI version, passed to server as IV_GUI_VER
       std::string gui_version;
+
+      // op header
+      bool enable_op32;
+      int remote_peer_id; // -1 to disable
 
       void load(const OptionList& opt, const ProtoContextOptions& pco, const int default_key_direction)
       {
@@ -428,7 +453,7 @@ namespace openvpn {
 		  CompressContext::Type meth = CompressContext::parse_method(meth_name);
 		  if (meth == CompressContext::NONE)
 		    OPENVPN_THROW(proto_option_error, "Unknown compressor: '" << meth_name << '\'');
-		  comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::COMP_STUB, pco.is_comp_asym());
+		  comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::stub(meth), pco.is_comp_asym());
 		}
 	      else
 		comp_ctx = CompressContext(pco.is_comp() ? CompressContext::ANY : CompressContext::COMP_STUB, pco.is_comp_asym());
@@ -515,7 +540,7 @@ namespace openvpn {
 	      new_comp = o->get(1, 128);
 	      CompressContext::Type meth = CompressContext::parse_method(new_comp);
 	      if (meth != CompressContext::NONE)
-		comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::COMP_STUB, pco.is_comp_asym());
+		comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::stub(meth), pco.is_comp_asym());
 	    }
 	  else
 	    {
@@ -536,6 +561,26 @@ namespace openvpn {
 	catch (const std::exception& e)
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed compressor '" << new_comp << "': " << e.what());
+	  }
+
+	// peer ID
+	try {
+	  const Option *o = opt.get_ptr("peer-id");
+	  if (o)
+	    {
+	      bool status = parse_number_validate<int>(o->get(1, 16),
+						       16,
+						       -1,
+						       0xFFFFFE,
+						       &remote_peer_id);
+	      if (!status)
+		throw Exception("value out of range");
+	      enable_op32 = true;
+	    }
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed peer-id: " << e.what());
 	  }
       }
 
@@ -639,7 +684,9 @@ namespace openvpn {
 	  out << "IV_GUI_VER=" << gui_version << '\n';
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
-	out << "IV_NCP=1\n"; // negotiable crypto parameters
+	out << "IV_NCP=2\n";   // negotiable crypto parameters V2
+	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
+	out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
 	{
 	  const char *compstr = comp_ctx.peer_info_string();
 	  if (compstr)
@@ -691,8 +738,8 @@ namespace openvpn {
       unsigned int link_mtu_adjust() const
       {
 	const size_t adj = protocol.extra_transport_bytes() + // extra 2 bytes for TCP-streamed packet length
-          1 +                                            // leading op byte
-	  comp_ctx.extra_payload_bytes() +               // compression magic byte
+          (enable_op32 ? 4 : 1) +                        // leading op
+	  comp_ctx.extra_payload_bytes() +               // compression header
 	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
 	  (dc_context ? dc_context->encap_overhead() : 0); // data channel crypto layer overhead
 	return (unsigned int)adj;
@@ -708,22 +755,93 @@ namespace openvpn {
 	DEFINED=1<<0,     // packet is valid (otherwise invalid)
 	CONTROL=1<<1,     // packet for control channel (otherwise for data channel)
 	SECONDARY=1<<2,   // packet is associated with secondary KeyContext (otherwise primary)
-	SOFT_RESET=1<<3,  // packet is a CONTROL_SOFT_RESET_V1 message indicating a request for SSL/TLS renegotiation
+	SOFT_RESET=1<<3,  // packet is a CONTROL_SOFT_RESET_V1 msg indicating a request for SSL/TLS renegotiate
       };
 
     public:
       bool is_defined() const { return flags & DEFINED; }
       bool is_control() const { return (flags & (CONTROL|DEFINED)) == (CONTROL|DEFINED); }
       bool is_data()    const { return (flags & (CONTROL|DEFINED)) == DEFINED; }
-      bool is_soft_reset() const { return (flags & (CONTROL|DEFINED|SECONDARY|SOFT_RESET)) == (CONTROL|DEFINED|SECONDARY|SOFT_RESET); }
+      bool is_soft_reset() const { return (flags & (CONTROL|DEFINED|SECONDARY|SOFT_RESET))
+	                                        == (CONTROL|DEFINED|SECONDARY|SOFT_RESET); }
+      int peer_id() const { return peer_id_; }
 
     private:
-      PacketType() : flags(0), opcode(INVALID_OPCODE) {}
+      PacketType(const Buffer& buf, class ProtoContext& proto)
+	: flags(0), opcode(INVALID_OPCODE), peer_id_(-1)
+      {
+	if (likely(buf.size()))
+	  {
+	    // get packet header byte
+	    const unsigned int op = buf[0];
+
+	    // examine opcode
+	    {
+	      const unsigned int opc = opcode_extract(op);
+	      switch (opc)
+		{
+		case CONTROL_SOFT_RESET_V1:
+		case CONTROL_V1:
+		case ACK_V1:
+		  {
+		    flags |= CONTROL;
+		    opcode = opc;
+		    break;
+		  }
+		case DATA_V2:
+		  {
+		    if (unlikely(buf.size() < 4))
+		      return;
+		    const int opi = ntohl(*(const boost::uint32_t *)buf.c_data()) & 0x00FFFFFF;
+		    if (opi != OP_PEER_ID_UNDEF)
+		      peer_id_ = opi;
+		    opcode = opc;
+		    break;
+		  }
+		case DATA_V1:
+		  {
+		    opcode = opc;
+		    break;
+		  }
+		case CONTROL_HARD_RESET_CLIENT_V2:
+		  {
+		    if (!proto.is_server())
+		      return;
+		    flags |= CONTROL;
+		    opcode = opc;
+		    break;
+		  }
+		case CONTROL_HARD_RESET_SERVER_V2:
+		  {
+		    if (proto.is_server())
+		      return;
+		    flags |= CONTROL;
+		    opcode = opc;
+		    break;
+		  }
+		default:
+		  return;
+		}
+	    }
+
+	    // examine key ID
+	    {
+	      const unsigned int kid = key_id_extract(op);
+	      if (kid == proto.primary->key_id())
+		flags |= DEFINED;
+	      else if (proto.secondary && kid == proto.secondary->key_id())
+		flags |= (DEFINED | SECONDARY);
+	      else if (opcode == CONTROL_SOFT_RESET_V1 && kid == proto.upcoming_key_id)
+		flags |= (DEFINED | SECONDARY | SOFT_RESET);
+	    }
+	  }
+      }
 
       bool is_secondary() const { return flags & SECONDARY; }
 
       unsigned int flags;
       unsigned int opcode;
+      int peer_id_;
     };
 
 #ifdef OPENVPN_INSTRUMENTATION
@@ -739,6 +857,8 @@ namespace openvpn {
 	  return "ACK_V1";
 	case DATA_V1:
 	  return "DATA_V1";
+	case DATA_V2:
+	  return "DATA_V2";
 	case CONTROL_HARD_RESET_CLIENT_V2:
 	  return "CONTROL_HARD_RESET_CLIENT_V2";
 	case CONTROL_HARD_RESET_SERVER_V2:
@@ -762,7 +882,7 @@ namespace openvpn {
 	else
 	  return "BAD_PACKET";
 
-	if (opcode == DATA_V1)
+	if (opcode == DATA_V1 || opcode == DATA_V2)
 	  {
 	    out << " SIZE=" << b.size() << '/' << orig_size;
 	  }
@@ -1016,20 +1136,14 @@ namespace openvpn {
 	// get key_id from parent
 	key_id_ = proto.next_key_id();
 
+	// cache stuff that we need to access in hot path
+	cache_op32();
+
 	// remember when we were constructed
 	construct_time = *now;
 
 	// set must-negotiate-by time
-	set_event(KEV_NONE, KEV_NEGOTIATE, construct_time + p.config->handshake_window);
-
-	// build compressor object
-	construct_compressor();
-      }
-
-      // construct compressor/decompressor
-      void construct_compressor()
-      {
-	compress = proto.config->comp_ctx.new_compressor(proto.config->frame, proto.stats);
+	set_event(KEV_NONE, KEV_NEGOTIATE, construct_time + proto.config->handshake_window);
       }
 
       // need to call only on the initiator side of the connection
@@ -1103,14 +1217,8 @@ namespace openvpn {
 	    && (crypto_flags & CryptoDCInstance::CRYPTO_DEFINED)
 	    && !invalidated())
 	  {
-	    // compress packet
-	    compress->compress(buf, true);
-
-	    // encrypt packet
-	    const bool pid_wrap = crypto->encrypt(buf, now->seconds_since_epoch());
-
-	    // prepend op
-	    buf.push_front(op_compose(DATA_V1, key_id_));
+	    // compress and encrypt packet and prepend op header
+	    const bool pid_wrap = do_encrypt(buf, true);
 
 	    // check for rare situation where packet ID is near overflow
 	    test_pid_wrap(pid_wrap);
@@ -1127,11 +1235,14 @@ namespace openvpn {
 	      && (crypto_flags & CryptoDCInstance::CRYPTO_DEFINED)
 	      && !invalidated())
 	    {
-	      // knock off leading op from buffer
-	      buf.advance(1);
+	      // Knock off leading op from buffer, but pass the 32-bit version to
+	      // decrypt so it can be used as Additional Data for packet authentication.
+	      const size_t head_size = op_head_size(buf[0]);
+	      const unsigned char *op32 = (head_size == OP_SIZE_V2) ? buf.c_data() : NULL;
+	      buf.advance(head_size);
 
 	      // decrypt packet
-	      const Error::Type err = crypto->decrypt(buf, now->seconds_since_epoch());
+	      const Error::Type err = crypto->decrypt(buf, now->seconds_since_epoch(), op32);
 	      if (err)
 		{
 		  proto.stats->error(err);
@@ -1140,7 +1251,8 @@ namespace openvpn {
 		}
 
 	      // decompress packet
-	      compress->decompress(buf);
+	      if (compress)
+		compress->decompress(buf);
 	    }
 	  else
 	    buf.reset_size(); // no crypto context available
@@ -1235,9 +1347,7 @@ namespace openvpn {
 	    pkt.buf->write(data, size);
 
 	    // process packet for transmission
-	    compress->compress(*pkt.buf, false); // set compress hint to "no"
-	    crypto->encrypt(*pkt.buf, now->seconds_since_epoch());
-	    pkt.buf->push_front(op_compose(DATA_V1, key_id_));
+	    do_encrypt(*pkt.buf, false); // set compress hint to "no"
 
 	    // send it
 	    proto.net_send(key_id_, pkt);
@@ -1321,10 +1431,12 @@ namespace openvpn {
       }
 
       // Initialize the components of the OpenVPN data channel protocol
-      void init_data_channel_crypto_context()
+      void init_data_channel()
       {
+	// set up crypto for data channel
 	if (data_channel_key.defined())
 	  {
+	    bool enable_compress = true;
 	    const Config& c = *proto.config;
 	    const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
 	    const OpenVPNStaticKey& key = data_channel_key->key;
@@ -1348,77 +1460,60 @@ namespace openvpn {
 			     "DATA", int(key_id_),
 			     proto.stats);
 
+	    enable_compress = crypto->consider_compression(proto.config->comp_ctx);
+
 	    if (data_channel_key->rekey_defined)
 	      crypto->rekey(data_channel_key->rekey_type);
 	    data_channel_key.reset();
+
+	    // set up compression for data channel
+	    if (enable_compress)
+	      compress = proto.config->comp_ctx.new_compressor(proto.config->frame, proto.stats);
+	    else
+	      compress.reset();
+
+	    // cache op32 for hot path in do_encrypt
+	    cache_op32();
 	  }
       }
 
     private:
-      // for debugging
-      static const char *event_type_string(const EventType et)
+      bool do_encrypt(BufferAllocated& buf, const bool compress_hint)
       {
-	switch (et)
-	  {
-	  case KEV_NONE:
-	    return "KEV_NONE";
-	  case KEV_ACTIVE:
-	    return "KEV_ACTIVE";
-	  case KEV_NEGOTIATE:
-	    return "KEV_NEGOTIATE";
-	  case KEV_BECOME_PRIMARY:
-	    return "KEV_BECOME_PRIMARY";
-	  case KEV_RENEGOTIATE:
-	    return "KEV_RENEGOTIATE";
-	  case KEV_EXPIRE:
-	    return "KEV_EXPIRE";
-	  case KEV_NEGOTIATE_FAILED:
-	    return "KEV_NEGOTIATE_FAILED";
-	  default:
-	    return "KEV_?";
-	  }
-      }
+	bool pid_wrap;
 
-      // for debugging
-      static const char *state_string(const int s)
-      {
-	switch (s)
-	  {
-	  case C_WAIT_RESET_ACK:
-	    return "C_WAIT_RESET_ACK";
-	  case C_WAIT_AUTH_ACK:
-	    return "C_WAIT_AUTH_ACK";
-	  case S_WAIT_RESET_ACK:
-	    return "S_WAIT_RESET_ACK";
-	  case S_WAIT_AUTH_ACK:
-	    return "S_WAIT_AUTH_ACK";
-	  case C_INITIAL:
-	    return "C_INITIAL";
-	  case C_WAIT_RESET:
-	    return "C_WAIT_RESET";
-	  case C_WAIT_AUTH:
-	    return "C_WAIT_AUTH";
-	  case S_INITIAL:
-	    return "S_INITIAL";
-	  case S_WAIT_RESET:
-	    return "S_WAIT_RESET";
-	  case S_WAIT_AUTH:
-	    return "S_WAIT_AUTH";
-	  case ACTIVE:
-	    return "ACTIVE";
-	  default:
-	    return "STATE_UNDEF";
-	  }
-      }
+	// compress packet
+	if (compress)
+	  compress->compress(buf, compress_hint);
 
-      // for debugging
-      int seconds_until(const Time& next_time)
-      {
-	Time::Duration d = next_time - *now;
-	if (d.is_infinite())
-	  return -1;
+	if (enable_op32)
+	  {
+	    const boost::uint32_t op32 = htonl(op32_compose(DATA_V2, key_id_, remote_peer_id));
+
+	    static_assert(sizeof(op32) == OP_SIZE_V2, "OP_SIZE_V2 inconsistency");
+
+	    // encrypt packet
+	    pid_wrap = crypto->encrypt(buf, now->seconds_since_epoch(), (const unsigned char *)&op32);
+
+	    // prepend op
+	    buf.prepend((const unsigned char *)&op32, sizeof(op32));
+	  }
 	else
-	  return d.to_seconds();
+	  {
+	    // encrypt packet
+	    pid_wrap = crypto->encrypt(buf, now->seconds_since_epoch(), NULL);
+
+	    // prepend op
+	    buf.push_front(op_compose(DATA_V1, key_id_));
+	  }
+	return pid_wrap;
+      }
+
+      // cache op32 and remote_peer_id
+      void cache_op32()
+      {
+	enable_op32 = proto.config->enable_op32;
+	remote_peer_id = proto.config->remote_peer_id;
       }
 
       void set_state(const int newstate)
@@ -1665,7 +1760,7 @@ namespace openvpn {
 	tlsprf->erase();
 	dck.swap(data_channel_key);
 	if (!proto.dc_deferred)
-	  init_data_channel_crypto_context();
+	  init_data_channel();
       }
 
       // generate message head
@@ -1918,12 +2013,80 @@ namespace openvpn {
 	gen_head(ACK_V1, buf);
       }
 
+      // for debugging
+      static const char *event_type_string(const EventType et)
+      {
+	switch (et)
+	  {
+	  case KEV_NONE:
+	    return "KEV_NONE";
+	  case KEV_ACTIVE:
+	    return "KEV_ACTIVE";
+	  case KEV_NEGOTIATE:
+	    return "KEV_NEGOTIATE";
+	  case KEV_BECOME_PRIMARY:
+	    return "KEV_BECOME_PRIMARY";
+	  case KEV_RENEGOTIATE:
+	    return "KEV_RENEGOTIATE";
+	  case KEV_EXPIRE:
+	    return "KEV_EXPIRE";
+	  case KEV_NEGOTIATE_FAILED:
+	    return "KEV_NEGOTIATE_FAILED";
+	  default:
+	    return "KEV_?";
+	  }
+      }
+
+      // for debugging
+      static const char *state_string(const int s)
+      {
+	switch (s)
+	  {
+	  case C_WAIT_RESET_ACK:
+	    return "C_WAIT_RESET_ACK";
+	  case C_WAIT_AUTH_ACK:
+	    return "C_WAIT_AUTH_ACK";
+	  case S_WAIT_RESET_ACK:
+	    return "S_WAIT_RESET_ACK";
+	  case S_WAIT_AUTH_ACK:
+	    return "S_WAIT_AUTH_ACK";
+	  case C_INITIAL:
+	    return "C_INITIAL";
+	  case C_WAIT_RESET:
+	    return "C_WAIT_RESET";
+	  case C_WAIT_AUTH:
+	    return "C_WAIT_AUTH";
+	  case S_INITIAL:
+	    return "S_INITIAL";
+	  case S_WAIT_RESET:
+	    return "S_WAIT_RESET";
+	  case S_WAIT_AUTH:
+	    return "S_WAIT_AUTH";
+	  case ACTIVE:
+	    return "ACTIVE";
+	  default:
+	    return "STATE_UNDEF";
+	  }
+      }
+
+      // for debugging
+      int seconds_until(const Time& next_time)
+      {
+	Time::Duration d = next_time - *now;
+	if (d.is_infinite())
+	  return -1;
+	else
+	  return d.to_seconds();
+      }
+
       // BEGIN KeyContext data members
 
       ProtoContext& proto; // parent
       int state;
       unsigned int key_id_;
       unsigned int crypto_flags;
+      int remote_peer_id; // -1 to disable
+      bool enable_op32;
       bool dirty;
       bool handled_pid_wrap;
       bool is_reliable;
@@ -2090,25 +2253,7 @@ namespace openvpn {
     // return the PacketType of an incoming network packet
     PacketType packet_type(const Buffer& buf)
     {
-      PacketType pt;
-      if (buf.size())
-	{
-	  const unsigned int op = buf[0];
-	  pt.opcode = validate_opcode(op);
-	  if (pt.opcode != INVALID_OPCODE)
-	    {
-	      if (pt.opcode != DATA_V1)
-		pt.flags |= PacketType::CONTROL;
-	      const unsigned int kid = key_id_extract(op);
-	      if (kid == primary->key_id())
-		pt.flags |= PacketType::DEFINED;
-	      else if (secondary && kid == secondary->key_id())
-		pt.flags |= (PacketType::DEFINED | PacketType::SECONDARY);
-	      else if (pt.opcode == CONTROL_SOFT_RESET_V1 && kid == upcoming_key_id)
-		pt.flags |= (PacketType::DEFINED | PacketType::SECONDARY | PacketType::SOFT_RESET);
-	    }
-	}
-      return pt;
+      return PacketType(buf, *this);
     }
 
     // start protocol negotiation
@@ -2300,18 +2445,24 @@ namespace openvpn {
     // Call on client with server-pushed options
     void process_push(const OptionList& opt, const ProtoContextOptions& pco)
     {
-      config->process_push(opt, pco);
-      primary->init_data_channel_crypto_context();
-      primary->construct_compressor();
-      if (secondary)
-	{
-	  secondary->init_data_channel_crypto_context();
-	  secondary->construct_compressor();
-	}
       dc_deferred = false;
+
+      // modify config with pushed options
+      config->process_push(opt, pco);
+
+      // initialize data channel (crypto & compression)
+      primary->init_data_channel();
+      if (secondary)
+	secondary->init_data_channel();
 
       // in case keepalive parms were modified by push
       keepalive_parms_modified();
+    }
+
+    // Return the current transport alignment adjustment
+    size_t align_adjust_hint() const
+    {
+      return config->enable_op32 ? 0 : 1;
     }
 
     // Disable keepalive for rest of session,
@@ -2576,31 +2727,6 @@ namespace openvpn {
 	      break;
 	    }
 	}
-    }
-
-    unsigned int validate_opcode(const unsigned int op)
-    {
-      // get opcode
-      const unsigned int opcode = opcode_extract(op);
-
-      // validate opcode
-      if (opcode >= CONTROL_SOFT_RESET_V1 && opcode <= DATA_V1)
-	return opcode;
-      if (is_server())
-	  {
-	    if (opcode == CONTROL_HARD_RESET_CLIENT_V2)
-	      return opcode;
-	  }
-      else
-	{
-	  if (opcode == CONTROL_HARD_RESET_SERVER_V2)
-	    return opcode;
-	}
-
-      stats->error(Error::CC_ERROR);
-      if (is_tcp())
-	disconnect(Error::CC_ERROR);
-      return INVALID_OPCODE;
     }
 
     // key_id starts at 0, increments to KEY_ID_MASK, then recycles back to 1.

@@ -92,6 +92,11 @@ namespace openvpn {
       return !crypto::memneq(str, c_str(), len);
     }
 
+    bool operator!=(const char *str) const
+    {
+      return !operator==(str);
+    }
+
     SafeString& operator+=(char c)
     {
       alloc();

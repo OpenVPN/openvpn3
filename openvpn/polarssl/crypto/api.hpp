@@ -23,6 +23,7 @@
 #define OPENVPN_POLARSSL_CRYPTO_API_H
 
 #include <openvpn/polarssl/crypto/cipher.hpp>
+#include <openvpn/polarssl/crypto/ciphergcm.hpp>
 #include <openvpn/polarssl/crypto/digest.hpp>
 #include <openvpn/polarssl/crypto/hmac.hpp>
 
@@ -32,6 +33,7 @@ namespace openvpn {
   struct PolarSSLCryptoAPI {
     // cipher
     typedef PolarSSLCrypto::CipherContext CipherContext;
+    typedef PolarSSLCrypto::CipherContextGCM CipherContextGCM;
 
     // digest
     typedef PolarSSLCrypto::DigestContext DigestContext;

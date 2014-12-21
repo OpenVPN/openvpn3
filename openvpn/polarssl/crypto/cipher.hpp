@@ -157,12 +157,6 @@ namespace openvpn {
 	    return cipher_info_from_type(POLARSSL_CIPHER_AES_192_CBC);
 	  case CryptoAlgs::AES_256_CBC:
 	    return cipher_info_from_type(POLARSSL_CIPHER_AES_256_CBC);
-	  case CryptoAlgs::AES_128_GCM:
-	    return cipher_info_from_type(POLARSSL_CIPHER_AES_128_GCM);
-	  case CryptoAlgs::AES_192_GCM:
-	    return cipher_info_from_type(POLARSSL_CIPHER_AES_192_GCM);
-	  case CryptoAlgs::AES_256_GCM:
-	    return cipher_info_from_type(POLARSSL_CIPHER_AES_256_GCM);
 	  case CryptoAlgs::DES_CBC:
 	    return cipher_info_from_type(POLARSSL_CIPHER_DES_CBC);
 	  case CryptoAlgs::DES_EDE3_CBC:

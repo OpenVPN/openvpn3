@@ -92,6 +92,11 @@ namespace openvpn {
 	recalc_derived();
       }
 
+      void reset_align_adjust(const size_t align_adjust)
+      {
+	align_adjust_ = align_adjust;
+      }
+
       size_t headroom() const { return adj_headroom_; }
       size_t payload() const { return payload_; }
       size_t tailroom() const { return tailroom_; }

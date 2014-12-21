@@ -86,12 +86,27 @@
 
 // setup cipher
 #ifndef PROTO_CIPHER
+#ifdef PROTOv2
+#define PROTO_CIPHER AES-256-GCM
+#else
 #define PROTO_CIPHER AES-128-CBC
+#endif
 #endif
 
 // setup digest
 #ifndef PROTO_DIGEST
 #define PROTO_DIGEST SHA1
+#endif
+
+// setup compressor
+#ifdef PROTOv2
+#ifdef HAVE_LZ4
+#define COMP_METH CompressContext::LZ4v2
+#else
+#define COMP_METH CompressContext::COMP_STUBv2
+#endif
+#else
+#define COMP_METH CompressContext::LZO_STUB
 #endif
 
 #include <openvpn/log/logsimple.hpp>
@@ -492,11 +507,10 @@ public:
   }
 
 private:
-  virtual void server_auth(Buffer& buf, const std::string& peer_info)
+  virtual void server_auth(const std::string& username,
+			   const SafeString& password,
+			   const std::string& peer_info)
   {
-    const std::string username = Base::template read_auth_string<std::string>(buf);
-    const std::string password = Base::template read_auth_string<std::string>(buf);
-
 #ifdef VERBOSE
     std::cout << "**** AUTHENTICATE " << username << '/' << password << " PEER INFO:" << std::endl;
     std::cout << peer_info;
@@ -693,6 +707,16 @@ public:
       return 0;
   }
 
+  void show_error_counts() const
+  {
+    for (size_t i = 0; i < Error::N_ERRORS; ++i)
+      {
+	count_t c = errors[i];
+	if (c)
+	  std::cerr << Error::name(i) << " : " << c << std::endl;
+      }
+  }
+
 private:
   count_t errors[Error::N_ERRORS];
 };
@@ -769,7 +793,11 @@ int test(const int thread_num)
     cp->prng = prng_cli;
     cp->protocol = Protocol(Protocol::UDPv4);
     cp->layer = Layer(Layer::OSI_LAYER_3);
-    cp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
+#ifdef PROTOv2
+    cp->enable_op32 = true;
+    cp->remote_peer_id = 100;
+#endif
+    cp->comp_ctx = CompressContext(COMP_METH, false);
     cp->set_cipher_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)),
 			  CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
 #ifdef USE_TLS_AUTH
@@ -834,7 +862,11 @@ int test(const int thread_num)
     sp->prng = prng_serv;
     sp->protocol = Protocol(Protocol::UDPv4);
     sp->layer = Layer(Layer::OSI_LAYER_3);
-    sp->comp_ctx = CompressContext(CompressContext::LZO_STUB, false);
+#ifdef PROTOv2
+    sp->enable_op32 = true;
+    sp->remote_peer_id = 101;
+#endif
+    sp->comp_ctx = CompressContext(COMP_METH, false);
     sp->set_cipher_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)),
 			  CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
 #ifdef USE_TLS_AUTH
@@ -925,6 +957,13 @@ int test(const int thread_num)
               << " SH=" << cli_proto.slowest_handshake().raw() << '/' << serv_proto.slowest_handshake().raw()
               << " HE=" << cli_stats->get_error_count(Error::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get_error_count(Error::HANDSHAKE_TIMEOUT)
 	      << std::endl;
+
+#ifdef STATS
+    std::cerr << "-------- CLIENT STATS --------" << std::endl;
+    cli_stats->show_error_counts();
+    std::cerr << "-------- SERVER STATS --------" << std::endl;
+    serv_stats->show_error_counts();
+#endif
   }
   catch (const std::exception& e)
     {

@@ -45,6 +45,7 @@ namespace openvpn {
     virtual void stop() = 0;
     virtual bool transport_send_const(const Buffer& buf) = 0;
     virtual bool transport_send(BufferAllocated& buf) = 0;
+    virtual void reset_align_adjust(const size_t align_adjust) = 0;
     virtual IP::Addr server_endpoint_addr() const = 0;
     virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const = 0;
   };

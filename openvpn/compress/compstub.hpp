@@ -98,6 +98,43 @@ namespace openvpn {
 #endif
   };
 
+  // Compression stub using V2 protocol
+  class CompressStubV2 : public Compress
+  {
+  public:
+    CompressStubV2(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
+      : Compress(frame, stats)
+    {
+      OPENVPN_LOG_COMPRESS("Comp-stubV2 init");
+    }
+
+    virtual const char *name() const { return "stubv2"; }
+
+    virtual void compress(BufferAllocated& buf, const bool hint)
+    {
+      // skip null packets
+      if (!buf.size())
+	return;
+
+      // indicate that we didn't compress
+      v2_push(buf, OVPN_COMPv2_NONE);
+    }
+
+    virtual void decompress(BufferAllocated& buf)
+    {
+      // skip null packets
+      if (!buf.size())
+	return;
+
+      const int cop = v2_pull(buf);
+      if (cop)
+	{
+	  OPENVPN_LOG_COMPRESS_VERBOSE("CompressStubV2: unable to handle op=" << c);
+	  error(buf);
+	}
+    }
+  };
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMPRESS_COMPSTUB_H

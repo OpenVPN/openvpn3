@@ -27,6 +27,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/crypto_chm.hpp>
+#include <openvpn/crypto/crypto_aead.hpp>
 #include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
@@ -40,8 +41,10 @@ namespace openvpn {
     typedef boost::intrusive_ptr<CryptoDCSelect> Ptr;
 
     CryptoDCSelect(const Frame::Ptr& frame_arg,
+		   const SessionStats::Ptr& stats_arg,
 		   const RandomAPI::Ptr& prng_arg)
       : frame(frame_arg),
+	stats(stats_arg),
 	prng(prng_arg)
     {
     }
@@ -49,12 +52,18 @@ namespace openvpn {
     virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
 					 const CryptoAlgs::Type digest)
     {
-      // fixme -- handle AEAD modes as well
-      return new CryptoContextCHM<CRYPTO_API>(cipher, digest, frame, prng);
+      const CryptoAlgs::Alg& alg = CryptoAlgs::get(cipher);
+      if (alg.flags() & CryptoAlgs::CBC_HMAC)
+	return new CryptoContextCHM<CRYPTO_API>(cipher, digest, frame, stats, prng);
+      else if (alg.flags() & CryptoAlgs::AEAD)
+	return new AEAD::CryptoContext<CRYPTO_API>(cipher, frame, stats);
+      else
+	OPENVPN_THROW(crypto_dc_select, alg.name() << ": only CBC/HMAC and AEAD cipher modes supported");
     }
 
   private:
     Frame::Ptr frame;
+    SessionStats::Ptr stats;
     RandomAPI::Ptr prng;
   };
 

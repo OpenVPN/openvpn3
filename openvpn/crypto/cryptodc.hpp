@@ -26,6 +26,8 @@
 
 #include <utility> // for std::move
 
+#include <boost/cstdint.hpp> // for boost::uint32_t, etc.
+
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/common/rc.hpp>
@@ -33,6 +35,7 @@
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
+#include <openvpn/compress/compress.hpp>
 
 namespace openvpn {
 
@@ -45,9 +48,9 @@ namespace openvpn {
     // Encrypt/Decrypt
 
     // returns true if packet ID is close to wrapping
-    virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now) = 0;
+    virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32) = 0;
 
-    virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now) = 0;
+    virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32) = 0;
 
     // Initialization
 
@@ -73,6 +76,8 @@ namespace openvpn {
 			  const char *recv_name,
 			  const int recv_unit,
 			  const SessionStats::Ptr& recv_stats_arg) = 0;
+
+    virtual bool consider_compression(const CompressContext& comp_ctx) = 0;
 
     // Rekeying
 

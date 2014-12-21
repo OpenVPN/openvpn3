@@ -34,6 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/circ_list.hpp>
 #include <openvpn/common/socktypes.hpp>
+#include <openvpn/common/likely.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -175,7 +176,7 @@ namespace openvpn {
       if (!pid_.time)
 	pid_.time = now;
       ret.id = ++pid_.id;
-      if (!pid_.id) // wraparound
+      if (unlikely(!pid_.id)) // wraparound
 	{
 	  if (form_ != PacketID::LONG_FORM)
 	    throw packet_id_wrap();
