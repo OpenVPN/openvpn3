@@ -12,7 +12,6 @@ cd $O3/core
 . vars/android-sdk-path
 cd javacli
 git clean -q -fXd .
-git clean -q -fd .
 
 if [ "$PKG" ]; then
     pkg=$PKG
@@ -110,4 +109,3 @@ done
 
 mv ovpncli.java ovpncliJNI.java SWIGTYPE_*.java ClientAPI_*.java build/
 git clean -q -fX .
-git clean -q -f .
