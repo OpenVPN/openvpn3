@@ -215,6 +215,21 @@ namespace openvpn {
       return out.str();
     }
 
+    static void escape_string(std::ostream& out, const std::string& term, const bool must_quote)
+    {
+      if (must_quote)
+	out << '\"';
+      for (std::string::const_iterator j = term.begin(); j != term.end(); ++j)
+	{
+	  const char c = *j;
+	  if (c == '\"' || c == '\\')
+	    out << '\\';
+	  out << c;
+	}
+      if (must_quote)
+	out << '\"';
+    }
+
     // Render the option args into a string format such that it could be parsed back to
     // the equivalent option args.
     std::string escape() const
@@ -224,20 +239,10 @@ namespace openvpn {
       for (std::vector<std::string>::const_iterator i = data.begin(); i != data.end(); ++i)
 	{
 	  const std::string& term = *i;
-	  const bool mustquote = string::contains_space(term);
+	  const bool must_quote = string::contains_space(term);
 	  if (more)
 	    out << ' ';
-	  if (mustquote)
-	    out << '\"';
-	  for (std::string::const_iterator j = term.begin(); j != term.end(); ++j)
-	    {
-	      const char c = *j;
-	      if (c == '\"' || c == '\\')
-		out << '\\';
-	      out << c;
-	    }
-	  if (mustquote)
-	    out << '\"';
+	  escape_string(out, term, must_quote);
 	  more = true;
 	}
       return out.str();
