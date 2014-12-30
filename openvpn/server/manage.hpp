@@ -33,6 +33,7 @@
 #include <openvpn/tun/server/tunbase.hpp>
 #include <openvpn/addr/route.hpp>
 #include <openvpn/auth/authcreds.hpp>
+#include <openvpn/ssl/proto.hpp>
 
 namespace openvpn {
   // Base class for the per-client-instance state of the ManServer.
@@ -45,7 +46,7 @@ namespace openvpn {
     virtual void stop() = 0;
 
     virtual void auth_request(const AuthCreds::Ptr& auth_creds) = 0;
-    virtual void push_request() = 0;
+    virtual void push_request(const ProtoContext::Config::Ptr& pconf) = 0;
   };
 
   // Base class for the client instance receiver.  Note that all

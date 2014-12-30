@@ -178,14 +178,15 @@ namespace openvpn {
 
       // client ProtoContext config
       cp.reset(new Client::ProtoConfig());
-      cp->dc_factory.reset(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, cli_stats, prng));
+      cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, cli_stats, prng));
       cp->dc_deferred = true; // defer data channel setup until after options pull
       cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
       cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));
-      cp->load(opt, *proto_context_options, config.default_key_direction);
+      cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->gui_version = config.gui_version;
+      cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites;
       cp->frame = frame;
       cp->now = &now_;
       cp->rng = rng;
@@ -436,7 +437,7 @@ namespace openvpn {
       const Protocol& transport_protocol = remote_list->current_transport_protocol();
 
       // set transport protocol in Client::ProtoConfig
-      cp->set_protocol(transport_protocol, false);
+      cp->set_protocol(transport_protocol);
 
       // construct transport object
       if (http_proxy_options)

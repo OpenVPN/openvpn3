@@ -28,6 +28,7 @@
 
 #include <boost/cstdint.hpp> // for boost::uint32_t, etc.
 
+#include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/common/rc.hpp>
@@ -101,6 +102,7 @@ namespace openvpn {
 
     // cipher/HMAC/key info
     struct Info {
+      Info() : cipher_alg(CryptoAlgs::NONE), hmac_alg(CryptoAlgs::NONE) {}
       CryptoAlgs::Type cipher_alg;
       CryptoAlgs::Type hmac_alg;
     };
@@ -118,6 +120,69 @@ namespace openvpn {
 
     virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
 					 const CryptoAlgs::Type digest) = 0;
+  };
+
+  // Manage cipher/digest settings, DC factory, and DC context.
+  class CryptoDCSettings
+  {
+  public:
+    OPENVPN_SIMPLE_EXCEPTION(no_data_channel_factory);
+
+    CryptoDCSettings()
+      : cipher_(CryptoAlgs::NONE),
+	digest_(CryptoAlgs::NONE),
+	dirty(false)
+    {
+    }
+
+    void set_factory(const CryptoDCFactory::Ptr& factory)
+    {
+      factory_ = factory;
+      context_.reset();
+      dirty = false;
+    }
+
+    void set_cipher(const CryptoAlgs::Type cipher)
+    {
+      if (cipher != cipher_)
+	{
+	  cipher_ = cipher;
+	  dirty = true;
+	}
+    }
+
+    void set_digest(const CryptoAlgs::Type digest)
+    {
+      if (digest != digest_)
+	{
+	  digest_ = digest;
+	  dirty = true;
+	}
+    }
+
+    CryptoDCContext& context()
+    {
+      if (!context_ || dirty)
+	{
+	  if (!factory_)
+	    throw no_data_channel_factory();
+	  context_ = factory_->new_obj(cipher_, digest_);
+	  dirty = false;
+	}
+      return *context_;
+    }
+
+    CryptoAlgs::Type cipher() const { return cipher_; }
+    CryptoAlgs::Type digest() const { return digest_; }
+
+    CryptoDCFactory::Ptr factory() const { return factory_; }
+
+  private:
+    CryptoAlgs::Type cipher_;
+    CryptoAlgs::Type digest_;
+    CryptoDCFactory::Ptr factory_;
+    CryptoDCContext::Ptr context_;
+    bool dirty;
   };
 }
 

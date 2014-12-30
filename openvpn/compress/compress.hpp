@@ -279,6 +279,7 @@ namespace openvpn {
     }
 
     // On the client, used to tell server which compression methods we support.
+    // Includes compression V1 and V2 methods.
     const char *peer_info_string() const
     {
       switch (type_)
@@ -337,6 +338,63 @@ namespace openvpn {
 #endif
 	    "IV_COMP_STUB=1\n"
 	    "IV_COMP_STUBv2=1\n"
+	    ;
+	default:
+	  return NULL;
+	}
+    }
+
+    // On the client, used to tell server which compression methods we support.
+    // Limited only to compression V1 methods.
+    const char *peer_info_string_v1() const
+    {
+      switch (type_)
+	{
+#ifndef NO_LZO
+	case LZO:
+	  return "IV_LZO=1\n";
+	case LZO_SWAP:
+	  return "IV_LZO_SWAP=1\n";
+#endif
+#ifdef HAVE_LZ4
+	case LZ4:
+	  return "IV_LZ4=1\n";
+#endif
+#ifdef HAVE_SNAPPY
+	case SNAPPY:
+	  return "IV_SNAPPY=1\n";
+#endif
+	case LZO_STUB:
+	case COMP_STUB:
+	  return
+	    "IV_LZO_STUB=1\n"
+	    "IV_COMP_STUB=1\n"
+	    ;
+	case ANY:
+	  return
+#ifdef HAVE_SNAPPY
+	    "IV_SNAPPY=1\n"
+#endif
+#ifndef NO_LZO
+	    "IV_LZO=1\n"
+	    "IV_LZO_SWAP=1\n"
+#else
+	    "IV_LZO_STUB=1\n"
+#endif
+#ifdef HAVE_LZ4
+	    "IV_LZ4=1\n"
+#endif
+	    "IV_COMP_STUB=1\n"
+	    ;
+	case ANY_LZO:
+	  return
+#ifndef NO_LZO
+	    "IV_LZO=1\n"
+	    "IV_LZO_SWAP=1\n"
+#else
+	    "IV_LZO_STUB=1\n"
+#endif
+	    "IV_COMP_STUB=1\n"
 	    ;
 	default:
 	  return NULL;

@@ -230,8 +230,8 @@ namespace openvpn {
 
       // Disable keepalive for rest of session, but fetch
       // the keepalive parameters (in seconds).
-      virtual void disable_keepalive(unsigned int &keepalive_ping,
-				     unsigned int &keepalive_timeout)
+      virtual void disable_keepalive(unsigned int& keepalive_ping,
+				     unsigned int& keepalive_timeout)
       {
 	Base::disable_keepalive(keepalive_ping, keepalive_timeout);
       }
@@ -257,6 +257,7 @@ namespace openvpn {
 	: Base(factory.clone_proto_config(), factory.stats),
 	  io_service(io_service_arg),
 	  halt(false),
+	  did_push(false),
 	  housekeeping_timer(io_service_arg),
 	  disconnect_at(Time::infinite()),
 	  stats(factory.stats),
@@ -302,12 +303,16 @@ namespace openvpn {
 							Unicode::UTF8_FILTER);
 	if (msg == "PUSH_REQUEST")
 	  {
-	    if (get_management())
-	      ManLink::send->push_request();
-	    else
+	    if (!did_push)
 	      {
-		auth_failed("");
-		OPENVPN_LOG("AUTH_FAILED: no management provider");
+		did_push = true;
+		if (get_management())
+		  ManLink::send->push_request(conf_ptr());
+		else
+		  {
+		    auth_failed("");
+		    OPENVPN_LOG("AUTH_FAILED: no management provider");
+		  }
 	      }
 	  }
 	else
@@ -343,6 +348,7 @@ namespace openvpn {
 
 	if (get_tun())
 	  {
+	    Base::init_data_channel();
 	    TunLink::send->add_routes(rtvec);
 	    Base::control_send(push_data);
 	    Base::flush(true);
@@ -445,6 +451,7 @@ namespace openvpn {
 
       boost::asio::io_service& io_service;
       bool halt;
+      bool did_push;
 
       CoarseTime housekeeping_schedule;
       AsioTimer housekeeping_timer;

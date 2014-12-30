@@ -170,7 +170,7 @@ namespace openvpn {
     {
       return CryptoAlgs::size(digest) +       // HMAC
 	CryptoAlgs::iv_length(cipher) +       // Cipher IV
-	CryptoAlgs::block_size(cipher);       // worst-case cipher padding expansion
+	CryptoAlgs::block_size(cipher);       // worst-case PKCS#7 padding expansion
     }
 
   private:

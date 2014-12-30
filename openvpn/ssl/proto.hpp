@@ -227,11 +227,6 @@ namespace openvpn {
     OPENVPN_EXCEPTION(process_server_push_error);
     OPENVPN_EXCEPTION_INHERIT(option_error, proto_option_error);
 
-    static unsigned int mtu()
-    {
-      return 1500;
-    }
-
     // configuration data passed to ProtoContext constructor
     class Config : public RCCopyable<thread_unsafe_refcount>
     {
@@ -250,14 +245,15 @@ namespace openvpn {
 	dc_deferred = false;
 	enable_op32 = false;
 	remote_peer_id = -1;
+	tun_mtu = 1500;
+	force_aes_cbc_ciphersuites = false;
       }
 
       // master SSL context factory
       SSLFactoryAPI::Ptr ssl_factory;
 
-      // data channel context and factory
-      CryptoDCFactory::Ptr dc_factory;
-      CryptoDCContext::Ptr dc_context; // set with set_cipher_digest
+      // data channel
+      CryptoDCSettings dc;
 
       // TLSPRF factory
       TLSPRFFactory::Ptr tlsprf_factory;
@@ -326,7 +322,14 @@ namespace openvpn {
       bool enable_op32;
       int remote_peer_id; // -1 to disable
 
-      void load(const OptionList& opt, const ProtoContextOptions& pco, const int default_key_direction)
+      // MTU
+      unsigned int tun_mtu;
+
+      // Compatibility
+      bool force_aes_cbc_ciphersuites;
+
+      void load(const OptionList& opt, const ProtoContextOptions& pco,
+		const int default_key_direction, const bool server)
       {
 	// first set defaults
 	reliable_window = 4;
@@ -343,7 +346,7 @@ namespace openvpn {
 	key_direction = default_key_direction;
 
 	// load parameters that can be present in both config file or pushed options
-	load_common(opt, pco);
+	load_common(opt, pco, server);
 
 	// duration parms
 	{
@@ -402,7 +405,8 @@ namespace openvpn {
 	    else
 	      digest = CryptoAlgs::lookup("SHA1");
 	  }
-	  set_cipher_digest(cipher, digest);
+	  dc.set_cipher(cipher);
+	  dc.set_digest(digest);
 
 	  // tls-auth
 	  {
@@ -443,8 +447,7 @@ namespace openvpn {
 
 	// compression
 	{
-	  const Option *o;
-	  o = opt.get_ptr("compress");
+	  const Option *o = opt.get_ptr("compress");
 	  if (o)
 	    {
 	      if (o->size() >= 2)
@@ -476,6 +479,25 @@ namespace openvpn {
 		}
 	    }
 	}
+
+	// tun-mtu
+	try {
+	  const Option *o = opt.get_ptr("tun-mtu");
+	  if (o)
+	    {
+	      bool status = parse_number_validate<unsigned int>(o->get(1, 16),
+								16,
+								576,
+								65535,
+								&tun_mtu);
+	      if (!status)
+		throw Exception("parse/range issue");
+	    }
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_THROW(proto_option_error, "tun-mtu directive: " << e.what());
+	  }
       }
 
       // load options string pushed by server
@@ -483,7 +505,7 @@ namespace openvpn {
       {
 	try {
 	  // load parameters that can be present in both config file or pushed options
-	  load_common(opt, pco);
+	  load_common(opt, pco, false);
 	}
 	catch (const std::exception& e)
 	  {
@@ -492,9 +514,6 @@ namespace openvpn {
 
 	// data channel
 	{
-	  CryptoAlgs::Type cipher = CryptoAlgs::NONE;
-	  CryptoAlgs::Type digest = CryptoAlgs::NONE;
-
 	  // cipher
 	  std::string new_cipher;
 	  try {
@@ -503,7 +522,7 @@ namespace openvpn {
 	      {
 		new_cipher = o->get(1, 128);
 		if (new_cipher != "none")
-		  cipher = CryptoAlgs::lookup(new_cipher);
+		  dc.set_cipher(CryptoAlgs::lookup(new_cipher));
 	      }
 	  }
 	  catch (const std::exception& e)
@@ -519,15 +538,13 @@ namespace openvpn {
 	      {
 		new_digest = o->get(1, 128);
 		if (new_digest != "none")
-		  digest = CryptoAlgs::lookup(new_digest);
+		  dc.set_digest(CryptoAlgs::lookup(new_digest));
 	      }
 	  }
 	  catch (const std::exception& e)
 	    {
 	      OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
 	    }
-	  if (cipher != CryptoAlgs::NONE)
-	    set_cipher_digest(cipher, digest);
 	}
 
 	// compression
@@ -574,7 +591,7 @@ namespace openvpn {
 						       0xFFFFFE,
 						       &remote_peer_id);
 	      if (!status)
-		throw Exception("value out of range");
+		throw Exception("parse/range issue");
 	      enable_op32 = true;
 	    }
 	}
@@ -584,10 +601,8 @@ namespace openvpn {
 	  }
       }
 
-      void set_protocol(const Protocol& p, const bool tcp_linear=true)
+      void set_pid_mode(const bool tcp_linear)
       {
-	// adjust options for new transport protocol
-	protocol = p;
 	if (protocol.is_udp() || !tcp_linear)
 	  pid_mode = PacketIDReceive::UDP_MODE;
 	else if (protocol.is_tcp())
@@ -596,19 +611,11 @@ namespace openvpn {
 	  throw proto_option_error("transport protocol undefined");
       }
 
-      void set_cipher_digest(const CryptoAlgs::Type cipher, const CryptoAlgs::Type digest)
+      void set_protocol(const Protocol& p)
       {
-	dc_context = dc_factory->new_obj(cipher, digest);
-      }
-
-      void update_dc_factory(CryptoDCFactory::Ptr dcf)
-      {
-	dc_factory = dcf;
-	if (dc_context)
-	  {
-	    CryptoDCContext::Info ci = dc_context->crypto_info();
-	    set_cipher_digest(ci.cipher_alg, ci.hmac_alg);
-	  }
+	// adjust options for new transport protocol
+	protocol = p;
+	set_pid_mode(false);
       }
 
       void set_tls_auth_digest(const CryptoAlgs::Type digest)
@@ -634,7 +641,7 @@ namespace openvpn {
 
       // generate a string summarizing options that will be
       // transmitted to peer for options consistency check
-      std::string options_string() const
+      std::string options_string()
       {
 	std::ostringstream out;
 
@@ -643,8 +650,8 @@ namespace openvpn {
 	out << "V4";
 
 	out << ",dev-type " << layer.dev_type();
-	out << ",link-mtu " << mtu() + link_mtu_adjust();
-	out << ",tun-mtu " << mtu();
+	out << ",link-mtu " << tun_mtu + link_mtu_adjust();
+	out << ",tun-mtu " << tun_mtu;
 	out << ",proto " << protocol.str_client(true);
 	
 	{
@@ -656,13 +663,10 @@ namespace openvpn {
 	if (key_direction >= 0)
 	  out << ",keydir " << key_direction;
 
-	if (dc_context)
-	  {
-	    const CryptoDCContext::Info ci = dc_context->crypto_info();
-	    out << ",cipher " << CryptoAlgs::name(ci.cipher_alg, "[null-cipher]");
-	    out << ",auth " << CryptoAlgs::name(ci.hmac_alg, "[null-digest]");
-	    out << ",keysize " << (CryptoAlgs::key_length(ci.cipher_alg) * 8);
-	  }
+	out << ",cipher " << CryptoAlgs::name(dc.cipher(), "[null-cipher]");
+	out << ",auth " << CryptoAlgs::name(dc.digest(), "[null-digest]");
+	out << ",keysize " << (CryptoAlgs::key_length(dc.cipher()) * 8);
+
 	if (tls_auth_key.defined())
 	  out << ",tls-auth";
 	out << ",key-method 2";
@@ -680,30 +684,38 @@ namespace openvpn {
       std::string peer_info_string() const
       {
 	std::ostringstream out;
+	const char *compstr = NULL;
+
 	if (!gui_version.empty())
 	  out << "IV_GUI_VER=" << gui_version << '\n';
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
-	out << "IV_NCP=2\n";   // negotiable crypto parameters V2
-	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
-	out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
-	{
-	  const char *compstr = comp_ctx.peer_info_string();
-	  if (compstr)
-	    out << compstr;
-	}
+	if (!force_aes_cbc_ciphersuites)
+	  {
+	    out << "IV_NCP=2\n"; // negotiable crypto parameters V2
+	    out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
+	    out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
+	    compstr = comp_ctx.peer_info_string();
+	  }
+	else
+	  compstr = comp_ctx.peer_info_string_v1();
+	if (compstr)
+	  out << compstr;
 	const std::string ret = out.str();
 	OPENVPN_LOG_PROTO("Peer Info:" << std::endl << ret);
 	return ret;
       }
 
-      static void set_duration_parm(Time::Duration& dur, const char *name, const std::string& valstr)
+      static void set_duration_parm(Time::Duration& dur, const char *name,
+				    const std::string& valstr, const bool x2=false)
       {
 	const unsigned int maxdur = 60*60*24*7; // maximum duration -- 7 days
 	unsigned int value = 0;
 	const bool status = parse_number<unsigned int>(valstr, value);
 	if (!status)
 	  OPENVPN_THROW(proto_option_error, name << ": error parsing number of seconds");
+	if (x2)
+	  value *= 2;
 	if (value == 0 || value > maxdur)
 	  value = maxdur;
 	dur = Time::Duration::seconds(value);
@@ -717,32 +729,34 @@ namespace openvpn {
 	return o;
       }
 
+      // Used to generate link_mtu option sent to peer.
+      // Not const because dc.context() caches the DC context.
+      unsigned int link_mtu_adjust()
+      {
+	const size_t adj = protocol.extra_transport_bytes() + // extra 2 bytes for TCP-streamed packet length
+          (enable_op32 ? 4 : 1) +                        // leading op
+	  comp_ctx.extra_payload_bytes() +               // compression header
+	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
+	  dc.context().encap_overhead();                 // data channel crypto layer overhead
+	return (unsigned int)adj;
+      }
+
     private:
       // load parameters that can be present in both config file or pushed options
-      void load_common(const OptionList& opt, const ProtoContextOptions& pco)
+      void load_common(const OptionList& opt, const ProtoContextOptions& pco,
+		       const bool server)
       {
 	const Option *o = opt.get_ptr("keepalive");
 	if (o)
 	  {
 	    set_duration_parm(keepalive_ping, "keepalive ping", o->get(1, 16));
-	    set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16));
+	    set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16), server);
 	  }
 	else
 	  {
 	    load_duration_parm(keepalive_ping, "ping", opt);
 	    load_duration_parm(keepalive_timeout, "ping-restart", opt);
 	  }
-      }
-
-      // used to generate link_mtu option sent to peer
-      unsigned int link_mtu_adjust() const
-      {
-	const size_t adj = protocol.extra_transport_bytes() + // extra 2 bytes for TCP-streamed packet length
-          (enable_op32 ? 4 : 1) +                        // leading op
-	  comp_ctx.extra_payload_bytes() +               // compression header
-	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
-	  (dc_context ? dc_context->encap_overhead() : 0); // data channel crypto layer overhead
-	return (unsigned int)adj;
       }
     };
 
@@ -1437,12 +1451,12 @@ namespace openvpn {
 	if (data_channel_key.defined())
 	  {
 	    bool enable_compress = true;
-	    const Config& c = *proto.config;
+	    Config& c = *proto.config;
 	    const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
 	    const OpenVPNStaticKey& key = data_channel_key->key;
 
 	    // build crypto context for data channel encryption/decryption
-	    crypto = proto.config->dc_context->new_obj(key_id_);
+	    crypto = c.dc.context().new_obj(key_id_);
 	    crypto_flags = crypto->defined();
 
 	    if (crypto_flags & CryptoDCInstance::CIPHER_DEFINED)
@@ -2442,18 +2456,25 @@ namespace openvpn {
       enable_fast_transition();
     }
 
-    // Call on client with server-pushed options
-    void process_push(const OptionList& opt, const ProtoContextOptions& pco)
+    // Do late initialization of data channel, for example
+    // on client after server push, or on server after client
+    // capabilities are known.
+    void init_data_channel()
     {
       dc_deferred = false;
-
-      // modify config with pushed options
-      config->process_push(opt, pco);
 
       // initialize data channel (crypto & compression)
       primary->init_data_channel();
       if (secondary)
 	secondary->init_data_channel();
+    }
+
+    // Call on client with server-pushed options
+    void process_push(const OptionList& opt, const ProtoContextOptions& pco)
+    {
+      // modify config with pushed options
+      config->process_push(opt, pco);
+      init_data_channel();
 
       // in case keepalive parms were modified by push
       keepalive_parms_modified();
@@ -2467,8 +2488,8 @@ namespace openvpn {
 
     // Disable keepalive for rest of session,
     // but return the previous keepalive parameters.
-    virtual void disable_keepalive(unsigned int &keepalive_ping,
-				   unsigned int &keepalive_timeout)
+    void disable_keepalive(unsigned int& keepalive_ping,
+			   unsigned int& keepalive_timeout)
     {
       keepalive_ping = config->keepalive_ping.to_seconds();
       keepalive_timeout = config->keepalive_timeout.to_seconds();
@@ -2480,7 +2501,7 @@ namespace openvpn {
     // override the data channel factory
     void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory)
     {
-      config->update_dc_factory(dc_factory);
+      config->dc.set_factory(dc_factory);
     }
 
     // current time
@@ -2502,6 +2523,7 @@ namespace openvpn {
 
     // configuration
     const Config& conf() const { return *config; }
+    const Config::Ptr& conf_ptr() const { return config; }
 
     // stats
     SessionStats& stat() const { return *stats; }
