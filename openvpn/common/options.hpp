@@ -1015,13 +1015,42 @@ namespace openvpn {
     // Convenience method that gets a particular argument index within an option,
     // while returning the empty string if option doesn't exist, and raising an
     // exception if argument index is out-of-bounds.
-    const std::string get_optional(const std::string& name, size_t index, const size_t max_len) const
+    std::string get_optional(const std::string& name, size_t index, const size_t max_len) const
     {
       const Option* o = get_ptr(name);
       if (o)
 	return o->get(index, max_len);
       else
 	return "";
+    }
+
+    // Convenience method that gets a particular argument index within an option,
+    // while returning a default string if option doesn't exist, and raising an
+    // exception if argument index is out-of-bounds.
+    std::string get_default(const std::string& name,
+			    size_t index,
+			    const size_t max_len,
+			    const std::string& default_value) const
+    {
+      const Option* o = get_ptr(name);
+      if (o)
+	return o->get(index, max_len);
+      else
+	return default_value;
+    }
+
+    template <typename T>
+    T get_num(const std::string& name, const size_t idx, const T default_value) const
+    {
+      const Option* o = get_ptr(name);
+      T n = default_value;
+      if (o && o->size() > idx)
+	{
+	  const std::string& numstr = o->get(idx, 64);
+	  if (parse_number<T>(numstr, n))
+	    return n;
+	}
+      return n;
     }
 
     // Touch an option, if it exists.
