@@ -599,7 +599,7 @@ namespace openvpn {
 	  // Set SSL options
 	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_NO_TICKET;
+	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_TICKET;
 	  if (ssl23)
 	    {
 	      sslopt |= SSL_OP_NO_SSLv2;
@@ -625,6 +625,10 @@ namespace openvpn {
 	      if (!SSL_CTX_set_cipher_list(ctx, "DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA"))
 		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed for force_aes_cbc_ciphersuites");
 	    }
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+	  else
+	    SSL_CTX_set_ecdh_auto(ctx, 1);
+#endif
 
 	  if (config.local_cert_enabled)
 	    {
