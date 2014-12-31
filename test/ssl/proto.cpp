@@ -44,11 +44,11 @@
 #endif
 
 // NoisyWire
+#ifndef NOERR
 #define SIMULATE_OOO
 #define SIMULATE_DROPPED
 #define SIMULATE_CORRUPTED
-
-#define OPENVPN_LOG_SSL(x) // disable
+#endif
 
 // how many virtual seconds between SSL renegotiations
 #ifndef RENEG
@@ -79,6 +79,9 @@
 
 #ifdef VERBOSE
 #define OPENVPN_DEBUG_PROTO 2
+#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
+#else
+#define OPENVPN_LOG_SSL(x) // disable
 #endif
 
 #define STRINGIZE1(x) #x
@@ -173,6 +176,7 @@
 #include <openvpn/polarssl/crypto/api.hpp>
 #include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
+#include <polarssl/debug.h>
 #endif
 
 #if OPENVPN_MULTITHREAD
@@ -763,6 +767,9 @@ int test(const int thread_num)
     ClientSSLAPI::Config cc;
     cc.mode = Mode(Mode::CLIENT);
     cc.frame = frame;
+#ifdef FORCE_AES_CBC
+    cc.force_aes_cbc_ciphersuites = true;
+#endif
 #ifdef USE_APPLE_SSL
     cc.load_identity("etest");
 #else
@@ -778,14 +785,15 @@ int test(const int thread_num)
     cc.rng = rng_cli;
 #endif
 
-    // client stats
+    // stats
     MySessionStats::Ptr cli_stats(new MySessionStats);
+    MySessionStats::Ptr serv_stats(new MySessionStats);
 
     // client ProtoContext config
     typedef ProtoContext ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_factory.reset(new ClientSSLAPI(cc));
-    cp->dc_factory.reset(new CryptoDCSelect<ClientCryptoAPI>(frame, prng_cli));
+    cp->dc.set_factory(new CryptoDCSelect<ClientCryptoAPI>(frame, cli_stats, prng_cli));
     cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ClientCryptoAPI>());
     cp->frame = frame;
     cp->now = &time;
@@ -798,8 +806,8 @@ int test(const int thread_num)
     cp->remote_peer_id = 100;
 #endif
     cp->comp_ctx = CompressContext(COMP_METH, false);
-    cp->set_cipher_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)),
-			  CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
+    cp->dc.set_cipher(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)));
+    cp->dc.set_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
 #ifdef USE_TLS_AUTH
     cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ClientCryptoAPI>());
     cp->tls_auth_key.parse(tls_auth_key);
@@ -854,7 +862,7 @@ int test(const int thread_num)
     typedef ProtoContext ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
     sp->ssl_factory.reset(new ServerSSLAPI(sc));
-    sp->dc_factory.reset(new CryptoDCSelect<ServerCryptoAPI>(frame, prng_serv));
+    sp->dc.set_factory(new CryptoDCSelect<ServerCryptoAPI>(frame, serv_stats, prng_serv));
     sp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ServerCryptoAPI>());
     sp->frame = frame;
     sp->now = &time;
@@ -867,8 +875,8 @@ int test(const int thread_num)
     sp->remote_peer_id = 101;
 #endif
     sp->comp_ctx = CompressContext(COMP_METH, false);
-    sp->set_cipher_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)),
-			  CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
+    sp->dc.set_cipher(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)));
+    sp->dc.set_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
 #ifdef USE_TLS_AUTH
     sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
     sp->tls_auth_key.parse(tls_auth_key);
@@ -902,9 +910,6 @@ int test(const int thread_num)
     std::cout << "SERVER PEER INFO:" << std::endl;
     std::cout << sp->peer_info_string();
 #endif
-
-    // server stats
-    MySessionStats::Ptr serv_stats(new MySessionStats);
 
     TestProtoClient cli_proto(cp, cli_stats);
     TestProtoServer serv_proto(sp, serv_stats);
@@ -977,6 +982,11 @@ int main(int argc, char* argv[])
 {
   // process-wide initialization
   InitProcess::init();
+
+  // set global PolarSSL debug level
+#if defined(USE_POLARSSL)
+  debug_set_threshold(1);
+#endif
 
   if (argc >= 2 && !strcmp(argv[1], "test"))
     {
