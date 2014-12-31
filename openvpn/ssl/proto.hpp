@@ -1714,10 +1714,10 @@ namespace openvpn {
 	tlsprf->self_randomize(*proto.config->rng);
 	tlsprf->self_write(*buf);
 	const std::string options = proto.config->options_string();
-	OPENVPN_LOG_PROTO("Tunnel Options:" << options);
 	write_auth_string(options, *buf);
 	if (!proto.is_server())
 	  {
+	    OPENVPN_LOG_PROTO("Tunnel Options:" << options);
 	    buf->or_flags(BufferAllocated::DESTRUCT_ZERO);
 	    if (proto.config->xmit_creds)
 	      proto.client_auth(*buf);
