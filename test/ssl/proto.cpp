@@ -91,8 +91,10 @@
 #ifndef PROTO_CIPHER
 #ifdef PROTOv2
 #define PROTO_CIPHER AES-256-GCM
+#define TLS_VER_MIN TLSVersion::V1_2
 #else
 #define PROTO_CIPHER AES-128-CBC
+#define TLS_VER_MIN TLSVersion::UNDEF
 #endif
 #endif
 
@@ -777,7 +779,7 @@ int test(const int thread_num)
     cc.load_cert(client_crt);
     cc.load_private_key(client_key);
 #endif
-    cc.tls_version_min = TLSVersion::UNDEF;
+    cc.tls_version_min = TLS_VER_MIN;
 #ifdef VERBOSE
     cc.ssl_debug_level = 1;
 #endif
@@ -850,7 +852,7 @@ int test(const int thread_num)
     sc.load_cert(server_crt);
     sc.load_private_key(server_key);
     sc.load_dh(dh_pem);
-    sc.tls_version_min = TLSVersion::UNDEF;
+    sc.tls_version_min = TLS_VER_MIN;
 #if defined(USE_POLARSSL_SERVER)
     sc.rng = rng_serv;
 #endif

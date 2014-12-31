@@ -23,6 +23,7 @@
 #define OPENVPN_OPENSSL_CRYPTO_API_H
 
 #include <openvpn/openssl/crypto/cipher.hpp>
+#include <openvpn/openssl/crypto/ciphergcm.hpp>
 #include <openvpn/openssl/crypto/digest.hpp>
 #include <openvpn/openssl/crypto/hmac.hpp>
 
@@ -32,6 +33,7 @@ namespace openvpn {
   struct OpenSSLCryptoAPI {
     // cipher
     typedef OpenSSLCrypto::CipherContext CipherContext;
+    typedef OpenSSLCrypto::CipherContextGCM CipherContextGCM;
 
     // digest
     typedef OpenSSLCrypto::DigestContext DigestContext;

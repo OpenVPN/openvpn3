@@ -36,6 +36,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
+#include <openvpn/openssl/util/error.hpp>
 
 namespace openvpn {
   namespace OpenSSLCrypto {
@@ -185,8 +186,8 @@ namespace openvpn {
 #endif
       }
 
-      EVP_CIPHER_CTX ctx;
       bool initialized;
+      EVP_CIPHER_CTX ctx;
     };
   }
 }

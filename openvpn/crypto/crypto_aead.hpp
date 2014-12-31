@@ -145,6 +145,7 @@ namespace openvpn {
 	typename CRYPTO_API::CipherContextGCM impl;
 	Nonce nonce;
 	PacketIDSend pid_send;
+	BufferAllocated work;
       };
 
       struct Decrypt {
@@ -173,18 +174,37 @@ namespace openvpn {
 	// only process non-null packets
 	if (buf.size())
 	  {
-	    // get buffer plaintext payload
-	    unsigned char *data = buf.data();
-	    const size_t size = buf.size();
-
-	    // alloc auth tag in buffer
-	    unsigned char *auth_tag = buf.prepend_alloc(CRYPTO_API::CipherContextGCM::AUTH_TAG_LEN);
-
 	    // build nonce/IV/AD
 	    Nonce nonce(e.nonce, e.pid_send, now, op32);
 
-	    // encrypt in-place
-	    e.impl.encrypt(data, size, nonce.iv(), auth_tag, nonce.ad(), nonce.ad_len());
+	    if (CRYPTO_API::CipherContextGCM::SUPPORTS_IN_PLACE_ENCRYPT)
+	      {
+		unsigned char *data = buf.data();
+		const size_t size = buf.size();
+
+		// alloc auth tag in buffer
+		unsigned char *auth_tag = buf.prepend_alloc(CRYPTO_API::CipherContextGCM::AUTH_TAG_LEN);
+
+		// encrypt in-place
+		e.impl.encrypt(data, data, size, nonce.iv(), auth_tag, nonce.ad(), nonce.ad_len());
+	      }
+	    else
+	      {
+		// encrypt to work buf
+		frame->prepare(Frame::ENCRYPT_WORK, e.work);
+		if (e.work.max_size() < buf.size())
+		  throw aead_error("encrypt work buffer too small");
+
+		// alloc auth tag in buffer
+		unsigned char *auth_tag = e.work.prepend_alloc(CRYPTO_API::CipherContextGCM::AUTH_TAG_LEN);
+
+		// prepare output buffer
+		unsigned char *work_data = e.work.write_alloc(buf.size());
+
+		// encrypt
+		e.impl.encrypt(buf.data(), work_data, buf.size(), nonce.iv(), auth_tag, nonce.ad(), nonce.ad_len());
+		buf.swap(e.work);
+	      }
 
 	    // prepend additional data
 	    nonce.prepend_ad(buf);
@@ -235,8 +255,8 @@ namespace openvpn {
       virtual void init_cipher(StaticKey&& encrypt_key,
 			       StaticKey&& decrypt_key)
       {
-	e.impl.init(cipher, encrypt_key.data(), encrypt_key.size());
-	d.impl.init(cipher, decrypt_key.data(), decrypt_key.size());
+	e.impl.init(cipher, encrypt_key.data(), encrypt_key.size(), CRYPTO_API::CipherContextGCM::ENCRYPT);
+	d.impl.init(cipher, decrypt_key.data(), decrypt_key.size(), CRYPTO_API::CipherContextGCM::DECRYPT);
       }
 
       virtual void init_hmac(StaticKey&& encrypt_key,

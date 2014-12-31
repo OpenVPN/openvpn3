@@ -19,8 +19,7 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL cipher API defined in <polarssl/cipher.h> so
-// that it can be used as part of the crypto layer of the OpenVPN core.
+// Wrap the PolarSSL GCM API.
 
 #ifndef OPENVPN_POLARSSL_CRYPTO_CIPHERGCM_H
 #define OPENVPN_POLARSSL_CRYPTO_CIPHERGCM_H
@@ -44,10 +43,18 @@ namespace openvpn {
     public:
       OPENVPN_EXCEPTION(polarssl_gcm_error);
 
+      // mode parameter for constructor
+      enum {
+	MODE_UNDEF = POLARSSL_OPERATION_NONE,
+	ENCRYPT = POLARSSL_ENCRYPT,
+	DECRYPT = POLARSSL_DECRYPT
+      };
+
       // PolarSSL cipher constants
       enum {
 	IV_LEN = 12,
 	AUTH_TAG_LEN = 16,
+	SUPPORTS_IN_PLACE_ENCRYPT = 1,
       };
 
 #if 0
@@ -65,7 +72,10 @@ namespace openvpn {
 
       ~CipherContextGCM() { erase() ; }
 
-      void init(const CryptoAlgs::Type alg, const unsigned char *key, const unsigned int keysize)
+      void init(const CryptoAlgs::Type alg,
+		const unsigned char *key,
+		const unsigned int keysize,
+		const int mode) // unused
       {
 	erase();
 
@@ -82,8 +92,8 @@ namespace openvpn {
 	initialized = true;
       }
 
-      // encrypt in-place
-      void encrypt(unsigned char *data,
+      void encrypt(const unsigned char *input,
+		   unsigned char *output,
 		   size_t length,
 		   const unsigned char *iv,
 		   unsigned char *tag,
@@ -92,7 +102,7 @@ namespace openvpn {
       {
 	check_initialized();
 	const int status = gcm_crypt_and_tag(&ctx, GCM_ENCRYPT, length, iv, IV_LEN, ad, ad_len,
-					     data, data, AUTH_TAG_LEN, tag);
+					     input, output, AUTH_TAG_LEN, tag);
 	if (unlikely(status))
 	  OPENVPN_THROW(polarssl_gcm_error, "gcm_crypt_and_tag failed with status=" << status);
       }
