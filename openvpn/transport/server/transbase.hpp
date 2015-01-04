@@ -36,6 +36,7 @@
 #include <openvpn/addr/route.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/tun/server/tunbase.hpp>
+#include <openvpn/server/servhalt.hpp>
 
 namespace openvpn {
 
@@ -98,6 +99,11 @@ namespace openvpn {
 
     // override the tun provider
     virtual TunClientInstanceRecv* override_tun(TunClientInstanceSend* tun) = 0;
+
+    // push a halt or restart message to client
+    virtual void push_halt_restart_msg(const HaltRestart::Type type,
+				       const std::string& client_reason) = 0;
+
   };
 
   // Base class for factory used to create TransportClientInstanceRecv objects.

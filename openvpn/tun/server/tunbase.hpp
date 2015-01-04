@@ -29,6 +29,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/server/servhalt.hpp>
 
 namespace openvpn {
 
@@ -45,6 +46,10 @@ namespace openvpn {
 
     // Called with IP packets from tun layer.
     virtual void tun_recv(BufferAllocated& buf) = 0;
+
+    // push a halt or restart message to client
+    virtual void push_halt_restart_msg(const HaltRestart::Type type,
+				       const std::string& client_reason) = 0;
   };
 
   // Base class for the per-client-instance state of the TunServer.

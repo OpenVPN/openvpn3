@@ -258,6 +258,7 @@ namespace openvpn {
 	  io_service(io_service_arg),
 	  halt(false),
 	  did_push(false),
+	  did_client_halt_restart(false),
 	  housekeeping_timer(io_service_arg),
 	  disconnect_at(Time::infinite()),
 	  stats(factory.stats),
@@ -361,6 +362,49 @@ namespace openvpn {
 	  }
       }
 
+      virtual void push_halt_restart_msg(const HaltRestart::Type type,
+					 const std::string& client_reason)
+      {
+	if (halt || did_client_halt_restart)
+	  return;
+
+	did_client_halt_restart = true;
+
+	BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
+	BufferStreamOut os(*buf);
+
+	switch (type)
+	  {
+	  case HaltRestart::Type::HALT:
+	    os << "HALT,";
+	    if (!client_reason.empty())
+	      os << client_reason;
+	    else
+	      os << "client was disconnected from server";
+	    break;
+	  case HaltRestart::Type::RESTART:
+	    os << "RESTART,";
+	    if (!client_reason.empty())
+	      os << client_reason;
+	    else
+	      os << "server requested a client reconnect";
+	    break;
+	  case HaltRestart::Type::RESTART_PSID:
+	    os << "RESTART,[P]:";
+	    if (!client_reason.empty())
+	      os << client_reason;
+	    else
+	      os << "server requested a client reconnect";
+	    break;
+	  }
+
+	disconnect_in(Time::Duration::seconds(1));
+
+	Base::control_send(buf);
+	Base::flush(true);
+	set_housekeeping_timer();
+      }
+
       bool get_management()
       {
 	if (!ManLink::send)
@@ -452,6 +496,7 @@ namespace openvpn {
       boost::asio::io_service& io_service;
       bool halt;
       bool did_push;
+      bool did_client_halt_restart;
 
       CoarseTime housekeeping_schedule;
       AsioTimer housekeeping_timer;

@@ -34,6 +34,7 @@
 #include <openvpn/addr/route.hpp>
 #include <openvpn/auth/authcreds.hpp>
 #include <openvpn/ssl/proto.hpp>
+#include <openvpn/server/servhalt.hpp>
 
 namespace openvpn {
   // Base class for the per-client-instance state of the ManServer.
@@ -63,6 +64,10 @@ namespace openvpn {
     virtual void auth_failed(const std::string& client_reason) = 0;
     virtual void push_reply(BufferPtr& push_data,
 			    const std::vector<IP::Route>& routes) = 0;
+
+    // push a halt or restart message to client
+    virtual void push_halt_restart_msg(const HaltRestart::Type type,
+				       const std::string& client_reason) = 0;
   };
 
   struct ManClientInstanceFactory : public RC<thread_unsafe_refcount>
