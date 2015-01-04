@@ -132,13 +132,15 @@ namespace openvpn {
 	return this;
       }
 
-      virtual void start(const TransportClientInstanceSend::Ptr& parent)
+      virtual void start(const TransportClientInstanceSend::Ptr& parent,
+			 const int local_peer_id)
       {
 	TransportLink::send = parent;
 
 	// init OpenVPN protocol handshake
 	Base::update_now();
 	Base::reset();
+	Base::set_local_peer_id(local_peer_id);
 	Base::start();
 	Base::flush(true);
 

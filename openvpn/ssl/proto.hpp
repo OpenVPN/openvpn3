@@ -245,6 +245,7 @@ namespace openvpn {
 	dc_deferred = false;
 	enable_op32 = false;
 	remote_peer_id = -1;
+	local_peer_id = -1;
 	tun_mtu = 1500;
 	force_aes_cbc_ciphersuites = false;
       }
@@ -321,6 +322,7 @@ namespace openvpn {
       // op header
       bool enable_op32;
       int remote_peer_id; // -1 to disable
+      int local_peer_id;  // -1 to disable
 
       // MTU
       unsigned int tun_mtu;
@@ -2502,6 +2504,12 @@ namespace openvpn {
     void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory)
     {
       config->dc.set_factory(dc_factory);
+    }
+
+    // set the local peer ID (or -1 to disable)
+    void set_local_peer_id(const int local_peer_id)
+    {
+      config->local_peer_id = local_peer_id;
     }
 
     // current time

@@ -84,7 +84,8 @@ namespace openvpn {
     virtual bool defined() const = 0;
     virtual void stop() = 0;
 
-    virtual void start(const TransportClientInstanceSend::Ptr& parent) = 0;
+    virtual void start(const TransportClientInstanceSend::Ptr& parent,
+		       const int local_peer_id) = 0;
 
     // Called with OpenVPN-encapsulated packets from transport layer.
     virtual void transport_recv(BufferAllocated& buf) = 0;
