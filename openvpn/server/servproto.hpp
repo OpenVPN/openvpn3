@@ -70,7 +70,7 @@ namespace openvpn {
 	: io_service(io_service_arg)
       {
 	if (c.tls_auth_enabled())
-	  preval.reset(new Base::TLSAuthPreValidate(c));
+	  preval.reset(new Base::TLSAuthPreValidate(c, true));
       }
 
       virtual TransportClientInstanceRecv::Ptr new_client_instance();

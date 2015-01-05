@@ -2128,13 +2128,16 @@ namespace openvpn {
 
       OPENVPN_SIMPLE_EXCEPTION(tls_auth_pre_validate);
 
-      TLSAuthPreValidate(const Config& c)
+      TLSAuthPreValidate(const Config& c, const bool server)
       {
 	if (!c.tls_auth_enabled())
 	  throw tls_auth_pre_validate();
 
 	// init OvpnHMACInstance
 	ta_hmac_recv = c.tls_auth_context->new_obj();
+
+	// save hard reset op we expect to receive from peer
+	reset_op = server ? CONTROL_HARD_RESET_CLIENT_V2 : CONTROL_HARD_RESET_SERVER_V2;
 
 	// init tls_auth hmac
 	if (c.key_direction >= 0)
@@ -2153,19 +2156,26 @@ namespace openvpn {
       bool validate(const Buffer& net_buf)
       {
 	try {
-	  return ta_hmac_recv->ovpn_hmac_cmp(net_buf.c_data(), net_buf.size(),
-					     1 + ProtoSessionID::SIZE,
-					     ta_hmac_recv->output_size(),
-					     PacketID::size(PacketID::LONG_FORM));
+	  if (net_buf.size())
+	    {
+	      const unsigned int op = net_buf[0];
+	      if (opcode_extract(op) != reset_op || key_id_extract(op) != 0)
+		return false;
+	      return ta_hmac_recv->ovpn_hmac_cmp(net_buf.c_data(), net_buf.size(),
+						 1 + ProtoSessionID::SIZE,
+						 ta_hmac_recv->output_size(),
+						 PacketID::size(PacketID::LONG_FORM));
+	    }
 	}
 	catch (BufferException&)
 	  {
-	    return false;
 	  }
+	return false;
       }
 
     private:
       OvpnHMACInstance::Ptr ta_hmac_recv;
+      unsigned int reset_op;
     };
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
