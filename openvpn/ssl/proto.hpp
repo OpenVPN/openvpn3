@@ -1220,10 +1220,11 @@ namespace openvpn {
       }
 
       // pass received ciphertext packets on network to SSL/reliability layers
-      void net_recv(Packet& pkt)
+      bool net_recv(Packet& pkt)
       {
-	Base::net_recv(pkt);
+	const bool ret = Base::net_recv(pkt);
 	dirty = true;
+	return ret;
       }
 
       // data channel encrypt
@@ -2375,22 +2376,22 @@ namespace openvpn {
 
     // pass received control channel network packets (ciphertext) into protocol object
 
-    void control_net_recv(const PacketType& type, BufferAllocated& net_buf)
+    bool control_net_recv(const PacketType& type, BufferAllocated& net_buf)
     {
       BufferPtr bp = new BufferAllocated();
       bp->move(net_buf);
       Packet pkt(bp, type.opcode);
       if (type.is_soft_reset() && !renegotiate_request(pkt))
-	return;
-      select_key_context(type, true).net_recv(pkt);
+	return false;
+      return select_key_context(type, true).net_recv(pkt);
     }
 
-    void control_net_recv(const PacketType& type, BufferPtr& net_bp)
+    bool control_net_recv(const PacketType& type, BufferPtr& net_bp)
     {
       Packet pkt(net_bp, type.opcode);
       if (type.is_soft_reset() && !renegotiate_request(pkt))
-	return;
-      select_key_context(type, true).net_recv(pkt);
+	return false;
+      return select_key_context(type, true).net_recv(pkt);
     }
 
     // encrypt a data channel packet using primary KeyContext
@@ -2401,19 +2402,26 @@ namespace openvpn {
 
     // decrypt a data channel packet (automatically select primary
     // or secondary KeyContext based on packet content)
-    void data_decrypt(const PacketType& type, BufferAllocated& in_out)
+    bool data_decrypt(const PacketType& type, BufferAllocated& in_out)
     {
+      bool ret = false;
+
       select_key_context(type, false).decrypt(in_out);
 
       // update time of most recent packet received
       if (in_out.size())
-	update_last_received();
+	{
+	  update_last_received();
+	  ret = true;
+	}
 
       // discard keepalive packets
       if (proto_context_private::is_keepalive(in_out))
 	{
 	  in_out.reset_size();
 	}
+
+      return ret;
     }
 
     // enter disconnected state

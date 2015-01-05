@@ -88,7 +88,8 @@ namespace openvpn {
 		       const int local_peer_id) = 0;
 
     // Called with OpenVPN-encapsulated packets from transport layer.
-    virtual void transport_recv(BufferAllocated& buf) = 0;
+    // Returns true if packet successfully validated.
+    virtual bool transport_recv(BufferAllocated& buf) = 0;
 
     // Disable keepalive for rest of session, but fetch
     // the keepalive parameters (in seconds).

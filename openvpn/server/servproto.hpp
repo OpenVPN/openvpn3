@@ -174,8 +174,9 @@ namespace openvpn {
       }
 
       // called with OpenVPN-encapsulated packets from transport layer
-      virtual void transport_recv(BufferAllocated& buf)
+      virtual bool transport_recv(BufferAllocated& buf)
       {
+	bool ret = false;
 	try {
 	  OPENVPN_LOG_SERVPROTO("Transport RECV[" << buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(buf));
 
@@ -189,7 +190,7 @@ namespace openvpn {
 	  if (pt.is_data())
 	    {
 	      // data packet
-	      Base::data_decrypt(pt, buf);
+	      ret = Base::data_decrypt(pt, buf);
 	      if (buf.size())
 		{
 #ifdef OPENVPN_PACKET_LOG
@@ -209,7 +210,7 @@ namespace openvpn {
 	  else if (pt.is_control())
 	    {
 	      // control packet
-	      Base::control_net_recv(pt, buf);
+	      ret = Base::control_net_recv(pt, buf);
 
 	      // do a full flush
 	      Base::flush(true);
@@ -221,7 +222,10 @@ namespace openvpn {
 	catch (const std::exception& e)
 	  {
 	    error(e);
+	    ret = false;
 	  }
+
+	return ret;
       }
 
       // called with cleartext IP packets from routing layer

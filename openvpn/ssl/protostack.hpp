@@ -122,10 +122,11 @@ namespace openvpn {
 
     // Incoming ciphertext packet arriving from network,
     // we will take ownership of pkt.
-    void net_recv(PACKET& pkt)
+    bool net_recv(PACKET& pkt)
     {
       if (!invalidated())
-	up_stack(pkt);
+	return up_stack(pkt);
+      return false;
     }
 
     // Outgoing application-level cleartext packet ready to send
@@ -355,11 +356,16 @@ namespace openvpn {
     }
 
     // network -> reliability layer -> protocol decapsulation -> SSL -> app
-    void up_stack(PACKET& recv)
+    bool up_stack(PACKET& recv)
     {
       UseCount use_count(up_stack_reentry_level);
       if (decapsulate(recv))
-	up_sequenced();
+	{
+	  up_sequenced();
+	  return true;
+	}
+      else
+	return false;
     }
 
     // if a sequenced packet is available from reliability layer,
