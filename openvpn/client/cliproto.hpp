@@ -686,7 +686,7 @@ namespace openvpn {
       void extract_inactive(const OptionList& opt)
       {
 	try {
-	  const Option *o = Base::Config::load_duration_parm(inactive_duration, "inactive", opt);
+	  const Option *o = Base::Config::load_duration_parm(inactive_duration, "inactive", opt, 1, false);
 	  if (o)
 	    {
 	      if (o->size() >= 3)

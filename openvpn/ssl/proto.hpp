@@ -350,17 +350,6 @@ namespace openvpn {
 	// load parameters that can be present in both config file or pushed options
 	load_common(opt, pco, server);
 
-	// duration parms
-	{
-	  load_duration_parm(renegotiate, "reneg-sec", opt);
-	  expire = renegotiate;
-	  load_duration_parm(expire, "tran-window", opt);
-	  expire += renegotiate;
-	  load_duration_parm(handshake_window, "hand-window", opt);
-	  become_primary = Time::Duration::seconds(std::min(handshake_window.to_seconds(),
-							    renegotiate.to_seconds() / 2));
-	}
-
 	// layer
 	{
 	  const Option* dev = opt.get_ptr("dev-type");
@@ -708,8 +697,11 @@ namespace openvpn {
 	return ret;
       }
 
-      static void set_duration_parm(Time::Duration& dur, const char *name,
-				    const std::string& valstr, const bool x2=false)
+      static void set_duration_parm(Time::Duration& dur,
+				    const char *name,
+				    const std::string& valstr,
+				    const unsigned int min_value,
+				    const bool x2)
       {
 	const unsigned int maxdur = 60*60*24*7; // maximum duration -- 7 days
 	unsigned int value = 0;
@@ -720,14 +712,20 @@ namespace openvpn {
 	  value *= 2;
 	if (value == 0 || value > maxdur)
 	  value = maxdur;
+	if (value < min_value)
+	  value = min_value;
 	dur = Time::Duration::seconds(value);
       }
 
-      static const Option *load_duration_parm(Time::Duration& dur, const char *name, const OptionList& opt)
+      static const Option* load_duration_parm(Time::Duration& dur,
+					      const char *name,
+					      const OptionList& opt,
+					      const unsigned int min_value,
+					      const bool x2)
       {
 	const Option *o = opt.get_ptr(name);
 	if (o)
-	  set_duration_parm(dur, name, o->get(1, 16));
+	  set_duration_parm(dur, name, o->get(1, 16), min_value, x2);
 	return o;
       }
 
@@ -748,17 +746,28 @@ namespace openvpn {
       void load_common(const OptionList& opt, const ProtoContextOptions& pco,
 		       const bool server)
       {
-	const Option *o = opt.get_ptr("keepalive");
-	if (o)
-	  {
-	    set_duration_parm(keepalive_ping, "keepalive ping", o->get(1, 16));
-	    set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16), server);
-	  }
-	else
-	  {
-	    load_duration_parm(keepalive_ping, "ping", opt);
-	    load_duration_parm(keepalive_timeout, "ping-restart", opt);
-	  }
+	// duration parms
+	load_duration_parm(renegotiate, "reneg-sec", opt, 10, false);
+	expire = renegotiate;
+	load_duration_parm(expire, "tran-window", opt, 10, false);
+	expire += renegotiate;
+	load_duration_parm(handshake_window, "hand-window", opt, 10, false);
+	become_primary = Time::Duration::seconds(std::min(handshake_window.to_seconds(),
+							    renegotiate.to_seconds() / 2));
+	// keepalive, ping, ping-restart
+	{
+	  const Option *o = opt.get_ptr("keepalive");
+	  if (o)
+	    {
+	      set_duration_parm(keepalive_ping, "keepalive ping", o->get(1, 16), 1, false);
+	      set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16), 1, server);
+	    }
+	  else
+	    {
+	      load_duration_parm(keepalive_ping, "ping", opt, 1, false);
+	      load_duration_parm(keepalive_timeout, "ping-restart", opt, 1, false);
+	    }
+	}
       }
     };
 
