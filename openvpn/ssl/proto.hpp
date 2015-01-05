@@ -2711,6 +2711,7 @@ namespace openvpn {
       primary.swap(secondary);
       primary->rekey(CryptoDCInstance::PROMOTE_SECONDARY_TO_PRIMARY);
       secondary->prepare_expire();
+      OPENVPN_LOG_PROTO_VERBOSE("*** PROMOTE_SECONDARY_TO_PRIMARY pri=" << primary->key_id() << " sec=" << secondary->key_id());
     }
 
     void process_primary_event()
