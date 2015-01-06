@@ -1,7 +1,7 @@
 //
 //  OpenVPN
 //
-//  Copyright (c) 2012-2014 OpenVPN Technologies, Inc. All rights reserved.
+//  Copyright (C) 2012-2015 OpenVPN Technologies, Inc. All rights reserved.
 //
 
 // General purpose HTTP/HTTPS/Web-services client.
