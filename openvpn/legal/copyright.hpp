@@ -3,6 +3,6 @@
 
 // Define copyright strings
 
-const char openvpn_copyright[] = "Copyright (c) 2012-2014 OpenVPN Technologies, Inc. All rights reserved."; // CONST GLOBAL
+const char openvpn_copyright[] = "Copyright (C) 2012-2015 OpenVPN Technologies, Inc. All rights reserved."; // CONST GLOBAL
 
 #endif
