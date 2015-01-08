@@ -143,6 +143,18 @@ namespace openvpn {
       }
   }
 
+  template <typename T>
+  std::string render_hex_number(T value)
+  {
+    unsigned char buf[sizeof(T)];
+    for (size_t i = sizeof(T); i --> 0 ;)
+      {
+	buf[i] = value & 0xFF;
+	value >>= 8;
+      }
+    return render_hex(buf, sizeof(T));
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_HEXSTR_H
