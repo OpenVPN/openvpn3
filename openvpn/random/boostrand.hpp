@@ -41,6 +41,11 @@ namespace openvpn {
       return rng_() % end;
     }
 
+    type rand()
+    {
+      return rng_();
+    }
+
   private:
     boost::mt19937 rng_;
   };
