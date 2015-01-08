@@ -317,8 +317,7 @@ namespace openvpn {
 		  ManLink::send->push_request(conf_ptr());
 		else
 		  {
-		    auth_failed("");
-		    OPENVPN_LOG("AUTH_FAILED: no management provider");
+		    auth_failed("no management provider", false);
 		  }
 	      }
 	  }
@@ -328,7 +327,8 @@ namespace openvpn {
 	  }
       }
 
-      virtual void auth_failed(const std::string& client_reason)
+      virtual void auth_failed(const std::string& reason,
+			       const bool tell_client)
       {
 	if (halt)
 	  return;
@@ -336,9 +336,10 @@ namespace openvpn {
 	BufferPtr buf(new BufferAllocated(64, BufferAllocated::GROW));
 	BufferStreamOut os(*buf);
 
+	OPENVPN_LOG("Auth failed: " << reason);
 	os << "AUTH_FAILED";
-	if (!client_reason.empty())
-	  os << ',' << client_reason;
+	if (tell_client && !reason.empty())
+	  os << ',' << reason;
 
 	disconnect_in(Time::Duration::seconds(1));
 
@@ -363,13 +364,13 @@ namespace openvpn {
 	  }
 	else
 	  {
-	    auth_failed("");
-	    OPENVPN_LOG("AUTH_FAILED: no tun provider");
+	    auth_failed("no tun provider", false);
 	  }
       }
 
       virtual void push_halt_restart_msg(const HaltRestart::Type type,
-					 const std::string& client_reason)
+					 const std::string& reason,
+					 const bool tell_client)
       {
 	if (halt || did_client_halt_restart)
 	  return;
@@ -379,30 +380,37 @@ namespace openvpn {
 	BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
 	BufferStreamOut os(*buf);
 
+	const char *ts = "";
+
 	switch (type)
 	  {
-	  case HaltRestart::Type::HALT:
+	  case HaltRestart::HALT:
+	    ts = "HALT";
 	    os << "HALT,";
-	    if (!client_reason.empty())
-	      os << client_reason;
+	    if (tell_client && !reason.empty())
+	      os << reason;
 	    else
 	      os << "client was disconnected from server";
 	    break;
-	  case HaltRestart::Type::RESTART:
+	  case HaltRestart::RESTART:
+	    ts = "RESTART";
 	    os << "RESTART,";
-	    if (!client_reason.empty())
-	      os << client_reason;
+	    if (tell_client && !reason.empty())
+	      os << reason;
 	    else
 	      os << "server requested a client reconnect";
 	    break;
-	  case HaltRestart::Type::RESTART_PSID:
+	  case HaltRestart::RESTART_PSID:
+	    ts = "RESTART_PSID";
 	    os << "RESTART,[P]:";
-	    if (!client_reason.empty())
-	      os << client_reason;
+	    if (tell_client && !reason.empty())
+	      os << reason;
 	    else
 	      os << "server requested a client reconnect";
 	    break;
 	  }
+
+	OPENVPN_LOG("Mid-session Auth failed: " << ts << ' ' << reason);
 
 	disconnect_in(Time::Duration::seconds(1));
 

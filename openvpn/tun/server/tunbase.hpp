@@ -49,7 +49,8 @@ namespace openvpn {
 
     // push a halt or restart message to client
     virtual void push_halt_restart_msg(const HaltRestart::Type type,
-				       const std::string& client_reason) = 0;
+				       const std::string& reason,
+				       const bool tell_client) = 0;
   };
 
   // Base class for the per-client-instance state of the TunServer.
