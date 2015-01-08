@@ -841,10 +841,12 @@ namespace openvpn {
 	      ASN1_STRING *val = X509_NAME_ENTRY_get_data(ent);
 	      unsigned char *buf;
 	      buf = (unsigned char *)1; // bug in OpenSSL 0.9.6b ASN1_STRING_to_UTF8 requires this workaround
-	      if (ASN1_STRING_to_UTF8 (&buf, val) > 0)
+	      const int len = ASN1_STRING_to_UTF8(&buf, val);
+	      if (len > 0)
 		{
-		  ret = (char *)buf;
-		  OPENSSL_free (buf);
+		  if (std::strlen((char *)buf) == len)
+		    ret = (char *)buf;
+		  OPENSSL_free(buf);
 		}
 	    }
 	}
@@ -864,8 +866,9 @@ namespace openvpn {
 			  if (BIO_write(bio, &nullc, 1) == 1)
 			    {
 			      char *str;
-			      BIO_get_mem_data(bio, &str);
-			      ret = (char *)str;
+			      const long len = BIO_get_mem_data(bio, &str);
+			      if (std::strlen(str) == len)
+				ret = str;
 			    }
 			}
 		      BIO_free(bio);
