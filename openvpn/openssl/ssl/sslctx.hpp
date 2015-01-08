@@ -29,6 +29,8 @@
 #include <cstring>
 #include <sstream>
 
+#include <boost/static_assert.hpp> // for BOOST_STATIC_ASSERT
+
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
@@ -296,9 +298,19 @@ namespace openvpn {
 	return ssl_handshake_details(ssl);
       }
 
+      virtual const AuthCert::Ptr& auth_cert() const
+      {
+	return authcert;
+      }
+
       ~SSL()
       {
 	ssl_erase();
+      }
+
+      static void init_static()
+      {
+	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", NULL, NULL, NULL);
       }
 
     private:
@@ -318,7 +330,10 @@ namespace openvpn {
 
 	  // set client/server mode
 	  if (ctx.config.mode.is_server())
-	    SSL_set_accept_state(ssl);
+	    {
+	      SSL_set_accept_state(ssl);
+	      authcert.reset(new AuthCert());
+	    }
 	  else if (ctx.config.mode.is_client())
 	    SSL_set_connect_state(ssl);
 	  else
@@ -328,6 +343,10 @@ namespace openvpn {
 	  ssl_bio_linkage = true; // after this point, no need to explicitly BIO_free ct_in/ct_out
 	  SSL_set_bio (ssl, ct_in, ct_out);
 	  BIO_set_ssl (ssl_bio, ssl, BIO_NOCLOSE);
+
+	  if (mydata_index < 0)
+	    throw ssl_context_error("OpenSSLContext::SSL: mydata_index is uninitialized");
+	  SSL_set_ex_data (ssl, mydata_index, this);
 	}
 	catch (...)
 	  {
@@ -402,8 +421,12 @@ namespace openvpn {
       BIO *ssl_bio;        // read/write cleartext from here
       BIO *ct_in;          // write ciphertext to here
       BIO *ct_out;         // read ciphertext from here
+      AuthCert::Ptr authcert;
       bool ssl_bio_linkage;
       bool overflow;
+
+      // Helps us to store pointer to self in ::SSL object
+      static int mydata_index;
     };
 
   private:
@@ -598,7 +621,8 @@ namespace openvpn {
 
 	  // Set SSL options
 	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
-	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+	  SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+			      config.mode.is_client() ? verify_callback_client : verify_callback_server);
 	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_TICKET;
 	  if (ssl23)
 	    {
@@ -879,12 +903,12 @@ namespace openvpn {
       return ret;
     }
 
-    static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+    static int verify_callback_client(int preverify_ok, X509_STORE_CTX *ctx)
     {
-      // get the SSL object
+      // get the OpenSSL SSL object
       ::SSL* ssl = (::SSL*) X509_STORE_CTX_get_ex_data (ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
 
-      // get this
+      // get OpenSSLContext
       const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
 
       // log subject
@@ -936,6 +960,63 @@ namespace openvpn {
       return preverify_ok;
     }
 
+    static int verify_callback_server(int preverify_ok, X509_STORE_CTX *ctx)
+    {
+      // get the OpenSSL SSL object
+      ::SSL* ssl = (::SSL*) X509_STORE_CTX_get_ex_data (ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+
+      // get OpenSSLContext
+      const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
+
+      // get OpenSSLContext::SSL
+      SSL* self_ssl = (SSL *) SSL_get_ex_data (ssl, SSL::mydata_index);
+
+      if (ctx->error_depth == 1) // issuer cert
+	{
+	  // save the issuer cert fingerprint
+	  if (self_ssl->authcert)
+	    {
+	      BOOST_STATIC_ASSERT(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH);
+	      std::memcpy(self_ssl->authcert->issuer_fp, ctx->current_cert->sha1_hash, sizeof(AuthCert::issuer_fp));
+	    }
+	}
+      if (ctx->error_depth == 0) // leaf cert
+	{
+	  // verify ns-cert-type
+	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(ctx->current_cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	      preverify_ok = false;
+	    }
+
+	  // verify X509 key usage
+	  if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(ctx->current_cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+	      preverify_ok = false;
+	    }
+
+	  // verify X509 extended key usage
+	  if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(ctx->current_cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+	      preverify_ok = false;
+	    }
+
+	  if (self_ssl->authcert)
+	    {
+	      // save the Common Name
+	      self_ssl->authcert->cn = x509_get_field(ctx->current_cert, NID_commonName);
+
+	      // save the leaf cert serial number
+	      const ASN1_INTEGER *ai = X509_get_serialNumber(ctx->current_cert);
+	      self_ssl->authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
+	    }
+	}
+
+      return preverify_ok;
+    }
+
     // Print debugging information on SSL/TLS session negotiation.
     static void info_callback (const ::SSL *s, int where, int ret)
     {
@@ -968,6 +1049,7 @@ namespace openvpn {
     ExternalPKIImpl* epki;
   };
 
+  int OpenSSLContext::SSL::mydata_index = -1;
 }
 
 #endif

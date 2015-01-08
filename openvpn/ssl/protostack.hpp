@@ -230,6 +230,11 @@ namespace openvpn {
       return ssl_->ssl_handshake_details();
     }
 
+    const AuthCert::Ptr& auth_cert() const
+    {
+      return ssl_->auth_cert();
+    }
+
     virtual ~ProtoStackBase() {}
 
   private:

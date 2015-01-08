@@ -292,14 +292,15 @@ namespace openvpn {
       // Should be overriden by derived class if credentials are required.
       virtual void server_auth(const std::string& username,
 			       const SafeString& password,
-			       const std::string& peer_info)
+			       const std::string& peer_info,
+			       const AuthCert::Ptr& auth_cert)
       {
 	if (get_management())
 	  {
 	    AuthCreds::Ptr auth_creds(new AuthCreds(Unicode::utf8_printable(username, Unicode::UTF8_FILTER),
 						    Unicode::utf8_printable(password, Unicode::UTF8_FILTER),
 						    Unicode::utf8_printable(peer_info, Unicode::UTF8_FILTER|Unicode::UTF8_PASS_FMT)));
-	    ManLink::send->auth_request(auth_creds);
+	    ManLink::send->auth_request(auth_creds, auth_cert);
 	  }
       }
 

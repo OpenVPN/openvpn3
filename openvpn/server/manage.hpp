@@ -35,6 +35,7 @@
 #include <openvpn/auth/authcreds.hpp>
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/server/servhalt.hpp>
+#include <openvpn/auth/authcert.hpp>
 
 namespace openvpn {
   // Base class for the per-client-instance state of the ManServer.
@@ -46,7 +47,8 @@ namespace openvpn {
     //virtual bool defined() const = 0;
     virtual void stop() = 0;
 
-    virtual void auth_request(const AuthCreds::Ptr& auth_creds) = 0;
+    virtual void auth_request(const AuthCreds::Ptr& auth_creds,
+			      const AuthCert::Ptr& auth_cert) = 0;
     virtual void push_request(const ProtoContext::Config::Ptr& pconf) = 0;
   };
 

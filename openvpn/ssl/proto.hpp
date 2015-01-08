@@ -1726,7 +1726,7 @@ namespace openvpn {
 	    const std::string username = read_auth_string<std::string>(buf);
 	    const SafeString password = read_auth_string<SafeString>(buf);
 	    const std::string peer_info = read_auth_string<std::string>(buf);
-	    proto.server_auth(username, password, peer_info);
+	    proto.server_auth(username, password, peer_info, Base::auth_cert());
 	  }
       }
 
@@ -2558,7 +2558,8 @@ namespace openvpn {
     // Should be overriden by derived class if credentials are required.
     virtual void server_auth(const std::string& username,
 			     const SafeString& password,
-			     const std::string& peer_info)
+			     const std::string& peer_info,
+			     const AuthCert::Ptr& auth_cert)
     {
     }
 

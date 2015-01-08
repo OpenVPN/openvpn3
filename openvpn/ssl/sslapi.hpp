@@ -29,6 +29,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/auth/authcert.hpp>
 
 namespace openvpn {
 
@@ -45,6 +46,7 @@ namespace openvpn {
     virtual bool read_ciphertext_ready() const = 0;
     virtual BufferPtr read_ciphertext() = 0;
     virtual std::string ssl_handshake_details() const = 0;
+    virtual const AuthCert::Ptr& auth_cert() const = 0;
   };
 
   class SSLFactoryAPI : public RC<thread_unsafe_refcount>

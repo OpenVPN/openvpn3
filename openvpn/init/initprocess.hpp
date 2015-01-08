@@ -46,8 +46,8 @@ namespace openvpn {
 	// initialize compression
 	CompressContext::init_static();
 
-	// init crypto acceleration (if available)
-	setup_crypto_engine("auto");
+	// init OpenSSL if included
+	init_openssl("auto");
 
 	base64_init_static();
       }
