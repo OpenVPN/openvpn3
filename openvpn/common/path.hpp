@@ -126,6 +126,15 @@ namespace openvpn {
 	return "";
     }
 
+    inline std::string root(const std::string& basename)
+    {
+      const size_t pos = basename.find_last_of('.');
+      if (pos != std::string::npos)
+	return basename.substr(0, pos);
+      else
+	return basename;
+    }
+
     inline std::string join(const std::string& p1, const std::string& p2)
     {
       if (p1.empty() || is_fully_qualified(p2))
