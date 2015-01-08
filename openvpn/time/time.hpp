@@ -89,6 +89,22 @@ namespace openvpn {
 	  return Duration(duration_ + d.duration_);
       }
 
+      Duration operator+(const int delta) const
+      {
+	T duration = duration_;
+	if (delta >= 0)
+	  duration += delta;
+	else
+	  {
+	    const unsigned int ndelta = -delta;
+	    if (duration_ >= ndelta)
+	      duration -= ndelta;
+	    else
+	      duration = 0;
+	  }
+	return Duration(duration);
+      }
+
       Duration& operator+=(const Duration& d)
       {
 	if (is_infinite() || d.is_infinite())

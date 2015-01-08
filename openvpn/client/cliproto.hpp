@@ -56,6 +56,7 @@
 #include <openvpn/client/clihalt.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
+#include <openvpn/time/durhelper.hpp>
 #include <openvpn/error/excode.hpp>
 
 #include <openvpn/ssl/proto.hpp>
@@ -686,7 +687,7 @@ namespace openvpn {
       void extract_inactive(const OptionList& opt)
       {
 	try {
-	  const Option *o = Base::Config::load_duration_parm(inactive_duration, "inactive", opt, 1, false);
+	  const Option *o = load_duration_parm(inactive_duration, "inactive", opt, 1, false);
 	  if (o)
 	    {
 	      if (o->size() >= 3)

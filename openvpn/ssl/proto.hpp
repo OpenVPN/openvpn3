@@ -48,6 +48,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
 #include <openvpn/time/time.hpp>
+#include <openvpn/time/durhelper.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/random/randapi.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
@@ -695,38 +696,6 @@ namespace openvpn {
 	const std::string ret = out.str();
 	OPENVPN_LOG_PROTO("Peer Info:" << std::endl << ret);
 	return ret;
-      }
-
-      static void set_duration_parm(Time::Duration& dur,
-				    const char *name,
-				    const std::string& valstr,
-				    const unsigned int min_value,
-				    const bool x2)
-      {
-	const unsigned int maxdur = 60*60*24*7; // maximum duration -- 7 days
-	unsigned int value = 0;
-	const bool status = parse_number<unsigned int>(valstr, value);
-	if (!status)
-	  OPENVPN_THROW(proto_option_error, name << ": error parsing number of seconds");
-	if (x2)
-	  value *= 2;
-	if (value == 0 || value > maxdur)
-	  value = maxdur;
-	if (value < min_value)
-	  value = min_value;
-	dur = Time::Duration::seconds(value);
-      }
-
-      static const Option* load_duration_parm(Time::Duration& dur,
-					      const char *name,
-					      const OptionList& opt,
-					      const unsigned int min_value,
-					      const bool x2)
-      {
-	const Option *o = opt.get_ptr(name);
-	if (o)
-	  set_duration_parm(dur, name, o->get(1, 16), min_value, x2);
-	return o;
       }
 
       // Used to generate link_mtu option sent to peer.
