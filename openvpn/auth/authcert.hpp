@@ -75,8 +75,8 @@ namespace openvpn {
       }
 
       std::string cn;                // common name
-      unsigned char issuer_fp[20];   // issuer cert fingerprint
       long sn;                       // serial number
+      unsigned char issuer_fp[20];   // issuer cert fingerprint
     };
 }
 
