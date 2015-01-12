@@ -102,9 +102,21 @@ namespace openvpn {
 	return ret;
       }
 
-      boost::uint32_t to_uint32() const
+      boost::uint32_t to_uint32() const // host byte order
       {
 	return u.addr;
+      }
+
+      static Addr from_uint32_net(const base_type addr) // addr in net byte order
+      {
+	Addr ret;
+	ret.u.addr = ntohl(addr);
+	return ret;
+      }
+
+      boost::uint32_t to_uint32_net() const // return value in net byte order
+      {
+	return htonl(u.addr);
       }
 
       static Addr from_ulong(unsigned long ul)

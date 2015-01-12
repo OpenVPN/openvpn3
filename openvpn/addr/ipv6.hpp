@@ -239,6 +239,31 @@ namespace openvpn {
 	return ret;
       }
 
+      void to_byte_string(unsigned char *bytestr) const
+      {
+	host_to_network_order((union ipv6addr *)bytestr, &u);
+      }
+
+      static void v4_to_byte_string(unsigned char *bytestr,
+				    const boost::uint32_t v4addr)
+      {
+	union ipv6addr *a = (union ipv6addr *)bytestr;
+	a->u32[0] = a->u32[1] = a->u32[2] = 0;
+	a->u32[3] = v4addr;
+      }
+
+      static bool byte_string_is_v4(const unsigned char *bytestr)
+      {
+	const union ipv6addr *a = (const union ipv6addr *)bytestr;
+	return a->u32[0] == 0 && a->u32[1] == 0 && a->u32[2] == 0;
+      }
+
+      static boost::uint32_t v4_from_byte_string(const unsigned char *bytestr)
+      {
+	const union ipv6addr *a = (const union ipv6addr *)bytestr;
+	return a->u32[3];
+      }
+
       boost::asio::ip::address_v6 to_asio() const
       {
 	union ipv6addr addr;

@@ -23,6 +23,7 @@
 #define OPENVPN_ADDR_IP_H
 
 #include <string>
+#include <cstring> // for std::memset
 
 #include <boost/asio.hpp>
 
@@ -214,6 +215,42 @@ namespace openvpn {
 	  throw ip_exception("address unspecified");
       }
 
+      // return Addr from 16 byte binary string
+      static Addr from_byte_string(const unsigned char *bytestr)
+      {
+	Addr a;
+	if (IPv6::Addr::byte_string_is_v4(bytestr))
+	  {
+	    a.ver = V4;
+	    a.u.v4 = IPv4::Addr::from_uint32_net(IPv6::Addr::v4_from_byte_string(bytestr));
+	  }
+	else
+	  {
+	    a.ver = V4;
+	    a.u.v6 = IPv6::Addr::from_byte_string(bytestr);
+	  }
+	return a;
+      }
+
+      // convert Addr to 16 byte binary string
+      void to_byte_string(unsigned char *bytestr) const
+      {
+	if (ver == V4)
+	  IPv6::Addr::v4_to_byte_string(bytestr, u.v4.to_uint32_net());
+	else if (ver == V6)
+	  u.v6.to_byte_string(bytestr);
+	else
+	  std::memset(bytestr, 0, 16);
+      }
+
+      boost::uint32_t to_uint32_net() const // return value in net byte order
+      {
+	if (ver == V4)
+	  return u.v4.to_uint32_net();
+	else
+	  return 0;
+      }
+
       // construct an address where all bits are zero
       static Addr from_zero(Version v)
       {
@@ -282,6 +319,17 @@ namespace openvpn {
 	  }
 	else
 	  return "UNSPEC";
+      }
+
+      std::string to_string_bracket_ipv6() const
+      {
+	std::string ret;
+	if (ver == V6)
+	  ret += '[';
+	ret += to_string();
+	if (ver == V6)
+	  ret += ']';
+	return ret;
       }
 
       std::string to_hex() const
