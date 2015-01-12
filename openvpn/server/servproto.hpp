@@ -133,9 +133,11 @@ namespace openvpn {
       }
 
       virtual void start(const TransportClientInstanceSend::Ptr& parent,
+			 const PeerAddr::Ptr& addr,
 			 const int local_peer_id)
       {
 	TransportLink::send = parent;
+	peer_addr = addr;
 
 	// init OpenVPN protocol handshake
 	Base::update_now();
@@ -154,6 +156,14 @@ namespace openvpn {
 	  {
 	    halt = true;
 	    housekeeping_timer.cancel();
+
+	    // deliver final peer stats to management layer
+	    if (TransportLink::send && ManLink::send)
+	      {
+		if (TransportLink::send->stats_pending())
+		  ManLink::send->stats_notify(TransportLink::send->stats_poll(), true);
+	      }
+
 	    Base::pre_destroy();
 	    if (TransportLink::send)
 	      {
@@ -300,7 +310,7 @@ namespace openvpn {
 	    AuthCreds::Ptr auth_creds(new AuthCreds(Unicode::utf8_printable(username, Unicode::UTF8_FILTER),
 						    Unicode::utf8_printable(password, Unicode::UTF8_FILTER),
 						    Unicode::utf8_printable(peer_info, Unicode::UTF8_FILTER|Unicode::UTF8_PASS_FMT)));
-	    ManLink::send->auth_request(auth_creds, auth_cert);
+	    ManLink::send->auth_request(auth_creds, auth_cert, peer_addr);
 	  }
       }
 
@@ -420,6 +430,18 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
+      virtual void stats_notify(const PeerStats& ps, const bool final)
+      {
+	if (ManLink::send)
+	  ManLink::send->stats_notify(ps, final);
+      }
+
+      virtual void float_notify(const PeerAddr::Ptr& addr)
+      {
+	if (ManLink::send)
+	  ManLink::send->float_notify(addr);
+      }
+
       bool get_management()
       {
 	if (!ManLink::send)
@@ -512,6 +534,8 @@ namespace openvpn {
       bool halt;
       bool did_push;
       bool did_client_halt_restart;
+
+      PeerAddr::Ptr peer_addr;
 
       CoarseTime housekeeping_schedule;
       AsioTimer housekeeping_timer;

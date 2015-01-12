@@ -35,6 +35,8 @@
 #include <openvpn/auth/authcreds.hpp>
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/server/servhalt.hpp>
+#include <openvpn/server/peerstats.hpp>
+#include <openvpn/server/peeraddr.hpp>
 #include <openvpn/auth/authcert.hpp>
 
 namespace openvpn {
@@ -48,8 +50,15 @@ namespace openvpn {
     virtual void stop() = 0;
 
     virtual void auth_request(const AuthCreds::Ptr& auth_creds,
-			      const AuthCert::Ptr& auth_cert) = 0;
+			      const AuthCert::Ptr& auth_cert,
+			      const PeerAddr::Ptr& peer_addr) = 0;
     virtual void push_request(const ProtoContext::Config::Ptr& pconf) = 0;
+
+    // bandwidth stats notification
+    virtual void stats_notify(const PeerStats& ps, const bool final) = 0;
+
+    // client float notification
+    virtual void float_notify(const PeerAddr::Ptr& addr) = 0;
   };
 
   // Base class for the client instance receiver.  Note that all

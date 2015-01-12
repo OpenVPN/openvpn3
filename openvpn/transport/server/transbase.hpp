@@ -37,6 +37,8 @@
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/tun/server/tunbase.hpp>
 #include <openvpn/server/servhalt.hpp>
+#include <openvpn/server/peerstats.hpp>
+#include <openvpn/server/peeraddr.hpp>
 
 namespace openvpn {
 
@@ -71,6 +73,10 @@ namespace openvpn {
     virtual bool transport_send(BufferAllocated& buf) = 0;
 
     virtual const std::string& transport_info() const = 0;
+
+    // bandwidth stats polling
+    virtual bool stats_pending() const = 0;
+    virtual PeerStats stats_poll() = 0;
   };
 
   // Base class for the client instance receiver.  Note that all
@@ -85,6 +91,7 @@ namespace openvpn {
     virtual void stop() = 0;
 
     virtual void start(const TransportClientInstanceSend::Ptr& parent,
+		       const PeerAddr::Ptr& addr,
 		       const int local_peer_id) = 0;
 
     // Called with OpenVPN-encapsulated packets from transport layer.
@@ -101,6 +108,12 @@ namespace openvpn {
 
     // override the tun provider
     virtual TunClientInstanceRecv* override_tun(TunClientInstanceSend* tun) = 0;
+
+    // bandwidth stats notification
+    virtual void stats_notify(const PeerStats& ps, const bool final) = 0;
+
+    // client float notification
+    virtual void float_notify(const PeerAddr::Ptr& addr) = 0;
 
     // push a halt or restart message to client
     virtual void push_halt_restart_msg(const HaltRestart::Type type,
