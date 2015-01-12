@@ -24,6 +24,7 @@
 #ifndef OPENVPN_TIME_TIMESTR_H
 #define OPENVPN_TIME_TIMESTR_H
 
+#include <string>
 #include <cstring> // for std::strlen
 #include <time.h>
 
@@ -31,15 +32,24 @@
 
 namespace openvpn {
 
-  inline const char *date_time()
+  inline std::string date_time(const time_t now)
   {
-    const time_t now = time(NULL);
-    struct tm *lt = localtime(&now);
-    char *ret = asctime(lt);
-    const int len = std::strlen(ret);
-    if (len > 0 && ret[len-1] == '\n')
-      ret[len-1] = '\0';
-    return ret;
+    struct tm lt;
+    char buf[64];
+
+    if (!localtime_r(&now, &lt))
+      return "LOCALTIME_ERROR";
+    if (!asctime_r(&lt, buf))
+      return "ASCTIME_ERROR";
+    const int len = std::strlen(buf);
+    if (len > 0 && buf[len-1] == '\n')
+      buf[len-1] = '\0';
+    return std::string(buf);
+  }
+
+  inline std::string date_time()
+  {
+    return date_time(time(NULL));
   }
 }
 
