@@ -120,6 +120,15 @@ namespace openvpn {
 	    push_back(std::move(e));
 	  }
       }
+
+      unsigned int total_threads() const
+      {
+	unsigned int ret = 0;
+	for (const_iterator i = begin(); i != end(); ++i)
+	  ret += i->n_threads;
+	return ret;
+      }
+
     };
   }
 }
