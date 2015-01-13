@@ -980,7 +980,7 @@ namespace openvpn {
 	      std::memcpy(self_ssl->authcert->issuer_fp, ctx->current_cert->sha1_hash, sizeof(AuthCert::issuer_fp));
 	    }
 	}
-      if (ctx->error_depth == 0) // leaf cert
+      else if (ctx->error_depth == 0) // leaf cert
 	{
 	  // verify ns-cert-type
 	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(ctx->current_cert))
