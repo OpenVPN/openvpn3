@@ -81,12 +81,11 @@ namespace openvpn {
     return ret;
   }
 
-  template <typename V>
-  inline std::string render_hex_pretty(const V& data)
+  inline std::string dump_hex(const unsigned char *data, size_t size)
   {
     std::ostringstream os;
     os << std::hex;
-    for (size_t i = 0; i < data.size(); ++i)
+    for (size_t i = 0; i < size; ++i)
       {
 	if (!(i & 0xF))
 	  {
@@ -98,6 +97,12 @@ namespace openvpn {
       }
     os << std::endl;
     return os.str();
+  }
+
+  template <typename V>
+  inline std::string dump_hex(const V& data)
+  {
+    return dump_hex(data.c_data(), data.size());
   }
 
   OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
