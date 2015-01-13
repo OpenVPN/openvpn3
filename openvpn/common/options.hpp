@@ -1053,6 +1053,16 @@ namespace openvpn {
       return n;
     }
 
+    template <typename T>
+    T get_num(const std::string& name, const size_t idx, const T default_value,
+	      const T min_value, const T max_value) const
+    {
+      const T ret = get_num<T>(name, idx, default_value);
+      if (ret != default_value && (ret < min_value || ret > max_value))
+	OPENVPN_THROW(option_error, name << " must be in the range [" << min_value << ',' << max_value << ']');
+      return ret;
+    }
+
     // Touch an option, if it exists.
     void touch(const std::string& name) const
     {
