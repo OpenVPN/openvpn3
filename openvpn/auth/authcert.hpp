@@ -42,6 +42,11 @@ namespace openvpn {
 	sn = -1;
       }
 
+      bool defined() const
+      {
+	return sn >= 0;
+      }
+
       template <typename T>
       T issuer_fp_prefix() const
       {
