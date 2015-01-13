@@ -270,8 +270,7 @@ namespace openvpn {
 
       virtual bool read_cleartext_ready() const
       {
-	// fixme: need to detect data buffered at SSL layer
-	return !bmq_stream::memq_from_bio(ct_in)->empty();
+	return !bmq_stream::memq_from_bio(ct_in)->empty() || SSL_pending(ssl) > 0;
       }
 
       virtual void write_ciphertext(const BufferPtr& buf)
