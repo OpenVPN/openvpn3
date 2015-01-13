@@ -26,12 +26,9 @@
 #include <sstream>
 #include <cstring>
 
-#include <boost/cstdint.hpp>       // for boost::uint32_t, uint64_t
-#include <boost/static_assert.hpp> // for BOOST_STATIC_ASSERT
-
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/socktypes.hpp> // for ntohl
+#include <openvpn/common/binprefix.hpp>
 
 namespace openvpn {
 
@@ -48,11 +45,7 @@ namespace openvpn {
       template <typename T>
       T issuer_fp_prefix() const
       {
-	BOOST_STATIC_ASSERT(sizeof(T) == 4 || sizeof(T) == 8);
-	if (sizeof(T) == 8)
-	  return (T(ntohl(*(uint32_t *)&issuer_fp[0])) << 32) | T(ntohl(*(uint32_t *)&issuer_fp[4]));
-	else // sizeof(T) == 4
-	  return T(ntohl(*(uint32_t *)&issuer_fp[0]));
+	return bin_prefix<T>(issuer_fp);
       }
 
       bool operator==(const AuthCert& other) const

@@ -32,6 +32,7 @@
 
 #include <polarssl/ssl.h>
 #include <polarssl/oid.h>
+#include <polarssl/sha1.h>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -39,6 +40,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/common/binprefix.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_stream.hpp>
 #include <openvpn/buffer/buffer.hpp>
@@ -363,6 +365,9 @@ namespace openvpn {
 	  const Config& c = ctx->config;
 	  int status;
 
+	  // set pointer back to parent
+	  parent = ctx;
+
 	  // init SSL object
 	  ssl = new ssl_context;
 	  status = ssl_init(ssl);
@@ -371,7 +376,10 @@ namespace openvpn {
 
 	  // set client/server mode
 	  if (c.mode.is_server())
-	    ssl_set_endpoint(ssl, SSL_IS_SERVER);
+	    {
+	      ssl_set_endpoint(ssl, SSL_IS_SERVER);
+	      authcert.reset(new AuthCert());
+	    }
 	  else if (c.mode.is_client())
 	    ssl_set_endpoint(ssl, SSL_IS_CLIENT);
 	  else
@@ -409,7 +417,7 @@ namespace openvpn {
 	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
 
 	  // set verify callback
-	  ssl_set_verify(ssl, verify_callback, ctx);
+	  ssl_set_verify(ssl, c.mode.is_server() ? verify_callback_server : verify_callback_client, this);
 
 	  // Notes on SSL resume/renegotiation:
 	  // SSL resume on server side is controlled by ssl_set_session_cache.
@@ -547,6 +555,7 @@ namespace openvpn {
 	clear();
       }
 
+      PolarSSLContext *parent;
       ssl_context *ssl;	       // underlying SSL connection object
       RandomAPI::Ptr rng;      // random data source
       bool overflow;
@@ -757,9 +766,10 @@ namespace openvpn {
       return os.str();
     }
 
-    static int verify_callback(void *arg, x509_crt *cert, int depth, int *flags)
+    static int verify_callback_client(void *arg, x509_crt *cert, int depth, int *flags)
     {
-      PolarSSLContext *self = (PolarSSLContext *)arg;
+      PolarSSLContext::SSL *ssl = (PolarSSLContext::SSL *)arg;
+      PolarSSLContext *self = ssl->parent;
       bool fail = false;
 
       // log status
@@ -801,6 +811,64 @@ namespace openvpn {
 		  OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
 		  fail = true;
 		}
+	    }
+	}
+
+      if (fail)
+	*flags |= BADCERT_OTHER;
+      return 0;
+    }
+
+    static int verify_callback_server(void *arg, x509_crt *cert, int depth, int *flags)
+    {
+      PolarSSLContext::SSL *ssl = (PolarSSLContext::SSL *)arg;
+      PolarSSLContext *self = ssl->parent;
+      bool fail = false;
+
+      if (depth == 1) // issuer cert
+	{
+	  // save the issuer cert fingerprint
+	  if (ssl->authcert)
+	    {
+	      const int SHA_DIGEST_LENGTH = 20;
+	      BOOST_STATIC_ASSERT(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH);
+	      sha1(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp);
+	    }
+	}
+      else if (depth == 0) // leaf-cert
+	{
+	  // verify ns-cert-type
+	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	      fail = true;
+	    }
+
+	  // verify X509 key usage
+	  if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+	      fail = true;
+	    }
+
+	  // verify X509 extended key usage
+	  if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(cert))
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+	      fail = true;
+	    }
+
+	  if (ssl->authcert)
+	    {
+	      // save the Common Name
+	      ssl->authcert->cn = x509_get_common_name(cert);
+
+	      // save the leaf cert serial number
+	      const x509_buf *s = &cert->serial;
+	      if (s->len > 0 && s->len <= sizeof(ssl->authcert->sn))
+		ssl->authcert->sn = bin_prefix_floor<decltype(ssl->authcert->sn)>(s->p, s->len, -1);
+	      else
+		ssl->authcert->sn = -1;
 	    }
 	}
 
