@@ -32,6 +32,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/buffer/bufstr.hpp>
 
 namespace openvpn {
 
@@ -127,6 +128,13 @@ namespace openvpn {
     ofs.write((const char *)buf.c_data(), buf.size());
     if (!ofs)
       OPENVPN_THROW(open_file_error, "cannot write: " << filename);
+  }
+
+  // Write std::string to file
+  inline void write_string(const std::string& filename, const std::string& str)
+  {
+    BufferPtr buf = buf_from_string(str);
+    write_binary(filename, *buf);
   }
 
 } // namespace openvpn
