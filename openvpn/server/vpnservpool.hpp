@@ -24,6 +24,7 @@
 
 #include <openvpn/common/thread.hpp>
 #include <openvpn/server/vpnservnetblock.hpp>
+#include <openvpn/addr/pool.hpp>
 
 namespace openvpn {
 

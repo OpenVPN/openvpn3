@@ -32,6 +32,7 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/abort.hpp>
 #include <openvpn/common/link.hpp>
+#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
