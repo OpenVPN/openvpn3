@@ -31,55 +31,15 @@
 
 namespace openvpn {
 
-  class PThreadCond
+  class PThreadCondBase
   {
-  public:
-    PThreadCond()
-      : signaled(false),
-	signal_counter(0),
-	cond(PTHREAD_COND_INITIALIZER),
+  protected:
+    PThreadCondBase()
+      : cond(PTHREAD_COND_INITIALIZER),
 	mutex(PTHREAD_MUTEX_INITIALIZER)
     {
     }
 
-    void wait()
-    {
-      lock();
-      const unsigned int signal_value = signal_counter;
-      while (!signaled && signal_value == signal_counter)
-	cond_wait();
-      unlock();
-    }
-
-    // returns true if timeout
-    bool wait(const unsigned int seconds)
-    {
-      bool ret = false;
-      lock();
-      const unsigned int signal_value = signal_counter;
-      while (!signaled && signal_value == signal_counter && !ret)
-	ret = cond_wait(seconds);
-      unlock();
-      return ret;
-    }
-
-    void signal()
-    {
-      lock();
-      signaled = true;
-      ++signal_counter;
-      bcast();
-      unlock();
-    }
-
-    void reset()
-    {
-      lock();
-      signaled = false;
-      unlock();
-    }
-
-  private:
     void lock()
     {
       const int status = pthread_mutex_lock(&mutex);
@@ -124,15 +84,161 @@ namespace openvpn {
 
     void error(const char *funcname, const int status)
     {
-      OPENVPN_LOG("PThreadCond: " << funcname << " returned " << status);
+      OPENVPN_LOG("PThreadCondBase: " << funcname << " returned " << status);
       std::abort();
     }
 
-    bool signaled;
-    unsigned int signal_counter;
     pthread_cond_t cond;
     pthread_mutex_t mutex;
   };
+
+  // A condition implementation not unlike Windows Events.
+  class PThreadCond : public PThreadCondBase
+  {
+  public:
+    PThreadCond()
+      : signaled(false),
+	signal_counter(0)
+    {
+    }
+
+    // Wait for object to be signaled
+    void wait()
+    {
+      lock();
+      const unsigned int signal_value = signal_counter;
+      while (!signaled && signal_value == signal_counter)
+	cond_wait();
+      unlock();
+    }
+
+    // Wait for object to be signaled,
+    // but return true on timeout
+    bool wait(const unsigned int seconds)
+    {
+      bool ret = false;
+      lock();
+      const unsigned int signal_value = signal_counter;
+      while (!signaled && signal_value == signal_counter && !ret)
+	ret = cond_wait(seconds);
+      unlock();
+      return ret;
+    }
+
+    // Causes wait() to return for all threads blocking on it
+    void signal()
+    {
+      lock();
+      signaled = true;
+      ++signal_counter;
+      bcast();
+      unlock();
+    }
+
+    // Resets the object for re-use
+    void reset()
+    {
+      lock();
+      signaled = false;
+      unlock();
+    }
+
+  private:
+    bool signaled;
+    unsigned int signal_counter;
+  };
+
+  // Barrier class that is useful in cases where all threads
+  // need to reach a known point before executing some action.
+  // Note that this barrier implementation is
+  // constructed using pthread conditions.  We don't actually
+  // use the native pthread barrier API.
+  class PThreadBarrier : public PThreadCondBase
+  {
+    enum State {
+      UNSIGNALED=0,  // initial state
+      SIGNALED,      // signal() was called
+      ERROR_THROWN,  // error() was called
+    };
+
+  public:
+    // status return from wait()
+    enum Status {
+      SUCCESS=0,  // successful
+      CHOSEN_ONE, // successful and chosen (only one thread is chosen)
+      TIMEOUT,    // timeout
+      ERROR,      // at least one thread called error()
+    };
+
+    PThreadBarrier(const unsigned int limit_arg)
+      : state(UNSIGNALED),
+	chosen(false),
+	count(0),
+	limit(limit_arg)
+    {
+    }
+
+    // All callers will increment count and block until
+    // count == limit.  CHOSEN_ONE will be returned to
+    // the first caller to reach limit.  This caller can
+    // then release all the other callers by calling
+    // signal().
+    int wait(const unsigned int seconds)
+    {
+      bool timeout = false;
+      int ret;
+
+      lock();
+      const unsigned int c = ++count;
+      while (state == UNSIGNALED && c < limit && !timeout)
+	timeout = cond_wait(seconds);
+      if (timeout)
+	ret = TIMEOUT;
+      else if (state == ERROR_THROWN)
+	ret = ERROR;
+      else if (state == UNSIGNALED && !chosen)
+	{
+	  ret = CHOSEN_ONE;
+	  chosen = true;
+	}
+      else
+	ret = SUCCESS;
+      unlock();
+      return ret;
+    }
+
+    // Generally, only the CHOSEN_ONE calls signal() after its work
+    // is complete, to allow the other threads to pass the barrier.
+    void signal()
+    {
+      signal_(SIGNALED);
+    }
+
+    // Causes all threads waiting on wait() (and those which call wait()
+    // in the future) to exit with ERROR status.
+    void error()
+    {
+      signal_(ERROR_THROWN);
+    }
+
+  private:
+    void signal_(const State newstate)
+    {
+      lock();
+      if (state == UNSIGNALED)
+	{
+	  state = newstate;
+	  bcast();
+	}
+      unlock();
+    }
+
+    State state;
+    bool chosen;
+    unsigned int count;
+    const unsigned int limit;
+  };
+
 }
 
 #endif
