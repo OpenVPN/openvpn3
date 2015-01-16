@@ -43,28 +43,47 @@ namespace openvpn {
     enum {
       S_SIGINT  = (1<<0),
       S_SIGTERM = (1<<1),
-      S_SIGQUIT = (1<<2),
 #ifndef OPENVPN_PLATFORM_WIN
-      S_SIGHUP  = (1<<3)
+      S_SIGQUIT = (1<<2),
+      S_SIGHUP  = (1<<3),
+      S_SIGUSR1  = (1<<4),
+      S_SIGUSR2  = (1<<5),
 #endif
     };
 
     template <typename SignalHandler>
-    void register_signals(SignalHandler stop_handler, unsigned int sigmask = (S_SIGINT|S_SIGTERM|S_SIGQUIT))
+    void register_signals(SignalHandler stop_handler, unsigned int sigmask = (S_SIGINT|S_SIGTERM))
     {
       if (sigmask & S_SIGINT)
 	signals_.add(SIGINT);
       if (sigmask & S_SIGTERM)
 	signals_.add(SIGTERM);
-#if defined(SIGQUIT)
+#ifndef OPENVPN_PLATFORM_WIN
       if (sigmask & S_SIGQUIT)
 	signals_.add(SIGQUIT);
-#endif // defined(SIGQUIT)
-#ifndef OPENVPN_PLATFORM_WIN
       if (sigmask & S_SIGHUP)
 	signals_.add(SIGHUP);
+      if (sigmask & S_SIGUSR1)
+	signals_.add(SIGUSR1);
+      if (sigmask & S_SIGUSR2)
+	signals_.add(SIGUSR2);
 #endif
       signals_.async_wait(stop_handler);
+    }
+
+    template <typename SignalHandler>
+    void register_signals_all(SignalHandler stop_handler)
+    {
+      register_signals(stop_handler,
+		         S_SIGINT
+		       | S_SIGTERM
+#ifndef OPENVPN_PLATFORM_WIN
+		       | S_SIGQUIT
+		       | S_SIGHUP
+		       | S_SIGUSR1
+		       | S_SIGUSR2
+#endif
+		       );
     }
 
     void cancel()
