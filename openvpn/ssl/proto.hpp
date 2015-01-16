@@ -2502,6 +2502,12 @@ namespace openvpn {
       config->dc.set_factory(dc_factory);
     }
 
+    // reset the data channel factory
+    void reset_dc_factory()
+    {
+      config->dc.reset();
+    }
+
     // set the local peer ID (or -1 to disable)
     void set_local_peer_id(const int local_peer_id)
     {

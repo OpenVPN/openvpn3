@@ -166,6 +166,7 @@ namespace openvpn {
 	      }
 
 	    Base::pre_destroy();
+	    Base::reset_dc_factory();
 	    if (TransportLink::send)
 	      {
 		TransportLink::send->stop();

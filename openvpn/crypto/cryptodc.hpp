@@ -172,6 +172,13 @@ namespace openvpn {
       return *context_;
     }
 
+    void reset()
+    {
+      factory_.reset();
+      context_.reset();
+      dirty = false;
+    }
+
     CryptoAlgs::Type cipher() const { return cipher_; }
     CryptoAlgs::Type digest() const { return digest_; }
 
