@@ -327,7 +327,7 @@ namespace openvpn {
 	      {
 		did_push = true;
 		if (get_management())
-		  ManLink::send->push_request(conf_ptr());
+		  ManLink::send->push_request(Base::conf_ptr());
 		else
 		  {
 		    auth_failed("no management provider", false);
