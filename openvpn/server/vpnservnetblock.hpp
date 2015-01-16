@@ -166,7 +166,6 @@ namespace openvpn {
     std::string to_string() const
     {
       std::ostringstream os;
-      os << "--- VPNServerNetblock ---" << std::endl;
       os << "IPv4: " << snb4.to_string() << std::endl;
       if (snb6.defined())
 	os << "IPv6: " << snb6.to_string() << std::endl;
