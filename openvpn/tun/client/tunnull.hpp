@@ -55,8 +55,12 @@ namespace openvpn {
     public:
       virtual void client_start(const OptionList& opt, TransportClient& transcli)
       {
+#ifdef TUN_NULL_EXIT
+	throw ErrorCode(Error::TUN_SETUP_FAILED, true, "TUN_NULL_EXIT");
+#else
 	// signal that we are "connected"
 	parent.tun_connected();
+#endif
       }
 
       virtual bool tun_send(BufferAllocated& buf)
