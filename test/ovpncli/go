@@ -1,4 +1,5 @@
 #!/bin/bash
+[ "$NULL" = "1" ] && export GCC_EXTRA="-DOPENVPN_FORCE_TUN_NULL -DTUN_NULL_EXIT"
 if [ "$(uname)" == "Darwin" ]; then
     cd $O3/core
     . vars/vars-osx64
