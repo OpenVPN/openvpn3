@@ -54,7 +54,7 @@ namespace openvpn {
     SessionStats()
       : verbose_(false)
     {
-      std::memset(stats_, 0, sizeof(stats_));
+      std::memset((void *)stats_, 0, sizeof(stats_));
     }
 
     virtual void error(const size_t type, const std::string* text=NULL) {}
@@ -114,7 +114,7 @@ namespace openvpn {
   private:
     bool verbose_;
     Time last_packet_received_;
-    count_t stats_[N_STATS];
+    volatile count_t stats_[N_STATS];
   };
 
 } // namespace openvpn
