@@ -26,6 +26,8 @@
 #include <vector>
 #include <utility> // for std::move
 
+#include <boost/algorithm/string.hpp> // for boost::algorithm::ends_with
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/port.hpp>
@@ -48,16 +50,19 @@ namespace openvpn {
 
     struct List : public std::vector<Item>
     {
-      List(const OptionList& opt)
+      List(const OptionList& opt, const unsigned int n_cores)
       {
 	const OptionList::IndexList* listen = opt.get_index_ptr("listen");
 	if (listen)
 	  {
 	    reserve(listen->size());
+
 	    for (OptionList::IndexList::const_iterator i = listen->begin(); i != listen->end(); ++i)
 	      {
 		const Option& o = opt[*i];
 		o.touch();
+
+		unsigned int mult = 1;
 
 		Item e;
 		e.addr = o.get(1, 128);
@@ -66,9 +71,15 @@ namespace openvpn {
 		e.proto = Protocol::parse(o.get(3, 16), false, "listen protocol");
 		const IP::Addr addr = IP::Addr(e.addr, "listen addr");
 		e.proto.mod_addr_version(addr);
-		const std::string n_threads = o.get_default(4, 16, "1");
+		std::string n_threads = o.get_default(4, 16, "1");
+		if (boost::algorithm::ends_with(n_threads, "*N"))
+		  {
+		    mult = n_cores;
+		    n_threads = n_threads.substr(0, n_threads.length() - 2);
+		  }
 		if (!parse_number_validate<unsigned int>(n_threads, 3, 1, 100, &e.n_threads))
 		  OPENVPN_THROW(option_error, "listen: bad num threads: " << n_threads);
+		e.n_threads *= mult;
 		push_back(std::move(e));
 	      }
 	  }
