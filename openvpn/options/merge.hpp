@@ -57,6 +57,8 @@ namespace openvpn {
     };
 
   public:
+    OPENVPN_EXCEPTION(merge_error);
+
     // public status values
     enum Status {
       MERGE_UNDEFINED,
@@ -105,9 +107,16 @@ namespace openvpn {
 	}
     }
 
+    // allow following of external file references
+    enum Follow {
+      FOLLOW_NONE,
+      FOLLOW_PARTIAL,
+      FOLLOW_FULL,
+    };
+
     ProfileMerge(const std::string& profile_path,
 		 const std::string& profile_dir_override,
-		 const bool follow_references,
+		 const Follow follow_references,
 		 const size_t max_line_len,
 		 const size_t max_size)
       : status_(MERGE_UNDEFINED)
@@ -151,12 +160,26 @@ namespace openvpn {
 	}
     }
 
+    static std::string merge(const std::string& profile_path,
+			     const std::string& profile_dir_override,
+			     const Follow follow_references,
+			     const size_t max_line_len,
+			     const size_t max_size)
+    {
+      const ProfileMerge pm(profile_path, profile_dir_override,
+			    follow_references, max_line_len, max_size);
+      if (pm.status() == ProfileMerge::MERGE_SUCCESS)
+	return pm.profile_content();
+      else
+	OPENVPN_THROW(merge_error, pm.status_string() << ": " << pm.error());
+    }
+
   protected:
     ProfileMerge() : status_(MERGE_UNDEFINED) {}
 
     void expand_profile(const std::string& orig_profile_content,
 			const std::string& profile_dir,
-			const bool follow_references,
+			const Follow follow_references,
 			const size_t max_line_len,
 			const size_t max_size,
 			size_t total_size)
@@ -243,14 +266,16 @@ namespace openvpn {
 			  // found a directive referencing a file
 
 			  // get basename of file and make sure that it doesn't
-			  // attempt to traverse directories
-			  const std::string fn = path::basename(opt.get(1, 256));
+			  // attempt to traverse directories (unless
+			  // follow_references == FOLLOW_FULL)
+			  const std::string fn_str = opt.get(1, 256);
+			  const std::string fn = (follow_references == FOLLOW_FULL ? fn_str : path::basename(fn_str));
 			  if (fn.empty())
 			    {
 			      echo = false;
 			      status_ = MERGE_REF_FAIL;
 			    }
-			  else if (!path::is_flat(fn))
+			  else if (follow_references != FOLLOW_FULL && !path::is_flat(fn))
 			    {
 			      echo = false;
 			      status_ = MERGE_REF_FAIL;
@@ -264,7 +289,7 @@ namespace openvpn {
 			      std::string file_content;
 			      bool error = false;
 			      try {
-				if (!follow_references)
+				if (follow_references == FOLLOW_NONE)
 				  {
 				    status_ = MERGE_EXCEPTION;
 				    error_ = fn + ": cannot follow file reference";
@@ -402,7 +427,7 @@ namespace openvpn {
   public:
     ProfileMergeFromString(const std::string& profile_content,
 			   const std::string& ref_dir,
-			   const bool follow_references,
+			   const Follow follow_references,
 			   const size_t max_line_len,
 			   const size_t max_size)
     {

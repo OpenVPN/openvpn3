@@ -441,14 +441,14 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_static(const std::string& path,
 									 bool follow_references)
     {
-      ProfileMerge pm(path, "", follow_references,
+      ProfileMerge pm(path, "", follow_references ? ProfileMerge::FOLLOW_PARTIAL : ProfileMerge::FOLLOW_NONE,
 		      ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
       return build_merge_config(pm);
     }
 
     OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_string_static(const std::string& config_content)
     {
-      ProfileMergeFromString pm(config_content, "", false,
+      ProfileMergeFromString pm(config_content, "", ProfileMerge::FOLLOW_NONE,
 				ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
       return build_merge_config(pm);
     }
