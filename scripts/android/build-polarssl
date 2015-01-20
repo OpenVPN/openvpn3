@@ -12,8 +12,8 @@ cd $DEP_DIR
 
 . $O3/core/vars/android-sdk-path
 
-mini=1
-[ "$DISABLE_MINICRYPTO" = "1" ] && mini=0
+# disable minicrypto for now
+mini=0
 
 rm -rf polarssl
 mkdir polarssl

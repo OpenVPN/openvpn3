@@ -61,9 +61,11 @@ else
     #patch -p1 <$PD/dhm.patch
     #patch -p1 <$PD/entropy-printf.patch
 
-    # do the big polar-openssl patch
-    echo MERGING polarssl-minicrypto.patch
-    patch -p1 <$PD/polarssl-minicrypto.patch
+    if [ "$USE_MINICRYPTO" = "1" ]; then
+        # do the big polar-openssl patch
+	echo MERGING polarssl-minicrypto.patch
+	patch -p1 <$PD/polarssl-minicrypto.patch
+    fi
 
     # define configs
     cp include/polarssl/config.h include/polarssl/config.h.orig
