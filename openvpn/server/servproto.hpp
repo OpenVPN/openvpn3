@@ -346,7 +346,7 @@ namespace openvpn {
 	if (halt)
 	  return;
 
-	BufferPtr buf(new BufferAllocated(64, BufferAllocated::GROW));
+	BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
 	BufferStreamOut os(*buf);
 
 	OPENVPN_LOG("Auth failed: " << reason);
