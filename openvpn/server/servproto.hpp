@@ -356,6 +356,7 @@ namespace openvpn {
 
 	disconnect_in(Time::Duration::seconds(1));
 
+	buf->push_back(0); // null-terminate
 	Base::control_send(buf);
 	Base::flush(true);
 	set_housekeeping_timer();
@@ -371,6 +372,7 @@ namespace openvpn {
 	  {
 	    Base::init_data_channel();
 	    TunLink::send->add_routes(rtvec);
+	    push_data->push_back(0); // null-terminate
 	    Base::control_send(push_data);
 	    Base::flush(true);
 	    set_housekeeping_timer();
@@ -427,6 +429,7 @@ namespace openvpn {
 
 	disconnect_in(Time::Duration::seconds(1));
 
+	buf->push_back(0); // null-terminate
 	Base::control_send(buf);
 	Base::flush(true);
 	set_housekeeping_timer();
