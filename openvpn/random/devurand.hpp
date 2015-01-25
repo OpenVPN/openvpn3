@@ -19,39 +19,62 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// API for random number implementations.
+#ifndef OPENVPN_RANDOM_DEVURAND_H
+#define OPENVPN_RANDOM_DEVURAND_H
 
-#ifndef OPENVPN_POLARSSL_UTIL_RANDAPI_H
-#define OPENVPN_POLARSSL_UTIL_RANDAPI_H
+#include <sys/types.h>  // for open()
+#include <sys/stat.h>   // for open()
+#include <fcntl.h>      // for open()
 
-#include <string>
+#include <unistd.h>     // for read()
 
-#include <openvpn/common/types.hpp>
-#include <openvpn/common/rc.hpp>
-#include <openvpn/common/exception.hpp>
+#include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
-  class RandomAPI : public RC<thread_unsafe_refcount>
+  class DevURand : public RandomAPI
   {
   public:
-    typedef boost::intrusive_ptr<RandomAPI> Ptr;
+    OPENVPN_EXCEPTION(dev_urand_error);
+
+    typedef boost::intrusive_ptr<DevURand> Ptr;
+
+    DevURand()
+      : dev_urandom(open("/dev/urandom", O_RDWR))
+    {
+      if (!dev_urandom.defined())
+	throw dev_urand_error("init failed");
+    }
 
     // Random algorithm name
-    virtual std::string name() const = 0;
+    virtual std::string name() const
+    {
+      return "DevURand";
+    }
 
     // Fill buffer with random bytes
-    virtual void rand_bytes(unsigned char *buf, size_t size) = 0;
+    virtual void rand_bytes(unsigned char *buf, size_t size)
+    {
+      if (!rndbytes(buf, size))
+	throw dev_urand_error("rand_bytes failed");
+    }
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
-    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size) = 0;
-
-    template <typename T>
-    void rand_fill(T& obj)
+    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
     {
-      rand_bytes(reinterpret_cast<unsigned char *>(&obj), sizeof(T));
+      return rndbytes(buf, size);
     }
+
+  private:
+    bool rndbytes(unsigned char *buf, size_t size)
+    {
+      const ssize_t actual = read(dev_urandom(), buf, size);
+      return size == actual;
+    }
+
+    ScopedFD dev_urandom;
   };
 
 }
