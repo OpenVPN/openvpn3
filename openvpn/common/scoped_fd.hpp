@@ -80,11 +80,12 @@ namespace openvpn {
     }
 
     // return false if close error
-    bool close()
+    virtual bool close()
     {
       if (defined())
 	{
 	  const int status = ::close(fd);
+	  post_close(status);
 	  //OPENVPN_LOG("**** SFD CLOSE fd=" << fd << " status=" << status);
 	  fd = -1;
 	  return status == 0;
@@ -93,7 +94,11 @@ namespace openvpn {
 	return true;
     }
 
-    ~ScopedFD()
+    virtual void post_close(const int close_status)
+    {
+    }
+
+    virtual ~ScopedFD()
     {
       //OPENVPN_LOG("**** SFD DESTRUCTOR");
       close();
