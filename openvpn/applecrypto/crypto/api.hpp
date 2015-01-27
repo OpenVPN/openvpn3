@@ -23,6 +23,7 @@
 #define OPENVPN_APPLECRYPTO_CRYPTO_API_H
 
 #include <openvpn/applecrypto/crypto/cipher.hpp>
+#include <openvpn/applecrypto/crypto/ciphergcm.hpp>
 #include <openvpn/applecrypto/crypto/digest.hpp>
 #include <openvpn/applecrypto/crypto/hmac.hpp>
 
@@ -32,6 +33,7 @@ namespace openvpn {
   struct AppleCryptoAPI {
     // cipher
     typedef AppleCrypto::CipherContext CipherContext;
+    typedef AppleCrypto::CipherContextGCM CipherContextGCM;
 
     // digest
     typedef AppleCrypto::DigestContext DigestContext;
