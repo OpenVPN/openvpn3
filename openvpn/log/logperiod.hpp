@@ -71,7 +71,22 @@ namespace openvpn {
 
     bool is_current(const time_t now) const
     {
-      return olong(now) >= start_ && olong(now) < end_;
+      const olong onow = olong(now);
+      return onow >= start_ && onow < end_;
+    }
+
+    bool defined() const
+    {
+      return period_ != UNDEF;
+    }
+
+    unsigned int expires_in(const time_t now)
+    {
+      const olong onow = olong(now);
+      if (onow < end_)
+	return end_ - onow;
+      else
+	return 0;
     }
 
     std::string to_string_verbose() const
