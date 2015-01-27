@@ -112,7 +112,7 @@ namespace openvpn {
 		  unsigned char *output,
 		  size_t length,
 		  const unsigned char *iv,
-		  unsigned char *tag,
+		  const unsigned char *tag,
 		  const unsigned char *ad,
 		  size_t ad_len)
       {
