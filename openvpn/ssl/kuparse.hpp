@@ -34,32 +34,58 @@
 
 namespace openvpn {
   namespace KUParse {
+    enum TLSWebType {
+      TLS_WEB_NONE,
+      TLS_WEB_SERVER,
+      TLS_WEB_CLIENT,
+    };
+
+    inline void remote_cert_tls(const TLSWebType wt, std::vector<unsigned int>& ku, std::string& eku)
+    {
+      ku.clear();
+      eku = "";
+
+      switch (wt)
+	{
+	case TLS_WEB_NONE:
+	  break;
+	case TLS_WEB_SERVER:
+	  ku.clear();
+	  ku.push_back(0xa0);
+	  ku.push_back(0x88);
+	  eku = "TLS Web Server Authentication";
+	  break;
+	case TLS_WEB_CLIENT:
+	  ku.clear();
+	  ku.push_back(0x80);
+	  ku.push_back(0x08);
+	  ku.push_back(0x88);
+	  eku = "TLS Web Client Authentication";
+	  break;
+	}
+    }
+
     inline void remote_cert_tls(const OptionList& opt, std::vector<unsigned int>& ku, std::string& eku)
     {
+      TLSWebType wt = TLS_WEB_NONE;
       const Option* o = opt.get_ptr("remote-cert-tls");
       if (o)
 	{
 	  const std::string& ct = o->get_optional(1, 16);
 	  if (ct == "server")
-	    {
-	      ku.push_back(0xa0);
-	      ku.push_back(0x88);
-	      eku = "TLS Web Server Authentication";
-	    }
+	    wt = TLS_WEB_SERVER;
 	  else if (ct == "client")
-	    {
-	      ku.push_back(0x80);
-	      ku.push_back(0x08);
-	      ku.push_back(0x88);
-	      eku = "TLS Web Client Authentication";
-	    }
+	    wt = TLS_WEB_CLIENT;
 	  else
 	    throw option_error("remote-cert-tls must be 'client' or 'server'");	      
 	}
+      remote_cert_tls(wt, ku, eku);
     }
 
     inline void remote_cert_ku(const OptionList& opt, std::vector<unsigned int>& ku)
     {
+      ku.clear();
+
       const Option* o = opt.get_ptr("remote-cert-ku");
       if (o)
 	{
@@ -83,6 +109,8 @@ namespace openvpn {
 
     inline void remote_cert_eku(const OptionList& opt, std::string& eku)
     {
+      eku = "";
+
       const Option* o = opt.get_ptr("remote-cert-eku");
       if (o)
 	eku = o->get(1, 256);
