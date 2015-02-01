@@ -27,9 +27,19 @@
 #include <string>
 
 #include <openvpn/common/types.hpp>
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/options.hpp>
+#include <openvpn/common/mode.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/frame/frame.hpp>
 #include <openvpn/auth/authcert.hpp>
+#include <openvpn/pki/epkibase.hpp>
+#include <openvpn/ssl/kuparse.hpp>
+#include <openvpn/ssl/nscert.hpp>
+#include <openvpn/ssl/tlsver.hpp>
+#include <openvpn/ssl/tls_remote.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
@@ -52,6 +62,11 @@ namespace openvpn {
   class SSLFactoryAPI : public RC<thread_unsafe_refcount>
   {
   public:
+    OPENVPN_EXCEPTION(ssl_options_error);
+    OPENVPN_EXCEPTION(ssl_context_error);
+    OPENVPN_EXCEPTION(ssl_external_pki);
+    OPENVPN_SIMPLE_EXCEPTION(ssl_ciphertext_in_overflow);
+
     typedef boost::intrusive_ptr<SSLFactoryAPI> Ptr;
 
     // create a new SSLAPI instance
@@ -62,6 +77,37 @@ namespace openvpn {
 
     // client or server?
     virtual const Mode& mode() const = 0;
+  };
+
+  class SSLConfigAPI : public RC<thread_unsafe_refcount>
+  {
+  public:
+    typedef boost::intrusive_ptr<SSLConfigAPI> Ptr;
+
+    virtual void set_mode(const Mode& mode_arg) = 0;
+    virtual const Mode& get_mode() const = 0;
+    virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg) = 0; // private key alternative
+    virtual void set_private_key_password(const std::string& pwd) = 0;
+    virtual void load_ca(const std::string& ca_txt, bool strict) = 0;
+    virtual void load_crl(const std::string& crl_txt) = 0;
+    virtual void load_cert(const std::string& cert_txt) = 0;
+    virtual void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt) = 0;
+    virtual void load_private_key(const std::string& key_txt) = 0;
+    virtual void load_dh(const std::string& dh_txt) = 0;
+    virtual void set_frame(const Frame::Ptr& frame_arg) = 0;
+    virtual void set_debug_level(const int debug_level) = 0;
+    virtual void set_flags(const unsigned int flags_arg) = 0;
+    virtual void set_ns_cert_type(const NSCert::Type ns_cert_type_arg) = 0;
+    virtual void set_remote_cert_tls(const KUParse::TLSWebType wt) = 0;
+    virtual void set_tls_remote(const std::string& tls_remote_arg) = 0;
+    virtual void set_tls_version_min(const TLSVersion::Type tvm) = 0;
+    virtual void set_local_cert_enabled(const bool v) = 0;
+    virtual void set_enable_renegotiation(const bool v) = 0;
+    virtual void set_force_aes_cbc_ciphersuites(const bool v) = 0;
+    virtual void set_rng(const RandomAPI::Ptr& rng_arg) = 0;
+    virtual void load(const OptionList& opt) = 0;
+
+    virtual SSLFactoryAPI::Ptr new_factory() = 0;
   };
 }
 

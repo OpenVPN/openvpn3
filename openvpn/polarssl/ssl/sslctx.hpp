@@ -36,24 +36,14 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/mode.hpp>
-#include <openvpn/common/options.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/binprefix.hpp>
-#include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_stream.hpp>
-#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
-#include <openvpn/pki/epkibase.hpp>
 #include <openvpn/pki/pkcs1.hpp>
-#include <openvpn/ssl/kuparse.hpp>
-#include <openvpn/ssl/nscert.hpp>
-#include <openvpn/ssl/tlsver.hpp>
-#include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
-#include <openvpn/random/randapi.hpp>
 
 #include <openvpn/polarssl/pki/x509cert.hpp>
 #include <openvpn/polarssl/pki/x509crl.hpp>
@@ -85,16 +75,18 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<PolarSSLContext> Ptr;
 
-    OPENVPN_SIMPLE_EXCEPTION(ssl_ciphertext_in_overflow);
-    OPENVPN_EXCEPTION(polarssl_external_pki);
-
     enum {
       MAX_CIPHERTEXT_IN = 64 // maximum number of queued input ciphertext packets
     };
 
     // The data needed to construct a PolarSSLContext.
-    struct Config
+    class Config : public SSLConfigAPI
     {
+      friend class PolarSSLContext;
+
+    public:
+      typedef boost::intrusive_ptr<Config> Ptr;
+
       Config() : external_pki(NULL),
 		 ssl_debug_level(0),
 		 flags(0),
@@ -104,60 +96,54 @@ namespace openvpn {
 		 enable_renegotiation(false),
                  force_aes_cbc_ciphersuites(false) {}
 
-      Mode mode;
-      PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
-      PolarSSLPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
-      PolarSSLPKI::X509CRL::Ptr crl_chain;   // CRL chain for remote verification
-      PolarSSLPKI::PKContext::Ptr priv_key;  // private key
-      std::string priv_key_pwd;              // private key password
-      PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters (only needed in server mode)
-      ExternalPKIBase* external_pki;
-      Frame::Ptr frame;
-      int ssl_debug_level;
-      unsigned int flags;           // defined in sslconsts.hpp
-      NSCert::Type ns_cert_type;
-      std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
-      std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
-      std::string tls_remote;
-      TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
-      bool local_cert_enabled;
-      bool enable_renegotiation;
-      bool force_aes_cbc_ciphersuites;
-      RandomAPI::Ptr rng;   // random data source
+      virtual SSLFactoryAPI::Ptr new_factory()
+      {
+	return SSLFactoryAPI::Ptr(new PolarSSLContext(this));
+      }
+
+      virtual void set_mode(const Mode& mode_arg)
+      {
+	mode = mode_arg;
+      }
+
+      virtual const Mode& get_mode() const
+      {
+	return mode;
+      }
 
       // if this callback is defined, no private key needs to be loaded
-      void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
+      virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
       {
 	external_pki = external_pki_arg;
       }
 
-      void set_private_key_password(const std::string& pwd)
+      virtual void set_private_key_password(const std::string& pwd)
       {
 	priv_key_pwd = pwd;
       }
 
-      void load_ca(const std::string& ca_txt, bool strict=true)
+      virtual void load_ca(const std::string& ca_txt, bool strict)
       {
 	PolarSSLPKI::X509Cert::Ptr c = new PolarSSLPKI::X509Cert();
 	c->parse(ca_txt, "ca", strict);
 	ca_chain = c;
       }
 
-      void load_crl(const std::string& crl_txt)
+      virtual void load_crl(const std::string& crl_txt)
       {
 	PolarSSLPKI::X509CRL::Ptr c = new PolarSSLPKI::X509CRL();
 	c->parse(crl_txt);
 	crl_chain = c;
       }
 
-      void load_cert(const std::string& cert_txt)
+      virtual void load_cert(const std::string& cert_txt)
       {
 	PolarSSLPKI::X509Cert::Ptr c = new PolarSSLPKI::X509Cert();
 	c->parse(cert_txt, "cert", true);
 	crt_chain = c;
       }
 
-      void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt)
+      virtual void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt)
       {
 	PolarSSLPKI::X509Cert::Ptr c = new PolarSSLPKI::X509Cert();
 	c->parse(cert_txt, "cert", true);
@@ -166,21 +152,76 @@ namespace openvpn {
 	crt_chain = c;
       }
 
-      void load_private_key(const std::string& key_txt)
+      virtual void load_private_key(const std::string& key_txt)
       {
 	PolarSSLPKI::PKContext::Ptr p = new PolarSSLPKI::PKContext();
 	p->parse(key_txt, "config", priv_key_pwd);
 	priv_key = p;
       }
 
-      void load_dh(const std::string& dh_txt)
+      virtual void load_dh(const std::string& dh_txt)
       {
 	PolarSSLPKI::DH::Ptr mydh = new PolarSSLPKI::DH();
 	mydh->parse(dh_txt, "server-config");
 	dh = mydh;
       }
 
-      void load(const OptionList& opt)
+      virtual void set_frame(const Frame::Ptr& frame_arg)
+      {
+	frame = frame_arg;
+      }
+
+      virtual void set_debug_level(const int debug_level)
+      {
+	ssl_debug_level = debug_level;
+      }
+
+      virtual void set_flags(const unsigned int flags_arg)
+      {
+	flags = flags_arg;
+      }
+
+      virtual void set_ns_cert_type(const NSCert::Type ns_cert_type_arg)
+      {
+	ns_cert_type = ns_cert_type_arg;
+      }
+
+      virtual void set_remote_cert_tls(const KUParse::TLSWebType wt)
+      {
+	KUParse::remote_cert_tls(wt, ku, eku);
+      }
+
+      virtual void set_tls_remote(const std::string& tls_remote_arg)
+      {
+	tls_remote = tls_remote_arg;
+      }
+
+      virtual void set_tls_version_min(const TLSVersion::Type tvm)
+      {
+	tls_version_min = tvm;
+      }
+
+      virtual void set_local_cert_enabled(const bool v)
+      {
+	local_cert_enabled = v;
+      }
+
+      virtual void set_enable_renegotiation(const bool v)
+      {
+	enable_renegotiation = v;
+      }
+
+      virtual void set_force_aes_cbc_ciphersuites(const bool v)
+      {
+	force_aes_cbc_ciphersuites = v;
+      }
+
+      virtual void set_rng(const RandomAPI::Ptr& rng_arg)
+      {
+	rng = rng_arg;
+      }
+
+      virtual void load(const OptionList& opt)
       {
 	// client/server
 	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
@@ -188,7 +229,7 @@ namespace openvpn {
 	// ca
 	{
 	  const std::string ca_txt = opt.cat("ca");
-	  load_ca(ca_txt);
+	  load_ca(ca_txt, true);
 	}
 
 	// CRL
@@ -250,6 +291,28 @@ namespace openvpn {
 	{
 	}
       }
+
+    private:
+      Mode mode;
+      PolarSSLPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
+      PolarSSLPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
+      PolarSSLPKI::X509CRL::Ptr crl_chain;   // CRL chain for remote verification
+      PolarSSLPKI::PKContext::Ptr priv_key;  // private key
+      std::string priv_key_pwd;              // private key password
+      PolarSSLPKI::DH::Ptr dh;               // diffie-hellman parameters (only needed in server mode)
+      ExternalPKIBase* external_pki;
+      Frame::Ptr frame;
+      int ssl_debug_level;
+      unsigned int flags;           // defined in sslconsts.hpp
+      NSCert::Type ns_cert_type;
+      std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
+      std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
+      std::string tls_remote;
+      TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
+      bool local_cert_enabled;
+      bool enable_renegotiation;
+      bool force_aes_cbc_ciphersuites;
+      RandomAPI::Ptr rng;   // random data source
     };
 
     // Represents an actual SSL session.
@@ -362,7 +425,7 @@ namespace openvpn {
       {
 	clear();
 	try {
-	  const Config& c = ctx->config;
+	  const Config& c = *ctx->config;
 	  int status;
 
 	  // set pointer back to parent
@@ -535,7 +598,7 @@ namespace openvpn {
       static void dbg_callback(void *arg, int level, const char *text)
       {
 	PolarSSLContext *self = (PolarSSLContext *)arg;
-	if (level <= self->config.ssl_debug_level)
+	if (level <= self->config->ssl_debug_level)
 	  OPENVPN_LOG_NTNL("PolarSSL[" << level << "]: " << text);
       }
 
@@ -566,18 +629,6 @@ namespace openvpn {
 
     /////// start of main class implementation
 
-    explicit PolarSSLContext(const Config& config_arg)
-    {
-      config = config_arg;
-
-      if (config.local_cert_enabled)
-	{
-	  // Verify that cert is defined
-	  if (!config.crt_chain)
-	    throw PolarSSLException("cert is undefined");
-	}
-    }
-
     // create a new SSL instance
     virtual SSLAPI::Ptr ssl()
     {
@@ -592,7 +643,7 @@ namespace openvpn {
 
     virtual const Mode& mode() const
     {
-      return config.mode;
+      return config->mode;
     }
  
     ~PolarSSLContext()
@@ -601,23 +652,34 @@ namespace openvpn {
     }
 
   private:
+    PolarSSLContext(Config* config_arg)
+      : config(config_arg)
+    {
+      if (config->local_cert_enabled)
+	{
+	  // Verify that cert is defined
+	  if (!config->crt_chain)
+	    throw PolarSSLException("cert is undefined");
+	}
+    }
+
     size_t key_len() const
     {
-      return pk_get_size(&config.crt_chain->get()->pk) / 8;
+      return pk_get_size(&config->crt_chain->get()->pk) / 8;
     }
 
     // ns-cert-type verification
 
     bool ns_cert_type_defined() const
     {
-      return config.ns_cert_type != NSCert::NONE;
+      return config->ns_cert_type != NSCert::NONE;
     }
 
     bool verify_ns_cert_type(const x509_crt *cert) const
     {
-      if (config.ns_cert_type == NSCert::SERVER)
+      if (config->ns_cert_type == NSCert::SERVER)
 	return bool(cert->ns_cert_type & NS_CERT_TYPE_SSL_SERVER);
-      else if (config.ns_cert_type == NSCert::CLIENT)
+      else if (config->ns_cert_type == NSCert::CLIENT)
 	return bool(cert->ns_cert_type & NS_CERT_TYPE_SSL_CLIENT);
       else
 	return false;
@@ -627,7 +689,7 @@ namespace openvpn {
 
     bool x509_cert_ku_defined() const
     {
-      return config.ku.size() > 0;
+      return config->ku.size() > 0;
     }
 
     bool verify_x509_cert_ku(const x509_crt *cert)
@@ -635,7 +697,7 @@ namespace openvpn {
       if (cert->ext_types & EXT_KEY_USAGE)
 	{
 	  const unsigned int ku = cert->key_usage;
-	  for (std::vector<unsigned int>::const_iterator i = config.ku.begin(); i != config.ku.end(); ++i)
+	  for (std::vector<unsigned int>::const_iterator i = config->ku.begin(); i != config->ku.end(); ++i)
 	    {
 	      if (ku == *i)
 		return true;
@@ -648,7 +710,7 @@ namespace openvpn {
 
     bool x509_cert_eku_defined() const
     {
-      return !config.eku.empty();
+      return !config->eku.empty();
     }
 
     bool verify_x509_cert_eku(x509_crt *cert)
@@ -663,7 +725,7 @@ namespace openvpn {
 	      // first compare against description
 	      {
 		const char *oid_str = x509_oid_get_description(oid);
-		if (oid_str && config.eku == oid_str)
+		if (oid_str && config->eku == oid_str)
 		  return true;
 	      }
 
@@ -671,7 +733,7 @@ namespace openvpn {
 	      {
 		char oid_num_str[256];
 		const int status = x509_oid_get_numeric_string(oid_num_str, sizeof(oid_num_str), oid);
-		if (status >= 0 && config.eku == oid_num_str)
+		if (status >= 0 && config->eku == oid_num_str)
 		  return true;
 	      }
 	      oid_seq = oid_seq->next;
@@ -773,7 +835,7 @@ namespace openvpn {
       bool fail = false;
 
       // log status
-      if (self->config.flags & SSLConst::LOG_VERIFY_STATUS)
+      if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
 	OPENVPN_LOG_SSL(status_string(cert, depth, flags));
 
       // leaf-cert verification
@@ -801,12 +863,12 @@ namespace openvpn {
 	    }
 
 	  // verify tls-remote
-	  if (!self->config.tls_remote.empty())
+	  if (!self->config->tls_remote.empty())
 	    {
 	      const std::string subject = TLSRemote::sanitize_x509_name(x509_get_subject(cert));
 	      const std::string common_name = TLSRemote::sanitize_common_name(x509_get_common_name(cert));
-	      TLSRemote::log(self->config.tls_remote, subject, common_name);
-	      if (!TLSRemote::test(self->config.tls_remote, subject, common_name))
+	      TLSRemote::log(self->config->tls_remote, subject, common_name);
+	      if (!TLSRemote::test(self->config->tls_remote, subject, common_name))
 		{
 		  OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
 		  fail = true;
@@ -965,9 +1027,9 @@ namespace openvpn {
 
 	    /* get signature */
 	    std::string sig_b64;
-	    const bool status = self->config.external_pki->sign("RSA_RAW", from_b64, sig_b64);
+	    const bool status = self->config->external_pki->sign("RSA_RAW", from_b64, sig_b64);
 	    if (!status)
-	      throw polarssl_external_pki("could not obtain signature");
+	      throw ssl_external_pki("PolarSSL: could not obtain signature");
 
 	    /* decode base64 signature to binary */
 	    const size_t len = self->key_len();
@@ -976,7 +1038,7 @@ namespace openvpn {
 
 	    /* verify length */
 	    if (sigbuf.size() != len)
-	      throw polarssl_external_pki("incorrect signature length");
+	      throw ssl_external_pki("PolarSSL: incorrect signature length");
 
 	    /* success */
 	    return 0;
@@ -1001,7 +1063,7 @@ namespace openvpn {
       return self->key_len();
     }
 
-    Config config;
+    Config::Ptr config;
   };
 
 } // namespace openvpn

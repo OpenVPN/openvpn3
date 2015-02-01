@@ -21,6 +21,7 @@
 
 // Wrap the Apple SSL API as defined in <Security/SecureTransport.h>
 // so that it can be used as the SSL layer by the OpenVPN core.
+// NOTE: not used in production code.
 
 // Note that the Apple SSL API is missing some functionality (as of
 // Mac OS X 10.8) that makes it difficult to use as a drop in replacement
@@ -65,9 +66,6 @@ namespace openvpn {
   class AppleSSLContext : public SSLFactoryAPI
   {
   public:
-    OPENVPN_EXCEPTION(ssl_context_error);
-    OPENVPN_EXCEPTION(ssl_ciphertext_in_overflow);
-
     typedef boost::intrusive_ptr<AppleSSLContext> Ptr;
 
     enum {
@@ -75,27 +73,43 @@ namespace openvpn {
     };
 
     // The data needed to construct an AppleSSLContext.
-    struct Config
+    class Config : public SSLConfigAPI
     {
-      Config() : ssl_debug_level(0),
-		 flags(0),
-		 tls_version_min(TLSVersion::UNDEF) {}
+      friend class AppleSSLContext;
 
-      Mode mode;
-      int ssl_debug_level;
-      unsigned int flags; // defined in sslconsts.hpp
-      CF::Array identity; // as returned by load_identity
-      TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate (fixme -- not implemented)
-      Frame::Ptr frame;
+    public:
+      typedef boost::intrusive_ptr<Config> Ptr;
+
+      Config() {}
 
       void load_identity(const std::string& subject_match)
       {
 	identity = load_identity_(subject_match);
 	if (!identity())
-	  OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity '" << subject_match << "' undefined");	
+	  OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity '" << subject_match << "' undefined");
       }
 
-      void load(const OptionList& opt)
+      virtual SSLFactoryAPI::Ptr new_factory()
+      {
+	return SSLFactoryAPI::Ptr(new AppleSSLContext(this));
+      }
+
+      virtual void set_mode(const Mode& mode_arg)
+      {
+	mode = mode_arg;
+      }
+
+      virtual const Mode& get_mode() const
+      {
+	return mode;
+      }
+
+      virtual void set_frame(const Frame::Ptr& frame_arg)
+      {
+	frame = frame_arg;
+      }
+
+      virtual void load(const OptionList& opt)
       {
 	// client/server
 	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
@@ -107,9 +121,105 @@ namespace openvpn {
 	}
       }
 
-      void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
+      virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
       {
+	not_implemented("set_external_pki_callback");
       }
+
+      virtual void set_private_key_password(const std::string& pwd)
+      {
+	return not_implemented("set_private_key_password");
+      }
+
+      virtual void load_ca(const std::string& ca_txt, bool strict)
+      {
+	return not_implemented("load_ca");
+      }
+
+      virtual void load_crl(const std::string& crl_txt)
+      {
+	return not_implemented("load_crl");
+      }
+
+      virtual void load_cert(const std::string& cert_txt)
+      {
+	return not_implemented("load_cert");
+      }
+
+      virtual void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt)
+      {
+	return not_implemented("load_cert");
+      }
+
+      virtual void load_private_key(const std::string& key_txt)
+      {
+	return not_implemented("load_private_key");
+      }
+
+      virtual void load_dh(const std::string& dh_txt)
+      {
+	return not_implemented("load_dh");
+      }
+
+      virtual void set_debug_level(const int debug_level)
+      {
+	return not_implemented("set_debug_level");
+      }
+
+      virtual void set_flags(const unsigned int flags_arg)
+      {
+	return not_implemented("set_flags");
+      }
+
+      virtual void set_ns_cert_type(const NSCert::Type ns_cert_type_arg)
+      {
+	return not_implemented("set_ns_cert_type");
+      }
+
+      virtual void set_remote_cert_tls(const KUParse::TLSWebType wt)
+      {
+	return not_implemented("set_remote_cert_tls");
+      }
+
+      virtual void set_tls_remote(const std::string& tls_remote_arg)
+      {
+	return not_implemented("set_tls_remote");
+      }
+
+      virtual void set_tls_version_min(const TLSVersion::Type tvm)
+      {
+	return not_implemented("set_tls_version_min");
+      }
+
+      virtual void set_local_cert_enabled(const bool v)
+      {
+	return not_implemented("set_local_cert_enabled");
+      }
+
+      virtual void set_enable_renegotiation(const bool v)
+      {
+	return not_implemented("set_enable_renegotiation");
+      }
+
+      virtual void set_force_aes_cbc_ciphersuites(const bool v)
+      {
+	return not_implemented("set_force_aes_cbc_ciphersuites");
+      }
+
+      virtual void set_rng(const RandomAPI::Ptr& rng_arg)
+      {
+	return not_implemented("set_rng");
+      }
+
+    private:
+      void not_implemented(const char *funcname)
+      {
+	OPENVPN_LOG("AppleSSL: " << funcname << " not implemented");
+      }
+
+      Mode mode;
+      CF::Array identity; // as returned by load_identity
+      Frame::Ptr frame;
     };
 
     // Represents an actual SSL session.
@@ -188,6 +298,11 @@ namespace openvpn {
       virtual std::string ssl_handshake_details() const // fixme -- code me
       {
 	return "[AppleSSL not implemented]";
+      }
+
+      virtual const AuthCert::Ptr& auth_cert() const
+      {
+	OPENVPN_THROW(ssl_context_error, "AppleSSL::SSL: auth_cert() not implemented");
       }
 
       ~SSL()
@@ -320,13 +435,6 @@ namespace openvpn {
 
     /////// start of main class implementation
 
-    explicit AppleSSLContext(const Config& config)
-      : config_(config)
-    {
-      if (!config_.identity())
-	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");	
-    }
-
     // create a new SSL instance
     virtual SSLAPI::Ptr ssl()
     {
@@ -341,12 +449,19 @@ namespace openvpn {
 
     virtual const Mode& mode() const
     {
-      return config_.mode;
+      return config_->mode;
     }
 
   private:
-    const Frame::Ptr& frame() const { return config_.frame; }
-    const CF::Array& identity() const { return config_.identity; }
+    AppleSSLContext(Config* config)
+      : config_(config)
+    {
+      if (!config_->identity())
+	OPENVPN_THROW(ssl_context_error, "AppleSSLContext: identity undefined");
+    }
+
+    const Frame::Ptr& frame() const { return config_->frame; }
+    const CF::Array& identity() const { return config_->identity; }
 
     // load an identity from keychain, return as an array that can
     // be passed to SSLSetCertificate
@@ -367,7 +482,7 @@ namespace openvpn {
 	return CF::Array(); // not found
     }
 
-    Config config_;
+    Config::Ptr config_;
   };
 
   typedef AppleSSLContext::Ptr AppleSSLContextPtr;

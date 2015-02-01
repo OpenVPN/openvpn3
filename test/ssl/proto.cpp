@@ -166,6 +166,7 @@
 #undef KU_KEY_CERT_SIGN
 #undef KU_CRL_SIGN
 #undef SSL_VERIFY_NONE
+#undef SHA_DIGEST_LENGTH
 #endif
 
 #if defined(USE_APPLE_SSL) || defined(USE_POLARSSL_APPLE_HYBRID)
@@ -515,7 +516,8 @@ public:
 private:
   virtual void server_auth(const std::string& username,
 			   const SafeString& password,
-			   const std::string& peer_info)
+			   const std::string& peer_info,
+			   const AuthCert::Ptr& auth_cert)
   {
 #ifdef VERBOSE
     std::cout << "**** AUTHENTICATE " << username << '/' << password << " PEER INFO:" << std::endl;
@@ -766,26 +768,24 @@ int test(const int thread_num)
     const std::string tls_auth_key = read_text("tls-auth.key");
 
     // client config
-    ClientSSLAPI::Config cc;
-    cc.mode = Mode(Mode::CLIENT);
-    cc.frame = frame;
+    ClientSSLAPI::Config::Ptr cc(new ClientSSLAPI::Config());
+    cc->set_mode(Mode(Mode::CLIENT));
+    cc->set_frame(frame);
 #ifdef FORCE_AES_CBC
-    cc.force_aes_cbc_ciphersuites = true;
+    cc->set_force_aes_cbc_ciphersuites(true);
 #endif
 #ifdef USE_APPLE_SSL
-    cc.load_identity("etest");
+    cc->load_identity("etest");
 #else
-    cc.load_ca(ca_crt);
-    cc.load_cert(client_crt);
-    cc.load_private_key(client_key);
+    cc->load_ca(ca_crt, true);
+    cc->load_cert(client_crt);
+    cc->load_private_key(client_key);
 #endif
-    cc.tls_version_min = TLS_VER_MIN;
+    cc->set_tls_version_min(TLS_VER_MIN);
 #ifdef VERBOSE
-    cc.ssl_debug_level = 1;
+    cc->set_debug_level(1);
 #endif
-#if defined(USE_POLARSSL)
-    cc.rng = rng_cli;
-#endif
+    cc->set_rng(rng_cli);
 
     // stats
     MySessionStats::Ptr cli_stats(new MySessionStats);
@@ -794,7 +794,7 @@ int test(const int thread_num)
     // client ProtoContext config
     typedef ProtoContext ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
-    cp->ssl_factory.reset(new ClientSSLAPI(cc));
+    cp->ssl_factory = cc->new_factory();
     cp->dc.set_factory(new CryptoDCSelect<ClientCryptoAPI>(frame, cli_stats, prng_cli));
     cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ClientCryptoAPI>());
     cp->frame = frame;
@@ -845,25 +845,23 @@ int test(const int thread_num)
 #endif
 
     // server config
-    ServerSSLAPI::Config sc;
-    sc.mode = Mode(Mode::SERVER);
-    sc.frame = frame;
-    sc.load_ca(ca_crt);
-    sc.load_cert(server_crt);
-    sc.load_private_key(server_key);
-    sc.load_dh(dh_pem);
-    sc.tls_version_min = TLS_VER_MIN;
-#if defined(USE_POLARSSL_SERVER)
-    sc.rng = rng_serv;
-#endif
+    ClientSSLAPI::Config::Ptr sc(new ClientSSLAPI::Config());
+    sc->set_mode(Mode(Mode::SERVER));
+    sc->set_frame(frame);
+    sc->load_ca(ca_crt, true);
+    sc->load_cert(server_crt);
+    sc->load_private_key(server_key);
+    sc->load_dh(dh_pem);
+    sc->set_tls_version_min(TLS_VER_MIN);
+    sc->set_rng(rng_serv);
 #ifdef VERBOSE
-    sc.ssl_debug_level = 1;
+    sc->set_debug_level(1);
 #endif
 
     // server ProtoContext config
     typedef ProtoContext ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
-    sp->ssl_factory.reset(new ServerSSLAPI(sc));
+    sp->ssl_factory = sc->new_factory();
     sp->dc.set_factory(new CryptoDCSelect<ServerCryptoAPI>(frame, serv_stats, prng_serv));
     sp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ServerCryptoAPI>());
     sp->frame = frame;

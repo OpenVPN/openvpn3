@@ -157,23 +157,19 @@ namespace openvpn {
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
 
       // client SSL config
-      SSLLib::SSLAPI::Config cc;
-      cc.set_external_pki_callback(config.external_pki);
-      cc.frame = frame;
-      cc.flags = SSLConst::LOG_VERIFY_STATUS;
+      SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
+      cc->set_external_pki_callback(config.external_pki);
+      cc->set_frame(frame);
+      cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
 #ifdef OPENVPN_SSL_DEBUG
-      cc.ssl_debug_level = OPENVPN_SSL_DEBUG;
+      cc->set_debug_level(OPENVPN_SSL_DEBUG);
 #endif
-#if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
-      cc.rng = rng;
-#endif
-#if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID) || defined(USE_OPENSSL)
-      cc.local_cert_enabled = (pcc.clientCertEnabled() && !config.disable_client_cert);
-      cc.set_private_key_password(config.private_key_password);
-      cc.force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites;
-#endif
-      cc.load(opt);
-      if (!cc.mode.is_client())
+      cc->set_rng(rng);
+      cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
+      cc->set_private_key_password(config.private_key_password);
+      cc->set_force_aes_cbc_ciphersuites(config.force_aes_cbc_ciphersuites);
+      cc->load(opt);
+      if (!cc->get_mode().is_client())
 	throw option_error("only client configuration supported");
 
       // client ProtoContext config
@@ -182,7 +178,7 @@ namespace openvpn {
       cp->dc_deferred = true; // defer data channel setup until after options pull
       cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
-      cp->ssl_factory.reset(new SSLLib::SSLAPI(cc));
+      cp->ssl_factory = cc->new_factory();
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->gui_version = config.gui_version;
