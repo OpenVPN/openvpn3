@@ -38,7 +38,6 @@
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/http/reply.hpp>
 #include <openvpn/http/status.hpp>
-#include <openvpn/ws/sslbase.hpp>
 
 namespace openvpn {
   namespace WS {
@@ -72,7 +71,7 @@ namespace openvpn {
 		   max_header_bytes(0),
 		   max_content_bytes(0) {}
 
-	SSL::Context::Ptr ssl_ctx;
+	SSLFactoryAPI::Ptr ssl_factory;
 	std::string user_agent;
 	unsigned int connect_timeout;
 	unsigned int general_timeout;
@@ -408,10 +407,10 @@ namespace openvpn {
 	      {
 		host = http_host();
 		if (host.port.empty())
-		  host.port = config->ssl_ctx ? "443" : "80";
+		  host.port = config->ssl_factory ? "443" : "80";
 
-		if (config->ssl_ctx)
-		  ssl_sess = config->ssl_ctx->new_session(host.host);
+		if (config->ssl_factory)
+		  ssl_sess = config->ssl_factory->ssl(host.host);
 
 		if (config->connect_timeout)
 		  {
@@ -871,7 +870,7 @@ namespace openvpn {
 	boost::asio::ip::tcp::socket socket;
 	boost::asio::ip::tcp::resolver resolver;
 
-	SSL::Session::Ptr ssl_sess;
+	SSLAPI::Ptr ssl_sess;
 
 	Host host;
 	ContentInfo content_info;
