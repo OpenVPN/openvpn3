@@ -727,7 +727,7 @@ namespace openvpn {
 	  if (ssl23)
 	    {
 	      sslopt |= SSL_OP_NO_SSLv2;
-	      if (!config->force_aes_cbc_ciphersuites)
+	      if (!config->force_aes_cbc_ciphersuites || config->tls_version_min > TLSVersion::UNDEF)
 	        {
 		  sslopt |= SSL_OP_NO_SSLv3;
 		  if (config->tls_version_min > TLSVersion::V1_0)

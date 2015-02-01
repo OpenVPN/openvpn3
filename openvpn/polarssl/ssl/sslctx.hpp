@@ -449,7 +449,7 @@ namespace openvpn {
 	    throw PolarSSLException("unknown client/server mode");
 
 	  // set minimum TLS version
-	  if (!c.force_aes_cbc_ciphersuites)
+	  if (!c.force_aes_cbc_ciphersuites || c.tls_version_min > TLSVersion::UNDEF)
 	    {
 	      int polar_major;
 	      int polar_minor;
