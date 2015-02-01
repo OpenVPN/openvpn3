@@ -66,6 +66,10 @@
 // OpenSSLContext is an SSL Context implementation that uses the
 // OpenSSL library as a backend.
 
+extern "C" {
+  int ssl_undefined_const_function(const ::SSL *s);
+};
+
 namespace openvpn {
 
   // Represents an SSL configuration that can be used
@@ -270,7 +274,9 @@ namespace openvpn {
 
       virtual bool read_cleartext_ready() const
       {
-	return !bmq_stream::memq_from_bio(ct_in)->empty() || SSL_pending(ssl) > 0;
+	return !bmq_stream::memq_from_bio(ct_in)->empty()
+	  || (ssl->method->ssl_pending != ssl_undefined_const_function
+	      && SSL_pending(ssl) > 0);
       }
 
       virtual void write_ciphertext(const BufferPtr& buf)
