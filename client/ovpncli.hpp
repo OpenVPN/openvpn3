@@ -151,7 +151,8 @@ namespace openvpn {
       Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false),
 		 disableClientCert(false), defaultKeyDirection(-1),
 		 forceAesCbcCiphersuites(false),
-		 proxyAllowCleartextAuth(false) {}
+		 proxyAllowCleartextAuth(false),
+		 altProxy(false) {}
 
       // OpenVPN profile as a string
       std::string content;
@@ -219,6 +220,9 @@ namespace openvpn {
       std::string proxyUsername;     // proxy credentials (optional)
       std::string proxyPassword;     // proxy credentials (optional)
       bool proxyAllowCleartextAuth;  // enables HTTP Basic auth
+
+      // Custom proxy implementation
+      bool altProxy;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

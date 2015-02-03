@@ -55,6 +55,23 @@ namespace openvpn {
 
   class RemoteList : public RC<thread_unsafe_refcount>
   {
+    // Directive names that we search for in options
+    struct Directives
+    {
+      void init(const std::string& prefix)
+      {
+	connection = prefix + "connection";
+	remote = prefix + "remote";
+	proto = prefix + "proto";
+	port = prefix + "port";
+      }
+
+      std::string connection;
+      std::string remote;
+      std::string proto;
+      std::string port;
+    };
+
     // A single IP address that is part of a list of IP addresses
     // associated with a "remote" item.
     struct ResolvedAddr : public RC<thread_unsafe_refcount>
@@ -339,12 +356,18 @@ namespace openvpn {
       size_t index;
     };
 
+    static bool directives_defined(const OptionList& opt, const std::string& directive_prefix)
+    {
+      Directives d;
+      d.init(directive_prefix);
+      return opt.get_index_ptr(d.connection) || opt.get_index_ptr(d.remote);
+    }
+
     // create an empty remote list
     RemoteList()
     {
-      init();
+      init("");
     }
-
 
     // create a remote list with exactly one item
     RemoteList(const std::string& server_host,
@@ -352,7 +375,7 @@ namespace openvpn {
 	       const Protocol& transport_protocol,
 	       const std::string& title)
     {
-      init();
+      init("");
 
       validate_port(server_port, title);
 
@@ -364,9 +387,9 @@ namespace openvpn {
     }
 
     // create a remote list from config file option list
-    RemoteList(const OptionList& opt, bool warn)
+    RemoteList(const OptionList& opt, const std::string& directive_prefix, const bool warn)
     {
-      init();
+      init(directive_prefix);
 
       // handle remote, port, and proto at the top-level
       Protocol default_proto(Protocol::UDPv4);
@@ -376,7 +399,7 @@ namespace openvpn {
       // cycle through <connection> blocks
       {
 	const size_t max_conn_block_size = 4096;
-	const OptionList::IndexList* conn = opt.get_index_ptr("connection");
+	const OptionList::IndexList* conn = opt.get_index_ptr(directives.connection);
 	if (conn)
 	  {
 	    for (OptionList::IndexList::const_iterator i = conn->begin(); i != conn->end(); ++i)
@@ -427,6 +450,11 @@ namespace openvpn {
       enable_cache = enable_cache_arg;
     }
 
+    bool get_enable_cache() const
+    {
+      return enable_cache;
+    }
+
     // override all server hosts to server_override
     void set_server_override(const std::string& server_override)
     {
@@ -466,17 +494,17 @@ namespace openvpn {
     }
 
     // Higher-level version of set_proto_override that also supports indication
-    // on whether or not HTTP proxy is enabled.  Should be called after set_enable_cache
+    // on whether or not TCP-based proxies are enabled.  Should be called after set_enable_cache
     // because it may modify enable_cache flag.
-    void handle_proto_override(const Protocol& proto_override, const bool http_proxy_enabled)
+    void handle_proto_override(const Protocol& proto_override, const bool tcp_proxy_enabled)
     {
-      if (http_proxy_enabled)
+      if (tcp_proxy_enabled)
 	{
 	  const Protocol tcp(Protocol::TCP);
 	  if (contains_protocol(tcp))
 	      set_proto_override(tcp);
 	  else
-	    throw option_error("cannot connect via HTTP proxy because no TCP server entries exist in profile");
+	    throw option_error("cannot connect via TCP-based proxy because no TCP server entries exist in profile");
 	}
       else if (proto_override.defined() && contains_protocol(proto_override))
 	set_proto_override(proto_override);
@@ -589,9 +617,10 @@ namespace openvpn {
 
   private:
     // initialization, called by constructors
-    void init()
+    void init(const std::string& directive_prefix)
     {
       enable_cache = false;
+      directives.init(directive_prefix);
     }
 
     // reset the cache associated with all items
@@ -702,24 +731,24 @@ namespace openvpn {
     {
       // parse "proto" option if present
       {
-	const Option* o = opt.get_ptr("proto");
+	const Option* o = opt.get_ptr(directives.proto);
 	if (o)
 	  default_proto = Protocol::parse(o->get(1, 16), true);
       }
 
       // parse "port" option if present
       {
-	const Option* o = opt.get_ptr("port");
+	const Option* o = opt.get_ptr(directives.port);
 	if (o)
 	  {
 	    default_port = o->get(1, 16);
-	    validate_port(default_port, "port");
+	    validate_port(default_port, directives.port);
 	  }
       }
 
       // cycle through remote entries
       {
-	const OptionList::IndexList* rem = opt.get_index_ptr("remote");
+	const OptionList::IndexList* rem = opt.get_index_ptr(directives.remote);
 	if (rem)
 	  {
 	    for (OptionList::IndexList::const_iterator i = rem->begin(); i != rem->end(); ++i)
@@ -731,7 +760,7 @@ namespace openvpn {
 		if (o.size() >= 3)
 		  {
 		    e->server_port = o.get(2, 16);
-		    validate_port(e->server_port, "port");
+		    validate_port(e->server_port, directives.port);
 		  }
 		else
 		  e->server_port = default_port;
@@ -755,6 +784,8 @@ namespace openvpn {
     Index index;
 
     std::vector<Item::Ptr> list;
+
+    Directives directives;
   };
 
 }

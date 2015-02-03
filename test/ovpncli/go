@@ -1,15 +1,15 @@
 #!/bin/bash
-[ "$NULL" = "1" ] && export GCC_EXTRA="-DOPENVPN_FORCE_TUN_NULL -DTUN_NULL_EXIT"
+[ "$NULL" = "1" ] && export GCC_EXTRA="$GCC_EXTRA -DOPENVPN_FORCE_TUN_NULL -DTUN_NULL_EXIT"
 if [ "$(uname)" == "Darwin" ]; then
     cd $O3/core
     . vars/vars-osx64
     . vars/setpath
     cd test/ovpncli
-    PSSL=1 SNAP=1 LZ4=1 build cli 2>&1
+    PSSL=1 SNAP=1 LZ4=1 PTPROXY=1 build cli 2>&1
 else
     cd $O3/core
     . vars/vars-linux
     . vars/setpath
     cd test/ovpncli
-    PSSL=1 SNAP=1 LZ4=1 NOSSL=1 build cli 2>&1
+    PSSL=1 SNAP=1 LZ4=1 NOSSL=1 PTPROXY=1 build cli 2>&1
 fi

@@ -25,6 +25,7 @@
 #define OPENVPN_TRANSPORT_TCPLINK_H
 
 #include <deque>
+#include <utility> // for std::move
 
 #include <boost/asio.hpp>
 
@@ -36,6 +37,7 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/transport/pktstream.hpp>
+#include <openvpn/transport/mutate.hpp>
 
 #if defined(OPENVPN_DEBUG_TCPLINK) && OPENVPN_DEBUG_TCPLINK >= 1
 #define OPENVPN_LOG_TCPLINK_ERROR(x) OPENVPN_LOG(x)
@@ -105,6 +107,11 @@ namespace openvpn {
 	  return raw_mode;
       }
 
+      void set_mutate(const TransportMutateStream::Ptr& mutate_arg)
+      {
+	mutate = mutate_arg;
+      }
+
       bool send(BufferAllocated& b)
       {
 	if (halt)
@@ -128,8 +135,12 @@ namespace openvpn {
 	  buf.reset(new BufferAllocated());
 	buf->swap(b);
 	if (!is_raw_mode())
-	  PacketStream::prepend_size(*buf);
-	queue.push_back(buf);
+	  {
+	    PacketStream::prepend_size(*buf);
+	    if (mutate)
+	      mutate->pre_send(*buf);
+	  }
+	queue.push_back(std::move(buf));
 	if (queue.size() == 1) // send operation not currently active?
 	  queue_send();
 	return true;
@@ -192,7 +203,7 @@ namespace openvpn {
 		    if (free_list.size() < free_list_max_size)
 		      {
 			buf->reset_content();
-			free_list.push_back(buf); // recycle the buffer for later use
+			free_list.push_back(std::move(buf)); // recycle the buffer for later use
 		      }
 		  }
 		else if (bytes_sent < buf->size())
@@ -242,10 +253,20 @@ namespace openvpn {
 		pfp->buf.set_size(bytes_recvd);
 		if (!is_raw_mode())
 		  {
-		    BufferAllocated pkt;
-		    put_pktstream(pfp->buf, pkt);
-		    if (!pfp->buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
-		      pfp->buf.move(pkt);
+		    try {
+		      BufferAllocated pkt;
+		      put_pktstream(pfp->buf, pkt);
+		      if (!pfp->buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
+			pfp->buf.move(pkt);
+		    }
+		    catch (const std::exception& e)
+		      {
+			OPENVPN_LOG_TCPLINK_ERROR("TCP packet extract error: " << e.what());
+			stats->error(Error::TCP_SIZE_ERROR);
+			read_handler->tcp_error_handler("TCP_SIZE_ERROR");
+			stop();
+			return;
+		      }
 		  }
 		else
 		  read_handler->tcp_read_handler(pfp->buf);
@@ -271,6 +292,8 @@ namespace openvpn {
       {
 	stats->inc_stat(SessionStats::BYTES_IN, buf.size());
 	stats->inc_stat(SessionStats::PACKETS_IN, 1);
+	if (mutate)
+	  mutate->post_recv(buf);
 	while (buf.size())
 	  {
 	    pktstream.put(buf, frame_context);
@@ -293,6 +316,7 @@ namespace openvpn {
       Queue queue;      // send queue
       Queue free_list;  // recycled free buffers for send queue
       PacketStream pktstream;
+      TransportMutateStream::Ptr mutate;
     };
   }
 } // namespace openvpn

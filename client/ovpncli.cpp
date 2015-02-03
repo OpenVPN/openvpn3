@@ -301,7 +301,8 @@ namespace openvpn {
       {
 	ClientState() : conn_timeout(0), tun_persist(false),
 			google_dns_fallback(false), disable_client_cert(false),
-			default_key_direction(-1), force_aes_cbc_ciphersuites(false) {}
+			default_key_direction(-1), force_aes_cbc_ciphersuites(false),
+			alt_proxy(false) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -326,6 +327,7 @@ namespace openvpn {
 	std::string gui_version;
 	ProtoContextOptions::Ptr proto_context_options;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
+	bool alt_proxy;
       };
     };
 
@@ -416,6 +418,7 @@ namespace openvpn {
 	state->default_key_direction = config.defaultKeyDirection;
 	state->force_aes_cbc_ciphersuites = config.forceAesCbcCiphersuites;
 	state->gui_version = config.guiVersion;
+	state->alt_proxy = config.altProxy;
 	if (!config.proxyHost.empty())
 	  {
 	    HTTPProxyTransport::Options::Ptr ho(new HTTPProxyTransport::Options());
@@ -597,6 +600,7 @@ namespace openvpn {
 	cc.google_dns_fallback = state->google_dns_fallback;
 	cc.proto_context_options = state->proto_context_options;
 	cc.http_proxy_options = state->http_proxy_options;
+	cc.alt_proxy = state->alt_proxy;
 	cc.reconnect_notify = &state->reconnect_notify;
 	cc.private_key_password = state->private_key_password;
 	cc.disable_client_cert = state->disable_client_cert;

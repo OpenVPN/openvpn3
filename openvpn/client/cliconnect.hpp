@@ -98,8 +98,9 @@ namespace openvpn {
 	  if (!test_network())
 	    throw ErrorCode(Error::NETWORK_UNAVAILABLE, true, "Network Unavailable");
 
+	  RemoteList::Ptr remote_list = client_options->remote_list_precache();
 	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_service,
-									client_options->remote_list_ptr(),
+									remote_list,
 									client_options->stats_ptr()));
 	  if (preres->work_available())
 	    {

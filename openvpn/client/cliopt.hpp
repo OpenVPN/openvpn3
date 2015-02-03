@@ -43,7 +43,7 @@
 #include <openvpn/transport/client/udpcli.hpp>
 #include <openvpn/transport/client/tcpcli.hpp>
 #include <openvpn/transport/client/httpcli.hpp>
-
+#include <openvpn/transport/altproxy.hpp>
 #include <openvpn/client/cliproto.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/client/optfilt.hpp>
@@ -68,6 +68,10 @@
 #include <openvpn/tun/client/tunnull.hpp>
 #endif
 
+#ifdef PRIVATE_TUNNEL_PROXY
+#include <openvpn/pt/ptproxy.hpp>
+#endif
+
 namespace openvpn {
 
   class ClientOptions : public RC<thread_unsafe_refcount>
@@ -84,6 +88,7 @@ namespace openvpn {
 	socket_protect = NULL;
 	reconnect_notify = NULL;
 	conn_timeout = 0;
+	alt_proxy = false;
 	tun_persist = false;
 	google_dns_fallback = false;
 	disable_client_cert = false;
@@ -102,6 +107,7 @@ namespace openvpn {
       ClientEvent::Queue::Ptr cli_events;
       ProtoContextOptions::Ptr proto_context_options;
       HTTPProxyTransport::Options::Ptr http_proxy_options;
+      bool alt_proxy;
       bool tun_persist;
       bool google_dns_fallback;
       std::string private_key_password;
@@ -141,10 +147,12 @@ namespace openvpn {
       userlocked_username = pcc.userlockedUsername();
       autologin = pcc.autologin();
 
+      // digest factory
+      DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
+
       // initialize RNG/PRNG
       rng.reset(new SSLLib::RandomAPI(false));
 #if ENABLE_PRNG
-      DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
       prng.reset(new PRNG("SHA1", digest_factory, rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
 #else
       prng.reset(new SSLLib::RandomAPI(true));
@@ -188,12 +196,17 @@ namespace openvpn {
       cp->rng = rng;
       cp->prng = prng;
 
+#ifdef PRIVATE_TUNNEL_PROXY
+      if (config.alt_proxy)
+	alt_proxy = PTProxy::new_proxy(opt);
+#endif
+
       // If HTTP proxy parameters are not supplied by API, try to get them from config
       if (!http_proxy_options)
 	http_proxy_options = HTTPProxyTransport::Options::parse(opt);
 
       // load remote list
-      remote_list.reset(new RemoteList(opt, true));
+      remote_list.reset(new RemoteList(opt, "", true));
       if (!remote_list->defined())
 	throw option_error("no remote option specified");
 
@@ -206,7 +219,8 @@ namespace openvpn {
       remote_list->set_server_override(config.server_override);
 
       // process protocol override, should be called after set_enable_cache
-      remote_list->handle_proto_override(config.proto_override, bool(http_proxy_options));
+      remote_list->handle_proto_override(config.proto_override,
+					 http_proxy_options || (alt_proxy && alt_proxy->requires_tcp()));
 
       // process remote-random
       if (opt.exists("remote-random"))
@@ -215,8 +229,13 @@ namespace openvpn {
       // get "float" option
       server_addr_float = opt.exists("float");
 
-      // special remote cache handling for HTTP proxy
-      if (http_proxy_options)
+      // special remote cache handling for proxies
+      if (alt_proxy)
+	{
+	  remote_list->set_enable_cache(false); // remote server addresses will be resolved by proxy
+	  alt_proxy->set_enable_cache(config.tun_persist);
+	}
+      else if (http_proxy_options)
 	{
 	  remote_list->set_enable_cache(false); // remote server addresses will be resolved by proxy
 	  http_proxy_options->proxy_server_set_enable_cache(config.tun_persist);
@@ -349,7 +368,12 @@ namespace openvpn {
 
     void next()
     {
-      remote_list->next();
+      bool omit_next = false;
+
+      if (alt_proxy)
+	omit_next = alt_proxy->next();
+      if (!omit_next)
+	remote_list->next();
       load_transport_config();
     }
 
@@ -410,10 +434,27 @@ namespace openvpn {
     SessionStats& stats() { return *cli_stats; }
     const SessionStats::Ptr& stats_ptr() const { return cli_stats; }
     ClientEvent::Queue& events() { return *cli_events; }
-    const RemoteList::Ptr& remote_list_ptr() const { return remote_list; }
     ClientLifeCycle* lifecycle() { return client_lifecycle.get(); }
 
     int conn_timeout() const { return conn_timeout_; }
+
+    RemoteList::Ptr remote_list_precache() const
+    {
+      RemoteList::Ptr r;
+      if (alt_proxy)
+	{
+	  alt_proxy->precache(r);
+	  if (r)
+	    return r;
+	}
+      if (http_proxy_options)
+	{
+	  http_proxy_options->proxy_server_precache(r);
+	  if (r)
+	    return r;
+	}
+      return remote_list;
+    }
 
     void update_now()
     {
@@ -435,11 +476,26 @@ namespace openvpn {
       // set transport protocol in Client::ProtoConfig
       cp->set_protocol(transport_protocol);
 
+      // If we are connecting over a proxy, and TCP protocol is required, but current
+      // transport protocol is NOT TCP, we will throw an internal error because this
+      // should have been caught earlier in RemoteList::handle_proto_override.
+
       // construct transport object
-      if (http_proxy_options)
+      if (alt_proxy)
 	{
-	  // HTTP proxy always uses TCP.  If current transport protocol is not TCP, this is
-	  // an error that should have been caught earlier in RemoteList::handle_proto_override.
+	  if (alt_proxy->requires_tcp() && !transport_protocol.is_tcp())
+	    throw option_error("internal error: no TCP server entries for " + alt_proxy->name() + " transport");
+	  AltProxy::Config conf;
+	  conf.remote_list = remote_list;
+	  conf.frame = frame;
+	  conf.stats = cli_stats;
+	  conf.digest_factory.reset(new CryptoDigestFactory<SSLLib::CryptoAPI>());
+	  conf.socket_protect = socket_protect;
+	  conf.rng = rng;
+	  transport_factory = alt_proxy->new_transport_client_factory(conf);
+	}
+      else if (http_proxy_options)
+	{
 	  if (!transport_protocol.is_tcp())
 	    throw option_error("internal error: no TCP server entries for HTTP proxy transport");
 
@@ -510,6 +566,7 @@ namespace openvpn {
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;
+    AltProxy::Ptr alt_proxy;
   };
 }
 

@@ -95,6 +95,12 @@ namespace openvpn {
 	proxy_server->set_enable_cache(enable_cache);
       }
 
+      void proxy_server_precache(RemoteList::Ptr& r)
+      {
+	if (proxy_server->get_enable_cache())
+	  r = proxy_server;
+      }
+
       static Ptr parse(const OptionList& opt)
       {
 	if (opt.exists("http-proxy"))

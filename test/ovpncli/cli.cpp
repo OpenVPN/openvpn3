@@ -189,6 +189,7 @@ int main(int argc, char *argv[])
     { "proxy-username", required_argument,  NULL,      'U' },
     { "proxy-password", required_argument,  NULL,      'W' },
     { "proxy-basic",    no_argument,        NULL,      'B' },
+    { "alt-proxy",      no_argument,        NULL,      'A' },
     { "eval",           no_argument,        NULL,      'e' },
     { "self-test",      no_argument,        NULL,      'T' },
     { "cache-password", no_argument,        NULL,      'C' },
@@ -232,10 +233,11 @@ int main(int argc, char *argv[])
 	bool tunPersist = false;
 	bool merge = false;
 	bool version = false;
+	bool altProxy = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BeTCxfgjmvu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -289,6 +291,9 @@ int main(int argc, char *argv[])
 		break;
 	      case 'B':
 		proxyAllowCleartextAuth = true;
+		break;
+	      case 'A':
+		altProxy = true;
 		break;
 	      case 'f':
 		forceAesCbcCiphersuites = true;
@@ -368,6 +373,7 @@ int main(int argc, char *argv[])
 	    config.proxyUsername = proxyUsername;
 	    config.proxyPassword = proxyPassword;
 	    config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
+	    config.altProxy = altProxy;
 	    config.defaultKeyDirection = defaultKeyDirection;
 	    config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 	    config.googleDnsFallback = googleDnsFallback;
