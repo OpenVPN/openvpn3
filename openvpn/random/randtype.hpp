@@ -31,7 +31,7 @@ namespace openvpn {
   inline T rand_type(RandomAPI& rng)
   {
     T ret;
-    rng.rand_bytes((unsigned char *)&ret, sizeof(ret));
+    rng.rand_fill(ret);
     return ret;
   }
 
