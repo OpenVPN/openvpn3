@@ -508,6 +508,7 @@ int main(int argc, char *argv[])
   std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
   std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
   std::cout << "--proxy-basic, -B    : allow HTTP basic auth" << std::endl;
+  std::cout << "--alt-proxy, -A      : enable alternative proxy module" << std::endl;
   std::cout << "--cache-password, -C : cache password" << std::endl;
   std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
   std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
