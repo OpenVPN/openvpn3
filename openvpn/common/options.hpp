@@ -302,9 +302,10 @@ namespace openvpn {
     std::vector<std::string> data;
   };
 
-  class OptionList : public std::vector<Option>
+  class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_refcount>
   {
   public:
+    typedef boost::intrusive_ptr<OptionList> Ptr;
     typedef std::vector<unsigned int> IndexList;
     typedef boost::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
@@ -607,6 +608,14 @@ namespace openvpn {
       OptionList ret;
       ret.parse_from_config(str, lim);
       ret.update_map();
+      return ret;
+    }
+
+    static OptionList::Ptr parse_from_config_static_ptr(const std::string& str, Limits* lim)
+    {
+      OptionList::Ptr ret = new OptionList();
+      ret->parse_from_config(str, lim);
+      ret->update_map();
       return ret;
     }
 
