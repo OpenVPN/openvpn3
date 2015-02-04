@@ -32,6 +32,7 @@
 
 #include <openvpn/error/excode.hpp>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/frame/frame_init.hpp>
@@ -198,7 +199,7 @@ namespace openvpn {
 
 #ifdef PRIVATE_TUNNEL_PROXY
       if (config.alt_proxy)
-	alt_proxy = PTProxy::new_proxy(opt);
+	alt_proxy = PTProxy::new_proxy(opt, *rng);
 #endif
 
       // If HTTP proxy parameters are not supplied by API, try to get them from config
@@ -206,7 +207,7 @@ namespace openvpn {
 	http_proxy_options = HTTPProxyTransport::Options::parse(opt);
 
       // load remote list
-      remote_list.reset(new RemoteList(opt, "", true));
+      remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, NULL));
       if (!remote_list->defined())
 	throw option_error("no remote option specified");
 

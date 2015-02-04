@@ -55,23 +55,6 @@ namespace openvpn {
 
   class RemoteList : public RC<thread_unsafe_refcount>
   {
-    // Directive names that we search for in options
-    struct Directives
-    {
-      void init(const std::string& prefix)
-      {
-	connection = prefix + "connection";
-	remote = prefix + "remote";
-	proto = prefix + "proto";
-	port = prefix + "port";
-      }
-
-      std::string connection;
-      std::string remote;
-      std::string proto;
-      std::string port;
-    };
-
     // A single IP address that is part of a list of IP addresses
     // associated with a "remote" item.
     struct ResolvedAddr : public RC<thread_unsafe_refcount>
@@ -103,6 +86,23 @@ namespace openvpn {
       }
     };
 
+  public:
+    struct Item;
+
+    struct ConnBlock : public RC<thread_unsafe_refcount>
+    {
+      typedef boost::intrusive_ptr<ConnBlock> Ptr;
+
+      virtual void new_item(const Item& item) = 0;
+    };
+
+    struct ConnBlockFactory
+    {
+      typedef boost::intrusive_ptr<ConnBlockFactory> Ptr;
+
+      virtual ConnBlock::Ptr new_conn_block(const OptionList::Ptr& opt) = 0;
+    };
+
     // A single "remote" item
     struct Item : public RC<thread_unsafe_refcount>
     {
@@ -115,6 +115,9 @@ namespace openvpn {
 
       // IP address list defined after server_host is resolved
       ResolvedAddrList::Ptr res_addr_list;
+
+      // Other options if this is a <connection> block
+      ConnBlock::Ptr conn_block;
 
       bool res_addr_list_defined() const
       {
@@ -162,6 +165,24 @@ namespace openvpn {
 	    << " proto=" << transport_protocol.str();
 	return out.str();
       }
+    };
+
+  private:
+    // Directive names that we search for in options
+    struct Directives
+    {
+      void init(const std::string& connection_tag)
+      {
+	connection = connection_tag.length() ? connection_tag : "connection";
+	remote = "remote";
+	proto = "proto";
+	port = "port";
+      }
+
+      std::string connection;
+      std::string remote;
+      std::string proto;
+      std::string port;
     };
 
     // Used to index into remote list.
@@ -356,13 +377,6 @@ namespace openvpn {
       size_t index;
     };
 
-    static bool directives_defined(const OptionList& opt, const std::string& directive_prefix)
-    {
-      Directives d;
-      d.init(directive_prefix);
-      return opt.get_index_ptr(d.connection) || opt.get_index_ptr(d.remote);
-    }
-
     // create an empty remote list
     RemoteList()
     {
@@ -386,15 +400,29 @@ namespace openvpn {
       list.push_back(item);
     }
 
-    // create a remote list from config file option list
-    RemoteList(const OptionList& opt, const std::string& directive_prefix, const bool warn)
-    {
-      init(directive_prefix);
+    // RemoteList flags
+    enum {
+      WARN_UNSUPPORTED=1<<0,
+      CONN_BLOCK_ONLY=1<<1,
+      CONN_BLOCK_OMIT_UNDEF=1<<2,
+      ALLOW_EMPTY=1<<3,
+    };
 
-      // handle remote, port, and proto at the top-level
+    // create a remote list from config file option list
+    RemoteList(const OptionList& opt,
+	       const std::string& connection_tag,
+	       const unsigned int flags,
+	       ConnBlockFactory* conn_block_factory)
+    {
+      init(connection_tag);
+
+      // defaults
       Protocol default_proto(Protocol::UDPv4);
       std::string default_port = "1194";
-      add(opt, default_proto, default_port);
+
+      // handle remote, port, and proto at the top-level
+      if (!(flags & CONN_BLOCK_ONLY))
+	add(opt, default_proto, default_port, ConnBlock::Ptr());
 
       // cycle through <connection> blocks
       {
@@ -414,19 +442,26 @@ namespace openvpn {
 					    ProfileParseLimits::TERM_OVERHEAD,
 					    ProfileParseLimits::MAX_LINE_SIZE,
 					    ProfileParseLimits::MAX_DIRECTIVE_SIZE);
-		  const OptionList conn_block = OptionList::parse_from_config_static(conn_block_text, &limits);
+		  OptionList::Ptr conn_block = OptionList::parse_from_config_static_ptr(conn_block_text, &limits);
 		  Protocol proto(default_proto);
 		  std::string port(default_port);
 
 		  // unsupported options
-		  if (warn)
+		  if (flags & WARN_UNSUPPORTED)
 		    {
-		      unsupported_in_connection_block(conn_block, "http-proxy");
-		      unsupported_in_connection_block(conn_block, "http-proxy-option");
-		      unsupported_in_connection_block(conn_block, "http-proxy-user-pass");
+		      unsupported_in_connection_block(*conn_block, "http-proxy");
+		      unsupported_in_connection_block(*conn_block, "http-proxy-option");
+		      unsupported_in_connection_block(*conn_block, "http-proxy-user-pass");
 		    }
 
-		  add(conn_block, proto, port);
+		  // connection block options encapsulation via user-defined factory
+		  {
+		    ConnBlock::Ptr cb;
+		    if (conn_block_factory)
+		      cb = conn_block_factory->new_conn_block(conn_block);
+		    if (!(flags & CONN_BLOCK_OMIT_UNDEF) || cb)
+		      add(*conn_block, proto, port, cb);
+		  }
 		}
 		catch (Exception& e)
 		  {
@@ -438,7 +473,7 @@ namespace openvpn {
 	  }
       }
 
-      if (list.empty())
+      if (!(flags & ALLOW_EMPTY) && list.empty())
 	throw option_error("remote option not specified");
 
       //OPENVPN_LOG(to_string());
@@ -565,6 +600,9 @@ namespace openvpn {
     // return true if object has at least one connection entry
     bool defined() const { return list.size() > 0; }
 
+    // return remote list size
+    size_t size() const { return list.size(); }
+
     // return hostname (or IP address) of current connection entry
     const std::string& current_server_host() const
     {
@@ -577,6 +615,20 @@ namespace openvpn {
     {
       const Item& item = *list[primary_index()];
       return item.transport_protocol;
+    }
+
+    template <typename T>
+    typename T::Ptr current_conn_block() const
+    {
+      const Item& item = *list[primary_index()];
+      return boost::dynamic_pointer_cast<T>(item.conn_block);
+    }
+
+    template <typename T>
+    T* current_conn_block_rawptr() const
+    {
+      const Item& item = *list[primary_index()];
+      return dynamic_cast<T*>(item.conn_block.get());
     }
 
     // return hostname (or IP address) of first connection entry
@@ -617,10 +669,10 @@ namespace openvpn {
 
   private:
     // initialization, called by constructors
-    void init(const std::string& directive_prefix)
+    void init(const std::string& connection_tag)
     {
       enable_cache = false;
-      directives.init(directive_prefix);
+      directives.init(connection_tag);
     }
 
     // reset the cache associated with all items
@@ -727,7 +779,7 @@ namespace openvpn {
       index.reset();
     }
 
-    void add(const OptionList& opt, Protocol& default_proto, std::string& default_port)
+    void add(const OptionList& opt, Protocol& default_proto, std::string& default_port, ConnBlock::Ptr conn_block)
     {
       // parse "proto" option if present
       {
@@ -768,6 +820,9 @@ namespace openvpn {
 		  e->transport_protocol = Protocol::parse(o.get(3, 16), true);
 		else
 		  e->transport_protocol = default_proto;
+		e->conn_block = conn_block;
+		if (conn_block)
+		  conn_block->new_item(*e);
 		list.push_back(e);
 	      }
 	  }
