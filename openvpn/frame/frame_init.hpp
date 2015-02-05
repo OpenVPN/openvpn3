@@ -31,7 +31,7 @@ namespace openvpn {
   inline Frame::Ptr frame_init(const bool align_adjust_3_1)
   {
     const size_t payload = 2048;
-    const size_t control_channel_payload = 1350;
+    const size_t control_channel_payload = 1250;
     const size_t headroom = 512;
     const size_t tailroom = 512;
     const size_t align_block = 16;
