@@ -9,8 +9,8 @@ cd $DEP_DIR
 rm -rf boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
 echo "******* BOOST"
 $O3/core/scripts/android/build-boost
-echo "******* MINICRYPTO"
-$O3/core/scripts/android/build-minicrypto
+#echo "******* MINICRYPTO"
+#$O3/core/scripts/android/build-minicrypto
 echo "******* POLARSSL"
 $O3/core/scripts/android/build-polarssl
 #echo "******* OpenSSL"

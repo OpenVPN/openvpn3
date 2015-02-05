@@ -53,7 +53,7 @@ if [ "$OPENSSL" = "1" ]; then
 else
     ssl_def="-DUSE_POLARSSL"
     ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
-    ssl_lib="-lpolarssl -lminicrypto"
+    ssl_lib="-lpolarssl"
     ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
 fi
 
@@ -90,7 +90,6 @@ g++ \
     $common \
     -L$DEP_DIR/boost/stage-$PLATFORM/lib \
     $ssl_libdir \
-    -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM \
     -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
     -L$DEP_DIR/lz4/lz4-$PLATFORM/lib \
     ovpncli_wrap.cxx \
