@@ -22,7 +22,7 @@ else
 fi
 echo PACKAGE $PKG
 
-if [ -d "$O3/common" ]; then
+if [ "$PT_PROXY" = "1" ] && [ -d "$O3/common" ]; then
     common="-I$O3/common -DPRIVATE_TUNNEL_PROXY"
 else
     common=""
