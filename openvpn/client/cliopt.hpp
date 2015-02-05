@@ -115,6 +115,7 @@ namespace openvpn {
       bool disable_client_cert;
       int default_key_direction;
       bool force_aes_cbc_ciphersuites;
+      std::string tls_version_min_override;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -178,6 +179,7 @@ namespace openvpn {
       cc->set_private_key_password(config.private_key_password);
       cc->set_force_aes_cbc_ciphersuites(config.force_aes_cbc_ciphersuites);
       cc->load(opt);
+      cc->set_tls_version_min_override(config.tls_version_min_override);
       if (!cc->get_mode().is_client())
 	throw option_error("only client configuration supported");
 
@@ -191,7 +193,7 @@ namespace openvpn {
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->gui_version = config.gui_version;
-      cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites;
+      cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
       cp->frame = frame;
       cp->now = &now_;
       cp->rng = rng;

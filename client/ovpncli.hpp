@@ -214,6 +214,15 @@ namespace openvpn {
       // This is intended for compatibility with legacy systems.
       bool forceAesCbcCiphersuites;
 
+      // Override the minimum TLS version:
+      //   disabled -- don't specify a minimum, and disable any minimum
+      //               specified in profile
+      //   default or ""  -- use profile minimum
+      //   tls_1_0  -- use TLS 1.0 minimum (overrides profile)
+      //   tls_1_1  -- use TLS 1.1 minimum (overrides profile)
+      //   tls_1_2  -- use TLS 1.2 minimum (overrides profile)
+      std::string tlsVersionMinOverride;
+
       // HTTP Proxy parameters (optional)
       std::string proxyHost;         // hostname or IP address of proxy
       std::string proxyPort;         // port number of proxy

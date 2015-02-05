@@ -184,6 +184,7 @@ int main(int argc, char *argv[])
     { "timeout",        required_argument,  NULL,      't' },
     { "compress",       required_argument,  NULL,      'c' },
     { "pk-password",    required_argument,  NULL,      'z' },
+    { "tvm-override",   required_argument,  NULL,      'M' },
     { "proxy-host",     required_argument,  NULL,      'h' },
     { "proxy-port",     required_argument,  NULL,      'q' },
     { "proxy-username", required_argument,  NULL,      'U' },
@@ -218,6 +219,7 @@ int main(int argc, char *argv[])
 	int timeout = 0;
 	std::string compress;
 	std::string privateKeyPassword;
+	std::string tlsVersionMinOverride;
 	std::string proxyHost;
 	std::string proxyPort;
 	std::string proxyUsername;
@@ -237,7 +239,7 @@ int main(int argc, char *argv[])
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:P:s:t:c:z:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:P:s:t:c:z:M:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -276,6 +278,9 @@ int main(int argc, char *argv[])
 		break;
 	      case 'z':
 		privateKeyPassword = optarg;
+		break;
+	      case 'M':
+		tlsVersionMinOverride = optarg;
 		break;
 	      case 'h':
 		proxyHost = optarg;
@@ -367,6 +372,7 @@ int main(int argc, char *argv[])
 	    config.connTimeout = timeout;
 	    config.compressionMode = compress;
 	    config.privateKeyPassword = privateKeyPassword;
+	    config.tlsVersionMinOverride = tlsVersionMinOverride;
 	    config.disableClientCert = disableClientCert;
 	    config.proxyHost = proxyHost;
 	    config.proxyPort = proxyPort;
@@ -503,6 +509,7 @@ int main(int argc, char *argv[])
   std::cout << "--timeout, -t        : timeout" << std::endl;
   std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
   std::cout << "--pk-password, -z    : private key password" << std::endl;
+  std::cout << "--tvm-override, -M   : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
   std::cout << "--proxy-host, -h     : HTTP proxy hostname/IP" << std::endl;
   std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
   std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;

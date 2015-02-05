@@ -101,6 +101,7 @@ namespace openvpn {
     virtual void set_remote_cert_tls(const KUParse::TLSWebType wt) = 0;
     virtual void set_tls_remote(const std::string& tls_remote_arg) = 0;
     virtual void set_tls_version_min(const TLSVersion::Type tvm) = 0;
+    virtual void set_tls_version_min_override(const std::string& override) = 0;
     virtual void set_local_cert_enabled(const bool v) = 0;
     virtual void set_enable_renegotiation(const bool v) = 0;
     virtual void set_force_aes_cbc_ciphersuites(const bool v) = 0;

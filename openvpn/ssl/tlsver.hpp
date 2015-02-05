@@ -39,6 +39,23 @@ namespace openvpn {
       V1_2
     };
 
+    const std::string to_string(const Type version)
+    {
+      switch (version)
+	{
+	case UNDEF:
+	  return "UNDEF";
+	case V1_0:
+	  return "V1_0";
+	case V1_1:
+	  return "V1_1";
+	case V1_2:
+	  return "V1_2";
+	default:
+	  return "???";
+	}
+    }
+
     inline Type parse_tls_version_min(const OptionList& opt, const Type max_version) {
       const Option* o = opt.get_ptr("tls-version-min");
       if (o)
@@ -56,6 +73,25 @@ namespace openvpn {
 	    throw option_error("tls-version-min: unrecognized TLS version");
 	}
       return UNDEF;
+    }
+
+    inline void apply_override(Type& tvm, const std::string& override)
+    {
+      //const Type orig = tvm;
+      if (override.empty() || override == "default")
+	;
+      else if (override == "disabled")
+	tvm = UNDEF;
+      else if (override == "tls_1_0")
+	tvm = V1_0;
+      else if (override == "tls_1_1")
+	tvm = V1_1;
+      else if (override == "tls_1_2")
+	tvm = V1_2;
+      else
+	throw option_error("tls-version-min: unrecognized override string");
+
+      //OPENVPN_LOG("*** TLS-version-min before=" << to_string(orig) << " override=" << override << " after=" << to_string(tvm)); // fixme
     }
   }
 }

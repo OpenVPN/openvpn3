@@ -324,6 +324,7 @@ namespace openvpn {
 	bool disable_client_cert;
 	int default_key_direction;
 	bool force_aes_cbc_ciphersuites;
+	std::string tls_version_min_override;
 	std::string gui_version;
 	ProtoContextOptions::Ptr proto_context_options;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
@@ -417,6 +418,7 @@ namespace openvpn {
 	state->disable_client_cert = config.disableClientCert;
 	state->default_key_direction = config.defaultKeyDirection;
 	state->force_aes_cbc_ciphersuites = config.forceAesCbcCiphersuites;
+	state->tls_version_min_override = config.tlsVersionMinOverride;
 	state->gui_version = config.guiVersion;
 	state->alt_proxy = config.altProxy;
 	if (!config.proxyHost.empty())
@@ -606,6 +608,7 @@ namespace openvpn {
 	cc.disable_client_cert = state->disable_client_cert;
 	cc.default_key_direction = state->default_key_direction;
 	cc.force_aes_cbc_ciphersuites = state->force_aes_cbc_ciphersuites;
+	cc.tls_version_min_override = state->tls_version_min_override;
 	cc.gui_version = state->gui_version;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;

@@ -201,6 +201,11 @@ namespace openvpn {
 	tls_version_min = tvm;
       }
 
+      virtual void set_tls_version_min_override(const std::string& override)
+      {
+	TLSVersion::apply_override(tls_version_min, override);
+      }
+
       virtual void set_local_cert_enabled(const bool v)
       {
 	local_cert_enabled = v;
