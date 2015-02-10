@@ -16,6 +16,8 @@ cd $DEP_DIR
 rm -rf openssl
 mkdir openssl
 
+export LINK_MODE=shared
+
 case $1 in
 x64*)
   export OPENSSL_TARGET=linux-x86_64
