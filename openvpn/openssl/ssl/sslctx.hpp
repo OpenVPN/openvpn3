@@ -220,9 +220,10 @@ namespace openvpn {
 	// use its own RNG.
       }
 
-      virtual void load(const OptionList& opt)
+      virtual void load(const OptionList& opt, const unsigned int lflags)
       {
 	// client/server
+	if (lflags & LF_PARSE_MODE)
 	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
 
 	// ca

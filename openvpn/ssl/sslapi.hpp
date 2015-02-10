@@ -84,6 +84,10 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<SSLConfigAPI> Ptr;
 
+    enum LoadFlags {
+      LF_PARSE_MODE = (1<<0),
+    };
+
     virtual void set_mode(const Mode& mode_arg) = 0;
     virtual const Mode& get_mode() const = 0;
     virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg) = 0; // private key alternative
@@ -106,7 +110,7 @@ namespace openvpn {
     virtual void set_enable_renegotiation(const bool v) = 0;
     virtual void set_force_aes_cbc_ciphersuites(const bool v) = 0;
     virtual void set_rng(const RandomAPI::Ptr& rng_arg) = 0;
-    virtual void load(const OptionList& opt) = 0;
+    virtual void load(const OptionList& opt, const unsigned int lflags) = 0;
 
     virtual SSLFactoryAPI::Ptr new_factory() = 0;
   };

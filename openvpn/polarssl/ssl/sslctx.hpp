@@ -226,10 +226,11 @@ namespace openvpn {
 	rng = rng_arg;
       }
 
-      virtual void load(const OptionList& opt)
+      virtual void load(const OptionList& opt, const unsigned int lflags)
       {
 	// client/server
-	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
+	if (lflags & LF_PARSE_MODE)
+	  mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
 
 	// ca
 	{

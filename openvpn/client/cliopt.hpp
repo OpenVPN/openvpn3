@@ -178,7 +178,7 @@ namespace openvpn {
       cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
       cc->set_private_key_password(config.private_key_password);
       cc->set_force_aes_cbc_ciphersuites(config.force_aes_cbc_ciphersuites);
-      cc->load(opt);
+      cc->load(opt, SSLConfigAPI::LF_PARSE_MODE);
       cc->set_tls_version_min_override(config.tls_version_min_override);
       if (!cc->get_mode().is_client())
 	throw option_error("only client configuration supported");
