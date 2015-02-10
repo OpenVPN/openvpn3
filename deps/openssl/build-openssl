@@ -37,7 +37,9 @@ rm -rf $OPENSSL $DIST
 mkdir -p $DIST
 tar xfz $DL/$OPENSSL.tar.gz
 pushd $OPENSSL
-./Configure $OPENSSL_TARGET $LINK_MODE threads no-idea no-mdc2 no-rc5 --prefix=$DIST
+CMD="./Configure $OPENSSL_TARGET $LINK_MODE threads no-idea no-mdc2 no-rc5 --prefix=$DIST"
+echo $CMD
+$CMD
 $mysed -e "s|-O3|$LIB_OPT_LEVEL $MIN_DEPLOY_TARGET $OTHER_COMPILER_FLAGS $LIB_FPIC|" Makefile
 #$mysed -e "s|ERR_load_COMP_strings()|//ERR_load_COMP_strings()|" crypto/err/err_all.c
 make CC="$GCC_CMD" -j ${MAKE_JOBS:-1} build_libs
