@@ -346,10 +346,10 @@ namespace openvpn {
     }
 
     // return a boost::asio::mutable_buffers_1 object used by
-    // asio read methods.
+    // asio read methods, starting from data()
     boost::asio::mutable_buffers_1 mutable_buffers_1(const size_t tailroom = 0)
     {
-      return boost::asio::mutable_buffers_1(data(), remaining(tailroom));
+      return boost::asio::mutable_buffers_1(data(), max_size_tailroom(tailroom));
     }
 
     // return a boost::asio::const_buffers_1 object used by
