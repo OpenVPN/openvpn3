@@ -48,7 +48,7 @@
   do { \
     if (openvpn::Log::global_log != NULL) { \
       std::ostringstream _ovpn_log; \
-      _ovpn_log << args << std::endl; \
+      _ovpn_log << args << '\n'; \
       (openvpn::Log::Context::obj()->log(OPENVPN_LOG_INFO(_ovpn_log.str()))); \
     } \
   } while (0)
