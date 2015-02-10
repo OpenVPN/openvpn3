@@ -115,6 +115,14 @@ namespace openvpn {
       return false;
     }
 
+    // return the length of a string, omitting trailing nulls
+    inline size_t len_without_trailing_nulls(const char *str, size_t len)
+    {
+      while (len > 0 && str[len-1] == '\0')
+	--len;
+      return len;
+    }
+
     // Define a common interpretation of what constitutes a space character.
     // Return true if c is a space char.
     inline bool is_space(char c)
