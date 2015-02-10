@@ -37,8 +37,13 @@ namespace openvpn {
   // Parse the number of type T in str, returning
   // value in retval.  Returns true on success.
   // Note -- currently doesn't detect overflow.
+  // If nondigit_term is true, any non-digit char
+  // can terminate the numerical value.  Otherwise,
+  // only '\0' can terminate the value.
   template <typename T>
-  inline bool parse_number(const char *str, T& retval)
+  inline bool parse_number(const char *str,
+			   T& retval,
+			   const bool nondigit_term = false)
   {
     if (!str[0])
       return false; // empty string
@@ -58,7 +63,7 @@ namespace openvpn {
 	    ret *= T(10);
 	    ret += T(c - '0');
 	  }
-	else if (!c)
+	else if (!c || nondigit_term)
 	  {
 	    retval = neg ? -ret : ret;
 	    return true;
