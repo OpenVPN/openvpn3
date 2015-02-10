@@ -56,7 +56,7 @@ namespace openvpn {
     return AsioDispatchWrite<C, Handler>(handle_write, obj);
   }
 
-  // Dispatcher for asio async_read
+  // Dispatcher for asio async_read with argument
 
   template <typename C, typename Handler, typename Data>
   class AsioDispatchRead
@@ -80,6 +80,31 @@ namespace openvpn {
   AsioDispatchRead<C, Handler, Data> asio_dispatch_read(Handler handle_read, C* obj, Data data)
   {
     return AsioDispatchRead<C, Handler, Data>(handle_read, obj, data);
+  }
+
+  // Dispatcher for asio async_read without argument
+
+  template <typename C, typename Handler>
+  class AsioDispatchReadNoArg
+  {
+  public:
+    AsioDispatchReadNoArg(Handler handle_read, C* obj)
+      : handle_read_(handle_read), obj_(obj) {}
+
+    void operator()(const boost::system::error_code& error, const size_t bytes_recvd)
+    {
+      (obj_.get()->*handle_read_)(error, bytes_recvd);
+    }
+
+  private:
+    Handler handle_read_;
+    boost::intrusive_ptr<C> obj_;
+  };
+
+  template <typename C, typename Handler>
+  AsioDispatchReadNoArg<C, Handler> asio_dispatch_read_noarg(Handler handle_read, C* obj)
+  {
+    return AsioDispatchReadNoArg<C, Handler>(handle_read, obj);
   }
 
   // Dispatcher for asio async_wait with argument
