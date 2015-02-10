@@ -349,7 +349,7 @@ int main(int argc, char *argv[])
 	  {
 	    if (argc != 1)
 	      goto usage;
-	    ProfileMerge pm(argv[0], "", ProfileMerge::FOLLOW_FULL,
+	    ProfileMerge pm(argv[0], "ovpn", "", ProfileMerge::FOLLOW_FULL,
 			    ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
 	    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
 	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
 	  {
 	    if (argc != 1)
 	      goto usage;
-	    ProfileMerge pm(argv[0], "", ProfileMerge::FOLLOW_FULL,
+	    ProfileMerge pm(argv[0], "ovpn", "", ProfileMerge::FOLLOW_FULL,
 			    ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
 	    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
 	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());

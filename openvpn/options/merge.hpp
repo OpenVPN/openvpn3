@@ -115,6 +115,7 @@ namespace openvpn {
     };
 
     ProfileMerge(const std::string& profile_path,
+		 const std::string& profile_ext,
 		 const std::string& profile_dir_override,
 		 const Follow follow_references,
 		 const size_t max_line_len,
@@ -131,7 +132,7 @@ namespace openvpn {
 	  profile_dir = !profile_dir_override.empty() ? profile_dir_override : path::dirname(profile_path);
 	  basename_ = path::basename(profile_path);
 	  const std::string ext = path::ext(basename_);
-	  if (string::strcasecmp(ext, "ovpn") == 0)
+	  if (profile_ext.empty() || string::strcasecmp(ext, profile_ext) == 0)
 	    {
 	      orig_profile_content = read_text_utf8(profile_path, max_size);
 	      total_size = orig_profile_content.size();
@@ -161,12 +162,13 @@ namespace openvpn {
     }
 
     static std::string merge(const std::string& profile_path,
+			     const std::string& profile_ext,
 			     const std::string& profile_dir_override,
 			     const Follow follow_references,
 			     const size_t max_line_len,
 			     const size_t max_size)
     {
-      const ProfileMerge pm(profile_path, profile_dir_override,
+      const ProfileMerge pm(profile_path, profile_ext, profile_dir_override,
 			    follow_references, max_line_len, max_size);
       if (pm.status() == ProfileMerge::MERGE_SUCCESS)
 	return pm.profile_content();
