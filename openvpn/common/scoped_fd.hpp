@@ -80,7 +80,7 @@ namespace openvpn {
     }
 
     // return false if close error
-    virtual bool close()
+    bool close()
     {
       if (defined())
 	{
