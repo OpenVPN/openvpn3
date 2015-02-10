@@ -226,6 +226,12 @@ namespace openvpn {
       return r <= capacity_ ? r : 0;
     }
 
+    // like max_size, but take tailroom into account
+    size_t max_size_tailroom(const size_t tailroom) const {
+      const size_t r = capacity_ - (offset_ + tailroom);
+      return r <= capacity_ ? r : 0;
+    }
+
     // After an external method, operating on the array as
     // a mutable unsigned char buffer, has written data to the
     // array, use this method to set the array length in terms
@@ -235,6 +241,13 @@ namespace openvpn {
       if (size > max_size())
 	OPENVPN_BUFFER_THROW(buffer_set_size);
       size_ = size;
+    }
+
+    // Increment size (usually used in a similar context
+    // to set_size such as after mutable_buffers_1_append).
+    void inc_size(const size_t delta)
+    {
+      set_size(size_ + delta);
     }
 
     // append a T object to array, with possible resize
@@ -350,6 +363,13 @@ namespace openvpn {
     boost::asio::mutable_buffers_1 mutable_buffers_1(const size_t tailroom = 0)
     {
       return boost::asio::mutable_buffers_1(data(), max_size_tailroom(tailroom));
+    }
+
+    // return a boost::asio::mutable_buffers_1 object used by
+    // asio read methods, starting from data_end()
+    boost::asio::mutable_buffers_1 mutable_buffers_1_append(const size_t tailroom = 0)
+    {
+      return boost::asio::mutable_buffers_1(data_end(), remaining(tailroom));
     }
 
     // return a boost::asio::const_buffers_1 object used by
