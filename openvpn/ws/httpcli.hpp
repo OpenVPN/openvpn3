@@ -57,9 +57,35 @@ namespace openvpn {
 	E_EOF_TCP,
 	E_CONNECT_TIMEOUT,
 	E_GENERAL_TIMEOUT,
+
+	N_ERRORS
       };
 
       OPENVPN_EXCEPTION(http_client_exception);
+
+      inline std::string error_str(const size_t status)
+      {
+	static const char *error_names[] = {
+	  "E_SUCCESS",
+	  "E_RESOLVE",
+	  "E_CONNECT",
+	  "E_TCP",
+	  "E_HTTP",
+	  "E_EXCEPTION",
+	  "E_HEADER_SIZE",
+	  "E_CONTENT_SIZE",
+	  "E_EOF_SSL",
+	  "E_EOF_TCP",
+	  "E_CONNECT_TIMEOUT",
+	  "E_GENERAL_TIMEOUT",
+	};
+
+	static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
+	if (status < N_ERRORS)
+	  return error_names[status];
+	else
+	  return "E_???";
+      }
 
       struct Config : public RC<thread_unsafe_refcount>
       {
@@ -298,10 +324,20 @@ namespace openvpn {
 	  per_request_reset();
 	}
 
+	void reset()
+	{
+	  if (halt)
+	    {
+	      halt = false;
+	      ready = true;
+	    }
+	}
+
 	void start_request()
 	{
 	  if (!is_ready())
 	    throw http_client_exception("not ready");
+	  ready = false;
 	  io_service.post(asio_dispatch_post(&HTTPCore::handle_request, this));
 	}
 
@@ -364,9 +400,17 @@ namespace openvpn {
 	{
 	}
 
+	virtual void http_headers_sent(const Buffer& buf)
+	{
+	}
+
 	virtual void http_content_in(BufferAllocated& buf) = 0;
 
 	virtual void http_done(const int status, const std::string& description) = 0;
+
+	virtual void http_keepalive_close(const int status, const std::string& description)
+	{
+	}
 
       private:
 	void verify_frame()
@@ -386,9 +430,8 @@ namespace openvpn {
 	    return;
 
 	  try {
-	    if (!ready)
-	      throw http_client_exception("not ready");
-	    ready = false;
+	    if (ready)
+	      throw http_client_exception("handle_request called in ready state");
 
 	    verify_frame();
 
@@ -490,8 +533,13 @@ namespace openvpn {
 	// error notification
 	void error_handler(const int errcode, const std::string& err)
 	{
+	  const bool in_transaction = !ready;
+	  const bool keepalive = alive;
 	  stop();
-	  http_done(errcode, err);
+	  if (in_transaction)
+	    http_done(errcode, err);
+	  else if (keepalive)
+	    http_keepalive_close(errcode, err); // keepalive connection close outside of transaction
 	}
 
 	void general_timeout_handler(const boost::system::error_code& e) // called by Asio
@@ -552,6 +600,7 @@ namespace openvpn {
 	  os << "Accept: */*\r\n";
 	  os << "\r\n";
 
+	  http_headers_sent(*outbuf);
 	  http_out();
 	}
 
@@ -733,9 +782,9 @@ namespace openvpn {
 	    return;
 	  if (content_info.keepalive)
 	    {
+	      general_timer.cancel();
 	      alive = true;
 	      ready = true;
-	      general_timer.cancel();
 	    }
 	  else
 	    stop();
@@ -893,6 +942,97 @@ namespace openvpn {
 
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
+      };
+
+      template <typename PARENT>
+      class HTTPDelegate : public HTTPCore
+      {
+      public:
+	OPENVPN_EXCEPTION(http_delegate_error);
+
+	typedef boost::intrusive_ptr<HTTPDelegate> Ptr;
+
+	HTTPDelegate(boost::asio::io_service& io_service,
+		     const WS::Client::Config::Ptr& config,
+		     PARENT* parent_arg)
+	  : WS::Client::HTTPCore(io_service, config),
+	    parent(parent_arg)
+	{
+	}
+
+	virtual Host http_host()
+	{
+	  if (parent)
+	    return parent->http_host(*this);
+	  else
+	    throw http_delegate_error("http_host");
+	}
+
+	virtual Request http_request()
+	{
+	  if (parent)
+	    return parent->http_request(*this);
+	  else
+	    throw http_delegate_error("http_request");
+	}
+
+	virtual ContentInfo http_content_info()
+	{
+	  if (parent)
+	    return parent->http_content_info(*this);
+	  else
+	    throw http_delegate_error("http_content_info");
+	}
+
+	virtual BufferPtr http_content_out()
+	{
+	  if (parent)
+	    return parent->http_content_out(*this);
+	  else
+	    throw http_delegate_error("http_content_out");
+	}
+
+	virtual void http_headers_received()
+	{
+	  if (parent)
+	    parent->http_headers_received(*this);
+	}
+
+	virtual void http_headers_sent(const Buffer& buf)
+	{
+	  if (parent)
+	    parent->http_headers_sent(*this, buf);
+	}
+
+	virtual void http_content_in(BufferAllocated& buf)
+	{
+	  if (parent)
+	    parent->http_content_in(*this, buf);
+	}
+
+	virtual void http_done(const int status, const std::string& description)
+	{
+	  if (parent)
+	    parent->http_done(*this, status, description);
+	}
+
+	virtual void http_keepalive_close(const int status, const std::string& description)
+	{
+	  if (parent)
+	    parent->http_keepalive_close(*this, status, description);
+	}
+
+	void detach()
+	{
+	  if (parent)
+	    {
+	      parent = NULL;
+	      stop();
+	    }
+	}
+
+      private:
+	PARENT* parent;
       };
     }
   }
