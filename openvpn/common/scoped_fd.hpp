@@ -72,6 +72,11 @@ namespace openvpn {
       //OPENVPN_LOG("**** SFD RESET=" << fd);
     }
 
+    void reset()
+    {
+      close();
+    }
+
     // unusual semantics: replace fd without closing it first
     void replace(const int fd_arg)
     {
