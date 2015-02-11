@@ -110,11 +110,28 @@ namespace openvpn {
 
       struct Host {
 	std::string host;
+	std::string cn;     // host for CN verification, defaults to host if empty
+	std::string head;   // host to send in HTTP header, defaults to host if empty
 	std::string port;
+
+	const std::string& host_transport() const
+	{
+	  return host;
+	}
+
+	const std::string& host_cn() const
+	{
+	  return cn.empty() ? host : cn;
+	}
+
+	const std::string& host_head() const
+	{
+	  return head.empty() ? host : head;
+	}
       };
 
       struct Request {
-	std::string http_method;
+	std::string method;
 	std::string uri;
 	std::string username;
 	std::string password;
@@ -453,7 +470,7 @@ namespace openvpn {
 		  host.port = config->ssl_factory ? "443" : "80";
 
 		if (config->ssl_factory)
-		  ssl_sess = config->ssl_factory->ssl(host.host);
+		  ssl_sess = config->ssl_factory->ssl(host.host_cn());
 
 		if (config->connect_timeout)
 		  {
@@ -461,7 +478,7 @@ namespace openvpn {
 		    connect_timer.async_wait(asio_dispatch_timer(&HTTPCore::connect_timeout_handler, this));
 		  }
 
-		boost::asio::ip::tcp::resolver::query query(host.host, host.port);
+		boost::asio::ip::tcp::resolver::query query(host.host_transport(), host.port);
 		resolver.async_resolve(query, AsioDispatchResolveTCP(&HTTPCore::handle_resolve, this));
 	      }
 	  }
@@ -581,8 +598,8 @@ namespace openvpn {
 
 	  outbuf.reset(new BufferAllocated(4096, BufferAllocated::GROW));
 	  BufferStreamOut os(*outbuf);
-	  os << req.http_method << ' ' << req.uri << " HTTP/1.1\r\n";
-	  os << "Host: " << host.host << "\r\n";
+	  os << req.method << ' ' << req.uri << " HTTP/1.1\r\n";
+	  os << "Host: " << host.host_head() << "\r\n";
 	  if (!config->user_agent.empty())
 	    os << "User-Agent: " << config->user_agent << "\r\n";
 	  if (!req.username.empty() || !req.password.empty())
