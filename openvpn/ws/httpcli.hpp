@@ -148,6 +148,7 @@ namespace openvpn {
 	    keepalive(false) {}
 
 	std::string type;
+	std::string content_encoding;
 	olong length;
 	bool keepalive;
       };
@@ -612,6 +613,8 @@ namespace openvpn {
 	    os << "Content-Length: " << content_info.length << "\r\n";
 	  else if (content_info.length == ContentInfo::CHUNKED)
 	    os << "Transfer-Encoding: chunked" << "\r\n";
+	  if (!content_info.content_encoding.empty())
+	    os << "Content-Encoding: " << content_info.content_encoding << "\r\n";
 	  if (content_info.keepalive)
 	    os << "Connection: keep-alive\r\n";
 	  os << "Accept: */*\r\n";
