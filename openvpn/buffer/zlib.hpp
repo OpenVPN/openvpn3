@@ -67,6 +67,7 @@ namespace openvpn {
 	  if (status != Z_STREAM_END)
 	    OPENVPN_THROW(zlib_error, "zlib deflate failed, error=" << status);
 	  b->set_size(zs.total_out);
+	  ::deflateEnd(&zs);
 	  return b;
 	}
       else
