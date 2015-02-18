@@ -1020,7 +1020,7 @@ namespace openvpn {
 
       // log subject
       const std::string subject = x509_get_subject(ctx->current_cert);
-      if (!subject.empty())
+      if (!subject.empty() && (self->config->flags & SSLConst::LOG_VERIFY_STATUS))
 	OPENVPN_LOG_SSL("VERIFY "
 			<< (preverify_ok ? "OK" : "FAIL")
 			<< ": depth=" << ctx->error_depth
