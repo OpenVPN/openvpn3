@@ -619,6 +619,12 @@ namespace openvpn {
       std::memcpy(data_, data, size * sizeof(T));
     }
 
+    void realloc(const size_t newcap)
+    {
+      if (newcap > capacity_)
+	realloc_(newcap);
+    }
+
     void reset(const size_t min_capacity, const unsigned int flags)
     {
       if (min_capacity > capacity_)
@@ -693,20 +699,21 @@ namespace openvpn {
       if (newcap > capacity_)
 	{
 	  if (flags_ & GROW)
-	    {
-	      T* data = new T[newcap];
-	      if (size_)
-		std::memcpy(data + offset_, data_ + offset_, size_ * sizeof(T));
-	      delete_(data_, capacity_, flags_);
-	      data_ = data;
-	      //std::cout << "*** RESIZE " << capacity_ << " -> " << newcap << std::endl; // fixme
-	      capacity_ = newcap;
-	    }
+	    realloc_(newcap);
 	  else
-	    {
-	      OPENVPN_BUFFER_THROW(buffer_full);
-	    }
+	    OPENVPN_BUFFER_THROW(buffer_full);
 	}
+    }
+
+    void realloc_(const size_t newcap)
+    {
+      T* data = new T[newcap];
+      if (size_)
+	std::memcpy(data + offset_, data_ + offset_, size_ * sizeof(T));
+      delete_(data_, capacity_, flags_);
+      data_ = data;
+      //std::cout << "*** RESIZE " << capacity_ << " -> " << newcap << std::endl; // fixme
+      capacity_ = newcap;
     }
 
     void move_(BufferAllocatedType& other)
