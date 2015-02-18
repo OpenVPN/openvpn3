@@ -27,17 +27,20 @@
 #include <string>
 #include <cstring> // for std::strlen
 #include <time.h>
+#include <sys/time.h>
+#include <stdio.h>
+#include <ctype.h>
 
 #include <openvpn/common/types.hpp>
 
 namespace openvpn {
 
-  inline std::string date_time(const time_t now)
+  inline std::string date_time(const time_t t)
   {
     struct tm lt;
     char buf[64];
 
-    if (!localtime_r(&now, &lt))
+    if (!localtime_r(&t, &lt))
       return "LOCALTIME_ERROR";
     if (!asctime_r(&lt, buf))
       return "ASCTIME_ERROR";
@@ -47,9 +50,38 @@ namespace openvpn {
     return std::string(buf);
   }
 
+  // msecs == false : Tue Feb 17 01:24:30 2015
+  // msecs == true  : Tue Feb 17 01:24:30.123 2015
+  inline std::string date_time(const struct timeval *tv, const bool msecs)
+  {
+    const std::string dt = date_time(tv->tv_sec);
+    if (msecs)
+      {
+	// find correct position in string to insert milliseconds
+	const size_t pos = dt.find_last_of(':');
+	if (pos != std::string::npos
+	    && pos + 3 < dt.length()
+	    && isdigit(dt[pos+1])
+	    && isdigit(dt[pos+2])
+	    && isspace(dt[pos+3]))
+	  {
+	    char ms[5];
+	    ::snprintf(ms, sizeof(ms), ".%03u", static_cast<unsigned int>(tv->tv_usec / 1000));
+	    return dt.substr(0, pos+3) + ms + dt.substr(pos+3);
+	  }
+      }
+    return dt;
+  }
+
   inline std::string date_time()
   {
-    return date_time(time(NULL));
+    struct timeval tv;
+    if (::gettimeofday(&tv, NULL) < 0)
+      {
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+      }
+    return date_time(&tv, true);
   }
 }
 
