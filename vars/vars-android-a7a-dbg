@@ -6,4 +6,8 @@ export OTHER_COMPILER_FLAGS="-g"
 export CXX_COMPILER_FLAGS="-std=c++11"
 export LIB_OPT_LEVEL="-O0"
 export LIB_FPIC="-fPIC"
-export PLATFORM_FLAGS="-march=armv7-a -mthumb -fomit-frame-pointer --sysroot=$DEP_DIR/tc/sysroot"
+export TC=$DEP_DIR/tc-arm
+export PLATFORM_FLAGS="-march=armv7-a -mthumb -fomit-frame-pointer --sysroot=$TC/sysroot"
+
+[ -z "$VARS_SAVE_PATH" ] && VARS_SAVE_PATH="$PATH"
+export PATH="$TC/bin:$TC/arm-linux-androideabi/bin:$VARS_SAVE_PATH"

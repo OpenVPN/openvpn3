@@ -13,7 +13,7 @@ cd $DEP_DIR
 [ -z "$DL" ] && DL=~/Downloads
 rm -rf openssl
 mkdir openssl
-for TARGET in android android-dbg android-a7a android-a7a-dbg ; do
+for TARGET in android-a8a android-a8a-dbg android-a7a android-a7a-dbg android-dbg android ; do
     . $O3/core/vars/vars-$TARGET
     export OPENSSL=$OPENSSL_VERSION
     export DIST=$(pwd)/openssl-$PLATFORM

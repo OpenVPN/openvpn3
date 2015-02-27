@@ -15,7 +15,7 @@ cd $DEP_DIR
 rm -rf lzo
 mkdir lzo
 
-for target in android android-dbg android-a7a android-a7a-dbg ; do
+for target in android-a8a android-a8a-dbg android-a7a android-a7a-dbg android android-dbg ; do
     echo '***************' TARGET $target
     TARGET=$target $O3/core/deps/lzo/build-lzo
 done

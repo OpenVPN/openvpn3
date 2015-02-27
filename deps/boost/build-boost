@@ -29,6 +29,9 @@ if [ "$NO_WIPE" != "1" ]; then
     #patch -p1 <$DL/asio-engine.patch
     #patch -p0 <$O3/core/deps/boost/atomic-1.55.0.patch
     patch -p1 <$O3/core/deps/boost/intrusive_ptr.patch
+    patch -p1 <$O3/core/deps/boost/page_size.patch
+
+    ./bootstrap.sh
 
     for T in $TARGETS ; do
 	TS="${T//-/}"
@@ -43,7 +46,6 @@ EOF
     echo '********** BOOST CONFIG'
     tail -30 $BCONF/user-config.jam
     echo '********** END BOOST CONFIG'
-    ./bootstrap.sh
 else
     echo RETAIN existing source
     cd $BOOST_VERSION
