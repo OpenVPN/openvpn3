@@ -52,6 +52,10 @@
 
 #include <openvpn/ssl/sslchoose.hpp>
 
+#if defined(OPENVPN_PLATFORM_ANDROID)
+#include <openvpn/client/cliemuexr.hpp>
+#endif
+
 #if ENABLE_PRNG
 #include <openvpn/random/prng.hpp>
 #endif
@@ -279,6 +283,10 @@ namespace openvpn {
       tunconf->tun_prefix = true;
       if (config.tun_persist)
 	tunconf->tun_prop.remote_bypass = true;
+#endif
+#if defined(OPENVPN_PLATFORM_ANDROID)
+      // Android VPN API doesn't support excluded routes, so we must emulate them
+      tunconf->eer_factory.reset(new EmulateExcludeRouteFactoryImpl(false));
 #endif
       if (config.tun_persist)
 	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd, config.builder));

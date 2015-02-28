@@ -24,6 +24,7 @@
 
 #include <string>
 #include <sstream>
+#include <vector>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -83,6 +84,11 @@ namespace openvpn {
 	return addr.version();
       }
 
+      IP::Addr::VersionMask version_mask() const
+      {
+	return addr.version_mask();
+      }
+
       ADDR netmask() const
       {
 	return ADDR::netmask_from_prefix_len(version(), prefix_len);
@@ -103,6 +109,40 @@ namespace openvpn {
 	addr = addr & netmask();
       }
 
+      bool is_host() const
+      {
+	return addr.defined() && prefix_len == addr.size();
+      }
+
+      bool contains(const ADDR& a) const // assumes canonical address/routes
+      {
+	if (addr.defined() && addr.version() == a.version())
+	  return (a & netmask()) == addr;
+	else
+	  return false;
+      }
+
+      bool contains(const RouteType& r) const // assumes canonical routes
+      {
+	return contains(r.addr) && r.prefix_len >= prefix_len;
+      }
+
+      bool split(RouteType& r1, RouteType& r2) const // assumes we are canonical
+      {
+	if (!is_host())
+	  {
+	    const unsigned int newpl = prefix_len + 1;
+	    r1.addr = addr;
+	    r1.prefix_len = newpl;
+
+	    r2.addr = addr + ADDR::netmask_from_prefix_len(addr.version(), newpl).extent_from_netmask();
+	    r2.prefix_len = newpl;
+
+	    return true;
+	  }
+	return false;
+      }
+
       std::string to_string() const
       {
 	std::ostringstream os;
@@ -113,6 +153,37 @@ namespace openvpn {
       bool operator==(const RouteType& other) const
       {
 	return prefix_len == other.prefix_len && addr == other.addr;
+      }
+    };
+
+    template <typename ADDR>
+    struct RouteTypeList : public std::vector<RouteType<ADDR>>
+    {
+      typedef std::vector< RouteType<ADDR> > Base;
+
+      OPENVPN_EXCEPTION(route_list_error);
+
+      std::string to_string() const
+      {
+	std::ostringstream os;
+	for (typename Base::const_iterator i = Base::begin(); i != Base::end(); ++i)
+	  os << i->to_string() << std::endl;
+	return os.str();
+      }
+
+      IP::Addr::VersionMask version_mask() const
+      {
+	IP::Addr::VersionMask mask = 0;
+	for (typename Base::const_iterator i = Base::begin(); i != Base::end(); ++i)
+	  mask |= i->version_mask();
+	return mask;
+      }
+
+      void verify_canonical() const
+      {
+	for (typename Base::const_iterator i = Base::begin(); i != Base::end(); ++i)
+	  if (!i->is_canonical())
+	    throw route_list_error("route not canonical: " + i->to_string());
       }
     };
 
@@ -130,9 +201,17 @@ namespace openvpn {
     typedef RouteType<IPv4::Addr> Route4;
     typedef RouteType<IPv6::Addr> Route6;
 
+    typedef RouteTypeList<IP::Addr> RouteList;
+    typedef RouteTypeList<IPv4::Addr> Route4List;
+    typedef RouteTypeList<IPv6::Addr> Route6List;
+
     OPENVPN_OSTREAM(Route, to_string);
     OPENVPN_OSTREAM(Route4, to_string);
     OPENVPN_OSTREAM(Route6, to_string);
+
+    OPENVPN_OSTREAM(RouteList, to_string);
+    OPENVPN_OSTREAM(Route4List, to_string);
+    OPENVPN_OSTREAM(Route6List, to_string);
   }
 }
 

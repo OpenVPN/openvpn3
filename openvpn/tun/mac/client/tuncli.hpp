@@ -42,6 +42,11 @@
 #include <openvpn/tun/mac/macgw.hpp>
 #include <openvpn/tun/mac/macdns_watchdog.hpp>
 
+#ifdef TEST_EER // test emulated exclude routes
+#include <openvpn/client/cliemuexr.hpp>
+#include <openvpn/tun/builder/rgwflags.hpp>
+#endif
+
 namespace openvpn {
   namespace TunMac {
 
@@ -506,6 +511,11 @@ namespace openvpn {
 	      // notify parent
 	      parent.tun_pre_tun_config();
 
+	      // emulated exclude routes
+	      EmulateExcludeRouteFactory::Ptr eer_factory;
+#ifdef TEST_EER
+	      eer_factory.reset(new EmulateExcludeRouteFactoryImpl(true));
+#endif
 	      // parse pushed options
 	      TunBuilderCapture::Ptr po(new TunBuilderCapture());
 	      TunProp::configure_builder(po.get(),
@@ -514,6 +524,7 @@ namespace openvpn {
 					 server_addr,
 					 config->tun_prop,
 					 opt,
+					 eer_factory.get(),
 					 false);
 
 	      // handle MTU default
@@ -786,10 +797,15 @@ namespace openvpn {
 	    else
 	      OPENVPN_LOG("ERROR: cannot detect IPv4 default gateway");
 
-	    add_del_route("0.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
-	    add_del_route("64.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
-	    add_del_route("128.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
-	    add_del_route("192.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+#ifdef TEST_EER
+	    if (!(pull.reroute_gw.flags & RGWFlags::EmulateExcludeRoutes))
+#endif
+	      {
+		add_del_route("0.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+		add_del_route("64.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+		add_del_route("128.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+		add_del_route("192.0.0.0", 2, local4->gateway, iface_name, 0, create, destroy);
+	      }
 	  }
 
 	// Process IPv6 redirect-gateway
@@ -816,10 +832,15 @@ namespace openvpn {
 	    else
 	      OPENVPN_LOG("ERROR: cannot detect IPv6 default gateway");
 
-	    add_del_route("0000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
-	    add_del_route("4000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
-	    add_del_route("8000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
-	    add_del_route("C000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+#ifdef TEST_EER
+	    if (!(pull.reroute_gw.flags & RGWFlags::EmulateExcludeRoutes))
+#endif
+	      {
+		add_del_route("0000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+		add_del_route("4000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+		add_del_route("8000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+		add_del_route("C000::", 2, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+	      }
 	  }
 
 	// Interface down

@@ -22,6 +22,7 @@
 #ifndef OPENVPN_TUN_PERSIST_TUNPERSIST_H
 #define OPENVPN_TUN_PERSIST_TUNPERSIST_H
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/tun/persist/tunwrap.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
@@ -83,7 +84,7 @@ namespace openvpn {
       {
 	TunBuilderCapture::Ptr capture = new TunBuilderCapture();
 	try {
-	  TunProp::configure_builder(capture.get(), NULL, NULL, server_addr, tun_prop, opt, true);
+	  TunProp::configure_builder(capture.get(), NULL, NULL, server_addr, tun_prop, opt, NULL, true);
 	  OPENVPN_LOG("*** TUN BUILDER CAPTURE" << std::endl << capture->to_string());
 	}
 	catch (const std::exception& e)
@@ -99,7 +100,7 @@ namespace openvpn {
 	{
 	  copt_.reset(new TunBuilderCapture());
 	  try {
-	    TunProp::configure_builder(copt_.get(), NULL, NULL, server_addr, tun_prop, opt, true);
+	    TunProp::configure_builder(copt_.get(), NULL, NULL, server_addr, tun_prop, opt, NULL, true);
 	  }
 	  catch (const std::exception&)
 	    {

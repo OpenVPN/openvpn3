@@ -86,9 +86,8 @@ namespace openvpn {
       bool tun_prefix;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
-
+      EmulateExcludeRouteFactory::Ptr eer_factory;
       TunPersist::Ptr tun_persist;
-
       TunBuilderBase* builder;
 
       static Ptr new_obj()
@@ -156,7 +155,7 @@ namespace openvpn {
 
 		  // configure the tun builder
 		  TunProp::configure_builder(tb, state.get(), config->stats.get(), server_addr,
-					     config->tun_prop, opt, false);
+					     config->tun_prop, opt, config->eer_factory.get(), false);
 
 		  // start tun
 		  sd = tb->tun_builder_establish();

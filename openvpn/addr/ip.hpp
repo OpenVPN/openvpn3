@@ -47,6 +47,9 @@ namespace openvpn {
     public:
       enum Version { UNSPEC, V4, V6 };
 
+      enum { V4_MASK=(1<<0), V6_MASK=(1<<1) };
+      typedef unsigned int VersionMask;
+
       enum VersionSize {
 	V4_SIZE = IPv4::Addr::SIZE,
 	V6_SIZE = IPv6::Addr::SIZE,
@@ -645,6 +648,24 @@ namespace openvpn {
       }
 
       Version version() const { return ver; }
+
+      static VersionMask version_mask(const Version ver)
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    return V4_MASK;
+	  case V6:
+	    return V6_MASK;
+	  default:
+	    return 0;
+	  }
+      }
+
+      VersionMask version_mask() const
+      {
+	return version_mask(ver);
+      }
 
       bool is_compatible(const Addr& other) const
       {

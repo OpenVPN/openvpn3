@@ -32,19 +32,13 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/port.hpp>
 #include <openvpn/tun/builder/base.hpp>
-#include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/addrpair.hpp>
-#include <openvpn/client/rgopt.hpp>
 #include <openvpn/client/remotelist.hpp>
+#include <openvpn/client/ipverflags.hpp>
+#include <openvpn/tun/client/emuexr.hpp>
 
 namespace openvpn {
   class TunProp {
-    // IP version flags
-    enum {
-      F_IPv4=(1<<0),
-      F_IPv6=(1<<1),
-    };
-
     // add_dns flags
     enum {
       F_ADD_DNS=(1<<0),
@@ -96,26 +90,43 @@ namespace openvpn {
 				  const IP::Addr& server_addr,
 				  const Config& config,
 				  const OptionList& opt,
+				  const EmulateExcludeRouteFactory* eer_factory,
 				  const bool quiet)
     {
+      // if eer_factory is defined, we must emulate exclude routes
+      EmulateExcludeRoute::Ptr eer;
+      if (eer_factory)
+	eer = eer_factory->new_obj();
+
       // do ifconfig
-      const unsigned int ip_ver_flags = tun_ifconfig(tb, state, opt);
+      const IP::Addr::VersionMask ip_ver_flags = tun_ifconfig(tb, state, opt);
+
+      // get IP version and redirect-gateway flags
+      IPVerFlags ipv(opt, ip_ver_flags);
 
       // add remote bypass routes
       if (config.remote_list && config.remote_bypass)
-	add_remote_bypass_routes(tb, *config.remote_list, server_addr, quiet);
+	add_remote_bypass_routes(tb, *config.remote_list, server_addr, eer.get(), quiet);
 
       // add routes
-      const unsigned int reroute_gw_ver_flags = add_routes(tb, opt, server_addr, ip_ver_flags, quiet);
+      add_routes(tb, opt, server_addr, ipv, eer.get(), quiet);
+
+      // emulate exclude routes
+      if (eer && eer->enabled(ipv))
+	eer->emulate(tb, ipv, server_addr);
+
+      // configure redirect-gateway
+      if (!tb->tun_builder_reroute_gw(ipv.rgv4(), ipv.rgv6(), ipv.api_flags()))
+	throw tun_prop_route_error("tun_builder_reroute_gw for redirect-gateway failed");
 
       // add DNS servers and domain prefixes
       const unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
 
       // Block IPv6?
-      tb->tun_builder_set_block_ipv6(opt.exists("block-ipv6") && !(ip_ver_flags & F_IPv6));
+      tb->tun_builder_set_block_ipv6(opt.exists("block-ipv6") && !ipv.v6());
 
       // DNS fallback
-      if ((reroute_gw_ver_flags & F_IPv4) && !(dhcp_option_flags & F_ADD_DNS))
+      if (ipv.rgv4() && !(dhcp_option_flags & F_ADD_DNS))
 	{
 	  if (config.google_dns_fallback)
 	    {
@@ -163,14 +174,14 @@ namespace openvpn {
       return ret;
     }
 
-    static unsigned int tun_ifconfig(TunBuilderBase* tb, State* state, const OptionList& opt)
+    static IP::Addr::VersionMask tun_ifconfig(TunBuilderBase* tb, State* state, const OptionList& opt)
     {
       enum Topology {
 	NET30,
 	SUBNET,
       };
 
-      unsigned int ip_ver_flags = 0;
+      IP::Addr::VersionMask ip_ver_flags = 0;
 
       // get topology
       Topology top = NET30;
@@ -207,7 +218,7 @@ namespace openvpn {
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology subnet)");
 		if (state)
 		  state->vpn_ip4_addr = pair.addr;
-		ip_ver_flags |= F_IPv4;
+		ip_ver_flags |= IP::Addr::V4_MASK;
 	      }
 	    else if (top == NET30)
 	      {
@@ -226,7 +237,7 @@ namespace openvpn {
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology net30)");
 		if (state)
 		  state->vpn_ip4_addr = local;
-		ip_ver_flags |= F_IPv4;
+		ip_ver_flags |= IP::Addr::V4_MASK;
 	      }
 	    else
 	      throw option_error("internal topology error");
@@ -255,7 +266,7 @@ namespace openvpn {
 	      throw tun_prop_error("tun_builder_add_address IPv6 failed");
 	    if (state)
 	      state->vpn_ip6_addr = pair.addr;
-	    ip_ver_flags |= F_IPv6;
+	    ip_ver_flags |= IP::Addr::V6_MASK;
 	  }
 
 	if (!ip_ver_flags)
@@ -266,20 +277,24 @@ namespace openvpn {
 
     static void add_exclude_route(TunBuilderBase* tb, 
 				  bool add,
-				  const std::string& address,
+				  const IP::Addr& addr,
 				  int prefix_length,
-				  bool ipv6)
+				  bool ipv6,
+				  EmulateExcludeRoute* eer)
     {
+      const std::string addr_str = addr.to_string();
       if (add)
 	{
-	  if (!tb->tun_builder_add_route(address, prefix_length, ipv6))
+	  if (!tb->tun_builder_add_route(addr_str, prefix_length, ipv6))
 	    throw tun_prop_route_error("tun_builder_add_route failed");
 	}
-      else
+      else if (!eer)
 	{
-	  if (!tb->tun_builder_exclude_route(address, prefix_length, ipv6))
+	  if (!tb->tun_builder_exclude_route(addr_str, prefix_length, ipv6))
 	    throw tun_prop_route_error("tun_builder_exclude_route failed");
 	}
+      if (eer)
+	eer->add_route(add, addr, prefix_length);
     }
 
     // Check the target of a route.
@@ -300,31 +315,15 @@ namespace openvpn {
 	return true;
     }
 
-    static unsigned int add_routes(TunBuilderBase* tb,
-				   const OptionList& opt,
-				   const IP::Addr& server_addr,
-				   const unsigned int ip_ver_flags,
-				   const bool quiet)
+    static void add_routes(TunBuilderBase* tb,
+			   const OptionList& opt,
+			   const IP::Addr& server_addr,
+			   const IPVerFlags& ipv,
+			   EmulateExcludeRoute* eer,
+			   const bool quiet)
     {
-      unsigned int reroute_gw_ver_flags = 0;
-      const RedirectGatewayFlags rg_flags(opt);
-
-      // redirect-gateway enabled for IPv4?
-      if (rg_flags.redirect_gateway_ipv4_enabled() && (ip_ver_flags & F_IPv4))
-	reroute_gw_ver_flags |= F_IPv4;
-
-      // redirect-gateway enabled for IPv6?
-      if (rg_flags.redirect_gateway_ipv6_enabled() && (ip_ver_flags & F_IPv6))
-	reroute_gw_ver_flags |= F_IPv6;
-
-      // call reroute_gw builder method
-      if (!tb->tun_builder_reroute_gw((reroute_gw_ver_flags & F_IPv4) ? true : false,
-				      (reroute_gw_ver_flags & F_IPv6) ? true : false,
-				      rg_flags()))
-	throw tun_prop_route_error("tun_builder_reroute_gw for redirect-gateway failed");
-
       // add IPv4 routes
-      if (ip_ver_flags & F_IPv4)
+      if (ipv.v4())
 	{
 	  OptionList::IndexMap::const_iterator dopt = opt.map().find("route"); // DIRECTIVE
 	  if (dopt != opt.map().end())
@@ -339,8 +338,8 @@ namespace openvpn {
 		    if (pair.version() != IP::Addr::V4)
 		      throw tun_prop_error("route is not IPv4");
 		    const bool add = route_target(o, 3);
-		    if (!(reroute_gw_ver_flags & F_IPv4) || !add)
-		      add_exclude_route(tb, add, pair.addr.to_string(), pair.netmask.prefix_len(), false);
+		    if (!ipv.rgv4() || !add)
+		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), false, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -352,7 +351,7 @@ namespace openvpn {
 	}
 
       // add IPv6 routes
-      if (ip_ver_flags & F_IPv6)
+      if (ipv.v6())
 	{
 	  OptionList::IndexMap::const_iterator dopt = opt.map().find("route-ipv6"); // DIRECTIVE
 	  if (dopt != opt.map().end())
@@ -367,8 +366,8 @@ namespace openvpn {
 		    if (pair.version() != IP::Addr::V6)
 		      throw tun_prop_error("route is not IPv6");
 		    const bool add = route_target(o, 2);
-		    if (!(reroute_gw_ver_flags & F_IPv6) || !add)
-		      add_exclude_route(tb, add, pair.addr.to_string(), pair.netmask.prefix_len(), true);
+		    if (!ipv.rgv6() || !add)
+		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), true, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -378,12 +377,12 @@ namespace openvpn {
 		}
 	    }
 	}
-      return reroute_gw_ver_flags;
     }
 
     static void add_remote_bypass_routes(TunBuilderBase* tb,
 					 const RemoteList& remote_list,
 					 const IP::Addr& server_addr,
+					 EmulateExcludeRoute* eer,
 					 const bool quiet)
     {
       IP::AddrList addrlist;
@@ -395,7 +394,7 @@ namespace openvpn {
 	    {
 	      try {
 		const IP::Addr::Version ver = addr.version();
-		add_exclude_route(tb, false, addr.to_string(), IP::Addr::version_size(ver), ver == IP::Addr::V6);
+		add_exclude_route(tb, false, addr, IP::Addr::version_size(ver), ver == IP::Addr::V6, eer);
 	      }
 	      catch (const std::exception& e)
 		{

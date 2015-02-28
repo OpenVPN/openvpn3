@@ -27,6 +27,7 @@
 #include <string>
 #include <sstream>
 
+#include <openvpn/common/types.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/scoped_asio_stream.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
@@ -155,6 +156,7 @@ namespace openvpn {
 					     server_addr,
 					     config->tun_prop,
 					     opt,
+					     NULL,
 					     false);
 		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string()); // fixme
 
