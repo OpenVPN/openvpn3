@@ -755,10 +755,14 @@ namespace openvpn {
 	      if (!SSL_CTX_set_cipher_list(ctx, "DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA"))
 		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed for force_aes_cbc_ciphersuites");
 	    }
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	  else
-	    SSL_CTX_set_ecdh_auto(ctx, 1);
+	    {
+	      if (!SSL_CTX_set_cipher_list(ctx, "DEFAULT:!EXP:!PSK:!SRP:!kRSA:!LOW"))
+		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+	      SSL_CTX_set_ecdh_auto(ctx, 1);
 #endif
+	    }
 
 	  if (config->local_cert_enabled)
 	    {
