@@ -915,7 +915,11 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::platform()
     {
-      return platform_string();
+      std::string ret = platform_string();
+#ifdef PRIVATE_TUNNEL_PROXY
+      ret += " PT_PROXY";
+#endif
+      return ret;
     }
 
     OPENVPN_CLIENT_EXPORT OpenVPNClient::~OpenVPNClient()
