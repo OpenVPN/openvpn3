@@ -30,14 +30,17 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/olong.hpp>
+#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/http/reply.hpp>
 #include <openvpn/http/status.hpp>
+#include <openvpn/ssl/sslapi.hpp>
+#include <openvpn/ssl/sslconsts.hpp>
+#include <openvpn/ws/chunked.hpp>
 
 namespace openvpn {
   namespace WS {
@@ -153,7 +156,7 @@ namespace openvpn {
 	bool keepalive;
       };
 
-      class HTTPCore : public RC<thread_unsafe_refcount>
+      class HTTPCore : ChunkedHelper::Callback, public RC<thread_unsafe_refcount>
       {
 	// calls tcp_* handlers
 	friend class TCPTransport::Link<HTTPCore*, false>;
@@ -164,163 +167,6 @@ namespace openvpn {
 				    void (HTTPCore::*)(const boost::system::error_code&,
 						   boost::asio::ip::tcp::resolver::iterator),
 				    boost::asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
-
-	class ChunkedHelper : public RC<thread_unsafe_refcount>
-	{
-	  enum State {
-	    hex,
-	    post_hex,
-	    post_hex_lf,
-	    post_chunk_cr,
-	    post_chunk_lf,
-	    post_content_cr,
-	    post_content_lf,
-	    done,
-	    chunk,
-	  };
-
-	public:
-	  typedef boost::intrusive_ptr<ChunkedHelper> Ptr;
-
-	  ChunkedHelper()
-	    : state(hex),
-	      size(0)
-	  {
-	  }
-
-	  bool receive(HTTPCore* parent, BufferAllocated& buf)
-	  {
-	    while (buf.defined())
-	      {
-		if (state == chunk)
-		  {
-		    if (size)
-		      {
-			if (buf.size() <= size)
-			  {
-			    size -= buf.size();
-			    parent->do_http_content_in(buf);
-			    break;
-			  }
-			else
-			  {
-			    BufferAllocated content(buf.read_alloc(size), size, 0);
-			    size = 0;
-			    parent->do_http_content_in(content);
-			  }
-		      }
-		    else
-		      state = post_chunk_cr;
-		  }
-		else if (state == done)
-		  break;
-		else
-		  {
-		    const char c = char(buf.pop_front());
-		  reprocess:
-		    switch (state)
-		      {
-		      case hex:
-			{
-			  const int v = parse_hex_char(c);
-			  if (v >= 0)
-			    size = (size << 4) + v;
-			  else
-			    {
-			      state = post_hex;
-			      goto reprocess;
-			    }
-			}
-			break;
-		      case post_hex:
-			if (c == '\r')
-			  state = post_hex_lf;
-			break;
-		      case post_hex_lf:
-			if (c == '\n')
-			  {
-			    if (size)
-			      state = chunk;
-			    else
-			      state = post_content_cr;
-			  }
-			else
-			  {
-			    state = post_hex;
-			    goto reprocess;
-			  }
-			break;
-		      case post_chunk_cr:
-			if (c == '\r')
-			  state = post_chunk_lf;
-			break;
-		      case post_chunk_lf:
-			if (c == '\n')
-			  state = hex;
-			else
-			  {
-			    state = post_chunk_cr;
-			    goto reprocess;
-			  }
-			break;
-		      case post_content_cr:
-			if (c == '\r')
-			  state = post_content_lf;
-			break;
-		      case post_content_lf:
-			if (c == '\n')
-			  state = done;
-			else
-			  {
-			    state = post_content_cr;
-			    goto reprocess;
-			  }
-			break;
-		      default: // should never be reached
-			break;
-		      }
-		  }
-	      }
-	    return state == done;
-	  }
-
-	  static BufferPtr transmit(BufferPtr buf)
-	  {
-	    const size_t headroom = 24;
-	    const size_t tailroom = 16;
-	    static const char crlf[] = "\r\n";
-
-	    if (!buf || buf->offset() < headroom || buf->remaining() < tailroom)
-	      {
-		// insufficient headroom/tailroom, must realloc
-		Frame::Context fc(headroom, 0, tailroom, 0, sizeof(size_t), 0);
-		buf = fc.copy(buf);
-	      }
-
-	    size_t size = buf->size();
-	    buf->prepend((unsigned char *)crlf, 2);
-	    if (size)
-	      {
-		while (size)
-		  {
-		    char *pc = (char *)buf->prepend_alloc(1);
-		    *pc = render_hex_char(size & 0xF);
-		    size >>= 4;
-		  }
-	      }
-	    else
-	      {
-		char *pc = (char *)buf->prepend_alloc(1);
-		*pc = '0';
-	      }
-	    buf->write((unsigned char *)crlf, 2);
-	    return buf;
-	  }
-
-	private:
-	  State state;
-	  size_t size;
-	};
 
       public:
 	typedef boost::intrusive_ptr<HTTPCore> Ptr;
@@ -766,13 +612,18 @@ namespace openvpn {
 		    }
 		  do_http_content_in(buf);
 		}
-	      else if (reply_chunked)
+	      else if (reply_chunked.defined())
 		{
-		  done = reply_chunked->receive(this, buf);
+		  done = reply_chunked->receive(*this, buf);
 		}
 	      if (done)
 		do_http_done();
 	    }
+	}
+
+	virtual void chunked_content_in(BufferAllocated& buf)
+	{
+	  do_http_content_in(buf);
 	}
 
 	void do_http_content_in(BufferAllocated& buf)
@@ -950,7 +801,7 @@ namespace openvpn {
 	unsigned int reply_header_bytes;
 	olong reply_content_length;  // Content-Length in header
 	olong reply_content_bytes;
-	ChunkedHelper::Ptr reply_chunked;
+	ScopedPtr<ChunkedHelper> reply_chunked;
 
 	LinkImpl::Ptr link;
 
