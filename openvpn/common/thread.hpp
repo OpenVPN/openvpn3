@@ -24,6 +24,18 @@
 #ifndef OPENVPN_COMMON_THREAD_H
 #define OPENVPN_COMMON_THREAD_H
 
+#if defined(USE_STD_THREAD)
+
+#include <thread>
+
+namespace openvpn {
+  typedef std::thread ThreadType;
+}
+
+#define OPENVPN_MULTITHREAD 1
+
+#else
+
 #include <boost/asio.hpp>
 
 #if defined(BOOST_HAS_THREADS) && !defined(BOOST_ASIO_DISABLE_THREADS)
@@ -32,8 +44,17 @@
 #define OPENVPN_MULTITHREAD 0
 #endif
 
+#endif // USE_STD_THREAD
+
 #if OPENVPN_MULTITHREAD
+
+#if !defined(USE_STD_THREAD)
 #include <boost/thread/thread.hpp>
+namespace openvpn {
+  typedef boost::thread ThreadType;
+}
+#endif
+
 #include <boost/asio/detail/tss_ptr.hpp>
 #include <boost/asio/detail/mutex.hpp>
 #endif

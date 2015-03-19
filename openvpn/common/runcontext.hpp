@@ -48,14 +48,14 @@ namespace openvpn {
 	ref.thread = NULL;
       }
 
-      Thread(boost::thread* thread_arg) : thread(thread_arg) {}
+      Thread(ThreadType* thread_arg) : thread(thread_arg) {}
 
       ~Thread() { delete thread; }
 
       Thread(const Thread&) = delete;
       Thread& operator=(const Thread&) = delete;
 
-      boost::thread* thread;
+      ThreadType* thread;
       typename ServerThread::Ptr serv;
     };
 
@@ -98,7 +98,7 @@ namespace openvpn {
 #endif
     }
 
-    void set_thread(const unsigned int unit, boost::thread* thread)
+    void set_thread(const unsigned int unit, ThreadType* thread)
     {
       BOOST_ASSERT(unit == threads.size());
       threads.emplace_back(thread);
