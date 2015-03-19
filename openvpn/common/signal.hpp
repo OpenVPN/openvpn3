@@ -127,6 +127,20 @@ namespace openvpn {
     // The previous signal mask.
     sigset_t old_mask_;
   };
+
+  // Like SignalBlocker, but block specific signals in default constructor
+  struct SignalBlockerDefault : public SignalBlocker
+  {
+    SignalBlockerDefault()
+      : SignalBlocker( // these signals should be handled by parent thread
+		      Signal::F_SIGINT|
+		      Signal::F_SIGTERM|
+		      Signal::F_SIGHUP|
+		      Signal::F_SIGUSR1|
+		      Signal::F_SIGUSR2)
+    {
+    }
+  };
 }
 #endif
 #endif
