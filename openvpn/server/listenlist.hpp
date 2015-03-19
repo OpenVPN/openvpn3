@@ -26,7 +26,7 @@
 #include <vector>
 #include <utility> // for std::move
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::ends_with
+#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
@@ -42,48 +42,78 @@ namespace openvpn {
     {
       Item() : n_threads(0) {}
 
+      std::string directive;
       std::string addr;
       std::string port;
       Protocol proto;
       unsigned int n_threads;
+
+      std::string to_string() const
+      {
+	std::ostringstream os;
+	os << directive << '/' << addr << '/' << port << '/' << proto.str() << '/' << n_threads;
+	return os.str();
+      }
     };
 
-    struct List : public std::vector<Item>
+    class List : public std::vector<Item>
     {
-      List(const OptionList& opt, const unsigned int n_cores)
+    public:
+      List(const OptionList& opt,
+	   const std::string& directive,
+	   const bool allow_default,
+	   const unsigned int n_cores)
       {
-	const OptionList::IndexList* listen = opt.get_index_ptr("listen");
-	if (listen)
+	size_t n_listen = 0;
+
+	for (OptionList::const_iterator i = opt.begin(); i != opt.end(); ++i)
 	  {
-	    reserve(listen->size());
+	    const Option& o = *i;
+	    if (match(directive, o))
+	      ++n_listen;
+	  }
 
-	    for (OptionList::IndexList::const_iterator i = listen->begin(); i != listen->end(); ++i)
+	if (n_listen)
+	  {
+	    reserve(n_listen);
+
+	    for (OptionList::const_iterator i = opt.begin(); i != opt.end(); ++i)
 	      {
-		const Option& o = opt[*i];
-		o.touch();
-
-		unsigned int mult = 1;
-
-		Item e;
-		e.addr = o.get(1, 128);
-		e.port = o.get(2, 16);
-		validate_port(e.port, "listen port");
-		e.proto = Protocol::parse(o.get(3, 16), false, "listen protocol");
-		const IP::Addr addr = IP::Addr(e.addr, "listen addr");
-		e.proto.mod_addr_version(addr);
-		std::string n_threads = o.get_default(4, 16, "1");
-		if (boost::algorithm::ends_with(n_threads, "*N"))
+		const Option& o = *i;
+		if (match(directive, o))
 		  {
-		    mult = n_cores;
-		    n_threads = n_threads.substr(0, n_threads.length() - 2);
+		    o.touch();
+
+		    unsigned int mult = 1;
+
+		    Item e;
+		    e.directive = o.get(0, 64);
+		    e.addr = o.get(1, 128);
+		    e.port = o.get(2, 16);
+		    validate_port(e.port, e.directive + " port");
+		    {
+		      const std::string title = e.directive + " protocol";
+		      e.proto = Protocol::parse(o.get(3, 16), false, title.c_str());
+		    }
+		    {
+		      const std::string title = e.directive + " addr";
+		      const IP::Addr addr = IP::Addr(e.addr, title.c_str());
+		      e.proto.mod_addr_version(addr);
+		    }
+		    std::string n_threads = o.get_default(4, 16, "1");
+		    if (boost::algorithm::ends_with(n_threads, "*N"))
+		      {
+			mult = n_cores;
+			n_threads = n_threads.substr(0, n_threads.length() - 2);
+		      }
+		    if (!parse_number_validate<unsigned int>(n_threads, 3, 1, 100, &e.n_threads))
+		      OPENVPN_THROW(option_error, e.directive << ": bad num threads: " << n_threads);
+		    e.n_threads *= mult;
+		    push_back(std::move(e));
 		  }
-		if (!parse_number_validate<unsigned int>(n_threads, 3, 1, 100, &e.n_threads))
-		  OPENVPN_THROW(option_error, "listen: bad num threads: " << n_threads);
-		e.n_threads *= mult;
-		push_back(std::move(e));
 	      }
 	  }
-	else
+	else if (allow_default)
 	  {
 	    Item e;
 
@@ -130,6 +160,8 @@ namespace openvpn {
 
 	    push_back(std::move(e));
 	  }
+	else
+	  OPENVPN_THROW(option_error, "no " << directive << " directives found");
       }
 
       unsigned int total_threads() const
@@ -140,6 +172,20 @@ namespace openvpn {
 	return ret;
       }
 
+    private:
+      static bool match(const std::string& directive, const Option& o)
+      {
+	const size_t len = directive.length();
+	if (len && o.size())
+	  {
+	    if (directive[len-1] == '-')
+	      return boost::algorithm::starts_with(o.ref(0), directive);
+	    else
+	      return o.ref(0) == directive;
+	  }
+	else
+	  return false;
+      }
     };
   }
 }
