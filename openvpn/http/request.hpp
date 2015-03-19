@@ -52,7 +52,7 @@ namespace openvpn {
 	std::ostringstream out;
 	out << "HTTP Request" << std::endl;
 	out << "method=" << method << std::endl;
-	out << "uri=" << method << std::endl;
+	out << "uri=" << uri << std::endl;
 	out << "version=" << http_version_major << '/' << http_version_minor << std::endl;
 	out << headers.to_string();
 	return out.str();
