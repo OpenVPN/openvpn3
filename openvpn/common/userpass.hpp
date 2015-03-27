@@ -47,6 +47,20 @@ namespace openvpn {
 	return false;
     }
 
+  inline void parse_user_pass(const OptionList& options, const std::string& opt_name,
+			      std::string& user, std::string& pass)
+  {
+    std::vector<std::string> up;
+    up.reserve(2);
+    parse_user_pass(options, opt_name, &up);
+    if (up.size() >= 1)
+      {
+	user = up[0];
+	if (up.size() >= 2)
+	  pass = up[1];
+      }
+  }
+
 } // namespace openvpn
 
 #endif
