@@ -66,10 +66,6 @@
 // OpenSSLContext is an SSL Context implementation that uses the
 // OpenSSL library as a backend.
 
-extern "C" {
-  int ssl_undefined_const_function(const ::SSL *s);
-};
-
 namespace openvpn {
 
   // Represents an SSL configuration that can be used
@@ -357,9 +353,7 @@ namespace openvpn {
 
       virtual bool read_cleartext_ready() const
       {
-	return !bmq_stream::memq_from_bio(ct_in)->empty()
-	  || (ssl->method->ssl_pending != ssl_undefined_const_function
-	      && SSL_pending(ssl) > 0);
+	return !bmq_stream::memq_from_bio(ct_in)->empty() || SSL_pending(ssl) > 0;
       }
 
       virtual void write_ciphertext(const BufferPtr& buf)
@@ -399,6 +393,19 @@ namespace openvpn {
       static void init_static()
       {
 	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", NULL, NULL, NULL);
+
+	// We actually override some of the OpenSSL SSLv23 methods here,
+	// in particular the ssl_pending method.  We want ssl_pending
+	// to return 0 until the SSL negotiation establishes the
+	// actual method.  The default OpenSSL SSLv23 ssl_pending method
+	// (ssl_undefined_const_function) triggers an OpenSSL error condition
+	// which is not what we want.
+
+	ssl23_method_client_ = *SSLv23_client_method();
+	ssl23_method_client_.ssl_pending = ssl_pending_override;
+
+	ssl23_method_server_ = *SSLv23_server_method();
+	ssl23_method_server_.ssl_pending = ssl_pending_override;
       }
 
     private:
@@ -451,6 +458,12 @@ namespace openvpn {
 	    ssl_erase();
 	    throw;
 	  }
+      }
+
+      // Indicate no data available for our custom SSLv23 method
+      static int ssl_pending_override(const ::SSL *)
+      {
+	return 0;
       }
 
       // Print a one line summary of SSL/TLS session handshake.
@@ -515,6 +528,21 @@ namespace openvpn {
 	return bio;
       }
 
+      /*
+       * Return modified OpenSSL SSLv23 methods,
+       * as configured in init_static().
+       */
+
+      static const SSL_METHOD* ssl23_method_client()
+      {
+	return &ssl23_method_client_;
+      }
+
+      static const SSL_METHOD* ssl23_method_server()
+      {
+	return &ssl23_method_server_;
+      }
+
       ::SSL *ssl;	   // OpenSSL SSL object
       BIO *ssl_bio;        // read/write cleartext from here
       BIO *ct_in;          // write ciphertext to here
@@ -525,6 +553,10 @@ namespace openvpn {
 
       // Helps us to store pointer to self in ::SSL object
       static int mydata_index;
+
+      // Modified SSLv23 methods
+      static SSL_METHOD ssl23_method_client_;
+      static SSL_METHOD ssl23_method_server_;
     };
 
   private:
@@ -699,7 +731,7 @@ namespace openvpn {
 	  const bool ssl23 = (config->force_aes_cbc_ciphersuites || (config->tls_version_min > TLSVersion::UNDEF));
 	  if (config->mode.is_server())
 	    {
-	      ctx = SSL_CTX_new(ssl23 ? SSLv23_server_method() : TLSv1_server_method());
+	      ctx = SSL_CTX_new(ssl23 ? SSL::ssl23_method_server() : TLSv1_server_method());
 	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
 
@@ -713,7 +745,7 @@ namespace openvpn {
 	    }
 	  else if (config->mode.is_client())
 	    {
-	      ctx = SSL_CTX_new(ssl23 ? SSLv23_client_method() : TLSv1_client_method());
+	      ctx = SSL_CTX_new(ssl23 ? SSL::ssl23_method_client() : TLSv1_client_method());
 	      if (ctx == NULL)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
 	      if (config->enable_renegotiation)
@@ -1161,6 +1193,9 @@ namespace openvpn {
   };
 
   int OpenSSLContext::SSL::mydata_index = -1;
+
+  SSL_METHOD OpenSSLContext::SSL::ssl23_method_client_;
+  SSL_METHOD OpenSSLContext::SSL::ssl23_method_server_;
 }
 
 #endif
