@@ -34,8 +34,7 @@ namespace openvpn {
   {
     virtual void log(const std::string& str) = 0;
   };
-
-};
+}
 
 #include <openvpn/log/logthread.hpp>
 
