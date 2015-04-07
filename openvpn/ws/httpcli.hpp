@@ -28,8 +28,6 @@
 #include <algorithm>         // for std::min, std::max
 
 #include <openvpn/common/base64.hpp>
-#include <openvpn/common/number.hpp>
-#include <openvpn/common/string.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/buffer/bufstream.hpp>
@@ -41,6 +39,7 @@
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ws/chunked.hpp>
+#include <openvpn/ws/httpcommon.hpp>
 
 namespace openvpn {
   namespace WS {
@@ -470,25 +469,6 @@ namespace openvpn {
 	  http_out();
 	}
 
-	static olong get_content_length(const HTTP::HeaderList& headers)
-	{
-	  const std::string transfer_encoding = headers.get_value_trim("transfer-encoding");
-	  if (!string::strcasecmp(transfer_encoding, "chunked"))
-	    {
-	      return ContentInfo::CHUNKED;
-	    }
-	  else
-	    {
-	      const std::string content_length_str = headers.get_value_trim("content-length");
-	      if (content_length_str.empty())
-		return 0;
-	      const olong content_length = parse_number_throw<olong>(content_length_str, "content-length");
-	      if (content_length < 0)
-		throw http_client_exception("content-length is < 0");
-	      return content_length;
-	    }
-	}
-
 	// Transmit outgoing HTTP, either to SSL object (HTTPS) or TCP socket (HTTP)
 	void http_out()
 	{
@@ -581,7 +561,7 @@ namespace openvpn {
 		      buf.advance(i+1);
 		      if (reply_status == HTTP::ReplyParser::success)
 			{
-			  reply_content_length = get_content_length(reply_obj.headers);
+			  reply_content_length = get_content_length<decltype(reply_content_length)>(reply_obj.headers, ContentInfo::CHUNKED);
 			  if (reply_content_length == ContentInfo::CHUNKED)
 			    reply_chunked.reset(new ChunkedHelper());
 			  if (!halt)
