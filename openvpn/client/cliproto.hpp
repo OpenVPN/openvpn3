@@ -667,6 +667,9 @@ namespace openvpn {
 
       void set_housekeeping_timer()
       {
+	if (halt)
+	  return;
+
 	Time next = Base::next_housekeeping();
 	if (!housekeeping_schedule.similar(next))
 	  {
