@@ -45,49 +45,52 @@ namespace openvpn {
   namespace WS {
     namespace Client {
 
-      // Error codes
-      enum {
-	E_SUCCESS=0,
-	E_RESOLVE,
-	E_CONNECT,
-	E_TCP,
-	E_HTTP,
-	E_EXCEPTION,
-	E_HEADER_SIZE,
-	E_CONTENT_SIZE,
-	E_EOF_SSL,
-	E_EOF_TCP,
-	E_CONNECT_TIMEOUT,
-	E_GENERAL_TIMEOUT,
-
-	N_ERRORS
-      };
-
       OPENVPN_EXCEPTION(http_client_exception);
 
-      inline std::string error_str(const size_t status)
+      struct Status
       {
-	static const char *error_names[] = {
-	  "E_SUCCESS",
-	  "E_RESOLVE",
-	  "E_CONNECT",
-	  "E_TCP",
-	  "E_HTTP",
-	  "E_EXCEPTION",
-	  "E_HEADER_SIZE",
-	  "E_CONTENT_SIZE",
-	  "E_EOF_SSL",
-	  "E_EOF_TCP",
-	  "E_CONNECT_TIMEOUT",
-	  "E_GENERAL_TIMEOUT",
+	// Error codes
+	enum {
+	  E_SUCCESS=0,
+	  E_RESOLVE,
+	  E_CONNECT,
+	  E_TCP,
+	  E_HTTP,
+	  E_EXCEPTION,
+	  E_HEADER_SIZE,
+	  E_CONTENT_SIZE,
+	  E_EOF_SSL,
+	  E_EOF_TCP,
+	  E_CONNECT_TIMEOUT,
+	  E_GENERAL_TIMEOUT,
+
+	  N_ERRORS
 	};
 
-	static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
-	if (status < N_ERRORS)
-	  return error_names[status];
-	else
-	  return "E_???";
-      }
+	static std::string error_str(const size_t status)
+	{
+	  static const char *error_names[] = {
+	    "E_SUCCESS",
+	    "E_RESOLVE",
+	    "E_CONNECT",
+	    "E_TCP",
+	    "E_HTTP",
+	    "E_EXCEPTION",
+	    "E_HEADER_SIZE",
+	    "E_CONTENT_SIZE",
+	    "E_EOF_SSL",
+	    "E_EOF_TCP",
+	    "E_CONNECT_TIMEOUT",
+	    "E_GENERAL_TIMEOUT",
+	  };
+
+	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
+	  if (status < N_ERRORS)
+	    return error_names[status];
+	  else
+	    return "E_???";
+	}
+      };
 
       struct Config : public RC<thread_unsafe_refcount>
       {
@@ -342,7 +345,7 @@ namespace openvpn {
 
 	  if (error)
 	    {
-	      asio_error_handler(E_RESOLVE, "handle_resolve", error);
+	      asio_error_handler(Status::E_RESOLVE, "handle_resolve", error);
 	      return;
 	    }
 
@@ -365,7 +368,7 @@ namespace openvpn {
 
 	  if (error)
 	    {
-	      asio_error_handler(E_CONNECT, "handle_connect", error);
+	      asio_error_handler(Status::E_CONNECT, "handle_connect", error);
 	      return;
 	    }
 
@@ -408,13 +411,13 @@ namespace openvpn {
 	void general_timeout_handler(const boost::system::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
-	    error_handler(E_GENERAL_TIMEOUT, "General timeout");
+	    error_handler(Status::E_GENERAL_TIMEOUT, "General timeout");
 	}
 
 	void connect_timeout_handler(const boost::system::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
-	    error_handler(E_CONNECT_TIMEOUT, "Connect timeout");
+	    error_handler(Status::E_CONNECT_TIMEOUT, "Connect timeout");
 	}
 
 	void set_default_stats()
@@ -550,7 +553,7 @@ namespace openvpn {
 			  if ((config->max_header_bytes && reply_header_bytes > config->max_header_bytes)
 			      || (config->max_headers && reply_obj.headers.size() > config->max_headers))
 			    {
-			      error_handler(E_HEADER_SIZE, "HTTP headers too large");
+			      error_handler(Status::E_HEADER_SIZE, "HTTP headers too large");
 			      return;
 			    }
 			}
@@ -570,7 +573,7 @@ namespace openvpn {
 			}
 		      else
 			{
-			  error_handler(E_HTTP, "HTTP reply/headers parse error");
+			  error_handler(Status::E_HTTP, "HTTP reply/headers parse error");
 			  return;
 			}
 		    }
@@ -615,7 +618,7 @@ namespace openvpn {
 	      reply_content_bytes += buf.size();
 	      if (config->max_content_bytes && reply_content_bytes > config->max_content_bytes)
 		{
-		  error_handler(E_CONTENT_SIZE, "HTTP content too large");
+		  error_handler(Status::E_CONTENT_SIZE, "HTTP content too large");
 		  return;
 		}
 	      http_content_in(buf);
@@ -639,7 +642,7 @@ namespace openvpn {
 	    }
 	  else
 	    stop();
-	  http_done(E_SUCCESS, "Succeeded");
+	  http_done(Status::E_SUCCESS, "Succeeded");
 	}
 
 	// read outgoing ciphertext data from SSL object and xmit to TCP socket
@@ -676,7 +679,7 @@ namespace openvpn {
 	      else if (size == SSLConst::SHOULD_RETRY)
 		break;
 	      else if (size == SSLConst::PEER_CLOSE_NOTIFY)
-		http_eof(E_EOF_SSL, "SSL PEER_CLOSE_NOTIFY");
+		http_eof(Status::E_EOF_SSL, "SSL PEER_CLOSE_NOTIFY");
 	      else
 		throw http_client_exception("unknown read status from SSL layer");
 	    }
@@ -733,7 +736,7 @@ namespace openvpn {
 	    return;
 
 	  try {
-	    http_eof(E_EOF_TCP, "TCP EOF");
+	    http_eof(Status::E_EOF_TCP, "TCP EOF");
 	    return;
 	  }
 	  catch (const std::exception& e)
@@ -746,7 +749,7 @@ namespace openvpn {
 	{
 	  if (halt)
 	    return;
-	  error_handler(E_TCP, std::string("HTTPCore TCP: ") + error);
+	  error_handler(Status::E_TCP, std::string("HTTPCore TCP: ") + error);
 	}
 
 	void asio_error_handler(int errcode, const char *func_name, const boost::system::error_code& error)
@@ -756,7 +759,7 @@ namespace openvpn {
 
 	void handle_exception(const char *func_name, const std::exception& e)
 	{
-	  error_handler(E_EXCEPTION, std::string("HTTPCore Exception ") + func_name + ": " + e.what());
+	  error_handler(Status::E_EXCEPTION, std::string("HTTPCore Exception ") + func_name + ": " + e.what());
 	}
 
 	boost::asio::io_service& io_service;
