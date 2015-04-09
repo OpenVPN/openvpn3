@@ -29,18 +29,14 @@ namespace openvpn {
       };
 
     public:
-      struct Callback
-      {
-	virtual void chunked_content_in(BufferAllocated& buf) = 0;
-      };
-
       ChunkedHelper()
 	: state(hex),
 	  size(0)
       {
       }
 
-      bool receive(Callback& callback, BufferAllocated& buf)
+      template <typename PARENT>
+      bool receive(PARENT& callback, BufferAllocated& buf)
       {
 	while (buf.defined())
 	  {
