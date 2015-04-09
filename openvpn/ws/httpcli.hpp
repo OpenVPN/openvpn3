@@ -29,16 +29,10 @@
 
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/buffer/bufstream.hpp>
-#include <openvpn/frame/frame.hpp>
+#include <openvpn/http/reply.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/transport/tcplink.hpp>
-#include <openvpn/http/reply.hpp>
-#include <openvpn/http/status.hpp>
-#include <openvpn/ssl/sslapi.hpp>
-#include <openvpn/ssl/sslconsts.hpp>
-#include <openvpn/ws/chunked.hpp>
 #include <openvpn/ws/httpcommon.hpp>
 
 namespace openvpn {
@@ -158,8 +152,13 @@ namespace openvpn {
 	bool keepalive;
       };
 
-      class HTTPCore : ChunkedHelper::Callback, public RC<thread_unsafe_refcount>
+      class HTTPCore;
+      typedef HTTPBase<HTTPCore, Config, Status, HTTP::ReplyType, ContentInfo, olong> Base;
+
+      class HTTPCore : public Base
       {
+	friend Base;
+
 	// calls tcp_* handlers
 	friend class TCPTransport::Link<HTTPCore*, false>;
 
@@ -175,28 +174,14 @@ namespace openvpn {
 
 	HTTPCore(boost::asio::io_service& io_service_arg,
 	     const Config::Ptr& config_arg)
-	  : io_service(io_service_arg),
-	    halt(false),
-	    ready(true),
+	  : Base(config_arg),
+	    io_service(io_service_arg),
 	    alive(false),
-	    config(config_arg),
 	    socket(io_service_arg),
 	    resolver(io_service_arg),
 	    connect_timer(io_service_arg),
-	    general_timer(io_service_arg),
-	    frame(config_arg->frame),
-	    stats(config_arg->stats)
+	    general_timer(io_service_arg)
 	{
-	  per_request_reset();
-	}
-
-	void reset()
-	{
-	  if (halt)
-	    {
-	      halt = false;
-	      ready = true;
-	    }
 	}
 
 	void start_request()
@@ -221,29 +206,6 @@ namespace openvpn {
 	      general_timer.cancel();
 	      connect_timer.cancel();
 	    }
-	}
-
-	bool is_ready() const {
-	  return !halt && ready;
-	}
-
-	const HTTP::Reply& reply() const {
-	  return reply_obj;
-	}
-
-	const HTTP::HeaderList& headers() const {
-	  return reply_obj.headers;
-	}
-
-	const olong content_length() const {
-	  return reply_content_length;
-	}
-
-	std::string ssl_handshake_details() const {
-	  if (ssl_sess)
-	    return ssl_sess->ssl_handshake_details();
-	  else
-	    return "";
 	}
 
 	// virtual methods
@@ -283,11 +245,6 @@ namespace openvpn {
 	{
 	  if (!frame)
 	    throw http_client_exception("frame undefined");
-	}
-
-	size_t http_buf_size() const
-	{
-	  return (*frame)[Frame::WRITE_HTTP].payload();
 	}
 
 	void handle_request() // called by Asio
@@ -396,18 +353,6 @@ namespace openvpn {
 	    }
 	}
 
-	// error notification
-	void error_handler(const int errcode, const std::string& err)
-	{
-	  const bool in_transaction = !ready;
-	  const bool keepalive = alive;
-	  stop();
-	  if (in_transaction)
-	    http_done(errcode, err);
-	  else if (keepalive)
-	    http_keepalive_close(errcode, err); // keepalive connection close outside of transaction
-	}
-
 	void general_timeout_handler(const boost::system::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
@@ -426,21 +371,9 @@ namespace openvpn {
 	    stats.reset(new SessionStats());
 	}
 
-	void per_request_reset()
-	{
-	  reply_obj.reset();
-	  reply_status = HTTP::ReplyParser::pending;
-	  reply_parser.reset();
-	  reply_header_bytes = 0;
-	  reply_content_length = 0;
-	  reply_content_bytes = 0;
-	  reply_chunked.reset();
-	  out_eof = false;
-	}
-
 	void generate_request()
 	{
-	  per_request_reset();
+	  rr_reset();
 
 	  const Request req = http_request();
 	  content_info = http_content_info();
@@ -472,242 +405,13 @@ namespace openvpn {
 	  http_out();
 	}
 
-	// Transmit outgoing HTTP, either to SSL object (HTTPS) or TCP socket (HTTP)
-	void http_out()
-	{
-	  if (halt)
-	    return;
-	  if ((!outbuf || outbuf->empty()) && !out_eof)
-	    {
-	      outbuf = http_content_out();
-	      if (!outbuf || !outbuf->defined())
-		out_eof = true;
-	      if (content_info.length == ContentInfo::CHUNKED)
-		outbuf = ChunkedHelper::transmit(outbuf);
-	    }
-	  if (outbuf)
-	    {
-	      const size_t size = std::min(outbuf->size(), http_buf_size());
-	      if (size)
-		{
-		  if (ssl_sess)
-		    {
-		      // HTTPS: send outgoing cleartext HTTP data from request to SSL object
-		      ssize_t actual = 0;
-		      try {
-			actual = ssl_sess->write_cleartext_unbuffered(outbuf->data(), size);
-		      }
-		      catch (...)
-			{
-			  stats->error(Error::SSL_ERROR);
-			  throw;
-			}
-		      if (actual >= 0)
-			{
-#if defined(OPENVPN_DEBUG_HTTPCLI)
-			  BufferAllocated tmp(outbuf->c_data(), actual, 0);
-			  OPENVPN_LOG(buf_to_string(tmp));
-#endif
-			  outbuf->advance(actual);
-			}
-		      else if (actual == SSLConst::SHOULD_RETRY)
-			;
-		      else
-			throw http_client_exception("unknown write status from SSL layer");
-		      ssl_down_stack();
-		    }
-		  else
-		    {
-		      // HTTP: send outgoing cleartext HTTP data from request to TCP socket
-		      BufferAllocated buf;
-		      frame->prepare(Frame::WRITE_HTTP, buf);
-		      buf.write(outbuf->data(), size);
-#if defined(OPENVPN_DEBUG_HTTPCLI)
-		      OPENVPN_LOG(buf_to_string(buf));
-#endif
-		      if (link->send(buf))
-			outbuf->advance(size);
-		    }
-		}
-	    }
-	}
-
-	// Receive incoming HTTP
-	void http_in(BufferAllocated& buf)
-	{
-	  if (halt || ready) // if ready, indicates unsolicited input
-	    return;
-
-	  if (reply_status == HTTP::ReplyParser::pending)
-	    {
-	      // processing HTTP reply and headers
-	      for (size_t i = 0; i < buf.size(); ++i)
-		{
-		  reply_status = reply_parser.consume(reply_obj, (char)buf[i]);
-		  if (reply_status == HTTP::ReplyParser::pending)
-		    {
-		      ++reply_header_bytes;
-		      if ((reply_header_bytes & 0x3F) == 0)
-			{
-			  // only check header maximums once every 64 bytes
-			  if ((config->max_header_bytes && reply_header_bytes > config->max_header_bytes)
-			      || (config->max_headers && reply_obj.headers.size() > config->max_headers))
-			    {
-			      error_handler(Status::E_HEADER_SIZE, "HTTP headers too large");
-			      return;
-			    }
-			}
-		    }
-		  else
-		    {
-		      // finished processing HTTP reply and headers
-		      buf.advance(i+1);
-		      if (reply_status == HTTP::ReplyParser::success)
-			{
-			  reply_content_length = get_content_length<decltype(reply_content_length)>(reply_obj.headers, ContentInfo::CHUNKED);
-			  if (reply_content_length == ContentInfo::CHUNKED)
-			    reply_chunked.reset(new ChunkedHelper());
-			  if (!halt)
-			    http_headers_received();
-			  break;
-			}
-		      else
-			{
-			  error_handler(Status::E_HTTP, "HTTP reply/headers parse error");
-			  return;
-			}
-		    }
-		}
-	    }
-
-	  if (reply_status == HTTP::ReplyParser::success)
-	    {
-	      // processing HTTP content
-	      bool done = false;
-	      if (reply_content_length >= 0)
-		{
-		  const olong needed = std::max(reply_content_length - reply_content_bytes, olong(0));
-		  if (needed <= buf.size())
-		    {
-		      done = true;
-		      if (needed < buf.size())
-			buf.set_size(needed); // drop post-content residual data
-		    }
-		  do_http_content_in(buf);
-		}
-	      else if (reply_chunked.defined())
-		{
-		  done = reply_chunked->receive(*this, buf);
-		}
-	      if (done)
-		do_http_done();
-	    }
-	}
-
-	virtual void chunked_content_in(BufferAllocated& buf)
-	{
-	  do_http_content_in(buf);
-	}
-
-	void do_http_content_in(BufferAllocated& buf)
-	{
-	  if (halt)
-	    return;
-	  if (buf.defined())
-	    {
-	      reply_content_bytes += buf.size();
-	      if (config->max_content_bytes && reply_content_bytes > config->max_content_bytes)
-		{
-		  error_handler(Status::E_CONTENT_SIZE, "HTTP content too large");
-		  return;
-		}
-	      http_content_in(buf);
-	    }
-	}
-
-	void http_eof(const int errcode, const std::string& err)
-	{
-	  error_handler(errcode, err);
-	}
-
-	void do_http_done()
-	{
-	  if (halt)
-	    return;
-	  if (content_info.keepalive)
-	    {
-	      general_timer.cancel();
-	      alive = true;
-	      ready = true;
-	    }
-	  else
-	    stop();
-	  http_done(Status::E_SUCCESS, "Succeeded");
-	}
-
-	// read outgoing ciphertext data from SSL object and xmit to TCP socket
-	void ssl_down_stack()
-	{
-	  while (!halt && ssl_sess->read_ciphertext_ready())
-	    {
-	      BufferPtr buf = ssl_sess->read_ciphertext();
-	      link->send(*buf);
-	    }
-	}
-
-	// read incoming cleartext data from SSL object and pass to HTTP receiver
-	void ssl_up_stack()
-	{
-	  BufferAllocated buf;
-	  while (!halt && ssl_sess->read_cleartext_ready())
-	    {
-	      frame->prepare(Frame::READ_SSL_CLEARTEXT, buf);
-	      ssize_t size = 0;
-	      try {
-		size = ssl_sess->read_cleartext(buf.data(), buf.max_size());
-	      }
-	      catch (...)
-		{
-		  stats->error(Error::SSL_ERROR);
-		  throw;
-		}
-	      if (size >= 0)
-		{
-		  buf.set_size(size);
-		  http_in(buf);
-		}
-	      else if (size == SSLConst::SHOULD_RETRY)
-		break;
-	      else if (size == SSLConst::PEER_CLOSE_NOTIFY)
-		http_eof(Status::E_EOF_SSL, "SSL PEER_CLOSE_NOTIFY");
-	      else
-		throw http_client_exception("unknown read status from SSL layer");
-	    }
-	}
-
 	void tcp_read_handler(BufferAllocated& b) // called by LinkImpl
 	{
 	  if (halt)
 	    return;
 
 	  try {
-	    if (ssl_sess)
-	      {
-		// HTTPS
-		BufferPtr buf(new BufferAllocated());
-		buf->swap(b); // take ownership
-		ssl_sess->write_ciphertext(buf);
-		ssl_up_stack();
-
-		// In some cases, such as immediately after handshake,
-		// a write becomes possible after a read has completed.
-		http_out();
-	      }
-	    else
-	      {
-		// HTTP
-		http_in(b);
-	      }
+	    tcp_in(b); // call Base
 	  }
 	  catch (const std::exception& e)
 	    {
@@ -736,7 +440,7 @@ namespace openvpn {
 	    return;
 
 	  try {
-	    http_eof(Status::E_EOF_TCP, "TCP EOF");
+	    error_handler(Status::E_EOF_TCP, "TCP EOF");
 	    return;
 	  }
 	  catch (const std::exception& e)
@@ -762,40 +466,51 @@ namespace openvpn {
 	  error_handler(Status::E_EXCEPTION, std::string("HTTPCore Exception ") + func_name + ": " + e.what());
 	}
 
+	bool link_send(BufferAllocated& buf) // called by Base
+	{
+	  return link->send(buf);
+	}
+
+	void http_done_handler() // called by Base
+	{
+	  if (halt)
+	    return;
+	  if (content_info.keepalive)
+	    {
+	      general_timer.cancel();
+	      alive = true;
+	      ready = true;
+	    }
+	  else
+	    stop();
+	  http_done(Status::E_SUCCESS, "Succeeded");
+	}
+
+	// error notification
+	void error_handler(const int errcode, const std::string& err) // called by Base
+	{
+	  const bool in_transaction = !ready;
+	  const bool keepalive = alive;
+	  stop();
+	  if (in_transaction)
+	    http_done(errcode, err);
+	  else if (keepalive)
+	    http_keepalive_close(errcode, err); // keepalive connection close outside of transaction
+	}
+
 	boost::asio::io_service& io_service;
 
-	bool halt;
-	bool ready;
 	bool alive;
-
-	Config::Ptr config;
 
 	boost::asio::ip::tcp::socket socket;
 	boost::asio::ip::tcp::resolver resolver;
 
-	SSLAPI::Ptr ssl_sess;
-
 	Host host;
-	ContentInfo content_info;
-
-	HTTP::Reply reply_obj;
-	HTTP::ReplyParser::status reply_status;
-	HTTP::ReplyParser reply_parser;
-	unsigned int reply_header_bytes;
-	olong reply_content_length;  // Content-Length in header
-	olong reply_content_bytes;
-	ScopedPtr<ChunkedHelper> reply_chunked;
 
 	LinkImpl::Ptr link;
 
-	BufferPtr outbuf;
-	bool out_eof;
-
 	AsioTimer connect_timer;
 	AsioTimer general_timer;
-
-	Frame::Ptr frame;
-	SessionStats::Ptr stats;
       };
 
       template <typename PARENT>
