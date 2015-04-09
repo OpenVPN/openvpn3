@@ -142,6 +142,20 @@ namespace openvpn {
       return false;
     }
 
+    // replace all spaces in string with rep
+    inline std::string replace_spaces(const std::string& str, const char rep)
+    {
+      std::string ret;
+      for (std::string::const_iterator i = str.begin(); i != str.end(); ++i)
+	{
+	  char c = *i;
+	  if (is_space(c))
+	    c = rep;
+	  ret += c;
+	}
+      return ret;
+    }
+
   } // namespace string
 
   // Reference-counted string
