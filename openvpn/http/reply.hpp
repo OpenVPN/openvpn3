@@ -386,6 +386,12 @@ namespace openvpn {
       // The current state of the parser.
       state state_;
     };
+
+    struct ReplyType
+    {
+      typedef Reply State;
+      typedef ReplyParser Parser;
+    };
   }
 }
 
