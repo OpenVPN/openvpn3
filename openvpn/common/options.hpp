@@ -1033,6 +1033,18 @@ namespace openvpn {
 	return "";
     }
 
+    // Like get_optional, but return "" if exception is thrown.
+    std::string get_optional_noexcept(const std::string& name, size_t index, const size_t max_len) const
+    {
+      try {
+	return get_optional(name, index, max_len);
+      }
+      catch (const std::exception& e)
+	{
+	  return "";
+	}
+    }
+
     // Convenience method that gets a particular argument index within an option,
     // while returning a default string if option doesn't exist, and raising an
     // exception if argument index is out-of-bounds.
