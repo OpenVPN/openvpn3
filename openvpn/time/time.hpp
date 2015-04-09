@@ -73,6 +73,13 @@ namespace openvpn {
       static Duration binary_ms(const T v) { return Duration(v); }
       static Duration infinite() { return Duration(std::numeric_limits<T>::max()); }
 
+      static Duration milliseconds(const T v)
+      {
+	// NOTE: assumes that prec == 1024
+	// Also note that this might wrap if v is larger than 1/3 of max size of T
+	return Duration(v + (v * T(3) / T(128)));
+      }
+
       Duration() : duration_(T(0)) {}
 
       bool defined() const { return duration_ != T(0); }
