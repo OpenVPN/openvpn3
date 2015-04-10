@@ -34,6 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/file.hpp>
+#include <openvpn/common/logrotate.hpp>
 
 namespace openvpn {
 
@@ -64,8 +65,12 @@ namespace openvpn {
       close(log);
   }
 
-  inline void daemonize(const std::string& log_fn, const bool log_append)
+  inline void daemonize(const std::string& log_fn,
+			const bool log_append,
+			const int log_versions)
   {
+    if (!log_append && log_versions >= 1)
+      log_rotate(log_fn, log_versions);
     redir_std(log_fn, log_append);
     if (daemon(1, 1) < 0)
       throw daemon_err("daemon() failed");
