@@ -248,6 +248,7 @@ namespace openvpn {
 	remote_peer_id = -1;
 	local_peer_id = -1;
 	tun_mtu = 1500;
+	debug_level = 1;
 	force_aes_cbc_ciphersuites = false;
       }
 
@@ -327,6 +328,9 @@ namespace openvpn {
 
       // MTU
       unsigned int tun_mtu;
+
+      // Debugging
+      int debug_level;
 
       // Compatibility
       bool force_aes_cbc_ciphersuites;
@@ -1732,7 +1736,8 @@ namespace openvpn {
 
       void active()
       {
-	OPENVPN_LOG_SSL("SSL Handshake: " << Base::ssl_handshake_details());
+	if (proto.config->debug_level >= 1)
+	  OPENVPN_LOG_SSL("SSL Handshake: " << Base::ssl_handshake_details());
 	generate_session_keys();
 	while (!app_pre_write_queue.empty())
 	  {
