@@ -259,6 +259,7 @@ namespace openvpn {
       // init transport config
       const std::string session_name = load_transport_config();
 
+#if !defined(OPENVPN_FORCE_TUN_NULL)
       // get tun-mtu parameter from config
       unsigned int tun_mtu = 0;
       {
@@ -266,6 +267,7 @@ namespace openvpn {
 	if (o)
 	  tun_mtu = parse_number_throw<unsigned int>(o->get(1, 16), "tun-mtu");
       }
+#endif
 
       // initialize tun/tap
 #if defined(USE_TUN_BUILDER)
