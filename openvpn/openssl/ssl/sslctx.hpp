@@ -1114,6 +1114,17 @@ namespace openvpn {
       // get OpenSSLContext::SSL
       SSL* self_ssl = (SSL *) SSL_get_ex_data (ssl, SSL::mydata_index);
 
+      // log subject
+      if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
+	{
+	  const std::string subject = x509_get_subject(ctx->current_cert);
+	  if (!subject.empty())
+	    OPENVPN_LOG_SSL("VERIFY "
+			    << (preverify_ok ? "OK" : "FAIL")
+			    << ": depth=" << ctx->error_depth
+			    << ", " << subject);
+	}
+
       if (ctx->error_depth == 1) // issuer cert
 	{
 	  // save the issuer cert fingerprint
