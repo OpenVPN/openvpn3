@@ -89,7 +89,9 @@
 #define USE_TUN_BUILDER
 #endif
 
+#ifndef OPENVPN_LOG
 #include <openvpn/log/logthread.hpp>    // should be included early
+#endif
 
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/common/types.hpp>
@@ -574,7 +576,9 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
     {
       boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+#ifdef OPENVPN_LOG_LOGTHREAD_H
       Log::Context log_context(this);
+#endif
       Status ret;
       bool in_run = false;
       ScopedPtr<boost::asio::io_service> io_service;
