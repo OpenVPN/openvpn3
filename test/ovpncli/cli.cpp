@@ -25,7 +25,8 @@
 
 #include <string>
 #include <iostream>
-//#include <fstream> // fixme
+
+#include <client/ovpncli.cpp> // should be included before any boost includes
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -45,8 +46,6 @@
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/console.hpp>
 #endif
-
-#include <client/ovpncli.cpp>
 
 using namespace openvpn;
 

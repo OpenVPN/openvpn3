@@ -61,6 +61,10 @@
 // enable assertion checks (can safely be disabled in production)
 //#define OPENVPN_ENABLE_ASSERT
 
+// boost asserts on null smart pointer dereferences are fairly useless
+// since a segfault will generate more actionable debug info
+#define BOOST_DISABLE_ASSERTS
+
 // if 1, enable special PRNG that is distinct from RNG
 #ifndef ENABLE_PRNG
 #define ENABLE_PRNG 0
