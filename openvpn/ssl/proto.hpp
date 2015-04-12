@@ -1584,6 +1584,7 @@ namespace openvpn {
 		  set_event(KEV_NEGOTIATE, KEV_BECOME_PRIMARY, construct_time + proto.config->become_primary);
 		else
 		  {
+		    proto.stats->error(Error::KEV_NEGOTIATE_ERROR);
 		    invalidate(Error::KEV_NEGOTIATE_ERROR);
 		    set_event(KEV_NEGOTIATE_FAILED);
 		  }
@@ -1595,6 +1596,7 @@ namespace openvpn {
 		set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
 		break;
 	      case KEV_EXPIRE:
+		proto.stats->error(Error::KEV_EXPIRE_ERROR);
 		invalidate(Error::KEV_EXPIRE_ERROR);
 		set_event(KEV_EXPIRE);
 		break;

@@ -483,7 +483,7 @@ namespace openvpn {
 	      housekeeping_schedule.reset();
 	      Base::housekeeping();
 	      if (Base::invalidated())
-		error(std::string("Session invalidated: ") + Error::name(Base::invalidation_reason()));
+		invalidation_error(Base::invalidation_reason());
 	      else if (now() > disconnect_at)
 		error("disconnect triggered");
 	      else
@@ -533,6 +533,19 @@ namespace openvpn {
       void error(const std::exception& e)
       {
 	error(e.what());
+      }
+
+      void error()
+      {
+	stop();
+      }
+
+      void invalidation_error(const Error::Type err)
+      {
+	if (err != Error::KEV_NEGOTIATE_ERROR)
+	  error(std::string("Session invalidated: ") + Error::name(err));
+	else
+	  error();
       }
 
       boost::asio::io_service& io_service;
