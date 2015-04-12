@@ -308,7 +308,8 @@ namespace openvpn {
 	ClientState() : conn_timeout(0), tun_persist(false),
 			google_dns_fallback(false), disable_client_cert(false),
 			default_key_direction(-1), force_aes_cbc_ciphersuites(false),
-			alt_proxy(false) {}
+			alt_proxy(false),
+			io_service(NULL) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -335,6 +336,36 @@ namespace openvpn {
 	ProtoContextOptions::Ptr proto_context_options;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
 	bool alt_proxy;
+
+	boost::asio::io_service* io_service;
+
+	void attach(OpenVPNClient* parent)
+	{
+	  // client stats
+	  stats.reset(new MySessionStats(parent));
+
+	  // client events
+	  events.reset(new MyClientEvents(parent));
+
+	  // socket protect
+	  socket_protect.set_parent(parent);
+
+	  // reconnect notifications
+	  reconnect_notify.set_parent(parent);
+
+	  // session
+	  session.reset();
+	}
+
+	void detach()
+	{
+	  socket_protect.detach_from_parent();
+	  reconnect_notify.detach_from_parent();
+	  stats->detach_from_parent();
+	  events->detach_from_parent();
+	  if (session)
+	    session.reset();
+	}
       };
     };
 
@@ -579,24 +610,15 @@ namespace openvpn {
 #ifdef OPENVPN_LOG_LOGTHREAD_H
       Log::Context log_context(this);
 #endif
+      return do_connect();
+    }
+
+    OPENVPN_CLIENT_EXPORT Status OpenVPNClient::do_connect()
+    {
       Status ret;
       bool in_run = false;
-      ScopedPtr<boost::asio::io_service> io_service;
 
-      // client stats
-      state->stats.reset(new MySessionStats(this));
-
-      // client events
-      state->events.reset(new MyClientEvents(this));
-
-      // socket protect
-      state->socket_protect.set_parent(this);
-
-      // reconnect notifications
-      state->reconnect_notify.set_parent(this);
-
-      // session
-      state->session.reset();
+      connect_attach();
 
       try {
 	// load options
@@ -668,11 +690,8 @@ namespace openvpn {
 	// configure creds in options
 	client_options->submit_creds(state->creds);
 
-	// initialize the Asio io_service object
-	io_service.reset(new boost::asio::io_service(1)); // concurrency hint=1
-
 	// instantiate top-level client session
-	state->session.reset(new ClientConnect(*io_service, client_options));
+	state->session.reset(new ClientConnect(*state->io_service, client_options));
 
 	// raise an exception if app has expired
 	check_app_expired();
@@ -680,17 +699,17 @@ namespace openvpn {
 	// start VPN
 	state->session->start(); // queue parallel async reads
 
+	// prepare to start reactor
+	connect_pre_run();
+
 	// run i/o reactor
-	in_run = true;	
-	io_service->run();
+	in_run = true;
+	connect_run();
       }
       catch (const std::exception& e)
 	{
 	  if (in_run)
-	    {
-	      state->session->stop(); // On exception, stop client...
-	      io_service->poll();     //   and execute completion handlers.
-	    }
+	    connect_session_stop();
 	  ret.error = true;
 	  ret.message = Unicode::utf8_printable<std::string>(e.what(), 256);
 
@@ -702,13 +721,36 @@ namespace openvpn {
 	      ret.status = Error::name(ec->code());
 	  }
 	}
-      state->socket_protect.detach_from_parent();
-      state->reconnect_notify.detach_from_parent();
-      state->stats->detach_from_parent();
-      state->events->detach_from_parent();
-      if (state->session)
-	state->session.reset();
+      connect_detach();
       return ret;
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_attach()
+    {
+      state->io_service = new boost::asio::io_service(1); // concurrency hint=1
+      state->attach(this);
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_detach()
+    {
+      state->detach();
+      delete state->io_service;
+      state->io_service = NULL;
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_pre_run()
+    {
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_run()
+    {
+      state->io_service->run();
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_session_stop()
+    {
+      state->session->stop();     // On exception, stop client...
+      state->io_service->poll();  //   and execute completion handlers.
     }
 
     OPENVPN_CLIENT_EXPORT ConnectionInfo OpenVPNClient::connection_info()

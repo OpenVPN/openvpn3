@@ -473,6 +473,17 @@ namespace openvpn {
       // Returns core copyright
       static std::string copyright();
 
+    protected:
+      Status do_connect();
+
+      virtual void connect_attach();
+      virtual void connect_detach();
+      virtual void connect_pre_run();
+      virtual void connect_run();
+      virtual void connect_session_stop();
+
+      Private::ClientState* state;
+
     private:
       static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
@@ -484,11 +495,9 @@ namespace openvpn {
       // from ExternalPKIBase
       virtual bool sign(const std::string& sig_type, const std::string& data, std::string& sig);
 
-      // disable copy and assignment
+      // disable copy and assignment (NOTE: C++11 "= delete" syntax crashes swig)
       OpenVPNClient(const OpenVPNClient&);
       OpenVPNClient& operator=(const OpenVPNClient&);
-
-      Private::ClientState* state;
     };
 
   }
