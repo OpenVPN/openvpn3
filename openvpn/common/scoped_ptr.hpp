@@ -106,6 +106,11 @@ namespace openvpn {
       return px;
     }
 
+    T* operator[](const size_t index)
+    {
+      return &px[index];
+    }
+
     T** ref()
     {
       return &px;
