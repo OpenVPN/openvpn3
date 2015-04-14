@@ -63,6 +63,9 @@ namespace openvpn {
     // via text argument.
     bool verbose() const { return verbose_; }
 
+#ifdef OPENVPN_STATS_VIRTUAL
+    virtual
+#endif
     void inc_stat(const size_t type, const count_t value)
     {
       if (type < N_STATS)
