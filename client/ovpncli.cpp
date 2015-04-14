@@ -339,13 +339,14 @@ namespace openvpn {
 
 	boost::asio::io_service* io_service;
 
+	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent)
 	{
 	  // client stats
-	  stats.reset(new MySessionStats(parent));
+	  stats.reset(new SESSION_STATS(parent));
 
 	  // client events
-	  events.reset(new MyClientEvents(parent));
+	  events.reset(new CLIENT_EVENTS(parent));
 
 	  // socket protect
 	  socket_protect.set_parent(parent);
@@ -728,7 +729,7 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_attach()
     {
       state->io_service = new boost::asio::io_service(1); // concurrency hint=1
-      state->attach(this);
+      state->attach<MySessionStats, MyClientEvents>(this);
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_detach()
