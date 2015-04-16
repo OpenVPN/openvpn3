@@ -24,7 +24,7 @@
 #ifndef OPENVPN_IP_IP_H
 #define OPENVPN_IP_IP_H
 
-#include <boost/cstdint.hpp> // for boost::uint32_t, uint16_t, uint8_t
+#include <cstdint> // for std::uint32_t, uint16_t, uint8_t
 
 #pragma pack(push)
 #pragma pack(1)
@@ -32,42 +32,70 @@
 namespace openvpn {
   struct IPHeader
   {
-    static unsigned int version(const boost::uint8_t version_len)
+    static unsigned int version(const std::uint8_t version_len)
     {
       return (version_len >> 4) & 0x0F;
     }
-    static unsigned int length(const boost::uint8_t version_len)
+
+    static unsigned int length(const std::uint8_t version_len)
     {
       return (version_len & 0x0F) << 2;
     }
-    boost::uint8_t    version_len;
 
-    boost::uint8_t    tos;
-    boost::uint16_t   tot_len;
-    boost::uint16_t   id;
+    static std::uint8_t ver_len(const unsigned int version,
+				const unsigned int len)
+    {
+      return ((len >> 2) & 0x0F) | (version & 0x0F) << 4;
+    }
+
+    std::uint8_t    version_len;
+
+    std::uint8_t    tos;
+    std::uint16_t   tot_len;
+    std::uint16_t   id;
 
     enum {
       OFFMASK=0x1fff,
     };
-    boost::uint16_t   frag_off;
+    std::uint16_t   frag_off;
 
-    boost::uint8_t    ttl;
+    std::uint8_t    ttl;
 
     enum {
-      IGMP=2, /* IGMP protocol */
-      TCP=6,  /* TCP protocol */
-      UDP=17, /* UDP protocol */
+      ICMP = 1, /* ICMP protocol */
+      IGMP = 2, /* IGMP protocol */
+      TCP = 6,  /* TCP protocol */
+      UDP = 17, /* UDP protocol */
     };
-    boost::uint8_t    protocol;
+    std::uint8_t    protocol;
 
-    boost::uint16_t   check;
-    boost::uint32_t   saddr;
-    boost::uint32_t   daddr;
-    /*The options start here. */
+    std::uint16_t   check;
+    std::uint32_t   saddr;
+    std::uint32_t   daddr;
+    /* The options start here. */
   };
 
-#pragma pack(pop)
+  std::uint16_t ip_checksum(const void *ip, unsigned int size)
+  {
+    std::uint16_t *buffer = (std::uint16_t *)ip;
+    uint32_t cksum = 0;
+
+    while (size > 1)
+      {
+        cksum += *buffer++;
+        size -= sizeof(uint16_t);
+      }
+
+    if (size)
+      cksum += *(uint8_t*)buffer;
+
+    cksum = (cksum >> 16) + (cksum & 0xffff);
+    cksum += (cksum >> 16);
+    return ~cksum;
+  }
 
 }
+
+#pragma pack(pop)
 
 #endif
