@@ -41,7 +41,7 @@ namespace openvpn {
     typedef boost::intrusive_ptr<DevURand> Ptr;
 
     DevURand()
-      : dev_urandom(open("/dev/urandom", O_RDWR))
+      : dev_urandom(open("/dev/urandom", O_RDONLY))
     {
       if (!dev_urandom.defined())
 	throw dev_urand_error("init failed");
