@@ -63,7 +63,9 @@
 
 // boost asserts on null smart pointer dereferences are fairly useless
 // since a segfault will generate more actionable debug info
+#ifndef BOOST_DISABLE_ASSERTS
 #define BOOST_DISABLE_ASSERTS
+#endif
 
 // if 1, enable special PRNG that is distinct from RNG
 #ifndef ENABLE_PRNG
@@ -76,21 +78,20 @@
 // log cleartext tunnel packets to file for debugging/analysis
 //#define OPENVPN_PACKET_LOG "pkt.log"
 
+#ifndef OPENVPN_LOG
 // log thread settings
 #define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClient
 #define OPENVPN_LOG_INFO  openvpn::ClientAPI::LogInfo
+#include <openvpn/log/logthread.hpp>    // should be included early
+#endif
 
 // log SSL handshake messages
 #define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
 
 // on Android and iOS, use TunBuilderBase abstraction
 #include <openvpn/common/platform.hpp>
-#if (defined(OPENVPN_PLATFORM_ANDROID) || defined(OPENVPN_PLATFORM_IPHONE)) && !defined(OPENVPN_FORCE_TUN_NULL)
+#if (defined(OPENVPN_PLATFORM_ANDROID) || defined(OPENVPN_PLATFORM_IPHONE)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_CUSTOM_TUN_FACTORY)
 #define USE_TUN_BUILDER
-#endif
-
-#ifndef OPENVPN_LOG
-#include <openvpn/log/logthread.hpp>    // should be included early
 #endif
 
 #include <openvpn/init/initprocess.hpp>

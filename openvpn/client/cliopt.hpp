@@ -60,7 +60,9 @@
 #include <openvpn/random/prng.hpp>
 #endif
 
-#if defined(USE_TUN_BUILDER)
+#if defined(OPENVPN_CUSTOM_TUN_FACTORY)
+// includer of this file must define OPENVPN_CUSTOM_TUN_FACTORY class
+#elif defined(USE_TUN_BUILDER)
 #include <openvpn/tun/builder/client.hpp>
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/linux/client/tuncli.hpp>
@@ -270,7 +272,16 @@ namespace openvpn {
 #endif
 
       // initialize tun/tap
-#if defined(USE_TUN_BUILDER)
+#if defined(OPENVPN_CUSTOM_TUN_FACTORY)
+      OPENVPN_CUSTOM_TUN_FACTORY::Ptr tunconf = OPENVPN_CUSTOM_TUN_FACTORY::new_obj();
+      tunconf->tun_prop.session_name = session_name;
+      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+      if (tun_mtu)
+	tunconf->tun_prop.mtu = tun_mtu;
+      tunconf->frame = frame;
+      tunconf->stats = cli_stats;
+      tunconf->tun_prop.remote_list = remote_list;
+#elif defined(USE_TUN_BUILDER)
       TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
       tunconf->builder = config.builder;
       tunconf->tun_prop.session_name = session_name;
