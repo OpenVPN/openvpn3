@@ -33,6 +33,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/error/error.hpp>
 
 namespace openvpn {
 
