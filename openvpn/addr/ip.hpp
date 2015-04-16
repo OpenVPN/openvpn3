@@ -151,6 +151,14 @@ namespace openvpn {
 	  throw ip_exception("address is not IPv4");
       }
 
+      const IPv6::Addr& to_ipv6() const
+      {
+	if (ver == V6)
+	  return u.v6;
+	else
+	  throw ip_exception("address is not IPv6");
+      }
+
       const IPv4::Addr& to_ipv4_nocheck() const
       {
 	return u.v4;
