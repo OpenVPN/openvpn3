@@ -27,6 +27,8 @@
 #ifndef OPENVPN_COMMON_ASIODISPATCH_H
 #define OPENVPN_COMMON_ASIODISPATCH_H
 
+#include <boost/asio.hpp>
+
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/rc.hpp>
 
