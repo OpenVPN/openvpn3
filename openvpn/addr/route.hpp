@@ -79,6 +79,16 @@ namespace openvpn {
 	return r;
       }
 
+      static RouteType from_string_prefix(const std::string& addrstr,
+					  unsigned int prefix_len,
+					  const char *title = NULL)
+      {
+	RouteType r;
+	r.addr = ADDR::from_string(addrstr, title);
+	r.prefix_len = prefix_len;
+	return r;
+      }
+
       IP::Addr::Version version() const
       {
 	return addr.version();
