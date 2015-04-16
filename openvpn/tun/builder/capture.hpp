@@ -30,8 +30,10 @@
 #include <vector>
 
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/types.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/client/rgopt.hpp>
+#include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
   class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcount>
@@ -293,6 +295,35 @@ namespace openvpn {
     {
       block_ipv6 = value;
       return true;
+    }
+
+    const Route* vpn_ipv4() const
+    {
+      if (tunnel_address_index_ipv4 >= 0)
+	return &tunnel_addresses[tunnel_address_index_ipv4];
+      else
+	return NULL;
+    }
+
+    const Route* vpn_ipv6() const
+    {
+      if (tunnel_address_index_ipv6 >= 0)
+	return &tunnel_addresses[tunnel_address_index_ipv6];
+      else
+	return NULL;
+    }
+
+    const Route* vpn_ip(const IP::Addr::Version v) const
+    {
+      switch (v)
+	{
+	case IP::Addr::V4:
+	  return vpn_ipv4();
+	case IP::Addr::V6:
+	  return vpn_ipv6();
+	default:
+	  return NULL;
+	}
     }
 
     std::string to_string() const
