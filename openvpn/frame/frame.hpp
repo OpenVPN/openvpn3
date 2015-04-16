@@ -224,7 +224,7 @@ namespace openvpn {
     // Calculate a starting offset into a buffer object, dealing with
     // headroom and alignment issues.  context should be one of
     // the context types above.  Returns payload size of buffer.
-    size_t prepare(const unsigned int context, BufferAllocated& buf) const
+    size_t prepare(const unsigned int context, Buffer& buf) const
     {
       return (*this)[context].prepare(buf);
     }
