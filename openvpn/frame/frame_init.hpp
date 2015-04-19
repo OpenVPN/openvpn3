@@ -48,13 +48,18 @@ namespace openvpn {
     return frame;
   }
 
-  inline Frame::Ptr frame_init_simple(const size_t payload)
+  inline Frame::Context frame_init_context_simple(const size_t payload)
   {
     const size_t headroom = 512;
     const size_t tailroom = 512;
     const size_t align_block = 16;
     const unsigned int buffer_flags = 0;
-    Frame::Ptr frame(new Frame(Frame::Context(headroom, payload, tailroom, 0, align_block, buffer_flags)));
+    return Frame::Context(headroom, payload, tailroom, 0, align_block, buffer_flags);
+  }
+
+  inline Frame::Ptr frame_init_simple(const size_t payload)
+  {
+    Frame::Ptr frame = new Frame(frame_init_context_simple(payload));
     frame->standardize_capacity(~0);
     return frame;
   }
