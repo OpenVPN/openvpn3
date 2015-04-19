@@ -530,7 +530,8 @@ namespace openvpn {
 	    }
 
 	  // peer must present a valid certificate
-	  ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
+	  if (!(c.flags & SSLConst::NO_VERIFY_PEER))
+	    ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
 
 	  // set verify callback
 	  ssl_set_verify(ssl, c.mode.is_server() ? verify_callback_server : verify_callback_client, this);

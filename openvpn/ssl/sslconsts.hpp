@@ -40,6 +40,9 @@ namespace openvpn {
     enum {
       // Show SSL status and cert chain in verify method
       LOG_VERIFY_STATUS=(1<<0),
+
+      // Disable peer verification
+      NO_VERIFY_PEER=(1<<1),
     };
 
   }
