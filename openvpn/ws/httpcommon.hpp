@@ -112,7 +112,7 @@ namespace openvpn {
 	      ssl_down_stack();
 	    return;
 	  }
-	if ((!outbuf || outbuf->empty()) && out_state == S_OUT)
+	if (out_state == S_OUT && (!outbuf || outbuf->empty()))
 	  {
 	    outbuf = parent().base_http_content_out();
 	    if (!outbuf || !outbuf->defined())
@@ -196,9 +196,11 @@ namespace openvpn {
 
       // Callback methods in parent:
       //   BufferPtr base_http_content_out();
+      //   void base_http_out_eof();
       //   void base_http_headers_received();
       //   void base_http_content_in(BufferAllocated& buf);
       //   bool base_link_send(BufferAllocated& buf);
+      //   bool base_send_queue_empty();
       //   void base_http_done_handler();
       //   void base_error_handler(const int errcode, const std::string& err);
 
