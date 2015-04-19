@@ -50,7 +50,7 @@ namespace openvpn {
 	rr_content_length = 0;
 	rr_content_bytes = 0;
 	rr_chunked.reset();
-	out_eof = false;
+	out_state = S_PRE;
       }
 
       void reset()
@@ -66,7 +66,7 @@ namespace openvpn {
 	return !halt && ready;
       }
 
-      const HTTP::Reply& reply() const {
+      const typename REQUEST_REPLY::State& request_reply() const {
 	return rr_obj;
       }
 
@@ -96,16 +96,27 @@ namespace openvpn {
 	rr_reset();
       }
 
+      void http_out_begin()
+      {
+	out_state = S_OUT;
+      }
+
       // Transmit outgoing HTTP, either to SSL object (HTTPS) or TCP socket (HTTP)
       void http_out()
       {
 	if (halt)
 	  return;
-	if ((!outbuf || outbuf->empty()) && !out_eof)
+	if (out_state == S_PRE)
 	  {
-	    outbuf = http_content_out();
+	    if (ssl_sess)
+	      ssl_down_stack();
+	    return;
+	  }
+	if ((!outbuf || outbuf->empty()) && out_state == S_OUT)
+	  {
+	    outbuf = parent().base_http_content_out();
 	    if (!outbuf || !outbuf->defined())
-	      out_eof = true;
+	      out_state = S_EOF;
 	    if (content_info.length == CONTENT_INFO::CHUNKED)
 	      outbuf = ChunkedHelper::transmit(outbuf);
 	  }
@@ -149,10 +160,15 @@ namespace openvpn {
 #if defined(OPENVPN_DEBUG_HTTP)
 		    OPENVPN_LOG(buf_to_string(buf));
 #endif
-		    if (parent().link_send(buf))
+		    if (parent().base_link_send(buf))
 		      outbuf->advance(size);
 		  }
 	      }
+	  }
+	if (out_state == S_EOF && parent().base_send_queue_empty())
+	  {
+	    out_state = S_DONE;
+	    parent().base_http_out_eof();
 	  }
       }
 
@@ -165,6 +181,7 @@ namespace openvpn {
 	    buf->swap(b); // take ownership
 	    ssl_sess->write_ciphertext(buf);
 	    ssl_up_stack();
+	    ssl_down_stack();
 
 	    // In some cases, such as immediately after handshake,
 	    // a write becomes possible after a read has completed.
@@ -177,11 +194,13 @@ namespace openvpn {
 	  }
       }
 
-      // virtual methods
-
-      virtual BufferPtr http_content_out() = 0;
-      virtual void http_headers_received() = 0;
-      virtual void http_content_in(BufferAllocated& buf) = 0;
+      // Callback methods in parent:
+      //   BufferPtr base_http_content_out();
+      //   void base_http_headers_received();
+      //   void base_http_content_in(BufferAllocated& buf);
+      //   bool base_link_send(BufferAllocated& buf);
+      //   void base_http_done_handler();
+      //   void base_error_handler(const int errcode, const std::string& err);
 
       // protected member vars
 
@@ -217,10 +236,10 @@ namespace openvpn {
 	    rr_content_bytes += buf.size();
 	    if (config->max_content_bytes && rr_content_bytes > config->max_content_bytes)
 	      {
-		parent().error_handler(STATUS::E_CONTENT_SIZE, "HTTP content too large");
+		parent().base_error_handler(STATUS::E_CONTENT_SIZE, "HTTP content too large");
 		return;
 	      }
-	    http_content_in(buf);
+	    parent().base_http_content_in(buf);
 	  }
       }
 
@@ -245,7 +264,7 @@ namespace openvpn {
 			if ((config->max_header_bytes && rr_header_bytes > config->max_header_bytes)
 			    || (config->max_headers && rr_obj.headers.size() > config->max_headers))
 			  {
-			    parent().error_handler(STATUS::E_HEADER_SIZE, "HTTP headers too large");
+			    parent().base_error_handler(STATUS::E_HEADER_SIZE, "HTTP headers too large");
 			    return;
 			  }
 		      }
@@ -260,12 +279,12 @@ namespace openvpn {
 			if (rr_content_length == CONTENT_INFO::CHUNKED)
 			  rr_chunked.reset(new ChunkedHelper());
 			if (!halt)
-			  http_headers_received();
+			  parent().base_http_headers_received();
 			break;
 		      }
 		    else
 		      {
-			parent().error_handler(STATUS::E_HTTP, "HTTP headers parse error");
+			parent().base_error_handler(STATUS::E_HTTP, "HTTP headers parse error");
 			return;
 		      }
 		  }
@@ -292,7 +311,7 @@ namespace openvpn {
 		done = rr_chunked->receive(*this, buf);
 	      }
 	    if (done)
-	      parent().http_done_handler();
+	      parent().base_http_done_handler();
 	  }
       }
 
@@ -302,7 +321,7 @@ namespace openvpn {
 	while (!halt && ssl_sess->read_ciphertext_ready())
 	  {
 	    BufferPtr buf = ssl_sess->read_ciphertext();
-	    parent().link_send(*buf);
+	    parent().base_link_send(*buf);
 	  }
       }
 
@@ -330,7 +349,7 @@ namespace openvpn {
 	    else if (size == SSLConst::SHOULD_RETRY)
 	      break;
 	    else if (size == SSLConst::PEER_CLOSE_NOTIFY)
-	      parent().error_handler(STATUS::E_EOF_SSL, "SSL PEER_CLOSE_NOTIFY");
+	      parent().base_error_handler(STATUS::E_EOF_SSL, "SSL PEER_CLOSE_NOTIFY");
 	    else
 	      throw http_exception("unknown read status from SSL layer");
 	  }
@@ -372,7 +391,13 @@ namespace openvpn {
       CONTENT_LENGTH_TYPE rr_content_length;  // Content-Length in header
       ScopedPtr<ChunkedHelper> rr_chunked;
 
-      bool out_eof;
+      enum HTTPOutState {
+	S_PRE,
+	S_OUT,
+	S_EOF,
+	S_DONE
+      };
+      HTTPOutState out_state;
     };
 
   }
