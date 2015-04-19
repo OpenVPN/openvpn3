@@ -444,6 +444,21 @@ namespace openvpn {
 	  error_ = e.what();
 	}
     }
+
+    static std::string merge(const std::string& profile_content,
+			     const std::string& ref_dir,
+			     const Follow follow_references,
+			     const size_t max_line_len,
+			     const size_t max_size)
+    {
+      const ProfileMergeFromString pm(profile_content, ref_dir,
+				      follow_references, max_line_len, max_size);
+      if (pm.status() == ProfileMerge::MERGE_SUCCESS)
+	return pm.profile_content();
+      else
+	OPENVPN_THROW(merge_error, pm.status_string() << ": " << pm.error());
+    }
+
   };
 }
 
