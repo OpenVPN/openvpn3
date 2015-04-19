@@ -35,6 +35,7 @@
 #endif
 
 #ifdef USE_POLARSSL
+#include <polarssl/debug.h>  // for debug_set_threshold
 #include <openvpn/polarssl/crypto/api.hpp>
 #include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
