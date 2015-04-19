@@ -36,6 +36,27 @@ namespace openvpn {
 	ProxyError=502,
 	ServiceUnavailable=503,
       };
+
+      inline const char *to_string(const int status)
+      {
+	switch (status)
+	  {
+	  case OK:
+	    return "OK";
+	  case Forbidden:
+	    return "Forbidden";
+	  case NotFound:
+	    return "Not Found";
+	  case ProxyAuthenticationRequired:
+	    return "Proxy Authentication Required";
+	  case ProxyError:
+	    return "Proxy Error";
+	  case ServiceUnavailable:
+	    return "Service Unavailable";
+	  default:
+	    return "";
+	  }
+      }
     }
   }
 }
