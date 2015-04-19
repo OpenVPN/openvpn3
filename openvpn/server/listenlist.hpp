@@ -59,6 +59,8 @@ namespace openvpn {
     class List : public std::vector<Item>
     {
     public:
+      List() {}
+
       List(const OptionList& opt,
 	   const std::string& directive,
 	   const bool allow_default,
