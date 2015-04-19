@@ -83,6 +83,25 @@ namespace openvpn {
       }
     return date_time(&tv, true);
   }
+
+  inline std::string date_time_rfc822(const time_t t)
+  {
+    struct tm lt;
+    char buf[64];
+
+    if (!gmtime_r(&t, &lt))
+      return "";
+    if (!strftime(buf, sizeof(buf),
+		  "%a, %d %b %y %T %z",
+		  &lt))
+      return "";
+    return std::string(buf);
+  }
+
+  inline std::string date_time_rfc822()
+  {
+    return date_time_rfc822(time(NULL));
+  }
 }
 
 #endif
