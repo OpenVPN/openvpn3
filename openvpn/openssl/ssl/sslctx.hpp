@@ -220,7 +220,7 @@ namespace openvpn {
       {
 	// client/server
 	if (lflags & LF_PARSE_MODE)
-	mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
+	  mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
 
 	// ca
 	{
