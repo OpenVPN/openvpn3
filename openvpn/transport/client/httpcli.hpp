@@ -352,7 +352,7 @@ namespace openvpn {
 	parent.proxy_error(fatal_err, os.str());
       }
 
-      void tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
+      bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
       {
 	if (proxy_established)
 	  parent.transport_recv(buf);
@@ -366,6 +366,7 @@ namespace openvpn {
 		proxy_error(Error::PROXY_ERROR, e.what());
 	      }
 	  }
+	return true;
       }
 
       void tcp_write_queue_empty() // called by LinkImpl

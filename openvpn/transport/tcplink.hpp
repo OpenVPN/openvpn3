@@ -254,13 +254,14 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
+		bool requeue = true;
 		OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv raw=" << raw_mode << " size=" << bytes_recvd);
 		pfp->buf.set_size(bytes_recvd);
 		if (!is_raw_mode())
 		  {
 		    try {
 		      BufferAllocated pkt;
-		      put_pktstream(pfp->buf, pkt);
+		      requeue = put_pktstream(pfp->buf, pkt);
 		      if (!pfp->buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
 			pfp->buf.move(pkt);
 		    }
@@ -274,8 +275,8 @@ namespace openvpn {
 		      }
 		  }
 		else
-		  read_handler->tcp_read_handler(pfp->buf);
-		if (!halt)
+		  requeue = read_handler->tcp_read_handler(pfp->buf);
+		if (!halt && requeue)
 		  queue_recv(pfp.release()); // reuse PacketFrom object
 	      }
 	    else if (error == boost::asio::error::eof)
@@ -293,8 +294,9 @@ namespace openvpn {
 	  }
       }
 
-      void put_pktstream(BufferAllocated& buf, BufferAllocated& pkt)
+      bool put_pktstream(BufferAllocated& buf, BufferAllocated& pkt)
       {
+	bool requeue = true;
 	stats->inc_stat(SessionStats::BYTES_IN, buf.size());
 	stats->inc_stat(SessionStats::PACKETS_IN, 1);
 	if (mutate)
@@ -305,9 +307,10 @@ namespace openvpn {
 	    if (pktstream.ready())
 	      {
 		pktstream.get(pkt);
-		read_handler->tcp_read_handler(pkt);
+		requeue = read_handler->tcp_read_handler(pkt);
 	      }
 	  }
+	return requeue;
       }
 
       boost::asio::ip::tcp::socket& socket;

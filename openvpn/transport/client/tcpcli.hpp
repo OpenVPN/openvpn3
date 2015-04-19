@@ -169,9 +169,10 @@ namespace openvpn {
 	tcp_error_handler("NETWORK_EOF_ERROR");
       }
 
-      void tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
+      bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
       {
 	parent.transport_recv(buf);
+	return true;
       }
 
       void tcp_write_queue_empty() // called by LinkImpl
