@@ -789,7 +789,7 @@ namespace openvpn {
 	    }
 	  else
 	    {
-	      if (!SSL_CTX_set_cipher_list(ctx, "DEFAULT:!EXP:!PSK:!SRP:!kRSA:!LOW"))
+	      if (!SSL_CTX_set_cipher_list(ctx, "DEFAULT:!EXP:!PSK:!SRP:!LOW:!RC4:!kRSA"))
 		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	      SSL_CTX_set_ecdh_auto(ctx, 1);
