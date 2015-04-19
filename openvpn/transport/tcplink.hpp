@@ -112,6 +112,11 @@ namespace openvpn {
 	mutate = mutate_arg;
       }
 
+      bool send_queue_empty() const
+      {
+	return queue.empty();
+      }
+
       bool send(BufferAllocated& b)
       {
 	if (halt)
