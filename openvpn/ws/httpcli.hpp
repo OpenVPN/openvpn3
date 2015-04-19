@@ -159,10 +159,8 @@ namespace openvpn {
       {
 	friend Base;
 
-	// calls tcp_* handlers
-	friend class TCPTransport::Link<HTTPCore*, false>;
-
 	typedef TCPTransport::Link<HTTPCore*, false> LinkImpl;
+	friend LinkImpl; // calls tcp_* handlers
 
 	typedef AsioDispatchResolve<HTTPCore,
 				    void (HTTPCore::*)(const boost::system::error_code&,
@@ -206,6 +204,10 @@ namespace openvpn {
 	      general_timer.cancel();
 	      connect_timer.cancel();
 	    }
+	}
+
+	const HTTP::Reply& reply() const {
+	  return request_reply();
 	}
 
 	// virtual methods
@@ -374,11 +376,12 @@ namespace openvpn {
 	void generate_request()
 	{
 	  rr_reset();
+	  http_out_begin();
 
 	  const Request req = http_request();
 	  content_info = http_content_info();
 
-	  outbuf.reset(new BufferAllocated(4096, BufferAllocated::GROW));
+	  outbuf.reset(new BufferAllocated(1024, BufferAllocated::GROW));
 	  BufferStreamOut os(*outbuf);
 	  os << req.method << ' ' << req.uri << " HTTP/1.1\r\n";
 	  os << "Host: " << host.host_head() << "\r\n";
@@ -405,10 +408,35 @@ namespace openvpn {
 	  http_out();
 	}
 
-	void tcp_read_handler(BufferAllocated& b) // called by LinkImpl
+	// error handlers
+
+	void asio_error_handler(int errcode, const char *func_name, const boost::system::error_code& error)
+	{
+	  error_handler(errcode, std::string("HTTPCore Asio ") + func_name + ": " + error.message());
+	}
+
+	void handle_exception(const char *func_name, const std::exception& e)
+	{
+	  error_handler(Status::E_EXCEPTION, std::string("HTTPCore Exception ") + func_name + ": " + e.what());
+	}
+
+	void error_handler(const int errcode, const std::string& err)
+	{
+	  const bool in_transaction = !ready;
+	  const bool keepalive = alive;
+	  stop();
+	  if (in_transaction)
+	    http_done(errcode, err);
+	  else if (keepalive)
+	    http_keepalive_close(errcode, err); // keepalive connection close outside of transaction
+	}
+
+	// methods called by LinkImpl
+
+	bool tcp_read_handler(BufferAllocated& b)
 	{
 	  if (halt)
-	    return;
+	    return false;
 
 	  try {
 	    tcp_in(b); // call Base
@@ -417,9 +445,10 @@ namespace openvpn {
 	    {
 	      handle_exception("tcp_read_handler", e);
 	    }
+	  return true;
 	}
 
-	void tcp_write_queue_empty() // called by LinkImpl
+	void tcp_write_queue_empty()
 	{
 	  if (halt)
 	    return;
@@ -434,7 +463,7 @@ namespace openvpn {
 
 	}
 
-	void tcp_eof_handler() // called by LinkImpl
+	void tcp_eof_handler()
 	{
 	  if (halt)
 	    return;
@@ -449,29 +478,45 @@ namespace openvpn {
 	    }
 	}
 
-	void tcp_error_handler(const char *error) // called by LinkImpl
+	void tcp_error_handler(const char *error)
 	{
 	  if (halt)
 	    return;
 	  error_handler(Status::E_TCP, std::string("HTTPCore TCP: ") + error);
 	}
 
-	void asio_error_handler(int errcode, const char *func_name, const boost::system::error_code& error)
+	// methods called by Base
+
+	BufferPtr base_http_content_out()
 	{
-	  error_handler(errcode, std::string("HTTPCore Asio ") + func_name + ": " + error.message());
+	  return http_content_out();
 	}
 
-	void handle_exception(const char *func_name, const std::exception& e)
+	void base_http_out_eof()
 	{
-	  error_handler(Status::E_EXCEPTION, std::string("HTTPCore Exception ") + func_name + ": " + e.what());
 	}
 
-	bool link_send(BufferAllocated& buf) // called by Base
+	void base_http_headers_received()
+	{
+	  http_headers_received();
+	}
+
+	void base_http_content_in(BufferAllocated& buf)
+	{
+	  http_content_in(buf);
+	}
+
+	bool base_link_send(BufferAllocated& buf)
 	{
 	  return link->send(buf);
 	}
 
-	void http_done_handler() // called by Base
+	bool base_send_queue_empty()
+	{
+	  return link->send_queue_empty();
+	}
+
+	void base_http_done_handler()
 	{
 	  if (halt)
 	    return;
@@ -486,16 +531,9 @@ namespace openvpn {
 	  http_done(Status::E_SUCCESS, "Succeeded");
 	}
 
-	// error notification
-	void error_handler(const int errcode, const std::string& err) // called by Base
+	void base_error_handler(const int errcode, const std::string& err)
 	{
-	  const bool in_transaction = !ready;
-	  const bool keepalive = alive;
-	  stop();
-	  if (in_transaction)
-	    http_done(errcode, err);
-	  else if (keepalive)
-	    http_keepalive_close(errcode, err); // keepalive connection close outside of transaction
+	  error_handler(errcode, err);
 	}
 
 	boost::asio::io_service& io_service;
