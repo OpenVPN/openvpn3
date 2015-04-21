@@ -54,6 +54,8 @@ namespace openvpn {
       WRITE_ACK_STANDALONE,
       WRITE_DC_MSG,
       WRITE_HTTP,
+      READ_HTTP,
+
       N_ALIGN_CONTEXTS
     };
 
