@@ -51,7 +51,7 @@ namespace openvpn {
     const unsigned char *data() const { return key_data_.c_data(); }
     void erase() { key_data_.clear(); }
 
-    std::string render_hex() const { return openvpn::render_hex(key_data_); }
+    std::string render_hex() const { return openvpn::render_hex_generic(key_data_); }
 
   private:
     key_t key_data_;

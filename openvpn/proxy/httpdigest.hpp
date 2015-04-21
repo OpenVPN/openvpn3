@@ -75,7 +75,7 @@ namespace openvpn {
 	std::string final_hex()
 	{
 	  BufferPtr bp = final();
-	  return render_hex(*bp);
+	  return render_hex_generic(*bp);
 	}
 
       private:
@@ -110,7 +110,7 @@ namespace openvpn {
 	    h2.update(cnonce);
 	    result = h2.final();
 	  }
-	return render_hex(*result);
+	return render_hex_generic(*result);
       }
 
       // calculate request-digest/response-digest as per HTTP Digest spec

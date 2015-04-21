@@ -32,17 +32,17 @@
 
 namespace openvpn {
 
-  inline char render_hex_char(const int c)
+  inline char render_hex_char(const int c, const bool caps=false)
   {
     if (c < 10)
       return '0' + c;
     else if (c < 16)
-      return 'a' - 10 + c;
+      return (caps ? 'A' : 'a') - 10 + c;
     else
       return '?';
   }
 
-  inline int parse_hex_char (const char c)
+  inline int parse_hex_char(const char c)
   {
     if (c >= '0' && c <= '9')
       return c - '0';
@@ -54,29 +54,29 @@ namespace openvpn {
       return -1;
   }
 
-  inline std::string render_hex(const unsigned char *data, size_t size)
+  inline std::string render_hex(const unsigned char *data, size_t size, const bool caps=false)
   {
     std::string ret;
     ret.reserve(size*2+1);
     while (size--)
       {
 	const unsigned char c = *data++;
-	ret += render_hex_char(c >> 4);
-	ret += render_hex_char(c & 0x0F);
+	ret += render_hex_char(c >> 4, caps);
+	ret += render_hex_char(c & 0x0F, caps);
       }
     return ret;
   }
 
   template <typename V>
-  inline std::string render_hex(const V& data)
+  inline std::string render_hex_generic(const V& data, const bool caps=false)
   {
     std::string ret;
     ret.reserve(data.size()*2+1);
     for (size_t i = 0; i < data.size(); ++i)
       {
 	const unsigned char c = data[i];
-	ret += render_hex_char(c >> 4);
-	ret += render_hex_char(c & 0x0F);
+	ret += render_hex_char(c >> 4, caps);
+	ret += render_hex_char(c & 0x0F, caps);
       }
     return ret;
   }
@@ -149,7 +149,7 @@ namespace openvpn {
   }
 
   template <typename T>
-  std::string render_hex_number(T value)
+  std::string render_hex_number(T value, const bool caps=false)
   {
     unsigned char buf[sizeof(T)];
     for (size_t i = sizeof(T); i --> 0 ;)
@@ -157,7 +157,7 @@ namespace openvpn {
 	buf[i] = value & 0xFF;
 	value >>= 8;
       }
-    return render_hex(buf, sizeof(T));
+    return render_hex(buf, sizeof(T), caps);
   }
 
 } // namespace openvpn
