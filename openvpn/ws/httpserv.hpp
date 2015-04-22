@@ -52,6 +52,7 @@ namespace openvpn {
 	  E_EOF_SSL,
 	  E_EOF_TCP,
 	  E_GENERAL_TIMEOUT,
+	  E_EXTERNAL_STOP,
 
 	  N_ERRORS
 	};
@@ -68,6 +69,7 @@ namespace openvpn {
 	    "E_EOF_SSL",
 	    "E_EOF_TCP",
 	    "E_GENERAL_TIMEOUT",
+	    "E_EXTERNAL_STOP",
 	  };
 
 	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
@@ -120,6 +122,7 @@ namespace openvpn {
 	}
 
 	int http_status;
+	std::string http_status_str; // optional
 	std::string type;
 	content_len_t length;
 	bool keepalive;
@@ -174,20 +177,21 @@ namespace openvpn {
 	    virtual Client::Ptr new_client(const Initializer& ci) = 0;
 	  };
 
+	  virtual ~Client()
+	  {
+	    stop(false);
+	  }
+
+	protected:
 	  Client(const Initializer& ci)
 	    : Base(ci.parent->config),
 	      io_service(ci.io_service),
-	      parent(ci.parent),
 	      sock(ci.socket),
+	      parent(ci.parent),
 	      timeout_timer(ci.io_service),
 	      client_id(ci.client_id),
 	      keepalive(false)
 	  {
-	  }
-
-	  virtual ~Client()
-	  {
-	    stop(false);
 	  }
 
 	  void generate_reply_headers(const ContentInfo& ci)
@@ -196,7 +200,12 @@ namespace openvpn {
 	    outbuf.reset(new BufferAllocated(1024, BufferAllocated::GROW));
 	    BufferStreamOut os(*outbuf);
 
-	    os << "HTTP/1.1 " << ci.http_status << ' ' << HTTP::Status::to_string(ci.http_status) << "\r\n";
+	    os << "HTTP/1.1 " << ci.http_status << ' ';
+	    if (ci.http_status_str.empty())
+	      os << HTTP::Status::to_string(ci.http_status);
+	    else
+	      os << ci.http_status_str;
+	    os << "\r\n";
 	    if (!parent->config->http_server_id.empty())
 	      os << "Server: " << parent->config->http_server_id << "\r\n";
 	    os << "Date: " << date_time_rfc822() << "\r\n";
@@ -216,6 +225,14 @@ namespace openvpn {
 	    http_out();
 	  }
 
+	  void generate_custom_reply_headers(BufferPtr& buf)
+	  {
+	    http_out_begin();
+	    outbuf = std::move(buf);
+	    http_headers_sent(*outbuf);
+	    http_out();
+	  }
+
 	  // return true if client asked for keepalive
 	  bool keepalive_request()
 	  {
@@ -226,6 +243,32 @@ namespace openvpn {
 	    return request_reply();
 	  }
 
+	  void register_activity()
+	  {
+	    activity();
+	  }
+
+	  void external_stop(const std::string& description)
+	  {
+	    error_handler(Status::E_EXTERNAL_STOP, description);
+	  }
+
+	  std::string remote_endpoint_str()
+	  {
+	    try {
+	      if (sock.defined())
+		return to_string(sock->remote_endpoint());
+	    }
+	    catch (const std::exception& e)
+	      {
+	      }
+	    return "[unknown endpoint]";
+	  }
+
+	  boost::asio::io_service& io_service;
+	  ScopedPtr<boost::asio::ip::tcp::socket> sock;
+	  Time::Duration timeout_duration;
+
 	private:
 	  void start()
 	  {
@@ -234,7 +277,7 @@ namespace openvpn {
 				    *sock,
 				    parent->config->send_queue_max_size,
 				    parent->config->free_list_max_size,
-				    (*parent->config->frame)[Frame::READ_LINK_TCP],
+				    (*parent->config->frame)[Frame::READ_HTTP],
 				    stats));
 	    link->set_raw_mode(true);
 	    if (parent->config->ssl_factory)
@@ -244,7 +287,8 @@ namespace openvpn {
 
 	  void restart()
 	  {
-	    activity(true);
+	    timeout_duration = Time::Duration::seconds(parent->config->general_timeout);
+	    activity();
 	    rr_reset();
 	    ready = false;
 	    link->start();
@@ -268,26 +312,18 @@ namespace openvpn {
 	    return client_id;
 	  }
 
-	  std::string remote_endpoint_str()
+	  void activity()
 	  {
-	    try {
-	      return to_string(sock->remote_endpoint());
-	    }
-	    catch (const std::exception& e)
+	    if (timeout_duration.defined())
 	      {
-		return "[unknown endpoint]";
-	      }
-	  }
-
-	  void activity(const bool initial)
-	  {
-	    const Time now = Time::now();
-	    const Time next = now + Time::Duration::seconds(parent->config->general_timeout);
-	    if (!timeout_coarse.similar(next))
-	      {
-		timeout_coarse.reset(next);
-		timeout_timer.expires_at(next);
-		timeout_timer.async_wait(asio_dispatch_timer(&Client::timeout_callback, this));
+		const Time now = Time::now();
+		const Time next = now + timeout_duration;
+		if (!timeout_coarse.similar(next))
+		  {
+		    timeout_coarse.reset(next);
+		    timeout_timer.expires_at(next);
+		    timeout_timer.async_wait(asio_dispatch_timer(&Client::timeout_callback, this));
+		  }
 	      }
 	  }
 
@@ -306,7 +342,7 @@ namespace openvpn {
 	      return false;
 
 	    try {
-	      activity(false);
+	      activity();
 	      tcp_in(b); // call Base
 	    }
 	    catch (const std::exception& e)
@@ -363,16 +399,18 @@ namespace openvpn {
 
 	  void base_http_out_eof()
 	  {
-	    http_out_eof();
-	    if (keepalive)
-	      restart();
-	    else
-	      error_handler(Status::E_SUCCESS, "Succeeded");
+	    if (http_out_eof())
+	      {
+		if (keepalive)
+		  restart();
+		else
+		  error_handler(Status::E_SUCCESS, "Succeeded");
+	      }
 	  }
 
-	  void base_http_headers_received()
+	  bool base_http_headers_received()
 	  {
-	    http_headers_received();
+	    return http_headers_received();
 	  }
 
 	  void base_http_content_in(BufferAllocated& buf)
@@ -382,7 +420,7 @@ namespace openvpn {
 
 	  bool base_link_send(BufferAllocated& buf)
 	  {
-	    activity(false);
+	    activity();
 	    return link->send(buf);
 	  }
 
@@ -391,12 +429,12 @@ namespace openvpn {
 	    return link->send_queue_empty();
 	  }
 
-	  void base_http_done_handler()
+	  void base_http_done_handler(BufferAllocated& residual)
 	  {
 	    if (halt)
 	      return;
 	    ready = true; // stop accepting input
-	    http_request_received();
+	    http_request_received(residual);
 	  }
 
 	  void base_error_handler(const int errcode, const std::string& err)
@@ -429,11 +467,12 @@ namespace openvpn {
 	    return BufferPtr();
 	  }
 
-	  virtual void http_headers_received()
+	  virtual bool http_headers_received()
 	  {
+	    return true;
 	  }
 
-	  virtual void http_request_received()
+	  virtual void http_request_received(BufferAllocated& residual)
 	  {
 	  }
 
@@ -445,17 +484,16 @@ namespace openvpn {
 	  {
 	  }
 
-	  virtual void http_out_eof()
+	  virtual bool http_out_eof()
 	  {
+	    return true;
 	  }
 
 	  virtual void http_stop(const int status, const std::string& description)
 	  {
 	  }
 
-	  boost::asio::io_service& io_service;
 	  Listener* parent;
-	  ScopedPtr<boost::asio::ip::tcp::socket> sock;
 	  AsioTimer timeout_timer;
 	  CoarseTime timeout_coarse;
 	  client_t client_id;
