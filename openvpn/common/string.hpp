@@ -125,12 +125,18 @@ namespace openvpn {
 
     // Define a common interpretation of what constitutes a space character.
     // Return true if c is a space char.
-    inline bool is_space(char c)
+    inline bool is_space(const char c)
     {
-      return (c == ' ' ||
-	      c == '\t' ||
-	      c == '\n' ||
-	      c == '\r');
+      switch (c)
+	{
+	case ' ':
+	case '\t':
+	case '\r':
+	case '\n':
+	  return true;
+	default:
+	  return false;
+	}
     }
 
     // return true if str contains at least one space char
