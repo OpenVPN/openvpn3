@@ -162,6 +162,37 @@ namespace openvpn {
       return ret;
     }
 
+    // convert \n to \r\n
+    inline std::string unix2dos(const std::string& str)
+    {
+      std::string ret;
+      bool last_char_was_cr = false;
+
+      ret.reserve(str.length() + str.length() / 8);
+      for (std::string::const_iterator i = str.begin(); i != str.end(); ++i)
+	{
+	  const char c = *i;
+	  if (c == '\n' && !last_char_was_cr)
+	    ret += '\r';
+	  ret += c;
+	  last_char_was_cr = (c == '\r');
+	}
+      return ret;
+    }
+
+    inline bool split_host_port(const std::string& str, std::string& host, std::string& port)
+    {
+      const size_t pos = str.find_last_of(':');
+      if (pos != std::string::npos && pos > 0 && str.length() >= pos + 2)
+	{
+	  host = str.substr(0, pos);
+	  port = str.substr(pos + 1);
+	  return true;
+	}
+      else
+	return false;
+    }
+
   } // namespace string
 
   // Reference-counted string
