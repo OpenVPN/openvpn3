@@ -168,6 +168,7 @@ namespace openvpn {
 	if (out_state == S_EOF && parent().base_send_queue_empty())
 	  {
 	    out_state = S_DONE;
+	    outbuf.reset();
 	    parent().base_http_out_eof();
 	  }
       }
@@ -197,11 +198,11 @@ namespace openvpn {
       // Callback methods in parent:
       //   BufferPtr base_http_content_out();
       //   void base_http_out_eof();
-      //   void base_http_headers_received();
+      //   bool base_http_headers_received();
       //   void base_http_content_in(BufferAllocated& buf);
       //   bool base_link_send(BufferAllocated& buf);
       //   bool base_send_queue_empty();
-      //   void base_http_done_handler();
+      //   void base_http_done_handler(BufferAllocated& residual)
       //   void base_error_handler(const int errcode, const std::string& err);
 
       // protected member vars
@@ -280,8 +281,13 @@ namespace openvpn {
 			rr_content_length = get_content_length(rr_obj.headers);
 			if (rr_content_length == CONTENT_INFO::CHUNKED)
 			  rr_chunked.reset(new ChunkedHelper());
-			if (!halt)
-			  parent().base_http_headers_received();
+			if (!parent().base_http_headers_received())
+			  {
+			    // parent wants to handle content itself,
+			    // pass post-header residual data
+			    parent().base_http_done_handler(buf);
+			    return;
+			  }
 			break;
 		      }
 		    else
@@ -313,7 +319,10 @@ namespace openvpn {
 		done = rr_chunked->receive(*this, buf);
 	      }
 	    if (done)
-	      parent().base_http_done_handler();
+	      {
+		BufferAllocated empty;
+		parent().base_http_done_handler(empty);
+	      }
 	  }
       }
 
