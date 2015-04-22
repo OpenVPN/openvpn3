@@ -70,6 +70,8 @@ namespace openvpn {
 
     struct Context
     {
+      // Mechanism for passing thread-local
+      // global_log to another thread.
       class Wrapper
       {
       public:
@@ -79,6 +81,8 @@ namespace openvpn {
 	OPENVPN_LOG_CLASS *log;
       };
 
+      // While in scope, turns on global_log
+      // for this thread.
       Context(const Wrapper& wrap)
       {
 	global_log = wrap.log;
