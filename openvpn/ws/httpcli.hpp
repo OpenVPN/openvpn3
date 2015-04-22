@@ -338,7 +338,7 @@ namespace openvpn {
 				    socket,
 				    0, // send_queue_max_size (unlimited)
 				    8, // free_list_max_size
-				    (*frame)[Frame::READ_LINK_TCP],
+				    (*frame)[Frame::READ_HTTP],
 				    stats));
 	    link->set_raw_mode(true);
 	    link->start();
@@ -496,9 +496,10 @@ namespace openvpn {
 	{
 	}
 
-	void base_http_headers_received()
+	bool base_http_headers_received()
 	{
 	  http_headers_received();
+	  return true; // continue to receive content
 	}
 
 	void base_http_content_in(BufferAllocated& buf)
@@ -516,7 +517,7 @@ namespace openvpn {
 	  return link->send_queue_empty();
 	}
 
-	void base_http_done_handler()
+	void base_http_done_handler(BufferAllocated& residual)
 	{
 	  if (halt)
 	    return;
