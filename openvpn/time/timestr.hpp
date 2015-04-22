@@ -92,7 +92,7 @@ namespace openvpn {
     if (!gmtime_r(&t, &lt))
       return "";
     if (!strftime(buf, sizeof(buf),
-		  "%a, %d %b %y %T %z",
+		  "%a, %d %b %Y %T %Z",
 		  &lt))
       return "";
     return std::string(buf);
