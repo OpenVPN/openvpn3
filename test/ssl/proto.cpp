@@ -33,6 +33,8 @@
 
 #ifdef OPENVPN_PLATFORM_WIN
 #include "protowin.h"
+#else
+#define USE_STD_THREAD        // use std::thread instead of boost::thread
 #endif
 
 #define OPENVPN_DEBUG
@@ -180,10 +182,6 @@
 #include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
 #include <polarssl/debug.h>
-#endif
-
-#if OPENVPN_MULTITHREAD
-#include <boost/bind.hpp>
 #endif
 
 #include <openvpn/crypto/selftest.hpp>
@@ -996,11 +994,13 @@ int main(int argc, char* argv[])
     }
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
-  boost::thread* threads[N_THREADS];
+  ThreadType* threads[N_THREADS];
   int i;
   for (i = 0; i < N_THREADS; ++i)
     {
-      threads[i] = new boost::thread(boost::bind(&test, i));
+      threads[i] = new ThreadType([i]() {
+	  test(i);
+	});
     }
   for (i = 0; i < N_THREADS; ++i)
     {
