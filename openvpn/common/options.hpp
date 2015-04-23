@@ -53,10 +53,10 @@
 #include <algorithm>   // for std::sort, std::min
 #include <utility>     // for std::move
 #include <type_traits> // for std::is_nothrow_move_constructible
+#include <unordered_map>
 
 #include <boost/cstdint.hpp> // for boost::uint64_t
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
-#include <boost/unordered_map.hpp>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
@@ -312,7 +312,7 @@ namespace openvpn {
   public:
     typedef boost::intrusive_ptr<OptionList> Ptr;
     typedef std::vector<unsigned int> IndexList;
-    typedef boost::unordered_map<std::string, IndexList> IndexMap;
+    typedef std::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
 
     static bool is_comment(const char c)

@@ -30,6 +30,7 @@
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/ostream.hpp>
+#include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ipv4.hpp>
 #include <openvpn/addr/ipv6.hpp>
 #include <openvpn/addr/iperr.hpp>
@@ -871,12 +872,18 @@ namespace openvpn {
     };
 
     OPENVPN_OSTREAM(Addr, to_string)
+  }
+}
 
-    inline std::size_t hash_value(const Addr& addr)
+namespace std {
+  template <>
+  struct hash<openvpn::IP::Addr>
+  {
+    inline std::size_t operator()(const openvpn::IP::Addr& addr) const
     {
       return addr.hashval();
     }
-  }
-} // namespace openvpn
+  };
+}
 
-#endif // OPENVPN_ADDR_IP_H
+#endif

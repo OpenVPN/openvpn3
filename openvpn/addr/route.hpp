@@ -30,6 +30,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/split.hpp>
+#include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
@@ -164,6 +165,14 @@ namespace openvpn {
       {
 	return prefix_len == other.prefix_len && addr == other.addr;
       }
+
+      std::size_t hash_value() const
+      {
+	std::size_t seed = 0;
+	boost::hash_combine(seed, addr);
+	boost::hash_combine(seed, prefix_len);
+	return seed;
+      }
     };
 
     template <typename ADDR>
@@ -196,16 +205,6 @@ namespace openvpn {
 	    throw route_list_error("route not canonical: " + i->to_string());
       }
     };
-
-    // Compute hash value of Route
-    template <typename ADDR>
-    inline std::size_t hash_value(const RouteType<ADDR>& route)
-    {
-      std::size_t seed = 0;
-      boost::hash_combine(seed, route.addr);
-      boost::hash_combine(seed, route.prefix_len);
-      return seed;
-    }
 
     typedef RouteType<IP::Addr> Route;
     typedef RouteType<IPv4::Addr> Route4;

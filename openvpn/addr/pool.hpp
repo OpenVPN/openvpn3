@@ -25,8 +25,8 @@
 #include <string>
 #include <sstream>
 #include <deque>
+#include <unordered_map>
 
-#include <boost/unordered_map.hpp>
 #include <boost/assert.hpp>
 
 #include <openvpn/common/types.hpp>
@@ -61,7 +61,7 @@ namespace openvpn {
       // Add single address to pool (pool will own the address).
       void add_addr(const ADDR& addr)
       {
-	typename boost::unordered_map<ADDR, bool>::const_iterator e = map.find(addr);
+	typename std::unordered_map<ADDR, bool>::const_iterator e = map.find(addr);
 	if (e == map.end())
 	  {
 	    freelist.push_back(addr);
@@ -84,7 +84,7 @@ namespace openvpn {
 	    if (freelist.empty())
 	      return false;
 	    const ADDR& a = freelist.front();
-	    typename boost::unordered_map<ADDR, bool>::iterator e = map.find(a);
+	    typename std::unordered_map<ADDR, bool>::iterator e = map.find(a);
 	    BOOST_ASSERT(e != map.end()); // any address in freelist must exist in map
 	    if (!e->second)
 	      {
@@ -101,7 +101,7 @@ namespace openvpn {
       // successful, or false if the address is not available.
       bool acquire_specific_addr(const ADDR& addr)
       {
-	typename boost::unordered_map<ADDR, bool>::iterator e = map.find(addr);
+	typename std::unordered_map<ADDR, bool>::iterator e = map.find(addr);
 	if (e != map.end() && !e->second)
 	  {
 	    e->second = true;
@@ -116,7 +116,7 @@ namespace openvpn {
       // (b) the address is not owned by the pool.
       void release_addr(const ADDR& addr)
       {
-	typename boost::unordered_map<ADDR, bool>::iterator e = map.find(addr);
+	typename std::unordered_map<ADDR, bool>::iterator e = map.find(addr);
 	if (e != map.end() && e->second)
 	  {
 	    freelist.push_back(addr);
@@ -129,7 +129,7 @@ namespace openvpn {
 
     private:
       std::deque<ADDR> freelist;
-      boost::unordered_map<ADDR, bool> map;
+      std::unordered_map<ADDR, bool> map;
     };
 
     typedef PoolType<IP::Addr> Pool;
