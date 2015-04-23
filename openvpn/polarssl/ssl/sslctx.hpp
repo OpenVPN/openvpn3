@@ -948,7 +948,7 @@ namespace openvpn {
 	  if (ssl->authcert)
 	    {
 	      const int SHA_DIGEST_LENGTH = 20;
-	      BOOST_STATIC_ASSERT(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH);
+	      static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH, "size inconsistency");
 	      sha1(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp);
 	    }
 	}

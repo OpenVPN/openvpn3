@@ -26,7 +26,6 @@
 #include <cstring>          // for std::memset, std::memcpy
 
 #include <boost/cstdint.hpp>       // for boost::uint32_t, uint64_t
-#include <boost/static_assert.hpp> // for BOOST_STATIC_ASSERT
 
 #include <openvpn/common/socktypes.hpp> // for ntohl
 
@@ -38,7 +37,7 @@ namespace openvpn {
   template <typename T>
   inline T bin_prefix(const unsigned char *data)
   {
-    BOOST_STATIC_ASSERT(sizeof(T) == 4 || sizeof(T) == 8);
+    static_assert(sizeof(T) == 4 || sizeof(T) == 8, "size inconsistency");
     if (sizeof(T) == 8)
       return (T(ntohl(*(uint32_t *)&data[0])) << 32) | T(ntohl(*(uint32_t *)&data[4]));
     else // sizeof(T) == 4

@@ -556,7 +556,7 @@ namespace openvpn {
     template <typename OT>
     BufferAllocatedType(const BufferType<OT>& other, const unsigned int flags)
     {
-      BOOST_STATIC_ASSERT(sizeof(T) == sizeof(OT));
+      static_assert(sizeof(T) == sizeof(OT), "size inconsistency");
       offset_ = other.offset();
       size_ = other.size();
       capacity_ = other.capacity();

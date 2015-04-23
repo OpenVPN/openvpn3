@@ -29,8 +29,6 @@
 #include <cstring>
 #include <sstream>
 
-#include <boost/static_assert.hpp> // for BOOST_STATIC_ASSERT
-
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
@@ -1131,7 +1129,7 @@ namespace openvpn {
 	  // save the issuer cert fingerprint
 	  if (self_ssl->authcert)
 	    {
-	      BOOST_STATIC_ASSERT(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH);
+	      static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH, "size inconsistency");
 	      std::memcpy(self_ssl->authcert->issuer_fp, ctx->current_cert->sha1_hash, sizeof(AuthCert::issuer_fp));
 	    }
 	}
