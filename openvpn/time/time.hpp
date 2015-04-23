@@ -39,8 +39,7 @@
 #define OPENVPN_TIME_TIME_H
 
 #include <limits>
-
-#include <boost/cstdint.hpp> // for boost::uint32_t, uint64_t
+#include <cstdint> // for std::uint32_t, uint64_t
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>

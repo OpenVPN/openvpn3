@@ -36,7 +36,7 @@
 #include <vector>
 #include <sstream>
 
-#include <boost/cstdint.hpp> // for boost::uint32_t
+#include <cstdint> // for std::uint32_t
 
 #include <tap-windows.h>
 
@@ -346,7 +346,7 @@ namespace openvpn {
 	const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(prefix_len);
 	const IPv4::Addr network = local.to_ipv4() & netmask;
 
-	boost::uint32_t ep[3];
+	std::uint32_t ep[3];
 	ep[0] = htonl(local.to_ipv4().to_uint32());
 	ep[1] = htonl(network.to_uint32());
 	ep[2] = htonl(netmask.to_uint32());
@@ -366,7 +366,7 @@ namespace openvpn {
 	const IPv4::Addr network = local & netmask;
 	const IPv4::Addr remote = network + 1;
 
-	boost::uint32_t ep[2];
+	std::uint32_t ep[2];
 	ep[0] = htonl(local.to_uint32());
 	ep[1] = htonl(remote.to_uint32());
 

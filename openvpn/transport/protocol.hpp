@@ -23,8 +23,8 @@
 #define OPENVPN_TRANSPORT_PROTOCOL_H
 
 #include <string>
+#include <cstdint> // for std::uint32_t, etc.
 
-#include <boost/cstdint.hpp> // for boost::uint32_t, etc.
 #include <boost/algorithm/string.hpp> // for boost::algorithm::to_lower, ends_with
 
 #include <openvpn/common/exception.hpp>
@@ -76,7 +76,7 @@ namespace openvpn {
 
     unsigned int extra_transport_bytes() const
     {
-      return is_tcp() ? sizeof(boost::uint16_t) : 0;
+      return is_tcp() ? sizeof(std::uint16_t) : 0;
     }
 
     void mod_addr_version(const IP::Addr& addr)

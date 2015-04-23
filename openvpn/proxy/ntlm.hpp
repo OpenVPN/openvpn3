@@ -27,8 +27,8 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <cstdint> // for std::uint32_t, uint64_t
 
-#include <boost/cstdint.hpp> // for boost::uint32_t, uint64_t
 #include <boost/algorithm/string.hpp> // for boost::algorithm::to_upper_copy
 
 #include <openvpn/common/types.hpp>
@@ -189,7 +189,7 @@ namespace openvpn {
       // store 64-bit windows time into a little-endian 8-byte buffer
       static void store_win_time(unsigned char *dest)
       {
-	const boost::uint64_t wt = Time::win_time();
+	const std::uint64_t wt = Time::win_time();
 	dest[0]= (unsigned char)wt;
 	dest[1]= (unsigned char)(wt  >> 8);
 	dest[2]= (unsigned char)(wt  >> 16);

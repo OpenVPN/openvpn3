@@ -25,8 +25,7 @@
 #define OPENVPN_CRYPTO_CRYPTODC_H
 
 #include <utility> // for std::move
-
-#include <boost/cstdint.hpp> // for boost::uint32_t, etc.
+#include <cstdint> // for std::uint32_t, etc.
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>

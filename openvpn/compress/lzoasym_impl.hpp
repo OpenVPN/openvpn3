@@ -30,7 +30,7 @@
 #ifndef OPENVPN_COMPRESS_LZOASYM_IMPL_H
 #define OPENVPN_COMPRESS_LZOASYM_IMPL_H
 
-#include <boost/cstdint.hpp> // for boost::uint32_t, etc.
+#include <cstdint> // for std::uint32_t, etc.
 
 #include <openvpn/common/types.hpp>  // for ssize_t
 #include <openvpn/common/likely.hpp> // for likely/unlikely
@@ -110,7 +110,7 @@ namespace openvpn {
     {
       // NOTE: assumes little-endian and unaligned 16-bit access is okay.
       // For a slower alternative without these assumptions, try: p[0] | (p[1] << 8)
-      return get_mem<boost::uint16_t>(p);
+      return get_mem<std::uint16_t>(p);
     }
 
     // copy 64 bits
@@ -120,12 +120,12 @@ namespace openvpn {
       // 32-bit machines can do 32-bit unaligned access.
       if (sizeof(void *) == 8)
 	{
-	  copy_mem<boost::uint64_t>(dest, src);
+	  copy_mem<std::uint64_t>(dest, src);
 	}
       else
 	{
-	  copy_mem<boost::uint32_t>(dest, src);
-	  copy_mem<boost::uint32_t>(dest+4, src+4);
+	  copy_mem<std::uint32_t>(dest, src);
+	  copy_mem<std::uint32_t>(dest+4, src+4);
 	}
     }
 
@@ -168,7 +168,7 @@ namespace openvpn {
 	}
       if (len >= 4)
 	{
-	  copy_mem<boost::uint32_t>(dest, src);
+	  copy_mem<std::uint32_t>(dest, src);
 	  src += 4;
 	  dest += 4;
 	  len -= 4;

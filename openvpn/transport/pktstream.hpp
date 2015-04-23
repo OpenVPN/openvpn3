@@ -23,7 +23,7 @@
 #define OPENVPN_TRANSPORT_PKTSTREAM_H
 
 #include <algorithm>         // for std::min
-#include <boost/cstdint.hpp> // for boost::uint16_t, etc.
+#include <cstdint>           // for std::uint16_t, etc.
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
@@ -123,7 +123,7 @@ namespace openvpn {
     // prepend uint16_t size to buffer
     static void prepend_size(Buffer& buf)
     {
-      const boost::uint16_t net_len = htons(buf.size());
+      const std::uint16_t net_len = htons(buf.size());
       buf.prepend((const unsigned char *)&net_len, sizeof(net_len));
     }
 
@@ -138,12 +138,12 @@ namespace openvpn {
 
     static bool size_defined(const Buffer& buf)
     {
-      return buf.size() >= sizeof(boost::uint16_t);
+      return buf.size() >= sizeof(std::uint16_t);
     }
 
     static size_t read_size(Buffer& buf)
     {
-      boost::uint16_t net_len;
+      std::uint16_t net_len;
       buf.read((unsigned char *)&net_len, sizeof(net_len));
       return ntohs(net_len);
     }

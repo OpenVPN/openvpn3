@@ -189,9 +189,9 @@ namespace openvpn {
     }
 
   private:
-    void prepend_pf_inet(Buffer& buf, const boost::uint32_t value)
+    void prepend_pf_inet(Buffer& buf, const std::uint32_t value)
     {
-      const boost::uint32_t net_value = htonl(value);
+      const std::uint32_t net_value = htonl(value);
       buf.prepend((unsigned char *)&net_value, sizeof(net_value));
     }
 

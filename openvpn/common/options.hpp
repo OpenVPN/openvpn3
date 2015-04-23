@@ -54,8 +54,8 @@
 #include <utility>     // for std::move
 #include <type_traits> // for std::is_nothrow_move_constructible
 #include <unordered_map>
+#include <cstdint>     // for std::uint64_t
 
-#include <boost/cstdint.hpp> // for boost::uint64_t
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
 
 #include <openvpn/common/rc.hpp>
@@ -378,7 +378,7 @@ namespace openvpn {
     {
     public:
       Limits(const std::string& error_message,
-	     const boost::uint64_t max_bytes_arg,
+	     const std::uint64_t max_bytes_arg,
 	     const size_t extra_bytes_per_opt_arg,
 	     const size_t extra_bytes_per_term_arg,
 	     const size_t max_line_len_arg,
@@ -420,7 +420,7 @@ namespace openvpn {
 	return max_line_len;
       }
 
-      boost::uint64_t get_bytes() const
+      std::uint64_t get_bytes() const
       {
 	return bytes;
       }
@@ -442,8 +442,8 @@ namespace openvpn {
 	throw option_error(err);
       }
 
-      boost::uint64_t bytes;
-      const boost::uint64_t max_bytes;
+      std::uint64_t bytes;
+      const std::uint64_t max_bytes;
       const size_t extra_bytes_per_opt;
       const size_t extra_bytes_per_term;
       const size_t max_line_len;

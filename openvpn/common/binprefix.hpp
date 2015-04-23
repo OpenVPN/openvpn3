@@ -24,8 +24,7 @@
 
 #include <algorithm>        // for std::min, std::max
 #include <cstring>          // for std::memset, std::memcpy
-
-#include <boost/cstdint.hpp>       // for boost::uint32_t, uint64_t
+#include <cstdint>          // for std::uint32_t, uint64_t
 
 #include <openvpn/common/socktypes.hpp> // for ntohl
 

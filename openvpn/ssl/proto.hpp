@@ -29,8 +29,8 @@
 #include <string>
 #include <sstream>
 #include <algorithm>                  // for std::min
+#include <cstdint>                    // for std::uint32_t, etc.
 
-#include <boost/cstdint.hpp>          // for boost::uint32_t, etc.
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 
 #include <openvpn/common/exception.hpp>
@@ -790,7 +790,7 @@ namespace openvpn {
 		  {
 		    if (unlikely(buf.size() < 4))
 		      return;
-		    const int opi = ntohl(*(const boost::uint32_t *)buf.c_data()) & 0x00FFFFFF;
+		    const int opi = ntohl(*(const std::uint32_t *)buf.c_data()) & 0x00FFFFFF;
 		    if (opi != OP_PEER_ID_UNDEF)
 		      peer_id_ = opi;
 		    opcode = opc;
@@ -944,7 +944,7 @@ namespace openvpn {
 
     static void write_string_length(const size_t size, Buffer& buf)
     {
-      const boost::uint16_t net_size = htons(size);
+      const std::uint16_t net_size = htons(size);
       buf.write((const unsigned char *)&net_size, sizeof(net_size));
     }
 
@@ -952,7 +952,7 @@ namespace openvpn {
     {
       if (buf.size())
 	{
-	  boost::uint16_t net_size;
+	  std::uint16_t net_size;
 	  buf.read((unsigned char *)&net_size, sizeof(net_size));
 	  return ntohs(net_size);
 	}
@@ -1487,7 +1487,7 @@ namespace openvpn {
 
 	if (enable_op32)
 	  {
-	    const boost::uint32_t op32 = htonl(op32_compose(DATA_V2, key_id_, remote_peer_id));
+	    const std::uint32_t op32 = htonl(op32_compose(DATA_V2, key_id_, remote_peer_id));
 
 	    static_assert(sizeof(op32) == OP_SIZE_V2, "OP_SIZE_V2 inconsistency");
 

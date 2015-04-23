@@ -24,8 +24,8 @@
 
 #include <cstring>           // for std::memcpy, std::memset
 #include <sstream>
+#include <cstdint>           // for std::uint32_t
 
-#include <boost/cstdint.hpp> // for boost::uint32_t
 #include <boost/asio.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -57,8 +57,8 @@ namespace openvpn {
     public:
       enum { SIZE=32 };
 
-      typedef boost::uint32_t base_type;
-      typedef boost::int32_t signed_base_type;
+      typedef std::uint32_t base_type;
+      typedef std::int32_t signed_base_type;
 
       static Addr from_addr(const Addr& addr)
       {
@@ -103,7 +103,7 @@ namespace openvpn {
 	return ret;
       }
 
-      boost::uint32_t to_uint32() const // host byte order
+      std::uint32_t to_uint32() const // host byte order
       {
 	return u.addr;
       }
@@ -115,7 +115,7 @@ namespace openvpn {
 	return ret;
       }
 
-      boost::uint32_t to_uint32_net() const // return value in net byte order
+      std::uint32_t to_uint32_net() const // return value in net byte order
       {
 	return htonl(u.addr);
       }
@@ -269,7 +269,7 @@ namespace openvpn {
       static Addr from_asio(const boost::asio::ip::address_v4& asio_addr)
       {
 	Addr ret;
-	ret.u.addr = (boost::uint32_t)asio_addr.to_ulong();
+	ret.u.addr = (std::uint32_t)asio_addr.to_ulong();
 	return ret;
       }
 
@@ -292,7 +292,7 @@ namespace openvpn {
 
       Addr operator+(const long delta) const {
 	Addr ret;
-	ret.u.addr = u.addr + (boost::uint32_t)delta;
+	ret.u.addr = u.addr + (std::uint32_t)delta;
 	return ret;
       }
 
@@ -444,9 +444,9 @@ namespace openvpn {
       }
 
       // convert netmask in addr to prefix_len, will return -1 on error
-      static int prefix_len_32(const boost::uint32_t addr)
+      static int prefix_len_32(const std::uint32_t addr)
       {
-	if (addr == ~boost::uint32_t(0))
+	if (addr == ~std::uint32_t(0))
 	  return 32;
 	else if (addr == 0)
 	  return 0;
@@ -514,7 +514,7 @@ namespace openvpn {
 
       Addr& operator+=(const long delta)
       {
-	u.addr += (boost::uint32_t)delta;
+	u.addr += (std::uint32_t)delta;
 	return *this;
       }
 

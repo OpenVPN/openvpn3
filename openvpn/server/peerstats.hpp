@@ -22,7 +22,7 @@
 #ifndef OPENVPN_SERVER_PEERSTATS_H
 #define OPENVPN_SERVER_PEERSTATS_H
 
-#include <boost/cstdint.hpp> // for boost::uint32_t, uint64_t, etc.
+#include <cstdint> // for std::uint32_t, uint64_t, etc.
 
 namespace openvpn {
 
@@ -35,8 +35,8 @@ namespace openvpn {
     {
     }
 
-    boost::uint64_t rx_bytes;
-    boost::uint64_t tx_bytes;
+    std::uint64_t rx_bytes;
+    std::uint64_t tx_bytes;
     int status;
   };
 

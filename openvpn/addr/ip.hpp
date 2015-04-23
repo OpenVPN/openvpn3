@@ -255,7 +255,7 @@ namespace openvpn {
 	  std::memset(bytestr, 0, 16);
       }
 
-      boost::uint32_t to_uint32_net() const // return value in net byte order
+      std::uint32_t to_uint32_net() const // return value in net byte order
       {
 	if (ver == V4)
 	  return u.v4.to_uint32_net();

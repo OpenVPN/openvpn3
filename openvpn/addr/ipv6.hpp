@@ -24,8 +24,8 @@
 
 #include <cstring>           // for std::memcpy, std::memset
 #include <algorithm>         // for std::min
+#include <cstdint>           // for std::uint32_t
 
-#include <boost/cstdint.hpp> // for boost::uint32_t
 #include <boost/asio.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -168,7 +168,7 @@ namespace openvpn {
       {
 	Addr ret;
 	ret.scope_id_ = 0;
-	ret.u.u64[Endian::e2(0)] = boost::uint64_t(ul);
+	ret.u.u64[Endian::e2(0)] = std::uint64_t(ul);
 	ret.u.u64[Endian::e2(1)] = 0;
 	return ret;
       }
@@ -177,7 +177,7 @@ namespace openvpn {
       unsigned long to_ulong() const
       {
 	const unsigned long ret = (unsigned long)u.u64[Endian::e2(0)];
-	const boost::uint64_t cmp = boost::uint64_t(ret);
+	const std::uint64_t cmp = std::uint64_t(ret);
 	if (u.u64[Endian::e2(1)] || cmp != u.u64[Endian::e2(0)])
 	  throw ipv6_exception("overflow in conversion from IPv6.Addr to unsigned long");
 	return ret;
@@ -193,7 +193,7 @@ namespace openvpn {
 	    ul = -(ul + 1);
 	    neg = true;
 	  }
-	ret.u.u64[Endian::e2(0)] = boost::uint64_t(ul);
+	ret.u.u64[Endian::e2(0)] = std::uint64_t(ul);
 	ret.u.u64[Endian::e2(1)] = 0;
 	if (neg)
 	  ret.negate();
@@ -211,7 +211,7 @@ namespace openvpn {
 	    neg = true;
 	  }
 	const long ret = (long)a.u.u64[Endian::e2(0)];
-	const boost::uint64_t cmp = boost::uint64_t(ret);
+	const std::uint64_t cmp = std::uint64_t(ret);
 	if (a.u.u64[Endian::e2(1)] || cmp != a.u.u64[Endian::e2(0)])
 	  throw ipv6_exception("overflow in conversion from IPv6.Addr to long");
 	return neg ? -(ret + 1) : ret;
@@ -246,7 +246,7 @@ namespace openvpn {
       }
 
       static void v4_to_byte_string(unsigned char *bytestr,
-				    const boost::uint32_t v4addr)
+				    const std::uint32_t v4addr)
       {
 	union ipv6addr *a = (union ipv6addr *)bytestr;
 	a->u32[0] = a->u32[1] = a->u32[2] = 0;
@@ -259,7 +259,7 @@ namespace openvpn {
 	return a->u32[0] == 0 && a->u32[1] == 0 && a->u32[2] == 0;
       }
 
-      static boost::uint32_t v4_from_byte_string(const unsigned char *bytestr)
+      static std::uint32_t v4_from_byte_string(const unsigned char *bytestr)
       {
 	const union ipv6addr *a = (const union ipv6addr *)bytestr;
 	return a->u32[3];
@@ -311,7 +311,7 @@ namespace openvpn {
 	const Addr lb = *this - 1;
 	for (size_t i = 4; i --> 0 ;)
 	  {
-	    const boost::uint32_t v = lb.u.u32[Endian::e4(i)];
+	    const std::uint32_t v = lb.u.u32[Endian::e4(i)];
 	    if (v)
 	      return netmask_from_prefix_len(SIZE - (((unsigned int)i<<5) + find_last_set(v)));
 	  }
@@ -461,15 +461,15 @@ namespace openvpn {
 
       bool all_ones() const
       {
-	return u.u64[0] == ~boost::uint64_t(0) && u.u64[1] == ~boost::uint64_t(0);
+	return u.u64[0] == ~std::uint64_t(0) && u.u64[1] == ~std::uint64_t(0);
       }
 
       bool bit(unsigned int pos) const
       {
 	if (pos < 64)
-	  return (u.u64[Endian::e2(0)] & (boost::uint64_t(1)<<pos)) != 0;
+	  return (u.u64[Endian::e2(0)] & (std::uint64_t(1)<<pos)) != 0;
 	else
-	  return (u.u64[Endian::e2(1)] & (boost::uint64_t(1)<<(pos-64))) != 0;
+	  return (u.u64[Endian::e2(1)] & (std::uint64_t(1)<<(pos-64))) != 0;
       }
 
       // number of network bits in netmask,
@@ -478,17 +478,17 @@ namespace openvpn {
       {
 	int idx = -1;
 
-	if (u.u32[Endian::e4(3)] != ~boost::uint32_t(0))
+	if (u.u32[Endian::e4(3)] != ~std::uint32_t(0))
 	  {
 	    if (!u.u32[Endian::e4(0)] && !u.u32[Endian::e4(1)] && !u.u32[Endian::e4(2)])
 	      idx = 0;
 	  }
-	else if (u.u32[Endian::e4(2)] != ~boost::uint32_t(0))
+	else if (u.u32[Endian::e4(2)] != ~std::uint32_t(0))
 	  {
 	    if (!u.u32[Endian::e4(0)] && !u.u32[Endian::e4(1)])
 	      idx = 1;
 	  }
-	else if (u.u32[Endian::e4(1)] != ~boost::uint32_t(0))
+	else if (u.u32[Endian::e4(1)] != ~std::uint32_t(0))
 	  {
 	    if (!u.u32[Endian::e4(0)])
 	      idx = 2;
@@ -562,8 +562,8 @@ namespace openvpn {
 
       void zero_complement()
       {
-	u.u64[0] = ~boost::uint64_t(0);
-	u.u64[1] = ~boost::uint64_t(0);
+	u.u64[0] = ~std::uint64_t(0);
+	u.u64[1] = ~std::uint64_t(0);
       }
 
       void one()
@@ -619,16 +619,16 @@ namespace openvpn {
 	if (pos < 64)
 	  {
 	    if (value)
-	      u.u64[Endian::e2(0)] |= (boost::uint64_t(1)<<pos);
+	      u.u64[Endian::e2(0)] |= (std::uint64_t(1)<<pos);
 	    else
-	      u.u64[Endian::e2(0)] &= ~(boost::uint64_t(1)<<pos);
+	      u.u64[Endian::e2(0)] &= ~(std::uint64_t(1)<<pos);
 	  }
 	else
 	  {
 	    if (value)
-	      u.u64[Endian::e2(1)] |= (boost::uint64_t(1)<<(pos-64));
+	      u.u64[Endian::e2(1)] |= (std::uint64_t(1)<<(pos-64));
 	    else
-	      u.u64[Endian::e2(1)] &= ~(boost::uint64_t(1)<<(pos-64));
+	      u.u64[Endian::e2(1)] &= ~(std::uint64_t(1)<<(pos-64));
 	  }
       }
 
@@ -637,9 +637,9 @@ namespace openvpn {
 	if (value)
 	  {
 	    if (pos < 64)
-	      u.u64[Endian::e2(0)] |= (boost::uint64_t(1)<<pos);
+	      u.u64[Endian::e2(0)] |= (std::uint64_t(1)<<pos);
 	    else
-	      u.u64[Endian::e2(1)] |= (boost::uint64_t(1)<<(pos-64));
+	      u.u64[Endian::e2(1)] |= (std::uint64_t(1)<<(pos-64));
 	  }
       }
 
@@ -671,8 +671,8 @@ namespace openvpn {
 
     private:
       union ipv6addr {
-	boost::uint64_t u64[2];
-	boost::uint32_t u32[4]; // generally stored in host byte order
+	std::uint64_t u64[2];
+	std::uint32_t u32[4]; // generally stored in host byte order
 	unsigned char bytes[16];
 	boost::asio::ip::address_v6::bytes_type asio_bytes;
       };
@@ -682,7 +682,7 @@ namespace openvpn {
 	if (prefix_len > 0)
 	  {
 	    const unsigned int pl = prefix_len - 1;
-	    const boost::uint32_t mask = ~((1 << (31 - (pl & 31))) - 1);
+	    const std::uint32_t mask = ~((1 << (31 - (pl & 31))) - 1);
 	    switch (pl >> 5)
 	      {
 	      case 0:
@@ -739,14 +739,14 @@ namespace openvpn {
 	dest->u32[3] = ntohl(src->u32[Endian::e4rev(3)]);
       }
 
-      static void shiftl128(boost::uint64_t& low,
-			    boost::uint64_t& high,
+      static void shiftl128(std::uint64_t& low,
+			    std::uint64_t& high,
 			    unsigned int shift)
       {
 	if (shift == 1)
 	  {
 	    high <<= 1;
-	    if (low & (boost::uint64_t(1) << 63))
+	    if (low & (std::uint64_t(1) << 63))
 	      high |= 1;
 	    low <<= 1;
 	  }
@@ -772,15 +772,15 @@ namespace openvpn {
 	  throw ipv6_exception("l-shift too large");
       }
 
-      static void shiftr128(boost::uint64_t& low,
-			    boost::uint64_t& high,
+      static void shiftr128(std::uint64_t& low,
+			    std::uint64_t& high,
 			    unsigned int shift)
       {
 	if (shift == 1)
 	  {
 	    low >>= 1;
 	    if (high & 1)
-	      low |= (boost::uint64_t(1) << 63);
+	      low |= (std::uint64_t(1) << 63);
 	    high >>= 1;
 	  }
 	else if (shift == 0)
@@ -806,7 +806,7 @@ namespace openvpn {
       }
 
       static void add(ipv6addr& dest, const ipv6addr& src) {
-	const boost::uint64_t dorigl = dest.u64[Endian::e2(0)];
+	const std::uint64_t dorigl = dest.u64[Endian::e2(0)];
         dest.u64[Endian::e2(0)] += src.u64[Endian::e2(0)];
         dest.u64[Endian::e2(1)] += src.u64[Endian::e2(1)];
         // check for overflow of low 64 bits, add carry to high
@@ -815,7 +815,7 @@ namespace openvpn {
       }
 
       static void sub(ipv6addr& dest, const ipv6addr& src) {
-	const boost::uint64_t dorigl = dest.u64[Endian::e2(0)];
+	const std::uint64_t dorigl = dest.u64[Endian::e2(0)];
         dest.u64[Endian::e2(0)] -= src.u64[Endian::e2(0)];
         dest.u64[Endian::e2(1)] -= src.u64[Endian::e2(1)]
 	  + (dorigl < dest.u64[Endian::e2(0)]);

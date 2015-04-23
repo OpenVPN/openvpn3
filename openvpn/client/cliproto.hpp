@@ -40,9 +40,9 @@
 #include <string>
 #include <vector>
 #include <algorithm>         // for std::min
+#include <cstdint>           // for std::uint...
 
 #include <boost/asio.hpp>
-#include <boost/cstdint.hpp> // for boost::uint...
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with and trim_left_copy
 
 #include <openvpn/common/rc.hpp>
@@ -779,7 +779,7 @@ namespace openvpn {
       {
 	if (buf.size())
 	  {
-	    boost::uint16_t len = buf.size() & 0x7FFF;
+	    std::uint16_t len = buf.size() & 0x7FFF;
 	    if (out)
 	      len |= 0x8000;
 	    packet_log.write((const char *)&len, sizeof(len));

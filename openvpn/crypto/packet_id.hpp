@@ -26,8 +26,8 @@
 
 #include <string>
 #include <sstream>
+#include <cstdint> // for std::uint32_t
 
-#include <boost/cstdint.hpp> // for boost::uint32_t
 #include <boost/asio.hpp>
 
 #include <openvpn/common/types.hpp>
@@ -65,8 +65,8 @@ namespace openvpn {
    */
   struct PacketID
   {
-    typedef boost::uint32_t id_t;
-    typedef boost::uint32_t net_time_t;
+    typedef std::uint32_t id_t;
+    typedef std::uint32_t net_time_t;
     typedef Time::base_type time_t;
 
     enum {

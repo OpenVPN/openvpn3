@@ -22,7 +22,7 @@
 #ifndef OPENVPN_SERVER_PEERADDR_H
 #define OPENVPN_SERVER_PEERADDR_H
 
-#include <boost/cstdint.hpp> // for boost::uint32_t, uint64_t, etc.
+#include <cstdint> // for std::uint32_t, uint64_t, etc.
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/format.hpp>
@@ -39,7 +39,7 @@ namespace openvpn {
     }
 
     IP::Addr addr;
-    boost::uint16_t port;
+    std::uint16_t port;
   };
 
   struct PeerAddr : public RC<thread_unsafe_refcount>

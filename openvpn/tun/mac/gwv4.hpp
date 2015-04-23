@@ -34,8 +34,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm> // for std::max
-
-#include <boost/cstdint.hpp> // for boost::uint32_t
+#include <cstdint>   // for std::uint32_t
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
@@ -56,7 +55,7 @@ namespace openvpn {
     };
 
 #   define OPENVPN_ROUNDUP(a)			\
-      ((a) > 0 ? (1 + (((a) - 1) | (sizeof(boost::uint32_t) - 1))) : sizeof(boost::uint32_t))
+      ((a) > 0 ? (1 + (((a) - 1) | (sizeof(std::uint32_t) - 1))) : sizeof(std::uint32_t))
 
 #   define OPENVPN_NEXTADDR(w, u)		\
       if (rtm_addrs & (w)) {			\

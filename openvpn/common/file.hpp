@@ -26,8 +26,7 @@
 
 #include <string>
 #include <fstream>
-
-#include <boost/cstdint.hpp> // for boost::uint64_t
+#include <cstdint> // for std::uint64_t
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/unicode.hpp>
@@ -57,7 +56,7 @@ namespace openvpn {
 
   // Read a file (may be text or binary).
   inline BufferPtr read_binary(const std::string& filename,
-			       const boost::uint64_t max_size = 0,
+			       const std::uint64_t max_size = 0,
 			       const unsigned int buffer_flags = 0)
   {
     std::ifstream ifs(filename.c_str(), std::ios::binary);
@@ -67,7 +66,7 @@ namespace openvpn {
     // get length of file
     ifs.seekg (0, std::ios::end);
     const std::streamsize length = ifs.tellg();
-    if (max_size && boost::uint64_t(length) > max_size)
+    if (max_size && std::uint64_t(length) > max_size)
       OPENVPN_THROW(file_too_large, "file too large [" << length << '/' << max_size << "]: " << filename);
     ifs.seekg (0, std::ios::beg);
 
@@ -87,7 +86,7 @@ namespace openvpn {
   }
 
   // Read a text file as a std::string, throw error if file is binary
-  inline std::string read_text(const std::string& filename, const boost::uint64_t max_size = 0)
+  inline std::string read_text(const std::string& filename, const std::uint64_t max_size = 0)
   {
     BufferPtr bp = read_binary(filename, max_size);
     if (bp->contains_null())
@@ -96,7 +95,7 @@ namespace openvpn {
   }
 
   // Read a UTF-8 file as a std::string, throw errors if file is binary or malformed UTF-8
-  inline std::string read_text_utf8(const std::string& filename, const boost::uint64_t max_size = 0)
+  inline std::string read_text_utf8(const std::string& filename, const std::uint64_t max_size = 0)
   {
     BufferPtr bp = read_binary(filename, max_size);
 
