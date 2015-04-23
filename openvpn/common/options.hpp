@@ -50,8 +50,9 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <algorithm> // for std::sort, std::min
-#include <utility> // for std::move
+#include <algorithm>   // for std::sort, std::min
+#include <utility>     // for std::move
+#include <type_traits> // for std::is_nothrow_move_constructible
 
 #include <boost/cstdint.hpp> // for boost::uint64_t
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
@@ -95,7 +96,11 @@ namespace openvpn {
       RENDER_UNUSED   = (1<<4),  // only show unused options
     };
 
-    Option() : touched_(false) {}
+    Option()
+      : touched_(false)
+    {
+      static_assert(std::is_nothrow_move_constructible<Option>::value, "class Option not noexcept move constructable");
+    }
 
     static validate_status validate(const std::string& str, const size_t max_len)
     {

@@ -122,24 +122,20 @@ namespace openvpn {
 	del(px);
     }
 
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+    ScopedPtr(ScopedPtr&& other) noexcept
+    {
+      px = other.px;
+      other.px = NULL;
+    }
 
-      ScopedPtr(ScopedPtr&& other) BOOST_NOEXCEPT
-      {
-	px = other.px;
-	other.px = NULL;
-      }
-
-      ScopedPtr& operator=(ScopedPtr&& other) BOOST_NOEXCEPT
-      {
-	if (px)
-	  del(px);
-	px = other.px;
-	other.px = NULL;
-	return *this;
-      }
-
-#endif
+    ScopedPtr& operator=(ScopedPtr&& other) noexcept
+    {
+      if (px)
+	del(px);
+      px = other.px;
+      other.px = NULL;
+      return *this;
+    }
 
   private:
     static void del(T* p)

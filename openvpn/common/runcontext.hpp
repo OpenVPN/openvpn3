@@ -22,6 +22,8 @@
 #ifndef OPENVPN_COMMON_RUNCONTEXT_H
 #define OPENVPN_COMMON_RUNCONTEXT_H
 
+#include <type_traits> // for std::is_nothrow_move_constructible
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/thread.hpp>
@@ -48,10 +50,11 @@ namespace openvpn {
     {
       Thread() : thread(NULL) {}
 
-      Thread(Thread&& ref)
+      Thread(Thread&& ref) noexcept
 	: thread(ref.thread),
 	  serv(std::move(ref.serv))
       {
+	static_assert(std::is_nothrow_move_constructible<Thread>::value, "class RunContext::Thread not noexcept move constructable");
 	ref.thread = NULL;
       }
 

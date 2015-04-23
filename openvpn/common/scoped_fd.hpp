@@ -109,23 +109,19 @@ namespace openvpn {
       close();
     }
 
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+    ScopedFD(ScopedFD&& other) noexcept
+    {
+      fd = other.fd;
+      other.fd = -1;
+    }
 
-      ScopedFD(ScopedFD&& other) BOOST_NOEXCEPT
-      {
-	fd = other.fd;
-	other.fd = -1;
-      }
-
-      ScopedFD& operator=(ScopedFD&& other) BOOST_NOEXCEPT
-      {
-	close();
-	fd = other.fd;
-	other.fd = -1;
-	return *this;
-      }
-
-#endif
+    ScopedFD& operator=(ScopedFD&& other) noexcept
+    {
+      close();
+      fd = other.fd;
+      other.fd = -1;
+      return *this;
+    }
 
   private:
     int fd;

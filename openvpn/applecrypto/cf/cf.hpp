@@ -27,8 +27,6 @@
 #include <sstream>
 #include <algorithm>
 
-#include <boost/config.hpp> // for BOOST_NO_CXX11_RVALUE_REFERENCES
-
 #include <CoreFoundation/CoreFoundation.h>
 
 #include <openvpn/common/types.hpp>
@@ -100,15 +98,13 @@ namespace openvpn {
 	return *this;
       }
 
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-
-      Wrap(Wrap&& other) BOOST_NOEXCEPT
+      Wrap(Wrap&& other) noexcept
       {
 	obj_ = other.obj_;
 	other.obj_ = NULL;
       }
 
-      Wrap& operator=(Wrap&& other) BOOST_NOEXCEPT
+      Wrap& operator=(Wrap&& other) noexcept
       {
 	if (obj_)
 	  CFRelease(obj_);
@@ -116,8 +112,6 @@ namespace openvpn {
 	other.obj_ = NULL;
 	return *this;
       }
-
-#endif
 
       void swap(Wrap& other)
       {

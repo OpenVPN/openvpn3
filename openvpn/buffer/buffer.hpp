@@ -53,10 +53,9 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+#include <type_traits> // for std::is_nothrow_move_constructible
 
 #include <boost/asio.hpp>
-
-#include <boost/static_assert.hpp>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/abort.hpp>
@@ -142,6 +141,7 @@ namespace openvpn {
 
     BufferType()
     {
+      static_assert(std::is_nothrow_move_constructible<BufferType>::value, "class BufferType not noexcept move constructable");
       data_ = NULL;
       offset_ = size_ = capacity_ = 0;
     }
@@ -508,7 +508,11 @@ namespace openvpn {
       ARRAY = (1<<3),           // if enabled, use as array
     };
 
-    BufferAllocatedType() { flags_ = 0; }
+    BufferAllocatedType()
+    {
+      static_assert(std::is_nothrow_move_constructible<BufferAllocatedType>::value, "class BufferAllocatedType not noexcept move constructable");
+      flags_ = 0;
+    }
 
     BufferAllocatedType(const size_t capacity, const unsigned int flags)
     {
@@ -647,20 +651,16 @@ namespace openvpn {
       std::swap(flags_, other.flags_);
     }
 
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-
-    BufferAllocatedType(BufferAllocatedType&& other) BOOST_NOEXCEPT
+    BufferAllocatedType(BufferAllocatedType&& other) noexcept
     {
       move_(other);
     }
 
-    BufferAllocatedType& operator=(BufferAllocatedType&& other) BOOST_NOEXCEPT
+    BufferAllocatedType& operator=(BufferAllocatedType&& other) noexcept
     {
       move(other);
       return *this;
     }
-
-#endif
 
     void clear()
     {
