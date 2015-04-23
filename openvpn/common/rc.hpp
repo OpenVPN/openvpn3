@@ -59,14 +59,14 @@
 #ifndef OPENVPN_COMMON_RC_H
 #define OPENVPN_COMMON_RC_H
 
+#include <atomic>
+
 #include <boost/noncopyable.hpp>
 #include <boost/intrusive_ptr.hpp>
 
-#include <boost/smart_ptr/detail/atomic_count.hpp>
-
 namespace openvpn {
 
-  typedef boost::detail::atomic_count thread_safe_refcount;
+  typedef std::atomic<long> thread_safe_refcount;
   typedef long thread_unsafe_refcount;
 
   // Reference count base class for objects tracked by boost::intrusive_ptr.
