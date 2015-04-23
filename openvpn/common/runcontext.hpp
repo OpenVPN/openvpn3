@@ -23,6 +23,7 @@
 #define OPENVPN_COMMON_RUNCONTEXT_H
 
 #include <type_traits> // for std::is_nothrow_move_constructible
+#include <cassert>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
@@ -110,7 +111,7 @@ namespace openvpn {
 
     void set_thread(const unsigned int unit, ThreadType* thread)
     {
-      BOOST_ASSERT(unit == threads.size());
+      assert(unit == threads.size());
       threads.emplace_back(thread);
     }
 

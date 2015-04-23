@@ -26,8 +26,7 @@
 #include <sstream>
 #include <deque>
 #include <unordered_map>
-
-#include <boost/assert.hpp>
+#include <cassert>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
@@ -85,7 +84,7 @@ namespace openvpn {
 	      return false;
 	    const ADDR& a = freelist.front();
 	    typename std::unordered_map<ADDR, bool>::iterator e = map.find(a);
-	    BOOST_ASSERT(e != map.end()); // any address in freelist must exist in map
+	    assert(e != map.end()); // any address in freelist must exist in map
 	    if (!e->second)
 	      {
 		e->second = true;

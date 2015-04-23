@@ -26,8 +26,6 @@
 
 #include <algorithm>
 
-#include <boost/assert.hpp>
-
 #include <openvpn/common/types.hpp>
 
 namespace openvpn {
@@ -88,13 +86,11 @@ namespace openvpn {
 
     T& operator*() const
     {
-      BOOST_ASSERT( px != 0 );
       return *px;
     }
 
     T* operator->() const
     {
-      BOOST_ASSERT( px != 0 );
       return px;
     }
 
