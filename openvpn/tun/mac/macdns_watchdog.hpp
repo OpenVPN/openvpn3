@@ -128,7 +128,7 @@ namespace openvpn {
 	      if (!thread)
 		{
 		  mod = macdns->setdns(*config_);
-		  thread = new boost::thread(&MacDNSWatchdog::thread_func, this);
+		  thread = new ThreadType(&MacDNSWatchdog::thread_func, this);
 		}
 	      else
 		{
@@ -280,7 +280,7 @@ namespace openvpn {
     MacDNS::Config::Ptr config_;
     MacDNS::Ptr macdns;
 
-    boost::thread* thread;         // watcher thread
+    ThreadType* thread;            // watcher thread
     CF::RunLoop runloop;           // run loop in watcher thread
     CF::Timer push_timer;          // watcher thread timer
     Mutex push_timer_lock;

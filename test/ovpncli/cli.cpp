@@ -26,16 +26,18 @@
 #include <string>
 #include <iostream>
 
+#include <openvpn/common/platform.hpp>
+
+#if !defined(OPENVPN_PLATFORM_WIN)
+#define USE_STD_THREAD        // use std::thread instead of boost::thread
+#endif
+
 #include <client/ovpncli.cpp> // should be included before any boost includes
 
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <boost/chrono.hpp>
-#include <boost/thread/thread.hpp>
 
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
 
-#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/file.hpp>
@@ -44,6 +46,7 @@
 #include <openvpn/time/timestr.hpp>
 
 #if defined(OPENVPN_PLATFORM_WIN)
+#include <boost/chrono.hpp>
 #include <openvpn/win/console.hpp>
 #endif
 
@@ -204,7 +207,7 @@ int main(int argc, char *argv[])
   };
 
   int ret = 0;
-  boost::thread* thread = NULL;
+  ThreadType* thread = NULL;
 
   try {
     Client::init_process();
@@ -441,7 +444,9 @@ int main(int argc, char *argv[])
 
 		// start connect thread
 		the_client = &client;
-		thread = new boost::thread(boost::bind(&worker_thread));
+		thread = new ThreadType([]() {
+		    worker_thread();
+		  });
 
 		// wait for connect thread to exit
 		thread->join();
@@ -454,7 +459,9 @@ int main(int argc, char *argv[])
 
 		// start connect thread
 		the_client = &client;
-		thread = new boost::thread(boost::bind(&worker_thread));
+		thread = new ThreadType([]() {
+		    worker_thread();
+		  });
 
 		// wait for connect thread to exit, also check for keypresses
 		while (!thread->try_join_for(boost::chrono::milliseconds(1000)))

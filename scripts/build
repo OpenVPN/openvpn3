@@ -151,7 +151,7 @@ LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM/lib"
 if [ "$NOTHREADS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
 else
-    LIBS="$LIBS -lboost_thread"
+    #LIBS="$LIBS -lboost_thread" # no longer needed because we use std::thread now
     [ "$PLATFORM" != "android" ] && FLAGS="$FLAGS -pthread"
 fi
 

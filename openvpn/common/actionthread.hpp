@@ -50,7 +50,7 @@ namespace openvpn {
 	completion_handler(completion_handler_arg)
     {
       if (actions)
-	thread = new boost::thread(&ActionThread::thread_func, this);
+	thread = new ThreadType(&ActionThread::thread_func, this);
     }
 
     void stop(const bool halt)
@@ -99,7 +99,7 @@ namespace openvpn {
     }
 
     boost::asio::io_service& io_service;
-    boost::thread* thread;
+    ThreadType* thread;
     ActionList::Ptr actions;       // actions to execute in child thread
     Notify* completion_handler;    // completion handler
     Log::Context::Wrapper logwrap; // used to carry forward the log context from parent thread
