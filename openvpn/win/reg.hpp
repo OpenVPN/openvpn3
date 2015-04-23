@@ -25,14 +25,17 @@
 #define OPENVPN_WIN_REG_H
 
 #include <windows.h>
-#include <boost/noncopyable.hpp>
 #include <openvpn/common/types.hpp>
 
 namespace openvpn {
   namespace Win {
 
     // HKEY wrapper
-    class RegKey : boost::noncopyable {
+    class RegKey
+    {
+      RegKey(const RegKey&) = delete;
+      RegKey& operator=(const RegKey&) = delete;
+
     public:
       RegKey() : key(NULL) {}
       bool defined() const { return key != NULL; }

@@ -32,8 +32,6 @@
 
 #include <string>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/action.hpp>
 
@@ -64,8 +62,11 @@ namespace openvpn {
     }
   };
 
-  class ArgvWrapper : boost::noncopyable
+  class ArgvWrapper
   {
+    ArgvWrapper(const ArgvWrapper&) = delete;
+    ArgvWrapper& operator=(const ArgvWrapper&) = delete;
+
   public:
     ArgvWrapper(const Argv& argv)
     {

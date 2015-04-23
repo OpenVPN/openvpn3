@@ -30,16 +30,17 @@
 
 #include <CommonCrypto/CommonHMAC.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/applecrypto/crypto/digest.hpp>
 
 namespace openvpn {
   namespace AppleCrypto {
-    class HMACContext : boost::noncopyable
+    class HMACContext
     {
+      HMACContext(const HMACContext&) = delete;
+      HMACContext& operator=(const HMACContext&) = delete;
+
     public:
       OPENVPN_EXCEPTION(digest_cannot_be_used_with_hmac);
       OPENVPN_SIMPLE_EXCEPTION(hmac_uninitialized);

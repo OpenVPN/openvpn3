@@ -26,15 +26,16 @@
 
 #include <windows.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/win/handle.hpp>
 
 namespace openvpn {
   namespace Win {
-    class ScopedHANDLE : boost::noncopyable
+    class ScopedHANDLE
     {
+      ScopedHANDLE(const ScopedHANDLE&) = delete;
+      ScopedHANDLE& operator=(const ScopedHANDLE&) = delete;
+
     public:
       typedef HANDLE base_type;
 

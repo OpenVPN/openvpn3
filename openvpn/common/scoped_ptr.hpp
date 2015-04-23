@@ -27,7 +27,6 @@
 #include <algorithm>
 
 #include <boost/assert.hpp>
-#include <boost/noncopyable.hpp>
 
 #include <openvpn/common/types.hpp>
 
@@ -57,8 +56,11 @@ namespace openvpn {
   // and default constructor usage.  Also allows definition of
   // alternative delete methods via second argument.
   template <typename T, template <typename TF> class F = PtrFree>
-  class ScopedPtr : boost::noncopyable
+  class ScopedPtr
   {
+    ScopedPtr(const ScopedPtr&) = delete;
+    ScopedPtr& operator=(const ScopedPtr&) = delete;
+
   public:
     explicit ScopedPtr(T* p = 0)
       : px(p) {}

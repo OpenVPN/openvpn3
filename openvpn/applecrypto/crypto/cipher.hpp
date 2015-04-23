@@ -30,8 +30,6 @@
 
 #include <CommonCrypto/CommonCryptor.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/platform.hpp>
@@ -42,8 +40,11 @@
 
 namespace openvpn {
   namespace AppleCrypto {
-    class CipherContext : boost::noncopyable
+    class CipherContext
     {
+      CipherContext(const CipherContext&) = delete;
+      CipherContext& operator=(const CipherContext&) = delete;
+
     public:
       OPENVPN_SIMPLE_EXCEPTION(apple_cipher_mode_error);
       OPENVPN_SIMPLE_EXCEPTION(apple_cipher_uninitialized);

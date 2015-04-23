@@ -29,8 +29,6 @@
 
 #include <polarssl/md.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
@@ -39,8 +37,11 @@ namespace openvpn {
   namespace PolarSSLCrypto {
     class HMACContext;
 
-    class DigestContext : boost::noncopyable
+    class DigestContext
     {
+      DigestContext(const DigestContext&) = delete;
+      DigestContext& operator=(const DigestContext&) = delete;
+
     public:
       friend class HMACContext;
 

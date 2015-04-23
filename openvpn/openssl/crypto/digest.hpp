@@ -34,8 +34,6 @@
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
@@ -45,8 +43,11 @@ namespace openvpn {
   namespace OpenSSLCrypto {
     class HMACContext;
 
-    class DigestContext : boost::noncopyable
+    class DigestContext
     {
+      DigestContext(const DigestContext&) = delete;
+      DigestContext& operator=(const DigestContext&) = delete;
+
     public:
       friend class HMACContext;
 

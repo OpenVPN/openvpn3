@@ -30,8 +30,6 @@
 #include <CommonCrypto/CommonDigest.h>
 #include <CommonCrypto/CommonHMAC.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
@@ -145,8 +143,11 @@ namespace openvpn {
 
     class HMACContext;
 
-    class DigestContext : boost::noncopyable
+    class DigestContext
     {
+      DigestContext(const DigestContext&) = delete;
+      DigestContext& operator=(const DigestContext&) = delete;
+
     public:
       friend class HMACContext;
 

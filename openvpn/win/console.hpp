@@ -26,15 +26,17 @@
 
 #include <windows.h>
 #include <string>
-#include <boost/noncopyable.hpp>
 #include <openvpn/win/handle.hpp>
 
 namespace openvpn {
   namespace Win {
     namespace Console {
 
-      class Input : boost::noncopyable
+      class Input
       {
+	Input(const Input&) = delete;
+	Input& operator=(const Input&) = delete;
+
       public:
 	Input()
 	  : std_input(Handle::undefined()),
@@ -116,8 +118,11 @@ namespace openvpn {
 	DWORD console_mode_save;
       };
 
-      class Title : boost::noncopyable
+      class Title
       {
+	Title(const Title&) = delete;
+	Title& operator=(const Title&) = delete;
+
       public:
 	Title(const std::string& new_title)
 	  : old_title_defined(false)

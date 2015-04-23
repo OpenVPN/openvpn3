@@ -26,8 +26,6 @@
 
 #include <string>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>

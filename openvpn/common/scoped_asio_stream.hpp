@@ -24,15 +24,16 @@
 #ifndef OPENVPN_COMMON_SCOPED_ASIO_STREAM_H
 #define OPENVPN_COMMON_SCOPED_ASIO_STREAM_H
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 
 namespace openvpn {
 
   template <typename STREAM>
-  class ScopedAsioStream : boost::noncopyable
+  class ScopedAsioStream
   {
+    ScopedAsioStream(const ScopedAsioStream&) = delete;
+    ScopedAsioStream& operator=(const ScopedAsioStream&) = delete;
+
   public:
     typedef STREAM* base_type;
 

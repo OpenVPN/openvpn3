@@ -29,7 +29,6 @@
 
 #include <polarssl/cipher.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, to_upper_copy
 
 #include <openvpn/common/types.hpp>
@@ -39,8 +38,11 @@
 
 namespace openvpn {
   namespace PolarSSLCrypto {
-    class CipherContext : boost::noncopyable
+    class CipherContext
     {
+      CipherContext(const CipherContext&) = delete;
+      CipherContext& operator=(const CipherContext&) = delete;
+
     public:
       OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_mode_error);
       OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_uninitialized);

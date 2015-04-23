@@ -28,8 +28,6 @@
 
 #include <polarssl/gcm.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/likely.hpp>
@@ -38,8 +36,11 @@
 
 namespace openvpn {
   namespace PolarSSLCrypto {
-    class CipherContextGCM : boost::noncopyable
+    class CipherContextGCM
     {
+      CipherContextGCM(const CipherContextGCM&) = delete;
+      CipherContextGCM& operator=(const CipherContextGCM&) = delete;
+
     public:
       OPENVPN_EXCEPTION(polarssl_gcm_error);
 

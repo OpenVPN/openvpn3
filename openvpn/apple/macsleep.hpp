@@ -29,13 +29,14 @@
 #include <IOKit/pwr_mgt/IOPMLib.h>
 #include <IOKit/IOMessage.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 
 namespace openvpn {
-  class MacSleep : boost::noncopyable
+  class MacSleep
   {
+    MacSleep(const MacSleep&) = delete;
+    MacSleep& operator=(const MacSleep&) = delete;
+
   public:
     MacSleep()
       : root_port(0),

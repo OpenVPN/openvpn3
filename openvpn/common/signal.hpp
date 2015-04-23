@@ -22,8 +22,6 @@
 #ifndef OPENVPN_COMMON_SIGNAL_H
 #define OPENVPN_COMMON_SIGNAL_H
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/platform.hpp>
 
 #if !defined(OPENVPN_PLATFORM_WIN)
@@ -92,8 +90,11 @@ namespace openvpn {
   };
 
   // Like Asio posix_signal_blocker, but only block certain signals
-  class SignalBlocker : private boost::noncopyable
+  class SignalBlocker
   {
+    SignalBlocker(const SignalBlocker&) = delete;
+    SignalBlocker& operator=(const SignalBlocker&) = delete;
+
   public:
     SignalBlocker(const unsigned int flags) // use signal mask from class Signal
       : blocked_(false)

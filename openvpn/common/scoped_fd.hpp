@@ -26,12 +26,13 @@
 
 #include <unistd.h> // for close()
 
-#include <boost/noncopyable.hpp>
-
 namespace openvpn {
 
-  class ScopedFD : boost::noncopyable
+  class ScopedFD
   {
+    ScopedFD(const ScopedFD&) = delete;
+    ScopedFD& operator=(const ScopedFD&) = delete;
+
   public:
     typedef int base_type;
 

@@ -27,16 +27,17 @@
 
 #include <string>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/crypto/digest.hpp>
 
 namespace openvpn {
   namespace OpenSSLCrypto {
-    class HMACContext : boost::noncopyable
+    class HMACContext
     {
+      HMACContext(const HMACContext&) = delete;
+      HMACContext& operator=(const HMACContext&) = delete;
+
     public:
       OPENVPN_SIMPLE_EXCEPTION(openssl_hmac_uninitialized);
       OPENVPN_EXCEPTION(openssl_hmac_error);

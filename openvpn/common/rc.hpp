@@ -61,7 +61,6 @@
 
 #include <atomic>
 
-#include <boost/noncopyable.hpp>
 #include <boost/intrusive_ptr.hpp>
 
 namespace openvpn {
@@ -72,8 +71,11 @@ namespace openvpn {
   // Reference count base class for objects tracked by boost::intrusive_ptr.
   // Disallows copying and assignment.
   template <typename RCImpl> // RCImpl = thread_safe_refcount or thread_unsafe_refcount
-  class RC : boost::noncopyable
+  class RC
   {
+    RC(const RC&) = delete;
+    RC& operator=(const RC&) = delete;
+
   public:
     RC() noexcept : refcount_(0) {}
     virtual ~RC() {}

@@ -30,8 +30,6 @@
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
@@ -40,8 +38,11 @@
 
 namespace openvpn {
   namespace OpenSSLCrypto {
-    class CipherContext : boost::noncopyable
+    class CipherContext
     {
+      CipherContext(const CipherContext&) = delete;
+      CipherContext& operator=(const CipherContext&) = delete;
+
     public:
       OPENVPN_SIMPLE_EXCEPTION(openssl_cipher_mode_error);
       OPENVPN_SIMPLE_EXCEPTION(openssl_cipher_uninitialized);
