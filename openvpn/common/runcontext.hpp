@@ -23,7 +23,6 @@
 #define OPENVPN_COMMON_RUNCONTEXT_H
 
 #include <type_traits> // for std::is_nothrow_move_constructible
-#include <cassert>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
@@ -111,7 +110,8 @@ namespace openvpn {
 
     void set_thread(const unsigned int unit, ThreadType* thread)
     {
-      assert(unit == threads.size());
+      if (unit != threads.size())
+	throw Exception("RunContext::set_thread: unexpected unit number");
       threads.emplace_back(thread);
     }
 
