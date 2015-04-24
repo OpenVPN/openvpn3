@@ -201,13 +201,18 @@ namespace openvpn {
 	  if (signals)
 	    io_service.post(asio_dispatch_post(&ASIOSignals::cancel, signals.get()));
 
+	  unsigned int stopped = 0;
 	  for (size_t i = 0; i < threads.size(); ++i)
 	    {
 	      Thread& thr = threads[i];
 	      if (thr.serv)
-		thr.serv->thread_safe_stop();
+		{
+		  thr.serv->thread_safe_stop();
+		  ++stopped;
+		}
 	      thr.serv.reset();
 	    }
+	  OPENVPN_LOG("Stopping " << stopped << '/' << threads.size() << " thread(s)");
 	}
     }
 
