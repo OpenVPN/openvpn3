@@ -18,6 +18,7 @@ if [ -z "$1" ]; then
     echo " CO=1 -- compile only"
     echo " OBJC=1 -- top-level source file is Obj-C"
     echo ' ECHO=1 -- show commands'
+    echo ' OUTBIN=name -- write binary to name'
     echo " STRIP=1 -- strip binary"
     echo " STRICT=1 -- more warnings"
     echo " LTO=1 -- build with LTO"
@@ -43,7 +44,8 @@ if [ -z "$1" ]; then
 fi
 
 # remove previous build
-rm -f $1
+[ -z "$OUTBIN" ] && OUTBIN="$(basename $1)"
+rm -f $OUTBIN
 
 # build options
 CPPFLAGS=""
@@ -228,7 +230,7 @@ if [ "$CO" == "1" ]; then
     LIBDIRS=""
     LIBS=""
 else
-    OUTPUT="-o $1"
+    OUTPUT="-o $OUTBIN"
 fi
 
 # release/debug builds
@@ -260,5 +262,5 @@ fi
 $CMD
 
 # maybe strip
-[ "$STRIP" = "1" ] && $STRIP_CMD $1
+[ "$STRIP" = "1" ] && $STRIP_CMD $OUTBIN
 exit 0
