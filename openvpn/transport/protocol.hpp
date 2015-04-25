@@ -134,7 +134,7 @@ namespace openvpn {
 	{
 	  if (!title)
 	    title = "protocol";
-	  OPENVPN_THROW(option_error, "error parsing " << title << ": " << s);
+	  OPENVPN_THROW(option_error, "error parsing " << title << ": " << str);
 	}
       return ret;
     }
