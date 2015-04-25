@@ -7,6 +7,7 @@
 #include <string>
 #include <cstdint>
 #include <unordered_map>
+#include <utility> // for std::move
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/scoped_ptr.hpp>
@@ -166,7 +167,7 @@ namespace openvpn {
 
 	    boost::asio::io_service& io_service;
 	    Listener* parent;
-	    boost::asio::ip::tcp::socket* socket;
+	    ScopedPtr<boost::asio::ip::tcp::socket> socket;
 	    const client_t client_id;
 	  };
 
@@ -174,7 +175,7 @@ namespace openvpn {
 	  {
 	    typedef boost::intrusive_ptr<Factory> Ptr;
 
-	    virtual Client::Ptr new_client(const Initializer& ci) = 0;
+	    virtual Client::Ptr new_client(Initializer& ci) = 0;
 	  };
 
 	  virtual ~Client()
@@ -183,10 +184,10 @@ namespace openvpn {
 	  }
 
 	protected:
-	  Client(const Initializer& ci)
+	  Client(Initializer& ci)
 	    : Base(ci.parent->config),
 	      io_service(ci.io_service),
-	      sock(ci.socket),
+	      sock(std::move(ci.socket)),
 	      parent(ci.parent),
 	      timeout_timer(ci.io_service),
 	      client_id(ci.client_id),
@@ -583,7 +584,7 @@ namespace openvpn {
 	{
 	  ScopedPtr<boost::asio::ip::tcp::socket> sock(socket);
 	  if (halt)
-	    return;
+	      return;
 
 	  try {
 	    if (!error)
@@ -594,7 +595,7 @@ namespace openvpn {
 		sock->non_blocking(true);
 
 		const client_t client_id = next_id++;
-		const Client::Initializer ci(io_service, this, sock.release(), client_id);
+		Client::Initializer ci(io_service, this, sock.release(), client_id);
 		Client::Ptr cli = client_factory->new_client(ci);
 		clients[client_id] = cli;
 		cli->start();
