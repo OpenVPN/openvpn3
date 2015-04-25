@@ -100,7 +100,7 @@ namespace openvpn {
 
   inline std::string date_time_rfc822()
   {
-    return date_time_rfc822(time(NULL));
+    return date_time_rfc822(::time(NULL));
   }
 }
 
