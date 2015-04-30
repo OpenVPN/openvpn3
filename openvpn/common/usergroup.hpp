@@ -41,7 +41,13 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(user_group_err);
 
-    SetUserGroup(const char *user, const char *group)
+    explicit SetUserGroup(const std::string& user, const std::string& group)
+      : SetUserGroup(user.empty() ? NULL : user.c_str(),
+		     group.empty() ? NULL : group.c_str())
+    {
+    }
+
+    explicit SetUserGroup(const char *user, const char *group)
       : pw(NULL),
 	gr(NULL)
     {
