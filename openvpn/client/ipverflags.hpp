@@ -81,7 +81,7 @@ namespace openvpn {
     // these flags are passed to tun_builder_reroute_gw method
     unsigned int api_flags() const
     {
-      return api_flags_;
+      return api_flags_ | rg_flags_();
     }
 
     void set_emulate_exclude_routes()

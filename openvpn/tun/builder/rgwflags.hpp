@@ -25,8 +25,9 @@
 namespace openvpn {
   namespace RGWFlags {
     // These flags are passed as the flags argument to TunBuilderBase::tun_builder_reroute_gw
+    // NOTE: must not collide with RG_x flags in rgopt.hpp.
     enum {
-      EmulateExcludeRoutes=(1<<0),
+      EmulateExcludeRoutes=(1<<16),
     };
   }
 }
