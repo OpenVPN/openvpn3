@@ -27,6 +27,7 @@
 
 #include <openvpn/common/memneq.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/buffer/bufstr.hpp>
 
 namespace openvpn {
   class SafeString
@@ -62,6 +63,12 @@ namespace openvpn {
 	return (const char *)data.c_data();
       else
 	return "";
+    }
+
+    // Note: unsafe because of conversion to std::string
+    std::string to_string() const
+    {
+      return buf_to_string(data);
     }
 
     const size_t length() const
