@@ -220,6 +220,11 @@ namespace openvpn {
 	if (lflags & LF_PARSE_MODE)
 	  mode = opt.exists("client") ? Mode(Mode::CLIENT) : Mode(Mode::SERVER);
 
+	// possibly disable peer cert verification
+	if ((lflags & LF_ALLOW_CLIENT_CERT_NOT_REQUIRED)
+	    && opt.exists("client-cert-not-required"))
+	  flags |= SSLConst::NO_VERIFY_PEER;
+
 	// ca
 	{
 	  const std::string ca_txt = opt.cat("ca");
