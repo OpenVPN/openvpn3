@@ -679,7 +679,7 @@ namespace openvpn {
       bool overflow;
       MemQStream ct_in;    // write ciphertext to here
       MemQStream ct_out;   // read ciphertext from here
-      AuthCert::Ptr authcert; // fixme -- set in server mode
+      AuthCert::Ptr authcert;
     };
 
     /////// start of main class implementation
