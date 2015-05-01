@@ -68,8 +68,16 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "CN=" << cn
 	   << " SN=" << sn
-	   << " ISSUER_FP=" << render_hex(issuer_fp, sizeof(issuer_fp));
+	   << " ISSUER_FP=" << issuer_fp_str(false);
 	return os.str();
+      }
+
+      std::string issuer_fp_str(const bool openssl_fmt) const
+      {
+	if (openssl_fmt)
+	  return render_hex_sep(issuer_fp, sizeof(issuer_fp), ':', true);
+	else
+	  return render_hex(issuer_fp, sizeof(issuer_fp), false);
       }
 
       std::string cn;                // common name
