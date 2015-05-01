@@ -67,6 +67,23 @@ namespace openvpn {
     return ret;
   }
 
+  inline std::string render_hex_sep(const unsigned char *data, size_t size, const char sep, const bool caps=false)
+  {
+    std::string ret;
+    ret.reserve(size*3);
+    bool prsep = false;
+    while (size--)
+      {
+	if (prsep)
+	  ret += sep;
+	const unsigned char c = *data++;
+	ret += render_hex_char(c >> 4, caps);
+	ret += render_hex_char(c & 0x0F, caps);
+	prsep = true;
+      }
+    return ret;
+  }
+
   template <typename V>
   inline std::string render_hex_generic(const V& data, const bool caps=false)
   {
