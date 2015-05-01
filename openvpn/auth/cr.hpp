@@ -54,6 +54,7 @@ namespace openvpn {
     typedef boost::intrusive_ptr<ChallengeResponse> Ptr;
 
     OPENVPN_SIMPLE_EXCEPTION(dynamic_challenge_parse_error);
+    OPENVPN_SIMPLE_EXCEPTION(static_challenge_parse_error);
 
     ChallengeResponse()
       : echo(false), response_required(false)
@@ -75,10 +76,7 @@ namespace openvpn {
       if (sl.size() != 5)
 	throw dynamic_challenge_parse_error();
       if (sl[0] != "CRV1")
-	{
-	  OPENVPN_LOG("*** DC no crv1");
-	  throw dynamic_challenge_parse_error();
-	}
+	throw dynamic_challenge_parse_error();
 
       // parse options
       {
@@ -115,6 +113,11 @@ namespace openvpn {
       return boost::algorithm::starts_with(s, "CRV1:");
     }
 
+    static bool is_static(const std::string& s)
+    {
+      return boost::algorithm::starts_with(s, "SCRV1:");
+    }
+
     static void validate_dynamic(const std::string& cookie)
     {
       ChallengeResponse cr(cookie);
@@ -133,6 +136,38 @@ namespace openvpn {
       std::ostringstream os;
       os << "SCRV1:" << base64->encode(password) << ':' << base64->encode(response);
       return os.str();
+    }
+
+    static void parse_static_cookie(const std::string& cookie,
+				    std::string& password,
+				    std::string& response)
+    {
+      typedef std::vector<std::string> StringList;
+      StringList sl;
+      sl.reserve(3);
+      Split::by_char_void<StringList, NullLex, Split::NullLimit>(sl, cookie, ':');
+      if (sl.size() != 3)
+	throw static_challenge_parse_error();
+      if (sl[0] != "SCRV1")
+	throw static_challenge_parse_error();
+
+      // get password
+      try {
+	password = base64->decode(sl[1]);
+      }
+      catch (const Base64::base64_decode_error&)
+	{
+	  throw static_challenge_parse_error();
+	}
+
+      // get response
+      try {
+	response = base64->decode(sl[2]);
+      }
+      catch (const Base64::base64_decode_error&)
+	{
+	  throw static_challenge_parse_error();
+	}
     }
 
     const std::string& get_state_id() const { return state_id; }
