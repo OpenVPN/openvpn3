@@ -1074,10 +1074,12 @@ namespace openvpn {
       BufferPtr buf;
     };
 
-    // KeyContext encapsulates a single SSL/TLS session
-    class KeyContext : ProtoStackBase<Packet>, public RC<thread_unsafe_refcount>
+    // KeyContext encapsulates a single SSL/TLS session.
+    // ProtoStackBase uses CRTP-based static polymorphism for method callbacks.
+    class KeyContext : ProtoStackBase<Packet, KeyContext>, public RC<thread_unsafe_refcount>
     {
-      typedef ProtoStackBase<Packet> Base;
+      typedef ProtoStackBase<Packet, KeyContext> Base;
+      friend Base;
       typedef Base::ReliableSend ReliableSend;
       typedef Base::ReliableRecv ReliableRecv;
 
@@ -1542,8 +1544,7 @@ namespace openvpn {
 	next_event_time = next_time;
       }
 
-      // called by ProtoStackBase when session is invalidated
-      virtual void invalidate_callback()
+      void invalidate_callback() // called by ProtoStackBase when session is invalidated
       {
 	reached_active_time_ = Time();
 	set_event(KEV_NONE, Time::infinite());
@@ -1622,7 +1623,7 @@ namespace openvpn {
 	raw_send(pkt);
       }
 
-      virtual void raw_recv(Packet& raw_pkt)
+      void raw_recv(Packet& raw_pkt)  // called by ProtoStackBase
       {
 	if (raw_pkt.buf->empty() && raw_pkt.opcode == initial_op(false))
 	  {
@@ -1640,7 +1641,7 @@ namespace openvpn {
 	  }
       }
 
-      virtual void app_recv(BufferPtr& to_app_buf)
+      void app_recv(BufferPtr& to_app_buf) // called by ProtoStackBase
       {
 	switch (state)
 	  {
@@ -1660,7 +1661,7 @@ namespace openvpn {
 	  }
       }
 
-      virtual void net_send(const Packet& net_pkt, const Base::NetSendType nstype)
+      void net_send(const Packet& net_pkt, const Base::NetSendType nstype)  // called by ProtoStackBase
       {
 	if (!is_reliable || nstype != Base::NET_SEND_RETRANSMIT) // retransmit packets on UDP only, not TCP
 	  proto.net_send(key_id_, net_pkt);
@@ -1848,7 +1849,7 @@ namespace openvpn {
 	return true;
       }
 
-      virtual void encapsulate(id_t id, Packet& pkt)
+      void encapsulate(id_t id, Packet& pkt) // called by ProtoStackBase
       {
 	Buffer& buf = *pkt.buf;
 
@@ -1862,7 +1863,7 @@ namespace openvpn {
 	gen_head(pkt.opcode, buf);
       }
 
-      virtual bool decapsulate(Packet& pkt)
+      bool decapsulate(Packet& pkt) // called by ProtoStackBase
       {
 	try {
 	  Buffer& recv = *pkt.buf;
@@ -2004,7 +2005,7 @@ namespace openvpn {
 	return false;
       }
 
-      virtual void generate_ack(Packet& pkt)
+      void generate_ack(Packet& pkt) // called by ProtoStackBase
       {
 	Buffer& buf = *pkt.buf;
 

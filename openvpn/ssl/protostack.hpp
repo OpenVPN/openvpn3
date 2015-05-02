@@ -70,7 +70,7 @@ namespace openvpn {
   // Call frame.prepare on internal buffer:
   //   void frame_prepare(const Frame& frame, const unsigned int context)
 
-  template <typename PACKET>
+  template <typename PACKET, typename PARENT>
   class ProtoStackBase
   {
   public:
@@ -170,10 +170,10 @@ namespace openvpn {
 	      ack_send_buf.frame_prepare(*frame_, Frame::WRITE_ACK_STANDALONE);
 
 	      // encapsulate standalone ACK
-	      generate_ack(ack_send_buf);
+	      parent().generate_ack(ack_send_buf);
 
 	      // transmit it
-	      net_send(ack_send_buf, NET_SEND_ACK);
+	      parent().net_send(ack_send_buf, NET_SEND_ACK);
 	    }
 	}
     }
@@ -188,7 +188,7 @@ namespace openvpn {
 	      typename ReliableSend::Message& m = rel_send.ref_by_id(i);
 	      if (m.ready_retransmit(*now))
 		{
-		  net_send(m.packet, NET_SEND_RETRANSMIT);
+		  parent().net_send(m.packet, NET_SEND_RETRANSMIT);
 		  m.reset_retransmit(*now);
 		}
 	    }
@@ -221,7 +221,7 @@ namespace openvpn {
 	{
 	  invalidated_ = true;
 	  invalidation_reason_ = reason;
-	  invalidate_callback();
+	  parent().invalidate_callback();
 	}
     }
 
@@ -235,16 +235,15 @@ namespace openvpn {
       return ssl_->auth_cert();
     }
 
-    virtual ~ProtoStackBase() {}
-
   private:
-    // VIRTUAL METHODS -- derived class must define these virtual methods
+    // Parent methods -- derived class must define these methods
 
     // Encapsulate packet, use id as sequence number.  If xmit_acks is non-empty,
     // try to piggy-back ACK replies from xmit_acks to sender in encapsulated
     // packet. Any exceptions thrown will invalidate session, i.e. this object
     // can no longer be used.
-    virtual void encapsulate(id_t id, PACKET& pkt) = 0;
+    //
+    // void encapsulate(id_t id, PACKET& pkt) = 0;
 
     // Perform integrity check on packet.  If packet is good, unencapsulate it and
     // pass it into the rel_recv object.  Any ACKs received for messages previously
@@ -252,32 +251,44 @@ namespace openvpn {
     // in xmit_acks.  Exceptions may be thrown here and they will be passed up to
     // caller of net_recv and will not invalidate the session.
     // Method should return true if packet was placed into rel_recv.
-    virtual bool decapsulate(PACKET& pkt) = 0;
+    //
+    // bool decapsulate(PACKET& pkt) = 0;
 
     // Generate a standalone ACK message in buf based on ACKs in xmit_acks
     // (PACKET will be already be initialized by frame_prepare()).
-    virtual void generate_ack(PACKET& pkt) = 0;
+    //
+    // void generate_ack(PACKET& pkt) = 0;
 
     // Transmit encapsulated ciphertext packet to peer.  Method may not modify
     // or take ownership of net_pkt or underlying data unless it copies it.
-    virtual void net_send(const PACKET& net_pkt, const NetSendType nstype) = 0;
+    //
+    // void net_send(const PACKET& net_pkt, const NetSendType nstype) = 0;
 
     // Pass cleartext data up to application.  Method may take ownership
     // of to_app_buf by making private copy of BufferPtr then calling
     // reset on to_app_buf.
-    virtual void app_recv(BufferPtr& to_app_buf) = 0;
+    //
+    // void app_recv(BufferPtr& to_app_buf) = 0;
 
     // Pass raw data up to application.  A packet is considered to be raw
     // if is_raw() method returns true.  Method may take ownership
     // of raw_pkt underlying data as long as it resets raw_pkt so that
     // a subsequent call to PACKET::frame_prepare will revert it to
     // a ready-to-use state.
-    virtual void raw_recv(PACKET& raw_pkt) = 0;
+    //
+    // void raw_recv(PACKET& raw_pkt) = 0;
 
     // called if session is invalidated by an error (optional)
-    virtual void invalidate_callback() {}
+    //
+    // void invalidate_callback() {}
 
-    // END of VIRTUAL METHODS
+    // END of parent methods
+
+    // get reference to parent for CRTP
+    PARENT& parent()
+    {
+      return *static_cast<PARENT*>(this);
+    }
 
     // app data -> SSL -> protocol encapsulation -> reliability layer -> network
     void down_stack_app()
@@ -322,7 +333,7 @@ namespace openvpn {
 
 	      // encapsulate packet
 	      try {
-		encapsulate(m.id(), m.packet);
+		parent().encapsulate(m.id(), m.packet);
 	      }
 	      catch (...)
 		{
@@ -331,7 +342,7 @@ namespace openvpn {
 		}
 
 	      // transmit it
-	      net_send(m.packet, NET_SEND_SSL);
+	      parent().net_send(m.packet, NET_SEND_SSL);
 	    }
 	}
     }
@@ -347,7 +358,7 @@ namespace openvpn {
 
 	  // encapsulate packet
 	  try {
-	    encapsulate(m.id(), m.packet);
+	    parent().encapsulate(m.id(), m.packet);
 	  }
 	  catch (...)
 	    {
@@ -356,7 +367,7 @@ namespace openvpn {
 	    }
 
 	  // transmit it
-	  net_send(m.packet, NET_SEND_RAW);
+	  parent().net_send(m.packet, NET_SEND_RAW);
 	}
     }
 
@@ -364,7 +375,7 @@ namespace openvpn {
     bool up_stack(PACKET& recv)
     {
       UseCount use_count(up_stack_reentry_level);
-      if (decapsulate(recv))
+      if (parent().decapsulate(recv))
 	{
 	  up_sequenced();
 	  return true;
@@ -382,7 +393,7 @@ namespace openvpn {
 	{
 	  typename ReliableRecv::Message& m = rel_recv.next_sequenced();
 	  if (m.packet.is_raw())
-	    raw_recv(m.packet);
+	    parent().raw_recv(m.packet);
 	  else // SSL packet
 	    {
 	      if (ssl_started_)
@@ -415,7 +426,7 @@ namespace openvpn {
 		to_app_buf->set_size(size);
 
 		// pass cleartext data to app
-		app_recv(to_app_buf);
+		parent().app_recv(to_app_buf);
 	      }
 	    else if (size == SSLConst::SHOULD_RETRY)
 	      break;
