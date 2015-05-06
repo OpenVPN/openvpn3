@@ -29,10 +29,12 @@
 
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
+#include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/http/reply.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/transport/tcplink.hpp>
+#include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/ws/httpcommon.hpp>
 
 namespace openvpn {
@@ -48,6 +50,8 @@ namespace openvpn {
 	  E_SUCCESS=0,
 	  E_RESOLVE,
 	  E_CONNECT,
+	  E_TRANSPORT,
+	  E_PROXY,
 	  E_TCP,
 	  E_HTTP,
 	  E_EXCEPTION,
@@ -67,6 +71,8 @@ namespace openvpn {
 	    "E_SUCCESS",
 	    "E_RESOLVE",
 	    "E_CONNECT",
+	    "E_TRANSPORT",
+	    "E_PROXY",
 	    "E_TCP",
 	    "E_HTTP",
 	    "E_EXCEPTION",
@@ -97,6 +103,7 @@ namespace openvpn {
 		   max_content_bytes(0) {}
 
 	SSLFactoryAPI::Ptr ssl_factory;
+	TransportClientFactory::Ptr transcli;
 	std::string user_agent;
 	unsigned int connect_timeout;
 	unsigned int general_timeout;
@@ -155,7 +162,7 @@ namespace openvpn {
       class HTTPCore;
       typedef HTTPBase<HTTPCore, Config, Status, HTTP::ReplyType, ContentInfo, olong> Base;
 
-      class HTTPCore : public Base
+      class HTTPCore : public Base, public TransportClientParent
       {
 	friend Base;
 
@@ -197,6 +204,8 @@ namespace openvpn {
 	      halt = true;
 	      ready = false;
 	      alive = false;
+	      if (transcli)
+		transcli->stop();
 	      if (link)
 		link->stop();
 	      socket.close();
@@ -286,8 +295,16 @@ namespace openvpn {
 		    connect_timer.async_wait(asio_dispatch_timer(&HTTPCore::connect_timeout_handler, this));
 		  }
 
-		boost::asio::ip::tcp::resolver::query query(host.host_transport(), host.port);
-		resolver.async_resolve(query, AsioDispatchResolveTCP(&HTTPCore::handle_resolve, this));
+		if (config->transcli)
+		  {
+		    transcli = config->transcli->new_client_obj(io_service, *this);
+		    transcli->start();
+		  }
+		else
+		  {
+		    boost::asio::ip::tcp::resolver::query query(host.host_transport(), host.port);
+		    resolver.async_resolve(query, AsioDispatchResolveTCP(&HTTPCore::handle_resolve, this));
+		  }
 	      }
 	  }
 	  catch (const std::exception& e)
@@ -319,6 +336,30 @@ namespace openvpn {
 	    }
 	}
 
+	void do_connect(const bool use_link)
+	{
+	  connect_timer.cancel();
+	  set_default_stats();
+
+	  if (use_link)
+	    {
+	      link.reset(new LinkImpl(this,
+				      socket,
+				      0, // send_queue_max_size (unlimited)
+				      8, // free_list_max_size
+				      (*frame)[Frame::READ_HTTP],
+				      stats));
+	      link->set_raw_mode(true);
+	      link->start();
+	    }
+
+	  if (ssl_sess)
+	    ssl_sess->start_handshake();
+
+	  // xmit the request
+	  generate_request();
+	}
+
 	void handle_connect(const boost::system::error_code& error, // called by Asio
 			    boost::asio::ip::tcp::resolver::iterator iterator)
 	{
@@ -332,22 +373,7 @@ namespace openvpn {
 	    }
 
 	  try {
-	    connect_timer.cancel();
-	    set_default_stats();
-	    link.reset(new LinkImpl(this,
-				    socket,
-				    0, // send_queue_max_size (unlimited)
-				    8, // free_list_max_size
-				    (*frame)[Frame::READ_HTTP],
-				    stats));
-	    link->set_raw_mode(true);
-	    link->start();
-
-	    if (ssl_sess)
-	      ssl_sess->start_handshake();
-
-	    // xmit the request
-	    generate_request();
+	    do_connect(true);
 	  }
 	  catch (const std::exception& e)
 	    {
@@ -448,7 +474,7 @@ namespace openvpn {
 	  return true;
 	}
 
-	void tcp_write_queue_empty()
+	void tcp_write_queue_needs_send()
 	{
 	  if (halt)
 	    return;
@@ -458,7 +484,7 @@ namespace openvpn {
 	  }
 	  catch (const std::exception& e)
 	    {
-	      handle_exception("tcp_write_queue_empty", e);
+	      handle_exception("tcp_write_queue_needs_send", e);
 	    }
 
 	}
@@ -509,12 +535,18 @@ namespace openvpn {
 
 	bool base_link_send(BufferAllocated& buf)
 	{
-	  return link->send(buf);
+	  if (transcli)
+	    return transcli->transport_send(buf);
+	  else
+	    return link->send(buf);
 	}
 
 	bool base_send_queue_empty()
 	{
-	  return link->send_queue_empty();
+	  if (transcli)
+	    return transcli->transport_send_queue_empty();
+	  else
+	    return link->send_queue_empty();
 	}
 
 	void base_http_done_handler(BufferAllocated& residual)
@@ -537,6 +569,61 @@ namespace openvpn {
 	  error_handler(errcode, err);
 	}
 
+	// TransportClientParent methods
+
+	virtual bool transport_is_openvpn_protocol()
+	{
+	  return false;
+	}
+
+	virtual void transport_recv(BufferAllocated& buf)
+	{
+	  tcp_read_handler(buf);
+	}
+
+	virtual void transport_needs_send()
+	{
+	  tcp_write_queue_needs_send();
+	}
+
+	std::string err_fmt(const Error::Type fatal_err, const std::string& err_text)
+	{
+	  return std::string(Error::name(fatal_err))
+	    + std::string(" : ")
+	    + err_text;
+	}
+
+	virtual void transport_error(const Error::Type fatal_err, const std::string& err_text)
+	{
+	  return error_handler(Status::E_TRANSPORT, err_fmt(fatal_err, err_text));
+	}
+
+	virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text)
+	{
+	  return error_handler(Status::E_PROXY, err_fmt(fatal_err, err_text));
+	}
+
+	virtual void ip_hole_punch(const IP::Addr& addr)
+	{
+	}
+
+	virtual void transport_pre_resolve()
+	{
+	}
+
+	virtual void transport_wait_proxy()
+	{
+	}
+
+	virtual void transport_wait()
+	{
+	}
+
+	virtual void transport_connecting()
+	{
+	  do_connect(false);
+	}
+
 	boost::asio::io_service& io_service;
 
 	bool alive;
@@ -547,6 +634,8 @@ namespace openvpn {
 	Host host;
 
 	LinkImpl::Ptr link;
+
+	TransportClient::Ptr transcli;
 
 	AsioTimer connect_timer;
 	AsioTimer general_timer;
