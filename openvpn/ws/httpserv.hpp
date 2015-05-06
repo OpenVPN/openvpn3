@@ -355,7 +355,7 @@ namespace openvpn {
 	    return !ready;
 	  }
 
-	  void tcp_write_queue_empty()
+	  void tcp_write_queue_needs_send()
 	  {
 	    if (halt)
 	      return;
@@ -365,7 +365,7 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		handle_exception("tcp_write_queue_empty", e);
+		handle_exception("tcp_write_queue_needs_send", e);
 	      }
 	  }
 
