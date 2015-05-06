@@ -107,6 +107,14 @@ namespace openvpn {
 	return send(buf);
       }
 
+      virtual bool transport_send_queue_empty()
+      {
+	if (impl)
+	  return impl->send_queue_empty();
+	else
+	  return false;
+      }
+
       virtual void reset_align_adjust(const size_t align_adjust)
       {
 	if (impl)
@@ -175,8 +183,9 @@ namespace openvpn {
 	return true;
       }
 
-      void tcp_write_queue_empty() // called by LinkImpl
+      void tcp_write_queue_needs_send() // called by LinkImpl
       {
+	parent.transport_needs_send();
       }
 
       void tcp_error_handler(const char *error) // called by LinkImpl
@@ -261,6 +270,8 @@ namespace openvpn {
 					(*config->frame)[Frame::READ_LINK_TCP],
 					config->stats));
 		impl->start();
+		if (!parent.transport_is_openvpn_protocol())
+		  impl->set_raw_mode(true);
 		parent.transport_connecting();
 	      }
 	    else

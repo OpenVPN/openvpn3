@@ -140,18 +140,16 @@ namespace openvpn {
 	  buf.reset(new BufferAllocated());
 	buf->swap(b);
 	if (!is_raw_mode())
-	  {
-	    PacketStream::prepend_size(*buf);
-	    if (mutate)
-	      mutate->pre_send(*buf);
-	  }
+	  PacketStream::prepend_size(*buf);
+	if (mutate)
+	  mutate->pre_send(*buf);
 	queue.push_back(std::move(buf));
 	if (queue.size() == 1) // send operation not currently active?
 	  queue_send();
 	return true;
       }
 
-      void inject(const BufferAllocated& src)
+      void inject(const Buffer& src)
       {
 	const size_t size = src.size();
 	OPENVPN_LOG_TCPLINK_VERBOSE("TCP inject size=" << size);
@@ -232,7 +230,7 @@ namespace openvpn {
 	    if (!queue.empty())
 	      queue_send();
 	    else
-	      read_handler->tcp_write_queue_empty();
+	      read_handler->tcp_write_queue_needs_send();
 	  }
       }
 
@@ -275,7 +273,11 @@ namespace openvpn {
 		      }
 		  }
 		else
-		  requeue = read_handler->tcp_read_handler(pfp->buf);
+		  {
+		    if (mutate)
+		      mutate->post_recv(pfp->buf);
+		    requeue = read_handler->tcp_read_handler(pfp->buf);
+		  }
 		if (!halt && requeue)
 		  queue_recv(pfp.release()); // reuse PacketFrom object
 	      }

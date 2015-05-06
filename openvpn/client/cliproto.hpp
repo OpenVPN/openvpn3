@@ -230,6 +230,11 @@ namespace openvpn {
       }
 
     private:
+      virtual bool transport_is_openvpn_protocol()
+      {
+	return true;
+      }
+
       // transport obj calls here with incoming packets
       virtual void transport_recv(BufferAllocated& buf)
       {
@@ -302,6 +307,10 @@ namespace openvpn {
 	  {
 	    process_exception(e, "transport_recv");
 	  }
+      }
+
+      virtual void transport_needs_send()
+      {
       }
 
       // tun i/o driver calls here with incoming packets

@@ -261,6 +261,14 @@ namespace openvpn {
 	return send(buf);
       }
 
+      virtual bool transport_send_queue_empty()
+      {
+	if (impl)
+	  return impl->send_queue_empty();
+	else
+	  return false;
+      }
+
       virtual void reset_align_adjust(const size_t align_adjust)
       {
 	if (impl)
@@ -369,8 +377,10 @@ namespace openvpn {
 	return true;
       }
 
-      void tcp_write_queue_empty() // called by LinkImpl
+      void tcp_write_queue_needs_send() // called by LinkImpl
       {
+	if (proxy_established)
+	  parent.transport_needs_send();
       }
 
       void tcp_eof_handler() // called by LinkImpl
@@ -416,8 +426,11 @@ namespace openvpn {
 			  {
 			    // switch socket from HTTP proxy handshake mode to OpenVPN protocol mode
 			    proxy_established = true;
-			    impl->set_raw_mode(false);
-			    impl->inject(buf);
+			    if (parent.transport_is_openvpn_protocol())
+			      {
+				impl->set_raw_mode(false);
+				impl->inject(buf);
+			      }
 			    parent.transport_connecting();
 			  }
 			else if (ntlm_phase_2_response_pending)

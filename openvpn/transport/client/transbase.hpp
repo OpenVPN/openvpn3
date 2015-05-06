@@ -46,6 +46,7 @@ namespace openvpn {
     virtual void stop() = 0;
     virtual bool transport_send_const(const Buffer& buf) = 0;
     virtual bool transport_send(BufferAllocated& buf) = 0;
+    virtual bool transport_send_queue_empty() = 0;
     virtual void reset_align_adjust(const size_t align_adjust) = 0;
     virtual IP::Addr server_endpoint_addr() const = 0;
     virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const = 0;
@@ -57,6 +58,7 @@ namespace openvpn {
   struct TransportClientParent
   {
     virtual void transport_recv(BufferAllocated& buf) = 0;
+    virtual void transport_needs_send() = 0; // notification that send queue is empty
     virtual void transport_error(const Error::Type fatal_err, const std::string& err_text) = 0;
     virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text) = 0;
 
@@ -64,6 +66,9 @@ namespace openvpn {
     // Allows the implementation to ensure connectivity for outgoing
     // transport connection to server.
     virtual void ip_hole_punch(const IP::Addr& addr) = 0;
+
+    // Return true if we are transporting OpenVPN protocol
+    virtual bool transport_is_openvpn_protocol() = 0;
 
     // progress notifications
     virtual void transport_pre_resolve() = 0;

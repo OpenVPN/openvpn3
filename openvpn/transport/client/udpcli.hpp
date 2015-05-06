@@ -109,6 +109,11 @@ namespace openvpn {
 	return send(buf);
       }
 
+      virtual bool transport_send_queue_empty() // really only has meaning for TCP
+      {
+	return false;
+      }
+
       virtual void reset_align_adjust(const size_t align_adjust)
       {
 	if (impl)
