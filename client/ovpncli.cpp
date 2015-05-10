@@ -545,7 +545,7 @@ namespace openvpn {
 	cc->set_username(creds.username);
 	cc->set_password(creds.password);
 	cc->set_response(creds.response);
-	cc->set_dynamic_challenge_cookie(creds.dynamicChallengeCookie);
+	cc->set_dynamic_challenge_cookie(creds.dynamicChallengeCookie, creds.username);
 	cc->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);
 	cc->enable_password_cache(creds.cachePassword);
 	state->creds = cc;
@@ -565,6 +565,7 @@ namespace openvpn {
 	dc.challenge = cr.get_challenge_text();
 	dc.echo = cr.get_echo();
 	dc.responseRequired = cr.get_response_required();
+	dc.stateID = cr.get_state_id();
 	return true;
       }
       catch (const std::exception&)

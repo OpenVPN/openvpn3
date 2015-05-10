@@ -134,6 +134,8 @@ namespace openvpn {
       std::string challenge;
       bool echo;
       bool responseRequired;
+
+      std::string stateID;
     };
 
     // a basic key/value pair, used in Config below when OpenVPN profile is

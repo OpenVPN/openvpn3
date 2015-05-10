@@ -67,6 +67,18 @@ namespace openvpn {
       init(cookie);
     }
 
+    ChallengeResponse(const std::string& cookie, const std::string& user)
+      : echo(false), response_required(false)
+    {
+      if (!is_dynamic(cookie) && cookie.find_first_of(':') == std::string::npos)
+	{
+	  state_id = cookie;
+	  username = user;
+	}
+      else
+	init(cookie);
+    }
+
     void init(const std::string& cookie)
     {
       typedef std::vector<std::string> StringList;

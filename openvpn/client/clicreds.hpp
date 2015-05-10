@@ -62,10 +62,10 @@ namespace openvpn {
       response = response_arg;
     }
 
-    void set_dynamic_challenge_cookie(const std::string& cookie)
+    void set_dynamic_challenge_cookie(const std::string& cookie, const std::string& username)
     {
       if (!cookie.empty())
-	dynamic_challenge.reset(new ChallengeResponse(cookie));
+	dynamic_challenge.reset(new ChallengeResponse(cookie, username));
     }
 
     void set_replace_password_with_session_id(const bool value)

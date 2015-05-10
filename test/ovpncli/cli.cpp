@@ -54,6 +54,17 @@ using namespace openvpn;
 
 class Client : public ClientAPI::OpenVPNClient
 {
+public:
+  bool is_dynamic_challenge() const
+  {
+    return !dc_cookie.empty();
+  }
+
+  std::string dynamic_challenge_cookie()
+  {
+    return dc_cookie;
+  }
+
 private:
   virtual bool socket_protect(int socket)
   {
@@ -68,7 +79,20 @@ private:
       std::cout << ' ' << ev.info;
     if (ev.error)
       std::cout << " [ERR]";
-    std::cout << std::endl << std::flush;
+    std::cout << std::endl;
+    if (ev.name == "DYNAMIC_CHALLENGE")
+      {
+	dc_cookie = ev.info;
+
+	ClientAPI::DynamicChallenge dc;
+	if (ClientAPI::OpenVPNClient::parse_dynamic_challenge(ev.info, dc)) {
+	  std::cout << "DYNAMIC CHALLENGE" << std::endl;
+	  std::cout << "challenge: " << dc.challenge << std::endl;
+	  std::cout << "echo: " << dc.echo << std::endl;
+	  std::cout << "responseRequired: " << dc.responseRequired << std::endl;
+	  std::cout << "stateID: " << dc.stateID << std::endl;
+	}
+      }
   }
 
   virtual void log(const ClientAPI::LogInfo& log)
@@ -94,6 +118,8 @@ private:
   {
     return false;
   }
+
+  std::string dc_cookie;
 };
 
 Client *the_client = NULL; // GLOBAL
@@ -181,6 +207,7 @@ int main(int argc, char *argv[])
     { "username",       required_argument,  NULL,      'u' },
     { "password",       required_argument,  NULL,      'p' },
     { "response",       required_argument,  NULL,      'r' },
+    { "dc",             required_argument,  NULL,      'D' },
     { "proto",          required_argument,  NULL,      'P' },
     { "server",         required_argument,  NULL,      's' },
     { "timeout",        required_argument,  NULL,      't' },
@@ -216,6 +243,7 @@ int main(int argc, char *argv[])
 	std::string username;
 	std::string password;
 	std::string response;
+	std::string dynamicChallengeCookie;
 	std::string proto;
 	std::string server;
 	int timeout = 0;
@@ -241,7 +269,7 @@ int main(int argc, char *argv[])
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:P:s:t:c:z:M:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:k:", longopts, NULL)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -330,6 +358,9 @@ int main(int argc, char *argv[])
 		    OPENVPN_THROW_EXCEPTION("bad default key-direction: " << arg);
 		}
 		break;
+	      case 'D':
+		dynamicChallengeCookie = optarg;
+		break;
 	      default:
 		goto usage;
 	      }
@@ -366,127 +397,147 @@ int main(int argc, char *argv[])
 	    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
 	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
 
-	    ClientAPI::Config config;
-	    config.guiVersion = "cli 1.0";
-	    config.content = pm.profile_content();
-	    config.serverOverride = server;
-	    config.protoOverride = proto;
-	    config.connTimeout = timeout;
-	    config.compressionMode = compress;
-	    config.privateKeyPassword = privateKeyPassword;
-	    config.tlsVersionMinOverride = tlsVersionMinOverride;
-	    config.disableClientCert = disableClientCert;
-	    config.proxyHost = proxyHost;
-	    config.proxyPort = proxyPort;
-	    config.proxyUsername = proxyUsername;
-	    config.proxyPassword = proxyPassword;
-	    config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
-	    config.altProxy = altProxy;
-	    config.defaultKeyDirection = defaultKeyDirection;
-	    config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
-	    config.googleDnsFallback = googleDnsFallback;
-	    config.tunPersist = tunPersist;
+	    bool retry;
+	    do {
+	      retry = false;
 
-	    if (eval)
-	      {
-		ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
-		std::cout << "EVAL PROFILE" << std::endl;
-		std::cout << "error=" << eval.error << std::endl;
-		std::cout << "message=" << eval.message << std::endl;
-		std::cout << "userlockedUsername=" << eval.userlockedUsername << std::endl;
-		std::cout << "profileName=" << eval.profileName << std::endl;
-		std::cout << "friendlyName=" << eval.friendlyName << std::endl;
-		std::cout << "autologin=" << eval.autologin << std::endl;
-		std::cout << "externalPki=" << eval.externalPki << std::endl;
-		std::cout << "staticChallenge=" << eval.staticChallenge << std::endl;
-		std::cout << "staticChallengeEcho=" << eval.staticChallengeEcho << std::endl;
-		std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
-		std::cout << "allowPasswordSave=" << eval.allowPasswordSave << std::endl;
+	      ClientAPI::Config config;
+	      config.guiVersion = "cli 1.0";
+	      config.content = pm.profile_content();
+	      config.serverOverride = server;
+	      config.protoOverride = proto;
+	      config.connTimeout = timeout;
+	      config.compressionMode = compress;
+	      config.privateKeyPassword = privateKeyPassword;
+	      config.tlsVersionMinOverride = tlsVersionMinOverride;
+	      config.disableClientCert = disableClientCert;
+	      config.proxyHost = proxyHost;
+	      config.proxyPort = proxyPort;
+	      config.proxyUsername = proxyUsername;
+	      config.proxyPassword = proxyPassword;
+	      config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
+	      config.altProxy = altProxy;
+	      config.defaultKeyDirection = defaultKeyDirection;
+	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
+	      config.googleDnsFallback = googleDnsFallback;
+	      config.tunPersist = tunPersist;
 
-		for (size_t i = 0; i < eval.serverList.size(); ++i)
-		  {
-		    const ClientAPI::ServerEntry& se = eval.serverList[i];
-		    std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << std::endl;
-		  }
-	      }
-	    else
-	      {
-		Client client;
-		ClientAPI::EvalConfig eval = client.eval_config(config);
-		if (eval.error)
-		  OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
-		if (eval.autologin)
-		  {
-		    if (!username.empty() || !password.empty())
-		      std::cout << "NOTE: creds were not needed" << std::endl;
-		  }
-		else
-		  {
-		    if (username.empty())
-		      OPENVPN_THROW_EXCEPTION("need creds");
-		    ClientAPI::ProvideCreds creds;
-		    if (password.empty())
-		      password = get_password("Password:");
-		    creds.username = username;
-		    creds.password = password;
-		    creds.response = response;
-		    creds.replacePasswordWithSessionID = true;
-		    creds.cachePassword = cachePassword;
-		    ClientAPI::Status creds_status = client.provide_creds(creds);
-		    if (creds_status.error)
-		      OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
-		  }
+	      if (eval)
+		{
+		  ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
+		  std::cout << "EVAL PROFILE" << std::endl;
+		  std::cout << "error=" << eval.error << std::endl;
+		  std::cout << "message=" << eval.message << std::endl;
+		  std::cout << "userlockedUsername=" << eval.userlockedUsername << std::endl;
+		  std::cout << "profileName=" << eval.profileName << std::endl;
+		  std::cout << "friendlyName=" << eval.friendlyName << std::endl;
+		  std::cout << "autologin=" << eval.autologin << std::endl;
+		  std::cout << "externalPki=" << eval.externalPki << std::endl;
+		  std::cout << "staticChallenge=" << eval.staticChallenge << std::endl;
+		  std::cout << "staticChallengeEcho=" << eval.staticChallengeEcho << std::endl;
+		  std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
+		  std::cout << "allowPasswordSave=" << eval.allowPasswordSave << std::endl;
 
-		std::cout << "CONNECTING..." << std::endl;
+		  for (size_t i = 0; i < eval.serverList.size(); ++i)
+		    {
+		      const ClientAPI::ServerEntry& se = eval.serverList[i];
+		      std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << std::endl;
+		    }
+		}
+	      else
+		{
+		  Client client;
+		  ClientAPI::EvalConfig eval = client.eval_config(config);
+		  if (eval.error)
+		    OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
+		  if (eval.autologin)
+		    {
+		      if (!username.empty() || !password.empty())
+			std::cout << "NOTE: creds were not needed" << std::endl;
+		    }
+		  else
+		    {
+		      if (username.empty())
+			OPENVPN_THROW_EXCEPTION("need creds");
+		      ClientAPI::ProvideCreds creds;
+		      if (password.empty() && dynamicChallengeCookie.empty())
+			password = get_password("Password:");
+		      creds.username = username;
+		      creds.password = password;
+		      creds.response = response;
+		      creds.dynamicChallengeCookie = dynamicChallengeCookie;
+		      creds.replacePasswordWithSessionID = true;
+		      creds.cachePassword = cachePassword;
+		      ClientAPI::Status creds_status = client.provide_creds(creds);
+		      if (creds_status.error)
+			OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
+		    }
+
+		  std::cout << "CONNECTING..." << std::endl;
 
 #if !defined(OPENVPN_PLATFORM_WIN)
-		Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
+		  Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
 
-		// start connect thread
-		the_client = &client;
-		thread = new ThreadType([]() {
-		    worker_thread();
-		  });
+		  // start connect thread
+		  the_client = &client;
+		  thread = new ThreadType([]() {
+		      worker_thread();
+		    });
 
-		// wait for connect thread to exit
-		thread->join();
-		the_client = NULL;
+		  // wait for connect thread to exit
+		  thread->join();
+		  the_client = NULL;
 #else
-		// Set Windows title bar
-		const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
-		Win::Console::Title title(ClientAPI::OpenVPNClient::platform() + "     " + title_text);
-		Win::Console::Input console;
+		  // Set Windows title bar
+		  const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
+		  Win::Console::Title title(ClientAPI::OpenVPNClient::platform() + "     " + title_text);
+		  Win::Console::Input console;
 
-		// start connect thread
-		the_client = &client;
-		thread = new ThreadType([]() {
-		    worker_thread();
-		  });
+		  // start connect thread
+		  the_client = &client;
+		  thread = new ThreadType([]() {
+		      worker_thread();
+		    });
 
-		// wait for connect thread to exit, also check for keypresses
-		while (!thread->try_join_for(boost::chrono::milliseconds(1000)))
-		  {
-		    while (true)
-		      {
-			const unsigned int c = console.get();
-			if (!c)
-			  break;
-			else if (c == 0x3C) // F2
-			  print_stats(*the_client);
-			else if (c == 0x3D) // F3
-			  the_client->reconnect(0);
-			else if (c == 0x3E) // F4
-			  the_client->stop();
-			else if (c == 0x3F) // F5
-			  the_client->pause("user-pause");
-		      }
-		  }
-		the_client = NULL;
+		  // wait for connect thread to exit, also check for keypresses
+		  while (!thread->try_join_for(boost::chrono::milliseconds(1000)))
+		    {
+		      while (true)
+			{
+			  const unsigned int c = console.get();
+			  if (!c)
+			    break;
+			  else if (c == 0x3C) // F2
+			    print_stats(*the_client);
+			  else if (c == 0x3D) // F3
+			    the_client->reconnect(0);
+			  else if (c == 0x3E) // F4
+			    the_client->stop();
+			  else if (c == 0x3F) // F5
+			    the_client->pause("user-pause");
+			}
+		    }
+		  the_client = NULL;
 #endif
 
-		// print closing stats
-		print_stats(client);
-	      }
+		  // Get dynamic challenge response
+		  if (client.is_dynamic_challenge())
+		    {
+		      std::cout << "ENTER RESPONSE" << std::endl;
+		      std::getline(std::cin, response);
+		      if (!response.empty())
+			{
+			  dynamicChallengeCookie = client.dynamic_challenge_cookie();
+			  retry = true;
+			}
+		    }
+		  else
+		    {
+		      // print closing stats
+		      print_stats(client);
+		    }
+		}
+	    } while (retry);
 	  }
       }
     else
@@ -510,6 +561,7 @@ int main(int argc, char *argv[])
   std::cout << "--username, -u       : username" << std::endl;
   std::cout << "--password, -p       : password" << std::endl;
   std::cout << "--response, -r       : static response" << std::endl;
+  std::cout << "--dc, -D             : dynamic challenge/response cookie" << std::endl;
   std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
   std::cout << "--server, -s         : server override" << std::endl;
   std::cout << "--timeout, -t        : timeout" << std::endl;
