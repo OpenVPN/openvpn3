@@ -79,7 +79,7 @@ namespace openvpn {
 	return Duration(v + (v * T(3) / T(128)));
       }
 
-      Duration() : duration_(T(0)) {}
+      Duration() noexcept : duration_(T(0)) {}
 
       bool defined() const { return duration_ != T(0); }
       bool operator!() const { return duration_ == T(0); }
@@ -178,7 +178,7 @@ namespace openvpn {
       T duration_;
     };
 
-    TimeType() : time_(T(0)) {}
+    TimeType() noexcept : time_(T(0)) {}
 
     static TimeType zero() { return TimeType(T(0)); }
     static TimeType infinite() { return TimeType(std::numeric_limits<T>::max()); }
