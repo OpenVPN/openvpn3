@@ -237,6 +237,16 @@ namespace openvpn {
 	time_ = t.time_;
     }
 
+    long delta_prec(const TimeType& t) const
+    {
+      return long(time_) - long(t.time_);
+    }
+
+    long delta(const TimeType& t) const
+    {
+      return delta_prec(t) / long(prec);
+    }
+
 #   define OPENVPN_TIME_REL(OP) bool operator OP(const TimeType& t) const { return time_ OP t.time_; }
     OPENVPN_TIME_REL(==)
     OPENVPN_TIME_REL(!=)
