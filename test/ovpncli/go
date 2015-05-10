@@ -1,7 +1,9 @@
 #!/bin/bash
-[ "$EER" = "1" ] && export GCC_EXTRA="$GCC_EXTRA -DTEST_EER"
-[ "$NULL" = "1" ] && export GCC_EXTRA="$GCC_EXTRA -DOPENVPN_FORCE_TUN_NULL"
-[ "$EXIT" = "1" ] && export GCC_EXTRA="$GCC_EXTRA -DTUN_NULL_EXIT"
+GCC_EXTRA="$GCC_EXTRA -DOPENVPN_SHOW_SESSION_TOKEN"
+[ "$EER" = "1" ] && GCC_EXTRA="$GCC_EXTRA -DTEST_EER"
+[ "$NULL" = "1" ] && GCC_EXTRA="$GCC_EXTRA -DOPENVPN_FORCE_TUN_NULL"
+[ "$EXIT" = "1" ] && GCC_EXTRA="$GCC_EXTRA -DTUN_NULL_EXIT"
+export GCC_EXTRA
 if [ "$(uname)" == "Darwin" ]; then
     cd $O3/core
     . vars/vars-osx64
