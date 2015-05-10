@@ -170,6 +170,35 @@ namespace openvpn {
 	}
     }
 
+    static std::string generate_dynamic_challenge(const std::string& session_token,
+						  const std::string& username,
+						  const std::string& challenge,
+						  const bool echo,
+						  const bool response_required)
+    {
+      std::ostringstream os;
+      bool comma = false;
+      os << "CRV1:";
+      if (echo)
+	{
+	  if (comma)
+	    os << ",";
+	  os << "E";
+	  comma = true;
+	}
+      if (response_required)
+	{
+	  if (comma)
+	    os << ",";
+	  os << "R";
+	  comma = true;
+	}
+      os << ':' << session_token;
+      os << ':' << base64->encode(username);
+      os << ':' << challenge;
+      return os.str();
+    }
+
     const std::string& get_state_id() const { return state_id; }
     const std::string& get_username() const { return username; }
     bool get_echo() const { return echo; }
