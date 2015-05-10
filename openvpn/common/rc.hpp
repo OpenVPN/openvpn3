@@ -63,10 +63,36 @@
 
 #include <boost/intrusive_ptr.hpp>
 
+#include <openvpn/common/olong.hpp>
+
 namespace openvpn {
 
-  typedef std::atomic<long> thread_safe_refcount;
-  typedef long thread_unsafe_refcount;
+  typedef olong thread_unsafe_refcount;
+
+  class thread_safe_refcount
+  {
+  public:
+    thread_safe_refcount(const olong value)
+      : rc(value)
+    {
+    }
+
+    void operator++()
+    {
+      rc.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    olong operator--()
+    {
+      const olong ret = rc.fetch_sub(1, std::memory_order_release) - 1;
+      if (ret == 0)
+	std::atomic_thread_fence(std::memory_order_acquire);
+      return ret;
+    }
+
+  private:
+    std::atomic<olong> rc;
+  };
 
   // Reference count base class for objects tracked by boost::intrusive_ptr.
   // Disallows copying and assignment.
