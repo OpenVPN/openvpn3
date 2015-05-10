@@ -33,6 +33,23 @@
 namespace openvpn {
 
   class Base64 {
+
+    class UCharWrap
+    {
+    public:
+      UCharWrap(const unsigned char *data, size_t size)
+	: data_(data),
+	  size_(size)
+      {}
+
+      size_t size() const { return size_; }
+      unsigned char operator[](const size_t i) const { return data_[i]; }
+
+    private:
+      const unsigned char *data_;
+      size_t size_;
+    };
+
   public:
     OPENVPN_SIMPLE_EXCEPTION(base64_bad_map);
     OPENVPN_SIMPLE_EXCEPTION(base64_decode_error);
@@ -114,6 +131,11 @@ namespace openvpn {
       const std::string ret(s);
       delete [] s;
       return ret;
+    }
+
+    std::string encode(const unsigned char *data, size_t size) const
+    {
+      return encode(UCharWrap(data, size));
     }
 
     std::string decode(const std::string& str) const
