@@ -32,10 +32,11 @@
 #define OPENVPN_COMMON_RUNCONTEXT_H
 
 #include <type_traits> // for std::is_nothrow_move_constructible
+#include <thread>
+#include <mutex>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/thread.hpp>
 #include <openvpn/common/asiosignal.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/signal.hpp>
@@ -93,7 +94,7 @@ namespace openvpn {
 #endif
     }
 
-    void set_thread(const unsigned int unit, ThreadType* thread)
+    void set_thread(const unsigned int unit, std::thread* thread)
     {
       while (threadlist.size() <= unit)
 	threadlist.push_back(NULL);
@@ -105,7 +106,7 @@ namespace openvpn {
     // called from worker thread
     void set_server(const unsigned int unit, ServerThread* serv)
     {
-      Mutex::scoped_lock lock(mutex);
+      std::lock_guard<std::mutex> lock(mutex);
       if (halt)
 	throw Exception("RunContext::set_server: halting");
       while (servlist.size() <= unit)
@@ -118,7 +119,7 @@ namespace openvpn {
     // called from worker thread
     void clear_server(const unsigned int unit)
     {
-      Mutex::scoped_lock lock(mutex);
+      std::lock_guard<std::mutex> lock(mutex);
       if (unit < servlist.size())
 	servlist[unit] = NULL;
     }
@@ -133,7 +134,7 @@ namespace openvpn {
     {
       for (size_t i = 0; i < threadlist.size(); ++i)
 	{
-	  ThreadType* t = threadlist[i];
+	  std::thread* t = threadlist[i];
 	  if (t)
 	    {
 	      t->join();
@@ -147,7 +148,7 @@ namespace openvpn {
     {
       const std::string ts = date_time();
       {
-	Mutex::scoped_lock lock(log_mutex);
+	std::lock_guard<std::mutex> lock(log_mutex);
 	std::cout << ts << ' ' << str;
 	std::cout.flush();
       }
@@ -164,21 +165,21 @@ namespace openvpn {
     // called from main or worker thread
     void add_thread()
     {
-      Mutex::scoped_lock lock(mutex);
+      std::lock_guard<std::mutex> lock(mutex);
       ++thread_count;
     }
 
     // called from main or worker thread
     void remove_thread()
     {
-      Mutex::scoped_lock lock(mutex);
+      std::lock_guard<std::mutex> lock(mutex);
       if (--thread_count <= 0)
 	do_cancel();
     }
 
     void cancel()
     {
-      Mutex::scoped_lock lock(mutex);
+      std::lock_guard<std::mutex> lock(mutex);
       do_cancel();
     }
 
@@ -246,16 +247,16 @@ namespace openvpn {
     typename Stats::Ptr stats;
     ASIOSignals::Ptr signals;
     AsioTimer exit_timer;
-    std::vector<ThreadType*> threadlist;
+    std::vector<std::thread*> threadlist;
 
     // servlist and related vars protected by mutex
-    Mutex mutex;
+    std::mutex mutex;
     std::vector<ServerThread*> servlist;
     int thread_count;
     volatile bool halt;
 
     // logging protected by log_mutex
-    Mutex log_mutex;
+    std::mutex log_mutex;
     Log::Context log_context;
     Log::Context::Wrapper log_wrap; // must be constructed after log_context
   };

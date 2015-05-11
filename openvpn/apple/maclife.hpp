@@ -25,7 +25,8 @@
 #include <string>
 #include <sstream>
 
-#include <openvpn/common/thread.hpp>
+#include <thread>
+
 #include <openvpn/log/logthread.hpp>
 #include <openvpn/applecrypto/cf/cftimer.hpp>
 #include <openvpn/applecrypto/cf/cfhelper.hpp>
@@ -63,7 +64,7 @@ namespace openvpn {
       if (!thread && nc_arg)
 	{
 	  nc = nc_arg;
-	  thread = new ThreadType(&MacLifeCycle::thread_func, this);
+	  thread = new std::thread(&MacLifeCycle::thread_func, this);
 	}
     }
 
@@ -308,7 +309,7 @@ namespace openvpn {
     }
 
     NotifyCallback* nc;
-    ThreadType* thread;
+    std::thread* thread;
     CF::RunLoop runloop;           // run loop in thread
     CF::DynamicStore dstore;
     State state;

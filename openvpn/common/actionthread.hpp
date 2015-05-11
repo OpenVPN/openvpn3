@@ -23,9 +23,10 @@
 #ifndef OPENVPN_COMMON_ACTIONTHREAD_H
 #define OPENVPN_COMMON_ACTIONTHREAD_H
 
+#include <thread>
+
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/action.hpp>
-#include <openvpn/common/thread.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/log/logthread.hpp>
 
@@ -50,7 +51,7 @@ namespace openvpn {
 	completion_handler(completion_handler_arg)
     {
       if (actions)
-	thread = new ThreadType(&ActionThread::thread_func, this);
+	thread = new std::thread(&ActionThread::thread_func, this);
     }
 
     void stop(const bool halt)
@@ -99,7 +100,7 @@ namespace openvpn {
     }
 
     boost::asio::io_service& io_service;
-    ThreadType* thread;
+    std::thread* thread;
     ActionList::Ptr actions;       // actions to execute in child thread
     Notify* completion_handler;    // completion handler
     Log::Context::Wrapper logwrap; // used to carry forward the log context from parent thread

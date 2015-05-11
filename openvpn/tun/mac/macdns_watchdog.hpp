@@ -24,7 +24,9 @@
 #ifndef OPENVPN_TUN_MAC_MACDNS_WATCHDOG_H
 #define OPENVPN_TUN_MAC_MACDNS_WATCHDOG_H
 
-#include <openvpn/common/thread.hpp>
+#include <thread>
+#include <mutex>
+
 #include <openvpn/log/logthread.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/applecrypto/cf/cftimer.hpp>
@@ -128,7 +130,7 @@ namespace openvpn {
 	      if (!thread)
 		{
 		  mod = macdns->setdns(*config_);
-		  thread = new ThreadType(&MacDNSWatchdog::thread_func, this);
+		  thread = new std::thread(&MacDNSWatchdog::thread_func, this);
 		}
 	      else
 		{
@@ -231,7 +233,7 @@ namespace openvpn {
 
     void schedule_push_timer(const int seconds)
     {
-      Mutex::scoped_lock lock(push_timer_lock);
+      std::lock_guard<std::mutex> lock(push_timer_lock);
       CFRunLoopTimerContext context = { 0, this, NULL, NULL, NULL };
       cancel_push_timer_nolock();
       push_timer.reset(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + seconds, 0, 0, 0, push_timer_callback_static, &context));
@@ -252,7 +254,7 @@ namespace openvpn {
 
     void cancel_push_timer()
     {
-      Mutex::scoped_lock lock(push_timer_lock);
+      std::lock_guard<std::mutex> lock(push_timer_lock);
       cancel_push_timer_nolock();
     }
 
@@ -280,10 +282,10 @@ namespace openvpn {
     MacDNS::Config::Ptr config_;
     MacDNS::Ptr macdns;
 
-    ThreadType* thread;            // watcher thread
+    std::thread* thread;            // watcher thread
     CF::RunLoop runloop;           // run loop in watcher thread
     CF::Timer push_timer;          // watcher thread timer
-    Mutex push_timer_lock;
+    std::mutex push_timer_lock;
     Log::Context::Wrapper logwrap; // used to carry forward the log context from parent thread
   };
 }

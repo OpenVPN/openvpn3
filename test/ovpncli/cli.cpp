@@ -25,12 +25,9 @@
 
 #include <string>
 #include <iostream>
+#include <thread>
 
 #include <openvpn/common/platform.hpp>
-
-#if !defined(OPENVPN_PLATFORM_WIN)
-#define USE_STD_THREAD        // use std::thread instead of boost::thread
-#endif
 
 #include <client/ovpncli.cpp> // should be included before any boost includes
 
@@ -234,7 +231,7 @@ int main(int argc, char *argv[])
   };
 
   int ret = 0;
-  ThreadType* thread = NULL;
+  std::thread* thread = NULL;
 
   try {
     Client::init_process();
@@ -480,7 +477,7 @@ int main(int argc, char *argv[])
 
 		  // start connect thread
 		  the_client = &client;
-		  thread = new ThreadType([]() {
+		  thread = new std::thread([]() {
 		      worker_thread();
 		    });
 
@@ -495,7 +492,7 @@ int main(int argc, char *argv[])
 
 		  // start connect thread
 		  the_client = &client;
-		  thread = new ThreadType([]() {
+		  thread = new std::thread([]() {
 		      worker_thread();
 		    });
 

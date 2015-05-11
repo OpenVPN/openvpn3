@@ -22,7 +22,9 @@
 #ifndef OPENVPN_SERVER_VPNSERVPOOL_H
 #define OPENVPN_SERVER_VPNSERVPOOL_H
 
-#include <openvpn/common/thread.hpp>
+#include <thread>
+#include <mutex>
+
 #include <openvpn/server/vpnservnetblock.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/pool.hpp>
@@ -45,7 +47,7 @@ namespace openvpn {
     IP::Pool pool4;
     IP::Pool pool6;
 
-    Mutex mutex;
+    std::mutex mutex;
   };
 
 }

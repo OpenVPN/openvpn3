@@ -28,13 +28,12 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <thread>
 
 #include <openvpn/common/platform.hpp>
 
 #ifdef OPENVPN_PLATFORM_WIN
 #include "protowin.h"
-#else
-#define USE_STD_THREAD        // use std::thread instead of boost::thread
 #endif
 
 #define OPENVPN_DEBUG
@@ -118,7 +117,6 @@
 
 #include <openvpn/log/logsimple.hpp>
 
-#include <openvpn/common/thread.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/time/time.hpp>
@@ -994,11 +992,11 @@ int main(int argc, char* argv[])
     }
 
 #if N_THREADS >= 2 && OPENVPN_MULTITHREAD
-  ThreadType* threads[N_THREADS];
+  std::thread* threads[N_THREADS];
   int i;
   for (i = 0; i < N_THREADS; ++i)
     {
-      threads[i] = new ThreadType([i]() {
+      threads[i] = new std::thread([i]() {
 	  test(i);
 	});
     }

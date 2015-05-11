@@ -24,8 +24,10 @@
 #ifndef OPENVPN_INIT_INITPROCESS_H
 #define OPENVPN_INIT_INITPROCESS_H
 
+#include <thread>
+#include <mutex>
+
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/thread.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/compress/compress.hpp>
@@ -64,18 +66,18 @@ namespace openvpn {
 
     // process-wide singular instance
     Init* the_instance; // GLOBAL
-    Mutex the_instance_mutex; // GLOBAL
+    std::mutex the_instance_mutex; // GLOBAL
 
     inline void init()
     {
-      Mutex::scoped_lock lock(the_instance_mutex);
+      std::lock_guard<std::mutex> lock(the_instance_mutex);
       if (!the_instance)
 	the_instance = new Init();
     }
 
     inline void uninit()
     {
-      Mutex::scoped_lock lock(the_instance_mutex);
+      std::lock_guard<std::mutex> lock(the_instance_mutex);
       if (the_instance)
 	{
 	  delete the_instance;

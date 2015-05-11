@@ -27,9 +27,11 @@
 
 #include <string>
 #include <sstream>
+#include <thread>
+
+#include <boost/asio/detail/tss_ptr.hpp>
 
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/thread.hpp>
 
 // Define these parameters before including this header:
 
