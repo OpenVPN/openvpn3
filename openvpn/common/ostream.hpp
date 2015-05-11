@@ -28,13 +28,12 @@
 #include <ostream>
 #include <string>
 
-#define OPENVPN_OSTREAM(TYPE, TO_STRING) \
+#define OPENVPN_OSTREAM(TYPE, METH) \
     template <typename Elem, typename Traits> \
     std::basic_ostream<Elem, Traits>& operator<<( \
       std::basic_ostream<Elem, Traits>& os, const TYPE& addr) \
     { \
-      std::string s = addr.TO_STRING(); \
-      os << s; \
+      os << addr.METH(); \
       return os; \
     }
 
