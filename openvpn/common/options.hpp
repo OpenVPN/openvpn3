@@ -1038,7 +1038,17 @@ namespace openvpn {
 	return "";
     }
 
-    // Like get_optional, but return "" if exception is thrown.
+    // Like get_optional(), but return "" if argument index is out-of-bounds.
+    std::string get_optional_relaxed(const std::string& name, size_t index, const size_t max_len) const
+    {
+      const Option* o = get_ptr(name);
+      if (o)
+	return o->get_optional(index, max_len);
+      else
+	return "";
+    }
+
+    // Like get_optional(), but return "" if exception is thrown.
     std::string get_optional_noexcept(const std::string& name, size_t index, const size_t max_len) const
     {
       try {
@@ -1063,6 +1073,22 @@ namespace openvpn {
 	return o->get(index, max_len);
       else
 	return default_value;
+    }
+
+    // Like get_default(), but return default_value if argument index is out-of-bounds.
+    std::string get_default_relaxed(const std::string& name,
+				    size_t index,
+				    const size_t max_len,
+				    const std::string& default_value) const
+    {
+      const Option* o = get_ptr(name);
+      if (o)
+	{
+	  const std::string* s = o->get_ptr(index, max_len);
+	  if (s)
+	    return *s;
+	}
+      return default_value;
     }
 
     template <typename T>
