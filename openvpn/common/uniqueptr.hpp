@@ -19,24 +19,15 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// deallocator for objects that were allocated by OpenSSL
+#ifndef OPENVPN_COMMON_UNIQUEPTR_H
+#define OPENVPN_COMMON_UNIQUEPTR_H
 
-#ifndef OPENVPN_OPENSSL_UTIL_FREE_H
-#define OPENVPN_OPENSSL_UTIL_FREE_H
-
-#include <openssl/crypto.h>
+#include <memory>
+#include <functional>
 
 namespace openvpn {
-
-  template <typename T>
-  class OpenSSLFree {
-  public:
-    static void del(T* p)
-    {
-      OPENSSL_free (p);
-    }
-  };
-
+  template<typename T>
+  using unique_ptr_del = std::unique_ptr<T, std::function<void(T*)>>;
 }
 
 #endif

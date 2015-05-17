@@ -35,8 +35,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
-
 #include <cstdint> // for std::uint32_t
+#include <memory>
 
 #include <tap-windows.h>
 
@@ -46,8 +46,8 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/stringize.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/action.hpp>
+#include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/scoped_handle.hpp>
@@ -393,7 +393,7 @@ namespace openvpn {
       inline void tap_process_logging(HANDLE th)
       {
 	const size_t size = 1024;
-	ScopedPtr<char, PtrArrayFree> line(new char[size]);
+	std::unique_ptr<char[]> line(new char[size]);
 	DWORD len;
 
 	while (DeviceIoControl (th, TAP_WIN_IOCTL_GET_LOG_LINE,
@@ -492,7 +492,7 @@ namespace openvpn {
       {
 	ULONG size = 0;
 	DWORD status;
-	ScopedPtr<MIB_IPFORWARDTABLE> rt;
+	std::unique_ptr<MIB_IPFORWARDTABLE> rt;
 
 	status = GetIpForwardTable (NULL, &size, TRUE);
 	if (status == ERROR_INSUFFICIENT_BUFFER)
@@ -507,16 +507,6 @@ namespace openvpn {
 	  }
 	return rt.release();
       }
-
-      // delete method for PMIB_IPFORWARD_TABLE2
-      template <typename T>
-      class FreeFwdTable2 {
-      public:
-	static void del(T* p)
-	{
-	  FreeMibTable((PVOID)p);
-	}
-      };
 
       // Get the Windows IPv4/IPv6 routing table.
       // Note that returned pointer must be freed with FreeMibTable.
@@ -537,7 +527,7 @@ namespace openvpn {
 	DefaultGateway()
 	  : index(DWORD(-1))
 	{
-	  ScopedPtr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
+	  std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
 	  if (rt.defined())
 	    {
 	      const MIB_IPFORWARDROW* gw = NULL;
@@ -601,7 +591,7 @@ namespace openvpn {
       private:
 	static void remove_all_ipv4_routes_on_iface(DWORD index, ActionList& actions)
 	{
-	  ScopedPtr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
+	  std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
 	  if (rt.defined())
 	    {
 	      for (size_t i = 0; i < rt()->dwNumEntries; ++i)
@@ -628,7 +618,8 @@ namespace openvpn {
 
 	static void remove_all_ipv6_routes_on_iface(DWORD index, ActionList& actions)
 	{
-	  ScopedPtr<const MIB_IPFORWARD_TABLE2, FreeFwdTable2> rt2(windows_routing_table2(AF_INET6));
+	  unique_ptr_del<const MIB_IPFORWARD_TABLE2> rt2(windows_routing_table2(AF_INET6),
+							 [](const MIB_IPFORWARD_TABLE2* p) { FreeMibTable((PVOID)p); });
 	  if (rt2.defined())
 	    {
 	      const IPv6::Addr ll_net = IPv6::Addr::from_string("fe80::");

@@ -35,11 +35,11 @@
 #include <sstream>
 #include <algorithm> // for std::max
 #include <cstdint>   // for std::uint32_t
+#include <memory>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/scoped_fd.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/addr/ip.hpp>
@@ -195,7 +195,7 @@ namespace openvpn {
 	  struct ifreq *ifr;
 	  const int bufsize = 4096;
 
-	  ScopedPtr<char, PtrArrayFree> buffer(new char[bufsize]);
+	  std::unique_ptr<char[]> buffer(new char[bufsize]);
 	  std::memset(buffer.get(), 0, bufsize);
 	  sockfd.reset(socket(AF_INET, SOCK_DGRAM, 0));
 	  if (!sockfd.defined())

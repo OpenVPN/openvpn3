@@ -32,6 +32,7 @@
 
 #include <string>
 #include <sstream>
+#include <memory>
 
 #include <openvpn/common/process.hpp>
 #include <openvpn/common/format.hpp>
@@ -43,7 +44,7 @@ namespace openvpn {
 
     struct PacketFrom
     {
-      typedef ScopedPtr<PacketFrom> SPtr;
+      typedef std::unique_ptr<PacketFrom> SPtr;
       BufferAllocated buf;
     };
 

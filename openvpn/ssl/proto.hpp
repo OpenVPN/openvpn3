@@ -30,6 +30,7 @@
 #include <sstream>
 #include <algorithm>                  // for std::min
 #include <cstdint>                    // for std::uint32_t, etc.
+#include <memory>
 
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 
@@ -43,7 +44,6 @@
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/number.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/likely.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
@@ -1307,7 +1307,7 @@ namespace openvpn {
       {
 	if (crypto)
 	  crypto->rekey(type);
-	else if (data_channel_key.defined())
+	else if (data_channel_key)
 	  {
 	    // save for deferred processing
 	    data_channel_key->rekey_type = type;
@@ -1435,7 +1435,7 @@ namespace openvpn {
       void init_data_channel()
       {
 	// set up crypto for data channel
-	if (data_channel_key.defined())
+	if (data_channel_key)
 	  {
 	    bool enable_compress = true;
 	    Config& c = *proto.config;
@@ -1757,7 +1757,7 @@ namespace openvpn {
       // the data channel crypto context
       void generate_session_keys()
       {
-	ScopedPtr<DataChannelKey> dck(new DataChannelKey());
+	std::unique_ptr<DataChannelKey> dck(new DataChannelKey());
 	tlsprf->generate_key_expansion(dck->key, proto.psid_self, proto.psid_peer);
 	OPENVPN_LOG_PROTO_VERBOSE("KEY " << proto.mode().str() << ' ' << dck->key.render());
 	tlsprf->erase();
@@ -2102,7 +2102,7 @@ namespace openvpn {
       EventType current_event;
       EventType next_event;
       std::deque<BufferPtr> app_pre_write_queue;
-      ScopedPtr<DataChannelKey> data_channel_key;
+      std::unique_ptr<DataChannelKey> data_channel_key;
     };
 
   public:

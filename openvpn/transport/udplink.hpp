@@ -24,10 +24,11 @@
 #ifndef OPENVPN_TRANSPORT_UDPLINK_H
 #define OPENVPN_TRANSPORT_UDPLINK_H
 
+#include <memory>
+
 #include <boost/asio.hpp>
 
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -57,7 +58,7 @@ namespace openvpn {
 
     struct PacketFrom
     {
-      typedef ScopedPtr<PacketFrom> SPtr;
+      typedef std::unique_ptr<PacketFrom> SPtr;
       BufferAllocated buf;
       AsioEndpoint sender_endpoint;
     };

@@ -96,7 +96,6 @@
 
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/platform_string.hpp>
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/client/cliopthelper.hpp>

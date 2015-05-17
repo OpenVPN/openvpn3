@@ -26,13 +26,13 @@
 
 #include <string>
 #include <sstream>
+#include <memory>
 
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/process.hpp>
 #include <openvpn/apple/macver.hpp>
 #include <openvpn/apple/scdynstore.hpp>
@@ -430,15 +430,15 @@ namespace openvpn {
       void restore_orig()
       {
 	const CFIndex size = CFDictionaryGetCount(dict());
-	ScopedPtr<const void *, PtrArrayFree> keys(new const void *[size]);
-	ScopedPtr<const void *, PtrArrayFree> values(new const void *[size]);
-	CFDictionaryGetKeysAndValues(dict(), keys(), values());
+	std::unique_ptr<const void *[]> keys(new const void *[size]);
+	std::unique_ptr<const void *[]> values(new const void *[size]);
+	CFDictionaryGetKeysAndValues(dict(), keys.get(), values.get());
 	const CF::String orig_prefix = orig_key("");
 	const CFIndex orig_prefix_len = CFStringGetLength(orig_prefix());
 	const CF::String delval = delete_value();
 	for (CFIndex i = 0; i < size; ++i)
 	  {
-	    const CF::String key = CF::string_cast(keys()[i]);
+	    const CF::String key = CF::string_cast(keys[i]);
 	    if (CFStringHasPrefix(key(), orig_prefix()))
 	      {
 		const CFIndex key_len = CFStringGetLength(key());
@@ -446,7 +446,7 @@ namespace openvpn {
 		  {
 		    const CFRange r = CFRangeMake(orig_prefix_len, key_len - orig_prefix_len);
 		    const CF::String k(CFStringCreateWithSubstring(kCFAllocatorDefault, key(), r));
-		    const CFTypeRef v = values()[i];
+		    const CFTypeRef v = values[i];
 		    const CF::String vstr = CF::string_cast(v);
 		    will_modify();
 		    if (vstr.defined() && CFStringCompare(vstr(), delval(), 0) == kCFCompareEqualTo)

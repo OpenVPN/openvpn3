@@ -26,6 +26,8 @@
 #ifndef OPENVPN_TUN_BUILDER_CLIENT_H
 #define OPENVPN_TUN_BUILDER_CLIENT_H
 
+#include <memory>
+
 #include <openvpn/tun/client/tunprop.hpp>
 #include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/common/scoped_fd.hpp>
@@ -39,7 +41,7 @@ namespace openvpn {
     // struct used to pass received tun packets
     struct PacketFrom
     {
-      typedef ScopedPtr<PacketFrom> SPtr;
+      typedef std::unique_ptr<PacketFrom> SPtr;
       BufferAllocated buf;
     };
 

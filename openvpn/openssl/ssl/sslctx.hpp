@@ -36,9 +36,9 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/options.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
@@ -56,7 +56,6 @@
 #include <openvpn/openssl/pki/dh.hpp>
 #include <openvpn/openssl/pki/x509store.hpp>
 #include <openvpn/openssl/bio/bio_memq_stream.hpp>
-#include <openvpn/openssl/util/free.hpp>
 
 // An SSL Context is essentially a configuration that can be used
 // to generate an arbitrary number of actual SSL connections objects.
@@ -991,8 +990,9 @@ namespace openvpn {
 
     static std::string x509_get_subject(::X509 *cert)
     {
-      ScopedPtr<char, OpenSSLFree> subject(X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0));
-      if (subject.defined())
+      unique_ptr_del<char> subject(X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0),
+				   [](char* p) { OPENSSL_free(p); });
+      if (subject)
 	return std::string(subject.get());
       else
 	return std::string("");

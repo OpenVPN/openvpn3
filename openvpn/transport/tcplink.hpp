@@ -26,11 +26,11 @@
 
 #include <deque>
 #include <utility> // for std::move
+#include <memory>
 
 #include <boost/asio.hpp>
 
 #include <openvpn/common/types.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/socktypes.hpp>
@@ -58,7 +58,7 @@ namespace openvpn {
 
     struct PacketFrom
     {
-      typedef ScopedPtr<PacketFrom> SPtr;
+      typedef std::unique_ptr<PacketFrom> SPtr;
       BufferAllocated buf;
     };
 

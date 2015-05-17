@@ -26,6 +26,7 @@
 
 #include <string>
 #include <sstream>
+#include <memory>
 
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/scoped_asio_stream.hpp>
@@ -174,7 +175,7 @@ namespace openvpn {
     // struct used to pass received tun packets
     struct PacketFrom
     {
-      typedef ScopedPtr<PacketFrom> SPtr;
+      typedef std::unique_ptr<PacketFrom> SPtr;
       BufferAllocated buf;
     };
 

@@ -28,23 +28,14 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <memory>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
+#include <openvpn/common/uniqueptr.hpp>
 
 namespace openvpn {
   OPENVPN_EXCEPTION(enum_dir_error);
-
-  template <typename T>
-  class FreeDIR {
-  public:
-    static void del(T* p)
-    {
-      // delete method for pointer returned by opendir
-      closedir(p);
-    }
-  };
 
   std::vector<std::string> enum_dir(const std::string& dirname,
 				    const size_t size_hint=0)
@@ -52,12 +43,12 @@ namespace openvpn {
     std::vector<std::string> ret;
     if (size_hint)
       ret.reserve(size_hint);
-    ScopedPtr<DIR, FreeDIR> dir(opendir(dirname.c_str()));
-    if (!dir.defined())
+    unique_ptr_del<DIR> dir(opendir(dirname.c_str()), [](DIR* d) { closedir(d); });
+    if (!dir)
       throw enum_dir_error(dirname + ": cannot open directory");
 
     struct dirent *e;
-    while ((e = readdir(dir())) != NULL)
+    while ((e = readdir(dir.get())) != NULL)
       {
 	std::string fn(e->d_name);
 	if (fn != "." && fn != "..")

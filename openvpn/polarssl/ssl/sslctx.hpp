@@ -29,6 +29,7 @@
 #include <string>
 #include <sstream>
 #include <cstring>
+#include <memory>
 
 #include <polarssl/ssl.h>
 #include <polarssl/oid.h>
@@ -36,7 +37,6 @@
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/binprefix.hpp>
 #include <openvpn/frame/memq_stream.hpp>
@@ -1002,10 +1002,10 @@ namespace openvpn {
     static std::string cert_info(const x509_crt *cert, const char *prefix = NULL)
     {
       const size_t buf_size = 4096;
-      ScopedPtr<char, PtrArrayFree> buf(new char[buf_size]);
-      const int size = x509_crt_info(buf(), buf_size, prefix ? prefix : "", cert);
+      std::unique_ptr<char[]> buf(new char[buf_size]);
+      const int size = x509_crt_info(buf.get(), buf_size, prefix ? prefix : "", cert);
       if (size >= 0)
-	return std::string(buf());
+	return std::string(buf.get());
       else
 	return "error rendering cert";
     }

@@ -49,8 +49,9 @@
 #ifndef OPENVPN_CLIENT_CLICONNECT_H
 #define OPENVPN_CLIENT_CLICONNECT_H
 
+#include <memory>
+
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/client/cliopt.hpp>
@@ -551,7 +552,7 @@ namespace openvpn {
     AsioTimer restart_wait_timer;
     AsioTimer conn_timer;
     bool conn_timer_pending;
-    ScopedPtr<boost::asio::io_service::work> asio_work;
+    std::unique_ptr<boost::asio::io_service::work> asio_work;
     RemoteList::PreResolve::Ptr pre_resolve;
   };
 

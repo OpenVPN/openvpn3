@@ -37,10 +37,10 @@
 #include <cstring>
 #include <string>
 #include <sstream>
+#include <memory>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
@@ -50,8 +50,8 @@ namespace openvpn {
       OPENVPN_EXCEPTION(enum_iface_error);
 
       EnumIface()
+	: ifinfo(alloc_if_addrs(), free_if_addrs)
       {
-	getifaddrs(ifinfo.ref());
       }
 
       std::string to_string() const
@@ -198,17 +198,20 @@ namespace openvpn {
 	return ret;
       }
 
-      template <typename T>
-      class FreeIFAddrs {
-      public:
-	static void del(T* p)
-	{
-	  // delete method for pointer returned by getifaddrs
-	  freeifaddrs(p);
-	}
-      };
+      static ifaddrs* alloc_if_addrs()
+      {
+	ifaddrs* ifa = nullptr;
+	::getifaddrs(&ifa);
+	return ifa;
+      }
 
-      ScopedPtr<ifaddrs, FreeIFAddrs> ifinfo;
+      static void free_if_addrs(ifaddrs* p)
+      {
+	// delete method for pointer returned by getifaddrs
+	freeifaddrs(p);
+      }
+
+      std::unique_ptr<ifaddrs, decltype(&free_if_addrs)> ifinfo;
     };
 }
 

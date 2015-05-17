@@ -22,17 +22,17 @@
 #ifndef OPENVPN_WIN_UNICODE_H
 #define OPENVPN_WIN_UNICODE_H
 
-#include <string>
-
 #include <windows.h>
+
+#include <string>
+#include <memory>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 
 namespace openvpn {
   namespace Win {
-    typedef ScopedPtr<wchar_t, PtrArrayFree> UTF16;
+    typedef std::unique_ptr<wchar_t[]> UTF16;
 
     OPENVPN_SIMPLE_EXCEPTION(win_utf16);
 
@@ -52,7 +52,7 @@ namespace openvpn {
 					   0,
 					   str.c_str(),
 					   -1,
-					   ret(),
+					   ret.get(),
 					   len);
       if (len != len2)
 	throw win_utf16();

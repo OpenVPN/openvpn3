@@ -26,10 +26,10 @@
 
 #include <string>
 #include <algorithm>         // for std::min
+#include <memory>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/unicode-impl.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
@@ -197,7 +197,7 @@ namespace openvpn {
     template <typename STRING>
     inline BufferPtr string_to_utf16(const STRING& str)
     {
-      ScopedPtr<UTF16, PtrArrayFree> utf16_dest(new UTF16[str.length()]);    
+      std::unique_ptr<UTF16[]> utf16_dest(new UTF16[str.length()]);
       const UTF8 *src = (UTF8 *)str.c_str();
       UTF16 *dest = utf16_dest.get();
       const ConversionResult res = ConvertUTF8toUTF16(&src, src + str.length(),

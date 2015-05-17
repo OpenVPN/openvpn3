@@ -27,23 +27,13 @@
 #include <windows.h>
 #include <shlobj.h>
 
-#include <openvpn/common/scoped_ptr.hpp>
+#include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 
 namespace openvpn {
   namespace Win {
 
     OPENVPN_EXCEPTION(win_call);
-
-    // delete method for CoTask
-    template <typename T>
-    class FreeCoTask {
-    public:
-      static void del(T* p)
-      {
-	CoTaskMemFree(p);
-      }
-    };
 
     inline std::string call(const std::string& cmd)
     {
@@ -62,14 +52,15 @@ namespace openvpn {
 
 #if _WIN32_WINNT >= 0x0600
       // get system path (Vista and higher)
-      ScopedPtr<wchar_t, FreeCoTask> syspath;
-      if (SHGetKnownFolderPath(FOLDERID_System, 0, NULL, syspath.ref()) != S_OK)
+      wchar_t *syspath_ptr = nullptr;
+      if (SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &syspath_ptr) != S_OK)
 	throw win_call("cannot get system path using SHGetKnownFolderPath");
+      unique_ptr_del<wchar_t> syspath(syspath_ptr, [](wchar_t* p) { CoTaskMemFree(p); });
 #     define SYSPATH_FMT_CHAR L"s"
 #     define SYSPATH_LEN_METH(x) wcslen(x)
 #else
       // get system path (XP and higher)
-      ScopedPtr<TCHAR, FreeCoTask> syspath(new char[MAX_PATH]);
+      std::unique_ptr<TCHAR[]> syspath(new char[MAX_PATH]);
       if (SHGetFolderPath(NULL, CSIDL_SYSTEM, NULL, 0, syspath()) != S_OK)
 	throw win_call("cannot get system path using SHGetFolderPath");
 #     define SYSPATH_FMT_CHAR L"S"
@@ -78,7 +69,7 @@ namespace openvpn {
 
       // build command line
       const size_t wcmdlen = SYSPATH_LEN_METH(syspath()) + name.length() + args.length() + 64;
-      ScopedPtr<wchar_t, PtrArrayFree> wcmd(new wchar_t[wcmdlen]);
+      std::unique_ptr<wchar_t[]> wcmd(new wchar_t[wcmdlen]);
       const char *spc = "";
       if (!args.empty())
 	spc = " ";
@@ -140,7 +131,7 @@ namespace openvpn {
 
       // read child's stdout
       const size_t outbuf_size = 512;
-      ScopedPtr<char, PtrArrayFree> outbuf(new char[outbuf_size]);
+      std::unique_ptr<char[]> outbuf(new char[outbuf_size]);
       std::string out;
       while (true)
 	{
