@@ -10,12 +10,12 @@
 #define OPENVPN_WS_HTTPCOMMON_H
 
 #include <string>
+#include <memory>
 
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -314,7 +314,7 @@ namespace openvpn {
 		  }
 		do_http_content_in(buf);
 	      }
-	    else if (rr_chunked.defined())
+	    else if (rr_chunked)
 	      {
 		done = rr_chunked->receive(*this, buf);
 	      }
@@ -400,7 +400,7 @@ namespace openvpn {
 
       CONTENT_LENGTH_TYPE rr_content_bytes;
       CONTENT_LENGTH_TYPE rr_content_length;  // Content-Length in header
-      ScopedPtr<ChunkedHelper> rr_chunked;
+      std::unique_ptr<ChunkedHelper> rr_chunked;
 
       enum HTTPOutState {
 	S_PRE,
