@@ -12,6 +12,7 @@
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/format.hpp>
+#include <openvpn/common/arraysize.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimer.hpp>
