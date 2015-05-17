@@ -46,6 +46,7 @@
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with and trim_left_copy
 
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/count.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/options/continuation.hpp>

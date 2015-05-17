@@ -119,6 +119,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
+#include <openvpn/common/count.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/random/randint.hpp>
 #include <openvpn/frame/frame.hpp>

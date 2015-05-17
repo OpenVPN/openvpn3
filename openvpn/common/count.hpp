@@ -19,20 +19,11 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// define very basic types such as size_t, ssize_t
+#ifndef OPENVPN_COMMON_COUNT_H
+#define OPENVPN_COMMON_COUNT_H
 
-#ifndef OPENVPN_COMMON_TYPES_H
-#define OPENVPN_COMMON_TYPES_H
+namespace openvpn {
+  typedef long long count_t;
+}
 
-#include <cstddef> // defines std::size_t
-
-#include <openvpn/common/platform.hpp>
-
-#ifdef OPENVPN_PLATFORM_WIN
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#else
-#include <unistd.h> // get ssize_t
 #endif
-
-#endif // OPENVPN_COMMON_TYPES_H

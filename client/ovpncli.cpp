@@ -97,6 +97,7 @@
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/common/types.hpp>
 #include <openvpn/common/platform_string.hpp>
+#include <openvpn/common/count.hpp>
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>
