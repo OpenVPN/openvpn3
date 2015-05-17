@@ -95,10 +95,10 @@ namespace openvpn {
 				  i,
 				  strbuf,
 				  &len,
-				  NULL,
-				  NULL,
-				  NULL,
-				  NULL);
+				  nullptr,
+				  nullptr,
+				  nullptr,
+				  nullptr);
 	    if (status == ERROR_NO_MORE_ITEMS)
 	      break;
 	    else if (status != ERROR_SUCCESS)
@@ -121,7 +121,7 @@ namespace openvpn {
 	    len = sizeof(strbuf);
 	    status = RegQueryValueEx(unit_key(),
 				     "ComponentId",
-				     NULL,
+				     nullptr,
 				     &data_type,
 				     (LPBYTE)strbuf,
 				     &len);
@@ -135,7 +135,7 @@ namespace openvpn {
 	    len = sizeof(strbuf);
 	    status = RegQueryValueEx(unit_key(),
 				     "NetCfgInstanceId",
-				     NULL,
+				     nullptr,
 				     &data_type,
 				     (LPBYTE)strbuf,
 				     &len);
@@ -222,10 +222,10 @@ namespace openvpn {
 				      i,
 				      strbuf,
 				      &len,
-				      NULL,
-				      NULL,
-				      NULL,
-				      NULL);
+				      nullptr,
+				      nullptr,
+				      nullptr,
+				      nullptr);
 		if (status == ERROR_NO_MORE_ITEMS)
 		  break;
 		else if (status != ERROR_SUCCESS)
@@ -246,7 +246,7 @@ namespace openvpn {
 		len = sizeof(strbuf);
 		status = RegQueryValueEx(connection_key(),
 					 "Name",
-					 NULL,
+					 nullptr,
 					 &data_type,
 					 (LPBYTE)strbuf,
 					 &len);
@@ -354,7 +354,7 @@ namespace openvpn {
 	DWORD len;
 	if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_TUN,
 			     ep, sizeof (ep),
-			     ep, sizeof (ep), &len, NULL))
+			     ep, sizeof (ep), &len, nullptr))
 	  throw tun_win_util("DeviceIoControl TAP_WIN_IOCTL_CONFIG_TUN failed");
       }
 
@@ -373,7 +373,7 @@ namespace openvpn {
 	DWORD len;
 	if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT,
 			     ep, sizeof (ep),
-			     ep, sizeof (ep), &len, NULL))
+			     ep, sizeof (ep), &len, nullptr))
 	  throw tun_win_util("DeviceIoControl TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT failed");
       }
 
@@ -384,7 +384,7 @@ namespace openvpn {
 	ULONG status = media_status ? TRUE : FALSE;
 	if (!DeviceIoControl(th, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
 			     &status, sizeof (status),
-			     &status, sizeof (status), &len, NULL))
+			     &status, sizeof (status), &len, nullptr))
 	  throw tun_win_util("DeviceIoControl TAP_WIN_IOCTL_SET_MEDIA_STATUS failed");
       }
 
@@ -399,7 +399,7 @@ namespace openvpn {
 	while (DeviceIoControl (th, TAP_WIN_IOCTL_GET_LOG_LINE,
 				line(), size,
 				line(), size,
-				&len, NULL))
+				&len, nullptr))
 	  {
 	    OPENVPN_LOG("TAP-Windows: " << line());
 	  }
@@ -415,7 +415,7 @@ namespace openvpn {
 	  info[0] = info[1] = info[2] = 0;
 	  if (DeviceIoControl(th, TAP_WIN_IOCTL_GET_VERSION,
 			      &info, sizeof (info),
-			      &info, sizeof (info), &len, NULL))
+			      &info, sizeof (info), &len, nullptr))
 	    defined = true;
 	}
 
@@ -494,7 +494,7 @@ namespace openvpn {
 	DWORD status;
 	std::unique_ptr<MIB_IPFORWARDTABLE> rt;
 
-	status = GetIpForwardTable (NULL, &size, TRUE);
+	status = GetIpForwardTable (nullptr, &size, TRUE);
 	if (status == ERROR_INSUFFICIENT_BUFFER)
 	  {
 	    rt.reset((MIB_IPFORWARDTABLE*)new unsigned char[size]);
@@ -502,7 +502,7 @@ namespace openvpn {
 	    if (status != NO_ERROR)
 	      {
 		OPENVPN_LOG("windows_routing_table: GetIpForwardTable failed");
-		return NULL;
+		return nullptr;
 	      }
 	  }
 	return rt.release();
@@ -512,12 +512,12 @@ namespace openvpn {
       // Note that returned pointer must be freed with FreeMibTable.
       inline const MIB_IPFORWARD_TABLE2* windows_routing_table2(ADDRESS_FAMILY af)
       {
-	MIB_IPFORWARD_TABLE2* routes = NULL;
+	MIB_IPFORWARD_TABLE2* routes = nullptr;
 	int res = GetIpForwardTable2(af, &routes);
 	if (res == NO_ERROR)
 	  return routes;
 	else
-	  return NULL;
+	  return nullptr;
       }
 
       // Get the current default gateway
@@ -530,7 +530,7 @@ namespace openvpn {
 	  std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
 	  if (rt.defined())
 	    {
-	      const MIB_IPFORWARDROW* gw = NULL;
+	      const MIB_IPFORWARDROW* gw = nullptr;
 	      for (size_t i = 0; i < rt()->dwNumEntries; ++i)
 		{
 		  const MIB_IPFORWARDROW* row = &rt()->table[i];

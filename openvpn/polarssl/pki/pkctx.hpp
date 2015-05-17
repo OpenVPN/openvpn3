@@ -43,10 +43,10 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<PKContext> Ptr;
 
-      PKContext() : ctx(NULL) {}
+      PKContext() : ctx(nullptr) {}
 
       PKContext(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
-	: ctx(NULL)
+	: ctx(nullptr)
       {
 	try {
 	  parse(key_txt, title, priv_key_pwd);
@@ -96,7 +96,7 @@ namespace openvpn {
 	  {
 	    pk_free(ctx);
 	    delete ctx;
-	    ctx = NULL;
+	    ctx = nullptr;
 	  }
       }
 

@@ -313,7 +313,7 @@ namespace openvpn {
     static T now_()
     {
       ::timeval tv;
-      if (::gettimeofday(&tv, NULL) != 0)
+      if (::gettimeofday(&tv, nullptr) != 0)
 	throw get_time_error();
       return T((tv.tv_sec - base_) * prec + tv.tv_usec * prec / 1000000);
     }

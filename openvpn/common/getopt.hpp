@@ -57,7 +57,7 @@ namespace openvpn {
   int optind = 1;         /* index into parent argv vector */
   int optopt = 0;         /* character checked for validity */
   int optreset = 0;       /* reset getopt */
-  char *optarg = NULL;    /* argument associated with option */
+  char *optarg = nullptr;    /* argument associated with option */
 
   struct option
   {
@@ -129,7 +129,7 @@ namespace openvpn {
 	return (GETOPT_BADCH);
       }
       if (*++oli != ':') {			/* don't need argument */
-	optarg = NULL;
+	optarg = nullptr;
 	if (!*place)
 	  ++optind;
       } else {				/* need an argument */
@@ -170,7 +170,7 @@ namespace openvpn {
 
       if (*current_argv == '\0')
 	return(-1);
-      if ((has_equal = std::strchr(current_argv, '=')) != NULL) {
+      if ((has_equal = std::strchr(current_argv, '=')) != nullptr) {
 	current_argv_len = has_equal - current_argv;
 	has_equal++;
       } else
@@ -196,7 +196,7 @@ namespace openvpn {
 	    optarg = nargv[optind++];
 	}
 	if ((long_options[match].has_arg == required_argument)
-	    && (optarg == NULL)) {
+	    && (optarg == nullptr)) {
 	  /*
 	   * Missing argument, leading :
 	   * indicates no error should be generated

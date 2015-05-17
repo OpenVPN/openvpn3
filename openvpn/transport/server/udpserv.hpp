@@ -88,7 +88,7 @@ namespace openvpn {
 	}
 
       private:
-	Instance() : id(0), parent(NULL), halt(false) {}
+	Instance() : id(0), parent(nullptr), halt(false) {}
 
 	virtual bool transport_send_const(const Buffer& buf)
 	{

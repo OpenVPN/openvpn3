@@ -103,7 +103,7 @@ namespace openvpn {
 	unsigned int size_;
       };
 
-      static AddrMaskPair from_string(const std::string& s1, const std::string& s2, const char *title = NULL)
+      static AddrMaskPair from_string(const std::string& s1, const std::string& s2, const char *title = nullptr)
       {
 	try {
 	  if (s2.empty())
@@ -125,7 +125,7 @@ namespace openvpn {
 	return AddrMaskPair(); // NOTREACHED
       }
 
-      static AddrMaskPair from_string(const std::string& s, const char *title = NULL)
+      static AddrMaskPair from_string(const std::string& s, const char *title = nullptr)
       {
 	try {
 	  const StringPair pair = Split::by_char<StringPair, NullLex, Split::NullLimit>(s, '/');
@@ -138,7 +138,7 @@ namespace openvpn {
 	return AddrMaskPair(); // NOTREACHED
       }
 
-      static AddrMaskPair from_string(const StringPair& pair, const char *title = NULL)
+      static AddrMaskPair from_string(const StringPair& pair, const char *title = nullptr)
       {
 	try {
 	  return from_string_impl(pair, title);
@@ -186,7 +186,7 @@ namespace openvpn {
 	OPENVPN_THROW(addr_pair_mask_parse_error, "AddrMaskPair parse error '" << title << "': " << s << " : " << e.what());
       }
 
-      static AddrMaskPair from_string_impl(const StringPair& pair, const char *title = NULL)
+      static AddrMaskPair from_string_impl(const StringPair& pair, const char *title = nullptr)
       {
 	AddrMaskPair ret;
 	if (pair.size() == 1 || pair.size() == 2)

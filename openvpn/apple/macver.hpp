@@ -60,7 +60,7 @@ namespace openvpn {
       {
 	char str[256];
 	size_t size = sizeof(str);
-	int ret = sysctlbyname("kern.osrelease", str, &size, NULL, 0);
+	int ret = sysctlbyname("kern.osrelease", str, &size, nullptr, 0);
 	if (!ret)
 	  init(std::string(str, size));
       }

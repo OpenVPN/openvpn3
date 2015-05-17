@@ -680,7 +680,7 @@ namespace openvpn {
       std::string peer_info_string() const
       {
 	std::ostringstream out;
-	const char *compstr = NULL;
+	const char *compstr = nullptr;
 
 	if (!gui_version.empty())
 	  out << "IV_GUI_VER=" << gui_version << '\n';
@@ -862,7 +862,7 @@ namespace openvpn {
 	case CONTROL_HARD_RESET_SERVER_V2:
 	  return "CONTROL_HARD_RESET_SERVER_V2";
 	}
-      return NULL;
+      return nullptr;
     }
 
     std::string dump_packet(const Buffer& buf)
@@ -1239,7 +1239,7 @@ namespace openvpn {
 	      // Knock off leading op from buffer, but pass the 32-bit version to
 	      // decrypt so it can be used as Additional Data for packet authentication.
 	      const size_t head_size = op_head_size(buf[0]);
-	      const unsigned char *op32 = (head_size == OP_SIZE_V2) ? buf.c_data() : NULL;
+	      const unsigned char *op32 = (head_size == OP_SIZE_V2) ? buf.c_data() : nullptr;
 	      buf.advance(head_size);
 
 	      // decrypt packet
@@ -1502,7 +1502,7 @@ namespace openvpn {
 	else
 	  {
 	    // encrypt packet
-	    pid_wrap = crypto->encrypt(buf, now->seconds_since_epoch(), NULL);
+	    pid_wrap = crypto->encrypt(buf, now->seconds_since_epoch(), nullptr);
 
 	    // prepend op
 	    buf.push_front(op_compose(DATA_V1, key_id_));

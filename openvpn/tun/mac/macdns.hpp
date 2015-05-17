@@ -541,7 +541,7 @@ namespace openvpn {
     CF::DynamicStore ds_create() const
     {
       CF::String sn = CF::string(sname);
-      return CF::DynamicStore(SCDynamicStoreCreate(kCFAllocatorDefault, sn(), NULL, NULL));
+      return CF::DynamicStore(SCDynamicStoreCreate(kCFAllocatorDefault, sn(), nullptr, nullptr));
     }
 
     const std::string sname;

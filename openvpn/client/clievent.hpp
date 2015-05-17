@@ -145,7 +145,7 @@ namespace openvpn {
 	if (id_ == CONNECTED)
 	  return (const Connected*)this;
 	else
-	  return NULL;
+	  return nullptr;
       }
 
     private:

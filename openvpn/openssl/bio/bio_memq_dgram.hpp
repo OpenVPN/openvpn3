@@ -126,15 +126,15 @@ namespace openvpn {
 
       inline int memq_free (BIO *b)
       {
-	if (b == NULL)
+	if (b == nullptr)
 	  return (0);
 	if (b->shutdown)
 	  {
-	    if ((b->init) && (b->ptr != NULL))
+	    if ((b->init) && (b->ptr != nullptr))
 	      {
 		MemQ *bmq = (MemQ*)b->ptr;
 		delete bmq;
-		b->ptr = NULL;
+		b->ptr = nullptr;
 	      }
 	  }
 	return 1;
@@ -209,11 +209,11 @@ namespace openvpn {
 	  memq_write,
 	  memq_read,
 	  memq_puts,
-	  NULL, /* memq_gets */
+	  nullptr, /* memq_gets */
 	  memq_ctrl,
 	  memq_new,
 	  memq_free,
-	  NULL,
+	  nullptr,
 	};
 
     } // namespace bio_memq_internal
@@ -228,7 +228,7 @@ namespace openvpn {
       if (b->method->type == bio_memq_internal::BIO_TYPE_MEMQ)
 	return (MemQ *)b->ptr;
       else
-	return NULL;
+	return nullptr;
     }
 
     inline const MemQ *const_memq_from_bio(const BIO *b)
@@ -236,7 +236,7 @@ namespace openvpn {
       if (b->method->type == bio_memq_internal::BIO_TYPE_MEMQ)
 	return (const MemQ *)b->ptr;
       else
-	return NULL;
+	return nullptr;
     }
 
   } // namespace bmq_dgram

@@ -168,10 +168,10 @@ namespace openvpn {
 
       void detach_from_parent()
       {
-	parent = NULL;
+	parent = nullptr;
       }
 
-      virtual void error(const size_t err, const std::string* text=NULL)
+      virtual void error(const size_t err, const std::string* text=nullptr)
       {
 	if (err < Error::N_ERRORS)
 	  {
@@ -240,7 +240,7 @@ namespace openvpn {
 
       void detach_from_parent()
       {
-	parent = NULL;
+	parent = nullptr;
       }
 
     private:
@@ -251,7 +251,7 @@ namespace openvpn {
     class MySocketProtect : public SocketProtect
     {
     public:
-      MySocketProtect() : parent(NULL) {}
+      MySocketProtect() : parent(nullptr) {}
 
       void set_parent(OpenVPNClient* parent_arg)
       {
@@ -268,7 +268,7 @@ namespace openvpn {
 
       void detach_from_parent()
       {
-	parent = NULL;
+	parent = nullptr;
       }
 
     private:
@@ -278,7 +278,7 @@ namespace openvpn {
     class MyReconnectNotify : public ReconnectNotify
     {
     public:
-      MyReconnectNotify() : parent(NULL) {}
+      MyReconnectNotify() : parent(nullptr) {}
 
       void set_parent(OpenVPNClient* parent_arg)
       {
@@ -287,7 +287,7 @@ namespace openvpn {
 
       void detach_from_parent()
       {
-	parent = NULL;
+	parent = nullptr;
       }
 
       virtual bool pause_on_connection_timeout()
@@ -309,7 +309,7 @@ namespace openvpn {
 			google_dns_fallback(false), disable_client_cert(false),
 			default_key_direction(-1), force_aes_cbc_ciphersuites(false),
 			alt_proxy(false),
-			io_service(NULL) {}
+			io_service(nullptr) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -737,7 +737,7 @@ namespace openvpn {
     {
       state->detach();
       delete state->io_service;
-      state->io_service = NULL;
+      state->io_service = nullptr;
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_pre_run()

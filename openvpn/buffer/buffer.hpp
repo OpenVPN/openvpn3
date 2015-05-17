@@ -142,7 +142,7 @@ namespace openvpn {
     BufferType()
     {
       static_assert(std::is_nothrow_move_constructible<BufferType>::value, "class BufferType not noexcept move constructable");
-      data_ = NULL;
+      data_ = nullptr;
       offset_ = size_ = capacity_ = 0;
     }
 
@@ -209,7 +209,7 @@ namespace openvpn {
     bool defined() const { return size_ > 0; }
 
     // return true if data memory is defined
-    bool allocated() const { return data_ != NULL; }
+    bool allocated() const { return data_ != nullptr; }
 
     // return true if array is empty
     bool empty() const { return !size_; }
@@ -724,7 +724,7 @@ namespace openvpn {
       capacity_ = other.capacity_;
       flags_ = other.flags_;
 
-      other.data_ = NULL;
+      other.data_ = nullptr;
       other.offset_ = other.size_ = other.capacity_ = 0;
     }
 
@@ -733,7 +733,7 @@ namespace openvpn {
       if (data_)
 	{
 	  delete_(data_, capacity_, flags_);
-	  data_ = NULL;
+	  data_ = nullptr;
 	}
       capacity_ = 0;
     }

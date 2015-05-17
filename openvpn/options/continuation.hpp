@@ -55,7 +55,7 @@ namespace openvpn {
       // Prepend from base where multiple options of the same type can aggregate,
       // so that server-pushed options will be at the end of list.
       if (push_base)
-	extend(push_base->multi, NULL);
+	extend(push_base->multi, nullptr);
     }
 
     // call with option list fragments

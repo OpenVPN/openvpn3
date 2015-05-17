@@ -43,7 +43,7 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_LINUX)
     return "linux";
 #else
-    return NULL;
+    return nullptr;
 #endif
   }
 

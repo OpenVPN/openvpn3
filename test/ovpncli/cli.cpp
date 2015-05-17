@@ -119,7 +119,7 @@ private:
   std::string dc_cookie;
 };
 
-Client *the_client = NULL; // GLOBAL
+Client *the_client = nullptr; // GLOBAL
 
 void worker_thread()
 {
@@ -201,37 +201,37 @@ void handler(int signum)
 int main(int argc, char *argv[])
 {
   static const struct option longopts[] = {
-    { "username",       required_argument,  NULL,      'u' },
-    { "password",       required_argument,  NULL,      'p' },
-    { "response",       required_argument,  NULL,      'r' },
-    { "dc",             required_argument,  NULL,      'D' },
-    { "proto",          required_argument,  NULL,      'P' },
-    { "server",         required_argument,  NULL,      's' },
-    { "timeout",        required_argument,  NULL,      't' },
-    { "compress",       required_argument,  NULL,      'c' },
-    { "pk-password",    required_argument,  NULL,      'z' },
-    { "tvm-override",   required_argument,  NULL,      'M' },
-    { "proxy-host",     required_argument,  NULL,      'h' },
-    { "proxy-port",     required_argument,  NULL,      'q' },
-    { "proxy-username", required_argument,  NULL,      'U' },
-    { "proxy-password", required_argument,  NULL,      'W' },
-    { "proxy-basic",    no_argument,        NULL,      'B' },
-    { "alt-proxy",      no_argument,        NULL,      'A' },
-    { "eval",           no_argument,        NULL,      'e' },
-    { "self-test",      no_argument,        NULL,      'T' },
-    { "cache-password", no_argument,        NULL,      'C' },
-    { "no-cert",        no_argument,        NULL,      'x' },
-    { "force-aes-cbc",  no_argument,        NULL,      'f' },
-    { "google-dns",     no_argument,        NULL,      'g' },
-    { "persist-tun",    no_argument,        NULL,      'j' },
-    { "def-keydir",     required_argument,  NULL,      'k' },
-    { "merge",          no_argument,        NULL,      'm' },
-    { "version",        no_argument,        NULL,      'v' },
-    { NULL,             0,                  NULL,       0  }
+    { "username",       required_argument,  nullptr,      'u' },
+    { "password",       required_argument,  nullptr,      'p' },
+    { "response",       required_argument,  nullptr,      'r' },
+    { "dc",             required_argument,  nullptr,      'D' },
+    { "proto",          required_argument,  nullptr,      'P' },
+    { "server",         required_argument,  nullptr,      's' },
+    { "timeout",        required_argument,  nullptr,      't' },
+    { "compress",       required_argument,  nullptr,      'c' },
+    { "pk-password",    required_argument,  nullptr,      'z' },
+    { "tvm-override",   required_argument,  nullptr,      'M' },
+    { "proxy-host",     required_argument,  nullptr,      'h' },
+    { "proxy-port",     required_argument,  nullptr,      'q' },
+    { "proxy-username", required_argument,  nullptr,      'U' },
+    { "proxy-password", required_argument,  nullptr,      'W' },
+    { "proxy-basic",    no_argument,        nullptr,      'B' },
+    { "alt-proxy",      no_argument,        nullptr,      'A' },
+    { "eval",           no_argument,        nullptr,      'e' },
+    { "self-test",      no_argument,        nullptr,      'T' },
+    { "cache-password", no_argument,        nullptr,      'C' },
+    { "no-cert",        no_argument,        nullptr,      'x' },
+    { "force-aes-cbc",  no_argument,        nullptr,      'f' },
+    { "google-dns",     no_argument,        nullptr,      'g' },
+    { "persist-tun",    no_argument,        nullptr,      'j' },
+    { "def-keydir",     required_argument,  nullptr,      'k' },
+    { "merge",          no_argument,        nullptr,      'm' },
+    { "version",        no_argument,        nullptr,      'v' },
+    { nullptr,          0,                  nullptr,       0  }
   };
 
   int ret = 0;
-  std::thread* thread = NULL;
+  std::thread* thread = nullptr;
 
   try {
     Client::init_process();
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:k:", longopts, NULL)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -483,7 +483,7 @@ int main(int argc, char *argv[])
 
 		  // wait for connect thread to exit
 		  thread->join();
-		  the_client = NULL;
+		  the_client = nullptr;
 #else
 		  // Set Windows title bar
 		  const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
@@ -514,7 +514,7 @@ int main(int argc, char *argv[])
 			    the_client->pause("user-pause");
 			}
 		    }
-		  the_client = NULL;
+		  the_client = nullptr;
 #endif
 
 		  // Get dynamic challenge response
@@ -542,7 +542,7 @@ int main(int argc, char *argv[])
   }
   catch (const std::exception& e)
     {
-      the_client = NULL;
+      the_client = nullptr;
       std::cout << "Main thread exception: " << e.what() << std::endl;
       Client::uninit_process();
       ret = 1;

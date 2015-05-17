@@ -160,7 +160,7 @@ namespace openvpn {
 	}
 
 	// validate remote list
-	RemoteList rl(options, "", 0, NULL);
+	RemoteList rl(options, "", 0, nullptr);
 
 	// determine if private key is encrypted
 	if (!externalPki_)

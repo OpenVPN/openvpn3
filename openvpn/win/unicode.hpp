@@ -43,7 +43,7 @@ namespace openvpn {
 					  0,
 					  str.c_str(),
 					  -1,
-					  NULL,
+					  nullptr,
 					  0);
       if (len <= 0)
 	throw win_utf16();

@@ -35,7 +35,7 @@ namespace openvpn {
       Config()
 	: send_queue_max_size(1024),
 	  free_list_max_size(8),
-	  socket_protect(NULL)
+	  socket_protect(nullptr)
       {}
 
       RemoteList::Ptr remote_list;

@@ -48,7 +48,7 @@ namespace openvpn {
       throw enum_dir_error(dirname + ": cannot open directory");
 
     struct dirent *e;
-    while ((e = readdir(dir.get())) != NULL)
+    while ((e = readdir(dir.get())) != nullptr)
       {
 	std::string fn(e->d_name);
 	if (fn != "." && fn != "..")

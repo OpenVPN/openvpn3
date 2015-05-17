@@ -202,7 +202,7 @@ namespace openvpn {
       ClientConfig()
 	: send_queue_max_size(1024),
 	  free_list_max_size(8),
-	  socket_protect(NULL)
+	  socket_protect(nullptr)
       {}
     };
 
@@ -232,10 +232,10 @@ namespace openvpn {
 
 	    // Get target server host:port.  We don't care about resolving it
 	    // since proxy server will do that for us.
-	    remote_list().endpoint_available(&server_host, &server_port, NULL);
+	    remote_list().endpoint_available(&server_host, &server_port, nullptr);
 
 	    // Get proxy server host:port, and resolve it if not already cached
-	    if (proxy_remote_list().endpoint_available(&proxy_host, &proxy_port, NULL))
+	    if (proxy_remote_list().endpoint_available(&proxy_host, &proxy_port, nullptr))
 	      {
 		// already cached
 		start_connect_();

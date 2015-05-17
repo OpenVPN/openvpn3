@@ -118,7 +118,7 @@ namespace openvpn {
 	if (!halt)
 	  {
 	    for (int i = 0; i < n_parallel; i++)
-	      queue_read(NULL);
+	      queue_read(nullptr);
 	  }
       }
 

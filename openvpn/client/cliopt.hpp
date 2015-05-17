@@ -91,9 +91,9 @@ namespace openvpn {
     struct Config {
       Config()
       {
-	external_pki = NULL;
-	socket_protect = NULL;
-	reconnect_notify = NULL;
+	external_pki = nullptr;
+	socket_protect = nullptr;
+	reconnect_notify = nullptr;
 	conn_timeout = 0;
 	alt_proxy = false;
 	tun_persist = false;
@@ -102,7 +102,7 @@ namespace openvpn {
 	default_key_direction = -1;
 	force_aes_cbc_ciphersuites = false;
 #if defined(USE_TUN_BUILDER)
-	builder = NULL;
+	builder = nullptr;
 #endif
       }
 
@@ -215,7 +215,7 @@ namespace openvpn {
 	http_proxy_options = HTTPProxyTransport::Options::parse(opt);
 
       // load remote list
-      remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, NULL));
+      remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr));
       if (!remote_list->defined())
 	throw option_error("no remote option specified");
 
@@ -330,7 +330,7 @@ namespace openvpn {
       tunconf->frame = frame;
       tunconf->stats = cli_stats;
       if (config.tun_persist)
-	tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, NULL));
+	tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
 #else
       TunNull::ClientConfig::Ptr tunconf = TunNull::ClientConfig::new_obj();
       tunconf->frame = frame;

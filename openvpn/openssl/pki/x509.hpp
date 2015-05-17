@@ -43,10 +43,10 @@ namespace openvpn {
     class X509Base
     {
     public:
-      X509Base() : x509_(NULL) {}
+      X509Base() : x509_(nullptr) {}
       explicit X509Base(::X509 *x509) : x509_(x509) {}
 
-      bool defined() const { return x509_ != NULL; }
+      bool defined() const { return x509_ != nullptr; }
       ::X509* obj() const { return x509_; }
       ::X509* obj_dup() const { return dup(x509_); }
 
@@ -80,7 +80,7 @@ namespace openvpn {
 	if (x509)
 	  return X509_dup(const_cast< ::X509 * >(x509));
 	else
-	  return NULL;
+	  return nullptr;
       }
 
       friend class X509;
@@ -113,7 +113,7 @@ namespace openvpn {
 	if (!bio)
 	  throw OpenSSLException();
 
-	::X509 *cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
+	::X509 *cert = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
 	BIO_free(bio);
 	if (!cert)
 	  throw OpenSSLException(std::string("X509::parse_pem: error in ") + title + std::string(":"));
@@ -127,7 +127,7 @@ namespace openvpn {
 	if (x509_)
 	  {
 	    X509_free(x509_);
-	    x509_ = NULL;
+	    x509_ = nullptr;
 	  }
       }
 

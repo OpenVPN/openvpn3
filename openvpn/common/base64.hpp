@@ -55,7 +55,7 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(base64_decode_error);
 
     // altmap is "+/=" by default
-    Base64(const char *altmap = NULL)
+    Base64(const char *altmap = nullptr)
     {
       // build encoding map
       {
@@ -221,7 +221,7 @@ namespace openvpn {
     if (base64)
       {
 	delete base64;
-	base64 = NULL;
+	base64 = nullptr;
       }
   }
 

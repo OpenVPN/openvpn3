@@ -102,7 +102,7 @@ namespace openvpn {
 
     static Protocol parse(const std::string& str,
 			  const bool allow_client_suffix,
-			  const char *title = NULL)
+			  const char *title = nullptr)
     {
       Protocol ret;
       std::string s = str;

@@ -41,16 +41,16 @@ namespace openvpn {
     class CRL : public RC<thread_unsafe_refcount>
     {
     public:
-      CRL() : crl_(NULL) {}
+      CRL() : crl_(nullptr) {}
 
       explicit CRL(const std::string& crl_txt)
-	: crl_(NULL)
+	: crl_(nullptr)
       {
 	parse_pem(crl_txt);
       }
 
       CRL(const CRL& other)
-	: crl_(NULL)
+	: crl_(nullptr)
       {
 	assign(other.crl_);
       }
@@ -60,7 +60,7 @@ namespace openvpn {
 	assign(other.crl_);
       }
 
-      bool defined() const { return crl_ != NULL; }
+      bool defined() const { return crl_ != nullptr; }
       X509_CRL* obj() const { return crl_; }
 
       void parse_pem(const std::string& crl_txt)
@@ -69,7 +69,7 @@ namespace openvpn {
 	if (!bio)
 	  throw OpenSSLException();
 
-	X509_CRL *crl = PEM_read_bio_X509_CRL(bio, NULL, NULL, NULL);
+	X509_CRL *crl = PEM_read_bio_X509_CRL(bio, nullptr, nullptr, nullptr);
 	BIO_free(bio);
 	if (!crl)
 	  throw OpenSSLException("CRL::parse_pem");
@@ -107,7 +107,7 @@ namespace openvpn {
 	if (crl_)
 	  {
 	    X509_CRL_free(crl_);
-	    crl_ = NULL;
+	    crl_ = nullptr;
 	  }
       }
 
@@ -124,7 +124,7 @@ namespace openvpn {
 	    return X509_CRL_dup(const_cast<X509_CRL *>(crl));
 	  }
 	else
-	  return NULL;
+	  return nullptr;
       }
 
       void assign(const X509_CRL *crl)

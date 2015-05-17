@@ -84,7 +84,7 @@ namespace openvpn {
       {
 	TunBuilderCapture::Ptr capture = new TunBuilderCapture();
 	try {
-	  TunProp::configure_builder(capture.get(), NULL, NULL, server_addr, tun_prop, opt, NULL, true);
+	  TunProp::configure_builder(capture.get(), nullptr, nullptr, server_addr, tun_prop, opt, nullptr, true);
 	  OPENVPN_LOG("*** TUN BUILDER CAPTURE" << std::endl << capture->to_string());
 	}
 	catch (const std::exception& e)
@@ -100,7 +100,7 @@ namespace openvpn {
 	{
 	  copt_.reset(new TunBuilderCapture());
 	  try {
-	    TunProp::configure_builder(copt_.get(), NULL, NULL, server_addr, tun_prop, opt, NULL, true);
+	    TunProp::configure_builder(copt_.get(), nullptr, nullptr, server_addr, tun_prop, opt, nullptr, true);
 	  }
 	  catch (const std::exception&)
 	    {

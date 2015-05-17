@@ -166,7 +166,7 @@ namespace openvpn {
       void start()
       {
 	if (!halt)
-	  queue_recv(NULL);
+	  queue_recv(nullptr);
       }
 
       void stop()

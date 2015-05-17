@@ -138,13 +138,13 @@ namespace openvpn {
 	OPENVPN_THROW(parse_cert_crl_error, title << " : CERT/CRL content ended unexpectedly without END marker");
     }
 
-    static void from_string(const std::string content, const std::string& title, CertList* cert_list, CRLList* crl_list = NULL)
+    static void from_string(const std::string content, const std::string& title, CertList* cert_list, CRLList* crl_list = nullptr)
     {
       std::stringstream in(content);
       from_istream(in, title, cert_list, crl_list);
     }
 
-    static void from_file(const std::string filename, CertList* cert_list, CRLList* crl_list = NULL)
+    static void from_file(const std::string filename, CertList* cert_list, CRLList* crl_list = nullptr)
     {
       std::ifstream ifs(filename.c_str());
       if (!ifs)

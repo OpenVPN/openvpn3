@@ -105,7 +105,7 @@ namespace openvpn {
 				    const size_t max_len,
 				    const T minimum,
 				    const T maximum,
-				    T* value_return = NULL)
+				    T* value_return = nullptr)
   {
     if (numstr.length() <= max_len)
       {

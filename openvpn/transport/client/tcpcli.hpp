@@ -61,7 +61,7 @@ namespace openvpn {
       ClientConfig()
 	: send_queue_max_size(1024),
 	  free_list_max_size(8),
-	  socket_protect(NULL)
+	  socket_protect(nullptr)
       {}
     };
 
@@ -83,7 +83,7 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    if (config->remote_list->endpoint_available(&server_host, &server_port, NULL))
+	    if (config->remote_list->endpoint_available(&server_host, &server_port, nullptr))
 	      {
 		start_connect_();
 	      }

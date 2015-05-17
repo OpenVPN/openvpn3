@@ -42,7 +42,7 @@ namespace openvpn {
 
     PolarSSLRandom(const bool prng)
     {
-      if (ctr_drbg_init(&ctx, entropy_poll, NULL, NULL, 0) < 0)
+      if (ctr_drbg_init(&ctx, entropy_poll, nullptr, nullptr, 0) < 0)
 	throw rand_error_polarssl("CTR_DRBG init");
 
       // If prng is set, configure for higher performance

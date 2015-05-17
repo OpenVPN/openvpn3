@@ -266,7 +266,7 @@ namespace openvpn {
 		 const SessionStats::Ptr& stats_arg)
 	:  io_service(io_service_arg),
 	   resolver(io_service_arg),
-	   notify_callback(NULL),
+	   notify_callback(nullptr),
 	   remote_list(remote_list_arg),
 	   stats(stats_arg),
 	   index(0)
@@ -299,7 +299,7 @@ namespace openvpn {
 
       void cancel()
       {
-	notify_callback = NULL;
+	notify_callback = nullptr;
 	index = 0;
 	resolver.cancel();
       }
@@ -499,7 +499,7 @@ namespace openvpn {
 	    {
 	      Item& item = **i;
 	      item.server_host = server_override;
-	      item.res_addr_list.reset(NULL);	    
+	      item.res_addr_list.reset(nullptr);	    
 	    }
 	  reset_items();
 	}
@@ -679,7 +679,7 @@ namespace openvpn {
     void reset_items()
     {
       for (std::vector<Item::Ptr>::iterator i = list.begin(); i != list.end(); ++i)
-	(*i)->res_addr_list.reset(NULL);	    
+	(*i)->res_addr_list.reset(nullptr);	    
       index.reset();
     }
 
@@ -687,7 +687,7 @@ namespace openvpn {
     void reset_item(const size_t i)
     {
       if (i <= list.size())
-	list[i]->res_addr_list.reset(NULL);
+	list[i]->res_addr_list.reset(nullptr);
     }
 
     // return the current primary index (into list) and raise an exception
@@ -722,7 +722,7 @@ namespace openvpn {
 	  if (server_host == item->server_host && item->res_addr_list_defined())
 	    return item;
 	}
-      return NULL;
+      return nullptr;
     }
 
     // prune remote entries so that only those of Protocol proto_override remain

@@ -83,7 +83,7 @@ namespace openvpn {
 
     virtual ~OpenSSLException() throw() {}
 
-    static const char *ssl_error_text(const int ssl_error, bool *unknown = NULL)
+    static const char *ssl_error_text(const int ssl_error, bool *unknown = nullptr)
     {
       switch (ssl_error)
 	{

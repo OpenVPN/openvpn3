@@ -69,8 +69,8 @@ namespace openvpn {
     {
       const CF::DynamicStore ds(SCDynamicStoreCreate(kCFAllocatorDefault,
 						     CFSTR("MacGWInfo"),
-						     NULL,
-						     NULL));
+						     nullptr,
+						     nullptr));
       v4 = Variant(IP::Addr::V4, ds);
       v6 = Variant(IP::Addr::V6, ds);
     }

@@ -44,7 +44,7 @@
 	if (obj && CFGetTypeID(obj) == idmeth()) \
 	  return obj; \
 	else \
-	  return NULL; \
+	  return nullptr; \
       } \
     }; \
     typedef Wrap<cftype> cls; \
@@ -71,7 +71,7 @@ namespace openvpn {
     class Wrap
     {
     public:
-      Wrap() : obj_(NULL) {}
+      Wrap() : obj_(nullptr) {}
 
       // Set own=BORROW if we don't currently own the object
       explicit Wrap(T obj, const Own own=OWN)
@@ -101,7 +101,7 @@ namespace openvpn {
       Wrap(Wrap&& other) noexcept
       {
 	obj_ = other.obj_;
-	other.obj_ = NULL;
+	other.obj_ = nullptr;
       }
 
       Wrap& operator=(Wrap&& other) noexcept
@@ -109,7 +109,7 @@ namespace openvpn {
 	if (obj_)
 	  CFRelease(obj_);
 	obj_ = other.obj_;
-	other.obj_ = NULL;
+	other.obj_ = nullptr;
 	return *this;
       }
 
@@ -118,7 +118,7 @@ namespace openvpn {
 	std::swap(obj_, other.obj_);
       }
 
-      void reset(T obj=NULL, const Own own=OWN)
+      void reset(T obj=nullptr, const Own own=OWN)
       {
 	if (own == BORROW && obj)
 	  CFRetain(obj);
@@ -127,7 +127,7 @@ namespace openvpn {
 	obj_ = obj;
       }
 
-      bool defined() const { return obj_ != NULL; }
+      bool defined() const { return obj_ != nullptr; }
 
       T operator()() const { return obj_; }
 
@@ -143,14 +143,14 @@ namespace openvpn {
       T release()
       {
 	T ret = obj_;
-	obj_ = NULL;
+	obj_ = nullptr;
 	return ret;
       }
 
       CFTypeRef generic_release()
       {
 	T ret = obj_;
-	obj_ = NULL;
+	obj_ = nullptr;
 	return (CFTypeRef)ret;
       }
 
@@ -161,7 +161,7 @@ namespace openvpn {
 	if (obj_)
 	  {
 	    CFRelease(obj_);
-	    obj_ = NULL;
+	    obj_ = nullptr;
 	  }
 	return &obj_;
       }
@@ -300,8 +300,8 @@ namespace openvpn {
     inline Dict empty_dict()
     {
       return Dict(CFDictionaryCreate(kCFAllocatorDefault,
-				     NULL,
-				     NULL,
+				     nullptr,
+				     nullptr,
 				     0,
 				     &kCFTypeDictionaryKeyCallBacks,
 				     &kCFTypeDictionaryValueCallBacks));
@@ -357,7 +357,7 @@ namespace openvpn {
       if (array.defined() && CFArrayGetCount(array()) > idx)
 	return CFArrayGetValueAtIndex(array(), idx);
       else
-	return NULL;
+	return nullptr;
     }
 
     template <typename DICT, typename KEY>
@@ -369,7 +369,7 @@ namespace openvpn {
 	  if (keystr.defined())
 	    return CFDictionaryGetValue(dict(), keystr());
 	}
-      return NULL;
+      return nullptr;
     }
 
     // string methods
@@ -455,7 +455,7 @@ namespace openvpn {
 					   obj,
 					   kCFPropertyListBinaryFormat_v1_0,
 					   0,
-					   NULL));
+					   nullptr));
     }
 
   } // namespace CF

@@ -46,7 +46,7 @@ namespace openvpn {
 		 const ActionList::Ptr& action_list,
 		 Notify* completion_handler_arg)
       : io_service(io_service_arg),
-	thread(NULL),
+	thread(nullptr),
 	actions(action_list),
 	completion_handler(completion_handler_arg)
     {
@@ -62,10 +62,10 @@ namespace openvpn {
 	    actions->halt();
 	  thread->join();
 	  delete thread;
-	  thread = NULL;
+	  thread = nullptr;
 	  // Necessary because no guarantee that completion_handler
 	  // obj will remain in scope during io_service.post delay.
-	  completion_handler = NULL;
+	  completion_handler = nullptr;
 	}
     }
 
@@ -78,7 +78,7 @@ namespace openvpn {
     void completion_post(bool status)
     {
       Notify* n = completion_handler;
-      completion_handler = NULL;
+      completion_handler = nullptr;
       if (n)
 	n->action_thread_finished(this, status);
     }

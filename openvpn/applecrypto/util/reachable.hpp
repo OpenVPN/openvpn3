@@ -387,7 +387,7 @@ namespace openvpn {
   private:
     bool schedule(ReachabilityBase& rb, SCNetworkReachabilityCallBack cb)
     {
-      SCNetworkReachabilityContext context = { 0, this, NULL, NULL, NULL };
+      SCNetworkReachabilityContext context = { 0, this, nullptr, nullptr, nullptr };
       if (rb.reach.defined())
 	{
 	  if (SCNetworkReachabilitySetCallback(rb.reach(),

@@ -43,10 +43,10 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<X509Cert> Ptr;
 
-      X509Cert() : chain(NULL) {}
+      X509Cert() : chain(nullptr) {}
 
       X509Cert(const std::string& cert_txt, const std::string& title, const bool strict)
-	: chain(NULL)
+	: chain(nullptr)
       {
 	try {
 	  parse(cert_txt, title, strict);
@@ -109,7 +109,7 @@ namespace openvpn {
 	  {
 	    x509_crt_free(chain);
 	    delete chain;
-	    chain = NULL;
+	    chain = nullptr;
 	  }
       }
 

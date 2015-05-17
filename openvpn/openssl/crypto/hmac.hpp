@@ -64,13 +64,13 @@ namespace openvpn {
 	erase();
 	HMAC_CTX_init (&ctx);
 #if SSLEAY_VERSION_NUMBER >= 0x10000000L
-	if (!HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), NULL))
+	if (!HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), nullptr))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Init_ex (init)");
 	  }
 #else
-	HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), NULL);
+	HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), nullptr);
 #endif
 	initialized = true;
       }
@@ -79,13 +79,13 @@ namespace openvpn {
       {
 	check_initialized();
 #if SSLEAY_VERSION_NUMBER >= 0x10000000L
-	if (!HMAC_Init_ex (&ctx, NULL, 0, NULL, NULL))
+	if (!HMAC_Init_ex (&ctx, nullptr, 0, nullptr, nullptr))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Init_ex (reset)");
 	  }
 #else
-	HMAC_Init_ex (&ctx, NULL, 0, NULL, NULL);
+	HMAC_Init_ex (&ctx, nullptr, 0, nullptr, nullptr);
 #endif
       }
 

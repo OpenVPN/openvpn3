@@ -189,7 +189,7 @@ namespace openvpn {
 	return netmask_from_prefix_len(SIZE - lb);
       }
 
-      static Addr from_string(const std::string& ipstr, const char *title = NULL)
+      static Addr from_string(const std::string& ipstr, const char *title = nullptr)
       {
 	boost::system::error_code ec;
 	boost::asio::ip::address_v4 a = boost::asio::ip::address_v4::from_string(ipstr, ec);

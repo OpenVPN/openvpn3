@@ -39,16 +39,16 @@ namespace openvpn {
     class PKey
     {
     public:
-      PKey() : pkey_(NULL) {}
+      PKey() : pkey_(nullptr) {}
 
       PKey(const std::string& pkey_txt, const std::string& title)
-	: pkey_(NULL)
+	: pkey_(nullptr)
       {
 	parse_pem(pkey_txt, title);
       }
 
       PKey(const PKey& other)
-	: pkey_(NULL)
+	: pkey_(nullptr)
       {
 	assign(other.pkey_);
       }
@@ -59,7 +59,7 @@ namespace openvpn {
 	priv_key_pwd = other.priv_key_pwd;
       }
 
-      bool defined() const { return pkey_ != NULL; }
+      bool defined() const { return pkey_ != nullptr; }
       EVP_PKEY* obj() const { return pkey_; }
 
       void set_private_key_password(const std::string& pwd)
@@ -73,7 +73,7 @@ namespace openvpn {
 	if (!bio)
 	  throw OpenSSLException();
 
-	EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, NULL, pem_password_callback, this);
+	EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, nullptr, pem_password_callback, this);
 	BIO_free(bio);
 	if (!pkey)
 	  throw OpenSSLException(std::string("PKey::parse_pem: error in ") + title + std::string(":"));
@@ -87,7 +87,7 @@ namespace openvpn {
 	if (pkey_)
 	  {
 	    BIO *bio = BIO_new(BIO_s_mem());
-	    const int ret = PEM_write_bio_PrivateKey(bio, pkey_, NULL, NULL, 0, NULL, NULL);
+	    const int ret = PEM_write_bio_PrivateKey(bio, pkey_, nullptr, nullptr, 0, nullptr, nullptr);
 	    if (ret == 0)
 	      {
 		BIO_free(bio);
@@ -111,7 +111,7 @@ namespace openvpn {
 	if (pkey_)
 	  {
 	    EVP_PKEY_free(pkey_);
-	    pkey_ = NULL;
+	    pkey_ = nullptr;
 	  }
       }
 
@@ -147,7 +147,7 @@ namespace openvpn {
 	    return pDupKey;
 	  }
 	else
-	  return NULL;
+	  return nullptr;
       }
 
       void assign(const EVP_PKEY *pkey)

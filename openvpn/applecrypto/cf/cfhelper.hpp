@@ -61,7 +61,7 @@ namespace openvpn {
 	    }
 	  return ret;
 	}
-      return NULL;
+      return nullptr;
     }
 
     // lookup a dict in another dict (base) and return or create if absent

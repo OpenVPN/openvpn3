@@ -43,10 +43,10 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<DH> Ptr;
 
-      DH() : dhc(NULL) {}
+      DH() : dhc(nullptr) {}
 
       DH(const std::string& dh_txt, const std::string& title)
-	: dhc(NULL)
+	: dhc(nullptr)
       {
 	try {
 	  parse(dh_txt, title);
@@ -102,7 +102,7 @@ namespace openvpn {
 	  {
 	    dhm_free(dhc);
 	    delete dhc;
-	    dhc = NULL;
+	    dhc = nullptr;
 	  }
       }
 

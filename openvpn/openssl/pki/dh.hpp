@@ -50,23 +50,23 @@ namespace openvpn {
 	if (dh)
 	  return DHparams_dup(const_cast< ::DH * >(dh));
 	else
-	  return NULL;
+	  return nullptr;
       }
     }
 
     class DH
     {
     public:
-      DH() : dh_(NULL) {}
+      DH() : dh_(nullptr) {}
 
       explicit DH(const std::string& dh_txt)
-	: dh_(NULL)
+	: dh_(nullptr)
       {
 	parse_pem(dh_txt);
       }
 
       DH(const DH& other)
-	: dh_(NULL)
+	: dh_(nullptr)
       {
 	assign(other.dh_);
       }
@@ -76,7 +76,7 @@ namespace openvpn {
 	assign(other.dh_);
       }
 
-      bool defined() const { return dh_ != NULL; }
+      bool defined() const { return dh_ != nullptr; }
       ::DH* obj() const { return dh_; }
 
       void parse_pem(const std::string& dh_txt)
@@ -85,7 +85,7 @@ namespace openvpn {
 	if (!bio)
 	  throw OpenSSLException();
 
-	::DH *dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+	::DH *dh = PEM_read_bio_DHparams(bio, nullptr, nullptr, nullptr);
 	BIO_free(bio);
 	if (!dh)
 	  throw OpenSSLException("DH::parse_pem");
@@ -123,7 +123,7 @@ namespace openvpn {
 	if (dh_)
 	  {
 	    DH_free(dh_);
-	    dh_ = NULL;
+	    dh_ = nullptr;
 	  }
       }
 

@@ -42,14 +42,14 @@ namespace openvpn {
     OPENVPN_EXCEPTION(user_group_err);
 
     explicit SetUserGroup(const std::string& user, const std::string& group)
-      : SetUserGroup(user.empty() ? NULL : user.c_str(),
-		     group.empty() ? NULL : group.c_str())
+      : SetUserGroup(user.empty() ? nullptr : user.c_str(),
+		     group.empty() ? nullptr : group.c_str())
     {
     }
 
     explicit SetUserGroup(const char *user, const char *group)
-      : pw(NULL),
-	gr(NULL)
+      : pw(nullptr),
+	gr(nullptr)
     {
       if (user)
 	{

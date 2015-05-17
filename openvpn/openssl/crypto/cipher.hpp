@@ -75,7 +75,7 @@ namespace openvpn {
 	  throw openssl_cipher_mode_error();
 	erase();
 	EVP_CIPHER_CTX_init (&ctx);
-	if (!EVP_CipherInit_ex (&ctx, cipher_type(alg), NULL, key, NULL, mode))
+	if (!EVP_CipherInit_ex (&ctx, cipher_type(alg), nullptr, key, nullptr, mode))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_cipher_error("EVP_CipherInit_ex (init)");
@@ -86,7 +86,7 @@ namespace openvpn {
       void reset(const unsigned char *iv)
       {
 	check_initialized();
-	if (!EVP_CipherInit_ex (&ctx, NULL, NULL, NULL, iv, -1))
+	if (!EVP_CipherInit_ex (&ctx, nullptr, nullptr, nullptr, iv, -1))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_cipher_error("EVP_CipherInit_ex (reset)");

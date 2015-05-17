@@ -43,10 +43,10 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<X509CRL> Ptr;
 
-      X509CRL() : chain(NULL) {}
+      X509CRL() : chain(nullptr) {}
 
       X509CRL(const std::string& crl_txt)
-	: chain(NULL)
+	: chain(nullptr)
       {
 	try {
 	  parse(crl_txt);
@@ -97,7 +97,7 @@ namespace openvpn {
 	  {
 	    x509_crl_free(chain);
 	    delete chain;
-	    chain = NULL;
+	    chain = nullptr;
 	  }
       }
 

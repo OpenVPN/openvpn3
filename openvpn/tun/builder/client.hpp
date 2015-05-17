@@ -108,7 +108,7 @@ namespace openvpn {
 
     private:
       ClientConfig()
-	: n_parallel(8), retain_sd(false), tun_prefix(false), builder(NULL) {}
+	: n_parallel(8), retain_sd(false), tun_prefix(false), builder(nullptr) {}
     };
 
     // The tun interface

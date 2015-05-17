@@ -302,7 +302,7 @@ namespace openvpn {
       if (tunnel_address_index_ipv4 >= 0)
 	return &tunnel_addresses[tunnel_address_index_ipv4];
       else
-	return NULL;
+	return nullptr;
     }
 
     const Route* vpn_ipv6() const
@@ -310,7 +310,7 @@ namespace openvpn {
       if (tunnel_address_index_ipv6 >= 0)
 	return &tunnel_addresses[tunnel_address_index_ipv6];
       else
-	return NULL;
+	return nullptr;
     }
 
     const Route* vpn_ip(const IP::Addr::Version v) const
@@ -322,7 +322,7 @@ namespace openvpn {
 	case IP::Addr::V6:
 	  return vpn_ipv6();
 	default:
-	  return NULL;
+	  return nullptr;
 	}
     }
 

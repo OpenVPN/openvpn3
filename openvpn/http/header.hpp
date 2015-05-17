@@ -61,7 +61,7 @@ namespace openvpn {
 	    if (string::strcasecmp(key, h.name) == 0)
 	      return &h;
 	  }
-	return NULL;
+	return nullptr;
       }
 
       const std::string get_value(const std::string& key) const

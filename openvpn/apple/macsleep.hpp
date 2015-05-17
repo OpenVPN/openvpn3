@@ -40,7 +40,7 @@ namespace openvpn {
   public:
     MacSleep()
       : root_port(0),
-	notifyPortRef(NULL),
+	notifyPortRef(nullptr),
 	notifierObject(0)
     {
     }
@@ -83,7 +83,7 @@ namespace openvpn {
 
 	  // reset object members
 	  root_port = 0;
-	  notifyPortRef = NULL;
+	  notifyPortRef = nullptr;
 	  notifierObject = 0;
 	}
     }

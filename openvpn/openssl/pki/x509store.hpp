@@ -44,7 +44,7 @@ namespace openvpn {
 
       typedef CertCRLListTemplate<X509List, CRLList> CertCRLList;
 
-      X509Store() : x509_store_(NULL) {}
+      X509Store() : x509_store_(nullptr) {}
 
       explicit X509Store(const CertCRLList& cc)
       {
@@ -78,7 +78,7 @@ namespace openvpn {
       X509_STORE* move()
       {
 	X509_STORE* ret = x509_store_;
-	x509_store_ = NULL;
+	x509_store_ = nullptr;
 	return ret;
       }
 

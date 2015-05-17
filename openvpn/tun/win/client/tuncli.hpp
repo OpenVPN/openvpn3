@@ -126,7 +126,7 @@ namespace openvpn {
 	    if (config->tun_persist)
 	      tun_persist = config->tun_persist; // long-term persistent
 	    else
-	      tun_persist.reset(new TunPersist(false, false, NULL)); // short-term
+	      tun_persist.reset(new TunPersist(false, false, nullptr)); // short-term
 
 	    try {
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
@@ -157,7 +157,7 @@ namespace openvpn {
 					     server_addr,
 					     config->tun_prop,
 					     opt,
-					     NULL,
+					     nullptr,
 					     false);
 		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string()); // fixme
 
@@ -292,8 +292,8 @@ namespace openvpn {
 	const Util::DefaultGateway gw;
 
 	// set local4 and local6 to point to IPv4/6 route configurations
-	const TunBuilderCapture::Route* local4 = NULL;
-	const TunBuilderCapture::Route* local6 = NULL;
+	const TunBuilderCapture::Route* local4 = nullptr;
+	const TunBuilderCapture::Route* local6 = nullptr;
 	if (pull.tunnel_address_index_ipv4 >= 0)
 	  local4 = &pull.tunnel_addresses[pull.tunnel_address_index_ipv4];
 	if (pull.tunnel_address_index_ipv6 >= 0)

@@ -81,7 +81,7 @@ namespace openvpn {
       if (the_instance)
 	{
 	  delete the_instance;
-	  the_instance = NULL;
+	  the_instance = nullptr;
 	}
     }
 

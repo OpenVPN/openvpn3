@@ -40,7 +40,7 @@ class MySessionStats : public SessionStats
 public:
   typedef boost::intrusive_ptr<MySessionStats> Ptr;
 
-  virtual void error(const size_t err_type, const std::string* text=NULL)
+  virtual void error(const size_t err_type, const std::string* text=nullptr)
   {
     if (text)
       OPENVPN_LOG("ERROR: " << Error::name(err_type) << ": " << *text);
@@ -168,7 +168,7 @@ void work(const char *config_fn, ServerThread::Ptr& serv)
   Time now;
 
   // parse options from server config file
-  OptionList opt = OptionList::parse_from_config_static(read_text(config_fn), NULL);
+  OptionList opt = OptionList::parse_from_config_static(read_text(config_fn), nullptr);
 
   // initialize the Asio io_service object (for worker thread)
   boost::asio::io_service io_service(1); // concurrency hint=1
@@ -275,7 +275,7 @@ void worker_thread(const char *config_fn, ServerThread::Ptr& serv, MyRunContext:
 int main(int argc, char* argv[])
 {
   int ret = 0;
-  boost::thread* thread = NULL;
+  boost::thread* thread = nullptr;
 
   // process-wide initialization
   InitProcess::init();

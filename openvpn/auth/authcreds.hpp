@@ -45,7 +45,7 @@ namespace openvpn {
 	: username(std::move(username_arg)),
 	  password(std::move(password_arg))
       {
-	peer_info.parse_from_peer_info(peer_info_str, NULL);
+	peer_info.parse_from_peer_info(peer_info_str, nullptr);
 	peer_info.update_map();
       }
 

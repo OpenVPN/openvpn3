@@ -94,7 +94,7 @@ namespace openvpn {
 
     MacDNSWatchdog()
       : macdns(new MacDNS("OpenVPNConnect")),
-	thread(NULL)
+	thread(nullptr)
     {
     }
 
@@ -176,7 +176,7 @@ namespace openvpn {
 	    CFRunLoopStop(runloop());
 	  thread->join();
 	  delete thread;
-	  thread = NULL;
+	  thread = nullptr;
 	}
     }
 
@@ -189,7 +189,7 @@ namespace openvpn {
       Log::Context logctx(logwrap);
 
       try {
-	SCDynamicStoreContext context = {0, this, NULL, NULL, NULL};
+	SCDynamicStoreContext context = {0, this, nullptr, nullptr, nullptr};
 	CF::DynamicStore ds(SCDynamicStoreCreate(kCFAllocatorDefault,
 						 CFSTR("OpenVPN_MacDNSWatchdog"),
 						 callback_static,
@@ -201,7 +201,7 @@ namespace openvpn {
 	  throw macdns_watchdog_error("watched_keys is undefined");
 	if (!SCDynamicStoreSetNotificationKeys(ds(),
 					       watched_keys(),
-					       NULL))
+					       nullptr))
 	  throw macdns_watchdog_error("SCDynamicStoreSetNotificationKeys failed");
 	CF::RunLoopSource rls(SCDynamicStoreCreateRunLoopSource(kCFAllocatorDefault, ds(), 0));
 	if (!rls.defined())
@@ -234,7 +234,7 @@ namespace openvpn {
     void schedule_push_timer(const int seconds)
     {
       std::lock_guard<std::mutex> lock(push_timer_lock);
-      CFRunLoopTimerContext context = { 0, this, NULL, NULL, NULL };
+      CFRunLoopTimerContext context = { 0, this, nullptr, nullptr, nullptr };
       cancel_push_timer_nolock();
       push_timer.reset(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + seconds, 0, 0, 0, push_timer_callback_static, &context));
       if (push_timer.defined())
@@ -248,7 +248,7 @@ namespace openvpn {
       if (push_timer.defined())
 	{
 	  CFRunLoopTimerInvalidate(push_timer());
-	  push_timer.reset(NULL);
+	  push_timer.reset(nullptr);
 	}
     }
 

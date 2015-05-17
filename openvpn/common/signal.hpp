@@ -82,7 +82,7 @@ namespace openvpn {
 
     static void sigact(struct sigaction& sa, const int sig)
     {
-      if (sigaction(sig, &sa, NULL) == -1)
+      if (sigaction(sig, &sa, nullptr) == -1)
 	throw signal_error();
     }
 

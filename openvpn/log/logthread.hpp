@@ -48,7 +48,7 @@
 
 # define OPENVPN_LOG(args) \
   do { \
-    if (openvpn::Log::global_log != NULL) { \
+    if (openvpn::Log::global_log != nullptr) { \
       std::ostringstream _ovpn_log; \
       _ovpn_log << args << '\n'; \
       (openvpn::Log::Context::obj()->log(OPENVPN_LOG_INFO(_ovpn_log.str()))); \
@@ -58,7 +58,7 @@
 // like OPENVPN_LOG but no trailing newline
 #define OPENVPN_LOG_NTNL(args) \
   do { \
-    if (openvpn::Log::global_log != NULL) { \
+    if (openvpn::Log::global_log != nullptr) { \
       std::ostringstream _ovpn_log; \
       _ovpn_log << args; \
       (openvpn::Log::Context::obj()->log(OPENVPN_LOG_INFO(_ovpn_log.str()))); \
@@ -97,7 +97,7 @@ namespace openvpn {
 
       ~Context()
       {
-	global_log = NULL;
+	global_log = nullptr;
       }
 
       static OPENVPN_LOG_CLASS* obj()

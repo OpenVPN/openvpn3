@@ -684,8 +684,8 @@ namespace openvpn {
 	MacGWInfo gw;
 
 	// set local4 and local6 to point to IPv4/6 route configurations
-	const TunBuilderCapture::Route* local4 = NULL;
-	const TunBuilderCapture::Route* local6 = NULL;
+	const TunBuilderCapture::Route* local4 = nullptr;
+	const TunBuilderCapture::Route* local6 = nullptr;
 	if (pull.tunnel_address_index_ipv4 >= 0)
 	  local4 = &pull.tunnel_addresses[pull.tunnel_address_index_ipv4];
 	if (pull.tunnel_address_index_ipv6 >= 0)

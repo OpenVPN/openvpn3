@@ -43,8 +43,8 @@ namespace openvpn {
     OPENVPN_EXCEPTION(mac_lifecycle_error);
 
     MacLifeCycle()
-      : nc(NULL),
-	thread(NULL),
+      : nc(nullptr),
+	thread(nullptr),
 	paused(false)
     {
     }
@@ -119,7 +119,7 @@ namespace openvpn {
 	    CFRunLoopStop(runloop());
 	  thread->join();
 	  delete thread;
-	  thread = NULL;
+	  thread = nullptr;
 	}
     }
 
@@ -131,8 +131,8 @@ namespace openvpn {
 	// set up dynamic store query object
 	dstore.reset(SCDynamicStoreCreate(kCFAllocatorDefault,
 					  CFSTR("OpenVPN_MacLifeCycle"),
-					  NULL,
-					  NULL));
+					  nullptr,
+					  nullptr));
 
 	// init state
 	state = State(net_up(), primary_interface(), false);
@@ -177,7 +177,7 @@ namespace openvpn {
 
     void iface_watch()
     {
-      SCDynamicStoreContext context = {0, this, NULL, NULL, NULL};
+      SCDynamicStoreContext context = {0, this, nullptr, nullptr, nullptr};
       CF::DynamicStore ds(SCDynamicStoreCreate(kCFAllocatorDefault,
 					       CFSTR("OpenVPN_MacLifeCycle_iface_watch"),
 					       iface_watch_callback_static,
@@ -191,7 +191,7 @@ namespace openvpn {
 	throw mac_lifecycle_error("watched_keys is undefined");
       if (!SCDynamicStoreSetNotificationKeys(ds(),
 					     watched_keys(),
-					     NULL))
+					     nullptr))
 	throw mac_lifecycle_error("SCDynamicStoreSetNotificationKeys failed");
       CF::RunLoopSource rls(SCDynamicStoreCreateRunLoopSource(kCFAllocatorDefault, ds(), 0));
       if (!rls.defined())
@@ -241,7 +241,7 @@ namespace openvpn {
       cancel_action_timer();
       if (seconds)
 	{
-	  CFRunLoopTimerContext context = { 0, this, NULL, NULL, NULL };
+	  CFRunLoopTimerContext context = { 0, this, nullptr, nullptr, nullptr };
 	  action_timer.reset(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + seconds, 0, 0, 0, action_timer_callback_static, &context));
 	  if (action_timer.defined())
 	    CFRunLoopAddTimer(CFRunLoopGetCurrent(), action_timer(), kCFRunLoopCommonModes);
@@ -249,7 +249,7 @@ namespace openvpn {
 	    OPENVPN_LOG("MacLifeCycle::schedule_action_timer: failed to create timer");
 	}
       else
-	action_timer_callback(NULL);
+	action_timer_callback(nullptr);
     }
 
     void cancel_action_timer()
@@ -257,7 +257,7 @@ namespace openvpn {
       if (action_timer.defined())
 	{
 	  CFRunLoopTimerInvalidate(action_timer());
-	  action_timer.reset(NULL);
+	  action_timer.reset(nullptr);
 	}
     }
 

@@ -262,8 +262,8 @@ namespace openvpn {
 		   sizeof(client.random1),
 		   server.random1,
 		   sizeof(server.random1),
-		   NULL,
-		   NULL,
+		   nullptr,
+		   nullptr,
 		   master,
 		   sizeof(master));
   

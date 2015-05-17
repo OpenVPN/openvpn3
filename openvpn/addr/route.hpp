@@ -51,7 +51,7 @@ namespace openvpn {
       {
       }
 
-      RouteType(const std::string& rtstr, const char *title = NULL)
+      RouteType(const std::string& rtstr, const char *title = nullptr)
 	: RouteType(RouteType::from_string(rtstr, title))
       {
       }
@@ -62,7 +62,7 @@ namespace openvpn {
       {
       }
 
-      static RouteType from_string(const std::string& rtstr, const char *title = NULL)
+      static RouteType from_string(const std::string& rtstr, const char *title = nullptr)
       {
 	RouteType r;
 	std::vector<std::string> pair;
@@ -82,7 +82,7 @@ namespace openvpn {
 
       static RouteType from_string_prefix(const std::string& addrstr,
 					  unsigned int prefix_len,
-					  const char *title = NULL)
+					  const char *title = nullptr)
       {
 	RouteType r;
 	r.addr = ADDR::from_string(addrstr, title);

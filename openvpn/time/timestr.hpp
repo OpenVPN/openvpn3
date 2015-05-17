@@ -76,7 +76,7 @@ namespace openvpn {
   inline std::string date_time()
   {
     struct timeval tv;
-    if (::gettimeofday(&tv, NULL) < 0)
+    if (::gettimeofday(&tv, nullptr) < 0)
       {
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
@@ -100,7 +100,7 @@ namespace openvpn {
 
   inline std::string date_time_rfc822()
   {
-    return date_time_rfc822(::time(NULL));
+    return date_time_rfc822(::time(nullptr));
   }
 }
 

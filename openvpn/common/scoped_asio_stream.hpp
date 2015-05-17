@@ -42,19 +42,19 @@ namespace openvpn {
     explicit ScopedAsioStream(STREAM *obj)
       : obj_(obj) {}
 
-    static STREAM* undefined() { return NULL; }
+    static STREAM* undefined() { return nullptr; }
 
     STREAM* release()
     {
       STREAM* ret = obj_;
-      obj_ = NULL;
+      obj_ = nullptr;
       //OPENVPN_LOG("**** SAS RELEASE=" << ret);
       return ret;
     }
 
     static bool defined_static(STREAM* obj)
     {
-      return obj != NULL;
+      return obj != nullptr;
     }
 
     bool defined() const
@@ -88,7 +88,7 @@ namespace openvpn {
 	{
 	  //OPENVPN_LOG("**** SAS CLOSE obj=" << obj_);
 	  delete obj_;
-	  obj_ = NULL;
+	  obj_ = nullptr;
 	}
       return true;
     }

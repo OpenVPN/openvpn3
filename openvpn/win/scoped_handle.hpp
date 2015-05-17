@@ -47,7 +47,7 @@ namespace openvpn {
       HANDLE release()
       {
 	const HANDLE ret = handle;
-	handle = NULL;
+	handle = nullptr;
 	return ret;
       }
 
@@ -84,7 +84,7 @@ namespace openvpn {
 	  {
 	    const BOOL ret = CloseHandle(handle);
 	    //OPENVPN_LOG("**** SH CLOSE hand=" << handle << " ret=" << ret);
-	    handle = NULL;
+	    handle = nullptr;
 	    return ret != 0;
 	  }
 	else

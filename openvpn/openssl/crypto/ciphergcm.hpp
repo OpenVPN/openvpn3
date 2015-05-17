@@ -81,14 +81,14 @@ namespace openvpn {
 	switch (mode)
 	  {
 	  case ENCRYPT:
-	    if (!EVP_EncryptInit_ex(&ctx, ciph, NULL, key, NULL))
+	    if (!EVP_EncryptInit_ex(&ctx, ciph, nullptr, key, nullptr))
 	      {
 		openssl_clear_error_stack();
 		throw openssl_gcm_error("EVP_EncryptInit_ex (init)");
 	      }
 	    break;
 	  case DECRYPT:
-	    if (!EVP_DecryptInit_ex(&ctx, ciph, NULL, key, NULL))
+	    if (!EVP_DecryptInit_ex(&ctx, ciph, nullptr, key, nullptr))
 	      {
 		openssl_clear_error_stack();
 		throw openssl_gcm_error("EVP_DecryptInit_ex (init)");
@@ -97,7 +97,7 @@ namespace openvpn {
 	  default:
 	    throw openssl_gcm_error("bad mode");
 	  }
-	if (EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LEN, NULL) != 1)
+	if (EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LEN, nullptr) != 1)
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl set IV len");
@@ -117,12 +117,12 @@ namespace openvpn {
 	int ciphertext_len;
 
 	check_initialized();
-	if (!EVP_EncryptInit_ex(&ctx, NULL, NULL, NULL, iv))
+	if (!EVP_EncryptInit_ex(&ctx, nullptr, nullptr, nullptr, iv))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_EncryptInit_ex (reset)");
 	  }
-	if (!EVP_EncryptUpdate(&ctx, NULL, &len, ad, int(ad_len)))
+	if (!EVP_EncryptUpdate(&ctx, nullptr, &len, ad, int(ad_len)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_EncryptUpdate AD");
@@ -162,12 +162,12 @@ namespace openvpn {
 	int plaintext_len;
 
 	check_initialized();
-	if (!EVP_DecryptInit_ex(&ctx, NULL, NULL, NULL, iv))
+	if (!EVP_DecryptInit_ex(&ctx, nullptr, nullptr, nullptr, iv))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_DecryptInit_ex (reset)");
 	  }
-	if (!EVP_DecryptUpdate(&ctx, NULL, &len, ad, int(ad_len)))
+	if (!EVP_DecryptUpdate(&ctx, nullptr, &len, ad, int(ad_len)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_DecryptUpdate AD");

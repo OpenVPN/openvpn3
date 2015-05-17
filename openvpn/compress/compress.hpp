@@ -340,7 +340,7 @@ namespace openvpn {
 	    "IV_COMP_STUBv2=1\n"
 	    ;
 	default:
-	  return NULL;
+	  return nullptr;
 	}
     }
 
@@ -397,7 +397,7 @@ namespace openvpn {
 	    "IV_COMP_STUB=1\n"
 	    ;
 	default:
-	  return NULL;
+	  return nullptr;
 	}
     }
 
@@ -417,7 +417,7 @@ namespace openvpn {
 	case ANY_LZO:
 	  return "comp-lzo";
 	default:
-	  return NULL;
+	  return nullptr;
 	}
     }
 

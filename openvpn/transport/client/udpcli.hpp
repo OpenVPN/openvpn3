@@ -63,7 +63,7 @@ namespace openvpn {
       ClientConfig()
 	: server_addr_float(false),
 	  n_parallel(8),
-	  socket_protect(NULL)
+	  socket_protect(nullptr)
       {}
     };
 
@@ -85,7 +85,7 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    if (config->remote_list->endpoint_available(&server_host, &server_port, NULL))
+	    if (config->remote_list->endpoint_available(&server_host, &server_port, nullptr))
 	      {
 		start_connect_();
 	      }
@@ -155,7 +155,7 @@ namespace openvpn {
       {
 	if (impl)
 	  {
-	    const int err = impl->send(buf, NULL);
+	    const int err = impl->send(buf, nullptr);
 	    if (unlikely(err))
 	      {
 		// While UDP errors are generally ignored, certain

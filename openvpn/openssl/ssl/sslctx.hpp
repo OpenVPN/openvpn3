@@ -85,7 +85,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<Config> Ptr;
 
-      Config() : external_pki(NULL),
+      Config() : external_pki(nullptr),
 		 ssl_debug_level(0),
 		 flags(0),
 		 ns_cert_type(NSCert::NONE),
@@ -139,7 +139,7 @@ namespace openvpn {
       {
 	load_cert(cert_txt);
 	if (!extra_certs_txt.empty())
-	  CertCRLList::from_string(extra_certs_txt, "extra-certs", &extra_certs, NULL);
+	  CertCRLList::from_string(extra_certs_txt, "extra-certs", &extra_certs, nullptr);
       }
 
       virtual void load_private_key(const std::string& key_txt)
@@ -394,7 +394,7 @@ namespace openvpn {
 
       static void init_static()
       {
-	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", NULL, NULL, NULL);
+	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
 
 	// We actually override some of the OpenSSL SSLv23 methods here,
 	// in particular the ssl_pending method.  We want ssl_pending
@@ -477,15 +477,15 @@ namespace openvpn {
 	os << SSL_get_version (c_ssl) << ", cipher " << SSL_CIPHER_get_version (ciph) << ' ' << SSL_CIPHER_get_name (ciph);
 
 	::X509 *cert = SSL_get_peer_certificate (c_ssl);
-	if (cert != NULL)
+	if (cert != nullptr)
 	  {
 	    EVP_PKEY *pkey = X509_get_pubkey (cert);
-	    if (pkey != NULL)
+	    if (pkey != nullptr)
 	      {
-		if (pkey->type == EVP_PKEY_RSA && pkey->pkey.rsa != NULL && pkey->pkey.rsa->n != NULL)
+		if (pkey->type == EVP_PKEY_RSA && pkey->pkey.rsa != nullptr && pkey->pkey.rsa->n != nullptr)
 		  os << ", " << BN_num_bits (pkey->pkey.rsa->n) << " bit RSA";
 #ifndef OPENSSL_NO_DSA
-		else if (pkey->type == EVP_PKEY_DSA && pkey->pkey.dsa != NULL && pkey->pkey.dsa->p != NULL)
+		else if (pkey->type == EVP_PKEY_DSA && pkey->pkey.dsa != nullptr && pkey->pkey.dsa->p != nullptr)
 		  os << ", " << BN_num_bits (pkey->pkey.dsa->p) << " bit DSA";
 #endif
 		EVP_PKEY_free (pkey);
@@ -498,10 +498,10 @@ namespace openvpn {
       void ssl_clear()
       {
 	ssl_bio_linkage = false;
-	ssl = NULL;
-	ssl_bio = NULL;
-	ct_in = NULL;
-	ct_out = NULL;
+	ssl = nullptr;
+	ssl_bio = nullptr;
+	ct_in = nullptr;
+	ct_out = nullptr;
 	overflow = false;
       }
 
@@ -567,9 +567,9 @@ namespace openvpn {
       ExternalPKIImpl(SSL_CTX* ssl_ctx, ::X509* cert, ExternalPKIBase* external_pki_arg)
 	: external_pki(external_pki_arg), n_errors(0)
       {
-	RSA *rsa = NULL;
-	RSA_METHOD *rsa_meth = NULL;
-	RSA *pub_rsa = NULL;
+	RSA *rsa = nullptr;
+	RSA_METHOD *rsa_meth = nullptr;
+	RSA *pub_rsa = nullptr;
 	const char *errtext = "";
 
 	/* allocate custom RSA method object */
@@ -580,14 +580,14 @@ namespace openvpn {
 	rsa_meth->rsa_pub_dec = rsa_pub_dec;
 	rsa_meth->rsa_priv_enc = rsa_priv_enc;
 	rsa_meth->rsa_priv_dec = rsa_priv_dec;
-	rsa_meth->init = NULL;
+	rsa_meth->init = nullptr;
 	rsa_meth->finish = rsa_finish;
 	rsa_meth->flags = RSA_METHOD_FLAG_NO_CHECK;
 	rsa_meth->app_data = (char *)this;
 
 	/* allocate RSA object */
 	rsa = RSA_new();
-	if (rsa == NULL)
+	if (rsa == nullptr)
 	  {
 	    SSLerr(SSL_F_SSL_USE_PRIVATEKEY, ERR_R_MALLOC_FAILURE);
 	    errtext = "RSA_new";
@@ -595,7 +595,7 @@ namespace openvpn {
 	  }
 
 	/* get the public key */
-	if (cert->cert_info->key->pkey == NULL) /* NULL before SSL_CTX_use_certificate() is called */
+	if (cert->cert_info->key->pkey == nullptr) /* nullptr before SSL_CTX_use_certificate() is called */
 	  {
 	    errtext = "pkey is NULL";
 	    goto err;
@@ -641,7 +641,7 @@ namespace openvpn {
       static int rsa_finish(RSA *rsa)
       {
 	free ((void*)rsa->meth);
-	rsa->meth = NULL;
+	rsa->meth = nullptr;
 	return 1;
       }
 
@@ -724,8 +724,8 @@ namespace openvpn {
 
     OpenSSLContext(Config* config_arg)
       : config(config_arg),
-	ctx(NULL),
-	epki(NULL)
+	ctx(nullptr),
+	epki(nullptr)
     {
       try
 	{
@@ -734,7 +734,7 @@ namespace openvpn {
 	  if (config->mode.is_server())
 	    {
 	      ctx = SSL_CTX_new(ssl23 ? SSL::ssl23_method_server() : TLSv1_server_method());
-	      if (ctx == NULL)
+	      if (ctx == nullptr)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
 
 	      // Set DH object
@@ -748,7 +748,7 @@ namespace openvpn {
 	  else if (config->mode.is_client())
 	    {
 	      ctx = SSL_CTX_new(ssl23 ? SSL::ssl23_method_client() : TLSv1_client_method());
-	      if (ctx == NULL)
+	      if (ctx == nullptr)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
 	      if (config->enable_renegotiation)
 		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT); // note: SSL_set_session must be called as well
@@ -859,7 +859,7 @@ namespace openvpn {
     // create a new SSL instance
     virtual SSLAPI::Ptr ssl()
     {
-      return SSL::Ptr(new SSL(*this, NULL));
+      return SSL::Ptr(new SSL(*this, nullptr));
     }
 
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
@@ -912,7 +912,7 @@ namespace openvpn {
     bool verify_x509_cert_ku(::X509 *cert) const
     {
       bool found = false;
-      ASN1_BIT_STRING *ku = (ASN1_BIT_STRING *)X509_get_ext_d2i(cert, NID_key_usage, NULL, NULL);
+      ASN1_BIT_STRING *ku = (ASN1_BIT_STRING *)X509_get_ext_d2i(cert, NID_key_usage, nullptr, nullptr);
 
       if (ku)
 	{
@@ -957,7 +957,7 @@ namespace openvpn {
     bool verify_x509_cert_eku(::X509 *cert) const
     {
       bool found = false;
-      EXTENDED_KEY_USAGE *eku = (EXTENDED_KEY_USAGE *)X509_get_ext_d2i(cert, NID_ext_key_usage, NULL, NULL);
+      EXTENDED_KEY_USAGE *eku = (EXTENDED_KEY_USAGE *)X509_get_ext_d2i(cert, NID_ext_key_usage, nullptr, nullptr);
 
       if (eku)
 	{
@@ -990,7 +990,7 @@ namespace openvpn {
 
     static std::string x509_get_subject(::X509 *cert)
     {
-      unique_ptr_del<char> subject(X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0),
+      unique_ptr_del<char> subject(X509_NAME_oneline(X509_get_subject_name(cert), nullptr, 0),
 				   [](char* p) { OPENSSL_free(p); });
       if (subject)
 	return std::string(subject.get());
@@ -1193,12 +1193,12 @@ namespace openvpn {
       if (epki)
 	{
 	  delete epki;
-	  epki = NULL;
+	  epki = nullptr;
 	}
       if (ctx)
 	{
 	  SSL_CTX_free(ctx);
-	  ctx = NULL;
+	  ctx = nullptr;
 	}
     }
 

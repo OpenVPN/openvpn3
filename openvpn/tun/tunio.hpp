@@ -44,7 +44,7 @@ namespace openvpn {
     TunIO(ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg)
-      : stream(NULL),
+      : stream(nullptr),
 	retain_stream(false),
 	tun_prefix(false),
 	halt(false),
@@ -82,14 +82,14 @@ namespace openvpn {
 			break;
 		      default:
 			OPENVPN_LOG_TUN_ERROR("TUN write error: cannot identify IP version for prefix");
-			tun_error(Error::TUN_FRAMING_ERROR, NULL);
+			tun_error(Error::TUN_FRAMING_ERROR, nullptr);
 			return false;
 		      }
 		  }
 		else
 		  {
 		    OPENVPN_LOG_TUN_ERROR("TUN write error: cannot write prefix");
-		    tun_error(Error::TUN_FRAMING_ERROR, NULL);
+		    tun_error(Error::TUN_FRAMING_ERROR, nullptr);
 		    return false;
 		  }
 	      }
@@ -106,7 +106,7 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-		tun_error(Error::TUN_WRITE_ERROR, NULL);
+		tun_error(Error::TUN_WRITE_ERROR, nullptr);
 		return false;
 	      }
 	  }
@@ -139,7 +139,7 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG_TUN_ERROR("TUN partial write error");
-		tun_error(Error::TUN_WRITE_ERROR, NULL);
+		tun_error(Error::TUN_WRITE_ERROR, nullptr);
 		return false;
 	      }
 	  }
@@ -159,7 +159,7 @@ namespace openvpn {
       if (!halt)
 	{
 	  for (int i = 0; i < n_parallel; i++)
-	    queue_read(NULL);
+	    queue_read(nullptr);
 	}
     }
 
@@ -235,7 +235,7 @@ namespace openvpn {
 	      else
 		{
 		  OPENVPN_LOG_TUN_ERROR("TUN Read Error: cannot read prefix");
-		  tun_error(Error::TUN_READ_ERROR, NULL);
+		  tun_error(Error::TUN_READ_ERROR, nullptr);
 		}
 	    }
 	  else

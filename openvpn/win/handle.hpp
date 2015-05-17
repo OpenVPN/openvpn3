@@ -36,7 +36,7 @@ namespace openvpn {
 
       inline bool defined(HANDLE handle)
       {
-	return handle != NULL && handle != INVALID_HANDLE_VALUE;
+	return handle != nullptr && handle != INVALID_HANDLE_VALUE;
       }
     }
   }

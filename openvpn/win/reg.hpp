@@ -37,8 +37,8 @@ namespace openvpn {
       RegKey& operator=(const RegKey&) = delete;
 
     public:
-      RegKey() : key(NULL) {}
-      bool defined() const { return key != NULL; }
+      RegKey() : key(nullptr) {}
+      bool defined() const { return key != nullptr; }
       HKEY* ref() { return &key; }
       HKEY operator()() { return key; }
 

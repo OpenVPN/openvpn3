@@ -199,7 +199,7 @@ namespace openvpn {
       if (index < data.size())
 	return &data[index];
       else
-	return NULL;
+	return nullptr;
     }
 
     std::string render(const unsigned int flags) const
@@ -875,7 +875,7 @@ namespace openvpn {
 	}
     }
 
-    // Get the last instance of an option, or return NULL if option
+    // Get the last instance of an option, or return nullptr if option
     // doesn't exist.
     const Option* get_ptr(const std::string& name) const
     {
@@ -890,10 +890,10 @@ namespace openvpn {
 	      return ret;
 	    }
 	}
-      return NULL;
+      return nullptr;
     }
 
-    // Get an option, return NULL if option doesn't exist, or
+    // Get an option, return nullptr if option doesn't exist, or
     // throw an error if more than one instance exists.
     const Option* get_unique_ptr(const std::string& name) const
     {
@@ -910,7 +910,7 @@ namespace openvpn {
 	    OPENVPN_THROW(option_error, "more than one instance of option '" << name << '\'');
 	}
       else
-	return NULL;
+	return nullptr;
     }
 
     // Get an option, throw an error if more than one instance exists and the instances
@@ -935,7 +935,7 @@ namespace openvpn {
 	  return first;
 	}
       else
-	return NULL;
+	return nullptr;
     }
 
     // Get option, throw error if not found
@@ -962,14 +962,14 @@ namespace openvpn {
     }
 
     // Get the list of options having the same name (by index),
-    // return NULL is option is not found.
+    // return nullptr is option is not found.
     const IndexList* get_index_ptr(const std::string& name) const
     {
       IndexMap::const_iterator e = map_.find(name);
       if (e != map_.end() && !e->second.empty())
 	return &e->second;
       else
-	return NULL;
+	return nullptr;
     }
 
     // Concatenate all one-arg directives of a given name, in index order.
@@ -1008,13 +1008,13 @@ namespace openvpn {
     // instances of the option exist.
     bool exists_unique(const std::string& name) const
     {
-      return get_unique_ptr(name) != NULL;
+      return get_unique_ptr(name) != nullptr;
     }
 
     // Return true if one or more instances of a given option exist.
     bool exists(const std::string& name) const
     {
-      return get_ptr(name) != NULL;
+      return get_ptr(name) != nullptr;
     }
 
     // Convenience method that gets a particular argument index within an option,

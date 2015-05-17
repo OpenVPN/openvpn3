@@ -134,7 +134,7 @@ namespace openvpn {
     public:
       typedef boost::intrusive_ptr<Config> Ptr;
 
-      Config() : external_pki(NULL),
+      Config() : external_pki(nullptr),
 		 ssl_debug_level(0),
 		 flags(0),
 		 ns_cert_type(NSCert::NONE),
@@ -559,7 +559,7 @@ namespace openvpn {
 	  if (c.ca_chain)
 	    ssl_set_ca_chain(ssl,
 			     c.ca_chain->get(),
-			     c.crl_chain ? c.crl_chain->get() : NULL,
+			     c.crl_chain ? c.crl_chain->get() : nullptr,
 			     hostname);
 	  else
 	    throw PolarSSLException("CA chain not defined");
@@ -664,7 +664,7 @@ namespace openvpn {
 
       void clear()
       {
-	ssl = NULL;
+	ssl = nullptr;
 	overflow = false;
       }
 
@@ -692,7 +692,7 @@ namespace openvpn {
     // create a new SSL instance
     virtual SSLAPI::Ptr ssl()
     {
-      return SSL::Ptr(new SSL(this, NULL));
+      return SSL::Ptr(new SSL(this, nullptr));
     }
 
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
@@ -778,7 +778,7 @@ namespace openvpn {
       if (cert->ext_types & EXT_EXTENDED_KEY_USAGE)
 	{
 	  x509_sequence *oid_seq = &cert->ext_key_usage;
-	  while (oid_seq != NULL)
+	  while (oid_seq != nullptr)
 	    {
 	      x509_buf *oid = &oid_seq->buf;
 
@@ -808,9 +808,9 @@ namespace openvpn {
     static std::string x509_get_subject(const x509_crt *cert)
     {
       std::string ret;
-      for (const x509_name *name = &cert->subject; name != NULL; name = name->next)
+      for (const x509_name *name = &cert->subject; name != nullptr; name = name->next)
 	{
-	  const char *key = NULL;
+	  const char *key = nullptr;
 	  if (OID_CMP(OID_AT_CN, &name->oid))
 	    key = "CN";
 	  else if (OID_CMP(OID_AT_COUNTRY, &name->oid))
@@ -838,7 +838,7 @@ namespace openvpn {
       const x509_name *name = &cert->subject;
 
       // find common name
-      while (name != NULL)
+      while (name != nullptr)
 	{
 	  if (OID_CMP(OID_AT_CN, &name->oid))
 	    break;
@@ -999,7 +999,7 @@ namespace openvpn {
       return 0;
     }
 
-    static std::string cert_info(const x509_crt *cert, const char *prefix = NULL)
+    static std::string cert_info(const x509_crt *cert, const char *prefix = nullptr)
     {
       const size_t buf_size = 4096;
       std::unique_ptr<char[]> buf(new char[buf_size]);
@@ -1040,7 +1040,7 @@ namespace openvpn {
 	if (mode == RSA_PRIVATE)
 	  {
 	    size_t digest_prefix_len = 0;
-	    const unsigned char *digest_prefix = NULL;
+	    const unsigned char *digest_prefix = nullptr;
 
 	    /* get signature type */
 	    switch (md_alg) {

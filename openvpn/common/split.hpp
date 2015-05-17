@@ -58,7 +58,7 @@ namespace openvpn {
     //               ~0 to disable.
     //   lim : an optional limits object such as OptionList::Limits
     template <typename V, typename LEX, typename LIM>
-    inline void by_char_void(V& ret, const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=NULL)
+    inline void by_char_void(V& ret, const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=nullptr)
     {
       LEX lex;
       unsigned int nterms = 0;
@@ -86,7 +86,7 @@ namespace openvpn {
 
     // convenience method that returns data rather than modifying an in-place argument
     template <typename V, typename LEX, typename LIM>
-    inline V by_char(const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=NULL)
+    inline V by_char(const std::string& input, const char split_by, const unsigned int flags=0, const unsigned int max_terms=~0, LIM* lim=nullptr)
     {
       V ret;
       by_char_void<V, LEX, LIM>(ret, input, split_by, flags, max_terms, lim);
@@ -104,7 +104,7 @@ namespace openvpn {
     //   input : input string to be split
     //   lim : an optional limits object such as OptionList::Limits
     template <typename V, typename LEX, typename SPACE, typename LIM>
-    inline void by_space_void(V& ret, const std::string& input, LIM* lim=NULL)
+    inline void by_space_void(V& ret, const std::string& input, LIM* lim=nullptr)
     {
       LEX lex;
 
@@ -144,7 +144,7 @@ namespace openvpn {
 
     // convenience method that returns data rather than modifying an in-place argument
     template <typename V, typename LEX, typename SPACE, typename LIM>
-    inline V by_space(const std::string& input, LIM* lim=NULL)
+    inline V by_space(const std::string& input, LIM* lim=nullptr)
     {
       V ret;
       by_space_void<V, LEX, SPACE, LIM>(ret, input, lim);

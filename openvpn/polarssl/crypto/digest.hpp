@@ -69,7 +69,7 @@ namespace openvpn {
       void init(const CryptoAlgs::Type alg)
       {
 	erase();
-	ctx.md_ctx = NULL;
+	ctx.md_ctx = nullptr;
 	if (md_init_ctx(&ctx, digest_type(alg)) < 0)
 	  throw polarssl_digest_error("md_init_ctx");
 	if (md_starts(&ctx) < 0)

@@ -63,7 +63,7 @@ namespace openvpn {
       };
 
       CipherContext()
-	: cinfo(NULL), cref(NULL)
+	: cinfo(nullptr), cref(nullptr)
       {
       }
 
@@ -83,7 +83,7 @@ namespace openvpn {
 						       kCCOptionPKCS7Padding,
 						       key,
 						       CryptoAlgs::key_length(alg),
-						       NULL,
+						       nullptr,
 						       &cref);
 	if (status != kCCSuccess)
 	  throw CFException("CipherContext: CCCryptorCreate", status);
@@ -129,7 +129,7 @@ namespace openvpn {
 	  return false;
       }
 
-      bool is_initialized() const { return cinfo != NULL; }
+      bool is_initialized() const { return cinfo != nullptr; }
 
       size_t iv_length() const
       {
@@ -178,8 +178,8 @@ namespace openvpn {
 	  {
 	    if (cref)
 	      CCCryptorRelease(cref);
-	    cref = NULL;
-	    cinfo = NULL;
+	    cref = nullptr;
+	    cinfo = nullptr;
 	  }
       }
 

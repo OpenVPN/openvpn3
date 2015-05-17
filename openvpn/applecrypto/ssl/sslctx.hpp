@@ -326,7 +326,7 @@ namespace openvpn {
 	    ssl = SSLCreateContext(kCFAllocatorDefault, kSSLClientSide, kSSLStreamType);
 	  else
 	    OPENVPN_THROW(ssl_context_error, "AppleSSLContext::SSL: unknown client/server mode");
-	  if (ssl == NULL)
+	  if (ssl == nullptr)
 	    throw CFException("SSLCreateContext failed");
 
 	  // use TLS v1
@@ -411,7 +411,7 @@ namespace openvpn {
 
       void ssl_clear()
       {
-	ssl = NULL;
+	ssl = nullptr;
 	overflow = false;
       }
 

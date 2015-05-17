@@ -75,7 +75,7 @@ namespace openvpn {
       cargv = new char *[argc+1];
       for (i = 0; i < argc; ++i)
 	cargv[i] = string_alloc(argv[i]);
-      cargv[i] = NULL;
+      cargv[i] = nullptr;
     }
 
     ~ArgvWrapper()

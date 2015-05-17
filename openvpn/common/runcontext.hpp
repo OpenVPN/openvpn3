@@ -97,7 +97,7 @@ namespace openvpn {
     void set_thread(const unsigned int unit, std::thread* thread)
     {
       while (threadlist.size() <= unit)
-	threadlist.push_back(NULL);
+	threadlist.push_back(nullptr);
       if (threadlist[unit])
 	throw Exception("RunContext::set_thread: overwrite");
       threadlist[unit] = thread;
@@ -110,7 +110,7 @@ namespace openvpn {
       if (halt)
 	throw Exception("RunContext::set_server: halting");
       while (servlist.size() <= unit)
-	servlist.push_back(NULL);
+	servlist.push_back(nullptr);
       if (servlist[unit])
 	throw Exception("RunContext::set_server: overwrite");
       servlist[unit] = serv;
@@ -121,7 +121,7 @@ namespace openvpn {
     {
       std::lock_guard<std::mutex> lock(mutex);
       if (unit < servlist.size())
-	servlist[unit] = NULL;
+	servlist[unit] = nullptr;
     }
 
     void run()
@@ -139,7 +139,7 @@ namespace openvpn {
 	    {
 	      t->join();
 	      delete t;
-	      threadlist[i] = NULL;
+	      threadlist[i] = nullptr;
 	    }
 	}
     }
@@ -204,7 +204,7 @@ namespace openvpn {
 		  serv->thread_safe_stop();
 		  ++stopped;
 		}
-	      servlist[i] = NULL;
+	      servlist[i] = nullptr;
 	    }
 	  OPENVPN_LOG("Stopping " << stopped << '/' << servlist.size() << " thread(s)");
 	}

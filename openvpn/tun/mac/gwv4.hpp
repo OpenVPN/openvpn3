@@ -85,7 +85,7 @@ namespace openvpn {
       int seq, l, pid, rtm_addrs, i;
       struct sockaddr so_dst, so_mask;
       char *cp = m_rtmsg.m_space; 
-      struct sockaddr *gate = NULL, *ifp = NULL, *sa;
+      struct sockaddr *gate = nullptr, *ifp = nullptr, *sa;
       struct rt_msghdr *rtm_aux;
 
       /* setup data to send to routing socket */
@@ -147,7 +147,7 @@ namespace openvpn {
 	return;
 
       /* get gateway addr and interface name */
-      if (gate != NULL )
+      if (gate != nullptr )
 	{
 	  /* get default gateway addr */
 	  gateway_.addr.reset_ipv4_from_uint32(ntohl(((struct sockaddr_in *)gate)->sin_addr.s_addr));

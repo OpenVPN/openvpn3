@@ -56,7 +56,7 @@ namespace openvpn {
 	V6_SIZE = IPv6::Addr::SIZE,
       };
 
-      Addr(const Addr& other, const char *title = NULL, Version required_version = UNSPEC)
+      Addr(const Addr& other, const char *title = nullptr, Version required_version = UNSPEC)
 	: ver(other.ver)
       {
 	if (required_version != UNSPEC && required_version != ver)
@@ -74,12 +74,12 @@ namespace openvpn {
 	  }
       }
 
-      Addr(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
+      Addr(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
 	: Addr(from_string(ipstr, title, required_version))
       {
       }
 
-      static std::string validate(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
+      static std::string validate(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
       {
 	Addr a = from_string(ipstr, title, required_version);
 	return a.to_string();
@@ -106,7 +106,7 @@ namespace openvpn {
 	}
       }
 
-      static Addr from_string(const std::string& ipstr, const char *title = NULL, Version required_version = UNSPEC)
+      static Addr from_string(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
       {
 	boost::system::error_code ec;
 	boost::asio::ip::address a = boost::asio::ip::address::from_string(ipstr, ec);

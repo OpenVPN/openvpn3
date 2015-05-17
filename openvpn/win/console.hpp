@@ -43,7 +43,7 @@ namespace openvpn {
 	    console_mode_save(0)
 	{
 	  // disable control-C
-	  SetConsoleCtrlHandler(NULL, TRUE);
+	  SetConsoleCtrlHandler(nullptr, TRUE);
 
 	  HANDLE in = GetStdHandle(STD_INPUT_HANDLE);
 	  DWORD mode = 0;
