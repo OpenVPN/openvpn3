@@ -723,7 +723,7 @@ namespace openvpn {
 	{
 	  if (parent)
 	    {
-	      parent = NULL;
+	      parent = nullptr;
 	      stop();
 	    }
 	}
