@@ -31,7 +31,7 @@
 
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, to_upper_copy
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>

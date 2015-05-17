@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
 

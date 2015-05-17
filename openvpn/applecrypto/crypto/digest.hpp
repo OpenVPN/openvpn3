@@ -30,7 +30,7 @@
 #include <CommonCrypto/CommonDigest.h>
 #include <CommonCrypto/CommonHMAC.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>

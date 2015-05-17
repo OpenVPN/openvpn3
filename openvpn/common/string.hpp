@@ -30,7 +30,7 @@
 #include <string>
 #include <cstring>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
   namespace string {

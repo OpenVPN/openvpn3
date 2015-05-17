@@ -23,7 +23,7 @@
 #define OPENVPN_COMMON_MEMNEQ_H
 
 #include <openvpn/common/arch.hpp>
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 // Does this architecture allow efficient unaligned access?
 

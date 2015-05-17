@@ -28,7 +28,7 @@
 #include <algorithm>         // for std::min
 #include <memory>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/unicode-impl.hpp>
 #include <openvpn/buffer/buffer.hpp>

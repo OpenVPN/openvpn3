@@ -27,7 +27,7 @@
 #include <thread>
 #include <mutex>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/compress/compress.hpp>

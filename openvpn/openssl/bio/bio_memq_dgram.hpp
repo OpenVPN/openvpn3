@@ -30,7 +30,7 @@
 #include <openssl/err.h>
 #include <openssl/bio.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_dgram.hpp>

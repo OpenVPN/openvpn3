@@ -26,7 +26,7 @@
 
 #include <cstring>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/memneq.hpp>
 #include <openvpn/buffer/buffer.hpp>

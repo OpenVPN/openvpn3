@@ -40,7 +40,7 @@
 #include <Security/SecureTransport.h>
 #include <Security/SecKey.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/buffer/buffer.hpp>

@@ -32,7 +32,7 @@
 
 #include <string>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/action.hpp>
 
 extern char **environ;

@@ -30,7 +30,7 @@
 
 #include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/process.hpp>

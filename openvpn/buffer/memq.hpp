@@ -26,7 +26,7 @@
 
 #include <deque>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {

@@ -22,7 +22,7 @@
 #ifndef OPENVPN_COMMON_PLATFORM_NAME_H
 #define OPENVPN_COMMON_PLATFORM_NAME_H
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/platform.hpp>
 
 namespace openvpn {

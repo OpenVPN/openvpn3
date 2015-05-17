@@ -30,7 +30,7 @@
 
 #include <boost/asio.hpp>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/circ_list.hpp>
 #include <openvpn/common/socktypes.hpp>

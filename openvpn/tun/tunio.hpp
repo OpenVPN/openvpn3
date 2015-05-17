@@ -26,7 +26,7 @@
 
 #include <boost/asio.hpp>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/frame/frame.hpp>

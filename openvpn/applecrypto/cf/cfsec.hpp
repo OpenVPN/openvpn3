@@ -34,7 +34,7 @@
 #include <Security/SecAccess.h>
 #endif
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/applecrypto/cf/cf.hpp>
 

@@ -25,7 +25,7 @@
 #include <utility> // for std::move
 #include <string>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>

@@ -26,7 +26,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
 

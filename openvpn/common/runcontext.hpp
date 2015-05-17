@@ -36,7 +36,7 @@
 #include <mutex>
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/asiosignal.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/signal.hpp>

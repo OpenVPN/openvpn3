@@ -28,7 +28,7 @@
 #include <sstream>
 #include <deque>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/transport/protocol.hpp>

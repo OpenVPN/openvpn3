@@ -26,7 +26,7 @@
 
 #include <boost/unordered_map.hpp>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ip.hpp>

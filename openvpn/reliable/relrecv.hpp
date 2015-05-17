@@ -24,7 +24,7 @@
 #ifndef OPENVPN_RELIABLE_RELRECV_H
 #define OPENVPN_RELIABLE_RELRECV_H
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/msgwin.hpp>
 #include <openvpn/reliable/relcommon.hpp>

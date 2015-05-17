@@ -28,7 +28,7 @@
 #include <sstream>
 #include <memory>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/scoped_asio_stream.hpp>
 #include <openvpn/tun/client/tunbase.hpp>

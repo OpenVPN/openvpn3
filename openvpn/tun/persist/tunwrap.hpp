@@ -22,7 +22,7 @@
 #ifndef OPENVPN_TUN_PERSIST_TUNWRAP_H
 #define OPENVPN_TUN_PERSIST_TUNWRAP_H
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/destruct.hpp>
 
 namespace openvpn {

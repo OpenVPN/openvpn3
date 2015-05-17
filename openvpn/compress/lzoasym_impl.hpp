@@ -32,7 +32,7 @@
 
 #include <cstdint> // for std::uint32_t, etc.
 
-#include <openvpn/common/types.hpp>  // for ssize_t
+#include <openvpn/common/size.hpp>  // for ssize_t
 #include <openvpn/common/likely.hpp> // for likely/unlikely
 
 // Implementation of asymmetrical LZO compression (only uncompress, don't compress)

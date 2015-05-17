@@ -30,7 +30,7 @@
 #include <vector>
 
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/client/rgopt.hpp>
 #include <openvpn/addr/ip.hpp>

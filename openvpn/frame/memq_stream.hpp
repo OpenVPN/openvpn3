@@ -27,7 +27,7 @@
 
 #include <algorithm>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/memq.hpp>
 #include <openvpn/frame/frame.hpp>

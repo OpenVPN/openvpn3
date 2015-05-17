@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/lex.hpp>
 
 namespace openvpn {

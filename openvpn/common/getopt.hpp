@@ -35,7 +35,7 @@
 #define OPENVPN_COMMON_GETOPT_H
 
 #include <openvpn/common/platform.hpp>
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
 #if !defined(OPENVPN_PLATFORM_WIN)

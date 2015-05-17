@@ -31,7 +31,7 @@
 
 #include <boost/asio/detail/tss_ptr.hpp>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 // Define these parameters before including this header:
 

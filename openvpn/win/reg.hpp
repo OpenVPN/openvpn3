@@ -25,7 +25,7 @@
 #define OPENVPN_WIN_REG_H
 
 #include <windows.h>
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
   namespace Win {

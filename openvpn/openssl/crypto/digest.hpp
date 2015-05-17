@@ -34,7 +34,7 @@
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/openssl/util/error.hpp>

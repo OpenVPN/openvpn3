@@ -21,8 +21,8 @@
 
 // define very basic types such as size_t, ssize_t
 
-#ifndef OPENVPN_COMMON_TYPES_H
-#define OPENVPN_COMMON_TYPES_H
+#ifndef OPENVPN_COMMON_SIZE_H
+#define OPENVPN_COMMON_SIZE_H
 
 #include <cstddef> // defines std::size_t
 
@@ -35,4 +35,4 @@ typedef SSIZE_T ssize_t;
 #include <unistd.h> // get ssize_t
 #endif
 
-#endif // OPENVPN_COMMON_TYPES_H
+#endif

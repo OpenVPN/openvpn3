@@ -25,7 +25,7 @@
 #include <string>
 #include <sstream>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
 #include <openvpn/addr/ip.hpp>

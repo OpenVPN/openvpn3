@@ -29,7 +29,7 @@
 #include <IOKit/pwr_mgt/IOPMLib.h>
 #include <IOKit/IOMessage.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
   class MacSleep

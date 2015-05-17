@@ -24,7 +24,7 @@
 #ifndef OPENVPN_FRAME_MEMQ_DGRAM_H
 #define OPENVPN_FRAME_MEMQ_DGRAM_H
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/memq.hpp>
 #include <openvpn/frame/frame.hpp>

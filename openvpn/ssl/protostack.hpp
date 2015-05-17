@@ -25,7 +25,7 @@
 #include <deque>
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/usecount.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/time/time.hpp>

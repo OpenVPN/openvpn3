@@ -27,7 +27,7 @@
 #include <string>
 #include <limits>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {

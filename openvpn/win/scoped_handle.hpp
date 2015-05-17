@@ -26,7 +26,7 @@
 
 #include <windows.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/win/handle.hpp>
 
 namespace openvpn {

@@ -26,7 +26,7 @@
 #include <sstream>
 #include <vector>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/split.hpp>

@@ -32,7 +32,7 @@
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/mode.hpp>
 #include <openvpn/common/options.hpp>

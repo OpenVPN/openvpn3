@@ -29,7 +29,7 @@
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/likely.hpp>
 #include <openvpn/crypto/static_key.hpp>

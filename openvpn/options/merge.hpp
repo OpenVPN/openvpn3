@@ -31,7 +31,7 @@
 #include <sstream>
 #include <vector>
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>

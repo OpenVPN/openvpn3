@@ -24,7 +24,7 @@
 #ifndef OPENVPN_COMMON_SCOPED_ASIO_STREAM_H
 #define OPENVPN_COMMON_SCOPED_ASIO_STREAM_H
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
 
