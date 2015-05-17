@@ -7,7 +7,7 @@
 #ifndef OPENVPN_WS_CHUNKED_H
 #define OPENVPN_WS_CHUNKED_H
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
