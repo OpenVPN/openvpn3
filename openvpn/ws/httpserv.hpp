@@ -8,9 +8,9 @@
 #include <cstdint>
 #include <unordered_map>
 #include <utility> // for std::move
+#include <memory>
 
 #include <openvpn/common/options.hpp>
-#include <openvpn/common/scoped_ptr.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/timestr.hpp>
@@ -167,7 +167,7 @@ namespace openvpn {
 
 	    boost::asio::io_service& io_service;
 	    Listener* parent;
-	    ScopedPtr<boost::asio::ip::tcp::socket> socket;
+	    std::unique_ptr<boost::asio::ip::tcp::socket> socket;
 	    const client_t client_id;
 	  };
 
@@ -257,7 +257,7 @@ namespace openvpn {
 	  std::string remote_endpoint_str()
 	  {
 	    try {
-	      if (sock.defined())
+	      if (sock)
 		return to_string(sock->remote_endpoint());
 	    }
 	    catch (const std::exception& e)
@@ -267,7 +267,7 @@ namespace openvpn {
 	  }
 
 	  boost::asio::io_service& io_service;
-	  ScopedPtr<boost::asio::ip::tcp::socket> sock;
+	  std::unique_ptr<boost::asio::ip::tcp::socket> sock;
 	  Time::Duration timeout_duration;
 
 	private:
@@ -582,7 +582,7 @@ namespace openvpn {
 	void handle_accept(boost::asio::ip::tcp::socket* socket,
 			   const boost::system::error_code& error)
 	{
-	  ScopedPtr<boost::asio::ip::tcp::socket> sock(socket);
+	  std::unique_ptr<boost::asio::ip::tcp::socket> sock(socket);
 	  if (halt)
 	      return;
 
