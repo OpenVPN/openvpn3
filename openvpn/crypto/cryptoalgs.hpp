@@ -30,6 +30,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/likely.hpp>
+#include <openvpn/common/arraysize.hpp>
 
 namespace openvpn {
   namespace CryptoAlgs {

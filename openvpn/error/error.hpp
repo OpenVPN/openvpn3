@@ -24,7 +24,7 @@
 #ifndef OPENVPN_ERROR_ERROR_H
 #define OPENVPN_ERROR_ERROR_H
 
-#include <openvpn/common/types.hpp>
+#include <openvpn/common/arraysize.hpp>
 
 namespace openvpn {
   namespace Error {
