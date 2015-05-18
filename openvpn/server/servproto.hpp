@@ -542,10 +542,16 @@ namespace openvpn {
 
       void invalidation_error(const Error::Type err)
       {
-	if (err != Error::KEV_NEGOTIATE_ERROR)
-	  error(std::string("Session invalidated: ") + Error::name(err));
-	else
-	  error();
+	switch (err)
+	  {
+	  case Error::KEV_NEGOTIATE_ERROR:
+	  case Error::KEEPALIVE_TIMEOUT:
+	    error();
+	    break;
+	  default:
+	    error(std::string("Session invalidated: ") + Error::name(err));
+	    break;
+	  }
       }
 
       boost::asio::io_service& io_service;
