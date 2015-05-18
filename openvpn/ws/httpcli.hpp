@@ -95,7 +95,7 @@ namespace openvpn {
 
       struct Config : public RC<thread_unsafe_refcount>
       {
-	typedef boost::intrusive_ptr<Config> Ptr;
+	typedef RCPtr<Config> Ptr;
 
 	Config() : connect_timeout(0),
 		   general_timeout(0),
@@ -176,7 +176,7 @@ namespace openvpn {
 				    boost::asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
 
       public:
-	typedef boost::intrusive_ptr<HTTPCore> Ptr;
+	typedef RCPtr<HTTPCore> Ptr;
 
 	HTTPCore(boost::asio::io_service& io_service_arg,
 	     const Config::Ptr& config_arg)
@@ -648,7 +648,7 @@ namespace openvpn {
       public:
 	OPENVPN_EXCEPTION(http_delegate_error);
 
-	typedef boost::intrusive_ptr<HTTPDelegate> Ptr;
+	typedef RCPtr<HTTPDelegate> Ptr;
 
 	HTTPDelegate(boost::asio::io_service& io_service,
 		     const WS::Client::Config::Ptr& config,
