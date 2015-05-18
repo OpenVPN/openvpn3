@@ -11,7 +11,7 @@ using namespace openvpn;
 class Test : public RC<thread_safe_refcount>
 {
 public:
-  typedef boost::intrusive_ptr<Test> Ptr;
+  typedef RCPtr<Test> Ptr;
 
   Test()
   {
