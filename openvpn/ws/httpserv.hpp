@@ -84,7 +84,7 @@ namespace openvpn {
 
       struct Config : public RC<thread_unsafe_refcount>
       {
-	typedef boost::intrusive_ptr<Config> Ptr;
+	typedef RCPtr<Config> Ptr;
 
 	Config()
 	  : tcp_max(0),
@@ -148,7 +148,7 @@ namespace openvpn {
 	  friend LinkImpl; // calls tcp_* handlers
 
 	public:
-	  typedef boost::intrusive_ptr<Client> Ptr;
+	  typedef RCPtr<Client> Ptr;
 
 	  class Initializer
 	  {
@@ -174,7 +174,7 @@ namespace openvpn {
 
 	  struct Factory : public RC<thread_unsafe_refcount>
 	  {
-	    typedef boost::intrusive_ptr<Factory> Ptr;
+	    typedef RCPtr<Factory> Ptr;
 
 	    virtual Client::Ptr new_client(Initializer& ci) = 0;
 	  };
@@ -504,7 +504,7 @@ namespace openvpn {
 	};
 
       public:
-	typedef boost::intrusive_ptr<Listener> Ptr;
+	typedef RCPtr<Listener> Ptr;
 
 	Listener(boost::asio::io_service& io_service_arg,
 		 const Config::Ptr& config_arg,
