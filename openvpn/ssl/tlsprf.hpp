@@ -301,7 +301,7 @@ namespace openvpn {
   class TLSPRFInstance : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<TLSPRFInstance> Ptr;
+    typedef RCPtr<TLSPRFInstance> Ptr;
 
     virtual void self_randomize(RandomAPI& rng) = 0;
     virtual void self_write(Buffer& buf) = 0;
@@ -316,7 +316,7 @@ namespace openvpn {
   class TLSPRFFactory : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<TLSPRFFactory> Ptr;
+    typedef RCPtr<TLSPRFFactory> Ptr;
 
     virtual TLSPRFInstance::Ptr new_obj(const bool self_is_server) = 0;
   };

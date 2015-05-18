@@ -34,7 +34,7 @@ namespace openvpn {
     class ClientConfig : public TunClientFactory
     {
     public:
-      typedef boost::intrusive_ptr<ClientConfig> Ptr;
+      typedef RCPtr<ClientConfig> Ptr;
 
       std::string name;
       bool ipv6;

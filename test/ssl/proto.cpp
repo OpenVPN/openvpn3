@@ -691,7 +691,7 @@ private:
 class MySessionStats : public SessionStats
 {
 public:
-  typedef boost::intrusive_ptr<MySessionStats> Ptr;
+  typedef RCPtr<MySessionStats> Ptr;
 
   MySessionStats()
   {

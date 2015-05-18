@@ -30,7 +30,7 @@ namespace openvpn {
   class TransportMutateStream : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<TransportMutateStream> Ptr;
+    typedef RCPtr<TransportMutateStream> Ptr;
 
     virtual void pre_send(BufferAllocated& buf) = 0;
     virtual void post_recv(BufferAllocated& buf) = 0;

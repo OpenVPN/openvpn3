@@ -38,7 +38,7 @@ namespace openvpn {
   class CryptoDCSelect : public CryptoDCFactory
   {
   public:
-    typedef boost::intrusive_ptr<CryptoDCSelect> Ptr;
+    typedef RCPtr<CryptoDCSelect> Ptr;
 
     CryptoDCSelect(const Frame::Ptr& frame_arg,
 		   const SessionStats::Ptr& stats_arg,

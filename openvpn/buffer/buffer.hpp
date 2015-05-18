@@ -751,7 +751,7 @@ namespace openvpn {
   typedef BufferType<unsigned char> Buffer;
   typedef BufferType<const unsigned char> ConstBuffer;
   typedef BufferAllocatedType<unsigned char> BufferAllocated;
-  typedef boost::intrusive_ptr<BufferAllocated> BufferPtr;
+  typedef RCPtr<BufferAllocated> BufferPtr;
 
   template <typename T>
   inline BufferType<const T>& const_buffer_ref(BufferType<T>& src)

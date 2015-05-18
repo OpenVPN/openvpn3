@@ -31,7 +31,7 @@ namespace openvpn {
   class LogBaseSimple : public LogBase
   {
   public:
-    typedef boost::intrusive_ptr<LogBaseSimple> Ptr;
+    typedef RCPtr<LogBaseSimple> Ptr;
 
     LogBaseSimple()
       : log_context(this)

@@ -63,7 +63,7 @@ namespace openvpn {
       typedef TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor> Base;
 
     public:
-      typedef boost::intrusive_ptr<Tun> Ptr;
+      typedef RCPtr<Tun> Ptr;
 
       Tun(boost::asio::io_service& io_service,
 	  ReadHandler read_handler_arg,

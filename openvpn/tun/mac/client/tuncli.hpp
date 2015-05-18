@@ -186,7 +186,7 @@ namespace openvpn {
       typedef TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunWrap>  > Base;
 
     public:
-      typedef boost::intrusive_ptr<Tun> Ptr;
+      typedef RCPtr<Tun> Ptr;
 
       Tun(const typename TunWrap::Ptr& tun_wrap,
 	  const std::string& name,
@@ -214,7 +214,7 @@ namespace openvpn {
     class FailsafeBlock : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<FailsafeBlock> Ptr;
+      typedef RCPtr<FailsafeBlock> Ptr;
 
       FailsafeBlock()
 	: halt(false),
@@ -438,7 +438,7 @@ namespace openvpn {
       friend class Client; // accesses fsblock
 
     public:
-      typedef boost::intrusive_ptr<ClientConfig> Ptr;
+      typedef RCPtr<ClientConfig> Ptr;
 
       Layer layer;               // OSI layer
 

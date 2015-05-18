@@ -35,7 +35,7 @@ namespace openvpn {
   class TunPersistTemplate : public TunWrapTemplate<SCOPED_OBJ>
   {
   public:
-    typedef boost::intrusive_ptr<TunPersistTemplate> Ptr;
+    typedef RCPtr<TunPersistTemplate> Ptr;
 
     TunPersistTemplate(const bool enable_persistence, const bool retain_obj, TunBuilderBase* tb)
       : TunWrapTemplate<SCOPED_OBJ>(retain_obj),

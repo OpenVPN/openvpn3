@@ -232,7 +232,7 @@ namespace openvpn {
     class Config : public RCCopyable<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<Config> Ptr;
+      typedef RCPtr<Config> Ptr;
 
       Config()
       {
@@ -1106,7 +1106,7 @@ namespace openvpn {
       };
 
     public:
-      typedef boost::intrusive_ptr<KeyContext> Ptr;
+      typedef RCPtr<KeyContext> Ptr;
 
       // timeline of events for KeyContext (occurring in order)
       enum EventType {
@@ -2111,7 +2111,7 @@ namespace openvpn {
     class TLSAuthPreValidate : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<TLSAuthPreValidate> Ptr;
+      typedef RCPtr<TLSAuthPreValidate> Ptr;
 
       OPENVPN_SIMPLE_EXCEPTION(tls_auth_pre_validate);
 

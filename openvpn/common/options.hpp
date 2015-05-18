@@ -310,7 +310,7 @@ namespace openvpn {
   class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<OptionList> Ptr;
+    typedef RCPtr<OptionList> Ptr;
     typedef std::vector<unsigned int> IndexList;
     typedef std::unordered_map<std::string, IndexList> IndexMap;
     typedef std::pair<std::string, IndexList> IndexPair;
@@ -454,14 +454,14 @@ namespace openvpn {
     // Used by extend() to optionally control which options are copied.
     struct FilterBase : public RC<thread_unsafe_refcount>
     {
-      typedef boost::intrusive_ptr<FilterBase> Ptr;
+      typedef RCPtr<FilterBase> Ptr;
       virtual bool filter(const Option& opt) = 0;
     };
 
     class KeyValue : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<KeyValue> Ptr;
+      typedef RCPtr<KeyValue> Ptr;
 
       KeyValue() : key_priority(0) {}
       KeyValue(const std::string& key_arg, const std::string& value_arg, const int key_priority_arg=0)

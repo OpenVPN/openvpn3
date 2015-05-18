@@ -36,7 +36,7 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(rand_error_openssl);
 
-    typedef boost::intrusive_ptr<OpenSSLRandom> Ptr;
+    typedef RCPtr<OpenSSLRandom> Ptr;
 
     OpenSSLRandom(const bool prng)
     {

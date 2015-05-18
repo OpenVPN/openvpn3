@@ -135,7 +135,7 @@ namespace openvpn {
 
   struct Command : public Action
   {
-    typedef boost::intrusive_ptr<Command> Ptr;
+    typedef RCPtr<Command> Ptr;
 
     Command* copy() const
     {

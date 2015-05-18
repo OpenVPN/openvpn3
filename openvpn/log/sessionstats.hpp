@@ -37,7 +37,7 @@ namespace openvpn {
   class SessionStats : public RC<thread_safe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<SessionStats> Ptr;
+    typedef RCPtr<SessionStats> Ptr;
 
     enum Stats {
       // operating stats

@@ -31,7 +31,7 @@
 namespace openvpn {
   struct EmulateExcludeRoute : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<EmulateExcludeRoute> Ptr;
+    typedef RCPtr<EmulateExcludeRoute> Ptr;
 
     virtual void add_route(const bool add, const IP::Addr& addr, const int prefix_len) = 0;
     virtual bool enabled(const IPVerFlags& ipv) const = 0;
@@ -40,7 +40,7 @@ namespace openvpn {
 
   struct EmulateExcludeRouteFactory : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<EmulateExcludeRouteFactory> Ptr;
+    typedef RCPtr<EmulateExcludeRouteFactory> Ptr;
 
     virtual EmulateExcludeRoute::Ptr new_obj() const = 0;
   };

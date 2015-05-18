@@ -120,7 +120,7 @@ namespace openvpn {
   class PolarSSLContext : public SSLFactoryAPI
   {
   public:
-    typedef boost::intrusive_ptr<PolarSSLContext> Ptr;
+    typedef RCPtr<PolarSSLContext> Ptr;
 
     enum {
       MAX_CIPHERTEXT_IN = 64 // maximum number of queued input ciphertext packets
@@ -132,7 +132,7 @@ namespace openvpn {
       friend class PolarSSLContext;
 
     public:
-      typedef boost::intrusive_ptr<Config> Ptr;
+      typedef RCPtr<Config> Ptr;
 
       Config() : external_pki(nullptr),
 		 ssl_debug_level(0),
@@ -387,7 +387,7 @@ namespace openvpn {
       friend class PolarSSLContext;
 
     public:
-      typedef boost::intrusive_ptr<SSL> Ptr;
+      typedef RCPtr<SSL> Ptr;
 
       virtual void start_handshake()
       {

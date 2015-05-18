@@ -38,7 +38,7 @@ using namespace openvpn;
 class MySessionStats : public SessionStats
 {
 public:
-  typedef boost::intrusive_ptr<MySessionStats> Ptr;
+  typedef RCPtr<MySessionStats> Ptr;
 
   virtual void error(const size_t err_type, const std::string* text=nullptr)
   {
@@ -52,7 +52,7 @@ public:
 class ServerThread : public RC<thread_unsafe_refcount>
 {
 public:
-  typedef boost::intrusive_ptr<ServerThread> Ptr;
+  typedef RCPtr<ServerThread> Ptr;
 
   struct Config
   {
@@ -107,7 +107,7 @@ private:
 class MyRunContext : public RC<thread_safe_refcount>
 {
 public:
-  typedef boost::intrusive_ptr<MyRunContext> Ptr;
+  typedef RCPtr<MyRunContext> Ptr;
 
   MyRunContext(ServerThread::Ptr& serv_arg)
     : io_service(1),

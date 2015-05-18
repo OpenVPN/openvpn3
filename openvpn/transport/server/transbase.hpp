@@ -45,7 +45,7 @@ namespace openvpn {
   // Base class for server transport object.
   struct TransportServer : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TransportServer> Ptr;
+    typedef RCPtr<TransportServer> Ptr;
 
     virtual void start() = 0;
     virtual void stop() = 0;
@@ -55,7 +55,7 @@ namespace openvpn {
   // Factory for server transport object.
   struct TransportServerFactory : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TransportServerFactory> Ptr;
+    typedef RCPtr<TransportServerFactory> Ptr;
 
     virtual TransportServer::Ptr new_server_obj(boost::asio::io_service& io_service) = 0;
   };
@@ -64,7 +64,7 @@ namespace openvpn {
   // Each client instance uses this class to send data to the transport layer.
   struct TransportClientInstanceSend : public virtual RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TransportClientInstanceSend> Ptr;
+    typedef RCPtr<TransportClientInstanceSend> Ptr;
 
     virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -85,7 +85,7 @@ namespace openvpn {
   // object will inherit from multiple receivers.
   struct TransportClientInstanceRecv : public virtual RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TransportClientInstanceRecv> Ptr;
+    typedef RCPtr<TransportClientInstanceRecv> Ptr;
 
     virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -125,7 +125,7 @@ namespace openvpn {
   // Base class for factory used to create TransportClientInstanceRecv objects.
   struct TransportClientInstanceFactory : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TransportClientInstanceFactory> Ptr;
+    typedef RCPtr<TransportClientInstanceFactory> Ptr;
 
     virtual TransportClientInstanceRecv::Ptr new_client_instance() = 0;
     virtual bool validate_initial_packet(const Buffer& net_buf) = 0;

@@ -23,7 +23,7 @@
 // boost::intrusive_ptr.  Simply inherit from RC to create an
 // object that can be tracked with an intrusive_ptr.
 //
-// We use tend to use boost::intrusive_ptr rather than the other boost
+// We use tend to use boost::intrusive_ptr rather than the other boost/std
 // smart pointer classes because it is more efficient to have the reference
 // count itself baked into the object being tracked.  The downside
 // of boost::intrusive_ptr is that it cannot be used for weak references.
@@ -50,7 +50,7 @@
 //
 // class Foo : public RC<thread_unsafe_refcount> {
 // public:
-//   typedef boost::intrusive_ptr<Foo> Ptr;
+//   typedef RCPtr<Foo> Ptr;
 // };
 //
 // This allows a smart-pointer to Foo to be referred to
@@ -142,6 +142,10 @@ namespace openvpn {
   }
 
 #endif
+
+  // The smart pointer
+  template<typename T>
+  using RCPtr = boost::intrusive_ptr<T>;
 
 } // namespace openvpn
 

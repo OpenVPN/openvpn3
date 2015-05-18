@@ -32,7 +32,7 @@ namespace openvpn {
 
   struct StatsSource : public RC<thread_safe_refcount>
   {
-    typedef boost::intrusive_ptr<StatsSource> Ptr;
+    typedef RCPtr<StatsSource> Ptr;
 
     virtual void output(std::ostream& os) = 0;
   };

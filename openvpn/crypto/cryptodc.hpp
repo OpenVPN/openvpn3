@@ -43,7 +43,7 @@ namespace openvpn {
   class CryptoDCInstance : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<CryptoDCInstance> Ptr;
+    typedef RCPtr<CryptoDCInstance> Ptr;
 
     // Encrypt/Decrypt
 
@@ -95,7 +95,7 @@ namespace openvpn {
   class CryptoDCContext : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<CryptoDCContext> Ptr;
+    typedef RCPtr<CryptoDCContext> Ptr;
 
     virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id) = 0;
 
@@ -115,7 +115,7 @@ namespace openvpn {
   class CryptoDCFactory : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<CryptoDCFactory> Ptr;
+    typedef RCPtr<CryptoDCFactory> Ptr;
 
     virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
 					 const CryptoAlgs::Type digest) = 0;

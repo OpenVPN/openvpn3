@@ -38,7 +38,7 @@ namespace openvpn {
 	virtual void cln_reconnect(int seconds) = 0;
       };
 
-      typedef boost::intrusive_ptr<ClientLifeCycle> Ptr;
+      typedef RCPtr<ClientLifeCycle> Ptr;
 
       virtual bool network_available() = 0;
 

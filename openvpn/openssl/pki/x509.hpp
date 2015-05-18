@@ -144,7 +144,7 @@ namespace openvpn {
       }
     };
 
-    typedef boost::intrusive_ptr<X509> X509Ptr;
+    typedef RCPtr<X509> X509Ptr;
 
     class X509List : public std::vector<X509Ptr>
     {

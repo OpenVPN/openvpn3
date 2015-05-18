@@ -66,7 +66,7 @@ namespace openvpn {
   class AppleSSLContext : public SSLFactoryAPI
   {
   public:
-    typedef boost::intrusive_ptr<AppleSSLContext> Ptr;
+    typedef RCPtr<AppleSSLContext> Ptr;
 
     enum {
       MAX_CIPHERTEXT_IN = 64
@@ -78,7 +78,7 @@ namespace openvpn {
       friend class AppleSSLContext;
 
     public:
-      typedef boost::intrusive_ptr<Config> Ptr;
+      typedef RCPtr<Config> Ptr;
 
       Config() {}
 
@@ -230,7 +230,7 @@ namespace openvpn {
       friend class AppleSSLContext;
 
     public:
-      typedef boost::intrusive_ptr<SSL> Ptr;
+      typedef RCPtr<SSL> Ptr;
 
       virtual void start_handshake()
       {

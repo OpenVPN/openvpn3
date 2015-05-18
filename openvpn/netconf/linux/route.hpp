@@ -44,7 +44,7 @@ namespace openvpn {
   class RouteListLinux : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<RouteListLinux> Ptr;
+    typedef RCPtr<RouteListLinux> Ptr;
 
     OPENVPN_EXCEPTION(route_error);
 

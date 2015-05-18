@@ -35,7 +35,7 @@ namespace openvpn {
   class RandomAPI : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<RandomAPI> Ptr;
+    typedef RCPtr<RandomAPI> Ptr;
 
     // Random algorithm name
     virtual std::string name() const = 0;

@@ -38,7 +38,7 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(dev_urand_error);
 
-    typedef boost::intrusive_ptr<DevURand> Ptr;
+    typedef RCPtr<DevURand> Ptr;
 
     DevURand()
       : dev_urandom(open("/dev/urandom", O_RDONLY))

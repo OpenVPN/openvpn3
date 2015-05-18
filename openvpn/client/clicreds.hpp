@@ -39,7 +39,7 @@ namespace openvpn {
 
   class ClientCreds : public RC<thread_safe_refcount> {
   public:
-    typedef boost::intrusive_ptr<ClientCreds> Ptr;
+    typedef RCPtr<ClientCreds> Ptr;
 
     ClientCreds() : allow_cache_password(false),
 		    password_save_defined(false),

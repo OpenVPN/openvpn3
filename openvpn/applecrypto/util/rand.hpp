@@ -36,7 +36,7 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(rand_error_apple);
 
-    typedef boost::intrusive_ptr<AppleRandom> Ptr;
+    typedef RCPtr<AppleRandom> Ptr;
 
     AppleRandom(const bool prng)
     {

@@ -37,7 +37,7 @@ namespace openvpn {
     class AuthCreds : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<AuthCreds> Ptr;
+      typedef RCPtr<AuthCreds> Ptr;
 
       AuthCreds(std::string&& username_arg,
 		SafeString&& password_arg,

@@ -46,7 +46,7 @@ namespace openvpn {
   class SSLAPI : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<SSLAPI> Ptr;
+    typedef RCPtr<SSLAPI> Ptr;
 
     virtual void start_handshake() = 0;
     virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size) = 0;
@@ -67,7 +67,7 @@ namespace openvpn {
     OPENVPN_EXCEPTION(ssl_external_pki);
     OPENVPN_SIMPLE_EXCEPTION(ssl_ciphertext_in_overflow);
 
-    typedef boost::intrusive_ptr<SSLFactoryAPI> Ptr;
+    typedef RCPtr<SSLFactoryAPI> Ptr;
 
     // create a new SSLAPI instance
     virtual SSLAPI::Ptr ssl() = 0;
@@ -82,7 +82,7 @@ namespace openvpn {
   class SSLConfigAPI : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<SSLConfigAPI> Ptr;
+    typedef RCPtr<SSLConfigAPI> Ptr;
 
     enum LoadFlags {
       LF_PARSE_MODE = (1<<0),

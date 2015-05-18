@@ -50,7 +50,7 @@ namespace openvpn {
       SocketProtect* socket_protect;
     };
 
-    typedef boost::intrusive_ptr<AltProxy> Ptr;
+    typedef RCPtr<AltProxy> Ptr;
 
     // return proxy name
     virtual std::string name() const = 0;

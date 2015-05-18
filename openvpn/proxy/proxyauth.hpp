@@ -34,7 +34,7 @@ namespace openvpn {
     // parse the Proxy-Authenticate HTTP header
     class ProxyAuthenticate : public RC<thread_unsafe_refcount> {
     public:
-      typedef boost::intrusive_ptr<ProxyAuthenticate> Ptr;
+      typedef RCPtr<ProxyAuthenticate> Ptr;
 
       ProxyAuthenticate() {}
 

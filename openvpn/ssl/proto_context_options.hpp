@@ -32,7 +32,7 @@
 namespace openvpn {
   struct ProtoContextOptions : public RC<thread_safe_refcount>
   {
-    typedef boost::intrusive_ptr<ProtoContextOptions> Ptr;
+    typedef RCPtr<ProtoContextOptions> Ptr;
 
     enum CompressionMode {
       COMPRESS_NO,

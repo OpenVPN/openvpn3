@@ -35,7 +35,7 @@ namespace openvpn {
   class Frame : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<Frame> Ptr;
+    typedef RCPtr<Frame> Ptr;
 
     // Frame context types -- we maintain a Context object for each context type
     enum {

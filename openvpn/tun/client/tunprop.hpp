@@ -77,7 +77,7 @@ namespace openvpn {
 
     struct State : public RC<thread_unsafe_refcount>
     {
-      typedef boost::intrusive_ptr<State> Ptr;
+      typedef RCPtr<State> Ptr;
 
       std::string iface_name;
       IP::Addr vpn_ip4_addr;

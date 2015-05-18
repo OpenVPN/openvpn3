@@ -67,7 +67,7 @@ namespace openvpn {
     class Link : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<Link> Ptr;
+      typedef RCPtr<Link> Ptr;
 
       Link(ReadHandler read_handler_arg,
 	   boost::asio::ip::udp::socket& socket_arg,

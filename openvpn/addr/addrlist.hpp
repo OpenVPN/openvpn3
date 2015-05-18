@@ -32,7 +32,7 @@ namespace openvpn {
     class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<AddrList> Ptr;
+      typedef RCPtr<AddrList> Ptr;
 
       void add(const IP::Addr& a)
       {

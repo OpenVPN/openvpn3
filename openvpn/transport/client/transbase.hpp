@@ -40,7 +40,7 @@ namespace openvpn {
   // Base class for client transport object.
   struct TransportClient : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TransportClient> Ptr;
+    typedef RCPtr<TransportClient> Ptr;
 
     virtual void start() = 0;
     virtual void stop() = 0;
@@ -80,7 +80,7 @@ namespace openvpn {
   // Factory for client transport object.
   struct TransportClientFactory : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TransportClientFactory> Ptr;
+    typedef RCPtr<TransportClientFactory> Ptr;
 
     virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 						TransportClientParent& parent) = 0;

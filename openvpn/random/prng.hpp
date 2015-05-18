@@ -40,7 +40,7 @@ namespace openvpn {
   {
     typedef BufferAllocatedType<unsigned char> nonce_t;
   public:
-    typedef boost::intrusive_ptr<PRNG> Ptr;
+    typedef RCPtr<PRNG> Ptr;
 
     enum {
       NONCE_SECRET_LEN_MIN = 16,

@@ -30,7 +30,7 @@ namespace openvpn {
 
   struct DestructorBase : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<DestructorBase> Ptr;
+    typedef RCPtr<DestructorBase> Ptr;
     virtual void destroy() = 0;
     virtual ~DestructorBase() {}
   };

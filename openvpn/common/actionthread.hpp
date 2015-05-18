@@ -35,7 +35,7 @@ namespace openvpn {
   class ActionThread : public RC<thread_safe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<ActionThread> Ptr;
+    typedef RCPtr<ActionThread> Ptr;
 
     struct Notify
     {

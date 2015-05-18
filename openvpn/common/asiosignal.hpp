@@ -35,7 +35,7 @@ namespace openvpn {
   class ASIOSignals : public RC<thread_safe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<ASIOSignals> Ptr;
+    typedef RCPtr<ASIOSignals> Ptr;
 
     ASIOSignals(boost::asio::io_service& io_service)
       : halt(false), signals_(io_service) {}

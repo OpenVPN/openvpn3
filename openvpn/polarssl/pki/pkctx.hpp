@@ -41,7 +41,7 @@ namespace openvpn {
     class PKContext : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<PKContext> Ptr;
+      typedef RCPtr<PKContext> Ptr;
 
       PKContext() : ctx(nullptr) {}
 

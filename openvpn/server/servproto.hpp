@@ -63,7 +63,7 @@ namespace openvpn {
     class Factory : public TransportClientInstanceFactory
     {
     public:
-      typedef boost::intrusive_ptr<Factory> Ptr;
+      typedef RCPtr<Factory> Ptr;
       typedef Base::Config ProtoConfig;
 
       Factory(boost::asio::io_service& io_service_arg,
@@ -120,7 +120,7 @@ namespace openvpn {
       using Base::stat;
 
     public:
-      typedef boost::intrusive_ptr<Session> Ptr;
+      typedef RCPtr<Session> Ptr;
 
       virtual bool defined() const
       {

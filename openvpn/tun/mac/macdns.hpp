@@ -45,14 +45,14 @@ namespace openvpn {
     class Info;
 
   public:
-    typedef boost::intrusive_ptr<MacDNS> Ptr;
+    typedef RCPtr<MacDNS> Ptr;
 
     OPENVPN_EXCEPTION(macdns_error);
 
     class Config : public RC<thread_safe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<Config> Ptr;
+      typedef RCPtr<Config> Ptr;
 
       Config()
 	: redirect_gateway(false),
@@ -496,7 +496,7 @@ namespace openvpn {
     class Info : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<Info> Ptr;
+      typedef RCPtr<Info> Ptr;
 
       Info(CF::DynamicStore& sc, const std::string& sname)
 	: ipv4(sc, sname, "State:/Network/Global/IPv4"),

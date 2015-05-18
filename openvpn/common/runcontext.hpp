@@ -48,7 +48,7 @@ namespace openvpn {
 
   struct ServerThreadBase : public RC<thread_safe_refcount>
   {
-    typedef boost::intrusive_ptr<ServerThreadBase> Ptr;
+    typedef RCPtr<ServerThreadBase> Ptr;
 
     virtual void thread_safe_stop() = 0;
   };
@@ -57,7 +57,7 @@ namespace openvpn {
   class RunContext : public LogBase
   {
   public:
-    typedef boost::intrusive_ptr<RunContext> Ptr;
+    typedef RCPtr<RunContext> Ptr;
 
     class ThreadContext
     {

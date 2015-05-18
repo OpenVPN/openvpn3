@@ -70,7 +70,7 @@ namespace openvpn {
   class OpenSSLContext : public SSLFactoryAPI
   {
   public:
-    typedef boost::intrusive_ptr<OpenSSLContext> Ptr;
+    typedef RCPtr<OpenSSLContext> Ptr;
     typedef CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList> CertCRLList;
 
     enum {
@@ -83,7 +83,7 @@ namespace openvpn {
       friend class OpenSSLContext;
 
     public:
-      typedef boost::intrusive_ptr<Config> Ptr;
+      typedef RCPtr<Config> Ptr;
 
       Config() : external_pki(nullptr),
 		 ssl_debug_level(0),
@@ -313,7 +313,7 @@ namespace openvpn {
       friend class OpenSSLContext;
 
     public:
-      typedef boost::intrusive_ptr<SSL> Ptr;
+      typedef RCPtr<SSL> Ptr;
 
       virtual void start_handshake()
       {

@@ -39,7 +39,7 @@ namespace openvpn {
   class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<TunBuilderCapture> Ptr;
+    typedef RCPtr<TunBuilderCapture> Ptr;
 
     // builder data classes
 

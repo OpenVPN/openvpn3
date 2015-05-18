@@ -41,7 +41,7 @@ namespace openvpn {
     class X509Cert : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<X509Cert> Ptr;
+      typedef RCPtr<X509Cert> Ptr;
 
       X509Cert() : chain(nullptr) {}
 

@@ -39,7 +39,7 @@ namespace openvpn {
   class MacDNSWatchdog : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<MacDNSWatchdog> Ptr;
+    typedef RCPtr<MacDNSWatchdog> Ptr;
 
     // flags
     enum {
@@ -51,7 +51,7 @@ namespace openvpn {
     class DNSAction : public Action
     {
     public:
-      typedef boost::intrusive_ptr<DNSAction> Ptr;
+      typedef RCPtr<DNSAction> Ptr;
 
       DNSAction(const MacDNSWatchdog::Ptr& parent_arg,
 		const MacDNS::Config::Ptr& config_arg,

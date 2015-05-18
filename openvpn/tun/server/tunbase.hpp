@@ -40,7 +40,7 @@ namespace openvpn {
   // object will inherit from multiple receivers.
   struct TunClientInstanceRecv : public virtual RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TunClientInstanceRecv> Ptr;
+    typedef RCPtr<TunClientInstanceRecv> Ptr;
 
     //virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -58,7 +58,7 @@ namespace openvpn {
   // Each client instance uses this class to send data to the tun layer.
   struct TunClientInstanceSend : public virtual RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TunClientInstanceSend> Ptr;
+    typedef RCPtr<TunClientInstanceSend> Ptr;
 
     //virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -75,7 +75,7 @@ namespace openvpn {
   // Factory for server tun object.
   struct TunClientInstanceFactory : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TunClientInstanceFactory> Ptr;
+    typedef RCPtr<TunClientInstanceFactory> Ptr;
 
     virtual TunClientInstanceSend::Ptr new_obj(TunClientInstanceRecv* parent) = 0;
   };

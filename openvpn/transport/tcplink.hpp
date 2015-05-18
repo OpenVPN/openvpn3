@@ -68,7 +68,7 @@ namespace openvpn {
       typedef std::deque<BufferPtr> Queue;
 
     public:
-      typedef boost::intrusive_ptr<Link> Ptr;
+      typedef RCPtr<Link> Ptr;
 
       Link(ReadHandler read_handler_arg,
 	   boost::asio::ip::tcp::socket& socket_arg,

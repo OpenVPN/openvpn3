@@ -34,7 +34,7 @@ namespace openvpn {
 
     struct AuthCert : public RC<thread_unsafe_refcount>
     {
-      typedef boost::intrusive_ptr<AuthCert> Ptr;
+      typedef RCPtr<AuthCert> Ptr;
 
       AuthCert()
       {

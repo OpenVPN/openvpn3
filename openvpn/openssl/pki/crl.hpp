@@ -136,7 +136,7 @@ namespace openvpn {
       X509_CRL *crl_;
     };
 
-    typedef boost::intrusive_ptr<CRL> CRLPtr;
+    typedef RCPtr<CRL> CRLPtr;
 
     class CRLList : public std::vector<CRLPtr>
     {

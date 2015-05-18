@@ -35,7 +35,7 @@ namespace openvpn {
   class VPNServerNetblockPool : public VPNServerNetblock
   {
   public:
-    typedef boost::intrusive_ptr<VPNServerNetblockPool> Ptr;
+    typedef RCPtr<VPNServerNetblockPool> Ptr;
 
     VPNServerNetblockPool(const OptionList& opt)
       : VPNServerNetblock(opt, 0)

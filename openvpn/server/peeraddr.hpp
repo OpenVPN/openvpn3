@@ -44,7 +44,7 @@ namespace openvpn {
 
   struct PeerAddr : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<PeerAddr> Ptr;
+    typedef RCPtr<PeerAddr> Ptr;
 
     PeerAddr()
       : tcp(false)

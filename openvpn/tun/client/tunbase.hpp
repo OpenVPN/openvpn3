@@ -38,7 +38,7 @@ namespace openvpn {
   // Base class for objects that implement a client tun interface.
   struct TunClient : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TunClient> Ptr;
+    typedef RCPtr<TunClient> Ptr;
 
     virtual void client_start(const OptionList&, TransportClient&) = 0;
     virtual void stop() = 0;
@@ -66,7 +66,7 @@ namespace openvpn {
   // Factory for tun interface objects.
   struct TunClientFactory : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<TunClientFactory> Ptr;
+    typedef RCPtr<TunClientFactory> Ptr;
 
     virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
 					  TunClientParent& parent) = 0;

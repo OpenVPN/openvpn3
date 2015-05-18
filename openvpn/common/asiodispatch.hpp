@@ -49,7 +49,7 @@ namespace openvpn {
 
   private:
     Handler handle_write_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   template <typename C, typename Handler>
@@ -74,7 +74,7 @@ namespace openvpn {
 
   private:
     Handler handle_read_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
     Data data_;
   };
 
@@ -100,7 +100,7 @@ namespace openvpn {
 
   private:
     Handler handle_read_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   template <typename C, typename Handler>
@@ -125,7 +125,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
     Data data_;
   };
 
@@ -151,7 +151,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   template <typename C, typename Handler>
@@ -176,7 +176,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
     Data data_;
   };
 
@@ -202,7 +202,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   template <typename C, typename Handler>
@@ -228,7 +228,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   template <typename C, typename Handler>
@@ -253,7 +253,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
     Data data_;
   };
 
@@ -279,7 +279,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
     Data data_;
   };
 
@@ -305,7 +305,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   template <typename C, typename Handler>
@@ -330,7 +330,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   // Dispatcher for asio signal
@@ -349,7 +349,7 @@ namespace openvpn {
 
   private:
     Handler handler_;
-    boost::intrusive_ptr<C> obj_;
+    RCPtr<C> obj_;
   };
 
   template <typename C, typename Handler>

@@ -34,7 +34,7 @@ namespace openvpn {
   class DigestInstance : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<DigestInstance> Ptr;
+    typedef RCPtr<DigestInstance> Ptr;
 
     virtual void update(const unsigned char *in, const size_t size) = 0;
     virtual size_t final(unsigned char *out) = 0;
@@ -44,7 +44,7 @@ namespace openvpn {
   class HMACInstance : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<HMACInstance> Ptr;
+    typedef RCPtr<HMACInstance> Ptr;
 
     virtual void reset() = 0;
     virtual void update(const unsigned char *in, const size_t size) = 0;
@@ -55,7 +55,7 @@ namespace openvpn {
   class DigestContext : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<DigestContext> Ptr;
+    typedef RCPtr<DigestContext> Ptr;
 
     virtual std::string name() const = 0;
     virtual size_t size() const = 0;
@@ -69,7 +69,7 @@ namespace openvpn {
   class DigestFactory : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<DigestFactory> Ptr;
+    typedef RCPtr<DigestFactory> Ptr;
 
     virtual DigestContext::Ptr new_context(const CryptoAlgs::Type digest_type) = 0;
 

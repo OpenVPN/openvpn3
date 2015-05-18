@@ -59,7 +59,7 @@ namespace openvpn {
     // associated with a "remote" item.
     struct ResolvedAddr : public RC<thread_unsafe_refcount>
     {
-      typedef boost::intrusive_ptr<ResolvedAddr> Ptr;
+      typedef RCPtr<ResolvedAddr> Ptr;
       IP::Addr addr;
 
       std::string to_string() const
@@ -71,7 +71,7 @@ namespace openvpn {
     // The IP address list associated with a single "remote" item.
     struct ResolvedAddrList : public std::vector<ResolvedAddr::Ptr>, public RC<thread_unsafe_refcount>
     {
-      typedef boost::intrusive_ptr<ResolvedAddrList> Ptr;
+      typedef RCPtr<ResolvedAddrList> Ptr;
 
       std::string to_string() const
       {
@@ -91,14 +91,14 @@ namespace openvpn {
 
     struct ConnBlock : public RC<thread_unsafe_refcount>
     {
-      typedef boost::intrusive_ptr<ConnBlock> Ptr;
+      typedef RCPtr<ConnBlock> Ptr;
 
       virtual void new_item(const Item& item) = 0;
     };
 
     struct ConnBlockFactory
     {
-      typedef boost::intrusive_ptr<ConnBlockFactory> Ptr;
+      typedef RCPtr<ConnBlockFactory> Ptr;
 
       virtual ConnBlock::Ptr new_conn_block(const OptionList::Ptr& opt) = 0;
     };
@@ -106,7 +106,7 @@ namespace openvpn {
     // A single "remote" item
     struct Item : public RC<thread_unsafe_refcount>
     {
-      typedef boost::intrusive_ptr<Item> Ptr;
+      typedef RCPtr<Item> Ptr;
 
       // "remote" item parameters from config file
       std::string server_host;
@@ -239,7 +239,7 @@ namespace openvpn {
     // (option_error used during initial options processing).
     OPENVPN_EXCEPTION(remote_list_error);
 
-    typedef boost::intrusive_ptr<RemoteList> Ptr;
+    typedef RCPtr<RemoteList> Ptr;
 
     // Helper class used to pre-resolve all items in remote list.
     // This is useful in tun_persist mode, where it may be necessary
@@ -253,7 +253,7 @@ namespace openvpn {
 				  boost::asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
 
     public:
-      typedef boost::intrusive_ptr<PreResolve> Ptr;
+      typedef RCPtr<PreResolve> Ptr;
 
       struct NotifyCallback
       {

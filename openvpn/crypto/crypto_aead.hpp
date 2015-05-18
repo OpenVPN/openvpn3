@@ -316,7 +316,7 @@ namespace openvpn {
     class CryptoContext : public CryptoDCContext
     {
     public:
-      typedef boost::intrusive_ptr<CryptoContext> Ptr;
+      typedef RCPtr<CryptoContext> Ptr;
 
       CryptoContext(const CryptoAlgs::Type cipher_arg,
 		    const Frame::Ptr& frame_arg,

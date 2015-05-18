@@ -56,7 +56,7 @@ namespace openvpn {
       typedef TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor> Base;
 
     public:
-      typedef boost::intrusive_ptr<Tun> Ptr;
+      typedef RCPtr<Tun> Ptr;
 
       Tun(boost::asio::io_service& io_service,
 	  const int socket,
@@ -80,7 +80,7 @@ namespace openvpn {
     class ClientConfig : public TunClientFactory
     {
     public:
-      typedef boost::intrusive_ptr<ClientConfig> Ptr;
+      typedef RCPtr<ClientConfig> Ptr;
 
       TunProp::Config tun_prop;
       int n_parallel;            // number of parallel async reads on tun socket

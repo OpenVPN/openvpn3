@@ -35,7 +35,7 @@ namespace openvpn {
   class WinCmd : public Action
   {
   public:
-    typedef boost::intrusive_ptr<WinCmd> Ptr;
+    typedef RCPtr<WinCmd> Ptr;
 
     WinCmd(const std::string& command)
       : cmd(command)

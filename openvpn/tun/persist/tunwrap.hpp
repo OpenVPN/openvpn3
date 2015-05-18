@@ -34,7 +34,7 @@ namespace openvpn {
   class TunWrapTemplate : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<TunWrapTemplate> Ptr;
+    typedef RCPtr<TunWrapTemplate> Ptr;
 
     TunWrapTemplate(const bool retain_obj)
       : retain_obj_(retain_obj)

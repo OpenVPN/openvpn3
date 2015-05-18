@@ -88,7 +88,7 @@ namespace openvpn {
       using Base::stat;
 
     public:
-      typedef boost::intrusive_ptr<Session> Ptr;
+      typedef RCPtr<Session> Ptr;
       typedef Base::Config ProtoConfig;
 
       OPENVPN_EXCEPTION(client_exception);
@@ -104,7 +104,7 @@ namespace openvpn {
 
       struct Config : public RC<thread_unsafe_refcount>
       {
-	typedef boost::intrusive_ptr<Config> Ptr;
+	typedef RCPtr<Config> Ptr;
 
 	Config()
 	  : pushed_options_limit("server-pushed options data too large",

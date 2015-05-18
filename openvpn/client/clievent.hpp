@@ -120,7 +120,7 @@ namespace openvpn {
     class Base : public RC<thread_safe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<Base> Ptr;
+      typedef RCPtr<Base> Ptr;
       Base(Type id) : id_(id) {}
 
       Type id() const { return id_; }
@@ -222,7 +222,7 @@ namespace openvpn {
 
     struct Connected : public Base
     {
-      typedef boost::intrusive_ptr<Connected> Ptr;
+      typedef RCPtr<Connected> Ptr;
 
       Connected() : Base(CONNECTED) {}
 
@@ -335,7 +335,7 @@ namespace openvpn {
     class Queue : public RC<thread_safe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<Queue> Ptr;
+      typedef RCPtr<Queue> Ptr;
 
       virtual void add_event(const Base::Ptr& event) = 0;
     };

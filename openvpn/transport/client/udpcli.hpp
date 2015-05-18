@@ -41,7 +41,7 @@ namespace openvpn {
     class ClientConfig : public TransportClientFactory
     {
     public:
-      typedef boost::intrusive_ptr<ClientConfig> Ptr;
+      typedef RCPtr<ClientConfig> Ptr;
 
       RemoteList::Ptr remote_list;
       bool server_addr_float;

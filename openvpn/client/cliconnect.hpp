@@ -69,7 +69,7 @@ namespace openvpn {
 			public RC<thread_safe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<ClientConnect> Ptr;
+    typedef RCPtr<ClientConnect> Ptr;
     typedef ClientOptions::Client Client;
 
     OPENVPN_SIMPLE_EXCEPTION(client_connect_unhandled_exception);

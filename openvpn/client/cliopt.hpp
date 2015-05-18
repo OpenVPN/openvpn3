@@ -84,7 +84,7 @@ namespace openvpn {
   class ClientOptions : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<ClientOptions> Ptr;
+    typedef RCPtr<ClientOptions> Ptr;
 
     typedef ClientProto::Session Client;
 

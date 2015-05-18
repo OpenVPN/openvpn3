@@ -42,7 +42,7 @@ namespace openvpn {
     class ServerConfig : public TransportServerFactory
     {
     public:
-      typedef boost::intrusive_ptr<ServerConfig> Ptr;
+      typedef RCPtr<ServerConfig> Ptr;
 
       std::string local_ip;
       std::string local_port;
@@ -80,7 +80,7 @@ namespace openvpn {
 	friend class Server;
 
       public:
-	typedef boost::intrusive_ptr<Instance> Ptr;
+	typedef RCPtr<Instance> Ptr;
 
 	virtual bool defined() const
 	{

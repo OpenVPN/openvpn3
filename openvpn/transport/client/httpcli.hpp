@@ -61,7 +61,7 @@ namespace openvpn {
     public:
       struct CustomHeader : public RC<thread_unsafe_refcount>
       {
-	typedef boost::intrusive_ptr<CustomHeader> Ptr;
+	typedef RCPtr<CustomHeader> Ptr;
 
 	std::string p1;
 	std::string p2;
@@ -71,7 +71,7 @@ namespace openvpn {
       {
       };
 
-      typedef boost::intrusive_ptr<Options> Ptr;
+      typedef RCPtr<Options> Ptr;
 
       Options() : allow_cleartext_auth(false) {}
 
@@ -174,7 +174,7 @@ namespace openvpn {
     class ClientConfig : public TransportClientFactory
     {
     public:
-      typedef boost::intrusive_ptr<ClientConfig> Ptr;
+      typedef RCPtr<ClientConfig> Ptr;
 
       RemoteList::Ptr remote_list;
       size_t send_queue_max_size;

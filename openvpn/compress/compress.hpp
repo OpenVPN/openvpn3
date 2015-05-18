@@ -51,7 +51,7 @@ namespace openvpn {
   class Compress : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<Compress> Ptr;
+    typedef RCPtr<Compress> Ptr;
 
     // Compressor name
     virtual const char *name() const = 0;

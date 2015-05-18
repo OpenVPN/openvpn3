@@ -44,7 +44,7 @@ namespace openvpn {
   // Each client instance uses this class to send data to the man layer.
   struct ManClientInstanceSend : public virtual RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<ManClientInstanceSend> Ptr;
+    typedef RCPtr<ManClientInstanceSend> Ptr;
 
     //virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -67,7 +67,7 @@ namespace openvpn {
   // object will inherit from multiple receivers.
   struct ManClientInstanceRecv : public virtual RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<ManClientInstanceRecv> Ptr;
+    typedef RCPtr<ManClientInstanceRecv> Ptr;
 
     //virtual bool defined() const = 0;
     virtual void stop() = 0;
@@ -86,7 +86,7 @@ namespace openvpn {
 
   struct ManClientInstanceFactory : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<ManClientInstanceFactory> Ptr;
+    typedef RCPtr<ManClientInstanceFactory> Ptr;
 
     virtual void start() = 0;
 

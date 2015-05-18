@@ -38,7 +38,7 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(rand_error_polarssl);
 
-    typedef boost::intrusive_ptr<PolarSSLRandom> Ptr;
+    typedef RCPtr<PolarSSLRandom> Ptr;
 
     PolarSSLRandom(const bool prng)
     {

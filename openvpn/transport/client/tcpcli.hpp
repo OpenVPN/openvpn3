@@ -39,7 +39,7 @@ namespace openvpn {
     class ClientConfig : public TransportClientFactory
     {
     public:
-      typedef boost::intrusive_ptr<ClientConfig> Ptr;
+      typedef RCPtr<ClientConfig> Ptr;
 
       RemoteList::Ptr remote_list;
       size_t send_queue_max_size;

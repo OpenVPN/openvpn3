@@ -41,7 +41,7 @@ namespace openvpn {
     class DH : public RC<thread_unsafe_refcount>
     {
     public:
-      typedef boost::intrusive_ptr<DH> Ptr;
+      typedef RCPtr<DH> Ptr;
 
       DH() : dhc(nullptr) {}
 

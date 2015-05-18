@@ -34,7 +34,7 @@ namespace openvpn {
 
   struct PushOptionsBase : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<PushOptionsBase> Ptr;
+    typedef RCPtr<PushOptionsBase> Ptr;
 
     OptionList multi;
     OptionList singleton;

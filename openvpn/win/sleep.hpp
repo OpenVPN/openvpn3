@@ -34,7 +34,7 @@ namespace openvpn {
   class WinSleep : public Action
   {
   public:
-    typedef boost::intrusive_ptr<WinSleep> Ptr;
+    typedef RCPtr<WinSleep> Ptr;
 
     WinSleep(DWORD dwMilliseconds_arg)
       : dwMilliseconds(dwMilliseconds_arg)

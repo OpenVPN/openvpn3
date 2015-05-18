@@ -34,7 +34,7 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(emulate_exclude_route_error);
 
-    typedef boost::intrusive_ptr<EmulateExcludeRouteImpl> Ptr;
+    typedef RCPtr<EmulateExcludeRouteImpl> Ptr;
 
     EmulateExcludeRouteImpl(const bool exclude_server_address)
       : exclude_server_address_(exclude_server_address)
@@ -86,7 +86,7 @@ namespace openvpn {
   class EmulateExcludeRouteFactoryImpl : public EmulateExcludeRouteFactory
   {
   public:
-    typedef boost::intrusive_ptr<EmulateExcludeRouteFactoryImpl> Ptr;
+    typedef RCPtr<EmulateExcludeRouteFactoryImpl> Ptr;
 
     EmulateExcludeRouteFactoryImpl(const bool exclude_server_address)
       : exclude_server_address_(exclude_server_address)

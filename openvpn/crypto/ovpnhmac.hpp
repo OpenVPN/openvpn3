@@ -133,7 +133,7 @@ namespace openvpn {
   class OvpnHMACInstance : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<OvpnHMACInstance> Ptr;
+    typedef RCPtr<OvpnHMACInstance> Ptr;
 
     virtual void init(const StaticKey& key) = 0;
 
@@ -149,7 +149,7 @@ namespace openvpn {
   class OvpnHMACContext : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<OvpnHMACContext> Ptr;
+    typedef RCPtr<OvpnHMACContext> Ptr;
 
     virtual size_t size() const = 0;
 
@@ -159,7 +159,7 @@ namespace openvpn {
   class OvpnHMACFactory : public RC<thread_unsafe_refcount>
   {
   public:
-    typedef boost::intrusive_ptr<OvpnHMACFactory> Ptr;
+    typedef RCPtr<OvpnHMACFactory> Ptr;
 
     virtual OvpnHMACContext::Ptr new_obj(const CryptoAlgs::Type digest_type) = 0;
   };

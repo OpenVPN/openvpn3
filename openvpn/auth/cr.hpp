@@ -51,7 +51,7 @@
 namespace openvpn {
   class ChallengeResponse : public RC<thread_unsafe_refcount> {
   public:
-    typedef boost::intrusive_ptr<ChallengeResponse> Ptr;
+    typedef RCPtr<ChallengeResponse> Ptr;
 
     OPENVPN_SIMPLE_EXCEPTION(dynamic_challenge_parse_error);
     OPENVPN_SIMPLE_EXCEPTION(static_challenge_parse_error);

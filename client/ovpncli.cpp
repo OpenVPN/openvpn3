@@ -115,7 +115,7 @@ namespace openvpn {
     class MySessionStats : public SessionStats
     {
     public:
-      typedef boost::intrusive_ptr<MySessionStats> Ptr;
+      typedef RCPtr<MySessionStats> Ptr;
 
       MySessionStats(OpenVPNClient* parent_arg)
 	: parent(parent_arg)
@@ -194,7 +194,7 @@ namespace openvpn {
     class MyClientEvents : public ClientEvent::Queue
     {
     public:
-      typedef boost::intrusive_ptr<MyClientEvents> Ptr;
+      typedef RCPtr<MyClientEvents> Ptr;
 
       MyClientEvents(OpenVPNClient* parent_arg) : parent(parent_arg) {}
 

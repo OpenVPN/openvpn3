@@ -35,7 +35,7 @@ namespace openvpn {
 
   struct Action : public RC<thread_unsafe_refcount>
   {
-    typedef boost::intrusive_ptr<Action> Ptr;
+    typedef RCPtr<Action> Ptr;
 
     virtual void execute() = 0;
     virtual std::string to_string() const = 0;
@@ -45,7 +45,7 @@ namespace openvpn {
   class ActionList : public std::vector<Action::Ptr>, public DestructorBase
   {
   public:
-    typedef boost::intrusive_ptr<ActionList> Ptr;
+    typedef RCPtr<ActionList> Ptr;
 
     ActionList(const size_t capacity=16)
       : enable_destroy_(false),
