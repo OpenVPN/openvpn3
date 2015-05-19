@@ -163,7 +163,7 @@ namespace openvpn {
 	    // parse local endpoint
 	    const IP::Addr ip_addr = IP::Addr::from_string(config->local_ip);
 	    local_endpoint.address(ip_addr.to_asio());
-	    local_endpoint.port(parse_port(config->local_port, "port"));
+	    local_endpoint.port(HostPort::parse_port(config->local_port, "udpserv"));
 
 	    // open socket and bind to local address
 	    socket.open(local_endpoint.protocol());

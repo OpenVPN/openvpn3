@@ -29,20 +29,73 @@
 #include <openvpn/common/options.hpp>
 
 namespace openvpn {
+  namespace HostPort {
+    OPENVPN_EXCEPTION(host_port_error);
 
-  inline void validate_port(const std::string& port, const std::string& title, unsigned int *value = nullptr)
-  {
-    if (!parse_number_validate<unsigned int>(port, 5, 1, 65535, value))
-      OPENVPN_THROW(option_error, "bad " << title << " number: " << port);
+    inline bool is_valid_port(const std::string& port, unsigned int *value = nullptr)
+    {
+      return parse_number_validate<unsigned int>(port, 5, 1, 65535, value);
+    }
+
+    inline void validate_port(const std::string& port, const std::string& title, unsigned int *value = nullptr)
+    {
+      if (!is_valid_port(port, value))
+	OPENVPN_THROW(host_port_error, "bad " << title << " port number: " << port);
+    }
+
+    inline unsigned short parse_port(const std::string& port, const std::string& title)
+    {
+      unsigned int ret = 0;
+      validate_port(port, title, &ret);
+      return ret;
+    }
+
+    // An IP address is also considered to be a valid host
+    inline bool is_valid_host_char(const char c)
+    {
+      return (c >= 'a' && c <= 'z')
+	|| (c >= 'A' && c <= 'Z')
+	|| (c >= '0' && c <= '9')
+	|| c == '.'
+	|| c == '-'
+	|| c == ':'; // for IPv6
+    }
+
+    inline bool is_valid_host(const std::string& host)
+    {
+      if (!host.length() || host.length() > 256)
+	return false;
+      for (const auto &c : host)
+	{
+	  if (!is_valid_host_char(c))
+	    return false;
+	}
+      return true;
+    }
+
+    inline void validate_host(const std::string& host, const std::string& title)
+    {
+      if (!is_valid_host(host))
+	OPENVPN_THROW(host_port_error, "bad " << title << " host");
+    }
+
+    inline bool split_host_port(const std::string& str,
+				std::string& host,
+				std::string& port,
+				const std::string& title)
+    {
+      const size_t pos = str.find_last_of(':');
+      if (pos != std::string::npos && pos > 0 && str.length() >= pos + 2)
+	{
+	  host = str.substr(0, pos);
+	  port = str.substr(pos + 1);
+	  return is_valid_host(host) && is_valid_port(port);
+	}
+      else
+	return false;
+    }
+
   }
-
-  inline unsigned short parse_port(const std::string& port, const std::string& title)
-  {
-    unsigned int ret = 0;
-    validate_port(port, title, &ret);
-    return ret;
-  }
-
-} // namespace openvpn
+}
 
 #endif

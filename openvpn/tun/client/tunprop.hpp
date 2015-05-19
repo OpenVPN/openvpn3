@@ -478,13 +478,13 @@ namespace openvpn {
 		  {
 		    o.exact_args(4);
 		    http_host = o.get(2, 256);
-		    validate_port(o.get(3, 256), "PROXY_HTTP port", &http_port);
+		    HostPort::validate_port(o.get(3, 256), "PROXY_HTTP", &http_port);
 		  }
 		else if (type == "PROXY_HTTPS")
 		  {
 		    o.exact_args(4);
 		    https_host = o.get(2, 256);
-		    validate_port(o.get(3, 256), "PROXY_HTTPS port", &https_port);
+		    HostPort::validate_port(o.get(3, 256), "PROXY_HTTPS", &https_port);
 		  }
 		else if (type == "WINS")
 		  {

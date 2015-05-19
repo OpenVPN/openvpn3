@@ -391,7 +391,7 @@ namespace openvpn {
     {
       init("");
 
-      validate_port(server_port, title);
+      HostPort::validate_port(server_port, title);
 
       Item::Ptr item(new Item());
       item->server_host = server_host;
@@ -794,7 +794,7 @@ namespace openvpn {
 	if (o)
 	  {
 	    default_port = o->get(1, 16);
-	    validate_port(default_port, directives.port);
+	    HostPort::validate_port(default_port, directives.port);
 	  }
       }
 
@@ -812,7 +812,7 @@ namespace openvpn {
 		if (o.size() >= 3)
 		  {
 		    e->server_port = o.get(2, 16);
-		    validate_port(e->server_port, directives.port);
+		    HostPort::validate_port(e->server_port, directives.port);
 		  }
 		else
 		  e->server_port = default_port;

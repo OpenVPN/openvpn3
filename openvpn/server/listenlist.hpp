@@ -92,7 +92,7 @@ namespace openvpn {
 		    e.directive = o.get(0, 64);
 		    e.addr = o.get(1, 128);
 		    e.port = o.get(2, 16);
-		    validate_port(e.port, e.directive + " port");
+		    HostPort::validate_port(e.port, e.directive);
 		    {
 		      const std::string title = e.directive + " protocol";
 		      e.proto = Protocol::parse(o.get(3, 16), false, title.c_str());
@@ -136,7 +136,7 @@ namespace openvpn {
 	      if (o)
 		{
 		  e.port = o->get(1, 16);
-		  validate_port(e.port, "port");
+		  HostPort::validate_port(e.port, "listen");
 		}
 	      else
 		e.port = "1194";
