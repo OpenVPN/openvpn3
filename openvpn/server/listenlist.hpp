@@ -30,7 +30,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
-#include <openvpn/common/port.hpp>
+#include <openvpn/common/hostport.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/addr/ip.hpp>

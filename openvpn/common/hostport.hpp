@@ -19,8 +19,8 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_COMMON_PORT_H
-#define OPENVPN_COMMON_PORT_H
+#ifndef OPENVPN_COMMON_HOSTPORT_H
+#define OPENVPN_COMMON_HOSTPORT_H
 
 #include <string>
 

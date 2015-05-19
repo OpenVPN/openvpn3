@@ -30,7 +30,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/split.hpp>
-#include <openvpn/common/port.hpp>
+#include <openvpn/common/hostport.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/addr/addrpair.hpp>
 #include <openvpn/client/remotelist.hpp>

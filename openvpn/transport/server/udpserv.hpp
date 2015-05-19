@@ -29,7 +29,7 @@
 #include <boost/asio.hpp>
 
 #include <openvpn/common/asiodispatch.hpp>
-#include <openvpn/common/port.hpp>
+#include <openvpn/common/hostport.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/cidrmap.hpp>
 #include <openvpn/transport/server/transbase.hpp>

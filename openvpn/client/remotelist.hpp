@@ -36,7 +36,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/number.hpp>
-#include <openvpn/common/port.hpp>
+#include <openvpn/common/hostport.hpp>
 #include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/addrlist.hpp>
