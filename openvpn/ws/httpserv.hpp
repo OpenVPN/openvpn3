@@ -532,7 +532,7 @@ namespace openvpn {
 	    throw option_error("only TCP supported");
 	  const IP::Addr ip_addr = IP::Addr::from_string(listen_item.addr);
 	  local_endpoint.address(ip_addr.to_asio());
-	  local_endpoint.port(parse_port(listen_item.port, "port"));
+	  local_endpoint.port(HostPort::parse_port(listen_item.port, "http listen"));
 
 	  // open socket and bind to local address
 	  acceptor.open(local_endpoint.protocol());
