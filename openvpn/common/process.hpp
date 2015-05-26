@@ -31,9 +31,11 @@
 #include <sys/wait.h>  // waitpid
 
 #include <string>
+#include <memory>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/action.hpp>
+#include <openvpn/common/redir.hpp>
 
 extern char **environ;
 
@@ -51,14 +53,76 @@ namespace openvpn {
     {
       std::string ret;
       bool first = true;
-      for (const_iterator i = begin(); i != end(); ++i)
+      for (const auto &s : *this)
 	{
 	  if (!first)
 	    ret += ' ';
-	  ret += *i;
+	  ret += s;
 	  first = false;
 	}
       return ret;
+    }
+  };
+
+  class Environ : public std::vector<std::string>
+  {
+  public:
+    void load_from_environ()
+    {
+      reserve(64);
+      for (char **e = ::environ; *e != NULL; ++e)
+	emplace_back(*e);
+    }
+
+    std::string to_string() const
+    {
+      std::string ret;
+      ret.reserve(512);
+      for (const auto &s : *this)
+	{
+	  ret += s;
+	  ret += '\n';
+	}
+      return ret;
+    }
+
+    int find_index(const std::string& name) const
+    {
+      for (int i = 0; i < size(); ++i)
+	{
+	  const std::string& s = (*this)[i];
+	  const size_t pos = s.find_first_of('=');
+	  if (pos != std::string::npos)
+	    {
+	      if (name == s.substr(0, pos))
+		return i;
+	    }
+	  else
+	    {
+	      if (name == s)
+		return i;
+	    }
+	}
+      return -1;
+    }
+
+    std::string find(const std::string& name) const
+    {
+      const int i = find_index(name);
+      if (i >= 0)
+	return value(i);
+      else
+	return "";
+    }
+
+    std::string value(const size_t idx) const
+    {
+      const std::string& s = (*this)[idx];
+      const size_t pos = s.find_first_of('=');
+      if (pos != std::string::npos)
+	return s.substr(pos+1);
+      else
+	return "";
     }
   };
 
@@ -68,7 +132,7 @@ namespace openvpn {
     ArgvWrapper& operator=(const ArgvWrapper&) = delete;
 
   public:
-    ArgvWrapper(const Argv& argv)
+    explicit ArgvWrapper(const std::vector<std::string>& argv)
     {
       size_t i;
       argc = argv.size();
@@ -90,6 +154,11 @@ namespace openvpn {
       return cargv;
     }
 
+    char **c_argv()
+    {
+      return cargv;
+    }
+
   private:
     static char *string_alloc(const std::string& s)
     {
@@ -105,24 +174,55 @@ namespace openvpn {
     char **cargv;
   };
 
-  inline int system_cmd(const std::string& cmd, const Argv& argv)
+  inline pid_t system_cmd_async(const std::string& cmd,
+				const Argv& argv,
+				const Environ* env,
+				RedirectBase* redir)
   {
-    int ret = -1;
     ArgvWrapper argv_wrap(argv);
-    const pid_t pid = fork();
+    std::unique_ptr<ArgvWrapper> env_wrap;
+    if (env)
+      env_wrap.reset(new ArgvWrapper(*env));
+    const pid_t pid = ::fork();
     if (pid == pid_t(0)) /* child side */
       {
-	execve(cmd.c_str(), argv_wrap.c_argv(), environ);
-	exit(127);
+	if (redir)
+	  redir->redirect();
+	::execve(cmd.c_str(),
+		 argv_wrap.c_argv(),
+		 env_wrap ? env_wrap->c_argv() : ::environ);
+	::exit(127);
       }
     else if (pid < pid_t(0)) /* fork failed */
-      ;
+      return -1;
     else /* parent side */
       {
-	if (waitpid(pid, &ret, 0) != pid)
-	  ret = -1;
+	if (redir)
+	  redir->close();
+	return pid;
       }
-    return ret;
+  }
+
+  inline int system_cmd(const std::string& cmd,
+			const Argv& argv,
+			RedirectBase* redir,
+			const Environ* env)
+  {
+    const pid_t pid = system_cmd_async(cmd, argv, env, redir);
+    if (pid < pid_t(0))
+      return -1;
+    int status = -1;
+    if (::waitpid(pid, &status, 0) == pid)
+      {
+	if (WIFEXITED(status))
+	  return WEXITSTATUS(status);
+      }
+    return -1;
+  }
+
+  inline int system_cmd(const std::string& cmd, const Argv& argv)
+  {
+    return system_cmd(cmd, argv, nullptr, nullptr);
   }
 
   inline int system_cmd(const Argv& argv)
