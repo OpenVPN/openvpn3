@@ -161,7 +161,7 @@ namespace openvpn {
       };
 
       class HTTPCore;
-      typedef HTTPBase<HTTPCore, Config, Status, HTTP::ReplyType, ContentInfo, olong> Base;
+      typedef HTTPBase<HTTPCore, Config, Status, HTTP::ReplyType, ContentInfo, olong, RC<thread_unsafe_refcount>> Base;
 
       class HTTPCore : public Base, public TransportClientParent
       {
