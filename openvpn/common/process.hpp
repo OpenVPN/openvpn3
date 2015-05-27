@@ -149,12 +149,12 @@ namespace openvpn {
       delete [] cargv;
     }
 
-    char *const *c_argv() const
+    char *const *c_argv() const noexcept
     {
       return cargv;
     }
 
-    char **c_argv()
+    char **c_argv() noexcept
     {
       return cargv;
     }

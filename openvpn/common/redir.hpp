@@ -49,7 +49,7 @@ namespace openvpn {
   class RedirectStdFD : public RedirectBase
   {
   public:
-    virtual void redirect() override
+    virtual void redirect() noexcept override
     {
       // stdin
       if (in.defined())
