@@ -32,6 +32,10 @@
 #ifndef OPENVPN_WS_HTTPSERV_H
 #define OPENVPN_WS_HTTPSERV_H
 
+#ifndef OPENVPN_HTTP_SERV_RC
+#define OPENVPN_HTTP_SERV_RC RC<thread_unsafe_refcount>
+#endif
+
 namespace openvpn {
   namespace WS {
     namespace Server {
@@ -136,7 +140,7 @@ namespace openvpn {
 	class Client;
 
       private:
-	typedef WS::HTTPBase<Client, Config, Status, HTTP::RequestType, ContentInfo, content_len_t> Base;
+	typedef WS::HTTPBase<Client, Config, Status, HTTP::RequestType, ContentInfo, content_len_t, OPENVPN_HTTP_SERV_RC> Base;
 
       public:
 	class Client : public Base
