@@ -34,9 +34,10 @@ namespace openvpn {
 	      typename STATUS,
 	      typename REQUEST_REPLY,
 	      typename CONTENT_INFO,
-	      typename CONTENT_LENGTH_TYPE
+	      typename CONTENT_LENGTH_TYPE,
+	      typename REFCOUNT_BASE
 	      >
-    class HTTPBase : public RC<thread_unsafe_refcount>
+    class HTTPBase : public REFCOUNT_BASE
     {
       friend ChunkedHelper;
 
