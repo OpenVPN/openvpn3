@@ -473,16 +473,19 @@ int main(int argc, char *argv[])
 		  std::cout << "CONNECTING..." << std::endl;
 
 #if !defined(OPENVPN_PLATFORM_WIN)
-		  Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
-
 		  // start connect thread
 		  the_client = &client;
 		  thread = new std::thread([]() {
 		      worker_thread();
 		    });
 
-		  // wait for connect thread to exit
-		  thread->join();
+		  {
+		    // catch signals that might occur while we're in join()
+		    Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
+
+		    // wait for connect thread to exit
+		    thread->join();
+		  }
 		  the_client = nullptr;
 #else
 		  // Set Windows title bar
