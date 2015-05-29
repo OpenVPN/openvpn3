@@ -550,11 +550,12 @@ namespace openvpn {
 	    return link->send_queue_empty();
 	}
 
-	void base_http_done_handler(BufferAllocated& residual)
+	void base_http_done_handler(BufferAllocated& residual,
+				    const bool parent_handoff)
 	{
 	  if (halt)
 	    return;
-	  if (content_info.keepalive)
+	  if (content_info.keepalive || parent_handoff)
 	    {
 	      general_timer.cancel();
 	      alive = true;
