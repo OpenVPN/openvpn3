@@ -130,6 +130,16 @@ namespace openvpn {
 	return b;
       }
 
+      // Return a new BufferAllocated object by value initialized with the given data.
+      BufferAllocated copy_by_value(const unsigned char *data, const size_t size) const
+      {
+	const size_t cap = size + headroom() + tailroom();
+	BufferAllocated b(cap, buffer_flags());
+	b.init_headroom(actual_headroom(b.c_data_raw()));
+	b.write(data, size);
+	return b;
+      }
+
       // Return a new BufferAllocated object initialized with
       // the data in given buffer.  buf may be empty or undefined.
       BufferPtr copy(const BufferPtr& buf) const
