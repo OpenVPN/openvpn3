@@ -286,7 +286,7 @@ namespace openvpn {
 			  {
 			    // parent wants to handle content itself,
 			    // pass post-header residual data
-			    parent().base_http_done_handler(buf);
+			    parent().base_http_done_handler(buf, true);
 			    return;
 			  }
 			break;
@@ -304,6 +304,8 @@ namespace openvpn {
 	  {
 	    // processing HTTP content
 	    bool done = false;
+	    BufferAllocated residual;
+
 	    if (rr_content_length >= 0)
 	      {
 		const CONTENT_LENGTH_TYPE needed = std::max(rr_content_length - rr_content_bytes, CONTENT_LENGTH_TYPE(0));
@@ -311,7 +313,11 @@ namespace openvpn {
 		  {
 		    done = true;
 		    if (needed < buf.size())
-		      buf.set_size(needed); // drop post-content residual data
+		      {
+			// residual data exists
+			residual.swap(buf);
+			buf = (*frame)[Frame::READ_HTTP].copy_by_value(residual.read_alloc(needed), needed);
+		      }
 		  }
 		do_http_content_in(buf);
 	      }
@@ -320,10 +326,7 @@ namespace openvpn {
 		done = rr_chunked->receive(*this, buf);
 	      }
 	    if (done)
-	      {
-		BufferAllocated empty;
-		parent().base_http_done_handler(empty);
-	      }
+	      parent().base_http_done_handler(residual, false);
 	  }
       }
 
