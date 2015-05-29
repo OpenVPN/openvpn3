@@ -7,6 +7,7 @@
 #include <string>
 #include <cstdint>
 #include <unordered_map>
+#include <deque>
 #include <utility> // for std::move
 #include <memory>
 
@@ -59,6 +60,7 @@ namespace openvpn {
 	  E_EOF_TCP,
 	  E_GENERAL_TIMEOUT,
 	  E_EXTERNAL_STOP,
+	  E_PIPELINE_OVERFLOW,
 
 	  N_ERRORS
 	};
@@ -76,6 +78,7 @@ namespace openvpn {
 	    "E_EOF_TCP",
 	    "E_GENERAL_TIMEOUT",
 	    "E_EXTERNAL_STOP",
+	    "E_PIPELINE_OVERFLOW",
 	  };
 
 	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
@@ -97,7 +100,8 @@ namespace openvpn {
 	    max_header_bytes(0),
 	    max_content_bytes(0),
 	    send_queue_max_size(0),
-	    free_list_max_size(8)
+	    free_list_max_size(8),
+	    pipeline_max_size(64)
 	{
 	}
 
@@ -109,6 +113,7 @@ namespace openvpn {
 	content_len_t max_content_bytes;
 	unsigned int send_queue_max_size;
 	unsigned int free_list_max_size;
+	unsigned int pipeline_max_size;
 	std::string http_server_id;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
@@ -196,7 +201,8 @@ namespace openvpn {
 	      parent(ci.parent),
 	      timeout_timer(ci.io_service),
 	      client_id(ci.client_id),
-	      keepalive(false)
+	      keepalive(false),
+	      handoff(false)
 	  {
 	  }
 
@@ -273,6 +279,7 @@ namespace openvpn {
 
 	  boost::asio::io_service& io_service;
 	  std::unique_ptr<boost::asio::ip::tcp::socket> sock;
+	  std::deque<BufferAllocated> pipeline;
 	  Time::Duration timeout_duration;
 
 	private:
@@ -288,16 +295,19 @@ namespace openvpn {
 	    link->set_raw_mode(true);
 	    if (parent->config->ssl_factory)
 	      ssl_sess = parent->config->ssl_factory->ssl();
-	    restart();
+	    restart(true);
 	  }
 
-	  void restart()
+	  void restart(const bool initial)
 	  {
 	    timeout_duration = Time::Duration::seconds(parent->config->general_timeout);
 	    activity();
 	    rr_reset();
 	    ready = false;
-	    link->start();
+	    consume_pipeline();
+	    if (initial || handoff)
+	      link->start();
+	    handoff = false;
 	  }
 
 	  void stop(const bool remove_self_from_map)
@@ -340,6 +350,25 @@ namespace openvpn {
 	    error_handler(Status::E_GENERAL_TIMEOUT, "General timeout");
 	  }
 
+	  void add_to_pipeline(BufferAllocated& buf)
+	  {
+	    if (buf.empty())
+	      return;
+	    if (pipeline.size() >= parent->config->pipeline_max_size)
+	      error_handler(Status::E_PIPELINE_OVERFLOW, "Pipeline overflow");
+	    pipeline.push_back(std::move(buf));
+	  }
+
+	  void consume_pipeline()
+	  {
+	    while (!pipeline.empty() && !ready)
+	      {
+		BufferAllocated buf(std::move(pipeline.front()));
+		pipeline.pop_front();
+		tcp_in(buf);
+	      }
+	  }
+
 	  // methods called by LinkImpl
 
 	  bool tcp_read_handler(BufferAllocated& b)
@@ -349,15 +378,16 @@ namespace openvpn {
 
 	    try {
 	      activity();
-	      tcp_in(b); // call Base
+	      if (ready)
+		add_to_pipeline(b);
+	      else
+		tcp_in(b); // call Base
 	    }
 	    catch (const std::exception& e)
 	      {
 		handle_exception("tcp_read_handler", e);
 	      }
-
-	    // don't requeue read if ready flag is set
-	    return !ready;
+	    return !handoff; // don't requeue read if handoff, i.e. parent wants to take control of session socket
 	  }
 
 	  void tcp_write_queue_needs_send()
@@ -408,7 +438,7 @@ namespace openvpn {
 	    if (http_out_eof())
 	      {
 		if (keepalive)
-		  restart();
+		  restart(false);
 		else
 		  error_handler(Status::E_SUCCESS, "Succeeded");
 	      }
@@ -435,12 +465,15 @@ namespace openvpn {
 	    return link->send_queue_empty();
 	  }
 
-	  void base_http_done_handler(BufferAllocated& residual)
+	  void base_http_done_handler(BufferAllocated& residual,
+				      const bool parent_handoff)
 	  {
 	    if (halt)
 	      return;
-	    ready = true; // stop accepting input
-	    http_request_received(residual);
+	    ready = true;
+	    handoff = parent_handoff;
+	    add_to_pipeline(residual);
+	    http_request_received();
 	  }
 
 	  void base_error_handler(const int errcode, const std::string& err)
@@ -478,7 +511,7 @@ namespace openvpn {
 	    return true;
 	  }
 
-	  virtual void http_request_received(BufferAllocated& residual)
+	  virtual void http_request_received()
 	  {
 	  }
 
@@ -505,6 +538,7 @@ namespace openvpn {
 	  client_t client_id;
 	  LinkImpl::Ptr link;
 	  bool keepalive;
+	  bool handoff;
 	};
 
       public:
