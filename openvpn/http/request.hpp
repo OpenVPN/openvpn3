@@ -58,6 +58,13 @@ namespace openvpn {
 	return out.str();
       }
 
+      std::string to_string_compact() const
+      {
+	std::ostringstream out;
+	out << method << ' ' << uri << " HTTP/" << http_version_major << '.' << http_version_minor;
+	return out.str();
+      }
+
       std::string method;
       std::string uri;
       int http_version_major;
