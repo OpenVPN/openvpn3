@@ -29,4 +29,6 @@
 // like OPENVPN_LOG but no trailing newline
 #define OPENVPN_LOG_NTNL(args)
 
+#define OPENVPN_LOG_STRING(str)
+
 #endif
