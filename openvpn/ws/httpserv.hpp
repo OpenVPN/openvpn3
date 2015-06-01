@@ -265,7 +265,7 @@ namespace openvpn {
 	    error_handler(Status::E_EXTERNAL_STOP, description);
 	  }
 
-	  std::string remote_endpoint_str()
+	  std::string remote_endpoint_str() const
 	  {
 	    try {
 	      if (sock)
