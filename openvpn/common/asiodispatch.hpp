@@ -314,7 +314,7 @@ namespace openvpn {
     return AsioDispatchPost<C, Handler>(handler, obj);
   }
 
-  // Dispatcher for asynchronous resolver
+  // Dispatcher for asynchronous resolver without argument
 
   template <typename C, typename Handler, typename EndpointIterator>
   class AsioDispatchResolve
@@ -332,6 +332,27 @@ namespace openvpn {
     Handler handler_;
     RCPtr<C> obj_;
   };
+
+  // Dispatcher for asynchronous resolver with argument
+
+  template <typename C, typename Handler, typename EndpointIterator, typename Data>
+  class AsioDispatchResolveArg
+  {
+  public:
+    AsioDispatchResolveArg(Handler handler, C* obj, Data data)
+      : handler_(handler), obj_(obj), data_(data) {}
+
+    void operator()(const boost::system::error_code& error, EndpointIterator iter)
+    {
+      (obj_.get()->*handler_)(error, iter, data_);
+    }
+
+  private:
+    Handler handler_;
+    RCPtr<C> obj_;
+    Data data_;
+  };
+
 
   // Dispatcher for asio signal
 
