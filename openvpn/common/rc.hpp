@@ -65,6 +65,11 @@
 
 #include <openvpn/common/olong.hpp>
 
+#ifdef OPENVPN_RC_DEBUG
+#include <iostream>
+#include <openvpn/common/demangle.hpp>
+#endif
+
 namespace openvpn {
 
   // The smart pointer
@@ -346,6 +351,9 @@ namespace openvpn {
   template <typename R>
   inline void intrusive_ptr_add_ref(R *p) noexcept
   {
+#ifdef OPENVPN_RC_DEBUG
+    std::cout << "ADD REF " << cxx_demangle(typeid(p).name()) << std::endl;
+#endif
     ++p->refcount_;
   }
 
@@ -353,7 +361,18 @@ namespace openvpn {
   inline void intrusive_ptr_release(R *p) noexcept
   {
     if (--p->refcount_ == 0)
-      delete p;
+      {
+#ifdef OPENVPN_RC_DEBUG
+	std::cout << "DEL OBJ " << cxx_demangle(typeid(p).name()) << std::endl;
+#endif
+	delete p;
+      }
+    else
+      {
+#ifdef OPENVPN_RC_DEBUG
+	std::cout << "REL REF " << cxx_demangle(typeid(p).name()) << std::endl;
+#endif
+      }
   }
 
 #endif
