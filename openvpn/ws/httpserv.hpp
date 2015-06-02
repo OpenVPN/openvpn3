@@ -315,6 +315,7 @@ namespace openvpn {
 	    if (halt)
 	      return;
 	    halt = true;
+	    http_destroy();
 	    timeout_timer.cancel();
 	    if (link)
 	      link->stop();
@@ -495,8 +496,8 @@ namespace openvpn {
 
 	  void error_handler(const int errcode, const std::string& err)
 	  {
-	    stop(true);
 	    http_stop(errcode, err);
+	    stop(true);
 	  }
 
 	  // virtual methods
@@ -529,6 +530,10 @@ namespace openvpn {
 	  }
 
 	  virtual void http_stop(const int status, const std::string& description)
+	  {
+	  }
+
+	  virtual void http_destroy()
 	  {
 	  }
 
