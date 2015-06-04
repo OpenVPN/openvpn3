@@ -28,6 +28,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/lex.hpp>
@@ -71,7 +72,7 @@ namespace openvpn {
 	    {
 	      if (lim)
 		lim->add_term();
-	      ret.push_back(term);
+	      ret.push_back(std::move(term));
 	      ++nterms;
 	      term = "";
 	    }
@@ -81,7 +82,7 @@ namespace openvpn {
 	}
       if (lim)
 	lim->add_term();
-      ret.push_back(term);
+      ret.push_back(std::move(term));
     }
 
     // convenience method that returns data rather than modifying an in-place argument
@@ -128,7 +129,7 @@ namespace openvpn {
 		{
 		  if (lim)
 		    lim->add_term();
-		  ret.push_back(term);
+		  ret.push_back(std::move(term));
 		  term = "";
 		  defined = false;
 		}
@@ -138,7 +139,7 @@ namespace openvpn {
 	{
 	  if (lim)
 	    lim->add_term();
-	  ret.push_back(term);
+	  ret.push_back(std::move(term));
 	}
     }
 
