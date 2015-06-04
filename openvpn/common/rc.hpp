@@ -39,10 +39,9 @@
 // class Bar : public RC<thread_unsafe_refcount> {}
 //
 // Thread-safe reference counting can be significantly more expensive
-// on SMP machines because the bus must be locked before the reference
-// count can be incremented/decremented.  Therefore thread-safe reference
-// counting should only be used for objects that have visibility across
-// multiple threads.
+// because an atomic object must be used for the reference count.
+// Therefore, thread-safe reference counting should only be used for
+// objects that have visibility across multiple threads.
 //
 // For clarity, any object that inherits from RC should also declare a Ptr
 // typedef that defines the smart pointer type that should be used to track
@@ -60,6 +59,7 @@
 #define OPENVPN_COMMON_RC_H
 
 #include <atomic>
+#include <utility>
 
 #include <boost/intrusive_ptr.hpp>
 
@@ -78,26 +78,23 @@ namespace openvpn {
 
   class thread_unsafe_refcount
   {
-    thread_unsafe_refcount(const thread_unsafe_refcount&) = delete;
-    thread_unsafe_refcount& operator=(const thread_unsafe_refcount&) = delete;
-
   public:
     thread_unsafe_refcount() noexcept
       : rc(olong(0))
     {
     }
 
-    void operator++()
+    void operator++() noexcept
     {
       ++rc;
     }
 
-    olong operator--()
+    olong operator--() noexcept
     {
       return --rc;
     }
 
-    bool inc_if_nonzero()
+    bool inc_if_nonzero() noexcept
     {
       if (rc)
 	{
@@ -108,32 +105,60 @@ namespace openvpn {
 	return false;
     }
 
-    olong use_count() const
+    olong use_count() const noexcept
     {
       return rc;
     }
 
+    void notify_release() noexcept
+    {
+    }
+
+    template <typename T>
+    class ListHead
+    {
+    public:
+      ListHead() noexcept : ptr(nullptr) {}
+
+      T* load() noexcept
+      {
+	return ptr;
+      }
+
+      void insert(T* item) noexcept
+      {
+	item->next = ptr;
+	ptr = item;
+      }
+
+    private:
+      ListHead(const ListHead&) = delete;
+      ListHead& operator=(const ListHead&) = delete;
+
+      T* ptr;
+    };
+
   private:
+    thread_unsafe_refcount(const thread_unsafe_refcount&) = delete;
+    thread_unsafe_refcount& operator=(const thread_unsafe_refcount&) = delete;
+
     olong rc;
   };
 
   class thread_safe_refcount
   {
-    thread_safe_refcount(const thread_safe_refcount&) = delete;
-    thread_safe_refcount& operator=(const thread_safe_refcount&) = delete;
-
   public:
     thread_safe_refcount() noexcept
       : rc(olong(0))
     {
     }
 
-    void operator++()
+    void operator++() noexcept
     {
       rc.fetch_add(1, std::memory_order_relaxed);
     }
 
-    olong operator--()
+    olong operator--() noexcept
     {
       // http://www.boost.org/doc/libs/1_55_0/doc/html/atomic/usage_examples.html
       const olong ret = rc.fetch_sub(1, std::memory_order_release) - 1;
@@ -144,7 +169,7 @@ namespace openvpn {
 
     // If refcount is 0, do nothing and return false.
     // If refcount != 0, increment it and return true.
-    bool inc_if_nonzero()
+    bool inc_if_nonzero() noexcept
     {
       olong previous = rc.load(std::memory_order_relaxed);
       while (true)
@@ -157,12 +182,48 @@ namespace openvpn {
       return previous > 0;
     }
 
-    olong use_count() const
+    olong use_count() const noexcept
     {
       return rc.load(std::memory_order_relaxed);
     }
 
+    void notify_release() noexcept
+    {
+    }
+
+    template <typename T>
+    class ListHead
+    {
+    public:
+      ListHead() noexcept : ptr(nullptr) {}
+
+      T* load() noexcept
+      {
+	return ptr.load(std::memory_order_relaxed);
+      }
+
+      void insert(T* item) noexcept
+      {
+	T* previous = ptr.load(std::memory_order_relaxed);
+	while (true)
+	  {
+	    item->next = previous;
+	    if (ptr.compare_exchange_weak(previous, item, std::memory_order_relaxed))
+	      break;
+	  }
+      }
+
+    private:
+      ListHead(const ListHead&) = delete;
+      ListHead& operator=(const ListHead&) = delete;
+
+      std::atomic<T*> ptr;
+    };
+
   private:
+    thread_safe_refcount(const thread_safe_refcount&) = delete;
+    thread_safe_refcount& operator=(const thread_safe_refcount&) = delete;
+
     std::atomic<olong> rc;
   };
 
@@ -171,13 +232,14 @@ namespace openvpn {
   template <typename RCImpl> // RCImpl = thread_safe_refcount or thread_unsafe_refcount
   class RC
   {
-    RC(const RC&) = delete;
-    RC& operator=(const RC&) = delete;
-
   public:
     RC() noexcept {}
     virtual ~RC() {}
+
   private:
+    RC(const RC&) = delete;
+    RC& operator=(const RC&) = delete;
+
     template <typename R> friend void intrusive_ptr_add_ref(R* p) noexcept;
     template <typename R> friend void intrusive_ptr_release(R* p) noexcept;
     RCImpl refcount_;
@@ -192,21 +254,99 @@ namespace openvpn {
     RCCopyable(const RCCopyable&) noexcept {}
     RCCopyable& operator=(const RCCopyable&) noexcept { return *this; }
     virtual ~RCCopyable() {}
+
   private:
     template <typename R> friend void intrusive_ptr_add_ref(R* p) noexcept;
     template <typename R> friend void intrusive_ptr_release(R* p) noexcept;
     RCImpl refcount_;
   };
 
-  // Like RC, but also allows weak pointers
+  // Like RC, but also allows weak pointers and release notification callables
   template <typename RCImpl> // RCImpl = thread_safe_refcount or thread_unsafe_refcount
   class RCWeak
   {
-    RCWeak(const RCWeak&) = delete;
-    RCWeak& operator=(const RCWeak&) = delete;
-
     template<typename T>
     friend class RCWeakPtr;
+
+    // Base class of release notification callables
+    class NotifyBase
+    {
+    public:
+      NotifyBase() noexcept {}
+      virtual void call() noexcept = 0;
+      virtual ~NotifyBase() {}
+      NotifyBase* next;
+
+    private:
+      NotifyBase(const NotifyBase&) = delete;
+      NotifyBase& operator=(const NotifyBase&) = delete;
+    };
+
+    // A release notification callable
+    template <typename CALLABLE>
+    class NotifyItem : public NotifyBase
+    {
+    public:
+      NotifyItem(const CALLABLE& c) noexcept
+	: callable(c)
+      {
+      }
+
+      NotifyItem(CALLABLE&& c) noexcept
+      : callable(std::move(c))
+      {
+      }
+
+    private:
+      virtual void call() noexcept override
+      {
+	callable();
+      }
+
+      CALLABLE callable;
+    };
+
+    // Head of a linked-list of release notification callables
+    class NotifyListHead
+    {
+    public:
+      NotifyListHead() noexcept {}
+
+      template <typename CALLABLE>
+      void add(const CALLABLE& c) noexcept
+      {
+	NotifyBase* item = new NotifyItem<CALLABLE>(c);
+	head.insert(item);
+      }
+
+      template <typename CALLABLE>
+      void add(CALLABLE&& c) noexcept
+      {
+	NotifyBase* item = new NotifyItem<CALLABLE>(std::move(c));
+	head.insert(item);
+      }
+
+      void release() noexcept
+      {
+	// In thread-safe mode, list traversal is guaranteed to be
+	// contention-free because we are not called until refcount
+	// reaches zero and after a std::memory_order_acquire fence.
+	NotifyBase* nb = head.load();
+	while (nb)
+	  {
+	    NotifyBase* next = nb->next;
+	    nb->call();
+	    delete nb;
+	    nb = next;
+	  }
+      }
+
+    private:
+      NotifyListHead(const NotifyListHead&) = delete;
+      NotifyListHead& operator=(const NotifyListHead&) = delete;
+
+      typename RCImpl::template ListHead<NotifyBase> head;
+    };
 
     // For weak-referenceable objects, we must detach the
     // refcount from the object and place it in Controller.
@@ -219,13 +359,13 @@ namespace openvpn {
       {
       }
 
-      olong use_count() const
+      olong use_count() const noexcept
       {
 	return rc.use_count();
       }
 
       template <typename PTR>
-      PTR lock()
+      PTR lock() noexcept
       {
 	if (rc.inc_if_nonzero())
 	  return PTR(static_cast<typename PTR::element_type*>(parent), false);
@@ -233,8 +373,8 @@ namespace openvpn {
 	  return PTR();
       }
 
-      RCWeak *const parent; // dangles after rc == 0
-      RCImpl rc;
+      RCWeak *const parent;  // dangles (harmlessly) after rc decrements to 0
+      RCImpl rc;             // refcount
     };
 
     struct ControllerRef
@@ -244,17 +384,23 @@ namespace openvpn {
       {
       }
 
-      void operator++()
+      void operator++() noexcept
       {
 	++controller->rc;
       }
 
-      olong operator--()
+      olong operator--() noexcept
       {
 	return --controller->rc;
       }
 
-      typename Controller::Ptr controller;
+      void notify_release() noexcept
+      {
+	notify.release();
+      }
+
+      typename Controller::Ptr controller;  // object containing actual refcount
+      NotifyListHead notify;                // linked list of callables to be notified on object release
     };
 
   public:
@@ -267,9 +413,32 @@ namespace openvpn {
     {
     }
 
+    // Add observers to be called just prior to object deletion,
+    // but after refcount has been decremented to 0.  At this
+    // point, all weak pointers have expired, and no strong
+    // pointers are outstanding.  Callables can access the
+    // object by raw pointer but must NOT attempt to create a
+    // strong pointer referencing the object.
+
+    template <typename CALLABLE>
+    void rc_release_notify(const CALLABLE& c) noexcept
+    {
+      refcount_.notify.add(c);
+    }
+
+    template <typename CALLABLE>
+    void rc_release_notify(CALLABLE&& c) noexcept
+    {
+      refcount_.notify.add(std::move(c));
+    }
+
   private:
+    RCWeak(const RCWeak&) = delete;
+    RCWeak& operator=(const RCWeak&) = delete;
+
     template <typename R> friend void intrusive_ptr_add_ref(R* p) noexcept;
     template <typename R> friend void intrusive_ptr_release(R* p) noexcept;
+
     ControllerRef refcount_;
   };
 
@@ -321,7 +490,7 @@ namespace openvpn {
       controller.swap(other.controller);
     }
 
-    olong use_count() const
+    olong use_count() const noexcept
     {
       if (controller)
 	return controller->use_count();
@@ -329,12 +498,12 @@ namespace openvpn {
 	return 0;
     }
 
-    bool expired() const
+    bool expired() const noexcept
     {
       return use_count() == 0;
     }
 
-    Strong lock() const
+    Strong lock() const noexcept
     {
       if (controller)
 	return controller->template lock<Strong>();
@@ -365,6 +534,7 @@ namespace openvpn {
 #ifdef OPENVPN_RC_DEBUG
 	std::cout << "DEL OBJ " << cxx_demangle(typeid(p).name()) << std::endl;
 #endif
+	p->refcount_.notify_release();
 	delete p;
       }
     else
