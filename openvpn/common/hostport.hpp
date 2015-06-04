@@ -82,14 +82,15 @@ namespace openvpn {
     inline bool split_host_port(const std::string& str,
 				std::string& host,
 				std::string& port,
-				const std::string& title)
+				const std::string& title,
+				unsigned int *port_save = nullptr)
     {
       const size_t pos = str.find_last_of(':');
       if (pos != std::string::npos && pos > 0 && str.length() >= pos + 2)
 	{
 	  host = str.substr(0, pos);
 	  port = str.substr(pos + 1);
-	  return is_valid_host(host) && is_valid_port(port);
+	  return is_valid_host(host) && is_valid_port(port, port_save);
 	}
       else
 	return false;
