@@ -177,6 +177,12 @@ namespace openvpn {
 	return boost::asio::mutable_buffers_1(buf.data(), remaining_payload(buf));
       }
 
+      // clamped version of mutable_buffers_1
+      boost::asio::mutable_buffers_1 mutable_buffers_1_clamp(Buffer& buf) const
+      {
+	return boost::asio::mutable_buffers_1(buf.data(), buf_clamp_read(remaining_payload(buf)));
+      }
+
       std::string info() const
       {
 	std::ostringstream info;

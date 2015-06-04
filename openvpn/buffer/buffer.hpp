@@ -61,6 +61,7 @@
 #include <openvpn/common/abort.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/buffer/bufclamp.hpp>
 
 #ifdef OPENVPN_BUFFER_ABORT
 #define OPENVPN_BUFFER_THROW(exc) { std::abort(); }
@@ -377,6 +378,24 @@ namespace openvpn {
     boost::asio::const_buffers_1 const_buffers_1() const
     {
       return boost::asio::const_buffers_1(c_data(), size());
+    }
+
+    // clamped versions of mutable_buffers_1(), mutable_buffers_1_append(),
+    // and const_buffers_1()
+
+    boost::asio::mutable_buffers_1 mutable_buffers_1_clamp(const size_t tailroom = 0)
+    {
+      return boost::asio::mutable_buffers_1(data(), buf_clamp_read(max_size_tailroom(tailroom)));
+    }
+
+    boost::asio::mutable_buffers_1 mutable_buffers_1_append_clamp(const size_t tailroom = 0)
+    {
+      return boost::asio::mutable_buffers_1(data_end(), buf_clamp_read(remaining(tailroom)));
+    }
+
+    boost::asio::const_buffers_1 const_buffers_1_clamp() const
+    {
+      return boost::asio::const_buffers_1(c_data(), buf_clamp_write(size()));
     }
 
     void realign(size_t headroom)

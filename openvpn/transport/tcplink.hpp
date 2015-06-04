@@ -185,7 +185,7 @@ namespace openvpn {
       void queue_send()
       {
 	BufferAllocated& buf = *queue.front();
-	socket.async_send(buf.const_buffers_1(),
+	socket.async_send(buf.const_buffers_1_clamp(),
 			  asio_dispatch_write(&Link::handle_send, this));
       }
 
@@ -240,7 +240,7 @@ namespace openvpn {
 	if (!tcpfrom)
 	  tcpfrom = new PacketFrom();
 	frame_context.prepare(tcpfrom->buf);
-	socket.async_receive(frame_context.mutable_buffers_1(tcpfrom->buf),
+	socket.async_receive(frame_context.mutable_buffers_1_clamp(tcpfrom->buf),
 			     asio_dispatch_read(&Link::handle_recv, this, tcpfrom));
       }
 
