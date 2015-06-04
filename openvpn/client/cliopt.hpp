@@ -532,6 +532,9 @@ namespace openvpn {
 	  httpconf->socket_protect = socket_protect;
 	  httpconf->http_proxy_options = http_proxy_options;
 	  httpconf->rng = rng;
+#ifdef PRIVATE_TUNNEL_PROXY
+	  httpconf->skip_html = true;
+#endif
 	  transport_factory = httpconf;
 	}
       else

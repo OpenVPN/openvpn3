@@ -94,17 +94,42 @@ namespace openvpn {
       // This method is a no-op if RAW_MODE_ONLY is true.
       void set_raw_mode(const bool mode)
       {
+	set_raw_mode_read(mode);
+	set_raw_mode_write(mode);
+      }
+
+      void set_raw_mode_read(const bool mode)
+      {
 	if (RAW_MODE_ONLY)
-	  raw_mode = true;
+	  raw_mode_read = true;
 	else
-	  raw_mode = mode;
+	  raw_mode_read = mode;
+      }
+
+      void set_raw_mode_write(const bool mode)
+      {
+	if (RAW_MODE_ONLY)
+	  raw_mode_write = true;
+	else
+	  raw_mode_write = mode;
       }
 
       bool is_raw_mode() const {
+	return is_raw_mode_read() && is_raw_mode_write();
+      }
+
+      bool is_raw_mode_read() const {
 	if (RAW_MODE_ONLY)
 	  return true;
 	else
-	  return raw_mode;
+	  return raw_mode_read;
+      }
+
+      bool is_raw_mode_write() const {
+	if (RAW_MODE_ONLY)
+	  return true;
+	else
+	  return raw_mode_write;
       }
 
       void set_mutate(const TransportMutateStream::Ptr& mutate_arg)
@@ -139,7 +164,7 @@ namespace openvpn {
 	else
 	  buf.reset(new BufferAllocated());
 	buf->swap(b);
-	if (!is_raw_mode())
+	if (!is_raw_mode_write())
 	  PacketStream::prepend_size(*buf);
 	if (mutate)
 	  mutate->pre_send(*buf);
@@ -195,7 +220,7 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		OPENVPN_LOG_TCPLINK_VERBOSE("TCP send raw=" << raw_mode << " size=" << bytes_sent);
+		OPENVPN_LOG_TCPLINK_VERBOSE("TCP send raw=" << raw_mode_write << " size=" << bytes_sent);
 		stats->inc_stat(SessionStats::BYTES_OUT, bytes_sent);
 		stats->inc_stat(SessionStats::PACKETS_OUT, 1);
 
@@ -253,9 +278,9 @@ namespace openvpn {
 	    if (!error)
 	      {
 		bool requeue = true;
-		OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv raw=" << raw_mode << " size=" << bytes_recvd);
+		OPENVPN_LOG_TCPLINK_VERBOSE("TCP recv raw=" << raw_mode_read << " size=" << bytes_recvd);
 		pfp->buf.set_size(bytes_recvd);
-		if (!is_raw_mode())
+		if (!is_raw_mode_read())
 		  {
 		    try {
 		      BufferAllocated pkt;
@@ -317,7 +342,8 @@ namespace openvpn {
 
       boost::asio::ip::tcp::socket& socket;
       bool halt;
-      bool raw_mode;
+      bool raw_mode_read;
+      bool raw_mode_write;
       ReadHandler read_handler;
       Frame::Context frame_context;
       SessionStats::Ptr stats;

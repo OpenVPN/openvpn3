@@ -28,6 +28,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm>                  // for std::min
+#include <memory>
 
 #include <boost/asio.hpp>
 
@@ -47,6 +48,7 @@
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/http/reply.hpp>
 #include <openvpn/http/status.hpp>
+#include <openvpn/http/htmlskip.hpp>
 #include <openvpn/proxy/proxyauth.hpp>
 #include <openvpn/proxy/httpdigest.hpp>
 #include <openvpn/proxy/ntlm.hpp>
@@ -190,6 +192,8 @@ namespace openvpn {
 
       SocketProtect* socket_protect;
 
+      bool skip_html;
+
       static Ptr new_obj()
       {
 	return new ClientConfig;
@@ -202,7 +206,8 @@ namespace openvpn {
       ClientConfig()
 	: send_queue_max_size(1024),
 	  free_list_max_size(8),
-	  socket_protect(nullptr)
+	  socket_protect(nullptr),
+	  skip_html(false)
       {}
     };
 
@@ -363,7 +368,12 @@ namespace openvpn {
       bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
       {
 	if (proxy_established)
-	  parent.transport_recv(buf);
+	  {
+	    if (!html_skip)
+	      parent.transport_recv(buf);
+	    else
+	      drain_html(buf); // skip extraneous HTML after header
+	  }
 	else
 	  {
 	    try {
@@ -424,14 +434,14 @@ namespace openvpn {
 			// we are connected, switch socket to tunnel mode
 			if (http_reply.status_code == HTTP::Status::Connected)
 			  {
-			    // switch socket from HTTP proxy handshake mode to OpenVPN protocol mode
-			    proxy_established = true;
-			    if (parent.transport_is_openvpn_protocol())
+			    if (config->skip_html)
 			      {
-				impl->set_raw_mode(false);
-				impl->inject(buf);
+				proxy_half_connected();
+				html_skip.reset(new HTTP::HTMLSkip());
+				drain_html(buf);
 			      }
-			    parent.transport_connecting();
+			    else
+			      proxy_connected(buf, true);
 			  }
 			else if (ntlm_phase_2_response_pending)
 			  ntlm_auth_phase_2_pre();
@@ -445,7 +455,7 @@ namespace openvpn {
 	      }
 	  }
 
-	// handle draining of content
+	// handle draining of content controlled by Content-length header
 	if (drain_content_length)
 	  {
 	    const size_t drain = std::min(drain_content_length, buf.size());
@@ -455,6 +465,67 @@ namespace openvpn {
 	      {
 		if (ntlm_phase_2_response_pending)
 		  ntlm_auth_phase_2();
+	      }
+	  }
+      }
+
+      void proxy_connected(BufferAllocated& buf, const bool notify_parent)
+      {
+	proxy_established = true;
+	if (parent.transport_is_openvpn_protocol())
+	  {
+	    // switch socket from HTTP proxy handshake mode to OpenVPN protocol mode
+	    impl->set_raw_mode(false);
+	    if (notify_parent)
+	      parent.transport_connecting();
+	    try {
+	      impl->inject(buf);
+	    }
+	    catch (const std::exception& e)
+	      {
+		proxy_error(Error::PROXY_ERROR, std::string("post-header inject error: ") + e.what());
+		return;
+	      }
+	  }
+	else
+	  {
+	    if (notify_parent)
+	      parent.transport_connecting();
+	    parent.transport_recv(buf);
+	  }
+      }
+
+      // Called after header received but before possible extraneous HTML
+      // is drained.  At this point, we are in a state where output data
+      // (if OpenVPN protocol) is packetized, but input data is still in
+      // raw mode as we search the input stream for the end of the
+      // extraneous HTML.  When we reach the beginning of payload data,
+      // proxy_connected() should be called with notify_parent == false.
+      void proxy_half_connected()
+      {
+	proxy_established = true;
+	if (parent.transport_is_openvpn_protocol())
+	  impl->set_raw_mode_write(false);
+	parent.transport_connecting();
+      }
+
+      void drain_html(BufferAllocated& buf)
+      {
+	while (!buf.empty())
+	  {
+	    switch (html_skip->add(buf.pop_front()))
+	      {
+	      case HTTP::HTMLSkip::MATCH:
+	      case HTTP::HTMLSkip::NOMATCH:
+		{
+		  OPENVPN_LOG("Proxy: Skipped " << html_skip->n_bytes() << " byte(s) of HTML");
+		  html_skip->get_residual(buf);
+		  html_skip.reset();
+		  proxy_connected(buf, false);
+		  return;
+		}
+	      case HTTP::HTMLSkip::PENDING:
+		break;
 	      }
 	  }
       }
@@ -801,6 +872,7 @@ namespace openvpn {
 	http_parser.reset();
 	ntlm_phase_2_response_pending = false;
 	drain_content_length = 0;
+	html_skip.reset();
       }
 
       // do TCP connect
@@ -921,6 +993,8 @@ namespace openvpn {
 
       bool ntlm_phase_2_response_pending;
       size_t drain_content_length;
+
+      std::unique_ptr<HTTP::HTMLSkip> html_skip;
     };
 
     inline TransportClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service, TransportClientParent& parent)
