@@ -283,8 +283,7 @@ namespace openvpn {
     {
       // Note that we violate constness here, which is done
       // because the touched bit is considered to be option metadata.
-      Option *self = const_cast<Option *>(this);
-      self->touched_ = true;
+      touched_ = true;
     }
 
     // was this option processed?
@@ -303,7 +302,7 @@ namespace openvpn {
       return ret;
     }
 
-    bool touched_;
+    mutable bool touched_;
     std::vector<std::string> data;
   };
 
