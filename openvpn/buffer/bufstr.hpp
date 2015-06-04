@@ -51,7 +51,7 @@ namespace openvpn {
     buf.write((unsigned char *)str, std::strlen(str));
   }
 
-  // return BufferAllocated from std::string
+  // return BufferPtr from std::string
   inline BufferPtr buf_from_string(const std::string& str)
   {
     const size_t len = str.length();
@@ -60,7 +60,7 @@ namespace openvpn {
     return buf;
   }
 
-  // return BufferAllocated from C string
+  // return BufferPtr from C string
   inline BufferPtr buf_from_string(const char *str)
   {
     const size_t len = std::strlen(str);
@@ -68,6 +68,25 @@ namespace openvpn {
     buf->write((unsigned char *)str, len);
     return buf;
   }
+
+  // return BufferAllocated from std::string
+  inline BufferAllocated buf_alloc_from_string(const std::string& str)
+  {
+    const size_t len = str.length();
+    BufferAllocated buf(len, 0);
+    buf.write((unsigned char *)str.c_str(), len);
+    return buf;
+  }
+
+  // return BufferAllocated from C string
+  inline BufferAllocated buf_alloc_from_string(const char *str)
+  {
+    const size_t len = std::strlen(str);
+    BufferAllocated buf(len, 0);
+    buf.write((unsigned char *)str, len);
+    return buf;
+  }
+
 }
 
 #endif
