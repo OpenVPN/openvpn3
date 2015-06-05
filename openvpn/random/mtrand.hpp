@@ -19,22 +19,29 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Non-cryptographic random number generator based on boost::mt19937
+// Non-cryptographic random number generator
 
-#ifndef OPENVPN_RANDOM_BOOSTRAND_H
-#define OPENVPN_RANDOM_BOOSTRAND_H
+#ifndef OPENVPN_RANDOM_MTRAND_H
+#define OPENVPN_RANDOM_MTRAND_H
 
-#include <boost/random.hpp>
+#include <random>
 
 namespace openvpn {
 
   class RandomIntBase
   {
   public:
-    typedef unsigned int type;
+    typedef std::mt19937::result_type type;
 
-    RandomIntBase(type seed) : rng_(seed) {}
-    RandomIntBase() {} // deterministic sequence
+    RandomIntBase(type seed)
+      : rng_(seed)
+    {
+    }
+
+    RandomIntBase()
+      : rng_(gen_seed())
+    {
+    }
 
     type randrange(const type end)
     {
@@ -46,8 +53,14 @@ namespace openvpn {
       return rng_();
     }
 
+    static std::random_device::result_type gen_seed()
+    {
+      std::random_device rd;
+      return rd();
+    }
+
   private:
-    boost::mt19937 rng_;
+    std::mt19937 rng_;
   };
 
 } // namespace openvpn

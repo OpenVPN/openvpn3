@@ -24,7 +24,7 @@
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/time/time.hpp>
-#include <openvpn/random/boostrand.hpp>
+#include <openvpn/random/mtrand.hpp>
 
 namespace openvpn {
   inline void set_duration_parm(Time::Duration& dur,

@@ -23,7 +23,7 @@
 #define OPENVPN_RANDOM_RANDINT_H
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/random/boostrand.hpp>
+#include <openvpn/random/mtrand.hpp>
 #include <openvpn/random/randtype.hpp>
 #include <openvpn/random/randapi.hpp>
 
@@ -34,7 +34,7 @@ namespace openvpn {
   class RandomInt : public RandomIntBase
   {
   public:
-    RandomInt(RandomAPI& rng) : RandomIntBase(rand_type<unsigned int>(rng)) {}
+    RandomInt(RandomAPI& rng) : RandomIntBase(rand_type<RandomIntBase::type>(rng)) {}
   };
 
 } // namespace openvpn
