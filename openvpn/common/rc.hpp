@@ -19,17 +19,11 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// A basic reference-counting garbage collection scheme based on
-// boost::intrusive_ptr.  Simply inherit from RC to create an
-// object that can be tracked with an intrusive_ptr.
+// A basic reference-counting garbage collection scheme.  Simply inherit
+// from RC to create an object that can be tracked with an RCPtr.
 //
-// We use tend to use boost::intrusive_ptr rather than the other boost/std
-// smart pointer classes because it is more efficient to have the reference
-// count itself baked into the object being tracked.  The downside
-// of boost::intrusive_ptr is that it cannot be used for weak references.
-// Another downside of reference counting in general is that it doesn't handle
-// cycles, so be sure to manually break any cycles that might arise
-// before the object chain is considered for garbage collection.
+// We use tend to use RCPtr rather than the other smart pointer
+// classes (std or boost) for performance.
 //
 // When using the RC template class, it is necessary to specify whether
 // the reference count should be thread safe or unsafe, i.e.:
@@ -61,8 +55,6 @@
 #include <atomic>
 #include <utility>
 
-#include <boost/intrusive_ptr.hpp>
-
 #include <openvpn/common/olong.hpp>
 
 #ifdef OPENVPN_RC_DEBUG
@@ -72,9 +64,108 @@
 
 namespace openvpn {
 
-  // The smart pointer
-  template<typename T>
-  using RCPtr = boost::intrusive_ptr<T>;
+  // The smart pointer class
+  template <typename T>
+  class RCPtr
+  {
+  public:
+    typedef T element_type;
+
+    RCPtr() noexcept
+      : px(nullptr)
+    {
+    }
+
+    RCPtr(T* p, const bool add_ref=true) noexcept
+      : px(p)
+    {
+      if (px && add_ref)
+	intrusive_ptr_add_ref(px);
+    }
+
+    RCPtr(const RCPtr& rhs) noexcept
+      : px(rhs.px)
+    {
+      if (px)
+	intrusive_ptr_add_ref(px);
+    }
+
+    RCPtr(RCPtr&& rhs) noexcept
+      : px(rhs.px)
+    {
+      rhs.px = nullptr;
+    }
+
+    template <typename U>
+    RCPtr(const RCPtr<U>& rhs) noexcept
+      : px(rhs.get())
+    {
+      if (px)
+	intrusive_ptr_add_ref(px);
+    }
+
+    ~RCPtr()
+    {
+      if (px)
+	intrusive_ptr_release(px);
+    }
+
+    RCPtr& operator=(const RCPtr& rhs) noexcept
+    {
+      RCPtr(rhs).swap(*this);
+      return *this;
+    }
+
+    RCPtr& operator=(const RCPtr&& rhs) noexcept
+    {
+      RCPtr(std::move(rhs)).swap(*this);
+      return *this;
+    }
+
+    void reset() noexcept
+    {
+      RCPtr().swap(*this);
+    }
+
+    void reset(T* rhs) noexcept
+    {
+      RCPtr(rhs).swap(*this);
+    }
+
+    void swap(RCPtr& rhs) noexcept
+    {
+      std::swap(px, rhs.px);
+    }
+
+    T* get() const noexcept
+    {
+      return px;
+    }
+
+    T& operator*() const noexcept
+    {
+      return *px;
+    }
+
+    T* operator->() const noexcept
+    {
+      return px;
+    }
+
+    explicit operator bool() const noexcept
+    {
+      return px != nullptr;
+    }
+
+    template <typename U>
+    RCPtr<U> dynamic_pointer_cast() const noexcept
+    {
+      return RCPtr<U>(dynamic_cast<U*>(px));
+    }
+
+  private:
+    T* px;
+  };
 
   class thread_unsafe_refcount
   {
@@ -227,7 +318,7 @@ namespace openvpn {
     std::atomic<olong> rc;
   };
 
-  // Reference count base class for objects tracked by boost::intrusive_ptr.
+  // Reference count base class for objects tracked by RCPtr.
   // Disallows copying and assignment.
   template <typename RCImpl> // RCImpl = thread_safe_refcount or thread_unsafe_refcount
   class RC

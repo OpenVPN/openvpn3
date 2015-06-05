@@ -621,7 +621,7 @@ namespace openvpn {
     typename T::Ptr current_conn_block() const
     {
       const Item& item = *list[primary_index()];
-      return boost::dynamic_pointer_cast<T>(item.conn_block);
+      return item.conn_block.template dynamic_pointer_cast<T>();
     }
 
     template <typename T>
