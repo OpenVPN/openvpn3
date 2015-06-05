@@ -25,10 +25,9 @@
 #include <string>
 #include <cstdint> // for std::uint32_t, etc.
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::to_lower, ends_with
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
@@ -106,10 +105,10 @@ namespace openvpn {
     {
       Protocol ret;
       std::string s = str;
-      boost::algorithm::to_lower(s);
+      string::to_lower(s);
       if (s == "adaptive")
 	return ret;
-      if (allow_client_suffix && boost::algorithm::ends_with(s, "-client"))
+      if (allow_client_suffix && string::ends_with(s, "-client"))
 	s = s.substr(0, s.length()-7);
       if (s.length() >= 3)
 	{

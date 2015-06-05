@@ -26,11 +26,10 @@
 #include <sstream>
 #include <fstream>
 
-#include <boost/algorithm/string.hpp>
-
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
+#include <openvpn/common/string.hpp>
 
 namespace openvpn {
 
@@ -86,7 +85,7 @@ namespace openvpn {
       while (std::getline(in, line))
 	{
 	  line_num++;
-	  boost::trim(line);
+	  string::trim(line);
 	  if (state == S_OUTSIDE)
 	    {
 	      if (line == cert_start)

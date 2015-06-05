@@ -24,8 +24,6 @@
 #ifndef OPENVPN_SSL_TLS_REMOTE_H
 #define OPENVPN_SSL_TLS_REMOTE_H
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
-
 #include <cstring>
 #include <string>
 
@@ -35,7 +33,7 @@ namespace openvpn {
   namespace TLSRemote {
     inline bool test(const std::string& tls_remote, const std::string& subject, const std::string& common_name)
     {
-      return tls_remote == subject || boost::algorithm::starts_with(common_name, tls_remote);
+      return tls_remote == subject || string::starts_with(common_name, tls_remote);
     }
 
     inline void log(const std::string& tls_remote, const std::string& subject, const std::string& common_name)

@@ -56,8 +56,6 @@
 #include <unordered_map>
 #include <cstdint>     // for std::uint64_t
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
-
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
@@ -773,7 +771,7 @@ namespace openvpn {
 	  if (in.line_overflow())
 	    line_too_long(line_num);
 	  std::string& line = in.line_ref();
-	  if (boost::algorithm::starts_with(line, "# "))
+	  if (string::starts_with(line, "# "))
 	    {
 	      line = std::string(line, 2);
 	      if (in_multiline)
@@ -796,7 +794,7 @@ namespace openvpn {
 		      mref += '\n';
 		    }
 		}
-	      else if (boost::algorithm::starts_with(line, prefix))
+	      else if (string::starts_with(line, prefix))
 		{
 		  Option opt = Split::by_char<Option, NullLex, Limits>(std::string(line, prefix.length()), '=', 0, 1, lim);
 		  if (opt.size())
@@ -1238,7 +1236,7 @@ namespace openvpn {
     // return true if string is a meta tag, e.g. WEB_CA_BUNDLE_START
     static bool is_open_meta_tag(const std::string& str)
     {
-      return boost::algorithm::ends_with(str, "_START");
+      return string::ends_with(str, "_START");
     }
 
     // return true if string is a tag, e.g. WEB_CA_BUNDLE_STOP

@@ -27,8 +27,6 @@
 #include <string>
 #include <sstream>
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::trim_copy
-
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
@@ -75,7 +73,7 @@ namespace openvpn {
 
       const std::string get_value_trim(const std::string& key) const
       {
-	return boost::algorithm::trim_copy(get_value(key));
+	return string::trim_copy(get_value(key));
       }
 
       std::string to_string() const

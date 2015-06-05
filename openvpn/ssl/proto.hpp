@@ -32,8 +32,6 @@
 #include <cstdint>                    // for std::uint32_t, etc.
 #include <memory>
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/version.hpp>
@@ -45,6 +43,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/likely.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
 #include <openvpn/time/time.hpp>
@@ -363,9 +362,9 @@ namespace openvpn {
 	  if (!dev)
 	    throw proto_option_error("missing dev-type or dev option");
 	  const std::string& dev_type = dev->get(1, 64);
-	  if (boost::algorithm::starts_with(dev_type, "tun"))
+	  if (string::starts_with(dev_type, "tun"))
 	    layer = Layer(Layer::OSI_LAYER_3);
-	  else if (boost::algorithm::starts_with(dev_type, "tap"))
+	  else if (string::starts_with(dev_type, "tap"))
 	    layer = Layer(Layer::OSI_LAYER_2);
 	  else
 	    throw proto_option_error("bad dev-type");

@@ -26,8 +26,6 @@
 #include <vector>
 #include <utility> // for std::move
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with, ends_with
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/hostport.hpp>
@@ -103,7 +101,7 @@ namespace openvpn {
 		      e.proto.mod_addr_version(addr);
 		    }
 		    std::string n_threads = o.get_default(4, 16, "1");
-		    if (boost::algorithm::ends_with(n_threads, "*N"))
+		    if (string::ends_with(n_threads, "*N"))
 		      {
 			mult = n_cores;
 			n_threads = n_threads.substr(0, n_threads.length() - 2);
@@ -181,7 +179,7 @@ namespace openvpn {
 	if (len && o.size())
 	  {
 	    if (directive[len-1] == '-')
-	      return boost::algorithm::starts_with(o.ref(0), directive);
+	      return string::starts_with(o.ref(0), directive);
 	    else
 	      return o.ref(0) == directive;
 	  }

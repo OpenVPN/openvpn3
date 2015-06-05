@@ -26,11 +26,10 @@
 #include <sstream>
 #include <vector>
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/unicode.hpp>
+#include <openvpn/common/string.hpp>
 
 // Process halt/restart messages from server:
 //   HALT,<client_reason>        -> disconnect
@@ -62,7 +61,7 @@ namespace openvpn {
       if (sl.size() >= 2)
 	{
 	  size_t reason_pos = 0;
-	  if (restart_ && boost::algorithm::starts_with(sl[1], "[P]:"))
+	  if (restart_ && string::starts_with(sl[1], "[P]:"))
 	    {
 	      psid_ = true;
 	      reason_pos = 4;

@@ -24,12 +24,11 @@
 #ifndef OPENVPN_COMMON_STRING_H
 #define OPENVPN_COMMON_STRING_H
 
-#include <openvpn/common/platform.hpp>
-#include <openvpn/common/rc.hpp>
-
 #include <string>
 #include <cstring>
+#include <cctype>
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/size.hpp>
 
 namespace openvpn {
@@ -127,16 +126,7 @@ namespace openvpn {
     // Return true if c is a space char.
     inline bool is_space(const char c)
     {
-      switch (c)
-	{
-	case ' ':
-	case '\t':
-	case '\r':
-	case '\n':
-	  return true;
-	default:
-	  return false;
-	}
+      return std::isspace(static_cast<unsigned char>(c)) != 0;
     }
 
     // return true if str contains at least one space char
@@ -180,20 +170,113 @@ namespace openvpn {
       return ret;
     }
 
+    inline bool starts_with(const std::string& str, const std::string& prefix)
+    {
+      const size_t len = str.length();
+      const size_t plen = prefix.length();
+      if (plen <= len)
+	return std::memcmp(str.c_str(), prefix.c_str(), plen) == 0;
+      else
+	return false;
+    }
+
+    inline bool starts_with(const std::string& str, const char *prefix)
+    {
+      const size_t len = str.length();
+      const size_t plen = std::strlen(prefix);
+      if (plen <= len)
+	return std::memcmp(str.c_str(), prefix, plen) == 0;
+      else
+	return false;
+    }
+
+    inline bool ends_with(const std::string& str, const std::string& suffix)
+    {
+      const size_t len = str.length();
+      const size_t slen = suffix.length();
+      if (slen <= len)
+	return std::memcmp(str.c_str() + (len-slen), suffix.c_str(), slen) == 0;
+      else
+	return false;
+    }
+
+    inline bool ends_with(const std::string& str, const char *suffix)
+    {
+      const size_t len = str.length();
+      const size_t slen = std::strlen(suffix);
+      if (slen <= len)
+	return std::memcmp(str.c_str() + (len-slen), suffix, slen) == 0;
+      else
+	return false;
+    }
+
+    inline std::string trim_left_copy(const std::string& str)
+    {
+      for (size_t i = 0; i < str.length(); ++i)
+	{
+	  if (!is_space(str[i]))
+	    return str.substr(i);
+	}
+      return std::string();
+    }
+
+    inline std::string trim_copy(const std::string& str)
+    {
+      for (size_t i = 0; i < str.length(); ++i)
+	{
+	  if (!is_space(str[i]))
+	    {
+	      size_t last_nonspace = i;
+	      for (size_t j = i + 1; j < str.length(); ++j)
+		{
+		  if (!is_space(str[j]))
+		    last_nonspace = j;
+		}
+	      return str.substr(i, last_nonspace - i + 1);
+	    }
+	}
+      return std::string();
+    }
+
+    inline std::string to_upper_copy(const std::string& str)
+    {
+      std::string ret;
+      ret.reserve(str.length()+1);
+      for (const auto &c : str)
+	ret.push_back(std::toupper(static_cast<unsigned char>(c)));
+      return ret;
+    }
+
+    inline std::string to_lower_copy(const std::string& str)
+    {
+      std::string ret;
+      ret.reserve(str.length()+1);
+      for (const auto &c : str)
+	ret.push_back(std::tolower(static_cast<unsigned char>(c)));
+      return ret;
+    }
+
+    inline void trim(std::string& str)
+    {
+      str = trim_copy(str);
+    }
+
+    inline void trim_left(std::string& str)
+    {
+      str = trim_left_copy(str);
+    }
+
+    inline void to_lower(std::string& str)
+    {
+      str = to_lower_copy(str);
+    }
+
+    inline void to_upper(std::string& str)
+    {
+      str = to_upper_copy(str);
+    }
+
   } // namespace string
-
-  // Reference-counted string
-  struct String : public std::string, public RC<thread_unsafe_refcount>
-  {
-    typedef RCPtr<String> Ptr;
-
-    String() {}
-    explicit String(const std::string& str) : std::string(str) {}
-    explicit String(const std::string& str, size_t pos, size_t n = std::string::npos) : std::string(str, pos, npos) {}
-    explicit String(const char *s, size_t n) : std::string(s, n) {}
-    explicit String(const char *s) : std::string(s) {}
-    explicit String(size_t n, char c) : std::string(n, c) {}
-  };
 
 } // namespace openvpn
 

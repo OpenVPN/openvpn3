@@ -28,12 +28,11 @@
 #include <sstream>
 #include <vector>
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/string.hpp>
 
 // Static Challenge response:
 //   SCRV1:<BASE64_PASSWORD>:<BASE64_RESPONSE>
@@ -122,12 +121,12 @@ namespace openvpn {
 
     static bool is_dynamic(const std::string& s)
     {
-      return boost::algorithm::starts_with(s, "CRV1:");
+      return string::starts_with(s, "CRV1:");
     }
 
     static bool is_static(const std::string& s)
     {
-      return boost::algorithm::starts_with(s, "SCRV1:");
+      return string::starts_with(s, "SCRV1:");
     }
 
     static void validate_dynamic(const std::string& cookie)

@@ -27,8 +27,6 @@
 #include <string>
 #include <sstream>
 
-#include <boost/algorithm/string.hpp>
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/file.hpp>

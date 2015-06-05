@@ -30,10 +30,10 @@
 #include <sstream>
 #include <exception>
 
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with
 #include <boost/system/error_code.hpp>
 
 #include <openvpn/common/stringize.hpp> // for OPENVPN_STRINGIZE
+#include <openvpn/common/string.hpp>
 
 #ifdef OPENVPN_DEBUG_EXCEPTION
   // well-known preprocessor hack to get __FILE__:__LINE__ rendered as a string
@@ -68,7 +68,7 @@ namespace openvpn {
     void remove_label(const std::string& label)
     {
       const std::string head = label + ": ";
-      if (boost::algorithm::starts_with(err_, head))
+      if (string::starts_with(err_, head))
 	err_ = err_.substr(head.length());
     }
 

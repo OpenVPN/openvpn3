@@ -43,10 +43,10 @@
 #include <cstdint>           // for std::uint...
 
 #include <boost/asio.hpp>
-#include <boost/algorithm/string.hpp> // for boost::algorithm::starts_with and trim_left_copy
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/count.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/options/continuation.hpp>
@@ -461,7 +461,7 @@ namespace openvpn {
 
 	//OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 
-	if (!received_options.complete() && boost::algorithm::starts_with(msg, "PUSH_REPLY,"))
+	if (!received_options.complete() && string::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
 	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11), &pushed_options_limit),
@@ -491,18 +491,18 @@ namespace openvpn {
 	    else
 	      OPENVPN_LOG("Options continuation...");
 	  }
-	else if (boost::algorithm::starts_with(msg, "AUTH_FAILED"))
+	else if (string::starts_with(msg, "AUTH_FAILED"))
 	  {
 	    std::string reason;
 	    std::string log_reason;
 
 	    // get reason (if it exists) for authentication failure
 	    if (msg.length() >= 13)
-	      reason = boost::algorithm::trim_left_copy(std::string(msg, 12));
+	      reason = string::trim_left_copy(std::string(msg, 12));
 
 	    // If session token problem (such as expiration), and we have a cached
 	    // password, retry with it.  Otherwise, fail without retry.
-	    if (boost::algorithm::starts_with(reason, "SESSION:")
+	    if (string::starts_with(reason, "SESSION:")
 		&& creds && creds->can_retry_auth_with_cached_password())
 	      {
 		log_reason = "SESSION_AUTH_FAILED";
