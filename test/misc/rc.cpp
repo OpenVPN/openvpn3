@@ -10,12 +10,13 @@
 
 using namespace openvpn;
 
-template <typename Base>
-class TestType : public Base
+template <typename BASE>
+class TestType : public BASE
 {
 public:
   typedef RCPtr<TestType> Ptr;
   typedef RCWeakPtr<TestType> WPtr;
+  typedef BASE Base;
 
   TestType(const std::string& name_arg)
     : name(name_arg)
@@ -36,17 +37,35 @@ public:
   std::string name;
 };
 
+template <typename Base>
+class TestParentType : public TestType<Base>
+{
+public:
+  typedef RCPtr<TestParentType> Ptr;
+  typedef RCWeakPtr<TestParentType> WPtr;
+
+  TestParentType(const std::string& name_arg)
+    : TestType<Base>(name_arg)
+  {
+    parent_name = std::string("parent of ") + TestType<Base>::name;
+  }
+
+  std::string parent_name;
+};
+
 template <typename Test>
 void test()
 {
+  typedef TestParentType<typename Test::Base> TestParent;
+
   {
-    OPENVPN_LOG("TEST1");
+    OPENVPN_LOG("*** TEST1");
     typename Test::Ptr t1 = new Test("Test1");
     typename Test::Ptr t2(t1);
     typename Test::Ptr t3(t2);
   }
   {
-    OPENVPN_LOG("TEST2");
+    OPENVPN_LOG("*** TEST2");
 
     typename Test::WPtr w1z;
     typename Test::WPtr w2z;
@@ -96,7 +115,7 @@ void test()
     w1z = w2z;
   }
   {
-    OPENVPN_LOG("TEST3");
+    OPENVPN_LOG("*** TEST3");
     typename Test::Ptr t1 = new Test("Test3");
     typename Test::Ptr t2(t1);
     typename Test::Ptr t3(t2);
@@ -113,6 +132,13 @@ void test()
 	obj->go("N#3");
 	OPENVPN_LOG("NOTIFY #3");
       });
+  }
+  {
+    OPENVPN_LOG("*** TEST4");
+    typename TestParent::Ptr t1 = new TestParent("Test4");
+    typename Test::Ptr t2(t1);
+    typename TestParent::Ptr t3 = t2.template dynamic_pointer_cast<TestParent>();
+    OPENVPN_LOG(t3->parent_name);
   }
 }
 
