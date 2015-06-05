@@ -63,6 +63,6 @@ namespace openvpn {
     std::mt19937 rng_;
   };
 
-} // namespace openvpn
+}
 
-#endif // OPENVPN_RANDOM_BOOSTRAND_H
+#endif
