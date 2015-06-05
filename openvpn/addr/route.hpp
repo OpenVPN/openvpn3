@@ -169,8 +169,8 @@ namespace openvpn {
       std::size_t hash_value() const
       {
 	std::size_t seed = 0;
-	boost::hash_combine(seed, addr);
-	boost::hash_combine(seed, prefix_len);
+	Hash::combine(seed, addr);
+	Hash::combine(seed, prefix_len);
 	return seed;
       }
     };

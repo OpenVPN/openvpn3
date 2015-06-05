@@ -27,7 +27,6 @@
 #include <cstdint>           // for std::uint32_t
 
 #include <boost/asio.hpp>
-#include <boost/functional/hash.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -478,7 +477,7 @@ namespace openvpn {
       std::size_t hashval() const
       {
 	std::size_t seed = 0;
-	boost::hash_combine(seed, u.addr);
+	Hash::combine(seed, u.addr);
 	return seed;
       }
 

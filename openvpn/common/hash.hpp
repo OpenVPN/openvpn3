@@ -23,52 +23,66 @@
 #define OPENVPN_COMMON_HASH_H
 
 #include <cstdint> // for std::uint32_t, uint64_t
-
-#include <boost/functional/hash.hpp>
+#include <functional>
 
 #include <openvpn/common/size.hpp>
 
 namespace openvpn {
+  namespace Hash {
 
-  // A hasher that combines a data hash with a stateful seed.
-  template <typename T>
-  class HashInitialSeed
-  {
-  public:
-    HashInitialSeed(std::size_t seed) : seed_(seed) {}
-
-    std::size_t operator()(const T& obj) const
+    template <class T>
+    inline auto combine(std::size_t& seed, const T& v) -> decltype(std::hash<T>(), void())
     {
-      std::size_t seed = seed_;
-      boost::hash_combine(seed, obj);
-      return seed;
+      std::hash<T> hasher;
+      seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
     }
 
-  private:
-    std::size_t seed_;
-  };
+    template <class T>
+    inline auto combine(std::size_t& seed, const T& v) -> decltype(hash_value(v), void())
+    {
+      seed ^= hash_value(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+    }
 
-  inline void hash_combine_data(std::size_t& seed, const void *data, std::size_t size)
-  {
-    while (size >= sizeof(std::uint32_t))
+    // A hasher that combines a data hash with a stateful seed.
+    template <typename T>
+    class InitialSeed
+    {
+    public:
+      InitialSeed(std::size_t seed) : seed_(seed) {}
+
+      std::size_t operator()(const T& obj) const
       {
-	boost::hash_combine(seed, static_cast<const std::uint32_t*>(data)[0]);
-	data = static_cast<const std::uint8_t*>(data) + sizeof(std::uint32_t);
-	size -= sizeof(std::uint32_t);
+	std::size_t seed = seed_;
+	combine(seed, obj);
+	return seed;
       }
-    switch (size)
-      {
-      case 1:
-	boost::hash_combine(seed, static_cast<const std::uint8_t*>(data)[0]);
-	break;
-      case 2:
-	boost::hash_combine(seed, static_cast<const std::uint16_t*>(data)[0]);
-	break;
-      case 3:
-	boost::hash_combine(seed, static_cast<const std::uint16_t*>(data)[0]);
-	boost::hash_combine(seed, static_cast<const std::uint8_t*>(data)[2]);
-	break;
-      }
+
+    private:
+      std::size_t seed_;
+    };
+
+    inline void combine_data(std::size_t& seed, const void *data, std::size_t size)
+    {
+      while (size >= sizeof(std::uint32_t))
+	{
+	  combine(seed, static_cast<const std::uint32_t*>(data)[0]);
+	  data = static_cast<const std::uint8_t*>(data) + sizeof(std::uint32_t);
+	  size -= sizeof(std::uint32_t);
+	}
+      switch (size)
+	{
+	case 1:
+	  combine(seed, static_cast<const std::uint8_t*>(data)[0]);
+	  break;
+	case 2:
+	  combine(seed, static_cast<const std::uint16_t*>(data)[0]);
+	  break;
+	case 3:
+	  combine(seed, static_cast<const std::uint16_t*>(data)[0]);
+	  combine(seed, static_cast<const std::uint8_t*>(data)[2]);
+	  break;
+	}
+    }
   }
 }
 

@@ -765,12 +765,12 @@ namespace openvpn {
 	switch (ver)
 	  {
 	  case Addr::V4:
-	    boost::hash_combine(seed, 4);
-	    boost::hash_combine(seed, u.v4);
+	    Hash::combine(seed, 4);
+	    Hash::combine(seed, u.v4);
 	    break;
 	  case Addr::V6:
-	    boost::hash_combine(seed, 6);
-	    boost::hash_combine(seed, u.v6);
+	    Hash::combine(seed, 6);
+	    Hash::combine(seed, u.v6);
 	    break;
 	  default:
 	    break;
