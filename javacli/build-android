@@ -67,14 +67,12 @@ g++ \
     $vis1 \
     $ssl_def \
     -DASIO_STANDALONE \
-    -DHAVE_SNAPPY \
     -DHAVE_LZ4 \
     -I$O3/core/client \
     -I$O3/core \
     $common \
     -I$DEP_DIR/asio/asio/include \
     $ssl_inc \
-    -I$DEP_DIR/snappy/snappy-$PLATFORM/include \
     -I$DEP_DIR/lz4/lz4-$PLATFORM/include \
     -c $O3/core/client/ovpncli.cpp
 
@@ -90,7 +88,6 @@ g++ \
     -I$O3/core \
     $common \
     $ssl_libdir \
-    -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
     -L$DEP_DIR/lz4/lz4-$PLATFORM/lib \
     ovpncli_wrap.cxx \
     android/jellybean_hack.cpp \
@@ -99,7 +96,6 @@ g++ \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
     $ssl_lib \
-    -lsnappy \
     -llz4 \
     -llog
 

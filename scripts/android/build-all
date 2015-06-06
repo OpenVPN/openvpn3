@@ -6,19 +6,21 @@ if [ -z "$O3" ]; then
 fi
 export DEP_DIR=${DEP_DIR:-$HOME/src/android}
 cd $DEP_DIR
-rm -rf boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
-#echo "******* BOOST"
-#$O3/core/scripts/android/build-boost
+rm -rf asio* boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
+echo "******* ASIO"
+$O3/core/deps/asio/build-asio
 echo "******* POLARSSL"
 $O3/core/scripts/android/build-polarssl
 echo "******* LZ4"
 $O3/core/scripts/android/build-lz4
-echo "******* SNAPPY"
-$O3/core/scripts/android/build-snappy
 
+#echo "******* BOOST"
+#$O3/core/scripts/android/build-boost
 #echo "******* MINICRYPTO"
 #$O3/core/scripts/android/build-minicrypto
 #echo "******* OpenSSL"
 #$O3/core/scripts/android/build-openssl-small
 #echo "******* LZO"
 #$O3/core/scripts/android/build-lzo
+#echo "******* SNAPPY"
+#$O3/core/scripts/android/build-snappy

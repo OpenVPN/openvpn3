@@ -59,13 +59,11 @@ g++ \
     $vis1 \
     $ssl_def \
     -DASIO_STANDALONE \
-    -DHAVE_SNAPPY \
     -DHAVE_LZ4 \
     -I$O3/core/client \
     -I$O3/core \
     -I$DEP_DIR/asio/asio/include \
     $ssl_inc \
-    -I$DEP_DIR/snappy/snappy-$PLATFORM/include \
     -I$DEP_DIR/lz4/lz4-$PLATFORM/include \
     -c $O3/core/client/ovpncli.cpp
 
@@ -81,14 +79,12 @@ g++ \
     -I$O3/core \
     $JINC \
     $ssl_libdir \
-    -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
     -L$DEP_DIR/lz4/lz4-$PLATFORM/lib \
     ovpncli_wrap.cxx \
     ovpncli.o \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
     $ssl_lib \
-    -lsnappy \
     -llz4
 
 if [ "$DEBUG_BUILD" != "1" ]; then

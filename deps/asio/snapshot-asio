@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+[ "$DEP_DIR" ] && cd $DEP_DIR
+[ -z "$DL" ] && DL=~/Downloads
+tar cfz $DL/asio-$(date "+%Y%m%d").tar.gz asio
