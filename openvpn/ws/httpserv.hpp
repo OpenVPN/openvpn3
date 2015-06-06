@@ -164,9 +164,9 @@ namespace openvpn {
 	    friend Listener;
 	    friend Client;
 
-	    Initializer(boost::asio::io_service& io_service_arg,
+	    Initializer(asio::io_service& io_service_arg,
 			Listener* parent_arg,
-			boost::asio::ip::tcp::socket* socket_arg,
+			asio::ip::tcp::socket* socket_arg,
 			const client_t client_id_arg)
 	      : io_service(io_service_arg),
 		parent(parent_arg),
@@ -175,9 +175,9 @@ namespace openvpn {
 	    {
 	    }
 
-	    boost::asio::io_service& io_service;
+	    asio::io_service& io_service;
 	    Listener* parent;
-	    std::unique_ptr<boost::asio::ip::tcp::socket> socket;
+	    std::unique_ptr<asio::ip::tcp::socket> socket;
 	    const client_t client_id;
 	  };
 
@@ -277,8 +277,8 @@ namespace openvpn {
 	    return "[unknown endpoint]";
 	  }
 
-	  boost::asio::io_service& io_service;
-	  std::unique_ptr<boost::asio::ip::tcp::socket> sock;
+	  asio::io_service& io_service;
+	  std::unique_ptr<asio::ip::tcp::socket> sock;
 	  std::deque<BufferAllocated> pipeline;
 	  Time::Duration timeout_duration;
 
@@ -344,7 +344,7 @@ namespace openvpn {
 	      }
 	  }
 
-	  void timeout_callback(const boost::system::error_code& e)
+	  void timeout_callback(const asio::error_code& e)
 	  {
 	    if (halt || e)
 	      return;
@@ -484,7 +484,7 @@ namespace openvpn {
 
 	  // error handlers
 
-	  void asio_error_handler(int errcode, const char *func_name, const boost::system::error_code& error)
+	  void asio_error_handler(int errcode, const char *func_name, const asio::error_code& error)
 	  {
 	    error_handler(errcode, std::string("HTTPCore Asio ") + func_name + ": " + error.message());
 	  }
@@ -549,7 +549,7 @@ namespace openvpn {
       public:
 	typedef RCPtr<Listener> Ptr;
 
-	Listener(boost::asio::io_service& io_service_arg,
+	Listener(asio::io_service& io_service_arg,
 		 const Config::Ptr& config_arg,
 		 const Listen::Item& listen_item_arg,
 		 const Client::Factory::Ptr& client_factory_arg)
@@ -619,14 +619,14 @@ namespace openvpn {
 
 	void queue_accept()
 	{
-	  boost::asio::ip::tcp::socket* socket = new boost::asio::ip::tcp::socket(io_service);
+	  asio::ip::tcp::socket* socket = new asio::ip::tcp::socket(io_service);
 	  acceptor.async_accept(*socket, asio_dispatch_accept_arg(&Listener::handle_accept, this, socket));
 	}
 
-	void handle_accept(boost::asio::ip::tcp::socket* socket,
-			   const boost::system::error_code& error)
+	void handle_accept(asio::ip::tcp::socket* socket,
+			   const asio::error_code& error)
 	{
-	  std::unique_ptr<boost::asio::ip::tcp::socket> sock(socket);
+	  std::unique_ptr<asio::ip::tcp::socket> sock(socket);
 	  if (halt)
 	      return;
 
@@ -678,14 +678,14 @@ namespace openvpn {
 	    clients.erase(e);
 	}
 
-	boost::asio::io_service& io_service;
+	asio::io_service& io_service;
 	Listen::Item listen_item;
 	Config::Ptr config;
 	Client::Factory::Ptr client_factory;
 	bool halt;
 
-	boost::asio::ip::tcp::endpoint local_endpoint;
-	boost::asio::ip::tcp::acceptor acceptor;
+	asio::ip::tcp::endpoint local_endpoint;
+	asio::ip::tcp::acceptor acceptor;
 
 	client_t next_id;
 	ClientMap clients;
