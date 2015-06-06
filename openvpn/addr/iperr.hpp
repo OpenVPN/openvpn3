@@ -24,14 +24,14 @@
 
 #include <string>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 namespace openvpn {
   namespace IP {
     namespace internal {
       // Called internally by IP, IPv4, and IPv6 classes
 
-      inline std::string format_error(const std::string& ipstr, const char *title, const char *ipver, const boost::system::error_code& ec)
+      inline std::string format_error(const std::string& ipstr, const char *title, const char *ipver, const asio::error_code& ec)
       {
 	std::string err = "error parsing";
 	if (title)

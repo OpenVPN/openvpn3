@@ -22,12 +22,12 @@
 #ifndef OPENVPN_OPENSSL_UTIL_INIT_H
 #define OPENVPN_OPENSSL_UTIL_INIT_H
 
-#include <boost/asio/ssl/detail/openssl_init.hpp>
+#include <asio/ssl/detail/openssl_init.hpp>
 
 namespace openvpn {
 
   // Instantiate this object to ensure openssl is initialised.
-  typedef boost::asio::ssl::detail::openssl_init<> openssl_init;
+  typedef asio::ssl::detail::openssl_init<> openssl_init;
 
 } // namespace openvpn
 

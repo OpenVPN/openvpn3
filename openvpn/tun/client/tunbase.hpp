@@ -26,7 +26,7 @@
 
 #include <string>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
@@ -68,7 +68,7 @@ namespace openvpn {
   {
     typedef RCPtr<TunClientFactory> Ptr;
 
-    virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
+    virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
 					  TunClientParent& parent) = 0;
 
     // return true if layer 2 tunnels are supported

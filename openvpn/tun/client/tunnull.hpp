@@ -42,7 +42,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
+      virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
 					    TunClientParent& parent);
     private:
       ClientConfig() {}
@@ -92,7 +92,7 @@ namespace openvpn {
       virtual void stop() {}
 
     private:
-      Client(boost::asio::io_service& io_service_arg,
+      Client(asio::io_service& io_service_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
 	:  io_service(io_service_arg),
@@ -101,12 +101,12 @@ namespace openvpn {
       {
       }
 
-      boost::asio::io_service& io_service;
+      asio::io_service& io_service;
       ClientConfig::Ptr config;
       TunClientParent& parent;
     };
 
-    inline TunClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service,
+    inline TunClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
 						       TunClientParent& parent)
     {
       return TunClient::Ptr(new Client(io_service, this, parent));

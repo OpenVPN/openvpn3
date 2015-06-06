@@ -28,7 +28,7 @@
 #include <utility> // for std::move
 #include <memory>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/asiodispatch.hpp>
@@ -54,7 +54,7 @@
 namespace openvpn {
   namespace TCPTransport {
 
-    typedef boost::asio::ip::tcp::endpoint AsioEndpoint;
+    typedef asio::ip::tcp::endpoint AsioEndpoint;
 
     struct PacketFrom
     {
@@ -71,7 +71,7 @@ namespace openvpn {
       typedef RCPtr<Link> Ptr;
 
       Link(ReadHandler read_handler_arg,
-	   boost::asio::ip::tcp::socket& socket_arg,
+	   asio::ip::tcp::socket& socket_arg,
 	   const size_t send_queue_max_size_arg, // 0 to disable
 	   const size_t free_list_max_size_arg,
 	   const Frame::Context& frame_context_arg,
@@ -214,7 +214,7 @@ namespace openvpn {
 			  asio_dispatch_write(&Link::handle_send, this));
       }
 
-      void handle_send(const boost::system::error_code& error, const size_t bytes_sent)
+      void handle_send(const asio::error_code& error, const size_t bytes_sent)
       {
 	if (!halt)
 	  {
@@ -269,7 +269,7 @@ namespace openvpn {
 			     asio_dispatch_read(&Link::handle_recv, this, tcpfrom));
       }
 
-      void handle_recv(PacketFrom *tcpfrom, const boost::system::error_code& error, const size_t bytes_recvd)
+      void handle_recv(PacketFrom *tcpfrom, const asio::error_code& error, const size_t bytes_recvd)
       {
 	OPENVPN_LOG_TCPLINK_VERBOSE("TCPLink::handle_recv: " << error.message());
 	PacketFrom::SPtr pfp(tcpfrom);
@@ -306,7 +306,7 @@ namespace openvpn {
 		if (!halt && requeue)
 		  queue_recv(pfp.release()); // reuse PacketFrom object
 	      }
-	    else if (error == boost::asio::error::eof)
+	    else if (error == asio::error::eof)
 	      {
 		OPENVPN_LOG_TCPLINK_ERROR("TCP recv EOF");
 		read_handler->tcp_eof_handler();
@@ -340,7 +340,7 @@ namespace openvpn {
 	return requeue;
       }
 
-      boost::asio::ip::tcp::socket& socket;
+      asio::ip::tcp::socket& socket;
       bool halt;
       bool raw_mode_read;
       bool raw_mode_write;

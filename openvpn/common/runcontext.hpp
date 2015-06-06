@@ -210,13 +210,13 @@ namespace openvpn {
 	}
     }
 
-    void exit_timer_callback(const boost::system::error_code& e)
+    void exit_timer_callback(const asio::error_code& e)
     {
       if (!e && !halt)
 	cancel();
     }
 
-    void signal(const boost::system::error_code& error, int signum)
+    void signal(const asio::error_code& error, int signum)
     {
       if (!error && !halt)
 	{
@@ -243,7 +243,7 @@ namespace openvpn {
     }
 
     // these vars only used by main thread
-    boost::asio::io_service io_service;
+    asio::io_service io_service;
     typename Stats::Ptr stats;
     ASIOSignals::Ptr signals;
     AsioTimer exit_timer;

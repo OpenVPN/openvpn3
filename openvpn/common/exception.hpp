@@ -30,7 +30,7 @@
 #include <sstream>
 #include <exception>
 
-#include <boost/system/error_code.hpp>
+#include <asio/error_code.hpp>
 
 #include <openvpn/common/stringize.hpp> // for OPENVPN_STRINGIZE
 #include <openvpn/common/string.hpp>
@@ -43,11 +43,11 @@
 #endif
 
 namespace openvpn {
-  // returns a string describing a boost::system error code
+  // returns a string describing a asio error code
   template <typename ErrorCode>
   inline std::string errinfo(ErrorCode err)
   {
-    boost::system::error_code e(err, boost::system::system_category());
+    asio::error_code e(err, asio::system_category());
     return e.message();
   }
 

@@ -22,12 +22,12 @@
 // These classes define function objects to be used as asynchronous callbacks
 // for Asio methods.  Think of these as optimized special cases of function
 // objects that could be more generally (but perhaps less optimally) defined
-// with boost::bind.
+// with lambdas.
 
 #ifndef OPENVPN_COMMON_ASIODISPATCH_H
 #define OPENVPN_COMMON_ASIODISPATCH_H
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
@@ -42,7 +42,7 @@ namespace openvpn {
     AsioDispatchWrite(Handler handle_write, C* obj)
       : handle_write_(handle_write), obj_(obj) {}
 
-    void operator()(const boost::system::error_code& error, const size_t bytes_sent)
+    void operator()(const asio::error_code& error, const size_t bytes_sent)
     {
       (obj_.get()->*handle_write_)(error, bytes_sent);
     }
@@ -67,7 +67,7 @@ namespace openvpn {
     AsioDispatchRead(Handler handle_read, C* obj, Data data)
       : handle_read_(handle_read), obj_(obj), data_(data) {}
 
-    void operator()(const boost::system::error_code& error, const size_t bytes_recvd)
+    void operator()(const asio::error_code& error, const size_t bytes_recvd)
     {
       (obj_.get()->*handle_read_)(data_, error, bytes_recvd);
     }
@@ -93,7 +93,7 @@ namespace openvpn {
     AsioDispatchReadNoArg(Handler handle_read, C* obj)
       : handle_read_(handle_read), obj_(obj) {}
 
-    void operator()(const boost::system::error_code& error, const size_t bytes_recvd)
+    void operator()(const asio::error_code& error, const size_t bytes_recvd)
     {
       (obj_.get()->*handle_read_)(error, bytes_recvd);
     }
@@ -118,7 +118,7 @@ namespace openvpn {
     AsioDispatchTimerArg(Handler handler, C* obj, Data data)
       : handler_(handler), obj_(obj), data_(data) {}
 
-    void operator()(const boost::system::error_code& error)
+    void operator()(const asio::error_code& error)
     {
       (obj_.get()->*handler_)(data_, error);
     }
@@ -144,7 +144,7 @@ namespace openvpn {
     AsioDispatchTimer(Handler handler, C* obj)
       : handler_(handler), obj_(obj) {}
 
-    void operator()(const boost::system::error_code& error)
+    void operator()(const asio::error_code& error)
     {
       (obj_.get()->*handler_)(error);
     }
@@ -169,7 +169,7 @@ namespace openvpn {
     AsioDispatchConnectArg(Handler handler, C* obj, Data data)
       : handler_(handler), obj_(obj), data_(data) {}
 
-    void operator()(const boost::system::error_code& error)
+    void operator()(const asio::error_code& error)
     {
       (obj_.get()->*handler_)(data_, error);
     }
@@ -195,7 +195,7 @@ namespace openvpn {
     AsioDispatchConnect(Handler handler, C* obj)
       : handler_(handler), obj_(obj) {}
 
-    void operator()(const boost::system::error_code& error)
+    void operator()(const asio::error_code& error)
     {
       (obj_.get()->*handler_)(error);
     }
@@ -220,8 +220,8 @@ namespace openvpn {
     AsioDispatchComposedConnect(Handler handler, C* obj)
       : handler_(handler), obj_(obj) {}
 
-    void operator()(const boost::system::error_code& error,
-		    boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
+    void operator()(const asio::error_code& error,
+		    asio::ip::tcp::resolver::iterator endpoint_iterator)
     {
       (obj_.get()->*handler_)(error, endpoint_iterator);
     }
@@ -246,7 +246,7 @@ namespace openvpn {
     AsioDispatchAcceptArg(Handler handler, C* obj, Data data)
       : handler_(handler), obj_(obj), data_(data) {}
 
-    void operator()(const boost::system::error_code& error)
+    void operator()(const asio::error_code& error)
     {
       (obj_.get()->*handler_)(data_, error);
     }
@@ -323,7 +323,7 @@ namespace openvpn {
     AsioDispatchResolve(Handler handler, C* obj)
       : handler_(handler), obj_(obj) {}
 
-    void operator()(const boost::system::error_code& error, EndpointIterator iter)
+    void operator()(const asio::error_code& error, EndpointIterator iter)
     {
       (obj_.get()->*handler_)(error, iter);
     }
@@ -342,7 +342,7 @@ namespace openvpn {
     AsioDispatchResolveArg(Handler handler, C* obj, Data data)
       : handler_(handler), obj_(obj), data_(data) {}
 
-    void operator()(const boost::system::error_code& error, EndpointIterator iter)
+    void operator()(const asio::error_code& error, EndpointIterator iter)
     {
       (obj_.get()->*handler_)(error, iter, data_);
     }
@@ -363,7 +363,7 @@ namespace openvpn {
     AsioDispatchSignal(Handler handler, C* obj)
       : handler_(handler), obj_(obj) {}
 
-    void operator()(const boost::system::error_code& error, int signal_number)
+    void operator()(const asio::error_code& error, int signal_number)
     {
       (obj_.get()->*handler_)(error, signal_number);
     }

@@ -332,7 +332,7 @@ namespace openvpn {
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
 	bool alt_proxy;
 
-	boost::asio::io_service* io_service;
+	asio::io_service* io_service;
 
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent)
@@ -603,7 +603,7 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
     {
-      boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+      asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
 #ifdef OPENVPN_LOG_LOGTHREAD_H
       Log::Context log_context(this);
 #endif
@@ -724,7 +724,7 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_attach()
     {
-      state->io_service = new boost::asio::io_service(1); // concurrency hint=1
+      state->io_service = new asio::io_service(1); // concurrency hint=1
       state->attach<MySessionStats, MyClientEvents>(this);
     }
 

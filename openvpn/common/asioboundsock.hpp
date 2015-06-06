@@ -26,14 +26,14 @@
 #ifndef OPENVPN_COMMON_ASIOBOUNDSOCK_H
 #define OPENVPN_COMMON_ASIOBOUNDSOCK_H
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
   namespace AsioBoundSocket {
 
-    typedef boost::asio::stream_socket_service<boost::asio::ip::tcp> SocketServiceBase;
+    typedef asio::stream_socket_service<asio::ip::tcp> SocketServiceBase;
 
     struct SocketService : public SocketServiceBase
     {
@@ -42,28 +42,28 @@ namespace openvpn {
 	IP::Addr bind_local_addr;
       };
 
-      explicit SocketService(boost::asio::io_service& io_service)
+      explicit SocketService(asio::io_service& io_service)
 	: SocketServiceBase(io_service)
       {
       }
 
-      static boost::asio::detail::service_id<SocketService> id; // register the service
+      static asio::detail::service_id<SocketService> id; // register the service
 
       // Override the open method so we can bind immediately after open.
-      boost::system::error_code open(implementation_type& impl,
+      asio::error_code open(implementation_type& impl,
 				     const protocol_type& protocol,
-				     boost::system::error_code& ec)
+				     asio::error_code& ec)
       {
 	ec = SocketServiceBase::open(impl, protocol, ec);
 	if (ec)
 	  return ec;
 	if (impl.bind_local_addr.defined())
 	  {
-	    ec = set_option(impl, boost::asio::socket_base::reuse_address(true), ec);
+	    ec = set_option(impl, asio::socket_base::reuse_address(true), ec);
 	    if (ec)
 	      return ec;
 	    ec = bind(impl,
-		      boost::asio::ip::tcp::endpoint(impl.bind_local_addr.to_asio(), 0), // port 0 -- kernel will choose port
+		      asio::ip::tcp::endpoint(impl.bind_local_addr.to_asio(), 0), // port 0 -- kernel will choose port
 		      ec);
 	  }
 	return ec;
@@ -71,11 +71,11 @@ namespace openvpn {
 
     };
 
-    typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, SocketService> SocketBase;
+    typedef asio::basic_stream_socket<asio::ip::tcp, SocketService> SocketBase;
 
     struct Socket : public SocketBase
     {
-      explicit Socket(boost::asio::io_service& io_service)
+      explicit Socket(asio::io_service& io_service)
 	: SocketBase(io_service)
       {
       }

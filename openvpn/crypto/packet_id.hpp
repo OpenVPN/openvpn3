@@ -28,7 +28,7 @@
 #include <sstream>
 #include <cstdint> // for std::uint32_t
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>

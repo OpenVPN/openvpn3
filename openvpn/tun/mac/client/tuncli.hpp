@@ -205,7 +205,7 @@ namespace openvpn {
     };
 
     // These types manage the underlying tun driver fd
-    typedef boost::asio::posix::stream_descriptor TUNStream;
+    typedef asio::posix::stream_descriptor TUNStream;
     typedef ScopedAsioStream<TUNStream> ScopedTUNStream;
     typedef TunWrapTemplate<ScopedTUNStream> TunWrap;
 
@@ -455,7 +455,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
+      virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
 					    TunClientParent& parent);
 
       // return true if layer 2 tunnels are supported
@@ -541,8 +541,8 @@ namespace openvpn {
 	      int fd = -1;
 	      try {
 #                   if defined(MAC_TUNTAP_FALLBACK)
-#                     if !defined(BOOST_ASIO_DISABLE_KQUEUE)
-#                       error Mac OS X TunTap adapter is incompatible with kqueue; rebuild with BOOST_ASIO_DISABLE_KQUEUE
+#                     if !defined(ASIO_DISABLE_KQUEUE)
+#                       error Mac OS X TunTap adapter is incompatible with kqueue; rebuild with ASIO_DISABLE_KQUEUE
 #                     endif
 		if (config->layer() == Layer::OSI_LAYER_3)
 		  {
@@ -663,7 +663,7 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(boost::asio::io_service& io_service_arg,
+      Client(asio::io_service& io_service_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
 	:  io_service(io_service_arg),
@@ -866,7 +866,7 @@ namespace openvpn {
       }
 
       void tun_error_handler(const Error::Type errtype, // called by TunImpl
-			     const boost::system::error_code* error)
+			     const asio::error_code* error)
       {
       }
 
@@ -883,7 +883,7 @@ namespace openvpn {
 	  }
       }
 
-      boost::asio::io_service& io_service;
+      asio::io_service& io_service;
       TunWrap::Ptr tun_wrap; // contains the tun device fd
       ClientConfig::Ptr config;
       TunClientParent& parent;
@@ -893,7 +893,7 @@ namespace openvpn {
       ActionList::Ptr remove_cmds;
     };
 
-    inline TunClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service,
+    inline TunClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
 						       TunClientParent& parent)
     {
       return TunClient::Ptr(new Client(io_service, this, parent));

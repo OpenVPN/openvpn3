@@ -30,7 +30,7 @@
 #include <sstream>
 #include <vector>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -248,9 +248,9 @@ namespace openvpn {
     class PreResolve : public RC<thread_unsafe_refcount>
     {
       typedef AsioDispatchResolve<PreResolve,
-				  void (PreResolve::*)(const boost::system::error_code&,
-						       boost::asio::ip::tcp::resolver::iterator),
-				  boost::asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
+				  void (PreResolve::*)(const asio::error_code&,
+						       asio::ip::tcp::resolver::iterator),
+				  asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
 
     public:
       typedef RCPtr<PreResolve> Ptr;
@@ -261,7 +261,7 @@ namespace openvpn {
 	virtual void pre_resolve_done() = 0;
       };
 
-      PreResolve(boost::asio::io_service& io_service_arg,
+      PreResolve(asio::io_service& io_service_arg,
 		 const RemoteList::Ptr& remote_list_arg,
 		 const SessionStats::Ptr& stats_arg)
 	:  io_service(io_service_arg),
@@ -326,7 +326,7 @@ namespace openvpn {
 		  {
 		    // call into Asio to do the resolve operation
 		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item.server_host);
-		    boost::asio::ip::tcp::resolver::query query(item.server_host, "0");
+		    asio::ip::tcp::resolver::query query(item.server_host, "0");
 		    resolver.async_resolve(query, AsioDispatchResolveTCP(&PreResolve::resolve_callback, this));
 		    return;
 		  }
@@ -347,8 +347,8 @@ namespace openvpn {
       }
 
       // callback on resolve completion
-      void resolve_callback(const boost::system::error_code& error,
-			    boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
+      void resolve_callback(const asio::error_code& error,
+			    asio::ip::tcp::resolver::iterator endpoint_iterator)
       {
 	if (notify_callback && index < remote_list->list.size())
 	  {
@@ -369,8 +369,8 @@ namespace openvpn {
 	  }
       }
 
-      boost::asio::io_service& io_service;
-      boost::asio::ip::tcp::resolver resolver;
+      asio::io_service& io_service;
+      asio::ip::tcp::resolver resolver;
       NotifyCallback* notify_callback;
       RemoteList::Ptr remote_list;
       SessionStats::Ptr stats;

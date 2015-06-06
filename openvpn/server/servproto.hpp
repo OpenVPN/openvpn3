@@ -66,7 +66,7 @@ namespace openvpn {
       typedef RCPtr<Factory> Ptr;
       typedef Base::Config ProtoConfig;
 
-      Factory(boost::asio::io_service& io_service_arg,
+      Factory(asio::io_service& io_service_arg,
 	      const Base::Config& c)
 	: io_service(io_service_arg)
       {
@@ -94,7 +94,7 @@ namespace openvpn {
 	return new ProtoConfig(*proto_context_config);
       }
 
-      boost::asio::io_service& io_service;
+      asio::io_service& io_service;
       ProtoConfig::Ptr proto_context_config;
 
       ManClientInstanceFactory::Ptr man_factory;
@@ -268,7 +268,7 @@ namespace openvpn {
       }
 
     private:
-      Session(boost::asio::io_service& io_service_arg,
+      Session(asio::io_service& io_service_arg,
 	      const Factory& factory,
 	      ManClientInstanceFactory::Ptr man_factory_arg,
 	      TunClientInstanceFactory::Ptr tun_factory_arg)
@@ -472,7 +472,7 @@ namespace openvpn {
 	disconnect_at = now() + dur;
       }
 
-      void housekeeping_callback(const boost::system::error_code& e)
+      void housekeeping_callback(const asio::error_code& e)
       {
 	try {
 	  if (!e && !halt)
@@ -554,7 +554,7 @@ namespace openvpn {
 	  }
       }
 
-      boost::asio::io_service& io_service;
+      asio::io_service& io_service;
       bool halt;
       bool did_push;
       bool did_client_halt_restart;

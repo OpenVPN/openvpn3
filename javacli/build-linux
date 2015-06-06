@@ -58,11 +58,12 @@ g++ \
     -Wno-unused-local-typedefs \
     $vis1 \
     $ssl_def \
+    -DASIO_STANDALONE \
     -DHAVE_SNAPPY \
     -DHAVE_LZ4 \
     -I$O3/core/client \
     -I$O3/core \
-    -I$DEP_DIR/boost \
+    -I$DEP_DIR/asio/asio/include \
     $ssl_inc \
     -I$DEP_DIR/snappy/snappy-$PLATFORM/include \
     -I$DEP_DIR/lz4/lz4-$PLATFORM/include \
@@ -79,7 +80,6 @@ g++ \
     -I$O3/core/client \
     -I$O3/core \
     $JINC \
-    -L$DEP_DIR/boost/stage-$PLATFORM/lib \
     $ssl_libdir \
     -L$DEP_DIR/snappy/snappy-$PLATFORM/lib \
     -L$DEP_DIR/lz4/lz4-$PLATFORM/lib \
@@ -88,7 +88,6 @@ g++ \
     -o libovpncli.so \
     -shared -Wl,-soname,libovpncli.so \
     $ssl_lib \
-    -lboost_system -lboost_thread \
     -lsnappy \
     -llz4
 

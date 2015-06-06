@@ -23,6 +23,6 @@
 #define OPENVPN_COMMON_SOCKTYPES_H
 
 // defines stuff like ntohl, ntohs, htonl, htons, etc. in a platform-general way
-#include <boost/asio/detail/socket_types.hpp>
+#include <asio/detail/socket_types.hpp>
 
 #endif // OPENVPN_COMMON_SOCKTYPES_H

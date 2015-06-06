@@ -41,7 +41,7 @@ See the file ``$O3/core/deps/lib-versions`` for the expected
 version numbers of each dependency.  If you want to use a different
 version of the library than listed here, you can edit this file.
 
-1. Boost -- http://www.boost.org/
+1. Asio -- https://github.com/chriskohlhoff/asio
 2. PolarSSL (1.3.4 or higher) -- https://polarssl.org/
 3. Snappy -- https://code.google.com/p/snappy/
 4. LZ4 -- https://code.google.com/p/lz4/
@@ -63,7 +63,7 @@ Now build the OpenVPN 3 client executable::
 
 This will build the OpenVPN 3 client library with a small client
 wrapper (``cli``).  It will also statically link in all external
-dependencies (Boost, PolarSSL,
+dependencies (Asio, PolarSSL,
 LZ4, and Snappy), so ``cli`` may be distributed to other Macs and
 will run as a standalone executable.
 

@@ -42,7 +42,7 @@ namespace openvpn {
       virtual void action_thread_finished(const ActionThread* self, bool status) = 0;
     };
 
-    ActionThread(boost::asio::io_service& io_service_arg,
+    ActionThread(asio::io_service& io_service_arg,
 		 const ActionList::Ptr& action_list,
 		 Notify* completion_handler_arg)
       : io_service(io_service_arg),
@@ -99,7 +99,7 @@ namespace openvpn {
       io_service.post(asio_dispatch_post_arg(&ActionThread::completion_post, this, status));
     }
 
-    boost::asio::io_service& io_service;
+    asio::io_service& io_service;
     std::thread* thread;
     ActionList::Ptr actions;       // actions to execute in child thread
     Notify* completion_handler;    // completion handler

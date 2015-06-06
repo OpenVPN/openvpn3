@@ -29,7 +29,7 @@
 #include <sstream>
 #include <thread>
 
-#include <boost/asio/detail/tss_ptr.hpp>
+#include <asio/detail/tss_ptr.hpp>
 
 #include <openvpn/common/size.hpp>
 
@@ -75,7 +75,7 @@
 namespace openvpn {
   namespace Log {
 
-    boost::asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
+    asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
 
     struct Context
     {

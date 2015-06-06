@@ -25,55 +25,51 @@
 #ifndef OPENVPN_TIME_ASIOTIMER_H
 #define OPENVPN_TIME_ASIOTIMER_H
 
-#include <boost/asio.hpp>
+#include <chrono>
 
+#include <asio.hpp>
+#include <asio/basic_waitable_timer.hpp>
+
+#include <openvpn/common/olong.hpp>
 #include <openvpn/time/time.hpp>
 
-namespace boost {
-  namespace asio {
-
-    // asio time traits specialized for our Time type
-    template <>
-    struct time_traits<openvpn::Time>
-    {
-      typedef openvpn::Time time_type;
-      typedef openvpn::Time::Duration duration_type;
-
-      static time_type now()
-      {
-	return time_type::now();
-      }
-
-      static time_type add(const time_type& t, const duration_type& d)
-      {
-	return t + d;
-      }
-
-      static duration_type subtract(const time_type& t1, const time_type& t2)
-      {
-	return t1 - t2;
-      }
-
-      static bool less_than(const time_type& t1, const time_type& t2)
-      {
-	return t1 < t2;
-      }
-
-      /// Convert to POSIX duration type.
-      static boost::posix_time::time_duration to_posix_duration(const duration_type& d)
-      {
-	if (d.is_infinite())
-	  return boost::posix_time::seconds(86400*365);
-	else
-	  return boost::posix_time::milliseconds(d.to_milliseconds());
-      }
-    };
-
-  } // namespace asio
-} // namespace boost
-
 namespace openvpn {
-  typedef boost::asio::basic_deadline_timer<Time> AsioTimer;
+  struct AsioClock
+  {
+    typedef olong rep;
+    typedef std::ratio<1, 1024> period; // time resolution of openvpn::Time
+    typedef std::chrono::duration<rep, period> duration;
+    typedef std::chrono::time_point<AsioClock> time_point;
+
+    static constexpr bool is_steady()
+    {
+      return false;
+    }
+
+    static time_point now()
+    {
+      return to_time_point(Time::now());
+    }
+
+    static time_point to_time_point(const Time& t)
+    {
+      return time_point(duration(t.raw()));
+    }
+  };
+
+  class AsioTimer : public asio::basic_waitable_timer<AsioClock>
+  {
+  public:
+    AsioTimer(asio::io_service& io_service)
+      : asio::basic_waitable_timer<AsioClock>(io_service)
+    {
+    }
+
+    std::size_t expires_at(const Time& t)
+    {
+      return asio::basic_waitable_timer<AsioClock>::expires_at(AsioClock::to_time_point(t));
+    }    
+  };
 }
 
-#endif // OPENVPN_TIME_ASIOTIMER_H
+#endif

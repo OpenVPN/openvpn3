@@ -26,7 +26,7 @@
 #include <algorithm>         // for std::min
 #include <cstdint>           // for std::uint32_t
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -97,8 +97,8 @@ namespace openvpn {
 
       static Addr from_string(const std::string& ipstr, const char *title = nullptr)
       {
-	boost::system::error_code ec;
-	boost::asio::ip::address_v6 a = boost::asio::ip::address_v6::from_string(ipstr, ec);
+	asio::error_code ec;
+	asio::ip::address_v6 a = asio::ip::address_v6::from_string(ipstr, ec);
 	if (ec)
 	  throw ipv6_exception(IP::internal::format_error(ipstr, title, "v6", ec));
 	return from_asio(a);
@@ -106,8 +106,8 @@ namespace openvpn {
 
       std::string to_string() const
       {
-	const boost::asio::ip::address_v6 a = to_asio();
-	boost::system::error_code ec;
+	const asio::ip::address_v6 a = to_asio();
+	asio::error_code ec;
 	std::string ret = a.to_string(ec);
 	if (ec)
 	  throw ipv6_exception("to_string");
@@ -221,7 +221,7 @@ namespace openvpn {
 	throw ipv6_exception("arpa() not implemented");
       }
 
-      static Addr from_asio(const boost::asio::ip::address_v6& asio_addr)
+      static Addr from_asio(const asio::ip::address_v6& asio_addr)
       {
 	Addr ret;
 	union ipv6addr addr;
@@ -264,11 +264,11 @@ namespace openvpn {
 	return a->u32[3];
       }
 
-      boost::asio::ip::address_v6 to_asio() const
+      asio::ip::address_v6 to_asio() const
       {
 	union ipv6addr addr;
 	host_to_network_order(&addr, &u);
-	return boost::asio::ip::address_v6(addr.asio_bytes, scope_id_);
+	return asio::ip::address_v6(addr.asio_bytes, scope_id_);
       }
 
       static Addr from_zero()
@@ -673,7 +673,7 @@ namespace openvpn {
 	std::uint64_t u64[2];
 	std::uint32_t u32[4]; // generally stored in host byte order
 	unsigned char bytes[16];
-	boost::asio::ip::address_v6::bytes_type asio_bytes;
+	asio::ip::address_v6::bytes_type asio_bytes;
       };
 
       void prefix_len_to_netmask_unchecked(const unsigned int prefix_len)

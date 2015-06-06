@@ -27,7 +27,7 @@
 
 #include <string>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -82,7 +82,7 @@ namespace openvpn {
   {
     typedef RCPtr<TransportClientFactory> Ptr;
 
-    virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
+    virtual TransportClient::Ptr new_client_obj(asio::io_service& io_service,
 						TransportClientParent& parent) = 0;
   };
 

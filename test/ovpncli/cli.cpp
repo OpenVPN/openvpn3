@@ -29,9 +29,9 @@
 
 #include <openvpn/common/platform.hpp>
 
-#include <client/ovpncli.cpp> // should be included before any boost includes
+#include <client/ovpncli.cpp>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
 
@@ -123,7 +123,7 @@ Client *the_client = nullptr; // GLOBAL
 
 void worker_thread()
 {
-  boost::asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+  asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
   try {
     std::cout << "Thread starting..." << std::endl;
     ClientAPI::Status connect_status = the_client->connect();

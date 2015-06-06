@@ -6,8 +6,8 @@ if [ -z "$O3" ]; then
 fi
 cd $DEP_DIR
 rm -rf boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
-echo "******* BOOST"
-$O3/core/scripts/mac/build-boost
+#echo "******* BOOST"
+#$O3/core/scripts/mac/build-boost
 #echo "******* MINICRYPTO"
 #$O3/core/scripts/mac/build-minicrypto
 echo "******* POLARSSL"

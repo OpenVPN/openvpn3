@@ -55,7 +55,7 @@
 #include <algorithm>
 #include <type_traits> // for std::is_nothrow_move_constructible
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/abort.hpp>
@@ -359,43 +359,43 @@ namespace openvpn {
       return !(*this == other);
     }
 
-    // return a boost::asio::mutable_buffers_1 object used by
+    // return a asio::mutable_buffers_1 object used by
     // asio read methods, starting from data()
-    boost::asio::mutable_buffers_1 mutable_buffers_1(const size_t tailroom = 0)
+    asio::mutable_buffers_1 mutable_buffers_1(const size_t tailroom = 0)
     {
-      return boost::asio::mutable_buffers_1(data(), max_size_tailroom(tailroom));
+      return asio::mutable_buffers_1(data(), max_size_tailroom(tailroom));
     }
 
-    // return a boost::asio::mutable_buffers_1 object used by
+    // return a asio::mutable_buffers_1 object used by
     // asio read methods, starting from data_end()
-    boost::asio::mutable_buffers_1 mutable_buffers_1_append(const size_t tailroom = 0)
+    asio::mutable_buffers_1 mutable_buffers_1_append(const size_t tailroom = 0)
     {
-      return boost::asio::mutable_buffers_1(data_end(), remaining(tailroom));
+      return asio::mutable_buffers_1(data_end(), remaining(tailroom));
     }
 
-    // return a boost::asio::const_buffers_1 object used by
+    // return a asio::const_buffers_1 object used by
     // asio write methods.
-    boost::asio::const_buffers_1 const_buffers_1() const
+    asio::const_buffers_1 const_buffers_1() const
     {
-      return boost::asio::const_buffers_1(c_data(), size());
+      return asio::const_buffers_1(c_data(), size());
     }
 
     // clamped versions of mutable_buffers_1(), mutable_buffers_1_append(),
     // and const_buffers_1()
 
-    boost::asio::mutable_buffers_1 mutable_buffers_1_clamp(const size_t tailroom = 0)
+    asio::mutable_buffers_1 mutable_buffers_1_clamp(const size_t tailroom = 0)
     {
-      return boost::asio::mutable_buffers_1(data(), buf_clamp_read(max_size_tailroom(tailroom)));
+      return asio::mutable_buffers_1(data(), buf_clamp_read(max_size_tailroom(tailroom)));
     }
 
-    boost::asio::mutable_buffers_1 mutable_buffers_1_append_clamp(const size_t tailroom = 0)
+    asio::mutable_buffers_1 mutable_buffers_1_append_clamp(const size_t tailroom = 0)
     {
-      return boost::asio::mutable_buffers_1(data_end(), buf_clamp_read(remaining(tailroom)));
+      return asio::mutable_buffers_1(data_end(), buf_clamp_read(remaining(tailroom)));
     }
 
-    boost::asio::const_buffers_1 const_buffers_1_clamp() const
+    asio::const_buffers_1 const_buffers_1_clamp() const
     {
-      return boost::asio::const_buffers_1(c_data(), buf_clamp_write(size()));
+      return asio::const_buffers_1(c_data(), buf_clamp_write(size()));
     }
 
     void realign(size_t headroom)

@@ -74,7 +74,7 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(client_connect_unhandled_exception);
 
-    ClientConnect(boost::asio::io_service& io_service_arg,
+    ClientConnect(asio::io_service& io_service_arg,
 		  const ClientOptions::Ptr& client_options_arg)
       : generation(0),
 	halt(false),
@@ -152,7 +152,7 @@ namespace openvpn {
 	}
     }
 
-    void stop_on_signal(const boost::system::error_code& error, int signal_number)
+    void stop_on_signal(const asio::error_code& error, int signal_number)
     {
       stop();
     }
@@ -176,7 +176,7 @@ namespace openvpn {
 	      interim_finalize();
 	    }
 	  cancel_timers();
-	  asio_work.reset(new boost::asio::io_service::work(io_service));
+	  asio_work.reset(new asio::io_service::work(io_service));
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause(reason);
 	  client_options->events().add_event(ev);
 	  client_options->stats().error(Error::N_PAUSE);
@@ -259,7 +259,7 @@ namespace openvpn {
       conn_timer_pending = false;
     }
 
-    void restart_wait_callback(unsigned int gen, const boost::system::error_code& e)
+    void restart_wait_callback(unsigned int gen, const asio::error_code& e)
     {
       if (!e && gen == generation && !halt)
 	{
@@ -274,7 +274,7 @@ namespace openvpn {
 	}
     }
 
-    void server_poll_callback(unsigned int gen, const boost::system::error_code& e)
+    void server_poll_callback(unsigned int gen, const asio::error_code& e)
     {
       if (!e && gen == generation && !halt && !client->first_packet_received())
 	{
@@ -283,7 +283,7 @@ namespace openvpn {
 	}
     }
 
-    void conn_timer_callback(unsigned int gen, const boost::system::error_code& e)
+    void conn_timer_callback(unsigned int gen, const asio::error_code& e)
     {
       if (!e && !halt)
 	{
@@ -545,14 +545,14 @@ namespace openvpn {
     bool dont_restart_;
     bool lifecycle_started;
     int conn_timeout;
-    boost::asio::io_service& io_service;
+    asio::io_service& io_service;
     ClientOptions::Ptr client_options;
     Client::Ptr client;
     AsioTimer server_poll_timer;
     AsioTimer restart_wait_timer;
     AsioTimer conn_timer;
     bool conn_timer_pending;
-    std::unique_ptr<boost::asio::io_service::work> asio_work;
+    std::unique_ptr<asio::io_service::work> asio_work;
     RemoteList::PreResolve::Ptr pre_resolve;
   };
 

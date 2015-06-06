@@ -25,7 +25,7 @@
 #include <string>
 #include <cstring> // for std::memset
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -100,16 +100,16 @@ namespace openvpn {
 
 	// slow path
 	{
-	  boost::system::error_code ec;
-	  boost::asio::ip::address::from_string(ipstr, ec);
+	  asio::error_code ec;
+	  asio::ip::address::from_string(ipstr, ec);
 	  return !ec;
 	}
       }
 
       static Addr from_string(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
       {
-	boost::system::error_code ec;
-	boost::asio::ip::address a = boost::asio::ip::address::from_string(ipstr, ec);
+	asio::error_code ec;
+	asio::ip::address a = asio::ip::address::from_string(ipstr, ec);
 	if (ec)
 	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
 	const Addr ret = from_asio(a);
@@ -322,8 +322,8 @@ namespace openvpn {
       {
 	if (ver != UNSPEC)
 	  {
-	    const boost::asio::ip::address a = to_asio();
-	    boost::system::error_code ec;
+	    const asio::ip::address a = to_asio();
+	    asio::error_code ec;
 	    std::string ret = a.to_string(ec);
 	    if (ec)
 	      throw ip_exception("to_string");
@@ -364,7 +364,7 @@ namespace openvpn {
 	  throw ip_exception("address unspecified");
       }
 
-      static Addr from_asio(const boost::asio::ip::address& addr)
+      static Addr from_asio(const asio::ip::address& addr)
       {
 	if (addr.is_v4())
 	  {
@@ -384,14 +384,14 @@ namespace openvpn {
 	  throw ip_exception("address unspecified");
       }
 
-      boost::asio::ip::address to_asio() const
+      asio::ip::address to_asio() const
       {
 	switch (ver)
 	  {
 	  case V4:
-	    return boost::asio::ip::address_v4(u.v4.to_asio());
+	    return asio::ip::address_v4(u.v4.to_asio());
 	  case V6:
-	    return boost::asio::ip::address_v6(u.v6.to_asio());
+	    return asio::ip::address_v6(u.v6.to_asio());
 	  default:
 	    throw ip_exception("address unspecified");
 	  }

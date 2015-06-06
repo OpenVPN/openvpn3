@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -57,7 +57,7 @@ namespace openvpn {
   {
     typedef RCPtr<TransportServerFactory> Ptr;
 
-    virtual TransportServer::Ptr new_server_obj(boost::asio::io_service& io_service) = 0;
+    virtual TransportServer::Ptr new_server_obj(asio::io_service& io_service) = 0;
   };
 
   // Base class for the per-client-instance state of the TransportServer.

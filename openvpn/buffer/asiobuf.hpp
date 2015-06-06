@@ -22,7 +22,7 @@
 #ifndef OPENVPN_BUFFER_ASIOBUF_H
 #define OPENVPN_BUFFER_ASIOBUF_H
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/buffer/buffer.hpp>
 
@@ -37,19 +37,19 @@ namespace openvpn {
     }
 
     // Implement the ConstBufferSequence requirements.
-    typedef boost::asio::const_buffer value_type;
-    typedef const boost::asio::const_buffer* const_iterator;
-    const boost::asio::const_buffer* begin() const { return buf; }
-    const boost::asio::const_buffer* end() const { return buf + 2; }
+    typedef asio::const_buffer value_type;
+    typedef const asio::const_buffer* const_iterator;
+    const asio::const_buffer* begin() const { return buf; }
+    const asio::const_buffer* end() const { return buf + 2; }
 
     const size_t size() const
     {
-      return boost::asio::buffer_size(buf[0])
-	   + boost::asio::buffer_size(buf[1]);
+      return asio::buffer_size(buf[0])
+	   + asio::buffer_size(buf[1]);
     }
 
   private:
-    const boost::asio::const_buffer buf[2];
+    const asio::const_buffer buf[2];
   };
 }
 

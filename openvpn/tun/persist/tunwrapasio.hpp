@@ -46,13 +46,13 @@ namespace openvpn {
 
     // Delegate STREAM methods (only need to support the
     // subset of methods used by TunIO).
-    // Prototypes from boost/asio/windows/basic_stream_handle.hpp
+    // Prototypes from asio/windows/basic_stream_handle.hpp
 
     template <typename MutableBufferSequence, typename ReadHandler>
-    BOOST_ASIO_INITFN_RESULT_TYPE(ReadHandler,
-				  void (boost::system::error_code, std::size_t))
-    async_read_some(const MutableBufferSequence& buffers,
-		    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
+    ASIO_INITFN_RESULT_TYPE(ReadHandler,
+			    void (asio::error_code, std::size_t))
+      async_read_some(const MutableBufferSequence& buffers,
+		      ASIO_MOVE_ARG(ReadHandler) handler)
     {
       return tun_wrap->obj()->async_read_some(buffers, handler);
     }

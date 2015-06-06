@@ -26,7 +26,7 @@
 
 #include <memory>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/asiodispatch.hpp>
@@ -49,7 +49,7 @@
 namespace openvpn {
   namespace UDPTransport {
 
-    typedef boost::asio::ip::udp::endpoint AsioEndpoint;
+    typedef asio::ip::udp::endpoint AsioEndpoint;
 
     enum {
       SEND_SOCKET_HALTED=-1,
@@ -70,7 +70,7 @@ namespace openvpn {
       typedef RCPtr<Link> Ptr;
 
       Link(ReadHandler read_handler_arg,
-	   boost::asio::ip::udp::socket& socket_arg,
+	   asio::ip::udp::socket& socket_arg,
 	   const Frame::Context& frame_context_arg,
 	   const SessionStats::Ptr& stats_arg)
 	: socket(socket_arg),
@@ -102,7 +102,7 @@ namespace openvpn {
 		  return SEND_PARTIAL;
 		}
 	    }
-	    catch (boost::system::system_error& e)
+	    catch (asio::system_error& e)
 	      {
 		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
 		stats->error(Error::NETWORK_SEND_ERROR);
@@ -145,7 +145,7 @@ namespace openvpn {
 				  asio_dispatch_read(&Link::handle_read, this, udpfrom));
       }
 
-      void handle_read(PacketFrom *udpfrom, const boost::system::error_code& error, const size_t bytes_recvd)
+      void handle_read(PacketFrom *udpfrom, const asio::error_code& error, const size_t bytes_recvd)
       {
 	OPENVPN_LOG_UDPLINK_VERBOSE("UDPLink::handle_read: " << error.message());
 	PacketFrom::SPtr pfp(udpfrom);
@@ -172,7 +172,7 @@ namespace openvpn {
 	  }
       }
 
-      boost::asio::ip::udp::socket& socket;
+      asio::ip::udp::socket& socket;
       bool halt;
       ReadHandler read_handler;
       Frame::Context frame_context;

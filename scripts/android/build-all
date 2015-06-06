@@ -7,8 +7,8 @@ fi
 export DEP_DIR=${DEP_DIR:-$HOME/src/android}
 cd $DEP_DIR
 rm -rf boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
-echo "******* BOOST"
-$O3/core/scripts/android/build-boost
+#echo "******* BOOST"
+#$O3/core/scripts/android/build-boost
 echo "******* POLARSSL"
 $O3/core/scripts/android/build-polarssl
 echo "******* LZ4"

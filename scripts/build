@@ -147,15 +147,18 @@ if [ "$APPLE_FAMILY" = "1" ]; then
 fi
 
 # boost
-CPPFLAGS="$CPPFLAGS -I$DEP_DIR/boost"
-LIBS="$LIBS -lboost_system"
-LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM/lib"
-if [ "$NOTHREADS" = "1" ]; then
-    CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
-else
-    #LIBS="$LIBS -lboost_thread" # no longer needed because we use std::thread now
-    [ "$PLATFORM" != "android" ] && FLAGS="$FLAGS -pthread"
-fi
+#CPPFLAGS="$CPPFLAGS -I$DEP_DIR/boost"
+#LIBS="$LIBS -lboost_system"
+#LIBDIRS="$LIBDIRS -L$DEP_DIR/boost/stage-$PLATFORM/lib"
+#if [ "$NOTHREADS" = "1" ]; then
+#    CPPFLAGS="$CPPFLAGS -DBOOST_DISABLE_THREADS"
+#else
+#    #LIBS="$LIBS -lboost_thread" # no longer needed because we use std::thread now
+#    [ "$PLATFORM" != "android" ] && FLAGS="$FLAGS -pthread"
+#fi
+
+# asio
+CPPFLAGS="$CPPFLAGS -DASIO_STANDALONE -I$DEP_DIR/asio/asio/include"
 
 # LZO compression
 if [ "$LZO" = "1" ]; then
@@ -188,7 +191,7 @@ done
 if [ "$PLATFORM" = "android" ]; then
     CPPFLAGS="$CPPFLAGS -D__GLIBC__"
     CPPFLAGS="$CPPFLAGS -D_GLIBCXX_HAVE_FENV_H=1"
-    CPPFLAGS="$CPPFLAGS -DBOOST_NO_INTRINSIC_WCHAR_T"
+#   CPPFLAGS="$CPPFLAGS -DBOOST_NO_INTRINSIC_WCHAR_T"
 fi
 
 # Special platform flags

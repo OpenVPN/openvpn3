@@ -75,7 +75,7 @@ namespace openvpn {
     };
 
     // These types manage the underlying TAP driver HANDLE
-    typedef boost::asio::windows::stream_handle TAPStream;
+    typedef asio::windows::stream_handle TAPStream;
     typedef ScopedAsioStream<TAPStream> ScopedTAPStream;
     typedef TunPersistTemplate<ScopedTAPStream> TunPersist;
 
@@ -97,7 +97,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
+      virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
 					    TunClientParent& parent);
 
       virtual void finalize(const bool disconnected)
@@ -264,7 +264,7 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(boost::asio::io_service& io_service_arg,
+      Client(asio::io_service& io_service_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
 	:  io_service(io_service_arg),
@@ -528,7 +528,7 @@ namespace openvpn {
       }
 
       void tun_error_handler(const Error::Type errtype, // called by TunImpl
-			     const boost::system::error_code* error)
+			     const asio::error_code* error)
       {
 	if (errtype == Error::TUN_READ_ERROR && error && error->value() == 995)
 	  parent.tun_error(Error::TUN_IFACE_DISABLED, "TAP adapter is disabled");
@@ -565,7 +565,7 @@ namespace openvpn {
 	  Util::tap_process_logging(h);
       }
 
-      boost::asio::io_service& io_service;
+      asio::io_service& io_service;
       TunPersist::Ptr tun_persist; // contains the TAP device HANDLE
       ClientConfig::Ptr config;
       TunClientParent& parent;
@@ -575,7 +575,7 @@ namespace openvpn {
       ActionList::Ptr remove_cmds;
     };
 
-    inline TunClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service,
+    inline TunClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
 						       TunClientParent& parent)
     {
       return TunClient::Ptr(new Client(io_service, this, parent));

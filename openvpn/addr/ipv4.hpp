@@ -26,7 +26,7 @@
 #include <sstream>
 #include <cstdint>           // for std::uint32_t
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -190,8 +190,8 @@ namespace openvpn {
 
       static Addr from_string(const std::string& ipstr, const char *title = nullptr)
       {
-	boost::system::error_code ec;
-	boost::asio::ip::address_v4 a = boost::asio::ip::address_v4::from_string(ipstr, ec);
+	asio::error_code ec;
+	asio::ip::address_v4 a = asio::ip::address_v4::from_string(ipstr, ec);
 	if (ec)
 	  throw ipv4_exception(IP::internal::format_error(ipstr, title, "v4", ec));
 	return from_asio(a);
@@ -199,8 +199,8 @@ namespace openvpn {
 
       std::string to_string() const
       {
-	const boost::asio::ip::address_v4 a = to_asio();
-	boost::system::error_code ec;
+	const asio::ip::address_v4 a = to_asio();
+	asio::error_code ec;
 	std::string ret = a.to_string(ec);
 	if (ec)
 	  throw ipv4_exception("to_string");
@@ -265,16 +265,16 @@ namespace openvpn {
 	return os.str();
       }
 
-      static Addr from_asio(const boost::asio::ip::address_v4& asio_addr)
+      static Addr from_asio(const asio::ip::address_v4& asio_addr)
       {
 	Addr ret;
 	ret.u.addr = (std::uint32_t)asio_addr.to_ulong();
 	return ret;
       }
 
-      boost::asio::ip::address_v4 to_asio() const
+      asio::ip::address_v4 to_asio() const
       {
-	return boost::asio::ip::address_v4(u.addr);
+	return asio::ip::address_v4(u.addr);
       }
 
       Addr operator&(const Addr& other) const {

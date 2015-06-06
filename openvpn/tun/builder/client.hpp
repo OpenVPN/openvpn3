@@ -51,14 +51,14 @@ namespace openvpn {
     // A simplified tun interface where pre-existing
     // socket is provided.
     template <typename ReadHandler>
-    class Tun : public TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor>
+    class Tun : public TunIO<ReadHandler, PacketFrom, asio::posix::stream_descriptor>
     {
-      typedef TunIO<ReadHandler, PacketFrom, boost::asio::posix::stream_descriptor> Base;
+      typedef TunIO<ReadHandler, PacketFrom, asio::posix::stream_descriptor> Base;
 
     public:
       typedef RCPtr<Tun> Ptr;
 
-      Tun(boost::asio::io_service& io_service,
+      Tun(asio::io_service& io_service,
 	  const int socket,
 	  const bool retain_sd_arg,
 	  const bool tun_prefix_arg,
@@ -67,7 +67,7 @@ namespace openvpn {
 	  const SessionStats::Ptr& stats_arg)
 	: Base(read_handler_arg, frame_arg, stats_arg)
       {
-	Base::stream = new boost::asio::posix::stream_descriptor(io_service, socket);
+	Base::stream = new asio::posix::stream_descriptor(io_service, socket);
 	Base::name_ = "tun";
 	Base::retain_stream = retain_sd_arg;
 	Base::tun_prefix = tun_prefix_arg;
@@ -97,7 +97,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_client_obj(boost::asio::io_service& io_service,
+      virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
 					    TunClientParent& parent);
 
       virtual void finalize(const bool disconnected)
@@ -115,7 +115,7 @@ namespace openvpn {
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
-      friend class TunIO<Client*, PacketFrom, boost::asio::posix::stream_descriptor>;  // calls tun_read_handler
+      friend class TunIO<Client*, PacketFrom, asio::posix::stream_descriptor>;  // calls tun_read_handler
 
       typedef Tun<Client*> TunImpl;
 
@@ -235,7 +235,7 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(boost::asio::io_service& io_service_arg,
+      Client(asio::io_service& io_service_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
 	:  io_service(io_service_arg),
@@ -260,7 +260,7 @@ namespace openvpn {
       }
 
       void tun_error_handler(const Error::Type errtype, // called by TunImpl
-			     const boost::system::error_code* error)
+			     const asio::error_code* error)
       {
       }
 
@@ -278,7 +278,7 @@ namespace openvpn {
       }
 
 
-      boost::asio::io_service& io_service;
+      asio::io_service& io_service;
       TunPersist::Ptr tun_persist; // owns the tun socket descriptor
       ClientConfig::Ptr config;
       TunClientParent& parent;
@@ -287,7 +287,7 @@ namespace openvpn {
       TunProp::State::Ptr state;
     };
 
-    inline TunClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service,
+    inline TunClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
 						       TunClientParent& parent)
     {
       return TunClient::Ptr(new Client(io_service, this, parent));

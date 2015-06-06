@@ -26,7 +26,7 @@
 
 #include <sstream>
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/platform.hpp>
@@ -56,7 +56,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TransportClient::Ptr new_client_obj(boost::asio::io_service& io_service,
+      virtual TransportClient::Ptr new_client_obj(asio::io_service& io_service,
 						  TransportClientParent& parent);
 
     private:
@@ -75,9 +75,9 @@ namespace openvpn {
       typedef Link<Client*> LinkImpl;
 
       typedef AsioDispatchResolve<Client,
-				  void (Client::*)(const boost::system::error_code&,
-						   boost::asio::ip::udp::resolver::iterator),
-				  boost::asio::ip::udp::resolver::iterator> AsioDispatchResolveUDP;
+				  void (Client::*)(const asio::error_code&,
+						   asio::ip::udp::resolver::iterator),
+				  asio::ip::udp::resolver::iterator> AsioDispatchResolveUDP;
 
     public:
       virtual void start()
@@ -91,7 +91,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		boost::asio::ip::udp::resolver::query query(server_host,
+		asio::ip::udp::resolver::query query(server_host,
 							    server_port);
 		parent.transport_pre_resolve();
 		resolver.async_resolve(query, AsioDispatchResolveUDP(&Client::do_resolve_, this));
@@ -139,7 +139,7 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(boost::asio::io_service& io_service_arg,
+      Client(asio::io_service& io_service_arg,
 	     ClientConfig* config_arg,
 	     TransportClientParent& parent_arg)
 	:  io_service(io_service_arg),
@@ -197,8 +197,8 @@ namespace openvpn {
       }
 
       // called after DNS resolution has succeeded or failed
-      void do_resolve_(const boost::system::error_code& error,
-		       boost::asio::ip::udp::resolver::iterator endpoint_iterator)
+      void do_resolve_(const asio::error_code& error,
+		       asio::ip::udp::resolver::iterator endpoint_iterator)
       {
 	if (!halt)
 	  {
@@ -243,7 +243,7 @@ namespace openvpn {
       }
 
       // start I/O on UDP socket
-      void start_impl_(const boost::system::error_code& error)
+      void start_impl_(const asio::error_code& error)
       {
 	if (!halt)
 	  {
@@ -270,17 +270,17 @@ namespace openvpn {
       std::string server_host;
       std::string server_port;
 
-      boost::asio::io_service& io_service;
-      boost::asio::ip::udp::socket socket;
+      asio::io_service& io_service;
+      asio::ip::udp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent& parent;
       LinkImpl::Ptr impl;
-      boost::asio::ip::udp::resolver resolver;
+      asio::ip::udp::resolver resolver;
       UDPTransport::AsioEndpoint server_endpoint;
       bool halt;
     };
 
-    inline TransportClient::Ptr ClientConfig::new_client_obj(boost::asio::io_service& io_service,
+    inline TransportClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
 							     TransportClientParent& parent)
     {
       return TransportClient::Ptr(new Client(io_service, this, parent));

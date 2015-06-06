@@ -42,7 +42,7 @@
 #include <algorithm>         // for std::min
 #include <cstdint>           // for std::uint...
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/count.hpp>
@@ -127,7 +127,7 @@ namespace openvpn {
 	OptionList::FilterBase::Ptr pushed_options_filter;
       };
 
-      Session(boost::asio::io_service& io_service_arg,
+      Session(asio::io_service& io_service_arg,
 	      const Config& config,
 	      NotifyCallback* notify_callback_arg)
 	: Base(config.proto_context_config, config.cli_stats),
@@ -209,7 +209,7 @@ namespace openvpn {
 	  }
       }
 
-      void stop_on_signal(const boost::system::error_code& error, int signal_number)
+      void stop_on_signal(const asio::error_code& error, int signal_number)
       {
 	stop(true);
       }
@@ -600,7 +600,7 @@ namespace openvpn {
       }
 
       void send_push_request_callback(const Time::Duration& dur,
-				      const boost::system::error_code& e)
+				      const asio::error_code& e)
       {
 	try {
 	  if (!e && !halt && !received_options.partial())
@@ -646,7 +646,7 @@ namespace openvpn {
 	schedule_push_request_callback(Time::Duration::seconds(0));
       }
 
-      void housekeeping_callback(const boost::system::error_code& e)
+      void housekeeping_callback(const asio::error_code& e)
       {
 	try {
 	  if (!e && !halt)
@@ -720,7 +720,7 @@ namespace openvpn {
 	inactive_timer.async_wait(asio_dispatch_timer(&Session::inactive_callback, this));
       }
 
-      void inactive_callback(const boost::system::error_code& e)
+      void inactive_callback(const asio::error_code& e)
       {
 	try {
 	  if (!e && !halt)
@@ -798,7 +798,7 @@ namespace openvpn {
       }
 #endif
 
-      boost::asio::io_service& io_service;
+      asio::io_service& io_service;
 
       TransportClientFactory::Ptr transport_factory;
       TransportClient::Ptr transport;
