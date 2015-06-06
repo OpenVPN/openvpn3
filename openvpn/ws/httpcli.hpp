@@ -171,14 +171,14 @@ namespace openvpn {
 	friend LinkImpl; // calls tcp_* handlers
 
 	typedef AsioDispatchResolve<HTTPCore,
-				    void (HTTPCore::*)(const boost::system::error_code&,
-						   boost::asio::ip::tcp::resolver::iterator),
-				    boost::asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
+				    void (HTTPCore::*)(const asio::error_code&,
+						   asio::ip::tcp::resolver::iterator),
+				    asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
 
       public:
 	typedef RCPtr<HTTPCore> Ptr;
 
-	HTTPCore(boost::asio::io_service& io_service_arg,
+	HTTPCore(asio::io_service& io_service_arg,
 	     const Config::Ptr& config_arg)
 	  : Base(config_arg),
 	    io_service(io_service_arg),
@@ -303,7 +303,7 @@ namespace openvpn {
 		  }
 		else
 		  {
-		    boost::asio::ip::tcp::resolver::query query(host.host_transport(), host.port);
+		    asio::ip::tcp::resolver::query query(host.host_transport(), host.port);
 		    resolver.async_resolve(query, AsioDispatchResolveTCP(&HTTPCore::handle_resolve, this));
 		  }
 	      }
@@ -314,8 +314,8 @@ namespace openvpn {
 	    }
 	}
 
-	void handle_resolve(const boost::system::error_code& error, // called by Asio
-			    boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
+	void handle_resolve(const asio::error_code& error, // called by Asio
+			    asio::ip::tcp::resolver::iterator endpoint_iterator)
 	{
 	  if (halt)
 	    return;
@@ -327,7 +327,7 @@ namespace openvpn {
 	    }
 
 	  try {
-	    boost::asio::async_connect(socket,
+	    asio::async_connect(socket,
 				       endpoint_iterator,
 				       asio_dispatch_composed_connect(&HTTPCore::handle_connect, this));
 	  }
@@ -361,8 +361,8 @@ namespace openvpn {
 	  generate_request();
 	}
 
-	void handle_connect(const boost::system::error_code& error, // called by Asio
-			    boost::asio::ip::tcp::resolver::iterator iterator)
+	void handle_connect(const asio::error_code& error, // called by Asio
+			    asio::ip::tcp::resolver::iterator iterator)
 	{
 	  if (halt)
 	    return;
@@ -382,13 +382,13 @@ namespace openvpn {
 	    }
 	}
 
-	void general_timeout_handler(const boost::system::error_code& e) // called by Asio
+	void general_timeout_handler(const asio::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
 	    error_handler(Status::E_GENERAL_TIMEOUT, "General timeout");
 	}
 
-	void connect_timeout_handler(const boost::system::error_code& e) // called by Asio
+	void connect_timeout_handler(const asio::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
 	    error_handler(Status::E_CONNECT_TIMEOUT, "Connect timeout");
@@ -437,7 +437,7 @@ namespace openvpn {
 
 	// error handlers
 
-	void asio_error_handler(int errcode, const char *func_name, const boost::system::error_code& error)
+	void asio_error_handler(int errcode, const char *func_name, const asio::error_code& error)
 	{
 	  error_handler(errcode, std::string("HTTPCore Asio ") + func_name + ": " + error.message());
 	}
@@ -626,12 +626,12 @@ namespace openvpn {
 	  do_connect(false);
 	}
 
-	boost::asio::io_service& io_service;
+	asio::io_service& io_service;
 
 	bool alive;
 
-	boost::asio::ip::tcp::socket socket;
-	boost::asio::ip::tcp::resolver resolver;
+	asio::ip::tcp::socket socket;
+	asio::ip::tcp::resolver resolver;
 
 	Host host;
 
@@ -651,7 +651,7 @@ namespace openvpn {
 
 	typedef RCPtr<HTTPDelegate> Ptr;
 
-	HTTPDelegate(boost::asio::io_service& io_service,
+	HTTPDelegate(asio::io_service& io_service,
 		     const WS::Client::Config::Ptr& config,
 		     PARENT* parent_arg)
 	  : WS::Client::HTTPCore(io_service, config),
