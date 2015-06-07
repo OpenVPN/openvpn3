@@ -38,11 +38,11 @@ namespace openvpn {
       const Option *o = opt.get_ptr("mssfix");
       if (o)
 	{
-	  const bool status = parse_number_validate<unsigned int>(o->get(1, 16),
-								  16,
-								  576,
-								  65535,
-								  &mssfix);
+	  const bool status = parse_number_validate<decltype(mssfix)>(o->get(1, 16),
+								      16,
+								      576,
+								      65535,
+								      &mssfix);
 	  if (!status)
 	    throw option_error("mssfix: parse/range issue");
 	  mtu = (o->get_optional(2, 16) == "mtu");
@@ -51,6 +51,17 @@ namespace openvpn {
 
     unsigned int mssfix;  // standard OpenVPN mssfix parm
     bool mtu;             // consider transport packet overhead in MSS adjustment
+  };
+
+  struct MSSCtrlParms
+  {
+    MSSCtrlParms(const OptionList& opt)
+    {
+      mssfix_ctrl = opt.get_num<decltype(mssfix_ctrl)>("mssfix-ctrl", 1, 1250,
+						       256, 65535);
+    }
+
+    unsigned int mssfix_ctrl;
   };
 }
 

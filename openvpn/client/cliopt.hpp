@@ -38,6 +38,7 @@
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/crypto/cryptodcsel.hpp>
+#include <openvpn/ssl/mssparms.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/reconnect_notify.hpp>
@@ -167,7 +168,8 @@ namespace openvpn {
 #endif
 
       // frame
-      frame = frame_init(true);
+      const MSSCtrlParms mc(opt);
+      frame = frame_init(true, mc.mssfix_ctrl, true);
 
       // route-nopull
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
