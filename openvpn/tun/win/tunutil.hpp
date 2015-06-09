@@ -397,11 +397,11 @@ namespace openvpn {
 	DWORD len;
 
 	while (DeviceIoControl (th, TAP_WIN_IOCTL_GET_LOG_LINE,
-				line(), size,
-				line(), size,
+				line.get(), size,
+				line.get(), size,
 				&len, nullptr))
 	  {
-	    OPENVPN_LOG("TAP-Windows: " << line());
+	    OPENVPN_LOG("TAP-Windows: " << line.get());
 	  }
       }
 
@@ -470,8 +470,8 @@ namespace openvpn {
 				  L"Domain",
 				  0,
 				  REG_SZ,
-				  (const BYTE *)dom(),
-				  (Win::utf16_strlen(dom())+1)*2);
+				  (const BYTE *)dom.get(),
+				  (Win::utf16_strlen(dom.get())+1)*2);
 	  if (status != ERROR_SUCCESS)
 	    OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error writing Domain registry key: " << reg_key_name);
 
@@ -498,7 +498,7 @@ namespace openvpn {
 	if (status == ERROR_INSUFFICIENT_BUFFER)
 	  {
 	    rt.reset((MIB_IPFORWARDTABLE*)new unsigned char[size]);
-	    status = GetIpForwardTable(rt(), &size, TRUE);
+	    status = GetIpForwardTable(rt.get(), &size, TRUE);
 	    if (status != NO_ERROR)
 	      {
 		OPENVPN_LOG("windows_routing_table: GetIpForwardTable failed");
@@ -528,12 +528,12 @@ namespace openvpn {
 	  : index(DWORD(-1))
 	{
 	  std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
-	  if (rt.defined())
+	  if (rt)
 	    {
 	      const MIB_IPFORWARDROW* gw = nullptr;
-	      for (size_t i = 0; i < rt()->dwNumEntries; ++i)
+	      for (size_t i = 0; i < rt->dwNumEntries; ++i)
 		{
-		  const MIB_IPFORWARDROW* row = &rt()->table[i];
+		  const MIB_IPFORWARDROW* row = &rt->table[i];
 		  if (!row->dwForwardDest && !row->dwForwardMask
 		      && (!gw || row->dwForwardMetric1 < gw->dwForwardMetric1))
 		    gw = row;
@@ -592,11 +592,11 @@ namespace openvpn {
 	static void remove_all_ipv4_routes_on_iface(DWORD index, ActionList& actions)
 	{
 	  std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
-	  if (rt.defined())
+	  if (rt)
 	    {
-	      for (size_t i = 0; i < rt()->dwNumEntries; ++i)
+	      for (size_t i = 0; i < rt->dwNumEntries; ++i)
 		{
-		  const MIB_IPFORWARDROW* row = &rt()->table[i];
+		  const MIB_IPFORWARDROW* row = &rt->table[i];
 		  if (row->dwForwardIfIndex == index)
 		    {
 		      const IPv4::Addr net = IPv4::Addr::from_uint32(ntohl(row->dwForwardDest));
@@ -620,13 +620,13 @@ namespace openvpn {
 	{
 	  unique_ptr_del<const MIB_IPFORWARD_TABLE2> rt2(windows_routing_table2(AF_INET6),
 							 [](const MIB_IPFORWARD_TABLE2* p) { FreeMibTable((PVOID)p); });
-	  if (rt2.defined())
+	  if (rt2)
 	    {
 	      const IPv6::Addr ll_net = IPv6::Addr::from_string("fe80::");
 	      const IPv6::Addr ll_mask = IPv6::Addr::netmask_from_prefix_len(64);
-	      for (size_t i = 0; i < rt2()->NumEntries; ++i)
+	      for (size_t i = 0; i < rt2->NumEntries; ++i)
 		{
-		  const MIB_IPFORWARD_ROW2* row = &rt2()->Table[i];
+		  const MIB_IPFORWARD_ROW2* row = &rt2->Table[i];
 		  if (row->InterfaceIndex == index)
 		    {
 		      const unsigned int pl = row->DestinationPrefix.PrefixLength;

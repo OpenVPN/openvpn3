@@ -27,8 +27,16 @@
 
 #include <openvpn/common/size.hpp>
 
+#ifdef _MSC_VER
+#define HAVE_HASH_COMBINE 0 // no hash combine on MSVC due to lack of SFINAE
+#else
+#define HAVE_HASH_COMBINE 1
+#endif
+
 namespace openvpn {
   namespace Hash {
+
+#if HAVE_HASH_COMBINE
 
     template <class T>
     inline auto combine(std::size_t& seed, const T& v) -> decltype(std::hash<T>(), void())
@@ -83,6 +91,7 @@ namespace openvpn {
 	  break;
 	}
     }
+#endif
   }
 }
 

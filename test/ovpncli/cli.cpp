@@ -43,7 +43,6 @@
 #include <openvpn/time/timestr.hpp>
 
 #if defined(OPENVPN_PLATFORM_WIN)
-#include <boost/chrono.hpp>
 #include <openvpn/win/console.hpp>
 #endif
 
@@ -494,13 +493,15 @@ int main(int argc, char *argv[])
 		  Win::Console::Input console;
 
 		  // start connect thread
+		  volatile bool thread_exit = false;
 		  the_client = &client;
-		  thread = new std::thread([]() {
+		  thread = new std::thread([&thread_exit]() {
 		      worker_thread();
+		      thread_exit = true;
 		    });
 
 		  // wait for connect thread to exit, also check for keypresses
-		  while (!thread->try_join_for(boost::chrono::milliseconds(1000)))
+		  while (!thread_exit)
 		    {
 		      while (true)
 			{
@@ -516,7 +517,12 @@ int main(int argc, char *argv[])
 			  else if (c == 0x3F) // F5
 			    the_client->pause("user-pause");
 			}
+		      Sleep(1000);
 		    }
+
+		  // wait for connect thread to exit
+		  thread->join();
+
 		  the_client = nullptr;
 #endif
 

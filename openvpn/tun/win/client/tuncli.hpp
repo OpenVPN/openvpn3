@@ -553,7 +553,7 @@ namespace openvpn {
 	  {
 	    TAPStream* stream = tun_persist->obj();
 	    if (stream)
-	      return stream->native();
+	      return stream->native_handle();
 	  }
 	return Win::Handle::undefined();
       }

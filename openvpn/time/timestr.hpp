@@ -27,13 +27,17 @@
 #include <string>
 #include <cstring> // for std::strlen
 #include <time.h>
+#ifndef _MSC_VER
 #include <sys/time.h>
+#endif
 #include <stdio.h>
 #include <ctype.h>
 
 #include <openvpn/common/size.hpp>
 
 namespace openvpn {
+
+#ifndef _MSC_VER
 
   inline std::string date_time(const time_t t)
   {
@@ -44,7 +48,7 @@ namespace openvpn {
       return "LOCALTIME_ERROR";
     if (!asctime_r(&lt, buf))
       return "ASCTIME_ERROR";
-    const int len = std::strlen(buf);
+    const size_t len = std::strlen(buf);
     if (len > 0 && buf[len-1] == '\n')
       buf[len-1] = '\0';
     return std::string(buf);
@@ -102,6 +106,21 @@ namespace openvpn {
   {
     return date_time_rfc822(::time(nullptr));
   }
+
+#else
+
+  inline std::string date_time()
+  {
+    const time_t now = time(NULL);
+    struct tm *lt = localtime(&now);
+    char *ret = asctime(lt);
+    const size_t len = strlen(ret);
+    if (len > 0 && ret[len-1] == '\n')
+      ret[len-1] = '\0';
+    return ret;
+  }
+
+#endif
 }
 
 #endif

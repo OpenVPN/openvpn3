@@ -759,6 +759,7 @@ namespace openvpn {
 	  return 0;
       }
 
+#if HAVE_HASH_COMBINE
       std::size_t hashval() const
       {
 	std::size_t seed = 0;
@@ -777,6 +778,7 @@ namespace openvpn {
 	  }
 	return seed;
       }
+#endif
 
 #ifdef OPENVPN_IP_IMMUTABLE
     private:
@@ -875,6 +877,7 @@ namespace openvpn {
   }
 }
 
+#if HAVE_HASH_COMBINE
 namespace std {
   template <>
   struct hash<openvpn::IP::Addr>
@@ -885,5 +888,6 @@ namespace std {
     }
   };
 }
+#endif
 
 #endif

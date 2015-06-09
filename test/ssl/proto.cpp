@@ -315,9 +315,9 @@ class TestProto : public ProtoContext
 public:
   using Base::flush;
 
-  typedef typename Base::PacketType PacketType;
+  typedef Base::PacketType PacketType;
 
-  TestProto(const typename Base::Config::Ptr& config,
+  TestProto(const Base::Config::Ptr& config,
 	    const SessionStats::Ptr& stats)
     : Base(config, stats),
       control_drought("control", config->now),
@@ -482,7 +482,7 @@ class TestProtoClient : public TestProto
 {
   typedef TestProto Base;
 public:
-  TestProtoClient(const typename Base::Config::Ptr& config,
+  TestProtoClient(const Base::Config::Ptr& config,
 		  const SessionStats::Ptr& stats)
     : Base(config, stats)
   {
@@ -504,7 +504,7 @@ class TestProtoServer : public TestProto
 public:
   OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
-  TestProtoServer(const typename Base::Config::Ptr& config,
+  TestProtoServer(const Base::Config::Ptr& config,
 		  const SessionStats::Ptr& stats)
     : Base(config, stats)
   {

@@ -1051,7 +1051,7 @@ namespace openvpn {
       try {
 	return get_optional(name, index, max_len);
       }
-      catch (const std::exception& e)
+      catch (const std::exception&)
 	{
 	  return "";
 	}

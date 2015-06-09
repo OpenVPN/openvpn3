@@ -474,12 +474,14 @@ namespace openvpn {
 	return SIZE;
       }
 
+#if HAVE_HASH_COMBINE
       std::size_t hashval() const
       {
 	std::size_t seed = 0;
 	Hash::combine(seed, u.addr);
 	return seed;
       }
+#endif
 
 #ifdef OPENVPN_IP_IMMUTABLE
     private:
@@ -547,10 +549,12 @@ namespace openvpn {
 
     OPENVPN_OSTREAM(Addr, to_string)
 
+#if HAVE_HASH_COMBINE
     inline std::size_t hash_value(const Addr& addr)
     {
       return addr.hashval();
     }
+#endif
   }
 } // namespace openvpn
 

@@ -61,21 +61,21 @@ namespace openvpn {
 #else
       // get system path (XP and higher)
       std::unique_ptr<TCHAR[]> syspath(new char[MAX_PATH]);
-      if (SHGetFolderPath(nullptr, CSIDL_SYSTEM, nullptr, 0, syspath()) != S_OK)
+      if (SHGetFolderPath(nullptr, CSIDL_SYSTEM, nullptr, 0, syspath.get()) != S_OK)
 	throw win_call("cannot get system path using SHGetFolderPath");
 #     define SYSPATH_FMT_CHAR L"S"
 #     define SYSPATH_LEN_METH(x) strlen(x)
 #endif
 
       // build command line
-      const size_t wcmdlen = SYSPATH_LEN_METH(syspath()) + name.length() + args.length() + 64;
+      const size_t wcmdlen = SYSPATH_LEN_METH(syspath.get()) + name.length() + args.length() + 64;
       std::unique_ptr<wchar_t[]> wcmd(new wchar_t[wcmdlen]);
       const char *spc = "";
       if (!args.empty())
 	spc = " ";
-      _snwprintf(wcmd(), wcmdlen, L"\"%" SYSPATH_FMT_CHAR L"\\%S.exe\"%S%S", syspath(), name.c_str(), spc, args.c_str());
-      wcmd()[wcmdlen-1] = 0;
-      //wprintf(L"CMD[%d]: %s\n", (int)wcslen(wcmd()), wcmd());
+      _snwprintf(wcmd.get(), wcmdlen, L"\"%" SYSPATH_FMT_CHAR L"\\%S.exe\"%S%S", syspath.get(), name.c_str(), spc, args.c_str());
+      wcmd.get()[wcmdlen-1] = 0;
+      //wprintf(L"CMD[%d]: %s\n", (int)wcslen(wcmd.get()), wcmd.get());
 #     undef SYSPATH_FMT_CHAR
 #     undef SYSPATH_LEN_METH
 
@@ -111,7 +111,7 @@ namespace openvpn {
 
       // Create the child process.
       if (!CreateProcessW(nullptr,
-			  wcmd(),        // command line
+			  wcmd.get(),        // command line
 			  nullptr,          // process security attributes
 			  nullptr,          // primary thread security attributes
 			  TRUE,          // handles are inherited
@@ -136,11 +136,11 @@ namespace openvpn {
       while (true)
 	{
 	  DWORD dwRead;
-	  if (!ReadFile(cstdout_r(), outbuf(), outbuf_size, &dwRead, nullptr))
+	  if (!ReadFile(cstdout_r(), outbuf.get(), outbuf_size, &dwRead, nullptr))
 	    break;
 	  if (dwRead == 0)
 	    break;
-	  out += std::string(outbuf(), 0, dwRead);
+	  out += std::string(outbuf.get(), 0, dwRead);
 	}
 
       // wait for child to exit

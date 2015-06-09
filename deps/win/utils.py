@@ -1,4 +1,4 @@
-import os, sys, re, shutil, tarfile, subprocess
+import os, sys, re, stat, shutil, tarfile, subprocess
 
 j = os.path.join
 
@@ -58,8 +58,24 @@ def cp(src, dest):
     shutil.copy2(src, dest)
 
 def wipetree(dir):
+    def onerror(func, path, exc_info):
+        """
+        Error handler for ``shutil.rmtree``.
+
+        If the error is due to an access error (read only file)
+        it attempts to add write permission and then retries.
+
+        If the error is for another reason it ignores.
+
+        Usage : ``shutil.rmtree(path, onerror=onerror)``
+        """
+        if not os.access(path, os.W_OK):
+            # Is the error an access error ?
+            os.chmod(path, stat.S_IWUSR)
+            func(path)
+
     print "WIPETREE", dir
-    shutil.rmtree(dir, ignore_errors=True)
+    shutil.rmtree(dir, ignore_errors=False, onerror=onerror)
     if not os.path.isdir(dir):
         os.mkdir(dir)
 

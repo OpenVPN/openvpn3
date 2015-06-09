@@ -46,7 +46,11 @@ namespace openvpn {
   template <typename T>
   inline T bin_prefix(const unsigned char *data, const size_t len)
   {
-    unsigned char d[sizeof(T)] __attribute__((aligned(sizeof(T))));
+    unsigned char d[sizeof(T)]
+#ifndef _MSC_VER
+      __attribute__((aligned(sizeof(T))))
+#endif
+      ;
     const size_t l = std::min(len, sizeof(d));
     std::memset(d, 0, sizeof(d));
     std::memcpy(d + sizeof(d) - l, data, l);

@@ -166,6 +166,7 @@ namespace openvpn {
 	return prefix_len == other.prefix_len && addr == other.addr;
       }
 
+#if HAVE_HASH_COMBINE
       std::size_t hash_value() const
       {
 	std::size_t seed = 0;
@@ -174,6 +175,7 @@ namespace openvpn {
 	return seed;
       }
     };
+#endif
 
     template <typename ADDR>
     struct RouteTypeList : public std::vector<RouteType<ADDR>>
