@@ -122,6 +122,12 @@ namespace openvpn {
       return len;
     }
 
+    // return true if string contains at least one newline
+    inline bool is_multiline(const std::string& str)
+    {
+      return str.find_first_of('\n') != std::string::npos;
+    }
+
     // Define a common interpretation of what constitutes a space character.
     // Return true if c is a space char.
     inline bool is_space(const char c)
