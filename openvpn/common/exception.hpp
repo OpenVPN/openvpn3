@@ -30,8 +30,6 @@
 #include <sstream>
 #include <exception>
 
-#include <asio/error_code.hpp>
-
 #include <openvpn/common/stringize.hpp> // for OPENVPN_STRINGIZE
 #include <openvpn/common/string.hpp>
 
@@ -43,13 +41,6 @@
 #endif
 
 namespace openvpn {
-  // returns a string describing a asio error code
-  template <typename ErrorCode>
-  inline std::string errinfo(ErrorCode err)
-  {
-    asio::error_code e(err, asio::system_category());
-    return e.message();
-  }
 
   // string exception class, where the exception is described by a std::string
   class Exception : public std::exception
