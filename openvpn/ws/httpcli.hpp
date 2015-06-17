@@ -298,8 +298,8 @@ namespace openvpn {
 
 		if (config->transcli)
 		  {
-		    transcli = config->transcli->new_client_obj(io_service, *this);
-		    transcli->start();
+		    transcli = config->transcli->new_transport_client_obj(io_service, *this);
+		    transcli->transport_start();
 		  }
 		else
 		  {
@@ -618,6 +618,11 @@ namespace openvpn {
 	}
 
 	virtual void transport_wait()
+	{
+	}
+
+	virtual void disable_keepalive(unsigned int& keepalive_ping,
+				       unsigned int& keepalive_timeout)
 	{
 	}
 
