@@ -234,6 +234,9 @@ namespace openvpn {
 
       // Custom proxy implementation
       bool altProxy;
+
+      // Custom Data Channel Offload implementation
+      bool dco;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

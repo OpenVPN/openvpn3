@@ -34,15 +34,16 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/error/error.hpp>
+#include <openvpn/crypto/cryptodc.hpp>
 
 namespace openvpn {
 
   // Base class for client transport object.
-  struct TransportClient : public RC<thread_unsafe_refcount>
+  struct TransportClient : public virtual RC<thread_unsafe_refcount>
   {
     typedef RCPtr<TransportClient> Ptr;
 
-    virtual void start() = 0;
+    virtual void transport_start() = 0;
     virtual void stop() = 0;
     virtual bool transport_send_const(const Buffer& buf) = 0;
     virtual bool transport_send(BufferAllocated& buf) = 0;
@@ -75,15 +76,20 @@ namespace openvpn {
     virtual void transport_wait_proxy() = 0;
     virtual void transport_wait() = 0;
     virtual void transport_connecting() = 0;
+
+    // Disable keepalive for rest of session, but fetch
+    // the keepalive parameters (in seconds).
+    virtual void disable_keepalive(unsigned int& keepalive_ping,
+				   unsigned int& keepalive_timeout) = 0;
   };
 
   // Factory for client transport object.
-  struct TransportClientFactory : public RC<thread_unsafe_refcount>
+  struct TransportClientFactory : public virtual RC<thread_unsafe_refcount>
   {
     typedef RCPtr<TransportClientFactory> Ptr;
 
-    virtual TransportClient::Ptr new_client_obj(asio::io_service& io_service,
-						TransportClientParent& parent) = 0;
+    virtual TransportClient::Ptr new_transport_client_obj(asio::io_service& io_service,
+							  TransportClientParent& parent) = 0;
   };
 
 } // namespace openvpn

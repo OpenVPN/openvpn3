@@ -42,8 +42,9 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
-					    TunClientParent& parent);
+      virtual TunClient::Ptr new_tun_client_obj(asio::io_service& io_service,
+						TunClientParent& parent,
+						TransportClient* transcli);
     private:
       ClientConfig() {}
     };
@@ -53,7 +54,7 @@ namespace openvpn {
       friend class ClientConfig;  // calls constructor
 
     public:
-      virtual void client_start(const OptionList& opt, TransportClient& transcli)
+      virtual void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&)
       {
 #ifdef TUN_NULL_EXIT
 	throw ErrorCode(Error::TUN_SETUP_FAILED, true, "TUN_NULL_EXIT");
@@ -106,8 +107,9 @@ namespace openvpn {
       TunClientParent& parent;
     };
 
-    inline TunClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
-						       TunClientParent& parent)
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_service& io_service,
+							   TunClientParent& parent,
+							   TransportClient* transcli)
     {
       return TunClient::Ptr(new Client(io_service, this, parent));
     }

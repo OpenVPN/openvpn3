@@ -2479,7 +2479,6 @@ namespace openvpn {
     {
       // modify config with pushed options
       config->process_push(opt, pco);
-      init_data_channel();
 
       // in case keepalive parms were modified by push
       keepalive_parms_modified();
@@ -2503,10 +2502,10 @@ namespace openvpn {
       keepalive_parms_modified();
     }
 
-    // override the data channel factory
-    void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory)
+    // access the data channel settings
+    CryptoDCSettings& dc_settings()
     {
-      config->dc.set_factory(dc_factory);
+      return config->dc;
     }
 
     // reset the data channel factory
@@ -2540,6 +2539,7 @@ namespace openvpn {
 
     // configuration
     const Config& conf() const { return *config; }
+    Config& conf() { return *config; }
     const Config::Ptr& conf_ptr() const { return config; }
 
     // stats

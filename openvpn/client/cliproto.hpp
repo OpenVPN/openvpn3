@@ -175,8 +175,8 @@ namespace openvpn {
 	    housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
 
 	    // initialize transport-layer packet handler
-	    transport = transport_factory->new_client_obj(io_service, *this);
-	    transport->start();
+	    transport = transport_factory->new_transport_client_obj(io_service, *this);
+	    transport->transport_start();
 	  }
       }
 
@@ -350,6 +350,14 @@ namespace openvpn {
 	  }
       }
 
+      // Disable keepalive for rest of session, but fetch
+      // the keepalive parameters (in seconds).
+      virtual void disable_keepalive(unsigned int& keepalive_ping,
+				     unsigned int& keepalive_timeout)
+      {
+	Base::disable_keepalive(keepalive_ping, keepalive_timeout);
+      }
+
       virtual void ip_hole_punch(const IP::Addr& addr)
       {
 	tun_factory->ip_hole_punch(addr);
@@ -477,16 +485,19 @@ namespace openvpn {
 		// modify proto config (cipher, auth, and compression methods)
 		Base::process_push(received_options, *proto_context_options);
 
+		// initialize tun/routing
+		tun = tun_factory->new_tun_client_obj(io_service, *this, transport.get());
+		tun->tun_start(received_options, *transport, Base::dc_settings());
+
+		// initialize data channel after pushed options have been processed
+		Base::init_data_channel();
+
 		// Allow ProtoContext to suggest an alignment adjustment
 		// hint for transport layer.
 		transport->reset_align_adjust(Base::align_adjust_hint());
 
-		// initialize tun/routing
-		tun = tun_factory->new_client_obj(io_service, *this);
-		tun->client_start(received_options, *transport);
-
 		// process "inactive" directive
-		extract_inactive(received_options);
+		process_inactive(received_options);
 	      }
 	    else
 	      OPENVPN_LOG("Options continuation...");
@@ -697,7 +708,7 @@ namespace openvpn {
 	  }
       }
 
-      void extract_inactive(const OptionList& opt)
+      void process_inactive(const OptionList& opt)
       {
 	try {
 	  const Option *o = load_duration_parm(inactive_duration, "inactive", opt, 1, false);
@@ -720,7 +731,7 @@ namespace openvpn {
 	inactive_timer.async_wait(asio_dispatch_timer(&Session::inactive_callback, this));
       }
 
-      void inactive_callback(const asio::error_code& e)
+      void inactive_callback(const asio::error_code& e) // fixme for DCO
       {
 	try {
 	  if (!e && !halt)

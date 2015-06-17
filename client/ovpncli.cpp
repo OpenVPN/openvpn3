@@ -304,6 +304,7 @@ namespace openvpn {
 			google_dns_fallback(false), disable_client_cert(false),
 			default_key_direction(-1), force_aes_cbc_ciphersuites(false),
 			alt_proxy(false),
+			dco(false),
 			io_service(nullptr) {}
 
 	OptionList options;
@@ -331,6 +332,7 @@ namespace openvpn {
 	ProtoContextOptions::Ptr proto_context_options;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
 	bool alt_proxy;
+	bool dco;
 
 	asio::io_service* io_service;
 
@@ -454,6 +456,7 @@ namespace openvpn {
 	state->tls_version_min_override = config.tlsVersionMinOverride;
 	state->gui_version = config.guiVersion;
 	state->alt_proxy = config.altProxy;
+	state->dco = config.dco;
 	if (!config.proxyHost.empty())
 	  {
 	    HTTPProxyTransport::Options::Ptr ho(new HTTPProxyTransport::Options());
@@ -630,6 +633,7 @@ namespace openvpn {
 	cc.proto_context_options = state->proto_context_options;
 	cc.http_proxy_options = state->http_proxy_options;
 	cc.alt_proxy = state->alt_proxy;
+	cc.dco = state->dco;
 	cc.reconnect_notify = &state->reconnect_notify;
 	cc.private_key_password = state->private_key_password;
 	cc.disable_client_cert = state->disable_client_cert;

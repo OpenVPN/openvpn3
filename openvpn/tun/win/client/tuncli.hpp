@@ -97,8 +97,9 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
-					    TunClientParent& parent);
+      virtual TunClient::Ptr new_tun_client_obj(asio::io_service& io_service,
+						TunClientParent& parent,
+						TransportClient* transcli);
 
       virtual void finalize(const bool disconnected)
       {
@@ -118,7 +119,7 @@ namespace openvpn {
       typedef Tun<Client*, TunPersist> TunImpl;
 
     public:
-      virtual void client_start(const OptionList& opt, TransportClient& transcli)
+      virtual void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&)
       {
 	if (!impl)
 	  {
@@ -575,8 +576,9 @@ namespace openvpn {
       ActionList::Ptr remove_cmds;
     };
 
-    inline TunClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
-						       TunClientParent& parent)
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_service& io_service,
+							   TunClientParent& parent,
+							   TransportClient* transcli)
     {
       return TunClient::Ptr(new Client(io_service, this, parent));
     }

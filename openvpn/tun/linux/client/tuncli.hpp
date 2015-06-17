@@ -24,38 +24,219 @@
 #ifndef OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H
 #define OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H
 
+#include <openvpn/common/exception.hpp>
+#include <openvpn/common/file.hpp>
+#include <openvpn/common/split.hpp>
+#include <openvpn/common/splitlines.hpp>
+#include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/format.hpp>
+#include <openvpn/common/process.hpp>
+#include <openvpn/common/action.hpp>
+#include <openvpn/addr/route.hpp>
+#include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/tun/linux/tun.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
-#include <openvpn/netconf/linux/route.hpp>
+#include <openvpn/tun/client/tunprop.hpp>
 
 namespace openvpn {
   namespace TunLinux {
+
+    OPENVPN_EXCEPTION(tun_linux_error);
+
+    enum { // add_del_route flags
+      R_IPv6=(1<<0),
+      R_ADD_ALL=(1<<1),
+      R_ADD_DCO=(1<<2),
+    };
+
+    inline IP::Addr cvt_pnr_ip_v4(const std::string& hexaddr)
+    {
+      BufferAllocated v(4, BufferAllocated::CONSTRUCT_ZERO);
+      parse_hex(v, hexaddr);
+      if (v.size() != 4)
+	throw tun_linux_error("bad hex address");
+      IPv4::Addr ret = IPv4::Addr::from_bytes(v.data());
+      return IP::Addr::from_ipv4(ret);
+    }
+
+    inline IP::Addr get_default_gateway_v4()
+    {
+      typedef std::vector<std::string> strvec;
+      const std::string proc_net_route = read_text_simple("/proc/net/route");
+      SplitLines in(proc_net_route, 0);
+      while (in(true))
+	{
+	  const std::string& line = in.line_ref();
+	  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(line);
+	  if (v.size() >= 8)
+	    {
+	      if (v[1] == "00000000" && v[7] == "00000000")
+		{
+		  const IP::Addr gw = cvt_pnr_ip_v4(v[2]);
+		  return gw;
+		}
+	    }
+	}
+      throw tun_linux_error("can't determine default gateway");
+    }
+
+    inline void add_del_route(const std::string& addr_str,
+			      const int prefix_len,
+			      const std::string& gateway_str,
+			      const unsigned int flags,
+			      std::vector<IP::Route>& rtvec,
+			      Action::Ptr& create,
+			      Action::Ptr& destroy)
+    {
+      if (flags & R_IPv6)
+	{
+	  OPENVPN_LOG("NOTE: route IPv6 not implemented yet"); // fixme
+	}
+      else
+	{
+	  const IPv4::Addr addr = IPv4::Addr::from_string(addr_str);
+	  const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(prefix_len);
+	  const IPv4::Addr net = addr & netmask;
+
+	  if (flags & R_ADD_ALL)
+	    {
+	      Command::Ptr add(new Command);
+	      add->argv.push_back("/sbin/route");
+	      add->argv.push_back("add");
+	      add->argv.push_back("-net");
+	      add->argv.push_back(net.to_string());
+	      add->argv.push_back("netmask");
+	      add->argv.push_back(netmask.to_string());
+	      add->argv.push_back("gw");
+	      add->argv.push_back(gateway_str);
+	      create = add;
+
+	      // for the destroy command, copy the add command but replace "add" with "delete"
+	      Command::Ptr del(add->copy());
+	      del->argv[1] = "del";
+	      destroy = del;
+	    }
+
+	  if (flags & (R_ADD_ALL|R_ADD_DCO))
+	    rtvec.emplace_back(IP::Addr::from_ipv4(net), prefix_len);
+	}
+    }
+
+    inline void add_del_route(const std::string& addr_str,
+			      const int prefix_len,
+			      const std::string& gateway_str,
+			      const unsigned int flags,
+			      std::vector<IP::Route>& rtvec,
+			      ActionList& create,
+			      ActionList& destroy)
+    {
+      Action::Ptr c, d;
+      add_del_route(addr_str, prefix_len, gateway_str, flags, rtvec, c, d);
+      create.add(c);
+      destroy.add(d);
+    }
+
+    inline void tun_config(const std::string& iface_name,
+			   const TunBuilderCapture& pull,
+			   std::vector<IP::Route>& rtvec,
+			   ActionList& create,
+			   ActionList& destroy)
+    {
+      // set local4 and local6 to point to IPv4/6 route configurations
+      const TunBuilderCapture::Route* local4 = pull.vpn_ipv4();
+      const TunBuilderCapture::Route* local6 = pull.vpn_ipv6();
+
+      // Set IPv4 Interface
+      if (local4)
+	{
+	  const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length);
+	  Command::Ptr cmd(new Command);
+	  cmd->argv.push_back("/sbin/ifconfig");
+	  cmd->argv.push_back(iface_name);
+	  cmd->argv.push_back(local4->address);
+	  cmd->argv.push_back("netmask");
+	  cmd->argv.push_back(netmask.to_string());
+	  cmd->argv.push_back("mtu");
+	  cmd->argv.push_back(to_string(pull.mtu));
+	  create.add(cmd);
+
+	  add_del_route(local4->address, local4->prefix_length, local4->address, R_ADD_DCO, rtvec, create, destroy);
+	}
+
+      if (local6)
+	OPENVPN_LOG("NOTE: ifconfig IPv6 not implemented yet"); // fixme
+
+      // Process Routes
+      {
+	for (auto i = pull.add_routes.begin(); i != pull.add_routes.end(); ++i)
+	  {
+	    const TunBuilderCapture::Route& route = *i;
+	    if (route.ipv6)
+	      add_del_route(route.address, route.prefix_length, local6->gateway, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
+	    else
+	      {
+		if (local4 && !local4->gateway.empty())
+		  add_del_route(route.address, route.prefix_length, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+		else
+		  OPENVPN_LOG("ERROR: IPv4 route pushed without IPv4 ifconfig and/or route-gateway");
+	      }
+	  }
+      }
+
+      // Process IPv4 redirect-gateway
+      if (pull.reroute_gw.ipv4)
+	{
+	  if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+	    add_del_route(pull.remote_address.address, 32, get_default_gateway_v4().to_string(), R_ADD_ALL, rtvec, create, destroy);
+
+	  add_del_route("0.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+	  add_del_route("128.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+	}
+
+      // fixme -- handled pushed DNS servers
+    }
 
     class ClientConfig : public TunClientFactory
     {
     public:
       typedef RCPtr<ClientConfig> Ptr;
 
-      std::string name;
-      bool ipv6;
+      std::string dev_name;
       Layer layer;
       int txqueuelen;
-      unsigned int mtu;
+
+      TunProp::Config tun_prop;
 
       int n_parallel;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
+
+      void load(const OptionList& opt)
+      {
+	// set a default MTU
+	if (!tun_prop.mtu)
+	  tun_prop.mtu = 1500;
+
+	// parse "dev" option
+	if (dev_name.empty())
+	  {
+	    const Option* dev = opt.get_ptr("dev");
+	    if (dev)
+	      dev_name = dev->get(1, 64);
+	  }
+      }
 
       static Ptr new_obj()
       {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
-					    TunClientParent& parent);
+      virtual TunClient::Ptr new_tun_client_obj(asio::io_service& io_service,
+						TunClientParent& parent,
+						TransportClient* transcli);
     private:
       ClientConfig()
-	: ipv6(false), txqueuelen(200), mtu(1500), n_parallel(8) {}
+	: txqueuelen(200), n_parallel(8) {}
     };
 
     class Client : public TunClient
@@ -66,31 +247,54 @@ namespace openvpn {
       typedef Tun<Client*> TunImpl;
 
     public:
-      virtual void client_start(const OptionList& opt, TransportClient& transcli)
+      virtual void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&)
       {
 	if (!impl)
 	  {
 	    halt = false;
 	    try {
+	      const IP::Addr server_addr = transcli.server_endpoint_addr();
+
+	      // notify parent
+	      parent.tun_pre_tun_config();
+
+	      // parse pushed options
+	      TunBuilderCapture::Ptr po(new TunBuilderCapture());
+	      TunProp::configure_builder(po.get(),
+					 state.get(),
+					 config->stats.get(),
+					 server_addr,
+					 config->tun_prop,
+					 opt,
+					 nullptr,
+					 false);
+
+	      OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
+
+	      // configure tun/tap interface properties
+	      ActionList::Ptr add_cmds = new ActionList();
+	      remove_cmds.reset(new ActionList());
+
 	      // start tun
 	      impl.reset(new TunImpl(io_service,
 				     this,
 				     config->frame,
 				     config->stats,
-				     config->name,
-				     config->ipv6,
+				     config->dev_name,
 				     config->layer,
 				     config->txqueuelen
 				     ));
 	      impl->start(config->n_parallel);
 
-	      // do ifconfig
-	      parent.tun_pre_tun_config();
-	      vpn_ip_addr = impl->ifconfig(opt, config->mtu);
+	      // get the iface name
+	      state->iface_name = impl->name();
 
-	      // add routes
-	      parent.tun_pre_route_config();
-	      route_list.reset(new RouteListLinux(opt, transcli.server_endpoint_addr()));
+	      // configure tun properties
+	      std::vector<IP::Route> rtvec;
+	      TunLinux::tun_config(state->iface_name, *po, rtvec, *add_cmds, *remove_cmds);
+
+	      // execute commands to bring up interface
+	      add_cmds->execute();
 
 	      // signal that we are connected
 	      parent.tun_connected();
@@ -118,12 +322,18 @@ namespace openvpn {
 
       virtual std::string vpn_ip4() const
       {
-	return vpn_ip_addr;
+	if (state->vpn_ip4_addr.specified())
+	  return state->vpn_ip4_addr.to_string();
+	else
+	  return "";
       }
 
-      virtual std::string vpn_ip6() const // fixme ipv6
+      virtual std::string vpn_ip6() const
       {
-	return "";
+	if (state->vpn_ip6_addr.specified())
+	  return state->vpn_ip6_addr.to_string();
+	else
+	  return "";
       }
 
       virtual void set_disconnect()
@@ -140,6 +350,7 @@ namespace openvpn {
 	:  io_service(io_service_arg),
 	   config(config_arg),
 	   parent(parent_arg),
+	   state(new TunProp::State()),
 	   halt(false)
       {
       }
@@ -169,8 +380,8 @@ namespace openvpn {
 	    halt = true;
 
 	    // remove added routes
-	    if (route_list)
-	      route_list->stop();
+	    if (remove_cmds)
+	      remove_cmds->execute();
 
 	    // stop tun
 	    if (impl)
@@ -182,13 +393,14 @@ namespace openvpn {
       ClientConfig::Ptr config;
       TunClientParent& parent;
       TunImpl::Ptr impl;
-      RouteListLinux::Ptr route_list;
-      std::string vpn_ip_addr;
+      TunProp::State::Ptr state;
+      ActionList::Ptr remove_cmds;
       bool halt;
     };
 
-    inline TunClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
-						       TunClientParent& parent)
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_service& io_service,
+							   TunClientParent& parent,
+							   TransportClient* transcli)
     {
       return TunClient::Ptr(new Client(io_service, this, parent));
     }

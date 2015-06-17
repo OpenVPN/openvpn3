@@ -216,6 +216,7 @@ int main(int argc, char *argv[])
     { "proxy-password", required_argument,  nullptr,      'W' },
     { "proxy-basic",    no_argument,        nullptr,      'B' },
     { "alt-proxy",      no_argument,        nullptr,      'A' },
+    { "dco",            no_argument,        nullptr,      'd' },
     { "eval",           no_argument,        nullptr,      'e' },
     { "self-test",      no_argument,        nullptr,      'T' },
     { "cache-password", no_argument,        nullptr,      'C' },
@@ -262,10 +263,11 @@ int main(int argc, char *argv[])
 	bool merge = false;
 	bool version = false;
 	bool altProxy = false;
+	bool dco = false;
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BAeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:k:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -325,6 +327,9 @@ int main(int argc, char *argv[])
 		break;
 	      case 'A':
 		altProxy = true;
+		break;
+	      case 'd':
+		dco = true;
 		break;
 	      case 'f':
 		forceAesCbcCiphersuites = true;
@@ -413,6 +418,7 @@ int main(int argc, char *argv[])
 	      config.proxyPassword = proxyPassword;
 	      config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
 	      config.altProxy = altProxy;
+	      config.dco = dco;
 	      config.defaultKeyDirection = defaultKeyDirection;
 	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 	      config.googleDnsFallback = googleDnsFallback;
@@ -580,6 +586,7 @@ int main(int argc, char *argv[])
   std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
   std::cout << "--proxy-basic, -B    : allow HTTP basic auth" << std::endl;
   std::cout << "--alt-proxy, -A      : enable alternative proxy module" << std::endl;
+  std::cout << "--dco, -d            : enable data channel offload" << std::endl;
   std::cout << "--cache-password, -C : cache password" << std::endl;
   std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
   std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;

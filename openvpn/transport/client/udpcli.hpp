@@ -56,8 +56,8 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TransportClient::Ptr new_client_obj(asio::io_service& io_service,
-						  TransportClientParent& parent);
+      virtual TransportClient::Ptr new_transport_client_obj(asio::io_service& io_service,
+							    TransportClientParent& parent);
 
     private:
       ClientConfig()
@@ -80,7 +80,7 @@ namespace openvpn {
 				  asio::ip::udp::resolver::iterator> AsioDispatchResolveUDP;
 
     public:
-      virtual void start()
+      virtual void transport_start()
       {
 	if (!impl)
 	  {
@@ -280,8 +280,8 @@ namespace openvpn {
       bool halt;
     };
 
-    inline TransportClient::Ptr ClientConfig::new_client_obj(asio::io_service& io_service,
-							     TransportClientParent& parent)
+    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_service& io_service,
+								       TransportClientParent& parent)
     {
       return TransportClient::Ptr(new Client(io_service, this, parent));
     }

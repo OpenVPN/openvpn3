@@ -36,11 +36,11 @@
 namespace openvpn {
 
   // Base class for objects that implement a client tun interface.
-  struct TunClient : public RC<thread_unsafe_refcount>
+  struct TunClient : public virtual RC<thread_unsafe_refcount>
   {
     typedef RCPtr<TunClient> Ptr;
 
-    virtual void client_start(const OptionList&, TransportClient&) = 0;
+    virtual void tun_start(const OptionList&, TransportClient&, CryptoDCSettings&) = 0;
     virtual void stop() = 0;
     virtual void set_disconnect() = 0;
     virtual bool tun_send(BufferAllocated& buf) = 0; // return true if send succeeded
@@ -64,12 +64,13 @@ namespace openvpn {
   };
 
   // Factory for tun interface objects.
-  struct TunClientFactory : public RC<thread_unsafe_refcount>
+  struct TunClientFactory : public virtual RC<thread_unsafe_refcount>
   {
     typedef RCPtr<TunClientFactory> Ptr;
 
-    virtual TunClient::Ptr new_client_obj(asio::io_service& io_service,
-					  TunClientParent& parent) = 0;
+    virtual TunClient::Ptr new_tun_client_obj(asio::io_service& io_service,
+					      TunClientParent& parent,
+					      TransportClient* transcli) = 0;
 
     // return true if layer 2 tunnels are supported
     virtual bool layer_2_supported() const { return false; }

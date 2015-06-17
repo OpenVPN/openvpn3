@@ -46,6 +46,7 @@
 #include <openvpn/transport/client/tcpcli.hpp>
 #include <openvpn/transport/client/httpcli.hpp>
 #include <openvpn/transport/altproxy.hpp>
+#include <openvpn/transport/dco.hpp>
 #include <openvpn/client/cliproto.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/client/optfilt.hpp>
@@ -80,6 +81,10 @@
 #include <openvpn/pt/ptproxy.hpp>
 #endif
 
+#if defined(ENABLE_DCO)
+#include <openvpn/dco/dcocli.hpp>
+#endif
+
 namespace openvpn {
 
   class ClientOptions : public RC<thread_unsafe_refcount>
@@ -97,6 +102,7 @@ namespace openvpn {
 	reconnect_notify = nullptr;
 	conn_timeout = 0;
 	alt_proxy = false;
+	dco = false;
 	tun_persist = false;
 	google_dns_fallback = false;
 	disable_client_cert = false;
@@ -116,6 +122,7 @@ namespace openvpn {
       ProtoContextOptions::Ptr proto_context_options;
       HTTPProxyTransport::Options::Ptr http_proxy_options;
       bool alt_proxy;
+      bool dco;
       bool tun_persist;
       bool google_dns_fallback;
       std::string private_key_password;
@@ -167,6 +174,11 @@ namespace openvpn {
       prng.reset(new SSLLib::RandomAPI(true));
 #endif
 
+#if defined(ENABLE_DCO) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_CUSTOM_TUN_FACTORY)
+      if (config.dco)
+	dco = DCOTransport::new_controller();
+#endif
+
       // frame
       const MSSCtrlParms mc(opt);
       frame = frame_init(true, mc.mssfix_ctrl, true);
@@ -208,7 +220,7 @@ namespace openvpn {
       cp->prng = prng;
 
 #ifdef PRIVATE_TUNNEL_PROXY
-      if (config.alt_proxy)
+      if (config.alt_proxy && !dco)
 	alt_proxy = PTProxy::new_proxy(opt, *rng);
 #endif
 
@@ -274,77 +286,111 @@ namespace openvpn {
 #endif
 
       // initialize tun/tap
+      if (dco)
+	{
+	  DCO::TunConfig tunconf;
+	  tunconf.layer = cp->layer;
+	  tunconf.tun_prop.session_name = session_name;
+	  if (tun_mtu)
+	    tunconf.tun_prop.mtu = tun_mtu;
+	  tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
+	  tunconf.tun_prop.remote_list = remote_list;
+	  tun_factory = dco->new_tun_factory(tunconf, opt);
+	}
+      else
+	{
 #if defined(OPENVPN_CUSTOM_TUN_FACTORY)
-      OPENVPN_CUSTOM_TUN_FACTORY::Ptr tunconf = OPENVPN_CUSTOM_TUN_FACTORY::new_obj();
-      tunconf->tun_prop.session_name = session_name;
-      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
-      if (tun_mtu)
-	tunconf->tun_prop.mtu = tun_mtu;
-      tunconf->frame = frame;
-      tunconf->stats = cli_stats;
-      tunconf->tun_prop.remote_list = remote_list;
+	  {
+	    OPENVPN_CUSTOM_TUN_FACTORY::Ptr tunconf = OPENVPN_CUSTOM_TUN_FACTORY::new_obj();
+	    tunconf->tun_prop.session_name = session_name;
+	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    if (tun_mtu)
+	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->frame = frame;
+	    tunconf->stats = cli_stats;
+	    tunconf->tun_prop.remote_list = remote_list;
+	    tun_factory = tunconf;
+	  }
 #elif defined(USE_TUN_BUILDER)
-      TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
-      tunconf->builder = config.builder;
-      tunconf->tun_prop.session_name = session_name;
-      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
-      if (tun_mtu)
-	tunconf->tun_prop.mtu = tun_mtu;
-      tunconf->frame = frame;
-      tunconf->stats = cli_stats;
-      tunconf->tun_prop.remote_list = remote_list;
+	  {
+	    TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
+	    tunconf->builder = config.builder;
+	    tunconf->tun_prop.session_name = session_name;
+	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    if (tun_mtu)
+	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->frame = frame;
+	    tunconf->stats = cli_stats;
+	    tunconf->tun_prop.remote_list = remote_list;
+	    tun_factory = tunconf;
 #if defined(OPENVPN_PLATFORM_IPHONE)
-      tunconf->retain_sd = true;
-      tunconf->tun_prefix = true;
-      if (config.tun_persist)
-	tunconf->tun_prop.remote_bypass = true;
+	    tunconf->retain_sd = true;
+	    tunconf->tun_prefix = true;
+	    if (config.tun_persist)
+	      tunconf->tun_prop.remote_bypass = true;
 #endif
 #if defined(OPENVPN_PLATFORM_ANDROID)
-      // Android VPN API doesn't support excluded routes, so we must emulate them
-      tunconf->eer_factory.reset(new EmulateExcludeRouteFactoryImpl(false));
+	    // Android VPN API doesn't support excluded routes, so we must emulate them
+	    tunconf->eer_factory.reset(new EmulateExcludeRouteFactoryImpl(false));
 #endif
-      if (config.tun_persist)
-	tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd, config.builder));
+	    if (config.tun_persist)
+	      tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd, config.builder));
+	    tun_factory = tunconf;
+	  }
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
-      TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
-      tunconf->layer = cp->layer;
-      tunconf->frame = frame;
-      tunconf->stats = cli_stats;
-      if (tun_mtu)
-	tunconf->mtu = tun_mtu;
+	  {
+	    TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
+	    tunconf->layer = cp->layer;
+	    tunconf->tun_prop.session_name = session_name;
+	    if (tun_mtu)
+	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    tunconf->tun_prop.remote_list = remote_list;
+	    tunconf->frame = frame;
+	    tunconf->stats = cli_stats;
+	    tunconf->load(opt);
+	    tun_factory = tunconf;
+	  }
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
-      TunMac::ClientConfig::Ptr tunconf = TunMac::ClientConfig::new_obj();
-      tunconf->layer = cp->layer;
-      tunconf->tun_prop.session_name = session_name;
-      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
-      if (tun_mtu)
-	tunconf->tun_prop.mtu = tun_mtu;
-      tunconf->frame = frame;
-      tunconf->stats = cli_stats;
-      tunconf->enable_failsafe_block = config.tun_persist;
-      client_lifecycle.reset(new MacLifeCycle);
+	  {
+	    TunMac::ClientConfig::Ptr tunconf = TunMac::ClientConfig::new_obj();
+	    tunconf->layer = cp->layer;
+	    tunconf->tun_prop.session_name = session_name;
+	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    if (tun_mtu)
+	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->frame = frame;
+	    tunconf->stats = cli_stats;
+	    tunconf->enable_failsafe_block = config.tun_persist;
+	    client_lifecycle.reset(new MacLifeCycle);
+	    tun_factory = tunconf;
+	  }
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
-      TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
-      tunconf->tun_prop.session_name = session_name;
-      tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
-      if (tun_mtu)
-	tunconf->tun_prop.mtu = tun_mtu;
-      tunconf->frame = frame;
-      tunconf->stats = cli_stats;
-      if (config.tun_persist)
-	tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
+	  {
+	    TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
+	    tunconf->tun_prop.session_name = session_name;
+	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    if (tun_mtu)
+	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->frame = frame;
+	    tunconf->stats = cli_stats;
+	    if (config.tun_persist)
+	      tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
+	    tun_factory = tunconf;
+	  }
 #else
-      TunNull::ClientConfig::Ptr tunconf = TunNull::ClientConfig::new_obj();
-      tunconf->frame = frame;
-      tunconf->stats = cli_stats;
+	  {
+	    TunNull::ClientConfig::Ptr tunconf = TunNull::ClientConfig::new_obj();
+	    tunconf->frame = frame;
+	    tunconf->stats = cli_stats;
+	    tun_factory = tunconf;
+	  }
 #endif
+	}
 
       // verify that tun implementation can handle OSI layer declared by config
-      if (cp->layer == Layer(Layer::OSI_LAYER_2) && !tunconf->layer_2_supported())
+      if (cp->layer == Layer(Layer::OSI_LAYER_2) && !tun_factory->layer_2_supported())
 	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "OSI layer 2 tunnels are not currently supported");
-
-      // save tun factory
-      tun_factory = tunconf;
 
       // server-poll-timeout
       {
@@ -507,7 +553,17 @@ namespace openvpn {
       // should have been caught earlier in RemoteList::handle_proto_override.
 
       // construct transport object
-      if (alt_proxy)
+      if (dco)
+	{
+	  DCO::TransportConfig transconf;
+	  transconf.protocol = transport_protocol;
+	  transconf.remote_list = remote_list;
+	  transconf.frame = frame;
+	  transconf.stats = cli_stats;
+	  transconf.server_addr_float = server_addr_float;
+	  transport_factory = dco->new_transport_factory(transconf);
+	}
+      else if (alt_proxy)
 	{
 	  if (alt_proxy->requires_tcp() && !transport_protocol.is_tcp())
 	    throw option_error("internal error: no TCP server entries for " + alt_proxy->name() + " transport");
@@ -596,6 +652,7 @@ namespace openvpn {
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;
     AltProxy::Ptr alt_proxy;
+    DCO::Ptr dco;
   };
 }
 

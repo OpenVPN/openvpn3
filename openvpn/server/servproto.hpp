@@ -257,7 +257,7 @@ namespace openvpn {
       // override the data channel factory
       virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory)
       {
-	Base::override_dc_factory(dc_factory);
+	Base::dc_settings().set_factory(dc_factory);
       }
 
       virtual ~Session()

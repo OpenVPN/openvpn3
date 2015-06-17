@@ -71,7 +71,6 @@ namespace openvpn {
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg,
 	  const std::string name,
-	  const bool ipv6,
 	  const Layer& layer,
 	  const int txqueuelen)
 	: Base(read_handler_arg, frame_arg, stats_arg)
@@ -84,8 +83,7 @@ namespace openvpn {
 	struct ifreq ifr;
 	std::memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_ONE_QUEUE;
-	if (!ipv6)
-	  ifr.ifr_flags |= IFF_NO_PI;
+	ifr.ifr_flags |= IFF_NO_PI;
 	if (layer() == Layer::OSI_LAYER_3)
 	  ifr.ifr_flags |= IFF_TUN;
 	else if (layer() == Layer::OSI_LAYER_2)
@@ -126,7 +124,7 @@ namespace openvpn {
 
 	Base::name_ = ifr.ifr_name;
 	Base::stream = new asio::posix::stream_descriptor(io_service, fd.release());
-	OPENVPN_LOG_TUN(Base::name_ << " opened for " << (ipv6 ? "IPv6" : "IPv4"));
+	OPENVPN_LOG_TUN(Base::name_ << " opened");
       }
 
       std::string ifconfig(const OptionList& opt, const unsigned int mtu)
