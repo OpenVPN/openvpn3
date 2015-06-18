@@ -178,6 +178,9 @@ namespace openvpn {
 #if defined(ENABLE_DCO) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_CUSTOM_TUN_FACTORY)
       if (config.dco)
 	dco = DCOTransport::new_controller();
+#else
+      if (config.dco)
+	throw option_error("DCO not enabled in this build");
 #endif
 
       // frame
