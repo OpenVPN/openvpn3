@@ -126,9 +126,7 @@ namespace openvpn {
       if (pid_recv.initialized())
 	{
 	  const PacketID pid = pid_recv.read_next(buf);
-	  if (pid_recv.test(pid, now)) // verify packet ID
-	    pid_recv.add(pid, now);    // remember packet ID
-	  else
+	  if (!pid_recv.test_add(pid, now, true)) // verify packet ID
 	    return false;
 	}
       return true;

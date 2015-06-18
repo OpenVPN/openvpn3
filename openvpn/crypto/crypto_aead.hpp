@@ -108,13 +108,7 @@ namespace openvpn {
 	{
 	  Buffer buf(data + 4, 4, true);
 	  const PacketID pid = pid_recv.read_next(buf);
-	  if (pid_recv.test(pid, now)) // verify packet ID
-	    {
-	      pid_recv.add(pid, now);  // remember packet ID
-	      return true;
-	    }
-	  else
-	    return false;
+	  return pid_recv.test_add(pid, now, true); // verify packet ID
 	}
 
 	const unsigned char *iv() const
@@ -269,15 +263,12 @@ namespace openvpn {
       virtual void init_pid(const int send_form,
 			    const int recv_mode,
 			    const int recv_form,
-			    const int recv_seq_backtrack,
-			    const int recv_time_backtrack,
 			    const char *recv_name,
 			    const int recv_unit,
 			    const SessionStats::Ptr& recv_stats_arg)
       {
 	e.pid_send.init(send_form);
-	d.pid_recv.init(recv_mode, recv_form, recv_seq_backtrack, recv_time_backtrack,
-			recv_name, recv_unit, recv_stats_arg);
+	d.pid_recv.init(recv_mode, recv_form, recv_name, recv_unit, recv_stats_arg);
       }
 
       // Indicate whether or not cipher/digest is defined

@@ -238,8 +238,6 @@ namespace openvpn {
 	reliable_window = 0;
 	max_ack_list = 0;
 	pid_mode = 0;
-	pid_seq_backtrack = 0;
-	pid_time_backtrack = 0;
 	xmit_creds = true;
 	key_direction = -1; // bidirectional
 	dc_deferred = false;
@@ -304,8 +302,6 @@ namespace openvpn {
 
       // packet_id parms for both data and control channels
       int pid_mode;            // PacketIDReceive::UDP_MODE or PacketIDReceive::TCP_MODE
-      int pid_seq_backtrack;
-      int pid_time_backtrack;
 
       // timeout parameters, relative to construction of KeyContext object
       Time::Duration handshake_window; // SSL/TLS negotiation must complete by this time
@@ -340,8 +336,6 @@ namespace openvpn {
 	// first set defaults
 	reliable_window = 4;
 	max_ack_list = 4;
-	pid_seq_backtrack = 64;
-	pid_time_backtrack = 30;
 	handshake_window = Time::Duration::seconds(60);
 	renegotiate = Time::Duration::seconds(3600);
 	keepalive_ping = Time::Duration::seconds(8);
@@ -1391,7 +1385,7 @@ namespace openvpn {
 	      const PacketID::time_t t = now->seconds_since_epoch();
 
 	      // verify tls_auth packet ID
-	      const bool pid_ok = proto.ta_pid_recv.test(pid, t);
+	      const bool pid_ok = proto.ta_pid_recv.test_add(pid, t, false);
 
 	      // make sure that our own PSID is contained in packet received from peer
 	      if (ReliableAck::ack_skip(recv))
@@ -1456,7 +1450,6 @@ namespace openvpn {
 	    crypto->init_pid(PacketID::SHORT_FORM,
 			     c.pid_mode,
 			     PacketID::SHORT_FORM,
-			     c.pid_seq_backtrack, c.pid_time_backtrack,
 			     "DATA", int(key_id_),
 			     proto.stats);
 
@@ -1907,7 +1900,7 @@ namespace openvpn {
 	      const PacketID::time_t t = now->seconds_since_epoch();
 
 	      // verify tls_auth packet ID
-	      const bool pid_ok = proto.ta_pid_recv.test(pid, t);
+	      const bool pid_ok = proto.ta_pid_recv.test_add(pid, t, false);
 
 	      // process ACKs sent by peer (if packet ID check failed,
 	      // read the ACK IDs, but don't modify the rel_send object).
@@ -1936,7 +1929,7 @@ namespace openvpn {
 		      // was packet accepted by reliable receive object?
 		      if (rflags & ReliableRecv::IN_WINDOW)
 			{
-			  proto.ta_pid_recv.add(pid, t); // remember tls_auth packet ID so that it can't be replayed
+			  proto.ta_pid_recv.test_add(pid, t, true); // remember tls_auth packet ID so that it can't be replayed
 			  return true;
 			}
 		    }
@@ -1950,7 +1943,7 @@ namespace openvpn {
 	      else
 		{
 		  if (pid_ok)
-		    proto.ta_pid_recv.add(pid, t); // remember tls_auth packet ID of ACK packet to prevent replay
+		    proto.ta_pid_recv.test_add(pid, t, true); // remember tls_auth packet ID of ACK packet to prevent replay
 		  else
 		    proto.stats->error(Error::REPLAY_ERROR);
 		}
@@ -2236,7 +2229,6 @@ namespace openvpn {
 	  ta_pid_send.init(PacketID::LONG_FORM);
 	  ta_pid_recv.init(c.pid_mode,
 			   PacketID::LONG_FORM,
-			   c.pid_seq_backtrack, c.pid_time_backtrack,
 			   "SSL-CC", 0,
 			   stats);
 	}

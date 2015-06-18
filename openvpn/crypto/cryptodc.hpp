@@ -71,8 +71,6 @@ namespace openvpn {
     virtual void init_pid(const int send_form,
 			  const int recv_mode,
 			  const int recv_form,
-			  const int recv_seq_backtrack,
-			  const int recv_time_backtrack,
 			  const char *recv_name,
 			  const int recv_unit,
 			  const SessionStats::Ptr& recv_stats_arg) = 0;

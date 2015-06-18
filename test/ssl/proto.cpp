@@ -816,8 +816,6 @@ int test(const int thread_num)
     cp->reliable_window = 4;
     cp->max_ack_list = 4;
     cp->pid_mode = PacketIDReceive::UDP_MODE;
-    cp->pid_seq_backtrack = 64;
-    cp->pid_time_backtrack = 30;
 #if defined(HANDSHAKE_WINDOW)
     cp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1
@@ -883,8 +881,6 @@ int test(const int thread_num)
     sp->reliable_window = 4;
     sp->max_ack_list = 4;
     sp->pid_mode = PacketIDReceive::UDP_MODE;
-    sp->pid_seq_backtrack = 64;
-    sp->pid_time_backtrack = 30;
 #if defined(HANDSHAKE_WINDOW)
     sp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1

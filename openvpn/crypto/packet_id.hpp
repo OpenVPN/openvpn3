@@ -25,6 +25,7 @@
 #define OPENVPN_CRYPTO_PACKET_ID_H
 
 #include <string>
+#include <cstring>
 #include <sstream>
 #include <cstdint> // for std::uint32_t
 
@@ -134,14 +135,12 @@ namespace openvpn {
 	}
     }
 
-#ifdef OPENVPN_INSTRUMENTATION
     std::string str() const
     {
       std::ostringstream os;
       os << "[" << time << "," << id << "]";
       return os.str();
     }
-#endif
   };
 
   struct PacketIDConstruct : public PacketID
@@ -204,7 +203,6 @@ namespace openvpn {
       return pid_.id >= wrap_at;
     }
 
-#ifdef OPENVPN_INSTRUMENTATION
     std::string str() const
     {
       std::string ret;
@@ -213,7 +211,6 @@ namespace openvpn {
 	ret += 'L';
       return ret;
     }
-#endif
 
   private:
     PacketID pid_;
@@ -224,245 +221,176 @@ namespace openvpn {
    * This is the data structure we keep on the receiving side,
    * to check that no packet-id (i.e. sequence number + optional timestamp)
    * is accepted more than once.
+   *
+   * Replay window sizing in bytes = 2^REPLAY_WINDOW_ORDER.
+   * PKTID_RECV_EXPIRE is backtrack expire in seconds.
    */
-  class PacketIDReceive
+  template <unsigned int REPLAY_WINDOW_ORDER,
+	    unsigned int PKTID_RECV_EXPIRE>
+  class PacketIDReceiveType
   {
   public:
-    OPENVPN_SIMPLE_EXCEPTION(packet_id_backtrack_out_of_range);
-    OPENVPN_SIMPLE_EXCEPTION(packet_id_not_initialized);
+    static constexpr unsigned int REPLAY_WINDOW_BYTES = 1 << REPLAY_WINDOW_ORDER;
+    static constexpr unsigned int REPLAY_WINDOW_SIZE = REPLAY_WINDOW_BYTES * 8;
 
-    /*
-     * Maximum allowed backtrack in
-     * sequence number due to packets arriving
-     * out of order.
-     */
-    enum {
-      MIN_SEQ_BACKTRACK = 0,
-      MAX_SEQ_BACKTRACK = 65536,
-      DEFAULT_SEQ_BACKTRACK = 64
-    };
-
-    /*
-     * Maximum allowed backtrack in
-     * seconds due to packets arriving
-     * out of order.
-     */
-    enum {
-      MIN_TIME_BACKTRACK = 0,
-      MAX_TIME_BACKTRACK = 600,
-      DEFAULT_TIME_BACKTRACK = 15
-    };
-
-    /*
-     * Special PacketID::time_t value that indicates that
-     * sequence number has expired.
-     */
-    enum {
-      SEQ_UNSEEN = 0,
-      SEQ_EXPIRED = 1
-    };
-
-    /*
-     * Do a reap pass through the sequence number
-     * array once every n seconds in order to
-     * expire sequence numbers which can no longer
-     * be accepted because they would violate
-     * TIME_BACKTRACK.
-     */
-    enum {
-      SEQ_REAP_PERIOD = 5
-    };
-
-    /* mode */
+    // mode
     enum {
       UDP_MODE = 0,
       TCP_MODE = 1
     };
 
-    PacketIDReceive() : initialized_(false) {}
+    OPENVPN_SIMPLE_EXCEPTION(packet_id_not_initialized);
 
-    bool initialized() const { return initialized_; }
+    PacketIDReceiveType()
+      : initialized_(false)
+    {
+    }
 
-    void init(const int mode, const int form,
-	      const int seq_backtrack, const int time_backtrack,
-	      const char *name, const int unit,
+    void init(const int mode_arg,
+	      const int form_arg,
+	      const char *name_arg,
+	      const int unit_arg,
 	      const SessionStats::Ptr& stats_arg)
     {
-      initialized_ = false;
-      form_ = form;
-      id_ = 0;
-      time_ = 0;
-      last_reap_ = 0;
-      seq_backtrack_ = 0;
-      max_backtrack_stat_ = 0;
-      time_backtrack_ = 0;
-      name_ = name;
-      unit_ = unit;
-      stats = stats_arg;
-      if (seq_backtrack && mode == UDP_MODE)
-	{
-	  if (MIN_SEQ_BACKTRACK <= seq_backtrack
-	      && seq_backtrack <= MAX_SEQ_BACKTRACK
-	      && MIN_TIME_BACKTRACK <= time_backtrack
-	      && time_backtrack <= MAX_TIME_BACKTRACK)
-	    {
-	      seq_backtrack_ = seq_backtrack;
-	      time_backtrack_ = time_backtrack;
-	      seq_list_.init(seq_backtrack);
-	    }
-	  else
-	    throw packet_id_backtrack_out_of_range();
-	}
-      else
-	seq_list_.init(0);
       initialized_ = true;
+      base = 0;
+      extent = 0;
+      expire = 0;
+      id_high = 0;
+      time_high = 0;
+      id_floor = 0;
+      max_backtrack = 0;
+      mode = mode_arg;
+      form = form_arg;
+      unit = unit_arg;
+      name = name_arg;
+      stats = stats_arg;
+      std::memset(history, 0, sizeof(history));
     }
 
-    /*
-     * Return true if packet id is ok, or false if
-     * it's a replay.
-     */
-    bool test(const PacketID& pin, const PacketID::time_t now)
+    bool initialized() const
     {
-      // make sure we were initialized
-      if (!initialized_)
-	throw packet_id_not_initialized();
+      return initialized_;
+    }
 
-      // see if we should do an expiration reap pass
-      if (last_reap_ + SEQ_REAP_PERIOD <= now)
-	reap(now);
-
-      // test for invalid packet ID
-      if (!pin.is_valid())
+    bool test_add(const PacketID& pin,
+		  const PacketID::time_t now,
+		  const bool mod) // don't modify history unless mod is true
+    {
+      const Error::Type err = do_test_add(pin, now, mod);
+      if (unlikely(err != Error::SUCCESS))
 	{
-	  debug_log (Error::PKTID_INVALID, pin, "PID is invalid", 0, now);
+	  stats->error(err);
 	  return false;
 	}
-
-      if (seq_list_.defined())
-	{
-	  /*
-	   * In backtrack mode, we allow packet reordering subject
-	   * to the seq_backtrack and time_backtrack constraints.
-	   *
-	   * This mode is used with UDP.
-	   */
-	  if (pin.time == time_)
-	    {
-	      /* is packet-id greater than any one we've seen yet? */
-	      if (pin.id > id_)
-		return true;
-
-	      /* check packet-id sliding window for original/replay status */
-	      const PacketID::id_t diff = id_ - pin.id;
-
-	      /* keep track of maximum backtrack seen for debugging purposes */
-	      if (diff > max_backtrack_stat_)
-		{
-		  max_backtrack_stat_ = diff;
-		  debug_log (Error::PKTID_UDP_REPLAY_WINDOW_BACKTRACK, pin, "UDP replay-window backtrack occurred", max_backtrack_stat_, now);
-		}
-
-	      if (diff >= seq_list_.size())
-		{
-		  debug_log (Error::PKTID_UDP_LARGE_DIFF, pin, "UDP large diff", diff, now);
-		  return false;
-		}
-
-	      {
-		const PacketID::time_t v = seq_list_[diff];
-		if (v == PacketID::time_t(SEQ_UNSEEN))
-		  return true;
-		else
-		  {
-		    debug_log (Error::PKTID_UDP_REPLAY, pin, "UDP replay", diff, now);
-		    return false;
-		  }
-	      }
-	    }
-	  else if (pin.time < time_) /* if time goes back, reject */
-	    {
-	      debug_log (Error::PKTID_UDP_TIME_BACKTRACK, pin, "UDP time backtrack", 0, now);
-	      return false;
-	    }
-	  else                       /* time moved forward */
-	    return true;
-	}
       else
-	{
-	  /*
-	   * In non-backtrack mode, all sequence number series must
-	   * begin at some number n > 0 and must increment linearly without gaps.
-	   *
-	   * This mode is used with TCP.
-	   */
-	  if (pin.time == time_)
-	    {
-	      if (pin.id == id_ + 1)
-		return true;
-	      else
-		{
-		  debug_log (Error::PKTID_TCP_OUT_OF_SEQ, pin, "TCP packet ID out of sequence", 0, now);
-		  return false;
-		}
-	    }
-	  else if (pin.time < time_)    /* if time goes back, reject */
-	    {
-	      debug_log (Error::PKTID_TCP_TIME_BACKTRACK, pin, "TCP time backtrack", 0, now);
-	      return false;
-	    }
-	  else                          /* time moved forward */
-	    {
-	      if (pin.id == 1)
-		return true;
-	      else
-		{
-		  debug_log (Error::PKTID_TCP_BAD_INITIAL, pin, "bad initial TCP packet ID", 0, now);
-		  return false;
-		}
-	    }
-	}
+	return true;
     }
 
-    void
-    add(const PacketID& pin, const PacketID::time_t now)
+    Error::Type do_test_add(const PacketID& pin,
+			    const PacketID::time_t now,
+			    const bool mod) // don't modify history unless mod is true
     {
-      if (!initialized_)
+      // make sure we were initialized
+      if (unlikely(!initialized_))
 	throw packet_id_not_initialized();
-      if (seq_list_.defined())
+
+      // expire backtracks at or below id_floor after PKTID_RECV_EXPIRE time
+      if (unlikely(now >= expire))
+	id_floor = id_high;
+      expire = now + PKTID_RECV_EXPIRE;
+
+      // ID must not be zero
+      if (unlikely(!pin.is_valid()))
+	return Error::PKTID_INVALID;
+
+      // time changed?
+      if (unlikely(pin.time != time_high))
 	{
-	  // UDP mode.  Decide if we should reset sequence number history list.
-	  if (!seq_list_.size()            // indicates first pass
-	      || pin.time > time_          // if time value increases, must reset
-	      || (pin.id >= seq_backtrack_ // also, big jumps in pin.id require us to reset
-		  && pin.id - seq_backtrack_ > id_))
+	  if (pin.time > time_high)
 	    {
-	      time_ = pin.time;
-	      id_ = 0;
-	      if (pin.id > seq_backtrack_) // if pin.id is large, fast-forward
-		id_ = pin.id - seq_backtrack_;
-	      seq_list_.reset();
+	      // time moved forward, accept
+	      if (!mod)
+		return Error::SUCCESS;
+	      base = 0;
+	      extent = 0;
+	      id_high = 0;
+	      time_high = pin.time;
+	      id_floor = 0;
 	    }
-
-	  while (id_ < pin.id) // should never iterate more than seq_backtrack_ steps
+	  else
 	    {
-	      seq_list_.push(PacketID::time_t(SEQ_UNSEEN));
-	      ++id_;
+	      // time moved backward, reject
+	      return Error::PKTID_TIME_BACKTRACK;
 	    }
+      }
 
-	  // remember timestamp of packet ID
-	  {
-	    const size_t diff = id_ - pin.id;
-	    if (diff < seq_list_.size() && now > PacketID::time_t(SEQ_EXPIRED))
-	      seq_list_[diff] = now;
-	  }
+      if (likely(pin.id == id_high + 1))
+	{
+	  // well-formed ID sequence (incremented by 1)
+	  if (!mod)
+	    return Error::SUCCESS;
+	  base = REPLAY_INDEX(-1);
+	  history[base / 8] |= (1 << (base % 8));
+	  if (extent < REPLAY_WINDOW_SIZE)
+	    ++extent;
+	  id_high = pin.id;
+	}
+      else if (pin.id > id_high)
+	{
+	  // ID jumped forward by more than one
+	  if (!mod)
+	    return Error::SUCCESS;
+	  const unsigned int delta = pin.id - id_high;
+	  if (delta < REPLAY_WINDOW_SIZE)
+	    {
+	      base = REPLAY_INDEX(-delta);
+	      history[base / 8] |= (1 << (base % 8));
+	      extent += delta;
+	      if (extent > REPLAY_WINDOW_SIZE)
+		extent = REPLAY_WINDOW_SIZE;
+	      for (unsigned i = 1; i < delta; ++i)
+		{
+		  const unsigned int newbase = REPLAY_INDEX(i);
+		  history[newbase / 8] &= ~(1 << (newbase % 8));
+		}
+	    }
+	  else
+	    {
+	      base = 0;
+	      extent = REPLAY_WINDOW_SIZE;
+	      std::memset(history, 0, sizeof(history));
+	      history[0] = 1;
+	    }
+	  id_high = pin.id;
 	}
       else
 	{
-	  // TCP mode
-	  time_ = pin.time;
-	  id_ = pin.id;
+	  // ID backtrack
+	  const unsigned int delta = id_high - pin.id;
+	  if (delta > max_backtrack)
+	    max_backtrack = delta;
+	  if (delta < extent)
+	    {
+	      if (pin.id > id_floor)
+		{
+		  const unsigned int ri = REPLAY_INDEX(delta);
+		  std::uint8_t *p = &history[ri / 8];
+		  const std::uint8_t mask = (1 << (ri % 8));
+		  if (*p & mask)
+		    return Error::PKTID_REPLAY;
+		  if (!mod)
+		    return Error::SUCCESS;
+		  *p |= mask;
+		}
+	      else
+		return Error::PKTID_EXPIRE;
+	    }
+	  else
+	    return Error::PKTID_BACKTRACK;
 	}
+
+      return Error::SUCCESS;
     }
 
     PacketID read_next(Buffer& buf) const
@@ -470,102 +398,46 @@ namespace openvpn {
       if (!initialized_)
 	throw packet_id_not_initialized();
       PacketID pid;
-      pid.read(buf, form_);
+      pid.read(buf, form);
       return pid;
     }
 
-#ifdef OPENVPN_INSTRUMENTATION
-    std::string str(const PacketID::time_t now) const
+    std::string str() const
     {
-      if (!initialized_)
-	throw packet_id_not_initialized();
       std::ostringstream os;
-      os << name_ << "-" << unit_ << " [";
-      for (size_t i = 0; i < seq_list_.size(); ++i)
-	{
-	  char c;
-	  const PacketID::time_t v = seq_list_[i];
-	  if (v == PacketID::time_t(SEQ_UNSEEN))
-	    c = '_';
-	  else if (v == PacketID::time_t(SEQ_EXPIRED))
-	    c = 'E';
-	  else
-	    {
-	      const int diff = int(now - v);
-	      if (diff < 0)
-		c = 'N';
-	      else if (diff < 10)
-		c = '0' + diff;
-	      else
-		c = '>';
-	    }
-	  os << c;
-	}
-      os << "] " << time_ << ":" << id_;
+      os << "[e=" << extent << " f=" << id_floor << " h=" << time_high << '/' << id_high << ']';
       return os.str();
     }
-#endif
 
   private:
-    /*
-     * Expire sequence numbers which can no longer
-     * be accepted because they would violate
-     * time_backtrack.
-     */
-    void reap(const PacketID::time_t now)
+    unsigned int REPLAY_INDEX(const int i) const
     {
-      if (time_backtrack_)
-	{
-	  bool expire = false;
-	  for (size_t i = 0; i < seq_list_.size(); ++i)
-	    {
-	      const PacketID::time_t t = seq_list_[i];
-	      if (t == PacketID::time_t(SEQ_EXPIRED)) // fast path -- once we see SEQ_EXPIRED from previous run, we can stop
-		break;
-	      if (!expire && t && t + time_backtrack_ < now)
-		expire = true;
-	      if (expire)
-		seq_list_[i] = PacketID::time_t(SEQ_EXPIRED);
-	    }
-	}
-      last_reap_ = now;
+      return (base + i) & (REPLAY_WINDOW_SIZE - 1);
     }
 
-    void debug_log (const Error::Type err_type, const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
-    {
-#ifdef OPENVPN_INSTRUMENTATION
-      if (stats->verbose())
-	{
-	  const std::string text = fmt_info(pin, description, info, now);
-	  stats->error(err_type, &text);
-	}
-      else
-#endif
-      stats->error(err_type);
-    }
+    bool initialized_;
 
-#ifdef OPENVPN_INSTRUMENTATION
-    std::string fmt_info (const PacketID& pin, const char *description, const PacketID::id_t info, const PacketID::time_t now) const
-    {
-      std::ostringstream os;
-      os << description << " pin=[" << pin.time << "," << pin.id << "] info=" << info << " state=" << str(now);
-      return os.str();
-    }
-#endif
+    unsigned int base;              // bit position of deque base in history
+    unsigned int extent;            // extent (in bits) of deque in history
+    PacketID::time_t expire;        // expiration of history
+    PacketID::id_t id_high;         // highest sequence number received
+    PacketID::time_t time_high;     // highest time stamp received
+    PacketID::id_t id_floor;        // we will only accept backtrack IDs > id_floor
+    unsigned int max_backtrack;
 
-    bool initialized_;                     /* true if packet_id_init was called */
-    PacketID::id_t id_;                    /* highest sequence number received */
-    PacketID::time_t time_;                /* highest time stamp received */
-    PacketID::time_t last_reap_;           /* last call of packet_id_reap */
-    PacketID::id_t seq_backtrack_;         /* maximum allowed packet ID backtrack (init parameter) */
-    PacketID::id_t max_backtrack_stat_;    /* maximum backtrack seen so far */
-    int time_backtrack_;                   /* maximum allowed time backtrack (init parameter) */
-    std::string name_;                     /* name of this object (for debugging) */
-    int unit_;                             /* unit number of this object (for debugging) */
-    int form_;                             /* PacketID::LONG_FORM or PacketID::SHORT_FORM */
-    SessionStats::Ptr stats;               /* used for error logging */
-    CircList<PacketID::time_t> seq_list_;  /* packet-id "memory" */
+    int mode;                       // UDP_MODE or TCP_MODE
+    int form;                       // PacketID::LONG_FORM or PacketID::SHORT_FORM
+    int unit;                       // unit number of this object (for debugging)
+    std::string name;               // name of this object (for debugging)
+
+    SessionStats::Ptr stats;
+
+    std::uint8_t history[REPLAY_WINDOW_BYTES]; /* "sliding window" bitmask of recent packet IDs received */
   };
+
+  // Our standard packet ID window with order=8 (window size=2048).
+  // and recv expire=30 seconds.
+  typedef PacketIDReceiveType<8, 30> PacketIDReceive;
 
 } // namespace openvpn
 

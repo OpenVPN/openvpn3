@@ -86,15 +86,12 @@ namespace openvpn {
     virtual void init_pid(const int send_form,
 			  const int recv_mode,
 			  const int recv_form,
-			  const int recv_seq_backtrack,
-			  const int recv_time_backtrack,
 			  const char *recv_name,
 			  const int recv_unit,
 			  const SessionStats::Ptr& recv_stats_arg)
     {
       encrypt_.pid_send.init(send_form);
-      decrypt_.pid_recv.init(recv_mode, recv_form, recv_seq_backtrack, recv_time_backtrack,
-			     recv_name, recv_unit, recv_stats_arg);
+      decrypt_.pid_recv.init(recv_mode, recv_form, recv_name, recv_unit, recv_stats_arg);
     }
 
     virtual bool consider_compression(const CompressContext& comp_ctx)
