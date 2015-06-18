@@ -31,10 +31,11 @@
 namespace openvpn {
 
   inline Frame::Ptr frame_init(const bool align_adjust_3_1,
+			       const size_t tun_mtu,
 			       const size_t control_channel_payload,
 			       const bool verbose)
   {
-    const size_t payload = 2048;
+    const size_t payload = std::max(tun_mtu + 512, size_t(2048));
     const size_t headroom = 512;
     const size_t tailroom = 512;
     const size_t align_block = 16;

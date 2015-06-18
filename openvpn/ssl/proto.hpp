@@ -62,6 +62,7 @@
 #include <openvpn/ssl/tlsprf.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/tun/layer.hpp>
+#include <openvpn/tun/tunmtu.hpp>
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/ssl/proto_context_options.hpp>
 
@@ -470,23 +471,7 @@ namespace openvpn {
 	}
 
 	// tun-mtu
-	try {
-	  const Option *o = opt.get_ptr("tun-mtu");
-	  if (o)
-	    {
-	      bool status = parse_number_validate<unsigned int>(o->get(1, 16),
-								16,
-								576,
-								65535,
-								&tun_mtu);
-	      if (!status)
-		throw Exception("parse/range issue");
-	    }
-	}
-	catch (const std::exception& e)
-	  {
-	    OPENVPN_THROW(proto_option_error, "tun-mtu directive: " << e.what());
-	  }
+	tun_mtu = parse_tun_mtu(opt, tun_mtu);
       }
 
       // load options string pushed by server

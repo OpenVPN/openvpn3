@@ -39,6 +39,7 @@
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/crypto/cryptodcsel.hpp>
 #include <openvpn/ssl/mssparms.hpp>
+#include <openvpn/tun/tunmtu.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/reconnect_notify.hpp>
@@ -180,8 +181,9 @@ namespace openvpn {
 #endif
 
       // frame
+      const unsigned int tun_mtu = parse_tun_mtu(opt, 0); // get tun-mtu parameter from config
       const MSSCtrlParms mc(opt);
-      frame = frame_init(true, mc.mssfix_ctrl, true);
+      frame = frame_init(true, tun_mtu, mc.mssfix_ctrl, true);
 
       // route-nopull
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
@@ -274,16 +276,6 @@ namespace openvpn {
 
       // init transport config
       const std::string session_name = load_transport_config();
-
-#if !defined(OPENVPN_FORCE_TUN_NULL)
-      // get tun-mtu parameter from config
-      unsigned int tun_mtu = 0;
-      {
-	const Option *o = opt.get_ptr("tun-mtu");
-	if (o)
-	  tun_mtu = parse_number_throw<unsigned int>(o->get(1, 16), "tun-mtu");
-      }
-#endif
 
       // initialize tun/tap
       if (dco)
