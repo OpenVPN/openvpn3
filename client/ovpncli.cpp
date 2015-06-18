@@ -970,6 +970,9 @@ namespace openvpn {
 #ifdef PRIVATE_TUNNEL_PROXY
       ret += " PT_PROXY";
 #endif
+#ifdef ENABLE_DCO
+      ret += " DCO";
+#endif
       ret += " built on " __DATE__ " " __TIME__;
       return ret;
     }
