@@ -4,16 +4,24 @@
 //  Copyright (C) 2012-2015 OpenVPN Technologies, Inc. All rights reserved.
 //
 
+#include <unistd.h>    // for unlink()
+
 #include <string>
 #include <cstdint>
 #include <unordered_map>
+#include <vector>
 #include <deque>
 #include <utility> // for std::move
 #include <memory>
 
+#include <asio.hpp>
+
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/arraysize.hpp>
+#include <openvpn/common/asiodispatch.hpp>
+#include <openvpn/common/function.hpp>
+#include <openvpn/common/sockopt.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimer.hpp>
@@ -139,6 +147,34 @@ namespace openvpn {
 	bool keepalive;
       };
 
+      class SocketBase : public RC<thread_unsafe_refcount>
+      {
+      public:
+	typedef RCPtr<SocketBase> Ptr;
+
+	virtual void async_send(const asio::const_buffers_1& buf,
+				Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
+
+	virtual void async_receive(const asio::mutable_buffers_1& buf,
+				   Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
+
+	virtual std::string remote_endpoint_str() const = 0;
+	virtual void non_blocking(const bool state) = 0;
+
+	virtual void tcp_nodelay() {}
+
+	size_t acceptor_index() const { return acceptor_index_; }
+
+      protected:
+	SocketBase(const size_t acceptor_index)
+	  : acceptor_index_(acceptor_index)
+	{
+	}
+
+      private:
+	size_t acceptor_index_;
+      };
+
       class Listener : public RC<thread_unsafe_refcount>
       {
       public:
@@ -153,10 +189,12 @@ namespace openvpn {
 	  friend Base;
 	  friend Listener;
 
-	  typedef TCPTransport::Link<Client*, false> LinkImpl;
-	  friend LinkImpl; // calls tcp_* handlers
-
 	public:
+	  struct AsioProtocol
+	  {
+	    typedef SocketBase socket;
+	  };
+
 	  typedef RCPtr<Client> Ptr;
 
 	  class Initializer
@@ -166,18 +204,18 @@ namespace openvpn {
 
 	    Initializer(asio::io_service& io_service_arg,
 			Listener* parent_arg,
-			asio::ip::tcp::socket* socket_arg,
+			SocketBase::Ptr&& socket_arg,
 			const client_t client_id_arg)
 	      : io_service(io_service_arg),
 		parent(parent_arg),
-		socket(socket_arg),
+		socket(std::move(socket_arg)),
 		client_id(client_id_arg)
 	    {
 	    }
 
 	    asio::io_service& io_service;
 	    Listener* parent;
-	    std::unique_ptr<asio::ip::tcp::socket> socket;
+	    SocketBase::Ptr socket;
 	    const client_t client_id;
 	  };
 
@@ -269,7 +307,7 @@ namespace openvpn {
 	  {
 	    try {
 	      if (sock)
-		return to_string(sock->remote_endpoint());
+		return sock->remote_endpoint_str();
 	    }
 	    catch (const std::exception& e)
 	      {
@@ -278,11 +316,14 @@ namespace openvpn {
 	  }
 
 	  asio::io_service& io_service;
-	  std::unique_ptr<asio::ip::tcp::socket> sock;
+	  SocketBase::Ptr sock;
 	  std::deque<BufferAllocated> pipeline;
 	  Time::Duration timeout_duration;
 
 	private:
+	  typedef TCPTransport::Link<AsioProtocol, Client*, false> LinkImpl;
+	  friend LinkImpl; // calls tcp_* handlers
+
 	  void start()
 	  {
 	    timeout_coarse.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
@@ -554,11 +595,23 @@ namespace openvpn {
 		 const Listen::Item& listen_item_arg,
 		 const Client::Factory::Ptr& client_factory_arg)
 	  : io_service(io_service_arg),
-	    listen_item(listen_item_arg),
+	    listen_list(listen_item_arg),
 	    config(config_arg),
 	    client_factory(client_factory_arg),
 	    halt(false),
-	    acceptor(io_service_arg),
+	    next_id(0)
+	{
+	}
+
+	Listener(asio::io_service& io_service_arg,
+		 const Config::Ptr& config_arg,
+		 const Listen::List& listen_list_arg,
+		 const Client::Factory::Ptr& client_factory_arg)
+	  : io_service(io_service_arg),
+	    listen_list(listen_list_arg),
+	    config(config_arg),
+	    client_factory(client_factory_arg),
+	    halt(false),
 	    next_id(0)
 	{
 	}
@@ -568,33 +621,74 @@ namespace openvpn {
 	  if (halt)
 	    return;
 
-	  OPENVPN_LOG("HTTP" << (config->ssl_factory ? "S" : "") << " Listen: " << listen_item.to_string());
+	  acceptors.reserve(listen_list.size());
+	  for (const auto &listen_item : listen_list)
+	    {
+	      OPENVPN_LOG("HTTP" << (config->ssl_factory ? "S" : "") << " Listen: " << listen_item.to_string());
 
-	  // parse address/port of local endpoint
-	  if (!listen_item.proto.is_tcp())
-	    throw option_error("only TCP supported");
-	  const IP::Addr ip_addr = IP::Addr::from_string(listen_item.addr);
-	  local_endpoint.address(ip_addr.to_asio());
-	  local_endpoint.port(HostPort::parse_port(listen_item.port, "http listen"));
+	      switch (listen_item.proto())
+		{
+		case Protocol::TCPv4:
+		case Protocol::TCPv6:
+		  {
+		    AcceptorTCP::Ptr a(new AcceptorTCP(io_service));
 
-	  // open socket and bind to local address
-	  acceptor.open(local_endpoint.protocol());
+		    // parse address/port of local endpoint
+		    const IP::Addr ip_addr = IP::Addr::from_string(listen_item.addr);
+		    a->local_endpoint.address(ip_addr.to_asio());
+		    a->local_endpoint.port(HostPort::parse_port(listen_item.port, "http listen"));
 
-	  // set socket flags
-	  {
-	    const int fd = acceptor.native_handle();
-	    SockOpt::reuseport(fd);
-	    SockOpt::reuseaddr(fd);
-	  }
+		    // open socket
+		    a->acceptor.open(a->local_endpoint.protocol());
 
-	  // bind to local address
-	  acceptor.bind(local_endpoint);
+		    // set socket flags
+		    {
+		      const int fd = a->acceptor.native_handle();
+		      SockOpt::reuseport(fd);
+		      SockOpt::reuseaddr(fd);
+		    }
 
-	  // listen for incoming client connections
-	  acceptor.listen();
+		    // bind to local address
+		    a->acceptor.bind(a->local_endpoint);
 
-	  // wait for incoming connection
-	  queue_accept();
+		    // listen for incoming client connections
+		    a->acceptor.listen();
+
+		    // save acceptor
+		    acceptors.push_back(a);
+
+		    // queue accept on listen socket
+		    queue_accept(acceptors.size() - 1);
+		  }
+		  break;
+		case Protocol::UnixStream:
+		  {
+		    AcceptorUnix::Ptr a(new AcceptorUnix(io_service));
+
+		    // set endpoint
+		    ::unlink(listen_item.addr.c_str());
+		    a->local_endpoint.path(listen_item.addr);
+
+		    // open socket
+		    a->acceptor.open(a->local_endpoint.protocol());
+
+		    // bind to local address
+		    a->acceptor.bind(a->local_endpoint);
+
+		    // listen for incoming client connections
+		    a->acceptor.listen();
+
+		    // save acceptor
+		    acceptors.push_back(a);
+
+		    // queue accept on listen socket
+		    queue_accept(acceptors.size() - 1);
+		  }
+		  break;
+		default:
+		  throw http_server_exception("listen on unknown protocol");
+		}
+	    }
 	}
 
 	void stop()
@@ -603,32 +697,177 @@ namespace openvpn {
 	    return;
 	  halt = true;
 
-	  acceptor.close();
+	  // close acceptors
+	  acceptors.close();
 
 	  // stop clients
-	  for (ClientMap::const_iterator i = clients.begin(); i != clients.end(); ++i)
-	    {
-	      Client& c = *i->second;
-	      c.stop(false);
-	    }
+	  for (auto &c : clients)
+	    c.second->stop(false);
 	  clients.clear();
 	}
 
       private:
 	typedef std::unordered_map<client_t, Client::Ptr> ClientMap;
 
-	void queue_accept()
+	struct SocketTCP : public SocketBase
 	{
-	  asio::ip::tcp::socket* socket = new asio::ip::tcp::socket(io_service);
-	  acceptor.async_accept(*socket, asio_dispatch_accept_arg(&Listener::handle_accept, this, socket));
+	  typedef RCPtr<SocketTCP> Ptr;
+
+	  SocketTCP(asio::io_service& io_service,
+		    const size_t acceptor_index)
+	    :  SocketBase(acceptor_index),
+	       socket(io_service)
+	  {
+	  }
+
+	  virtual void async_send(const asio::const_buffers_1& buf,
+				  Function<void(const asio::error_code&, const size_t)>&& callback) override
+	  {
+	    socket.async_send(buf, std::move(callback));
+	  }
+
+	  virtual void async_receive(const asio::mutable_buffers_1& buf,
+				     Function<void(const asio::error_code&, const size_t)>&& callback) override
+	  {
+	    socket.async_receive(buf, std::move(callback));
+	  }
+
+	  virtual std::string remote_endpoint_str() const override
+	  {
+	    return to_string(socket.remote_endpoint());
+	  }
+
+	  virtual void non_blocking(const bool state) override
+	  {
+	    socket.non_blocking(state);
+	  }
+
+	  virtual void tcp_nodelay() override
+	  {
+	    SockOpt::tcp_nodelay(socket.native_handle());
+	  }
+
+	  asio::ip::tcp::socket socket;
+	};
+
+	struct SocketUnix : public SocketBase
+	{
+	  typedef RCPtr<SocketUnix> Ptr;
+
+	  SocketUnix(asio::io_service& io_service,
+		     const size_t acceptor_index)
+	    :  SocketBase(acceptor_index),
+	       socket(io_service)
+	  {
+	  }
+
+	  virtual void async_send(const asio::const_buffers_1& buf,
+				  Function<void(const asio::error_code&, const size_t)>&& callback) override
+	  {
+	    socket.async_send(buf, std::move(callback));
+	  }
+
+	  virtual void async_receive(const asio::mutable_buffers_1& buf,
+				     Function<void(const asio::error_code&, const size_t)>&& callback) override
+	  {
+	    socket.async_receive(buf, std::move(callback));
+	  }
+
+	  virtual std::string remote_endpoint_str() const override
+	  {
+	    return "LOCAL";
+	  }
+
+	  virtual void non_blocking(const bool state) override
+	  {
+	    socket.non_blocking(state);
+	  }
+
+	  asio::local::stream_protocol::socket socket;
+	};
+
+	struct AcceptorBase : public RC<thread_unsafe_refcount>
+	{
+	  typedef RCPtr<AcceptorBase> Ptr;
+
+	  virtual void async_accept(Listener* listener,
+				    const size_t acceptor_index,
+				    asio::io_service& io_service) = 0;
+	  virtual void close() = 0;
+	};
+
+	struct AcceptorSet : public std::vector<AcceptorBase::Ptr>
+	{
+	  void close()
+	  {
+	    for (auto &i : *this)
+	      i->close();
+	  }
+	};
+
+	struct AcceptorTCP : public AcceptorBase
+	{
+	  typedef RCPtr<AcceptorTCP> Ptr;
+
+	  AcceptorTCP(asio::io_service& io_service)
+	    : acceptor(io_service)
+	  {
+	  }
+
+	  virtual void async_accept(Listener* listener,
+				    const size_t acceptor_index,
+				    asio::io_service& io_service) override
+	  {
+	    SocketTCP::Ptr sock(new SocketTCP(io_service, acceptor_index));
+	    acceptor.async_accept(sock->socket, asio_dispatch_accept_arg(&Listener::handle_accept, listener, sock));
+	  }
+
+	  virtual void close() override
+	  {
+	    acceptor.close();
+	  }
+
+	  asio::ip::tcp::endpoint local_endpoint;
+	  asio::ip::tcp::acceptor acceptor;
+	};
+
+	struct AcceptorUnix : public AcceptorBase
+	{
+	  typedef RCPtr<AcceptorUnix> Ptr;
+
+	  AcceptorUnix(asio::io_service& io_service)
+	    : acceptor(io_service)
+	  {
+	  }
+
+	  virtual void async_accept(Listener* listener,
+				    const size_t acceptor_index,
+				    asio::io_service& io_service) override
+	  {
+	    SocketUnix::Ptr sock(new SocketUnix(io_service, acceptor_index));
+	    acceptor.async_accept(sock->socket, asio_dispatch_accept_arg(&Listener::handle_accept, listener, sock));
+	  }
+
+	  virtual void close() override
+	  {
+	    acceptor.close();
+	  }
+
+	  asio::local::stream_protocol::endpoint local_endpoint;
+	  asio::basic_socket_acceptor<asio::local::stream_protocol> acceptor;
+	};
+
+	void queue_accept(const size_t acceptor_index)
+	{
+	  acceptors[acceptor_index]->async_accept(this, acceptor_index, io_service);
 	}
 
-	void handle_accept(asio::ip::tcp::socket* socket,
-			   const asio::error_code& error)
+	void handle_accept(SocketBase::Ptr sock, const asio::error_code& error)
 	{
-	  std::unique_ptr<asio::ip::tcp::socket> sock(socket);
 	  if (halt)
 	      return;
+
+	  const size_t acceptor_index = sock->acceptor_index();
 
 	  try {
 	    if (!error)
@@ -639,7 +878,7 @@ namespace openvpn {
 		sock->non_blocking(true);
 
 		const client_t client_id = next_id++;
-		Client::Initializer ci(io_service, this, sock.release(), client_id);
+		Client::Initializer ci(io_service, this, std::move(sock), client_id);
 		Client::Ptr cli = client_factory->new_client(ci);
 		clients[client_id] = cli;
 		cli->start();
@@ -652,7 +891,7 @@ namespace openvpn {
 	      OPENVPN_LOG("exception in handle_accept: " << e.what());
 	    }
 
-	  queue_accept();
+	  queue_accept(acceptor_index);
 	}
 
 	client_t new_client_id()
@@ -679,13 +918,12 @@ namespace openvpn {
 	}
 
 	asio::io_service& io_service;
-	Listen::Item listen_item;
+	Listen::List listen_list;
 	Config::Ptr config;
 	Client::Factory::Ptr client_factory;
 	bool halt;
 
-	asio::ip::tcp::endpoint local_endpoint;
-	asio::ip::tcp::acceptor acceptor;
+	AcceptorSet acceptors;
 
 	client_t next_id;
 	ClientMap clients;
