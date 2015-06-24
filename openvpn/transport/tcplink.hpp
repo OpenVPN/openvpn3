@@ -53,15 +53,13 @@
 namespace openvpn {
   namespace TCPTransport {
 
-    typedef asio::ip::tcp::endpoint AsioEndpoint;
-
     struct PacketFrom
     {
       typedef std::unique_ptr<PacketFrom> SPtr;
       BufferAllocated buf;
     };
 
-    template <typename ReadHandler, bool RAW_MODE_ONLY>
+    template <typename Protocol, typename ReadHandler, bool RAW_MODE_ONLY>
     class Link : public RC<thread_unsafe_refcount>
     {
       typedef std::deque<BufferPtr> Queue;
@@ -69,8 +67,10 @@ namespace openvpn {
     public:
       typedef RCPtr<Link> Ptr;
 
+      typedef Protocol protocol;
+
       Link(ReadHandler read_handler_arg,
-	   asio::ip::tcp::socket& socket_arg,
+	   typename Protocol::socket& socket_arg,
 	   const size_t send_queue_max_size_arg, // 0 to disable
 	   const size_t free_list_max_size_arg,
 	   const Frame::Context& frame_context_arg,
@@ -346,7 +346,7 @@ namespace openvpn {
 	return requeue;
       }
 
-      asio::ip::tcp::socket& socket;
+      typename Protocol::socket& socket;
       bool halt;
       bool raw_mode_read;
       bool raw_mode_write;

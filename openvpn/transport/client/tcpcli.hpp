@@ -67,10 +67,10 @@ namespace openvpn {
 
     class Client : public TransportClient
     {
-      friend class ClientConfig;         // calls constructor
-      friend class Link<Client*, false>; // calls tcp_read_handler
+      typedef Link<asio::ip::tcp, Client*, false> LinkImpl;
 
-      typedef Link<Client*, false> LinkImpl;
+      friend class ClientConfig;         // calls constructor
+      friend LinkImpl;                   // calls tcp_read_handler
 
       typedef AsioDispatchResolve<Client,
 				  void (Client::*)(const asio::error_code&,
@@ -294,7 +294,7 @@ namespace openvpn {
       TransportClientParent& parent;
       LinkImpl::Ptr impl;
       asio::ip::tcp::resolver resolver;
-      TCPTransport::AsioEndpoint server_endpoint;
+      LinkImpl::protocol::endpoint server_endpoint;
       bool halt;
     };
 
