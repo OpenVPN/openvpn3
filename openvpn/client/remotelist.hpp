@@ -809,15 +809,22 @@ namespace openvpn {
 		const Option& o = opt[*i];
 		o.touch();
 		e->server_host = o.get(1, 256);
+		int adj = 0;
 		if (o.size() >= 3)
 		  {
 		    e->server_port = o.get(2, 16);
-		    HostPort::validate_port(e->server_port, directives.port);
+		    if (Protocol::is_unix_type(e->server_port))
+		      {
+			adj = -1;
+			e->server_port = "";
+		      }
+		    else
+		      HostPort::validate_port(e->server_port, directives.port);
 		  }
 		else
 		  e->server_port = default_port;
-		if (o.size() >= 4)
-		  e->transport_protocol = Protocol::parse(o.get(3, 16), true);
+		if (o.size() >= 4+adj)
+		  e->transport_protocol = Protocol::parse(o.get(3+adj, 16), true);
 		else
 		  e->transport_protocol = default_proto;
 		e->conn_block = conn_block;

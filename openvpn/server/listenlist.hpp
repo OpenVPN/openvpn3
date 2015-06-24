@@ -49,7 +49,10 @@ namespace openvpn {
       std::string to_string() const
       {
 	std::ostringstream os;
-	os << directive << '/' << addr << '/' << port << '/' << proto.str() << '/' << n_threads;
+	os << directive << ' ' << addr;
+	if (!proto.is_unix())
+	  os << ' ' << port;
+	os << ' ' << proto.str() << ' ' << n_threads;
 	return os.str();
       }
     };
@@ -58,6 +61,11 @@ namespace openvpn {
     {
     public:
       List() {}
+
+      List(const Item& item)
+      {
+	push_back(item);
+      }
 
       List(const OptionList& opt,
 	   const std::string& directive,
@@ -85,22 +93,30 @@ namespace openvpn {
 		    o.touch();
 
 		    unsigned int mult = 1;
+		    int unix = 0;
 
 		    Item e;
 		    e.directive = o.get(0, 64);
 		    e.addr = o.get(1, 128);
 		    e.port = o.get(2, 16);
-		    HostPort::validate_port(e.port, e.directive);
+		    if (Protocol::is_unix_type(e.port))
+		      {
+			unix = 1;
+			e.port = "";
+		      }
+		    else
+		      HostPort::validate_port(e.port, e.directive);
 		    {
 		      const std::string title = e.directive + " protocol";
-		      e.proto = Protocol::parse(o.get(3, 16), false, title.c_str());
+		      e.proto = Protocol::parse(o.get(3-unix, 16), false, title.c_str());
 		    }
-		    {
-		      const std::string title = e.directive + " addr";
-		      const IP::Addr addr = IP::Addr(e.addr, title.c_str());
-		      e.proto.mod_addr_version(addr);
-		    }
-		    std::string n_threads = o.get_default(4, 16, "1");
+		    if (!unix)
+		      {
+			const std::string title = e.directive + " addr";
+			const IP::Addr addr = IP::Addr(e.addr, title.c_str());
+			e.proto.mod_addr_version(addr);
+		      }
+		    std::string n_threads = o.get_default(4-unix, 16, "1");
 		    if (string::ends_with(n_threads, "*N"))
 		      {
 			mult = n_cores;
@@ -108,6 +124,8 @@ namespace openvpn {
 		      }
 		    if (!parse_number_validate<unsigned int>(n_threads, 3, 1, 100, &e.n_threads))
 		      OPENVPN_THROW(option_error, e.directive << ": bad num threads: " << n_threads);
+		    if (unix && e.n_threads != 1)
+		      OPENVPN_THROW(option_error, e.directive << ": unix socket only supports one thread per pathname (not " << n_threads << ')');
 		    e.n_threads *= mult;
 		    push_back(std::move(e));
 		  }

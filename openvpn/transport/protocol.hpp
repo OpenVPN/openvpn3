@@ -41,6 +41,8 @@ namespace openvpn {
       TCPv4,
       UDPv6,
       TCPv6,
+      UnixStream,   // unix domain socket (stream)
+      UnixDGram,    // unix domain socket (datagram)
       UDP=UDPv4,
       TCP=TCPv4,
     };
@@ -57,6 +59,7 @@ namespace openvpn {
     bool is_tcp() const { return type_ == TCPv4 || type_ == TCPv6; }
     bool is_reliable() const { return is_tcp(); }
     bool is_ipv6() const { return type_ == UDPv6 || type_ == TCPv6; }
+    bool is_unix() const { return type_ == UnixStream || type_ == UnixDGram; }
 
     bool operator==(const Protocol& other) const
     {
@@ -104,31 +107,7 @@ namespace openvpn {
 			  const char *title = nullptr)
     {
       Protocol ret;
-      std::string s = str;
-      string::to_lower(s);
-      if (s == "adaptive")
-	return ret;
-      if (allow_client_suffix && string::ends_with(s, "-client"))
-	s = s.substr(0, s.length()-7);
-      if (s.length() >= 3)
-	{
-	  const std::string s1 = s.substr(0, 3);
-	  const std::string s2 = s.substr(3);
-	  if (s2 == "" || s2 == "4" || s2 == "v4")
-	    {
-	      if (s1 == "udp")
-		ret.type_ = UDPv4;
-	      else if (s1 == "tcp")
-		ret.type_ = TCPv4;
-	    }
-	  else if (s2 == "6" || s2 == "v6")
-	    {
-	      if (s1 == "udp")
-		ret.type_ = UDPv6;
-	      else if (s1 == "tcp")
-		ret.type_ = TCPv6;
-	    }
-	}
+      ret.type_ = parse_type(str, allow_client_suffix);
       if (ret.type_ == NONE)
 	{
 	  if (!title)
@@ -136,6 +115,14 @@ namespace openvpn {
 	  OPENVPN_THROW(option_error, "error parsing " << title << ": " << str);
 	}
       return ret;
+    }
+
+    static bool is_unix_type(const std::string& str)
+    {
+      if (str.empty() || (str[0] != 'u' && str[0] != 'U')) // fast path
+	return false;
+      const Type type = parse_type(str, false);
+      return type == UnixStream || type == UnixDGram;
     }
 
     int transport_proto() const
@@ -150,6 +137,10 @@ namespace openvpn {
 	  return 0;
 	case TCPv6:
 	  return 1;
+	case UnixDGram:
+	  return 2;
+	case UnixStream:
+	  return 3;
 	default:
 	  return -1;
 	}
@@ -167,6 +158,10 @@ namespace openvpn {
 	  return "UDPv6";
 	case TCPv6:
 	  return "TCPv6";
+	case UnixStream:
+	  return "UnixStream";
+	case UnixDGram:
+	  return "UnixDGram";
 	default:
 	  return "UNDEF_PROTO";
 	}
@@ -190,6 +185,45 @@ namespace openvpn {
     }
 
   private:
+    static Type parse_type(const std::string& str,
+			   const bool allow_client_suffix)
+    {
+      Type ret = NONE;
+      std::string s = str;
+      string::to_lower(s);
+      if (s == "adaptive")
+	return ret;
+      if (allow_client_suffix && string::ends_with(s, "-client"))
+	s = s.substr(0, s.length()-7);
+      if (string::starts_with(s, "unix")) // unix domain socket
+	{
+	  if (s == "unix-stream")
+	    ret = UnixStream;
+	  else if (s == "unix-dgram")
+	    ret = UnixDGram;
+	}
+      else if (s.length() >= 3) // udp/tcp
+	{
+	  const std::string s1 = s.substr(0, 3);
+	  const std::string s2 = s.substr(3);
+	  if (s2 == "" || s2 == "4" || s2 == "v4")
+	    {
+	      if (s1 == "udp")
+		ret = UDPv4;
+	      else if (s1 == "tcp")
+		ret = TCPv4;
+	    }
+	  else if (s2 == "6" || s2 == "v6")
+	    {
+	      if (s1 == "udp")
+		ret = UDPv6;
+	      else if (s1 == "tcp")
+		ret = TCPv6;
+	    }
+	}
+      return ret;
+    }
+
     Type type_;
   };
 } // namespace openvpn
