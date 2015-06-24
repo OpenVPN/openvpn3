@@ -31,7 +31,6 @@
 #include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -211,7 +210,10 @@ namespace openvpn {
       {
 	BufferAllocated& buf = *queue.front();
 	socket.async_send(buf.const_buffers_1_clamp(),
-			  asio_dispatch_write(&Link::handle_send, this));
+			  [self=Ptr(this)](const asio::error_code& error, const size_t bytes_sent)
+			  {
+			    self->handle_send(error, bytes_sent);
+			  });
       }
 
       void handle_send(const asio::error_code& error, const size_t bytes_sent)
@@ -265,8 +267,12 @@ namespace openvpn {
 	if (!tcpfrom)
 	  tcpfrom = new PacketFrom();
 	frame_context.prepare(tcpfrom->buf);
+
 	socket.async_receive(frame_context.mutable_buffers_1_clamp(tcpfrom->buf),
-			     asio_dispatch_read(&Link::handle_recv, this, tcpfrom));
+			     [self=Ptr(this), tcpfrom](const asio::error_code& error, const size_t bytes_recvd)
+			     {
+			       self->handle_recv(tcpfrom, error, bytes_recvd);
+			     });
       }
 
       void handle_recv(PacketFrom *tcpfrom, const asio::error_code& error, const size_t bytes_recvd)
