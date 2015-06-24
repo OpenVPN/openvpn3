@@ -30,6 +30,7 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
+#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/http/reply.hpp>
@@ -167,7 +168,7 @@ namespace openvpn {
       {
 	friend Base;
 
-	typedef TCPTransport::Link<HTTPCore*, false> LinkImpl;
+	typedef TCPTransport::Link<asio::ip::tcp, HTTPCore*, false> LinkImpl;
 	friend LinkImpl; // calls tcp_* handlers
 
 	typedef AsioDispatchResolve<HTTPCore,
