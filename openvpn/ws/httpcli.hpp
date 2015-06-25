@@ -30,7 +30,6 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/http/reply.hpp>
@@ -171,11 +170,6 @@ namespace openvpn {
 	typedef TCPTransport::Link<asio::ip::tcp, HTTPCore*, false> LinkImpl;
 	friend LinkImpl; // calls tcp_* handlers
 
-	typedef AsioDispatchResolve<HTTPCore,
-				    void (HTTPCore::*)(const asio::error_code&,
-						   asio::ip::tcp::resolver::iterator),
-				    asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
-
       public:
 	typedef RCPtr<HTTPCore> Ptr;
 
@@ -196,7 +190,10 @@ namespace openvpn {
 	  if (!is_ready())
 	    throw http_client_exception("not ready");
 	  ready = false;
-	  io_service.post(asio_dispatch_post(&HTTPCore::handle_request, this));
+	  io_service.post([self=Ptr(this)]()
+                          {
+                            self->handle_request();
+                          });
 	}
 
 	void stop()
@@ -275,7 +272,10 @@ namespace openvpn {
 	    if (config->general_timeout)
 	      {
 		general_timer.expires_at(now + Time::Duration::seconds(config->general_timeout));
-		general_timer.async_wait(asio_dispatch_timer(&HTTPCore::general_timeout_handler, this));
+		general_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                                         {
+                                           self->general_timeout_handler(error);
+                                         });
 	      }
 
 	    if (alive)
@@ -294,7 +294,10 @@ namespace openvpn {
 		if (config->connect_timeout)
 		  {
 		    connect_timer.expires_at(now + Time::Duration::seconds(config->connect_timeout));
-		    connect_timer.async_wait(asio_dispatch_timer(&HTTPCore::connect_timeout_handler, this));
+		    connect_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                                             {
+                                               self->connect_timeout_handler(error);
+                                             });
 		  }
 
 		if (config->transcli)
@@ -305,7 +308,10 @@ namespace openvpn {
 		else
 		  {
 		    asio::ip::tcp::resolver::query query(host.host_transport(), host.port);
-		    resolver.async_resolve(query, AsioDispatchResolveTCP(&HTTPCore::handle_resolve, this));
+		    resolver.async_resolve(query, [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
+                                                  {
+                                                    self->handle_resolve(error, endpoint_iterator);
+                                                  });
 		  }
 	      }
 	  }
@@ -330,7 +336,10 @@ namespace openvpn {
 	  try {
 	    asio::async_connect(socket,
 				       endpoint_iterator,
-				       asio_dispatch_composed_connect(&HTTPCore::handle_connect, this));
+				       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
+                                       {
+                                         self->handle_connect(error, endpoint_iterator);
+                                       });
 	  }
 	  catch (const std::exception& e)
 	    {
