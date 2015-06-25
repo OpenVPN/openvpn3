@@ -220,8 +220,7 @@ namespace openvpn {
     AsioDispatchComposedConnect(Handler handler, C* obj)
       : handler_(handler), obj_(obj) {}
 
-    void operator()(const asio::error_code& error,
-		    asio::ip::tcp::resolver::iterator endpoint_iterator)
+    void operator()(const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
     {
       (obj_.get()->*handler_)(error, endpoint_iterator);
     }
