@@ -161,7 +161,10 @@ namespace openvpn {
     void thread_safe_stop()
     {
       if (!halt)
-	io_service.post(asio_dispatch_post(&ClientConnect::graceful_stop, this));
+	io_service.post([self=Ptr(this)]()
+                        {
+                          self->graceful_stop();
+                        });
     }
 
     void pause(const std::string& reason)
@@ -203,26 +206,38 @@ namespace openvpn {
 	  OPENVPN_LOG("Client terminated, reconnecting in " << seconds << "...");
 	  server_poll_timer.cancel();
 	  restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
-	  restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+	  restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const asio::error_code& error)
+                                        {
+                                          self->restart_wait_callback(gen, error);
+                                        });
 	}
     }
 
     void thread_safe_pause(const std::string& reason)
     {
       if (!halt)
-	io_service.post(asio_dispatch_post_arg(&ClientConnect::pause, this, reason));
+	io_service.post([self=Ptr(this), reason]()
+                        {
+                          self->pause(reason);
+                        });
     }
 
     void thread_safe_resume()
     {
       if (!halt)
-	io_service.post(asio_dispatch_post(&ClientConnect::resume, this));
+	io_service.post([self=Ptr(this)]()
+                        {
+                          self->resume();
+                        });
     }
 
     void thread_safe_reconnect(int seconds)
     {
       if (!halt)
-	io_service.post(asio_dispatch_post_arg(&ClientConnect::reconnect, this, seconds));
+	io_service.post([self=Ptr(this), seconds]()
+                        {
+                          self->reconnect(seconds);
+                        });
     }
 
     void dont_restart()
@@ -307,7 +322,10 @@ namespace openvpn {
       if (!conn_timer_pending && conn_timeout > 0)
 	{
 	  conn_timer.expires_at(Time::now() + Time::Duration::seconds(conn_timeout));
-	  conn_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::conn_timer_callback, this, generation));
+	  conn_timer.async_wait([self=Ptr(this), gen=generation](const asio::error_code& error)
+                                {
+                                  self->conn_timer_callback(gen, error);
+                                });
 	  conn_timer_pending = true;
 	}
     }
@@ -351,7 +369,10 @@ namespace openvpn {
       server_poll_timer.cancel();
       interim_finalize();
       restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
-      restart_wait_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::restart_wait_callback, this, generation));
+      restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const asio::error_code& error)
+                                    {
+                                      self->restart_wait_callback(gen, error);
+                                    });
     }
 
     virtual void client_proto_terminate()
@@ -510,7 +531,10 @@ namespace openvpn {
       if (client_options->server_poll_timeout_enabled())
 	{
 	  server_poll_timer.expires_at(Time::now() + client_options->server_poll_timeout());
-	  server_poll_timer.async_wait(asio_dispatch_timer_arg(&ClientConnect::server_poll_callback, this, generation));
+	  server_poll_timer.async_wait([self=Ptr(this), gen=generation](const asio::error_code& error)
+                                       {
+                                         self->server_poll_callback(gen, error);
+                                       });
 	}
       conn_timer_start();
       client->start();

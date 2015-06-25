@@ -29,7 +29,6 @@
 #include <asio.hpp>
 
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -142,7 +141,10 @@ namespace openvpn {
 	frame_context.prepare(udpfrom->buf);
 	socket.async_receive_from(frame_context.mutable_buffers_1(udpfrom->buf),
 				  udpfrom->sender_endpoint,
-				  asio_dispatch_read(&Link::handle_read, this, udpfrom));
+				  [self=Ptr(this), udpfrom](const asio::error_code& error, const size_t bytes_recvd)
+                                  {
+                                    self->handle_read(udpfrom, error, bytes_recvd);
+                                  });
       }
 
       void handle_read(PacketFrom *udpfrom, const asio::error_code& error, const size_t bytes_recvd)

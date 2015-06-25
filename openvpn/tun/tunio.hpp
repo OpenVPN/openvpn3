@@ -28,7 +28,6 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/ip/ip.hpp>
 #include <openvpn/common/socktypes.hpp>
@@ -207,7 +206,10 @@ namespace openvpn {
 
       // queue read on tun device
       stream->async_read_some(frame_context.mutable_buffers_1(tunfrom->buf),
-			      asio_dispatch_read(&TunIO::handle_read, this, tunfrom));
+			      [self=Ptr(this), tunfrom](const asio::error_code& error, const size_t bytes_recvd)
+                              {
+                                self->handle_read(tunfrom, error, bytes_recvd);
+                              });
     }
 
     void handle_read(PacketFrom *tunfrom, const asio::error_code& error, const size_t bytes_recvd)

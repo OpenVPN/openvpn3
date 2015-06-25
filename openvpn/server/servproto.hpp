@@ -32,7 +32,6 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/abort.hpp>
 #include <openvpn/common/link.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
@@ -507,7 +506,10 @@ namespace openvpn {
 		next.max(now());
 		housekeeping_schedule.reset(next);
 		housekeeping_timer.expires_at(next);
-		housekeeping_timer.async_wait(asio_dispatch_timer(&Session::housekeeping_callback, this));
+		housekeeping_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                                              {
+                                                self->housekeeping_callback(error);
+                                              });
 	      }
 	    else
 	      {

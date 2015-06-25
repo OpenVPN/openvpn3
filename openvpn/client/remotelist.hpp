@@ -37,7 +37,6 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/hostport.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/addrlist.hpp>
 #include <openvpn/transport/protocol.hpp>
@@ -247,11 +246,6 @@ namespace openvpn {
     // to initial tunnel establishment.
     class PreResolve : public RC<thread_unsafe_refcount>
     {
-      typedef AsioDispatchResolve<PreResolve,
-				  void (PreResolve::*)(const asio::error_code&,
-						       asio::ip::tcp::resolver::iterator),
-				  asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
-
     public:
       typedef RCPtr<PreResolve> Ptr;
 
@@ -327,7 +321,10 @@ namespace openvpn {
 		    // call into Asio to do the resolve operation
 		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item.server_host);
 		    asio::ip::tcp::resolver::query query(item.server_host, "0");
-		    resolver.async_resolve(query, AsioDispatchResolveTCP(&PreResolve::resolve_callback, this));
+		    resolver.async_resolve(query, [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
+                                                  {
+                                                    self->resolve_callback(error, endpoint_iterator);
+                                                  });
 		    return;
 		  }
 	      }

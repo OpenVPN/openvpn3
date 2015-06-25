@@ -220,10 +220,6 @@ namespace openvpn {
       friend class ClientConfig;                        // calls constructor
       friend LinkImpl;                                  // calls tcp_read_handler
 
-      typedef AsioDispatchResolve<Client,
-				  void (Client::*)(const asio::error_code&, asio::ip::tcp::resolver::iterator),
-				  asio::ip::tcp::resolver::iterator> AsioDispatchResolveTCP;
-
     public:
       virtual void transport_start()
       {
@@ -253,7 +249,10 @@ namespace openvpn {
 		asio::ip::tcp::resolver::query query(proxy_host,
 							    proxy_port);
 		parent.transport_pre_resolve();
-		resolver.async_resolve(query, AsioDispatchResolveTCP(&Client::do_resolve_, this));
+		resolver.async_resolve(query, [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
+                                              {
+                                                self->do_resolve_(error, endpoint_iterator);
+                                              });
 	      }
 	  }
       }
@@ -898,7 +897,10 @@ namespace openvpn {
 	  }
 #endif
 	socket.set_option(asio::ip::tcp::no_delay(true));
-	socket.async_connect(server_endpoint, asio_dispatch_connect(&Client::start_impl_, this));
+	socket.async_connect(server_endpoint, [self=Ptr(this)](const asio::error_code& error)
+                                              {
+                                                self->start_impl_(error);
+                                              });
       }
 
       // start I/O on TCP socket

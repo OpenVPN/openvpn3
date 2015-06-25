@@ -76,11 +76,6 @@ namespace openvpn {
 
       typedef Link<Client*> LinkImpl;
 
-      typedef AsioDispatchResolve<Client,
-				  void (Client::*)(const asio::error_code&,
-						   asio::ip::udp::resolver::iterator),
-				  asio::ip::udp::resolver::iterator> AsioDispatchResolveUDP;
-
     public:
       virtual void transport_start()
       {
@@ -96,7 +91,10 @@ namespace openvpn {
 		asio::ip::udp::resolver::query query(server_host,
 							    server_port);
 		parent.transport_pre_resolve();
-		resolver.async_resolve(query, AsioDispatchResolveUDP(&Client::do_resolve_, this));
+		resolver.async_resolve(query, [self=Ptr(this)](const asio::error_code& error, asio::ip::udp::resolver::iterator endpoint_iterator)
+                                              {
+                                                self->do_resolve_(error, endpoint_iterator);
+                                              });
 	      }
 	  }
       }
@@ -241,7 +239,10 @@ namespace openvpn {
 	      }
 	  }
 #endif
-	socket.async_connect(server_endpoint, asio_dispatch_connect(&Client::start_impl_, this));
+	socket.async_connect(server_endpoint, [self=Ptr(this)](const asio::error_code& error)
+                                              {
+                                                self->start_impl_(error);
+                                              });
       }
 
       // start I/O on UDP socket

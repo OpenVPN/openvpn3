@@ -38,7 +38,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/asiosignal.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/asiotimer.hpp>
@@ -90,7 +89,10 @@ namespace openvpn {
 
 #ifdef OPENVPN_EXIT_IN
       exit_timer.expires_at(Time::now() + Time::Duration::seconds(OPENVPN_EXIT_IN));
-      exit_timer.async_wait(asio_dispatch_timer(&RunContext::exit_timer_callback, this));
+      exit_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                            {
+                              self->exit_timer_callback(error);
+                            });
 #endif
     }
 
@@ -193,7 +195,10 @@ namespace openvpn {
 	  exit_timer.cancel();
 
 	  if (signals)
-	    io_service.post(asio_dispatch_post(&ASIOSignals::cancel, signals.get()));
+	    io_service.post([sig=signals]()
+                            {
+                              sig->cancel();
+                            });
 
 	  unsigned int stopped = 0;
 	  for (size_t i = 0; i < servlist.size(); ++i)
@@ -239,7 +244,10 @@ namespace openvpn {
 
     void signal_rearm()
     {
-      signals->register_signals_all(asio_dispatch_signal(&RunContext::signal, this));
+      signals->register_signals_all([self=Ptr(this)](const asio::error_code& error, int signal_number)
+                                    {
+                                      self->signal(error, signal_number);
+                                    });
     }
 
     // these vars only used by main thread

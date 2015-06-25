@@ -27,7 +27,6 @@
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/action.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/log/logthread.hpp>
 
 namespace openvpn {
@@ -96,7 +95,10 @@ namespace openvpn {
 	{
 	  OPENVPN_LOG("ActionThread Exception: " << e.what());
 	}
-      io_service.post(asio_dispatch_post_arg(&ActionThread::completion_post, this, status));
+      io_service.post([self=Ptr(this), status]()
+                      {
+                        self->completion_post(status);
+                      });
     }
 
     asio::io_service& io_service;

@@ -646,7 +646,10 @@ namespace openvpn {
 	if (!received_options.partial())
 	  {
 	    push_request_timer.expires_at(now() + dur);
-	    push_request_timer.async_wait(asio_dispatch_timer_arg(&Session::send_push_request_callback, this, dur));
+	    push_request_timer.async_wait([self=Ptr(this), dur](const asio::error_code& error)
+                                          {
+                                            self->send_push_request_callback(dur, error);
+                                          });
 	  }
       }
 
@@ -699,7 +702,10 @@ namespace openvpn {
 		next.max(now());
 		housekeeping_schedule.reset(next);
 		housekeeping_timer.expires_at(next);
-		housekeeping_timer.async_wait(asio_dispatch_timer(&Session::housekeeping_callback, this));
+		housekeeping_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                                              {
+                                                self->housekeeping_callback(error);
+                                              });
 	      }
 	    else
 	      {
@@ -728,7 +734,10 @@ namespace openvpn {
       void schedule_inactive_timer()
       {
 	inactive_timer.expires_at(now() + inactive_duration);
-	inactive_timer.async_wait(asio_dispatch_timer(&Session::inactive_callback, this));
+	inactive_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                                  {
+                                    self->inactive_callback(error);
+                                  });
       }
 
       void inactive_callback(const asio::error_code& e) // fixme for DCO
