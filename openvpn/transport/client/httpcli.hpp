@@ -213,6 +213,8 @@ namespace openvpn {
 
     class Client : public TransportClient
     {
+      typedef RCPtr<Client> Ptr;
+
       typedef TCPTransport::Link<asio::ip::tcp, Client*, false> LinkImpl;
 
       friend class ClientConfig;                        // calls constructor

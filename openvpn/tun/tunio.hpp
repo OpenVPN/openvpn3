@@ -41,6 +41,8 @@ namespace openvpn {
   class TunIO : public RC<thread_unsafe_refcount>
   {
   public:
+    typedef RCPtr<TunIO> Ptr;
+
     TunIO(ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg)

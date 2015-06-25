@@ -69,6 +69,8 @@ namespace openvpn {
 
     class Client : public TransportClient
     {
+      typedef RCPtr<Client> Ptr;
+
       friend class ClientConfig;  // calls constructor
       friend class Link<Client*>; // calls udp_read_handler
 
