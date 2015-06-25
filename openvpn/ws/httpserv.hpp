@@ -19,7 +19,6 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/arraysize.hpp>
-#include <openvpn/common/asiodispatch.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/sockopt.hpp>
 #include <openvpn/buffer/bufstream.hpp>
@@ -362,7 +361,10 @@ namespace openvpn {
 	      link->stop();
 	    sock.reset();
 	    if (remove_self_from_map)
-	      io_service.post(asio_dispatch_post_arg(&Listener::remove_client, parent, Ptr(this)));
+	      io_service.post([self=Ptr(this), parent=Listener::Ptr(parent)]()
+                              {
+                                parent->remove_client(self);
+                              });
 	  }
 
 	  client_t get_client_id() const
@@ -380,7 +382,10 @@ namespace openvpn {
 		  {
 		    timeout_coarse.reset(next);
 		    timeout_timer.expires_at(next);
-		    timeout_timer.async_wait(asio_dispatch_timer(&Client::timeout_callback, this));
+		    timeout_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                                             {
+                                               self->timeout_callback(error);
+                                             });
 		  }
 	      }
 	  }
@@ -819,7 +824,10 @@ namespace openvpn {
 				    asio::io_service& io_service) override
 	  {
 	    SocketTCP::Ptr sock(new SocketTCP(io_service, acceptor_index));
-	    acceptor.async_accept(sock->socket, asio_dispatch_accept_arg(&Listener::handle_accept, listener, sock));
+	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
+                                                {
+                                                  listener->handle_accept(sock, error);
+                                                });
 	  }
 
 	  virtual void close() override
@@ -845,7 +853,10 @@ namespace openvpn {
 				    asio::io_service& io_service) override
 	  {
 	    SocketUnix::Ptr sock(new SocketUnix(io_service, acceptor_index));
-	    acceptor.async_accept(sock->socket, asio_dispatch_accept_arg(&Listener::handle_accept, listener, sock));
+	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
+                                                {
+                                                  listener->handle_accept(sock, error);
+                                                });
 	  }
 
 	  virtual void close() override
