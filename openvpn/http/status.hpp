@@ -30,6 +30,7 @@ namespace openvpn {
       enum {
 	OK=200,
 	Connected=200,
+	BadRequest=400,
 	Forbidden=403,
 	NotFound=404,
 	ProxyAuthenticationRequired=407,
@@ -44,6 +45,8 @@ namespace openvpn {
 	  {
 	  case OK:
 	    return "OK";
+	  case BadRequest:
+	    return "BadRequest";
 	  case Forbidden:
 	    return "Forbidden";
 	  case NotFound:
