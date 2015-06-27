@@ -306,10 +306,13 @@ namespace openvpn {
 			       const std::string& peer_info,
 			       const AuthCert::Ptr& auth_cert)
       {
+	constexpr size_t MAX_USERNAME_SIZE = 256;
+	constexpr size_t MAX_PASSWORD_SIZE = 256;
+
 	if (get_management())
 	  {
-	    AuthCreds::Ptr auth_creds(new AuthCreds(Unicode::utf8_printable(username, Unicode::UTF8_FILTER),
-						    Unicode::utf8_printable(password, Unicode::UTF8_FILTER),
+	    AuthCreds::Ptr auth_creds(new AuthCreds(Unicode::utf8_printable(username, MAX_USERNAME_SIZE|Unicode::UTF8_FILTER),
+						    Unicode::utf8_printable(password, MAX_PASSWORD_SIZE|Unicode::UTF8_FILTER),
 						    Unicode::utf8_printable(peer_info, Unicode::UTF8_FILTER|Unicode::UTF8_PASS_FMT)));
 	    ManLink::send->auth_request(auth_creds, auth_cert, peer_addr);
 	  }
