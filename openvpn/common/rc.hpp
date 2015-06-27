@@ -201,10 +201,13 @@ namespace openvpn {
       return rc;
     }
 
+#ifdef OPENVPN_RC_NOTIFY
     void notify_release() noexcept
     {
     }
+#endif
 
+#ifdef OPENVPN_RC_NOTIFY
     template <typename T>
     class ListHead
     {
@@ -228,6 +231,7 @@ namespace openvpn {
 
       T* ptr;
     };
+#endif
 
   private:
     thread_unsafe_refcount(const thread_unsafe_refcount&) = delete;
@@ -278,10 +282,13 @@ namespace openvpn {
       return rc.load(std::memory_order_relaxed);
     }
 
+#ifdef OPENVPN_RC_NOTIFY
     void notify_release() noexcept
     {
     }
+#endif
 
+#ifdef OPENVPN_RC_NOTIFY
     template <typename T>
     class ListHead
     {
@@ -310,6 +317,7 @@ namespace openvpn {
 
       std::atomic<T*> ptr;
     };
+#endif
 
   private:
     thread_safe_refcount(const thread_safe_refcount&) = delete;
@@ -359,6 +367,7 @@ namespace openvpn {
     template<typename T>
     friend class RCWeakPtr;
 
+#ifdef OPENVPN_RC_NOTIFY
     // Base class of release notification callables
     class NotifyBase
     {
@@ -438,6 +447,7 @@ namespace openvpn {
 
       typename RCImpl::template ListHead<NotifyBase> head;
     };
+#endif
 
     // For weak-referenceable objects, we must detach the
     // refcount from the object and place it in Controller.
@@ -485,13 +495,18 @@ namespace openvpn {
 	return --controller->rc;
       }
 
+#ifdef OPENVPN_RC_NOTIFY
       void notify_release() noexcept
       {
 	notify.release();
       }
+#endif
 
       typename Controller::Ptr controller;  // object containing actual refcount
+
+#ifdef OPENVPN_RC_NOTIFY
       NotifyListHead notify;                // linked list of callables to be notified on object release
+#endif
     };
 
   public:
@@ -504,6 +519,7 @@ namespace openvpn {
     {
     }
 
+#ifdef OPENVPN_RC_NOTIFY
     // Add observers to be called just prior to object deletion,
     // but after refcount has been decremented to 0.  At this
     // point, all weak pointers have expired, and no strong
@@ -522,6 +538,7 @@ namespace openvpn {
     {
       refcount_.notify.add(std::move(c));
     }
+#endif
 
   private:
     RCWeak(const RCWeak&) = delete;
@@ -606,8 +623,6 @@ namespace openvpn {
     typename T::Controller::Ptr controller;
   };
 
-#if !defined(OPENVPN_RC_USERDEF)
-
   template <typename R>
   inline void intrusive_ptr_add_ref(R *p) noexcept
   {
@@ -625,7 +640,9 @@ namespace openvpn {
 #ifdef OPENVPN_RC_DEBUG
 	std::cout << "DEL OBJ " << cxx_demangle(typeid(p).name()) << std::endl;
 #endif
+#ifdef OPENVPN_RC_NOTIFY
 	p->refcount_.notify_release();
+#endif
 	delete p;
       }
     else
@@ -635,8 +652,6 @@ namespace openvpn {
 #endif
       }
   }
-
-#endif
 
 } // namespace openvpn
 
