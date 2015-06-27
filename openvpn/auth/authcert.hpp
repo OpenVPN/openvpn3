@@ -27,6 +27,7 @@
 #include <cstring>
 
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/binprefix.hpp>
 
@@ -45,6 +46,11 @@ namespace openvpn {
       bool defined() const
       {
 	return sn >= 0;
+      }
+
+      bool cn_defined() const
+      {
+	return !cn.empty();
       }
 
       template <typename T>
@@ -78,6 +84,14 @@ namespace openvpn {
 	  return render_hex_sep(issuer_fp, sizeof(issuer_fp), ':', true);
 	else
 	  return render_hex(issuer_fp, sizeof(issuer_fp), false);
+      }
+
+      std::string normalize_cn() const // remove trailing "_AUTOLOGIN" from AS certs
+      {
+	if (string::ends_with(cn, "_AUTOLOGIN"))
+	  return cn.substr(0, cn.length() - 10);
+	else
+	  return cn;
       }
 
       std::string cn;                // common name
