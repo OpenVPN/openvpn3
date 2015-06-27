@@ -49,6 +49,16 @@ namespace openvpn {
 	peer_info.update_map();
       }
 
+      bool defined() const
+      {
+	return !username.empty();
+      }
+
+      bool is_valid() const
+      {
+	return defined();
+      }
+
       void wipe_password()
       {
 	password.wipe();
