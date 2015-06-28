@@ -154,7 +154,8 @@ namespace openvpn {
 		 disableClientCert(false), defaultKeyDirection(-1),
 		 forceAesCbcCiphersuites(false),
 		 proxyAllowCleartextAuth(false),
-		 altProxy(false) {}
+		 altProxy(false),
+		 dco(false) {}
 
       // OpenVPN profile as a string
       std::string content;
