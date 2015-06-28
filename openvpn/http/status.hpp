@@ -46,7 +46,7 @@ namespace openvpn {
 	  case OK:
 	    return "OK";
 	  case BadRequest:
-	    return "BadRequest";
+	    return "Bad Request";
 	  case Forbidden:
 	    return "Forbidden";
 	  case NotFound:
