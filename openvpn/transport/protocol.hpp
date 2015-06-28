@@ -107,6 +107,8 @@ namespace openvpn {
 			  const char *title = nullptr)
     {
       Protocol ret;
+      if (string::strcasecmp(str, "adaptive") == 0)
+	return ret;
       ret.type_ = parse_type(str, allow_client_suffix);
       if (ret.type_ == NONE)
 	{
@@ -191,8 +193,6 @@ namespace openvpn {
       Type ret = NONE;
       std::string s = str;
       string::to_lower(s);
-      if (s == "adaptive")
-	return ret;
       if (allow_client_suffix && string::ends_with(s, "-client"))
 	s = s.substr(0, s.length()-7);
       if (string::starts_with(s, "unix")) // unix domain socket
