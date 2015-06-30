@@ -173,15 +173,15 @@ namespace openvpn {
       public:
 	typedef RCPtr<HTTPCore> Ptr;
 
-	HTTPCore(asio::io_service& io_service_arg,
+	HTTPCore(asio::io_context& io_context_arg,
 	     const Config::Ptr& config_arg)
 	  : Base(config_arg),
-	    io_service(io_service_arg),
+	    io_context(io_context_arg),
 	    alive(false),
-	    socket(io_service_arg),
-	    resolver(io_service_arg),
-	    connect_timer(io_service_arg),
-	    general_timer(io_service_arg)
+	    socket(io_context_arg),
+	    resolver(io_context_arg),
+	    connect_timer(io_context_arg),
+	    general_timer(io_context_arg)
 	{
 	}
 
@@ -190,10 +190,10 @@ namespace openvpn {
 	  if (!is_ready())
 	    throw http_client_exception("not ready");
 	  ready = false;
-	  io_service.post([self=Ptr(this)]()
-                          {
-                            self->handle_request();
-                          });
+	  asio::post(io_context, [self=Ptr(this)]()
+		     {
+		       self->handle_request();
+		     });
 	}
 
 	void stop()
@@ -302,16 +302,16 @@ namespace openvpn {
 
 		if (config->transcli)
 		  {
-		    transcli = config->transcli->new_transport_client_obj(io_service, *this);
+		    transcli = config->transcli->new_transport_client_obj(io_context, *this);
 		    transcli->transport_start();
 		  }
 		else
 		  {
-		    asio::ip::tcp::resolver::query query(host.host_transport(), host.port);
-		    resolver.async_resolve(query, [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
-                                                  {
-                                                    self->handle_resolve(error, endpoint_iterator);
-                                                  });
+		    resolver.async_resolve(host.host_transport(), host.port,
+					   [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
+					   {
+					     self->handle_resolve(error, results);
+					   });
 		  }
 	      }
 	  }
@@ -322,7 +322,7 @@ namespace openvpn {
 	}
 
 	void handle_resolve(const asio::error_code& error, // called by Asio
-			    asio::ip::tcp::resolver::iterator endpoint_iterator)
+			    asio::ip::tcp::resolver::results_type results)
 	{
 	  if (halt)
 	    return;
@@ -334,12 +334,11 @@ namespace openvpn {
 	    }
 
 	  try {
-	    asio::async_connect(socket,
-				       endpoint_iterator,
-				       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
-                                       {
-                                         self->handle_connect(error, endpoint_iterator);
-                                       });
+	    asio::async_connect(socket, results,
+				[self=Ptr(this)](const asio::error_code& error, const asio::ip::tcp::endpoint& endpoint)
+				{
+				  self->handle_connect(error, endpoint);
+				});
 	  }
 	  catch (const std::exception& e)
 	    {
@@ -372,7 +371,7 @@ namespace openvpn {
 	}
 
 	void handle_connect(const asio::error_code& error, // called by Asio
-			    asio::ip::tcp::resolver::iterator iterator)
+			    const asio::ip::tcp::endpoint& endpoint)
 	{
 	  if (halt)
 	    return;
@@ -641,7 +640,7 @@ namespace openvpn {
 	  do_connect(false);
 	}
 
-	asio::io_service& io_service;
+	asio::io_context& io_context;
 
 	bool alive;
 
@@ -666,10 +665,10 @@ namespace openvpn {
 
 	typedef RCPtr<HTTPDelegate> Ptr;
 
-	HTTPDelegate(asio::io_service& io_service,
+	HTTPDelegate(asio::io_context& io_context,
 		     const WS::Client::Config::Ptr& config,
 		     PARENT* parent_arg)
-	  : WS::Client::HTTPCore(io_service, config),
+	  : WS::Client::HTTPCore(io_context, config),
 	    parent(parent_arg)
 	{
 	}
