@@ -201,18 +201,18 @@ namespace openvpn {
 	    friend Listener;
 	    friend Client;
 
-	    Initializer(asio::io_service& io_service_arg,
+	    Initializer(asio::io_context& io_context_arg,
 			Listener* parent_arg,
 			SocketBase::Ptr&& socket_arg,
 			const client_t client_id_arg)
-	      : io_service(io_service_arg),
+	      : io_context(io_context_arg),
 		parent(parent_arg),
 		socket(std::move(socket_arg)),
 		client_id(client_id_arg)
 	    {
 	    }
 
-	    asio::io_service& io_service;
+	    asio::io_context& io_context;
 	    Listener* parent;
 	    SocketBase::Ptr socket;
 	    const client_t client_id;
@@ -233,10 +233,10 @@ namespace openvpn {
 	protected:
 	  Client(Initializer& ci)
 	    : Base(ci.parent->config),
-	      io_service(ci.io_service),
+	      io_context(ci.io_context),
 	      sock(std::move(ci.socket)),
 	      parent(ci.parent),
-	      timeout_timer(ci.io_service),
+	      timeout_timer(ci.io_context),
 	      client_id(ci.client_id),
 	      keepalive(false),
 	      handoff(false)
@@ -314,7 +314,7 @@ namespace openvpn {
 	    return "[unknown endpoint]";
 	  }
 
-	  asio::io_service& io_service;
+	  asio::io_context& io_context;
 	  SocketBase::Ptr sock;
 	  std::deque<BufferAllocated> pipeline;
 	  Time::Duration timeout_duration;
@@ -361,10 +361,10 @@ namespace openvpn {
 	      link->stop();
 	    sock.reset();
 	    if (remove_self_from_map)
-	      io_service.post([self=Ptr(this), parent=Listener::Ptr(parent)]()
-                              {
-                                parent->remove_client(self);
-                              });
+	      asio::post(io_context, [self=Ptr(this), parent=Listener::Ptr(parent)]()
+			 {
+			   parent->remove_client(self);
+			 });
 	  }
 
 	  client_t get_client_id() const
@@ -595,11 +595,11 @@ namespace openvpn {
       public:
 	typedef RCPtr<Listener> Ptr;
 
-	Listener(asio::io_service& io_service_arg,
+	Listener(asio::io_context& io_context_arg,
 		 const Config::Ptr& config_arg,
 		 const Listen::Item& listen_item_arg,
 		 const Client::Factory::Ptr& client_factory_arg)
-	  : io_service(io_service_arg),
+	  : io_context(io_context_arg),
 	    listen_list(listen_item_arg),
 	    config(config_arg),
 	    client_factory(client_factory_arg),
@@ -608,11 +608,11 @@ namespace openvpn {
 	{
 	}
 
-	Listener(asio::io_service& io_service_arg,
+	Listener(asio::io_context& io_context_arg,
 		 const Config::Ptr& config_arg,
 		 const Listen::List& listen_list_arg,
 		 const Client::Factory::Ptr& client_factory_arg)
-	  : io_service(io_service_arg),
+	  : io_context(io_context_arg),
 	    listen_list(listen_list_arg),
 	    config(config_arg),
 	    client_factory(client_factory_arg),
@@ -636,7 +636,7 @@ namespace openvpn {
 		case Protocol::TCPv4:
 		case Protocol::TCPv6:
 		  {
-		    AcceptorTCP::Ptr a(new AcceptorTCP(io_service));
+		    AcceptorTCP::Ptr a(new AcceptorTCP(io_context));
 
 		    // parse address/port of local endpoint
 		    const IP::Addr ip_addr = IP::Addr::from_string(listen_item.addr);
@@ -668,7 +668,7 @@ namespace openvpn {
 		  break;
 		case Protocol::UnixStream:
 		  {
-		    AcceptorUnix::Ptr a(new AcceptorUnix(io_service));
+		    AcceptorUnix::Ptr a(new AcceptorUnix(io_context));
 
 		    // set endpoint
 		    ::unlink(listen_item.addr.c_str());
@@ -718,10 +718,10 @@ namespace openvpn {
 	{
 	  typedef RCPtr<SocketTCP> Ptr;
 
-	  SocketTCP(asio::io_service& io_service,
+	  SocketTCP(asio::io_context& io_context,
 		    const size_t acceptor_index)
 	    :  SocketBase(acceptor_index),
-	       socket(io_service)
+	       socket(io_context)
 	  {
 	  }
 
@@ -759,10 +759,10 @@ namespace openvpn {
 	{
 	  typedef RCPtr<SocketUnix> Ptr;
 
-	  SocketUnix(asio::io_service& io_service,
+	  SocketUnix(asio::io_context& io_context,
 		     const size_t acceptor_index)
 	    :  SocketBase(acceptor_index),
-	       socket(io_service)
+	       socket(io_context)
 	  {
 	  }
 
@@ -797,7 +797,7 @@ namespace openvpn {
 
 	  virtual void async_accept(Listener* listener,
 				    const size_t acceptor_index,
-				    asio::io_service& io_service) = 0;
+				    asio::io_context& io_context) = 0;
 	  virtual void close() = 0;
 	};
 
@@ -814,16 +814,16 @@ namespace openvpn {
 	{
 	  typedef RCPtr<AcceptorTCP> Ptr;
 
-	  AcceptorTCP(asio::io_service& io_service)
-	    : acceptor(io_service)
+	  AcceptorTCP(asio::io_context& io_context)
+	    : acceptor(io_context)
 	  {
 	  }
 
 	  virtual void async_accept(Listener* listener,
 				    const size_t acceptor_index,
-				    asio::io_service& io_service) override
+				    asio::io_context& io_context) override
 	  {
-	    SocketTCP::Ptr sock(new SocketTCP(io_service, acceptor_index));
+	    SocketTCP::Ptr sock(new SocketTCP(io_context, acceptor_index));
 	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
                                                 {
                                                   listener->handle_accept(sock, error);
@@ -843,16 +843,16 @@ namespace openvpn {
 	{
 	  typedef RCPtr<AcceptorUnix> Ptr;
 
-	  AcceptorUnix(asio::io_service& io_service)
-	    : acceptor(io_service)
+	  AcceptorUnix(asio::io_context& io_context)
+	    : acceptor(io_context)
 	  {
 	  }
 
 	  virtual void async_accept(Listener* listener,
 				    const size_t acceptor_index,
-				    asio::io_service& io_service) override
+				    asio::io_context& io_context) override
 	  {
-	    SocketUnix::Ptr sock(new SocketUnix(io_service, acceptor_index));
+	    SocketUnix::Ptr sock(new SocketUnix(io_context, acceptor_index));
 	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
                                                 {
                                                   listener->handle_accept(sock, error);
@@ -870,7 +870,7 @@ namespace openvpn {
 
 	void queue_accept(const size_t acceptor_index)
 	{
-	  acceptors[acceptor_index]->async_accept(this, acceptor_index, io_service);
+	  acceptors[acceptor_index]->async_accept(this, acceptor_index, io_context);
 	}
 
 	void handle_accept(SocketBase::Ptr sock, const asio::error_code& error)
@@ -889,7 +889,7 @@ namespace openvpn {
 		sock->non_blocking(true);
 
 		const client_t client_id = next_id++;
-		Client::Initializer ci(io_service, this, std::move(sock), client_id);
+		Client::Initializer ci(io_context, this, std::move(sock), client_id);
 		Client::Ptr cli = client_factory->new_client(ci);
 		clients[client_id] = cli;
 		cli->start();
@@ -928,7 +928,7 @@ namespace openvpn {
 	    clients.erase(e);
 	}
 
-	asio::io_service& io_service;
+	asio::io_context& io_context;
 	Listen::List listen_list;
 	Config::Ptr config;
 	Client::Factory::Ptr client_factory;
