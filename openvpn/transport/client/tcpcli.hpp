@@ -54,7 +54,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TransportClient::Ptr new_transport_client_obj(asio::io_service& io_service,
+      virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
 							    TransportClientParent& parent);
 
     private:
@@ -86,13 +86,12 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		asio::ip::tcp::resolver::query query(server_host,
-							    server_port);
 		parent.transport_pre_resolve();
-		resolver.async_resolve(query, [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
-                                              {
-                                                self->do_resolve_(error, endpoint_iterator);
-                                              });
+		resolver.async_resolve(server_host, server_port,
+				       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
+				       {
+					 self->do_resolve_(error, results);
+				       });
 	      }
 	  }
       }
@@ -140,14 +139,14 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(asio::io_service& io_service_arg,
+      Client(asio::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TransportClientParent& parent_arg)
-	:  io_service(io_service_arg),
-	   socket(io_service_arg),
+	:  io_context(io_context_arg),
+	   socket(io_context_arg),
 	   config(config_arg),
 	   parent(parent_arg),
-	   resolver(io_service_arg),
+	   resolver(io_context_arg),
 	   halt(false)
       {
       }
@@ -211,14 +210,14 @@ namespace openvpn {
 
       // do DNS resolve
       void do_resolve_(const asio::error_code& error,
-		       asio::ip::tcp::resolver::iterator endpoint_iterator)
+		       asio::ip::tcp::resolver::results_type results)
       {
 	if (!halt)
 	  {
 	    if (!error)
 	      {
 		// save resolved endpoint list in remote_list
-		config->remote_list->set_endpoint_list(endpoint_iterator);
+		config->remote_list->set_endpoint_range(results);
 		start_connect_();
 	      }
 	    else
@@ -291,7 +290,7 @@ namespace openvpn {
       std::string server_host;
       std::string server_port;
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
       asio::ip::tcp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent& parent;
@@ -301,10 +300,10 @@ namespace openvpn {
       bool halt;
     };
 
-    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_service& io_service,
+    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_context& io_context,
 								       TransportClientParent& parent)
     {
-      return TransportClient::Ptr(new Client(io_service, this, parent));
+      return TransportClient::Ptr(new Client(io_context, this, parent));
     }
   }
 } // namespace openvpn

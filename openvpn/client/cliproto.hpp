@@ -127,16 +127,16 @@ namespace openvpn {
 	OptionList::FilterBase::Ptr pushed_options_filter;
       };
 
-      Session(asio::io_service& io_service_arg,
+      Session(asio::io_context& io_context_arg,
 	      const Config& config,
 	      NotifyCallback* notify_callback_arg)
 	: Base(config.proto_context_config, config.cli_stats),
-	  io_service(io_service_arg),
+	  io_context(io_context_arg),
 	  transport_factory(config.transport_factory),
 	  tun_factory(config.tun_factory),
 	  notify_callback(notify_callback_arg),
-	  housekeeping_timer(io_service_arg),
-	  push_request_timer(io_service_arg),
+	  housekeeping_timer(io_context_arg),
+	  push_request_timer(io_context_arg),
 	  halt(false),
 	  received_options(config.push_base),
 	  creds(config.creds),
@@ -149,7 +149,7 @@ namespace openvpn {
 	  fatal_(Error::UNDEF),
 	  pushed_options_limit(config.pushed_options_limit),
 	  pushed_options_filter(config.pushed_options_filter),
-	  inactive_timer(io_service_arg),
+	  inactive_timer(io_context_arg),
 	  inactive_bytes(0),
 	  inactive_last_sample(0)
       {
@@ -175,7 +175,7 @@ namespace openvpn {
 	    housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
 
 	    // initialize transport-layer packet handler
-	    transport = transport_factory->new_transport_client_obj(io_service, *this);
+	    transport = transport_factory->new_transport_client_obj(io_context, *this);
 	    transport->transport_start();
 	  }
       }
@@ -486,7 +486,7 @@ namespace openvpn {
 		Base::process_push(received_options, *proto_context_options);
 
 		// initialize tun/routing
-		tun = tun_factory->new_tun_client_obj(io_service, *this, transport.get());
+		tun = tun_factory->new_tun_client_obj(io_context, *this, transport.get());
 		tun->tun_start(received_options, *transport, Base::dc_settings());
 
 		// initialize data channel after pushed options have been processed
@@ -818,7 +818,7 @@ namespace openvpn {
       }
 #endif
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
 
       TransportClientFactory::Ptr transport_factory;
       TransportClient::Ptr transport;

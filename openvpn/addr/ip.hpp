@@ -101,7 +101,7 @@ namespace openvpn {
 	// slow path
 	{
 	  asio::error_code ec;
-	  asio::ip::address::from_string(ipstr, ec);
+	  asio::ip::make_address(ipstr, ec);
 	  return !ec;
 	}
       }
@@ -109,7 +109,7 @@ namespace openvpn {
       static Addr from_string(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
       {
 	asio::error_code ec;
-	asio::ip::address a = asio::ip::address::from_string(ipstr, ec);
+	asio::ip::address a = asio::ip::make_address(ipstr, ec);
 	if (ec)
 	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
 	const Addr ret = from_asio(a);
@@ -323,10 +323,7 @@ namespace openvpn {
 	if (ver != UNSPEC)
 	  {
 	    const asio::ip::address a = to_asio();
-	    asio::error_code ec;
-	    std::string ret = a.to_string(ec);
-	    if (ec)
-	      throw ip_exception("to_string");
+	    std::string ret = a.to_string();
 	    return ret;
 	  }
 	else

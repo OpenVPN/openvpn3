@@ -455,7 +455,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_tun_client_obj(asio::io_service& io_service,
+      virtual TunClient::Ptr new_tun_client_obj(asio::io_context& io_context,
 						TunClientParent& parent,
 						TransportClient* transcli);
 
@@ -572,7 +572,7 @@ namespace openvpn {
 	      OPENVPN_LOG("open " << state->iface_name << " SUCCEEDED");
 
 	      // create ASIO wrapper for tun fd
-	      tun_wrap->save_replace_sock(new TUNStream(io_service, fd));
+	      tun_wrap->save_replace_sock(new TUNStream(io_context, fd));
 
 	      // initialize failsafe blocker
 	      if (config->enable_failsafe_block && !config->fsblock)
@@ -664,10 +664,10 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(asio::io_service& io_service_arg,
+      Client(asio::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
-	:  io_service(io_service_arg),
+	:  io_context(io_context_arg),
 	   config(config_arg),
 	   parent(parent_arg),
 	   halt(false),
@@ -884,7 +884,7 @@ namespace openvpn {
 	  }
       }
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
       TunWrap::Ptr tun_wrap; // contains the tun device fd
       ClientConfig::Ptr config;
       TunClientParent& parent;
@@ -894,11 +894,11 @@ namespace openvpn {
       ActionList::Ptr remove_cmds;
     };
 
-    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_service& io_service,
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_context& io_context,
 							   TunClientParent& parent,
 							   TransportClient* transcli)
     {
-      return TunClient::Ptr(new Client(io_service, this, parent));
+      return TunClient::Ptr(new Client(io_context, this, parent));
     }
 
   }

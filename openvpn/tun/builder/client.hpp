@@ -58,7 +58,7 @@ namespace openvpn {
     public:
       typedef RCPtr<Tun> Ptr;
 
-      Tun(asio::io_service& io_service,
+      Tun(asio::io_context& io_context,
 	  const int socket,
 	  const bool retain_sd_arg,
 	  const bool tun_prefix_arg,
@@ -67,7 +67,7 @@ namespace openvpn {
 	  const SessionStats::Ptr& stats_arg)
 	: Base(read_handler_arg, frame_arg, stats_arg)
       {
-	Base::stream = new asio::posix::stream_descriptor(io_service, socket);
+	Base::stream = new asio::posix::stream_descriptor(io_context, socket);
 	Base::name_ = "tun";
 	Base::retain_stream = retain_sd_arg;
 	Base::tun_prefix = tun_prefix_arg;
@@ -97,7 +97,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_tun_client_obj(asio::io_service& io_service,
+      virtual TunClient::Ptr new_tun_client_obj(asio::io_context& io_context,
 						TunClientParent& parent,
 						TransportClient* transcli);
 
@@ -174,7 +174,7 @@ namespace openvpn {
 	      if (tun_persist->persist_tun_state(sd, state))
 		  OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 
-	      impl.reset(new TunImpl(io_service,
+	      impl.reset(new TunImpl(io_context,
 				     sd,
 				     true,
 				     config->tun_prefix,
@@ -236,10 +236,10 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(asio::io_service& io_service_arg,
+      Client(asio::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
-	:  io_service(io_service_arg),
+	:  io_context(io_context_arg),
 	   config(config_arg),
 	   parent(parent_arg),
 	   halt(false),
@@ -279,7 +279,7 @@ namespace openvpn {
       }
 
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
       TunPersist::Ptr tun_persist; // owns the tun socket descriptor
       ClientConfig::Ptr config;
       TunClientParent& parent;
@@ -288,11 +288,11 @@ namespace openvpn {
       TunProp::State::Ptr state;
     };
 
-    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_service& io_service,
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_context& io_context,
 							   TunClientParent& parent,
 							   TransportClient* transcli)
     {
-      return TunClient::Ptr(new Client(io_service, this, parent));
+      return TunClient::Ptr(new Client(io_context, this, parent));
     }
 
   }

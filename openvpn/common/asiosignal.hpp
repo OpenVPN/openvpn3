@@ -37,8 +37,8 @@ namespace openvpn {
   public:
     typedef RCPtr<ASIOSignals> Ptr;
 
-    ASIOSignals(asio::io_service& io_service)
-      : halt(false), signals_(io_service) {}
+    ASIOSignals(asio::io_context& io_context)
+      : halt(false), signals_(io_context) {}
 
     enum {
       S_SIGINT  = (1<<0),

@@ -97,7 +97,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_tun_client_obj(asio::io_service& io_service,
+      virtual TunClient::Ptr new_tun_client_obj(asio::io_context& io_context,
 						TunClientParent& parent,
 						TransportClient* transcli);
 
@@ -180,7 +180,7 @@ namespace openvpn {
 		  OPENVPN_LOG(version.to_string());
 
 		  // create ASIO wrapper for HANDLE
-		  TAPStream* ts = new TAPStream(io_service, th);
+		  TAPStream* ts = new TAPStream(io_context, th);
 
 		  // persist tun settings state
 		  if (tun_persist->persist_tun_state(ts, state))
@@ -265,10 +265,10 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(asio::io_service& io_service_arg,
+      Client(asio::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
-	:  io_service(io_service_arg),
+	:  io_context(io_context_arg),
 	   config(config_arg),
 	   parent(parent_arg),
 	   halt(false),
@@ -566,7 +566,7 @@ namespace openvpn {
 	  Util::tap_process_logging(h);
       }
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
       TunPersist::Ptr tun_persist; // contains the TAP device HANDLE
       ClientConfig::Ptr config;
       TunClientParent& parent;
@@ -576,11 +576,11 @@ namespace openvpn {
       ActionList::Ptr remove_cmds;
     };
 
-    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_service& io_service,
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_context& io_context,
 							   TunClientParent& parent,
 							   TransportClient* transcli)
     {
-      return TunClient::Ptr(new Client(io_service, this, parent));
+      return TunClient::Ptr(new Client(io_context, this, parent));
     }
 
   }

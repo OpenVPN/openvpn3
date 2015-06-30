@@ -60,8 +60,8 @@ namespace openvpn {
   class AsioTimer : public asio::basic_waitable_timer<AsioClock>
   {
   public:
-    AsioTimer(asio::io_service& io_service)
-      : asio::basic_waitable_timer<AsioClock>(io_service)
+    AsioTimer(asio::io_context& io_context)
+      : asio::basic_waitable_timer<AsioClock>(io_context)
     {
     }
 

@@ -191,7 +191,7 @@ namespace openvpn {
       static Addr from_string(const std::string& ipstr, const char *title = nullptr)
       {
 	asio::error_code ec;
-	asio::ip::address_v4 a = asio::ip::address_v4::from_string(ipstr, ec);
+	asio::ip::address_v4 a = asio::ip::make_address_v4(ipstr, ec);
 	if (ec)
 	  throw ipv4_exception(IP::internal::format_error(ipstr, title, "v4", ec));
 	return from_asio(a);
@@ -200,10 +200,7 @@ namespace openvpn {
       std::string to_string() const
       {
 	const asio::ip::address_v4 a = to_asio();
-	asio::error_code ec;
-	std::string ret = a.to_string(ec);
-	if (ec)
-	  throw ipv4_exception("to_string");
+	std::string ret = a.to_string();
 	return ret;
       }
 
@@ -268,7 +265,7 @@ namespace openvpn {
       static Addr from_asio(const asio::ip::address_v4& asio_addr)
       {
 	Addr ret;
-	ret.u.addr = (std::uint32_t)asio_addr.to_ulong();
+	ret.u.addr = (std::uint32_t)asio_addr.to_uint();
 	return ret;
       }
 

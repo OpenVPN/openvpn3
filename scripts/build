@@ -158,7 +158,7 @@ fi
 #fi
 
 # asio
-CPPFLAGS="$CPPFLAGS -DASIO_STANDALONE -I$DEP_DIR/asio/asio/include"
+CPPFLAGS="$CPPFLAGS -DASIO_STANDALONE -DASIO_NO_DEPRECATED -I$DEP_DIR/asio/asio/include"
 
 # LZO compression
 if [ "$LZO" = "1" ]; then

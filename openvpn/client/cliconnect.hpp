@@ -74,7 +74,7 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(client_connect_unhandled_exception);
 
-    ClientConnect(asio::io_service& io_service_arg,
+    ClientConnect(asio::io_context& io_context_arg,
 		  const ClientOptions::Ptr& client_options_arg)
       : generation(0),
 	halt(false),
@@ -83,11 +83,11 @@ namespace openvpn {
 	dont_restart_(false),
 	lifecycle_started(false),
 	conn_timeout(client_options_arg->conn_timeout()),
-	io_service(io_service_arg),
+	io_context(io_context_arg),
 	client_options(client_options_arg),
-	server_poll_timer(io_service_arg),
-	restart_wait_timer(io_service_arg),
-	conn_timer(io_service_arg),
+	server_poll_timer(io_context_arg),
+	restart_wait_timer(io_context_arg),
+	conn_timer(io_context_arg),
 	conn_timer_pending(false)
     {
     }
@@ -100,7 +100,7 @@ namespace openvpn {
 	    throw ErrorCode(Error::NETWORK_UNAVAILABLE, true, "Network Unavailable");
 
 	  RemoteList::Ptr remote_list = client_options->remote_list_precache();
-	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_service,
+	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_context,
 									remote_list,
 									client_options->stats_ptr()));
 	  if (preres->work_available())
@@ -161,10 +161,10 @@ namespace openvpn {
     void thread_safe_stop()
     {
       if (!halt)
-	io_service.post([self=Ptr(this)]()
-                        {
-                          self->graceful_stop();
-                        });
+	asio::post(io_context, [self=Ptr(this)]()
+		   {
+		     self->graceful_stop();
+		   });
     }
 
     void pause(const std::string& reason)
@@ -179,7 +179,7 @@ namespace openvpn {
 	      interim_finalize();
 	    }
 	  cancel_timers();
-	  asio_work.reset(new asio::io_service::work(io_service));
+	  asio_work.reset(new asio::io_context::work(io_context));
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause(reason);
 	  client_options->events().add_event(ev);
 	  client_options->stats().error(Error::N_PAUSE);
@@ -216,28 +216,28 @@ namespace openvpn {
     void thread_safe_pause(const std::string& reason)
     {
       if (!halt)
-	io_service.post([self=Ptr(this), reason]()
-                        {
-                          self->pause(reason);
-                        });
+	asio::post(io_context, [self=Ptr(this), reason]()
+		   {
+		     self->pause(reason);
+		   });
     }
 
     void thread_safe_resume()
     {
       if (!halt)
-	io_service.post([self=Ptr(this)]()
-                        {
-                          self->resume();
-                        });
+	asio::post(io_context, [self=Ptr(this)]()
+		   {
+		     self->resume();
+		   });
     }
 
     void thread_safe_reconnect(int seconds)
     {
       if (!halt)
-	io_service.post([self=Ptr(this), seconds]()
-                        {
-                          self->reconnect(seconds);
-                        });
+	asio::post(io_context, [self=Ptr(this), seconds]()
+		   {
+		     self->reconnect(seconds);
+		   });
     }
 
     void dont_restart()
@@ -524,7 +524,7 @@ namespace openvpn {
 	    client_options->next();
 	}
       Client::Config::Ptr cli_config = client_options->client_config(); // client_config in cliopt.hpp
-      client.reset(new Client(io_service, *cli_config, this)); // build ClientProto::Session from cliproto.hpp
+      client.reset(new Client(io_context, *cli_config, this)); // build ClientProto::Session from cliproto.hpp
       client_finalized = false;
 
       restart_wait_timer.cancel();
@@ -569,14 +569,14 @@ namespace openvpn {
     bool dont_restart_;
     bool lifecycle_started;
     int conn_timeout;
-    asio::io_service& io_service;
+    asio::io_context& io_context;
     ClientOptions::Ptr client_options;
     Client::Ptr client;
     AsioTimer server_poll_timer;
     AsioTimer restart_wait_timer;
     AsioTimer conn_timer;
     bool conn_timer_pending;
-    std::unique_ptr<asio::io_service::work> asio_work;
+    std::unique_ptr<asio::io_context::work> asio_work;
     RemoteList::PreResolve::Ptr pre_resolve;
   };
 

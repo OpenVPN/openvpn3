@@ -88,7 +88,7 @@ namespace openvpn {
   {
     typedef RCPtr<TransportClientFactory> Ptr;
 
-    virtual TransportClient::Ptr new_transport_client_obj(asio::io_service& io_service,
+    virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
 							  TransportClientParent& parent) = 0;
   };
 

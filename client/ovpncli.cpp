@@ -305,7 +305,7 @@ namespace openvpn {
 			default_key_direction(-1), force_aes_cbc_ciphersuites(false),
 			alt_proxy(false),
 			dco(false),
-			io_service(nullptr) {}
+			io_context(nullptr) {}
 
 	OptionList options;
 	EvalConfig eval;
@@ -334,7 +334,7 @@ namespace openvpn {
 	bool alt_proxy;
 	bool dco;
 
-	asio::io_service* io_service;
+	asio::io_context* io_context;
 
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent)
@@ -692,7 +692,7 @@ namespace openvpn {
 	client_options->submit_creds(state->creds);
 
 	// instantiate top-level client session
-	state->session.reset(new ClientConnect(*state->io_service, client_options));
+	state->session.reset(new ClientConnect(*state->io_context, client_options));
 
 	// raise an exception if app has expired
 	check_app_expired();
@@ -728,15 +728,15 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_attach()
     {
-      state->io_service = new asio::io_service(1); // concurrency hint=1
+      state->io_context = new asio::io_context(1); // concurrency hint=1
       state->attach<MySessionStats, MyClientEvents>(this);
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_detach()
     {
       state->detach();
-      delete state->io_service;
-      state->io_service = nullptr;
+      delete state->io_context;
+      state->io_context = nullptr;
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_pre_run()
@@ -745,13 +745,13 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_run()
     {
-      state->io_service->run();
+      state->io_context->run();
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_session_stop()
     {
       state->session->stop();     // On exception, stop client...
-      state->io_service->poll();  //   and execute completion handlers.
+      state->io_context->poll();  //   and execute completion handlers.
     }
 
     OPENVPN_CLIENT_EXPORT ConnectionInfo OpenVPNClient::connection_info()

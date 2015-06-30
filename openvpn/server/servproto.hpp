@@ -65,9 +65,9 @@ namespace openvpn {
       typedef RCPtr<Factory> Ptr;
       typedef Base::Config ProtoConfig;
 
-      Factory(asio::io_service& io_service_arg,
+      Factory(asio::io_context& io_context_arg,
 	      const Base::Config& c)
-	: io_service(io_service_arg)
+	: io_context(io_context_arg)
       {
 	if (c.tls_auth_enabled())
 	  preval.reset(new Base::TLSAuthPreValidate(c, true));
@@ -93,7 +93,7 @@ namespace openvpn {
 	return new ProtoConfig(*proto_context_config);
       }
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
       ProtoConfig::Ptr proto_context_config;
 
       ManClientInstanceFactory::Ptr man_factory;
@@ -267,16 +267,16 @@ namespace openvpn {
       }
 
     private:
-      Session(asio::io_service& io_service_arg,
+      Session(asio::io_context& io_context_arg,
 	      const Factory& factory,
 	      ManClientInstanceFactory::Ptr man_factory_arg,
 	      TunClientInstanceFactory::Ptr tun_factory_arg)
 	: Base(factory.clone_proto_config(), factory.stats),
-	  io_service(io_service_arg),
+	  io_context(io_context_arg),
 	  halt(false),
 	  did_push(false),
 	  did_client_halt_restart(false),
-	  housekeeping_timer(io_service_arg),
+	  housekeeping_timer(io_context_arg),
 	  disconnect_at(Time::infinite()),
 	  stats(factory.stats),
 	  man_factory(man_factory_arg),
@@ -559,7 +559,7 @@ namespace openvpn {
 	  }
       }
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
       bool halt;
       bool did_push;
       bool did_client_halt_restart;
@@ -580,7 +580,7 @@ namespace openvpn {
 
   inline TransportClientInstanceRecv::Ptr ServerProto::Factory::new_client_instance()
   {
-    return new Session(io_service, *this, man_factory, tun_factory);
+    return new Session(io_context, *this, man_factory, tun_factory);
   }
 }
 

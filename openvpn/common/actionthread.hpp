@@ -41,10 +41,10 @@ namespace openvpn {
       virtual void action_thread_finished(const ActionThread* self, bool status) = 0;
     };
 
-    ActionThread(asio::io_service& io_service_arg,
+    ActionThread(asio::io_context& io_context_arg,
 		 const ActionList::Ptr& action_list,
 		 Notify* completion_handler_arg)
-      : io_service(io_service_arg),
+      : io_context(io_context_arg),
 	thread(nullptr),
 	actions(action_list),
 	completion_handler(completion_handler_arg)
@@ -63,7 +63,7 @@ namespace openvpn {
 	  delete thread;
 	  thread = nullptr;
 	  // Necessary because no guarantee that completion_handler
-	  // obj will remain in scope during io_service.post delay.
+	  // obj will remain in scope during io_context.post delay.
 	  completion_handler = nullptr;
 	}
     }
@@ -95,13 +95,13 @@ namespace openvpn {
 	{
 	  OPENVPN_LOG("ActionThread Exception: " << e.what());
 	}
-      io_service.post([self=Ptr(this), status]()
-                      {
-                        self->completion_post(status);
-                      });
+      asio::post(io_context, [self=Ptr(this), status]()
+		 {
+		   self->completion_post(status);
+		 });
     }
 
-    asio::io_service& io_service;
+    asio::io_context& io_context;
     std::thread* thread;
     ActionList::Ptr actions;       // actions to execute in child thread
     Notify* completion_handler;    // completion handler

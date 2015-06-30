@@ -42,8 +42,8 @@ namespace openvpn {
 	IP::Addr bind_local_addr;
       };
 
-      explicit SocketService(asio::io_service& io_service)
-	: SocketServiceBase(io_service)
+      explicit SocketService(asio::io_context& io_context)
+	: SocketServiceBase(io_context)
       {
       }
 
@@ -51,8 +51,8 @@ namespace openvpn {
 
       // Override the open method so we can bind immediately after open.
       asio::error_code open(implementation_type& impl,
-				     const protocol_type& protocol,
-				     asio::error_code& ec)
+			    const protocol_type& protocol,
+			    asio::error_code& ec)
       {
 	ec = SocketServiceBase::open(impl, protocol, ec);
 	if (ec)
@@ -75,8 +75,8 @@ namespace openvpn {
 
     struct Socket : public SocketBase
     {
-      explicit Socket(asio::io_service& io_service)
-	: SocketBase(io_service)
+      explicit Socket(asio::io_context& io_context)
+	: SocketBase(io_context)
       {
       }
 

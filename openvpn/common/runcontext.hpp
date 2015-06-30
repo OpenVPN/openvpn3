@@ -77,14 +77,14 @@ namespace openvpn {
     };
 
     RunContext()
-      : io_service(1),
-	exit_timer(io_service),
+      : io_context(1),
+	exit_timer(io_context),
 	thread_count(0),
 	halt(false),
 	log_context(this),
 	log_wrap()
     {
-      signals.reset(new ASIOSignals(io_service));
+      signals.reset(new ASIOSignals(io_context));
       signal_rearm();
 
 #ifdef OPENVPN_EXIT_IN
@@ -129,7 +129,7 @@ namespace openvpn {
     void run()
     {
       if (!halt)
-	io_service.run();
+	io_context.run();
     }
 
     void join()
@@ -195,10 +195,10 @@ namespace openvpn {
 	  exit_timer.cancel();
 
 	  if (signals)
-	    io_service.post([sig=signals]()
-                            {
-                              sig->cancel();
-                            });
+	    asio::post(io_context, [sig=signals]()
+		       {
+			 sig->cancel();
+		       });
 
 	  unsigned int stopped = 0;
 	  for (size_t i = 0; i < servlist.size(); ++i)
@@ -251,7 +251,7 @@ namespace openvpn {
     }
 
     // these vars only used by main thread
-    asio::io_service io_service;
+    asio::io_context io_context;
     typename Stats::Ptr stats;
     ASIOSignals::Ptr signals;
     AsioTimer exit_timer;

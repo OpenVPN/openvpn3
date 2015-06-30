@@ -57,7 +57,7 @@ namespace openvpn {
   {
     typedef RCPtr<TransportServerFactory> Ptr;
 
-    virtual TransportServer::Ptr new_server_obj(asio::io_service& io_service) = 0;
+    virtual TransportServer::Ptr new_server_obj(asio::io_context& io_context) = 0;
   };
 
   // Base class for the per-client-instance state of the TransportServer.

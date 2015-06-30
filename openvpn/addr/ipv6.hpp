@@ -98,7 +98,7 @@ namespace openvpn {
       static Addr from_string(const std::string& ipstr, const char *title = nullptr)
       {
 	asio::error_code ec;
-	asio::ip::address_v6 a = asio::ip::address_v6::from_string(ipstr, ec);
+	asio::ip::address_v6 a = asio::ip::make_address_v6(ipstr, ec);
 	if (ec)
 	  throw ipv6_exception(IP::internal::format_error(ipstr, title, "v6", ec));
 	return from_asio(a);
@@ -107,10 +107,7 @@ namespace openvpn {
       std::string to_string() const
       {
 	const asio::ip::address_v6 a = to_asio();
-	asio::error_code ec;
-	std::string ret = a.to_string(ec);
-	if (ec)
-	  throw ipv6_exception("to_string");
+	std::string ret = a.to_string();
 	return ret;
       }
 

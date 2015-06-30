@@ -66,7 +66,7 @@ namespace openvpn {
     public:
       typedef RCPtr<Tun> Ptr;
 
-      Tun(asio::io_service& io_service,
+      Tun(asio::io_context& io_context,
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg,
@@ -123,7 +123,7 @@ namespace openvpn {
 	  }
 
 	Base::name_ = ifr.ifr_name;
-	Base::stream = new asio::posix::stream_descriptor(io_service, fd.release());
+	Base::stream = new asio::posix::stream_descriptor(io_context, fd.release());
 	OPENVPN_LOG_TUN(Base::name_ << " opened");
       }
 

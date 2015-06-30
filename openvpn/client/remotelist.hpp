@@ -124,17 +124,16 @@ namespace openvpn {
       }
 
       // cache a list of DNS-resolved IP addresses
-      template <class EPITER>
-      void set_endpoint_list(EPITER& endpoint_iterator)
+      template <class EPRANGE>
+      void set_endpoint_range(EPRANGE& endpoint_range)
       {
-	EPITER end;
+	EPRANGE end;
 	res_addr_list.reset(new ResolvedAddrList());
-	while (endpoint_iterator != end)
+	for (const auto &i : endpoint_range)
 	  {
 	    ResolvedAddr::Ptr addr(new ResolvedAddr());
-	    addr->addr = IP::Addr::from_asio(endpoint_iterator->endpoint().address());
+	    addr->addr = IP::Addr::from_asio(i.endpoint().address());
 	    res_addr_list->push_back(addr);
-	    ++endpoint_iterator;
 	  }
 	OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint SET " << to_string());
       }
@@ -255,11 +254,11 @@ namespace openvpn {
 	virtual void pre_resolve_done() = 0;
       };
 
-      PreResolve(asio::io_service& io_service_arg,
+      PreResolve(asio::io_context& io_context_arg,
 		 const RemoteList::Ptr& remote_list_arg,
 		 const SessionStats::Ptr& stats_arg)
-	:  io_service(io_service_arg),
-	   resolver(io_service_arg),
+	:  io_context(io_context_arg),
+	   resolver(io_context_arg),
 	   notify_callback(nullptr),
 	   remote_list(remote_list_arg),
 	   stats(stats_arg),
@@ -320,11 +319,11 @@ namespace openvpn {
 		  {
 		    // call into Asio to do the resolve operation
 		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item.server_host);
-		    asio::ip::tcp::resolver::query query(item.server_host, "0");
-		    resolver.async_resolve(query, [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::iterator endpoint_iterator)
-                                                  {
-                                                    self->resolve_callback(error, endpoint_iterator);
-                                                  });
+		    resolver.async_resolve(item.server_host, "",
+					   [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
+					   {
+					     self->resolve_callback(error, results);
+					   });
 		    return;
 		  }
 	      }
@@ -345,7 +344,7 @@ namespace openvpn {
 
       // callback on resolve completion
       void resolve_callback(const asio::error_code& error,
-			    asio::ip::tcp::resolver::iterator endpoint_iterator)
+			    asio::ip::tcp::resolver::results_type results)
       {
 	if (notify_callback && index < remote_list->list.size())
 	  {
@@ -353,7 +352,7 @@ namespace openvpn {
 	    if (!error)
 	      {
 		// resolve succeeded
-		item.set_endpoint_list(endpoint_iterator);
+		item.set_endpoint_range(results);
 	      }
 	    else
 	      {
@@ -366,7 +365,7 @@ namespace openvpn {
 	  }
       }
 
-      asio::io_service& io_service;
+      asio::io_context& io_context;
       asio::ip::tcp::resolver resolver;
       NotifyCallback* notify_callback;
       RemoteList::Ptr remote_list;
@@ -577,11 +576,11 @@ namespace openvpn {
     }
 
     // cache a list of DNS-resolved IP addresses
-    template <class EPITER>
-    void set_endpoint_list(EPITER& endpoint_iterator)
+    template <class EPRANGE>
+    void set_endpoint_range(EPRANGE& endpoint_range)
     {
       Item& item = *list[primary_index()];
-      item.set_endpoint_list(endpoint_iterator);
+      item.set_endpoint_range(endpoint_range);
       index.reset_secondary();
     }
 
