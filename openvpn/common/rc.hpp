@@ -167,6 +167,79 @@ namespace openvpn {
     T* px;
   };
 
+  template <typename T>
+  class RCWeakPtr
+  {
+    typedef RCPtr<T> Strong;
+
+  public:
+    typedef T element_type;
+
+    RCWeakPtr() noexcept {}
+
+    RCWeakPtr(const Strong& p) noexcept
+    {
+      if (p)
+	controller = p->refcount_.controller;
+    }
+
+    RCWeakPtr(T* p) noexcept
+    {
+      if (p)
+	controller = p->refcount_.controller;
+    }
+
+    void reset(const Strong& p) noexcept
+    {
+      if (p)
+	controller = p->refcount_.controller;
+      else
+	controller.reset();
+    }
+
+    void reset(T* p) noexcept
+    {
+      if (p)
+	controller = p->refcount_.controller;
+      else
+	controller.reset();
+    }
+
+    void reset() noexcept
+    {
+      controller.reset();
+    }
+
+    void swap(RCWeakPtr& other) noexcept
+    {
+      controller.swap(other.controller);
+    }
+
+    olong use_count() const noexcept
+    {
+      if (controller)
+	return controller->use_count();
+      else
+	return 0;
+    }
+
+    bool expired() const noexcept
+    {
+      return use_count() == 0;
+    }
+
+    Strong lock() const noexcept
+    {
+      if (controller)
+	return controller->template lock<Strong>();
+      else
+	return Strong();
+    }
+
+  private:
+    typename T::Controller::Ptr controller;
+  };
+
   class thread_unsafe_refcount
   {
   public:
@@ -332,6 +405,8 @@ namespace openvpn {
   class RC
   {
   public:
+    typedef RCPtr<RC> Ptr;
+
     RC() noexcept {}
     virtual ~RC() {}
 
@@ -510,6 +585,9 @@ namespace openvpn {
     };
 
   public:
+    typedef RCPtr<RCWeak> Ptr;
+    typedef RCWeakPtr<RCWeak> WPtr;
+
     RCWeak() noexcept
       : refcount_(this)
     {
@@ -548,79 +626,6 @@ namespace openvpn {
     template <typename R> friend void intrusive_ptr_release(R* p) noexcept;
 
     ControllerRef refcount_;
-  };
-
-  template <typename T>
-  class RCWeakPtr
-  {
-    typedef RCPtr<T> Strong;
-
-  public:
-    typedef T element_type;
-
-    RCWeakPtr() noexcept {}
-
-    RCWeakPtr(const Strong& p) noexcept
-    {
-      if (p)
-	controller = p->refcount_.controller;
-    }
-
-    RCWeakPtr(T* p) noexcept
-    {
-      if (p)
-	controller = p->refcount_.controller;
-    }
-
-    void reset(const Strong& p) noexcept
-    {
-      if (p)
-	controller = p->refcount_.controller;
-      else
-	controller.reset();
-    }
-
-    void reset(T* p) noexcept
-    {
-      if (p)
-	controller = p->refcount_.controller;
-      else
-	controller.reset();
-    }
-
-    void reset() noexcept
-    {
-      controller.reset();
-    }
-
-    void swap(RCWeakPtr& other) noexcept
-    {
-      controller.swap(other.controller);
-    }
-
-    olong use_count() const noexcept
-    {
-      if (controller)
-	return controller->use_count();
-      else
-	return 0;
-    }
-
-    bool expired() const noexcept
-    {
-      return use_count() == 0;
-    }
-
-    Strong lock() const noexcept
-    {
-      if (controller)
-	return controller->template lock<Strong>();
-      else
-	return Strong();
-    }
-
-  private:
-    typename T::Controller::Ptr controller;
   };
 
   template <typename R>
