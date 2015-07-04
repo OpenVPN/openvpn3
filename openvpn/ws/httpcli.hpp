@@ -25,11 +25,14 @@
 #ifndef OPENVPN_WS_HTTPCLI_H
 #define OPENVPN_WS_HTTPCLI_H
 
+#include <string>
+#include <sstream>
 #include <algorithm>         // for std::min, std::max
 
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
+#include <openvpn/common/asiopolysock.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/http/reply.hpp>
@@ -165,20 +168,21 @@ namespace openvpn {
 
       class HTTPCore : public Base, public TransportClientParent
       {
+      public:
 	friend Base;
 
-	typedef TCPTransport::Link<asio::ip::tcp, HTTPCore*, false> LinkImpl;
-	friend LinkImpl; // calls tcp_* handlers
-
-      public:
 	typedef RCPtr<HTTPCore> Ptr;
+
+	struct AsioProtocol
+	{
+	  typedef AsioPolySock::Base socket;
+	};
 
 	HTTPCore(asio::io_context& io_context_arg,
 	     const Config::Ptr& config_arg)
 	  : Base(config_arg),
 	    io_context(io_context_arg),
 	    alive(false),
-	    socket(io_context_arg),
 	    resolver(io_context_arg),
 	    connect_timer(io_context_arg),
 	    general_timer(io_context_arg)
@@ -207,7 +211,7 @@ namespace openvpn {
 		transcli->stop();
 	      if (link)
 		link->stop();
-	      socket.close();
+	      socket.reset();
 	      resolver.cancel();
 	      general_timer.cancel();
 	      connect_timer.cancel();
@@ -251,6 +255,9 @@ namespace openvpn {
 	}
 
       private:
+	typedef TCPTransport::Link<AsioProtocol, HTTPCore*, false> LinkImpl;
+	friend LinkImpl; // calls tcp_* handlers
+
 	void verify_frame()
 	{
 	  if (!frame)
@@ -285,33 +292,48 @@ namespace openvpn {
 	    else
 	      {
 		host = http_host();
-		if (host.port.empty())
-		  host.port = config->ssl_factory ? "443" : "80";
+#ifdef ASIO_HAS_LOCAL_SOCKETS
+		if (host.port == "unix")
+		  {
+		    asio::local::stream_protocol::endpoint ep(host.host);
+		    AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
+		    socket.reset(s);
+		    s->socket.async_connect(ep,
+					    [self=Ptr(this)](const asio::error_code& error)
+					    {
+					      self->handle_unix_connect(error);
+					    });
+		  }
+		else
+#endif
+		  {
+		    if (host.port.empty())
+		      host.port = config->ssl_factory ? "443" : "80";
 
-		if (config->ssl_factory)
-		  ssl_sess = config->ssl_factory->ssl(host.host_cn());
+		    if (config->ssl_factory)
+		      ssl_sess = config->ssl_factory->ssl(host.host_cn());
 
+		    if (config->transcli)
+		      {
+			transcli = config->transcli->new_transport_client_obj(io_context, *this);
+			transcli->transport_start();
+		      }
+		    else
+		      {
+			resolver.async_resolve(host.host_transport(), host.port,
+					       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
+					       {
+						 self->handle_tcp_resolve(error, results);
+					       });
+		      }
+		  }
 		if (config->connect_timeout)
 		  {
 		    connect_timer.expires_at(now + Time::Duration::seconds(config->connect_timeout));
 		    connect_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
-                                             {
-                                               self->connect_timeout_handler(error);
-                                             });
-		  }
-
-		if (config->transcli)
-		  {
-		    transcli = config->transcli->new_transport_client_obj(io_context, *this);
-		    transcli->transport_start();
-		  }
-		else
-		  {
-		    resolver.async_resolve(host.host_transport(), host.port,
-					   [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
-					   {
-					     self->handle_resolve(error, results);
-					   });
+					     {
+					       self->connect_timeout_handler(error);
+					     });
 		  }
 	      }
 	  }
@@ -321,8 +343,8 @@ namespace openvpn {
 	    }
 	}
 
-	void handle_resolve(const asio::error_code& error, // called by Asio
-			    asio::ip::tcp::resolver::results_type results)
+	void handle_tcp_resolve(const asio::error_code& error, // called by Asio
+				asio::ip::tcp::resolver::results_type results)
 	{
 	  if (halt)
 	    return;
@@ -334,10 +356,12 @@ namespace openvpn {
 	    }
 
 	  try {
-	    asio::async_connect(socket, results,
+	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
+	    socket.reset(s);
+	    async_connect(s->socket, results,
 				[self=Ptr(this)](const asio::error_code& error, const asio::ip::tcp::endpoint& endpoint)
 				{
-				  self->handle_connect(error, endpoint);
+				  self->handle_tcp_connect(error, endpoint);
 				});
 	  }
 	  catch (const std::exception& e)
@@ -345,6 +369,49 @@ namespace openvpn {
 	      handle_exception("handle_resolve", e);
 	    }
 	}
+
+	void handle_tcp_connect(const asio::error_code& error, // called by Asio
+				const asio::ip::tcp::endpoint& endpoint)
+	{
+	  if (halt)
+	    return;
+
+	  if (error)
+	    {
+	      asio_error_handler(Status::E_CONNECT, "handle_tcp_connect", error);
+	      return;
+	    }
+
+	  try {
+	    do_connect(true);
+	  }
+	  catch (const std::exception& e)
+	    {
+	      handle_exception("handle_tcp_connect", e);
+	    }
+	}
+
+#ifdef ASIO_HAS_LOCAL_SOCKETS
+	void handle_unix_connect(const asio::error_code& error) // called by Asio
+	{
+	  if (halt)
+	    return;
+
+	  if (error)
+	    {
+	      asio_error_handler(Status::E_CONNECT, "handle_unix_connect", error);
+	      return;
+	    }
+
+	  try {
+	    do_connect(true);
+	  }
+	  catch (const std::exception& e)
+	    {
+	      handle_exception("handle_unix_connect", e);
+	    }
+	}
+#endif
 
 	void do_connect(const bool use_link)
 	{
@@ -354,7 +421,7 @@ namespace openvpn {
 	  if (use_link)
 	    {
 	      link.reset(new LinkImpl(this,
-				      socket,
+				      *socket,
 				      0, // send_queue_max_size (unlimited)
 				      8, // free_list_max_size
 				      (*frame)[Frame::READ_HTTP],
@@ -368,27 +435,6 @@ namespace openvpn {
 
 	  // xmit the request
 	  generate_request();
-	}
-
-	void handle_connect(const asio::error_code& error, // called by Asio
-			    const asio::ip::tcp::endpoint& endpoint)
-	{
-	  if (halt)
-	    return;
-
-	  if (error)
-	    {
-	      asio_error_handler(Status::E_CONNECT, "handle_connect", error);
-	      return;
-	    }
-
-	  try {
-	    do_connect(true);
-	  }
-	  catch (const std::exception& e)
-	    {
-	      handle_exception("handle_connect", e);
-	    }
 	}
 
 	void general_timeout_handler(const asio::error_code& e) // called by Asio
@@ -599,9 +645,11 @@ namespace openvpn {
 
 	std::string err_fmt(const Error::Type fatal_err, const std::string& err_text)
 	{
-	  return std::string(Error::name(fatal_err))
-	    + std::string(" : ")
-	    + err_text;
+	  std::ostringstream os;
+	  if (fatal_err != Error::SUCCESS)
+	    os << Error::name(fatal_err) << " : ";
+	  os << err_text;
+	  return os.str();
 	}
 
 	virtual void transport_error(const Error::Type fatal_err, const std::string& err_text)
@@ -644,7 +692,7 @@ namespace openvpn {
 
 	bool alive;
 
-	asio::ip::tcp::socket socket;
+	AsioPolySock::Base::Ptr socket;
 	asio::ip::tcp::resolver resolver;
 
 	Host host;
