@@ -67,6 +67,11 @@ namespace openvpn {
 	push_back(item);
       }
 
+      List(Item&& item)
+      {
+	push_back(std::move(item));
+      }
+
       List(const OptionList& opt,
 	   const std::string& directive,
 	   const bool allow_default,
