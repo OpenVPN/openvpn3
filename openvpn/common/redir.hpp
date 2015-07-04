@@ -163,6 +163,15 @@ namespace openvpn {
       out = std::move(stdout_temp.fd);
       combine_out_err = combine_out_err_arg;
     }
+
+    RedirectTemp(const std::string& stdin_fn,
+		 TempFile& stdout_temp,
+		 TempFile& stderr_temp)
+    {
+      open_input(stdin_fn);
+      out = std::move(stdout_temp.fd);
+      err = std::move(stderr_temp.fd);
+    }
   };
 }
 
