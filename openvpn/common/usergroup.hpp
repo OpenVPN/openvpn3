@@ -71,7 +71,7 @@ namespace openvpn {
     {
       if (gr)
 	{
-	  if (setgid(gr->gr_gid))
+	  if (::setgid(gr->gr_gid))
 	    OPENVPN_THROW(user_group_err, "setgid failed for group '" << group_name << "': " << std::strerror(errno));
 	  gid_t gr_list[1];
 	  gr_list[0] = gr->gr_gid;
@@ -81,10 +81,16 @@ namespace openvpn {
 	}
       if (pw)
 	{
-	  if (setuid(pw->pw_uid))
+	  if (::setuid(pw->pw_uid))
 	    OPENVPN_THROW(user_group_err, "setuid failed for user '" << user_name << "': " << std::strerror(errno));
 	  OPENVPN_LOG("UID set to '" << user_name << '\'');
 	}
+    }
+
+    void invalidate()
+    {
+      pw = nullptr;
+      gr = nullptr;
     }
 
   private:
