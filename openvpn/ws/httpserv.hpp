@@ -5,6 +5,7 @@
 //
 
 #include <unistd.h>    // for unlink()
+#include <sys/stat.h>  // for chmod()
 
 #include <string>
 #include <cstdint>
@@ -21,6 +22,7 @@
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/sockopt.hpp>
+#include <openvpn/common/asiopolysock.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimer.hpp>
@@ -101,7 +103,8 @@ namespace openvpn {
 	typedef RCPtr<Config> Ptr;
 
 	Config()
-	  : tcp_max(0),
+	  : unix_mode(0),
+	    tcp_max(0),
 	    general_timeout(15),
 	    max_headers(0),
 	    max_header_bytes(0),
@@ -113,6 +116,7 @@ namespace openvpn {
 	}
 
 	SSLFactoryAPI::Ptr ssl_factory;
+	mode_t unix_mode;
 	unsigned int tcp_max;
 	unsigned int general_timeout;
 	unsigned int max_headers;
@@ -142,36 +146,9 @@ namespace openvpn {
 	int http_status;
 	std::string http_status_str; // optional
 	std::string type;
+	std::string basic_realm;
 	content_len_t length;
 	bool keepalive;
-      };
-
-      class SocketBase : public RC<thread_unsafe_refcount>
-      {
-      public:
-	typedef RCPtr<SocketBase> Ptr;
-
-	virtual void async_send(const asio::const_buffers_1& buf,
-				Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
-
-	virtual void async_receive(const asio::mutable_buffers_1& buf,
-				   Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
-
-	virtual std::string remote_endpoint_str() const = 0;
-	virtual void non_blocking(const bool state) = 0;
-
-	virtual void tcp_nodelay() {}
-
-	size_t acceptor_index() const { return acceptor_index_; }
-
-      protected:
-	SocketBase(const size_t acceptor_index)
-	  : acceptor_index_(acceptor_index)
-	{
-	}
-
-      private:
-	size_t acceptor_index_;
       };
 
       class Listener : public RC<thread_unsafe_refcount>
@@ -191,7 +168,7 @@ namespace openvpn {
 	public:
 	  struct AsioProtocol
 	  {
-	    typedef SocketBase socket;
+	    typedef AsioPolySock::Base socket;
 	  };
 
 	  typedef RCPtr<Client> Ptr;
@@ -203,7 +180,7 @@ namespace openvpn {
 
 	    Initializer(asio::io_context& io_context_arg,
 			Listener* parent_arg,
-			SocketBase::Ptr&& socket_arg,
+			AsioPolySock::Base::Ptr&& socket_arg,
 			const client_t client_id_arg)
 	      : io_context(io_context_arg),
 		parent(parent_arg),
@@ -214,7 +191,7 @@ namespace openvpn {
 
 	    asio::io_context& io_context;
 	    Listener* parent;
-	    SocketBase::Ptr socket;
+	    AsioPolySock::Base::Ptr socket;
 	    const client_t client_id;
 	  };
 
@@ -258,6 +235,8 @@ namespace openvpn {
 	    if (!parent->config->http_server_id.empty())
 	      os << "Server: " << parent->config->http_server_id << "\r\n";
 	    os << "Date: " << date_time_rfc822() << "\r\n";
+	    if (!ci.basic_realm.empty())
+	      os << "WWW-Authenticate: Basic realm=\"" << ci.basic_realm << "\"\r\n";
 	    if (ci.length)
 	      os << "Content-Type: " << ci.type << "\r\n";
 	    if (ci.length > 0)
@@ -315,7 +294,7 @@ namespace openvpn {
 	  }
 
 	  asio::io_context& io_context;
-	  SocketBase::Ptr sock;
+	  AsioPolySock::Base::Ptr sock;
 	  std::deque<BufferAllocated> pipeline;
 	  Time::Duration timeout_duration;
 
@@ -680,6 +659,13 @@ namespace openvpn {
 		    // bind to local address
 		    a->acceptor.bind(a->local_endpoint);
 
+		    // set socket permissions in filesystem
+		    if (config->unix_mode)
+		      {
+			if (::chmod(listen_item.addr.c_str(), config->unix_mode) < 0)
+			  throw http_server_exception("chmod failed on unix socket");
+		      }
+
 		    // listen for incoming client connections
 		    a->acceptor.listen();
 
@@ -714,83 +700,6 @@ namespace openvpn {
       private:
 	typedef std::unordered_map<client_t, Client::Ptr> ClientMap;
 
-	struct SocketTCP : public SocketBase
-	{
-	  typedef RCPtr<SocketTCP> Ptr;
-
-	  SocketTCP(asio::io_context& io_context,
-		    const size_t acceptor_index)
-	    :  SocketBase(acceptor_index),
-	       socket(io_context)
-	  {
-	  }
-
-	  virtual void async_send(const asio::const_buffers_1& buf,
-				  Function<void(const asio::error_code&, const size_t)>&& callback) override
-	  {
-	    socket.async_send(buf, std::move(callback));
-	  }
-
-	  virtual void async_receive(const asio::mutable_buffers_1& buf,
-				     Function<void(const asio::error_code&, const size_t)>&& callback) override
-	  {
-	    socket.async_receive(buf, std::move(callback));
-	  }
-
-	  virtual std::string remote_endpoint_str() const override
-	  {
-	    return to_string(socket.remote_endpoint());
-	  }
-
-	  virtual void non_blocking(const bool state) override
-	  {
-	    socket.non_blocking(state);
-	  }
-
-	  virtual void tcp_nodelay() override
-	  {
-	    SockOpt::tcp_nodelay(socket.native_handle());
-	  }
-
-	  asio::ip::tcp::socket socket;
-	};
-
-	struct SocketUnix : public SocketBase
-	{
-	  typedef RCPtr<SocketUnix> Ptr;
-
-	  SocketUnix(asio::io_context& io_context,
-		     const size_t acceptor_index)
-	    :  SocketBase(acceptor_index),
-	       socket(io_context)
-	  {
-	  }
-
-	  virtual void async_send(const asio::const_buffers_1& buf,
-				  Function<void(const asio::error_code&, const size_t)>&& callback) override
-	  {
-	    socket.async_send(buf, std::move(callback));
-	  }
-
-	  virtual void async_receive(const asio::mutable_buffers_1& buf,
-				     Function<void(const asio::error_code&, const size_t)>&& callback) override
-	  {
-	    socket.async_receive(buf, std::move(callback));
-	  }
-
-	  virtual std::string remote_endpoint_str() const override
-	  {
-	    return "LOCAL";
-	  }
-
-	  virtual void non_blocking(const bool state) override
-	  {
-	    socket.non_blocking(state);
-	  }
-
-	  asio::local::stream_protocol::socket socket;
-	};
-
 	struct AcceptorBase : public RC<thread_unsafe_refcount>
 	{
 	  typedef RCPtr<AcceptorBase> Ptr;
@@ -823,7 +732,7 @@ namespace openvpn {
 				    const size_t acceptor_index,
 				    asio::io_context& io_context) override
 	  {
-	    SocketTCP::Ptr sock(new SocketTCP(io_context, acceptor_index));
+	    AsioPolySock::TCP::Ptr sock(new AsioPolySock::TCP(io_context, acceptor_index));
 	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
                                                 {
                                                   listener->handle_accept(sock, error);
@@ -852,7 +761,7 @@ namespace openvpn {
 				    const size_t acceptor_index,
 				    asio::io_context& io_context) override
 	  {
-	    SocketUnix::Ptr sock(new SocketUnix(io_context, acceptor_index));
+	    AsioPolySock::Unix::Ptr sock(new AsioPolySock::Unix(io_context, acceptor_index));
 	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
                                                 {
                                                   listener->handle_accept(sock, error);
@@ -873,20 +782,22 @@ namespace openvpn {
 	  acceptors[acceptor_index]->async_accept(this, acceptor_index, io_context);
 	}
 
-	void handle_accept(SocketBase::Ptr sock, const asio::error_code& error)
+	void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error)
 	{
 	  if (halt)
 	      return;
 
-	  const size_t acceptor_index = sock->acceptor_index();
+	  const size_t acceptor_index = sock->index();
 
 	  try {
 	    if (!error)
 	      {
+		sock->non_blocking(true);
+
 		if (config->tcp_max && clients.size() >= config->tcp_max)
 		  throw http_server_exception("max TCP clients exceeded");
-
-		sock->non_blocking(true);
+		if (!allow_client(*sock))
+		  throw http_server_exception("client socket rejected");
 
 		const client_t client_id = next_id++;
 		Client::Initializer ci(io_context, this, std::move(sock), client_id);
@@ -926,6 +837,11 @@ namespace openvpn {
 	  ClientMap::const_iterator e = clients.find(client_id);
 	  if (e != clients.end())
 	    clients.erase(e);
+	}
+
+	virtual bool allow_client(AsioPolySock::Base& sock)
+	{
+	  return true;
 	}
 
 	asio::io_context& io_context;
