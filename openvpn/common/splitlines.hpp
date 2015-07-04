@@ -73,6 +73,23 @@ namespace openvpn {
       return line;
     }
 
+    enum Status {
+      S_OK,
+      S_EOF,
+      S_ERROR
+    };
+
+    Status next(std::string& ln, const bool trim=true)
+    {
+      const bool s = (*this)(trim);
+      if (!s)
+	return S_EOF;
+      if (overflow)
+	return S_ERROR;
+      ln = line;
+      return S_OK;
+    }
+
   private:
     const char *data;
     size_t size;
