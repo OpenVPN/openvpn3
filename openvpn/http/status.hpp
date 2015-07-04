@@ -31,6 +31,7 @@ namespace openvpn {
 	OK=200,
 	Connected=200,
 	BadRequest=400,
+	Unauthorized=401,
 	Forbidden=403,
 	NotFound=404,
 	ProxyAuthenticationRequired=407,
@@ -47,6 +48,8 @@ namespace openvpn {
 	    return "OK";
 	  case BadRequest:
 	    return "Bad Request";
+	  case Unauthorized:
+	    return "Unauthorized";
 	  case Forbidden:
 	    return "Forbidden";
 	  case NotFound:
