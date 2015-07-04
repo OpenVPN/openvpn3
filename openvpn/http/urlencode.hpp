@@ -27,6 +27,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/split.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/unicode.hpp>
 
@@ -84,13 +85,34 @@ namespace openvpn {
       return ret;
     }
 
-    inline std::vector<std::string> decode_path(const std::string& path)
+    inline std::vector<std::string> decode_path(std::string path)
     {
       std::vector<std::string> list;
+      if (!path.empty() && path[0] == '/')
+	path = path.substr(1);
       Split::by_char_void<decltype(list), NullLex, Split::NullLimit>(list, path, '/');
       for (auto &i : list)
 	i = decode(i);
       return list;
+    }
+
+    inline bool match_path(const std::string& uri, const std::vector<std::string>& choices)
+    {
+      if (uri.empty())
+	return false;
+      if (uri[0] != '/')
+	return false;
+      return std::find(choices.begin(), choices.end(), uri.substr(1)) != choices.end();
+    }
+
+    inline bool match_prefix(const std::string& uri, const std::vector<std::string>& choices)
+    {
+      for (const auto &c : choices)
+	{
+	  if (string::starts_with(uri, std::string("/") + c + std::string("/")))
+	    return true;
+	}
+      return false;
     }
   }
 }
