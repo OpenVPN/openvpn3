@@ -28,8 +28,13 @@
 #include <sys/types.h>
 
 #include <cstring>     // for std::strerror()
-
 #include <string>
+
+#include <openvpn/common/platform.hpp>
+
+#ifdef OPENVPN_PLATFORM_LINUX
+#include <sys/prctl.h>
+#endif
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -85,6 +90,11 @@ namespace openvpn {
 	    OPENVPN_THROW(user_group_err, "setuid failed for user '" << user_name << "': " << std::strerror(errno));
 	  OPENVPN_LOG("UID set to '" << user_name << '\'');
 	}
+#ifdef OPENVPN_PLATFORM_LINUX
+      // retain core dumpability after setgid/setuid
+      if (gr || pw)
+	prctl(PR_SET_DUMPABLE, 1);
+#endif
     }
 
     void invalidate()
