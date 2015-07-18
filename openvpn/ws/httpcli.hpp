@@ -351,11 +351,15 @@ namespace openvpn {
 
 	  if (error)
 	    {
-	      asio_error_handler(Status::E_RESOLVE, "handle_resolve", error);
+	      asio_error_handler(Status::E_RESOLVE, "handle_tcp_resolve", error);
 	      return;
 	    }
 
 	  try {
+	    // asio docs say this should never happen, but check just in case
+	    if (results.empty())
+	      OPENVPN_THROW_EXCEPTION("no results");
+
 	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
 	    socket.reset(s);
 	    async_connect(s->socket, results,
@@ -366,7 +370,7 @@ namespace openvpn {
 	  }
 	  catch (const std::exception& e)
 	    {
-	      handle_exception("handle_resolve", e);
+	      handle_exception("handle_tcp_resolve", e);
 	    }
 	}
 
