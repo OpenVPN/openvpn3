@@ -150,6 +150,14 @@ namespace openvpn {
 	housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
       }
 
+      virtual PeerStats stats_poll()
+      {
+	if (TransportLink::send)
+	  return TransportLink::send->stats_poll();
+	else
+	  return PeerStats();
+      }
+
       virtual void stop()
       {
 	if (!halt)

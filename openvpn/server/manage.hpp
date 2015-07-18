@@ -90,6 +90,9 @@ namespace openvpn {
     virtual void push_halt_restart_msg(const HaltRestart::Type type,
 				       const std::string& reason,
 				       const bool tell_client) = 0;
+
+    // get client bandwidth stats
+    virtual PeerStats stats_poll() = 0;
   };
 
   struct ManClientInstanceFactory : public RC<thread_unsafe_refcount>
