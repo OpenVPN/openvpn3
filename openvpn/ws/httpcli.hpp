@@ -211,7 +211,7 @@ namespace openvpn {
 		transcli->stop();
 	      if (link)
 		link->stop();
-	      socket.reset();
+	      socket->close();
 	      resolver.cancel();
 	      general_timer.cancel();
 	      connect_timer.cancel();
