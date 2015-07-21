@@ -53,6 +53,8 @@ namespace openvpn {
       virtual std::string remote_endpoint_str() const = 0;
       virtual void non_blocking(const bool state) = 0;
 
+      virtual void close() = 0;
+
       virtual void tcp_nodelay() {}
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
@@ -112,6 +114,11 @@ namespace openvpn {
 	SockOpt::tcp_nodelay(socket.native_handle());
       }
 
+      virtual void close() override
+      {
+	socket.close();
+      }
+
       asio::ip::tcp::socket socket;
     };
 
@@ -152,6 +159,11 @@ namespace openvpn {
       virtual bool peercreds(SockOpt::Creds& cr) override
       {
 	return SockOpt::peercreds(socket.native_handle(), cr);
+      }
+
+      virtual void close() override
+      {
+	socket.close();
       }
 
       asio::local::stream_protocol::socket socket;
