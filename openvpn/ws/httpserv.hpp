@@ -338,7 +338,8 @@ namespace openvpn {
 	    timeout_timer.cancel();
 	    if (link)
 	      link->stop();
-	    sock->close();
+	    if (sock)
+	      sock->close();
 	    if (remove_self_from_map)
 	      asio::post(io_context, [self=Ptr(this), parent=Listener::Ptr(parent)]()
 			 {
