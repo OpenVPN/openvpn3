@@ -64,7 +64,7 @@ namespace openvpn {
   private:
     bool rndbytes(unsigned char *buf, size_t size)
     {
-      return RAND_bytes(buf, size) ? true : false;
+      return RAND_bytes(buf, size) == 1;
     }
   };
 }
