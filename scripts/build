@@ -37,6 +37,7 @@ if [ -z "$1" ]; then
     echo " LZO=1 -- build with LZO compression library"
     echo " LZ4=1 -- build with LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
+    echo " JAVA=1 -- build with JVM"
     for s in $(enum_build_extras) ; do
 	. $s args
     done
@@ -180,6 +181,17 @@ if [ "$SNAP" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM/include"
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
+fi
+
+# JVM
+if [ "$JAVA" = "1" ]; then
+    if [ -z "$JAVA_HOME" ]; then
+	echo JAVA_HOME not defined
+	exit 1
+    fi
+    LIBDIRS="$LIBDIRS -L$JAVA_HOME/jre/lib/amd64/server"
+    CPPFLAGS="$CPPFLAGS -I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
+    LIBS="$LIBS -ljvm"
 fi
 
 # other environments
