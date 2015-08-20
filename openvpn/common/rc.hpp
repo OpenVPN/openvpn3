@@ -116,7 +116,7 @@ namespace openvpn {
       return *this;
     }
 
-    RCPtr& operator=(const RCPtr&& rhs) noexcept
+    RCPtr& operator=(RCPtr&& rhs) noexcept
     {
       RCPtr(std::move(rhs)).swap(*this);
       return *this;
