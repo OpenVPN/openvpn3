@@ -55,7 +55,9 @@
 #include <algorithm>
 #include <type_traits> // for std::is_nothrow_move_constructible
 
+#ifndef NO_ASIO
 #include <asio.hpp>
+#endif
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/abort.hpp>
@@ -359,6 +361,7 @@ namespace openvpn {
       return !(*this == other);
     }
 
+#ifndef NO_ASIO
     // return a asio::mutable_buffers_1 object used by
     // asio read methods, starting from data()
     asio::mutable_buffers_1 mutable_buffers_1(const size_t tailroom = 0)
@@ -397,6 +400,7 @@ namespace openvpn {
     {
       return asio::const_buffers_1(c_data(), buf_clamp_write(size()));
     }
+#endif
 
     void realign(size_t headroom)
     {
