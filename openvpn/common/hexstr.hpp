@@ -166,6 +166,12 @@ namespace openvpn {
   }
 
   template <typename T>
+  inline T parse_hex_number(const std::string& str)
+  {
+    return parse_hex_number<T>(str.c_str());
+  }
+
+  template <typename T>
   std::string render_hex_number(T value, const bool caps=false)
   {
     unsigned char buf[sizeof(T)];
