@@ -29,7 +29,7 @@ namespace openvpn {
 
   // Convert an arbitrary argument to a string.
   template <typename T>
-  std::string to_string(const T& value)
+  inline std::string to_string(const T& value)
   {
     std::ostringstream os;
     os << value;
