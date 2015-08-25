@@ -183,15 +183,16 @@ namespace openvpn {
     std::unique_ptr<ArgvWrapper> env_wrap;
     if (env)
       env_wrap.reset(new ArgvWrapper(*env));
-    const pid_t pid = ::fork();
+    auto fn = cmd.c_str();
+    auto av = argv_wrap.c_argv();
+    auto ev = env_wrap ? env_wrap->c_argv() : ::environ;
+    const pid_t pid = redir ? ::fork() : ::vfork();
     if (pid == pid_t(0)) /* child side */
       {
 	if (redir)
 	  redir->redirect();
-	::execve(cmd.c_str(),
-		 argv_wrap.c_argv(),
-		 env_wrap ? env_wrap->c_argv() : ::environ);
-	::exit(127);
+	::execve(fn, av, ev);
+	::_exit(127);
       }
     else if (pid < pid_t(0)) /* fork failed */
       return -1;
