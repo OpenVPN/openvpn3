@@ -35,6 +35,7 @@ namespace openvpn {
 	Forbidden=403,
 	NotFound=404,
 	ProxyAuthenticationRequired=407,
+	PreconditionFailed=412,
 	InternalServerError=500,
 	ProxyError=502,
 	ServiceUnavailable=503,
@@ -56,6 +57,8 @@ namespace openvpn {
 	    return "Not Found";
 	  case ProxyAuthenticationRequired:
 	    return "Proxy Authentication Required";
+	  case PreconditionFailed:
+	    return "Precondition Failed";
 	  case InternalServerError:
 	    return "Internal Server Error";
 	  case ProxyError:
