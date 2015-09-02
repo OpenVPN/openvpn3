@@ -247,6 +247,13 @@ namespace openvpn {
       return (*this)[context].prepare(buf);
     }
 
+    BufferPtr prepare(const unsigned int context) const
+    {
+      BufferPtr buf(new BufferAllocated());
+      prepare(context, *buf);
+      return buf;
+    }
+
     size_t n_contexts() const { return N_ALIGN_CONTEXTS; }
 
     Context& operator[](const size_t i)
