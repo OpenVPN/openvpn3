@@ -53,7 +53,7 @@ namespace openvpn {
       OPENVPN_EXCEPTION(http_server_exception);
 
       typedef unsigned int client_t;
-      typedef std::uint64_t content_len_t;
+      typedef std::int64_t content_len_t;
 
       struct Status
       {
@@ -131,14 +131,13 @@ namespace openvpn {
       };
 
       struct ContentInfo {
-	enum {
-	  // content length if Transfer-Encoding: chunked
-	  CHUNKED=-1
-	};
+	// content length if Transfer-Encoding: chunked
+	static constexpr content_len_t CHUNKED = -1;
 
 	ContentInfo()
 	  : http_status(0),
 	    length(0),
+	    no_cache(false),
 	    keepalive(false)
 	{
 	}
@@ -148,7 +147,9 @@ namespace openvpn {
 	std::string type;
 	std::string basic_realm;
 	content_len_t length;
+	bool no_cache;
 	bool keepalive;
+	std::vector<std::string> extra_headers;
       };
 
       class Listener : public RC<thread_unsafe_refcount>
@@ -200,6 +201,7 @@ namespace openvpn {
 	    typedef RCPtr<Factory> Ptr;
 
 	    virtual Client::Ptr new_client(Initializer& ci) = 0;
+	    virtual void stop() {}
 	  };
 
 	  virtual ~Client()
@@ -223,6 +225,9 @@ namespace openvpn {
 	  void generate_reply_headers(const ContentInfo& ci)
 	  {
 	    http_out_begin();
+
+	    content_info = ci;
+
 	    outbuf.reset(new BufferAllocated(1024, BufferAllocated::GROW));
 	    BufferStreamOut os(*outbuf);
 
@@ -242,7 +247,11 @@ namespace openvpn {
 	    if (ci.length > 0)
 	      os << "Content-Length: " << ci.length << "\r\n";
 	    else if (ci.length == ContentInfo::CHUNKED)
-	      os << "Transfer-Encoding: chunked" << "\r\n";
+	      os << "Transfer-Encoding: chunked\r\n";
+	    for (auto &h : ci.extra_headers)
+	      os << h << "\r\n";
+	    if (ci.no_cache)
+	      os << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
 	    if ((keepalive = ci.keepalive))
 	      os << "Connection: keep-alive\r\n";
 	    else
@@ -291,6 +300,19 @@ namespace openvpn {
 	      {
 	      }
 	    return "[unknown endpoint]";
+	  }
+
+	  bool remote_ip_port(IP::Addr& addr, unsigned int& port) const
+	  {
+	    if (sock)
+	      return sock->remote_ip_port(addr, port);
+	    else
+	      return false;
+	  }
+
+	  client_t get_client_id() const
+	  {
+	    return client_id;
 	  }
 
 	  asio::io_context& io_context;
@@ -345,11 +367,6 @@ namespace openvpn {
 			 {
 			   parent->remove_client(self);
 			 });
-	  }
-
-	  client_t get_client_id() const
-	  {
-	    return client_id;
 	  }
 
 	  void activity()
@@ -460,6 +477,11 @@ namespace openvpn {
 	    return http_content_out();
 	  }
 
+	  void base_http_content_out_needed()
+	  {
+	    http_content_out_needed();
+	  }
+
 	  void base_http_out_eof()
 	  {
 	    if (http_out_eof())
@@ -531,6 +553,10 @@ namespace openvpn {
 	  virtual BufferPtr http_content_out()
 	  {
 	    return BufferPtr();
+	  }
+
+	  virtual void http_content_out_needed()
+	  {
 	  }
 
 	  virtual bool http_headers_received()
@@ -631,6 +657,7 @@ namespace openvpn {
 		      const int fd = a->acceptor.native_handle();
 		      SockOpt::reuseport(fd);
 		      SockOpt::reuseaddr(fd);
+		      SockOpt::set_cloexec(fd);
 		    }
 
 		    // bind to local address
@@ -696,6 +723,10 @@ namespace openvpn {
 	  for (auto &c : clients)
 	    c.second->stop(false);
 	  clients.clear();
+
+	  // stop client factory
+	  if (client_factory)
+	    client_factory->stop();
 	}
 
       private:
@@ -794,13 +825,14 @@ namespace openvpn {
 	    if (!error)
 	      {
 		sock->non_blocking(true);
+		sock->set_cloexec();
 
 		if (config->tcp_max && clients.size() >= config->tcp_max)
 		  throw http_server_exception("max TCP clients exceeded");
 		if (!allow_client(*sock))
 		  throw http_server_exception("client socket rejected");
 
-		const client_t client_id = next_id++;
+		const client_t client_id = new_client_id();
 		Client::Initializer ci(io_context, this, std::move(sock), client_id);
 		Client::Ptr cli = client_factory->new_client(ci);
 		clients[client_id] = cli;
