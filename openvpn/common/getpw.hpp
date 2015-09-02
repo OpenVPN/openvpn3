@@ -22,6 +22,8 @@
 #ifndef OPENVPN_COMMON_GETPW_H
 #define OPENVPN_COMMON_GETPW_H
 
+#include <openvpn/common/platform.hpp>
+
 #if !defined(OPENVPN_PLATFORM_WIN)
 #include <pwd.h>
 #include <unistd.h>
@@ -30,7 +32,6 @@
 #include <string>
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/platform.hpp>
 
 namespace openvpn {
   std::string get_password(const char *prompt)
