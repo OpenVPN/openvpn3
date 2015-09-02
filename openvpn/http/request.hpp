@@ -65,6 +65,11 @@ namespace openvpn {
 	return out.str();
       }
 
+      bool at_least_http_1_1() const
+      {
+	return http_version_major > 1 || (http_version_major == 1 && http_version_minor >= 1);
+      }
+
       std::string method;
       std::string uri;
       int http_version_major;
