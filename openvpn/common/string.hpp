@@ -25,6 +25,7 @@
 #define OPENVPN_COMMON_STRING_H
 
 #include <string>
+#include <vector>
 #include <cstring>
 #include <cctype>
 
@@ -105,6 +106,13 @@ namespace openvpn {
 	}
     }
 
+    // remove trailing \r or \n chars
+    inline std::string trim_crlf_copy(std::string str)
+    {
+      trim_crlf(str);
+      return str;
+    }
+
     // return true if str of size len contains an embedded null
     inline bool embedded_null(const char *str, size_t len)
     {
@@ -173,6 +181,31 @@ namespace openvpn {
 	  ret += c;
 	  last_char_was_cr = (c == '\r');
 	}
+      return ret;
+    }
+
+    // Split a string on sep delimiter.  The size of the
+    // returned string list will be at most maxsplit + 1.
+    inline std::vector<std::string> split(const std::string& str,
+					  const char sep,
+					  const int maxsplit = -1)
+    {
+      std::vector<std::string> ret;
+      int nterms = 0;
+      std::string term;
+
+      for (auto &c : str)
+	{
+	  if (c == sep && (maxsplit < 0 || nterms < maxsplit))
+	    {
+	      ret.push_back(std::move(term));
+	      ++nterms;
+	      term = "";
+	    }
+	  else
+	    term += c;
+	}
+      ret.push_back(std::move(term));
       return ret;
     }
 
