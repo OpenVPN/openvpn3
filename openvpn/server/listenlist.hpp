@@ -60,6 +60,12 @@ namespace openvpn {
     class List : public std::vector<Item>
     {
     public:
+      enum LoadMode {
+	Nominal,
+	AllowDefault,
+	AllowEmpty
+      };
+
       List() {}
 
       List(const Item& item)
@@ -74,7 +80,7 @@ namespace openvpn {
 
       List(const OptionList& opt,
 	   const std::string& directive,
-	   const bool allow_default,
+	   const LoadMode load_mode,
 	   const unsigned int n_cores)
       {
 	size_t n_listen = 0;
@@ -136,7 +142,7 @@ namespace openvpn {
 		  }
 	      }
 	  }
-	else if (allow_default)
+	else if (load_mode == AllowDefault)
 	  {
 	    Item e;
 
@@ -183,7 +189,7 @@ namespace openvpn {
 
 	    push_back(std::move(e));
 	  }
-	else
+	else if (load_mode != AllowEmpty)
 	  OPENVPN_THROW(option_error, "no " << directive << " directives found");
       }
 
