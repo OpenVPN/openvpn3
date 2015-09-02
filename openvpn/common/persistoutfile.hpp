@@ -34,6 +34,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/common/write.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
@@ -58,7 +59,7 @@ namespace openvpn {
 	err("unexpected seek");
       if (::ftruncate(fd(), 0) < 0)
 	syserr("truncate");
-      const ssize_t len = ::write(fd(), buf, count);
+      const ssize_t len = write_retry(fd(), buf, count);
       if (len < 0)
 	syserr("write");
       if (len != count || len != ::lseek(fd(), 0, SEEK_CUR))

@@ -32,6 +32,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/common/write.hpp>
 
 namespace openvpn {
   class TempFile
@@ -71,7 +72,7 @@ namespace openvpn {
 
     void write(const std::string& content)
     {
-      const ssize_t size = ::write(fd(), content.c_str(), content.length());
+      const ssize_t size = write_retry(fd(), content.c_str(), content.length());
       if (size < 0)
 	{
 	  const int eno = errno;
