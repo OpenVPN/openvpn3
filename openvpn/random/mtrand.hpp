@@ -53,6 +53,11 @@ namespace openvpn {
       return rng_();
     }
 
+    std::mt19937& operator()()
+    {
+      return rng_;
+    }
+
     static std::random_device::result_type gen_seed()
     {
       std::random_device rd;
