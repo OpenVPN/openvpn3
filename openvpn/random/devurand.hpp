@@ -41,7 +41,7 @@ namespace openvpn {
     typedef RCPtr<DevURand> Ptr;
 
     DevURand()
-      : dev_urandom(open("/dev/urandom", O_RDONLY))
+      : dev_urandom(::open("/dev/urandom", O_RDONLY))
     {
       if (!dev_urandom.defined())
 	throw dev_urand_error("init failed");
@@ -70,7 +70,7 @@ namespace openvpn {
   private:
     bool rndbytes(unsigned char *buf, size_t size)
     {
-      const ssize_t actual = read(dev_urandom(), buf, size);
+      const ssize_t actual = ::read(dev_urandom(), buf, size);
       return size == actual;
     }
 
