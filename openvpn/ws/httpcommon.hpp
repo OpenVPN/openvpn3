@@ -11,6 +11,7 @@
 
 #include <string>
 #include <memory>
+#include <utility>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -86,10 +87,31 @@ namespace openvpn {
 	  return "";
       }
 
+      void set_async_out(const bool async_out_arg)
+      {
+	async_out = async_out_arg;
+      }
+
+      void http_content_out_finish(const BufferPtr& buf)
+      {
+	if (halt)
+	  return;
+	if (out_state == S_DEFERRED && (!outbuf || outbuf->empty()))
+	  {
+	    out_state = S_OUT;
+	    outbuf = std::move(buf);
+	    new_outbuf();
+	    http_out_buffer();
+	  }
+	else
+	  throw http_exception("http_out_deferred: no deferred state");
+      }
+
     protected:
       HTTPBase(const typename CONFIG::Ptr& config_arg)
 	: halt(false),
 	  ready(true),
+	  async_out(false),
 	  config(config_arg),
 	  frame(config_arg->frame),
 	  stats(config_arg->stats)
@@ -100,6 +122,14 @@ namespace openvpn {
       void http_out_begin()
       {
 	out_state = S_OUT;
+      }
+
+      void new_outbuf()
+      {
+	if (!outbuf || !outbuf->defined())
+	  out_state = S_EOF;
+	if (content_info.length == CONTENT_INFO::CHUNKED)
+	  outbuf = ChunkedHelper::transmit(std::move(outbuf));
       }
 
       // Transmit outgoing HTTP, either to SSL object (HTTPS) or TCP socket (HTTP)
@@ -115,12 +145,23 @@ namespace openvpn {
 	  }
 	if (out_state == S_OUT && (!outbuf || outbuf->empty()))
 	  {
-	    outbuf = parent().base_http_content_out();
-	    if (!outbuf || !outbuf->defined())
-	      out_state = S_EOF;
-	    if (content_info.length == CONTENT_INFO::CHUNKED)
-	      outbuf = ChunkedHelper::transmit(outbuf);
+	    if (async_out)
+	      {
+		out_state = S_DEFERRED;
+		parent().base_http_content_out_needed();
+		return;
+	      }
+	    else
+	      {
+		outbuf = parent().base_http_content_out();
+		new_outbuf();
+	      }
 	  }
+	http_out_buffer();
+      }
+
+      void http_out_buffer()
+      {
 	if (outbuf)
 	  {
 	    const size_t size = std::min(outbuf->size(), http_buf_size());
@@ -198,6 +239,7 @@ namespace openvpn {
 
       // Callback methods in parent:
       //   BufferPtr base_http_content_out();
+      //   void base_http_content_out_needed();
       //   void base_http_out_eof();
       //   bool base_http_headers_received();
       //   void base_http_content_in(BufferAllocated& buf);
@@ -210,6 +252,7 @@ namespace openvpn {
 
       bool halt;
       bool ready;
+      bool async_out;
 
       typename CONFIG::Ptr config;
       CONTENT_INFO content_info;
@@ -409,6 +452,7 @@ namespace openvpn {
       enum HTTPOutState {
 	S_PRE,
 	S_OUT,
+	S_DEFERRED,
 	S_EOF,
 	S_DONE
       };
