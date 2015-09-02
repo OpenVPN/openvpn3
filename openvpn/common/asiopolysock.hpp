@@ -27,11 +27,13 @@
 
 #include <asio.hpp>
 
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/sockopt.hpp>
+#include <openvpn/addr/ip.hpp>
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 #include <openvpn/common/peercred.hpp>
@@ -51,11 +53,14 @@ namespace openvpn {
 				 Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
 
       virtual std::string remote_endpoint_str() const = 0;
+      virtual bool remote_ip_port(IP::Addr& addr, unsigned int& port) const = 0;
+
       virtual void non_blocking(const bool state) = 0;
 
       virtual void close() = 0;
 
       virtual void tcp_nodelay() {}
+      virtual void set_cloexec() {}
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
       virtual bool peercreds(SockOpt::Creds& cr)
@@ -104,6 +109,19 @@ namespace openvpn {
 	return to_string(socket.remote_endpoint());
       }
 
+      virtual bool remote_ip_port(IP::Addr& addr, unsigned int& port) const override
+      {
+	try {
+	  addr = IP::Addr::from_asio(socket.remote_endpoint().address());
+	  port = socket.remote_endpoint().port();
+	  return true;
+	}
+	catch (std::exception&)
+	  {
+	    return false;
+	  }
+      }
+
       virtual void non_blocking(const bool state) override
       {
 	socket.non_blocking(state);
@@ -111,8 +129,15 @@ namespace openvpn {
 
       virtual void tcp_nodelay() override
       {
-	SockOpt::tcp_nodelay(socket.native_handle());
+	socket.set_option(asio::ip::tcp::no_delay(true));
       }
+
+#if !defined(OPENVPN_PLATFORM_WIN)
+      virtual void set_cloexec() override
+      {
+	SockOpt::set_cloexec(socket.native_handle());
+      }
+#endif
 
       virtual void close() override
       {
@@ -151,6 +176,11 @@ namespace openvpn {
 	return "LOCAL";
       }
 
+      virtual bool remote_ip_port(IP::Addr&, unsigned int&) const override
+      {
+	return false;
+      }
+
       virtual void non_blocking(const bool state) override
       {
 	socket.non_blocking(state);
@@ -159,6 +189,11 @@ namespace openvpn {
       virtual bool peercreds(SockOpt::Creds& cr) override
       {
 	return SockOpt::peercreds(socket.native_handle(), cr);
+      }
+
+      virtual void set_cloexec() override
+      {
+	SockOpt::set_cloexec(socket.native_handle());
       }
 
       virtual void close() override

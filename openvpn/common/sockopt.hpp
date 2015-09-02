@@ -22,6 +22,12 @@
 #ifndef OPENVPN_COMMON_SOCKOPT_H
 #define OPENVPN_COMMON_SOCKOPT_H
 
+#include <openvpn/common/platform.hpp>
+
+#if !defined(OPENVPN_PLATFORM_WIN)
+
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -56,7 +62,15 @@ namespace openvpn {
 		     (void *)&state, sizeof(state)) != 0)
 	throw Exception("error setting TCP_NODELAY on socket");
     }
+
+    // set FD_CLOEXEC to prevent fd from being passed across execs
+    inline void set_cloexec(const int fd)
+    {
+      if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
+	throw Exception("error setting FD_CLOEXEC on file-descriptor/socket");
+    }
   }
 }
 
+#endif
 #endif
