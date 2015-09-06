@@ -286,6 +286,16 @@ namespace openvpn {
       return ret;
     }
 
+    T front()
+    {
+      return (*this)[0];
+    }
+
+    T back()
+    {
+      return (*this)[size_-1];
+    }
+
     // Place a T object after the last object in the
     // array, with possible resize to contain it,
     // however don't actually change the size of the
