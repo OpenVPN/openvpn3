@@ -300,7 +300,7 @@ namespace openvpn {
       return ret;
     }
 
-    mutable bool touched_;
+    volatile mutable bool touched_;
     std::vector<std::string> data;
   };
 
