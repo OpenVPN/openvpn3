@@ -26,11 +26,15 @@
 
 #include <iostream>
 
-#define OPENVPN_LOG(args) std::cout << args << std::endl
+#ifndef OPENVPN_LOG_STREAM
+#define OPENVPN_LOG_STREAM std::cout
+#endif
+
+#define OPENVPN_LOG(args) OPENVPN_LOG_STREAM << args << std::endl
 
 // like OPENVPN_LOG but no trailing newline
-#define OPENVPN_LOG_NTNL(args) std::cout << args
+#define OPENVPN_LOG_NTNL(args) OPENVPN_LOG_STREAM << args
 
-#define OPENVPN_LOG_STRING(str) std::cout << (str)
+#define OPENVPN_LOG_STRING(str) OPENVPN_LOG_STREAM << (str)
 
 #endif // OPENVPN_LOG_LOGSIMPLE_H
