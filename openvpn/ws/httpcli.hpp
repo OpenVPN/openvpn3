@@ -121,7 +121,8 @@ namespace openvpn {
 		   general_timeout(0),
 		   max_headers(0),
 		   max_header_bytes(0),
-		   max_content_bytes(0) {}
+		   max_content_bytes(0),
+		   msg_overhead_bytes(0) {}
 
 	SSLFactoryAPI::Ptr ssl_factory;
 	TransportClientFactory::Ptr transcli;
@@ -131,6 +132,7 @@ namespace openvpn {
 	unsigned int max_headers;
 	unsigned int max_header_bytes;
 	olong max_content_bytes;
+	unsigned int msg_overhead_bytes;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
       };
