@@ -66,6 +66,7 @@ namespace openvpn {
 	rr_header_bytes = 0;
 	rr_content_length = 0;
 	rr_content_bytes = 0;
+	rr_limit_bytes = 0;
 	rr_chunked.reset();
 	out_state = S_PRE;
       }
@@ -300,7 +301,8 @@ namespace openvpn {
 	if (buf.defined())
 	  {
 	    rr_content_bytes += buf.size();
-	    if (config->max_content_bytes && rr_content_bytes > config->max_content_bytes)
+	    rr_limit_bytes += buf.size() + config->msg_overhead_bytes;
+	    if (config->max_content_bytes && rr_limit_bytes > config->max_content_bytes)
 	      {
 		parent().base_error_handler(STATUS::E_CONTENT_SIZE, "HTTP content too large");
 		return;
@@ -466,6 +468,7 @@ namespace openvpn {
 
       CONTENT_LENGTH_TYPE rr_content_bytes;
       CONTENT_LENGTH_TYPE rr_content_length;  // Content-Length in header
+      CONTENT_LENGTH_TYPE rr_limit_bytes;
       std::unique_ptr<ChunkedHelper> rr_chunked;
 
       enum HTTPOutState {
