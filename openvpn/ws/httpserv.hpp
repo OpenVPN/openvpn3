@@ -160,6 +160,7 @@ namespace openvpn {
 	int http_status;
 	std::string http_status_str; // optional
 	std::string type;
+	std::string content_encoding;
 	std::string basic_realm;
 	content_len_t length;
 	bool no_cache;
@@ -265,6 +266,8 @@ namespace openvpn {
 	      os << "Transfer-Encoding: chunked\r\n";
 	    for (auto &h : ci.extra_headers)
 	      os << h << "\r\n";
+	    if (!ci.content_encoding.empty())
+	      os << "Content-Encoding: " << ci.content_encoding << "\r\n";
 	    if (ci.no_cache)
 	      os << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
 	    if ((keepalive = ci.keepalive))
