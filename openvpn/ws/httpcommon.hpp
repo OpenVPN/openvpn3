@@ -127,6 +127,11 @@ namespace openvpn {
 	  throw http_exception("http_out_deferred: no deferred state");
       }
 
+      void update_max_content_bytes(const CONTENT_LENGTH_TYPE new_max_content_bytes)
+      {
+	config->max_content_bytes = new_max_content_bytes;
+      }
+
     protected:
       HTTPBase(const typename CONFIG::Ptr& config_arg)
 	: halt(false),
