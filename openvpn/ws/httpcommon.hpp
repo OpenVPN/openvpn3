@@ -102,6 +102,10 @@ namespace openvpn {
 	  return "";
       }
 
+      const CONFIG& http_config() const {
+	return *config;
+      }
+
       void set_async_out(const bool async_out_arg)
       {
 	async_out = async_out_arg;
