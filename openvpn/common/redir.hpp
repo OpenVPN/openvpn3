@@ -54,7 +54,7 @@ namespace openvpn {
       // stdin
       if (in.defined())
 	{
-	  dup2(in(), 0);
+	  ::dup2(in(), 0);
 	  if (in() <= 2)
 	    in.release();
 	}
@@ -62,9 +62,9 @@ namespace openvpn {
       // stdout
       if (out.defined())
 	{
-	  dup2(out(), 1);
+	  ::dup2(out(), 1);
 	  if (!err.defined() && combine_out_err)
-	    dup2(out(), 2);
+	    ::dup2(out(), 2);
 	  if (out() <= 2)
 	    out.release();
 	}
@@ -72,7 +72,7 @@ namespace openvpn {
       // stderr
       if (err.defined())
 	{
-	  dup2(err(), 2);
+	  ::dup2(err(), 2);
 	  if (err() <= 2)
 	    err.release();
 	}
@@ -128,7 +128,7 @@ namespace openvpn {
     void open_input(const std::string& fn)
     {
       // open input file for stdin
-      in.reset(open(fn.c_str(), O_RDONLY, 0));
+      in.reset(::open(fn.c_str(), O_RDONLY, 0));
       if (!in.defined())
 	{
 	  const int eno = errno;
@@ -141,9 +141,9 @@ namespace openvpn {
 		     const mode_t mode)
     {
       // open output file for stdout/stderr
-      out.reset(open(fn.c_str(),
-		     flags,
-		     mode));
+      out.reset(::open(fn.c_str(),
+		       flags,
+		       mode));
       if (!out.defined())
 	{
 	  const int eno = errno;
