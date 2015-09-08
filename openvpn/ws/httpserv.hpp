@@ -330,6 +330,14 @@ namespace openvpn {
 	      return false;
 	  }
 
+	  bool is_local() const
+	  {
+	    if (sock)
+	      return sock->is_local();
+	    else
+	      return false;
+	  }
+
 	  client_t get_client_id() const
 	  {
 	    return client_id;
