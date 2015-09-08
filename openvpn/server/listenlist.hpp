@@ -38,12 +38,19 @@ namespace openvpn {
   namespace Listen {
     struct Item
     {
-      Item() : n_threads(0) {}
+      enum SSLMode {
+	SSLUnspecified,
+	SSLOn,
+	SSLOff,
+      };
+
+      Item() : ssl(SSLUnspecified), n_threads(0) {}
 
       std::string directive;
       std::string addr;
       std::string port;
       Protocol proto;
+      SSLMode ssl;
       unsigned int n_threads;
 
       std::string to_string() const
@@ -53,6 +60,10 @@ namespace openvpn {
 	if (!proto.is_unix())
 	  os << ' ' << port;
 	os << ' ' << proto.str() << ' ' << n_threads;
+	if (ssl == SSLOn)
+	  os << " ssl";
+	else if (ssl == SSLOff)
+	  os << " !ssl";
 	return os.str();
       }
     };
@@ -107,8 +118,14 @@ namespace openvpn {
 		    int unix = 0;
 
 		    Item e;
+
+		    // directive
 		    e.directive = o.get(0, 64);
+
+		    // IP address
 		    e.addr = o.get(1, 128);
+
+		    // port number
 		    e.port = o.get(2, 16);
 		    if (Protocol::is_unix_type(e.port))
 		      {
@@ -117,27 +134,60 @@ namespace openvpn {
 		      }
 		    else
 		      HostPort::validate_port(e.port, e.directive);
+
+		    // protocol
 		    {
 		      const std::string title = e.directive + " protocol";
 		      e.proto = Protocol::parse(o.get(3-unix, 16), false, title.c_str());
 		    }
 		    if (!unix)
 		      {
+			// modify protocol based on IP version of given address
 			const std::string title = e.directive + " addr";
 			const IP::Addr addr = IP::Addr(e.addr, title.c_str());
 			e.proto.mod_addr_version(addr);
 		      }
-		    std::string n_threads = o.get_default(4-unix, 16, "1");
-		    if (string::ends_with(n_threads, "*N"))
+
+		    // number of threads
+		    int n_threads_exists = 0;
+		    {
+		      const std::string ntstr = o.get_optional(4-unix, 16);
+		      if (ntstr.length() > 0 && string::is_digit(ntstr[0]))
+			n_threads_exists = 1;
+		    }
+		    if (n_threads_exists)
 		      {
-			mult = n_cores;
-			n_threads = n_threads.substr(0, n_threads.length() - 2);
+			std::string n_threads = o.get(4-unix, 16);
+			if (string::ends_with(n_threads, "*N"))
+			  {
+			    mult = n_cores;
+			    n_threads = n_threads.substr(0, n_threads.length() - 2);
+			  }
+			if (!parse_number_validate<unsigned int>(n_threads, 3, 1, 100, &e.n_threads))
+			  OPENVPN_THROW(option_error, e.directive << ": bad num threads: " << n_threads);
+			if (unix && e.n_threads != 1)
+			  OPENVPN_THROW(option_error, e.directive << ": unix socket only supports one thread per pathname (not " << n_threads << ')');
+			e.n_threads *= mult;
 		      }
-		    if (!parse_number_validate<unsigned int>(n_threads, 3, 1, 100, &e.n_threads))
-		      OPENVPN_THROW(option_error, e.directive << ": bad num threads: " << n_threads);
-		    if (unix && e.n_threads != 1)
-		      OPENVPN_THROW(option_error, e.directive << ": unix socket only supports one thread per pathname (not " << n_threads << ')');
-		    e.n_threads *= mult;
+		    else
+		      e.n_threads = 1;
+
+		    // SSL
+		    if (o.size() >= 5-unix+n_threads_exists)
+		      {
+			const std::string& ssl_qualifier = o.get(4-unix+n_threads_exists, 16);
+			if (ssl_qualifier == "ssl")
+			  {
+			    if (unix)
+			      OPENVPN_THROW(option_error, e.directive << ": SSL not supported on local unix sockets");
+			    e.ssl = Item::SSLOn;
+			  }
+			else if (ssl_qualifier == "!ssl")
+			  e.ssl = Item::SSLOff;
+			else
+			  OPENVPN_THROW(option_error, e.directive << ": unrecognized SSL qualifier");
+		      }
+
 		    push_back(std::move(e));
 		  }
 	      }
