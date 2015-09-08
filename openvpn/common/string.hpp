@@ -143,6 +143,11 @@ namespace openvpn {
       return std::isspace(static_cast<unsigned char>(c)) != 0;
     }
 
+    inline bool is_digit(const char c)
+    {
+      return std::isdigit(static_cast<unsigned char>(c)) != 0;
+    }
+
     // return true if str contains at least one space char
     inline bool contains_space(const std::string& str)
     {
