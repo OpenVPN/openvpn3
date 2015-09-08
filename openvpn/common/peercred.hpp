@@ -22,6 +22,7 @@
 #ifndef OPENVPN_COMMON_PEERCRED_H
 #define OPENVPN_COMMON_PEERCRED_H
 
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -37,6 +38,11 @@ namespace openvpn {
 	  gid(gid_arg),
 	  pid(pid_arg)
       {
+      }
+
+      bool root_or_self_uid() const
+      {
+	return !uid || uid == ::getuid();
       }
 
       int uid;
