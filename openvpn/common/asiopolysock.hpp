@@ -69,6 +69,8 @@ namespace openvpn {
       }
 #endif
 
+      virtual bool is_local() const = 0;
+
       size_t index() const { return index_; }
 
     protected:
@@ -144,6 +146,11 @@ namespace openvpn {
 	socket.close();
       }
 
+      virtual bool is_local() const override
+      {
+	return false;
+      }
+
       asio::ip::tcp::socket socket;
     };
 
@@ -199,6 +206,11 @@ namespace openvpn {
       virtual void close() override
       {
 	socket.close();
+      }
+
+      virtual bool is_local() const override
+      {
+	return true;
       }
 
       asio::local::stream_protocol::socket socket;
