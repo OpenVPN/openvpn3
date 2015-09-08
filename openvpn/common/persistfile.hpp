@@ -19,8 +19,8 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_COMMON_PERSISTOUTFILE_H
-#define OPENVPN_COMMON_PERSISTOUTFILE_H
+#ifndef OPENVPN_COMMON_PERSISTFILE_H
+#define OPENVPN_COMMON_PERSISTFILE_H
 
 #include <cstring>     // for std::strerror()
 #include <sys/types.h> // for open(), lseek(), ftruncate()
@@ -38,10 +38,10 @@
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
-  class PersistentOutputFile
+  class PersistentFile
   {
   public:
-    PersistentOutputFile(const std::string& fn_arg)
+    PersistentFile(const std::string& fn_arg)
       : fn(fn_arg)
     {
       const int f = ::open(fn.c_str(), O_WRONLY|O_CREAT|O_CLOEXEC, S_IRUSR|S_IWUSR);
