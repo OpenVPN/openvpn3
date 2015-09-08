@@ -352,7 +352,7 @@ namespace openvpn {
 	  typedef TCPTransport::Link<AsioProtocol, Client*, false> LinkImpl;
 	  friend LinkImpl; // calls tcp_* handlers
 
-	  void start()
+	  void start(const bool ssl)
 	  {
 	    timeout_coarse.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
 	    link.reset(new LinkImpl(this,
@@ -362,7 +362,7 @@ namespace openvpn {
 				    (*parent->config->frame)[Frame::READ_HTTP],
 				    stats));
 	    link->set_raw_mode(true);
-	    if (parent->config->ssl_factory)
+	    if (ssl)
 	      ssl_sess = parent->config->ssl_factory->ssl();
 	    restart(true);
 	  }
@@ -663,13 +663,30 @@ namespace openvpn {
 	  acceptors.reserve(listen_list.size());
 	  for (const auto &listen_item : listen_list)
 	    {
-	      OPENVPN_LOG("HTTP" << (config->ssl_factory ? "S" : "") << " Listen: " << listen_item.to_string());
-
 	      switch (listen_item.proto())
 		{
 		case Protocol::TCPv4:
 		case Protocol::TCPv6:
 		  {
+		    // ssl enabled?
+		    bool is_ssl = false;
+		    switch (listen_item.ssl)
+		      {
+		      case Listen::Item::SSLUnspecified:
+			is_ssl = bool(config->ssl_factory);
+			break;
+		      case Listen::Item::SSLOn:
+			if (listen_item.ssl == Listen::Item::SSLOn && !config->ssl_factory)
+			  throw http_server_exception("listen item has 'ssl' qualifier, but no SSL configuration");
+			is_ssl = true;
+			break;
+		      case Listen::Item::SSLOff:
+			break;
+		      }
+
+		    OPENVPN_LOG("HTTP" << (is_ssl ? "S" : "") << " Listen: " << listen_item.to_string());
+
+		    // init TCP acceptor
 		    AcceptorTCP::Ptr a(new AcceptorTCP(io_context));
 
 		    // parse address/port of local endpoint
@@ -695,7 +712,7 @@ namespace openvpn {
 		    a->acceptor.listen();
 
 		    // save acceptor
-		    acceptors.push_back(a);
+		    acceptors.emplace_back(std::move(a), is_ssl);
 
 		    // queue accept on listen socket
 		    queue_accept(acceptors.size() - 1);
@@ -703,6 +720,8 @@ namespace openvpn {
 		  break;
 		case Protocol::UnixStream:
 		  {
+		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
+
 		    AcceptorUnix::Ptr a(new AcceptorUnix(io_context));
 
 		    // set endpoint
@@ -726,7 +745,7 @@ namespace openvpn {
 		    a->acceptor.listen();
 
 		    // save acceptor
-		    acceptors.push_back(a);
+		    acceptors.emplace_back(std::move(a), false);
 
 		    // queue accept on listen socket
 		    queue_accept(acceptors.size() - 1);
@@ -770,12 +789,25 @@ namespace openvpn {
 	  virtual void close() = 0;
 	};
 
-	struct AcceptorSet : public std::vector<AcceptorBase::Ptr>
+	struct AcceptorItem
+	{
+	  AcceptorItem(AcceptorBase::Ptr acceptor_arg,
+		       const bool ssl_arg)
+	    : acceptor(std::move(acceptor_arg)),
+	      ssl(ssl_arg)
+	  {
+	  }
+
+	  AcceptorBase::Ptr acceptor;
+	  bool ssl;
+	};
+
+	struct AcceptorSet : public std::vector<AcceptorItem>
 	{
 	  void close()
 	  {
 	    for (auto &i : *this)
-	      i->close();
+	      i.acceptor->close();
 	  }
 	};
 
@@ -839,7 +871,7 @@ namespace openvpn {
 
 	void queue_accept(const size_t acceptor_index)
 	{
-	  acceptors[acceptor_index]->async_accept(this, acceptor_index, io_context);
+	  acceptors[acceptor_index].acceptor->async_accept(this, acceptor_index, io_context);
 	}
 
 	void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error)
@@ -864,7 +896,7 @@ namespace openvpn {
 		Client::Initializer ci(io_context, this, std::move(sock), client_id);
 		Client::Ptr cli = client_factory->new_client(ci);
 		clients[client_id] = cli;
-		cli->start();
+		cli->start(acceptors[acceptor_index].ssl);
 	      }
 	    else
 	      throw http_server_exception("accept failed: " + error.message());
