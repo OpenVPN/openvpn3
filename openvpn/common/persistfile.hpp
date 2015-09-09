@@ -68,6 +68,14 @@ namespace openvpn {
 	syserr("truncate");
     }
 
+    struct stat stat()
+    {
+      struct stat s;
+      if (::fstat(fd(), &s) < 0)
+	syserr("fstat");
+      return s;
+    }
+
     void write(const Buffer& buf)
     {
       write(buf.c_data(), buf.size());
