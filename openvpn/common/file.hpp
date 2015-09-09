@@ -32,6 +32,7 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufstr.hpp>
+#include <openvpn/buffer/buflist.hpp>
 
 namespace openvpn {
 
@@ -83,6 +84,39 @@ namespace openvpn {
       OPENVPN_THROW(open_file_error, "cannot read: " << filename);
 
     return b;
+  }
+
+  // Read a file (may be text or binary) without seeking to determine
+  // its length.
+  inline BufferPtr read_binary_linear(const std::string& filename,
+				      const std::uint64_t max_size = 0,
+				      const size_t block_size = 1024)
+  {
+    std::ifstream ifs(filename.c_str(), std::ios::binary);
+    if (!ifs)
+      OPENVPN_THROW(open_file_error, "cannot open for read: " << filename);
+
+    BufferList buflist;
+    std::streamsize total_size = 0;
+    while (true)
+      {
+	BufferPtr b = new BufferAllocated(block_size, 0);
+	ifs.read((char *)b->data(), b->remaining());
+	const std::streamsize size = ifs.gcount();
+	if (size)
+	  {
+	    b->set_size(size);
+	    total_size += size;
+	    if (max_size && std::uint64_t(total_size) > max_size)
+	      OPENVPN_THROW(file_too_large, "file too large [" << total_size << '/' << max_size << "]: " << filename);
+	    buflist.push_back(std::move(b));
+	  }
+	if (ifs.eof())
+	  break;
+	if (!ifs)
+	  OPENVPN_THROW(open_file_error, "cannot read: " << filename);
+      }
+    return buflist.join(0, 0);
   }
 
   // Read a text file as a std::string, throw error if file is binary
