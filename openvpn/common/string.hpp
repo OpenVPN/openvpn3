@@ -113,6 +113,13 @@ namespace openvpn {
       return str;
     }
 
+    // return true if string ends with a newline
+    bool ends_with_newline(const std::string& str)
+    {
+      const size_t len = str.length();
+      return len > 0 && str[len-1] == '\n';
+    }
+
     // return true if str of size len contains an embedded null
     inline bool embedded_null(const char *str, size_t len)
     {
@@ -169,6 +176,38 @@ namespace openvpn {
 	  ret += c;
 	}
       return ret;
+    }
+
+    // generate a string with spaces
+    inline std::string spaces(int n)
+    {
+      std::string ret;
+      ret.reserve(n);
+      while (n-- > 0)
+	ret += ' ';
+      return ret;
+    }
+
+    // indent a multiline string
+    inline std::string indent(const std::string& str, const int first, const int remaining)
+    {
+      std::string ret = spaces(first);
+      for (auto &c : str)
+	{
+	  ret += c;
+	  if (c == '\n')
+	    ret += spaces(remaining);
+	}
+      return ret;
+    }
+
+    // return true if str is empty or contains only space chars
+    inline bool is_empty(const std::string& str)
+    {
+      for (const auto& c : str)
+	if (!is_space(c))
+	  return false;
+      return true;
     }
 
     // convert \n to \r\n
