@@ -409,7 +409,8 @@ namespace openvpn {
 		    timeout_timer.expires_at(next);
 		    timeout_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
                                              {
-                                               self->timeout_callback(error);
+					       if (!error)
+						 self->timeout_callback(error);
                                              });
 		  }
 	      }
