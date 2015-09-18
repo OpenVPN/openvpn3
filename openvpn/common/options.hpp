@@ -1230,6 +1230,23 @@ namespace openvpn {
 	str = str.substr(1, n-2);
     }
 
+    // detect multiline breakout attempt
+    static void detect_multiline_breakout(const std::string& opt, const std::string& tag)
+    {
+      std::string line;
+      for (auto &c : opt)
+	{
+	  if (c == '\n' || c == '\r')
+	    line.clear();
+	  else
+	    {
+	      line += c;
+	      if (is_close_tag(line, tag))
+		throw option_error("multiline breakout detected");
+	    }
+	}
+    }
+
   private:
     // multiline tagging (meta)
 
