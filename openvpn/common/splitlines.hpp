@@ -73,6 +73,11 @@ namespace openvpn {
       return line;
     }
 
+    const std::string& line_ref() const
+    {
+      return line;
+    }
+
     enum Status {
       S_OK,
       S_EOF,
