@@ -348,7 +348,8 @@ namespace openvpn {
 		  general_timer.expires_at(next);
 		  general_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
 					   {
-					     self->general_timeout_handler(error);
+					     if (!error)
+					       self->general_timeout_handler(error);
 					   });
 		}
 	    }
@@ -423,7 +424,8 @@ namespace openvpn {
 		    connect_timer.expires_at(now + Time::Duration::seconds(config->connect_timeout));
 		    connect_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
 					     {
-					       self->connect_timeout_handler(error);
+					       if (!error)
+						 self->connect_timeout_handler(error);
 					     });
 		  }
 	      }
