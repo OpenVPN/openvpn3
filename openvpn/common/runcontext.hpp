@@ -104,7 +104,8 @@ namespace openvpn {
       exit_timer.expires_at(Time::now() + Time::Duration::seconds(OPENVPN_EXIT_IN));
       exit_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
                             {
-                              self->exit_timer_callback(error);
+			      if (!error)
+				self->exit_timer_callback(error);
                             });
 #endif
     }
