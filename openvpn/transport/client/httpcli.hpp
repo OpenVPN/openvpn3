@@ -126,7 +126,7 @@ namespace openvpn {
 	    // get creds
 	    {
 	      std::vector<std::string> user_pass;
-	      if (parse_user_pass(opt, "http-proxy-user-pass", &user_pass))
+	      if (UserPass::parse(opt, "http-proxy-user-pass", 0, &user_pass))
 		{
 		  if (user_pass.size() >= 1)
 		    username = user_pass[0];

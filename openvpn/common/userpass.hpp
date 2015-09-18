@@ -27,40 +27,73 @@
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/splitlines.hpp>
+#include <openvpn/common/string.hpp>
+#include <openvpn/common/file.hpp>
 
 namespace openvpn {
+  namespace UserPass {
 
-  inline bool parse_user_pass(const OptionList& options, const std::string& opt_name, std::vector<std::string>* user_pass)
+    enum Flags {
+      OPT_REQUIRED = (1<<0),
+      USERNAME_REQUIRED = (1<<1),
+      PASSWORD_REQUIRED = (1<<2),
+      TRY_FILE = (1<<3),
+    };
+
+    inline bool parse(const OptionList& options,
+		      const std::string& opt_name,
+		      const unsigned int flags,
+		      std::vector<std::string>* user_pass)
     {
       const Option* auth_user_pass = options.get_ptr(opt_name);
-      if (auth_user_pass)
+      if (!auth_user_pass)
 	{
-	  if (user_pass && auth_user_pass->size() == 2)
-	    {
-	      SplitLines in(auth_user_pass->get(1, 512 | Option::MULTILINE), 256);
-	      for (int i = 0; in(true) && i < 2; ++i)
-		user_pass->push_back(in.line_ref());
-	    }
-	  return true;
+	  if (flags & OPT_REQUIRED)
+	    throw option_error(opt_name + " : credentials option missing");
+	  return false;
 	}
-      else
-	return false;
+      if (auth_user_pass->size() != 2)
+	{
+	  if (flags & OPT_REQUIRED)
+	    throw option_error(opt_name + " : credentials option incorrectly specified");
+	  return false;
+	}
+
+      std::string str = auth_user_pass->get(1, 1024 | Option::MULTILINE);
+      if ((flags & TRY_FILE) && !string::is_multiline(str))
+	str = read_text_utf8(str);
+      SplitLines in(str, 1024);
+      for (int i = 0; in(true) && i < 2; ++i)
+	{
+	  const std::string& line = in.line_ref();
+	  if (user_pass)
+	    user_pass->push_back(line);
+	}
+      return true;
     }
 
-  inline void parse_user_pass(const OptionList& options, const std::string& opt_name,
-			      std::string& user, std::string& pass)
-  {
-    std::vector<std::string> up;
-    up.reserve(2);
-    parse_user_pass(options, opt_name, &up);
-    if (up.size() >= 1)
-      {
-	user = up[0];
-	if (up.size() >= 2)
-	  pass = up[1];
-      }
-  }
+    inline void parse(const OptionList& options,
+		      const std::string& opt_name,
+		      const unsigned int flags,
+		      std::string& user,
+		      std::string& pass)
+    {
+      std::vector<std::string> up;
+      up.reserve(2);
+      parse(options, opt_name, flags, &up);
+      if (up.size() >= 1)
+	{
+	  user = up[0];
+	  if (up.size() >= 2)
+	    pass = up[1];
+	}
+      if ((flags & USERNAME_REQUIRED) && string::is_empty(user))
+	throw option_error(opt_name + " : username empty");
+      if ((flags & PASSWORD_REQUIRED) && string::is_empty(pass))
+	throw option_error(opt_name + " : password empty");
+    }
 
-} // namespace openvpn
+  }
+}
 
 #endif

@@ -352,7 +352,7 @@ namespace openvpn {
   private:
     static bool parse_auth_user_pass(const OptionList& options, std::vector<std::string>* user_pass)
     {
-      return parse_user_pass(options, "auth-user-pass", user_pass);
+      return UserPass::parse(options, "auth-user-pass", 0, user_pass);
     }
 
     static void process_setenv_opt(OptionList& options)
