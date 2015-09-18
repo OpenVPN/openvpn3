@@ -113,6 +113,12 @@ namespace openvpn {
     virtual void set_rng(const RandomAPI::Ptr& rng_arg) = 0;
     virtual void load(const OptionList& opt, const unsigned int lflags) = 0;
 
+    virtual std::string validate_cert(const std::string& cert_txt) const = 0;
+    virtual std::string validate_cert_list(const std::string& certs_txt) const = 0;
+    virtual std::string validate_crl(const std::string& crl_txt) const = 0;
+    virtual std::string validate_private_key(const std::string& key_txt) const = 0;
+    virtual std::string validate_dh(const std::string& dh_txt) const = 0;
+
     virtual SSLFactoryAPI::Ptr new_factory() = 0;
   };
 }

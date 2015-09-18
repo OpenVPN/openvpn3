@@ -213,6 +213,35 @@ namespace openvpn {
 	// use its own RNG.
       }
 
+      virtual std::string validate_cert(const std::string& cert_txt) const
+      {
+	OpenSSLPKI::X509 cert(cert_txt, "cert");
+	return cert.render_pem();
+      }
+
+      virtual std::string validate_cert_list(const std::string& certs_txt) const
+      {
+	CertCRLList certs(certs_txt, "cert list");
+	return certs.render_pem();
+      }
+
+      virtual std::string validate_private_key(const std::string& key_txt) const
+      {
+	OpenSSLPKI::PKey pkey(key_txt, "private key");
+	return pkey.render_pem();
+      }
+
+      virtual std::string validate_dh(const std::string& dh_txt) const
+      {
+	OpenSSLPKI::DH dh(dh_txt);
+	return dh.render_pem();
+      }
+
+      virtual std::string validate_crl(const std::string& crl_txt) const
+      {
+	throw ssl_options_error("CRL not implemented yet in OpenSSL driver"); // fixme
+      }
+
       virtual void load(const OptionList& opt, const unsigned int lflags)
       {
 	// client/server

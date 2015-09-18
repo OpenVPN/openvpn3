@@ -273,6 +273,36 @@ namespace openvpn {
 	rng = rng_arg;
       }
 
+      virtual std::string validate_cert(const std::string& cert_txt) const
+      {
+	PolarSSLPKI::X509Cert::Ptr cert = new PolarSSLPKI::X509Cert(cert_txt, "validation cert", true);
+	return cert_txt; // fixme -- implement parse/re-render semantics
+      }
+
+      virtual std::string validate_cert_list(const std::string& certs_txt) const
+      {
+	PolarSSLPKI::X509Cert::Ptr cert = new PolarSSLPKI::X509Cert(certs_txt, "validation cert list", true);
+	return certs_txt; // fixme -- implement parse/re-render semantics
+      }
+
+      virtual std::string validate_private_key(const std::string& key_txt) const
+      {
+	PolarSSLPKI::PKContext::Ptr pkey = new PolarSSLPKI::PKContext(key_txt, "validation", "");
+	return key_txt; // fixme -- implement parse/re-render semantics
+      }
+
+      virtual std::string validate_dh(const std::string& dh_txt) const
+      {
+	PolarSSLPKI::DH::Ptr dh = new PolarSSLPKI::DH(dh_txt, "validation");
+	return dh_txt; // fixme -- implement parse/re-render semantics
+      }
+
+      virtual std::string validate_crl(const std::string& crl_txt) const
+      {
+	PolarSSLPKI::X509CRL::Ptr crl = new PolarSSLPKI::X509CRL(crl_txt);
+	return crl_txt; // fixme -- implement parse/re-render semantics
+      }
+
       virtual void load(const OptionList& opt, const unsigned int lflags)
       {
 	// client/server
