@@ -19,6 +19,9 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef OPENVPN_WS_HTTPSERV_H
+#define OPENVPN_WS_HTTPSERV_H
+
 #include <unistd.h>    // for unlink()
 #include <sys/stat.h>  // for chmod()
 
@@ -53,9 +56,6 @@
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/ws/httpcommon.hpp>
 #include <openvpn/server/listenlist.hpp>
-
-#ifndef OPENVPN_WS_HTTPSERV_H
-#define OPENVPN_WS_HTTPSERV_H
 
 #ifndef OPENVPN_HTTP_SERV_RC
 #define OPENVPN_HTTP_SERV_RC RC<thread_unsafe_refcount>
