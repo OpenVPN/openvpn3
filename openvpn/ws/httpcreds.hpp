@@ -34,6 +34,7 @@
 #include <openvpn/common/memneq.hpp>
 #include <openvpn/common/umask.hpp>
 #include <openvpn/common/unicode.hpp>
+#include <openvpn/common/userpass.hpp>
 #include <openvpn/http/header.hpp>
 
 namespace openvpn {
@@ -102,6 +103,31 @@ namespace openvpn {
 	      throw Exception(fn + " : password empty");
 	    ret.username = std::move(u);
 	    ret.password = std::move(p);
+	  }
+	catch (const std::exception& e)
+	  {
+	    if (throw_on_error)
+	      throw web_creds_error(e.what());
+	  }
+	return ret;
+      }
+
+      static Creds load_from_options(const OptionList& opt,
+				     const std::string& opt_name,
+				     const bool try_file,
+				     const bool password_required,
+				     const bool throw_on_error)
+      {
+	Creds ret;
+	try
+	  {
+	    unsigned int flags = UserPass::OPT_REQUIRED
+	                       | UserPass::USERNAME_REQUIRED;
+	    if (password_required)
+	      flags |= UserPass::PASSWORD_REQUIRED;
+	    if (try_file)
+	      flags |= UserPass::TRY_FILE;
+	    UserPass::parse(opt, opt_name, flags, ret.username, ret.password);
 	  }
 	catch (const std::exception& e)
 	  {
