@@ -31,12 +31,14 @@ namespace openvpn {
   struct BufferList : public std::list<BufferPtr>
   {
     BufferPtr join(const size_t headroom,
-		   const size_t tailroom) const
+		   const size_t tailroom,
+		   const bool size_1_optim) const
     {
       // special optimization if list contains
       // a single element that satisfies our
       // headroom/tailroom constraints.
-      if (size() == 1
+      if (size_1_optim
+	  && size() == 1
 	  && front()->offset() >= headroom
 	  && front()->remaining() >= tailroom)
 	return front();
@@ -55,12 +57,25 @@ namespace openvpn {
       return big;
     }
 
+    BufferPtr join() const
+    {
+      return join(0, 0, true);
+    }
+
     size_t join_size() const
     {
       size_t size = 0;
       for (auto &b : *this)
 	size += b->size();
       return size;
+    }
+
+    BufferList copy() const
+    {
+      BufferList ret;
+      for (auto &b : *this)
+	ret.emplace_back(new BufferAllocated(*b));
+      return ret;
     }
   };
 

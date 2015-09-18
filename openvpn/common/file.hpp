@@ -116,7 +116,7 @@ namespace openvpn {
 	if (!ifs)
 	  OPENVPN_THROW(open_file_error, "cannot read: " << filename);
       }
-    return buflist.join(0, 0);
+    return buflist.join();
   }
 
   // Read a text file as a std::string, throw error if file is binary

@@ -136,7 +136,7 @@ namespace openvpn {
 #ifdef OPENVPN_GZIP_DEBUG
 	  OPENVPN_LOG("*** DECOMPRESS " << src->size() << " -> " << blist.join_size());
 #endif
-	  return blist.join(headroom, tailroom);
+	  return blist.join(headroom, tailroom, true);
 	}
       else
 	return BufferPtr();
