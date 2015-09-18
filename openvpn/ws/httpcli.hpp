@@ -57,6 +57,7 @@
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/ws/httpcommon.hpp>
+#include <openvpn/ws/httpcreds.hpp>
 
 namespace openvpn {
   namespace WS {
@@ -166,6 +167,12 @@ namespace openvpn {
       };
 
       struct Request {
+	void set_creds(const Creds& creds)
+	{
+	  username = creds.username;
+	  password = creds.password;
+	}
+
 	std::string method;
 	std::string uri;
 	std::string username;
@@ -212,6 +219,16 @@ namespace openvpn {
 	    general_timer(io_context_arg),
 	    general_timeout_coarse(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024))
 	{
+	}
+
+	virtual ~HTTPCore()
+	{
+	  stop();
+	}
+
+	bool is_alive() const
+	{
+	  return alive;
 	}
 
 	void start_request()
@@ -833,6 +850,21 @@ namespace openvpn {
 	{
 	}
 
+	void attach(PARENT* parent_arg)
+	{
+	  parent = parent_arg;
+	}
+
+	void detach(const bool keepalive=false)
+	{
+	  if (parent)
+	    {
+	      parent = nullptr;
+	      if (!keepalive)
+		stop();
+	    }
+	}
+
 	virtual Host http_host()
 	{
 	  if (parent)
@@ -907,15 +939,6 @@ namespace openvpn {
 	{
 	  if (parent)
 	    parent->http_keepalive_close(*this, status, description);
-	}
-
-	void detach()
-	{
-	  if (parent)
-	    {
-	      parent = nullptr;
-	      stop();
-	    }
 	}
 
       private:
