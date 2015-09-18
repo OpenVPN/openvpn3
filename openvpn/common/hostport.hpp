@@ -27,6 +27,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/common/unicode.hpp>
 
 namespace openvpn {
   namespace HostPort {
@@ -40,7 +41,7 @@ namespace openvpn {
     inline void validate_port(const std::string& port, const std::string& title, unsigned int *value = nullptr)
     {
       if (!is_valid_port(port, value))
-	OPENVPN_THROW(host_port_error, "bad " << title << " port number: " << port);
+	OPENVPN_THROW(host_port_error, "bad " << title << " port number: " << Unicode::utf8_printable(port, 16));
     }
 
     inline unsigned short parse_port(const std::string& port, const std::string& title)
@@ -76,7 +77,7 @@ namespace openvpn {
     inline void validate_host(const std::string& host, const std::string& title)
     {
       if (!is_valid_host(host))
-	OPENVPN_THROW(host_port_error, "bad " << title << " host");
+	OPENVPN_THROW(host_port_error, "bad " << title << " host: " << Unicode::utf8_printable(host, 64));
     }
 
     inline bool split_host_port(const std::string& str,
