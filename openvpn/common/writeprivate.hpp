@@ -1,0 +1,82 @@
+//    OpenVPN -- An application to securely tunnel IP networks
+//               over a single port, with support for SSL/TLS-based
+//               session authentication and key exchange,
+//               packet encryption, packet authentication, and
+//               packet compression.
+//
+//    Copyright (C) 2012-2015 OpenVPN Technologies, Inc.
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU Affero General Public License Version 3
+//    as published by the Free Software Foundation.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU Affero General Public License for more details.
+//
+//    You should have received a copy of the GNU Affero General Public License
+//    along with this program in the COPYING file.
+//    If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef OPENVPN_COMMON_WRITEPRIVATE_H
+#define OPENVPN_COMMON_WRITEPRIVATE_H
+
+#include <cstring>     // for std::strerror()
+#include <sys/types.h> // for open(), ftruncate()
+#include <sys/stat.h>  // for open()
+#include <fcntl.h>     // for open()
+#include <unistd.h>    // for write(), ftruncate()
+#include <errno.h>
+
+#include <string>
+
+#include <openvpn/common/size.hpp>
+#include <openvpn/common/exception.hpp>
+#include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/common/write.hpp>
+#include <openvpn/buffer/buffer.hpp>
+
+namespace openvpn {
+
+  inline void write_private(const std::string& path, const void *buf, size_t count)
+  {
+    ScopedFD fd(::open(path.c_str(), O_WRONLY|O_CREAT|O_CLOEXEC, S_IRUSR|S_IWUSR));
+    if (!fd.defined())
+      {
+	const int eno = errno;
+	OPENVPN_THROW_EXCEPTION(path << " : open error : " << std::strerror(eno));
+      }
+    if (::ftruncate(fd(), 0) < 0)
+      {
+	const int eno = errno;
+	OPENVPN_THROW_EXCEPTION(path << " : truncate error : " << std::strerror(eno));
+      }
+    const ssize_t len = write_retry(fd(), buf, count);
+    if (len == -1)
+      {
+	const int eno = errno;
+	OPENVPN_THROW_EXCEPTION(path << " : write error : " << std::strerror(eno));
+      }
+    else if (len != count)
+      OPENVPN_THROW_EXCEPTION(path << " : unexpected write size");
+    if (!fd.close())
+      {
+	const int eno = errno;
+	OPENVPN_THROW_EXCEPTION(path << " : close error : " << std::strerror(eno));
+      }
+  }
+
+  inline void write_private(const std::string& path, const Buffer& buf)
+  {
+    write_private(path, buf.c_data(), buf.size());
+  }
+
+  inline void write_private(const std::string& path, const std::string& str)
+  {
+    write_private(path, str.c_str(), str.length());
+  }
+
+}
+
+#endif
