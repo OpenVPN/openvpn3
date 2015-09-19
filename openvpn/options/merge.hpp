@@ -306,6 +306,7 @@ namespace openvpn {
 				    error_ = fn + ": file too large";
 				    return;
 				  }
+				OptionList::detect_multiline_breakout(file_content, opt.ref(0));
 			      }
 			      catch (const std::exception& e)
 				{

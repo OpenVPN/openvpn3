@@ -1230,8 +1230,8 @@ namespace openvpn {
 	str = str.substr(1, n-2);
     }
 
-    // detect multiline breakout attempt
-    static void detect_multiline_breakout(const std::string& opt, const std::string& tag)
+    // detect multiline breakout attempt (return true)
+    static bool detect_multiline_breakout_nothrow(const std::string& opt, const std::string& tag)
     {
       std::string line;
       for (auto &c : opt)
@@ -1242,9 +1242,17 @@ namespace openvpn {
 	    {
 	      line += c;
 	      if (is_close_tag(line, tag))
-		throw option_error("multiline breakout detected");
+		return true;
 	    }
 	}
+      return false;
+    }
+
+    // detect multiline breakout attempt
+    static void detect_multiline_breakout(const std::string& opt, const std::string& tag)
+    {
+      if (detect_multiline_breakout_nothrow(opt, tag))
+	throw option_error("multiline breakout detected");
     }
 
   private:
