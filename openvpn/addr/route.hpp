@@ -25,6 +25,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <cstdint> // for std::uint32_t
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -43,11 +44,13 @@ namespace openvpn {
 
       ADDR addr;
       unsigned int prefix_len;
+      std::uint32_t mark;
 
       OPENVPN_EXCEPTION(route_error);
 
       RouteType()
-	: prefix_len(0)
+	: prefix_len(0),
+	  mark(0)
       {
       }
 
@@ -56,9 +59,17 @@ namespace openvpn {
       {
       }
 
-      RouteType(const ADDR& addr_arg, const unsigned int prefix_len_arg)
+      RouteType(const std::string& rtstr, const std::string& title)
+	: RouteType(RouteType::from_string(rtstr, title.c_str()))
+      {
+      }
+
+      RouteType(const ADDR& addr_arg,
+		const unsigned int prefix_len_arg,
+		const std::uint32_t mark_arg = 0)
 	: addr(addr_arg),
-	  prefix_len(prefix_len_arg)
+	  prefix_len(prefix_len_arg),
+	  mark(mark_arg)
       {
       }
 
