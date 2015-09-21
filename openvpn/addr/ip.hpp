@@ -79,6 +79,11 @@ namespace openvpn {
       {
       }
 
+      Addr(const std::string& ipstr, const std::string& title, Version required_version = UNSPEC)
+	: Addr(from_string(ipstr, title.c_str(), required_version))
+      {
+      }
+
       static std::string validate(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
       {
 	Addr a = from_string(ipstr, title, required_version);
