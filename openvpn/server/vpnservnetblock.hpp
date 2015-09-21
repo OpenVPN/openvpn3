@@ -92,32 +92,36 @@ namespace openvpn {
       IP::Range range6_;
     };
 
-    VPNServerNetblock(const OptionList& opt, const unsigned int n_threads)
+    VPNServerNetblock(const OptionList& opt,
+		      const std::string& opt_name,
+		      const bool ipv4_optional,
+		      const unsigned int n_threads)
     {
       // ifconfig
-      {
-	const Option& o = opt.get("server");
-	const IP::Addr gw(o.get(1, 64), "server gateway");
-	const IP::Addr nm(o.get(2, 64), "server netmask");
-	IP::Route rt(gw, nm.prefix_len());
-	if (rt.version() != IP::Addr::V4)
-	  throw vpn_serv_netblock("server address is not IPv4");
-	rt.force_canonical();
-	snb4 = Netblock(rt);
-	if (snb4.server_gw != gw)
-	  throw vpn_serv_netblock("server local gateway must be first usable address of subnet");
-      }
+      if (!ipv4_optional || opt.exists(opt_name))
+	{
+	  const Option& o = opt.get(opt_name);
+	  const IP::Addr gw(o.get(1, 64), opt_name + " gateway");
+	  const IP::Addr nm(o.get(2, 64), opt_name + " netmask");
+	  IP::Route rt(gw, nm.prefix_len());
+	  if (rt.version() != IP::Addr::V4)
+	    throw vpn_serv_netblock(opt_name + " address is not IPv4");
+	  rt.force_canonical();
+	  snb4 = Netblock(rt);
+	  if (snb4.server_gw != gw)
+	    throw vpn_serv_netblock(opt_name + " local gateway must be first usable address of subnet");
+	}
 
       // ifconfig-ipv6
       {
-	const Option* o = opt.get_ptr("server-ipv6");
+	const Option* o = opt.get_ptr(opt_name + "-ipv6");
 	if (o)
 	  {
-	    IP::Route rt(o->get(1, 64), "server-ipv6 network");
+	    IP::Route rt(o->get(1, 64), opt_name + "-ipv6 network");
 	    if (rt.version() != IP::Addr::V6)
-	      throw vpn_serv_netblock("server-ipv6 network is not IPv6");
+	      throw vpn_serv_netblock(opt_name + "-ipv6 network is not IPv6");
 	    if (!rt.is_canonical())
-	      throw vpn_serv_netblock("server-ipv6 network is not canonical");
+	      throw vpn_serv_netblock(opt_name + "-ipv6 network is not canonical");
 	    snb6 = Netblock(rt);
 	  }
       }
@@ -131,7 +135,7 @@ namespace openvpn {
 	    for (unsigned int i = 0; i < n_threads; ++i)
 	      {
 		if (!rp.next(crange))
-		  throw vpn_serv_netblock("unexpected ServerNetblock4 partition fail");
+		  throw vpn_serv_netblock(opt_name + " : unexpected ServerNetblock4 partition fail");
 		PerThread pt;
 		pt.range4_ = crange;
 		thr.push_back(pt);
@@ -146,11 +150,18 @@ namespace openvpn {
 	      for (unsigned int i = 0; i < n_threads; ++i)
 		{
 		  if (!rp.next(crange))
-		    throw vpn_serv_netblock("unexpected ServerNetblock6 partition fail");
+		    throw vpn_serv_netblock(opt_name + " : unexpected ServerNetblock6 partition fail");
 		  thr[i].range6_ = crange;
 		}
 	    }
 	}
+    }
+
+    static bool configured(const OptionList& opt,
+			   const std::string& opt_name,
+			   const bool ipv4_optional)
+    {
+      return !ipv4_optional || opt.exists(opt_name) || opt.exists(opt_name + "-ipv6");
     }
 
     const Netblock& netblock4() const { return snb4; }
