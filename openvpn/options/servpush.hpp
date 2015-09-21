@@ -33,9 +33,9 @@ namespace openvpn {
   class ServerPushList : public std::vector<std::string>
   {
   public:
-    void parse(const OptionList& opt)
+    void parse(const std::string& opt_name, const OptionList& opt)
     {
-      const OptionList::IndexList* push = opt.get_index_ptr("push");
+      const OptionList::IndexList* push = opt.get_index_ptr(opt_name);
       if (push)
 	{
 	    reserve(push->size());
