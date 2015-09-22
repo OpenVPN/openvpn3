@@ -41,6 +41,7 @@
 #include <openvpn/common/getopt.hpp>
 #include <openvpn/common/getpw.hpp>
 #include <openvpn/time/timestr.hpp>
+#include <openvpn/ssl/peerinfo.hpp>
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/console.hpp>
@@ -214,6 +215,7 @@ int main(int argc, char *argv[])
     { "proxy-port",     required_argument,  nullptr,      'q' },
     { "proxy-username", required_argument,  nullptr,      'U' },
     { "proxy-password", required_argument,  nullptr,      'W' },
+    { "peer-info",      required_argument,  nullptr,      'I' },
     { "proxy-basic",    no_argument,        nullptr,      'B' },
     { "alt-proxy",      no_argument,        nullptr,      'A' },
     { "dco",            no_argument,        nullptr,      'd' },
@@ -251,6 +253,7 @@ int main(int argc, char *argv[])
 	std::string proxyPort;
 	std::string proxyUsername;
 	std::string proxyPassword;
+	std::string peer_info;
 	bool eval = false;
 	bool self_test = false;
 	bool cachePassword = false;
@@ -267,7 +270,7 @@ int main(int argc, char *argv[])
 
 	int ch;
 
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:k:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:I:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -362,6 +365,9 @@ int main(int argc, char *argv[])
 	      case 'D':
 		dynamicChallengeCookie = optarg;
 		break;
+	      case 'I':
+		peer_info = optarg;
+		break;
 	      default:
 		goto usage;
 	      }
@@ -423,6 +429,7 @@ int main(int argc, char *argv[])
 	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 	      config.googleDnsFallback = googleDnsFallback;
 	      config.tunPersist = tunPersist;
+	      PeerInfo::Set::parse_csv(peer_info, config.peerInfo);
 
 	      if (eval)
 		{
@@ -593,6 +600,7 @@ int main(int argc, char *argv[])
   std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
   std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
   std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
+  std::cout << "--peer-info, -I      : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
   ret = 2;
   goto done;
 

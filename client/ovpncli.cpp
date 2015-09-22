@@ -330,6 +330,7 @@ namespace openvpn {
 	std::string tls_version_min_override;
 	std::string gui_version;
 	ProtoContextOptions::Ptr proto_context_options;
+	PeerInfo::Set::Ptr extra_peer_info;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
 	bool alt_proxy;
 	bool dco;
@@ -457,6 +458,7 @@ namespace openvpn {
 	state->gui_version = config.guiVersion;
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
+	state->extra_peer_info = PeerInfo::Set::new_from_foreign_set(config.peerInfo);
 	if (!config.proxyHost.empty())
 	  {
 	    HTTPProxyTransport::Options::Ptr ho(new HTTPProxyTransport::Options());
@@ -641,6 +643,7 @@ namespace openvpn {
 	cc.force_aes_cbc_ciphersuites = state->force_aes_cbc_ciphersuites;
 	cc.tls_version_min_override = state->tls_version_min_override;
 	cc.gui_version = state->gui_version;
+	cc.extra_peer_info = state->extra_peer_info;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;

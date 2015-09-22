@@ -131,6 +131,7 @@ namespace openvpn {
       int default_key_direction;
       bool force_aes_cbc_ciphersuites;
       std::string tls_version_min_override;
+      PeerInfo::Set::Ptr extra_peer_info;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -219,6 +220,7 @@ namespace openvpn {
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
       cp->gui_version = config.gui_version;
       cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
+      cp->extra_peer_info = config.extra_peer_info;
       cp->frame = frame;
       cp->now = &now_;
       cp->rng = rng;

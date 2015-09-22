@@ -142,6 +142,12 @@ namespace openvpn {
     // passed as a dictionary
     struct KeyValue
     {
+      KeyValue() {}
+
+      KeyValue(const std::string& key_arg, const std::string& value_arg)
+	: key(key_arg),
+	  value(value_arg) {}
+
       std::string key;
       std::string value;
     };
@@ -225,6 +231,9 @@ namespace openvpn {
       //   tls_1_1  -- use TLS 1.1 minimum (overrides profile)
       //   tls_1_2  -- use TLS 1.2 minimum (overrides profile)
       std::string tlsVersionMinOverride;
+
+      // Pass custom key/value pairs to OpenVPN server.
+      std::vector<KeyValue> peerInfo;
 
       // HTTP Proxy parameters (optional)
       std::string proxyHost;         // hostname or IP address of proxy
