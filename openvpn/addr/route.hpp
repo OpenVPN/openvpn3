@@ -177,16 +177,11 @@ namespace openvpn {
 	return prefix_len == other.prefix_len && addr == other.addr;
       }
 
-#if HAVE_HASH_COMBINE
       std::size_t hash_value() const
       {
-	std::size_t seed = 0;
-	Hash::combine(seed, addr);
-	Hash::combine(seed, prefix_len);
-	return seed;
+	return Hash::value(addr, prefix_len);
       }
     };
-#endif
 
     template <typename ADDR>
     struct RouteTypeList : public std::vector<RouteType<ADDR>>
@@ -236,5 +231,9 @@ namespace openvpn {
     OPENVPN_OSTREAM(Route6List, to_string);
   }
 }
+
+OPENVPN_HASH_METHOD(openvpn::IP::Route, hash_value);
+OPENVPN_HASH_METHOD(openvpn::IP::Route4, hash_value);
+OPENVPN_HASH_METHOD(openvpn::IP::Route6, hash_value);
 
 #endif

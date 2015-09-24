@@ -22,33 +22,54 @@
 #ifndef OPENVPN_COMMON_HASH_H
 #define OPENVPN_COMMON_HASH_H
 
+#include <cstring> // for std::strlen
 #include <cstdint> // for std::uint32_t, uint64_t
 #include <functional>
 
 #include <openvpn/common/size.hpp>
 
-#ifdef _MSC_VER
-#define HAVE_HASH_COMBINE 0 // no hash combine on MSVC due to lack of SFINAE
-#else
-#define HAVE_HASH_COMBINE 1
-#endif
+#define OPENVPN_HASH_METHOD(T, meth)			\
+  namespace std {					\
+    template <>						\
+    struct hash<T>					\
+    {							\
+      inline std::size_t operator()(const T& obj) const	\
+      {							\
+        return obj.meth();				\
+      }							\
+    };							\
+  }
 
 namespace openvpn {
   namespace Hash {
 
-#if HAVE_HASH_COMBINE
+    void combine_data(std::size_t& seed, const void *data, std::size_t size);
 
     template <class T>
-    inline auto combine(std::size_t& seed, const T& v) -> decltype(std::hash<T>(), void())
+    inline void combine(std::size_t& seed, const T& v)
     {
       std::hash<T> hasher;
       seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
     }
 
-    template <class T>
-    inline auto combine(std::size_t& seed, const T& v) -> decltype(hash_value(v), void())
+    inline void combine(std::size_t& seed, const char *str)
     {
-      seed ^= hash_value(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+      combine_data(seed, str, std::strlen(str));
+    }
+
+    template<typename T, typename... Args>
+    inline void combine(std::size_t& seed, const T& first, Args... args)
+    {
+      combine(seed, first);
+      combine(seed, args...);
+    }
+
+    template<typename... Args>
+    inline std::size_t value(Args... args)
+    {
+      std::size_t hash = 0;
+      combine(hash, args...);
+      return hash;
     }
 
     // A hasher that combines a data hash with a stateful seed.
@@ -91,7 +112,6 @@ namespace openvpn {
 	  break;
 	}
     }
-#endif
   }
 }
 

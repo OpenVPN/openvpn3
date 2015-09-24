@@ -530,17 +530,10 @@ namespace openvpn {
 	return SIZE;
       }
 
-#if HAVE_HASH_COMBINE
       std::size_t hashval() const
       {
-	std::size_t seed = 0;
-	Hash::combine(seed, u.u32[0]);
-	Hash::combine(seed, u.u32[1]);
-	Hash::combine(seed, u.u32[2]);
-	Hash::combine(seed, u.u32[3]);
-	return seed;
+	return Hash::value(u.u32[0], u.u32[1], u.u32[2], u.u32[3]);
       }
-#endif
 
 #ifdef OPENVPN_IP_IMMUTABLE
     private:
@@ -824,14 +817,9 @@ namespace openvpn {
     };
 
     OPENVPN_OSTREAM(Addr, to_string)
-
-#if HAVE_HASH_COMBINE
-    inline std::size_t hash_value(const Addr& addr)
-    {
-      return addr.hashval();
-    }
-#endif
   }
-} // namespace openvpn
+}
+
+OPENVPN_HASH_METHOD(openvpn::IPv6::Addr, hashval);
 
 #endif // OPENVPN_ADDR_IPV6_H
