@@ -93,9 +93,9 @@ namespace openvpn {
 	    const std::string content = read_text_utf8(fn);
 	    SplitLines sl(content, 1024);
 	    std::string u, p;
-	    if (sl.next(u) != SplitLines::S_OK)
+	    if (sl.next(u) != SplitLines::S_OKAY)
 	      throw Exception(fn + " : username missing");
-	    if (sl.next(p) != SplitLines::S_OK)
+	    if (sl.next(p) != SplitLines::S_OKAY)
 	      throw Exception(fn + " : password missing");
 	    if (u.empty())
 	      throw Exception(fn + " : username empty");
