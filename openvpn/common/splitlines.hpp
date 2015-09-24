@@ -79,7 +79,7 @@ namespace openvpn {
     }
 
     enum Status {
-      S_OK,
+      S_OKAY,
       S_EOF,
       S_ERROR
     };
@@ -92,7 +92,7 @@ namespace openvpn {
       if (overflow)
 	return S_ERROR;
       ln = line;
-      return S_OK;
+      return S_OKAY;
     }
 
   private:
