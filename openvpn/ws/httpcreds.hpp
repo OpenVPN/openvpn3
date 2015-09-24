@@ -32,10 +32,14 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/splitlines.hpp>
 #include <openvpn/common/memneq.hpp>
-#include <openvpn/common/umask.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/userpass.hpp>
+#include <openvpn/common/platform.hpp>
 #include <openvpn/http/header.hpp>
+
+#ifndef OPENVPN_PLATFORM_WIN
+#include <openvpn/common/umask.hpp>
+#endif
 
 namespace openvpn {
   namespace WS {
@@ -149,7 +153,9 @@ namespace openvpn {
 
       void save_to_file(const std::string& fn) const
       {
+#ifndef OPENVPN_PLATFORM_WIN
 	const UMaskPrivate um;
+#endif
 	write_string(fn, username + '\n' + password + '\n');
       }
 
