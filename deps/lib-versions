@@ -1,4 +1,4 @@
-export ASIO_VERSION=asio-20150718
+export ASIO_VERSION=asio-20150924
 export LZ4_VERSION=lz4-r120
 export POLARSSL_VERSION=polarssl-1.3.9a
 export OPENSSL_VERSION=openssl-1.0.2d
