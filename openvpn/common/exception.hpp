@@ -29,6 +29,7 @@
 #include <string>
 #include <sstream>
 #include <exception>
+#include <utility>
 
 #include <openvpn/common/stringize.hpp> // for OPENVPN_STRINGIZE
 #include <openvpn/common/string.hpp>
@@ -46,9 +47,10 @@ namespace openvpn {
   class Exception : public std::exception
   {
   public:
-    Exception(const std::string& err) : err_(err) {}
+    Exception(const std::string& err) noexcept : err_(err) {}
+    Exception(std::string&& err) noexcept : err_(std::move(err)) {}
     virtual const char* what() const throw() { return err_.c_str(); }
-    const std::string& err() const { return err_; }
+    const std::string& err() const noexcept { return err_; }
     virtual ~Exception() throw() {}
 
     void add_label(const std::string& label)
