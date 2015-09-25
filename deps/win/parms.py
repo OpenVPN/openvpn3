@@ -11,7 +11,7 @@ PARMS = {
     "MSVC_DIR" : "c:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
     "ARCH" : "amd64", # one of amd64, x86
     "LIB_VERSIONS" : {
-        'asio'     : "asio-20150606",
+        'asio'     : "asio-20150924",
         'polarssl' : "polarssl-1.3.9a",
         'lz4'      : "lz4-r120",
         }
