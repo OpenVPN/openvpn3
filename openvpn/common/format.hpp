@@ -51,34 +51,11 @@ namespace openvpn {
     return os.str();
   }
 
-  // specialization for std::string
-  inline std::string to_string(const std::string& value)
-  {
-    return value;
-  }
-
-  // specialization for char *
-  inline std::string to_string(const char *value)
-  {
-    return std::string(value);
-  }
-
-  // specialization for char
-  inline std::string to_string(const char c)
-  {
-    return std::string(&c, 1);
-  }
-
-  // specialization for nullptr
-  inline std::string to_string(std::nullptr_t)
-  {
-    return "nullptr";
-  }
-
   // Concatenate arguments into a string:
   // print(args...)   -- concatenate
   // prints(args...)  -- concatenate but delimit args with space
   // printd(char delim, args...) -- concatenate but delimit args with delim
+
   namespace print_detail {
     template<typename T>
     inline void print(std::ostream& os, char delim, const T& first)
@@ -121,15 +98,136 @@ namespace openvpn {
   // %r formats any argument regardless of type and quotes it.
   // %% formats '%'
   // printfmt(<format_string>, args...)
+
+  namespace print_formatted_detail {
+    template<typename T>
+    class Output {};
+
+    template<>
+    class Output<std::string>
+    {
+    public:
+      Output(const size_t reserve)
+      {
+	if (reserve)
+	  str_.reserve(reserve);
+      }
+
+      // numeric types
+      template <typename T,
+		typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
+      void append(T value)
+      {
+	str_ += std::to_string(value);
+      }
+
+      // non-numeric types not specialized below
+      template <typename T,
+		typename std::enable_if<!std::is_arithmetic<T>::value, int>::type = 0>
+      void append(const T& value)
+      {
+	std::ostringstream os;
+	os << value;
+	str_ += os.str();
+      }
+
+      // specialization for std::string
+      void append(const std::string& value)
+      {
+	str_ += value;
+      }
+
+      // specialization for const char *
+      void append(const char *value)
+      {
+	if (value)
+	  str_ += value;
+      }
+
+      // specialization for char *
+      void append(char *value)
+      {
+	if (value)
+	  str_ += value;
+      }
+
+      // specialization for char
+      void append(const char c)
+      {
+	str_ += c;
+      }
+
+      // specialization for nullptr
+      void append(std::nullptr_t)
+      {
+	str_ += "nullptr";
+      }
+
+      std::string str()
+      {
+	return std::move(str_);
+      }
+
+    private:
+      std::string str_;
+    };
+
+    template<>
+    class Output<std::ostringstream>
+    {
+    public:
+      Output(const size_t reserve)
+      {
+	// fixme -- figure out how to reserve space in std::ostringstream
+      }
+
+      // general types
+      template <typename T>
+      void append(const T& value)
+      {
+	os_ << value;
+      }
+
+      // specialization for const char *
+      void append(const char *value)
+      {
+	if (value)
+	  os_ << value;
+      }
+
+      // specialization for char *
+      void append(char *value)
+      {
+	if (value)
+	  os_ << value;
+      }
+
+      // specialization for nullptr
+      void append(std::nullptr_t)
+      {
+	os_ << "nullptr";
+      }
+
+      std::string str()
+      {
+	return os_.str();
+      }
+
+    private:
+      std::ostringstream os_;
+    };
+  }
+
+  template <typename OUT>
   class PrintFormatted
   {
   public:
     PrintFormatted(const std::string& fmt_arg, const size_t reserve)
       : fmt(fmt_arg),
 	fi(fmt.begin()),
+	out(reserve),
 	pct(false)
     {
-      out.reserve(reserve);
     }
 
     void process()
@@ -153,7 +251,7 @@ namespace openvpn {
 
     std::string str()
     {
-      return std::move(out);
+      return out.str();
     }
 
   private:
@@ -171,25 +269,25 @@ namespace openvpn {
 	      pct = false;
 	      if (c == 's')
 		{
-		  append_string(out, arg);
+		  out.append(arg);
 		  return true;
 		}
 	      else if (c == 'r')
 		{
-		  append_string(out, '\"');
-		  append_string(out, arg);
-		  append_string(out, '\"');
+		  out.append('\"');
+		  out.append(arg);
+		  out.append('\"');
 		  return true;
 		}
 	      else
-		out += c;
+		out.append(c);
 	    }
 	  else
 	    {
 	      if (c == '%')
 		pct = true;
 	      else
-		out += c;
+		out.append(c);
 	    }
 	}
       return false;
@@ -202,58 +300,16 @@ namespace openvpn {
 	;
     }
 
-    // numeric types
-    template <typename T,
-	      typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
-    inline void append_string(std::string& str, T value)
-    {
-      str += std::to_string(value);
-    }
-
-    // non-numeric types not specialized below
-    template <typename T,
-	      typename std::enable_if<!std::is_arithmetic<T>::value, int>::type = 0>
-    inline void append_string(std::string& str, const T& value)
-    {
-      std::ostringstream os;
-      os << value;
-      str += os.str();
-    }
-
-    // specialization for std::string
-    inline void append_string(std::string& str, const std::string& value)
-    {
-      str += value;
-    }
-
-    // specialization for char *
-    inline void append_string(std::string& str, const char *value)
-    {
-      str += value;
-    }
-
-    // specialization for char
-    inline void append_string(std::string& str, const char c)
-    {
-      str += c;
-    }
-
-    // specialization for nullptr
-    inline void append_string(std::string& str, std::nullptr_t)
-    {
-      str += "nullptr";
-    }
-
     const std::string& fmt;
     std::string::const_iterator fi;
-    std::string out;
+    print_formatted_detail::Output<OUT> out;
     bool pct;
   };
 
   template<typename... Args>
   inline std::string printfmt(const std::string& fmt, Args... args)
   {
-    PrintFormatted pf(fmt, 256);
+    PrintFormatted<std::string> pf(fmt, 256);
     pf.process(args...);
     return pf.str();
   }
