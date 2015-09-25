@@ -14,5 +14,6 @@ PARMS = {
         'asio'     : "asio-20150924",
         'polarssl' : "polarssl-1.3.9a",
         'lz4'      : "lz4-r120",
+        'jsoncpp'  : "jsoncpp-1.3.0", # optional
         }
 }

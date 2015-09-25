@@ -66,8 +66,24 @@ def build_lz4(parms):
             compile_one_file("lz4.c", ())
             vc_cmd(PARMS, r"lib /OUT:lz4.lib lz4.obj")
 
+def build_jsoncpp(parms):
+    if 'jsoncpp' in PARMS['LIB_VERSIONS']:
+        print "**************** JSONCPP"
+        with Cd(parms['BUILD']) as cd:
+            with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
+                dist = os.path.realpath('jsoncpp')
+                rmtree(dist)
+                d = expand('jsoncpp', parms['DEP'], parms.get('LIB_VERSIONS'))
+                os.rename(d, dist)
+                os.chdir(dist)
+                call(["python", "amalgamate.py"])
+                os.chdir(os.path.join(dist, "dist"))
+                compile_one_file("jsoncpp.cpp", (".",))
+                vc_cmd(PARMS, r"lib /OUT:jsoncpp.lib jsoncpp.obj")
+
 wipetree(PARMS['BUILD'])
 wipetree(PARMS['DIST'])
 build_asio(PARMS)
 build_polarssl(PARMS)
 build_lz4(PARMS)
+build_jsoncpp(PARMS)
