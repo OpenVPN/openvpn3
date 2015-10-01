@@ -210,6 +210,18 @@ namespace openvpn {
       return true;
     }
 
+    // return true if str is empty or contains only space chars
+    inline bool is_empty(const char *str)
+    {
+      if (!str)
+	return true;
+      char c;
+      while ((c = *str++) != '\0')
+	if (!is_space(c))
+	  return false;
+      return true;
+    }
+
     // convert \n to \r\n
     inline std::string unix2dos(const std::string& str)
     {
