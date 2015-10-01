@@ -165,6 +165,28 @@ namespace openvpn {
 	  if (!s.empty() && !string::ends_with_newline(s))
 	    os << '\n';
 	}
+
+	std::string format_status(const TransactionSet& ts) const
+	{
+	  std::string ret;
+	  ret.reserve(256);
+	  ret += title(ts);
+	  ret += " : ";
+	  if (status == WS::Client::Status::E_SUCCESS)
+	    {
+	      ret += std::to_string(reply.status_code);
+	      ret += ' ';
+	      ret += reply.status_text;
+	    }
+	  else
+	    {
+	      ret += WS::Client::Status::error_str(status);
+	      ret += ' ';
+	      ret += description;
+	    }
+	  ret += '\n';
+	  return ret;
+	}
       };
 
       class TransactionSet : public RC<thread_unsafe_refcount>
