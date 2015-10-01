@@ -95,7 +95,8 @@ namespace openvpn {
 
   // String formatting similar to sprintf.
   // %s formats any argument regardless of type.
-  // %r formats any argument regardless of type and quotes it.
+  // %r formats any argument regardless of type and single-quotes it.
+  // %R formats any argument regardless of type and double-quotes it.
   // %% formats '%'
   // printfmt(<format_string>, args...)
 
@@ -282,16 +283,14 @@ namespace openvpn {
 	  if (pct)
 	    {
 	      pct = false;
-	      if (c == 's')
+	      const int quote = quote_delim(c);
+	      if (quote >= 0)
 		{
+		  if (quote)
+		    out.append((char)quote);
 		  out.append(arg);
-		  return true;
-		}
-	      else if (c == 'r')
-		{
-		  out.append('\"');
-		  out.append(arg);
-		  out.append('\"');
+		  if (quote)
+		    out.append((char)quote);
 		  return true;
 		}
 	      else
@@ -313,6 +312,21 @@ namespace openvpn {
       // '?' printed for %s operators that don't match an argument
       while (process_arg("?"))
 	;
+    }
+
+    static int quote_delim(const char fmt)
+    {
+      switch (fmt)
+	{
+	case 's':
+	  return 0;
+	case 'r':
+	  return '\'';
+	case 'R':
+	  return '\"';
+	default:
+	  return -1;
+	}
     }
 
     const std::string& fmt;
