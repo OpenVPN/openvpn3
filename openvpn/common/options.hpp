@@ -1215,7 +1215,7 @@ namespace openvpn {
       return n >= 3 && str[0] == '<' && str[1] != '/' && str[n-1] == '>';
     }
 
-    // return true if string is a tag, e.g. "<ca>"
+    // return true if string is a close tag, e.g. "</ca>"
     static bool is_close_tag(const std::string& str, const std::string& tag)
     {
       const size_t n = str.length();
@@ -1241,7 +1241,14 @@ namespace openvpn {
 	  else
 	    {
 	      line += c;
-	      if (is_close_tag(line, tag))
+	      if (tag.empty())
+		{
+		  if (line.length() >= 2
+		      && line[0] == '<'
+		      && line[1] == '/')
+		    return true;
+		}
+	      else if (is_close_tag(line, tag))
 		return true;
 	    }
 	}
