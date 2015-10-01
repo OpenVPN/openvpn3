@@ -156,7 +156,7 @@ namespace openvpn {
 	HTTP::Reply reply;
 	BufferList content_in;
 
-	void dump(std::ostream& os, const TransactionSet& ts)
+	void dump(std::ostream& os, const TransactionSet& ts) const
 	{
 	  os << "----- " << title(ts) << " -----\n";
 	  BufferPtr in = content_in.join();
@@ -203,7 +203,7 @@ namespace openvpn {
 	// close persistent state.
 	HTTPStateContainer hsc;
 
-	void dump(std::ostream& os)
+	void dump(std::ostream& os) const
 	{
 	  for (auto &t : transactions)
 	    t->dump(os, *this);
