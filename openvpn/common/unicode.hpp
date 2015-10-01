@@ -25,6 +25,7 @@
 #define OPENVPN_COMMON_UNICODE_H
 
 #include <string>
+#include <cstring>           // for std::memcpy
 #include <algorithm>         // for std::min
 #include <memory>
 
@@ -214,6 +215,65 @@ namespace openvpn {
 	}
       return ret;
     }
+
+    class UTF8Iterator
+    {
+    public:
+      struct Char
+      {
+	unsigned int len;
+	unsigned char data[4];
+	bool valid;
+
+	const bool is_valid() const
+	{
+	  return valid && len >= 1 && len <= sizeof(data);
+	}
+
+	std::string str(const char *malformed)
+	{
+	  if (is_valid())
+	    return std::string((char *)data, len);
+	  else
+	    return malformed;
+	}
+      };
+
+      UTF8Iterator(const std::string& str_arg)
+	: str((unsigned char *)str_arg.c_str()),
+	  size(str_arg.length())
+      {
+      }
+
+      bool get(Char &c)
+      {
+	if (size)
+	  {
+	    unsigned int len = std::min((unsigned int)trailingBytesForUTF8[*str]+1,
+					(unsigned int)size);
+	    if (isLegalUTF8(str, len))
+	      {
+		c.valid = true;
+		c.len = std::min(len, (unsigned int)sizeof(c.data));
+		std::memcpy(c.data, str, c.len);
+	      }
+	    else
+	      {
+		c.valid = false;
+		c.len = 1;
+	      }
+	    str += c.len;
+	    size -= c.len;
+	    return true;
+	  }
+	else
+	  return false;
+      }
+
+    private:
+      const unsigned char *str;
+      unsigned int size;
+    };
   }
 }
 
