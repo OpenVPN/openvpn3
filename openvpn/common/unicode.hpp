@@ -169,7 +169,8 @@ namespace openvpn {
       size_t pos = 0;
       while (pos < size)
 	{
-	  int len = trailingBytesForUTF8[(unsigned char)str[pos]]+1;
+	  int len = std::min((int)trailingBytesForUTF8[(unsigned char)str[pos]]+1,
+			     (int)size);
 	  if (!isLegalUTF8((const unsigned char *)&str[pos], len))
 	    len = 1;
 	  pos += len;
