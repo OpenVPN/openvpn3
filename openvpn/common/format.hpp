@@ -329,6 +329,8 @@ namespace openvpn {
     return pf.str();
   }
 
+# define OPENVPN_FMT(...) OPENVPN_LOG_STRING(printfmt(__VA_ARGS__))
+
 } // namespace openvpn
 
 #endif
