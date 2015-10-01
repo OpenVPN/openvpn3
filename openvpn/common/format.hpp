@@ -157,6 +157,12 @@ namespace openvpn {
 	str_ += c;
       }
 
+      // specialization for bool
+      void append(const bool value)
+      {
+	str_ += value ? "true" : "false";
+      }
+
       // specialization for nullptr
       void append(std::nullptr_t)
       {
@@ -200,6 +206,15 @@ namespace openvpn {
       {
 	if (value)
 	  os_ << value;
+      }
+
+      // specialization for bool
+      void append(const bool value)
+      {
+	if (value)
+	  os_ << "true";
+	else
+	  os_ << "false";
       }
 
       // specialization for nullptr
