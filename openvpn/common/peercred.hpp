@@ -26,7 +26,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
+
+#ifdef OPENVPN_PLATFORM_TYPE_APPLE
+#include <sys/ucred.h>
+#endif
 
 namespace openvpn {
   namespace SockOpt {
@@ -53,12 +58,23 @@ namespace openvpn {
     // get credentials of process on other side of unix socket
     inline bool peercreds(const int fd, Creds& cr)
     {
+#if defined(OPENVPN_PLATFORM_TYPE_APPLE)
+      xucred cred;
+      socklen_t credLen = sizeof(cred);
+      if (::getsockopt(fd, SOL_LOCAL, LOCAL_PEERCRED, &cred, &credLen) != 0)
+	return false;
+      cr = Creds(cred.cr_uid, cred.cr_gid);
+      return true;
+#elif defined(OPENVPN_PLATFORM_LINUX)
       struct ucred uc;
       socklen_t uc_len = sizeof(uc);
       if (::getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &uc, &uc_len) != 0)
 	return false;
       cr = Creds(uc.uid, uc.gid, uc.pid);
       return true;
+#else
+#error no implementation for peercreds()
+#endif
     }
 
   }
