@@ -22,6 +22,7 @@
 #ifndef OPENVPN_COMMON_PTHREADCOND_H
 #define OPENVPN_COMMON_PTHREADCOND_H
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/abort.hpp>
 #include <openvpn/common/format.hpp>
 
@@ -71,7 +72,7 @@ namespace openvpn {
     bool cond_wait(const unsigned int seconds)
     {
       struct timespec ts;
-      if (clock_gettime(CLOCK_REALTIME, &ts))
+      if (my_clock_gettime(&ts))
 	error("clock_gettime", errno);
       ts.tv_sec += seconds;
       const int status = pthread_cond_timedwait(&cond, &mutex, &ts);
@@ -90,6 +91,24 @@ namespace openvpn {
 
     pthread_cond_t cond;
     pthread_mutex_t mutex;
+
+  private:
+    static int my_clock_gettime(struct timespec* ts)
+    {
+#if defined(OPENVPN_PLATFORM_TYPE_APPLE)
+      struct timeval now;
+      const int rv = gettimeofday(&now, NULL);
+      if (rv)
+	return rv;
+      ts->tv_sec  = now.tv_sec;
+      ts->tv_nsec = now.tv_usec * 1000;
+      return 0;
+#elif defined(OPENVPN_PLATFORM_LINUX)
+      return clock_gettime(CLOCK_REALTIME, ts);
+#else
+#error no implementation for my_clock_gettime()
+#endif
+    }
   };
 
   // A condition implementation not unlike Windows Events.
