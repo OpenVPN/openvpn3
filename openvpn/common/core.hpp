@@ -19,30 +19,41 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Linux method for binding a thread to a particular core.
+// Linux methods for enumerating the number of cores on machine,
+// and binding a thread to a particular core.
 
-#ifndef OPENVPN_LINUX_CORE_H
-#define OPENVPN_LINUX_CORE_H
+#ifndef OPENVPN_COMMON_CORE_H
+#define OPENVPN_COMMON_CORE_H
 
-#include <pthread.h>
+#include <openvpn/common/platform.hpp>
 
-#include <openvpn/common/core.hpp>
+#if defined(OPENVPN_PLATFORM_TYPE_APPLE)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#elif defined(OPENVPN_PLATFORM_LINUX)
+#include <unistd.h>
+#endif
 
 namespace openvpn {
 
-  inline int bind_to_core(const int core_id)
+  inline int n_cores()
   {
-    const int num_cores = n_cores();
-    if (core_id >= num_cores)
-      return EINVAL;
-
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(core_id, &cpuset);
-
-    pthread_t current_thread = pthread_self();
-    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+#if defined(OPENVPN_PLATFORM_TYPE_APPLE)
+    int count;
+    size_t count_len = sizeof(count);
+    if (::sysctlbyname("hw.logicalcpu", &count, &count_len, NULL, 0) != 0)
+      count = 1;
+    return count;
+#elif defined(OPENVPN_PLATFORM_LINUX)
+    long ret = ::sysconf(_SC_NPROCESSORS_ONLN);
+    if (ret <= 0)
+      ret = 1;
+    return ret;
+#else
+#error no implementation for n_cores()
+#endif
   }
+
 }
 
 #endif
