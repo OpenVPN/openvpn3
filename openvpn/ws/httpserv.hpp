@@ -41,6 +41,7 @@
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/sockopt.hpp>
 #include <openvpn/common/asiopolysock.hpp>
+#include <openvpn/common/core.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimer.hpp>
@@ -49,7 +50,6 @@
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/options/merge.hpp>
 #include <openvpn/frame/frame_init.hpp>
-#include <openvpn/linux/core.hpp>
 #include <openvpn/http/request.hpp>
 #include <openvpn/http/reply.hpp>
 #include <openvpn/http/status.hpp>
