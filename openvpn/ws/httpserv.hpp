@@ -22,9 +22,6 @@
 #ifndef OPENVPN_WS_HTTPSERV_H
 #define OPENVPN_WS_HTTPSERV_H
 
-#include <unistd.h>    // for unlink()
-#include <sys/stat.h>  // for chmod()
-
 #include <string>
 #include <cstdint>
 #include <unordered_map>
@@ -35,6 +32,7 @@
 
 #include <asio.hpp>
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/arraysize.hpp>
@@ -56,6 +54,11 @@
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/ws/httpcommon.hpp>
 #include <openvpn/server/listenlist.hpp>
+
+#if !defined(OPENVPN_PLATFORM_WIN)
+#include <unistd.h>    // for unlink()
+#include <sys/stat.h>  // for chmod()
+#endif
 
 #ifndef OPENVPN_HTTP_SERV_RC
 #define OPENVPN_HTTP_SERV_RC RC<thread_unsafe_refcount>
@@ -117,8 +120,10 @@ namespace openvpn {
       {
 	typedef RCPtr<Config> Ptr;
 
-	Config()
-	  : unix_mode(0),
+	Config() :
+#if !defined(OPENVPN_PLATFORM_WIN)
+            unix_mode(0),
+#endif
 	    tcp_max(0),
 	    general_timeout(15),
 	    max_headers(0),
@@ -132,7 +137,9 @@ namespace openvpn {
 	}
 
 	SSLFactoryAPI::Ptr ssl_factory;
+#if !defined(OPENVPN_PLATFORM_WIN)
 	mode_t unix_mode;
+#endif
 	unsigned int tcp_max;
 	unsigned int general_timeout;
 	unsigned int max_headers;
@@ -316,7 +323,7 @@ namespace openvpn {
 	      if (sock)
 		return sock->remote_endpoint_str();
 	    }
-	    catch (const std::exception& e)
+	    catch (const std::exception&)
 	      {
 	      }
 	    return "[unknown endpoint]";
@@ -698,14 +705,18 @@ namespace openvpn {
 		    // open socket
 		    a->acceptor.open(a->local_endpoint.protocol());
 
-		    // set socket flags
+#if defined(OPENVPN_PLATFORM_WIN)
+		    // set Windows socket flags
+		    a->acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+#else
+		    // set Unix socket flags
 		    {
 		      const int fd = a->acceptor.native_handle();
 		      SockOpt::reuseport(fd);
 		      SockOpt::reuseaddr(fd);
 		      SockOpt::set_cloexec(fd);
 		    }
-
+#endif
 		    // bind to local address
 		    a->acceptor.bind(a->local_endpoint);
 
@@ -719,6 +730,7 @@ namespace openvpn {
 		    queue_accept(acceptors.size() - 1);
 		  }
 		  break;
+#if !defined(OPENVPN_PLATFORM_WIN)
 		case Protocol::UnixStream:
 		  {
 		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
@@ -752,6 +764,7 @@ namespace openvpn {
 		    queue_accept(acceptors.size() - 1);
 		  }
 		  break;
+#endif
 		default:
 		  throw http_server_exception("listen on unknown protocol");
 		}
@@ -841,6 +854,7 @@ namespace openvpn {
 	  asio::ip::tcp::acceptor acceptor;
 	};
 
+#if !defined(OPENVPN_PLATFORM_WIN)
 	struct AcceptorUnix : public AcceptorBase
 	{
 	  typedef RCPtr<AcceptorUnix> Ptr;
@@ -869,6 +883,7 @@ namespace openvpn {
 	  asio::local::stream_protocol::endpoint local_endpoint;
 	  asio::basic_socket_acceptor<asio::local::stream_protocol> acceptor;
 	};
+#endif
 
 	void queue_accept(const size_t acceptor_index)
 	{
