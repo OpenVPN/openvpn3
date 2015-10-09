@@ -32,6 +32,8 @@
 #include <sys/sysctl.h>
 #elif defined(OPENVPN_PLATFORM_LINUX)
 #include <unistd.h>
+#elif defined(OPENVPN_PLATFORM_WIN)
+#include <windows.h>
 #endif
 
 namespace openvpn {
@@ -49,6 +51,10 @@ namespace openvpn {
     if (ret <= 0)
       ret = 1;
     return ret;
+#elif defined(OPENVPN_PLATFORM_WIN)
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwNumberOfProcessors;
 #else
 #error no implementation for n_cores()
 #endif
