@@ -234,7 +234,7 @@ namespace openvpn {
     };
   }
 
-  template <typename OUT>
+  template <typename OUTPUT>
   class PrintFormatted
   {
   public:
@@ -331,7 +331,7 @@ namespace openvpn {
 
     const std::string& fmt;
     std::string::const_iterator fi;
-    print_formatted_detail::Output<OUT> out;
+    print_formatted_detail::Output<OUTPUT> out;
     bool pct;
   };
 
