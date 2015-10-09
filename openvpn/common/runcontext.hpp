@@ -36,6 +36,7 @@
 #include <mutex>
 #include <memory>
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/asiosignal.hpp>
@@ -227,7 +228,9 @@ namespace openvpn {
 	  self->halt = true;
 
 	  self->exit_timer.cancel();
+#ifdef ASIO_HAS_LOCAL_SOCKETS
 	  self->exit_sock.reset();
+#endif
 	  if (self->signals)
 	    self->signals->cancel();
 
@@ -264,14 +267,18 @@ namespace openvpn {
 	    {
 	    case SIGINT:
 	    case SIGTERM:
+#if !defined(OPENVPN_PLATFORM_WIN)
 	    case SIGQUIT:
+#endif
 	      cancel();
 	      break;
+#if !defined(OPENVPN_PLATFORM_WIN)
 	    case SIGUSR2:
 	      if (stats)
 		OPENVPN_LOG(stats->dump());
 	      signal_rearm();
 	      break;
+#endif
 	    }
 	}
     }
