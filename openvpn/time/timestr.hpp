@@ -28,17 +28,34 @@
 #include <cstring> // for std::strlen
 #include <cstdint> // for std::uint64_t
 #include <time.h>
-#ifndef _MSC_VER
-#include <sys/time.h>
-#endif
 #include <stdio.h>
 #include <ctype.h>
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/size.hpp>
+
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
 
 namespace openvpn {
 
-#ifndef _MSC_VER
+#if defined(OPENVPN_PLATFORM_WIN)
+
+  inline std::string date_time()
+  {
+    const time_t now = time(NULL);
+    struct tm *lt = localtime(&now);
+    char *ret = asctime(lt);
+    const size_t len = strlen(ret);
+    if (len > 0 && ret[len-1] == '\n')
+      ret[len-1] = '\0';
+    return ret;
+  }
+
+#else
 
   inline std::string date_time(const time_t t)
   {
@@ -89,25 +106,6 @@ namespace openvpn {
     return date_time(&tv, true);
   }
 
-  inline std::string date_time_rfc822(const time_t t)
-  {
-    struct tm lt;
-    char buf[64];
-
-    if (!gmtime_r(&t, &lt))
-      return "";
-    if (!strftime(buf, sizeof(buf),
-		  "%a, %d %b %Y %T %Z",
-		  &lt))
-      return "";
-    return std::string(buf);
-  }
-
-  inline std::string date_time_rfc822()
-  {
-    return date_time_rfc822(::time(nullptr));
-  }
-
   inline std::uint64_t milliseconds_since_epoch()
   {
     struct timeval tv;
@@ -117,20 +115,36 @@ namespace openvpn {
          + std::uint64_t(tv.tv_usec) / std::uint64_t(1000);
   }
 
-#else
+#endif
 
-  inline std::string date_time()
+  inline std::string date_time_rfc822(const time_t t)
   {
-    const time_t now = time(NULL);
-    struct tm *lt = localtime(&now);
-    char *ret = asctime(lt);
-    const size_t len = strlen(ret);
-    if (len > 0 && ret[len-1] == '\n')
-      ret[len-1] = '\0';
-    return ret;
+    struct tm lt;
+    char buf[64];
+
+#if defined(OPENVPN_PLATFORM_WIN)
+    if (gmtime_s(&lt, &t))
+      return "";
+    if (!strftime(buf, sizeof(buf),
+		  "%a, %d %b %Y %T GMT",
+		  &lt))
+      return "";
+#else
+    if (!gmtime_r(&t, &lt))
+      return "";
+    if (!strftime(buf, sizeof(buf),
+		  "%a, %d %b %Y %T %Z",
+		  &lt))
+      return "";
+#endif
+    return std::string(buf);
   }
 
-#endif
+  inline std::string date_time_rfc822()
+  {
+    return date_time_rfc822(::time(nullptr));
+  }
+
 }
 
 #endif
