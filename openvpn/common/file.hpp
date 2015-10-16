@@ -163,6 +163,21 @@ namespace openvpn {
       OPENVPN_THROW(open_file_error, "cannot write: " << filename);
   }
 
+  // Write binary buffer list to file
+  template <typename BUFLIST>
+  inline void write_binary_list(const std::string& filename, const BUFLIST& buflist)
+  {
+    std::ofstream ofs(filename.c_str(), std::ios::binary);
+    if (!ofs)
+      OPENVPN_THROW(open_file_error, "cannot open for write: " << filename);
+    for (auto &buf : buflist)
+      {
+	ofs.write((const char *)buf->c_data(), buf->size());
+	if (!ofs)
+	  OPENVPN_THROW(open_file_error, "cannot write: " << filename);
+      }
+  }
+
   // Write std::string to file
   inline void write_string(const std::string& filename, const std::string& str)
   {
