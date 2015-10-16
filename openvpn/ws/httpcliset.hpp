@@ -133,6 +133,7 @@ namespace openvpn {
 	void compress_content_out(const unsigned int min_size=64,
 				  const bool verbose=OPENVPN_GZIP_VERBOSE)
 	{
+#ifdef HAVE_ZLIB
 	  if (content_out.join_size() >= min_size)
 	    {
 	      BufferPtr co = content_out.join();
@@ -142,6 +143,7 @@ namespace openvpn {
 	      content_out.push_back(std::move(co));
 	      ci.content_encoding = "gzip";
 	    }
+#endif
 	}
 
 	// input
@@ -444,8 +446,10 @@ namespace openvpn {
 	  WS::Client::ContentInfo ci = t.ci;
 	  if (!ci.length)
 	    ci.length = t.content_out.join_size();
+#ifdef HAVE_ZLIB
 	  if (t.accept_gzip_in)
 	    ci.extra_headers.emplace_back("Accept-Encoding: gzip");
+#endif
 	  return ci;
 	}
 
@@ -534,10 +538,14 @@ namespace openvpn {
 		// uncompress if server sent gzip-compressed data
 		if (hd.reply().headers.get_value_trim("content-encoding") == "gzip")
 		  {
+#ifdef HAVE_ZLIB
 		    BufferPtr bp = t.content_in.join();
 		    t.content_in.clear();
 		    bp = ZLib::decompress_gzip(std::move(bp), 0, 0, hd.http_config().max_content_bytes, ts->debug_level >= 2);
 		    t.content_in.push_back(std::move(bp));
+#else
+		    throw Exception("gzip-compressed data returned from server but app not linked with zlib");
+#endif
 		  }
 
 		// do next request
