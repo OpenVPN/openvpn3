@@ -231,6 +231,25 @@ namespace openvpn {
 	// close persistent state.
 	HTTPStateContainer hsc;
 
+	// Return true if and only if all HTTP transactions
+	// succeeded AND each HTTP status code was in the
+	// successful range of 2xx.
+	bool http_status_success() const
+	{
+	  if (!status)
+	    return false;
+	  if (transactions.empty())
+	    return false;
+	  for (auto &t : transactions)
+	    {
+	      if (t->status != WS::Client::Status::E_SUCCESS)
+		return false;
+	      if (t->reply.status_code < 200 || t->reply.status_code >= 300)
+		return false;
+	    }
+	  return true;
+	}
+
 	void dump(std::ostream& os, const bool content_only=false) const
 	{
 	  for (auto &t : transactions)
