@@ -130,13 +130,14 @@ namespace openvpn {
 	  return req.method + ' ' + url(ts);
 	}
 
-	void compress_content_out(const unsigned int min_size=64)
+	void compress_content_out(const unsigned int min_size=64,
+				  const bool verbose=OPENVPN_GZIP_VERBOSE)
 	{
 	  if (content_out.join_size() >= min_size)
 	    {
 	      BufferPtr co = content_out.join();
 	      content_out.clear();
-	      co = ZLib::compress_gzip(co, 0, 0, 1);
+	      co = ZLib::compress_gzip(co, 0, 0, 1, verbose);
 	      ci.length = co->size();
 	      content_out.push_back(std::move(co));
 	      ci.content_encoding = "gzip";
@@ -504,7 +505,7 @@ namespace openvpn {
 		  {
 		    BufferPtr bp = t.content_in.join();
 		    t.content_in.clear();
-		    bp = ZLib::decompress_gzip(std::move(bp), 0, 0, hd.http_config().max_content_bytes);
+		    bp = ZLib::decompress_gzip(std::move(bp), 0, 0, hd.http_config().max_content_bytes, ts->debug_level >= 2);
 		    t.content_in.push_back(std::move(bp));
 		  }
 
