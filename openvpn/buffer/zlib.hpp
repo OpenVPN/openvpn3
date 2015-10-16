@@ -22,6 +22,14 @@
 #ifndef OPENVPN_BUFFER_ZLIB_H
 #define OPENVPN_BUFFER_ZLIB_H
 
+#ifdef OPENVPN_GZIP_DEBUG
+#define OPENVPN_GZIP_VERBOSE true
+#else
+#define OPENVPN_GZIP_VERBOSE false
+#endif
+
+#ifdef HAVE_ZLIB
+
 #include <cstring> // for std::memset
 
 #include <zlib.h>
@@ -29,12 +37,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/buflist.hpp>
-
-#ifdef OPENVPN_GZIP_DEBUG
-#define OPENVPN_GZIP_VERBOSE true
-#else
-#define OPENVPN_GZIP_VERBOSE false
-#endif
 
 namespace openvpn {
   namespace ZLib {
@@ -151,4 +153,5 @@ namespace openvpn {
   }
 }
 
+#endif
 #endif

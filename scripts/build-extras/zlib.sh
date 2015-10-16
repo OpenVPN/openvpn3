@@ -3,5 +3,6 @@ if [ "$1" = "args" ]; then
 elif [ "$1" = "deps" ]; then
     if [ "$ZLIB" = "1" ]; then
 	LIBS="$LIBS -lz"
+	CPPFLAGS="$CPPFLAGS -DHAVE_ZLIB"
     fi
 fi
