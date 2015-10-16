@@ -415,6 +415,8 @@ namespace openvpn {
 	  WS::Client::ContentInfo ci = t.ci;
 	  if (!ci.length)
 	    ci.length = t.content_out.join_size();
+	  if (t.accept_gzip_in)
+	    ci.extra_headers.emplace_back("Accept-Encoding: gzip");
 	  return ci;
 	}
 
