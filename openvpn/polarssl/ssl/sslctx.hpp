@@ -591,7 +591,7 @@ namespace openvpn {
 			     c.ca_chain->get(),
 			     c.crl_chain ? c.crl_chain->get() : nullptr,
 			     hostname);
-	  else
+	  else if (!(c.flags & SSLConst::NO_VERIFY_PEER))
 	    throw PolarSSLException("CA chain not defined");
 
 	  // client cert+key

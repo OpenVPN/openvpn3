@@ -866,9 +866,10 @@ namespace openvpn {
 	    }
 
 	  // Set CAs/CRLs
-	  if (!config->ca.certs.defined())
+	  if (config->ca.certs.defined())
+	    update_trust(config->ca);
+	  else if (!(config->flags & SSLConst::NO_VERIFY_PEER))
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: CA not defined");
-	  update_trust(config->ca);
 
 	  // keep a reference to this in ctx, for use by verify callback
 	  ctx->app_verify_arg = this;
