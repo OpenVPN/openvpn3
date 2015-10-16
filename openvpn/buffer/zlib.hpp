@@ -129,7 +129,7 @@ namespace openvpn {
 	      OPENVPN_THROW(zlib_error, "zlib inflate failed, error=" << status);
 	    b->set_size(avail - zs.s.avail_out);
 	    blist.push_back(std::move(b));
-	    if (zs.s.total_out > max_size)
+	    if (max_size && zs.s.total_out > max_size)
 	      OPENVPN_THROW(zlib_error, "zlib inflate max_size " << max_size << " exceeded");
 	    hr = tr = 0;
 	  } while (status == Z_OK);
