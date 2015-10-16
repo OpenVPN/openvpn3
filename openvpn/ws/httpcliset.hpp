@@ -159,12 +159,18 @@ namespace openvpn {
 
 	void dump(std::ostream& os, const TransactionSet& ts) const
 	{
-	  os << "----- " << title(ts) << " -----\n";
+	  os << "----- " << format_status(ts) << " -----\n";
 	  BufferPtr in = content_in.join();
 	  const std::string s = buf_to_string(*in);
 	  os << s;
 	  if (!s.empty() && !string::ends_with_newline(s))
 	    os << '\n';
+	}
+
+	std::string content_in_string() const
+	{
+	  BufferPtr in = content_in.join();
+	  return buf_to_string(*in);
 	}
 
 	std::string format_status(const TransactionSet& ts) const
@@ -185,7 +191,6 @@ namespace openvpn {
 	      ret += ' ';
 	      ret += description;
 	    }
-	  ret += '\n';
 	  return ret;
 	}
       };
@@ -226,10 +231,15 @@ namespace openvpn {
 	// close persistent state.
 	HTTPStateContainer hsc;
 
-	void dump(std::ostream& os) const
+	void dump(std::ostream& os, const bool content_only=false) const
 	{
 	  for (auto &t : transactions)
-	    t->dump(os, *this);
+	    {
+	      if (content_only)
+		os << t->content_in_string();
+	      else
+		t->dump(os, *this);
+	    }
 	}
       };
 
