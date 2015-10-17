@@ -22,6 +22,13 @@
 #ifndef OPENVPN_WS_HTTPSERV_H
 #define OPENVPN_WS_HTTPSERV_H
 
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <sddl.h>      // for DACLs
+#else
+#include <unistd.h>    // for unlink()
+#include <sys/stat.h>  // for chmod()
+#endif
+
 #include <string>
 #include <cstdint>
 #include <unordered_map>
@@ -55,9 +62,8 @@
 #include <openvpn/ws/httpcommon.hpp>
 #include <openvpn/server/listenlist.hpp>
 
-#if !defined(OPENVPN_PLATFORM_WIN)
-#include <unistd.h>    // for unlink()
-#include <sys/stat.h>  // for chmod()
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <openvpn/win/scoped_handle.hpp>
 #endif
 
 #ifndef OPENVPN_HTTP_SERV_RC
@@ -730,7 +736,22 @@ namespace openvpn {
 		    queue_accept(acceptors.size() - 1);
 		  }
 		  break;
-#if !defined(OPENVPN_PLATFORM_WIN)
+#if defined(OPENVPN_PLATFORM_WIN)
+		case Protocol::NamedPipe:
+		  {
+		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
+
+		    // create named pipe
+		    AcceptorNamedPipe::Ptr a(new AcceptorNamedPipe(io_context, listen_item.addr));
+
+		    // save acceptor
+		    acceptors.emplace_back(std::move(a), false);
+
+		    // queue accept on listen socket
+		    queue_accept(acceptors.size() - 1);
+		  }
+		  break;
+#else
 		case Protocol::UnixStream:
 		  {
 		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
@@ -854,7 +875,121 @@ namespace openvpn {
 	  asio::ip::tcp::acceptor acceptor;
 	};
 
-#if !defined(OPENVPN_PLATFORM_WIN)
+#if defined(OPENVPN_PLATFORM_WIN)
+	class AcceptorNamedPipe : public AcceptorBase
+	{
+	public:
+	  typedef RCPtr<AcceptorNamedPipe> Ptr;
+
+	  AcceptorNamedPipe(asio::io_context& io_context,
+			    const std::string& name_arg)
+	    : name(name_arg),
+	      handle(io_context)
+	  {
+	  }
+
+	  virtual void async_accept(Listener* listener,
+				    const size_t acceptor_index,
+				    asio::io_context& io_context) override
+	  {
+	    // create the named pipe
+	    const HANDLE h = ::CreateNamedPipeA(
+	        name.c_str(),
+		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE |
+		     PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
+		PIPE_UNLIMITED_INSTANCES,
+		2048, // output buffer size
+		2048, // input buffer size
+		0,
+		&sa.sa);
+	    if (!Win::Handle::defined(h))
+	      {
+		const asio::error_code err(::GetLastError(), asio::error::get_system_category());
+		OPENVPN_THROW(http_server_exception, "failed to create named pipe: " << name << " : " << err.message());
+	      }
+
+	    // wait for connection (asynchronously)
+	    {
+	      handle.assign(h);
+	      asio::windows::overlapped_ptr over(
+	          io_context,
+		  [self=Ptr(this), listener=Listener::Ptr(listener), acceptor_index]
+		  (const asio::error_code& ec, size_t bytes_transferred) {
+		      // accept client connection
+		      listener->handle_accept(new AsioPolySock::NamedPipe(std::move(self->handle), acceptor_index),
+					      ec.value() == ERROR_PIPE_CONNECTED // not an error
+					        ? asio::error_code()
+					        : ec);
+		  });
+
+	      const BOOL ok = ::ConnectNamedPipe(handle.native_handle(), over.get());
+	      const DWORD err = ::GetLastError();
+	      if (!ok && err != ERROR_IO_PENDING)
+		{
+		  // The operation completed immediately,
+		  // so a completion notification needs
+		  // to be posted. When complete() is called,
+		  // ownership of the OVERLAPPED-derived
+		  // object passes to the io_service.
+		  const asio::error_code ec(err, asio::error::get_system_category());
+		  over.complete(ec, 0);
+		}
+	      else // ok || err == ERROR_IO_PENDING
+		{
+		  // The operation was successfully initiated,
+		  // so ownership of the OVERLAPPED-derived object
+		  // has passed to the io_service.
+		  over.release();
+		}
+	    }
+	  }
+
+	  virtual void close() override
+	  {
+	    handle.close();
+	  }
+
+	private:
+
+	  // Security descriptor for named pipe created by privileged service
+	  // and used by local unprivileged users.
+	  struct NamedPipeSecurityAttributes
+	  {
+	    NamedPipeSecurityAttributes()
+	    {
+	      sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+	      sa.bInheritHandle = FALSE;
+	      sa.lpSecurityDescriptor = nullptr;
+	      if (!::ConvertStringSecurityDescriptorToSecurityDescriptor(
+		  "D:"                         // discretionary ACL
+		  "(D;OICI;GA;;;S-1-5-2)"      // deny all access for network users
+		  "(A;OICI;GA;;;S-1-5-32-544)" // allow full access to Admin group
+		  "(A;OICI;GA;;;S-1-5-18)"     // allow full access to Local System account
+		  "(A;OICI;GRGW;;;S-1-5-11)"   // allow read/write access for authenticated users
+		  ,
+		  SDDL_REVISION_1,
+		  &sa.lpSecurityDescriptor, // allocates memory
+		  NULL))
+		{
+		  const asio::error_code err(::GetLastError(), asio::error::get_system_category());
+		  OPENVPN_THROW(http_server_exception, "failed to create security descriptor for named pipe: " << err.message());
+		}
+	    }
+
+	    ~NamedPipeSecurityAttributes()
+	    {
+	      ::LocalFree(sa.lpSecurityDescriptor);
+	    }
+
+	    SECURITY_ATTRIBUTES sa;
+	  };
+
+	  NamedPipeSecurityAttributes sa;
+	  std::string name;
+	  asio::windows::stream_handle handle;
+	};
+#else
 	struct AcceptorUnix : public AcceptorBase
 	{
 	  typedef RCPtr<AcceptorUnix> Ptr;
@@ -904,7 +1039,7 @@ namespace openvpn {
 		sock->set_cloexec();
 
 		if (config->tcp_max && clients.size() >= config->tcp_max)
-		  throw http_server_exception("max TCP clients exceeded");
+		  throw http_server_exception("max clients exceeded");
 		if (!allow_client(*sock))
 		  throw http_server_exception("client socket rejected");
 
