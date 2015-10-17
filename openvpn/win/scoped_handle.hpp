@@ -96,6 +96,20 @@ namespace openvpn {
 	close();
       }
 
+      ScopedHANDLE(ScopedHANDLE&& other) noexcept
+      {
+	handle = other.handle;
+	other.handle = nullptr;
+      }
+
+      ScopedHANDLE& operator=(ScopedHANDLE&& other) noexcept
+      {
+	close();
+	handle = other.handle;
+	other.handle = nullptr;
+	return *this;
+      }
+
     private:
       HANDLE handle;
     };
