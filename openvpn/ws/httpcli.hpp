@@ -45,6 +45,7 @@
 #include <sstream>
 #include <algorithm>         // for std::min, std::max
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
@@ -58,6 +59,10 @@
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/ws/httpcommon.hpp>
 #include <openvpn/ws/httpcreds.hpp>
+
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <openvpn/win/scoped_handle.hpp>
+#endif
 
 namespace openvpn {
   namespace WS {
@@ -402,7 +407,7 @@ namespace openvpn {
 	      {
 		host = http_host();
 #ifdef ASIO_HAS_LOCAL_SOCKETS
-		if (host.port == "unix")
+		if (host.port == "unix") // unix domain socket
 		  {
 		    asio::local::stream_protocol::endpoint ep(host.host);
 		    AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
@@ -412,6 +417,27 @@ namespace openvpn {
 					    {
 					      self->handle_unix_connect(error);
 					    });
+		  }
+		else
+#endif
+#ifdef OPENVPN_PLATFORM_WIN
+		  if (host.port == "np") // windows named pipe
+		  {
+		    const HANDLE h = ::CreateFile(
+		        host.host.c_str(),
+			GENERIC_READ | GENERIC_WRITE,
+			0,
+			NULL,
+			OPEN_EXISTING,
+			FILE_FLAG_OVERLAPPED,
+			NULL);
+		    if (!Win::Handle::defined(h))
+		      {
+			const asio::error_code err(::GetLastError(), asio::error::get_system_category());
+			OPENVPN_THROW(http_client_exception, "failed to open existing named pipe: " << host.host << " : " << err.message());
+		      }
+		    socket.reset(new AsioPolySock::NamedPipe(asio::windows::stream_handle(io_context, h), 0));
+		    do_connect(true);
 		  }
 		else
 #endif
