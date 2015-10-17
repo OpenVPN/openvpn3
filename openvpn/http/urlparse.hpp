@@ -139,6 +139,26 @@ namespace openvpn {
 	  default_port();
       }
 
+      // Note that special address types such as unix domain
+      // sockets or windows named pipes store a tag such as
+      // "unix" or "np" as the port component of an address/port
+      // tuple.  Here, we move such tags into the scheme.
+      static Parse from_components(const bool https,
+				   const std::string& host,
+				   const std::string& port,
+				   const std::string& uri)
+      {
+	Parse p;
+	p.scheme = https ? "https" : "http";
+	p.host = host;
+	if (port.size() >= 1 && !string::is_digit(port[0])) // non-INET address
+	  p.scheme = port;
+	else
+	  p.port = port;
+	p.uri = uri;
+	return p;
+      }
+
       void validate() const
       {
 	if (scheme.empty())
@@ -165,20 +185,25 @@ namespace openvpn {
 	  }
       }
 
+      bool port_implied() const
+      {
+	return (scheme == "http" && port == "80") || (scheme == "https" && port == "443");
+      }
+
       std::string to_string() const
       {
-	const bool host_contains_colon = (host.find_first_of(':') != std::string::npos);
+	const bool bracket_host = (host.find_first_of(":/\\") != std::string::npos);
 
 	std::string ret;
 	ret.reserve(256);
 	ret += scheme;
 	ret += "://";
-	if (host_contains_colon)
+	if (bracket_host)
 	  ret += '[';
 	ret += host;
-	if (host_contains_colon)
+	if (bracket_host)
 	  ret += ']';
-	if (!port.empty())
+	if (!port.empty() && !port_implied())
 	  {
 	    ret += ':';
 	    ret += port;
@@ -192,6 +217,13 @@ namespace openvpn {
 	return printfmt("[scheme=%r host=%r port=%r uri=%r]", scheme, host, port, uri);
       }
 
+      // Note that special address types such as unix domain
+      // sockets or windows named pipes store a tag such as
+      // "unix" or "np" as the port component of an address/port
+      // tuple.  This method returns the port number for INET
+      // addresses or a special tag for non-INET addresses.
+      // Internally, we store the tag as an alternative
+      // scheme such as "unix" or "np".
       std::string port_for_scheme() const
       {
 #ifdef OPENVPN_PLATFORM_WIN
