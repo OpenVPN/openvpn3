@@ -27,6 +27,7 @@
 
 #include <asio.hpp>
 
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
@@ -214,6 +215,58 @@ namespace openvpn {
       }
 
       asio::local::stream_protocol::socket socket;
+    };
+#endif
+
+#if defined(OPENVPN_PLATFORM_WIN)
+    struct NamedPipe : public Base
+    {
+      typedef RCPtr<NamedPipe> Ptr;
+
+      NamedPipe(asio::windows::stream_handle&& handle_arg,
+		const size_t index)
+	:  Base(index),
+	   handle(std::move(handle_arg))
+      {
+      }
+
+      virtual void async_send(const asio::const_buffers_1& buf,
+			      Function<void(const asio::error_code&, const size_t)>&& callback) override
+      {
+	handle.async_write_some(buf, std::move(callback));
+      }
+
+      virtual void async_receive(const asio::mutable_buffers_1& buf,
+				 Function<void(const asio::error_code&, const size_t)>&& callback) override
+      {
+	handle.async_read_some(buf, std::move(callback));
+      }
+
+      virtual std::string remote_endpoint_str() const override
+      {
+	return "NAMED_PIPE";
+      }
+
+      virtual bool remote_ip_port(IP::Addr&, unsigned int&) const override
+      {
+	return false;
+      }
+
+      virtual void non_blocking(const bool state) override
+      {
+      }
+
+      virtual void close() override
+      {
+	handle.close();
+      }
+
+      virtual bool is_local() const override
+      {
+	return true;
+      }
+
+      asio::windows::stream_handle handle;
     };
 #endif
   }

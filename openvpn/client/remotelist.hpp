@@ -809,7 +809,7 @@ namespace openvpn {
 		if (o.size() >= 3)
 		  {
 		    e->server_port = o.get(2, 16);
-		    if (Protocol::is_unix_type(e->server_port))
+		    if (Protocol::is_local_type(e->server_port))
 		      {
 			adj = -1;
 			e->server_port = "";

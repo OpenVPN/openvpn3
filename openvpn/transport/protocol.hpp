@@ -43,6 +43,7 @@ namespace openvpn {
       TCPv6,
       UnixStream,   // unix domain socket (stream)
       UnixDGram,    // unix domain socket (datagram)
+      NamedPipe,    // named pipe (Windows only)
       UDP=UDPv4,
       TCP=TCPv4,
     };
@@ -60,6 +61,8 @@ namespace openvpn {
     bool is_reliable() const { return is_tcp(); }
     bool is_ipv6() const { return type_ == UDPv6 || type_ == TCPv6; }
     bool is_unix() const { return type_ == UnixStream || type_ == UnixDGram; }
+    bool is_named_pipe() const { return type_ == NamedPipe; }
+    bool is_local() const { return is_unix() || is_named_pipe(); }
 
     bool operator==(const Protocol& other) const
     {
@@ -119,12 +122,15 @@ namespace openvpn {
       return ret;
     }
 
-    static bool is_unix_type(const std::string& str)
+    static bool is_local_type(const std::string& str)
     {
-      if (str.empty() || (str[0] != 'u' && str[0] != 'U')) // fast path
+      if (str.empty())
+	return false;
+      if (str[0] != 'u' && str[0] != 'U'  // unix fast path
+       && str[0] != 'n' && str[0] != 'N') // named pipe fast path
 	return false;
       const Type type = parse_type(str, false);
-      return type == UnixStream || type == UnixDGram;
+      return type == UnixStream || type == UnixDGram || type == NamedPipe;
     }
 
     int transport_proto() const
@@ -143,6 +149,8 @@ namespace openvpn {
 	  return 2;
 	case UnixStream:
 	  return 3;
+	case NamedPipe:
+	  return 4;
 	default:
 	  return -1;
 	}
@@ -164,6 +172,8 @@ namespace openvpn {
 	  return "UnixStream";
 	case UnixDGram:
 	  return "UnixDGram";
+	case NamedPipe:
+	  return "NamedPipe";
 	default:
 	  return "UNDEF_PROTO";
 	}
@@ -202,6 +212,8 @@ namespace openvpn {
 	  else if (s == "unix-dgram")
 	    ret = UnixDGram;
 	}
+      else if (s == "named-pipe")         // Windows named pipe
+	ret = NamedPipe;
       else if (s.length() >= 3) // udp/tcp
 	{
 	  const std::string s1 = s.substr(0, 3);
