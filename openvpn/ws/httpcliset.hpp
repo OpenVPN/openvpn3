@@ -38,6 +38,7 @@
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/zlib.hpp>
 #include <openvpn/random/randint.hpp>
+#include <openvpn/http/urlparse.hpp>
 #include <openvpn/ws/httpcli.hpp>
 
 #ifndef OPENVPN_HTTP_CLISET_RC
@@ -116,13 +117,11 @@ namespace openvpn {
 
 	std::string url(const TransactionSet& ts) const
 	{
-	  std::string ret = "http";
-	  if (ts.http_config->ssl_factory)
-	    ret += 's';
-	  ret += "://";
-	  ret += ts.host.host_port_str();
-	  ret += req.uri;
-	  return ret;
+	  URL::Parse u = URL::Parse::from_components(bool(ts.http_config->ssl_factory),
+						     ts.host.host,
+						     ts.host.port,
+						     req.uri);
+	  return u.to_string();
 	}
 
 	std::string title(const TransactionSet& ts) const
