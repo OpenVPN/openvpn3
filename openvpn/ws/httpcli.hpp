@@ -62,6 +62,7 @@
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/scoped_handle.hpp>
+#include <openvpn/win/winerr.hpp>
 #endif
 
 namespace openvpn {
@@ -433,7 +434,7 @@ namespace openvpn {
 			NULL);
 		    if (!Win::Handle::defined(h))
 		      {
-			const asio::error_code err(::GetLastError(), asio::error::get_system_category());
+			const Win::LastError err;
 			OPENVPN_THROW(http_client_exception, "failed to open existing named pipe: " << host.host << " : " << err.message());
 		      }
 		    socket.reset(new AsioPolySock::NamedPipe(asio::windows::stream_handle(io_context, h), 0));
