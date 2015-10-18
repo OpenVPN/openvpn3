@@ -22,9 +22,7 @@
 #ifndef OPENVPN_WS_HTTPSERV_H
 #define OPENVPN_WS_HTTPSERV_H
 
-#if defined(OPENVPN_PLATFORM_WIN)
-#include <sddl.h>      // for DACLs
-#else
+#if !defined(OPENVPN_PLATFORM_WIN)
 #include <unistd.h>    // for unlink()
 #include <sys/stat.h>  // for chmod()
 #endif
@@ -64,6 +62,7 @@
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/scoped_handle.hpp>
+#include <openvpn/win/secattr.hpp>
 #endif
 
 #ifndef OPENVPN_HTTP_SERV_RC
@@ -143,7 +142,9 @@ namespace openvpn {
 	}
 
 	SSLFactoryAPI::Ptr ssl_factory;
-#if !defined(OPENVPN_PLATFORM_WIN)
+#if defined(OPENVPN_PLATFORM_WIN)
+	std::string sddl_string; // Windows named-pipe security descriptor as string
+#else
 	mode_t unix_mode;
 #endif
 	unsigned int tcp_max;
@@ -742,7 +743,7 @@ namespace openvpn {
 		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
 
 		    // create named pipe
-		    AcceptorNamedPipe::Ptr a(new AcceptorNamedPipe(io_context, listen_item.addr));
+		    AcceptorNamedPipe::Ptr a(new AcceptorNamedPipe(io_context, listen_item.addr, config->sddl_string));
 
 		    // save acceptor
 		    acceptors.emplace_back(std::move(a), false);
@@ -882,9 +883,11 @@ namespace openvpn {
 	  typedef RCPtr<AcceptorNamedPipe> Ptr;
 
 	  AcceptorNamedPipe(asio::io_context& io_context,
-			    const std::string& name_arg)
+			    const std::string& name_arg,
+			    const std::string& sddl_string)
 	    : name(name_arg),
-	      handle(io_context)
+	      handle(io_context),
+	      sa(sddl_string, false, "named pipe")
 	  {
 	  }
 
@@ -950,43 +953,9 @@ namespace openvpn {
 	  }
 
 	private:
-
-	  // Security descriptor for named pipe created by privileged service
-	  // and used by local unprivileged users.
-	  struct NamedPipeSecurityAttributes
-	  {
-	    NamedPipeSecurityAttributes()
-	    {
-	      sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-	      sa.bInheritHandle = FALSE;
-	      sa.lpSecurityDescriptor = nullptr;
-	      if (!::ConvertStringSecurityDescriptorToSecurityDescriptor(
-		  "D:"                         // discretionary ACL
-		  "(D;OICI;GA;;;S-1-5-2)"      // deny all access for network users
-		  "(A;OICI;GA;;;S-1-5-32-544)" // allow full access to Admin group
-		  "(A;OICI;GA;;;S-1-5-18)"     // allow full access to Local System account
-		  "(A;OICI;GRGW;;;S-1-5-11)"   // allow read/write access for authenticated users
-		  ,
-		  SDDL_REVISION_1,
-		  &sa.lpSecurityDescriptor, // allocates memory
-		  NULL))
-		{
-		  const asio::error_code err(::GetLastError(), asio::error::get_system_category());
-		  OPENVPN_THROW(http_server_exception, "failed to create security descriptor for named pipe: " << err.message());
-		}
-	    }
-
-	    ~NamedPipeSecurityAttributes()
-	    {
-	      ::LocalFree(sa.lpSecurityDescriptor);
-	    }
-
-	    SECURITY_ATTRIBUTES sa;
-	  };
-
-	  NamedPipeSecurityAttributes sa;
 	  std::string name;
 	  asio::windows::stream_handle handle;
+	  Win::SecurityAttributes sa;
 	};
 #else
 	struct AcceptorUnix : public AcceptorBase
