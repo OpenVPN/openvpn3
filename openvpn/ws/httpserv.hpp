@@ -22,11 +22,6 @@
 #ifndef OPENVPN_WS_HTTPSERV_H
 #define OPENVPN_WS_HTTPSERV_H
 
-#if !defined(OPENVPN_PLATFORM_WIN)
-#include <unistd.h>    // for unlink()
-#include <sys/stat.h>  // for chmod()
-#endif
-
 #include <string>
 #include <cstdint>
 #include <unordered_map>
@@ -60,9 +55,13 @@
 #include <openvpn/ws/httpcommon.hpp>
 #include <openvpn/server/listenlist.hpp>
 
+// include acceptors for different protocols
+#include <openvpn/acceptor/base.hpp>
+#include <openvpn/acceptor/tcp.hpp>
 #if defined(OPENVPN_PLATFORM_WIN)
-#include <openvpn/win/scoped_handle.hpp>
-#include <openvpn/win/secattr.hpp>
+#include <openvpn/acceptor/namedpipe.hpp>
+#else
+#include <openvpn/acceptor/unix.hpp>
 #endif
 
 #ifndef OPENVPN_HTTP_SERV_RC
@@ -184,7 +183,7 @@ namespace openvpn {
 	std::vector<std::string> extra_headers;
       };
 
-      class Listener : public RC<thread_unsafe_refcount>
+      class Listener : public Acceptor::ListenerBase
       {
       public:
 	class Client;
@@ -702,7 +701,7 @@ namespace openvpn {
 		    OPENVPN_LOG("HTTP" << (is_ssl ? "S" : "") << " Listen: " << listen_item.to_string());
 
 		    // init TCP acceptor
-		    AcceptorTCP::Ptr a(new AcceptorTCP(io_context));
+		    Acceptor::TCP::Ptr a(new Acceptor::TCP(io_context));
 
 		    // parse address/port of local endpoint
 		    const IP::Addr ip_addr = IP::Addr::from_string(listen_item.addr);
@@ -712,18 +711,9 @@ namespace openvpn {
 		    // open socket
 		    a->acceptor.open(a->local_endpoint.protocol());
 
-#if defined(OPENVPN_PLATFORM_WIN)
-		    // set Windows socket flags
-		    a->acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-#else
-		    // set Unix socket flags
-		    {
-		      const int fd = a->acceptor.native_handle();
-		      SockOpt::reuseport(fd);
-		      SockOpt::reuseaddr(fd);
-		      SockOpt::set_cloexec(fd);
-		    }
-#endif
+		    // set options
+		    a->set_socket_options();
+
 		    // bind to local address
 		    a->acceptor.bind(a->local_endpoint);
 
@@ -743,7 +733,7 @@ namespace openvpn {
 		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
 
 		    // create named pipe
-		    AcceptorNamedPipe::Ptr a(new AcceptorNamedPipe(io_context, listen_item.addr, config->sddl_string));
+		    Acceptor::NamedPipe::Ptr a(new Acceptor::NamedPipe(io_context, listen_item.addr, config->sddl_string));
 
 		    // save acceptor
 		    acceptors.emplace_back(std::move(a), false);
@@ -757,10 +747,10 @@ namespace openvpn {
 		  {
 		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
 
-		    AcceptorUnix::Ptr a(new AcceptorUnix(io_context));
+		    Acceptor::Unix::Ptr a(new Acceptor::Unix(io_context));
 
 		    // set endpoint
-		    ::unlink(listen_item.addr.c_str());
+		    a->pre_listen(listen_item.addr);
 		    a->local_endpoint.path(listen_item.addr);
 
 		    // open socket
@@ -770,11 +760,7 @@ namespace openvpn {
 		    a->acceptor.bind(a->local_endpoint);
 
 		    // set socket permissions in filesystem
-		    if (config->unix_mode)
-		      {
-			if (::chmod(listen_item.addr.c_str(), config->unix_mode) < 0)
-			  throw http_server_exception("chmod failed on unix socket");
-		      }
+		    a->set_socket_permissions(listen_item.addr, config->unix_mode);
 
 		    // listen for incoming client connections
 		    a->acceptor.listen();
@@ -815,185 +801,12 @@ namespace openvpn {
       private:
 	typedef std::unordered_map<client_t, Client::Ptr> ClientMap;
 
-	struct AcceptorBase : public RC<thread_unsafe_refcount>
-	{
-	  typedef RCPtr<AcceptorBase> Ptr;
-
-	  virtual void async_accept(Listener* listener,
-				    const size_t acceptor_index,
-				    asio::io_context& io_context) = 0;
-	  virtual void close() = 0;
-	};
-
-	struct AcceptorItem
-	{
-	  AcceptorItem(AcceptorBase::Ptr acceptor_arg,
-		       const bool ssl_arg)
-	    : acceptor(std::move(acceptor_arg)),
-	      ssl(ssl_arg)
-	  {
-	  }
-
-	  AcceptorBase::Ptr acceptor;
-	  bool ssl;
-	};
-
-	struct AcceptorSet : public std::vector<AcceptorItem>
-	{
-	  void close()
-	  {
-	    for (auto &i : *this)
-	      i.acceptor->close();
-	  }
-	};
-
-	struct AcceptorTCP : public AcceptorBase
-	{
-	  typedef RCPtr<AcceptorTCP> Ptr;
-
-	  AcceptorTCP(asio::io_context& io_context)
-	    : acceptor(io_context)
-	  {
-	  }
-
-	  virtual void async_accept(Listener* listener,
-				    const size_t acceptor_index,
-				    asio::io_context& io_context) override
-	  {
-	    AsioPolySock::TCP::Ptr sock(new AsioPolySock::TCP(io_context, acceptor_index));
-	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
-                                                {
-                                                  listener->handle_accept(sock, error);
-                                                });
-	  }
-
-	  virtual void close() override
-	  {
-	    acceptor.close();
-	  }
-
-	  asio::ip::tcp::endpoint local_endpoint;
-	  asio::ip::tcp::acceptor acceptor;
-	};
-
-#if defined(OPENVPN_PLATFORM_WIN)
-	class AcceptorNamedPipe : public AcceptorBase
-	{
-	public:
-	  typedef RCPtr<AcceptorNamedPipe> Ptr;
-
-	  AcceptorNamedPipe(asio::io_context& io_context,
-			    const std::string& name_arg,
-			    const std::string& sddl_string)
-	    : name(name_arg),
-	      handle(io_context),
-	      sa(sddl_string, false, "named pipe")
-	  {
-	  }
-
-	  virtual void async_accept(Listener* listener,
-				    const size_t acceptor_index,
-				    asio::io_context& io_context) override
-	  {
-	    // create the named pipe
-	    const HANDLE h = ::CreateNamedPipeA(
-	        name.c_str(),
-		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
-		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_REJECT_REMOTE_CLIENTS,
-		PIPE_UNLIMITED_INSTANCES,
-		2048, // output buffer size
-		2048, // input buffer size
-		0,
-		&sa.sa);
-	    if (!Win::Handle::defined(h))
-	      {
-		const asio::error_code err(::GetLastError(), asio::error::get_system_category());
-		OPENVPN_THROW(http_server_exception, "failed to create named pipe: " << name << " : " << err.message());
-	      }
-
-	    // wait for connection (asynchronously)
-	    {
-	      handle.assign(h);
-	      asio::windows::overlapped_ptr over(
-	          io_context,
-		  [self=Ptr(this), listener=Listener::Ptr(listener), acceptor_index]
-		  (const asio::error_code& ec, size_t bytes_transferred) {
-		      // accept client connection
-		      listener->handle_accept(new AsioPolySock::NamedPipe(std::move(self->handle), acceptor_index),
-					      ec.value() == ERROR_PIPE_CONNECTED // not an error
-					        ? asio::error_code()
-					        : ec);
-		  });
-
-	      const BOOL ok = ::ConnectNamedPipe(handle.native_handle(), over.get());
-	      const DWORD err = ::GetLastError();
-	      if (!ok && err != ERROR_IO_PENDING)
-		{
-		  // The operation completed immediately,
-		  // so a completion notification needs
-		  // to be posted. When complete() is called,
-		  // ownership of the OVERLAPPED-derived
-		  // object passes to the io_service.
-		  const asio::error_code ec(err, asio::error::get_system_category());
-		  over.complete(ec, 0);
-		}
-	      else // ok || err == ERROR_IO_PENDING
-		{
-		  // The operation was successfully initiated,
-		  // so ownership of the OVERLAPPED-derived object
-		  // has passed to the io_service.
-		  over.release();
-		}
-	    }
-	  }
-
-	  virtual void close() override
-	  {
-	    handle.close();
-	  }
-
-	private:
-	  std::string name;
-	  asio::windows::stream_handle handle;
-	  Win::SecurityAttributes sa;
-	};
-#else
-	struct AcceptorUnix : public AcceptorBase
-	{
-	  typedef RCPtr<AcceptorUnix> Ptr;
-
-	  AcceptorUnix(asio::io_context& io_context)
-	    : acceptor(io_context)
-	  {
-	  }
-
-	  virtual void async_accept(Listener* listener,
-				    const size_t acceptor_index,
-				    asio::io_context& io_context) override
-	  {
-	    AsioPolySock::Unix::Ptr sock(new AsioPolySock::Unix(io_context, acceptor_index));
-	    acceptor.async_accept(sock->socket, [listener=Listener::Ptr(listener), sock](const asio::error_code& error)
-                                                {
-                                                  listener->handle_accept(sock, error);
-                                                });
-	  }
-
-	  virtual void close() override
-	  {
-	    acceptor.close();
-	  }
-
-	  asio::local::stream_protocol::endpoint local_endpoint;
-	  asio::basic_socket_acceptor<asio::local::stream_protocol> acceptor;
-	};
-#endif
-
 	void queue_accept(const size_t acceptor_index)
 	{
 	  acceptors[acceptor_index].acceptor->async_accept(this, acceptor_index, io_context);
 	}
 
-	void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error)
+	virtual void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error) override
 	{
 	  if (halt)
 	      return;
@@ -1062,7 +875,7 @@ namespace openvpn {
 	Client::Factory::Ptr client_factory;
 	bool halt;
 
-	AcceptorSet acceptors;
+	Acceptor::Set acceptors;
 
 	client_t next_id;
 	ClientMap clients;
