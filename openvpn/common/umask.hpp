@@ -26,6 +26,9 @@
 #include <sys/stat.h>
 
 namespace openvpn {
+  // Note: not thread safe, since umask() is
+  // documented to modify the process-wide file
+  // mode creation mask.
   class UMask
   {
   public:
