@@ -35,11 +35,8 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/userpass.hpp>
 #include <openvpn/common/platform.hpp>
+#include <openvpn/common/writeprivate.hpp>
 #include <openvpn/http/header.hpp>
-
-#ifndef OPENVPN_PLATFORM_WIN
-#include <openvpn/common/umask.hpp>
-#endif
 
 namespace openvpn {
   namespace WS {
@@ -153,10 +150,7 @@ namespace openvpn {
 
       void save_to_file(const std::string& fn) const
       {
-#ifndef OPENVPN_PLATFORM_WIN
-	const UMaskPrivate um;
-#endif
-	write_string(fn, username + '\n' + password + '\n');
+	write_private(fn, username + '\n' + password + '\n');
       }
 
       bool operator==(const Creds& rhs) const
