@@ -896,8 +896,7 @@ namespace openvpn {
 	    const HANDLE h = ::CreateNamedPipeA(
 	        name.c_str(),
 		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
-		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE |
-		     PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
+		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_REJECT_REMOTE_CLIENTS,
 		PIPE_UNLIMITED_INSTANCES,
 		2048, // output buffer size
 		2048, // input buffer size
