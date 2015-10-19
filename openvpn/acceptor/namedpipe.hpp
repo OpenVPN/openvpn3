@@ -23,6 +23,7 @@
 #define OPENVPN_ACCEPTOR_NAMEDPIPE_H
 
 #include <openvpn/acceptor/base.hpp>
+#include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/secattr.hpp>
 
 namespace openvpn {
