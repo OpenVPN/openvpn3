@@ -32,6 +32,7 @@
 #include <functional>
 #include <limits>
 #include <unordered_map>
+#include <thread>
 
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/buffer/buflist.hpp>
@@ -108,13 +109,6 @@ namespace openvpn {
       {
 	static constexpr int UNDEF = -1;
 
-	Transaction()
-	  : accept_gzip_in(false),
-	    randomize_resolver_results(false),
-	    status(UNDEF)
-	{
-	}
-
 	std::string url(const TransactionSet& ts) const
 	{
 	  URL::Parse u = URL::Parse::from_components(bool(ts.http_config->ssl_factory),
@@ -149,11 +143,11 @@ namespace openvpn {
 	WS::Client::Request req;
 	WS::Client::ContentInfo ci;
 	BufferList content_out;
-	bool accept_gzip_in;
-	bool randomize_resolver_results;
+	bool accept_gzip_in = false;
+	bool randomize_resolver_results = false;
 
 	// output
-	int status;
+	int status = UNDEF;
 	std::string description;
 	HTTP::Reply reply;
 	BufferList content_in;
@@ -202,27 +196,19 @@ namespace openvpn {
 	typedef RCPtr<TransactionSet> Ptr;
 	typedef std::vector<std::unique_ptr<Transaction>> Vector;
 
-	TransactionSet()
-	  : max_retries(1),
-	    debug_level(0),
-	    retry_duration(Time::Duration::seconds(5)),
-	    status(false)
-	{
-	}
-
 	// configuration
 	WS::Client::Config::Ptr http_config;
 	WS::Client::Host host;
-	unsigned int max_retries;
-	int debug_level;
+	unsigned int max_retries = 1;
+	int debug_level = 2;
 	Time::Duration delayed_start;
-	Time::Duration retry_duration;
+	Time::Duration retry_duration = Time::Duration::seconds(5);
 
 	// request/response vector
 	Vector transactions;
 
 	// true if all requests were successful
-	bool status;
+	bool status = false;
 
 	// completion method
 	std::function<void(TransactionSet& ts)> completion;
@@ -231,9 +217,11 @@ namespace openvpn {
 	// on local sockets
 	std::function<void(TransactionSet& ts, AsioPolySock::Base& sock)> post_connect;
 
-	// Persistent state (can be reused).
+	// Enable preserve_http_state to reuse HTTP session
+	// across multiple completions.
 	// hsc.reset() can be called to explicitly
 	// close persistent state.
+	bool preserve_http_state = false;
 	HTTPStateContainer hsc;
 
 	// Return true if and only if all HTTP transactions
@@ -285,6 +273,28 @@ namespace openvpn {
 	Client::Ptr cli = new Client(this, ts, id);
 	clients[id] = cli;
 	cli->start();
+      }
+
+      static void new_request_synchronous(const TransactionSet::Ptr& ts)
+      {
+	Log::Context::Wrapper logwrap;
+	std::thread mythread([&ts, &logwrap]() {
+	    Log::Context logctx(logwrap);
+	    asio::io_context io_context(1); // concurrency hint=1
+	    ClientSet::Ptr cs;
+	    try {
+	      cs.reset(new ClientSet(io_context));
+	      cs->new_request(ts);
+	      io_context.run();
+	    }
+	    catch (...)
+	      {
+		if (cs)
+		  cs->stop();        // on exception, stop ClientSet
+		io_context.poll();   // execute completion handlers
+	      }
+	  });
+	mythread.join();
       }
 
       void stop()
@@ -376,7 +386,10 @@ namespace openvpn {
 	  stop(status);
 	  remove_self_from_map();
 	  ts->status = status;
-	  ts->completion(*ts);
+	  if (!ts->preserve_http_state)
+	    ts->hsc.reset();
+	  if (ts->completion)
+	    ts->completion(*ts);
 	}
 
 	Transaction& trans()
