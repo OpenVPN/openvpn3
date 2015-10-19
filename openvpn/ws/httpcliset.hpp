@@ -227,6 +227,10 @@ namespace openvpn {
 	// completion method
 	std::function<void(TransactionSet& ts)> completion;
 
+	// post-connect method, useful to validate server
+	// on local sockets
+	std::function<void(TransactionSet& ts, AsioPolySock::Base& sock)> post_connect;
+
 	// Persistent state (can be reused).
 	// hsc.reset() can be called to explicitly
 	// close persistent state.
@@ -578,6 +582,12 @@ namespace openvpn {
 	void http_keepalive_close(HTTPDelegate& hd, const int status, const std::string& description)
 	{
 	  // this is a no-op because ts->hsc.alive() is always tested before construction
+	}
+
+	void http_post_connect(HTTPDelegate& hd, AsioPolySock::Base& sock)
+	{
+	  if (ts->post_connect)
+	    ts->post_connect(*ts, sock);
 	}
 
 	ClientSet* parent;
