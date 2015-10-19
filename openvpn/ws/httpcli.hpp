@@ -350,6 +350,10 @@ namespace openvpn {
 	{
 	}
 
+	virtual void http_post_connect(AsioPolySock::Base& sock)
+	{
+	}
+
       private:
 	typedef TCPTransport::Link<AsioProtocol, HTTPCore*, false> LinkImpl;
 	friend LinkImpl; // calls tcp_* handlers
@@ -564,6 +568,7 @@ namespace openvpn {
 	  if (use_link)
 	    {
 	      socket->set_cloexec();
+	      http_post_connect(*socket);
 	      link.reset(new LinkImpl(this,
 				      *socket,
 				      0, // send_queue_max_size (unlimited)
@@ -966,6 +971,12 @@ namespace openvpn {
 	{
 	  if (parent)
 	    parent->http_keepalive_close(*this, status, description);
+	}
+
+	virtual void http_post_connect(AsioPolySock::Base& sock)
+	{
+	  if (parent)
+	    parent->http_post_connect(*this, sock);
 	}
 
       private:
