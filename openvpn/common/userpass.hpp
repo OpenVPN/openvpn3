@@ -55,12 +55,10 @@ namespace openvpn {
 	    throw creds_error(opt_name + " : credentials option missing");
 	  return false;
 	}
+      if (auth_user_pass->size() == 1 && !(flags & OPT_REQUIRED))
+	return true;
       if (auth_user_pass->size() != 2)
-	{
-	  if (flags & OPT_REQUIRED)
-	    throw creds_error(opt_name + " : credentials option incorrectly specified");
-	  return false;
-	}
+	throw creds_error(opt_name + " : credentials option incorrectly specified");
 
       std::string str = auth_user_pass->get(1, 1024 | Option::MULTILINE);
       if ((flags & TRY_FILE) && !string::is_multiline(str))
