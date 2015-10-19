@@ -33,13 +33,11 @@ namespace openvpn {
     struct Config
     {
       Config()
-	: send_queue_max_size(1024),
-	  free_list_max_size(8),
+	: free_list_max_size(8),
 	  socket_protect(nullptr)
       {}
 
       RemoteList::Ptr remote_list;
-      size_t send_queue_max_size;
       size_t free_list_max_size;
       Frame::Ptr frame;
       SessionStats::Ptr stats;

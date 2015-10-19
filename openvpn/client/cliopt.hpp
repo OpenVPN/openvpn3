@@ -153,6 +153,7 @@ namespace openvpn {
 	server_override(config.server_override),
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout),
+	tcp_queue_limit(64),
 	proto_context_options(config.proto_context_options),
 	http_proxy_options(config.http_proxy_options),
 	autologin(false),
@@ -188,6 +189,9 @@ namespace openvpn {
       const unsigned int tun_mtu = parse_tun_mtu(opt, 0); // get tun-mtu parameter from config
       const MSSCtrlParms mc(opt);
       frame = frame_init(true, tun_mtu, mc.mssfix_ctrl, true);
+
+      // TCP queue limit
+      tcp_queue_limit = opt.get_num<decltype(tcp_queue_limit)>("tcp-queue-limit", 1, tcp_queue_limit, 1, 65536);
 
       // route-nopull
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
@@ -470,6 +474,7 @@ namespace openvpn {
       cli_config->cli_events = cli_events;
       cli_config->creds = creds;
       cli_config->pushed_options_filter = pushed_options_filter;
+      cli_config->tcp_queue_limit = tcp_queue_limit;
       return cli_config;
     }
 
@@ -640,6 +645,7 @@ namespace openvpn {
     std::string server_override;
     Protocol proto_override;
     int conn_timeout_;
+    unsigned int tcp_queue_limit;
     ProtoContextOptions::Ptr proto_context_options;
     HTTPProxyTransport::Options::Ptr http_proxy_options;
     std::string userlocked_username;

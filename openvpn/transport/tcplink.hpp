@@ -141,6 +141,11 @@ namespace openvpn {
 	return queue.empty();
       }
 
+      unsigned int send_queue_size()
+      {
+	return queue.size();
+      }
+
       bool send(BufferAllocated& b)
       {
 	if (halt)

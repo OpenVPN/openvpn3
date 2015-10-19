@@ -113,6 +113,16 @@ namespace openvpn {
 	return false;
       }
 
+      virtual bool transport_has_send_queue()
+      {
+	return false;
+      }
+
+      virtual unsigned int transport_send_queue_size()
+      {
+	return 0;
+      }
+
       virtual void reset_align_adjust(const size_t align_adjust)
       {
 	if (impl)

@@ -42,7 +42,6 @@ namespace openvpn {
       typedef RCPtr<ClientConfig> Ptr;
 
       RemoteList::Ptr remote_list;
-      size_t send_queue_max_size;
       size_t free_list_max_size;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -59,8 +58,7 @@ namespace openvpn {
 
     private:
       ClientConfig()
-	: send_queue_max_size(1024),
-	  free_list_max_size(8),
+	: free_list_max_size(8),
 	  socket_protect(nullptr)
       {}
     };
@@ -112,6 +110,19 @@ namespace openvpn {
 	  return impl->send_queue_empty();
 	else
 	  return false;
+      }
+
+      virtual bool transport_has_send_queue()
+      {
+	return true;
+      }
+
+      virtual unsigned int transport_send_queue_size()
+      {
+	if (impl)
+	  return impl->send_queue_size();
+	else
+	  return 0;
       }
 
       virtual void reset_align_adjust(const size_t align_adjust)
@@ -267,7 +278,7 @@ namespace openvpn {
 	      {
 		impl.reset(new LinkImpl(this,
 					socket,
-					config->send_queue_max_size,
+					0, // // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
 					config->free_list_max_size,
 					(*config->frame)[Frame::READ_LINK_TCP],
 					config->stats));

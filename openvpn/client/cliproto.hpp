@@ -112,7 +112,8 @@ namespace openvpn {
 				 ProfileParseLimits::OPT_OVERHEAD,
 				 ProfileParseLimits::TERM_OVERHEAD,
 				 0,
-				 ProfileParseLimits::MAX_DIRECTIVE_SIZE)
+				 ProfileParseLimits::MAX_DIRECTIVE_SIZE),
+	    tcp_queue_limit(0)
 	{}
 
 	ProtoConfig::Ptr proto_context_config;
@@ -125,6 +126,7 @@ namespace openvpn {
 	ClientCreds::Ptr creds;
 	OptionList::Limits pushed_options_limit;
 	OptionList::FilterBase::Ptr pushed_options_filter;
+	unsigned int tcp_queue_limit;
       };
 
       Session(asio::io_context& io_context_arg,
@@ -134,6 +136,8 @@ namespace openvpn {
 	  io_context(io_context_arg),
 	  transport_factory(config.transport_factory),
 	  tun_factory(config.tun_factory),
+	  tcp_queue_limit(config.tcp_queue_limit),
+	  transport_has_send_queue(false),
 	  notify_callback(notify_callback_arg),
 	  housekeeping_timer(io_context_arg),
 	  push_request_timer(io_context_arg),
@@ -176,6 +180,7 @@ namespace openvpn {
 
 	    // initialize transport-layer packet handler
 	    transport = transport_factory->new_transport_client_obj(io_context, *this);
+	    transport_has_send_queue = transport->transport_has_send_queue();
 	    transport->transport_start();
 	  }
       }
@@ -323,19 +328,34 @@ namespace openvpn {
 	  // update current time
 	  Base::update_now();
 
-	  // encrypt packet
+	  // log packet
 #ifdef OPENVPN_PACKET_LOG
 	  log_packet(buf, true);
 #endif
-	  Base::data_encrypt(buf);
+
+	  // if transport layer has an output queue, check if it's full
+	  if (transport_has_send_queue)
+	    {
+	      if (transport->transport_send_queue_size() > tcp_queue_limit)
+		{
+		  buf.reset_size(); // queue full, drop packet
+		  cli_stats->error(Error::TCP_OVERFLOW);
+		}
+	    }
+
+	  // encrypt packet
 	  if (buf.size())
 	    {
-	      // send packet via transport to destination
-	      OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
-	      if (transport->transport_send(buf))
-		Base::update_last_sent();
-	      else if (halt)
-		return;
+	      Base::data_encrypt(buf);
+	      if (buf.size())
+		{
+		  // send packet via transport to destination
+		  OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
+		  if (transport->transport_send(buf))
+		    Base::update_last_sent();
+		  else if (halt)
+		    return;
+		}
 	    }
 
 	  // do a lightweight flush
@@ -825,6 +845,9 @@ namespace openvpn {
 
       TunClientFactory::Ptr tun_factory;
       TunClient::Ptr tun;
+
+      unsigned int tcp_queue_limit;
+      bool transport_has_send_queue;
 
       NotifyCallback* notify_callback;
 
