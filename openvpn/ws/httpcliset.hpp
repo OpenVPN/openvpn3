@@ -152,6 +152,18 @@ namespace openvpn {
 	HTTP::Reply reply;
 	BufferList content_in;
 
+	// Return true if and only if HTTP transaction
+	// succeeded AND HTTP status code was in the
+	// successful range of 2xx.
+	bool http_status_success() const
+	{
+	  if (status != WS::Client::Status::E_SUCCESS)
+	    return false;
+	  if (reply.status_code < 200 || reply.status_code >= 300)
+	    return false;
+	  return true;
+	}
+
 	void dump(std::ostream& os, const TransactionSet& ts) const
 	{
 	  os << "----- " << format_status(ts) << " -----\n";
@@ -235,9 +247,7 @@ namespace openvpn {
 	    return false;
 	  for (auto &t : transactions)
 	    {
-	      if (t->status != WS::Client::Status::E_SUCCESS)
-		return false;
-	      if (t->reply.status_code < 200 || t->reply.status_code >= 300)
+	      if (!t->http_status_success())
 		return false;
 	    }
 	  return true;
