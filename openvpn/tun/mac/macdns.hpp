@@ -99,11 +99,11 @@ namespace openvpn {
       std::string to_string() const
       {
 	std::ostringstream os;
-	os << "rg=" << redirect_gateway;
-	os << " rdp=" << reroute_dns_partial;
-	os << " so=" << search_order;
-	os << " dns=" << CF::array_to_string(dns_servers);
-	os << " dom=" << CF::array_to_string(search_domains);
+	os << "RG=" << redirect_gateway;
+	os << " RDP=" << reroute_dns_partial;
+	os << " SO=" << search_order;
+	os << " DNS=" << CF::array_to_string(dns_servers);
+	os << " DOM=" << CF::array_to_string(search_domains);
 	return os.str();
       }
 

@@ -72,17 +72,15 @@ namespace openvpn {
       virtual std::string to_string() const
       {
 	std::ostringstream os;
-	os << "MacDNS:";
+	os << "MacDNSAction: FLAGS=";
+	if (flags & ENABLE_WATCHDOG)
+	  os << 'E';
+	if (flags & SYNCHRONOUS)
+	  os << 'S';
+	if (flags & FLUSH_RECONFIG)
+	  os << 'F';
 	if (config)
 	  os << ' ' << config->to_string();
-	else
-	  os << " UNDEF";
-	if (flags & ENABLE_WATCHDOG)
-	  os << " ENABLE_WATCHDOG";
-	if (flags & SYNCHRONOUS)
-	  os << " SYNCHRONOUS";
-	if (flags & FLUSH_RECONFIG)
-	  os << " FLUSH_RECONFIG";
 	return os.str();
       }
 
