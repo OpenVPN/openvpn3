@@ -25,6 +25,7 @@
 #include <list>
 
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/buffer/bufstr.hpp>
 
 namespace openvpn {
 
@@ -68,6 +69,12 @@ namespace openvpn {
       for (auto &b : *this)
 	size += b->size();
       return size;
+    }
+
+    std::string to_string() const
+    {
+      BufferPtr bp = join();
+      return buf_to_string(*bp);
     }
 
     BufferList copy() const
