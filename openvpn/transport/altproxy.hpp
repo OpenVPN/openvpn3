@@ -26,6 +26,9 @@
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/transport/client/transbase.hpp>
+#include <openvpn/transport/socket_protect.hpp>
+#include <openvpn/client/remotelist.hpp>
+#include <openvpn/crypto/digestapi.hpp>
 
 namespace openvpn {
   struct AltProxy : public RC<thread_unsafe_refcount>
