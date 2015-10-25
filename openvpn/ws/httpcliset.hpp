@@ -63,7 +63,7 @@ namespace openvpn {
       public:
 	void reset()
 	{
-	  http.reset();
+	  http->stop();
 	}
 
 	bool alive() const
@@ -85,7 +85,7 @@ namespace openvpn {
 	    {
 	      http->detach(keepalive);
 	      if (!keepalive)
-		http.reset();
+		reset();
 	    }
 	}
 
@@ -576,7 +576,14 @@ namespace openvpn {
 
 		// do next request
 		++ts_iter;
-		next_request();
+
+		// Post a call to next_request() under a fresh stack.
+		// Currently we may actually be under tcp_read_handler() and
+		// next_request() can trigger destructors.
+		asio::post(parent->io_context, [self=Ptr(this)]()
+			   {
+			     self->next_request();
+			   });
 	      }
 	    else
 	      {
