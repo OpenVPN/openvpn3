@@ -114,6 +114,19 @@ namespace openvpn {
       {
 	static constexpr int UNDEF = -1;
 
+	// input
+	WS::Client::Request req;
+	WS::Client::ContentInfo ci;
+	BufferList content_out;
+	bool accept_gzip_in = false;
+	bool randomize_resolver_results = false;
+
+	// output
+	int status = UNDEF;
+	std::string description;
+	HTTP::Reply reply;
+	BufferList content_in;
+
 	std::string url(const TransactionSet& ts) const
 	{
 	  URL::Parse u = URL::Parse::from_components(bool(ts.http_config->ssl_factory),
@@ -143,19 +156,6 @@ namespace openvpn {
 	    }
 #endif
 	}
-
-	// input
-	WS::Client::Request req;
-	WS::Client::ContentInfo ci;
-	BufferList content_out;
-	bool accept_gzip_in = false;
-	bool randomize_resolver_results = false;
-
-	// output
-	int status = UNDEF;
-	std::string description;
-	HTTP::Reply reply;
-	BufferList content_in;
 
 	// Return true if and only if HTTP transaction
 	// succeeded AND HTTP status code was in the
