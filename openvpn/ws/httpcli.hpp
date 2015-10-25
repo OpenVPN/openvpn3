@@ -124,22 +124,15 @@ namespace openvpn {
       {
 	typedef RCPtr<Config> Ptr;
 
-	Config() : connect_timeout(0),
-		   general_timeout(0),
-		   max_headers(0),
-		   max_header_bytes(0),
-		   max_content_bytes(0),
-		   msg_overhead_bytes(0) {}
-
 	SSLFactoryAPI::Ptr ssl_factory;
 	TransportClientFactory::Ptr transcli;
 	std::string user_agent;
-	unsigned int connect_timeout;
-	unsigned int general_timeout;
-	unsigned int max_headers;
-	unsigned int max_header_bytes;
-	olong max_content_bytes;
-	unsigned int msg_overhead_bytes;
+	unsigned int connect_timeout = 0;
+	unsigned int general_timeout = 0;
+	unsigned int max_headers = 0;
+	unsigned int max_header_bytes = 0;
+	olong max_content_bytes = 0;
+	unsigned int msg_overhead_bytes = 0;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
       };
