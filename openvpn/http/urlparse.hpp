@@ -134,9 +134,11 @@ namespace openvpn {
 		break;
 	      }
 	  }
-	validate();
 	if (set_default_port)
 	  default_port();
+	if (uri.empty())
+	  uri = "/";
+	validate();
       }
 
       // Note that special address types such as unix domain
