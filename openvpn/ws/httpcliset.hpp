@@ -61,9 +61,14 @@ namespace openvpn {
       class HTTPStateContainer
       {
       public:
-	void reset()
+	void stop()
 	{
 	  http->stop();
+	}
+
+	void reset()
+	{
+	  http.reset();
 	}
 
 	bool alive() const
@@ -85,7 +90,7 @@ namespace openvpn {
 	    {
 	      http->detach(keepalive);
 	      if (!keepalive)
-		reset();
+		stop();
 	    }
 	}
 
@@ -231,7 +236,7 @@ namespace openvpn {
 
 	// Enable preserve_http_state to reuse HTTP session
 	// across multiple completions.
-	// hsc.reset() can be called to explicitly
+	// hsc.stop() can be called to explicitly
 	// close persistent state.
 	bool preserve_http_state = false;
 	HTTPStateContainer hsc;
@@ -303,6 +308,7 @@ namespace openvpn {
 		  cs->stop();        // on exception, stop ClientSet
 		io_context.poll();   // execute completion handlers
 	      }
+	    ts->hsc.reset();         // ensure that socket is destroyed here, not by parent thread
 	  });
 	mythread.join();
       }
@@ -397,7 +403,7 @@ namespace openvpn {
 	  remove_self_from_map();
 	  ts->status = status;
 	  if (!ts->preserve_http_state)
-	    ts->hsc.reset();
+	    ts->hsc.stop();
 	  if (ts->completion)
 	    ts->completion(*ts);
 	}
