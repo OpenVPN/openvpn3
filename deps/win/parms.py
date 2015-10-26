@@ -9,7 +9,7 @@ PARMS = {
     "PATCH" : "c:\\src\\as\\pyovpn\\patch",
     "GIT" : "c:\\Program Files (x86)\\Git",
     "MSVC_DIR" : "c:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
-    "ARCH" : "amd64", # one of amd64, x86
+    "ARCH" : "amd64", # one of amd64, x86, or x86_xp (note that x86_xp requires vcvarsall.bat patch)
     "LIB_VERSIONS" : {
         'asio'     : "asio-20150924",
         'polarssl' : "polarssl-1.3.9a",

@@ -1,0 +1,31 @@
+NOTE: Visual Studio 2015 supports Windows XP but is missing an XP target
+in vcvarsall.bat (c:/program files (x86)/Microsoft Visual Studio 14.0/VC).
+This patch adds one.
+
+--- vcvarsall.bat.orig	Sun Oct 25 19:42:37 2015
++++ vcvarsall.bat	Sun Oct 25 19:49:55 2015
+@@ -7,6 +7,7 @@
+ 
+ :check_platform
+ if /i %1 == x86       goto x86
++if /i %1 == x86_xp    goto x86_xp
+ if /i %1 == amd64     goto amd64
+ if /i %1 == x64       goto amd64
+ if /i %1 == arm       goto arm
+@@ -19,6 +20,16 @@
+ :x86
+ if not exist "%~dp0bin\vcvars32.bat" goto missing
+ call "%~dp0bin\vcvars32.bat" %2
++goto :SetVisualStudioVersion
++
++:x86_xp
++if not exist "%~dp0bin\vcvars32.bat" goto missing
++call "%~dp0bin\vcvars32.bat"
++set INCLUDE=%ProgramFiles(x86)%\Microsoft SDKs\Windows\7.1A\Include;%INCLUDE%
++set PATH=%ProgramFiles(x86)%\Microsoft SDKs\Windows\7.1A\Bin;%PATH%
++set LIB=%ProgramFiles(x86)%\Microsoft SDKs\Windows\7.1A\Lib;%LIB%
++set CL=/D_USING_V110_SDK71_;%CL%
++set LINK=/SUBSYSTEM:CONSOLE,5.01 %LINK%
+ goto :SetVisualStudioVersion
+ 
+ :amd64

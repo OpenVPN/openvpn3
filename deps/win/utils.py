@@ -71,8 +71,11 @@ def wipetree(dir):
         """
         if not os.access(path, os.W_OK):
             # Is the error an access error ?
-            os.chmod(path, stat.S_IWUSR)
-            func(path)
+            try:
+                os.chmod(path, stat.S_IWUSR)
+                func(path)
+            except:
+                pass
 
     print "WIPETREE", dir
     shutil.rmtree(dir, ignore_errors=False, onerror=onerror)
@@ -178,7 +181,7 @@ def call(cmd, **kw):
         raise ValueError("command failed with status %r (expected %r)" % (ret, succeed))
 
 def vc_cmd(parms, cmd, arch=None, succeed=0):
-    # arch should be one of amd64 (alias x64), x86, or None
+    # arch should be one of amd64 (alias x64), x86, x86_xp, or None
     # (if None, use parms.py value)
     if arch is None:
         arch = parms['ARCH']
