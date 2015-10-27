@@ -80,7 +80,7 @@ def wipetree(dir):
     print "WIPETREE", dir
     shutil.rmtree(dir, ignore_errors=False, onerror=onerror)
     if not os.path.isdir(dir):
-        os.mkdir(dir)
+        os.makedirs(dir)
 
 def extract_dict(d, k, default=None):
     if k in d:
@@ -197,3 +197,6 @@ def patch(pkg_prefix, patchdir):
     patch_fn = patchfile(pkg_prefix, patchdir)
     print "PATCH", patch_fn
     call(['patch', '-p1', '-i', patch_fn])
+
+def build_dir(parms):
+    return os.path.join(parms['BUILD'], parms['ARCH'])
