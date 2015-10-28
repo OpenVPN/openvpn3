@@ -87,6 +87,17 @@ namespace openvpn {
     return buf;
   }
 
+  // append str to buf
+  inline void buf_append_string(Buffer& buf, const std::string& str)
+  {
+    buf.write((unsigned char *)str.c_str(), str.length());
+  }
+
+  // append str to buf
+  inline void buf_append_string(Buffer& buf, const char *str)
+  {
+    buf.write((unsigned char *)str, std::strlen(str));
+  }
 }
 
 #endif
