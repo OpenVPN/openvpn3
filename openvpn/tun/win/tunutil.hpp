@@ -48,7 +48,9 @@
 #include <openvpn/common/stringize.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/uniqueptr.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/unicode.hpp>
@@ -405,6 +407,359 @@ namespace openvpn {
 	  }
       }
 
+      struct InterfaceInfoList
+      {
+      public:
+	InterfaceInfoList()
+	{
+	  DWORD size = 0;
+	  if (::GetInterfaceInfo(nullptr, &size) != ERROR_INSUFFICIENT_BUFFER)
+	    OPENVPN_THROW(tun_win_util, "InterfaceInfoList: GetInterfaceInfo #1");
+	  list.reset((IP_INTERFACE_INFO*)new unsigned char[size]);
+	  if (::GetInterfaceInfo(list.get(), &size) != NO_ERROR)
+	    OPENVPN_THROW(tun_win_util, "InterfaceInfoList: GetInterfaceInfo #2");
+	}
+
+	IP_ADAPTER_INDEX_MAP* iface(const DWORD index) const
+	{
+	  if (list)
+	    {
+	      for (unsigned int i = 0; i < list->NumAdapters; ++i)
+		{
+		  IP_ADAPTER_INDEX_MAP* inter = &list->Adapter[i];
+		  if (index == inter->Index)
+		    return inter;
+		}
+	    }
+	  return nullptr;
+	}
+
+	std::unique_ptr<IP_INTERFACE_INFO> list;
+      };
+
+      inline void dhcp_release(const InterfaceInfoList& ii,
+			       const DWORD adapter_index)
+      {
+	IP_ADAPTER_INDEX_MAP* iface = ii.iface(adapter_index);
+	if (iface)
+	  {
+	    const DWORD status = ::IpReleaseAddress(iface);
+	    if (status == NO_ERROR)
+	      OPENVPN_LOG("TAP: DHCP release succeeded");
+	    else
+	      OPENVPN_LOG("TAP: DHCP release failed");
+	  }
+      }
+
+      inline void dhcp_renew(const InterfaceInfoList& ii,
+			     const DWORD adapter_index)
+      {
+	IP_ADAPTER_INDEX_MAP* iface = ii.iface(adapter_index);
+	if (iface)
+	  {
+	    const DWORD status = ::IpRenewAddress(iface);
+	    if (status == NO_ERROR)
+	      OPENVPN_LOG("TAP: DHCP renew succeeded");
+	    else
+	      OPENVPN_LOG("TAP: DHCP renew failed");
+	  }
+      }
+
+      inline void flush_arp(const DWORD adapter_index)
+      {
+	const DWORD status = ::FlushIpNetTable(adapter_index);
+	if (status == NO_ERROR)
+	  OPENVPN_LOG("TAP: ARP flush succeeded");
+	else
+	  OPENVPN_LOG("TAP: ARP flush failed");
+      }
+
+      struct IPNetmask4
+      {
+	IPNetmask4() {}
+
+	IPNetmask4(const TunBuilderCapture& pull, const char *title)
+	{
+	  const TunBuilderCapture::Route* local4 = pull.vpn_ipv4();
+	  if (local4)
+	    {
+	      ip = IPv4::Addr::from_string(local4->address, title);
+	      netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length);
+	    }
+	}
+
+	IPNetmask4(const IP_ADDR_STRING *ias)
+	{
+	  if (ias)
+	    {
+	      try {
+		if (ias->IpAddress.String)
+		  ip = IPv4::Addr::from_string(ias->IpAddress.String);
+	      }
+	      catch (const std::exception&)
+		{
+		}
+	      try {
+		if (ias->IpMask.String)
+		  netmask = IPv4::Addr::from_string(ias->IpMask.String);
+	      }
+	      catch (const std::exception&)
+		{
+		}
+	    }
+	}
+
+	bool operator==(const IPNetmask4& rhs) const
+	{
+	  return ip == rhs.ip && netmask == rhs.netmask;
+	}
+
+	bool operator!=(const IPNetmask4& rhs) const
+	{
+	  return !operator==(rhs);
+	}
+
+	IPv4::Addr ip = IPv4::Addr::from_zero();
+	IPv4::Addr netmask = IPv4::Addr::from_zero();
+      };
+
+      struct IPAdaptersInfo
+      {
+	IPAdaptersInfo()
+	{
+	  ULONG size = 0;
+	  if (::GetAdaptersInfo(nullptr, &size) != ERROR_BUFFER_OVERFLOW)
+	    OPENVPN_THROW(tun_win_util, "IPAdaptersInfo: GetAdaptersInfo #1");
+	  list.reset((IP_ADAPTER_INFO*)new unsigned char[size]);
+	  if (::GetAdaptersInfo(list.get(), &size) != NO_ERROR)
+	    OPENVPN_THROW(tun_win_util, "IPAdaptersInfo: GetAdaptersInfo #2");
+	}
+
+	const IP_ADAPTER_INFO* adapter(const DWORD index) const
+	{
+	  if (list)
+	    {
+	      for (const IP_ADAPTER_INFO* a = list.get(); a != nullptr; a = a->Next)
+		{
+		  if (index == a->Index)
+		    return a;
+		}
+	    }
+	  return nullptr;
+	}
+
+	bool is_up(const DWORD index, const IPNetmask4& vpn_addr) const
+	{
+	  const IP_ADAPTER_INFO* ai = adapter(index);
+	  if (ai)
+	    {
+	      for (const IP_ADDR_STRING *iplist = &ai->IpAddressList; iplist != nullptr; iplist = iplist->Next)
+		{
+		  if (vpn_addr == IPNetmask4(iplist))
+		    return true;
+		}
+	    }
+	  return false;
+	}
+
+	bool is_dhcp_enabled(const DWORD index) const
+	{
+	  const IP_ADAPTER_INFO* ai = adapter(index);
+	  return ai && ai->DhcpEnabled;
+	}
+
+	std::unique_ptr<IP_ADAPTER_INFO> list;
+      };
+
+      struct IPPerAdapterInfo
+      {
+	IPPerAdapterInfo(const DWORD index)
+	{
+	  ULONG size = 0;
+	  if (::GetPerAdapterInfo(index, nullptr, &size) != ERROR_BUFFER_OVERFLOW)
+	    return;
+	  adapt.reset((IP_PER_ADAPTER_INFO*)new unsigned char[size]);
+	  if (::GetPerAdapterInfo(index, adapt.get(), &size) != ERROR_SUCCESS)
+	    adapt.reset();
+	}
+
+	std::unique_ptr<IP_PER_ADAPTER_INFO> adapt;
+      };
+
+      // Use the TAP DHCP masquerade capability to set TAP adapter properties.
+      // Generally only used on pre-Vista.
+      class TAPDHCPMasquerade
+      {
+      public:
+	OPENVPN_EXCEPTION(dhcp_masq);
+
+	// VPN IP/netmask
+	IPNetmask4 vpn;
+
+	// IP address of fake DHCP server in TAP adapter
+	IPv4::Addr dhcp_serv_addr = IPv4::Addr::from_zero();
+
+	// DHCP lease for one year
+	unsigned int lease_time = 31536000;
+
+	// DHCP options
+	std::string domain;            // DOMAIN (15)
+	std::string netbios_scope;     // NBS (47)
+	int netbios_node_type = 0;     // NBT 1,2,4,8 (46)
+	bool disable_nbt = false;      // DISABLE_NBT (43, Vendor option 001)
+	std::vector<IPv4::Addr> dns;   // DNS (6)
+	std::vector<IPv4::Addr> wins;  // WINS (44)
+	std::vector<IPv4::Addr> ntp;   // NTP (42)
+	std::vector<IPv4::Addr> nbdd;  // NBDD (45)
+
+	void init_from_capture(const TunBuilderCapture& pull)
+	{
+	  // VPN IP/netmask
+	  vpn = IPNetmask4(pull, "VPN IP");
+
+	  // DHCP server address
+	  {
+	    const IPv4::Addr network_addr = vpn.ip & vpn.netmask;
+	    const std::uint32_t extent = vpn.netmask.extent_from_netmask_uint32();
+	    if (extent >= 16)
+	      dhcp_serv_addr = network_addr + (extent - 2);
+	    else
+	      dhcp_serv_addr = network_addr;
+	  }
+
+	  // DNS
+	  for (auto &ds : pull.dns_servers)
+	    {
+	      if (!ds.ipv6)
+		dns.push_back(IPv4::Addr::from_string(ds.address, "DNS Server"));
+	    }
+
+	  // WINS
+	  for (auto &ws : pull.wins_servers)
+	    wins.push_back(IPv4::Addr::from_string(ws.address, "WINS Server"));
+
+	  // DOMAIN
+	  if (!pull.search_domains.empty())
+	    domain = pull.search_domains[0].domain;
+	}
+
+	void ioctl(HANDLE th) const
+	{
+	  // TAP_WIN_IOCTL_CONFIG_DHCP_MASQ
+	  {
+	    std::uint32_t ep[4];
+	    ep[0] = vpn.ip.to_uint32_net();
+	    ep[1] = vpn.netmask.to_uint32_net();
+	    ep[2] = dhcp_serv_addr.to_uint32_net();
+	    ep[3] = lease_time;
+
+	    DWORD len;
+	    if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_DHCP_MASQ,
+				 ep, sizeof (ep),
+				 ep, sizeof (ep), &len, nullptr))
+	      throw dhcp_masq("DeviceIoControl TAP_WIN_IOCTL_CONFIG_DHCP_MASQ failed");
+	  }
+
+	  // TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT
+	  {
+	    BufferAllocated buf(256, BufferAllocated::GROW);
+	    write_options(buf);
+
+	    DWORD len;
+	    if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT,
+				 buf.data(), buf.size(),
+				 buf.data(), buf.size(), &len, nullptr))
+	      throw dhcp_masq("DeviceIoControl TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT failed");
+	  }
+	}
+
+      private:
+	void write_options(Buffer& buf) const
+	{
+	  // DOMAIN
+	  write_dhcp_str(buf, 15, domain);
+
+	  // NBS
+	  write_dhcp_str(buf, 47, netbios_scope);
+
+	  // NBT
+	  if (netbios_node_type)
+	    write_dhcp_u8(buf, 46, netbios_node_type);
+
+	  // DNS
+	  write_dhcp_addr_list(buf, 6, dns);
+
+	  // WINS
+	  write_dhcp_addr_list(buf, 44, wins);
+
+	  // NTP
+	  write_dhcp_addr_list(buf, 42, ntp);
+
+	  // NBDD
+	  write_dhcp_addr_list(buf, 45, nbdd);
+
+	  // DISABLE_NBT
+	  //
+	  // The MS DHCP server option 'Disable Netbios-over-TCP/IP
+	  // is implemented as vendor option 001, value 002.
+	  // A value of 001 means 'leave NBT alone' which is the default.
+	  if (disable_nbt)
+	    {
+	      buf.push_back(43);
+	      buf.push_back(6);     // total length field
+	      buf.push_back(0x001);
+	      buf.push_back(4);     // length of the vendor-specified field
+	      {
+		const std::uint32_t raw = 0x002;
+		buf.write((const unsigned char *)&raw, sizeof(raw));
+	      }
+	    }
+	}
+
+	static void write_dhcp_u8(Buffer& buf,
+				  const unsigned char type,
+				  const unsigned char data)
+	{
+	  buf.push_back(type);
+	  buf.push_back(1);
+	  buf.push_back(data);
+	}
+
+	static void write_dhcp_str(Buffer& buf,
+				   const unsigned char type,
+				   const std::string& str)
+	{
+	  const size_t len = str.length();
+	  if (len)
+	    {
+	      if (len > 255)
+		OPENVPN_THROW(dhcp_masq, "string '" << str << "' must be > 0 bytes and <= 255 bytes");
+	      buf.push_back(type);
+	      buf.push_back((unsigned char)len);
+	      buf.write((const unsigned char *)str.c_str(), len);
+	    }
+	}
+
+	static void write_dhcp_addr_list(Buffer& buf,
+					 const unsigned char type,
+					 const std::vector<IPv4::Addr>& addr_list)
+	{
+	  if (!addr_list.empty())
+	    {
+	      const size_t size = addr_list.size() * sizeof(std::uint32_t);
+	      if (size < 1 || size > 255)
+		OPENVPN_THROW(dhcp_masq, "array size=" << size << " must be > 0 bytes and <= 255 bytes");
+	      buf.push_back(type);
+	      buf.push_back((unsigned char)size);
+	      for (auto &a : addr_list)
+		{
+		  const std::uint32_t rawaddr = a.to_uint32_net();
+		  buf.write((const unsigned char *)&rawaddr, sizeof(std::uint32_t));
+		}
+	    }
+	}
+      };
+
       class TAPDriverVersion
       {
       public:
@@ -450,9 +805,9 @@ namespace openvpn {
 	{
 	}
 
-	virtual void execute()
+	virtual void execute(std::ostream& os) override
 	{
-	  OPENVPN_LOG(to_string());
+	  os << to_string() << std::endl;
 
 	  LONG status;
 	  Win::RegKey key;
@@ -474,13 +829,35 @@ namespace openvpn {
 				  (Win::utf16_strlen(dom.get())+1)*2);
 	  if (status != ERROR_SUCCESS)
 	    OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error writing Domain registry key: " << reg_key_name);
-
 	}
 
-	virtual std::string to_string() const
+	virtual std::string to_string() const override
 	{
 	  return "Set DNS search domain: '" + search_domain + "' " + tap_guid;
 	}
+
+#ifdef HAVE_JSONCPP
+	virtual Json::Value to_json() const override
+	{
+	  Json::Value root(Json::objectValue);
+	  root["type"] = "ActionSetSearchDomain";
+	  root["search_domain"] = Json::Value(search_domain);
+	  root["tap_guid"] = Json::Value(tap_guid);
+	  return root;
+	}
+
+	static ActionSetSearchDomain::Ptr from_json_untrusted(const Json::Value& jact)
+	{
+	  // fixme -- sanity check input
+	  const Json::Value& p1 = jact["search_domain"];
+	  if (!p1.isString())
+	    throw Exception("ActionSetSearchDomain: missing json string 'search_domain'");
+	  const Json::Value& p2 = jact["tap_guid"];
+	  if (!p2.isString())
+	    throw Exception("ActionSetSearchDomain: missing json string 'tap_guid'");
+	  return new ActionSetSearchDomain(p1.asString(), p2.asString());
+	}
+#endif
 
       private:
 	const std::string search_domain;
@@ -508,6 +885,7 @@ namespace openvpn {
 	return rt.release();
       }
 
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
       // Get the Windows IPv4/IPv6 routing table.
       // Note that returned pointer must be freed with FreeMibTable.
       inline const MIB_IPFORWARD_TABLE2* windows_routing_table2(ADDRESS_FAMILY af)
@@ -519,6 +897,7 @@ namespace openvpn {
 	else
 	  return nullptr;
       }
+#endif
 
       // Get the current default gateway
       class DefaultGateway
@@ -575,18 +954,41 @@ namespace openvpn {
 	{
 	}
 
-	virtual void execute()
+	virtual void execute(std::ostream& os) override
 	{
+	  os << to_string() << std::endl;
+
 	  ActionList::Ptr actions = new ActionList();
 	  remove_all_ipv4_routes_on_iface(iface_index, *actions);
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
 	  remove_all_ipv6_routes_on_iface(iface_index, *actions);
-	  actions->execute();
+#endif
+	  actions->execute(os);
 	}
 
-	virtual std::string to_string() const
+	virtual std::string to_string() const override
 	{
-	  return "ActionDeleteAllRoutesOnInterface";
+	  return "ActionDeleteAllRoutesOnInterface iface_index=" + std::to_string(iface_index);
 	}
+
+#ifdef HAVE_JSONCPP
+	virtual Json::Value to_json() const override
+	{
+	  Json::Value root(Json::objectValue);
+	  root["type"] = "ActionDeleteAllRoutesOnInterface";
+	  root["iface_index"] = Json::Value((Json::LargestUInt)iface_index);
+	  return root;
+	}
+
+	static ActionDeleteAllRoutesOnInterface::Ptr from_json_untrusted(const Json::Value& jact)
+	{
+	  // fixme -- sanity check input
+	  const Json::Value& p1 = jact["iface_index"];
+	  if (!p1.isNumeric())
+	    throw Exception("ActionDeleteAllRoutesOnInterface: missing json number 'iface_index'");
+	  return new ActionDeleteAllRoutesOnInterface(p1.asLargestUInt());
+	}
+#endif
 
       private:
 	static void remove_all_ipv4_routes_on_iface(DWORD index, ActionList& actions)
@@ -616,6 +1018,7 @@ namespace openvpn {
 	    }
 	}
 
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
 	static void remove_all_ipv6_routes_on_iface(DWORD index, ActionList& actions)
 	{
 	  unique_ptr_del<const MIB_IPFORWARD_TABLE2> rt2(windows_routing_table2(AF_INET6),
@@ -646,10 +1049,25 @@ namespace openvpn {
 		}
 	    }
 	}
+#endif
 
 	const DWORD iface_index;
       };
 
+      class ActionEnableDHCP : public WinCmd
+      {
+      public:
+	ActionEnableDHCP(const TapNameGuidPair& tap)
+	  : WinCmd(cmd(tap))
+	{
+	}
+
+      private:
+	static std::string cmd(const TapNameGuidPair& tap)
+	{
+	  return "netsh interface ip set address " + tap.index_or_name() + " dhcp";
+	}
+      };
     }
   }
 }

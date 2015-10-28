@@ -41,16 +41,26 @@ namespace openvpn {
     {
     }
 
-    virtual void execute()
+    virtual void execute(std::ostream& os) override
     {
-      OPENVPN_LOG(to_string());
+      os << to_string() << std::endl;
       Sleep(dwMilliseconds);
     }
 
-    virtual std::string to_string() const
+    virtual std::string to_string() const override
     {
       return "Sleeping for " + openvpn::to_string(dwMilliseconds) + " milliseconds...";
     }
+
+#ifdef HAVE_JSONCPP
+    virtual Json::Value to_json() const override
+    {
+      Json::Value root(Json::objectValue);
+      root["type"] = "WinSleep";
+      root["value"] = Json::Value((Json::UInt)dwMilliseconds);
+      return root;
+    }
+#endif
 
   private:
     DWORD dwMilliseconds;

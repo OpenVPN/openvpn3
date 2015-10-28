@@ -26,6 +26,7 @@
 
 #include <string>
 
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/win/call.hpp>
@@ -42,18 +43,36 @@ namespace openvpn {
     {
     }
 
-    virtual void execute()
+    virtual void execute(std::ostream& os) override
     {
-      OPENVPN_LOG(cmd);
+      os << cmd << std::endl;
       std::string out = Win::call(cmd);
-      string::trim_crlf(out);
-      OPENVPN_LOG(out);
+      os << out;
     }
 
-    virtual std::string to_string() const
+    virtual std::string to_string() const override
     {
       return cmd;
     }
+
+#ifdef HAVE_JSONCPP
+    virtual Json::Value to_json() const override
+    {
+      Json::Value root(Json::objectValue);
+      root["type"] = "WinCmd";
+      root["cmd"] = Json::Value(cmd);
+      return root;
+    }
+
+    static WinCmd::Ptr from_json_untrusted(const Json::Value& jact)
+    {
+      // fixme -- sanity check input
+      const Json::Value& jcmd = jact["cmd"];
+      if (!jcmd.isString())
+	throw Exception("WinCmd: missing json string 'cmd'");
+      return new WinCmd(jcmd.asString());
+    }
+#endif
 
   private:
     std::string cmd;

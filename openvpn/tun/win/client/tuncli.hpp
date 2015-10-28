@@ -92,6 +92,16 @@ namespace openvpn {
 
       TunPersist::Ptr tun_persist;
 
+      ActionListFactory::Ptr action_list_factory;
+
+      ActionList::Ptr new_action_list()
+      {
+	if (action_list_factory)
+	  return action_list_factory->new_action_list();
+	else
+	  return new ActionList();
+      }
+
       static Ptr new_obj()
       {
 	return new ClientConfig;
@@ -186,23 +196,22 @@ namespace openvpn {
 		  if (tun_persist->persist_tun_state(ts, state))
 		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 
-		  // set TAP media status to CONNECTED
-		  Util::tap_set_media_status(th, true);
-
-		  // set up ActionLists for setting up and removing adapter properties
-		  ActionList::Ptr add_cmds = new ActionList();
-		  remove_cmds.reset(new ActionList());
-		  remove_cmds->enable_destroy(true);
-		  tun_persist->add_destructor(remove_cmds);
-
-		  // try to delete any stale routes on interface left over from previous session
-		  add_cmds->add(new Util::ActionDeleteAllRoutesOnInterface(tap.index));
+		  // create ActionLists for setting up and removing adapter properties
+		  ActionList::Ptr add_cmds = config->new_action_list();
+		  remove_cmds = config->new_action_list();
 
 		  // populate add/remove lists with actions
-		  adapter_config(th, tap, *po, *add_cmds, *remove_cmds);
+		  if (!adapter_config(th, tap, *po, *add_cmds, *remove_cmds))
+		    return;
 
 		  // execute the add actions
-		  add_cmds->execute();
+		  if (!execute_actions(*add_cmds))
+		    return;
+
+		  // now that the add actions have succeeded,
+		  // enable the remove actions
+		  remove_cmds->enable_destroy(true);
+		  tun_persist->add_destructor(remove_cmds);
 		}
 
 	      // configure tun interface packet forwarding
@@ -276,12 +285,29 @@ namespace openvpn {
       {
       }
 
-      // Windows doesn't have a VPN API but at least it has netsh
-      static void adapter_config(HANDLE th,
-				 const Util::TapNameGuidPair& tap,
-				 const TunBuilderCapture& pull,
-				 ActionList& create,
-				 ActionList& destroy)
+      bool execute_actions(ActionList& actions)
+      {
+	std::ostringstream os;
+	try {
+	  actions.execute(os);
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG_STRING(os.str());
+	    parent.tun_error(Error::TUN_SETUP_FAILED, e.what());
+	    return false;
+	  }
+	OPENVPN_LOG_STRING(os.str());
+	return true;
+      }
+
+#if _WIN32_WINNT >= 0x0600
+      // Configure TAP adapter on Vista and higher
+      bool adapter_config(HANDLE th,
+			  const Util::TapNameGuidPair& tap,
+			  const TunBuilderCapture& pull,
+			  ActionList& create,
+			  ActionList& destroy)
       {
 	// Windows interface index
 	const std::string tap_index_name = tap.index_or_name();
@@ -293,12 +319,14 @@ namespace openvpn {
 	const Util::DefaultGateway gw;
 
 	// set local4 and local6 to point to IPv4/6 route configurations
-	const TunBuilderCapture::Route* local4 = nullptr;
-	const TunBuilderCapture::Route* local6 = nullptr;
-	if (pull.tunnel_address_index_ipv4 >= 0)
-	  local4 = &pull.tunnel_addresses[pull.tunnel_address_index_ipv4];
-	if (pull.tunnel_address_index_ipv6 >= 0)
-	  local6 = &pull.tunnel_addresses[pull.tunnel_address_index_ipv6];
+	const TunBuilderCapture::Route* local4 = pull.vpn_ipv4();
+	const TunBuilderCapture::Route* local6 = pull.vpn_ipv6();
+
+	// set TAP media status to CONNECTED
+	Util::tap_set_media_status(th, true);
+
+	// try to delete any stale routes on interface left over from previous session
+	create.add(new Util::ActionDeleteAllRoutesOnInterface(tap.index));
 
 	// Set IPv4 Interface
 	//
@@ -507,7 +535,157 @@ namespace openvpn {
 	// flush DNS cache
 	create.add(new WinCmd("ipconfig /flushdns"));
 	destroy.add(new WinCmd("ipconfig /flushdns"));
+	return true;
       }
+#else
+      // Configure TAP adapter for pre-Vista
+      // Currently we don't support IPv6 on pre-Vista
+      bool adapter_config(HANDLE th,
+			  const Util::TapNameGuidPair& tap,
+			  const TunBuilderCapture& pull,
+			  ActionList& create,
+			  ActionList& destroy)
+      {
+	// Windows interface index
+	const std::string tap_index_name = tap.index_or_name();
+
+	// get default gateway
+	const Util::DefaultGateway gw;
+
+	// set local4 to point to IPv4 route configurations
+	const TunBuilderCapture::Route* local4 = pull.vpn_ipv4();
+
+	// Make sure the TAP adapter is set for DHCP
+	{
+	  const Util::IPAdaptersInfo ai;
+	  if (!ai.is_dhcp_enabled(tap.index))
+	    {
+	      OPENVPN_LOG("TAP: DHCP is disabled, attempting to enable");
+	      ActionList::Ptr cmds = config->new_action_list();
+	      cmds->add(new Util::ActionEnableDHCP(tap));
+	      if (!execute_actions(*cmds))
+		return false;
+	    }
+	}
+
+	// Set IPv4 Interface
+	if (local4)
+	  {
+	    // Process ifconfig and topology
+	    const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
+	    const IP::Addr localaddr = IP::Addr::from_string(local4->address);
+	    if (local4->net30)
+	      Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
+	    else
+	      Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
+	  }
+
+	// On pre-Vista, set up TAP adapter DHCP masquerade for
+	// configuring adapter properties.
+	{
+	  OPENVPN_LOG("TAP: configure DHCP masquerade");
+	  Util::TAPDHCPMasquerade dhmasq;
+	  dhmasq.init_from_capture(pull);
+	  dhmasq.ioctl(th);
+	}
+
+	// set TAP media status to CONNECTED
+	Util::tap_set_media_status(th, true);
+
+	// ARP
+	Util::flush_arp(tap.index);
+
+	// DHCP release/renew
+	{
+	  const Util::InterfaceInfoList ii;
+	  Util::dhcp_release(ii, tap.index);
+	  Util::dhcp_renew(ii, tap.index);
+	}
+
+	// Wait for TAP adapter to come up
+	{
+	  bool succeed = false;
+	  const Util::IPNetmask4 vpn_addr(pull, "VPN IP");
+	  for (int i = 1; i <= 30; ++i)
+	    {
+	      OPENVPN_LOG('[' << i << "] waiting for TAP adapter to receive DHCP settings...");
+	      const Util::IPAdaptersInfo ai;
+	      if (ai.is_up(tap.index, vpn_addr))
+		{
+		  succeed = true;
+		  break;
+		}
+	      ::Sleep(1000);
+	    }
+	  if (!succeed)
+	    throw tun_win_error("TAP adapter DHCP handshake failed");
+	}
+
+	// Process routes
+	for (auto &route : pull.add_routes)
+	  {
+	    if (!route.ipv6)
+	      {
+		if (local4)
+		  {
+		    const std::string netmask = IPv4::Addr::netmask_from_prefix_len(route.prefix_length).to_string();
+		    create.add(new WinCmd("route ADD " + route.address + " MASK " + netmask + ' ' + local4->gateway));
+		    destroy.add(new WinCmd("route DELETE " + route.address + " MASK " + netmask + ' ' + local4->gateway));
+		  }
+		else
+		  throw tun_win_error("IPv4 routes pushed without IPv4 ifconfig");
+	      }
+	  }
+
+	// Process exclude routes
+	if (!pull.exclude_routes.empty())
+	  {
+	    if (gw.defined())
+	      {
+		for (auto &route : pull.exclude_routes)
+		  {
+		    if (!route.ipv6)
+		      {
+			const std::string netmask = IPv4::Addr::netmask_from_prefix_len(route.prefix_length).to_string();
+			create.add(new WinCmd("route ADD " + route.address + " MASK " + netmask + ' ' + gw.gateway_address()));
+			destroy.add(new WinCmd("route DELETE " + route.address + " MASK " + netmask + ' ' + gw.gateway_address()));
+		      }
+		  }
+	      }
+	    else
+	      OPENVPN_LOG("NOTE: exclude routes error: cannot detect default gateway");
+	  }
+
+	// Process IPv4 redirect-gateway
+	if (pull.reroute_gw.ipv4)
+	  {
+	    // add server bypass route
+	    if (gw.defined())
+	      {
+		if (!pull.remote_address.ipv6)
+		  {
+		    create.add(new WinCmd("route ADD " + pull.remote_address.address + " MASK 255.255.255.255 " + gw.gateway_address()));
+		    destroy.add(new WinCmd("route DELETE " + pull.remote_address.address + " MASK 255.255.255.255 " + gw.gateway_address()));
+		  }
+	      }
+	    else
+	      throw tun_win_error("redirect-gateway error: cannot detect default gateway");
+
+	    create.add(new WinCmd("route ADD 0.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+	    create.add(new WinCmd("route ADD 128.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+	    destroy.add(new WinCmd("route DELETE 0.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+	    destroy.add(new WinCmd("route DELETE 128.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+	  }
+
+	// flush DNS cache
+	//create.add(new WinCmd("net stop dnscache"));
+	//create.add(new WinCmd("net start dnscache"));
+	create.add(new WinCmd("ipconfig /flushdns"));
+	//create.add(new WinCmd("ipconfig /registerdns"));
+	destroy.add(new WinCmd("ipconfig /flushdns"));
+	return true;
+      }
+#endif
 
       bool send(Buffer& buf)
       {
