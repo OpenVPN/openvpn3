@@ -422,19 +422,18 @@ namespace openvpn {
       // return the number of host addresses contained within netmask
       Addr extent_from_netmask() const
       {
+	Addr ret;
+	ret.u.addr = extent_from_netmask_uint32();
+	return ret;
+      }
+
+      std::uint32_t extent_from_netmask_uint32() const
+      {
 	const unsigned int hl = host_len();
 	if (hl < SIZE)
-	  {
-	    Addr ret;
-	    ret.u.addr = 1 << hl;
-	    return ret;
-	  }
+	  return 1 << hl;
 	else if (hl == SIZE)
-	  {
-	    Addr ret;
-	    ret.u.addr = 0;
-	    return ret;
-	  }
+	  return 0;
 	else
 	  throw ipv4_exception("extent overflow");
       }
