@@ -32,6 +32,7 @@
 namespace openvpn {
   struct LogBase : public RC<thread_safe_refcount>
   {
+    typedef RCPtr<LogBase> Ptr;
     virtual void log(const std::string& str) = 0;
   };
 }
