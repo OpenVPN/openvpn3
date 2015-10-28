@@ -72,8 +72,14 @@
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/mac/client/tuncli.hpp>
 #include <openvpn/apple/maclife.hpp>
+#ifdef OPENVPN_COMMAND_AGENT
+#include <openvpn/apple/cmdagent.hpp>
+#endif
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/win/client/tuncli.hpp>
+#ifdef OPENVPN_COMMAND_AGENT
+#include <openvpn/win/cmdagent.hpp>
+#endif
 #else
 #include <openvpn/tun/client/tunnull.hpp>
 #endif
@@ -364,6 +370,9 @@ namespace openvpn {
 	    tunconf->stats = cli_stats;
 	    tunconf->enable_failsafe_block = config.tun_persist;
 	    client_lifecycle.reset(new MacLifeCycle);
+#ifdef OPENVPN_COMMAND_AGENT
+	    tunconf->action_list_factory = MacCommandAgent::new_agent(opt);
+#endif
 	    tun_factory = tunconf;
 	  }
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
@@ -377,6 +386,9 @@ namespace openvpn {
 	    tunconf->stats = cli_stats;
 	    if (config.tun_persist)
 	      tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
+#ifdef OPENVPN_COMMAND_AGENT
+	    tunconf->action_list_factory = WinCommandAgent::new_agent(opt);
+#endif
 	    tun_factory = tunconf;
 	  }
 #else

@@ -72,10 +72,18 @@ namespace openvpn {
 
     void close_destructor()
     {
-      if (destruct_)
+      try {
+	if (destruct_)
+	  {
+	    std::ostringstream os;
+	    destruct_->destroy(os);
+	    OPENVPN_LOG_STRING(os.str());
+	    destruct_.reset();
+	  }
+      }
+      catch (const std::exception& e)
 	{
-	  destruct_->destroy();
-	  destruct_.reset();
+	  OPENVPN_LOG("TunWrap destructor: " << e.what());
 	}
     }
 

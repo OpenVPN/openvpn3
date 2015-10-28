@@ -25,6 +25,11 @@
 
 #include <vector>
 #include <string>
+#include <ostream>
+
+#ifdef HAVE_JSONCPP
+#include "json/json.h"
+#endif
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -37,8 +42,14 @@ namespace openvpn {
   {
     typedef RCPtr<Action> Ptr;
 
-    virtual void execute() = 0;
+    virtual void execute(std::ostream& os) = 0;
     virtual std::string to_string() const = 0;
+#ifdef HAVE_JSONCPP
+    virtual Json::Value to_json() const
+    {
+      throw Exception("Action::to_json() virtual method not implemented");
+    }
+#endif
     virtual ~Action() {}
   };
 
@@ -70,32 +81,29 @@ namespace openvpn {
       if (action)
 	{
 	  const std::string cmp = action->to_string();
-	  for (const_iterator i = begin(); i != end(); ++i)
+	  for (auto &a : *this)
 	    {
-	      const Action& a = **i;
-	      if (a.to_string() == cmp)
+	      if (a->to_string() == cmp)
 		return true;
 	    }
 	}
       return false;
     }
 
-    bool execute()
+    virtual void execute(std::ostream& os)
     {
-      for (iterator i = begin(); i != end(); ++i)
+      for (auto &a : *this)
 	{
-	  Action& a = **i;
-	  if (halt_)
-	    return false;
+	  if (is_halt())
+	    return;
 	  try {
-	    a.execute();
+	    a->execute(os);
 	  }
 	  catch (const std::exception& e)
 	    {
-	      OPENVPN_LOG("action exception: " << e.what());
+	      os << "action exception: " << e.what() << std::endl;
 	    }
 	}
-      return true;
     }
 
     void enable_destroy(const bool state)
@@ -108,13 +116,18 @@ namespace openvpn {
       halt_ = true;
     }
 
-    virtual void destroy()
+    virtual void destroy(std::ostream& os) override // defined by DestructorBase
     {
       if (enable_destroy_)
 	{
-	  execute();
+	  execute(os);
 	  enable_destroy_ = false;
 	}
+    }
+
+    bool is_halt() const
+    {
+      return halt_;
     }
 
   private:
@@ -122,6 +135,12 @@ namespace openvpn {
     volatile bool halt_;
   };
 
+  struct ActionListFactory : public RC<thread_unsafe_refcount>
+  {
+    typedef RCPtr<ActionListFactory> Ptr;
+
+    virtual ActionList::Ptr new_action_list() = 0;
+  };
 }
 
 #endif
