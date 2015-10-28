@@ -73,12 +73,12 @@
 #include <openvpn/tun/mac/client/tuncli.hpp>
 #include <openvpn/apple/maclife.hpp>
 #ifdef OPENVPN_COMMAND_AGENT
-#include <openvpn/apple/cmdagent.hpp>
+#include <openvpn/client/mac/cmdagent.hpp>
 #endif
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/win/client/tuncli.hpp>
 #ifdef OPENVPN_COMMAND_AGENT
-#include <openvpn/win/cmdagent.hpp>
+#include <openvpn/client/win/cmdagent.hpp>
 #endif
 #else
 #include <openvpn/tun/client/tunnull.hpp>
