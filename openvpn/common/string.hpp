@@ -371,6 +371,58 @@ namespace openvpn {
       str = to_upper_copy(str);
     }
 
+    // Replace any subsequence of consecutive space chars containing
+    // at least one newline with a single newline char.  If string
+    // is non-empty and doesn't include a trailing newline, add one.
+    inline std::string remove_blanks(const std::string& str)
+    {
+      std::string ret;
+      ret.reserve(str.length()+1);
+
+      std::string spaces;
+      bool in_space = false;
+      bool has_nl = false;
+
+      for (auto &c : str)
+	{
+	  const bool s = is_space(c);
+	reprocess:
+	  if (in_space)
+	    {
+	      if (s)
+		{
+		  if (c == '\n')
+		    has_nl = true;
+		  spaces += c;
+		}
+	      else
+		{
+		  if (has_nl)
+		    ret += '\n';
+		  else
+		    ret += spaces;
+		  in_space = false;
+		  has_nl = false;
+		  spaces.clear();
+		  goto reprocess;
+		}
+	    }
+	  else
+	    {
+	      if (s)
+		{
+		  in_space = true;
+		  goto reprocess;
+		}
+	      else
+		ret += c;
+	    }
+	}
+      if (!ret.empty() && !ends_with_newline(ret))
+	ret += '\n';
+      return ret;
+    }
+
   } // namespace string
 
 } // namespace openvpn
