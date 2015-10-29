@@ -410,14 +410,22 @@ namespace openvpn {
     {
       return asio::const_buffers_1(c_data(), buf_clamp_write(size()));
     }
+
+    asio::const_buffers_1 const_buffers_1_limit(const size_t limit) const
+    {
+      return asio::const_buffers_1(c_data(), std::min(buf_clamp_write(size()), limit));
+    }
 #endif
 
     void realign(size_t headroom)
     {
-      if (headroom + size_ > capacity_)
-	OPENVPN_BUFFER_THROW(buffer_headroom);
-      std::memmove(data_ + headroom, data_ + offset_, size_);
-      offset_ = headroom;
+      if (headroom != offset_)
+	{
+	  if (headroom + size_ > capacity_)
+	    OPENVPN_BUFFER_THROW(buffer_headroom);
+	  std::memmove(data_ + headroom, data_ + offset_, size_);
+	  offset_ = headroom;
+	}
     }
 
     void write(const T* data, const size_t size)
@@ -473,6 +481,12 @@ namespace openvpn {
     {
       if (min_capacity > capacity_)
 	reset_impl(min_capacity, flags);
+    }
+
+    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+    {
+      reset(min_capacity, flags);
+      init_headroom(headroom);
     }
 
     void append(const BufferType& other)
@@ -666,6 +680,12 @@ namespace openvpn {
     {
       if (min_capacity > capacity_)
 	init (min_capacity, flags);
+    }
+
+    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+    {
+      reset(min_capacity, flags);
+      BufferType<T>::init_headroom(headroom);
     }
 
     void move(BufferAllocatedType& other)
