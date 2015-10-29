@@ -45,6 +45,7 @@ namespace openvpn {
       F_SIGHUP  = (1<<2),
       F_SIGUSR1  = (1<<3),
       F_SIGUSR2  = (1<<4),
+      F_SIGPIPE  = (1<<5),
     };
 
     Signal(const handler_t handler, const unsigned int flags)
@@ -78,6 +79,8 @@ namespace openvpn {
 	sigact(sa, SIGUSR1);
       if (flags & F_SIGUSR2)
 	sigact(sa, SIGUSR2);
+      if (flags & F_SIGPIPE)
+	sigact(sa, SIGPIPE);
     }
 
     static void sigact(struct sigaction& sa, const int sig)
@@ -111,6 +114,8 @@ namespace openvpn {
 	sigaddset(&new_mask, SIGUSR1);
       if (flags & Signal::F_SIGUSR2)
 	sigaddset(&new_mask, SIGUSR2);
+      if (flags & Signal::F_SIGPIPE)
+	sigaddset(&new_mask, SIGPIPE);
       blocked_ = (pthread_sigmask(SIG_BLOCK, &new_mask, &old_mask_) == 0);
     }
 
@@ -138,10 +143,20 @@ namespace openvpn {
 		      Signal::F_SIGTERM|
 		      Signal::F_SIGHUP|
 		      Signal::F_SIGUSR1|
-		      Signal::F_SIGUSR2)
+		      Signal::F_SIGUSR2|
+		      Signal::F_SIGPIPE)
     {
     }
   };
+
+  struct SignalBlockerPipe : public SignalBlocker
+  {
+    SignalBlockerPipe()
+      : SignalBlocker(Signal::F_SIGPIPE)
+    {
+    }
+  };
+
 }
 #endif
 #endif
