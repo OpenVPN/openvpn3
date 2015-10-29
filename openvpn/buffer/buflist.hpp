@@ -23,6 +23,7 @@
 #define OPENVPN_BUFFER_BUFLIST_H
 
 #include <list>
+#include <utility>
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -83,6 +84,27 @@ namespace openvpn {
       for (auto &b : *this)
 	ret.emplace_back(new BufferAllocated(*b));
       return ret;
+    }
+
+    void put_consume(BufferAllocated& buf, const size_t tailroom = 0)
+    {
+      const size_t s = buf.size();
+      if (!s)
+	return;
+      if (!empty())
+	{
+	  // special optimization if buf data fits in
+	  // back() unused tail capacity -- if so, append
+	  // buf to existing back().
+	  BufferPtr& b = back();
+	  const size_t r = b->remaining(tailroom);
+	  if (s < r)
+	    {
+	      b->write(buf.read_alloc(s), s);
+	      return;
+	    }
+	}
+      emplace_back(new BufferAllocated(std::move(buf)));
     }
   };
 
