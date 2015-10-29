@@ -294,7 +294,7 @@ namespace openvpn {
 	      TunLinux::tun_config(state->iface_name, *po, rtvec, *add_cmds, *remove_cmds);
 
 	      // execute commands to bring up interface
-	      add_cmds->execute();
+	      add_cmds->execute(std::cout);
 
 	      // signal that we are connected
 	      parent.tun_connected();
@@ -381,7 +381,7 @@ namespace openvpn {
 
 	    // remove added routes
 	    if (remove_cmds)
-	      remove_cmds->execute();
+	      remove_cmds->execute(std::cout);
 
 	    // stop tun
 	    if (impl)
