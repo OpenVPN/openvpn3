@@ -32,7 +32,6 @@
 #include <functional>
 #include <limits>
 #include <unordered_map>
-#include <thread>
 
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/buffer/buflist.hpp>
@@ -292,25 +291,20 @@ namespace openvpn {
 
       static void new_request_synchronous(const TransactionSet::Ptr& ts)
       {
-	Log::Context::Wrapper logwrap;
-	std::thread mythread([&ts, &logwrap]() {
-	    Log::Context logctx(logwrap);
-	    asio::io_context io_context(1); // concurrency hint=1
-	    ClientSet::Ptr cs;
-	    try {
-	      cs.reset(new ClientSet(io_context));
-	      cs->new_request(ts);
-	      io_context.run();
-	    }
-	    catch (...)
-	      {
-		if (cs)
-		  cs->stop();        // on exception, stop ClientSet
-		io_context.poll();   // execute completion handlers
-	      }
-	    ts->hsc.reset();         // ensure that socket is destroyed here, not by parent thread
-	  });
-	mythread.join();
+	asio::io_context io_context(1); // concurrency hint=1
+	ClientSet::Ptr cs;
+	try {
+	  cs.reset(new ClientSet(io_context));
+	  cs->new_request(ts);
+	  io_context.run();
+	}
+	catch (...)
+	  {
+	    if (cs)
+	      cs->stop();        // on exception, stop ClientSet
+	    io_context.poll();   // execute completion handlers
+	  }
+	ts->hsc.reset();         // ensure that socket is destroyed here, not by parent
       }
 
       void stop()
