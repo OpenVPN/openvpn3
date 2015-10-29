@@ -415,10 +415,11 @@ namespace openvpn {
 	BufferAllocated buf;
 	while (!halt && ssl_sess->read_cleartext_ready())
 	  {
-	    frame->prepare(Frame::READ_SSL_CLEARTEXT, buf);
+	    const Frame::Context& fc = (*frame)[Frame::READ_SSL_CLEARTEXT];
+	    fc.prepare(buf);
 	    ssize_t size = 0;
 	    try {
-	      size = ssl_sess->read_cleartext(buf.data(), buf.max_size());
+	      size = ssl_sess->read_cleartext(buf.data(), fc.payload());
 	    }
 	    catch (...)
 	      {
