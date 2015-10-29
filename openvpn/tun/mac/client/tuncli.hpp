@@ -298,7 +298,7 @@ namespace openvpn {
 
 		ActionList::Ptr add_cmds = new ActionList();
 		add_cmds->add(create);
-		add_cmds->execute();
+		add_cmds->execute(std::cout); // fixme
 	      }
 	  }
       }
@@ -411,7 +411,7 @@ namespace openvpn {
 	      }
 
 	    // execute commands
-	    cmds->execute();
+	    cmds->execute(std::cout); // fixme
 	  }
       }
 
@@ -449,6 +449,16 @@ namespace openvpn {
 
       Frame::Ptr frame;
       SessionStats::Ptr stats;
+
+      ActionListFactory::Ptr action_list_factory;
+
+      ActionList::Ptr new_action_list()
+      {
+	if (action_list_factory)
+	  return action_list_factory->new_action_list();
+	else
+	  return new ActionList();
+      }
 
       static Ptr new_obj()
       {
@@ -580,10 +590,8 @@ namespace openvpn {
 	      FailsafeBlock* fsblock = config->fsblock.get();
 
 	      // configure tun/tap interface properties
-	      ActionList::Ptr add_cmds = new ActionList();
-	      remove_cmds.reset(new ActionList());
-	      remove_cmds->enable_destroy(true);
-	      tun_wrap->add_destructor(remove_cmds);
+	      ActionList::Ptr add_cmds = config->new_action_list();
+	      remove_cmds = config->new_action_list();
 
 	      // configure tun properties
 	      tun_config(state->iface_name, *po, fsblock, *add_cmds, *remove_cmds);
@@ -601,8 +609,14 @@ namespace openvpn {
 	      if (fsblock)
 		fsblock->establish(*add_cmds, *remove_cmds);
 
-	      // execute commands to bring up interface
-	      add_cmds->execute();
+	      // execute the add actions to bring up interface
+	      if (!execute_actions(*add_cmds))
+		return;
+
+	      // now that the add actions have succeeded,
+	      // enable the remove actions
+	      remove_cmds->enable_destroy(true);
+	      tun_wrap->add_destructor(remove_cmds);
 
 	      impl.reset(new TunImpl(tun_wrap,
 				     state->iface_name,
@@ -673,6 +687,22 @@ namespace openvpn {
 	   halt(false),
 	   state(new TunProp::State())
       {
+      }
+
+      bool execute_actions(ActionList& actions)
+      {
+	std::ostringstream os;
+	try {
+	  actions.execute(os);
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG_STRING(os.str());
+	    parent.tun_error(Error::TUN_SETUP_FAILED, e.what());
+	    return false;
+	  }
+	OPENVPN_LOG_STRING(os.str());
+	return true;
       }
 
       static void tun_config(const std::string& iface_name,

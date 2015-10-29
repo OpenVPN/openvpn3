@@ -62,9 +62,9 @@ namespace openvpn {
       {
       }
 
-      virtual void execute()
+      virtual void execute(std::ostream& os)
       {
-	OPENVPN_LOG(to_string());
+	os << to_string() << std::endl;
 	if (parent)
 	  parent->setdns(config, flags);
       }
