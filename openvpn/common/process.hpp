@@ -36,6 +36,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/redir.hpp>
+#include <openvpn/common/signal.hpp>
 
 extern char **environ;
 
@@ -174,6 +175,7 @@ namespace openvpn {
     char **cargv;
   };
 
+  // low-level fork/exec (async)
   inline pid_t system_cmd_async(const std::string& cmd,
 				const Argv& argv,
 				const Environ* env,
@@ -204,14 +206,9 @@ namespace openvpn {
       }
   }
 
-  inline int system_cmd(const std::string& cmd,
-			const Argv& argv,
-			RedirectBase* redir,
-			const Environ* env)
+  // completion for system_cmd_async()
+  inline int system_cmd_post(const pid_t pid)
   {
-    const pid_t pid = system_cmd_async(cmd, argv, env, redir);
-    if (pid < pid_t(0))
-      return -1;
     int status = -1;
     if (::waitpid(pid, &status, 0) == pid)
       {
@@ -221,17 +218,50 @@ namespace openvpn {
     return -1;
   }
 
+  // synchronous version of system_cmd_async
+  inline int system_cmd(const std::string& cmd,
+			const Argv& argv,
+			RedirectBase* redir,
+			const Environ* env)
+  {
+    const pid_t pid = system_cmd_async(cmd, argv, env, redir);
+    if (pid < pid_t(0))
+      return -1;
+    return system_cmd_post(pid);
+  }
+
+  // simple command execution
   inline int system_cmd(const std::string& cmd, const Argv& argv)
   {
     return system_cmd(cmd, argv, nullptr, nullptr);
   }
 
+  // simple command execution
   inline int system_cmd(const Argv& argv)
   {
     int ret = -1;
     if (argv.size())
       ret = system_cmd(argv[0], argv);
     return ret;
+  }
+
+  // command execution with std::strings as
+  // input/output/error (uses pipes under the
+  // hood)
+  inline int system_cmd(const std::string& cmd,
+			const Argv& argv,
+			const Environ* env,
+			RedirectPipe::InOut& inout,
+			const bool combine_out_err)
+  {
+    SignalBlockerPipe sbpipe;
+    RedirectPipe remote;
+    RedirectPipe local(remote, combine_out_err, !inout.in.empty());
+    const pid_t pid = system_cmd_async(cmd, argv, env, &remote);
+    if (pid < pid_t(0))
+      return -1;
+    local.transact(inout);
+    return system_cmd_post(pid);
   }
 
   struct Command : public Action
@@ -245,18 +275,22 @@ namespace openvpn {
       return ret;
     }
 
-    virtual void execute()
+    virtual void execute(std::ostream& os) override
     {
       if (!argv.empty())
 	{
-	  OPENVPN_LOG(to_string());
-	  system_cmd(argv[0], argv);
+	  RedirectPipe::InOut inout;
+	  os << to_string() << std::endl;
+	  const int status = system_cmd(argv[0], argv, nullptr, inout, true);
+	  if (status < 0)
+	    os << "Error: command failed to execute" << std::endl;
+	  os << inout.out;
 	}
       else
-	OPENVPN_LOG("WARNING: Command::execute called with empty argv");
+	os << "Error: command called with empty argv" << std::endl;
     }
 
-    virtual std::string to_string() const
+    virtual std::string to_string() const override
     {
       return argv.to_string();
     }

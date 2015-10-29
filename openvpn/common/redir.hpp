@@ -31,10 +31,15 @@
 
 #include <string>
 #include <utility>
+#include <memory>
+#include <algorithm>
+
+#include <asio.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/tempfile.hpp>
+#include <openvpn/buffer/buflist.hpp>
 
 namespace openvpn {
 
@@ -46,9 +51,8 @@ namespace openvpn {
     virtual ~RedirectBase() {}
   };
 
-  class RedirectStdFD : public RedirectBase
+  struct RedirectStdFD : public RedirectBase
   {
-  public:
     virtual void redirect() noexcept override
     {
       // stdin
@@ -87,15 +91,10 @@ namespace openvpn {
       err.close();
     }
 
-  protected:
-    RedirectStdFD()
-      : combine_out_err(false)
-    {}
-
     ScopedFD in;
     ScopedFD out;
     ScopedFD err;
-    bool combine_out_err;
+    bool combine_out_err = false;
   };
 
   class RedirectStd : public RedirectStdFD
@@ -172,6 +171,176 @@ namespace openvpn {
       out = std::move(stdout_temp.fd);
       err = std::move(stderr_temp.fd);
     }
+  };
+
+  class RedirectPipe : public RedirectStdFD
+  {
+  public:
+    struct InOut
+    {
+      std::string in;
+      std::string out;
+      std::string err;
+    };
+
+    RedirectPipe() {}
+
+    RedirectPipe(RedirectStdFD& remote,
+		 const bool combine_out_err_arg,
+		 const bool enable_in)
+    {
+      int fd[2];
+
+      // stdout
+      make_pipe(fd);
+      out.reset(cloexec(fd[0]));
+      remote.out.reset(fd[1]);
+
+      // stderr
+      combine_out_err = remote.combine_out_err = combine_out_err_arg;
+      if (!combine_out_err)
+	{
+	  make_pipe(fd);
+	  err.reset(cloexec(fd[0]));
+	  remote.err.reset(fd[1]);
+	}
+
+      // stdin
+      if (enable_in)
+	{
+	  make_pipe(fd);
+	  in.reset(cloexec(fd[1]));
+	  remote.in.reset(fd[0]);
+	}
+      else
+	{
+	  // open /dev/null for stdin
+	  remote.in.reset(::open("/dev/null", O_RDONLY, 0));
+	  if (!remote.in.defined())
+	    {
+	      const int eno = errno;
+	      OPENVPN_THROW(redirect_std_err, "error opening /dev/null : " << std::strerror(eno));
+	    }
+	}
+    }
+
+    void transact(InOut& inout)
+    {
+      asio::io_context io_context(1);
+      SD_OUT send_in(io_context, inout.in, in);
+      SD_IN recv_out(io_context, out);
+      SD_IN recv_err(io_context, err);
+      io_context.run();
+      inout.out = recv_out.content();
+      inout.err = recv_err.content();
+    }
+
+  private:
+    class SD
+    {
+    public:
+      SD(asio::io_context& io_context, ScopedFD& fd)
+      {
+	if (fd.defined())
+	  sd.reset(new asio::posix::stream_descriptor(io_context, fd.release()));
+      }
+
+      bool defined() const
+      {
+	return bool(sd);
+      }
+
+    protected:
+      std::unique_ptr<asio::posix::stream_descriptor> sd;
+    };
+
+    class SD_OUT : public SD
+    {
+    public:
+      SD_OUT(asio::io_context& io_context, const std::string& content, ScopedFD& fd)
+	: SD(io_context, fd)
+      {
+	if (defined())
+	  {
+	    buf = buf_alloc_from_string(content);
+	    queue_write();
+	  }
+      }
+
+    private:
+      void queue_write()
+      {
+	sd->async_write_some(buf.const_buffers_1_limit(2048),
+			     [this](const asio::error_code& ec, const size_t bytes_sent) {
+			       if (!ec && bytes_sent < buf.size())
+				 {
+				   buf.advance(bytes_sent);
+				   queue_write();
+				 }
+			       else
+				 sd->close();
+			     });
+      }
+
+      BufferAllocated buf;
+    };
+
+    class SD_IN : public SD
+    {
+    public:
+      SD_IN(asio::io_context& io_context, ScopedFD& fd)
+	: SD(io_context, fd)
+      {
+	if (defined())
+	  queue_read();
+      }
+
+      const std::string content() const
+      {
+	return data.to_string();
+      }
+
+    private:
+      void queue_read()
+      {
+	buf.reset(0, 2048, 0);
+	sd->async_read_some(buf.mutable_buffers_1_clamp(),
+			    [this](const asio::error_code& ec, const size_t bytes_recvd) {
+			      if (!ec)
+				{
+				  buf.set_size(bytes_recvd);
+				  data.put_consume(buf);
+				  queue_read();
+				}
+			      else
+				sd->close();
+			    });
+      }
+
+      BufferAllocated buf;
+      BufferList data;
+    };
+
+    static void make_pipe(int fd[2])
+    {
+      if (::pipe(fd) < 0)
+	{
+	  const int eno = errno;
+	  OPENVPN_THROW(redirect_std_err, "error creating pipe : " << std::strerror(eno));
+	}
+    }
+
+    // set FD_CLOEXEC to prevent fd from being passed across execs
+    static int cloexec(const int fd)
+    {
+      if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
+	{
+	  const int eno = errno;
+	  OPENVPN_THROW(redirect_std_err, "error setting FD_CLOEXEC on pipe : " << std::strerror(eno));
+	}
+      return fd;
+    }
+
   };
 }
 
