@@ -331,6 +331,7 @@ namespace openvpn {
 	  : parent(parent_arg),
 	    ts(ts_arg),
 	    n_retries(0),
+	    buf_tailroom((*ts->http_config->frame)[Frame::READ_HTTP].tailroom()),
 	    reconnect_timer(parent_arg->io_context),
 	    client_id(client_id_arg),
 	    halt(false),
@@ -536,8 +537,7 @@ namespace openvpn {
 
 	void http_content_in(HTTPDelegate& hd, BufferAllocated& buf)
 	{
-	  if (buf.defined())
-	    trans().content_in.emplace_back(new BufferAllocated(std::move(buf)));
+	  trans().content_in.put_consume(buf, buf_tailroom);
 	}
 
 	void http_done(HTTPDelegate& hd, const int status, const std::string& description)
@@ -626,6 +626,7 @@ namespace openvpn {
 	BufferList content_out;
 	BufferList::const_iterator out_iter;
 	unsigned int n_retries;
+	unsigned int buf_tailroom;
 	Time::Duration retry_duration;
 	AsioTimer reconnect_timer;
 	client_t client_id;
