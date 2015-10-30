@@ -29,6 +29,7 @@
 #include <vector>
 #include <utility>
 #include <memory>
+#include <algorithm>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -38,7 +39,8 @@ namespace openvpn {
   OPENVPN_EXCEPTION(enum_dir_error);
 
   std::vector<std::string> enum_dir(const std::string& dirname,
-				    const size_t size_hint=0)
+				    const size_t size_hint=0,
+				    const bool sort=false)
   {
     std::vector<std::string> ret;
     if (size_hint)
@@ -54,6 +56,9 @@ namespace openvpn {
 	if (fn != "." && fn != "..")
 	  ret.push_back(std::move(fn));
       }
+
+    if (sort)
+      std::sort(ret.begin(), ret.end());
 
     return ret;
   }
