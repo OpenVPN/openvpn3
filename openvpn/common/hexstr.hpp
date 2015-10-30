@@ -29,6 +29,7 @@
 #include <sstream>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/string.hpp>
 
 namespace openvpn {
 
@@ -100,19 +101,31 @@ namespace openvpn {
 
   inline std::string dump_hex(const unsigned char *data, size_t size)
   {
+    const unsigned int mask = 0x0F; // N bytes per line - 1
     std::ostringstream os;
     os << std::hex;
-    for (size_t i = 0; i < size; ++i)
+    std::string chars;
+    size_t i;
+    for (i = 0; i < size; ++i)
       {
-	if (!(i & 0xF))
+	if (!(i & mask))
 	  {
 	    if (i)
-	      os << std::endl;
+	      {
+		os << "  " << chars << std::endl;
+		chars.clear();
+	      }
 	    os << std::setfill(' ') << std::setw(8) << i << ":";
 	  }
-	os << ' ' << std::setfill('0') << std::setw(2) << (int)data[i];
+	const unsigned char c = data[i];
+	os << ' ' << std::setfill('0') << std::setw(2) << (unsigned int)c;
+	if (string::is_printable(c))
+	  chars += c;
+	else
+	  chars += '.';
       }
-    os << std::endl;
+    if (i)
+      os << string::spaces(2 + (((i-1) & mask) ^ mask) * 3) << chars << std::endl;
     return os.str();
   }
 
