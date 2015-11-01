@@ -24,6 +24,8 @@
 #ifndef OPENVPN_TUN_WIN_TUNUTIL_H
 #define OPENVPN_TUN_WIN_TUNUTIL_H
 
+#include <asio/detail/socket_types.hpp> // prevent winsock multiple def errors
+
 #include <windows.h>
 #include <winsock2.h> // for IPv6
 #include <winioctl.h>
@@ -37,6 +39,7 @@
 #include <sstream>
 #include <cstdint> // for std::uint32_t
 #include <memory>
+#include <regex>
 
 #include <tap-windows.h>
 
@@ -50,6 +53,7 @@
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/addr/regex.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/scoped_handle.hpp>
@@ -848,7 +852,6 @@ namespace openvpn {
 
 	static ActionSetSearchDomain::Ptr from_json_untrusted(const Json::Value& jact)
 	{
-	  // fixme -- sanity check input
 	  const Json::Value& p1 = jact["search_domain"];
 	  if (!p1.isString())
 	    throw Exception("ActionSetSearchDomain: missing json string 'search_domain'");
@@ -982,7 +985,6 @@ namespace openvpn {
 
 	static ActionDeleteAllRoutesOnInterface::Ptr from_json_untrusted(const Json::Value& jact)
 	{
-	  // fixme -- sanity check input
 	  const Json::Value& p1 = jact["iface_index"];
 	  if (!p1.isNumeric())
 	    throw Exception("ActionDeleteAllRoutesOnInterface: missing json number 'iface_index'");
@@ -1068,6 +1070,17 @@ namespace openvpn {
 	  return "netsh interface ip set address " + tap.index_or_name() + " dhcp";
 	}
       };
+
+      inline std::regex cmd_sanitizer()
+      {
+	const std::string restr =
+	  "(?:netsh interface ip(?:v6)? (?:add|delete|set) (?:route|address|(?:dns|wins)servers) .*"
+	  "|route (?:ADD|DELETE) " + IP::v4_regex() + " MASK " + IP::v4_regex() + ' ' + IP::v4_regex() +
+	  "|ipconfig /(?:flush|register)dns"
+	  "|net (?:start|stop) dnscache)";
+	return std::regex(restr);
+      }
+
     }
   }
 }

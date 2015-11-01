@@ -25,10 +25,12 @@
 #include <windows.h>
 
 #include <string>
+#include <regex>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/action.hpp>
+#include <openvpn/common/unicode.hpp>
 #include <openvpn/win/call.hpp>
 
 namespace openvpn {
@@ -64,13 +66,19 @@ namespace openvpn {
       return root;
     }
 
-    static WinCmd::Ptr from_json_untrusted(const Json::Value& jact)
+    static WinCmd::Ptr from_json_untrusted(const Json::Value& jact,
+					   const std::regex& re)
     {
       // fixme -- sanity check input
       const Json::Value& jcmd = jact["cmd"];
       if (!jcmd.isString())
 	throw Exception("WinCmd: missing json string 'cmd'");
-      return new WinCmd(jcmd.asString());
+      const std::string cmd = jcmd.asString();
+      if (cmd.length() > 512)
+	throw Exception("WinCmd: json command string too long: " + Unicode::utf8_printable(cmd, 256));
+      if (!std::regex_match(cmd, re))
+	throw Exception("WinCmd: json command string not allowed by regex: " + Unicode::utf8_printable(cmd, 256));
+      return new WinCmd(cmd);
     }
 #endif
 
