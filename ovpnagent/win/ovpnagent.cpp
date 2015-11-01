@@ -109,9 +109,13 @@ public:
 	     const Listen::List& listen_list,
 	     const WS::Server::Listener::Client::Factory::Ptr& client_factory)
     : WS::Server::Listener(io_context, hconf, listen_list, client_factory),
-      config(config_arg)
+      config(config_arg),
+      cmd_sanitizer(TunWin::Util::cmd_sanitizer())
   {
   }
+
+  const MyConfig& config;
+  const std::regex cmd_sanitizer;
 
 private:
   virtual bool allow_client(AsioPolySock::Base& sock) override
@@ -134,8 +138,6 @@ private:
       OPENVPN_LOG("only named pipe clients are allowed");
     return false;
   }
-
-  const MyConfig& config;
 };
 
 class MyClientInstance : public WS::Server::Listener::Client
@@ -199,7 +201,7 @@ private:
 	      Action::Ptr action;
 	      try {
 		if (type == "WinCmd")
-		  action = WinCmd::from_json_untrusted(jact);
+		  action = WinCmd::from_json_untrusted(jact, parent()->cmd_sanitizer);
 		else if (type == "ActionSetSearchDomain")
 		  action = TunWin::Util::ActionSetSearchDomain::from_json_untrusted(jact);
 		else if (type == "ActionDeleteAllRoutesOnInterface")
@@ -268,6 +270,11 @@ private:
   virtual void http_stop(const int status, const std::string& description) override
   {
     OPENVPN_LOG("INSTANCE STOP : " << WS::Server::Status::error_str(status) << " : " << description);
+  }
+
+  MyListener* parent()
+  {
+    return static_cast<MyListener*>(get_parent());
   }
 
   BufferList in;
