@@ -1,5 +1,3 @@
-import sys, os
-
 PARMS = {
     "DEBUG" : False,
     "OVPN3" : "c:\\src\\ovpn3",
@@ -18,9 +16,3 @@ PARMS = {
         'lz4'      : "lz4-r120",
         }
 }
-
-ex = "c:/src/ovpn3/common/deps/win/extra.py"
-if os.path.exists(ex):
-    sys.path.append(os.path.dirname(ex))
-    import extra
-    extra.update_parms(PARMS)
