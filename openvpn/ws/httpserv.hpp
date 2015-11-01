@@ -356,6 +356,11 @@ namespace openvpn {
 	    return client_id;
 	  }
 
+	  Listener* get_parent() const
+	  {
+	    return parent;
+	  }
+
 	  asio::io_context& io_context;
 	  AsioPolySock::Base::Ptr sock;
 	  std::deque<BufferAllocated> pipeline;
