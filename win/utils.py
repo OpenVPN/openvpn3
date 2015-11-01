@@ -57,7 +57,7 @@ def cp(src, dest):
     print "COPY %s %s" % (src, dest)
     shutil.copy2(src, dest)
 
-def wipetree(dir):
+def wipetree(dir, wipe=True):
     def onerror(func, path, exc_info):
         """
         Error handler for ``shutil.rmtree``.
@@ -77,10 +77,11 @@ def wipetree(dir):
             except:
                 pass
 
-    print "WIPETREE", dir
-    shutil.rmtree(dir, ignore_errors=False, onerror=onerror)
+    if wipe:
+        print "WIPETREE", dir
+        shutil.rmtree(dir, ignore_errors=False, onerror=onerror)
     if not os.path.isdir(dir):
-        os.makedirs(dir)
+        makedirs(dir)
 
 def extract_dict(d, k, default=None):
     if k in d:
