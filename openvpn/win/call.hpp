@@ -27,6 +27,8 @@
 #include <windows.h>
 #include <shlobj.h>
 
+#include <cstring>
+
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 
@@ -53,18 +55,18 @@ namespace openvpn {
 #if _WIN32_WINNT >= 0x0600
       // get system path (Vista and higher)
       wchar_t *syspath_ptr = nullptr;
-      if (SHGetKnownFolderPath(FOLDERID_System, 0, nullptr, &syspath_ptr) != S_OK)
+      if (::SHGetKnownFolderPath(FOLDERID_System, 0, nullptr, &syspath_ptr) != S_OK)
 	throw win_call("cannot get system path using SHGetKnownFolderPath");
-      unique_ptr_del<wchar_t> syspath(syspath_ptr, [](wchar_t* p) { CoTaskMemFree(p); });
+      unique_ptr_del<wchar_t> syspath(syspath_ptr, [](wchar_t* p) { ::CoTaskMemFree(p); });
 #     define SYSPATH_FMT_CHAR L"s"
-#     define SYSPATH_LEN_METH(x) wcslen(x)
+#     define SYSPATH_LEN_METH(x) ::wcslen(x)
 #else
       // get system path (XP and higher)
       std::unique_ptr<TCHAR[]> syspath(new char[MAX_PATH]);
-      if (SHGetFolderPath(nullptr, CSIDL_SYSTEM, nullptr, 0, syspath.get()) != S_OK)
+      if (::SHGetFolderPath(nullptr, CSIDL_SYSTEM, nullptr, 0, syspath.get()) != S_OK)
 	throw win_call("cannot get system path using SHGetFolderPath");
 #     define SYSPATH_FMT_CHAR L"S"
-#     define SYSPATH_LEN_METH(x) strlen(x)
+#     define SYSPATH_LEN_METH(x) std::strlen(x)
 #endif
 
       // build command line
@@ -73,9 +75,9 @@ namespace openvpn {
       const char *spc = "";
       if (!args.empty())
 	spc = " ";
-      _snwprintf(wcmd.get(), wcmdlen, L"\"%" SYSPATH_FMT_CHAR L"\\%S.exe\"%S%S", syspath.get(), name.c_str(), spc, args.c_str());
+      ::_snwprintf(wcmd.get(), wcmdlen, L"\"%" SYSPATH_FMT_CHAR L"\\%S.exe\"%S%S", syspath.get(), name.c_str(), spc, args.c_str());
       wcmd.get()[wcmdlen-1] = 0;
-      //wprintf(L"CMD[%d]: %s\n", (int)wcslen(wcmd.get()), wcmd.get());
+      //::wprintf(L"CMD[%d]: %s\n", (int)::wcslen(wcmd.get()), wcmd.get());
 #     undef SYSPATH_FMT_CHAR
 #     undef SYSPATH_LEN_METH
 
@@ -88,21 +90,21 @@ namespace openvpn {
       // Create a pipe for the child process's STDOUT.
       ScopedHANDLE cstdout_r; // child write side
       ScopedHANDLE cstdout_w; // parent read side
-      if (!CreatePipe(cstdout_r.ref(), cstdout_w.ref(), &saAttr, 0))
+      if (!::CreatePipe(cstdout_r.ref(), cstdout_w.ref(), &saAttr, 0))
 	throw win_call("cannot create pipe for child stdout");
 
       // Ensure the read handle to the pipe for STDOUT is not inherited.
-      if (!SetHandleInformation(cstdout_r(), HANDLE_FLAG_INHERIT, 0))
+      if (!::SetHandleInformation(cstdout_r(), HANDLE_FLAG_INHERIT, 0))
 	throw win_call("SetHandleInformation failed for child stdout pipe");
 
       // Set up members of the PROCESS_INFORMATION structure.
       PROCESS_INFORMATION piProcInfo;
-      ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+      ::ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
       // Set up members of the STARTUPINFO structure.
       // This structure specifies the STDIN and STDOUT handles for redirection.
       STARTUPINFOW siStartInfo;
-      ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+      ::ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
       siStartInfo.cb = sizeof(STARTUPINFO);
       siStartInfo.hStdError = cstdout_w();
       siStartInfo.hStdOutput = cstdout_w();
@@ -110,14 +112,14 @@ namespace openvpn {
       siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
       // Create the child process.
-      if (!CreateProcessW(nullptr,
-			  wcmd.get(),        // command line
-			  nullptr,          // process security attributes
-			  nullptr,          // primary thread security attributes
+      if (!::CreateProcessW(nullptr,
+			  wcmd.get(),    // command line
+			  nullptr,       // process security attributes
+			  nullptr,       // primary thread security attributes
 			  TRUE,          // handles are inherited
 			  0,             // creation flags
-			  nullptr,          // use parent's environment
-			  nullptr,          // use parent's current directory
+			  nullptr,       // use parent's environment
+			  nullptr,       // use parent's current directory
 			  &siStartInfo,  // STARTUPINFO pointer
 			  &piProcInfo))  // receives PROCESS_INFORMATION
 	throw win_call("cannot create process");
@@ -136,7 +138,7 @@ namespace openvpn {
       while (true)
 	{
 	  DWORD dwRead;
-	  if (!ReadFile(cstdout_r(), outbuf.get(), outbuf_size, &dwRead, nullptr))
+	  if (!::ReadFile(cstdout_r(), outbuf.get(), outbuf_size, &dwRead, nullptr))
 	    break;
 	  if (dwRead == 0)
 	    break;
@@ -144,7 +146,7 @@ namespace openvpn {
 	}
 
       // wait for child to exit
-      if (WaitForSingleObject(process_hand(), INFINITE) == WAIT_FAILED)
+      if (::WaitForSingleObject(process_hand(), INFINITE) == WAIT_FAILED)
 	throw win_call("WaitForSingleObject failed on child process handle");
 
       return out;
