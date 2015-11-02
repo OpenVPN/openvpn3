@@ -30,6 +30,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/format.hpp>
+#include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/scoped_asio_stream.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
@@ -353,6 +354,21 @@ namespace openvpn {
 	    destroy.add(new WinCmd("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " gateway=all store=active"));
 	  }
 
+	// Should we block IPv6?
+	if (pull.block_ipv6)
+	  {
+	    static const char *const block_ipv6_net[] = {
+	      "2000::/4",
+	      "3000::/4",
+	      "fc00::/7",
+	    };
+	    for (size_t i = 0; i < array_size(block_ipv6_net); ++i)
+	      {
+		create.add(new WinCmd("netsh interface ipv6 add route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
+		destroy.add(new WinCmd("netsh interface ipv6 delete route " + std::string(block_ipv6_net[i]) + " interface=1 store=active"));
+	      }
+	  }
+
 	// Set IPv6 Interface
 	//
 	// Usage: set address [interface=]<string> [address=]<IPv6 address>
@@ -362,7 +378,7 @@ namespace openvpn {
 	//  [[store=]active|persistent]
 	//Usage: delete address [interface=]<string> [address=]<IPv6 address>
 	//  [[store=]active|persistent]
-	if (local6)
+	if (local6 && !pull.block_ipv6)
 	  {
 	    create.add(new WinCmd("netsh interface ipv6 set address " + tap_index_name + ' ' + local6->address + " store=active"));
 	    destroy.add(new WinCmd("netsh interface ipv6 delete address " + tap_index_name + ' ' + local6->address + " store=active"));
@@ -393,13 +409,15 @@ namespace openvpn {
 	//  [[nexthop=]<IPv6 address>]
 	//  [[store=]active|persistent]
 	{
-	  for (std::vector<TunBuilderCapture::Route>::const_iterator i = pull.add_routes.begin(); i != pull.add_routes.end(); ++i)
+	  for (auto &route : pull.add_routes)
 	    {
-	      const TunBuilderCapture::Route& route = *i;
 	      if (route.ipv6)
 		{
-		  create.add(new WinCmd("netsh interface ipv6 add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
-		  destroy.add(new WinCmd("netsh interface ipv6 delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+		  if (!pull.block_ipv6)
+		    {
+		      create.add(new WinCmd("netsh interface ipv6 add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+		      destroy.add(new WinCmd("netsh interface ipv6 delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
+		    }
 		}
 	      else
 		{
@@ -462,7 +480,7 @@ namespace openvpn {
 	  }
 
 	// Process IPv6 redirect-gateway
-	if (pull.reroute_gw.ipv6)
+	if (pull.reroute_gw.ipv6 && !pull.block_ipv6)
 	  {
 	    create.add(new WinCmd("netsh interface ipv6 add route 0::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
 	    create.add(new WinCmd("netsh interface ipv6 add route 8000::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
@@ -492,6 +510,8 @@ namespace openvpn {
 	  for (size_t i = 0; i < pull.dns_servers.size(); ++i)
 	    {
 	      const TunBuilderCapture::DNSServer& ds = pull.dns_servers[i];
+	      if (ds.ipv6 && pull.block_ipv6)
+		continue;
 	      const std::string proto = ds.ipv6 ? "ipv6" : "ip";
 	      const int idx = indices[bool(ds.ipv6)]++;
 	      if (idx)

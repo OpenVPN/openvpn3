@@ -123,7 +123,7 @@ namespace openvpn {
       const unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
 
       // Block IPv6?
-      tb->tun_builder_set_block_ipv6(opt.exists("block-ipv6") && !ipv.v6());
+      tb->tun_builder_set_block_ipv6(opt.exists("block-ipv6"));
 
       // DNS fallback
       if (ipv.rgv4() && !(dhcp_option_flags & F_ADD_DNS))
