@@ -40,6 +40,10 @@
 #include <openvpn/tun/win/tunutil.hpp>
 #include <openvpn/win/cmd.hpp>
 
+#if _WIN32_WINNT >= 0x0600 // Vista+
+#include <openvpn/tun/win/wfp.hpp>
+#endif
+
 namespace openvpn {
   namespace TunWin {
 
@@ -82,11 +86,13 @@ namespace openvpn {
 
     class ClientConfig : public TunClientFactory
     {
+      friend class Client; // accesses wfp
+
     public:
       typedef RCPtr<ClientConfig> Ptr;
 
       TunProp::Config tun_prop;
-      int n_parallel;            // number of parallel async reads on tun socket
+      int n_parallel = 8;         // number of parallel async reads on tun socket
 
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -115,11 +121,18 @@ namespace openvpn {
       virtual void finalize(const bool disconnected)
       {
 	if (disconnected)
-	  tun_persist.reset();
+	  {
+	    tun_persist.reset();
+#if _WIN32_WINNT >= 0x0600 // Vista+
+	    wfp.reset();
+#endif
+	  }
       }
 
     private:
-      ClientConfig() : n_parallel(8) {}
+#if _WIN32_WINNT >= 0x0600 // Vista+
+      TunWin::WFPContext::Ptr wfp{new TunWin::WFPContext};
+#endif
     };
 
     class Client : public TunClient
@@ -521,6 +534,14 @@ namespace openvpn {
 		  create.add(new WinCmd("netsh interface " + proto + " set dnsservers " + tap_index_name + " static " + ds.address + " register=primary validate=no"));
 		  destroy.add(new WinCmd("netsh interface " + proto + " delete dnsservers " + tap_index_name + " all validate=no"));
 		}
+	    }
+
+	  // If we added DNS servers, block DNS on all interfaces except
+	  // the TAP adapter.
+	  if (indices[0] || indices[1])
+	    {
+	      create.add(new ActionWFP(tap.index, true, config->wfp));
+	      destroy.add(new ActionWFP(tap.index, false, config->wfp));
 	    }
 	}
 

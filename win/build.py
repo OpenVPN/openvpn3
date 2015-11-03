@@ -52,6 +52,7 @@ def build(parms, srcfile):
         paths['extra_defs'] += " /D_WIN32_WINNT=0x0501"  # pre-Vista
     else:
         paths['extra_defs'] += " /D_WIN32_WINNT=0x0600"  # Vista and later
+        paths['extra_lib'] += " fwpuclnt.lib"
 
     # Add jsoncpp (optional)
     if 'jsoncpp' in parms['LIB_VERSIONS']:
@@ -61,7 +62,7 @@ def build(parms, srcfile):
         paths['extra_lib'] += " jsoncpp.lib"
 
     # build it
-    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_POLARSSL /I %(polarssl)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s /I %(ovpn3)s\common -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /GL /EHsc /MD /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(polarssl)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s polarssl.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib" % paths, arch=os.environ.get("ARCH"))
+    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_POLARSSL /I %(polarssl)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s /I %(ovpn3)s\common -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /GL /EHsc /MD /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(polarssl)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s polarssl.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib rpcrt4.lib" % paths, arch=os.environ.get("ARCH"))
 
 if __name__ == "__main__":
     import sys
