@@ -3,18 +3,14 @@ import os, re
 from utils import *
 
 def compile_one_file(parms, srcfile, incdirs):
-    if parms['DEBUG']:
-        dbg_rel_flags = "/Zi"
-    else:
-        dbg_rel_flags = "/O2"
-
-    paths = {
+    extra = {
         "srcfile" : srcfile,
         "incdirs" : ' '.join([r"/I %s" % (x,) for x in incdirs]),
-        "dbg_rel_flags" : dbg_rel_flags,
         }
 
-    vc_cmd(parms, r"cl /c /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS %(incdirs)s /EHsc /MD /W3 %(dbg_rel_flags)s /nologo %(srcfile)s" % paths, arch=os.environ.get("ARCH"))
+    vc_parms(parms, extra)
+
+    vc_cmd(parms, r"cl /c /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS %(incdirs)s /EHsc %(link_static_dynamic_flags)s /W3 %(dbg_rel_flags)s /nologo %(srcfile)s" % extra, arch=os.environ.get("ARCH"))
 
 def build_asio(parms):
     print "**************** ASIO"

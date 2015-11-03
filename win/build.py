@@ -31,7 +31,7 @@ def build(parms, srcfile):
 
     # Dictionary we will use to substitute parameters
     # onto VC command line.
-    paths = {
+    options = {
         "ovpn3"   : parms['OVPN3'],
         "tap"     : os.path.join(parms['TAP'], 'src'),
         "tap_component_id" : parms['TAP_WIN_COMPONENT_ID'],
@@ -39,30 +39,31 @@ def build(parms, srcfile):
         "polarssl" : os.path.join(build_dir(parms), "polarssl"),
         "lz4" : os.path.join(build_dir(parms), "lz4"),
         "srcfile" : srcfile,
-        "dbg_rel_flags" : dbg_rel_flags,
         "extra_defs" : parms['CPP_EXTRA'],
         "extra_inc" : "",
         "extra_lib_path" : "",
         "extra_lib" : "",
     }
 
+    vc_parms(parms, options)
+
     # Do we need to support XP and Win 2003?
     arch = os.environ.get("ARCH", parms['ARCH'])
     if arch == "x86_xp":
-        paths['extra_defs'] += " /D_WIN32_WINNT=0x0501"  # pre-Vista
+        options['extra_defs'] += " /D_WIN32_WINNT=0x0501"  # pre-Vista
     else:
-        paths['extra_defs'] += " /D_WIN32_WINNT=0x0600"  # Vista and later
-        paths['extra_lib'] += " fwpuclnt.lib"
+        options['extra_defs'] += " /D_WIN32_WINNT=0x0600"  # Vista and later
+        options['extra_lib'] += " fwpuclnt.lib"
 
     # Add jsoncpp (optional)
     if 'jsoncpp' in parms['LIB_VERSIONS']:
-        paths["jsoncpp"] = os.path.join(build_dir(parms), "jsoncpp")
-        paths['extra_inc'] += " /DHAVE_JSONCPP /I %(jsoncpp)s/dist" % paths
-        paths['extra_lib_path'] += " /LIBPATH:%(jsoncpp)s/dist" % paths
-        paths['extra_lib'] += " jsoncpp.lib"
+        options["jsoncpp"] = os.path.join(build_dir(parms), "jsoncpp")
+        options['extra_inc'] += " /DHAVE_JSONCPP /I %(jsoncpp)s/dist" % options
+        options['extra_lib_path'] += " /LIBPATH:%(jsoncpp)s/dist" % options
+        options['extra_lib'] += " jsoncpp.lib"
 
     # build it
-    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_POLARSSL /I %(polarssl)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s /I %(ovpn3)s\common -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /GL /EHsc /MD /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(polarssl)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s polarssl.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib rpcrt4.lib" % paths, arch=os.environ.get("ARCH"))
+    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_POLARSSL /I %(polarssl)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s /I %(ovpn3)s\common -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /GL /EHsc %(link_static_dynamic_flags)s /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(polarssl)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s polarssl.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib rpcrt4.lib" % options, arch=os.environ.get("ARCH"))
 
 if __name__ == "__main__":
     import sys

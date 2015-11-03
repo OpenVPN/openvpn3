@@ -1,5 +1,6 @@
 PARMS = {
     "DEBUG" : False,
+    "STATIC" : True,
     "OVPN3" : "c:\\src\\ovpn3",
     "TAP" : "c:\\src\\tap-windows6",
     "TAP_WIN_COMPONENT_ID" : "tap0901",  # Community: tap0901, Access Server: tapoas

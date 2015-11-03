@@ -49,6 +49,12 @@ def rmtree(dir):
     print "RMTREE", dir
     shutil.rmtree(dir, ignore_errors=True)
 
+def rm(fn, silent=False):
+    if os.path.exists(fn):
+        if not silent:
+            print "RM", fn
+        os.remove(fn)
+
 def makedirs(dir):
     print "MAKEDIRS", dir
     os.makedirs(dir)
@@ -191,6 +197,10 @@ def vc_cmd(parms, cmd, arch=None, succeed=0):
     with ModEnv('PATH', "%s;%s\\VC" % (os.environ['PATH'], parms['MSVC_DIR'])):
         status = call('vcvarsall.bat %s && %s' % (arch, cmd), shell=True, succeed=succeed)
 
+def vc_parms(parms, cmd_dict):
+    cmd_dict["dbg_rel_flags"] = "/Zi" if parms['DEBUG'] else "/O2"
+    cmd_dict["link_static_dynamic_flags"] = "/MT" if parms['STATIC'] else "/MD"
+
 def patchfile(pkg_prefix, patchdir):
     return os.path.join(patchdir, one_prefix(pkg_prefix, patchdir))
 
@@ -201,3 +211,23 @@ def patch(pkg_prefix, patchdir):
 
 def build_dir(parms):
     return os.path.join(parms['BUILD'], parms['ARCH'])
+
+# remove .obj files
+def rm_obj(dir):
+    fns = []
+    for dirpath, dirnames, filenames in os.walk(dir):
+        for f in filenames:
+            path = os.path.join(dirpath, f)
+            if f.endswith(".obj"):
+                rm(path)
+
+# zip a directory
+# sample usage:
+#   zipf = zipfile.ZipFile('Python.zip', 'w')
+#   zipdir('tmp/', zipf)
+#   zipf.close()
+def zipdir(path, ziph):
+    # ziph is zipfile handle
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            ziph.write(os.path.join(root, file))
