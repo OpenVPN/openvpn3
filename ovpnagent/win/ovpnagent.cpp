@@ -44,6 +44,7 @@
 
 #if _WIN32_WINNT >= 0x0600 // Vista and higher
 #include <openvpn/win/npinfo.hpp>
+#include <openvpn/tun/win/wfp.hpp>
 #endif
 
 // actions
@@ -116,6 +117,10 @@ public:
 
   const MyConfig& config;
   const std::regex cmd_sanitizer;
+
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
+  TunWin::WFPContext::Ptr wfp{new TunWin::WFPContext};
+#endif
 
 private:
   virtual bool allow_client(AsioPolySock::Base& sock) override
@@ -206,6 +211,10 @@ private:
 		  action = TunWin::Util::ActionSetSearchDomain::from_json_untrusted(jact);
 		else if (type == "ActionDeleteAllRoutesOnInterface")
 		  action = TunWin::Util::ActionDeleteAllRoutesOnInterface::from_json_untrusted(jact);
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
+		else if (type == "ActionWFP")
+		  action = TunWin::ActionWFP::from_json_untrusted(jact, parent()->wfp);
+#endif
 		else
 		  OPENVPN_THROW_EXCEPTION("unknown action type: " << type);
 
