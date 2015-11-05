@@ -59,6 +59,7 @@
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/unicode.hpp>
 #include <openvpn/win/cmd.hpp>
+#include <openvpn/win/winerr.hpp>
 
 namespace openvpn {
   namespace TunWin {
@@ -89,7 +90,10 @@ namespace openvpn {
 			      KEY_READ,
 			      adapter_key.ref());
 	if (status != ERROR_SUCCESS)
-	  OPENVPN_THROW(tun_win_util, "tap_guids: error opening adapter registry key: " << ADAPTER);
+	  {
+	    const Win::Error err(status);
+	    OPENVPN_THROW(tun_win_util, "tap_guids: error opening adapter registry key: " << ADAPTER << " : " << err.message());
+	  }
 
 	for (int i = 0;; ++i)
 	  {
@@ -216,7 +220,10 @@ namespace openvpn {
 				  KEY_READ,
 				  network_connections_key.ref());
 	    if (status != ERROR_SUCCESS)
-	      OPENVPN_THROW(tun_win_util, "TapNameGuidPairList: error opening network connections registry key: " << NETWORK_CONNECTIONS);
+	      {
+		const Win::Error err(status);
+		OPENVPN_THROW(tun_win_util, "TapNameGuidPairList: error opening network connections registry key: " << NETWORK_CONNECTIONS << " : " << err.message());
+	      }
 
 	    for (int i = 0;; ++i)
 	      {
@@ -822,7 +829,10 @@ namespace openvpn {
 				KEY_READ|KEY_WRITE,
 				key.ref());
 	  if (status != ERROR_SUCCESS)
-	    OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error opening registry key: " << reg_key_name);
+	    {
+	      const Win::Error err(status);
+	      OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error opening registry key: " << reg_key_name << " : " << err.message());
+	    }
 
 	  Win::UTF16 dom(Win::utf16(search_domain));
 	  status = RegSetValueExW(key(),
