@@ -46,7 +46,7 @@ namespace openvpn {
 	sa.lpSecurityDescriptor = nullptr;
 	if (!sddl_string.empty())
 	  {
-	    if (!::ConvertStringSecurityDescriptorToSecurityDescriptor(
+	    if (!::ConvertStringSecurityDescriptorToSecurityDescriptorA(
 	        sddl_string.c_str(),
 		SDDL_REVISION_1,
 		&sa.lpSecurityDescriptor,    // allocates memory
