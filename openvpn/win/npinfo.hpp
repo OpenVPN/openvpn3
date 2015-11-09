@@ -65,7 +65,7 @@ namespace openvpn {
 	if (!bDaclPresent)
 	  OPENVPN_THROW(npinfo_error, "allow_client_query: missing DACL");
 	const DWORD ssi_status = ::SetSecurityInfo(
-	    GetCurrentProcess(),
+	    ::GetCurrentProcess(),
 	    SE_KERNEL_OBJECT,
 	    DACL_SECURITY_INFORMATION,
 	    NULL,
@@ -128,7 +128,7 @@ namespace openvpn {
 	if (!::QueryFullProcessImageNameW(proc, 0, exe, &exe_size))
 	  {
 	    const Win::LastError err;
-	    OPENVPN_THROW(npinfo_error, "QueryFullProcessImageName failed: " << err.message());
+	    OPENVPN_THROW(npinfo_error, "QueryFullProcessImageNameW failed: " << err.message());
 	  }
 	return std::wstring(exe, exe_size);
       }
