@@ -43,11 +43,11 @@ namespace openvpn {
 	    console_mode_save(0)
 	{
 	  // disable control-C
-	  SetConsoleCtrlHandler(nullptr, TRUE);
+	  ::SetConsoleCtrlHandler(nullptr, TRUE);
 
-	  HANDLE in = GetStdHandle(STD_INPUT_HANDLE);
+	  HANDLE in = ::GetStdHandle(STD_INPUT_HANDLE);
 	  DWORD mode = 0;
-	  if (Handle::defined(in) && GetConsoleMode(in, &mode))
+	  if (Handle::defined(in) && ::GetConsoleMode(in, &mode))
 	    {
 	      // running on a console
 	      const DWORD newmode = mode
@@ -57,7 +57,7 @@ namespace openvpn {
 		    | ENABLE_ECHO_INPUT 
 		    | ENABLE_MOUSE_INPUT);
 
-	      if (newmode == mode || SetConsoleMode(in, newmode))
+	      if (newmode == mode || ::SetConsoleMode(in, newmode))
 		{
 		  std_input = in;
 		  console_mode_save = mode;
@@ -68,7 +68,7 @@ namespace openvpn {
 	~Input()
 	{
 	  if (Handle::defined(std_input))
-	    SetConsoleMode(std_input, console_mode_save);
+	    ::SetConsoleMode(std_input, console_mode_save);
 	}
 
 	bool available()
@@ -76,7 +76,7 @@ namespace openvpn {
 	  if (Handle::defined(std_input))
 	    {
 	      DWORD n;
-	      if (GetNumberOfConsoleInputEvents(std_input, &n))
+	      if (::GetNumberOfConsoleInputEvents(std_input, &n))
 		return n > 0;
 	    }
 	  return false;
@@ -91,7 +91,7 @@ namespace openvpn {
 		DWORD n;
 		if (!available())
 		  return 0;
-		if (!ReadConsoleInput(std_input, &ir, 1, &n))
+		if (!::ReadConsoleInputA(std_input, &ir, 1, &n))
 		  return 0;
 	      } while (ir.EventType != KEY_EVENT || ir.Event.KeyEvent.bKeyDown != TRUE);
 	      return keyboard_ir_to_key(&ir);
@@ -128,18 +128,18 @@ namespace openvpn {
 	  : old_title_defined(false)
 	{
 	  char title[256];
-	  if (GetConsoleTitle(title, sizeof(title)))
+	  if (::GetConsoleTitleA(title, sizeof(title)))
 	    {
 	      old_title = title;
 	      old_title_defined = true;
 	    }
-	  SetConsoleTitle(new_title.c_str());
+	  ::SetConsoleTitleA(new_title.c_str());
 	}
 
 	~Title()
 	{
 	  if (old_title_defined)
-	    SetConsoleTitle(old_title.c_str());
+	    ::SetConsoleTitleA(old_title.c_str());
 	}
       private:
 	bool old_title_defined;

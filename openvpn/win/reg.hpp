@@ -45,7 +45,7 @@ namespace openvpn {
       ~RegKey()
       {
 	if (defined())
-	  RegCloseKey(key);
+	  ::RegCloseKey(key);
       }
     private:
       HKEY key;

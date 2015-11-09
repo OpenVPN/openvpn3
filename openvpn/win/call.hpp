@@ -62,11 +62,11 @@ namespace openvpn {
 #     define SYSPATH_LEN_METH(x) ::wcslen(x)
 #else
       // get system path (XP and higher)
-      std::unique_ptr<TCHAR[]> syspath(new char[MAX_PATH]);
-      if (::SHGetFolderPath(nullptr, CSIDL_SYSTEM, nullptr, 0, syspath.get()) != S_OK)
-	throw win_call("cannot get system path using SHGetFolderPath");
-#     define SYSPATH_FMT_CHAR L"S"
-#     define SYSPATH_LEN_METH(x) std::strlen(x)
+      std::unique_ptr<wchar_t[]> syspath(new wchar_t[MAX_PATH]);
+      if (::SHGetFolderPathW(nullptr, CSIDL_SYSTEM, nullptr, 0, syspath.get()) != S_OK)
+	throw win_call("cannot get system path using SHGetFolderPathW");
+#     define SYSPATH_FMT_CHAR L"s"
+#     define SYSPATH_LEN_METH(x) ::wcslen(x)
 #endif
 
       // build command line

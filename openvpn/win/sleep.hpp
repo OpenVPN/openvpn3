@@ -44,7 +44,7 @@ namespace openvpn {
     virtual void execute(std::ostream& os) override
     {
       os << to_string() << std::endl;
-      Sleep(dwMilliseconds);
+      ::Sleep(dwMilliseconds);
     }
 
     virtual std::string to_string() const override

@@ -84,11 +84,11 @@ namespace openvpn {
 	std::vector<std::string> ret;
 
 	Win::RegKey adapter_key;
-	status = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-			      ADAPTER,
-			      0,
-			      KEY_READ,
-			      adapter_key.ref());
+	status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+				 ADAPTER,
+				 0,
+				 KEY_READ,
+				 adapter_key.ref());
 	if (status != ERROR_SUCCESS)
 	  {
 	    const Win::Error err(status);
@@ -101,14 +101,14 @@ namespace openvpn {
 	    Win::RegKey unit_key;
 
 	    len = sizeof(strbuf);
-	    status = RegEnumKeyEx(adapter_key(),
-				  i,
-				  strbuf,
-				  &len,
-				  nullptr,
-				  nullptr,
-				  nullptr,
-				  nullptr);
+	    status = ::RegEnumKeyExA(adapter_key(),
+				     i,
+				     strbuf,
+				     &len,
+				     nullptr,
+				     nullptr,
+				     nullptr,
+				     nullptr);
 	    if (status == ERROR_NO_MORE_ITEMS)
 	      break;
 	    else if (status != ERROR_SUCCESS)
@@ -119,22 +119,22 @@ namespace openvpn {
 	                                  + std::string("\\")
 	                                  + std::string(strbuf);
 
-	    status = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-				  unit_string.c_str(),
-				  0,
-				  KEY_READ,
-				  unit_key.ref());
+	    status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+				     unit_string.c_str(),
+				     0,
+				     KEY_READ,
+				     unit_key.ref());
 
 	    if (status != ERROR_SUCCESS)
 	      continue;
 
 	    len = sizeof(strbuf);
-	    status = RegQueryValueEx(unit_key(),
-				     "ComponentId",
-				     nullptr,
-				     &data_type,
-				     (LPBYTE)strbuf,
-				     &len);
+	    status = ::RegQueryValueExA(unit_key(),
+					"ComponentId",
+					nullptr,
+					&data_type,
+					(LPBYTE)strbuf,
+					&len);
 
 	    if (status != ERROR_SUCCESS || data_type != REG_SZ)
 	      continue;
@@ -143,12 +143,12 @@ namespace openvpn {
 	      continue;
 
 	    len = sizeof(strbuf);
-	    status = RegQueryValueEx(unit_key(),
-				     "NetCfgInstanceId",
-				     nullptr,
-				     &data_type,
-				     (LPBYTE)strbuf,
-				     &len);
+	    status = ::RegQueryValueExA(unit_key(),
+					"NetCfgInstanceId",
+					nullptr,
+					&data_type,
+					(LPBYTE)strbuf,
+					&len);
 
 	    if (status == ERROR_SUCCESS && data_type == REG_SZ)
 	      {
@@ -199,7 +199,7 @@ namespace openvpn {
 		  wchar_t wbuf[len];
 		  _snwprintf(wbuf, len, L"\\DEVICE\\TCPIP_%S", pair.guid.c_str());
 		  wbuf[len-1] = 0;
-		  if (GetAdapterIndex(wbuf, &aindex) == NO_ERROR)
+		  if (::GetAdapterIndex(wbuf, &aindex) == NO_ERROR)
 		    pair.index = aindex;
 		}
 
@@ -214,11 +214,11 @@ namespace openvpn {
 	    DWORD data_type;
 
 	    Win::RegKey network_connections_key;
-	    status = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-				  NETWORK_CONNECTIONS,
-				  0,
-				  KEY_READ,
-				  network_connections_key.ref());
+	    status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+				     NETWORK_CONNECTIONS,
+				     0,
+				     KEY_READ,
+				     network_connections_key.ref());
 	    if (status != ERROR_SUCCESS)
 	      {
 		const Win::Error err(status);
@@ -231,14 +231,14 @@ namespace openvpn {
 		Win::RegKey connection_key;
 
 		len = sizeof(strbuf);
-		status = RegEnumKeyEx(network_connections_key(),
-				      i,
-				      strbuf,
-				      &len,
-				      nullptr,
-				      nullptr,
-				      nullptr,
-				      nullptr);
+		status = ::RegEnumKeyExA(network_connections_key(),
+					 i,
+					 strbuf,
+					 &len,
+					 nullptr,
+					 nullptr,
+					 nullptr,
+					 nullptr);
 		if (status == ERROR_NO_MORE_ITEMS)
 		  break;
 		else if (status != ERROR_SUCCESS)
@@ -248,21 +248,21 @@ namespace openvpn {
 		const std::string guid = std::string(strbuf);
 		const std::string connection_string = std::string(NETWORK_CONNECTIONS) + std::string("\\") + guid + std::string("\\Connection");
 
-		status = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-				      connection_string.c_str(),
-				      0,
-				      KEY_READ,
-				      connection_key.ref());
+		status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+					 connection_string.c_str(),
+					 0,
+					 KEY_READ,
+					 connection_key.ref());
 		if (status != ERROR_SUCCESS)
 		  continue;
 
 		len = sizeof(strbuf);
-		status = RegQueryValueEx(connection_key(),
-					 "Name",
-					 nullptr,
-					 &data_type,
-					 (LPBYTE)strbuf,
-					 &len);
+		status = ::RegQueryValueExA(connection_key(),
+					    "Name",
+					    nullptr,
+					    &data_type,
+					    (LPBYTE)strbuf,
+					    &len);
 		if (status != ERROR_SUCCESS || data_type != REG_SZ)
 		  continue;
 		strbuf[len] = '\0';
@@ -336,13 +336,13 @@ namespace openvpn {
 	  {
 	    const TapNameGuidPair& tap = *i;
 	    const std::string path = tap_path(tap.guid);
-	    hand.reset(CreateFile(path.c_str(),
-				  GENERIC_READ | GENERIC_WRITE,
-				  0, /* was: FILE_SHARE_READ */
-				  0,
-				  OPEN_EXISTING,
-				  FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
-				  0));
+	    hand.reset(::CreateFileA(path.c_str(),
+				     GENERIC_READ | GENERIC_WRITE,
+				     0, /* was: FILE_SHARE_READ */
+				     0,
+				     OPEN_EXISTING,
+				     FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
+				     0));
 	    if (hand.defined())
 	      {
 		used = tap;
@@ -365,9 +365,9 @@ namespace openvpn {
 	ep[2] = htonl(netmask.to_uint32());
 
 	DWORD len;
-	if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_TUN,
-			     ep, sizeof (ep),
-			     ep, sizeof (ep), &len, nullptr))
+	if (!::DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_TUN,
+			       ep, sizeof (ep),
+			       ep, sizeof (ep), &len, nullptr))
 	  throw tun_win_util("DeviceIoControl TAP_WIN_IOCTL_CONFIG_TUN failed");
       }
 
@@ -384,9 +384,9 @@ namespace openvpn {
 	ep[1] = htonl(remote.to_uint32());
 
 	DWORD len;
-	if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT,
-			     ep, sizeof (ep),
-			     ep, sizeof (ep), &len, nullptr))
+	if (!::DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT,
+			       ep, sizeof (ep),
+			       ep, sizeof (ep), &len, nullptr))
 	  throw tun_win_util("DeviceIoControl TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT failed");
       }
 
@@ -395,9 +395,9 @@ namespace openvpn {
       {
 	DWORD len;
 	ULONG status = media_status ? TRUE : FALSE;
-	if (!DeviceIoControl(th, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
-			     &status, sizeof (status),
-			     &status, sizeof (status), &len, nullptr))
+	if (!::DeviceIoControl(th, TAP_WIN_IOCTL_SET_MEDIA_STATUS,
+			       &status, sizeof (status),
+			       &status, sizeof (status), &len, nullptr))
 	  throw tun_win_util("DeviceIoControl TAP_WIN_IOCTL_SET_MEDIA_STATUS failed");
       }
 
@@ -409,10 +409,10 @@ namespace openvpn {
 	std::unique_ptr<char[]> line(new char[size]);
 	DWORD len;
 
-	while (DeviceIoControl (th, TAP_WIN_IOCTL_GET_LOG_LINE,
-				line.get(), size,
-				line.get(), size,
-				&len, nullptr))
+	while (::DeviceIoControl(th, TAP_WIN_IOCTL_GET_LOG_LINE,
+				 line.get(), size,
+				 line.get(), size,
+				 &len, nullptr))
 	  {
 	    OPENVPN_LOG("TAP-Windows: " << line.get());
 	  }
@@ -665,9 +665,9 @@ namespace openvpn {
 	    ep[3] = lease_time;
 
 	    DWORD len;
-	    if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_DHCP_MASQ,
-				 ep, sizeof (ep),
-				 ep, sizeof (ep), &len, nullptr))
+	    if (!::DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_DHCP_MASQ,
+				   ep, sizeof (ep),
+				   ep, sizeof (ep), &len, nullptr))
 	      throw dhcp_masq("DeviceIoControl TAP_WIN_IOCTL_CONFIG_DHCP_MASQ failed");
 	  }
 
@@ -677,9 +677,9 @@ namespace openvpn {
 	    write_options(buf);
 
 	    DWORD len;
-	    if (!DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT,
-				 buf.data(), buf.size(),
-				 buf.data(), buf.size(), &len, nullptr))
+	    if (!::DeviceIoControl(th, TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT,
+				   buf.data(), buf.size(),
+				   buf.data(), buf.size(), &len, nullptr))
 	      throw dhcp_masq("DeviceIoControl TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT failed");
 	  }
 	}
@@ -779,9 +779,9 @@ namespace openvpn {
 	{
 	  DWORD len;
 	  info[0] = info[1] = info[2] = 0;
-	  if (DeviceIoControl(th, TAP_WIN_IOCTL_GET_VERSION,
-			      &info, sizeof (info),
-			      &info, sizeof (info), &len, nullptr))
+	  if (::DeviceIoControl(th, TAP_WIN_IOCTL_GET_VERSION,
+				&info, sizeof (info),
+				&info, sizeof (info), &len, nullptr))
 	    defined = true;
 	}
 
@@ -823,11 +823,11 @@ namespace openvpn {
 	  LONG status;
 	  Win::RegKey key;
 	  const std::string reg_key_name = "SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces\\" + tap_guid;
-	  status = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-				reg_key_name.c_str(),
-				0,
-				KEY_READ|KEY_WRITE,
-				key.ref());
+	  status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+				   reg_key_name.c_str(),
+				   0,
+				   KEY_READ|KEY_WRITE,
+				   key.ref());
 	  if (status != ERROR_SUCCESS)
 	    {
 	      const Win::Error err(status);
@@ -835,12 +835,12 @@ namespace openvpn {
 	    }
 
 	  Win::UTF16 dom(Win::utf16(search_domain));
-	  status = RegSetValueExW(key(),
-				  L"Domain",
-				  0,
-				  REG_SZ,
-				  (const BYTE *)dom.get(),
-				  (Win::utf16_strlen(dom.get())+1)*2);
+	  status = ::RegSetValueExW(key(),
+				    L"Domain",
+				    0,
+				    REG_SZ,
+				    (const BYTE *)dom.get(),
+				    (Win::utf16_strlen(dom.get())+1)*2);
 	  if (status != ERROR_SUCCESS)
 	    OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error writing Domain registry key: " << reg_key_name);
 	}
@@ -884,11 +884,11 @@ namespace openvpn {
 	DWORD status;
 	std::unique_ptr<MIB_IPFORWARDTABLE> rt;
 
-	status = GetIpForwardTable (nullptr, &size, TRUE);
+	status = ::GetIpForwardTable(nullptr, &size, TRUE);
 	if (status == ERROR_INSUFFICIENT_BUFFER)
 	  {
 	    rt.reset((MIB_IPFORWARDTABLE*)new unsigned char[size]);
-	    status = GetIpForwardTable(rt.get(), &size, TRUE);
+	    status = ::GetIpForwardTable(rt.get(), &size, TRUE);
 	    if (status != NO_ERROR)
 	      {
 		OPENVPN_LOG("windows_routing_table: GetIpForwardTable failed");
@@ -904,7 +904,7 @@ namespace openvpn {
       inline const MIB_IPFORWARD_TABLE2* windows_routing_table2(ADDRESS_FAMILY af)
       {
 	MIB_IPFORWARD_TABLE2* routes = nullptr;
-	int res = GetIpForwardTable2(af, &routes);
+	int res = ::GetIpForwardTable2(af, &routes);
 	if (res == NO_ERROR)
 	  return routes;
 	else

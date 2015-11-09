@@ -53,7 +53,7 @@ namespace openvpn {
     return ret;
 #elif defined(OPENVPN_PLATFORM_WIN)
     SYSTEM_INFO si;
-    GetSystemInfo(&si);
+    ::GetSystemInfo(&si);
     return si.dwNumberOfProcessors;
 #else
 #error no implementation for n_cores()

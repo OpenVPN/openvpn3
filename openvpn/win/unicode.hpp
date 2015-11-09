@@ -39,21 +39,21 @@ namespace openvpn {
     inline wchar_t* utf16(const std::string& str)
     {
       // first get output length (return value includes space for trailing nul)
-      const int len = MultiByteToWideChar(CP_UTF8,
-					  0,
-					  str.c_str(),
-					  -1,
-					  nullptr,
-					  0);
+      const int len = ::MultiByteToWideChar(CP_UTF8,
+					    0,
+					    str.c_str(),
+					    -1,
+					    nullptr,
+					    0);
       if (len <= 0)
 	throw win_utf16();
       UTF16 ret(new wchar_t[len]);
-      const int len2 = MultiByteToWideChar(CP_UTF8,
-					   0,
-					   str.c_str(),
-					   -1,
-					   ret.get(),
-					   len);
+      const int len2 = ::MultiByteToWideChar(CP_UTF8,
+					     0,
+					     str.c_str(),
+					     -1,
+					     ret.get(),
+					     len);
       if (len != len2)
 	throw win_utf16();
       return ret.release();
