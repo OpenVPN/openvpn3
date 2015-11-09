@@ -421,7 +421,7 @@ namespace openvpn {
 #ifdef OPENVPN_PLATFORM_WIN
 		  if (host.port == "np") // windows named pipe
 		  {
-		    const HANDLE h = ::CreateFile(
+		    const HANDLE h = ::CreateFileA(
 		        host.host.c_str(),
 			GENERIC_READ | GENERIC_WRITE,
 			0,
