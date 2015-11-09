@@ -231,7 +231,7 @@ namespace openvpn {
 	{
 	  if (defined())
 	    {
-	      const BOOL ret = CloseServiceHandle(handle);
+	      const BOOL ret = ::CloseServiceHandle(handle);
 	      handle = nullptr;
 	      return ret != 0;
 	    }
