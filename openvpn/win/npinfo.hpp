@@ -29,15 +29,81 @@
 #include <aclapi.h>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/abort.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/win/winerr.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/secattr.hpp>
 
 namespace openvpn {
   namespace Win {
+    struct NamedPipeImpersonate
+    {
+      OPENVPN_EXCEPTION(named_pipe_impersonate);
+
+      NamedPipeImpersonate(const HANDLE pipe)
+      {
+	if (!::ImpersonateNamedPipeClient(pipe))
+	  {
+	    const Win::LastError err;
+	    OPENVPN_THROW(named_pipe_impersonate, "ImpersonateNamedPipeClient failed: " << err.message());
+	  }
+      }
+
+      ~NamedPipeImpersonate()
+      {
+	if (!::RevertToSelf())
+	  {
+	    OPENVPN_LOG("NamedPipeImpersonate: RevertToSelf failed, must abort");
+	    std::abort();
+	  }
+      }
+    };
+
     struct NamedPipePeerInfo
     {
       OPENVPN_EXCEPTION(npinfo_error);
+
+      // Get process handle given PID.
+      static Win::ScopedHANDLE get_process(const ULONG pid, const bool limited)
+      {
+	// open process
+	Win::ScopedHANDLE proc(::OpenProcess(
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
+	    limited ? PROCESS_QUERY_LIMITED_INFORMATION : PROCESS_ALL_ACCESS,
+#else
+	    PROCESS_ALL_ACCESS,
+#endif
+	    FALSE,
+	    pid));
+	if (!proc.defined())
+	  {
+	    const Win::LastError err;
+	    OPENVPN_THROW(npinfo_error, "OpenProcess failed: " << err.message());
+	  }
+	return proc;
+      }
+
+      static std::string send_handle(const HANDLE handle, const HANDLE process)
+      {
+	HANDLE remote_handle;
+	if (!::DuplicateHandle(GetCurrentProcess(),
+			       handle,
+			       process,
+			       &remote_handle,
+			       0,
+			       FALSE,
+			       DUPLICATE_SAME_ACCESS))
+	  {
+	    const Win::LastError err;
+	    OPENVPN_THROW(npinfo_error, "DuplicateHandle failed: " << err.message());
+	  }
+	const Buffer hb((unsigned char *)&remote_handle, sizeof(remote_handle), true);
+	return render_hex_generic(hb);
+      }
+
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
 
       // Servers must call this method to modify their process
       // access rights to grant clients the
@@ -102,22 +168,6 @@ namespace openvpn {
 	return pid;
       }
 
-      // Get process handle given PID.
-      static Win::ScopedHANDLE get_process(const ULONG pid, const bool limited)
-      {
-	// open process
-	Win::ScopedHANDLE proc(::OpenProcess(
-	    limited ? PROCESS_QUERY_LIMITED_INFORMATION : PROCESS_ALL_ACCESS,
-	    FALSE,
-	    pid));
-	if (!proc.defined())
-	  {
-	    const Win::LastError err;
-	    OPENVPN_THROW(npinfo_error, "OpenProcess failed: " << err.message());
-	  }
-	return proc;
-      }
-
       // Get exe path given process handle.
       static std::wstring get_exe_path(const HANDLE proc)
       {
@@ -132,7 +182,11 @@ namespace openvpn {
 	  }
 	return std::wstring(exe, exe_size);
       }
+
+#endif
     };
+
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
 
     // Used by server to get info about clients
     struct NamedPipePeerInfoClient : public NamedPipePeerInfo
@@ -159,6 +213,9 @@ namespace openvpn {
 
       std::wstring exe_path;
     };
+
+#endif
+
   }
 }
 
