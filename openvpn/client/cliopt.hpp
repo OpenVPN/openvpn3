@@ -371,7 +371,7 @@ namespace openvpn {
 	    tunconf->enable_failsafe_block = config.tun_persist;
 	    client_lifecycle.reset(new MacLifeCycle);
 #ifdef OPENVPN_COMMAND_AGENT
-	    tunconf->action_list_factory = MacCommandAgent::new_agent(opt);
+	    tunconf->tun_setup_factory = MacCommandAgent::new_agent(opt);
 #endif
 	    tun_factory = tunconf;
 	  }
@@ -387,7 +387,7 @@ namespace openvpn {
 	    if (config.tun_persist)
 	      tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
 #ifdef OPENVPN_COMMAND_AGENT
-	    tunconf->action_list_factory = WinCommandAgent::new_agent(opt);
+	    tunconf->tun_setup_factory = WinCommandAgent::new_agent(opt);
 #endif
 	    tun_factory = tunconf;
 	  }

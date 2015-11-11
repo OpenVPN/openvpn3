@@ -39,7 +39,6 @@
 #include <sstream>
 #include <cstdint> // for std::uint32_t
 #include <memory>
-#include <regex>
 
 #include <tap-windows.h>
 
@@ -53,7 +52,6 @@
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
-#include <openvpn/addr/regex.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/scoped_handle.hpp>
@@ -449,40 +447,43 @@ namespace openvpn {
       };
 
       inline void dhcp_release(const InterfaceInfoList& ii,
-			       const DWORD adapter_index)
+			       const DWORD adapter_index,
+			       std::ostream& os)
       {
 	IP_ADAPTER_INDEX_MAP* iface = ii.iface(adapter_index);
 	if (iface)
 	  {
 	    const DWORD status = ::IpReleaseAddress(iface);
 	    if (status == NO_ERROR)
-	      OPENVPN_LOG("TAP: DHCP release succeeded");
+	      os << "TAP: DHCP release succeeded" << std::endl;
 	    else
-	      OPENVPN_LOG("TAP: DHCP release failed");
+	      os << "TAP: DHCP release failed" << std::endl;
 	  }
       }
 
       inline void dhcp_renew(const InterfaceInfoList& ii,
-			     const DWORD adapter_index)
+			     const DWORD adapter_index,
+			     std::ostream& os)
       {
 	IP_ADAPTER_INDEX_MAP* iface = ii.iface(adapter_index);
 	if (iface)
 	  {
 	    const DWORD status = ::IpRenewAddress(iface);
 	    if (status == NO_ERROR)
-	      OPENVPN_LOG("TAP: DHCP renew succeeded");
+	      os << "TAP: DHCP renew succeeded" << std::endl;
 	    else
-	      OPENVPN_LOG("TAP: DHCP renew failed");
+	      os << "TAP: DHCP renew failed" << std::endl;
 	  }
       }
 
-      inline void flush_arp(const DWORD adapter_index)
+      inline void flush_arp(const DWORD adapter_index,
+			    std::ostream& os)
       {
 	const DWORD status = ::FlushIpNetTable(adapter_index);
 	if (status == NO_ERROR)
-	  OPENVPN_LOG("TAP: ARP flush succeeded");
+	  os << "TAP: ARP flush succeeded" << std::endl;
 	else
-	  OPENVPN_LOG("TAP: ARP flush failed");
+	  os << "TAP: ARP flush failed" << std::endl;
       }
 
       struct IPNetmask4
@@ -491,7 +492,7 @@ namespace openvpn {
 
 	IPNetmask4(const TunBuilderCapture& pull, const char *title)
 	{
-	  const TunBuilderCapture::Route* local4 = pull.vpn_ipv4();
+	  const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
 	  if (local4)
 	    {
 	      ip = IPv4::Addr::from_string(local4->address, title);
@@ -1040,16 +1041,6 @@ namespace openvpn {
 	  return "netsh interface ip set address " + tap.index_or_name() + " dhcp";
 	}
       };
-
-      inline std::regex cmd_sanitizer()
-      {
-	const std::string restr =
-	  "(?:netsh interface ip(?:v6)? (?:add|delete|set) (?:route|address|(?:dns|wins)servers) .*"
-	  "|route (?:ADD|DELETE) " + IP::v4_regex() + " MASK " + IP::v4_regex() + ' ' + IP::v4_regex() +
-	  "|ipconfig /(?:flush|register)dns"
-	  "|net (?:start|stop) dnscache)";
-	return std::regex(restr);
-      }
 
     }
   }
