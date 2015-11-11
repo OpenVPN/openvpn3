@@ -39,18 +39,11 @@
 #include <openvpn/ssl/sslchoose.hpp>
 #include <openvpn/ws/httpserv.hpp>
 #include <openvpn/client/win/agentconfig.hpp>
+#include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/winsvc.hpp>
 #include <openvpn/win/logfile.hpp>
-
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
+#include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/win/npinfo.hpp>
-#include <openvpn/tun/win/wfp.hpp>
-#endif
-
-// actions
-#include <openvpn/win/cmd.hpp>
-#include <openvpn/win/sleep.hpp>
-#include <openvpn/tun/win/tunutil.hpp>
 
 #if defined(USE_POLARSSL)
 #define SSL_LIB_NAME "PolarSSL"
@@ -111,16 +104,57 @@ public:
 	     const WS::Server::Listener::Client::Factory::Ptr& client_factory)
     : WS::Server::Listener(io_context, hconf, listen_list, client_factory),
       config(config_arg),
-      cmd_sanitizer(TunWin::Util::cmd_sanitizer())
+      client_process(io_context)
   {
   }
 
-  const MyConfig& config;
-  const std::regex cmd_sanitizer;
+  Win::ScopedHANDLE establish_tun(const TunBuilderCapture& tbc, std::ostream& os)
+  {
+    if (!tun)
+      tun.reset(new TunWin::Setup);
+    return Win::ScopedHANDLE(tun->establish(tbc, os));
+  }
 
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
-  TunWin::WFPContext::Ptr wfp{new TunWin::WFPContext};
-#endif
+  void destroy_tun(std::ostream& os)
+  {
+    client_process.close();
+    if (tun)
+      {
+	tun->destroy(os);
+	tun.reset();
+      }
+  }
+
+  void destroy_tun()
+  {
+    std::ostringstream os;
+    destroy_tun(os);
+  }
+
+  void set_client_process(Win::ScopedHANDLE&& proc)
+  {
+    client_process.close();
+    client_process.assign(proc.release());
+
+    // special failsafe to destroy tun in case client crashes without closing it
+    client_process.async_wait([self=Ptr(this)](const asio::error_code& error) {
+	if (!error && self->tun)
+	  {
+	    std::ostringstream os;
+	    self->tun->destroy(os);
+	    OPENVPN_LOG_NTNL("FAILSAFE TUN CLOSE\n" << os.str());
+	  }
+      });
+  }
+
+  HANDLE get_client_process()
+  {
+    if (!client_process.is_open())
+      throw Exception("no client process");
+    return client_process.native_handle();
+  }
+
+  const MyConfig& config;
 
 private:
   virtual bool allow_client(AsioPolySock::Base& sock) override
@@ -143,6 +177,9 @@ private:
       OPENVPN_LOG("only named pipe clients are allowed");
     return false;
   }
+
+  TunWin::Setup::Ptr tun;
+  asio::windows::object_handle client_process;
 };
 
 class MyClientInstance : public WS::Server::Listener::Client
@@ -153,28 +190,30 @@ public:
   MyClientInstance(WS::Server::Listener::Client::Initializer& ci)
     : WS::Server::Listener::Client(ci)
   {
-    OPENVPN_LOG("INSTANCE START");
+    //OPENVPN_LOG("INSTANCE START");
   }
 
   virtual ~MyClientInstance()
   {
-    OPENVPN_LOG("INSTANCE DESTRUCT");
+    //OPENVPN_LOG("INSTANCE DESTRUCT");
   }
 
 private:
   virtual void http_request_received() override
   {
     try {
+      const HANDLE client_pipe = get_client_pipe();
+
       const HTTP::Request& req = request();
       OPENVPN_LOG("HTTP request received from " << sock->remote_endpoint_str() << '\n' << req.to_string());
 
       // get content-type
       const std::string content_type = req.headers.get_value_trim("content-type");
 
-      if (req.method != "GET" && req.uri == "/actions")
+      if (req.method == "POST" && req.uri == "/tun-setup")
 	{
 	  // verify correct content-type
-	  if (string::strcasecmp(content_type, "application/x-ovpn-actions"))
+	  if (string::strcasecmp(content_type, "application/json"))
 	    throw Exception("bad content-type");
 
 	  // parse the json dict
@@ -182,56 +221,61 @@ private:
 	  Json::Reader reader;
 	  if (!reader.parse(in.to_string(), root, false))
 	    OPENVPN_THROW_EXCEPTION("json parse error: " << reader.getFormatedErrorMessages());
-	  if (!root.isArray())
-	    throw Exception("json parse error: top level json object is not an array");
+	  if (!root.isObject())
+	    throw Exception("json parse error: top level json object is not a dictionary");
 
 	  // alloc output buffer
 	  std::ostringstream os;
 
-	  // loop through action list
-	  for (unsigned int i = 0; i < root.size(); ++i)
-	    {
-	      // get an action
-	      const Json::Value& jact = root[i];
+	  // get PID
+	  ULONG pid = json::get_uint_optional(root, "pid", 0);
 
-	      // get action type
-	      if (!jact.isObject())
-		throw Exception("json action list element is not a dictionary");
-	      const Json::Value& jtype = jact["type"];
-	      if (!jtype.isString())
-		throw Exception("json type element in action entry is not a string");
-	      const std::string type = jtype.asString();
+	  // parse JSON data into a TunBuilderCapture object
+	  TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
+	  tbc->validate();
 
-	      // build the action object from json
-	      Action::Ptr action;
-	      try {
-		if (type == "WinCmd")
-		  action = WinCmd::from_json_untrusted(jact, parent()->cmd_sanitizer);
-		else if (type == "ActionSetSearchDomain")
-		  action = TunWin::Util::ActionSetSearchDomain::from_json_untrusted(jact);
-		else if (type == "ActionDeleteAllRoutesOnInterface")
-		  action = TunWin::Util::ActionDeleteAllRoutesOnInterface::from_json_untrusted(jact);
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
-		else if (type == "ActionWFP")
-		  action = TunWin::ActionWFP::from_json_untrusted(jact, parent()->wfp);
-#endif
-		else
-		  OPENVPN_THROW_EXCEPTION("unknown action type: " << type);
+	  // establish the tun setup object
+	  Win::ScopedHANDLE handle(parent()->establish_tun(*tbc, os));
 
-		// execute the action
-		action->execute(os);
-	      }
-	      catch (const std::exception& e)
-		{
-		  os << std::string(e.what()) << std::endl;
-		}
-	    }
+	  // this section is impersonated in the context of the client
+	  {
+	    Win::NamedPipeImpersonate impersonate(client_pipe);
 
-	  out = buf_from_string(string::remove_blanks(os.str()));
+	    // remember the client process that sent the request
+	    parent()->set_client_process(get_client_process(client_pipe, pid));
+
+	    // build JSON return dictionary
+	    Json::Value jout(Json::objectValue);
+	    jout["log_txt"] = string::remove_blanks(os.str());
+	    jout["tap_handle_hex"] = Win::NamedPipePeerInfo::send_handle(handle(), parent()->get_client_process());
+
+	    out = buf_from_string(jout.toStyledString());
+	  }
 
 	  WS::Server::ContentInfo ci;
 	  ci.http_status = HTTP::Status::OK;
-	  ci.type = "text/plain";
+	  ci.type = "application/json";
+	  ci.length = out->size();
+	  ci.keepalive = keepalive_request();
+	  generate_reply_headers(ci);
+	}
+      else if (req.method == "GET" && req.uri == "/tun-destroy")
+	{
+	  // alloc output buffer
+	  std::ostringstream os;
+
+	  // destroy tun object
+	  parent()->destroy_tun(os);
+
+	  // build JSON return dictionary
+	  Json::Value jout(Json::objectValue);
+	  jout["log_txt"] = string::remove_blanks(os.str());
+
+	  out = buf_from_string(jout.toStyledString());
+
+	  WS::Server::ContentInfo ci;
+	  ci.http_status = HTTP::Status::OK;
+	  ci.type = "application/json";
 	  ci.length = out->size();
 	  ci.keepalive = keepalive_request();
 	  generate_reply_headers(ci);
@@ -272,13 +316,32 @@ private:
 
   virtual bool http_out_eof() override
   {
-    OPENVPN_LOG("HTTP output EOF");
+    //OPENVPN_LOG("HTTP output EOF");
     return true;
   }
 
   virtual void http_stop(const int status, const std::string& description) override
   {
-    OPENVPN_LOG("INSTANCE STOP : " << WS::Server::Status::error_str(status) << " : " << description);
+    if (status != WS::Server::Status::E_SUCCESS)
+      OPENVPN_LOG("INSTANCE STOP : " << WS::Server::Status::error_str(status) << " : " << description);
+  }
+
+  HANDLE get_client_pipe() const
+  {
+    AsioPolySock::NamedPipe* np = dynamic_cast<AsioPolySock::NamedPipe*>(sock.get());
+    if (!np)
+      throw Exception("only named pipe clients are allowed");
+    return np->handle.native_handle();
+  }
+
+  Win::ScopedHANDLE get_client_process(const HANDLE pipe, ULONG pid_hint) const
+  {
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
+    pid_hint = Win::NamedPipePeerInfo::get_pid(pipe, true);
+#endif
+    if (!pid_hint)
+      throw Exception("cannot determine client PID");
+    return Win::NamedPipePeerInfo::get_process(pid_hint, false);
   }
 
   MyListener* parent()
@@ -377,7 +440,10 @@ public:
   {
     asio::post(*io_context, [this]() {
 	if (listener)
-	  listener->stop();
+	  {
+	    listener->destroy_tun();
+	    listener->stop();
+	  }
       });
   }
 
