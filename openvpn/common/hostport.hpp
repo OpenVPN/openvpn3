@@ -33,6 +33,11 @@ namespace openvpn {
   namespace HostPort {
     OPENVPN_EXCEPTION(host_port_error);
 
+    inline bool is_valid_port(const unsigned int port)
+    {
+      return port < 65536;
+    }
+
     inline bool is_valid_port(const std::string& port, unsigned int *value = nullptr)
     {
       return parse_number_validate<unsigned int>(port, 5, 1, 65535, value);
@@ -42,6 +47,12 @@ namespace openvpn {
     {
       if (!is_valid_port(port, value))
 	OPENVPN_THROW(host_port_error, "bad " << title << " port number: " << Unicode::utf8_printable(port, 16));
+    }
+
+    inline void validate_port(const unsigned int port, const std::string& title)
+    {
+      if (!is_valid_port(port))
+	OPENVPN_THROW(host_port_error, "bad " << title << " port number: " << port);
     }
 
     inline unsigned short parse_port(const std::string& port, const std::string& title)
