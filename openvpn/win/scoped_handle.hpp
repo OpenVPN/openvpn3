@@ -72,6 +72,11 @@ namespace openvpn {
 	handle = h;
       }
 
+      void reset()
+      {
+	close();
+      }
+
       // unusual semantics: replace handle without closing it first
       void replace(HANDLE h)
       {
