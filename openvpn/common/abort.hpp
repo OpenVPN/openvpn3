@@ -25,6 +25,6 @@
 #ifndef OPENVPN_COMMON_ABORT_H
 #define OPENVPN_COMMON_ABORT_H
 
-#include <stdlib.h> // defines std::abort()
+#include <cstdlib> // defines std::abort()
 
 #endif // OPENVPN_COMMON_ABORT_H
