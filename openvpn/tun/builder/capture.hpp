@@ -31,9 +31,16 @@
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/hostport.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/client/rgopt.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/addr/route.hpp>
+#include <openvpn/http/urlparse.hpp>
+
+#ifdef HAVE_JSONCPP
+#include <openvpn/common/jsonhelper.hpp>
+#endif
 
 namespace openvpn {
   class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcount>
@@ -43,10 +50,11 @@ namespace openvpn {
 
     // builder data classes
 
-    struct RemoteAddress {
-      RemoteAddress() : ipv6(false) {}
+    class RemoteAddress
+    {
+    public:
       std::string address;
-      bool ipv6;
+      bool ipv6 = false;
 
       std::string to_string() const
       {
@@ -55,13 +63,47 @@ namespace openvpn {
 	  ret += " [IPv6]";
 	return ret;
       }
+
+      bool defined() const
+      {
+	return !address.empty();
+      }
+
+      void validate(const std::string& title) const
+      {
+	IP::Addr(address, title, ipv6 ? IP::Addr::V6 : IP::Addr::V4);
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["address"] = Json::Value(address);
+	root["ipv6"] = Json::Value(ipv6);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	if (!json::is_dict(root, title))
+	  return;
+	json::to_string(root, address, "address", title);
+	json::to_bool(root, ipv6, "ipv6", title);
+      }
+#endif
     };
 
-    struct RerouteGW {
-      RerouteGW() : ipv4(false), ipv6(false), flags(0) {}
-      bool ipv4;
-      bool ipv6;
-      unsigned int flags;
+    class RerouteGW
+    {
+    public:
+      bool ipv4 = false;
+      bool ipv6 = false;
+      unsigned int flags = 0;
 
       std::string to_string() const
       {
@@ -70,15 +112,45 @@ namespace openvpn {
 	os << "IPv4=" << ipv4 << " IPv6=" << ipv6 << " flags=" << rgf.to_string();
 	return os.str();
       }
+
+      void validate(const std::string& title) const
+      {
+	// nothing to validate
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["ipv4"] = Json::Value(ipv4);
+	root["ipv6"] = Json::Value(ipv6);
+	root["flags"] = Json::Value((Json::UInt)flags);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	json::assert_dict(root, title);
+	json::to_bool(root, ipv4, "ipv4", title);
+	json::to_bool(root, ipv6, "ipv6", title);
+	json::to_uint(root, flags, "flags", title);
+      }
+#endif
     };
 
-    struct Route {
-      Route() : prefix_length(0), ipv6(false), net30(false) {}
+    class RouteBase
+    {
+    public:
       std::string address;
-      int prefix_length;
+      int prefix_length = 0;
       std::string gateway; // optional
-      bool ipv6;
-      bool net30;
+      bool ipv6 = false;
+      bool net30 = false;
 
       std::string to_string() const
       {
@@ -92,12 +164,72 @@ namespace openvpn {
 	  os << " [net30]";
 	return os.str();
       }
+
+    protected:
+      void validate_(const std::string& title, const bool require_canonical) const
+      {
+	const IP::Addr::Version ver = ipv6 ? IP::Addr::V6 : IP::Addr::V4;
+	const IP::Route route = IP::route_from_string_prefix(address, prefix_length, title, ver);
+	if (require_canonical && !route.is_canonical())
+	  OPENVPN_THROW_EXCEPTION(title << " : not a canonical route: " << route);
+	if (!gateway.empty())
+	  IP::Addr(gateway, title + ".gateway", ver);
+	if (net30 && route.prefix_len != 30)
+	  OPENVPN_THROW_EXCEPTION(title << " : not a net30 route: " << route);
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["address"] = Json::Value(address);
+	root["prefix_length"] = Json::Value(prefix_length);
+	root["gateway"] = Json::Value(gateway);
+	root["ipv6"] = Json::Value(ipv6);
+	root["net30"] = Json::Value(net30);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	json::assert_dict(root, title);
+	json::to_string(root, address, "address", title);
+	json::to_int(root, prefix_length, "prefix_length", title);
+	json::to_string(root, gateway, "gateway", title);
+	json::to_bool(root, ipv6, "ipv6", title);
+	json::to_bool(root, net30, "net30", title);
+      }
+#endif
     };
 
-    struct DNSServer {
-      DNSServer() : ipv6(false) {}
+    class RouteAddress : public RouteBase // may be non-canonical
+    {
+    public:
+      void validate(const std::string& title) const
+      {
+	validate_(title, false);
+      }
+    };
+
+    class Route : public RouteBase // must be canonical
+    {
+    public:
+      void validate(const std::string& title) const
+      {
+	validate_(title, true);
+      }
+    };
+
+    class DNSServer
+    {
+    public:
       std::string address;
-      bool ipv6;
+      bool ipv6 = false;
 
       std::string to_string() const
       {
@@ -106,48 +238,166 @@ namespace openvpn {
 	  ret += " [IPv6]";
 	return ret;
       }
+
+      void validate(const std::string& title) const
+      {
+	IP::Addr(address, title, ipv6 ? IP::Addr::V6 : IP::Addr::V4);
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["address"] = Json::Value(address);
+	root["ipv6"] = Json::Value(ipv6);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	json::assert_dict(root, title);
+	json::to_string(root, address, "address", title);
+	json::to_bool(root, ipv6, "ipv6", title);
+      }
+#endif
     };
 
-    struct SearchDomain {
+    class SearchDomain
+    {
+    public:
       std::string domain;
 
       std::string to_string() const
       {
 	return domain;
       }
+
+      void validate(const std::string& title) const
+      {
+	HostPort::validate_host(domain, title);
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["domain"] = Json::Value(domain);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	json::assert_dict(root, title);
+	json::to_string(root, domain, "domain", title);
+      }
+#endif
     };
 
-    struct ProxyBypass {
+    class ProxyBypass
+    {
+    public:
       std::string bypass_host;
 
       std::string to_string() const
       {
 	return bypass_host;
       }
+
+      bool defined() const
+      {
+	return !bypass_host.empty();
+      }
+
+      void validate(const std::string& title) const
+      {
+	if (defined())
+	  HostPort::validate_host(bypass_host, title);
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["bypass_host"] = Json::Value(bypass_host);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	json::assert_dict(root, title);
+	json::to_string(root, bypass_host, "bypass_host", title);
+      }
+#endif
     };
 
-    struct ProxyAutoConfigURL {
+    class ProxyAutoConfigURL
+    {
+    public:
       std::string url;
-
-      bool defined() const {
-	return !url.empty();
-      }
 
       std::string to_string() const
       {
 	return url;
       }
-    };
-
-    struct ProxyHostPort {
-      std::string host;
-      int port;
-
-      ProxyHostPort() : port(0) {}
 
       bool defined() const {
-	return !host.empty();
+	return !url.empty();
       }
+
+      void validate(const std::string& title) const
+      {
+	try {
+	  if (defined())
+	    URL::Parse(url);
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_THROW_EXCEPTION(title << " : error parsing ProxyAutoConfigURL: " << e.what());
+	  }
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["url"] = Json::Value(url);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	if (!json::is_dict(root, title))
+	  return;
+	json::to_string(root, url, "url", title);
+      }
+#endif
+    };
+
+    class ProxyHostPort
+    {
+    public:
+      std::string host;
+      int port = 0;
 
       std::string to_string() const
       {
@@ -155,10 +405,47 @@ namespace openvpn {
 	os << host << ' ' << port;
 	return os.str();
       }
+
+      bool defined() const {
+	return !host.empty();
+      }
+
+      void validate(const std::string& title) const
+      {
+	if (defined())
+	  {
+	    HostPort::validate_host(host, title);
+	    HostPort::validate_port(port, title);
+	  }
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["host"] = Json::Value(host);
+	root["port"] = Json::Value(port);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	if (!json::is_dict(root, title))
+	  return;
+	json::to_string(root, host, "host", title);
+	json::to_int(root, port, "port", title);
+      }
+#endif
     };
 
-    struct WINSServer {
-      WINSServer() {}
+    class WINSServer
+    {
+    public:
       std::string address;
 
       std::string to_string() const
@@ -166,14 +453,32 @@ namespace openvpn {
 	std::string ret = address;
 	return ret;
       }
-    };
 
-    TunBuilderCapture() : mtu(0),
-			  tunnel_address_index_ipv4(-1),
-			  tunnel_address_index_ipv6(-1),
-			  block_ipv6(false)
-    {
-    }
+      void validate(const std::string& title) const
+      {
+	IP::Addr(address, title, IP::Addr::V4);
+      }
+
+    private:
+      friend TunBuilderCapture;
+
+#ifdef HAVE_JSONCPP
+      friend json;
+
+      Json::Value to_json() const
+      {
+	Json::Value root(Json::objectValue);
+	root["address"] = Json::Value(address);
+	return root;
+      }
+
+      void from_json(const Json::Value& root, const std::string& title)
+      {
+	json::assert_dict(root, title);
+	json::to_string(root, address, "address", title);
+      }
+#endif
+    };
 
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
     {
@@ -184,7 +489,7 @@ namespace openvpn {
 
     virtual bool tun_builder_add_address(const std::string& address, int prefix_length, const std::string& gateway, bool ipv6, bool net30)
     {
-      Route r;
+      RouteAddress r;
       r.address = address;
       r.prefix_length = prefix_length;
       r.gateway = gateway;
@@ -297,7 +602,7 @@ namespace openvpn {
       return true;
     }
 
-    const Route* vpn_ipv4() const
+    const RouteAddress* vpn_ipv4() const
     {
       if (tunnel_address_index_ipv4 >= 0)
 	return &tunnel_addresses[tunnel_address_index_ipv4];
@@ -305,7 +610,7 @@ namespace openvpn {
 	return nullptr;
     }
 
-    const Route* vpn_ipv6() const
+    const RouteAddress* vpn_ipv6() const
     {
       if (tunnel_address_index_ipv6 >= 0)
 	return &tunnel_addresses[tunnel_address_index_ipv6];
@@ -313,7 +618,7 @@ namespace openvpn {
 	return nullptr;
     }
 
-    const Route* vpn_ip(const IP::Addr::Version v) const
+    const RouteAddress* vpn_ip(const IP::Addr::Version v) const
     {
       switch (v)
 	{
@@ -326,6 +631,23 @@ namespace openvpn {
 	}
     }
 
+    void validate() const
+    {
+      validate_mtu("root");
+      remote_address.validate("remote_address");
+      validate_list(tunnel_addresses, "tunnel_addresses");
+      validate_tunnel_address_indices("root");
+      reroute_gw.validate("reroute_gw");
+      validate_list(add_routes, "add_routes");
+      validate_list(exclude_routes, "exclude_routes");
+      validate_list(dns_servers, "dns_servers");
+      validate_list(search_domains, "search_domains");
+      validate_list(proxy_bypass, "proxy_bypass");
+      proxy_auto_config_url.validate("proxy_auto_config_url");
+      http_proxy.validate("http_proxy");
+      https_proxy.validate("https_proxy");
+    }
+
     std::string to_string() const
     {
       std::ostringstream os;
@@ -333,51 +655,91 @@ namespace openvpn {
       if (mtu)
 	os << "MTU: " << mtu << std::endl;
       os << "Remote Address: " << remote_address.to_string() << std::endl;
-      render_route_list(os, "Tunnel Addresses", tunnel_addresses);
+      render_list(os, "Tunnel Addresses", tunnel_addresses);
       os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
       os << "Block IPv6: " << (block_ipv6 ? "yes" : "no") << std::endl;
-      render_route_list(os, "Add Routes", add_routes);
-      render_route_list(os, "Exclude Routes", exclude_routes);
-      {
-	os << "DNS Servers:" << std::endl;
-	for (std::vector<DNSServer>::const_iterator i = dns_servers.begin(); i != dns_servers.end(); ++i)
-	  os << "  " << i->to_string() << std::endl;
-      }
-      {
-	os << "Search Domains:" << std::endl;
-	for (std::vector<SearchDomain>::const_iterator i = search_domains.begin(); i != search_domains.end(); ++i)
-	  os << "  " << i->to_string() << std::endl;
-      }
-      if (!proxy_bypass.empty()) {
-	os << "Proxy Bypass:" << std::endl;
-	for (std::vector<ProxyBypass>::const_iterator i = proxy_bypass.begin(); i != proxy_bypass.end(); ++i)
-	  os << "  " << i->to_string() << std::endl;
-      }
+      render_list(os, "Add Routes", add_routes);
+      render_list(os, "Exclude Routes", exclude_routes);
+      render_list(os, "DNS Servers", dns_servers);
+      render_list(os, "Search Domains", search_domains);
+      if (!proxy_bypass.empty())
+	render_list(os, "Proxy Bypass", proxy_bypass);
       if (proxy_auto_config_url.defined())
 	os << "Proxy Auto Config URL: " << proxy_auto_config_url.to_string() << std::endl;
       if (http_proxy.defined())
 	os << "HTTP Proxy: " << http_proxy.to_string() << std::endl;
       if (https_proxy.defined())
 	os << "HTTPS Proxy: " << https_proxy.to_string() << std::endl;
-
-      if (!wins_servers.empty()) {
-	os << "WINS Servers:" << std::endl;
-	for (std::vector<WINSServer>::const_iterator i = wins_servers.begin(); i != wins_servers.end(); ++i)
-	  os << "  " << i->to_string() << std::endl;
-      }
-
+      if (!wins_servers.empty())
+	render_list(os, "WINS Servers", wins_servers);
       return os.str();
     }
 
+#ifdef HAVE_JSONCPP
+
+    Json::Value to_json() const
+    {
+      Json::Value root(Json::objectValue);
+      root["session_name"] = Json::Value(session_name);
+      root["mtu"] = Json::Value(mtu);
+      if (remote_address.defined())
+	root["remote_address"] = remote_address.to_json();
+      json::from_vector(root, tunnel_addresses, "tunnel_addresses");
+      root["tunnel_address_index_ipv4"] = Json::Value(tunnel_address_index_ipv4);
+      root["tunnel_address_index_ipv6"] = Json::Value(tunnel_address_index_ipv6);
+      root["reroute_gw"] = reroute_gw.to_json();
+      root["block_ipv6"] = Json::Value(block_ipv6);
+      json::from_vector(root, add_routes, "add_routes");
+      json::from_vector(root, exclude_routes, "exclude_routes");
+      json::from_vector(root, dns_servers, "dns_servers");
+      json::from_vector(root, wins_servers, "wins_servers");
+      json::from_vector(root, search_domains, "search_domains");
+      json::from_vector(root, proxy_bypass, "proxy_bypass");
+      if (proxy_auto_config_url.defined())
+	root["proxy_auto_config_url"] = proxy_auto_config_url.to_json();
+      if (http_proxy.defined())
+	root["http_proxy"] = http_proxy.to_json();
+      if (https_proxy.defined())
+	root["https_proxy"] = https_proxy.to_json();
+      return root;
+    }
+
+    static TunBuilderCapture::Ptr from_json(const Json::Value& root)
+    {
+      const std::string title = "root";
+      TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
+      json::assert_dict(root, title);
+      json::to_string(root, tbc->session_name, "session_name", title);
+      json::to_int(root, tbc->mtu, "mtu", title);
+      tbc->remote_address.from_json(root["remote_address"], "remote_address");
+      json::to_vector(root, tbc->tunnel_addresses, "tunnel_addresses", title);
+      json::to_int(root, tbc->tunnel_address_index_ipv4, "tunnel_address_index_ipv4", title);
+      json::to_int(root, tbc->tunnel_address_index_ipv6, "tunnel_address_index_ipv6", title);
+      tbc->reroute_gw.from_json(root["reroute_gw"], "reroute_gw");
+      json::to_bool(root, tbc->block_ipv6, "block_ipv6", title);
+      json::to_vector(root, tbc->add_routes, "add_routes", title);
+      json::to_vector(root, tbc->exclude_routes, "exclude_routes", title);
+      json::to_vector(root, tbc->dns_servers, "dns_servers", title);
+      json::to_vector(root, tbc->wins_servers, "wins_servers", title);
+      json::to_vector(root, tbc->search_domains, "search_domains", title);
+      json::to_vector(root, tbc->proxy_bypass, "proxy_bypass", title);
+      tbc->proxy_auto_config_url.from_json(root["proxy_auto_config_url"], "proxy_auto_config_url");
+      tbc->http_proxy.from_json(root["http_proxy"], "http_proxy");
+      tbc->https_proxy.from_json(root["https_proxy"], "https_proxy");
+      return tbc;
+    }
+
+#endif // HAVE_JSONCPP
+
     // builder data
     std::string session_name;
-    int mtu;
+    int mtu = 0;
     RemoteAddress remote_address;          // real address of server
-    std::vector<Route> tunnel_addresses;   // local tunnel addresses
-    int tunnel_address_index_ipv4;         // index into tunnel_addresses for IPv4 entry (or -1 if undef)
-    int tunnel_address_index_ipv6;         // index into tunnel_addresses for IPv6 entry (or -1 if undef)
+    std::vector<RouteAddress> tunnel_addresses;   // local tunnel addresses
+    int tunnel_address_index_ipv4 = -1;    // index into tunnel_addresses for IPv4 entry (or -1 if undef)
+    int tunnel_address_index_ipv6 = -1;    // index into tunnel_addresses for IPv6 entry (or -1 if undef)
     RerouteGW reroute_gw;                  // redirect-gateway info
-    bool block_ipv6;                       // block IPv6 traffic while VPN is active
+    bool block_ipv6 = false;               // block IPv6 traffic while VPN is active
     std::vector<Route> add_routes;         // routes that should be added to tunnel
     std::vector<Route> exclude_routes;     // routes that should be excluded from tunnel
     std::vector<DNSServer> dns_servers;    // VPN DNS servers
@@ -391,12 +753,52 @@ namespace openvpn {
     std::vector<WINSServer> wins_servers;  // Windows WINS servers
 
   private:
-    void render_route_list(std::ostream& os, const char *title, const std::vector<Route>& list) const
+    template <typename LIST>
+    static void render_list(std::ostream& os, const std::string& title, const LIST& list)
     {
       os << title << ':' << std::endl;
-      for (std::vector<Route>::const_iterator i = list.begin(); i != list.end(); ++i)
-	os << "  " << i->to_string() << std::endl;
+      for (auto &e : list)
+	os << "  " << e.to_string() << std::endl;
     }
+
+    template <typename LIST>
+    static void validate_list(const LIST& list, const std::string& title)
+    {
+      int i = 0;
+      for (auto &e : list)
+	{
+	  e.validate(title + '[' + std::to_string(i) + ']');
+	  ++i;
+	}
+    }
+
+    bool validate_tunnel_index(const int index) const
+    {
+      if (index == -1)
+	return true;
+      return index >= 0 && index <= tunnel_addresses.size();
+    }
+
+    void validate_tunnel_address_indices(const std::string& title) const
+    {
+      if (!validate_tunnel_index(tunnel_address_index_ipv4))
+	OPENVPN_THROW_EXCEPTION(title << ".tunnel_address_index_ipv4 : IPv4 tunnel address index out of range: " << tunnel_address_index_ipv4);
+      if (!validate_tunnel_index(tunnel_address_index_ipv6))
+	OPENVPN_THROW_EXCEPTION(title << ".tunnel_address_index_ipv6 : IPv6 tunnel address index out of range: " << tunnel_address_index_ipv6);
+      const RouteAddress* r4 = vpn_ipv4();
+      if (r4 && r4->ipv6)
+	OPENVPN_THROW_EXCEPTION(title << ".tunnel_address_index_ipv4 : IPv4 tunnel address index points to wrong address type: " << r4->to_string());
+      const RouteAddress* r6 = vpn_ipv6();
+      if (r6 && !r6->ipv6)
+	OPENVPN_THROW_EXCEPTION(title << ".tunnel_address_index_ipv6 : IPv6 tunnel address index points to wrong address type: " << r6->to_string());
+    }
+
+    void validate_mtu(const std::string& title) const
+    {
+      if (mtu < 0 || mtu > 65536)
+	OPENVPN_THROW_EXCEPTION(title << ".mtu : MTU out of range: " << mtu);
+    }
+
   };
 }
 
