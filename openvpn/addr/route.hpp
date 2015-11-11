@@ -84,20 +84,10 @@ namespace openvpn {
 	  {
 	    r.prefix_len = parse_number_throw<unsigned int>(pair[1], "prefix length");
 	    if (r.prefix_len > r.addr.size())
-	      throw route_error(rtstr + ": bad prefix len");
+	      OPENVPN_THROW(route_error, (title ? title : "route") << " : bad prefix length : " << rtstr);
 	  }
 	else
 	  r.prefix_len = r.addr.size();
-	return r;
-      }
-
-      static RouteType from_string_prefix(const std::string& addrstr,
-					  unsigned int prefix_len,
-					  const char *title = nullptr)
-      {
-	RouteType r;
-	r.addr = ADDR::from_string(addrstr, title);
-	r.prefix_len = prefix_len;
 	return r;
       }
 
@@ -229,6 +219,21 @@ namespace openvpn {
     OPENVPN_OSTREAM(RouteList, to_string);
     OPENVPN_OSTREAM(Route4List, to_string);
     OPENVPN_OSTREAM(Route6List, to_string);
+
+    inline Route route_from_string_prefix(const std::string& addrstr,
+					  const unsigned int prefix_len,
+					  const std::string& title,
+					  const IP::Addr::Version required_version = IP::Addr::UNSPEC)
+      {
+	Route r;
+	r.addr = IP::Addr(addrstr, title, required_version);
+	r.prefix_len = prefix_len;
+	if (r.prefix_len > r.addr.size())
+	  OPENVPN_THROW(Route::route_error, title << " : bad prefix length : " << addrstr);
+	return r;
+      }
+
+
   }
 }
 
