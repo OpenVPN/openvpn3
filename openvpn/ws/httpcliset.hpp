@@ -161,11 +161,20 @@ namespace openvpn {
 	// successful range of 2xx.
 	bool http_status_success() const
 	{
-	  if (status != WS::Client::Status::E_SUCCESS)
-	    return false;
-	  if (reply.status_code < 200 || reply.status_code >= 300)
-	    return false;
-	  return true;
+	  return comm_status_success() && request_status_success();
+	}
+
+	// Return true if communication succeeded
+	bool comm_status_success() const
+	{
+	  return status == WS::Client::Status::E_SUCCESS;
+	}
+
+	// Return true if request succeeded, i.e. HTTP status
+	// code was in the successful range of 2xx.
+	bool request_status_success() const
+	{
+	  return reply.status_code >= 200 && reply.status_code < 300;
 	}
 
 	void dump(std::ostream& os, const TransactionSet& ts) const
