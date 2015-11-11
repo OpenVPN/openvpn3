@@ -19,33 +19,35 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Special ActionList that transmits actions to a named pipe
-// server that will execute them in LocalSystem context.
+// Transmit TunBuilderCapture object (as JSON) to a named pipe
+// server that will establish tunnel.
 
 #ifndef OPENVPN_CLIENT_WIN_CMDAGENT_H
 #define OPENVPN_CLIENT_WIN_CMDAGENT_H
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/action.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/wstring.hpp>
+#include <openvpn/common/jsonhelper.hpp>
+#include <openvpn/common/hexstr.hpp>
+#include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/ws/httpcliset.hpp>
 #include <openvpn/client/win/agentconfig.hpp>
 #include <openvpn/win/modname.hpp>
-
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
+#include <openvpn/tun/win/client/setupbase.hpp>
 #include <openvpn/win/npinfo.hpp>
-#endif
 
 namespace openvpn {
 
-  class WinCommandAgent : public ActionListFactory
+  class WinCommandAgent : public TunWin::SetupFactory
   {
   public:
     typedef RCPtr<WinCommandAgent> Ptr;
 
-    static ActionListFactory::Ptr new_agent(const OptionList& opt)
+    OPENVPN_EXCEPTION(ovpnagent);
+
+    static TunWin::SetupFactory::Ptr new_agent(const OptionList& opt)
     {
       return new WinCommandAgent(opt);
     }
@@ -67,26 +69,90 @@ namespace openvpn {
       int debug_level;
     };
 
-    class ActionListClient : public ActionList
+    class SetupClient : public TunWin::SetupBase
     {
     public:
-      ActionListClient(const Config::Ptr& config_arg)
+      SetupClient(const Config::Ptr& config_arg)
 	: config(config_arg)
       {
       }
 
     private:
-      virtual void execute(std::ostream& os) override
+      virtual HANDLE establish(const TunBuilderCapture& pull, std::ostream& os) override // TunWin::SetupBase
       {
-	if (is_halt())
-	  return;
+	os << "SetupClient: transmitting tun setup list to " << config->npserv << std::endl;
 
-	os << "ActionListClient: transmitting action list to " << config->npserv << std::endl;
+	// Build JSON request
+	Json::Value jreq(Json::objectValue);
+#if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
+	jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
+#endif
+	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
+	const std::string jtxt = jreq.toStyledString();
+	os << jtxt; // dump it
 
-	const std::string content = get_content();
+	// Create HTTP transaction container
+	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set();
 
-	os << content;
+	// Make transaction
+	{
+	  std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+	  t->req.method = "POST";
+	  t->req.uri = "/tun-setup";
+	  t->ci.type = "application/json";
+	  t->content_out.push_back(buf_from_string(jtxt));
+	  ts->transactions.push_back(std::move(t));
+	}
 
+	// Execute transaction
+	WS::ClientSet::new_request_synchronous(ts);
+
+	// Get result
+	const Json::Value jres = get_json_result(os, *ts);
+
+	// Dump log
+	const std::string log_txt = json::get_string(jres, "log_txt");
+	os << log_txt;
+
+	// Parse TAP handle
+	const std::string tap_handle_hex = json::get_string(jres, "tap_handle_hex");
+	os << "TAP handle: " << tap_handle_hex << std::endl;
+	HANDLE h;
+	Buffer hb((unsigned char *)&h, sizeof(h), false);
+	parse_hex(hb, tap_handle_hex);
+	if (hb.size() != sizeof(h))
+	  throw ovpnagent("tap_handle_hex unexpected size");
+	return h;
+      }
+
+      virtual void destroy(std::ostream& os) override // defined by DestructorBase
+      {
+	os << "SetupClient: transmitting tun destroy request to " << config->npserv << std::endl;
+
+	// Create HTTP transaction container
+	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set();
+
+	// Make transaction
+	{
+	  std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+	  t->req.method = "GET";
+	  t->req.uri = "/tun-destroy";
+	  ts->transactions.push_back(std::move(t));
+	}
+
+	// Execute transaction
+	WS::ClientSet::new_request_synchronous(ts);
+
+	// Process result
+	const Json::Value jres = get_json_result(os, *ts);
+
+	// Dump log
+	const std::string log_txt = json::get_string(jres, "log_txt");
+	os << log_txt;
+      }
+
+      WS::ClientSet::TransactionSet::Ptr new_transaction_set()
+      {
 	WS::Client::Config::Ptr hc(new WS::Client::Config());
 	hc->frame = frame_init_simple(2048);
 	hc->connect_timeout = 10;
@@ -106,50 +172,59 @@ namespace openvpn {
 	      Win::NamedPipePeerInfoServer npinfo(np->handle.native_handle());
 	      const std::string server_exe = wstring::to_utf8(npinfo.exe_path);
 	      if (!Agent::valid_pipe(config->client_exe, server_exe))
-		OPENVPN_THROW_EXCEPTION(config->npserv << " server running from " << server_exe << " could not be validated");
+		OPENVPN_THROW(ovpnagent, config->npserv << " server running from " << server_exe << " could not be validated");
 	    }
 	};
 #endif
-
-	{
-	  std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
-	  t->req.method = "POST";
-	  t->req.uri = "/actions";
-	  t->ci.type = "application/x-ovpn-actions";
-	  t->content_out.push_back(buf_from_string(content));
-	  ts->transactions.push_back(std::move(t));
-	}
-
-	// execute transaction
-	WS::ClientSet::new_request_synchronous(ts);
-
-	// dump result
-	{
-	  WS::ClientSet::Transaction& t = *ts->transactions.at(0);
-	  os << t.format_status(*ts) << std::endl;
-	  os << t.content_in.to_string();
-	  if (!t.http_status_success())
-	    throw Exception("ovpnagent communication error");
-	}
+	return ts;
       }
 
-      std::string get_content() const
+      Json::Value get_json_result(std::ostream& os, WS::ClientSet::TransactionSet& ts)
       {
-	Json::Value jact(Json::arrayValue);
-	for (auto &a : *this)
-	  jact.append(a->to_json());
-	return jact.toStyledString();
+	// Get content
+	if (ts.transactions.size() != 1)
+	  throw ovpnagent("unexpected transaction set size");
+	WS::ClientSet::Transaction& t = *ts.transactions[0];
+	const std::string content = t.content_in.to_string();
+	os << t.format_status(ts) << std::endl;
+	if (!t.comm_status_success())
+	  {
+	    os << content;
+	    throw ovpnagent("communication error");
+	  }
+	if (!t.request_status_success())
+	  {
+	    os << content;
+	    throw ovpnagent("request error");
+	  }
+
+	// Verify content-type
+	if (t.reply.headers.get_value_trim("content-type") != "application/json")
+	  {
+	    os << content;
+	    throw ovpnagent("unexpected content-type");
+	  }
+
+	// Parse the returned json dict
+	Json::Value jres;
+	Json::Reader reader;
+	if (!reader.parse(content, jres, false))
+	  {
+	    os << content;
+	    OPENVPN_THROW(ovpnagent, "error parsing returned JSON: " << reader.getFormatedErrorMessages());
+	  }
+	return jres;
       }
 
       Config::Ptr config;
     };
 
-    virtual ActionList::Ptr new_action_list()
+    virtual TunWin::SetupBase::Ptr new_setup_obj() override
     {
       if (config)
-	return new ActionListClient(config);
+	return new SetupClient(config);
       else
-	return new ActionList();
+	return new TunWin::Setup();
     }
 
     WinCommandAgent(const OptionList& opt_parent)
