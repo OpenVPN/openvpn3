@@ -286,29 +286,6 @@ namespace openvpn {
 	return "ActionWFP iface_index=" + std::to_string(iface_index) + " enable=" + std::to_string(enable);
       }
 
-#ifdef HAVE_JSONCPP
-      virtual Json::Value to_json() const override
-      {
-	Json::Value root(Json::objectValue);
-	root["type"] = "ActionWFP";
-	root["iface_index"] = Json::Value((Json::LargestUInt)iface_index);
-	root["enable"] = Json::Value(enable);
-	return root;
-      }
-
-      static ActionWFP::Ptr from_json_untrusted(const Json::Value& jact,
-						const WFPContext::Ptr& wfp)
-      {
-	const Json::Value& p1 = jact["iface_index"];
-	if (!p1.isNumeric())
-	  throw Exception("ActionWFP: missing json number 'iface_index'");
-	const Json::Value& p2 = jact["enable"];
-	if (!p2.isBool())
-	  throw Exception("ActionWFP: missing json bool 'enable'");
-	return new ActionWFP(p1.asLargestUInt(), p2.asBool(), wfp);
-      }
-#endif
-
     private:
       const DWORD iface_index;
       bool enable;

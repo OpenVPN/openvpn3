@@ -52,16 +52,6 @@ namespace openvpn {
       return "Sleeping for " + openvpn::to_string(dwMilliseconds) + " milliseconds...";
     }
 
-#ifdef HAVE_JSONCPP
-    virtual Json::Value to_json() const override
-    {
-      Json::Value root(Json::objectValue);
-      root["type"] = "WinSleep";
-      root["value"] = Json::Value((Json::UInt)dwMilliseconds);
-      return root;
-    }
-#endif
-
   private:
     DWORD dwMilliseconds;
   };

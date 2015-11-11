@@ -850,28 +850,6 @@ namespace openvpn {
 	  return "Set DNS search domain: '" + search_domain + "' " + tap_guid;
 	}
 
-#ifdef HAVE_JSONCPP
-	virtual Json::Value to_json() const override
-	{
-	  Json::Value root(Json::objectValue);
-	  root["type"] = "ActionSetSearchDomain";
-	  root["search_domain"] = Json::Value(search_domain);
-	  root["tap_guid"] = Json::Value(tap_guid);
-	  return root;
-	}
-
-	static ActionSetSearchDomain::Ptr from_json_untrusted(const Json::Value& jact)
-	{
-	  const Json::Value& p1 = jact["search_domain"];
-	  if (!p1.isString())
-	    throw Exception("ActionSetSearchDomain: missing json string 'search_domain'");
-	  const Json::Value& p2 = jact["tap_guid"];
-	  if (!p2.isString())
-	    throw Exception("ActionSetSearchDomain: missing json string 'tap_guid'");
-	  return new ActionSetSearchDomain(p1.asString(), p2.asString());
-	}
-#endif
-
       private:
 	const std::string search_domain;
 	const std::string tap_guid;
@@ -983,24 +961,6 @@ namespace openvpn {
 	{
 	  return "ActionDeleteAllRoutesOnInterface iface_index=" + std::to_string(iface_index);
 	}
-
-#ifdef HAVE_JSONCPP
-	virtual Json::Value to_json() const override
-	{
-	  Json::Value root(Json::objectValue);
-	  root["type"] = "ActionDeleteAllRoutesOnInterface";
-	  root["iface_index"] = Json::Value((Json::LargestUInt)iface_index);
-	  return root;
-	}
-
-	static ActionDeleteAllRoutesOnInterface::Ptr from_json_untrusted(const Json::Value& jact)
-	{
-	  const Json::Value& p1 = jact["iface_index"];
-	  if (!p1.isNumeric())
-	    throw Exception("ActionDeleteAllRoutesOnInterface: missing json number 'iface_index'");
-	  return new ActionDeleteAllRoutesOnInterface(p1.asLargestUInt());
-	}
-#endif
 
       private:
 	static void remove_all_ipv4_routes_on_iface(DWORD index, ActionList& actions)
