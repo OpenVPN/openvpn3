@@ -60,7 +60,8 @@
 #include <openvpn/acceptor/tcp.hpp>
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/acceptor/namedpipe.hpp>
-#else
+#endif
+#ifdef ASIO_HAS_LOCAL_SOCKETS
 #include <openvpn/acceptor/unix.hpp>
 #endif
 
@@ -125,7 +126,7 @@ namespace openvpn {
 	typedef RCPtr<Config> Ptr;
 
 	Config() :
-#if !defined(OPENVPN_PLATFORM_WIN)
+#ifdef ASIO_HAS_LOCAL_SOCKETS
             unix_mode(0),
 #endif
 	    tcp_max(0),
@@ -143,7 +144,8 @@ namespace openvpn {
 	SSLFactoryAPI::Ptr ssl_factory;
 #if defined(OPENVPN_PLATFORM_WIN)
 	std::string sddl_string; // Windows named-pipe security descriptor as string
-#else
+#endif
+#ifdef ASIO_HAS_LOCAL_SOCKETS
 	mode_t unix_mode;
 #endif
 	unsigned int tcp_max;
@@ -747,7 +749,8 @@ namespace openvpn {
 		    queue_accept(acceptors.size() - 1);
 		  }
 		  break;
-#else
+#endif
+#ifdef ASIO_HAS_LOCAL_SOCKETS
 		case Protocol::UnixStream:
 		  {
 		    OPENVPN_LOG("HTTP Listen: " << listen_item.to_string());
