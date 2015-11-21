@@ -70,6 +70,12 @@ namespace openvpn {
 	  http.reset();
 	}
 
+	void abort(const std::string& message)
+	{
+	  if (http)
+	    http->abort(message);
+	}
+
 	bool alive() const
 	{
 	  return http && http->is_alive();
@@ -325,6 +331,12 @@ namespace openvpn {
 	  c.second->stop(false);
       }
 
+      void abort(const std::string& message)
+      {
+	for (auto &c : clients)
+	  c.second->abort(message);
+      }
+
     private:
       typedef unsigned int client_t;
 
@@ -374,6 +386,12 @@ namespace openvpn {
 	  halt = true;
 	  reconnect_timer.cancel();
 	  close_http(keepalive);
+	}
+
+	void abort(const std::string& message)
+	{
+	  if (ts)
+	    ts->hsc.abort(message);
 	}
 
       private:
