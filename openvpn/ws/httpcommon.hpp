@@ -50,7 +50,7 @@ namespace openvpn {
 	      typename STATUS,
 	      typename REQUEST_REPLY,
 	      typename CONTENT_INFO,
-	      typename CONTENT_LENGTH_TYPE,
+	      typename CONTENT_LENGTH_TYPE, // must be signed
 	      typename REFCOUNT_BASE
 	      >
     class HTTPBase : public REFCOUNT_BASE
@@ -141,6 +141,7 @@ namespace openvpn {
 	  frame(config_arg->frame),
 	  stats(config_arg->stats)
       {
+	static_assert(CONTENT_LENGTH_TYPE(-1) < CONTENT_LENGTH_TYPE(0), "CONTENT_LENGTH_TYPE must be signed");
 	rr_reset();
       }
 
