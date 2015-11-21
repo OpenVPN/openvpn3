@@ -22,35 +22,39 @@
 #ifndef OPENVPN_COMMON_CLEANUP_H
 #define OPENVPN_COMMON_CLEANUP_H
 
-#include <functional>
 #include <utility>
 
 namespace openvpn {
-  class Cleanup
+
+  template <class F>
+  class CleanupType
   {
   public:
-    Cleanup(const std::function<void()>& method)
-      : clean(method)
-    {}
-
-    Cleanup(std::function<void()>&& method)
+    CleanupType(F&& method) noexcept
       : clean(std::move(method))
-    {}
-
-    void release()
     {
-      clean = std::function<void()>();
     }
 
-    ~Cleanup()
+    CleanupType(CleanupType&&) = default;
+
+    ~CleanupType()
     {
-      if (clean)
-	clean();
+      clean();
     }
 
   private:
-    std::function<void()> clean;
+    CleanupType(const CleanupType&) = delete;
+    CleanupType& operator=(const CleanupType&) = delete;
+
+    F clean;
   };
+
+  template <class F>
+  CleanupType<F> Cleanup(F&& method) noexcept
+  {
+    return CleanupType<F>(std::move(method));
+  }
+
 }
 
 #endif
