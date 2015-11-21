@@ -33,6 +33,7 @@
 #include <limits>
 #include <unordered_map>
 
+#include <openvpn/common/asiostop.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -317,11 +318,16 @@ namespace openvpn {
 	cli->start();
       }
 
-      static void new_request_synchronous(const TransactionSet::Ptr& ts)
+      static void new_request_synchronous(const TransactionSet::Ptr& ts,
+					  Stop* stop=nullptr)
       {
 	asio::io_context io_context(1); // concurrency hint=1
 	ClientSet::Ptr cs;
 	try {
+	  AsioStopScope scope(io_context, stop, [&]() {
+	      if (cs)
+		cs->abort("stop message received");
+	    });
 	  cs.reset(new ClientSet(io_context));
 	  cs->new_request(ts);
 	  io_context.run();
@@ -331,8 +337,8 @@ namespace openvpn {
 	    if (cs)
 	      cs->stop();        // on exception, stop ClientSet
 	    io_context.poll();   // execute completion handlers
+	    throw;
 	  }
-	ts->hsc.reset();         // ensure that socket is destroyed here, not by parent
       }
 
       void stop()
