@@ -91,6 +91,8 @@ namespace openvpn {
       Frame::Ptr frame;
       SessionStats::Ptr stats;
 
+      Stop* stop = nullptr;
+
       TunPersist::Ptr tun_persist;
 
       TunWin::SetupFactory::Ptr tun_setup_factory;
@@ -174,7 +176,7 @@ namespace openvpn {
 		  {
 		    std::ostringstream os;
 		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
-		    th = tun_setup->establish(*po, os);
+		    th = tun_setup->establish(*po, config->stop, os);
 		  }
 
 		  // create ASIO wrapper for HANDLE

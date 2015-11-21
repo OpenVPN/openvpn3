@@ -27,6 +27,7 @@
 #include <windows.h> // for HANDLE
 
 #include <openvpn/common/destruct.hpp>
+#include <openvpn/common/stop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
 namespace openvpn {
@@ -37,7 +38,9 @@ namespace openvpn {
 
       OPENVPN_EXCEPTION(tun_win_setup);
 
-      virtual HANDLE establish(const TunBuilderCapture& pull, std::ostream& os) = 0;
+      virtual HANDLE establish(const TunBuilderCapture& pull,
+			       Stop* stop,
+			       std::ostream& os) = 0;
     };
 
     struct SetupFactory : public RC<thread_unsafe_refcount>

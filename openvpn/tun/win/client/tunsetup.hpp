@@ -49,7 +49,9 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
-      virtual HANDLE establish(const TunBuilderCapture& pull, std::ostream& os) override // defined by SetupBase
+      virtual HANDLE establish(const TunBuilderCapture& pull,
+			       Stop* stop,
+			       std::ostream& os) override // defined by SetupBase
       {
 	// close out old remove cmds, if they exist
 	destroy(os);
