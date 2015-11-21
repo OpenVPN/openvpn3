@@ -220,10 +220,7 @@ private:
 	    throw Exception("bad content-type");
 
 	  // parse the json dict
-	  Json::Value root;
-	  Json::Reader reader;
-	  if (!reader.parse(in.to_string(), root, false))
-	    OPENVPN_THROW_EXCEPTION("json parse error: " << reader.getFormatedErrorMessages());
+	  const Json::Value root = json::parse(in.to_string(), "JSON request");
 	  if (!root.isObject())
 	    throw Exception("json parse error: top level json object is not a dictionary");
 
