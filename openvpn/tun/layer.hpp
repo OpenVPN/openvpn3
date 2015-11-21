@@ -24,6 +24,8 @@
 #ifndef OPENVPN_TUN_LAYER_H
 #define OPENVPN_TUN_LAYER_H
 
+#include <openvpn/common/exception.hpp>
+
 namespace openvpn {
   class Layer
   {
@@ -55,13 +57,27 @@ namespace openvpn {
     {
       switch (type_)
 	{
+	case NONE:
+	  return "UNDEF_LAYER";
 	case OSI_LAYER_2:
 	  return "OSI_LAYER_2";
 	case OSI_LAYER_3:
 	  return "OSI_LAYER_3";
 	default:
-	  return "UNDEF_LAYER";
+	  throw Exception("Layer: unrecognized layer type");
 	}
+    }
+
+    static Layer from_str(const std::string& str)
+    {
+      if (str == "OSI_LAYER_3")
+	return Layer(OSI_LAYER_3);
+      else if (str == "OSI_LAYER_2")
+	return Layer(OSI_LAYER_2);
+      else if (str == "UNDEF_LAYER")
+	return Layer(NONE);
+      else
+	throw Exception("Layer: unrecognized layer string");
     }
 
     bool operator==(const Layer& other)
