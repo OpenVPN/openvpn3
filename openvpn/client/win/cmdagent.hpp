@@ -78,7 +78,9 @@ namespace openvpn {
       }
 
     private:
-      virtual HANDLE establish(const TunBuilderCapture& pull, std::ostream& os) override // TunWin::SetupBase
+      virtual HANDLE establish(const TunBuilderCapture& pull,
+			       Stop* stop,
+			       std::ostream& os) override // TunWin::SetupBase
       {
 	os << "SetupClient: transmitting tun setup list to " << config->npserv << std::endl;
 
@@ -105,7 +107,7 @@ namespace openvpn {
 	}
 
 	// Execute transaction
-	WS::ClientSet::new_request_synchronous(ts);
+	WS::ClientSet::new_request_synchronous(ts, stop);
 
 	// Get result
 	const Json::Value jres = get_json_result(os, *ts);
