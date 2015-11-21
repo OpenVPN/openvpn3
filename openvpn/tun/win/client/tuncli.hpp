@@ -173,7 +173,7 @@ namespace openvpn {
 		  HANDLE th;
 		  {
 		    std::ostringstream os;
-		    Cleanup os_print([&os](){ OPENVPN_LOG_STRING(os.str()); });
+		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
 		    th = tun_setup->establish(*po, os);
 		  }
 
