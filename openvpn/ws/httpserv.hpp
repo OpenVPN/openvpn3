@@ -363,6 +363,17 @@ namespace openvpn {
 	    return parent;
 	  }
 
+#ifdef ASIO_HAS_LOCAL_SOCKETS
+	  int unix_fd()
+	  {
+	    AsioPolySock::Unix* uds = dynamic_cast<AsioPolySock::Unix*>(sock.get());
+	    if (uds)
+	      return uds->socket.native_handle();
+	    else
+	      return -1;
+	  }
+#endif
+
 	  asio::io_context& io_context;
 	  AsioPolySock::Base::Ptr sock;
 	  std::deque<BufferAllocated> pipeline;
