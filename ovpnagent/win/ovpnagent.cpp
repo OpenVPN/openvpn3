@@ -108,11 +108,13 @@ public:
   {
   }
 
-  Win::ScopedHANDLE establish_tun(const TunBuilderCapture& tbc, std::ostream& os)
+  Win::ScopedHANDLE establish_tun(const TunBuilderCapture& tbc,
+				  Stop* stop,
+				  std::ostream& os)
   {
     if (!tun)
       tun.reset(new TunWin::Setup);
-    return Win::ScopedHANDLE(tun->establish(tbc, os));
+    return Win::ScopedHANDLE(tun->establish(tbc, stop, os));
   }
 
   void destroy_tun(std::ostream& os)
@@ -232,7 +234,7 @@ private:
 	  tbc->validate();
 
 	  // establish the tun setup object
-	  Win::ScopedHANDLE handle(parent()->establish_tun(*tbc, os));
+	  Win::ScopedHANDLE handle(parent()->establish_tun(*tbc, nullptr, os));
 
 	  // this section is impersonated in the context of the client
 	  {
