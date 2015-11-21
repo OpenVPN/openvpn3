@@ -89,7 +89,7 @@ namespace openvpn {
 	  E_EOF_TCP,
 	  E_CONNECT_TIMEOUT,
 	  E_GENERAL_TIMEOUT,
-	  E_ABORT,
+	  E_ABORTED,
 
 	  N_ERRORS
 	};
@@ -111,7 +111,7 @@ namespace openvpn {
 	    "E_EOF_TCP",
 	    "E_CONNECT_TIMEOUT",
 	    "E_GENERAL_TIMEOUT",
-	    "E_ABORT",
+	    "E_ABORTED",
 	  };
 
 	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
@@ -261,7 +261,7 @@ namespace openvpn {
 	void abort(const std::string& message)
 	{
 	  if (!halt)
-	    error_handler(Status::E_ABORT, message);
+	    error_handler(Status::E_ABORTED, message);
 	}
 
 	const HTTP::Reply& reply() const {
