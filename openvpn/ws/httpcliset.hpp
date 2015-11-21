@@ -34,6 +34,7 @@
 #include <unordered_map>
 
 #include <openvpn/common/asiostop.hpp>
+#include <openvpn/common/cleanup.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -323,6 +324,9 @@ namespace openvpn {
       {
 	asio::io_context io_context(1); // concurrency hint=1
 	ClientSet::Ptr cs;
+	auto clean = Cleanup([&]() {
+	    ts->hsc.reset();     // ensure that socket is destroyed before method returns
+	  });
 	try {
 	  AsioStopScope scope(io_context, stop, [&]() {
 	      if (cs)
