@@ -119,7 +119,13 @@ namespace openvpn {
 	os << "TAP handle: " << tap_handle_hex << std::endl;
 	HANDLE h;
 	Buffer hb((unsigned char *)&h, sizeof(h), false);
-	parse_hex(hb, tap_handle_hex);
+	try {
+	  parse_hex(hb, tap_handle_hex);
+	}
+	catch (const BufferException& e)
+	  {
+	    OPENVPN_THROW(ovpnagent, "tap_handle_hex unexpected size: " << e.what());
+	  }
 	if (hb.size() != sizeof(h))
 	  throw ovpnagent("tap_handle_hex unexpected size");
 	return h;
