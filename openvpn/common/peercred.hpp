@@ -50,6 +50,11 @@ namespace openvpn {
 	return !uid || uid == ::getuid();
       }
 
+      bool root_uid() const
+      {
+	return !uid;
+      }
+
       int uid;
       int gid;
       int pid;
