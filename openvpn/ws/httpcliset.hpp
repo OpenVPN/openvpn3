@@ -62,7 +62,8 @@ namespace openvpn {
       public:
 	void stop()
 	{
-	  http->stop();
+	  if (http)
+	    http->stop();
 	}
 
 	void reset()
