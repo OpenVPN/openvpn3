@@ -32,6 +32,15 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(json_parse);
 
+    static Json::Value parse(const std::string& str, const std::string& title)
+    {
+      Json::Value root;
+      Json::Reader reader;
+      if (!reader.parse(str, root, false))
+	OPENVPN_THROW(json_parse, title << " : " << reader.getFormatedErrorMessages());
+      return root;
+    }
+
     template <typename T>
     static void from_vector(Json::Value& root, const T& vec, const std::string& name)
     {
@@ -86,6 +95,23 @@ namespace openvpn {
       dest = value.asUInt();
     }
 
+    static void to_uint_optional(const Json::Value& root,
+				 unsigned int& dest,
+				 const std::string& name,
+				 const std::string& title,
+				 const unsigned int default_value)
+    {
+      const Json::Value& value = root[name];
+      if (value.isNull())
+	{
+	  dest = default_value;
+	  return;
+	}
+      if (!value.isUInt())
+	OPENVPN_THROW(json_parse, "uint " << fmt_name(name, title) << " is of incorrect type");
+      dest = value.asUInt();
+    }
+
     static void to_bool(const Json::Value& root, bool& dest, const std::string& name, const std::string& title)
     {
       const Json::Value& value = root[name];
@@ -94,6 +120,21 @@ namespace openvpn {
       if (!value.isBool())
 	OPENVPN_THROW(json_parse, "bool " << fmt_name(name, title) << " is of incorrect type");
       dest = value.asBool();
+    }
+
+    template <typename T>
+    static void to_vector(const Json::Value& root, T& vec, const std::string& name, const std::string& title)
+    {
+      const Json::Value& array = root[name];
+      if (array.isNull())
+	return;
+      if (!array.isArray())
+	OPENVPN_THROW(json_parse, "array " << fmt_name(name, title) << " is of incorrect type");
+      for (unsigned int i = 0; i < array.size(); ++i)
+	{
+	  vec.emplace_back();
+	  vec.back().from_json(array[i], fmt_name(name, title));
+	}
     }
 
     static std::string get_string(const Json::Value& root, const std::string& name, const std::string& title)
@@ -132,27 +173,10 @@ namespace openvpn {
       return get_uint(root, name, "");
     }
 
-    static void to_uint_optional(const Json::Value& root,
-				 unsigned int& dest,
-				 const std::string& name,
-				 const unsigned int default_value,
-				 const std::string& title)
-    {
-      const Json::Value& value = root[name];
-      if (value.isNull())
-	{
-	  dest = default_value;
-	  return;
-	}
-      if (!value.isUInt())
-	OPENVPN_THROW(json_parse, "uint " << fmt_name(name, title) << " is of incorrect type");
-      dest = value.asUInt();
-    }
-
     static unsigned int get_uint_optional(const Json::Value& root, const std::string& name, const unsigned int default_value, const std::string& title)
     {
       unsigned int ret;
-      to_uint_optional(root, ret, name, default_value, title);
+      to_uint_optional(root, ret, name, title, default_value);
       return ret;
     }
 
@@ -190,21 +214,6 @@ namespace openvpn {
     static const Json::Value& get_dict(const Json::Value& root, const std::string& name, const bool optional)
     {
       return get_dict(root, name, optional, "");
-    }
-
-    template <typename T>
-    static void to_vector(const Json::Value& root, T& vec, const std::string& name, const std::string& title)
-    {
-      const Json::Value& array = root[name];
-      if (array.isNull())
-	return;
-      if (!array.isArray())
-	OPENVPN_THROW(json_parse, "array " << fmt_name(name, title) << " is of incorrect type");
-      for (unsigned int i = 0; i < array.size(); ++i)
-	{
-	  vec.emplace_back();
-	  vec.back().from_json(array[i], fmt_name(name, title));
-	}
     }
 
   private:
