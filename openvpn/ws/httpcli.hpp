@@ -184,14 +184,10 @@ namespace openvpn {
 	// content length if Transfer-Encoding: chunked
 	static constexpr olong CHUNKED = -1;
 
-	ContentInfo()
-	  : length(0),
-	    keepalive(false) {}
-
 	std::string type;
 	std::string content_encoding;
-	olong length;
-	bool keepalive;
+	olong length = 0;
+	bool keepalive = false;
 	std::vector<std::string> extra_headers;
       };
 
