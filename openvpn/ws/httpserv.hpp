@@ -456,6 +456,10 @@ namespace openvpn {
 
 	  void add_to_pipeline(BufferAllocated& buf)
 	  {
+	    if (!buf.empty())
+	      http_pipeline_peek(buf);
+	    if (halt)
+	      return;
 	    if (buf.empty())
 	      return;
 	    if (pipeline.size() >= parent->config->pipeline_max_size)
@@ -625,6 +629,10 @@ namespace openvpn {
 	  }
 
 	  virtual void http_request_received()
+	  {
+	  }
+
+	  virtual void http_pipeline_peek(BufferAllocated& buf)
 	  {
 	  }
 
