@@ -35,6 +35,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/common/stop.hpp>
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/crypto/cryptodcsel.hpp>
@@ -69,11 +70,14 @@
 #include <openvpn/tun/builder/client.hpp>
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/linux/client/tuncli.hpp>
+#ifdef OPENVPN_COMMAND_AGENT
+#include <openvpn/client/unix/cmdagent.hpp>
+#endif
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/mac/client/tuncli.hpp>
 #include <openvpn/apple/maclife.hpp>
 #ifdef OPENVPN_COMMAND_AGENT
-#include <openvpn/client/mac/cmdagent.hpp>
+#include <openvpn/client/unix/cmdagent.hpp>
 #endif
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
 #include <openvpn/tun/win/client/tuncli.hpp>
@@ -115,6 +119,7 @@ namespace openvpn {
 	disable_client_cert = false;
 	default_key_direction = -1;
 	force_aes_cbc_ciphersuites = false;
+	stop = nullptr;
 #if defined(USE_TUN_BUILDER)
 	builder = nullptr;
 #endif
@@ -138,6 +143,7 @@ namespace openvpn {
       bool force_aes_cbc_ciphersuites;
       std::string tls_version_min_override;
       PeerInfo::Set::Ptr extra_peer_info;
+      Stop* stop;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
       ExternalPKIBase* external_pki;
@@ -368,10 +374,11 @@ namespace openvpn {
 	      tunconf->tun_prop.mtu = tun_mtu;
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
+	    tunconf->stop = config.stop;
 	    tunconf->enable_failsafe_block = config.tun_persist;
 	    client_lifecycle.reset(new MacLifeCycle);
 #ifdef OPENVPN_COMMAND_AGENT
-	    tunconf->tun_setup_factory = MacCommandAgent::new_agent(opt);
+	    tunconf->tun_setup_factory = UnixCommandAgent::new_agent(opt);
 #endif
 	    tun_factory = tunconf;
 	  }

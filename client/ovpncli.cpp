@@ -334,6 +334,7 @@ namespace openvpn {
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
 	bool alt_proxy;
 	bool dco;
+	Stop stop;
 
 	asio::io_context* io_context;
 
@@ -644,6 +645,7 @@ namespace openvpn {
 	cc.tls_version_min_override = state->tls_version_min_override;
 	cc.gui_version = state->gui_version;
 	cc.extra_peer_info = state->extra_peer_info;
+	cc.stop = &state->stop;
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
@@ -916,7 +918,10 @@ namespace openvpn {
     {
       ClientConnect::Ptr session = state->session;
       if (session)
-	session->thread_safe_stop();
+	{
+	  state->stop.stop();
+	  session->thread_safe_stop();
+	}
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::pause(const std::string& reason)
