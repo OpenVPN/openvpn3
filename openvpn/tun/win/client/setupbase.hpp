@@ -24,6 +24,8 @@
 #ifndef OPENVPN_TUN_WIN_CLIENT_SETUPBASE_H
 #define OPENVPN_TUN_WIN_CLIENT_SETUPBASE_H
 
+#include <windows.h> // for HANDLE
+
 #include <openvpn/common/destruct.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
