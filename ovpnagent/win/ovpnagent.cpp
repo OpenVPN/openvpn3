@@ -2,7 +2,7 @@
 // Copyright (C) 2012-2015 OpenVPN Technologies, Inc.
 // All rights reserved
 
-// Boilerplate for general-purpose Named pipe HTTP server
+// OpenVPN agent for Windows
 
 #include <iostream>
 #include <string>
