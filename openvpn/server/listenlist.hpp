@@ -45,14 +45,12 @@ namespace openvpn {
 	SSLOff,
       };
 
-      Item() : ssl(SSLUnspecified), n_threads(0) {}
-
       std::string directive;
       std::string addr;
       std::string port;
       Protocol proto;
-      SSLMode ssl;
-      unsigned int n_threads;
+      SSLMode ssl = SSLUnspecified;
+      unsigned int n_threads = 0;
 
       std::string to_string() const
       {
