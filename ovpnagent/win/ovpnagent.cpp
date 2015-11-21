@@ -201,6 +201,9 @@ public:
 private:
   virtual void http_request_received() override
   {
+    // alloc output buffer
+    std::ostringstream os;
+
     try {
       const HANDLE client_pipe = get_client_pipe();
 
@@ -223,9 +226,6 @@ private:
 	    OPENVPN_THROW_EXCEPTION("json parse error: " << reader.getFormatedErrorMessages());
 	  if (!root.isObject())
 	    throw Exception("json parse error: top level json object is not a dictionary");
-
-	  // alloc output buffer
-	  std::ostringstream os;
 
 	  // get PID
 	  ULONG pid = json::get_uint_optional(root, "pid", 0);
@@ -261,9 +261,6 @@ private:
 	}
       else if (req.method == "GET" && req.uri == "/tun-destroy")
 	{
-	  // alloc output buffer
-	  std::ostringstream os;
-
 	  // destroy tun object
 	  parent()->destroy_tun(os);
 
@@ -292,7 +289,7 @@ private:
     }
     catch (const std::exception& e)
       {
-	out = buf_from_string(std::string(e.what()) + '\n');
+	out = buf_from_string(string::remove_blanks(os.str() + e.what() + '\n'));
 	WS::Server::ContentInfo ci;
 	ci.http_status = HTTP::Status::BadRequest;
 	ci.type = "text/plain";
