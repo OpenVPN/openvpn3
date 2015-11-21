@@ -455,6 +455,8 @@ namespace openvpn {
 	}
 
 	// Process routes
+	os << "Sleeping 5 seconds prior to adding routes..." << std::endl;
+	::Sleep(5000);
 	for (auto &route : pull.add_routes)
 	  {
 	    if (!route.ipv6)
