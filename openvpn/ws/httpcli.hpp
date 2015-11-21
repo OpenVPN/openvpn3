@@ -307,6 +307,11 @@ namespace openvpn {
 	  return h;
 	}
 
+	AsioPolySock::Base* get_socket()
+	{
+	  return socket.get();
+	}
+
 	// virtual methods
 
 	virtual Host http_host() = 0;
