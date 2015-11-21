@@ -81,6 +81,18 @@ namespace openvpn {
 	  return http && http->is_alive();
 	}
 
+#ifdef ASIO_HAS_LOCAL_SOCKETS
+	int unix_fd()
+	{
+	  if (!http)
+	    return -1;
+	  AsioPolySock::Unix* us = dynamic_cast<AsioPolySock::Unix*>(http->get_socket());
+	  if (!us)
+	    return -1;
+	  return us->socket.native_handle();
+	}
+#endif
+
       private:
 	friend Client;
 
