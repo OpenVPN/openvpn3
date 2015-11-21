@@ -143,8 +143,8 @@ namespace openvpn {
 			   ActionList& destroy)
     {
       // set local4 and local6 to point to IPv4/6 route configurations
-      const TunBuilderCapture::Route* local4 = pull.vpn_ipv4();
-      const TunBuilderCapture::Route* local6 = pull.vpn_ipv6();
+      const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
+      const TunBuilderCapture::RouteAddress* local6 = pull.vpn_ipv6();
 
       // Set IPv4 Interface
       if (local4)
