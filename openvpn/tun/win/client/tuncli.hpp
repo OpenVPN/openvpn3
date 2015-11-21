@@ -29,7 +29,6 @@
 #include <memory>
 
 #include <openvpn/common/format.hpp>
-#include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/scoped_asio_stream.hpp>
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/tun/client/tunbase.hpp>

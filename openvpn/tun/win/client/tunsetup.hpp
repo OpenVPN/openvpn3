@@ -31,6 +31,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/arraysize.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/cmd.hpp>
