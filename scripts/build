@@ -38,6 +38,7 @@ if [ -z "$1" ]; then
     echo " LZ4=1 -- build with LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
     echo " JAVA=1 -- build with JVM"
+    echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
     for s in $(enum_build_extras) ; do
 	. $s args
     done
@@ -235,7 +236,7 @@ fi
 FLAGS="$LIB_OPT_LEVEL $FLAGS"
 
 # whole-program
-if [ "$CLANG" != "1" ] && [ "$DEBUG_BUILD" != "1" ]; then
+if [ "$CLANG" != "1" ] && [ "$DEBUG_BUILD" != "1" ] && [ -z "$EXTRA_CPP" ] && [ "$CO" != "1" ]; then
     FLAGS="-fwhole-program $FLAGS"
 fi
 
@@ -244,6 +245,7 @@ if [ "$CO" == "1" ]; then
     OUTPUT="-c"
     LIBDIRS=""
     LIBS=""
+    EXTRA_SRC_OBJ=""
 else
     OUTPUT="-o $OUTBIN"
 fi
@@ -269,7 +271,7 @@ if [ "$OBJC" == "1" ]; then
     SRC="$1.m $O3/cliobjc/ovpncli.mm "
     CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $SRC $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 else
-    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_SRC_OBJ $OUTPUT $LIBS"
+    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_CPP $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 fi
 
 # execute CMD
