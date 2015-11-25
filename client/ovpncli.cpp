@@ -612,7 +612,10 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
     {
       asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
-#ifdef OPENVPN_LOG_LOGTHREAD_H
+#if defined(OPENVPN_LOG_LOGTHREAD_H) && !defined(OPENVPN_LOG_LOGBASE_H)
+#ifdef OPENVPN_LOG_GLOBAL
+#error ovpn3 core logging object only supports thread-local scope
+#endif
       Log::Context log_context(this);
 #endif
       return do_connect();
