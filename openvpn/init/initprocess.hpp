@@ -29,6 +29,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/common/extern.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/init/cryptoinit.hpp>
@@ -65,8 +66,8 @@ namespace openvpn {
     };
 
     // process-wide singular instance
-    Init* the_instance; // GLOBAL
-    std::mutex the_instance_mutex; // GLOBAL
+    OPENVPN_EXTERN Init* the_instance; // GLOBAL
+    OPENVPN_EXTERN std::mutex the_instance_mutex; // GLOBAL
 
     inline void init()
     {

@@ -32,6 +32,7 @@
 #include <asio/detail/tss_ptr.hpp>
 
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/extern.hpp>
 
 // Define these parameters before including this header:
 
@@ -77,7 +78,7 @@ namespace openvpn {
 
 #ifdef OPENVPN_LOG_GLOBAL
     // OPENVPN_LOG uses global object pointer
-    OPENVPN_LOG_CLASS* global_log = nullptr; // GLOBAL
+    OPENVPN_EXTERN OPENVPN_LOG_CLASS* global_log; // GLOBAL
     struct Context
     {
       struct Wrapper
@@ -110,7 +111,7 @@ namespace openvpn {
     };
 #else
     // OPENVPN_LOG uses thread-local object pointer
-    asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
+    OPENVPN_EXTERN asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
     struct Context
     {
       // Mechanism for passing thread-local

@@ -29,6 +29,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/extern.hpp>
 
 namespace openvpn {
 
@@ -208,7 +209,7 @@ namespace openvpn {
 
   // provide a static Base64 object
 
-  const Base64* base64; // GLOBAL
+  OPENVPN_EXTERN const Base64* base64; // GLOBAL
 
   inline void base64_init_static()
   {
