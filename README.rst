@@ -8,8 +8,9 @@ of an OpenVPN client, and is protocol-compatible with the OpenVPN
 OpenVPN 3 includes a minimal client wrapper (``cli``) that links in with
 the library and provides basic command line functionality.
 
-NOTE: As of 2014, OpenVPN 3 is primarily of interest to developers
-because it does not yet replicate the full functionality of OpenVPN 2.
+NOTE: As of 2015, OpenVPN 3 is primarily of interest to developers
+because it does not yet replicate the full functionality of OpenVPN 2.x.
+In particular, server functionality is not yet implemented.
 
 Building OpenVPN 3 client on Mac OS X
 -------------------------------------
@@ -42,11 +43,15 @@ version numbers of each dependency.  If you want to use a different
 version of the library than listed here, you can edit this file.
 
 1. Asio -- https://github.com/chriskohlhoff/asio
-2. PolarSSL (1.3.4 or higher) -- https://polarssl.org/
-3. Snappy -- https://code.google.com/p/snappy/
-4. LZ4 -- https://code.google.com/p/lz4/
+2. PolarSSL/mbedTLS (1.3.4 or higher) -- https://tls.mbed.org/
+3. LZ4 -- https://github.com/Cyan4973/lz4
 
-Note that while LZO and OpenSSL are listed in lib-versions, they are
+For dependencies that are typically cloned from github vs.
+provided as a .tar.gz file, tools are provided to convert
+the github to a .tar.gz file.  See "snapshot" scripts under
+$O3/core/deps
+
+Note that while OpenSSL is listed in lib-versions, it is
 not required for Mac builds.
 
 Build the dependencies::
@@ -56,20 +61,18 @@ Build the dependencies::
 Now build the OpenVPN 3 client executable::
 
     cd $O3/core
-    . vars/vars-osx
+    . vars/vars-osx64
     . vars/setpath
     cd test/ovpncli
-    STRIP=1 PSSL=1 SNAP=1 LZ4=1 build cli
+    PSSL=1 LZ4=1 build cli
 
 This will build the OpenVPN 3 client library with a small client
 wrapper (``cli``).  It will also statically link in all external
-dependencies (Asio, PolarSSL,
-LZ4, and Snappy), so ``cli`` may be distributed to other Macs and
-will run as a standalone executable.
+dependencies (Asio, PolarSSL, and LZ4), so ``cli`` may be distributed
+to other Macs and will run as a standalone executable.
 
-These build scripts will create a "fat" Mac OS X executable with
-support for both **x86_x64** and **i386** architectures, with a minimum
-deployment target of 10.6.x.  The Mac OS X tuntap driver is not
+These build scripts will create a **x86_x64** Mac OS X executable,
+with a minimum deployment target of 10.8.x.  The Mac OS X tuntap driver is not
 required, as OpenVPN 3 can use the integrated utun interface if
 available.
 
