@@ -27,14 +27,28 @@
 #include <iostream>
 #include <thread>
 
-#include <openvpn/common/platform.hpp>
+// If enabled, don't direct ovpn3 core logging to
+// ClientAPI::OpenVPNClient::log() virtual method.
+// Instead, logging will go to LogBaseSimple::log().
+// In this case, make sure to define:
+//   LogBaseSimple log;
+// at the top of your main() function to receive
+// log messages from all threads.
+// Also, note that the OPENVPN_LOG_GLOBAL setting
+// MUST be consistent across all compilation units.
+#if 0
+#define OPENVPN_LOG_GLOBAL // use global rather than thread-local log object pointer
+#include <openvpn/log/logbasesimple.hpp>
+#endif
 
+// don't export core symbols
+#define OPENVPN_CORE_API_VISIBILITY_HIDDEN
+
+// should be included before other openvpn includes,
+// with the exception of openvpn/log includes
 #include <client/ovpncli.cpp>
 
-#include <asio.hpp>
-
-#define OPENVPN_CORE_API_VISIBILITY_HIDDEN  // don't export core symbols
-
+#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/file.hpp>
@@ -234,6 +248,10 @@ int main(int argc, char *argv[])
 
   int ret = 0;
   std::thread* thread = nullptr;
+
+#ifdef OPENVPN_LOG_LOGBASE_H
+  LogBaseSimple log;
+#endif
 
   try {
     Client::init_process();
