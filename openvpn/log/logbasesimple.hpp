@@ -23,6 +23,7 @@
 #define OPENVPN_LOG_LOGBASESIMPLE_H
 
 #include <iostream>
+#include <mutex>
 
 #include <openvpn/log/logbase.hpp>
 #include <openvpn/time/timestr.hpp>
@@ -42,12 +43,13 @@ namespace openvpn {
     {
       const std::string ts = date_time();
       {
-	std::cout << ts << ' ' << str;
-	std::cout.flush();
+	std::lock_guard<std::mutex> lock(mutex);
+	std::cout << ts << ' ' << str << std::flush;
       }
     }
 
   private:
+    std::mutex mutex;
     Log::Context log_context;
   };
 }
