@@ -75,8 +75,42 @@
 namespace openvpn {
   namespace Log {
 
-    asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
+#ifdef OPENVPN_LOG_GLOBAL
+    // OPENVPN_LOG uses global object pointer
+    OPENVPN_LOG_CLASS* global_log = nullptr; // GLOBAL
+    struct Context
+    {
+      struct Wrapper
+      {
+      };
 
+      Context(const Wrapper& wrap)
+      {
+      }
+
+      Context(OPENVPN_LOG_CLASS *cli)
+      {
+	global_log = cli;
+      }
+
+      ~Context()
+      {
+	global_log = nullptr;
+      }
+
+      static bool defined()
+      {
+	return global_log != nullptr;
+      }
+
+      static OPENVPN_LOG_CLASS* obj()
+      {
+	return global_log;
+      }
+    };
+#else
+    // OPENVPN_LOG uses thread-local object pointer
+    asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
     struct Context
     {
       // Mechanism for passing thread-local
@@ -117,7 +151,7 @@ namespace openvpn {
 	return global_log;
       }
     };
-
+#endif
   }
 }
 
