@@ -60,7 +60,7 @@ DIST=$(pwd)/lz4/lz4-$PLATFORM
 rm -rf $DIST
 mkdir -p $DIST/include
 mkdir $DIST/lib
-cd $LZ4_VERSION
+cd $LZ4_VERSION/lib
 CMD="$CC $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c lz4.c"
 echo $CMD
 $CMD

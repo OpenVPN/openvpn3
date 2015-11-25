@@ -10,5 +10,6 @@ fi
 
 . $O3/core/deps/lib-versions
 
-rm -rf asio
+rm -rf asio*
 tar xf $DL/$ASIO_VERSION.tar.gz
+cp -a $ASIO_VERSION asio

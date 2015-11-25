@@ -50,7 +50,7 @@ else
     echo WIPE and reunzip source
     rm -rf $POLARSSL_VERSION $POLARSSL_VERSION-prerelease
     [ -z "$DL" ] && DL=~/Downloads
-    tar xfz $DL/$POLARSSL_VERSION-*.tgz
+    tar xfz $DL/$POLARSSL_VERSION-gpl.tgz
 
     [ -d $POLARSSL_VERSION-prerelease ] && mv $POLARSSL_VERSION-prerelease $POLARSSL_VERSION
     cd $POLARSSL_VERSION

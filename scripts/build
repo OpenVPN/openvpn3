@@ -88,7 +88,7 @@ FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # PolarSSL
 if [ "$PSSL" = "1" ]; then
-    LIBS="$LIBS -lpolarssl"
+    LIBS="$LIBS -lmbedtls"
     if [ "$HYBRID" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL_APPLE_HYBRID"
     else
