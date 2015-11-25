@@ -183,8 +183,7 @@ namespace openvpn {
       const std::string ts = date_time();
       {
 	std::lock_guard<std::mutex> lock(log_mutex);
-	std::cout << ts << ' ' << str;
-	std::cout.flush();
+	std::cout << ts << ' ' << str << std::flush;
       }
     }
 
