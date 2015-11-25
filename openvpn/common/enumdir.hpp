@@ -38,9 +38,9 @@
 namespace openvpn {
   OPENVPN_EXCEPTION(enum_dir_error);
 
-  std::vector<std::string> enum_dir(const std::string& dirname,
-				    const size_t size_hint=0,
-				    const bool sort=false)
+  inline std::vector<std::string> enum_dir(const std::string& dirname,
+					   const size_t size_hint=0,
+					   const bool sort=false)
   {
     std::vector<std::string> ret;
     if (size_hint)

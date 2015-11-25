@@ -184,10 +184,10 @@ namespace openvpn {
 	}
     }
 
-    int lzo1x_decompress_safe(const unsigned char *input,
-			      size_t input_length,
-			      unsigned char *output,
-			      size_t *output_length)
+    inline int lzo1x_decompress_safe(const unsigned char *input,
+				     size_t input_length,
+				     unsigned char *output,
+				     size_t *output_length)
     {
       size_t z;
       const unsigned char *input_ptr;

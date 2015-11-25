@@ -33,7 +33,7 @@
 #endif
 
 namespace openvpn {
-  bool sleep_milliseconds(const unsigned int milliseconds)
+  inline bool sleep_milliseconds(const unsigned int milliseconds)
   {
 #ifdef OPENVPN_PLATFORM_WIN
     ::Sleep(milliseconds);

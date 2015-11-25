@@ -39,7 +39,7 @@ namespace openvpn {
       V1_2
     };
 
-    const std::string to_string(const Type version)
+    inline const std::string to_string(const Type version)
     {
       switch (version)
 	{

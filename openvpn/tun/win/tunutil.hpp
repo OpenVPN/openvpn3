@@ -64,12 +64,14 @@ namespace openvpn {
     namespace Util {
       OPENVPN_EXCEPTION(tun_win_util);
 
-      // from tap-windows.h
-      static const char ADAPTER[] = ADAPTER_KEY; // CONST GLOBAL
-      static const char NETWORK_CONNECTIONS[] = NETWORK_CONNECTIONS_KEY; // CONST GLOBAL
+      namespace {
+	// from tap-windows.h
+	const char ADAPTER[] = ADAPTER_KEY; // CONST GLOBAL
+	const char NETWORK_CONNECTIONS[] = NETWORK_CONNECTIONS_KEY; // CONST GLOBAL
 
-      // generally defined on cl command line
-      static const char COMPONENT_ID[] = OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID); // CONST GLOBAL
+	// generally defined on cl command line
+	const char COMPONENT_ID[] = OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID); // CONST GLOBAL
+      }
 
       // Return a list of TAP device GUIDs installed on the system,
       // filtered by TAP_WIN_COMPONENT_ID.

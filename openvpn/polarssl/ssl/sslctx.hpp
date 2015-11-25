@@ -60,59 +60,61 @@
 namespace openvpn {
 
   namespace polarssl_ctx_private {
-    static const int aes_cbc_ciphersuites[] = // CONST GLOBAL
-      {
-	TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
-	TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
-	0
-      };
+    namespace {
+      const int aes_cbc_ciphersuites[] = // CONST GLOBAL
+	{
+	  TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
+	  TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+	  0
+	};
 
-    /*
-     * This is a modified list from PolarSSL ssl_ciphersuites.c.
-     * We removed some SHA1 methods near the top of the list to
-     * avoid Chrome warnings about "obsolete cryptography".
-     * We also removed ECDSA, CCM, PSK, and CAMELLIA algs.
-     */
-    static const int ciphersuites[] =
-      {
-	/* Selected AES-256 ephemeral suites */
-	TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
-	TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
-	TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
+      /*
+       * This is a modified list from PolarSSL ssl_ciphersuites.c.
+       * We removed some SHA1 methods near the top of the list to
+       * avoid Chrome warnings about "obsolete cryptography".
+       * We also removed ECDSA, CCM, PSK, and CAMELLIA algs.
+       */
+      const int ciphersuites[] = // CONST GLOBAL
+	{
+	  /* Selected AES-256 ephemeral suites */
+	  TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	  TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
+	  TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
+	  TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
 
-	/* Selected AES-128 ephemeral suites */
-	TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
-	TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-	TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
+	  /* Selected AES-128 ephemeral suites */
+	  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	  TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
+	  TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+	  TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
 
-	/* Selected remaining >= 128-bit ephemeral suites */
-	TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-	TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	  /* Selected remaining >= 128-bit ephemeral suites */
+	  TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	  TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
 
-	/* Selected AES-256 suites */
-	TLS_RSA_WITH_AES_256_GCM_SHA384,
-	TLS_RSA_WITH_AES_256_CBC_SHA256,
-	TLS_RSA_WITH_AES_256_CBC_SHA,
-	TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
-	TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,
-	TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,
+	  /* Selected AES-256 suites */
+	  TLS_RSA_WITH_AES_256_GCM_SHA384,
+	  TLS_RSA_WITH_AES_256_CBC_SHA256,
+	  TLS_RSA_WITH_AES_256_CBC_SHA,
+	  TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
+	  TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,
+	  TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,
 
-	/* Selected AES-128 suites */
-	TLS_RSA_WITH_AES_128_GCM_SHA256,
-	TLS_RSA_WITH_AES_128_CBC_SHA256,
-	TLS_RSA_WITH_AES_128_CBC_SHA,
-	TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
-	TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,
-	TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,
+	  /* Selected AES-128 suites */
+	  TLS_RSA_WITH_AES_128_GCM_SHA256,
+	  TLS_RSA_WITH_AES_128_CBC_SHA256,
+	  TLS_RSA_WITH_AES_128_CBC_SHA,
+	  TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
+	  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,
+	  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,
 
-	/* Selected remaining >= 128-bit suites */
-	TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-	TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
+	  /* Selected remaining >= 128-bit suites */
+	  TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+	  TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
 
-	0
-      };
+	  0
+	};
+    }
   }
 
   // Represents an SSL configuration that can be used

@@ -50,7 +50,7 @@ namespace openvpn {
 
   // Remove security-sensitive strings from control message
   // so that they will not be output to log file.
-  std::string sanitize_control_message(const std::string& src_str)
+  inline std::string sanitize_control_message(const std::string& src_str)
   {
 #ifdef OPENVPN_SHOW_SESSION_TOKEN
     return src_str;

@@ -37,7 +37,7 @@ namespace openvpn {
 
   OPENVPN_EXCEPTION(openssl_engine_error);
 
-  void openssl_setup_engine (const std::string& engine)
+  inline void openssl_setup_engine (const std::string& engine)
   {
 #ifndef OPENSSL_NO_ENGINE
     ENGINE_load_builtin_engines ();

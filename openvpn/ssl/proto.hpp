@@ -111,33 +111,35 @@ namespace openvpn {
 
   // utility namespace for ProtoContext
   namespace proto_context_private {
-    static const unsigned char auth_prefix[] = { 0, 0, 0, 0, 2 }; // CONST GLOBAL
+    namespace {
+      const unsigned char auth_prefix[] = { 0, 0, 0, 0, 2 }; // CONST GLOBAL
 
-    static const unsigned char keepalive_message[] = {    // CONST GLOBAL
-      0x2a, 0x18, 0x7b, 0xf3, 0x64, 0x1e, 0xb4, 0xcb,
-      0x07, 0xed, 0x2d, 0x0a, 0x98, 0x1f, 0xc7, 0x48
-    };
+      const unsigned char keepalive_message[] = {    // CONST GLOBAL
+	0x2a, 0x18, 0x7b, 0xf3, 0x64, 0x1e, 0xb4, 0xcb,
+	0x07, 0xed, 0x2d, 0x0a, 0x98, 0x1f, 0xc7, 0x48
+      };
 
-    enum {
-      KEEPALIVE_FIRST_BYTE = 0x2a  // first byte of keepalive message
-    };
+      enum {
+	KEEPALIVE_FIRST_BYTE = 0x2a  // first byte of keepalive message
+      };
 
-    inline bool is_keepalive(const Buffer& buf)
-    {
-      return buf.size() >= sizeof(keepalive_message)
-	&& buf[0] == KEEPALIVE_FIRST_BYTE
-	&& !std::memcmp(keepalive_message, buf.c_data(), sizeof(keepalive_message));
+      inline bool is_keepalive(const Buffer& buf)
+      {
+	return buf.size() >= sizeof(keepalive_message)
+	  && buf[0] == KEEPALIVE_FIRST_BYTE
+	  && !std::memcmp(keepalive_message, buf.c_data(), sizeof(keepalive_message));
+      }
+
+      const unsigned char explicit_exit_notify_message[] = {    // CONST GLOBAL
+	0x28, 0x7f, 0x34, 0x6b, 0xd4, 0xef, 0x7a, 0x81,
+	0x2d, 0x56, 0xb8, 0xd3, 0xaf, 0xc5, 0x45, 0x9c,
+	6 // OCC_EXIT
+      };
+
+      enum {
+	EXPLICIT_EXIT_NOTIFY_FIRST_BYTE = 0x28  // first byte of exit message
+      };
     }
-
-    static const unsigned char explicit_exit_notify_message[] = {    // CONST GLOBAL
-      0x28, 0x7f, 0x34, 0x6b, 0xd4, 0xef, 0x7a, 0x81,
-      0x2d, 0x56, 0xb8, 0xd3, 0xaf, 0xc5, 0x45, 0x9c,
-      6 // OCC_EXIT
-    };
-
-    enum {
-      EXPLICIT_EXIT_NOTIFY_FIRST_BYTE = 0x28  // first byte of exit message
-    };
   }
 
   class ProtoContext

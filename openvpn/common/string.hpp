@@ -114,7 +114,7 @@ namespace openvpn {
     }
 
     // return true if string ends with a newline
-    bool ends_with_newline(const std::string& str)
+    inline bool ends_with_newline(const std::string& str)
     {
       const size_t len = str.length();
       return len > 0 && str[len-1] == '\n';

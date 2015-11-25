@@ -75,7 +75,7 @@ namespace openvpn {
     /* The options start here. */
   };
 
-  std::uint16_t ip_checksum(const void *ip, unsigned int size)
+  inline std::uint16_t ip_checksum(const void *ip, unsigned int size)
   {
     std::uint16_t *buffer = (std::uint16_t *)ip;
     uint32_t cksum = 0;

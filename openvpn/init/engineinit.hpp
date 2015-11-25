@@ -41,7 +41,7 @@ extern "C" {
 
 namespace openvpn {
 
-  void init_openssl(const std::string& engine)
+  inline void init_openssl(const std::string& engine)
   {
 #if defined(USE_OPENSSL)
     openssl_setup_engine(engine);
