@@ -24,6 +24,8 @@
 #include <iostream>
 #include <string>
 
+#include <asio.hpp>
+
 // Set up export of our public interface unless
 // OPENVPN_CORE_API_VISIBILITY_HIDDEN is defined
 #if defined(__GNUC__)
