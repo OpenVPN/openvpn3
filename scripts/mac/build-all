@@ -13,7 +13,6 @@ echo "******* POLARSSL"
 $O3/core/scripts/mac/build-polarssl
 echo "******* LZ4"
 $O3/core/scripts/mac/build-lz4
-exit 0
 
 #echo "******* MINICRYPTO"
 #$O3/core/scripts/mac/build-minicrypto
