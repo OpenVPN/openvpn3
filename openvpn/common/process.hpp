@@ -24,7 +24,6 @@
 #ifndef OPENVPN_COMMON_PROCESS_H
 #define OPENVPN_COMMON_PROCESS_H
 
-#include <cstring>     // memcpy
 #include <stdlib.h>    // exit
 #include <unistd.h>    // fork, execve
 #include <sys/types.h> // waitpid
@@ -37,33 +36,11 @@
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/redir.hpp>
 #include <openvpn/common/signal.hpp>
+#include <openvpn/common/argv.hpp>
 
 extern char **environ;
 
 namespace openvpn {
-
-  class Argv : public std::vector<std::string>
-  {
-  public:
-    Argv(const size_t capacity=16)
-    {
-      reserve(capacity);
-    }
-
-    std::string to_string() const
-    {
-      std::string ret;
-      bool first = true;
-      for (const auto &s : *this)
-	{
-	  if (!first)
-	    ret += ' ';
-	  ret += s;
-	  first = false;
-	}
-      return ret;
-    }
-  };
 
   class Environ : public std::vector<std::string>
   {
@@ -125,54 +102,6 @@ namespace openvpn {
       else
 	return "";
     }
-  };
-
-  class ArgvWrapper
-  {
-    ArgvWrapper(const ArgvWrapper&) = delete;
-    ArgvWrapper& operator=(const ArgvWrapper&) = delete;
-
-  public:
-    explicit ArgvWrapper(const std::vector<std::string>& argv)
-    {
-      size_t i;
-      argc = argv.size();
-      cargv = new char *[argc+1];
-      for (i = 0; i < argc; ++i)
-	cargv[i] = string_alloc(argv[i]);
-      cargv[i] = nullptr;
-    }
-
-    ~ArgvWrapper()
-    {
-      for (size_t i = 0; i < argc; ++i)
-	delete [] cargv[i];
-      delete [] cargv;
-    }
-
-    char *const *c_argv() const noexcept
-    {
-      return cargv;
-    }
-
-    char **c_argv() noexcept
-    {
-      return cargv;
-    }
-
-  private:
-    static char *string_alloc(const std::string& s)
-    {
-      const char *sdata = s.c_str();
-      const size_t slen = s.length();
-      char *ret = new char[slen+1];
-      std::memcpy(ret, sdata, slen);
-      ret[slen] = '\0';
-      return ret;
-    }
-
-    size_t argc;
-    char **cargv;
   };
 
   // low-level fork/exec (async)
