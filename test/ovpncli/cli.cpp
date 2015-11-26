@@ -26,6 +26,7 @@
 #include <string>
 #include <iostream>
 #include <thread>
+#include <memory>
 
 // If enabled, don't direct ovpn3 core logging to
 // ClientAPI::OpenVPNClient::log() virtual method.
@@ -36,7 +37,7 @@
 // log messages from all threads.
 // Also, note that the OPENVPN_LOG_GLOBAL setting
 // MUST be consistent across all compilation units.
-#if 0
+#ifdef OPENVPN_USE_LOG_BASE_SIMPLE
 #define OPENVPN_LOG_GLOBAL // use global rather than thread-local log object pointer
 #include <openvpn/log/logbasesimple.hpp>
 #endif
@@ -50,10 +51,12 @@
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/getopt.hpp>
 #include <openvpn/common/getpw.hpp>
+#include <openvpn/common/cleanup.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/ssl/peerinfo.hpp>
 
@@ -62,6 +65,10 @@
 #endif
 
 using namespace openvpn;
+
+namespace {
+  OPENVPN_SIMPLE_EXCEPTION(usage);
+}
 
 class Client : public ClientAPI::OpenVPNClient
 {
@@ -133,9 +140,9 @@ private:
   std::string dc_cookie;
 };
 
-Client *the_client = nullptr; // GLOBAL
+static Client *the_client = nullptr; // GLOBAL
 
-void worker_thread()
+static void worker_thread()
 {
   asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
   try {
@@ -156,7 +163,7 @@ void worker_thread()
   std::cout << "Thread finished" << std::endl;
 }
 
-void print_stats(const Client& client)
+static void print_stats(const Client& client)
 {
   const int n = client.stats_n();
   std::vector<long long> stats = client.stats_bundle();
@@ -171,7 +178,7 @@ void print_stats(const Client& client)
 }
 
 #if !defined(OPENVPN_PLATFORM_WIN)
-void handler(int signum)
+static void handler(int signum)
 {
   switch (signum)
     {
@@ -212,7 +219,21 @@ void handler(int signum)
 }
 #endif
 
-int main(int argc, char *argv[])
+static std::string read_profile(const char *fn, const std::string* profile_content)
+{
+  if (!string::strcasecmp(fn, "http") && profile_content && !profile_content->empty())
+    return *profile_content;
+  else
+    {
+      ProfileMerge pm(fn, "ovpn", "", ProfileMerge::FOLLOW_FULL,
+		      ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
+      if (pm.status() != ProfileMerge::MERGE_SUCCESS)
+	OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+      return pm.profile_content();
+    }
+}
+
+int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 {
   static const struct option longopts[] = {
     { "username",       required_argument,  nullptr,      'u' },
@@ -247,14 +268,12 @@ int main(int argc, char *argv[])
   };
 
   int ret = 0;
-  std::thread* thread = nullptr;
-
-#ifdef OPENVPN_LOG_LOGBASE_H
-  LogBaseSimple log;
-#endif
+  auto cleanup = Cleanup([]() {
+      the_client = nullptr;
+    });
+  std::unique_ptr<std::thread> thread;
 
   try {
-    Client::init_process();
     if (argc >= 2)
       {
 	std::string username;
@@ -287,7 +306,7 @@ int main(int argc, char *argv[])
 	bool dco = false;
 
 	int ch;
-
+	optind = 0;
 	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:I:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
@@ -387,7 +406,7 @@ int main(int argc, char *argv[])
 		peer_info = optarg;
 		break;
 	      default:
-		goto usage;
+		throw usage();
 	      }
 	  }
 	argc -= optind;
@@ -406,21 +425,13 @@ int main(int argc, char *argv[])
 	else if (merge)
 	  {
 	    if (argc != 1)
-	      goto usage;
-	    ProfileMerge pm(argv[0], "ovpn", "", ProfileMerge::FOLLOW_FULL,
-			    ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
-	    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
-	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
-	    std::cout << pm.profile_content();
+	      throw usage();
+	    std::cout << read_profile(argv[0], profile_content);
 	  }
 	else
 	  {
 	    if (argc != 1)
-	      goto usage;
-	    ProfileMerge pm(argv[0], "ovpn", "", ProfileMerge::FOLLOW_FULL,
-			    ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
-	    if (pm.status() != ProfileMerge::MERGE_SUCCESS)
-	      OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+	      throw usage();
 
 	    bool retry;
 	    do {
@@ -428,7 +439,7 @@ int main(int argc, char *argv[])
 
 	      ClientAPI::Config config;
 	      config.guiVersion = "cli 1.0";
-	      config.content = pm.profile_content();
+	      config.content = read_profile(argv[0], profile_content);
 	      config.serverOverride = server;
 	      config.protoOverride = proto;
 	      config.connTimeout = timeout;
@@ -505,9 +516,9 @@ int main(int argc, char *argv[])
 #if !defined(OPENVPN_PLATFORM_WIN)
 		  // start connect thread
 		  the_client = &client;
-		  thread = new std::thread([]() {
-		      worker_thread();
-		    });
+		  thread.reset(new std::thread([]() {
+			worker_thread();
+		      }));
 
 		  {
 		    // catch signals that might occur while we're in join()
@@ -526,10 +537,10 @@ int main(int argc, char *argv[])
 		  // start connect thread
 		  volatile bool thread_exit = false;
 		  the_client = &client;
-		  thread = new std::thread([&thread_exit]() {
-		      worker_thread();
-		      thread_exit = true;
-		    });
+		  thread.reset(new std::thread([&thread_exit]() {
+			worker_thread();
+			thread_exit = true;
+		      }));
 
 		  // wait for connect thread to exit, also check for keypresses
 		  while (!thread_exit)
@@ -578,52 +589,65 @@ int main(int argc, char *argv[])
 	  }
       }
     else
-      goto usage;
+      throw usage();
+  }
+  catch (const usage&)
+    {
+      std::cout << "OpenVPN Client (ovpncli)" << std::endl;
+      std::cout << "usage: cli [options] <config-file>" << std::endl;
+      std::cout << "--version, -v        : show version info" << std::endl;
+      std::cout << "--eval, -e           : evaluate profile only (standalone)" << std::endl;
+      std::cout << "--merge, -m          : merge profile into unified format (standalone)" << std::endl;
+      std::cout << "--username, -u       : username" << std::endl;
+      std::cout << "--password, -p       : password" << std::endl;
+      std::cout << "--response, -r       : static response" << std::endl;
+      std::cout << "--dc, -D             : dynamic challenge/response cookie" << std::endl;
+      std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
+      std::cout << "--server, -s         : server override" << std::endl;
+      std::cout << "--timeout, -t        : timeout" << std::endl;
+      std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
+      std::cout << "--pk-password, -z    : private key password" << std::endl;
+      std::cout << "--tvm-override, -M   : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
+      std::cout << "--proxy-host, -h     : HTTP proxy hostname/IP" << std::endl;
+      std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
+      std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
+      std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
+      std::cout << "--proxy-basic, -B    : allow HTTP basic auth" << std::endl;
+      std::cout << "--alt-proxy, -A      : enable alternative proxy module" << std::endl;
+      std::cout << "--dco, -d            : enable data channel offload" << std::endl;
+      std::cout << "--cache-password, -C : cache password" << std::endl;
+      std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
+      std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
+      std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
+      std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
+      std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
+      std::cout << "--peer-info, -I      : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
+      ret = 2;
+    }
+  return ret;
+}
+
+#ifndef OPENVPN_OVPNCLI_OMIT_MAIN
+
+int main(int argc, char *argv[])
+{
+  int ret = 0;
+
+#ifdef OPENVPN_LOG_LOGBASE_H
+  LogBaseSimple log;
+#endif
+
+  try {
+    Client::init_process();
+    ret = openvpn_client(argc, argv, nullptr);
   }
   catch (const std::exception& e)
     {
-      the_client = nullptr;
       std::cout << "Main thread exception: " << e.what() << std::endl;
-      Client::uninit_process();
       ret = 1;
     }  
-  goto done;
-
- usage:
-  std::cout << "OpenVPN Client (ovpncli)" << std::endl;
-  std::cout << "usage: cli [options] <config-file>" << std::endl;
-  std::cout << "--version, -v        : show version info" << std::endl;
-  std::cout << "--eval, -e           : evaluate profile only (standalone)" << std::endl;
-  std::cout << "--merge, -m          : merge profile into unified format (standalone)" << std::endl;
-  std::cout << "--username, -u       : username" << std::endl;
-  std::cout << "--password, -p       : password" << std::endl;
-  std::cout << "--response, -r       : static response" << std::endl;
-  std::cout << "--dc, -D             : dynamic challenge/response cookie" << std::endl;
-  std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
-  std::cout << "--server, -s         : server override" << std::endl;
-  std::cout << "--timeout, -t        : timeout" << std::endl;
-  std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
-  std::cout << "--pk-password, -z    : private key password" << std::endl;
-  std::cout << "--tvm-override, -M   : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
-  std::cout << "--proxy-host, -h     : HTTP proxy hostname/IP" << std::endl;
-  std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
-  std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
-  std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
-  std::cout << "--proxy-basic, -B    : allow HTTP basic auth" << std::endl;
-  std::cout << "--alt-proxy, -A      : enable alternative proxy module" << std::endl;
-  std::cout << "--dco, -d            : enable data channel offload" << std::endl;
-  std::cout << "--cache-password, -C : cache password" << std::endl;
-  std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
-  std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
-  std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
-  std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
-  std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
-  std::cout << "--peer-info, -I      : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
-  ret = 2;
-  goto done;
-
- done:
-  delete thread;
   Client::uninit_process();
   return ret;
 }
+
+#endif
