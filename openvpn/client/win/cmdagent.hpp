@@ -219,7 +219,7 @@ namespace openvpn {
 	if (!reader.parse(content, jres, false))
 	  {
 	    os << content;
-	    OPENVPN_THROW(ovpnagent, "error parsing returned JSON: " << reader.getFormatedErrorMessages());
+	    OPENVPN_THROW(ovpnagent, "error parsing returned JSON: " << reader.getFormattedErrorMessages());
 	  }
 	return jres;
       }
