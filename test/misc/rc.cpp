@@ -2,6 +2,8 @@
 #include <string>
 #include <functional>
 
+#define OPENVPN_RC_NOTIFY
+
 #include <openvpn/log/logsimple.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
