@@ -37,7 +37,7 @@ namespace openvpn {
       Json::Value root;
       Json::Reader reader;
       if (!reader.parse(str, root, false))
-	OPENVPN_THROW(json_parse, title << " : " << reader.getFormatedErrorMessages());
+	OPENVPN_THROW(json_parse, title << " : " << reader.getFormattedErrorMessages());
       return root;
     }
 
