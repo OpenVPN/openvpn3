@@ -7,3 +7,5 @@ export OTHER_COMPILER_FLAGS="-Wno-unused-local-typedefs -Wno-unused-variable -Wn
 export CXX_COMPILER_FLAGS="-std=c++11"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC="-fPIC"
+export AR_CMD=gcc-ar
+export RANLIB_CMD=gcc-ranlib

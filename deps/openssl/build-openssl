@@ -30,6 +30,14 @@ fi
 . $O3/core/vars/vars-$TARGET
 . $O3/core/deps/lib-versions
 
+AR=ar
+RANLIB=ranlib
+[ "$AR_CMD" ] && AR=$AR_CMD
+[ "$RANLIB_CMD" ] && RANLIB=$RANLIB_CMD
+
+# special hack because OpenSSL build system doesn't use rc options for ar
+[ "$AR" = "gcc-ar" ] && AR="gcc-ar rc"
+
 OPENSSL=$OPENSSL_VERSION
 DIST=$(pwd)/openssl/openssl-$PLATFORM
 [ "$ARCH" ] && DIST=$DIST/$ARCH
@@ -42,7 +50,7 @@ echo $CMD
 $CMD
 $mysed -e "s|-O3|$LIB_OPT_LEVEL $MIN_DEPLOY_TARGET $OTHER_COMPILER_FLAGS $LIB_FPIC|" Makefile
 #$mysed -e "s|ERR_load_COMP_strings()|//ERR_load_COMP_strings()|" crypto/err/err_all.c
-make CC="$GCC_CMD" -j ${MAKE_JOBS:-1} build_libs
+make CC="$GCC_CMD" AR="$AR" RANLIB="$RANLIB" -j ${MAKE_JOBS:-1} build_libs
 touch apps/openssl
 touch openssl.pc
 touch libcrypto.pc

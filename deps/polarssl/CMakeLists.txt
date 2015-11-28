@@ -6,6 +6,12 @@ enable_testing()
 if(CMAKE_COMPILER_IS_GNUCC)
   # JY Added
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} $ENV{LIB_FPIC} $ENV{LIB_OPT_LEVEL} $ENV{PLATFORM_FLAGS} $ENV{OTHER_COMPILER_FLAGS} -Wall -W -Wdeclaration-after-statement")
+  if (NOT "$ENV{AR_CMD}" STREQUAL "")
+    set(CMAKE_AR "$ENV{AR_CMD}")
+  endif()
+  if (NOT "$ENV{RANLIB_CMD}" STREQUAL "")
+    set(CMAKE_RANLIB "$ENV{RANLIB_CMD}")
+  endif()
 
   # JY Commented out
   #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -Wall -Wextra -W -Wdeclaration-after-statement")
