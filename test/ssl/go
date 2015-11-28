@@ -5,12 +5,16 @@ if [ "$(uname)" == "Darwin" ]; then
     . vars/setpath
     cd test/ssl
     # GCC_EXTRA="-DENABLE_PRNG" HYBRID=1
-    PSSL=1 build proto 2>&1
+    PSSL=1 build proto
 else
     cd $O3/core
     . vars/vars-linux
     . vars/setpath
     cd test/ssl
     #GCC_EXTRA="-DENABLE_PRNG"
-    PSSL=1 NOSSL=1 build proto 2>&1
+    if [ "$OSSL" = "1" ]; then
+	OSSL=1 build proto
+    else
+	PSSL=1 NOSSL=1 build proto
+    fi
 fi
