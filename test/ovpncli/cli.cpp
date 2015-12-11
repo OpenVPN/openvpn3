@@ -306,7 +306,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool dco = false;
 
 	int ch;
-	optind = 0;
+	optind = 1;
 	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:I:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
