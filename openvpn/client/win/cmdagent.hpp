@@ -25,18 +25,23 @@
 #ifndef OPENVPN_CLIENT_WIN_CMDAGENT_H
 #define OPENVPN_CLIENT_WIN_CMDAGENT_H
 
+#include <utility>
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/wstring.hpp>
 #include <openvpn/common/jsonhelper.hpp>
-#include <openvpn/common/hexstr.hpp>
 #include <openvpn/buffer/bufstr.hpp>
+#include <openvpn/buffer/bufhex.hpp>
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/ws/httpcliset.hpp>
+#include <openvpn/win/winerr.hpp>
 #include <openvpn/client/win/agentconfig.hpp>
 #include <openvpn/win/modname.hpp>
 #include <openvpn/tun/win/client/setupbase.hpp>
 #include <openvpn/win/npinfo.hpp>
+#include <openvpn/win/handlecomm.hpp>
+#include <openvpn/win/event.hpp>
 
 namespace openvpn {
 
@@ -72,8 +77,10 @@ namespace openvpn {
     class SetupClient : public TunWin::SetupBase
     {
     public:
-      SetupClient(const Config::Ptr& config_arg)
-	: config(config_arg)
+      SetupClient(asio::io_context& io_context,
+		  const Config::Ptr& config_arg)
+	: config(config_arg),
+	  service_process(io_context)
       {
       }
 
@@ -89,6 +96,8 @@ namespace openvpn {
 #if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
 	jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
 #endif
+	jreq["confirm_event"] = confirm_event.handle_as_hex();
+	jreq["destroy_event"] = destroy_event.handle_as_hex();
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
 	const std::string jtxt = jreq.toStyledString();
 	os << jtxt; // dump it
@@ -119,51 +128,38 @@ namespace openvpn {
 	// Parse TAP handle
 	const std::string tap_handle_hex = json::get_string(jres, "tap_handle_hex");
 	os << "TAP handle: " << tap_handle_hex << std::endl;
-	HANDLE h;
-	Buffer hb((unsigned char *)&h, sizeof(h), false);
-	try {
-	  parse_hex(hb, tap_handle_hex);
-	}
-	catch (const BufferException& e)
+	const HANDLE tap = BufHex::parse<HANDLE>(tap_handle_hex, "TAP handle");
+	return tap;
+      }
+
+      virtual void confirm() override
+      {
+	confirm_event.signal_event();
+      }
+
+      virtual void set_service_fail_handler(std::function<void()>&& handler)
+      {
+	if (service_process.is_open())
 	  {
-	    OPENVPN_THROW(ovpnagent, "tap_handle_hex unexpected size: " << e.what());
+	    service_process.async_wait([handler=std::move(handler)](const asio::error_code& error) {
+		if (!error)
+		  handler();
+	      });
 	  }
-	if (hb.size() != sizeof(h))
-	  throw ovpnagent("tap_handle_hex unexpected size");
-	return h;
       }
 
       virtual void destroy(std::ostream& os) override // defined by DestructorBase
       {
-	os << "SetupClient: transmitting tun destroy request to " << config->npserv << std::endl;
-
-	// Create HTTP transaction container
-	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set();
-
-	// Make transaction
-	{
-	  std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
-	  t->req.method = "GET";
-	  t->req.uri = "/tun-destroy";
-	  ts->transactions.push_back(std::move(t));
-	}
-
-	// Execute transaction
-	WS::ClientSet::new_request_synchronous(ts);
-
-	// Process result
-	const Json::Value jres = get_json_result(os, *ts);
-
-	// Dump log
-	const std::string log_txt = json::get_string(jres, "log_txt");
-	os << log_txt;
+	os << "SetupClient: signaling tun destroy event" << std::endl;
+	service_process.close();
+	destroy_event.signal_event();
       }
 
       WS::ClientSet::TransactionSet::Ptr new_transaction_set()
       {
 	WS::Client::Config::Ptr hc(new WS::Client::Config());
 	hc->frame = frame_init_simple(2048);
-	hc->connect_timeout = 10;
+	hc->connect_timeout = 30;
 	hc->general_timeout = 60;
 
 	WS::ClientSet::TransactionSet::Ptr ts = new WS::ClientSet::TransactionSet;
@@ -181,6 +177,7 @@ namespace openvpn {
 	      const std::string server_exe = wstring::to_utf8(npinfo.exe_path);
 	      if (!Agent::valid_pipe(config->client_exe, server_exe))
 		OPENVPN_THROW(ovpnagent, config->npserv << " server running from " << server_exe << " could not be validated");
+	      service_process.assign(npinfo.proc.release());
 	    }
 	};
 #endif
@@ -225,12 +222,15 @@ namespace openvpn {
       }
 
       Config::Ptr config;
+      asio::windows::object_handle service_process;
+      Win::Event confirm_event;
+      Win::DestroyEvent destroy_event;
     };
 
-    virtual TunWin::SetupBase::Ptr new_setup_obj() override
+    virtual TunWin::SetupBase::Ptr new_setup_obj(asio::io_context& io_context) override
     {
       if (config)
-	return new SetupClient(config);
+	return new SetupClient(io_context, config);
       else
 	return new TunWin::Setup();
     }
@@ -243,4 +243,5 @@ namespace openvpn {
     Config::Ptr config;
   };
 }
+
 #endif
