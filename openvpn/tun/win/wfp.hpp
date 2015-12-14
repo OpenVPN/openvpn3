@@ -220,7 +220,7 @@ namespace openvpn {
 	  });
       }
 
-      bool add_filter(const FWPM_FILTER0 *filter,
+      void add_filter(const FWPM_FILTER0 *filter,
 		      PSECURITY_DESCRIPTOR sd,
 		      UINT64 *id)
       {
