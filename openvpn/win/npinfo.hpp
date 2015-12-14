@@ -71,7 +71,7 @@ namespace openvpn {
 	// open process
 	Win::ScopedHANDLE proc(::OpenProcess(
 #if _WIN32_WINNT >= 0x0600 // Vista and higher
-	    limited ? PROCESS_QUERY_LIMITED_INFORMATION : PROCESS_ALL_ACCESS,
+	    limited ? (PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE) : PROCESS_ALL_ACCESS,
 #else
 	    PROCESS_ALL_ACCESS,
 #endif
@@ -94,8 +94,8 @@ namespace openvpn {
       static void allow_client_query()
       {
 	SecurityAttributes sa(
-          "D:"                         // discretionary ACL
-	  "(A;OICI;0x1000;;;S-1-1-0)"  // allow PROCESS_QUERY_LIMITED_INFORMATION access to Everyone
+          "D:"                           // discretionary ACL
+	  "(A;OICI;0x101000;;;S-1-1-0)"  // grant PROCESS_QUERY_LIMITED_INFORMATION and SYNCHRONIZE access to Everyone
 	  ,
 	  false,
 	  "client query");
