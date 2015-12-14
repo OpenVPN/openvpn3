@@ -169,7 +169,7 @@ namespace openvpn {
 		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
 		  // create new tun setup object
-		  tun_setup = config->new_setup_obj();
+		  TunWin::SetupBase::Ptr tun_setup(config->new_setup_obj(io_context));
 
 		  // open/config TAP
 		  HANDLE th;
@@ -329,7 +329,6 @@ namespace openvpn {
       TunImpl::Ptr impl;
       bool halt;
       TunProp::State::Ptr state;
-      TunWin::SetupBase::Ptr tun_setup;
     };
 
     inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_context& io_context,
