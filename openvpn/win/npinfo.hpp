@@ -170,30 +170,35 @@ namespace openvpn {
 
 #if _WIN32_WINNT >= 0x0600 // Vista and higher
 
-    // Used by server to get info about clients
-    struct NamedPipePeerInfoClient : public NamedPipePeerInfo
+    struct NamedPipePeerInfoCS : public NamedPipePeerInfo
     {
-      NamedPipePeerInfoClient(const HANDLE handle)
+      NamedPipePeerInfoCS(const HANDLE handle, const bool client)
       {
-	const ULONG pid = get_pid(handle, true);
-	Win::ScopedHANDLE proc = get_process(pid, false);
+	const ULONG pid = get_pid(handle, client);
+	proc = get_process(pid, !client);
 	exe_path = get_exe_path(proc());
       }
 
+      Win::ScopedHANDLE proc;
       std::wstring exe_path;
     };
 
+    // Used by server to get info about clients
+    struct NamedPipePeerInfoClient : public NamedPipePeerInfoCS
+    {
+      NamedPipePeerInfoClient(const HANDLE handle)
+	: NamedPipePeerInfoCS(handle, true)
+      {
+      }
+    };
+
     // Used by clients to get info about the server
-    struct NamedPipePeerInfoServer : public NamedPipePeerInfo
+    struct NamedPipePeerInfoServer : public NamedPipePeerInfoCS
     {
       NamedPipePeerInfoServer(const HANDLE handle)
+	: NamedPipePeerInfoCS(handle, false)
       {
-	const ULONG pid = get_pid(handle, false);
-	Win::ScopedHANDLE proc = get_process(pid, true);
-	exe_path = get_exe_path(proc());
       }
-
-      std::wstring exe_path;
     };
 
 #endif
