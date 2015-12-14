@@ -26,6 +26,10 @@
 
 #include <windows.h> // for HANDLE
 
+#include <functional>
+
+#include <asio.hpp>
+
 #include <openvpn/common/destruct.hpp>
 #include <openvpn/common/stop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
@@ -41,13 +45,21 @@ namespace openvpn {
       virtual HANDLE establish(const TunBuilderCapture& pull,
 			       Stop* stop,
 			       std::ostream& os) = 0;
+
+      virtual void confirm()
+      {
+      }
+
+      virtual void set_service_fail_handler(std::function<void()>&& handler)
+      {
+      }
     };
 
     struct SetupFactory : public RC<thread_unsafe_refcount>
     {
       typedef RCPtr<SetupFactory> Ptr;
 
-      virtual SetupBase::Ptr new_setup_obj() = 0;
+      virtual SetupBase::Ptr new_setup_obj(asio::io_context& io_context) = 0;
     };
   }
 }

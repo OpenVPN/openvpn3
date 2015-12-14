@@ -97,10 +97,10 @@ namespace openvpn {
 
       TunWin::SetupFactory::Ptr tun_setup_factory;
 
-      TunWin::SetupBase::Ptr new_setup_obj()
+      TunWin::SetupBase::Ptr new_setup_obj(asio::io_context& io_context)
       {
 	if (tun_setup_factory)
-	  return tun_setup_factory->new_setup_obj();
+	  return tun_setup_factory->new_setup_obj(io_context);
 	else
 	  return new TunWin::Setup();
       }
@@ -129,6 +129,8 @@ namespace openvpn {
       typedef Tun<Client*, TunPersist> TunImpl;
 
     public:
+      typedef RCPtr<Client> Ptr;
+
       virtual void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&)
       {
 	if (!impl)
@@ -182,9 +184,18 @@ namespace openvpn {
 		  // create ASIO wrapper for HANDLE
 		  TAPStream* ts = new TAPStream(io_context, th);
 
+		  // assert ownership over TAP device handle
+		  tun_setup->confirm();
+
 		  // persist tun settings state
 		  if (tun_persist->persist_tun_state(ts, state))
 		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
+
+		  // setup handler for external tun close
+		  tun_setup->set_service_fail_handler([self=Ptr(this)]() {
+		      if (!self->halt)
+			self->parent.tun_error(Error::TUN_IFACE_DISABLED, "service failure");
+		    });
 
 		  // enable tun_setup destructor
 		  tun_persist->add_destructor(tun_setup);
