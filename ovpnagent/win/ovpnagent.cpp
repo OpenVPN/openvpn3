@@ -35,15 +35,19 @@
 #include <openvpn/common/wstring.hpp>
 #include <openvpn/log/logbasesimple.hpp>
 #include <openvpn/buffer/buflist.hpp>
+#include <openvpn/buffer/bufhex.hpp>
 #include <openvpn/init/initprocess.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
 #include <openvpn/ws/httpserv.hpp>
+#include <openvpn/win/winerr.hpp>
 #include <openvpn/client/win/agentconfig.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/winsvc.hpp>
 #include <openvpn/win/logfile.hpp>
 #include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/win/npinfo.hpp>
+#include <openvpn/win/handlecomm.hpp>
+#include <openvpn/win/event.hpp>
 
 #if defined(USE_POLARSSL)
 #define SSL_LIB_NAME "PolarSSL"
@@ -104,7 +108,9 @@ public:
 	     const WS::Server::Listener::Client::Factory::Ptr& client_factory)
     : WS::Server::Listener(io_context, hconf, listen_list, client_factory),
       config(config_arg),
-      client_process(io_context)
+      client_process(io_context),
+      client_confirm_event(io_context),
+      client_destroy_event(io_context)
   {
   }
 
@@ -117,20 +123,71 @@ public:
     return Win::ScopedHANDLE(tun->establish(tbc, stop, os));
   }
 
-  void destroy_tun(std::ostream& os)
+  // return true if we did any work
+  bool destroy_tun(std::ostream& os)
   {
-    client_process.close();
-    if (tun)
+    bool ret = false;
+    try {
+      // close the remote tap handle in the client process
+      if (client_process.is_open() && !remote_tap_handle_hex.empty())
+	{
+	  ret = true;
+	  const HANDLE remote_tap_handle = BufHex::parse<HANDLE>(remote_tap_handle_hex, "remote TAP handle");
+	  Win::ScopedHANDLE local_tap_handle; // dummy handle, immediately closed after duplication
+	  if (::DuplicateHandle(client_process.native_handle(),
+				 remote_tap_handle,
+				 GetCurrentProcess(),
+				 local_tap_handle.ref(),
+				 0,
+				 FALSE,
+				 DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE))
+	    {
+	      os << "destroy_tun: no client confirm, DuplicateHandle (close) succeeded" << std::endl;
+	    }
+	  else
+	    {
+	      const Win::LastError err;
+	      os << "destroy_tun: no client confirm, DuplicateHandle (close) failed: " << err.message() << std::endl;
+	    }
+	}
+    }
+    catch (const std::exception& e)
       {
-	tun->destroy(os);
-	tun.reset();
+	os << "destroy_tun: exception in remote tap handle close: " << e.what() << std::endl;
       }
+
+    try {
+      // undo the effects of establish_tun
+      if (tun)
+	{
+	  ret = true;
+	  tun->destroy(os);
+	}
+    }
+    catch (const std::exception& e)
+      {
+	os << "destroy_tun: exception in tun teardown: " << e.what() << std::endl;
+      }
+
+    try {
+      tun.reset();
+      remote_tap_handle_hex.clear();
+      client_process.close();
+      client_confirm_event.close();
+      client_destroy_event.close();
+    }
+    catch (const std::exception& e)
+      {
+	os << "destroy_tun: exception in cleanup: " << e.what() << std::endl;
+      }
+    return ret;
   }
 
-  void destroy_tun()
+  void destroy_tun_exit()
   {
     std::ostringstream os;
     destroy_tun(os);
+    OPENVPN_LOG_NTNL("TUN CLOSE (exit)\n" << os.str());
   }
 
   void set_client_process(Win::ScopedHANDLE&& proc)
@@ -143,8 +200,75 @@ public:
 	if (!error && self->tun)
 	  {
 	    std::ostringstream os;
-	    self->tun->destroy(os);
-	    OPENVPN_LOG_NTNL("FAILSAFE TUN CLOSE\n" << os.str());
+	    self->destroy_tun(os);
+	    OPENVPN_LOG_NTNL("TUN CLOSE (failsafe)\n" << os.str());
+	  }
+      });
+  }
+
+  void set_client_confirm_event(const HANDLE client_process_handle,
+				const std::string& confirm_handle_hex)
+  {
+    client_confirm_event.close();
+
+    const HANDLE remote_event = BufHex::parse<HANDLE>(confirm_handle_hex, "confirm event handle");
+    HANDLE event_handle;
+    if (!::DuplicateHandle(client_process_handle,
+			   remote_event,
+			   GetCurrentProcess(),
+			   &event_handle,
+			   0,
+			   FALSE,
+			   DUPLICATE_SAME_ACCESS))
+      {
+	const Win::LastError err;
+	OPENVPN_THROW_EXCEPTION("set_client_confirm_event: DuplicateHandle failed: " << err.message());
+      }
+
+    client_confirm_event.assign(event_handle);
+
+    // When the client signals the client_confirm event, it means
+    // that the client has taken ownership of the TAP device HANDLE,
+    // so we locally release ownership by clearing remote_tap_handle_hex,
+    // effectively preventing the cross-process release of TAP device
+    // HANDLE in destroy_tun() above.
+    client_confirm_event.async_wait([self=Ptr(this)](const asio::error_code& error) {
+	if (!error)
+	  {
+	    self->remote_tap_handle_hex.clear();
+	    OPENVPN_LOG_STRING("TUN CONFIRM\n");
+	  }
+      });
+  }
+
+  void set_client_destroy_event(const HANDLE client_process_handle,
+				const std::string& event_handle_hex)
+  {
+    client_destroy_event.close();
+
+    const HANDLE remote_event = BufHex::parse<HANDLE>(event_handle_hex, "destroy event handle");
+    HANDLE event_handle;
+    if (!::DuplicateHandle(client_process_handle,
+			   remote_event,
+			   GetCurrentProcess(),
+			   &event_handle,
+			   0,
+			   FALSE,
+			   DUPLICATE_SAME_ACCESS))
+      {
+	const Win::LastError err;
+	OPENVPN_THROW_EXCEPTION("set_client_destroy_event: DuplicateHandle failed: " << err.message());
+      }
+
+    client_destroy_event.assign(event_handle);
+
+    // normal event-based tun close processing
+    client_destroy_event.async_wait([self=Ptr(this)](const asio::error_code& error) {
+	if (!error && self->tun)
+	  {
+	    std::ostringstream os;
+	    self->destroy_tun(os);
+	    OPENVPN_LOG_NTNL("TUN CLOSE (event)\n" << os.str());
 	  }
       });
   }
@@ -154,6 +278,12 @@ public:
     if (!client_process.is_open())
       throw Exception("no client process");
     return client_process.native_handle();
+  }
+
+  const std::string& set_remote_tap_handle_hex(const std::string& value)
+  {
+    remote_tap_handle_hex = value;
+    return value;
   }
 
   const MyConfig& config;
@@ -182,6 +312,9 @@ private:
 
   TunWin::Setup::Ptr tun;
   asio::windows::object_handle client_process;
+  asio::windows::object_handle client_confirm_event;
+  asio::windows::object_handle client_destroy_event;
+  std::string remote_tap_handle_hex;
 };
 
 class MyClientInstance : public WS::Server::Listener::Client
@@ -229,9 +362,20 @@ private:
 	  // get PID
 	  ULONG pid = json::get_uint_optional(root, "pid", 0);
 
+	  // get remote event handles for tun object confirmation/destruction
+	  const std::string confirm_event_hex = json::get_string(root, "confirm_event");
+	  const std::string destroy_event_hex = json::get_string(root, "destroy_event");
+
 	  // parse JSON data into a TunBuilderCapture object
 	  TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
 	  tbc->validate();
+
+	  // destroy previous instance
+	  if (parent()->destroy_tun(os))
+	    {
+	      os << "Destroyed previous TAP instance" << std::endl;
+	      ::Sleep(1000);
+	    }
 
 	  // establish the tun setup object
 	  Win::ScopedHANDLE handle(parent()->establish_tun(*tbc, nullptr, os));
@@ -240,13 +384,19 @@ private:
 	  {
 	    Win::NamedPipeImpersonate impersonate(client_pipe);
 
-	    // remember the client process that sent the request
-	    parent()->set_client_process(get_client_process(client_pipe, pid));
+	    // remember the client process that sent the request,
+	    // and save the confirm/destroy events
+	    Win::ScopedHANDLE cliproc = get_client_process(client_pipe, pid);
+	    parent()->set_client_confirm_event(cliproc(), confirm_event_hex);
+	    parent()->set_client_destroy_event(cliproc(), destroy_event_hex);
+	    parent()->set_client_process(std::move(cliproc));
 
 	    // build JSON return dictionary
+	    const std::string log_txt = string::remove_blanks(os.str());
 	    Json::Value jout(Json::objectValue);
-	    jout["log_txt"] = string::remove_blanks(os.str());
-	    jout["tap_handle_hex"] = Win::NamedPipePeerInfo::send_handle(handle(), parent()->get_client_process());
+	    jout["log_txt"] = log_txt;
+	    jout["tap_handle_hex"] = parent()->set_remote_tap_handle_hex(Win::HandleComm::send_handle(handle(), parent()->get_client_process()));
+	    OPENVPN_LOG_NTNL("TUN SETUP\n" << log_txt);
 
 	    out = buf_from_string(jout.toStyledString());
 	  }
@@ -258,26 +408,9 @@ private:
 	  ci.keepalive = keepalive_request();
 	  generate_reply_headers(ci);
 	}
-      else if (req.method == "GET" && req.uri == "/tun-destroy")
-	{
-	  // destroy tun object
-	  parent()->destroy_tun(os);
-
-	  // build JSON return dictionary
-	  Json::Value jout(Json::objectValue);
-	  jout["log_txt"] = string::remove_blanks(os.str());
-
-	  out = buf_from_string(jout.toStyledString());
-
-	  WS::Server::ContentInfo ci;
-	  ci.http_status = HTTP::Status::OK;
-	  ci.type = "application/json";
-	  ci.length = out->size();
-	  ci.keepalive = keepalive_request();
-	  generate_reply_headers(ci);
-	}
       else
 	{
+	  OPENVPN_LOG("PAGE NOT FOUND");
 	  out = buf_from_string("page not found\n");
 	  WS::Server::ContentInfo ci;
 	  ci.http_status = HTTP::Status::NotFound;
@@ -288,7 +421,10 @@ private:
     }
     catch (const std::exception& e)
       {
-	out = buf_from_string(string::remove_blanks(os.str() + e.what() + '\n'));
+	const std::string error_msg = string::remove_blanks(os.str() + e.what() + '\n');
+	OPENVPN_LOG_NTNL("EXCEPTION\n" << error_msg);
+
+	out = buf_from_string(error_msg);
 	WS::Server::ContentInfo ci;
 	ci.http_status = HTTP::Status::BadRequest;
 	ci.type = "text/plain";
@@ -437,7 +573,7 @@ public:
     asio::post(*io_context, [this]() {
 	if (listener)
 	  {
-	    listener->destroy_tun();
+	    listener->destroy_tun_exit();
 	    listener->stop();
 	  }
       });
