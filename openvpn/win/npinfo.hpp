@@ -85,24 +85,6 @@ namespace openvpn {
 	return proc;
       }
 
-      static std::string send_handle(const HANDLE handle, const HANDLE process)
-      {
-	HANDLE remote_handle;
-	if (!::DuplicateHandle(GetCurrentProcess(),
-			       handle,
-			       process,
-			       &remote_handle,
-			       0,
-			       FALSE,
-			       DUPLICATE_SAME_ACCESS))
-	  {
-	    const Win::LastError err;
-	    OPENVPN_THROW(npinfo_error, "DuplicateHandle failed: " << err.message());
-	  }
-	const Buffer hb((unsigned char *)&remote_handle, sizeof(remote_handle), true);
-	return render_hex_generic(hb);
-      }
-
 #if _WIN32_WINNT >= 0x0600 // Vista and higher
 
       // Servers must call this method to modify their process
