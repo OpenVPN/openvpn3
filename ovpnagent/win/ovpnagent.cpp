@@ -47,7 +47,6 @@
 #include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/win/npinfo.hpp>
 #include <openvpn/win/handlecomm.hpp>
-#include <openvpn/win/event.hpp>
 
 #if defined(USE_POLARSSL)
 #define SSL_LIB_NAME "PolarSSL"
@@ -135,12 +134,12 @@ public:
 	  const HANDLE remote_tap_handle = BufHex::parse<HANDLE>(remote_tap_handle_hex, "remote TAP handle");
 	  Win::ScopedHANDLE local_tap_handle; // dummy handle, immediately closed after duplication
 	  if (::DuplicateHandle(client_process.native_handle(),
-				 remote_tap_handle,
-				 GetCurrentProcess(),
-				 local_tap_handle.ref(),
-				 0,
-				 FALSE,
-				 DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE))
+				remote_tap_handle,
+				GetCurrentProcess(),
+				local_tap_handle.ref(),
+				0,
+				FALSE,
+				DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE))
 	    {
 	      os << "destroy_tun: no client confirm, DuplicateHandle (close) succeeded" << std::endl;
 	    }
@@ -206,26 +205,40 @@ public:
       });
   }
 
-  void set_client_confirm_event(const HANDLE client_process_handle,
-				const std::string& confirm_handle_hex)
+  void set_client_confirm_event(const std::string& confirm_handle_hex)
   {
     client_confirm_event.close();
 
     const HANDLE remote_event = BufHex::parse<HANDLE>(confirm_handle_hex, "confirm event handle");
     HANDLE event_handle;
-    if (!::DuplicateHandle(client_process_handle,
+    if (!::DuplicateHandle(get_client_process(),
 			   remote_event,
 			   GetCurrentProcess(),
 			   &event_handle,
 			   0,
 			   FALSE,
-			   DUPLICATE_SAME_ACCESS))
+			   DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE))
       {
 	const Win::LastError err;
 	OPENVPN_THROW_EXCEPTION("set_client_confirm_event: DuplicateHandle failed: " << err.message());
       }
-
     client_confirm_event.assign(event_handle);
+
+    // Check if the event is okay
+    {
+      const DWORD status = ::WaitForSingleObject(client_confirm_event.native_handle(), 0);
+      const Win::LastError err;
+      switch (status)
+	{
+	case WAIT_OBJECT_0: // acceptable status
+	case WAIT_TIMEOUT:  // acceptable status
+	  break;
+	case WAIT_ABANDONED:
+	  throw Exception("set_client_confirm_event: confirm event is abandoned");
+	default:
+	  OPENVPN_THROW_EXCEPTION("set_client_confirm_event: WaitForSingleObject failed: " << err.message());
+	}
+    }
 
     // When the client signals the client_confirm event, it means
     // that the client has taken ownership of the TAP device HANDLE,
@@ -241,26 +254,43 @@ public:
       });
   }
 
-  void set_client_destroy_event(const HANDLE client_process_handle,
-				const std::string& event_handle_hex)
+  void set_client_destroy_event(const std::string& event_handle_hex)
   {
     client_destroy_event.close();
 
+    // Move the remote event HANDLE (already duplicated in remote process)
+    // to local process.
     const HANDLE remote_event = BufHex::parse<HANDLE>(event_handle_hex, "destroy event handle");
     HANDLE event_handle;
-    if (!::DuplicateHandle(client_process_handle,
+    if (!::DuplicateHandle(get_client_process(),
 			   remote_event,
 			   GetCurrentProcess(),
 			   &event_handle,
 			   0,
 			   FALSE,
-			   DUPLICATE_SAME_ACCESS))
+			   DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE))
       {
 	const Win::LastError err;
 	OPENVPN_THROW_EXCEPTION("set_client_destroy_event: DuplicateHandle failed: " << err.message());
       }
-
     client_destroy_event.assign(event_handle);
+
+    // Check if the event is already signaled, or has some other error
+    {
+      const DWORD status = ::WaitForSingleObject(client_destroy_event.native_handle(), 0);
+      const Win::LastError err;
+      switch (status)
+	{
+	case WAIT_TIMEOUT: // expected status
+	  break;
+	case WAIT_OBJECT_0:
+	  throw Exception("set_client_destroy_event: destroy event is already signaled");
+	case WAIT_ABANDONED:
+	  throw Exception("set_client_destroy_event: destroy event is abandoned");
+	default:
+	  OPENVPN_THROW_EXCEPTION("set_client_destroy_event: WaitForSingleObject failed: " << err.message());
+	}
+    }
 
     // normal event-based tun close processing
     client_destroy_event.async_wait([self=Ptr(this)](const asio::error_code& error) {
@@ -280,10 +310,14 @@ public:
     return client_process.native_handle();
   }
 
-  const std::string& set_remote_tap_handle_hex(const std::string& value)
+  void set_remote_tap_handle_hex(const HANDLE tap_handle)
   {
-    remote_tap_handle_hex = value;
-    return value;
+    remote_tap_handle_hex = Win::HandleComm::send_handle(tap_handle, get_client_process());
+  }
+
+  const std::string& get_remote_tap_handle_hex()
+  {
+    return remote_tap_handle_hex;
   }
 
   const MyConfig& config;
@@ -377,29 +411,37 @@ private:
 	      ::Sleep(1000);
 	    }
 
-	  // establish the tun setup object
-	  Win::ScopedHANDLE handle(parent()->establish_tun(*tbc, nullptr, os));
-
-	  // this section is impersonated in the context of the client
+	  // pre-establish impersonation
 	  {
 	    Win::NamedPipeImpersonate impersonate(client_pipe);
 
-	    // remember the client process that sent the request,
-	    // and save the confirm/destroy events
-	    Win::ScopedHANDLE cliproc = get_client_process(client_pipe, pid);
-	    parent()->set_client_confirm_event(cliproc(), confirm_event_hex);
-	    parent()->set_client_destroy_event(cliproc(), destroy_event_hex);
-	    parent()->set_client_process(std::move(cliproc));
+	    // remember the client process that sent the request
+	    parent()->set_client_process(get_client_process(client_pipe, pid));
 
-	    // build JSON return dictionary
-	    const std::string log_txt = string::remove_blanks(os.str());
-	    Json::Value jout(Json::objectValue);
-	    jout["log_txt"] = log_txt;
-	    jout["tap_handle_hex"] = parent()->set_remote_tap_handle_hex(Win::HandleComm::send_handle(handle(), parent()->get_client_process()));
-	    OPENVPN_LOG_NTNL("TUN SETUP\n" << log_txt);
-
-	    out = buf_from_string(jout.toStyledString());
+	    // save the confirm/destroy events
+	    parent()->set_client_destroy_event(destroy_event_hex);
+	    parent()->set_client_confirm_event(confirm_event_hex);
 	  }
+
+	  // establish the tun setup object
+	  Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, nullptr, os));
+
+	  // post-establish impersonation
+	  {
+	    Win::NamedPipeImpersonate impersonate(client_pipe);
+
+	    // duplicate the TAP handle into the client process
+	    parent()->set_remote_tap_handle_hex(tap_handle());
+	  }
+
+	  // build JSON return dictionary
+	  const std::string log_txt = string::remove_blanks(os.str());
+	  Json::Value jout(Json::objectValue);
+	  jout["log_txt"] = log_txt;
+	  jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
+	  OPENVPN_LOG_NTNL("TUN SETUP\n" << log_txt);
+
+	  out = buf_from_string(jout.toStyledString());
 
 	  WS::Server::ContentInfo ci;
 	  ci.http_status = HTTP::Status::OK;
@@ -421,6 +463,9 @@ private:
     }
     catch (const std::exception& e)
       {
+	if (parent()->destroy_tun(os))
+	  os << "Destroyed previous TAP instance due to exception" << std::endl;
+
 	const std::string error_msg = string::remove_blanks(os.str() + e.what() + '\n');
 	OPENVPN_LOG_NTNL("EXCEPTION\n" << error_msg);
 
