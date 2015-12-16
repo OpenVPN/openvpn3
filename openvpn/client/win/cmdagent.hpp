@@ -96,8 +96,8 @@ namespace openvpn {
 #if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
 	jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
 #endif
-	jreq["confirm_event"] = confirm_event.handle_as_hex();
-	jreq["destroy_event"] = destroy_event.handle_as_hex();
+	jreq["confirm_event"] = confirm_event.duplicate_local();
+	jreq["destroy_event"] = destroy_event.duplicate_local();
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
 	const std::string jtxt = jreq.toStyledString();
 	os << jtxt; // dump it
