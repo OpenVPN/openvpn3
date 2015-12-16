@@ -345,7 +345,11 @@ namespace openvpn {
   template<typename... Args>
   inline std::string printfmt(const std::string& fmt, Args... args)
   {
+#ifdef OPENVPN_PLATFORM_ANDROID
+    PrintFormatted<std::ostringstream> pf(fmt, 256);
+#else
     PrintFormatted<std::string> pf(fmt, 256);
+#endif
     pf.process(args...);
     return pf.str();
   }
