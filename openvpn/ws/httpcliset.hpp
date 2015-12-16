@@ -222,7 +222,7 @@ namespace openvpn {
 	  ret += " : ";
 	  if (status == WS::Client::Status::E_SUCCESS)
 	    {
-	      ret += std::to_string(reply.status_code);
+	      ret += openvpn::to_string(reply.status_code);
 	      ret += ' ';
 	      ret += reply.status_text;
 	    }
