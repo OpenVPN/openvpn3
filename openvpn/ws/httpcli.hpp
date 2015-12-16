@@ -50,6 +50,7 @@
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/asiopolysock.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/http/reply.hpp>
@@ -301,7 +302,7 @@ namespace openvpn {
 	      if (socket->remote_ip_port(addr, port))
 		{
 		  h.hint = addr.to_string();
-		  h.port = std::to_string(port);
+		  h.port = openvpn::to_string(port);
 		}
 	    }
 	  return h;
