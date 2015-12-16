@@ -184,9 +184,6 @@ namespace openvpn {
 		  // create ASIO wrapper for HANDLE
 		  TAPStream* ts = new TAPStream(io_context, th);
 
-		  // assert ownership over TAP device handle
-		  tun_setup->confirm();
-
 		  // persist tun settings state
 		  if (tun_persist->persist_tun_state(ts, state))
 		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
@@ -199,6 +196,9 @@ namespace openvpn {
 
 		  // enable tun_setup destructor
 		  tun_persist->add_destructor(tun_setup);
+
+		  // assert ownership over TAP device handle
+		  tun_setup->confirm();
 		}
 
 	      // configure tun interface packet forwarding
