@@ -29,10 +29,13 @@
 #include <type_traits>
 #include <utility>
 
+#include <openvpn/common/platform.hpp>
+
 namespace openvpn {
 
   // Convert an arbitrary argument to a string.
 
+#ifndef OPENVPN_PLATFORM_ANDROID // Android NDK apparently doesn't support std::to_string : http://stackoverflow.com/questions/22774009/android-ndk-stdto-string-support
   // numeric types
   template <typename T,
 	    typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
@@ -40,10 +43,14 @@ namespace openvpn {
   {
     return std::to_string(value);
   }
+#endif
 
-  // non-numeric types not specialized below
-  template <typename T,
-	    typename std::enable_if<!std::is_arithmetic<T>::value, int>::type = 0>
+  // non-numeric types
+  template <typename T
+#ifndef OPENVPN_PLATFORM_ANDROID
+	    , typename std::enable_if<!std::is_arithmetic<T>::value, int>::type = 0
+#endif
+	    >
   inline std::string to_string(const T& value)
   {
     std::ostringstream os;
@@ -119,7 +126,7 @@ namespace openvpn {
 		typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
       void append(T value)
       {
-	str_ += std::to_string(value);
+	str_ += openvpn::to_string(value);
       }
 
       // non-numeric types not specialized below
