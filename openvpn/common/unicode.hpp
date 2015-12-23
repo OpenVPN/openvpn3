@@ -28,6 +28,7 @@
 #include <cstring>           // for std::memcpy
 #include <algorithm>         // for std::min
 #include <memory>
+#include <cctype>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -41,9 +42,18 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(unicode_dest_overflow);
     OPENVPN_SIMPLE_EXCEPTION(unicode_malformed);
 
-    // Return true if the given buffer is a valid UTF-8 string
-    inline bool is_valid_utf8(const unsigned char *source, size_t size)
+    // Return true if the given buffer is a valid UTF-8 string.
+    // Extra constraints:
+    enum {
+      UTF8_NO_CTRL  = (1<<30), // no control chars allowed
+      UTF8_NO_SPACE = (1<<31), // no space chars allowed
+    };
+    inline bool is_valid_utf8_uchar_buf(const unsigned char *source,
+					size_t size,
+					const size_t max_len_flags=0) // OR max length (or 0 to disable) with UTF8_x flags above
     {
+      const size_t max_len = max_len_flags & ((size_t)UTF8_NO_CTRL-1); // NOTE -- use smallest flag value here
+      size_t unicode_len = 0;
       while (size)
 	{
 	  const unsigned char c = *source;
@@ -54,16 +64,27 @@ namespace openvpn {
 	    return false;
 	  if (!isLegalUTF8(source, length))
 	    return false;
+	  if (length == 1)
+	    {
+	      if ((max_len_flags & UTF8_NO_CTRL) && std::iscntrl(c))
+		return false;
+	      if ((max_len_flags & UTF8_NO_SPACE) && std::isspace(c))
+		return false;
+	    }
+
 	  source += length;
 	  size -= length;
+	  ++unicode_len;
+	  if (max_len && unicode_len > max_len)
+	    return false;
 	}
       return true;
     }
 
     template <typename STRING>
-    inline bool is_valid_utf8(const STRING& str)
+    inline bool is_valid_utf8(const STRING& str, const size_t max_len_flags=0)
     {
-      return is_valid_utf8((const unsigned char *)str.c_str(), str.length());
+      return is_valid_utf8_uchar_buf((const unsigned char *)str.c_str(), str.length(), max_len_flags);
     }
 
     // Return the byte position in the string that corresponds with

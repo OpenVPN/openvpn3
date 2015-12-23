@@ -146,7 +146,7 @@ namespace openvpn {
       }
 
     // verify that file is valid UTF-8
-    if (!Unicode::is_valid_utf8(bp->c_data(), bp->size()))
+    if (!Unicode::is_valid_utf8_uchar_buf(bp->c_data(), bp->size()))
       OPENVPN_THROW(file_not_utf8, "file is not UTF8: " << filename);
 
     return std::string((const char *)bp->c_data(), bp->size());
