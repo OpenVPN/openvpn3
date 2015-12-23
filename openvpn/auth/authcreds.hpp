@@ -31,6 +31,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/buffer/safestr.hpp>
+#include <openvpn/auth/validatecreds.hpp>
 
 namespace openvpn {
 
@@ -56,7 +57,7 @@ namespace openvpn {
 
       bool is_valid() const
       {
-	return defined();
+	return defined() && validate_auth_cred(username) && validate_auth_cred(password);
       }
 
       void wipe_password()
