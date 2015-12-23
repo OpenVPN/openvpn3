@@ -52,7 +52,7 @@ namespace openvpn {
     {
     }
 
-    SafeString(std::string& str)
+    SafeString(const std::string& str)
       : SafeString(str.c_str(), str.length())
     {
     }
