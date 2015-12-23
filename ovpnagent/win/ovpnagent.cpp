@@ -587,6 +587,7 @@ public:
       "(A;OICI;GA;;;S-1-5-18)"     // allow full access to Local System account
       "(D;OICI;0x4;;;S-1-1-0)"     // deny FILE_CREATE_PIPE_INSTANCE for Everyone
       "(A;OICI;GRGW;;;S-1-5-11)"   // allow read/write access for authenticated users
+      "(A;OICI;GRGW;;;S-1-5-32-546)" // allow read/write access for built-in guest account
       ;
 
     Listen::List ll;
