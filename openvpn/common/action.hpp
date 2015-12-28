@@ -65,6 +65,12 @@ namespace openvpn {
       reserve(capacity);
     }
 
+    void add(Action* action)
+    {
+      if (action)
+	emplace_back(action);
+    }
+
     void add(const Action::Ptr& action)
     {
       if (action)
