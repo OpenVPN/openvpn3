@@ -328,7 +328,7 @@ namespace openvpn {
 	  }
 
 	// Set IPv6 Interface
-	if (local6)
+	if (local6 && !pull.block_ipv6)
 	  {
 	    {
 	      Command::Ptr cmd(new Command);
@@ -348,7 +348,10 @@ namespace openvpn {
 	    {
 	      const TunBuilderCapture::Route& route = *i;
 	      if (route.ipv6)
-		add_del_route(route.address, route.prefix_length, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+		{
+		  if (!pull.block_ipv6)
+		    add_del_route(route.address, route.prefix_length, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
+		}
 	      else
 		{
 		  if (local4 && !local4->gateway.empty())
@@ -367,10 +370,13 @@ namespace openvpn {
 		const TunBuilderCapture::Route& route = *i;
 		if (route.ipv6)
 		  {
-		    if (gw.v6.defined())
-		      add_del_route(route.address, route.prefix_length, gw.v6.router.to_string(), gw.v6.iface, R_IPv6|R_IFACE_HINT, create, destroy);
-		    else
-		      os << "NOTE: cannot determine gateway for exclude IPv6 routes" << std::endl;
+		    if (!pull.block_ipv6)
+		      {
+			if (gw.v6.defined())
+			  add_del_route(route.address, route.prefix_length, gw.v6.router.to_string(), gw.v6.iface, R_IPv6|R_IFACE_HINT, create, destroy);
+			else
+			  os << "NOTE: cannot determine gateway for exclude IPv6 routes" << std::endl;
+		      }
 		  }
 		else
 		  {
@@ -408,7 +414,7 @@ namespace openvpn {
 	  }
 
 	// Process IPv6 redirect-gateway
-	if (pull.reroute_gw.ipv6)
+	if (pull.reroute_gw.ipv6 && !pull.block_ipv6)
 	  {
 	    // add server bypass route
 	    if (gw.v6.defined())
@@ -430,6 +436,14 @@ namespace openvpn {
 		add_del_route("0000::", 1, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
 		add_del_route("8000::", 1, local6->gateway, iface_name, R_IPv6|R_IFACE, create, destroy);
 	      }
+	  }
+
+	// Process block-ipv6
+	if (pull.block_ipv6)
+	  {
+	    add_del_route("2000::", 4, "::1", "lo0", R_IPv6|R_REJECT|R_IFACE_HINT, create, destroy);
+	    add_del_route("3000::", 4, "::1", "lo0", R_IPv6|R_REJECT|R_IFACE_HINT, create, destroy);
+	    add_del_route("fc00::", 7, "::1", "lo0", R_IPv6|R_REJECT|R_IFACE_HINT, create, destroy);
 	  }
 
 	// Interface down
