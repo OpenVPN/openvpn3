@@ -39,6 +39,8 @@ namespace openvpn {
     {
     public:
       // Mac OS X versions
+      // 15.x.x  OS X 10.11.x El Capitan
+      // 14.x.x  OS X 10.10.x Yosemite
       // 13.x.x  OS X 10.9.x Mavericks
       // 12.x.x  OS X 10.8.x Mountain Lion
       // 11.x.x  OS X 10.7.x Lion
@@ -50,6 +52,8 @@ namespace openvpn {
       //  5.x    OS X 10.1.x Puma
 
       enum {
+	OSX_10_11=15,
+	OSX_10_10=14,
 	OSX_10_9=13,
 	OSX_10_8=12,
 	OSX_10_7=11,
