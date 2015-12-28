@@ -430,7 +430,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	  }
 	else
 	  {
-	    if (argc != 1)
+	    if (argc < 1)
 	      throw usage();
 
 	    bool retry;
@@ -440,6 +440,11 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      ClientAPI::Config config;
 	      config.guiVersion = "cli 1.0";
 	      config.content = read_profile(argv[0], profile_content);
+	      for (int i = 1; i < argc; ++i)
+		{
+		  config.content += argv[i];
+		  config.content += '\n';
+		}
 	      config.serverOverride = server;
 	      config.protoOverride = proto;
 	      config.connTimeout = timeout;
@@ -594,7 +599,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
   catch (const usage&)
     {
       std::cout << "OpenVPN Client (ovpncli)" << std::endl;
-      std::cout << "usage: cli [options] <config-file>" << std::endl;
+      std::cout << "usage: cli [options] <config-file> [extra-config-directives...]" << std::endl;
       std::cout << "--version, -v        : show version info" << std::endl;
       std::cout << "--eval, -e           : evaluate profile only (standalone)" << std::endl;
       std::cout << "--merge, -m          : merge profile into unified format (standalone)" << std::endl;
