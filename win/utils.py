@@ -159,7 +159,7 @@ def expand(pkg_prefix, srcdir, lib_versions=None, noop=False):
 
     if not noop:
         # remove previous directory
-        rmtree(b)
+        rmtree(os.path.realpath(b))
 
         # expand it
         tarextract(os.path.join(srcdir, f), t)
