@@ -37,7 +37,7 @@ def build(parms, srcfile):
         "tap_component_id" : parms['TAP_WIN_COMPONENT_ID'],
         "asio"    : os.path.join(build_dir(parms), "asio"),
         "polarssl" : os.path.join(build_dir(parms), "polarssl"),
-        "lz4" : os.path.join(build_dir(parms), "lz4"),
+        "lz4" : os.path.join(build_dir(parms), "lz4", "lib"),
         "srcfile" : srcfile,
         "extra_defs" : parms['CPP_EXTRA'],
         "extra_inc" : "",

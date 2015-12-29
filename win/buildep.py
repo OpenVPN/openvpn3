@@ -16,7 +16,10 @@ def build_asio(parms):
     print "**************** ASIO"
     with Cd(build_dir(parms)) as cd:
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
+            dist = os.path.realpath('asio')
+            rmtree(dist)
             d = expand('asio', parms['DEP'], parms.get('LIB_VERSIONS'))
+            os.rename(d, dist)
 
 def build_polarssl(parms):
     print "**************** PolarSSL"
@@ -57,7 +60,7 @@ def build_lz4(parms):
             rmtree(dist)
             d = expand('lz4', parms['DEP'], parms.get('LIB_VERSIONS'))
             os.rename(d, dist)
-            os.chdir(dist)
+            os.chdir(os.path.join(dist, "lib"))
             compile_one_file(parms, "lz4.c", ())
             vc_cmd(parms, r"lib /OUT:lz4.lib lz4.obj")
 
