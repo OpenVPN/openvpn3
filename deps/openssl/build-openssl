@@ -50,6 +50,7 @@ echo $CMD
 $CMD
 $mysed -e "s|-O3|$LIB_OPT_LEVEL $MIN_DEPLOY_TARGET $OTHER_COMPILER_FLAGS $LIB_FPIC|" Makefile
 #$mysed -e "s|ERR_load_COMP_strings()|//ERR_load_COMP_strings()|" crypto/err/err_all.c
+make depend
 make CC="$GCC_CMD" AR="$AR" RANLIB="$RANLIB" -j ${MAKE_JOBS:-1} build_libs
 touch apps/openssl
 touch openssl.pc
