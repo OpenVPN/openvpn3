@@ -8,7 +8,7 @@ of an OpenVPN client, and is protocol-compatible with the OpenVPN
 OpenVPN 3 includes a minimal client wrapper (``cli``) that links in with
 the library and provides basic command line functionality.
 
-NOTE: As of 2015, OpenVPN 3 is primarily of interest to developers
+NOTE: As of early 2016, OpenVPN 3 is primarily of interest to developers
 because it does not yet replicate the full functionality of OpenVPN 2.x.
 In particular, server functionality is not yet implemented.
 
@@ -43,7 +43,7 @@ version numbers of each dependency.  If you want to use a different
 version of the library than listed here, you can edit this file.
 
 1. Asio -- https://github.com/chriskohlhoff/asio
-2. PolarSSL/mbedTLS (1.3.4 or higher) -- https://tls.mbed.org/
+2. PolarSSL/mbedTLS (1.3.15 or higher) -- https://tls.mbed.org/
 3. LZ4 -- https://github.com/Cyan4973/lz4
 
 For dependencies that are typically cloned from github vs.
