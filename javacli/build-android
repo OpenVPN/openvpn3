@@ -53,7 +53,7 @@ if [ "$OPENSSL" = "1" ]; then
 else
     ssl_def="-DUSE_POLARSSL"
     ssl_inc="-I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
-    ssl_lib="-lpolarssl"
+    ssl_lib="-lmbedtls"
     ssl_libdir="-L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
 fi
 
