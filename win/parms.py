@@ -12,8 +12,8 @@ PARMS = {
     "MSVC_DIR" : "c:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
     "ARCH" : "amd64", # one of amd64, x86, or x86_xp (note that x86_xp requires vcvarsall.bat patch)
     "LIB_VERSIONS" : {
-        'asio'     : "asio-20150924",
-        'polarssl' : "polarssl-1.3.9a",
-        'lz4'      : "lz4-r120",
+        'asio'     : "asio-20151228",
+        'polarssl' : "mbedtls-1.3.15",
+        'lz4'      : "lz4-20150629",
         }
 }
