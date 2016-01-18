@@ -357,8 +357,13 @@ namespace openvpn {
 	    });
 	  cs.reset(new ClientSet(*io_context));
 	  cs->new_request(ts);
-	  while (cs->clients.size())
-	    io_context->run_one();
+	  if (sps)
+	    {
+	      while (cs->clients.size())
+		io_context->run_one();
+	    }
+	  else
+	    io_context->run();
 	}
 	catch (...)
 	  {
