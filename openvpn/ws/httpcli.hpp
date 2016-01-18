@@ -573,6 +573,7 @@ namespace openvpn {
 	  if (use_link)
 	    {
 	      socket->set_cloexec();
+	      socket->tcp_nodelay();
 	      http_post_connect(*socket);
 	      link.reset(new LinkImpl(this,
 				      *socket,
