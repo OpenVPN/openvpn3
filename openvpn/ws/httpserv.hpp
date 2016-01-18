@@ -125,38 +125,22 @@ namespace openvpn {
       {
 	typedef RCPtr<Config> Ptr;
 
-	Config() :
-#ifdef ASIO_HAS_LOCAL_SOCKETS
-            unix_mode(0),
-#endif
-	    tcp_max(0),
-	    general_timeout(15),
-	    max_headers(0),
-	    max_header_bytes(0),
-	    max_content_bytes(0),
-	    msg_overhead_bytes(0),
-	    send_queue_max_size(0),
-	    free_list_max_size(8),
-	    pipeline_max_size(64)
-	{
-	}
-
 	SSLFactoryAPI::Ptr ssl_factory;
 #if defined(OPENVPN_PLATFORM_WIN)
 	std::string sddl_string; // Windows named-pipe security descriptor as string
 #endif
 #ifdef ASIO_HAS_LOCAL_SOCKETS
-	mode_t unix_mode;
+	mode_t unix_mode = 0;
 #endif
-	unsigned int tcp_max;
-	unsigned int general_timeout;
-	unsigned int max_headers;
-	unsigned int max_header_bytes;
-	content_len_t max_content_bytes;
-	unsigned int msg_overhead_bytes;
-	unsigned int send_queue_max_size;
-	unsigned int free_list_max_size;
-	unsigned int pipeline_max_size;
+	unsigned int tcp_max = 0;
+	unsigned int general_timeout = 15;
+	unsigned int max_headers = 0;
+	unsigned int max_header_bytes = 0;
+	content_len_t max_content_bytes = 0;
+	unsigned int msg_overhead_bytes = 0;
+	unsigned int send_queue_max_size = 0;
+	unsigned int free_list_max_size = 8;
+	unsigned int pipeline_max_size = 64;
 	std::string http_server_id;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
