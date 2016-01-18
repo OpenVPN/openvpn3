@@ -32,6 +32,7 @@
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/transport/protocol.hpp>
 
@@ -64,6 +65,13 @@ namespace openvpn {
 	else if (ssl == SSLOff)
 	  os << " !ssl";
 	return os.str();
+      }
+
+      Item port_offset(const unsigned int offset) const
+      {
+	Item ret(*this);
+	ret.port = openvpn::to_string(HostPort::parse_port(ret.port, "offset") + offset);
+	return ret;
       }
     };
 
