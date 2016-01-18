@@ -418,17 +418,6 @@ namespace openvpn {
 	}
 
       private:
-	class HSCCleanup {
-	public:
-	  HSCCleanup(TransactionSet& ts) : ts_(ts) {}
-	  ~HSCCleanup() {
-	    if (!ts_.preserve_http_state)
-	      ts_.hsc.stop();
-	  }
-	private:
-	  TransactionSet& ts_;
-	};
-
 	void close_http(const bool keepalive)
 	{
 	  ts->hsc.close(keepalive);
@@ -455,7 +444,10 @@ namespace openvpn {
 
 	void done(const bool status)
 	{
-	  HSCCleanup hc(*ts);
+	  auto clean = Cleanup([this]() {
+	      if (!ts->preserve_http_state)
+		ts->hsc.stop();
+	    });
 	  stop(status);
 	  remove_self_from_map();
 	  ts->status = status;
