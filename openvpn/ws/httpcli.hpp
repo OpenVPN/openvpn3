@@ -118,8 +118,10 @@ namespace openvpn {
 	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
 	  if (status < N_ERRORS)
 	    return error_names[status];
+	  else if (status == -1)
+	    return "E_UNDEF";
 	  else
-	    return "E_???";
+	    return "E_?/" + openvpn::to_string(status);
 	}
       };
 
