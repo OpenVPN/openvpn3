@@ -829,6 +829,7 @@ namespace openvpn {
 	      {
 		sock->non_blocking(true);
 		sock->set_cloexec();
+		sock->tcp_nodelay();
 
 		if (config->tcp_max && clients.size() >= config->tcp_max)
 		  throw http_server_exception("max clients exceeded");
