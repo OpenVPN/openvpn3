@@ -319,30 +319,56 @@ namespace openvpn {
 	cli->start();
       }
 
-      static void new_request_synchronous(const TransactionSet::Ptr& ts,
-					  Stop* stop=nullptr)
+      class SyncPersistState
       {
-	asio::io_context io_context(1); // concurrency hint=1
-	ClientSet::Ptr cs;
+      public:
+	void reset()
+	{
+	  io_context.reset();
+	}
+
+      private:
+	friend class ClientSet;
+	std::unique_ptr<asio::io_context> io_context;
+      };
+
+      static void new_request_synchronous(const TransactionSet::Ptr& ts,
+					  Stop* stop=nullptr,
+					  SyncPersistState* sps=nullptr)
+      {
 	auto clean = Cleanup([&]() {
-	    ts->hsc.reset();     // ensure that socket is destroyed before method returns
+	    // ensure that TransactionSet reference to socket
+	    // is reset before method returns (unless sps is non-null
+	    // in which case we should retain it).
+	    if (!sps)
+	      ts->hsc.reset();
 	  });
+	ts->preserve_http_state = (sps != nullptr);
+	std::unique_ptr<asio::io_context> io_context;
+	if (sps)
+	  io_context = std::move(sps->io_context);
+	if (!io_context)
+	  io_context.reset(new asio::io_context(1));
+	ClientSet::Ptr cs;
 	try {
-	  AsioStopScope scope(io_context, stop, [&]() {
+	  AsioStopScope scope(*io_context, stop, [&]() {
 	      if (cs)
 		cs->abort("stop message received");
 	    });
-	  cs.reset(new ClientSet(io_context));
+	  cs.reset(new ClientSet(*io_context));
 	  cs->new_request(ts);
-	  io_context.run();
+	  while (cs->clients.size())
+	    io_context->run_one();
 	}
 	catch (...)
 	  {
 	    if (cs)
 	      cs->stop();        // on exception, stop ClientSet
-	    io_context.poll();   // execute completion handlers
+	    io_context->poll();   // execute completion handlers
 	    throw;
 	  }
+	if (sps)
+	  sps->io_context = std::move(io_context);
       }
 
       void stop()
