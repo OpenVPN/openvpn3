@@ -36,6 +36,7 @@
 namespace openvpn {
   namespace SockOpt {
 
+#ifdef SO_REUSEPORT
     // set SO_REUSEPORT for inter-thread load balancing
     inline void reuseport(const int fd)
     {
@@ -44,6 +45,7 @@ namespace openvpn {
 		     (void *)&on, sizeof(on)) < 0)
 	throw Exception("error setting SO_REUSEPORT on socket");
     }
+#endif
 
     // set SO_REUSEADDR for TCP
     inline void reuseaddr(const int fd)
