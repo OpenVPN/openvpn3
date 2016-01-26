@@ -38,6 +38,10 @@
 #include <openvpn/transport/pktstream.hpp>
 #include <openvpn/transport/mutate.hpp>
 
+#ifdef OPENVPN_GREMLIN
+#include <openvpn/transport/gremlin.hpp>
+#endif
+
 #if defined(OPENVPN_DEBUG_TCPLINK) && OPENVPN_DEBUG_TCPLINK >= 1
 #define OPENVPN_LOG_TCPLINK_ERROR(x) OPENVPN_LOG(x)
 #else
@@ -85,6 +89,14 @@ namespace openvpn {
       {
 	set_raw_mode(false);
       }
+
+#ifdef OPENVPN_GREMLIN
+      void gremlin_config(const Gremlin::Config::Ptr& config)
+      {
+	if (config)
+	  gremlin.reset(new Gremlin::SendRecvQueue(socket.get_executor().context(), config, true));
+      }
+#endif
 
       // In raw mode, data is sent and received without any special encapsulation.
       // In non-raw mode, data is packetized by prepending a 16-bit length word
@@ -138,12 +150,16 @@ namespace openvpn {
 
       bool send_queue_empty() const
       {
-	return queue.empty();
+	return send_queue_size() == 0;
       }
 
-      unsigned int send_queue_size()
+      unsigned int send_queue_size() const
       {
-	return queue.size();
+	return queue.size()
+#ifdef OPENVPN_GREMLIN
+	  + (gremlin ? gremlin->send_size() : 0)
+#endif
+	  ;
       }
 
       bool send(BufferAllocated& b)
@@ -172,9 +188,12 @@ namespace openvpn {
 	  PacketStream::prepend_size(*buf);
 	if (mutate)
 	  mutate->pre_send(*buf);
-	queue.push_back(std::move(buf));
-	if (queue.size() == 1) // send operation not currently active?
-	  queue_send();
+#ifdef OPENVPN_GREMLIN
+	if (gremlin)
+	  gremlin_queue_send_buffer(buf);
+	else
+#endif
+	queue_send_buffer(buf);
 	return true;
       }
 
@@ -201,6 +220,10 @@ namespace openvpn {
       void stop()
       {
 	halt = true;
+#ifdef OPENVPN_GREMLIN
+	if (gremlin)
+	  gremlin->stop();
+#endif
       }
 
       void reset_align_adjust(const size_t align_adjust)
@@ -211,6 +234,13 @@ namespace openvpn {
       ~Link() { stop(); }
 
     private:
+      void queue_send_buffer(BufferPtr& buf)
+      {
+	queue.push_back(std::move(buf));
+	if (queue.size() == 1) // send operation not currently active?
+	  queue_send();
+      }
+
       void queue_send()
       {
 	BufferAllocated& buf = *queue.front();
@@ -312,6 +342,11 @@ namespace openvpn {
 		  {
 		    if (mutate)
 		      mutate->post_recv(pfp->buf);
+#ifdef OPENVPN_GREMLIN
+		    if (gremlin)
+		      requeue = gremlin_recv(pfp->buf);
+		    else
+#endif
 		    requeue = read_handler->tcp_read_handler(pfp->buf);
 		  }
 		if (!halt && requeue)
@@ -345,11 +380,41 @@ namespace openvpn {
 	    if (pktstream.ready())
 	      {
 		pktstream.get(pkt);
+#ifdef OPENVPN_GREMLIN
+		if (gremlin)
+		  requeue = gremlin_recv(pkt);
+		else
+#endif
 		requeue = read_handler->tcp_read_handler(pkt);
 	      }
 	  }
 	return requeue;
       }
+
+#ifdef OPENVPN_GREMLIN
+      void gremlin_queue_send_buffer(BufferPtr& buf)
+      {
+	gremlin->send_queue([self=Ptr(this), buf=std::move(buf)]() mutable {
+	    if (!self->halt)
+	      {
+		self->queue_send_buffer(buf);
+	      }
+	  });
+      }
+
+      bool gremlin_recv(BufferAllocated& buf)
+      {
+	gremlin->recv_queue([self=Ptr(this), buf=std::move(buf)]() mutable {
+	    if (!self->halt)
+	      {
+		const bool requeue = self->read_handler->tcp_read_handler(buf);
+		if (requeue)
+		  self->queue_recv(nullptr);
+	      }
+	  });
+	return false;
+      }
+#endif
 
       typename Protocol::socket& socket;
       bool halt;
@@ -364,6 +429,10 @@ namespace openvpn {
       Queue free_list;  // recycled free buffers for send queue
       PacketStream pktstream;
       TransportMutateStream::Ptr mutate;
+
+#ifdef OPENVPN_GREMLIN
+      std::unique_ptr<Gremlin::SendRecvQueue> gremlin;
+#endif
     };
   }
 } // namespace openvpn

@@ -251,6 +251,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "proxy-username", required_argument,  nullptr,      'U' },
     { "proxy-password", required_argument,  nullptr,      'W' },
     { "peer-info",      required_argument,  nullptr,      'I' },
+    { "gremlin",        required_argument,  nullptr,      'G' },
     { "proxy-basic",    no_argument,        nullptr,      'B' },
     { "alt-proxy",      no_argument,        nullptr,      'A' },
     { "dco",            no_argument,        nullptr,      'd' },
@@ -291,6 +292,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string proxyUsername;
 	std::string proxyPassword;
 	std::string peer_info;
+	std::string gremlin;
 	bool eval = false;
 	bool self_test = false;
 	bool cachePassword = false;
@@ -307,7 +309,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:I:k:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:I:G:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -405,6 +407,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      case 'I':
 		peer_info = optarg;
 		break;
+	      case 'G':
+		gremlin = optarg;
+		break;
 	      default:
 		throw usage();
 	      }
@@ -463,6 +468,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 	      config.googleDnsFallback = googleDnsFallback;
 	      config.tunPersist = tunPersist;
+	      config.gremlinConfig = gremlin;
 	      PeerInfo::Set::parse_csv(peer_info, config.peerInfo);
 
 	      if (eval)
@@ -627,6 +633,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
       std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
       std::cout << "--peer-info, -I      : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
+      std::cout << "--gremlin, -G        : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
       ret = 2;
     }
   return ret;

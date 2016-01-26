@@ -334,6 +334,9 @@ namespace openvpn {
 	ProtoContextOptions::Ptr proto_context_options;
 	PeerInfo::Set::Ptr extra_peer_info;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
+#ifdef OPENVPN_GREMLIN
+	Gremlin::Config::Ptr gremlin_config;
+#endif
 	bool alt_proxy;
 	bool dco;
 	Stop stop;
@@ -461,6 +464,14 @@ namespace openvpn {
 	state->gui_version = config.guiVersion;
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
+	if (!config.gremlinConfig.empty())
+	  {
+#ifdef OPENVPN_GREMLIN
+	  state->gremlin_config.reset(new Gremlin::Config(config.gremlinConfig));
+#else
+	  throw Exception("client not built with OPENVPN_GREMLIN");
+#endif
+	  }
 	state->extra_peer_info = PeerInfo::Set::new_from_foreign_set(config.peerInfo);
 	if (!config.proxyHost.empty())
 	  {
@@ -651,6 +662,9 @@ namespace openvpn {
 	cc.gui_version = state->gui_version;
 	cc.extra_peer_info = state->extra_peer_info;
 	cc.stop = &state->stop;
+#ifdef OPENVPN_GREMLIN
+	cc.gremlin_config = state->gremlin_config;
+#endif
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
@@ -985,6 +999,9 @@ namespace openvpn {
 #endif
 #ifdef ENABLE_DCO
       ret += " DCO";
+#endif
+#ifdef OPENVPN_GREMLIN
+      ret += " GREMLIN";
 #endif
       ret += " built on " __DATE__ " " __TIME__;
       return ret;

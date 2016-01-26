@@ -51,6 +51,10 @@ namespace openvpn {
 
       SocketProtect* socket_protect;
 
+#ifdef OPENVPN_GREMLIN
+      Gremlin::Config::Ptr gremlin_config;
+#endif
+
       static Ptr new_obj()
       {
 	return new ClientConfig;
@@ -265,6 +269,9 @@ namespace openvpn {
 					socket,
 					(*config->frame)[Frame::READ_LINK_UDP],
 					config->stats));
+#ifdef OPENVPN_GREMLIN
+		impl->gremlin_config(config->gremlin_config);
+#endif
 		impl->start(config->n_parallel);
 		parent.transport_connecting();
 	      }

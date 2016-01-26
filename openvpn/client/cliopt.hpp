@@ -56,6 +56,10 @@
 
 #include <openvpn/ssl/sslchoose.hpp>
 
+#ifdef OPENVPN_GREMLIN
+#include <openvpn/transport/gremlin.hpp>
+#endif
+
 #if defined(OPENVPN_PLATFORM_ANDROID)
 #include <openvpn/client/cliemuexr.hpp>
 #endif
@@ -143,6 +147,9 @@ namespace openvpn {
       bool force_aes_cbc_ciphersuites;
       std::string tls_version_min_override;
       PeerInfo::Set::Ptr extra_peer_info;
+#ifdef OPENVPN_GREMLIN
+      Gremlin::Config::Ptr gremlin_config;
+#endif
       Stop* stop;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
@@ -168,6 +175,9 @@ namespace openvpn {
 	tcp_queue_limit(64),
 	proto_context_options(config.proto_context_options),
 	http_proxy_options(config.http_proxy_options),
+#ifdef OPENVPN_GREMLIN
+	gremlin_config(config.gremlin_config),
+#endif
 	autologin(false),
 	creds_locked(false)
     {
@@ -629,6 +639,9 @@ namespace openvpn {
 	      udpconf->stats = cli_stats;
 	      udpconf->socket_protect = socket_protect;
 	      udpconf->server_addr_float = server_addr_float;
+#ifdef OPENVPN_GREMLIN
+	      udpconf->gremlin_config = gremlin_config;
+#endif
 	      transport_factory = udpconf;
 	    }
 	  else if (transport_protocol.is_tcp())
@@ -639,6 +652,9 @@ namespace openvpn {
 	      tcpconf->frame = frame;
 	      tcpconf->stats = cli_stats;
 	      tcpconf->socket_protect = socket_protect;
+#ifdef OPENVPN_GREMLIN
+	      tcpconf->gremlin_config = gremlin_config;
+#endif
 	      transport_factory = tcpconf;
 	    }
 	  else
@@ -669,6 +685,9 @@ namespace openvpn {
     unsigned int tcp_queue_limit;
     ProtoContextOptions::Ptr proto_context_options;
     HTTPProxyTransport::Options::Ptr http_proxy_options;
+#ifdef OPENVPN_GREMLIN
+    Gremlin::Config::Ptr gremlin_config;
+#endif
     std::string userlocked_username;
     bool autologin;
     bool creds_locked;

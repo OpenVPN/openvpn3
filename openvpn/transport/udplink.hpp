@@ -33,6 +33,10 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
 
+#ifdef OPENVPN_GREMLIN
+#include <openvpn/transport/gremlin.hpp>
+#endif
+
 #if defined(OPENVPN_DEBUG_UDPLINK) && OPENVPN_DEBUG_UDPLINK >= 1
 #define OPENVPN_LOG_UDPLINK_ERROR(x) OPENVPN_LOG(x)
 #else
@@ -80,36 +84,27 @@ namespace openvpn {
       {
       }
 
+#ifdef OPENVPN_GREMLIN
+      void gremlin_config(const Gremlin::Config::Ptr& config)
+      {
+	if (config)
+	  gremlin.reset(new Gremlin::SendRecvQueue(socket.get_executor().context(), config, false));
+      }
+#endif
+
       // Returns 0 on success, or a system error code on error.
       // May also return SEND_PARTIAL or SEND_SOCKET_HALTED.
       int send(const Buffer& buf, const AsioEndpoint* endpoint)
       {
-	if (!halt)
+#ifdef OPENVPN_GREMLIN
+	if (gremlin)
 	  {
-	    try {
-	      const size_t wrote = endpoint
-		? socket.send_to(buf.const_buffers_1(), *endpoint)
-		: socket.send(buf.const_buffers_1());
-	      stats->inc_stat(SessionStats::BYTES_OUT, wrote);
-	      stats->inc_stat(SessionStats::PACKETS_OUT, 1);
-	      if (wrote == buf.size())
-		return 0;
-	      else
-		{
-		  OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
-		  stats->error(Error::NETWORK_SEND_ERROR);
-		  return SEND_PARTIAL;
-		}
-	    }
-	    catch (asio::system_error& e)
-	      {
-		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
-		stats->error(Error::NETWORK_SEND_ERROR);
-		return e.code().value();
-	      }
+	    gremlin_send(buf, endpoint);
+	    return 0;
 	  }
 	else
-	  return SEND_SOCKET_HALTED;
+#endif
+	return do_send(buf, endpoint);
       }
 
       void start(const int n_parallel)
@@ -121,8 +116,13 @@ namespace openvpn {
 	  }
       }
 
-      void stop() {
+      void stop()
+      {
 	halt = true;
+#ifdef OPENVPN_GREMLIN
+	if (gremlin)
+	  gremlin->stop();
+#endif
       }
 
       void reset_align_adjust(const size_t align_adjust)
@@ -161,6 +161,11 @@ namespace openvpn {
 		    pfp->buf.set_size(bytes_recvd);
 		    stats->inc_stat(SessionStats::BYTES_IN, bytes_recvd);
 		    stats->inc_stat(SessionStats::PACKETS_IN, 1);
+#ifdef OPENVPN_GREMLIN
+		    if (gremlin)
+		      gremlin_recv(pfp);
+		    else
+#endif
 		    read_handler->udp_read_handler(pfp);
 		  }
 		else
@@ -174,11 +179,66 @@ namespace openvpn {
 	  }
       }
 
+      int do_send(const Buffer& buf, const AsioEndpoint* endpoint)
+      {
+	if (!halt)
+	  {
+	    try {
+	      const size_t wrote = endpoint
+		? socket.send_to(buf.const_buffers_1(), *endpoint)
+		: socket.send(buf.const_buffers_1());
+	      stats->inc_stat(SessionStats::BYTES_OUT, wrote);
+	      stats->inc_stat(SessionStats::PACKETS_OUT, 1);
+	      if (wrote == buf.size())
+		return 0;
+	      else
+		{
+		  OPENVPN_LOG_UDPLINK_ERROR("UDP partial send error");
+		  stats->error(Error::NETWORK_SEND_ERROR);
+		  return SEND_PARTIAL;
+		}
+	    }
+	    catch (asio::system_error& e)
+	      {
+		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
+		stats->error(Error::NETWORK_SEND_ERROR);
+		return e.code().value();
+	      }
+	  }
+	else
+	  return SEND_SOCKET_HALTED;
+      }
+
+#ifdef OPENVPN_GREMLIN
+      void gremlin_send(const Buffer& buf, const AsioEndpoint* endpoint)
+      {
+	std::unique_ptr<AsioEndpoint> ep;
+	if (endpoint)
+	  ep.reset(new AsioEndpoint(*endpoint));
+	gremlin->send_queue([self=Ptr(this), buf=BufferAllocated(buf, 0), ep=std::move(ep)]() mutable {
+	    if (!self->halt)
+	      self->do_send(buf, ep.get());
+	  });
+      }
+
+      void gremlin_recv(PacketFrom::SPtr& pfp)
+      {
+	gremlin->recv_queue([self=Ptr(this), pfp=std::move(pfp)]() mutable {
+	    if (!self->halt)
+	      self->read_handler->udp_read_handler(pfp);
+	  });
+      }
+#endif
+
       asio::ip::udp::socket& socket;
       bool halt;
       ReadHandler read_handler;
       Frame::Context frame_context;
       SessionStats::Ptr stats;
+
+#ifdef OPENVPN_GREMLIN
+      std::unique_ptr<Gremlin::SendRecvQueue> gremlin;
+#endif
     };
   }
 } // namespace openvpn

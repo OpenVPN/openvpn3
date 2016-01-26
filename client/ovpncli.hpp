@@ -247,6 +247,9 @@ namespace openvpn {
 
       // Custom Data Channel Offload implementation
       bool dco;
+
+      // Gremlin configuration (requires that the core is built with OPENVPN_GREMLIN)
+      std::string gremlinConfig;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

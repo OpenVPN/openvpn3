@@ -48,6 +48,10 @@ namespace openvpn {
 
       SocketProtect* socket_protect;
 
+#ifdef OPENVPN_GREMLIN
+      Gremlin::Config::Ptr gremlin_config;
+#endif
+
       static Ptr new_obj()
       {
 	return new ClientConfig;
@@ -282,6 +286,9 @@ namespace openvpn {
 					config->free_list_max_size,
 					(*config->frame)[Frame::READ_LINK_TCP],
 					config->stats));
+#ifdef OPENVPN_GREMLIN
+		impl->gremlin_config(config->gremlin_config);
+#endif
 		impl->start();
 		if (!parent.transport_is_openvpn_protocol())
 		  impl->set_raw_mode(true);
