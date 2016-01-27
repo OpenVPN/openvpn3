@@ -47,6 +47,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/count.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/base64.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/options/continuation.hpp>
@@ -458,19 +459,38 @@ namespace openvpn {
 
       void extract_auth_token(const OptionList& opt)
       {
-	// if auth-token is present, use it as the password for future renegotiations
-	const Option* o = opt.get_ptr("auth-token");
-	if (o)
-	  {
-	    const std::string& sess_id = o->get(1, 256);
-	    if (creds)
-	      creds->set_session_id(sess_id);
+	// auth-token-user
+	{
+	  const Option* o = opt.get_ptr("auth-token-user");
+	  if (o)
+	    {
+	      const std::string username = base64->decode(o->get(1, 256));
+	      if (creds)
+		{
+		  creds->set_username(username);
+		  OPENVPN_LOG("Session user: " << username);
+		}
+	    }
+	}
+
+	// auth-token
+	{
+	  // if auth-token is present, use it as the password for future renegotiations
+	  const Option* o = opt.get_ptr("auth-token");
+	  if (o)
+	    {
+	      const std::string& sess_id = o->get(1, 256);
+	      if (creds)
+		{
+		  creds->set_session_id(sess_id);
 #ifdef OPENVPN_SHOW_SESSION_TOKEN
-	    OPENVPN_LOG("using session token " << sess_id);
+		  OPENVPN_LOG("Session token: " << sess_id);
 #else
-	    OPENVPN_LOG("using session token");
+		  OPENVPN_LOG("Session token: [redacted]");
 #endif
-	  }
+		}
+	    }
+	}
       }
 
       // proto base class calls here for control channel network sends

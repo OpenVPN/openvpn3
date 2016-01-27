@@ -123,6 +123,7 @@ namespace openvpn {
 	disable_client_cert = false;
 	default_key_direction = -1;
 	force_aes_cbc_ciphersuites = false;
+	autologin_sessions = true;
 	stop = nullptr;
 #if defined(USE_TUN_BUILDER)
 	builder = nullptr;
@@ -145,6 +146,7 @@ namespace openvpn {
       bool disable_client_cert;
       int default_key_direction;
       bool force_aes_cbc_ciphersuites;
+      bool autologin_sessions;
       std::string tls_version_min_override;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN
@@ -243,7 +245,7 @@ namespace openvpn {
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
       cp->ssl_factory = cc->new_factory();
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
-      cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword());
+      cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || config.autologin_sessions);
       cp->gui_version = config.gui_version;
       cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
       cp->extra_peer_info = config.extra_peer_info;
@@ -444,7 +446,11 @@ namespace openvpn {
 	    creds_locked = true;
 	  }
 	else
-	  submit_creds(cc);
+	  {
+	    if (config.autologin_sessions)
+	      cc->set_replace_password_with_session_id(true);
+	    submit_creds(cc);
+	  }
       }
 
       // configure push_base, a set of base options that will be combined with
