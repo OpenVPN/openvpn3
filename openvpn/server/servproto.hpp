@@ -384,8 +384,6 @@ namespace openvpn {
 	if (halt || did_client_halt_restart)
 	  return;
 
-	did_client_halt_restart = true;
-
 	BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
 	BufferStreamOut os(*buf);
 
@@ -409,6 +407,14 @@ namespace openvpn {
 	    else
 	      os << "server requested a client reconnect";
 	    break;
+	  case HaltRestart::RESTART_PASSIVE:
+	    ts = "RESTART_PASSIVE";
+	    os << "RESTART,[P]:";
+	    if (tell_client && !reason.empty())
+	      os << reason;
+	    else
+	      os << "server requested a client reconnect";
+	    break;
 	  case HaltRestart::RESTART_PSID:
 	    ts = "RESTART_PSID";
 	    os << "RESTART,[P]:";
@@ -427,7 +433,11 @@ namespace openvpn {
 
 	OPENVPN_LOG("Disconnect: " << ts << ' ' << reason);
 
-	disconnect_in(Time::Duration::seconds(1));
+	if (type != HaltRestart::RESTART_PASSIVE)
+	  {
+	    did_client_halt_restart = true;
+	    disconnect_in(Time::Duration::seconds(1));
+	  }
 
 	buf->push_back(0); // null-terminate
 	Base::control_send(buf);

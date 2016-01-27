@@ -28,6 +28,7 @@ namespace openvpn {
       HALT,             // disconnect
       RESTART,          // restart, don't preserve session token
       RESTART_PSID,     // restart, preserve session token
+      RESTART_PASSIVE,  // restart, preserve session token and local client instance object
       AUTH_FAILED,      // auth fail, don't preserve session token
     };
   }
