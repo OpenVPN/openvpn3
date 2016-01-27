@@ -22,6 +22,7 @@
 #ifndef OPENVPN_SERVER_VPNSERVPOOL_H
 #define OPENVPN_SERVER_VPNSERVPOOL_H
 
+#include <sstream>
 #include <vector>
 #include <memory>
 #include <mutex>
@@ -111,6 +112,13 @@ namespace openvpn {
       bool defined() const
       {
 	return pool_index >= 0 && pool_index < SIZE;
+      }
+
+      std::string to_string() const
+      {
+	std::ostringstream os;
+	os << '[' << ip4 << ' ' << ip6 << ']';
+	return os.str();
       }
 
       IP::Addr ip4;
