@@ -353,23 +353,7 @@ namespace openvpn {
       virtual void auth_failed(const std::string& reason,
 			       const bool tell_client)
       {
-	if (halt)
-	  return;
-
-	BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
-	BufferStreamOut os(*buf);
-
-	OPENVPN_LOG("Auth failed: " << reason);
-	os << "AUTH_FAILED";
-	if (tell_client && !reason.empty())
-	  os << ',' << reason;
-
-	disconnect_in(Time::Duration::seconds(1));
-
-	buf->push_back(0); // null-terminate
-	Base::control_send(buf);
-	Base::flush(true);
-	set_housekeeping_timer();
+	push_halt_restart_msg(HaltRestart::AUTH_FAILED, reason, tell_client);
       }
 
       virtual void push_reply(BufferPtr& push_data,
@@ -433,9 +417,15 @@ namespace openvpn {
 	    else
 	      os << "server requested a client reconnect";
 	    break;
+	  case HaltRestart::AUTH_FAILED:
+	    ts = "AUTH_FAILED";
+	    os << ts;
+	    if (tell_client && !reason.empty())
+	      os << ',' << reason;
+	    break;
 	  }
 
-	OPENVPN_LOG("Mid-session Auth failed: " << ts << ' ' << reason);
+	OPENVPN_LOG("Disconnect: " << ts << ' ' << reason);
 
 	disconnect_in(Time::Duration::seconds(1));
 
