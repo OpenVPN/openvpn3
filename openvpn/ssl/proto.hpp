@@ -1314,8 +1314,10 @@ namespace openvpn {
       // send explicit-exit-notify message to peer
       void send_explicit_exit_notify()
       {
+#ifndef OPENVPN_DISABLE_EXPLICIT_EXIT // explicit exit should always be enabled in production
 	send_data_channel_message(proto_context_private::explicit_exit_notify_message,
 				  sizeof(proto_context_private::explicit_exit_notify_message));
+#endif
       }
 
       // general purpose method for sending constant string messages
