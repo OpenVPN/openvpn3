@@ -29,6 +29,7 @@
 #include <cstdint> // for std::uint32_t
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/rc.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/server/vpnservnetblock.hpp>
 #include <openvpn/addr/ip.hpp>
@@ -199,6 +200,24 @@ namespace openvpn {
       std::mutex mutex;
     };
 
+    class IP46AutoRelease : public IP46, public RC<thread_safe_refcount>
+    {
+    public:
+      typedef RCPtr<IP46AutoRelease> Ptr;
+
+      IP46AutoRelease(Set& set_arg)
+	: set(set_arg)
+      {
+      }
+
+      ~IP46AutoRelease()
+      {
+	set.release(*this);
+      }
+
+    private:
+      Set& set;
+    };
   }
 }
 
