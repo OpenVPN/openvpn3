@@ -387,7 +387,8 @@ namespace openvpn {
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;
-	    tunconf->enable_failsafe_block = config.tun_persist;
+	    if (config.tun_persist)
+	      tunconf->tun_persist.reset(new TunMac::TunPersist(true, false, nullptr));
 	    client_lifecycle.reset(new MacLifeCycle);
 #ifdef OPENVPN_COMMAND_AGENT
 	    tunconf->tun_setup_factory = UnixCommandAgent::new_agent(opt);

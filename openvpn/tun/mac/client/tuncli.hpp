@@ -33,7 +33,7 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
-#include <openvpn/tun/persist/tunwrap.hpp>
+#include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
 #include <openvpn/tun/mac/client/tunsetup.hpp>
@@ -55,15 +55,15 @@ namespace openvpn {
     };
 
     // tun interface wrapper for Mac OS X
-    template <typename ReadHandler, typename TunWrap>
-    class Tun : public TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunWrap> >
+    template <typename ReadHandler, typename TunPersist>
+    class Tun : public TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunPersist> >
     {
-      typedef TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunWrap>  > Base;
+      typedef TunIO<ReadHandler, PacketFrom, TunWrapAsioStream<TunPersist>  > Base;
 
     public:
       typedef RCPtr<Tun> Ptr;
 
-      Tun(const typename TunWrap::Ptr& tun_wrap,
+      Tun(const typename TunPersist::Ptr& tun_persist,
 	  const std::string& name,
 	  const bool retain_stream,
 	  const bool tun_prefix,
@@ -75,14 +75,14 @@ namespace openvpn {
 	Base::name_ = name;
 	Base::retain_stream = retain_stream;
 	Base::tun_prefix = tun_prefix;
-	Base::stream = new TunWrapAsioStream<TunWrap>(tun_wrap);
+	Base::stream = new TunWrapAsioStream<TunPersist>(tun_persist);
       }
     };
 
     // These types manage the underlying tun driver fd
     typedef asio::posix::stream_descriptor TUNStream;
     typedef ScopedAsioStream<TUNStream> ScopedTUNStream;
-    typedef TunWrapTemplate<ScopedTUNStream> TunWrap;
+    typedef TunPersistTemplate<ScopedTUNStream> TunPersist;
 
     class Client;
 
@@ -96,10 +96,10 @@ namespace openvpn {
       TunProp::Config tun_prop;
       int n_parallel = 8;        // number of parallel async reads on tun socket
 
-      bool enable_failsafe_block = false;
-
       Frame::Ptr frame;
       SessionStats::Ptr stats;
+
+      TunPersist::Ptr tun_persist;
 
       Stop* stop = nullptr;
 
@@ -135,15 +135,17 @@ namespace openvpn {
       // called just prior to transmission of Disconnect event
       virtual void finalize(const bool disconnected)
       {
+	if (disconnected)
+	  tun_persist.reset();
       }
     };
 
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
-      friend class TunIO<Client*, PacketFrom, TunWrapAsioStream<TunWrap> >;  // calls tun_read_handler
+      friend class TunIO<Client*, PacketFrom, TunWrapAsioStream<TunPersist> >;  // calls tun_read_handler
 
-      typedef Tun<Client*, TunWrap> TunImpl;
+      typedef Tun<Client*, TunPersist> TunImpl;
 
     public:
       virtual void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&)
@@ -151,22 +153,44 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
-	    tun_wrap.reset(new TunWrap(false));
+	    if (config->tun_persist)
+	      {
+		OPENVPN_LOG("TunPersist: long-term session scope");
+		tun_persist = config->tun_persist;
+	      }
+	    else
+	      {
+		OPENVPN_LOG("TunPersist: short-term connection scope");
+		tun_persist.reset(new TunPersist(false, false, NULL));
+	      }
 
 	    try {
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
 
-	      // notify parent
-	      parent.tun_pre_tun_config();
+	      // Check if persisted tun session matches properties of to-be-created session
+	      if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
+		{
+		  state = tun_persist->state();
+		  OPENVPN_LOG("TunPersist: reused tun context");
+		}
+	      else
+		{
+		  OPENVPN_LOG("TunPersist: new tun context");
 
-	      // emulated exclude routes
-	      EmulateExcludeRouteFactory::Ptr eer_factory;
+		  // notify parent
+		  parent.tun_pre_tun_config();
+
+		  // close old tun handle if persisted
+		  tun_persist->close();
+
+		  // emulated exclude routes
+		  EmulateExcludeRouteFactory::Ptr eer_factory;
 #ifdef TEST_EER
-	      eer_factory.reset(new EmulateExcludeRouteFactoryImpl(true));
+		  eer_factory.reset(new EmulateExcludeRouteFactoryImpl(true));
 #endif
-	      // parse pushed options
-	      TunBuilderCapture::Ptr po(new TunBuilderCapture());
-	      TunProp::configure_builder(po.get(),
+		  // parse pushed options
+		  TunBuilderCapture::Ptr po(new TunBuilderCapture());
+		  TunProp::configure_builder(po.get(),
 					 state.get(),
 					 config->stats.get(),
 					 server_addr,
@@ -175,39 +199,46 @@ namespace openvpn {
 					 eer_factory.get(),
 					 false);
 
-	      // handle MTU default
-	      if (!po->mtu)
-		po->mtu = 1500;
+		  // handle MTU default
+		  if (!po->mtu)
+		    po->mtu = 1500;
 
-	      OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
+		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
-	      // create new tun setup object
-	      tun_setup = config->new_setup_obj();
+		  // create new tun setup object
+		  tun_setup = config->new_setup_obj();
 
-	      // create config object for tun setup layer
-	      Setup::Config tsconf;
-	      tsconf.iface_name = state->iface_name;
-	      tsconf.layer = config->layer;
+		  // create config object for tun setup layer
+		  Setup::Config tsconf;
+		  tsconf.iface_name = state->iface_name;
+		  tsconf.layer = config->layer;
 
-	      // open/config tun
-	      int fd = -1;
-	      {
-		std::ostringstream os;
-		auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
-		fd = tun_setup->establish(*po, &tsconf, config->stop, os);
-	      }
+		  // open/config tun
+		  int fd = -1;
+		  {
+		    std::ostringstream os;
+		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
+		    fd = tun_setup->establish(*po, &tsconf, config->stop, os);
+		  }
 
-	      // create ASIO wrapper for tun fd
-	      tun_wrap->save_replace_sock(new TUNStream(io_context, fd));
+		  // create ASIO wrapper for tun fd
+		  TUNStream* ts = new TUNStream(io_context, fd);
 
-	      // enable tun_setup destructor
-	      tun_wrap->add_destructor(tun_setup);
+		  // persist tun settings state
+		  state->iface_name = tsconf.iface_name;
+		  state->tun_prefix = tsconf.tun_prefix;
+		  if (tun_persist->persist_tun_state(ts, state))
+		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
+
+		  // enable tun_setup destructor
+		  tun_persist->add_destructor(tun_setup);
+		}
 
 	      // configure tun interface packet forwarding
-	      impl.reset(new TunImpl(tun_wrap,
-				     tsconf.iface_name,
+	      impl.reset(new TunImpl(tun_persist,
+				     state->iface_name,
 				     true,
-				     tsconf.tun_prefix,
+				     state->tun_prefix,
 				     this,
 				     config->frame,
 				     config->stats
@@ -219,8 +250,8 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		if (tun_wrap)
-		  tun_wrap->close();
+		if (tun_persist)
+		  tun_persist->close();
 		stop();
 		Error::Type err = Error::TUN_SETUP_FAILED;
 		const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
@@ -306,12 +337,12 @@ namespace openvpn {
 	    // stop tun
 	    if (impl)
 	      impl->stop();
-	    tun_wrap.reset();
+	    tun_persist.reset();
 	  }
       }
 
       asio::io_context& io_context;
-      TunWrap::Ptr tun_wrap; // contains the tun device fd
+      TunPersist::Ptr tun_persist; // contains the tun device fd
       ClientConfig::Ptr config;
       TunClientParent& parent;
       TunImpl::Ptr impl;

@@ -82,6 +82,7 @@ namespace openvpn {
       std::string iface_name;
       IP::Addr vpn_ip4_addr;
       IP::Addr vpn_ip6_addr;
+      bool tun_prefix = false;
     };
 
     static void configure_builder(TunBuilderBase* tb,
