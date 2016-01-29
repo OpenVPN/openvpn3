@@ -187,7 +187,6 @@ namespace openvpn {
       int connTimeout;
 
       // Keep tun interface active during pauses or reconnections
-      // (Can't work on iOS due to tun socket semantics of Apple VPN API)
       bool tunPersist;
 
       // If true and a redirect-gateway profile doesn't also define
