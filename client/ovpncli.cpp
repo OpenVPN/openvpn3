@@ -302,13 +302,6 @@ namespace openvpn {
     namespace Private {
       struct ClientState
       {
-	ClientState() : conn_timeout(0), tun_persist(false),
-			google_dns_fallback(false), disable_client_cert(false),
-			default_key_direction(-1), force_aes_cbc_ciphersuites(false),
-			alt_proxy(false),
-			dco(false),
-			io_context(nullptr) {}
-
 	OptionList options;
 	EvalConfig eval;
 	MySocketProtect socket_protect;
@@ -321,14 +314,14 @@ namespace openvpn {
 	// extra settings submitted by API client
 	std::string server_override;
 	Protocol proto_override;
-	int conn_timeout;
-	bool tun_persist;
-	bool google_dns_fallback;
+	int conn_timeout = 0;
+	bool tun_persist = false;
+	bool google_dns_fallback = false;
 	std::string private_key_password;
 	std::string external_pki_alias;
-	bool disable_client_cert;
-	int default_key_direction;
-	bool force_aes_cbc_ciphersuites;
+	bool disable_client_cert = false;
+	int default_key_direction = -1;
+	bool force_aes_cbc_ciphersuites = false;
 	std::string tls_version_min_override;
 	std::string gui_version;
 	ProtoContextOptions::Ptr proto_context_options;
@@ -337,11 +330,11 @@ namespace openvpn {
 #ifdef OPENVPN_GREMLIN
 	Gremlin::Config::Ptr gremlin_config;
 #endif
-	bool alt_proxy;
-	bool dco;
+	bool alt_proxy = false;
+	bool dco = false;
 	Stop stop;
 
-	asio::io_context* io_context;
+	asio::io_context* io_context = nullptr;
 
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent)

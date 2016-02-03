@@ -109,57 +109,38 @@ namespace openvpn {
 
     typedef ClientProto::Session Client;
 
-    struct Config {
-      Config()
-      {
-	external_pki = nullptr;
-	socket_protect = nullptr;
-	reconnect_notify = nullptr;
-	conn_timeout = 0;
-	alt_proxy = false;
-	dco = false;
-	tun_persist = false;
-	google_dns_fallback = false;
-	disable_client_cert = false;
-	default_key_direction = -1;
-	force_aes_cbc_ciphersuites = false;
-	autologin_sessions = true;
-	stop = nullptr;
-#if defined(USE_TUN_BUILDER)
-	builder = nullptr;
-#endif
-      }
-
+    struct Config
+    {
       std::string gui_version;
       std::string server_override;
       Protocol proto_override;
-      int conn_timeout;
+      int conn_timeout = 0;
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
       ProtoContextOptions::Ptr proto_context_options;
       HTTPProxyTransport::Options::Ptr http_proxy_options;
-      bool alt_proxy;
-      bool dco;
-      bool tun_persist;
-      bool google_dns_fallback;
+      bool alt_proxy = false;
+      bool dco = false;
+      bool tun_persist = false;
+      bool google_dns_fallback = false;
       std::string private_key_password;
-      bool disable_client_cert;
-      int default_key_direction;
-      bool force_aes_cbc_ciphersuites;
-      bool autologin_sessions;
+      bool disable_client_cert = false;
+      int default_key_direction = -1;
+      bool force_aes_cbc_ciphersuites = false;
+      bool autologin_sessions = true;
       std::string tls_version_min_override;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
 #endif
-      Stop* stop;
+      Stop* stop = nullptr;
 
       // callbacks -- must remain in scope for lifetime of ClientOptions object
-      ExternalPKIBase* external_pki;
-      SocketProtect* socket_protect;
-      ReconnectNotify* reconnect_notify;
+      ExternalPKIBase* external_pki = nullptr;
+      SocketProtect* socket_protect = nullptr;
+      ReconnectNotify* reconnect_notify = nullptr;
 #if defined(USE_TUN_BUILDER)
-      TunBuilderBase* builder;
+      TunBuilderBase* builder = nullptr;
 #endif
     };
 

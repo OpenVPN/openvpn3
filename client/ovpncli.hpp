@@ -47,12 +47,8 @@ namespace openvpn {
     // (client reads)
     struct EvalConfig
     {
-      EvalConfig() : error(false), autologin(false), externalPki(false),
-		     staticChallengeEcho(false), privateKeyPasswordRequired(false),
-		     allowPasswordSave(false) {}
-
       // true if error
-      bool error;
+      bool error = false;
 
       // if error, message given here
       std::string message;
@@ -67,22 +63,22 @@ namespace openvpn {
       std::string friendlyName;
 
       // true: no creds required, false: username/password required
-      bool autologin;
+      bool autologin = false;
 
       // if true, this is an External PKI profile (no cert or key directives)
-      bool externalPki;
+      bool externalPki = false;
 
       // static challenge, may be empty, ignored if autologin
       std::string staticChallenge;
 
       // true if static challenge response should be echoed to UI, ignored if autologin
-      bool staticChallengeEcho;
+      bool staticChallengeEcho = false;
 
       // true if this profile requires a private key password
-      bool privateKeyPasswordRequired;
+      bool privateKeyPasswordRequired = false;
 
       // true if user is allowed to save authentication password in UI
-      bool allowPasswordSave;
+      bool allowPasswordSave = false;
 
       // optional list of user-selectable VPN servers
       std::vector<ServerEntry> serverList;
@@ -92,8 +88,6 @@ namespace openvpn {
     // (client writes)
     struct ProvideCreds
     {
-      ProvideCreds() : replacePasswordWithSessionID(false), cachePassword(false) {}
-
       std::string username;
       std::string password;
 
@@ -108,13 +102,13 @@ namespace openvpn {
       // If false, the password will be cached for future reconnects
       // and will not be replaced with a session ID, even if the
       // server provides one.
-      bool replacePasswordWithSessionID;
+      bool replacePasswordWithSessionID = false;
 
       // If true, and if replacePasswordWithSessionID is true, and if
       // we actually receive a session ID from the server, cache
       // the user-provided password for future use before replacing
       // the active password with the session ID.
-      bool cachePassword;
+      bool cachePassword = false;
     };
 
     // used to get session token from VPN core
@@ -129,11 +123,9 @@ namespace openvpn {
     // (client reads)
     struct DynamicChallenge
     {
-      DynamicChallenge() : echo(false), responseRequired(false) {}
-
       std::string challenge;
-      bool echo;
-      bool responseRequired;
+      bool echo = false;
+      bool responseRequired = false;
 
       std::string stateID;
     };
@@ -156,13 +148,6 @@ namespace openvpn {
     // (client writes)
     struct Config
     {
-      Config() : connTimeout(0), tunPersist(false), googleDnsFallback(false),
-		 disableClientCert(false), defaultKeyDirection(-1),
-		 forceAesCbcCiphersuites(false),
-		 proxyAllowCleartextAuth(false),
-		 altProxy(false),
-		 dco(false) {}
-
       // OpenVPN profile as a string
       std::string content;
 
@@ -184,21 +169,21 @@ namespace openvpn {
       std::string protoOverride;
 
       // Connection timeout in seconds, or 0 to retry indefinitely
-      int connTimeout;
+      int connTimeout = 0;
 
       // Keep tun interface active during pauses or reconnections
-      bool tunPersist;
+      bool tunPersist = false;
 
       // If true and a redirect-gateway profile doesn't also define
       // DNS servers, use the standard Google DNS servers.
-      bool googleDnsFallback;
+      bool googleDnsFallback = false;
 
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
       std::string externalPkiAlias;
 
       // If true, don't send client cert/key to peer.
-      bool disableClientCert;
+      bool disableClientCert = false;
 
       // Compression mode, one of:
       // yes -- allow compression on both uplink and downlink
@@ -213,14 +198,14 @@ namespace openvpn {
       // -1 (bidirectional -- default)) if no key-direction parameter
       // defined in profile.  Generally should be -1 (bidirectional)
       // for compatibility with 2.x branch
-      int defaultKeyDirection;
+      int defaultKeyDirection = -1;
 
       // If true, force ciphersuite to be one of:
       // 1. TLS_DHE_RSA_WITH_AES_256_CBC_SHA, or
       // 2. TLS_DHE_RSA_WITH_AES_128_CBC_SHA
       // and disable setting TLS minimum version.
       // This is intended for compatibility with legacy systems.
-      bool forceAesCbcCiphersuites;
+      bool forceAesCbcCiphersuites = false;
 
       // Override the minimum TLS version:
       //   disabled -- don't specify a minimum, and disable any minimum
@@ -239,13 +224,13 @@ namespace openvpn {
       std::string proxyPort;         // port number of proxy
       std::string proxyUsername;     // proxy credentials (optional)
       std::string proxyPassword;     // proxy credentials (optional)
-      bool proxyAllowCleartextAuth;  // enables HTTP Basic auth
+      bool proxyAllowCleartextAuth = false;  // enables HTTP Basic auth
 
       // Custom proxy implementation
-      bool altProxy;
+      bool altProxy = false;
 
       // Custom Data Channel Offload implementation
-      bool dco;
+      bool dco = false;
 
       // Gremlin configuration (requires that the core is built with OPENVPN_GREMLIN)
       std::string gremlinConfig;
@@ -255,8 +240,7 @@ namespace openvpn {
     // (client reads)
     struct Event
     {
-      Event() : error(false) {}
-      bool error;            // true if error
+      bool error = false;    // true if error
       std::string name;      // event name
       std::string info;      // additional event info
     };
@@ -265,9 +249,7 @@ namespace openvpn {
     // (client reads)
     struct ConnectionInfo
     {
-      ConnectionInfo() : defined(false) {}
-
-      bool defined;
+      bool defined = false;
       std::string user;
       std::string serverHost;
       std::string serverPort;
@@ -283,8 +265,7 @@ namespace openvpn {
     // (client reads)
     struct Status
     {
-      Status() : error(false) {}
-      bool error;           // true if error
+      bool error = false;   // true if error
       std::string status;   // an optional short error label that identifies the error
       std::string message;  // if error, message given here
     };
