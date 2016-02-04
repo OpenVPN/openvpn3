@@ -23,6 +23,8 @@
 #define OPENVPN_OPTIONS_SERVPUSH_H
 
 #include <string>
+#include <sstream>
+#include <ostream>
 #include <vector>
 #include <utility> // for std::move
 
@@ -48,11 +50,18 @@ namespace openvpn {
 	}
     }
 
-    void output(std::ostream& push) const
+    // do a roundtrip to csv and back to OptionList
+    OptionList to_option_list() const
     {
-      for (const_iterator i = begin(); i != end(); ++i)
+      std::ostringstream os;
+      output_csv(os);
+      return OptionList::parse_from_csv_static(os.str(), nullptr);
+    }
+
+    void output_csv(std::ostream& push) const
+    {
+      for (auto &e : *this)
 	{
-	  const std::string& e = *i;
 	  const bool must_quote = (e.find_first_of(',') != std::string::npos);
 	  push << ',';
 	  Option::escape_string(push, e, must_quote);
