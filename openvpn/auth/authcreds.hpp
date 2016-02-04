@@ -55,9 +55,14 @@ namespace openvpn {
 	return !username.empty();
       }
 
+      bool is_valid_user_pass() const
+      {
+	return validate_auth_cred(username) && validate_auth_cred(password);
+      }
+
       bool is_valid() const
       {
-	return defined() && validate_auth_cred(username) && validate_auth_cred(password);
+	return defined() && is_valid_user_pass();
       }
 
       void wipe_password()
