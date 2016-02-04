@@ -429,8 +429,11 @@ namespace openvpn {
 	  }
 	else
 	  {
-	    if (config.autologin_sessions)
-	      cc->set_replace_password_with_session_id(true);
+	    if (autologin && config.autologin_sessions)
+	      {
+		cc->set_password("auth-token-request");
+		cc->set_replace_password_with_session_id(true);
+	      }
 	    submit_creds(cc);
 	  }
       }

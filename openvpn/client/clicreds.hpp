@@ -83,7 +83,7 @@ namespace openvpn {
       return replace_password_with_session_id;
     }
 
-    void set_session_id(const std::string& sess_id)
+    void set_session_id(const std::string& user, const std::string& sess_id)
     {
       // force Session ID use if dynamic challenge is enabled
       if (dynamic_challenge && !replace_password_with_session_id)
@@ -103,6 +103,8 @@ namespace openvpn {
 	      username = dynamic_challenge->get_username();
 	      dynamic_challenge.reset();
 	    }
+	  else if (!user.empty())
+	    username = user;
 	  did_replace_password_with_session_id = true;
 	}
     }

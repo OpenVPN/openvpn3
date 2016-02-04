@@ -459,18 +459,13 @@ namespace openvpn {
 
       void extract_auth_token(const OptionList& opt)
       {
+	std::string username;
+
 	// auth-token-user
 	{
 	  const Option* o = opt.get_ptr("auth-token-user");
 	  if (o)
-	    {
-	      const std::string username = base64->decode(o->get(1, 256));
-	      if (creds)
-		{
-		  creds->set_username(username);
-		  OPENVPN_LOG("Session user: " << username);
-		}
-	    }
+	    username = base64->decode(o->get(1, 256));
 	}
 
 	// auth-token
@@ -482,12 +477,14 @@ namespace openvpn {
 	      const std::string& sess_id = o->get(1, 256);
 	      if (creds)
 		{
-		  creds->set_session_id(sess_id);
+		  if (!username.empty())
+		    OPENVPN_LOG("Session user: " << username);
 #ifdef OPENVPN_SHOW_SESSION_TOKEN
 		  OPENVPN_LOG("Session token: " << sess_id);
 #else
 		  OPENVPN_LOG("Session token: [redacted]");
 #endif
+		  creds->set_session_id(username, sess_id);
 		}
 	    }
 	}
