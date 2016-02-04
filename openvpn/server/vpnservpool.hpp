@@ -126,13 +126,13 @@ namespace openvpn {
 
     private:
       // returns flags
-      unsigned int acquire(Pool& pool, const unsigned int index)
+      unsigned int acquire(Pool& pool, const unsigned int index, const bool request_ipv6)
       {
 	unsigned int flags = 0;
 	pool_index = index;
 	if (!pool.pool4.acquire_addr(ip4))
 	  flags |= IPv4_DEPLETION;
-	if (pool.netblock6().defined())
+	if (request_ipv6 && pool.netblock6().defined())
 	  {
 	    if (!pool.pool6.acquire_addr(ip6))
 	      flags |= IPv6_DEPLETION;
@@ -169,14 +169,14 @@ namespace openvpn {
       }
 
       // returns IP46::Flags
-      unsigned int acquire(IP46& ip46, const unsigned int index)
+      unsigned int acquire(IP46& ip46, const unsigned int index, const bool request_ipv6)
       {
 	std::lock_guard<std::mutex> lock(mutex);
 	if (index >= SIZE)
 	  OPENVPN_THROW(vpn_serv_pool_error, "pool index=" << index << " is out of range (must be less than " << SIZE << ')');
 	if (!pools[index])
 	  OPENVPN_THROW(vpn_serv_pool_error, pool_name(index) << " IP address pool is undefined");
-	return ip46.acquire(*pools[index], index);
+	return ip46.acquire(*pools[index], index, request_ipv6);
       }
 
       void release(IP46& ip46)
