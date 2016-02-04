@@ -317,6 +317,7 @@ namespace openvpn {
 	int conn_timeout = 0;
 	bool tun_persist = false;
 	bool google_dns_fallback = false;
+	bool autologin_sessions = false;
 	std::string private_key_password;
 	std::string external_pki_alias;
 	bool disable_client_cert = false;
@@ -443,6 +444,7 @@ namespace openvpn {
 	state->conn_timeout = config.connTimeout;
 	state->tun_persist = config.tunPersist;
 	state->google_dns_fallback = config.googleDnsFallback;
+	state->autologin_sessions = config.autologinSessions;
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride, false);
@@ -642,6 +644,7 @@ namespace openvpn {
 	cc.conn_timeout = state->conn_timeout;
 	cc.tun_persist = state->tun_persist;
 	cc.google_dns_fallback = state->google_dns_fallback;
+	cc.autologin_sessions = state->autologin_sessions;
 	cc.proto_context_options = state->proto_context_options;
 	cc.http_proxy_options = state->http_proxy_options;
 	cc.alt_proxy = state->alt_proxy;

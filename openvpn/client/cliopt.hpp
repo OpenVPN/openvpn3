@@ -127,7 +127,7 @@ namespace openvpn {
       bool disable_client_cert = false;
       int default_key_direction = -1;
       bool force_aes_cbc_ciphersuites = false;
-      bool autologin_sessions = true;
+      bool autologin_sessions = false;
       std::string tls_version_min_override;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN

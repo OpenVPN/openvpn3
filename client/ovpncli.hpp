@@ -178,6 +178,9 @@ namespace openvpn {
       // DNS servers, use the standard Google DNS servers.
       bool googleDnsFallback = false;
 
+      // Enable autologin sessions
+      bool autologinSessions = false;
+
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
       std::string externalPkiAlias;

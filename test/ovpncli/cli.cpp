@@ -265,6 +265,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "def-keydir",     required_argument,  nullptr,      'k' },
     { "merge",          no_argument,        nullptr,      'm' },
     { "version",        no_argument,        nullptr,      'v' },
+    { "auto-sess",      no_argument,        nullptr,      'a' },
     { nullptr,          0,                  nullptr,       0  }
   };
 
@@ -301,6 +302,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	int defaultKeyDirection = -1;
 	bool forceAesCbcCiphersuites = false;
 	bool googleDnsFallback = false;
+	bool autologinSessions = false;
 	bool tunPersist = false;
 	bool merge = false;
 	bool version = false;
@@ -309,7 +311,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvu:p:r:D:P:s:t:c:z:M:h:q:U:W:I:G:k:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:s:t:c:z:M:h:q:U:W:I:G:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -378,6 +380,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'g':
 		googleDnsFallback = true;
+		break;
+	      case 'a':
+		autologinSessions = true;
 		break;
 	      case 'j':
 		tunPersist = true;
@@ -467,6 +472,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.defaultKeyDirection = defaultKeyDirection;
 	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 	      config.googleDnsFallback = googleDnsFallback;
+	      config.autologinSessions = autologinSessions;
 	      config.tunPersist = tunPersist;
 	      config.gremlinConfig = gremlin;
 	      PeerInfo::Set::parse_csv(peer_info, config.peerInfo);
@@ -631,6 +637,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
       std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
       std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
+      std::cout << "--auto-sess, -a      : request autologin session" << std::endl;
       std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
       std::cout << "--peer-info, -I      : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
       std::cout << "--gremlin, -G        : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
