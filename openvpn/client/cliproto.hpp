@@ -395,7 +395,7 @@ namespace openvpn {
 	std::string server_host, server_port, server_proto, server_ip;
 	transport->server_endpoint_info(server_host, server_port, server_proto, server_ip);
 	std::ostringstream out;
-	out << server_host << ":" << server_port << " (" << server_ip << ") via " << server_proto;
+	out << '[' << server_host << "]:" << server_port << " (" << server_ip << ") via " << server_proto;
 	return out.str();
       }
 

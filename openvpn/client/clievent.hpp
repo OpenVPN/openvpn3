@@ -240,7 +240,12 @@ namespace openvpn {
       {
 	std::ostringstream out;
 	// eg. "godot@foo.bar.gov:443 (1.2.3.4) via TCPv4 on tun0/5.5.1.1"
-	out << user << '@' << server_host << ':' << server_port
+	out << user << '@';
+	if (server_host.find_first_of(':') == std::string::npos)
+	  out << server_host;
+	else
+	  out << '[' << server_host << ']';
+	out << ':' << server_port
 	    << " (" << server_ip << ") via " << client_ip << '/' << server_proto
 	    << " on " << tun_name << '/' << vpn_ip4 << '/' << vpn_ip6;
 	return out.str();
