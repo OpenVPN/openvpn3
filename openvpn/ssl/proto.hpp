@@ -237,22 +237,6 @@ namespace openvpn {
     public:
       typedef RCPtr<Config> Ptr;
 
-      Config()
-      {
-	reliable_window = 0;
-	max_ack_list = 0;
-	pid_mode = 0;
-	xmit_creds = true;
-	key_direction = -1; // bidirectional
-	dc_deferred = false;
-	enable_op32 = false;
-	remote_peer_id = -1;
-	local_peer_id = -1;
-	tun_mtu = 1500;
-	debug_level = 1;
-	force_aes_cbc_ciphersuites = false;
-      }
-
       // master SSL context factory
       SSLFactoryAPI::Ptr ssl_factory;
 
@@ -280,10 +264,10 @@ namespace openvpn {
       RandomAPI::Ptr prng;
 
       // defer data channel initialization until after client options pull
-      bool dc_deferred;
+      bool dc_deferred = false;
 
       // transmit username/password creds to server (client-only)
-      bool xmit_creds;
+      bool xmit_creds = true;
 
       // Transport protocol, i.e. UDPv4, etc.
       Protocol protocol; // set with set_protocol()
@@ -298,14 +282,14 @@ namespace openvpn {
       OpenVPNStaticKey tls_auth_key; // leave this undefined to disable tls_auth
       OvpnHMACFactory::Ptr tls_auth_factory;
       OvpnHMACContext::Ptr tls_auth_context;
-      int key_direction; // 0, 1, or -1 for bidirectional
+      int key_direction = -1;        // 0, 1, or -1 for bidirectional
 
       // reliability layer parms
-      reliable::id_t reliable_window;
-      size_t max_ack_list;
+      reliable::id_t reliable_window = 0;
+      size_t max_ack_list = 0;
 
       // packet_id parms for both data and control channels
-      int pid_mode;            // PacketIDReceive::UDP_MODE or PacketIDReceive::TCP_MODE
+      int pid_mode = 0;                // PacketIDReceive::UDP_MODE or PacketIDReceive::TCP_MODE
 
       // timeout parameters, relative to construction of KeyContext object
       Time::Duration handshake_window; // SSL/TLS negotiation must complete by this time
@@ -324,18 +308,18 @@ namespace openvpn {
       std::string gui_version;
 
       // op header
-      bool enable_op32;
-      int remote_peer_id; // -1 to disable
-      int local_peer_id;  // -1 to disable
+      bool enable_op32 = false;
+      int remote_peer_id = -1; // -1 to disable
+      int local_peer_id = -1;  // -1 to disable
 
       // MTU
-      unsigned int tun_mtu;
+      unsigned int tun_mtu = 1500;
 
       // Debugging
-      int debug_level;
+      int debug_level = 1;
 
       // Compatibility
-      bool force_aes_cbc_ciphersuites;
+      bool force_aes_cbc_ciphersuites = false;
 
       void load(const OptionList& opt, const ProtoContextOptions& pco,
 		const int default_key_direction, const bool server)
