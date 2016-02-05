@@ -56,7 +56,7 @@ namespace openvpn {
       }
     };
 
-    struct Set : public std::vector<KeyValue>, public RC<thread_unsafe_refcount>
+    struct Set : public std::vector<KeyValue>, public RCCopyable<thread_unsafe_refcount>
     {
       typedef RCPtr<Set> Ptr;
 
@@ -67,6 +67,11 @@ namespace openvpn {
 	for (const auto &kv : other)
 	  sp->emplace_back(kv.key, kv.value);
 	return sp;
+      }
+
+      Ptr copy() const
+      {
+	return new Set(*this);
       }
 
       // Parse src in the form K1=V1,K2=V2,...
