@@ -866,16 +866,20 @@ namespace openvpn {
 
     // Append elements in other having given name to self,
     // caller should call update_map() after this function.
-    void extend(const OptionList& other, const std::string& name)
+    // Return the number of elements processed.
+    unsigned int extend(const OptionList& other, const std::string& name)
     {
       IndexMap::const_iterator oi = other.map().find(name);
+      unsigned int count = 0;
       if (oi != other.map().end())
 	for (IndexList::const_iterator i = oi->second.begin(); i != oi->second.end(); ++i)
 	  {
 	    const Option& opt = other[*i];
 	    push_back(opt);
 	    opt.touch();
+	    ++count;
 	  }
+      return count;
     }
 
     // Append to self only those elements in other that do not exist
