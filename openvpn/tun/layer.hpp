@@ -80,12 +80,12 @@ namespace openvpn {
 	throw Exception("Layer: unrecognized layer string");
     }
 
-    bool operator==(const Layer& other)
+    bool operator==(const Layer& other) const
     {
       return type_ == other.type_;
     }
 
-    bool operator!=(const Layer& other)
+    bool operator!=(const Layer& other) const
     {
       return type_ != other.type_;
     }
