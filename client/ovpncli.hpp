@@ -168,6 +168,12 @@ namespace openvpn {
       // Should be tcp, udp, or adaptive.
       std::string protoOverride;
 
+      // IPv6 preference
+      //  no      -- disable IPv6, so tunnel will be IPv4-only
+      //  yes     -- request combined IPv4/IPv6 tunnel
+      //  default (or empty string) -- leave decision to server
+      std::string ipv6;
+
       // Connection timeout in seconds, or 0 to retry indefinitely
       int connTimeout = 0;
 

@@ -314,6 +314,7 @@ namespace openvpn {
 	// extra settings submitted by API client
 	std::string server_override;
 	Protocol proto_override;
+	IPv6Setting ipv6;
 	int conn_timeout = 0;
 	bool tun_persist = false;
 	bool google_dns_fallback = false;
@@ -396,6 +397,10 @@ namespace openvpn {
 	if (!config.protoOverride.empty())
 	  Protocol::parse(config.protoOverride, false);
 
+	// validate IPv6 setting
+	if (!config.ipv6.empty())
+	  IPv6Setting::parse(config.ipv6);
+
 	// parse config
 	OptionList::KeyValueList kvl;
 	kvl.reserve(config.contentList.size());
@@ -448,6 +453,8 @@ namespace openvpn {
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride, false);
+	if (!config.ipv6.empty())
+	  state->ipv6 = IPv6Setting::parse(config.ipv6);
 	if (!config.compressionMode.empty())
 	  state->proto_context_options->parse_compression_mode(config.compressionMode);
 	if (eval.externalPki)
@@ -641,6 +648,7 @@ namespace openvpn {
 	cc.cli_events = state->events;
 	cc.server_override = state->server_override;
 	cc.proto_override = state->proto_override;
+	cc.ipv6 = state->ipv6;
 	cc.conn_timeout = state->conn_timeout;
 	cc.tun_persist = state->tun_persist;
 	cc.google_dns_fallback = state->google_dns_fallback;

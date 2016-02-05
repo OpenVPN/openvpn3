@@ -241,6 +241,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "response",       required_argument,  nullptr,      'r' },
     { "dc",             required_argument,  nullptr,      'D' },
     { "proto",          required_argument,  nullptr,      'P' },
+    { "ipv6",           required_argument,  nullptr,      '6' },
     { "server",         required_argument,  nullptr,      's' },
     { "timeout",        required_argument,  nullptr,      't' },
     { "compress",       required_argument,  nullptr,      'c' },
@@ -283,6 +284,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string response;
 	std::string dynamicChallengeCookie;
 	std::string proto;
+	std::string ipv6;
 	std::string server;
 	int timeout = 0;
 	std::string compress;
@@ -311,7 +313,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:s:t:c:z:M:h:q:U:W:I:G:k:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -338,6 +340,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'P':
 		proto = optarg;
+		break;
+	      case '6':
+		ipv6 = optarg;
 		break;
 	      case 's':
 		server = optarg;
@@ -459,6 +464,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.protoOverride = proto;
 	      config.connTimeout = timeout;
 	      config.compressionMode = compress;
+	      config.ipv6 = ipv6;
 	      config.privateKeyPassword = privateKeyPassword;
 	      config.tlsVersionMinOverride = tlsVersionMinOverride;
 	      config.disableClientCert = disableClientCert;
@@ -621,6 +627,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--dc, -D             : dynamic challenge/response cookie" << std::endl;
       std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
       std::cout << "--server, -s         : server override" << std::endl;
+      std::cout << "--ipv6, -6           : IPv6 (yes|no|default)" << std::endl;
       std::cout << "--timeout, -t        : timeout" << std::endl;
       std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
       std::cout << "--pk-password, -z    : private key password" << std::endl;

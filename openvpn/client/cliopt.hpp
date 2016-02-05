@@ -41,6 +41,7 @@
 #include <openvpn/crypto/cryptodcsel.hpp>
 #include <openvpn/ssl/mssparms.hpp>
 #include <openvpn/tun/tunmtu.hpp>
+#include <openvpn/tun/ipv6_setting.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/reconnect_notify.hpp>
@@ -114,6 +115,7 @@ namespace openvpn {
       std::string gui_version;
       std::string server_override;
       Protocol proto_override;
+      IPv6Setting ipv6;
       int conn_timeout = 0;
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
@@ -229,7 +231,7 @@ namespace openvpn {
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || config.autologin_sessions);
       cp->gui_version = config.gui_version;
       cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
-      cp->extra_peer_info = config.extra_peer_info;
+      cp->extra_peer_info = build_peer_info(config);
       cp->frame = frame;
       cp->now = &now_;
       cp->rng = rng;
@@ -453,12 +455,31 @@ namespace openvpn {
 	// base options where only a single instance of each option makes sense
 	push_base->singleton.extend(opt, "redirect-dns");
 	push_base->singleton.extend(opt, "inactive");
-	push_base->singleton.extend(opt, "block-ipv6");
+
+	// IPv6
+	{
+	  const unsigned int n = push_base->singleton.extend(opt, "block-ipv6");
+	  if (!n && config.ipv6() == IPv6Setting::NO)
+	    push_base->singleton.emplace_back("block-ipv6");
+	}
       }
 
       // show unused options
       if (opt.n_unused())
 	OPENVPN_LOG("UNUSED OPTIONS" << std::endl << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
+    }
+
+    static PeerInfo::Set::Ptr build_peer_info(const Config& config)
+    {
+      PeerInfo::Set::Ptr pi = config.extra_peer_info->copy();
+
+      // IPv6
+      if (config.ipv6() == IPv6Setting::NO)
+	pi->emplace_back("IV_IPv6", "0");
+      else if (config.ipv6() == IPv6Setting::YES)
+	pi->emplace_back("IV_IPv6", "1");
+
+      return pi;
     }
 
     void next()
