@@ -95,9 +95,15 @@ namespace openvpn {
     };
 
     Option()
-      : touched_(false)
     {
       static_assert(std::is_nothrow_move_constructible<Option>::value, "class Option not noexcept move constructable");
+    }
+
+    template<typename T, typename... Args>
+    Option(T first, Args... args)
+    {
+      reserve(1 + sizeof...(args));
+      from_list(first, args...);
     }
 
     static validate_status validate(const std::string& str, const size_t max_len)
@@ -300,7 +306,24 @@ namespace openvpn {
       return ret;
     }
 
-    volatile mutable bool touched_;
+    void from_list(std::string arg)
+    {
+      push_back(std::move(arg));
+    }
+
+    void from_list(const char *arg)
+    {
+      push_back(std::string(arg));
+    }
+
+    template<typename T, typename... Args>
+    void from_list(T first, Args... args)
+    {
+      from_list(first);
+      from_list(args...);
+    }
+
+    volatile mutable bool touched_ = false;
     std::vector<std::string> data;
   };
 
