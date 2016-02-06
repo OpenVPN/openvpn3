@@ -49,6 +49,7 @@ namespace openvpn {
 	std::string display_name;
 	std::vector<std::string> dependencies;
 	bool autostart = false;
+	bool restart_on_fail = false;
       };
 
       Service(const Config& config_arg)
@@ -105,6 +106,28 @@ namespace openvpn {
 	  {
 	    const Win::LastError err;
 	    OPENVPN_THROW(winsvc_error, "CreateServiceW failed: " << err.message());
+	  }
+	if (config.restart_on_fail)
+	  {
+	    // http://stackoverflow.com/questions/3242505/how-to-create-service-which-restarts-on-crash
+	    SERVICE_FAILURE_ACTIONS servFailActions;
+	    SC_ACTION failActions[3];
+
+	    failActions[0].Type = SC_ACTION_RESTART;   // Failure action: Restart Service
+	    failActions[0].Delay = 1000;               // number of seconds to wait before performing failure action, in milliseconds
+	    failActions[1].Type = SC_ACTION_RESTART;
+	    failActions[1].Delay = 5000;
+	    failActions[2].Type = SC_ACTION_RESTART;
+	    failActions[2].Delay = 30000;
+
+	    servFailActions.dwResetPeriod = 86400;     // Reset Failures Counter, in Seconds
+	    servFailActions.lpCommand = NULL;          // Command to perform due to service failure, not used
+	    servFailActions.lpRebootMsg = NULL;        // Message during rebooting computer due to service failure, not used
+	    servFailActions.cActions = 3;              // Number of failure action to manage
+	    servFailActions.lpsaActions = failActions;
+
+	    ::ChangeServiceConfig2(svc(), SERVICE_CONFIG_FAILURE_ACTIONS, &servFailActions); // Apply above settings
+	    ::StartService(svc(), NULL, NULL);
 	  }
       }
 
