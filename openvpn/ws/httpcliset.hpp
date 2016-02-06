@@ -336,6 +336,7 @@ namespace openvpn {
 					  Stop* stop=nullptr,
 					  SyncPersistState* sps=nullptr)
       {
+	std::unique_ptr<asio::io_context> io_context;
 	auto clean = Cleanup([&]() {
 	    // ensure that TransactionSet reference to socket
 	    // is reset before method returns (unless sps is non-null
@@ -344,7 +345,6 @@ namespace openvpn {
 	      ts->hsc.reset();
 	  });
 	ts->preserve_http_state = (sps != nullptr);
-	std::unique_ptr<asio::io_context> io_context;
 	if (sps)
 	  io_context = std::move(sps->io_context);
 	if (!io_context)
