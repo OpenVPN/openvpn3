@@ -634,6 +634,8 @@ private:
 #if _WIN32_WINNT < 0x0600 // pre-Vista
     c.dependencies.push_back("Dhcp"); // DHCP client
 #endif
+    c.autostart = true;
+    c.restart_on_fail = true;
     return c;
   }
 
