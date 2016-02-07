@@ -894,6 +894,9 @@ namespace openvpn {
 		out << " SIZE=" << b.size() << '/' << orig_size;
 	      }
 	  }
+#ifdef OPENVPN_DEBUG_PROTO_DUMP
+	out << '\n' << string::trim_crlf_copy(dump_hex(buf));
+#endif
       }
       catch (const std::exception& e)
 	{
