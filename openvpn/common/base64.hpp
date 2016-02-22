@@ -110,13 +110,13 @@ namespace openvpn {
 
       p = s = new char[encode_size_max(size)];
       for (i = 0; i < size; ) {
-	c = data[i++] << 8;
+	c = static_cast<unsigned char>(data[i++]) << 8;
 	if (i < size)
-	  c += data[i];
+	  c += static_cast<unsigned char>(data[i]);
 	i++;
 	c <<= 8;
 	if (i < size)
-	  c += data[i];
+	  c += static_cast<unsigned char>(data[i]);
 	i++;
 	p[0] = enc[(c & 0x00fc0000) >> 18];
 	p[1] = enc[(c & 0x0003f000) >> 12];
