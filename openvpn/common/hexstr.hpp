@@ -129,6 +129,11 @@ namespace openvpn {
     return os.str();
   }
 
+  inline std::string dump_hex(const std::string& str)
+  {
+    return dump_hex((const unsigned char *)str.c_str(), str.length());
+  }
+
   template <typename V>
   inline std::string dump_hex(const V& data)
   {
