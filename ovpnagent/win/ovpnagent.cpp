@@ -114,12 +114,13 @@ public:
   }
 
   Win::ScopedHANDLE establish_tun(const TunBuilderCapture& tbc,
+				  const std::wstring& openvpn_app_path,
 				  Stop* stop,
 				  std::ostream& os)
   {
     if (!tun)
       tun.reset(new TunWin::Setup);
-    return Win::ScopedHANDLE(tun->establish(tbc, stop, os));
+    return Win::ScopedHANDLE(tun->establish(tbc, openvpn_app_path, stop, os));
   }
 
   // return true if we did any work
@@ -375,6 +376,7 @@ private:
 
     try {
       const HANDLE client_pipe = get_client_pipe();
+      const std::wstring client_exe = get_client_exe(client_pipe);
 
       const HTTP::Request& req = request();
       OPENVPN_LOG("HTTP request received from " << sock->remote_endpoint_str() << '\n' << req.to_string());
@@ -424,7 +426,7 @@ private:
 	  }
 
 	  // establish the tun setup object
-	  Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, nullptr, os));
+	  Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os));
 
 	  // post-establish impersonation
 	  {
@@ -509,6 +511,16 @@ private:
     if (!np)
       throw Exception("only named pipe clients are allowed");
     return np->handle.native_handle();
+  }
+
+  std::wstring get_client_exe(const HANDLE client_pipe)
+  {
+#if _WIN32_WINNT >= 0x0600 // Vista and higher
+    Win::NamedPipePeerInfoClient npinfo(client_pipe);
+    return npinfo.exe_path;
+#else
+    return std::wstring();
+#endif
   }
 
   Win::ScopedHANDLE get_client_process(const HANDLE pipe, ULONG pid_hint) const
