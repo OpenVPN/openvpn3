@@ -50,6 +50,7 @@ namespace openvpn {
       typedef RCPtr<Setup> Ptr;
 
       virtual HANDLE establish(const TunBuilderCapture& pull,
+			       const std::wstring& openvpn_app_path,
 			       Stop* stop,
 			       std::ostream& os) override // defined by SetupBase
       {
@@ -81,7 +82,7 @@ namespace openvpn {
 	remove_cmds.reset(new ActionList());
 
 	// populate add/remove lists with actions
-	adapter_config(th(), tap, pull, *add_cmds, *remove_cmds, os);
+	adapter_config(th(), openvpn_app_path, tap, pull, *add_cmds, *remove_cmds, os);
 
 	// execute the add actions
 	add_cmds->execute(os);
@@ -112,6 +113,7 @@ namespace openvpn {
 #if _WIN32_WINNT >= 0x0600
       // Configure TAP adapter on Vista and higher
       void adapter_config(HANDLE th,
+			  const std::wstring& openvpn_app_path,
 			  const Util::TapNameGuidPair& tap,
 			  const TunBuilderCapture& pull,
 			  ActionList& create,
@@ -331,13 +333,15 @@ namespace openvpn {
 		}
 	    }
 
+#if 0 // WFP is disabled for now
 	  // If we added DNS servers, block DNS on all interfaces except
 	  // the TAP adapter.
-	  if (indices[0] || indices[1])
+	  if (!openvpn_app_path.empty() && (indices[0] || indices[1]))
 	    {
-	      create.add(new ActionWFP(tap.index, true, wfp));
-	      destroy.add(new ActionWFP(tap.index, false, wfp));
+	      create.add(new ActionWFP(openvpn_app_path, tap.index, true, wfp));
+	      destroy.add(new ActionWFP(openvpn_app_path, tap.index, false, wfp));
 	    }
+#endif
 	}
 
 	// Process DNS search domains
@@ -376,6 +380,7 @@ namespace openvpn {
       // Configure TAP adapter for pre-Vista
       // Currently we don't support IPv6 on pre-Vista
       void adapter_config(HANDLE th,
+			  const std::wstring& openvpn_app_path,
 			  const Util::TapNameGuidPair& tap,
 			  const TunBuilderCapture& pull,
 			  ActionList& create,

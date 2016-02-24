@@ -37,6 +37,7 @@
 #include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
 #include <openvpn/tun/win/client/tunsetup.hpp>
+#include <openvpn/win/modname.hpp>
 
 namespace openvpn {
   namespace TunWin {
@@ -178,7 +179,7 @@ namespace openvpn {
 		  {
 		    std::ostringstream os;
 		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
-		    th = tun_setup->establish(*po, config->stop, os);
+		    th = tun_setup->establish(*po, Win::module_name(), config->stop, os);
 		  }
 
 		  // create ASIO wrapper for HANDLE

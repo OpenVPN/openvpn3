@@ -25,6 +25,7 @@
 #include <ostream>
 
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/wstring.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/tun/win/tunutil.hpp>
 #include <openvpn/win/winerr.hpp>
@@ -43,9 +44,12 @@ namespace openvpn {
 
       OPENVPN_EXCEPTION(wfp_error);
 
-      // Block DNS on all interfaces except the one given.
+      // Block DNS from all apps except openvpn_app_path and
+      // from all interfaces except tap_index.
       // Derived from https://github.com/ValdikSS/openvpn-with-patches/commit/3bd4d503d21aa34636e4f97b3e32ae0acca407f0
-      void block_dns(const NET_IFINDEX index, std::ostream& log)
+      void block_dns(const std::wstring& openvpn_app_path,
+		     const NET_IFINDEX tap_index,
+		     std::ostream& log)
       {
 	// WFP filter/conditions
 	FWPM_FILTER0 filter = {0};
@@ -53,10 +57,10 @@ namespace openvpn {
 	UINT64 filterid = 0;
 
 	// Get NET_LUID object for adapter
-	NET_LUID tap_luid = adapter_index_to_luid(index);
+	NET_LUID tap_luid = adapter_index_to_luid(tap_index);
 
-	// Get app ID for svchost.exe
-	unique_ptr_del<FWP_BYTE_BLOB> svchost_app_id = get_app_id_blob(get_svchost_path());
+	// Get app ID
+	unique_ptr_del<FWP_BYTE_BLOB> openvpn_app_id_blob = get_app_id_blob(openvpn_app_path);
 
 	// Populate packet filter layer information
 	{
@@ -76,13 +80,14 @@ namespace openvpn {
 	// Prepare filter
 	filter.subLayerKey = subLayerGUID;
 	filter.displayData.name = L"OpenVPN";
-	filter.weight.type = FWP_EMPTY;
+	filter.weight.type = FWP_UINT8;
+	filter.weight.uint8 = 0xF;
 	filter.filterCondition = condition;
-	filter.numFilterConditions = 2;
 
-	// Filter #1 -- block IPv4 DNS requests from svchost.exe
+	// Filter #1 -- permit IPv4 DNS requests from OpenVPN app
 	filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
-	filter.action.type = FWP_ACTION_BLOCK;
+	filter.action.type = FWP_ACTION_PERMIT;
+	filter.numFilterConditions = 2;
 
 	condition[0].fieldKey = FWPM_CONDITION_IP_REMOTE_PORT;
 	condition[0].matchType = FWP_MATCH_EQUAL;
@@ -92,31 +97,48 @@ namespace openvpn {
 	condition[1].fieldKey = FWPM_CONDITION_ALE_APP_ID;
 	condition[1].matchType = FWP_MATCH_EQUAL;
 	condition[1].conditionValue.type = FWP_BYTE_BLOB_TYPE;
-	condition[1].conditionValue.byteBlob = svchost_app_id.get();
+	condition[1].conditionValue.byteBlob = openvpn_app_id_blob.get();
 
 	add_filter(&filter, NULL, &filterid);
-	log << "block IPv4 DNS requests from svchost.exe" << std::endl;
+	log << "permit IPv4 DNS requests from OpenVPN app" << std::endl;
 
-	// Filter #2 -- block IPv6 DNS requests from svchost.exe
+	// Filter #2 -- permit IPv6 DNS requests from OpenVPN app
 	filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
+
 	add_filter(&filter, NULL, &filterid);
-	log << "block IPv6 DNS requests from svchost.exe" << std::endl;
+	log << "permit IPv6 DNS requests from OpenVPN app" << std::endl;
 
-	// Filter #3 -- allow IPv4 traffic from TAP
-	filter.action.type = FWP_ACTION_PERMIT;
-
-	condition[0].fieldKey = FWPM_CONDITION_IP_LOCAL_INTERFACE;
-	condition[0].matchType = FWP_MATCH_EQUAL;
-	condition[0].conditionValue.type = FWP_UINT64;
-
+	// Filter #3 -- block IPv4 DNS requests from other apps
 	filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
-	condition[0].conditionValue.uint64 = &tap_luid.Value;
+	filter.action.type = FWP_ACTION_BLOCK;
+	filter.weight.type = FWP_EMPTY;
+	filter.numFilterConditions = 1;
+
+	add_filter(&filter, NULL, &filterid);
+	log << "block IPv4 DNS requests from other apps" << std::endl;
+
+	// Filter #4 -- block IPv6 DNS requests from other apps
+	filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
+
+	add_filter(&filter, NULL, &filterid);
+	log << "block IPv6 DNS requests from other apps" << std::endl;
+
+	// Filter #5 -- allow IPv4 traffic from TAP
+	filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
+	filter.action.type = FWP_ACTION_PERMIT;
+	filter.numFilterConditions = 2;
+
+	condition[1].fieldKey = FWPM_CONDITION_IP_LOCAL_INTERFACE;
+	condition[1].matchType = FWP_MATCH_EQUAL;
+	condition[1].conditionValue.type = FWP_UINT64;
+	condition[1].conditionValue.uint64 = &tap_luid.Value;
 
 	add_filter(&filter, NULL, &filterid);
 	log << "allow IPv4 traffic from TAP" << std::endl;
 
-	// Filter #4 -- allow IPv6 traffic from TAP
+	// Filter #6 -- allow IPv6 traffic from TAP
 	filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
+
 	add_filter(&filter, NULL, &filterid);
 	log << "allow IPv6 traffic from TAP" << std::endl;
       }
@@ -198,17 +220,6 @@ namespace openvpn {
 	return tap_luid;
       }
 
-      static std::wstring get_svchost_path()
-      {
-	wchar_t path[MAX_PATH];
-	if (!::GetSystemDirectoryW(path, MAX_PATH))
-	  {
-	    const Win::LastError err;
-	    OPENVPN_THROW(wfp_error, "GetSystemDirectoryW failed: " << err.message());
-	  }
-	return std::wstring(path) + L"\\svchost.exe";
-      }
-
       static unique_ptr_del<FWP_BYTE_BLOB> get_app_id_blob(const std::wstring& app_path)
       {
 	FWP_BYTE_BLOB *blob;
@@ -241,11 +252,13 @@ namespace openvpn {
     private:
       friend class ActionWFP;
 
-      void block(const DWORD iface_index, std::ostream& log)
+      void block(const std::wstring& openvpn_app_path,
+		 const NET_IFINDEX tap_index,
+		 std::ostream& log)
       {
 	unblock(log);
 	wfp.reset(new WFP());
-	wfp->block_dns(iface_index, log);
+	wfp->block_dns(openvpn_app_path, tap_index, log);
       }
 
       void unblock(std::ostream& log)
@@ -263,10 +276,12 @@ namespace openvpn {
     class ActionWFP : public Action
     {
     public:
-      ActionWFP(const DWORD iface_index_arg,
+      ActionWFP(const std::wstring& openvpn_app_path_arg,
+		const NET_IFINDEX tap_index_arg,
 		const bool enable_arg,
 		const WFPContext::Ptr& wfp_arg)
-	: iface_index(iface_index_arg),
+	: openvpn_app_path(openvpn_app_path_arg),
+	  tap_index(tap_index_arg),
 	  enable(enable_arg),
 	  wfp(wfp_arg)
       {
@@ -276,20 +291,20 @@ namespace openvpn {
       {
 	log << to_string() << std::endl;
 	if (enable)
-	  wfp->block(iface_index, log);
+	  wfp->block(openvpn_app_path, tap_index, log);
 	else
 	  wfp->unblock(log);
       }
 
       virtual std::string to_string() const override
       {
-	return "ActionWFP iface_index=" + std::to_string(iface_index) + " enable=" + std::to_string(enable);
+	return "ActionWFP openvpn_app_path=" + wstring::to_utf8(openvpn_app_path) + " tap_index=" + std::to_string(tap_index) + " enable=" + std::to_string(enable);
       }
 
     private:
-      const DWORD iface_index;
-      bool enable;
-
+      const std::wstring openvpn_app_path;
+      const NET_IFINDEX tap_index;
+      const bool enable;
       WFPContext::Ptr wfp;
     };
   }

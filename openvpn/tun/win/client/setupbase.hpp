@@ -43,6 +43,7 @@ namespace openvpn {
       OPENVPN_EXCEPTION(tun_win_setup);
 
       virtual HANDLE establish(const TunBuilderCapture& pull,
+			       const std::wstring& openvpn_app_path,
 			       Stop* stop,
 			       std::ostream& os) = 0;
 
