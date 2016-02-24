@@ -86,6 +86,7 @@ namespace openvpn {
 
     private:
       virtual HANDLE establish(const TunBuilderCapture& pull,
+			       const std::wstring& openvpn_app_path,
 			       Stop* stop,
 			       std::ostream& os) override // TunWin::SetupBase
       {
