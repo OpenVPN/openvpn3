@@ -42,6 +42,8 @@
 #include <openvpn/tun/win/wfp.hpp>
 #endif
 
+#include <versionhelpers.h>
+
 namespace openvpn {
   namespace TunWin {
     class Setup : public SetupBase
@@ -316,6 +318,14 @@ namespace openvpn {
 	//  [[index=]<integer>] [[validate=]yes|no]
 	// Usage: delete dnsservers [name=]<string> [[address=]<IPv6 address>|all] [[validate=]yes|no]
 	{
+	  // fix for vista and dnsserver vs win7+ dnsservers
+	  std::string dns_servers_cmd = "dnsservers";
+	  std::string validate_cmd = " validate=no";
+	  if (IsWindowsVistaOrGreater() && !IsWindows7OrGreater()) {
+	    dns_servers_cmd = "dnsserver";
+	    validate_cmd = "";
+	  }
+
 	  int indices[2] = {0, 0}; // per-protocol indices
 	  for (size_t i = 0; i < pull.dns_servers.size(); ++i)
 	    {
@@ -325,11 +335,11 @@ namespace openvpn {
 	      const std::string proto = ds.ipv6 ? "ipv6" : "ip";
 	      const int idx = indices[bool(ds.ipv6)]++;
 	      if (idx)
-		create.add(new WinCmd("netsh interface " + proto + " add dnsservers " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + " validate=no"));
+		create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + validate_cmd));
 	      else
 		{
-		  create.add(new WinCmd("netsh interface " + proto + " set dnsservers " + tap_index_name + " static " + ds.address + " register=primary validate=no"));
-		  destroy.add(new WinCmd("netsh interface " + proto + " delete dnsservers " + tap_index_name + " all validate=no"));
+		  create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ds.address + " register=primary" + validate_cmd));
+		  destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
 		}
 	    }
 
