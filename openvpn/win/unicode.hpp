@@ -61,7 +61,7 @@ namespace openvpn {
 
     inline size_t utf16_strlen(const wchar_t *str)
     {
-      return wcslen(str);
+      return ::wcslen(str);
     }
   }
 }
