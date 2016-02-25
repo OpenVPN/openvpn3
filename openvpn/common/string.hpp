@@ -275,6 +275,24 @@ namespace openvpn {
       return ret;
     }
 
+    inline std::string join(const std::vector<std::string>& strings,
+			    const std::string& delim,
+			    const bool tail=false)
+    {
+      std::string ret;
+      bool first = true;
+      for (const auto &s : strings)
+	{
+	  if (!first)
+	    ret += delim;
+	  ret += s;
+	  first = false;
+	}
+      if (tail)
+	ret += delim;
+      return ret;
+    }
+
     inline bool starts_with(const std::string& str, const std::string& prefix)
     {
       const size_t len = str.length();
