@@ -85,7 +85,7 @@ namespace openvpn {
 	const std::wstring wdisplay_name = wstring::from_utf8(config.display_name);
 
 	// get dependencies
-	const std::wstring deps = pack_string_vector(config.dependencies);
+	const std::wstring deps = wstring::pack_string_vector(config.dependencies);
 
 	// create the service
 	ScopedSCHandle svc(::CreateServiceW(
@@ -394,17 +394,6 @@ namespace openvpn {
 
 	// Report the status of the service to the SCM.
 	::SetServiceStatus(status_handle, &status);
-      }
-
-      static std::wstring pack_string_vector(const std::vector<std::string>& strvec)
-      {
-	std::wstring ret;
-	for (auto &s : strvec)
-	  {
-	    ret += wstring::from_utf8(s);
-	    ret += L'\0';
-	  }
-	return ret;
       }
 
       static Service* service; // GLOBAL
