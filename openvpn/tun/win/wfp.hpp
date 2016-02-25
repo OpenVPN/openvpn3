@@ -26,6 +26,7 @@
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/wstring.hpp>
+#include <openvpn/common/action.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/tun/win/tunutil.hpp>
 #include <openvpn/win/winerr.hpp>
