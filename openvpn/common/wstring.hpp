@@ -23,6 +23,7 @@
 #define OPENVPN_COMMON_WSTRING_H
 
 #include <string>
+#include <vector>
 #include <locale>
 #include <codecvt>
 #include <memory>
@@ -30,21 +31,21 @@
 namespace openvpn {
   namespace wstring {
 
-    std::wstring from_utf8(const std::string& str)
+    inline std::wstring from_utf8(const std::string& str)
     {
       typedef std::codecvt_utf8<wchar_t> cvt_type;
       std::wstring_convert<cvt_type, wchar_t> cvt;
       return cvt.from_bytes(str);
     }
 
-    std::string to_utf8(const std::wstring& wstr)
+    inline std::string to_utf8(const std::wstring& wstr)
     {
       typedef std::codecvt_utf8<wchar_t> cvt_type;
       std::wstring_convert<cvt_type, wchar_t> cvt;
       return cvt.to_bytes(wstr);
     }
 
-    std::unique_ptr<wchar_t[]> to_wchar_t(const std::wstring& wstr)
+    inline std::unique_ptr<wchar_t[]> to_wchar_t(const std::wstring& wstr)
     {
       const size_t len = wstr.length();
       std::unique_ptr<wchar_t[]> ret(new wchar_t[len+1]);
@@ -52,6 +53,18 @@ namespace openvpn {
       for (i = 0; i < len; ++i)
 	ret[i] = wstr[i];
       ret[i] = L'\0';
+      return ret;
+    }
+
+    // return value corresponds to the MULTI_SZ string format on Windows
+    inline std::wstring pack_string_vector(const std::vector<std::string>& strvec)
+    {
+      std::wstring ret;
+      for (auto &s : strvec)
+	{
+	  ret += from_utf8(s);
+	  ret += L'\0';
+	}
       return ret;
     }
   }
