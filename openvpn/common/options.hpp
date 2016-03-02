@@ -644,6 +644,14 @@ namespace openvpn {
       return ret;
     }
 
+    static OptionList parse_from_argv_static(const std::vector<std::string>& argv)
+    {
+      OptionList ret;
+      ret.parse_from_argv(argv);
+      ret.update_map();
+      return ret;
+    }
+
     void clear()
     {
       std::vector<Option>::clear();
@@ -669,6 +677,29 @@ namespace openvpn {
 	      push_back(std::move(opt));
 	    }
 	}
+    }
+
+    // caller should call update_map() after this function
+    void parse_from_argv(const std::vector<std::string>& argv)
+    {
+      Option opt;
+      for (auto &arg : argv)
+	{
+	  std::string a = arg;
+	  if (string::starts_with(a, "--"))
+	    {
+	      if (!opt.empty())
+		{
+		  push_back(std::move(opt));
+		  opt.clear();
+		}
+	      a = a.substr(2);
+	    }
+	  if (!a.empty())
+	    opt.push_back(a);
+	}
+      if (!opt.empty())
+	push_back(std::move(opt));
     }
 
     // caller should call update_map() after this function

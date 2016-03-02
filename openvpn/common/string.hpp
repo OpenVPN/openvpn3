@@ -293,6 +293,14 @@ namespace openvpn {
       return ret;
     }
 
+    inline std::vector<std::string> from_argv(int argc, char *argv[], const bool skip_first)
+    {
+      std::vector<std::string> ret;
+      for (int i = (skip_first ? 1 : 0); i < argc; ++i)
+	ret.emplace_back(argv[i]);
+      return ret;
+    }
+
     inline bool starts_with(const std::string& str, const std::string& prefix)
     {
       const size_t len = str.length();
