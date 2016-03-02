@@ -27,9 +27,11 @@
 #include <string>
 #include <sstream>
 #include <ostream>
+#include <utility>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/error/excode.hpp>
@@ -39,6 +41,7 @@
 #include <openvpn/tun/win/client/setupbase.hpp>
 
 #if _WIN32_WINNT >= 0x0600 // Vista+
+#include <openvpn/tun/win/nrpt.hpp>
 #include <openvpn/tun/win/wfp.hpp>
 #endif
 
@@ -326,7 +329,21 @@ namespace openvpn {
 	    validate_cmd = "";
 	  }
 
-	  int indices[2] = {0, 0}; // per-protocol indices
+#if 1
+	  // normal production setting
+	  const bool use_nrpt = IsWindows8OrGreater();
+	  const bool add_netsh_rules = true;
+#else
+	  // test NRPT registry settings on pre-Win8
+	  const bool use_nrpt = true;
+	  const bool add_netsh_rules = true;
+#endif
+	  // per-protocol indices
+	  constexpr size_t IPv4 = 0;
+	  constexpr size_t IPv6 = 1;
+	  int indices[2] = {0, 0}; // DNS server counters for IPv4/IPv6
+
+	  // iterate over pushed DNS server list
 	  for (size_t i = 0; i < pull.dns_servers.size(); ++i)
 	    {
 	      const TunBuilderCapture::DNSServer& ds = pull.dns_servers[i];
@@ -334,16 +351,62 @@ namespace openvpn {
 		continue;
 	      const std::string proto = ds.ipv6 ? "ipv6" : "ip";
 	      const int idx = indices[bool(ds.ipv6)]++;
-	      if (idx)
-		create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + validate_cmd));
-	      else
+	      if (add_netsh_rules)
 		{
-		  create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ds.address + " register=primary" + validate_cmd));
-		  destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
+		  if (idx)
+		    create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + validate_cmd));
+		  else
+		    {
+		      create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ds.address + " register=primary" + validate_cmd));
+		      destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
+		    }
 		}
 	    }
 
-#if 0 // WFP is disabled for now
+	  // If NRPT enabled and at least one IPv4 or IPv6 DNS
+	  // server was added, add NRPT registry entries to
+	  // route DNS through the tunnel.
+	  // Also consider selective DNS routing using domain
+	  // suffix list from pull.search_domains as set by
+	  // "dhcp-option DOMAIN ..." directives.
+	  if (use_nrpt && (indices[IPv4] || indices[IPv6]))
+	    {
+	      // domain suffix list
+	      std::vector<std::string> dsfx;
+
+	      // Only add DNS routing suffixes if not rerouting gateway.
+	      // Otherwise, route all DNS requests with wildcard (".").
+	      const bool redir_dns4 = pull.reroute_gw.ipv4 && indices[IPv4];
+	      const bool redir_dns6 = pull.reroute_gw.ipv6 && indices[IPv6];
+	      if (!redir_dns4 && !redir_dns6)
+		{
+		  for (const auto &sd : pull.search_domains)
+		    {
+		      std::string dom = sd.domain;
+		      if (!dom.empty())
+			{
+			  // each DNS suffix must begin with '.'
+			  if (dom[0] != '.')
+			    dom = "." + dom;
+			  dsfx.push_back(std::move(dom));
+			}
+		    }
+		}
+	      if (dsfx.empty())
+		dsfx.emplace_back(".");
+
+	      // DNS server list
+	      std::vector<std::string> dserv;
+	      for (const auto &ds : pull.dns_servers)
+		dserv.push_back(ds.address);
+
+	      create.add(new NRPT::ActionCreate(dsfx, dserv));
+	      destroy.add(new NRPT::ActionDelete);
+	    }
+
+#if 1
+	  // Use WFP for DNS leak protection.
+
 	  // If we added DNS servers, block DNS on all interfaces except
 	  // the TAP adapter.
 	  if (!openvpn_app_path.empty() && (indices[0] || indices[1]))
@@ -354,13 +417,17 @@ namespace openvpn {
 #endif
 	}
 
-	// Process DNS search domains
+#if 0
+	// Set a default TAP-adapter domain suffix using the first
+	// domain suffix from from pull.search_domains as set by
+	// "dhcp-option DOMAIN ..." directives.
 	if (!pull.search_domains.empty())
 	  {
-	    // Only the first search domain is used (Windows limitation?)
+	    // Only the first search domain is used
 	    create.add(new Util::ActionSetSearchDomain(pull.search_domains[0].domain, tap.guid));
 	    destroy.add(new Util::ActionSetSearchDomain("", tap.guid));
 	  }
+#endif
 
 	// Process WINS Servers
 	//
