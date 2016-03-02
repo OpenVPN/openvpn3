@@ -584,6 +584,7 @@ public:
 
 #if _WIN32_WINNT >= 0x0600 // Vista and higher
     Win::NamedPipePeerInfo::allow_client_query();
+    TunWin::NRPT::delete_rule(); // remove stale NRPT rules
 #endif
 
     WS::Server::Config::Ptr hconf = new WS::Server::Config();
