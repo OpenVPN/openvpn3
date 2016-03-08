@@ -27,61 +27,13 @@
 #include <cstring> // for std::strlen and others
 #include <string>
 
-#include <openvpn/buffer/buffer.hpp>
-#include <openvpn/common/hexstr.hpp>
-#include <openvpn/crypto/digestapi.hpp>
+#include <openvpn/crypto/hashstr.hpp>
 
 namespace openvpn {
   namespace HTTPProxy {
 
     class Digest
     {
-      class HashString
-      {
-      public:
-	HashString(DigestFactory& digest_factory,
-		   const CryptoAlgs::Type digest_type)
-	  : ctx(digest_factory.new_digest(digest_type))
-	{
-	}
-
-	void update(const std::string& str)
-	{
-	  ctx->update((unsigned char *)str.c_str(), str.length());
-	}
-
-	void update(const char *str)
-	{
-	  ctx->update((unsigned char *)str, std::strlen(str));
-	}
-
-	void update(const char c)
-	{
-	  ctx->update((unsigned char *)&c, 1);
-	}
-
-	void update(const Buffer& buf)
-	{
-	  ctx->update(buf.c_data(), buf.size());
-	}
-
-	BufferPtr final()
-	{
-	  BufferPtr ret(new BufferAllocated(ctx->size(), BufferAllocated::ARRAY));
-	  ctx->final(ret->data());
-	  return ret;
-	}
-
-	std::string final_hex()
-	{
-	  BufferPtr bp = final();
-	  return render_hex_generic(*bp);
-	}
-
-      private:
-	DigestInstance::Ptr ctx;
-      };
-
     public:
       // calculate H(A1) as per spec
       static std::string calcHA1(DigestFactory& digest_factory,
