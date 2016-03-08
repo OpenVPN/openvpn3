@@ -31,6 +31,8 @@ namespace openvpn {
   // Return true if file exists
   inline bool file_exists(const std::string& filename)
   {
+    if (filename.empty())
+      return false;
     struct stat buffer;   
     return stat(filename.c_str(), &buffer) == 0; 
   }
