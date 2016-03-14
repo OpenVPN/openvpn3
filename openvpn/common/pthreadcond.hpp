@@ -189,11 +189,11 @@ namespace openvpn {
       ERROR,      // at least one thread called error()
     };
 
-    PThreadBarrier(const unsigned int limit_arg)
+    PThreadBarrier(const int initial_limit = -1)
       : state(UNSIGNALED),
 	chosen(false),
 	count(0),
-	limit(limit_arg)
+	limit(initial_limit)
     {
     }
 
@@ -209,7 +209,9 @@ namespace openvpn {
 
       lock();
       const unsigned int c = ++count;
-      while (state == UNSIGNALED && c < limit && !timeout)
+      while (state == UNSIGNALED
+	     && (limit < 0 || c < limit)
+	     && !timeout)
 	timeout = cond_wait(seconds);
       if (timeout)
 	ret = TIMEOUT;
@@ -224,6 +226,14 @@ namespace openvpn {
 	ret = SUCCESS;
       unlock();
       return ret;
+    }
+
+    void set_limit(const int new_limit)
+    {
+      lock();
+      limit = new_limit;
+      bcast();
+      unlock();
     }
 
     // Generally, only the CHOSEN_ONE calls signal() after its work
@@ -255,7 +265,7 @@ namespace openvpn {
     State state;
     bool chosen;
     unsigned int count;
-    const unsigned int limit;
+    int limit;
   };
 
 }
