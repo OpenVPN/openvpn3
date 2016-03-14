@@ -26,6 +26,7 @@
 
 #include <string>
 #include <fstream>
+#include <iostream>
 #include <cstdint> // for std::uint64_t
 
 #include <openvpn/common/exception.hpp>
@@ -151,6 +152,19 @@ namespace openvpn {
 
     return std::string((const char *)bp->c_data(), bp->size());
   }
+
+  // Read multi-line string from stdin
+  inline std::string read_stdin()
+    {
+      std::string ret;
+      std::string line;
+      while (std::getline(std::cin, line))
+	{
+	  ret += line;
+	  ret += '\n';
+	}
+      return ret;
+    }
 
   // Write binary buffer to file
   inline void write_binary(const std::string& filename, const Buffer& buf)
