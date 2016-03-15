@@ -116,7 +116,8 @@ namespace openvpn {
 		const mode_t out_mode = MODE_ALL,
 		const bool combine_out_err_arg = true)
     {
-      open_input(in_fn);
+      if (!in_fn.empty())
+	open_input(in_fn);
       open_output(out_fn, out_flags, out_mode);
       combine_out_err = combine_out_err_arg;
     }
