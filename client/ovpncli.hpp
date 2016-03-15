@@ -287,6 +287,12 @@ namespace openvpn {
       std::string text;     // log output (usually but not always one line)
     };
 
+    // receives log messages
+    struct LogReceiver
+    {
+      virtual void log(const LogInfo&) = 0;
+    };
+
     // used to pass stats for an interface
     struct InterfaceStats
     {
@@ -355,7 +361,7 @@ namespace openvpn {
     };
 
     // Top-level OpenVPN client class.
-    class OpenVPNClient : public TunBuilderBase, private ExternalPKIBase {
+    class OpenVPNClient : public TunBuilderBase, public LogReceiver, private ExternalPKIBase {
     public:
       OpenVPNClient();
       virtual ~OpenVPNClient();

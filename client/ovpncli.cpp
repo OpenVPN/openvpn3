@@ -77,7 +77,7 @@
 
 #ifndef OPENVPN_LOG
 // log thread settings
-#define OPENVPN_LOG_CLASS openvpn::ClientAPI::OpenVPNClient
+#define OPENVPN_LOG_CLASS openvpn::ClientAPI::LogReceiver
 #define OPENVPN_LOG_INFO  openvpn::ClientAPI::LogInfo
 #include <openvpn/log/logthread.hpp>    // should be included early
 #endif
