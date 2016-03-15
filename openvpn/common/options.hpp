@@ -745,6 +745,11 @@ namespace openvpn {
 	}
     }
 
+    static Option parse_option_from_line(const std::string& line, Limits* lim)
+    {
+      return Split::by_space<Option, LexComment, SpaceMatch, Limits>(line, lim);
+    }
+
     // caller should call update_map() after this function
     void parse_from_config(const std::string& str, Limits* lim)
     {
@@ -783,7 +788,7 @@ namespace openvpn {
 	    }
 	  else if (!ignore_line(line))
 	    {
-	      Option opt = Split::by_space<Option, LexComment, SpaceMatch, Limits>(line, lim);
+	      Option opt = parse_option_from_line(line, lim);
 	      if (opt.size())
 		{
 		  if (is_open_tag(opt.ref(0)))
