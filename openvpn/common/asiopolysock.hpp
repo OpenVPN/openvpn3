@@ -70,6 +70,7 @@ namespace openvpn {
       }
 #endif
 
+      virtual bool is_open() const = 0;
       virtual bool is_local() const = 0;
 
       size_t index() const { return index_; }
@@ -147,6 +148,11 @@ namespace openvpn {
 	socket.close();
       }
 
+      virtual bool is_open() const override
+      {
+	return socket.is_open();
+      }
+
       virtual bool is_local() const override
       {
 	return false;
@@ -209,6 +215,11 @@ namespace openvpn {
 	socket.close();
       }
 
+      virtual bool is_open() const override
+      {
+	return socket.is_open();
+      }
+
       virtual bool is_local() const override
       {
 	return true;
@@ -259,6 +270,11 @@ namespace openvpn {
       virtual void close() override
       {
 	handle.close();
+      }
+
+      virtual bool is_open() const override
+      {
+	return handle.is_open();
       }
 
       virtual bool is_local() const override
