@@ -112,6 +112,17 @@ namespace openvpn {
 	}
     }
 
+    std::string to_string() const
+    {
+      std::string ret;
+      for (auto &a : *this)
+	{
+	  ret += a->to_string();
+	  ret += '\n';
+	}
+      return ret;
+    }
+
     void enable_destroy(const bool state)
     {
       enable_destroy_ = state;
