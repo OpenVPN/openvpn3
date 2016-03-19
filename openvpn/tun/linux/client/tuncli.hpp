@@ -139,6 +139,7 @@ namespace openvpn {
     inline void tun_config(const std::string& iface_name,
 			   const TunBuilderCapture& pull,
 			   std::vector<IP::Route>& rtvec,
+			   const bool enable_routes,
 			   ActionList& create,
 			   ActionList& destroy)
     {
@@ -166,31 +167,34 @@ namespace openvpn {
       if (local6)
 	OPENVPN_LOG("NOTE: ifconfig IPv6 not implemented yet"); // fixme
 
-      // Process Routes
-      {
-	for (auto i = pull.add_routes.begin(); i != pull.add_routes.end(); ++i)
+      if (enable_routes)
+	{
+	  // Process Routes
 	  {
-	    const TunBuilderCapture::Route& route = *i;
-	    if (route.ipv6)
-	      add_del_route(route.address, route.prefix_length, local6->gateway, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
-	    else
+	    for (auto i = pull.add_routes.begin(); i != pull.add_routes.end(); ++i)
 	      {
-		if (local4 && !local4->gateway.empty())
-		  add_del_route(route.address, route.prefix_length, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+		const TunBuilderCapture::Route& route = *i;
+		if (route.ipv6)
+		  add_del_route(route.address, route.prefix_length, local6->gateway, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
 		else
-		  OPENVPN_LOG("ERROR: IPv4 route pushed without IPv4 ifconfig and/or route-gateway");
+		  {
+		    if (local4 && !local4->gateway.empty())
+		      add_del_route(route.address, route.prefix_length, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+		    else
+		      OPENVPN_LOG("ERROR: IPv4 route pushed without IPv4 ifconfig and/or route-gateway");
+		  }
 	      }
 	  }
-      }
 
-      // Process IPv4 redirect-gateway
-      if (pull.reroute_gw.ipv4)
-	{
-	  if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
-	    add_del_route(pull.remote_address.address, 32, get_default_gateway_v4().to_string(), R_ADD_ALL, rtvec, create, destroy);
+	  // Process IPv4 redirect-gateway
+	  if (pull.reroute_gw.ipv4)
+	    {
+	      if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+		add_del_route(pull.remote_address.address, 32, get_default_gateway_v4().to_string(), R_ADD_ALL, rtvec, create, destroy);
 
-	  add_del_route("0.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
-	  add_del_route("128.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+	      add_del_route("0.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+	      add_del_route("128.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+	    }
 	}
 
       // fixme -- handled pushed DNS servers
@@ -295,7 +299,7 @@ namespace openvpn {
 
 	      // configure tun properties
 	      std::vector<IP::Route> rtvec;
-	      TunLinux::tun_config(state->iface_name, *po, rtvec, *add_cmds, *remove_cmds);
+	      TunLinux::tun_config(state->iface_name, *po, rtvec, true, *add_cmds, *remove_cmds);
 
 	      // execute commands to bring up interface
 	      add_cmds->execute(std::cout);
