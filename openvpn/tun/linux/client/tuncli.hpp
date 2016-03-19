@@ -224,6 +224,10 @@ namespace openvpn {
 	    if (dev)
 	      dev_name = dev->get(1, 64);
 	  }
+
+	// no trunking support yet
+	if (opt.exists("trunk-table"))
+	  throw option_error("no trunking support");
       }
 
       static Ptr new_obj()
