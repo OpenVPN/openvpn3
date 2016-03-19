@@ -155,6 +155,11 @@ namespace openvpn {
       return std::isdigit(static_cast<unsigned char>(c)) != 0;
     }
 
+    inline bool is_alpha(const char c)
+    {
+      return std::isalpha(static_cast<unsigned char>(c)) != 0;
+    }
+
     inline bool is_printable(const char c)
     {
       return std::isprint(static_cast<unsigned char>(c)) != 0;
