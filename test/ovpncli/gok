@@ -1,8 +1,0 @@
-#!/bin/bash
-GCC_EXTRA="$GCC_EXTRA -DOPENVPN_SHOW_SESSION_TOKEN"
-export GCC_EXTRA
-cd $O3/core
-. vars/vars-linux
-. vars/setpath
-cd test/ovpncli
-PSSL=1 LZ4=1 NOSSL=1 PTPROXY=1 DCO=1 build cli
