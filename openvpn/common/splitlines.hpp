@@ -32,14 +32,14 @@ namespace openvpn {
   public:
     // Note: str passed to constructor is not locally stored, so it must remain in
     // scope and not be modified during the lifetime of the SplitLines object.
-    SplitLines(const std::string& str, const size_t max_line_len_arg)
+    SplitLines(const std::string& str, const size_t max_line_len_arg=0)
       : data(str.c_str()),
 	size(str.length()),
 	max_line_len(max_line_len_arg),
 	index(0),
 	overflow(false) {}
 
-    bool operator()(const bool trim)
+    bool operator()(const bool trim=true)
     {
       line.clear();
       overflow = false;
