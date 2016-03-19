@@ -31,6 +31,7 @@
 
 #include <string>
 #include <memory>
+#include <utility>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/action.hpp>
@@ -196,6 +197,13 @@ namespace openvpn {
   struct Command : public Action
   {
     typedef RCPtr<Command> Ptr;
+
+    Command() {}
+
+    Command(Argv argv_arg)
+      : argv(std::move(argv_arg))
+    {
+    }
 
     Command* copy() const
     {
