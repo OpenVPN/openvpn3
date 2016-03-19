@@ -37,6 +37,7 @@ RANLIB=ranlib
 
 # special hack because OpenSSL build system doesn't use rc options for ar
 [ "$AR" = "gcc-ar" ] && AR="gcc-ar rc"
+[ "$AR" = "gcc-ar-5" ] && AR="gcc-ar-5 rc"
 
 OPENSSL=$OPENSSL_VERSION
 DIST=$(pwd)/openssl/openssl-$PLATFORM

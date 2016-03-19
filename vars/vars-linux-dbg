@@ -3,6 +3,10 @@ export JAVA_DIR=/usr/lib/jvm/java-7-openjdk-amd64
 export PLATFORM=linux
 export DEBUG_BUILD=1
 export OTHER_COMPILER_FLAGS="-g -Wno-unused-local-typedefs -Wno-unused-variable -Wno-shift-count-overflow -pthread"
-export CXX_COMPILER_FLAGS="-std=c++11"
+export CXX_COMPILER_FLAGS="-std=c++14"
 export LIB_OPT_LEVEL="-O0"
 export LIB_FPIC="-fPIC"
+export GPP_CMD=g++-5
+export GCC_CMD=gcc-5
+export AR_CMD=gcc-ar-5
+export RANLIB_CMD=gcc-ranlib-5
