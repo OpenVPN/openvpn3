@@ -113,8 +113,7 @@ namespace openvpn {
 				 ProfileParseLimits::OPT_OVERHEAD,
 				 ProfileParseLimits::TERM_OVERHEAD,
 				 0,
-				 ProfileParseLimits::MAX_DIRECTIVE_SIZE),
-	    tcp_queue_limit(0)
+				 ProfileParseLimits::MAX_DIRECTIVE_SIZE)
 	{}
 
 	ProtoConfig::Ptr proto_context_config;
@@ -127,7 +126,8 @@ namespace openvpn {
 	ClientCreds::Ptr creds;
 	OptionList::Limits pushed_options_limit;
 	OptionList::FilterBase::Ptr pushed_options_filter;
-	unsigned int tcp_queue_limit;
+	unsigned int tcp_queue_limit = 0;
+	bool echo = false;
       };
 
       Session(asio::io_context& io_context_arg,
