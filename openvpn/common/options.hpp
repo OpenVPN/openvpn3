@@ -212,6 +212,28 @@ namespace openvpn {
 	return nullptr;
     }
 
+    template <typename T>
+    T get_num(const size_t idx, const T default_value) const
+    {
+      T n = default_value;
+      if (size() > idx)
+	{
+	  const std::string& numstr = get(idx, 64);
+	  if (!parse_number<T>(numstr, n))
+	    OPENVPN_THROW(option_error, err_ref() << " must be a number");
+	}
+      return n;
+    }
+
+    template <typename T>
+    T get_num(const size_t idx, const T default_value, const T min_value, const T max_value) const
+    {
+      const T ret = get_num<T>(idx, default_value);
+      if (ret != default_value && (ret < min_value || ret > max_value))
+	OPENVPN_THROW(option_error, err_ref() << " must be in the range [" << min_value << ',' << max_value << ']');
+      return ret;
+    }
+
     std::string render(const unsigned int flags) const
     {
       std::ostringstream out;
@@ -1161,14 +1183,10 @@ namespace openvpn {
     template <typename T>
     T get_num(const std::string& name, const size_t idx, const T default_value) const
     {
-      const Option* o = get_ptr(name);
       T n = default_value;
-      if (o && o->size() > idx)
-	{
-	  const std::string& numstr = o->get(idx, 64);
-	  if (parse_number<T>(numstr, n))
-	    return n;
-	}
+      const Option* o = get_ptr(name);
+      if (o)
+	n = o->get_num<T>(idx, default_value);
       return n;
     }
 
@@ -1176,10 +1194,11 @@ namespace openvpn {
     T get_num(const std::string& name, const size_t idx, const T default_value,
 	      const T min_value, const T max_value) const
     {
-      const T ret = get_num<T>(name, idx, default_value);
-      if (ret != default_value && (ret < min_value || ret > max_value))
-	OPENVPN_THROW(option_error, name << " must be in the range [" << min_value << ',' << max_value << ']');
-      return ret;
+      T n = default_value;
+      const Option* o = get_ptr(name);
+      if (o)
+	n = o->get_num<T>(idx, default_value, min_value, max_value);
+      return n;
     }
 
     // Touch an option, if it exists.
