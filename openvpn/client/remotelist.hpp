@@ -630,8 +630,16 @@ namespace openvpn {
     // return hostname (or IP address) of first connection entry
     std::string first_server_host() const
     {
-      const Item& item = *list[0];
+      const Item& item = *list.at(0);
       return item.server_host;
+    }
+
+    const Item* first_item() const
+    {
+      if (defined())
+	return list[0].get();
+      else
+	return nullptr;
     }
 
     std::string to_string() const

@@ -428,6 +428,9 @@ namespace openvpn {
 	eval.staticChallengeEcho = cc.staticChallengeEcho();
 	eval.privateKeyPasswordRequired = cc.privateKeyPasswordRequired();
 	eval.allowPasswordSave = cc.allowPasswordSave();
+	eval.remoteHost = config.serverOverride.empty() ? cc.firstRemoteListItem().host : config.serverOverride;
+	eval.remotePort = cc.firstRemoteListItem().port;
+	eval.remoteProto = cc.firstRemoteListItem().proto;
 	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
 	  {
 	    ServerEntry se;

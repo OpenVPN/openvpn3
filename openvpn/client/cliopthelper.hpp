@@ -50,6 +50,12 @@ namespace openvpn {
     {
     };
 
+    struct RemoteItem {
+      std::string host;
+      std::string port;
+      std::string proto;
+    };
+
     ParseClientConfig(const OptionList& options)
     {
       try {
@@ -161,6 +167,18 @@ namespace openvpn {
 
 	// validate remote list
 	RemoteList rl(options, "", 0, nullptr);
+	{
+	  const RemoteList::Item* ri = rl.first_item();
+	  if (ri)
+	    {
+	      firstRemoteListItem_.host = ri->server_host;
+	      firstRemoteListItem_.port = ri->server_port;
+	      if (ri->transport_protocol.is_udp())
+		firstRemoteListItem_.proto = "udp";
+	      else if (ri->transport_protocol.is_tcp())
+		firstRemoteListItem_.proto = "tcp-client";
+	    }
+	}
 
 	// determine if private key is encrypted
 	if (!externalPki_)
@@ -335,6 +353,9 @@ namespace openvpn {
     // optional list of user-selectable VPN servers
     const ServerList& serverList() const { return serverList_; }
 
+    // return first remote directive in config
+    const RemoteItem& firstRemoteListItem() const { return firstRemoteListItem_; }
+
     std::string to_string() const
     {
       std::ostringstream os;
@@ -446,6 +467,7 @@ namespace openvpn {
     ServerList serverList_;
     bool hasEmbeddedPassword_;
     std::string embeddedPassword_;
+    RemoteItem firstRemoteListItem_;
   };
 }
 

@@ -80,6 +80,11 @@ namespace openvpn {
       // true if user is allowed to save authentication password in UI
       bool allowPasswordSave = false;
 
+      // information about the first remote item in config
+      std::string remoteHost;    // will be overridden by Config::serverOverride if defined
+      std::string remotePort;
+      std::string remoteProto;
+
       // optional list of user-selectable VPN servers
       std::vector<ServerEntry> serverList;
     };
