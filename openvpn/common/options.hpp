@@ -166,10 +166,16 @@ namespace openvpn {
 
     std::string printable_directive() const
     {
-      if (data.size() > 0)
-	return Unicode::utf8_printable(data[0], 32);
-      else
-	return "";
+      try {
+	if (data.size() > 0)
+	  return Unicode::utf8_printable(data[0], 32);
+	else
+	  return "";
+      }
+      catch (const std::exception&)
+	{
+	  return "[DIRECTIVE]";
+	}
     }
 
     const std::string& get(const size_t index, const size_t max_len) const
