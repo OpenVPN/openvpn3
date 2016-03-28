@@ -13,7 +13,7 @@ PARMS = {
     "ARCH" : "amd64", # one of amd64, x86, or x86_xp (note that x86_xp requires vcvarsall.bat patch)
     "LIB_VERSIONS" : {
         'asio'     : "asio-20151228",
-        'polarssl' : "mbedtls-1.3.15",
+        'polarssl' : "mbedtls-1.3.16",
         'lz4'      : "lz4-20150629",
         }
 }
