@@ -593,13 +593,14 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::process_epki_cert_chain(const ExternalPKICertRequest& req)
     {
       // Get cert and add to options list
-      {
-	Option o;
-	o.push_back("cert");
-	o.push_back(req.cert);
-	state->options.add_item(o);
-      }
-      
+      if (!req.cert.empty())
+	{
+	  Option o;
+	  o.push_back("cert");
+	  o.push_back(req.cert);
+	  state->options.add_item(o);
+	}
+
       // Get the supporting chain, if it exists, and use
       // it for ca (if ca isn't defined), or otherwise use
       // it for extra-certs (if ca is defined but extra-certs
