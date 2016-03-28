@@ -29,11 +29,14 @@
 #include <openvpn/common/platform_name.hpp>
 
 namespace openvpn {
-  inline std::string platform_string(const std::string& title)
+  inline std::string platform_string(const std::string& title, const std::string& app_version)
   {
     std::ostringstream os;
 
-    os << title << " " << OPENVPN_VERSION;
+    os << title << " ";
+    if (!app_version.empty())
+      os << app_version << '/';
+    os << OPENVPN_VERSION;
     os << ' ' << platform_name();
 #   if defined(__amd64__) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
       os << " x86_64";
@@ -64,7 +67,7 @@ namespace openvpn {
 
   inline std::string platform_string()
   {
-    return platform_string("OpenVPN core");
+    return platform_string("OpenVPN core", "");
   }
 } // namespace openvpn
 
