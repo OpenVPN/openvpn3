@@ -299,7 +299,7 @@ namespace openvpn {
     // was this option processed?
     bool touched() const { return touched_; }
 
-  private:
+    // refer to the option when constructing an error message
     std::string err_ref() const
     {
       std::string ret = "option";
@@ -312,6 +312,7 @@ namespace openvpn {
       return ret;
     }
 
+  private:
     void from_list(std::string arg)
     {
       push_back(std::move(arg));
