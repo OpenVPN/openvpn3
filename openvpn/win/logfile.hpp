@@ -22,17 +22,8 @@
 #ifndef OPENVPN_WIN_LOGFILE_H
 #define OPENVPN_WIN_LOGFILE_H
 
-#include <windows.h>
-
-#include <string>
-
-#include <openvpn/common/exception.hpp>
-#include <openvpn/common/wstring.hpp>
 #include <openvpn/log/logbase.hpp>
-#include <openvpn/time/timestr.hpp>
-#include <openvpn/win/winerr.hpp>
-#include <openvpn/win/secattr.hpp>
-#include <openvpn/win/scoped_handle.hpp>
+#include <openvpn/win/logutil.hpp>
 
 namespace openvpn {
   namespace Win {
@@ -45,51 +36,17 @@ namespace openvpn {
       LogFile(const std::string& fn,
 	      const std::string& sddl_string,
 	      bool append)
-	: log_handle(create_file(fn, sddl_string, append)),
+	: log_handle(LogUtil::create_file(fn, sddl_string, append)),
 	  log_context(this)
       {
       }
 
       virtual void log(const std::string& str) override
       {
-	DWORD n_written;
-	const std::string line = date_time() + ' ' + str;
-	::WriteFile(log_handle(), line.c_str(), line.length(), &n_written, NULL);
+	LogUtil::log(log_handle(), str);
       }
 
     private:
-      static ScopedHANDLE create_file(const std::string& fn,
-				      const std::string& sddl_string,
-				      bool append)
-      {
-	SecurityAttributes sa(sddl_string, true, "redirect_stdout_stderr");
-	const std::wstring wfn = wstring::from_utf8(fn);
-	ScopedHANDLE file(::CreateFileW(
-	    wfn.c_str(),
-	    GENERIC_WRITE,
-	    FILE_SHARE_READ,
-	    &sa.sa,
-	    append ? OPEN_ALWAYS : CREATE_ALWAYS,
-	    FILE_ATTRIBUTE_NORMAL,
-	    NULL));
-	if (!file.defined())
-	  {
-	    const Win::LastError err;
-	    OPENVPN_THROW_EXCEPTION("Win::LogFile: failed to open " << fn << " : " << err.message());
-	  }
-
-	// append to logfile?
-	if (append)
-	  {
-	    if (::SetFilePointer(file(), 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
-	      {
-		const Win::LastError err;
-		OPENVPN_THROW_EXCEPTION("Win::LogFile: cannot append to " << fn << " : " << err.message());
-	      }
-	  }
-	return file;
-      }
-
       ScopedHANDLE log_handle;
       Log::Context log_context; // must be initialized last
     };
