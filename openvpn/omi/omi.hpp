@@ -38,12 +38,19 @@
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/buffer/bufstr.hpp>
+#include <openvpn/time/timestr.hpp>
 
 // include acceptors for different protocols
 #include <openvpn/acceptor/base.hpp>
 #include <openvpn/acceptor/tcp.hpp>
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 #include <openvpn/acceptor/unix.hpp>
+#endif
+
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <openvpn/win/logutil.hpp>
+#else
+#include <openvpn/common/redir.hpp>
 #endif
 
 namespace openvpn {
@@ -290,7 +297,20 @@ namespace openvpn {
 	send(buf_from_string(str));
     }
 
-    void log_line(const std::string& line)
+    void log_full(const std::string& text) // logs to OMI buffer and log file
+    {
+      const time_t now = ::time(NULL);
+      const std::string textcrlf = string::unix2dos(text, true);
+      log_line(openvpn::to_string(now) + ",," + textcrlf);
+#if defined(OPENVPN_PLATFORM_WIN)
+      if (log_handle.defined())
+	Win::LogUtil::log(log_handle(), date_time(now) + ' ' + textcrlf);
+      else
+#endif
+      std::cout << date_time(now) << ' ' << text << std::flush;
+    }
+
+    void log_line(const std::string& line) // logs to OMI buffer only
     {
       if (!stop_called)
 	send(hist_log.notify(line));
@@ -588,7 +608,7 @@ namespace openvpn {
     void log_setup(const std::string& log_fn, const bool append)
     {
 #if defined(OPENVPN_PLATFORM_WIN)
-      // fixme -- code for Windows
+      log_handle = Win::LogUtil::create_file(log_fn, "", append);
 #else
       RedirectStd redir("",
 			log_fn,
@@ -855,6 +875,10 @@ namespace openvpn {
     History hist_log   {"log",   100};
     History hist_state {"state", 100};
     History hist_echo  {"echo",  100};
+
+#if defined(OPENVPN_PLATFORM_WIN)
+    Win::ScopedHANDLE log_handle;
+#endif
   };
 }
 
