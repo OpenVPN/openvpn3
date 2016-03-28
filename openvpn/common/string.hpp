@@ -324,7 +324,7 @@ namespace openvpn {
     }
 
     // convert \n to \r\n
-    inline std::string unix2dos(const std::string& str)
+    inline std::string unix2dos(const std::string& str, const bool force_eol=false)
     {
       std::string ret;
       bool last_char_was_cr = false;
@@ -338,6 +338,8 @@ namespace openvpn {
 	  ret += c;
 	  last_char_was_cr = (c == '\r');
 	}
+      if (force_eol)
+	add_trailing_crlf(ret);
       return ret;
     }
 
