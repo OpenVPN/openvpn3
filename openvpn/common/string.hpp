@@ -73,22 +73,96 @@ namespace openvpn {
       return str == "1" || !strcasecmp(str.c_str(), "true");
     }
 
-    // make sure that string ends with char c, if not append it
-    inline std::string add_trailing(const std::string& str, const char c)
+    inline bool starts_with(const std::string& str, const std::string& prefix)
     {
       const size_t len = str.length();
-      if (len > 0 && str[len-1] == c)
+      const size_t plen = prefix.length();
+      if (plen <= len)
+	return std::memcmp(str.c_str(), prefix.c_str(), plen) == 0;
+      else
+	return false;
+    }
+
+    inline bool starts_with(const std::string& str, const char *prefix)
+    {
+      const size_t len = str.length();
+      const size_t plen = std::strlen(prefix);
+      if (plen <= len)
+	return std::memcmp(str.c_str(), prefix, plen) == 0;
+      else
+	return false;
+    }
+
+    inline bool ends_with(const std::string& str, const std::string& suffix)
+    {
+      const size_t len = str.length();
+      const size_t slen = suffix.length();
+      if (slen <= len)
+	return std::memcmp(str.c_str() + (len-slen), suffix.c_str(), slen) == 0;
+      else
+	return false;
+    }
+
+    inline bool ends_with(const std::string& str, const char *suffix)
+    {
+      const size_t len = str.length();
+      const size_t slen = std::strlen(suffix);
+      if (slen <= len)
+	return std::memcmp(str.c_str() + (len-slen), suffix, slen) == 0;
+      else
+	return false;
+    }
+
+    // return true if string ends with char c
+    inline bool ends_with(const std::string& str, const char c)
+    {
+      const size_t len = str.length();
+      return len > 0 && str[len-1] == c;
+    }
+
+    // return true if string ends with a newline
+    inline bool ends_with_newline(const std::string& str)
+    {
+      return ends_with(str, '\n');
+    }
+
+    // make sure that string ends with char c, if not append it
+    inline std::string add_trailing(const std::string& str, const char c) // fixme -- rename to add_trailing_copy
+    {
+      if (ends_with(str, c))
 	return str;
       else
 	return str + c;
     }
 
     // make sure that string ends with char c, if not append it
-    inline void add_trailing_in_place(std::string& str, const char c)
+    inline void add_trailing_in_place(std::string& str, const char c) // fixme -- rename to add_trailing
     {
-      const size_t len = str.length();
-      if (!(len > 0 && str[len-1] == c))
+      if (!ends_with(str, c))
 	str += c;
+    }
+
+    // make sure that string ends with CRLF, if not append it
+    inline void add_trailing_crlf(std::string& str)
+    {
+      if (ends_with(str, "\r\n"))
+	;
+      else if (ends_with(str, '\r'))
+	str += '\n';
+      else if (ends_with(str, '\n'))
+	{
+	  str.pop_back();
+	  str += "\r\n";
+	}
+      else
+	str += "\r\n";
+    }
+
+    // make sure that string ends with CRLF, if not append it
+    inline std::string add_trailing_crlf_copy(std::string str)
+    {
+      add_trailing_crlf(str);
+      return str;
     }
 
     // remove trailing \r or \n chars
@@ -111,13 +185,6 @@ namespace openvpn {
     {
       trim_crlf(str);
       return str;
-    }
-
-    // return true if string ends with a newline
-    inline bool ends_with_newline(const std::string& str)
-    {
-      const size_t len = str.length();
-      return len > 0 && str[len-1] == '\n';
     }
 
     // return true if str of size len contains an embedded null
@@ -323,46 +390,6 @@ namespace openvpn {
       for (int i = (skip_first ? 1 : 0); i < argc; ++i)
 	ret.emplace_back(argv[i]);
       return ret;
-    }
-
-    inline bool starts_with(const std::string& str, const std::string& prefix)
-    {
-      const size_t len = str.length();
-      const size_t plen = prefix.length();
-      if (plen <= len)
-	return std::memcmp(str.c_str(), prefix.c_str(), plen) == 0;
-      else
-	return false;
-    }
-
-    inline bool starts_with(const std::string& str, const char *prefix)
-    {
-      const size_t len = str.length();
-      const size_t plen = std::strlen(prefix);
-      if (plen <= len)
-	return std::memcmp(str.c_str(), prefix, plen) == 0;
-      else
-	return false;
-    }
-
-    inline bool ends_with(const std::string& str, const std::string& suffix)
-    {
-      const size_t len = str.length();
-      const size_t slen = suffix.length();
-      if (slen <= len)
-	return std::memcmp(str.c_str() + (len-slen), suffix.c_str(), slen) == 0;
-      else
-	return false;
-    }
-
-    inline bool ends_with(const std::string& str, const char *suffix)
-    {
-      const size_t len = str.length();
-      const size_t slen = std::strlen(suffix);
-      if (slen <= len)
-	return std::memcmp(str.c_str() + (len-slen), suffix, slen) == 0;
-      else
-	return false;
     }
 
     inline std::string trim_left_copy(const std::string& str)
