@@ -331,12 +331,10 @@ namespace openvpn {
     // base class for External PKI queries
     struct ExternalPKIRequestBase
     {
-      ExternalPKIRequestBase() : error(false), invalidAlias(false) {}
-
-      bool error;             // true if error occurred (client writes)
-      std::string errorText;  // text describing error (client writes)
-      bool invalidAlias;      // true if the error is caused by an invalid alias (client writes)
-      std::string alias;      // the alias string, used to query cert/key (client reads)
+      bool error = false;        // true if error occurred (client writes)
+      std::string errorText;     // text describing error (client writes)
+      bool invalidAlias = false; // true if the error is caused by an invalid alias (client writes)
+      std::string alias;         // the alias string, used to query cert/key (client reads)
     };
 
     // used to query for External PKI certificate
