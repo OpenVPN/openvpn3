@@ -510,7 +510,7 @@ namespace openvpn {
 
 	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
 	    socket.reset(s);
-	    async_connect(s->socket, results,
+	    asio::async_connect(s->socket, results,
 				[self=Ptr(this)](const asio::error_code& error, const asio::ip::tcp::endpoint& endpoint)
 				{
 				  self->handle_tcp_connect(error, endpoint);
