@@ -44,15 +44,20 @@ namespace openvpn {
 
 #if defined(OPENVPN_PLATFORM_WIN)
 
-  inline std::string date_time()
+  inline std::string date_time(const time_t now)
   {
-    const time_t now = time(NULL);
     struct tm *lt = localtime(&now);
     char *ret = asctime(lt);
     const size_t len = strlen(ret);
     if (len > 0 && ret[len-1] == '\n')
       ret[len-1] = '\0';
     return ret;
+  }
+
+  inline std::string date_time()
+  {
+    const time_t now = time(NULL);
+    return date_time(now);
   }
 
 #else
