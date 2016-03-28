@@ -108,6 +108,7 @@ namespace openvpn {
 	"EPKI_INVALID_ALIAS",
       };
 
+      static_assert(N_TYPES == array_size(names), "event names array inconsistency");
       if (type < N_TYPES)
 	return names[type];
       else
