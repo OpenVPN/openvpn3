@@ -142,7 +142,7 @@ namespace openvpn {
       if (p1.empty() || is_fully_qualified(p2))
 	return p2;
       else
-	return string::add_trailing(p1, dirsep[0]) + p2;
+	return string::add_trailing_copy(p1, dirsep[0]) + p2;
     }
 
   } // namespace path

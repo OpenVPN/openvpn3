@@ -127,7 +127,7 @@ namespace openvpn {
     }
 
     // make sure that string ends with char c, if not append it
-    inline std::string add_trailing(const std::string& str, const char c) // fixme -- rename to add_trailing_copy
+    inline std::string add_trailing_copy(const std::string& str, const char c)
     {
       if (ends_with(str, c))
 	return str;
@@ -136,7 +136,7 @@ namespace openvpn {
     }
 
     // make sure that string ends with char c, if not append it
-    inline void add_trailing_in_place(std::string& str, const char c) // fixme -- rename to add_trailing
+    inline void add_trailing(std::string& str, const char c)
     {
       if (!ends_with(str, c))
 	str += c;

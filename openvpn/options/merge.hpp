@@ -337,7 +337,7 @@ namespace openvpn {
 				  {
 				    std::ostringstream os;
 				    const std::string& tag = opt.ref(0);
-				    string::add_trailing_in_place(file_content, '\n');
+				    string::add_trailing(file_content, '\n');
 				    os << '<' << tag << ">\n" << file_content << "</" << tag << ">\n";
 				    profile_content_ += os.str();
 				  }

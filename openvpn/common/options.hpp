@@ -1086,7 +1086,7 @@ namespace openvpn {
 		{
 		  o.touch();
 		  ret += o.ref(1);
-		  string::add_trailing_in_place(ret, '\n');
+		  string::add_trailing(ret, '\n');
 		}
 	    }
 	}
