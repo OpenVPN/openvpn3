@@ -335,6 +335,7 @@ namespace openvpn {
 #endif
 	bool alt_proxy = false;
 	bool dco = false;
+	bool echo = false;
 	Stop stop;
 
 	asio::io_context* io_context = nullptr;
@@ -470,6 +471,7 @@ namespace openvpn {
 	state->gui_version = config.guiVersion;
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
+	state->echo = config.echo;
 	if (!config.gremlinConfig.empty())
 	  {
 #ifdef OPENVPN_GREMLIN
@@ -662,6 +664,7 @@ namespace openvpn {
 	cc.http_proxy_options = state->http_proxy_options;
 	cc.alt_proxy = state->alt_proxy;
 	cc.dco = state->dco;
+	cc.echo = state->echo;
 	cc.reconnect_notify = &state->reconnect_notify;
 	cc.private_key_password = state->private_key_password;
 	cc.disable_client_cert = state->disable_client_cert;

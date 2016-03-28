@@ -47,6 +47,7 @@ namespace openvpn {
       GET_CONFIG,
       ASSIGN_IP,
       ADD_ROUTES,
+      ECHO_OPT,
       PAUSE,
       RESUME,
 
@@ -88,6 +89,7 @@ namespace openvpn {
 	"GET_CONFIG",
 	"ASSIGN_IP",
 	"ADD_ROUTES",
+	"ECHO",
 	"PAUSE",
 	"RESUME",
 	"AUTH_FAILED",
@@ -336,6 +338,11 @@ namespace openvpn {
     struct EpkiInvalidAlias : public ReasonBase
     {
       EpkiInvalidAlias(const std::string& reason) : ReasonBase(EPKI_INVALID_ALIAS, reason) {}
+    };
+
+    struct Echo : public ReasonBase
+    {
+      Echo(const std::string& value) : ReasonBase(ECHO_OPT, value) {}
     };
 
     class Queue : public RC<thread_safe_refcount>

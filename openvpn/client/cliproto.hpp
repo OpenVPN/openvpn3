@@ -151,6 +151,7 @@ namespace openvpn {
 	  cli_stats(config.cli_stats),
 	  cli_events(config.cli_events),
 	  connected_(false),
+	  echo(config.echo),
 	  fatal_(Error::UNDEF),
 	  pushed_options_limit(config.pushed_options_limit),
 	  pushed_options_filter(config.pushed_options_filter),
@@ -516,6 +517,10 @@ namespace openvpn {
 		// show options
 		OPENVPN_LOG("OPTIONS:" << std::endl << render_options_sanitized(received_options, Option::RENDER_PASS_FMT|Option::RENDER_NUMBER|Option::RENDER_BRACKET));
 
+		// process "echo" directives
+		if (echo)
+		  process_echo(received_options);
+
 		// process auth-token
 		extract_auth_token(received_options);
 
@@ -812,6 +817,22 @@ namespace openvpn {
 	  }
       }
 
+      void process_echo(const OptionList& opt)
+      {
+	OptionList::IndexMap::const_iterator echo_opt = opt.map().find("echo");
+	if (echo_opt != opt.map().end())
+	  {
+	    for (OptionList::IndexList::const_iterator i = echo_opt->second.begin(); i != echo_opt->second.end(); ++i)
+	      {
+		const Option& o = opt[*i];
+		o.touch();
+		const std::string& value = o.get(1, 512);
+		ClientEvent::Base::Ptr ev = new ClientEvent::Echo(value);
+		cli_events->add_event(ev);
+	      }
+	  }
+      }
+
       void process_exception(const std::exception& e, const char *method_name)
       {
 	if (notify_callback)
@@ -886,6 +907,8 @@ namespace openvpn {
       ClientEvent::Queue::Ptr cli_events;
 
       bool connected_;
+
+      bool echo;
 
       Error::Type fatal_;
       std::string fatal_reason_;

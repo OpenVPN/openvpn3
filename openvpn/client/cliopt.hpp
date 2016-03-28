@@ -123,6 +123,7 @@ namespace openvpn {
       HTTPProxyTransport::Options::Ptr http_proxy_options;
       bool alt_proxy = false;
       bool dco = false;
+      bool echo = false;
       bool tun_persist = false;
       bool google_dns_fallback = false;
       std::string private_key_password;
@@ -163,6 +164,7 @@ namespace openvpn {
 #ifdef OPENVPN_GREMLIN
 	gremlin_config(config.gremlin_config),
 #endif
+	echo(config.echo),
 	autologin(false),
 	creds_locked(false)
     {
@@ -518,6 +520,7 @@ namespace openvpn {
       cli_config->creds = creds;
       cli_config->pushed_options_filter = pushed_options_filter;
       cli_config->tcp_queue_limit = tcp_queue_limit;
+      cli_config->echo = echo;
       return cli_config;
     }
 
@@ -701,6 +704,7 @@ namespace openvpn {
     Gremlin::Config::Ptr gremlin_config;
 #endif
     std::string userlocked_username;
+    bool echo;
     bool autologin;
     bool creds_locked;
     PushOptionsBase::Ptr push_base;

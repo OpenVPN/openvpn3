@@ -246,6 +246,9 @@ namespace openvpn {
       // Custom Data Channel Offload implementation
       bool dco = false;
 
+      // pass through pushed "echo" directives via "ECHO" event
+      bool echo = false;
+
       // Gremlin configuration (requires that the core is built with OPENVPN_GREMLIN)
       std::string gremlinConfig;
     };
