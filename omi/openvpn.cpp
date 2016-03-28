@@ -28,14 +28,8 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/asiosignal.hpp>
 #include <openvpn/common/stop.hpp>
-#include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/omi/omi.hpp>
-
-#if defined(OPENVPN_PLATFORM_WIN)
-#else
-#include <openvpn/common/redir.hpp>
-#endif
 
 // set SSL_LIB_NAME to name of SSL library
 #if defined(USE_POLARSSL)
@@ -695,9 +689,7 @@ private:
 
   void log_msg(const ClientAPI::LogInfo& msg)
   {
-    const time_t now = ::time(NULL);
-    log_line(string::add_trailing_crlf_copy(openvpn::to_string(now) + ",," + msg.text));
-    std::cout << date_time(now) << ' ' << msg.text << std::flush;
+    log_full(msg.text);
   }
 
   static std::string event_format(const ClientAPI::Event& ev, const ClientAPI::ConnectionInfo* ci)
