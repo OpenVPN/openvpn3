@@ -28,11 +28,14 @@
 #include <deque>
 #include <memory>
 #include <utility>
+#include <algorithm>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/number.hpp>
+#include <openvpn/common/hostport.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 
@@ -49,7 +52,26 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(omi_error);
 
-    struct Command {
+    void stop()
+    {
+      if (stop_called)
+	return;
+      stop_called = true;
+
+      // close acceptor
+      if (acceptor)
+	acceptor->close();
+
+      // Call derived class stop method and close OMI socket,
+      // but if omi_stop() returns true, wait for content_out
+      // to be flushed to OMI socket before closing it.
+      if (!omi_stop() || content_out.empty())
+	stop_omi_client(false);
+    }
+
+  protected:
+    struct Command
+    {
       Option option;
       std::vector<std::string> extra;
       bool valid_utf8 = false;
@@ -67,6 +89,113 @@ namespace openvpn {
       }
     };
 
+    class History
+    {
+    public:
+      History(const std::string& type_arg,
+	      const size_t max_size_arg)
+	: type(type_arg),
+	  max_size(max_size_arg)
+      {
+      }
+
+      bool is_cmd(const Option& o) const
+      {
+	return o.get_optional(0, 0) == type;
+      }
+
+      std::string process_cmd(const Option& o)
+      {
+	try {
+	  const std::string arg1 = o.get(1, 16);
+	  if (arg1 == "on")
+	    {
+	      const std::string arg2 = o.get_optional(2, 16);
+	      real_time = true;
+	      std::string ret = real_time_status();
+	      if (arg2 == "all")
+		ret += show(hist.size());
+	      else if (!arg2.empty())
+		return error();
+	      return ret;
+	    }
+	  else if (arg1 == "all")
+	    {
+	      return show(hist.size());
+	    }
+	  else if (arg1 == "off")
+	    {
+	      real_time = false;
+	      return real_time_status();
+	    }
+	  else
+	    {
+	      unsigned int n;
+	      if (parse_number(arg1, n))
+		return show(n);
+	      else
+		return error();
+	    }
+	}
+	catch (const option_error&)
+	  {
+	    return error();
+	  }
+	catch (const std::exception& e)
+	  {
+	    return "ERROR: " + type + " processing error: " + e.what() + "\r\n";
+	  }
+      }
+
+      std::string notify(const std::string& msg)
+      {
+	hist.push_front(msg);
+	while (hist.size() > max_size)
+	  hist.pop_back();
+	if (real_time)
+	  return notify_prefix() + msg;
+	else
+	  return std::string();
+      }
+
+    private:
+      std::string show(size_t n) const
+      {
+	std::string ret = "";
+	n = std::min(n, hist.size());
+	for (size_t i = 0; i < n; ++i)
+	  ret += hist[n - i - 1];
+	ret += "END\r\n";
+	return ret;
+      }
+
+      std::string notify_prefix() const
+      {
+	return ">" + string::to_upper_copy(type) + ":";
+      }
+
+      std::string real_time_status() const
+      {
+	std::string ret = "SUCCESS: real-time " + type + " notification set to ";
+	if (real_time)
+	  ret += "ON";
+	else
+	  ret += "OFF";
+	ret += "\r\n";
+	return ret;
+      }
+
+      std::string error() const
+      {
+	return "ERROR: " + type + " parameter must be 'on' or 'off' or some number n or 'all'\r\n";
+      }
+
+      std::string type;
+      size_t max_size;
+      bool real_time = false;
+      std::deque<std::string> hist;
+    };
+
     OMICore(asio::io_context& io_context_arg,
 	    OptionList opt_arg)
       : io_context(io_context_arg),
@@ -77,9 +206,18 @@ namespace openvpn {
     void open_log()
     {
       // open log file
-	const std::string log_fn = opt.get_optional("log", 1, 256);
-	if (!log_fn.empty())
-	  log_setup(log_fn);
+      bool append = false;
+      std::string log_fn = opt.get_optional("log", 1, 256);
+      if (log_fn.empty())
+	{
+	  log_fn = opt.get_optional("log-append", 1, 256);
+	  append = true;
+	}
+      if (!log_fn.empty())
+	log_setup(log_fn, append);
+
+      // other log-related options
+      errors_to_stderr = opt.exists("errors-to-stderr");
     }
 
     std::string get_config() const
@@ -94,6 +232,21 @@ namespace openvpn {
       const Option& o = opt.get("management");
       const std::string addr = o.get(1, 256);
       const std::string port = o.get(2, 16);
+
+      hold_flag = opt.exists("management-hold");
+
+      // management-client-user root
+      {
+	const Option* o = opt.get_ptr("management-client-user");
+	if (o)
+	  {
+	    if (o->get(1, 64) == "root")
+	      management_client_root = true;
+	    else
+	      throw Exception("only --management-client-user root supported");
+	  }
+      }
+
       if (opt.exists("management-client"))
 	{
 	  if (port == "unix")
@@ -122,24 +275,9 @@ namespace openvpn {
 	}
     }
 
-    void stop()
-    {
-      if (halt)
-	return;
-      halt = true;
-
-      // close acceptor
-      if (acceptor)
-	acceptor->close();
-
-      // close client socket
-      stop_client(false);
-    }
-
-  protected:
     void send(BufferPtr buf)
     {
-      if (halt || !is_sock_open())
+      if (!is_sock_open())
 	return;
       content_out.push_back(std::move(buf));
       if (content_out.size() == 1) // send operation not currently active?
@@ -148,37 +286,260 @@ namespace openvpn {
 
     void send(const std::string& str)
     {
-      send(buf_from_string(str));
+      if (!str.empty())
+	send(buf_from_string(str));
     }
 
-    virtual bool omi_command_is_multiline(const Option& option) = 0;
-    virtual void omi_command_in(std::unique_ptr<Command> cmd) = 0;
+    void log_line(const std::string& line)
+    {
+      if (!stop_called)
+	send(hist_log.notify(line));
+    }
+
+    void state_line(const std::string& line)
+    {
+      if (!stop_called)
+	send(hist_state.notify(line));
+    }
+
+    void echo_line(const std::string& line)
+    {
+      if (!stop_called)
+	send(hist_echo.notify(line));
+    }
+
+    bool is_errors_to_stderr() const
+    {
+      return errors_to_stderr;
+    }
+
+    bool is_stopping() const
+    {
+      return stop_called;
+    }
+
+    unsigned int get_bytecount() const
+    {
+      return bytecount;
+    }
+
+    virtual bool omi_command_is_multiline(const std::string& arg0, const Option& option) = 0;
+    virtual void omi_command_in(const std::string& arg0, const Command& cmd) = 0;
+    virtual void omi_start_connection() = 0;
     virtual void omi_done(const bool eof) = 0;
+    virtual void omi_sigterm() = 0;
+    virtual void omi_sighup() = 0;
+    virtual bool omi_stop() = 0;
 
     asio::io_context& io_context;
     const OptionList opt;
-    bool halt = false;
 
   private:
     typedef RCPtr<OMICore> Ptr;
+
+    void command_in(std::unique_ptr<Command> cmd)
+    {
+      try {
+	const std::string arg0 = cmd->option.get_optional(0, 64);
+	if (arg0.empty())
+	  return;
+	if (!cmd->valid_utf8)
+	  throw Exception("invalid UTF8");
+	switch (arg0[0])
+	  {
+	  case 'b':
+	    {
+	      if (arg0 == "bytecount")
+		{
+		  process_bytecount_cmd(cmd->option);
+		  return;
+		}
+	      break;
+	    }
+	  case 'e':
+	    {
+	      if (hist_echo.is_cmd(cmd->option))
+		{
+		  send(hist_echo.process_cmd(cmd->option));
+		  return;
+		}
+	      if (arg0 == "exit")
+		{
+		  conditional_stop(true);
+		  return;
+		}
+	      break;
+	    }
+	  case 'h':
+	    {
+	      if (is_hold_cmd(cmd->option))
+		{
+		  bool release = false;
+		  send(hold_cmd(cmd->option, release));
+		  if (release)
+		    hold_release();
+		  return;
+		}
+	      break;
+	    }
+	  case 'l':
+	    {
+	      if (hist_log.is_cmd(cmd->option))
+		{
+		  send(hist_log.process_cmd(cmd->option));
+		  return;
+		}
+	      break;
+	    }
+	  case 'q':
+	    {
+	      if (arg0 == "quit")
+		{
+		  conditional_stop(true);
+		  return;
+		}
+	      break;
+	    }
+	  case 's':
+	    {
+	      if (hist_state.is_cmd(cmd->option))
+		{
+		  send(hist_state.process_cmd(cmd->option));
+		  return;
+		}
+	      if (arg0 == "signal")
+		{
+		  process_signal_cmd(cmd->option);
+		  return;
+		}
+	      break;
+	    }
+	  }
+	omi_command_in(arg0, *cmd);
+      }
+      catch (const std::exception& e)
+	{
+	  std::string err_ref = "option";
+	  if (cmd)
+	    err_ref = cmd->option.err_ref();
+	  send("ERROR: error processing " + err_ref + " : " + e.what() + "\r\n");
+	}
+    }
+
+    bool is_hold_cmd(const Option& o) const
+    {
+      return o.get_optional(0, 0) == "hold";
+    }
+
+    std::string hold_cmd(const Option& o, bool& release)
+    {
+      try {
+	const std::string arg1 = o.get_optional(1, 16);
+	if (arg1.empty())
+	  {
+	    if (hold_flag)
+	      return "SUCCESS: hold=1\r\n";
+	    else
+	      return "SUCCESS: hold=0\r\n";
+	  }
+	else if (arg1 == "on")
+	  {
+	    hold_flag = true;
+	    return "SUCCESS: hold flag set to ON\r\n";
+	  }
+	else if (arg1 == "off")
+	  {
+	    hold_flag = false;
+	    return "SUCCESS: hold flag set to OFF\r\n";
+	  }
+	else if (arg1 == "release")
+	  {
+	    release = true;
+	    return "SUCCESS: hold release succeeded\r\n";
+	  }
+      }
+      catch (const option_error&)
+	{
+	}
+      return "ERROR: bad hold command parameter\r\n";
+    }
+
+    void hold_cycle()
+    {
+      hold_wait = true;
+      if (hold_flag)
+	send(">HOLD:Waiting for hold release\r\n");
+      else
+	hold_release();
+    }
+
+    void hold_release()
+    {
+      if (hold_wait)
+	{
+	  hold_wait = false;
+	  omi_start_connection();
+	}
+    }
+
+    void process_bytecount_cmd(const Option& o)
+    {
+      bytecount = o.get_num<decltype(bytecount)>(1, 0, 0, 86400);
+      send("SUCCESS: bytecount interval changed\r\n");
+    }
+
+    void process_signal_cmd(const Option& o)
+    {
+      const std::string type = o.get(1, 16);
+      if (type == "SIGTERM")
+	{
+	  send("SUCCESS: signal SIGTERM thrown\r\n");
+	  omi_sigterm();
+	}
+      else if (type == "SIGHUP")
+	{
+	  send("SUCCESS: signal SIGHUP thrown\r\n");
+	  omi_sighup();
+	}
+      else
+	send("ERROR: signal not supported\r\n");
+    }
+
+    bool command_is_multiline(const Option& o)
+    {
+      const std::string arg0 = o.get_optional(0, 64);
+      if (arg0.empty())
+	return false;
+      return omi_command_is_multiline(arg0, o);
+    }
 
     bool is_sock_open() const
     {
       return socket && socket->is_open();
     }
 
-    void stop_client(const bool eof)
+    void conditional_stop(const bool eof)
     {
-      if (is_sock_open())
+      if (acceptor || stop_called)
+	stop_omi_client(eof);
+      else
+	stop(); // if running in management-client mode, do a full stop
+    }
+
+    void stop_omi_client(const bool eof)
+    {
+      const bool is_open = is_sock_open();
+      if (is_open)
 	socket->close();
       content_out.clear();
       in_partial.clear();
-      omi_done(eof);
+      if (is_open)
+	omi_done(eof);
     }
 
     void send_title_message()
     {
-      send(">INFO:OpenVPN Management Interface Version 1 -- type 'help' for more info\n");
+      send(">INFO:OpenVPN Management Interface Version 1 -- type 'help' for more info\r\n");
     }
 
     void process_in_line() // process incoming line in in_partial
@@ -191,7 +552,7 @@ namespace openvpn {
 	    throw omi_error("process_in_line: internal error");
 	  if (in_partial == "END")
 	    {
-	      omi_command_in(std::move(command));
+	      command_in(std::move(command));
 	      command.reset();
 	      multiline = false;
 	    }
@@ -207,10 +568,10 @@ namespace openvpn {
 	  command.reset(new Command);
 	  command->option = OptionList::parse_option_from_line(in_partial, nullptr);
 	  command->valid_utf8 = utf8;
-	  multiline = omi_command_is_multiline(command->option);
+	  multiline = command_is_multiline(command->option);
 	  if (!multiline)
 	    {
-	      omi_command_in(std::move(command));
+	      command_in(std::move(command));
 	      command.reset();
 	    }
 	}
@@ -224,14 +585,14 @@ namespace openvpn {
 	return read_text_utf8(fn);
     }
 
-    void log_setup(const std::string& log_fn)
+    void log_setup(const std::string& log_fn, const bool append)
     {
 #if defined(OPENVPN_PLATFORM_WIN)
       // fixme -- code for Windows
 #else
       RedirectStd redir("",
 			log_fn,
-			RedirectStd::FLAGS_OVERWRITE,
+			append ? RedirectStd::FLAGS_APPEND : RedirectStd::FLAGS_OVERWRITE,
 			RedirectStd::MODE_ALL,
 			false);
       redir.redirect();
@@ -246,7 +607,7 @@ namespace openvpn {
       // parse address/port of local endpoint
       const IP::Addr ip_addr = IP::Addr::from_string(addr);
       a->local_endpoint.address(ip_addr.to_asio());
-      a->local_endpoint.port(HostPort::parse_port(port, "tcp listen"));
+      a->local_endpoint.port(HostPort::parse_port(port, "OMI TCP listen"));
 
       // open socket
       a->acceptor.open(a->local_endpoint.protocol());
@@ -301,19 +662,35 @@ namespace openvpn {
 
     void queue_accept()
     {
-      acceptor->async_accept(this, 0, io_context);
+      if (acceptor)
+	acceptor->async_accept(this, 0, io_context);
     }
 
+    void verify_sock_peer(AsioPolySock::Base& sock)
+    {
+#ifdef ASIO_HAS_LOCAL_SOCKETS
+      SockOpt::Creds cr;
+      if (management_client_root && sock.peercreds(cr))
+	{
+	  if (!cr.root_uid())
+	    throw Exception("peer must be root");
+	}
+#endif
+    }
+
+    // despite its name, this method handles both accept and connect events
     virtual void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error) override
     {
-      if (halt)
+      if (stop_called)
 	return;
 
       try {
 	if (error)
-	  throw Exception("accept failed: " + error.message());
+	  throw Exception("accept/connect failed: " + error.message());
 	if (is_sock_open())
 	  throw Exception("client already connected");
+
+	verify_sock_peer(*sock);
 
 	sock->non_blocking(true);
 	sock->set_cloexec();
@@ -321,25 +698,52 @@ namespace openvpn {
 
 	send_title_message();
 	queue_recv();
+	hold_cycle();
       }
       catch (const std::exception& e)
 	{
-	  std::cerr << "exception in handle_accept: " << e.what() << std::endl;
+	  const std::string msg = "exception in accept/connect handler: " + std::string(e.what()) + '\n';
+	  if (errors_to_stderr)
+	    std::cerr << msg << std::flush;
+	  OPENVPN_LOG_STRING(msg);
 	}
       queue_accept();
     }
 
     void connect_tcp(const std::string& addr, const std::string& port)
     {
+      asio::ip::tcp::endpoint ep(IP::Addr::from_string(addr).to_asio(),
+				 HostPort::parse_port(port, "OMI TCP connect"));
+      AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
+      AsioPolySock::Base::Ptr sock(s);
+      s->socket.async_connect(ep,
+			      [self=Ptr(this), sock](const asio::error_code& error)
+			      {
+				// this is a connect, but we reuse the accept method
+				self->handle_accept(sock, error);
+			      });
     }
 
     void connect_unix(const std::string& socket_path)
     {
+#ifdef ASIO_HAS_LOCAL_SOCKETS
+      asio::local::stream_protocol::endpoint ep(socket_path);
+      AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
+      AsioPolySock::Base::Ptr sock(s);
+      s->socket.async_connect(ep,
+			      [self=Ptr(this), sock](const asio::error_code& error)
+			      {
+				// this is a connect, but we reuse the accept method
+				self->handle_accept(sock, error);
+			      });
+#else
+      throw Exception("unix sockets not supported on this platform");
+#endif
     }
 
     void queue_recv()
     {
-      if (halt || !is_sock_open())
+      if (!is_sock_open())
 	return;
       BufferPtr buf(new BufferAllocated(256, 0));
       socket->async_receive(buf->mutable_buffers_1_clamp(),
@@ -352,14 +756,14 @@ namespace openvpn {
     void handle_recv(const asio::error_code& error, const size_t bytes_recvd,
 		     Buffer& buf, const AsioPolySock::Base* queued_socket)
     {
-      if (halt || !is_sock_open() || socket.get() != queued_socket)
+      if (!is_sock_open() || socket.get() != queued_socket)
 	return;
       if (error)
 	{
 	  const bool eof = (error == asio::error::eof);
 	  if (!eof)
 	    OPENVPN_LOG("client socket recv error: " << error.message());
-	  stop_client(eof);
+	  conditional_stop(eof);
 	  return;
 	}
       buf.set_size(bytes_recvd);
@@ -375,9 +779,7 @@ namespace openvpn {
 	      }
 	      catch (const std::exception& e)
 		{
-		  OPENVPN_LOG("error processing omi command: " << e.what());
-		  stop_client(false);
-		  return;
+		  send("ERROR: in OMI command: " + std::string(e.what()) + "\r\n");
 		}
 	      in_partial.clear();
 	    }
@@ -388,7 +790,7 @@ namespace openvpn {
 
     void queue_send()
     {
-      if (halt || !is_sock_open())
+      if (!is_sock_open())
 	return;
       BufferAllocated& buf = *content_out.front();
       socket->async_send(buf.const_buffers_1_clamp(),
@@ -401,13 +803,13 @@ namespace openvpn {
     void handle_send(const asio::error_code& error, const size_t bytes_sent,
 		     const AsioPolySock::Base* queued_socket)
     {
-      if (halt || !is_sock_open() || socket.get() != queued_socket)
+      if (!is_sock_open() || socket.get() != queued_socket)
 	return;
 
       if (error)
 	{
 	  OPENVPN_LOG("client socket send error: " << error.message());
-	  stop_client(false);
+	  conditional_stop(false);
 	  return;
 	}
 
@@ -419,20 +821,40 @@ namespace openvpn {
       else
 	{
 	  OPENVPN_LOG("client socket unexpected send size: " << bytes_sent << '/' << buf->size());
-	  stop_client(false);
+	  conditional_stop(false);
 	  return;
 	}
 
       if (!content_out.empty())
 	queue_send();
+      else if (stop_called)
+	conditional_stop(false);
     }
 
+    // I/O
     Acceptor::Base::Ptr acceptor;
     AsioPolySock::Base::Ptr socket;
     std::deque<BufferPtr> content_out;
     std::string in_partial;
     std::unique_ptr<Command> command;
+    bool management_client_root = false;
     bool multiline = false;
+    bool errors_to_stderr = false;
+
+    // stopping
+    bool stop_called = false;
+
+    // hold
+    bool hold_wait = false;
+    bool hold_flag = false;
+
+    // bandwidth stats
+    unsigned int bytecount = 0;
+
+    // histories
+    History hist_log   {"log",   100};
+    History hist_state {"state", 100};
+    History hist_echo  {"echo",  100};
   };
 }
 
