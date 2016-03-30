@@ -741,8 +741,9 @@ private:
       return;
 
     // process events
-    if (ev.name == "AUTH_FAILED" || ev.name == "DYNAMIC_CHALLENGE") // handle auth failures
+    if ((ev.name == "AUTH_FAILED" || ev.name == "DYNAMIC_CHALLENGE") && management_query_passwords)
       {
+	// handle auth failures
 	std::string msg = ">PASSWORD:Verification Failed: 'Auth'";
 	if (!ev.info.empty())
 	  msg += " ['" + ev.info + "']";
@@ -787,7 +788,7 @@ private:
 	state_line(event_format(nev, nullptr));
       }
 
-    else if (ev.name == "PROXY_NEED_CREDS")
+    else if (ev.name == "PROXY_NEED_CREDS" && management_query_passwords)
       {
 	// need proxy credentials, retry
 	proxy_need_creds = true;
