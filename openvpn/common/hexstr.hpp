@@ -201,6 +201,12 @@ namespace openvpn {
     return render_hex(buf, sizeof(T), caps);
   }
 
+  std::string render_hex_number(unsigned char uc, const bool caps=false)
+  {
+    unsigned char buf[1] = { uc };
+    return render_hex(buf, 1, caps);
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_HEXSTR_H
