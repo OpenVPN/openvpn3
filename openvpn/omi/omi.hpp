@@ -39,6 +39,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/time/timestr.hpp>
+#include <openvpn/time/asiotimer.hpp>
 
 // include acceptors for different protocols
 #include <openvpn/acceptor/base.hpp>
@@ -73,7 +74,7 @@ namespace openvpn {
       // but if omi_stop() returns true, wait for content_out
       // to be flushed to OMI socket before closing it.
       if (!omi_stop() || content_out.empty())
-	stop_omi_client(false);
+	stop_omi_client(false, 250);
     }
 
   protected:
@@ -206,7 +207,8 @@ namespace openvpn {
     OMICore(asio::io_context& io_context_arg,
 	    OptionList opt_arg)
       : io_context(io_context_arg),
-	opt(std::move(opt_arg))
+	opt(std::move(opt_arg)),
+	stop_timer(io_context_arg)
     {
     }
 
@@ -541,13 +543,24 @@ namespace openvpn {
     void conditional_stop(const bool eof)
     {
       if (acceptor || stop_called)
-	stop_omi_client(eof);
+	stop_omi_client(eof, 250);
       else
 	stop(); // if running in management-client mode, do a full stop
     }
 
+    void stop_omi_client(const bool eof, const unsigned int milliseconds)
+    {
+      stop_timer.expires_at(Time::now() + Time::Duration::milliseconds(milliseconds));
+      stop_timer.async_wait([self=Ptr(this), eof](const asio::error_code& error)
+				 {
+				   if (!error)
+				     self->stop_omi_client(eof);
+				 });
+    }
+
     void stop_omi_client(const bool eof)
     {
+      stop_timer.cancel();
       const bool is_open = is_sock_open();
       if (is_open)
 	socket->close();
@@ -863,6 +876,7 @@ namespace openvpn {
 
     // stopping
     bool stop_called = false;
+    AsioTimer stop_timer;
 
     // hold
     bool hold_wait = false;
