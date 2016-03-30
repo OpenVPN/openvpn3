@@ -669,8 +669,11 @@ private:
     reconnect_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
     reconnect_timer.async_wait([self=Ptr(this), reason](const asio::error_code& error)
 			       {
-				 self->state_line(gen_state_msg(false, "RECONNECTING", reason));
-				 self->retry();
+				 if (!error)
+				   {
+				     self->state_line(gen_state_msg(false, "RECONNECTING", reason));
+				     self->retry();
+				   }
 			       });
   }
 
