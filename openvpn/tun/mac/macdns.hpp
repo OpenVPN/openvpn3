@@ -323,25 +323,18 @@ namespace openvpn {
       bool mod = false;
       if (info)
 	{
-	  if (ver.major() < Mac::Version::OSX_10_8)
-	    {
-	      // Mac OS X 10.7 and lower.
-	      //
-	      // We want to avoid executing this code block on OS X 10.8+
-	      // because it might cause our VPN DNS settings to persist after
-	      // disconnect.  Conversely, for 10.7 and earlier, we should
-	      // execute this code to prevent our VPN DNS settings from
-	      // persisting after disconnect.
-	      info->dns.will_modify();
-	      info->dns.restore_orig();
-	      mod |= info->dns.push_to_store();
-	    }
-	  else
-	    {
-	      // Mac OS X 10.8 and higher
-	      info->dns.mod_reset();
-	      mod |= info->dns.push_to_store();
-	    }
+#if 1
+	  // Restore previous DNS settings.
+	  // Recommended for production.
+	  info->dns.will_modify();
+	  info->dns.restore_orig();
+	  mod |= info->dns.push_to_store();
+#else
+	  // Wipe DNS settings without restore.
+	  // This can potentially wipe static IP/DNS settings.
+	  info->dns.mod_reset();
+	  mod |= info->dns.push_to_store();
+#endif
 	}
       return mod;
     }
