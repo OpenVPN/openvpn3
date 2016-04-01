@@ -51,15 +51,18 @@ namespace openvpn {
       PAUSE,
       RESUME,
 
-      // start of errors, must be marked by ERROR_START below
+      // start of nonfatal errors, must be marked by NONFATAL_ERROR_START below
+      TRANSPORT_ERROR,
+      TUN_ERROR,
+      CLIENT_RESTART,
+
+      // start of errors, must be marked by FATAL_ERROR_START below
       AUTH_FAILED,
       CERT_VERIFY_FAIL,
       TLS_VERSION_MIN,
       CLIENT_HALT,
-      CLIENT_RESTART,
       CONNECTION_TIMEOUT,
       INACTIVE_TIMEOUT,
-      TRANSPORT_ERROR,
       DYNAMIC_CHALLENGE,
       PROXY_NEED_CREDS,
       PROXY_ERROR,
@@ -73,7 +76,8 @@ namespace openvpn {
     };
 
     enum {
-      ERROR_START=AUTH_FAILED, // start of error events
+      NONFATAL_ERROR_START = TRANSPORT_ERROR, // start of nonfatal errors that automatically reconnect
+      FATAL_ERROR_START    = AUTH_FAILED,     // start of fatal errors
     };
 
     inline const char *event_name(const Type type)
@@ -92,14 +96,19 @@ namespace openvpn {
 	"ECHO",
 	"PAUSE",
 	"RESUME",
+
+	// nonfatal errors
+	"TRANSPORT_ERROR",
+	"TUN_ERROR",
+	"CLIENT_RESTART",
+
+	// fatal errors
 	"AUTH_FAILED",
 	"CERT_VERIFY_FAIL",
 	"TLS_VERSION_MIN",
 	"CLIENT_HALT",
-	"CLIENT_RESTART",
 	"CONNECTION_TIMEOUT",
 	"INACTIVE_TIMEOUT",
-	"TRANSPORT_ERROR",
 	"DYNAMIC_CHALLENGE",
 	"PROXY_NEED_CREDS",
 	"PROXY_ERROR",
@@ -135,7 +144,12 @@ namespace openvpn {
 
       bool is_error() const
       {
-	return int(id_) >= ERROR_START;
+	return int(id_) >= NONFATAL_ERROR_START;
+      }
+
+      bool is_fatal() const
+      {
+	return int(id_) >= FATAL_ERROR_START;
       }
 
       virtual std::string render() const
@@ -328,6 +342,11 @@ namespace openvpn {
     struct TunIfaceDisabled : public ReasonBase
     {
       TunIfaceDisabled(const std::string& reason) : ReasonBase(TUN_IFACE_DISABLED, reason) {}
+    };
+
+    struct TunError : public ReasonBase
+    {
+      TunError(const std::string& reason) : ReasonBase(TUN_ERROR, reason) {}
     };
 
     struct EpkiError : public ReasonBase

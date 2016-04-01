@@ -203,6 +203,7 @@ namespace openvpn {
 	    ev.name = event->name();
 	    ev.info = Unicode::utf8_printable(event->render(), 256);
 	    ev.error = event->is_error();
+	    ev.fatal = event->is_fatal();
 
 	    // save connected event
 	    if (event->id() == ClientEvent::CONNECTED)

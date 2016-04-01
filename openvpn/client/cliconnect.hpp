@@ -499,6 +499,14 @@ namespace openvpn {
 		    queue_restart(5); // use a larger timeout to allow preemption from higher levels
 		  }
 		  break;
+		case Error::TUN_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunError(client->fatal_reason());
+		    client_options->events().add_event(ev);
+		    client_options->stats().error(Error::TUN_ERROR);
+		    queue_restart(5);
+		  }
+		  break;
 		default:
 		  throw client_connect_unhandled_exception();
 		}

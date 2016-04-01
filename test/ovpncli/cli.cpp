@@ -95,7 +95,9 @@ private:
     std::cout << date_time() << " EVENT: " << ev.name;
     if (!ev.info.empty())
       std::cout << ' ' << ev.info;
-    if (ev.error)
+    if (ev.fatal)
+      std::cout << " [FATAL-ERR]";
+    else if (ev.error)
       std::cout << " [ERR]";
     std::cout << std::endl;
     if (ev.name == "DYNAMIC_CHALLENGE")

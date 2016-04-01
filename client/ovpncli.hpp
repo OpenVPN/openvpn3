@@ -257,7 +257,8 @@ namespace openvpn {
     // (client reads)
     struct Event
     {
-      bool error = false;    // true if error
+      bool error = false;    // true if error (fatal or nonfatal)
+      bool fatal = false;    // true if fatal error (will disconnect)
       std::string name;      // event name
       std::string info;      // additional event info
     };

@@ -326,6 +326,7 @@ namespace openvpn {
       void tun_error_handler(const Error::Type errtype, // called by TunImpl
 			     const asio::error_code* error)
       {
+	parent.tun_error(Error::TUN_ERROR, "TUN I/O error");
       }
 
       void stop_()

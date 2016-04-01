@@ -50,6 +50,7 @@ namespace openvpn {
       TUN_SETUP_FAILED,    // error setting up tun/tap interface
       TUN_IFACE_CREATE,    // error creating tun/tap interface
       TUN_IFACE_DISABLED,  // tun/tap interface is disabled
+      TUN_ERROR,           // general tun error
       TAP_NOT_SUPPORTED,   // dev tap is present in profile but not supported
       REROUTE_GW_NO_DNS,   // redirect-gateway specified without alt DNS servers
       TRANSPORT_ERROR,     // general transport error
@@ -119,6 +120,7 @@ namespace openvpn {
 	"TUN_SETUP_FAILED",
 	"TUN_IFACE_CREATE",
 	"TUN_IFACE_DISABLED",
+	"TUN_ERROR",
 	"TAP_NOT_SUPPORTED",
 	"REROUTE_GW_NO_DNS",
 	"TRANSPORT_ERROR",

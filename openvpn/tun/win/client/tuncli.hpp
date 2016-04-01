@@ -301,6 +301,8 @@ namespace openvpn {
       {
 	if (errtype == Error::TUN_READ_ERROR && error && error->value() == 995)
 	  parent.tun_error(Error::TUN_IFACE_DISABLED, "TAP adapter is disabled");
+	else
+	  parent.tun_error(Error::TUN_ERROR, "TUN I/O error");
       }
 
       void stop_()
