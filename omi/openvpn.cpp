@@ -602,6 +602,7 @@ private:
       {
 	ClientAPI::Event ev;
 	ev.error = true;
+	ev.fatal = true;
 	ev.name = "CLIENT_EXCEPTION";
 	ev.info = error;
 	event(ev);
@@ -730,7 +731,9 @@ private:
 	  li.text += " : ";
 	  li.text += ev.info;
 	}
-      if (ev.error)
+      if (ev.fatal)
+	li.text += " [FATAL-ERR]";
+      else if (ev.error)
 	li.text += " [ERR]";
       li.text += '\n';
       log_msg(li);
@@ -801,7 +804,7 @@ private:
 	// for now, we ignore DISCONNECTED messages
       }
 
-    else if (ev.error)
+    else if (ev.fatal)
       {
 	// this event is a fatal error
 	std::string reason = ev.name;
