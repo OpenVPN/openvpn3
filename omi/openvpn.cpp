@@ -4,6 +4,8 @@
 
 // OpenVPN 3 client with Management Interface
 
+#define OMI_VERSION "1.0.0"
+
 #include <string>
 #include <vector>
 #include <thread>
@@ -40,19 +42,11 @@
 #error no SSL library defined
 #endif
 
-// VERSION version can be passed on build command line
-#include <openvpn/common/stringize.hpp>
-#ifdef VERSION
-#define VERSION_STRING OPENVPN_STRINGIZE(VERSION)
-#else
-#define VERSION_STRING "0.1.0"
-#endif
-
 using namespace openvpn;
 
 std::string log_version()
 {
-  return platform_string("OpenVPN Management Interface", VERSION_STRING)
+  return platform_string("OpenVPN Management Interface", OMI_VERSION)
     + " [" SSL_LIB_NAME "] built on " __DATE__ " " __TIME__;
 }
 
@@ -332,7 +326,7 @@ private:
       if (!config)
 	{
 	  config.reset(new ClientAPI::Config);
-	  config->guiVersion = "ovpnmi " VERSION_STRING;
+	  config->guiVersion = "ovpnmi " OMI_VERSION;
 	  config->content = get_config();
 	  config->peerInfo = get_peer_info();
 	  config->connTimeout = connection_timeout;
