@@ -48,7 +48,7 @@ namespace openvpn {
   {
     struct tm *lt = localtime(&now);
     char *ret = asctime(lt);
-    const size_t len = strlen(ret);
+    const size_t len = std::strlen(ret);
     if (len > 0 && ret[len-1] == '\n')
       ret[len-1] = '\0';
     return ret;
