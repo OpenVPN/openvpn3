@@ -113,9 +113,9 @@ namespace openvpn {
 
       virtual TunClient::Ptr new_tun_client_obj(asio::io_context& io_context,
 						TunClientParent& parent,
-						TransportClient* transcli);
+						TransportClient* transcli) override;
 
-      virtual void finalize(const bool disconnected)
+      virtual void finalize(const bool disconnected) override
       {
 	if (disconnected)
 	  tun_persist.reset();
@@ -132,7 +132,7 @@ namespace openvpn {
     public:
       typedef RCPtr<Client> Ptr;
 
-      virtual void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&)
+      virtual void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&) override
       {
 	if (!impl)
 	  {
@@ -229,12 +229,12 @@ namespace openvpn {
 	  }
       }
 
-      virtual bool tun_send(BufferAllocated& buf)
+      virtual bool tun_send(BufferAllocated& buf) override
       {
 	return send(buf);
       }
 
-      virtual std::string tun_name() const
+      virtual std::string tun_name() const override
       {
 	if (impl)
 	  return impl->name();
@@ -242,7 +242,7 @@ namespace openvpn {
 	  return "UNDEF_TUN";
       }
 
-      virtual std::string vpn_ip4() const
+      virtual std::string vpn_ip4() const override
       {
 	if (state->vpn_ip4_addr.specified())
 	  return state->vpn_ip4_addr.to_string();
@@ -250,7 +250,7 @@ namespace openvpn {
 	  return "";
       }
 
-      virtual std::string vpn_ip6() const
+      virtual std::string vpn_ip6() const override
       {
 	if (state->vpn_ip6_addr.specified())
 	  return state->vpn_ip6_addr.to_string();
@@ -258,11 +258,11 @@ namespace openvpn {
 	  return "";
       }
 
-      virtual void set_disconnect()
+      virtual void set_disconnect() override
       {
       }
 
-      virtual void stop() { stop_(); }
+      virtual void stop() override { stop_(); }
       virtual ~Client() { stop_(); }
 
     private:
