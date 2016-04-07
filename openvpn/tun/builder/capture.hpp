@@ -482,14 +482,14 @@ namespace openvpn {
 #endif
     };
 
-    virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)
+    virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6) override
     {
       remote_address.address = address;
       remote_address.ipv6 = ipv6;
       return true;
     }
 
-    virtual bool tun_builder_add_address(const std::string& address, int prefix_length, const std::string& gateway, bool ipv6, bool net30)
+    virtual bool tun_builder_add_address(const std::string& address, int prefix_length, const std::string& gateway, bool ipv6, bool net30) override
     {
       RouteAddress r;
       r.address = address;
@@ -505,7 +505,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_reroute_gw(bool ipv4, bool ipv6, unsigned int flags)
+    virtual bool tun_builder_reroute_gw(bool ipv4, bool ipv6, unsigned int flags) override
     {
       reroute_gw.ipv4 = ipv4;
       reroute_gw.ipv6 = ipv6;
@@ -513,7 +513,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_add_route(const std::string& address, int prefix_length, bool ipv6)
+    virtual bool tun_builder_add_route(const std::string& address, int prefix_length, bool ipv6) override
     {
       Route r;
       r.address = address;
@@ -523,7 +523,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_exclude_route(const std::string& address, int prefix_length, bool ipv6)
+    virtual bool tun_builder_exclude_route(const std::string& address, int prefix_length, bool ipv6) override
     {
       Route r;
       r.address = address;
@@ -533,7 +533,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_add_dns_server(const std::string& address, bool ipv6)
+    virtual bool tun_builder_add_dns_server(const std::string& address, bool ipv6) override
     {
       DNSServer dns;
       dns.address = address;
@@ -542,7 +542,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_add_search_domain(const std::string& domain)
+    virtual bool tun_builder_add_search_domain(const std::string& domain) override
     {
       SearchDomain dom;
       dom.domain = domain;
@@ -550,19 +550,19 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_set_mtu(int mtu)
+    virtual bool tun_builder_set_mtu(int mtu) override
     {
       this->mtu =  mtu;
       return true;
     }
 
-    virtual bool tun_builder_set_session_name(const std::string& name)
+    virtual bool tun_builder_set_session_name(const std::string& name) override
     {
       session_name = name;
       return true;
     }
 
-    virtual bool tun_builder_add_proxy_bypass(const std::string& bypass_host)
+    virtual bool tun_builder_add_proxy_bypass(const std::string& bypass_host) override
     {
       ProxyBypass b;
       b.bypass_host = bypass_host;
@@ -570,27 +570,27 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_set_proxy_auto_config_url(const std::string& url)
+    virtual bool tun_builder_set_proxy_auto_config_url(const std::string& url) override
     {
       proxy_auto_config_url.url = url;
       return true;
     }
 
-    virtual bool tun_builder_set_proxy_http(const std::string& host, int port)
+    virtual bool tun_builder_set_proxy_http(const std::string& host, int port) override
     {
       http_proxy.host = host;
       http_proxy.port = port;      
       return true;
     }
 
-    virtual bool tun_builder_set_proxy_https(const std::string& host, int port)
+    virtual bool tun_builder_set_proxy_https(const std::string& host, int port) override
     {
       https_proxy.host = host;
       https_proxy.port = port;      
       return true;
     }
 
-    virtual bool tun_builder_add_wins_server(const std::string& address)
+    virtual bool tun_builder_add_wins_server(const std::string& address) override
     {
       WINSServer wins;
       wins.address = address;
@@ -598,7 +598,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_set_block_ipv6(bool value)
+    virtual bool tun_builder_set_block_ipv6(bool value) override
     {
       block_ipv6 = value;
       return true;
