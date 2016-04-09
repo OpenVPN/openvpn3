@@ -299,7 +299,7 @@ namespace openvpn {
       if (dco)
 	{
 	  DCO::TunConfig tunconf;
-	  tunconf.layer = cp->layer;
+	  tunconf.tun_prop.layer = cp->layer;
 	  tunconf.tun_prop.session_name = session_name;
 	  if (tun_mtu)
 	    tunconf.tun_prop.mtu = tun_mtu;
@@ -350,7 +350,7 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
 	  {
 	    TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
-	    tunconf->layer = cp->layer;
+	    tunconf->tun_prop.layer = cp->layer;
 	    tunconf->tun_prop.session_name = session_name;
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;

@@ -206,7 +206,6 @@ namespace openvpn {
       typedef RCPtr<ClientConfig> Ptr;
 
       std::string dev_name;
-      Layer layer;
       int txqueuelen;
 
       TunProp::Config tun_prop;
@@ -289,7 +288,7 @@ namespace openvpn {
 				     config->frame,
 				     config->stats,
 				     config->dev_name,
-				     config->layer,
+				     config->tun_prop.layer,
 				     config->txqueuelen
 				     ));
 	      impl->start(config->n_parallel);

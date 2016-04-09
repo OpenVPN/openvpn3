@@ -60,7 +60,6 @@ namespace openvpn {
       {
       }
 
-      Layer layer;
       TunProp::Config tun_prop;
     };
 
