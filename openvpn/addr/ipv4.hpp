@@ -152,6 +152,14 @@ namespace openvpn {
 	return ret;
       }
 
+      static Addr from_bytes_net(const unsigned char *bytes) // network byte order
+      {
+	Addr ret;
+	std::memcpy(ret.u.bytes, bytes, 4);
+	ret.u.addr = ntohl(ret.u.addr);
+	return ret;
+      }
+
       static Addr from_zero()
       {
 	Addr ret;
