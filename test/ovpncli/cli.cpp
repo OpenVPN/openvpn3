@@ -27,6 +27,7 @@
 #include <iostream>
 #include <thread>
 #include <memory>
+#include <mutex>
 
 // If enabled, don't direct ovpn3 core logging to
 // ClientAPI::OpenVPNClient::log() virtual method.
@@ -117,6 +118,7 @@ private:
 
   virtual void log(const ClientAPI::LogInfo& log)
   {
+    std::lock_guard<std::mutex> lock(log_mutex);
     std::cout << date_time() << ' ' << log.text << std::flush;
   }
 
@@ -139,6 +141,7 @@ private:
     return false;
   }
 
+  std::mutex log_mutex;
   std::string dc_cookie;
 };
 
