@@ -31,8 +31,10 @@
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/scoped_asio_stream.hpp>
 #include <openvpn/common/cleanup.hpp>
+#include <openvpn/time/asiotimer.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
+#include <openvpn/tun/client/dhcp_capture.hpp>
 #include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
@@ -120,6 +122,11 @@ namespace openvpn {
 	if (disconnected)
 	  tun_persist.reset();
       }
+
+      virtual bool layer_2_supported() const override
+      {
+	return true;
+      }
     };
 
     class Client : public TunClient
@@ -172,7 +179,7 @@ namespace openvpn {
 		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
 		  // create new tun setup object
-		  TunWin::SetupBase::Ptr tun_setup(config->new_setup_obj(io_context));
+		  tun_setup = config->new_setup_obj(io_context);
 
 		  // open/config TAP
 		  HANDLE th;
@@ -200,6 +207,10 @@ namespace openvpn {
 
 		  // assert ownership over TAP device handle
 		  tun_setup->confirm();
+
+		  // if layer 2, set up to capture DHCP messages over the tunnel
+		  if (config->tun_prop.layer() == Layer::OSI_LAYER_2)
+		    dhcp_capture.reset(new DHCPCapture(po));
 		}
 
 	      // configure tun interface packet forwarding
@@ -212,8 +223,8 @@ namespace openvpn {
 				     ));
 	      impl->start(config->n_parallel);
 
-	      // signal that we are connected
-	      parent.tun_connected();
+	      if (!dhcp_capture)
+		parent.tun_connected(); // signal that we are connected
 	    }
 	    catch (const std::exception& e)
 	      {
@@ -272,15 +283,23 @@ namespace openvpn {
 	:  io_context(io_context_arg),
 	   config(config_arg),
 	   parent(parent_arg),
-	   halt(false),
-	   state(new TunProp::State())
+	   state(new TunProp::State()),
+	   l2_timer(io_context_arg),
+	   halt(false)
       {
       }
 
       bool send(Buffer& buf)
       {
 	if (impl)
-	  return impl->write(buf);
+	  {
+	    if (dhcp_capture && dhcp_capture->mod_reply(buf))
+	      {
+		OPENVPN_LOG("DHCP PROPS:" << std::endl << dhcp_capture->get_props().to_string());
+		layer_2_schedule_timer(1);
+	      }
+	    return impl->write(buf);
+	  }
 	else
 	  return false;
 #ifdef OPENVPN_DEBUG_TAPWIN
@@ -311,6 +330,8 @@ namespace openvpn {
 	  {
 	    halt = true;
 
+	    l2_timer.cancel();
+
 	    // stop tun
 	    if (impl)
 	      impl->stop();
@@ -336,13 +357,51 @@ namespace openvpn {
 	  Util::tap_process_logging(h);
       }
 
+      void layer_2_schedule_timer(const unsigned int seconds)
+      {
+	l2_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
+	l2_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+			    {
+			      if (!error && !self->halt)
+				self->layer_2_timer_callback();
+			    });
+      }
+
+      // Normally called once per second by l2_timer while we are waiting
+      // for layer 2 DHCP handshake to complete.
+      void layer_2_timer_callback()
+      {
+	if (dhcp_capture && tun_setup)
+	  {
+	    if (tun_setup->l2_ready(dhcp_capture->get_props()))
+	      {
+		std::ostringstream os;
+		tun_setup->l2_finish(dhcp_capture->get_props(), config->stop, os);
+		OPENVPN_LOG_STRING(os.str());
+		parent.tun_connected();
+		dhcp_capture.reset();
+	      }
+	    else
+	      {
+		OPENVPN_LOG("L2: Waiting for DHCP handshake...");
+		layer_2_schedule_timer(1);
+	      }
+	  }
+      }
+
       asio::io_context& io_context;
       TunPersist::Ptr tun_persist; // contains the TAP device HANDLE
       ClientConfig::Ptr config;
       TunClientParent& parent;
       TunImpl::Ptr impl;
-      bool halt;
       TunProp::State::Ptr state;
+      TunWin::SetupBase::Ptr tun_setup;
+
+      // Layer 2 DHCP stuff
+      std::unique_ptr<DHCPCapture> dhcp_capture;
+      AsioTimer l2_timer;
+
+      bool halt;
     };
 
     inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_context& io_context,

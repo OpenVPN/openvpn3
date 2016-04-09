@@ -48,6 +48,13 @@ namespace openvpn {
       return false;
     }
 
+    // Optional callback that indicates OSI layer, should be 2 or 3.
+    // Defaults to 3.
+    virtual bool tun_builder_set_layer(int layer)
+    {
+      return true;
+    }
+
     // Callback to set address of remote server
     // Never called more than once per tun_builder session.
     virtual bool tun_builder_set_remote_address(const std::string& address, bool ipv6)

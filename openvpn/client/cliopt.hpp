@@ -383,6 +383,7 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
 	  {
 	    TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
+	    tunconf->tun_prop.layer = cp->layer;
 	    tunconf->tun_prop.session_name = session_name;
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    if (tun_mtu)

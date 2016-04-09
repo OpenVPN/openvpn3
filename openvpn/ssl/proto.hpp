@@ -610,14 +610,15 @@ namespace openvpn {
 	std::ostringstream out;
 
 	const bool server = ssl_factory->mode().is_server();
+	const unsigned int l2extra = (layer() == Layer::OSI_LAYER_2 ? 32 : 0);
 
 	out << "V4";
 
 	out << ",dev-type " << layer.dev_type();
-	out << ",link-mtu " << tun_mtu + link_mtu_adjust();
-	out << ",tun-mtu " << tun_mtu;
+	out << ",link-mtu " << tun_mtu + link_mtu_adjust() + l2extra;
+	out << ",tun-mtu " << tun_mtu + l2extra;
 	out << ",proto " << protocol.str_client(true);
-	
+
 	{
 	  const char *compstr = comp_ctx.options_string();
 	  if (compstr)

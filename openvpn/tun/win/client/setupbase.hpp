@@ -47,6 +47,12 @@ namespace openvpn {
 			       Stop* stop,
 			       std::ostream& os) = 0;
 
+      virtual bool l2_ready(const TunBuilderCapture& pull) = 0;
+
+      virtual void l2_finish(const TunBuilderCapture& pull,
+			     Stop* stop,
+			     std::ostream& os) = 0;
+
       virtual void confirm()
       {
       }

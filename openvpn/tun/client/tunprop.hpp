@@ -36,6 +36,7 @@
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/ipverflags.hpp>
 #include <openvpn/tun/client/emuexr.hpp>
+#include <openvpn/tun/layer.hpp>
 
 namespace openvpn {
   class TunProp {
@@ -56,11 +57,10 @@ namespace openvpn {
 
     struct Config
     {
-      Config() : mtu(0), google_dns_fallback(false), remote_bypass(false) {}
-
       std::string session_name;
-      int mtu;
-      bool google_dns_fallback;
+      int mtu = 0;
+      bool google_dns_fallback = false;
+      Layer layer{Layer::OSI_LAYER_3};
 
       // If remote_bypass is true, obtain cached remote IPs from
       // remote_list, and preconfigure exclude route rules for them.
@@ -72,7 +72,7 @@ namespace openvpn {
       // servers in the remote list after the routing configuration
       // for the initial connection has taken effect.
       RemoteList::Ptr remote_list;
-      bool remote_bypass;
+      bool remote_bypass = false;
     };
 
     struct State : public RC<thread_unsafe_refcount>
@@ -100,7 +100,15 @@ namespace openvpn {
 	eer = eer_factory->new_obj();
 
       // do ifconfig
-      const IP::Addr::VersionMask ip_ver_flags = tun_ifconfig(tb, state, opt);
+      IP::Addr::VersionMask ip_ver_flags = tun_ifconfig(tb, state, opt);
+
+      // with layer 2, either IPv4 or IPv6 might be supported
+      if (config.layer() == Layer::OSI_LAYER_2)
+	ip_ver_flags |= (IP::Addr::V4_MASK|IP::Addr::V6_MASK);
+
+      // verify IPv4/IPv6
+      if (!ip_ver_flags)
+	throw tun_prop_error("one of ifconfig or ifconfig-ipv6 must be specified");
 
       // get IP version and redirect-gateway flags
       IPVerFlags ipv(opt, ip_ver_flags);
@@ -135,7 +143,7 @@ namespace openvpn {
 		OPENVPN_LOG("Google DNS fallback enabled");
 	      add_google_dns(tb);
 	    }
-	  else if (stats)
+	  else if (stats && (config.layer() != Layer::OSI_LAYER_2))
 	    stats->error(Error::REROUTE_GW_NO_DNS);
 	}
 
@@ -143,6 +151,10 @@ namespace openvpn {
       if (!tb->tun_builder_set_remote_address(server_addr.to_string(),
 					      server_addr.version() == IP::Addr::V6))
 	throw tun_prop_error("tun_builder_set_remote_address failed");
+
+      // set layer
+      if (!tb->tun_builder_set_layer(config.layer.value()))
+	throw tun_prop_error("tun_builder_set_layer failed");
 
       // set MTU
       if (config.mtu)
@@ -175,7 +187,9 @@ namespace openvpn {
       return ret;
     }
 
-    static IP::Addr::VersionMask tun_ifconfig(TunBuilderBase* tb, State* state, const OptionList& opt)
+    static IP::Addr::VersionMask tun_ifconfig(TunBuilderBase* tb,
+					      State* state,
+					      const OptionList& opt)
     {
       enum Topology {
 	NET30,
@@ -270,8 +284,6 @@ namespace openvpn {
 	    ip_ver_flags |= IP::Addr::V6_MASK;
 	  }
 
-	if (!ip_ver_flags)
-	  throw tun_prop_error("one of ifconfig or ifconfig-ipv6 must be specified");
 	return ip_ver_flags;
       }
     }

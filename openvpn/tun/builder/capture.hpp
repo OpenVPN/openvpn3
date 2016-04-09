@@ -39,6 +39,7 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/route.hpp>
 #include <openvpn/http/urlparse.hpp>
+#include <openvpn/tun/layer.hpp>
 
 #ifdef HAVE_JSONCPP
 #include <openvpn/common/jsonhelper.hpp>
@@ -550,6 +551,12 @@ namespace openvpn {
       return true;
     }
 
+    virtual bool tun_builder_set_layer(int layer) override
+    {
+      this->layer = Layer::from_value(layer);
+      return true;
+    }
+
     virtual bool tun_builder_set_mtu(int mtu) override
     {
       this->mtu =  mtu;
@@ -604,6 +611,18 @@ namespace openvpn {
       return true;
     }
 
+    void reset_tunnel_addresses()
+    {
+      tunnel_addresses.clear();
+      tunnel_address_index_ipv4 = -1;
+      tunnel_address_index_ipv6 = -1;
+    }
+
+    void reset_dns_servers()
+    {
+      dns_servers.clear();
+    }
+
     const RouteAddress* vpn_ipv4() const
     {
       if (tunnel_address_index_ipv4 >= 0)
@@ -635,6 +654,7 @@ namespace openvpn {
 
     void validate() const
     {
+      validate_layer("root");
       validate_mtu("root");
       remote_address.validate("remote_address");
       validate_list(tunnel_addresses, "tunnel_addresses");
@@ -654,6 +674,7 @@ namespace openvpn {
     {
       std::ostringstream os;
       os << "Session Name: " << session_name << std::endl;
+      os << "Layer: " << layer.str() << std::endl;
       if (mtu)
 	os << "MTU: " << mtu << std::endl;
       os << "Remote Address: " << remote_address.to_string() << std::endl;
@@ -684,6 +705,7 @@ namespace openvpn {
       Json::Value root(Json::objectValue);
       root["session_name"] = Json::Value(session_name);
       root["mtu"] = Json::Value(mtu);
+      root["layer"] = Json::Value(layer.value());
       if (remote_address.defined())
 	root["remote_address"] = remote_address.to_json();
       json::from_vector(root, tunnel_addresses, "tunnel_addresses");
@@ -712,6 +734,7 @@ namespace openvpn {
       TunBuilderCapture::Ptr tbc(new TunBuilderCapture);
       json::assert_dict(root, title);
       json::to_string(root, tbc->session_name, "session_name", title);
+      tbc->layer = Layer::from_value(json::get_int(root, "layer", title));
       json::to_int(root, tbc->mtu, "mtu", title);
       tbc->remote_address.from_json(root["remote_address"], "remote_address");
       json::to_vector(root, tbc->tunnel_addresses, "tunnel_addresses", title);
@@ -736,6 +759,7 @@ namespace openvpn {
     // builder data
     std::string session_name;
     int mtu = 0;
+    Layer layer{Layer::OSI_LAYER_3};       // OSI layer
     RemoteAddress remote_address;          // real address of server
     std::vector<RouteAddress> tunnel_addresses;   // local tunnel addresses
     int tunnel_address_index_ipv4 = -1;    // index into tunnel_addresses for IPv4 entry (or -1 if undef)
@@ -801,6 +825,11 @@ namespace openvpn {
 	OPENVPN_THROW_EXCEPTION(title << ".mtu : MTU out of range: " << mtu);
     }
 
+    void validate_layer(const std::string& title) const
+    {
+      if (!layer.defined())
+	OPENVPN_THROW_EXCEPTION(title << ": layer undefined");
+    }
   };
 }
 

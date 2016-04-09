@@ -27,13 +27,16 @@
 #include <string>
 #include <sstream>
 #include <ostream>
+#include <memory>
 #include <utility>
+#include <thread>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/arraysize.hpp>
+#include <openvpn/time/time.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/cmd.hpp>
@@ -54,6 +57,7 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
+      // Set up the TAP device
       virtual HANDLE establish(const TunBuilderCapture& pull,
 			       const std::wstring& openvpn_app_path,
 			       Stop* stop,
@@ -87,8 +91,17 @@ namespace openvpn {
 	remove_cmds.reset(new ActionList());
 
 	// populate add/remove lists with actions
-	adapter_config(th(), openvpn_app_path, tap, pull, *add_cmds, *remove_cmds, os);
-
+	switch (pull.layer())
+	  {
+	  case Layer::OSI_LAYER_3:
+	    adapter_config(th(), openvpn_app_path, tap, pull, false, *add_cmds, *remove_cmds, os);
+	    break;
+	  case Layer::OSI_LAYER_2:
+	    adapter_config_l2(th(), openvpn_app_path, tap, pull, *add_cmds, *remove_cmds, os);
+	    break;
+	  default:
+	    throw tun_win_setup("layer undefined");
+	  }
 	// execute the add actions
 	add_cmds->execute(os);
 
@@ -96,11 +109,72 @@ namespace openvpn {
 	// enable the remove actions
 	remove_cmds->enable_destroy(true);
 
+	// if layer 2, save state
+	if (pull.layer() == Layer::OSI_LAYER_2)
+	  l2_state.reset(new L2State(tap, openvpn_app_path));
+
 	return th.release();
+      }
+
+      // In layer 2 mode, return true route_delay seconds after
+      // the adapter properties matches the data given in pull.
+      // This method is usually called once per second until it
+      // returns true.
+      virtual bool l2_ready(const TunBuilderCapture& pull) override
+      {
+	const unsigned int route_delay = 5;
+	if (l2_state)
+	  {
+	    if (l2_state->props_ready.defined())
+	      {
+		if (Time::now() >= l2_state->props_ready)
+		  return true;
+	      }
+	    else
+	      {
+		const Util::IPNetmask4 vpn_addr(pull, "VPN IP");
+		const Util::IPAdaptersInfo ai;
+		if (ai.is_up(l2_state->tap.index, vpn_addr))
+		  l2_state->props_ready = Time::now() + Time::Duration::seconds(route_delay);
+	      }
+	  }
+	return false;
+      }
+
+      // Finish the layer 2 configuration, should be called
+      // after l2_ready() returns true.
+      virtual void l2_finish(const TunBuilderCapture& pull,
+			     Stop* stop,
+			     std::ostream& os) override
+      {
+	std::unique_ptr<L2State> l2s(std::move(l2_state));
+	if (l2s)
+	  {
+	    Win::ScopedHANDLE nh;
+	    ActionList::Ptr add_cmds(new ActionList());
+	    adapter_config(nh(), l2s->openvpn_app_path, l2s->tap, pull, true, *add_cmds, *remove_cmds, os);
+	    add_cmds->execute(os);
+	  }
       }
 
       virtual void destroy(std::ostream& os) override // defined by DestructorBase
       {
+	// l2_state
+	l2_state.reset();
+
+	// l2_thread
+	if (l2_thread)
+	  {
+	    try {
+	      l2_thread->join();
+	    }
+	    catch (...)
+	      {
+	      }
+	    l2_thread.reset();
+	  }
+
+	// remove_cmds
 	if (remove_cmds)
 	  {
 	    remove_cmds->destroy(os);
@@ -115,12 +189,27 @@ namespace openvpn {
       }
 
     private:
+      struct L2State
+      {
+	L2State(const Util::TapNameGuidPair& tap_arg,
+		const std::wstring& openvpn_app_path_arg)
+	  : tap(tap_arg),
+	    openvpn_app_path(openvpn_app_path_arg)
+	{
+	}
+
+	Util::TapNameGuidPair tap;
+	std::wstring openvpn_app_path;
+	Time props_ready;
+      };
+
 #if _WIN32_WINNT >= 0x0600
       // Configure TAP adapter on Vista and higher
       void adapter_config(HANDLE th,
 			  const std::wstring& openvpn_app_path,
 			  const Util::TapNameGuidPair& tap,
 			  const TunBuilderCapture& pull,
+			  const bool l2_post,
 			  ActionList& create,
 			  ActionList& destroy,
 			  std::ostream& os)
@@ -139,7 +228,8 @@ namespace openvpn {
 	const TunBuilderCapture::RouteAddress* local6 = pull.vpn_ipv6();
 
 	// set TAP media status to CONNECTED
-	Util::tap_set_media_status(th, true);
+	if (!l2_post)
+	  Util::tap_set_media_status(th, true);
 
 	// try to delete any stale routes on interface left over from previous session
 	create.add(new Util::ActionDeleteAllRoutesOnInterface(tap.index));
@@ -156,7 +246,7 @@ namespace openvpn {
 	// Usage: delete address [name=]<string> [[address=]<IPv4 address>]
 	//  [[gateway=]<IPv4 address>|all]
 	//  [[store=]active|persistent]
-	if (local4)
+	if (local4 && !l2_post)
 	  {
 	    // Process ifconfig and topology
 	    const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
@@ -193,7 +283,7 @@ namespace openvpn {
 	//  [[store=]active|persistent]
 	//Usage: delete address [interface=]<string> [address=]<IPv6 address>
 	//  [[store=]active|persistent]
-	if (local6 && !pull.block_ipv6)
+	if (local6 && !pull.block_ipv6 && !l2_post)
 	  {
 	    create.add(new WinCmd("netsh interface ipv6 set address " + tap_index_name + ' ' + local6->address + " store=active"));
 	    destroy.add(new WinCmd("netsh interface ipv6 delete address " + tap_index_name + ' ' + local6->address + " store=active"));
@@ -351,7 +441,7 @@ namespace openvpn {
 		continue;
 	      const std::string proto = ds.ipv6 ? "ipv6" : "ip";
 	      const int idx = indices[bool(ds.ipv6)]++;
-	      if (add_netsh_rules)
+	      if (add_netsh_rules && !l2_post)
 		{
 		  if (idx)
 		    create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + validate_cmd));
@@ -460,6 +550,7 @@ namespace openvpn {
 			  const std::wstring& openvpn_app_path,
 			  const Util::TapNameGuidPair& tap,
 			  const TunBuilderCapture& pull,
+			  const bool l2_post,
 			  ActionList& create,
 			  ActionList& destroy,
 			  std::ostream& os)
@@ -473,74 +564,80 @@ namespace openvpn {
 	// set local4 to point to IPv4 route configurations
 	const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
 
-	// Make sure the TAP adapter is set for DHCP
-	{
-	  const Util::IPAdaptersInfo ai;
-	  if (!ai.is_dhcp_enabled(tap.index))
-	    {
-	      os << "TAP: DHCP is disabled, attempting to enable" << std::endl;
-	      ActionList::Ptr cmds(new ActionList());
-	      cmds->add(new Util::ActionEnableDHCP(tap));
-	      cmds->execute(os);
-	    }
-	}
-
-	// Set IPv4 Interface
-	if (local4)
+	// This section skipped on layer 2 post-config
+	if (!l2_post)
 	  {
-	    // Process ifconfig and topology
-	    const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
-	    const IP::Addr localaddr = IP::Addr::from_string(local4->address);
-	    if (local4->net30)
-	      Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
-	    else
-	      Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
+	    // Make sure the TAP adapter is set for DHCP
+	    {
+	      const Util::IPAdaptersInfo ai;
+	      if (!ai.is_dhcp_enabled(tap.index))
+		{
+		  os << "TAP: DHCP is disabled, attempting to enable" << std::endl;
+		  ActionList::Ptr cmds(new ActionList());
+		  cmds->add(new Util::ActionEnableDHCP(tap));
+		  cmds->execute(os);
+		}
+	    }
+
+	    // Set IPv4 Interface
+	    if (local4)
+	      {
+		// Process ifconfig and topology
+		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
+		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
+		if (local4->net30)
+		  Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
+		else
+		  Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
+	      }
+
+	    // On pre-Vista, set up TAP adapter DHCP masquerade for
+	    // configuring adapter properties.
+	    {
+	      os << "TAP: configure DHCP masquerade" << std::endl;
+	      Util::TAPDHCPMasquerade dhmasq;
+	      dhmasq.init_from_capture(pull);
+	      dhmasq.ioctl(th);
+	    }
+
+	    // set TAP media status to CONNECTED
+	    Util::tap_set_media_status(th, true);
+
+	    // ARP
+	    Util::flush_arp(tap.index, os);
+
+	    // DHCP release/renew
+	    {
+	      const Util::InterfaceInfoList ii;
+	      Util::dhcp_release(ii, tap.index, os);
+	      Util::dhcp_renew(ii, tap.index, os);
+	    }
+
+	    // Wait for TAP adapter to come up
+	    {
+	      bool succeed = false;
+	      const Util::IPNetmask4 vpn_addr(pull, "VPN IP");
+	      for (int i = 1; i <= 30; ++i)
+		{
+		  os << '[' << i << "] waiting for TAP adapter to receive DHCP settings..." << std::endl;
+		  const Util::IPAdaptersInfo ai;
+		  if (ai.is_up(tap.index, vpn_addr))
+		    {
+		      succeed = true;
+		      break;
+		    }
+		  ::Sleep(1000);
+		}
+	      if (!succeed)
+		throw tun_win_setup("TAP adapter DHCP handshake failed");
+	    }
+
+	    // Pre route-add sleep
+	    os << "Sleeping 5 seconds prior to adding routes..." << std::endl;
+	    ::Sleep(5000);
 	  }
 
-	// On pre-Vista, set up TAP adapter DHCP masquerade for
-	// configuring adapter properties.
-	{
-	  os << "TAP: configure DHCP masquerade" << std::endl;
-	  Util::TAPDHCPMasquerade dhmasq;
-	  dhmasq.init_from_capture(pull);
-	  dhmasq.ioctl(th);
-	}
-
-	// set TAP media status to CONNECTED
-	Util::tap_set_media_status(th, true);
-
-	// ARP
-	Util::flush_arp(tap.index, os);
-
-	// DHCP release/renew
-	{
-	  const Util::InterfaceInfoList ii;
-	  Util::dhcp_release(ii, tap.index, os);
-	  Util::dhcp_renew(ii, tap.index, os);
-	}
-
-	// Wait for TAP adapter to come up
-	{
-	  bool succeed = false;
-	  const Util::IPNetmask4 vpn_addr(pull, "VPN IP");
-	  for (int i = 1; i <= 30; ++i)
-	    {
-	      os << '[' << i << "] waiting for TAP adapter to receive DHCP settings..." << std::endl;
-	      const Util::IPAdaptersInfo ai;
-	      if (ai.is_up(tap.index, vpn_addr))
-		{
-		  succeed = true;
-		  break;
-		}
-	      ::Sleep(1000);
-	    }
-	  if (!succeed)
-	    throw tun_win_setup("TAP adapter DHCP handshake failed");
-	}
-
 	// Process routes
-	os << "Sleeping 5 seconds prior to adding routes..." << std::endl;
-	::Sleep(5000);
 	for (auto &route : pull.add_routes)
 	  {
 	    if (!route.ipv6)
@@ -605,9 +702,51 @@ namespace openvpn {
       }
 #endif
 
+      void adapter_config_l2(HANDLE th,
+			     const std::wstring& openvpn_app_path,
+			     const Util::TapNameGuidPair& tap,
+			     const TunBuilderCapture& pull,
+			     ActionList& create,
+			     ActionList& destroy,
+			     std::ostream& os)
+      {
+	// Make sure the TAP adapter is set for DHCP
+	{
+	  const Util::IPAdaptersInfo ai;
+	  if (!ai.is_dhcp_enabled(tap.index))
+	    {
+	      os << "TAP: DHCP is disabled, attempting to enable" << std::endl;
+	      ActionList::Ptr cmds(new ActionList());
+	      cmds->add(new Util::ActionEnableDHCP(tap));
+	      cmds->execute(os);
+	    }
+	}
+
+	// set TAP media status to CONNECTED
+	Util::tap_set_media_status(th, true);
+
+	// ARP
+	Util::flush_arp(tap.index, os);
+
+	// We must do DHCP release/renew in a background thread
+	// so the foreground can forward the DHCP negotiation packets
+	// over the tunnel.
+	l2_thread.reset(new std::thread([this, logwrap=Log::Context::Wrapper(), tap]() {
+	      Log::Context logctx(logwrap);
+	      std::ostringstream os;
+	      const Util::InterfaceInfoList ii;
+	      Util::dhcp_release(ii, tap.index, os);
+	      Util::dhcp_renew(ii, tap.index, os);
+	      OPENVPN_LOG_STRING(os.str());
+	    }));
+      }
+
 #if _WIN32_WINNT >= 0x0600 // Vista+
       TunWin::WFPContext::Ptr wfp{new TunWin::WFPContext};
 #endif
+
+      std::unique_ptr<std::thread> l2_thread;
+      std::unique_ptr<L2State> l2_state;
 
       ActionList::Ptr remove_cmds;
     };

@@ -40,6 +40,11 @@ namespace openvpn {
     explicit Layer(const Type t) : type_(t) {}
     Type operator()() const { return type_; }
 
+    bool defined() const
+    {
+      return type_ != NONE;
+    }
+
     const char *dev_type() const
     {
       switch (type_)
@@ -68,6 +73,21 @@ namespace openvpn {
 	}
     }
 
+    int value() const
+    {
+      switch (type_)
+	{
+	case NONE:
+	  return 0;
+	case OSI_LAYER_2:
+	  return 2;
+	case OSI_LAYER_3:
+	  return 3;
+	default:
+	  throw Exception("Layer: unrecognized layer type");
+	}
+    }
+
     static Layer from_str(const std::string& str)
     {
       if (str == "OSI_LAYER_3")
@@ -78,6 +98,18 @@ namespace openvpn {
 	return Layer(NONE);
       else
 	throw Exception("Layer: unrecognized layer string");
+    }
+
+    static Layer from_value(const int value)
+    {
+      if (value == 3)
+	return Layer(OSI_LAYER_3);
+      else if (value == 2)
+	return Layer(OSI_LAYER_2);
+      else if (value == 0)
+	return Layer(NONE);
+      else
+	throw Exception("Layer: unrecognized layer value");
     }
 
     bool operator==(const Layer& other) const
