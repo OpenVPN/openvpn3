@@ -91,8 +91,6 @@ namespace openvpn {
     public:
       typedef RCPtr<ClientConfig> Ptr;
 
-      Layer layer;               // OSI layer
-
       TunProp::Config tun_prop;
       int n_parallel = 8;        // number of parallel async reads on tun socket
 
@@ -211,7 +209,7 @@ namespace openvpn {
 		  // create config object for tun setup layer
 		  Setup::Config tsconf;
 		  tsconf.iface_name = state->iface_name;
-		  tsconf.layer = config->layer;
+		  tsconf.layer = config->tun_prop.layer;
 
 		  // open/config tun
 		  int fd = -1;
