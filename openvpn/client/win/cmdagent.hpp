@@ -133,6 +133,18 @@ namespace openvpn {
 	return tap;
       }
 
+      virtual void l2_finish(const TunBuilderCapture& pull,
+			     Stop* stop,
+			     std::ostream& os) override
+      {
+	throw ovpnagent("l2_finish not implemented");
+      }
+
+      virtual bool l2_ready(const TunBuilderCapture& pull) override
+      {
+	throw ovpnagent("l2_ready not implemented");
+      }
+
       virtual void confirm() override
       {
 	confirm_event.signal_event();
