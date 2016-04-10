@@ -746,11 +746,19 @@ namespace openvpn {
 	// over the tunnel.
 	l2_thread.reset(new std::thread([this, logwrap=Log::Context::Wrapper(), tap]() {
 	      Log::Context logctx(logwrap);
-	      std::ostringstream os;
+	      ::Sleep(250);
 	      const Util::InterfaceInfoList ii;
-	      Util::dhcp_release(ii, tap.index, os);
-	      Util::dhcp_renew(ii, tap.index, os);
-	      OPENVPN_LOG_STRING(os.str());
+	      {
+		std::ostringstream os;
+		Util::dhcp_release(ii, tap.index, os);
+		OPENVPN_LOG_STRING(os.str());
+	      }
+	      ::Sleep(250);
+	      {
+		std::ostringstream os;
+		Util::dhcp_renew(ii, tap.index, os);
+		OPENVPN_LOG_STRING(os.str());
+	      }
 	    }));
       }
 
