@@ -246,17 +246,30 @@ namespace openvpn {
 	// Usage: delete address [name=]<string> [[address=]<IPv4 address>]
 	//  [[gateway=]<IPv4 address>|all]
 	//  [[store=]active|persistent]
-	if (local4 && !l2_post)
+	if (local4)
 	  {
 	    // Process ifconfig and topology
-	    const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
-	    const IP::Addr localaddr = IP::Addr::from_string(local4->address);
-	    if (local4->net30)
-	      Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
+	    if (l2_post)
+	      {
+		// add on-link route for layer 2 subnet
+		const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length);
+		const IPv4::Addr localaddr = IPv4::Addr::from_string(local4->address);
+		const IPv4::Addr network = localaddr & netmask;
+
+		create.add(new WinCmd("netsh interface ip add route "     + network.to_string() + '/' + to_string(local4->prefix_length) + ' ' + tap_index_name + " store=active"));
+		destroy.add(new WinCmd("netsh interface ip delete route " + network.to_string() + '/' + to_string(local4->prefix_length) + ' ' + tap_index_name + " store=active"));
+	      }
 	    else
-	      Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
-	    create.add(new WinCmd("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " gateway=" + local4->gateway + " store=active"));
-	    destroy.add(new WinCmd("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " gateway=all store=active"));
+	      {
+		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
+		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
+		if (local4->net30)
+		  Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
+		else
+		  Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
+		create.add(new WinCmd("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " gateway=" + local4->gateway + " store=active"));
+		destroy.add(new WinCmd("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " gateway=all store=active"));
+	      }
 	  }
 
 	// Should we block IPv6?
