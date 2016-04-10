@@ -57,6 +57,11 @@ namespace openvpn {
       close_local();
     }
 
+    void invalidate()
+    {
+      options_.clear();
+    }
+
     void close()
     {
       close_local();
