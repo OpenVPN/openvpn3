@@ -421,6 +421,11 @@ namespace openvpn {
 	  throw ipv4_exception("malformed netmask");
       }
 
+      int prefix_len_nothrow() const
+      {
+	return prefix_len_32(u.addr);
+      }
+
       // number of host bits in netmask
       unsigned int host_len() const
       {
