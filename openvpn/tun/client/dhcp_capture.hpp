@@ -66,6 +66,7 @@ namespace openvpn {
 	      /* get host IP address/netmask */
 	      const IPv4::Addr host = IPv4::Addr::from_uint32_net(dhcp->dhcp.yiaddr);
 	      const IPv4::Addr netmask = get_netmask(dhcp, optlen);
+	      const int prefix_len = netmask.prefix_len_nothrow();
 
 	      /* get the router IP address while padding out all DHCP router options */
 	      const IPv4::Addr router = extract_router(dhcp, optlen);
@@ -94,6 +95,11 @@ namespace openvpn {
 		      OPENVPN_LOG("NOTE: failed to obtain netmask via DHCP");
 		      complete = false;
 		    }
+		  if (prefix_len < 0)
+		    {
+		      OPENVPN_LOG("NOTE: bad netmask obtained via DHCP: " << netmask);
+		      complete = false;
+		    }
 		  if (router.unspecified())
 		    {
 		      OPENVPN_LOG("NOTE: failed to obtain router via DHCP");
@@ -102,7 +108,7 @@ namespace openvpn {
 		  if (complete)
 		    {
 		      reset();
-		      props->tun_builder_add_address(host.to_string(), netmask.prefix_len(), router.to_string(), false, false);
+		      props->tun_builder_add_address(host.to_string(), prefix_len, router.to_string(), false, false);
 		      if (dns_servers.empty())
 			OPENVPN_LOG("NOTE: failed to obtain DNS servers via DHCP");
 		      else

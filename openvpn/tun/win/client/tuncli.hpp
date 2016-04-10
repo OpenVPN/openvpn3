@@ -293,11 +293,8 @@ namespace openvpn {
       {
 	if (impl)
 	  {
-	    if (dhcp_capture && dhcp_capture->mod_reply(buf))
-	      {
-		OPENVPN_LOG("DHCP PROPS:" << std::endl << dhcp_capture->get_props().to_string());
-		layer_2_schedule_timer(1);
-	      }
+	    if (dhcp_capture)
+	      dhcp_inspect(buf);
 	    return impl->write(buf);
 	  }
 	else
@@ -357,6 +354,22 @@ namespace openvpn {
 	  Util::tap_process_logging(h);
       }
 
+      void dhcp_inspect(Buffer& buf)
+      {
+	try {
+	  if (dhcp_capture->mod_reply(buf))
+	    {
+	      OPENVPN_LOG("DHCP PROPS:" << std::endl << dhcp_capture->get_props().to_string());
+	      layer_2_schedule_timer(1);
+	    }
+	}
+	catch (const std::exception& e)
+	  {
+	    stop();
+	    parent.tun_error(Error::TUN_SETUP_FAILED, std::string("L2 exception: ") + e.what());
+	  }
+      }
+
       void layer_2_schedule_timer(const unsigned int seconds)
       {
 	l2_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
@@ -371,21 +384,28 @@ namespace openvpn {
       // for layer 2 DHCP handshake to complete.
       void layer_2_timer_callback()
       {
-	if (dhcp_capture && tun_setup)
+	try {
+	  if (dhcp_capture && tun_setup)
+	    {
+	      if (tun_setup->l2_ready(dhcp_capture->get_props()))
+		{
+		  std::ostringstream os;
+		  tun_setup->l2_finish(dhcp_capture->get_props(), config->stop, os);
+		  OPENVPN_LOG_STRING(os.str());
+		  parent.tun_connected();
+		  dhcp_capture.reset();
+		}
+	      else
+		{
+		  OPENVPN_LOG("L2: Waiting for DHCP handshake...");
+		  layer_2_schedule_timer(1);
+		}
+	    }
+	}
+	catch (const std::exception& e)
 	  {
-	    if (tun_setup->l2_ready(dhcp_capture->get_props()))
-	      {
-		std::ostringstream os;
-		tun_setup->l2_finish(dhcp_capture->get_props(), config->stop, os);
-		OPENVPN_LOG_STRING(os.str());
-		parent.tun_connected();
-		dhcp_capture.reset();
-	      }
-	    else
-	      {
-		OPENVPN_LOG("L2: Waiting for DHCP handshake...");
-		layer_2_schedule_timer(1);
-	      }
+	    stop();
+	    parent.tun_error(Error::TUN_SETUP_FAILED, std::string("L2 exception: ") + e.what());
 	  }
       }
 
