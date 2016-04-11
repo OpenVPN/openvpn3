@@ -982,6 +982,9 @@ int run(OptionList opt)
   OMI::Ptr omi;
 
   try {
+#if _WIN32_WINNT >= 0x0600 // Vista+
+    TunWin::NRPT::delete_rule(); // delete stale NRPT rules
+#endif
     omi.reset(new OMI(io_context, std::move(opt)));
     omi->start();
     io_context_run_called = true;
