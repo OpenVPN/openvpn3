@@ -227,12 +227,14 @@ namespace openvpn {
 	const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
 	const TunBuilderCapture::RouteAddress* local6 = pull.vpn_ipv6();
 
-	// set TAP media status to CONNECTED
 	if (!l2_post)
-	  Util::tap_set_media_status(th, true);
+	  {
+	    // set TAP media status to CONNECTED
+	    Util::tap_set_media_status(th, true);
 
-	// try to delete any stale routes on interface left over from previous session
-	create.add(new Util::ActionDeleteAllRoutesOnInterface(tap.index));
+	    // try to delete any stale routes on interface left over from previous session
+	    create.add(new Util::ActionDeleteAllRoutesOnInterface(tap.index));
+	  }
 
 	// Set IPv4 Interface
 	//
@@ -249,17 +251,7 @@ namespace openvpn {
 	if (local4)
 	  {
 	    // Process ifconfig and topology
-	    if (l2_post)
-	      {
-		// add on-link route for layer 2 subnet
-		const IPv4::Addr netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length);
-		const IPv4::Addr localaddr = IPv4::Addr::from_string(local4->address);
-		const IPv4::Addr network = localaddr & netmask;
-
-		create.add(new WinCmd("netsh interface ip add route "     + network.to_string() + '/' + to_string(local4->prefix_length) + ' ' + tap_index_name + " store=active"));
-		destroy.add(new WinCmd("netsh interface ip delete route " + network.to_string() + '/' + to_string(local4->prefix_length) + ' ' + tap_index_name + " store=active"));
-	      }
-	    else
+	    if (!l2_post)
 	      {
 		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
 		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
