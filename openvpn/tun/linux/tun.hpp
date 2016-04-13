@@ -39,6 +39,9 @@
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/tun/tunio.hpp>
+#include <openvpn/tun/layer.hpp>
+#include <openvpn/log/sessionstats.hpp>
+#include <openvpn/frame/frame.hpp>
 
 namespace openvpn {
   namespace TunLinux {
@@ -125,39 +128,6 @@ namespace openvpn {
 	Base::name_ = ifr.ifr_name;
 	Base::stream = new asio::posix::stream_descriptor(io_context, fd.release());
 	OPENVPN_LOG_TUN(Base::name_ << " opened");
-      }
-
-      std::string ifconfig(const OptionList& opt, const unsigned int mtu)
-      {
-	// first verify topology
-	{
-	  const Option& o = opt.get("topology");
-	  o.min_args(2);
-	  if (o.get(1, 16) != "subnet")
-	    throw option_error("only topology subnet supported");
-	}
-
-	// configure tun interface
-	{
-	  int status = 0;
-	  const Option& o = opt.get("ifconfig");
-	  o.exact_args(3);
-	  const IP::Addr ip = IP::Addr::from_string(o.get(1, 256), "ifconfig-ip");
-	  const IP::Addr mask = IP::Addr::from_string(o.get(2, 256), "ifconfig-net");
-	  Argv argv;
-	  argv.push_back("/sbin/ifconfig");
-	  argv.push_back(Base::name());
-	  argv.push_back(ip.to_string());
-	  argv.push_back("netmask");
-	  argv.push_back(mask.to_string());
-	  argv.push_back("mtu");
-	  argv.push_back(to_string(mtu));
-	  OPENVPN_LOG_TUN(argv.to_string());
-	  status = system_cmd(argv[0], argv);
-	  if (status)
-	    throw tun_ifconfig_error();
-	  return ip.to_string();
-	}
       }
 
       ~Tun() { Base::stop(); }
