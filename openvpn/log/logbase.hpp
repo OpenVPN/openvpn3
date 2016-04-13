@@ -30,11 +30,23 @@
 #define OPENVPN_LOG_INFO(x) x
 
 namespace openvpn {
+
+#ifdef OPENVPN_LOGBASE_NO_RC
+
+  struct LogBase
+  {
+    virtual void log(const std::string& str) = 0;
+  };
+
+#else
+
   struct LogBase : public RC<thread_safe_refcount>
   {
     typedef RCPtr<LogBase> Ptr;
     virtual void log(const std::string& str) = 0;
   };
+
+#endif
 }
 
 #include <openvpn/log/logthread.hpp>
