@@ -190,7 +190,7 @@ namespace openvpn {
       bool googleDnsFallback = false;
 
       // Enable autologin sessions
-      bool autologinSessions = false;
+      bool autologinSessions = true;
 
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
