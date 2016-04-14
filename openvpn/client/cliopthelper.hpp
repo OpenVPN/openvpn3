@@ -37,6 +37,7 @@
 #include <openvpn/common/userpass.hpp>
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/cliconstants.hpp>
+#include <openvpn/ssl/peerinfo.hpp>
 
 namespace openvpn {
   class ParseClientConfig {
@@ -64,6 +65,9 @@ namespace openvpn {
 
 	// limits
 	const size_t max_server_list_size = 64;
+
+	// setenv UV_x
+	PeerInfo::Set::Ptr peer_info_uv(new PeerInfo::Set);
 
 	// process setenv directives
 	{
@@ -107,6 +111,14 @@ namespace openvpn {
 			}
 		      if (!se.server.empty() && !se.friendlyName.empty() && serverList_.size() < max_server_list_size)
 			serverList_.push_back(se);
+		    }
+		  else if (arg1 == "PUSH_PEER_INFO")
+		    pushPeerInfo_ = true;
+		  else if (string::starts_with(arg1, "UV_") && arg1.length() >= 4 && string::is_word(arg1))
+		    {
+		      const std::string value = o.get_optional(2, 256);
+		      if (string::is_printable(value))
+			peer_info_uv->emplace_back(arg1, value);
 		    }
 		}
 	    }
@@ -239,6 +251,14 @@ namespace openvpn {
 		}
 	    }
 	}
+
+	// push-peer-info
+	{
+	  if (options.exists("push-peer-info"))
+	    pushPeerInfo_ = true;
+	  if (pushPeerInfo_)
+	    peerInfoUV_ = peer_info_uv;
+	}
       }
       catch (const std::exception& e)
 	{
@@ -350,6 +370,12 @@ namespace openvpn {
     // true if user is allowed to save authentication password in UI
     bool allowPasswordSave() const { return allowPasswordSave_; }
 
+    // true if "setenv PUSH_PEER_INFO" or "push-peer-info" are defined
+    bool pushPeerInfo() const { return pushPeerInfo_; }
+
+    // "setenv UV_x" directives if pushPeerInfo() is true
+    const PeerInfo::Set* peerInfoUV() const { return peerInfoUV_.get(); }
+
     // optional list of user-selectable VPN servers
     const ServerList& serverList() const { return serverList_; }
 
@@ -438,6 +464,7 @@ namespace openvpn {
     {
       error_ = autologin_ = externalPki_ = staticChallengeEcho_ = false;
       privateKeyPasswordRequired_ = hasEmbeddedPassword_ = false;
+      pushPeerInfo_ = false;
       allowPasswordSave_ = clientCertEnabled_ = true;
     }
 
@@ -460,6 +487,7 @@ namespace openvpn {
     bool autologin_;
     bool clientCertEnabled_;
     bool externalPki_;
+    bool pushPeerInfo_;
     std::string staticChallenge_;
     bool staticChallengeEcho_;
     bool privateKeyPasswordRequired_;
@@ -468,6 +496,7 @@ namespace openvpn {
     bool hasEmbeddedPassword_;
     std::string embeddedPassword_;
     RemoteItem firstRemoteListItem_;
+    PeerInfo::Set::Ptr peerInfoUV_;
   };
 }
 

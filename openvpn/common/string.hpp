@@ -247,6 +247,24 @@ namespace openvpn {
       return std::iscntrl(c) != 0;
     }
 
+    // return true if string conforms to regex \w*
+    inline bool is_word(const std::string& str)
+    {
+      for (auto &c : str)
+	if (!(is_alpha(c) || is_digit(c) || c == '_'))
+	  return false;
+      return true;
+    }
+
+    // return true if all string characters are printable (or if string is empty)
+    inline bool is_printable(const std::string& str)
+    {
+      for (auto &c : str)
+	if (!is_printable(c))
+	  return false;
+      return true;
+    }
+
     // return true if str contains at least one non-space control char
     inline bool contains_non_space_ctrl(const std::string& str)
     {

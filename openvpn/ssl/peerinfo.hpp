@@ -69,6 +69,21 @@ namespace openvpn {
 	return sp;
       }
 
+      template <typename SET>
+      void append_foreign_set_ptr(const SET* other)
+      {
+	if (other)
+	  for (const auto &kv : *other)
+	    emplace_back(kv.key, kv.value);
+      }
+
+      template <typename SET>
+      void append_foreign_set_ref(const SET& other)
+      {
+	for (const auto &kv : other)
+	  emplace_back(kv.key, kv.value);
+      }
+
       Ptr copy() const
       {
 	return new Set(*this);
