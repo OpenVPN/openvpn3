@@ -384,6 +384,8 @@ namespace openvpn {
 	if (halt || did_client_halt_restart)
 	  return;
 
+	Base::update_now();
+
 	BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
 	BufferStreamOut os(*buf);
 
@@ -494,7 +496,7 @@ namespace openvpn {
 	      Base::housekeeping();
 	      if (Base::invalidated())
 		invalidation_error(Base::invalidation_reason());
-	      else if (now() > disconnect_at)
+	      else if (now() >= disconnect_at)
 		error("disconnect triggered");
 	      else
 		set_housekeeping_timer();
