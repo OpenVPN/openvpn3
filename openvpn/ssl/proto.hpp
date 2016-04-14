@@ -69,8 +69,10 @@
 
 #if OPENVPN_DEBUG_PROTO >= 1
 #define OPENVPN_LOG_PROTO(x) OPENVPN_LOG(x)
+#define OPENVPN_LOG_STRING_PROTO(x) OPENVPN_LOG_STRING(x)
 #else
 #define OPENVPN_LOG_PROTO(x)
+#define OPENVPN_LOG_STRING_PROTO(x)
 #endif
 
 #if OPENVPN_DEBUG_PROTO >= 2
@@ -563,6 +565,20 @@ namespace openvpn {
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed peer-id: " << e.what());
 	  }
+
+	// show negotiated options
+	OPENVPN_LOG_STRING_PROTO(show_options());
+      }
+
+      std::string show_options() const
+      {
+	std::ostringstream os;
+	os << "PROTOCOL OPTIONS:" << std::endl;
+	os << "  cipher: " << CryptoAlgs::name(dc.cipher()) << std::endl;
+	os << "  digest: " << CryptoAlgs::name(dc.digest()) << std::endl;
+	os << "  compress: " << comp_ctx.str() << std::endl;
+	os << "  peer ID: " << remote_peer_id << std::endl;
+	return os.str();
       }
 
       void set_pid_mode(const bool tcp_linear)
