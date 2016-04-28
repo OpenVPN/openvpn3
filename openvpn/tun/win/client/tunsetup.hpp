@@ -504,7 +504,7 @@ namespace openvpn {
 
 	  // If we added DNS servers, block DNS on all interfaces except
 	  // the TAP adapter.
-	  if (IsWindows8OrGreater() && !openvpn_app_path.empty() && (indices[0] || indices[1]))
+	  if (IsWindows8OrGreater() && !openvpn_app_path.empty() && (indices[IPv4] || indices[IPv6]))
 	    {
 	      create.add(new ActionWFP(openvpn_app_path, tap.index, true, wfp));
 	      destroy.add(new ActionWFP(openvpn_app_path, tap.index, false, wfp));
