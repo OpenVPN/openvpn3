@@ -427,16 +427,20 @@ namespace openvpn {
 #if 1
 	  // normal production setting
 	  const bool use_nrpt = IsWindows8OrGreater();
-	  const bool add_netsh_rules = true;
+	  bool add_netsh_rules = true;
 #else
 	  // test NRPT registry settings on pre-Win8
 	  const bool use_nrpt = true;
-	  const bool add_netsh_rules = true;
+	  bool add_netsh_rules = true;
 #endif
 	  // per-protocol indices
 	  constexpr size_t IPv4 = 0;
 	  constexpr size_t IPv6 = 1;
 	  int indices[2] = {0, 0}; // DNS server counters for IPv4/IPv6
+
+	  // don't use netsh with NRPT split tunnel
+	  if (use_nrpt && !pull.search_domains.empty() && !pull.reroute_gw.ipv4 && !pull.reroute_gw.ipv6)
+	    add_netsh_rules = false;
 
 	  // iterate over pushed DNS server list
 	  for (size_t i = 0; i < pull.dns_servers.size(); ++i)
