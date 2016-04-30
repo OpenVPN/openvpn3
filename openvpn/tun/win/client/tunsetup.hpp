@@ -203,6 +203,41 @@ namespace openvpn {
 	Time props_ready;
       };
 
+      class UseDNS
+      {
+      public:
+	UseDNS() {}
+
+	UseDNS(const TunBuilderCapture& pull)
+	{
+	  for (auto &ds : pull.dns_servers)
+	    add(ds, pull);
+	}
+
+	static bool enabled(const TunBuilderCapture::DNSServer& ds,
+			    const TunBuilderCapture& pull)
+	{
+	  if (ds.ipv6 && pull.block_ipv6)
+	    return false;
+	  return true;
+	}
+
+	int add(const TunBuilderCapture::DNSServer& ds,
+		const TunBuilderCapture& pull)
+	{
+	  if (enabled(ds, pull))
+	    return indices[ds.ipv6 ? 1 : 0]++;
+	  else
+	    return -1;
+	}
+
+	int ipv4() const { return indices[0]; }
+	int ipv6() const { return indices[1]; }
+
+      private:
+	int indices[2] = {0, 0};
+      };
+
 #if _WIN32_WINNT >= 0x0600
       // Configure TAP adapter on Vista and higher
       void adapter_config(HANDLE th,
@@ -427,37 +462,40 @@ namespace openvpn {
 #if 1
 	  // normal production setting
 	  const bool use_nrpt = IsWindows8OrGreater();
-	  bool add_netsh_rules = true;
+	  const bool use_wfp = IsWindows8OrGreater();
+	  const bool add_netsh_rules = true;
 #else
 	  // test NRPT registry settings on pre-Win8
 	  const bool use_nrpt = true;
-	  bool add_netsh_rules = true;
+	  const bool use_wfp = true;
+	  const bool add_netsh_rules = true;
 #endif
-	  // per-protocol indices
-	  constexpr size_t IPv4 = 0;
-	  constexpr size_t IPv6 = 1;
-	  int indices[2] = {0, 0}; // DNS server counters for IPv4/IPv6
+	  // determine IPv4/IPv6 DNS redirection
+	  const UseDNS dns(pull);
 
-	  // don't use netsh with NRPT split tunnel
-	  if (use_nrpt && !pull.search_domains.empty() && !pull.reroute_gw.ipv4 && !pull.reroute_gw.ipv6)
-	    add_netsh_rules = false;
+	  // will DNS requests be split between VPN DNS server and local?
+	  const bool split_dns = (!pull.search_domains.empty()
+				  && !(pull.reroute_gw.ipv4 && dns.ipv4())
+				  && !(pull.reroute_gw.ipv6 && dns.ipv6()));
 
-	  // iterate over pushed DNS server list
-	  for (size_t i = 0; i < pull.dns_servers.size(); ++i)
+	  // add DNS servers via netsh
+	  if (add_netsh_rules && !(use_nrpt && split_dns) && !l2_post)
 	    {
-	      const TunBuilderCapture::DNSServer& ds = pull.dns_servers[i];
-	      if (ds.ipv6 && pull.block_ipv6)
-		continue;
-	      const std::string proto = ds.ipv6 ? "ipv6" : "ip";
-	      const int idx = indices[bool(ds.ipv6)]++;
-	      if (add_netsh_rules && !l2_post)
+	      UseDNS dc;
+	      for (auto &ds : pull.dns_servers)
 		{
-		  if (idx)
-		    create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(idx+1) + validate_cmd));
-		  else
+		  // 0-based index for specific IPv4/IPv6 protocol, or -1 if disabled
+		  const int count = dc.add(ds, pull);
+		  if (count >= 0)
 		    {
-		      create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ds.address + " register=primary" + validate_cmd));
-		      destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
+		      const std::string proto = ds.ipv6 ? "ipv6" : "ip";
+		      if (count)
+			create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(count+1) + validate_cmd));
+		      else
+			{
+			  create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ds.address + " register=primary" + validate_cmd));
+			  destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
+			}
 		    }
 		}
 	    }
@@ -468,16 +506,14 @@ namespace openvpn {
 	  // Also consider selective DNS routing using domain
 	  // suffix list from pull.search_domains as set by
 	  // "dhcp-option DOMAIN ..." directives.
-	  if (use_nrpt && (indices[IPv4] || indices[IPv6]))
+	  if (use_nrpt && (dns.ipv4() || dns.ipv6()))
 	    {
 	      // domain suffix list
 	      std::vector<std::string> dsfx;
 
 	      // Only add DNS routing suffixes if not rerouting gateway.
 	      // Otherwise, route all DNS requests with wildcard (".").
-	      const bool redir_dns4 = pull.reroute_gw.ipv4 && indices[IPv4];
-	      const bool redir_dns6 = pull.reroute_gw.ipv6 && indices[IPv6];
-	      if (!redir_dns4 && !redir_dns6)
+	      if (split_dns)
 		{
 		  for (const auto &sd : pull.search_domains)
 		    {
@@ -503,17 +539,14 @@ namespace openvpn {
 	      destroy.add(new NRPT::ActionDelete);
 	    }
 
-#if 1
 	  // Use WFP for DNS leak protection.
-
 	  // If we added DNS servers, block DNS on all interfaces except
 	  // the TAP adapter.
-	  if (IsWindows8OrGreater() && !openvpn_app_path.empty() && (indices[IPv4] || indices[IPv6]))
+	  if (use_wfp && !split_dns && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
 	    {
 	      create.add(new ActionWFP(openvpn_app_path, tap.index, true, wfp));
 	      destroy.add(new ActionWFP(openvpn_app_path, tap.index, false, wfp));
 	    }
-#endif
 	}
 
 #if 0
