@@ -77,7 +77,7 @@ namespace openvpn {
       const Option* o = opt.get_ptr("tls-version-min");
       if (o)
 	{
-	  const std::string& ver = o->get_optional(1, 16);
+	  const std::string ver = o->get_optional(1, 16);
 	  const bool or_highest = (o->get_optional(2, 16) == "or-highest");
 	  return parse_tls_version_min(ver, or_highest, max_version);
 	}

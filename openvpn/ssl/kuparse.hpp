@@ -71,7 +71,7 @@ namespace openvpn {
       const Option* o = opt.get_ptr("remote-cert-tls");
       if (o)
 	{
-	  const std::string& ct = o->get_optional(1, 16);
+	  const std::string ct = o->get_optional(1, 16);
 	  if (ct == "server")
 	    wt = TLS_WEB_SERVER;
 	  else if (ct == "client")
