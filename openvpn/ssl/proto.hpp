@@ -339,7 +339,7 @@ namespace openvpn {
 	key_direction = default_key_direction;
 
 	// load parameters that can be present in both config file or pushed options
-	load_common(opt, pco, server);
+	load_common(opt, pco, server ? LOAD_COMMON_SERVER : LOAD_COMMON_CLIENT);
 
 	// layer
 	{
@@ -471,7 +471,7 @@ namespace openvpn {
       {
 	try {
 	  // load parameters that can be present in both config file or pushed options
-	  load_common(opt, pco, false);
+	  load_common(opt, pco, LOAD_COMMON_CLIENT_PUSHED);
 	}
 	catch (const std::exception& e)
 	  {
@@ -702,9 +702,15 @@ namespace openvpn {
       }
 
     private:
+      enum LoadCommonType {
+	LOAD_COMMON_SERVER,
+	LOAD_COMMON_CLIENT,
+	LOAD_COMMON_CLIENT_PUSHED,
+      };
+
       // load parameters that can be present in both config file or pushed options
       void load_common(const OptionList& opt, const ProtoContextOptions& pco,
-		       const bool server)
+		       const LoadCommonType type)
       {
 	// duration parms
 	load_duration_parm(renegotiate, "reneg-sec", opt, 10, false);
@@ -720,7 +726,7 @@ namespace openvpn {
 	  if (o)
 	    {
 	      set_duration_parm(keepalive_ping, "keepalive ping", o->get(1, 16), 1, false);
-	      set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16), 1, server);
+	      set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16), 1, type == LOAD_COMMON_SERVER);
 	    }
 	  else
 	    {
