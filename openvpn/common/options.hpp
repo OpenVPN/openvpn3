@@ -213,16 +213,22 @@ namespace openvpn {
     }
 
     template <typename T>
+    T get_num(const size_t idx) const
+    {
+      T n;
+      const std::string& numstr = get(idx, 64);
+      if (!parse_number<T>(numstr, n))
+	OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be a number");
+      return n;
+    }
+
+    template <typename T>
     T get_num(const size_t idx, const T default_value) const
     {
-      T n = default_value;
       if (size() > idx)
-	{
-	  const std::string& numstr = get(idx, 64);
-	  if (!parse_number<T>(numstr, n))
-	    OPENVPN_THROW(option_error, err_ref() << " must be a number");
-	}
-      return n;
+	return get_num<T>(idx);
+      else
+	return default_value;
     }
 
     template <typename T>
@@ -230,7 +236,7 @@ namespace openvpn {
     {
       const T ret = get_num<T>(idx, default_value);
       if (ret != default_value && (ret < min_value || ret > max_value))
-	OPENVPN_THROW(option_error, err_ref() << " must be in the range [" << min_value << ',' << max_value << ']');
+	OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be in the range [" << min_value << ',' << max_value << ']');
       return ret;
     }
 
