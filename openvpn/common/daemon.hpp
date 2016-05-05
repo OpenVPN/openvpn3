@@ -40,14 +40,17 @@ namespace openvpn {
 
   inline void log_setup(const std::string& log_fn,
 			const bool log_append,
-			const int log_versions)
+			const int log_versions,
+			const bool stdin_to_dev_null,
+			const bool combine_out_err)
   {
     if (!log_append && log_versions >= 1)
       log_rotate(log_fn, log_versions);
-    RedirectStd redir("/dev/null",
+    RedirectStd redir(stdin_to_dev_null ? "/dev/null" : "",
 		      log_fn,
 		      log_append ? RedirectStd::FLAGS_APPEND : RedirectStd::FLAGS_OVERWRITE,
-		      RedirectStd::MODE_USER_GROUP);
+		      RedirectStd::MODE_USER_GROUP,
+		      combine_out_err);
     redir.redirect();
   }
 
@@ -61,7 +64,7 @@ namespace openvpn {
 			const bool log_append,
 			const int log_versions)
   {
-    log_setup(log_fn, log_append, log_versions);
+    log_setup(log_fn, log_append, log_versions, true, true);
     daemonize();
   }
 
