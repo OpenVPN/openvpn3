@@ -22,6 +22,7 @@
 #ifndef OPENVPN_COMMON_DAEMON_H
 #define OPENVPN_COMMON_DAEMON_H
 
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <string>
@@ -66,7 +67,7 @@ namespace openvpn {
 
   inline void write_pid(const std::string& fn)
   {
-    write_string(fn, to_string(getpid()) + '\n');
+    write_string(fn, to_string(::getpid()) + '\n');
   }
 }
 
