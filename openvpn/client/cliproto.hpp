@@ -576,7 +576,7 @@ namespace openvpn {
 	  }
 	else if (ClientHalt::match(msg))
 	  {
-	    const ClientHalt ch(msg);
+	    const ClientHalt ch(msg, true);
 	    process_halt_restart(ch);
 	  }
       }

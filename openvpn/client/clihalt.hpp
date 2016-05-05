@@ -44,8 +44,7 @@ namespace openvpn {
   public:
     OPENVPN_SIMPLE_EXCEPTION(client_halt_error);
 
-    ClientHalt(const std::string& msg)
-      : restart_(false), psid_(false)
+    ClientHalt(const std::string& msg, const bool unicode_filter)
     {
       // get operator (halt or restart)
       StringList sl;
@@ -66,7 +65,9 @@ namespace openvpn {
 	      psid_ = true;
 	      reason_pos = 4;
 	    }
-	  reason_ = Unicode::utf8_printable(sl[1].substr(reason_pos), 256);
+	  reason_ = sl[1].substr(reason_pos);
+	  if (unicode_filter)
+	    reason_ = Unicode::utf8_printable(reason_, 256);
 	}
     }
 
@@ -109,8 +110,8 @@ namespace openvpn {
       return sl.size() >= 1 && sl[0] == "RESTART";
     }
 
-    bool restart_;
-    bool psid_;
+    bool restart_ = false;
+    bool psid_ = false;
     std::string reason_;
   };
 }
