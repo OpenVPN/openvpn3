@@ -37,13 +37,13 @@ namespace openvpn {
   public:
     void parse(const std::string& opt_name, const OptionList& opt)
     {
-      const OptionList::IndexList* push = opt.get_index_ptr(opt_name);
+      const auto* push = opt.get_index_ptr(opt_name);
       if (push)
 	{
 	    reserve(push->size());
-	    for (OptionList::IndexList::const_iterator i = push->begin(); i != push->end(); ++i)
+	    for (auto &i : *push)
 	      {
-		const Option& o = opt[*i];
+		const Option& o = opt[i];
 		o.touch();
 		push_back(o.get(1, 512));
 	      }
@@ -58,14 +58,19 @@ namespace openvpn {
       return OptionList::parse_from_csv_static(os.str(), nullptr);
     }
 
-    void output_csv(std::ostream& push) const
+    void output_csv(std::ostream& os) const
     {
       for (auto &e : *this)
 	{
-	  const bool must_quote = (e.find_first_of(',') != std::string::npos);
-	  push << ',';
-	  Option::escape_string(push, e, must_quote);
+	  os << ',';
+	  output_arg(e, os);
 	}
+    }
+
+    static void output_arg(const std::string& e, std::ostream& os)
+    {
+      const bool must_quote = (e.find_first_of(',') != std::string::npos);
+      Option::escape_string(os, e, must_quote);
     }
   };
 }
