@@ -398,7 +398,7 @@ namespace openvpn {
       try {
 	// validate proto_override
 	if (!config.protoOverride.empty())
-	  Protocol::parse(config.protoOverride, false);
+	  Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
 
 	// validate IPv6 setting
 	if (!config.ipv6.empty())
@@ -458,7 +458,7 @@ namespace openvpn {
 	state->autologin_sessions = config.autologinSessions;
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
-	  state->proto_override = Protocol::parse(config.protoOverride, false);
+	  state->proto_override = Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
 	if (!config.ipv6.empty())
 	  state->ipv6 = IPv6Setting::parse(config.ipv6);
 	if (!config.compressionMode.empty())

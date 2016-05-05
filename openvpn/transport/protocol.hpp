@@ -48,6 +48,12 @@ namespace openvpn {
       TCP=TCPv4,
     };
 
+    enum AllowSuffix {
+      NO_SUFFIX,
+      CLIENT_SUFFIX,
+      SERVER_SUFFIX,
+    };
+
     Protocol() : type_(NONE) {}
     explicit Protocol(const Type t) : type_(t) {}
     Type operator()() const { return type_; }
@@ -106,13 +112,13 @@ namespace openvpn {
     }
 
     static Protocol parse(const std::string& str,
-			  const bool allow_client_suffix,
+			  const AllowSuffix allow_suffix,
 			  const char *title = nullptr)
     {
       Protocol ret;
       if (string::strcasecmp(str, "adaptive") == 0)
 	return ret;
-      ret.type_ = parse_type(str, allow_client_suffix);
+      ret.type_ = parse_type(str, allow_suffix);
       if (ret.type_ == NONE)
 	{
 	  if (!title)
@@ -129,7 +135,7 @@ namespace openvpn {
       if (str[0] != 'u' && str[0] != 'U'  // unix fast path
        && str[0] != 'n' && str[0] != 'N') // named pipe fast path
 	return false;
-      const Type type = parse_type(str, false);
+      const Type type = parse_type(str, NO_SUFFIX);
       return type == UnixStream || type == UnixDGram || type == NamedPipe;
     }
 
@@ -198,13 +204,24 @@ namespace openvpn {
 
   private:
     static Type parse_type(const std::string& str,
-			   const bool allow_client_suffix)
+			   const AllowSuffix allow_suffix)
     {
       Type ret = NONE;
       std::string s = str;
       string::to_lower(s);
-      if (allow_client_suffix && string::ends_with(s, "-client"))
-	s = s.substr(0, s.length()-7);
+      switch (allow_suffix)
+	{
+	case NO_SUFFIX:
+	  break;
+	case CLIENT_SUFFIX:
+	  if (string::ends_with(s, "-client"))
+	    s = s.substr(0, s.length()-7);
+	  break;
+	case SERVER_SUFFIX:
+	  if (string::ends_with(s, "-server"))
+	    s = s.substr(0, s.length()-7);
+	  break;
+	}
       if (string::starts_with(s, "unix")) // unix domain socket
 	{
 	  if (s == "unix-stream")

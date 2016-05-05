@@ -789,7 +789,7 @@ namespace openvpn {
       {
 	const Option* o = opt.get_ptr(directives.proto);
 	if (o)
-	  default_proto = Protocol::parse(o->get(1, 16), true);
+	  default_proto = Protocol::parse(o->get(1, 16), Protocol::CLIENT_SUFFIX);
       }
 
       // parse "port" option if present
@@ -828,7 +828,7 @@ namespace openvpn {
 		else
 		  e->server_port = default_port;
 		if (o.size() >= 4+adj)
-		  e->transport_protocol = Protocol::parse(o.get(3+adj, 16), true);
+		  e->transport_protocol = Protocol::parse(o.get(3+adj, 16), Protocol::CLIENT_SUFFIX);
 		else
 		  e->transport_protocol = default_proto;
 		e->conn_block = conn_block;

@@ -145,7 +145,7 @@ namespace openvpn {
 		    // protocol
 		    {
 		      const std::string title = e.directive + " protocol";
-		      e.proto = Protocol::parse(o.get(3-local, 16), false, title.c_str());
+		      e.proto = Protocol::parse(o.get(3-local, 16), Protocol::NO_SUFFIX, title.c_str());
 		    }
 		    if (!local)
 		      {
@@ -209,7 +209,7 @@ namespace openvpn {
 	    {
 	      const Option* o = opt.get_ptr("proto");
 	      if (o)
-		e.proto = Protocol::parse(o->get(1, 16), true);
+		e.proto = Protocol::parse(o->get(1, 16), Protocol::SERVER_SUFFIX);
 	      else
 		e.proto = Protocol(Protocol::UDPv4);
 	    }
