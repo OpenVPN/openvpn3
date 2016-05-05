@@ -84,8 +84,9 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
 public:
   typedef RCPtr<OMI> Ptr;
 
-  OMI(asio::io_context& io_context, OptionList opt)
-    : OMICore(io_context, std::move(opt)),
+  OMI(asio::io_context& io_context, OptionList opt_arg)
+    : OMICore(io_context),
+      opt(std::move(opt_arg)),
       reconnect_timer(io_context),
       bytecount_timer(io_context),
       log_context(this)
@@ -96,7 +97,7 @@ public:
 
   void start()
   {
-    open_log();
+    log_setup(OMICore::LogFn(opt));
 
     OPENVPN_LOG(log_version());
 
@@ -121,7 +122,7 @@ public:
     }
 
     // begin listening/connecting on OMI port
-    OMICore::start();
+    OMICore::start(opt);
   }
 
   virtual void log(const ClientAPI::LogInfo& msg) override
@@ -327,7 +328,7 @@ private:
 	{
 	  config.reset(new ClientAPI::Config);
 	  config->guiVersion = "ovpnmi " OMI_VERSION;
-	  config->content = get_config();
+	  config->content = get_config(opt);
 	  config->peerInfo = get_peer_info();
 	  config->connTimeout = connection_timeout;
 	  config->protoOverride = proto_override;
@@ -679,6 +680,11 @@ private:
     stop();
   }
 
+  virtual bool omi_is_sighup_implemented() override
+  {
+    return true;
+  }
+
   virtual void omi_sighup() override
   {
     if (client)
@@ -890,6 +896,9 @@ private:
 				    self->signal(error, signal_number);
 				  });
   }
+
+  // options
+  OptionList opt;
 
   // general
   std::unique_ptr<Client> client;
