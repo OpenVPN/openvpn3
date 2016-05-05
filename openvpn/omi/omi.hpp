@@ -30,6 +30,7 @@
 #include <utility>
 #include <algorithm>
 
+#include <openvpn/common/size.hpp>
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -59,6 +60,24 @@ namespace openvpn {
   {
   public:
     OPENVPN_EXCEPTION(omi_error);
+
+    struct LogFn
+    {
+      LogFn(const OptionList& opt)
+      {
+	fn = opt.get_optional("log", 1, 256);
+	if (fn.empty())
+	  {
+	    fn = opt.get_optional("log-append", 1, 256);
+	    append = true;
+	  }
+	errors_to_stderr = opt.exists("errors-to-stderr");
+      }
+
+      std::string fn;
+      bool append = false;
+      bool errors_to_stderr = false;
+    };
 
     void stop()
     {
@@ -204,45 +223,55 @@ namespace openvpn {
       std::deque<std::string> hist;
     };
 
-    OMICore(asio::io_context& io_context_arg,
-	    OptionList opt_arg)
+    OMICore(asio::io_context& io_context_arg)
       : io_context(io_context_arg),
-	opt(std::move(opt_arg)),
 	stop_timer(io_context_arg)
     {
     }
 
-    void open_log()
+    void log_setup(const LogFn& log)
     {
-      // open log file
-      bool append = false;
-      std::string log_fn = opt.get_optional("log", 1, 256);
-      if (log_fn.empty())
+      if (!log.fn.empty())
 	{
-	  log_fn = opt.get_optional("log-append", 1, 256);
-	  append = true;
+#if defined(OPENVPN_PLATFORM_WIN)
+	  log_handle = Win::LogUtil::create_file(log.fn, "", log.append);
+#else
+	  RedirectStd redir("",
+			    log.fn,
+			    log.append ? RedirectStd::FLAGS_APPEND : RedirectStd::FLAGS_OVERWRITE,
+			    RedirectStd::MODE_ALL,
+			    false);
+	  redir.redirect();
+#endif
 	}
-      if (!log_fn.empty())
-	log_setup(log_fn, append);
-
-      // other log-related options
-      errors_to_stderr = opt.exists("errors-to-stderr");
+      errors_to_stderr = log.errors_to_stderr;
     }
 
-    std::string get_config() const
+    static std::string get_config(const OptionList& opt)
     {
       // get config file
       const std::string config_fn = opt.get("config", 1, 256);
       return read_config(config_fn);
     }
 
-    void start()
+    void start(const OptionList& opt)
     {
       const Option& o = opt.get("management");
       const std::string addr = o.get(1, 256);
       const std::string port = o.get(2, 16);
 
       hold_flag = opt.exists("management-hold");
+
+      // management-queue-limit low_water high_water
+      {
+	const Option* o = opt.get_ptr("management-queue-limit");
+	if (o)
+	  {
+	    const size_t low_water = o->get_num<size_t>(1, 0, 0, 1000000);
+	    const size_t high_water = o->get_num<size_t>(2, 0, 0, 1000000);
+	    content_out_throttle.reset(new BufferThrottle(low_water, high_water));
+	  }
+      }
 
       // management-client-user root
       {
@@ -260,12 +289,12 @@ namespace openvpn {
 	{
 	  if (port == "unix")
 	    {
-	      OPENVPN_LOG("Connecting to " << addr << " [unix]");
+	      OPENVPN_LOG("OMI Connecting to " << addr << " [unix]");
 	      connect_unix(addr);
 	    }
 	  else
 	    {
-	      OPENVPN_LOG("Connecting to [" << addr << "]:" << port << " [tcp]");
+	      OPENVPN_LOG("OMI Connecting to [" << addr << "]:" << port << " [tcp]");
 	      connect_tcp(addr, port);
 	    }
 	}
@@ -273,15 +302,21 @@ namespace openvpn {
 	{
 	  if (port == "unix")
 	    {
-	      OPENVPN_LOG("Listening on " << addr << " [unix]");
+	      OPENVPN_LOG("OMI Listening on " << addr << " [unix]");
 	      listen_unix(addr);
 	    }
 	  else
 	    {
-	      OPENVPN_LOG("Listening on [" << addr << "]:" << port << " [tcp]");
+	      OPENVPN_LOG("OMI Listening on [" << addr << "]:" << port << " [tcp]");
 	      listen_tcp(addr, port);
 	    }
 	}
+    }
+
+    void start_connection_if_not_hold()
+    {
+      if (!hold_flag)
+	omi_start_connection();
     }
 
     void send(BufferPtr buf)
@@ -289,6 +324,8 @@ namespace openvpn {
       if (!is_sock_open())
 	return;
       content_out.push_back(std::move(buf));
+      if (content_out_throttle)
+	content_out_throttle->size_change(content_out.size());
       if (content_out.size() == 1) // send operation not currently active?
 	queue_send();
     }
@@ -297,6 +334,14 @@ namespace openvpn {
     {
       if (!str.empty())
 	send(buf_from_string(str));
+    }
+
+    bool send_ready() const
+    {
+      if (content_out_throttle)
+	return content_out_throttle->ready();
+      else
+	return true;
     }
 
     void log_full(const std::string& text) // logs to OMI buffer and log file
@@ -310,6 +355,12 @@ namespace openvpn {
       else
 #endif
       std::cout << date_time(now) << ' ' << text << std::flush;
+    }
+
+    void log_timestamp(const time_t timestamp, const std::string& text) // logs to OMI buffer only
+    {
+      const std::string textcrlf = string::unix2dos(text, true);
+      log_line(openvpn::to_string(timestamp) + ",," + textcrlf);
     }
 
     void log_line(const std::string& line) // logs to OMI buffer only
@@ -350,14 +401,58 @@ namespace openvpn {
     virtual void omi_start_connection() = 0;
     virtual void omi_done(const bool eof) = 0;
     virtual void omi_sigterm() = 0;
-    virtual void omi_sighup() = 0;
     virtual bool omi_stop() = 0;
 
+    virtual bool omi_is_sighup_implemented()
+    {
+      return false;
+    }
+
+    virtual void omi_sighup()
+    {
+    }
+
     asio::io_context& io_context;
-    const OptionList opt;
 
   private:
     typedef RCPtr<OMICore> Ptr;
+
+    class BufferThrottle
+    {
+    public:
+      BufferThrottle(const size_t low_water_arg,
+		     const size_t high_water_arg)
+	: low_water(low_water_arg),
+	  high_water(high_water_arg)
+      {
+	if (low_water > high_water)
+	  throw Exception("bad management-queue-limit values");
+      }
+
+      void size_change(const size_t size)
+      {
+	if (ready_)
+	  {
+	    if (size > high_water)
+	      ready_ = false;
+	  }
+	else
+	  {
+	    if (size <= low_water)
+	      ready_ = true;
+	  }
+      }
+
+      bool ready() const
+      {
+	return ready_;
+      }
+
+    private:
+      const size_t low_water;
+      const size_t high_water;
+      volatile bool ready_ = true;
+    };
 
     void command_in(std::unique_ptr<Command> cmd)
     {
@@ -518,7 +613,7 @@ namespace openvpn {
 	  send("SUCCESS: signal SIGTERM thrown\r\n");
 	  omi_sigterm();
 	}
-      else if (type == "SIGHUP")
+      else if (type == "SIGHUP" && omi_is_sighup_implemented())
 	{
 	  send("SUCCESS: signal SIGHUP thrown\r\n");
 	  omi_sighup();
@@ -565,6 +660,8 @@ namespace openvpn {
       if (is_open)
 	socket->close();
       content_out.clear();
+      if (content_out_throttle)
+	content_out_throttle->size_change(content_out.size());
       in_partial.clear();
       if (is_open)
 	omi_done(eof);
@@ -616,20 +713,6 @@ namespace openvpn {
 	return read_stdin();
       else
 	return read_text_utf8(fn);
-    }
-
-    void log_setup(const std::string& log_fn, const bool append)
-    {
-#if defined(OPENVPN_PLATFORM_WIN)
-      log_handle = Win::LogUtil::create_file(log_fn, "", append);
-#else
-      RedirectStd redir("",
-			log_fn,
-			append ? RedirectStd::FLAGS_APPEND : RedirectStd::FLAGS_OVERWRITE,
-			RedirectStd::MODE_ALL,
-			false);
-      redir.redirect();
-#endif
     }
 
     void listen_tcp(const std::string& addr, const std::string& port)
@@ -848,7 +931,11 @@ namespace openvpn {
 
       BufferPtr buf = content_out.front();
       if (bytes_sent == buf->size())
-	content_out.pop_front();
+	{
+	  content_out.pop_front();
+	  if (content_out_throttle)
+	    content_out_throttle->size_change(content_out.size());
+	}
       else if (bytes_sent < buf->size())
 	buf->advance(bytes_sent);
       else
@@ -875,7 +962,7 @@ namespace openvpn {
     bool errors_to_stderr = false;
 
     // stopping
-    bool stop_called = false;
+    volatile bool stop_called = false;
     AsioTimer stop_timer;
 
     // hold
@@ -889,6 +976,9 @@ namespace openvpn {
     History hist_log   {"log",   100};
     History hist_state {"state", 100};
     History hist_echo  {"echo",  100};
+
+    // throttling
+    std::unique_ptr<BufferThrottle> content_out_throttle;
 
 #if defined(OPENVPN_PLATFORM_WIN)
     Win::ScopedHANDLE log_handle;
