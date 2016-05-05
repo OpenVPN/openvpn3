@@ -297,6 +297,28 @@ namespace openvpn {
       return ret;
     }
 
+    // replace all spaces in string with rep, reducing instances of multiple
+    // consecutive spaces to a single instance of rep and removing leading
+    // and trailing spaces
+    inline std::string reduce_spaces(const std::string& str, const char rep)
+    {
+      std::string ret;
+      bool last_space = true;
+      for (std::string::const_iterator i = str.begin(); i != str.end(); ++i)
+	{
+	  char c = *i;
+	  const bool space = is_space(c);
+	  if (is_space(c))
+	    c = rep;
+	  if (!(space && last_space))
+	    ret += c;
+	  last_space = space;
+	}
+      if (last_space && !ret.empty())
+	ret.pop_back();
+      return ret;
+    }
+
     // generate a string with spaces
     inline std::string spaces(int n)
     {
