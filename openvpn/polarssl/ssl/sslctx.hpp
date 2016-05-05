@@ -270,6 +270,11 @@ namespace openvpn {
 	force_aes_cbc_ciphersuites = v;
       }
 
+      virtual void set_x509_track(X509Track::ConfigSet x509_track_config_arg)
+      {
+	x509_track_config = std::move(x509_track_config_arg);
+      }
+
       virtual void set_rng(const RandomAPI::Ptr& rng_arg)
       {
 	rng = rng_arg;
@@ -399,6 +404,7 @@ namespace openvpn {
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
+      X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
       bool enable_renegotiation;
       bool force_aes_cbc_ciphersuites;

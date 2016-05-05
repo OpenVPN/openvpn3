@@ -23,18 +23,29 @@
 #define OPENVPN_AUTH_AUTHCERT_H
 
 #include <string>
+#include <vector>
 #include <sstream>
 #include <cstring>
+#include <memory>
+#include <utility>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/binprefix.hpp>
+#include <openvpn/pki/x509track.hpp>
 
 namespace openvpn {
 
+    class OpenSSLContext;
+    class PolarSSLContext;
+
     struct AuthCert : public RC<thread_unsafe_refcount>
     {
+      // AuthCert needs to friend SSL implementation classes
+      friend class OpenSSLContext;
+      friend class PolarSSLContext;
+
       typedef RCPtr<AuthCert> Ptr;
 
       AuthCert()
@@ -94,9 +105,32 @@ namespace openvpn {
 	  return cn;
       }
 
+      const std::string& get_cn() const
+      {
+	return cn;
+      }
+
+      long get_sn() const
+      {
+	return sn;
+      }
+
+      const X509Track::Set* x509_track_get() const
+      {
+	return x509_track.get();
+      }
+
+      std::unique_ptr<X509Track::Set> x509_track_take_ownership()
+      {
+	return std::move(x509_track);
+      }
+
+    private:
       std::string cn;                // common name
       long sn;                       // serial number
       unsigned char issuer_fp[20];   // issuer cert fingerprint
+
+      std::unique_ptr<X509Track::Set> x509_track;
     };
 }
 

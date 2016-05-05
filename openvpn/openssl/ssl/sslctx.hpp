@@ -28,6 +28,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <utility>
 
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
@@ -39,6 +40,7 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/uniqueptr.hpp>
+#include <openvpn/common/hexstr.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
@@ -207,6 +209,11 @@ namespace openvpn {
 	force_aes_cbc_ciphersuites = v;
       }
 
+      virtual void set_x509_track(X509Track::ConfigSet x509_track_config_arg)
+      {
+	x509_track_config = std::move(x509_track_config_arg);
+      }
+
       virtual void set_rng(const RandomAPI::Ptr& rng_arg)
       {
 	// Not implemented because OpenSSL is hardcoded to
@@ -330,6 +337,7 @@ namespace openvpn {
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
+      X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
       bool force_aes_cbc_ciphersuites;
       bool enable_renegotiation;
@@ -469,6 +477,8 @@ namespace openvpn {
 	    {
 	      SSL_set_accept_state(ssl);
 	      authcert.reset(new AuthCert());
+	      if (!ctx.config->x509_track_config.empty())
+		authcert->x509_track.reset(new X509Track::Set);
 	    }
 	  else if (ctx.config->mode.is_client())
 	    SSL_set_connect_state(ssl);
@@ -1080,6 +1090,95 @@ namespace openvpn {
       return ret;
     }
 
+    static std::string x509_get_serial(::X509 *cert)
+    {
+      ASN1_INTEGER *asn1_i;
+      BIGNUM *bignum;
+      char *openssl_serial;
+
+      asn1_i = X509_get_serialNumber(cert);
+      bignum = ASN1_INTEGER_to_BN(asn1_i, NULL);
+      openssl_serial = BN_bn2dec(bignum);
+
+      const std::string ret = openssl_serial;
+
+      BN_free(bignum);
+      OPENSSL_free(openssl_serial);
+
+      return ret;
+    }
+
+    static std::string x509_get_serial_hex(::X509 *cert)
+    {
+      const ASN1_INTEGER *asn1_i = X509_get_serialNumber(cert);
+      return render_hex_sep(asn1_i->data, asn1_i->length, ':', false);
+    }
+
+    static void x509_track_extract_nid(const X509Track::Type xt_type,
+				       const int nid,
+				       ::X509 *cert,
+				       const int depth,
+				       X509Track::Set& xts)
+    {
+      const std::string value = x509_get_field(cert, nid);
+      if (!value.empty())
+	xts.emplace_back(xt_type, depth, x509_get_field(cert, nid));
+    }
+
+    static void x509_track_extract_from_cert(::X509 *cert,
+					     const int depth,
+					     const X509Track::ConfigSet& cs,
+					     X509Track::Set& xts)
+    {
+      for (auto &c : cs)
+	{
+	  if (c.depth_match(depth))
+	    {
+	      switch (c.type)
+		{
+		case X509Track::SERIAL:
+		  xts.emplace_back(X509Track::SERIAL,
+				   depth,
+				   x509_get_serial(cert));
+		  break;
+		case X509Track::SERIAL_HEX:
+		  xts.emplace_back(X509Track::SERIAL_HEX,
+				   depth,
+				   x509_get_serial_hex(cert));
+		  break;
+		case X509Track::SHA1:
+		  xts.emplace_back(X509Track::SHA1,
+				   depth,
+				   render_hex_sep(cert->sha1_hash, SHA_DIGEST_LENGTH, ':', true));
+		  break;
+		case X509Track::CN:
+		  x509_track_extract_nid(X509Track::CN, NID_commonName, cert, depth, xts);
+		  break;
+		case X509Track::C:
+		  x509_track_extract_nid(X509Track::C, NID_countryName, cert, depth, xts);
+		  break;
+		case X509Track::L:
+		  x509_track_extract_nid(X509Track::L, NID_localityName, cert, depth, xts);
+		  break;
+		case X509Track::ST:
+		  x509_track_extract_nid(X509Track::ST, NID_stateOrProvinceName, cert, depth, xts);
+		  break;
+		case X509Track::O:
+		  x509_track_extract_nid(X509Track::O, NID_organizationName, cert, depth, xts);
+		  break;
+		case X509Track::OU:
+		  x509_track_extract_nid(X509Track::OU, NID_organizationalUnitName, cert, depth, xts);
+		  break;
+		case X509Track::EMAIL:
+		  x509_track_extract_nid(X509Track::EMAIL, NID_pkcs9_emailAddress, cert, depth, xts);
+		  break;
+		default:
+		  break;
+		}
+	    }
+	}
+    }
+
     static int verify_callback_client(int preverify_ok, X509_STORE_CTX *ctx)
     {
       // get the OpenSSL SSL object
@@ -1201,6 +1300,13 @@ namespace openvpn {
 	      self_ssl->authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
 	    }
 	}
+
+      // x509-track enabled?
+      if (self_ssl->authcert && self_ssl->authcert->x509_track)
+	x509_track_extract_from_cert(ctx->current_cert,
+				     ctx->error_depth,
+				     self->config->x509_track_config,
+				     *self_ssl->authcert->x509_track);
 
       return preverify_ok;
     }

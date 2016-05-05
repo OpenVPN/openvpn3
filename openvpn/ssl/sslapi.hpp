@@ -110,6 +110,7 @@ namespace openvpn {
     virtual void set_local_cert_enabled(const bool v) = 0;
     virtual void set_enable_renegotiation(const bool v) = 0;
     virtual void set_force_aes_cbc_ciphersuites(const bool v) = 0;
+    virtual void set_x509_track(X509Track::ConfigSet x509_track_config_arg) = 0;
     virtual void set_rng(const RandomAPI::Ptr& rng_arg) = 0;
     virtual void load(const OptionList& opt, const unsigned int lflags) = 0;
 
