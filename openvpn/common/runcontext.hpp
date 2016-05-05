@@ -31,16 +31,19 @@
 #ifndef OPENVPN_COMMON_RUNCONTEXT_H
 #define OPENVPN_COMMON_RUNCONTEXT_H
 
-#include <type_traits> // for std::is_nothrow_move_constructible
+#include <string>
+#include <vector>
 #include <thread>
 #include <mutex>
 #include <memory>
+#include <type_traits> // for std::is_nothrow_move_constructible
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/asiosignal.hpp>
 #include <openvpn/common/signal.hpp>
+#include <openvpn/common/stop.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/timestr.hpp>
@@ -51,23 +54,44 @@
 
 namespace openvpn {
 
-  struct ServerThreadBase : public RC<thread_safe_refcount>
+  struct RunContextLogEntry
   {
-    typedef RCPtr<ServerThreadBase> Ptr;
+    RunContextLogEntry(const time_t timestamp_arg, const std::string& text_arg)
+      : timestamp(timestamp_arg),
+	text(text_arg)
+    {
+    }
 
-    virtual void thread_safe_stop() = 0;
+    time_t timestamp;
+    std::string text;
   };
 
-  struct ServerThreadWeakBase : public RCWeak<thread_safe_refcount>
+  template <typename RC_TYPE>
+  struct ServerThreadType : public virtual RC_TYPE
   {
-    typedef RCPtr<ServerThreadWeakBase> Ptr;
-    typedef RCWeakPtr<ServerThreadWeakBase> WPtr;
+    typedef RCPtr<ServerThreadType> Ptr;
+    typedef RCWeakPtr<ServerThreadType> WPtr;
 
     virtual void thread_safe_stop() = 0;
+
+    virtual void log_notify(const RunContextLogEntry& le)
+    {
+    }
+  };
+
+  typedef ServerThreadType<RCWeak<thread_safe_refcount>> ServerThreadWeakBase;
+  typedef ServerThreadType<RC<thread_safe_refcount>> ServerThreadBase;
+
+  struct RunContextBase : public LogBase
+  {
+    virtual void cancel() = 0;
+    virtual std::vector<RunContextLogEntry> add_log_observer(const unsigned int unit) = 0;
+    virtual void disable_log_history() = 0;
+    virtual Stop* async_stop() = 0;
   };
 
   template <typename ServerThread, typename Stats>
-  class RunContext : public LogBase
+  class RunContext : public RunContextBase
   {
   public:
     typedef RCPtr<RunContext> Ptr;
@@ -106,7 +130,7 @@ namespace openvpn {
       exit_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
                             {
 			      if (!error)
-				self->exit_timer_callback(error);
+				self->cancel();
                             });
 #endif
     }
@@ -123,7 +147,7 @@ namespace openvpn {
     // called from worker thread
     void set_server(const unsigned int unit, ServerThread* serv)
     {
-      std::lock_guard<std::mutex> lock(mutex);
+      std::lock_guard<std::recursive_mutex> lock(mutex);
       if (halt)
 	throw Exception("RunContext::set_server: halting");
       while (servlist.size() <= unit)
@@ -136,9 +160,39 @@ namespace openvpn {
     // called from worker thread
     void clear_server(const unsigned int unit)
     {
-      std::lock_guard<std::mutex> lock(mutex);
+      std::lock_guard<std::recursive_mutex> lock(mutex);
       if (unit < servlist.size())
 	servlist[unit] = nullptr;
+
+      // remove log observer entry, if present
+      auto lu = std::find(log_observers.begin(), log_observers.end(), unit);
+      if (lu != log_observers.end())
+	log_observers.erase(lu);
+    }
+
+    void enable_log_history()
+    {
+      std::lock_guard<std::recursive_mutex> lock(mutex);
+      if (!log_history)
+	log_history.reset(new std::vector<RunContextLogEntry>());
+    }
+
+    virtual void disable_log_history() override
+    {
+      std::lock_guard<std::recursive_mutex> lock(mutex);
+      log_history.reset();
+    }
+
+    virtual std::vector<RunContextLogEntry> add_log_observer(const unsigned int unit) override
+    {
+      std::lock_guard<std::recursive_mutex> lock(mutex);
+      auto lu = std::find(log_observers.begin(), log_observers.end(), unit);
+      if (lu == log_observers.end())
+	log_observers.push_back(unit);
+      if (log_history)
+	return *log_history;
+      else
+	return std::vector<RunContextLogEntry>();
     }
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
@@ -148,7 +202,8 @@ namespace openvpn {
       exit_sock->async_read_some(asio::null_buffers(),
 				 [self=Ptr(this)](const asio::error_code& error, const size_t bytes_recvd)
 				 {
-				   self->cancel();
+				   if (!error)
+				     self->cancel();
 				 });
     }
 #endif
@@ -178,50 +233,37 @@ namespace openvpn {
 	}
     }
 
-    virtual void log(const std::string& str)
+    virtual void log(const std::string& str) override
     {
-      const std::string ts = date_time();
+      time_t now;
+      const std::string ts = date_time_store_time_t(now);
       {
-	std::lock_guard<std::mutex> lock(log_mutex);
+	std::lock_guard<std::recursive_mutex> lock(mutex);
 	std::cout << ts << ' ' << str << std::flush;
+
+	if (!log_observers.empty() || log_history)
+	  {
+	    const RunContextLogEntry le(now, str);
+	    for (auto &si : log_observers)
+	      {
+		ServerThread* st = servlist[si];
+		if (st)
+		  st->log_notify(le);
+	      }
+	    if (log_history)
+	      log_history->emplace_back(now, str);
+	  }
       }
     }
 
-    const Log::Context::Wrapper& log_wrapper() { return log_wrap; }
-
-    void set_stats_obj(const typename Stats::Ptr& stats_arg)
-    {
-      stats = stats_arg;
-    }
-
-  private:
     // called from main or worker thread
-    void add_thread()
-    {
-      std::lock_guard<std::mutex> lock(mutex);
-      ++thread_count;
-    }
-
-    // called from main or worker thread
-    void remove_thread()
-    {
-      bool last = false;
-      {
-	std::lock_guard<std::mutex> lock(mutex);
-	last = (--thread_count <= 0);
-      }
-      if (last)
-	cancel();
-    }
-
-    // called from main or worker thread
-    void cancel()
+    virtual void cancel() override
     {
       if (halt)
 	return;
       asio::post(io_context, [self=Ptr(this)]()
         {
-	  std::lock_guard<std::mutex> lock(self->mutex);
+	  std::lock_guard<std::recursive_mutex> lock(self->mutex);
 	  if (self->halt)
 	    return;
 	  self->halt = true;
@@ -248,12 +290,41 @@ namespace openvpn {
 	      }
 	    OPENVPN_LOG(self->prefix << "Stopping " << stopped << '/' << self->servlist.size() << " thread(s)");
 	  }
+
+	  // async stop
+	  self->async_stop_.stop();
 	});
     }
 
-    void exit_timer_callback(const asio::error_code& e)
+    const Log::Context::Wrapper& log_wrapper() { return log_wrap; }
+
+    void set_stats_obj(const typename Stats::Ptr& stats_arg)
     {
-      if (!e)
+      stats = stats_arg;
+    }
+
+    virtual Stop* async_stop()
+    {
+      return &async_stop_;
+    }
+
+  private:
+    // called from main or worker thread
+    void add_thread()
+    {
+      std::lock_guard<std::recursive_mutex> lock(mutex);
+      ++thread_count;
+    }
+
+    // called from main or worker thread
+    void remove_thread()
+    {
+      bool last = false;
+      {
+	std::lock_guard<std::recursive_mutex> lock(mutex);
+	last = (--thread_count <= 0);
+      }
+      if (last)
 	cancel();
     }
 
@@ -301,14 +372,22 @@ namespace openvpn {
     std::unique_ptr<asio::posix::stream_descriptor> exit_sock;
 #endif
 
+    // main lock
+    std::recursive_mutex mutex;
+
     // servlist and related vars protected by mutex
-    std::mutex mutex;
     std::vector<ServerThread*> servlist;
     int thread_count;
     volatile bool halt;
 
-    // logging protected by log_mutex
-    std::mutex log_mutex;
+    // stop
+    Stop async_stop_;
+
+    // log observers
+    std::vector<unsigned int> log_observers; // unit numbers of log observers
+    std::unique_ptr<std::vector<RunContextLogEntry>> log_history;
+
+    // logging
     Log::Context log_context;
     Log::Context::Wrapper log_wrap; // must be constructed after log_context
   };
