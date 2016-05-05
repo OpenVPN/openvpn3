@@ -73,6 +73,12 @@ namespace openvpn {
       {
       }
 
+      RouteType(const RouteType& other, const std::uint32_t mark_arg)
+	: RouteType(other)
+      {
+	mark = mark_arg;
+      }
+
       static RouteType from_string(const std::string& rtstr, const char *title = nullptr)
       {
 	RouteType r;
