@@ -60,6 +60,12 @@ namespace openvpn {
     return date_time(now);
   }
 
+  inline std::string date_time_store_time_t(time_t& save)
+  {
+    save = time(NULL);
+    return date_time(now);
+  }
+
 #else
 
   inline std::string date_time(const time_t t)
@@ -108,6 +114,18 @@ namespace openvpn {
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
       }
+    return date_time(&tv, true);
+  }
+
+  inline std::string date_time_store_time_t(time_t& save)
+  {
+    struct timeval tv;
+    if (::gettimeofday(&tv, nullptr) < 0)
+      {
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+      }
+    save = tv.tv_sec;
     return date_time(&tv, true);
   }
 
