@@ -38,14 +38,22 @@ namespace openvpn {
     public:
       Scope(Stop* stop_arg, std::function<void()>&& method_arg)
 	: stop(stop_arg),
-	  index(0),
-	  method(std::move(method_arg))
+	  method(std::move(method_arg)),
+	  index(-1)
       {
 	if (stop)
 	  {
 	    std::lock_guard<std::recursive_mutex> lock(stop->mutex);
-	    index = stop->scopes.size();
-	    stop->scopes.push_back(this);
+	    if (stop->stop_called)
+	      {
+		// stop already called, call method immediately
+		method();
+	      }
+	    else
+	      {
+		index = stop->scopes.size();
+		stop->scopes.push_back(this);
+	      }
 	  }
       }
 
@@ -54,7 +62,7 @@ namespace openvpn {
 	if (stop)
 	  {
 	    std::lock_guard<std::recursive_mutex> lock(stop->mutex);
-	    if (stop->scopes.size() > index && stop->scopes[index] == this)
+	    if (index >= 0 && index < stop->scopes.size() && stop->scopes[index] == this)
 	      {
 		stop->scopes[index] = nullptr;
 		stop->prune();
@@ -66,9 +74,9 @@ namespace openvpn {
       Scope(const Scope&) = delete;
       Scope& operator=(const Scope&) = delete;
 
-      Stop* stop;
-      size_t index;
-      std::function<void()> method;
+      Stop *const stop;
+      const std::function<void()> method;
+      int index;
     };
 
     Stop()
@@ -78,13 +86,14 @@ namespace openvpn {
     void stop()
     {
       std::lock_guard<std::recursive_mutex> lock(mutex);
+      stop_called = true;
       while (scopes.size())
 	{
 	  Scope* scope = scopes.back();
 	  scopes.pop_back();
 	  if (scope)
 	    {
-	      scope->stop = nullptr;
+	      scope->index = -1;
 	      scope->method();
 	    }
 	}
@@ -100,8 +109,9 @@ namespace openvpn {
 	scopes.pop_back();
     }
 
-    std::vector<Scope*> scopes;
     std::recursive_mutex mutex;
+    std::vector<Scope*> scopes;
+    bool stop_called = false;
   };
 
 }
