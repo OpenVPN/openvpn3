@@ -36,10 +36,14 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/asiopolysock.hpp>
 
+#ifndef OPENVPN_ACCEPTOR_LISTENER_BASE_RC
+#define OPENVPN_ACCEPTOR_LISTENER_BASE_RC RC<thread_unsafe_refcount>
+#endif
+
 namespace openvpn {
   namespace Acceptor {
 
-    struct ListenerBase : public RC<thread_unsafe_refcount>
+    struct ListenerBase : public OPENVPN_ACCEPTOR_LISTENER_BASE_RC
     {
       typedef RCPtr<ListenerBase> Ptr;
 
