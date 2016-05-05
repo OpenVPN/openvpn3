@@ -720,6 +720,9 @@ namespace openvpn {
 	load_duration_parm(handshake_window, "hand-window", opt, 10, false);
 	become_primary = Time::Duration::seconds(std::min(handshake_window.to_seconds(),
 							    renegotiate.to_seconds() / 2));
+	if (type == LOAD_COMMON_SERVER)
+	  renegotiate += handshake_window; // avoid renegotiation collision with client
+
 	// keepalive, ping, ping-restart
 	{
 	  const Option *o = opt.get_ptr("keepalive");
