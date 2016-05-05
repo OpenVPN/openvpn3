@@ -30,6 +30,7 @@ namespace openvpn {
       RESTART_PSID,     // restart, preserve session token
       RESTART_PASSIVE,  // restart, preserve session token and local client instance object
       AUTH_FAILED,      // auth fail, don't preserve session token
+      RAW,              // pass raw message to client
     };
   }
 }

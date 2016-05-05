@@ -389,7 +389,7 @@ namespace openvpn {
 	BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
 	BufferStreamOut os(*buf);
 
-	const char *ts = "";
+	std::string ts;
 
 	switch (type)
 	  {
@@ -431,6 +431,16 @@ namespace openvpn {
 	    if (tell_client && !reason.empty())
 	      os << ',' << reason;
 	    break;
+	  case HaltRestart::RAW:
+	    {
+	      const size_t pos = reason.find_first_of(',');
+	      if (pos != std::string::npos)
+		ts = reason.substr(0, pos);
+	      else
+		ts = reason;
+	      os << reason;
+	      break;
+	    }
 	  }
 
 	OPENVPN_LOG("Disconnect: " << ts << ' ' << reason);
