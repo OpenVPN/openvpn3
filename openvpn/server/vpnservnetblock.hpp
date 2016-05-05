@@ -157,13 +157,6 @@ namespace openvpn {
 	}
     }
 
-    static bool configured(const OptionList& opt,
-			   const std::string& opt_name,
-			   const bool ipv4_optional)
-    {
-      return !ipv4_optional || opt.exists(opt_name) || opt.exists(opt_name + "-ipv6");
-    }
-
     const Netblock& netblock4() const { return snb4; }
     const Netblock& netblock6() const { return snb6; }
 

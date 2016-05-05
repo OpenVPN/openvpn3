@@ -42,64 +42,8 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(vpn_serv_pool_error);
 
-    class Set;
-    class IP46;
-
-    enum Index {
-      GENERAL_POOL=0,
-      //OTHER_POOL,
-
-      SIZE
-    };
-
-    inline const char *pool_name(const unsigned int i)
+    struct IP46
     {
-      static const char *const names[] = {
-	"server",
-	//"other-pool",
-      };
-
-      static_assert(SIZE == array_size(names), "VPNServerPool::pool_name() size inconsistency");
-
-      if (i < SIZE)
-	return names[i];
-      else
-	return "UNDEF_POOL";
-    }
-
-    class Pool : public VPNServerNetblock
-    {
-    public:
-      friend IP46;
-
-      Pool(const OptionList& opt,
-	   const std::string& opt_name,
-	   const bool ipv4_optional)
-	: VPNServerNetblock(opt, opt_name, ipv4_optional, 0)
-      {
-	pool4.add_range(netblock4().clients);
-	pool6.add_range(netblock6().clients);
-      }
-
-    private:
-      IP::Pool pool4;
-      IP::Pool pool6;
-    };
-
-    class IP46
-    {
-    public:
-      friend Set;
-
-      enum Flags {
-	IPv4_DEPLETION=(1<<0),
-	IPv6_DEPLETION=(1<<1),
-      };
-
-      IP46()
-	: pool_index(-1)
-      {}
-
       void add_routes(std::vector<IP::Route>& rtvec,
 		      const std::uint32_t mark)
       {
@@ -109,11 +53,6 @@ namespace openvpn {
 	  rtvec.emplace_back(ip6, ip6.size(), mark);
       }
 
-      bool defined() const
-      {
-	return pool_index >= 0 && pool_index < SIZE;
-      }
-
       std::string to_string() const
       {
 	std::ostringstream os;
@@ -121,91 +60,78 @@ namespace openvpn {
 	return os.str();
       }
 
+      bool defined() const
+      {
+	return ip4.defined() || ip6.defined();
+      }
+
       IP::Addr ip4;
       IP::Addr ip6;
+    };
 
-    private:
-      // returns flags
-      unsigned int acquire(Pool& pool, const unsigned int index, const bool request_ipv6)
+    class Pool : public VPNServerNetblock
+    {
+    public:
+      enum Flags {
+	IPv4_DEPLETION=(1<<0),
+	IPv6_DEPLETION=(1<<1),
+      };
+
+      Pool(const OptionList& opt)
+	: VPNServerNetblock(init_snb_from_opt(opt))
       {
-	unsigned int flags = 0;
-	pool_index = index;
-	if (!pool.pool4.acquire_addr(ip4))
-	  flags |= IPv4_DEPLETION;
-	if (request_ipv6 && pool.netblock6().defined())
+	if (configured(opt, "server"))
 	  {
-	    if (!pool.pool6.acquire_addr(ip6))
+	    pool4.add_range(netblock4().clients);
+	    pool6.add_range(netblock6().clients);
+	  }
+      }
+
+      // returns flags
+      unsigned int acquire(IP46& addr_pair, const bool request_ipv6)
+      {
+	std::lock_guard<std::mutex> lock(mutex);
+	unsigned int flags = 0;
+	if (!pool4.acquire_addr(addr_pair.ip4))
+	  flags |= IPv4_DEPLETION;
+	if (request_ipv6 && netblock6().defined())
+	  {
+	    if (!pool6.acquire_addr(addr_pair.ip6))
 	      flags |= IPv6_DEPLETION;
 	  }
 	return flags;
       }
 
-      void release(Pool& pool)
-      {
-	if (ip4.defined())
-	  pool.pool4.release_addr(ip4);
-	if (ip6.defined())
-	  pool.pool6.release_addr(ip6);
-	pool_index = -1;
-      }
-
-      int pool_index;
-    };
-
-    class Set
-    {
-    public:
-      Set(const OptionList& opt)
-      {
-	for (unsigned int i = 0; i < SIZE; ++i)
-	  {
-	    const std::string opt_name = pool_name(i);
-	    const bool ipv4_optional = (i > 0);
-	    if (VPNServerNetblock::configured(opt, opt_name, ipv4_optional))
-	      pools.emplace_back(new Pool(opt, opt_name, ipv4_optional));
-	    else
-	      pools.emplace_back();
-	  }
-      }
-
-      // returns IP46::Flags
-      unsigned int acquire(IP46& ip46, const unsigned int index, const bool request_ipv6)
+      void release(IP46& addr_pair)
       {
 	std::lock_guard<std::mutex> lock(mutex);
-	if (index >= SIZE)
-	  OPENVPN_THROW(vpn_serv_pool_error, "pool index=" << index << " is out of range (must be less than " << SIZE << ')');
-	if (!pools[index])
-	  OPENVPN_THROW(vpn_serv_pool_error, pool_name(index) << " IP address pool is undefined");
-	return ip46.acquire(*pools[index], index, request_ipv6);
-      }
-
-      void release(IP46& ip46)
-      {
-	std::lock_guard<std::mutex> lock(mutex);
-	if (!ip46.defined())
-	  return;
-	if (!pools[ip46.pool_index])
-	  return;
-	ip46.release(*pools[ip46.pool_index]);
-      }
-
-      const VPNServerNetblock* snb(const IP46& ip46)
-      {
-	if (!ip46.defined())
-	  return nullptr;
-	return pools[ip46.pool_index].get();
-      }
-
-      const VPNServerNetblock* snb(const unsigned int index)
-      {
-	if (index >= SIZE)
-	  return nullptr;
-	return pools[index].get();
+	if (addr_pair.ip4.defined())
+	  pool4.release_addr(addr_pair.ip4);
+	if (addr_pair.ip6.defined())
+	  pool6.release_addr(addr_pair.ip6);
       }
 
     private:
-      std::vector<std::unique_ptr<Pool>> pools; // size is always SIZE after construction
+      static VPNServerNetblock init_snb_from_opt(const OptionList& opt)
+      {
+	if (configured(opt, "server"))
+	  return VPNServerNetblock(opt, "server", false, 0);
+	else if (configured(opt, "ifconfig"))
+	  return VPNServerNetblock(opt, "ifconfig", false, 0);
+	else
+	  throw vpn_serv_pool_error("one of 'server' or 'ifconfig' directives is required");
+      }
+
+      static bool configured(const OptionList& opt,
+			     const std::string& opt_name)
+      {
+	return opt.exists(opt_name) || opt.exists(opt_name + "-ipv6");
+      }
+
       std::mutex mutex;
+
+      IP::Pool pool4;
+      IP::Pool pool6;
     };
 
     class IP46AutoRelease : public IP46, public RC<thread_safe_refcount>
@@ -213,19 +139,21 @@ namespace openvpn {
     public:
       typedef RCPtr<IP46AutoRelease> Ptr;
 
-      IP46AutoRelease(Set& set_arg)
-	: set(set_arg)
+      IP46AutoRelease(Pool* pool_arg)
+	: pool(pool_arg)
       {
       }
 
       ~IP46AutoRelease()
       {
-	set.release(*this);
+	if (pool)
+	  pool->release(*this);
       }
 
     private:
-      Set& set;
+      Pool* pool;
     };
+
   }
 }
 
