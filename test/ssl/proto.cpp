@@ -892,7 +892,13 @@ int test(const int thread_num)
 #if defined(SERVER_NO_RENEG)
     sp->renegotiate = Time::Duration::infinite();
 #else
-    sp->renegotiate = Time::Duration::seconds(RENEG);
+    // NOTE: if we don't add sp->handshake_window, both client and server reneg-sec (RENEG)
+    // will be equal and will therefore occasionally collide.  Such collisions can sometimes
+    // produce this OpenSSL error:
+    // OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=400 status=-1: error:140E0197:SSL routines:SSL_shutdown:shutdown while in init
+    // The issue was introduced by this patch in OpenSSL:
+    //   https://github.com/openssl/openssl/commit/64193c8218540499984cd63cda41f3cd491f3f59
+    sp->renegotiate = Time::Duration::seconds(RENEG) + sp->handshake_window;
 #endif
     sp->expire = sp->renegotiate + sp->renegotiate;
     sp->keepalive_ping = Time::Duration::seconds(5);
