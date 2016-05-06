@@ -481,7 +481,12 @@ namespace openvpn {
 		authcert->x509_track.reset(new X509Track::Set);
 	    }
 	  else if (ctx.config->mode.is_client())
-	    SSL_set_connect_state(ssl);
+	    {
+	      SSL_set_connect_state(ssl);
+	      if (ctx.config->flags & SSLConst::ENABLE_SNI)
+		if (SSL_set_tlsext_host_name(ssl, hostname) != 1)
+		  throw OpenSSLException("OpenSSLContext::SSL: SSL_set_tlsext_host_name failed");
+	    }
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext::SSL: unknown client/server mode");
 

@@ -43,6 +43,9 @@ namespace openvpn {
 
       // Disable peer verification
       NO_VERIFY_PEER=(1<<1),
+
+      // Enable SNI (Server Name Indication) when hostname is provided
+      ENABLE_SNI=(1<<2),
     };
 
   }

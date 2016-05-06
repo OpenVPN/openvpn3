@@ -602,6 +602,13 @@ namespace openvpn {
 	  else if (!(c.flags & SSLConst::NO_VERIFY_PEER))
 	    throw PolarSSLException("CA chain not defined");
 
+	  // SNI
+	  if (hostname && (c.flags & SSLConst::ENABLE_SNI))
+	    {
+	      if (ssl_set_hostname(ssl, hostname))
+		throw PolarSSLException("ssl_set_hostname failed");
+	    }
+
 	  // client cert+key
 	  if (c.local_cert_enabled)
 	    {
