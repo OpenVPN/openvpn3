@@ -29,6 +29,7 @@
 #include <asio.hpp>
 
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/common/extern.hpp>
 
 namespace openvpn {
   namespace AsioBoundSocket {
@@ -70,6 +71,8 @@ namespace openvpn {
       }
 
     };
+
+    OPENVPN_EXTERN asio::detail::service_id<SocketService> SocketService::id;
 
     typedef asio::basic_stream_socket<asio::ip::tcp, SocketService> SocketBase;
 
