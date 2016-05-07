@@ -73,6 +73,16 @@ namespace openvpn {
       return false;
     }
 
+    // Optional callback to set default value for route metric.
+    // Guaranteed to be called before other methods that deal
+    // with routes such as tun_builder_add_route and
+    // tun_builder_reroute_gw.  Route metric is ignored
+    // if < 0.
+    virtual bool tun_builder_set_route_metric_default(int metric)
+    {
+      return true;
+    }
+
     // Callback to reroute default gateway to VPN interface.
     // ipv4 is true if the default route to be added should be IPv4.
     // ipv6 is true if the default route to be added should be IPv6.
@@ -87,8 +97,10 @@ namespace openvpn {
 
     // Callback to add route to VPN interface
     // May be called more than once per tun_builder session
+    // metric is optional and should be ignored if < 0
     virtual bool tun_builder_add_route(const std::string& address,
 				       int prefix_length,
+				       int metric,
 				       bool ipv6)
     {
       return false;
@@ -96,8 +108,10 @@ namespace openvpn {
 
     // Callback to exclude route from VPN interface
     // May be called more than once per tun_builder session
+    // metric is optional and should be ignored if < 0
     virtual bool tun_builder_exclude_route(const std::string& address,
 					   int prefix_length,
+					   int metric,
 					   bool ipv6)
     {
       return false;

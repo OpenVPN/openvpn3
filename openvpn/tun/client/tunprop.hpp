@@ -50,6 +50,9 @@ namespace openvpn {
       OPT_RENDER_FLAGS = Option::RENDER_TRUNC_64 | Option::RENDER_BRACKET
     };
 
+    // maximum route metric
+    static constexpr int MAX_ROUTE_METRIC = 1000000;
+
   public:
     OPENVPN_EXCEPTION(tun_prop_error);
     OPENVPN_EXCEPTION(tun_prop_route_error);
@@ -113,6 +116,9 @@ namespace openvpn {
       // get IP version and redirect-gateway flags
       IPVerFlags ipv(opt, ip_ver_flags);
 
+      // add default route-metric
+      add_route_metric_default(tb, opt, quiet);
+
       // add remote bypass routes
       if (config.remote_list && config.remote_bypass)
 	add_remote_bypass_routes(tb, *config.remote_list, server_addr, eer.get(), quiet);
@@ -172,6 +178,28 @@ namespace openvpn {
     }
 
   private:
+
+    static void add_route_metric_default(TunBuilderBase* tb,
+					 const OptionList& opt,
+					 const bool quiet)
+    {
+      try {
+	const Option* o = opt.get_ptr("route-metric"); // DIRECTIVE
+	if (o)
+	  {
+	    const int metric = o->get_num<int>(1);
+	    if (metric < 0 || metric > MAX_ROUTE_METRIC)
+	      throw tun_prop_error("route-metric is out of range");
+	    if (!tb->tun_builder_set_route_metric_default(metric))
+	      throw tun_prop_error("tun_builder_set_route_metric_default failed");
+	  }
+      }
+      catch (const std::exception& e)
+	{
+	  if (!quiet)
+	    OPENVPN_LOG("Error processing route-metric: " << e.what());
+	}
+    }
 
     static std::string route_gateway(const OptionList& opt)
     {
@@ -292,18 +320,19 @@ namespace openvpn {
 				  bool add,
 				  const IP::Addr& addr,
 				  int prefix_length,
+				  int metric,
 				  bool ipv6,
 				  EmulateExcludeRoute* eer)
     {
       const std::string addr_str = addr.to_string();
       if (add)
 	{
-	  if (!tb->tun_builder_add_route(addr_str, prefix_length, ipv6))
+	  if (!tb->tun_builder_add_route(addr_str, prefix_length, metric, ipv6))
 	    throw tun_prop_route_error("tun_builder_add_route failed");
 	}
       else if (!eer)
 	{
-	  if (!tb->tun_builder_exclude_route(addr_str, prefix_length, ipv6))
+	  if (!tb->tun_builder_exclude_route(addr_str, prefix_length, metric, ipv6))
 	    throw tun_prop_route_error("tun_builder_exclude_route failed");
 	}
       if (eer)
@@ -346,13 +375,14 @@ namespace openvpn {
 		  const Option& o = opt[*i];
 		  try {
 		    const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o.get(1, 256), o.get_optional(2, 256), "route");
+		    const int metric = o.get_num<int>(4, -1, 0, MAX_ROUTE_METRIC);
 		    if (!pair.is_canonical())
 		      throw tun_prop_error("route is not canonical");
 		    if (pair.version() != IP::Addr::V4)
 		      throw tun_prop_error("route is not IPv4");
 		    const bool add = route_target(o, 3);
 		    if (!ipv.rgv4() || !add)
-		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), false, eer);
+		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, false, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -374,13 +404,14 @@ namespace openvpn {
 		  const Option& o = opt[*i];
 		  try {
 		    const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o.get(1, 256), "route-ipv6");
+		    const int metric = o.get_num<int>(3, -1, 0, MAX_ROUTE_METRIC);
 		    if (!pair.is_canonical())
 		      throw tun_prop_error("route is not canonical");
 		    if (pair.version() != IP::Addr::V6)
 		      throw tun_prop_error("route is not IPv6");
 		    const bool add = route_target(o, 2);
 		    if (!ipv.rgv6() || !add)
-		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), true, eer);
+		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, true, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -407,7 +438,7 @@ namespace openvpn {
 	    {
 	      try {
 		const IP::Addr::Version ver = addr.version();
-		add_exclude_route(tb, false, addr, IP::Addr::version_size(ver), ver == IP::Addr::V6, eer);
+		add_exclude_route(tb, false, addr, IP::Addr::version_size(ver), -1, ver == IP::Addr::V6, eer);
 	      }
 	      catch (const std::exception& e)
 		{

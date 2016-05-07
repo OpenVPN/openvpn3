@@ -151,6 +151,7 @@ namespace openvpn {
     public:
       std::string address;
       int prefix_length = 0;
+      int metric = -1;     // optional
       std::string gateway; // optional
       bool ipv6 = false;
       bool net30 = false;
@@ -161,6 +162,8 @@ namespace openvpn {
 	os << address << '/' << prefix_length;
 	if (!gateway.empty())
 	  os << " -> " << gateway;
+	if (metric >= 0)
+	  os << " [METRIC=" << metric << ']';
 	if (ipv6)
 	  os << " [IPv6]";
 	if (net30)
@@ -192,6 +195,7 @@ namespace openvpn {
 	Json::Value root(Json::objectValue);
 	root["address"] = Json::Value(address);
 	root["prefix_length"] = Json::Value(prefix_length);
+	root["metric"] = Json::Value(metric);
 	root["gateway"] = Json::Value(gateway);
 	root["ipv6"] = Json::Value(ipv6);
 	root["net30"] = Json::Value(net30);
@@ -203,6 +207,7 @@ namespace openvpn {
 	json::assert_dict(root, title);
 	json::to_string(root, address, "address", title);
 	json::to_int(root, prefix_length, "prefix_length", title);
+	json::to_int(root, metric, "metric", title);
 	json::to_string(root, gateway, "gateway", title);
 	json::to_bool(root, ipv6, "ipv6", title);
 	json::to_bool(root, net30, "net30", title);
@@ -514,21 +519,29 @@ namespace openvpn {
       return true;
     }
 
-    virtual bool tun_builder_add_route(const std::string& address, int prefix_length, bool ipv6) override
+    virtual bool tun_builder_set_route_metric_default(int metric) override
+    {
+      route_metric_default = metric;
+      return true;
+    }
+
+    virtual bool tun_builder_add_route(const std::string& address, int prefix_length, int metric, bool ipv6) override
     {
       Route r;
       r.address = address;
       r.prefix_length = prefix_length;
+      r.metric = metric;
       r.ipv6 = ipv6;
       add_routes.push_back(r);
       return true;
     }
 
-    virtual bool tun_builder_exclude_route(const std::string& address, int prefix_length, bool ipv6) override
+    virtual bool tun_builder_exclude_route(const std::string& address, int prefix_length, int metric, bool ipv6) override
     {
       Route r;
       r.address = address;
       r.prefix_length = prefix_length;
+      r.metric = metric;
       r.ipv6 = ipv6;
       exclude_routes.push_back(r);
       return true;
@@ -687,6 +700,8 @@ namespace openvpn {
       render_list(os, "Tunnel Addresses", tunnel_addresses);
       os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
       os << "Block IPv6: " << (block_ipv6 ? "yes" : "no") << std::endl;
+      if (route_metric_default >= 0)
+	os << "Route Metric Default: " << route_metric_default << std::endl;
       render_list(os, "Add Routes", add_routes);
       render_list(os, "Exclude Routes", exclude_routes);
       render_list(os, "DNS Servers", dns_servers);
@@ -721,6 +736,7 @@ namespace openvpn {
       root["tunnel_address_index_ipv6"] = Json::Value(tunnel_address_index_ipv6);
       root["reroute_gw"] = reroute_gw.to_json();
       root["block_ipv6"] = Json::Value(block_ipv6);
+      root["route_metric_default"] = Json::Value(route_metric_default);
       json::from_vector(root, add_routes, "add_routes");
       json::from_vector(root, exclude_routes, "exclude_routes");
       json::from_vector(root, dns_servers, "dns_servers");
@@ -751,6 +767,7 @@ namespace openvpn {
       json::to_int(root, tbc->tunnel_address_index_ipv6, "tunnel_address_index_ipv6", title);
       tbc->reroute_gw.from_json(root["reroute_gw"], "reroute_gw");
       json::to_bool(root, tbc->block_ipv6, "block_ipv6", title);
+      json::to_int(root, tbc->route_metric_default, "route_metric_default", title);
       json::to_vector(root, tbc->add_routes, "add_routes", title);
       json::to_vector(root, tbc->exclude_routes, "exclude_routes", title);
       json::to_vector(root, tbc->dns_servers, "dns_servers", title);
@@ -776,6 +793,7 @@ namespace openvpn {
     int tunnel_address_index_ipv6 = -1;    // index into tunnel_addresses for IPv6 entry (or -1 if undef)
     RerouteGW reroute_gw;                  // redirect-gateway info
     bool block_ipv6 = false;               // block IPv6 traffic while VPN is active
+    int route_metric_default = -1;         // route-metric directive
     std::vector<Route> add_routes;         // routes that should be added to tunnel
     std::vector<Route> exclude_routes;     // routes that should be excluded from tunnel
     std::vector<DNSServer> dns_servers;    // VPN DNS servers
