@@ -301,6 +301,7 @@ namespace openvpn {
     struct LogReceiver
     {
       virtual void log(const LogInfo&) = 0;
+      virtual ~LogReceiver() {}
     };
 
     // used to pass stats for an interface
