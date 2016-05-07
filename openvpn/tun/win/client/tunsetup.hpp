@@ -549,17 +549,14 @@ namespace openvpn {
 	    }
 	}
 
-#if 0
-	// Set a default TAP-adapter domain suffix using the first
-	// domain suffix from from pull.search_domains as set by
-	// "dhcp-option DOMAIN ..." directives.
-	if (!pull.search_domains.empty())
+	// Set a default TAP-adapter domain suffix using
+	// "dhcp-option ADAPTER_DOMAIN_SUFFIX mycompany.com" directive.
+	if (!pull.adapter_domain_suffix.empty())
 	  {
 	    // Only the first search domain is used
-	    create.add(new Util::ActionSetSearchDomain(pull.search_domains[0].domain, tap.guid));
-	    destroy.add(new Util::ActionSetSearchDomain("", tap.guid));
+	    create.add(new Util::ActionSetAdapterDomainSuffix(pull.adapter_domain_suffix, tap.guid));
+	    destroy.add(new Util::ActionSetAdapterDomainSuffix("", tap.guid));
 	  }
-#endif
 
 	// Process WINS Servers
 	//

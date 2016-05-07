@@ -809,10 +809,10 @@ namespace openvpn {
       };
 
       // An action to set the DNS "Connection-specific DNS Suffix"
-      class ActionSetSearchDomain : public Action
+      class ActionSetAdapterDomainSuffix : public Action
       {
       public:
-	ActionSetSearchDomain(const std::string& search_domain_arg,
+	ActionSetAdapterDomainSuffix(const std::string& search_domain_arg,
 			      const std::string& tap_guid_arg)
 	  : search_domain(search_domain_arg),
 	    tap_guid(tap_guid_arg)
@@ -834,7 +834,7 @@ namespace openvpn {
 	  if (status != ERROR_SUCCESS)
 	    {
 	      const Win::Error err(status);
-	      OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error opening registry key: " << reg_key_name << " : " << err.message());
+	      OPENVPN_THROW(tun_win_util, "ActionSetAdapterDomainSuffix: error opening registry key: " << reg_key_name << " : " << err.message());
 	    }
 
 	  Win::UTF16 dom(Win::utf16(search_domain));
@@ -845,12 +845,12 @@ namespace openvpn {
 				    (const BYTE *)dom.get(),
 				    (Win::utf16_strlen(dom.get())+1)*2);
 	  if (status != ERROR_SUCCESS)
-	    OPENVPN_THROW(tun_win_util, "ActionSetSearchDomain: error writing Domain registry key: " << reg_key_name);
+	    OPENVPN_THROW(tun_win_util, "ActionSetAdapterDomainSuffix: error writing Domain registry key: " << reg_key_name);
 	}
 
 	virtual std::string to_string() const override
 	{
-	  return "Set DNS search domain: '" + search_domain + "' " + tap_guid;
+	  return "Set adapter domain suffix: '" + search_domain + "' " + tap_guid;
 	}
 
       private:

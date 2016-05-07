@@ -551,6 +551,12 @@ namespace openvpn {
       return true;
     }
 
+    virtual bool tun_builder_set_adapter_domain_suffix(const std::string& name) override
+    {
+      adapter_domain_suffix = name;
+      return true;
+    }
+
     virtual bool tun_builder_set_layer(int layer) override
     {
       this->layer = Layer::from_value(layer);
@@ -685,6 +691,8 @@ namespace openvpn {
       render_list(os, "Exclude Routes", exclude_routes);
       render_list(os, "DNS Servers", dns_servers);
       render_list(os, "Search Domains", search_domains);
+      if (!adapter_domain_suffix.empty())
+	os << "Adapter Domain Suffix: " << adapter_domain_suffix << std::endl;
       if (!proxy_bypass.empty())
 	render_list(os, "Proxy Bypass", proxy_bypass);
       if (proxy_auto_config_url.defined())
@@ -718,6 +726,7 @@ namespace openvpn {
       json::from_vector(root, dns_servers, "dns_servers");
       json::from_vector(root, wins_servers, "wins_servers");
       json::from_vector(root, search_domains, "search_domains");
+      root["adapter_domain_suffix"] = Json::Value(adapter_domain_suffix);
       json::from_vector(root, proxy_bypass, "proxy_bypass");
       if (proxy_auto_config_url.defined())
 	root["proxy_auto_config_url"] = proxy_auto_config_url.to_json();
@@ -747,6 +756,7 @@ namespace openvpn {
       json::to_vector(root, tbc->dns_servers, "dns_servers", title);
       json::to_vector(root, tbc->wins_servers, "wins_servers", title);
       json::to_vector(root, tbc->search_domains, "search_domains", title);
+      json::to_string(root, tbc->adapter_domain_suffix, "adapter_domain_suffix", title);
       json::to_vector(root, tbc->proxy_bypass, "proxy_bypass", title);
       tbc->proxy_auto_config_url.from_json(root["proxy_auto_config_url"], "proxy_auto_config_url");
       tbc->http_proxy.from_json(root["http_proxy"], "http_proxy");
@@ -770,6 +780,7 @@ namespace openvpn {
     std::vector<Route> exclude_routes;     // routes that should be excluded from tunnel
     std::vector<DNSServer> dns_servers;    // VPN DNS servers
     std::vector<SearchDomain> search_domains;  // domain suffixes whose DNS requests should be tunnel-routed
+    std::string adapter_domain_suffix;     // domain suffix on tun/tap adapter (currently Windows only)
 
     std::vector<ProxyBypass> proxy_bypass; // hosts that should bypass proxy
     ProxyAutoConfigURL proxy_auto_config_url;

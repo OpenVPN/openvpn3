@@ -427,6 +427,7 @@ namespace openvpn {
       //   [dhcp-option] [DOMAIN] [example.com]
       //   [dhcp-option] [DOMAIN] [foo1.com foo2.com foo3.com ...]
       //   [dhcp-option] [DOMAIN] [bar1.com] [bar2.com] [bar3.com] ...
+      //   [dhcp-option] [ADAPTER_DOMAIN_SUFFIX] [mycompany.com]
       //   [dhcp-option] [PROXY_HTTP] [foo.bar.gov] [1234]
       //   [dhcp-option] [PROXY_HTTPS] [foo.bar.gov] [1234]
       //   [dhcp-option] [PROXY_BYPASS] [server1] [server2] ...
@@ -467,6 +468,13 @@ namespace openvpn {
 			      throw tun_prop_dhcp_option_error("tun_builder_add_search_domain failed");
 			  }
 		      }
+		  }
+		else if (type == "ADAPTER_DOMAIN_SUFFIX")
+		  {
+		    o.exact_args(3);
+		    const std::string& adapter_domain_suffix = o.get(2, 256);
+		    if (!tb->tun_builder_set_adapter_domain_suffix(adapter_domain_suffix))
+		      throw tun_prop_dhcp_option_error("tun_builder_set_adapter_domain_suffix");
 		  }
 		else if (type == "PROXY_BYPASS")
 		  {

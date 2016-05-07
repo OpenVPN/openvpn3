@@ -184,6 +184,15 @@ namespace openvpn {
       return true;
     }
 
+    // Optional callback to set a DNS suffix on tun/tap adapter.
+    // Currently only implemented on Windows, where it will
+    // set the "Connection-specific DNS Suffix" property on
+    // the TAP driver.
+    virtual bool tun_builder_set_adapter_domain_suffix(const std::string& name)
+    {
+      return true;
+    }
+
     // Callback to establish the VPN tunnel, returning a file descriptor
     // to the tunnel, which the caller will henceforth own.  Returns -1
     // if the tunnel could not be established.
