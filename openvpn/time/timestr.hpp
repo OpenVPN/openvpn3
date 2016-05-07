@@ -63,7 +63,7 @@ namespace openvpn {
   inline std::string date_time_store_time_t(time_t& save)
   {
     save = time(NULL);
-    return date_time(now);
+    return date_time(save);
   }
 
 #else
