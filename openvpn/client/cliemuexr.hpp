@@ -70,7 +70,7 @@ namespace openvpn {
 	  for (IP::RouteInverter::const_iterator i = ri.begin(); i != ri.end(); ++i)
 	    {
 	      const IP::Route& r = *i;
-	      if (!tb->tun_builder_add_route(r.addr.to_string(), r.prefix_len, r.addr.version() == IP::Addr::V6))
+	      if (!tb->tun_builder_add_route(r.addr.to_string(), r.prefix_len, -1, r.addr.version() == IP::Addr::V6))
 		throw emulate_exclude_route_error("tun_builder_add_route failed");
 	    }
 

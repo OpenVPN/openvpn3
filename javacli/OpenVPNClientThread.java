@@ -286,7 +286,7 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     @Override
-    public boolean tun_builder_add_route(String address, int prefix_length, boolean ipv6) {
+    public boolean tun_builder_add_route(String address, int prefix_length, int metric, boolean ipv6) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
 	    return tb.tun_builder_add_route(address, prefix_length, ipv6);
@@ -295,7 +295,7 @@ public class OpenVPNClientThread extends ClientAPI_OpenVPNClient implements Runn
     }
 
     @Override
-    public boolean tun_builder_exclude_route(String address, int prefix_length, boolean ipv6) {
+    public boolean tun_builder_exclude_route(String address, int prefix_length, int metric, boolean ipv6) {
 	TunBuilder tb = tun_builder;
 	if (tb != null)
 	    return tb.tun_builder_exclude_route(address, prefix_length, ipv6);

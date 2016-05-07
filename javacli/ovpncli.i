@@ -12,6 +12,9 @@
 #include "ovpncli.hpp"
 %}
 
+// ignore ClientAPI::OpenVPNClient bases other than TunBuilderBase
+%ignore openvpn::ClientAPI::LogReceiver;
+
 // modify exported C++ class names to incorporate their enclosing namespace
 %rename(ClientAPI_OpenVPNClient) OpenVPNClient;
 %rename(ClientAPI_TunBuilderBase) TunBuilderBase;
