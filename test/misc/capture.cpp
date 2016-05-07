@@ -18,14 +18,14 @@ int main(int argc, char* argv[])
     tbc->tun_builder_add_address("1.2.3.4", 24, "10.10.0.1", false, false);
     tbc->tun_builder_add_address("fe80::c32:4ff:febf:97d9", 64, "9999::7777", true, false);
     tbc->tun_builder_reroute_gw(true, false, 123);
-    tbc->tun_builder_add_route("192.168.0.0", 16, false);
-    tbc->tun_builder_add_route("10.0.0.0", 8, false);
-    tbc->tun_builder_add_route("2000::", 4, true);
-    //tbc->tun_builder_add_route("X000::", 4, true); // fixme
-    tbc->tun_builder_add_route("3000::", 4, true);
-    tbc->tun_builder_add_route("fc00::", 7, true);
-    tbc->tun_builder_exclude_route("10.10.0.0", 24, false);
-    tbc->tun_builder_exclude_route("::1", 128, true);
+    tbc->tun_builder_add_route("192.168.0.0", 16, 33, false);
+    tbc->tun_builder_add_route("10.0.0.0", 8, -1, false);
+    tbc->tun_builder_add_route("2000::", 4, 55, true);
+    //tbc->tun_builder_add_route("X000::", 4, -1, true); // fixme
+    tbc->tun_builder_add_route("3000::", 4, -1, true);
+    tbc->tun_builder_add_route("fc00::", 7, 66, true);
+    tbc->tun_builder_exclude_route("10.10.0.0", 24, 77, false);
+    tbc->tun_builder_exclude_route("::1", 128, -1, true);
     tbc->tun_builder_add_dns_server("8.8.8.8", false);
     tbc->tun_builder_add_dns_server("8.8.4.4", false);
     tbc->tun_builder_add_search_domain("yonan.net");
