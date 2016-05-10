@@ -308,6 +308,12 @@ namespace openvpn {
       *(data()+size_) = value;
     }
 
+    void null_terminate()
+    {
+      if (empty() || back())
+	push_back(0);
+    }
+
     void advance(const size_t delta)
     {
       if (delta > size_)

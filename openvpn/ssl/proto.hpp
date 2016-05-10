@@ -971,7 +971,7 @@ namespace openvpn {
 	{
 	  write_string_length(len+1, buf);
 	  buf.write((const unsigned char *)str.c_str(), len);
-	  buf.push_back(0);
+	  buf.null_terminate();
 	}
       else
 	write_string_length(0, buf);
@@ -995,7 +995,7 @@ namespace openvpn {
     {
       const size_t len = str.length();
       buf.write((const unsigned char *)str.c_str(), len);
-      buf.push_back(0);
+      buf.null_terminate();
     }
 
     template <typename S>
