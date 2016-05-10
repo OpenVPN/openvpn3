@@ -23,6 +23,7 @@
 #define OPENVPN_SSL_PROTOSTACK_H
 
 #include <deque>
+#include <utility>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
@@ -264,11 +265,9 @@ namespace openvpn {
     //
     // void net_send(const PACKET& net_pkt, const NetSendType nstype) = 0;
 
-    // Pass cleartext data up to application.  Method may take ownership
-    // of to_app_buf by making private copy of BufferPtr then calling
-    // reset on to_app_buf.
+    // Pass cleartext data up to application.
     //
-    // void app_recv(BufferPtr& to_app_buf) = 0;
+    // void app_recv(BufferPtr to_app_buf) = 0;
 
     // Pass raw data up to application.  A packet is considered to be raw
     // if is_raw() method returns true.  Method may take ownership
@@ -314,8 +313,8 @@ namespace openvpn {
 		break;
 	      else if (size >= 0)
 		{
-		  // error if written size is different from what we asked for
-		  error(Error::SSL_PARTIAL_WRITE);
+		  // partial write
+		  app_write_queue.front()->advance(size);
 		  break;
 		}
 	      else
@@ -409,8 +408,7 @@ namespace openvpn {
 	while (ssl_->read_cleartext_ready())
 	  {
 	    ssize_t size;
-	    if (!to_app_buf)
-	      to_app_buf.reset(new BufferAllocated());
+	    to_app_buf.reset(new BufferAllocated());
 	    frame_->prepare(Frame::READ_SSL_CLEARTEXT, *to_app_buf);
 	    try {
 	      size = ssl_->read_cleartext(to_app_buf->data(), to_app_buf->max_size());
@@ -426,7 +424,7 @@ namespace openvpn {
 		to_app_buf->set_size(size);
 
 		// pass cleartext data to app
-		parent().app_recv(to_app_buf);
+		parent().app_recv(std::move(to_app_buf));
 	      }
 	    else if (size == SSLConst::SHOULD_RETRY)
 	      break;

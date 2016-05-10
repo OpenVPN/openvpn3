@@ -49,6 +49,7 @@ namespace openvpn {
       }
     (*frame)[Frame::READ_BIO_MEMQ_STREAM] = Frame::Context(headroom, std::min(control_channel_payload, payload),
 							   tailroom, 0, align_block, buffer_flags);
+    (*frame)[Frame::WRITE_SSL_CLEARTEXT] = Frame::Context(headroom, payload, tailroom, 0, align_block, BufferAllocated::GROW);
     frame->standardize_capacity(~0);
 
     if (verbose)

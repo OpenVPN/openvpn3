@@ -30,8 +30,15 @@
 
 namespace openvpn {
 
-  struct BufferList : public std::list<BufferPtr>
+  template <template <typename...> class COLLECTION>
+  struct BufferCollection : public COLLECTION<BufferPtr>
   {
+    using COLLECTION<BufferPtr>::size;
+    using COLLECTION<BufferPtr>::front;
+    using COLLECTION<BufferPtr>::empty;
+    using COLLECTION<BufferPtr>::back;
+    using COLLECTION<BufferPtr>::emplace_back;
+
     BufferPtr join(const size_t headroom,
 		   const size_t tailroom,
 		   const bool size_1_optim) const
@@ -78,9 +85,9 @@ namespace openvpn {
       return buf_to_string(*bp);
     }
 
-    BufferList copy() const
+    BufferCollection copy() const
     {
-      BufferList ret;
+      BufferCollection ret;
       for (auto &b : *this)
 	ret.emplace_back(new BufferAllocated(*b));
       return ret;
@@ -108,6 +115,8 @@ namespace openvpn {
     }
   };
 
+  typedef BufferCollection<std::list> BufferList;
+  typedef BufferCollection<std::list> BufferVector;
 }
 
 #endif

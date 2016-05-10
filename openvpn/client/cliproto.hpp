@@ -500,7 +500,7 @@ namespace openvpn {
       }
 
       // proto base class calls here for app-level control-channel messages received
-      virtual void control_recv(BufferPtr& app_bp)
+      virtual void control_recv(BufferPtr app_bp)
       {
 	const std::string msg = Unicode::utf8_printable(Base::template read_control_string<std::string>(*app_bp),
 							Unicode::UTF8_FILTER);

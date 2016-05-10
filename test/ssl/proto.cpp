@@ -341,7 +341,7 @@ public:
   {
     Base::start();
 
-    const size_t msglen = std::strlen(msg);
+    const size_t msglen = std::strlen(msg) + 1;
     BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
     copy_progress(app_buf);
     control_send(app_buf);
@@ -419,7 +419,7 @@ private:
     net_out.push_back(BufferPtr(new BufferAllocated(net_buf, 0)));
   }
 
-  virtual void control_recv(BufferPtr& app_bp)
+  virtual void control_recv(BufferPtr app_bp)
   {
     BufferPtr work;
     work.swap(app_bp);
@@ -994,7 +994,7 @@ int main(int argc, char* argv[])
       return 0;
     }
 
-#if N_THREADS >= 2 && OPENVPN_MULTITHREAD
+#if N_THREADS >= 2
   std::thread* threads[N_THREADS];
   int i;
   for (i = 0; i < N_THREADS; ++i)

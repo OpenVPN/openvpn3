@@ -46,6 +46,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
+#include <openvpn/buffer/bufcomposed.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/durhelper.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -147,6 +148,8 @@ namespace openvpn {
   class ProtoContext
   {
   protected:
+    static constexpr size_t APP_MSG_MAX = 65536;
+
     enum {
       // packet opcode (high 5 bits) and key-id (low 3 bits) are combined in one byte
       KEY_ID_MASK =             0x07,
@@ -228,8 +231,7 @@ namespace openvpn {
     }
 
   public:
-    OPENVPN_SIMPLE_EXCEPTION(peer_psid_undef);
-    OPENVPN_SIMPLE_EXCEPTION(bad_auth_prefix);
+    OPENVPN_EXCEPTION(proto_error);
     OPENVPN_EXCEPTION(process_server_push_error);
     OPENVPN_EXCEPTION_INHERIT(option_error, proto_option_error);
 
@@ -943,6 +945,8 @@ namespace openvpn {
 
     static void write_string_length(const size_t size, Buffer& buf)
     {
+      if (size > 0xFFFF)
+	throw proto_error("auth_string_overflow");
       const std::uint16_t net_size = htons(size);
       buf.write((const unsigned char *)&net_size, sizeof(net_size));
     }
@@ -1190,12 +1194,19 @@ namespace openvpn {
 	  return next_event_time;
       }
 
+      void app_send_validate(BufferPtr& bp)
+      {
+	if (bp->size() > APP_MSG_MAX)
+	  throw proto_error("app_send: sent control message is too large");
+	Base::app_send(bp);
+      }
+
       // send app-level cleartext data to peer via SSL
       void app_send(BufferPtr& bp)
       {
 	if (state >= ACTIVE)
 	  {
-	    Base::app_send(bp);
+	    app_send_validate(bp);
 	    dirty = true;
 	  }
 	else
@@ -1641,22 +1652,33 @@ namespace openvpn {
 	  }
       }
 
-      void app_recv(BufferPtr& to_app_buf) // called by ProtoStackBase
+      void app_recv(BufferPtr to_app_buf) // called by ProtoStackBase
       {
+	app_recv_buf.put(std::move(to_app_buf));
+	if (app_recv_buf.size() > APP_MSG_MAX)
+	  throw proto_error("app_recv: received control message is too large");
+	BufferComposed::Complete bcc = app_recv_buf.complete();
 	switch (state)
 	  {
 	  case C_WAIT_AUTH:
-	    recv_auth(*to_app_buf);
-	    set_state(C_WAIT_AUTH_ACK);
+	    if (recv_auth_complete(bcc))
+	      {
+		recv_auth(bcc.get());
+		set_state(C_WAIT_AUTH_ACK);
+	      }
 	    break;
 	  case S_WAIT_AUTH:
-	    recv_auth(*to_app_buf);
-	    send_auth();	
-	    set_state(S_WAIT_AUTH_ACK);
+	    if (recv_auth_complete(bcc))
+	      {
+		recv_auth(bcc.get());
+		send_auth();
+		set_state(S_WAIT_AUTH_ACK);
+	      }
 	    break;
 	  case S_WAIT_AUTH_ACK: // rare case where client receives auth, goes ACTIVE, but the ACK response is dropped
 	  case ACTIVE:
-	    proto.app_recv(key_id_, to_app_buf);
+	    if (bcc.advance_to_null()) // does composed buffer contain terminating null char?
+	      proto.app_recv(key_id_, bcc.get());
 	    break;
 	  }
       }
@@ -1717,24 +1739,45 @@ namespace openvpn {
 	    const std::string peer_info = proto.config->peer_info_string();
 	    write_auth_string(peer_info, *buf);
 	  }
-	Base::app_send(buf);
+	app_send_validate(buf);
 	dirty = true;
       }
 
-      void recv_auth(BufferAllocated& buf)
+      void recv_auth(BufferPtr buf)
       {
-	const unsigned char *buf_pre = buf.read_alloc(sizeof(proto_context_private::auth_prefix));
+	const unsigned char *buf_pre = buf->read_alloc(sizeof(proto_context_private::auth_prefix));
 	if (std::memcmp(buf_pre, proto_context_private::auth_prefix, sizeof(proto_context_private::auth_prefix)))
-	  throw bad_auth_prefix();
-	tlsprf->peer_read(buf);
-	const std::string options = read_auth_string<std::string>(buf);
+	  throw proto_error("bad_auth_prefix");
+	tlsprf->peer_read(*buf);
+	const std::string options = read_auth_string<std::string>(*buf);
 	if (proto.is_server())
 	  {
-	    const std::string username = read_auth_string<std::string>(buf);
-	    const SafeString password = read_auth_string<SafeString>(buf);
-	    const std::string peer_info = read_auth_string<std::string>(buf);
+	    const std::string username = read_auth_string<std::string>(*buf);
+	    const SafeString password = read_auth_string<SafeString>(*buf);
+	    const std::string peer_info = read_auth_string<std::string>(*buf);
 	    proto.server_auth(username, password, peer_info, Base::auth_cert());
 	  }
+      }
+
+      // return true if complete recv_auth message is contained in buffer
+      bool recv_auth_complete(BufferComplete& bc) const
+      {
+	if (!bc.advance(sizeof(proto_context_private::auth_prefix)))
+	  return false;
+	if (!tlsprf->peer_read_complete(bc))
+	  return false;
+	if (!bc.advance_string()) // options
+	  return false;
+	if (proto.is_server())
+	  {
+	    if (!bc.advance_string()) // username
+	      return false;
+	    if (!bc.advance_string()) // password
+	      return false;
+	    if (!bc.advance_string()) // peer_info
+	      return false;
+	  }
+	return true;
       }
 
       void active()
@@ -1744,7 +1787,7 @@ namespace openvpn {
 	generate_session_keys();
 	while (!app_pre_write_queue.empty())
 	  {
-	    Base::app_send(app_pre_write_queue.front());
+	    app_send_validate(app_pre_write_queue.front());
 	    app_pre_write_queue.pop_front();
 	    dirty = true;
 	  }
@@ -1809,7 +1852,7 @@ namespace openvpn {
 	    else
 	      {
 		proto.stats->error(Error::CC_ERROR);
-		throw peer_psid_undef();
+		throw proto_error("peer_psid_undef");
 	      }
 	  }
 
@@ -2103,6 +2146,7 @@ namespace openvpn {
       EventType next_event;
       std::deque<BufferPtr> app_pre_write_queue;
       std::unique_ptr<DataChannelKey> data_channel_key;
+      BufferComposed app_recv_buf;
     };
 
   public:
@@ -2556,7 +2600,7 @@ namespace openvpn {
 
     virtual void control_net_send(const Buffer& net_buf) = 0;
 
-    virtual void control_recv(BufferPtr& app_bp) = 0;
+    virtual void control_recv(BufferPtr app_bp) = 0;
 
     // Called on client to request username/password credentials.
     // Should be overriden by derived class if credentials are required.
@@ -2591,9 +2635,9 @@ namespace openvpn {
       control_net_send(net_pkt.buffer());
     }
 
-    void app_recv(const unsigned int key_id, BufferPtr& to_app_buf)
+    void app_recv(const unsigned int key_id, BufferPtr to_app_buf)
     {
-      control_recv(to_app_buf);
+      control_recv(std::move(to_app_buf));
     }
 
     // we're getting a request from peer to renegotiate.

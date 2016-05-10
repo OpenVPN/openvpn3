@@ -36,6 +36,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/buffer/bufcomplete.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/ssl/psid.hpp>
@@ -69,6 +70,16 @@ namespace openvpn {
       buf.read(random1, sizeof(random1));
       buf.read(random2, sizeof(random2));
       initialized_ = true;
+    }
+
+    bool read_complete(BufferComplete& bc)
+    {
+      size_t need = sizeof(random1) + sizeof(random2);
+      if (!server_)
+	need += sizeof(pre_master);
+      if (!bc.advance(need))
+	return false;
+      return true;
     }
 
     void write(Buffer& buf)
@@ -306,6 +317,7 @@ namespace openvpn {
     virtual void self_randomize(RandomAPI& rng) = 0;
     virtual void self_write(Buffer& buf) = 0;
     virtual void peer_read(Buffer& buf) = 0;
+    virtual bool peer_read_complete(BufferComplete& bc) = 0;
     virtual void erase() = 0;
 
     virtual void generate_key_expansion(OpenVPNStaticKey& dest,
@@ -346,6 +358,11 @@ namespace openvpn {
     virtual void peer_read(Buffer& buf)
     {
       peer.read(buf);
+    }
+
+    virtual bool peer_read_complete(BufferComplete& bc)
+    {
+      return peer.read_complete(bc);
     }
 
     virtual void erase()
