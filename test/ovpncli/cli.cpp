@@ -486,6 +486,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.autologinSessions = autologinSessions;
 	      config.tunPersist = tunPersist;
 	      config.gremlinConfig = gremlin;
+	      config.info = true;
 	      PeerInfo::Set::parse_csv(peer_info, config.peerInfo);
 
 	      if (eval)

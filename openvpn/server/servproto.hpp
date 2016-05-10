@@ -457,6 +457,18 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
+      virtual void post_info(BufferPtr&& info)
+      {
+	if (halt)
+	  return;
+
+	Base::update_now();
+	info->null_terminate();
+	Base::control_send(std::move(info));
+	Base::flush(true);
+	set_housekeeping_timer();
+      }
+
       virtual void stats_notify(const PeerStats& ps, const bool final)
       {
 	if (ManLink::send)

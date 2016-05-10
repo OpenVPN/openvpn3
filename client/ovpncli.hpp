@@ -249,6 +249,9 @@ namespace openvpn {
       // pass through pushed "echo" directives via "ECHO" event
       bool echo = false;
 
+      // pass through control channel INFO notifications via "INFO" event
+      bool info = false;
+
       // Gremlin configuration (requires that the core is built with OPENVPN_GREMLIN)
       std::string gremlinConfig;
     };

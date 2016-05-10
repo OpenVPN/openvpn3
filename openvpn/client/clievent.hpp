@@ -48,6 +48,7 @@ namespace openvpn {
       ASSIGN_IP,
       ADD_ROUTES,
       ECHO_OPT,
+      INFO,
       PAUSE,
       RESUME,
 
@@ -94,6 +95,7 @@ namespace openvpn {
 	"ASSIGN_IP",
 	"ADD_ROUTES",
 	"ECHO",
+	"INFO",
 	"PAUSE",
 	"RESUME",
 
@@ -276,6 +278,12 @@ namespace openvpn {
       {
       }
 
+      ReasonBase(const Type id, std::string&& reason_arg)
+	: Base(id),
+	  reason(std::move(reason_arg))
+      {
+      }
+
       virtual std::string render() const
       {
 	return reason;
@@ -362,6 +370,11 @@ namespace openvpn {
     struct Echo : public ReasonBase
     {
       Echo(const std::string& value) : ReasonBase(ECHO_OPT, value) {}
+    };
+
+    struct Info : public ReasonBase
+    {
+      Info(std::string&& value) : ReasonBase(INFO, std::move(value)) {}
     };
 
     class Queue : public RC<thread_safe_refcount>

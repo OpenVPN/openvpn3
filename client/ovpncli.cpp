@@ -201,7 +201,7 @@ namespace openvpn {
 	  {
 	    Event ev;
 	    ev.name = event->name();
-	    ev.info = Unicode::utf8_printable(event->render(), 256);
+	    ev.info = event->render();
 	    ev.error = event->is_error();
 	    ev.fatal = event->is_fatal();
 
@@ -337,6 +337,7 @@ namespace openvpn {
 	bool alt_proxy = false;
 	bool dco = false;
 	bool echo = false;
+	bool info = false;
 	Stop stop;
 
 	asio::io_context* io_context = nullptr;
@@ -473,6 +474,7 @@ namespace openvpn {
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
 	state->echo = config.echo;
+	state->info = config.info;
 	if (!config.gremlinConfig.empty())
 	  {
 #ifdef OPENVPN_GREMLIN
@@ -666,6 +668,7 @@ namespace openvpn {
 	cc.alt_proxy = state->alt_proxy;
 	cc.dco = state->dco;
 	cc.echo = state->echo;
+	cc.info = state->info;
 	cc.reconnect_notify = &state->reconnect_notify;
 	cc.private_key_password = state->private_key_password;
 	cc.disable_client_cert = state->disable_client_cert;

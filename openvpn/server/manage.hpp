@@ -67,6 +67,9 @@ namespace openvpn {
     virtual void disconnect_user(const HaltRestart::Type type,
 				 const std::string& reason,
 				 const bool tell_client) = 0;
+
+    // send control channel message
+    virtual void post_info_user(BufferPtr&& info) = 0;
   };
 
   // Base class for the client instance receiver.  Note that all
@@ -90,6 +93,10 @@ namespace openvpn {
     virtual void push_halt_restart_msg(const HaltRestart::Type type,
 				       const std::string& reason,
 				       const bool tell_client) = 0;
+
+
+    // send control channel message
+    virtual void post_info(BufferPtr&& info) = 0;
 
     // get client bandwidth stats
     virtual PeerStats stats_poll() = 0;

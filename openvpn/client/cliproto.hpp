@@ -128,6 +128,7 @@ namespace openvpn {
 	OptionList::FilterBase::Ptr pushed_options_filter;
 	unsigned int tcp_queue_limit = 0;
 	bool echo = false;
+	bool info = false;
       };
 
       Session(asio::io_context& io_context_arg,
@@ -152,6 +153,7 @@ namespace openvpn {
 	  cli_events(config.cli_events),
 	  connected_(false),
 	  echo(config.echo),
+	  info(config.info),
 	  fatal_(Error::UNDEF),
 	  pushed_options_limit(config.pushed_options_limit),
 	  pushed_options_filter(config.pushed_options_filter),
@@ -503,7 +505,7 @@ namespace openvpn {
       virtual void control_recv(BufferPtr&& app_bp)
       {
 	const std::string msg = Unicode::utf8_printable(Base::template read_control_string<std::string>(*app_bp),
-							Unicode::UTF8_FILTER);
+							Unicode::UTF8_FILTER|Unicode::UTF8_PASS_FMT);
 
 	//OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 
@@ -578,6 +580,11 @@ namespace openvpn {
 	  {
 	    const ClientHalt ch(msg, true);
 	    process_halt_restart(ch);
+	  }
+	else if (info && string::starts_with(msg, "INFO,"))
+	  {
+	    ClientEvent::Base::Ptr ev = new ClientEvent::Info(msg.substr(5));
+	    cli_events->add_event(ev);
 	  }
       }
 
@@ -909,6 +916,7 @@ namespace openvpn {
       bool connected_;
 
       bool echo;
+      bool info;
 
       Error::Type fatal_;
       std::string fatal_reason_;
