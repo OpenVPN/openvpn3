@@ -695,6 +695,13 @@ namespace openvpn {
       move_(other);
     }
 
+    RCPtr<BufferAllocatedType<T>> move_to_ptr()
+    {
+      RCPtr<BufferAllocatedType<T>> bp = new BufferAllocatedType<T>();
+      bp->move(*this);
+      return bp;
+    }
+
     void swap(BufferAllocatedType& other)
     {
       std::swap(data_, other.data_);

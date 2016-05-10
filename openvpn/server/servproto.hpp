@@ -229,7 +229,7 @@ namespace openvpn {
 	  else if (pt.is_control())
 	    {
 	      // control packet
-	      ret = Base::control_net_recv(pt, buf);
+	      ret = Base::control_net_recv(pt, std::move(buf));
 
 	      // do a full flush
 	      Base::flush(true);
@@ -327,7 +327,7 @@ namespace openvpn {
       }
 
       // proto base class calls here for app-level control-channel messages received
-      virtual void control_recv(BufferPtr app_bp)
+      virtual void control_recv(BufferPtr&& app_bp)
       {
 	const std::string msg = Unicode::utf8_printable(Base::template read_control_string<std::string>(*app_bp),
 							Unicode::UTF8_FILTER);
@@ -356,7 +356,7 @@ namespace openvpn {
 	push_halt_restart_msg(HaltRestart::AUTH_FAILED, reason, tell_client);
       }
 
-      virtual void push_reply(BufferPtr& push_data,
+      virtual void push_reply(BufferPtr&& push_data,
 			      const std::vector<IP::Route>& rtvec)
       {
 	if (halt)
@@ -367,7 +367,7 @@ namespace openvpn {
 	    Base::init_data_channel();
 	    TunLink::send->add_routes(rtvec);
 	    push_data->push_back(0); // null-terminate
-	    Base::control_send(push_data);
+	    Base::control_send(std::move(push_data));
 	    Base::flush(true);
 	    set_housekeeping_timer();
 	  }
@@ -452,7 +452,7 @@ namespace openvpn {
 	  }
 
 	buf->push_back(0); // null-terminate
-	Base::control_send(buf);
+	Base::control_send(std::move(buf));
 	Base::flush(true);
 	set_housekeeping_timer();
       }

@@ -83,7 +83,7 @@ namespace openvpn {
     virtual void auth_failed(const std::string& reason,
 			     const bool tell_client) = 0;
 
-    virtual void push_reply(BufferPtr& push_data,
+    virtual void push_reply(BufferPtr&& push_data,
 			    const std::vector<IP::Route>& routes) = 0;
 
     // push a halt or restart message to client

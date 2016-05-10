@@ -344,7 +344,7 @@ public:
     const size_t msglen = std::strlen(msg) + 1;
     BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
     copy_progress(app_buf);
-    control_send(app_buf);
+    control_send(std::move(app_buf));
     flush(true);
   }
 
@@ -359,16 +359,16 @@ public:
       return false;
   }
 
-  void control_send(BufferPtr& app_bp)
+  void control_send(BufferPtr&& app_bp)
   {
     app_bytes_ += app_bp->size();
-    Base::control_send(app_bp);
+    Base::control_send(std::move(app_bp));
   }
 
-  void control_send(BufferAllocated& app_buf)
+  void control_send(BufferAllocated&& app_buf)
   {
     app_bytes_ += app_buf.size();
-    Base::control_send(app_buf);
+    Base::control_send(std::move(app_buf));
   }
 
   BufferPtr data_encrypt_string(const char *str)
@@ -419,7 +419,7 @@ private:
     net_out.push_back(BufferPtr(new BufferAllocated(net_buf, 0)));
   }
 
-  virtual void control_recv(BufferPtr app_bp)
+  virtual void control_recv(BufferPtr&& app_bp)
   {
     BufferPtr work;
     work.swap(app_bp);
@@ -434,7 +434,7 @@ private:
     }
 #endif
     modmsg(work);
-    control_send(work);
+    control_send(std::move(work));
     control_drought.event();
   }
 
@@ -593,7 +593,7 @@ public:
 	    if (!b.control_net_validate(pt, *bp)) // not strictly necessary since control_net_recv will also validate
 	      std::cout << now->raw() << " " << title << " CONTROL PACKET VALIDATION FAILED" << std::endl;
 #endif
-	    b.control_net_recv(pt, bp);
+	    b.control_net_recv(pt, std::move(bp));
 	  }
 	else if (pt.is_data())
 	  {

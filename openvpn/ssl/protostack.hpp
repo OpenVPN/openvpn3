@@ -123,7 +123,7 @@ namespace openvpn {
 
     // Incoming ciphertext packet arriving from network,
     // we will take ownership of pkt.
-    bool net_recv(PACKET& pkt)
+    bool net_recv(PACKET&& pkt)
     {
       if (!invalidated())
 	return up_stack(pkt);
@@ -133,19 +133,19 @@ namespace openvpn {
     // Outgoing application-level cleartext packet ready to send
     // (will be encrypted via SSL), we will take ownership
     // of buf.
-    void app_send(BufferPtr& buf)
+    void app_send(BufferPtr&& buf)
     {
       if (!invalidated())
-	app_write_queue.push_back(buf);
+	app_write_queue.push_back(std::move(buf));
     }
 
     // Outgoing raw packet ready to send (will NOT be encrypted
     // via SSL, but will still be encapsulated, sequentialized,
     // and tracked via reliability layer).
-    void raw_send(const PACKET& pkt)
+    void raw_send(PACKET&& pkt)
     {
       if (!invalidated())
-	raw_write_queue.push_back(pkt);
+	raw_write_queue.push_back(std::move(pkt));
     }
 
     // Write any pending data to network and update retransmit
@@ -265,17 +265,16 @@ namespace openvpn {
     //
     // void net_send(const PACKET& net_pkt, const NetSendType nstype) = 0;
 
-    // Pass cleartext data up to application.
+    // Pass cleartext data up to application, which make take
+    // ownership of to_app_buf via std::move.
     //
-    // void app_recv(BufferPtr to_app_buf) = 0;
+    // void app_recv(BufferPtr&& to_app_buf) = 0;
 
     // Pass raw data up to application.  A packet is considered to be raw
     // if is_raw() method returns true.  Method may take ownership
-    // of raw_pkt underlying data as long as it resets raw_pkt so that
-    // a subsequent call to PACKET::frame_prepare will revert it to
-    // a ready-to-use state.
+    // of raw_pkt via std::move.
     //
-    // void raw_recv(PACKET& raw_pkt) = 0;
+    // void raw_recv(PACKET&& raw_pkt) = 0;
 
     // called if session is invalidated by an error (optional)
     //
@@ -392,7 +391,7 @@ namespace openvpn {
 	{
 	  typename ReliableRecv::Message& m = rel_recv.next_sequenced();
 	  if (m.packet.is_raw())
-	    parent().raw_recv(m.packet);
+	    parent().raw_recv(std::move(m.packet));
 	  else // SSL packet
 	    {
 	      if (ssl_started_)

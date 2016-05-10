@@ -1018,7 +1018,7 @@ namespace openvpn {
       const size_t len = str.length();
       BufferPtr bp = new BufferAllocated(len+1, 0);
       write_control_string(str, *bp);
-      control_send(bp);
+      control_send(std::move(bp));
     }
 
     static unsigned char *skip_string(Buffer& buf)
@@ -1044,8 +1044,8 @@ namespace openvpn {
 	reset_non_buf();
       }
 
-      explicit Packet(const BufferPtr& buf_arg, const unsigned int opcode_arg = CONTROL_V1)
-	: opcode(opcode_arg), buf(buf_arg)
+      Packet(BufferPtr&& buf_arg, const unsigned int opcode_arg = CONTROL_V1)
+	: opcode(opcode_arg), buf(std::move(buf_arg))
       {
       }
 
@@ -1194,19 +1194,19 @@ namespace openvpn {
 	  return next_event_time;
       }
 
-      void app_send_validate(BufferPtr& bp)
+      void app_send_validate(BufferPtr&& bp)
       {
 	if (bp->size() > APP_MSG_MAX)
 	  throw proto_error("app_send: sent control message is too large");
-	Base::app_send(bp);
+	Base::app_send(std::move(bp));
       }
 
       // send app-level cleartext data to peer via SSL
-      void app_send(BufferPtr& bp)
+      void app_send(BufferPtr&& bp)
       {
 	if (state >= ACTIVE)
 	  {
-	    app_send_validate(bp);
+	    app_send_validate(std::move(bp));
 	    dirty = true;
 	  }
 	else
@@ -1214,9 +1214,9 @@ namespace openvpn {
       }
 
       // pass received ciphertext packets on network to SSL/reliability layers
-      bool net_recv(Packet& pkt)
+      bool net_recv(Packet&& pkt)
       {
-	const bool ret = Base::net_recv(pkt);
+	const bool ret = Base::net_recv(std::move(pkt));
 	dirty = true;
 	return ret;
       }
@@ -1631,10 +1631,10 @@ namespace openvpn {
 	Packet pkt;
 	pkt.opcode = initial_op(true);
 	pkt.frame_prepare(*proto.config->frame, Frame::WRITE_SSL_INIT);
-	raw_send(pkt);
+	raw_send(std::move(pkt));
       }
 
-      void raw_recv(Packet& raw_pkt)  // called by ProtoStackBase
+      void raw_recv(Packet&& raw_pkt)  // called by ProtoStackBase
       {
 	if (raw_pkt.buf->empty() && raw_pkt.opcode == initial_op(false))
 	  {
@@ -1652,7 +1652,7 @@ namespace openvpn {
 	  }
       }
 
-      void app_recv(BufferPtr to_app_buf) // called by ProtoStackBase
+      void app_recv(BufferPtr&& to_app_buf) // called by ProtoStackBase
       {
 	app_recv_buf.put(std::move(to_app_buf));
 	if (app_recv_buf.size() > APP_MSG_MAX)
@@ -1739,7 +1739,7 @@ namespace openvpn {
 	    const std::string peer_info = proto.config->peer_info_string();
 	    write_auth_string(peer_info, *buf);
 	  }
-	app_send_validate(buf);
+	app_send_validate(std::move(buf));
 	dirty = true;
       }
 
@@ -1787,7 +1787,7 @@ namespace openvpn {
 	generate_session_keys();
 	while (!app_pre_write_queue.empty())
 	  {
-	    app_send_validate(app_pre_write_queue.front());
+	    app_send_validate(std::move(app_pre_write_queue.front()));
 	    app_pre_write_queue.pop_front();
 	    dirty = true;
 	  }
@@ -2384,17 +2384,14 @@ namespace openvpn {
 
     // send app-level cleartext to remote peer
 
-    void control_send(BufferPtr& app_bp)
+    void control_send(BufferPtr&& app_bp)
     {
-      select_control_send_context().app_send(app_bp);
-      app_bp.reset();
+      select_control_send_context().app_send(std::move(app_bp));
     }
 
-    void control_send(BufferAllocated& app_buf)
+    void control_send(BufferAllocated&& app_buf)
     {
-      BufferPtr bp = new BufferAllocated();
-      bp->move(app_buf);
-      control_send(bp);
+      control_send(app_buf.move_to_ptr());
     }
 
     // validate a control channel network packet
@@ -2405,22 +2402,20 @@ namespace openvpn {
 
     // pass received control channel network packets (ciphertext) into protocol object
 
-    bool control_net_recv(const PacketType& type, BufferAllocated& net_buf)
+    bool control_net_recv(const PacketType& type, BufferAllocated&& net_buf)
     {
-      BufferPtr bp = new BufferAllocated();
-      bp->move(net_buf);
-      Packet pkt(bp, type.opcode);
+      Packet pkt(net_buf.move_to_ptr(), type.opcode);
       if (type.is_soft_reset() && !renegotiate_request(pkt))
 	return false;
-      return select_key_context(type, true).net_recv(pkt);
+      return select_key_context(type, true).net_recv(std::move(pkt));
     }
 
-    bool control_net_recv(const PacketType& type, BufferPtr& net_bp)
+    bool control_net_recv(const PacketType& type, BufferPtr&& net_bp)
     {
-      Packet pkt(net_bp, type.opcode);
+      Packet pkt(std::move(net_bp), type.opcode);
       if (type.is_soft_reset() && !renegotiate_request(pkt))
 	return false;
-      return select_key_context(type, true).net_recv(pkt);
+      return select_key_context(type, true).net_recv(std::move(pkt));
     }
 
     // encrypt a data channel packet using primary KeyContext
@@ -2600,7 +2595,8 @@ namespace openvpn {
 
     virtual void control_net_send(const Buffer& net_buf) = 0;
 
-    virtual void control_recv(BufferPtr app_bp) = 0;
+    // app may take ownership of app_bp via std::move
+    virtual void control_recv(BufferPtr&& app_bp) = 0;
 
     // Called on client to request username/password credentials.
     // Should be overriden by derived class if credentials are required.
@@ -2635,7 +2631,7 @@ namespace openvpn {
       control_net_send(net_pkt.buffer());
     }
 
-    void app_recv(const unsigned int key_id, BufferPtr to_app_buf)
+    void app_recv(const unsigned int key_id, BufferPtr&& to_app_buf)
     {
       control_recv(std::move(to_app_buf));
     }
