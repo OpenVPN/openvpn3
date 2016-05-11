@@ -261,7 +261,7 @@ namespace openvpn {
 	  if (!first_packet_received_)
 	    {
 	      ClientEvent::Base::Ptr ev = new ClientEvent::Connecting();
-	      cli_events->add_event(ev);
+	      cli_events->add_event(std::move(ev));
 	      first_packet_received_ = true;
 	    }
 
@@ -390,7 +390,7 @@ namespace openvpn {
       virtual void transport_pre_resolve()
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
-	cli_events->add_event(ev);
+	cli_events->add_event(std::move(ev));
       }
 
       std::string server_endpoint_render()
@@ -405,13 +405,13 @@ namespace openvpn {
       virtual void transport_wait_proxy()
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::WaitProxy();
-	cli_events->add_event(ev);
+	cli_events->add_event(std::move(ev));
       }
 
       virtual void transport_wait()
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::Wait();
-	cli_events->add_event(ev);
+	cli_events->add_event(std::move(ev));
       }
 
       virtual void transport_connecting()
@@ -584,20 +584,20 @@ namespace openvpn {
 	else if (info && string::starts_with(msg, "INFO,"))
 	  {
 	    ClientEvent::Base::Ptr ev = new ClientEvent::Info(msg.substr(5));
-	    cli_events->add_event(ev);
+	    cli_events->add_event(std::move(ev));
 	  }
       }
 
       virtual void tun_pre_tun_config()
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::AssignIP();
-	cli_events->add_event(ev);
+	cli_events->add_event(std::move(ev));
       }
 
       virtual void tun_pre_route_config()
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::AddRoutes();
-	cli_events->add_event(ev);
+	cli_events->add_event(std::move(ev));
       }
 
       virtual void tun_connected()
@@ -620,7 +620,7 @@ namespace openvpn {
 	    OPENVPN_LOG("Error parsing client-ip: " << e.what());
 	  }
 	ev->tun_name = tun->tun_name();
-	cli_events->add_event(ev);
+	cli_events->add_event(std::move(ev));
 	connected_ = true;
 	if (notify_callback)
 	  notify_callback->client_proto_connected();
@@ -669,7 +669,7 @@ namespace openvpn {
 	      if (!sent_push_request)
 		{
 		  ClientEvent::Base::Ptr ev = new ClientEvent::GetConfig();
-		  cli_events->add_event(ev);
+		  cli_events->add_event(std::move(ev));
 		  sent_push_request = true;
 		}
 	      OPENVPN_LOG("Sending PUSH_REQUEST to server...");
@@ -835,7 +835,7 @@ namespace openvpn {
 		o.touch();
 		const std::string& value = o.get(1, 512);
 		ClientEvent::Base::Ptr ev = new ClientEvent::Echo(value);
-		cli_events->add_event(ev);
+		cli_events->add_event(std::move(ev));
 	      }
 	  }
       }

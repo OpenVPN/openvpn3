@@ -27,6 +27,7 @@
 
 #include <sstream>
 #include <deque>
+#include <utility>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -294,87 +295,87 @@ namespace openvpn {
 
     struct AuthFailed : public ReasonBase
     {
-      AuthFailed(const std::string& reason) : ReasonBase(AUTH_FAILED, reason) {}
+      AuthFailed(std::string reason) : ReasonBase(AUTH_FAILED, std::move(reason)) {}
     };
 
     struct CertVerifyFail : public ReasonBase
     {
-      CertVerifyFail(const std::string& reason) : ReasonBase(CERT_VERIFY_FAIL, reason) {}
+      CertVerifyFail(std::string reason) : ReasonBase(CERT_VERIFY_FAIL, std::move(reason)) {}
     };
 
     struct ClientHalt : public ReasonBase
     {
-      ClientHalt(const std::string& reason) : ReasonBase(CLIENT_HALT, reason) {}
+      ClientHalt(std::string reason) : ReasonBase(CLIENT_HALT, std::move(reason)) {}
     };
 
     struct ClientRestart : public ReasonBase
     {
-      ClientRestart(const std::string& reason) : ReasonBase(CLIENT_RESTART, reason) {}
+      ClientRestart(std::string reason) : ReasonBase(CLIENT_RESTART, std::move(reason)) {}
     };
 
     struct DynamicChallenge : public ReasonBase
     {
-      DynamicChallenge(const std::string& reason) : ReasonBase(DYNAMIC_CHALLENGE, reason) {}
+      DynamicChallenge(std::string reason) : ReasonBase(DYNAMIC_CHALLENGE, std::move(reason)) {}
     };
 
     struct Pause : public ReasonBase
     {
-      Pause(const std::string& reason) : ReasonBase(PAUSE, reason) {}
+      Pause(std::string reason) : ReasonBase(PAUSE, std::move(reason)) {}
     };
 
     struct ProxyError : public ReasonBase
     {
-      ProxyError(const std::string& reason) : ReasonBase(PROXY_ERROR, reason) {}
+      ProxyError(std::string reason) : ReasonBase(PROXY_ERROR, std::move(reason)) {}
     };
 
     struct ProxyNeedCreds : public ReasonBase
     {
-      ProxyNeedCreds(const std::string& reason) : ReasonBase(PROXY_NEED_CREDS, reason) {}
+      ProxyNeedCreds(std::string reason) : ReasonBase(PROXY_NEED_CREDS, std::move(reason)) {}
     };
 
     struct TransportError : public ReasonBase
     {
-      TransportError(const std::string& reason) : ReasonBase(TRANSPORT_ERROR, reason) {}
+      TransportError(std::string reason) : ReasonBase(TRANSPORT_ERROR, std::move(reason)) {}
     };
 
     struct TunSetupFailed : public ReasonBase
     {
-      TunSetupFailed(const std::string& reason) : ReasonBase(TUN_SETUP_FAILED, reason) {}
+      TunSetupFailed(std::string reason) : ReasonBase(TUN_SETUP_FAILED, std::move(reason)) {}
     };
 
     struct TunIfaceCreate : public ReasonBase
     {
-      TunIfaceCreate(const std::string& reason) : ReasonBase(TUN_IFACE_CREATE, reason) {}
+      TunIfaceCreate(std::string reason) : ReasonBase(TUN_IFACE_CREATE, std::move(reason)) {}
     };
 
     struct TunIfaceDisabled : public ReasonBase
     {
-      TunIfaceDisabled(const std::string& reason) : ReasonBase(TUN_IFACE_DISABLED, reason) {}
+      TunIfaceDisabled(std::string reason) : ReasonBase(TUN_IFACE_DISABLED, std::move(reason)) {}
     };
 
     struct TunError : public ReasonBase
     {
-      TunError(const std::string& reason) : ReasonBase(TUN_ERROR, reason) {}
+      TunError(std::string reason) : ReasonBase(TUN_ERROR, std::move(reason)) {}
     };
 
     struct EpkiError : public ReasonBase
     {
-      EpkiError(const std::string& reason) : ReasonBase(EPKI_ERROR, reason) {}
+      EpkiError(std::string reason) : ReasonBase(EPKI_ERROR, std::move(reason)) {}
     };
 
     struct EpkiInvalidAlias : public ReasonBase
     {
-      EpkiInvalidAlias(const std::string& reason) : ReasonBase(EPKI_INVALID_ALIAS, reason) {}
+      EpkiInvalidAlias(std::string reason) : ReasonBase(EPKI_INVALID_ALIAS, std::move(reason)) {}
     };
 
     struct Echo : public ReasonBase
     {
-      Echo(const std::string& value) : ReasonBase(ECHO_OPT, value) {}
+      Echo(std::string value) : ReasonBase(ECHO_OPT, std::move(value)) {}
     };
 
     struct Info : public ReasonBase
     {
-      Info(std::string&& value) : ReasonBase(INFO, std::move(value)) {}
+      Info(std::string value) : ReasonBase(INFO, std::move(value)) {}
     };
 
     class Queue : public RC<thread_safe_refcount>
@@ -382,7 +383,7 @@ namespace openvpn {
     public:
       typedef RCPtr<Queue> Ptr;
 
-      virtual void add_event(const Base::Ptr& event) = 0;
+      virtual void add_event(Base::Ptr event) = 0;
     };
   }
 }

@@ -106,7 +106,7 @@ namespace openvpn {
 	  if (preres->work_available())
 	    {
 	      ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
-	      client_options->events().add_event(ev);
+	      client_options->events().add_event(std::move(ev));
 	      pre_resolve = preres;
 	      pre_resolve->start(this); // asynchronous -- will call back to pre_resolve_done
 	    }
@@ -148,7 +148,7 @@ namespace openvpn {
 	    }
 
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Disconnected();
-	  client_options->events().add_event(ev);
+	  client_options->events().add_event(std::move(ev));
 	}
     }
 
@@ -181,7 +181,7 @@ namespace openvpn {
 	  cancel_timers();
 	  asio_work.reset(new asio::io_context::work(io_context));
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause(reason);
-	  client_options->events().add_event(ev);
+	  client_options->events().add_event(std::move(ev));
 	  client_options->stats().error(Error::N_PAUSE);
 	}
     }
@@ -192,7 +192,7 @@ namespace openvpn {
 	{
 	  paused = false;
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Resume();
-	  client_options->events().add_event(ev);
+	  client_options->events().add_event(std::move(ev));
 	  new_client();
 	}
     }
@@ -311,7 +311,7 @@ namespace openvpn {
 	  else
 	    {
 	      ClientEvent::Base::Ptr ev = new ClientEvent::ConnectionTimeout();
-	      client_options->events().add_event(ev);
+	      client_options->events().add_event(std::move(ev));
 	      stop();
 	    }
 	}
@@ -400,12 +400,12 @@ namespace openvpn {
 		    if (ChallengeResponse::is_dynamic(reason)) // dynamic challenge/response?
 		      {
 			ClientEvent::Base::Ptr ev = new ClientEvent::DynamicChallenge(reason);
-			client_options->events().add_event(ev);
+			client_options->events().add_event(std::move(ev));
 		      }
 		    else
 		      {
 			ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(reason);
-			client_options->events().add_event(ev);
+			client_options->events().add_event(std::move(ev));
 			client_options->stats().error(Error::AUTH_FAILED);
 		      }
 		    stop();
@@ -414,7 +414,7 @@ namespace openvpn {
 		case Error::TUN_SETUP_FAILED:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TUN_SETUP_FAILED);
 		    stop();
 		  }
@@ -422,7 +422,7 @@ namespace openvpn {
 		case Error::TUN_IFACE_CREATE:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunIfaceCreate(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TUN_IFACE_CREATE);
 		    stop();
 		  }
@@ -430,7 +430,7 @@ namespace openvpn {
 		case Error::TUN_IFACE_DISABLED:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunIfaceDisabled(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TUN_IFACE_DISABLED);
 		    stop();
 		  }
@@ -438,7 +438,7 @@ namespace openvpn {
 		case Error::PROXY_ERROR:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::ProxyError(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::PROXY_ERROR);
 		    stop();
 		  }
@@ -446,7 +446,7 @@ namespace openvpn {
 		case Error::PROXY_NEED_CREDS:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::ProxyNeedCreds(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::PROXY_NEED_CREDS);
 		    stop();
 		  }
@@ -454,7 +454,7 @@ namespace openvpn {
 		case Error::CERT_VERIFY_FAIL:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::CertVerifyFail(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::CERT_VERIFY_FAIL);
 		    stop();
 		  }
@@ -462,7 +462,7 @@ namespace openvpn {
 		case Error::TLS_VERSION_MIN:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TLSVersionMinFail();
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TLS_VERSION_MIN);
 		    stop();
 		  }
@@ -470,7 +470,7 @@ namespace openvpn {
 		case Error::CLIENT_HALT:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientHalt(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::CLIENT_HALT);
 		    stop();
 		  }
@@ -478,7 +478,7 @@ namespace openvpn {
 		case Error::CLIENT_RESTART:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientRestart(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::CLIENT_RESTART);
 		    queue_restart();
 		  }
@@ -486,7 +486,7 @@ namespace openvpn {
 		case Error::INACTIVE_TIMEOUT:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::InactiveTimeout();
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::INACTIVE_TIMEOUT);
 		    stop();
 		  }
@@ -494,7 +494,7 @@ namespace openvpn {
 		case Error::TRANSPORT_ERROR:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TransportError(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TRANSPORT_ERROR);
 		    queue_restart(5); // use a larger timeout to allow preemption from higher levels
 		  }
@@ -502,7 +502,7 @@ namespace openvpn {
 		case Error::TUN_ERROR:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunError(client->fatal_reason());
-		    client_options->events().add_event(ev);
+		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TUN_ERROR);
 		    queue_restart(5);
 		  }
@@ -526,7 +526,7 @@ namespace openvpn {
       if (generation > 1)
 	{
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Reconnecting();
-	  client_options->events().add_event(ev);
+	  client_options->events().add_event(std::move(ev));
 	  client_options->stats().error(Error::N_RECONNECT);
 	  if (!(client && client->reached_connected_state()))
 	    client_options->next();

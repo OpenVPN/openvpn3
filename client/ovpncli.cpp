@@ -195,7 +195,7 @@ namespace openvpn {
 
       MyClientEvents(OpenVPNClient* parent_arg) : parent(parent_arg) {}
 
-      virtual void add_event(const ClientEvent::Base::Ptr& event)
+      virtual void add_event(ClientEvent::Base::Ptr event) override
       {
 	if (parent)
 	  {
@@ -207,7 +207,7 @@ namespace openvpn {
 
 	    // save connected event
 	    if (event->id() == ClientEvent::CONNECTED)
-	      last_connected = event;
+	      last_connected = std::move(event);
 
 	    parent->event(ev);
 	  }
@@ -823,11 +823,11 @@ namespace openvpn {
 	  if (req.invalidAlias)
 	    {
 	      ClientEvent::Base::Ptr ev = new ClientEvent::EpkiInvalidAlias(req.alias);
-	      state->events->add_event(ev);
+	      state->events->add_event(std::move(ev));
 	    }
 
 	  ClientEvent::Base::Ptr ev = new ClientEvent::EpkiError(req.errorText);
-	  state->events->add_event(ev);
+	  state->events->add_event(std::move(ev));
 
 	  state->stats->error(err_type);
 	  if (state->session)
