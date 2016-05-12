@@ -161,10 +161,10 @@ namespace openvpn {
 
   // note -- currently doesn't detect overflow
   template <typename T>
-  inline T parse_hex_number(const char *str)
+  inline bool parse_hex_number(const char *str, T& retval)
   {
     if (!str[0])
-      throw parse_hex_error(); // empty string
+      return false; // empty string
     size_t i = 0;
     T ret = T(0);
     while (true)
@@ -177,16 +177,28 @@ namespace openvpn {
 	    ret += T(hd);
 	  }
 	else if (!c)
-	  return ret;
+	  {
+	    retval = ret;
+	    return true;
+	  }
 	else
-	  throw parse_hex_error(); // non-hex-digit
+	  return false; // non-hex-digit
       }
+  }
+
+  template <typename T>
+  inline bool parse_hex_number(const std::string& str, T& retval)
+  {
+    return parse_hex_number(str.c_str(), retval);
   }
 
   template <typename T>
   inline T parse_hex_number(const std::string& str)
   {
-    return parse_hex_number<T>(str.c_str());
+    T ret;
+    if (!parse_hex_number<T>(str.c_str(), ret))
+      throw parse_hex_error();
+    return ret;
   }
 
   template <typename T>

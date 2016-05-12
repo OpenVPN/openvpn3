@@ -97,7 +97,7 @@ namespace openvpn {
 	    {
 	      try {
 		for (size_t i = 1; i < o->size(); ++i)
-		  ku.push_back(parse_hex_number<unsigned int>(o->get(i, 16).c_str()));
+		  ku.push_back(parse_hex_number<unsigned int>(o->get(i, 16)));
 	      }
 	      catch (parse_hex_error&)
 		{

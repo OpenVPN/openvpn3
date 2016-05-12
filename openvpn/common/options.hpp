@@ -60,6 +60,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/splitlines.hpp>
@@ -217,7 +218,12 @@ namespace openvpn {
     {
       T n;
       const std::string& numstr = get(idx, 64);
-      if (!parse_number<T>(numstr, n))
+      if (numstr.length() >= 2 && numstr[0] == '0' && numstr[1] == 'x')
+	{
+	  if (!parse_hex_number(numstr.substr(2), n))
+	    OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] expecting a hex number");
+	}
+      else if (!parse_number<T>(numstr, n))
 	OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be a number");
       return n;
     }
