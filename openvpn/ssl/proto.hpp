@@ -402,7 +402,8 @@ namespace openvpn {
 		const Option *tad = opt.get_ptr("tls-auth-digest");
 		if (tad)
 		  digest = CryptoAlgs::lookup(tad->get(1, 128));
-		set_tls_auth_digest(digest);
+		if (digest != CryptoAlgs::NONE)
+		  set_tls_auth_digest(digest);
 	      }
 	  }
 	}
