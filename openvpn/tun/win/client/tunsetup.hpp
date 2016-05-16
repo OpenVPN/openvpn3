@@ -288,13 +288,14 @@ namespace openvpn {
 	    // Process ifconfig and topology
 	    if (!l2_post)
 	      {
+		const std::string metric = route_metric_opt(pull, *local4, MT_IFACE);
 		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
 		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
 		if (local4->net30)
 		  Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
 		else
 		  Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
-		create.add(new WinCmd("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " gateway=" + local4->gateway + " store=active"));
+		create.add(new WinCmd("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " gateway=" + local4->gateway + metric + " store=active"));
 		destroy.add(new WinCmd("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " gateway=all store=active"));
 	      }
 	  }
@@ -356,7 +357,7 @@ namespace openvpn {
 	{
 	  for (auto &route : pull.add_routes)
 	    {
-	      const std::string metric = route_metric_opt(pull, route, true);
+	      const std::string metric = route_metric_opt(pull, route, MT_NETSH);
 	      if (route.ipv6)
 		{
 		  if (!pull.block_ipv6)
@@ -386,7 +387,7 @@ namespace openvpn {
 		bool ipv6_error = false;
 		for (auto &route : pull.exclude_routes)
 		  {
-		    const std::string metric = route_metric_opt(pull, route, true);
+		    const std::string metric = route_metric_opt(pull, route, MT_NETSH);
 		    if (route.ipv6)
 		      {
 			ipv6_error = true;
@@ -680,7 +681,7 @@ namespace openvpn {
 	// Process routes
 	for (auto &route : pull.add_routes)
 	  {
-	    const std::string metric = route_metric_opt(pull, route, false);
+	    const std::string metric = route_metric_opt(pull, route, MT_ROUTE);
 	    if (!route.ipv6)
 	      {
 		if (local4)
@@ -701,7 +702,7 @@ namespace openvpn {
 	      {
 		for (auto &route : pull.exclude_routes)
 		  {
-		    const std::string metric = route_metric_opt(pull, route, false);
+		    const std::string metric = route_metric_opt(pull, route, MT_ROUTE);
 		    if (!route.ipv6)
 		      {
 			const std::string netmask = IPv4::Addr::netmask_from_prefix_len(route.prefix_length).to_string();
@@ -791,22 +792,32 @@ namespace openvpn {
 	    }));
       }
 
+      enum MetricType {
+	MT_ROUTE,
+	MT_NETSH,
+	MT_IFACE,
+      };
+
       static std::string route_metric_opt(const TunBuilderCapture& pull,
-					  const TunBuilderCapture::Route& route,
-					  const bool netsh)
+					  const TunBuilderCapture::RouteBase& route,
+					  const MetricType mt)
       {
 	int metric = pull.route_metric_default;
 	if (route.metric >= 0)
 	  metric = route.metric;
 	if (metric >= 0)
 	  {
-	    if (netsh)
-	      return " metric=" + std::to_string(metric);  // netsh form
-	    else
-	      return " METRIC " + std::to_string(metric);  // route command form
+	    switch (mt)
+	      {
+	      case MT_ROUTE:
+		return " METRIC " + std::to_string(metric);    // route command form
+	      case MT_NETSH:
+		return " metric=" + std::to_string(metric);    // "netsh interface ip[v6] add route" form
+	      case MT_IFACE:
+		return " gwmetric=" + std::to_string(metric);  // "netsh interface ip set address" form
+	      }
 	  }
-	else
-	  return "";
+	return "";
       }
 
 #if _WIN32_WINNT >= 0x0600 // Vista+
