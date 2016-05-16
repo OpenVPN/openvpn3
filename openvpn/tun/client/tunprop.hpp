@@ -381,8 +381,7 @@ namespace openvpn {
 		    if (pair.version() != IP::Addr::V4)
 		      throw tun_prop_error("route is not IPv4");
 		    const bool add = route_target(o, 3);
-		    if (!ipv.rgv4() || !add)
-		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, false, eer);
+		    add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, false, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -410,8 +409,7 @@ namespace openvpn {
 		    if (pair.version() != IP::Addr::V6)
 		      throw tun_prop_error("route is not IPv6");
 		    const bool add = route_target(o, 2);
-		    if (!ipv.rgv6() || !add)
-		      add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, true, eer);
+		    add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, true, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
