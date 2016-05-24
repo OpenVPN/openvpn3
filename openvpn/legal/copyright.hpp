@@ -4,7 +4,7 @@
 // Define copyright strings
 
 namespace {
-  const char openvpn_copyright[] = "Copyright (C) 2012-2015 OpenVPN Technologies, Inc. All rights reserved."; // CONST GLOBAL
+  const char openvpn_copyright[] = "Copyright (C) 2012-2016 OpenVPN Technologies, Inc. All rights reserved."; // CONST GLOBAL
 }
 
 #endif
