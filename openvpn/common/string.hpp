@@ -342,6 +342,16 @@ namespace openvpn {
       return ret;
     }
 
+    // replace instances of char 'from' in string with char 'to'
+    inline std::string replace_copy(const std::string& str, const char from, const char to)
+    {
+      std::string ret;
+      ret.reserve(str.length());
+      for (auto &c : str)
+	ret.push_back(c == from ? to : c);
+      return ret;
+    }
+
     // return true if str is empty or contains only space chars
     inline bool is_empty(const std::string& str)
     {
