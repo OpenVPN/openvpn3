@@ -124,6 +124,11 @@ namespace openvpn {
 	return ret;
       }
 
+      const std::string& request() const
+      {
+	return request_;
+      }
+
     private:
       std::string request_;
     };
