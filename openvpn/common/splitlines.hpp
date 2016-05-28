@@ -24,6 +24,8 @@
 #ifndef OPENVPN_COMMON_SPLITLINES_H
 #define OPENVPN_COMMON_SPLITLINES_H
 
+#include <utility>
+
 #include <openvpn/common/string.hpp>
 
 namespace openvpn {
@@ -78,6 +80,11 @@ namespace openvpn {
       return line;
     }
 
+    std::string line_move()
+    {
+      return std::move(line);
+    }
+
     enum Status {
       S_OKAY,
       S_EOF,
@@ -91,7 +98,7 @@ namespace openvpn {
 	return S_EOF;
       if (overflow)
 	return S_ERROR;
-      ln = line;
+      ln = std::move(line);
       return S_OKAY;
     }
 
