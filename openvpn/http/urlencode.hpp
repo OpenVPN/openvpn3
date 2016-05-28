@@ -95,25 +95,6 @@ namespace openvpn {
 	i = decode(i);
       return list;
     }
-
-    inline bool match_path(const std::string& uri, const std::vector<std::string>& choices)
-    {
-      if (uri.empty())
-	return false;
-      if (uri[0] != '/')
-	return false;
-      return std::find(choices.begin(), choices.end(), uri.substr(1)) != choices.end();
-    }
-
-    inline bool match_prefix(const std::string& uri, const std::vector<std::string>& choices)
-    {
-      for (const auto &c : choices)
-	{
-	  if (string::starts_with(uri, std::string("/") + c + std::string("/")))
-	    return true;
-	}
-      return false;
-    }
   }
 }
 
