@@ -24,6 +24,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
@@ -37,10 +38,11 @@ namespace openvpn {
     OPENVPN_EXCEPTION(creds_error);
 
     enum Flags {
-      OPT_REQUIRED = (1<<0),
-      USERNAME_REQUIRED = (1<<1),
-      PASSWORD_REQUIRED = (1<<2),
-      TRY_FILE = (1<<3),
+      OPT_REQUIRED = (1<<0),        // option must be present
+      OPT_OPTIONAL = (1<<1),        // if option is not present, USERNAME_REQUIRED and PASSWORD_REQUIRED are ignored
+      USERNAME_REQUIRED = (1<<2),   // username must be present
+      PASSWORD_REQUIRED = (1<<3),   // password must be present
+      TRY_FILE = (1<<4),            // option argument might be a filename, try to load creds from it
     };
 
     inline bool parse(const OptionList& options,
@@ -66,9 +68,8 @@ namespace openvpn {
       SplitLines in(str, 1024);
       for (int i = 0; in(true) && i < 2; ++i)
 	{
-	  const std::string& line = in.line_ref();
 	  if (user_pass)
-	    user_pass->push_back(line);
+	    user_pass->push_back(in.line_move());
 	}
       return true;
     }
@@ -81,12 +82,13 @@ namespace openvpn {
     {
       std::vector<std::string> up;
       up.reserve(2);
-      parse(options, opt_name, flags, &up);
+      if (!parse(options, opt_name, flags, &up) && (flags & OPT_OPTIONAL))
+	return;
       if (up.size() >= 1)
 	{
-	  user = up[0];
+	  user = std::move(up[0]);
 	  if (up.size() >= 2)
-	    pass = up[1];
+	    pass = std::move(up[1]);
 	}
       if ((flags & USERNAME_REQUIRED) && string::is_empty(user))
 	throw creds_error(opt_name + " : username empty");
@@ -105,9 +107,9 @@ namespace openvpn {
       SplitLines in(str, 1024);
       if (in(true))
 	{
-	  user = in.line_ref();
+	  user = in.line_move();
 	  if (in(true))
-	    pass = in.line_ref();
+	    pass = in.line_move();
 	}
       if ((flags & USERNAME_REQUIRED) && string::is_empty(user))
 	throw creds_error(path + " : username empty");
