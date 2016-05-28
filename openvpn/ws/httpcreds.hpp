@@ -115,26 +115,10 @@ namespace openvpn {
 
       static Creds load_from_options(const OptionList& opt,
 				     const std::string& opt_name,
-				     const bool try_file,
-				     const bool password_required,
-				     const bool throw_on_error)
+				     const unsigned int flags)
       {
 	Creds ret;
-	try
-	  {
-	    unsigned int flags = UserPass::OPT_REQUIRED
-	                       | UserPass::USERNAME_REQUIRED;
-	    if (password_required)
-	      flags |= UserPass::PASSWORD_REQUIRED;
-	    if (try_file)
-	      flags |= UserPass::TRY_FILE;
-	    UserPass::parse(opt, opt_name, flags, ret.username, ret.password);
-	  }
-	catch (const std::exception& e)
-	  {
-	    if (throw_on_error)
-	      throw web_creds_error(e.what());
-	  }
+	UserPass::parse(opt, opt_name, flags, ret.username, ret.password);
 	return ret;
       }
 
