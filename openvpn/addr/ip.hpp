@@ -59,8 +59,7 @@ namespace openvpn {
       Addr(const Addr& other, const char *title = nullptr, Version required_version = UNSPEC)
 	: ver(other.ver)
       {
-	if (required_version != UNSPEC && required_version != ver)
-	  throw ip_exception(internal::format_error(other.to_string(), title, version_string_static(required_version), "wrong IP version"));
+	other.validate_version(title, required_version);
 	switch (ver)
 	  {
 	  case V4:
@@ -82,6 +81,17 @@ namespace openvpn {
       Addr(const std::string& ipstr, const std::string& title, Version required_version = UNSPEC)
 	: Addr(from_string(ipstr, title.c_str(), required_version))
       {
+      }
+
+      void validate_version(const char *title, Version required_version) const
+      {
+	if (required_version != UNSPEC && required_version != ver)
+	  throw ip_exception(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
+      }
+
+      void validate_version(const std::string& title, Version required_version) const
+      {
+	validate_version(title.c_str(), required_version);
       }
 
       static std::string validate(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)

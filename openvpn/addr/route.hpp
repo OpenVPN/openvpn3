@@ -30,6 +30,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ip.hpp>
@@ -163,9 +164,12 @@ namespace openvpn {
 
       std::string to_string() const
       {
-	std::ostringstream os;
-	os << addr.to_string() << '/' << prefix_len;
-	return os.str();
+	return addr.to_string() + '/' + openvpn::to_string(prefix_len);
+      }
+
+      std::string to_string_by_netmask() const
+      {
+	return addr.to_string() + ' ' + netmask().to_string();
       }
 
       bool operator==(const RouteType& other) const
@@ -239,7 +243,14 @@ namespace openvpn {
 	return r;
       }
 
-
+    inline Route route_from_string(const std::string& rtstr,
+				   const std::string& title,
+				   const IP::Addr::Version required_version = IP::Addr::UNSPEC)
+    {
+      Route r(rtstr, title);
+      r.addr.validate_version(title, required_version);
+      return r;
+    }
   }
 }
 
