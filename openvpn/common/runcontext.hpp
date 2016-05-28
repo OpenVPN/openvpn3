@@ -115,10 +115,7 @@ namespace openvpn {
     };
 
     RunContext()
-      : io_context(1),
-	exit_timer(io_context),
-	thread_count(0),
-	halt(false),
+      : exit_timer(io_context),
 	log_context(this),
 	log_wrap()
     {
@@ -133,6 +130,11 @@ namespace openvpn {
 				self->cancel();
                             });
 #endif
+    }
+
+    void set_async_stop(Stop* async_stop)
+    {
+      async_stop_ = async_stop;
     }
 
     void set_thread(const unsigned int unit, std::thread* thread)
@@ -292,7 +294,8 @@ namespace openvpn {
 	  }
 
 	  // async stop
-	  self->async_stop_.stop();
+	  if (self->async_stop_)
+	    self->async_stop_->stop();
 	});
     }
 
@@ -305,7 +308,7 @@ namespace openvpn {
 
     virtual Stop* async_stop()
     {
-      return &async_stop_;
+      return async_stop_;
     }
 
   private:
@@ -362,7 +365,7 @@ namespace openvpn {
     }
 
     // these vars only used by main thread
-    asio::io_context io_context;
+    asio::io_context io_context{1};
     typename Stats::Ptr stats;
     ASIOSignals::Ptr signals;
     AsioTimer exit_timer;
@@ -377,11 +380,11 @@ namespace openvpn {
 
     // servlist and related vars protected by mutex
     std::vector<ServerThread*> servlist;
-    int thread_count;
-    volatile bool halt;
+    int thread_count = 0;
+    volatile bool halt = false;
 
     // stop
-    Stop async_stop_;
+    Stop* async_stop_ = nullptr;
 
     // log observers
     std::vector<unsigned int> log_observers; // unit numbers of log observers
