@@ -50,12 +50,22 @@ namespace openvpn {
       std::string value;
     };
 
-    struct HeaderList : public std::vector<Header> {
+    struct HeaderList : public std::vector<Header>
+    {
       const Header* get(const std::string& key) const
       {
-	for (std::vector<Header>::const_iterator i = begin(); i != end(); ++i)
+	for (auto &h : *this)
 	  {
-	    const Header& h = *i;
+	    if (string::strcasecmp(key, h.name) == 0)
+	      return &h;
+	  }
+	return nullptr;
+      }
+
+      Header* get(const std::string& key)
+      {
+	for (auto &h : *this)
+	  {
 	    if (string::strcasecmp(key, h.name) == 0)
 	      return &h;
 	  }
