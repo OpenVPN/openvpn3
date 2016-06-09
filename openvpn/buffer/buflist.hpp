@@ -116,7 +116,7 @@ namespace openvpn {
   };
 
   typedef BufferCollection<std::list> BufferList;
-  typedef BufferCollection<std::list> BufferVector;
+  typedef BufferCollection<std::vector> BufferVector;
 }
 
 #endif
