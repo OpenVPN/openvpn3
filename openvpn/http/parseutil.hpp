@@ -34,19 +34,19 @@ namespace openvpn {
     namespace Util {
 
       // Check if a byte is an HTTP character.
-      inline bool is_char(int c)
+      inline bool is_char(const unsigned char c)
       {
 	return c >= 0 && c <= 127;
       }
 
       // Check if a byte is an HTTP control character.
-      inline bool is_ctl(int c)
+      inline bool is_ctl(const unsigned char c)
       {
 	return (c >= 0 && c <= 31) || (c == 127);
       }
 
       // Check if a byte is defined as an HTTP tspecial character.
-      inline bool is_tspecial(int c)
+      inline bool is_tspecial(const unsigned char c)
       {
 	switch (c)
 	  {
@@ -61,7 +61,7 @@ namespace openvpn {
       }
 
       // Check if a byte is a digit.
-      inline bool is_digit(int c)
+      inline bool is_digit(const unsigned char c)
       {
 	return c >= '0' && c <= '9';
       }

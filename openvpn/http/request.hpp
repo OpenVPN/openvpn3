@@ -121,7 +121,7 @@ namespace openvpn {
       }
 
       // Parse some HTTP request data.
-      status consume(Request& req, const char input)
+      status consume(Request& req, const unsigned char input)
       {
 	switch (state_)
 	  {
