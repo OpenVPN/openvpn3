@@ -181,6 +181,10 @@ namespace openvpn {
       offset_ = size_ = 0;
     }
 
+    // std::string compatible methods
+    const T* c_str() const { return c_data(); }
+    size_t length() const { return size(); }
+
     // return a const pointer to start of array
     const T* c_data() const { return data_ + offset_; }
 
