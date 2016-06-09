@@ -29,17 +29,19 @@
 #include <openvpn/common/string.hpp>
 
 namespace openvpn {
-  class SplitLines
+  template <typename STRING>
+  class SplitLinesType
   {
   public:
-    // Note: str passed to constructor is not locally stored, so it must remain in
-    // scope and not be modified during the lifetime of the SplitLines object.
-    SplitLines(const std::string& str, const size_t max_line_len_arg=0)
-      : data(str.c_str()),
+    // Note: string/buffer passed to constructor is not locally stored,
+    // so it must remain in scope and not be modified during the lifetime
+    // of the SplitLines object.
+    SplitLinesType(const STRING& str, const size_t max_line_len_arg=0)
+      : data((const char *)str.c_str()),
 	size(str.length()),
-	max_line_len(max_line_len_arg),
-	index(0),
-	overflow(false) {}
+	max_line_len(max_line_len_arg)
+    {
+    }
 
     bool operator()(const bool trim=true)
     {
@@ -106,10 +108,12 @@ namespace openvpn {
     const char *data;
     size_t size;
     size_t max_line_len;
-    size_t index;
+    size_t index = 0;
     std::string line;
-    bool overflow;
+    bool overflow = false;
   };
+
+  typedef SplitLinesType<std::string> SplitLines;
 }
 
 #endif
