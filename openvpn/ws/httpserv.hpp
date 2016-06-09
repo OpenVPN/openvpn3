@@ -213,7 +213,7 @@ namespace openvpn {
 	    const client_t client_id;
 	  };
 
-	  struct Factory : public RC<thread_unsafe_refcount>
+	  struct Factory : public OPENVPN_HTTP_SERV_RC
 	  {
 	    typedef RCPtr<Factory> Ptr;
 
