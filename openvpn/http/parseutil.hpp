@@ -65,6 +65,20 @@ namespace openvpn {
       {
 	return c >= '0' && c <= '9';
       }
+
+      // Check if char should be URL-escaped
+      inline bool is_escaped(const unsigned char c)
+      {
+	if (c >= 'a' && c <= 'z')
+	  return false;
+	if (c >= 'A' && c <= 'Z')
+	  return false;
+	if (c >= '0' && c <= '9')
+	  return false;
+	if (c == '.' || c == '-' || c == '_')
+	  return false;
+	return true;
+      }
     }
   }
 }

@@ -30,10 +30,27 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/unicode.hpp>
+#include <openvpn/http/parseutil.hpp>
 
 namespace openvpn {
   namespace URL {
     OPENVPN_EXCEPTION(url_error);
+
+    inline std::string encode(const std::string& str)
+    {
+      std::string ret;
+      for (auto &c : str)
+	{
+	  if (HTTP::Util::is_escaped(c))
+	    {
+	      ret += '%';
+	      ret += render_hex_number((unsigned char)c, true);
+	    }
+	  else
+	    ret += c;
+	}
+      return ret;
+    }
 
     inline std::string decode(const std::string& encoded)
     {
