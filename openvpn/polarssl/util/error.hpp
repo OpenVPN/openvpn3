@@ -65,6 +65,10 @@ namespace openvpn {
       errnum = polarssl_errnum;
       errtxt = "PolarSSL: " + error_text + " : " + polarssl_errtext(polarssl_errnum);
 
+      // cite forum URL for PolarSSL invalid date
+      if (polarssl_errnum == POLARSSL_ERR_X509_INVALID_DATE)
+	errtxt += ", please see https://forums.openvpn.net/viewtopic.php?f=36&t=21873 for more info";
+
       // for certain PolarSSL errors, translate them to an OpenVPN error code,
       // so they can be propagated up to the higher levels (such as UI level)
       switch (errnum) {
