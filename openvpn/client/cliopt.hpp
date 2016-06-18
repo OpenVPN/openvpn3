@@ -168,6 +168,7 @@ namespace openvpn {
 	echo(config.echo),
 	info(config.info),
 	autologin(false),
+	autologin_sessions(false),
 	creds_locked(false)
     {
       // parse general client options
@@ -176,6 +177,7 @@ namespace openvpn {
       // creds
       userlocked_username = pcc.userlockedUsername();
       autologin = pcc.autologin();
+      autologin_sessions = (autologin && config.autologin_sessions);
 
       // digest factory
       DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
@@ -232,10 +234,10 @@ namespace openvpn {
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
       cp->ssl_factory = cc->new_factory();
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
-      cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || config.autologin_sessions);
+      cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
       cp->gui_version = config.gui_version;
       cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
-      cp->extra_peer_info = build_peer_info(config, pcc);
+      cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
       cp->frame = frame;
       cp->now = &now_;
       cp->rng = rng;
@@ -434,13 +436,15 @@ namespace openvpn {
 	    submit_creds(cc);
 	    creds_locked = true;
 	  }
+	else if (autologin_sessions)
+	  {
+	    // autologin sessions require replace_password_with_session_id
+	    cc->set_replace_password_with_session_id(true);
+	    submit_creds(cc);
+	    creds_locked = true;
+	  }
 	else
 	  {
-	    if (autologin && config.autologin_sessions)
-	      {
-		cc->set_password("auth-token-request");
-		cc->set_replace_password_with_session_id(true);
-	      }
 	    submit_creds(cc);
 	  }
       }
@@ -475,7 +479,7 @@ namespace openvpn {
 	OPENVPN_LOG("UNUSED OPTIONS" << std::endl << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
     }
 
-    static PeerInfo::Set::Ptr build_peer_info(const Config& config, const ParseClientConfig& pcc)
+    static PeerInfo::Set::Ptr build_peer_info(const Config& config, const ParseClientConfig& pcc, const bool autologin_sessions)
     {
       PeerInfo::Set::Ptr pi(new PeerInfo::Set);
 
@@ -484,6 +488,10 @@ namespace openvpn {
 	pi->emplace_back("IV_IPv6", "0");
       else if (config.ipv6() == IPv6Setting::YES)
 	pi->emplace_back("IV_IPv6", "1");
+
+      // autologin sessions
+      if (autologin_sessions)
+	pi->emplace_back("IV_AUTO_SESS", "1");
 
       // Config::peerInfo
       pi->append_foreign_set_ptr(config.extra_peer_info.get());
@@ -718,6 +726,7 @@ namespace openvpn {
     bool echo;
     bool info;
     bool autologin;
+    bool autologin_sessions;
     bool creds_locked;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
