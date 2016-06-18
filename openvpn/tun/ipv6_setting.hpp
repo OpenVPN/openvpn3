@@ -68,7 +68,7 @@ namespace openvpn {
       else if (str == "default")
 	return IPv6Setting(DEFAULT);
       else
-	throw Exception("IPv6Setting: unrecognized setting");
+	throw Exception("IPv6Setting: unrecognized setting: '" + str + '\'');
     }
 
     bool operator==(const IPv6Setting& other) const
