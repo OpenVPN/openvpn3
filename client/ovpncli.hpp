@@ -33,6 +33,7 @@
 namespace openvpn {
   class OptionList;
   class ProfileMerge;
+  class Stop;
 
   namespace ClientAPI {
     // Represents an OpenVPN server and its friendly name
@@ -371,7 +372,7 @@ namespace openvpn {
     };
 
     namespace Private {
-      struct ClientState;
+      class ClientState;
     };
 
     // Top-level OpenVPN client class.
@@ -510,10 +511,11 @@ namespace openvpn {
       Status do_connect();
 
       virtual void connect_attach();
-      virtual void connect_detach();
       virtual void connect_pre_run();
       virtual void connect_run();
       virtual void connect_session_stop();
+
+      virtual Stop* get_async_stop();
 
       Private::ClientState* state;
 

@@ -381,7 +381,7 @@ namespace openvpn {
       Info(std::string value) : ReasonBase(INFO, std::move(value)) {}
     };
 
-    class Queue : public RC<thread_safe_refcount>
+    class Queue : public RC<thread_unsafe_refcount>
     {
     public:
       typedef RCPtr<Queue> Ptr;

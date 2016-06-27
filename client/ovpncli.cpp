@@ -23,6 +23,9 @@
 
 #include <iostream>
 #include <string>
+#include <memory>
+#include <utility>
+#include <atomic>
 
 #include <asio.hpp>
 
@@ -95,6 +98,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/platform_string.hpp>
 #include <openvpn/common/count.hpp>
+#include <openvpn/common/asiostop.hpp>
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>
@@ -304,8 +308,10 @@ namespace openvpn {
     };
 
     namespace Private {
-      struct ClientState
+      class ClientState
       {
+      public:
+	// state objects
 	OptionList options;
 	EvalConfig eval;
 	MySocketProtect socket_protect;
@@ -340,13 +346,35 @@ namespace openvpn {
 	bool dco = false;
 	bool echo = false;
 	bool info = false;
-	Stop stop;
-
-	asio::io_context* io_context = nullptr;
 
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
-	void attach(OpenVPNClient* parent)
+	void attach(OpenVPNClient* parent,
+		    asio::io_context* io_context,
+		    Stop* async_stop)
 	{
+	  // only one attachment per instantiation allowed
+	  if (attach_called)
+	    throw Exception("ClientState::attach() can only be called once per ClientState instantiation");
+	  attach_called = true;
+
+	  // async stop
+	  if (async_stop)
+	    async_stop_ = async_stop;
+	  else
+	    {
+	      async_stop_ = new Stop();
+	      async_stop_owned = true;
+	    }
+
+	  // io_context
+	  if (io_context)
+	    io_context_ = io_context;
+	  else
+	    {
+	      io_context_ = new asio::io_context(1); // concurrency hint=1
+	      io_context_owned = true;
+	    }
+
 	  // client stats
 	  stats.reset(new SESSION_STATS(parent));
 
@@ -358,20 +386,67 @@ namespace openvpn {
 
 	  // reconnect notifications
 	  reconnect_notify.set_parent(parent);
-
-	  // session
-	  session.reset();
 	}
 
-	void detach()
+	ClientState() {}
+
+	~ClientState()
 	{
 	  socket_protect.detach_from_parent();
 	  reconnect_notify.detach_from_parent();
 	  stats->detach_from_parent();
 	  events->detach_from_parent();
-	  if (session)
-	    session.reset();
+	  if (async_stop_owned)
+	    delete async_stop_;
+	  if (io_context_owned)
+	    delete io_context_;
 	}
+
+	// foreign thread access
+
+	void enable_foreign_thread_access()
+	{
+	  foreign_thread_ready.store(true, std::memory_order_release);
+	}
+
+	bool is_foreign_thread_access()
+	{
+	  return foreign_thread_ready.load(std::memory_order_acquire);
+	}
+
+	// io_context
+
+	asio::io_context* io_context()
+	{
+	  return io_context_;
+	}
+
+	// async stop
+
+	Stop* async_stop()
+	{
+	  return async_stop_;
+	}
+
+	void trigger_async_stop()
+	{
+	  if (async_stop_)
+	    async_stop_->stop();
+	}
+
+      private:
+	ClientState(const ClientState&) = delete;
+	ClientState& operator=(const ClientState&) = delete;
+
+	bool attach_called = false;
+
+	Stop* async_stop_ = nullptr;
+	bool async_stop_owned = false;
+
+	asio::io_context* io_context_ = nullptr;
+	bool io_context_owned = false;
+
+	std::atomic<bool> foreign_thread_ready{false};
       };
     };
 
@@ -395,7 +470,7 @@ namespace openvpn {
 #endif
 
       state = new Private::ClientState();
-      state->proto_context_options = new ProtoContextOptions();
+      state->proto_context_options.reset(new ProtoContextOptions());
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
@@ -681,7 +756,7 @@ namespace openvpn {
 	cc.tls_version_min_override = state->tls_version_min_override;
 	cc.gui_version = state->gui_version;
 	cc.extra_peer_info = state->extra_peer_info;
-	cc.stop = &state->stop;
+	cc.stop = state->async_stop();
 #ifdef OPENVPN_GREMLIN
 	cc.gremlin_config = state->gremlin_config;
 #endif
@@ -736,7 +811,7 @@ namespace openvpn {
 	client_options->submit_creds(state->creds);
 
 	// instantiate top-level client session
-	state->session.reset(new ClientConnect(*state->io_context, client_options));
+	state->session.reset(new ClientConnect(*state->io_context(), client_options));
 
 	// raise an exception if app has expired
 	check_app_expired();
@@ -744,10 +819,16 @@ namespace openvpn {
 	// start VPN
 	state->session->start(); // queue parallel async reads
 
+	// wire up async stop
+	AsioStopScope scope(*state->io_context(), state->async_stop(), [this]() {
+	    state->session->graceful_stop();
+	  });
+
 	// prepare to start reactor
 	connect_pre_run();
 
 	// run i/o reactor
+	state->enable_foreign_thread_access();
 	in_run = true;
 	connect_run();
       }
@@ -766,21 +847,14 @@ namespace openvpn {
 	      ret.status = Error::name(ec->code());
 	  }
 	}
-      connect_detach();
       return ret;
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_attach()
     {
-      state->io_context = new asio::io_context(1); // concurrency hint=1
-      state->attach<MySessionStats, MyClientEvents>(this);
-    }
-
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_detach()
-    {
-      state->detach();
-      delete state->io_context;
-      state->io_context = nullptr;
+      state->attach<MySessionStats, MyClientEvents>(this,
+						    nullptr,
+						    get_async_stop());
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_pre_run()
@@ -789,35 +863,45 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_run()
     {
-      state->io_context->run();
+      state->io_context()->run();
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_session_stop()
     {
       state->session->stop();     // On exception, stop client...
-      state->io_context->poll();  //   and execute completion handlers.
+      state->io_context()->poll();  //   and execute completion handlers.
     }
 
     OPENVPN_CLIENT_EXPORT ConnectionInfo OpenVPNClient::connection_info()
     {
       ConnectionInfo ci;
-      MyClientEvents::Ptr events = state->events;
-      if (events)
-	events->get_connection_info(ci);
+      if (state->is_foreign_thread_access())
+	{
+	  MyClientEvents* events = state->events.get();
+	  if (events)
+	    events->get_connection_info(ci);
+	}
       return ci;
     }
 
     OPENVPN_CLIENT_EXPORT bool OpenVPNClient::session_token(SessionToken& tok)
     {
-      ClientCreds::Ptr cc = state->creds;
-      if (cc && cc->session_id_defined())
+      if (state->is_foreign_thread_access())
 	{
-	  tok.username = cc->get_username();
-	  tok.session_id = cc->get_password();
-	  return true;
+	  ClientCreds* cc = state->creds.get();
+	  if (cc && cc->session_id_defined())
+	    {
+	      tok.username = cc->get_username();
+	      tok.session_id = cc->get_password();
+	      return true;
+	    }
 	}
-      else
-	return false;
+      return false;
+    }
+
+    OPENVPN_CLIENT_EXPORT Stop* OpenVPNClient::get_async_stop()
+    {
+      return nullptr;
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::external_pki_error(const ExternalPKIRequestBase& req, const size_t err_type)
@@ -834,8 +918,7 @@ namespace openvpn {
 	  state->events->add_event(std::move(ev));
 
 	  state->stats->error(err_type);
-	  if (state->session)
-	    state->session->dont_restart();
+	  state->session->dont_restart();
 	}
     }
 
@@ -870,118 +953,137 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT long long OpenVPNClient::stats_value(int index) const
     {
-      MySessionStats::Ptr stats = state->stats;
-      if (stats)
-	return stats->combined_value(index);
-      else
-	return 0;
+      if (state->is_foreign_thread_access())
+	{
+	  MySessionStats* stats = state->stats.get();
+	  if (stats)
+	    return stats->combined_value(index);
+	}
+      return 0;
     }
 
     OPENVPN_CLIENT_EXPORT std::vector<long long> OpenVPNClient::stats_bundle() const
     {
       std::vector<long long> sv;
-      MySessionStats::Ptr stats = state->stats;
       const size_t n = MySessionStats::combined_n();
       sv.reserve(n);
-      for (size_t i = 0; i < n; ++i)
-	sv.push_back(stats ? stats->combined_value(i) : 0);
+      if (state->is_foreign_thread_access())
+	{
+	  MySessionStats* stats = state->stats.get();
+	  for (size_t i = 0; i < n; ++i)
+	    sv.push_back(stats ? stats->combined_value(i) : 0);
+	}
+      else
+	{
+	  for (size_t i = 0; i < n; ++i)
+	    sv.push_back(0);
+	}
       return sv;
     }
 
     OPENVPN_CLIENT_EXPORT InterfaceStats OpenVPNClient::tun_stats() const
     {
-      MySessionStats::Ptr stats = state->stats;
       InterfaceStats ret;
+      if (state->is_foreign_thread_access())
+	{
+	  MySessionStats* stats = state->stats.get();
 
-      // The reason for the apparent inversion between in/out below is
-      // that TUN_*_OUT stats refer to data written to tun device,
-      // but from the perspective of tun interface, this is incoming
-      // data.  Vice versa for TUN_*_IN.
-      if (stats)
-	{
-	  ret.bytesOut = stats->stat_count(SessionStats::TUN_BYTES_IN);
-	  ret.bytesIn = stats->stat_count(SessionStats::TUN_BYTES_OUT);
-	  ret.packetsOut = stats->stat_count(SessionStats::TUN_PACKETS_IN);
-	  ret.packetsIn = stats->stat_count(SessionStats::TUN_PACKETS_OUT);
-	  ret.errorsOut = stats->error_count(Error::TUN_READ_ERROR);
-	  ret.errorsIn = stats->error_count(Error::TUN_WRITE_ERROR);
+	  // The reason for the apparent inversion between in/out below is
+	  // that TUN_*_OUT stats refer to data written to tun device,
+	  // but from the perspective of tun interface, this is incoming
+	  // data.  Vice versa for TUN_*_IN.
+	  if (stats)
+	    {
+	      ret.bytesOut = stats->stat_count(SessionStats::TUN_BYTES_IN);
+	      ret.bytesIn = stats->stat_count(SessionStats::TUN_BYTES_OUT);
+	      ret.packetsOut = stats->stat_count(SessionStats::TUN_PACKETS_IN);
+	      ret.packetsIn = stats->stat_count(SessionStats::TUN_PACKETS_OUT);
+	      ret.errorsOut = stats->error_count(Error::TUN_READ_ERROR);
+	      ret.errorsIn = stats->error_count(Error::TUN_WRITE_ERROR);
+	      return ret;
+	    }
 	}
-      else
-	{
-	  ret.bytesOut = 0;
-	  ret.bytesIn = 0;
-	  ret.packetsOut = 0;
-	  ret.packetsIn = 0;
-	  ret.errorsOut = 0;
-	  ret.errorsIn = 0;
-	}
+
+      ret.bytesOut = 0;
+      ret.bytesIn = 0;
+      ret.packetsOut = 0;
+      ret.packetsIn = 0;
+      ret.errorsOut = 0;
+      ret.errorsIn = 0;
       return ret;
     }
 
     OPENVPN_CLIENT_EXPORT TransportStats OpenVPNClient::transport_stats() const
     {
-      MySessionStats::Ptr stats = state->stats;
       TransportStats ret;
-
       ret.lastPacketReceived = -1; // undefined
-      if (stats)
-	{
-	  ret.bytesOut = stats->stat_count(SessionStats::BYTES_OUT);
-	  ret.bytesIn = stats->stat_count(SessionStats::BYTES_IN);
-	  ret.packetsOut = stats->stat_count(SessionStats::PACKETS_OUT);
-	  ret.packetsIn = stats->stat_count(SessionStats::PACKETS_IN);
 
-	  // calculate time since last packet received
-	  {
-	    const Time& lpr = stats->last_packet_received();
-	    if (lpr.defined())
-	      {
-		const Time::Duration dur = Time::now() - lpr;
-		const unsigned int delta = (unsigned int)dur.to_binary_ms();
-		if (delta <= 60*60*24*1024) // only define for time periods <= 1 day
-		  ret.lastPacketReceived = delta;
-	      }
-	  }
-	}
-      else
+      if (state->is_foreign_thread_access())
 	{
-	  ret.bytesOut = 0;
-	  ret.bytesIn = 0;
-	  ret.packetsOut = 0;
-	  ret.packetsIn = 0;
+	  MySessionStats* stats = state->stats.get();
+	  if (stats)
+	    {
+	      ret.bytesOut = stats->stat_count(SessionStats::BYTES_OUT);
+	      ret.bytesIn = stats->stat_count(SessionStats::BYTES_IN);
+	      ret.packetsOut = stats->stat_count(SessionStats::PACKETS_OUT);
+	      ret.packetsIn = stats->stat_count(SessionStats::PACKETS_IN);
+
+	      // calculate time since last packet received
+	      {
+		const Time& lpr = stats->last_packet_received();
+		if (lpr.defined())
+		  {
+		    const Time::Duration dur = Time::now() - lpr;
+		    const unsigned int delta = (unsigned int)dur.to_binary_ms();
+		    if (delta <= 60*60*24*1024) // only define for time periods <= 1 day
+		      ret.lastPacketReceived = delta;
+		  }
+	      }
+	      return ret;
+	    }
 	}
+
+      ret.bytesOut = 0;
+      ret.bytesIn = 0;
+      ret.packetsOut = 0;
+      ret.packetsIn = 0;
       return ret;
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::stop()
     {
-      ClientConnect::Ptr session = state->session;
-      if (session)
-	{
-	  state->stop.stop();
-	  session->thread_safe_stop();
-	}
+      if (state->is_foreign_thread_access())
+	state->trigger_async_stop();
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::pause(const std::string& reason)
     {
-      ClientConnect::Ptr session = state->session;
-      if (session)
-	session->thread_safe_pause(reason);
+      if (state->is_foreign_thread_access())
+	{
+	  ClientConnect* session = state->session.get();
+	  if (session)
+	    session->thread_safe_pause(reason);
+	}
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::resume()
     {
-      ClientConnect::Ptr session = state->session;
-      if (session)
-	session->thread_safe_resume();
+      if (state->is_foreign_thread_access())
+	{
+	  ClientConnect* session = state->session.get();
+	  if (session)
+	    state->session->thread_safe_resume();
+	}
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::reconnect(int seconds)
     {
-      ClientConnect::Ptr session = state->session;
-      if (session)
-	session->thread_safe_reconnect(seconds);
+      if (state->is_foreign_thread_access())
+	{
+	  ClientConnect* session = state->session.get();
+	  if (session)
+	    state->session->thread_safe_reconnect(seconds);
+	}
     }
 
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::crypto_self_test()

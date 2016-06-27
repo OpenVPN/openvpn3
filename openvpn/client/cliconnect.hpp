@@ -66,7 +66,7 @@ namespace openvpn {
   class ClientConnect : ClientProto::NotifyCallback,
 			RemoteList::PreResolve::NotifyCallback,
 			ClientLifeCycle::NotifyCallback,
-			public RC<thread_safe_refcount>
+			public RC<thread_unsafe_refcount>
   {
   public:
     typedef RCPtr<ClientConnect> Ptr;

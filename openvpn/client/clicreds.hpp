@@ -37,7 +37,7 @@
 
 namespace openvpn {
 
-  class ClientCreds : public RC<thread_safe_refcount> {
+  class ClientCreds : public RC<thread_unsafe_refcount> {
   public:
     typedef RCPtr<ClientCreds> Ptr;
 
