@@ -12,13 +12,21 @@ fi
 export GCC_EXTRA
 if [ "$(uname)" == "Darwin" ]; then
     cd $O3/core
-    . vars/vars-osx64
+    if [ "$DEBUG" = "3" ]; then
+	. vars/vars-osx64-dbg
+    else
+	. vars/vars-osx64
+    fi
     . vars/setpath
     cd test/ovpncli
     PSSL=1 LZ4=1 PTPROXY=1 build cli 2>&1
 else
     cd $O3/core
-    . vars/vars-linux
+    if [ "$DEBUG" = "3" ]; then
+	. vars/vars-linux-dbg
+    else
+	. vars/vars-linux
+    fi
     . vars/setpath
     cd test/ovpncli
     PSSL=1 LZ4=1 NOSSL=1 PTPROXY=1 build cli 2>&1
