@@ -115,10 +115,15 @@ namespace openvpn {
 	}
     }
 
-    void graceful_stop()
+    void send_explicit_exit_notify()
     {
       if (!halt && client)
-	  client->send_explicit_exit_notify();
+	client->send_explicit_exit_notify();
+    }
+
+    void graceful_stop()
+    {
+      send_explicit_exit_notify();
       //sleep(5); // simulate slow stop (comment out for production)
       stop();
     }
@@ -488,7 +493,7 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::InactiveTimeout();
 		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::INACTIVE_TIMEOUT);
-		    stop();
+		    graceful_stop();
 		  }
 		  break;
 		case Error::TRANSPORT_ERROR:
