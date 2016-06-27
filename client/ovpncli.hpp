@@ -278,6 +278,8 @@ namespace openvpn {
       std::string serverIp;
       std::string vpnIp4;
       std::string vpnIp6;
+      std::string gw4;
+      std::string gw6;
       std::string clientIp;
       std::string tunName;
     };

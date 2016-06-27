@@ -253,6 +253,8 @@ namespace openvpn {
       std::string server_ip;
       std::string vpn_ip4;
       std::string vpn_ip6;
+      std::string vpn_gw4;
+      std::string vpn_gw6;
       std::string client_ip;
       std::string tun_name;
 
@@ -267,7 +269,8 @@ namespace openvpn {
 	  out << '[' << server_host << ']';
 	out << ':' << server_port
 	    << " (" << server_ip << ") via " << client_ip << '/' << server_proto
-	    << " on " << tun_name << '/' << vpn_ip4 << '/' << vpn_ip6;
+	    << " on " << tun_name << '/' << vpn_ip4 << '/' << vpn_ip6
+	    << " gw=[" << vpn_gw4 << '/' << vpn_gw6 << ']';
 	return out.str();
       }
     };

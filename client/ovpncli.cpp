@@ -228,6 +228,8 @@ namespace openvpn {
 		ci.serverIp = c->server_ip;
 		ci.vpnIp4 = c->vpn_ip4;
 		ci.vpnIp6 = c->vpn_ip6;
+		ci.gw4 = c->vpn_gw4;
+		ci.gw6 = c->vpn_gw6;
 		ci.clientIp = c->client_ip;
 		ci.tunName = c->tun_name;
 		ci.defined = true;

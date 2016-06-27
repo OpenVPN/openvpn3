@@ -85,6 +85,8 @@ namespace openvpn {
       std::string iface_name;
       IP::Addr vpn_ip4_addr;
       IP::Addr vpn_ip6_addr;
+      IP::Addr vpn_ip4_gw;
+      IP::Addr vpn_ip6_gw;
       bool tun_prefix = false;
     };
 
@@ -201,18 +203,17 @@ namespace openvpn {
 	}
     }
 
-    static std::string route_gateway(const OptionList& opt)
+    static IP::Addr route_gateway(const OptionList& opt)
     {
-      std::string ret;
+      IP::Addr gateway;
       const Option* o = opt.get_ptr("route-gateway"); // DIRECTIVE
       if (o)
 	{
-	  const IP::Addr gateway = IP::Addr::from_string(o->get(1, 256), "route-gateway");
+	  gateway = IP::Addr::from_string(o->get(1, 256), "route-gateway");
 	  if (gateway.version() != IP::Addr::V4)
 	    throw tun_prop_error("route-gateway is not IPv4 (IPv6 route-gateway is passed with ifconfig-ipv6 directive)");
-	  ret = gateway.to_string();
 	}
-      return ret;
+      return gateway;
     }
 
     static IP::Addr::VersionMask tun_ifconfig(TunBuilderBase* tb,
@@ -251,16 +252,20 @@ namespace openvpn {
 	    if (top == SUBNET)
 	      {
 		const IP::AddrMaskPair pair = IP::AddrMaskPair::from_string(o->get(1, 256), o->get_optional(2, 256), "ifconfig");
+		const IP::Addr gateway = route_gateway(opt);
 		if (pair.version() != IP::Addr::V4)
 		  throw tun_prop_error("ifconfig address is not IPv4 (topology subnet)");
 		if (!tb->tun_builder_add_address(pair.addr.to_string(),
 						 pair.netmask.prefix_len(),
-						 route_gateway(opt),
+						 gateway.to_string(),
 						 false,  // IPv6
 						 false)) // net30
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology subnet)");
 		if (state)
-		  state->vpn_ip4_addr = pair.addr;
+		  {
+		    state->vpn_ip4_addr = pair.addr;
+		    state->vpn_ip4_gw = gateway;
+		  }
 		ip_ver_flags |= IP::Addr::V4_MASK;
 	      }
 	    else if (top == NET30)
@@ -279,7 +284,10 @@ namespace openvpn {
 						 true)) // net30
 		  throw tun_prop_error("tun_builder_add_address IPv4 failed (topology net30)");
 		if (state)
-		  state->vpn_ip4_addr = local;
+		  {
+		    state->vpn_ip4_addr = local;
+		    state->vpn_ip4_gw = remote;
+		  }
 		ip_ver_flags |= IP::Addr::V4_MASK;
 	      }
 	    else
@@ -300,6 +308,8 @@ namespace openvpn {
 		if (gateway.version() != IP::Addr::V6)
 		  throw tun_prop_error("ifconfig-ipv6 gateway is not IPv6");
 		gateway_str = gateway.to_string();
+		if (state)
+		  state->vpn_ip6_gw = gateway;
 	      }
 	    if (!tb->tun_builder_add_address(pair.addr.to_string(),
 					     pair.netmask.prefix_len(),

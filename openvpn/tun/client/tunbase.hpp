@@ -44,9 +44,14 @@ namespace openvpn {
     virtual void stop() = 0;
     virtual void set_disconnect() = 0;
     virtual bool tun_send(BufferAllocated& buf) = 0; // return true if send succeeded
+
     virtual std::string tun_name() const = 0;
-    virtual std::string vpn_ip4() const = 0;
+
+    virtual std::string vpn_ip4() const = 0; // VPN IP addresses
     virtual std::string vpn_ip6() const = 0;
+
+    virtual std::string vpn_gw4() const { return std::string(); } // VPN gateways
+    virtual std::string vpn_gw6() const { return std::string(); }
   };
 
   // Base class for parent of tun interface object, used to

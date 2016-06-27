@@ -610,6 +610,8 @@ namespace openvpn {
 	transport->server_endpoint_info(ev->server_host, ev->server_port, ev->server_proto, ev->server_ip);
 	ev->vpn_ip4 = tun->vpn_ip4();
 	ev->vpn_ip6 = tun->vpn_ip6();
+	ev->vpn_gw4 = tun->vpn_gw4();
+	ev->vpn_gw6 = tun->vpn_gw6();
 	try {
 	  std::string client_ip = received_options.get_optional("client-ip", 1, 256);
 	  if (!client_ip.empty())

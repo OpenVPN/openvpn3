@@ -269,6 +269,22 @@ namespace openvpn {
 	  return "";
       }
 
+      virtual std::string vpn_gw4() const override
+      {
+	if (state->vpn_ip4_gw.specified())
+	  return state->vpn_ip4_gw.to_string();
+	else
+	  return "";
+      }
+
+      virtual std::string vpn_gw6() const override
+      {
+	if (state->vpn_ip6_gw.specified())
+	  return state->vpn_ip6_gw.to_string();
+	else
+	  return "";
+      }
+
       virtual void set_disconnect() override
       {
       }
