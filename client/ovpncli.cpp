@@ -387,10 +387,12 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
     {
+#ifndef OPENVPN_NORESET_TIME
       // We keep track of time as binary milliseconds since a time base, and
       // this can wrap after ~48 days on 32 bit systems, so it's a good idea
       // to periodically reinitialize the base.
       Time::reset_base_conditional();
+#endif
 
       state = new Private::ClientState();
       state->proto_context_options = new ProtoContextOptions();
