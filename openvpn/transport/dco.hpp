@@ -26,6 +26,7 @@
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/common/stop.hpp>
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -61,6 +62,7 @@ namespace openvpn {
       }
 
       TunProp::Config tun_prop;
+      Stop* stop = nullptr;
     };
 
     virtual TunClientFactory::Ptr new_tun_factory(const TunConfig& conf, const OptionList& opt) = 0;

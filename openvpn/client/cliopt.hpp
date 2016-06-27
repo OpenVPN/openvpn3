@@ -309,6 +309,7 @@ namespace openvpn {
 	    tunconf.tun_prop.mtu = tun_mtu;
 	  tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
 	  tunconf.tun_prop.remote_list = remote_list;
+	  tunconf.stop = config.stop;
 	  tun_factory = dco->new_tun_factory(tunconf, opt);
 	}
       else
