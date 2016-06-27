@@ -116,6 +116,8 @@ namespace openvpn {
       return ret;
     }
 
+    // Note: this is suboptimal because std::random_device returns
+    // 32-bit value while std::mt19937_64 wants a 64-bit seed.
     static std::random_device::result_type gen_seed()
     {
       std::random_device rd;
