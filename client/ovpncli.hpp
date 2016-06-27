@@ -528,9 +528,9 @@ namespace openvpn {
       // from ExternalPKIBase
       virtual bool sign(const std::string& sig_type, const std::string& data, std::string& sig);
 
-      // disable copy and assignment (NOTE: C++11 "= delete" syntax crashes swig)
-      OpenVPNClient(const OpenVPNClient&);
-      OpenVPNClient& operator=(const OpenVPNClient&);
+      // disable copy and assignment
+      OpenVPNClient(const OpenVPNClient&) = delete;
+      OpenVPNClient& operator=(const OpenVPNClient&) = delete;
     };
 
   }
