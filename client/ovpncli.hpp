@@ -500,7 +500,13 @@ namespace openvpn {
       // Returns core copyright
       static std::string copyright();
 
+      // Hide protected methods/data from SWIG
+#ifdef SWIGJAVA
+    private:
+#else
     protected:
+#endif
+
       Status do_connect();
 
       virtual void connect_attach();
