@@ -1032,7 +1032,9 @@ namespace openvpn {
       delete state;
     }
 
-    OPENVPN_CLIENT_EXPORT LogInfo::LogInfo(const std::string& str)
-      : text(Unicode::utf8_printable(str, 0 | Unicode::UTF8_PASS_FMT)) {} // allow unlimited length
+    OPENVPN_CLIENT_EXPORT LogInfo::LogInfo(std::string str)
+      : text(std::move(str))
+    {
+    }
   }
 }
