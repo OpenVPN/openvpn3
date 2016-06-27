@@ -26,6 +26,7 @@
 #include <vector>
 #include <string>
 #include <ostream>
+#include <sstream>
 
 #ifdef HAVE_JSONCPP
 #include "json/json.h"
@@ -110,6 +111,13 @@ namespace openvpn {
 	      os << "action exception: " << e.what() << std::endl;
 	    }
 	}
+    }
+
+    void execute_log()
+    {
+      std::ostringstream os;
+      execute(os);
+      OPENVPN_LOG_STRING(os.str());
     }
 
     std::string to_string() const
