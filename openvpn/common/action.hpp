@@ -59,11 +59,9 @@ namespace openvpn {
   public:
     typedef RCPtr<ActionList> Ptr;
 
-    ActionList(const size_t capacity=16)
-      : enable_destroy_(false),
-	halt_(false)
+    ActionList()
     {
-      reserve(capacity);
+      reserve(16);
     }
 
     void add(Action* action)
@@ -99,12 +97,13 @@ namespace openvpn {
 
     virtual void execute(std::ostream& os)
     {
-      for (auto &a : *this)
+      Iter i(size(), reverse_);
+      while (i())
 	{
 	  if (is_halt())
 	    return;
 	  try {
-	    a->execute(os);
+	    (*this)[i.index()]->execute(os);
 	  }
 	  catch (const std::exception& e)
 	    {
@@ -123,9 +122,10 @@ namespace openvpn {
     std::string to_string() const
     {
       std::string ret;
-      for (auto &a : *this)
+      Iter i(size(), reverse_);
+      while (i())
 	{
-	  ret += a->to_string();
+	  ret += (*this)[i.index()]->to_string();
 	  ret += '\n';
 	}
       return ret;
@@ -155,9 +155,53 @@ namespace openvpn {
       return halt_;
     }
 
-  private:
-    bool enable_destroy_;
-    volatile bool halt_;
+  protected:
+    class Iter
+    {
+    public:
+      Iter(size_t size, const bool reverse)
+      {
+	if (reverse)
+	  {
+	    idx = size;
+	    end = -1;
+	    delta = -1;
+	  }
+	else
+	  {
+	    idx = -1;
+	    end = size;
+	    delta = 1;
+	  }
+      }
+
+      bool operator()()
+      {
+	return (idx += delta) != end;
+      }
+
+      size_t index() const
+      {
+	return idx;
+      }
+
+    private:
+      size_t idx;
+      size_t end;
+      size_t delta;
+    };
+
+    bool reverse_ = false;
+    bool enable_destroy_ = false;
+    volatile bool halt_ = false;
+  };
+
+  struct ActionListReversed : public ActionList
+  {
+    ActionListReversed()
+    {
+      reverse_ = true;
+    }
   };
 
   struct ActionListFactory : public RC<thread_unsafe_refcount>
