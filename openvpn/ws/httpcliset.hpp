@@ -39,7 +39,7 @@
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/zlib.hpp>
-#include <openvpn/random/randint.hpp>
+#include <openvpn/random/randapi.hpp>
 #include <openvpn/http/urlparse.hpp>
 #include <openvpn/ws/httpcli.hpp>
 
@@ -306,9 +306,9 @@ namespace openvpn {
       {
       }
 
-      void set_random(RandomAPI& rand)
+      void set_random(RandomAPI::Ptr rng_arg)
       {
-	randint.reset(new RandomInt(rand));
+	rng = std::move(rng_arg);
       }
 
       void new_request(const TransactionSet::Ptr& ts)
@@ -614,8 +614,8 @@ namespace openvpn {
 
 	void http_mutate_resolver_results(HTTPDelegate& hd, asio::ip::tcp::resolver::results_type& results)
 	{
-	  if (parent->randint && trans().randomize_resolver_results)
-	    results.randomize((*parent->randint)());
+	  if (parent->rng && trans().randomize_resolver_results)
+	    results.randomize(*parent->rng);
 	}
 
 	void http_content_in(HTTPDelegate& hd, BufferAllocated& buf)
@@ -738,7 +738,7 @@ namespace openvpn {
       asio::io_context& io_context;
       bool halt;
       client_t next_id;
-      std::unique_ptr<RandomInt> randint;
+      RandomAPI::Ptr rng;
       std::unordered_map<client_t, Client::Ptr> clients;
     };
 
