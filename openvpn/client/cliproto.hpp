@@ -129,6 +129,7 @@ namespace openvpn {
 	unsigned int tcp_queue_limit = 0;
 	bool echo = false;
 	bool info = false;
+	bool autologin_sessions = false;
       };
 
       Session(asio::io_context& io_context_arg,
@@ -154,6 +155,7 @@ namespace openvpn {
 	  connected_(false),
 	  echo(config.echo),
 	  info(config.info),
+	  autologin_sessions(config.autologin_sessions),
 	  fatal_(Error::UNDEF),
 	  pushed_options_limit(config.pushed_options_limit),
 	  pushed_options_filter(config.pushed_options_filter),
@@ -558,7 +560,8 @@ namespace openvpn {
 	    // If session token problem (such as expiration), and we have a cached
 	    // password, retry with it.  Otherwise, fail without retry.
 	    if (string::starts_with(reason, "SESSION:")
-		&& creds && creds->can_retry_auth_with_cached_password())
+		&& (autologin_sessions
+		    || (creds && creds->can_retry_auth_with_cached_password())))
 	      {
 		log_reason = "SESSION_AUTH_FAILED";
 	      }
@@ -919,6 +922,7 @@ namespace openvpn {
 
       bool echo;
       bool info;
+      bool autologin_sessions;
 
       Error::Type fatal_;
       std::string fatal_reason_;

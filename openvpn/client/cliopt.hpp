@@ -533,6 +533,7 @@ namespace openvpn {
       cli_config->tcp_queue_limit = tcp_queue_limit;
       cli_config->echo = echo;
       cli_config->info = info;
+      cli_config->autologin_sessions = autologin_sessions;
       return cli_config;
     }
 
