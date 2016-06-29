@@ -30,7 +30,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/hostport.hpp>
-#include <openvpn/random/mtrand.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
   namespace HostList {
@@ -97,7 +97,7 @@ namespace openvpn {
 	  }
       }
 
-      void randomize(RandomIntBase& rng)
+      void randomize(RandomAPI& rng)
       {
 	std::shuffle(begin(), end(), rng());
       }

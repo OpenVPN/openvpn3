@@ -19,22 +19,49 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_RANDOM_RANDTYPE_H
-#define OPENVPN_RANDOM_RANDTYPE_H
+#ifndef OPENVPN_RANDOM_RANDBYTESTORE_H
+#define OPENVPN_RANDOM_RANDBYTESTORE_H
 
-#include <openvpn/random/randapi.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
 
-  // Given a RandomAPI object, return a T object that has been filled with random bits
-  template <typename T>
-  inline T rand_type(RandomAPI& rng)
+  template <typename RAND_TYPE>
+  class RandomByteStore
   {
-    T ret;
-    rng.rand_fill(ret);
-    return ret;
-  }
+  public:
+    static constexpr size_t SIZE = sizeof(typename RAND_TYPE::result_type);
 
-} // namespace openvpn
+    unsigned char get_byte(RAND_TYPE& rng)
+    {
+      if (n_bytes == 0)
+	{
+	  res.rt = rng();
+	  n_bytes = SIZE;
+	}
+      unsigned char ret = res.bytes[0];
+      res.rt >>= 8;
+      --n_bytes;
+      return ret;
+    }
 
+    template <typename T>
+    void fill(T& obj, RAND_TYPE& rng)
+    {
+      unsigned char *data = reinterpret_cast<unsigned char *>(&obj);
+      for (size_t i = 0; i < sizeof(obj); ++i)
+	data[i] = get_byte(rng);
+    }
+
+  private:
+    union Result {
+      unsigned char bytes[SIZE];
+      typename RAND_TYPE::result_type rt;
+    };
+
+    Result res;
+    unsigned int n_bytes = 0;
+  };
+
+}
 #endif

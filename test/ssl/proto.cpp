@@ -40,10 +40,6 @@
 #define OPENVPN_ENABLE_ASSERT
 #define USE_TLS_AUTH
 
-#ifndef ENABLE_PRNG
-#define ENABLE_PRNG 0
-#endif
-
 // NoisyWire
 #ifndef NOERR
 #define SIMULATE_OOO
@@ -121,16 +117,12 @@
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/count.hpp>
 #include <openvpn/time/time.hpp>
-#include <openvpn/random/randint.hpp>
+#include <openvpn/random/mtrandapi.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/ssl/proto.hpp>
 #include <openvpn/init/initprocess.hpp>
 
 #include <openvpn/crypto/cryptodcsel.hpp>
-
-#if ENABLE_PRNG
-#include <openvpn/random/prng.hpp>
-#endif
 
 #if defined(USE_POLARSSL_APPLE_HYBRID)
 #define USE_POLARSSL
@@ -534,7 +526,7 @@ public:
 
   NoisyWire(const std::string title_arg,
 	    TimePtr now_arg,
-	    RandomIntBase& rand_arg,
+	    RandomAPI& rand_arg,
 	    const unsigned int reorder_prob_arg,
 	    const unsigned int drop_prob_arg,
 	    const unsigned int corrupt_prob_arg)
@@ -681,7 +673,7 @@ private:
   
   std::string title;
   TimePtr now;
-  RandomIntBase& random;
+  RandomAPI& random;
   unsigned int reorder_prob;
   unsigned int drop_prob;
   unsigned int corrupt_prob;
@@ -735,21 +727,10 @@ int test(const int thread_num)
 
     // RNG
     ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI(false));
-    RandomInt rand(*rng_cli);
-#if ENABLE_PRNG
-    DigestFactory::Ptr rng_digest_cli(new CryptoDigestFactory<ClientCryptoAPI>());
-    PRNG::Ptr prng_cli(new PRNG(STRINGIZE(PROTO_DIGEST), rng_digest_cli, rng_cli, 16));
-#else
     ClientRandomAPI::Ptr prng_cli(new ClientRandomAPI(true));
-#endif
-
     ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI(false));
-#if ENABLE_PRNG
-    DigestFactory::Ptr rng_digest_serv(new CryptoDigestFactory<ServerCryptoAPI>());
-    PRNG::Ptr prng_serv(new PRNG(STRINGIZE(PROTO_DIGEST), rng_digest_serv, rng_serv, 16));
-#else
     ServerRandomAPI::Ptr prng_serv(new ServerRandomAPI(true));
-#endif
+    MTRand rng_noncrypto;
 
     // init simulated time
     Time time;
@@ -921,8 +902,8 @@ int test(const int thread_num)
 	cli_proto.reset();
 	serv_proto.reset();
 
-	NoisyWire client_to_server("Client -> Server", &time, rand, 8, 16, 32); // last value: 32
-	NoisyWire server_to_client("Server -> Client", &time, rand, 8, 16, 32); // last value: 32
+	NoisyWire client_to_server("Client -> Server", &time, rng_noncrypto, 8, 16, 32); // last value: 32
+	NoisyWire server_to_client("Server -> Client", &time, rng_noncrypto, 8, 16, 32); // last value: 32
 
 	int j = -1;
 	try {

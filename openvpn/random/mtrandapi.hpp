@@ -28,6 +28,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/random/randapi.hpp>
+#include <openvpn/random/randbytestore.hpp>
 
 namespace openvpn {
 
@@ -37,6 +38,7 @@ namespace openvpn {
     OPENVPN_EXCEPTION(mtrand_error);
 
     typedef RCPtr<MTRand> Ptr;
+    typedef std::mt19937_64 rand_type;
 
     MTRand(RandomAPI& seed)
       : rng(gen_seed(seed))
@@ -68,64 +70,35 @@ namespace openvpn {
       return rndbytes(buf, size);
     }
 
-    std::mt19937_64::result_type rand()
+    rand_type::result_type rand()
     {
       return rng();
     }
 
   private:
-    class ByteGenerator
-    {
-    public:
-      static constexpr size_t SIZE = std::mt19937_64::word_size / 8;
-
-      unsigned char get_byte(MTRand& mtr)
-      {
-	if (n_bytes == 0)
-	  {
-	    res.mt = mtr.rand();
-	    n_bytes = SIZE;
-	  }
-	unsigned char ret = res.bytes[0];
-	res.mt >>= 8;
-	--n_bytes;
-	return ret;
-      }
-
-    private:
-      union Result {
-	unsigned char bytes[SIZE];
-	std::mt19937_64::result_type mt;
-      };
-
-      Result res;
-      unsigned int n_bytes = 0;
-    };
-
     bool rndbytes(unsigned char *buf, size_t size)
     {
       while (size--)
-	*buf++ = bg.get_byte(*this);
+	*buf++ = rbs.get_byte(rng);
       return true;
     }
 
-    static std::mt19937_64::result_type gen_seed(RandomAPI& seed)
+    static rand_type::result_type gen_seed(RandomAPI& seed)
     {
-      std::mt19937_64::result_type ret;
-      seed.rand_fill(ret);
+      return seed.rand_get<rand_type::result_type>();
+    }
+
+    static rand_type::result_type gen_seed()
+    {
+      std::random_device rd;
+      RandomByteStore<decltype(rd)> rbs;
+      rand_type::result_type ret;
+      rbs.fill(ret, rd);
       return ret;
     }
 
-    // Note: this is suboptimal because std::random_device returns
-    // 32-bit value while std::mt19937_64 wants a 64-bit seed.
-    static std::random_device::result_type gen_seed()
-    {
-      std::random_device rd;
-      return rd();
-    }
-
-    std::mt19937_64 rng;
-    ByteGenerator bg;
+    rand_type rng;
+    RandomByteStore<rand_type> rbs;
   };
 
 }

@@ -29,6 +29,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 #include <asio.hpp>
 
@@ -37,12 +38,12 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/hostport.hpp>
+#include <openvpn/random/randapi.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/addrlist.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/client/cliconstants.hpp>
 #include <openvpn/log/sessionstats.hpp>
-#include <openvpn/random/randtype.hpp>
 
 #if OPENVPN_DEBUG_REMOTELIST >= 1
 #define OPENVPN_LOG_REMOTELIST(x) OPENVPN_LOG(x)
@@ -504,12 +505,7 @@ namespace openvpn {
     // randomize item list, used to implement remote-random directive
     void randomize(RandomAPI& rng)
     {
-      for (size_t i = 0; i < list.size(); ++i)
-	{
-	  const size_t swapidx = i + rand_type<size_t>(rng) % (list.size() - i);
-	  if (swapidx != i && swapidx < list.size())
-	    list[i].swap(list[swapidx]);
-	}
+      std::shuffle(list.begin(), list.end(), rng);
       index.reset();
     }
 

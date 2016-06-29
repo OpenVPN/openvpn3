@@ -67,11 +67,6 @@
 // enable assertion checks (can safely be disabled in production)
 //#define OPENVPN_ENABLE_ASSERT
 
-// if 1, enable special PRNG that is distinct from RNG
-#ifndef ENABLE_PRNG
-#define ENABLE_PRNG 0
-#endif
-
 // force null tun device (useful for testing)
 //#define OPENVPN_FORCE_TUN_NULL
 

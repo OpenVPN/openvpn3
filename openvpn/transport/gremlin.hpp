@@ -33,7 +33,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/time/asiotimer.hpp>
-#include <openvpn/random/mtrand.hpp>
+#include <openvpn/random/mtrandapi.hpp>
 
 namespace openvpn {
   namespace Gremlin {
@@ -213,7 +213,7 @@ namespace openvpn {
       }
 
       Config::Ptr conf;
-      RandomIntBase ri;
+      MTRand ri;
       DelayedQueue::Ptr send;
       DelayedQueue::Ptr recv;
       bool tcp;

@@ -91,6 +91,11 @@ namespace openvpn {
 	return start + rand_get_positive<T>() % (end - start + 1);
     }
 
+    // UniformRandomBitGenerator for std::shuffle
+    typedef unsigned int result_type;
+    static constexpr result_type min() { return result_type(0); }
+    static constexpr result_type max() { return ~result_type(0); }
+    result_type operator()() { return rand_get<result_type>(); }
   };
 
 }

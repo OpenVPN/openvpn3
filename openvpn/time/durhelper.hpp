@@ -24,7 +24,7 @@
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/time/time.hpp>
-#include <openvpn/random/mtrand.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
   inline void set_duration_parm(Time::Duration& dur,
@@ -62,10 +62,10 @@ namespace openvpn {
   inline Time::Duration skew_duration(const Time::Duration& dur,
 				      const Time::Duration& min,
 				      const unsigned int flux_order,
-				      RandomIntBase& rand)
+				      RandomAPI& rng)
   {
     const unsigned int range = 1 << flux_order;
-    const int delta = int(rand.rand() & (range-1)) - int(range>>1);
+    const int delta = int(rng.rand_get<unsigned int>() & (range-1)) - int(range>>1);
     const Time::Duration ret = dur + delta;
     if (ret >= min)
       return ret;

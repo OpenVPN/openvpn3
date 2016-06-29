@@ -65,10 +65,6 @@
 #include <openvpn/client/cliemuexr.hpp>
 #endif
 
-#if ENABLE_PRNG
-#include <openvpn/random/prng.hpp>
-#endif
-
 #if defined(OPENVPN_CUSTOM_TUN_FACTORY)
 // includer of this file must define OPENVPN_CUSTOM_TUN_FACTORY class
 #elif defined(USE_TUN_BUILDER)
@@ -184,11 +180,7 @@ namespace openvpn {
 
       // initialize RNG/PRNG
       rng.reset(new SSLLib::RandomAPI(false));
-#if ENABLE_PRNG
-      prng.reset(new PRNG("SHA1", digest_factory, rng, 16)); // fixme: hangs on OS X 10.6 with USE_POLARSSL_APPLE_HYBRID
-#else
       prng.reset(new SSLLib::RandomAPI(true));
-#endif
 
 #if defined(ENABLE_DCO) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_CUSTOM_TUN_FACTORY)
       if (config.dco)
