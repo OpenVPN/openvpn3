@@ -389,8 +389,10 @@ namespace openvpn {
 	{
 	  socket_protect.detach_from_parent();
 	  reconnect_notify.detach_from_parent();
-	  stats->detach_from_parent();
-	  events->detach_from_parent();
+	  if (stats)
+	    stats->detach_from_parent();
+	  if (events)
+	    events->detach_from_parent();
 	  if (async_stop_owned)
 	    delete async_stop_;
 	  if (io_context_owned)
