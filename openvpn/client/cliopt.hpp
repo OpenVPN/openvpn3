@@ -139,6 +139,8 @@ namespace openvpn {
       ExternalPKIBase* external_pki = nullptr;
       SocketProtect* socket_protect = nullptr;
       ReconnectNotify* reconnect_notify = nullptr;
+      RemoteList::RemoteOverride* remote_override = nullptr;
+
 #if defined(USE_TUN_BUILDER)
       TunBuilderBase* builder = nullptr;
 #endif
@@ -245,7 +247,10 @@ namespace openvpn {
 	http_proxy_options = HTTPProxyTransport::Options::parse(opt);
 
       // load remote list
-      remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr));
+      if (config.remote_override)
+	  remote_list.reset(new RemoteList(config.remote_override));
+	else
+	  remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr));
       if (!remote_list->defined())
 	throw option_error("no remote option specified");
 

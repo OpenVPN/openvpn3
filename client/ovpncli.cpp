@@ -302,6 +302,47 @@ namespace openvpn {
       OpenVPNClient* parent;
     };
 
+    class MyRemoteOverride : public RemoteList::RemoteOverride
+    {
+    public:
+      void set_parent(OpenVPNClient* parent_arg)
+      {
+	parent = parent_arg;
+      }
+
+      void detach_from_parent()
+      {
+	parent = nullptr;
+      }
+
+      virtual RemoteList::Item::Ptr get() override
+      {
+	if (parent)
+	  {
+	    const std::string title = "remote-override";
+	    ClientAPI::RemoteOverride ro;
+	    parent->remote_override(ro);
+	    RemoteList::Item::Ptr ri(new RemoteList::Item);
+	    if (!ro.ip.empty())
+	      ri->set_ip_addr(IP::Addr(ro.ip, title));
+	    if (ro.host.empty())
+	      ro.host = ro.ip;
+	    HostPort::validate_host(ro.host, title);
+	    HostPort::validate_port(ro.port, title);
+	    ri->server_host = std::move(ro.host);
+	    ri->server_port = std::move(ro.port);
+	    ri->transport_protocol = Protocol::parse(ro.proto, Protocol::CLIENT_SUFFIX, title.c_str());
+
+	    return ri;
+	  }
+	else
+	  return RemoteList::Item::Ptr();
+      }
+
+    private:
+      OpenVPNClient* parent = nullptr;
+    };
+
     namespace Private {
       class ClientState
       {
@@ -311,6 +352,7 @@ namespace openvpn {
 	EvalConfig eval;
 	MySocketProtect socket_protect;
 	MyReconnectNotify reconnect_notify;
+	MyRemoteOverride remote_override;
 	ClientCreds::Ptr creds;
 	MySessionStats::Ptr stats;
 	MyClientEvents::Ptr events;
@@ -381,6 +423,9 @@ namespace openvpn {
 
 	  // reconnect notifications
 	  reconnect_notify.set_parent(parent);
+
+	  // remote override
+	  remote_override.set_parent(parent);
 	}
 
 	ClientState() {}
@@ -389,6 +434,7 @@ namespace openvpn {
 	{
 	  socket_protect.detach_from_parent();
 	  reconnect_notify.detach_from_parent();
+	  remote_override.detach_from_parent();
 	  if (stats)
 	    stats->detach_from_parent();
 	  if (events)
@@ -746,6 +792,8 @@ namespace openvpn {
 	cc.echo = state->echo;
 	cc.info = state->info;
 	cc.reconnect_notify = &state->reconnect_notify;
+	if (remote_override_enabled())
+	  cc.remote_override = &state->remote_override;
 	cc.private_key_password = state->private_key_password;
 	cc.disable_client_cert = state->disable_client_cert;
 	cc.default_key_direction = state->default_key_direction;
@@ -936,6 +984,15 @@ namespace openvpn {
 	  external_pki_error(req, Error::EPKI_SIGN_ERROR);
 	  return false;
 	}
+    }
+
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::remote_override_enabled()
+    {
+      return false;
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::remote_override(RemoteOverride&)
+    {
     }
 
     OPENVPN_CLIENT_EXPORT int OpenVPNClient::stats_n()

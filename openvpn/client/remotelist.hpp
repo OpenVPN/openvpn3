@@ -30,6 +30,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <utility>
 
 #include <asio.hpp>
 
@@ -124,6 +125,16 @@ namespace openvpn {
 	return res_addr_list && res_addr_list->size() > 0;
       }
 
+      // cache a single IP address
+      void set_ip_addr(const IP::Addr& addr)
+      {
+	res_addr_list.reset(new ResolvedAddrList());
+	ResolvedAddr::Ptr ra(new ResolvedAddr());
+	ra->addr = addr;
+	res_addr_list->push_back(std::move(ra));
+	OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint SET " << to_string());
+      }
+
       // cache a list of DNS-resolved IP addresses
       template <class EPRANGE>
       void set_endpoint_range(EPRANGE& endpoint_range)
@@ -164,6 +175,11 @@ namespace openvpn {
 	    << " proto=" << transport_protocol.str();
 	return out.str();
       }
+    };
+
+    struct RemoteOverride
+    {
+      virtual Item::Ptr get() = 0;
     };
 
   private:
@@ -380,6 +396,14 @@ namespace openvpn {
       init("");
     }
 
+    // create a remote list with a RemoteOverride callback
+    RemoteList(RemoteOverride* remote_override_arg)
+      : remote_override(remote_override_arg)
+    {
+      init("");
+      next();
+    }
+
     // create a remote list with exactly one item
     RemoteList(const std::string& server_host,
 	       const std::string& server_port,
@@ -540,8 +564,19 @@ namespace openvpn {
     // increment to next IP address
     void next()
     {
-      if (index.increment(list.size(), secondary_length(index.primary())) && !enable_cache)
-	reset_item(index.primary());
+      if (remote_override)
+	{
+	  list.clear();
+	  index.reset();
+	  Item::Ptr item = remote_override->get();
+	  if (item)
+	    list.push_back(std::move(item));
+	}
+      else
+	{
+	  if (index.increment(list.size(), secondary_length(index.primary())) && !enable_cache)
+	    reset_item(index.primary());
+	}
     }
 
     // Return details about current connection entry.
@@ -848,6 +883,8 @@ namespace openvpn {
     std::vector<Item::Ptr> list;
 
     Directives directives;
+
+    RemoteOverride* remote_override = nullptr;
   };
 
 }

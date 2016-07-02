@@ -371,6 +371,16 @@ namespace openvpn {
       std::string sig;   // RSA signature, rendered as base64 (client writes)
     };
 
+    // used to override "remote" directives
+    struct RemoteOverride
+    {
+      // components of "remote" directive (client writes),
+      std::string host;   // either one of host
+      std::string ip;     //   or ip must be defined (or both)
+      std::string port;
+      std::string proto;
+    };
+
     namespace Private {
       class ClientState;
     };
@@ -488,6 +498,10 @@ namespace openvpn {
       // Will be called from the thread executing connect().
       virtual void external_pki_cert_request(ExternalPKICertRequest&) = 0;
       virtual void external_pki_sign_request(ExternalPKISignRequest&) = 0;
+
+      // Remote override callback (disabled by default).
+      virtual bool remote_override_enabled();
+      virtual void remote_override(RemoteOverride&);
 
       // Do a crypto library self test
       static std::string crypto_self_test();
