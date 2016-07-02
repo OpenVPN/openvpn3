@@ -100,6 +100,11 @@ namespace openvpn {
 	return a.to_string();
       }
 
+      static std::string validate(const std::string& ipstr, const std::string& title, Version required_version = UNSPEC)
+      {
+	return validate(ipstr, title.c_str(), required_version);
+      }
+
       static bool is_valid(const std::string& ipstr)
       {
 	// fast path -- rule out validity if invalid chars
