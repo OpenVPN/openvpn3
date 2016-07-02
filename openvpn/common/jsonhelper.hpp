@@ -25,6 +25,7 @@
 #include "json/json.h"
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/file.hpp>
 
 namespace openvpn {
 
@@ -39,6 +40,11 @@ namespace openvpn {
       if (!reader.parse(str, root, false))
 	OPENVPN_THROW(json_parse, title << " : " << reader.getFormattedErrorMessages());
       return root;
+    }
+
+    static Json::Value parse_from_file(const std::string& fn)
+    {
+      return parse(read_text_utf8(fn), fn);
     }
 
     template <typename T>
@@ -217,6 +223,33 @@ namespace openvpn {
 	}
       if (!value.isObject())
 	OPENVPN_THROW(json_parse, "dictionary " << fmt_name(name, title) << " is of incorrect type");
+      return value;
+    }
+
+    static const Json::Value& cast_dict(const Json::Value& value, const bool optional, const std::string& title)
+    {
+      if (value.isNull())
+	{
+	  if (optional)
+	    return value;
+	  OPENVPN_THROW(json_parse, "dictionary cast " << title << " is null");
+	}
+      if (!value.isObject())
+	OPENVPN_THROW(json_parse, "dictionary cast " << title << " is of incorrect type");
+      return value;
+    }
+
+    static const Json::Value& get_array(const Json::Value& root, const std::string& name, const bool optional, const std::string& title)
+    {
+      const Json::Value& value = root[name];
+      if (value.isNull())
+	{
+	  if (optional)
+	    return value;
+	  OPENVPN_THROW(json_parse, "array " << fmt_name(name, title) << " is missing");
+	}
+      if (!value.isArray())
+	OPENVPN_THROW(json_parse, "array " << fmt_name(name, title) << " is of incorrect type");
       return value;
     }
 
