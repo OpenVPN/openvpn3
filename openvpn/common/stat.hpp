@@ -37,6 +37,16 @@ namespace openvpn {
     return stat(filename.c_str(), &buffer) == 0; 
   }
 
+  // Return file modification time or 0 on error
+  inline time_t file_mod_time(const std::string& filename)
+  {
+    struct stat buffer;
+    if (stat(filename.c_str(), &buffer) != 0)
+      return 0;
+    else
+      return buffer.st_mtime;
+  }
+
 }
 
 #endif
