@@ -410,6 +410,11 @@ namespace openvpn {
     RC() noexcept {}
     virtual ~RC() {}
 
+    olong use_count() const noexcept
+    {
+      return refcount_.use_count();
+    }
+
   private:
     RC(const RC&) = delete;
     RC& operator=(const RC&) = delete;
@@ -428,6 +433,11 @@ namespace openvpn {
     RCCopyable(const RCCopyable&) noexcept {}
     RCCopyable& operator=(const RCCopyable&) noexcept { return *this; }
     virtual ~RCCopyable() {}
+
+    olong use_count() const noexcept
+    {
+      return refcount_.use_count();
+    }
 
   private:
     template <typename R> friend void intrusive_ptr_add_ref(R* p) noexcept;
