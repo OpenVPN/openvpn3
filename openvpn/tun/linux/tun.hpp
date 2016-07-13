@@ -73,7 +73,7 @@ namespace openvpn {
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg,
-	  const std::string name,
+	  const std::string& name,
 	  const Layer& layer,
 	  const int txqueuelen)
 	: Base(read_handler_arg, frame_arg, stats_arg)
@@ -93,16 +93,8 @@ namespace openvpn {
 	  ifr.ifr_flags |= IFF_TAP;
 	else
 	  throw tun_layer_error("unknown OSI layer");
-	if (!name.empty())
-	  {
-	    if (name.length() < IFNAMSIZ)
-	      ::strcpy (ifr.ifr_name, name.c_str());
-	    else
-	      throw tun_name_error();
-	  }
 
-	if (ioctl (fd(), TUNSETIFF, (void *) &ifr) < 0)
-	  throw tun_ioctl_error(errinfo(errno));
+	open_unit(name, ifr, fd);
 
 	if (fcntl (fd(), F_SETFL, O_NONBLOCK) < 0)
 	  throw tun_fcntl_error(errinfo(errno));
@@ -131,6 +123,37 @@ namespace openvpn {
       }
 
       ~Tun() { Base::stop(); }
+
+    private:
+      static void open_unit(const std::string& name, struct ifreq& ifr, ScopedFD& fd)
+      {
+	if (!name.empty())
+	  {
+	    const int max_units = 256;
+	    for (int unit = 0; unit < max_units; ++unit)
+	      {
+		std::string n = name;
+		if (unit)
+		  n += openvpn::to_string(unit);
+		if (n.length() < IFNAMSIZ)
+		  ::strcpy (ifr.ifr_name, n.c_str());
+		else
+		  throw tun_name_error();
+		if (ioctl (fd(), TUNSETIFF, (void *) &ifr) == 0)
+		  return;
+	      }
+	    const int eno = errno;
+	    OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' after trying " << max_units << "units : " << errinfo(eno));
+	  }
+	else
+	  {
+	    if (ioctl (fd(), TUNSETIFF, (void *) &ifr) < 0)
+	      {
+		const int eno = errno;
+		OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' : " << errinfo(eno));
+	      }
+	  }
+      }
     };
 
   }
