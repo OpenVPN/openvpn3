@@ -848,6 +848,11 @@ namespace openvpn {
 	{
 	}
 
+	virtual bool is_keepalive_enabled() const
+	{
+	  return false;
+	}
+
 	virtual void disable_keepalive(unsigned int& keepalive_ping,
 				       unsigned int& keepalive_timeout)
 	{
