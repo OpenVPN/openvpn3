@@ -98,6 +98,9 @@ namespace openvpn {
     // Returns true if packet successfully validated.
     virtual bool transport_recv(BufferAllocated& buf) = 0;
 
+    // Return true if keepalive parameter(s) are enabled.
+    virtual bool is_keepalive_enabled() const = 0;
+
     // Disable keepalive for rest of session, but fetch
     // the keepalive parameters (in seconds).
     virtual void disable_keepalive(unsigned int &keepalive_ping,

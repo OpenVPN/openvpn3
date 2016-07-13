@@ -79,6 +79,9 @@ namespace openvpn {
     virtual void transport_wait() = 0;
     virtual void transport_connecting() = 0;
 
+    // Return true if keepalive parameter(s) are enabled.
+    virtual bool is_keepalive_enabled() const = 0;
+
     // Disable keepalive for rest of session, but fetch
     // the keepalive parameters (in seconds).
     virtual void disable_keepalive(unsigned int& keepalive_ping,

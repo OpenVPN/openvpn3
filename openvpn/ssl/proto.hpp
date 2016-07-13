@@ -2532,6 +2532,13 @@ namespace openvpn {
       return config->enable_op32 ? 0 : 1;
     }
 
+    // Return true if keepalive parameter(s) are enabled
+    bool is_keepalive_enabled() const
+    {
+      return config->keepalive_ping.enabled()
+	  || config->keepalive_timeout.enabled();
+    }
+
     // Disable keepalive for rest of session,
     // but return the previous keepalive parameters.
     void disable_keepalive(unsigned int& keepalive_ping,
