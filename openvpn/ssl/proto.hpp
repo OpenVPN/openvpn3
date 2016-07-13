@@ -1134,11 +1134,11 @@ namespace openvpn {
 	  is_reliable(p.config->protocol.is_reliable()),
 	  tlsprf(p.config->tlsprf_factory->new_obj(p.is_server()))
       {
-	// set initial state
-	set_state((proto.is_server() ? S_INITIAL : C_INITIAL) + (initiator ? 0 : 1));
-
 	// get key_id from parent
 	key_id_ = proto.next_key_id();
+
+	// set initial state
+	set_state((proto.is_server() ? S_INITIAL : C_INITIAL) + (initiator ? 0 : 1));
 
 	// cache stuff that we need to access in hot path
 	cache_op32();
@@ -1531,26 +1531,26 @@ namespace openvpn {
 
       void set_state(const int newstate)
       {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << (proto.is_server() ? "SERVER " : "CLIENT ") << state_string(state) << " -> " << state_string(newstate));
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << (proto.is_server() ? "SERVER " : "CLIENT ") << state_string(state) << " -> " << state_string(newstate));
 	state = newstate;
       }
 
       void set_event(const EventType current)
       {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << event_type_string(current));
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << event_type_string(current));
 	current_event = current;
       }
 
       void set_event(const EventType next, const Time& next_time)
       {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
 	next_event = next;
 	next_event_time = next_time;
       }
 
       void set_event(const EventType current, const EventType next, const Time& next_time)
       {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext " << event_type_string(current) << " -> " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
+	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << event_type_string(current) << " -> " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
 	current_event = current;
 	next_event = next;
 	next_event_time = next_time;
@@ -2292,6 +2292,7 @@ namespace openvpn {
 
       // initialize key contexts
       primary.reset(new KeyContext(*this, is_client()));
+      OPENVPN_LOG_PROTO_VERBOSE("New KeyContext PRIMARY id=" << primary->key_id());
 
       // initialize keepalive timers
       keepalive_expire = Time::infinite();   // initially disabled
@@ -2325,6 +2326,7 @@ namespace openvpn {
     {
       // initialize secondary key context
       secondary.reset(new KeyContext(*this, true));
+      OPENVPN_LOG_PROTO_VERBOSE("New KeyContext SECONDARY id=" << secondary->key_id() << " local-triggered");
       secondary->start();
     }
 
@@ -2643,6 +2645,7 @@ namespace openvpn {
       if (KeyContext::validate(pkt.buffer(), *this, now_))
 	{
 	  secondary.reset(new KeyContext(*this, false));
+	  OPENVPN_LOG_PROTO_VERBOSE("New KeyContext SECONDARY id=" << secondary->key_id() << " remote-triggered");
 	  return true;
 	}
       else
