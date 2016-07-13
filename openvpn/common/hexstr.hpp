@@ -57,6 +57,8 @@ namespace openvpn {
 
   inline std::string render_hex(const unsigned char *data, size_t size, const bool caps=false)
   {
+    if (!data)
+      return "NULL";
     std::string ret;
     ret.reserve(size*2+1);
     while (size--)
@@ -70,6 +72,8 @@ namespace openvpn {
 
   inline std::string render_hex_sep(const unsigned char *data, size_t size, const char sep, const bool caps=false)
   {
+    if (!data)
+      return "NULL";
     std::string ret;
     ret.reserve(size*3);
     bool prsep = false;
@@ -101,6 +105,8 @@ namespace openvpn {
 
   inline std::string dump_hex(const unsigned char *data, size_t size)
   {
+    if (!data)
+      return "NULL\n";
     const unsigned int mask = 0x0F; // N bytes per line - 1
     std::ostringstream os;
     os << std::hex;
