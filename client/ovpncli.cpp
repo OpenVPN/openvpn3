@@ -387,7 +387,7 @@ namespace openvpn {
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent,
 		    asio::io_context* io_context,
-		    Stop* async_stop)
+		    Stop* async_stop_global)
 	{
 	  // only one attachment per instantiation allowed
 	  if (attach_called)
@@ -395,13 +395,7 @@ namespace openvpn {
 	  attach_called = true;
 
 	  // async stop
-	  if (async_stop)
-	    async_stop_ = async_stop;
-	  else
-	    {
-	      async_stop_ = new Stop();
-	      async_stop_owned = true;
-	    }
+	  async_stop_global_ = async_stop_global;
 
 	  // io_context
 	  if (io_context)
@@ -439,8 +433,6 @@ namespace openvpn {
 	    stats->detach_from_parent();
 	  if (events)
 	    events->detach_from_parent();
-	  if (async_stop_owned)
-	    delete async_stop_;
 	  if (io_context_owned)
 	    delete io_context_;
 	}
@@ -466,15 +458,19 @@ namespace openvpn {
 
 	// async stop
 
-	Stop* async_stop()
+	Stop* async_stop_local()
 	{
-	  return async_stop_;
+	  return &async_stop_local_;
 	}
 
-	void trigger_async_stop()
+	Stop* async_stop_global()
 	{
-	  if (async_stop_)
-	    async_stop_->stop();
+	  return async_stop_global_;
+	}
+
+	void trigger_async_stop_local()
+	{
+	  async_stop_local_.stop();
 	}
 
       private:
@@ -483,8 +479,8 @@ namespace openvpn {
 
 	bool attach_called = false;
 
-	Stop* async_stop_ = nullptr;
-	bool async_stop_owned = false;
+	Stop async_stop_local_;
+	Stop* async_stop_global_ = nullptr;
 
 	asio::io_context* io_context_ = nullptr;
 	bool io_context_owned = false;
@@ -801,7 +797,7 @@ namespace openvpn {
 	cc.tls_version_min_override = state->tls_version_min_override;
 	cc.gui_version = state->gui_version;
 	cc.extra_peer_info = state->extra_peer_info;
-	cc.stop = state->async_stop();
+	cc.stop = state->async_stop_local();
 #ifdef OPENVPN_GREMLIN
 	cc.gremlin_config = state->gremlin_config;
 #endif
@@ -865,8 +861,11 @@ namespace openvpn {
 	state->session->start(); // queue parallel async reads
 
 	// wire up async stop
-	AsioStopScope scope(*state->io_context(), state->async_stop(), [this]() {
+	AsioStopScope scope_local(*state->io_context(), state->async_stop_local(), [this]() {
 	    state->session->graceful_stop();
+	  });
+	AsioStopScope scope_global(*state->io_context(), state->async_stop_global(), [this]() {
+	    state->trigger_async_stop_local();
 	  });
 
 	// prepare to start reactor
@@ -1107,7 +1106,7 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::stop()
     {
       if (state->is_foreign_thread_access())
-	state->trigger_async_stop();
+	state->trigger_async_stop_local();
     }
 
     OPENVPN_CLIENT_EXPORT void OpenVPNClient::pause(const std::string& reason)
