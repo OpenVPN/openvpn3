@@ -55,6 +55,11 @@ namespace openvpn {
 	return !uid;
       }
 
+      bool match_uid(const int other_uid) const
+      {
+	return uid >= 0 && uid == other_uid;
+      }
+
       int uid;
       int gid;
       int pid;
