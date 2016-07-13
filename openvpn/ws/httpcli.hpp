@@ -170,7 +170,13 @@ namespace openvpn {
 	}
       };
 
-      struct Request {
+      struct Request
+      {
+	bool creds_defined() const
+	{
+	  return !username.empty() || !password.empty();
+	}
+
 	void set_creds(const Creds& creds)
 	{
 	  username = creds.username;
