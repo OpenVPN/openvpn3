@@ -97,6 +97,10 @@
 #include <openvpn/dco/dcocli.hpp>
 #endif
 
+#ifndef OPENVPN_UNUSED_OPTIONS
+#define OPENVPN_UNUSED_OPTIONS "UNUSED OPTIONS"
+#endif
+
 namespace openvpn {
 
   class ClientOptions : public RC<thread_unsafe_refcount>
@@ -474,7 +478,7 @@ namespace openvpn {
 
       // show unused options
       if (opt.n_unused())
-	OPENVPN_LOG("UNUSED OPTIONS" << std::endl << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
+	OPENVPN_LOG(OPENVPN_UNUSED_OPTIONS << std::endl << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
     }
 
     static PeerInfo::Set::Ptr build_peer_info(const Config& config, const ParseClientConfig& pcc, const bool autologin_sessions)
