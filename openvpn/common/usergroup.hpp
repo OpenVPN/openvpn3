@@ -41,31 +41,33 @@
 #include <openvpn/common/format.hpp>
 
 namespace openvpn {
+  // NOTE: -- SetUserGroup object does not own passwd and group
+  // objects, therefore *pw and *gr can change under us.
   class SetUserGroup
   {
   public:
     OPENVPN_EXCEPTION(user_group_err);
 
-    explicit SetUserGroup(const std::string& user, const std::string& group)
+    SetUserGroup(const std::string& user, const std::string& group)
       : SetUserGroup(user.empty() ? nullptr : user.c_str(),
 		     group.empty() ? nullptr : group.c_str())
     {
     }
 
-    explicit SetUserGroup(const char *user, const char *group)
+    SetUserGroup(const char *user, const char *group)
       : pw(nullptr),
 	gr(nullptr)
     {
       if (user)
 	{
-	  pw = getpwnam(user);
+	  pw = ::getpwnam(user);
 	  if (!pw)
 	    OPENVPN_THROW(user_group_err, "user lookup failed for '" << user << '\'');
 	  user_name = user;
 	}
       if (group)
 	{
-	  gr = getgrnam(group);
+	  gr = ::getgrnam(group);
 	  if (!gr)
 	    OPENVPN_THROW(user_group_err, "group lookup failed for '" << group << '\'');
 	  group_name = group;
@@ -80,7 +82,7 @@ namespace openvpn {
 	    OPENVPN_THROW(user_group_err, "setgid failed for group '" << group_name << "': " << std::strerror(errno));
 	  gid_t gr_list[1];
 	  gr_list[0] = gr->gr_gid;
-	  if (setgroups(1, gr_list))
+	  if (::setgroups(1, gr_list))
 	    OPENVPN_THROW(user_group_err, "setgroups failed for group '" << group_name << "': " << std::strerror(errno));
 	  OPENVPN_LOG("GID set to '" << group_name << '\'');
 	}
@@ -93,7 +95,7 @@ namespace openvpn {
 #ifdef OPENVPN_PLATFORM_LINUX
       // retain core dumpability after setgid/setuid
       if (gr || pw)
-	prctl(PR_SET_DUMPABLE, 1);
+	::prctl(PR_SET_DUMPABLE, 1);
 #endif
     }
 
@@ -101,6 +103,14 @@ namespace openvpn {
     {
       pw = nullptr;
       gr = nullptr;
+    }
+
+    int uid() const
+    {
+      if (pw)
+	return pw->pw_uid;
+      else
+	return -1;
     }
 
   private:
