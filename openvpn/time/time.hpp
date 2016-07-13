@@ -84,6 +84,7 @@ namespace openvpn {
       bool defined() const { return duration_ != T(0); }
       bool operator!() const { return duration_ == T(0); }
       bool is_infinite() const { return duration_ == std::numeric_limits<T>::max(); }
+      bool enabled() const { return defined() && !is_infinite(); }
       void set_infinite() { duration_ = std::numeric_limits<T>::max(); }
       void set_zero() { duration_ = T(0); }
 
