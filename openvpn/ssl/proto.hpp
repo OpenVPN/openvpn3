@@ -2544,8 +2544,8 @@ namespace openvpn {
     void disable_keepalive(unsigned int& keepalive_ping,
 			   unsigned int& keepalive_timeout)
     {
-      keepalive_ping = config->keepalive_ping.to_seconds();
-      keepalive_timeout = config->keepalive_timeout.to_seconds();
+      keepalive_ping = config->keepalive_ping.enabled() ? config->keepalive_ping.to_seconds() : 0;
+      keepalive_timeout = config->keepalive_timeout.enabled() ? config->keepalive_timeout.to_seconds() : 0;
       config->keepalive_ping = Time::Duration::infinite();
       config->keepalive_timeout = Time::Duration::infinite();
       keepalive_parms_modified();
