@@ -475,13 +475,15 @@ namespace openvpn {
 
 	void done(const bool status)
 	{
-	  auto clean = Cleanup([this]() {
-	      if (!ts->preserve_http_state)
-		ts->hsc.stop();
-	    });
-	  stop(status);
-	  remove_self_from_map();
-	  ts->status = status;
+	  {
+	    auto clean = Cleanup([this]() {
+		if (!ts->preserve_http_state)
+		  ts->hsc.stop();
+	      });
+	    stop(status);
+	    remove_self_from_map();
+	    ts->status = status;
+	  }
 	  if (ts->completion)
 	    ts->completion(*ts);
 	}
