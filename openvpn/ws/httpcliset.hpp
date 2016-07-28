@@ -129,6 +129,13 @@ namespace openvpn {
       };
 
       class TransactionSet;
+      struct Transaction;
+
+      struct ErrorRecovery : public RC<thread_unsafe_refcount>
+      {
+	typedef RCPtr<ErrorRecovery> Ptr;
+	virtual void retry(TransactionSet& ts, Transaction& t) = 0;
+      };
 
       struct Transaction
       {
@@ -263,6 +270,11 @@ namespace openvpn {
 	// on local sockets
 	std::function<void(TransactionSet& ts, AsioPolySock::Base& sock)> post_connect;
 
+	// error recovery method, called before we retry a request
+	// after an error to possibly modify connection parameters
+	// such as the hostname.
+	ErrorRecovery::Ptr error_recovery;
+
 	// Enable preserve_http_state to reuse HTTP session
 	// across multiple completions.
 	// hsc.stop() can be called to explicitly
@@ -297,6 +309,60 @@ namespace openvpn {
 		t->dump(os, *this);
 	    }
 	}
+      };
+
+      class HostRetry : public ErrorRecovery
+      {
+      public:
+	typedef RCPtr<HostRetry> Ptr;
+
+	template<typename T, typename... Args>
+	HostRetry(T first, Args... args)
+	{
+	  hosts.reserve(1 + sizeof...(args));
+	  from_list(first, args...);
+	}
+
+	void shuffle(RandomAPI& rng)
+	{
+	  std::shuffle(hosts.begin(), hosts.end(), rng);
+	  index = 0;
+	}
+
+	std::string next_host()
+	{
+	  if (hosts.empty())
+	    throw Exception("HostRetry: empty host list");
+	  if (index >= hosts.size())
+	    index = 0;
+	  return hosts[index++];
+	}
+
+	virtual void retry(TransactionSet& ts, Transaction& t) override
+	{
+	  ts.host.host = next_host();
+	}
+
+      private:
+	void from_list(std::string arg)
+	{
+	  hosts.push_back(std::move(arg));
+	}
+
+	void from_list(const char *arg)
+	{
+	  hosts.push_back(std::string(arg));
+	}
+
+	template<typename T, typename... Args>
+	void from_list(T first, Args... args)
+	{
+	  from_list(first);
+	  from_list(args...);
+	}
+
+	size_t index = 0;
+	std::vector<std::string> hosts;
       };
 
       ClientSet(asio::io_context& io_context_arg)
@@ -456,11 +522,11 @@ namespace openvpn {
 	  if (ts->delayed_start.defined())
 	    {
 	      retry_duration = ts->delayed_start;
-	      reconnect_schedule();
+	      reconnect_schedule(false);
 	    }
 	  else
 	    {
-	      next_request();
+	      next_request(false);
 	    }
 	  return true;
 	}
@@ -535,7 +601,7 @@ namespace openvpn {
 	  return trans().title(*ts);
 	}
 
-	void next_request()
+	void next_request(const bool error_retry)
 	{
 	  if (check_if_done())
 	    return;
@@ -553,25 +619,23 @@ namespace openvpn {
 	  // init buffer to receive content in
 	  t.content_in.clear();
 
+	  // if this is an error retry, allow user-defined recovery
+	  if (error_retry && ts->error_recovery)
+	    ts->error_recovery->retry(*ts, t);
+
 	  ts->hsc.start_request();
 	}
 
-	void reconnect_schedule()
+	void reconnect_schedule(const bool error_retry)
 	{
 	  if (check_if_done())
 	    return;
 	  reconnect_timer.expires_at(Time::now() + retry_duration);
-	  reconnect_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+	  reconnect_timer.async_wait([self=Ptr(this), error_retry](const asio::error_code& error)
 				     {
-				       if (!error)
-					 self->reconnect_callback(error);
+				       if (!error && !self->halt)
+					 self->next_request(error_retry);
 				     });
-	}
-
-	void reconnect_callback(const asio::error_code& e)
-	{
-	  if (!halt && !e)
-	    next_request();
 	}
 
 	WS::Client::Host http_host(HTTPDelegate& hd) const
@@ -699,7 +763,7 @@ namespace openvpn {
 		// next_request() can trigger destructors.
 		asio::post(parent->io_context, [self=Ptr(this)]()
 			   {
-			     self->next_request();
+			     self->next_request(false);
 			   });
 	      }
 	    else
@@ -714,7 +778,7 @@ namespace openvpn {
 		  {
 		    // fail -- retry
 		    close_http(false);
-		    reconnect_schedule();
+		    reconnect_schedule(true);
 		  }
 	      }
 	  }
