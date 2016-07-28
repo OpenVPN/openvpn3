@@ -311,6 +311,11 @@ namespace openvpn {
 	rng = std::move(rng_arg);
       }
 
+      const RandomAPI::Ptr& get_random() const
+      {
+	return rng;
+      }
+
       void new_request(const TransactionSet::Ptr& ts)
       {
 	const client_t id = new_client_id();
