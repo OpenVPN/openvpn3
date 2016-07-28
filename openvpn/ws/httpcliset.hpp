@@ -383,6 +383,31 @@ namespace openvpn {
 	  sps->io_context = std::move(io_context);
       }
 
+      static void run_synchronous(std::function<void(ClientSet::Ptr)> job,
+				  Stop* stop=nullptr,
+				  RandomAPI* rng=nullptr)
+      {
+	std::unique_ptr<asio::io_context> io_context(new asio::io_context(1));
+	ClientSet::Ptr cs;
+	try {
+	  AsioStopScope scope(*io_context, stop, [&]() {
+	      if (cs)
+		cs->abort("stop message received");
+	    });
+	  cs.reset(new ClientSet(*io_context));
+	  cs->set_random(rng);
+	  job(cs);
+	  io_context->run();
+	}
+	catch (...)
+	  {
+	    if (cs)
+	      cs->stop();         // on exception, stop ClientSet
+	    io_context->poll();   // execute completion handlers
+	    throw;
+	  }
+      }
+
       void stop()
       {
 	if (halt)
