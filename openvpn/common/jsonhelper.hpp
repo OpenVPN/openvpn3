@@ -105,8 +105,8 @@ namespace openvpn {
     static void to_uint_optional(const Json::Value& root,
 				 unsigned int& dest,
 				 const std::string& name,
-				 const std::string& title,
-				 const unsigned int default_value)
+				 const unsigned int default_value,
+				 const std::string& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -183,7 +183,7 @@ namespace openvpn {
     static unsigned int get_uint_optional(const Json::Value& root, const std::string& name, const unsigned int default_value, const std::string& title)
     {
       unsigned int ret;
-      to_uint_optional(root, ret, name, title, default_value);
+      to_uint_optional(root, ret, name, default_value, title);
       return ret;
     }
 
