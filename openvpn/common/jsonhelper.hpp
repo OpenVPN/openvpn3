@@ -88,6 +88,23 @@ namespace openvpn {
       dest = value.asString();
     }
 
+    static void to_string_optional(const Json::Value& root,
+				   std::string& dest,
+				   const std::string& name,
+				   const std::string& default_value,
+				   const std::string& title)
+    {
+      const Json::Value& value = root[name];
+      if (value.isNull())
+	{
+	  dest = default_value;
+	  return;
+	}
+      if (!value.isString())
+	OPENVPN_THROW(json_parse, "string " << fmt_name(name, title) << " is of incorrect type");
+      dest = value.asString();
+    }
+
     static void to_int(const Json::Value& root, int& dest, const std::string& name, const std::string& title)
     {
       const Json::Value& value = root[name];
@@ -154,6 +171,16 @@ namespace openvpn {
     {
       std::string ret;
       to_string(root, ret, name, title);
+      return ret;
+    }
+
+    static std::string get_string_optional(const Json::Value& root,
+					   const std::string& name,
+					   const std::string& default_value,
+					   const std::string& title)
+    {
+      std::string ret;
+      to_string_optional(root, ret, name, default_value, title);
       return ret;
     }
 
