@@ -339,7 +339,8 @@ namespace openvpn {
 
       static void new_request_synchronous(const TransactionSet::Ptr& ts,
 					  Stop* stop=nullptr,
-					  SyncPersistState* sps=nullptr)
+					  SyncPersistState* sps=nullptr,
+					  RandomAPI* rng=nullptr)
       {
 	std::unique_ptr<asio::io_context> io_context;
 	auto clean = Cleanup([&]() {
@@ -361,6 +362,7 @@ namespace openvpn {
 		cs->abort("stop message received");
 	    });
 	  cs.reset(new ClientSet(*io_context));
+	  cs->set_random(rng);
 	  cs->new_request(ts);
 	  if (sps)
 	    {
