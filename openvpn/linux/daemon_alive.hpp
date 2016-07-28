@@ -24,10 +24,11 @@
 
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/number.hpp>
 
 namespace openvpn {
-  inline bool is_daemon_alive(const std::string& cmd,
-			      const std::string& pidfile)
+  inline int daemon_pid(const std::string& cmd,
+			const std::string& pidfile)
   {
     try {
       std::string pidstr = read_text(pidfile);
@@ -35,12 +36,23 @@ namespace openvpn {
       const std::string cmdline_fn = "/proc/" + pidstr + "/cmdline";
       BufferPtr cmdbuf = read_binary_linear(cmdline_fn);
       const size_t len = ::strnlen((const char *)cmdbuf->c_data(), cmdbuf->size());
-      return cmd == std::string((const char *)cmdbuf->c_data(), len);
+      if (cmd == std::string((const char *)cmdbuf->c_data(), len))
+	{
+	  int ret;
+	  if (parse_number(pidstr, ret))
+	    return ret;
+	}
     }
     catch (const std::exception& e)
       {
-	return false;
       }
+    return -1;
+  }
+
+  inline bool is_daemon_alive(const std::string& cmd,
+			      const std::string& pidfile)
+  {
+    return daemon_pid(cmd, pidfile) >= 0;
   }
 }
 
