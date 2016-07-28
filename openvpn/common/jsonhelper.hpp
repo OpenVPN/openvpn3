@@ -72,6 +72,12 @@ namespace openvpn {
       return true;
     }
 
+    static bool exists(const Json::Value& root, const std::string& name)
+    {
+      const Json::Value& value = root[name];
+      return !value.isNull();
+    }
+
     static void to_string(const Json::Value& root, std::string& dest, const std::string& name, const std::string& title)
     {
       const Json::Value& value = root[name];
