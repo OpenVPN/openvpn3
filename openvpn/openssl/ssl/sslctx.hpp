@@ -805,8 +805,11 @@ namespace openvpn {
 	  if (!config->enable_renegotiation)
 	    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	  if (!(config->flags & SSLConst::NO_VERIFY_PEER))
-	    SSL_CTX_set_verify (ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-				config->mode.is_client() ? verify_callback_client : verify_callback_server);
+	    {
+	      SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+				 config->mode.is_client() ? verify_callback_client : verify_callback_server);
+	      SSL_CTX_set_verify_depth(ctx, 16);
+	    }
 	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION;
 	  if (!config->enable_renegotiation)
 	    sslopt |= SSL_OP_NO_TICKET;
