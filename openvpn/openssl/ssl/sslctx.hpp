@@ -41,6 +41,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/pki/cclist.hpp>
@@ -1184,6 +1185,46 @@ namespace openvpn {
 	}
     }
 
+    static std::string cert_status_line(int preverify_ok,
+					int depth,
+					int err,
+					const std::string& subject)
+    {
+      std::string ret;
+      ret.reserve(128);
+      ret = "VERIFY";
+      if (preverify_ok)
+	ret += " OK";
+      else
+	ret += " FAIL";
+      ret += ": depth=";
+      ret += openvpn::to_string(depth);
+      ret += ", ";
+      if (!subject.empty())
+	ret += subject;
+      else
+	ret += "NO_SUBJECT";
+      if (!preverify_ok)
+	{
+	  ret += " [";
+	  ret += X509_verify_cert_error_string(err);
+	  ret += ']';
+	}
+      return ret;
+    }
+
+    static AuthCert::Fail::Type cert_fail_code(const int openssl_err)
+    {
+      // NOTE: this method should never return OK
+      switch (openssl_err)
+	{
+	case X509_V_ERR_CERT_HAS_EXPIRED:
+	  return AuthCert::Fail::EXPIRED;
+	default:
+	  return AuthCert::Fail::OTHER;
+	}
+    }
+
     static int verify_callback_client(int preverify_ok, X509_STORE_CTX *ctx)
     {
       // get the OpenSSL SSL object
@@ -1192,16 +1233,16 @@ namespace openvpn {
       // get OpenSSLContext
       const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
 
+      // get depth
+      const int depth = X509_STORE_CTX_get_error_depth(ctx);
+
       // log subject
       const std::string subject = x509_get_subject(ctx->current_cert);
-      if (!subject.empty() && (self->config->flags & SSLConst::LOG_VERIFY_STATUS))
-	OPENVPN_LOG_SSL("VERIFY "
-			<< (preverify_ok ? "OK" : "FAIL")
-			<< ": depth=" << ctx->error_depth
-			<< ", " << subject);
+      if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
+	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, X509_STORE_CTX_get_error(ctx), subject));
 
       // leaf-cert verification
-      if (ctx->error_depth == 0)
+      if (depth == 0)
 	{
 	  // verify ns-cert-type
 	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(ctx->current_cert))
@@ -1252,18 +1293,21 @@ namespace openvpn {
       // get OpenSSLContext::SSL
       SSL* self_ssl = (SSL *) SSL_get_ex_data (ssl, SSL::mydata_index);
 
+      // get error code
+      const int err = X509_STORE_CTX_get_error(ctx);
+
+      // get depth
+      const int depth = X509_STORE_CTX_get_error_depth(ctx);
+
       // log subject
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
-	{
-	  const std::string subject = x509_get_subject(ctx->current_cert);
-	  if (!subject.empty())
-	    OPENVPN_LOG_SSL("VERIFY "
-			    << (preverify_ok ? "OK" : "FAIL")
-			    << ": depth=" << ctx->error_depth
-			    << ", " << subject);
-	}
+	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, x509_get_subject(ctx->current_cert)));
 
-      if (ctx->error_depth == 1) // issuer cert
+      // record cert error in authcert
+      if (!preverify_ok && self_ssl->authcert)
+	self_ssl->authcert->add_fail(depth, cert_fail_code(err), X509_verify_cert_error_string(err));
+
+      if (depth == 1) // issuer cert
 	{
 	  // save the issuer cert fingerprint
 	  if (self_ssl->authcert)
@@ -1272,12 +1316,14 @@ namespace openvpn {
 	      std::memcpy(self_ssl->authcert->issuer_fp, ctx->current_cert->sha1_hash, sizeof(AuthCert::issuer_fp));
 	    }
 	}
-      else if (ctx->error_depth == 0) // leaf cert
+      else if (depth == 0) // leaf cert
 	{
 	  // verify ns-cert-type
 	  if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(ctx->current_cert))
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+	      if (self_ssl->authcert)
+		self_ssl->authcert->add_fail(depth, AuthCert::Fail::BAD_CERT_TYPE, "bad ns-cert-type in leaf certificate");
 	      preverify_ok = false;
 	    }
 
@@ -1285,6 +1331,8 @@ namespace openvpn {
 	  if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(ctx->current_cert))
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+	      if (self_ssl->authcert)
+		self_ssl->authcert->add_fail(depth, AuthCert::Fail::BAD_CERT_TYPE, "bad X509 key usage in leaf certificate");
 	      preverify_ok = false;
 	    }
 
@@ -1292,6 +1340,8 @@ namespace openvpn {
 	  if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(ctx->current_cert))
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+	      if (self_ssl->authcert)
+		self_ssl->authcert->add_fail(depth, AuthCert::Fail::BAD_CERT_TYPE, "bad X509 extended key usage in leaf certificate");
 	      preverify_ok = false;
 	    }
 
@@ -1309,11 +1359,13 @@ namespace openvpn {
       // x509-track enabled?
       if (self_ssl->authcert && self_ssl->authcert->x509_track)
 	x509_track_extract_from_cert(ctx->current_cert,
-				     ctx->error_depth,
+				     depth,
 				     self->config->x509_track_config,
 				     *self_ssl->authcert->x509_track);
 
-      return preverify_ok;
+      return preverify_ok || ((self->config->flags & SSLConst::DEFERRED_CERT_VERIFY)
+			      && self_ssl->authcert               // failsafe: don't defer error unless
+			      && self_ssl->authcert->is_fail());  //   authcert has recorded it
     }
 
     // Print debugging information on SSL/TLS session negotiation.

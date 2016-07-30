@@ -33,6 +33,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/binprefix.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/pki/x509track.hpp>
 
 namespace openvpn {
@@ -47,6 +48,89 @@ namespace openvpn {
       friend class PolarSSLContext;
 
       typedef RCPtr<AuthCert> Ptr;
+
+      class Fail
+      {
+      public:
+	// ordered by priority
+	enum Type {
+	  OK=0, // OK MUST be 0
+	  OTHER,
+	  BAD_CERT_TYPE,
+	  EXPIRED,
+	  N
+	};
+
+	void add_fail(const size_t depth, const Type new_code, const char *reason)
+	{
+	  if (new_code > code)
+	    code = new_code;
+	  while (errors.size() <= depth)
+	    errors.emplace_back();
+	  std::string& err = errors[depth];
+	  if (err.empty())
+	    err = reason;
+	  else if (err.find(reason) == std::string::npos)
+	    {
+	      err += ", ";
+	      err += reason;
+	    }
+	}
+
+	bool is_fail() const
+	{
+	  return code != OK;
+	}
+
+	Type get_code() const
+	{
+	  return code;
+	}
+
+	std::string to_string(const bool use_prefix) const
+	{
+	  std::string ret;
+	  if (use_prefix)
+	    {
+	      ret += render_code(code);
+	      ret += ": ";
+	    }
+	  bool notfirst = false;
+	  for (size_t i = 0; i < errors.size(); ++i)
+	    {
+	      if (errors[i].empty())
+		continue;
+	      if (notfirst)
+		ret += ", ";
+	      notfirst = true;
+	      ret += errors[i];
+	      ret += " [";
+	      ret += openvpn::to_string(i);
+	      ret += ']';
+	    }
+	  return ret;
+	}
+
+	static const char *render_code(const Type code)
+	{
+	  switch (code)
+	    {
+	    case OK:
+	      return "OK";
+	    case OTHER:
+	    default:
+	      return "CERT_FAIL";
+	    case BAD_CERT_TYPE:
+	      return "BAD_CERT_TYPE";
+	    case EXPIRED:
+	      return "EXPIRED";
+	    }
+	}
+
+      private:
+	Type code{OK};                    // highest-valued cert fail code
+	std::vector<std::string> errors;  // human-readable cert errors by depth
+      };
 
       AuthCert()
       {
@@ -125,11 +209,29 @@ namespace openvpn {
 	return std::move(x509_track);
       }
 
+      void add_fail(const size_t depth, const Fail::Type new_code, const char *reason)
+      {
+	if (!fail)
+	  fail.reset(new Fail());
+	fail->add_fail(depth, new_code, reason);
+      }
+
+      bool is_fail() const
+      {
+	return fail && fail->is_fail();
+      }
+
+      const Fail* get_fail() const
+      {
+	return fail.get();
+      }
+
     private:
       std::string cn;                // common name
       long sn;                       // serial number
       unsigned char issuer_fp[20];   // issuer cert fingerprint
 
+      std::unique_ptr<Fail> fail;
       std::unique_ptr<X509Track::Set> x509_track;
     };
 }

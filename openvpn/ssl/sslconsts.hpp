@@ -46,6 +46,12 @@ namespace openvpn {
 
       // Enable SNI (Server Name Indication) when hostname is provided
       ENABLE_SNI=(1<<2),
+
+      // [server only] Don't automatically fail connections on
+      // bad peer cert.  Succeed the connection, but pass the
+      // fail status data via AuthCert so the higher layers
+      // can handle it.
+      DEFERRED_CERT_VERIFY=(1<<3),
     };
 
   }
