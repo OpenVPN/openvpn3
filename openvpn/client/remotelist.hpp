@@ -520,9 +520,9 @@ namespace openvpn {
 	    {
 	      Item& item = **i;
 	      item.server_host = server_override;
-	      item.res_addr_list.reset(nullptr);	    
+	      item.res_addr_list.reset(nullptr);
 	    }
-	  reset_items();
+	  reset_cache();
 	}
     }
 
@@ -630,6 +630,11 @@ namespace openvpn {
     // return remote list size
     size_t size() const { return list.size(); }
 
+    const Item& get_item(const size_t index) const
+    {
+      return *list.at(index);
+    }
+
     // return hostname (or IP address) of current connection entry
     const std::string& current_server_host() const
     {
@@ -702,20 +707,20 @@ namespace openvpn {
 	}
     }
 
+    // reset the cache associated with all items
+    void reset_cache()
+    {
+      for (auto &e : list)
+	e->res_addr_list.reset(nullptr);
+      index.reset();
+    }
+
   private:
     // initialization, called by constructors
     void init(const std::string& connection_tag)
     {
       enable_cache = false;
       directives.init(connection_tag);
-    }
-
-    // reset the cache associated with all items
-    void reset_items()
-    {
-      for (std::vector<Item::Ptr>::iterator i = list.begin(); i != list.end(); ++i)
-	(*i)->res_addr_list.reset(nullptr);	    
-      index.reset();
     }
 
     // reset the cache associated with a given item
@@ -778,7 +783,7 @@ namespace openvpn {
 	    }
 	  if (di != list.size())
 	    list.resize(di);
-	  reset_items();
+	  reset_cache();
 	}
     }
 
