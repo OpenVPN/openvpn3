@@ -6,6 +6,10 @@
 # NAME : basename of git root directory in dependency directory
 # DL : download directory, where to build tarball, defaults to ~/Downloads
 
+# Note: this script gives priority to $NAME-yyyymmdd as source location,
+# so for Asio, make sure to delete such directories if you want to
+# favor straight "asio" directory.
+
 set -e
 if [ -z "$NAME" ]; then
     echo "NAME var must exist"
