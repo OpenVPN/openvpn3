@@ -54,7 +54,6 @@
 #define OPENVPN_DEBUG_PROTO   1        // increases low-level protocol verbosity (1)
 //#define OPENVPN_DEBUG_PROTO_DUMP     // dump hex of transport-layer packets, requires OPENVPN_DEBUG_CLIPROTO (comment out)
 //#define OPENVPN_DEBUG_VERBOSE_ERRORS // verbosely log Error::Type errors (comment out)
-#define OPENVPN_SSL_DEBUG     0        // show verbose SSL debug info (0)
 #define OPENVPN_DEBUG_TUN     2        // debug level for tun object (2)
 #define OPENVPN_DEBUG_UDPLINK 2        // debug level for UDP link object (2)
 #define OPENVPN_DEBUG_TCPLINK 2        // debug level for TCP link object (2)
@@ -369,6 +368,7 @@ namespace openvpn {
 	std::string private_key_password;
 	std::string external_pki_alias;
 	bool disable_client_cert = false;
+	int ssl_debug_level = 0;
 	int default_key_direction = -1;
 	bool force_aes_cbc_ciphersuites = false;
 	std::string tls_version_min_override;
@@ -585,6 +585,7 @@ namespace openvpn {
 	if (eval.externalPki)
 	  state->external_pki_alias = config.externalPkiAlias;
 	state->disable_client_cert = config.disableClientCert;
+	state->ssl_debug_level = config.sslDebugLevel;
 	state->default_key_direction = config.defaultKeyDirection;
 	state->force_aes_cbc_ciphersuites = config.forceAesCbcCiphersuites;
 	state->tls_version_min_override = config.tlsVersionMinOverride;
@@ -770,6 +771,11 @@ namespace openvpn {
       connect_attach();
 
       try {
+	// set global PolarSSL debug level
+#if defined(USE_POLARSSL)
+	debug_set_threshold(state->ssl_debug_level); // fixme -- using a global method for this seems wrong
+#endif
+
 	// load options
 	ClientOptions::Config cc;
 	cc.cli_stats = state->stats;
@@ -792,6 +798,7 @@ namespace openvpn {
 	  cc.remote_override = &state->remote_override;
 	cc.private_key_password = state->private_key_password;
 	cc.disable_client_cert = state->disable_client_cert;
+	cc.ssl_debug_level = state->ssl_debug_level;
 	cc.default_key_direction = state->default_key_direction;
 	cc.force_aes_cbc_ciphersuites = state->force_aes_cbc_ciphersuites;
 	cc.tls_version_min_override = state->tls_version_min_override;

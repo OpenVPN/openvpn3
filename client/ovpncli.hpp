@@ -200,6 +200,9 @@ namespace openvpn {
       // If true, don't send client cert/key to peer.
       bool disableClientCert = false;
 
+      // SSL library debug level
+      int sslDebugLevel = 0;
+
       // Compression mode, one of:
       // yes -- allow compression on both uplink and downlink
       // asym -- allow compression on downlink only (i.e. server -> client)

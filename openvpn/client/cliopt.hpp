@@ -129,6 +129,7 @@ namespace openvpn {
       bool google_dns_fallback = false;
       std::string private_key_password;
       bool disable_client_cert = false;
+      int ssl_debug_level = 0;
       int default_key_direction = -1;
       bool force_aes_cbc_ciphersuites = false;
       bool autologin_sessions = false;
@@ -212,9 +213,7 @@ namespace openvpn {
       cc->set_external_pki_callback(config.external_pki);
       cc->set_frame(frame);
       cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
-#ifdef OPENVPN_SSL_DEBUG
-      cc->set_debug_level(OPENVPN_SSL_DEBUG);
-#endif
+      cc->set_debug_level(config.ssl_debug_level);
       cc->set_rng(rng);
       cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
       cc->set_private_key_password(config.private_key_password);

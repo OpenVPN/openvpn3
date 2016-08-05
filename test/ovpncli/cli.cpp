@@ -272,6 +272,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "merge",          no_argument,        nullptr,      'm' },
     { "version",        no_argument,        nullptr,      'v' },
     { "auto-sess",      no_argument,        nullptr,      'a' },
+    { "ssl-debug",      required_argument,  nullptr,       1  },
     { nullptr,          0,                  nullptr,       0  }
   };
 
@@ -308,6 +309,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool proxyAllowCleartextAuth = false;
 	int defaultKeyDirection = -1;
 	bool forceAesCbcCiphersuites = false;
+	int sslDebugLevel = 0;
 	bool googleDnsFallback = false;
 	bool autologinSessions = false;
 	bool tunPersist = false;
@@ -322,6 +324,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	  {
 	    switch (ch)
 	      {
+	      case 1:
+		sslDebugLevel = ::atoi(optarg);
+		break;
 	      case 'e':
 		eval = true;
 		break;
@@ -482,6 +487,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.dco = dco;
 	      config.defaultKeyDirection = defaultKeyDirection;
 	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
+	      config.sslDebugLevel = sslDebugLevel;
 	      config.googleDnsFallback = googleDnsFallback;
 	      config.autologinSessions = autologinSessions;
 	      config.tunPersist = tunPersist;
@@ -649,6 +655,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
       std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
       std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
+      std::cerr << "--ssl-debug          : SSL debug level" << std::endl;
       std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
       std::cout << "--auto-sess, -a      : request autologin session" << std::endl;
       std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
