@@ -77,6 +77,7 @@ namespace openvpn {
 	      for (OptionList::IndexList::const_iterator i = se->begin(); i != se->end(); ++i)
 		{
 		  const Option& o = options[*i];
+		  o.touch();
 		  const std::string arg1 = o.get_optional(1, 256);
 
 		  // server-locked profiles not supported
