@@ -772,7 +772,7 @@ namespace openvpn {
 
       try {
 	// set global PolarSSL debug level
-#if defined(USE_POLARSSL)
+#if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
 	debug_set_threshold(state->ssl_debug_level); // fixme -- using a global method for this seems wrong
 #endif
 

@@ -34,6 +34,7 @@
 #include <polarssl/ssl.h>
 #include <polarssl/oid.h>
 #include <polarssl/sha1.h>
+#include <polarssl/debug.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
