@@ -137,7 +137,7 @@ namespace openvpn {
 
       // cache a list of DNS-resolved IP addresses
       template <class EPRANGE>
-      void set_endpoint_range(EPRANGE& endpoint_range)
+      void set_endpoint_range(EPRANGE& endpoint_range, RandomAPI* rng)
       {
 	EPRANGE end;
 	res_addr_list.reset(new ResolvedAddrList());
@@ -147,6 +147,8 @@ namespace openvpn {
 	    addr->addr = IP::Addr::from_asio(i.endpoint().address());
 	    res_addr_list->push_back(addr);
 	  }
+	if (rng && res_addr_list->size() >= 2)
+	  std::shuffle(res_addr_list->begin(), res_addr_list->end(), *rng);
 	OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint SET " << to_string());
       }
 
@@ -370,7 +372,7 @@ namespace openvpn {
 	    if (!error)
 	      {
 		// resolve succeeded
-		item.set_endpoint_range(results);
+		item.set_endpoint_range(results, remote_list->rng.get());
 	      }
 	    else
 	      {
@@ -527,11 +529,19 @@ namespace openvpn {
 	}
     }
 
-    // randomize item list, used to implement remote-random directive
-    void randomize(RandomAPI& rng)
+    void set_random(const RandomAPI::Ptr& rng_arg)
     {
-      std::shuffle(list.begin(), list.end(), rng);
-      index.reset();
+      rng = rng_arg;
+    }
+
+    // randomize item list, used to implement remote-random directive
+    void randomize()
+    {
+      if (rng)
+	{
+	  std::shuffle(list.begin(), list.end(), *rng);
+	  index.reset();
+	}
     }
 
     // return true if at least one remote entry is of type proto
@@ -613,7 +623,7 @@ namespace openvpn {
     void set_endpoint_range(EPRANGE& endpoint_range)
     {
       Item& item = *list[primary_index()];
-      item.set_endpoint_range(endpoint_range);
+      item.set_endpoint_range(endpoint_range, rng.get());
       index.reset_secondary();
     }
 
@@ -899,6 +909,8 @@ namespace openvpn {
     Directives directives;
 
     RemoteOverride* remote_override = nullptr;
+
+    RandomAPI::Ptr rng;
   };
 
 }

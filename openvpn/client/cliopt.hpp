@@ -242,7 +242,7 @@ namespace openvpn {
 
 #ifdef PRIVATE_TUNNEL_PROXY
       if (config.alt_proxy && !dco)
-	alt_proxy = PTProxy::new_proxy(opt, *rng);
+	alt_proxy = PTProxy::new_proxy(opt, rng);
 #endif
 
       // If HTTP proxy parameters are not supplied by API, try to get them from config
@@ -256,6 +256,9 @@ namespace openvpn {
 	  remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr));
       if (!remote_list->defined())
 	throw option_error("no remote option specified");
+
+      // Set remote list prng
+      remote_list->set_random(prng);
 
       // If running in tun_persist mode, we need to do basic DNS caching so that
       // we can avoid emitting DNS requests while the tunnel is blocked during
@@ -271,7 +274,7 @@ namespace openvpn {
 
       // process remote-random
       if (opt.exists("remote-random"))
-	remote_list->randomize(*prng);
+	remote_list->randomize();
 
       // get "float" option
       server_addr_float = opt.exists("float");
