@@ -222,6 +222,7 @@ namespace openvpn {
 	secondary_ = 0;
       }
 
+      // return true if primary index was incremented
       bool increment(const size_t pri_len, const size_t sec_len)
       {
 	if (++secondary_ >= sec_len)
@@ -574,7 +575,8 @@ namespace openvpn {
 	}
       else
 	{
-	  if (index.increment(list.size(), secondary_length(index.primary())) && !enable_cache)
+	  index.increment(list.size(), secondary_length(index.primary()));
+	  if (!enable_cache)
 	    reset_item(index.primary());
 	}
     }
@@ -713,6 +715,13 @@ namespace openvpn {
       for (auto &e : list)
 	e->res_addr_list.reset(nullptr);
       index.reset();
+    }
+
+    // if caching is disabled, reset the cache for current item
+    void reset_cache_item()
+    {
+      if (!enable_cache)
+	reset_item(index.primary());
     }
 
   private:

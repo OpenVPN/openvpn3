@@ -198,6 +198,7 @@ namespace openvpn {
 	  paused = false;
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Resume();
 	  client_options->events().add_event(std::move(ev));
+	  client_options->remote_reset_cache_item();
 	  new_client();
 	}
     }
@@ -210,6 +211,7 @@ namespace openvpn {
 	    seconds = 0;
 	  OPENVPN_LOG("Client terminated, reconnecting in " << seconds << "...");
 	  server_poll_timer.cancel();
+	  client_options->remote_reset_cache_item();
 	  restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
 	  restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const asio::error_code& error)
                                         {
@@ -373,6 +375,7 @@ namespace openvpn {
       OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
       server_poll_timer.cancel();
       interim_finalize();
+      client_options->remote_reset_cache_item();
       restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
       restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const asio::error_code& error)
                                     {

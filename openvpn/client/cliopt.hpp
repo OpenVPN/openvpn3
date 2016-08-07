@@ -514,6 +514,11 @@ namespace openvpn {
       load_transport_config();
     }
 
+    void remote_reset_cache_item()
+    {
+      remote_list->reset_cache_item();
+    }
+
     bool pause_on_connection_timeout()
     {
       if (reconnect_notify)
