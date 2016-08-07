@@ -243,6 +243,7 @@ namespace openvpn {
 	  ret = ReachabilityInterface::ReachableViaWiFi;
 	}
 
+#if 0 // don't contaminate result by considering on-demand viability
       if ((((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) ||
 	   (flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0))
 	{
@@ -255,6 +256,7 @@ namespace openvpn {
 	      ret = ReachabilityInterface::ReachableViaWiFi;
 	    }
 	}
+#endif
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR // Mac OS X doesn't define WWAN flags
       if ((flags & kSCNetworkReachabilityFlagsIsWWAN) == kSCNetworkReachabilityFlagsIsWWAN)
