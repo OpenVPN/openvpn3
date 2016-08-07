@@ -74,6 +74,7 @@
 
 #include <string>
 #include <sstream>
+#include <memory>
 
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/applecrypto/cf/cf.hpp>
@@ -306,16 +307,37 @@ namespace openvpn {
   class Reachability : public ReachabilityInterface
   {
   public:
-    Reachability() {}
+    Reachability(const bool enable_internet, const bool enable_wifi)
+    {
+      if (enable_internet)
+	internet.reset(new ReachabilityViaInternet);
+      if (enable_wifi)
+	wifi.reset(new ReachabilityViaWiFi);
+    }
 
     bool reachableViaWiFi() const {
-      return internet.status() == ReachableViaWiFi
-	      && wifi.status() == ReachableViaWiFi;
+      if (internet)
+	{
+	  if (wifi)
+	    return internet->status() == ReachableViaWiFi && wifi->status() == ReachableViaWiFi;
+	  else
+	    return internet->status() == ReachableViaWiFi;
+	}
+      else
+	{
+	  if (wifi)
+	    return wifi->status() == ReachableViaWiFi;
+	  else
+	    return false;
+	}
     }
 
     bool reachableViaCellular() const
     {
-      return internet.status() == ReachableViaWWAN;
+      if (internet)
+	return internet->status() == ReachableViaWWAN;
+      else
+	return false;
     }
 
     virtual Status reachable() const
@@ -341,21 +363,25 @@ namespace openvpn {
     virtual std::string to_string() const
     {
       std::string ret;
-      ret += internet.to_string();
-      ret += ' ';
-      ret += wifi.to_string();
+      if (internet)
+	ret += internet->to_string();
+      if (internet && wifi)
+	ret += ' ';
+      if (wifi)
+	ret += wifi->to_string();
       return ret;
     }
 
-    ReachabilityViaInternet internet;
-    ReachabilityViaWiFi wifi;
+    std::unique_ptr<ReachabilityViaInternet> internet;
+    std::unique_ptr<ReachabilityViaWiFi> wifi;
   };
 
   class ReachabilityTracker
   {
   public:
-    ReachabilityTracker()
-      : scheduled(false)
+    ReachabilityTracker(const bool enable_internet, const bool enable_wifi)
+      : reachability(enable_internet, enable_wifi),
+	scheduled(false)
     {
     }
 
@@ -363,8 +389,10 @@ namespace openvpn {
     {
       if (!scheduled)
 	{
-	  schedule(reachability.internet, internet_callback_static);
-	  schedule(reachability.wifi, wifi_callback_static);
+	  if (reachability.internet)
+	    schedule(*reachability.internet, internet_callback_static);
+	  if (reachability.wifi)
+	    schedule(*reachability.wifi, wifi_callback_static);
 	  scheduled = true;
 	}
     }
@@ -373,8 +401,10 @@ namespace openvpn {
     {
       if (scheduled)
 	{
-	  cancel(reachability.internet);
-	  cancel(reachability.wifi);
+	  if (reachability.internet)
+	    cancel(*reachability.internet);
+	  if (reachability.wifi)
+	    cancel(*reachability.wifi);
 	  scheduled = false;
 	}
     }
@@ -417,7 +447,7 @@ namespace openvpn {
 					 void *info)
     {
       ReachabilityTracker* self = (ReachabilityTracker*)info;
-      self->reachability_tracker_event(self->reachability.internet, flags);
+      self->reachability_tracker_event(*self->reachability.internet, flags);
     }
 
     static void wifi_callback_static(SCNetworkReachabilityRef target,
@@ -425,7 +455,7 @@ namespace openvpn {
 				     void *info)
     {
       ReachabilityTracker* self = (ReachabilityTracker*)info;
-      self->reachability_tracker_event(self->reachability.wifi, flags);
+      self->reachability_tracker_event(*self->reachability.wifi, flags);
     }
 
     Reachability reachability;

@@ -43,7 +43,8 @@ namespace openvpn {
     OPENVPN_EXCEPTION(mac_lifecycle_error);
 
     MacLifeCycle()
-      : nc(nullptr),
+      : ReachabilityTracker(true, true),
+	nc(nullptr),
 	thread(nullptr),
 	paused(false)
     {
