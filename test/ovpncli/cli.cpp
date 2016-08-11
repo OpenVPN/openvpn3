@@ -29,6 +29,14 @@
 #include <memory>
 #include <mutex>
 
+#include <openvpn/common/platform.hpp>
+
+#ifdef OPENVPN_PLATFORM_MAC
+#include <CoreFoundation/CFBundle.h>
+#define _OIDSBASE_H_ 1 // prevent symbol conflict between PolarSSL and ApplicationServices.h
+#include <ApplicationServices/ApplicationServices.h>
+#endif
+
 // If enabled, don't direct ovpn3 core logging to
 // ClientAPI::OpenVPNClient::log() virtual method.
 // Instead, logging will go to LogBaseSimple::log().
@@ -50,7 +58,6 @@
 // with the exception of openvpn/log includes
 #include <client/ovpncli.cpp>
 
-#include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/signal.hpp>
@@ -113,6 +120,29 @@ private:
 	  std::cout << "responseRequired: " << dc.responseRequired << std::endl;
 	  std::cout << "stateID: " << dc.stateID << std::endl;
 	}
+      }
+    else if (ev.name == "INFO" && (string::starts_with(ev.info, "OPEN_URL:http://")
+				|| string::starts_with(ev.info, "OPEN_URL:https://")))
+      {
+	// launch URL after 1 second to reduce chances of race with CONNECTED
+	const std::string url_str = ev.info.substr(9);
+#ifdef OPENVPN_PLATFORM_MAC
+	std::thread thr([url_str]() {
+	    ::sleep(1);
+	    CFURLRef url = CFURLCreateWithBytes(
+	        NULL,                        // allocator
+		(UInt8*)url_str.c_str(),     // URLBytes
+		url_str.length(),            // length
+		kCFStringEncodingUTF8,       // encoding
+		NULL                         // baseURL
+	    );
+	    LSOpenCFURLRef(url, 0);
+	    CFRelease(url);
+	  });
+	thr.detach();
+#else
+	std::cout << "No implementation to launch " << url_str << std::endl;
+#endif
       }
   }
 
