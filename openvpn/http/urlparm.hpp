@@ -101,6 +101,15 @@ namespace openvpn {
 	  return "";
       }
 
+      const std::string& get_value_required(const std::string& key) const
+      {
+	const Parm* p = get(key);
+	if (p)
+	  return p->value;
+	else
+	  throw url_parameter_error(key + " : not found");
+      }
+
       std::string to_string() const
       {
 	std::ostringstream out;
