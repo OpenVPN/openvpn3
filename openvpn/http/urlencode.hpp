@@ -39,6 +39,7 @@ namespace openvpn {
     inline std::string encode(const std::string& str)
     {
       std::string ret;
+      ret.reserve(str.length() * 2); // just a guess
       for (auto &c : str)
 	{
 	  if (HTTP::Util::is_escaped(c))
