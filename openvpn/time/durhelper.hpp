@@ -59,6 +59,17 @@ namespace openvpn {
     return o;
   }
 
+  inline Time::Duration load_duration_default(const char *name,
+					      const OptionList& opt,
+					      const Time::Duration& default_duration,
+					      const unsigned int min_value,
+					      const bool x2)
+  {
+    Time::Duration ret(default_duration);
+    load_duration_parm(ret, name, opt, min_value, x2);
+    return ret;
+  }
+
   inline Time::Duration skew_duration(const Time::Duration& dur,
 				      const Time::Duration& min,
 				      const unsigned int flux_order,
