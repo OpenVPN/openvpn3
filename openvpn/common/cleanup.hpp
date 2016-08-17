@@ -26,7 +26,7 @@
 
 namespace openvpn {
 
-  template <class F>
+  template <typename F>
   class CleanupType
   {
   public:
@@ -49,8 +49,8 @@ namespace openvpn {
     F clean;
   };
 
-  template <class F>
-  CleanupType<F> Cleanup(F&& method) noexcept
+  template <typename F>
+  inline CleanupType<F> Cleanup(F&& method) noexcept
   {
     return CleanupType<F>(std::move(method));
   }
