@@ -92,7 +92,7 @@ namespace openvpn {
 	return nullptr;
       }
 
-      const std::string get_value(const std::string& key) const
+      std::string get_value(const std::string& key) const
       {
 	const Parm* p = get(key);
 	if (p)
