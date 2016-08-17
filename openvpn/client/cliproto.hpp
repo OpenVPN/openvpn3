@@ -39,6 +39,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include <algorithm>         // for std::min
 #include <cstdint>           // for std::uint...
 
@@ -153,7 +154,8 @@ namespace openvpn {
 	  autologin_sessions(config.autologin_sessions),
 	  pushed_options_limit(config.pushed_options_limit),
 	  pushed_options_filter(config.pushed_options_filter),
-	  inactive_timer(io_context_arg)
+	  inactive_timer(io_context_arg),
+	  info_hold_timer(io_context_arg)
       {
 #ifdef OPENVPN_PACKET_LOG
 	packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -163,6 +165,8 @@ namespace openvpn {
 	Base::update_now();
 	Base::reset();
 	//Base::enable_strict_openvpn_2x();
+
+	info_hold.reset(new std::vector<ClientEvent::Base::Ptr>());
       }
 
       bool first_packet_received() const { return first_packet_received_; }
@@ -203,6 +207,7 @@ namespace openvpn {
 	    housekeeping_timer.cancel();
 	    push_request_timer.cancel();
 	    inactive_timer.cancel();
+	    info_hold_timer.cancel();
 	    if (notify_callback && call_terminate_callback)
 	      notify_callback->client_proto_terminate();
 	    if (tun)
@@ -584,8 +589,16 @@ namespace openvpn {
 	  }
 	else if (info && string::starts_with(msg, "INFO,"))
 	  {
+	    // Buffer INFO messages received near Connected event to fire
+	    // one second after Connected event, to reduce the chance of
+	    // race conditions in the client app, if the INFO event
+	    // triggers the client app to perform an operation that
+	    // requires the VPN tunnel to be ready.
 	    ClientEvent::Base::Ptr ev = new ClientEvent::Info(msg.substr(5));
-	    cli_events->add_event(std::move(ev));
+	    if (info_hold)
+	      info_hold->push_back(std::move(ev));
+	    else
+	      cli_events->add_event(std::move(ev));
 	  }
       }
 
@@ -625,6 +638,7 @@ namespace openvpn {
 	ev->tun_name = tun->tun_name();
 	cli_events->add_event(std::move(ev));
 	connected_ = true;
+	schedule_info_hold_callback();
 	if (notify_callback)
 	  notify_callback->client_proto_connected();
       }
@@ -872,6 +886,35 @@ namespace openvpn {
 	  throw client_halt_restart(ch.render());
       }
 
+      void schedule_info_hold_callback()
+      {
+	info_hold_timer.expires_at(now() + Time::Duration::seconds(1));
+	info_hold_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+                                  {
+                                    self->info_hold_callback(error);
+                                  });
+      }
+
+      void info_hold_callback(const asio::error_code& e)
+      {
+	try {
+	  if (!e && !halt)
+	    {
+	      Base::update_now();
+	      if (info_hold)
+		{
+		  for (auto &ev : *info_hold)
+		    cli_events->add_event(std::move(ev));
+		  info_hold.reset();
+		}
+	    }
+	}
+	catch (const std::exception& e)
+	  {
+	    process_exception(e, "info_hold_callback");
+	  }
+      }
+
 #ifdef OPENVPN_PACKET_LOG
       void log_packet(const Buffer& buf, const bool out)
       {
@@ -932,6 +975,9 @@ namespace openvpn {
       Time::Duration inactive_duration;
       unsigned int inactive_bytes = 0;
       count_t inactive_last_sample = 0;
+
+      std::unique_ptr<std::vector<ClientEvent::Base::Ptr>> info_hold;
+      AsioTimer info_hold_timer;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;
