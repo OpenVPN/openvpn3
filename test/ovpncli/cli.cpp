@@ -124,11 +124,10 @@ private:
     else if (ev.name == "INFO" && (string::starts_with(ev.info, "OPEN_URL:http://")
 				|| string::starts_with(ev.info, "OPEN_URL:https://")))
       {
-	// launch URL after 1 second to reduce chances of race with CONNECTED
+	// launch URL
 	const std::string url_str = ev.info.substr(9);
 #ifdef OPENVPN_PLATFORM_MAC
 	std::thread thr([url_str]() {
-	    ::sleep(1);
 	    CFURLRef url = CFURLCreateWithBytes(
 	        NULL,                        // allocator
 		(UInt8*)url_str.c_str(),     // URLBytes
