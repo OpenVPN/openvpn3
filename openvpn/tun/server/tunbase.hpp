@@ -69,6 +69,9 @@ namespace openvpn {
     // add routes
     virtual void add_routes(const std::vector<IP::Route>& rtvec) = 0;
 
+    // set fwmark
+    virtual void set_fwmark(const unsigned int fwmark) = 0;
+
     virtual const std::string& tun_info() const = 0;
   };
 

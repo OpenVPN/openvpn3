@@ -70,6 +70,12 @@ namespace openvpn {
 
     // send control channel message
     virtual void post_info_user(BufferPtr&& info) = 0;
+
+    // set ACL ID for user
+    virtual void set_acl_id(const unsigned int acl_id,
+			    const std::string* username,
+			    const bool challenge,
+			    const bool throw_on_error) = 0;
   };
 
   // Base class for the client instance receiver.  Note that all
@@ -86,8 +92,9 @@ namespace openvpn {
     virtual void auth_failed(const std::string& reason,
 			     const bool tell_client) = 0;
 
-    virtual void push_reply(BufferPtr&& push_data,
-			    const std::vector<IP::Route>& routes) = 0;
+    virtual void push_reply(std::vector<BufferPtr>&& push_msgs,
+			    const std::vector<IP::Route>& routes,
+			    const unsigned int initial_fwmark) = 0;
 
     // push a halt or restart message to client
     virtual void push_halt_restart_msg(const HaltRestart::Type type,
@@ -97,6 +104,9 @@ namespace openvpn {
 
     // send control channel message
     virtual void post_info(BufferPtr&& info) = 0;
+
+    // set fwmark value in client instance
+    virtual void set_fwmark(const unsigned int fwmark) = 0;
 
     // get client bandwidth stats
     virtual PeerStats stats_poll() = 0;

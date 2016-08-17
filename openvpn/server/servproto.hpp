@@ -362,8 +362,15 @@ namespace openvpn {
 	push_halt_restart_msg(HaltRestart::AUTH_FAILED, reason, tell_client);
       }
 
-      virtual void push_reply(BufferPtr&& push_data,
-			      const std::vector<IP::Route>& rtvec)
+      virtual void set_fwmark(const unsigned int fwmark)
+      {
+	if (TunLink::send)
+	  TunLink::send->set_fwmark(fwmark);
+      }
+
+      virtual void push_reply(std::vector<BufferPtr>&& push_msgs,
+			      const std::vector<IP::Route>& rtvec,
+			      const unsigned int initial_fwmark)
       {
 	if (halt)
 	  return;
@@ -371,9 +378,14 @@ namespace openvpn {
 	if (get_tun())
 	  {
 	    Base::init_data_channel();
+	    if (initial_fwmark)
+	      TunLink::send->set_fwmark(initial_fwmark);
 	    TunLink::send->add_routes(rtvec);
-	    push_data->null_terminate();
-	    Base::control_send(std::move(push_data));
+	    for (auto &msg : push_msgs)
+	      {
+		msg->null_terminate();
+		Base::control_send(std::move(msg));
+	      }
 	    Base::flush(true);
 	    set_housekeeping_timer();
 	  }
