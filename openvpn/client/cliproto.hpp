@@ -140,28 +140,20 @@ namespace openvpn {
 	  transport_factory(config.transport_factory),
 	  tun_factory(config.tun_factory),
 	  tcp_queue_limit(config.tcp_queue_limit),
-	  transport_has_send_queue(false),
 	  notify_callback(notify_callback_arg),
 	  housekeeping_timer(io_context_arg),
 	  push_request_timer(io_context_arg),
-	  halt(false),
 	  received_options(config.push_base),
 	  creds(config.creds),
 	  proto_context_options(config.proto_context_options),
-	  first_packet_received_(false),
-	  sent_push_request(false),
 	  cli_stats(config.cli_stats),
 	  cli_events(config.cli_events),
-	  connected_(false),
 	  echo(config.echo),
 	  info(config.info),
 	  autologin_sessions(config.autologin_sessions),
-	  fatal_(Error::UNDEF),
 	  pushed_options_limit(config.pushed_options_limit),
 	  pushed_options_filter(config.pushed_options_filter),
-	  inactive_timer(io_context_arg),
-	  inactive_bytes(0),
-	  inactive_last_sample(0)
+	  inactive_timer(io_context_arg)
       {
 #ifdef OPENVPN_PACKET_LOG
 	packet_log.open(OPENVPN_PACKET_LOG, std::ios::binary);
@@ -903,14 +895,14 @@ namespace openvpn {
       TunClient::Ptr tun;
 
       unsigned int tcp_queue_limit;
-      bool transport_has_send_queue;
+      bool transport_has_send_queue = false;
 
       NotifyCallback* notify_callback;
 
       CoarseTime housekeeping_schedule;
       AsioTimer housekeeping_timer;
       AsioTimer push_request_timer;
-      bool halt;
+      bool halt = false;
 
       OptionListContinuation received_options;
 
@@ -918,19 +910,19 @@ namespace openvpn {
 
       ProtoContextOptions::Ptr proto_context_options;
 
-      bool first_packet_received_;
-      bool sent_push_request;
+      bool first_packet_received_ = false;
+      bool sent_push_request = false;
 
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
 
-      bool connected_;
+      bool connected_ = false;
 
       bool echo;
       bool info;
       bool autologin_sessions;
 
-      Error::Type fatal_;
+      Error::Type fatal_ = Error::UNDEF;
       std::string fatal_reason_;
 
       OptionList::Limits pushed_options_limit;
@@ -938,8 +930,8 @@ namespace openvpn {
 
       AsioTimer inactive_timer;
       Time::Duration inactive_duration;
-      unsigned int inactive_bytes;
-      count_t inactive_last_sample;
+      unsigned int inactive_bytes = 0;
+      count_t inactive_last_sample = 0;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;
