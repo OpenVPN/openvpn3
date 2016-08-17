@@ -45,13 +45,11 @@ namespace openvpn {
 
       ADDR addr;
       unsigned int prefix_len;
-      std::uint32_t mark;
 
       OPENVPN_EXCEPTION(route_error);
 
       RouteType()
-	: prefix_len(0),
-	  mark(0)
+	: prefix_len(0)
       {
       }
 
@@ -66,18 +64,10 @@ namespace openvpn {
       }
 
       RouteType(const ADDR& addr_arg,
-		const unsigned int prefix_len_arg,
-		const std::uint32_t mark_arg = 0)
+		const unsigned int prefix_len_arg)
 	: addr(addr_arg),
-	  prefix_len(prefix_len_arg),
-	  mark(mark_arg)
+	  prefix_len(prefix_len_arg)
       {
-      }
-
-      RouteType(const RouteType& other, const std::uint32_t mark_arg)
-	: RouteType(other)
-      {
-	mark = mark_arg;
       }
 
       static RouteType from_string(const std::string& rtstr, const char *title = nullptr)

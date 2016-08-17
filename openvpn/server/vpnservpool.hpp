@@ -44,13 +44,12 @@ namespace openvpn {
 
     struct IP46
     {
-      void add_routes(std::vector<IP::Route>& rtvec,
-		      const std::uint32_t mark)
+      void add_routes(std::vector<IP::Route>& rtvec)
       {
 	if (ip4.defined())
-	  rtvec.emplace_back(ip4, ip4.size(), mark);
+	  rtvec.emplace_back(ip4, ip4.size());
 	if (ip6.defined())
-	  rtvec.emplace_back(ip6, ip6.size(), mark);
+	  rtvec.emplace_back(ip6, ip6.size());
       }
 
       std::string to_string() const
