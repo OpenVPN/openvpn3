@@ -36,6 +36,7 @@
 %rename(ClientAPI_ExternalPKIRequestBase) ExternalPKIRequestBase;
 %rename(ClientAPI_ExternalPKICertRequest) ExternalPKICertRequest;
 %rename(ClientAPI_ExternalPKISignRequest) ExternalPKISignRequest;
+%rename(ClientAPI_RemoteOverride) RemoteOverride;
 
 // declare vectors
 namespace std {
