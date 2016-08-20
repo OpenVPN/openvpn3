@@ -94,6 +94,10 @@ namespace openvpn {
 	const std::string jtxt = jreq.toStyledString();
 	os << jtxt; // dump it
 
+	// We need to hold the HTTP connection state
+	// long enough to fetch the received tun socket.
+	WS::ClientSet::SyncPersistState sps;
+
 	// Create HTTP transaction container
 	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set();
 
@@ -135,7 +139,7 @@ namespace openvpn {
 	}
 
 	// Execute transaction
-	WS::ClientSet::new_request_synchronous(ts, stop);
+	WS::ClientSet::new_request_synchronous(ts, stop, &sps);
 
 	// Get result
 	const Json::Value jres = get_json_result(os, *ts);
