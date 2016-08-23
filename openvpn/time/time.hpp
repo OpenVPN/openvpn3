@@ -112,6 +112,11 @@ namespace openvpn {
 	return Duration(duration);
       }
 
+      Duration operator*(const unsigned int mult) const
+      {
+	return Duration(duration_ * mult);
+      }
+
       Duration& operator+=(const Duration& d)
       {
 	if (is_infinite() || d.is_infinite())
