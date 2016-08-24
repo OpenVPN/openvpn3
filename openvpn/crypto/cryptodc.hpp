@@ -83,6 +83,7 @@ namespace openvpn {
       ACTIVATE_PRIMARY,
       DEACTIVATE_SECONDARY,
       PROMOTE_SECONDARY_TO_PRIMARY,
+      NEW_SECONDARY,
       DEACTIVATE_ALL,
     };
 

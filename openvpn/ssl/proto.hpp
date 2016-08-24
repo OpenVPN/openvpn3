@@ -2801,6 +2801,7 @@ namespace openvpn {
 	  switch (ev)
 	    {
 	    case KeyContext::KEV_ACTIVE:
+	      secondary->rekey(CryptoDCInstance::NEW_SECONDARY);
 	      primary->prepare_expire();
 	      break;
 	    case KeyContext::KEV_BECOME_PRIMARY:
