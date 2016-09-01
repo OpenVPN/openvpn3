@@ -39,6 +39,7 @@
 #include <openvpn/server/servhalt.hpp>
 #include <openvpn/server/peerstats.hpp>
 #include <openvpn/server/peeraddr.hpp>
+#include <openvpn/ssl/datalimit.hpp>
 
 namespace openvpn {
 
@@ -117,6 +118,12 @@ namespace openvpn {
 
     // client float notification
     virtual void float_notify(const PeerAddr::Ptr& addr) = 0;
+
+    // Data limit notification -- trigger a renegotiation
+    // when cdl_status == DataLimit::Red.
+    virtual void data_limit_notify(const int key_id,
+				   const DataLimit::Mode cdl_mode,
+				   const DataLimit::State cdl_status) = 0;
 
     // push a halt or restart message to client
     virtual void push_halt_restart_msg(const HaltRestart::Type type,

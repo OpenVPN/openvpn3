@@ -499,6 +499,16 @@ namespace openvpn {
 	  ManLink::send->float_notify(addr);
       }
 
+      virtual void data_limit_notify(const int key_id,
+				     const DataLimit::Mode cdl_mode,
+				     const DataLimit::State cdl_status)
+      {
+	Base::update_now();
+	Base::data_limit_notify(key_id, cdl_mode, cdl_status);
+	Base::flush(true);
+	set_housekeeping_timer();
+      }
+
       bool get_management()
       {
 	if (!ManLink::send)

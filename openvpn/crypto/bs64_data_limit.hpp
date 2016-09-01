@@ -19,11 +19,27 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Current version of the OpenVPN core
+// Special data limits on Blowfish, Triple DES, and other 64-bit
+// block-size ciphers vulnerable to "Sweet32" birthday attack
+// (CVE-2016-6329).  Limit such cipher keys to no more than 64 MB
+// of data encrypted/decrypted.  Note that we trigger early at
+// 48 MB to compensate for possible delays in renegotiation and
+// rollover to the new key.
 
-#ifndef OPENVPN_COMMON_VERSION_H
-#define OPENVPN_COMMON_VERSION_H
+#ifndef OPENVPN_CRYPTO_DATALIMIT_H
+#define OPENVPN_CRYPTO_DATALIMIT_H
 
-#define OPENVPN_VERSION "3.0.20"
+#include <openvpn/crypto/cryptoalgs.hpp>
 
-#endif // OPENVPN_COMMON_VERSION_H
+#ifndef OPENVPN_BS64_DATA_LIMIT
+#define OPENVPN_BS64_DATA_LIMIT 48000000
+#endif
+
+namespace openvpn {
+  inline bool is_bs64_cipher(const CryptoAlgs::Type cipher)
+  {
+    return CryptoAlgs::get(cipher).block_size() == 8;
+  }
+}
+
+#endif

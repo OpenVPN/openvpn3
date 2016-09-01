@@ -44,6 +44,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
 #include <openvpn/buffer/bufcomposed.hpp>
@@ -57,10 +58,12 @@
 #include <openvpn/crypto/ovpnhmac.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/crypto/static_key.hpp>
+#include <openvpn/crypto/bs64_data_limit.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/ssl/protostack.hpp>
 #include <openvpn/ssl/psid.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
+#include <openvpn/ssl/datalimit.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/tun/tunmtu.hpp>
@@ -300,6 +303,7 @@ namespace openvpn {
       Time::Duration become_primary;   // KeyContext (that is ACTIVE) becomes primary at this time
       Time::Duration renegotiate;      // start SSL/TLS renegotiation at this time
       Time::Duration expire;           // KeyContext expires at this time
+      Time::Duration tls_timeout;      // Packet retransmit timeout on TLS control channel
 
       // keepalive parameters
       Time::Duration keepalive_ping;
@@ -333,15 +337,13 @@ namespace openvpn {
 	max_ack_list = 4;
 	handshake_window = Time::Duration::seconds(60);
 	renegotiate = Time::Duration::seconds(3600);
+	tls_timeout = Time::Duration::seconds(1);
 	keepalive_ping = Time::Duration::seconds(8);
 	keepalive_timeout = Time::Duration::seconds(40);
 	comp_ctx = CompressContext(CompressContext::NONE, false);
 	protocol = Protocol();
 	pid_mode = PacketIDReceive::UDP_MODE;
 	key_direction = default_key_direction;
-
-	// load parameters that can be present in both config file or pushed options
-	load_common(opt, pco, server ? LOAD_COMMON_SERVER : LOAD_COMMON_CLIENT);
 
 	// layer
 	{
@@ -467,20 +469,14 @@ namespace openvpn {
 
 	// tun-mtu
 	tun_mtu = parse_tun_mtu(opt, tun_mtu);
+
+	// load parameters that can be present in both config file or pushed options
+	load_common(opt, pco, server ? LOAD_COMMON_SERVER : LOAD_COMMON_CLIENT);
       }
 
       // load options string pushed by server
       void process_push(const OptionList& opt, const ProtoContextOptions& pco)
       {
-	try {
-	  // load parameters that can be present in both config file or pushed options
-	  load_common(opt, pco, LOAD_COMMON_CLIENT_PUSHED);
-	}
-	catch (const std::exception& e)
-	  {
-	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
-	  }
-
 	// data channel
 	{
 	  // cipher
@@ -567,6 +563,15 @@ namespace openvpn {
 	catch (const std::exception& e)
 	  {
 	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed peer-id: " << e.what());
+	  }
+
+	try {
+	  // load parameters that can be present in both config file or pushed options
+	  load_common(opt, pco, LOAD_COMMON_CLIENT_PUSHED);
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
 	  }
 
 	// show negotiated options
@@ -687,6 +692,8 @@ namespace openvpn {
 	  out << compstr;
 	if (extra_peer_info)
 	  out << extra_peer_info->to_string();
+	if (is_bs64_cipher(dc.cipher()))
+	  out << "IV_BS64DL=1\n"; // indicate support for data limits when using 64-bit block-size ciphers, version 1 (CVE-2016-6329)
 	const std::string ret = out.str();
 	OPENVPN_LOG_PROTO("Peer Info:" << std::endl << ret);
 	return ret;
@@ -716,13 +723,22 @@ namespace openvpn {
 		       const LoadCommonType type)
       {
 	// duration parms
-	load_duration_parm(renegotiate, "reneg-sec", opt, 10, false);
+	load_duration_parm(renegotiate, "reneg-sec", opt, 10, false, false);
 	expire = renegotiate;
-	load_duration_parm(expire, "tran-window", opt, 10, false);
+	load_duration_parm(expire, "tran-window", opt, 10, false, false);
 	expire += renegotiate;
-	load_duration_parm(handshake_window, "hand-window", opt, 10, false);
-	become_primary = Time::Duration::seconds(std::min(handshake_window.to_seconds(),
+	load_duration_parm(handshake_window, "hand-window", opt, 10, false, false);
+	if (is_bs64_cipher(dc.cipher())) // special data limits for 64-bit block-size ciphers (CVE-2016-6329)
+	  {
+	    become_primary = Time::Duration::seconds(5);
+	    tls_timeout = Time::Duration::milliseconds(1000);
+	  }
+	else
+	  become_primary = Time::Duration::seconds(std::min(handshake_window.to_seconds(),
 							    renegotiate.to_seconds() / 2));
+	load_duration_parm(become_primary, "become-primary", opt, 0, false, false);
+	load_duration_parm(tls_timeout, "tls-timeout", opt, 100, false, true);
+
 	if (type == LOAD_COMMON_SERVER)
 	  renegotiate += handshake_window; // avoid renegotiation collision with client
 
@@ -731,13 +747,13 @@ namespace openvpn {
 	  const Option *o = opt.get_ptr("keepalive");
 	  if (o)
 	    {
-	      set_duration_parm(keepalive_ping, "keepalive ping", o->get(1, 16), 1, false);
-	      set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16), 1, type == LOAD_COMMON_SERVER);
+	      set_duration_parm(keepalive_ping, "keepalive ping", o->get(1, 16), 1, false, false);
+	      set_duration_parm(keepalive_timeout, "keepalive timeout", o->get(2, 16), 1, type == LOAD_COMMON_SERVER, false);
 	    }
 	  else
 	    {
-	      load_duration_parm(keepalive_ping, "ping", opt, 1, false);
-	      load_duration_parm(keepalive_timeout, "ping-restart", opt, 1, false);
+	      load_duration_parm(keepalive_ping, "ping", opt, 1, false, false);
+	      load_duration_parm(keepalive_timeout, "ping-restart", opt, 1, false, false);
 	    }
 	}
       }
@@ -833,8 +849,6 @@ namespace openvpn {
 	    }
 	  }
       }
-
-      bool is_secondary() const { return flags & SECONDARY; }
 
       unsigned int flags;
       unsigned int opcode;
@@ -1112,25 +1126,101 @@ namespace openvpn {
     public:
       typedef RCPtr<KeyContext> Ptr;
 
-      // timeline of events for KeyContext (occurring in order)
+      // KeyContext events occur on two basic key types:
+      //   Primary Key -- the key we transmit/encrypt on.
+      //   Secondary Key -- new keys and retiring keys.
+      //
+      // The very first key created (key_id == 0) is a
+      // primary key.  Subsequently created keys are always,
+      // at least initially, secondary keys.  Secondary keys
+      // promote to primary via the KEV_BECOME_PRIMARY event
+      // (actually KEV_BECOME_PRIMARY swaps the primary and
+      // secondary keys, so the old primary is demoted
+      // to secondary and marked for expiration).
+      //
+      // Secondary keys are created by:
+      // 1. locally-generated soft renegotiation requests, and
+      // 2. peer-requested soft renegotiation requests.
+      // In each case, any previous secondary key will be
+      // wiped (including a secondary key that exists due to
+      // demotion of a previous primary key that has been marked
+      // for expiration).
       enum EventType {
 	KEV_NONE,
-	KEV_ACTIVE,         // KeyContext has reached the ACTIVE state
-	KEV_NEGOTIATE,      // SSL/TLS negotiation must complete by this time
-	KEV_BECOME_PRIMARY, // KeyContext becomes primary for data channel traffic
-	KEV_RENEGOTIATE,    // start renegotiating a new KeyContext at this time
-	KEV_EXPIRE,         // expiration of KeyContext
-	KEV_NEGOTIATE_FAILED, // SSL/TLS negotiation failed
+
+	// KeyContext has reached the ACTIVE state, occurs on both
+	// primary and secondary.
+	KEV_ACTIVE,
+
+	// SSL/TLS negotiation must complete by this time.  If this
+	// event is hit on the first primary (i.e. first KeyContext
+	// with key_id == 0), it is fatal to the session and will
+	// trigger a disconnect/reconnect.  If it's hit on the
+	// secondary, it will trigger a soft renegotiation.
+	KEV_NEGOTIATE,
+
+	// When a KeyContext (normally the secondary) is scheduled
+	// to transition to the primary state.
+	KEV_BECOME_PRIMARY,
+
+	// Waiting for condition on secondary (usually
+	// dataflow-based) to trigger KEV_BECOME_PRIMARY.
+	KEV_PRIMARY_PENDING,
+
+	// Start renegotiating a new KeyContext on secondary
+	// (ignored unless originating on primary).
+	KEV_RENEGOTIATE,
+
+	// Trigger a renegotiation originating from either
+	// primary or secondary.
+	KEV_RENEGOTIATE_FORCE,
+
+	// Queue delayed renegotiation request from secondary
+	// to take effect after KEV_BECOME_PRIMARY.
+	KEV_RENEGOTIATE_QUEUE,
+
+	// Expiration of KeyContext.
+	KEV_EXPIRE,
       };
 
+      // for debugging
+      static const char *event_type_string(const EventType et)
+      {
+	switch (et)
+	  {
+	  case KEV_NONE:
+	    return "KEV_NONE";
+	  case KEV_ACTIVE:
+	    return "KEV_ACTIVE";
+	  case KEV_NEGOTIATE:
+	    return "KEV_NEGOTIATE";
+	  case KEV_BECOME_PRIMARY:
+	    return "KEV_BECOME_PRIMARY";
+	  case KEV_PRIMARY_PENDING:
+	    return "KEV_PRIMARY_PENDING";
+	  case KEV_RENEGOTIATE:
+	    return "KEV_RENEGOTIATE";
+	  case KEV_RENEGOTIATE_FORCE:
+	    return "KEV_RENEGOTIATE_FORCE";
+	  case KEV_RENEGOTIATE_QUEUE:
+	    return "KEV_RENEGOTIATE_QUEUE";
+	  case KEV_EXPIRE:
+	    return "KEV_EXPIRE";
+	  default:
+	    return "KEV_?";
+	  }
+      }
+
       KeyContext(ProtoContext& p, const bool initiator)
-	: Base(*p.config->ssl_factory, p.config->now, p.config->frame, p.stats,
+	: Base(*p.config->ssl_factory,
+	       p.config->now, p.config->tls_timeout,
+	       p.config->frame, p.stats,
 	       p.config->reliable_window, p.config->max_ack_list),
 	  proto(p),
 	  state(STATE_UNDEF),
 	  crypto_flags(0),
 	  dirty(0),
-	  handled_pid_wrap(false),
+	  key_limit_renegotiation_fired(false),
 	  is_reliable(p.config->protocol.is_reliable()),
 	  tlsprf(p.config->tlsprf_factory->new_obj(p.is_server()))
       {
@@ -1232,8 +1322,12 @@ namespace openvpn {
 	    // compress and encrypt packet and prepend op header
 	    const bool pid_wrap = do_encrypt(buf, true);
 
-	    // check for rare situation where packet ID is near overflow
-	    test_pid_wrap(pid_wrap);
+	    // Trigger a new SSL/TLS negotiation if packet ID (a 32-bit unsigned int)
+	    // is getting close to wrapping around.  If it wraps back to 0 without
+	    // a renegotiation, it would cause the relay protection logic to wrongly
+	    // think that all further packets are replays.
+	    if (pid_wrap)
+	      schedule_key_limit_renegotiation();
 	  }
 	else
 	  buf.reset_size(); // no crypto context available
@@ -1262,6 +1356,10 @@ namespace openvpn {
 		    invalidate(err);
 		}
 
+	      // trigger renegotiation if we hit decrypt data limit
+	      if (data_limit)
+		data_limit_add(DataLimit::Decrypt, buf.size());
+
 	      // decompress packet
 	      if (compress)
 		compress->decompress(buf);
@@ -1280,9 +1378,34 @@ namespace openvpn {
 
       // usually called by parent ProtoContext object when this KeyContext
       // has been retired.
-      void prepare_expire()
+      void prepare_expire(const EventType current_ev = KeyContext::KEV_NONE)
       {
-	set_event(KEV_NONE, KEV_EXPIRE, construct_time + proto.config->expire);
+	set_event(current_ev,
+		  KEV_EXPIRE,
+		  key_limit_renegotiation_fired ? data_limit_expire() : construct_time + proto.config->expire);
+      }
+
+      // set a default next event, if unspecified
+      void set_next_event_if_unspecified()
+      {
+	if (next_event == KEV_NONE && !invalidated())
+	  prepare_expire();
+      }
+
+      // set a key limit renegotiation event at time t
+      void key_limit_reneg(const EventType ev, const Time& t)
+      {
+	if (t.defined())
+	  set_event(KEV_NONE, ev, t + Time::Duration::seconds(proto.is_server() ? 2 : 1));
+      }
+
+      // return time of upcoming KEV_BECOME_PRIMARY event
+      Time become_primary_time()
+      {
+	if (next_event == KEV_BECOME_PRIMARY)
+	  return next_event_time;
+	else
+	  return Time();
       }
 
       // is an KEV_x event pending?
@@ -1297,7 +1420,7 @@ namespace openvpn {
       EventType get_event() const { return current_event; }
 
       // clear KEV_x event
-      void reset_event() { set_event(KEV_NONE); }
+      void reset_event() { current_event = KEV_NONE; }
 
       // was session invalidated by an exception?
       bool invalidated() const { return Base::invalidated(); }
@@ -1455,6 +1578,16 @@ namespace openvpn {
 	    const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
 	    const OpenVPNStaticKey& key = data_channel_key->key;
 
+	    // special data limits for 64-bit block-size ciphers (CVE-2016-6329)
+	    if (is_bs64_cipher(c.dc.cipher()))
+	      {
+		DataLimit::Parameters dp;
+		dp.encrypt_red_limit = OPENVPN_BS64_DATA_LIMIT;
+		dp.decrypt_red_limit = OPENVPN_BS64_DATA_LIMIT;
+		OPENVPN_LOG_PROTO("Per-Key Data Limit: " << dp.encrypt_red_limit << '/' << dp.decrypt_red_limit);
+		data_limit.reset(new DataLimit(dp));
+	      }
+
 	    // build crypto context for data channel encryption/decryption
 	    crypto = c.dc.context().new_obj(key_id_);
 	    crypto_flags = crypto->defined();
@@ -1490,6 +1623,13 @@ namespace openvpn {
 	  }
       }
 
+      void data_limit_notify(const DataLimit::Mode cdl_mode,
+			     const DataLimit::State cdl_status)
+      {
+	if (data_limit)
+	  data_limit_event(cdl_mode, data_limit->update_state(cdl_mode, cdl_status));
+      }
+
     private:
       bool do_encrypt(BufferAllocated& buf, const bool compress_hint)
       {
@@ -1498,6 +1638,10 @@ namespace openvpn {
 	// compress packet
 	if (compress)
 	  compress->compress(buf, compress_hint);
+
+	// trigger renegotiation if we hit encrypt data limit
+	if (data_limit)
+	  data_limit_add(DataLimit::Encrypt, buf.size());
 
 	if (enable_op32)
 	  {
@@ -1531,26 +1675,19 @@ namespace openvpn {
 
       void set_state(const int newstate)
       {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << (proto.is_server() ? "SERVER " : "CLIENT ") << state_string(state) << " -> " << state_string(newstate));
+	OPENVPN_LOG_PROTO_VERBOSE(proto.debug_prefix() << " KeyContext[" << key_id_ << "] " << state_string(state) << " -> " << state_string(newstate));
 	state = newstate;
       }
 
       void set_event(const EventType current)
       {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << event_type_string(current));
+	OPENVPN_LOG_PROTO_VERBOSE(proto.debug_prefix() << " KeyContext[" << key_id_ << "] " << event_type_string(current));
 	current_event = current;
-      }
-
-      void set_event(const EventType next, const Time& next_time)
-      {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
-	next_event = next;
-	next_event_time = next_time;
       }
 
       void set_event(const EventType current, const EventType next, const Time& next_time)
       {
-	OPENVPN_LOG_PROTO_VERBOSE("KeyContext[" << key_id_ << "] " << event_type_string(current) << " -> " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
+	OPENVPN_LOG_PROTO_VERBOSE(proto.debug_prefix() << " KeyContext[" << key_id_ << "] " << event_type_string(current) << " -> " << event_type_string(next) << '(' << seconds_until(next_time) << ')');
 	current_event = current;
 	next_event = next;
 	next_event_time = next_time;
@@ -1559,31 +1696,76 @@ namespace openvpn {
       void invalidate_callback() // called by ProtoStackBase when session is invalidated
       {
 	reached_active_time_ = Time();
-	set_event(KEV_NONE, Time::infinite());
+	next_event = KEV_NONE;
+	next_event_time = Time::infinite();
       }
 
-      // Trigger a new SSL/TLS negotiation if packet ID (a 32-bit unsigned int)
-      // is getting close to wrapping around.  If it wraps back to 0 without
-      // a renegotiation, it would cause the relay protection logic to wrongly
-      // think that all further packets are replays.
-      void test_pid_wrap(const bool pid_wrap)
+      // Trigger a renegotiation based on data flow condition such
+      // as per-key data limit or packet ID approaching wraparound.
+      void schedule_key_limit_renegotiation()
       {
-	if (pid_wrap && !handled_pid_wrap)
+	if (!key_limit_renegotiation_fired && state >= ACTIVE && !invalidated())
 	  {
-	    trigger_renegotiation();
-	    handled_pid_wrap = true;
+	    OPENVPN_LOG_PROTO_VERBOSE(proto.debug_prefix() << " SCHEDULE KEY LIMIT RENEGOTIATION");
+
+	    key_limit_renegotiation_fired = true;
+	    proto.stats->error(Error::N_KEY_LIMIT_RENEG);
+
+	    // If primary, renegotiate now (within a second or two).
+	    // If secondary, queue the renegotiation request until
+	    // key reaches primary.
+	    if (next_event == KEV_BECOME_PRIMARY) // secondary key before transition to primary?
+	      set_event(KEV_RENEGOTIATE_QUEUE);   // reneg request crosses over to primary, doesn't wipe next_event (KEV_BECOME_PRIMARY)
+	    else
+	      key_limit_reneg(KEV_RENEGOTIATE, *now);
 	  }
       }
 
-      void trigger_renegotiation()
+      // Handle data-limited keys such as Blowfish and other 64-bit block-size ciphers.
+      void data_limit_add(const DataLimit::Mode mode, const size_t size)
       {
-	if (state >= ACTIVE && !invalidated())
-	  set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
+	const DataLimit::State state = data_limit->add(mode, size);
+	if (state > DataLimit::None)
+	  data_limit_event(mode, state);
+      }
+
+      // Handle a DataLimit event.
+      void data_limit_event(const DataLimit::Mode mode, const DataLimit::State state)
+      {
+	OPENVPN_LOG_PROTO_VERBOSE(proto.debug_prefix() << " DATA LIMIT " << DataLimit::mode_str(mode) << ' ' << DataLimit::state_str(state) << " key_id=" << key_id_);
+
+	// State values:
+	//   DataLimit::Green -- first packet received and decrypted.
+	//   DataLimit::Red -- data limit has been exceeded, so trigger a renegotiation.
+	if (state == DataLimit::Red)
+	  schedule_key_limit_renegotiation();
+
+	// When we are in KEV_PRIMARY_PENDING state, we must receive at least
+	// one packet from the peer on this key before we transition to
+	// KEV_BECOME_PRIMARY so we can transmit on it.
+	if (next_event == KEV_PRIMARY_PENDING && data_limit->is_decrypt_green())
+	  set_event(KEV_NONE, KEV_BECOME_PRIMARY, *now + Time::Duration::seconds(1));
+      }
+
+      // Should we enter KEV_PRIMARY_PENDING state?  Do it if:
+      // 1. we are a client,
+      // 2. data limit is enabled,
+      // 3. this is a renegotiated key in secondary context, i.e. not the first key, and
+      // 4. no data received yet from peer on this key.
+      bool data_limit_defer() const
+      {
+	return !proto.is_server() && data_limit && key_id_ && !data_limit->is_decrypt_green();
+      }
+
+      // General expiration set when key hits data limit threshold.
+      Time data_limit_expire() const
+      {
+	return *now + (proto.config->handshake_window * 2);
       }
 
       void active_event()
       {
-	set_event(KEV_ACTIVE, KEV_BECOME_PRIMARY, construct_time + proto.config->become_primary);
+	set_event(KEV_ACTIVE, KEV_BECOME_PRIMARY, reached_active() + proto.config->become_primary);
       }
 
       void process_next_event()
@@ -1592,31 +1774,36 @@ namespace openvpn {
 	  {
 	    switch (next_event)
 	      {
-	      case KEV_NEGOTIATE:
-		if (state >= ACTIVE)
-		  set_event(KEV_NEGOTIATE, KEV_BECOME_PRIMARY, construct_time + proto.config->become_primary);
-		else
-		  {
-		    proto.stats->error(Error::KEV_NEGOTIATE_ERROR);
-		    invalidate(Error::KEV_NEGOTIATE_ERROR);
-		    set_event(KEV_NEGOTIATE_FAILED);
-		  }
-		break;
 	      case KEV_BECOME_PRIMARY:
-		set_event(KEV_BECOME_PRIMARY, KEV_RENEGOTIATE, construct_time + proto.config->renegotiate);
+		if (data_limit_defer())
+		  set_event(KEV_NONE, KEV_PRIMARY_PENDING, data_limit_expire());
+		else
+		  set_event(KEV_BECOME_PRIMARY, KEV_RENEGOTIATE, construct_time + proto.config->renegotiate);
 		break;
 	      case KEV_RENEGOTIATE:
-		set_event(KEV_RENEGOTIATE, KEV_EXPIRE, construct_time + proto.config->expire);
+	      case KEV_RENEGOTIATE_FORCE:
+		prepare_expire(next_event);
+		break;
+	      case KEV_NEGOTIATE:
+		kev_error(KEV_NEGOTIATE, Error::KEV_NEGOTIATE_ERROR);
+		break;
+	      case KEV_PRIMARY_PENDING:
+		kev_error(KEV_PRIMARY_PENDING, Error::KEV_PENDING_ERROR);
 		break;
 	      case KEV_EXPIRE:
-		proto.stats->error(Error::KEV_EXPIRE_ERROR);
-		invalidate(Error::KEV_EXPIRE_ERROR);
-		set_event(KEV_EXPIRE);
+		kev_error(KEV_EXPIRE, Error::N_KEV_EXPIRE);
 		break;
 	      default:
 		break;
 	      }
 	  }
+      }
+
+      void kev_error(const EventType ev, const Error::Type reason)
+      {
+	proto.stats->error(reason);
+	invalidate(reason);
+	set_event(ev);
       }
 
       unsigned int initial_op(const bool sender) const
@@ -1803,7 +1990,7 @@ namespace openvpn {
       {
 	std::unique_ptr<DataChannelKey> dck(new DataChannelKey());
 	tlsprf->generate_key_expansion(dck->key, proto.psid_self, proto.psid_peer);
-	OPENVPN_LOG_PROTO_VERBOSE("KEY " << proto.mode().str() << ' ' << dck->key.render());
+	OPENVPN_LOG_PROTO_VERBOSE(proto.debug_prefix() << " KEY " << proto.mode().str() << ' ' << dck->key.render());
 	tlsprf->erase();
 	dck.swap(data_channel_key);
 	if (!proto.dc_deferred)
@@ -2061,30 +2248,6 @@ namespace openvpn {
       }
 
       // for debugging
-      static const char *event_type_string(const EventType et)
-      {
-	switch (et)
-	  {
-	  case KEV_NONE:
-	    return "KEV_NONE";
-	  case KEV_ACTIVE:
-	    return "KEV_ACTIVE";
-	  case KEV_NEGOTIATE:
-	    return "KEV_NEGOTIATE";
-	  case KEV_BECOME_PRIMARY:
-	    return "KEV_BECOME_PRIMARY";
-	  case KEV_RENEGOTIATE:
-	    return "KEV_RENEGOTIATE";
-	  case KEV_EXPIRE:
-	    return "KEV_EXPIRE";
-	  case KEV_NEGOTIATE_FAILED:
-	    return "KEV_NEGOTIATE_FAILED";
-	  default:
-	    return "KEV_?";
-	  }
-      }
-
-      // for debugging
       static const char *state_string(const int s)
       {
 	switch (s)
@@ -2135,7 +2298,7 @@ namespace openvpn {
       int remote_peer_id; // -1 to disable
       bool enable_op32;
       bool dirty;
-      bool handled_pid_wrap;
+      bool key_limit_renegotiation_fired;
       bool is_reliable;
       Compress::Ptr compress;
       CryptoDCInstance::Ptr crypto;
@@ -2148,6 +2311,7 @@ namespace openvpn {
       std::deque<BufferPtr> app_pre_write_queue;
       std::unique_ptr<DataChannelKey> data_channel_key;
       BufferComposed app_recv_buf;
+      std::unique_ptr<DataLimit> data_limit;
     };
 
   public:
@@ -2244,9 +2408,6 @@ namespace openvpn {
       // validate options
       c.validate_complete();
 
-      // by default, fast_transition is turned off
-      fast_transition = false;
-
       // defer data channel initialization until after client options pull?
       dc_deferred = c.dc_deferred;
 
@@ -2292,7 +2453,7 @@ namespace openvpn {
 
       // initialize key contexts
       primary.reset(new KeyContext(*this, is_client()));
-      OPENVPN_LOG_PROTO_VERBOSE("New KeyContext PRIMARY id=" << primary->key_id());
+      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " New KeyContext PRIMARY id=" << primary->key_id());
 
       // initialize keepalive timers
       keepalive_expire = Time::infinite();   // initially disabled
@@ -2325,8 +2486,7 @@ namespace openvpn {
     void renegotiate()
     {
       // initialize secondary key context
-      secondary.reset(new KeyContext(*this, true));
-      OPENVPN_LOG_PROTO_VERBOSE("New KeyContext SECONDARY id=" << secondary->key_id() << " local-triggered");
+      new_secondary_key(true);
       secondary->start();
     }
 
@@ -2424,6 +2584,7 @@ namespace openvpn {
     // encrypt a data channel packet using primary KeyContext
     void data_encrypt(BufferAllocated& in_out)
     {
+      //OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " DATA ENCRYPT size=" << in_out.size());
       primary->encrypt(in_out);
     }
 
@@ -2432,6 +2593,8 @@ namespace openvpn {
     bool data_decrypt(const PacketType& type, BufferAllocated& in_out)
     {
       bool ret = false;
+
+      //OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " DATA DECRYPT key_id=" << select_key_context(type, false).key_id() << " size=" << in_out.size());
 
       select_key_context(type, false).decrypt(in_out);
 
@@ -2488,21 +2651,6 @@ namespace openvpn {
     // reason for invalidation if invalidated() above returns true
     Error::Type invalidation_reason() const { return primary->invalidation_reason(); }
 
-    // Enable original OpenVPN behavior of switching to new SSL/TLS key
-    // context for control channel sends immediately after renegotiation
-    // reaches ACTIVE state.  By default, we will transition to new
-    // key context over the "become_primary" duration in Config.
-    // The default behavior is known to be more reliable, but the
-    // original behavior may be enabled by calling this method.
-    void enable_fast_transition() { fast_transition = true; }
-
-    // A placeholder for enabling strict OpenVPN 2.x protocol
-    // compatibility.
-    void enable_strict_openvpn_2x()
-    {
-      enable_fast_transition();
-    }
-
     // Do late initialization of data channel, for example
     // on client after server push, or on server after client
     // capabilities are known.
@@ -2549,6 +2697,17 @@ namespace openvpn {
       config->keepalive_ping = Time::Duration::infinite();
       config->keepalive_timeout = Time::Duration::infinite();
       keepalive_parms_modified();
+    }
+
+    // Notify our component KeyContext when per-key Data Limits have been reached
+    void data_limit_notify(const int key_id,
+			   const DataLimit::Mode cdl_mode,
+			   const DataLimit::State cdl_status)
+    {
+      if (key_id == primary->key_id())
+	primary->data_limit_notify(cdl_mode, cdl_status);
+      else if (secondary && key_id == secondary->key_id())
+	secondary->data_limit_notify(cdl_mode, cdl_status);
     }
 
     // access the data channel settings
@@ -2651,8 +2810,7 @@ namespace openvpn {
     {
       if (KeyContext::validate(pkt.buffer(), *this, now_))
 	{
-	  secondary.reset(new KeyContext(*this, false));
-	  OPENVPN_LOG_PROTO_VERBOSE("New KeyContext SECONDARY id=" << secondary->key_id() << " remote-triggered");
+	  new_secondary_key(false);
 	  return true;
 	}
       else
@@ -2681,26 +2839,15 @@ namespace openvpn {
     }
 
     // Select a KeyContext (primary or secondary) for control channel sends.
-    // NOTE: possible incompatibility with existing OpenVPN protocol.
     // Even after new key context goes active, we still wait for
-    // KEV_BECOME_PRIMARY event before we use it for app-level control-channel
-    // transmissions.  Simulations have found this method to be more reliable.
-    // To revert to old OpenVPN behavior, call enable_fast_transition() method.
+    // KEV_BECOME_PRIMARY event (controlled by the become_primary duration
+    // in Config) before we use it for app-level control-channel
+    // transmissions.  Simulations have found this method to be more reliable
+    // than the immediate rollover practiced by OpenVPN 2.x.
     KeyContext& select_control_send_context()
     {
-      if (!fast_transition || !secondary)
-	{
-	  return *primary;
-	}
-      else
-	{
-	  const Time p = primary->reached_active();
-	  const Time s = secondary->reached_active();
-	  if (p.defined() && s.defined() && s > p)
-	    return *secondary;
-	  else
-	    return *primary;
-	}
+      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " CONTROL SEND");
+      return *primary;
     }
 
     // Possibly send a keepalive message, and check for expiration
@@ -2746,6 +2893,17 @@ namespace openvpn {
       return did_work;
     }
 
+    // Create a new secondary key.
+    // initiator --
+    //   false : remote renegotiation request
+    //   true  : local renegotiation request
+    void new_secondary_key(const bool initiator)
+    {
+      // Create the secondary
+      secondary.reset(new KeyContext(*this, initiator));
+      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " New KeyContext SECONDARY id=" << secondary->key_id() << (initiator ? " local-triggered" : " remote-triggered"));
+    }
+
     // Promote a newly renegotiated KeyContext to primary status.
     // This is usually triggered by become_primary variable (Time::Duration)
     // in Config.
@@ -2754,7 +2912,7 @@ namespace openvpn {
       primary.swap(secondary);
       primary->rekey(CryptoDCInstance::PROMOTE_SECONDARY_TO_PRIMARY);
       secondary->prepare_expire();
-      OPENVPN_LOG_PROTO_VERBOSE("*** PROMOTE_SECONDARY_TO_PRIMARY pri=" << primary->key_id() << " sec=" << secondary->key_id());
+      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " PROMOTE_SECONDARY_TO_PRIMARY");
     }
 
     void process_primary_event()
@@ -2766,11 +2924,12 @@ namespace openvpn {
 	  switch (ev)
 	    {
 	    case KeyContext::KEV_ACTIVE:
-	      OPENVPN_LOG_PROTO_VERBOSE("*** SESSION_ACTIVE");
+	      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " SESSION_ACTIVE");
 	      primary->rekey(CryptoDCInstance::ACTIVATE_PRIMARY);
 	      active();
 	      break;
 	    case KeyContext::KEV_RENEGOTIATE:
+	    case KeyContext::KEV_RENEGOTIATE_FORCE:
 	      renegotiate();
 	      break;
 	    case KeyContext::KEV_EXPIRE:
@@ -2782,7 +2941,7 @@ namespace openvpn {
 		  disconnect(Error::PRIMARY_EXPIRE); // primary context expired and no secondary context available
 		}
 	      break;
-	    case KeyContext::KEV_NEGOTIATE_FAILED:
+	    case KeyContext::KEV_NEGOTIATE:
 	      stats->error(Error::HANDSHAKE_TIMEOUT);
 	      disconnect(Error::HANDSHAKE_TIMEOUT);   // primary negotiation failed
 	      break;
@@ -2790,6 +2949,7 @@ namespace openvpn {
 	      break;
 	    }
 	}
+      primary->set_next_event_if_unspecified();
     }
 
     void process_secondary_event()
@@ -2812,15 +2972,39 @@ namespace openvpn {
 	      secondary->rekey(CryptoDCInstance::DEACTIVATE_SECONDARY);
 	      secondary.reset();
 	      break;
-	    case KeyContext::KEV_NEGOTIATE_FAILED:
+	    case KeyContext::KEV_RENEGOTIATE_QUEUE:
+	      primary->key_limit_reneg(KeyContext::KEV_RENEGOTIATE_FORCE, secondary->become_primary_time());
+	      break;
+	    case KeyContext::KEV_NEGOTIATE:
 	      stats->error(Error::HANDSHAKE_TIMEOUT);
+	    case KeyContext::KEV_PRIMARY_PENDING:
+	    case KeyContext::KEV_RENEGOTIATE_FORCE:
 	      renegotiate();
 	      break;
 	    default:
 	      break;
 	    }
 	}
+      if (secondary)
+	secondary->set_next_event_if_unspecified();
     }
+
+#ifdef OPENVPN_INSTRUMENTATION
+    std::string debug_prefix()
+    {
+      std::string ret = openvpn::to_string(now_->raw());
+      ret += is_server() ? " SERVER[" : " CLIENT[";
+      if (primary)
+	ret += openvpn::to_string(primary->key_id());
+      if (secondary)
+	{
+	  ret += '/';
+	  ret += openvpn::to_string(secondary->key_id());
+	}
+      ret += ']';
+      return ret;
+    }
+#endif
 
     // key_id starts at 0, increments to KEY_ID_MASK, then recycles back to 1.
     // Therefore, if key_id is 0, it is the first key.
@@ -2875,8 +3059,6 @@ namespace openvpn {
     KeyContext::Ptr primary;
     KeyContext::Ptr secondary;
     bool dc_deferred;
-
-    bool fast_transition;
 
     // END ProtoContext data members
   };

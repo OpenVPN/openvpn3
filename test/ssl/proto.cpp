@@ -39,6 +39,51 @@
 #define OPENVPN_DEBUG
 #define OPENVPN_ENABLE_ASSERT
 #define USE_TLS_AUTH
+#define OPENVPN_INSTRUMENTATION
+
+// Data limits for Blowfish and other 64-bit block-size ciphers
+#ifndef BF
+#define BF 0
+#endif
+#define OPENVPN_BS64_DATA_LIMIT 50000
+#if BF == 1
+#define PROTO_CIPHER "BF-CBC"
+#define TLS_VER_MIN TLSVersion::UNDEF
+#define HANDSHAKE_WINDOW 60
+#define BECOME_PRIMARY_CLIENT 5
+#define BECOME_PRIMARY_SERVER 5
+#define TLS_TIMEOUT_CLIENT 1000
+#define TLS_TIMEOUT_SERVER 1000
+#define FEEDBACK 0
+#elif BF == 2
+#define PROTO_CIPHER "BF-CBC"
+#define TLS_VER_MIN TLSVersion::UNDEF
+#define HANDSHAKE_WINDOW 10
+#define BECOME_PRIMARY_CLIENT 10
+#define BECOME_PRIMARY_SERVER 10
+#define TLS_TIMEOUT_CLIENT 2000
+#define TLS_TIMEOUT_SERVER 1000
+#define FEEDBACK 0
+#elif BF == 3
+#define PROTO_CIPHER "BF-CBC"
+#define TLS_VER_MIN TLSVersion::UNDEF
+#define HANDSHAKE_WINDOW 60
+#define BECOME_PRIMARY_CLIENT 60
+#define BECOME_PRIMARY_SERVER 10
+#define TLS_TIMEOUT_CLIENT 2000
+#define TLS_TIMEOUT_SERVER 1000
+#define FEEDBACK 0
+#elif BF != 0
+#error unknown BF value
+#endif
+
+// TLS timeout
+#ifndef TLS_TIMEOUT_CLIENT
+#define TLS_TIMEOUT_CLIENT 2000
+#endif
+#ifndef TLS_TIMEOUT_SERVER
+#define TLS_TIMEOUT_SERVER 2000
+#endif
 
 // NoisyWire
 #ifndef NOERR
@@ -50,6 +95,13 @@
 // how many virtual seconds between SSL renegotiations
 #ifndef RENEG
 #define RENEG 900
+#endif
+
+// feedback
+#ifndef FEEDBACK
+#define FEEDBACK 1
+#else
+#define FEEDBACK 0
 #endif
 
 // number of threads to use for test
@@ -87,17 +139,17 @@
 // setup cipher
 #ifndef PROTO_CIPHER
 #ifdef PROTOv2
-#define PROTO_CIPHER AES-256-GCM
+#define PROTO_CIPHER "AES-256-GCM"
 #define TLS_VER_MIN TLSVersion::V1_2
 #else
-#define PROTO_CIPHER AES-128-CBC
+#define PROTO_CIPHER "AES-128-CBC"
 #define TLS_VER_MIN TLSVersion::UNDEF
 #endif
 #endif
 
 // setup digest
 #ifndef PROTO_DIGEST
-#define PROTO_DIGEST SHA1
+#define PROTO_DIGEST "SHA1"
 #endif
 
 // setup compressor
@@ -272,7 +324,7 @@ public:
 #if defined(VERBOSE) || defined(DROUGHT_LIMIT)
 	    {
 	      const unsigned int r = drought.raw();
-#ifdef VERBOSE
+#if defined(VERBOSE)
 	      std::cout << "*** Drought " << name << " has reached " << r << std::endl;
 #endif
 #ifdef DROUGHT_LIMIT
@@ -309,15 +361,14 @@ public:
 
   typedef Base::PacketType PacketType;
 
+  OPENVPN_EXCEPTION(session_invalidated);
+
   TestProto(const Base::Config::Ptr& config,
 	    const SessionStats::Ptr& stats)
     : Base(config, stats),
       control_drought("control", config->now),
       data_drought("data", config->now),
-      frame(config->frame),
-      app_bytes_(0),
-      net_bytes_(0),
-      data_bytes_(0)
+      frame(config->frame)
   {
     // zero progress value
     std::memset(progress_, 0, 11);
@@ -332,12 +383,33 @@ public:
   void initial_app_send(const char *msg)
   {
     Base::start();
-
     const size_t msglen = std::strlen(msg) + 1;
     BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
     copy_progress(app_buf);
     control_send(std::move(app_buf));
     flush(true);
+  }
+
+  void app_send_templ_init(const char *msg)
+  {
+    Base::start();
+    const size_t msglen = std::strlen(msg) + 1;
+    templ.reset(new BufferAllocated((unsigned char *)msg, msglen, 0));
+    flush(true);
+  }
+
+  void app_send_templ()
+  {
+#if !FEEDBACK
+    if (bool(iteration++ & 1) == is_server())
+      {
+	modmsg(templ);
+	BufferAllocated app_buf(*templ);
+	control_send(std::move(app_buf));
+	flush(true);
+	++n_control_send_;
+      }
+#endif
   }
 
   bool do_housekeeping()
@@ -390,6 +462,8 @@ public:
   size_t net_bytes() const { return net_bytes_; }
   size_t app_bytes() const { return app_bytes_; }
   size_t data_bytes() const { return data_bytes_; }
+  size_t n_control_recv() const { return n_control_recv_; }
+  size_t n_control_send() const { return n_control_send_; }
 
   const char *progress() const { return progress_; }
 
@@ -397,6 +471,12 @@ public:
   {
     data_drought.event();
     control_drought.event();
+  }
+
+  void check_invalidated()
+  {
+    if (Base::invalidated())
+      throw session_invalidated(Error::name(Base::invalidation_reason()));
   }
 
   std::deque<BufferPtr> net_out;
@@ -425,9 +505,12 @@ private:
       std::cout << now().raw() << " " << mode().str() << " " << show << std::endl;
     }
 #endif
+#if FEEDBACK
     modmsg(work);
     control_send(std::move(work));
+#endif
     control_drought.event();
+    ++n_control_recv_;
   }
 
   void copy_progress(Buffer& buf)
@@ -464,9 +547,13 @@ private:
   }
 
   Frame::Ptr frame;
-  size_t app_bytes_;
-  size_t net_bytes_;
-  size_t data_bytes_;
+  size_t app_bytes_ = 0;
+  size_t net_bytes_ = 0;
+  size_t data_bytes_ = 0;
+  size_t n_control_send_ = 0;
+  size_t n_control_recv_ = 0;
+  BufferPtr templ;
+  size_t iteration = 0;
   char progress_[11];
 };
 
@@ -522,8 +609,6 @@ private:
 class NoisyWire
 {
 public:
-  OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
-
   NoisyWire(const std::string title_arg,
 	    TimePtr now_arg,
 	    RandomAPI& rand_arg,
@@ -543,8 +628,8 @@ public:
   void xfer(T1& a, T2& b)
   {
     // check for errors
-    if (a.invalidated() || b.invalidated())
-	throw session_invalidated();
+    a.check_invalidated();
+    b.check_invalidated();
 
     // need to retransmit?
     if (a.do_housekeeping())
@@ -554,10 +639,13 @@ public:
 #endif
       }
 
+    // queue a control channel packet
+    a.app_send_templ();
+
     // queue a data channel packet
     if (a.data_channel_ready())
       {
-	BufferPtr bp = a.data_encrypt_string("Waiting for godot...");
+	BufferPtr bp = a.data_encrypt_string("Waiting for godot A... Waiting for godot B... Waiting for godot C... Waiting for godot D... Waiting for godot E... Waiting for godot F... Waiting for godot G... Waiting for godot H... Waiting for godot I... Waiting for godot J...");
 	wire.push_back(bp);
       }
 
@@ -594,7 +682,7 @@ public:
 #ifdef VERBOSE
 	      if (bp->size())
 		{
-		  const std::string show((char *)bp->data(), bp->size());
+		  const std::string show((char *)bp->data(), std::min(bp->size(), size_t(40)));
 		  std::cout << now->raw() << " " << title << " DATA CHANNEL DECRYPT: " << show << std::endl;
 		}
 #endif
@@ -605,6 +693,13 @@ public:
 		std::cout << now->raw() << " " << title << " Exception on data channel decrypt: " << e.what() << std::endl;
 #endif
 	      }
+	  }
+	else
+	  {
+#ifdef VERBOSE
+	    std::cout << now->raw() << " " << title << " KEY_STATE_ERROR" << std::endl;
+#endif
+	    b.stat().error(Error::KEY_STATE_ERROR);
 	  }
       }
     b.flush(true);
@@ -786,12 +881,12 @@ int test(const int thread_num)
     cp->remote_peer_id = 100;
 #endif
     cp->comp_ctx = CompressContext(COMP_METH, false);
-    cp->dc.set_cipher(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)));
-    cp->dc.set_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
+    cp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
+    cp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
 #ifdef USE_TLS_AUTH
     cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ClientCryptoAPI>());
     cp->tls_auth_key.parse(tls_auth_key);
-    cp->set_tls_auth_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
+    cp->set_tls_auth_digest(CryptoAlgs::lookup(PROTO_DIGEST));
     cp->key_direction = 0;
 #endif
     cp->reliable_window = 4;
@@ -804,7 +899,12 @@ int test(const int thread_num)
 #else
     cp->handshake_window = Time::Duration::seconds(18); // will cause a small number of handshake failures
 #endif
-    cp->become_primary = Time::Duration::seconds(30);
+#ifdef BECOME_PRIMARY_CLIENT
+    cp->become_primary = Time::Duration::seconds(BECOME_PRIMARY_CLIENT);
+#else
+    cp->become_primary = cp->handshake_window;
+#endif
+    cp->tls_timeout = Time::Duration::milliseconds(TLS_TIMEOUT_CLIENT);
 #if defined(CLIENT_NO_RENEG)
     cp->renegotiate = Time::Duration::infinite();
 #else
@@ -851,12 +951,12 @@ int test(const int thread_num)
     sp->remote_peer_id = 101;
 #endif
     sp->comp_ctx = CompressContext(COMP_METH, false);
-    sp->dc.set_cipher(CryptoAlgs::lookup(STRINGIZE(PROTO_CIPHER)));
-    sp->dc.set_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
+    sp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
+    sp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
 #ifdef USE_TLS_AUTH
     sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
     sp->tls_auth_key.parse(tls_auth_key);
-    sp->set_tls_auth_digest(CryptoAlgs::lookup(STRINGIZE(PROTO_DIGEST)));
+    sp->set_tls_auth_digest(CryptoAlgs::lookup(PROTO_DIGEST));
     sp->key_direction = 1;
 #endif
     sp->reliable_window = 4;
@@ -869,7 +969,12 @@ int test(const int thread_num)
 #else
     sp->handshake_window = Time::Duration::seconds(17) + Time::Duration::binary_ms(512);
 #endif
-    sp->become_primary = Time::Duration::seconds(30);
+#ifdef BECOME_PRIMARY_SERVER
+    sp->become_primary = Time::Duration::seconds(BECOME_PRIMARY_SERVER);
+#else
+    sp->become_primary = sp->handshake_window;
+#endif
+    sp->tls_timeout = Time::Duration::milliseconds(TLS_TIMEOUT_SERVER);
 #if defined(SERVER_NO_RENEG)
     sp->renegotiate = Time::Duration::infinite();
 #else
@@ -907,9 +1012,14 @@ int test(const int thread_num)
 
 	int j = -1;
 	try {
+#if FEEDBACK
 	  // start feedback loop
 	  cli_proto.initial_app_send(message);
 	  serv_proto.start();
+#else
+	  cli_proto.app_send_templ_init(message);
+	  serv_proto.app_send_templ_init(message);
+#endif
 
 	  // message loop
 	  for (j = 0; j < ITER; ++j)
@@ -937,6 +1047,9 @@ int test(const int thread_num)
 	      << " net_bytes=" << nb
 	      << " data_bytes=" << db
 	      << " prog=" << cli_proto.progress() << '/' << serv_proto.progress()
+#if !FEEDBACK
+              << " CTRL=" << cli_proto.n_control_recv() << '/' << cli_proto.n_control_send() << '/' << serv_proto.n_control_recv() << '/' << serv_proto.n_control_send()
+#endif
               << " D=" << cli_proto.control_drought().raw() << '/' << cli_proto.data_drought().raw() << '/' << serv_proto.control_drought().raw() << '/' << serv_proto.data_drought().raw()
               << " N=" << cli_proto.negotiations() << '/' << serv_proto.negotiations()
               << " SH=" << cli_proto.slowest_handshake().raw() << '/' << serv_proto.slowest_handshake().raw()
@@ -948,6 +1061,10 @@ int test(const int thread_num)
     cli_stats->show_error_counts();
     std::cerr << "-------- SERVER STATS --------" << std::endl;
     serv_stats->show_error_counts();
+#endif
+#ifdef OPENVPN_MAX_DATALIMIT_BYTES
+    std::cerr << "------------------------------" << std::endl;
+    std::cerr << "MAX_DATALIMIT_BYTES=" << DataLimit::max_bytes() << std::endl;
 #endif
   }
   catch (const std::exception& e)

@@ -296,6 +296,8 @@ namespace openvpn {
 	      // do a full flush
 	      Base::flush(true);
 	    }
+	  else
+	    cli_stats->error(Error::KEY_STATE_ERROR);
 
 	  // schedule housekeeping wakeup
 	  set_housekeeping_timer();
@@ -783,7 +785,7 @@ namespace openvpn {
       void process_inactive(const OptionList& opt)
       {
 	try {
-	  const Option *o = load_duration_parm(inactive_duration, "inactive", opt, 1, false);
+	  const Option *o = load_duration_parm(inactive_duration, "inactive", opt, 1, false, false);
 	  if (o)
 	    {
 	      if (o->size() >= 3)

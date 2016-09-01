@@ -91,11 +91,13 @@ namespace openvpn {
 
     ProtoStackBase(SSLFactoryAPI& ssl_factory, // SSL factory object that can be used to generate new SSL sessions
 		   TimePtr now_arg,                   // pointer to current time
+		   const Time::Duration& tls_timeout_arg, // packet retransmit timeout
 		   const Frame::Ptr& frame,           // contains info on how to allocate and align buffers
 		   const SessionStats::Ptr& stats_arg,  // error statistics
 		   const id_t span,                   // basically the window size for our reliability layer
 		   const size_t max_ack_list)         // maximum number of ACK messages to bundle in one packet
-      : ssl_(ssl_factory.ssl()),
+      : tls_timeout(tls_timeout_arg),
+	ssl_(ssl_factory.ssl()),
 	frame_(frame),
 	up_stack_reentry_level(0),
 	invalidated_(false),
@@ -190,7 +192,7 @@ namespace openvpn {
 	      if (m.ready_retransmit(*now))
 		{
 		  parent().net_send(m.packet, NET_SEND_RETRANSMIT);
-		  m.reset_retransmit(*now);
+		  m.reset_retransmit(*now, tls_timeout);
 		}
 	    }
 	  update_retransmit();
@@ -326,7 +328,7 @@ namespace openvpn {
 	  // encapsulate SSL ciphertext packets
 	  while (ssl_->read_ciphertext_ready() && rel_send.ready())
 	    {
-	      typename ReliableSend::Message& m = rel_send.send(*now);
+	      typename ReliableSend::Message& m = rel_send.send(*now, tls_timeout);
 	      m.packet = PACKET(ssl_->read_ciphertext());
 
 	      // encapsulate packet
@@ -350,7 +352,7 @@ namespace openvpn {
     {
       while (!raw_write_queue.empty() && rel_send.ready())
 	{
-	  typename ReliableSend::Message& m = rel_send.send(*now);
+	  typename ReliableSend::Message& m = rel_send.send(*now, tls_timeout);
 	  m.packet = raw_write_queue.front();
 	  raw_write_queue.pop_front();
 
@@ -453,6 +455,7 @@ namespace openvpn {
     }
 
   private:
+    const Time::Duration tls_timeout;
     typename SSLAPI::Ptr ssl_;
     Frame::Ptr frame_;
     int up_stack_reentry_level;

@@ -77,12 +77,15 @@ namespace openvpn {
       CLIENT_RESTART,      // RESTART message from server received
       N_PAUSE,             // Number of transitions to Pause state
       N_RECONNECT,         // Number of reconnections
+      N_KEY_LIMIT_RENEG,   // Number of renegotiations triggered by per-key limits such as data or packet limits
+      KEY_STATE_ERROR,     // Received packet didn't match expected key state
       PROXY_ERROR,         // HTTP proxy error
       PROXY_NEED_CREDS,    // HTTP proxy needs credentials
 
       // key event errors
       KEV_NEGOTIATE_ERROR,
-      KEV_EXPIRE_ERROR,
+      KEV_PENDING_ERROR,
+      N_KEV_EXPIRE,
 
       // Packet ID error detail
       PKTID_INVALID,
@@ -147,10 +150,13 @@ namespace openvpn {
 	"CLIENT_RESTART",
 	"N_PAUSE",
 	"N_RECONNECT",
+	"N_KEY_LIMIT_RENEG",
+	"KEY_STATE_ERROR",
 	"PROXY_ERROR",
 	"PROXY_NEED_CREDS",
 	"KEV_NEGOTIATE_ERROR",
-	"KEV_EXPIRE_ERROR",
+	"KEV_PENDING_ERROR",
+	"N_KEV_EXPIRE",
 	"PKTID_INVALID",
 	"PKTID_BACKTRACK",
 	"PKTID_EXPIRE",

@@ -38,10 +38,6 @@ namespace openvpn {
   public:
     typedef reliable::id_t id_t;
 
-    enum {
-      RETRANSMIT = 2 // retransmit in N seconds if ACK not received
-    };
-
     class Message : public ReliableMessageBase<PACKET>
     {
       friend class ReliableSendTemplate;
@@ -61,9 +57,9 @@ namespace openvpn {
 	return ret;
       }
 
-      void reset_retransmit(const Time& now)
+      void reset_retransmit(const Time& now, const Time::Duration& tls_timeout)
       {
-	retransmit_at_ = now + Time::Duration::seconds(RETRANSMIT);
+	retransmit_at_ = now + tls_timeout;
       }
 
     private:
@@ -128,11 +124,11 @@ namespace openvpn {
     // Return a fresh Message object that can be used to
     // construct the next packet in the sequence.  Don't call
     // unless ready() returns true.
-    Message& send(const Time& now)
+    Message& send(const Time& now, const Time::Duration& tls_timeout)
     {
       Message& msg = window_.ref_by_id(next);
       msg.id_ = next++;
-      msg.reset_retransmit(now);
+      msg.reset_retransmit(now, tls_timeout);
       return msg;
     }
 
