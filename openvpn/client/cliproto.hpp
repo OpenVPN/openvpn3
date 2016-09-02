@@ -222,7 +222,7 @@ namespace openvpn {
 	stop(true);
       }
 
-      bool reached_connected_state() const { return connected_; }
+      bool reached_connected_state() const { return bool(connected_); }
 
       // If fatal() returns something other than Error::UNDEF, it
       // is intended to flag the higher levels (cliconnect.hpp)
@@ -540,6 +540,10 @@ namespace openvpn {
 		tun = tun_factory->new_tun_client_obj(io_context, *this, transport.get());
 		tun->tun_start(received_options, *transport, Base::dc_settings());
 
+		// we should be connected at this point
+		if (!connected_)
+		  throw tun_exception("not connected");
+
 		// initialize data channel after pushed options have been processed
 		Base::init_data_channel();
 
@@ -549,6 +553,16 @@ namespace openvpn {
 
 		// process "inactive" directive
 		process_inactive(received_options);
+
+		// tell parent that we are connected
+		if (notify_callback)
+		  notify_callback->client_proto_connected();
+
+		// start info-hold timer
+		schedule_info_hold_callback();
+
+		// send the Connected event
+		cli_events->add_event(connected_);
 	      }
 	    else
 	      OPENVPN_LOG("Options continuation...");
@@ -638,11 +652,7 @@ namespace openvpn {
 	    OPENVPN_LOG("Error parsing client-ip: " << e.what());
 	  }
 	ev->tun_name = tun->tun_name();
-	cli_events->add_event(std::move(ev));
-	connected_ = true;
-	schedule_info_hold_callback();
-	if (notify_callback)
-	  notify_callback->client_proto_connected();
+	connected_ = std::move(ev);
       }
 
       virtual void tun_error(const Error::Type fatal_err, const std::string& err_text)
@@ -890,6 +900,7 @@ namespace openvpn {
 
       void schedule_info_hold_callback()
       {
+	Base::update_now();
 	info_hold_timer.expires_at(now() + Time::Duration::seconds(1));
 	info_hold_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
                                   {
@@ -961,7 +972,7 @@ namespace openvpn {
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
 
-      bool connected_ = false;
+      ClientEvent::Connected::Ptr connected_;
 
       bool echo;
       bool info;
