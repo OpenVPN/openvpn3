@@ -59,6 +59,7 @@ namespace openvpn {
       CIPHER_DEFINED=(1<<0),  // may call init_cipher method
       HMAC_DEFINED=(1<<1),    // may call init_hmac method
       CRYPTO_DEFINED=(1<<2),  // may call encrypt or decrypt methods
+      EXPLICIT_EXIT_NOTIFY_DEFINED=(1<<3),  // may call explicit_exit_notify method
     };
     virtual unsigned int defined() const = 0;
 
@@ -76,6 +77,8 @@ namespace openvpn {
 			  const SessionStats::Ptr& recv_stats_arg) = 0;
 
     virtual bool consider_compression(const CompressContext& comp_ctx) = 0;
+
+    virtual void explicit_exit_notify() {}
 
     // Rekeying
 

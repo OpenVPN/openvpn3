@@ -1463,8 +1463,11 @@ namespace openvpn {
       void send_explicit_exit_notify()
       {
 #ifndef OPENVPN_DISABLE_EXPLICIT_EXIT // explicit exit should always be enabled in production
-	send_data_channel_message(proto_context_private::explicit_exit_notify_message,
-				  sizeof(proto_context_private::explicit_exit_notify_message));
+	if (crypto_flags & CryptoDCInstance::EXPLICIT_EXIT_NOTIFY_DEFINED)
+	  crypto->explicit_exit_notify();
+	else
+	  send_data_channel_message(proto_context_private::explicit_exit_notify_message,
+				    sizeof(proto_context_private::explicit_exit_notify_message));
 #endif
       }
 
