@@ -1017,7 +1017,11 @@ namespace openvpn {
 	{
 	  MySessionStats* stats = state->stats.get();
 	  if (stats)
-	    return stats->combined_value(index);
+	    {
+	      if (index == SessionStats::BYTES_IN || index == SessionStats::BYTES_OUT)
+		stats->dco_update();
+	      return stats->combined_value(index);
+	    }
 	}
       return 0;
     }
@@ -1030,6 +1034,8 @@ namespace openvpn {
       if (state->is_foreign_thread_access())
 	{
 	  MySessionStats* stats = state->stats.get();
+	  if (stats)
+	    stats->dco_update();
 	  for (size_t i = 0; i < n; ++i)
 	    sv.push_back(stats ? stats->combined_value(i) : 0);
 	}
@@ -1083,6 +1089,7 @@ namespace openvpn {
 	  MySessionStats* stats = state->stats.get();
 	  if (stats)
 	    {
+	      stats->dco_update();
 	      ret.bytesOut = stats->stat_count(SessionStats::BYTES_OUT);
 	      ret.bytesIn = stats->stat_count(SessionStats::BYTES_IN);
 	      ret.packetsOut = stats->stat_count(SessionStats::PACKETS_OUT);

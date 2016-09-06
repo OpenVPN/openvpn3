@@ -112,12 +112,62 @@ namespace openvpn {
 
     const Time& last_packet_received() const { return last_packet_received_; }
 
+    struct DCOTransportSource : public virtual RC<thread_unsafe_refcount>
+    {
+      typedef RCPtr<DCOTransportSource> Ptr;
+
+      struct Data {
+	count_t bytes_in;
+	count_t bytes_out;
+
+	Data()
+	  : bytes_in(0),
+	    bytes_out(0)
+	{
+	}
+
+	Data(count_t bytes_in_arg, count_t bytes_out_arg)
+	  : bytes_in(bytes_in_arg),
+	    bytes_out(bytes_out_arg)
+	{
+	}
+
+	Data operator-(const Data& rhs) const
+	{
+	  Data data;
+	  if (bytes_in > rhs.bytes_in)
+	    data.bytes_in = bytes_in - rhs.bytes_in;
+	  if (bytes_out > rhs.bytes_out)
+	    data.bytes_out = bytes_out - rhs.bytes_out;
+	  return data;
+	}
+      };
+
+      virtual Data dco_transport_stats_delta() = 0;
+    };
+
+    void dco_configure(SessionStats::DCOTransportSource* source)
+    {
+      dco_.reset(source);
+    }
+
+    void dco_update()
+    {
+      if (dco_)
+	{
+	  const DCOTransportSource::Data data = dco_->dco_transport_stats_delta();
+	  stats_[BYTES_IN] += data.bytes_in;
+	  stats_[BYTES_OUT] += data.bytes_out;
+	}
+    }
+
   protected:
     void session_stats_set_verbose(const bool v) { verbose_ = v; }
 
   private:
     bool verbose_;
     Time last_packet_received_;
+    DCOTransportSource::Ptr dco_;
     volatile count_t stats_[N_STATS];
   };
 
