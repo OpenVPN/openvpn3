@@ -42,6 +42,7 @@
 #include <openvpn/ssl/mssparms.hpp>
 #include <openvpn/tun/tunmtu.hpp>
 #include <openvpn/tun/ipv6_setting.hpp>
+#include <openvpn/netconf/hwaddr.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/transport/reconnect_notify.hpp>
@@ -502,6 +503,14 @@ namespace openvpn {
 
       // setenv UV_ options
       pi->append_foreign_set_ptr(pcc.peerInfoUV());
+
+      // MAC address
+      if (pcc.pushPeerInfo())
+	{
+	  std::string hwaddr = get_hwaddr();
+	  if (!hwaddr.empty())
+	    pi->emplace_back("IV_HWADDR", hwaddr);
+	}
 
       return pi;
     }

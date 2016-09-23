@@ -263,6 +263,11 @@ namespace openvpn {
       return (flags_ & (ADDR_DEFINED|IFACE_DEFINED)) == (ADDR_DEFINED|IFACE_DEFINED);
     }
 
+    bool hwaddr_defined() const
+    {
+      return flags_ & HWADDR_DEFINED;
+    }
+
   private:
     unsigned int flags_;
     IP::AddrMaskPair gateway_;

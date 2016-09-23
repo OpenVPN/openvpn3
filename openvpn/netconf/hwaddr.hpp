@@ -19,49 +19,47 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_ADDR_MACADDR_H
-#define OPENVPN_ADDR_MACADDR_H
+// Get the local MAC addr of the interface that owns the default route
 
-#include <ostream>
-#include <cstring>
+#ifndef OPENVPN_NETCONF_HWADDR_H
+#define OPENVPN_NETCONF_HWADDR_H
+
 #include <string>
 
-#include <openvpn/common/exception.hpp>
-#include <openvpn/common/ostream.hpp>
-#include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/platform.hpp>
+#include <openvpn/addr/macaddr.hpp>
+
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <openvpn/tun/win/tunutil.hpp>
+#elif defined(OPENVPN_PLATFORM_MAC)
+#include <openvpn/tun/mac/gwv4.hpp>
+#endif
 
 namespace openvpn {
+  inline std::string get_hwaddr()
+  {
+#if defined(OPENVPN_PLATFORM_WIN)
+    const TunWin::Util::DefaultGateway dg;
+    if (dg.defined())
+      {
+	const TunWin::Util::IPAdaptersInfo ai_list;
+	const IP_ADAPTER_INFO* ai = ai_list.adapter(dg.interface_index());
+	if (ai)
+	  {
+	    const MACAddr mac(ai->Address);
+	    return mac.to_string();
+	  }
+      }
+#elif defined(OPENVPN_PLATFORM_MAC)
+    const MacGatewayInfoV4 gw;
+    if (gw.hwaddr_defined())
+      {
+	const MACAddr& mac = gw.hwaddr();
+	return mac.to_string();
+      }
+#endif
+    return std::string();
+  }
+}
 
-  // Fundamental class for representing an ethernet MAC address.
-
-  class MACAddr {
-  public:
-    MACAddr()
-    {
-      std::memset(addr_, 0, sizeof(addr_));
-    }
-
-    MACAddr(const unsigned char *addr)
-    {
-      reset(addr);
-    }
-
-    void reset(const unsigned char *addr)
-    {
-      std::memcpy(addr_, addr, sizeof(addr_));
-    }
-
-    std::string to_string() const
-    {
-      return render_hex_sep(addr_, sizeof(addr_), ':');
-    }
-
-  private:
-    unsigned char addr_[6];
-  };
-
-  OPENVPN_OSTREAM(MACAddr, to_string)
-
-} // namespace openvpn
-
-#endif // OPENVPN_ADDR_MACADDR_H
+#endif
