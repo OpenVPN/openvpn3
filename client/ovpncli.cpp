@@ -433,6 +433,7 @@ namespace openvpn {
 	    stats->detach_from_parent();
 	  if (events)
 	    events->detach_from_parent();
+	  session.reset();
 	  if (io_context_owned)
 	    delete io_context_;
 	}
