@@ -351,6 +351,8 @@ private:
       if (eval.error)
 	OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
 
+      autologin = eval.autologin;
+
       if (!eval.autologin && management_query_passwords && !creds)
 	query_username_password("Auth", false, eval.staticChallenge, eval.staticChallengeEcho);
       else if (proxy_need_creds)
@@ -757,8 +759,14 @@ private:
 	creds.reset();
 	did_query_remote = false;
 
-	// reconnect
-	deferred_reconnect(1, "auth-failure");
+	// exit/reconnect
+	if (autologin)
+	  {
+	    set_final_error(">FATAL: auth-failure: " + ev.info + "\r\n");
+	    stop();
+	  }
+	else
+	  deferred_reconnect(1, "auth-failure");
       }
 
     else if (ev.name == "CLIENT_HALT")
@@ -950,6 +958,9 @@ private:
 
   // up/down
   bool management_up_down = false;
+
+  // autologin
+  bool autologin = false;
 
   // signals
   ASIOSignals::Ptr signals;
