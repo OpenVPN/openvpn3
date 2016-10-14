@@ -97,6 +97,30 @@ namespace openvpn {
     bool combine_out_err = false;
   };
 
+  class RedirectNull : public RedirectStdFD
+  {
+  public:
+    RedirectNull()
+    {
+      // open /dev/null for stdin
+      in.reset(::open("/dev/null", O_RDONLY, 0));
+      if (!in.defined())
+	{
+	  const int eno = errno;
+	  OPENVPN_THROW(redirect_std_err, "RedirectNull: error opening /dev/null for input : " << std::strerror(eno));
+	}
+
+      // open /dev/null for stdout
+      out.reset(::open("/dev/null", O_RDWR, 0));
+      if (!out.defined())
+	{
+	  const int eno = errno;
+	  OPENVPN_THROW(redirect_std_err, "RedirectNull: error opening /dev/null for output : " << std::strerror(eno));
+	}
+      combine_out_err = true;
+    }
+  };
+
   class RedirectStd : public RedirectStdFD
   {
   public:
