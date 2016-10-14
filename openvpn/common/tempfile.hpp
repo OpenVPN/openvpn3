@@ -25,7 +25,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <cstring>     // for memcpy
-#include <unistd.h>    // for write, unlink
+#include <unistd.h>    // for write, unlink, lseek
+#include <sys/types.h> // for lseek
 
 #include <string>
 #include <memory>
@@ -33,6 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/write.hpp>
+#include <openvpn/buffer/bufread.hpp>
 
 namespace openvpn {
   class TempFile
@@ -70,6 +72,28 @@ namespace openvpn {
       delete_file();
     }
 
+    void reset()
+    {
+      const off_t off = ::lseek(fd(), 0, SEEK_SET);
+      if (off < 0)
+	{
+	  const int eno = errno;
+	  OPENVPN_THROW(tempfile_exception, "seek error on temporary file: " << filename() << " : " << std::strerror(eno));
+	}
+      if (off)
+	OPENVPN_THROW(tempfile_exception, "unexpected seek on temporary file: " << filename());
+    }
+
+    void truncate()
+    {
+      reset();
+      if (::ftruncate(fd(), 0) < 0)
+	{
+	  const int eno = errno;
+	  OPENVPN_THROW(tempfile_exception, "ftruncate error on temporary file: " << filename() << " : " << std::strerror(eno));
+	}
+    }
+
     void write(const std::string& content)
     {
       const ssize_t size = write_retry(fd(), content.c_str(), content.length());
@@ -82,6 +106,12 @@ namespace openvpn {
 	{
 	  OPENVPN_THROW(tempfile_exception, "incomplete write to temporary file: " << filename());
 	}
+    }
+
+    std::string read()
+    {
+      BufferList buflist = buf_read(fd(), filename());
+      return buflist.to_string();
     }
 
     std::string filename() const
@@ -99,6 +129,11 @@ namespace openvpn {
 	  const int eno = errno;
 	  OPENVPN_THROW(tempfile_exception, "error closing temporary file: " << filename() << " : " << std::strerror(eno));
 	}
+    }
+
+    void set_delete(const bool del_flag)
+    {
+      del = del_flag;
     }
 
     void delete_file()
