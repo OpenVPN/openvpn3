@@ -460,6 +460,11 @@ namespace openvpn {
 	return u.u64[0] == ~std::uint64_t(0) && u.u64[1] == ~std::uint64_t(0);
       }
 
+      bool is_loopback() const // ::1
+      {
+	return u.u64[Endian::e2(1)] == 0 && u.u64[Endian::e2(0)] == 1;
+      }
+
       bool bit(unsigned int pos) const
       {
 	if (pos < 64)

@@ -650,6 +650,19 @@ namespace openvpn {
 	  }
       }
 
+      bool is_loopback() const
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    return u.v4.is_loopback();
+	  case V6:
+	    return u.v6.is_loopback();
+	  default:
+	    return false;
+	  }
+      }
+
       bool defined() const
       {
 	return ver != UNSPEC;

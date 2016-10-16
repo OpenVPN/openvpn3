@@ -410,6 +410,11 @@ namespace openvpn {
 	return ~u.addr == 0;
       }
 
+      bool is_loopback() const
+      {
+	return (u.addr & 0x7F000000) == 0x7F000000;
+      }
+
       // number of network bits in netmask,
       // throws exception if addr is not a netmask
       unsigned int prefix_len() const
