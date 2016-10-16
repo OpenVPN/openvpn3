@@ -693,6 +693,19 @@ namespace openvpn {
 	return version_mask(ver);
       }
 
+      int version_index() const
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    return 0;
+	  case V6:
+	    return 1;
+	  default:
+	    throw ip_exception("version index undefined");
+	  }
+      }
+
       bool is_compatible(const Addr& other) const
       {
 	return ver == other.ver;
