@@ -270,6 +270,10 @@ namespace openvpn {
 	    return;
 	  self->halt = true;
 
+	  // async stop
+	  if (self->async_stop_)
+	    self->async_stop_->stop();
+
 	  self->exit_timer.cancel();
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 	  self->exit_sock.reset();
@@ -292,10 +296,6 @@ namespace openvpn {
 	      }
 	    OPENVPN_LOG(self->prefix << "Stopping " << stopped << '/' << self->servlist.size() << " thread(s)");
 	  }
-
-	  // async stop
-	  if (self->async_stop_)
-	    self->async_stop_->stop();
 	});
     }
 
