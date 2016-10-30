@@ -103,6 +103,16 @@ namespace openvpn {
       else
 	return "";
     }
+
+    void assign(const std::string& name, const std::string& value)
+    {
+      std::string nv = name + '=' + value;
+      const int i = find_index(name);
+      if (i >= 0)
+	(*this)[i] = std::move(nv);
+      else
+	push_back(std::move(nv));
+    }
   };
 
   // low-level fork/exec (async)
