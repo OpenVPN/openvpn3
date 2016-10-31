@@ -72,7 +72,7 @@ namespace openvpn {
     virtual void post_info_user(BufferPtr&& info) = 0;
 
     // set ACL ID for user
-    virtual void set_acl_id(const unsigned int acl_id,
+    virtual void set_acl_id(const int acl_id,
 			    const std::string* username,
 			    const bool challenge,
 			    const bool throw_on_error) = 0;
