@@ -724,6 +724,11 @@ namespace openvpn {
 	return ver == other.ver;
       }
 
+      bool is_ipv6() const
+      {
+	return ver == V6;
+      }
+
       void verify_version_consistency(const Addr& other) const
       {
 	if (!is_compatible(other))
