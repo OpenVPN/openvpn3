@@ -40,14 +40,21 @@ namespace openvpn {
       const auto* push = opt.get_index_ptr(opt_name);
       if (push)
 	{
-	    reserve(push->size());
-	    for (auto &i : *push)
-	      {
-		const Option& o = opt[i];
-		o.touch();
-		push_back(o.get(1, 512));
-	      }
+	  reserve(size() + push->size());
+	  for (auto &i : *push)
+	    {
+	      const Option& o = opt[i];
+	      o.touch();
+	      push_back(o.get(1, 512));
+	    }
 	}
+    }
+
+    void extend(const std::vector<std::string>& other)
+    {
+      reserve(size() + other.size());
+      for (auto &e : other)
+	push_back(e);
     }
 
     // do a roundtrip to csv and back to OptionList
