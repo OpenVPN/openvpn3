@@ -62,6 +62,14 @@ namespace openvpn {
 	return IP::Addr::netmask_from_prefix_len(net.version(), prefix_len);
       }
 
+      bool contains(const IP::Addr& a) const
+      {
+	if (net.defined() && net.version() == a.version())
+	  return (a & netmask()) == net;
+	else
+	  return false;
+      }
+
       std::string to_string() const
       {
 	return '[' + net.to_string() + ','
@@ -159,6 +167,11 @@ namespace openvpn {
 
     const Netblock& netblock4() const { return snb4; }
     const Netblock& netblock6() const { return snb6; }
+
+    bool netblock_contains(const IP::Addr& a) const
+    {
+      return snb4.contains(a) || snb6.contains(a);
+    }
 
     const size_t size() const { return thr.size(); }
 
