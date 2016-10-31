@@ -183,24 +183,33 @@ namespace openvpn {
       std::string to_string() const
       {
 	std::ostringstream os;
-	for (typename Base::const_iterator i = Base::begin(); i != Base::end(); ++i)
-	  os << i->to_string() << std::endl;
+	for (auto &r : *this)
+	  os << r.to_string() << std::endl;
 	return os.str();
       }
 
       IP::Addr::VersionMask version_mask() const
       {
 	IP::Addr::VersionMask mask = 0;
-	for (typename Base::const_iterator i = Base::begin(); i != Base::end(); ++i)
-	  mask |= i->version_mask();
+	for (auto &r : *this)
+	  mask |= r.version_mask();
 	return mask;
       }
 
       void verify_canonical() const
       {
-	for (typename Base::const_iterator i = Base::begin(); i != Base::end(); ++i)
-	  if (!i->is_canonical())
-	    throw route_list_error("route not canonical: " + i->to_string());
+	for (auto &r : *this)
+	  if (!r.is_canonical())
+	    throw route_list_error("route not canonical: " + r.to_string());
+      }
+
+      template <typename R>
+      bool contains(const R& c) const
+      {
+	for (auto &r : *this)
+	  if (r.contains(c))
+	    return true;
+	return false;
       }
     };
 
