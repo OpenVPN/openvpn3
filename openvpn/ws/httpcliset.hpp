@@ -786,7 +786,8 @@ namespace openvpn {
 	    {
 	      t.status = WS::Client::Status::E_EXCEPTION;
 	      t.description = std::string("http_done: ") + e.what();
-	      done(false);
+	      if (!halt)
+		done(false);
 	    }
 	}
 
