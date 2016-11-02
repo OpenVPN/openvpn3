@@ -95,7 +95,7 @@ namespace openvpn {
 	  N_ERRORS
 	};
 
-	static std::string error_str(const size_t status)
+	static std::string error_str(const int status)
 	{
 	  static const char *error_names[] = {
 	    "E_SUCCESS",
@@ -116,7 +116,7 @@ namespace openvpn {
 	  };
 
 	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
-	  if (status < N_ERRORS)
+	  if (status >= 0 && status < N_ERRORS)
 	    return error_names[status];
 	  else if (status == -1)
 	    return "E_UNDEF";
