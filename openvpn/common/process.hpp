@@ -33,87 +33,13 @@
 #include <memory>
 #include <utility>
 
-#include <openvpn/common/size.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/redir.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/argv.hpp>
-
-extern char **environ;
+#include <openvpn/common/environ.hpp>
 
 namespace openvpn {
-
-  class Environ : public std::vector<std::string>
-  {
-  public:
-    void load_from_environ()
-    {
-      reserve(64);
-      for (char **e = ::environ; *e != NULL; ++e)
-	emplace_back(*e);
-    }
-
-    std::string to_string() const
-    {
-      std::string ret;
-      ret.reserve(512);
-      for (const auto &s : *this)
-	{
-	  ret += s;
-	  ret += '\n';
-	}
-      return ret;
-    }
-
-    int find_index(const std::string& name) const
-    {
-      for (int i = 0; i < size(); ++i)
-	{
-	  const std::string& s = (*this)[i];
-	  const size_t pos = s.find_first_of('=');
-	  if (pos != std::string::npos)
-	    {
-	      if (name == s.substr(0, pos))
-		return i;
-	    }
-	  else
-	    {
-	      if (name == s)
-		return i;
-	    }
-	}
-      return -1;
-    }
-
-    std::string find(const std::string& name) const
-    {
-      const int i = find_index(name);
-      if (i >= 0)
-	return value(i);
-      else
-	return "";
-    }
-
-    std::string value(const size_t idx) const
-    {
-      const std::string& s = (*this)[idx];
-      const size_t pos = s.find_first_of('=');
-      if (pos != std::string::npos)
-	return s.substr(pos+1);
-      else
-	return "";
-    }
-
-    void assign(const std::string& name, const std::string& value)
-    {
-      std::string nv = name + '=' + value;
-      const int i = find_index(name);
-      if (i >= 0)
-	(*this)[i] = std::move(nv);
-      else
-	push_back(std::move(nv));
-    }
-  };
 
   // low-level fork/exec (async)
   inline pid_t system_cmd_async(const std::string& cmd,
