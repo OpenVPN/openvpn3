@@ -17,8 +17,10 @@
 #include <openvpn/ws/httpcliset.hpp>
 #include <openvpn/common/jsonhelper.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/frame/frame_init.hpp>
 #include <openvpn/openssl/sign/verify.hpp>
 #include <openvpn/openssl/sign/pkcs7verify.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
 
 namespace openvpn {
   namespace AWS {
@@ -41,6 +43,11 @@ namespace openvpn {
 	bool is_error() const
 	{
 	  return !error.empty();
+	}
+
+	bool instance_data_defined() const
+	{
+	  return !instanceId.empty() && !region.empty() && !privateIp.empty();
 	}
 
 	// example: [instanceId=i-ae91d23e region=us-east-1 privateIp=10.0.0.218 concurrentConnections=10]
