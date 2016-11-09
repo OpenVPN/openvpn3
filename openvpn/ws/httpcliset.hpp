@@ -59,6 +59,11 @@ namespace openvpn {
 
       typedef WS::Client::HTTPDelegate<Client> HTTPDelegate;
 
+      struct SyncPersistState
+      {
+	std::unique_ptr<asio::io_context> io_context;
+      };
+
       class HTTPStateContainer
       {
       public:
@@ -245,9 +250,22 @@ namespace openvpn {
 
       class TransactionSet : public RC<thread_unsafe_refcount>
       {
+      private:
+	// optionally contains an asio::io_context for
+	// persistent synchronous operations
+	friend class ClientSet;
+	SyncPersistState sps;
+
       public:
 	typedef RCPtr<TransactionSet> Ptr;
 	typedef std::vector<std::unique_ptr<Transaction>> Vector;
+
+	// Enable preserve_http_state to reuse HTTP session
+	// across multiple completions.
+	// hsc.stop() can be called to explicitly
+	// close persistent state.
+	bool preserve_http_state = false;
+	HTTPStateContainer hsc;
 
 	// configuration
 	WS::Client::Config::Ptr http_config;
@@ -275,12 +293,18 @@ namespace openvpn {
 	// such as the hostname.
 	ErrorRecovery::Ptr error_recovery;
 
-	// Enable preserve_http_state to reuse HTTP session
-	// across multiple completions.
-	// hsc.stop() can be called to explicitly
-	// close persistent state.
-	bool preserve_http_state = false;
-	HTTPStateContainer hsc;
+	void reset_push_back(std::unique_ptr<Transaction>&& t)
+	{
+	  transactions.clear();
+	  transactions.push_back(std::move(t));
+	}
+
+	WS::ClientSet::Transaction& first_transaction()
+	{
+	  if (transactions.empty())
+	    throw Exception("TransactionSet::first_transaction: transaction list is empty");
+	  return *transactions[0];
+	}
 
 	// Return true if and only if all HTTP transactions
 	// succeeded AND each HTTP status code was in the
@@ -390,35 +414,22 @@ namespace openvpn {
 	cli->start();
       }
 
-      class SyncPersistState
-      {
-      public:
-	void reset()
-	{
-	  io_context.reset();
-	}
-
-      private:
-	friend class ClientSet;
-	std::unique_ptr<asio::io_context> io_context;
-      };
-
       static void new_request_synchronous(const TransactionSet::Ptr& ts,
 					  Stop* stop=nullptr,
-					  SyncPersistState* sps=nullptr,
-					  RandomAPI* rng=nullptr)
+					  RandomAPI* rng=nullptr,
+					  const bool sps=false)
       {
 	std::unique_ptr<asio::io_context> io_context;
 	auto clean = Cleanup([&]() {
 	    // ensure that TransactionSet reference to socket
-	    // is reset before method returns (unless sps is non-null
+	    // is reset before method returns (unless sps is true
 	    // in which case we should retain it).
 	    if (!sps)
 	      ts->hsc.reset();
 	  });
-	ts->preserve_http_state = (sps != nullptr);
+	ts->preserve_http_state = sps;
 	if (sps)
-	  io_context = std::move(sps->io_context);
+	  io_context = std::move(ts->sps.io_context);
 	if (!io_context)
 	  io_context.reset(new asio::io_context(1));
 	ClientSet::Ptr cs;
@@ -446,7 +457,7 @@ namespace openvpn {
 	    throw;
 	  }
 	if (sps)
-	  sps->io_context = std::move(io_context);
+	  ts->sps.io_context = std::move(io_context);
       }
 
       static void run_synchronous(std::function<void(ClientSet::Ptr)> job,
