@@ -275,6 +275,17 @@ namespace openvpn {
 	  std::memset(bytestr, 0, 16);
       }
 
+      // convert Addr to variable length byte string
+      void to_byte_string_variable(unsigned char *bytestr) const
+      {
+	if (ver == V4)
+	  u.v4.to_byte_string(bytestr);
+	else if (ver == V6)
+	  u.v6.to_byte_string(bytestr);
+	else
+	  throw ip_exception("address unspecified");
+      }
+
       std::uint32_t to_uint32_net() const // return value in net byte order
       {
 	if (ver == V4)
@@ -719,6 +730,19 @@ namespace openvpn {
 	  }
       }
 
+      int family() const
+      {
+	switch (ver)
+	  {
+	  case V4:
+	    return AF_INET;
+	  case V6:
+	    return AF_INET6;
+	  default:
+	    return -1;
+	  }
+      }
+
       bool is_compatible(const Addr& other) const
       {
 	return ver == other.ver;
@@ -794,6 +818,12 @@ namespace openvpn {
       unsigned int size() const
       {
 	return version_size(ver);
+      }
+
+      // address size in bytes
+      unsigned int size_bytes() const
+      {
+	return size() / 8;
       }
 
       // address size in bits of particular IP version

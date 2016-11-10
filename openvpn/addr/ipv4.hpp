@@ -114,6 +114,11 @@ namespace openvpn {
 	return ret;
       }
 
+      void to_byte_string(unsigned char *bytestr) const
+      {
+	*(base_type*)bytestr = ntohl(u.addr);
+      }
+
       std::uint32_t to_uint32_net() const // return value in net byte order
       {
 	return htonl(u.addr);
