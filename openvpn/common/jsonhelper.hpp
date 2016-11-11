@@ -27,6 +27,8 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/file.hpp>
+#include <openvpn/buffer/bufstr.hpp>
+#include <openvpn/buffer/bufstream.hpp>
 
 namespace openvpn {
 
@@ -295,6 +297,22 @@ namespace openvpn {
     static const Json::Value& get_dict(const Json::Value& root, const std::string& name, const bool optional)
     {
       return get_dict(root, name, optional, "");
+    }
+
+    static void format_compact(const Json::Value& root, Buffer& buf)
+    {
+      Json::StreamWriterBuilder json_builder;
+      json_builder.settings_["indentation"] = "";
+      BufferStreamOut os(buf);
+      std::unique_ptr<Json::StreamWriter> sw(json_builder.newStreamWriter());
+      sw->write(root, &os);
+    }
+
+    static std::string format_compact(const Json::Value& root, const size_t size_hint=256)
+    {
+      BufferPtr bp = new BufferAllocated(size_hint, BufferAllocated::GROW);
+      format_compact(root, *bp);
+      return buf_to_string(*bp);
     }
 
   private:
