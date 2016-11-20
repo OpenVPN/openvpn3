@@ -75,6 +75,8 @@ namespace openvpn {
       AUTH_FAILED,         // general authentication failure
       CLIENT_HALT,         // HALT message from server received
       CLIENT_RESTART,      // RESTART message from server received
+      RELAY,               // RELAY message from server received
+      RELAY_ERROR,         // RELAY error
       N_PAUSE,             // Number of transitions to Pause state
       N_RECONNECT,         // Number of reconnections
       N_KEY_LIMIT_RENEG,   // Number of renegotiations triggered by per-key limits such as data or packet limits
@@ -148,6 +150,8 @@ namespace openvpn {
 	"AUTH_FAILED",
 	"CLIENT_HALT",
 	"CLIENT_RESTART",
+	"RELAY",
+	"RELAY_ERROR",
 	"N_PAUSE",
 	"N_RECONNECT",
 	"N_KEY_LIMIT_RENEG",

@@ -65,10 +65,13 @@ namespace openvpn {
 	}
     }
 
-    inline void remote_cert_tls(const OptionList& opt, std::vector<unsigned int>& ku, std::string& eku)
+    inline void remote_cert_tls(const OptionList& opt,
+				const std::string& relay_prefix,
+				std::vector<unsigned int>& ku,
+				std::string& eku)
     {
       TLSWebType wt = TLS_WEB_NONE;
-      const Option* o = opt.get_ptr("remote-cert-tls");
+      const Option* o = opt.get_ptr(relay_prefix + "remote-cert-tls");
       if (o)
 	{
 	  const std::string ct = o->get_optional(1, 16);
@@ -82,11 +85,13 @@ namespace openvpn {
       remote_cert_tls(wt, ku, eku);
     }
 
-    inline void remote_cert_ku(const OptionList& opt, std::vector<unsigned int>& ku)
+    inline void remote_cert_ku(const OptionList& opt,
+			       const std::string& relay_prefix,
+			       std::vector<unsigned int>& ku)
     {
       ku.clear();
 
-      const Option* o = opt.get_ptr("remote-cert-ku");
+      const Option* o = opt.get_ptr(relay_prefix + "remote-cert-ku");
       if (o)
 	{
 	  if (o->empty())
@@ -107,11 +112,13 @@ namespace openvpn {
 	}
     }
 
-    inline void remote_cert_eku(const OptionList& opt, std::string& eku)
+    inline void remote_cert_eku(const OptionList& opt,
+				const std::string& relay_prefix,
+				std::string& eku)
     {
       eku = "";
 
-      const Option* o = opt.get_ptr("remote-cert-eku");
+      const Option* o = opt.get_ptr(relay_prefix + "remote-cert-eku");
       if (o)
 	eku = o->get(1, 256);
     }

@@ -58,7 +58,7 @@ namespace openvpn {
       }
 
       virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
-							    TransportClientParent& parent);
+							    TransportClientParent* parent);
 
     private:
       ClientConfig()
@@ -88,7 +88,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		parent.transport_pre_resolve();
+		parent->transport_pre_resolve();
 		resolver.async_resolve(server_host, server_port,
 				       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
 				       {
@@ -150,13 +150,23 @@ namespace openvpn {
 	return IP::Addr::from_asio(server_endpoint.address());
       }
 
+      virtual Protocol transport_protocol() const
+      {
+	if (server_endpoint.address().is_v4())
+	  return Protocol(Protocol::TCPv4);
+	else if (server_endpoint.address().is_v6())
+	  return Protocol(Protocol::TCPv6);
+	else
+	  return Protocol();
+      }
+
       virtual void stop() { stop_(); }
       virtual ~Client() { stop_(); }
 
     private:
       Client(asio::io_context& io_context_arg,
 	     ClientConfig* config_arg,
-	     TransportClientParent& parent_arg)
+	     TransportClientParent* parent_arg)
 	:  io_context(io_context_arg),
 	   socket(io_context_arg),
 	   config(config_arg),
@@ -164,6 +174,11 @@ namespace openvpn {
 	   resolver(io_context_arg),
 	   halt(false)
       {
+      }
+
+      virtual void transport_reparent(TransportClientParent* parent_arg)
+      {
+	parent = parent_arg;
       }
 
       bool send_const(const Buffer& cbuf)
@@ -193,13 +208,13 @@ namespace openvpn {
 
       bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
       {
-	parent.transport_recv(buf);
+	parent->transport_recv(buf);
 	return true;
       }
 
       void tcp_write_queue_needs_send() // called by LinkImpl
       {
-	parent.transport_needs_send();
+	parent->transport_needs_send();
       }
 
       void tcp_error_handler(const char *error) // called by LinkImpl
@@ -207,7 +222,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "Transport error on '" << server_host << ": " << error;
 	stop();
-	parent.transport_error(Error::TRANSPORT_ERROR, os.str());
+	parent->transport_error(Error::TRANSPORT_ERROR, os.str());
       }
 
       void stop_()
@@ -241,7 +256,7 @@ namespace openvpn {
 		os << "DNS resolve error on '" << server_host << "' for TCP session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
-		parent.transport_error(Error::UNDEF, os.str());
+		parent->transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
@@ -251,8 +266,8 @@ namespace openvpn {
       {
 	config->remote_list->get_endpoint(server_endpoint);
 	OPENVPN_LOG("Contacting " << server_endpoint << " via TCP");
-	parent.transport_wait();
-	parent.ip_hole_punch(server_endpoint_addr());
+	parent->transport_wait();
+	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)
@@ -261,7 +276,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		parent.transport_error(Error::UNDEF, "socket_protect error (TCP)");
+		parent->transport_error(Error::UNDEF, "socket_protect error (TCP)");
 		return;
 	      }
 	  }
@@ -290,9 +305,9 @@ namespace openvpn {
 		impl->gremlin_config(config->gremlin_config);
 #endif
 		impl->start();
-		if (!parent.transport_is_openvpn_protocol())
+		if (!parent->transport_is_openvpn_protocol())
 		  impl->set_raw_mode(true);
-		parent.transport_connecting();
+		parent->transport_connecting();
 	      }
 	    else
 	      {
@@ -300,7 +315,7 @@ namespace openvpn {
 		os << "TCP connect error on '" << server_host << ':' << server_port << "' (" << server_endpoint << "): " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
-		parent.transport_error(Error::UNDEF, os.str());
+		parent->transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
@@ -311,7 +326,7 @@ namespace openvpn {
       asio::io_context& io_context;
       asio::ip::tcp::socket socket;
       ClientConfig::Ptr config;
-      TransportClientParent& parent;
+      TransportClientParent* parent;
       LinkImpl::Ptr impl;
       asio::ip::tcp::resolver resolver;
       LinkImpl::protocol::endpoint server_endpoint;
@@ -319,7 +334,7 @@ namespace openvpn {
     };
 
     inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_context& io_context,
-								       TransportClientParent& parent)
+								       TransportClientParent* parent)
     {
       return TransportClient::Ptr(new Client(io_context, this, parent));
     }

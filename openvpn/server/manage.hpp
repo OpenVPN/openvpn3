@@ -103,10 +103,13 @@ namespace openvpn {
 
 
     // send control channel message
-    virtual void post_info(BufferPtr&& info) = 0;
+    virtual void post_cc_msg(BufferPtr&& msg) = 0;
 
     // set fwmark value in client instance
     virtual void set_fwmark(const unsigned int fwmark) = 0;
+
+    // set up relay to target
+    virtual void relay(const IP::Addr& target, const int port) = 0;
 
     // get client bandwidth stats
     virtual PeerStats stats_poll() = 0;

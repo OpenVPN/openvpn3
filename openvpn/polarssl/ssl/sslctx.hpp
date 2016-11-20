@@ -324,7 +324,9 @@ namespace openvpn {
 
 	// ca
 	{
-	  const std::string ca_txt = opt.cat("ca");
+	  std::string ca_txt = opt.cat("ca");
+	  if (lflags & LF_RELAY_MODE)
+	    ca_txt += opt.cat("relay-extra-ca");
 	  load_ca(ca_txt, true);
 	}
 
@@ -360,16 +362,21 @@ namespace openvpn {
 	    load_dh(dh_txt);
 	  }
 
+	// relay mode
+	std::string relay_prefix;
+	if (lflags & LF_RELAY_MODE)
+	  relay_prefix = "relay-";
+
 	// parse ns-cert-type
-	ns_cert_type = NSCert::ns_cert_type(opt);
+	ns_cert_type = NSCert::ns_cert_type(opt, relay_prefix);
 
 	// parse remote-cert-x options
-	KUParse::remote_cert_tls(opt, ku, eku);
-	KUParse::remote_cert_ku(opt, ku);
-	KUParse::remote_cert_eku(opt, eku);
+	KUParse::remote_cert_tls(opt, relay_prefix, ku, eku);
+	KUParse::remote_cert_ku(opt, relay_prefix, ku);
+	KUParse::remote_cert_eku(opt, relay_prefix, eku);
 
 	// parse tls-remote
-	tls_remote = opt.get_optional("tls-remote", 1, 256);
+	tls_remote = opt.get_optional(relay_prefix + "tls-remote", 1, 256);
 
 	// parse tls-version-min option
 	{
@@ -380,7 +387,7 @@ namespace openvpn {
 #         else
             const TLSVersion::Type maxver = TLSVersion::V1_0;
 #         endif
-	  tls_version_min = TLSVersion::parse_tls_version_min(opt, maxver);
+	  tls_version_min = TLSVersion::parse_tls_version_min(opt, relay_prefix, maxver);
 	}
 
 	// unsupported cert verification options

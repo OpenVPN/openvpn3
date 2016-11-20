@@ -209,37 +209,10 @@ namespace openvpn {
       // route-nopull
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
 
-      // client SSL config
-      SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
-      cc->set_external_pki_callback(config.external_pki);
-      cc->set_frame(frame);
-      cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
-      cc->set_debug_level(config.ssl_debug_level);
-      cc->set_rng(rng);
-      cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
-      cc->set_private_key_password(config.private_key_password);
-      cc->set_force_aes_cbc_ciphersuites(config.force_aes_cbc_ciphersuites);
-      cc->load(opt, SSLConfigAPI::LF_PARSE_MODE);
-      cc->set_tls_version_min_override(config.tls_version_min_override);
-      if (!cc->get_mode().is_client())
-	throw option_error("only client configuration supported");
-
-      // client ProtoContext config
-      cp.reset(new Client::ProtoConfig());
-      cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, cli_stats, prng));
-      cp->dc_deferred = true; // defer data channel setup until after options pull
-      cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
-      cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
-      cp->ssl_factory = cc->new_factory();
-      cp->load(opt, *proto_context_options, config.default_key_direction, false);
-      cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
-      cp->gui_version = config.gui_version;
-      cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
-      cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
-      cp->frame = frame;
-      cp->now = &now_;
-      cp->rng = rng;
-      cp->prng = prng;
+      // OpenVPN Protocol context (including SSL)
+      cp_main = proto_config(opt, config, pcc, false);
+      cp_relay = proto_config(opt, config, pcc, true); // may be null
+      layer = cp_main->layer;
 
 #ifdef PRIVATE_TUNNEL_PROXY
       if (config.alt_proxy && !dco)
@@ -307,7 +280,7 @@ namespace openvpn {
       if (dco)
 	{
 	  DCO::TunConfig tunconf;
-	  tunconf.tun_prop.layer = cp->layer;
+	  tunconf.tun_prop.layer = layer;
 	  tunconf.tun_prop.session_name = session_name;
 	  if (tun_mtu)
 	    tunconf.tun_prop.mtu = tun_mtu;
@@ -359,7 +332,7 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
 	  {
 	    TunLinux::ClientConfig::Ptr tunconf = TunLinux::ClientConfig::new_obj();
-	    tunconf->tun_prop.layer = cp->layer;
+	    tunconf->tun_prop.layer = layer;
 	    tunconf->tun_prop.session_name = session_name;
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;
@@ -373,7 +346,7 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_MAC) && !defined(OPENVPN_FORCE_TUN_NULL)
 	  {
 	    TunMac::ClientConfig::Ptr tunconf = TunMac::ClientConfig::new_obj();
-	    tunconf->tun_prop.layer = cp->layer;
+	    tunconf->tun_prop.layer = layer;
 	    tunconf->tun_prop.session_name = session_name;
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    if (tun_mtu)
@@ -392,7 +365,7 @@ namespace openvpn {
 #elif defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_FORCE_TUN_NULL)
 	  {
 	    TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
-	    tunconf->tun_prop.layer = cp->layer;
+	    tunconf->tun_prop.layer = layer;
 	    tunconf->tun_prop.session_name = session_name;
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    if (tun_mtu)
@@ -418,7 +391,7 @@ namespace openvpn {
 	}
 
       // verify that tun implementation can handle OSI layer declared by config
-      if (cp->layer == Layer(Layer::OSI_LAYER_2) && !tun_factory->layer_2_supported())
+      if (layer == Layer(Layer::OSI_LAYER_2) && !tun_factory->layer_2_supported())
 	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "OSI layer 2 tunnels are not currently supported");
 
       // server-poll-timeout
@@ -539,13 +512,13 @@ namespace openvpn {
 	return false;
     }
 
-    Client::Config::Ptr client_config()
+    Client::Config::Ptr client_config(const bool relay_mode)
     {
       Client::Config::Ptr cli_config = new Client::Config;
 
       // Copy ProtoConfig so that modifications due to server push will
       // not persist across client instantiations.
-      cli_config->proto_context_config.reset(new Client::ProtoConfig(*cp));
+      cli_config->proto_context_config.reset(new Client::ProtoConfig(proto_config_cached(relay_mode)));
 
       cli_config->proto_context_options = proto_context_options;
       cli_config->push_base = push_base;
@@ -626,13 +599,68 @@ namespace openvpn {
     }
 
   private:
+    Client::ProtoConfig& proto_config_cached(const bool relay_mode)
+    {
+      if (relay_mode && cp_relay)
+	return *cp_relay;
+      else
+	return *cp_main;
+    }
+
+    Client::ProtoConfig::Ptr proto_config(const OptionList& opt,
+					  const Config& config,
+					  const ParseClientConfig& pcc,
+					  const bool relay_mode)
+    {
+      // relay mode is null unless one of the below directives is defined
+      if (relay_mode && !opt.exists("relay-mode"))
+	return Client::ProtoConfig::Ptr();
+
+      // load flags
+      unsigned int lflags = SSLConfigAPI::LF_PARSE_MODE;
+      if (relay_mode)
+	lflags |= SSLConfigAPI::LF_RELAY_MODE;
+
+      // client SSL config
+      SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
+      cc->set_external_pki_callback(config.external_pki);
+      cc->set_frame(frame);
+      cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
+      cc->set_debug_level(config.ssl_debug_level);
+      cc->set_rng(rng);
+      cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
+      cc->set_private_key_password(config.private_key_password);
+      cc->set_force_aes_cbc_ciphersuites(config.force_aes_cbc_ciphersuites);
+      cc->load(opt, lflags);
+      cc->set_tls_version_min_override(config.tls_version_min_override);
+      if (!cc->get_mode().is_client())
+	throw option_error("only client configuration supported");
+
+      // client ProtoContext config
+      Client::ProtoConfig::Ptr cp(new Client::ProtoConfig());
+      cp->relay_mode = relay_mode;
+      cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, cli_stats, prng));
+      cp->dc_deferred = true; // defer data channel setup until after options pull
+      cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
+      cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
+      cp->ssl_factory = cc->new_factory();
+      cp->load(opt, *proto_context_options, config.default_key_direction, false);
+      cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
+      cp->gui_version = config.gui_version;
+      cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
+      cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
+      cp->frame = frame;
+      cp->now = &now_;
+      cp->rng = rng;
+      cp->prng = prng;
+
+      return cp;
+    }
+
     std::string load_transport_config()
     {
       // get current transport protocol
       const Protocol& transport_protocol = remote_list->current_transport_protocol();
-
-      // set transport protocol in Client::ProtoConfig
-      cp->set_protocol(transport_protocol);
 
       // If we are connecting over a proxy, and TCP protocol is required, but current
       // transport protocol is NOT TCP, we will throw an internal error because this
@@ -720,8 +748,9 @@ namespace openvpn {
     RandomAPI::Ptr rng;
     RandomAPI::Ptr prng;
     Frame::Ptr frame;
-    SSLLib::SSLAPI::Config cc;
-    Client::ProtoConfig::Ptr cp;
+    Layer layer;
+    Client::ProtoConfig::Ptr cp_main;
+    Client::ProtoConfig::Ptr cp_relay;
     RemoteList::Ptr remote_list;
     bool server_addr_float;
     TransportClientFactory::Ptr transport_factory;

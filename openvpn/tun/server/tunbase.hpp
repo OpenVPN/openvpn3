@@ -72,6 +72,9 @@ namespace openvpn {
     // set fwmark
     virtual void set_fwmark(const unsigned int fwmark) = 0;
 
+    // set up relay to target
+    virtual void relay(const IP::Addr& target, const int port) = 0;
+
     virtual const std::string& tun_info() const = 0;
   };
 

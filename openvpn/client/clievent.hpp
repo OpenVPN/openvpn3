@@ -52,6 +52,7 @@ namespace openvpn {
       INFO,
       PAUSE,
       RESUME,
+      RELAY,
 
       // start of nonfatal errors, must be marked by NONFATAL_ERROR_START below
       TRANSPORT_ERROR,
@@ -73,6 +74,7 @@ namespace openvpn {
       TUN_IFACE_DISABLED,
       EPKI_ERROR,          // EPKI refers to External PKI errors, i.e. errors in accessing external
       EPKI_INVALID_ALIAS,  //    certificates or keys.
+      RELAY_ERROR,
 
       N_TYPES
     };
@@ -99,6 +101,7 @@ namespace openvpn {
 	"INFO",
 	"PAUSE",
 	"RESUME",
+	"RELAY",
 
 	// nonfatal errors
 	"TRANSPORT_ERROR",
@@ -120,6 +123,7 @@ namespace openvpn {
 	"TUN_IFACE_DISABLED",
 	"EPKI_ERROR",
 	"EPKI_INVALID_ALIAS",
+	"RELAY_ERROR",
       };
 
       static_assert(N_TYPES == array_size(names), "event names array inconsistency");
@@ -220,6 +224,11 @@ namespace openvpn {
       Resume() : Base(RESUME) {}
     };
 
+    struct Relay : public Base
+    {
+      Relay() : Base(RELAY) {}
+    };
+
     struct Disconnected : public Base
     {
       Disconnected() : Base(DISCONNECTED) {}
@@ -314,6 +323,11 @@ namespace openvpn {
     struct ClientRestart : public ReasonBase
     {
       ClientRestart(std::string reason) : ReasonBase(CLIENT_RESTART, std::move(reason)) {}
+    };
+
+    struct RelayError : public ReasonBase
+    {
+      RelayError(std::string reason) : ReasonBase(RELAY_ERROR, std::move(reason)) {}
     };
 
     struct DynamicChallenge : public ReasonBase

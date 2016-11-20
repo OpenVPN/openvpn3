@@ -30,6 +30,8 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include <openvpn/common/exception.hpp>
 
@@ -70,6 +72,13 @@ namespace openvpn {
     {
       if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
 	throw Exception("error setting FD_CLOEXEC on file-descriptor/socket");
+    }
+
+    // set non-block mode on socket
+    static inline void set_nonblock(const int fd)
+    {
+      if (::fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+	throw Exception("error setting socket to non-blocking mode");
     }
   }
 }

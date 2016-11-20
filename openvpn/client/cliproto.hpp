@@ -51,6 +51,7 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
+#include <openvpn/transport/client/relay.hpp>
 #include <openvpn/options/continuation.hpp>
 #include <openvpn/options/sanitize.hpp>
 #include <openvpn/client/clievent.hpp>
@@ -101,6 +102,7 @@ namespace openvpn {
       OPENVPN_SIMPLE_EXCEPTION(session_invalidated);
       OPENVPN_SIMPLE_EXCEPTION(authentication_failed);
       OPENVPN_SIMPLE_EXCEPTION(inactive_timer_expired);
+      OPENVPN_SIMPLE_EXCEPTION(relay_event);
 
       OPENVPN_EXCEPTION(proxy_exception);
 
@@ -181,10 +183,25 @@ namespace openvpn {
 	    housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
 
 	    // initialize transport-layer packet handler
-	    transport = transport_factory->new_transport_client_obj(io_context, *this);
+	    transport = transport_factory->new_transport_client_obj(io_context, this);
 	    transport_has_send_queue = transport->transport_has_send_queue();
-	    transport->transport_start();
+	    if (transport_factory->is_relay())
+	      transport_connecting();
+	    else
+	      transport->transport_start();
 	  }
+      }
+
+      TransportClientFactory::Ptr transport_factory_relay()
+      {
+	TransportClient::Ptr tc(new TransportRelayFactory::TransportClientNull(transport.get()));
+	tc.swap(transport);
+	return new TransportRelayFactory(io_context, std::move(tc), this);
+      }
+
+      void transport_factory_override(TransportClientFactory::Ptr factory)
+      {
+	transport_factory = std::move(factory);
       }
 
       void send_explicit_exit_notify()
@@ -425,6 +442,7 @@ namespace openvpn {
       {
 	try {
 	  OPENVPN_LOG("Connecting to " << server_endpoint_render());
+	  Base::set_protocol(transport->transport_protocol());
 	  Base::start();
 	  Base::flush(true);
 	  set_housekeeping_timer();
@@ -526,6 +544,13 @@ namespace openvpn {
 		// show options
 		OPENVPN_LOG("OPTIONS:" << std::endl << render_options_sanitized(received_options, Option::RENDER_PASS_FMT|Option::RENDER_NUMBER|Option::RENDER_BRACKET));
 
+		// relay servers are not allowed to establish a tunnel with us
+		if (Base::conf().relay_mode)
+		  {
+		    tun_error(Error::RELAY_ERROR, "tunnel not permitted to relay server");
+		    return;
+		  }
+
 		// process "echo" directives
 		if (echo)
 		  process_echo(received_options);
@@ -616,6 +641,26 @@ namespace openvpn {
 	    else
 	      cli_events->add_event(std::move(ev));
 	  }
+	else if (msg == "RELAY")
+	  {
+	    if (Base::conf().relay_mode)
+	      {
+		fatal_ = Error::RELAY;
+		fatal_reason_ = "";
+	      }
+	    else
+	      {
+		fatal_ = Error::RELAY_ERROR;
+		fatal_reason_ = "not in relay mode";
+	      }
+	    if (notify_callback)
+	      {
+		OPENVPN_LOG(Error::name(fatal_) << ' ' << fatal_reason_);
+		stop(true);
+	      }
+	    else
+	      throw relay_event();
+	  }
       }
 
       virtual void tun_pre_tun_config()
@@ -674,7 +719,8 @@ namespace openvpn {
       // proto base class calls here to get auth credentials
       virtual void client_auth(Buffer& buf)
       {
-	if (creds)
+	// we never send creds to a relay server
+	if (creds && !Base::conf().relay_mode)
 	  {
 	    OPENVPN_LOG("Creds: " << creds->auth_info());
 	    Base::write_auth_string(creds->get_username(), buf);

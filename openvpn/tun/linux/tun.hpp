@@ -143,7 +143,7 @@ namespace openvpn {
 		  return;
 	      }
 	    const int eno = errno;
-	    OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' after trying " << max_units << "units : " << errinfo(eno));
+	    OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' after trying " << max_units << " units : " << errinfo(eno));
 	  }
 	else
 	  {

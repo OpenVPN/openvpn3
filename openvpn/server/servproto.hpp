@@ -24,6 +24,7 @@
 #ifndef OPENVPN_SERVER_SERVPROTO_H
 #define OPENVPN_SERVER_SERVPROTO_H
 
+#include <memory>
 #include <utility> // for std::move
 
 #include <openvpn/common/size.hpp>
@@ -196,6 +197,8 @@ namespace openvpn {
       virtual bool transport_recv(BufferAllocated& buf)
       {
 	bool ret = false;
+	if (!Base::primary_defined())
+	  return false;
 	try {
 	  OPENVPN_LOG_SERVPROTO("Transport RECV[" << buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(buf));
 
@@ -287,9 +290,6 @@ namespace openvpn {
 	      TunClientInstanceFactory::Ptr tun_factory_arg)
 	: Base(factory.clone_proto_config(), factory.stats),
 	  io_context(io_context_arg),
-	  halt(false),
-	  did_push(false),
-	  did_client_halt_restart(false),
 	  housekeeping_timer(io_context_arg),
 	  disconnect_at(Time::infinite()),
 	  stats(factory.stats),
@@ -368,12 +368,37 @@ namespace openvpn {
 	  TunLink::send->set_fwmark(fwmark);
       }
 
+      virtual void relay(const IP::Addr& target, const int port)
+      {
+	Base::update_now();
+
+	if (TunLink::send && !relay_transition)
+	  {
+	    relay_transition = true;
+	    TunLink::send->relay(target, port);
+	    disconnect_in(Time::Duration::seconds(10)); // not a real disconnect, just complete transition to relay
+	  }
+
+	if (Base::primary_defined())
+	  {
+	    BufferPtr buf(new BufferAllocated(64, 0));
+	    buf_append_string(*buf, "RELAY");
+	    buf->null_terminate();
+	    Base::control_send(std::move(buf));
+	    Base::flush(true);
+	  }
+
+	set_housekeeping_timer();
+      }
+
       virtual void push_reply(std::vector<BufferPtr>&& push_msgs,
 			      const std::vector<IP::Route>& rtvec,
 			      const unsigned int initial_fwmark)
       {
-	if (halt)
+	if (halt || relay_transition || !Base::primary_defined())
 	  return;
+
+	Base::update_now();
 
 	if (get_tun())
 	  {
@@ -469,20 +494,24 @@ namespace openvpn {
 	    disconnect_in(Time::Duration::seconds(1));
 	  }
 
-	buf->null_terminate();
-	Base::control_send(std::move(buf));
-	Base::flush(true);
+	if (Base::primary_defined())
+	  {
+	    buf->null_terminate();
+	    Base::control_send(std::move(buf));
+	    Base::flush(true);
+	  }
+
 	set_housekeeping_timer();
       }
 
-      virtual void post_info(BufferPtr&& info)
+      virtual void post_cc_msg(BufferPtr&& msg)
       {
-	if (halt)
+	if (halt || !Base::primary_defined())
 	  return;
 
 	Base::update_now();
-	info->null_terminate();
-	Base::control_send(std::move(info));
+	msg->null_terminate();
+	Base::control_send(std::move(msg));
 	Base::flush(true);
 	set_housekeeping_timer();
       }
@@ -529,6 +558,8 @@ namespace openvpn {
 	return bool(TunLink::send);
       }
 
+      // caller must ensure that update_now() was called before
+      // and set_housekeeping_timer() called after this method
       void disconnect_in(const Time::Duration& dur)
       {
 	disconnect_at = now() + dur;
@@ -547,7 +578,12 @@ namespace openvpn {
 	      if (Base::invalidated())
 		invalidation_error(Base::invalidation_reason());
 	      else if (now() >= disconnect_at)
-		error("disconnect triggered");
+		{
+		  if (relay_transition && !did_client_halt_restart)
+		    Base::pre_destroy();
+		  else
+		    error("disconnect triggered");
+		}
 	      else
 		set_housekeeping_timer();
 	    }
@@ -620,9 +656,11 @@ namespace openvpn {
       }
 
       asio::io_context& io_context;
-      bool halt;
-      bool did_push;
-      bool did_client_halt_restart;
+
+      bool halt = false;
+      bool did_push = false;
+      bool did_client_halt_restart = false;
+      bool relay_transition = false;
 
       PeerAddr::Ptr peer_addr;
 

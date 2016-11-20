@@ -51,6 +51,7 @@ namespace openvpn {
     virtual void start() = 0;
     virtual void stop() = 0;
     virtual std::string local_endpoint_info() const = 0;
+    virtual IP::Addr local_endpoint_addr() const = 0;
   };
 
   // Factory for server transport object.

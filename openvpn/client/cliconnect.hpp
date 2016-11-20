@@ -50,6 +50,7 @@
 #define OPENVPN_CLIENT_CLICONNECT_H
 
 #include <memory>
+#include <utility>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/error/excode.hpp>
@@ -370,13 +371,13 @@ namespace openvpn {
 	}
     }
 
-    void queue_restart(const unsigned int delay = 2)
+    void queue_restart(const unsigned int delay_ms = 2000)
     {
-      OPENVPN_LOG("Client terminated, restarting in " << delay << "...");
+      OPENVPN_LOG("Client terminated, restarting in " << delay_ms << " ms...");
       server_poll_timer.cancel();
       interim_finalize();
       client_options->remote_reset_cache_item();
-      restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(delay));
+      restart_wait_timer.expires_at(Time::now() + Time::Duration::milliseconds(delay_ms));
       restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const asio::error_code& error)
                                     {
                                       self->restart_wait_callback(gen, error);
@@ -504,7 +505,7 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TransportError(client->fatal_reason());
 		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TRANSPORT_ERROR);
-		    queue_restart(5); // use a larger timeout to allow preemption from higher levels
+		    queue_restart(5000); // use a larger timeout to allow preemption from higher levels
 		  }
 		  break;
 		case Error::TUN_ERROR:
@@ -512,7 +513,24 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunError(client->fatal_reason());
 		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TUN_ERROR);
-		    queue_restart(5);
+		    queue_restart(5000);
+		  }
+		  break;
+		case Error::RELAY:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::Relay();
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::RELAY);
+		    transport_factory_relay = client->transport_factory_relay();
+		    queue_restart(0);
+		  }
+		  break;
+		case Error::RELAY_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::RelayError(client->fatal_reason());
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::RELAY_ERROR);
+		    stop();
 		  }
 		  break;
 		default:
@@ -531,7 +549,7 @@ namespace openvpn {
 	  client->stop(false);
 	  interim_finalize();
 	}
-      if (generation > 1)
+      if (generation > 1 && !transport_factory_relay)
 	{
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Reconnecting();
 	  client_options->events().add_event(std::move(ev));
@@ -539,9 +557,18 @@ namespace openvpn {
 	  if (!(client && client->reached_connected_state()))
 	    client_options->next();
 	}
-      Client::Config::Ptr cli_config = client_options->client_config(); // client_config in cliopt.hpp
+
+      // client_config in cliopt.hpp
+      Client::Config::Ptr cli_config = client_options->client_config(!transport_factory_relay);
       client.reset(new Client(io_context, *cli_config, this)); // build ClientProto::Session from cliproto.hpp
       client_finalized = false;
+
+      // relay?
+      if (transport_factory_relay)
+	{
+	  client->transport_factory_override(std::move(transport_factory_relay));
+	  transport_factory_relay.reset();
+	}
 
       restart_wait_timer.cancel();
       if (client_options->server_poll_timeout_enabled())
@@ -588,6 +615,7 @@ namespace openvpn {
     asio::io_context& io_context;
     ClientOptions::Ptr client_options;
     Client::Ptr client;
+    TransportClientFactory::Ptr transport_factory_relay;
     AsioTimer server_poll_timer;
     AsioTimer restart_wait_timer;
     AsioTimer conn_timer;

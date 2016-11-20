@@ -38,8 +38,8 @@ namespace openvpn {
       SERVER
     };
 
-    inline Type ns_cert_type(const OptionList& opt) {
-      const Option* o = opt.get_ptr("ns-cert-type");
+    inline Type ns_cert_type(const OptionList& opt, const std::string& relay_prefix) {
+      const Option* o = opt.get_ptr(relay_prefix + "ns-cert-type");
       if (o)
 	{
 	  const std::string ct = o->get_optional(1, 16);

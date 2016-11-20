@@ -87,6 +87,7 @@ namespace openvpn {
     enum LoadFlags {
       LF_PARSE_MODE = (1<<0),
       LF_ALLOW_CLIENT_CERT_NOT_REQUIRED = (1<<1),
+      LF_RELAY_MODE = (1<<2), // look for "relay-ca" instead of "ca" directive
     };
 
     virtual void set_mode(const Mode& mode_arg) = 0;

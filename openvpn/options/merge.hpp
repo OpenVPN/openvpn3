@@ -405,6 +405,15 @@ namespace openvpn {
 		}
 	      return false;
 #endif
+	    case 'r':
+	      if (d == "relay-extra-ca")
+		return true;
+	      if (d == "relay-tls-auth")
+		{
+		  flags |= F_MAY_INCLUDE_KEY_DIRECTION;
+		  return true;
+		}
+	      return false;
 	    case 't':
 	      if (d == "tls-auth")
 		{

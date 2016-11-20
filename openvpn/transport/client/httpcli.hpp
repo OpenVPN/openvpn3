@@ -199,7 +199,7 @@ namespace openvpn {
       }
 
       virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
-							    TransportClientParent& parent);
+							    TransportClientParent* parent);
 
     private:
       ClientConfig()
@@ -225,7 +225,7 @@ namespace openvpn {
 	  {
 	    if (!config->http_proxy_options)
 	      {
-		parent.proxy_error(Error::PROXY_ERROR, "http_proxy_options not defined");
+		parent->proxy_error(Error::PROXY_ERROR, "http_proxy_options not defined");
 		return;
 	      }
 
@@ -244,7 +244,7 @@ namespace openvpn {
 	    else
 	      {
 		// resolve it
-		parent.transport_pre_resolve();
+		parent->transport_pre_resolve();
 		resolver.async_resolve(proxy_host, proxy_port,
 				       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
 				       {
@@ -307,6 +307,16 @@ namespace openvpn {
 	return IP::Addr::from_asio(server_endpoint.address());
       }
 
+      virtual Protocol transport_protocol() const
+      {
+	if (server_endpoint.address().is_v4())
+	  return Protocol(Protocol::TCPv4);
+	else if (server_endpoint.address().is_v6())
+	  return Protocol(Protocol::TCPv6);
+	else
+	  return Protocol();
+      }
+
       virtual void stop() { stop_(); }
       virtual ~Client() { stop_(); }
 
@@ -326,7 +336,7 @@ namespace openvpn {
 
       Client(asio::io_context& io_context_arg,
 	     ClientConfig* config_arg,
-	     TransportClientParent& parent_arg)
+	     TransportClientParent* parent_arg)
 	:  io_context(io_context_arg),
 	   socket(io_context_arg),
 	   config(config_arg),
@@ -339,6 +349,11 @@ namespace openvpn {
 	   ntlm_phase_2_response_pending(false),
 	   drain_content_length(0)
       {
+      }
+
+      virtual void transport_reparent(TransportClientParent* parent_arg)
+      {
+	parent = parent_arg;
       }
 
       bool send_const(const Buffer& cbuf)
@@ -365,7 +380,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "Transport error on '" << server_host << "' via HTTP proxy " << proxy_host << ':' << proxy_port << " : " << error;
 	stop();
-	parent.transport_error(Error::TRANSPORT_ERROR, os.str());
+	parent->transport_error(Error::TRANSPORT_ERROR, os.str());
       }
 
       void proxy_error(const Error::Type fatal_err, const std::string& what)
@@ -373,7 +388,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "on " << proxy_host << ':' << proxy_port << ": " << what;
 	stop();
-	parent.proxy_error(fatal_err, os.str());
+	parent->proxy_error(fatal_err, os.str());
       }
 
       bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
@@ -381,7 +396,7 @@ namespace openvpn {
 	if (proxy_established)
 	  {
 	    if (!html_skip)
-	      parent.transport_recv(buf);
+	      parent->transport_recv(buf);
 	    else
 	      drain_html(buf); // skip extraneous HTML after header
 	  }
@@ -401,7 +416,7 @@ namespace openvpn {
       void tcp_write_queue_needs_send() // called by LinkImpl
       {
 	if (proxy_established)
-	  parent.transport_needs_send();
+	  parent->transport_needs_send();
       }
 
       void tcp_eof_handler() // called by LinkImpl
@@ -483,12 +498,12 @@ namespace openvpn {
       void proxy_connected(BufferAllocated& buf, const bool notify_parent)
       {
 	proxy_established = true;
-	if (parent.transport_is_openvpn_protocol())
+	if (parent->transport_is_openvpn_protocol())
 	  {
 	    // switch socket from HTTP proxy handshake mode to OpenVPN protocol mode
 	    impl->set_raw_mode(false);
 	    if (notify_parent)
-	      parent.transport_connecting();
+	      parent->transport_connecting();
 	    try {
 	      impl->inject(buf);
 	    }
@@ -501,8 +516,8 @@ namespace openvpn {
 	else
 	  {
 	    if (notify_parent)
-	      parent.transport_connecting();
-	    parent.transport_recv(buf);
+	      parent->transport_connecting();
+	    parent->transport_recv(buf);
 	  }
       }
 
@@ -515,9 +530,9 @@ namespace openvpn {
       void proxy_half_connected()
       {
 	proxy_established = true;
-	if (parent.transport_is_openvpn_protocol())
+	if (parent->transport_is_openvpn_protocol())
 	  impl->set_raw_mode_write(false);
-	parent.transport_connecting();
+	parent->transport_connecting();
       }
 
       void drain_html(BufferAllocated& buf)
@@ -862,7 +877,7 @@ namespace openvpn {
 		os << "DNS resolve error on '" << proxy_host << "' for TCP (HTTP proxy): " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
-		parent.transport_error(Error::UNDEF, os.str());
+		parent->transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
@@ -891,8 +906,8 @@ namespace openvpn {
       {
 	proxy_remote_list().get_endpoint(server_endpoint);
 	OPENVPN_LOG("Contacting " << server_endpoint << " via HTTP Proxy");
-	parent.transport_wait_proxy();
-	parent.ip_hole_punch(server_endpoint_addr());
+	parent->transport_wait_proxy();
+	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)
@@ -901,7 +916,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		parent.transport_error(Error::UNDEF, "socket_protect error (HTTP Proxy)");
+		parent->transport_error(Error::UNDEF, "socket_protect error (HTTP Proxy)");
 		return;
 	      }
 	  }
@@ -920,7 +935,7 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		parent.transport_wait();
+		parent->transport_wait();
 		impl.reset(new LinkImpl(this,
 					socket,
 					0, // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
@@ -942,7 +957,7 @@ namespace openvpn {
 		os << "TCP connect error on '" << proxy_host << ':' << proxy_port << "' (" << server_endpoint << ") for TCP-via-HTTP-proxy session: " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
-		parent.transport_error(Error::UNDEF, os.str());
+		parent->transport_error(Error::UNDEF, os.str());
 	      }
 	  }
       }
@@ -991,7 +1006,7 @@ namespace openvpn {
       asio::io_context& io_context;
       asio::ip::tcp::socket socket;
       ClientConfig::Ptr config;
-      TransportClientParent& parent;
+      TransportClientParent* parent;
       LinkImpl::Ptr impl;
       asio::ip::tcp::resolver resolver;
       LinkImpl::protocol::endpoint server_endpoint;
@@ -1011,7 +1026,7 @@ namespace openvpn {
       std::unique_ptr<HTTP::HTMLSkip> html_skip;
     };
 
-    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_context& io_context, TransportClientParent& parent)
+    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_context& io_context, TransportClientParent* parent)
     {
       return TransportClient::Ptr(new Client(io_context, this, parent));
     }

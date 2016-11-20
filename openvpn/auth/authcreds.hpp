@@ -75,7 +75,7 @@ namespace openvpn {
 	std::ostringstream os;
 	os << "*** AuthCreds ***" << std::endl;
 	os << "user: '" << username << "'" << std::endl;
-	//os << "pass: '" << password << "'" << std::endl;
+	os << "pass: (" << password.length() << " chars)" << std::endl;
 	os << "peer info:" << std::endl;
 	os << peer_info.render(Option::RENDER_BRACKET|Option::RENDER_NUMBER);
 	return os.str();

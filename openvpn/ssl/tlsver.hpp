@@ -72,9 +72,11 @@ namespace openvpn {
 	throw option_error("tls-version-min: unrecognized TLS version");
     }
 
-    inline Type parse_tls_version_min(const OptionList& opt, const Type max_version)
+    inline Type parse_tls_version_min(const OptionList& opt,
+				      const std::string& relay_prefix,
+				      const Type max_version)
     {
-      const Option* o = opt.get_ptr("tls-version-min");
+      const Option* o = opt.get_ptr(relay_prefix + "tls-version-min");
       if (o)
 	{
 	  const std::string ver = o->get_optional(1, 16);

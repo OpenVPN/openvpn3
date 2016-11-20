@@ -35,8 +35,10 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
+#include <openvpn/transport/protocol.hpp>
 
 namespace openvpn {
+  struct TransportClientParent;
 
   // Base class for client transport object.
   struct TransportClient : public virtual RC<thread_unsafe_refcount>
@@ -53,6 +55,8 @@ namespace openvpn {
     virtual void reset_align_adjust(const size_t align_adjust) = 0;
     virtual IP::Addr server_endpoint_addr() const = 0;
     virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const = 0;
+    virtual Protocol transport_protocol() const = 0;
+    virtual void transport_reparent(TransportClientParent* parent) = 0;
   };
 
   // Base class for parent of client transport object, used by client transport
@@ -94,7 +98,8 @@ namespace openvpn {
     typedef RCPtr<TransportClientFactory> Ptr;
 
     virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
-							  TransportClientParent& parent) = 0;
+							  TransportClientParent* parent) = 0;
+    virtual bool is_relay() { return false; }
   };
 
 } // namespace openvpn
