@@ -466,7 +466,7 @@ namespace openvpn {
 
 		    if (config->transcli)
 		      {
-			transcli = config->transcli->new_transport_client_obj(io_context, *this);
+			transcli = config->transcli->new_transport_client_obj(io_context, this);
 			transcli->transport_start();
 		      }
 		    else
