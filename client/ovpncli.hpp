@@ -26,6 +26,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/pki/epkibase.hpp>
@@ -142,9 +143,9 @@ namespace openvpn {
     {
       KeyValue() {}
 
-      KeyValue(const std::string& key_arg, const std::string& value_arg)
-	: key(key_arg),
-	  value(value_arg) {}
+      KeyValue(std::string key_arg, std::string value_arg)
+	: key(std::move(key_arg)),
+	  value(std::move(value_arg)) {}
 
       std::string key;
       std::string value;
