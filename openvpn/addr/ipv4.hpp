@@ -91,7 +91,7 @@ namespace openvpn {
 	std::memset(&ret, 0, sizeof(ret));
 	ret.sin_family = AF_INET;
 	ret.sin_port = 0;
-	ret.sin_addr.s_addr = htonl(u.addr);;
+	ret.sin_addr.s_addr = htonl(u.addr);
 	return ret;
       }
 
