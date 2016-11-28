@@ -26,6 +26,7 @@
 #include <grp.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <errno.h>
 
 #include <cstring>     // for std::strerror()
 #include <string>
@@ -48,27 +49,28 @@ namespace openvpn {
   public:
     OPENVPN_EXCEPTION(user_group_err);
 
-    SetUserGroup(const std::string& user, const std::string& group)
+    SetUserGroup(const std::string& user, const std::string& group, const bool strict)
       : SetUserGroup(user.empty() ? nullptr : user.c_str(),
-		     group.empty() ? nullptr : group.c_str())
+		     group.empty() ? nullptr : group.c_str(),
+		     strict)
     {
     }
 
-    SetUserGroup(const char *user, const char *group)
+    SetUserGroup(const char *user, const char *group, const bool strict)
       : pw(nullptr),
 	gr(nullptr)
     {
       if (user)
 	{
 	  pw = ::getpwnam(user);
-	  if (!pw)
+	  if (!pw && strict)
 	    OPENVPN_THROW(user_group_err, "user lookup failed for '" << user << '\'');
 	  user_name = user;
 	}
       if (group)
 	{
 	  gr = ::getgrnam(group);
-	  if (!gr)
+	  if (!gr && strict)
 	    OPENVPN_THROW(user_group_err, "group lookup failed for '" << group << '\'');
 	  group_name = group;
 	}
@@ -79,17 +81,26 @@ namespace openvpn {
       if (gr)
 	{
 	  if (::setgid(gr->gr_gid))
-	    OPENVPN_THROW(user_group_err, "setgid failed for group '" << group_name << "': " << std::strerror(errno));
+	    {
+	      const int eno = errno;
+	      OPENVPN_THROW(user_group_err, "setgid failed for group '" << group_name << "': " << std::strerror(eno));
+	    }
 	  gid_t gr_list[1];
 	  gr_list[0] = gr->gr_gid;
 	  if (::setgroups(1, gr_list))
-	    OPENVPN_THROW(user_group_err, "setgroups failed for group '" << group_name << "': " << std::strerror(errno));
+	    {
+	      const int eno = errno;
+	      OPENVPN_THROW(user_group_err, "setgroups failed for group '" << group_name << "': " << std::strerror(eno));
+	    }
 	  OPENVPN_LOG("GID set to '" << group_name << '\'');
 	}
       if (pw)
 	{
 	  if (::setuid(pw->pw_uid))
-	    OPENVPN_THROW(user_group_err, "setuid failed for user '" << user_name << "': " << std::strerror(errno));
+	    {
+	      const int eno = errno;
+	      OPENVPN_THROW(user_group_err, "setuid failed for user '" << user_name << "': " << std::strerror(eno));
+	    }
 	  OPENVPN_LOG("UID set to '" << user_name << '\'');
 	}
 #ifdef OPENVPN_PLATFORM_LINUX
@@ -99,18 +110,67 @@ namespace openvpn {
 #endif
     }
 
+    void chown(const std::string& fn) const
+    {
+      if (pw && gr)
+	{
+	  const int status = ::chown(fn.c_str(), uid(), gid());
+	  if (status < 0)
+	    {
+	      const int eno = errno;
+	      OPENVPN_THROW(user_group_err, "chown " << user_name << '.' << group_name << ' ' << fn << " : " << std::strerror(eno));
+	    }
+	}
+    }
+
+    void chown(const int fd, const std::string& title) const
+    {
+      if (pw && gr)
+	{
+	  const int status = ::fchown(fd, uid(), gid());
+	  if (status < 0)
+	    {
+	      const int eno = errno;
+	      OPENVPN_THROW(user_group_err, "chown " << user_name << '.' << group_name << ' ' << title << " : " << std::strerror(eno));
+	    }
+	}
+    }
+
     void invalidate()
     {
       pw = nullptr;
       gr = nullptr;
     }
 
-    int uid() const
+    uid_t uid() const
     {
       if (pw)
 	return pw->pw_uid;
       else
 	return -1;
+    }
+
+    gid_t gid() const
+    {
+      if (gr)
+	return gr->gr_gid;
+      else
+	return -1;
+    }
+
+    bool uid_defined() const
+    {
+      return bool(pw);
+    }
+
+    bool gid_defined() const
+    {
+      return bool(gr);
+    }
+
+    bool defined() const
+    {
+      return uid_defined() && gid_defined();
     }
 
   private:
