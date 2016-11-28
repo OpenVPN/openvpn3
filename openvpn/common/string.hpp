@@ -431,7 +431,7 @@ namespace openvpn {
 	  ret += s;
 	  first = false;
 	}
-      if (tail)
+      if (tail && !ret.empty())
 	ret += delim;
       return ret;
     }
