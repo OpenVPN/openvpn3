@@ -26,6 +26,7 @@
 #include <sstream>
 #include <vector>
 
+#include <openvpn/common/number.hpp>
 #include <openvpn/http/urlencode.hpp>
 #include <openvpn/http/webexcept.hpp>
 #include <openvpn/common/string.hpp>
@@ -108,6 +109,47 @@ namespace openvpn {
 	  return p->value;
 	else
 	  throw url_parameter_error(key + " : not found");
+      }
+
+      template <typename T>
+      T get_num(const std::string& name, const std::string& short_name, const T default_value) const
+      {
+	const Parm* p = get(name);
+	if (!p && !short_name.empty())
+	  p = get(short_name);
+	if (p)
+	  return parse_number_throw<T>(p->value, name);
+	else
+	  return default_value;
+      }
+
+      bool get_bool(const std::string& name, const std::string& short_name, const bool default_value) const
+      {
+	const Parm* p = get(name);
+	if (!p && !short_name.empty())
+	  p = get(short_name);
+	if (p)
+	  {
+	    if (p->value == "0")
+	      return false;
+	    else if (p->value == "1")
+	      return true;
+	    else
+	      throw url_parameter_error(name + ": parameter must be 0 or 1");
+	  }
+	else
+	  return default_value;
+      }
+
+      std::string get_string(const std::string& name, const std::string& short_name) const
+      {
+	const Parm* p = get(name);
+	if (!p && !short_name.empty())
+	  p = get(short_name);
+	if (p)
+	  return p->value;
+	else
+	  return "";
       }
 
       std::string to_string() const
