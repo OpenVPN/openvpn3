@@ -33,12 +33,14 @@
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/logrotate.hpp>
 #include <openvpn/common/redir.hpp>
+#include <openvpn/common/usergroup.hpp>
 
 namespace openvpn {
 
   OPENVPN_EXCEPTION(daemon_err);
 
   inline void log_setup(const std::string& log_fn,
+			const SetUserGroup* user_group,
 			const bool log_append,
 			const int log_versions,
 			const bool stdin_to_dev_null,
@@ -51,6 +53,14 @@ namespace openvpn {
 		      log_append ? RedirectStd::FLAGS_APPEND : RedirectStd::FLAGS_OVERWRITE,
 		      RedirectStd::MODE_USER_GROUP,
 		      combine_out_err);
+    // if user_group specified, do chown on log file
+    try {
+      if (user_group && redir.out.defined())
+	user_group->chown(redir.out(), log_fn);
+    }
+    catch (const std::exception&)
+      {
+      }
     redir.redirect();
   }
 
@@ -61,10 +71,11 @@ namespace openvpn {
   }
 
   inline void daemonize(const std::string& log_fn,
+			const SetUserGroup* user_group,
 			const bool log_append,
 			const int log_versions)
   {
-    log_setup(log_fn, log_append, log_versions, true, true);
+    log_setup(log_fn, user_group, log_append, log_versions, true, true);
     daemonize();
   }
 
