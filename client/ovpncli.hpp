@@ -490,6 +490,9 @@ namespace openvpn {
       // return transport stats only
       TransportStats transport_stats() const;
 
+      // post control channel message
+      void post_cc_msg(const std::string& msg);
+
       // Callback for delivering events during connect() call.
       // Will be called from the thread executing connect().
       virtual void event(const Event&) = 0;

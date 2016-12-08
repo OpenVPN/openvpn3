@@ -1154,6 +1154,16 @@ namespace openvpn {
 	}
     }
 
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::post_cc_msg(const std::string& msg)
+    {
+      if (state->is_foreign_thread_access())
+	{
+	  ClientConnect* session = state->session.get();
+	  if (session)
+	    state->session->thread_safe_post_cc_msg(msg);
+	}
+    }
+
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::crypto_self_test()
     {
       return SelfTest::crypto_self_test();

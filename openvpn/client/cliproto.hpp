@@ -216,6 +216,14 @@ namespace openvpn {
 	  tun->set_disconnect();
       }
 
+      void post_cc_msg(const std::string& msg)
+      {
+	Base::update_now();
+	Base::write_control_string(msg);
+	Base::flush(true);
+	set_housekeeping_timer();
+      }
+
       void stop(const bool call_terminate_callback)
       {
 	if (!halt)

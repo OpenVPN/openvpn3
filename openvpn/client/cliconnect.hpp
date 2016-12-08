@@ -253,6 +253,21 @@ namespace openvpn {
       dont_restart_ = true;
     }
 
+    void post_cc_msg(const std::string& msg)
+    {
+      if (!halt && client)
+	client->post_cc_msg(msg);
+    }
+
+    void thread_safe_post_cc_msg(std::string msg)
+    {
+      if (!halt)
+	asio::post(io_context, [self=Ptr(this), msg=std::move(msg)]()
+		   {
+		     self->post_cc_msg(msg);
+		   });
+    }
+
     ~ClientConnect()
     {
       stop();
