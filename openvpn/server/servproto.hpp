@@ -33,6 +33,7 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/abort.hpp>
 #include <openvpn/common/link.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
@@ -349,6 +350,11 @@ namespace openvpn {
 		    auth_failed("no management provider", false);
 		  }
 	      }
+	  }
+	else if (string::starts_with(msg, "INFO,"))
+	  {
+	    if (get_management())
+	      ManLink::send->info_request(msg.substr(5));
 	  }
 	else
 	  {
