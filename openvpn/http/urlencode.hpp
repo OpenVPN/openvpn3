@@ -64,6 +64,7 @@ namespace openvpn {
       int value = 0;
       State state = TEXT;
       std::string ret;
+      ret.reserve(encoded.size()); // just a guess
 
       for (auto &c : encoded)
 	{
