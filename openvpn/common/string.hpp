@@ -116,14 +116,25 @@ namespace openvpn {
     // return true if string ends with char c
     inline bool ends_with(const std::string& str, const char c)
     {
-      const size_t len = str.length();
-      return len > 0 && str[len-1] == c;
+      return str.length() && str.back() == c;
     }
 
     // return true if string ends with a newline
     inline bool ends_with_newline(const std::string& str)
     {
       return ends_with(str, '\n');
+    }
+
+    // return true if string ends with a CR or LF
+    inline bool ends_with_crlf(const std::string& str)
+    {
+      if (str.length())
+	{
+	  const char c = str.back();
+	  return c == '\n' || c == '\r';
+	}
+      else
+	return false;
     }
 
     // make sure that string ends with char c, if not append it
@@ -165,19 +176,20 @@ namespace openvpn {
       return str;
     }
 
+    // make sure that string ends with char c, if not append it (unless the string is empty)
+    inline std::string add_trailing_unless_empty_copy(const std::string& str, const char c)
+    {
+      if (str.empty() || ends_with(str, c))
+	return str;
+      else
+	return str + c;
+    }
+
     // remove trailing \r or \n chars
     inline void trim_crlf(std::string& str)
     {
-      static const char crlf[] = "\r\n";
-      const size_t pos = str.find_last_not_of(crlf);
-      if (pos == std::string::npos)
-	str = "";
-      else
-	{
-	  const size_t p = pos + 1;
-	  if (p < str.length())
-	    str = str.substr(0, p);
-	}
+      while (ends_with_crlf(str))
+	str.pop_back();
     }
 
     // remove trailing \r or \n chars
@@ -227,6 +239,11 @@ namespace openvpn {
       return std::isalpha(static_cast<unsigned char>(c)) != 0;
     }
 
+    inline bool is_alphanumeric(const char c)
+    {
+      return std::isalnum(static_cast<unsigned char>(c)) != 0;
+    }
+
     inline bool is_printable(const char c)
     {
       return std::isprint(static_cast<unsigned char>(c)) != 0;
@@ -251,7 +268,7 @@ namespace openvpn {
     inline bool is_word(const std::string& str)
     {
       for (auto &c : str)
-	if (!(is_alpha(c) || is_digit(c) || c == '_'))
+	if (!(is_alphanumeric(c) || c == '_'))
 	  return false;
       return true;
     }
