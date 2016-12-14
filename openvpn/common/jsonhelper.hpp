@@ -50,6 +50,15 @@ namespace openvpn {
       return parse(read_text_utf8(fn), fn);
     }
 
+    static Json::Value parse_from_buffer(const Buffer& buf, const std::string& title)
+    {
+      Json::Value root;
+      Json::Reader reader;
+      if (!reader.parse(reinterpret_cast<const char *>(buf.c_data()), reinterpret_cast<const char *>(buf.c_data()) + buf.size(), root, false))
+	OPENVPN_THROW(json_parse, title << " : " << reader.getFormattedErrorMessages());
+      return root;
+    }
+
     template <typename T>
     static void from_vector(Json::Value& root, const T& vec, const std::string& name)
     {
