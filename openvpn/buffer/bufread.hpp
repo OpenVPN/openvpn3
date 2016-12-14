@@ -54,7 +54,7 @@ namespace openvpn {
     BufferList buflist;
     while (true)
       {
-	BufferAllocated buf(3, 0); // fixme
+	BufferAllocated buf(1024, 0);
 	if (!buf_read(fd, buf, title))
 	  break;
 	buflist.put_consume(buf);
