@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <cstdint>         // for std::uint64_t
 
 namespace openvpn {
 
@@ -37,7 +38,7 @@ namespace openvpn {
     return stat(filename.c_str(), &buffer) == 0; 
   }
 
-  // Return file modification time or 0 on error
+  // Return file modification time (in seconds since unix epoch) or 0 on error
   inline time_t file_mod_time(const std::string& filename)
   {
     struct stat buffer;
@@ -45,6 +46,23 @@ namespace openvpn {
       return 0;
     else
       return buffer.st_mtime;
+  }
+
+  // Return file modification time (in nanoseconds since unix epoch) or 0 on error
+  inline std::uint64_t file_mod_time_nanoseconds(const std::string& filename)
+  {
+    typedef std::uint64_t T;
+    struct stat s;
+    if (::stat(filename.c_str(), &s) == 0)
+      return T(s.st_mtim.tv_sec) * T(1000000000) + T(s.st_mtim.tv_nsec);
+    else
+      return 0;
+  }
+
+  // Return file modification time (in milliseconds since unix epoch) or 0 on error
+  inline std::uint64_t file_mod_time_milliseconds(const std::string& filename)
+  {
+    return file_mod_time_nanoseconds(filename) / std::uint64_t(1000000);
   }
 
 }
