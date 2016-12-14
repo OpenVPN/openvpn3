@@ -38,55 +38,106 @@ void join(const std::string& p1, const std::string& p2)
   std::cout << "join('" << p1 << "', '" << p2 << "') = '" << res << "'" << std::endl;
 }
 
+void join3(const std::string& p1, const std::string& p2, const std::string& p3)
+{
+  const std::string res = path::join(p1, p2, p3);
+  std::cout << "join('" << p1 << "', '" << p2 << "', '" << p3 << "') = '" << res << "'" << std::endl;
+}
+
+void join4(const std::string& p1, const std::string& p2, const std::string& p3, const std::string& p4)
+{
+  const std::string res = path::join(p1, p2, p3, p4);
+  std::cout << "join('" << p1 << "', '" << p2 << "', '" << p3 << "', '" << p4 << "') = '" << res << "'" << std::endl;
+}
+
+void splitjoin(const std::string& p1)
+{
+  const std::string d = path::dirname(p1);
+  const std::string b = path::basename(p1);
+  const std::string p2 = path::join(d, b);
+  std::cout << "splitjoin p1='" << p1 << "' dir='" << d << "' bn='" << b << "' p2='" << p2 << "'" << std::endl;
+}
+
+void test1()
+{
+  // basename
+  basename("");
+  basename("/");
+  basename("/foo");
+  basename("/foo/bar");
+  basename("foo/bar/boo");
+  basename("foo/bar/");
+  basename("foo\\bar\\boo");
+
+  // dirname
+  dirname("");
+  dirname("/");
+  dirname("/foo");
+  dirname("/foo/bar");
+  dirname("foo/bar/boo");
+  dirname("foo/bar/");
+  dirname("foo\\bar\\boo");
+
+  // is_flat
+  is_flat("");
+  is_flat("/");
+  is_flat("foo.bar");
+  is_flat("foo/bar");
+  is_flat("c:/foo");
+  is_flat("c:foo");
+  is_flat("z:\\foo");
+  is_flat(".");
+  is_flat("..");
+  is_flat("./foo");
+
+  // join
+  join("foo", "bar");
+  join("foo", "");
+  join("", "foo/bar");
+  join("", "bar");
+  join("foo", "/bar");
+  join("/", "bar");
+
+  // join (3 or more parms)
+  join3("", "", "three");
+  join3("one", "two", "three");
+  join3("one", "/two", "three");
+  join4("one", "two", "three", "four");
+  join4("one", "two", "", "four");
+
+  // ext
+  ext("");
+  ext("foo");
+  ext("foo.bar");
+  ext("foo.bar.moo");
+  ext("foo.");
+  ext(".foo");
+
+  // splitjoin
+  splitjoin("");
+  splitjoin("/");
+  splitjoin("/foo");
+  splitjoin("/foo/");
+  splitjoin("/foo/bar");
+  splitjoin("/foo/bar/");
+}
+
+void test_join_speed()
+{
+  size_t count = 0;
+  for (int i = 0; i < 10000000; ++i)
+    {
+      const std::string s = path::join("one", "two", "three", "four");
+      count += s.length();
+    }
+  std::cout << count << std::endl;
+}
 
 int main()
 {
   try {
-    // basename
-    basename("");
-    basename("/");
-    basename("/foo");
-    basename("/foo/bar");
-    basename("foo/bar/boo");
-    basename("foo/bar/");
-    basename("foo\\bar\\boo");
-
-    // dirname
-    dirname("");
-    dirname("/");
-    dirname("/foo");
-    dirname("/foo/bar");
-    dirname("foo/bar/boo");
-    dirname("foo/bar/");
-    dirname("foo\\bar\\boo");
-
-    // is_flat
-    is_flat("");
-    is_flat("/");
-    is_flat("foo.bar");
-    is_flat("foo/bar");
-    is_flat("c:/foo");
-    is_flat("c:foo");
-    is_flat("z:\\foo");
-    is_flat(".");
-    is_flat("..");
-    is_flat("./foo");
-
-    // join
-    join("foo", "bar");
-    join("foo", "");
-    join("", "foo/bar");
-    join("", "bar");
-    join("foo", "/bar");
-    join("/", "bar");
-
-    // ext
-    ext("");
-    ext("foo");
-    ext("foo.bar");
-    ext("foo.bar.moo");
-    ext("foo.");
-    ext(".foo");
+    test1();
+    //test_join_speed();
   }
   catch (const std::exception& e)
     {
