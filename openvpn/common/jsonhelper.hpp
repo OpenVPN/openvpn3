@@ -248,7 +248,7 @@ namespace openvpn {
       return get_bool(root, name, "");
     }
 
-    static bool get_bool_optional(const Json::Value& root, const std::string& name)
+    static bool get_bool_optional(const Json::Value& root, const std::string& name, const bool default_value=false)
     {
       const Json::Value& jv = root[name];
       if (jv.isConvertibleTo(Json::booleanValue))
@@ -259,7 +259,7 @@ namespace openvpn {
 	  return bs == "true" || bs == "1";
 	}
       else
-	return false;
+	return default_value;
     }
 
     static const Json::Value& get_dict(const Json::Value& root, const std::string& name, const bool optional, const std::string& title)
