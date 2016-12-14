@@ -45,12 +45,12 @@ namespace openvpn {
     std::vector<std::string> ret;
     if (size_hint)
       ret.reserve(size_hint);
-    unique_ptr_del<DIR> dir(opendir(dirname.c_str()), [](DIR* d) { closedir(d); });
+    unique_ptr_del<DIR> dir(::opendir(dirname.c_str()), [](DIR* d) { ::closedir(d); });
     if (!dir)
       throw enum_dir_error(dirname + ": cannot open directory");
 
     struct dirent *e;
-    while ((e = readdir(dir.get())) != nullptr)
+    while ((e = ::readdir(dir.get())) != nullptr)
       {
 	std::string fn(e->d_name);
 	if (fn != "." && fn != "..")
