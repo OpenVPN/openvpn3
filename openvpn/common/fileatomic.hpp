@@ -24,39 +24,43 @@
 #ifndef OPENVPN_COMMON_FILEATOMIC_H
 #define OPENVPN_COMMON_FILEATOMIC_H
 
-#include <stdio.h> // for rename()
-#include <errno.h>
-#include <cstring>
-
 #include <openvpn/common/platform.hpp>
-#include <openvpn/common/file.hpp>
-#include <openvpn/common/hexstr.hpp>
-#include <openvpn/random/randapi.hpp>
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #error atomic file methods not supported on Windows
 #endif
 
+#include <stdio.h> // for rename()
+#include <errno.h>
+#include <cstring>
+
+#include <openvpn/common/file.hpp>
+#include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/fileunix.hpp>
+#include <openvpn/common/path.hpp>
+#include <openvpn/random/randapi.hpp>
+
 namespace openvpn {
   // Atomically write binary buffer to file (relies on
   // the atomicity of rename())
-  inline void write_binary_atomic(const std::string& filename,
+  inline void write_binary_atomic(const std::string& fn,
+				  const mode_t mode,
 				  const Buffer& buf,
 				  RandomAPI& rng)
   {
     // generate temporary filename
     unsigned char data[16];
     rng.rand_fill(data);
-    const std::string tfn = filename + '.' + render_hex(data, sizeof(data));
+    const std::string tfn = path::join(path::dirname(fn), '.' + path::basename(fn) + '.' + render_hex(data, sizeof(data)));
 
     // write to temporary file
-    write_binary(tfn, buf);
+    write_binary_unix(tfn, mode, buf);
 
     // then move into position
-    if (::rename(tfn.c_str(), filename.c_str()) == -1)
+    if (::rename(tfn.c_str(), fn.c_str()) == -1)
       {
 	const int eno = errno;
-	OPENVPN_THROW(open_file_error, "error moving '" << tfn << "' -> '" << filename << "' : " << std::strerror(eno));
+	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << std::strerror(eno));
       }
   }
 }
