@@ -65,6 +65,15 @@ namespace openvpn {
       return ret;
     }
 
+    void final(Buffer& output)
+    {
+      const size_t size = ctx->size();
+      if (size > output.max_size())
+	OPENVPN_BUFFER_THROW(buffer_overflow);
+      ctx->final(output.data());
+      output.set_size(size);
+    }
+
     std::string final_hex()
     {
       BufferPtr bp = final();
