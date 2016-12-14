@@ -145,6 +145,12 @@ namespace openvpn {
 	return string::add_trailing_copy(p1, dirsep[0]) + p2;
     }
 
+    template<typename... Args>
+    inline std::string join(const std::string& p1, const std::string& p2, Args... args)
+    {
+      return join(join(p1, p2), args...);
+    }
+
   } // namespace path
 } // namespace openvpn
 
