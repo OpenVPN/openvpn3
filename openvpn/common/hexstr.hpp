@@ -55,6 +55,24 @@ namespace openvpn {
       return -1;
   }
 
+  class RenderHexByte
+  {
+  public:
+    RenderHexByte(const unsigned char byte, const bool caps=false)
+    {
+      c[0] = render_hex_char(byte >> 4, caps);
+      c[1] = render_hex_char(byte & 0x0F, caps);
+    }
+
+    char char1() const { return c[0]; }
+    char char2() const { return c[1]; }
+
+    const char *str2() const { return c; } // Note: length=2, NOT null terminated
+
+  private:
+    char c[2];
+  };
+
   inline std::string render_hex(const unsigned char *data, size_t size, const bool caps=false)
   {
     if (!data)
@@ -63,9 +81,9 @@ namespace openvpn {
     ret.reserve(size*2+1);
     while (size--)
       {
-	const unsigned char c = *data++;
-	ret += render_hex_char(c >> 4, caps);
-	ret += render_hex_char(c & 0x0F, caps);
+	const RenderHexByte b(*data++, caps);
+	ret += b.char1();
+	ret += b.char2();
       }
     return ret;
   }
@@ -81,9 +99,9 @@ namespace openvpn {
       {
 	if (prsep)
 	  ret += sep;
-	const unsigned char c = *data++;
-	ret += render_hex_char(c >> 4, caps);
-	ret += render_hex_char(c & 0x0F, caps);
+	const RenderHexByte b(*data++, caps);
+	ret += b.char1();
+	ret += b.char2();
 	prsep = true;
       }
     return ret;
@@ -96,9 +114,9 @@ namespace openvpn {
     ret.reserve(data.size()*2+1);
     for (size_t i = 0; i < data.size(); ++i)
       {
-	const unsigned char c = data[i];
-	ret += render_hex_char(c >> 4, caps);
-	ret += render_hex_char(c & 0x0F, caps);
+	const RenderHexByte b(data[i], caps);
+	ret += b.char1();
+	ret += b.char2();
       }
     return ret;
   }
@@ -221,8 +239,8 @@ namespace openvpn {
 
   std::string render_hex_number(unsigned char uc, const bool caps=false)
   {
-    unsigned char buf[1] = { uc };
-    return render_hex(buf, 1, caps);
+    RenderHexByte b(uc, caps);
+    return std::string(b.str2(), 2);
   }
 
 } // namespace openvpn
