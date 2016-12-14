@@ -337,6 +337,17 @@ namespace openvpn {
       return false;
     }
 
+    bool is_zeroed() const
+    {
+      const T* end = c_data_end();
+      for (const T* p = c_data(); p < end; ++p)
+	{
+	  if (*p)
+	    return false;
+	}
+      return true;
+    }
+
     // mutable index into array
     T& operator[](const size_t index)
     {
