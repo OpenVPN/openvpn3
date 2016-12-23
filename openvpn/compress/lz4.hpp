@@ -71,12 +71,13 @@ namespace openvpn {
 	}
 
       // do compress
-      const int comp_size = LZ4_compress((const char *)buf.c_data(), (char *)work.data(), (int)buf.size());
+      const int comp_size = LZ4_compress_default((const char *)buf.c_data(), (char *)work.data(),
+                                                 (int)buf.size(), (int)work.capacity());
 
       // did compression actually reduce data length?
       if (comp_size < buf.size())
 	{
-	  if (comp_size < 0)
+	  if (comp_size <= 0)
 	    {
 	      error(buf);
 	      return false;
