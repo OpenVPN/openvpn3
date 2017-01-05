@@ -43,7 +43,7 @@ namespace openvpn {
     OPENVPN_EXCEPTION(mac_lifecycle_error);
 
     MacLifeCycle()
-      : ReachabilityTracker(true, true),
+      : ReachabilityTracker(true, false),
 	nc(nullptr),
 	thread(nullptr),
 	paused(false)
@@ -172,8 +172,8 @@ namespace openvpn {
 
     bool net_up()
     {
-      ReachabilityViaWiFi r;
-      return ReachabilityViaWiFi::status_from_flags(r.flags()) != ReachabilityInterface::NotReachable;
+      ReachabilityViaInternet r;
+      return ReachabilityViaInternet::status_from_flags(r.flags()) != ReachabilityInterface::NotReachable;
     }
 
     void iface_watch()
@@ -229,10 +229,11 @@ namespace openvpn {
 
     virtual void reachability_tracker_event(const ReachabilityBase& rb, SCNetworkReachabilityFlags flags)
     {
-      if (rb.vtype() == ReachabilityBase::WiFi)
+      if (rb.vtype() == ReachabilityBase::Internet)
 	{
-	  state.net_up = (rb.vstatus(flags) != ReachabilityInterface::NotReachable);
-	  OPENVPN_LOG("MacLifeCycle NET_STATE " << state.net_up);
+	  const ReachabilityBase::Status status = rb.vstatus(flags);
+	  state.net_up = (status != ReachabilityInterface::NotReachable);
+	  OPENVPN_LOG("MacLifeCycle NET_STATE " << state.net_up << " status=" << ReachabilityBase::render_status(status) << " flags=" << ReachabilityBase::render_flags(flags));
 	  schedule_action_timer(1);
 	}
     }
