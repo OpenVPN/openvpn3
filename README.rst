@@ -83,3 +83,13 @@ To view the client wrapper options::
 To connect::
 
     ./cli client.ovpn
+
+Contributing
+------------
+
+See `<CONTRIBUTING.rst>`_.
+
+License
+-------
+
+See `<LICENSE.rst>`_.
