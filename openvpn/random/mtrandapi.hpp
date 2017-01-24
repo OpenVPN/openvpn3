@@ -56,6 +56,12 @@ namespace openvpn {
       return "MTRand";
     }
 
+    // Return true if algorithm is crypto-strength
+    virtual bool is_crypto() const
+    {
+      return false;
+    }
+
     // Fill buffer with random bytes
     virtual void rand_bytes(unsigned char *buf, size_t size)
     {

@@ -56,6 +56,7 @@ namespace openvpn {
 
     void randomize(RandomAPI& rng)
     {
+      rng.assert_crypto();
       if (!server_)
 	rng.rand_bytes(pre_master, sizeof(pre_master));
       rng.rand_bytes(random1, sizeof(random1));

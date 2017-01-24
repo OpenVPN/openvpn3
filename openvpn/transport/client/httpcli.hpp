@@ -677,6 +677,7 @@ namespace openvpn {
 
 	  // generate a client nonce
 	  unsigned char cnonce_raw[8];
+	  config->rng->assert_crypto();
 	  config->rng->rand_bytes(cnonce_raw, sizeof(cnonce_raw));
 	  const std::string cnonce = render_hex(cnonce_raw, sizeof(cnonce_raw));
 

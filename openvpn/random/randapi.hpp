@@ -40,6 +40,9 @@ namespace openvpn {
     // Random algorithm name
     virtual std::string name() const = 0;
 
+    // Return true if algorithm is crypto-strength
+    virtual bool is_crypto() const = 0;
+
     // Fill buffer with random bytes
     virtual void rand_bytes(unsigned char *buf, size_t size) = 0;
 
@@ -89,6 +92,13 @@ namespace openvpn {
 	return start;
       else
 	return start + rand_get_positive<T>() % (end - start + 1);
+    }
+
+    // Throw an exception if algorithm is not crypto-strength
+    void assert_crypto() const
+    {
+      if (!is_crypto())
+	throw Exception("RandomAPI: " + name() + " algorithm is not crypto-strength");
     }
 
     // UniformRandomBitGenerator for std::shuffle

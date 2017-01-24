@@ -68,6 +68,9 @@ namespace openvpn {
 	if (password.empty())
 	  throw Exception("password is blank");
 
+	// ensure that RNG is crypto-strength
+	rng.assert_crypto();
+
 	// split domain\username
 	std::string domain;
 	std::string username;

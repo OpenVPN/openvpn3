@@ -50,7 +50,7 @@ namespace openvpn {
     {
       encrypt_.frame = frame;
       decrypt_.frame = frame;
-      encrypt_.prng = prng;
+      encrypt_.set_prng(prng);
     }
 
     // Encrypt/Decrypt

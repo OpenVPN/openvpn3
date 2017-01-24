@@ -278,6 +278,7 @@ namespace openvpn {
 
       virtual void set_rng(const RandomAPI::Ptr& rng_arg)
       {
+	rng_arg->assert_crypto();
 	rng = rng_arg;
       }
 

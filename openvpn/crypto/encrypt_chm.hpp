@@ -25,6 +25,7 @@
 #define OPENVPN_CRYPTO_ENCRYPT_CHM_H
 
 #include <cstring>
+#include <utility>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -100,11 +101,16 @@ namespace openvpn {
 	}
     }
 
+    void set_prng(RandomAPI::Ptr prng_arg)
+    {
+      prng_arg->assert_crypto();
+      prng = std::move(prng_arg);
+    }
+
     Frame::Ptr frame;
     CipherContext<CRYPTO_API> cipher;
     OvpnHMAC<CRYPTO_API> hmac;
     PacketIDSend pid_send;
-    RandomAPI::Ptr prng;
 
   private:
     // compute HMAC signature of data buffer,
@@ -122,6 +128,7 @@ namespace openvpn {
     }
 
     BufferAllocated work;
+    RandomAPI::Ptr prng;
   };
 
 } // namespace openvpn

@@ -57,6 +57,12 @@ namespace openvpn {
       return "PolarSSL-CTR_DRBG";
     }
 
+    // Return true if algorithm is crypto-strength
+    virtual bool is_crypto() const
+    {
+      return true;
+    }
+
     // Fill buffer with random bytes
     virtual void rand_bytes(unsigned char *buf, size_t size)
     {

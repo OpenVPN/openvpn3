@@ -29,6 +29,7 @@ namespace openvpn {
     {
       Key(RandomAPI& rng)
       {
+	rng.assert_crypto();
 	rng.rand_bytes(data, sizeof(data));
       }
 

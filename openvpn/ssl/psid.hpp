@@ -60,6 +60,7 @@ namespace openvpn {
     template <typename PRNG_TYPE>
     void randomize(PRNG_TYPE& prng)
     {
+      prng.assert_crypto();
       prng.rand_bytes(id_, SIZE);
       defined_ = true;
     }
