@@ -390,7 +390,9 @@ namespace openvpn {
       std::string nonce() const
       {
 	unsigned char data[16];
-	cs->get_random()->rand_fill(data);
+	RandomAPI& rng = *cs->get_random();
+	rng.assert_crypto();
+	rng.rand_fill(data);
 	return render_hex(data, sizeof(data));
       }
 
