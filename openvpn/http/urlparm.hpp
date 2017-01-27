@@ -123,6 +123,17 @@ namespace openvpn {
 	  return default_value;
       }
 
+      template <typename T>
+      T get_num_required(const std::string& name, const std::string& short_name) const
+      {
+	const Parm* p = get(name);
+	if (!p && !short_name.empty())
+	  p = get(short_name);
+	if (!p)
+	  throw url_parameter_error(name + " : not found");
+	return parse_number_throw<T>(p->value, name);
+      }
+
       bool get_bool(const std::string& name, const std::string& short_name, const bool default_value) const
       {
 	const Parm* p = get(name);
@@ -150,6 +161,16 @@ namespace openvpn {
 	  return p->value;
 	else
 	  return "";
+      }
+
+      std::string get_string_required(const std::string& name, const std::string& short_name) const
+      {
+	const Parm* p = get(name);
+	if (!p && !short_name.empty())
+	  p = get(short_name);
+	if (!p)
+	  throw url_parameter_error(name + " : not found");
+	return p->value;
       }
 
       std::string to_string() const
