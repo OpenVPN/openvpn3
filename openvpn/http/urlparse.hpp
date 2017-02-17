@@ -40,7 +40,9 @@ namespace openvpn {
     public:
       Parse() {}
 
-      Parse(const std::string& url, const bool set_default_port=false)
+      Parse(const std::string& url,
+	    const bool set_default_port=false,
+	    const bool loose_validation=false)
       {
 	enum State {
 	  Scheme,
@@ -128,7 +130,7 @@ namespace openvpn {
 		  port += c;
 		break;
 	      case URI:
-		if (!is_valid_uri_char(c))
+		if (!is_valid_uri_char(c) && !loose_validation)
 		  throw url_parse_error("bad URI char");
 		uri += c;
 		break;
