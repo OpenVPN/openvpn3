@@ -10,11 +10,10 @@ echo "******* ASIO"
 $O3/core/deps/asio/build-asio
 echo "******* POLARSSL"
 $O3/core/scripts/linux/build-polarssl
-echo "******* OpenSSL"
-$O3/core/scripts/linux/build-openssl x64
 echo "******* LZ4"
 $O3/core/scripts/linux/build-lz4
 
+#$O3/core/scripts/linux/build-openssl x64
 #$O3/core/scripts/linux/build-lzo
 #$O3/core/scripts/linux/build-boost
 #$O3/core/scripts/linux/build-snappy
