@@ -193,6 +193,16 @@ namespace openvpn {
       return ret;
     }
 
+    std::string dev() const
+    {
+      if (v4.defined())
+	return v4.dev();
+      else if (v6.defined())
+	return v6.dev();
+      else
+	throw LinuxGW::linux_gw_error("cannot determine gateway interface");
+    }
+
     LinuxGW v4;
     LinuxGW v6;
   };
