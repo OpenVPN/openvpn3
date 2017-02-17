@@ -210,7 +210,7 @@ namespace openvpn {
 		      {
 #if defined(OPENVPN_DEBUG_HTTP)
 			BufferAllocated tmp(outbuf->c_data(), actual, 0);
-			OPENVPN_LOG(buf_to_string(tmp));
+			OPENVPN_LOG("OUT: " << buf_to_string(tmp));
 #endif
 			outbuf->advance(actual);
 		      }
@@ -227,7 +227,7 @@ namespace openvpn {
 		    frame->prepare(Frame::WRITE_HTTP, buf);
 		    buf.write(outbuf->data(), size);
 #if defined(OPENVPN_DEBUG_HTTP)
-		    OPENVPN_LOG(buf_to_string(buf));
+		    OPENVPN_LOG("OUT: " << buf_to_string(buf));
 #endif
 		    if (parent().base_link_send(buf))
 		      outbuf->advance(size);
@@ -323,6 +323,10 @@ namespace openvpn {
       {
 	if (halt || ready) // if ready, indicates unsolicited input
 	  return;
+
+#if defined(OPENVPN_DEBUG_HTTP)
+	OPENVPN_LOG("IN: " << buf_to_string(buf));
+#endif
 
 	if (rr_status == REQUEST_REPLY::Parser::pending)
 	  {
