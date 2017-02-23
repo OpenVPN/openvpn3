@@ -570,6 +570,7 @@ namespace openvpn {
 	  BIO_free_all(ssl_bio);
 	if (ssl)
 	  SSL_free(ssl);
+	openssl_clear_error_stack();
 	ssl_clear();
       }
 
