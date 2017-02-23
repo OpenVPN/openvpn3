@@ -19,11 +19,11 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL 1.3 SSL API as defined in <polarssl/ssl.h>
+// Wrap the mbed TLS 2.3 SSL API as defined in <mbedtls/ssl.h>
 // so that it can be used as the SSL layer by the OpenVPN core.
 
-#ifndef OPENVPN_POLARSSL_SSL_SSLCTX_H
-#define OPENVPN_POLARSSL_SSL_SSLCTX_H
+#ifndef OPENVPN_MBEDTLS_SSL_SSLCTX_H
+#define OPENVPN_MBEDTLS_SSL_SSLCTX_H
 
 #include <vector>
 #include <string>
@@ -31,15 +31,16 @@
 #include <cstring>
 #include <memory>
 
-#include <polarssl/ssl.h>
-#include <polarssl/oid.h>
-#include <polarssl/sha1.h>
-#include <polarssl/debug.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/oid.h>
+#include <mbedtls/sha1.h>
+#include <mbedtls/debug.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/binprefix.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/frame/memq_stream.hpp>
 #include <openvpn/pki/cclist.hpp>
 #include <openvpn/pki/pkcs1.hpp>
@@ -56,7 +57,7 @@
 // to generate an arbitrary number of actual SSL connections objects.
 
 // PolarSSLContext is an SSL Context implementation that uses the
-// PolarSSL library as a backend.
+// mbed TLS library as a backend.
 
 namespace openvpn {
 
@@ -64,13 +65,13 @@ namespace openvpn {
     namespace {
       const int aes_cbc_ciphersuites[] = // CONST GLOBAL
 	{
-	  TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
-	  TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
+	  MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
+	  MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
 	  0
 	};
 
       /*
-       * This is a modified list from PolarSSL ssl_ciphersuites.c.
+       * This is a modified list from mbed TLS ssl_ciphersuites.c.
        * We removed some SHA1 methods near the top of the list to
        * avoid Chrome warnings about "obsolete cryptography".
        * We also removed ECDSA, CCM, PSK, and CAMELLIA algs.
@@ -78,42 +79,58 @@ namespace openvpn {
       const int ciphersuites[] = // CONST GLOBAL
 	{
 	  /* Selected AES-256 ephemeral suites */
-	  TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	  TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
-	  TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
-	  TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
+	  MBEDTLS_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	  MBEDTLS_TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
+	  MBEDTLS_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
+	  MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
 
 	  /* Selected AES-128 ephemeral suites */
-	  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	  TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
-	  TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-	  TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
+	  MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	  MBEDTLS_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
+	  MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+	  MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
 
 	  /* Selected remaining >= 128-bit ephemeral suites */
-	  TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-	  TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	  MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	  MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
 
 	  /* Selected AES-256 suites */
-	  TLS_RSA_WITH_AES_256_GCM_SHA384,
-	  TLS_RSA_WITH_AES_256_CBC_SHA256,
-	  TLS_RSA_WITH_AES_256_CBC_SHA,
-	  TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
-	  TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,
-	  TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,
+	  MBEDTLS_TLS_RSA_WITH_AES_256_GCM_SHA384,
+	  MBEDTLS_TLS_RSA_WITH_AES_256_CBC_SHA256,
+	  MBEDTLS_TLS_RSA_WITH_AES_256_CBC_SHA,
+	  MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
+	  MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,
+	  MBEDTLS_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,
 
 	  /* Selected AES-128 suites */
-	  TLS_RSA_WITH_AES_128_GCM_SHA256,
-	  TLS_RSA_WITH_AES_128_CBC_SHA256,
-	  TLS_RSA_WITH_AES_128_CBC_SHA,
-	  TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
-	  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,
-	  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,
+	  MBEDTLS_TLS_RSA_WITH_AES_128_GCM_SHA256,
+	  MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA256,
+	  MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA,
+	  MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
+	  MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,
+	  MBEDTLS_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,
 
 	  /* Selected remaining >= 128-bit suites */
-	  TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-	  TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
+	  MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+	  MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
 
 	  0
+	};
+
+      /*
+       * X509 cert profile.
+       */
+      const mbedtls_x509_crt_profile crt_profile = // CONST GLOBAL
+	{
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_RIPEMD160 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA224 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
+	  0xFFFFFFF, /* Any PK alg    */
+	  0xFFFFFFF, /* Any curve     */
+	  1024,      /* Minimum size for RSA keys */
 	};
     }
   }
@@ -381,9 +398,9 @@ namespace openvpn {
 
 	// parse tls-version-min option
 	{
-#         if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_3)
+#         if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
 	    const TLSVersion::Type maxver = TLSVersion::V1_2;
-#         elif defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_2)
+#         elif defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_2)
 	    const TLSVersion::Type maxver = TLSVersion::V1_1;
 #         else
             const TLSVersion::Type maxver = TLSVersion::V1_0;
@@ -426,7 +443,7 @@ namespace openvpn {
     {
       // read/write callback errors
       enum {
-	// assumes that PolarSSL user-defined errors may start at -0x8000
+	// assumes that mbed TLS user-defined errors may start at -0x8000
 	CT_WOULD_BLOCK = -0x8000,
 	CT_INTERNAL_ERROR = -0x8001
       };
@@ -438,12 +455,12 @@ namespace openvpn {
 
       virtual void start_handshake()
       {
-	ssl_handshake(ssl);
+	mbedtls_ssl_handshake(ssl);
       }
 
       virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
       {
-	const int status = ssl_write(ssl, (const unsigned char*)data, size);
+	const int status = mbedtls_ssl_write(ssl, (const unsigned char*)data, size);
 	if (status < 0)
 	  {
 	    if (status == CT_WOULD_BLOCK)
@@ -461,12 +478,12 @@ namespace openvpn {
       {
 	if (!overflow)
 	  {
-	    const int status = ssl_read(ssl, (unsigned char*)data, capacity);
+	    const int status = mbedtls_ssl_read(ssl, (unsigned char*)data, capacity);
 	    if (status < 0)
 	      {
 		if (status == CT_WOULD_BLOCK)
 		  return SSLConst::SHOULD_RETRY;
-		else if (status == POLARSSL_ERR_SSL_PEER_CLOSE_NOTIFY)
+		else if (status == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
 		  return SSLConst::PEER_CLOSE_NOTIFY;
 		else if (status == CT_INTERNAL_ERROR)
 		  throw PolarSSLException("SSL read: internal error");
@@ -482,7 +499,7 @@ namespace openvpn {
 
       virtual bool read_cleartext_ready() const
       {
-	return !ct_in.empty() || ssl_get_bytes_avail(ssl);
+	return !ct_in.empty() || mbedtls_ssl_get_bytes_avail(ssl);
       }
 
       virtual void write_ciphertext(const BufferPtr& buf)
@@ -507,8 +524,8 @@ namespace openvpn {
       {
 	if (ssl)
 	  {
-	    const char *ver = ssl_get_version(ssl);
-	    const char *cs = ssl_get_ciphersuite(ssl);
+	    const char *ver = mbedtls_ssl_get_version(ssl);
+	    const char *cs = mbedtls_ssl_get_ciphersuite(ssl);
 	    if (ver && cs)
 	      return ver + std::string("/") + cs;
 	  }
@@ -536,20 +553,29 @@ namespace openvpn {
 	  // set pointer back to parent
 	  parent = ctx;
 
+	  // init SSL configuration object
+	  sslconf = new mbedtls_ssl_config;
+	  mbedtls_ssl_config_init(sslconf);
+	  mbedtls_ssl_config_defaults(sslconf,
+				      c.mode.is_client() ? MBEDTLS_SSL_IS_CLIENT : MBEDTLS_SSL_IS_SERVER,
+				      MBEDTLS_SSL_TRANSPORT_STREAM,
+				      MBEDTLS_SSL_PRESET_DEFAULT);
+
+	  // init X509 cert profile
+	  mbedtls_ssl_conf_cert_profile(sslconf, &polarssl_ctx_private::crt_profile);
+
 	  // init SSL object
-	  ssl = new ssl_context;
-	  status = ssl_init(ssl);
-	  if (status < 0)
-	    throw PolarSSLException("error in ssl_init", status);
+	  ssl = new mbedtls_ssl_context;
+	  mbedtls_ssl_init(ssl);
 
 	  // set client/server mode
 	  if (c.mode.is_server())
 	    {
-	      ssl_set_endpoint(ssl, SSL_IS_SERVER);
+	      mbedtls_ssl_conf_endpoint(sslconf, MBEDTLS_SSL_IS_SERVER);
 	      authcert.reset(new AuthCert());
 	    }
 	  else if (c.mode.is_client())
-	    ssl_set_endpoint(ssl, SSL_IS_CLIENT);
+	    mbedtls_ssl_conf_endpoint(sslconf, MBEDTLS_SSL_IS_CLIENT);
 	  else
 	    throw PolarSSLException("unknown client/server mode");
 
@@ -562,60 +588,69 @@ namespace openvpn {
 		{
 		case TLSVersion::V1_0:
 		default:
-		  polar_major = SSL_MAJOR_VERSION_3;
-		  polar_minor = SSL_MINOR_VERSION_1;
+		  polar_major = MBEDTLS_SSL_MAJOR_VERSION_3;
+		  polar_minor = MBEDTLS_SSL_MINOR_VERSION_1;
 		  break;
-#               if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_2)
+#               if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_2)
 	          case TLSVersion::V1_1:
-		    polar_major = SSL_MAJOR_VERSION_3;
-		    polar_minor = SSL_MINOR_VERSION_2;
+		    polar_major = MBEDTLS_SSL_MAJOR_VERSION_3;
+		    polar_minor = MBEDTLS_SSL_MINOR_VERSION_2;
 		    break;
 #               endif
-#               if defined(SSL_MAJOR_VERSION_3) && defined(SSL_MINOR_VERSION_3)
+#               if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
 	          case TLSVersion::V1_2:
-		    polar_major = SSL_MAJOR_VERSION_3;
-		    polar_minor = SSL_MINOR_VERSION_3;
+		    polar_major = MBEDTLS_SSL_MAJOR_VERSION_3;
+		    polar_minor = MBEDTLS_SSL_MINOR_VERSION_3;
 		    break;
 #               endif
 	        }
-	      ssl_set_min_version(ssl, polar_major, polar_minor);
+	      mbedtls_ssl_conf_min_version(sslconf, polar_major, polar_minor);
+#if 0 // force TLS 1.0 as maximum version (debugging only, disable in production)
+	      mbedtls_ssl_conf_max_version(sslconf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_1);
+#endif
 	    }
 
-	  // peer must present a valid certificate
-	  if (!(c.flags & SSLConst::NO_VERIFY_PEER))
-	    ssl_set_authmode(ssl, SSL_VERIFY_REQUIRED);
+	  // peer must present a valid certificate unless SSLConst::NO_VERIFY_PEER is set
+	  mbedtls_ssl_conf_authmode(sslconf,
+				    (c.flags & SSLConst::NO_VERIFY_PEER)
+				    ? MBEDTLS_SSL_VERIFY_NONE
+				    : MBEDTLS_SSL_VERIFY_REQUIRED);
 
 	  // set verify callback
-	  ssl_set_verify(ssl, c.mode.is_server() ? verify_callback_server : verify_callback_client, this);
+	  mbedtls_ssl_conf_verify(sslconf, c.mode.is_server() ? verify_callback_server : verify_callback_client, this);
 
 	  // Notes on SSL resume/renegotiation:
 	  // SSL resume on server side is controlled by ssl_set_session_cache.
 	  // SSL renegotiation on/off is handled here via ssl_set_renegotiation.
 	  // Without calling ssl_set_renegotiation, it defaults to
-	  // SSL_RENEGOTIATION_DISABLED and ssl_legacy_renegotiation defaults to
-	  // SSL_LEGACY_NO_RENEGOTIATION.  To enable session tickets,
-	  // POLARSSL_SSL_SESSION_TICKETS (compile flag) must be defined
-	  // in PolarSSL config.h.
-	  ssl_set_renegotiation(ssl, c.enable_renegotiation ? SSL_RENEGOTIATION_ENABLED : SSL_RENEGOTIATION_DISABLED);
+	  // MBEDTLS_SSL_RENEGOTIATION_DISABLED and ssl_legacy_renegotiation defaults to
+	  // MBEDTLS_SSL_LEGACY_NO_RENEGOTIATION.  To enable session tickets,
+	  // MBEDTLS_SSL_SESSION_TICKETS (compile flag) must be defined
+	  // in mbed TLS config.h.
+	  mbedtls_ssl_conf_renegotiation(sslconf,
+					 c.enable_renegotiation
+					 ? MBEDTLS_SSL_RENEGOTIATION_ENABLED : MBEDTLS_SSL_RENEGOTIATION_DISABLED);
 
-	  ssl_set_ciphersuites(ssl, c.force_aes_cbc_ciphersuites ?
-			       polarssl_ctx_private::aes_cbc_ciphersuites :
-			       polarssl_ctx_private::ciphersuites);
+	  mbedtls_ssl_conf_ciphersuites(sslconf, c.force_aes_cbc_ciphersuites ?
+					polarssl_ctx_private::aes_cbc_ciphersuites :
+					polarssl_ctx_private::ciphersuites);
 
 	  // set CA chain
 	  if (c.ca_chain)
-	    ssl_set_ca_chain(ssl,
-			     c.ca_chain->get(),
-			     c.crl_chain ? c.crl_chain->get() : nullptr,
-			     hostname);
+	    mbedtls_ssl_conf_ca_chain(sslconf,
+				      c.ca_chain->get(),
+				      c.crl_chain ? c.crl_chain->get() : nullptr);
 	  else if (!(c.flags & SSLConst::NO_VERIFY_PEER))
 	    throw PolarSSLException("CA chain not defined");
 
-	  // SNI
-	  if (hostname && (c.flags & SSLConst::ENABLE_SNI))
+	  // Set hostname for SNI or if a CA chain is configured
+	  // In pre-mbedtls-2.x the hostname for the CA chain was set in ssl_set_ca_chain().
+	  // From mbedtls-2.x, the hostname must be set via mbedtls_ssl_set_hostname()
+	  // https://tls.mbed.org/kb/how-to/upgrade-2.0
+	  if (hostname && ((c.flags & SSLConst::ENABLE_SNI) || c.ca_chain))
 	    {
-	      if (ssl_set_hostname(ssl, hostname))
-		throw PolarSSLException("ssl_set_hostname failed");
+	      if (mbedtls_ssl_set_hostname(ssl, hostname))
+		throw PolarSSLException("mbedtls_ssl_set_hostname failed");
 	    }
 
 	  // client cert+key
@@ -625,7 +660,10 @@ namespace openvpn {
 		{
 		  // set our own certificate, supporting chain (i.e. extra-certs), and external private key
 		  if (c.crt_chain)
-		    ssl_set_own_cert_alt(ssl, c.crt_chain->get(), ctx, epki_decrypt, epki_sign, epki_key_len);
+		    {
+		      epki_ctx.epki_enable(ctx, epki_decrypt, epki_sign, epki_key_len);
+		      mbedtls_ssl_conf_own_cert(sslconf, c.crt_chain->get(), epki_ctx.get());
+		    }
 		  else
 		    throw PolarSSLException("cert is undefined");
 		}
@@ -633,7 +671,7 @@ namespace openvpn {
 		{
 		  // set our own certificate, supporting chain (i.e. extra-certs), and private key
 		  if (c.crt_chain && c.priv_key)
-		    ssl_set_own_cert(ssl, c.crt_chain->get(), c.priv_key->get());
+		    mbedtls_ssl_conf_own_cert(sslconf, c.crt_chain->get(), c.priv_key->get());
 		  else
 		    throw PolarSSLException("cert and/or private key is undefined");
 		}
@@ -642,7 +680,7 @@ namespace openvpn {
 	  // set DH
 	  if (c.dh)
 	    {
-	      status = ssl_set_dh_param_ctx(ssl, c.dh->get());
+	      status = mbedtls_ssl_conf_dh_param_ctx(sslconf, c.dh->get());
 	      if (status < 0)
 		throw PolarSSLException("error in ssl_set_dh_param_ctx", status);
 	    }
@@ -652,20 +690,24 @@ namespace openvpn {
 	  ct_out.set_frame(c.frame);
 
 	  // set BIO
-	  ssl_set_bio(ssl, ct_read_func, this, ct_write_func, this);
+	  mbedtls_ssl_set_bio(ssl, this, ct_write_func, ct_read_func, NULL);
 
 	  // set RNG
 	  if (c.rng)
 	    {
 	      rng = c.rng;
-	      ssl_set_rng(ssl, rng_callback, this);
+	      mbedtls_ssl_conf_rng(sslconf, rng_callback, this);
 	    }
 	  else
 	    throw PolarSSLException("RNG not defined");
 
 	  // set debug callback
 	  if (c.ssl_debug_level)
-	    ssl_set_dbg(ssl, dbg_callback, ctx);
+	    mbedtls_ssl_conf_dbg(sslconf, dbg_callback, ctx);
+
+          // Apply the configuration to the SSL connection object
+          if (mbedtls_ssl_setup(ssl, sslconf) < 0)
+            throw PolarSSLException("mbedtls_ssl_setup failed");
 	}
 	catch (...)
 	  {
@@ -702,23 +744,25 @@ namespace openvpn {
 	  }
       }
 
-      // RNG callback -- return random data to PolarSSL
+      // RNG callback -- return random data to mbed TLS
       static int rng_callback(void *arg, unsigned char *data, size_t len)
       {
 	SSL *self = (SSL *)arg;
-	return self->rng->rand_bytes_noexcept(data, len) ? 0 : -1; // using -1 as a general-purpose PolarSSL error code
+	return self->rng->rand_bytes_noexcept(data, len) ? 0 : -1; // using -1 as a general-purpose mbed TLS error code
       }
 
-      static void dbg_callback(void *arg, int level, const char *text)
+      static void dbg_callback(void *arg, int level, const char *filename, int linenum, const char *text)
       {
 	PolarSSLContext *self = (PolarSSLContext *)arg;
 	if (level <= self->config->ssl_debug_level)
-	  OPENVPN_LOG_NTNL("PolarSSL[" << level << "]: " << text);
+	  OPENVPN_LOG_NTNL("mbed TLS[" << filename << ":" << linenum << " "<< level << "]: " << text);
       }
 
       void clear()
       {
+	parent = nullptr;
 	ssl = nullptr;
+	sslconf = nullptr;
 	overflow = false;
       }
 
@@ -726,19 +770,23 @@ namespace openvpn {
       {
 	if (ssl)
 	  {
-	    ssl_free(ssl);
+	    mbedtls_ssl_free(ssl);
+            mbedtls_ssl_config_free(sslconf);
 	    delete ssl;
+	    delete sslconf;
 	  }
 	clear();
       }
 
       PolarSSLContext *parent;
-      ssl_context *ssl;	       // underlying SSL connection object
-      RandomAPI::Ptr rng;      // random data source
-      bool overflow;
-      MemQStream ct_in;    // write ciphertext to here
-      MemQStream ct_out;   // read ciphertext from here
+      mbedtls_ssl_context *ssl;		  // underlying SSL connection object
+      mbedtls_ssl_config *sslconf;	  // SSL configuration parameters for SSL connection object
+      PolarSSLPKI::PKContext epki_ctx;    // external PKI context
+      RandomAPI::Ptr rng;                 // random data source
+      MemQStream ct_in;                   // write ciphertext to here
+      MemQStream ct_out;                  // read ciphertext from here
       AuthCert::Ptr authcert;
+      bool overflow;
     };
 
     /////// start of main class implementation
@@ -779,7 +827,7 @@ namespace openvpn {
 
     size_t key_len() const
     {
-      return pk_get_size(&config->crt_chain->get()->pk) / 8;
+      return mbedtls_pk_get_bitlen(&config->crt_chain->get()->pk) / 8;
     }
 
     // ns-cert-type verification
@@ -789,12 +837,12 @@ namespace openvpn {
       return config->ns_cert_type != NSCert::NONE;
     }
 
-    bool verify_ns_cert_type(const x509_crt *cert) const
+    bool verify_ns_cert_type(const mbedtls_x509_crt *cert) const
     {
       if (config->ns_cert_type == NSCert::SERVER)
-	return bool(cert->ns_cert_type & NS_CERT_TYPE_SSL_SERVER);
+	return bool(cert->ns_cert_type & MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER);
       else if (config->ns_cert_type == NSCert::CLIENT)
-	return bool(cert->ns_cert_type & NS_CERT_TYPE_SSL_CLIENT);
+	return bool(cert->ns_cert_type & MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT);
       else
 	return false;
     }
@@ -806,9 +854,9 @@ namespace openvpn {
       return config->ku.size() > 0;
     }
 
-    bool verify_x509_cert_ku(const x509_crt *cert)
+    bool verify_x509_cert_ku(const mbedtls_x509_crt *cert)
     {
-      if (cert->ext_types & EXT_KEY_USAGE)
+      if (cert->ext_types & MBEDTLS_X509_EXT_KEY_USAGE)
 	{
 	  const unsigned int ku = cert->key_usage;
 	  for (std::vector<unsigned int>::const_iterator i = config->ku.begin(); i != config->ku.end(); ++i)
@@ -827,26 +875,27 @@ namespace openvpn {
       return !config->eku.empty();
     }
 
-    bool verify_x509_cert_eku(x509_crt *cert)
+    bool verify_x509_cert_eku(mbedtls_x509_crt *cert)
     {
-      if (cert->ext_types & EXT_EXTENDED_KEY_USAGE)
+      if (cert->ext_types & MBEDTLS_X509_EXT_EXTENDED_KEY_USAGE)
 	{
-	  x509_sequence *oid_seq = &cert->ext_key_usage;
+	  mbedtls_x509_sequence *oid_seq = &cert->ext_key_usage;
 	  while (oid_seq != nullptr)
 	    {
-	      x509_buf *oid = &oid_seq->buf;
+	      mbedtls_x509_buf *oid = &oid_seq->buf;
 
 	      // first compare against description
 	      {
-		const char *oid_str = x509_oid_get_description(oid);
-		if (oid_str && config->eku == oid_str)
+		const char *oid_str;
+		const int status = mbedtls_oid_get_extended_key_usage(oid, &oid_str);
+		if (status >= 0 && config->eku == oid_str)
 		  return true;
 	      }
 
 	      // next compare against OID numeric string
 	      {
 		char oid_num_str[256];
-		const int status = x509_oid_get_numeric_string(oid_num_str, sizeof(oid_num_str), oid);
+		const int status = mbedtls_oid_get_numeric_string(oid_num_str, sizeof(oid_num_str), oid);
 		if (status >= 0 && config->eku == oid_num_str)
 		  return true;
 	      }
@@ -859,25 +908,25 @@ namespace openvpn {
     // Try to return the x509 subject formatted like the OpenSSL X509_NAME_oneline method.
     // Only attributes matched in the switch statements below will be rendered.  All other
     // attributes will be ignored.
-    static std::string x509_get_subject(const x509_crt *cert)
+    static std::string x509_get_subject(const mbedtls_x509_crt *cert)
     {
       std::string ret;
-      for (const x509_name *name = &cert->subject; name != nullptr; name = name->next)
+      for (const mbedtls_x509_name *name = &cert->subject; name != nullptr; name = name->next)
 	{
 	  const char *key = nullptr;
-	  if (OID_CMP(OID_AT_CN, &name->oid))
+	  if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid))
 	    key = "CN";
-	  else if (OID_CMP(OID_AT_COUNTRY, &name->oid))
+	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_COUNTRY, &name->oid))
 	    key = "C";
-	  else if (OID_CMP(OID_AT_LOCALITY, &name->oid))
+	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_LOCALITY, &name->oid))
 	    key = "L";
-	  else if (OID_CMP(OID_AT_STATE, &name->oid))
+	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_STATE, &name->oid))
 	    key = "ST";
-	  else if (OID_CMP(OID_AT_ORGANIZATION, &name->oid))
+	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_ORGANIZATION, &name->oid))
 	    key = "O";
-	  else if (OID_CMP(OID_AT_ORG_UNIT, &name->oid))
+	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_ORG_UNIT, &name->oid))
 	    key = "OU";
-	  else if (OID_CMP(OID_PKCS9_EMAIL, &name->oid))
+	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_PKCS9_EMAIL, &name->oid))
 	    key = "emailAddress";
 
 	  // make sure that key is defined and value has no embedded nulls
@@ -887,14 +936,14 @@ namespace openvpn {
       return ret;
     }
 
-    static std::string x509_get_common_name(const x509_crt *cert)
+    static std::string x509_get_common_name(const mbedtls_x509_crt *cert)
     {
-      const x509_name *name = &cert->subject;
+      const mbedtls_x509_name *name = &cert->subject;
 
       // find common name
       while (name != nullptr)
 	{
-	  if (OID_CMP(OID_AT_CN, &name->oid))
+	  if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid))
 	    break;
 	  name = name->next;
 	}
@@ -905,44 +954,20 @@ namespace openvpn {
 	return std::string("");
     }
 
-    static std::string fmt_polarssl_verify_flags(const int flags)
-    {
-      std::ostringstream os;
-      if (flags & BADCERT_EXPIRED)
-	os << "CERT_EXPIRED ";
-      if (flags & BADCERT_REVOKED)
-	os << "CERT_REVOKED ";
-      if (flags & BADCERT_CN_MISMATCH)
-	os << "CN_MISMATCH ";
-      if (flags & BADCERT_NOT_TRUSTED)
-	os << "CERT_NOT_TRUSTED ";
-      if (flags & BADCRL_NOT_TRUSTED)
-	os << "CRL_NOT_TRUSTED ";
-      if (flags & BADCRL_EXPIRED)
-	os << "CRL_EXPIRED ";
-      if (flags & BADCERT_MISSING)
-	os << "CERT_MISSING ";
-      if (flags & BADCERT_SKIP_VERIFY)
-	os << "CERT_SKIP_VERIFY ";
-      if (flags & BADCERT_OTHER)
-	os << "CERT_OTHER ";
-      return os.str();
-    }
-
-    static std::string status_string(const x509_crt *cert, const int depth, const int *flags)
+    static std::string status_string(const mbedtls_x509_crt *cert, const int depth, const uint32_t *flags)
     {
       std::ostringstream os;
       std::string status_str = "OK";
       if (*flags)
-	status_str = "FAIL " + fmt_polarssl_verify_flags(*flags);
+	status_str = "FAIL -- " + PolarSSLException::polarssl_verify_flags_errtext(*flags);
       os << "VERIFY "
 	 << status_str
-	 << ": depth=" << depth
+	 << " : depth=" << depth
 	 << std::endl << cert_info(cert);
       return os.str();
     }
 
-    static int verify_callback_client(void *arg, x509_crt *cert, int depth, int *flags)
+    static int verify_callback_client(void *arg, mbedtls_x509_crt *cert, int depth, uint32_t *flags)
     {
       PolarSSLContext::SSL *ssl = (PolarSSLContext::SSL *)arg;
       PolarSSLContext *self = ssl->parent;
@@ -991,11 +1016,11 @@ namespace openvpn {
 	}
 
       if (fail)
-	*flags |= BADCERT_OTHER;
+	*flags |= MBEDTLS_X509_BADCERT_OTHER;
       return 0;
     }
 
-    static int verify_callback_server(void *arg, x509_crt *cert, int depth, int *flags)
+    static int verify_callback_server(void *arg, mbedtls_x509_crt *cert, int depth, uint32_t *flags)
     {
       PolarSSLContext::SSL *ssl = (PolarSSLContext::SSL *)arg;
       PolarSSLContext *self = ssl->parent;
@@ -1008,7 +1033,7 @@ namespace openvpn {
 	    {
 	      const int SHA_DIGEST_LENGTH = 20;
 	      static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH, "size inconsistency");
-	      sha1(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp);
+	      mbedtls_sha1(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp);
 	    }
 	}
       else if (depth == 0) // leaf-cert
@@ -1040,7 +1065,7 @@ namespace openvpn {
 	      ssl->authcert->cn = x509_get_common_name(cert);
 
 	      // save the leaf cert serial number
-	      const x509_buf *s = &cert->serial;
+	      const mbedtls_x509_buf *s = &cert->serial;
 	      if (s->len > 0 && s->len <= sizeof(ssl->authcert->sn))
 		ssl->authcert->sn = bin_prefix_floor<decltype(ssl->authcert->sn)>(s->p, s->len, -1);
 	      else
@@ -1049,15 +1074,15 @@ namespace openvpn {
 	}
 
       if (fail)
-	*flags |= BADCERT_OTHER;
+	*flags |= MBEDTLS_X509_BADCERT_OTHER;
       return 0;
     }
 
-    static std::string cert_info(const x509_crt *cert, const char *prefix = nullptr)
+    static std::string cert_info(const mbedtls_x509_crt *cert, const char *prefix = nullptr)
     {
       const size_t buf_size = 4096;
       std::unique_ptr<char[]> buf(new char[buf_size]);
-      const int size = x509_crt_info(buf.get(), buf_size, prefix ? prefix : "", cert);
+      const int size = mbedtls_x509_crt_info(buf.get(), buf_size, prefix ? prefix : "", cert);
       if (size >= 0)
 	return std::string(buf.get());
       else
@@ -1077,57 +1102,57 @@ namespace openvpn {
     {
       OPENVPN_LOG_SSL("PolarSSLContext::epki_decrypt is unimplemented, mode=" << mode
 		      << " output_max_len=" << output_max_len);
-      return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+      return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
     }
 
     static int epki_sign(void *arg,
 			 int (*f_rng)(void *, unsigned char *, size_t),
 			 void *p_rng,
 			 int mode,
-			 md_type_t md_alg,
+			 mbedtls_md_type_t md_alg,
 			 unsigned int hashlen,
 			 const unsigned char *hash,
 			 unsigned char *sig)
     {
       PolarSSLContext *self = (PolarSSLContext *) arg;
       try {
-	if (mode == RSA_PRIVATE)
+	if (mode == MBEDTLS_RSA_PRIVATE)
 	  {
 	    size_t digest_prefix_len = 0;
 	    const unsigned char *digest_prefix = nullptr;
 
 	    /* get signature type */
 	    switch (md_alg) {
-	    case POLARSSL_MD_NONE:
+	    case MBEDTLS_MD_NONE:
 	      break;
-	    case POLARSSL_MD_MD2:
+	    case MBEDTLS_MD_MD2:
 	      digest_prefix = PKCS1::DigestPrefix::MD2;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD2);
 	      break;
-	    case POLARSSL_MD_MD5:
+	    case MBEDTLS_MD_MD5:
 	      digest_prefix = PKCS1::DigestPrefix::MD5;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::MD5);
 	      break;
-	    case POLARSSL_MD_SHA1:
+	    case MBEDTLS_MD_SHA1:
 	      digest_prefix = PKCS1::DigestPrefix::SHA1;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA1);
 	      break;
-	    case POLARSSL_MD_SHA256:
+	    case MBEDTLS_MD_SHA256:
 	      digest_prefix = PKCS1::DigestPrefix::SHA256;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA256);
 	      break;
-	    case POLARSSL_MD_SHA384:
+	    case MBEDTLS_MD_SHA384:
 	      digest_prefix = PKCS1::DigestPrefix::SHA384;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA384);
 	      break;
-	    case POLARSSL_MD_SHA512:
+	    case MBEDTLS_MD_SHA512:
 	      digest_prefix = PKCS1::DigestPrefix::SHA512;
 	      digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA512);
 	      break;
 	    default:
 	      OPENVPN_LOG_SSL("PolarSSLContext::epki_sign unrecognized hash_id, mode=" << mode
 			      << " md_alg=" << md_alg << " hashlen=" << hashlen);
-	      return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+	      return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
 	    }
 
 	    /* concatenate digest prefix with hash */
@@ -1141,7 +1166,7 @@ namespace openvpn {
 
 	    /* get signature */
 	    std::string sig_b64;
-	    const bool status = self->config->external_pki->sign("RSA_RAW", from_b64, sig_b64);
+	    const bool status = self->config->external_pki->sign(from_b64, sig_b64);
 	    if (!status)
 	      throw ssl_external_pki("PolarSSL: could not obtain signature");
 
@@ -1152,7 +1177,7 @@ namespace openvpn {
 
 	    /* verify length */
 	    if (sigbuf.size() != len)
-	      throw ssl_external_pki("PolarSSL: incorrect signature length");
+	      throw ssl_external_pki("mbed TLS: incorrect signature length");
 
 	    /* success */
 	    return 0;
@@ -1161,13 +1186,13 @@ namespace openvpn {
 	  {
 	    OPENVPN_LOG_SSL("PolarSSLContext::epki_sign unrecognized parameters, mode=" << mode 
 			    << " md_alg=" << md_alg << " hashlen=" << hashlen);
-	    return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+	    return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
 	  }
       }
       catch (const std::exception& e)
 	{
 	  OPENVPN_LOG("PolarSSLContext::epki_sign: " << e.what());
-	  return POLARSSL_ERR_RSA_BAD_INPUT_DATA;
+	  return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
 	}
     }
 

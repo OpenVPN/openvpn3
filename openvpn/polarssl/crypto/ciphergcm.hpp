@@ -19,14 +19,14 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL GCM API.
+// Wrap the mbed TLS GCM API.
 
-#ifndef OPENVPN_POLARSSL_CRYPTO_CIPHERGCM_H
-#define OPENVPN_POLARSSL_CRYPTO_CIPHERGCM_H
+#ifndef OPENVPN_MBEDTLS_CRYPTO_CIPHERGCM_H
+#define OPENVPN_MBEDTLS_CRYPTO_CIPHERGCM_H
 
 #include <string>
 
-#include <polarssl/gcm.h>
+#include <mbedtls/gcm.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -46,12 +46,12 @@ namespace openvpn {
 
       // mode parameter for constructor
       enum {
-	MODE_UNDEF = POLARSSL_OPERATION_NONE,
-	ENCRYPT = POLARSSL_ENCRYPT,
-	DECRYPT = POLARSSL_DECRYPT
+	MODE_UNDEF = MBEDTLS_OPERATION_NONE,
+	ENCRYPT = MBEDTLS_ENCRYPT,
+	DECRYPT = MBEDTLS_DECRYPT
       };
 
-      // PolarSSL cipher constants
+      // mbed TLS cipher constants
       enum {
 	IV_LEN = 12,
 	AUTH_TAG_LEN = 16,
@@ -59,9 +59,9 @@ namespace openvpn {
       };
 
 #if 0
-      // PolarSSL encrypt/decrypt return values
+      // mbed TLS encrypt/decrypt return values
       enum {
-	GCM_AUTH_FAILED = POLARSSL_ERR_GCM_AUTH_FAILED,
+	GCM_AUTH_FAILED = MBEDTLS_ERR_GCM_AUTH_FAILED,
 	SUCCESS = 0,
       };
 #endif
@@ -82,13 +82,14 @@ namespace openvpn {
 
 	// get cipher type
 	unsigned int ckeysz = 0;
-	const cipher_id_t cid = cipher_type(alg, ckeysz);
+	const mbedtls_cipher_id_t cid = cipher_type(alg, ckeysz);
 	if (ckeysz > keysize)
 	  throw polarssl_gcm_error("insufficient key material");
 
 	// initialize cipher context
-	if (gcm_init(&ctx, cid, key, ckeysz * 8) < 0)
-	  throw polarssl_gcm_error("gcm_init");
+	mbedtls_gcm_init(&ctx);
+	if (mbedtls_gcm_setkey(&ctx, cid, key, ckeysz * 8) < 0)
+	    throw polarssl_gcm_error("mbedtls_gcm_setkey");
 
 	initialized = true;
       }
@@ -102,10 +103,11 @@ namespace openvpn {
 		   size_t ad_len)
       {
 	check_initialized();
-	const int status = gcm_crypt_and_tag(&ctx, GCM_ENCRYPT, length, iv, IV_LEN, ad, ad_len,
-					     input, output, AUTH_TAG_LEN, tag);
+	const int status = mbedtls_gcm_crypt_and_tag(&ctx, MBEDTLS_GCM_ENCRYPT,
+						     length, iv, IV_LEN, ad, ad_len,
+						     input, output, AUTH_TAG_LEN, tag);
 	if (unlikely(status))
-	  OPENVPN_THROW(polarssl_gcm_error, "gcm_crypt_and_tag failed with status=" << status);
+	  OPENVPN_THROW(polarssl_gcm_error, "mbedtls_gcm_crypt_and_tag failed with status=" << status);
       }
 
       // input and output may NOT be equal
@@ -118,27 +120,27 @@ namespace openvpn {
 		  size_t ad_len)
       {
 	check_initialized();
-	const int status = gcm_auth_decrypt(&ctx, length, iv, IV_LEN, ad, ad_len, tag,
-					    AUTH_TAG_LEN, input, output);
+	const int status = mbedtls_gcm_auth_decrypt(&ctx, length, iv, IV_LEN, ad, ad_len, tag,
+						    AUTH_TAG_LEN, input, output);
 	return status == 0;
       }
 
       bool is_initialized() const { return initialized; }
 
     private:
-      static cipher_id_t cipher_type(const CryptoAlgs::Type alg, unsigned int& keysize)
+      static mbedtls_cipher_id_t cipher_type(const CryptoAlgs::Type alg, unsigned int& keysize)
       {
 	switch (alg)
 	  {
 	  case CryptoAlgs::AES_128_GCM:
 	    keysize = 16;
-	    return POLARSSL_CIPHER_ID_AES;
+	    return MBEDTLS_CIPHER_ID_AES;
 	  case CryptoAlgs::AES_192_GCM:
 	    keysize = 24;
-	    return POLARSSL_CIPHER_ID_AES;
+	    return MBEDTLS_CIPHER_ID_AES;
 	  case CryptoAlgs::AES_256_GCM:
 	    keysize = 32;
-	    return POLARSSL_CIPHER_ID_AES;
+	    return MBEDTLS_CIPHER_ID_AES;
 	  default:
 	    OPENVPN_THROW(polarssl_gcm_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
@@ -148,7 +150,7 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    gcm_free(&ctx);
+	    mbedtls_gcm_free(&ctx);
 	    initialized = false;
 	  }
       }
@@ -160,7 +162,7 @@ namespace openvpn {
       }
 
       bool initialized;
-      gcm_context ctx;
+      mbedtls_gcm_context ctx;
     };
   }
 }

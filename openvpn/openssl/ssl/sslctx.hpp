@@ -716,7 +716,7 @@ namespace openvpn {
 
 	  /* get signature */
 	  std::string sig_b64;
-	  const bool status = self->external_pki->sign("RSA_RAW", from_b64, sig_b64);
+	  const bool status = self->external_pki->sign(from_b64, sig_b64);
 	  if (!status)
 	    throw ssl_external_pki("OpenSSL: could not obtain signature");
 

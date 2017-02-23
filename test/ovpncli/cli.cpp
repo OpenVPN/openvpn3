@@ -67,6 +67,11 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/ssl/peerinfo.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
+
+#if defined(USE_POLARSSL)
+#include <openvpn/polarssl/util/pkcs1.hpp>
+#endif
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/console.hpp>
@@ -90,6 +95,12 @@ public:
   {
     return dc_cookie;
   }
+
+  std::string epki_ca;
+  std::string epki_cert;
+#if defined(USE_POLARSSL)
+  PolarSSLPKI::PKContext epki_ctx; // external PKI context
+#endif
 
 private:
   virtual bool socket_protect(int socket)
@@ -153,16 +164,80 @@ private:
 
   virtual void external_pki_cert_request(ClientAPI::ExternalPKICertRequest& certreq)
   {
-    std::cout << "*** external_pki_cert_request" << std::endl;
-    certreq.error = true;
-    certreq.errorText = "external_pki_cert_request not implemented";
+    if (!epki_cert.empty())
+      {
+	certreq.cert = epki_cert;
+	certreq.supportingChain = epki_ca;
+      }
+    else
+      {
+	certreq.error = true;
+	certreq.errorText = "external_pki_cert_request not implemented";
+      }
   }
 
   virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signreq)
   {
-    std::cout << "*** external_pki_sign_request" << std::endl;
-    signreq.error = true;
-    signreq.errorText = "external_pki_sign_request not implemented";
+#if defined(USE_POLARSSL)
+    if (epki_ctx.defined())
+      {
+	try {
+	  // decode base64 sign request
+	  BufferAllocated signdata(256, BufferAllocated::GROW);
+	  base64->decode(signdata, signreq.data);
+
+	  // get MD alg
+	  const mbedtls_md_type_t md_alg = PKCS1::DigestPrefix::PolarSSLParse().alg_from_prefix(signdata);
+
+	  // log info
+	  OPENVPN_LOG("SIGN[" << PKCS1::DigestPrefix::PolarSSLParse::to_string(md_alg) << ',' << signdata.size() << "]: " << render_hex_generic(signdata));
+
+	  // allocate buffer for signature
+	  BufferAllocated sig(mbedtls_pk_get_len(epki_ctx.get()), BufferAllocated::ARRAY);
+
+	  // sign it
+	  size_t sig_size = 0;
+	  const int status = mbedtls_pk_sign(epki_ctx.get(),
+					     md_alg,
+					     signdata.c_data(),
+					     signdata.size(),
+					     sig.data(),
+					     &sig_size,
+					     rng_callback,
+					     this);
+	  if (status != 0)
+	    throw Exception("mbedtls_pk_sign failed, err=" + openvpn::to_string(status));
+	  if (sig.size() != sig_size)
+	    throw Exception("unexpected signature size");
+
+	  // encode base64 signature
+	  signreq.sig = base64->encode(sig);
+	  OPENVPN_LOG("SIGNATURE[" << sig_size << "]: " << signreq.sig);
+	}
+	catch (const std::exception& e)
+	  {
+	    signreq.error = true;
+	    signreq.errorText = std::string("external_pki_sign_request: ") + e.what();
+	  }
+      }
+    else
+#endif
+      {
+	signreq.error = true;
+	signreq.errorText = "external_pki_sign_request not implemented";
+      }
+  }
+
+  // RNG callback
+  static int rng_callback(void *arg, unsigned char *data, size_t len)
+  {
+    Client *self = (Client *)arg;
+    if (!self->rng)
+      {
+	self->rng.reset(new SSLLib::RandomAPI(false));
+	self->rng->assert_crypto();
+      }
+    return self->rng->rand_bytes_noexcept(data, len) ? 0 : -1; // using -1 as a general-purpose mbed TLS error code
   }
 
   virtual bool pause_on_connection_timeout()
@@ -172,6 +247,7 @@ private:
 
   std::mutex log_mutex;
   std::string dc_cookie;
+  RandomAPI::Ptr rng;      // random data source for epki
 };
 
 static Client *the_client = nullptr; // GLOBAL
@@ -302,6 +378,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "version",        no_argument,        nullptr,      'v' },
     { "auto-sess",      no_argument,        nullptr,      'a' },
     { "ssl-debug",      required_argument,  nullptr,       1  },
+    { "epki-cert",      required_argument,  nullptr,       2  },
+    { "epki-ca",        required_argument,  nullptr,       3  },
+    { "epki-key",       required_argument,  nullptr,       4  },
     { nullptr,          0,                  nullptr,       0  }
   };
 
@@ -346,6 +425,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool version = false;
 	bool altProxy = false;
 	bool dco = false;
+	std::string epki_cert_fn;
+	std::string epki_ca_fn;
+	std::string epki_key_fn;
 
 	int ch;
 	optind = 1;
@@ -353,8 +435,17 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	  {
 	    switch (ch)
 	      {
-	      case 1:
+	      case 1: // ssl-debug
 		sslDebugLevel = ::atoi(optarg);
+		break;
+	      case 2: // --epki-cert
+		epki_cert_fn = optarg;
+		break;
+	      case 3: // --epki-ca
+		epki_ca_fn = optarg;
+		break;
+	      case 4: // --epki-key
+		epki_key_fn = optarg;
 		break;
 	      case 'e':
 		eval = true;
@@ -522,6 +613,10 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.tunPersist = tunPersist;
 	      config.gremlinConfig = gremlin;
 	      config.info = true;
+
+	      if (!epki_cert_fn.empty())
+		config.externalPkiAlias = "epki"; // dummy string
+
 	      PeerInfo::Set::parse_csv(peer_info, config.peerInfo);
 
 	      if (eval)
@@ -573,6 +668,23 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		      ClientAPI::Status creds_status = client.provide_creds(creds);
 		      if (creds_status.error)
 			OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
+		    }
+
+		  // external PKI
+		  if (!epki_cert_fn.empty())
+		    {
+		      client.epki_cert = read_text_utf8(epki_cert_fn);
+		      if (!epki_ca_fn.empty())
+			client.epki_ca = read_text_utf8(epki_ca_fn);
+#if defined(USE_POLARSSL)
+		      if (!epki_key_fn.empty())
+			{
+			  const std::string epki_key_txt = read_text_utf8(epki_key_fn);
+			  client.epki_ctx.parse(epki_key_txt, "EPKI", privateKeyPassword);
+			}
+		      else
+			OPENVPN_THROW_EXCEPTION("--epki-key must be specified");
+#endif
 		    }
 
 		  std::cout << "CONNECTING..." << std::endl;
@@ -684,12 +796,15 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
       std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
       std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
-      std::cerr << "--ssl-debug          : SSL debug level" << std::endl;
+      std::cout << "--ssl-debug          : SSL debug level" << std::endl;
       std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
       std::cout << "--auto-sess, -a      : request autologin session" << std::endl;
       std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
       std::cout << "--peer-info, -I      : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
       std::cout << "--gremlin, -G        : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
+      std::cout << "--epki-ca            : simulate external PKI cert supporting intermediate/root certs" << std::endl;
+      std::cout << "--epki-cert          : simulate external PKI cert" << std::endl;
+      std::cout << "--epki-key           : simulate external PKI private key" << std::endl;
       ret = 2;
     }
   return ret;

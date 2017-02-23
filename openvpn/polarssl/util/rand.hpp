@@ -19,15 +19,15 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL Cryptographic Random API defined in <polarssl/ctr_drbg.h>
+// Wrap the mbed TLS Cryptographic Random API defined in <mbedtls/ctr_drbg.h>
 // so that it can be used as the primary source of cryptographic entropy by
 // the OpenVPN core.
 
-#ifndef OPENVPN_POLARSSL_UTIL_RAND_H
-#define OPENVPN_POLARSSL_UTIL_RAND_H
+#ifndef OPENVPN_MBEDTLS_UTIL_RAND_H
+#define OPENVPN_MBEDTLS_UTIL_RAND_H
 
-#include <polarssl/entropy_poll.h>
-#include <polarssl/ctr_drbg.h>
+#include <mbedtls/entropy_poll.h>
+#include <mbedtls/ctr_drbg.h>
 
 #include <openvpn/random/randapi.hpp>
 
@@ -42,19 +42,19 @@ namespace openvpn {
 
     PolarSSLRandom(const bool prng)
     {
-      if (ctr_drbg_init(&ctx, entropy_poll, nullptr, nullptr, 0) < 0)
+      if (mbedtls_ctr_drbg_seed(&ctx, entropy_poll, nullptr, nullptr, 0) < 0)
 	throw rand_error_polarssl("CTR_DRBG init");
 
       // If prng is set, configure for higher performance
       // by reseeding less frequently.
       if (prng)
-	ctr_drbg_set_reseed_interval(&ctx, 1000000);
+	mbedtls_ctr_drbg_set_reseed_interval(&ctx, 1000000);
     }
 
     // Random algorithm name
     virtual std::string name() const
     {
-      return "PolarSSL-CTR_DRBG";
+      return "mbedTLS-CTR_DRBG";
     }
 
     // Return true if algorithm is crypto-strength
@@ -80,16 +80,16 @@ namespace openvpn {
   private:
     bool rndbytes(unsigned char *buf, size_t size)
     {
-      return ctr_drbg_random(&ctx, buf, size) < 0 ? false : true;
+      return mbedtls_ctr_drbg_random(&ctx, buf, size) < 0 ? false : true;
     }
 
     static int entropy_poll(void *data, unsigned char *output, size_t len)
     {
       size_t olen;
-      return platform_entropy_poll(data, output, len, &olen);
+      return mbedtls_platform_entropy_poll(data, output, len, &olen);
     }
 
-    ctr_drbg_context ctx;
+    mbedtls_ctr_drbg_context ctx;
   };
 
 }

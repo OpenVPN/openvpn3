@@ -19,16 +19,16 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap a PolarSSL dhm_context object (Diffie Hellman parameters).
+// Wrap a mbed TLS dhm_context object (Diffie Hellman parameters).
 
-#ifndef OPENVPN_POLARSSL_PKI_DH_H
-#define OPENVPN_POLARSSL_PKI_DH_H
+#ifndef OPENVPN_MBEDTLS_PKI_DH_H
+#define OPENVPN_MBEDTLS_PKI_DH_H
 
 #include <string>
 #include <sstream>
 #include <cstring>
 
-#include <polarssl/x509.h>
+#include <mbedtls/x509.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -61,9 +61,11 @@ namespace openvpn {
       void parse(const std::string& dh_txt, const std::string& title)
       {
 	alloc();
-	const int status = dhm_parse_dhm(dhc,
+	// dh_txt.length() is increased by 1 as it does not include the NULL-terminator
+	// which mbedtls_dhm_parse_dhm() expects to see.
+	const int status = mbedtls_dhm_parse_dhm(dhc,
 					 (const unsigned char *)dh_txt.c_str(),
-					 dh_txt.length());
+					 dh_txt.length() + 1);
 	if (status < 0)
 	  {
 	    throw PolarSSLException("error parsing " + title + " DH parameters", status);
@@ -76,7 +78,7 @@ namespace openvpn {
 	  }
       }
 
-      dhm_context* get() const
+      mbedtls_dhm_context* get() const
       {
 	return dhc;
       }
@@ -91,8 +93,8 @@ namespace openvpn {
       {
 	if (!dhc)
 	  {
-	    dhc = new dhm_context;
-	    dhm_init(dhc);
+	    dhc = new mbedtls_dhm_context;
+	    mbedtls_dhm_init(dhc);
 	  }
       }
 
@@ -100,13 +102,13 @@ namespace openvpn {
       {
 	if (dhc)
 	  {
-	    dhm_free(dhc);
+	    mbedtls_dhm_free(dhc);
 	    delete dhc;
 	    dhc = nullptr;
 	  }
       }
 
-      dhm_context *dhc;
+      mbedtls_dhm_context *dhc;
     };
   }
 }

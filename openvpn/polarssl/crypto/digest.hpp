@@ -19,15 +19,15 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL digest API defined in <polarssl/md.h>
+// Wrap the mbed TLS digest API defined in <mbedtls/md.h>
 // so that it can be used as part of the crypto layer of the OpenVPN core.
 
-#ifndef OPENVPN_POLARSSL_CRYPTO_DIGEST_H
-#define OPENVPN_POLARSSL_CRYPTO_DIGEST_H
+#ifndef OPENVPN_MBEDTLS_CRYPTO_DIGEST_H
+#define OPENVPN_MBEDTLS_CRYPTO_DIGEST_H
 
 #include <string>
 
-#include <polarssl/md.h>
+#include <mbedtls/md.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -50,7 +50,7 @@ namespace openvpn {
       OPENVPN_EXCEPTION(polarssl_digest_error);
 
       enum {
-	MAX_DIGEST_SIZE = POLARSSL_MD_MAX_SIZE
+	MAX_DIGEST_SIZE = MBEDTLS_MD_MAX_SIZE
       };
 
       DigestContext()
@@ -70,25 +70,27 @@ namespace openvpn {
       {
 	erase();
 	ctx.md_ctx = nullptr;
-	if (md_init_ctx(&ctx, digest_type(alg)) < 0)
-	  throw polarssl_digest_error("md_init_ctx");
-	if (md_starts(&ctx) < 0)
-	  throw polarssl_digest_error("md_starts");
+
+	mbedtls_md_init(&ctx);
+	if ( mbedtls_md_setup(&ctx, digest_type(alg), 1) < 0)
+	  throw polarssl_digest_error("mbedtls_md_setup");
+	if (mbedtls_md_starts(&ctx) < 0)
+	  throw polarssl_digest_error("mbedtls_md_starts");
 	initialized = true;
       }
 
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
-	if (md_update(&ctx, in, size) < 0)
-	  throw polarssl_digest_error("md_update");
+	if (mbedtls_md_update(&ctx, in, size) < 0)
+	  throw polarssl_digest_error("mbedtls_md_update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
-	if (md_finish(&ctx, out) < 0)
-	  throw polarssl_digest_error("md_finish");
+	if (mbedtls_md_finish(&ctx, out) < 0)
+	  throw polarssl_digest_error("mbedtls_md_finish");
 	return size_();
       }
 
@@ -101,24 +103,24 @@ namespace openvpn {
       bool is_initialized() const { return initialized; }
 
     private:
-      static const md_info_t *digest_type(const CryptoAlgs::Type alg)
+      static const mbedtls_md_info_t *digest_type(const CryptoAlgs::Type alg)
       {
 	switch (alg)
 	  {
 	  case CryptoAlgs::MD4:
-	    return md_info_from_type(POLARSSL_MD_MD4);
+	    return mbedtls_md_info_from_type(MBEDTLS_MD_MD4);
 	  case CryptoAlgs::MD5:
-	    return md_info_from_type(POLARSSL_MD_MD5);
+	    return mbedtls_md_info_from_type(MBEDTLS_MD_MD5);
 	  case CryptoAlgs::SHA1:
-	    return md_info_from_type(POLARSSL_MD_SHA1);
+	    return mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
 	  case CryptoAlgs::SHA224:
-	    return md_info_from_type(POLARSSL_MD_SHA224);
+	    return mbedtls_md_info_from_type(MBEDTLS_MD_SHA224);
 	  case CryptoAlgs::SHA256:
-	    return md_info_from_type(POLARSSL_MD_SHA256);
+	    return mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
 	  case CryptoAlgs::SHA384:
-	    return md_info_from_type(POLARSSL_MD_SHA384);
+	    return mbedtls_md_info_from_type(MBEDTLS_MD_SHA384);
 	  case CryptoAlgs::SHA512:
-	    return md_info_from_type(POLARSSL_MD_SHA512);
+	    return mbedtls_md_info_from_type(MBEDTLS_MD_SHA512);
 	  default:
 	    OPENVPN_THROW(polarssl_digest_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
@@ -128,14 +130,14 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    md_free_ctx(&ctx);
+	    mbedtls_md_free(&ctx);
 	    initialized = false;
 	  }
       }
 
       size_t size_() const
       {
-	return ctx.md_info->size;
+	return mbedtls_md_get_size(ctx.md_info);
       }
 
       void check_initialized() const
@@ -147,7 +149,7 @@ namespace openvpn {
       }
 
       bool initialized;
-      md_context_t ctx;
+      mbedtls_md_context_t ctx;
     };
   }
 }

@@ -19,17 +19,17 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// PolarSSL exception class that allows a PolarSSL error code
+// mbed TLS exception class that allows a  error code
 // to be represented.
 
-#ifndef OPENVPN_POLARSSL_UTIL_ERROR_H
-#define OPENVPN_POLARSSL_UTIL_ERROR_H
+#ifndef OPENVPN_MBEDTLS_UTIL_ERROR_H
+#define OPENVPN_MBEDTLS_UTIL_ERROR_H
 
 #include <string>
 
-#include <polarssl/ssl.h>
-#include <polarssl/pem.h>
-#include <polarssl/error.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/pem.h>
+#include <mbedtls/error.h>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/error/error.hpp>
@@ -44,42 +44,43 @@ namespace openvpn {
     PolarSSLException()
     {
       errnum = 0;
-      errtxt = "PolarSSL";
+      errtxt = "mbed TLS";
     }
 
     explicit PolarSSLException(const std::string& error_text)
     {
       errnum = 0;
-      errtxt = "PolarSSL: " + error_text;
+      errtxt = "mbed TLS: " + error_text;
     }
 
     explicit PolarSSLException(const std::string& error_text, const Error::Type code, const bool fatal)
       : ExceptionCode(code, fatal)
     {
       errnum = 0;
-      errtxt = "PolarSSL: " + error_text;
+      errtxt = "mbed TLS: " + error_text;
     }
 
     explicit PolarSSLException(const std::string& error_text, const int polarssl_errnum)
     {
       errnum = polarssl_errnum;
-      errtxt = "PolarSSL: " + error_text + " : " + polarssl_errtext(polarssl_errnum);
+      errtxt = "mbed TLS: " + error_text + " : " + polarssl_errtext(polarssl_errnum);
 
-      // cite forum URL for PolarSSL invalid date
-      if (polarssl_errnum == POLARSSL_ERR_X509_INVALID_DATE)
+      // cite forum URL for mbed TLS invalid date
+      // TODO: Get a better URL for such knowledge information record
+      if (polarssl_errnum == MBEDTLS_ERR_X509_INVALID_DATE)
 	errtxt += ", please see https://forums.openvpn.net/viewtopic.php?f=36&t=21873 for more info";
 
-      // for certain PolarSSL errors, translate them to an OpenVPN error code,
+      // for certain mbed TLS errors, translate them to an OpenVPN error code,
       // so they can be propagated up to the higher levels (such as UI level)
       switch (errnum) {
-      case POLARSSL_ERR_X509_CERT_VERIFY_FAILED:
+      case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED:
 	set_code(Error::CERT_VERIFY_FAIL, true);
 	break;
-      case POLARSSL_ERR_PK_PASSWORD_REQUIRED:
-      case POLARSSL_ERR_PK_PASSWORD_MISMATCH:
+      case MBEDTLS_ERR_PK_PASSWORD_REQUIRED:
+      case MBEDTLS_ERR_PK_PASSWORD_MISMATCH:
 	set_code(Error::PEM_PASSWORD_FAIL, true);
 	break;
-      case POLARSSL_ERR_SSL_BAD_HS_PROTOCOL_VERSION:
+      case MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION:
 	set_code(Error::TLS_VERSION_MIN, true);
 	break;
       }
@@ -95,8 +96,40 @@ namespace openvpn {
     static std::string polarssl_errtext(int errnum)
     {
       char buf[256];
-      polarssl_strerror(errnum, buf, sizeof(buf));
+      mbedtls_strerror(errnum, buf, sizeof(buf));
       return buf;
+    }
+
+    static std::string polarssl_verify_flags_errtext(const uint32_t flags)
+    {
+      // get string rendition of flags
+      const size_t BUF_SIZE = 1024;
+      std::unique_ptr<char[]> buf(new char[BUF_SIZE]);
+      buf[0] = '\0';
+      mbedtls_x509_crt_verify_info(buf.get(), BUF_SIZE, "", flags);
+
+      // postprocess string
+      std::string ret;
+      ret.reserve(std::strlen(buf.get()) + 64);
+      bool newline = false;
+      for (size_t i = 0; i < BUF_SIZE; ++i)
+	{
+	  const char c = buf[i];
+	  if (c == '\0')
+	    break;
+	  else if (c == '\n')
+	    newline = true;
+	  else
+	    {
+	      if (newline)
+		{
+		  ret += ", ";
+		  newline = false;
+		}
+	      ret += c;
+	    }
+	}
+      return ret;
     }
 
   private:

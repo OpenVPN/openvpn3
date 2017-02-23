@@ -8,8 +8,8 @@ cd $DEP_DIR
 rm -rf asio* boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
 echo "******* ASIO"
 $O3/core/deps/asio/build-asio
-echo "******* POLARSSL"
-$O3/core/scripts/linux/build-polarssl
+echo "******* MBEDTLS"
+$O3/core/scripts/linux/build-mbedtls
 echo "******* LZ4"
 $O3/core/scripts/linux/build-lz4
 

@@ -88,14 +88,14 @@ FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # PolarSSL
 if [ "$PSSL" = "1" ]; then
-    LIBS="$LIBS -lmbedtls"
+    LIBS="$LIBS -lmbedcrypto -lmbedtls -lmbedx509"
     if [ "$HYBRID" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL_APPLE_HYBRID"
     else
 	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL"
     fi
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/polarssl/polarssl-$PLATFORM/include"
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/polarssl/polarssl-$PLATFORM/library"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/mbedtls/mbedtls-$PLATFORM/include"
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/mbedtls/mbedtls-$PLATFORM/library"
     if [ "$MINI" = "1" ]; then
 	LIBS="$LIBS -lminicrypto"
 	LIBDIRS="$LIBDIRS -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM"

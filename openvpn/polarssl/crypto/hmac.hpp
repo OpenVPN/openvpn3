@@ -19,11 +19,11 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL HMAC API defined in <polarssl/md.h> so
+// Wrap the mbed TLS HMAC API defined in <mbedtls/md.h> so
 // that it can be used as part of the crypto layer of the OpenVPN core.
 
 #ifndef OPENVPN_POLARSSL_CRYPTO_HMAC_H
-#define OPENVPN_POLARSSL_CRYPTO_HMAC_H
+#define OPENVPN_MBEDTLS_CRYPTO_HMAC_H
 
 #include <string>
 
@@ -43,7 +43,7 @@ namespace openvpn {
       OPENVPN_EXCEPTION(polarssl_hmac_error);
 
       enum {
-	MAX_HMAC_SIZE = POLARSSL_MD_MAX_SIZE
+	MAX_HMAC_SIZE = MBEDTLS_MD_MAX_SIZE
       };
 
       HMACContext()
@@ -63,32 +63,34 @@ namespace openvpn {
       {
 	erase();
 	ctx.md_ctx = nullptr;
-	if (md_init_ctx(&ctx, DigestContext::digest_type(digest)) < 0)
-	  throw polarssl_hmac_error("md_init_ctx");
-	if (md_hmac_starts(&ctx, key, key_size) < 0)
-	  throw polarssl_hmac_error("md_hmac_starts");
+
+	mbedtls_md_init(&ctx);
+	if ( mbedtls_md_setup(&ctx, DigestContext::digest_type(digest), 1) < 0)
+	  throw polarssl_hmac_error("mbedtls_md_init_ctx");
+	if (mbedtls_md_hmac_starts(&ctx, key, key_size) < 0)
+	  throw polarssl_hmac_error("mbedtls_md_hmac_starts");
 	initialized = true;
       }
 
       void reset()
       {
 	check_initialized();
-	if (md_hmac_reset(&ctx) < 0)
-	  throw polarssl_hmac_error("md_hmac_reset");
+	if (mbedtls_md_hmac_reset(&ctx) < 0)
+	  throw polarssl_hmac_error("mbedtls_md_hmac_reset");
       }
 
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
-	if (md_hmac_update(&ctx, in, size) < 0)
-	  throw polarssl_hmac_error("md_hmac_update");
+	if (mbedtls_md_hmac_update(&ctx, in, size) < 0)
+	  throw polarssl_hmac_error("mbedtls_md_hmac_update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
-	if (md_hmac_finish(&ctx, out) < 0)
-	  throw polarssl_hmac_error("md_hmac_finish");
+	if (mbedtls_md_hmac_finish(&ctx, out) < 0)
+	  throw polarssl_hmac_error("mbedtls_md_hmac_finish");
 	return size_();
       }
 
@@ -105,14 +107,14 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    md_free_ctx(&ctx);
+	    mbedtls_md_free(&ctx);
 	    initialized = false;
 	  }
       }
 
       size_t size_() const
       {
-	return ctx.md_info->size;
+	return mbedtls_md_get_size(ctx.md_info);
       }
 
       void check_initialized() const
@@ -124,7 +126,7 @@ namespace openvpn {
       }
 
       bool initialized;
-      md_context_t ctx;
+      mbedtls_md_context_t ctx;
     };
   }
 }

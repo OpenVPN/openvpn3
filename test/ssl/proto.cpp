@@ -224,7 +224,7 @@
 #include <openvpn/polarssl/crypto/api.hpp>
 #include <openvpn/polarssl/ssl/sslctx.hpp>
 #include <openvpn/polarssl/util/rand.hpp>
-#include <polarssl/debug.h>
+#include <mbedtls/debug.h>
 #endif
 
 #include <openvpn/crypto/selftest.hpp>
@@ -1082,7 +1082,7 @@ int main(int argc, char* argv[])
 
   // set global PolarSSL debug level
 #if defined(USE_POLARSSL)
-  debug_set_threshold(1);
+  mbedtls_debug_set_threshold(1);
 #endif
 
   if (argc >= 2 && !strcmp(argv[1], "test"))

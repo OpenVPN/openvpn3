@@ -774,7 +774,7 @@ namespace openvpn {
       try {
 	// set global PolarSSL debug level
 #if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
-	debug_set_threshold(state->ssl_debug_level); // fixme -- using a global method for this seems wrong
+	mbedtls_debug_set_threshold(state->ssl_debug_level); // fixme -- using a global method for this seems wrong
 #endif
 
 	// load options
@@ -975,10 +975,9 @@ namespace openvpn {
 	}
     }
 
-    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string& sig_type, const std::string& data, std::string& sig)
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string& data, std::string& sig)
     {
       ExternalPKISignRequest req;
-      req.sigType = sig_type;
       req.data = data;
       req.alias = state->external_pki_alias;
       external_pki_sign_request(req); // call out to derived class for RSA signature

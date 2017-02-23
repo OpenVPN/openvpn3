@@ -19,16 +19,17 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap a PolarSSL x509_crt object
+// Wrap a mbed TLS x509_crt object
 
-#ifndef OPENVPN_POLARSSL_PKI_X509CERT_H
-#define OPENVPN_POLARSSL_PKI_X509CERT_H
+#ifndef OPENVPN_MBEDTLS_PKI_X509CERT_H
+#define OPENVPN_MBEDTLS_PKI_X509CERT_H
 
 #include <string>
 #include <sstream>
 #include <cstring>
+#include <iostream>
 
-#include <polarssl/x509.h>
+#include <mbedtls/x509.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -65,9 +66,11 @@ namespace openvpn {
 	if (cert_txt.empty())
 	  throw PolarSSLException(title + " certificate is undefined");
 
-	const int status = x509_crt_parse(chain,
-					  (const unsigned char *)cert_txt.c_str(),
-					  cert_txt.length());
+	// cert_txt.length() is increased by 1 as it does not include the NULL-terminator
+	// which mbedtls_x509_crt_parse() expects to see.
+	const int status = mbedtls_x509_crt_parse(chain,
+						  (const unsigned char *)cert_txt.c_str(),
+						  cert_txt.length() + 1);
 	if (status < 0)
 	  {
 	    throw PolarSSLException("error parsing " + title + " certificate", status);
@@ -79,11 +82,11 @@ namespace openvpn {
 	    if (strict)
 	      throw PolarSSLException(os.str());
 	    else
-	      OPENVPN_LOG("POLARSSL: " << os.str());
+	      OPENVPN_LOG("MBEDTLS: " << os.str());
 	  }
       }
 
-      x509_crt* get() const
+      mbedtls_x509_crt* get() const
       {
 	return chain;
       }
@@ -98,8 +101,8 @@ namespace openvpn {
       {
 	if (!chain)
 	  {
-	    chain = new x509_crt;
-	    std::memset(chain, 0, sizeof(x509_crt));
+	    chain = new mbedtls_x509_crt;
+	    std::memset(chain, 0, sizeof(mbedtls_x509_crt));
 	  }
       }
 
@@ -107,13 +110,13 @@ namespace openvpn {
       {
 	if (chain)
 	  {
-	    x509_crt_free(chain);
+	    mbedtls_x509_crt_free(chain);
 	    delete chain;
 	    chain = nullptr;
 	  }
       }
 
-      x509_crt *chain;
+      mbedtls_x509_crt *chain;
     };
   }
 }

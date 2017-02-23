@@ -43,7 +43,7 @@ version numbers of each dependency.  If you want to use a different
 version of the library than listed here, you can edit this file.
 
 1. Asio -- https://github.com/chriskohlhoff/asio
-2. PolarSSL/mbedTLS (1.3.15 or higher) -- https://tls.mbed.org/
+2. mbed TLS (2.3.0 or higher) -- https://tls.mbed.org/
 3. LZ4 -- https://github.com/Cyan4973/lz4
 
 For dependencies that are typically cloned from github vs.

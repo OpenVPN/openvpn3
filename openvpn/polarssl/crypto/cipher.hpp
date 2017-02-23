@@ -19,15 +19,15 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the PolarSSL cipher API defined in <polarssl/cipher.h> so
+// Wrap the mbed TLS cipher API defined in <mbedtls/cipher.h> so
 // that it can be used as part of the crypto layer of the OpenVPN core.
 
-#ifndef OPENVPN_POLARSSL_CRYPTO_CIPHER_H
-#define OPENVPN_POLARSSL_CRYPTO_CIPHER_H
+#ifndef OPENVPN_MBEDTLS_CRYPTO_CIPHER_H
+#define OPENVPN_MBEDTLS_CRYPTO_CIPHER_H
 
 #include <string>
 
-#include <polarssl/cipher.h>
+#include <mbedtls/cipher.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -48,15 +48,15 @@ namespace openvpn {
 
       // mode parameter for constructor
       enum {
-	MODE_UNDEF = POLARSSL_OPERATION_NONE,
-	ENCRYPT = POLARSSL_ENCRYPT,
-	DECRYPT = POLARSSL_DECRYPT
+	MODE_UNDEF = MBEDTLS_OPERATION_NONE,
+	ENCRYPT = MBEDTLS_ENCRYPT,
+	DECRYPT = MBEDTLS_DECRYPT
       };
 
-      // PolarSSL cipher constants
+      // mbed TLS cipher constants
       enum {
-	MAX_IV_LENGTH = POLARSSL_MAX_IV_LENGTH,
-	CIPH_CBC_MODE = POLARSSL_MODE_CBC
+	MAX_IV_LENGTH = MBEDTLS_MAX_IV_LENGTH,
+	CIPH_CBC_MODE = MBEDTLS_MODE_CBC
       };
 
       CipherContext()
@@ -75,15 +75,15 @@ namespace openvpn {
 	  throw polarssl_cipher_mode_error();
 
 	// get cipher type
-	const cipher_info_t *ci = cipher_type(alg);
+	const mbedtls_cipher_info_t *ci = cipher_type(alg);
 
 	// initialize cipher context with cipher type
-	if (cipher_init_ctx(&ctx, ci) < 0)
-	  throw polarssl_cipher_error("cipher_init_ctx");
+	if (mbedtls_cipher_setup(&ctx, ci) < 0)
+	  throw polarssl_cipher_error("mbedtls_cipher_setup");
 
 	// set key and encrypt/decrypt mode
-	if (cipher_setkey(&ctx, key, ci->key_length, (operation_t)mode) < 0)
-	  throw polarssl_cipher_error("cipher_setkey");
+	if (mbedtls_cipher_setkey(&ctx, key, ci->key_bitlen, (mbedtls_operation_t)mode) < 0)
+	  throw polarssl_cipher_error("mbedtls_cipher_setkey");
 
 	initialized = true;
       }
@@ -91,10 +91,10 @@ namespace openvpn {
       void reset(const unsigned char *iv)
       {
 	check_initialized();
-	if (cipher_reset(&ctx) < 0)
-	  throw polarssl_cipher_error("cipher_reset");
-	if (cipher_set_iv(&ctx, iv, iv_length()))
-	  throw polarssl_cipher_error("cipher_set_iv");
+	if (mbedtls_cipher_reset(&ctx) < 0)
+	  throw polarssl_cipher_error("mbedtls_cipher_reset");
+	if (mbedtls_cipher_set_iv(&ctx, iv, iv_length()))
+	  throw polarssl_cipher_error("mbedtls_cipher_set_iv");
       }
 
       bool update(unsigned char *out, const size_t max_out_size,
@@ -103,7 +103,7 @@ namespace openvpn {
       {
 	check_initialized();
 	size_t outlen;
-	if (cipher_update(&ctx, in, in_size, out, &outlen) >= 0)
+	if (mbedtls_cipher_update(&ctx, in, in_size, out, &outlen) >= 0)
 	  {
 	    out_acc += outlen;
 	    return true;
@@ -116,7 +116,7 @@ namespace openvpn {
       {
 	check_initialized();
 	size_t outlen;
-	if (cipher_finish (&ctx, out, &outlen) >= 0)
+	if (mbedtls_cipher_finish (&ctx, out, &outlen) >= 0)
 	  {
 	    out_acc += outlen;
 	    return true;
@@ -130,39 +130,39 @@ namespace openvpn {
       size_t iv_length() const
       {
 	check_initialized();
-	return cipher_get_iv_size(&ctx);
+	return mbedtls_cipher_get_iv_size(&ctx);
       }
 
       size_t block_size() const
       {
 	check_initialized();
-	return cipher_get_block_size(&ctx);
+	return mbedtls_cipher_get_block_size(&ctx);
       }
 
       // return cipher mode (such as CIPH_CBC_MODE, etc.)
       int cipher_mode() const
       {
 	check_initialized();
-	return cipher_get_cipher_mode(&ctx);
+	return mbedtls_cipher_get_cipher_mode(&ctx);
       }
 
     private:
-      static const cipher_info_t *cipher_type(const CryptoAlgs::Type alg)
+      static const mbedtls_cipher_info_t *cipher_type(const CryptoAlgs::Type alg)
       {
 	switch (alg)
 	  {
 	  case CryptoAlgs::AES_128_CBC:
-	    return cipher_info_from_type(POLARSSL_CIPHER_AES_128_CBC);
+	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_CBC);
 	  case CryptoAlgs::AES_192_CBC:
-	    return cipher_info_from_type(POLARSSL_CIPHER_AES_192_CBC);
+	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_192_CBC);
 	  case CryptoAlgs::AES_256_CBC:
-	    return cipher_info_from_type(POLARSSL_CIPHER_AES_256_CBC);
+	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_256_CBC);
 	  case CryptoAlgs::DES_CBC:
-	    return cipher_info_from_type(POLARSSL_CIPHER_DES_CBC);
+	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_CBC);
 	  case CryptoAlgs::DES_EDE3_CBC:
-	    return cipher_info_from_type(POLARSSL_CIPHER_DES_EDE3_CBC);
+	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_EDE3_CBC);
 	  case CryptoAlgs::BF_CBC:
-	    return cipher_info_from_type(POLARSSL_CIPHER_BLOWFISH_CBC);
+	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_BLOWFISH_CBC);
 	  default:
 	    OPENVPN_THROW(polarssl_cipher_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
@@ -172,7 +172,7 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    cipher_free_ctx(&ctx);
+	    mbedtls_cipher_free(&ctx);
 	    initialized = false;
 	  }
       }
@@ -186,7 +186,7 @@ namespace openvpn {
       }
 
       bool initialized;
-      cipher_context_t ctx;
+      mbedtls_cipher_context_t ctx;
     };
   }
 }

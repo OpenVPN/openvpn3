@@ -22,6 +22,11 @@
 #ifndef OPENVPN_PKI_PKCS1_H
 #define OPENVPN_PKI_PKCS1_H
 
+#include <cstring>
+
+#include <openvpn/common/size.hpp>
+#include <openvpn/buffer/buffer.hpp>
+
 namespace openvpn {
   namespace PKCS1 {
     // from http://www.ietf.org/rfc/rfc3447.txt
@@ -49,6 +54,62 @@ namespace openvpn {
 					 0x04, 0x02, 0x03, 0x05, 0x00, 0x04,
 					 0x40 };
       }
+
+      template <typename T>
+      class Parse
+      {
+      public:
+	Parse(const T none,
+	      const T md2,
+	      const T md5,
+	      const T sha1,
+	      const T sha256,
+	      const T sha384,
+	      const T sha512)
+	  : none_(none),
+	    md2_(md2),
+	    md5_(md5),
+	    sha1_(sha1),
+	    sha256_(sha256),
+	    sha384_(sha384),
+	    sha512_(sha512)
+	{
+	}
+
+	T alg_from_prefix(Buffer& buf) const
+	{
+	  if (match(buf, MD2, sizeof(MD2)))
+	    return md2_;
+	  else if (match(buf, MD5, sizeof(MD5)))
+	    return md5_;
+	  else if (match(buf, SHA1, sizeof(SHA1)))
+	    return sha1_;
+	  else if (match(buf, SHA256, sizeof(SHA256)))
+	    return sha256_;
+	  else if (match(buf, SHA384, sizeof(SHA384)))
+	    return sha384_;
+	  else if (match(buf, SHA512, sizeof(SHA512)))
+	    return sha512_;
+	  else
+	    return none_;
+	}
+
+      private:
+	bool match(Buffer& buf, const unsigned char *data, const size_t size) const
+	{
+	  if (buf.size() < size)
+	    return false;
+	  else if (std::memcmp(buf.c_data(), data, size) == 0)
+	    {
+	      buf.advance(size);
+	      return true;
+	    }
+	  else
+	    return false;
+	}
+
+	const T none_, md2_, md5_, sha1_, sha256_, sha384_, sha512_;
+      };
     }
   }
 }

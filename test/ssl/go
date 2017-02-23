@@ -13,7 +13,7 @@ else
     cd test/ssl
     #GCC_EXTRA="-DENABLE_PRNG"
     if [ "$OSSL" = "1" ]; then
-	OSSL=1 build proto
+	OPENSSL_SYS=1 build proto
     else
 	PSSL=1 NOSSL=1 build proto
     fi

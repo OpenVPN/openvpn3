@@ -19,16 +19,16 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap a PolarSSL x509_crl object
+// Wrap a mbed TLS x509_crl object
 
-#ifndef OPENVPN_POLARSSL_PKI_X509CRL_H
-#define OPENVPN_POLARSSL_PKI_X509CRL_H
+#ifndef OPENVPN_MBEDTLS_PKI_X509CRL_H
+#define OPENVPN_MBEDTLS_PKI_X509CRL_H
 
 #include <string>
 #include <sstream>
 #include <cstring>
 
-#include <polarssl/x509_crl.h>
+#include <mbedtls/x509_crl.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -62,16 +62,18 @@ namespace openvpn {
       {
 	alloc();
 
-	const int status = x509_crl_parse(chain,
-					  (const unsigned char *)crl_txt.c_str(),
-					  crl_txt.length());
+	// crl_txt.length() is increased by 1 as it does not include the NULL-terminator
+	// which mbedtls_x509_crl_parse() expects to see.
+	const int status = mbedtls_x509_crl_parse(chain,
+						  (const unsigned char *)crl_txt.c_str(),
+						  crl_txt.length() + 1);
 	if (status < 0)
 	  {
 	    throw PolarSSLException("error parsing CRL", status);
 	  }
       }
 
-      x509_crl* get() const
+      mbedtls_x509_crl* get() const
       {
 	return chain;
       }
@@ -86,8 +88,8 @@ namespace openvpn {
       {
 	if (!chain)
 	  {
-	    chain = new x509_crl;
-	    std::memset(chain, 0, sizeof(x509_crl));
+	    chain = new mbedtls_x509_crl;
+	    std::memset(chain, 0, sizeof(mbedtls_x509_crl));
 	  }
       }
 
@@ -95,13 +97,13 @@ namespace openvpn {
       {
 	if (chain)
 	  {
-	    x509_crl_free(chain);
+	    mbedtls_x509_crl_free(chain);
 	    delete chain;
 	    chain = nullptr;
 	  }
       }
 
-      x509_crl *chain;
+      mbedtls_x509_crl *chain;
     };
   }
 }

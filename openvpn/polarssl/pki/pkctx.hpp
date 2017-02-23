@@ -19,16 +19,16 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap a PolarSSL pk_context object.
+// Wrap a mbed TLS pk_context object.
 
-#ifndef OPENVPN_POLARSSL_PKI_PKCTX_H
-#define OPENVPN_POLARSSL_PKI_PKCTX_H
+#ifndef OPENVPN_MBEDTLS_PKI_PKCTX_H
+#define OPENVPN_MBEDTLS_PKI_PKCTX_H
 
 #include <string>
 #include <sstream>
 #include <cstring>
 
-#include <polarssl/pk.h>
+#include <mbedtls/pk.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -58,19 +58,37 @@ namespace openvpn {
 	  }
       }
 
+      bool defined() const
+      {
+	return ctx != nullptr;
+      }
+
       void parse(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
       {
 	alloc();
-	const int status = pk_parse_key(ctx,
+	// key_txt.length() is increased by 1 as it does not include the NULL-terminator
+	// which mbedtls_pk_parse_key() expects to see.
+	const int status = mbedtls_pk_parse_key(ctx,
 					(const unsigned char *)key_txt.c_str(),
-					key_txt.length(),
+					key_txt.length() + 1,
 					(const unsigned char *)priv_key_pwd.c_str(),
 					priv_key_pwd.length());
 	if (status < 0)
 	  throw PolarSSLException("error parsing " + title + " private key", status);
       }
 
-      pk_context* get() const
+      void epki_enable(void *arg,
+		       mbedtls_pk_rsa_alt_decrypt_func epki_decrypt,
+		       mbedtls_pk_rsa_alt_sign_func epki_sign,
+		       mbedtls_pk_rsa_alt_key_len_func epki_key_len)
+      {
+	alloc();
+	const int status = mbedtls_pk_setup_rsa_alt(ctx, arg, epki_decrypt, epki_sign, epki_key_len);
+	if (status < 0)
+	  throw PolarSSLException("error in mbedtls_pk_setup_rsa_alt", status);
+      }
+
+      mbedtls_pk_context* get() const
       {
 	return ctx;
       }
@@ -85,8 +103,8 @@ namespace openvpn {
       {
 	if (!ctx)
 	  {
-	    ctx = new pk_context;
-	    pk_init(ctx);
+	    ctx = new mbedtls_pk_context;
+	    mbedtls_pk_init(ctx);
 	  }
       }
 
@@ -94,13 +112,13 @@ namespace openvpn {
       {
 	if (ctx)
 	  {
-	    pk_free(ctx);
+	    mbedtls_pk_free(ctx);
 	    delete ctx;
 	    ctx = nullptr;
 	  }
       }
 
-      pk_context *ctx;
+      mbedtls_pk_context *ctx;
     };
 
   }

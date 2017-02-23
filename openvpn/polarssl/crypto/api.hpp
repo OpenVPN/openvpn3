@@ -19,8 +19,8 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_POLARSSL_CRYPTO_API_H
-#define OPENVPN_POLARSSL_CRYPTO_API_H
+#ifndef OPENVPN_MBEDTLS_CRYPTO_API_H
+#define OPENVPN_MBEDTLS_CRYPTO_API_H
 
 #include <openvpn/polarssl/crypto/cipher.hpp>
 #include <openvpn/polarssl/crypto/ciphergcm.hpp>

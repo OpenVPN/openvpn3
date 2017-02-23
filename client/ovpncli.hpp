@@ -367,10 +367,11 @@ namespace openvpn {
       std::string supportingChain; // (client writes)
     };
 
-    // used to request an RSA signature
+    // Used to request an RSA signature.
+    // Data will be prefixed by an optional PKCS#1 digest prefix
+    // per RFC 3447.
     struct ExternalPKISignRequest : public ExternalPKIRequestBase
     {
-      std::string sigType; // signature type (client reads)
       std::string data;  // data rendered as base64 (client reads)
       std::string sig;   // RSA signature, rendered as base64 (client writes)
     };
@@ -549,7 +550,7 @@ namespace openvpn {
       static MergeConfig build_merge_config(const ProfileMerge&);
 
       // from ExternalPKIBase
-      virtual bool sign(const std::string& sig_type, const std::string& data, std::string& sig);
+      virtual bool sign(const std::string& data, std::string& sig);
 
       // disable copy and assignment
       OpenVPNClient(const OpenVPNClient&) = delete;
