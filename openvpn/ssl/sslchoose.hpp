@@ -38,31 +38,31 @@
 #include <openvpn/applecrypto/util/rand.hpp>
 #endif
 
-#ifdef USE_POLARSSL
+#ifdef USE_MBEDTLS
 #include <mbedtls/platform.h>
 #include <mbedtls/debug.h>  // for debug_set_threshold
-#include <openvpn/polarssl/crypto/api.hpp>
-#include <openvpn/polarssl/ssl/sslctx.hpp>
-#include <openvpn/polarssl/util/rand.hpp>
+#include <openvpn/mbedtls/crypto/api.hpp>
+#include <openvpn/mbedtls/ssl/sslctx.hpp>
+#include <openvpn/mbedtls/util/rand.hpp>
 #endif
 
-#ifdef USE_POLARSSL_APPLE_HYBRID
+#ifdef USE_MBEDTLS_APPLE_HYBRID
 #include <openvpn/applecrypto/crypto/api.hpp>
-#include <openvpn/polarssl/ssl/sslctx.hpp>
-#include <openvpn/polarssl/util/rand.hpp>
+#include <openvpn/mbedtls/ssl/sslctx.hpp>
+#include <openvpn/mbedtls/util/rand.hpp>
 #endif
 
 namespace openvpn {
   namespace SSLLib {
-#if defined(USE_POLARSSL)
-    typedef PolarSSLCryptoAPI CryptoAPI;
-    typedef PolarSSLContext SSLAPI;
-    typedef PolarSSLRandom RandomAPI;
-#elif defined(USE_POLARSSL_APPLE_HYBRID)
-    // Uses Apple framework for CryptoAPI and PolarSSL for SSLAPI and RandomAPI
+#if defined(USE_MBEDTLS)
+    typedef MbedTLSCryptoAPI CryptoAPI;
+    typedef MbedTLSContext SSLAPI;
+    typedef MbedTLSRandom RandomAPI;
+#elif defined(USE_MBEDTLS_APPLE_HYBRID)
+    // Uses Apple framework for CryptoAPI and MbedTLS for SSLAPI and RandomAPI
     typedef AppleCryptoAPI CryptoAPI;
-    typedef PolarSSLContext SSLAPI;
-    typedef PolarSSLRandom RandomAPI;
+    typedef MbedTLSContext SSLAPI;
+    typedef MbedTLSRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
     typedef AppleCryptoAPI CryptoAPI;
     typedef AppleSSLContext SSLAPI;

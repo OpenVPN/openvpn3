@@ -25,7 +25,7 @@
 
 // Note that the Apple SSL API is missing some functionality (as of
 // Mac OS X 10.8) that makes it difficult to use as a drop in replacement
-// for OpenSSL or PolarSSL.  The biggest issue is that the API doesn't
+// for OpenSSL or MbedTLS.  The biggest issue is that the API doesn't
 // allow an SSL context to be built out of PEM-based certificates and
 // keys.  It requires an "Identity" in the Keychain that was imported
 // by the user as a PKCS#12 file.

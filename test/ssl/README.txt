@@ -2,17 +2,17 @@ Building proto.cpp sample:
 
 On Mac
 
-  Build with PolarSSL client and server (no minicrypto ASM algs for PolarSSL):
+  Build with MbedTLS client and server (no minicrypto ASM algs for MbedTLS):
 
-    PSSL=1 build proto
+    MTLS=1 build proto
 
-  Build with PolarSSL client and server using 4 concurrent threads (no minicrypto ASM algs for PolarSSL):
+  Build with MbedTLS client and server using 4 concurrent threads (no minicrypto ASM algs for MbedTLS):
 
-    -DN_THREADS=4" PSSL=1 build proto
+    -DN_THREADS=4" MTLS=1 build proto
 
-  Build with PolarSSL client and OpenSSL server (no minicrypto ASM algs for PolarSSL):
+  Build with MbedTLS client and OpenSSL server (no minicrypto ASM algs for MbedTLS):
 
-    PSSL=1 OSSL=1 OPENSSL_SYS=1 build proto
+    MTLS=1 OSSL=1 OPENSSL_SYS=1 build proto
 
   Build with OpenSSL client and server:
 
@@ -22,33 +22,33 @@ On Mac
 
     SSL_BOTH=1 OPENSSL_SYS=1 build proto
 
-  Build with PolarSSL client and server + minicrypto lib:
+  Build with MbedTLS client and server + minicrypto lib:
 
-    PSSL=1 MINI=1 build proto
+    MTLS=1 MINI=1 build proto
 
-  Build with PolarSSL client and server (no minicrypto ASM algs for PolarSSL),
+  Build with MbedTLS client and server (no minicrypto ASM algs for MbedTLS),
   except substitute AppleSSL crypto algs for the client side:
 
     HYBRID=1 build proto
 
 On Linux:
 
-  Build with PolarSSL client and server (no ASM crypto algs):
+  Build with MbedTLS client and server (no ASM crypto algs):
 
-    PSSL=1 NOSSL=1 build proto
+    MTLS=1 NOSSL=1 build proto
 
   Build with OpenSSL client and server:
 
     OSSL=1 build proto
 
-  Build with PolarSSL client and OpenSSL server:
+  Build with MbedTLS client and OpenSSL server:
 
-    PSSL=1 OSSL=1 build proto
+    MTLS=1 OSSL=1 build proto
 
-  Build with PolarSSL client and server (no ASM crypto algs)
+  Build with MbedTLS client and server (no ASM crypto algs)
   using Profile-Guided Optimization:
 
-    PGEN=1 PSSL=1 NOSSL=1 build proto && ./proto && PUSE=1 PSSL=1 NOSSL=1 build proto
+    PGEN=1 MTLS=1 NOSSL=1 build proto && ./proto && PUSE=1 MTLS=1 NOSSL=1 build proto
 
 Variations:
 
@@ -62,14 +62,14 @@ Variations:
 
     GCC_EXTRA="-DITER=1000" build proto
 
-  Crypto self-test (PolarSSL must be built with DEBUG_BUILD=1 or SELF_TEST=1):
+  Crypto self-test (MbedTLS must be built with DEBUG_BUILD=1 or SELF_TEST=1):
 
     ./proto test
 
 Caveats:
 
- When using PolarSSL as both client and server, make sure to build
- PolarSSL on Mac OS X with OSX_SERVER=1.
+ When using MbedTLS as both client and server, make sure to build
+ MbedTLS on Mac OS X with OSX_SERVER=1.
 
 Typical output:
 

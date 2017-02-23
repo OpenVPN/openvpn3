@@ -20,7 +20,7 @@ if [ "$(uname)" == "Darwin" ]; then
     fi
     . vars/setpath
     cd test/ovpncli
-    PSSL=1 LZ4=1 PTPROXY=1 build cli 2>&1
+    MTLS=1 LZ4=1 PTPROXY=1 build cli 2>&1
 else
     cd $O3/core
     if [ "$DEBUG" = "3" ]; then
@@ -30,5 +30,5 @@ else
     fi
     . vars/setpath
     cd test/ovpncli
-    PSSL=1 LZ4=1 NOSSL=1 PTPROXY=1 build cli 2>&1
+    MTLS=1 LZ4=1 NOSSL=1 PTPROXY=1 build cli 2>&1
 fi

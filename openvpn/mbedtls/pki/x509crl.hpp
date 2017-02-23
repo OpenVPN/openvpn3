@@ -33,10 +33,10 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/polarssl/util/error.hpp>
+#include <openvpn/mbedtls/util/error.hpp>
 
 namespace openvpn {
-  namespace PolarSSLPKI {
+  namespace MbedTLSPKI {
 
     class X509CRL : public RC<thread_unsafe_refcount>
     {
@@ -69,7 +69,7 @@ namespace openvpn {
 						  crl_txt.length() + 1);
 	if (status < 0)
 	  {
-	    throw PolarSSLException("error parsing CRL", status);
+	    throw MbedTLSException("error parsing CRL", status);
 	  }
       }
 

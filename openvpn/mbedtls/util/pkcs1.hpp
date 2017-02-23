@@ -19,18 +19,18 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_POLARSSL_UTIL_PKCS1_H
-#define OPENVPN_POLARSSL_UTIL_PKCS1_H
+#ifndef OPENVPN_MBEDTLS_UTIL_PKCS1_H
+#define OPENVPN_MBEDTLS_UTIL_PKCS1_H
 
 #include <openvpn/pki/pkcs1.hpp>
 
 namespace openvpn {
   namespace PKCS1 {
     namespace DigestPrefix {
-      class PolarSSLParse : public Parse<mbedtls_md_type_t>
+      class MbedTLSParse : public Parse<mbedtls_md_type_t>
       {
       public:
-	PolarSSLParse()
+	MbedTLSParse()
 	  : Parse(MBEDTLS_MD_NONE,
 		  MBEDTLS_MD_MD2,
 		  MBEDTLS_MD_MD5,

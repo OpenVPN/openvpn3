@@ -33,10 +33,10 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/polarssl/util/error.hpp>
+#include <openvpn/mbedtls/util/error.hpp>
 
 namespace openvpn {
-  namespace PolarSSLPKI {
+  namespace MbedTLSPKI {
 
     class PKContext : public RC<thread_unsafe_refcount>
     {
@@ -74,7 +74,7 @@ namespace openvpn {
 					(const unsigned char *)priv_key_pwd.c_str(),
 					priv_key_pwd.length());
 	if (status < 0)
-	  throw PolarSSLException("error parsing " + title + " private key", status);
+	  throw MbedTLSException("error parsing " + title + " private key", status);
       }
 
       void epki_enable(void *arg,
@@ -85,7 +85,7 @@ namespace openvpn {
 	alloc();
 	const int status = mbedtls_pk_setup_rsa_alt(ctx, arg, epki_decrypt, epki_sign, epki_key_len);
 	if (status < 0)
-	  throw PolarSSLException("error in mbedtls_pk_setup_rsa_alt", status);
+	  throw MbedTLSException("error in mbedtls_pk_setup_rsa_alt", status);
       }
 
       mbedtls_pk_context* get() const

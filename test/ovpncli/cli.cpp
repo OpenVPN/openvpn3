@@ -33,7 +33,6 @@
 
 #ifdef OPENVPN_PLATFORM_MAC
 #include <CoreFoundation/CFBundle.h>
-#define _OIDSBASE_H_ 1 // prevent symbol conflict between PolarSSL and ApplicationServices.h
 #include <ApplicationServices/ApplicationServices.h>
 #endif
 
@@ -69,8 +68,8 @@
 #include <openvpn/ssl/peerinfo.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
 
-#if defined(USE_POLARSSL)
-#include <openvpn/polarssl/util/pkcs1.hpp>
+#if defined(USE_MBEDTLS)
+#include <openvpn/mbedtls/util/pkcs1.hpp>
 #endif
 
 #if defined(OPENVPN_PLATFORM_WIN)
@@ -98,8 +97,8 @@ public:
 
   std::string epki_ca;
   std::string epki_cert;
-#if defined(USE_POLARSSL)
-  PolarSSLPKI::PKContext epki_ctx; // external PKI context
+#if defined(USE_MBEDTLS)
+  MbedTLSPKI::PKContext epki_ctx; // external PKI context
 #endif
 
 private:
@@ -178,7 +177,7 @@ private:
 
   virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signreq)
   {
-#if defined(USE_POLARSSL)
+#if defined(USE_MBEDTLS)
     if (epki_ctx.defined())
       {
 	try {
@@ -187,10 +186,10 @@ private:
 	  base64->decode(signdata, signreq.data);
 
 	  // get MD alg
-	  const mbedtls_md_type_t md_alg = PKCS1::DigestPrefix::PolarSSLParse().alg_from_prefix(signdata);
+	  const mbedtls_md_type_t md_alg = PKCS1::DigestPrefix::MbedTLSParse().alg_from_prefix(signdata);
 
 	  // log info
-	  OPENVPN_LOG("SIGN[" << PKCS1::DigestPrefix::PolarSSLParse::to_string(md_alg) << ',' << signdata.size() << "]: " << render_hex_generic(signdata));
+	  OPENVPN_LOG("SIGN[" << PKCS1::DigestPrefix::MbedTLSParse::to_string(md_alg) << ',' << signdata.size() << "]: " << render_hex_generic(signdata));
 
 	  // allocate buffer for signature
 	  BufferAllocated sig(mbedtls_pk_get_len(epki_ctx.get()), BufferAllocated::ARRAY);
@@ -676,7 +675,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		      client.epki_cert = read_text_utf8(epki_cert_fn);
 		      if (!epki_ca_fn.empty())
 			client.epki_ca = read_text_utf8(epki_ca_fn);
-#if defined(USE_POLARSSL)
+#if defined(USE_MBEDTLS)
 		      if (!epki_key_fn.empty())
 			{
 			  const std::string epki_key_txt = read_text_utf8(epki_key_fn);

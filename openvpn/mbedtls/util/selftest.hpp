@@ -33,7 +33,7 @@
 #include <mbedtls/sha512.h>
 
 namespace openvpn {
-  inline std::string crypto_self_test_polarssl()
+  inline std::string crypto_self_test_mbedtls()
   {
     std::ostringstream os;
 #ifdef MBEDTLS_SELF_TEST

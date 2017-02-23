@@ -34,10 +34,10 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/polarssl/util/error.hpp>
+#include <openvpn/mbedtls/util/error.hpp>
 
 namespace openvpn {
-  namespace PolarSSLPKI {
+  namespace MbedTLSPKI {
 
     class X509Cert : public RC<thread_unsafe_refcount>
     {
@@ -64,7 +64,7 @@ namespace openvpn {
 	alloc();
 
 	if (cert_txt.empty())
-	  throw PolarSSLException(title + " certificate is undefined");
+	  throw MbedTLSException(title + " certificate is undefined");
 
 	// cert_txt.length() is increased by 1 as it does not include the NULL-terminator
 	// which mbedtls_x509_crt_parse() expects to see.
@@ -73,14 +73,14 @@ namespace openvpn {
 						  cert_txt.length() + 1);
 	if (status < 0)
 	  {
-	    throw PolarSSLException("error parsing " + title + " certificate", status);
+	    throw MbedTLSException("error parsing " + title + " certificate", status);
 	  }
 	if (status > 0)
 	  {
 	    std::ostringstream os;
 	    os << status << " certificate(s) in " << title << " bundle failed to parse";
 	    if (strict)
-	      throw PolarSSLException(os.str());
+	      throw MbedTLSException(os.str());
 	    else
 	      OPENVPN_LOG("MBEDTLS: " << os.str());
 	  }

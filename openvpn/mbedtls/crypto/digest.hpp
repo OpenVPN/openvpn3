@@ -34,7 +34,7 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
-  namespace PolarSSLCrypto {
+  namespace MbedTLSCrypto {
     class HMACContext;
 
     class DigestContext
@@ -45,9 +45,9 @@ namespace openvpn {
     public:
       friend class HMACContext;
 
-      OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_uninitialized);
-      OPENVPN_SIMPLE_EXCEPTION(polarssl_digest_final_overflow);
-      OPENVPN_EXCEPTION(polarssl_digest_error);
+      OPENVPN_SIMPLE_EXCEPTION(mbedtls_digest_uninitialized);
+      OPENVPN_SIMPLE_EXCEPTION(mbedtls_digest_final_overflow);
+      OPENVPN_EXCEPTION(mbedtls_digest_error);
 
       enum {
 	MAX_DIGEST_SIZE = MBEDTLS_MD_MAX_SIZE
@@ -73,9 +73,9 @@ namespace openvpn {
 
 	mbedtls_md_init(&ctx);
 	if ( mbedtls_md_setup(&ctx, digest_type(alg), 1) < 0)
-	  throw polarssl_digest_error("mbedtls_md_setup");
+	  throw mbedtls_digest_error("mbedtls_md_setup");
 	if (mbedtls_md_starts(&ctx) < 0)
-	  throw polarssl_digest_error("mbedtls_md_starts");
+	  throw mbedtls_digest_error("mbedtls_md_starts");
 	initialized = true;
       }
 
@@ -83,14 +83,14 @@ namespace openvpn {
       {
 	check_initialized();
 	if (mbedtls_md_update(&ctx, in, size) < 0)
-	  throw polarssl_digest_error("mbedtls_md_update");
+	  throw mbedtls_digest_error("mbedtls_md_update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
 	if (mbedtls_md_finish(&ctx, out) < 0)
-	  throw polarssl_digest_error("mbedtls_md_finish");
+	  throw mbedtls_digest_error("mbedtls_md_finish");
 	return size_();
       }
 
@@ -122,7 +122,7 @@ namespace openvpn {
 	  case CryptoAlgs::SHA512:
 	    return mbedtls_md_info_from_type(MBEDTLS_MD_SHA512);
 	  default:
-	    OPENVPN_THROW(polarssl_digest_error, CryptoAlgs::name(alg) << ": not usable");
+	    OPENVPN_THROW(mbedtls_digest_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
       }
 
@@ -144,7 +144,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw polarssl_digest_uninitialized();
+	  throw mbedtls_digest_uninitialized();
 #endif
       }
 

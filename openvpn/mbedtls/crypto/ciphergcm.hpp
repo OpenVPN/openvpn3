@@ -35,14 +35,14 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
-  namespace PolarSSLCrypto {
+  namespace MbedTLSCrypto {
     class CipherContextGCM
     {
       CipherContextGCM(const CipherContextGCM&) = delete;
       CipherContextGCM& operator=(const CipherContextGCM&) = delete;
 
     public:
-      OPENVPN_EXCEPTION(polarssl_gcm_error);
+      OPENVPN_EXCEPTION(mbedtls_gcm_error);
 
       // mode parameter for constructor
       enum {
@@ -84,12 +84,12 @@ namespace openvpn {
 	unsigned int ckeysz = 0;
 	const mbedtls_cipher_id_t cid = cipher_type(alg, ckeysz);
 	if (ckeysz > keysize)
-	  throw polarssl_gcm_error("insufficient key material");
+	  throw mbedtls_gcm_error("insufficient key material");
 
 	// initialize cipher context
 	mbedtls_gcm_init(&ctx);
 	if (mbedtls_gcm_setkey(&ctx, cid, key, ckeysz * 8) < 0)
-	    throw polarssl_gcm_error("mbedtls_gcm_setkey");
+	    throw mbedtls_gcm_error("mbedtls_gcm_setkey");
 
 	initialized = true;
       }
@@ -107,7 +107,7 @@ namespace openvpn {
 						     length, iv, IV_LEN, ad, ad_len,
 						     input, output, AUTH_TAG_LEN, tag);
 	if (unlikely(status))
-	  OPENVPN_THROW(polarssl_gcm_error, "mbedtls_gcm_crypt_and_tag failed with status=" << status);
+	  OPENVPN_THROW(mbedtls_gcm_error, "mbedtls_gcm_crypt_and_tag failed with status=" << status);
       }
 
       // input and output may NOT be equal
@@ -142,7 +142,7 @@ namespace openvpn {
 	    keysize = 32;
 	    return MBEDTLS_CIPHER_ID_AES;
 	  default:
-	    OPENVPN_THROW(polarssl_gcm_error, CryptoAlgs::name(alg) << ": not usable");
+	    OPENVPN_THROW(mbedtls_gcm_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
       }
 
@@ -158,7 +158,7 @@ namespace openvpn {
       void check_initialized() const
       {
 	if (unlikely(!initialized))
-	  throw polarssl_gcm_error("uninitialized");
+	  throw mbedtls_gcm_error("uninitialized");
       }
 
       bool initialized;

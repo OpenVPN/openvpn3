@@ -34,13 +34,13 @@
 //#include <openvpn/applecrypto/util/selftest.hpp>
 #endif
 
-#ifdef USE_POLARSSL
-#include <openvpn/polarssl/util/selftest.hpp>
+#ifdef USE_MBEDTLS
+#include <openvpn/mbedtls/util/selftest.hpp>
 #endif
 
-#ifdef USE_POLARSSL_APPLE_HYBRID
+#ifdef USE_MBEDTLS_APPLE_HYBRID
 //#include <openvpn/applecrypto/util/selftest.hpp>
-#include <openvpn/polarssl/util/selftest.hpp>
+#include <openvpn/mbedtls/util/selftest.hpp>
 #endif
 
 namespace openvpn {
@@ -54,8 +54,8 @@ namespace openvpn {
 #     ifdef USE_APPLE_SSL
         //ret += crypto_self_test_apple();
 #     endif
-#     if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
-        ret += crypto_self_test_polarssl();
+#     if defined(USE_MBEDTLS) || defined(USE_MBEDTLS_APPLE_HYBRID)
+        ret += crypto_self_test_mbedtls();
 #     endif
       return ret;
     }

@@ -39,13 +39,13 @@
 namespace openvpn {
 
     class OpenSSLContext;
-    class PolarSSLContext;
+    class MbedTLSContext;
 
     struct AuthCert : public RC<thread_unsafe_refcount>
     {
       // AuthCert needs to friend SSL implementation classes
       friend class OpenSSLContext;
-      friend class PolarSSLContext;
+      friend class MbedTLSContext;
 
       typedef RCPtr<AuthCert> Ptr;
 

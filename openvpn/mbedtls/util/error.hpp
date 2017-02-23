@@ -38,36 +38,36 @@
 namespace openvpn {
 
   // string exception class
-  class PolarSSLException : public ExceptionCode
+  class MbedTLSException : public ExceptionCode
   {
   public:
-    PolarSSLException()
+    MbedTLSException()
     {
       errnum = 0;
       errtxt = "mbed TLS";
     }
 
-    explicit PolarSSLException(const std::string& error_text)
+    explicit MbedTLSException(const std::string& error_text)
     {
       errnum = 0;
       errtxt = "mbed TLS: " + error_text;
     }
 
-    explicit PolarSSLException(const std::string& error_text, const Error::Type code, const bool fatal)
+    explicit MbedTLSException(const std::string& error_text, const Error::Type code, const bool fatal)
       : ExceptionCode(code, fatal)
     {
       errnum = 0;
       errtxt = "mbed TLS: " + error_text;
     }
 
-    explicit PolarSSLException(const std::string& error_text, const int polarssl_errnum)
+    explicit MbedTLSException(const std::string& error_text, const int mbedtls_errnum)
     {
-      errnum = polarssl_errnum;
-      errtxt = "mbed TLS: " + error_text + " : " + polarssl_errtext(polarssl_errnum);
+      errnum = mbedtls_errnum;
+      errtxt = "mbed TLS: " + error_text + " : " + mbedtls_errtext(mbedtls_errnum);
 
       // cite forum URL for mbed TLS invalid date
       // TODO: Get a better URL for such knowledge information record
-      if (polarssl_errnum == MBEDTLS_ERR_X509_INVALID_DATE)
+      if (mbedtls_errnum == MBEDTLS_ERR_X509_INVALID_DATE)
 	errtxt += ", please see https://forums.openvpn.net/viewtopic.php?f=36&t=21873 for more info";
 
       // for certain mbed TLS errors, translate them to an OpenVPN error code,
@@ -91,16 +91,16 @@ namespace openvpn {
 
     int get_errnum() const { return errnum; }
 
-    virtual ~PolarSSLException() throw() {}
+    virtual ~MbedTLSException() throw() {}
 
-    static std::string polarssl_errtext(int errnum)
+    static std::string mbedtls_errtext(int errnum)
     {
       char buf[256];
       mbedtls_strerror(errnum, buf, sizeof(buf));
       return buf;
     }
 
-    static std::string polarssl_verify_flags_errtext(const uint32_t flags)
+    static std::string mbedtls_verify_flags_errtext(const uint32_t flags)
     {
       // get string rendition of flags
       const size_t BUF_SIZE = 1024;

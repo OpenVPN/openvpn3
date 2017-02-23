@@ -25,8 +25,8 @@ if [ -z "$1" ]; then
     echo " GPROF=1 -- build for gprof profiling"
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
-    echo " PSSL=1 -- include PolarSSL"
-    echo " HYBRID=1 -- use PolarSSL/AppleCrypto hybrid"
+    echo " MTLS=1 -- include mbedTLS"
+    echo " MA_HYBRID=1 -- use mbedTLS/AppleCrypto hybrid"
     echo " NOSSL=1 -- don't include OpenSSL"
     echo " OPENSSL_SYS=1 -- include system OpenSSL"
     echo " MINI=1 -- link with OpenSSL mini crypto lib"
@@ -55,9 +55,9 @@ LIBS=""
 LIBDIRS=""
 EXTRA_SRC_OBJ=""
 
-# PolarSSL/AppleCrypto hybrid
-if [ "$HYBRID" = "1" ]; then
-    PSSL=1
+# MbedTLS/AppleCrypto hybrid
+if [ "$MA_HYBRID" = "1" ]; then
+    MTLS=1
 fi
 
 # building on Mac OS X for osx, ios, or iossim?
@@ -86,13 +86,13 @@ FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 #    CPPFLAGS="$CPPFLAGS -DBOOST_ASIO_DISABLE_KQUEUE"
 #fi
 
-# PolarSSL
-if [ "$PSSL" = "1" ]; then
+# MbedTLS
+if [ "$MTLS" = "1" ]; then
     LIBS="$LIBS -lmbedcrypto -lmbedtls -lmbedx509"
-    if [ "$HYBRID" = "1" ]; then
-	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL_APPLE_HYBRID"
+    if [ "$MA_HYBRID" = "1" ]; then
+	CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS_APPLE_HYBRID"
     else
-	CPPFLAGS="$CPPFLAGS -DUSE_POLARSSL"
+	CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS"
     fi
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/mbedtls/mbedtls-$PLATFORM/include"
     LIBDIRS="$LIBDIRS -L$DEP_DIR/mbedtls/mbedtls-$PLATFORM/library"
@@ -123,7 +123,7 @@ if [ "$APPLE_FAMILY" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_APPLE_SSL -DUSE_OPENSSL"
 	LIBS="$LIBS -lcrypto -lssl"
 	[ "$CLANG" = "1" ] && [ "$NO_DEPRECATE" ] && FLAGS="$FLAGS $NO_DEPRECATE"
-    elif [ "$PSSL" = "1" ]; then
+    elif [ "$MTLS" = "1" ]; then
 	NOSSL=1
     else
 	NOSSL=1

@@ -33,10 +33,10 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/polarssl/util/error.hpp>
+#include <openvpn/mbedtls/util/error.hpp>
 
 namespace openvpn {
-  namespace PolarSSLPKI {
+  namespace MbedTLSPKI {
 
     class DH : public RC<thread_unsafe_refcount>
     {
@@ -68,13 +68,13 @@ namespace openvpn {
 					 dh_txt.length() + 1);
 	if (status < 0)
 	  {
-	    throw PolarSSLException("error parsing " + title + " DH parameters", status);
+	    throw MbedTLSException("error parsing " + title + " DH parameters", status);
 	  }
 	if (status > 0)
 	  {
 	    std::ostringstream os;
 	    os << status << " DH parameters in " << title << " failed to parse";
-	    throw PolarSSLException(os.str());
+	    throw MbedTLSException(os.str());
 	  }
       }
 

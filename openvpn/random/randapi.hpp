@@ -21,8 +21,8 @@
 
 // API for random number implementations.
 
-#ifndef OPENVPN_POLARSSL_UTIL_RANDAPI_H
-#define OPENVPN_POLARSSL_UTIL_RANDAPI_H
+#ifndef OPENVPN_MBEDTLS_UTIL_RANDAPI_H
+#define OPENVPN_MBEDTLS_UTIL_RANDAPI_H
 
 #include <string>
 

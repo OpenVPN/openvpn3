@@ -772,8 +772,8 @@ namespace openvpn {
       connect_attach();
 
       try {
-	// set global PolarSSL debug level
-#if defined(USE_POLARSSL) || defined(USE_POLARSSL_APPLE_HYBRID)
+	// set global MbedTLS debug level
+#if defined(USE_MBEDTLS) || defined(USE_MBEDTLS_APPLE_HYBRID)
 	mbedtls_debug_set_threshold(state->ssl_debug_level); // fixme -- using a global method for this seems wrong
 #endif
 

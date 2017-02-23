@@ -22,24 +22,24 @@
 #ifndef OPENVPN_MBEDTLS_CRYPTO_API_H
 #define OPENVPN_MBEDTLS_CRYPTO_API_H
 
-#include <openvpn/polarssl/crypto/cipher.hpp>
-#include <openvpn/polarssl/crypto/ciphergcm.hpp>
-#include <openvpn/polarssl/crypto/digest.hpp>
-#include <openvpn/polarssl/crypto/hmac.hpp>
+#include <openvpn/mbedtls/crypto/cipher.hpp>
+#include <openvpn/mbedtls/crypto/ciphergcm.hpp>
+#include <openvpn/mbedtls/crypto/digest.hpp>
+#include <openvpn/mbedtls/crypto/hmac.hpp>
 
 namespace openvpn {
 
-  // type container for PolarSSL Crypto-level API
-  struct PolarSSLCryptoAPI {
+  // type container for MbedTLS Crypto-level API
+  struct MbedTLSCryptoAPI {
     // cipher
-    typedef PolarSSLCrypto::CipherContext CipherContext;
-    typedef PolarSSLCrypto::CipherContextGCM CipherContextGCM;
+    typedef MbedTLSCrypto::CipherContext CipherContext;
+    typedef MbedTLSCrypto::CipherContextGCM CipherContextGCM;
 
     // digest
-    typedef PolarSSLCrypto::DigestContext DigestContext;
+    typedef MbedTLSCrypto::DigestContext DigestContext;
 
     // HMAC
-    typedef PolarSSLCrypto::HMACContext HMACContext;
+    typedef MbedTLSCrypto::HMACContext HMACContext;
   };
 }
 

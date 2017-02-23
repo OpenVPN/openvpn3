@@ -176,20 +176,20 @@
 
 #include <openvpn/crypto/cryptodcsel.hpp>
 
-#if defined(USE_POLARSSL_APPLE_HYBRID)
-#define USE_POLARSSL
+#if defined(USE_MBEDTLS_APPLE_HYBRID)
+#define USE_MBEDTLS
 #endif
 
-#if !(defined(USE_OPENSSL) || defined(USE_POLARSSL) || defined(USE_APPLE_SSL))
-#error Must define one or more of USE_OPENSSL, USE_POLARSSL, USE_APPLE_SSL.
+#if !(defined(USE_OPENSSL) || defined(USE_MBEDTLS) || defined(USE_APPLE_SSL))
+#error Must define one or more of USE_OPENSSL, USE_MBEDTLS, USE_APPLE_SSL.
 #endif
 
-#if defined(USE_OPENSSL) && (defined(USE_POLARSSL) || defined(USE_APPLE_SSL))
+#if defined(USE_OPENSSL) && (defined(USE_MBEDTLS) || defined(USE_APPLE_SSL))
 #undef USE_OPENSSL
 #define USE_OPENSSL_SERVER
-#elif !defined(USE_OPENSSL) && defined(USE_POLARSSL)
-#define USE_POLARSSL_SERVER
-#elif defined(USE_OPENSSL) && !defined(USE_POLARSSL)
+#elif !defined(USE_OPENSSL) && defined(USE_MBEDTLS)
+#define USE_MBEDTLS_SERVER
+#elif defined(USE_OPENSSL) && !defined(USE_MBEDTLS)
 #define USE_OPENSSL_SERVER
 #else
 #error no server setup
@@ -202,28 +202,18 @@
 #include <openvpn/openssl/ssl/sslctx.hpp>
 #include <openvpn/openssl/util/rand.hpp>
 
-// kludge to work around symbol conflict between OpenSSL and PolarSSL
-#undef KU_DIGITAL_SIGNATURE
-#undef KU_NON_REPUDIATION
-#undef KU_KEY_ENCIPHERMENT
-#undef KU_DATA_ENCIPHERMENT
-#undef KU_KEY_AGREEMENT
-#undef KU_KEY_CERT_SIGN
-#undef KU_CRL_SIGN
-#undef SSL_VERIFY_NONE
-#undef SHA_DIGEST_LENGTH
 #endif
 
-#if defined(USE_APPLE_SSL) || defined(USE_POLARSSL_APPLE_HYBRID)
+#if defined(USE_APPLE_SSL) || defined(USE_MBEDTLS_APPLE_HYBRID)
 #include <openvpn/applecrypto/crypto/api.hpp>
 #include <openvpn/applecrypto/ssl/sslctx.hpp>
 #include <openvpn/applecrypto/util/rand.hpp>
 #endif
 
-#if defined(USE_POLARSSL) || defined(USE_POLARSSL_SERVER)
-#include <openvpn/polarssl/crypto/api.hpp>
-#include <openvpn/polarssl/ssl/sslctx.hpp>
-#include <openvpn/polarssl/util/rand.hpp>
+#if defined(USE_MBEDTLS) || defined(USE_MBEDTLS_SERVER)
+#include <openvpn/mbedtls/crypto/api.hpp>
+#include <openvpn/mbedtls/ssl/sslctx.hpp>
+#include <openvpn/mbedtls/util/rand.hpp>
 #include <mbedtls/debug.h>
 #endif
 
@@ -232,10 +222,10 @@
 using namespace openvpn;
 
 // server Crypto/SSL/Rand implementation
-#if defined(USE_POLARSSL_SERVER)
-typedef PolarSSLCryptoAPI ServerCryptoAPI;
-typedef PolarSSLContext ServerSSLAPI;
-typedef PolarSSLRandom ServerRandomAPI;
+#if defined(USE_MBEDTLS_SERVER)
+typedef MbedTLSCryptoAPI ServerCryptoAPI;
+typedef MbedTLSContext ServerSSLAPI;
+typedef MbedTLSRandom ServerRandomAPI;
 #elif defined(USE_OPENSSL_SERVER)
 typedef OpenSSLCryptoAPI ServerCryptoAPI;
 typedef OpenSSLContext ServerSSLAPI;
@@ -244,15 +234,15 @@ typedef OpenSSLRandom ServerRandomAPI;
 #error No server SSL implementation defined
 #endif
 
-// client SSL implementation can be OpenSSL, Apple SSL, or PolarSSL
-#if defined(USE_POLARSSL)
-#if defined(USE_POLARSSL_APPLE_HYBRID)
+// client SSL implementation can be OpenSSL, Apple SSL, or MbedTLS
+#if defined(USE_MBEDTLS)
+#if defined(USE_MBEDTLS_APPLE_HYBRID)
 typedef AppleCryptoAPI ClientCryptoAPI;
 #else
-typedef PolarSSLCryptoAPI ClientCryptoAPI;
+typedef MbedTLSCryptoAPI ClientCryptoAPI;
 #endif
-typedef PolarSSLContext ClientSSLAPI;
-typedef PolarSSLRandom ClientRandomAPI;
+typedef MbedTLSContext ClientSSLAPI;
+typedef MbedTLSRandom ClientRandomAPI;
 #elif defined(USE_APPLE_SSL)
 typedef AppleCryptoAPI ClientCryptoAPI;
 typedef AppleSSLContext ClientSSLAPI;
@@ -1080,8 +1070,8 @@ int main(int argc, char* argv[])
   // process-wide initialization
   InitProcess::init();
 
-  // set global PolarSSL debug level
-#if defined(USE_POLARSSL)
+  // set global MbedTLS debug level
+#if defined(USE_MBEDTLS)
   mbedtls_debug_set_threshold(1);
 #endif
 

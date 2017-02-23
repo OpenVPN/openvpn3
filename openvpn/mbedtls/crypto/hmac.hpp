@@ -22,25 +22,25 @@
 // Wrap the mbed TLS HMAC API defined in <mbedtls/md.h> so
 // that it can be used as part of the crypto layer of the OpenVPN core.
 
-#ifndef OPENVPN_POLARSSL_CRYPTO_HMAC_H
+#ifndef OPENVPN_MBEDTLS_CRYPTO_HMAC_H
 #define OPENVPN_MBEDTLS_CRYPTO_HMAC_H
 
 #include <string>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/polarssl/crypto/digest.hpp>
+#include <openvpn/mbedtls/crypto/digest.hpp>
 
 namespace openvpn {
-  namespace PolarSSLCrypto {
+  namespace MbedTLSCrypto {
     class HMACContext
     {
       HMACContext(const HMACContext&) = delete;
       HMACContext& operator=(const HMACContext&) = delete;
 
     public:
-      OPENVPN_SIMPLE_EXCEPTION(polarssl_hmac_uninitialized);
-      OPENVPN_EXCEPTION(polarssl_hmac_error);
+      OPENVPN_SIMPLE_EXCEPTION(mbedtls_hmac_uninitialized);
+      OPENVPN_EXCEPTION(mbedtls_hmac_error);
 
       enum {
 	MAX_HMAC_SIZE = MBEDTLS_MD_MAX_SIZE
@@ -66,9 +66,9 @@ namespace openvpn {
 
 	mbedtls_md_init(&ctx);
 	if ( mbedtls_md_setup(&ctx, DigestContext::digest_type(digest), 1) < 0)
-	  throw polarssl_hmac_error("mbedtls_md_init_ctx");
+	  throw mbedtls_hmac_error("mbedtls_md_init_ctx");
 	if (mbedtls_md_hmac_starts(&ctx, key, key_size) < 0)
-	  throw polarssl_hmac_error("mbedtls_md_hmac_starts");
+	  throw mbedtls_hmac_error("mbedtls_md_hmac_starts");
 	initialized = true;
       }
 
@@ -76,21 +76,21 @@ namespace openvpn {
       {
 	check_initialized();
 	if (mbedtls_md_hmac_reset(&ctx) < 0)
-	  throw polarssl_hmac_error("mbedtls_md_hmac_reset");
+	  throw mbedtls_hmac_error("mbedtls_md_hmac_reset");
       }
 
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
 	if (mbedtls_md_hmac_update(&ctx, in, size) < 0)
-	  throw polarssl_hmac_error("mbedtls_md_hmac_update");
+	  throw mbedtls_hmac_error("mbedtls_md_hmac_update");
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
 	if (mbedtls_md_hmac_finish(&ctx, out) < 0)
-	  throw polarssl_hmac_error("mbedtls_md_hmac_finish");
+	  throw mbedtls_hmac_error("mbedtls_md_hmac_finish");
 	return size_();
       }
 
@@ -121,7 +121,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw polarssl_hmac_uninitialized();
+	  throw mbedtls_hmac_uninitialized();
 #endif
       }
 

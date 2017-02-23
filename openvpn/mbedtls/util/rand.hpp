@@ -33,17 +33,17 @@
 
 namespace openvpn {
 
-  class PolarSSLRandom : public RandomAPI
+  class MbedTLSRandom : public RandomAPI
   {
   public:
-    OPENVPN_EXCEPTION(rand_error_polarssl);
+    OPENVPN_EXCEPTION(rand_error_mbedtls);
 
-    typedef RCPtr<PolarSSLRandom> Ptr;
+    typedef RCPtr<MbedTLSRandom> Ptr;
 
-    PolarSSLRandom(const bool prng)
+    MbedTLSRandom(const bool prng)
     {
       if (mbedtls_ctr_drbg_seed(&ctx, entropy_poll, nullptr, nullptr, 0) < 0)
-	throw rand_error_polarssl("CTR_DRBG init");
+	throw rand_error_mbedtls("CTR_DRBG init");
 
       // If prng is set, configure for higher performance
       // by reseeding less frequently.
@@ -67,7 +67,7 @@ namespace openvpn {
     virtual void rand_bytes(unsigned char *buf, size_t size)
     {
       if (!rndbytes(buf, size))
-	throw rand_error_polarssl("CTR_DRBG rand_bytes");
+	throw rand_error_mbedtls("CTR_DRBG rand_bytes");
     }
 
     // Like rand_bytes, but don't throw exception.

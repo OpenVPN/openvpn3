@@ -35,16 +35,16 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 
 namespace openvpn {
-  namespace PolarSSLCrypto {
+  namespace MbedTLSCrypto {
     class CipherContext
     {
       CipherContext(const CipherContext&) = delete;
       CipherContext& operator=(const CipherContext&) = delete;
 
     public:
-      OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_mode_error);
-      OPENVPN_SIMPLE_EXCEPTION(polarssl_cipher_uninitialized);
-      OPENVPN_EXCEPTION(polarssl_cipher_error);
+      OPENVPN_SIMPLE_EXCEPTION(mbedtls_cipher_mode_error);
+      OPENVPN_SIMPLE_EXCEPTION(mbedtls_cipher_uninitialized);
+      OPENVPN_EXCEPTION(mbedtls_cipher_error);
 
       // mode parameter for constructor
       enum {
@@ -72,18 +72,18 @@ namespace openvpn {
 
 	// check that mode is valid
 	if (!(mode == ENCRYPT || mode == DECRYPT))
-	  throw polarssl_cipher_mode_error();
+	  throw mbedtls_cipher_mode_error();
 
 	// get cipher type
 	const mbedtls_cipher_info_t *ci = cipher_type(alg);
 
 	// initialize cipher context with cipher type
 	if (mbedtls_cipher_setup(&ctx, ci) < 0)
-	  throw polarssl_cipher_error("mbedtls_cipher_setup");
+	  throw mbedtls_cipher_error("mbedtls_cipher_setup");
 
 	// set key and encrypt/decrypt mode
 	if (mbedtls_cipher_setkey(&ctx, key, ci->key_bitlen, (mbedtls_operation_t)mode) < 0)
-	  throw polarssl_cipher_error("mbedtls_cipher_setkey");
+	  throw mbedtls_cipher_error("mbedtls_cipher_setkey");
 
 	initialized = true;
       }
@@ -92,9 +92,9 @@ namespace openvpn {
       {
 	check_initialized();
 	if (mbedtls_cipher_reset(&ctx) < 0)
-	  throw polarssl_cipher_error("mbedtls_cipher_reset");
+	  throw mbedtls_cipher_error("mbedtls_cipher_reset");
 	if (mbedtls_cipher_set_iv(&ctx, iv, iv_length()))
-	  throw polarssl_cipher_error("mbedtls_cipher_set_iv");
+	  throw mbedtls_cipher_error("mbedtls_cipher_set_iv");
       }
 
       bool update(unsigned char *out, const size_t max_out_size,
@@ -164,7 +164,7 @@ namespace openvpn {
 	  case CryptoAlgs::BF_CBC:
 	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_BLOWFISH_CBC);
 	  default:
-	    OPENVPN_THROW(polarssl_cipher_error, CryptoAlgs::name(alg) << ": not usable");
+	    OPENVPN_THROW(mbedtls_cipher_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
       }
 
@@ -181,7 +181,7 @@ namespace openvpn {
       {
 #ifdef OPENVPN_ENABLE_ASSERT
 	if (!initialized)
-	  throw polarssl_cipher_uninitialized();
+	  throw mbedtls_cipher_uninitialized();
 #endif
       }
 

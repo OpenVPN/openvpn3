@@ -64,11 +64,11 @@ Now build the OpenVPN 3 client executable::
     . vars/vars-osx64
     . vars/setpath
     cd test/ovpncli
-    PSSL=1 LZ4=1 build cli
+    MTLS=1 LZ4=1 build cli
 
 This will build the OpenVPN 3 client library with a small client
 wrapper (``cli``).  It will also statically link in all external
-dependencies (Asio, PolarSSL, and LZ4), so ``cli`` may be distributed
+dependencies (Asio, mbedTLS, and LZ4), so ``cli`` may be distributed
 to other Macs and will run as a standalone executable.
 
 These build scripts will create a **x86_x64** Mac OS X executable,
