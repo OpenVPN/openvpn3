@@ -970,7 +970,8 @@ namespace openvpn {
 	  state->events->add_event(std::move(ev));
 
 	  state->stats->error(err_type);
-	  state->session->dont_restart();
+	  if (state->session)
+	    state->session->dont_restart();
 	}
     }
 
