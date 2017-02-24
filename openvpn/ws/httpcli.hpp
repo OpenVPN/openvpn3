@@ -27,7 +27,7 @@
 //   * keepalive
 //   * connect and overall timeouts
 //   * GET, POST, etc.
-//   * any OpenVPN SSL module (OpenSSL, PolarSSL)
+//   * any OpenVPN SSL module (OpenSSL, MbedTLS)
 //   * server CA bundle
 //   * client certificate
 //   * HTTP basic auth
