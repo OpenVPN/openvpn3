@@ -34,8 +34,8 @@
 #include <openvpn/omi/omi.hpp>
 
 // set SSL_LIB_NAME to name of SSL library
-#if defined(USE_POLARSSL)
-#define SSL_LIB_NAME "PolarSSL"
+#if defined(USE_MBEDTLS)
+#define SSL_LIB_NAME "MbedTLS"
 #elif defined(USE_OPENSSL)
 #define SSL_LIB_NAME "OpenSSL"
 #else
@@ -154,13 +154,6 @@ public:
   void external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signreq)
   {
     try {
-      if (signreq.sigType != "RSA_RAW") // fixme -- support more than just RSA_RAW
-	{
-	  signreq.error = true;
-	  signreq.errorText = "External PKI OMI: currently only supports RSA_RAW signing method, not " + signreq.sigType;
-	  return;
-	}
-
       // publish signreq to main thread
       {
 	std::lock_guard<std::mutex> lock(epki_mutex);
