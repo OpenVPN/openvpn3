@@ -48,8 +48,8 @@
 #include <openvpn/win/npinfo.hpp>
 #include <openvpn/win/handlecomm.hpp>
 
-#if defined(USE_POLARSSL)
-#define SSL_LIB_NAME "PolarSSL"
+#if defined(USE_MBEDTLS)
+#define SSL_LIB_NAME "MbedTLS"
 #elif defined(USE_OPENSSL)
 #define SSL_LIB_NAME "OpenSSL"
 #else
