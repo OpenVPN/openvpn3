@@ -70,6 +70,12 @@ if [ "$CLANG" = "1" ]; then
     [ -z "$GPP_CMD" ] && GPP_CMD=clang++
 fi
 
+# building on Linux, use system OpenSSL
+if [ "$PLATFORM" = "linux" ] && [ "$OSSL" = "1" ] && [ "$NOSSL" != "1" ] && [ -z "$OPENSSL_SYS" ]; then
+    OSSL=0
+    OPENSSL_SYS=1
+fi
+
 # default commands
 [ -z "$STRIP_CMD" ] && STRIP_CMD=strip
 [ -z "$GPP_CMD" ] && GPP_CMD=g++
