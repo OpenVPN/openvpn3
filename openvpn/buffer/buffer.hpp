@@ -251,7 +251,7 @@ namespace openvpn {
     }
 
     // Increment size (usually used in a similar context
-    // to set_size such as after mutable_buffers_1_append).
+    // to set_size such as after mutable_buffer_append).
     void inc_size(const size_t delta)
     {
       set_size(size_ + delta);
@@ -393,48 +393,48 @@ namespace openvpn {
     }
 
 #ifndef NO_ASIO
-    // return a asio::mutable_buffers_1 object used by
+    // return a asio::mutable_buffer object used by
     // asio read methods, starting from data()
-    asio::mutable_buffers_1 mutable_buffers_1(const size_t tailroom = 0)
+    asio::mutable_buffer mutable_buffer(const size_t tailroom = 0)
     {
-      return asio::mutable_buffers_1(data(), max_size_tailroom(tailroom));
+      return asio::mutable_buffer(data(), max_size_tailroom(tailroom));
     }
 
-    // return a asio::mutable_buffers_1 object used by
+    // return a asio::mutable_buffer object used by
     // asio read methods, starting from data_end()
-    asio::mutable_buffers_1 mutable_buffers_1_append(const size_t tailroom = 0)
+    asio::mutable_buffer mutable_buffer_append(const size_t tailroom = 0)
     {
-      return asio::mutable_buffers_1(data_end(), remaining(tailroom));
+      return asio::mutable_buffer(data_end(), remaining(tailroom));
     }
 
-    // return a asio::const_buffers_1 object used by
+    // return a asio::const_buffer object used by
     // asio write methods.
-    asio::const_buffers_1 const_buffers_1() const
+    asio::const_buffer const_buffer() const
     {
-      return asio::const_buffers_1(c_data(), size());
+      return asio::const_buffer(c_data(), size());
     }
 
-    // clamped versions of mutable_buffers_1(), mutable_buffers_1_append(),
-    // and const_buffers_1()
+    // clamped versions of mutable_buffer(), mutable_buffer_append(),
+    // and const_buffer()
 
-    asio::mutable_buffers_1 mutable_buffers_1_clamp(const size_t tailroom = 0)
+    asio::mutable_buffer mutable_buffer_clamp(const size_t tailroom = 0)
     {
-      return asio::mutable_buffers_1(data(), buf_clamp_read(max_size_tailroom(tailroom)));
+      return asio::mutable_buffer(data(), buf_clamp_read(max_size_tailroom(tailroom)));
     }
 
-    asio::mutable_buffers_1 mutable_buffers_1_append_clamp(const size_t tailroom = 0)
+    asio::mutable_buffer mutable_buffer_append_clamp(const size_t tailroom = 0)
     {
-      return asio::mutable_buffers_1(data_end(), buf_clamp_read(remaining(tailroom)));
+      return asio::mutable_buffer(data_end(), buf_clamp_read(remaining(tailroom)));
     }
 
-    asio::const_buffers_1 const_buffers_1_clamp() const
+    asio::const_buffer const_buffer_clamp() const
     {
-      return asio::const_buffers_1(c_data(), buf_clamp_write(size()));
+      return asio::const_buffer(c_data(), buf_clamp_write(size()));
     }
 
-    asio::const_buffers_1 const_buffers_1_limit(const size_t limit) const
+    asio::const_buffer const_buffer_limit(const size_t limit) const
     {
-      return asio::const_buffers_1(c_data(), std::min(buf_clamp_write(size()), limit));
+      return asio::const_buffer(c_data(), std::min(buf_clamp_write(size()), limit));
     }
 #endif
 

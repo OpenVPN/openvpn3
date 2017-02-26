@@ -47,10 +47,10 @@ namespace openvpn {
     public:
       typedef RCPtr<Base> Ptr;
 
-      virtual void async_send(const asio::const_buffers_1& buf,
+      virtual void async_send(const asio::const_buffer& buf,
 			      Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
 
-      virtual void async_receive(const asio::mutable_buffers_1& buf,
+      virtual void async_receive(const asio::mutable_buffer& buf,
 				 Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
 
       virtual std::string remote_endpoint_str() const = 0;
@@ -96,13 +96,13 @@ namespace openvpn {
       {
       }
 
-      virtual void async_send(const asio::const_buffers_1& buf,
+      virtual void async_send(const asio::const_buffer& buf,
 			      Function<void(const asio::error_code&, const size_t)>&& callback) override
       {
 	socket.async_send(buf, std::move(callback));
       }
 
-      virtual void async_receive(const asio::mutable_buffers_1& buf,
+      virtual void async_receive(const asio::mutable_buffer& buf,
 				 Function<void(const asio::error_code&, const size_t)>&& callback) override
       {
 	socket.async_receive(buf, std::move(callback));
@@ -173,13 +173,13 @@ namespace openvpn {
       {
       }
 
-      virtual void async_send(const asio::const_buffers_1& buf,
+      virtual void async_send(const asio::const_buffer& buf,
 			      Function<void(const asio::error_code&, const size_t)>&& callback) override
       {
 	socket.async_send(buf, std::move(callback));
       }
 
-      virtual void async_receive(const asio::mutable_buffers_1& buf,
+      virtual void async_receive(const asio::mutable_buffer& buf,
 				 Function<void(const asio::error_code&, const size_t)>&& callback) override
       {
 	socket.async_receive(buf, std::move(callback));
@@ -241,13 +241,13 @@ namespace openvpn {
       {
       }
 
-      virtual void async_send(const asio::const_buffers_1& buf,
+      virtual void async_send(const asio::const_buffer& buf,
 			      Function<void(const asio::error_code&, const size_t)>&& callback) override
       {
 	handle.async_write_some(buf, std::move(callback));
       }
 
-      virtual void async_receive(const asio::mutable_buffers_1& buf,
+      virtual void async_receive(const asio::mutable_buffer& buf,
 				 Function<void(const asio::error_code&, const size_t)>&& callback) override
       {
 	handle.async_read_some(buf, std::move(callback));

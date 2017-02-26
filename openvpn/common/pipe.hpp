@@ -69,7 +69,7 @@ namespace openvpn {
     private:
       void queue_write()
       {
-	sd->async_write_some(buf.const_buffers_1_limit(2048),
+	sd->async_write_some(buf.const_buffer_limit(2048),
 			     [this](const asio::error_code& ec, const size_t bytes_sent) {
 			       if (!ec && bytes_sent < buf.size())
 				 {
@@ -105,7 +105,7 @@ namespace openvpn {
       void queue_read()
       {
 	buf.reset(0, 2048, 0);
-	sd->async_read_some(buf.mutable_buffers_1_clamp(),
+	sd->async_read_some(buf.mutable_buffer_clamp(),
 			    [this](const asio::error_code& ec, const size_t bytes_recvd) {
 			      if (!ec)
 				{

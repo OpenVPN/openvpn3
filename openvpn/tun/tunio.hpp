@@ -96,7 +96,7 @@ namespace openvpn {
 	      }
 
 	    // write data to tun device
-	    const size_t wrote = stream->write_some(buf.const_buffers_1());
+	    const size_t wrote = stream->write_some(buf.const_buffer());
 	    if (stats)
 	      {
 		stats->inc_stat(SessionStats::TUN_BYTES_OUT, wrote);
@@ -205,7 +205,7 @@ namespace openvpn {
       frame_context.prepare(tunfrom->buf);
 
       // queue read on tun device
-      stream->async_read_some(frame_context.mutable_buffers_1(tunfrom->buf),
+      stream->async_read_some(frame_context.mutable_buffer(tunfrom->buf),
 			      [self=Ptr(this), tunfrom](const asio::error_code& error, const size_t bytes_recvd)
                               {
                                 self->handle_read(tunfrom, error, bytes_recvd);

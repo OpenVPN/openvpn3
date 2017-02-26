@@ -139,7 +139,7 @@ namespace openvpn {
 	if (!udpfrom)
 	  udpfrom = new PacketFrom();
 	frame_context.prepare(udpfrom->buf);
-	socket.async_receive_from(frame_context.mutable_buffers_1(udpfrom->buf),
+	socket.async_receive_from(frame_context.mutable_buffer(udpfrom->buf),
 				  udpfrom->sender_endpoint,
 				  [self=Ptr(this), udpfrom](const asio::error_code& error, const size_t bytes_recvd)
                                   {
@@ -185,8 +185,8 @@ namespace openvpn {
 	  {
 	    try {
 	      const size_t wrote = endpoint
-		? socket.send_to(buf.const_buffers_1(), *endpoint)
-		: socket.send(buf.const_buffers_1());
+		? socket.send_to(buf.const_buffer(), *endpoint)
+		: socket.send(buf.const_buffer());
 	      stats->inc_stat(SessionStats::BYTES_OUT, wrote);
 	      stats->inc_stat(SessionStats::PACKETS_OUT, 1);
 	      if (wrote == buf.size())
