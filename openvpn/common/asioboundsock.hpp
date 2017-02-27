@@ -34,50 +34,11 @@
 namespace openvpn {
   namespace AsioBoundSocket {
 
-    typedef asio::stream_socket_service<asio::ip::tcp> SocketServiceBase;
+    typedef asio::basic_stream_socket<asio::ip::tcp> SocketBase;
 
-    struct SocketService : public SocketServiceBase
+    class Socket : public SocketBase
     {
-      struct implementation_type : public SocketServiceBase::implementation_type
-      {
-	IP::Addr bind_local_addr;
-      };
-
-      explicit SocketService(asio::io_context& io_context)
-	: SocketServiceBase(io_context)
-      {
-      }
-
-      static asio::detail::service_id<SocketService> id; // register the service
-
-      // Override the open method so we can bind immediately after open.
-      asio::error_code open(implementation_type& impl,
-			    const protocol_type& protocol,
-			    asio::error_code& ec)
-      {
-	ec = SocketServiceBase::open(impl, protocol, ec);
-	if (ec)
-	  return ec;
-	if (impl.bind_local_addr.defined())
-	  {
-	    ec = set_option(impl, asio::socket_base::reuse_address(true), ec);
-	    if (ec)
-	      return ec;
-	    ec = bind(impl,
-		      asio::ip::tcp::endpoint(impl.bind_local_addr.to_asio(), 0), // port 0 -- kernel will choose port
-		      ec);
-	  }
-	return ec;
-      }
-
-    };
-
-    OPENVPN_EXTERN asio::detail::service_id<SocketService> SocketService::id;
-
-    typedef asio::basic_stream_socket<asio::ip::tcp, SocketService> SocketBase;
-
-    struct Socket : public SocketBase
-    {
+    public:
       explicit Socket(asio::io_context& io_context)
 	: SocketBase(io_context)
       {
@@ -85,8 +46,22 @@ namespace openvpn {
 
       void bind_local(const IP::Addr& addr)
       {
-	this->get_implementation().bind_local_addr = addr;
+	bind_local_addr = addr;
       }
+
+    private:
+      virtual void async_connect_post_open(const protocol_type& protocol, asio::error_code& ec) override
+      {
+	if (bind_local_addr.defined())
+	  {
+	    set_option(asio::socket_base::reuse_address(true), ec);
+	    if (ec)
+	      return;
+	    bind(asio::ip::tcp::endpoint(bind_local_addr.to_asio(), 0), ec); // port 0 -- kernel will choose port
+	  }
+      }
+
+      IP::Addr bind_local_addr;
     };
 
   }
