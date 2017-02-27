@@ -53,6 +53,7 @@
 #include <utility>
 
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/asiowork.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/client/cliopt.hpp>
@@ -185,7 +186,7 @@ namespace openvpn {
 	      interim_finalize();
 	    }
 	  cancel_timers();
-	  asio_work.reset(new asio::io_context::work(io_context));
+	  asio_work.reset(new AsioWork(io_context));
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause(reason);
 	  client_options->events().add_event(std::move(ev));
 	  client_options->stats().error(Error::N_PAUSE);
@@ -635,7 +636,7 @@ namespace openvpn {
     AsioTimer restart_wait_timer;
     AsioTimer conn_timer;
     bool conn_timer_pending;
-    std::unique_ptr<asio::io_context::work> asio_work;
+    std::unique_ptr<AsioWork> asio_work;
     RemoteList::PreResolve::Ptr pre_resolve;
   };
 
