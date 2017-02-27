@@ -5,12 +5,12 @@ if [ -z "$O3" ]; then
     echo O3 var must point to ovpn3 tree ; exit 1
 fi
 cd $DEP_DIR
-rm -rf asio* boost* lz4* lzo* minicrypto openssl* polarssl* snappy*
+rm -rf asio* boost* lz4* lzo* minicrypto openssl* polarssl* mbedtls* snappy*
 echo "******* ASIO"
 $O3/core/deps/asio/build-asio
-echo "******* POLARSSL"
+echo "******* MBEDTLS"
 # consider OSX_SERVER=0
-$O3/core/scripts/mac/build-polarssl
+$O3/core/scripts/mac/build-mbedtls
 echo "******* LZ4"
 $O3/core/scripts/mac/build-lz4
 
