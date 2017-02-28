@@ -53,7 +53,7 @@ if [ "$OPENSSL" = "1" ]; then
 else
     ssl_def="-DUSE_MBEDTLS"
     ssl_inc="-I$DEP_DIR/mbedtls/mbedtls-$PLATFORM/include"
-    ssl_lib="-lmbedtls"
+    ssl_lib="-lmbedtls -lmbedx509 -lmbedcrypto"
     ssl_libdir="-L$DEP_DIR/mbedtls/mbedtls-$PLATFORM/library"
 fi
 
