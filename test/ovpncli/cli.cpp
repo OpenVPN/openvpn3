@@ -376,6 +376,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "merge",          no_argument,        nullptr,      'm' },
     { "version",        no_argument,        nullptr,      'v' },
     { "auto-sess",      no_argument,        nullptr,      'a' },
+    { "tcprof-override", required_argument, nullptr,      'X' },
     { "ssl-debug",      required_argument,  nullptr,       1  },
     { "epki-cert",      required_argument,  nullptr,       2  },
     { "epki-ca",        required_argument,  nullptr,       3  },
@@ -403,6 +404,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string compress;
 	std::string privateKeyPassword;
 	std::string tlsVersionMinOverride;
+	std::string tlsCertProfileOverride;
 	std::string proxyHost;
 	std::string proxyPort;
 	std::string proxyUsername;
@@ -430,7 +432,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -487,6 +489,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'M':
 		tlsVersionMinOverride = optarg;
+		break;
+	      case 'X':
+		tlsCertProfileOverride = optarg;
 		break;
 	      case 'h':
 		proxyHost = optarg;
@@ -596,6 +601,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.ipv6 = ipv6;
 	      config.privateKeyPassword = privateKeyPassword;
 	      config.tlsVersionMinOverride = tlsVersionMinOverride;
+	      config.tlsCertProfileOverride = tlsCertProfileOverride;
 	      config.disableClientCert = disableClientCert;
 	      config.proxyHost = proxyHost;
 	      config.proxyPort = proxyPort;
@@ -784,6 +790,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
       std::cout << "--pk-password, -z    : private key password" << std::endl;
       std::cout << "--tvm-override, -M   : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
+      std::cout << "--tcprof-override, -X : tls-cert-profile override (legacy, preferred, etc.)" << std::endl;
       std::cout << "--proxy-host, -h     : HTTP proxy hostname/IP" << std::endl;
       std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
       std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;

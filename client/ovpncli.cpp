@@ -372,6 +372,7 @@ namespace openvpn {
 	int default_key_direction = -1;
 	bool force_aes_cbc_ciphersuites = false;
 	std::string tls_version_min_override;
+	std::string tls_cert_profile_override;
 	std::string gui_version;
 	ProtoContextOptions::Ptr proto_context_options;
 	PeerInfo::Set::Ptr extra_peer_info;
@@ -590,6 +591,7 @@ namespace openvpn {
 	state->default_key_direction = config.defaultKeyDirection;
 	state->force_aes_cbc_ciphersuites = config.forceAesCbcCiphersuites;
 	state->tls_version_min_override = config.tlsVersionMinOverride;
+	state->tls_cert_profile_override = config.tlsCertProfileOverride;
 	state->gui_version = config.guiVersion;
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
@@ -803,6 +805,7 @@ namespace openvpn {
 	cc.default_key_direction = state->default_key_direction;
 	cc.force_aes_cbc_ciphersuites = state->force_aes_cbc_ciphersuites;
 	cc.tls_version_min_override = state->tls_version_min_override;
+	cc.tls_cert_profile_override = state->tls_cert_profile_override;
 	cc.gui_version = state->gui_version;
 	cc.extra_peer_info = state->extra_peer_info;
 	cc.stop = state->async_stop_local();

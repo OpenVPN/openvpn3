@@ -135,6 +135,7 @@ namespace openvpn {
       bool force_aes_cbc_ciphersuites = false;
       bool autologin_sessions = false;
       std::string tls_version_min_override;
+      std::string tls_cert_profile_override;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
@@ -633,6 +634,7 @@ namespace openvpn {
       cc->set_force_aes_cbc_ciphersuites(config.force_aes_cbc_ciphersuites);
       cc->load(opt, lflags);
       cc->set_tls_version_min_override(config.tls_version_min_override);
+      cc->set_tls_cert_profile_override(config.tls_cert_profile_override);
       if (!cc->get_mode().is_client())
 	throw option_error("only client configuration supported");
 

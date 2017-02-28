@@ -235,6 +235,18 @@ namespace openvpn {
       //   tls_1_2  -- use TLS 1.2 minimum (overrides profile)
       std::string tlsVersionMinOverride;
 
+      // Override or default the tls-cert-profile setting:
+      //   default or ""     -- use profile default
+      //   legacy            -- allow 1024-bit RSA certs signed with SHA1
+      //   preferred         -- require at least 2048-bit RSA certs signed
+      //                        with SHA256 or higher
+      //   suiteb            -- require NSA Suite-B
+      //   legacy-default    -- use legacy as the default if profile
+      //                        doesn't specify tls-cert-profile
+      //   preferred-default -- use preferred as the default if profile
+      //                        doesn't specify tls-cert-profile
+      std::string tlsCertProfileOverride;
+
       // Pass custom key/value pairs to OpenVPN server.
       std::vector<KeyValue> peerInfo;
 

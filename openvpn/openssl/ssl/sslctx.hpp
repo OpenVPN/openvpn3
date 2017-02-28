@@ -93,6 +93,7 @@ namespace openvpn {
 		 flags(0),
 		 ns_cert_type(NSCert::NONE),
 		 tls_version_min(TLSVersion::UNDEF),
+		 tls_cert_profile(TLSCertProfile::UNDEF),
 		 local_cert_enabled(true),
 		 force_aes_cbc_ciphersuites(false),
 		 enable_renegotiation(false) {}
@@ -193,6 +194,16 @@ namespace openvpn {
       virtual void set_tls_version_min_override(const std::string& override)
       {
 	TLSVersion::apply_override(tls_version_min, override);
+      }
+
+      virtual void set_tls_cert_profile(const TLSCertProfile::Type type)
+      {
+	tls_cert_profile = type;
+      }
+
+      virtual void set_tls_cert_profile_override(const std::string& override)
+      {
+	TLSCertProfile::apply_override(tls_cert_profile, override);
       }
 
       virtual void set_local_cert_enabled(const bool v)
@@ -324,6 +335,9 @@ namespace openvpn {
 	  tls_version_min = TLSVersion::parse_tls_version_min(opt, relay_prefix, maxver);
 	}
 
+	// parse tls-cert-profile
+	tls_cert_profile = TLSCertProfile::parse_tls_cert_profile(opt, relay_prefix);
+
 	// unsupported cert checkers
 	{
 	}
@@ -345,6 +359,7 @@ namespace openvpn {
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
+      TLSCertProfile::Type tls_cert_profile;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
       bool force_aes_cbc_ciphersuites;
@@ -854,6 +869,11 @@ namespace openvpn {
 	      SSL_CTX_set_ecdh_auto(ctx, 1);
 #endif
 	    }
+
+	  // tls-cert-profile is not implemented yet in OpenSSL (fixme),
+	  // so throw exception if the setting is anything other than LEGACY.
+	  if (TLSCertProfile::default_if_undef(config->tls_cert_profile) != TLSCertProfile::LEGACY)
+	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: tls-cert-profile not implemented yet");
 
 	  if (config->local_cert_enabled)
 	    {

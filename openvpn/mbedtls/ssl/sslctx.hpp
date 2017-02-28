@@ -118,9 +118,10 @@ namespace openvpn {
 	};
 
       /*
-       * X509 cert profile.
+       * X509 cert profiles.
        */
-      const mbedtls_x509_crt_profile crt_profile = // CONST GLOBAL
+
+      const mbedtls_x509_crt_profile crt_profile_legacy = // CONST GLOBAL
 	{
 	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 ) |
 	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_RIPEMD160 ) |
@@ -131,6 +132,16 @@ namespace openvpn {
 	  0xFFFFFFF, /* Any PK alg    */
 	  0xFFFFFFF, /* Any curve     */
 	  1024,      /* Minimum size for RSA keys */
+	};
+
+      const mbedtls_x509_crt_profile crt_profile_preferred = // CONST GLOBAL
+	{
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
+	  0xFFFFFFF, /* Any PK alg    */
+	  0xFFFFFFF, /* Any curve     */
+	  2048,      /* Minimum size for RSA keys */
 	};
     }
   }
@@ -159,6 +170,7 @@ namespace openvpn {
 		 flags(0),
 		 ns_cert_type(NSCert::NONE),
 		 tls_version_min(TLSVersion::UNDEF),
+		 tls_cert_profile(TLSCertProfile::UNDEF),
 		 local_cert_enabled(true),
 		 enable_renegotiation(false),
                  force_aes_cbc_ciphersuites(false) {}
@@ -271,6 +283,16 @@ namespace openvpn {
       virtual void set_tls_version_min_override(const std::string& override)
       {
 	TLSVersion::apply_override(tls_version_min, override);
+      }
+
+      virtual void set_tls_cert_profile(const TLSCertProfile::Type type)
+      {
+	tls_cert_profile = type;
+      }
+
+      virtual void set_tls_cert_profile_override(const std::string& override)
+      {
+	TLSCertProfile::apply_override(tls_cert_profile, override);
       }
 
       virtual void set_local_cert_enabled(const bool v)
@@ -408,12 +430,30 @@ namespace openvpn {
 	  tls_version_min = TLSVersion::parse_tls_version_min(opt, relay_prefix, maxver);
 	}
 
+	// parse tls-cert-profile
+	tls_cert_profile = TLSCertProfile::parse_tls_cert_profile(opt, relay_prefix);
+
 	// unsupported cert verification options
 	{
 	}
       }
 
     private:
+      const mbedtls_x509_crt_profile *select_crt_profile() const
+      {
+	switch (TLSCertProfile::default_if_undef(tls_cert_profile))
+	  {
+	  case TLSCertProfile::LEGACY:
+	    return &mbedtls_ctx_private::crt_profile_legacy;
+	  case TLSCertProfile::PREFERRED:
+	    return &mbedtls_ctx_private::crt_profile_preferred;
+	  case TLSCertProfile::SUITEB:
+	    return &mbedtls_x509_crt_profile_suiteb;
+	  default:
+	    throw MbedTLSException("select_crt_profile: unknown cert profile");
+	  }
+      }
+
       Mode mode;
       MbedTLSPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
       MbedTLSPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
@@ -430,6 +470,7 @@ namespace openvpn {
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
+      TLSCertProfile::Type tls_cert_profile;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
       bool enable_renegotiation;
@@ -562,7 +603,7 @@ namespace openvpn {
 				      MBEDTLS_SSL_PRESET_DEFAULT);
 
 	  // init X509 cert profile
-	  mbedtls_ssl_conf_cert_profile(sslconf, &mbedtls_ctx_private::crt_profile);
+	  mbedtls_ssl_conf_cert_profile(sslconf, c.select_crt_profile());
 
 	  // init SSL object
 	  ssl = new mbedtls_ssl_context;
