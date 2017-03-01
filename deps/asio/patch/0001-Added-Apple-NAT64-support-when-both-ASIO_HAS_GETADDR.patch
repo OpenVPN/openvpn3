@@ -1,0 +1,48 @@
+From 430862dee0dd960be1f702cc5ae0e7c0525d48a4 Mon Sep 17 00:00:00 2001
+From: James Yonan <james@openvpn.net>
+Date: Wed, 3 Aug 2016 11:42:38 -0600
+Subject: =?UTF-8?q?Added=20Apple=20NAT64=20support=20when=20both=20ASIO=5F?=
+ =?UTF-8?q?HAS=5FGETADDRINFO=0Aand=20ASIO=5FAPPLE=5FNAT64=20are=20defined.?=
+
+* When calling getaddrinfo(), Apple recommends to set
+  AI_DEFAULT flags in hint.
+
+* iOS bug workaround: sometimes iOS getaddrinfo() returns a
+  non-zero scope ID for non-link-local addresses.
+  Workaround by forcing scope ID to 0 for non-link-local
+  addresses.
+---
+ asio/include/asio/detail/impl/socket_ops.ipp | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/asio/include/asio/detail/impl/socket_ops.ipp b/asio/include/asio/detail/impl/socket_ops.ipp
+index d72afec..4f66c77 100644
+--- a/asio/include/asio/detail/impl/socket_ops.ipp
++++ b/asio/include/asio/detail/impl/socket_ops.ipp
+@@ -3276,6 +3276,23 @@ asio::error_code getaddrinfo(const char* host,
+ #elif !defined(ASIO_HAS_GETADDRINFO)
+   int error = getaddrinfo_emulation(host, service, &hints, result);
+   return ec = translate_addrinfo_error(error);
++#elif defined(ASIO_HAS_GETADDRINFO) && defined(ASIO_APPLE_NAT64)
++  // For NAT64 compatibility, Apple recommends to set AI_DEFAULT flags
++  addrinfo_type new_hints = hints;
++  new_hints.ai_flags |= AI_DEFAULT;
++  int error = ::getaddrinfo(host, service, &new_hints, result);
++
++  // iOS bug workaround: sometimes iOS getaddrinfo() returns a non-zero scope ID
++  // for non-link-local addresses.  Workaround by forcing scope ID to 0 for
++  // non-link-local addresses.
++  if (!error && (*result)->ai_family == AF_INET6)
++    {
++      sockaddr_in6* a6 = (sockaddr_in6*)(*result)->ai_addr;
++      if (a6->sin6_scope_id && !(IN6_IS_ADDR_LINKLOCAL(&a6->sin6_addr) || IN6_IS_ADDR_MC_NODELOCAL(&a6->sin6_addr) || IN6_IS_ADDR_MC_LINKLOCAL(&a6->sin6_addr)))
++	a6->sin6_scope_id = 0;
++    }
++
++  return ec = translate_addrinfo_error(error);
+ #else
+   int error = ::getaddrinfo(host, service, &hints, result);
+   return ec = translate_addrinfo_error(error);
+-- 
+1.8.5.2 (Apple Git-48)
+
