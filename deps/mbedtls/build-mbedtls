@@ -14,12 +14,10 @@ fi
 . $O3/core/vars/vars-${TARGET}
 . $O3/core/deps/lib-versions
 
-# extract the mbedTLS source
-PD=$O3/core/deps/mbedtls
-DIST=mbedtls-$PLATFORM
-
+# put build targets here
+DIST=$(pwd)/mbedtls/mbedtls-$PLATFORM
 rm -rf $DIST
-mkdir $DIST
+mkdir -p $DIST
 
 if [ "$NO_WIPE" = "1" ]; then
     echo RETAIN existing source
@@ -35,21 +33,33 @@ else
     perl -pi -e 's/^\/\/// if /#define MBEDTLS_MD4_C/' include/mbedtls/config.h
 fi
 
-# build it
-pwd
-cd ../$DIST
-cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_PROGRAMS=Off -DENABLE_TESTING=Off ../$MBEDTLS_VERSION
-if [ "$VERBOSE" = "1" ]; then
-    make VERBOSE=1
-else
-    make
-fi
+# compiler vars
+CC=cc
+LD=ld
+AR=ar
+RANLIB=ranlib
+[ "$GCC_CMD" ] && CC=$GCC_CMD
+[ "$LD_CMD" ] && LD=$LD_CMD
+[ "$AR_CMD" ] && AR=$AR_CMD
+[ "$RANLIB_CMD" ] && RANLIB=$RANLIB_CMD
 
-# test it
-if [ "$ENABLE_TESTING" = "1" ]; then
-    make test
-fi
+# build it
+SRC=$(pwd)
+cd library
+rm -f *.o
+for c in *.c ; do
+    CMD="$CC -I../include $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c $c"
+    echo $CMD
+    $CMD
+done
+
+# create archive
+cd $DIST
+mkdir library
+$AR rc library/libmbedtls.a $SRC/library/*.o
+$RANLIB library/libmbedtls.a 2>&1 | grep -v "has no symbols" || true
 
 # copy headers
-cp -a ../$MBEDTLS_VERSION/include/mbedtls include/
+mkdir -p include/mbedtls
+cp $SRC/include/mbedtls/*.h include/mbedtls/
 exit 0

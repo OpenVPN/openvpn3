@@ -11,14 +11,12 @@ fi
 cd $DEP_DIR
 
 rm -rf mbedtls
-mkdir mbedtls
 
 if [ "$OSX_ONLY" != "1" ]; then
     # for ios, build with minicrypto
     for target in ios-dbg ios ; do
 	echo '***************' TARGET $target
 	VERBOSE=1 TARGET=$target USE_MINICRYPTO=0 $O3/core/deps/mbedtls/build-mbedtls
-	mv mbedtls-$target mbedtls
 	[ "$IOS_DBG_ONLY" = "1" ] && exit
     done
 
@@ -26,7 +24,6 @@ if [ "$OSX_ONLY" != "1" ]; then
     for target in iossim iossim-dbg ; do
 	echo '***************' TARGET $target
 	VERBOSE=1 TARGET=$target $O3/core/deps/mbedtls/build-mbedtls
-	mv mbedtls-$target mbedtls/
     done
 fi
 
@@ -36,6 +33,5 @@ fi
 for target in osx osx-dbg ; do
     echo '***************' TARGET $target
     VERBOSE=1 TARGET=$target USE_MINICRYPTO=$OSX_MINICRYPTO MINICRYPTO_NO_AES=1 ENABLE_SERVER=$OSX_SERVER $O3/core/deps/mbedtls/build-mbedtls
-    mv mbedtls-$target mbedtls/
 done
 exit 0

@@ -94,7 +94,7 @@ FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 
 # MbedTLS
 if [ "$MTLS" = "1" ]; then
-    LIBS="$LIBS -lmbedcrypto -lmbedtls -lmbedx509"
+    LIBS="$LIBS -lmbedtls"
     if [ "$MA_HYBRID" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS_APPLE_HYBRID"
     else
