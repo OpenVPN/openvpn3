@@ -26,31 +26,6 @@ RANLIB=ranlib
 [ "$AR_CMD" ] && AR=$AR_CMD
 [ "$RANLIB_CMD" ] && RANLIB=$RANLIB_CMD
 
-case $PLATFORM in
-android*)
-  echo PLATFORM android
-  host="x86_64-apple-darwin"
-  target=arm
-  ;;
-ios*)
-  echo PLATFORM ios
-  host="x86_64-apple-darwin"
-  target=arm
-  ;;
-*)
-  host=""
-  target=""
-  ;;
-esac
-
-if [ "$target" ]; then
-    targ_opt="--target=$target"
-fi
-
-if [ "$host" ]; then
-    host_opt="--host=$host"
-fi
-
 if [ "$NO_WIPE" != "1" ]; then
     rm -rf $LZ4_VERSION
     tar xfz $DL/$LZ4_VERSION.tar.gz
