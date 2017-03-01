@@ -1,4 +1,4 @@
-export ASIO_VERSION=asio-20170227
+export ASIO_VERSION=asio-20170301
 export LZ4_VERSION=lz4-1.7.5
 export MBEDTLS_VERSION=mbedtls-2.4.0
 export OPENSSL_VERSION=openssl-1.0.2h
