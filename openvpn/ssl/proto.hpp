@@ -904,6 +904,15 @@ namespace openvpn {
 
 	if (opcode == DATA_V1 || opcode == DATA_V2)
 	  {
+	    if (opcode == DATA_V2)
+	      {
+		const unsigned int p1 = b.pop_front();
+		const unsigned int p2 = b.pop_front();
+		const unsigned int p3 = b.pop_front();
+		const unsigned int peer_id = (p1<<16) + (p2<<8) + p3;
+		if (peer_id != 0xFFFFFF)
+		  out << " PEER_ID=" << peer_id;
+	      }
 	    out << " SIZE=" << b.size() << '/' << orig_size;
 	  }
 	else
