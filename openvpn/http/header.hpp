@@ -26,6 +26,7 @@
 
 #include <string>
 #include <sstream>
+#include <utility>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -36,8 +37,13 @@ namespace openvpn {
 
     struct Header {
       Header() {}
-      Header(const std::string& name_arg, const std::string& value_arg)
-	: name(name_arg), value(value_arg) {}
+      Header(std::string name_arg, std::string value_arg)
+	: name(std::move(name_arg)), value(std::move(value_arg)) {}
+
+      bool name_match(const std::string& n) const
+      {
+	return string::strcasecmp(n, name) == 0;
+      }
 
       std::string to_string() const
       {
@@ -56,7 +62,7 @@ namespace openvpn {
       {
 	for (auto &h : *this)
 	  {
-	    if (string::strcasecmp(key, h.name) == 0)
+	    if (h.name_match(key))
 	      return &h;
 	  }
 	return nullptr;
@@ -66,7 +72,7 @@ namespace openvpn {
       {
 	for (auto &h : *this)
 	  {
-	    if (string::strcasecmp(key, h.name) == 0)
+	    if (h.name_match(key))
 	      return &h;
 	  }
 	return nullptr;
