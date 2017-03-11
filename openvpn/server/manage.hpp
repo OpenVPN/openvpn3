@@ -63,6 +63,10 @@ namespace openvpn {
     // client float notification
     virtual void float_notify(const PeerAddr::Ptr& addr) = 0;
 
+    // ID
+    virtual std::string instance_name() const = 0;
+    virtual std::uint64_t instance_id() const = 0;
+
     // return a JSON string describing connected user
     virtual std::string describe_user() = 0;
 
