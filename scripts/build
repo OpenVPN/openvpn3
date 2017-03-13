@@ -13,6 +13,7 @@ enum_build_extras()
 if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"
+    echo " PROF=<platform> -- source vars/vars-<platform> before running"
     echo " CLANG=1 -- use clang instead of gcc"
     echo " DEBUG=1 -- enable debug symbols"
     echo " CO=1 -- compile only"
@@ -25,17 +26,20 @@ if [ -z "$1" ]; then
     echo " GPROF=1 -- build for gprof profiling"
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
+    echo " ASIO_DIR=<dir> -- specify ASIO tree"
     echo " MTLS=1 -- include mbedTLS"
+    echo " MTLS_SYS=1 -- use system mbedTLS"
     echo " MA_HYBRID=1 -- use mbedTLS/AppleCrypto hybrid"
     echo " NOSSL=1 -- don't include OpenSSL"
     echo " OPENSSL_SYS=1 -- include system OpenSSL"
     echo " MINI=1 -- link with OpenSSL mini crypto lib"
-    echo " OSSL=1 -- include OpenSSL on Mac"
+    echo " OSSL=1 -- include OpenSSL"
     echo " SSL_BOTH=1 -- include OpenSSL and Apple SSL on Mac"
     echo " NOTHREADS=1 -- disable threads"
     echo ' GCC_EXTRA="-DITER=5" -- add build flags'
     echo " LZO=1 -- build with LZO compression library"
     echo " LZ4=1 -- build with LZ4 compression library"
+    echo " LZ4_SYS=1 -- build with system LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
@@ -43,6 +47,15 @@ if [ -z "$1" ]; then
 	. $s args
     done
     exit 1
+fi
+
+# source vars file
+if [ "$PROF" ]; then
+    pfn="$O3/core/vars/vars-$PROF"
+    if ! [ -f "$pfn" ]; then
+	pfn="$PROF"
+    fi
+    . $pfn || exit 1
 fi
 
 # remove previous build
@@ -93,7 +106,10 @@ FLAGS="$FLAGS -Wno-sign-compare -Wno-unused-parameter"
 #fi
 
 # MbedTLS
-if [ "$MTLS" = "1" ]; then
+if [ "$MTLS_SYS" = "1" ]; then
+    CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS"
+    LIBS="$LIBS -lmbedtls -lmbedx509 -lmbedcrypto"
+elif [ "$MTLS" = "1" ]; then
     LIBS="$LIBS -lmbedtls"
     if [ "$MA_HYBRID" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS_APPLE_HYBRID"
@@ -166,7 +182,8 @@ fi
 #fi
 
 # asio
-CPPFLAGS="$CPPFLAGS -DASIO_STANDALONE -DASIO_NO_DEPRECATED -I$DEP_DIR/asio/asio/include"
+[ -z "$ASIO_DIR" ] && ASIO_DIR="$DEP_DIR/asio"
+CPPFLAGS="$CPPFLAGS -DASIO_STANDALONE -DASIO_NO_DEPRECATED -I$ASIO_DIR/asio/include"
 
 # LZO compression
 if [ "$LZO" = "1" ]; then
@@ -177,7 +194,10 @@ if [ "$LZO" = "1" ]; then
 fi
 
 # LZ4 compression
-if [ "$LZ4" = "1" ]; then
+if [ "$LZ4_SYS" = "1" ]; then
+    CPPFLAGS="$CPPFLAGS -DHAVE_LZ4"
+    LIBS="$LIBS -llz4"
+elif [ "$LZ4" = "1" ]; then
     EXTRA_SRC_OBJ="$EXTRA_SRC_OBJ $DEP_DIR/lz4/lz4-$PLATFORM/lib/liblz4.a"
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/lz4/lz4-$PLATFORM/include -DHAVE_LZ4"
 fi
