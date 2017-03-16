@@ -864,7 +864,6 @@ namespace openvpn {
       int peer_id_;
     };
 
-#ifdef OPENVPN_INSTRUMENTATION
     static const char *opcode_name(const unsigned int opcode)
     {
       switch (opcode)
@@ -965,12 +964,6 @@ namespace openvpn {
 	}
       return out.str();
     }
-#else
-    std::string dump_packet(const Buffer& buf)
-    {
-      return "";
-    }
-#endif
 
   protected:
 
@@ -3045,7 +3038,6 @@ namespace openvpn {
 	secondary->set_next_event_if_unspecified();
     }
 
-#ifdef OPENVPN_INSTRUMENTATION
     std::string debug_prefix()
     {
       std::string ret = openvpn::to_string(now_->raw());
@@ -3060,7 +3052,6 @@ namespace openvpn {
       ret += ']';
       return ret;
     }
-#endif
 
     // key_id starts at 0, increments to KEY_ID_MASK, then recycles back to 1.
     // Therefore, if key_id is 0, it is the first key.

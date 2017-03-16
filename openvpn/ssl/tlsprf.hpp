@@ -26,15 +26,13 @@
 
 #include <cstring> // for std::strlen and others
 
-#ifdef OPENVPN_INSTRUMENTATION
 #include <string>
 #include <sstream>
-#include <openvpn/common/hexstr.hpp>
-#endif
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/hexstr.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufcomplete.hpp>
 #include <openvpn/crypto/static_key.hpp>
@@ -115,7 +113,6 @@ namespace openvpn {
 	}
     }
 
-#ifdef OPENVPN_INSTRUMENTATION
     std::string dump(const char *title)
     {
       std::ostringstream out;
@@ -124,7 +121,6 @@ namespace openvpn {
       out << "*** TLSPRF " << title << " random2: " << render_hex(random2, sizeof(random2)) << std::endl;
       return out.str();
     }
-#endif
 
     ~TLSPRF()
     {

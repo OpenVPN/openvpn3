@@ -39,7 +39,6 @@
 #define OPENVPN_DEBUG
 #define OPENVPN_ENABLE_ASSERT
 #define USE_TLS_AUTH
-#define OPENVPN_INSTRUMENTATION
 
 // Data limits for Blowfish and other 64-bit block-size ciphers
 #ifndef BF

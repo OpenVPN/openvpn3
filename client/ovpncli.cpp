@@ -48,7 +48,6 @@
 
 // debug settings (production setting in parentheses)
 
-#define OPENVPN_INSTRUMENTATION        // include debug instrumentation for classes (define)
 //#define OPENVPN_DUMP_CONFIG          // dump parsed configuration (comment out)
 //#define OPENVPN_DEBUG_CLIPROTO       // shows packets in/out (comment out)
 #define OPENVPN_DEBUG_PROTO   1        // increases low-level protocol verbosity (1)
