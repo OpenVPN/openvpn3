@@ -30,6 +30,7 @@
 #include <mbedtls/ctr_drbg.h>
 
 #include <openvpn/random/randapi.hpp>
+#include <openvpn/mbedtls/util/error.hpp>
 
 namespace openvpn {
 
@@ -42,13 +43,24 @@ namespace openvpn {
 
     MbedTLSRandom(const bool prng)
     {
-      if (mbedtls_ctr_drbg_seed(&ctx, entropy_poll, nullptr, nullptr, 0) < 0)
-	throw rand_error_mbedtls("CTR_DRBG init");
+      // Init RNG context
+      mbedtls_ctr_drbg_init(&ctx);
+
+      // Seed RNG
+      const int errnum = mbedtls_ctr_drbg_seed(&ctx, entropy_poll, nullptr, nullptr, 0);
+      if (errnum < 0)
+	throw MbedTLSException("mbedtls_ctr_drbg_seed", errnum);
 
       // If prng is set, configure for higher performance
       // by reseeding less frequently.
       if (prng)
 	mbedtls_ctr_drbg_set_reseed_interval(&ctx, 1000000);
+    }
+
+    ~MbedTLSRandom()
+    {
+      // Free RNG context
+      mbedtls_ctr_drbg_free(&ctx);
     }
 
     // Random algorithm name
@@ -66,21 +78,22 @@ namespace openvpn {
     // Fill buffer with random bytes
     virtual void rand_bytes(unsigned char *buf, size_t size)
     {
-      if (!rndbytes(buf, size))
-	throw rand_error_mbedtls("CTR_DRBG rand_bytes");
+      const int errnum = rndbytes(buf, size);
+      if (errnum < 0)
+	throw MbedTLSException("mbedtls_ctr_drbg_random", errnum);
     }
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
     virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
     {
-      return rndbytes(buf, size);
+      return rndbytes(buf, size) >= 0;
     }
 
   private:
-    bool rndbytes(unsigned char *buf, size_t size)
+    int rndbytes(unsigned char *buf, size_t size)
     {
-      return mbedtls_ctr_drbg_random(&ctx, buf, size) < 0 ? false : true;
+      return mbedtls_ctr_drbg_random(&ctx, buf, size);
     }
 
     static int entropy_poll(void *data, unsigned char *output, size_t len)
