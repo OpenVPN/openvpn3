@@ -2,7 +2,7 @@
 //  cmdagent.hpp
 //  OpenVPN
 //
-//  Copyright (C) 2012-2016 OpenVPN Technologies, Inc.
+//  Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
 //  All rights reserved.
 //
 
