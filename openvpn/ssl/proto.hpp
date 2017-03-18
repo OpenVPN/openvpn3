@@ -1627,6 +1627,8 @@ namespace openvpn {
 			     "DATA", int(key_id_),
 			     proto.stats);
 
+	    crypto->init_remote_peer_id(c.remote_peer_id);
+
 	    enable_compress = crypto->consider_compression(proto.config->comp_ctx);
 
 	    if (data_channel_key->rekey_defined)

@@ -76,6 +76,8 @@ namespace openvpn {
 			  const int recv_unit,
 			  const SessionStats::Ptr& recv_stats_arg) = 0;
 
+    virtual void init_remote_peer_id(const int remote_peer_id) {}
+
     virtual bool consider_compression(const CompressContext& comp_ctx) = 0;
 
     virtual void explicit_exit_notify() {}
