@@ -27,7 +27,7 @@
 #include <string>
 
 #include <openvpn/common/action.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 
 namespace openvpn {
 

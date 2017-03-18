@@ -42,7 +42,7 @@
 
 #include <tap-windows.h>
 
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/socktypes.hpp>

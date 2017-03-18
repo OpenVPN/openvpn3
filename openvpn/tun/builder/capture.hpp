@@ -33,7 +33,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/hostport.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/client/rgopt.hpp>
 #include <openvpn/addr/ip.hpp>

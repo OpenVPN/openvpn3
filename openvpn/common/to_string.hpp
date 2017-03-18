@@ -19,52 +19,45 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_SERVER_PEERADDR_H
-#define OPENVPN_SERVER_PEERADDR_H
+// Define openvpn::to_string() to work around the fact that
+// std::to_string() is missing on Android.
+// http://stackoverflow.com/questions/22774009/android-ndk-stdto-string-support
 
-#include <cstdint> // for std::uint32_t, uint64_t, etc.
+#ifndef OPENVPN_COMMON_TO_STRING_H
+#define OPENVPN_COMMON_TO_STRING_H
 
-#include <openvpn/common/rc.hpp>
-#include <openvpn/common/to_string.hpp>
-#include <openvpn/addr/ip.hpp>
+#include <string>
+#include <sstream>
+#include <type_traits>
+
+#include <openvpn/common/platform.hpp>
 
 namespace openvpn {
-  struct AddrPort
+
+  // Convert an arbitrary argument to a string.
+
+#ifndef OPENVPN_PLATFORM_ANDROID
+  // numeric types
+  template <typename T,
+	    typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
+  inline std::string to_string(T value)
   {
-    AddrPort() : port(0) {}
+    return std::to_string(value);
+  }
+#endif
 
-    std::string to_string() const
-    {
-      return addr.to_string_bracket_ipv6() + ':' + openvpn::to_string(port);
-    }
-
-    IP::Addr addr;
-    std::uint16_t port;
-  };
-
-  struct PeerAddr : public RC<thread_unsafe_refcount>
+  // non-numeric types
+  template <typename T
+#ifndef OPENVPN_PLATFORM_ANDROID
+	    , typename std::enable_if<!std::is_arithmetic<T>::value, int>::type = 0
+#endif
+	    >
+  inline std::string to_string(const T& value)
   {
-    typedef RCPtr<PeerAddr> Ptr;
-
-    PeerAddr()
-      : tcp(false)
-    {
-    }
-
-    std::string to_string() const
-    {
-      std::string proto;
-      if (tcp)
-	proto = "TCP ";
-      else
-	proto = "UDP ";
-      return proto + remote.to_string() + " -> " + local.to_string();
-    }
-
-    AddrPort remote;
-    AddrPort local;
-    bool tcp;
-  };
+    std::ostringstream os;
+    os << value;
+    return os.str();
+  }
 }
 
 #endif

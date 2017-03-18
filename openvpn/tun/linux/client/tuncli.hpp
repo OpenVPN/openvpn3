@@ -29,7 +29,7 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/splitlines.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/common/process.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/addr/route.hpp>

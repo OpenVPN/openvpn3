@@ -39,7 +39,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 
 namespace openvpn {
   // NOTE: -- SetUserGroup object does not own passwd and group

@@ -30,33 +30,9 @@
 #include <utility>
 
 #include <openvpn/common/platform.hpp>
+#include <openvpn/common/to_string.hpp>
 
 namespace openvpn {
-
-  // Convert an arbitrary argument to a string.
-
-#ifndef OPENVPN_PLATFORM_ANDROID // Android NDK apparently doesn't support std::to_string : http://stackoverflow.com/questions/22774009/android-ndk-stdto-string-support
-  // numeric types
-  template <typename T,
-	    typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
-  inline std::string to_string(T value)
-  {
-    return std::to_string(value);
-  }
-#endif
-
-  // non-numeric types
-  template <typename T
-#ifndef OPENVPN_PLATFORM_ANDROID
-	    , typename std::enable_if<!std::is_arithmetic<T>::value, int>::type = 0
-#endif
-	    >
-  inline std::string to_string(const T& value)
-  {
-    std::ostringstream os;
-    os << value;
-    return os.str();
-  }
 
   // Concatenate arguments into a string:
   // print(args...)   -- concatenate

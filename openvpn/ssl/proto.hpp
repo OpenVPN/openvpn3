@@ -44,7 +44,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
 #include <openvpn/buffer/bufcomposed.hpp>

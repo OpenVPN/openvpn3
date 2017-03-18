@@ -24,7 +24,7 @@
 
 #include <stdio.h>     // for rename()
 
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 
 namespace openvpn {
   inline void log_rotate(const std::string& fn, const int max_versions)

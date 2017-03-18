@@ -29,7 +29,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 
 namespace openvpn {
   namespace X509Track {

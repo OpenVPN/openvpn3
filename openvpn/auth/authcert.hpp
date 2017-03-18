@@ -33,7 +33,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/binprefix.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/pki/x509track.hpp>
 
 namespace openvpn {

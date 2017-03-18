@@ -32,7 +32,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/function.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/common/sockopt.hpp>
 #include <openvpn/addr/ip.hpp>
 

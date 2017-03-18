@@ -29,7 +29,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/logrotate.hpp>
 #include <openvpn/common/redir.hpp>

@@ -32,7 +32,7 @@
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/transport/protocol.hpp>
 
