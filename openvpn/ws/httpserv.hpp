@@ -21,7 +21,7 @@
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/sockopt.hpp>
