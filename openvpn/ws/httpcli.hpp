@@ -37,7 +37,7 @@
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/asiopolysock.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/http/reply.hpp>
