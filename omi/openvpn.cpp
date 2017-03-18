@@ -25,7 +25,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/format.hpp>
+#include <openvpn/common/to_string.hpp>
 #include <openvpn/common/platform_string.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/asiosignal.hpp>
