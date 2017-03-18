@@ -1,5 +1,5 @@
 // Private Gateway
-// Copyright (C) 2012-2016 OpenVPN Technologies, Inc.
+// Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
 // All rights reserved
 
 #ifndef OPENVPN_CRYPTO_TOKENENCRYPT_H
