@@ -8,9 +8,56 @@ of an OpenVPN client, and is protocol-compatible with the OpenVPN
 OpenVPN 3 includes a minimal client wrapper (``cli``) that links in with
 the library and provides basic command line functionality.
 
-NOTE: As of early 2016, OpenVPN 3 is primarily of interest to developers
+NOTE: As of 2017, OpenVPN 3 is primarily of interest to developers,
 because it does not yet replicate the full functionality of OpenVPN 2.x.
 In particular, server functionality is not yet implemented.
+
+Building OpenVPN 3 client on Linux
+----------------------------------
+
+These instructions were tested on Ubuntu 16.
+
+Get prerequisites to allow for either mbedTLS or OpenSSL linkage::
+
+  $ sudo apt-get install g++ make libmbedtls-dev libssl-dev liblz4-dev
+
+Get Asio C++ library::
+
+  $ cd ~
+  $ git clone https://github.com/chriskohlhoff/asio.git
+
+Set environmental variable used by OpenVPN 3 build scripts::
+
+  $ export O3=~/ovpn3
+
+Clone the OpenVPN 3 source repo::
+
+  $ mkdir ~/ovpn3
+  $ cd ~/ovpn3
+  $ git clone https://github.com/OpenVPN/openvpn3.git core
+
+Build the OpenVPN 3 client wrapper (cli) with mbedTLS crypto/ssl library
+and LZ4 compression::
+
+  $ cd $O3/core/test/ovpncli
+  $ ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build cli
+
+Or alternatively build with OpenSSL::
+
+  $ cd $O3/core/test/ovpncli
+  $ ECHO=1 PROF=linux ASIO_DIR=~/asio OPENSSL_SYS=1 LZ4_SYS=1 $O3/core/scripts/build cli
+
+Run OpenVPN 3 client::
+
+  $ sudo ./cli -a -c yes myprofile.ovpn route-nopull
+
+Options used::
+
+  -a             : use autologin sessions, if supported
+  -c yes         : negotiate LZ4 compression
+  myprofile.ovpn : OpenVPN config file
+  route-nopull   : if you are connected via ssh, prevent ssh session lockout
+
 
 Building OpenVPN 3 client on Mac OS X
 -------------------------------------
@@ -21,14 +68,14 @@ Make sure that Xcode is installed with optional command-line tools.
 
 Create the directories ``~/src`` and ``~/src/mac``::
 
-    mkdir -p ~/src/mac
+    $ mkdir -p ~/src/mac
 
 Clone the OpenVPN 3 repo::
 
-    cd ~/src
-    mkdir ovpn3
-    cd ovpn3
-    git clone ... core
+    $ cd ~/src
+    $ mkdir ovpn3
+    $ cd ovpn3
+    $ git clone https://github.com/OpenVPN/openvpn3.git core
 
 Export the shell variable ``O3`` to point to the OpenVPN 3 top level
 directory::
@@ -56,15 +103,15 @@ not required for Mac builds.
 
 Build the dependencies::
 
-    OSX_ONLY=1 $O3/core/scripts/mac/build-all
+    $ OSX_ONLY=1 $O3/core/scripts/mac/build-all
 
 Now build the OpenVPN 3 client executable::
 
-    cd $O3/core
-    . vars/vars-osx64
-    . vars/setpath
-    cd test/ovpncli
-    MTLS=1 LZ4=1 build cli
+    $ cd $O3/core
+    $ . vars/vars-osx64
+    $ . vars/setpath
+    $ cd test/ovpncli
+    $ MTLS=1 LZ4=1 build cli
 
 This will build the OpenVPN 3 client library with a small client
 wrapper (``cli``).  It will also statically link in all external
@@ -78,11 +125,11 @@ available.
 
 To view the client wrapper options::
 
-    ./cli -h
+    $ ./cli -h
 
 To connect::
 
-    ./cli client.ovpn
+    $ ./cli client.ovpn
 
 Contributing
 ------------
