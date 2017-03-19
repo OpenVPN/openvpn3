@@ -19,35 +19,64 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// A basic reference-counting garbage collection scheme.  Simply inherit
-// from RC to create an object that can be tracked with an RCPtr.
+// A basic reference-counting garbage collection scheme based
+// on intrusive pointers, where the reference count is embedded in
+// the object via inheritance.  Simply inherit from RC to create an
+// object that can be tracked with an RCPtr.
 //
-// We use tend to use RCPtr rather than the other smart pointer
-// classes (std or boost) for performance.
+// We use tend to use RCPtr (or RCWeakPtr) rather than the other
+// smart pointer classes (std or boost) for flexibility and
+// performance.
 //
-// When using the RC template class, it is necessary to specify whether
-// the reference count should be thread safe or unsafe, i.e.:
+// Smart pointers have two basic attributes that determine
+// their performance.  Either of these attributes, when required,
+// will degrade the performance of the smart pointer:
 //
-// class Foo : public RC<thread_safe_refcount> {}
-//   or
-// class Bar : public RC<thread_unsafe_refcount> {}
+// 1. whether the smart pointer is thread-safe, i.e. it uses an
+//    atomic reference counter
+// 2. whether the smart pointer can be referrred to via a
+//    weak reference
+//
+// In keeping with the oft-stated C++ motto of only paying for
+// what you use, both attributes can be independently controlled.
+//
+// * thread-unsafe/not-weak-referenceable -- class Foo : public RC<thread_unsafe_refcount>
+// * thread-safe/not-weak-referenceable   -- class Foo : public RC<thread_safe_refcount>
+// * thread-unsafe/weak-referenceable     -- class Foo : public RCWeak<thread_unsafe_refcount>
+// * thread-safe/weak-referenceable       -- class Foo : public RCWeak<thread_safe_refcount>
 //
 // Thread-safe reference counting can be significantly more expensive
 // because an atomic object must be used for the reference count.
 // Therefore, thread-safe reference counting should only be used for
 // objects that have visibility across multiple threads.
 //
-// For clarity, any object that inherits from RC should also declare a Ptr
-// typedef that defines the smart pointer type that should be used to track
-// the object, e.g.:
+// In addition, having an object be weak-referenceable also
+// imposes a cost, so it should be avoided unless necessary.
+//
+// For clarity and as a general convention in the OpenVPN code,
+// any object that inherits from RC should also declare a Ptr
+// typedef that defines the smart pointer type that should be used to
+// track the object, e.g.:
 //
 // class Foo : public RC<thread_unsafe_refcount> {
 // public:
-//   typedef RCPtr<Foo> Ptr;
+//   typedef RCPtr<Foo> Ptr;        // strong pointer
+//   typedef RCWeakPtr<Foo> WPtr;   // weak pointer
 // };
 //
 // This allows a smart-pointer to Foo to be referred to
-// as Foo::Ptr
+// as Foo::Ptr or Foo::WPtr.
+//
+// Note that RC/RCWeak fully supports virtual inheritance.  For
+// example, consider the diamond inheritance pattern below, where
+// both A and B objects contain their own reference count, but C
+// inherits from both A and B.  To prevent C objects from
+// having two separate reference counts, it is necessary to
+// virtually inherit from RC.
+//
+// class A : public virtual RC<thread_unsafe_refcount> {}
+// class B : public virtual RC<thread_unsafe_refcount> {}
+// class C : public A, public B {}
 
 #ifndef OPENVPN_COMMON_RC_H
 #define OPENVPN_COMMON_RC_H
