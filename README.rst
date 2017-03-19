@@ -64,7 +64,7 @@ Options used::
 
   -a             : use autologin sessions, if supported
   -c yes         : negotiate LZ4 compression
-  myprofile.ovpn : OpenVPN config file
+  myprofile.ovpn : OpenVPN config file (must have .ovpn extension)
   route-nopull   : if you are connected via ssh, prevent ssh session lockout
 
 
