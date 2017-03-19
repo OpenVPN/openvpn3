@@ -12,6 +12,15 @@ NOTE: As of 2017, OpenVPN 3 is primarily of interest to developers,
 because it does not yet replicate the full functionality of OpenVPN 2.x.
 In particular, server functionality is not yet implemented.
 
+OpenVPN 3 Client API
+--------------------
+
+OpenVPN 3 is organized as a C++ class library, and the API is defined in
+`<client/ovpncli.hpp>`_.
+
+A simple command-line wrapper for the API is provided in
+`<test/ovpncli/cli.cpp>`_.
+
 Building OpenVPN 3 client on Linux
 ----------------------------------
 
