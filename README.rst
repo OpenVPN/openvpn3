@@ -110,7 +110,7 @@ version of the library than listed here, you can edit this file.
 For dependencies that are typically cloned from github vs.
 provided as a .tar.gz file, tools are provided to convert
 the github to a .tar.gz file.  See "snapshot" scripts under
-$O3/core/deps
+``$O3/core/deps``
 
 Note that while OpenSSL is listed in lib-versions, it is
 not required for Mac builds.
@@ -216,7 +216,9 @@ testing the API.  See `<test/ovpncli/cli.cpp>`_.
 The basic approach to building an OpenVPN 3 client is
 to define a client class that derives from
 ``ClientAPI::OpenVPNClient``, then provide implementations
-for callbacks including event and logging notifications::
+for callbacks including event and logging notifications:
+
+.. code:: c++
 
   class Client : public ClientAPI::OpenVPNClient
   {
@@ -232,20 +234,26 @@ for callbacks including event and logging notifications::
   };
 
 To start the client, first create a ``ClientAPI::Config`` object
-and initialize it with the OpenVPN config file and other options::
+and initialize it with the OpenVPN config file and other options:
+
+.. code:: c++
 
   ClientAPI::Config config;
   config.content = <config_file_content_as_multiline_string>;
   ...
 
-Next, create a client object and evaluate the configuration::
+Next, create a client object and evaluate the configuration:
+
+.. code:: c++
 
   Client client;
   ClientAPI::EvalConfig eval = client.eval_config(config);
   if (eval.error)
     throw ...;
 
-Finally, in a new worker thread, start the connection::
+Finally, in a new worker thread, start the connection:
+
+.. code:: c++
 
   ClientAPI::Status connect_status = client.connect();
 
@@ -388,7 +396,9 @@ Here is a brief set of guidelines:
 
 * Never use ``malloc`` or ``free``.  When allocating objects,
   use the C++ ``new`` operator and then immediately construct
-  a smart pointer to reference the object::
+  a smart pointer to reference the object:
+
+  .. code:: c++
 
     std::unique_ptr<MyObject> ptr = new MyObject();
     ptr->method();
@@ -410,7 +420,9 @@ Here is a brief set of guidelines:
   for cryptographic purposes (i.e. for keys, tokens, etc.),
   always ensure that the RNG is crypto-grade by calling
   ``assert_crypto()`` on the RNG.  This will throw
-  an exception if the RNG is not crypto-grade::
+  an exception if the RNG is not crypto-grade:
+
+  .. code:: c++
 
     void set_rng(RandomAPI::Ptr rng_arg) {
       rng_arg->assert_crypto();
@@ -425,13 +437,17 @@ Here is a brief set of guidelines:
 
 * When formatting strings, don't use ``snprintf``.  Instead, use
   ``std::ostringstream`` or build the string using the '+' ``std::string``
-  operator::
+  operator:
+
+  .. code:: c++
 
     std::string format_reconnecting(const int n_seconds) {
       return "Reconnecting in " + openvpn::to_string(n_seconds) + " seconds.";
     }
 
-  or::
+  or:
+
+  .. code:: c++
 
     std::string format_reconnecting(const int n_seconds) {
       std::ostringstream os;
@@ -496,7 +512,9 @@ Conventions
   use ``Cleanup`` in `<openvpn/common/cleanup.hpp>`_ when
   you need to specify a code block to execute prior to scope
   exit.  For example, ensure that the file ``pid_fn`` is
-  deleted before scope exit::
+  deleted before scope exit:
+
+  .. code:: c++
 
     auto clean = Cleanup([pid_fn]() {
       if (pid_fn)
@@ -504,7 +522,9 @@ Conventions
     });
 
 * When calling global methods (such as libc ``fork``),
-  prepend "::" to the symbol name, e.g.::
+  prepend "::" to the symbol name, e.g.:
+
+  .. code:: c++
 
     struct dirent *e;
     while ((e = ::readdir(dir.get())) != nullptr) {
