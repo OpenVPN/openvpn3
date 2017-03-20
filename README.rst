@@ -1,9 +1,6 @@
 OpenVPN 3
 =========
 
-.. include:: <isonum.txt>
-.. include:: <isopub.txt>
-
 OpenVPN 3 is a C++ class library that implements the functionality
 of an OpenVPN client, and is protocol-compatible with the OpenVPN
 2.x branch.
@@ -106,9 +103,9 @@ See the file ``$O3/core/deps/lib-versions`` for the expected
 version numbers of each dependency.  If you want to use a different
 version of the library than listed here, you can edit this file.
 
-1. Asio -- https://github.com/chriskohlhoff/asio
-2. mbed TLS (2.3.0 or higher) -- https://tls.mbed.org/
-3. LZ4 -- https://github.com/Cyan4973/lz4
+1. Asio — https://github.com/chriskohlhoff/asio
+2. mbed TLS (2.3.0 or higher) — https://tls.mbed.org/
+3. LZ4 — https://github.com/Cyan4973/lz4
 
 For dependencies that are typically cloned from github vs.
 provided as a .tar.gz file, tools are provided to convert
@@ -200,17 +197,17 @@ The consise definition of the client API is essentially ``class OpenVPNClient``
 in `<client/ovpncli.hpp>`_ with several imporant extensions to
 the API found in:
 
-* **class TunBuilderBase** in `<openvpn/tun/builder/base.hpp>`_ |mdash|
+* **class TunBuilderBase** in `<openvpn/tun/builder/base.hpp>`_ —
   Provides an abstraction layer defining the *tun* interface,
   and is especially useful for interfacing with an OS-layer VPN API.
 
-* **class ExternalPKIBase** in `<openvpn/pki/epkibase.hpp>`_ |mdash|
+* **class ExternalPKIBase** in `<openvpn/pki/epkibase.hpp>`_ —
   Provides a callback for external private key operations, and
   is useful for interfacing with an OS-layer Keychain such as
   the Keychain on iOS, Mac OS X, and Android, and the Crypto API
   on Windows.
 
-* **class LogReceiver** in `<client/ovpncli.hpp>`_ |mdash|
+* **class LogReceiver** in `<client/ovpncli.hpp>`_ —
   Provides an abstraction layer for the delivery of logging messages.
 
 OpenVPN 3 includes a command-line reference client (``cli``) for
@@ -284,15 +281,15 @@ to the actual connection thread.
 
 In an OpenVPN client connection, the following object stack would be used:
 
-1. **class ClientConnect** in `<openvpn/client/cliconnect.hpp>`_ |mdash|
+1. **class ClientConnect** in `<openvpn/client/cliconnect.hpp>`_ —
    The top-layer object in an OpenVPN client connection.
-2. **class ClientProto::Session** in `<openvpn/client/cliproto.hpp>`_ |mdash|
+2. **class ClientProto::Session** in `<openvpn/client/cliproto.hpp>`_ —
    The OpenVPN client protocol object that subinstantiates the transport
    and tun layer objects.
-3. **class ProtoContext** in `<openvpn/ssl/proto.hpp>`_ |mdash|
+3. **class ProtoContext** in `<openvpn/ssl/proto.hpp>`_ —
    The core OpenVPN protocol implementation that is common to both
    client and server.
-4. **class ProtoStackBase<Packet>** in `<openvpn/ssl/protostack.hpp>`_ |mdash|
+4. **class ProtoStackBase<Packet>** in `<openvpn/ssl/protostack.hpp>`_ —
    The bottom-layer class that implements
    the basic functionality of tunneling a protocol over a reliable or
    unreliable transport layer, but isn't specific to OpenVPN per-se.
@@ -305,9 +302,9 @@ implementations in `<openvpn/transport/client/transbase.hpp>`_.
 
 Currently, transport layer implementations are provided for:
 
-* **UDP** |mdash| `<openvpn/transport/client/udpcli.hpp>`_
-* **TCP** |mdash| `<openvpn/transport/client/tcpcli.hpp>`_
-* **HTTP Proxy** |mdash| `<openvpn/transport/client/httpcli.hpp>`_
+* **UDP** — `<openvpn/transport/client/udpcli.hpp>`_
+* **TCP** — `<openvpn/transport/client/tcpcli.hpp>`_
+* **HTTP Proxy** — `<openvpn/transport/client/httpcli.hpp>`_
 
 Tun Layer
 .........
@@ -324,9 +321,9 @@ layer implementation:
 
 2. Use an OS-specific model such as:
 
-     * **Linux** |mdash| `<openvpn/tun/linux/client/tuncli.hpp>`_
-     * **Windows** |mdash| `<openvpn/tun/win/client/tuncli.hpp>`_
-     * **Mac OS X** |mdash| `<openvpn/tun/mac/client/tuncli.hpp>`_
+     * **Linux** — `<openvpn/tun/linux/client/tuncli.hpp>`_
+     * **Windows** — `<openvpn/tun/win/client/tuncli.hpp>`_
+     * **Mac OS X** — `<openvpn/tun/mac/client/tuncli.hpp>`_
 
 Protocol Layer
 ..............
