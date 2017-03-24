@@ -71,7 +71,9 @@ namespace openvpn {
 	      const Base::Config& c)
 	: io_context(io_context_arg)
       {
-	if (c.tls_auth_enabled())
+	if (c.tls_crypt_enabled())
+	  preval.reset(new Base::TLSCryptPreValidate(c, true));
+	else if (c.tls_auth_enabled())
 	  preval.reset(new Base::TLSAuthPreValidate(c, true));
       }
 
@@ -104,7 +106,7 @@ namespace openvpn {
       SessionStats::Ptr stats;
 
     private:
-      Base::TLSAuthPreValidate::Ptr preval;
+      Base::TLSWrapPreValidate::Ptr preval;
     };
 
     // This is the main server-side client instance object
