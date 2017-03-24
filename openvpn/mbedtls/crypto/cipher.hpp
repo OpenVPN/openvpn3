@@ -157,6 +157,8 @@ namespace openvpn {
 	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_192_CBC);
 	  case CryptoAlgs::AES_256_CBC:
 	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_256_CBC);
+	  case CryptoAlgs::AES_256_CTR:
+	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_256_CTR);
 	  case CryptoAlgs::DES_CBC:
 	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_CBC);
 	  case CryptoAlgs::DES_EDE3_CBC:

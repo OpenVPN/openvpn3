@@ -159,6 +159,8 @@ namespace openvpn {
 	    return EVP_aes_192_cbc();
 	  case CryptoAlgs::AES_256_CBC:
 	    return EVP_aes_256_cbc();
+	  case CryptoAlgs::AES_256_CTR:
+	    return EVP_aes_256_ctr();
 	  case CryptoAlgs::DES_CBC:
 	    return EVP_des_cbc();
 	  case CryptoAlgs::DES_EDE3_CBC:

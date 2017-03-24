@@ -158,6 +158,7 @@ namespace openvpn {
 	  case CryptoAlgs::AES_128_CBC:
 	  case CryptoAlgs::AES_192_CBC:
 	  case CryptoAlgs::AES_256_CBC:
+	  case CryptoAlgs::AES_256_CTR:
 	    return kCCAlgorithmAES128;
 	  case CryptoAlgs::DES_CBC:
 	    return kCCAlgorithmDES;
