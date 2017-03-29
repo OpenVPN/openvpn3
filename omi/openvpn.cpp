@@ -28,7 +28,7 @@
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/common/platform_string.hpp>
 #include <openvpn/common/options.hpp>
-#include <openvpn/common/asiosignal.hpp>
+#include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/common/stop.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/omi/omi.hpp>
