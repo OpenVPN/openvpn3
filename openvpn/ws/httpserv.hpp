@@ -25,7 +25,7 @@
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/sockopt.hpp>
-#include <openvpn/common/asiopolysock.hpp>
+#include <openvpn/asio/asiopolysock.hpp>
 #include <openvpn/common/core.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/timestr.hpp>
