@@ -20,7 +20,7 @@
 #include <limits>
 #include <unordered_map>
 
-#include <openvpn/common/asiostop.hpp>
+#include <openvpn/asio/asiostop.hpp>
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/buffer/buflist.hpp>
