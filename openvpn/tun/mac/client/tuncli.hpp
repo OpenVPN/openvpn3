@@ -29,7 +29,7 @@
 #include <memory>
 
 #include <openvpn/common/to_string.hpp>
-#include <openvpn/common/scoped_asio_stream.hpp>
+#include <openvpn/asio/scoped_asio_stream.hpp>
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>

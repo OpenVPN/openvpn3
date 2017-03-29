@@ -53,7 +53,7 @@
 #include <utility>
 
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/asiowork.hpp>
+#include <openvpn/asio/asiowork.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/client/cliopt.hpp>

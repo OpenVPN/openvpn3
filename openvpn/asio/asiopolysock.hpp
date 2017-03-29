@@ -22,8 +22,8 @@
 // Asio polymorphic socket for handling TCP
 // and unix domain sockets.
 
-#ifndef OPENVPN_COMMON_ASIOPOLYSOCK_H
-#define OPENVPN_COMMON_ASIOPOLYSOCK_H
+#ifndef OPENVPN_ASIO_ASIOPOLYSOCK_H
+#define OPENVPN_ASIO_ASIOPOLYSOCK_H
 
 #include <asio.hpp>
 

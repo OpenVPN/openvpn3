@@ -22,8 +22,8 @@
 // A null Asio unit of work, that prevents the Asio event loop from
 // exiting.
 
-#ifndef OPENVPN_COMMON_ASIOWORK_H
-#define OPENVPN_COMMON_ASIOWORK_H
+#ifndef OPENVPN_ASIO_ASIOWORK_H
+#define OPENVPN_ASIO_ASIOWORK_H
 
 #include <asio.hpp>
 

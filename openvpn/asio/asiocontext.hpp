@@ -19,52 +19,33 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Asio TCP socket that can be configured so that open() method
-// always prebinds the socket to a given local address.  Useful
-// for TCP clients.
+#ifndef OPENVPN_ASIO_ASIOCONTEXT_H
+#define OPENVPN_ASIO_ASIOCONTEXT_H
 
-#ifndef OPENVPN_COMMON_ASIOBOUNDSOCK_H
-#define OPENVPN_COMMON_ASIOBOUNDSOCK_H
+#include <vector>
+#include <memory>
+#include <mutex>
 
 #include <asio.hpp>
 
-#include <openvpn/addr/ip.hpp>
-#include <openvpn/common/extern.hpp>
-
 namespace openvpn {
-  namespace AsioBoundSocket {
-
-    typedef asio::basic_stream_socket<asio::ip::tcp> SocketBase;
-
-    class Socket : public SocketBase
+  class AsioContextStore
+  {
+  public:
+    asio::io_context& new_context(int concurrency_hint)
     {
-    public:
-      explicit Socket(asio::io_context& io_context)
-	: SocketBase(io_context)
+      asio::io_context* ioc = new asio::io_context(concurrency_hint);
       {
+	std::lock_guard<std::mutex> lock(mutex);
+	contexts.emplace_back(ioc);
       }
+      return *ioc;
+    }
 
-      void bind_local(const IP::Addr& addr)
-      {
-	bind_local_addr = addr;
-      }
-
-    private:
-      virtual void async_connect_post_open(const protocol_type& protocol, asio::error_code& ec) override
-      {
-	if (bind_local_addr.defined())
-	  {
-	    set_option(asio::socket_base::reuse_address(true), ec);
-	    if (ec)
-	      return;
-	    bind(asio::ip::tcp::endpoint(bind_local_addr.to_asio(), 0), ec); // port 0 -- kernel will choose port
-	  }
-      }
-
-      IP::Addr bind_local_addr;
-    };
-
-  }
+  private:
+    std::mutex mutex;
+    std::vector<std::unique_ptr<asio::io_context>> contexts;
+  };
 }
 
 #endif

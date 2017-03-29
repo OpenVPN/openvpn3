@@ -31,7 +31,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/asioerr.hpp>
+#include <openvpn/asio/asioerr.hpp>
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/tun/layer.hpp>

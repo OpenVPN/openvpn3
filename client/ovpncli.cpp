@@ -91,7 +91,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/platform_string.hpp>
 #include <openvpn/common/count.hpp>
-#include <openvpn/common/asiostop.hpp>
+#include <openvpn/asio/asiostop.hpp>
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>

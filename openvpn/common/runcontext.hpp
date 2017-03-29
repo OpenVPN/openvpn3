@@ -41,7 +41,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/asiosignal.hpp>
+#include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/stop.hpp>
 #include <openvpn/time/time.hpp>

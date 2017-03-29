@@ -34,7 +34,7 @@
 #include <sstream>
 #include <memory>
 
-#include <openvpn/common/asioerr.hpp>
+#include <openvpn/asio/asioerr.hpp>
 #include <openvpn/common/process.hpp>
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/common/scoped_fd.hpp>

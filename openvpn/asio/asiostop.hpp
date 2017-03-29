@@ -19,8 +19,8 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_COMMON_ASIOSTOP_H
-#define OPENVPN_COMMON_ASIOSTOP_H
+#ifndef OPENVPN_ASIO_ASIOSTOP_H
+#define OPENVPN_ASIO_ASIOSTOP_H
 
 #include <asio.hpp>
 

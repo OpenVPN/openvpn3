@@ -21,8 +21,8 @@
 
 // A scoped Asio stream that is automatically closed by its destructor.
 
-#ifndef OPENVPN_COMMON_SCOPED_ASIO_STREAM_H
-#define OPENVPN_COMMON_SCOPED_ASIO_STREAM_H
+#ifndef OPENVPN_ASIO_SCOPED_ASIO_STREAM_H
+#define OPENVPN_ASIO_SCOPED_ASIO_STREAM_H
 
 #include <openvpn/common/size.hpp>
 

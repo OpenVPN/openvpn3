@@ -19,33 +19,23 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_COMMON_ASIOCONTEXT_H
-#define OPENVPN_COMMON_ASIOCONTEXT_H
+#ifndef OPENVPN_ASIO_ASIOERR_H
+#define OPENVPN_ASIO_ASIOERR_H
 
-#include <vector>
-#include <memory>
-#include <mutex>
+#include <string>
 
-#include <asio.hpp>
+#include <asio/error_code.hpp>
 
 namespace openvpn {
-  class AsioContextStore
-  {
-  public:
-    asio::io_context& new_context(int concurrency_hint)
-    {
-      asio::io_context* ioc = new asio::io_context(concurrency_hint);
-      {
-	std::lock_guard<std::mutex> lock(mutex);
-	contexts.emplace_back(ioc);
-      }
-      return *ioc;
-    }
 
-  private:
-    std::mutex mutex;
-    std::vector<std::unique_ptr<asio::io_context>> contexts;
-  };
+  // returns a string describing a asio error code
+  template <typename ErrorCode>
+  inline std::string errinfo(ErrorCode err)
+  {
+    asio::error_code e(err, asio::system_category());
+    return e.message();
+  }
+
 }
 
 #endif

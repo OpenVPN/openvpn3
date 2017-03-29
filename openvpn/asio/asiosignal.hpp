@@ -22,8 +22,8 @@
 // A simple class that allows an arbitrary set of posix signals to be
 // associated with an Asio handler.
 
-#ifndef OPENVPN_COMMON_ASIOSIGNAL_H
-#define OPENVPN_COMMON_ASIOSIGNAL_H
+#ifndef OPENVPN_ASIO_ASIOSIGNAL_H
+#define OPENVPN_ASIO_ASIOSIGNAL_H
 
 #include <asio.hpp>
 
