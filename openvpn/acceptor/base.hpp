@@ -21,7 +21,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/asiopolysock.hpp>
+#include <openvpn/asio/asiopolysock.hpp>
 
 #ifndef OPENVPN_ACCEPTOR_LISTENER_BASE_RC
 #define OPENVPN_ACCEPTOR_LISTENER_BASE_RC RC<thread_unsafe_refcount>
