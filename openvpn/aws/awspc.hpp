@@ -278,7 +278,7 @@ namespace openvpn {
 	  Json::Value root(Json::objectValue);
 	  root["region"] = Json::Value(info.region);
 	  root["identityIp"] = Json::Value(info.privateIp);
-	  root["host"] = Json::Value(asio::ip::host_name());
+	  root["host"] = Json::Value(openvpn_io::ip::host_name());
 	  root["instanceId"] = Json::Value(info.instanceId);
 	  root["productCode"] = Json::Value(pc);
 	  root["nonce"] = Json::Value(nonce());
