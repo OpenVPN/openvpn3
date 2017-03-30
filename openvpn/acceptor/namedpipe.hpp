@@ -23,7 +23,7 @@ namespace openvpn {
 
       typedef RCPtr<NamedPipe> Ptr;
 
-      NamedPipe(asio::io_context& io_context,
+      NamedPipe(openvpn_io::io_context& io_context,
 		const std::string& name_arg,
 		const std::string& sddl_string)
 	: name(name_arg),
@@ -34,7 +34,7 @@ namespace openvpn {
 
       virtual void async_accept(ListenerBase* listener,
 				const size_t acceptor_index,
-				asio::io_context& io_context) override
+				openvpn_io::io_context& io_context) override
       {
 	// create the named pipe
 	const HANDLE h = ::CreateNamedPipeA(
@@ -51,21 +51,21 @@ namespace openvpn {
 	    &sa.sa);
 	if (!Win::Handle::defined(h))
 	  {
-	    const asio::error_code err(::GetLastError(), asio::error::get_system_category());
+	    const openvpn_io::error_code err(::GetLastError(), openvpn_io::error::get_system_category());
 	    OPENVPN_THROW(named_pipe_acceptor_error, "failed to create named pipe: " << name << " : " << err.message());
 	  }
 
 	// wait for connection (asynchronously)
 	{
 	  handle.assign(h);
-	  asio::windows::overlapped_ptr over(
+	  openvpn_io::windows::overlapped_ptr over(
 	      io_context,
 	      [self=Ptr(this), listener=ListenerBase::Ptr(listener), acceptor_index]
-	      (const asio::error_code& ec, size_t bytes_transferred) {
+	      (const openvpn_io::error_code& ec, size_t bytes_transferred) {
 		// accept client connection
 		listener->handle_accept(new AsioPolySock::NamedPipe(std::move(self->handle), acceptor_index),
 					ec.value() == ERROR_PIPE_CONNECTED // not an error
-					  ? asio::error_code()
+					  ? openvpn_io::error_code()
 					  : ec);
 	      });
 
@@ -78,7 +78,7 @@ namespace openvpn {
 	      // to be posted. When complete() is called,
 	      // ownership of the OVERLAPPED-derived
 	      // object passes to the io_service.
-	      const asio::error_code ec(err, asio::error::get_system_category());
+	      const openvpn_io::error_code ec(err, openvpn_io::error::get_system_category());
 	      over.complete(ec, 0);
 	    }
 	  else // ok || err == ERROR_IO_PENDING
@@ -98,7 +98,7 @@ namespace openvpn {
 
     private:
       std::string name;
-      asio::windows::stream_handle handle;
+      openvpn_io::windows::stream_handle handle;
       Win::SecurityAttributes sa;
     };
 
