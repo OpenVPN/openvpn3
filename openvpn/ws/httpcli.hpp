@@ -202,7 +202,7 @@ namespace openvpn {
 	  typedef AsioPolySock::Base socket;
 	};
 
-	HTTPCore(asio::io_context& io_context_arg,
+	HTTPCore(openvpn_io::io_context& io_context_arg,
 	     const Config::Ptr& config_arg)
 	  : Base(config_arg),
 	    io_context(io_context_arg),
@@ -229,7 +229,7 @@ namespace openvpn {
 	  if (!is_ready())
 	    throw http_client_exception("not ready");
 	  ready = false;
-	  asio::post(io_context, [self=Ptr(this)]()
+	  openvpn_io::post(io_context, [self=Ptr(this)]()
 		     {
 		       self->handle_request();
 		     });
@@ -336,7 +336,7 @@ namespace openvpn {
 	{
 	}
 
-	virtual void http_mutate_resolver_results(asio::ip::tcp::resolver::results_type& results)
+	virtual void http_mutate_resolver_results(openvpn_io::ip::tcp::resolver::results_type& results)
 	{
 	}
 
@@ -371,7 +371,7 @@ namespace openvpn {
 		{
 		  general_timeout_coarse.reset(next);
 		  general_timer.expires_at(next);
-		  general_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+		  general_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 					   {
 					     if (!error)
 					       self->general_timeout_handler(error);
@@ -412,11 +412,11 @@ namespace openvpn {
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 		if (host.port == "unix") // unix domain socket
 		  {
-		    asio::local::stream_protocol::endpoint ep(host.host);
+		    openvpn_io::local::stream_protocol::endpoint ep(host.host);
 		    AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
 		    socket.reset(s);
 		    s->socket.async_connect(ep,
-					    [self=Ptr(this)](const asio::error_code& error)
+					    [self=Ptr(this)](const openvpn_io::error_code& error)
 					    {
 					      self->handle_unix_connect(error);
 					    });
@@ -439,7 +439,7 @@ namespace openvpn {
 			const Win::LastError err;
 			OPENVPN_THROW(http_client_exception, "failed to open existing named pipe: " << host.host << " : " << err.message());
 		      }
-		    socket.reset(new AsioPolySock::NamedPipe(asio::windows::stream_handle(io_context, h), 0));
+		    socket.reset(new AsioPolySock::NamedPipe(openvpn_io::windows::stream_handle(io_context, h), 0));
 		    do_connect(true);
 		  }
 		else
@@ -459,7 +459,7 @@ namespace openvpn {
 		    else
 		      {
 			resolver.async_resolve(host.host_transport(), host.port,
-					       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
+					       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
 					       {
 						 self->handle_tcp_resolve(error, results);
 					       });
@@ -468,7 +468,7 @@ namespace openvpn {
 		if (config->connect_timeout)
 		  {
 		    connect_timer.expires_at(now + Time::Duration::seconds(config->connect_timeout));
-		    connect_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+		    connect_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 					     {
 					       if (!error)
 						 self->connect_timeout_handler(error);
@@ -482,8 +482,8 @@ namespace openvpn {
 	    }
 	}
 
-	void handle_tcp_resolve(const asio::error_code& error, // called by Asio
-				asio::ip::tcp::resolver::results_type results)
+	void handle_tcp_resolve(const openvpn_io::error_code& error, // called by Asio
+				openvpn_io::ip::tcp::resolver::results_type results)
 	{
 	  if (halt)
 	    return;
@@ -503,8 +503,8 @@ namespace openvpn {
 
 	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
 	    socket.reset(s);
-	    asio::async_connect(s->socket, results,
-				[self=Ptr(this)](const asio::error_code& error, const asio::ip::tcp::endpoint& endpoint)
+	    openvpn_io::async_connect(s->socket, results,
+				[self=Ptr(this)](const openvpn_io::error_code& error, const openvpn_io::ip::tcp::endpoint& endpoint)
 				{
 				  self->handle_tcp_connect(error, endpoint);
 				});
@@ -515,8 +515,8 @@ namespace openvpn {
 	    }
 	}
 
-	void handle_tcp_connect(const asio::error_code& error, // called by Asio
-				const asio::ip::tcp::endpoint& endpoint)
+	void handle_tcp_connect(const openvpn_io::error_code& error, // called by Asio
+				const openvpn_io::ip::tcp::endpoint& endpoint)
 	{
 	  if (halt)
 	    return;
@@ -537,7 +537,7 @@ namespace openvpn {
 	}
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
-	void handle_unix_connect(const asio::error_code& error) // called by Asio
+	void handle_unix_connect(const openvpn_io::error_code& error) // called by Asio
 	{
 	  if (halt)
 	    return;
@@ -585,13 +585,13 @@ namespace openvpn {
 	  generate_request();
 	}
 
-	void general_timeout_handler(const asio::error_code& e) // called by Asio
+	void general_timeout_handler(const openvpn_io::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
 	    error_handler(Status::E_GENERAL_TIMEOUT, "General timeout");
 	}
 
-	void connect_timeout_handler(const asio::error_code& e) // called by Asio
+	void connect_timeout_handler(const openvpn_io::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
 	    error_handler(Status::E_CONNECT_TIMEOUT, "Connect timeout");
@@ -642,7 +642,7 @@ namespace openvpn {
 
 	// error handlers
 
-	void asio_error_handler(int errcode, const char *func_name, const asio::error_code& error)
+	void asio_error_handler(int errcode, const char *func_name, const openvpn_io::error_code& error)
 	{
 	  error_handler(errcode, std::string("HTTPCore Asio ") + func_name + ": " + error.message());
 	}
@@ -850,12 +850,12 @@ namespace openvpn {
 	  do_connect(false);
 	}
 
-	asio::io_context& io_context;
+	openvpn_io::io_context& io_context;
 
 	bool alive;
 
 	AsioPolySock::Base::Ptr socket;
-	asio::ip::tcp::resolver resolver;
+	openvpn_io::ip::tcp::resolver resolver;
 
 	Host host;
 
@@ -878,7 +878,7 @@ namespace openvpn {
 
 	typedef RCPtr<HTTPDelegate> Ptr;
 
-	HTTPDelegate(asio::io_context& io_context,
+	HTTPDelegate(openvpn_io::io_context& io_context,
 		     const WS::Client::Config::Ptr& config,
 		     PARENT* parent_arg)
 	  : WS::Client::HTTPCore(io_context, config),
@@ -953,7 +953,7 @@ namespace openvpn {
 	    parent->http_headers_sent(*this, buf);
 	}
 
-	virtual void http_mutate_resolver_results(asio::ip::tcp::resolver::results_type& results)
+	virtual void http_mutate_resolver_results(openvpn_io::ip::tcp::resolver::results_type& results)
 	{
 	  if (parent)
 	    parent->http_mutate_resolver_results(*this, results);
