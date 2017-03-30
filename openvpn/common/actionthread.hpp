@@ -41,7 +41,7 @@ namespace openvpn {
       virtual void action_thread_finished(const ActionThread* self, bool status) = 0;
     };
 
-    ActionThread(asio::io_context& io_context_arg,
+    ActionThread(openvpn_io::io_context& io_context_arg,
 		 const ActionList::Ptr& action_list,
 		 Notify* completion_handler_arg)
       : io_context(io_context_arg),
@@ -95,13 +95,13 @@ namespace openvpn {
 	{
 	  OPENVPN_LOG("ActionThread Exception: " << e.what());
 	}
-      asio::post(io_context, [self=Ptr(this), status]()
+      openvpn_io::post(io_context, [self=Ptr(this), status]()
 		 {
 		   self->completion_post(status);
 		 });
     }
 
-    asio::io_context& io_context;
+    openvpn_io::io_context& io_context;
     std::thread* thread;
     ActionList::Ptr actions;       // actions to execute in child thread
     Notify* completion_handler;    // completion handler

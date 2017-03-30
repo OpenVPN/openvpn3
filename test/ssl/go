@@ -4,7 +4,7 @@ if [ "$(uname)" == "Darwin" ]; then
     . vars/vars-osx64
     . vars/setpath
     cd test/ssl
-    MTLS=1 build proto
+    ASIO=1 MTLS=1 build proto
 else
     cd $O3/core
     . vars/vars-linux
@@ -12,12 +12,12 @@ else
     cd test/ssl
     if [ "$MO_HYBRID" = "1" ]; then
 	# mbedTLS client, OpenSSL server
-	OPENSSL_SYS=1 MTLS=1 build proto
+	ASIO=1 OPENSSL_SYS=1 MTLS=1 build proto
     elif [ "$OSSL" = "1" ]; then
 	# OpenSSL client/server
-	OPENSSL_SYS=1 build proto
+	ASIO=1 OPENSSL_SYS=1 build proto
     else
 	# mbedTLS client/server
-	MTLS=1 NOSSL=1 build proto
+	ASIO=1 MTLS=1 NOSSL=1 build proto
     fi
 fi

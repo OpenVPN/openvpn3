@@ -62,14 +62,14 @@ namespace openvpn {
     OPENVPN_EXCEPTION(tun_ifconfig_error);
 
     template <typename ReadHandler>
-    class Tun : public TunIO<ReadHandler, PacketFrom, asio::posix::stream_descriptor>
+    class Tun : public TunIO<ReadHandler, PacketFrom, openvpn_io::posix::stream_descriptor>
     {
-      typedef TunIO<ReadHandler, PacketFrom, asio::posix::stream_descriptor> Base;
+      typedef TunIO<ReadHandler, PacketFrom, openvpn_io::posix::stream_descriptor> Base;
 
     public:
       typedef RCPtr<Tun> Ptr;
 
-      Tun(asio::io_context& io_context,
+      Tun(openvpn_io::io_context& io_context,
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg,
@@ -118,7 +118,7 @@ namespace openvpn {
 	  }
 
 	Base::name_ = ifr.ifr_name;
-	Base::stream = new asio::posix::stream_descriptor(io_context, fd.release());
+	Base::stream = new openvpn_io::posix::stream_descriptor(io_context, fd.release());
 	OPENVPN_LOG_TUN(Base::name_ << " opened");
       }
 

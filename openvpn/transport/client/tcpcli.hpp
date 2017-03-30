@@ -26,7 +26,7 @@
 
 #include <sstream>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
@@ -57,7 +57,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
+      virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
 							    TransportClientParent* parent);
 
     private:
@@ -71,7 +71,7 @@ namespace openvpn {
     {
       typedef RCPtr<Client> Ptr;
 
-      typedef Link<asio::ip::tcp, Client*, false> LinkImpl;
+      typedef Link<openvpn_io::ip::tcp, Client*, false> LinkImpl;
 
       friend class ClientConfig;         // calls constructor
       friend LinkImpl;                   // calls tcp_read_handler
@@ -90,7 +90,7 @@ namespace openvpn {
 	      {
 		parent->transport_pre_resolve();
 		resolver.async_resolve(server_host, server_port,
-				       [self=Ptr(this)](const asio::error_code& error, asio::ip::tcp::resolver::results_type results)
+				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
 				       {
 					 self->do_resolve_(error, results);
 				       });
@@ -164,7 +164,7 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(asio::io_context& io_context_arg,
+      Client(openvpn_io::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TransportClientParent* parent_arg)
 	:  io_context(io_context_arg),
@@ -239,8 +239,8 @@ namespace openvpn {
       }
 
       // do DNS resolve
-      void do_resolve_(const asio::error_code& error,
-		       asio::ip::tcp::resolver::results_type results)
+      void do_resolve_(const openvpn_io::error_code& error,
+		       openvpn_io::ip::tcp::resolver::results_type results)
       {
 	if (!halt)
 	  {
@@ -281,15 +281,15 @@ namespace openvpn {
 	      }
 	  }
 #endif
-	socket.set_option(asio::ip::tcp::no_delay(true));
-	socket.async_connect(server_endpoint, [self=Ptr(this)](const asio::error_code& error)
+	socket.set_option(openvpn_io::ip::tcp::no_delay(true));
+	socket.async_connect(server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
                                                 self->start_impl_(error);
                                               });
       }
 
       // start I/O on TCP socket
-      void start_impl_(const asio::error_code& error)
+      void start_impl_(const openvpn_io::error_code& error)
       {
 	if (!halt)
 	  {
@@ -323,17 +323,17 @@ namespace openvpn {
       std::string server_host;
       std::string server_port;
 
-      asio::io_context& io_context;
-      asio::ip::tcp::socket socket;
+      openvpn_io::io_context& io_context;
+      openvpn_io::ip::tcp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent* parent;
       LinkImpl::Ptr impl;
-      asio::ip::tcp::resolver resolver;
+      openvpn_io::ip::tcp::resolver resolver;
       LinkImpl::protocol::endpoint server_endpoint;
       bool halt;
     };
 
-    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_context& io_context,
+    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
 								       TransportClientParent* parent)
     {
       return TransportClient::Ptr(new Client(io_context, this, parent));

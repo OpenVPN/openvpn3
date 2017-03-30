@@ -43,7 +43,7 @@
 #include <algorithm>         // for std::min
 #include <cstdint>           // for std::uint...
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/count.hpp>
@@ -135,7 +135,7 @@ namespace openvpn {
 	bool autologin_sessions = false;
       };
 
-      Session(asio::io_context& io_context_arg,
+      Session(openvpn_io::io_context& io_context_arg,
 	      const Config& config,
 	      NotifyCallback* notify_callback_arg)
 	: Base(config.proto_context_config, config.cli_stats),
@@ -242,7 +242,7 @@ namespace openvpn {
 	  }
       }
 
-      void stop_on_signal(const asio::error_code& error, int signal_number)
+      void stop_on_signal(const openvpn_io::error_code& error, int signal_number)
       {
 	stop(true);
       }
@@ -743,7 +743,7 @@ namespace openvpn {
       }
 
       void send_push_request_callback(const Time::Duration& dur,
-				      const asio::error_code& e)
+				      const openvpn_io::error_code& e)
       {
 	try {
 	  if (!e && !halt && !received_options.partial())
@@ -778,7 +778,7 @@ namespace openvpn {
 	if (!received_options.partial())
 	  {
 	    push_request_timer.expires_at(now() + dur);
-	    push_request_timer.async_wait([self=Ptr(this), dur](const asio::error_code& error)
+	    push_request_timer.async_wait([self=Ptr(this), dur](const openvpn_io::error_code& error)
                                           {
                                             self->send_push_request_callback(dur, error);
                                           });
@@ -792,7 +792,7 @@ namespace openvpn {
 	schedule_push_request_callback(Time::Duration::seconds(0));
       }
 
-      void housekeeping_callback(const asio::error_code& e)
+      void housekeeping_callback(const openvpn_io::error_code& e)
       {
 	try {
 	  if (!e && !halt)
@@ -834,7 +834,7 @@ namespace openvpn {
 		next.max(now());
 		housekeeping_schedule.reset(next);
 		housekeeping_timer.expires_at(next);
-		housekeeping_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+		housekeeping_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
                                                 self->housekeeping_callback(error);
                                               });
@@ -866,13 +866,13 @@ namespace openvpn {
       void schedule_inactive_timer()
       {
 	inactive_timer.expires_at(now() + inactive_duration);
-	inactive_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+	inactive_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                   {
                                     self->inactive_callback(error);
                                   });
       }
 
-      void inactive_callback(const asio::error_code& e) // fixme for DCO
+      void inactive_callback(const openvpn_io::error_code& e) // fixme for DCO
       {
 	try {
 	  if (!e && !halt)
@@ -956,13 +956,13 @@ namespace openvpn {
       {
 	Base::update_now();
 	info_hold_timer.expires_at(now() + Time::Duration::seconds(1));
-	info_hold_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+	info_hold_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                   {
                                     self->info_hold_callback(error);
                                   });
       }
 
-      void info_hold_callback(const asio::error_code& e)
+      void info_hold_callback(const openvpn_io::error_code& e)
       {
 	try {
 	  if (!e && !halt)
@@ -996,7 +996,7 @@ namespace openvpn {
       }
 #endif
 
-      asio::io_context& io_context;
+      openvpn_io::io_context& io_context;
 
       TransportClientFactory::Ptr transport_factory;
       TransportClient::Ptr transport;

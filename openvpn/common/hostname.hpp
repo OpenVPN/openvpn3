@@ -19,23 +19,26 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_ASIO_ASIOERR_H
-#define OPENVPN_ASIO_ASIOERR_H
+// Get hostname
+
+#ifndef OPENVPN_COMMON_HOSTNAME_H
+#define OPENVPN_COMMON_HOSTNAME_H
 
 #include <string>
 
-#include <openvpn/io/io.hpp> // was: #include <asio/error_code.hpp>
+#ifdef USE_ASIO
+#include <asio/ip/host_name.hpp>
+#endif
 
 namespace openvpn {
-
-  // returns a string describing an i/o error code
-  template <typename ErrorCode>
-  inline std::string errinfo(ErrorCode err)
+  inline std::string get_hostname()
   {
-    openvpn_io::error_code e(err, openvpn_io::system_category());
-    return e.message();
+#ifdef USE_ASIO
+    return asio::ip::host_name();
+#else
+    return "HOSTNAME_UNDEFINED";
+#endif
   }
-
 }
 
 #endif

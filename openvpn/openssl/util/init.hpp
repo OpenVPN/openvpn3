@@ -22,12 +22,18 @@
 #ifndef OPENVPN_OPENSSL_UTIL_INIT_H
 #define OPENVPN_OPENSSL_UTIL_INIT_H
 
+#ifdef USE_ASIO
 #include <asio/ssl/detail/openssl_init.hpp>
+#endif
 
 namespace openvpn {
 
+#ifdef USE_ASIO
   // Instantiate this object to ensure openssl is initialised.
-  typedef asio::ssl::detail::openssl_init<> openssl_init;
+  typedef openvpn_io::ssl::detail::openssl_init<> openssl_init;
+#else
+#error no OpenSSL init code
+#endif
 
 } // namespace openvpn
 

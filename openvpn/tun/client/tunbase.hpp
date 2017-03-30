@@ -26,7 +26,7 @@
 
 #include <string>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
@@ -73,7 +73,7 @@ namespace openvpn {
   {
     typedef RCPtr<TunClientFactory> Ptr;
 
-    virtual TunClient::Ptr new_tun_client_obj(asio::io_context& io_context,
+    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
 					      TunClientParent& parent,
 					      TransportClient* transcli) = 0;
 

@@ -170,17 +170,17 @@ namespace openvpn {
 	  adj_capacity_ = newcap;
       }
 
-      // return a asio::mutable_buffer object used by
+      // return a openvpn_io::mutable_buffer object used by
       // asio read methods.
-      asio::mutable_buffer mutable_buffer(Buffer& buf) const
+      openvpn_io::mutable_buffer mutable_buffer(Buffer& buf) const
       {
-	return asio::mutable_buffer(buf.data(), remaining_payload(buf));
+	return openvpn_io::mutable_buffer(buf.data(), remaining_payload(buf));
       }
 
       // clamped version of mutable_buffer
-      asio::mutable_buffer mutable_buffer_clamp(Buffer& buf) const
+      openvpn_io::mutable_buffer mutable_buffer_clamp(Buffer& buf) const
       {
-	return asio::mutable_buffer(buf.data(), buf_clamp_read(remaining_payload(buf)));
+	return openvpn_io::mutable_buffer(buf.data(), buf_clamp_read(remaining_payload(buf)));
       }
 
       std::string info() const

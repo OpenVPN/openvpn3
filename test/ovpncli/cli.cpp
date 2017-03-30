@@ -253,7 +253,7 @@ static Client *the_client = nullptr; // GLOBAL
 
 static void worker_thread()
 {
-  asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+  openvpn_io::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
   try {
     std::cout << "Thread starting..." << std::endl;
     ClientAPI::Status connect_status = the_client->connect();

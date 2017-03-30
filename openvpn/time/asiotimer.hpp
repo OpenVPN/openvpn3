@@ -27,8 +27,7 @@
 
 #include <chrono>
 
-#include <asio.hpp>
-#include <asio/basic_waitable_timer.hpp>
+#include <openvpn/io/io.hpp> // was: #include <asio/basic_waitable_timer.hpp>
 
 #include <openvpn/common/olong.hpp>
 #include <openvpn/time/time.hpp>
@@ -57,17 +56,17 @@ namespace openvpn {
     }
   };
 
-  class AsioTimer : public asio::basic_waitable_timer<AsioClock>
+  class AsioTimer : public openvpn_io::basic_waitable_timer<AsioClock>
   {
   public:
-    AsioTimer(asio::io_context& io_context)
-      : asio::basic_waitable_timer<AsioClock>(io_context)
+    AsioTimer(openvpn_io::io_context& io_context)
+      : openvpn_io::basic_waitable_timer<AsioClock>(io_context)
     {
     }
 
     std::size_t expires_at(const Time& t)
     {
-      return asio::basic_waitable_timer<AsioClock>::expires_at(AsioClock::to_time_point(t));
+      return openvpn_io::basic_waitable_timer<AsioClock>::expires_at(AsioClock::to_time_point(t));
     }    
   };
 }

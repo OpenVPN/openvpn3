@@ -19,23 +19,14 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_ASIO_ASIOERR_H
-#define OPENVPN_ASIO_ASIOERR_H
+// Select the i/o reactor
 
-#include <string>
+#ifndef OPENVPN_IO_IO_H
+#define OPENVPN_IO_IO_H
 
-#include <openvpn/io/io.hpp> // was: #include <asio/error_code.hpp>
-
-namespace openvpn {
-
-  // returns a string describing an i/o error code
-  template <typename ErrorCode>
-  inline std::string errinfo(ErrorCode err)
-  {
-    openvpn_io::error_code e(err, openvpn_io::system_category());
-    return e.message();
-  }
-
-}
+#ifdef USE_ASIO
+#include <asio.hpp>
+#define openvpn_io asio
+#endif
 
 #endif

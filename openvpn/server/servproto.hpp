@@ -67,7 +67,7 @@ namespace openvpn {
       typedef RCPtr<Factory> Ptr;
       typedef Base::Config ProtoConfig;
 
-      Factory(asio::io_context& io_context_arg,
+      Factory(openvpn_io::io_context& io_context_arg,
 	      const Base::Config& c)
 	: io_context(io_context_arg)
       {
@@ -95,7 +95,7 @@ namespace openvpn {
 	return new ProtoConfig(*proto_context_config);
       }
 
-      asio::io_context& io_context;
+      openvpn_io::io_context& io_context;
       ProtoConfig::Ptr proto_context_config;
 
       ManClientInstanceFactory::Ptr man_factory;
@@ -285,7 +285,7 @@ namespace openvpn {
       }
 
     private:
-      Session(asio::io_context& io_context_arg,
+      Session(openvpn_io::io_context& io_context_arg,
 	      const Factory& factory,
 	      ManClientInstanceFactory::Ptr man_factory_arg,
 	      TunClientInstanceFactory::Ptr tun_factory_arg)
@@ -571,7 +571,7 @@ namespace openvpn {
 	disconnect_at = now() + dur;
       }
 
-      void housekeeping_callback(const asio::error_code& e)
+      void housekeeping_callback(const openvpn_io::error_code& e)
       {
 	try {
 	  if (!e && !halt)
@@ -611,7 +611,7 @@ namespace openvpn {
 		next.max(now());
 		housekeeping_schedule.reset(next);
 		housekeeping_timer.expires_at(next);
-		housekeeping_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+		housekeeping_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
                                                 self->housekeeping_callback(error);
                                               });
@@ -661,7 +661,7 @@ namespace openvpn {
 	  }
       }
 
-      asio::io_context& io_context;
+      openvpn_io::io_context& io_context;
 
       bool halt = false;
       bool did_push = false;

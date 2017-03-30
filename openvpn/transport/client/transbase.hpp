@@ -27,7 +27,7 @@
 
 #include <string>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -97,7 +97,7 @@ namespace openvpn {
   {
     typedef RCPtr<TransportClientFactory> Ptr;
 
-    virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
+    virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
 							  TransportClientParent* parent) = 0;
     virtual bool is_relay() { return false; }
   };

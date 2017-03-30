@@ -34,7 +34,7 @@
 #include <memory>
 #include <algorithm>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
@@ -251,7 +251,7 @@ namespace openvpn {
 
     void transact(InOut& inout)
     {
-      asio::io_context io_context(1);
+      openvpn_io::io_context io_context(1);
       Pipe::SD_OUT send_in(io_context, inout.in, in);
       Pipe::SD_IN recv_out(io_context, out);
       Pipe::SD_IN recv_err(io_context, err);

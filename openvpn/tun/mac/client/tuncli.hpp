@@ -80,7 +80,7 @@ namespace openvpn {
     };
 
     // These types manage the underlying tun driver fd
-    typedef asio::posix::stream_descriptor TUNStream;
+    typedef openvpn_io::posix::stream_descriptor TUNStream;
     typedef ScopedAsioStream<TUNStream> ScopedTUNStream;
     typedef TunPersistTemplate<ScopedTUNStream> TunPersist;
 
@@ -116,7 +116,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_tun_client_obj(asio::io_context& io_context,
+      virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
 						TunClientParent& parent,
 						TransportClient* transcli);
 
@@ -313,7 +313,7 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(asio::io_context& io_context_arg,
+      Client(openvpn_io::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
 	:  io_context(io_context_arg),
@@ -338,7 +338,7 @@ namespace openvpn {
       }
 
       void tun_error_handler(const Error::Type errtype, // called by TunImpl
-			     const asio::error_code* error)
+			     const openvpn_io::error_code* error)
       {
 	parent.tun_error(Error::TUN_ERROR, "TUN I/O error");
       }
@@ -356,7 +356,7 @@ namespace openvpn {
 	  }
       }
 
-      asio::io_context& io_context;
+      openvpn_io::io_context& io_context;
       TunPersist::Ptr tun_persist; // contains the tun device fd
       ClientConfig::Ptr config;
       TunClientParent& parent;
@@ -366,7 +366,7 @@ namespace openvpn {
       TunBuilderSetup::Base::Ptr tun_setup;
     };
 
-    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_context& io_context,
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context& io_context,
 							   TunClientParent& parent,
 							   TransportClient* transcli)
     {

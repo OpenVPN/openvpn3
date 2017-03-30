@@ -22,7 +22,7 @@
 #ifndef OPENVPN_ASIO_ASIOSTOP_H
 #define OPENVPN_ASIO_ASIOSTOP_H
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/stop.hpp>
 
@@ -30,7 +30,7 @@ namespace openvpn {
   class AsioStopScope : public Stop::Scope
   {
   public:
-    AsioStopScope(asio::io_context& io_context,
+    AsioStopScope(openvpn_io::io_context& io_context,
 		  Stop* stop,
 		  std::function<void()>&& method)
       : Stop::Scope(stop, post_method(io_context, std::move(method)))
@@ -38,11 +38,11 @@ namespace openvpn {
     }
 
   private:
-    static std::function<void()> post_method(asio::io_context& io_context, std::function<void()>&& method)
+    static std::function<void()> post_method(openvpn_io::io_context& io_context, std::function<void()>&& method)
     {
       return [&io_context, method=std::move(method)]()
 	{
-	  asio::post(io_context, std::move(method));
+	  openvpn_io::post(io_context, std::move(method));
 	};
     }
   };

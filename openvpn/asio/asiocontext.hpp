@@ -26,15 +26,15 @@
 #include <memory>
 #include <mutex>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 namespace openvpn {
   class AsioContextStore
   {
   public:
-    asio::io_context& new_context(int concurrency_hint)
+    openvpn_io::io_context& new_context(int concurrency_hint)
     {
-      asio::io_context* ioc = new asio::io_context(concurrency_hint);
+      openvpn_io::io_context* ioc = new openvpn_io::io_context(concurrency_hint);
       {
 	std::lock_guard<std::mutex> lock(mutex);
 	contexts.emplace_back(ioc);
@@ -44,7 +44,7 @@ namespace openvpn {
 
   private:
     std::mutex mutex;
-    std::vector<std::unique_ptr<asio::io_context>> contexts;
+    std::vector<std::unique_ptr<openvpn_io::io_context>> contexts;
   };
 }
 

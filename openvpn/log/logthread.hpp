@@ -29,8 +29,6 @@
 #include <sstream>
 #include <thread>
 
-#include <asio/detail/tss_ptr.hpp>
-
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/extern.hpp>
 
@@ -111,7 +109,7 @@ namespace openvpn {
     };
 #else
     // OPENVPN_LOG uses thread-local object pointer
-    OPENVPN_EXTERN asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
+    OPENVPN_EXTERN thread_local OPENVPN_LOG_CLASS* global_log; // GLOBAL
     struct Context
     {
       // Mechanism for passing thread-local

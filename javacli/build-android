@@ -67,6 +67,7 @@ g++ \
     -Wno-unused-local-typedefs \
     $vis1 \
     $ssl_def \
+    -DUSE_ASIO \
     -DASIO_STANDALONE \
     -DASIO_NO_DEPRECATED \
     -DHAVE_LZ4 \

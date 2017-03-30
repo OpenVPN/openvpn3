@@ -27,7 +27,7 @@
 #include <utility>
 #include <atomic>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 // Set up export of our public interface unless
 // OPENVPN_CORE_API_VISIBILITY_HIDDEN is defined
@@ -386,7 +386,7 @@ namespace openvpn {
 
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent,
-		    asio::io_context* io_context,
+		    openvpn_io::io_context* io_context,
 		    Stop* async_stop_global)
 	{
 	  // only one attachment per instantiation allowed
@@ -402,7 +402,7 @@ namespace openvpn {
 	    io_context_ = io_context;
 	  else
 	    {
-	      io_context_ = new asio::io_context(1); // concurrency hint=1
+	      io_context_ = new openvpn_io::io_context(1); // concurrency hint=1
 	      io_context_owned = true;
 	    }
 
@@ -452,7 +452,7 @@ namespace openvpn {
 
 	// io_context
 
-	asio::io_context* io_context()
+	openvpn_io::io_context* io_context()
 	{
 	  return io_context_;
 	}
@@ -483,7 +483,7 @@ namespace openvpn {
 	Stop async_stop_local_;
 	Stop* async_stop_global_ = nullptr;
 
-	asio::io_context* io_context_ = nullptr;
+	openvpn_io::io_context* io_context_ = nullptr;
 	bool io_context_owned = false;
 
 	std::atomic<bool> foreign_thread_ready{false};
@@ -755,7 +755,7 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
     {
-      asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+      openvpn_io::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
 #if defined(OPENVPN_LOG_LOGTHREAD_H) && !defined(OPENVPN_LOG_LOGBASE_H)
 #ifdef OPENVPN_LOG_GLOBAL
 #error ovpn3 core logging object only supports thread-local scope

@@ -24,7 +24,7 @@
 #ifndef OPENVPN_TUN_WIN_TUNUTIL_H
 #define OPENVPN_TUN_WIN_TUNUTIL_H
 
-#include <asio/detail/socket_types.hpp> // prevent winsock multiple def errors
+#include <openvpn/common/socktypes.hpp> // prevent winsock multiple def errors
 
 #include <windows.h>
 #include <winsock2.h> // for IPv6

@@ -28,7 +28,7 @@
 #include <utility> // for std::move
 #include <memory>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
@@ -245,13 +245,13 @@ namespace openvpn {
       {
 	BufferAllocated& buf = *queue.front();
 	socket.async_send(buf.const_buffer_clamp(),
-			  [self=Ptr(this)](const asio::error_code& error, const size_t bytes_sent)
+			  [self=Ptr(this)](const openvpn_io::error_code& error, const size_t bytes_sent)
 			  {
 			    self->handle_send(error, bytes_sent);
 			  });
       }
 
-      void handle_send(const asio::error_code& error, const size_t bytes_sent)
+      void handle_send(const openvpn_io::error_code& error, const size_t bytes_sent)
       {
 	if (!halt)
 	  {
@@ -304,13 +304,13 @@ namespace openvpn {
 	frame_context.prepare(tcpfrom->buf);
 
 	socket.async_receive(frame_context.mutable_buffer_clamp(tcpfrom->buf),
-			     [self=Ptr(this), tcpfrom](const asio::error_code& error, const size_t bytes_recvd)
+			     [self=Ptr(this), tcpfrom](const openvpn_io::error_code& error, const size_t bytes_recvd)
 			     {
 			       self->handle_recv(tcpfrom, error, bytes_recvd);
 			     });
       }
 
-      void handle_recv(PacketFrom *tcpfrom, const asio::error_code& error, const size_t bytes_recvd)
+      void handle_recv(PacketFrom *tcpfrom, const openvpn_io::error_code& error, const size_t bytes_recvd)
       {
 	OPENVPN_LOG_TCPLINK_VERBOSE("TCPLink::handle_recv: " << error.message());
 	PacketFrom::SPtr pfp(tcpfrom);
@@ -352,7 +352,7 @@ namespace openvpn {
 		if (!halt && requeue)
 		  queue_recv(pfp.release()); // reuse PacketFrom object
 	      }
-	    else if (error == asio::error::eof)
+	    else if (error == openvpn_io::error::eof)
 	      {
 		OPENVPN_LOG_TCPLINK_ERROR("TCP recv EOF");
 		read_handler->tcp_eof_handler();

@@ -35,7 +35,7 @@ namespace openvpn {
   class TransportRelayFactory : public TransportClientFactory
   {
   public:
-    TransportRelayFactory(asio::io_context& io_context,
+    TransportRelayFactory(openvpn_io::io_context& io_context,
 			  TransportClient::Ptr transport,
 			  TransportClientParent* old_parent)
       : io_context_(io_context),
@@ -141,7 +141,7 @@ namespace openvpn {
       bool is_openvpn_protocol;
     };
 
-    virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
+    virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
 							  TransportClientParent* parent) override
     {
       // io_context MUST stay consistent
@@ -157,7 +157,7 @@ namespace openvpn {
       return true;
     }
 
-    asio::io_context& io_context_;                        // only used to verify consistency
+    openvpn_io::io_context& io_context_;                        // only used to verify consistency
     TransportClient::Ptr transport_;                      // the persisted transport
     std::unique_ptr<TransportClientParent> null_parent_;  // placeholder for TransportClient parent before reparenting
   };

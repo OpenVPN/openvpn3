@@ -27,7 +27,7 @@
 
 #include <string>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
@@ -38,10 +38,10 @@ namespace openvpn {
     class SD
     {
     public:
-      SD(asio::io_context& io_context, ScopedFD& fd)
+      SD(openvpn_io::io_context& io_context, ScopedFD& fd)
       {
 	if (fd.defined())
-	  sd.reset(new asio::posix::stream_descriptor(io_context, fd.release()));
+	  sd.reset(new openvpn_io::posix::stream_descriptor(io_context, fd.release()));
       }
 
       bool defined() const
@@ -50,13 +50,13 @@ namespace openvpn {
       }
 
     protected:
-      std::unique_ptr<asio::posix::stream_descriptor> sd;
+      std::unique_ptr<openvpn_io::posix::stream_descriptor> sd;
     };
 
     class SD_OUT : public SD
     {
     public:
-      SD_OUT(asio::io_context& io_context, const std::string& content, ScopedFD& fd)
+      SD_OUT(openvpn_io::io_context& io_context, const std::string& content, ScopedFD& fd)
 	: SD(io_context, fd)
       {
 	if (defined())
@@ -70,7 +70,7 @@ namespace openvpn {
       void queue_write()
       {
 	sd->async_write_some(buf.const_buffer_limit(2048),
-			     [this](const asio::error_code& ec, const size_t bytes_sent) {
+			     [this](const openvpn_io::error_code& ec, const size_t bytes_sent) {
 			       if (!ec && bytes_sent < buf.size())
 				 {
 				   buf.advance(bytes_sent);
@@ -89,7 +89,7 @@ namespace openvpn {
     class SD_IN : public SD
     {
     public:
-      SD_IN(asio::io_context& io_context, ScopedFD& fd)
+      SD_IN(openvpn_io::io_context& io_context, ScopedFD& fd)
 	: SD(io_context, fd)
       {
 	if (defined())
@@ -106,7 +106,7 @@ namespace openvpn {
       {
 	buf.reset(0, 2048, 0);
 	sd->async_read_some(buf.mutable_buffer_clamp(),
-			    [this](const asio::error_code& ec, const size_t bytes_recvd) {
+			    [this](const openvpn_io::error_code& ec, const size_t bytes_recvd) {
 			      if (!ec)
 				{
 				  buf.set_size(bytes_recvd);

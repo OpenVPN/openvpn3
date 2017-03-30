@@ -45,7 +45,7 @@ namespace openvpn {
     public:
       typedef RCPtr<DelayedQueue> Ptr;
 
-      DelayedQueue(asio::io_context& io_context,
+      DelayedQueue(openvpn_io::io_context& io_context,
 		   const unsigned int delay_ms)
 	: dur(Time::Duration::milliseconds(delay_ms)),
 	  next_event(io_context)
@@ -110,7 +110,7 @@ namespace openvpn {
 	  return;
 	EventBase& ev = *events.front();
 	next_event.expires_at(ev.fire_time());
-	next_event.async_wait([self=Ptr(this)](const asio::error_code& error)
+	next_event.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 			      {
 				if (!error)
 				  {
@@ -163,7 +163,7 @@ namespace openvpn {
     class SendRecvQueue
     {
     public:
-      SendRecvQueue(asio::io_context& io_context,
+      SendRecvQueue(openvpn_io::io_context& io_context,
 		    const Config::Ptr& conf_arg,
 		    const bool tcp_arg)
 	: conf(conf_arg),

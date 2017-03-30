@@ -28,7 +28,7 @@
 
 #include <functional>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/destruct.hpp>
 #include <openvpn/common/stop.hpp>
@@ -66,7 +66,7 @@ namespace openvpn {
     {
       typedef RCPtr<SetupFactory> Ptr;
 
-      virtual SetupBase::Ptr new_setup_obj(asio::io_context& io_context) = 0;
+      virtual SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context) = 0;
     };
   }
 }

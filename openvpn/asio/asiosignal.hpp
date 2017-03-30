@@ -25,7 +25,7 @@
 #ifndef OPENVPN_ASIO_ASIOSIGNAL_H
 #define OPENVPN_ASIO_ASIOSIGNAL_H
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/rc.hpp>
@@ -37,7 +37,7 @@ namespace openvpn {
   public:
     typedef RCPtr<ASIOSignals> Ptr;
 
-    ASIOSignals(asio::io_context& io_context)
+    ASIOSignals(openvpn_io::io_context& io_context)
       : halt(false), signals_(io_context) {}
 
     enum {
@@ -97,7 +97,7 @@ namespace openvpn {
 
   private:
     bool halt;
-    asio::signal_set signals_;
+    openvpn_io::signal_set signals_;
   };
 
 }

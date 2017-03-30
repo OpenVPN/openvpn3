@@ -25,7 +25,7 @@
 #ifndef OPENVPN_ASIO_ASIOPOLYSOCK_H
 #define OPENVPN_ASIO_ASIOPOLYSOCK_H
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
@@ -47,11 +47,11 @@ namespace openvpn {
     public:
       typedef RCPtr<Base> Ptr;
 
-      virtual void async_send(const asio::const_buffer& buf,
-			      Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
+      virtual void async_send(const openvpn_io::const_buffer& buf,
+			      Function<void(const openvpn_io::error_code&, const size_t)>&& callback) = 0;
 
-      virtual void async_receive(const asio::mutable_buffer& buf,
-				 Function<void(const asio::error_code&, const size_t)>&& callback) = 0;
+      virtual void async_receive(const openvpn_io::mutable_buffer& buf,
+				 Function<void(const openvpn_io::error_code&, const size_t)>&& callback) = 0;
 
       virtual std::string remote_endpoint_str() const = 0;
       virtual bool remote_ip_port(IP::Addr& addr, unsigned int& port) const = 0;
@@ -89,21 +89,21 @@ namespace openvpn {
     {
       typedef RCPtr<TCP> Ptr;
 
-      TCP(asio::io_context& io_context,
+      TCP(openvpn_io::io_context& io_context,
 	  const size_t index)
 	:  Base(index),
 	   socket(io_context)
       {
       }
 
-      virtual void async_send(const asio::const_buffer& buf,
-			      Function<void(const asio::error_code&, const size_t)>&& callback) override
+      virtual void async_send(const openvpn_io::const_buffer& buf,
+			      Function<void(const openvpn_io::error_code&, const size_t)>&& callback) override
       {
 	socket.async_send(buf, std::move(callback));
       }
 
-      virtual void async_receive(const asio::mutable_buffer& buf,
-				 Function<void(const asio::error_code&, const size_t)>&& callback) override
+      virtual void async_receive(const openvpn_io::mutable_buffer& buf,
+				 Function<void(const openvpn_io::error_code&, const size_t)>&& callback) override
       {
 	socket.async_receive(buf, std::move(callback));
       }
@@ -133,7 +133,7 @@ namespace openvpn {
 
       virtual void tcp_nodelay() override
       {
-	socket.set_option(asio::ip::tcp::no_delay(true));
+	socket.set_option(openvpn_io::ip::tcp::no_delay(true));
       }
 
 #if !defined(OPENVPN_PLATFORM_WIN)
@@ -158,7 +158,7 @@ namespace openvpn {
 	return false;
       }
 
-      asio::ip::tcp::socket socket;
+      openvpn_io::ip::tcp::socket socket;
     };
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
@@ -166,21 +166,21 @@ namespace openvpn {
     {
       typedef RCPtr<Unix> Ptr;
 
-      Unix(asio::io_context& io_context,
+      Unix(openvpn_io::io_context& io_context,
 	   const size_t index)
 	:  Base(index),
 	   socket(io_context)
       {
       }
 
-      virtual void async_send(const asio::const_buffer& buf,
-			      Function<void(const asio::error_code&, const size_t)>&& callback) override
+      virtual void async_send(const openvpn_io::const_buffer& buf,
+			      Function<void(const openvpn_io::error_code&, const size_t)>&& callback) override
       {
 	socket.async_send(buf, std::move(callback));
       }
 
-      virtual void async_receive(const asio::mutable_buffer& buf,
-				 Function<void(const asio::error_code&, const size_t)>&& callback) override
+      virtual void async_receive(const openvpn_io::mutable_buffer& buf,
+				 Function<void(const openvpn_io::error_code&, const size_t)>&& callback) override
       {
 	socket.async_receive(buf, std::move(callback));
       }
@@ -225,7 +225,7 @@ namespace openvpn {
 	return true;
       }
 
-      asio::local::stream_protocol::socket socket;
+      openvpn_io::local::stream_protocol::socket socket;
     };
 #endif
 
@@ -234,21 +234,21 @@ namespace openvpn {
     {
       typedef RCPtr<NamedPipe> Ptr;
 
-      NamedPipe(asio::windows::stream_handle&& handle_arg,
+      NamedPipe(openvpn_io::windows::stream_handle&& handle_arg,
 		const size_t index)
 	:  Base(index),
 	   handle(std::move(handle_arg))
       {
       }
 
-      virtual void async_send(const asio::const_buffer& buf,
-			      Function<void(const asio::error_code&, const size_t)>&& callback) override
+      virtual void async_send(const openvpn_io::const_buffer& buf,
+			      Function<void(const openvpn_io::error_code&, const size_t)>&& callback) override
       {
 	handle.async_write_some(buf, std::move(callback));
       }
 
-      virtual void async_receive(const asio::mutable_buffer& buf,
-				 Function<void(const asio::error_code&, const size_t)>&& callback) override
+      virtual void async_receive(const openvpn_io::mutable_buffer& buf,
+				 Function<void(const openvpn_io::error_code&, const size_t)>&& callback) override
       {
 	handle.async_read_some(buf, std::move(callback));
       }
@@ -282,7 +282,7 @@ namespace openvpn {
 	return true;
       }
 
-      asio::windows::stream_handle handle;
+      openvpn_io::windows::stream_handle handle;
     };
 #endif
   }

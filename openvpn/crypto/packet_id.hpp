@@ -29,7 +29,7 @@
 #include <sstream>
 #include <cstdint> // for std::uint32_t
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>

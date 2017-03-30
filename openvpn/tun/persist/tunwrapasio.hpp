@@ -50,7 +50,7 @@ namespace openvpn {
 
     template <typename MutableBufferSequence, typename ReadHandler>
     ASIO_INITFN_RESULT_TYPE(ReadHandler,
-			    void (asio::error_code, std::size_t))
+			    void (openvpn_io::error_code, std::size_t))
       async_read_some(const MutableBufferSequence& buffers,
 		      ASIO_MOVE_ARG(ReadHandler) handler)
     {

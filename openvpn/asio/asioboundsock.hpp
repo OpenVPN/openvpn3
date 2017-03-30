@@ -26,7 +26,7 @@
 #ifndef OPENVPN_ASIO_ASIOBOUNDSOCK_H
 #define OPENVPN_ASIO_ASIOBOUNDSOCK_H
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/common/extern.hpp>
@@ -34,12 +34,12 @@
 namespace openvpn {
   namespace AsioBoundSocket {
 
-    typedef asio::basic_stream_socket<asio::ip::tcp> SocketBase;
+    typedef openvpn_io::basic_stream_socket<openvpn_io::ip::tcp> SocketBase;
 
     class Socket : public SocketBase
     {
     public:
-      explicit Socket(asio::io_context& io_context)
+      explicit Socket(openvpn_io::io_context& io_context)
 	: SocketBase(io_context)
       {
       }
@@ -50,14 +50,14 @@ namespace openvpn {
       }
 
     private:
-      virtual void async_connect_post_open(const protocol_type& protocol, asio::error_code& ec) override
+      virtual void async_connect_post_open(const protocol_type& protocol, openvpn_io::error_code& ec) override
       {
 	if (bind_local_addr.defined())
 	  {
-	    set_option(asio::socket_base::reuse_address(true), ec);
+	    set_option(openvpn_io::socket_base::reuse_address(true), ec);
 	    if (ec)
 	      return;
-	    bind(asio::ip::tcp::endpoint(bind_local_addr.to_asio(), 0), ec); // port 0 -- kernel will choose port
+	    bind(openvpn_io::ip::tcp::endpoint(bind_local_addr.to_asio(), 0), ec); // port 0 -- kernel will choose port
 	  }
       }
 

@@ -42,7 +42,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_tun_client_obj(asio::io_context& io_context,
+      virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
 						TunClientParent& parent,
 						TransportClient* transcli);
     private:
@@ -93,7 +93,7 @@ namespace openvpn {
       virtual void stop() {}
 
     private:
-      Client(asio::io_context& io_context_arg,
+      Client(openvpn_io::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TunClientParent& parent_arg)
 	:  io_context(io_context_arg),
@@ -102,12 +102,12 @@ namespace openvpn {
       {
       }
 
-      asio::io_context& io_context;
+      openvpn_io::io_context& io_context;
       ClientConfig::Ptr config;
       TunClientParent& parent;
     };
 
-    inline TunClient::Ptr ClientConfig::new_tun_client_obj(asio::io_context& io_context,
+    inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context& io_context,
 							   TunClientParent& parent,
 							   TransportClient* transcli)
     {

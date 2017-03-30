@@ -26,7 +26,7 @@
 
 #include <memory>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
@@ -52,7 +52,7 @@
 namespace openvpn {
   namespace UDPTransport {
 
-    typedef asio::ip::udp::endpoint AsioEndpoint;
+    typedef openvpn_io::ip::udp::endpoint AsioEndpoint;
 
     enum {
       SEND_SOCKET_HALTED=-1,
@@ -73,7 +73,7 @@ namespace openvpn {
       typedef RCPtr<Link> Ptr;
 
       Link(ReadHandler read_handler_arg,
-	   asio::ip::udp::socket& socket_arg,
+	   openvpn_io::ip::udp::socket& socket_arg,
 	   const Frame::Context& frame_context_arg,
 	   const SessionStats::Ptr& stats_arg)
 	: socket(socket_arg),
@@ -141,13 +141,13 @@ namespace openvpn {
 	frame_context.prepare(udpfrom->buf);
 	socket.async_receive_from(frame_context.mutable_buffer(udpfrom->buf),
 				  udpfrom->sender_endpoint,
-				  [self=Ptr(this), udpfrom](const asio::error_code& error, const size_t bytes_recvd)
+				  [self=Ptr(this), udpfrom](const openvpn_io::error_code& error, const size_t bytes_recvd)
                                   {
                                     self->handle_read(udpfrom, error, bytes_recvd);
                                   });
       }
 
-      void handle_read(PacketFrom *udpfrom, const asio::error_code& error, const size_t bytes_recvd)
+      void handle_read(PacketFrom *udpfrom, const openvpn_io::error_code& error, const size_t bytes_recvd)
       {
 	OPENVPN_LOG_UDPLINK_VERBOSE("UDPLink::handle_read: " << error.message());
 	PacketFrom::SPtr pfp(udpfrom);
@@ -198,7 +198,7 @@ namespace openvpn {
 		  return SEND_PARTIAL;
 		}
 	    }
-	    catch (asio::system_error& e)
+	    catch (openvpn_io::system_error& e)
 	      {
 		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
 		stats->error(Error::NETWORK_SEND_ERROR);
@@ -230,7 +230,7 @@ namespace openvpn {
       }
 #endif
 
-      asio::ip::udp::socket& socket;
+      openvpn_io::ip::udp::socket& socket;
       bool halt;
       ReadHandler read_handler;
       Frame::Context frame_context;

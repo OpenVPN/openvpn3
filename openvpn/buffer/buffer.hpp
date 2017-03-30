@@ -55,8 +55,8 @@
 #include <algorithm>
 #include <type_traits> // for std::is_nothrow_move_constructible
 
-#ifndef NO_ASIO
-#include <asio.hpp>
+#ifndef OPENVPN_NO_IO
+#include <openvpn/io/io.hpp>
 #endif
 
 #include <openvpn/common/size.hpp>
@@ -392,49 +392,49 @@ namespace openvpn {
       return !(*this == other);
     }
 
-#ifndef NO_ASIO
-    // return a asio::mutable_buffer object used by
+#ifndef OPENVPN_NO_IO
+    // return a openvpn_io::mutable_buffer object used by
     // asio read methods, starting from data()
-    asio::mutable_buffer mutable_buffer(const size_t tailroom = 0)
+    openvpn_io::mutable_buffer mutable_buffer(const size_t tailroom = 0)
     {
-      return asio::mutable_buffer(data(), max_size_tailroom(tailroom));
+      return openvpn_io::mutable_buffer(data(), max_size_tailroom(tailroom));
     }
 
-    // return a asio::mutable_buffer object used by
+    // return a openvpn_io::mutable_buffer object used by
     // asio read methods, starting from data_end()
-    asio::mutable_buffer mutable_buffer_append(const size_t tailroom = 0)
+    openvpn_io::mutable_buffer mutable_buffer_append(const size_t tailroom = 0)
     {
-      return asio::mutable_buffer(data_end(), remaining(tailroom));
+      return openvpn_io::mutable_buffer(data_end(), remaining(tailroom));
     }
 
-    // return a asio::const_buffer object used by
+    // return a openvpn_io::const_buffer object used by
     // asio write methods.
-    asio::const_buffer const_buffer() const
+    openvpn_io::const_buffer const_buffer() const
     {
-      return asio::const_buffer(c_data(), size());
+      return openvpn_io::const_buffer(c_data(), size());
     }
 
     // clamped versions of mutable_buffer(), mutable_buffer_append(),
     // and const_buffer()
 
-    asio::mutable_buffer mutable_buffer_clamp(const size_t tailroom = 0)
+    openvpn_io::mutable_buffer mutable_buffer_clamp(const size_t tailroom = 0)
     {
-      return asio::mutable_buffer(data(), buf_clamp_read(max_size_tailroom(tailroom)));
+      return openvpn_io::mutable_buffer(data(), buf_clamp_read(max_size_tailroom(tailroom)));
     }
 
-    asio::mutable_buffer mutable_buffer_append_clamp(const size_t tailroom = 0)
+    openvpn_io::mutable_buffer mutable_buffer_append_clamp(const size_t tailroom = 0)
     {
-      return asio::mutable_buffer(data_end(), buf_clamp_read(remaining(tailroom)));
+      return openvpn_io::mutable_buffer(data_end(), buf_clamp_read(remaining(tailroom)));
     }
 
-    asio::const_buffer const_buffer_clamp() const
+    openvpn_io::const_buffer const_buffer_clamp() const
     {
-      return asio::const_buffer(c_data(), buf_clamp_write(size()));
+      return openvpn_io::const_buffer(c_data(), buf_clamp_write(size()));
     }
 
-    asio::const_buffer const_buffer_limit(const size_t limit) const
+    openvpn_io::const_buffer const_buffer_limit(const size_t limit) const
     {
-      return asio::const_buffer(c_data(), std::min(buf_clamp_write(size()), limit));
+      return openvpn_io::const_buffer(c_data(), std::min(buf_clamp_write(size()), limit));
     }
 #endif
 

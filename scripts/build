@@ -26,6 +26,7 @@ if [ -z "$1" ]; then
     echo " GPROF=1 -- build for gprof profiling"
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
+    echo " ASIO=1 -- build with ASIO"
     echo " ASIO_DIR=<dir> -- specify ASIO tree"
     echo " MTLS=1 -- include mbedTLS"
     echo " MTLS_SYS=1 -- use system mbedTLS"
@@ -182,8 +183,10 @@ fi
 #fi
 
 # asio
-[ -z "$ASIO_DIR" ] && ASIO_DIR="$DEP_DIR/asio"
-CPPFLAGS="$CPPFLAGS -DASIO_STANDALONE -DASIO_NO_DEPRECATED -I$ASIO_DIR/asio/include"
+if [ "$ASIO" = "1" ] || [ "$ASIO_DIR" ]; then
+    [ -z "$ASIO_DIR" ] && ASIO_DIR="$DEP_DIR/asio"
+    CPPFLAGS="$CPPFLAGS -DUSE_ASIO -DASIO_STANDALONE -DASIO_NO_DEPRECATED -I$ASIO_DIR/asio/include"
+fi
 
 # LZO compression
 if [ "$LZO" = "1" ]; then

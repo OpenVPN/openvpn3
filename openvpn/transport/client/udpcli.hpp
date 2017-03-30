@@ -26,7 +26,7 @@
 
 #include <sstream>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/platform.hpp>
@@ -60,7 +60,7 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TransportClient::Ptr new_transport_client_obj(asio::io_context& io_context,
+      virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
 							    TransportClientParent* parent);
 
     private:
@@ -94,7 +94,7 @@ namespace openvpn {
 	      {
 		parent->transport_pre_resolve();
 		resolver.async_resolve(server_host, server_port,
-				       [self=Ptr(this)](const asio::error_code& error, asio::ip::udp::resolver::results_type results)
+				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::udp::resolver::results_type results)
 				       {
 					 self->do_resolve_(error, results);
 				       });
@@ -162,7 +162,7 @@ namespace openvpn {
       virtual ~Client() { stop_(); }
 
     private:
-      Client(asio::io_context& io_context_arg,
+      Client(openvpn_io::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TransportClientParent* parent_arg)
 	:  io_context(io_context_arg),
@@ -225,8 +225,8 @@ namespace openvpn {
       }
 
       // called after DNS resolution has succeeded or failed
-      void do_resolve_(const asio::error_code& error,
-		       asio::ip::udp::resolver::results_type results)
+      void do_resolve_(const openvpn_io::error_code& error,
+		       openvpn_io::ip::udp::resolver::results_type results)
       {
 	if (!halt)
 	  {
@@ -267,14 +267,14 @@ namespace openvpn {
 	      }
 	  }
 #endif
-	socket.async_connect(server_endpoint, [self=Ptr(this)](const asio::error_code& error)
+	socket.async_connect(server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
                                                 self->start_impl_(error);
                                               });
       }
 
       // start I/O on UDP socket
-      void start_impl_(const asio::error_code& error)
+      void start_impl_(const openvpn_io::error_code& error)
       {
 	if (!halt)
 	  {
@@ -304,17 +304,17 @@ namespace openvpn {
       std::string server_host;
       std::string server_port;
 
-      asio::io_context& io_context;
-      asio::ip::udp::socket socket;
+      openvpn_io::io_context& io_context;
+      openvpn_io::ip::udp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent* parent;
       LinkImpl::Ptr impl;
-      asio::ip::udp::resolver resolver;
+      openvpn_io::ip::udp::resolver resolver;
       UDPTransport::AsioEndpoint server_endpoint;
       bool halt;
     };
 
-    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(asio::io_context& io_context,
+    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
 								       TransportClientParent* parent)
     {
       return TransportClient::Ptr(new Client(io_context, this, parent));

@@ -19,10 +19,17 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
+// define stuff like ntohl, ntohs, htonl, htons, etc. in a platform-independent way
+
 #ifndef OPENVPN_COMMON_SOCKTYPES_H
 #define OPENVPN_COMMON_SOCKTYPES_H
 
-// defines stuff like ntohl, ntohs, htonl, htons, etc. in a platform-general way
-#include <asio/detail/socket_types.hpp>
+#include <openvpn/common/platform.hpp>
+
+#ifdef OPENVPN_PLATFORM_WIN
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
 
 #endif // OPENVPN_COMMON_SOCKTYPES_H

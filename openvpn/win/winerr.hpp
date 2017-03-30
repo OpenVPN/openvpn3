@@ -26,14 +26,14 @@
 
 #include <windows.h>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 namespace openvpn {
   namespace Win {
-    struct Error : public asio::error_code
+    struct Error : public openvpn_io::error_code
     {
       Error(const DWORD err)
-	: asio::error_code(err, asio::error::get_system_category())
+	: openvpn_io::error_code(err, openvpn_io::error::get_system_category())
       {
       }
     };

@@ -25,19 +25,19 @@
 #ifndef OPENVPN_ASIO_ASIOWORK_H
 #define OPENVPN_ASIO_ASIOWORK_H
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 namespace openvpn {
   class AsioWork
   {
   public:
-    AsioWork(asio::io_context& io_context)
-      : work(asio::make_work_guard(io_context))
+    AsioWork(openvpn_io::io_context& io_context)
+      : work(openvpn_io::make_work_guard(io_context))
     {
     }
 
   private:
-    asio::executor_work_guard<asio::io_context::executor_type> work;
+    openvpn_io::executor_work_guard<openvpn_io::io_context::executor_type> work;
   };
 }
 

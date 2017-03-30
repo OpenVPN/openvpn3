@@ -24,7 +24,7 @@
 #ifndef OPENVPN_TUN_TUNIO_H
 #define OPENVPN_TUN_TUNIO_H
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
@@ -111,7 +111,7 @@ namespace openvpn {
 		return false;
 	      }
 	  }
-	  catch (asio::system_error& e)
+	  catch (openvpn_io::system_error& e)
 	    {
 	      OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
 	      tun_error(Error::TUN_WRITE_ERROR, &e.code());
@@ -144,7 +144,7 @@ namespace openvpn {
 		return false;
 	      }
 	  }
-	  catch (asio::system_error& e)
+	  catch (openvpn_io::system_error& e)
 	    {
 	      OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
 	      tun_error(Error::TUN_WRITE_ERROR, &e.code());
@@ -206,13 +206,13 @@ namespace openvpn {
 
       // queue read on tun device
       stream->async_read_some(frame_context.mutable_buffer(tunfrom->buf),
-			      [self=Ptr(this), tunfrom](const asio::error_code& error, const size_t bytes_recvd)
+			      [self=Ptr(this), tunfrom](const openvpn_io::error_code& error, const size_t bytes_recvd)
                               {
                                 self->handle_read(tunfrom, error, bytes_recvd);
                               });
     }
 
-    void handle_read(PacketFrom *tunfrom, const asio::error_code& error, const size_t bytes_recvd)
+    void handle_read(PacketFrom *tunfrom, const openvpn_io::error_code& error, const size_t bytes_recvd)
     {
       OPENVPN_LOG_TUN_VERBOSE("TunIO::handle_read: " << error.message());
       typename PacketFrom::SPtr pfp(tunfrom);
@@ -252,7 +252,7 @@ namespace openvpn {
 	}
     }
 
-    void tun_error(const Error::Type errtype, const asio::error_code* error)
+    void tun_error(const Error::Type errtype, const openvpn_io::error_code* error)
     {
       if (stats)
 	stats->error(errtype);
