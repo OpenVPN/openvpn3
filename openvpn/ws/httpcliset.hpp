@@ -48,7 +48,7 @@ namespace openvpn {
 
       struct SyncPersistState
       {
-	std::unique_ptr<asio::io_context> io_context;
+	std::unique_ptr<openvpn_io::io_context> io_context;
       };
 
       class HTTPStateContainer
@@ -106,7 +106,7 @@ namespace openvpn {
 	    }
 	}
 
-	void construct(asio::io_context& io_context,
+	void construct(openvpn_io::io_context& io_context,
 		       const WS::Client::Config::Ptr& config)
 	{
 	  http.reset(new HTTPDelegate(io_context, config, nullptr));
@@ -238,7 +238,7 @@ namespace openvpn {
       class TransactionSet : public RC<thread_unsafe_refcount>
       {
       private:
-	// optionally contains an asio::io_context for
+	// optionally contains an openvpn_io::io_context for
 	// persistent synchronous operations
 	friend class ClientSet;
 	SyncPersistState sps;
@@ -376,7 +376,7 @@ namespace openvpn {
 	std::vector<std::string> hosts;
       };
 
-      ClientSet(asio::io_context& io_context_arg)
+      ClientSet(openvpn_io::io_context& io_context_arg)
 	: io_context(io_context_arg),
 	  halt(false),
 	  next_id(0)
@@ -406,7 +406,7 @@ namespace openvpn {
 					  RandomAPI* rng=nullptr,
 					  const bool sps=false)
       {
-	std::unique_ptr<asio::io_context> io_context;
+	std::unique_ptr<openvpn_io::io_context> io_context;
 	auto clean = Cleanup([&]() {
 	    // ensure that TransactionSet reference to socket
 	    // is reset before method returns (unless sps is true
@@ -418,7 +418,7 @@ namespace openvpn {
 	if (sps)
 	  io_context = std::move(ts->sps.io_context);
 	if (!io_context)
-	  io_context.reset(new asio::io_context(1));
+	  io_context.reset(new openvpn_io::io_context(1));
 	ClientSet::Ptr cs;
 	try {
 	  AsioStopScope scope(*io_context, stop, [&]() {
@@ -451,7 +451,7 @@ namespace openvpn {
 				  Stop* stop=nullptr,
 				  RandomAPI* rng=nullptr)
       {
-	std::unique_ptr<asio::io_context> io_context(new asio::io_context(1));
+	std::unique_ptr<openvpn_io::io_context> io_context(new openvpn_io::io_context(1));
 	ClientSet::Ptr cs;
 	try {
 	  AsioStopScope scope(*io_context, stop, [&]() {
@@ -552,7 +552,7 @@ namespace openvpn {
 
 	void remove_self_from_map()
 	{
-	  asio::post(parent->io_context, [id=client_id, parent=ClientSet::Ptr(parent)]()
+	  openvpn_io::post(parent->io_context, [id=client_id, parent=ClientSet::Ptr(parent)]()
 		     {
 		       parent->remove_client_id(id);
 		     });
@@ -629,7 +629,7 @@ namespace openvpn {
 	  if (check_if_done())
 	    return;
 	  reconnect_timer.expires_at(Time::now() + retry_duration);
-	  reconnect_timer.async_wait([self=Ptr(this), error_retry](const asio::error_code& error)
+	  reconnect_timer.async_wait([self=Ptr(this), error_retry](const openvpn_io::error_code& error)
 				     {
 				       if (!error && !self->halt)
 					 self->next_request(error_retry);
@@ -708,7 +708,7 @@ namespace openvpn {
 	    }
 	}
 
-	void http_mutate_resolver_results(HTTPDelegate& hd, asio::ip::tcp::resolver::results_type& results)
+	void http_mutate_resolver_results(HTTPDelegate& hd, openvpn_io::ip::tcp::resolver::results_type& results)
 	{
 	  if (parent->rng && trans().randomize_resolver_results)
 	    results.randomize(*parent->rng);
@@ -759,7 +759,7 @@ namespace openvpn {
 		// Post a call to next_request() under a fresh stack.
 		// Currently we may actually be under tcp_read_handler() and
 		// next_request() can trigger destructors.
-		asio::post(parent->io_context, [self=Ptr(this)]()
+		openvpn_io::post(parent->io_context, [self=Ptr(this)]()
 			   {
 			     self->next_request(false);
 			   });
@@ -832,7 +832,7 @@ namespace openvpn {
 	  }
       }
 
-      asio::io_context& io_context;
+      openvpn_io::io_context& io_context;
       bool halt;
       client_t next_id;
       RandomAPI::Ptr rng;
