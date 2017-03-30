@@ -23,17 +23,17 @@ namespace openvpn {
 
       typedef RCPtr<Unix> Ptr;
 
-      Unix(asio::io_context& io_context)
+      Unix(openvpn_io::io_context& io_context)
 	: acceptor(io_context)
       {
       }
 
       virtual void async_accept(ListenerBase* listener,
 				const size_t acceptor_index,
-				asio::io_context& io_context) override
+				openvpn_io::io_context& io_context) override
       {
 	AsioPolySock::Unix::Ptr sock(new AsioPolySock::Unix(io_context, acceptor_index));
-	acceptor.async_accept(sock->socket, [listener=ListenerBase::Ptr(listener), sock](const asio::error_code& error)
+	acceptor.async_accept(sock->socket, [listener=ListenerBase::Ptr(listener), sock](const openvpn_io::error_code& error)
 			      {
 				listener->handle_accept(sock, error);
 			      });
@@ -61,8 +61,8 @@ namespace openvpn {
 	  }
       }
 
-      asio::local::stream_protocol::endpoint local_endpoint;
-      asio::basic_socket_acceptor<asio::local::stream_protocol> acceptor;
+      openvpn_io::local::stream_protocol::endpoint local_endpoint;
+      openvpn_io::basic_socket_acceptor<openvpn_io::local::stream_protocol> acceptor;
     };
 
   }
