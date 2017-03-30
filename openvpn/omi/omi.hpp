@@ -210,7 +210,7 @@ namespace openvpn {
       std::deque<std::string> hist;
     };
 
-    OMICore(asio::io_context& io_context_arg)
+    OMICore(openvpn_io::io_context& io_context_arg)
       : io_context(io_context_arg),
 	stop_timer(io_context_arg)
     {
@@ -399,7 +399,7 @@ namespace openvpn {
     {
     }
 
-    asio::io_context& io_context;
+    openvpn_io::io_context& io_context;
 
   private:
     typedef RCPtr<OMICore> Ptr;
@@ -633,7 +633,7 @@ namespace openvpn {
     void stop_omi_client(const bool eof, const unsigned int milliseconds)
     {
       stop_timer.expires_at(Time::now() + Time::Duration::milliseconds(milliseconds));
-      stop_timer.async_wait([self=Ptr(this), eof](const asio::error_code& error)
+      stop_timer.async_wait([self=Ptr(this), eof](const openvpn_io::error_code& error)
 				 {
 				   if (!error)
 				     self->stop_omi_client(eof);
@@ -782,7 +782,7 @@ namespace openvpn {
     }
 
     // despite its name, this method handles both accept and connect events
-    virtual void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error) override
+    virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code& error) override
     {
       if (stop_called)
 	return;
@@ -815,12 +815,12 @@ namespace openvpn {
 
     void connect_tcp(const std::string& addr, const std::string& port)
     {
-      asio::ip::tcp::endpoint ep(IP::Addr::from_string(addr).to_asio(),
+      openvpn_io::ip::tcp::endpoint ep(IP::Addr::from_string(addr).to_asio(),
 				 HostPort::parse_port(port, "OMI TCP connect"));
       AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
       AsioPolySock::Base::Ptr sock(s);
       s->socket.async_connect(ep,
-			      [self=Ptr(this), sock](const asio::error_code& error)
+			      [self=Ptr(this), sock](const openvpn_io::error_code& error)
 			      {
 				// this is a connect, but we reuse the accept method
 				self->handle_accept(sock, error);
@@ -830,11 +830,11 @@ namespace openvpn {
     void connect_unix(const std::string& socket_path)
     {
 #ifdef ASIO_HAS_LOCAL_SOCKETS
-      asio::local::stream_protocol::endpoint ep(socket_path);
+      openvpn_io::local::stream_protocol::endpoint ep(socket_path);
       AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
       AsioPolySock::Base::Ptr sock(s);
       s->socket.async_connect(ep,
-			      [self=Ptr(this), sock](const asio::error_code& error)
+			      [self=Ptr(this), sock](const openvpn_io::error_code& error)
 			      {
 				// this is a connect, but we reuse the accept method
 				self->handle_accept(sock, error);
@@ -850,20 +850,20 @@ namespace openvpn {
 	return;
       BufferPtr buf(new BufferAllocated(256, 0));
       socket->async_receive(buf->mutable_buffer_clamp(),
-			    [self=Ptr(this), sock=socket, buf](const asio::error_code& error, const size_t bytes_recvd)
+			    [self=Ptr(this), sock=socket, buf](const openvpn_io::error_code& error, const size_t bytes_recvd)
 			    {
 			      self->handle_recv(error, bytes_recvd, *buf, sock.get());
 			    });
     }
 
-    void handle_recv(const asio::error_code& error, const size_t bytes_recvd,
+    void handle_recv(const openvpn_io::error_code& error, const size_t bytes_recvd,
 		     Buffer& buf, const AsioPolySock::Base* queued_socket)
     {
       if (!is_sock_open() || socket.get() != queued_socket)
 	return;
       if (error)
 	{
-	  const bool eof = (error == asio::error::eof);
+	  const bool eof = (error == openvpn_io::error::eof);
 	  if (!eof)
 	    OPENVPN_LOG("client socket recv error: " << error.message());
 	  conditional_stop(eof);
@@ -897,13 +897,13 @@ namespace openvpn {
 	return;
       BufferAllocated& buf = *content_out.front();
       socket->async_send(buf.const_buffer_clamp(),
-			 [self=Ptr(this), sock=socket](const asio::error_code& error, const size_t bytes_sent)
+			 [self=Ptr(this), sock=socket](const openvpn_io::error_code& error, const size_t bytes_sent)
 			 {
 			   self->handle_send(error, bytes_sent, sock.get());
 			 });
     }
 
-    void handle_send(const asio::error_code& error, const size_t bytes_sent,
+    void handle_send(const openvpn_io::error_code& error, const size_t bytes_sent,
 		     const AsioPolySock::Base* queued_socket)
     {
       if (!is_sock_open() || socket.get() != queued_socket)
