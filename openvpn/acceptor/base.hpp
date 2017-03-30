@@ -15,7 +15,7 @@
 #include <vector>
 #include <utility>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
@@ -34,7 +34,7 @@ namespace openvpn {
     {
       typedef RCPtr<ListenerBase> Ptr;
 
-      virtual void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error) = 0;
+      virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code& error) = 0;
     };
 
     struct Base : public RC<thread_unsafe_refcount>
@@ -43,7 +43,7 @@ namespace openvpn {
 
       virtual void async_accept(ListenerBase* listener,
 				const size_t acceptor_index,
-				asio::io_context& io_context) = 0;
+				openvpn_io::io_context& io_context) = 0;
       virtual void close() = 0;
     };
 
