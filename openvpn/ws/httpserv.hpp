@@ -17,7 +17,7 @@
 #include <utility> // for std::move
 #include <memory>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/options.hpp>
@@ -183,7 +183,7 @@ namespace openvpn {
 	    friend Listener;
 	    friend Client;
 
-	    Initializer(asio::io_context& io_context_arg,
+	    Initializer(openvpn_io::io_context& io_context_arg,
 			Listener* parent_arg,
 			AsioPolySock::Base::Ptr&& socket_arg,
 			const client_t client_id_arg)
@@ -194,7 +194,7 @@ namespace openvpn {
 	    {
 	    }
 
-	    asio::io_context& io_context;
+	    openvpn_io::io_context& io_context;
 	    Listener* parent;
 	    AsioPolySock::Base::Ptr socket;
 	    const client_t client_id;
@@ -345,7 +345,7 @@ namespace openvpn {
 	  }
 #endif
 
-	  asio::io_context& io_context;
+	  openvpn_io::io_context& io_context;
 	  AsioPolySock::Base::Ptr sock;
 	  std::deque<BufferAllocated> pipeline;
 	  Time::Duration timeout_duration;
@@ -393,7 +393,7 @@ namespace openvpn {
 	    if (sock)
 	      sock->close();
 	    if (remove_self_from_map)
-	      asio::post(io_context, [self=Ptr(this), parent=Listener::Ptr(parent)]()
+	      openvpn_io::post(io_context, [self=Ptr(this), parent=Listener::Ptr(parent)]()
 			 {
 			   parent->remove_client(self);
 			 });
@@ -409,7 +409,7 @@ namespace openvpn {
 		  {
 		    timeout_coarse.reset(next);
 		    timeout_timer.expires_at(next);
-		    timeout_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+		    timeout_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                              {
 					       if (!error)
 						 self->timeout_callback(error);
@@ -418,7 +418,7 @@ namespace openvpn {
 	      }
 	  }
 
-	  void timeout_callback(const asio::error_code& e)
+	  void timeout_callback(const openvpn_io::error_code& e)
 	  {
 	    if (halt || e)
 	      return;
@@ -567,7 +567,7 @@ namespace openvpn {
 
 	  // error handlers
 
-	  void asio_error_handler(int errcode, const char *func_name, const asio::error_code& error)
+	  void asio_error_handler(int errcode, const char *func_name, const openvpn_io::error_code& error)
 	  {
 	    error_handler(errcode, std::string("HTTPCore Asio ") + func_name + ": " + error.message());
 	  }
@@ -640,7 +640,7 @@ namespace openvpn {
       public:
 	typedef RCPtr<Listener> Ptr;
 
-	Listener(asio::io_context& io_context_arg,
+	Listener(openvpn_io::io_context& io_context_arg,
 		 const Config::Ptr& config_arg,
 		 const Listen::Item& listen_item_arg,
 		 const Client::Factory::Ptr& client_factory_arg)
@@ -653,7 +653,7 @@ namespace openvpn {
 	{
 	}
 
-	Listener(asio::io_context& io_context_arg,
+	Listener(openvpn_io::io_context& io_context_arg,
 		 const Config::Ptr& config_arg,
 		 const Listen::List& listen_list_arg,
 		 const Client::Factory::Ptr& client_factory_arg)
@@ -804,7 +804,7 @@ namespace openvpn {
 	  acceptors[acceptor_index].acceptor->async_accept(this, acceptor_index, io_context);
 	}
 
-	virtual void handle_accept(AsioPolySock::Base::Ptr sock, const asio::error_code& error) override
+	virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code& error) override
 	{
 	  if (halt)
 	      return;
@@ -868,7 +868,7 @@ namespace openvpn {
 	  return true;
 	}
 
-	asio::io_context& io_context;
+	openvpn_io::io_context& io_context;
 	Listen::List listen_list;
 	Config::Ptr config;
 	Client::Factory::Ptr client_factory;
