@@ -18,17 +18,17 @@ namespace openvpn {
     {
       typedef RCPtr<TCP> Ptr;
 
-      TCP(asio::io_context& io_context)
+      TCP(openvpn_io::io_context& io_context)
 	: acceptor(io_context)
       {
       }
 
       virtual void async_accept(ListenerBase* listener,
 				const size_t acceptor_index,
-				asio::io_context& io_context) override
+				openvpn_io::io_context& io_context) override
       {
 	AsioPolySock::TCP::Ptr sock(new AsioPolySock::TCP(io_context, acceptor_index));
-	acceptor.async_accept(sock->socket, [listener=ListenerBase::Ptr(listener), sock](const asio::error_code& error)
+	acceptor.async_accept(sock->socket, [listener=ListenerBase::Ptr(listener), sock](const openvpn_io::error_code& error)
 			      {
 				listener->handle_accept(sock, error);
 			      });
@@ -43,7 +43,7 @@ namespace openvpn {
       {
 #if defined(OPENVPN_PLATFORM_WIN)
 	// set Windows socket flags
-	acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+	acceptor.set_option(openvpn_io::ip::tcp::acceptor::reuse_address(true));
 #else
 	// set Unix socket flags
 	{
@@ -55,8 +55,8 @@ namespace openvpn {
 #endif
       }
 
-      asio::ip::tcp::endpoint local_endpoint;
-      asio::ip::tcp::acceptor acceptor;
+      openvpn_io::ip::tcp::endpoint local_endpoint;
+      openvpn_io::ip::tcp::acceptor acceptor;
     };
 
   }
