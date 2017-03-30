@@ -22,12 +22,19 @@
 // This is a general-purpose logging framework that allows for OPENVPN_LOG and
 // OPENVPN_LOG_NTNL macros to dispatch logging data to a thread-local handler.
 
+// NOTE: define USE_ASIO_THREADLOCAL if your C++ doesn't support the
+// "thread_local" attribute.
+
 #ifndef OPENVPN_LOG_LOGTHREAD_H
 #define OPENVPN_LOG_LOGTHREAD_H
 
 #include <string>
 #include <sstream>
 #include <thread>
+
+#if defined(USE_ASIO) && defined(USE_ASIO_THREADLOCAL)
+#include <asio/detail/tss_ptr.hpp>
+#endif
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/extern.hpp>
@@ -109,7 +116,11 @@ namespace openvpn {
     };
 #else
     // OPENVPN_LOG uses thread-local object pointer
+#if defined(USE_ASIO) && defined(USE_ASIO_THREADLOCAL)
+    OPENVPN_EXTERN asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
+#else
     OPENVPN_EXTERN thread_local OPENVPN_LOG_CLASS* global_log; // GLOBAL
+#endif
     struct Context
     {
       // Mechanism for passing thread-local
