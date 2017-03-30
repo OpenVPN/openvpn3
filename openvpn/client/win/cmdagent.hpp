@@ -64,7 +64,7 @@ namespace openvpn {
     class SetupClient : public TunWin::SetupBase
     {
     public:
-      SetupClient(asio::io_context& io_context,
+      SetupClient(openvpn_io::io_context& io_context,
 		  const Config::Ptr& config_arg)
 	: config(config_arg),
 	  service_process(io_context)
@@ -141,7 +141,7 @@ namespace openvpn {
       {
 	if (service_process.is_open())
 	  {
-	    service_process.async_wait([handler=std::move(handler)](const asio::error_code& error) {
+	    service_process.async_wait([handler=std::move(handler)](const openvpn_io::error_code& error) {
 		if (!error)
 		  handler();
 	      });
@@ -222,12 +222,12 @@ namespace openvpn {
       }
 
       Config::Ptr config;
-      asio::windows::object_handle service_process;
+      openvpn_io::windows::object_handle service_process;
       Win::Event confirm_event;
       Win::DestroyEvent destroy_event;
     };
 
-    virtual TunWin::SetupBase::Ptr new_setup_obj(asio::io_context& io_context) override
+    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context) override
     {
       if (config)
 	return new SetupClient(io_context, config);
