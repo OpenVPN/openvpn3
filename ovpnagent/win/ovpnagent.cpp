@@ -10,7 +10,7 @@
 #include <memory>
 #include <utility>
 
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 
 // debug settings (production setting in parentheses)
 #define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
@@ -101,7 +101,7 @@ public:
   typedef RCPtr<MyListener> Ptr;
 
   MyListener(const MyConfig& config_arg,
-	     asio::io_context& io_context,
+	     openvpn_io::io_context& io_context,
 	     const WS::Server::Config::Ptr& hconf,
 	     const Listen::List& listen_list,
 	     const WS::Server::Listener::Client::Factory::Ptr& client_factory)
@@ -196,7 +196,7 @@ public:
     client_process.assign(proc.release());
 
     // special failsafe to destroy tun in case client crashes without closing it
-    client_process.async_wait([self=Ptr(this)](const asio::error_code& error) {
+    client_process.async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
 	if (!error && self->tun)
 	  {
 	    std::ostringstream os;
@@ -246,7 +246,7 @@ public:
     // so we locally release ownership by clearing remote_tap_handle_hex,
     // effectively preventing the cross-process release of TAP device
     // HANDLE in destroy_tun() above.
-    client_confirm_event.async_wait([self=Ptr(this)](const asio::error_code& error) {
+    client_confirm_event.async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
 	if (!error)
 	  {
 	    self->remote_tap_handle_hex.clear();
@@ -294,7 +294,7 @@ public:
     }
 
     // normal event-based tun close processing
-    client_destroy_event.async_wait([self=Ptr(this)](const asio::error_code& error) {
+    client_destroy_event.async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
 	if (!error && self->tun)
 	  {
 	    std::ostringstream os;
@@ -346,9 +346,9 @@ private:
   }
 
   TunWin::Setup::Ptr tun;
-  asio::windows::object_handle client_process;
-  asio::windows::object_handle client_confirm_event;
-  asio::windows::object_handle client_destroy_event;
+  openvpn_io::windows::object_handle client_process;
+  openvpn_io::windows::object_handle client_confirm_event;
+  openvpn_io::windows::object_handle client_destroy_event;
   std::string remote_tap_handle_hex;
 };
 
@@ -576,7 +576,7 @@ public:
     if (!log)
       log.reset(new LogBaseSimple());
 
-    io_context.reset(new asio::io_context(1)); // concurrency hint=1
+    io_context.reset(new openvpn_io::io_context(1)); // concurrency hint=1
 
     log_version();
 
@@ -629,7 +629,7 @@ public:
   // to signal the service_work() method to exit.
   virtual void service_stop() override
   {
-    asio::post(*io_context, [this]() {
+    openvpn_io::post(*io_context, [this]() {
 	if (listener)
 	  {
 	    listener->destroy_tun_exit();
@@ -660,7 +660,7 @@ private:
     return fn;
   }
 
-  std::unique_ptr<asio::io_context> io_context;
+  std::unique_ptr<openvpn_io::io_context> io_context;
   MyListener::Ptr listener;
   LogBase::Ptr log;
 };
