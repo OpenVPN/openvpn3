@@ -84,7 +84,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
 public:
   typedef RCPtr<OMI> Ptr;
 
-  OMI(asio::io_context& io_context, OptionList opt_arg)
+  OMI(openvpn_io::io_context& io_context, OptionList opt_arg)
     : OMICore(io_context),
       opt(std::move(opt_arg)),
       reconnect_timer(io_context),
@@ -127,21 +127,21 @@ public:
 
   virtual void log(const ClientAPI::LogInfo& msg) override
   {
-    asio::post(io_context, [this, msg]() {
+    openvpn_io::post(io_context, [this, msg]() {
 	log_msg(msg);
       });
   }
 
   void event(const ClientAPI::Event& ev)
   {
-    asio::post(io_context, [this, ev]() {
+    openvpn_io::post(io_context, [this, ev]() {
 	event_msg(ev, nullptr);
       });
   }
 
   void event(const ClientAPI::Event& ev, const ClientAPI::ConnectionInfo& ci)
   {
-    asio::post(io_context, [this, ev, ci]() {
+    openvpn_io::post(io_context, [this, ev, ci]() {
 	event_msg(ev, &ci);
       });
   }
@@ -161,7 +161,7 @@ public:
       }
 
       // message main thread that signreq is published and pending
-      asio::post(io_context, [this]() {
+      openvpn_io::post(io_context, [this]() {
 	  epki_sign_request();
 	});
 
@@ -510,7 +510,7 @@ private:
     if (get_bytecount())
       {
 	bytecount_timer.expires_at(Time::now() + Time::Duration::seconds(get_bytecount()));
-	bytecount_timer.async_wait([self=Ptr(this)](const asio::error_code& error)
+	bytecount_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 				   {
 				     if (!error)
 				       self->report_bytecount();
@@ -566,7 +566,7 @@ private:
 
   void connection_thread()
   {
-    asio::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+    openvpn_io::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
     std::string error;
     try {
       const ClientAPI::Status cs = client->connect();
@@ -658,7 +658,7 @@ private:
   void deferred_reconnect(const unsigned int seconds, const std::string& reason)
   {
     reconnect_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
-    reconnect_timer.async_wait([self=Ptr(this), reason](const asio::error_code& error)
+    reconnect_timer.async_wait([self=Ptr(this), reason](const openvpn_io::error_code& error)
 			       {
 				 if (!error)
 				   {
@@ -866,7 +866,7 @@ private:
     return final_error;
   }
 
-  void signal(const asio::error_code& error, int signum)
+  void signal(const openvpn_io::error_code& error, int signum)
   {
     if (!error && !is_stopping())
       {
@@ -892,7 +892,7 @@ private:
 
   void signal_rearm()
   {
-    signals->register_signals_all([self=Ptr(this)](const asio::error_code& error, int signal_number)
+    signals->register_signals_all([self=Ptr(this)](const openvpn_io::error_code& error, int signal_number)
 				  {
 				    self->signal(error, signal_number);
 				  });
@@ -989,7 +989,7 @@ void Client::external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signre
 
 int run(OptionList opt)
 {
-  asio::io_context io_context(1);
+  openvpn_io::io_context io_context(1);
   bool io_context_run_called = false;
   int ret = 0;
   OMI::Ptr omi;
