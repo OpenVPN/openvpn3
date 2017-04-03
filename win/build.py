@@ -67,7 +67,7 @@ def build(parms, srcfile):
         options['extra_inc'] += " /I " + os.path.join(parms['OVPN3'], "common")
 
     # build it
-    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_MBEDTLS /I %(mbedtls)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /GL /EHsc %(link_static_dynamic_flags)s /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(mbedtls)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s mbedtls.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib rpcrt4.lib" % options, arch=os.environ.get("ARCH"))
+    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DUSE_ASIO /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_MBEDTLS /I %(mbedtls)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /GL /EHsc %(link_static_dynamic_flags)s /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(mbedtls)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s mbedtls.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib rpcrt4.lib" % options, arch=os.environ.get("ARCH"))
 
 if __name__ == "__main__":
     import sys
