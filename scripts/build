@@ -292,13 +292,9 @@ fi
 # Construct command
 if [ "$OBJC" == "1" ]; then
     FLAGS="$FLAGS -fobjc-arc"
-    CPPFLAGS=""
-    CPPFLAGS="$CPPFLAGS -I$O3/cliobjc"
-    CPPFLAGS="$CPPFLAGS -I$O3/clilib/dist-static-$PLATFORM/include"
-    LIBDIRS="-L$O3/clilib/dist-static-$PLATFORM/lib"
-    LIBS="-lovpncli -framework Foundation $LIBS"
-    SRC="$1.m $O3/cliobjc/ovpncli.mm "
-    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $SRC $EXTRA_SRC_OBJ $OUTPUT $LIBS"
+    LIBS="-framework Foundation $LIBS"
+    SRC="$1.mm"
+    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $SRC $EXTRA_CPP $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 else
     CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_CPP $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 fi
