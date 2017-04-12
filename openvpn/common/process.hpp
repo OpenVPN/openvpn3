@@ -152,12 +152,18 @@ namespace openvpn {
     {
       if (!argv.empty())
 	{
-	  RedirectPipe::InOut inout;
 	  os << to_string() << std::endl;
+#ifdef OPENVPN_PROCESS_AVOID_PIPES
+	  const int status = system_cmd(argv[0], argv);
+	  if (status < 0)
+	    os << "Error: command failed to execute" << std::endl;
+#else
+	  RedirectPipe::InOut inout;
 	  const int status = system_cmd(argv[0], argv, nullptr, inout, true);
 	  if (status < 0)
 	    os << "Error: command failed to execute" << std::endl;
 	  os << inout.out;
+#endif
 	}
       else
 	os << "Error: command called with empty argv" << std::endl;
