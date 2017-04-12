@@ -54,6 +54,11 @@ namespace openvpn {
     {
       return time_point(duration(t.raw()));
     }
+
+    static duration to_duration(const Time::Duration& d)
+    {
+      return duration(d.raw());
+    }
   };
 
   class AsioTimer : public openvpn_io::basic_waitable_timer<AsioClock>
@@ -67,7 +72,12 @@ namespace openvpn {
     std::size_t expires_at(const Time& t)
     {
       return openvpn_io::basic_waitable_timer<AsioClock>::expires_at(AsioClock::to_time_point(t));
-    }    
+    }
+
+    std::size_t expires_after(const Time::Duration& d)
+    {
+      return openvpn_io::basic_waitable_timer<AsioClock>::expires_after(AsioClock::to_duration(d));
+    }
   };
 }
 
