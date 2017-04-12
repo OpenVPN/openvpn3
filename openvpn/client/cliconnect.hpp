@@ -156,6 +156,9 @@ namespace openvpn {
 
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Disconnected();
 	  client_options->events().add_event(std::move(ev));
+#ifdef OPENVPN_IO_REQUIRES_STOP
+	  io_context.stop();
+#endif
 	}
     }
 
