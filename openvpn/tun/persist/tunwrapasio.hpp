@@ -22,6 +22,8 @@
 #ifndef OPENVPN_TUN_PERSIST_TUNWRAPASIO_H
 #define OPENVPN_TUN_PERSIST_TUNWRAPASIO_H
 
+#include <utility>
+
 namespace openvpn {
 
   // This object supports that subset of the Asio stream
@@ -48,17 +50,14 @@ namespace openvpn {
     // subset of methods used by TunIO).
     // Prototypes from asio/windows/basic_stream_handle.hpp
 
-    template <typename MutableBufferSequence, typename ReadHandler>
-    ASIO_INITFN_RESULT_TYPE(ReadHandler,
-			    void (openvpn_io::error_code, std::size_t))
-      async_read_some(const MutableBufferSequence& buffers,
-		      ASIO_MOVE_ARG(ReadHandler) handler)
+    template <typename MUTABLE_BUFFER, typename HANDLER>
+    void async_read_some(const MUTABLE_BUFFER& buffers, HANDLER&& handler)
     {
-      return tun_wrap->obj()->async_read_some(buffers, handler);
+      return tun_wrap->obj()->async_read_some(buffers, std::move(handler));
     }
 
-    template <typename ConstBufferSequence>
-    std::size_t write_some(const ConstBufferSequence& buffers)
+    template <typename CONST_BUFFER>
+    std::size_t write_some(const CONST_BUFFER& buffers)
     {
       return tun_wrap->obj()->write_some(buffers);
     }
