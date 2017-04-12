@@ -632,7 +632,7 @@ namespace openvpn {
 
     void stop_omi_client(const bool eof, const unsigned int milliseconds)
     {
-      stop_timer.expires_at(Time::now() + Time::Duration::milliseconds(milliseconds));
+      stop_timer.expires_after(Time::Duration::milliseconds(milliseconds));
       stop_timer.async_wait([self=Ptr(this), eof](const openvpn_io::error_code& error)
 				 {
 				   if (!error)
