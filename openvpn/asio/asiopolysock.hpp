@@ -139,7 +139,9 @@ namespace openvpn {
 #if !defined(OPENVPN_PLATFORM_WIN)
       virtual void set_cloexec() override
       {
-	SockOpt::set_cloexec(socket.native_handle());
+	const int fd = socket.native_handle();
+	if (fd >= 0)
+	  SockOpt::set_cloexec(fd);
       }
 #endif
 
@@ -207,7 +209,9 @@ namespace openvpn {
 
       virtual void set_cloexec() override
       {
-	SockOpt::set_cloexec(socket.native_handle());
+	const int fd = socket.native_handle();
+	if (fd >= 0)
+	  SockOpt::set_cloexec(fd);
       }
 
       virtual void close() override
