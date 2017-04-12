@@ -26,8 +26,10 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <net/route.h>
+#include <net/if.h>
 #include <net/if_dl.h>
 
 #include <cstring>
