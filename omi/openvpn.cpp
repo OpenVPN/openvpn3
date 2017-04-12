@@ -509,7 +509,7 @@ private:
   {
     if (get_bytecount())
       {
-	bytecount_timer.expires_at(Time::now() + Time::Duration::seconds(get_bytecount()));
+	bytecount_timer.expires_after(Time::Duration::seconds(get_bytecount()));
 	bytecount_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 				   {
 				     if (!error)
@@ -657,7 +657,7 @@ private:
 
   void deferred_reconnect(const unsigned int seconds, const std::string& reason)
   {
-    reconnect_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
+    reconnect_timer.expires_after(Time::Duration::seconds(seconds));
     reconnect_timer.async_wait([self=Ptr(this), reason](const openvpn_io::error_code& error)
 			       {
 				 if (!error)
