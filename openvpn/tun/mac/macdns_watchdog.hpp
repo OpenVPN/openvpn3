@@ -30,7 +30,7 @@
 #include <openvpn/log/logthread.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/applecrypto/cf/cftimer.hpp>
-#include <openvpn/apple/runloop.hpp>
+#include <openvpn/applecrypto/cf/cfrunloop.hpp>
 #include <openvpn/tun/mac/macdns.hpp>
 
 namespace openvpn {

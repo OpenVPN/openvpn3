@@ -19,14 +19,14 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_APPLE_RUNLOOP_H
-#define OPENVPN_APPLE_RUNLOOP_H
+#ifndef OPENVPN_APPLECRYPTO_CF_CFRUNLOOP_H
+#define OPENVPN_APPLECRYPTO_CF_CFRUNLOOP_H
 
 #include <openvpn/applecrypto/cf/cf.hpp>
 
 namespace openvpn {
   namespace CF {
-    OPENVPN_CF_WRAP(RunLoop, runloop_cast, CFRunLoopRef, CFRunLoopGetTypeID);
+    OPENVPN_CF_WRAP(RunLoop, runloop_cast, CFRunLoopRef, CFRunLoopGetTypeID)
     OPENVPN_CF_WRAP(RunLoopSource, runloop_source_cast, CFRunLoopSourceRef, CFRunLoopSourceGetTypeID);
   }
 }
