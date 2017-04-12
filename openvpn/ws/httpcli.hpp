@@ -31,6 +31,7 @@
 #include <vector>
 #include <sstream>
 #include <algorithm>         // for std::min, std::max
+#include <utility>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/base64.hpp>
@@ -503,7 +504,7 @@ namespace openvpn {
 
 	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
 	    socket.reset(s);
-	    openvpn_io::async_connect(s->socket, results,
+	    openvpn_io::async_connect(s->socket, std::move(results),
 				[self=Ptr(this)](const openvpn_io::error_code& error, const openvpn_io::ip::tcp::endpoint& endpoint)
 				{
 				  self->handle_tcp_connect(error, endpoint);
