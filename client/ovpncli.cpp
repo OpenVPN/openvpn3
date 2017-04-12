@@ -1142,7 +1142,7 @@ namespace openvpn {
 	{
 	  ClientConnect* session = state->session.get();
 	  if (session)
-	    state->session->thread_safe_resume();
+	    session->thread_safe_resume();
 	}
     }
 
@@ -1152,7 +1152,7 @@ namespace openvpn {
 	{
 	  ClientConnect* session = state->session.get();
 	  if (session)
-	    state->session->thread_safe_reconnect(seconds);
+	    session->thread_safe_reconnect(seconds);
 	}
     }
 
@@ -1162,7 +1162,7 @@ namespace openvpn {
 	{
 	  ClientConnect* session = state->session.get();
 	  if (session)
-	    state->session->thread_safe_post_cc_msg(msg);
+	    session->thread_safe_post_cc_msg(msg);
 	}
     }
 
