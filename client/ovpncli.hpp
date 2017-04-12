@@ -269,6 +269,11 @@ namespace openvpn {
       // pass through control channel INFO notifications via "INFO" event
       bool info = false;
 
+      // Periodic convenience clock tick in milliseconds.
+      // Will call clock_tick() at a frequency defined by this parameter.
+      // Set to 0 to disable.
+      unsigned int clockTickMS = 0;
+
       // Gremlin configuration (requires that the core is built with OPENVPN_GREMLIN)
       std::string gremlinConfig;
     };
@@ -523,6 +528,9 @@ namespace openvpn {
       virtual bool remote_override_enabled();
       virtual void remote_override(RemoteOverride&);
 
+      // Periodic convenience clock tick, controlled by Config::clock_tick_ms
+      virtual void clock_tick();
+
       // Do a crypto library self test
       static std::string crypto_self_test();
 
@@ -560,6 +568,9 @@ namespace openvpn {
       void process_epki_cert_chain(const ExternalPKICertRequest& req);
       void check_app_expired();
       static MergeConfig build_merge_config(const ProfileMerge&);
+
+      friend class MyClientEvents;
+      void on_disconnect();
 
       // from ExternalPKIBase
       virtual bool sign(const std::string& data, std::string& sig);

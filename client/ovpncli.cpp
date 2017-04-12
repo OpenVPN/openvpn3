@@ -92,6 +92,7 @@
 #include <openvpn/common/platform_string.hpp>
 #include <openvpn/common/count.hpp>
 #include <openvpn/asio/asiostop.hpp>
+#include <openvpn/time/asiotimer.hpp>
 #include <openvpn/client/cliconnect.hpp>
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/options/merge.hpp>
@@ -205,7 +206,8 @@ namespace openvpn {
 	    // save connected event
 	    if (event->id() == ClientEvent::CONNECTED)
 	      last_connected = std::move(event);
-
+	    else if (event->id() == ClientEvent::DISCONNECTED)
+	      parent->on_disconnect();
 	    parent->event(ev);
 	  }
       }
@@ -341,6 +343,51 @@ namespace openvpn {
       OpenVPNClient* parent = nullptr;
     };
 
+    class MyClockTick
+    {
+    public:
+      MyClockTick(openvpn_io::io_context& io_context,
+		  OpenVPNClient* parent_arg,
+		  const unsigned int ms)
+	: timer(io_context),
+	  parent(parent_arg),
+	  period(Time::Duration::milliseconds(ms))
+      {
+      }
+
+      void cancel()
+      {
+	timer.cancel();
+      }
+
+      void detach_from_parent()
+      {
+	parent = nullptr;
+      }
+
+      void schedule()
+      {
+	timer.expires_after(period);
+	timer.async_wait([this](const openvpn_io::error_code& error)
+			 {
+			   if (!parent || error)
+			     return;
+			   try {
+			     parent->clock_tick();
+			   }
+			   catch (...)
+			     {
+			     }
+			   schedule();
+			 });
+      }
+
+    private:
+      AsioTimer timer;
+      OpenVPNClient* parent;
+      const Time::Duration period;
+    };
+
     namespace Private {
       class ClientState
       {
@@ -355,6 +402,7 @@ namespace openvpn {
 	MySessionStats::Ptr stats;
 	MyClientEvents::Ptr events;
 	ClientConnect::Ptr session;
+	std::unique_ptr<MyClockTick> clock_tick;
 
 	// extra settings submitted by API client
 	std::string server_override;
@@ -376,6 +424,7 @@ namespace openvpn {
 	ProtoContextOptions::Ptr proto_context_options;
 	PeerInfo::Set::Ptr extra_peer_info;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
+	unsigned int clock_tick_ms = 0;
 #ifdef OPENVPN_GREMLIN
 	Gremlin::Config::Ptr gremlin_config;
 #endif
@@ -429,6 +478,8 @@ namespace openvpn {
 	  socket_protect.detach_from_parent();
 	  reconnect_notify.detach_from_parent();
 	  remote_override.detach_from_parent();
+	  if (clock_tick)
+	    clock_tick->detach_from_parent();
 	  if (stats)
 	    stats->detach_from_parent();
 	  if (events)
@@ -472,6 +523,13 @@ namespace openvpn {
 	void trigger_async_stop_local()
 	{
 	  async_stop_local_.stop();
+	}
+
+	// disconnect
+	void on_disconnect()
+	{
+	  if (clock_tick)
+	    clock_tick->cancel();
 	}
 
       private:
@@ -596,6 +654,7 @@ namespace openvpn {
 	state->dco = config.dco;
 	state->echo = config.echo;
 	state->info = config.info;
+	state->clock_tick_ms = config.clockTickMS;
 	if (!config.gremlinConfig.empty())
 	  {
 #ifdef OPENVPN_GREMLIN
@@ -755,7 +814,9 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT Status OpenVPNClient::connect()
     {
+#if !defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
       openvpn_io::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+#endif
 #if defined(OPENVPN_LOG_LOGTHREAD_H) && !defined(OPENVPN_LOG_LOGBASE_H)
 #ifdef OPENVPN_LOG_GLOBAL
 #error ovpn3 core logging object only supports thread-local scope
@@ -863,6 +924,13 @@ namespace openvpn {
 
 	// instantiate top-level client session
 	state->session.reset(new ClientConnect(*state->io_context(), client_options));
+
+	// convenience clock tick
+	if (state->clock_tick_ms)
+	  {
+	    state->clock_tick.reset(new MyClockTick(*state->io_context(), this, state->clock_tick_ms));
+	    state->clock_tick->schedule();
+	  }
 
 	// raise an exception if app has expired
 	check_app_expired();
@@ -1164,6 +1232,15 @@ namespace openvpn {
 	  if (session)
 	    session->thread_safe_post_cc_msg(msg);
 	}
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::clock_tick()
+    {
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::on_disconnect()
+    {
+      state->on_disconnect();
     }
 
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::crypto_self_test()

@@ -85,6 +85,15 @@ namespace {
 class Client : public ClientAPI::OpenVPNClient
 {
 public:
+  enum ClockTickAction {
+    CT_UNDEF,
+    CT_STOP,
+    CT_RECONNECT,
+    CT_PAUSE,
+    CT_RESUME,
+    CT_STATS,
+  };
+
   bool is_dynamic_challenge() const
   {
     return !dc_cookie.empty();
@@ -101,14 +110,33 @@ public:
   MbedTLSPKI::PKContext epki_ctx; // external PKI context
 #endif
 
+  void set_clock_tick_action(const ClockTickAction action)
+  {
+    clock_tick_action = action;
+  }
+
+  void print_stats()
+  {
+    const int n = stats_n();
+    std::vector<long long> stats = stats_bundle();
+
+    std::cout << "STATS:" << std::endl;
+    for (int i = 0; i < n; ++i)
+      {
+	const long long value = stats[i];
+	if (value)
+	  std::cout << "  " << stats_name(i) << " : " << value << std::endl;
+      }
+  }
+
 private:
-  virtual bool socket_protect(int socket)
+  virtual bool socket_protect(int socket) override
   {
     std::cout << "*** socket_protect " << socket << std::endl;
     return true;
   }
 
-  virtual void event(const ClientAPI::Event& ev)
+  virtual void event(const ClientAPI::Event& ev) override
   {
     std::cout << date_time() << " EVENT: " << ev.name;
     if (!ev.info.empty())
@@ -155,13 +183,45 @@ private:
       }
   }
 
-  virtual void log(const ClientAPI::LogInfo& log)
+  virtual void log(const ClientAPI::LogInfo& log) override
   {
     std::lock_guard<std::mutex> lock(log_mutex);
     std::cout << date_time() << ' ' << log.text << std::flush;
   }
 
-  virtual void external_pki_cert_request(ClientAPI::ExternalPKICertRequest& certreq)
+  virtual void clock_tick() override
+  {
+    const ClockTickAction action = clock_tick_action;
+    clock_tick_action = CT_UNDEF;
+
+    switch (action)
+      {
+      case CT_STOP:
+	std::cout << "signal: CT_STOP" << std::endl;
+	stop();
+	break;
+      case CT_RECONNECT:
+	std::cout << "signal: CT_RECONNECT" << std::endl;
+	reconnect(0);
+	break;
+      case CT_PAUSE:
+	std::cout << "signal: CT_PAUSE" << std::endl;
+	pause("clock-tick pause");
+	break;
+      case CT_RESUME:
+	std::cout << "signal: CT_RESUME" << std::endl;
+	resume();
+	break;
+      case CT_STATS:
+	std::cout << "signal: CT_STATS" << std::endl;
+	print_stats();
+	break;
+      default:
+	break;
+      }
+  }
+
+  virtual void external_pki_cert_request(ClientAPI::ExternalPKICertRequest& certreq) override
   {
     if (!epki_cert.empty())
       {
@@ -175,7 +235,7 @@ private:
       }
   }
 
-  virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signreq)
+  virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signreq) override
   {
 #if defined(USE_MBEDTLS)
     if (epki_ctx.defined())
@@ -239,7 +299,7 @@ private:
     return self->rng->rand_bytes_noexcept(data, len) ? 0 : -1; // using -1 as a general-purpose mbed TLS error code
   }
 
-  virtual bool pause_on_connection_timeout()
+  virtual bool pause_on_connection_timeout() override
   {
     return false;
   }
@@ -247,13 +307,16 @@ private:
   std::mutex log_mutex;
   std::string dc_cookie;
   RandomAPI::Ptr rng;      // random data source for epki
+  volatile ClockTickAction clock_tick_action = CT_UNDEF;
 };
 
 static Client *the_client = nullptr; // GLOBAL
 
 static void worker_thread()
 {
+#if !defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
   openvpn_io::detail::signal_blocker signal_blocker; // signals should be handled by parent thread
+#endif
   try {
     std::cout << "Thread starting..." << std::endl;
     ClientAPI::Status connect_status = the_client->connect();
@@ -272,21 +335,117 @@ static void worker_thread()
   std::cout << "Thread finished" << std::endl;
 }
 
-static void print_stats(const Client& client)
+static std::string read_profile(const char *fn, const std::string* profile_content)
 {
-  const int n = client.stats_n();
-  std::vector<long long> stats = client.stats_bundle();
-
-  std::cout << "STATS:" << std::endl;
-  for (int i = 0; i < n; ++i)
+  if (!string::strcasecmp(fn, "http") && profile_content && !profile_content->empty())
+    return *profile_content;
+  else
     {
-      const long long value = stats[i];
-      if (value)
-	std::cout << "  " << client.stats_name(i) << " : " << value << std::endl;
+      ProfileMerge pm(fn, "ovpn", "", ProfileMerge::FOLLOW_FULL,
+		      ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
+      if (pm.status() != ProfileMerge::MERGE_SUCCESS)
+	OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
+      return pm.profile_content();
     }
 }
 
-#if !defined(OPENVPN_PLATFORM_WIN)
+#if defined(OPENVPN_PLATFORM_WIN)
+
+static void start_thread(Client& client)
+{
+  // Set Windows title bar
+  const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
+  Win::Console::Title title(ClientAPI::OpenVPNClient::platform() + "     " + title_text);
+  Win::Console::Input console;
+
+  // start connect thread
+  std::unique_ptr<std::thread> thread;
+  volatile bool thread_exit = false;
+  the_client = &client;
+  thread.reset(new std::thread([&thread_exit]() {
+	worker_thread();
+	thread_exit = true;
+      }));
+
+  // wait for connect thread to exit, also check for keypresses
+  while (!thread_exit)
+    {
+      while (true)
+	{
+	  const unsigned int c = console.get();
+	  if (!c)
+	    break;
+	  else if (c == 0x3C) // F2
+	    the_client->print_stats();
+	  else if (c == 0x3D) // F3
+	    the_client->reconnect(0);
+	  else if (c == 0x3E) // F4
+	    the_client->stop();
+	  else if (c == 0x3F) // F5
+	    the_client->pause("user-pause");
+	}
+      Sleep(1000);
+    }
+
+  // wait for connect thread to exit
+  thread->join();
+
+  the_client = nullptr;
+}
+
+#elif defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
+
+static void handler(int signum)
+{
+  switch (signum)
+    {
+    case SIGTERM:
+    case SIGINT:
+      if (the_client)
+	the_client->set_clock_tick_action(Client::CT_STOP);
+      break;
+    case SIGHUP:
+      if (the_client)
+	the_client->set_clock_tick_action(Client::CT_RECONNECT);
+      break;
+    case SIGUSR1:
+      if (the_client)
+	the_client->set_clock_tick_action(Client::CT_STATS);
+      break;
+    case SIGUSR2:
+      {
+	// toggle pause/resume
+	static bool hup = false;
+	if (the_client)
+	  {
+	    if (hup)
+	      the_client->set_clock_tick_action(Client::CT_RESUME);
+	    else
+	      the_client->set_clock_tick_action(Client::CT_PAUSE);
+	    hup = !hup;
+	  }
+      }
+      break;
+    default:
+      break;
+    }
+}
+
+static void start_thread(Client& client)
+{
+  the_client = &client;
+
+  // capture signals that might occur while we're in worker_thread
+  Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
+
+  // run the client
+  worker_thread();
+
+  the_client = nullptr;
+}
+
+#else
+
 static void handler(int signum)
 {
   switch (signum)
@@ -304,7 +463,7 @@ static void handler(int signum)
       break;
     case SIGUSR1:
       if (the_client)
-	print_stats(*the_client);
+	the_client->print_stats();
       break;
     case SIGUSR2:
       {
@@ -326,21 +485,28 @@ static void handler(int signum)
       break;
     }
 }
-#endif
 
-static std::string read_profile(const char *fn, const std::string* profile_content)
+static void start_thread(Client& client)
 {
-  if (!string::strcasecmp(fn, "http") && profile_content && !profile_content->empty())
-    return *profile_content;
-  else
-    {
-      ProfileMerge pm(fn, "ovpn", "", ProfileMerge::FOLLOW_FULL,
-		      ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
-      if (pm.status() != ProfileMerge::MERGE_SUCCESS)
-	OPENVPN_THROW_EXCEPTION("merge config error: " << pm.status_string() << " : " << pm.error());
-      return pm.profile_content();
-    }
+  std::unique_ptr<std::thread> thread;
+
+  // start connect thread
+  the_client = &client;
+  thread.reset(new std::thread([]() {
+	worker_thread();
+      }));
+
+  {
+    // catch signals that might occur while we're in join()
+    Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
+
+    // wait for connect thread to exit
+    thread->join();
+  }
+  the_client = nullptr;
 }
+
+#endif
 
 int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 {
@@ -388,7 +554,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
   auto cleanup = Cleanup([]() {
       the_client = nullptr;
     });
-  std::unique_ptr<std::thread> thread;
 
   try {
     if (argc >= 2)
@@ -618,6 +783,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.tunPersist = tunPersist;
 	      config.gremlinConfig = gremlin;
 	      config.info = true;
+#if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
+	      config.clockTickMS = 250;
+#endif
 
 	      if (!epki_cert_fn.empty())
 		config.externalPkiAlias = "epki"; // dummy string
@@ -694,60 +862,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 		  std::cout << "CONNECTING..." << std::endl;
 
-#if !defined(OPENVPN_PLATFORM_WIN)
-		  // start connect thread
-		  the_client = &client;
-		  thread.reset(new std::thread([]() {
-			worker_thread();
-		      }));
-
-		  {
-		    // catch signals that might occur while we're in join()
-		    Signal signal(handler, Signal::F_SIGINT|Signal::F_SIGTERM|Signal::F_SIGHUP|Signal::F_SIGUSR1|Signal::F_SIGUSR2);
-
-		    // wait for connect thread to exit
-		    thread->join();
-		  }
-		  the_client = nullptr;
-#else
-		  // Set Windows title bar
-		  const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
-		  Win::Console::Title title(ClientAPI::OpenVPNClient::platform() + "     " + title_text);
-		  Win::Console::Input console;
-
-		  // start connect thread
-		  volatile bool thread_exit = false;
-		  the_client = &client;
-		  thread.reset(new std::thread([&thread_exit]() {
-			worker_thread();
-			thread_exit = true;
-		      }));
-
-		  // wait for connect thread to exit, also check for keypresses
-		  while (!thread_exit)
-		    {
-		      while (true)
-			{
-			  const unsigned int c = console.get();
-			  if (!c)
-			    break;
-			  else if (c == 0x3C) // F2
-			    print_stats(*the_client);
-			  else if (c == 0x3D) // F3
-			    the_client->reconnect(0);
-			  else if (c == 0x3E) // F4
-			    the_client->stop();
-			  else if (c == 0x3F) // F5
-			    the_client->pause("user-pause");
-			}
-		      Sleep(1000);
-		    }
-
-		  // wait for connect thread to exit
-		  thread->join();
-
-		  the_client = nullptr;
-#endif
+		  // start the client thread
+		  start_thread(client);
 
 		  // Get dynamic challenge response
 		  if (client.is_dynamic_challenge())
@@ -763,7 +879,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		  else
 		    {
 		      // print closing stats
-		      print_stats(client);
+		      client.print_stats();
 		    }
 		}
 	    } while (retry);
