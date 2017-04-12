@@ -24,36 +24,72 @@
 #ifndef OPENVPN_COMMON_FUNCTION_H
 #define OPENVPN_COMMON_FUNCTION_H
 
+#include <cstddef>  // for std::size_t
+#include <utility>  // for std::move
 #include <new>
-#include <utility>
 
 namespace openvpn {
-  template <typename F>
+  // F -- function type (usually a lambda expression)
+  // N (default=3) -- max size of functor in void* machine words before we overflow to dynamic allocation
+  // INTERN_ONLY (default=false) -- if true, throw a static assertion if functor cannot be stored internally
+  template <typename F, std::size_t N=3, bool INTERN_ONLY=false>
   class Function;
 
-  template <typename R, typename ... A>
-  class Function<R(A...)>
+  template <typename R, typename ... A, std::size_t N, bool INTERN_ONLY>
+  class Function<R(A...), N, INTERN_ONLY>
   {
   public:
-    static constexpr size_t N = 3; // max size of functor in machine words
+    Function() noexcept
+    {
+      methods = nullptr;
+    }
 
     template <typename T>
     Function(T&& functor) noexcept
     {
-      static_assert(sizeof(Intern<T>) <= sizeof(data), "Functor too large");
-      setup_methods<T>();
-      new (data) Intern<T>(std::move(functor));
+      construct(std::move(functor));
     }
 
-    Function(Function&& f) noexcept
+    Function(Function&& other) noexcept
     {
-      methods = f.methods;
-      methods->move(data, f.data);
+      methods = other.methods;
+      other.methods = nullptr;
+      if (methods)
+	methods->move(data, other.data);
+    }
+
+    Function& operator=(Function&& other) noexcept
+    {
+      if (methods)
+	methods->destruct(data);
+      methods = other.methods;
+      other.methods = nullptr;
+      if (methods)
+	methods->move(data, other.data);
+      return *this;
     }
 
     ~Function()
     {
-      methods->destruct(data);
+      if (methods)
+	methods->destruct(data);
+    }
+
+    template <typename T>
+    void reset(T&& functor) noexcept
+    {
+      if (methods)
+	methods->destruct(data);
+      construct(std::move(functor));
+    }
+
+    void reset() noexcept
+    {
+      if (methods)
+	{
+	  methods->destruct(data);
+	  methods = nullptr;
+	}
     }
 
     R operator()(A... args)
@@ -61,7 +97,33 @@ namespace openvpn {
       return methods->invoke(data, args...);
     }
 
+    explicit operator bool() const noexcept
+    {
+      return methods != nullptr;
+    }
+
   private:
+    template <typename T>
+    void construct(T&& functor) noexcept
+    {
+      constexpr bool is_intern = (sizeof(Intern<T>) <= sizeof(data));
+      static_assert(!INTERN_ONLY || is_intern, "Function: Intern<T> doesn't fit in data[] and INTERN_ONLY=true");
+      static_assert(sizeof(Extern<T>) <= sizeof(data), "Function: Extern<T> doesn't fit in data[]");
+
+      if (is_intern)
+	{
+	  // store functor internally (in data)
+	  setup_methods_intern<T>();
+	  new (data) Intern<T>(std::move(functor));
+	}
+      else
+	{
+	  // store functor externally (using new)
+	  setup_methods_extern<T>();
+	  new (data) Extern<T>(std::move(functor));
+	}
+    }
+
     struct Methods
     {
       R (*invoke)(void *, A...);
@@ -70,7 +132,7 @@ namespace openvpn {
     };
 
     template <typename T>
-    void setup_methods()
+    void setup_methods_intern()
     {
       static const struct Methods m = {
 	&Intern<T>::invoke,
@@ -81,14 +143,21 @@ namespace openvpn {
     }
 
     template <typename T>
+    void setup_methods_extern()
+    {
+      static const struct Methods m = {
+	&Extern<T>::invoke,
+	&Extern<T>::move,
+	&Extern<T>::destruct,
+      };
+      methods = &m;
+    }
+
+    // store functor internally (in data)
+    template <typename T>
     class Intern
     {
     public:
-      Intern(Intern&& obj) noexcept
-        : functor_(std::move(obj.functor_))
-      {
-      }
-
       Intern(T&& functor) noexcept
         : functor_(std::move(functor))
       {
@@ -114,6 +183,40 @@ namespace openvpn {
 
     private:
       T functor_;
+    };
+
+    // store functor externally (using new)
+    template <typename T>
+    class Extern
+    {
+    public:
+      Extern(T&& functor) noexcept
+        : functor_(new T(std::move(functor)))
+      {
+      }
+
+      static R invoke(void *ptr, A... args)
+      {
+	Extern* self = reinterpret_cast<Extern<T>*>(ptr);
+	return (*self->functor_)(args...);
+      }
+
+      static void move(void *dest, void *src)
+      {
+	Extern* d = reinterpret_cast<Extern<T>*>(dest);
+	Extern* s = reinterpret_cast<Extern<T>*>(src);
+	d->functor_ = s->functor_;
+	// no need to set s->functor_=nullptr because parent will not destruct src after move
+      }
+
+      static void destruct(void *ptr)
+      {
+	Extern* self = reinterpret_cast<Extern<T>*>(ptr);
+	delete self->functor_;
+      }
+
+    private:
+      T* functor_;
     };
 
     const Methods* methods;
