@@ -36,7 +36,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
-#include <openvpn/applecrypto/cf/error.hpp>
+#include <openvpn/apple/cf/error.hpp>
 
 namespace openvpn {
   namespace AppleCrypto {

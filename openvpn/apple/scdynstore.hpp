@@ -24,7 +24,7 @@
 
 #include <SystemConfiguration/SCDynamicStore.h>
 
-#include <openvpn/applecrypto/cf/cf.hpp>
+#include <openvpn/apple/cf/cf.hpp>
 
 namespace openvpn {
   namespace CF {

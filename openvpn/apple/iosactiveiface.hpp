@@ -21,7 +21,7 @@
 
 #include <string>
 
-#include <openvpn/applecrypto/util/reach.hpp>
+#include <openvpn/apple/reach.hpp>
 #include <openvpn/netconf/enumiface.hpp>
 
 #ifndef OPENVPN_APPLECRYPTO_UTIL_IOSACTIVEIFACE_H

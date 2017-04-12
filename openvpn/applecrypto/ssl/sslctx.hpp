@@ -47,8 +47,8 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_stream.hpp>
 #include <openvpn/pki/epkibase.hpp>
-#include <openvpn/applecrypto/cf/cfsec.hpp>
-#include <openvpn/applecrypto/cf/error.hpp>
+#include <openvpn/apple/cf/cfsec.hpp>
+#include <openvpn/apple/cf/error.hpp>
 #include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>

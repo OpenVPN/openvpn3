@@ -22,7 +22,7 @@
 #ifndef OPENVPN_APPLECRYPTO_CF_CFTIMER_H
 #define OPENVPN_APPLECRYPTO_CF_CFTIMER_H
 
-#include <openvpn/applecrypto/cf/cf.hpp>
+#include <openvpn/apple/cf/cf.hpp>
 
 namespace openvpn {
   namespace CF {

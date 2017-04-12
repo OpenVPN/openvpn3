@@ -23,7 +23,7 @@
 #define OPENVPN_APPLECRYPTO_CF_CFHELPER_H
 
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/applecrypto/cf/cf.hpp>
+#include <openvpn/apple/cf/cf.hpp>
 
 // These methods build on the Wrapper classes for Apple Core Foundation objects
 // defined in cf.hpp.  They add additional convenience methods, such as dictionary

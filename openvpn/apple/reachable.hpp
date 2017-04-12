@@ -77,8 +77,8 @@
 #include <memory>
 
 #include <openvpn/common/socktypes.hpp>
-#include <openvpn/applecrypto/cf/cf.hpp>
-#include <openvpn/applecrypto/util/reach.hpp>
+#include <openvpn/apple/cf/cf.hpp>
+#include <openvpn/apple/reach.hpp>
 
 namespace openvpn {
   namespace CF {

@@ -19,14 +19,14 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_APPLECRYPTO_CF_CFHOST_H
-#define OPENVPN_APPLECRYPTO_CF_CFHOST_H
+#ifndef OPENVPN_APPLECRYPTO_CF_CFSTREAM_H
+#define OPENVPN_APPLECRYPTO_CF_CFSTREAM_H
 
-#include <openvpn/applecrypto/cf/cf.hpp>
+#include <openvpn/apple/cf/cf.hpp>
 
 namespace openvpn {
   namespace CF {
-    OPENVPN_CF_WRAP(Host, host_cast, CFHostRef, CFHostGetTypeID)
+    OPENVPN_CF_WRAP(Socket, socket_cast, CFSocketRef, CFSocketGetTypeID)
   }
 }
 

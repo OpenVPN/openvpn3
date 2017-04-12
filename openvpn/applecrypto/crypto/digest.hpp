@@ -34,7 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
-#include <openvpn/applecrypto/cf/error.hpp>
+#include <openvpn/apple/cf/error.hpp>
 
 #define OPENVPN_DIGEST_CONTEXT(TYPE) CC_##TYPE##_CTX TYPE##_ctx
 

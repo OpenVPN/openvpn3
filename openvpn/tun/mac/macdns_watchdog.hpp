@@ -29,8 +29,8 @@
 
 #include <openvpn/log/logthread.hpp>
 #include <openvpn/common/action.hpp>
-#include <openvpn/applecrypto/cf/cftimer.hpp>
-#include <openvpn/applecrypto/cf/cfrunloop.hpp>
+#include <openvpn/apple/cf/cftimer.hpp>
+#include <openvpn/apple/cf/cfrunloop.hpp>
 #include <openvpn/tun/mac/macdns.hpp>
 
 namespace openvpn {

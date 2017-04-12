@@ -36,7 +36,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/applecrypto/cf/cf.hpp>
+#include <openvpn/apple/cf/cf.hpp>
 
 // Define C++ wrappings for Apple security-related objects.
 

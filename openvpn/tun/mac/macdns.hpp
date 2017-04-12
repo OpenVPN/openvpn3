@@ -34,7 +34,7 @@
 #include <openvpn/common/process.hpp>
 #include <openvpn/apple/macver.hpp>
 #include <openvpn/apple/scdynstore.hpp>
-#include <openvpn/applecrypto/cf/cfhelper.hpp>
+#include <openvpn/apple/cf/cfhelper.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
 namespace openvpn {

@@ -28,7 +28,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/apple/scdynstore.hpp>
-#include <openvpn/applecrypto/cf/cfhelper.hpp>
+#include <openvpn/apple/cf/cfhelper.hpp>
 
 namespace openvpn {
   struct MacGWInfo
