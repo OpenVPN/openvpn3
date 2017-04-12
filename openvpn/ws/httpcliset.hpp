@@ -628,7 +628,7 @@ namespace openvpn {
 	{
 	  if (check_if_done())
 	    return;
-	  reconnect_timer.expires_at(Time::now() + retry_duration);
+	  reconnect_timer.expires_after(retry_duration);
 	  reconnect_timer.async_wait([self=Ptr(this), error_retry](const openvpn_io::error_code& error)
 				     {
 				       if (!error && !self->halt)
