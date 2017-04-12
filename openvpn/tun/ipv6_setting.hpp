@@ -29,9 +29,9 @@ namespace openvpn {
   {
   public:
     enum Type {
-      NO,
-      YES,
-      DEFAULT,
+      No,
+      Yes,
+      Default,
     };
 
     IPv6Setting()
@@ -49,11 +49,11 @@ namespace openvpn {
     {
       switch (type_)
 	{
-	case NO:
+	case No:
 	  return "no";
-	case YES:
+	case Yes:
 	  return "yes";
-	case DEFAULT:
+	case Default:
 	default:
 	  return "default";
 	}
@@ -62,11 +62,11 @@ namespace openvpn {
     static IPv6Setting parse(const std::string& str)
     {
       if (str == "no")
-	return IPv6Setting(NO);
+	return IPv6Setting(No);
       else if (str == "yes")
-	return IPv6Setting(YES);
+	return IPv6Setting(Yes);
       else if (str == "default")
-	return IPv6Setting(DEFAULT);
+	return IPv6Setting(Default);
       else
 	throw Exception("IPv6Setting: unrecognized setting: '" + str + '\'');
     }
@@ -82,7 +82,7 @@ namespace openvpn {
     }
 
   private:
-    Type type_ = DEFAULT;
+    Type type_ = Default;
   };
 }
 

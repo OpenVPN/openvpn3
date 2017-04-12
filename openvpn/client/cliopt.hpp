@@ -448,7 +448,7 @@ namespace openvpn {
 	// IPv6
 	{
 	  const unsigned int n = push_base->singleton.extend(opt, "block-ipv6");
-	  if (!n && config.ipv6() == IPv6Setting::NO)
+	  if (!n && config.ipv6() == IPv6Setting::No)
 	    push_base->singleton.emplace_back("block-ipv6");
 	}
       }
@@ -463,9 +463,9 @@ namespace openvpn {
       PeerInfo::Set::Ptr pi(new PeerInfo::Set);
 
       // IPv6
-      if (config.ipv6() == IPv6Setting::NO)
+      if (config.ipv6() == IPv6Setting::No)
 	pi->emplace_back("IV_IPv6", "0");
-      else if (config.ipv6() == IPv6Setting::YES)
+      else if (config.ipv6() == IPv6Setting::Yes)
 	pi->emplace_back("IV_IPv6", "1");
 
       // autologin sessions
