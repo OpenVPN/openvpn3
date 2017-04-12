@@ -16,12 +16,12 @@
 #include <memory>
 #include <utility>
 #include <algorithm>
-#include <functional>
 #include <limits>
 #include <unordered_map>
 
 #include <openvpn/asio/asiostop.hpp>
 #include <openvpn/common/cleanup.hpp>
+#include <openvpn/common/function.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -269,11 +269,11 @@ namespace openvpn {
 	bool status = false;
 
 	// completion method
-	std::function<void(TransactionSet& ts)> completion;
+	Function<void(TransactionSet& ts)> completion;
 
 	// post-connect method, useful to validate server
 	// on local sockets
-	std::function<void(TransactionSet& ts, AsioPolySock::Base& sock)> post_connect;
+	Function<void(TransactionSet& ts, AsioPolySock::Base& sock)> post_connect;
 
 	// error recovery method, called before we retry a request
 	// after an error to possibly modify connection parameters
@@ -447,7 +447,7 @@ namespace openvpn {
 	  ts->sps.io_context = std::move(io_context);
       }
 
-      static void run_synchronous(std::function<void(ClientSet::Ptr)> job,
+      static void run_synchronous(Function<void(ClientSet::Ptr)> job,
 				  Stop* stop=nullptr,
 				  RandomAPI* rng=nullptr)
       {
