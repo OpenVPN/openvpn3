@@ -26,12 +26,10 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <utility>
+#include <exception>
 
 #include <CoreFoundation/CoreFoundation.h>
-
-#include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
-#include <openvpn/buffer/buffer.hpp>
 
 // Wrapper classes for Apple Core Foundation objects.
 
@@ -186,9 +184,6 @@ namespace openvpn {
       T obj_;
     };
 
-    // essentially a vector of void *, used as source for array and dictionary constructors
-    typedef BufferAllocatedType<CFTypeRef> SrcList;
-
     // common CF types
 
     OPENVPN_CF_WRAP(String, string_cast, CFStringRef, CFStringGetTypeID)
@@ -267,11 +262,6 @@ namespace openvpn {
       return Array(CFArrayCreate(kCFAllocatorDefault, values, numValues, &kCFTypeArrayCallBacks));
     }
 
-    inline Array array(const SrcList& values)
-    {
-      return array((const void **)values.c_data(), values.size());
-    }
-
     inline Dict dict(const void **keys, const void **values, CFIndex numValues)
     {
       return Dict(CFDictionaryCreate(kCFAllocatorDefault,
@@ -280,11 +270,6 @@ namespace openvpn {
 				     numValues,
 				     &kCFTypeDictionaryKeyCallBacks,
 				     &kCFTypeDictionaryValueCallBacks));
-    }
-
-    inline Dict dict(const SrcList& keys, const SrcList& values)
-    {
-      return dict((const void **)keys.c_data(), (const void **)values.c_data(), std::min(keys.size(), values.size()));
     }
 
     inline Dict const_dict(MutableDict& mdict)
@@ -374,7 +359,13 @@ namespace openvpn {
 
     // string methods
 
-    OPENVPN_SIMPLE_EXCEPTION(cppstring_error);
+    struct cppstring_error : public std::exception
+    {
+      virtual const char* what() const throw()
+      {
+	return "cppstring_error";
+      }
+    };
 
     inline std::string cppstring(CFStringRef str)
     {
