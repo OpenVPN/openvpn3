@@ -217,7 +217,7 @@ namespace openvpn {
 	  OPENVPN_LOG("Client terminated, reconnecting in " << seconds << "...");
 	  server_poll_timer.cancel();
 	  client_options->remote_reset_cache_item();
-	  restart_wait_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
+	  restart_wait_timer.expires_after(Time::Duration::seconds(seconds));
 	  restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                         {
                                           self->restart_wait_callback(gen, error);
@@ -348,7 +348,7 @@ namespace openvpn {
     {
       if (!conn_timer_pending && conn_timeout > 0)
 	{
-	  conn_timer.expires_at(Time::now() + Time::Duration::seconds(conn_timeout));
+	  conn_timer.expires_after(Time::Duration::seconds(conn_timeout));
 	  conn_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                 {
                                   self->conn_timer_callback(gen, error);
@@ -396,7 +396,7 @@ namespace openvpn {
       server_poll_timer.cancel();
       interim_finalize();
       client_options->remote_reset_cache_item();
-      restart_wait_timer.expires_at(Time::now() + Time::Duration::milliseconds(delay_ms));
+      restart_wait_timer.expires_after(Time::Duration::milliseconds(delay_ms));
       restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                     {
                                       self->restart_wait_callback(gen, error);
@@ -592,7 +592,7 @@ namespace openvpn {
       restart_wait_timer.cancel();
       if (client_options->server_poll_timeout_enabled())
 	{
-	  server_poll_timer.expires_at(Time::now() + client_options->server_poll_timeout());
+	  server_poll_timer.expires_after(client_options->server_poll_timeout());
 	  server_poll_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                        {
                                          self->server_poll_callback(gen, error);

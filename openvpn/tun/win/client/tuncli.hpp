@@ -388,7 +388,7 @@ namespace openvpn {
 
       void layer_2_schedule_timer(const unsigned int seconds)
       {
-	l2_timer.expires_at(Time::now() + Time::Duration::seconds(seconds));
+	l2_timer.expires_after(Time::Duration::seconds(seconds));
 	l2_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 			    {
 			      if (!error && !self->halt)

@@ -777,7 +777,7 @@ namespace openvpn {
       {
 	if (!received_options.partial())
 	  {
-	    push_request_timer.expires_at(now() + dur);
+	    push_request_timer.expires_after(dur);
 	    push_request_timer.async_wait([self=Ptr(this), dur](const openvpn_io::error_code& error)
                                           {
                                             self->send_push_request_callback(dur, error);
@@ -865,7 +865,7 @@ namespace openvpn {
 
       void schedule_inactive_timer()
       {
-	inactive_timer.expires_at(now() + inactive_duration);
+	inactive_timer.expires_after(inactive_duration);
 	inactive_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                   {
                                     self->inactive_callback(error);
@@ -955,7 +955,7 @@ namespace openvpn {
       void schedule_info_hold_callback()
       {
 	Base::update_now();
-	info_hold_timer.expires_at(now() + Time::Duration::seconds(1));
+	info_hold_timer.expires_after(Time::Duration::seconds(1));
 	info_hold_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                   {
                                     self->info_hold_callback(error);

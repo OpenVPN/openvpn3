@@ -123,7 +123,7 @@ namespace openvpn {
       signal_rearm();
 
 #ifdef OPENVPN_EXIT_IN
-      exit_timer.expires_at(Time::now() + Time::Duration::seconds(OPENVPN_EXIT_IN));
+      exit_timer.expires_after(Time::Duration::seconds(OPENVPN_EXIT_IN));
       exit_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                             {
 			      if (!error)
