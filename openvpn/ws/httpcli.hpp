@@ -468,7 +468,7 @@ namespace openvpn {
 		  }
 		if (config->connect_timeout)
 		  {
-		    connect_timer.expires_at(now + Time::Duration::seconds(config->connect_timeout));
+		    connect_timer.expires_after(Time::Duration::seconds(config->connect_timeout));
 		    connect_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 					     {
 					       if (!error)
