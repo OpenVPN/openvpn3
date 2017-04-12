@@ -183,7 +183,7 @@ namespace openvpn {
     // as well.
     void thread_func()
     {
-      runloop.reset(CFRunLoopGetCurrent(), CF::BORROW);
+      runloop.reset(CFRunLoopGetCurrent(), CF::GET);
       Log::Context logctx(logwrap);
 
       try {
