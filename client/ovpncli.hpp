@@ -29,6 +29,7 @@
 #include <utility>
 
 #include <openvpn/tun/builder/base.hpp>
+#include <openvpn/tun/extern/fw.hpp>
 #include <openvpn/pki/epkibase.hpp>
 
 namespace openvpn {
@@ -408,7 +409,11 @@ namespace openvpn {
     };
 
     // Top-level OpenVPN client class.
-    class OpenVPNClient : public TunBuilderBase, public LogReceiver, private ExternalPKIBase {
+    class OpenVPNClient : public TunBuilderBase,            // expose tun builder virtual methods
+			  public LogReceiver,               // log message notification
+			  public ExternalTun::Factory,      // low-level tun override
+			  private ExternalPKIBase
+    {
     public:
       OpenVPNClient();
       virtual ~OpenVPNClient();

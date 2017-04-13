@@ -66,8 +66,9 @@
 #include <openvpn/client/cliemuexr.hpp>
 #endif
 
-#if defined(OPENVPN_CUSTOM_TUN_FACTORY)
-// includer of this file must define OPENVPN_CUSTOM_TUN_FACTORY class
+#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+// requires that client implements ExternalTun::Factory::new_tun_factory
+#include <openvpn/tun/extern/config.hpp>
 #elif defined(USE_TUN_BUILDER)
 #include <openvpn/tun/builder/client.hpp>
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
@@ -151,6 +152,10 @@ namespace openvpn {
 #if defined(USE_TUN_BUILDER)
       TunBuilderBase* builder = nullptr;
 #endif
+
+#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+      ExternalTun::Factory* extern_tun_factory = nullptr;
+#endif
     };
 
     ClientOptions(const OptionList& opt,   // only needs to remain in scope for duration of constructor call
@@ -191,7 +196,7 @@ namespace openvpn {
       rng.reset(new SSLLib::RandomAPI(false));
       prng.reset(new SSLLib::RandomAPI(true));
 
-#if defined(ENABLE_DCO) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_CUSTOM_TUN_FACTORY)
+#if defined(ENABLE_DCO) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       if (config.dco)
 	dco = DCOTransport::new_controller();
 #else
@@ -292,17 +297,22 @@ namespace openvpn {
 	}
       else
 	{
-#if defined(OPENVPN_CUSTOM_TUN_FACTORY)
+#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
 	  {
-	    OPENVPN_CUSTOM_TUN_FACTORY::Ptr tunconf = OPENVPN_CUSTOM_TUN_FACTORY::new_obj();
-	    tunconf->tun_prop.session_name = session_name;
-	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    ExternalTun::Config tunconf;
+	    tunconf.tun_prop.layer = layer;
+	    tunconf.tun_prop.session_name = session_name;
+	    tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    if (tun_mtu)
-	      tunconf->tun_prop.mtu = tun_mtu;
-	    tunconf->frame = frame;
-	    tunconf->stats = cli_stats;
-	    tunconf->tun_prop.remote_list = remote_list;
-	    tun_factory = tunconf;
+	      tunconf.tun_prop.mtu = tun_mtu;
+	    tunconf.frame = frame;
+	    tunconf.stats = cli_stats;
+	    tunconf.tun_prop.remote_list = remote_list;
+	    tunconf.tun_persist = config.tun_persist;
+	    tunconf.stop = config.stop;
+	    tun_factory.reset(config.extern_tun_factory->new_tun_factory(tunconf, opt));
+	    if (!tun_factory)
+	      throw option_error("OPENVPN_EXTERNAL_TUN_FACTORY: no tun factory");
 	  }
 #elif defined(USE_TUN_BUILDER)
 	  {

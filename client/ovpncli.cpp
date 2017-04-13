@@ -83,7 +83,7 @@
 
 // on Android and iOS, use TunBuilderBase abstraction
 #include <openvpn/common/platform.hpp>
-#if (defined(OPENVPN_PLATFORM_ANDROID) || defined(OPENVPN_PLATFORM_IPHONE)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_CUSTOM_TUN_FACTORY)
+#if (defined(OPENVPN_PLATFORM_ANDROID) || defined(OPENVPN_PLATFORM_IPHONE)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
 #define USE_TUN_BUILDER
 #endif
 
@@ -875,6 +875,9 @@ namespace openvpn {
 #if defined(USE_TUN_BUILDER)
 	cc.socket_protect = &state->socket_protect;
 	cc.builder = this;
+#endif
+#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+	cc.extern_tun_factory = this;
 #endif
 
 	// force Session ID use and disable password cache if static challenge is enabled
