@@ -567,10 +567,13 @@ namespace openvpn {
       Private::ClientState* state;
 
     private:
+      void connect_setup(Status&, bool&);
+      void do_connect_async();
+      static Status status_from_exception(const std::exception&);
       static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
-      void external_pki_error(const ExternalPKIRequestBase&, const size_t err_type);
-      void process_epki_cert_chain(const ExternalPKICertRequest& req);
+      void external_pki_error(const ExternalPKIRequestBase&, const size_t);
+      void process_epki_cert_chain(const ExternalPKICertRequest&);
       void check_app_expired();
       static MergeConfig build_merge_config(const ProfileMerge&);
 
