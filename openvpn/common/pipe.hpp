@@ -31,6 +31,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/buffer/buflist.hpp>
 
 namespace openvpn {
@@ -129,7 +130,7 @@ namespace openvpn {
       if (::pipe(fd) < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW_EXCEPTION("error creating pipe : " << std::strerror(eno));
+	  OPENVPN_THROW_EXCEPTION("error creating pipe : " << strerror_str(eno));
 	}
     }
 

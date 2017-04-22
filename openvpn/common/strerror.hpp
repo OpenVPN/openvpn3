@@ -19,48 +19,29 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_BUFFER_BUFREAD_H
-#define OPENVPN_BUFFER_BUFREAD_H
+#ifndef OPENVPN_COMMON_STRERROR_H
+#define OPENVPN_COMMON_STRERROR_H
 
-#include <unistd.h>
-#include <errno.h>
-
+#include <string.h>
 #include <string>
-#include <cstring>
-
-#include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
-#include <openvpn/common/strerror.hpp>
-#include <openvpn/buffer/buflist.hpp>
 
 namespace openvpn {
-  OPENVPN_EXCEPTION(buf_read_error);
-
-  inline bool buf_read(const int fd, Buffer& buf, const std::string& title)
+  inline std::string strerror_str(const int errnum)
   {
-    const ssize_t status = ::read(fd, buf.data_end(), buf.remaining(0));
-    if (status < 0)
-      {
-	const int eno = errno;
-	OPENVPN_THROW(buf_read_error, "on " << title << " : " << strerror_str(eno));
-      }
-    else if (!status)
-      return false;
-    buf.inc_size(status);
-    return true;
-  }
+    static const char unknown_err[] = "UNKNOWN_SYSTEM_ERROR";
+    char buf[128];
 
-  inline BufferList buf_read(const int fd, const std::string& title)
-  {
-    BufferList buflist;
-    while (true)
-      {
-	BufferAllocated buf(1024, 0);
-	if (!buf_read(fd, buf, title))
-	  break;
-	buflist.put_consume(buf);
-      }
-    return buflist;
+#if defined(__GLIBC__) && (!defined(__USE_XOPEN2K) || defined(__USE_GNU))
+    // GNU
+    const char *errstr = ::strerror_r(errnum, buf, sizeof(buf));
+    if (errstr)
+      return std::string(errstr);
+#else
+    // POSIX
+    if (::strerror_r(errnum, buf, sizeof(buf)) == 0)
+      return std::string(buf);
+#endif
+    return std::string(unknown_err);
   }
 }
 

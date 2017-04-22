@@ -38,6 +38,7 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/fileunix.hpp>
 #include <openvpn/common/path.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
@@ -60,7 +61,7 @@ namespace openvpn {
     if (::rename(tfn.c_str(), fn.c_str()) == -1)
       {
 	const int eno = errno;
-	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << std::strerror(eno));
+	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << strerror_str(eno));
       }
   }
 }
