@@ -21,6 +21,7 @@
 #include <errno.h>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/strerror.hpp>
 
 namespace openvpn {
 
@@ -65,7 +66,7 @@ namespace openvpn {
       if (status < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(xmit_fd_error, "xmit_fd: " << std::strerror(eno));
+	  OPENVPN_THROW(xmit_fd_error, "xmit_fd: " << strerror_str(eno));
 	}
       else if (status != message.length())
 	OPENVPN_THROW(xmit_fd_error, "xmit_fd: unexpected send size");
@@ -92,7 +93,7 @@ namespace openvpn {
       if (status < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(xmit_fd_error, "recv_fd: " << std::strerror(eno));
+	  OPENVPN_THROW(xmit_fd_error, "recv_fd: " << strerror_str(eno));
 	}
       else if (status == 0)
 	OPENVPN_THROW(xmit_fd_error, "recv_fd: eof");
@@ -130,7 +131,7 @@ namespace openvpn {
       if (status < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(xmit_fd_error, "poll_wait: poll failed: " << std::strerror(eno));
+	  OPENVPN_THROW(xmit_fd_error, "poll_wait: poll failed: " << strerror_str(eno));
 	}
       else if (status == 0)
 	OPENVPN_THROW(xmit_fd_error, "poll_wait: poll timeout");
