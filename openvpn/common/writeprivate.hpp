@@ -14,7 +14,6 @@
 #include <openvpn/common/platform.hpp>
 
 #if !defined(OPENVPN_PLATFORM_WIN)
-#include <cstring>     // for std::strerror()
 #include <sys/types.h> // for open(), ftruncate()
 #include <sys/stat.h>  // for open()
 #include <fcntl.h>     // for open()
@@ -29,6 +28,7 @@
 #if !defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/write.hpp>
+#include <openvpn/common/strerror.hpp>
 #endif
 
 namespace openvpn {
@@ -48,25 +48,25 @@ namespace openvpn {
     if (!fd.defined())
       {
 	const int eno = errno;
-	OPENVPN_THROW_EXCEPTION(path << " : open error : " << std::strerror(eno));
+	OPENVPN_THROW_EXCEPTION(path << " : open error : " << strerror_str(eno));
       }
     if (::ftruncate(fd(), 0) < 0)
       {
 	const int eno = errno;
-	OPENVPN_THROW_EXCEPTION(path << " : truncate error : " << std::strerror(eno));
+	OPENVPN_THROW_EXCEPTION(path << " : truncate error : " << strerror_str(eno));
       }
     const ssize_t len = write_retry(fd(), buf, count);
     if (len == -1)
       {
 	const int eno = errno;
-	OPENVPN_THROW_EXCEPTION(path << " : write error : " << std::strerror(eno));
+	OPENVPN_THROW_EXCEPTION(path << " : write error : " << strerror_str(eno));
       }
     else if (len != count)
       OPENVPN_THROW_EXCEPTION(path << " : unexpected write size");
     if (!fd.close())
       {
 	const int eno = errno;
-	OPENVPN_THROW_EXCEPTION(path << " : close error : " << std::strerror(eno));
+	OPENVPN_THROW_EXCEPTION(path << " : close error : " << strerror_str(eno));
       }
   }
 
