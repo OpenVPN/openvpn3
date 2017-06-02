@@ -338,8 +338,8 @@ namespace openvpn {
 		else
 		  {
 		    // call into Asio to do the resolve operation
-		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item.server_host);
-		    resolver.async_resolve(item.server_host, "",
+		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item.server_host << " : " << item.server_port);
+		    resolver.async_resolve(item.server_host, item.server_port,
 					   [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
 					   {
 					     self->resolve_callback(error, results);
