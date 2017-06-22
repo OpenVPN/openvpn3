@@ -44,9 +44,11 @@ namespace openvpn {
       {
       }
 
-      void bind_local(const IP::Addr& addr)
+      // if port 0, kernel will dynamically allocate free port
+      void bind_local(const IP::Addr& addr, const unsigned short port=0)
       {
 	bind_local_addr = addr;
+	bind_local_port = port;
       }
 
     private:
@@ -57,11 +59,12 @@ namespace openvpn {
 	    set_option(openvpn_io::socket_base::reuse_address(true), ec);
 	    if (ec)
 	      return;
-	    bind(openvpn_io::ip::tcp::endpoint(bind_local_addr.to_asio(), 0), ec); // port 0 -- kernel will choose port
+	    bind(openvpn_io::ip::tcp::endpoint(bind_local_addr.to_asio(), bind_local_port), ec);
 	  }
       }
 
       IP::Addr bind_local_addr;
+      unsigned short bind_local_port = 0;
     };
 
   }
