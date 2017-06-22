@@ -37,6 +37,8 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
+#include <openvpn/common/hostport.hpp>
+#include <openvpn/addr/ip.hpp>
 #include <openvpn/asio/asiopolysock.hpp>
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/error/error.hpp>
@@ -136,6 +138,9 @@ namespace openvpn {
 	std::string cn;     // host for CN verification, defaults to host if empty
 	std::string head;   // host to send in HTTP header, defaults to host if empty
 	std::string port;
+
+	std::string local_addr;  // bind to local IP addr (optional)
+	std::string local_port;  // bind to local port (optional)
 
 	const std::string& host_transport() const
 	{
@@ -504,6 +509,17 @@ namespace openvpn {
 
 	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
 	    socket.reset(s);
+
+	    // optionally bind to local addr/port
+	    if (!host.local_addr.empty())
+	      {
+		const IP::Addr local_addr(host.local_addr, "local_addr");
+		unsigned short local_port = 0;
+		if (!host.local_port.empty())
+		  local_port = HostPort::parse_port(host.local_port, "local_port");
+		s->socket.bind_local(local_addr, local_port);
+	      }
+
 	    openvpn_io::async_connect(s->socket, std::move(results),
 				[self=Ptr(this)](const openvpn_io::error_code& error, const openvpn_io::ip::tcp::endpoint& endpoint)
 				{
