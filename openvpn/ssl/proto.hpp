@@ -171,6 +171,7 @@ namespace openvpn {
 
       // indicates key_method >= 2
       CONTROL_HARD_RESET_CLIENT_V2 = 7,   // initial key from client, forget previous state
+      CONTROL_HARD_RESET_CLIENT_V3 = 10,  // initial key from client, forget previous state
       CONTROL_HARD_RESET_SERVER_V2 = 8,   // initial key from server, forget previous state
 
       // define the range of legal opcodes
@@ -892,6 +893,7 @@ namespace openvpn {
 		    break;
 		  }
 		case CONTROL_HARD_RESET_CLIENT_V2:
+		case CONTROL_HARD_RESET_CLIENT_V3:
 		  {
 		    if (!proto.is_server())
 		      return;
@@ -946,6 +948,8 @@ namespace openvpn {
 	  return "DATA_V2";
 	case CONTROL_HARD_RESET_CLIENT_V2:
 	  return "CONTROL_HARD_RESET_CLIENT_V2";
+	case CONTROL_HARD_RESET_CLIENT_V3:
+	  return "CONTROL_HARD_RESET_CLIENT_V3";
 	case CONTROL_HARD_RESET_SERVER_V2:
 	  return "CONTROL_HARD_RESET_SERVER_V2";
 	}

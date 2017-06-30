@@ -34,6 +34,7 @@ namespace openvpn {
   inline bool is_openvpn_protocol(const unsigned char *p, const size_t len)
   {
     const int CONTROL_HARD_RESET_CLIENT_V2 = 7;
+    const int CONTROL_HARD_RESET_CLIENT_V3 = 10;
     const int OPCODE_SHIFT = 3;
     const int MIN_INITIAL_PKT_SIZE = 14;
 
@@ -42,7 +43,8 @@ namespace openvpn {
       case 3:
 	return p[0] == 0
 	  && p[1] >= MIN_INITIAL_PKT_SIZE
-	  && p[2] == (CONTROL_HARD_RESET_CLIENT_V2 << OPCODE_SHIFT);
+	  && (p[2] == (CONTROL_HARD_RESET_CLIENT_V2 << OPCODE_SHIFT)
+	      || p[2] == (CONTROL_HARD_RESET_CLIENT_V3 << OPCODE_SHIFT));
       case 2:
 	return p[0] == 0 && p[1] >= MIN_INITIAL_PKT_SIZE;
       case 1:
