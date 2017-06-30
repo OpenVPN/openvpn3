@@ -41,7 +41,8 @@
 
 #if !defined(USE_TLS_AUTH) && !defined(USE_TLS_CRYPT)
 //#define USE_TLS_AUTH
-#define USE_TLS_CRYPT
+//#define USE_TLS_CRYPT
+#define USE_TLS_CRYPT_V2
 #endif
 
 #define OPENVPN_INSTRUMENTATION
@@ -834,6 +835,7 @@ int test(const int thread_num)
     const std::string server_key = read_text("server.key");
     const std::string dh_pem = read_text("dh.pem");
     const std::string tls_auth_key = read_text("tls-auth.key");
+    const std::string tls_crypt_v2_client_key = read_text("tls-crypt-v2-client.key");
 
     // client config
     ClientSSLAPI::Config::Ptr cc(new ClientSSLAPI::Config());
@@ -888,6 +890,15 @@ int test(const int thread_num)
     cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
     cp->tls_key.parse(tls_auth_key);
     cp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+#endif
+#ifdef USE_TLS_CRYPT_V2
+    cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
+    cp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+    TLSCryptV2ClientKey tls_crypt_v2_key(cp->tls_crypt_context);
+    tls_crypt_v2_key.parse(tls_crypt_v2_client_key);
+    tls_crypt_v2_key.extract_key(cp->tls_key);
+    tls_crypt_v2_key.extract_wkc(cp->wkc);
+    cp->tls_crypt_v2 = true;
 #endif
     cp->reliable_window = 4;
     cp->max_ack_list = 4;
@@ -959,10 +970,13 @@ int test(const int thread_num)
     sp->set_tls_auth_digest(CryptoAlgs::lookup(PROTO_DIGEST));
     sp->key_direction = 1;
 #endif
-#ifdef USE_TLS_CRYPT
-    sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ServerCryptoAPI>());
+#if defined(USE_TLS_CRYPT) || defined(USE_TLS_CRYPT_V2)
+    sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
     sp->tls_key.parse(tls_auth_key);
     sp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+#endif
+#ifdef USE_TLS_CRYPT_V2
+    sp->tls_crypt_v2 = true;
 #endif
     sp->reliable_window = 4;
     sp->max_ack_list = 4;
