@@ -422,6 +422,8 @@ namespace openvpn {
 		}
 	      if (d == "tls-crypt")
 		return true;
+	      if (d == "tls-crypt-v2")
+		return true;
 	      return false;
 	    }
 	}

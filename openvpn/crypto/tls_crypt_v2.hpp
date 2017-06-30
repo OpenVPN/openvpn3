@@ -33,6 +33,56 @@
 #include <openvpn/ssl/sslchoose.hpp>
 
 namespace openvpn {
+  class TLSCryptV2ServerKey
+  {
+  public:
+    OPENVPN_SIMPLE_EXCEPTION(tls_crypt_v2_server_key_parse_error);
+    OPENVPN_SIMPLE_EXCEPTION(tls_crypt_v2_server_key_encode_error);
+    OPENVPN_SIMPLE_EXCEPTION(tls_crypt_v2_server_key_bad_size);
+
+    TLSCryptV2ServerKey()
+      : key_size(128),
+        key(key_size, BufferAllocated::DESTRUCT_ZERO)
+    {}
+
+    bool defined() const
+    {
+      return key.defined();
+    }
+
+    void parse(const std::string& key_text)
+    {
+      if (!SSLLib::PEMAPI::pem_decode(key, key_text.c_str(), key_text.length(),
+				      tls_crypt_v2_server_key_name))
+	throw tls_crypt_v2_server_key_parse_error();
+
+      if (key.size() != key_size)
+	throw tls_crypt_v2_server_key_bad_size();
+    }
+
+    void extract_key(OpenVPNStaticKey& tls_key)
+    {
+      std::memcpy(tls_key.raw_alloc(), key.c_data(), key_size);
+    }
+
+    std::string render() const
+    {
+      BufferAllocated data(32 + 2 * key.size(), 0);
+
+      if (!SSLLib::PEMAPI::pem_encode(data, key.c_data(), key.size(),
+				      tls_crypt_v2_server_key_name))
+	throw tls_crypt_v2_server_key_encode_error();
+
+      return std::string((const char *)data.c_data());
+    }
+
+  private:
+    const size_t key_size;
+    BufferAllocated key;
+    static const std::string tls_crypt_v2_server_key_name;
+  };
+
+  const std::string TLSCryptV2ServerKey::tls_crypt_v2_server_key_name = "OpenVPN tls-crypt-v2 server key";
 
   class TLSCryptV2ClientKey
   {

@@ -57,6 +57,7 @@
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/ovpnhmac.hpp>
 #include <openvpn/crypto/tls_crypt.hpp>
+#include <openvpn/crypto/tls_crypt_v2.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/bs64_data_limit.hpp>
@@ -292,8 +293,10 @@ namespace openvpn {
       // compressor
       CompressContext comp_ctx;
 
-      // tls_auth parms
+      // tls_auth/crypt parms
       OpenVPNStaticKey tls_key; // leave this undefined to disable tls_auth/crypt
+      bool tls_crypt_v2 = false; // needed to distinguish between tls-crypt and tls-crypt-v2 server mode
+      BufferAllocated wkc; // leave this undefined to disable tls-crypt-v2 on client
 
       OvpnHMACFactory::Ptr tls_auth_factory;
       OvpnHMACContext::Ptr tls_auth_context;
@@ -434,6 +437,8 @@ namespace openvpn {
 	      {
 		if (tls_auth_context)
 		  throw proto_option_error("tls-auth and tls-crypt are mutually exclusive");
+		if (tls_crypt_context)
+		  throw proto_option_error("tls-crypt and tls-crypt-v2 are mutually exclusive");
 
 		tls_key.parse(o->get(1, 0));
 
@@ -444,6 +449,46 @@ namespace openvpn {
 		  throw proto_option_error("missing support for tls-crypt algorithms");
 
 		set_tls_crypt_algs(digest, cipher);
+	      }
+	  }
+
+	  // tls-crypt-v2
+	  {
+	    const Option *o = opt.get_ptr(relay_prefix("tls-crypt-v2"));
+	    if (o)
+	      {
+		if (tls_auth_context)
+		  throw proto_option_error("tls-auth and tls-crypt-v2 are mutually exclusive");
+		if (tls_crypt_context)
+		  throw proto_option_error("tls-crypt and tls-crypt-v2 are mutually exclusive");
+
+		digest = CryptoAlgs::lookup("SHA256");
+		cipher = CryptoAlgs::lookup("AES-256-CTR");
+
+		if ((digest == CryptoAlgs::NONE) || (cipher == CryptoAlgs::NONE))
+		  throw proto_option_error("missing support for tls-crypt-v2 algorithms");
+
+		// initialize tls_crypt_context
+		set_tls_crypt_algs(digest, cipher);
+
+		std::string keyfile = o->get(1, 0);
+
+		if (opt.exists("client"))
+		  {
+		    // in client mode expect the key to be a PEM encoded tls-crypt-v2 client key (key + WKc)
+		    TLSCryptV2ClientKey tls_crypt_v2_key(tls_crypt_context);
+		    tls_crypt_v2_key.parse(keyfile);
+		    tls_crypt_v2_key.extract_key(tls_key);
+		    tls_crypt_v2_key.extract_wkc(wkc);
+		  }
+		else
+		  {
+		    // in server mode this is a PEM encoded tls-crypt-v2 server key
+		    TLSCryptV2ServerKey tls_crypt_v2_key;
+		    tls_crypt_v2_key.parse(keyfile);
+		    tls_crypt_v2_key.extract_key(tls_key);
+		  }
+		tls_crypt_v2 = true;
 	      }
 	  }
 	}
@@ -679,6 +724,11 @@ namespace openvpn {
       bool tls_crypt_enabled() const
       {
 	return tls_key.defined() && tls_crypt_context;
+      }
+
+      bool tls_crypt_v2_enabled() const
+      {
+	return tls_crypt_enabled() && tls_crypt_v2;
       }
 
       // generate a string summarizing options that will be
@@ -1221,6 +1271,8 @@ namespace openvpn {
     public:
       typedef RCPtr<KeyContext> Ptr;
 
+      OPENVPN_SIMPLE_EXCEPTION(tls_crypt_unwrap_wkc_error);
+
       // KeyContext events occur on two basic key types:
       //   Primary Key -- the key we transmit/encrypt on.
       //   Secondary Key -- new keys and retiring keys.
@@ -1611,6 +1663,15 @@ namespace openvpn {
 	  {
 	    case TLS_AUTH:
 	      return validate_tls_auth(recv, proto, now);
+	    case TLS_CRYPT_V2:
+	      if (opcode_extract(recv[0]) == CONTROL_HARD_RESET_CLIENT_V3)
+		{
+		  // skip validation of HARD_RESET_V3 because the tls-crypt
+		  // engine has not been initialized yet
+		  std::cout << now->raw() << " SKIPPING VALIDATION OF HARD_RESET_V3" << std::endl;
+		  return true;
+		}
+	      /* no break */
 	    case TLS_CRYPT:
 	      return validate_tls_crypt(recv, proto, now);
 	    case TLS_PLAIN:
@@ -1996,25 +2057,36 @@ namespace openvpn {
 	set_event(ev);
       }
 
-      unsigned int initial_op(const bool sender) const
+      unsigned int initial_op(const bool sender, const bool tls_crypt_v2) const
       {
 	if (key_id_)
-	  return CONTROL_SOFT_RESET_V1;
+	  {
+	    return CONTROL_SOFT_RESET_V1;
+	  }
 	else
-	  return (proto.is_server() == sender) ? CONTROL_HARD_RESET_SERVER_V2 : CONTROL_HARD_RESET_CLIENT_V2;
+	  {
+	    if (proto.is_server() == sender)
+	      return CONTROL_HARD_RESET_SERVER_V2;
+
+	    if (!tls_crypt_v2)
+	      return CONTROL_HARD_RESET_CLIENT_V2;
+	    else
+	      return CONTROL_HARD_RESET_CLIENT_V3;
+	  }
       }
 
       void send_reset()
       {
 	Packet pkt;
-	pkt.opcode = initial_op(true);
+	pkt.opcode = initial_op(true, proto.tls_wrap_mode == TLS_CRYPT_V2);
 	pkt.frame_prepare(*proto.config->frame, Frame::WRITE_SSL_INIT);
 	raw_send(std::move(pkt));
       }
 
       void raw_recv(Packet&& raw_pkt)  // called by ProtoStackBase
       {
-	if (raw_pkt.buf->empty() && raw_pkt.opcode == initial_op(false))
+	if (raw_pkt.buf->empty() &&
+	    raw_pkt.opcode == initial_op(false, proto.tls_wrap_mode == TLS_CRYPT_V2))
 	  {
 	    switch (state)
 	      {
@@ -2290,6 +2362,11 @@ namespace openvpn {
 	  }
 	work.inc_size(decrypt_bytes);
 
+	// append WKc to wrapped packet for tls-crypt-v2
+	if ((opcode == CONTROL_HARD_RESET_CLIENT_V3)
+	    && (proto.tls_wrap_mode == TLS_CRYPT_V2))
+	  proto.tls_crypt_append_wkc(work);
+
 	// 'work' now contains the complete packet ready to go. swap it with 'buf'
 	buf.swap(work);
       }
@@ -2310,6 +2387,7 @@ namespace openvpn {
 	      gen_head_tls_auth(opcode, buf);
 	      break;
 	    case TLS_CRYPT:
+	    case TLS_CRYPT_V2:
 	      gen_head_tls_crypt(opcode, buf);
 	      break;
 	    case TLS_PLAIN:
@@ -2535,6 +2613,95 @@ namespace openvpn {
 	return false;
       }
 
+      bool unwrap_tls_crypt_wkc(Buffer &recv)
+      {
+	// the ``WKc`` is located at the end of the packet, after the tls-crypt
+	// payload.
+	// Format is as follows (as documented by Steffan Krager):
+	//
+	// ``len = len(WKc)`` (16 bit, network byte order)
+	// ``T = HMAC-SHA256(Ka, len || Kc || metadata)``
+	// ``IV = 128 most significant bits of T``
+	// ``WKc = T || AES-256-CTR(Ke, IV, Kc || metadata) || len``
+
+	const unsigned char *orig_data = recv.data();
+	const size_t orig_size = recv.size();
+	const size_t hmac_size = proto.config->tls_crypt_context->digest_size();
+	const size_t tls_frame_size = 1 + ProtoSessionID::SIZE +
+				      PacketID::size(PacketID::LONG_FORM) +
+				      hmac_size +
+				      // the following is the tls-crypt payload
+				      sizeof(char) +  // length of ACK array
+				      sizeof(id_t); // reliable ID
+
+	// check that at least the authentication tag ``T`` is present
+	if (orig_size < (tls_frame_size + hmac_size))
+	  return false;
+
+	// the ``WKc`` is just appended after the standard tls-crypt frame
+	const unsigned char *wkc_raw = orig_data + tls_frame_size;
+	const size_t wkc_raw_size = orig_size - tls_frame_size - sizeof(uint16_t);
+	// retrieve the ``WKc`` len from the bottom of the packet and convert it to Host Order
+	uint16_t wkc_len = ntohs(*(uint16_t *)(wkc_raw + wkc_raw_size));
+	// length sanity check (the size of the ``len`` field is included in the value)
+	if ((wkc_len - sizeof(uint16_t)) != wkc_raw_size)
+	  return false;
+
+	BufferAllocated plaintext(wkc_len, BufferAllocated::CONSTRUCT_ZERO);
+	// plaintext will be used to compute the Auth Tag, therefore start by prepnding
+	// the WKc length in network order
+	wkc_len = htons(wkc_len);
+	plaintext.write(&wkc_len, sizeof(wkc_len));
+	const size_t decrypt_bytes = proto.tls_crypt_server->decrypt(wkc_raw,
+								     plaintext.data() + 2,
+								     plaintext.max_size() - 2,
+								     wkc_raw + hmac_size,
+								     wkc_raw_size - hmac_size);
+	plaintext.inc_size(decrypt_bytes);
+	// decrypted data must at least contain a full 2048bits client key
+	// (metadata is optional)
+	if (plaintext.size() < OpenVPNStaticKey::KEY_SIZE)
+	  {
+	    proto.stats->error(Error::DECRYPT_ERROR);
+	    if (proto.is_tcp())
+	      invalidate(Error::DECRYPT_ERROR);
+	    return false;
+	  }
+
+	if (!proto.tls_crypt_server->hmac_cmp(wkc_raw, 0,
+					      plaintext.c_data(),
+					      plaintext.size()))
+	  {
+	    proto.stats->error(Error::HMAC_ERROR);
+	    if (proto.is_tcp())
+	      invalidate(Error::HMAC_ERROR);
+	    return false;
+	  }
+
+	// we can now remove the WKc length from the plaintext, as it is not
+	// really part of the key material
+	plaintext.advance(sizeof(wkc_len));
+
+	// WKc has been authenticated: it contains the client key followed
+	// by the optional metadata. Let's initialize the tls-crypt context
+	// with the client key
+
+	OpenVPNStaticKey client_key;
+	plaintext.read(client_key.raw_alloc(), OpenVPNStaticKey::KEY_SIZE);
+	proto.reset_tls_crypt(*proto.config, client_key);
+
+	// check existence of optional metadata
+	size_t metadata_size = decrypt_bytes - OpenVPNStaticKey::KEY_SIZE;
+	if (metadata_size > 0)
+	  OPENVPN_LOG("tls-crypt-v2: received metadata (" << metadata_size << " bytes) - IGNORING");
+	// metadata is ignored at the moment
+
+	// virtually remove the WKc from the packet
+	recv.set_size(tls_frame_size);
+
+	return true;
+      }
+
       bool decapsulate(Packet& pkt) // called by ProtoStackBase
       {
 	try {
@@ -2542,6 +2709,20 @@ namespace openvpn {
 	  {
 	    case TLS_AUTH:
 	      return decapsulate_tls_auth(pkt);
+	    case TLS_CRYPT_V2:
+	      if (pkt.opcode == CONTROL_HARD_RESET_CLIENT_V3)
+		{
+		  // unwrap WKc and extract Kc (client key) from packet.
+		  // This way we can initialize the tls-crypt per-client contexts
+		  // (this happens on the server side only)
+		  if (!unwrap_tls_crypt_wkc(*pkt.buf))
+		  {
+		    return false;
+		  }
+		}
+	      // now that the tls-crypt contexts have been initialized it is
+	      // possible to proceed with the standard tls-crypt decapsulation
+	      /* no break */
 	    case TLS_CRYPT:
 	      return decapsulate_tls_crypt(pkt);
 	    case TLS_PLAIN:
@@ -2758,11 +2939,30 @@ namespace openvpn {
 	return false;
       }
 
+    protected:
+      unsigned int reset_op;
+
     private:
       TLSCryptInstance::Ptr tls_crypt_recv;
       Frame::Ptr frame;
       BufferAllocated work;
-      unsigned int reset_op;
+    };
+
+    class TLSCryptV2PreValidate : public TLSCryptPreValidate
+    {
+        public:
+          OPENVPN_SIMPLE_EXCEPTION(tls_crypt_v2_pre_validate);
+
+          TLSCryptV2PreValidate(const Config& c, const bool server)
+	    : TLSCryptPreValidate(c, server)
+          {
+            if (!c.tls_crypt_v2_enabled())
+              throw tls_crypt_v2_pre_validate();
+
+            // in case of server peer, we expect the new v3 packet type
+            if (server)
+              reset_op = CONTROL_HARD_RESET_CLIENT_V3;
+          }
     };
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
@@ -2778,19 +2978,26 @@ namespace openvpn {
       const Config& c = *config;
 
       // tls-auth setup
-      if (c.tls_auth_context)
+      if (c.tls_crypt_v2_enabled())
 	{
-	  tls_wrap_mode = TLS_AUTH;
+	  tls_wrap_mode = TLS_CRYPT_V2;
 
 	  // get HMAC size from Digest object
-	  hmac_size = c.tls_auth_context->size();
+	  hmac_size = c.tls_crypt_context->digest_size();
 	}
-      else if (c.tls_crypt_context)
+      else if (c.tls_crypt_enabled())
 	{
 	  tls_wrap_mode = TLS_CRYPT;
 
 	  // get HMAC size from Digest object
 	  hmac_size = c.tls_crypt_context->digest_size();
+	}
+      else if (c.tls_auth_enabled())
+	{
+	  tls_wrap_mode = TLS_AUTH;
+
+	  // get HMAC size from Digest object
+	  hmac_size = c.tls_auth_context->size();
 	}
       else
 	{
@@ -2806,6 +3013,41 @@ namespace openvpn {
 
       OPENVPN_LOG("TLS: primary key context uninitialized. Can't retrieve TLS warnings");
       return 0;
+    }
+
+    void reset_tls_crypt(const Config& c, const OpenVPNStaticKey& key)
+    {
+      tls_crypt_send = c.tls_crypt_context->new_obj_send();
+      tls_crypt_recv = c.tls_crypt_context->new_obj_recv();
+
+      // static direction assignment - not user configurable
+      unsigned int key_dir = is_server() ?
+			     OpenVPNStaticKey::NORMAL :
+			     OpenVPNStaticKey::INVERSE;
+
+      tls_crypt_send->init(key.slice(OpenVPNStaticKey::HMAC |
+				     OpenVPNStaticKey::ENCRYPT | key_dir),
+			   key.slice(OpenVPNStaticKey::CIPHER |
+				     OpenVPNStaticKey::ENCRYPT | key_dir));
+      tls_crypt_recv->init(key.slice(OpenVPNStaticKey::HMAC |
+				     OpenVPNStaticKey::DECRYPT | key_dir),
+			   key.slice(OpenVPNStaticKey::CIPHER |
+				     OpenVPNStaticKey::DECRYPT | key_dir));
+    }
+
+    void reset_tls_crypt_server(const Config& c)
+    {
+      //tls-crypt session key is derived later from WKc received from the client
+      tls_crypt_send.reset();
+      tls_crypt_recv.reset();
+
+      //server context is used only to process incoming WKc's
+      tls_crypt_server = c.tls_crypt_context->new_obj_recv();
+
+      //the server key is composed by one key set only, therefore direction and
+      //mode should not be specified when slicing
+      tls_crypt_server->init(c.tls_key.slice(OpenVPNStaticKey::HMAC),
+			     c.tls_key.slice(OpenVPNStaticKey::CIPHER));
     }
 
     void reset()
@@ -2827,16 +3069,19 @@ namespace openvpn {
       switch (tls_wrap_mode)
 	{
 	  case TLS_CRYPT:
-	    tls_crypt_send = c.tls_crypt_context->new_obj_send();
-	    tls_crypt_recv = c.tls_crypt_context->new_obj_recv();
-
-	    // static direction assignment - not user configurable
-	    key_dir = is_server() ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
-	    tls_crypt_send->init(c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir),
-				 c.tls_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir));
-	    tls_crypt_recv->init(c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir),
-				 c.tls_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
-
+	    reset_tls_crypt(c, c.tls_key);
+	    // init tls_crypt packet ID
+	    ta_pid_send.init(PacketID::LONG_FORM);
+	    ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
+	    break;
+	  case TLS_CRYPT_V2:
+	    if (is_server())
+	      // setup key to be used to unwrap WKc upon client connection.
+	      // tls-crypt session key setup is postponed to reception of WKc
+	      // from client
+	      reset_tls_crypt_server(c);
+	    else
+	      reset_tls_crypt(c, c.tls_key);
 	    // init tls_crypt packet ID
 	    ta_pid_send.init(PacketID::LONG_FORM);
 	    ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
@@ -2867,7 +3112,7 @@ namespace openvpn {
 	    break;
 	  case TLS_PLAIN:
 	    break;
-	}
+      }
 
       // initialize proto session ID
       psid_self.randomize(*c.prng);
@@ -3206,7 +3451,8 @@ namespace openvpn {
     enum TLSWrapMode {
       TLS_PLAIN,
       TLS_AUTH,
-      TLS_CRYPT
+      TLS_CRYPT,
+      TLS_CRYPT_V2
     };
 
     void reset_all()
@@ -3490,6 +3736,13 @@ namespace openvpn {
 	keepalive_xmit = kx;
     }
 
+    void tls_crypt_append_wkc(BufferAllocated& dst)
+    {
+      if (!config->wkc.defined())
+	throw proto_error("Client Key Wrapper undefined");
+      dst.append(config->wkc);
+    }
+
     // BEGIN ProtoContext data members
 
     Config::Ptr config;
@@ -3512,6 +3765,8 @@ namespace openvpn {
 
     TLSCryptInstance::Ptr tls_crypt_send;
     TLSCryptInstance::Ptr tls_crypt_recv;
+
+    TLSCryptInstance::Ptr tls_crypt_server;
 
     PacketIDSend ta_pid_send;
     PacketIDReceive ta_pid_recv;
