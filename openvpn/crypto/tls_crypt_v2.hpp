@@ -155,6 +155,44 @@ namespace openvpn {
   };
 
   const std::string TLSCryptV2ClientKey::tls_crypt_v2_client_key_name = "OpenVPN tls-crypt-v2 client key";
+
+  // the user can extend the TLSCryptMetadata and the TLSCryptMetadataFactory
+  // classes to implement its own metadata verification method.
+  //
+  // default method is to *ignore* the metadata contained in the WKc sent by the client
+  class TLSCryptMetadata : public RC<thread_unsafe_refcount>
+  {
+  public:
+    typedef RCPtr<TLSCryptMetadata> Ptr;
+
+    // override this method with your own verification mechanism.
+    //
+    // If type is -1 it means that metadata is empty.
+    //
+    virtual bool verify(int type, Buffer& metadata) const
+    {
+      return true;
+    }
+  };
+
+  // abstract class to be extended when creating other factories
+  class TLSCryptMetadataFactory : public RC<thread_unsafe_refcount>
+  {
+  public:
+    typedef RCPtr<TLSCryptMetadataFactory> Ptr;
+
+    virtual TLSCryptMetadata::Ptr new_obj() = 0;
+  };
+
+  // factory implementation for the basic verification method
+  class CryptoTLSCryptMetadataFactory : public TLSCryptMetadataFactory
+  {
+  public:
+    TLSCryptMetadata::Ptr new_obj()
+    {
+      return new TLSCryptMetadata();
+    }
+  };
 }
 
 #endif /* OPENVPN_CRYPTO_TLS_CRYPT_V2_H */

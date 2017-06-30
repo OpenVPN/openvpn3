@@ -305,6 +305,8 @@ namespace openvpn {
       TLSCryptFactory::Ptr tls_crypt_factory;
       TLSCryptContext::Ptr tls_crypt_context;
 
+      TLSCryptMetadataFactory::Ptr tls_crypt_metadata_factory;
+
       // reliability layer parms
       reliable::id_t reliable_window = 0;
       size_t max_ack_list = 0;
@@ -2690,11 +2692,16 @@ namespace openvpn {
 	plaintext.read(client_key.raw_alloc(), OpenVPNStaticKey::KEY_SIZE);
 	proto.reset_tls_crypt(*proto.config, client_key);
 
-	// check existence of optional metadata
-	size_t metadata_size = decrypt_bytes - OpenVPNStaticKey::KEY_SIZE;
-	if (metadata_size > 0)
-	  OPENVPN_LOG("tls-crypt-v2: received metadata (" << metadata_size << " bytes) - IGNORING");
-	// metadata is ignored at the moment
+	// verify metadata
+	int metadata_type = -1;
+	if (!plaintext.empty())
+	  metadata_type = plaintext.pop_front();
+
+	if (!proto.tls_crypt_metadata->verify(metadata_type, plaintext))
+	  {
+	    proto.stats->error(Error::TLS_CRYPT_META_FAIL);
+	    return false;
+	  }
 
 	// virtually remove the WKc from the packet
 	recv.set_size(tls_frame_size);
@@ -3048,6 +3055,8 @@ namespace openvpn {
       //mode should not be specified when slicing
       tls_crypt_server->init(c.tls_key.slice(OpenVPNStaticKey::HMAC),
 			     c.tls_key.slice(OpenVPNStaticKey::CIPHER));
+
+      tls_crypt_metadata = c.tls_crypt_metadata_factory->new_obj();
     }
 
     void reset()
@@ -3767,6 +3776,7 @@ namespace openvpn {
     TLSCryptInstance::Ptr tls_crypt_recv;
 
     TLSCryptInstance::Ptr tls_crypt_server;
+    TLSCryptMetadata::Ptr tls_crypt_metadata;
 
     PacketIDSend ta_pid_send;
     PacketIDReceive ta_pid_recv;

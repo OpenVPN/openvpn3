@@ -835,6 +835,7 @@ int test(const int thread_num)
     const std::string server_key = read_text("server.key");
     const std::string dh_pem = read_text("dh.pem");
     const std::string tls_auth_key = read_text("tls-auth.key");
+    const std::string tls_crypt_v2_server_key = read_text("tls-crypt-v2-server.key");
     const std::string tls_crypt_v2_client_key = read_text("tls-crypt-v2-client.key");
 
     // client config
@@ -894,10 +895,12 @@ int test(const int thread_num)
 #ifdef USE_TLS_CRYPT_V2
     cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
     cp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
-    TLSCryptV2ClientKey tls_crypt_v2_key(cp->tls_crypt_context);
-    tls_crypt_v2_key.parse(tls_crypt_v2_client_key);
-    tls_crypt_v2_key.extract_key(cp->tls_key);
-    tls_crypt_v2_key.extract_wkc(cp->wkc);
+    {
+      TLSCryptV2ClientKey tls_crypt_v2_key(cp->tls_crypt_context);
+      tls_crypt_v2_key.parse(tls_crypt_v2_client_key);
+      tls_crypt_v2_key.extract_key(cp->tls_key);
+      tls_crypt_v2_key.extract_wkc(cp->wkc);
+    }
     cp->tls_crypt_v2 = true;
 #endif
     cp->reliable_window = 4;
@@ -970,12 +973,20 @@ int test(const int thread_num)
     sp->set_tls_auth_digest(CryptoAlgs::lookup(PROTO_DIGEST));
     sp->key_direction = 1;
 #endif
-#if defined(USE_TLS_CRYPT) || defined(USE_TLS_CRYPT_V2)
+#if defined(USE_TLS_CRYPT)
     sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
     sp->tls_key.parse(tls_auth_key);
     sp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
 #endif
 #ifdef USE_TLS_CRYPT_V2
+    sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
+    {
+      TLSCryptV2ServerKey tls_crypt_v2_key;
+      tls_crypt_v2_key.parse(tls_crypt_v2_server_key);
+      tls_crypt_v2_key.extract_key(sp->tls_key);
+    }
+    sp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+    sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
     sp->tls_crypt_v2 = true;
 #endif
     sp->reliable_window = 4;
