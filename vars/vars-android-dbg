@@ -3,11 +3,13 @@ export PLATFORM=android-dbg
 export ABI=armeabi
 export DEBUG_BUILD=1
 export OTHER_COMPILER_FLAGS="-g"
-export CXX_COMPILER_FLAGS="-std=c++11"
+export CXX_COMPILER_FLAGS="-std=c++1y"
 export LIB_OPT_LEVEL="-O0"
 export LIB_FPIC="-fPIC"
 export TC=$DEP_DIR/tc-arm
-export PLATFORM_FLAGS="--sysroot=$TC/sysroot"
+export PLATFORM_FLAGS="-march=armv5te --sysroot=$TC/sysroot"
+export GPP_CMD="$TC/bin/arm-linux-androideabi-g++"
+export GCC_CMD="$TC/bin/arm-linux-androideabi-gcc"
 
 [ -z "$VARS_SAVE_PATH" ] && VARS_SAVE_PATH="$PATH"
 export PATH="$TC/bin:$TC/arm-linux-androideabi/bin:$VARS_SAVE_PATH"

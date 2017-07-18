@@ -13,31 +13,35 @@ cd $DEP_DIR
 DEST=$(pwd)/tc-arm64
 rm -rf $DEST
 ABI=aarch64-linux-android
+ABI_VER=4.9
 $NDK/build/tools/make-standalone-toolchain.sh \
     --verbose \
-    --ndk-dir=$NDK \
-    --toolchain=$ABI-4.9 \
+    --toolchain=$ABI-$ABI_VER \
     --stl=gnustl \
     --arch=arm64 \
-    --platform=android-21 \
+    --platform=android-24 \
     --install-dir=$DEST
 cd $DEST/$ABI/bin
 ln -s ../../bin/$ABI-gcc cc
 ln -s ../../bin/$ABI-gcc gcc
 ln -s ../../bin/$ABI-g++ g++
+ln -s ../../libexec/gcc/$ABI/$ABI_VER.x/cc1 cc1
+ln -s ../../libexec/gcc/$ABI/$ABI_VER.x/cc1plus cc1plus
 
 # 32 bit
 cd $DEP_DIR
 DEST=$(pwd)/tc-arm
 rm -rf $DEST
 ABI=arm-linux-androideabi
+ABI_VER=4.9
 $NDK/build/tools/make-standalone-toolchain.sh \
     --verbose \
-    --ndk-dir=$NDK \
-    --toolchain=$ABI-4.8 \
+    --toolchain=$ABI-$ABI_VER \
     --stl=gnustl \
     --arch=arm \
     --platform=android-14 \
     --install-dir=$DEST
 cd $DEST/$ABI/bin
 ln -s ../../bin/$ABI-gcc cc
+ln -s ../../libexec/gcc/$ABI/$ABI_VER.x/cc1 cc1
+ln -s ../../libexec/gcc/$ABI/$ABI_VER.x/cc1plus cc1plus
