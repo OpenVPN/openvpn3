@@ -477,9 +477,9 @@ namespace openvpn {
 	{
 	  std::string auto_config_url;
 	  std::string http_host;
-	  unsigned int http_port;
+	  unsigned int http_port = 0;
 	  std::string https_host;
-	  unsigned int https_port;
+	  unsigned int https_port = 0;
 	  for (OptionList::IndexList::const_iterator i = dopt->second.begin(); i != dopt->second.end(); ++i)
 	    {
 	      const Option& o = opt[*i];
