@@ -65,8 +65,8 @@ namespace openvpn {
 	ctx.md_ctx = nullptr;
 
 	mbedtls_md_init(&ctx);
-	if ( mbedtls_md_setup(&ctx, DigestContext::digest_type(digest), 1) < 0)
-	  throw mbedtls_hmac_error("mbedtls_md_init_ctx");
+	if (mbedtls_md_setup(&ctx, DigestContext::digest_type(digest), 1) < 0)
+	  throw mbedtls_hmac_error("mbedtls_md_setup");
 	if (mbedtls_md_hmac_starts(&ctx, key, key_size) < 0)
 	  throw mbedtls_hmac_error("mbedtls_md_hmac_starts");
 	initialized = true;
