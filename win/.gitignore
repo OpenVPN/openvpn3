@@ -3,3 +3,4 @@ cli.exe
 cli.obj
 *.pdb
 .vs
+parms_local.py

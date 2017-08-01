@@ -30,6 +30,9 @@ def build_mbedtls(parms):
             d = expand('mbedtls', parms['DEP'], parms.get('LIB_VERSIONS'))
             if d.endswith("-apache"):
                 d = d[:-7]
+            elif d.endswith("-gpl"):
+                d = d[:-4]
+
             os.rename(d, dist)
 
             # edit mbedTLS config.h

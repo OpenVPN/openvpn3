@@ -145,6 +145,57 @@ To connect::
 
     $ ./cli client.ovpn
 
+
+Building the OpenVPN 3 client on Windows
+----------------------------------------
+
+Those instructions were tested with Git Bash.
+
+Prerequisites:
+
+ - Visual Studio 2015
+ - Python 2.7
+
+To make python interpreter work inside Git Bash terminal, add::
+
+    alias python='winpty python.exe'
+
+to ``.bashrc``.
+
+Clone the OpenVPN 3 source repo::
+
+  $ mkdir ovpn3
+  $ cd ovpn3
+  $ git clone https://github.com/OpenVPN/openvpn3.git core
+
+Create ``parms_local.py`` inside ``~/ovpn3/core/win`` directory which overrides build settings from ``parms.py``. For example:
+
+.. code-block:: python
+
+  PARMS = {
+      "OVPN3" : "c:\\Users\\user\\Projects\\ovpn3",
+      "TAP" : "c:\\Users\\user\\Projects\\tap-windows",
+      "DEP" : "c:\\Users\\user\\Downloads",
+      "BUILD" : "c:\\Users\\user\\Projects\\ovpn3-build",
+      "LIB_VERSIONS" : {
+          "asio" : "asio-cc1bd58f9ebb15afbebf53207015ff690b338195"
+      }
+  }
+
+Download dependencies as tar(zip)balls to DEP directory defined in previous step:
+
+1. Asio — https://github.com/chriskohlhoff/asio
+2. mbed TLS (2.3.0 or higher) — https://tls.mbed.org/
+3. LZ4 — https://github.com/Cyan4973/lz4
+
+Extract and build dependencies (assuming you are in ``~/ovpn3/core/win`` directory)::
+
+    $ python buildep.py
+
+Build the OpenVPN 3 client executable:
+
+    $ python build.py
+
 Testing
 -------
 
@@ -553,3 +604,4 @@ License
 -------
 
 See `<LICENSE.rst>`_.
+ 
