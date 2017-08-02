@@ -196,6 +196,13 @@ Build the OpenVPN 3 client executable:
 
     $ python build.py
 
+Visual Studio 2015 project and solution files are located in ``~/ovpn3/core/win`` directory.
+Before opening project you need to build dependencies and define environmental variables:
+
+- OVPN3_BUILD - path where dependencies are build (BUILD in parms.py)
+- OVPN3_CORE - path where ovpn3-core was checked out (OVPN3 in parms.py)
+- OVPN3_TAP_WINDOWS - path where tap-windows was checked out (TAP in parms.py)
+
 Testing
 -------
 
