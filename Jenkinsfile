@@ -12,10 +12,11 @@ def build_linux() {
     checkout() 
     withEnv(["O3=$WORKSPACE"]) {
         dir("$O3/core/test/ovpncli") {
-            sh 'ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build cli'
+            sh 'ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 OUTBIN=cli_mbed $O3/core/scripts/build cli'
+            sh 'ECHO=1 PROF=linux ASIO_DIR=~/asio OPENSSL_SYS=1 LZ4_SYS=1 OUTBIN=cli_ssl $O3/core/scripts/build cli'
         }
     }
-    archiveArtifacts 'core/test/ovpncli/cli'
+    archiveArtifacts 'core/test/ovpncli/cli_mbed,core/test/ovpncli/cli_ssl'
 }
 
 def build_windows() {
