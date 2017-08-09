@@ -186,7 +186,7 @@ private:
   virtual void log(const ClientAPI::LogInfo& log) override
   {
     std::lock_guard<std::mutex> lock(log_mutex);
-    std::cout << date_time() << ' ' << log.text << std::flush;
+    std::cout << date_time() << ' ' << log.getText() << std::flush;
   }
 
   virtual void clock_tick() override

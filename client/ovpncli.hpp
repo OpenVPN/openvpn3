@@ -24,6 +24,7 @@
 // The crux of the API is defined in OpenVPNClient (below)
 // and TunBuilderBase.
 
+#include <atomic>
 #include <string>
 #include <vector>
 #include <utility>
@@ -318,11 +319,37 @@ namespace openvpn {
 
     // used to pass log lines
     // (client reads)
-    struct LogInfo
+    class LogInfo
     {
+    protected:
+      std::string text;     // log output (usually but not always one line)
+
+    public:
       LogInfo() {}
       LogInfo(std::string str);
-      std::string text;     // log output (usually but not always one line)
+
+      virtual std::string getText() const;
+    };
+
+    // log line with unique reference
+    class UniqueLogInfo : public LogInfo
+    {
+      // could be accessed and modified in different threads, hence atomic
+      static std::atomic_ullong globalIndex;
+
+    protected:
+      // index and pid provide uniqueness to log info
+      unsigned long long index;
+      int pid;
+
+      // generates string representation of unique id
+      std::string getUniqueId() const;
+
+    public:
+      UniqueLogInfo(std::string str);
+
+      // prepends log string with unique reference
+      virtual std::string getText() const override;
     };
 
     // receives log messages
