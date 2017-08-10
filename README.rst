@@ -179,7 +179,8 @@ Create ``parms_local.py`` inside ``~/ovpn3/core/win`` directory which overrides 
       "BUILD" : "c:\\Users\\user\\Projects\\ovpn3-build",
       "LIB_VERSIONS" : {
           "asio" : "asio-cc1bd58f9ebb15afbebf53207015ff690b338195"
-      }
+      },
+      "GTEST_ROOT": "c:\\Users\\user\\Projects\\googletest"
   }
 
 Download dependencies as tar(zip)balls to DEP directory defined in previous step:
@@ -233,6 +234,36 @@ Run the test::
   user	0m15.800s
   sys	0m0.004s
 
+The OpenVPN 3 core also includes unit tests, which are based on
+Google Test framework. To run unit tests, you need to install
+CMake and build Google Test.
+
+Building Google Test on Linux::
+
+  $ git clone https://github.com/google/googletest.git
+  $ cd googletest
+  $ cmake . && cmake --build .
+
+Building Google Test on Windows::
+
+  > git clone https://github.com/google/googletest.git
+  > cd googletest
+  > cmake -G "Visual Studio 14 2015 Win64" .
+  > cmake --build .
+
+After Google Test is built you are ready to build and run unit tests.
+
+Build and run tests on Linux::
+
+  $ cd ovpn3/core/test/unittests
+  $ GTEST_DIR=~/googletest ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build test_log
+  $ ./test_log
+
+Build and run tests on Windows::
+
+  $ cd ovpn3/core/win
+  $ python build.py ../test/unittests/test_log.cpp unittest
+  $ test_log.exe
 
 Developer Guide
 ---------------

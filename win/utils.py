@@ -225,7 +225,10 @@ def vc_cmd(parms, cmd, arch=None, succeed=0):
 
 def vc_parms(parms, cmd_dict):
     cmd_dict["dbg_rel_flags"] = "/Zi" if parms['DEBUG'] else "/O2"
-    cmd_dict["link_static_dynamic_flags"] = "/MT" if parms['STATIC'] else "/MD"
+    flags = "/MT" if parms['STATIC'] else "/MD"
+    if parms['DEBUG']:
+        flags += "d"
+    cmd_dict["link_static_dynamic_flags"] = flags
 
 def patchfile(pkg_prefix, patchdir):
     return os.path.join(patchdir, one_prefix(pkg_prefix, patchdir))

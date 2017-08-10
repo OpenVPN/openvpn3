@@ -15,7 +15,8 @@ PARMS = {
         'asio'     : "asio-20170227",
         'mbedtls'  : "mbedtls-2.4.0",
         'lz4'      : "lz4-1.7.5",
-    }
+    },
+    "GTEST_ROOT": ""
 }
 
 try:

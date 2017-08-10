@@ -48,6 +48,7 @@ if [ -z "$1" ]; then
     echo " CITY=1 -- build with Cityhash hash library"
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
+    echo " GTEST_DIR=<dir> -- specify googletest tree, required for building unit tests"
     for s in $(enum_build_extras) ; do
 	. $s args
     done
@@ -192,6 +193,13 @@ fi
 if [ "$ASIO" = "1" ] || [ "$ASIO_DIR" ]; then
     [ -z "$ASIO_DIR" ] && ASIO_DIR="$DEP_DIR/asio"
     CPPFLAGS="$CPPFLAGS -DUSE_ASIO -DASIO_STANDALONE -DASIO_NO_DEPRECATED -I$ASIO_DIR/asio/include"
+fi
+
+# gtest
+if [ "$GTEST_DIR" ]; then
+    CPPFLAGS="$CPPFLAGS -I$GTEST_DIR/googletest/include"
+    LIBDIRS="$LIBDIRS -L$GTEST_DIR/googlemock/gtest"
+    LIBS="$LIBS -lgtest"
 fi
 
 # LZO compression
