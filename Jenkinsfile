@@ -9,7 +9,7 @@ def checkout() {
 }
 
 def build_linux() {
-    checkout() 
+    checkout()
     withEnv(["O3=$WORKSPACE"]) {
         dir("$O3/core/test/ovpncli") {
             sh 'ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 OUTBIN=cli_mbed $O3/core/scripts/build cli'
@@ -30,16 +30,36 @@ def build_windows() {
 }
 
 stage('Build') {
-    parallel(
-        linux: {
-            node('linux_slave') {
-                build_linux()          
+    try {
+        bitbucketStatusNotify(buildState: 'INPROGRESS')
+        parallel(
+            linux: {
+                node('linux_slave') {
+                    build_linux()
+                }
+            },
+            windows: {
+                node('windows_slave') {
+                    build_windows()
+                }
             }
-        },
-        windows: {
-            node('windows_slave') {
-                build_windows()
-            }
+        )
+        currentBuild.result = 'SUCCESS'
+        bitbucketStatusNotify(buildState: 'SUCCESSFUL')
+    }
+    catch (Exception e) {
+        currentBuild.result = 'FAILURE'
+        bitbucketStatusNotify(buildState: 'FAILED')
+        throw e
+    }
+    finally {
+        // send mail on every failure or status change
+        if ((currentBuild.result == 'FAILURE') || (currentBuild.previousBuild.result == 'FAILURE')) {
+            emailext(
+                body: '$DEFAULT_CONTENT',
+                subject: '$DEFAULT_SUBJECT',
+                recipientProviders: [[$class: 'RequesterRecipientProvider'], [$class: 'CulpritsRecipientProvider']]
+            )
         }
-    )    
+    }
 }
