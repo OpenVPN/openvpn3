@@ -1,0 +1,58 @@
+dist: trusty
+
+os: linux
+
+language: cpp
+
+env:
+  global:
+    - PREFIX="${HOME}/opt"
+    - ASIO_VERSION="862aed305dcf91387535519c9549c17630339a12"
+    - LZ4_VERSION="1.7.5"
+    - MBEDTLS_VERSION="2.5.1"
+    - MBEDTLS_CFLAGS="-I${PREFIX}/include"
+    - MBEDTLS_LIBS="-lmbedtls -lmbedx509 -lmbedcrypto"
+    - OPENSSL_VERSION="1.0.2l"
+    - OPENSSL_CFLAGS="-I${PREFIX}/include"
+    - OPENSSL_LIBS="-lssl -lcrypto"
+
+matrix:
+  include:
+    - env: SSLLIB="openssl"
+      os: osx
+      osx_image: xcode8.3
+      compiler: clang
+    - env: SSLLIB="mbedtls"
+      os: osx
+      osx_image: xcode8.3
+      compiler: clang
+    - env: SSLLIB="openssl"
+      os: linux
+      compiler: gcc
+    - env: SSLLIB="openssl"
+      os: linux
+      compiler: clang
+    - env: SSLLIB="mbedtls"
+      os: linux
+      compiler: gcc
+    - env: SSLLIB="mbedtls"
+      os: linux
+      compiler: clang
+
+addons:
+  apt:
+    packages:
+      - libboost-all-dev
+      - linux-libc-dev
+
+cache:
+  ccache: true
+  directories:
+  - download-cache
+  - ${HOME}/opt
+
+install:
+  - .travis/build-deps.sh
+
+script:
+  - .travis/build-check.sh
