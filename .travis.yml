@@ -1,0 +1,66 @@
+dist: trusty
+
+os: linux
+
+language: generic
+
+env:
+  global:
+    - PREFIX="${HOME}/opt"
+    - ASIO_VERSION="862aed305dcf91387535519c9549c17630339a12"
+    - LZ4_VERSION="1.7.5"
+    - MBEDTLS_VERSION="2.5.1"
+    - MBEDTLS_CFLAGS="-I${PREFIX}/include"
+    - MBEDTLS_LIBS="-lmbedtls -lmbedx509 -lmbedcrypto"
+    - OPENSSL_VERSION="1.0.2l"
+    - OPENSSL_CFLAGS="-I${PREFIX}/include"
+    - OPENSSL_LIBS="-lssl -lcrypto"
+
+matrix:
+  include:
+    - env: SSLLIB="openssl" CC="gcc-5" CXX="g++-5"
+      os: linux
+      compiler: gcc
+    - env: SSLLIB="openssl" CC="clang-5.0" CXX="clang++-5.0"
+      os: linux
+      compiler: clang
+    - env: SSLLIB="mbedtls" CC="gcc-5" CXX="g++-5"
+      os: linux
+      compiler: gcc
+    - env: SSLLIB="mbedtls" CC="clang-5.0" CXX="clang++-5.0"
+      os: linux
+      compiler: clang
+    - env: SSLLIB="openssl" CC="clang" CXX="clang++"
+      os: osx
+      osx_image: xcode8.3
+      compiler: clang
+    - env: SSLLIB="mbedtls" CC="clang" CXX="clang++"
+      os: osx
+      osx_image: xcode8.3
+      compiler: clang
+  exclude:
+    - compiler: gcc
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-5.0
+    packages:
+      - libboost-all-dev
+      - linux-libc-dev
+      - gcc-5
+      - g++-5
+      - clang-5.0
+
+cache:
+  ccache: true
+  directories:
+  - download-cache
+  - ${HOME}/opt
+
+install:
+  - .travis/build-deps.sh
+
+script:
+  - .travis/build-check.sh
