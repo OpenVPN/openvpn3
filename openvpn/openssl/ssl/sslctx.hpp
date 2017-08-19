@@ -229,8 +229,9 @@ namespace openvpn {
 
       virtual void set_rng(const RandomAPI::Ptr& rng_arg)
       {
-	// Not implemented because OpenSSL is hardcoded to
-	// use its own RNG.
+	// Not implemented (other than assert_crypto check)
+	// because OpenSSL is hardcoded to use its own RNG.
+	rng_arg->assert_crypto();
       }
 
       virtual std::string validate_cert(const std::string& cert_txt) const
