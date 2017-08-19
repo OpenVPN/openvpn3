@@ -175,9 +175,9 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(compressor_unavailable);
 
-    CompressContext() : type_(NONE) {}
+    CompressContext() {}
 
-    explicit CompressContext(const Type t, const bool asym)
+    CompressContext(const Type t, const bool asym)
       : asym_(asym) // asym indicates asymmetrical compression where only downlink is compressed
     {
       if (!compressor_available(t))
@@ -492,8 +492,8 @@ namespace openvpn {
     }
 
   private:
-    Type type_;
-    bool asym_;
+    Type type_ = NONE;
+    bool asym_ = false;
   };
 
 } // namespace openvpn
