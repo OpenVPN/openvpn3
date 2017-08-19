@@ -123,6 +123,14 @@ namespace openvpn {
 	return addr.defined() && prefix_len == addr.size();
       }
 
+      unsigned int host_bits() const
+      {
+	if (prefix_len < addr.size())
+	  return addr.size() - prefix_len;
+	else
+	  return 0;
+      }
+
       bool contains(const ADDR& a) const // assumes canonical address/routes
       {
 	if (addr.defined() && addr.version() == a.version())
