@@ -92,6 +92,11 @@ namespace openvpn {
 	return string::trim_copy(get_value(key));
       }
 
+      std::string get_value_trim_lower(const std::string& key) const
+      {
+	return string::to_lower_copy(get_value_trim(key));
+      }
+
       std::string to_string() const
       {
 	std::ostringstream out;
