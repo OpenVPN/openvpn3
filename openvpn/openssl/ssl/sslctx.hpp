@@ -814,6 +814,8 @@ namespace openvpn {
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
 	      if (config->enable_renegotiation)
 		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_SERVER);
+	      if (config->flags & SSLConst::SERVER_TO_SERVER)
+		SSL_CTX_set_purpose(ctx, X509_PURPOSE_SSL_SERVER);
 	    }
 	  else if (config->mode.is_client())
 	    {
