@@ -327,6 +327,22 @@ namespace openvpn {
 	  throw ip_exception("address unspecified");
       }
 
+      // validate the prefix length for the IP version
+      static bool validate_prefix_len(Version v, const unsigned int prefix_len)
+      {
+	if (v == V4)
+	  {
+	    if (prefix_len <= V4_SIZE)
+	      return true;
+	  }
+	else if (v == V6)
+	  {
+	    if (prefix_len <= V6_SIZE)
+	      return true;
+	  }
+	return false;
+      }
+
       // build a netmask using given prefix_len
       static Addr netmask_from_prefix_len(Version v, const unsigned int prefix_len)
       {
