@@ -78,7 +78,7 @@ namespace openvpn {
 	return nullptr;
       }
 
-      const std::string get_value(const std::string& key) const
+      std::string get_value(const std::string& key) const
       {
 	const Header* h = get(key);
 	if (h)
@@ -87,7 +87,7 @@ namespace openvpn {
 	  return "";
       }
 
-      const std::string get_value_trim(const std::string& key) const
+      std::string get_value_trim(const std::string& key) const
       {
 	return string::trim_copy(get_value(key));
       }
