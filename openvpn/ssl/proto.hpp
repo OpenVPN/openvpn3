@@ -1853,7 +1853,7 @@ namespace openvpn {
 	    switch (state)
 	      {
 	      case C_WAIT_RESET:
-		send_reset();
+		//send_reset(); // fixme -- possibly not needed
 		set_state(C_WAIT_RESET_ACK);
 		break;
 	      case S_WAIT_RESET:
