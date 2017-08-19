@@ -14,6 +14,7 @@ if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"
     echo " PROF=<platform> -- source vars/vars-<platform> before running"
+    echo " DPROF=1 -- when PROF is specified, use the debugging variant"
     echo " CLANG=1 -- use clang instead of gcc"
     echo " DEBUG=1 -- enable debug symbols"
     echo " CO=1 -- compile only"
@@ -53,7 +54,9 @@ fi
 
 # source vars file
 if [ "$PROF" ]; then
-    pfn="$O3/core/vars/vars-$PROF"
+    suffix=""
+    [ "$DPROF" = "1" ] && suffix="-dbg"
+    pfn="$O3/core/vars/vars-$PROF$suffix"
     if ! [ -f "$pfn" ]; then
 	pfn="$PROF"
     fi
