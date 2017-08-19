@@ -62,86 +62,89 @@ namespace openvpn {
     virtual TransportServer::Ptr new_server_obj(openvpn_io::io_context& io_context) = 0;
   };
 
-  // Base class for the per-client-instance state of the TransportServer.
-  // Each client instance uses this class to send data to the transport layer.
-  struct TransportClientInstanceSend : public virtual RC<thread_unsafe_refcount>
-  {
-    typedef RCPtr<TransportClientInstanceSend> Ptr;
+  namespace TransportClientInstance {
 
-    virtual bool defined() const = 0;
-    virtual void stop() = 0;
+    // Base class for the per-client-instance state of the TransportServer.
+    // Each client instance uses this class to send data to the transport layer.
+    struct Send : public virtual RC<thread_unsafe_refcount>
+    {
+      typedef RCPtr<Send> Ptr;
 
-    virtual bool transport_send_const(const Buffer& buf) = 0;
-    virtual bool transport_send(BufferAllocated& buf) = 0;
+      virtual bool defined() const = 0;
+      virtual void stop() = 0;
 
-    virtual const std::string& transport_info() const = 0;
+      virtual bool transport_send_const(const Buffer& buf) = 0;
+      virtual bool transport_send(BufferAllocated& buf) = 0;
 
-    // bandwidth stats polling
-    virtual bool stats_pending() const = 0;
-    virtual PeerStats stats_poll() = 0;
-  };
+      virtual const std::string& transport_info() const = 0;
 
-  // Base class for the client instance receiver.  Note that all
-  // client instance receivers (transport, routing, management,
-  // etc.) must inherit virtually from RC because the client instance
-  // object will inherit from multiple receivers.
-  struct TransportClientInstanceRecv : public virtual RC<thread_unsafe_refcount>
-  {
-    typedef RCPtr<TransportClientInstanceRecv> Ptr;
+      // bandwidth stats polling
+      virtual bool stats_pending() const = 0;
+      virtual PeerStats stats_poll() = 0;
+    };
 
-    virtual bool defined() const = 0;
-    virtual void stop() = 0;
+    // Base class for the client instance receiver.  Note that all
+    // client instance receivers (transport, routing, management,
+    // etc.) must inherit virtually from RC because the client instance
+    // object will inherit from multiple receivers.
+    struct Recv : public virtual RC<thread_unsafe_refcount>
+    {
+      typedef RCPtr<Recv> Ptr;
 
-    virtual void start(const TransportClientInstanceSend::Ptr& parent,
-		       const PeerAddr::Ptr& addr,
-		       const int local_peer_id) = 0;
+      virtual bool defined() const = 0;
+      virtual void stop() = 0;
 
-    // Called with OpenVPN-encapsulated packets from transport layer.
-    // Returns true if packet successfully validated.
-    virtual bool transport_recv(BufferAllocated& buf) = 0;
+      virtual void start(const Send::Ptr& parent,
+			 const PeerAddr::Ptr& addr,
+			 const int local_peer_id) = 0;
 
-    // Return true if keepalive parameter(s) are enabled.
-    virtual bool is_keepalive_enabled() const = 0;
+      // Called with OpenVPN-encapsulated packets from transport layer.
+      // Returns true if packet successfully validated.
+      virtual bool transport_recv(BufferAllocated& buf) = 0;
 
-    // Disable keepalive for rest of session, but fetch
-    // the keepalive parameters (in seconds).
-    virtual void disable_keepalive(unsigned int &keepalive_ping,
-				   unsigned int &keepalive_timeout) = 0;
+      // Return true if keepalive parameter(s) are enabled.
+      virtual bool is_keepalive_enabled() const = 0;
 
-    // override the data channel factory
-    virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory) = 0;
+      // Disable keepalive for rest of session, but fetch
+      // the keepalive parameters (in seconds).
+      virtual void disable_keepalive(unsigned int &keepalive_ping,
+				     unsigned int &keepalive_timeout) = 0;
 
-    // override the tun provider
-    virtual TunClientInstanceRecv* override_tun(TunClientInstanceSend* tun) = 0;
+      // override the data channel factory
+      virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory) = 0;
 
-    // bandwidth stats notification
-    virtual void stats_notify(const PeerStats& ps, const bool final) = 0;
+      // override the tun provider
+      virtual TunClientInstance::Recv* override_tun(TunClientInstance::Send* tun) = 0;
 
-    // client float notification
-    virtual void float_notify(const PeerAddr::Ptr& addr) = 0;
+      // bandwidth stats notification
+      virtual void stats_notify(const PeerStats& ps, const bool final) = 0;
 
-    // Data limit notification -- trigger a renegotiation
-    // when cdl_status == DataLimit::Red.
-    virtual void data_limit_notify(const int key_id,
-				   const DataLimit::Mode cdl_mode,
-				   const DataLimit::State cdl_status) = 0;
+      // client float notification
+      virtual void float_notify(const PeerAddr::Ptr& addr) = 0;
 
-    // push a halt or restart message to client
-    virtual void push_halt_restart_msg(const HaltRestart::Type type,
-				       const std::string& reason,
-				       const bool tell_client) = 0;
+      // Data limit notification -- trigger a renegotiation
+      // when cdl_status == DataLimit::Red.
+      virtual void data_limit_notify(const int key_id,
+				     const DataLimit::Mode cdl_mode,
+				     const DataLimit::State cdl_status) = 0;
 
-  };
+      // push a halt or restart message to client
+      virtual void push_halt_restart_msg(const HaltRestart::Type type,
+					 const std::string& reason,
+					 const bool tell_client) = 0;
 
-  // Base class for factory used to create TransportClientInstanceRecv objects.
-  struct TransportClientInstanceFactory : public RC<thread_unsafe_refcount>
-  {
-    typedef RCPtr<TransportClientInstanceFactory> Ptr;
+    };
 
-    virtual TransportClientInstanceRecv::Ptr new_client_instance() = 0;
-    virtual bool validate_initial_packet(const Buffer& net_buf) = 0;
-  };
+    // Base class for factory used to create Recv objects.
+    struct Factory : public RC<thread_unsafe_refcount>
+    {
+      typedef RCPtr<Factory> Ptr;
 
-} // namespace openvpn
+      virtual Recv::Ptr new_client_instance() = 0;
+      virtual bool validate_initial_packet(const Buffer& net_buf) = 0;
+    };
+
+  }
+}
 
 #endif 
