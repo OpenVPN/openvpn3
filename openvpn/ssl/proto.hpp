@@ -70,6 +70,7 @@
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/ssl/proto_context_options.hpp>
 #include <openvpn/ssl/peerinfo.hpp>
+#include <openvpn/ssl/ssllog.hpp>
 
 #if OPENVPN_DEBUG_PROTO >= 1
 #define OPENVPN_LOG_PROTO(x) OPENVPN_LOG(x)

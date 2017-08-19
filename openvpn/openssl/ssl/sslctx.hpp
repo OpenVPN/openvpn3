@@ -52,6 +52,7 @@
 #include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
+#include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
