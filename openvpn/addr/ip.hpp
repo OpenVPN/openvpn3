@@ -148,19 +148,19 @@ namespace openvpn {
 	  throw ip_exception("address unspecified");
       }
 
-      static Addr from_ipv4(const IPv4::Addr& addr)
+      static Addr from_ipv4(IPv4::Addr addr)
       {
 	Addr a;
 	a.ver = V4;
-	a.u.v4 = addr;
+	a.u.v4 = std::move(addr);
 	return a;
       }
 
-      static Addr from_ipv6(const IPv6::Addr& addr)
+      static Addr from_ipv6(IPv6::Addr addr)
       {
 	Addr a;
 	a.ver = V6;
-	a.u.v6 = addr;
+	a.u.v6 = std::move(addr);
 	return a;
       }
 
