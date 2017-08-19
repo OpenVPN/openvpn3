@@ -94,7 +94,9 @@ namespace openvpn {
 	return start + rand_get_positive<T>() % (end - start + 1);
     }
 
-    // Throw an exception if algorithm is not crypto-strength
+    // Throw an exception if algorithm is not crypto-strength.
+    // Be sure to always call this method before using an rng
+    // for crypto purposes.
     void assert_crypto() const
     {
       if (!is_crypto())
