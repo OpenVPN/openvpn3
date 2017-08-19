@@ -31,6 +31,7 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/splitlines.hpp>
+#include <openvpn/common/base64.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
@@ -50,6 +51,12 @@ namespace openvpn {
     void erase() { key_data_.clear(); }
 
     std::string render_hex() const { return openvpn::render_hex_generic(key_data_); }
+
+    void parse_from_base64(const std::string& b64, const size_t capacity)
+    {
+      key_data_.reset(capacity, key_t::DESTRUCT_ZERO);
+      base64->decode(key_data_, b64);
+    }
 
   private:
     key_t key_data_;
