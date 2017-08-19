@@ -45,6 +45,7 @@ namespace openvpn {
   // Atomically write binary buffer to file (relies on
   // the atomicity of rename())
   inline void write_binary_atomic(const std::string& fn,
+				  const std::string& tmpdir,
 				  const mode_t mode,
 				  const Buffer& buf,
 				  RandomAPI& rng)
@@ -52,7 +53,7 @@ namespace openvpn {
     // generate temporary filename
     unsigned char data[16];
     rng.rand_fill(data);
-    const std::string tfn = path::join(path::dirname(fn), '.' + path::basename(fn) + '.' + render_hex(data, sizeof(data)));
+    const std::string tfn = path::join(tmpdir, '.' + path::basename(fn) + '.' + render_hex(data, sizeof(data)));
 
     // write to temporary file
     write_binary_unix(tfn, mode, buf);
