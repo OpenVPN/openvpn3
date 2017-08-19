@@ -51,19 +51,23 @@
 namespace openvpn {
   namespace SSLLib {
 #if defined(USE_MBEDTLS)
+#define SSL_LIB_NAME "MbedTLS"
     typedef MbedTLSCryptoAPI CryptoAPI;
     typedef MbedTLSContext SSLAPI;
     typedef MbedTLSRandom RandomAPI;
 #elif defined(USE_MBEDTLS_APPLE_HYBRID)
     // Uses Apple framework for CryptoAPI and MbedTLS for SSLAPI and RandomAPI
+#define SSL_LIB_NAME "MbedTLSAppleHybrid"
     typedef AppleCryptoAPI CryptoAPI;
     typedef MbedTLSContext SSLAPI;
     typedef MbedTLSRandom RandomAPI;
 #elif defined(USE_APPLE_SSL)
+#define SSL_LIB_NAME "AppleSSL"
     typedef AppleCryptoAPI CryptoAPI;
     typedef AppleSSLContext SSLAPI;
     typedef AppleRandom RandomAPI;
 #elif defined(USE_OPENSSL)
+#define SSL_LIB_NAME "OpenSSL"
     typedef OpenSSLCryptoAPI CryptoAPI;
     typedef OpenSSLContext SSLAPI;
     typedef OpenSSLRandom RandomAPI;
