@@ -84,12 +84,12 @@ namespace openvpn {
 	return ret;
       }
 
-      struct sockaddr_in to_sockaddr() const
+      struct sockaddr_in to_sockaddr(const unsigned short port=0) const
       {
 	struct sockaddr_in ret;
 	std::memset(&ret, 0, sizeof(ret));
 	ret.sin_family = AF_INET;
-	ret.sin_port = 0;
+	ret.sin_port = htons(port);
 	ret.sin_addr.s_addr = htonl(u.addr);
 	return ret;
       }

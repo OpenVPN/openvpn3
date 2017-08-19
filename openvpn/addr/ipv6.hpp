@@ -83,12 +83,12 @@ namespace openvpn {
 	return ret;
       }
 
-      struct sockaddr_in6 to_sockaddr() const
+      struct sockaddr_in6 to_sockaddr(const unsigned short port=0) const
       {
 	struct sockaddr_in6 ret;
 	std::memset(&ret, 0, sizeof(ret));
 	ret.sin6_family = AF_INET6;
-	ret.sin6_port = 0;
+	ret.sin6_port = htons(port);
 	host_to_network_order((union ipv6addr *)&ret.sin6_addr.s6_addr, &u);
 	ret.sin6_scope_id = scope_id_;
 	return ret;
