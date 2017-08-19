@@ -1343,7 +1343,7 @@ namespace openvpn {
 
 	    // Trigger a new SSL/TLS negotiation if packet ID (a 32-bit unsigned int)
 	    // is getting close to wrapping around.  If it wraps back to 0 without
-	    // a renegotiation, it would cause the relay protection logic to wrongly
+	    // a renegotiation, it would cause the replay protection logic to wrongly
 	    // think that all further packets are replays.
 	    if (pid_wrap)
 	      schedule_key_limit_renegotiation();
