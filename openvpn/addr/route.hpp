@@ -167,10 +167,21 @@ namespace openvpn {
 	return prefix_len == other.prefix_len && addr == other.addr;
       }
 
+      template <typename HASH>
+      void hash(HASH& h) const
+      {
+	addr.hash(h);
+	h(prefix_len);
+      }
+
+#ifdef HAVE_CITYHASH
       std::size_t hash_value() const
       {
-	return Hash::value(addr, prefix_len);
+	HashSizeT h;
+	hash(h);
+	return h.value();
       }
+#endif
     };
 
     template <typename ADDR>
@@ -253,8 +264,10 @@ namespace openvpn {
   }
 }
 
+#ifdef HAVE_CITYHASH
 OPENVPN_HASH_METHOD(openvpn::IP::Route, hash_value);
 OPENVPN_HASH_METHOD(openvpn::IP::Route4, hash_value);
 OPENVPN_HASH_METHOD(openvpn::IP::Route6, hash_value);
+#endif
 
 #endif

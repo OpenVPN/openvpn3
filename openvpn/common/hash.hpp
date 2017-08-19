@@ -22,11 +22,12 @@
 #ifndef OPENVPN_COMMON_HASH_H
 #define OPENVPN_COMMON_HASH_H
 
-#include <cstring> // for std::strlen
+#include <string>
 #include <cstdint> // for std::uint32_t, uint64_t
-#include <functional>
 
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/hexstr.hpp>
 
 #define OPENVPN_HASH_METHOD(T, meth)			\
   namespace std {					\
@@ -40,79 +41,152 @@
     };							\
   }
 
+#ifdef HAVE_CITYHASH
+
+#ifdef OPENVPN_HASH128_CRC
+#include <citycrc.h>
+#define OPENVPN_HASH128 ::CityHashCrc128WithSeed
+#else
+#include <city.h>
+#define OPENVPN_HASH128 ::CityHash128WithSeed
+#endif
+
+#if SIZE_MAX == 0xFFFFFFFF
+#define HashSizeT Hash32
+#elif SIZE_MAX == 0xFFFFFFFFFFFFFFFF
+#define HashSizeT Hash64
+#else
+#error "Unrecognized SIZE_MAX"
+#endif
+
 namespace openvpn {
-  namespace Hash {
 
-    void combine_data(std::size_t& seed, const void *data, std::size_t size);
+  class Hash128
+  {
+  public:
+    Hash128() : hashval(0,0) {}
 
-    template <class T>
-    inline void combine(std::size_t& seed, const T& v)
+    void operator()(const void *data, const std::size_t size)
     {
-      std::hash<T> hasher;
-      seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+      hashval = OPENVPN_HASH128((const char *)data, size, hashval);
     }
 
-    inline void combine(std::size_t& seed, const char *str)
+    void operator()(const std::string& str)
     {
-      combine_data(seed, str, std::strlen(str));
+      (*this)(str.c_str(), str.length());
     }
 
-    template<typename T, typename... Args>
-    inline void combine(std::size_t& seed, const T& first, Args... args)
-    {
-      combine(seed, first);
-      combine(seed, args...);
-    }
-
-    template<typename... Args>
-    inline std::size_t value(Args... args)
-    {
-      std::size_t hash = 0;
-      combine(hash, args...);
-      return hash;
-    }
-
-    // A hasher that combines a data hash with a stateful seed.
     template <typename T>
-    class InitialSeed
+    inline void operator()(const T& obj)
     {
-    public:
-      InitialSeed(std::size_t seed) : seed_(seed) {}
-
-      std::size_t operator()(const T& obj) const
-      {
-	std::size_t seed = seed_;
-	combine(seed, obj);
-	return seed;
-      }
-
-    private:
-      std::size_t seed_;
-    };
-
-    inline void combine_data(std::size_t& seed, const void *data, std::size_t size)
-    {
-      while (size >= sizeof(std::uint32_t))
-	{
-	  combine(seed, static_cast<const std::uint32_t*>(data)[0]);
-	  data = static_cast<const std::uint8_t*>(data) + sizeof(std::uint32_t);
-	  size -= sizeof(std::uint32_t);
-	}
-      switch (size)
-	{
-	case 1:
-	  combine(seed, static_cast<const std::uint8_t*>(data)[0]);
-	  break;
-	case 2:
-	  combine(seed, static_cast<const std::uint16_t*>(data)[0]);
-	  break;
-	case 3:
-	  combine(seed, static_cast<const std::uint16_t*>(data)[0]);
-	  combine(seed, static_cast<const std::uint8_t*>(data)[2]);
-	  break;
-	}
+      static_assert(std::is_pod<T>::value, "Hash128: POD type required");
+      (*this)(&obj, sizeof(obj));
     }
-  }
+
+    std::uint64_t high() const
+    {
+      return hashval.second;
+    }
+
+    std::uint64_t low() const
+    {
+      return hashval.first;
+    }
+
+    std::string to_string() const
+    {
+      return render_hex_number(high()) + render_hex_number(low());
+    }
+
+  private:
+    uint128 hashval;
+  };
+
+  class Hash64
+  {
+  public:
+    Hash64(const std::uint64_t init_hashval=0)
+      : hashval(init_hashval)
+    {
+    }
+
+    void operator()(const void *data, const std::size_t size)
+    {
+      hashval = ::CityHash64WithSeed((const char *)data, size, hashval);
+    }
+
+    void operator()(const std::string& str)
+    {
+      (*this)(str.c_str(), str.length());
+    }
+
+    template <typename T>
+    inline void operator()(const T& obj)
+    {
+      static_assert(std::is_pod<T>::value, "Hash64: POD type required");
+      (*this)(&obj, sizeof(obj));
+    }
+
+    std::uint64_t value() const
+    {
+      return hashval;
+    }
+
+    std::string to_string() const
+    {
+      return render_hex_number(hashval);
+    }
+
+  private:
+    std::uint64_t hashval;
+  };
+
+  class Hash32
+  {
+  public:
+    Hash32(const std::uint32_t init_hashval=0)
+      : hashval(init_hashval)
+    {
+    }
+
+    void operator()(const void *data, const std::size_t size)
+    {
+      hashval = hash_combine(::CityHash32((const char *)data, size), hashval);
+    }
+
+    void operator()(const std::string& str)
+    {
+      (*this)(str.c_str(), str.length());
+    }
+
+    template <typename T>
+    inline void operator()(const T& obj)
+    {
+      static_assert(std::is_pod<T>::value, "Hash64: POD type required");
+      (*this)(&obj, sizeof(obj));
+    }
+
+    std::uint32_t value() const
+    {
+      return hashval;
+    }
+
+    std::string to_string() const
+    {
+      return render_hex_number(hashval);
+    }
+
+  private:
+    static std::uint32_t hash_combine(const std::uint32_t h1,
+				      const std::uint32_t h2)
+    {
+      return h1 ^ (h2 + 0x9e3779b9 + (h1<<6) + (h1>>2));
+    }
+
+    std::uint32_t hashval;
+  };
+
 }
 
+#endif
 #endif

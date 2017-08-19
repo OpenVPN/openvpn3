@@ -34,7 +34,6 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/ffs.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ipv4.hpp>
 #include <openvpn/addr/iperr.hpp>
 
@@ -535,9 +534,10 @@ namespace openvpn {
 	return SIZE;
       }
 
-      std::size_t hashval() const
+      template <typename HASH>
+      void hash(HASH& h) const
       {
-	return Hash::value(u.u32[0], u.u32[1], u.u32[2], u.u32[3]);
+	h(u.bytes, sizeof(u.bytes));
       }
 
 #ifdef OPENVPN_IP_IMMUTABLE
@@ -824,7 +824,5 @@ namespace openvpn {
     OPENVPN_OSTREAM(Addr, to_string)
   }
 }
-
-OPENVPN_HASH_METHOD(openvpn::IPv6::Addr, hashval);
 
 #endif // OPENVPN_ADDR_IPV6_H

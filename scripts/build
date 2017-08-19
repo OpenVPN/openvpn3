@@ -42,6 +42,7 @@ if [ -z "$1" ]; then
     echo " LZ4=1 -- build with LZ4 compression library"
     echo " LZ4_SYS=1 -- build with system LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
+    echo " CITY=1 -- build with Cityhash hash library"
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
     for s in $(enum_build_extras) ; do
@@ -211,6 +212,12 @@ if [ "$SNAP" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM/include"
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
+fi
+
+# Cityhash
+if [ "$CITY" = "1" ]; then
+    LIBS="$LIBS -lcityhash"
+    CPPFLAGS="$CPPFLAGS -DHAVE_CITYHASH"
 fi
 
 # JVM
