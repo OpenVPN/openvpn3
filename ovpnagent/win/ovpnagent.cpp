@@ -48,14 +48,6 @@
 #include <openvpn/win/npinfo.hpp>
 #include <openvpn/win/handlecomm.hpp>
 
-#if defined(USE_MBEDTLS)
-#define SSL_LIB_NAME "MbedTLS"
-#elif defined(USE_OPENSSL)
-#define SSL_LIB_NAME "OpenSSL"
-#else
-#error no SSL library defined
-#endif
-
 void log_version()
 {
   OPENVPN_LOG("OpenVPN Agent " HTTP_SERVER_VERSION " [" SSL_LIB_NAME "] built on " __DATE__ " " __TIME__);
