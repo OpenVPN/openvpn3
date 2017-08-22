@@ -33,15 +33,6 @@
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/omi/omi.hpp>
 
-// set SSL_LIB_NAME to name of SSL library
-#if defined(USE_MBEDTLS)
-#define SSL_LIB_NAME "MbedTLS"
-#elif defined(USE_OPENSSL)
-#define SSL_LIB_NAME "OpenSSL"
-#else
-#error no SSL library defined
-#endif
-
 using namespace openvpn;
 
 std::string log_version()
