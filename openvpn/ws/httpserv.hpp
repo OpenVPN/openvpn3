@@ -10,12 +10,14 @@
 #define OPENVPN_WS_HTTPSERV_H
 
 #include <string>
-#include <cstdint>
-#include <unordered_map>
 #include <vector>
-#include <deque>
-#include <utility> // for std::move
+#include <sstream>
+#include <ostream>
+#include <cstdint>
+#include <utility>
 #include <memory>
+#include <unordered_map>
+#include <deque>
 
 #include <openvpn/io/io.hpp>
 
@@ -40,6 +42,7 @@
 #include <openvpn/http/status.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/ws/httpcommon.hpp>
+#include <openvpn/ws/websocket.hpp>
 #include <openvpn/server/listenlist.hpp>
 
 // include acceptors for different protocols
@@ -80,6 +83,8 @@ namespace openvpn {
 	  E_GENERAL_TIMEOUT,
 	  E_EXTERNAL_STOP,
 	  E_PIPELINE_OVERFLOW,
+	  E_SHUTDOWN,
+	  E_ABORTED,
 
 	  N_ERRORS
 	};
@@ -98,6 +103,8 @@ namespace openvpn {
 	    "E_GENERAL_TIMEOUT",
 	    "E_EXTERNAL_STOP",
 	    "E_PIPELINE_OVERFLOW",
+	    "E_SHUTDOWN",
+	    "E_ABORTED",
 	  };
 
 	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
@@ -137,23 +144,17 @@ namespace openvpn {
 	// content length if Transfer-Encoding: chunked
 	static constexpr content_len_t CHUNKED = -1;
 
-	ContentInfo()
-	  : http_status(0),
-	    length(0),
-	    no_cache(false),
-	    keepalive(false)
-	{
-	}
-
-	int http_status;
+	int http_status = 0;
 	std::string http_status_str; // optional
 	std::string type;
 	std::string content_encoding;
 	std::string basic_realm;
-	content_len_t length;
-	bool no_cache;
-	bool keepalive;
+	content_len_t length = 0;
+	bool no_cache = false;
+	bool keepalive = false;
+	bool lean_headers = false;
 	std::vector<std::string> extra_headers;
+	WebSocket::Server::PerRequest::Ptr websocket;
       };
 
       class Listener : public Acceptor::ListenerBase
@@ -213,6 +214,45 @@ namespace openvpn {
 	    stop(false);
 	  }
 
+	  bool remote_ip_port(IP::Addr& addr, unsigned int& port) const
+	  {
+	    if (sock)
+	      return sock->remote_ip_port(addr, port);
+	    else
+	      return false;
+	  }
+
+	  IP::Addr remote_ip() const
+	  {
+	    IP::Addr addr;
+	    unsigned int port;
+	    if (remote_ip_port(addr, port))
+	      return addr;
+	    else
+	      return IP::Addr();
+	  }
+
+	  AuthCert::Ptr auth_cert() const
+	  {
+	    if (ssl_sess)
+	      return ssl_sess->auth_cert();
+	    else
+	      return AuthCert::Ptr();
+	  }
+
+	  bool is_ssl() const
+	  {
+	    return bool(ssl_sess);
+	  }
+
+	  bool is_local() const
+	  {
+	    if (sock)
+	      return sock->is_local();
+	    else
+	      return false;
+	  }
+
 	protected:
 	  Client(Initializer& ci)
 	    : Base(ci.parent->config),
@@ -226,46 +266,28 @@ namespace openvpn {
 	  {
 	  }
 
-	  void generate_reply_headers(const ContentInfo& ci)
+	  void generate_reply_headers(ContentInfo ci)
 	  {
 	    http_out_begin();
 
-	    content_info = ci;
+	    content_info = std::move(ci);
 
-	    outbuf.reset(new BufferAllocated(1024, BufferAllocated::GROW));
+	    outbuf.reset(new BufferAllocated(512, BufferAllocated::GROW));
 	    BufferStreamOut os(*outbuf);
 
-	    os << "HTTP/1.1 " << ci.http_status << ' ';
-	    if (ci.http_status_str.empty())
-	      os << HTTP::Status::to_string(ci.http_status);
+	    // websocket?
+	    const bool ws = (content_info.websocket && content_info.http_status == HTTP::Status::SwitchingProtocols);
+
+	    if (ws)
+	      generate_reply_headers_websocket(os);
 	    else
-	      os << ci.http_status_str;
-	    os << "\r\n";
-	    if (!parent->config->http_server_id.empty())
-	      os << "Server: " << parent->config->http_server_id << "\r\n";
-	    os << "Date: " << date_time_rfc822() << "\r\n";
-	    if (!ci.basic_realm.empty())
-	      os << "WWW-Authenticate: Basic realm=\"" << ci.basic_realm << "\"\r\n";
-	    if (ci.length)
-	      os << "Content-Type: " << ci.type << "\r\n";
-	    if (ci.length > 0)
-	      os << "Content-Length: " << ci.length << "\r\n";
-	    else if (ci.length == ContentInfo::CHUNKED)
-	      os << "Transfer-Encoding: chunked\r\n";
-	    for (auto &h : ci.extra_headers)
-	      os << h << "\r\n";
-	    if (!ci.content_encoding.empty())
-	      os << "Content-Encoding: " << ci.content_encoding << "\r\n";
-	    if (ci.no_cache)
-	      os << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
-	    if ((keepalive = ci.keepalive))
-	      os << "Connection: keep-alive\r\n";
-	    else
-	      os << "Connection: close\r\n";
-	    os << "\r\n";
+	      generate_reply_headers_http(os);
 
 	    http_headers_sent(*outbuf);
 	    http_out();
+
+	    if (ws)
+	      begin_websocket();
 	  }
 
 	  void generate_custom_reply_headers(BufferPtr& buf)
@@ -296,6 +318,12 @@ namespace openvpn {
 	    error_handler(Status::E_EXTERNAL_STOP, description);
 	  }
 
+	  void abort(const std::string& description, const int status=Status::E_ABORTED)
+	  {
+	    if (!halt)
+	      error_handler(status, description);
+	  }
+
 	  std::string remote_endpoint_str() const
 	  {
 	    try {
@@ -306,22 +334,6 @@ namespace openvpn {
 	      {
 	      }
 	    return "[unknown endpoint]";
-	  }
-
-	  bool remote_ip_port(IP::Addr& addr, unsigned int& port) const
-	  {
-	    if (sock)
-	      return sock->remote_ip_port(addr, port);
-	    else
-	      return false;
-	  }
-
-	  bool is_local() const
-	  {
-	    if (sock)
-	      return sock->is_local();
-	    else
-	      return false;
 	  }
 
 	  client_t get_client_id() const
@@ -353,6 +365,61 @@ namespace openvpn {
 	private:
 	  typedef TCPTransport::Link<AsioProtocol, Client*, false> LinkImpl;
 	  friend LinkImpl; // calls tcp_* handlers
+
+	  void generate_reply_headers_http(std::ostream& os)
+	  {
+	    os << "HTTP/1.1 " << content_info.http_status << ' ';
+	    if (content_info.http_status_str.empty())
+	      os << HTTP::Status::to_string(content_info.http_status);
+	    else
+	      os << content_info.http_status_str;
+	    os << "\r\n";
+	    if (!content_info.lean_headers)
+	      {
+		if (!parent->config->http_server_id.empty())
+		  os << "Server: " << parent->config->http_server_id << "\r\n";
+		os << "Date: " << date_time_rfc822() << "\r\n";
+	      }
+	    if (!content_info.basic_realm.empty())
+	      os << "WWW-Authenticate: Basic realm=\"" << content_info.basic_realm << "\"\r\n";
+	    if (content_info.length)
+	      os << "Content-Type: " << content_info.type << "\r\n";
+	    if (content_info.length > 0)
+	      os << "Content-Length: " << content_info.length << "\r\n";
+	    else if (content_info.length == ContentInfo::CHUNKED)
+	      os << "Transfer-Encoding: chunked\r\n";
+	    for (auto &h : content_info.extra_headers)
+	      os << h << "\r\n";
+	    if (!content_info.content_encoding.empty())
+	      os << "Content-Encoding: " << content_info.content_encoding << "\r\n";
+	    if (content_info.no_cache && !content_info.lean_headers)
+	      os << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
+	    if ((keepalive = content_info.keepalive))
+	      os << "Connection: keep-alive\r\n";
+	    else
+	      os << "Connection: close\r\n";
+	    os << "\r\n";
+	  }
+
+	  void generate_reply_headers_websocket(std::ostream& os)
+	  {
+	    os << "HTTP/1.1 101 Switching Protocols\r\n";
+	    if (content_info.websocket)
+	      content_info.websocket->server_headers(os);
+	    for (auto &h : content_info.extra_headers)
+	      os << h << "\r\n";
+	    os << "\r\n";
+	  }
+
+	  // transition to websocket i/o after we push HTTP
+	  // headers to client
+	  void begin_websocket()
+	  {
+	    set_async_out(true);
+	    websocket = true;   // enable websocket in httpcommon
+	    ready = false;      // enable tcp_in
+	    consume_pipeline(); // process data received while tcp_in was disabled
+	  }
 
 	  void start(const bool ssl)
 	  {
@@ -521,7 +588,7 @@ namespace openvpn {
 	  {
 	    if (http_out_eof())
 	      {
-		if (keepalive)
+		if (keepalive && !websocket)
 		  restart(false);
 		else
 		  error_handler(Status::E_SUCCESS, "Succeeded");
