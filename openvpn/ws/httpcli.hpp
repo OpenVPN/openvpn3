@@ -30,14 +30,18 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <algorithm>         // for std::min, std::max
+#include <ostream>
+#include <cstdint>
 #include <utility>
+#include <memory>
+#include <algorithm>         // for std::min, std::max
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/hostport.hpp>
+#include <openvpn/common/base64.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/asio/asiopolysock.hpp>
 #include <openvpn/common/to_string.hpp>
@@ -50,6 +54,7 @@
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/ws/httpcommon.hpp>
 #include <openvpn/ws/httpcreds.hpp>
+#include <openvpn/ws/websocket.hpp>
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/scoped_handle.hpp>
@@ -74,12 +79,16 @@ namespace openvpn {
 	  E_TCP,
 	  E_HTTP,
 	  E_EXCEPTION,
+	  E_BAD_REQUEST,
 	  E_HEADER_SIZE,
 	  E_CONTENT_SIZE,
+	  E_CONTENT_TYPE,
 	  E_EOF_SSL,
 	  E_EOF_TCP,
 	  E_CONNECT_TIMEOUT,
 	  E_GENERAL_TIMEOUT,
+	  E_KEEPALIVE_TIMEOUT,
+	  E_SHUTDOWN,
 	  E_ABORTED,
 
 	  N_ERRORS
@@ -96,12 +105,16 @@ namespace openvpn {
 	    "E_TCP",
 	    "E_HTTP",
 	    "E_EXCEPTION",
+	    "E_BAD_REQUEST",
 	    "E_HEADER_SIZE",
 	    "E_CONTENT_SIZE",
+	    "E_CONTENT_TYPE",
 	    "E_EOF_SSL",
 	    "E_EOF_TCP",
 	    "E_CONNECT_TIMEOUT",
 	    "E_GENERAL_TIMEOUT",
+	    "E_KEEPALIVE_TIMEOUT",
+	    "E_SHUTDOWN",
 	    "E_ABORTED",
 	  };
 
@@ -115,7 +128,7 @@ namespace openvpn {
 	}
       };
 
-      struct Config : public RC<thread_unsafe_refcount>
+      struct Config : public RCCopyable<thread_unsafe_refcount>
       {
 	typedef RCPtr<Config> Ptr;
 
@@ -124,6 +137,7 @@ namespace openvpn {
 	std::string user_agent;
 	unsigned int connect_timeout = 0;
 	unsigned int general_timeout = 0;
+	unsigned int keepalive_timeout = 0;
 	unsigned int max_headers = 0;
 	unsigned int max_header_bytes = 0;
 	olong max_content_bytes = 0;
@@ -159,7 +173,11 @@ namespace openvpn {
 
 	std::string host_port_str() const
 	{
-	  return host + ':' + port;
+	  const std::string& ht = host_transport();
+	  if (ht == host)
+	    return '[' + host + "]:" + port;
+	  else
+	    return host + '[' + ht + "]:" + port;
 	}
       };
 
@@ -190,7 +208,18 @@ namespace openvpn {
 	std::string content_encoding;
 	olong length = 0;
 	bool keepalive = false;
+	bool lean_headers = false;
 	std::vector<std::string> extra_headers;
+	WebSocket::Client::PerRequest::Ptr websocket;
+      };
+
+      struct TimeoutOverride
+      {
+	// Timeout overrides in seconds.
+	// Set to -1 to disable.
+	int connect = -1;
+	int general = -1;
+	int keepalive = -1;
       };
 
       class HTTPCore;
@@ -209,10 +238,9 @@ namespace openvpn {
 	};
 
 	HTTPCore(openvpn_io::io_context& io_context_arg,
-	     const Config::Ptr& config_arg)
-	  : Base(config_arg),
+		 Config::Ptr config_arg)
+	  : Base(std::move(config_arg)),
 	    io_context(io_context_arg),
-	    alive(false),
 	    resolver(io_context_arg),
 	    connect_timer(io_context_arg),
 	    general_timer(io_context_arg),
@@ -225,20 +253,47 @@ namespace openvpn {
 	  stop();
 	}
 
+	// Should be called before start_request().
+	void override_timeouts(TimeoutOverride to_arg)
+	{
+	  to = std::move(to_arg);
+	}
+
 	bool is_alive() const
 	{
 	  return alive;
 	}
 
-	void start_request()
+	void check_ready() const
 	{
 	  if (!is_ready())
 	    throw http_client_exception("not ready");
+	}
+
+	void start_request()
+	{
+	  check_ready();
 	  ready = false;
+	  cancel_keepalive_timer();
 	  openvpn_io::post(io_context, [self=Ptr(this)]()
 		     {
 		       self->handle_request();
 		     });
+	}
+
+	void start_request_after(const Time::Duration dur)
+	{
+	  check_ready();
+	  ready = false;
+	  cancel_keepalive_timer();
+	  if (!req_timer)
+	    req_timer.reset(new AsioTimer(io_context));
+	  req_timer->expires_after(dur);
+	  req_timer->async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
+				{
+				  if (!error)
+				    self->handle_request();
+				});
 	}
 
 	void stop()
@@ -255,15 +310,18 @@ namespace openvpn {
 	      if (socket)
 		socket->close();
 	      resolver.cancel();
+	      if (req_timer)
+		req_timer->cancel();
+	      cancel_keepalive_timer();
 	      general_timer.cancel();
 	      connect_timer.cancel();
 	    }
 	}
 
-	void abort(const std::string& message)
+	void abort(const std::string& message, const int status=Status::E_ABORTED)
 	{
 	  if (!halt)
-	    error_handler(Status::E_ABORTED, message);
+	    error_handler(status, message);
 	}
 
 	const HTTP::Reply& reply() const {
@@ -312,6 +370,13 @@ namespace openvpn {
 	AsioPolySock::Base* get_socket()
 	{
 	  return socket.get();
+	}
+
+	void streaming_start()
+	{
+	  content_out_hold = false;
+	  if (is_deferred())
+	    http_content_out_needed();
 	}
 
 	// virtual methods
@@ -368,8 +433,9 @@ namespace openvpn {
 	    throw http_client_exception("frame undefined");
 	}
 
-	void activity(const bool init, const Time& now)
+	void activity(const bool init)
 	{
+	  const Time now = Time::now();
 	  if (general_timeout_duration.defined())
 	    {
 	      const Time next = now + general_timeout_duration;
@@ -388,11 +454,6 @@ namespace openvpn {
 	    general_timer.cancel();
 	}
 
-	void activity(const bool init)
-	{
-	  activity(init, Time::now());
-	}
-
 	void handle_request() // called by Asio
 	{
 	  if (halt)
@@ -404,9 +465,10 @@ namespace openvpn {
 
 	    verify_frame();
 
-	    const Time now = Time::now();
-	    general_timeout_duration = Time::Duration::seconds(config->general_timeout);
-	    activity(true, now);
+	    general_timeout_duration = Time::Duration::seconds(to.general >= 0
+							       ? to.general
+							       : config->general_timeout);
+	    activity(true);
 
 	    if (alive)
 	      {
@@ -418,7 +480,7 @@ namespace openvpn {
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 		if (host.port == "unix") // unix domain socket
 		  {
-		    openvpn_io::local::stream_protocol::endpoint ep(host.host);
+		    openvpn_io::local::stream_protocol::endpoint ep(host.host_transport());
 		    AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
 		    socket.reset(s);
 		    s->socket.async_connect(ep,
@@ -432,8 +494,9 @@ namespace openvpn {
 #ifdef OPENVPN_PLATFORM_WIN
 		  if (host.port == "np") // windows named pipe
 		  {
+		    const std::string& ht = host.host_transport();
 		    const HANDLE h = ::CreateFileA(
-		        host.host.c_str(),
+		        ht.c_str(),
 			GENERIC_READ | GENERIC_WRITE,
 			0,
 			NULL,
@@ -443,7 +506,7 @@ namespace openvpn {
 		    if (!Win::Handle::defined(h))
 		      {
 			const Win::LastError err;
-			OPENVPN_THROW(http_client_exception, "failed to open existing named pipe: " << host.host << " : " << err.message());
+			OPENVPN_THROW(http_client_exception, "failed to open existing named pipe: " << ht << " : " << err.message());
 		      }
 		    socket.reset(new AsioPolySock::NamedPipe(openvpn_io::windows::stream_handle(io_context, h), 0));
 		    do_connect(true);
@@ -473,7 +536,9 @@ namespace openvpn {
 		  }
 		if (config->connect_timeout)
 		  {
-		    connect_timer.expires_after(Time::Duration::seconds(config->connect_timeout));
+		    connect_timer.expires_after(Time::Duration::seconds(to.connect >= 0
+									? to.connect
+									: config->connect_timeout));
 		    connect_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 					     {
 					       if (!error)
@@ -513,11 +578,15 @@ namespace openvpn {
 	    // optionally bind to local addr/port
 	    if (!host.local_addr.empty())
 	      {
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
 		const IP::Addr local_addr(host.local_addr, "local_addr");
 		unsigned short local_port = 0;
 		if (!host.local_port.empty())
 		  local_port = HostPort::parse_port(host.local_port, "local_port");
 		s->socket.bind_local(local_addr, local_port);
+#else
+		throw Exception("httpcli must be built with OPENVPN_POLYSOCK_SUPPORTS_BIND to support local bind");
+#endif
 	      }
 
 	    openvpn_io::async_connect(s->socket, std::move(results),
@@ -602,6 +671,32 @@ namespace openvpn {
 	  generate_request();
 	}
 
+	void schedule_keepalive_timer()
+	{
+	  if (config->keepalive_timeout || to.keepalive >= 0)
+	    {
+	      const Time::Duration dur = Time::Duration::seconds(to.keepalive >= 0
+								 ? to.keepalive
+								 : config->keepalive_timeout);
+	      if (!keepalive_timer)
+		keepalive_timer.reset(new AsioTimer(io_context));
+	      keepalive_timer->expires_after(dur);
+	      keepalive_timer->async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
+	              {
+			if (!self->halt && !error)
+			  {
+			    self->error_handler(Status::E_KEEPALIVE_TIMEOUT, "Keepalive timeout");
+			  }
+		      });
+	    }
+	}
+
+	void cancel_keepalive_timer()
+	{
+	  if (keepalive_timer)
+	    keepalive_timer->cancel();
+	}
+
 	void general_timeout_handler(const openvpn_io::error_code& e) // called by Asio
 	{
 	  if (!halt && !e)
@@ -628,16 +723,31 @@ namespace openvpn {
 	  const Request req = http_request();
 	  content_info = http_content_info();
 
-	  outbuf.reset(new BufferAllocated(1024, BufferAllocated::GROW));
+	  outbuf.reset(new BufferAllocated(512, BufferAllocated::GROW));
 	  BufferStreamOut os(*outbuf);
+
+	  if (content_info.websocket)
+	    {
+	      content_out_hold = true; // no content-out until after server reply
+	      generate_request_websocket(os, req);
+	    }
+	  else
+	    generate_request_http(os, req);
+
+	  http_headers_sent(*outbuf);
+	  http_out();
+	}
+
+	void generate_request_http(std::ostream& os, const Request& req)
+	{
 	  os << req.method << ' ' << req.uri << " HTTP/1.1\r\n";
-	  os << "Host: " << host.host_head() << "\r\n";
-	  if (!config->user_agent.empty())
-	    os << "User-Agent: " << config->user_agent << "\r\n";
-	  if (!req.username.empty() || !req.password.empty())
-	    os << "Authorization: Basic "
-	       << base64->encode(req.username + ':' + req.password)
-	       << "\r\n";
+	  if (!content_info.lean_headers)
+	    {
+	      os << "Host: " << host.host_head() << "\r\n";
+	      if (!config->user_agent.empty())
+		os << "User-Agent: " << config->user_agent << "\r\n";
+	    }
+	  generate_basic_auth_headers(os, req);
 	  if (content_info.length)
 	    os << "Content-Type: " << content_info.type << "\r\n";
 	  if (content_info.length > 0)
@@ -650,11 +760,33 @@ namespace openvpn {
 	    os << "Content-Encoding: " << content_info.content_encoding << "\r\n";
 	  if (content_info.keepalive)
 	    os << "Connection: keep-alive\r\n";
-	  os << "Accept: */*\r\n";
+	  if (!content_info.lean_headers)
+	    os << "Accept: */*\r\n";
 	  os << "\r\n";
+	}
 
-	  http_headers_sent(*outbuf);
-	  http_out();
+	void generate_request_websocket(std::ostream& os, const Request& req)
+	{
+	  os << req.method << ' ' << req.uri << " HTTP/1.1\r\n";
+	  os << "Host: " << host.host_head() << "\r\n";
+	  if (!config->user_agent.empty())
+	    os << "User-Agent: " << config->user_agent << "\r\n";
+	  generate_basic_auth_headers(os, req);
+	  if (content_info.length)
+	  os << "Content-Type: " << content_info.type << "\r\n";
+	  if (content_info.websocket)
+	    content_info.websocket->client_headers(os);
+	  for (auto &h : content_info.extra_headers)
+	    os << h << "\r\n";
+	  os << "\r\n";
+	}
+
+	void generate_basic_auth_headers(std::ostream& os, const Request& req)
+	{
+	  if (!req.username.empty() || !req.password.empty())
+	    os << "Authorization: Basic "
+	       << base64->encode(req.username + ':' + req.password)
+	       << "\r\n";
 	}
 
 	// error handlers
@@ -744,17 +876,25 @@ namespace openvpn {
 
 	void base_http_content_out_needed()
 	{
-	  http_content_out_needed();
+	  if (!content_out_hold)
+	    http_content_out_needed();
 	}
 
 	void base_http_out_eof()
 	{
+	  if (websocket)
+	    {
+	      stop();
+	      http_done(Status::E_SUCCESS, "Succeeded");
+	    }
 	}
 
 	bool base_http_headers_received()
 	{
+	  if (content_info.websocket)
+	    websocket = true; // enable websocket in httpcommon
 	  http_headers_received();
-	  return true; // continue to receive content
+	  return true;        // continue to receive content
 	}
 
 	void base_http_content_in(BufferAllocated& buf)
@@ -784,9 +924,10 @@ namespace openvpn {
 	{
 	  if (halt)
 	    return;
-	  if (content_info.keepalive || parent_handoff)
+	  if ((content_info.keepalive || parent_handoff) && !websocket)
 	    {
 	      general_timer.cancel();
+	      schedule_keepalive_timer();
 	      alive = true;
 	      ready = true;
 	    }
@@ -869,7 +1010,7 @@ namespace openvpn {
 
 	openvpn_io::io_context& io_context;
 
-	bool alive;
+	TimeoutOverride to;
 
 	AsioPolySock::Base::Ptr socket;
 	openvpn_io::ip::tcp::resolver resolver;
@@ -882,9 +1023,14 @@ namespace openvpn {
 
 	AsioTimer connect_timer;
 	AsioTimer general_timer;
+	std::unique_ptr<AsioTimer> req_timer;
+	std::unique_ptr<AsioTimer> keepalive_timer;
 
 	Time::Duration general_timeout_duration;
 	CoarseTime general_timeout_coarse;
+
+	bool content_out_hold = false;
+	bool alive = false;
       };
 
       template <typename PARENT>
@@ -896,112 +1042,117 @@ namespace openvpn {
 	typedef RCPtr<HTTPDelegate> Ptr;
 
 	HTTPDelegate(openvpn_io::io_context& io_context,
-		     const WS::Client::Config::Ptr& config,
-		     PARENT* parent_arg)
-	  : WS::Client::HTTPCore(io_context, config),
-	    parent(parent_arg)
+		     WS::Client::Config::Ptr config,
+		     PARENT* parent)
+	  : WS::Client::HTTPCore(io_context, std::move(config)),
+	    parent_(parent)
 	{
 	}
 
-	void attach(PARENT* parent_arg)
+	void attach(PARENT* parent)
 	{
-	  parent = parent_arg;
+	  parent_ = parent;
 	}
 
 	void detach(const bool keepalive=false)
 	{
-	  if (parent)
+	  if (parent_)
 	    {
-	      parent = nullptr;
+	      parent_ = nullptr;
 	      if (!keepalive)
 		stop();
 	    }
 	}
 
+	PARENT* parent()
+	{
+	  return parent_;
+	}
+
 	virtual Host http_host()
 	{
-	  if (parent)
-	    return parent->http_host(*this);
+	  if (parent_)
+	    return parent_->http_host(*this);
 	  else
 	    throw http_delegate_error("http_host");
 	}
 
 	virtual Request http_request()
 	{
-	  if (parent)
-	    return parent->http_request(*this);
+	  if (parent_)
+	    return parent_->http_request(*this);
 	  else
 	    throw http_delegate_error("http_request");
 	}
 
 	virtual ContentInfo http_content_info()
 	{
-	  if (parent)
-	    return parent->http_content_info(*this);
+	  if (parent_)
+	    return parent_->http_content_info(*this);
 	  else
 	    throw http_delegate_error("http_content_info");
 	}
 
 	virtual BufferPtr http_content_out()
 	{
-	  if (parent)
-	    return parent->http_content_out(*this);
+	  if (parent_)
+	    return parent_->http_content_out(*this);
 	  else
 	    throw http_delegate_error("http_content_out");
 	}
 
 	virtual void http_content_out_needed()
 	{
-	  if (parent)
-	    parent->http_content_out_needed(*this);
+	  if (parent_)
+	    parent_->http_content_out_needed(*this);
 	  else
 	    throw http_delegate_error("http_content_out_needed");
 	}
 
 	virtual void http_headers_received()
 	{
-	  if (parent)
-	    parent->http_headers_received(*this);
+	  if (parent_)
+	    parent_->http_headers_received(*this);
 	}
 
 	virtual void http_headers_sent(const Buffer& buf)
 	{
-	  if (parent)
-	    parent->http_headers_sent(*this, buf);
+	  if (parent_)
+	    parent_->http_headers_sent(*this, buf);
 	}
 
 	virtual void http_mutate_resolver_results(openvpn_io::ip::tcp::resolver::results_type& results)
 	{
-	  if (parent)
-	    parent->http_mutate_resolver_results(*this, results);
+	  if (parent_)
+	    parent_->http_mutate_resolver_results(*this, results);
 	}
 
 	virtual void http_content_in(BufferAllocated& buf)
 	{
-	  if (parent)
-	    parent->http_content_in(*this, buf);
+	  if (parent_)
+	    parent_->http_content_in(*this, buf);
 	}
 
 	virtual void http_done(const int status, const std::string& description)
 	{
-	  if (parent)
-	    parent->http_done(*this, status, description);
+	  if (parent_)
+	    parent_->http_done(*this, status, description);
 	}
 
 	virtual void http_keepalive_close(const int status, const std::string& description)
 	{
-	  if (parent)
-	    parent->http_keepalive_close(*this, status, description);
+	  if (parent_)
+	    parent_->http_keepalive_close(*this, status, description);
 	}
 
 	virtual void http_post_connect(AsioPolySock::Base& sock)
 	{
-	  if (parent)
-	    parent->http_post_connect(*this, sock);
+	  if (parent_)
+	    parent_->http_post_connect(*this, sock);
 	}
 
       private:
-	PARENT* parent;
+	PARENT* parent_;
       };
     }
   }
