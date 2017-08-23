@@ -17,7 +17,7 @@
 #include <utility>
 #include <algorithm>
 #include <limits>
-#include <unordered_map>
+#include <map>
 
 #include <openvpn/asio/asiostop.hpp>
 #include <openvpn/common/cleanup.hpp>
@@ -322,31 +322,34 @@ namespace openvpn {
 	}
       };
 
-      class HostRetry : public ErrorRecovery
+      class HostRetry : public std::vector<std::string>,
+			public ErrorRecovery
       {
       public:
 	typedef RCPtr<HostRetry> Ptr;
 
+	HostRetry() {}
+
 	template<typename T, typename... Args>
 	HostRetry(T first, Args... args)
 	{
-	  hosts.reserve(1 + sizeof...(args));
+	  reserve(1 + sizeof...(args));
 	  from_list(first, args...);
 	}
 
-	void shuffle(RandomAPI& rng)
+	void shuffle(RandomAPI& prng)
 	{
-	  std::shuffle(hosts.begin(), hosts.end(), rng);
+	  std::shuffle(begin(), end(), prng);
 	  index = 0;
 	}
 
 	std::string next_host()
 	{
-	  if (hosts.empty())
+	  if (empty())
 	    throw Exception("HostRetry: empty host list");
-	  if (index >= hosts.size())
+	  if (index >= size())
 	    index = 0;
-	  return hosts[index++];
+	  return (*this)[index++];
 	}
 
 	virtual void retry(TransactionSet& ts, Transaction& t) override
@@ -357,12 +360,12 @@ namespace openvpn {
       private:
 	void from_list(std::string arg)
 	{
-	  hosts.push_back(std::move(arg));
+	  push_back(std::move(arg));
 	}
 
 	void from_list(const char *arg)
 	{
-	  hosts.push_back(std::string(arg));
+	  push_back(std::string(arg));
 	}
 
 	template<typename T, typename... Args>
@@ -373,7 +376,6 @@ namespace openvpn {
 	}
 
 	size_t index = 0;
-	std::vector<std::string> hosts;
       };
 
       ClientSet(openvpn_io::io_context& io_context_arg)
@@ -383,14 +385,9 @@ namespace openvpn {
       {
       }
 
-      void set_random(RandomAPI::Ptr rng_arg)
+      void set_random(RandomAPI::Ptr prng_arg)
       {
-	rng = std::move(rng_arg);
-      }
-
-      const RandomAPI::Ptr& get_random() const
-      {
-	return rng;
+	prng = std::move(prng_arg);
       }
 
       void new_request(const TransactionSet::Ptr& ts)
@@ -403,7 +400,7 @@ namespace openvpn {
 
       static void new_request_synchronous(const TransactionSet::Ptr& ts,
 					  Stop* stop=nullptr,
-					  RandomAPI* rng=nullptr,
+					  RandomAPI* prng=nullptr,
 					  const bool sps=false)
       {
 	std::unique_ptr<openvpn_io::io_context> io_context;
@@ -426,7 +423,8 @@ namespace openvpn {
 		cs->abort("stop message received");
 	    });
 	  cs.reset(new ClientSet(*io_context));
-	  cs->set_random(rng);
+	  if (prng)
+	    cs->set_random(RandomAPI::Ptr(prng));
 	  cs->new_request(ts);
 	  if (sps)
 	    {
@@ -449,7 +447,7 @@ namespace openvpn {
 
       static void run_synchronous(Function<void(ClientSet::Ptr)> job,
 				  Stop* stop=nullptr,
-				  RandomAPI* rng=nullptr)
+				  RandomAPI* prng=nullptr)
       {
 	std::unique_ptr<openvpn_io::io_context> io_context(new openvpn_io::io_context(1));
 	ClientSet::Ptr cs;
@@ -459,7 +457,7 @@ namespace openvpn {
 		cs->abort("stop message received");
 	    });
 	  cs.reset(new ClientSet(*io_context));
-	  cs->set_random(rng);
+	  cs->set_random(prng);
 	  job(cs);
 	  io_context->run();
 	}
@@ -710,8 +708,8 @@ namespace openvpn {
 
 	void http_mutate_resolver_results(HTTPDelegate& hd, openvpn_io::ip::tcp::resolver::results_type& results)
 	{
-	  if (parent->rng && trans().randomize_resolver_results)
-	    results.randomize(*parent->rng);
+	  if (parent->prng && trans().randomize_resolver_results)
+	    results.randomize(*parent->prng);
 	}
 
 	void http_content_in(HTTPDelegate& hd, BufferAllocated& buf)
@@ -835,8 +833,8 @@ namespace openvpn {
       openvpn_io::io_context& io_context;
       bool halt;
       client_t next_id;
-      RandomAPI::Ptr rng;
-      std::unordered_map<client_t, Client::Ptr> clients;
+      RandomAPI::Ptr prng;
+      std::map<client_t, Client::Ptr> clients;
     };
 
   }
