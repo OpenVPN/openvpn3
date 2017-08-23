@@ -72,6 +72,10 @@ namespace openvpn {
 	return !halt && ready;
       }
 
+      bool is_websocket() const {
+	return websocket;
+      }
+
       const typename REQUEST_REPLY::State& request_reply() const {
 	return rr_obj;
       }
@@ -100,7 +104,7 @@ namespace openvpn {
 	async_out = async_out_arg;
       }
 
-      void http_content_out_finish(const BufferPtr& buf)
+      void http_content_out_finish(BufferPtr buf)
       {
 	if (halt)
 	  return;
@@ -112,7 +116,7 @@ namespace openvpn {
 	    http_out_buffer();
 	  }
 	else
-	  throw http_exception("http_out_deferred: no deferred state");
+	  throw http_exception("http_content_out_finish: no deferred state");
       }
 
       void update_max_content_bytes(const CONTENT_LENGTH_TYPE new_max_content_bytes)
@@ -122,10 +126,7 @@ namespace openvpn {
 
     protected:
       HTTPBase(const typename CONFIG::Ptr& config_arg)
-	: halt(false),
-	  ready(true),
-	  async_out(false),
-	  config(config_arg),
+	: config(config_arg),
 	  frame(config_arg->frame),
 	  stats(config_arg->stats)
       {
@@ -133,17 +134,14 @@ namespace openvpn {
 	rr_reset();
       }
 
+      bool is_deferred() const
+      {
+	return out_state == S_DEFERRED;
+      }
+
       void http_out_begin()
       {
 	out_state = S_OUT;
-      }
-
-      void new_outbuf()
-      {
-	if (!outbuf || !outbuf->defined())
-	  out_state = S_EOF;
-	if (content_info.length == CONTENT_INFO::CHUNKED)
-	  outbuf = ChunkedHelper::transmit(std::move(outbuf));
       }
 
       // Transmit outgoing HTTP, either to SSL object (HTTPS) or TCP socket (HTTP)
@@ -172,6 +170,69 @@ namespace openvpn {
 	      }
 	  }
 	http_out_buffer();
+      }
+
+      void tcp_in(BufferAllocated& b)
+      {
+	if (ssl_sess)
+	  {
+	    // HTTPS
+	    BufferPtr buf(new BufferAllocated());
+	    buf->swap(b); // take ownership
+	    ssl_sess->write_ciphertext(buf);
+	    ssl_up_stack();
+	    ssl_down_stack();
+
+	    // In some cases, such as immediately after handshake,
+	    // a write becomes possible after a read has completed.
+	    http_out();
+	  }
+	else
+	  {
+	    // HTTP
+	    http_in(b);
+	  }
+      }
+
+      // Callback methods in parent:
+      //   BufferPtr base_http_content_out();
+      //   void base_http_content_out_needed();
+      //   void base_http_out_eof();
+      //   bool base_http_headers_received();
+      //   void base_http_content_in(BufferAllocated& buf);
+      //   bool base_link_send(BufferAllocated& buf);
+      //   bool base_send_queue_empty();
+      //   void base_http_done_handler(BufferAllocated& residual)
+      //   void base_error_handler(const int errcode, const std::string& err);
+
+      // protected member vars
+
+      bool halt = false;
+      bool ready = true;
+      bool async_out = false;
+      bool websocket = false;
+
+      typename CONFIG::Ptr config;
+      CONTENT_INFO content_info;
+      SSLAPI::Ptr ssl_sess;
+
+      BufferPtr outbuf;
+
+      Frame::Ptr frame;
+      SessionStats::Ptr stats;
+
+    private:
+      PARENT& parent()
+      {
+	return *static_cast<PARENT*>(this);
+      }
+
+      void new_outbuf()
+      {
+	if (!outbuf || !outbuf->defined())
+	  out_state = S_EOF;
+	if (content_info.length == CONTENT_INFO::CHUNKED)
+	  outbuf = ChunkedHelper::transmit(std::move(outbuf));
       }
 
       void http_out_buffer()
@@ -227,60 +288,6 @@ namespace openvpn {
 	    outbuf.reset();
 	    parent().base_http_out_eof();
 	  }
-      }
-
-      void tcp_in(BufferAllocated& b)
-      {
-	if (ssl_sess)
-	  {
-	    // HTTPS
-	    BufferPtr buf(new BufferAllocated());
-	    buf->swap(b); // take ownership
-	    ssl_sess->write_ciphertext(buf);
-	    ssl_up_stack();
-	    ssl_down_stack();
-
-	    // In some cases, such as immediately after handshake,
-	    // a write becomes possible after a read has completed.
-	    http_out();
-	  }
-	else
-	  {
-	    // HTTP
-	    http_in(b);
-	  }
-      }
-
-      // Callback methods in parent:
-      //   BufferPtr base_http_content_out();
-      //   void base_http_content_out_needed();
-      //   void base_http_out_eof();
-      //   bool base_http_headers_received();
-      //   void base_http_content_in(BufferAllocated& buf);
-      //   bool base_link_send(BufferAllocated& buf);
-      //   bool base_send_queue_empty();
-      //   void base_http_done_handler(BufferAllocated& residual)
-      //   void base_error_handler(const int errcode, const std::string& err);
-
-      // protected member vars
-
-      bool halt;
-      bool ready;
-      bool async_out;
-
-      typename CONFIG::Ptr config;
-      CONTENT_INFO content_info;
-      SSLAPI::Ptr ssl_sess;
-
-      BufferPtr outbuf;
-
-      Frame::Ptr frame;
-      SessionStats::Ptr stats;
-
-    private:
-      PARENT& parent()
-      {
-	return *static_cast<PARENT*>(this);
       }
 
       void chunked_content_in(BufferAllocated& buf) // called by ChunkedHelper
@@ -341,13 +348,17 @@ namespace openvpn {
 		    buf.advance(i+1);
 		    if (rr_status == REQUEST_REPLY::Parser::success)
 		      {
-			rr_content_length = get_content_length(rr_obj.headers);
-			if (rr_content_length == CONTENT_INFO::CHUNKED)
-			  rr_chunked.reset(new ChunkedHelper());
+			if (!websocket)
+			  {
+			    rr_content_length = get_content_length(rr_obj.headers);
+			    if (rr_content_length == CONTENT_INFO::CHUNKED)
+			      rr_chunked.reset(new ChunkedHelper());
+			  }
 			if (!parent().base_http_headers_received())
 			  {
-			    // parent wants to handle content itself,
-			    // pass post-header residual data
+			    // Parent wants to handle content itself,
+			    // pass post-header residual data.
+			    // Currently, only pgproxy uses this.
 			    parent().base_http_done_handler(buf, true);
 			    return;
 			  }
@@ -368,7 +379,11 @@ namespace openvpn {
 	    bool done = false;
 	    BufferAllocated residual;
 
-	    if (rr_content_length >= 0)
+	    if (websocket)
+	      {
+		do_http_content_in(buf);
+	      }
+	    else if (rr_content_length >= 0)
 	      {
 		const CONTENT_LENGTH_TYPE needed = std::max(rr_content_length - rr_content_bytes, CONTENT_LENGTH_TYPE(0));
 		if (needed <= buf.size())
