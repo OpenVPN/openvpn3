@@ -17,6 +17,7 @@
 #include <openvpn/ws/httpcliset.hpp>
 #include <openvpn/common/jsonhelper.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/random/devurand.hpp>
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/openssl/sign/verify.hpp>
 #include <openvpn/openssl/sign/pkcs7verify.hpp>
@@ -69,6 +70,7 @@ namespace openvpn {
 	      const bool lookup_product_code_arg,
 	      const int debug_level_arg)
 	: cs(std::move(cs_arg)),
+	  rng(new DevURand()),
 	  frame(frame_init_simple(1024)),
 	  lookup_product_code(lookup_product_code_arg),
 	  debug_level(debug_level_arg)
@@ -241,7 +243,7 @@ namespace openvpn {
 	ssl->set_remote_cert_tls(KUParse::TLS_WEB_SERVER);
 	ssl->set_flags(ssl_flags);
 	ssl->set_frame(frame);
-	ssl->set_rng(cs->get_random());
+	ssl->set_rng(rng);
 
 	// make HTTP context
 	WS::Client::Config::Ptr hc(new WS::Client::Config());
@@ -390,9 +392,8 @@ namespace openvpn {
       std::string nonce() const
       {
 	unsigned char data[16];
-	RandomAPI& rng = *cs->get_random();
-	rng.assert_crypto();
-	rng.rand_fill(data);
+	rng->assert_crypto();
+	rng->rand_fill(data);
 	return render_hex(data, sizeof(data));
       }
 
@@ -473,6 +474,7 @@ namespace openvpn {
       }
 
       WS::ClientSet::Ptr cs;
+      RandomAPI::Ptr rng;
       Frame::Ptr frame;
       const bool lookup_product_code;
       const int debug_level;
