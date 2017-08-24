@@ -226,7 +226,7 @@ namespace openvpn {
   }
 
   template <typename T>
-  std::string render_hex_number(T value, const bool caps=false)
+  inline std::string render_hex_number(T value, const bool caps=false)
   {
     unsigned char buf[sizeof(T)];
     for (size_t i = sizeof(T); i --> 0 ;)
@@ -237,7 +237,7 @@ namespace openvpn {
     return render_hex(buf, sizeof(T), caps);
   }
 
-  std::string render_hex_number(unsigned char uc, const bool caps=false)
+  inline std::string render_hex_number(unsigned char uc, const bool caps=false)
   {
     RenderHexByte b(uc, caps);
     return std::string(b.str2(), 2);
