@@ -321,7 +321,8 @@ namespace openvpn {
     struct LogInfo
     {
       LogInfo() {}
-      LogInfo(std::string str);
+      LogInfo(std::string str)
+	: text(std::move(str)) {}
       std::string text;     // log output (usually but not always one line)
     };
 

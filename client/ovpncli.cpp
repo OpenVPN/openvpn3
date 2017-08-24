@@ -1349,10 +1349,5 @@ namespace openvpn {
     {
       delete state;
     }
-
-    OPENVPN_CLIENT_EXPORT LogInfo::LogInfo(std::string str)
-      : text(std::move(str))
-    {
-    }
   }
 }
