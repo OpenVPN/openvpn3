@@ -74,12 +74,9 @@
 #ifndef OPENVPN_LOG
 // log thread settings
 #define OPENVPN_LOG_CLASS openvpn::ClientAPI::LogReceiver
-#define OPENVPN_LOG_INFO  openvpn::ClientAPI::UniqueLogInfo
+#define OPENVPN_LOG_INFO  openvpn::ClientAPI::LogInfo
 #include <openvpn/log/logthread.hpp>    // should be included early
 #endif
-
-// initialize index that prepends log string
-std::atomic_ullong openvpn::ClientAPI::UniqueLogInfo::globalIndex = {0};
 
 // log SSL handshake messages
 #define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
@@ -1356,34 +1353,6 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT LogInfo::LogInfo(std::string str)
       : text(std::move(str))
     {
-    }
-
-    OPENVPN_CLIENT_EXPORT std::string LogInfo::getText() const
-    {
-      return text;
-    }
-
-    OPENVPN_CLIENT_EXPORT UniqueLogInfo::UniqueLogInfo(std::string str)
-      : LogInfo(std::move(str))
-    {
-      index = ++globalIndex;
-      pid = getpid();
-    }
-
-    OPENVPN_CLIENT_EXPORT std::string UniqueLogInfo::getUniqueId() const
-    {
-	std::ostringstream logStr;
-
-	logStr << pid << "-" << index;
-	return logStr.str();
-    }
-
-    OPENVPN_CLIENT_EXPORT std::string UniqueLogInfo::getText() const
-    {
-      std::ostringstream logStr;
-
-      logStr << getUniqueId() << " " << text;
-      return logStr.str();
     }
   }
 }
