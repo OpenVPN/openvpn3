@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 set -eux
 
 PREFIX="${PREFIX:-${HOME}/opt}"
+RUN_COVERITY_SCAN="${RUN_COVERITY_SCAN:-0}"
 
 if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
     export LD_LIBRARY_PATH="${PREFIX}/lib:${LD_LIBRARY_PATH:-}"
@@ -51,3 +52,17 @@ LIBS="${SSL_LIBS} -llz4"
     ${CXX} ${CXXFLAGS} ${INCLUDEDIRS} ${LDFLAGS} proto.cpp -o proto ${LIBS}
     ./proto
 )
+
+if [ "${RUN_COVERITY_SCAN}" = "1" -a "${TRAVIS_BRANCH}" = "${COVERITY_BRANCH}" ]; then
+	export COVERITY_SCAN_PROJECT_NAME="OpenVPN/openvpn3"
+	export COVERITY_SCAN_BRANCH_PATTERN="${COVERITY_BRANCH}"
+	export COVERITY_SCAN_NOTIFICATION_EMAIL="scan-reports@openvpn.net"
+	export COVERITY_SCAN_BUILD_COMMAND_PREPEND="cd test/ssl; \
+                                                cov-configure --comptype gcc \
+                                                --compiler gcc-5 --template"
+	export COVERITY_SCAN_BUILD_COMMAND="${CXX} ${CXXFLAGS} ${INCLUDEDIRS} \
+                                        ${LDFLAGS} proto.cpp -o proto ${LIBS}"
+
+	# Ignore exit code, script exits with 1 if we're not on the right branch
+	curl -s "https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh" | bash || true
+fi
