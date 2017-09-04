@@ -1066,6 +1066,7 @@ int test(const int thread_num)
 
 int main(int argc, char* argv[])
 {
+  int ret = 0;
   // process-wide initialization
   InitProcess::init();
 
@@ -1078,7 +1079,7 @@ int main(int argc, char* argv[])
     {
       const std::string out = SelfTest::crypto_self_test();
       OPENVPN_LOG(out);
-      return 0;
+      goto out;
     }
 
 #if N_THREADS >= 2
@@ -1095,8 +1096,12 @@ int main(int argc, char* argv[])
       threads[i]->join();
       delete threads[i];
     }
-  return 0;
 #else
-  return test(1);
+  ret = test(1);
 #endif
+
+out:
+  InitProcess::uninit();
+
+  return ret;
 }
