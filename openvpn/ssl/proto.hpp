@@ -3326,10 +3326,10 @@ namespace openvpn {
     {
       primary.swap(secondary);
       if (primary)
-	primary->rekey(CryptoDCInstance::PROMOTE_SECONDARY_TO_PRIMARY);
+	primary->rekey(CryptoDCInstance::PRIMARY_SECONDARY_SWAP);
       if (secondary)
 	secondary->prepare_expire();
-      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " PROMOTE_SECONDARY_TO_PRIMARY");
+      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " PRIMARY_SECONDARY_SWAP");
     }
 
     void process_primary_event()
