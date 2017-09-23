@@ -72,6 +72,18 @@ namespace openvpn {
 #error no find_first_set / find_last_set implementation for this platform
 #endif
 
+  template <typename T>
+  inline bool is_pow2(const T v)
+  {
+    return v && find_first_set(v) == find_last_set(v);
+  }
+
+  template <typename T>
+  inline int log2(const T v)
+  {
+    return find_last_set(v) - 1;
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_COMMON_FFS_H
