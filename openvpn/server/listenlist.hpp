@@ -71,6 +71,7 @@ namespace openvpn {
       {
 	Item ret(*this);
 	ret.port = openvpn::to_string(HostPort::parse_port(ret.port, "offset") + offset);
+	ret.n_threads = 0;
 	return ret;
       }
     };
