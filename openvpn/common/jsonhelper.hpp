@@ -478,6 +478,15 @@ namespace openvpn {
       return buf_to_string(*bp);
     }
 
+    inline void format(const Json::Value& root, Buffer& buf)
+    {
+      Json::StreamWriterBuilder json_builder;
+      json_builder.settings_["indentation"] = "  ";
+      BufferStreamOut os(buf);
+      std::unique_ptr<Json::StreamWriter> sw(json_builder.newStreamWriter());
+      sw->write(root, &os);
+    }
+
     inline std::string format(const Json::Value& root)
     {
       return root.toStyledString();
