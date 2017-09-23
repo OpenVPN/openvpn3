@@ -38,6 +38,7 @@
 #include <openvpn/server/peerstats.hpp>
 #include <openvpn/server/peeraddr.hpp>
 #include <openvpn/auth/authcert.hpp>
+#include <openvpn/auth/authstatusconst.hpp>
 
 namespace openvpn {
   namespace ManClientInstance {
@@ -74,6 +75,7 @@ namespace openvpn {
 
       // disconnect
       virtual void disconnect_user(const HaltRestart::Type type,
+				   const AuthStatus::Type auth_status,
 				   const std::string& reason,
 				   const bool tell_client) = 0;
 
