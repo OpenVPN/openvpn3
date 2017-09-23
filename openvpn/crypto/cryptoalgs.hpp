@@ -218,6 +218,12 @@ namespace openvpn {
       return alg.block_size();
     }
 
+    inline Mode mode(const Type type)
+    {
+      const Alg& alg = get(type);
+      return alg.mode();
+    }
+
     inline Type legal_dc_cipher(const Type type)
     {
       const Alg& alg = get(type);
