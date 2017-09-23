@@ -392,6 +392,12 @@ namespace openvpn {
       return value;
     }
 
+    template <typename NAME>
+    inline const Json::Value& get_array(const Json::Value& root, const NAME& name, const bool optional)
+    {
+      return get_array(root, name, optional, nullptr);
+    }
+
     template <typename TITLE>
     inline const Json::Value& cast_array(const Json::Value& value, const bool optional, const TITLE& title)
     {
