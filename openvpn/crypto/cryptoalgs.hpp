@@ -82,6 +82,12 @@ namespace openvpn {
       F_ALLOW_DC=(1<<4),  // alg may be used in OpenVPN data channel
     };
 
+    // size in bytes of AEAD "nonce tail" normally taken from
+    // HMAC key material
+    enum {
+      AEAD_NONCE_TAIL_SIZE = 8
+    };
+
     class Alg
     {
     public:
