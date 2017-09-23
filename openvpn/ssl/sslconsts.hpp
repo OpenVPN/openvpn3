@@ -57,8 +57,16 @@ namespace openvpn {
       // clients that connect to us have their certificate
       // purpose set to server.
       SERVER_TO_SERVER=(1<<4),
+
+      // last flag marker
+      LAST=(1<<5),
     };
 
+    // filter all but SSL flags
+    inline unsigned int ssl_flags(const unsigned int flags)
+    {
+      return flags & (LAST-1);
+    }
   }
 }
 
