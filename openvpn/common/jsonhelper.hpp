@@ -91,8 +91,9 @@ namespace openvpn {
     template <typename NAME>
     inline bool exists(const Json::Value& root, const NAME& name)
     {
-      const Json::Value& value = root[name];
-      return !value.isNull();
+      if (!root.isObject())
+	return false;
+      return !root[name].isNull();
     }
 
     template <typename T, typename NAME, typename TITLE>
