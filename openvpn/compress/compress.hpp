@@ -452,22 +452,22 @@ namespace openvpn {
 
     static Type parse_method(const std::string& method)
     {
-      if (method == "lzo")
+      if (method == "stub-v2")
+	return COMP_STUBv2;
+      else if (method == "lz4-v2")
+	return LZ4v2;
+      else if (method == "lz4")
+	return LZ4;
+      else if (method == "lzo")
 	return LZO;
       else if (method == "lzo-swap")
 	return LZO_SWAP;
       else if (method == "lzo-stub")
 	return LZO_STUB;
-      else if (method == "lz4")
-	return LZ4;
-      else if (method == "lz4-v2")
-	return LZ4v2;
       else if (method == "snappy")
 	return SNAPPY;
       else if (method == "stub")
 	return COMP_STUB;
-      else if (method == "stub-v2")
-	return COMP_STUBv2;
       else
 	return NONE;
     }
