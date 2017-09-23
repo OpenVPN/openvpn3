@@ -278,6 +278,21 @@ namespace openvpn {
 	return std::string();
       }
 
+      List expand_ports(const size_t max_size) const
+      {
+	List ret;
+	for (const auto &e : *this)
+	  {
+	    unsigned int offset = 0;
+	    do {
+	      if (ret.size() >= max_size)
+		OPENVPN_THROW(option_error, e.directive << ": max_size=" << max_size << " exceeded");
+	      ret.emplace_back(e.port_offset(offset));
+	    } while (++offset < e.n_threads);
+	  }
+	return ret;
+      }
+
     private:
       static bool match(const std::string& directive, const Option& o)
       {
