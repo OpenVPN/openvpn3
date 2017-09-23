@@ -33,6 +33,7 @@
 #include <openvpn/common/splitlines.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/buffer/buffer.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
@@ -56,6 +57,19 @@ namespace openvpn {
     {
       key_data_.reset(capacity, key_t::DESTRUCT_ZERO);
       base64->decode(key_data_, b64);
+    }
+
+    std::string render_to_base64() const
+    {
+      return base64->encode(key_data_);
+    }
+
+    void init_from_rng(RandomAPI& rng, const size_t key_size)
+    {
+      rng.assert_crypto();
+      key_data_.init(key_size, key_t::DESTRUCT_ZERO);
+      rng.rand_bytes(key_data_.data(), key_size);
+      key_data_.set_size(key_size);
     }
 
   private:
