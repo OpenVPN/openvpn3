@@ -79,7 +79,7 @@ namespace openvpn {
 
       virtual TransportClientInstance::Recv::Ptr new_client_instance() override;
 
-      virtual bool validate_initial_packet(const Buffer& net_buf) override
+      virtual bool validate_initial_packet(const BufferAllocated& net_buf) override
       {
 	if (preval)
 	  {

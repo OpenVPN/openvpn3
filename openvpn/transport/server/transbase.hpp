@@ -141,7 +141,7 @@ namespace openvpn {
       typedef RCPtr<Factory> Ptr;
 
       virtual Recv::Ptr new_client_instance() = 0;
-      virtual bool validate_initial_packet(const Buffer& net_buf) = 0;
+      virtual bool validate_initial_packet(const BufferAllocated& net_buf) = 0;
     };
 
   }
