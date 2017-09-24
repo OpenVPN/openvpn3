@@ -714,9 +714,7 @@ namespace openvpn {
 	  : io_context(io_context_arg),
 	    listen_list(listen_item_arg),
 	    config(config_arg),
-	    client_factory(client_factory_arg),
-	    halt(false),
-	    next_id(0)
+	    client_factory(client_factory_arg)
 	{
 	}
 
@@ -727,9 +725,7 @@ namespace openvpn {
 	  : io_context(io_context_arg),
 	    listen_list(listen_list_arg),
 	    config(config_arg),
-	    client_factory(client_factory_arg),
-	    halt(false),
-	    next_id(0)
+	    client_factory(client_factory_arg)
 	{
 	}
 
@@ -939,11 +935,11 @@ namespace openvpn {
 	Listen::List listen_list;
 	Config::Ptr config;
 	Client::Factory::Ptr client_factory;
-	bool halt;
+	bool halt = false;
 
 	Acceptor::Set acceptors;
 
-	client_t next_id;
+	client_t next_id = 0;
 	ClientMap clients;
       };
 
