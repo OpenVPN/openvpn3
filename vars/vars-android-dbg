@@ -1,4 +1,4 @@
-export DEP_DIR=$HOME/src/android
+[ -z "$DEP_DIR" ] && export DEP_DIR=$HOME/src/android
 export PLATFORM=android-dbg
 export ABI=armeabi
 export DEBUG_BUILD=1
