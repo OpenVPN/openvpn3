@@ -56,7 +56,7 @@ fi
 
 (
     cd test/ssl
-    ${CXX} ${CXXFLAGS} ${INCLUDEDIRS} ${LDFLAGS} proto.cpp -o proto ${LIBS}
+    ${CXX} ${CXXFLAGS} -DNOERR ${INCLUDEDIRS} ${LDFLAGS} proto.cpp -o proto ${LIBS}
     ./proto
 )
 
