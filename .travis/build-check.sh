@@ -61,6 +61,8 @@ fi
 )
 
 if [ "${RUN_COVERITY_SCAN}" = "1" -a "${TRAVIS_BRANCH}" = "${COVERITY_BRANCH}" ]; then
+	unset LD_LIBRARY_PATH #don't mess up SSL for curl/wget
+
 	export COVERITY_SCAN_PROJECT_NAME="OpenVPN/openvpn3"
 	export COVERITY_SCAN_BRANCH_PATTERN="${COVERITY_BRANCH}"
 	export COVERITY_SCAN_NOTIFICATION_EMAIL="scan-reports@openvpn.net"
