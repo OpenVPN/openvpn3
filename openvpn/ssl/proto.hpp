@@ -1765,7 +1765,9 @@ namespace openvpn {
 	work.inc_size(decrypt_bytes);
 
 	// verify HMAC
-	if (!proto.tls_crypt_recv->hmac_cmp(orig_data, orig_size, work.c_data(), work.size()))
+	if (!proto.tls_crypt_recv->hmac_cmp(orig_data,
+					    TLSCryptContext::hmac_offset,
+					    work.c_data(), work.size()))
 	  return false;
 
 	// verify source PSID
@@ -2265,14 +2267,15 @@ namespace openvpn {
 	// write opcode
 	work.push_front(op_compose(opcode, key_id_));
 
-	// compute HMAC using header fields (from 'work') and plaintext payload (from 'buf')
-	proto.tls_crypt_send->hmac_gen(work.data(), work.size(), buf.c_data(), buf.size());
+	// compute HMAC using header fields (from 'work') and plaintext
+	// payload (from 'buf')
+	proto.tls_crypt_send->hmac_gen(work.data(), TLSCryptContext::hmac_offset,
+				       buf.c_data(), buf.size());
 
-	const size_t head_size = 1 + ProtoSessionID::SIZE + PacketID::size(PacketID::LONG_FORM);
-	const size_t data_offset = head_size + proto.hmac_size;
+	const size_t data_offset = TLSCryptContext::hmac_offset + proto.hmac_size;
 
 	// encrypt the content of 'buf' (packet payload) into 'work'
-	const size_t decrypt_bytes = proto.tls_crypt_send->encrypt(work.c_data() + head_size,
+	const size_t decrypt_bytes = proto.tls_crypt_send->encrypt(work.c_data() + TLSCryptContext::hmac_offset,
 								   work.data() + data_offset,
 								   work.max_size() - data_offset,
 								   buf.c_data(), buf.size());
@@ -2448,15 +2451,14 @@ namespace openvpn {
 	// skip the hmac
 	recv.advance(proto.hmac_size);
 
-	const size_t head_size = 1 + ProtoSessionID::SIZE + PacketID::size(PacketID::LONG_FORM);
-	const size_t data_offset = head_size + proto.hmac_size;
+	const size_t data_offset = TLSCryptContext::hmac_offset + proto.hmac_size;
 	if (orig_size < data_offset)
 	  return false;
 
 	// decrypt payload
 	proto.config->frame->prepare(Frame::DECRYPT_WORK, work);
 
-	const size_t decrypt_bytes = proto.tls_crypt_recv->decrypt(orig_data + head_size,
+	const size_t decrypt_bytes = proto.tls_crypt_recv->decrypt(orig_data + TLSCryptContext::hmac_offset,
 								   work.data(), work.max_size(),
 								   recv.c_data(), recv.size());
 	if (!decrypt_bytes)
@@ -2470,7 +2472,8 @@ namespace openvpn {
 	work.inc_size(decrypt_bytes);
 
 	// verify HMAC
-	if (!proto.tls_crypt_recv->hmac_cmp(orig_data, orig_size, work.c_data(), work.size()))
+	if (!proto.tls_crypt_recv->hmac_cmp(orig_data, TLSCryptContext::hmac_offset,
+					    work.c_data(), work.size()))
 	  {
 	    proto.stats->error(Error::HMAC_ERROR);
 	    if (proto.is_tcp())
@@ -2724,15 +2727,14 @@ namespace openvpn {
 	    if (opcode_extract(op) != reset_op || key_id_extract(op) != 0)
 	      return false;
 
-	    const size_t head_size = 1 + ProtoSessionID::SIZE + PacketID::size(PacketID::LONG_FORM);
-	    const size_t data_offset = head_size + tls_crypt_recv->output_hmac_size();
+	    const size_t data_offset = TLSCryptContext::hmac_offset + tls_crypt_recv->output_hmac_size();
 	    if (net_buf.size() < data_offset)
 	      return false;
 
 	    frame->prepare(Frame::DECRYPT_WORK, work);
 
 	    // decrypt payload from 'net_buf' into 'work'
-	    const size_t decrypt_bytes = tls_crypt_recv->decrypt(net_buf.c_data() + head_size,
+	    const size_t decrypt_bytes = tls_crypt_recv->decrypt(net_buf.c_data() + TLSCryptContext::hmac_offset,
 								 work.data(), work.max_size(),
 								 net_buf.c_data() + data_offset,
 								 net_buf.size() - data_offset);
@@ -2742,7 +2744,8 @@ namespace openvpn {
 	    work.inc_size(decrypt_bytes);
 
 	    // verify HMAC
-	    return tls_crypt_recv->hmac_cmp(net_buf.c_data(), net_buf.size(),
+	    return tls_crypt_recv->hmac_cmp(net_buf.c_data(),
+					    TLSCryptContext::hmac_offset,
 					    work.data(), work.size());
 	}
 	catch (BufferException&)
