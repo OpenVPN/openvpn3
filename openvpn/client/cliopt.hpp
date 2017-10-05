@@ -179,7 +179,8 @@ namespace openvpn {
 	info(config.info),
 	autologin(false),
 	autologin_sessions(false),
-	creds_locked(false)
+	creds_locked(false),
+	asio_work_always_on_(false)
     {
       // parse general client options
       const ParseClientConfig pcc(opt);
@@ -278,6 +279,11 @@ namespace openvpn {
       // fragment option not supported
       if (opt.exists("fragment"))
 	throw option_error("sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
+
+#ifdef OPENVPN_PLATFORM_UWP
+      // workaround for OVPN3-62 Busy loop in win_event.hpp
+      asio_work_always_on_ = true;
+#endif
 
       // init transport config
       const std::string session_name = load_transport_config();
@@ -580,6 +586,8 @@ namespace openvpn {
 
     int conn_timeout() const { return conn_timeout_; }
 
+    bool asio_work_always_on() const { return asio_work_always_on_; }
+
     RemoteList::Ptr remote_list_precache() const
     {
       RemoteList::Ptr r;
@@ -789,6 +797,7 @@ namespace openvpn {
     bool autologin;
     bool autologin_sessions;
     bool creds_locked;
+    bool asio_work_always_on_;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;

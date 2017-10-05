@@ -562,7 +562,10 @@ namespace openvpn {
     void new_client()
     {
       ++generation;
-      asio_work.reset();
+      if (client_options->asio_work_always_on())
+	asio_work.reset(new AsioWork(io_context));
+      else
+	asio_work.reset();
       if (client)
 	{
 	  client->stop(false);
