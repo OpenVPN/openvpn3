@@ -40,6 +40,9 @@
 #include <openvpn/mbedtls/crypto/api.hpp>
 #include <openvpn/mbedtls/ssl/sslctx.hpp>
 #include <openvpn/mbedtls/util/rand.hpp>
+#ifdef OPENVPN_PLATFORM_UWP
+#include <openvpn/mbedtls/util/uwprand.hpp>
+#endif
 #endif
 
 #ifdef USE_MBEDTLS_APPLE_HYBRID
@@ -54,7 +57,11 @@ namespace openvpn {
 #define SSL_LIB_NAME "MbedTLS"
     typedef MbedTLSCryptoAPI CryptoAPI;
     typedef MbedTLSContext SSLAPI;
+#if defined OPENVPN_PLATFORM_UWP
+    typedef MbedTLSRandomWithUWPEntropy RandomAPI;
+#else
     typedef MbedTLSRandom RandomAPI;
+#endif
 #elif defined(USE_MBEDTLS_APPLE_HYBRID)
     // Uses Apple framework for CryptoAPI and MbedTLS for SSLAPI and RandomAPI
 #define SSL_LIB_NAME "MbedTLSAppleHybrid"
