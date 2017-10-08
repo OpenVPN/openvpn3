@@ -101,6 +101,12 @@ namespace openvpn {
     virtual void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt) = 0;
     virtual void load_private_key(const std::string& key_txt) = 0;
     virtual void load_dh(const std::string& dh_txt) = 0;
+    virtual std::string extract_ca() const = 0;
+    virtual std::string extract_crl() const = 0;
+    virtual std::string extract_cert() const = 0;
+    virtual std::vector<std::string> extract_extra_certs() const = 0;
+    virtual std::string extract_private_key() const = 0;
+    virtual std::string extract_dh() const = 0;
     virtual void set_frame(const Frame::Ptr& frame_arg) = 0;
     virtual void set_debug_level(const int debug_level) = 0;
     virtual void set_flags(const unsigned int flags_arg) = 0;
