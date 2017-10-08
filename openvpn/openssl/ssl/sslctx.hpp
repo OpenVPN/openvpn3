@@ -157,6 +157,36 @@ namespace openvpn {
 	dh.parse_pem(dh_txt);
       }
 
+      virtual std::string extract_ca() const
+      {
+	throw ssl_options_error("extract_ca not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_crl() const
+      {
+	throw ssl_options_error("CRL not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_cert() const
+      {
+	throw ssl_options_error("extract_cert not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::vector<std::string> extract_extra_certs() const
+      {
+	throw ssl_options_error("extract_extra_certs not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_private_key() const
+      {
+	throw ssl_options_error("extract_priv_key not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_dh() const
+      {
+	throw ssl_options_error("extract_dh not implemented yet in OpenSSL driver"); // fixme
+      }
+
       virtual void set_frame(const Frame::Ptr& frame_arg)
       {
 	frame = frame_arg;
