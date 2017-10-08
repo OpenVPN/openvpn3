@@ -185,6 +185,33 @@ namespace openvpn {
 	}
     }
 
+    /* This function returns a parseable string representation of the used
+     * transport protocol. NOTE: returns nullptr if there is no mapping */
+    const char *protocol_to_string() const
+    {
+      switch (type_)
+	{
+	case UDPv4:
+	  return "udp4";
+	case TCPv4:
+	  return "tcp4";
+	case UDPv6:
+	  return "udp6";
+	case TCPv6:
+	  return "tcp6";
+	case UnixStream:
+	  return "unix-stream";
+	case UnixDGram:
+	  return "unix-dgram";
+	case NamedPipe:
+	  return "named-pipe";
+	case NONE:
+	  return "adaptive";
+	default:
+	  return nullptr;
+	}
+    }
+
     const char *str_client(const bool force_ipv4) const
     {
       switch (type_)
