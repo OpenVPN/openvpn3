@@ -246,6 +246,48 @@ namespace openvpn {
 	dh = mydh;
       }
 
+      virtual std::string extract_ca() const
+      {
+	if (!ca_chain)
+	  return std::string();
+	return ca_chain->extract();
+      }
+
+      virtual std::string extract_crl() const
+      {
+	if (!crl_chain)
+	  return std::string();
+	return crl_chain->extract();
+      }
+
+      virtual std::string extract_cert() const
+      {
+	if (!crt_chain)
+	  return std::string();
+	return crt_chain->extract();
+      }
+
+      virtual std::vector<std::string> extract_extra_certs() const
+      {
+	if (!crt_chain)
+	  return std::vector<std::string>();
+	return crt_chain->extract_extra_certs();
+      }
+
+      virtual std::string extract_private_key() const
+      {
+	if (!priv_key)
+	  return std::string();
+	return priv_key->extract();
+      }
+
+      virtual std::string extract_dh() const
+      {
+	if (!dh)
+	  return std::string();
+	return dh->extract();
+      }
+
       virtual void set_frame(const Frame::Ptr& frame_arg)
       {
 	frame = frame_arg;

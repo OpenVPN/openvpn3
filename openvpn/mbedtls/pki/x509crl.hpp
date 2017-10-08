@@ -71,6 +71,13 @@ namespace openvpn {
 	  {
 	    throw MbedTLSException("error parsing CRL", status);
 	  }
+
+	pem_chain = crl_txt;
+      }
+
+      std::string extract() const
+      {
+	return std::string(pem_chain);
       }
 
       mbedtls_x509_crl* get() const
@@ -104,6 +111,7 @@ namespace openvpn {
       }
 
       mbedtls_x509_crl *chain;
+      std::string pem_chain;
     };
   }
 }

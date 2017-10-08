@@ -76,6 +76,13 @@ namespace openvpn {
 	    os << status << " DH parameters in " << title << " failed to parse";
 	    throw MbedTLSException(os.str());
 	  }
+	// store PEM data to allow extraction
+	pem_dhc = dh_txt;
+      }
+
+      std::string extract() const
+      {
+	return std::string(pem_dhc);
       }
 
       mbedtls_dhm_context* get() const
@@ -109,6 +116,7 @@ namespace openvpn {
       }
 
       mbedtls_dhm_context *dhc;
+      std::string pem_dhc;
     };
   }
 }

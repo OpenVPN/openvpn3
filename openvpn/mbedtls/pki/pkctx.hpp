@@ -77,6 +77,18 @@ namespace openvpn {
 	  throw MbedTLSException("error parsing " + title + " private key", status);
       }
 
+      std::string extract() const
+      {
+	// maximum size of the PEM data is not available at this point
+	BufferAllocated buff(16000, 0);
+
+	int ret = mbedtls_pk_write_key_pem(ctx, buff.data(), buff.max_size());
+	if (ret < 0)
+	  throw MbedTLSException("extract priv_key: can't write to buffer", ret);
+
+	return std::string((const char *)buff.data());
+      }
+
       void epki_enable(void *arg,
 		       mbedtls_pk_rsa_alt_decrypt_func epki_decrypt,
 		       mbedtls_pk_rsa_alt_sign_func epki_sign,
