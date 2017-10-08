@@ -450,6 +450,33 @@ namespace openvpn {
 	}
     }
 
+    /* This function returns a parseable string representation of the compress
+     * method. NOTE: returns nullptr if no mapping is possible */
+    const char *method_to_string() const
+    {
+      switch (type_)
+	{
+	case LZO:
+	  return "lzo";
+	case LZO_SWAP:
+	  return "lzo-swap";
+	case LZO_STUB:
+	  return "lzo-stub";
+	case LZ4:
+	  return "lz4";
+	case LZ4v2:
+	  return "lz4v2";
+	case SNAPPY:
+	  return "snappy";
+	case COMP_STUB:
+	  return "stub";
+	case COMP_STUBv2:
+	  return "stub-v2";
+	default:
+	  return nullptr;
+	}
+    }
+
     static Type parse_method(const std::string& method)
     {
       if (method == "stub-v2")
