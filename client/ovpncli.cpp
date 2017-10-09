@@ -947,7 +947,9 @@ namespace openvpn {
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       cc.extern_tun_factory = this;
 #endif
-
+#if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
+      cc.extern_transport_factory = this;
+#endif
       // force Session ID use and disable password cache if static challenge is enabled
       if (state->creds
 	  && !state->creds->get_replace_password_with_session_id()

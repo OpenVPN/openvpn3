@@ -31,6 +31,7 @@
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/extern/fw.hpp>
 #include <openvpn/pki/epkibase.hpp>
+#include <openvpn/transport/client/extern/fw.hpp>
 
 namespace openvpn {
   class OptionList;
@@ -416,6 +417,7 @@ namespace openvpn {
     class OpenVPNClient : public TunBuilderBase,            // expose tun builder virtual methods
 			  public LogReceiver,               // log message notification
 			  public ExternalTun::Factory,      // low-level tun override
+			  public ExternalTransport::Factory,// low-level transport override
 			  private ExternalPKIBase
     {
     public:

@@ -66,6 +66,11 @@
 #include <openvpn/client/cliemuexr.hpp>
 #endif
 
+#if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
+#include <openvpn/transport/client/extern/config.hpp>
+#include <openvpn/transport/client/extern/fw.hpp>
+#endif
+
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
 // requires that client implements ExternalTun::Factory::new_tun_factory
 #include <openvpn/tun/extern/config.hpp>
@@ -157,6 +162,10 @@ namespace openvpn {
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       ExternalTun::Factory* extern_tun_factory = nullptr;
 #endif
+
+#if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
+      ExternalTransport::Factory* extern_transport_factory = nullptr;
+#endif
     };
 
     ClientOptions(const OptionList& opt,   // only needs to remain in scope for duration of constructor call
@@ -183,6 +192,9 @@ namespace openvpn {
 	creds_locked(false),
 	asio_work_always_on_(false),
 	synchronous_dns_lookup(false)
+#ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
+	,extern_transport_factory(config.extern_transport_factory)
+#endif
     {
       // parse general client options
       const ParseClientConfig pcc(opt);
@@ -692,6 +704,21 @@ namespace openvpn {
       // should have been caught earlier in RemoteList::handle_proto_override.
 
       // construct transport object
+#ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
+      ExternalTransport::Config transconf;
+      transconf.remote_list = remote_list;
+      transconf.frame = frame;
+      transconf.stats = cli_stats;
+      transconf.socket_protect = socket_protect;
+      transconf.server_addr_float = server_addr_float;
+      transconf.synchronous_dns_lookup = synchronous_dns_lookup;
+      transport_factory = extern_transport_factory->new_transport_factory(transconf);
+#ifdef OPENVPN_GREMLIN
+      udpconf->gremlin_config = gremlin_config;
+#endif
+
+#else
+	
       if (dco)
 	{
 	  DCO::TransportConfig transconf;
@@ -766,6 +793,7 @@ namespace openvpn {
 	  else
 	    throw option_error("internal error: unknown transport protocol");
 	}
+#endif // OPENVPN_EXTERNAL_TRANSPORT_FACTORY
       return remote_list->current_server_host();
     }
 
@@ -808,6 +836,9 @@ namespace openvpn {
     ClientLifeCycle::Ptr client_lifecycle;
     AltProxy::Ptr alt_proxy;
     DCO::Ptr dco;
+#ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
+    ExternalTransport::Factory* extern_transport_factory;
+#endif
   };
 }
 
