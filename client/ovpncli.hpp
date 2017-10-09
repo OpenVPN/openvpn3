@@ -192,6 +192,9 @@ namespace openvpn {
       // DNS servers, use the standard Google DNS servers.
       bool googleDnsFallback = false;
 
+      // if true, do synchronous DNS lookup.
+      bool synchronousDnsLookup = false;
+
       // Enable autologin sessions
       bool autologinSessions = true;
 

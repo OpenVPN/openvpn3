@@ -129,6 +129,7 @@ namespace openvpn {
       bool info = false;
       bool tun_persist = false;
       bool google_dns_fallback = false;
+      bool synchronous_dns_lookup = false;
       std::string private_key_password;
       bool disable_client_cert = false;
       int ssl_debug_level = 0;
@@ -180,7 +181,8 @@ namespace openvpn {
 	autologin(false),
 	autologin_sessions(false),
 	creds_locked(false),
-	asio_work_always_on_(false)
+	asio_work_always_on_(false),
+	synchronous_dns_lookup(false)
     {
       // parse general client options
       const ParseClientConfig pcc(opt);
@@ -284,6 +286,8 @@ namespace openvpn {
       // workaround for OVPN3-62 Busy loop in win_event.hpp
       asio_work_always_on_ = true;
 #endif
+
+      synchronous_dns_lookup = config.synchronous_dns_lookup;
 
       // init transport config
       const std::string session_name = load_transport_config();
@@ -798,6 +802,7 @@ namespace openvpn {
     bool autologin_sessions;
     bool creds_locked;
     bool asio_work_always_on_;
+    bool synchronous_dns_lookup;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;

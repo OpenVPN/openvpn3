@@ -45,6 +45,7 @@ namespace openvpn {
 
       RemoteList::Ptr remote_list;
       bool server_addr_float;
+      bool synchronous_dns_lookup;
       int n_parallel;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -66,6 +67,7 @@ namespace openvpn {
     private:
       ClientConfig()
 	: server_addr_float(false),
+	  synchronous_dns_lookup(false),
 	  n_parallel(8),
 	  socket_protect(nullptr)
       {}
@@ -93,11 +95,21 @@ namespace openvpn {
 	    else
 	      {
 		parent->transport_pre_resolve();
-		resolver.async_resolve(server_host, server_port,
-				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::udp::resolver::results_type results)
-				       {
-					 self->do_resolve_(error, results);
-				       });
+
+		if (config->synchronous_dns_lookup)
+		  {
+		    openvpn_io::error_code error;
+		    openvpn_io::ip::udp::resolver::results_type results = resolver.resolve(server_host, server_port, error);
+		    do_resolve_(error, results);
+		  }
+		else
+		  {
+		    resolver.async_resolve(server_host, server_port,
+					   [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::udp::resolver::results_type results)
+					   {
+					     self->do_resolve_(error, results);
+					   });
+		  }
 	      }
 	  }
       }
