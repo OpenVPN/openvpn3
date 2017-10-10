@@ -31,7 +31,11 @@ namespace openvpn {
   inline const char *platform_name()
   {
 #if defined(OPENVPN_PLATFORM_WIN)
+#if defined(OPENVPN_PLATFORM_UWP)
+    return "uwp";
+#else
     return "win";
+#endif // UWP
 #elif defined(OPENVPN_PLATFORM_MAC)
     return "mac";
 #elif defined(OPENVPN_PLATFORM_IPHONE)
