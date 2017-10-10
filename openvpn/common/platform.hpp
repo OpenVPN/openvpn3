@@ -26,6 +26,12 @@
 
 #if defined(_WIN32)
 # define OPENVPN_PLATFORM_WIN
+# if defined(__cplusplus_winrt)
+#  include <winapifamily.h>
+#  if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) && !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#   define OPENVPN_PLATFORM_UWP
+#  endif // WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
+# endif // defined(__cplusplus_winrt)
 #elif defined(__APPLE__)
 # include "TargetConditionals.h"
 # define OPENVPN_PLATFORM_TYPE_APPLE
