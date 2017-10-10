@@ -29,7 +29,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/addr/macaddr.hpp>
 
-#if defined(OPENVPN_PLATFORM_WIN)
+#if defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_PLATFORM_UWP)
 #include <openvpn/tun/win/tunutil.hpp>
 #elif defined(OPENVPN_PLATFORM_MAC)
 #include <openvpn/tun/mac/gwv4.hpp>
@@ -38,7 +38,7 @@
 namespace openvpn {
   inline std::string get_hwaddr()
   {
-#if defined(OPENVPN_PLATFORM_WIN)
+#if defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_PLATFORM_UWP)
     const TunWin::Util::DefaultGateway dg;
     if (dg.defined())
       {
