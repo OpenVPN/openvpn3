@@ -102,7 +102,7 @@ namespace openvpn {
 	if (!chain)
 	  {
 	    chain = new mbedtls_x509_crt;
-	    std::memset(chain, 0, sizeof(mbedtls_x509_crt));
+	    mbedtls_x509_crt_init(chain);
 	  }
       }
 
