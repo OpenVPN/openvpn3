@@ -433,7 +433,75 @@ namespace openvpn {
       return os.str();
     }
 
+    std::string to_string_config() const
+    {
+      std::ostringstream os;
+
+      os << "client" << std::endl;
+      os << "dev " << dev << std::endl;
+      os << "dev-type " << protoConfig->layer.dev_type() << std::endl;
+      for (size_t i = 0; i < remoteList->size(); i++)
+      {
+	const RemoteList::Item& item = remoteList->get_item(i);
+
+	os << "remote " << item.server_host << " " << item.server_port;
+	const char *proto = item.transport_protocol.protocol_to_string();
+	if (proto)
+	  os << " " << proto;
+	os << std::endl;
+      }
+      if (protoConfig->tls_crypt_context)
+      {
+	os << "<tls-crypt>" << std::endl << protoConfig->tls_key.render() << "</tls-crypt>"
+	   << std::endl;
+      }
+      else if (protoConfig->tls_auth_context)
+      {
+	os << "<tls-auth>" << std::endl << protoConfig->tls_key.render() << "</tls-auth>"
+	   << std::endl;
+	os << "key_direction " << protoConfig->key_direction << std::endl;
+      }
+
+      // SSL parameters
+      print_pem(os, "ca", sslConfig->extract_ca());
+      print_pem(os, "crl", sslConfig->extract_crl());
+      print_pem(os, "key", sslConfig->extract_private_key());
+      print_pem(os, "cert", sslConfig->extract_cert());
+
+      std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
+      if (extra_certs.size() > 0)
+      {
+	os << "<extra-certs>" << std::endl;
+	for (auto& cert : extra_certs)
+	{
+	  os << cert;
+	}
+	os << "</extra-certs>" << std::endl;
+      }
+
+      os << "cipher " << CryptoAlgs::name(protoConfig->dc.cipher(), "none")
+	 << std::endl;
+      os << "auth " << CryptoAlgs::name(protoConfig->dc.digest(), "none")
+	 << std::endl;
+      const char *comp = protoConfig->comp_ctx.method_to_string();
+      if (comp)
+	os << "compress " << comp <<  std::endl;
+      os << "keepalive " << protoConfig->keepalive_ping.to_seconds() << " "
+	 << protoConfig->keepalive_timeout.to_seconds() << std::endl;
+      os << "tun-mtu " << protoConfig->tun_mtu << std::endl;
+      os << "reneg-sec " << protoConfig->renegotiate.to_seconds() << std::endl;
+
+      return os.str();
+    }
+
   private:
+    static void print_pem(std::ostream& os, std::string label, std::string pem)
+    {
+      if (pem.empty())
+	return;
+      os << "<" << label << ">" << std::endl << pem << "</" << label << ">" << std::endl;
+    }
+
     static bool parse_auth_user_pass(const OptionList& options, std::vector<std::string>* user_pass)
     {
       return UserPass::parse(options, "auth-user-pass", 0, user_pass);
