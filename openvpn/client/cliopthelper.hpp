@@ -38,6 +38,9 @@
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/cliconstants.hpp>
 #include <openvpn/ssl/peerinfo.hpp>
+#include <openvpn/ssl/proto.hpp>
+#include <openvpn/ssl/proto_context_options.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
 
 namespace openvpn {
   class ParseClientConfig {
@@ -56,6 +59,11 @@ namespace openvpn {
       std::string port;
       std::string proto;
     };
+
+    ParseClientConfig()
+    {
+      reset_pod();
+    }
 
     ParseClientConfig(const OptionList& options)
     {
@@ -179,9 +187,9 @@ namespace openvpn {
 	}
 
 	// validate remote list
-	RemoteList rl(options, "", 0, nullptr);
+	remoteList.reset(new RemoteList(options, "", 0, nullptr));
 	{
-	  const RemoteList::Item* ri = rl.first_item();
+	  const RemoteList::Item* ri = remoteList->first_item();
 	  if (ri)
 	    {
 	      firstRemoteListItem_.host = ri->server_host;
@@ -222,8 +230,8 @@ namespace openvpn {
 	    }
 	  else
 	    {
-	      if (rl.defined())
-		profileName_ = rl.first_server_host();
+	      if (remoteList)
+		profileName_ = remoteList->first_server_host();
 	    }
 	}
 
@@ -259,6 +267,29 @@ namespace openvpn {
 	    pushPeerInfo_ = true;
 	  if (pushPeerInfo_)
 	    peerInfoUV_ = peer_info_uv;
+	}
+
+	// dev name
+	{
+	  const Option *o = options.get_ptr("dev");
+	  if (o)
+	  {
+	    dev = o->get(1, 256);
+	  }
+	}
+
+	// protocol configuration
+	{
+	  protoConfig.reset(new ProtoContext::Config());
+	  protoConfig->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
+	  protoConfig->tls_crypt_factory.reset(new CryptoTLSCryptFactory<SSLLib::CryptoAPI>());
+	  protoConfig->load(options, ProtoContextOptions(), -1, false);
+	}
+
+	// ssl lib configuration
+	{
+	  sslConfig.reset(new SSLLib::SSLAPI::Config());
+	  sslConfig->load(options, SSLConfigAPI::LF_PARSE_MODE);
 	}
       }
       catch (const std::exception& e)
@@ -456,11 +487,6 @@ namespace openvpn {
 	}
     }
 
-    ParseClientConfig()
-    {
-      reset_pod();
-    }
-
     void reset_pod()
     {
       error_ = autologin_ = externalPki_ = staticChallengeEcho_ = false;
@@ -496,8 +522,12 @@ namespace openvpn {
     ServerList serverList_;
     bool hasEmbeddedPassword_;
     std::string embeddedPassword_;
+    RemoteList::Ptr remoteList;
     RemoteItem firstRemoteListItem_;
     PeerInfo::Set::Ptr peerInfoUV_;
+    ProtoContext::Config::Ptr protoConfig;
+    SSLLib::SSLAPI::Config::Ptr sslConfig;
+    std::string dev;
   };
 }
 
