@@ -299,6 +299,11 @@ namespace openvpn {
 	}
     }
 
+    static ParseClientConfig parse(const std::string& content)
+    {
+      return parse(content, nullptr);
+    }
+
     static ParseClientConfig parse(const std::string& content, OptionList::KeyValueList* content_list)
     {
       OptionList options;
