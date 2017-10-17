@@ -83,6 +83,11 @@ def build(parms, srcfile, unit_test):
 if __name__ == "__main__":
     import sys
     from parms import PARMS
+
+    # some parameters might be redefined, like in Jenkins multibranch pipeline case
+    PARMS['BUILD'] = os.environ.get('BUILD', PARMS['BUILD'])
+    PARMS['OVPN3'] = os.environ.get('OVPN3', PARMS['OVPN3'])
+
     src = src_fn_argv(PARMS, sys.argv[1:])
     unit_test = is_unit_test(sys.argv[1:])
     build(PARMS, src, unit_test)
