@@ -41,9 +41,11 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
-#include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/common/signal.hpp>
 #include <openvpn/common/stop.hpp>
+#include <openvpn/common/environ.hpp>
+#include <openvpn/common/number.hpp>
+#include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/timestr.hpp>
@@ -121,15 +123,7 @@ namespace openvpn {
     {
       signals.reset(new ASIOSignals(io_context));
       signal_rearm();
-
-#ifdef OPENVPN_EXIT_IN
-      exit_timer.expires_after(Time::Duration::seconds(OPENVPN_EXIT_IN));
-      exit_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
-                            {
-			      if (!error)
-				self->cancel();
-                            });
-#endif
+      schedule_debug_exit();
     }
 
     void set_async_stop(Stop* async_stop)
@@ -362,6 +356,23 @@ namespace openvpn {
                                     {
                                       self->signal(error, signal_number);
                                     });
+    }
+
+    // debugging feature -- exit in n seconds
+    void schedule_debug_exit()
+    {
+      const std::string exit_in = Environ::find_static("EXIT_IN");
+      if (exit_in.empty())
+	return;
+      const unsigned int n_sec = parse_number_throw<unsigned int>(exit_in, "error parsing EXIT_IN");
+      exit_timer.expires_after(Time::Duration::seconds(n_sec));
+      exit_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
+                            {
+			      if (error)
+				return;
+			      OPENVPN_LOG("DEBUG EXIT");
+			      self->cancel();
+                            });
     }
 
     // these vars only used by main thread
