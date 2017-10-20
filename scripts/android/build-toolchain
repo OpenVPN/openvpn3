@@ -19,7 +19,7 @@ $NDK/build/tools/make-standalone-toolchain.sh \
     --toolchain=$ABI-$ABI_VER \
     --stl=gnustl \
     --arch=arm64 \
-    --platform=android-24 \
+    --platform=android-26 \
     --install-dir=$DEST
 cd $DEST/$ABI/bin
 ln -s ../../bin/$ABI-gcc cc

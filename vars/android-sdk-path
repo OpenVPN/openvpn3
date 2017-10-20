@@ -1,7 +1,7 @@
 # setup PATH for Android SDK and NDK
 AD=$HOME/src/android
-export SDK=$AD/android-sdk-macosx
-export NDK=$AD/android-ndk-r10d
+[ -z "$SDK" ] && export SDK=$AD/android-sdk-macosx
+[ -z "$NDK" ] && export NDK=$SDK/ndk-bundle
 if [ "$NO_MOD_PATH" != "1" ]; then
    export PATH="$SDK/tools:$SDK/platform-tools:$PATH"
 fi
