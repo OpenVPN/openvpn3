@@ -83,6 +83,29 @@ namespace openvpn {
   {
     write_string(fn, to_string(::getpid()) + '\n');
   }
+
+  class WritePid
+  {
+  public:
+    WritePid(const char *pid_fn_arg) // must remain in scope for lifetime of object
+      : pid_fn(pid_fn_arg)
+    {
+      if (pid_fn)
+	write_pid(pid_fn);
+    }
+
+    ~WritePid()
+    {
+      if (pid_fn)
+	::unlink(pid_fn);
+    }
+
+  private:
+    WritePid(const WritePid&) = delete;
+    WritePid& operator=(const WritePid&) = delete;
+
+    const char *const pid_fn;
+  };
 }
 
 #endif
