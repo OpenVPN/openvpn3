@@ -518,6 +518,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "proto",          required_argument,  nullptr,      'P' },
     { "ipv6",           required_argument,  nullptr,      '6' },
     { "server",         required_argument,  nullptr,      's' },
+    { "port",           required_argument,  nullptr,      'R' },
     { "timeout",        required_argument,  nullptr,      't' },
     { "compress",       required_argument,  nullptr,      'c' },
     { "pk-password",    required_argument,  nullptr,      'z' },
@@ -565,6 +566,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string proto;
 	std::string ipv6;
 	std::string server;
+	std::string port;
 	int timeout = 0;
 	std::string compress;
 	std::string privateKeyPassword;
@@ -597,7 +599,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -642,6 +644,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 's':
 		server = optarg;
+		break;
+	      case 'R':
+		port = optarg;
 		break;
 	      case 't':
 		timeout = ::atoi(optarg);
@@ -760,6 +765,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		  config.content += '\n';
 		}
 	      config.serverOverride = server;
+	      config.portOverride = port;
 	      config.protoOverride = proto;
 	      config.connTimeout = timeout;
 	      config.compressionMode = compress;
@@ -901,6 +907,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--dc, -D             : dynamic challenge/response cookie" << std::endl;
       std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
       std::cout << "--server, -s         : server override" << std::endl;
+      std::cout << "--port, -R           : port override" << std::endl;
       std::cout << "--ipv6, -6           : IPv6 (yes|no|default)" << std::endl;
       std::cout << "--timeout, -t        : timeout" << std::endl;
       std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;

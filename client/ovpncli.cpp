@@ -406,6 +406,7 @@ namespace openvpn {
 
 	// extra settings submitted by API client
 	std::string server_override;
+	std::string port_override;
 	Protocol proto_override;
 	IPv6Setting ipv6;
 	int conn_timeout = 0;
@@ -647,6 +648,7 @@ namespace openvpn {
     {
       try {
 	state->server_override = config.serverOverride;
+	state->port_override = config.portOverride;
 	state->conn_timeout = config.connTimeout;
 	state->tun_persist = config.tunPersist;
 	state->google_dns_fallback = config.googleDnsFallback;
@@ -911,6 +913,7 @@ namespace openvpn {
       cc.cli_stats = state->stats;
       cc.cli_events = state->events;
       cc.server_override = state->server_override;
+      cc.port_override = state->port_override;
       cc.proto_override = state->proto_override;
       cc.ipv6 = state->ipv6;
       cc.conn_timeout = state->conn_timeout;

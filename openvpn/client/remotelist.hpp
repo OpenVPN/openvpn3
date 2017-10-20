@@ -517,16 +517,27 @@ namespace openvpn {
     // override all server hosts to server_override
     void set_server_override(const std::string& server_override)
     {
-      if (!server_override.empty())
+      if (server_override.empty())
+	return;
+      for (auto &item : list)
 	{
-	  for (std::vector<Item::Ptr>::iterator i = list.begin(); i != list.end(); ++i)
-	    {
-	      Item& item = **i;
-	      item.server_host = server_override;
-	      item.res_addr_list.reset(nullptr);
-	    }
-	  reset_cache();
+	  item->server_host = server_override;
+	  item->res_addr_list.reset();
 	}
+      reset_cache();
+    }
+
+    // override all server ports to port_override
+    void set_port_override(const std::string& port_override)
+    {
+      if (port_override.empty())
+	return;
+      for (auto &item : list)
+	{
+	  item->server_port = port_override;
+	  item->res_addr_list.reset();
+	}
+      reset_cache();
     }
 
     void set_random(const RandomAPI::Ptr& rng_arg)

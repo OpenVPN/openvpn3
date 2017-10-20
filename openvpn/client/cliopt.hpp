@@ -121,6 +121,7 @@ namespace openvpn {
     {
       std::string gui_version;
       std::string server_override;
+      std::string port_override;
       Protocol proto_override;
       IPv6Setting ipv6;
       int conn_timeout = 0;
@@ -177,6 +178,7 @@ namespace openvpn {
 	cli_events(config.cli_events),
 	server_poll_timeout_(10),
 	server_override(config.server_override),
+	port_override(config.port_override),
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout),
 	tcp_queue_limit(64),
@@ -260,8 +262,9 @@ namespace openvpn {
       // reconnections.
       remote_list->set_enable_cache(config.tun_persist);
 
-      // process server override
+      // process server/port overrides
       remote_list->set_server_override(config.server_override);
+      remote_list->set_port_override(config.port_override);
 
       // process protocol override, should be called after set_enable_cache
       remote_list->handle_proto_override(config.proto_override,
@@ -815,6 +818,7 @@ namespace openvpn {
     ClientCreds::Ptr creds;
     unsigned int server_poll_timeout_;
     std::string server_override;
+    std::string port_override;
     Protocol proto_override;
     int conn_timeout_;
     unsigned int tcp_queue_limit;

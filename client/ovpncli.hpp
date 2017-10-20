@@ -173,6 +173,10 @@ namespace openvpn {
       // option of profile
       std::string serverOverride;
 
+      // Use a different port than that specified in "remote"
+      // option of profile
+      std::string portOverride;
+
       // Force a given transport protocol
       // Should be tcp, udp, or adaptive.
       std::string protoOverride;
