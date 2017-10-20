@@ -44,6 +44,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/olong.hpp>
+#include <openvpn/common/to_string.hpp>
 
 #ifdef OPENVPN_PLATFORM_WIN
 #include <time.h>     // for ::time() on Windows
@@ -167,6 +168,11 @@ namespace openvpn {
 	return duration_ - (duration_ * T(3) / T(128));
       }
 
+      double to_double() const
+      {
+	return double(duration_) / double(prec);
+      }
+
       T raw() const { return duration_; }
 
 #     define OPENVPN_DURATION_REL(OP) bool operator OP(const Duration& d) const { return duration_ OP d.duration_; }
@@ -251,6 +257,23 @@ namespace openvpn {
     long delta(const TimeType& t) const
     {
       return delta_prec(t) / long(prec);
+    }
+
+    double delta_float(const TimeType& t) const
+    {
+      return (double(time_) - double(t.time_)) / double(prec);
+    }
+
+    std::string delta_str(const TimeType& t) const
+    {
+      if (!defined())
+	return "UNDEF-TIME";
+      const double df = delta_float(t);
+      std::string ret;
+      if (df >= 0.0)
+	ret += '+';
+      ret += std::to_string(df);
+      return ret;
     }
 
 #   define OPENVPN_TIME_REL(OP) bool operator OP(const TimeType& t) const { return time_ OP t.time_; }
