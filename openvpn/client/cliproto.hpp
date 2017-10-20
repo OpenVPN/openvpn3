@@ -842,6 +842,7 @@ namespace openvpn {
 	    else
 	      {
 		housekeeping_timer.cancel();
+		housekeeping_schedule.reset();
 	      }
 	  }
       }
