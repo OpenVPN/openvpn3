@@ -13,15 +13,18 @@
 #include <cstring>
 #include <cstdint>
 
-#include "json/json.h"
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/stringtempl.hpp>
+#include <openvpn/common/jsonlib.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/bufstream.hpp>
+
+#ifndef HAVE_JSON
+#error no JSON library available
+#endif
 
 namespace openvpn {
   namespace json {
@@ -40,11 +43,15 @@ namespace openvpn {
     template <typename TITLE>
     inline Json::Value parse(const std::string& str, const TITLE& title)
     {
+#ifdef OPENVPN_JSON
+      return Json::Value::parse(str, StringTempl::to_string(title));
+#else
       Json::Value root;
       Json::Reader reader;
       if (!reader.parse(str, root, false))
 	throw json_parse(StringTempl::to_string(title) + " : " + reader.getFormattedErrorMessages());
       return root;
+#endif
     }
 
     inline Json::Value parse_from_file(const std::string& fn)
@@ -55,11 +62,15 @@ namespace openvpn {
     template <typename TITLE>
     inline Json::Value parse_from_buffer(const Buffer& buf, const TITLE& title)
     {
+#ifdef OPENVPN_JSON
+      return Json::Value::parse(buf, StringTempl::to_string(title));
+#else
       Json::Value root;
       Json::Reader reader;
       if (!reader.parse(reinterpret_cast<const char *>(buf.c_data()), reinterpret_cast<const char *>(buf.c_data()) + buf.size(), root, false))
 	throw json_parse(StringTempl::to_string(title) + " : " + reader.getFormattedErrorMessages());
       return root;
+#endif
     }
 
     template <typename T, typename NAME>
@@ -96,8 +107,18 @@ namespace openvpn {
       return !root[name].isNull();
     }
 
+    template <typename NAME>
+    inline bool string_exists(const Json::Value& root, const NAME& name)
+    {
+      if (!root.isObject())
+	return false;
+      return root[name].isString();
+    }
+
     template <typename T, typename NAME, typename TITLE>
-    inline void to_vector(const Json::Value& root, T& vec, const NAME& name, const TITLE& title)
+    inline void to_vector(const Json::Value& root, T& vec,
+			  const NAME& name,
+			  const TITLE& title)
     {
       const Json::Value& array = root[name];
       if (array.isNull())
@@ -112,7 +133,9 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline std::string get_string(const Json::Value& root, const NAME& name, const TITLE& title)
+    inline std::string get_string(const Json::Value& root,
+				  const NAME& name,
+				  const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -162,7 +185,9 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline int get_int(const Json::Value& root, const NAME& name, const TITLE& title)
+    inline int get_int(const Json::Value& root,
+		       const NAME& name,
+		       const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -179,7 +204,10 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline int get_int_optional(const Json::Value& root, const NAME& name, const int default_value, const TITLE& title)
+    inline int get_int_optional(const Json::Value& root,
+				const NAME& name,
+				const int default_value,
+				const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -190,13 +218,17 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline int get_int_optional(const Json::Value& root, const NAME& name, const int default_value)
+    inline int get_int_optional(const Json::Value& root,
+				const NAME& name,
+				const int default_value)
     {
       return get_int_optional(root, name, default_value, nullptr);
     }
 
     template <typename NAME, typename TITLE>
-    inline unsigned int get_uint(const Json::Value& root, const NAME& name, const TITLE& title)
+    inline unsigned int get_uint(const Json::Value& root,
+				 const NAME& name,
+				 const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -213,7 +245,10 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline unsigned int get_uint_optional(const Json::Value& root, const NAME& name, const unsigned int default_value, const TITLE& title)
+    inline unsigned int get_uint_optional(const Json::Value& root,
+					  const NAME& name,
+					  const unsigned int default_value,
+					  const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -224,13 +259,17 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline unsigned int get_uint_optional(const Json::Value& root, const NAME& name, const unsigned int default_value)
+    inline unsigned int get_uint_optional(const Json::Value& root,
+					  const NAME& name,
+					  const unsigned int default_value)
     {
       return get_uint_optional(root, name, default_value, nullptr);
     }
 
     template <typename NAME, typename TITLE>
-    inline unsigned int get_uint_via_string(const Json::Value& root, const NAME& name, const TITLE& title)
+    inline unsigned int get_uint_via_string(const Json::Value& root,
+					    const NAME& name,
+					    const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -245,13 +284,42 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline unsigned int get_uint_via_string(const Json::Value& root, const NAME& name)
+    inline unsigned int get_uint_via_string(const Json::Value& root,
+					    const NAME& name)
     {
       return get_uint_via_string(root, name, nullptr);
     }
 
     template <typename NAME, typename TITLE>
-    inline std::uint64_t get_uint64(const Json::Value& root, const NAME& name, const TITLE& title)
+    inline unsigned int get_uint_optional_via_string(const Json::Value& root,
+						     const NAME& name,
+						     const unsigned int default_value,
+						     const TITLE& title)
+    {
+      const Json::Value& value = root[name];
+      if (value.isNull())
+	return default_value;
+      if (!value.isString())
+	throw json_parse("uint-via-string " + fmt_name(name, title) + " is of incorrect type");
+
+      unsigned int ret;
+      if (!parse_number(value.asString(), ret))
+	throw json_parse("uint-via-string " + fmt_name(name, title) + " failed to parse");
+      return ret;
+    }
+
+    template <typename NAME>
+    inline unsigned int get_uint_optional_via_string(const Json::Value& root,
+						     const NAME& name,
+						     const unsigned int default_value)
+    {
+      return get_uint_optional_via_string(root, name, default_value, nullptr);
+    }
+
+    template <typename NAME, typename TITLE>
+    inline std::uint64_t get_uint64(const Json::Value& root,
+				    const NAME& name,
+				    const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -268,7 +336,10 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline std::uint64_t get_uint64_optional(const Json::Value& root, const NAME& name, const std::uint64_t default_value, const TITLE& title)
+    inline std::uint64_t get_uint64_optional(const Json::Value& root,
+					     const NAME& name,
+					     const std::uint64_t default_value,
+					     const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -279,13 +350,17 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline std::uint64_t get_uint64_optional(const Json::Value& root, const NAME& name, const std::uint64_t default_value)
+    inline std::uint64_t get_uint64_optional(const Json::Value& root,
+					     const NAME& name,
+					     const std::uint64_t default_value)
     {
       return get_uint64_optional(root, name, default_value, nullptr);
     }
 
     template <typename NAME, typename TITLE>
-    inline std::uint64_t get_uint64_via_string(const Json::Value& root, const NAME& name, const TITLE& title)
+    inline std::uint64_t get_uint64_via_string(const Json::Value& root,
+					       const NAME& name,
+					       const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -300,13 +375,41 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline std::uint64_t get_uint64_via_string(const Json::Value& root, const NAME& name)
+    inline std::uint64_t get_uint64_via_string(const Json::Value& root,
+					       const NAME& name)
     {
       return get_uint64_via_string(root, name, nullptr);
     }
 
     template <typename NAME, typename TITLE>
-    inline bool get_bool(const Json::Value& root, const NAME& name, const TITLE& title)
+    inline std::uint64_t get_uint64_optional_via_string(const Json::Value& root,
+							const NAME& name,
+							const std::uint64_t default_value,
+							const TITLE& title)
+    {
+      const Json::Value& value = root[name];
+      if (value.isNull())
+	return default_value;
+      if (!value.isString())
+	throw json_parse("uint64-via-string " + fmt_name(name, title) + " is of incorrect type");
+
+      std::uint64_t ret;
+      if (!parse_number(value.asString(), ret))
+	throw json_parse("uint64-via-string " + fmt_name(name, title) + " failed to parse");
+      return ret;
+    }
+
+    template <typename NAME>
+    inline std::uint64_t get_uint64_optional_via_string(const Json::Value& root,
+							const NAME& name,
+							const std::uint64_t default_value)
+    {
+      return get_uint64_optional_via_string(root, name, default_value, nullptr);
+    }
+    template <typename NAME, typename TITLE>
+    inline bool get_bool(const Json::Value& root,
+			 const NAME& name,
+			 const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -323,7 +426,9 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline bool get_bool_optional(const Json::Value& root, const NAME& name, const bool default_value=false)
+    inline bool get_bool_optional(const Json::Value& root,
+				  const NAME& name,
+				  const bool default_value=false)
     {
       const Json::Value& jv = root[name];
       if (jv.isConvertibleTo(Json::booleanValue))
@@ -338,7 +443,10 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline const Json::Value& get_dict(const Json::Value& root, const NAME& name, const bool optional, const TITLE& title)
+    inline const Json::Value& get_dict(const Json::Value& root,
+				       const NAME& name,
+				       const bool optional,
+				       const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -353,13 +461,17 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline const Json::Value& get_dict(const Json::Value& root, const NAME& name, const bool optional)
+    inline const Json::Value& get_dict(const Json::Value& root,
+				       const NAME& name,
+				       const bool optional)
     {
       return get_dict(root, name, optional, nullptr);
     }
 
     template <typename TITLE>
-    inline const Json::Value& cast_dict(const Json::Value& value, const bool optional, const TITLE& title)
+    inline const Json::Value& cast_dict(const Json::Value& value,
+					const bool optional,
+					const TITLE& title)
     {
       if (value.isNull())
 	{
@@ -372,13 +484,17 @@ namespace openvpn {
       return value;
     }
 
-    inline const Json::Value& cast_dict(const Json::Value& value, const bool optional)
+    inline const Json::Value& cast_dict(const Json::Value& value,
+					const bool optional)
     {
       return cast_dict(value, optional, nullptr);
     }
 
     template <typename NAME, typename TITLE>
-    inline const Json::Value& get_array(const Json::Value& root, const NAME& name, const bool optional, const TITLE& title)
+    inline const Json::Value& get_array(const Json::Value& root,
+					const NAME& name,
+					const bool optional,
+					const TITLE& title)
     {
       const Json::Value& value = root[name];
       if (value.isNull())
@@ -393,13 +509,17 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline const Json::Value& get_array(const Json::Value& root, const NAME& name, const bool optional)
+    inline const Json::Value& get_array(const Json::Value& root,
+					const NAME& name,
+					const bool optional)
     {
       return get_array(root, name, optional, nullptr);
     }
 
     template <typename TITLE>
-    inline const Json::Value& cast_array(const Json::Value& value, const bool optional, const TITLE& title)
+    inline const Json::Value& cast_array(const Json::Value& value,
+					 const bool optional,
+					 const TITLE& title)
     {
       if (value.isNull())
 	{
@@ -413,7 +533,10 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline void to_string(const Json::Value& root, std::string& dest, const NAME& name, const TITLE& title)
+    inline void to_string(const Json::Value& root,
+			  std::string& dest,
+			  const NAME& name,
+			  const TITLE& title)
     {
       dest = get_string(root, name, title);
     }
@@ -429,13 +552,19 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline void to_int(const Json::Value& root, int& dest, const NAME& name, const TITLE& title)
+    inline void to_int(const Json::Value& root,
+		       int& dest,
+		       const NAME& name,
+		       const TITLE& title)
     {
       dest = get_int(root, name, title);
     }
 
     template <typename NAME, typename TITLE>
-    inline void to_uint(const Json::Value& root, unsigned int& dest, const NAME& name, const TITLE& title)
+    inline void to_uint(const Json::Value& root,
+			unsigned int& dest,
+			const NAME& name,
+			const TITLE& title)
     {
       dest = get_uint(root, name, title);
     }
@@ -451,27 +580,38 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
-    inline void to_uint64(const Json::Value& root, std::uint64_t& dest, const NAME& name, const TITLE& title)
+    inline void to_uint64(const Json::Value& root,
+			  std::uint64_t& dest,
+			  const NAME& name,
+			  const TITLE& title)
     {
       dest = get_uint64(root, name, title);
     }
 
     template <typename NAME, typename TITLE>
-    inline void to_bool(const Json::Value& root, bool& dest, const NAME& name, const TITLE& title)
+    inline void to_bool(const Json::Value& root,
+			bool& dest,
+			const NAME& name,
+			const TITLE& title)
     {
       dest = get_bool(root, name, title);
     }
 
     inline void format_compact(const Json::Value& root, Buffer& buf)
     {
+#ifdef OPENVPN_JSON
+      root.toCompactString(buf);
+#else
       Json::StreamWriterBuilder json_builder;
       json_builder.settings_["indentation"] = "";
       BufferStreamOut os(buf);
       std::unique_ptr<Json::StreamWriter> sw(json_builder.newStreamWriter());
       sw->write(root, &os);
+#endif
     }
 
-    inline std::string format_compact(const Json::Value& root, const size_t size_hint=256)
+    inline std::string format_compact(const Json::Value& root,
+				      const size_t size_hint=256)
     {
       BufferPtr bp = new BufferAllocated(size_hint, BufferAllocated::GROW);
       format_compact(root, *bp);
@@ -480,11 +620,15 @@ namespace openvpn {
 
     inline void format(const Json::Value& root, Buffer& buf)
     {
+#ifdef OPENVPN_JSON
+      root.toStyledString(buf);
+#else
       Json::StreamWriterBuilder json_builder;
       json_builder.settings_["indentation"] = "  ";
       BufferStreamOut os(buf);
       std::unique_ptr<Json::StreamWriter> sw(json_builder.newStreamWriter());
       sw->write(root, &os);
+#endif
     }
 
     inline std::string format(const Json::Value& root)
