@@ -34,6 +34,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/to_string.hpp>
+#include <openvpn/common/jsonlib.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/client/rgopt.hpp>
 #include <openvpn/addr/ip.hpp>
@@ -41,7 +42,7 @@
 #include <openvpn/http/urlparse.hpp>
 #include <openvpn/tun/layer.hpp>
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
@@ -77,7 +78,7 @@ namespace openvpn {
 	IP::Addr(address, title, ipv6 ? IP::Addr::V6 : IP::Addr::V4);
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -116,7 +117,7 @@ namespace openvpn {
 	// nothing to validate
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -161,7 +162,7 @@ namespace openvpn {
 	return os.str();
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -237,7 +238,7 @@ namespace openvpn {
 	IP::Addr(address, title, ipv6 ? IP::Addr::V6 : IP::Addr::V4);
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -270,7 +271,7 @@ namespace openvpn {
 	HostPort::validate_host(domain, title);
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -307,7 +308,7 @@ namespace openvpn {
 	  HostPort::validate_host(bypass_host, title);
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -349,7 +350,7 @@ namespace openvpn {
 	  }
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -392,7 +393,7 @@ namespace openvpn {
 	  }
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -427,7 +428,7 @@ namespace openvpn {
 	IP::Addr(address, title, IP::Addr::V4);
       }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -676,7 +677,7 @@ namespace openvpn {
       return os.str();
     }
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
 
     Json::Value to_json() const
     {
@@ -736,7 +737,7 @@ namespace openvpn {
       return tbc;
     }
 
-#endif // HAVE_JSONCPP
+#endif // HAVE_JSON
 
     // builder data
     std::string session_name;

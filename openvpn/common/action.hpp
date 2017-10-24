@@ -28,14 +28,11 @@
 #include <ostream>
 #include <sstream>
 
-#ifdef HAVE_JSONCPP
-#include "json/json.h"
-#endif
-
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/destruct.hpp>
+#include <openvpn/common/jsonlib.hpp>
 
 namespace openvpn {
 
@@ -45,7 +42,7 @@ namespace openvpn {
 
     virtual void execute(std::ostream& os) = 0;
     virtual std::string to_string() const = 0;
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
     virtual Json::Value to_json() const
     {
       throw Exception("Action::to_json() virtual method not implemented");

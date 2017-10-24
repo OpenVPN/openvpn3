@@ -34,6 +34,7 @@
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/process.hpp>
+#include <openvpn/common/jsonlib.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/tun/mac/tunutil.hpp>
@@ -43,7 +44,7 @@
 #include <openvpn/tun/builder/rgwflags.hpp>
 #include <openvpn/tun/builder/setup.hpp>
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
@@ -62,7 +63,7 @@ namespace openvpn {
 	Layer layer;               // OSI layer
 	bool tun_prefix = false;
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
 	virtual Json::Value to_json() override
 	{
 	  Json::Value root(Json::objectValue);
