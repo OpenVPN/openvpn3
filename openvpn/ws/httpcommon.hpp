@@ -76,6 +76,13 @@ namespace openvpn {
 	return websocket;
       }
 
+      // If true, indicates that data can be transmitted
+      // now with immediate dispatch.
+      bool is_deferred() const
+      {
+	return out_state == S_DEFERRED;
+      }
+
       const typename REQUEST_REPLY::State& request_reply() const {
 	return rr_obj;
       }
@@ -132,11 +139,6 @@ namespace openvpn {
       {
 	static_assert(CONTENT_LENGTH_TYPE(-1) < CONTENT_LENGTH_TYPE(0), "CONTENT_LENGTH_TYPE must be signed");
 	rr_reset();
-      }
-
-      bool is_deferred() const
-      {
-	return out_state == S_DEFERRED;
       }
 
       void http_out_begin()
