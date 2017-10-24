@@ -128,6 +128,7 @@ namespace openvpn {
       typedef RCPtr<Factory> Ptr;
 
       virtual void start() = 0;
+      virtual void stop() = 0;
 
       virtual Send::Ptr new_obj(Recv* instance) = 0;
     };
