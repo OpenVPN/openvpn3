@@ -415,10 +415,17 @@ namespace openvpn {
 	  // headers to client
 	  void begin_websocket()
 	  {
-	    set_async_out(true);
-	    websocket = true;   // enable websocket in httpcommon
-	    ready = false;      // enable tcp_in
-	    consume_pipeline(); // process data received while tcp_in was disabled
+	    cancel_general_timeout();  // timeouts could be harmful for long-running websockets
+	    set_async_out(true);       // websockets require async output
+	    websocket = true;          // enable websocket in httpcommon
+	    ready = false;             // enable tcp_in
+	    consume_pipeline();        // process data received while tcp_in was disabled
+	  }
+
+	  void cancel_general_timeout()
+	  {
+	    timeout_duration.set_zero();
+	    timeout_timer.cancel();
 	  }
 
 	  void start(const bool ssl)
@@ -439,6 +446,7 @@ namespace openvpn {
 	  void restart(const bool initial)
 	  {
 	    timeout_duration = Time::Duration::seconds(parent->config->general_timeout);
+	    timeout_coarse.reset();
 	    activity();
 	    rr_reset();
 	    ready = false;
