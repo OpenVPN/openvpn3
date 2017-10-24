@@ -11,9 +11,9 @@
 namespace openvpn {
   namespace json {
 
-    inline Json::Value read_fast(const std::string& fn, const bool must_exist)
+    inline Json::Value read_fast(const std::string& fn, const bool optional)
     {
-      BufferPtr bp = read_binary_unix(fn, 0, must_exist ? NULL_ON_ENOENT : 0);
+      BufferPtr bp = read_binary_unix(fn, 0, optional ? NULL_ON_ENOENT : 0);
       if (!bp)
 	return Json::Value();
       return parse_from_buffer(*bp, fn);
