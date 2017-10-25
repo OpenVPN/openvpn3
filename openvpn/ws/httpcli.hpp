@@ -264,6 +264,11 @@ namespace openvpn {
 	  return alive;
 	}
 
+	bool is_link_active()
+	{
+	  return link && !halt;
+	}
+
 	void check_ready() const
 	{
 	  if (!is_ready())
@@ -377,6 +382,24 @@ namespace openvpn {
 	  content_out_hold = false;
 	  if (is_deferred())
 	    http_content_out_needed();
+	}
+
+	void streaming_restart()
+	{
+	  if (content_out_hold)
+	    throw http_client_exception("streaming_restart() called when content-out is still in hold state");
+	  if (is_deferred())
+	    http_content_out_needed();
+	}
+
+	bool is_streaming_restartable() const
+	{
+	  return !content_out_hold;
+	}
+
+	bool is_streaming_hold() const
+	{
+	  return content_out_hold;
 	}
 
 	// virtual methods
