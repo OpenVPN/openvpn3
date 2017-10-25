@@ -762,11 +762,15 @@ namespace openvpn {
 
 	  if (content_info.websocket)
 	    {
-	      content_out_hold = true; // no content-out until after server reply
+	      // no content-out until after server reply (content_out_hold kept at true)
 	      generate_request_websocket(os, req);
 	    }
 	  else
-	    generate_request_http(os, req);
+	    {
+	      // non-websocket allows immediate content-out
+	      content_out_hold = false;
+	      generate_request_http(os, req);
+	    }
 
 	  http_headers_sent(*outbuf);
 	  http_out();
@@ -1063,7 +1067,7 @@ namespace openvpn {
 	Time::Duration general_timeout_duration;
 	CoarseTime general_timeout_coarse;
 
-	bool content_out_hold = false;
+	bool content_out_hold = true;
 	bool alive = false;
       };
 
