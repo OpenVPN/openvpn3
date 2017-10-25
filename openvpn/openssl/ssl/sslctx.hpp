@@ -187,6 +187,16 @@ namespace openvpn {
 	throw ssl_options_error("extract_dh not implemented yet in OpenSSL driver"); // fixme
       }
 
+      virtual PKType private_key_type() const
+      {
+	throw ssl_options_error("private_key_type not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual size_t private_key_length() const
+      {
+	throw ssl_options_error("private_key_length not implemented yet in OpenSSL driver"); // fixme
+      }
+
       virtual void set_frame(const Frame::Ptr& frame_arg)
       {
 	frame = frame_arg;
