@@ -379,6 +379,7 @@ namespace openvpn {
 
 	void streaming_start()
 	{
+	  cancel_general_timeout();
 	  content_out_hold = false;
 	  if (is_deferred())
 	    http_content_out_needed();
@@ -474,7 +475,10 @@ namespace openvpn {
 		}
 	    }
 	  else if (init)
-	    general_timer.cancel();
+	    {
+	      general_timeout_coarse.reset();
+	      general_timer.cancel();
+	    }
 	}
 
 	void handle_request() // called by Asio
@@ -491,6 +495,7 @@ namespace openvpn {
 	    general_timeout_duration = Time::Duration::seconds(to.general >= 0
 							       ? to.general
 							       : config->general_timeout);
+	    general_timeout_coarse.reset();
 	    activity(true);
 
 	    if (alive)
@@ -718,6 +723,12 @@ namespace openvpn {
 	{
 	  if (keepalive_timer)
 	    keepalive_timer->cancel();
+	}
+
+	void cancel_general_timeout()
+	{
+	  general_timeout_duration.set_zero();
+	  general_timer.cancel();
 	}
 
 	void general_timeout_handler(const openvpn_io::error_code& e) // called by Asio
