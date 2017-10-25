@@ -85,11 +85,48 @@ namespace openvpn {
   public:
     typedef RCPtr<SSLConfigAPI> Ptr;
 
+    enum PKType {
+      PK_UNKNOWN = 0,
+      PK_NONE,
+      PK_RSA,
+      PK_ECKEY,
+      PK_ECKEY_DH,
+      PK_ECDSA,
+      PK_RSA_ALT,
+      PK_RSASSA_PSS,
+    };
+
     enum LoadFlags {
       LF_PARSE_MODE = (1<<0),
       LF_ALLOW_CLIENT_CERT_NOT_REQUIRED = (1<<1),
       LF_RELAY_MODE = (1<<2), // look for "relay-ca" instead of "ca" directive
     };
+
+    std::string private_key_type_string() const
+    {
+      PKType type = private_key_type();
+
+      switch (type)
+      {
+      case PK_NONE:
+	return "None";
+      case PK_RSA:
+	return "RSA";
+      case PK_ECKEY:
+	return "EC";
+      case PK_ECKEY_DH:
+	return "EC_DH";
+      case PK_ECDSA:
+	return "ECDSA";
+      case PK_RSA_ALT:
+	return "RSA_ALT";
+      case PK_RSASSA_PSS:
+	return "RSASSA_PSS";
+      case PK_UNKNOWN:
+      default:
+	return "Unknown";
+      }
+    }
 
     virtual void set_mode(const Mode& mode_arg) = 0;
     virtual const Mode& get_mode() const = 0;
@@ -107,6 +144,8 @@ namespace openvpn {
     virtual std::vector<std::string> extract_extra_certs() const = 0;
     virtual std::string extract_private_key() const = 0;
     virtual std::string extract_dh() const = 0;
+    virtual PKType private_key_type() const = 0;
+    virtual size_t private_key_length() const = 0;
     virtual void set_frame(const Frame::Ptr& frame_arg) = 0;
     virtual void set_debug_level(const int debug_level) = 0;
     virtual void set_flags(const unsigned int flags_arg) = 0;
