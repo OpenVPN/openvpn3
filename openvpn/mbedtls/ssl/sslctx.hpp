@@ -288,6 +288,20 @@ namespace openvpn {
 	return dh->extract();
       }
 
+      virtual PKType private_key_type() const
+      {
+	if (!priv_key)
+	  return PK_NONE;
+	return priv_key->key_type();
+      }
+
+      virtual size_t private_key_length() const
+      {
+	if (!priv_key)
+	  return 0;
+	return priv_key->key_length();
+      }
+
       virtual void set_frame(const Frame::Ptr& frame_arg)
       {
 	frame = frame_arg;
