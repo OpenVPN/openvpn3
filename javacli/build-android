@@ -31,7 +31,7 @@ fi
 echo SWIG
 swig -c++ -java -package $pkg -I$O3/core/client -I$O3/core ovpncli.i
 
-for TARGET in android-a7a android-a8a ; do
+for TARGET in android-a7a android-a8a android-x86; do
 
 if [ "$DEBUG_BUILD" = "1" ]; then
     . ../vars/vars-${TARGET}-dbg

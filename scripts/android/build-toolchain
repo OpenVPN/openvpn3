@@ -39,9 +39,28 @@ $NDK/build/tools/make-standalone-toolchain.sh \
     --toolchain=$ABI-$ABI_VER \
     --stl=gnustl \
     --arch=arm \
-    --platform=android-14 \
+    --platform=android-26 \
     --install-dir=$DEST
 cd $DEST/$ABI/bin
 ln -s ../../bin/$ABI-gcc cc
 ln -s ../../libexec/gcc/$ABI/$ABI_VER.x/cc1 cc1
 ln -s ../../libexec/gcc/$ABI/$ABI_VER.x/cc1plus cc1plus
+
+# 32 bit x86 for Android emulator
+cd $DEP_DIR
+DEST=$(pwd)/tc-x86
+rm -rf $DEST
+ABI=x86-linux-android
+SUB=i686-linux-android
+ABI_VER=4.9
+$NDK/build/tools/make-standalone-toolchain.sh \
+    --verbose \
+    --toolchain=$ABI-$ABI_VER \
+    --stl=gnustl \
+    --arch=x86 \
+    --platform=android-26 \
+    --install-dir=$DEST
+cd $DEST/$SUB/bin
+ln -s ../../bin/$SUB-gcc cc
+ln -s ../../libexec/gcc/$SUB/$ABI_VER.x/cc1 cc1
+ln -s ../../libexec/gcc/$SUB/$ABI_VER.x/cc1plus cc1plus
