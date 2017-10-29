@@ -26,6 +26,7 @@
 #include <sstream>
 #include <vector>
 #include <cstdint> // for std::uint32_t
+#include <tuple>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -172,7 +173,12 @@ namespace openvpn {
 
       bool operator==(const RouteType& other) const
       {
-	return prefix_len == other.prefix_len && addr == other.addr;
+	return std::tie(prefix_len, addr) == std::tie(other.prefix_len, other.addr);
+      }
+
+      bool operator<(const RouteType& other) const
+      {
+	return std::tie(prefix_len, addr) < std::tie(other.prefix_len, other.addr);
       }
 
       template <typename HASH>
