@@ -1,4 +1,5 @@
 #include <iostream>
+#include <set>
 
 #include <openvpn/log/logsimple.hpp>
 #include <openvpn/common/size.hpp>
@@ -26,6 +27,22 @@ void test6(const std::string& rstr)
   std::cout << rstr << " -> " << r << std::endl;
 }
 
+void test_set()
+{
+  OPENVPN_LOG("===== ROUTE SET =====");
+    std::set<IP::Route> routes;
+    routes.emplace("1.2.3.4/24");
+    routes.emplace("1.2.3.0/24");
+    routes.emplace("1.2.3.2/24");
+    routes.emplace("1.2.3.1/24");
+    routes.emplace("128.0.0.0/1");
+    routes.emplace("1:2:3:4:5:6:dead:beef/64");
+    routes.emplace("1:2:3:4:5:6:dead:bead/64");
+
+    for (const auto &r : routes)
+      OPENVPN_LOG(r.to_string());
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
   try {
@@ -37,7 +54,15 @@ int main(int /*argc*/, char* /*argv*/[])
     test4("192.168.4.0/24");
     test6("fe80::6470:7dff:fea5:f360/64");
 
-    test("192.168.4.0/33");
+    try {
+      test("192.168.4.0/33");
+    }
+    catch (const std::exception& e)
+      {
+	OPENVPN_LOG("expected exception: " << e.what());
+      }
+
+    test_set();
   }
   catch (const std::exception& e)
     {
