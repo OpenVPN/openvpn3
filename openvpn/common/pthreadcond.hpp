@@ -33,8 +33,7 @@ namespace openvpn {
   // Barrier class that is useful in cases where all threads
   // need to reach a known point before executing some action.
   // Note that this barrier implementation is
-  // constructed using pthread conditions.  We don't actually
-  // use the native pthread barrier API.
+  // constructed using C++11 condition variables.
   class PThreadBarrier
   {
     enum State {

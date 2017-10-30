@@ -145,6 +145,65 @@ To connect::
 
     $ ./cli client.ovpn
 
+
+Building the OpenVPN 3 client on Windows
+----------------------------------------
+
+Those instructions were tested with Git Bash.
+
+Prerequisites:
+
+ - Visual Studio 2015
+ - Python 2.7
+
+To make python interpreter work inside Git Bash terminal, add::
+
+    alias python='winpty python.exe'
+
+to ``.bashrc``.
+
+Clone the OpenVPN 3 source repo::
+
+  $ mkdir ovpn3
+  $ cd ovpn3
+  $ git clone https://github.com/OpenVPN/openvpn3.git core
+
+Create ``parms_local.py`` inside ``~/ovpn3/core/win`` directory which overrides build settings from ``parms.py``. For example:
+
+.. code-block:: python
+
+  PARMS = {
+      "OVPN3" : "c:\\Users\\user\\Projects\\ovpn3",
+      "TAP" : "c:\\Users\\user\\Projects\\tap-windows",
+      "DEP" : "c:\\Users\\user\\Downloads",
+      "BUILD" : "c:\\Users\\user\\Projects\\ovpn3-build",
+      "LIB_VERSIONS" : {
+          "asio" : "asio-cc1bd58f9ebb15afbebf53207015ff690b338195"
+      },
+      "GTEST_ROOT": "c:\\Users\\user\\Projects\\googletest"
+  }
+
+Download dependencies as tar(zip)balls to DEP directory defined in previous step:
+
+1. Asio — https://github.com/chriskohlhoff/asio
+2. mbed TLS (2.3.0 or higher) — https://tls.mbed.org/
+3. LZ4 — https://github.com/Cyan4973/lz4
+
+Extract and build dependencies (assuming you are in ``~/ovpn3/core/win`` directory)::
+
+    $ python buildep.py
+
+Build the OpenVPN 3 client executable:
+
+    $ python build.py
+
+Visual Studio 2015 project and solution files are located in ``~/ovpn3/core/win`` directory.
+Before opening project you need to build dependencies and define environmental variables:
+
+- OVPN3_BUILD - path where dependencies are build (BUILD in parms.py)
+- OVPN3_CORE - path where ovpn3-core was checked out (OVPN3 in parms.py)
+- OVPN3_TAP_WINDOWS - path where tap-windows was checked out (TAP in parms.py)
+
 Testing
 -------
 
@@ -175,6 +234,36 @@ Run the test::
   user	0m15.800s
   sys	0m0.004s
 
+The OpenVPN 3 core also includes unit tests, which are based on
+Google Test framework. To run unit tests, you need to install
+CMake and build Google Test.
+
+Building Google Test on Linux::
+
+  $ git clone https://github.com/google/googletest.git
+  $ cd googletest
+  $ cmake . && cmake --build .
+
+Building Google Test on Windows::
+
+  > git clone https://github.com/google/googletest.git
+  > cd googletest
+  > cmake -G "Visual Studio 14 2015 Win64" .
+  > cmake --build .
+
+After Google Test is built you are ready to build and run unit tests.
+
+Build and run tests on Linux::
+
+  $ cd ovpn3/core/test/unittests
+  $ GTEST_DIR=~/googletest ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build test_log
+  $ ./test_log
+
+Build and run tests on Windows::
+
+  $ cd ovpn3/core/win
+  $ python build.py ../test/unittests/test_log.cpp unittest
+  $ test_log.exe
 
 Developer Guide
 ---------------
@@ -553,3 +642,4 @@ License
 -------
 
 See `<LICENSE.rst>`_.
+ 

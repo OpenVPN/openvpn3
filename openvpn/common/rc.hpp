@@ -186,6 +186,16 @@ namespace openvpn {
       return px != nullptr;
     }
 
+    bool operator==(const RCPtr& rhs) const
+    {
+      return px == rhs.px;
+    }
+
+    bool operator!=(const RCPtr& rhs) const
+    {
+      return px != rhs.px;
+    }
+
     template <typename U>
     RCPtr<U> dynamic_pointer_cast() const noexcept
     {

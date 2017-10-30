@@ -35,12 +35,12 @@
 #include <sys/types.h> // for lseek, open
 #include <sys/stat.h>  // for open
 #include <fcntl.h>     // for open
-#include <cstring>     // for std::strerror()
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/write.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/buffer/bufread.hpp>
 
 namespace openvpn {
@@ -57,7 +57,7 @@ namespace openvpn {
     if (!fd.defined())
       {
 	const int eno = errno;
-	throw file_unix_error(fn + " : open for write : " + std::strerror(eno));
+	throw file_unix_error(fn + " : open for write : " + strerror_str(eno));
       }
 
     // write
@@ -71,7 +71,7 @@ namespace openvpn {
     {
       const int eno = fd.close_with_errno();
       if (eno)
-	throw file_unix_error(fn + " : close for write : " + std::strerror(eno));
+	throw file_unix_error(fn + " : close for write : " + strerror_str(eno));
     }
   }
 
@@ -103,7 +103,7 @@ namespace openvpn {
 	const int eno = errno;
 	if ((buffer_flags & NULL_ON_ENOENT) && eno == ENOENT)
 	  return BufferPtr();
-	throw file_unix_error(fn + " : open for read : " + std::strerror(eno));
+	throw file_unix_error(fn + " : open for read : " + strerror_str(eno));
       }
 
     // get file length
@@ -111,12 +111,12 @@ namespace openvpn {
     if (length < 0)
       {
 	const int eno = errno;
-	throw file_unix_error(fn + " : seek end error : " + std::strerror(eno));
+	throw file_unix_error(fn + " : seek end error : " + strerror_str(eno));
       }
     if (::lseek(fd(), 0, SEEK_SET) != 0)
       {
 	const int eno = errno;
-	throw file_unix_error(fn + " : seek begin error : " + std::strerror(eno));
+	throw file_unix_error(fn + " : seek begin error : " + strerror_str(eno));
       }
 
     // maximum size exceeded?
@@ -134,7 +134,7 @@ namespace openvpn {
     {
       const int eno = fd.close_with_errno();
       if (eno)
-	throw file_unix_error(fn + " : close for read : " + std::strerror(eno));
+	throw file_unix_error(fn + " : close for read : " + strerror_str(eno));
     }
 
     return bp;

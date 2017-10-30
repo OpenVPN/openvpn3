@@ -37,6 +37,7 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/addr/route.hpp>
 
 namespace openvpn {
@@ -138,7 +139,7 @@ namespace openvpn {
       if (status < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(linux_route_error, "add_delete: sendmsg failed: " << std::strerror(eno));
+	  OPENVPN_THROW(linux_route_error, "add_delete: sendmsg failed: " << strerror_str(eno));
 	}
     }
 

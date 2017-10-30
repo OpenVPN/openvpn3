@@ -137,9 +137,9 @@ namespace openvpn {
       return ret;
     }
 
-    std::string encode(const unsigned char *data, size_t size) const
+    std::string encode(const void *data, size_t size) const
     {
-      return encode(UCharWrap(data, size));
+      return encode(UCharWrap((const unsigned char *)data, size));
     }
 
     std::string decode(const std::string& str) const

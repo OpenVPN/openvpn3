@@ -77,12 +77,7 @@ namespace openvpn {
 	IP::Addr(address, title, ipv6 ? IP::Addr::V6 : IP::Addr::V4);
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -121,12 +116,7 @@ namespace openvpn {
 	// nothing to validate
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -171,25 +161,7 @@ namespace openvpn {
 	return os.str();
       }
 
-    protected:
-      void validate_(const std::string& title, const bool require_canonical) const
-      {
-	const IP::Addr::Version ver = ipv6 ? IP::Addr::V6 : IP::Addr::V4;
-	const IP::Route route = IP::route_from_string_prefix(address, prefix_length, title, ver);
-	if (require_canonical && !route.is_canonical())
-	  OPENVPN_THROW_EXCEPTION(title << " : not a canonical route: " << route);
-	if (!gateway.empty())
-	  IP::Addr(gateway, title + ".gateway", ver);
-	if (net30 && route.prefix_len != 30)
-	  OPENVPN_THROW_EXCEPTION(title << " : not a net30 route: " << route);
-      }
-
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -213,6 +185,19 @@ namespace openvpn {
 	json::to_bool(root, net30, "net30", title);
       }
 #endif
+
+    protected:
+      void validate_(const std::string& title, const bool require_canonical) const
+      {
+	const IP::Addr::Version ver = ipv6 ? IP::Addr::V6 : IP::Addr::V4;
+	const IP::Route route = IP::route_from_string_prefix(address, prefix_length, title, ver);
+	if (require_canonical && !route.is_canonical())
+	  OPENVPN_THROW_EXCEPTION(title << " : not a canonical route: " << route);
+	if (!gateway.empty())
+	  IP::Addr(gateway, title + ".gateway", ver);
+	if (net30 && route.prefix_len != 30)
+	  OPENVPN_THROW_EXCEPTION(title << " : not a net30 route: " << route);
+      }
     };
 
     class RouteAddress : public RouteBase // may be non-canonical
@@ -252,12 +237,7 @@ namespace openvpn {
 	IP::Addr(address, title, ipv6 ? IP::Addr::V6 : IP::Addr::V4);
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -290,12 +270,7 @@ namespace openvpn {
 	HostPort::validate_host(domain, title);
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -332,12 +307,7 @@ namespace openvpn {
 	  HostPort::validate_host(bypass_host, title);
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -379,12 +349,7 @@ namespace openvpn {
 	  }
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -427,12 +392,7 @@ namespace openvpn {
 	  }
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);
@@ -467,12 +427,7 @@ namespace openvpn {
 	IP::Addr(address, title, IP::Addr::V4);
       }
 
-    private:
-      friend TunBuilderCapture;
-
 #ifdef HAVE_JSONCPP
-      friend json;
-
       Json::Value to_json() const
       {
 	Json::Value root(Json::objectValue);

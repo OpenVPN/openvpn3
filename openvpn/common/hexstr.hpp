@@ -88,6 +88,11 @@ namespace openvpn {
     return ret;
   }
 
+  inline std::string render_hex(const void *data, const size_t size, const bool caps=false)
+  {
+    return render_hex((const unsigned char *)data, size, caps);
+  }
+
   inline std::string render_hex_sep(const unsigned char *data, size_t size, const char sep, const bool caps=false)
   {
     if (!data)
@@ -105,6 +110,11 @@ namespace openvpn {
 	prsep = true;
       }
     return ret;
+  }
+
+  inline std::string render_hex_sep(const void *data, const size_t size, const char sep, const bool caps=false)
+  {
+    return render_hex_sep((const unsigned char *)data, size, sep, caps);
   }
 
   template <typename V>

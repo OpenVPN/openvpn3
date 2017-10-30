@@ -39,19 +39,16 @@ namespace openvpn {
 
     struct Netblock
     {
-      Netblock() : prefix_len(0) {}
+      Netblock() {}
 
       Netblock(const IP::Route& route)
       {
 	if (!route.is_canonical())
 	  throw vpn_serv_netblock("not canonical");
-	const size_t extent = route.extent();
-	if (extent < 4)
+	if (route.host_bits() < 2)
 	  throw vpn_serv_netblock("need at least 4 addresses in netblock");
 	net = route.addr;
 	server_gw = net + 1;
-	bcast = net + (extent - 1);
-	clients = IP::Range(net + 2, extent - 3);
 	prefix_len = route.prefix_len;
       }
 
@@ -72,17 +69,35 @@ namespace openvpn {
 
       std::string to_string() const
       {
-	return '[' + net.to_string() + ','
-	  + server_gw.to_string() + ','
-	  + clients.to_string() + ','
-	  + bcast.to_string() + ']';
+	return '[' + net.to_string() + ',' + server_gw.to_string() + ']';
       }
 
       IP::Addr net;
       IP::Addr server_gw;
+      unsigned int prefix_len = 0;
+    };
+
+    struct ClientNetblock : public Netblock
+    {
+      ClientNetblock() {}
+
+      ClientNetblock(const IP::Route& route)
+	: Netblock(route)
+      {
+	const size_t extent = route.extent();
+	bcast = net + (extent - 1);
+	clients = IP::Range(net + 2, extent - 3);
+      }
+
+      std::string to_string() const
+      {
+	return '[' + Netblock::to_string() + ','
+	  + clients.to_string() + ','
+	  + bcast.to_string() + ']';
+      }
+
       IP::Range clients;
       IP::Addr bcast;
-      unsigned int prefix_len;
     };
 
     class PerThread
@@ -115,7 +130,7 @@ namespace openvpn {
 	  if (rt.version() != IP::Addr::V4)
 	    throw vpn_serv_netblock(opt_name + " address is not IPv4");
 	  rt.force_canonical();
-	  snb4 = Netblock(rt);
+	  snb4 = ClientNetblock(rt);
 	  if (snb4.server_gw != gw)
 	    throw vpn_serv_netblock(opt_name + " local gateway must be first usable address of subnet");
 	}
@@ -130,7 +145,7 @@ namespace openvpn {
 	      throw vpn_serv_netblock(opt_name + "-ipv6 network is not IPv6");
 	    if (!rt.is_canonical())
 	      throw vpn_serv_netblock(opt_name + "-ipv6 network is not canonical");
-	    snb6 = Netblock(rt);
+	    snb6 = ClientNetblock(rt);
 	  }
       }
 
@@ -165,8 +180,8 @@ namespace openvpn {
 	}
     }
 
-    const Netblock& netblock4() const { return snb4; }
-    const Netblock& netblock6() const { return snb6; }
+    const ClientNetblock& netblock4() const { return snb4; }
+    const ClientNetblock& netblock6() const { return snb6; }
 
     bool netblock_contains(const IP::Addr& a) const
     {
@@ -199,8 +214,8 @@ namespace openvpn {
     }
 
   private:
-    Netblock snb4;
-    Netblock snb6;
+    ClientNetblock snb4;
+    ClientNetblock snb6;
     std::vector<PerThread> thr;
   };
 }

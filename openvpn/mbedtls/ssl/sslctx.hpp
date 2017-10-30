@@ -46,6 +46,7 @@
 #include <openvpn/pki/pkcs1.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
+#include <openvpn/ssl/ssllog.hpp>
 
 #include <openvpn/mbedtls/pki/x509cert.hpp>
 #include <openvpn/mbedtls/pki/x509crl.hpp>

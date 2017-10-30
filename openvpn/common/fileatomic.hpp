@@ -38,12 +38,14 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/fileunix.hpp>
 #include <openvpn/common/path.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
   // Atomically write binary buffer to file (relies on
   // the atomicity of rename())
   inline void write_binary_atomic(const std::string& fn,
+				  const std::string& tmpdir,
 				  const mode_t mode,
 				  const Buffer& buf,
 				  RandomAPI& rng)
@@ -51,7 +53,7 @@ namespace openvpn {
     // generate temporary filename
     unsigned char data[16];
     rng.rand_fill(data);
-    const std::string tfn = path::join(path::dirname(fn), '.' + path::basename(fn) + '.' + render_hex(data, sizeof(data)));
+    const std::string tfn = path::join(tmpdir, '.' + path::basename(fn) + '.' + render_hex(data, sizeof(data)));
 
     // write to temporary file
     write_binary_unix(tfn, mode, buf);
@@ -60,7 +62,7 @@ namespace openvpn {
     if (::rename(tfn.c_str(), fn.c_str()) == -1)
       {
 	const int eno = errno;
-	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << std::strerror(eno));
+	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << strerror_str(eno));
       }
   }
 }

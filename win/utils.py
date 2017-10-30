@@ -1,4 +1,4 @@
-import os, sys, re, stat, shutil, tarfile, subprocess
+import os, sys, re, stat, shutil, tarfile, zipfile, subprocess
 
 j = os.path.join
 
@@ -134,35 +134,61 @@ def tarsplit(fn):
         raise ValueError("unrecognized tar file type: %r" % (fn,))
     return b, t
 
-def tarsplit_filt(fn):
+def zipsplit(fn):
+    if fn.endswith(".zip"):
+        t = "zip"
+        b = fn[:-4]
+    else:
+        raise ValueError("unrecognized zip file type: %r" % (fn,))
+    return b, t
+
+def archsplit(fn):
+    try:
+        b, t = tarsplit(fn)
+    except:
+        b, t = zipsplit(fn)
+    return b, t
+
+def archsplit_filt(fn):
     try:
         tarsplit(fn)
     except:
-        return False
+        try:
+            zipsplit(fn)
+        except:
+            return False
+        else:
+            return True
     else:
         return True
 
-def tarextract(fn, t):
-    print "TAR EXTRACT %s [%s]" % (fn, t)
-    tar = tarfile.open(fn, mode='r:'+t)
-    try:
-        tar.extractall()
-    finally:
-        tar.close()
+def extract(fn, t):
+    print "%s EXTRACT %s [%s]" % ("ZIP" if t == "zip" else "TAR", fn, t)
+
+    if t == "zip":
+        with zipfile.ZipFile(fn) as z:
+            z.extractall()
+    else:
+        tar = tarfile.open(fn, mode='r:'+t)
+        try:
+            tar.extractall()
+        finally:
+            tar.close()
 
 def expand(pkg_prefix, srcdir, lib_versions=None, noop=False):
     if lib_versions and pkg_prefix in lib_versions:
-        f = one_prefix(lib_versions[pkg_prefix], srcdir, tarsplit_filt)
+        f = one_prefix(lib_versions[pkg_prefix], srcdir, archsplit_filt)
     else:
-        f = one_prefix(pkg_prefix, srcdir, tarsplit_filt)
-    b, t = tarsplit(f)
+        f = one_prefix(pkg_prefix, srcdir, archsplit_filt)
+
+    b, t = archsplit(f)
 
     if not noop:
         # remove previous directory
         rmtree(os.path.realpath(b))
 
         # expand it
-        tarextract(os.path.join(srcdir, f), t)
+        extract(os.path.join(srcdir, f), t)
 
     return b
 
@@ -199,7 +225,10 @@ def vc_cmd(parms, cmd, arch=None, succeed=0):
 
 def vc_parms(parms, cmd_dict):
     cmd_dict["dbg_rel_flags"] = "/Zi" if parms['DEBUG'] else "/O2"
-    cmd_dict["link_static_dynamic_flags"] = "/MT" if parms['STATIC'] else "/MD"
+    flags = "/MT" if parms['STATIC'] else "/MD"
+    if parms['DEBUG']:
+        flags += "d"
+    cmd_dict["link_static_dynamic_flags"] = flags
 
 def patchfile(pkg_prefix, patchdir):
     return os.path.join(patchdir, one_prefix(pkg_prefix, patchdir))

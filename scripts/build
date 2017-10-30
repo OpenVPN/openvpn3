@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 if [ -z "$O3" ]; then
     echo O3 var must point to ovpn3 tree
     exit 1
@@ -14,6 +16,7 @@ if [ -z "$1" ]; then
     echo "usage: ./build target"
     echo "options:"
     echo " PROF=<platform> -- source vars/vars-<platform> before running"
+    echo " DPROF=1 -- when PROF is specified, use the debugging variant"
     echo " CLANG=1 -- use clang instead of gcc"
     echo " DEBUG=1 -- enable debug symbols"
     echo " CO=1 -- compile only"
@@ -30,6 +33,8 @@ if [ -z "$1" ]; then
     echo " ASIO_DIR=<dir> -- specify ASIO tree"
     echo " MTLS=1 -- include mbedTLS"
     echo " MTLS_SYS=1 -- use system mbedTLS"
+    echo " MTLS_PATH=path -- use user specified mbedTLS source folder"
+    echo " MTLS_LIBS=ldflags -- user specific mbedTLS LDFLAGS"
     echo " MA_HYBRID=1 -- use mbedTLS/AppleCrypto hybrid"
     echo " NOSSL=1 -- don't include OpenSSL"
     echo " OPENSSL_SYS=1 -- include system OpenSSL"
@@ -42,8 +47,10 @@ if [ -z "$1" ]; then
     echo " LZ4=1 -- build with LZ4 compression library"
     echo " LZ4_SYS=1 -- build with system LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
+    echo " CITY=1 -- build with Cityhash hash library"
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
+    echo " GTEST_DIR=<dir> -- specify googletest tree, required for building unit tests"
     for s in $(enum_build_extras) ; do
 	. $s args
     done
@@ -52,7 +59,9 @@ fi
 
 # source vars file
 if [ "$PROF" ]; then
-    pfn="$O3/core/vars/vars-$PROF"
+    suffix=""
+    [ "$DPROF" = "1" ] && suffix="-dbg"
+    pfn="$O3/core/vars/vars-$PROF$suffix"
     if ! [ -f "$pfn" ]; then
 	pfn="$PROF"
     fi
@@ -111,14 +120,19 @@ if [ "$MTLS_SYS" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS"
     LIBS="$LIBS -lmbedtls -lmbedx509 -lmbedcrypto"
 elif [ "$MTLS" = "1" ]; then
-    LIBS="$LIBS -lmbedtls"
+    LIBS="$LIBS -lmbedtls $MTLS_LIBS"
     if [ "$MA_HYBRID" = "1" ]; then
 	CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS_APPLE_HYBRID"
     else
 	CPPFLAGS="$CPPFLAGS -DUSE_MBEDTLS"
     fi
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/mbedtls/mbedtls-$PLATFORM/include"
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/mbedtls/mbedtls-$PLATFORM/library"
+    if [ -n "$MTLS_PATH" ]; then
+	CPPFLAGS="$CPPFLAGS -I$MTLS_PATH/include"
+	LIBDIRS="$LIBDIRS -L$MTLS_PATH/library"
+    else
+	CPPFLAGS="$CPPFLAGS -I$DEP_DIR/mbedtls/mbedtls-$PLATFORM/include"
+	LIBDIRS="$LIBDIRS -L$DEP_DIR/mbedtls/mbedtls-$PLATFORM/library"
+    fi
     if [ "$MINI" = "1" ]; then
 	LIBS="$LIBS -lminicrypto"
 	LIBDIRS="$LIBDIRS -L$DEP_DIR/minicrypto/minicrypto-$PLATFORM"
@@ -188,6 +202,13 @@ if [ "$ASIO" = "1" ] || [ "$ASIO_DIR" ]; then
     CPPFLAGS="$CPPFLAGS -DUSE_ASIO -DASIO_STANDALONE -DASIO_NO_DEPRECATED -I$ASIO_DIR/asio/include"
 fi
 
+# gtest
+if [ "$GTEST_DIR" ]; then
+    CPPFLAGS="$CPPFLAGS -I$GTEST_DIR/googletest/include"
+    LIBDIRS="$LIBDIRS -L$GTEST_DIR/googlemock/gtest"
+    LIBS="$LIBS -lgtest"
+fi
+
 # LZO compression
 if [ "$LZO" = "1" ]; then
     LIBDIRS="$LIBDIRS -L$DEP_DIR/lzo/lzo-$PLATFORM/lib"
@@ -211,6 +232,12 @@ if [ "$SNAP" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/snappy/snappy-$PLATFORM/include"
     LIBS="$LIBS -lsnappy"
     CPPFLAGS="$CPPFLAGS -DHAVE_SNAPPY"
+fi
+
+# Cityhash
+if [ "$CITY" = "1" ]; then
+    LIBS="$LIBS -lcityhash"
+    CPPFLAGS="$CPPFLAGS -DHAVE_CITYHASH"
 fi
 
 # JVM

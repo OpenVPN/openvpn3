@@ -52,6 +52,7 @@
 #include <openvpn/ssl/tls_remote.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
+#include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
@@ -228,8 +229,9 @@ namespace openvpn {
 
       virtual void set_rng(const RandomAPI::Ptr& rng_arg)
       {
-	// Not implemented because OpenSSL is hardcoded to
-	// use its own RNG.
+	// Not implemented (other than assert_crypto check)
+	// because OpenSSL is hardcoded to use its own RNG.
+	rng_arg->assert_crypto();
       }
 
       virtual std::string validate_cert(const std::string& cert_txt) const
@@ -812,6 +814,8 @@ namespace openvpn {
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
 	      if (config->enable_renegotiation)
 		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_SERVER);
+	      if (config->flags & SSLConst::SERVER_TO_SERVER)
+		SSL_CTX_set_purpose(ctx, X509_PURPOSE_SSL_SERVER);
 	    }
 	  else if (config->mode.is_client())
 	    {

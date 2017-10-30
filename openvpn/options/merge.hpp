@@ -420,6 +420,8 @@ namespace openvpn {
 		  flags |= F_MAY_INCLUDE_KEY_DIRECTION;
 		  return true;
 		}
+	      if (d == "tls-crypt")
+		return true;
 	      return false;
 	    }
 	}

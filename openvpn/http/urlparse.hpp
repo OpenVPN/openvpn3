@@ -29,6 +29,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/format.hpp>
+#include <openvpn/http/validate_uri.hpp>
 #include <openvpn/http/parseutil.hpp>
 
 namespace openvpn {
@@ -130,7 +131,7 @@ namespace openvpn {
 		  port += c;
 		break;
 	      case URI:
-		if (!is_valid_uri_char(c) && !loose_validation)
+		if (!HTTP::is_valid_uri_char(c) && !loose_validation)
 		  throw url_parse_error("bad URI char");
 		uri += c;
 		break;
@@ -252,11 +253,6 @@ namespace openvpn {
       bool is_valid_scheme_char(const char c)
       {
 	return (c >= 'a' && c <= 'z') || c == '_';
-      }
-
-      bool is_valid_uri_char(const char c)
-      {
-	return !HTTP::Util::is_ctl(c) && c != ' ';
       }
     };
 

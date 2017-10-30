@@ -26,6 +26,7 @@
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/base64.hpp>
 #include <openvpn/crypto/digestapi.hpp>
 
 namespace openvpn {
@@ -78,6 +79,12 @@ namespace openvpn {
     {
       BufferPtr bp = final();
       return render_hex_generic(*bp);
+    }
+
+    std::string final_base64()
+    {
+      BufferPtr bp = final();
+      return base64->encode(*bp);
     }
 
   private:

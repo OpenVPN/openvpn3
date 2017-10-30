@@ -475,6 +475,8 @@ namespace openvpn {
 
 	~ClientState()
 	{
+	  stop_scope_local.reset();
+	  stop_scope_global.reset();
 	  socket_protect.detach_from_parent();
 	  reconnect_notify.detach_from_parent();
 	  remote_override.detach_from_parent();
@@ -532,6 +534,17 @@ namespace openvpn {
 	    clock_tick->cancel();
 	}
 
+	void setup_async_stop_scopes()
+	{
+	  stop_scope_local.reset(new AsioStopScope(*io_context(), async_stop_local(), [this]() {
+	      session->graceful_stop();
+	    }));
+
+	  stop_scope_global.reset(new AsioStopScope(*io_context(), async_stop_global(), [this]() {
+	      trigger_async_stop_local();
+	    }));
+	}
+
       private:
 	ClientState(const ClientState&) = delete;
 	ClientState& operator=(const ClientState&) = delete;
@@ -540,6 +553,9 @@ namespace openvpn {
 
 	Stop async_stop_local_;
 	Stop* async_stop_global_ = nullptr;
+
+	std::unique_ptr<AsioStopScope> stop_scope_local;
+	std::unique_ptr<AsioStopScope> stop_scope_global;
 
 	openvpn_io::io_context* io_context_ = nullptr;
 	bool io_context_owned = false;
@@ -828,150 +844,190 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT Status OpenVPNClient::do_connect()
     {
-      Status ret;
-      bool in_run = false;
-
-      connect_attach();
-
+      Status status;
+      bool session_started = false;
       try {
-	// set global MbedTLS debug level
-#if defined(USE_MBEDTLS) || defined(USE_MBEDTLS_APPLE_HYBRID)
-	mbedtls_debug_set_threshold(state->ssl_debug_level); // fixme -- using a global method for this seems wrong
-#endif
-
-	// load options
-	ClientOptions::Config cc;
-	cc.cli_stats = state->stats;
-	cc.cli_events = state->events;
-	cc.server_override = state->server_override;
-	cc.proto_override = state->proto_override;
-	cc.ipv6 = state->ipv6;
-	cc.conn_timeout = state->conn_timeout;
-	cc.tun_persist = state->tun_persist;
-	cc.google_dns_fallback = state->google_dns_fallback;
-	cc.autologin_sessions = state->autologin_sessions;
-	cc.proto_context_options = state->proto_context_options;
-	cc.http_proxy_options = state->http_proxy_options;
-	cc.alt_proxy = state->alt_proxy;
-	cc.dco = state->dco;
-	cc.echo = state->echo;
-	cc.info = state->info;
-	cc.reconnect_notify = &state->reconnect_notify;
-	if (remote_override_enabled())
-	  cc.remote_override = &state->remote_override;
-	cc.private_key_password = state->private_key_password;
-	cc.disable_client_cert = state->disable_client_cert;
-	cc.ssl_debug_level = state->ssl_debug_level;
-	cc.default_key_direction = state->default_key_direction;
-	cc.force_aes_cbc_ciphersuites = state->force_aes_cbc_ciphersuites;
-	cc.tls_version_min_override = state->tls_version_min_override;
-	cc.tls_cert_profile_override = state->tls_cert_profile_override;
-	cc.gui_version = state->gui_version;
-	cc.extra_peer_info = state->extra_peer_info;
-	cc.stop = state->async_stop_local();
-#ifdef OPENVPN_GREMLIN
-	cc.gremlin_config = state->gremlin_config;
-#endif
-#if defined(USE_TUN_BUILDER)
-	cc.socket_protect = &state->socket_protect;
-	cc.builder = this;
-#endif
-#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
-	cc.extern_tun_factory = this;
-#endif
-
-	// force Session ID use and disable password cache if static challenge is enabled
-	if (state->creds
-	    && !state->creds->get_replace_password_with_session_id()
-	    && !state->eval.autologin
-	    && !state->eval.staticChallenge.empty())
-	  {
-	    state->creds->set_replace_password_with_session_id(true);
-	    state->creds->enable_password_cache(false);
-	  }
-
-	// external PKI
-#if !defined(USE_APPLE_SSL)
-	if (state->eval.externalPki && !state->disable_client_cert)
-	  {
-	    if (!state->external_pki_alias.empty())
-	      {
-		ExternalPKICertRequest req;
-		req.alias = state->external_pki_alias;
-		external_pki_cert_request(req);
-		if (!req.error)
-		  {
-		    cc.external_pki = this;
-		    process_epki_cert_chain(req);
-		  }
-		else
-		  {
-		    external_pki_error(req, Error::EPKI_CERT_ERROR);
-		    return ret;
-		  }
-	      }
-	    else
-	      {
-		ret.error = true;
-		ret.message = "Missing External PKI alias";
-		return ret;
-	      }
-	  }
-#endif
-
-	// build client options object
-	ClientOptions::Ptr client_options = new ClientOptions(state->options, cc);
-
-	// configure creds in options
-	client_options->submit_creds(state->creds);
-
-	// instantiate top-level client session
-	state->session.reset(new ClientConnect(*state->io_context(), client_options));
-
-	// convenience clock tick
-	if (state->clock_tick_ms)
-	  {
-	    state->clock_tick.reset(new MyClockTick(*state->io_context(), this, state->clock_tick_ms));
-	    state->clock_tick->schedule();
-	  }
-
-	// raise an exception if app has expired
-	check_app_expired();
-
-	// start VPN
-	state->session->start(); // queue parallel async reads
-
-	// wire up async stop
-	AsioStopScope scope_local(*state->io_context(), state->async_stop_local(), [this]() {
-	    state->session->graceful_stop();
+	connect_attach();
+#if defined(OPENVPN_OVPNCLI_ASYNC_SETUP)
+	openvpn_io::post(*state->io_context(), [this]() {
+	    do_connect_async();
 	  });
-	AsioStopScope scope_global(*state->io_context(), state->async_stop_global(), [this]() {
-	    state->trigger_async_stop_local();
-	  });
-
-	// prepare to start reactor
-	connect_pre_run();
-
-	// run i/o reactor
-	state->enable_foreign_thread_access();
-	in_run = true;
+#else
+	connect_setup(status, session_started);
+#endif
 	connect_run();
+	return status;
       }
       catch (const std::exception& e)
 	{
-	  if (in_run)
+	  if (session_started)
 	    connect_session_stop();
-	  ret.error = true;
-	  ret.message = Unicode::utf8_printable<std::string>(e.what(), 256);
-
-	  // if exception is an ExceptionCode, translate the code
-	  // to return status string
-	  {
-	    const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
-	    if (ec && ec->code_defined())
-	      ret.status = Error::name(ec->code());
-	  }
+	  return status_from_exception(e);
 	}
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::do_connect_async()
+    {
+      enum StopType {
+	NONE,
+	SESSION,
+	EXPLICIT,
+      };
+      StopType stop_type = NONE;
+      Status status;
+      bool session_started = false;
+      try {
+	connect_setup(status, session_started);
+      }
+      catch (const std::exception& e)
+	{
+	  stop_type = session_started ? SESSION : EXPLICIT;
+	  status = status_from_exception(e);
+	}
+      if (status.error)
+	{
+	  ClientEvent::Base::Ptr ev = new ClientEvent::ClientSetup(status.status, status.message);
+	  state->events->add_event(std::move(ev));
+	}
+      if (stop_type == SESSION)
+	connect_session_stop();
+#ifdef OPENVPN_IO_REQUIRES_STOP
+      if (stop_type == EXPLICIT)
+	state->io_context()->stop();
+#endif
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_setup(Status& status, bool& session_started)
+    {
+      // set global MbedTLS debug level
+#if defined(USE_MBEDTLS) || defined(USE_MBEDTLS_APPLE_HYBRID)
+      mbedtls_debug_set_threshold(state->ssl_debug_level); // fixme -- using a global method for this seems wrong
+#endif
+
+      // load options
+      ClientOptions::Config cc;
+      cc.cli_stats = state->stats;
+      cc.cli_events = state->events;
+      cc.server_override = state->server_override;
+      cc.proto_override = state->proto_override;
+      cc.ipv6 = state->ipv6;
+      cc.conn_timeout = state->conn_timeout;
+      cc.tun_persist = state->tun_persist;
+      cc.google_dns_fallback = state->google_dns_fallback;
+      cc.autologin_sessions = state->autologin_sessions;
+      cc.proto_context_options = state->proto_context_options;
+      cc.http_proxy_options = state->http_proxy_options;
+      cc.alt_proxy = state->alt_proxy;
+      cc.dco = state->dco;
+      cc.echo = state->echo;
+      cc.info = state->info;
+      cc.reconnect_notify = &state->reconnect_notify;
+      if (remote_override_enabled())
+	cc.remote_override = &state->remote_override;
+      cc.private_key_password = state->private_key_password;
+      cc.disable_client_cert = state->disable_client_cert;
+      cc.ssl_debug_level = state->ssl_debug_level;
+      cc.default_key_direction = state->default_key_direction;
+      cc.force_aes_cbc_ciphersuites = state->force_aes_cbc_ciphersuites;
+      cc.tls_version_min_override = state->tls_version_min_override;
+      cc.tls_cert_profile_override = state->tls_cert_profile_override;
+      cc.gui_version = state->gui_version;
+      cc.extra_peer_info = state->extra_peer_info;
+      cc.stop = state->async_stop_local();
+#ifdef OPENVPN_GREMLIN
+      cc.gremlin_config = state->gremlin_config;
+#endif
+#if defined(USE_TUN_BUILDER)
+      cc.socket_protect = &state->socket_protect;
+      cc.builder = this;
+#endif
+#if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+      cc.extern_tun_factory = this;
+#endif
+
+      // force Session ID use and disable password cache if static challenge is enabled
+      if (state->creds
+	  && !state->creds->get_replace_password_with_session_id()
+	  && !state->eval.autologin
+	  && !state->eval.staticChallenge.empty())
+	{
+	  state->creds->set_replace_password_with_session_id(true);
+	  state->creds->enable_password_cache(false);
+	}
+
+      // external PKI
+#if !defined(USE_APPLE_SSL)
+      if (state->eval.externalPki && !state->disable_client_cert)
+	{
+	  if (!state->external_pki_alias.empty())
+	    {
+	      ExternalPKICertRequest req;
+	      req.alias = state->external_pki_alias;
+	      external_pki_cert_request(req);
+	      if (!req.error)
+		{
+		  cc.external_pki = this;
+		  process_epki_cert_chain(req);
+		}
+	      else
+		{
+		  external_pki_error(req, Error::EPKI_CERT_ERROR);
+		  return;
+		}
+	    }
+	  else
+	    {
+	      status.error = true;
+	      status.message = "Missing External PKI alias";
+	      return;
+	    }
+	}
+#endif
+
+      // build client options object
+      ClientOptions::Ptr client_options = new ClientOptions(state->options, cc);
+
+      // configure creds in options
+      client_options->submit_creds(state->creds);
+
+      // instantiate top-level client session
+      state->session.reset(new ClientConnect(*state->io_context(), client_options));
+
+      // convenience clock tick
+      if (state->clock_tick_ms)
+	{
+	  state->clock_tick.reset(new MyClockTick(*state->io_context(), this, state->clock_tick_ms));
+	  state->clock_tick->schedule();
+	}
+
+      // raise an exception if app has expired
+      check_app_expired();
+
+      // start VPN
+      state->session->start(); // queue reads on socket/tun
+      session_started = true;
+
+      // wire up async stop
+      state->setup_async_stop_scopes();
+
+      // prepare to start reactor
+      connect_pre_run();
+      state->enable_foreign_thread_access();
+    }
+
+    OPENVPN_CLIENT_EXPORT Status OpenVPNClient::status_from_exception(const std::exception& e)
+    {
+      Status ret;
+      ret.error = true;
+      ret.message = Unicode::utf8_printable<std::string>(e.what(), 256);
+
+      // if exception is an ExceptionCode, translate the code
+      // to return status string
+      {
+	const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
+	if (ec && ec->code_defined())
+	  ret.status = Error::name(ec->code());
+      }
       return ret;
     }
 
@@ -1292,11 +1348,6 @@ namespace openvpn {
     OPENVPN_CLIENT_EXPORT OpenVPNClient::~OpenVPNClient()
     {
       delete state;
-    }
-
-    OPENVPN_CLIENT_EXPORT LogInfo::LogInfo(std::string str)
-      : text(std::move(str))
-    {
     }
   }
 }

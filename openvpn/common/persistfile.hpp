@@ -22,7 +22,6 @@
 #ifndef OPENVPN_COMMON_PERSISTFILE_H
 #define OPENVPN_COMMON_PERSISTFILE_H
 
-#include <cstring>     // for std::strerror()
 #include <sys/types.h> // for open(), lseek(), ftruncate()
 #include <sys/stat.h>  // for open()
 #include <fcntl.h>     // for open()
@@ -35,6 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/write.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
@@ -90,7 +90,7 @@ namespace openvpn {
     void syserr(const char *type)
     {
       const int eno = errno;
-      OPENVPN_THROW_EXCEPTION(fn << " : " << type << " error : " << std::strerror(eno));
+      OPENVPN_THROW_EXCEPTION(fn << " : " << type << " error : " << strerror_str(eno));
     }
 
     void err(const char *type)

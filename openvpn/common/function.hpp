@@ -94,7 +94,7 @@ namespace openvpn {
 
     R operator()(A... args)
     {
-      return methods->invoke(data, args...);
+      return methods->invoke(data, std::forward<A>(args)...);
     }
 
     explicit operator bool() const noexcept
@@ -166,7 +166,7 @@ namespace openvpn {
       static R invoke(void *ptr, A... args)
       {
 	Intern* self = reinterpret_cast<Intern<T>*>(ptr);
-	return self->functor_(args...);
+	return self->functor_(std::forward<A>(args)...);
       }
 
       static void move(void *dest, void *src)
@@ -198,7 +198,7 @@ namespace openvpn {
       static R invoke(void *ptr, A... args)
       {
 	Extern* self = reinterpret_cast<Extern<T>*>(ptr);
-	return (*self->functor_)(args...);
+	return (*self->functor_)(std::forward<A>(args)...);
       }
 
       static void move(void *dest, void *src)

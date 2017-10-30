@@ -170,6 +170,7 @@ namespace openvpn {
 	  adj_capacity_ = newcap;
       }
 
+#ifndef OPENVPN_NO_IO
       // return a openvpn_io::mutable_buffer object used by
       // asio read methods.
       openvpn_io::mutable_buffer mutable_buffer(Buffer& buf) const
@@ -182,6 +183,7 @@ namespace openvpn {
       {
 	return openvpn_io::mutable_buffer(buf.data(), buf_clamp_read(remaining_payload(buf)));
       }
+#endif
 
       std::string info() const
       {

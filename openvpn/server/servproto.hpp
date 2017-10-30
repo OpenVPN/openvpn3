@@ -54,14 +54,14 @@ namespace openvpn {
   class ServerProto
   {
     typedef ProtoContext Base;
-    typedef Link<TransportClientInstanceSend, TransportClientInstanceRecv> TransportLink;
-    typedef Link<TunClientInstanceSend, TunClientInstanceRecv> TunLink;
-    typedef Link<ManClientInstanceSend, ManClientInstanceRecv> ManLink;
+    typedef Link<TransportClientInstance::Send, TransportClientInstance::Recv> TransportLink;
+    typedef Link<TunClientInstance::Send, TunClientInstance::Recv> TunLink;
+    typedef Link<ManClientInstance::Send, ManClientInstance::Recv> ManLink;
 
   public:
     class Session;
 
-    class Factory : public TransportClientInstanceFactory
+    class Factory : public TransportClientInstance::Factory
     {
     public:
       typedef RCPtr<Factory> Ptr;
@@ -71,13 +71,15 @@ namespace openvpn {
 	      const Base::Config& c)
 	: io_context(io_context_arg)
       {
-	if (c.tls_auth_enabled())
+	if (c.tls_crypt_enabled())
+	  preval.reset(new Base::TLSCryptPreValidate(c, true));
+	else if (c.tls_auth_enabled())
 	  preval.reset(new Base::TLSAuthPreValidate(c, true));
       }
 
-      virtual TransportClientInstanceRecv::Ptr new_client_instance();
+      virtual TransportClientInstance::Recv::Ptr new_client_instance() override;
 
-      virtual bool validate_initial_packet(const Buffer& net_buf)
+      virtual bool validate_initial_packet(const Buffer& net_buf) override
       {
 	if (preval)
 	  {
@@ -98,13 +100,13 @@ namespace openvpn {
       openvpn_io::io_context& io_context;
       ProtoConfig::Ptr proto_context_config;
 
-      ManClientInstanceFactory::Ptr man_factory;
-      TunClientInstanceFactory::Ptr tun_factory;
+      ManClientInstance::Factory::Ptr man_factory;
+      TunClientInstance::Factory::Ptr tun_factory;
 
       SessionStats::Ptr stats;
 
     private:
-      Base::TLSAuthPreValidate::Ptr preval;
+      Base::TLSWrapPreValidate::Ptr preval;
     };
 
     // This is the main server-side client instance object
@@ -123,20 +125,20 @@ namespace openvpn {
     public:
       typedef RCPtr<Session> Ptr;
 
-      virtual bool defined() const
+      virtual bool defined() const override
       {
 	return defined_();
       }
 
-      virtual TunClientInstanceRecv* override_tun(TunClientInstanceSend* tun)
+      virtual TunClientInstance::Recv* override_tun(TunClientInstance::Send* tun) override
       {
 	TunLink::send.reset(tun);
 	return this;
       }
 
-      virtual void start(const TransportClientInstanceSend::Ptr& parent,
+      virtual void start(const TransportClientInstance::Send::Ptr& parent,
 			 const PeerAddr::Ptr& addr,
-			 const int local_peer_id)
+			 const int local_peer_id) override
       {
 	TransportLink::send = parent;
 	peer_addr = addr;
@@ -152,7 +154,7 @@ namespace openvpn {
 	housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
       }
 
-      virtual PeerStats stats_poll()
+      virtual PeerStats stats_poll() override
       {
 	if (TransportLink::send)
 	  return TransportLink::send->stats_poll();
@@ -160,12 +162,15 @@ namespace openvpn {
 	  return PeerStats();
       }
 
-      virtual void stop()
+      virtual void stop() override
       {
 	if (!halt)
 	  {
 	    halt = true;
 	    housekeeping_timer.cancel();
+
+	    if (ManLink::send)
+	      ManLink::send->pre_stop();
 
 	    // deliver final peer stats to management layer
 	    if (TransportLink::send && ManLink::send)
@@ -195,7 +200,7 @@ namespace openvpn {
       }
 
       // called with OpenVPN-encapsulated packets from transport layer
-      virtual bool transport_recv(BufferAllocated& buf)
+      virtual bool transport_recv(BufferAllocated& buf) override
       {
 	bool ret = false;
 	if (!Base::primary_defined())
@@ -252,13 +257,13 @@ namespace openvpn {
       }
 
       // called with cleartext IP packets from routing layer
-      virtual void tun_recv(BufferAllocated& buf)
+      virtual void tun_recv(BufferAllocated& buf) override
       {
 	// fixme -- code me
       }
 
       // Return true if keepalive parameter(s) are enabled.
-      virtual bool is_keepalive_enabled() const
+      virtual bool is_keepalive_enabled() const override
       {
 	return Base::is_keepalive_enabled();
       }
@@ -266,13 +271,13 @@ namespace openvpn {
       // Disable keepalive for rest of session, but fetch
       // the keepalive parameters (in seconds).
       virtual void disable_keepalive(unsigned int& keepalive_ping,
-				     unsigned int& keepalive_timeout)
+				     unsigned int& keepalive_timeout) override
       {
 	Base::disable_keepalive(keepalive_ping, keepalive_timeout);
       }
 
       // override the data channel factory
-      virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory)
+      virtual void override_dc_factory(const CryptoDCFactory::Ptr& dc_factory) override
       {
 	Base::dc_settings().set_factory(dc_factory);
       }
@@ -287,8 +292,8 @@ namespace openvpn {
     private:
       Session(openvpn_io::io_context& io_context_arg,
 	      const Factory& factory,
-	      ManClientInstanceFactory::Ptr man_factory_arg,
-	      TunClientInstanceFactory::Ptr tun_factory_arg)
+	      ManClientInstance::Factory::Ptr man_factory_arg,
+	      TunClientInstance::Factory::Ptr tun_factory_arg)
 	: Base(factory.clone_proto_config(), factory.stats),
 	  io_context(io_context_arg),
 	  housekeeping_timer(io_context_arg),
@@ -304,7 +309,7 @@ namespace openvpn {
       }
 
       // proto base class calls here for control channel network sends
-      virtual void control_net_send(const Buffer& net_buf)
+      virtual void control_net_send(const Buffer& net_buf) override
       {
 	OPENVPN_LOG_SERVPROTO("Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(net_buf));
 	if (TransportLink::send)
@@ -319,7 +324,7 @@ namespace openvpn {
       virtual void server_auth(const std::string& username,
 			       const SafeString& password,
 			       const std::string& peer_info,
-			       const AuthCert::Ptr& auth_cert)
+			       const AuthCert::Ptr& auth_cert) override
       {
 	constexpr size_t MAX_USERNAME_SIZE = 256;
 	constexpr size_t MAX_PASSWORD_SIZE = 256;
@@ -334,7 +339,7 @@ namespace openvpn {
       }
 
       // proto base class calls here for app-level control-channel messages received
-      virtual void control_recv(BufferPtr&& app_bp)
+      virtual void control_recv(BufferPtr&& app_bp) override
       {
 	const std::string msg = Unicode::utf8_printable(Base::template read_control_string<std::string>(*app_bp),
 							Unicode::UTF8_FILTER);
@@ -363,18 +368,12 @@ namespace openvpn {
       }
 
       virtual void auth_failed(const std::string& reason,
-			       const bool tell_client)
+			       const bool tell_client) override
       {
 	push_halt_restart_msg(HaltRestart::AUTH_FAILED, reason, tell_client);
       }
 
-      virtual void set_fwmark(const unsigned int fwmark)
-      {
-	if (TunLink::send)
-	  TunLink::send->set_fwmark(fwmark);
-      }
-
-      virtual void relay(const IP::Addr& target, const int port)
+      virtual void relay(const IP::Addr& target, const int port) override
       {
 	Base::update_now();
 
@@ -397,9 +396,7 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
-      virtual void push_reply(std::vector<BufferPtr>&& push_msgs,
-			      const std::vector<IP::Route>& rtvec,
-			      const unsigned int initial_fwmark)
+      virtual void push_reply(std::vector<BufferPtr>&& push_msgs) override
       {
 	if (halt || relay_transition || !Base::primary_defined())
 	  return;
@@ -409,9 +406,6 @@ namespace openvpn {
 	if (get_tun())
 	  {
 	    Base::init_data_channel();
-	    if (initial_fwmark)
-	      TunLink::send->set_fwmark(initial_fwmark);
-	    TunLink::send->add_routes(rtvec);
 	    for (auto &msg : push_msgs)
 	      {
 		msg->null_terminate();
@@ -426,9 +420,17 @@ namespace openvpn {
 	  }
       }
 
+      virtual TunClientInstance::NativeHandle tun_native_handle() override
+      {
+	if (get_tun())
+	  return TunLink::send->tun_native_handle();
+	else
+	  return TunClientInstance::NativeHandle();
+      }
+
       virtual void push_halt_restart_msg(const HaltRestart::Type type,
 					 const std::string& reason,
-					 const bool tell_client)
+					 const bool tell_client) override
       {
 	if (halt || did_client_halt_restart)
 	  return;
@@ -510,7 +512,7 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
-      virtual void post_cc_msg(BufferPtr&& msg)
+      virtual void post_cc_msg(BufferPtr&& msg) override
       {
 	if (halt || !Base::primary_defined())
 	  return;
@@ -522,13 +524,13 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
-      virtual void stats_notify(const PeerStats& ps, const bool final)
+      virtual void stats_notify(const PeerStats& ps, const bool final) override
       {
 	if (ManLink::send)
 	  ManLink::send->stats_notify(ps, final);
       }
 
-      virtual void float_notify(const PeerAddr::Ptr& addr)
+      virtual void float_notify(const PeerAddr::Ptr& addr) override
       {
 	if (ManLink::send)
 	  ManLink::send->float_notify(addr);
@@ -536,7 +538,7 @@ namespace openvpn {
 
       virtual void data_limit_notify(const int key_id,
 				     const DataLimit::Mode cdl_mode,
-				     const DataLimit::State cdl_status)
+				     const DataLimit::State cdl_status) override
       {
 	Base::update_now();
 	Base::data_limit_notify(key_id, cdl_mode, cdl_status);
@@ -677,12 +679,12 @@ namespace openvpn {
 
       SessionStats::Ptr stats;
 
-      ManClientInstanceFactory::Ptr man_factory;
-      TunClientInstanceFactory::Ptr tun_factory;
+      ManClientInstance::Factory::Ptr man_factory;
+      TunClientInstance::Factory::Ptr tun_factory;
     };
   };
 
-  inline TransportClientInstanceRecv::Ptr ServerProto::Factory::new_client_instance()
+  inline TransportClientInstance::Recv::Ptr ServerProto::Factory::new_client_instance()
   {
     return new Session(io_context, *this, man_factory, tun_factory);
   }

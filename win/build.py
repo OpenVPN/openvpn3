@@ -16,13 +16,19 @@ def src_fn(parms, srcfile):
         srcfile = cli_cpp(parms)
     return srcfile
 
+def is_unit_test(argv):
+    unit_test = False
+    if len(argv) >= 2:
+        unit_test = argv[1] == "unittest"
+    return unit_test
+
 def src_fn_argv(parms, argv):
     srcfile = None
     if len(argv) >= 1:
         srcfile = argv[0]
     return src_fn(parms, srcfile)
 
-def build(parms, srcfile):
+def build(parms, srcfile, unit_test):
     # Debug?
     if parms['DEBUG']:
         dbg_rel_flags = "/Zi"
@@ -62,6 +68,11 @@ def build(parms, srcfile):
         options['extra_lib_path'] += " /LIBPATH:%(jsoncpp)s/dist" % options
         options['extra_lib'] += " jsoncpp.lib"
 
+    if unit_test:
+        options['extra_lib'] += " gtest.lib"
+        options['extra_inc'] += " /I %s" % os.path.join(parms["GTEST_ROOT"], "googletest", "include")
+        options['extra_lib_path'] += " /LIBPATH:%s" % os.path.join(parms["GTEST_ROOT"], "googlemock", "gtest", "Debug")
+
     # Build OpenVPN Connect
     if parms.get("CONNECT"):
         options['extra_inc'] += " /I " + os.path.join(parms['OVPN3'], "common")
@@ -72,4 +83,6 @@ def build(parms, srcfile):
 if __name__ == "__main__":
     import sys
     from parms import PARMS
-    build(PARMS, src_fn_argv(PARMS, sys.argv[1:]))
+    src = src_fn_argv(PARMS, sys.argv[1:])
+    unit_test = is_unit_test(sys.argv[1:])
+    build(PARMS, src, unit_test)

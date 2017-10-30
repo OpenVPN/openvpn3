@@ -454,14 +454,29 @@ namespace openvpn {
       std::memcpy(write_alloc(size), data, size * sizeof(T));
     }
 
+    void write(const void* data, const size_t size)
+    {
+      write((const T*)data, size);
+    }
+
     void prepend(const T* data, const size_t size)
     {
       std::memcpy(prepend_alloc(size), data, size * sizeof(T));
     }
 
+    void prepend(const void* data, const size_t size)
+    {
+      prepend((const T*)data, size);
+    }
+
     void read(T* data, const size_t size)
     {
       std::memcpy(data, read_alloc(size), size * sizeof(T));
+    }
+
+    void read(void* data, const size_t size)
+    {
+      read((T*)data, size);
     }
 
     T* write_alloc(const size_t size)

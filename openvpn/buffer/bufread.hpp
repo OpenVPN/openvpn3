@@ -30,6 +30,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/buffer/buflist.hpp>
 
 namespace openvpn {
@@ -41,7 +42,7 @@ namespace openvpn {
     if (status < 0)
       {
 	const int eno = errno;
-	OPENVPN_THROW(buf_read_error, "on " << title << " : " << std::strerror(eno));
+	OPENVPN_THROW(buf_read_error, "on " << title << " : " << strerror_str(eno));
       }
     else if (!status)
       return false;

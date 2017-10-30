@@ -26,7 +26,6 @@
 
 #include <string>
 #include <cstring> // for std::strlen
-#include <cstdint> // for std::uint64_t
 #include <time.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -127,15 +126,6 @@ namespace openvpn {
       }
     save = tv.tv_sec;
     return date_time(&tv, true);
-  }
-
-  inline std::uint64_t milliseconds_since_epoch()
-  {
-    struct timeval tv;
-    if (::gettimeofday(&tv, nullptr) < 0)
-      return 0;
-    return std::uint64_t(tv.tv_sec)  * std::uint64_t(1000)
-         + std::uint64_t(tv.tv_usec) / std::uint64_t(1000);
   }
 
 #endif

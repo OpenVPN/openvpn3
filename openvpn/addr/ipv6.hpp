@@ -34,7 +34,6 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/ffs.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ipv4.hpp>
 #include <openvpn/addr/iperr.hpp>
 
@@ -84,12 +83,12 @@ namespace openvpn {
 	return ret;
       }
 
-      struct sockaddr_in6 to_sockaddr() const
+      struct sockaddr_in6 to_sockaddr(const unsigned short port=0) const
       {
 	struct sockaddr_in6 ret;
 	std::memset(&ret, 0, sizeof(ret));
 	ret.sin6_family = AF_INET6;
-	ret.sin6_port = 0;
+	ret.sin6_port = htons(port);
 	host_to_network_order((union ipv6addr *)&ret.sin6_addr.s6_addr, &u);
 	ret.sin6_scope_id = scope_id_;
 	return ret;
@@ -535,9 +534,10 @@ namespace openvpn {
 	return SIZE;
       }
 
-      std::size_t hashval() const
+      template <typename HASH>
+      void hash(HASH& h) const
       {
-	return Hash::value(u.u32[0], u.u32[1], u.u32[2], u.u32[3]);
+	h(u.bytes, sizeof(u.bytes));
       }
 
 #ifdef OPENVPN_IP_IMMUTABLE
@@ -824,7 +824,5 @@ namespace openvpn {
     OPENVPN_OSTREAM(Addr, to_string)
   }
 }
-
-OPENVPN_HASH_METHOD(openvpn::IPv6::Addr, hashval);
 
 #endif // OPENVPN_ADDR_IPV6_H

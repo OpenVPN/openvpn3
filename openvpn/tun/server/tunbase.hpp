@@ -28,64 +28,90 @@
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/function.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/server/servhalt.hpp>
-#include <openvpn/addr/route.hpp>
 
 namespace openvpn {
+  namespace TunClientInstance {
 
-  // Base class for the client instance receiver.  Note that all
-  // client instance receivers (transport, routing, management,
-  // etc.) must inherit virtually from RC because the client instance
-  // object will inherit from multiple receivers.
-  struct TunClientInstanceRecv : public virtual RC<thread_unsafe_refcount>
-  {
-    typedef RCPtr<TunClientInstanceRecv> Ptr;
+    typedef Function<void(int fd)> PostCloseFunc;
 
-    //virtual bool defined() const = 0;
-    virtual void stop() = 0;
+    // A native reference to a client instance
+    struct NativeHandle
+    {
+      NativeHandle() {}
 
-    // Called with IP packets from tun layer.
-    virtual void tun_recv(BufferAllocated& buf) = 0;
+      NativeHandle(const int fd_arg, const int peer_id_arg)
+	: fd(fd_arg),
+	  peer_id(peer_id_arg)
+      {
+      }
 
-    // push a halt or restart message to client
-    virtual void push_halt_restart_msg(const HaltRestart::Type type,
-				       const std::string& reason,
-				       const bool tell_client) = 0;
-  };
+      bool fd_defined() const
+      {
+	return fd >= 0;
+      }
 
-  // Base class for the per-client-instance state of the TunServer.
-  // Each client instance uses this class to send data to the tun layer.
-  struct TunClientInstanceSend : public virtual RC<thread_unsafe_refcount>
-  {
-    typedef RCPtr<TunClientInstanceSend> Ptr;
+      bool defined() const
+      {
+	return fd >= 0 && peer_id >= 0;
+      }
 
-    //virtual bool defined() const = 0;
-    virtual void stop() = 0;
+      int fd = -1;
+      int peer_id = -1;
+    };
 
-    virtual bool tun_send_const(const Buffer& buf) = 0;
-    virtual bool tun_send(BufferAllocated& buf) = 0;
+    // Base class for the client instance receiver.  Note that all
+    // client instance receivers (transport, routing, management,
+    // etc.) must inherit virtually from RC because the client instance
+    // object will inherit from multiple receivers.
+    struct Recv : public virtual RC<thread_unsafe_refcount>
+    {
+      typedef RCPtr<Recv> Ptr;
 
-    // add routes
-    virtual void add_routes(const std::vector<IP::Route>& rtvec) = 0;
+      //virtual bool defined() const = 0;
+      virtual void stop() = 0;
 
-    // set fwmark
-    virtual void set_fwmark(const unsigned int fwmark) = 0;
+      // Called with IP packets from tun layer.
+      virtual void tun_recv(BufferAllocated& buf) = 0;
 
-    // set up relay to target
-    virtual void relay(const IP::Addr& target, const int port) = 0;
+      // push a halt or restart message to client
+      virtual void push_halt_restart_msg(const HaltRestart::Type type,
+					 const std::string& reason,
+					 const bool tell_client) = 0;
+    };
 
-    virtual const std::string& tun_info() const = 0;
-  };
+    // Base class for the per-client-instance state of the TunServer.
+    // Each client instance uses this class to send data to the tun layer.
+    struct Send : public virtual RC<thread_unsafe_refcount>
+    {
+      typedef RCPtr<Send> Ptr;
 
-  // Factory for server tun object.
-  struct TunClientInstanceFactory : public RC<thread_unsafe_refcount>
-  {
-    typedef RCPtr<TunClientInstanceFactory> Ptr;
+      //virtual bool defined() const = 0;
+      virtual void stop() = 0;
 
-    virtual TunClientInstanceSend::Ptr new_obj(TunClientInstanceRecv* parent) = 0;
-  };
+      virtual bool tun_send_const(const Buffer& buf) = 0;
+      virtual bool tun_send(BufferAllocated& buf) = 0;
 
-} // namespace openvpn
+      // get the native handle for tun/peer
+      virtual NativeHandle tun_native_handle() = 0;
+
+      // set up relay to target
+      virtual void relay(const IP::Addr& target, const int port) = 0;
+
+      virtual const std::string& tun_info() const = 0;
+    };
+
+    // Factory for server tun object.
+    struct Factory : public RC<thread_unsafe_refcount>
+    {
+      typedef RCPtr<Factory> Ptr;
+
+      virtual Send::Ptr new_obj(Recv* parent) = 0;
+    };
+
+  }
+}
 
 #endif

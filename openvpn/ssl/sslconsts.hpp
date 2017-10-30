@@ -52,6 +52,11 @@ namespace openvpn {
       // fail status data via AuthCert so the higher layers
       // can handle it.
       DEFERRED_CERT_VERIFY=(1<<3),
+
+      // [server only] When running as a server, require that
+      // clients that connect to us have their certificate
+      // purpose set to server.
+      SERVER_TO_SERVER=(1<<4),
     };
 
   }

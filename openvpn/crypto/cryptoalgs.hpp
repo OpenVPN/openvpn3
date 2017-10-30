@@ -49,6 +49,9 @@ namespace openvpn {
       DES_EDE3_CBC,
       BF_CBC,
 
+      // CTR ciphers
+      AES_256_CTR,
+
       // AEAD ciphers
       AES_128_GCM,
       AES_192_GCM,
@@ -120,6 +123,7 @@ namespace openvpn {
       { "DES-CBC",      F_CIPHER|F_ALLOW_DC|CBC_HMAC,           8,  8,  8 },
       { "DES-EDE3-CBC", F_CIPHER|F_ALLOW_DC|CBC_HMAC,          24,  8,  8 },
       { "BF-CBC",       F_CIPHER|F_ALLOW_DC|CBC_HMAC,          16,  8,  8 },
+      { "AES-256-CTR",  F_CIPHER,                              32, 16, 16 },
       { "AES-128-GCM",  F_CIPHER|F_ALLOW_DC|AEAD,              16, 12, 16 },
       { "AES-192-GCM",  F_CIPHER|F_ALLOW_DC|AEAD,              24, 12, 16 },
       { "AES-256-GCM",  F_CIPHER|F_ALLOW_DC|AEAD,              32, 12, 16 },

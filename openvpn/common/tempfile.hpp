@@ -34,6 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/write.hpp>
+#include <openvpn/common/strerror.hpp>
 #include <openvpn/buffer/bufread.hpp>
 
 namespace openvpn {
@@ -59,7 +60,7 @@ namespace openvpn {
 	  if (!fd.defined())
 	    {
 	      const int eno = errno;
-	      OPENVPN_THROW(tempfile_exception, "error creating temporary file from template: " << fn_template << " : " << std::strerror(eno));
+	      OPENVPN_THROW(tempfile_exception, "error creating temporary file from template: " << fn_template << " : " << strerror_str(eno));
 	    }
 	}
       else
@@ -78,7 +79,7 @@ namespace openvpn {
       if (off < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "seek error on temporary file: " << filename() << " : " << std::strerror(eno));
+	  OPENVPN_THROW(tempfile_exception, "seek error on temporary file: " << filename() << " : " << strerror_str(eno));
 	}
       if (off)
 	OPENVPN_THROW(tempfile_exception, "unexpected seek on temporary file: " << filename());
@@ -90,7 +91,7 @@ namespace openvpn {
       if (::ftruncate(fd(), 0) < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "ftruncate error on temporary file: " << filename() << " : " << std::strerror(eno));
+	  OPENVPN_THROW(tempfile_exception, "ftruncate error on temporary file: " << filename() << " : " << strerror_str(eno));
 	}
     }
 
@@ -100,7 +101,7 @@ namespace openvpn {
       if (size < 0)
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "error writing to temporary file: " << filename() << " : " << std::strerror(eno));
+	  OPENVPN_THROW(tempfile_exception, "error writing to temporary file: " << filename() << " : " << strerror_str(eno));
 	}
       else if (size != content.length())
 	{
@@ -127,7 +128,7 @@ namespace openvpn {
       if (!fd.close())
 	{
 	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "error closing temporary file: " << filename() << " : " << std::strerror(eno));
+	  OPENVPN_THROW(tempfile_exception, "error closing temporary file: " << filename() << " : " << strerror_str(eno));
 	}
     }
 

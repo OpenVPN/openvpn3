@@ -55,16 +55,16 @@ namespace openvpn {
 
       std::string to_string() const
       {
-	std::ostringstream os;
-	os << directive << ' ' << addr;
+	std::string ret;
+	ret += directive + ' ' + addr;
 	if (!proto.is_local())
-	  os << ' ' << port;
-	os << ' ' << proto.str() << ' ' << n_threads;
+	  ret += ' ' + port;
+	ret += ' ' + std::string(proto.str()) + ' ' + openvpn::to_string(n_threads);
 	if (ssl == SSLOn)
-	  os << " ssl";
+	  ret += " ssl";
 	else if (ssl == SSLOff)
-	  os << " !ssl";
-	return os.str();
+	  ret += " !ssl";
+	return ret;
       }
 
       Item port_offset(const unsigned int offset) const
@@ -103,9 +103,8 @@ namespace openvpn {
       {
 	size_t n_listen = 0;
 
-	for (OptionList::const_iterator i = opt.begin(); i != opt.end(); ++i)
+	for (auto &o : opt)
 	  {
-	    const Option& o = *i;
 	    if (match(directive, o))
 	      ++n_listen;
 	  }
@@ -114,9 +113,8 @@ namespace openvpn {
 	  {
 	    reserve(n_listen);
 
-	    for (OptionList::const_iterator i = opt.begin(); i != opt.end(); ++i)
+	    for (auto &o : opt)
 	      {
-		const Option& o = *i;
 		if (match(directive, o))
 		  {
 		    o.touch();
@@ -255,9 +253,28 @@ namespace openvpn {
       unsigned int total_threads() const
       {
 	unsigned int ret = 0;
-	for (const_iterator i = begin(); i != end(); ++i)
-	  ret += i->n_threads;
+	for (auto &i : *this)
+	  ret += i.n_threads;
 	return ret;
+      }
+
+      std::string to_string() const
+      {
+	std::string ret;
+	for (auto &i : *this)
+	  {
+	    ret += i.to_string();
+	    ret += '\n';
+	  }
+	return ret;
+      }
+
+      std::string local_addr() const
+      {
+	for (auto &i : *this)
+	  if (i.proto.is_local())
+	    return i.addr;
+	return std::string();
       }
 
     private:

@@ -36,6 +36,10 @@
 #include <openvpn/common/sockopt.hpp>
 #include <openvpn/addr/ip.hpp>
 
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
+#include <openvpn/asio/asioboundsock.hpp>
+#endif
+
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 #include <openvpn/common/peercred.hpp>
 #endif
@@ -160,7 +164,11 @@ namespace openvpn {
 	return false;
       }
 
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
+      AsioBoundSocket::Socket socket;
+#else
       openvpn_io::ip::tcp::socket socket;
+#endif
     };
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS

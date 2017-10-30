@@ -64,6 +64,7 @@ namespace openvpn {
       CERT_VERIFY_FAIL,
       TLS_VERSION_MIN,
       CLIENT_HALT,
+      CLIENT_SETUP,
       CONNECTION_TIMEOUT,
       INACTIVE_TIMEOUT,
       DYNAMIC_CHALLENGE,
@@ -113,6 +114,7 @@ namespace openvpn {
 	"CERT_VERIFY_FAIL",
 	"TLS_VERSION_MIN",
 	"CLIENT_HALT",
+	"CLIENT_SETUP",
 	"CONNECTION_TIMEOUT",
 	"INACTIVE_TIMEOUT",
 	"DYNAMIC_CHALLENGE",
@@ -393,6 +395,26 @@ namespace openvpn {
     struct Info : public ReasonBase
     {
       Info(std::string value) : ReasonBase(INFO, std::move(value)) {}
+    };
+
+    class ClientSetup : public ReasonBase
+    {
+    public:
+      ClientSetup(const std::string& status, const std::string& message)
+	: ReasonBase(CLIENT_SETUP, make(status, message))
+      {
+      }
+
+    private:
+      static std::string make(const std::string& status, const std::string& message)
+      {
+	std::string ret;
+	ret += status;
+	if (!status.empty() && !message.empty())
+	  ret += ": ";
+	ret += message;
+	return ret;
+      }
     };
 
     class Queue : public RC<thread_unsafe_refcount>

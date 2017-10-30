@@ -22,6 +22,8 @@
 #ifndef OPENVPN_COMMON_LINK_H
 #define OPENVPN_COMMON_LINK_H
 
+#include <utility>
+
 namespace openvpn {
 
   // Link creates a sender-receiver relationship between two objects.
@@ -40,7 +42,7 @@ namespace openvpn {
   {
   protected:
     Link() {}
-    Link(const typename SEND::Ptr& send_arg) : send(send_arg) {}
+    Link(typename SEND::Ptr send_arg) : send(std::move(send_arg)) {}
     Link(SEND* send_arg) : send(send_arg) {}
 
     typename SEND::Ptr send;
