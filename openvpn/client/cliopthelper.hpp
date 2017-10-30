@@ -291,9 +291,11 @@ namespace openvpn {
 	}
 
 	// ssl lib configuration
-	{
+	try {
 	  sslConfig.reset(new SSLLib::SSLAPI::Config());
 	  sslConfig->load(options, SSLConfigAPI::LF_PARSE_MODE);
+	} catch (...) {
+	  sslConfig.reset();
 	}
       }
       catch (const std::exception& e)
@@ -467,20 +469,23 @@ namespace openvpn {
       }
 
       // SSL parameters
-      print_pem(os, "ca", sslConfig->extract_ca());
-      print_pem(os, "crl", sslConfig->extract_crl());
-      print_pem(os, "key", sslConfig->extract_private_key());
-      print_pem(os, "cert", sslConfig->extract_cert());
-
-      std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
-      if (extra_certs.size() > 0)
+      if (sslConfig)
       {
-	os << "<extra-certs>" << std::endl;
-	for (auto& cert : extra_certs)
+	print_pem(os, "ca", sslConfig->extract_ca());
+	print_pem(os, "crl", sslConfig->extract_crl());
+	print_pem(os, "key", sslConfig->extract_private_key());
+	print_pem(os, "cert", sslConfig->extract_cert());
+
+	std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
+	if (extra_certs.size() > 0)
 	{
-	  os << cert;
-	}
-	os << "</extra-certs>" << std::endl;
+	  os << "<extra-certs>" << std::endl;
+	  for (auto& cert : extra_certs)
+	  {
+	    os << cert;
+	  }
+	  os << "</extra-certs>" << std::endl;
+        }
       }
 
       os << "cipher " << CryptoAlgs::name(protoConfig->dc.cipher(), "none")
@@ -539,29 +544,32 @@ namespace openvpn {
       }
 
       // SSL parameters
-      json_pem(root, "ca", sslConfig->extract_ca());
-      json_pem(root, "crl", sslConfig->extract_crl());
-      json_pem(root, "cert", sslConfig->extract_cert());
-
-      // JSON config is aimed to users, therefore we do not export the raw private
-      // key, but only some basic info
-      SSLConfigAPI::PKType priv_key_type = sslConfig->private_key_type();
-      if (priv_key_type != SSLConfigAPI::PK_NONE)
+      if (sslConfig)
       {
-	root["key"] = Json::Value(Json::objectValue);
-	root["key"]["type"] = Json::Value(sslConfig->private_key_type_string());
-	root["key"]["length"] = Json::Value((Json::UInt)sslConfig->private_key_length());
-      }
+        json_pem(root, "ca", sslConfig->extract_ca());
+        json_pem(root, "crl", sslConfig->extract_crl());
+        json_pem(root, "cert", sslConfig->extract_cert());
 
-      std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
-      if (extra_certs.size() > 0)
-      {
-	root["extra_certs"] = Json::Value(Json::arrayValue);
-	for (auto cert = extra_certs.begin(); cert != extra_certs.end(); cert++)
-	{
-	  if (!cert->empty())
-	    root["extra_certs"].append(Json::Value(*cert));
-	}
+        // JSON config is aimed to users, therefore we do not export the raw private
+        // key, but only some basic info
+        SSLConfigAPI::PKType priv_key_type = sslConfig->private_key_type();
+        if (priv_key_type != SSLConfigAPI::PK_NONE)
+        {
+	  root["key"] = Json::Value(Json::objectValue);
+	  root["key"]["type"] = Json::Value(sslConfig->private_key_type_string());
+	  root["key"]["length"] = Json::Value((Json::UInt)sslConfig->private_key_length());
+        }
+
+        std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
+        if (extra_certs.size() > 0)
+        {
+	  root["extra_certs"] = Json::Value(Json::arrayValue);
+	  for (auto cert = extra_certs.begin(); cert != extra_certs.end(); cert++)
+	  {
+	    if (!cert->empty())
+	      root["extra_certs"].append(Json::Value(*cert));
+	  }
+        }
       }
 
       root["cipher"] = Json::Value(CryptoAlgs::name(protoConfig->dc.cipher(), "none"));
