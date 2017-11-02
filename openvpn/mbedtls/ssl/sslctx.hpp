@@ -803,6 +803,15 @@ namespace openvpn {
 	  if (c.ssl_debug_level)
 	    mbedtls_ssl_conf_dbg(sslconf, dbg_callback, ctx);
 
+	  /* OpenVPN 2.x disables cbc_record_splitting by default, therefore
+	   * we have to do the same here to keep compatibility.
+	   * If not disabled, this setting will trigger bad behaviours on
+	   * TLS1.0 and possibly on other setups */
+#if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
+	  mbedtls_ssl_conf_cbc_record_splitting(sslconf,
+						MBEDTLS_SSL_CBC_RECORD_SPLITTING_DISABLED);
+#endif /* MBEDTLS_SSL_CBC_RECORD_SPLITTING */
+
           // Apply the configuration to the SSL connection object
           if (mbedtls_ssl_setup(ssl, sslconf) < 0)
             throw MbedTLSException("mbedtls_ssl_setup failed");
