@@ -31,6 +31,11 @@ else
 
     # enable MD4 (needed for NTLM auth)
     perl -pi -e 's/^\/\/// if /#define MBEDTLS_MD4_C/' include/mbedtls/config.h
+
+    # apply pre-generated patches
+    for file in $O3/core/deps/mbedtls/patches/*.patch; do
+        patch -p1 <$file
+    done
 fi
 
 # compiler vars
@@ -48,7 +53,8 @@ SRC=$(pwd)
 cd library
 rm -f *.o
 for c in *.c ; do
-    CMD="$CC -I../include $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c $c"
+    CMD="$CC -I../include -DMBEDTLS_RELAXED_X509_DATE \
+         $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c $c"
     echo $CMD
     $CMD
 done

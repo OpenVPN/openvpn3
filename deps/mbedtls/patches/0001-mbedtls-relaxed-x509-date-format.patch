@@ -1,0 +1,41 @@
+diff -urw mbedtls-2.6.0.orig/library/x509.c mbedtls-2.6.0/library/x509.c
+--- mbedtls-2.6.0.orig/library/x509.c	2017-11-03 11:46:21.403848065 +0800
++++ mbedtls-2.6.0/library/x509.c	2017-11-03 11:58:46.259817520 +0800
+@@ -559,13 +559,20 @@
+     /*
+      * Parse seconds if present
+      */
+-    if ( len >= 2 )
++    if ( len >= 2 && **p >= '0' && **p <= '9' )
+     {
+         CHECK( x509_parse_int( p, 2, &tm->sec ) );
+         len -= 2;
+     }
+     else
++    {
++#if defined(MBEDTLS_RELAXED_X509_DATE)
++	/* if relaxed mode, allow seconds to be absent */
++	tm->sec = 0;
++#else
+         return ( MBEDTLS_ERR_X509_INVALID_DATE );
++#endif
++    }
+ 
+     /*
+      * Parse trailing 'Z' if present
+@@ -575,6 +582,15 @@
+         (*p)++;
+         len--;
+     }
++#if defined(MBEDTLS_RELAXED_X509_DATE)
++    else if ( len == 5 && **p == '+' )
++    {
++	int tz; /* throwaway timezone */
++	(*p)++;
++	CHECK( x509_parse_int( p, 4, &tz ) );
++	return 0;
++    }
++#endif
+ 
+     /*
+      * We should have parsed all characters at this point
