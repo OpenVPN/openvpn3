@@ -122,6 +122,25 @@ namespace openvpn {
        * X509 cert profiles.
        */
 
+#ifdef OPENVPN_USE_TLS_MD5
+      // This profile includes the broken MD5 alrogithm.
+      // We are going to ship support for this algorithm for a limited
+      // amount of time to allow our users to switch to something else
+      const mbedtls_x509_crt_profile crt_profile_insecure = // CONST GLOBAL
+	{
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_MD5 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_RIPEMD160 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA224 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
+	  0xFFFFFFF, /* Any PK alg    */
+	  0xFFFFFFF, /* Any curve     */
+	  1024,      /* Minimum size for RSA keys */
+	};
+#endif
+
       const mbedtls_x509_crt_profile crt_profile_legacy = // CONST GLOBAL
 	{
 	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 ) |
@@ -500,6 +519,10 @@ namespace openvpn {
       {
 	switch (TLSCertProfile::default_if_undef(tls_cert_profile))
 	  {
+#ifdef OPENVPN_USE_TLS_MD5
+	  case TLSCertProfile::INSECURE:
+	    return &mbedtls_ctx_private::crt_profile_insecure;
+#endif
 	  case TLSCertProfile::LEGACY:
 	    return &mbedtls_ctx_private::crt_profile_legacy;
 	  case TLSCertProfile::PREFERRED:
