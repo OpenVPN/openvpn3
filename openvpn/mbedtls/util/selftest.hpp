@@ -26,9 +26,11 @@
 
 #include <sstream>
 
+#include <mbedtls/bignum.h>
 #include <mbedtls/config.h>
 #include <mbedtls/cipher.h>
 #include <mbedtls/aes.h>
+#include <mbedtls/sha1.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>
 
