@@ -499,32 +499,6 @@ namespace openvpn {
 	return NONE;
     }
 
-    // NOTE: returns nullptr if no mapping to parseable method
-    const char *method_to_string() const
-    {
-      switch (type_)
-	{
-	case COMP_STUBv2:
-	  return "stub-v2";
-	case LZ4v2:
-	  return "lz4-v2";
-	case LZ4:
-	  return "lz4";
-	case LZO:
-	  return "lzo";
-	case LZO_SWAP:
-	  return "lzo-swap";
-	case LZO_STUB:
-	  return "lzo-stub";
-	case SNAPPY:
-	  return "snappy";
-	case COMP_STUB:
-	  return "stub";
-	default:
-	  return nullptr;
-	}
-    }
-
     static Type stub(const Type t)
     {
       switch (t)
