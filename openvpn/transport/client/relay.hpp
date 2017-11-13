@@ -64,6 +64,7 @@ namespace openvpn {
       virtual bool transport_send_queue_empty() { return false; }
       virtual bool transport_has_send_queue() { return false; }
       virtual unsigned int transport_send_queue_size() { return 0; }
+      virtual void transport_stop_requeueing() { }
       virtual void reset_align_adjust(const size_t align_adjust) {}
       virtual void transport_reparent(TransportClientParent* parent) {}
 

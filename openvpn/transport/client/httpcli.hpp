@@ -277,6 +277,8 @@ namespace openvpn {
 	return true;
       }
 
+      virtual void transport_stop_requeueing() { }
+
       virtual unsigned int transport_send_queue_size()
       {
 	if (impl)

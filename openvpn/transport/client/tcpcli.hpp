@@ -82,6 +82,7 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
+	    stop_requeueing = false;
 	    if (config->remote_list->endpoint_available(&server_host, &server_port, nullptr))
 	      {
 		start_connect_();
@@ -172,13 +173,19 @@ namespace openvpn {
 	   config(config_arg),
 	   parent(parent_arg),
 	   resolver(io_context_arg),
-	   halt(false)
+	   halt(false),
+	   stop_requeueing(false)
       {
       }
 
       virtual void transport_reparent(TransportClientParent* parent_arg)
       {
 	parent = parent_arg;
+      }
+
+      virtual void transport_stop_requeueing()
+      {
+	stop_requeueing = true;
       }
 
       bool send_const(const Buffer& cbuf)
@@ -209,7 +216,7 @@ namespace openvpn {
       bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
       {
 	parent->transport_recv(buf);
-	return true;
+	return !stop_requeueing;
       }
 
       void tcp_write_queue_needs_send() // called by LinkImpl
@@ -331,6 +338,7 @@ namespace openvpn {
       openvpn_io::ip::tcp::resolver resolver;
       LinkImpl::protocol::endpoint server_endpoint;
       bool halt;
+      bool stop_requeueing;
     };
 
     inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
