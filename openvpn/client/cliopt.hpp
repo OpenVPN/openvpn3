@@ -715,6 +715,7 @@ namespace openvpn {
       transconf.socket_protect = socket_protect;
       transconf.server_addr_float = server_addr_float;
       transconf.synchronous_dns_lookup = synchronous_dns_lookup;
+      transconf.protocol = transport_protocol;
       transport_factory = extern_transport_factory->new_transport_factory(transconf);
 #ifdef OPENVPN_GREMLIN
       udpconf->gremlin_config = gremlin_config;
