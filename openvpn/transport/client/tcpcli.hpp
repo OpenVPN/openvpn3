@@ -276,7 +276,7 @@ namespace openvpn {
 	parent->transport_wait();
 	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
-#ifdef OPENVPN_PLATFORM_TYPE_UNIX
+#if defined(OPENVPN_PLATFORM_TYPE_UNIX) || defined(OPENVPN_PLATFORM_UWP)
 	if (config->socket_protect)
 	  {
 	    if (!config->socket_protect->socket_protect(socket.native_handle()))
