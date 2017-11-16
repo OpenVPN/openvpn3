@@ -272,7 +272,7 @@ namespace openvpn {
       std::string ret;
       if (df >= 0.0)
 	ret += '+';
-      ret += std::to_string(df);
+      ret += openvpn::to_string(df);
       return ret;
     }
 
