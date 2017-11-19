@@ -5,6 +5,15 @@ if [ -z "$O3" ]; then
     echo O3 var must point to ovpn3 tree
     exit 1
 fi
+if [ -z "$DEP_DIR" ]; then
+    echo DEP_DIR var must point to dependency build folder
+    exit 1
+fi
+if [ -z "$DL" ]; then
+    echo DL var must point to the download folder
+    exit 1
+fi
+
 if [ -z "$TARGET" ]; then
     echo TARGET var must be defined
     exit 1
@@ -13,6 +22,16 @@ fi
 # source vars
 . $O3/core/vars/vars-${TARGET}
 . $O3/core/deps/lib-versions
+
+# source helper functions
+. $O3/core/deps/functions.sh
+
+FNAME=${MBEDTLS_VERSION}-apache.tgz
+PN=${MBEDTLS_VERSION#*-}
+URL=https://tls.mbed.org/download/$MBEDTLS_VERSION-apache.tgz
+CSUM=${MBEDTLS_CSUM}
+
+download
 
 # put build targets here
 DIST=$(pwd)/mbedtls/mbedtls-$PLATFORM
