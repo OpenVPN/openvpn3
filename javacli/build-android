@@ -118,5 +118,8 @@ mv libovpncli.so build/libs/$ABI/
 rm ovpncli.o
 done
 
-mv ovpncli.java ovpncliJNI.java SWIGTYPE_*.java ClientAPI_*.java build/
+mv ovpncli_wrap.cxx ovpncli_wrap.h ovpncli.java ovpncliJNI.java SWIGTYPE_*.java ClientAPI_*.java build/
 git clean -q -fX .
+
+tar -czf android-core-build.tgz build
+mv android-core-build.tgz $O3/
