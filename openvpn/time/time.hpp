@@ -303,7 +303,7 @@ namespace openvpn {
       base_ = ::time(0);
 #ifdef OPENVPN_PLATFORM_WIN
 #if (_WIN32_WINNT >= 0x0600)
-      win_recalibrate(::GetTickCount64());
+      win_recalibrate((DWORD)::GetTickCount64());
 #else
       win_recalibrate(::GetTickCount());
 #endif
@@ -331,7 +331,7 @@ namespace openvpn {
     static T now_()
     {
 #if (_WIN32_WINNT >= 0x0600)
-      const DWORD gtc = ::GetTickCount64();
+      const DWORD gtc = (DWORD)::GetTickCount64();
 #else
       const DWORD gtc = ::GetTickCount();
 #endif
