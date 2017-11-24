@@ -174,7 +174,9 @@ namespace openvpn {
     }
 
     template <typename TITLE>
-    inline std::string get_string_from_array(const Json::Value& root, const Json::ArrayIndex index, const TITLE& title)
+    inline std::string get_string_from_array(const Json::Value& root,
+					     const Json::ArrayIndex index,
+					     const TITLE& title)
     {
       const Json::Value& value = root[index];
       if (value.isNull())
