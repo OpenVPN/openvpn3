@@ -113,6 +113,9 @@ namespace openvpn {
       // send control channel message
       virtual void post_cc_msg(BufferPtr&& msg) = 0;
 
+      // schedule a low-level connection disconnect in seconds
+      virtual void schedule_disconnect(const unsigned int seconds) = 0;
+
       // set up relay to target
       virtual void relay(const IP::Addr& target, const int port) = 0;
 

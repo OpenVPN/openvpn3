@@ -512,6 +512,15 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
+      virtual void schedule_disconnect(const unsigned int seconds)
+      {
+	if (halt || did_client_halt_restart)
+	  return;
+	Base::update_now();
+	disconnect_in(Time::Duration::seconds(seconds));
+	set_housekeeping_timer();
+      }
+
       virtual void post_cc_msg(BufferPtr&& msg) override
       {
 	if (halt || !Base::primary_defined())
