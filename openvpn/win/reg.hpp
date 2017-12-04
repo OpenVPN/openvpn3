@@ -51,6 +51,55 @@ namespace openvpn {
       HKEY key;
     };
 
+    class RegKeyEnumerator : public std::vector<std::string>
+    {
+    public:
+      RegKeyEnumerator(HKEY hkey, const std::string& path)
+      {
+	RegKey regKey;
+	auto status = ::RegOpenKeyExA(hkey,
+				      path.c_str(),
+				      0,
+				      KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS,
+				      regKey.ref());
+	if (status != ERROR_SUCCESS)
+	    return;
+
+	DWORD subkeys_num;
+	status = ::RegQueryInfoKeyA(regKey(),
+				    nullptr,
+				    nullptr,
+				    NULL,
+				    &subkeys_num,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr);
+
+	if (status != ERROR_SUCCESS)
+	  return;
+
+	const int MAX_KEY_LENGTH = 255;
+	for (auto i = 0; i < subkeys_num; ++ i)
+	  {
+	    DWORD subkey_size = MAX_KEY_LENGTH;
+	    char subkey[MAX_KEY_LENGTH];
+	    status = ::RegEnumKeyExA(regKey(),
+				     i,
+				     subkey,
+				     &subkey_size,
+				     nullptr,
+				     nullptr,
+				     nullptr,
+				     nullptr);
+	    if (status == ERROR_SUCCESS)
+	      push_back(subkey);
+	  }
+      }
+    };
   }
 }
 
