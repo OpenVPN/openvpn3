@@ -50,6 +50,7 @@ namespace openvpn {
       ADD_ROUTES,
       ECHO_OPT,
       INFO,
+      WARN,
       PAUSE,
       RESUME,
       RELAY,
@@ -100,6 +101,7 @@ namespace openvpn {
 	"ADD_ROUTES",
 	"ECHO",
 	"INFO",
+	"WARN",
 	"PAUSE",
 	"RESUME",
 	"RELAY",
@@ -395,6 +397,11 @@ namespace openvpn {
     struct Info : public ReasonBase
     {
       Info(std::string value) : ReasonBase(INFO, std::move(value)) {}
+    };
+
+    struct Warn : public ReasonBase
+    {
+      Warn(std::string value) : ReasonBase(WARN, std::move(value)) {}
     };
 
     class ClientSetup : public ReasonBase
