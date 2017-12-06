@@ -123,6 +123,11 @@ namespace openvpn {
 	}
     }
 
+    uint32_t get_tls_warnings() const
+    {
+      return ssl_->get_tls_warnings();
+    }
+
     // Incoming ciphertext packet arriving from network,
     // we will take ownership of pkt.
     bool net_recv(PACKET&& pkt)

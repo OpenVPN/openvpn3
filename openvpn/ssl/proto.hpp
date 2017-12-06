@@ -1318,6 +1318,11 @@ namespace openvpn {
 	is_reliable = p.is_reliable(); // cache is_reliable state locally
       }
 
+      uint32_t get_tls_warnings() const
+      {
+	return Base::get_tls_warnings();
+      }
+
       // need to call only on the initiator side of the connection
       void start()
       {
@@ -2764,6 +2769,15 @@ namespace openvpn {
 	  tls_wrap_mode = TLS_PLAIN;
 	  hmac_size = 0;
 	}
+    }
+
+    uint32_t get_tls_warnings() const
+    {
+      if (primary)
+	return primary->get_tls_warnings();
+
+      OPENVPN_LOG("TLS: primary key context uninitialized. Can't retrieve TLS warnings");
+      return 0;
     }
 
     void reset()
