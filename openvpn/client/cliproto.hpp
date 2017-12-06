@@ -785,10 +785,23 @@ namespace openvpn {
 	  }
       }
 
+      // react to any tls warning triggered during the tls-handshake
+      virtual void check_tls_warnings()
+      {
+	uint32_t tls_warnings = get_tls_warnings();
+
+	if (tls_warnings & SSLAPI::TLS_WARN_SIG_MD5)
+	{
+	  ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with MD5. Please inform your admin to upgrade to a stronger algorithm. Support for MD5 will be dropped at end of Apr 2018");
+	  cli_events->add_event(std::move(ev));
+	}
+      }
+
       // base class calls here when primary session transitions to ACTIVE state
       virtual void active()
       {
 	OPENVPN_LOG("Session is ACTIVE");
+	check_tls_warnings();
 	schedule_push_request_callback(Time::Duration::seconds(0));
       }
 
