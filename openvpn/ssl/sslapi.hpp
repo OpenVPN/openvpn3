@@ -25,6 +25,7 @@
 #define OPENVPN_SSL_SSLAPI_H
 
 #include <string>
+#include <cstdint>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -47,6 +48,11 @@ namespace openvpn {
   class SSLAPI : public RC<thread_unsafe_refcount>
   {
   public:
+
+    enum TLSWarnings {
+      TLS_WARN_SIG_MD5 = (1 << 0),
+    };
+
     typedef RCPtr<SSLAPI> Ptr;
 
     virtual void start_handshake() = 0;
@@ -58,6 +64,12 @@ namespace openvpn {
     virtual BufferPtr read_ciphertext() = 0;
     virtual std::string ssl_handshake_details() const = 0;
     virtual const AuthCert::Ptr& auth_cert() const = 0;
+    uint32_t get_tls_warnings() const
+    {
+      return tls_warnings;
+    }
+  protected:
+    uint32_t tls_warnings = 0; // bitfield of SSLAPI::TLSWarnings
   };
 
   class SSLFactoryAPI : public RC<thread_unsafe_refcount>

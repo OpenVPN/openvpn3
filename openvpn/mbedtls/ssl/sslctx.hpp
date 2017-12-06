@@ -1107,6 +1107,12 @@ namespace openvpn {
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
 	OPENVPN_LOG_SSL(status_string(cert, depth, flags));
 
+      // notify if connection is happening with an insecurely signed cert
+      if (cert->sig_md == MBEDTLS_MD_MD5)
+      {
+	ssl->tls_warnings |= SSLAPI::TLS_WARN_SIG_MD5;
+      }
+
       // leaf-cert verification
       if (depth == 0)
 	{
