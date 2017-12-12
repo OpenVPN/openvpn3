@@ -105,7 +105,7 @@ namespace openvpn {
 	if (tun_setup_factory)
 	  return tun_setup_factory->new_setup_obj(io_context);
 	else
-	  return new TunWin::Setup();
+	  return new TunWin::Setup(io_context);
       }
 
       static Ptr new_obj()

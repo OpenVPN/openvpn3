@@ -57,6 +57,9 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
+      Setup(openvpn_io::io_context& io_context_arg)
+	: delete_route_timer(io_context_arg) {}
+
       // Set up the TAP device
       virtual HANDLE establish(const TunBuilderCapture& pull,
 			       const std::wstring& openvpn_app_path,
@@ -180,6 +183,8 @@ namespace openvpn {
 	    remove_cmds->destroy(os);
 	    remove_cmds.reset();
 	  }
+
+	delete_route_timer.cancel();
       }
 
       virtual ~Setup()
@@ -297,7 +302,21 @@ namespace openvpn {
 		  Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
 		create.add(new WinCmd("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " gateway=" + local4->gateway + metric + " store=active"));
 		destroy.add(new WinCmd("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " gateway=all store=active"));
-	      }
+
+		// specifying 'gateway' when setting ip address makes Windows add unnecessary route 0.0.0.0/0,
+		// which might cause routing conflicts, so we have to delete it after a small delay.
+		// If route is deleted before profile is created, then profile won't be created at all (OVPN-135)
+		WinCmd::Ptr cmd = new WinCmd("netsh interface ip delete route 0.0.0.0/0 " + tap_index_name + ' ' + local4->gateway + " store=active");
+		delete_route_timer.expires_after(Time::Duration::seconds(5));
+		delete_route_timer.async_wait([self=Ptr(this), cmd=std::move(cmd)](const openvpn_io::error_code& error)
+					      {
+						if (!error)
+						  {
+						    std::ostringstream os;
+						    cmd->execute(os);
+						  }
+					      });
+	    }
 	  }
 
 	// Should we block IPv6?
@@ -828,6 +847,8 @@ namespace openvpn {
       std::unique_ptr<L2State> l2_state;
 
       ActionList::Ptr remove_cmds;
+
+      AsioTimer delete_route_timer;
     };
   }
 }
