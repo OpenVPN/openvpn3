@@ -119,27 +119,9 @@ namespace openvpn {
 
 	/* extra certificates are appended to the main one */
 	for (mbedtls_x509_crt *cert = chain->next; cert; cert = cert->next)
-	{
-
-	  size_t olen = 0;
-	  int ret;
-
-	  ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(),
-					 cert->raw.p, cert->raw.len, NULL, 0,
-					 &olen);
-	  if (ret != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)
-	    throw MbedTLSException("X509Cert::extract_cert: can't calculate PEM size");
-
-	  BufferAllocated buff(olen, 0);
-
-	  ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(),
-					 cert->raw.p, cert->raw.len, buff.data(),
-					 buff.max_size(), &olen);
-	  if (ret)
-	    throw MbedTLSException("X509Cert::extract_cert: can't write PEM buffer");
-
-	  extra_certs.push_back(std::string((const char *)buff.data()));
-	}
+	  {
+	    extra_certs.push_back(der_to_pem(cert->raw.p, cert->raw.len));
+	  }
 	return extra_certs;
       }
 
