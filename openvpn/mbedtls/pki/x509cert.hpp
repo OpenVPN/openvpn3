@@ -88,26 +88,29 @@ namespace openvpn {
 	  }
       }
 
-      std::string extract() const
+      static std::string der_to_pem(const unsigned char* der, size_t der_size)
       {
 	size_t olen = 0;
 	int ret;
 
-	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(),
-				       chain->raw.p, chain->raw.len, NULL, 0,
-				       &olen);
+	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(), der,
+				       der_size, NULL, 0, &olen);
 	if (ret != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)
 	  throw MbedTLSException("X509Cert::extract: can't calculate PEM size");
 
 	BufferAllocated buff(olen, 0);
 
-	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(),
-				       chain->raw.p, chain->raw.len, buff.data(),
-				       buff.max_size(), &olen);
+	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(), der,
+				       der_size, buff.data(), buff.max_size(), &olen);
 	if (ret)
 	  throw MbedTLSException("X509Cert::extract: can't write PEM buffer");
 
 	return std::string((const char *)buff.data());
+      }
+
+      std::string extract() const
+      {
+	return der_to_pem(chain->raw.p, chain->raw.len);
       }
 
       std::vector<std::string> extract_extra_certs() const
