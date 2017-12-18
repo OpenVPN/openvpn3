@@ -28,7 +28,7 @@ def src_fn_argv(parms, argv):
         srcfile = argv[0]
     return src_fn(parms, srcfile)
 
-def build(parms, srcfile, unit_test):
+def build(parms, srcfile, unit_test=False):
     # Debug?
     if parms['DEBUG']:
         dbg_rel_flags = "/Zi"
