@@ -96,5 +96,6 @@ if __name__ == "__main__":
     # some parameters might be redefined, like in Jenkins multibranch pipeline case
     PARMS['BUILD'] = os.environ.get('BUILD', PARMS['BUILD'])
     PARMS['OVPN3'] = os.environ.get('OVPN3', PARMS['OVPN3'])
+    PARMS['ARCH'] = os.environ.get('ARCH', PARMS['ARCH'])
 
     build_all(PARMS)
