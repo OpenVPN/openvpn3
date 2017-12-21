@@ -50,16 +50,14 @@ the open source license(s) involved.
 Part II
 #######
 
-Copyright (C) 2017 OpenVPN Technologies, Inc.
+Copyright (C) 2017 OpenVPN Inc.
 
 In addition:
 
-(e) I understand that OpenVPN Technologies, Inc. may relicense this
-project, this contribution, and any modification to it under any
-license. I certify that I, or the person on whose behalf I am
-submitting the contribution, have the right to grant and hereby grant
-OpenVPN Technologies, Inc. a license to do so for this
-contribution. My grant is made on the condition that OpenVPN
-Technologies, Inc. will make any modification to this contribution
-available to the OpenVPN project under the open source license
-indicated in the file.
+(e) I understand that OpenVPN Inc. may relicense this project, this
+contribution, and any modification to it under any license. I certify that I,
+or the person on whose behalf I am submitting the contribution, have the
+right to grant and hereby grant OpenVPN Inc. a license to do so for this
+contribution. My grant is made on the condition that OpenVPN Inc. will make
+any modification to this contribution available to the OpenVPN project under
+the open source license indicated in the file.
