@@ -1,5 +1,5 @@
-Contributor agreement for the OpenVPN project version 1.2 - March 2017
-########################################################################
+Contributor agreement for the OpenVPN project version 1.3 - December 2017
+#########################################################################
 
 This Contributor Agreement consists of two parts. Part I is the
 Developer Certificate of Origin available at
@@ -8,7 +8,7 @@ http://developercertificate.org/.
 In this contributor agreement, "This project" refers to the OpenVPN
 project and
 "open source license indicated in `the file <LICENSE.rst>`_" refers to
-the GPLv3 license with an additional permission that allows linking
+the AGPLv3 license with an additional permission that allows linking
 the OpenSSL software, https://www.openssl.org/, with the OpenVPN
 software.
 

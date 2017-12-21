@@ -1,10 +1,10 @@
 OpenVPN 3 is distributed under 
-`GNU General Public License version 3 <COPYRIGHT.GPLV3>`_ 
+`GNU Affero General Public License version 3 <COPYRIGHT.AGPLV3>`_
 with a special permission to link against OpenSSL:
 
 ::
 
-    Additional permission under GNU GPL version 3 section 7
+    Additional permission under GNU AGPL version 3 section 7
     
     If you modify this Program, or any covered work, by linking or combining
     it with OpenSSL (or a modified version of that library), containing parts
