@@ -36,7 +36,9 @@
 #include <openvpn/common/sockopt.hpp>
 #include <openvpn/addr/ip.hpp>
 
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+#include <openvpn/asio/alt_routing.hpp>
+#elif defined(OPENVPN_POLYSOCK_SUPPORTS_BIND)
 #include <openvpn/asio/asioboundsock.hpp>
 #endif
 
@@ -66,6 +68,11 @@ namespace openvpn {
 
       virtual void tcp_nodelay() {}
       virtual void set_cloexec() {}
+
+      virtual int native_handle()
+      {
+	return -1;
+      }
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
       virtual bool peercreds(SockOpt::Creds& cr)
@@ -164,7 +171,14 @@ namespace openvpn {
 	return false;
       }
 
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
+      virtual int native_handle() override
+      {
+	return socket.native_handle();
+      }
+
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+      AltRouting::Socket socket;
+#elif defined(OPENVPN_POLYSOCK_SUPPORTS_BIND)
       AsioBoundSocket::Socket socket;
 #else
       openvpn_io::ip::tcp::socket socket;
@@ -235,6 +249,11 @@ namespace openvpn {
       virtual bool is_local() const override
       {
 	return true;
+      }
+
+      virtual int native_handle() override
+      {
+	return socket.native_handle();
       }
 
       openvpn_io::local::stream_protocol::socket socket;
