@@ -56,6 +56,10 @@
 #include <openvpn/ws/httpcreds.hpp>
 #include <openvpn/ws/websocket.hpp>
 
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+#include <openvpn/asio/alt_routing.hpp>
+#endif
+
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/winerr.hpp>
@@ -156,6 +160,10 @@ namespace openvpn {
 	std::string local_addr;  // bind to local IP addr (optional)
 	std::string local_port;  // bind to local port (optional)
 
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	AltRouting::Shim::Ptr shim;
+#endif
+
 	const std::string& host_transport() const
 	{
 	  return hint.empty() ? host : hint;
@@ -173,11 +181,31 @@ namespace openvpn {
 
 	std::string host_port_str() const
 	{
+	  std::string ret;
 	  const std::string& ht = host_transport();
 	  if (ht == host)
-	    return '[' + host + "]:" + port;
+	    {
+	      ret += '[';
+	      ret += host;
+	      ret += "]:";
+	      ret += port;
+	    }
 	  else
-	    return host + '[' + ht + "]:" + port;
+	    {
+	      ret += host;
+	      ret += '[';
+	      ret += ht;
+	      ret += "]:";
+	      ret += port;
+	    }
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	  if (shim)
+	    {
+	      ret += '/';
+	      ret += shim->to_string();
+	    }
+#endif
+	  return ret;
 	}
       };
 
@@ -542,10 +570,15 @@ namespace openvpn {
 		else
 #endif
 		  {
+		    bool use_ssl = bool(config->ssl_factory);
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+		    if (host.shim)
+		      use_ssl = false;
+#endif
 		    if (host.port.empty())
-		      host.port = config->ssl_factory ? "443" : "80";
+		      host.port = use_ssl ? "443" : "80";
 
-		    if (config->ssl_factory)
+		    if (use_ssl)
 		      ssl_sess = config->ssl_factory->ssl(host.host_cn());
 
 		    if (config->transcli)
@@ -616,6 +649,9 @@ namespace openvpn {
 		throw Exception("httpcli must be built with OPENVPN_POLYSOCK_SUPPORTS_BIND to support local bind");
 #endif
 	      }
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	    s->socket.shim = host.shim;
+#endif
 
 	    openvpn_io::async_connect(s->socket, std::move(results),
 				[self=Ptr(this)](const openvpn_io::error_code& error, const openvpn_io::ip::tcp::endpoint& endpoint)
