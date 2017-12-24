@@ -485,7 +485,7 @@ namespace openvpn {
 	      const Option& o = opt[*i];
 	      try {
 		const std::string& type = o.get(1, 64);
-		if (type == "DNS")
+		if (type == "DNS" || type == "DNS6")
 		  {
 		    o.exact_args(3);
 		    const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
