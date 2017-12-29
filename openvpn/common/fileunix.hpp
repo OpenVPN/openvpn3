@@ -147,6 +147,19 @@ namespace openvpn {
     return bp;
   }
 
+  inline bool read_binary_unix_fast(const std::string& fn,
+				    Buffer& out)
+  {
+    ScopedFD fd(::open(fn.c_str(), O_RDONLY|O_CLOEXEC));
+    if (!fd.defined())
+	return errno;
+    const ssize_t status = ::read(fd(), out.data_end(), out.remaining(0));
+    if (status < 0)
+      return errno;
+    out.inc_size(status);
+    return 0;
+  }
+
   inline std::string read_text_unix(const std::string& filename,
 				    const std::uint64_t max_size = 0,
 				    const unsigned int buffer_flags = 0)
