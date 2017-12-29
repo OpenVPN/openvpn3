@@ -82,6 +82,13 @@ namespace openvpn {
     write_binary_unix(fn, mode, buf.c_data(), buf.size());
   }
 
+  inline void write_binary_unix(const std::string& fn,
+				const mode_t mode,
+				const ConstBuffer& buf)
+  {
+    write_binary_unix(fn, mode, buf.c_data(), buf.size());
+  }
+
   inline void write_text_unix(const std::string& fn,
 			      const mode_t mode,
 			      const std::string& content)
