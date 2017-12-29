@@ -45,6 +45,10 @@
 #include <openvpn/ws/websocket.hpp>
 #include <openvpn/server/listenlist.hpp>
 
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+#include <openvpn/kovpn/sock_mark.hpp>
+#endif
+
 // include acceptors for different protocols
 #include <openvpn/acceptor/base.hpp>
 #include <openvpn/acceptor/tcp.hpp>
@@ -253,6 +257,15 @@ namespace openvpn {
 	      return false;
 	  }
 
+	  bool is_alt_routing() const
+	  {
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	    return is_alt_routing_;
+#else
+	    return false;
+#endif
+	  }
+
 	protected:
 	  Client(Initializer& ci)
 	    : Base(ci.parent->config),
@@ -260,9 +273,7 @@ namespace openvpn {
 	      sock(std::move(ci.socket)),
 	      parent(ci.parent),
 	      timeout_timer(ci.io_context),
-	      client_id(ci.client_id),
-	      keepalive(false),
-	      handoff(false)
+	      client_id(ci.client_id)
 	  {
 	  }
 
@@ -428,7 +439,7 @@ namespace openvpn {
 	    timeout_timer.cancel();
 	  }
 
-	  void start(const bool ssl)
+	  void start(const Acceptor::Item::SSLMode ssl_mode)
 	  {
 	    timeout_coarse.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
 	    link.reset(new LinkImpl(this,
@@ -438,8 +449,19 @@ namespace openvpn {
 				    (*parent->config->frame)[Frame::READ_HTTP],
 				    stats));
 	    link->set_raw_mode(true);
-	    if (ssl)
-	      ssl_sess = parent->config->ssl_factory->ssl();
+	    switch (ssl_mode)
+	      {
+	      case Acceptor::Item::SSLOff:
+		break;
+	      case Acceptor::Item::SSLOn:
+		ssl_sess = parent->config->ssl_factory->ssl();
+		break;
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	      case Acceptor::Item::AltRouting:
+		is_alt_routing_ = true;
+		break;
+#endif
+	      }
 	    restart(true);
 	  }
 
@@ -708,8 +730,11 @@ namespace openvpn {
 	  CoarseTime timeout_coarse;
 	  client_t client_id;
 	  LinkImpl::Ptr link;
-	  bool keepalive;
-	  bool handoff;
+	  bool keepalive = false;
+	  bool handoff = false;
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	  bool is_alt_routing_ = false;
+#endif
 	};
 
       public:
@@ -751,22 +776,27 @@ namespace openvpn {
 		case Protocol::TCPv6:
 		  {
 		    // ssl enabled?
-		    bool is_ssl = false;
+		    Acceptor::Item::SSLMode ssl_mode = Acceptor::Item::SSLOff;
 		    switch (listen_item.ssl)
 		      {
 		      case Listen::Item::SSLUnspecified:
-			is_ssl = bool(config->ssl_factory);
+			ssl_mode = bool(config->ssl_factory) ? Acceptor::Item::SSLOn : Acceptor::Item::SSLOff;
 			break;
 		      case Listen::Item::SSLOn:
 			if (listen_item.ssl == Listen::Item::SSLOn && !config->ssl_factory)
 			  throw http_server_exception("listen item has 'ssl' qualifier, but no SSL configuration");
-			is_ssl = true;
+			ssl_mode = Acceptor::Item::SSLOn;
 			break;
 		      case Listen::Item::SSLOff:
 			break;
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+		      case Listen::Item::AltRouting:
+			ssl_mode = Acceptor::Item::AltRouting;
+			break;
+#endif
 		      }
 
-		    OPENVPN_LOG("HTTP" << (is_ssl ? "S" : "") << " Listen: " << listen_item.to_string());
+		    OPENVPN_LOG("HTTP" << ((ssl_mode == Acceptor::Item::SSLOn) ? "S" : "") << " Listen: " << listen_item.to_string());
 
 		    // init TCP acceptor
 		    Acceptor::TCP::Ptr a(new Acceptor::TCP(io_context));
@@ -789,7 +819,7 @@ namespace openvpn {
 		    a->acceptor.listen();
 
 		    // save acceptor
-		    acceptors.emplace_back(std::move(a), is_ssl);
+		    acceptors.emplace_back(std::move(a), ssl_mode);
 
 		    // queue accept on listen socket
 		    queue_accept(acceptors.size() - 1);
@@ -804,7 +834,7 @@ namespace openvpn {
 		    Acceptor::NamedPipe::Ptr a(new Acceptor::NamedPipe(io_context, listen_item.addr, config->sddl_string));
 
 		    // save acceptor
-		    acceptors.emplace_back(std::move(a), false);
+		    acceptors.emplace_back(std::move(a), Acceptor::Item::SSLOff);
 
 		    // queue accept on listen socket
 		    queue_accept(acceptors.size() - 1);
@@ -835,7 +865,7 @@ namespace openvpn {
 		    a->acceptor.listen();
 
 		    // save acceptor
-		    acceptors.emplace_back(std::move(a), false);
+		    acceptors.emplace_back(std::move(a), Acceptor::Item::SSLOff);
 
 		    // queue accept on listen socket
 		    queue_accept(acceptors.size() - 1);
@@ -885,6 +915,8 @@ namespace openvpn {
 	  try {
 	    if (!error)
 	      {
+		const Acceptor::Item::SSLMode ssl_mode = acceptors[acceptor_index].ssl_mode;
+
 		sock->non_blocking(true);
 		sock->set_cloexec();
 		sock->tcp_nodelay();
@@ -894,11 +926,21 @@ namespace openvpn {
 		if (!allow_client(*sock))
 		  throw http_server_exception("client socket rejected");
 
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+		if (ssl_mode == Acceptor::Item::AltRouting)
+		  {
+		    const KovpnSockMark ksm(sock->native_handle());
+		    if (!ksm.is_internal())
+		      throw http_server_exception("non alt-routing socket: " + ksm.to_string());
+		  }
+#endif
+
 		const client_t client_id = new_client_id();
 		Client::Initializer ci(io_context, this, std::move(sock), client_id);
 		Client::Ptr cli = client_factory->new_client(ci);
 		clients[client_id] = cli;
-		cli->start(acceptors[acceptor_index].ssl);
+
+		cli->start(ssl_mode);
 	      }
 	    else
 	      throw http_server_exception("accept failed: " + error.message());
