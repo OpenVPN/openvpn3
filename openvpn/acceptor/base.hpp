@@ -49,15 +49,23 @@ namespace openvpn {
 
     struct Item
     {
+      enum SSLMode {
+	SSLOff,
+	SSLOn,
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	AltRouting,
+#endif
+      };
+
       Item(Base::Ptr acceptor_arg,
-	   const bool ssl_arg)
+	   const SSLMode ssl_mode_arg)
 	: acceptor(std::move(acceptor_arg)),
-	  ssl(ssl_arg)
+	  ssl_mode(ssl_mode_arg)
       {
       }
 
       Base::Ptr acceptor;
-      bool ssl;
+      SSLMode ssl_mode;
     };
 
     struct Set : public std::vector<Item>
