@@ -855,6 +855,12 @@ namespace openvpn {
     return (BufferType<const T>&)src;
   }
 
+  template <typename T>
+  inline const BufferType<const T>& const_buffer_ref(const BufferType<T>& src)
+  {
+    return (const BufferType<const T>&)src;
+  }
+
 } // namespace openvpn
 
 #endif // OPENVPN_BUFFER_BUFFER_H
