@@ -81,6 +81,13 @@ namespace openvpn {
       }
 #endif
 
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+      virtual bool alt_routing_enabled()
+      {
+	return false;
+      }
+#endif
+
       virtual bool is_open() const = 0;
       virtual bool is_local() const = 0;
 
@@ -119,10 +126,12 @@ namespace openvpn {
 	socket.async_receive(buf, std::move(callback));
       }
 
+#if !defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
       virtual std::string remote_endpoint_str() const override
       {
-	return to_string(socket.remote_endpoint());
+	return openvpn::to_string(socket.remote_endpoint());
       }
+#endif
 
       virtual bool remote_ip_port(IP::Addr& addr, unsigned int& port) const override
       {
@@ -177,6 +186,16 @@ namespace openvpn {
       }
 
 #if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+      virtual std::string remote_endpoint_str() const override
+      {
+	return socket.to_string();
+      }
+
+      virtual bool alt_routing_enabled() override
+      {
+	return socket.alt_routing_enabled();
+      }
+
       AltRouting::Socket socket;
 #elif defined(OPENVPN_POLYSOCK_SUPPORTS_BIND)
       AsioBoundSocket::Socket socket;
