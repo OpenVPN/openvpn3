@@ -130,7 +130,36 @@ namespace openvpn {
 	  else
 	    return "E_?/" + openvpn::to_string(status);
 	}
+
+	static bool is_error(const int status)
+	{
+	  switch (status)
+	    {
+	    case E_SUCCESS:
+	    case E_SHUTDOWN:
+	      return true;
+	    default:
+	      return false;
+	    }
+	}
       };
+
+      struct Host;
+
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+      struct AltRoutingShimFactory : public RC<thread_unsafe_refcount>
+      {
+	typedef RCPtr<AltRoutingShimFactory> Ptr;
+
+	virtual AltRouting::Shim::Ptr shim(const Host& host) = 0;
+	virtual void report_error(const Host& host, const bool alt_routing) {}
+	virtual bool is_reset(const Host& host, const bool alt_routing) { return false; }
+	virtual int connect_timeout() { return -1; }
+	virtual IP::Addr remote_ip() { return IP::Addr(); }
+	virtual int remote_port() { return -1; }
+	virtual int error_expire() { return 0; }
+      };
+#endif
 
       struct Config : public RCCopyable<thread_unsafe_refcount>
       {
@@ -148,6 +177,10 @@ namespace openvpn {
 	unsigned int msg_overhead_bytes = 0;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
+
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	AltRoutingShimFactory::Ptr shim_factory;
+#endif
       };
 
       struct Host {
@@ -159,10 +192,6 @@ namespace openvpn {
 
 	std::string local_addr;  // bind to local IP addr (optional)
 	std::string local_port;  // bind to local port (optional)
-
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
-	AltRouting::Shim::Ptr shim;
-#endif
 
 	const std::string& host_transport() const
 	{
@@ -198,13 +227,6 @@ namespace openvpn {
 	      ret += "]:";
 	      ret += port;
 	    }
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
-	  if (shim)
-	    {
-	      ret += '/';
-	      ret += shim->to_string();
-	    }
-#endif
 	  return ret;
 	}
       };
@@ -295,6 +317,19 @@ namespace openvpn {
 	bool is_link_active()
 	{
 	  return link && !halt;
+	}
+
+	// return true if the alt-routing state for this session
+	// has changed, requiring a reset
+	bool is_alt_routing_reset() const
+	{
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	  if (config->shim_factory
+	   && socket
+	   && config->shim_factory->is_reset(host, socket->alt_routing_enabled()))
+	    return true;
+#endif
+	  return false;
 	}
 
 	void check_ready() const
@@ -526,87 +561,89 @@ namespace openvpn {
 	    general_timeout_coarse.reset();
 	    activity(true);
 
+	    // already in persistent session?
 	    if (alive)
 	      {
 		generate_request();
+		return;
+	      }
+
+	    host = http_host();
+
+#ifdef ASIO_HAS_LOCAL_SOCKETS
+	    // unix domain socket?
+	    if (host.port == "unix")
+	      {
+		openvpn_io::local::stream_protocol::endpoint ep(host.host_transport());
+		AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
+		socket.reset(s);
+		s->socket.async_connect(ep,
+					[self=Ptr(this)](const openvpn_io::error_code& error)
+					{
+					  self->handle_unix_connect(error);
+					});
+		set_connect_timeout(config->connect_timeout);
+		return;
+	      }
+#endif
+#ifdef OPENVPN_PLATFORM_WIN
+	    // windows named pipe?
+	    if (host.port == "np")
+	      {
+		const std::string& ht = host.host_transport();
+		const HANDLE h = ::CreateFileA(
+					       ht.c_str(),
+					       GENERIC_READ | GENERIC_WRITE,
+					       0,
+					       NULL,
+					       OPEN_EXISTING,
+					       FILE_FLAG_OVERLAPPED,
+					       NULL);
+		if (!Win::Handle::defined(h))
+		  {
+		    const Win::LastError err;
+		    OPENVPN_THROW(http_client_exception, "failed to open existing named pipe: " << ht << " : " << err.message());
+		  }
+		socket.reset(new AsioPolySock::NamedPipe(openvpn_io::windows::stream_handle(io_context, h), 0));
+		do_connect(true);
+		set_connect_timeout(config->connect_timeout);
+		return;
+	      }
+#endif
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+	    // alt routing?
+	    if (config->shim_factory)
+	      {
+		AltRouting::Shim::Ptr shim = config->shim_factory->shim(host);
+		if (shim)
+		  {
+		    alt_routing_connect(std::move(shim));
+		    return;
+		  }
+	      }
+#endif
+
+	    // standard TCP (with or without SSL)
+	    if (host.port.empty())
+	      host.port = config->ssl_factory ? "443" : "80";
+
+	    if (config->ssl_factory)
+	      ssl_sess = config->ssl_factory->ssl(host.host_cn());
+
+	    if (config->transcli)
+	      {
+		transcli = config->transcli->new_transport_client_obj(io_context, this);
+		transcli->transport_start();
 	      }
 	    else
 	      {
-		host = http_host();
-#ifdef ASIO_HAS_LOCAL_SOCKETS
-		if (host.port == "unix") // unix domain socket
-		  {
-		    openvpn_io::local::stream_protocol::endpoint ep(host.host_transport());
-		    AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
-		    socket.reset(s);
-		    s->socket.async_connect(ep,
-					    [self=Ptr(this)](const openvpn_io::error_code& error)
-					    {
-					      self->handle_unix_connect(error);
-					    });
-		  }
-		else
-#endif
-#ifdef OPENVPN_PLATFORM_WIN
-		  if (host.port == "np") // windows named pipe
-		  {
-		    const std::string& ht = host.host_transport();
-		    const HANDLE h = ::CreateFileA(
-		        ht.c_str(),
-			GENERIC_READ | GENERIC_WRITE,
-			0,
-			NULL,
-			OPEN_EXISTING,
-			FILE_FLAG_OVERLAPPED,
-			NULL);
-		    if (!Win::Handle::defined(h))
-		      {
-			const Win::LastError err;
-			OPENVPN_THROW(http_client_exception, "failed to open existing named pipe: " << ht << " : " << err.message());
-		      }
-		    socket.reset(new AsioPolySock::NamedPipe(openvpn_io::windows::stream_handle(io_context, h), 0));
-		    do_connect(true);
-		  }
-		else
-#endif
-		  {
-		    bool use_ssl = bool(config->ssl_factory);
-#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
-		    if (host.shim)
-		      use_ssl = false;
-#endif
-		    if (host.port.empty())
-		      host.port = use_ssl ? "443" : "80";
-
-		    if (use_ssl)
-		      ssl_sess = config->ssl_factory->ssl(host.host_cn());
-
-		    if (config->transcli)
-		      {
-			transcli = config->transcli->new_transport_client_obj(io_context, this);
-			transcli->transport_start();
-		      }
-		    else
-		      {
-			resolver.async_resolve(host.host_transport(), host.port,
-					       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
-					       {
-						 self->handle_tcp_resolve(error, results);
-					       });
-		      }
-		  }
-		if (config->connect_timeout)
-		  {
-		    connect_timer.expires_after(Time::Duration::seconds(to.connect >= 0
-									? to.connect
-									: config->connect_timeout));
-		    connect_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
-					     {
-					       if (!error)
-						 self->connect_timeout_handler(error);
-					     });
-		  }
+		resolver.async_resolve(host.host_transport(), host.port,
+				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
+				       {
+					 self->handle_tcp_resolve(error, results);
+				       });
 	      }
+	    set_connect_timeout(config->connect_timeout);
 	  }
 	  catch (const std::exception& e)
 	    {
@@ -635,23 +672,7 @@ namespace openvpn {
 
 	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
 	    socket.reset(s);
-
-	    // optionally bind to local addr/port
-	    if (!host.local_addr.empty())
-	      {
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
-		const IP::Addr local_addr(host.local_addr, "local_addr");
-		unsigned short local_port = 0;
-		if (!host.local_port.empty())
-		  local_port = HostPort::parse_port(host.local_port, "local_port");
-		s->socket.bind_local(local_addr, local_port);
-#else
-		throw Exception("httpcli must be built with OPENVPN_POLYSOCK_SUPPORTS_BIND to support local bind");
-#endif
-	      }
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
-	    s->socket.shim = host.shim;
-#endif
+	    bind_local_addr(s);
 
 	    openvpn_io::async_connect(s->socket, std::move(results),
 				[self=Ptr(this)](const openvpn_io::error_code& error, const openvpn_io::ip::tcp::endpoint& endpoint)
@@ -708,6 +729,47 @@ namespace openvpn {
 	}
 #endif
 
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+	void alt_routing_connect(AltRouting::Shim::Ptr shim)
+	{
+	  AltRoutingShimFactory& sf = *config->shim_factory;
+
+	  // build socket and assign shim
+	  AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
+	  socket.reset(s);
+	  bind_local_addr(s);
+	  s->socket.shim = std::move(shim);
+
+	  // build results
+	  int port = sf.remote_port();
+	  if (port < 0)
+	    port = HostPort::parse_port(host.port, "AltRouting");
+	  IP::Addr addr = sf.remote_ip();
+	  if (!addr.defined())
+	    addr = IP::Addr(host.host_transport(), "AltRouting");
+	  openvpn_io::ip::tcp::resolver::results_type results =
+	    openvpn_io::ip::tcp::resolver::results_type::create(openvpn_io::ip::tcp::endpoint(addr.to_asio(),
+											      port),
+								host.host,
+								"");
+
+	  // do async connect
+	  openvpn_io::async_connect(s->socket, std::move(results),
+				    [self=Ptr(this)](const openvpn_io::error_code& error, const openvpn_io::ip::tcp::endpoint& endpoint)
+				    {
+				      self->handle_tcp_connect(error, endpoint);
+				    });
+
+	  // set connect timeout
+	  {
+	    unsigned int ct = sf.connect_timeout();
+	    if (ct < 0)
+	      ct = config->connect_timeout;
+	    set_connect_timeout(ct);
+	  }
+	}
+#endif
+
 	void do_connect(const bool use_link)
 	{
 	  connect_timer.cancel();
@@ -733,6 +795,38 @@ namespace openvpn {
 
 	  // xmit the request
 	  generate_request();
+	}
+
+	void set_connect_timeout(unsigned int connect_timeout)
+	{
+	  if (config->connect_timeout)
+	    {
+	      connect_timer.expires_after(Time::Duration::seconds(to.connect >= 0
+								  ? to.connect
+								  : connect_timeout));
+	      connect_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
+				       {
+					 if (!error)
+					   self->connect_timeout_handler(error);
+				       });
+	    }
+	}
+
+	void bind_local_addr(AsioPolySock::TCP* s)
+	{
+	  // optionally bind to local addr/port
+	  if (!host.local_addr.empty())
+	    {
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_BIND) || defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+	      const IP::Addr local_addr(host.local_addr, "local_addr");
+	      unsigned short local_port = 0;
+	      if (!host.local_port.empty())
+		local_port = HostPort::parse_port(host.local_port, "local_port");
+	      s->socket.bind_local(local_addr, local_port);
+#else
+	      throw Exception("httpcli must be built with OPENVPN_POLYSOCK_SUPPORTS_BIND or OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING to support local bind");
+#endif
+	    }
 	}
 
 	void schedule_keepalive_timer()
@@ -879,6 +973,10 @@ namespace openvpn {
 	{
 	  const bool in_transaction = !ready;
 	  const bool keepalive = alive;
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+	  if (config->shim_factory && Status::is_error(errcode) && in_transaction && socket)
+	    config->shim_factory->report_error(host, socket->alt_routing_enabled());
+#endif
 	  stop();
 	  if (in_transaction)
 	    http_done(errcode, err);
