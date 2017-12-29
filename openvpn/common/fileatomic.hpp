@@ -47,7 +47,7 @@ namespace openvpn {
   inline void write_binary_atomic(const std::string& fn,
 				  const std::string& tmpdir,
 				  const mode_t mode,
-				  const Buffer& buf,
+				  const ConstBuffer& buf,
 				  RandomAPI& rng)
   {
     // generate temporary filename
@@ -64,6 +64,15 @@ namespace openvpn {
 	const int eno = errno;
 	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << strerror_str(eno));
       }
+  }
+
+  inline void write_binary_atomic(const std::string& fn,
+				  const std::string& tmpdir,
+				  const mode_t mode,
+				  const Buffer& buf,
+				  RandomAPI& rng)
+  {
+    return write_binary_atomic(fn, tmpdir, mode, const_buffer_ref(buf), rng);
   }
 }
 
