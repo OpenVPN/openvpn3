@@ -130,8 +130,11 @@ namespace openvpn {
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 	mode_t unix_mode = 0;
 #endif
+	unsigned int tcp_backlog = 16;
+	unsigned int tcp_throttle_max_connections_per_period = 0; // set > 0 to enable throttling
+	Time::Duration tcp_throttle_period;
 	unsigned int tcp_max = 0;
-	unsigned int general_timeout = 15;
+	unsigned int general_timeout = 60;
 	unsigned int max_headers = 0;
 	unsigned int max_header_bytes = 0;
 	content_len_t max_content_bytes = 0;
@@ -740,25 +743,16 @@ namespace openvpn {
       public:
 	typedef RCPtr<Listener> Ptr;
 
+	template <typename L> // L is a Listen::Item or Listen::List
 	Listener(openvpn_io::io_context& io_context_arg,
 		 const Config::Ptr& config_arg,
-		 const Listen::Item& listen_item_arg,
+		 const L& listen_item_or_list,
 		 const Client::Factory::Ptr& client_factory_arg)
 	  : io_context(io_context_arg),
-	    listen_list(listen_item_arg),
+	    listen_list(listen_item_or_list),
 	    config(config_arg),
-	    client_factory(client_factory_arg)
-	{
-	}
-
-	Listener(openvpn_io::io_context& io_context_arg,
-		 const Config::Ptr& config_arg,
-		 const Listen::List& listen_list_arg,
-		 const Client::Factory::Ptr& client_factory_arg)
-	  : io_context(io_context_arg),
-	    listen_list(listen_list_arg),
-	    config(config_arg),
-	    client_factory(client_factory_arg)
+	    client_factory(client_factory_arg),
+	    throttle_timer(io_context)
 	{
 	}
 
@@ -816,13 +810,13 @@ namespace openvpn {
 		    a->acceptor.bind(a->local_endpoint);
 
 		    // listen for incoming client connections
-		    a->acceptor.listen();
+		    a->acceptor.listen(config->tcp_backlog);
 
 		    // save acceptor
 		    acceptors.emplace_back(std::move(a), ssl_mode);
 
 		    // queue accept on listen socket
-		    queue_accept(acceptors.size() - 1);
+		    queue_accept_throttled(acceptors.size() - 1, false);
 		  }
 		  break;
 #if defined(OPENVPN_PLATFORM_WIN)
@@ -837,7 +831,7 @@ namespace openvpn {
 		    acceptors.emplace_back(std::move(a), Acceptor::Item::SSLOff);
 
 		    // queue accept on listen socket
-		    queue_accept(acceptors.size() - 1);
+		    queue_accept_throttled(acceptors.size() - 1, false);
 		  }
 		  break;
 #endif
@@ -868,7 +862,7 @@ namespace openvpn {
 		    acceptors.emplace_back(std::move(a), Acceptor::Item::SSLOff);
 
 		    // queue accept on listen socket
-		    queue_accept(acceptors.size() - 1);
+		    queue_accept_throttled(acceptors.size() - 1, false);
 		  }
 		  break;
 #endif
@@ -887,6 +881,8 @@ namespace openvpn {
 	  // close acceptors
 	  acceptors.close();
 
+	  throttle_timer.cancel();
+
 	  // stop clients
 	  for (auto &c : clients)
 	    c.second->stop(false);
@@ -903,6 +899,67 @@ namespace openvpn {
 	void queue_accept(const size_t acceptor_index)
 	{
 	  acceptors[acceptor_index].acceptor->async_accept(this, acceptor_index, io_context);
+	}
+
+	void queue_accept_throttled(const size_t acceptor_index, const bool debit_one)
+	{
+	  if (config->tcp_throttle_max_connections_per_period)
+	    {
+	      if (throttle_acceptor_indices.empty())
+		{
+		  const Time now = Time::now();
+		  if (now >= throttle_expire)
+		    throttle_reset(now, debit_one);
+		  if (throttle_connections > 0)
+		    {
+		      --throttle_connections;
+		      queue_accept(acceptor_index);
+		    }
+		  else
+		    {
+		      // throttle it
+		      throttle_acceptor_indices.push_back(acceptor_index);
+		      throttle_timer_wait();
+		    }
+		}
+	      else
+		throttle_acceptor_indices.push_back(acceptor_index);
+	    }
+	  else
+	    queue_accept(acceptor_index);
+	}
+
+	void throttle_reset(const Time& now, const bool debit_one)
+	{
+	  throttle_connections = config->tcp_throttle_max_connections_per_period;
+	  if (debit_one)
+	    --throttle_connections;
+	  throttle_expire = now + config->tcp_throttle_period;
+	}
+
+	void throttle_timer_wait()
+	{
+	  throttle_timer.expires_at(throttle_expire);
+	  throttle_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
+				    {
+				      if (self->halt || error)
+					return;
+				      self->throttle_timer_callback();
+				    });
+	}
+
+	void throttle_timer_callback()
+	{
+	  throttle_reset(Time::now(), false);
+	  while (!throttle_acceptor_indices.empty() && throttle_connections > 0)
+	    {
+	      const size_t acceptor_index = throttle_acceptor_indices.front();
+	      queue_accept(acceptor_index);
+	      throttle_acceptor_indices.pop_front();
+	      --throttle_connections;
+	    }
+	  if (!throttle_acceptor_indices.empty())
+	    throttle_timer_wait();
 	}
 
 	virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code& error) override
@@ -950,7 +1007,7 @@ namespace openvpn {
 	      OPENVPN_LOG("exception in handle_accept: " << e.what());
 	    }
 
-	  queue_accept(acceptor_index);
+	  queue_accept_throttled(acceptor_index, true);
 	}
 
 	client_t new_client_id()
@@ -988,6 +1045,11 @@ namespace openvpn {
 	bool halt = false;
 
 	Acceptor::Set acceptors;
+
+	AsioTimer throttle_timer;
+	Time throttle_expire;
+	int throttle_connections = 0;
+	std::deque<size_t> throttle_acceptor_indices;
 
 	client_t next_id = 0;
 	ClientMap clients;
