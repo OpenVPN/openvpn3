@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -31,6 +31,7 @@
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/extern/fw.hpp>
 #include <openvpn/pki/epkibase.hpp>
+#include <openvpn/transport/client/extern/fw.hpp>
 
 namespace openvpn {
   class OptionList;
@@ -172,6 +173,10 @@ namespace openvpn {
       // option of profile
       std::string serverOverride;
 
+      // Use a different port than that specified in "remote"
+      // option of profile
+      std::string portOverride;
+
       // Force a given transport protocol
       // Should be tcp, udp, or adaptive.
       std::string protoOverride;
@@ -191,6 +196,9 @@ namespace openvpn {
       // If true and a redirect-gateway profile doesn't also define
       // DNS servers, use the standard Google DNS servers.
       bool googleDnsFallback = false;
+
+      // if true, do synchronous DNS lookup.
+      bool synchronousDnsLookup = false;
 
       // Enable autologin sessions
       bool autologinSessions = true;
@@ -413,6 +421,7 @@ namespace openvpn {
     class OpenVPNClient : public TunBuilderBase,            // expose tun builder virtual methods
 			  public LogReceiver,               // log message notification
 			  public ExternalTun::Factory,      // low-level tun override
+			  public ExternalTransport::Factory,// low-level transport override
 			  private ExternalPKIBase
     {
     public:

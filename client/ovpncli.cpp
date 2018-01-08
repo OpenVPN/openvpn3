@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -406,11 +406,13 @@ namespace openvpn {
 
 	// extra settings submitted by API client
 	std::string server_override;
+	std::string port_override;
 	Protocol proto_override;
 	IPv6Setting ipv6;
 	int conn_timeout = 0;
 	bool tun_persist = false;
 	bool google_dns_fallback = false;
+	bool synchronous_dns_lookup = false;
 	bool autologin_sessions = false;
 	std::string private_key_password;
 	std::string external_pki_alias;
@@ -646,9 +648,11 @@ namespace openvpn {
     {
       try {
 	state->server_override = config.serverOverride;
+	state->port_override = config.portOverride;
 	state->conn_timeout = config.connTimeout;
 	state->tun_persist = config.tunPersist;
 	state->google_dns_fallback = config.googleDnsFallback;
+	state->synchronous_dns_lookup = config.synchronousDnsLookup;
 	state->autologin_sessions = config.autologinSessions;
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
@@ -909,11 +913,13 @@ namespace openvpn {
       cc.cli_stats = state->stats;
       cc.cli_events = state->events;
       cc.server_override = state->server_override;
+      cc.port_override = state->port_override;
       cc.proto_override = state->proto_override;
       cc.ipv6 = state->ipv6;
       cc.conn_timeout = state->conn_timeout;
       cc.tun_persist = state->tun_persist;
       cc.google_dns_fallback = state->google_dns_fallback;
+      cc.synchronous_dns_lookup = state->synchronous_dns_lookup;
       cc.autologin_sessions = state->autologin_sessions;
       cc.proto_context_options = state->proto_context_options;
       cc.http_proxy_options = state->http_proxy_options;
@@ -944,7 +950,9 @@ namespace openvpn {
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       cc.extern_tun_factory = this;
 #endif
-
+#if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
+      cc.extern_transport_factory = this;
+#endif
       // force Session ID use and disable password cache if static challenge is enabled
       if (state->creds
 	  && !state->creds->get_replace_password_with_session_id()

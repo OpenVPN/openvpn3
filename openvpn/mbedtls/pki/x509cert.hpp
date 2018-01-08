@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -30,6 +30,8 @@
 #include <iostream>
 
 #include <mbedtls/x509.h>
+#include <mbedtls/pem.h>
+#include <mbedtls/base64.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -86,6 +88,43 @@ namespace openvpn {
 	  }
       }
 
+      static std::string der_to_pem(const unsigned char* der, size_t der_size)
+      {
+	size_t olen = 0;
+	int ret;
+
+	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(), der,
+				       der_size, NULL, 0, &olen);
+	if (ret != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)
+	  throw MbedTLSException("X509Cert::extract: can't calculate PEM size");
+
+	BufferAllocated buff(olen, 0);
+
+	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(), der,
+				       der_size, buff.data(), buff.max_size(), &olen);
+	if (ret)
+	  throw MbedTLSException("X509Cert::extract: can't write PEM buffer");
+
+	return std::string((const char *)buff.data());
+      }
+
+      std::string extract() const
+      {
+	return der_to_pem(chain->raw.p, chain->raw.len);
+      }
+
+      std::vector<std::string> extract_extra_certs() const
+      {
+	std::vector<std::string> extra_certs;
+
+	/* extra certificates are appended to the main one */
+	for (mbedtls_x509_crt *cert = chain->next; cert; cert = cert->next)
+	  {
+	    extra_certs.push_back(der_to_pem(cert->raw.p, cert->raw.len));
+	  }
+	return extra_certs;
+      }
+
       mbedtls_x509_crt* get() const
       {
 	return chain;
@@ -102,7 +141,7 @@ namespace openvpn {
 	if (!chain)
 	  {
 	    chain = new mbedtls_x509_crt;
-	    std::memset(chain, 0, sizeof(mbedtls_x509_crt));
+	    mbedtls_x509_crt_init(chain);
 	  }
       }
 
@@ -117,7 +156,13 @@ namespace openvpn {
       }
 
       mbedtls_x509_crt *chain;
+
+      static const std::string begin_cert;
+      static const std::string end_cert;
     };
+
+    const std::string X509Cert::begin_cert = "-----BEGIN CERTIFICATE-----\n";
+    const std::string X509Cert::end_cert = "-----END CERTIFICATE-----\n";
   }
 }
 

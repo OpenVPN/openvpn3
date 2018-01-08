@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -38,6 +38,7 @@
 #include <openvpn/server/peerstats.hpp>
 #include <openvpn/server/peeraddr.hpp>
 #include <openvpn/auth/authcert.hpp>
+#include <openvpn/auth/authstatusconst.hpp>
 
 namespace openvpn {
   namespace ManClientInstance {
@@ -74,6 +75,7 @@ namespace openvpn {
 
       // disconnect
       virtual void disconnect_user(const HaltRestart::Type type,
+				   const AuthStatus::Type auth_status,
 				   const std::string& reason,
 				   const bool tell_client) = 0;
 
@@ -126,6 +128,7 @@ namespace openvpn {
       typedef RCPtr<Factory> Ptr;
 
       virtual void start() = 0;
+      virtual void stop() = 0;
 
       virtual Send::Ptr new_obj(Recv* instance) = 0;
     };

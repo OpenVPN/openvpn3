@@ -15,6 +15,7 @@
 // ignore these ClientAPI::OpenVPNClient bases
 %ignore openvpn::ClientAPI::LogReceiver;
 %ignore openvpn::ExternalTun::Factory;
+%ignore openvpn::ExternalTransport::Factory;
 
 // modify exported C++ class names to incorporate their enclosing namespace
 %rename(ClientAPI_OpenVPNClient) OpenVPNClient;
@@ -49,4 +50,5 @@ namespace std {
 %include "openvpn/pki/epkibase.hpp"
 %include "openvpn/tun/builder/base.hpp"
 %import  "openvpn/tun/extern/fw.hpp"     // ignored
+%import  "openvpn/transport/client/extern/fw.hpp"     // ignored
 %include "ovpncli.hpp"

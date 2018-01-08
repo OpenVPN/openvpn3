@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -450,24 +450,51 @@ namespace openvpn {
 	}
     }
 
+    /* This function returns a parseable string representation of the compress
+     * method. NOTE: returns nullptr if no mapping is possible */
+    const char *method_to_string() const
+    {
+      switch (type_)
+	{
+	case LZO:
+	  return "lzo";
+	case LZO_SWAP:
+	  return "lzo-swap";
+	case LZO_STUB:
+	  return "lzo-stub";
+	case LZ4:
+	  return "lz4";
+	case LZ4v2:
+	  return "lz4v2";
+	case SNAPPY:
+	  return "snappy";
+	case COMP_STUB:
+	  return "stub";
+	case COMP_STUBv2:
+	  return "stub-v2";
+	default:
+	  return nullptr;
+	}
+    }
+
     static Type parse_method(const std::string& method)
     {
-      if (method == "lzo")
+      if (method == "stub-v2")
+	return COMP_STUBv2;
+      else if (method == "lz4-v2")
+	return LZ4v2;
+      else if (method == "lz4")
+	return LZ4;
+      else if (method == "lzo")
 	return LZO;
       else if (method == "lzo-swap")
 	return LZO_SWAP;
       else if (method == "lzo-stub")
 	return LZO_STUB;
-      else if (method == "lz4")
-	return LZ4;
-      else if (method == "lz4-v2")
-	return LZ4v2;
       else if (method == "snappy")
 	return SNAPPY;
       else if (method == "stub")
 	return COMP_STUB;
-      else if (method == "stub-v2")
-	return COMP_STUBv2;
       else
 	return NONE;
     }

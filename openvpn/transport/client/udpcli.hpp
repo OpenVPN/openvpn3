@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -45,6 +45,7 @@ namespace openvpn {
 
       RemoteList::Ptr remote_list;
       bool server_addr_float;
+      bool synchronous_dns_lookup;
       int n_parallel;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -66,6 +67,7 @@ namespace openvpn {
     private:
       ClientConfig()
 	: server_addr_float(false),
+	  synchronous_dns_lookup(false),
 	  n_parallel(8),
 	  socket_protect(nullptr)
       {}
@@ -93,11 +95,21 @@ namespace openvpn {
 	    else
 	      {
 		parent->transport_pre_resolve();
-		resolver.async_resolve(server_host, server_port,
-				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::udp::resolver::results_type results)
-				       {
-					 self->do_resolve_(error, results);
-				       });
+
+		if (config->synchronous_dns_lookup)
+		  {
+		    openvpn_io::error_code error;
+		    openvpn_io::ip::udp::resolver::results_type results = resolver.resolve(server_host, server_port, error);
+		    do_resolve_(error, results);
+		  }
+		else
+		  {
+		    resolver.async_resolve(server_host, server_port,
+					   [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::udp::resolver::results_type results)
+					   {
+					     self->do_resolve_(error, results);
+					   });
+		  }
 	      }
 	  }
       }
@@ -121,6 +133,8 @@ namespace openvpn {
       {
 	return false;
       }
+
+      virtual void transport_stop_requeueing() { }
 
       virtual unsigned int transport_send_queue_size()
       {
@@ -255,7 +269,7 @@ namespace openvpn {
 	parent->transport_wait();
 	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
-#ifdef OPENVPN_PLATFORM_TYPE_UNIX
+#if defined(OPENVPN_PLATFORM_TYPE_UNIX) || defined(OPENVPN_PLATFORM_UWP)
 	if (config->socket_protect)
 	  {
 	    if (!config->socket_protect->socket_protect(socket.native_handle()))

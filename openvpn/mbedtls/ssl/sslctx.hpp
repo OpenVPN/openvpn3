@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -121,6 +121,25 @@ namespace openvpn {
       /*
        * X509 cert profiles.
        */
+
+#ifdef OPENVPN_USE_TLS_MD5
+      // This profile includes the broken MD5 alrogithm.
+      // We are going to ship support for this algorithm for a limited
+      // amount of time to allow our users to switch to something else
+      const mbedtls_x509_crt_profile crt_profile_insecure = // CONST GLOBAL
+	{
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_MD5 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_RIPEMD160 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA224 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
+	  MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
+	  0xFFFFFFF, /* Any PK alg    */
+	  0xFFFFFFF, /* Any curve     */
+	  1024,      /* Minimum size for RSA keys */
+	};
+#endif
 
       const mbedtls_x509_crt_profile crt_profile_legacy = // CONST GLOBAL
 	{
@@ -244,6 +263,62 @@ namespace openvpn {
 	MbedTLSPKI::DH::Ptr mydh = new MbedTLSPKI::DH();
 	mydh->parse(dh_txt, "server-config");
 	dh = mydh;
+      }
+
+      virtual std::string extract_ca() const
+      {
+	if (!ca_chain)
+	  return std::string();
+	return ca_chain->extract();
+      }
+
+      virtual std::string extract_crl() const
+      {
+	if (!crl_chain)
+	  return std::string();
+	return crl_chain->extract();
+      }
+
+      virtual std::string extract_cert() const
+      {
+	if (!crt_chain)
+	  return std::string();
+	return crt_chain->extract();
+      }
+
+      virtual std::vector<std::string> extract_extra_certs() const
+      {
+	if (!crt_chain)
+	  return std::vector<std::string>();
+	return crt_chain->extract_extra_certs();
+      }
+
+      virtual std::string extract_private_key() const
+      {
+	if (!priv_key)
+	  return std::string();
+	return priv_key->extract();
+      }
+
+      virtual std::string extract_dh() const
+      {
+	if (!dh)
+	  return std::string();
+	return dh->extract();
+      }
+
+      virtual PKType private_key_type() const
+      {
+	if (!priv_key)
+	  return PK_NONE;
+	return priv_key->key_type();
+      }
+
+      virtual size_t private_key_length() const
+      {
+	if (!priv_key)
+	  return 0;
+	return priv_key->key_length();
       }
 
       virtual void set_frame(const Frame::Ptr& frame_arg)
@@ -444,6 +519,10 @@ namespace openvpn {
       {
 	switch (TLSCertProfile::default_if_undef(tls_cert_profile))
 	  {
+#ifdef OPENVPN_USE_TLS_MD5
+	  case TLSCertProfile::INSECURE:
+	    return &mbedtls_ctx_private::crt_profile_insecure;
+#endif
 	  case TLSCertProfile::LEGACY:
 	    return &mbedtls_ctx_private::crt_profile_legacy;
 	  case TLSCertProfile::PREFERRED:
@@ -747,6 +826,15 @@ namespace openvpn {
 	  if (c.ssl_debug_level)
 	    mbedtls_ssl_conf_dbg(sslconf, dbg_callback, ctx);
 
+	  /* OpenVPN 2.x disables cbc_record_splitting by default, therefore
+	   * we have to do the same here to keep compatibility.
+	   * If not disabled, this setting will trigger bad behaviours on
+	   * TLS1.0 and possibly on other setups */
+#if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
+	  mbedtls_ssl_conf_cbc_record_splitting(sslconf,
+						MBEDTLS_SSL_CBC_RECORD_SPLITTING_DISABLED);
+#endif /* MBEDTLS_SSL_CBC_RECORD_SPLITTING */
+
           // Apply the configuration to the SSL connection object
           if (mbedtls_ssl_setup(ssl, sslconf) < 0)
             throw MbedTLSException("mbedtls_ssl_setup failed");
@@ -1018,6 +1106,12 @@ namespace openvpn {
       // log status
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
 	OPENVPN_LOG_SSL(status_string(cert, depth, flags));
+
+      // notify if connection is happening with an insecurely signed cert
+      if (cert->sig_md == MBEDTLS_MD_MD5)
+      {
+	ssl->tls_warnings |= SSLAPI::TLS_WARN_SIG_MD5;
+      }
 
       // leaf-cert verification
       if (depth == 0)

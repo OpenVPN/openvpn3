@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -28,6 +28,10 @@
 #include <string>
 #include <sstream>
 
+#ifdef HAVE_CONFIG_JSONCPP
+#include "json/json.h"
+#endif /* HAVE_CONFIG_JSONCPP */
+
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
@@ -38,6 +42,9 @@
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/cliconstants.hpp>
 #include <openvpn/ssl/peerinfo.hpp>
+#include <openvpn/ssl/proto.hpp>
+#include <openvpn/ssl/proto_context_options.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
 
 namespace openvpn {
   class ParseClientConfig {
@@ -56,6 +63,11 @@ namespace openvpn {
       std::string port;
       std::string proto;
     };
+
+    ParseClientConfig()
+    {
+      reset_pod();
+    }
 
     ParseClientConfig(const OptionList& options)
     {
@@ -179,9 +191,9 @@ namespace openvpn {
 	}
 
 	// validate remote list
-	RemoteList rl(options, "", 0, nullptr);
+	remoteList.reset(new RemoteList(options, "", 0, nullptr));
 	{
-	  const RemoteList::Item* ri = rl.first_item();
+	  const RemoteList::Item* ri = remoteList->first_item();
 	  if (ri)
 	    {
 	      firstRemoteListItem_.host = ri->server_host;
@@ -222,8 +234,8 @@ namespace openvpn {
 	    }
 	  else
 	    {
-	      if (rl.defined())
-		profileName_ = rl.first_server_host();
+	      if (remoteList)
+		profileName_ = remoteList->first_server_host();
 	    }
 	}
 
@@ -260,12 +272,42 @@ namespace openvpn {
 	  if (pushPeerInfo_)
 	    peerInfoUV_ = peer_info_uv;
 	}
+
+	// dev name
+	{
+	  const Option *o = options.get_ptr("dev");
+	  if (o)
+	  {
+	    dev = o->get(1, 256);
+	  }
+	}
+
+	// protocol configuration
+	{
+	  protoConfig.reset(new ProtoContext::Config());
+	  protoConfig->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
+	  protoConfig->tls_crypt_factory.reset(new CryptoTLSCryptFactory<SSLLib::CryptoAPI>());
+	  protoConfig->load(options, ProtoContextOptions(), -1, false);
+	}
+
+	// ssl lib configuration
+	try {
+	  sslConfig.reset(new SSLLib::SSLAPI::Config());
+	  sslConfig->load(options, SSLConfigAPI::LF_PARSE_MODE);
+	} catch (...) {
+	  sslConfig.reset();
+	}
       }
       catch (const std::exception& e)
 	{
 	  error_ = true;
 	  message_ = Unicode::utf8_printable<std::string>(e.what(), 256);
 	}
+    }
+
+    static ParseClientConfig parse(const std::string& content)
+    {
+      return parse(content, nullptr);
     }
 
     static ParseClientConfig parse(const std::string& content, OptionList::KeyValueList* content_list)
@@ -397,7 +439,173 @@ namespace openvpn {
       return os.str();
     }
 
+    std::string to_string_config() const
+    {
+      std::ostringstream os;
+
+      os << "client" << std::endl;
+      os << "dev " << dev << std::endl;
+      os << "dev-type " << protoConfig->layer.dev_type() << std::endl;
+      for (size_t i = 0; i < remoteList->size(); i++)
+      {
+	const RemoteList::Item& item = remoteList->get_item(i);
+
+	os << "remote " << item.server_host << " " << item.server_port;
+	const char *proto = item.transport_protocol.protocol_to_string();
+	if (proto)
+	  os << " " << proto;
+	os << std::endl;
+      }
+      if (protoConfig->tls_crypt_context)
+      {
+	os << "<tls-crypt>" << std::endl << protoConfig->tls_key.render() << "</tls-crypt>"
+	   << std::endl;
+      }
+      else if (protoConfig->tls_auth_context)
+      {
+	os << "<tls-auth>" << std::endl << protoConfig->tls_key.render() << "</tls-auth>"
+	   << std::endl;
+	os << "key_direction " << protoConfig->key_direction << std::endl;
+      }
+
+      // SSL parameters
+      if (sslConfig)
+      {
+	print_pem(os, "ca", sslConfig->extract_ca());
+	print_pem(os, "crl", sslConfig->extract_crl());
+	print_pem(os, "key", sslConfig->extract_private_key());
+	print_pem(os, "cert", sslConfig->extract_cert());
+
+	std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
+	if (extra_certs.size() > 0)
+	{
+	  os << "<extra-certs>" << std::endl;
+	  for (auto& cert : extra_certs)
+	  {
+	    os << cert;
+	  }
+	  os << "</extra-certs>" << std::endl;
+        }
+      }
+
+      os << "cipher " << CryptoAlgs::name(protoConfig->dc.cipher(), "none")
+	 << std::endl;
+      os << "auth " << CryptoAlgs::name(protoConfig->dc.digest(), "none")
+	 << std::endl;
+      const char *comp = protoConfig->comp_ctx.method_to_string();
+      if (comp)
+	os << "compress " << comp <<  std::endl;
+      os << "keepalive " << protoConfig->keepalive_ping.to_seconds() << " "
+	 << protoConfig->keepalive_timeout.to_seconds() << std::endl;
+      os << "tun-mtu " << protoConfig->tun_mtu << std::endl;
+      os << "reneg-sec " << protoConfig->renegotiate.to_seconds() << std::endl;
+
+      return os.str();
+    }
+
+#ifdef HAVE_CONFIG_JSONCPP
+
+    std::string to_json_config() const
+    {
+      std::ostringstream os;
+
+      Json::Value root(Json::objectValue);
+
+      root["mode"] = Json::Value("client");
+      root["dev"] = Json::Value(dev);
+      root["dev-type"] = Json::Value(protoConfig->layer.dev_type());
+      root["remotes"] = Json::Value(Json::arrayValue);
+      for (size_t i = 0; i < remoteList->size(); i++)
+      {
+	const RemoteList::Item& item = remoteList->get_item(i);
+
+	Json::Value el = Json::Value(Json::objectValue);
+	el["address"] = Json::Value(item.server_host);
+	el["port"] = Json::Value((Json::UInt)std::stoi(item.server_port));
+	if (item.transport_protocol() == Protocol::NONE)
+	  el["proto"] = Json::Value("adaptive");
+	else
+	  el["proto"] = Json::Value(item.transport_protocol.str());
+
+	root["remotes"].append(el);
+      }
+      if (protoConfig->tls_crypt_context)
+      {
+	root["tls_wrap"] = Json::Value(Json::objectValue);
+	root["tls_wrap"]["mode"] = Json::Value("tls_crypt");
+	root["tls_wrap"]["key"] = Json::Value(protoConfig->tls_key.render());
+      }
+      else if (protoConfig->tls_auth_context)
+      {
+	root["tls_wrap"] = Json::Value(Json::objectValue);
+	root["tls_wrap"]["mode"] = Json::Value("tls_auth");
+	root["tls_wrap"]["key_direction"] = Json::Value((Json::UInt)protoConfig->key_direction);
+	root["tls_wrap"]["key"] = Json::Value(protoConfig->tls_key.render());
+      }
+
+      // SSL parameters
+      if (sslConfig)
+      {
+        json_pem(root, "ca", sslConfig->extract_ca());
+        json_pem(root, "crl", sslConfig->extract_crl());
+        json_pem(root, "cert", sslConfig->extract_cert());
+
+        // JSON config is aimed to users, therefore we do not export the raw private
+        // key, but only some basic info
+        SSLConfigAPI::PKType priv_key_type = sslConfig->private_key_type();
+        if (priv_key_type != SSLConfigAPI::PK_NONE)
+        {
+	  root["key"] = Json::Value(Json::objectValue);
+	  root["key"]["type"] = Json::Value(sslConfig->private_key_type_string());
+	  root["key"]["length"] = Json::Value((Json::UInt)sslConfig->private_key_length());
+        }
+
+        std::vector<std::string> extra_certs = sslConfig->extract_extra_certs();
+        if (extra_certs.size() > 0)
+        {
+	  root["extra_certs"] = Json::Value(Json::arrayValue);
+	  for (auto cert = extra_certs.begin(); cert != extra_certs.end(); cert++)
+	  {
+	    if (!cert->empty())
+	      root["extra_certs"].append(Json::Value(*cert));
+	  }
+        }
+      }
+
+      root["cipher"] = Json::Value(CryptoAlgs::name(protoConfig->dc.cipher(), "none"));
+      root["auth"] = Json::Value(CryptoAlgs::name(protoConfig->dc.digest(), "none"));
+      if (protoConfig->comp_ctx.type() != CompressContext::NONE)
+	root["compression"] = Json::Value(protoConfig->comp_ctx.str());
+      root["keepalive"] = Json::Value(Json::objectValue);
+      root["keepalive"]["ping"] = Json::Value((Json::UInt)protoConfig->keepalive_ping.to_seconds());
+      root["keepalive"]["timeout"] = Json::Value((Json::UInt)protoConfig->keepalive_timeout.to_seconds());
+      root["tun_mtu"] = Json::Value((Json::UInt)protoConfig->tun_mtu);
+      root["reneg_sec"] = Json::Value((Json::UInt)protoConfig->renegotiate.to_seconds());
+
+      return root.toStyledString();
+    }
+
+#endif /* HAVE_CONFIG_JSONCPP */
+
   private:
+    static void print_pem(std::ostream& os, std::string label, std::string pem)
+    {
+      if (pem.empty())
+	return;
+      os << "<" << label << ">" << std::endl << pem << "</" << label << ">" << std::endl;
+    }
+
+#ifdef HAVE_CONFIG_JSONCPP
+
+    static void json_pem(Json::Value& obj, std::string key, std::string pem)
+    {
+      if (pem.empty())
+	return;
+      obj[key] = Json::Value(pem);
+    }
+
+#endif /* HAVE_CONFIG_JSONCPP */
+
     static bool parse_auth_user_pass(const OptionList& options, std::vector<std::string>* user_pass)
     {
       return UserPass::parse(options, "auth-user-pass", 0, user_pass);
@@ -456,11 +664,6 @@ namespace openvpn {
 	}
     }
 
-    ParseClientConfig()
-    {
-      reset_pod();
-    }
-
     void reset_pod()
     {
       error_ = autologin_ = externalPki_ = staticChallengeEcho_ = false;
@@ -496,8 +699,12 @@ namespace openvpn {
     ServerList serverList_;
     bool hasEmbeddedPassword_;
     std::string embeddedPassword_;
+    RemoteList::Ptr remoteList;
     RemoteItem firstRemoteListItem_;
     PeerInfo::Set::Ptr peerInfoUV_;
+    ProtoContext::Config::Ptr protoConfig;
+    SSLLib::SSLAPI::Config::Ptr sslConfig;
+    std::string dev;
   };
 }
 

@@ -8,7 +8,6 @@ GCC_EXTRA="$GCC_EXTRA -DOPENVPN_SHOW_SESSION_TOKEN"
 [ "$BS64" = "1" ] && GCC_EXTRA="$GCC_EXTRA -DOPENVPN_BS64_DATA_LIMIT=2500000"
 if [ "$AGENT" = "1" ]; then
     GCC_EXTRA="$GCC_EXTRA -DOPENVPN_COMMAND_AGENT"
-    export JSON=1
 fi
 export GCC_EXTRA
 if [ "$(uname)" == "Darwin" ]; then

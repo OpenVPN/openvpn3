@@ -5,11 +5,29 @@ if [ -z "$O3" ]; then
     echo O3 var must point to ovpn3 tree
     exit 1
 fi
-
-[ -z "$DL" ] && DL=~/Downloads
+if [ -z "$DEP_DIR" ]; then
+    echo DEP_DIR var must point to dependency build folder
+    exit 1
+fi
+if [ -z "$DL" ]; then
+    echo DL var must point to the download folder
+    exit 1
+fi
 
 . $O3/core/deps/lib-versions
 
+# source helper functions
+. $O3/core/deps/functions.sh
+
+PACKAGE=${ASIO_VERSION}
+FNAME=${ASIO_VERSION}.tar.gz
+PV=${ASIO_VERSION#*-}
+URL=https://github.com/chriskohlhoff/asio/archive/${PV}.tar.gz
+CSUM=${ASIO_CSUM}
+
+download
+
+cd $DEP_DIR
 rm -rf asio*
 tar xf $DL/$ASIO_VERSION.tar.gz
 cp -a $ASIO_VERSION asio

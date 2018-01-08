@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -51,6 +51,55 @@ namespace openvpn {
       HKEY key;
     };
 
+    class RegKeyEnumerator : public std::vector<std::string>
+    {
+    public:
+      RegKeyEnumerator(HKEY hkey, const std::string& path)
+      {
+	RegKey regKey;
+	auto status = ::RegOpenKeyExA(hkey,
+				      path.c_str(),
+				      0,
+				      KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS,
+				      regKey.ref());
+	if (status != ERROR_SUCCESS)
+	    return;
+
+	DWORD subkeys_num;
+	status = ::RegQueryInfoKeyA(regKey(),
+				    nullptr,
+				    nullptr,
+				    NULL,
+				    &subkeys_num,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr,
+				    nullptr);
+
+	if (status != ERROR_SUCCESS)
+	  return;
+
+	const int MAX_KEY_LENGTH = 255;
+	for (auto i = 0; i < subkeys_num; ++ i)
+	  {
+	    DWORD subkey_size = MAX_KEY_LENGTH;
+	    char subkey[MAX_KEY_LENGTH];
+	    status = ::RegEnumKeyExA(regKey(),
+				     i,
+				     subkey,
+				     &subkey_size,
+				     nullptr,
+				     nullptr,
+				     nullptr,
+				     nullptr);
+	    if (status == ERROR_SUCCESS)
+	      push_back(subkey);
+	  }
+      }
+    };
   }
 }
 

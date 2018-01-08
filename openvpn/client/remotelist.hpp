@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -517,16 +517,27 @@ namespace openvpn {
     // override all server hosts to server_override
     void set_server_override(const std::string& server_override)
     {
-      if (!server_override.empty())
+      if (server_override.empty())
+	return;
+      for (auto &item : list)
 	{
-	  for (std::vector<Item::Ptr>::iterator i = list.begin(); i != list.end(); ++i)
-	    {
-	      Item& item = **i;
-	      item.server_host = server_override;
-	      item.res_addr_list.reset(nullptr);
-	    }
-	  reset_cache();
+	  item->server_host = server_override;
+	  item->res_addr_list.reset();
 	}
+      reset_cache();
+    }
+
+    // override all server ports to port_override
+    void set_port_override(const std::string& port_override)
+    {
+      if (port_override.empty())
+	return;
+      for (auto &item : list)
+	{
+	  item->server_port = port_override;
+	  item->res_addr_list.reset();
+	}
+      reset_cache();
     }
 
     void set_random(const RandomAPI::Ptr& rng_arg)

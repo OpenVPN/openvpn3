@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -1316,6 +1316,11 @@ namespace openvpn {
       void set_protocol(const Protocol& p)
       {
 	is_reliable = p.is_reliable(); // cache is_reliable state locally
+      }
+
+      uint32_t get_tls_warnings() const
+      {
+	return Base::get_tls_warnings();
       }
 
       // need to call only on the initiator side of the connection
@@ -2766,6 +2771,15 @@ namespace openvpn {
 	}
     }
 
+    uint32_t get_tls_warnings() const
+    {
+      if (primary)
+	return primary->get_tls_warnings();
+
+      OPENVPN_LOG("TLS: primary key context uninitialized. Can't retrieve TLS warnings");
+      return 0;
+    }
+
     void reset()
     {
       const Config& c = *config;
@@ -3326,10 +3340,10 @@ namespace openvpn {
     {
       primary.swap(secondary);
       if (primary)
-	primary->rekey(CryptoDCInstance::PROMOTE_SECONDARY_TO_PRIMARY);
+	primary->rekey(CryptoDCInstance::PRIMARY_SECONDARY_SWAP);
       if (secondary)
 	secondary->prepare_expire();
-      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " PROMOTE_SECONDARY_TO_PRIMARY");
+      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " PRIMARY_SECONDARY_SWAP");
     }
 
     void process_primary_event()

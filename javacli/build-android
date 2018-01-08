@@ -31,8 +31,9 @@ fi
 echo SWIG
 swig -c++ -java -package $pkg -I$O3/core/client -I$O3/core ovpncli.i
 
-# fixme: removed "android" from TARGET list due to compile failures in Asio
-for TARGET in android-a8a android-a7a ; do
+TARGETS=${TARGETS:-android-a7a android-a8a android-x86}
+
+for TARGET in $TARGETS; do
 
 if [ "$DEBUG_BUILD" = "1" ]; then
     . ../vars/vars-${TARGET}-dbg
@@ -58,10 +59,13 @@ else
     ssl_libdir="-L$DEP_DIR/mbedtls/mbedtls-$PLATFORM/library"
 fi
 
+[ -z "$GPP_CMD" ] && GPP_CMD=g++
+
 echo CORE $ABI
-g++ \
+$GPP_CMD \
     $CXX_COMPILER_FLAGS \
     $PLATFORM_FLAGS \
+    $OTHER_COMPILER_FLAGS \
     $LIB_OPT_LEVEL $LIB_FPIC \
     -Wall -Wno-sign-compare -Wno-unused-parameter \
     -Wno-unused-local-typedefs \
@@ -71,6 +75,7 @@ g++ \
     -DASIO_STANDALONE \
     -DASIO_NO_DEPRECATED \
     -DHAVE_LZ4 \
+    -DOPENVPN_USE_TLS_MD5 \
     -I$O3/core/client \
     -I$O3/core \
     $common \
@@ -80,9 +85,10 @@ g++ \
     -c $O3/core/client/ovpncli.cpp
 
 echo WRAP $ABI
-g++ \
+$GPP_CMD \
     $CXX_COMPILER_FLAGS \
     $PLATFORM_FLAGS \
+    $OTHER_COMPILER_FLAGS \
     $opt2 $LIB_FPIC \
     -fno-strict-aliasing \
     -Wall \
@@ -112,5 +118,8 @@ mv libovpncli.so build/libs/$ABI/
 rm ovpncli.o
 done
 
-mv ovpncli.java ovpncliJNI.java SWIGTYPE_*.java ClientAPI_*.java build/
+mv ovpncli_wrap.cxx ovpncli_wrap.h ovpncli.java ovpncliJNI.java SWIGTYPE_*.java ClientAPI_*.java build/
 git clean -q -fX .
+
+tar -czf android-core-build.tgz build
+mv android-core-build.tgz $O3/

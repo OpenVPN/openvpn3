@@ -48,6 +48,7 @@ if [ -z "$1" ]; then
     echo " LZ4_SYS=1 -- build with system LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
     echo " CITY=1 -- build with Cityhash hash library"
+    echo " VAL=1 -- build with valgrind run-time extensions"
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
     echo " GTEST_DIR=<dir> -- specify googletest tree, required for building unit tests"
@@ -238,6 +239,11 @@ fi
 if [ "$CITY" = "1" ]; then
     LIBS="$LIBS -lcityhash"
     CPPFLAGS="$CPPFLAGS -DHAVE_CITYHASH"
+fi
+
+# Valgrind
+if [ "$VAL" = "1" ]; then
+    CPPFLAGS="$CPPFLAGS -DHAVE_VALGRIND"
 fi
 
 # JVM

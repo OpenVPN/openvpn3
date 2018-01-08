@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -34,6 +34,7 @@
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/process.hpp>
+#include <openvpn/common/jsonlib.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/tun/mac/tunutil.hpp>
@@ -43,7 +44,7 @@
 #include <openvpn/tun/builder/rgwflags.hpp>
 #include <openvpn/tun/builder/setup.hpp>
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
@@ -62,7 +63,7 @@ namespace openvpn {
 	Layer layer;               // OSI layer
 	bool tun_prefix = false;
 
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
 	virtual Json::Value to_json() override
 	{
 	  Json::Value root(Json::objectValue);

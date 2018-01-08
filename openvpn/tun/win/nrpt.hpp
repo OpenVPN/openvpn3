@@ -4,20 +4,21 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
+//
 
 // Name Resolution Policy Table (NRPT) utilities for Windows
 
@@ -48,91 +49,119 @@ namespace openvpn {
       {
 	Win::RegKey key;
 
-	// open/create the key
-	{
-	  const LONG status = ::RegCreateKeyA(HKEY_LOCAL_MACHINE, subkey(), key.ref());
-	  if (status != ERROR_SUCCESS)
+	for (auto i = 0; i < names.size(); ++ i)
+	  {
+	    // open/create the key
 	    {
-	      const Win::Error err(status);
-	      OPENVPN_THROW(nrpt_error, "cannot open/create registry key " << subkey << " : " << err.message());
-	    }
-	}
+	      std::ostringstream ss;
+	      ss << dnsPolicyConfig() << "\\" << policyPrefix() << "-" << i;
+	      auto key_name = ss.str();
 
-	// Name
-	{
-	  const std::wstring names_packed = wstring::pack_string_vector(names);
-	  const LONG status = ::RegSetValueExW(key(),
-					       L"Name",
-					       0,
-					       REG_MULTI_SZ,
-					       (const BYTE *)names_packed.c_str(),
-					       (names_packed.length()+1)*2);
-	  if (status != ERROR_SUCCESS)
-	    {
-	      const Win::Error err(status);
-	      OPENVPN_THROW(nrpt_error, "cannot set registry value for 'Name' : " << err.message());
+	      const LONG status = ::RegCreateKeyA(HKEY_LOCAL_MACHINE, key_name.c_str(), key.ref());
+	      if (status != ERROR_SUCCESS)
+		{
+		  const Win::Error err(status);
+		  OPENVPN_THROW(nrpt_error, "cannot open/create registry key " << key_name << " : " << err.message());
+		}
 	    }
-	}
 
-	// GenericDNSServers
-	{
-	  const std::wstring dns_servers_joined = wstring::from_utf8(string::join(dns_servers, ";"));
-	  const LONG status = ::RegSetValueExW(key(),
-					       L"GenericDNSServers",
-					       0,
-					       REG_SZ,
-					       (const BYTE *)dns_servers_joined.c_str(),
-					       (dns_servers_joined.length()+1)*2);
-	  if (status != ERROR_SUCCESS)
+	    // Name
 	    {
-	      const Win::Error err(status);
-	      OPENVPN_THROW(nrpt_error, "cannot set registry value for 'GenericDNSServers' : " << err.message());
+	      std::wstring name(wstring::from_utf8(names[i]));
+	      name += L'\0';
+	      const LONG status = ::RegSetValueExW(key(),
+						   L"Name",
+						   0,
+						   REG_MULTI_SZ,
+						   (const BYTE *)name.c_str(),
+						   (name.length()+1)*2);
+	      if (status != ERROR_SUCCESS)
+		{
+		  const Win::Error err(status);
+		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'Name' : " << err.message());
+		}
 	    }
-	}
 
-	// ConfigOptions
-	{
-	  const DWORD value = 0x8; // Only the Generic DNS server option (that is, the option defined in section 2.2.2.13) is specified.
-	  const LONG status = ::RegSetValueExW(key(),
-					       L"ConfigOptions",
-					       0,
-					       REG_DWORD,
-					       (const BYTE *)&value,
-					       sizeof(value));
-	  if (status != ERROR_SUCCESS)
+	    // GenericDNSServers
 	    {
-	      const Win::Error err(status);
-	      OPENVPN_THROW(nrpt_error, "cannot set registry value for 'ConfigOptions' : " << err.message());
+	      const std::wstring dns_servers_joined = wstring::from_utf8(string::join(dns_servers, ";"));
+	      const LONG status = ::RegSetValueExW(key(),
+						   L"GenericDNSServers",
+						   0,
+						   REG_SZ,
+						   (const BYTE *)dns_servers_joined.c_str(),
+						   (dns_servers_joined.length()+1)*2);
+	      if (status != ERROR_SUCCESS)
+		{
+		  const Win::Error err(status);
+		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'GenericDNSServers' : " << err.message());
+		}
 	    }
-	}
 
-	// Version
-	{
-	  const DWORD value = 0x2;
-	  const LONG status = ::RegSetValueExW(key(),
-					       L"Version",
-					       0,
-					       REG_DWORD,
-					       (const BYTE *)&value,
-					       sizeof(value));
-	  if (status != ERROR_SUCCESS)
+	    // ConfigOptions
 	    {
-	      const Win::Error err(status);
-	      OPENVPN_THROW(nrpt_error, "cannot set registry value for 'Version' : " << err.message());
+	      const DWORD value = 0x8; // Only the Generic DNS server option (that is, the option defined in section 2.2.2.13) is specified.
+	      const LONG status = ::RegSetValueExW(key(),
+						   L"ConfigOptions",
+						   0,
+						   REG_DWORD,
+						   (const BYTE *)&value,
+						   sizeof(value));
+	      if (status != ERROR_SUCCESS)
+		{
+		  const Win::Error err(status);
+		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'ConfigOptions' : " << err.message());
+		}
 	    }
-	}
+
+	    // Version
+	    {
+	      const DWORD value = 0x2;
+	      const LONG status = ::RegSetValueExW(key(),
+						   L"Version",
+						   0,
+						   REG_DWORD,
+						   (const BYTE *)&value,
+						   sizeof(value));
+	      if (status != ERROR_SUCCESS)
+		{
+		  const Win::Error err(status);
+		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'Version' : " << err.message());
+		}
+	    }
+	  }
       }
 
       static bool delete_rule()
       {
-	return ::RegDeleteTreeA(HKEY_LOCAL_MACHINE, subkey()) == ERROR_SUCCESS;
+	Win::RegKeyEnumerator keys(HKEY_LOCAL_MACHINE, dnsPolicyConfig());
+
+	for (const auto& key : keys)
+	  {
+	    // remove only own policies
+	    if (key.find(policyPrefix()) == std::string::npos)
+	      continue;
+
+	    std::ostringstream ss;
+	    ss << dnsPolicyConfig() << "\\" << key;
+	    auto path = ss.str();
+	    ::RegDeleteTreeA(HKEY_LOCAL_MACHINE, path.c_str());
+	  }
+
+	return true;
       }
 
     private:
-      static const char *subkey()
+      static const char *dnsPolicyConfig()
       {
-	static const char subkey[] = "SYSTEM\\CurrentControlSet\\Services\\Dnscache\\Parameters\\DnsPolicyConfig\\OpenVPNDNSRouting";
+	static const char subkey[] = "SYSTEM\\CurrentControlSet\\Services\\Dnscache\\Parameters\\DnsPolicyConfig";
 	return subkey;
+      }
+
+      static const char *policyPrefix()
+      {
+	static const char prefix[] = "OpenVPNDNSRouting";
+	return prefix;
       }
 
     public:

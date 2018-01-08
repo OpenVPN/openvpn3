@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -82,6 +82,7 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
+	    stop_requeueing = false;
 	    if (config->remote_list->endpoint_available(&server_host, &server_port, nullptr))
 	      {
 		start_connect_();
@@ -172,13 +173,19 @@ namespace openvpn {
 	   config(config_arg),
 	   parent(parent_arg),
 	   resolver(io_context_arg),
-	   halt(false)
+	   halt(false),
+	   stop_requeueing(false)
       {
       }
 
       virtual void transport_reparent(TransportClientParent* parent_arg)
       {
 	parent = parent_arg;
+      }
+
+      virtual void transport_stop_requeueing()
+      {
+	stop_requeueing = true;
       }
 
       bool send_const(const Buffer& cbuf)
@@ -209,7 +216,7 @@ namespace openvpn {
       bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
       {
 	parent->transport_recv(buf);
-	return true;
+	return !stop_requeueing;
       }
 
       void tcp_write_queue_needs_send() // called by LinkImpl
@@ -269,7 +276,7 @@ namespace openvpn {
 	parent->transport_wait();
 	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
-#ifdef OPENVPN_PLATFORM_TYPE_UNIX
+#if defined(OPENVPN_PLATFORM_TYPE_UNIX) || defined(OPENVPN_PLATFORM_UWP)
 	if (config->socket_protect)
 	  {
 	    if (!config->socket_protect->socket_protect(socket.native_handle()))
@@ -331,6 +338,7 @@ namespace openvpn {
       openvpn_io::ip::tcp::resolver resolver;
       LinkImpl::protocol::endpoint server_endpoint;
       bool halt;
+      bool stop_requeueing;
     };
 
     inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,

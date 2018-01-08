@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -63,6 +63,34 @@ namespace openvpn {
 	return ctx != nullptr;
       }
 
+      SSLConfigAPI::PKType key_type() const
+      {
+	switch (mbedtls_pk_get_type(ctx))
+	{
+	case MBEDTLS_PK_RSA:
+	  return SSLConfigAPI::PK_RSA;
+	case MBEDTLS_PK_ECKEY:
+	  return SSLConfigAPI::PK_ECKEY;
+	case MBEDTLS_PK_ECKEY_DH:
+	  return SSLConfigAPI::PK_ECKEY_DH;
+	case MBEDTLS_PK_ECDSA:
+	  return SSLConfigAPI::PK_ECDSA;
+	case MBEDTLS_PK_RSA_ALT:
+	  return SSLConfigAPI::PK_RSA_ALT;
+	case MBEDTLS_PK_RSASSA_PSS:
+	  return SSLConfigAPI::PK_RSASSA_PSS;
+	case MBEDTLS_PK_NONE:
+	  return SSLConfigAPI::PK_NONE;
+	default:
+	  return SSLConfigAPI::PK_UNKNOWN;
+	}
+      }
+
+      size_t key_length() const
+      {
+	return mbedtls_pk_get_bitlen(ctx);
+      }
+
       void parse(const std::string& key_txt, const std::string& title, const std::string& priv_key_pwd)
       {
 	alloc();
@@ -75,6 +103,18 @@ namespace openvpn {
 					priv_key_pwd.length());
 	if (status < 0)
 	  throw MbedTLSException("error parsing " + title + " private key", status);
+      }
+
+      std::string extract() const
+      {
+	// maximum size of the PEM data is not available at this point
+	BufferAllocated buff(16000, 0);
+
+	int ret = mbedtls_pk_write_key_pem(ctx, buff.data(), buff.max_size());
+	if (ret < 0)
+	  throw MbedTLSException("extract priv_key: can't write to buffer", ret);
+
+	return std::string((const char *)buff.data());
       }
 
       void epki_enable(void *arg,

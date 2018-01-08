@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -64,6 +64,11 @@
 
 #if defined(OPENVPN_PLATFORM_ANDROID)
 #include <openvpn/client/cliemuexr.hpp>
+#endif
+
+#if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
+#include <openvpn/transport/client/extern/config.hpp>
+#include <openvpn/transport/client/extern/fw.hpp>
 #endif
 
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
@@ -116,6 +121,7 @@ namespace openvpn {
     {
       std::string gui_version;
       std::string server_override;
+      std::string port_override;
       Protocol proto_override;
       IPv6Setting ipv6;
       int conn_timeout = 0;
@@ -129,6 +135,7 @@ namespace openvpn {
       bool info = false;
       bool tun_persist = false;
       bool google_dns_fallback = false;
+      bool synchronous_dns_lookup = false;
       std::string private_key_password;
       bool disable_client_cert = false;
       int ssl_debug_level = 0;
@@ -156,6 +163,10 @@ namespace openvpn {
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       ExternalTun::Factory* extern_tun_factory = nullptr;
 #endif
+
+#if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
+      ExternalTransport::Factory* extern_transport_factory = nullptr;
+#endif
     };
 
     ClientOptions(const OptionList& opt,   // only needs to remain in scope for duration of constructor call
@@ -167,6 +178,7 @@ namespace openvpn {
 	cli_events(config.cli_events),
 	server_poll_timeout_(10),
 	server_override(config.server_override),
+	port_override(config.port_override),
 	proto_override(config.proto_override),
 	conn_timeout_(config.conn_timeout),
 	tcp_queue_limit(64),
@@ -179,7 +191,12 @@ namespace openvpn {
 	info(config.info),
 	autologin(false),
 	autologin_sessions(false),
-	creds_locked(false)
+	creds_locked(false),
+	asio_work_always_on_(false),
+	synchronous_dns_lookup(false)
+#ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
+	,extern_transport_factory(config.extern_transport_factory)
+#endif
     {
       // parse general client options
       const ParseClientConfig pcc(opt);
@@ -245,8 +262,9 @@ namespace openvpn {
       // reconnections.
       remote_list->set_enable_cache(config.tun_persist);
 
-      // process server override
+      // process server/port overrides
       remote_list->set_server_override(config.server_override);
+      remote_list->set_port_override(config.port_override);
 
       // process protocol override, should be called after set_enable_cache
       remote_list->handle_proto_override(config.proto_override,
@@ -278,6 +296,13 @@ namespace openvpn {
       // fragment option not supported
       if (opt.exists("fragment"))
 	throw option_error("sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
+
+#ifdef OPENVPN_PLATFORM_UWP
+      // workaround for OVPN3-62 Busy loop in win_event.hpp
+      asio_work_always_on_ = true;
+#endif
+
+      synchronous_dns_lookup = config.synchronous_dns_lookup;
 
       // init transport config
       const std::string session_name = load_transport_config();
@@ -580,6 +605,8 @@ namespace openvpn {
 
     int conn_timeout() const { return conn_timeout_; }
 
+    bool asio_work_always_on() const { return asio_work_always_on_; }
+
     RemoteList::Ptr remote_list_precache() const
     {
       RemoteList::Ptr r;
@@ -680,6 +707,22 @@ namespace openvpn {
       // should have been caught earlier in RemoteList::handle_proto_override.
 
       // construct transport object
+#ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
+      ExternalTransport::Config transconf;
+      transconf.remote_list = remote_list;
+      transconf.frame = frame;
+      transconf.stats = cli_stats;
+      transconf.socket_protect = socket_protect;
+      transconf.server_addr_float = server_addr_float;
+      transconf.synchronous_dns_lookup = synchronous_dns_lookup;
+      transconf.protocol = transport_protocol;
+      transport_factory = extern_transport_factory->new_transport_factory(transconf);
+#ifdef OPENVPN_GREMLIN
+      udpconf->gremlin_config = gremlin_config;
+#endif
+
+#else
+	
       if (dco)
 	{
 	  DCO::TransportConfig transconf;
@@ -754,6 +797,7 @@ namespace openvpn {
 	  else
 	    throw option_error("internal error: unknown transport protocol");
 	}
+#endif // OPENVPN_EXTERNAL_TRANSPORT_FACTORY
       return remote_list->current_server_host();
     }
 
@@ -775,6 +819,7 @@ namespace openvpn {
     ClientCreds::Ptr creds;
     unsigned int server_poll_timeout_;
     std::string server_override;
+    std::string port_override;
     Protocol proto_override;
     int conn_timeout_;
     unsigned int tcp_queue_limit;
@@ -789,11 +834,16 @@ namespace openvpn {
     bool autologin;
     bool autologin_sessions;
     bool creds_locked;
+    bool asio_work_always_on_;
+    bool synchronous_dns_lookup;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;
     AltProxy::Ptr alt_proxy;
     DCO::Ptr dco;
+#ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
+    ExternalTransport::Factory* extern_transport_factory;
+#endif
   };
 }
 

@@ -1,5 +1,5 @@
-Contributor agreement for the OpenVPN project version 1.2 - March 2017
-########################################################################
+Contributor agreement for the OpenVPN project version 1.3 - December 2017
+#########################################################################
 
 This Contributor Agreement consists of two parts. Part I is the
 Developer Certificate of Origin available at
@@ -8,7 +8,7 @@ http://developercertificate.org/.
 In this contributor agreement, "This project" refers to the OpenVPN
 project and
 "open source license indicated in `the file <LICENSE.rst>`_" refers to
-the GPLv3 license with an additional permission that allows linking
+the AGPLv3 license with an additional permission that allows linking
 the OpenSSL software, https://www.openssl.org/, with the OpenVPN
 software.
 
@@ -50,16 +50,14 @@ the open source license(s) involved.
 Part II
 #######
 
-Copyright (C) 2017 OpenVPN Technologies, Inc.
+Copyright (C) 2017 OpenVPN Inc.
 
 In addition:
 
-(e) I understand that OpenVPN Technologies, Inc. may relicense this
-project, this contribution, and any modification to it under any
-license. I certify that I, or the person on whose behalf I am
-submitting the contribution, have the right to grant and hereby grant
-OpenVPN Technologies, Inc. a license to do so for this
-contribution. My grant is made on the condition that OpenVPN
-Technologies, Inc. will make any modification to this contribution
-available to the OpenVPN project under the open source license
-indicated in the file.
+(e) I understand that OpenVPN Inc. may relicense this project, this
+contribution, and any modification to it under any license. I certify that I,
+or the person on whose behalf I am submitting the contribution, have the
+right to grant and hereby grant OpenVPN Inc. a license to do so for this
+contribution. My grant is made on the condition that OpenVPN Inc. will make
+any modification to this contribution available to the OpenVPN project under
+the open source license indicated in the file.

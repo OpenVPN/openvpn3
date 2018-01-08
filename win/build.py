@@ -28,7 +28,7 @@ def src_fn_argv(parms, argv):
         srcfile = argv[0]
     return src_fn(parms, srcfile)
 
-def build(parms, srcfile, unit_test):
+def build(parms, srcfile, unit_test=False):
     # Debug?
     if parms['DEBUG']:
         dbg_rel_flags = "/Zi"
@@ -78,11 +78,16 @@ def build(parms, srcfile, unit_test):
         options['extra_inc'] += " /I " + os.path.join(parms['OVPN3'], "common")
 
     # build it
-    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DUSE_ASIO /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_MBEDTLS /I %(mbedtls)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /GL /EHsc %(link_static_dynamic_flags)s /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(mbedtls)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s mbedtls.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib rpcrt4.lib" % options, arch=os.environ.get("ARCH"))
+    vc_cmd(parms, r"cl %(extra_defs)s /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /DUSE_ASIO /DASIO_STANDALONE /DASIO_NO_DEPRECATED /I %(asio)s\asio\include /DUSE_MBEDTLS /I %(mbedtls)s\include /DHAVE_LZ4 /I %(lz4)s%(extra_inc)s -DTAP_WIN_COMPONENT_ID=%(tap_component_id)s /I %(tap)s /I %(ovpn3)s\core /EHsc %(link_static_dynamic_flags)s /W0 %(dbg_rel_flags)s /nologo %(srcfile)s /link /LIBPATH:%(mbedtls)s\library /LIBPATH:%(lz4)s%(extra_lib_path)s mbedtls.lib lz4.lib%(extra_lib)s ws2_32.lib crypt32.lib iphlpapi.lib winmm.lib user32.lib gdi32.lib advapi32.lib wininet.lib shell32.lib ole32.lib rpcrt4.lib" % options, arch=os.environ.get("ARCH"))
 
 if __name__ == "__main__":
     import sys
     from parms import PARMS
+
+    # some parameters might be redefined, like in Jenkins multibranch pipeline case
+    PARMS['BUILD'] = os.environ.get('BUILD', PARMS['BUILD'])
+    PARMS['OVPN3'] = os.environ.get('OVPN3', PARMS['OVPN3'])
+
     src = src_fn_argv(PARMS, sys.argv[1:])
     unit_test = is_unit_test(sys.argv[1:])
     build(PARMS, src, unit_test)

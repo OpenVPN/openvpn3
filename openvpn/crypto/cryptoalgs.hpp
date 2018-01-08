@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -80,6 +80,12 @@ namespace openvpn {
       F_CIPHER=(1<<2),    // alg is a cipher
       F_DIGEST=(1<<3),    // alg is a digest
       F_ALLOW_DC=(1<<4),  // alg may be used in OpenVPN data channel
+    };
+
+    // size in bytes of AEAD "nonce tail" normally taken from
+    // HMAC key material
+    enum {
+      AEAD_NONCE_TAIL_SIZE = 8
     };
 
     class Alg
@@ -210,6 +216,12 @@ namespace openvpn {
     {
       const Alg& alg = get(type);
       return alg.block_size();
+    }
+
+    inline Mode mode(const Type type)
+    {
+      const Alg& alg = get(type);
+      return alg.mode();
     }
 
     inline Type legal_dc_cipher(const Type type)

@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -155,6 +155,46 @@ namespace openvpn {
       virtual void load_dh(const std::string& dh_txt)
       {
 	dh.parse_pem(dh_txt);
+      }
+
+      virtual std::string extract_ca() const
+      {
+	throw ssl_options_error("extract_ca not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_crl() const
+      {
+	throw ssl_options_error("CRL not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_cert() const
+      {
+	throw ssl_options_error("extract_cert not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::vector<std::string> extract_extra_certs() const
+      {
+	throw ssl_options_error("extract_extra_certs not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_private_key() const
+      {
+	throw ssl_options_error("extract_priv_key not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual std::string extract_dh() const
+      {
+	throw ssl_options_error("extract_dh not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual PKType private_key_type() const
+      {
+	throw ssl_options_error("private_key_type not implemented yet in OpenSSL driver"); // fixme
+      }
+
+      virtual size_t private_key_length() const
+      {
+	throw ssl_options_error("private_key_length not implemented yet in OpenSSL driver"); // fixme
       }
 
       virtual void set_frame(const Frame::Ptr& frame_arg)

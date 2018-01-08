@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -785,10 +785,23 @@ namespace openvpn {
 	  }
       }
 
+      // react to any tls warning triggered during the tls-handshake
+      virtual void check_tls_warnings()
+      {
+	uint32_t tls_warnings = get_tls_warnings();
+
+	if (tls_warnings & SSLAPI::TLS_WARN_SIG_MD5)
+	{
+	  ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with MD5. Please inform your admin to upgrade to a stronger algorithm. Support for MD5 will be dropped at end of Apr 2018");
+	  cli_events->add_event(std::move(ev));
+	}
+      }
+
       // base class calls here when primary session transitions to ACTIVE state
       virtual void active()
       {
 	OPENVPN_LOG("Session is ACTIVE");
+	check_tls_warnings();
 	schedule_push_request_callback(Time::Duration::seconds(0));
       }
 
@@ -842,6 +855,7 @@ namespace openvpn {
 	    else
 	      {
 		housekeeping_timer.cancel();
+		housekeeping_schedule.reset();
 	      }
 	  }
       }

@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -44,6 +44,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/olong.hpp>
+#include <openvpn/common/to_string.hpp>
 
 #ifdef OPENVPN_PLATFORM_WIN
 #include <time.h>     // for ::time() on Windows
@@ -167,6 +168,11 @@ namespace openvpn {
 	return duration_ - (duration_ * T(3) / T(128));
       }
 
+      double to_double() const
+      {
+	return double(duration_) / double(prec);
+      }
+
       T raw() const { return duration_; }
 
 #     define OPENVPN_DURATION_REL(OP) bool operator OP(const Duration& d) const { return duration_ OP d.duration_; }
@@ -253,6 +259,23 @@ namespace openvpn {
       return delta_prec(t) / long(prec);
     }
 
+    double delta_float(const TimeType& t) const
+    {
+      return (double(time_) - double(t.time_)) / double(prec);
+    }
+
+    std::string delta_str(const TimeType& t) const
+    {
+      if (!defined())
+	return "UNDEF-TIME";
+      const double df = delta_float(t);
+      std::string ret;
+      if (df >= 0.0)
+	ret += '+';
+      ret += openvpn::to_string(df);
+      return ret;
+    }
+
 #   define OPENVPN_TIME_REL(OP) bool operator OP(const TimeType& t) const { return time_ OP t.time_; }
     OPENVPN_TIME_REL(==)
     OPENVPN_TIME_REL(!=)
@@ -278,9 +301,13 @@ namespace openvpn {
     static void reset_base()
     {
       base_ = ::time(0);
-#     ifdef OPENVPN_PLATFORM_WIN
-        win_recalibrate(::GetTickCount());
-#     endif
+#ifdef OPENVPN_PLATFORM_WIN
+#if (_WIN32_WINNT >= 0x0600)
+      win_recalibrate((DWORD)::GetTickCount64());
+#else
+      win_recalibrate(::GetTickCount());
+#endif
+#endif
     }
 
     // number of tenths of a microsecond since January 1, 1601.
@@ -303,7 +330,11 @@ namespace openvpn {
 
     static T now_()
     {
+#if (_WIN32_WINNT >= 0x0600)
+      const DWORD gtc = (DWORD)::GetTickCount64();
+#else
       const DWORD gtc = ::GetTickCount();
+#endif
       if (gtc < gtc_last)
 	win_recalibrate(gtc);
       const time_t sec = gtc_base + gtc / 1000;

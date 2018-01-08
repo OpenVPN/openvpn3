@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -24,10 +24,7 @@
 #ifndef OPENVPN_TUN_BUILDER_SETUP_H
 #define OPENVPN_TUN_BUILDER_SETUP_H
 
-#ifdef HAVE_JSONCPP
-#include "json/json.h"
-#endif
-
+#include <openvpn/common/jsonlib.hpp>
 #include <openvpn/common/destruct.hpp>
 #include <openvpn/common/stop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
@@ -36,7 +33,7 @@ namespace openvpn {
   namespace TunBuilderSetup {
     struct Config
     {
-#ifdef HAVE_JSONCPP
+#ifdef HAVE_JSON
       virtual Json::Value to_json() = 0;
       virtual void from_json(const Json::Value& root, const std::string& title) = 0;
 #endif

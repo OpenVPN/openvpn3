@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -518,6 +518,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "proto",          required_argument,  nullptr,      'P' },
     { "ipv6",           required_argument,  nullptr,      '6' },
     { "server",         required_argument,  nullptr,      's' },
+    { "port",           required_argument,  nullptr,      'R' },
     { "timeout",        required_argument,  nullptr,      't' },
     { "compress",       required_argument,  nullptr,      'c' },
     { "pk-password",    required_argument,  nullptr,      'z' },
@@ -565,6 +566,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string proto;
 	std::string ipv6;
 	std::string server;
+	std::string port;
 	int timeout = 0;
 	std::string compress;
 	std::string privateKeyPassword;
@@ -597,7 +599,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -642,6 +644,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 's':
 		server = optarg;
+		break;
+	      case 'R':
+		port = optarg;
 		break;
 	      case 't':
 		timeout = ::atoi(optarg);
@@ -760,6 +765,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		  config.content += '\n';
 		}
 	      config.serverOverride = server;
+	      config.portOverride = port;
 	      config.protoOverride = proto;
 	      config.connTimeout = timeout;
 	      config.compressionMode = compress;
@@ -892,41 +898,46 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     {
       std::cout << "OpenVPN Client (ovpncli)" << std::endl;
       std::cout << "usage: cli [options] <config-file> [extra-config-directives...]" << std::endl;
-      std::cout << "--version, -v        : show version info" << std::endl;
-      std::cout << "--eval, -e           : evaluate profile only (standalone)" << std::endl;
-      std::cout << "--merge, -m          : merge profile into unified format (standalone)" << std::endl;
-      std::cout << "--username, -u       : username" << std::endl;
-      std::cout << "--password, -p       : password" << std::endl;
-      std::cout << "--response, -r       : static response" << std::endl;
-      std::cout << "--dc, -D             : dynamic challenge/response cookie" << std::endl;
-      std::cout << "--proto, -P          : protocol override (udp|tcp)" << std::endl;
-      std::cout << "--server, -s         : server override" << std::endl;
-      std::cout << "--ipv6, -6           : IPv6 (yes|no|default)" << std::endl;
-      std::cout << "--timeout, -t        : timeout" << std::endl;
-      std::cout << "--compress, -c       : compression mode (yes|no|asym)" << std::endl;
-      std::cout << "--pk-password, -z    : private key password" << std::endl;
-      std::cout << "--tvm-override, -M   : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
-      std::cout << "--tcprof-override, -X : tls-cert-profile override (legacy, preferred, etc.)" << std::endl;
-      std::cout << "--proxy-host, -h     : HTTP proxy hostname/IP" << std::endl;
-      std::cout << "--proxy-port, -q     : HTTP proxy port" << std::endl;
-      std::cout << "--proxy-username, -U : HTTP proxy username" << std::endl;
-      std::cout << "--proxy-password, -W : HTTP proxy password" << std::endl;
-      std::cout << "--proxy-basic, -B    : allow HTTP basic auth" << std::endl;
-      std::cout << "--alt-proxy, -A      : enable alternative proxy module" << std::endl;
-      std::cout << "--dco, -d            : enable data channel offload" << std::endl;
-      std::cout << "--cache-password, -C : cache password" << std::endl;
-      std::cout << "--no-cert, -x        : disable client certificate" << std::endl;
-      std::cout << "--def-keydir, -k     : default key direction ('bi', '0', or '1')" << std::endl;
-      std::cout << "--force-aes-cbc, -f  : force AES-CBC ciphersuites" << std::endl;
-      std::cout << "--ssl-debug          : SSL debug level" << std::endl;
-      std::cout << "--google-dns, -g     : enable Google DNS fallback" << std::endl;
-      std::cout << "--auto-sess, -a      : request autologin session" << std::endl;
-      std::cout << "--persist-tun, -j    : keep TUN interface open across reconnects" << std::endl;
-      std::cout << "--peer-info, -I      : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
-      std::cout << "--gremlin, -G        : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
-      std::cout << "--epki-ca            : simulate external PKI cert supporting intermediate/root certs" << std::endl;
-      std::cout << "--epki-cert          : simulate external PKI cert" << std::endl;
-      std::cout << "--epki-key           : simulate external PKI private key" << std::endl;
+      std::cout << "--version, -v         : show version info" << std::endl;
+      std::cout << "--eval, -e            : evaluate profile only (standalone)" << std::endl;
+      std::cout << "--merge, -m           : merge profile into unified format (standalone)" << std::endl;
+      std::cout << "--username, -u        : username" << std::endl;
+      std::cout << "--password, -p        : password" << std::endl;
+      std::cout << "--response, -r        : static response" << std::endl;
+      std::cout << "--dc, -D              : dynamic challenge/response cookie" << std::endl;
+      std::cout << "--proto, -P           : protocol override (udp|tcp)" << std::endl;
+      std::cout << "--server, -s          : server override" << std::endl;
+      std::cout << "--port, -R            : port override" << std::endl;
+      std::cout << "--ipv6, -6            : IPv6 (yes|no|default)" << std::endl;
+      std::cout << "--timeout, -t         : timeout" << std::endl;
+      std::cout << "--compress, -c        : compression mode (yes|no|asym)" << std::endl;
+      std::cout << "--pk-password, -z     : private key password" << std::endl;
+      std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
+      std::cout << "--tcprof-override, -X : tls-cert-profile override (" <<
+#ifdef OPENVPN_USE_TLS_MD5
+          "insecure, " <<
+#endif
+          "legacy, preferred, etc.)" << std::endl;
+      std::cout << "--proxy-host, -h      : HTTP proxy hostname/IP" << std::endl;
+      std::cout << "--proxy-port, -q      : HTTP proxy port" << std::endl;
+      std::cout << "--proxy-username, -U  : HTTP proxy username" << std::endl;
+      std::cout << "--proxy-password, -W  : HTTP proxy password" << std::endl;
+      std::cout << "--proxy-basic, -B     : allow HTTP basic auth" << std::endl;
+      std::cout << "--alt-proxy, -A       : enable alternative proxy module" << std::endl;
+      std::cout << "--dco, -d             : enable data channel offload" << std::endl;
+      std::cout << "--cache-password, -C  : cache password" << std::endl;
+      std::cout << "--no-cert, -x         : disable client certificate" << std::endl;
+      std::cout << "--def-keydir, -k      : default key direction ('bi', '0', or '1')" << std::endl;
+      std::cout << "--force-aes-cbc, -f   : force AES-CBC ciphersuites" << std::endl;
+      std::cout << "--ssl-debug           : SSL debug level" << std::endl;
+      std::cout << "--google-dns, -g      : enable Google DNS fallback" << std::endl;
+      std::cout << "--auto-sess, -a       : request autologin session" << std::endl;
+      std::cout << "--persist-tun, -j     : keep TUN interface open across reconnects" << std::endl;
+      std::cout << "--peer-info, -I       : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
+      std::cout << "--gremlin, -G         : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
+      std::cout << "--epki-ca             : simulate external PKI cert supporting intermediate/root certs" << std::endl;
+      std::cout << "--epki-cert           : simulate external PKI cert" << std::endl;
+      std::cout << "--epki-key            : simulate external PKI private key" << std::endl;
       ret = 2;
     }
   return ret;

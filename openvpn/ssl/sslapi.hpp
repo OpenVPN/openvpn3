@@ -4,18 +4,18 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License Version 3
+//    it under the terms of the GNU Affero General Public License Version 3
 //    as published by the Free Software Foundation.
 //
 //    This program is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+//    GNU Affero General Public License for more details.
 //
-//    You should have received a copy of the GNU General Public License
+//    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
@@ -25,6 +25,7 @@
 #define OPENVPN_SSL_SSLAPI_H
 
 #include <string>
+#include <cstdint>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -47,6 +48,11 @@ namespace openvpn {
   class SSLAPI : public RC<thread_unsafe_refcount>
   {
   public:
+
+    enum TLSWarnings {
+      TLS_WARN_SIG_MD5 = (1 << 0),
+    };
+
     typedef RCPtr<SSLAPI> Ptr;
 
     virtual void start_handshake() = 0;
@@ -58,6 +64,12 @@ namespace openvpn {
     virtual BufferPtr read_ciphertext() = 0;
     virtual std::string ssl_handshake_details() const = 0;
     virtual const AuthCert::Ptr& auth_cert() const = 0;
+    uint32_t get_tls_warnings() const
+    {
+      return tls_warnings;
+    }
+  protected:
+    uint32_t tls_warnings = 0; // bitfield of SSLAPI::TLSWarnings
   };
 
   class SSLFactoryAPI : public RC<thread_unsafe_refcount>
@@ -85,11 +97,48 @@ namespace openvpn {
   public:
     typedef RCPtr<SSLConfigAPI> Ptr;
 
+    enum PKType {
+      PK_UNKNOWN = 0,
+      PK_NONE,
+      PK_RSA,
+      PK_ECKEY,
+      PK_ECKEY_DH,
+      PK_ECDSA,
+      PK_RSA_ALT,
+      PK_RSASSA_PSS,
+    };
+
     enum LoadFlags {
       LF_PARSE_MODE = (1<<0),
       LF_ALLOW_CLIENT_CERT_NOT_REQUIRED = (1<<1),
       LF_RELAY_MODE = (1<<2), // look for "relay-ca" instead of "ca" directive
     };
+
+    std::string private_key_type_string() const
+    {
+      PKType type = private_key_type();
+
+      switch (type)
+      {
+      case PK_NONE:
+	return "None";
+      case PK_RSA:
+	return "RSA";
+      case PK_ECKEY:
+	return "EC";
+      case PK_ECKEY_DH:
+	return "EC_DH";
+      case PK_ECDSA:
+	return "ECDSA";
+      case PK_RSA_ALT:
+	return "RSA_ALT";
+      case PK_RSASSA_PSS:
+	return "RSASSA_PSS";
+      case PK_UNKNOWN:
+      default:
+	return "Unknown";
+      }
+    }
 
     virtual void set_mode(const Mode& mode_arg) = 0;
     virtual const Mode& get_mode() const = 0;
@@ -101,6 +150,14 @@ namespace openvpn {
     virtual void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt) = 0;
     virtual void load_private_key(const std::string& key_txt) = 0;
     virtual void load_dh(const std::string& dh_txt) = 0;
+    virtual std::string extract_ca() const = 0;
+    virtual std::string extract_crl() const = 0;
+    virtual std::string extract_cert() const = 0;
+    virtual std::vector<std::string> extract_extra_certs() const = 0;
+    virtual std::string extract_private_key() const = 0;
+    virtual std::string extract_dh() const = 0;
+    virtual PKType private_key_type() const = 0;
+    virtual size_t private_key_length() const = 0;
     virtual void set_frame(const Frame::Ptr& frame_arg) = 0;
     virtual void set_debug_level(const int debug_level) = 0;
     virtual void set_flags(const unsigned int flags_arg) = 0;
