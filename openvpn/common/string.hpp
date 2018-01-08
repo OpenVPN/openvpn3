@@ -222,6 +222,16 @@ namespace openvpn {
       return str.find_first_of('\n') != std::string::npos;
     }
 
+    // return the first line (without newline) of a multi-line string
+    std::string first_line(const std::string& str)
+    {
+      const size_t pos = str.find_first_of('\n');
+      if (pos != std::string::npos)
+	return str.substr(0, pos);
+      else
+	return str;
+    }
+
     // Define a common interpretation of what constitutes a space character.
     // Return true if c is a space char.
     inline bool is_space(const char c)
