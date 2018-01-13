@@ -181,7 +181,7 @@ namespace openvpn {
 	  cli_rng->assert_crypto();
       }
 
-      void frame(Buffer& buf, const Status& s)
+      void frame(Buffer& buf, const Status& s) const
       {
 	if (s.opcode() == Protocol::Close)
 	  {
