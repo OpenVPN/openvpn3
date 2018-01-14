@@ -44,6 +44,7 @@
 #include <openvpn/common/base64.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/asio/asiopolysock.hpp>
+#include <openvpn/asio/asioresolverres.hpp>
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
@@ -175,6 +176,7 @@ namespace openvpn {
 	unsigned int max_header_bytes = 0;
 	olong max_content_bytes = 0;
 	unsigned int msg_overhead_bytes = 0;
+	int debug_level = 0;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
 
@@ -674,6 +676,9 @@ namespace openvpn {
 	    socket.reset(s);
 	    bind_local_addr(s);
 
+	    if (config->debug_level >= 2)
+	      OPENVPN_LOG("TCP HTTP CONNECT to " << s->remote_endpoint_str() << " res=" << asio_resolver_results_to_string(results));
+
 	    openvpn_io::async_connect(s->socket, std::move(results),
 				[self=Ptr(this)](const openvpn_io::error_code& error, const openvpn_io::ip::tcp::endpoint& endpoint)
 				{
@@ -752,6 +757,9 @@ namespace openvpn {
 											      port),
 								host.host,
 								"");
+
+	  if (config->debug_level >= 2)
+	    OPENVPN_LOG("ALT_ROUTING HTTP CONNECT to " << s->remote_endpoint_str() << " res=" << asio_resolver_results_to_string(results));
 
 	  // do async connect
 	  openvpn_io::async_connect(s->socket, std::move(results),
