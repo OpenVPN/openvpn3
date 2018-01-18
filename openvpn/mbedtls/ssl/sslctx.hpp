@@ -826,8 +826,15 @@ namespace openvpn {
 		  // set our own certificate, supporting chain (i.e. extra-certs), and external private key
 		  if (c.crt_chain)
 		    {
-		      epki_ctx.epki_enable(ctx, epki_decrypt, epki_sign, epki_key_len);
-		      mbedtls_ssl_conf_own_cert(sslconf, c.crt_chain->get(), epki_ctx.get());
+		      if (mbedtls_pk_get_type(&c.crt_chain.get()->get()->pk) == MBEDTLS_PK_RSA)
+			{
+			  epki_ctx.epki_enable(ctx, epki_decrypt, epki_sign, epki_key_len);
+			  mbedtls_ssl_conf_own_cert(sslconf, c.crt_chain->get(), epki_ctx.get());
+			}
+		      else
+			{
+			  throw MbedTLSException("cert has unsupported type for external pki support");
+			}
 		    }
 		  else
 		    throw MbedTLSException("cert is undefined");
