@@ -85,6 +85,23 @@ namespace openvpn {
       return true;
     }
 
+    inline bool is_valid_unix_sock_char(const unsigned char c)
+    {
+      return c >= 0x21 && c <= 0x7E;
+    }
+
+    inline bool is_valid_unix_sock(const std::string& host)
+    {
+      if (!host.length() || host.length() > 256)
+	return false;
+      for (const auto &c : host)
+	{
+	  if (!is_valid_unix_sock_char(c))
+	    return false;
+	}
+      return true;
+    }
+
     inline void validate_host(const std::string& host, const std::string& title)
     {
       if (!is_valid_host(host))
@@ -95,8 +112,11 @@ namespace openvpn {
 				std::string& host,
 				std::string& port,
 				const std::string& default_port,
+				const bool allow_unix,
 				unsigned int *port_save = nullptr)
     {
+      if (port_save)
+	*port_save = 0;
       const size_t pos = str.find_last_of(':');
       const size_t cb = str.find_last_of(']');
       if (pos != std::string::npos && (cb == std::string::npos || pos > cb))
@@ -118,7 +138,10 @@ namespace openvpn {
       if (host.length() >= 2 && host[0] == '[' && host[host.length()-1] == ']')
 	host = host.substr(1, host.length()-2);
 
-      return is_valid_host(host) && is_valid_port(port, port_save);
+      if (allow_unix && port == "unix")
+	return is_valid_unix_sock(host);
+      else
+	return is_valid_host(host) && is_valid_port(port, port_save);
     }
 
   }
