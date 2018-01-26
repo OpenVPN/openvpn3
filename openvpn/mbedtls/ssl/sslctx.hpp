@@ -687,16 +687,26 @@ namespace openvpn {
 	clear();
 	try {
 	  const Config& c = *ctx->config;
-	  int status;
+	  int endpoint, status;
 
 	  // set pointer back to parent
 	  parent = ctx;
 
+	  // set client/server mode
+	  if (c.mode.is_server())
+	    {
+	      endpoint = MBEDTLS_SSL_IS_SERVER;
+	      authcert.reset(new AuthCert());
+	    }
+	  else if (c.mode.is_client())
+	    endpoint = MBEDTLS_SSL_IS_CLIENT;
+	  else
+	    throw MbedTLSException("unknown client/server mode");
+
 	  // init SSL configuration object
 	  sslconf = new mbedtls_ssl_config;
 	  mbedtls_ssl_config_init(sslconf);
-	  mbedtls_ssl_config_defaults(sslconf,
-				      c.mode.is_client() ? MBEDTLS_SSL_IS_CLIENT : MBEDTLS_SSL_IS_SERVER,
+	  mbedtls_ssl_config_defaults(sslconf, endpoint,
 				      MBEDTLS_SSL_TRANSPORT_STREAM,
 				      MBEDTLS_SSL_PRESET_DEFAULT);
 
@@ -706,17 +716,6 @@ namespace openvpn {
 	  // init SSL object
 	  ssl = new mbedtls_ssl_context;
 	  mbedtls_ssl_init(ssl);
-
-	  // set client/server mode
-	  if (c.mode.is_server())
-	    {
-	      mbedtls_ssl_conf_endpoint(sslconf, MBEDTLS_SSL_IS_SERVER);
-	      authcert.reset(new AuthCert());
-	    }
-	  else if (c.mode.is_client())
-	    mbedtls_ssl_conf_endpoint(sslconf, MBEDTLS_SSL_IS_CLIENT);
-	  else
-	    throw MbedTLSException("unknown client/server mode");
 
 	  // set minimum TLS version
 	  if (!c.force_aes_cbc_ciphersuites || c.tls_version_min > TLSVersion::UNDEF)
