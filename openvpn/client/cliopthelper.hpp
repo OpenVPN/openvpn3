@@ -27,6 +27,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <utility>
 
 #ifdef HAVE_CONFIG_JSONCPP
 #include "json/json.h"
@@ -123,7 +124,7 @@ namespace openvpn {
 			  se.friendlyName = slist[1];
 			}
 		      if (!se.server.empty() && !se.friendlyName.empty() && serverList_.size() < max_server_list_size)
-			serverList_.push_back(se);
+			serverList_.push_back(std::move(se));
 		    }
 		  else if (arg1 == "PUSH_PEER_INFO")
 		    pushPeerInfo_ = true;
@@ -260,7 +261,7 @@ namespace openvpn {
 		  Option::validate_string("HOST_LIST server", se.server, 256);
 		  Option::validate_string("HOST_LIST friendly name", se.friendlyName, 256);
 		  if (!se.server.empty() && !se.friendlyName.empty() && serverList_.size() < max_server_list_size)
-		    serverList_.push_back(se);
+		    serverList_.push_back(std::move(se));
 		}
 	    }
 	}
@@ -346,7 +347,7 @@ namespace openvpn {
 	  {
 	    Option opt;
 	    opt.push_back("client");
-	    options.push_back(opt);
+	    options.push_back(std::move(opt));
 	    added = true;
 	  }
 
@@ -356,7 +357,7 @@ namespace openvpn {
 	    Option opt;
 	    opt.push_back("dev");
 	    opt.push_back("tun");
-	    options.push_back(opt);
+	    options.push_back(std::move(opt));
 	    added = true;
 	  }
 	if (added)
