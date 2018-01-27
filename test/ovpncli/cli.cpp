@@ -798,9 +798,25 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	      PeerInfo::Set::parse_csv(peer_info, config.peerInfo);
 
+	      // allow -s server override to reference a friendly name
+	      // in the config.
+	      //   setenv SERVER <HOST>/<FRIENDLY_NAME>
+	      if (!config.serverOverride.empty())
+		{
+		  const ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
+		  for (auto &se : eval.serverList)
+		    {
+		      if (config.serverOverride == se.friendlyName)
+			{
+			  config.serverOverride = se.server;
+			  break;
+			}
+		    }
+		}
+
 	      if (eval)
 		{
-		  ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
+		  const ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
 		  std::cout << "EVAL PROFILE" << std::endl;
 		  std::cout << "error=" << eval.error << std::endl;
 		  std::cout << "message=" << eval.message << std::endl;
@@ -814,6 +830,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		  std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
 		  std::cout << "allowPasswordSave=" << eval.allowPasswordSave << std::endl;
 
+		  if (!config.serverOverride.empty())
+		    std::cout << "server=" << config.serverOverride << std::endl;
+
 		  for (size_t i = 0; i < eval.serverList.size(); ++i)
 		    {
 		      const ClientAPI::ServerEntry& se = eval.serverList[i];
@@ -823,7 +842,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      else
 		{
 		  Client client;
-		  ClientAPI::EvalConfig eval = client.eval_config(config);
+		  const ClientAPI::EvalConfig eval = client.eval_config(config);
 		  if (eval.error)
 		    OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
 		  if (eval.autologin)
