@@ -687,7 +687,7 @@ namespace openvpn {
 	    out << ',' << compstr;
 	}
 
-	if (key_direction >= 0)
+	if (tls_auth_context && (key_direction >= 0))
 	  out << ",keydir " << key_direction;
 
 	out << ",cipher " << CryptoAlgs::name(dc.cipher(), "[null-cipher]");

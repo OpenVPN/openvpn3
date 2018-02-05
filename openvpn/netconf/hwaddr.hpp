@@ -33,6 +33,8 @@
 #include <openvpn/tun/win/tunutil.hpp>
 #elif defined(OPENVPN_PLATFORM_MAC)
 #include <openvpn/tun/mac/gwv4.hpp>
+#elif defined(TARGET_OS_IPHONE)
+#include <UIKit/UIKit.h>
 #endif
 
 namespace openvpn {
@@ -57,6 +59,13 @@ namespace openvpn {
 	const MACAddr& mac = gw.hwaddr();
 	return mac.to_string();
       }
+#elif defined(TARGET_OS_IPHONE)
+    // as reported at https://developer.apple.com/library/content/releasenotes/General/WhatsNewIniOS/Articles/iOS7.html#//apple_ref/doc/uid/TP40013162-SW34
+    // we can't get the MAC address from iOS for privacy reasons, but we can
+    // use the UUID as unique identifier. It is unique among the App domain,
+    // meaning that a different app will get a different UUID from this call
+    const NSString *uuid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    return std::string([uuid UTF8String]);
 #endif
     return std::string();
   }

@@ -1,7 +1,7 @@
 function check_download()
 {
   if [ -f $DL/$FNAME ]; then
-    CHECK=$(sha256sum $DL/$FNAME |awk '{printf $1};')
+    CHECK=$(shasum -a 256 $DL/$FNAME |awk '{printf $1};')
     if [ "$CHECK" == "$CSUM" ]; then
       return 0
     else
