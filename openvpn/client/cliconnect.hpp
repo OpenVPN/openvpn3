@@ -429,14 +429,18 @@ namespace openvpn {
 		      {
 			ClientEvent::Base::Ptr ev = new ClientEvent::DynamicChallenge(reason);
 			client_options->events().add_event(std::move(ev));
+			stop();
 		      }
 		    else
 		      {
 			ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(reason);
 			client_options->events().add_event(std::move(ev));
 			client_options->stats().error(Error::AUTH_FAILED);
+			if (client_options->retry_on_auth_failed())
+			  queue_restart(5000);
+			else
+			  stop();
 		      }
-		    stop();
 		  }
 		  break;
 		case Error::TUN_SETUP_FAILED:

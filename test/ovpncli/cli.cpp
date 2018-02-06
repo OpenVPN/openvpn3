@@ -543,6 +543,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "merge",          no_argument,        nullptr,      'm' },
     { "version",        no_argument,        nullptr,      'v' },
     { "auto-sess",      no_argument,        nullptr,      'a' },
+    { "auth-retry",     no_argument,        nullptr,      'Y' },
     { "tcprof-override", required_argument, nullptr,      'X' },
     { "ssl-debug",      required_argument,  nullptr,       1  },
     { "epki-cert",      required_argument,  nullptr,       2  },
@@ -588,6 +589,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	int sslDebugLevel = 0;
 	bool googleDnsFallback = false;
 	bool autologinSessions = false;
+	bool retryOnAuthFailed = false;
 	bool tunPersist = false;
 	bool merge = false;
 	bool version = false;
@@ -599,7 +601,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvau:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -692,6 +694,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'a':
 		autologinSessions = true;
+		break;
+	      case 'Y':
+		retryOnAuthFailed = true;
 		break;
 	      case 'j':
 		tunPersist = true;
@@ -786,6 +791,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.sslDebugLevel = sslDebugLevel;
 	      config.googleDnsFallback = googleDnsFallback;
 	      config.autologinSessions = autologinSessions;
+	      config.retryOnAuthFailed = retryOnAuthFailed;
 	      config.tunPersist = tunPersist;
 	      config.gremlinConfig = gremlin;
 	      config.info = true;
@@ -951,6 +957,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--ssl-debug           : SSL debug level" << std::endl;
       std::cout << "--google-dns, -g      : enable Google DNS fallback" << std::endl;
       std::cout << "--auto-sess, -a       : request autologin session" << std::endl;
+      std::cout << "--auth-retry, -Y      : retry connection on auth failure" << std::endl;
       std::cout << "--persist-tun, -j     : keep TUN interface open across reconnects" << std::endl;
       std::cout << "--peer-info, -I       : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
       std::cout << "--gremlin, -G         : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;

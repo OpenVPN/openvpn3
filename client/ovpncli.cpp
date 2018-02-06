@@ -414,6 +414,7 @@ namespace openvpn {
 	bool google_dns_fallback = false;
 	bool synchronous_dns_lookup = false;
 	bool autologin_sessions = false;
+	bool retry_on_auth_failed = false;
 	std::string private_key_password;
 	std::string external_pki_alias;
 	bool disable_client_cert = false;
@@ -654,6 +655,7 @@ namespace openvpn {
 	state->google_dns_fallback = config.googleDnsFallback;
 	state->synchronous_dns_lookup = config.synchronousDnsLookup;
 	state->autologin_sessions = config.autologinSessions;
+	state->retry_on_auth_failed = config.retryOnAuthFailed;
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
@@ -921,6 +923,7 @@ namespace openvpn {
       cc.google_dns_fallback = state->google_dns_fallback;
       cc.synchronous_dns_lookup = state->synchronous_dns_lookup;
       cc.autologin_sessions = state->autologin_sessions;
+      cc.retry_on_auth_failed = state->retry_on_auth_failed;
       cc.proto_context_options = state->proto_context_options;
       cc.http_proxy_options = state->http_proxy_options;
       cc.alt_proxy = state->alt_proxy;

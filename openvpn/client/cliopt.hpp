@@ -142,6 +142,7 @@ namespace openvpn {
       int default_key_direction = -1;
       bool force_aes_cbc_ciphersuites = false;
       bool autologin_sessions = false;
+      bool retry_on_auth_failed = false;
       std::string tls_version_min_override;
       std::string tls_cert_profile_override;
       PeerInfo::Set::Ptr extra_peer_info;
@@ -193,7 +194,8 @@ namespace openvpn {
 	autologin_sessions(false),
 	creds_locked(false),
 	asio_work_always_on_(false),
-	synchronous_dns_lookup(false)
+	synchronous_dns_lookup(false),
+	retry_on_auth_failed_(config.retry_on_auth_failed)
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
@@ -548,6 +550,11 @@ namespace openvpn {
 	return false;
     }
 
+    bool retry_on_auth_failed() const
+    {
+      return retry_on_auth_failed_;
+    }
+
     Client::Config::Ptr client_config(const bool relay_mode)
     {
       Client::Config::Ptr cli_config = new Client::Config;
@@ -836,6 +843,7 @@ namespace openvpn {
     bool creds_locked;
     bool asio_work_always_on_;
     bool synchronous_dns_lookup;
+    bool retry_on_auth_failed_;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;
