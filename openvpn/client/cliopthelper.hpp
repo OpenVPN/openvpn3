@@ -77,7 +77,7 @@ namespace openvpn {
 	reset_pod();
 
 	// limits
-	const size_t max_server_list_size = 64;
+	const size_t max_server_list_size = ProfileParseLimits::MAX_SERVER_LIST_SIZE;
 
 	// setenv UV_x
 	PeerInfo::Set::Ptr peer_info_uv(new PeerInfo::Set);

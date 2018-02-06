@@ -33,6 +33,7 @@ namespace openvpn {
       MAX_DIRECTIVE_SIZE=64,   // maximum number of chars in an OpenVPN directive
       OPT_OVERHEAD=64,         // bytes overhead of one option/directive, for accounting purposes
       TERM_OVERHEAD=16,        // bytes overhead of one argument in an option, for accounting purposes
+      MAX_SERVER_LIST_SIZE=4096, // maximum server list size, i.e. "setenv SERVER ..."
     };
   }
 }
