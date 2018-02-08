@@ -275,7 +275,8 @@ namespace openvpn {
       {
 	std::ostringstream out;
 	// eg. "godot@foo.bar.gov:443 (1.2.3.4) via TCPv4 on tun0/5.5.1.1"
-	out << user << '@';
+	if (!user.empty())
+	  out << user << '@';
 	if (server_host.find_first_of(':') == std::string::npos)
 	  out << server_host;
 	else
