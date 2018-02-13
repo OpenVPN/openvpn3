@@ -138,9 +138,9 @@ namespace openvpn {
 	    {
 	    case E_SUCCESS:
 	    case E_SHUTDOWN:
-	      return true;
-	    default:
 	      return false;
+	    default:
+	      return true;
 	    }
 	}
       };
