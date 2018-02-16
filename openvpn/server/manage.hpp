@@ -87,6 +87,9 @@ namespace openvpn {
 				 const std::string* username,
 				 const bool challenge,
 				 const bool throw_on_error) = 0;
+
+      // notify of local user properties update
+      virtual void userprop_local_update() = 0;
     };
 
     // Base class for the client instance receiver.  Note that all
