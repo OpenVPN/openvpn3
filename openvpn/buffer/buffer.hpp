@@ -655,7 +655,7 @@ namespace openvpn {
 	{
 	  data_ = new T[capacity_];
 	  if (size_)
-	    std::memcpy(data_ + offset_, other.data_, size_ * sizeof(T));
+	    std::memcpy(data_ + offset_, other.data_ + offset_, size_ * sizeof(T));
 	}
     }
 
