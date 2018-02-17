@@ -304,7 +304,8 @@ namespace openvpn {
 	if (buf.defined())
 	  {
 	    rr_content_bytes += buf.size();
-	    rr_limit_bytes += buf.size() + config->msg_overhead_bytes;
+	    if (!websocket)
+	      rr_limit_bytes += buf.size() + config->msg_overhead_bytes;
 	    if (max_content_bytes && rr_limit_bytes > max_content_bytes)
 	      {
 		parent().base_error_handler(STATUS::E_CONTENT_SIZE, "HTTP content too large");
