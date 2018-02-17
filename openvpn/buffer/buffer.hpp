@@ -53,7 +53,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
-#include <type_traits> // for std::is_nothrow_move_constructible
+#include <type_traits> // for std::is_nothrow_move_constructible, std::remove_const
 
 #ifndef OPENVPN_NO_IO
 #include <openvpn/io/io.hpp>
@@ -146,6 +146,7 @@ namespace openvpn {
   public:
     typedef T* type;
     typedef const T* const_type;
+    typedef typename std::remove_const<T>::type NCT; // non-const type
 
     BufferType()
     {
@@ -474,14 +475,14 @@ namespace openvpn {
       prepend((const T*)data, size);
     }
 
-    void read(T* data, const size_t size)
+    void read(NCT* data, const size_t size)
     {
       std::memcpy(data, read_alloc(size), size * sizeof(T));
     }
 
     void read(void* data, const size_t size)
     {
-      read((T*)data, size);
+      read((NCT*)data, size);
     }
 
     T* write_alloc(const size_t size)
