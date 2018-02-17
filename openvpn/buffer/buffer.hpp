@@ -855,10 +855,17 @@ namespace openvpn {
     unsigned int flags_;
   };
 
+  // specializations of BufferType for unsigned char
   typedef BufferType<unsigned char> Buffer;
   typedef BufferType<const unsigned char> ConstBuffer;
   typedef BufferAllocatedType<unsigned char, thread_unsafe_refcount> BufferAllocated;
   typedef RCPtr<BufferAllocated> BufferPtr;
+
+  // BufferAllocated with thread-safe refcount
+  typedef BufferAllocatedType<unsigned char, thread_safe_refcount> BufferAllocatedTS;
+  typedef RCPtr<BufferAllocatedTS> BufferPtrTS;
+
+  // cast BufferType<T> to BufferType<const T>
 
   template <typename T>
   inline BufferType<const T>& const_buffer_ref(BufferType<T>& src)
