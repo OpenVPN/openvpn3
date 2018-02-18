@@ -1268,6 +1268,17 @@ namespace openvpn {
       return n;
     }
 
+    void show_unused_options(const char *title=nullptr) const
+    {
+      // show unused options
+      if (n_unused())
+	{
+	  if (!title)
+	    title = "NOTE: Unused Options";
+	  OPENVPN_LOG_NTNL(title << std::endl << render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
+	}
+    }
+
     // Add item to underlying option list while updating map as well.
     void add_item(const Option& opt) 
     {

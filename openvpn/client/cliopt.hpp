@@ -491,8 +491,7 @@ namespace openvpn {
       }
 
       // show unused options
-      if (opt.n_unused())
-	OPENVPN_LOG(OPENVPN_UNUSED_OPTIONS << std::endl << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
+      opt.show_unused_options(OPENVPN_UNUSED_OPTIONS);
     }
 
     static PeerInfo::Set::Ptr build_peer_info(const Config& config, const ParseClientConfig& pcc, const bool autologin_sessions)
