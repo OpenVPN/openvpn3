@@ -522,6 +522,9 @@ namespace openvpn {
 	  if (!ssl)
 	    throw OpenSSLException("OpenSSLContext::SSL: SSL_new failed");
 
+	  // release unneeded buffers
+	  SSL_set_mode(ssl, SSL_MODE_RELEASE_BUFFERS);
+
 	  // verify hostname
 	  if (hostname)
 	    {
