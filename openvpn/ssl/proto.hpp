@@ -1765,9 +1765,9 @@ namespace openvpn {
 	// verify tls_auth packet ID
 	const bool pid_ok = proto.ta_pid_recv.test_add(pid, t, false);
 	// make sure that our own PSID is contained in packet received from peer
-	if (ReliableAck::ack_skip(recv))
+	if (ReliableAck::ack_skip(work))
 	  {
-	    ProtoSessionID dest_psid(recv);
+	    ProtoSessionID dest_psid(work);
 	    if (!proto.psid_self.match(dest_psid))
 	      return false;
 	  }
