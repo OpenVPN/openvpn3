@@ -1593,8 +1593,9 @@ namespace openvpn {
 	      return validate_tls_plain(recv, proto, now);
 	    }
 	}
-	catch (BufferException&)
+	catch (BufferException& e)
 	  {
+	    OPENVPN_LOG_PROTO_VERBOSE("validate() exception: " << e.what());
 	  }
 	return false;
       }
