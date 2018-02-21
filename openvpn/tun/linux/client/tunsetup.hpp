@@ -34,7 +34,6 @@
 #include <openvpn/common/action.hpp>
 #include <openvpn/addr/route.hpp>
 #include <openvpn/tun/builder/capture.hpp>
-#include <openvpn/tun/linux/tun.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
 
