@@ -24,6 +24,12 @@
 #ifndef OPENVPN_TUN_LINUX_CLIENT_TUNSETUP_H
 #define OPENVPN_TUN_LINUX_CLIENT_TUNSETUP_H
 
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <net/if.h>
+#include <linux/if_tun.h>
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/split.hpp>
@@ -34,6 +40,7 @@
 #include <openvpn/common/action.hpp>
 #include <openvpn/addr/route.hpp>
 #include <openvpn/tun/builder/capture.hpp>
+#include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
 
@@ -41,6 +48,13 @@ namespace openvpn {
   namespace TunLinux {
 
     OPENVPN_EXCEPTION(tun_linux_error);
+    OPENVPN_EXCEPTION(tun_open_error);
+    OPENVPN_EXCEPTION(tun_layer_error);
+    OPENVPN_EXCEPTION(tun_ioctl_error);
+    OPENVPN_EXCEPTION(tun_fcntl_error);
+    OPENVPN_EXCEPTION(tun_name_error);
+    OPENVPN_EXCEPTION(tun_tx_queue_len_error);
+    OPENVPN_EXCEPTION(tun_ifconfig_error);
 
     enum { // add_del_route flags
       R_IPv6=(1<<0),
@@ -324,6 +338,107 @@ namespace openvpn {
 
       // fixme -- Handle pushed DNS servers
     }
+
+    class Setup : public TunBuilderSetup::Base
+    {
+    public:
+      typedef RCPtr<Setup> Ptr;
+
+      struct Config : public TunBuilderSetup::Config
+      {
+	std::string iface_name;
+	Layer layer; // OSI layer
+	std::string dev_name;
+	int txqueuelen;
+      };
+
+      virtual void destroy(std::ostream &os) { }
+
+      virtual int establish(const TunBuilderCapture& pull, // defined by TunBuilderSetup::Base
+			    TunBuilderSetup::Config* config,
+			    Stop* stop,
+			    std::ostream& os) override
+      {
+	// get configuration
+	Config *conf = dynamic_cast<Config *>(config);
+	if (!conf)
+	  throw tun_linux_error("missing config");
+
+	static const char node[] = "/dev/net/tun";
+	ScopedFD fd(open(node, O_RDWR));
+	if (!fd.defined())
+	  OPENVPN_THROW(tun_open_error, "error opening tun device " << node << ": " << errinfo(errno));
+
+	struct ifreq ifr;
+	std::memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_flags = IFF_ONE_QUEUE;
+	ifr.ifr_flags |= IFF_NO_PI;
+	if (conf->layer() == Layer::OSI_LAYER_3)
+	  ifr.ifr_flags |= IFF_TUN;
+	else if (conf->layer() == Layer::OSI_LAYER_2)
+	  ifr.ifr_flags |= IFF_TAP;
+	else
+	  throw tun_layer_error("unknown OSI layer");
+
+	open_unit(conf->dev_name, ifr, fd);
+
+	if (fcntl (fd(), F_SETFL, O_NONBLOCK) < 0)
+	  throw tun_fcntl_error(errinfo(errno));
+
+	// Set the TX send queue size
+	if (conf->txqueuelen)
+	  {
+	    struct ifreq netifr;
+	    ScopedFD ctl_fd(socket (AF_INET, SOCK_DGRAM, 0));
+
+	    if (ctl_fd.defined())
+	      {
+		std::memset(&netifr, 0, sizeof(netifr));
+		strcpy (netifr.ifr_name, ifr.ifr_name);
+		netifr.ifr_qlen = conf->txqueuelen;
+		if (ioctl (ctl_fd(), SIOCSIFTXQLEN, (void *) &netifr) < 0)
+		  throw tun_tx_queue_len_error(errinfo(errno));
+	      }
+	    else
+	      throw tun_tx_queue_len_error(errinfo(errno));
+	  }
+
+	conf->iface_name = ifr.ifr_name;
+
+	return fd.release();
+      }
+
+    private:
+      void open_unit(const std::string& name, struct ifreq& ifr, ScopedFD& fd)
+      {
+	if (!name.empty())
+	  {
+	    const int max_units = 256;
+	    for (int unit = 0; unit < max_units; ++unit)
+	      {
+		std::string n = name;
+		if (unit)
+		  n += openvpn::to_string(unit);
+		if (n.length() < IFNAMSIZ)
+		  ::strcpy (ifr.ifr_name, n.c_str());
+		else
+		  throw tun_name_error();
+		if (ioctl (fd(), TUNSETIFF, (void *) &ifr) == 0)
+		  return;
+	      }
+	    const int eno = errno;
+	    OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' after trying " << max_units << " units : " << errinfo(eno));
+	  }
+	else
+	  {
+	    if (ioctl (fd(), TUNSETIFF, (void *) &ifr) < 0)
+	      {
+		const int eno = errno;
+		OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' : " << errinfo(eno));
+	      }
+	  }
+      }
+    };
   }
 } // namespace openvpn
 

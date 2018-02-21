@@ -24,39 +24,16 @@
 #ifndef OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H
 #define OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H
 
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <net/if.h>
-#include <linux/if_tun.h>
-
 #include <openvpn/asio/asioerr.hpp>
-#include <openvpn/common/exception.hpp>
-#include <openvpn/common/file.hpp>
-#include <openvpn/common/split.hpp>
-#include <openvpn/common/splitlines.hpp>
-#include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/to_string.hpp>
-#include <openvpn/common/process.hpp>
-#include <openvpn/common/action.hpp>
-#include <openvpn/addr/route.hpp>
+#include <openvpn/common/cleanup.hpp>
+#include <openvpn/common/scoped_fd.hpp>
+#include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/tunio.hpp>
-#include <openvpn/tun/builder/capture.hpp>
+#include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/linux/client/tunsetup.hpp>
-#include <openvpn/tun/client/tunbase.hpp>
-#include <openvpn/tun/client/tunprop.hpp>
 
 namespace openvpn {
   namespace TunLinux {
-
-    // exceptions
-    OPENVPN_EXCEPTION(tun_open_error);
-    OPENVPN_EXCEPTION(tun_layer_error);
-    OPENVPN_EXCEPTION(tun_ioctl_error);
-    OPENVPN_EXCEPTION(tun_fcntl_error);
-    OPENVPN_EXCEPTION(tun_name_error);
-    OPENVPN_EXCEPTION(tun_tx_queue_len_error);
-    OPENVPN_EXCEPTION(tun_ifconfig_error);
 
     struct PacketFrom
     {
@@ -76,87 +53,17 @@ namespace openvpn {
 	  ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
 	  const SessionStats::Ptr& stats_arg,
-	  const std::string& name,
-	  const Layer& layer,
-	  const int txqueuelen)
+	  const int socket,
+	  const std::string& name)
 	: Base(read_handler_arg, frame_arg, stats_arg)
       {
-	static const char node[] = "/dev/net/tun";
-	ScopedFD fd(open(node, O_RDWR));
-	if (!fd.defined())
-	  OPENVPN_THROW(tun_open_error, "error opening tun device " << node << ": " << errinfo(errno));
-
-	struct ifreq ifr;
-	std::memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_flags = IFF_ONE_QUEUE;
-	ifr.ifr_flags |= IFF_NO_PI;
-	if (layer() == Layer::OSI_LAYER_3)
-	  ifr.ifr_flags |= IFF_TUN;
-	else if (layer() == Layer::OSI_LAYER_2)
-	  ifr.ifr_flags |= IFF_TAP;
-	else
-	  throw tun_layer_error("unknown OSI layer");
-
-	open_unit(name, ifr, fd);
-
-	if (fcntl (fd(), F_SETFL, O_NONBLOCK) < 0)
-	  throw tun_fcntl_error(errinfo(errno));
-
-	// Set the TX send queue size
-	if (txqueuelen)
-	  {
-	    struct ifreq netifr;
-	    ScopedFD ctl_fd(socket (AF_INET, SOCK_DGRAM, 0));
-
-	    if (ctl_fd.defined())
-	      {
-		std::memset(&netifr, 0, sizeof(netifr));
-		strcpy (netifr.ifr_name, ifr.ifr_name);
-		netifr.ifr_qlen = txqueuelen;
-		if (ioctl (ctl_fd(), SIOCSIFTXQLEN, (void *) &netifr) < 0)
-		  throw tun_tx_queue_len_error(errinfo(errno));
-	      }
-	    else
-	      throw tun_tx_queue_len_error(errinfo(errno));
-	  }
-
-	Base::name_ = ifr.ifr_name;
-	Base::stream = new openvpn_io::posix::stream_descriptor(io_context, fd.release());
+	Base::name_ = name;
+	Base::retain_stream = true;
+	Base::stream = new openvpn_io::posix::stream_descriptor(io_context, socket);
 	OPENVPN_LOG_TUN(Base::name_ << " opened");
       }
 
       ~Tun() { Base::stop(); }
-
-    private:
-      static void open_unit(const std::string& name, struct ifreq& ifr, ScopedFD& fd)
-      {
-	if (!name.empty())
-	  {
-	    const int max_units = 256;
-	    for (int unit = 0; unit < max_units; ++unit)
-	      {
-		std::string n = name;
-		if (unit)
-		  n += openvpn::to_string(unit);
-		if (n.length() < IFNAMSIZ)
-		  ::strcpy (ifr.ifr_name, n.c_str());
-		else
-		  throw tun_name_error();
-		if (ioctl (fd(), TUNSETIFF, (void *) &ifr) == 0)
-		  return;
-	      }
-	    const int eno = errno;
-	    OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' after trying " << max_units << " units : " << errinfo(eno));
-	  }
-	else
-	  {
-	    if (ioctl (fd(), TUNSETIFF, (void *) &ifr) < 0)
-	      {
-		const int eno = errno;
-		OPENVPN_THROW(tun_ioctl_error, "failed to open tun device '" << name << "' : " << errinfo(eno));
-	      }
-	  }
-      }
     };
 
     class ClientConfig : public TunClientFactory
@@ -172,6 +79,8 @@ namespace openvpn {
       int n_parallel = 8;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
+
+      TunBuilderSetup::Factory::Ptr tun_setup_factory;
 
       void load(const OptionList& opt)
       {
@@ -196,6 +105,15 @@ namespace openvpn {
       virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
 						TunClientParent& parent,
 						TransportClient* transcli);
+
+      TunBuilderSetup::Base::Ptr new_setup_obj()
+      {
+	if (tun_setup_factory)
+	  return tun_setup_factory->new_setup_obj();
+	else
+	  return new TunLinux::Setup();
+      }
+
     private:
       ClientConfig() {}
     };
@@ -232,6 +150,27 @@ namespace openvpn {
 
 	      OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
+	      // create new tun setup object
+	      tun_setup = config->new_setup_obj();
+
+	      // create config object for tun setup layer
+	      Setup::Config tsconf;
+	      tsconf.layer = config->tun_prop.layer;
+	      tsconf.dev_name = config->dev_name;
+	      tsconf.txqueuelen = config->txqueuelen;
+
+	      int sd = -1;
+
+	      // open/config tun
+	      {
+		std::ostringstream os;
+		auto os_print =
+		    Cleanup([&os]() { OPENVPN_LOG_STRING(os.str()); });
+		sd = tun_setup->establish(*po, &tsconf, nullptr, os);
+	      }
+
+	      state->iface_name = tsconf.iface_name;
+
 	      // configure tun/tap interface properties
 	      ActionList::Ptr add_cmds = new ActionList();
 	      remove_cmds.reset(new ActionList());
@@ -241,9 +180,8 @@ namespace openvpn {
 				     this,
 				     config->frame,
 				     config->stats,
-				     config->dev_name,
-				     config->tun_prop.layer,
-				     config->txqueuelen
+				     sd,
+				     state->iface_name
 				     ));
 	      impl->start(config->n_parallel);
 
@@ -371,6 +309,7 @@ namespace openvpn {
       TunImpl::Ptr impl;
       TunProp::State::Ptr state;
       ActionList::Ptr remove_cmds;
+      TunBuilderSetup::Base::Ptr tun_setup;
       bool halt;
     };
 
