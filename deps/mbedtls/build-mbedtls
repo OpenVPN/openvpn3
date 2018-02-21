@@ -53,7 +53,8 @@ else
 
     # apply pre-generated patches
     for file in $O3/core/deps/mbedtls/patches/*.patch; do
-        patch -p1 <$file
+        echo Applying patch: $file
+        git apply $file
     done
 fi
 
