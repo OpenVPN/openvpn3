@@ -352,7 +352,12 @@ namespace openvpn {
 	int txqueuelen;
       };
 
-      virtual void destroy(std::ostream &os) { }
+      virtual void destroy(std::ostream &os)
+      {
+	// remove added routes
+	if (remove_cmds)
+	  remove_cmds->execute(std::cout);
+      }
 
       virtual int establish(const TunBuilderCapture& pull, // defined by TunBuilderSetup::Base
 			    TunBuilderSetup::Config* config,
@@ -405,6 +410,15 @@ namespace openvpn {
 
 	conf->iface_name = ifr.ifr_name;
 
+	ActionList::Ptr add_cmds = new ActionList();
+	remove_cmds.reset(new ActionListReversed()); // remove commands executed in reversed order
+
+	// configure tun properties
+	tun_config(ifr.ifr_name, pull, nullptr, *add_cmds, *remove_cmds);
+
+	// execute commands to bring up interface
+	add_cmds->execute(std::cout);
+
 	return fd.release();
       }
 
@@ -438,6 +452,8 @@ namespace openvpn {
 	      }
 	  }
       }
+
+      ActionListReversed::Ptr remove_cmds;
     };
   }
 } // namespace openvpn

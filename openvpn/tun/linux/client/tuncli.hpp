@@ -66,6 +66,8 @@ namespace openvpn {
       ~Tun() { Base::stop(); }
     };
 
+    typedef TunPersistTemplate<ScopedFD> TunPersist;
+
     class ClientConfig : public TunClientFactory
     {
     public:
@@ -81,6 +83,7 @@ namespace openvpn {
       SessionStats::Ptr stats;
 
       TunBuilderSetup::Factory::Ptr tun_setup_factory;
+      TunPersist::Ptr tun_persist;
 
       void load(const OptionList& opt)
       {
@@ -131,49 +134,75 @@ namespace openvpn {
 	if (!impl)
 	  {
 	    halt = false;
+
+	    if (config->tun_persist)
+	      {
+		OPENVPN_LOG("TunPersist: long-term session scope");
+		tun_persist = config->tun_persist; // long-term persistent
+	      }
+	    else
+	      {
+		OPENVPN_LOG("TunPersist: short-term connection scope");
+		tun_persist.reset(new TunPersist(true, false, nullptr)); // short-term
+	      }
+
 	    try {
 	      const IP::Addr server_addr = transcli.server_endpoint_addr();
 
-	      // notify parent
-	      parent.tun_pre_tun_config();
-
-	      // parse pushed options
-	      TunBuilderCapture::Ptr po(new TunBuilderCapture());
-	      TunProp::configure_builder(po.get(),
-					 state.get(),
-					 config->stats.get(),
-					 server_addr,
-					 config->tun_prop,
-					 opt,
-					 nullptr,
-					 false);
-
-	      OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
-
-	      // create new tun setup object
-	      tun_setup = config->new_setup_obj();
-
-	      // create config object for tun setup layer
-	      Setup::Config tsconf;
-	      tsconf.layer = config->tun_prop.layer;
-	      tsconf.dev_name = config->dev_name;
-	      tsconf.txqueuelen = config->txqueuelen;
-
 	      int sd = -1;
 
-	      // open/config tun
-	      {
-		std::ostringstream os;
-		auto os_print =
-		    Cleanup([&os]() { OPENVPN_LOG_STRING(os.str()); });
-		sd = tun_setup->establish(*po, &tsconf, nullptr, os);
-	      }
+	      // Check if persisted tun session matches properties of to-be-created session
+	      if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
+		{
+		  state = tun_persist->state();
+		  sd = tun_persist->obj();
+		  state = tun_persist->state();
+		  OPENVPN_LOG("TunPersist: reused tun context");
+		}
+	      else
+	        {
+		  // notify parent
+		  parent.tun_pre_tun_config();
 
-	      state->iface_name = tsconf.iface_name;
+		  // close old tun handle if persisted
+		  tun_persist->close();
 
-	      // configure tun/tap interface properties
-	      ActionList::Ptr add_cmds = new ActionList();
-	      remove_cmds.reset(new ActionList());
+		  // parse pushed options
+		  TunBuilderCapture::Ptr po(new TunBuilderCapture());
+		  TunProp::configure_builder(po.get(),
+		  			     state.get(),
+					     config->stats.get(),
+					     server_addr,
+					     config->tun_prop,
+					     opt,
+					     nullptr,
+					     false);
+
+		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
+
+		  // create new tun setup object
+		  tun_setup = config->new_setup_obj();
+
+		  // create config object for tun setup layer
+		  Setup::Config tsconf;
+		  tsconf.layer = config->tun_prop.layer;
+		  tsconf.dev_name = config->dev_name;
+		  tsconf.txqueuelen = config->txqueuelen;
+
+		  // open/config tun
+		  {
+		    std::ostringstream os;
+		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
+		    sd = tun_setup->establish(*po, &tsconf, nullptr, os);
+		  }
+
+		  // persist tun settings state
+		  state->iface_name = tsconf.iface_name;
+		  tun_persist->persist_tun_state(sd, state);
+
+		  // enable tun_setup destructor
+		  tun_persist->add_destructor(tun_setup);
+		}
 
 	      // start tun
 	      impl.reset(new TunImpl(io_context,
@@ -185,20 +214,14 @@ namespace openvpn {
 				     ));
 	      impl->start(config->n_parallel);
 
-	      // get the iface name
-	      state->iface_name = impl->name();
-
-	      // configure tun properties
-	      TunLinux::tun_config(state->iface_name, *po, nullptr, *add_cmds, *remove_cmds);
-
-	      // execute commands to bring up interface
-	      add_cmds->execute(std::cout);
-
 	      // signal that we are connected
 	      parent.tun_connected();
 	    }
 	    catch (const std::exception& e)
 	      {
+		if (tun_persist)
+		  tun_persist->close();
+
 		stop();
 		parent.tun_error(Error::TUN_SETUP_FAILED, e.what());
 	      }
@@ -293,22 +316,20 @@ namespace openvpn {
 	  {
 	    halt = true;
 
-	    // remove added routes
-	    if (remove_cmds)
-	      remove_cmds->execute(std::cout);
-
 	    // stop tun
 	    if (impl)
 	      impl->stop();
+
+	    tun_persist.reset();
 	  }
       }
 
       openvpn_io::io_context& io_context;
+      TunPersist::Ptr tun_persist;
       ClientConfig::Ptr config;
       TunClientParent& parent;
       TunImpl::Ptr impl;
       TunProp::State::Ptr state;
-      ActionList::Ptr remove_cmds;
       TunBuilderSetup::Base::Ptr tun_setup;
       bool halt;
     };

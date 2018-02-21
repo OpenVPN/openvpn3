@@ -378,6 +378,8 @@ namespace openvpn {
 	    tunconf->tun_prop.remote_list = remote_list;
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
+	    if (config.tun_persist)
+	      tunconf->tun_persist.reset(new TunLinux::TunPersist(true, false, nullptr));
 	    tunconf->load(opt);
 	    tun_factory = tunconf;
 	  }
