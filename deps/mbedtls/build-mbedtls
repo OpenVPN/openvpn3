@@ -58,6 +58,16 @@ else
     done
 fi
 
+if [[ "x$TARGET" == xlinux* || "x$TARGET" == xosx* ]]; then
+    # run unit tests and then clean
+    echo RUNNING CHECK
+    make check
+    echo CLEANING
+    make clean
+fi
+
+echo BUILDING
+
 # compiler vars
 CC=cc
 LD=ld
