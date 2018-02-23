@@ -83,6 +83,16 @@ namespace openvpn {
 	return out_state == S_DEFERRED;
       }
 
+      bool http_in_started() const
+      {
+	return rr_content_bytes > CONTENT_LENGTH_TYPE(0);
+      }
+
+      bool http_out_started() const
+      {
+	return out_state != S_PRE;
+      }
+
       const typename REQUEST_REPLY::State& request_reply() const {
 	return rr_obj;
       }
