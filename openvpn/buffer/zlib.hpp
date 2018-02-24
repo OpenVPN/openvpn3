@@ -22,12 +22,6 @@
 #ifndef OPENVPN_BUFFER_ZLIB_H
 #define OPENVPN_BUFFER_ZLIB_H
 
-#ifdef OPENVPN_GZIP_DEBUG
-#define OPENVPN_GZIP_VERBOSE true
-#else
-#define OPENVPN_GZIP_VERBOSE false
-#endif
-
 #ifdef HAVE_ZLIB
 
 #include <cstring> // for std::memset
@@ -57,7 +51,6 @@ namespace openvpn {
 				   const size_t headroom,
 				   const size_t tailroom,
 				   const int level,
-				   const bool verbose=OPENVPN_GZIP_VERBOSE,
 				   const int window_bits=15,
 				   const int mem_level=8)
     {
@@ -90,8 +83,6 @@ namespace openvpn {
 	  if (status != Z_STREAM_END)
 	    OPENVPN_THROW(zlib_error, "zlib deflate failed, error=" << status);
 	  b->set_size(zs.s.total_out);
-	  if (verbose)
-	    OPENVPN_LOG("*** COMPRESS " << src->size() << " -> " << b->size());
 	  return b;
 	}
       else
@@ -102,7 +93,6 @@ namespace openvpn {
 				     const size_t headroom,
 				     const size_t tailroom,
 				     const size_t max_size,
-				     const bool verbose=OPENVPN_GZIP_VERBOSE,
 				     const size_t block_size=4096,
 				     const int window_bits=15)
     {
@@ -142,8 +132,6 @@ namespace openvpn {
 	      OPENVPN_THROW(zlib_error, "zlib inflate max_size " << max_size << " exceeded");
 	    hr = tr = 0;
 	  } while (status == Z_OK);
-	  if (verbose)
-	    OPENVPN_LOG("*** DECOMPRESS " << src->size() << " -> " << blist.join_size());
 	  return blist.join(headroom, tailroom, true);
 	}
       else
