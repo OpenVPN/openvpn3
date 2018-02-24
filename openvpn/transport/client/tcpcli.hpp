@@ -74,7 +74,7 @@ namespace openvpn {
       typedef Link<openvpn_io::ip::tcp, Client*, false> LinkImpl;
 
       friend class ClientConfig;         // calls constructor
-      friend LinkImpl;                   // calls tcp_read_handler
+      friend LinkImpl::Base;             // calls tcp_read_handler
 
     public:
       virtual void transport_start()
@@ -207,24 +207,24 @@ namespace openvpn {
 	  return false;
       }
 
-      void tcp_eof_handler() // called by LinkImpl
+      void tcp_eof_handler() // called by LinkImpl::Base
       {
 	config->stats->error(Error::NETWORK_EOF_ERROR);
 	tcp_error_handler("NETWORK_EOF_ERROR");
       }
 
-      bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl
+      bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl::Base
       {
 	parent->transport_recv(buf);
 	return !stop_requeueing;
       }
 
-      void tcp_write_queue_needs_send() // called by LinkImpl
+      void tcp_write_queue_needs_send() // called by LinkImpl::Base
       {
 	parent->transport_needs_send();
       }
 
-      void tcp_error_handler(const char *error) // called by LinkImpl
+      void tcp_error_handler(const char *error) // called by LinkImpl::Base
       {
 	std::ostringstream os;
 	os << "Transport error on '" << server_host << ": " << error;
@@ -304,7 +304,7 @@ namespace openvpn {
 	      {
 		impl.reset(new LinkImpl(this,
 					socket,
-					0, // // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
+					0, // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
 					config->free_list_max_size,
 					(*config->frame)[Frame::READ_LINK_TCP],
 					config->stats));
@@ -334,9 +334,9 @@ namespace openvpn {
       openvpn_io::ip::tcp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent* parent;
-      LinkImpl::Ptr impl;
+      LinkImpl::Base::Ptr impl;
       openvpn_io::ip::tcp::resolver resolver;
-      LinkImpl::protocol::endpoint server_endpoint;
+      LinkImpl::Base::protocol::endpoint server_endpoint;
       bool halt;
       bool stop_requeueing;
     };
