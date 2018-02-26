@@ -22,6 +22,7 @@
 #include <openvpn/asio/asiostop.hpp>
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/common/function.hpp>
+#include <openvpn/common/complog.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -161,14 +162,17 @@ namespace openvpn {
 	}
 
 	void compress_content_out(const unsigned int min_size=64,
-				  const bool verbose=OPENVPN_GZIP_VERBOSE)
+				  const bool verbose=false)
 	{
 #ifdef HAVE_ZLIB
 	  if (content_out.join_size() >= min_size)
 	    {
 	      BufferPtr co = content_out.join();
 	      content_out.clear();
-	      co = ZLib::compress_gzip(co, 0, 0, 1, verbose);
+	      const size_t orig_size = co->size();
+	      co = ZLib::compress_gzip(co, 0, 0, 1);
+	      if (verbose)
+		log_compress("HTTPClientSet: GZIP COMPRESS", orig_size, co->size());
 	      ci.length = co->size();
 	      content_out.push_back(std::move(co));
 	      ci.content_encoding = "gzip";
@@ -744,7 +748,7 @@ namespace openvpn {
 #ifdef HAVE_ZLIB
 		    BufferPtr bp = t.content_in.join();
 		    t.content_in.clear();
-		    bp = ZLib::decompress_gzip(std::move(bp), 0, 0, hd.http_config().max_content_bytes, ts->debug_level >= 2);
+		    bp = ZLib::decompress_gzip(std::move(bp), 0, 0, hd.http_config().max_content_bytes);
 		    t.content_in.push_back(std::move(bp));
 #else
 		    throw Exception("gzip-compressed data returned from server but app not linked with zlib");
