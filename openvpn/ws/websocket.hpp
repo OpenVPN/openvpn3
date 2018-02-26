@@ -115,6 +115,14 @@ namespace openvpn {
       {
       }
 
+      Status(const Status& ref,
+	     const unsigned int opcode)
+	: opcode_(opcode),
+	  fin_(ref.fin_),
+	  close_status_code_(ref.close_status_code_)
+      {
+      }
+
       bool defined() const
       {
 	return opcode_ != 0;
@@ -413,6 +421,10 @@ namespace openvpn {
 	std::string protocol;
 	RandomAPI::Ptr rng;
 	DigestFactory::Ptr digest_factory;
+
+	// compression
+	bool compress = false;
+	size_t compress_threshold = 256;
       };
 
       class PerRequest : public RC<thread_unsafe_refcount>
