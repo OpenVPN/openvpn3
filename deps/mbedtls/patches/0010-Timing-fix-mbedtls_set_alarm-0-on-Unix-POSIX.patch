@@ -1,0 +1,32 @@
+From a0af95f052fa734c662dfe420d3e34e6ed777ed5 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Tue, 10 Oct 2017 20:10:46 +0200
+Subject: [PATCH] Timing: fix mbedtls_set_alarm(0) on Unix/POSIX
+
+The POSIX/Unix implementation of mbedtls_set_alarm did not set the
+mbedtls_timing_alarmed flag when called with 0, which was inconsistent
+with what the documentation implied and with the Windows behavior.
+---
+ library/timing.c | 6 ++++++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/library/timing.c b/library/timing.c
+index a7c7ff02..4576f317 100644
+--- a/library/timing.c
++++ b/library/timing.c
+@@ -315,6 +315,12 @@ void mbedtls_set_alarm( int seconds )
+     mbedtls_timing_alarmed = 0;
+     signal( SIGALRM, sighandler );
+     alarm( seconds );
++    if( seconds == 0 )
++    {
++        /* alarm(0) cancelled any previous pending alarm, but the
++           handler won't fire, so raise the flag straight away. */
++        mbedtls_timing_alarmed = 1;
++    }
+ }
+ 
+ #endif /* _WIN32 && !EFIX64 && !EFI32 */
+-- 
+2.14.3 (Apple Git-98)
+
