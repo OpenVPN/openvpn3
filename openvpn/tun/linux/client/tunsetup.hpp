@@ -43,6 +43,7 @@
 #include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
+#include <openvpn/netconf/linux/gw.hpp>
 
 namespace openvpn {
   namespace TunLinux {
@@ -73,30 +74,10 @@ namespace openvpn {
       return IP::Addr::from_ipv4(ret);
     }
 
-    inline IP::Addr get_default_gateway_v4()
-    {
-      typedef std::vector<std::string> strvec;
-      const std::string proc_net_route = read_text_simple("/proc/net/route");
-      SplitLines in(proc_net_route, 0);
-      while (in(true))
-	{
-	  const std::string& line = in.line_ref();
-	  strvec v = Split::by_space<strvec, StandardLex, SpaceMatch, Split::NullLimit>(line);
-	  if (v.size() >= 8)
-	    {
-	      if (v[1] == "00000000" && v[7] == "00000000")
-		{
-		  const IP::Addr gw = cvt_pnr_ip_v4(v[2]);
-		  return gw;
-		}
-	    }
-	}
-      throw tun_linux_error("can't determine default gateway");
-    }
-
     inline void add_del_route(const std::string& addr_str,
 			      const int prefix_len,
 			      const std::string& gateway_str,
+			      const std::string& dev,
 			      const unsigned int flags,
 			      std::vector<IP::Route>* rtvec,
 			      Action::Ptr& create,
@@ -119,6 +100,11 @@ namespace openvpn {
 	      add->argv.push_back(net.to_string() + '/' + openvpn::to_string(prefix_len));
 	      add->argv.push_back("via");
 	      add->argv.push_back(gateway_str);
+	      if (!dev.empty())
+		{
+		  add->argv.push_back("dev");
+		  add->argv.push_back(dev);
+		}
 	      create = add;
 
 	      // for the destroy command, copy the add command but replace "add" with "delete"
@@ -163,13 +149,14 @@ namespace openvpn {
     inline void add_del_route(const std::string& addr_str,
 			      const int prefix_len,
 			      const std::string& gateway_str,
-			      const unsigned int flags,
+			      const std::string& dev,
+			      const unsigned int flags,// add interface route to rtvec if defined
 			      std::vector<IP::Route>* rtvec,
 			      ActionList& create,
 			      ActionList& destroy)
     {
       Action::Ptr c, d;
-      add_del_route(addr_str, prefix_len, gateway_str, flags, rtvec, c, d);
+      add_del_route(addr_str, prefix_len, gateway_str, dev, flags, rtvec, c, d);
       create.add(c);
       destroy.add(d);
     }
@@ -237,7 +224,7 @@ namespace openvpn {
 	  destroy.add(del);
 
 	  // add interface route to rtvec if defined
-	  add_del_route(local4->address, local4->prefix_length, local4->address, R_ADD_DCO, rtvec, create, destroy);
+	  add_del_route(local4->address, local4->prefix_length, local4->address, iface_name, R_ADD_DCO, rtvec, create, destroy);
 	}
 
       // Set IPv6 Interface
@@ -259,7 +246,7 @@ namespace openvpn {
 	  destroy.add(del);
 
 	  // add interface route to rtvec if defined
-	  add_del_route(local6->address, local6->prefix_length, local6->address, R_ADD_DCO|R_IPv6, rtvec, create, destroy);
+	  add_del_route(local6->address, local6->prefix_length, local6->address, iface_name, R_ADD_DCO|R_IPv6, rtvec, create, destroy);
 	}
     }
 
@@ -269,7 +256,7 @@ namespace openvpn {
 			   ActionList& create,
 			   ActionList& destroy)
     {
-      const IP::Addr gw4 = get_default_gateway_v4();
+      const LinuxGW46 gw(true);
 
       // set local4 and local6 to point to IPv4/6 route configurations
       const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
@@ -286,12 +273,12 @@ namespace openvpn {
 	    if (route.ipv6)
 	      {
 		if (!pull.block_ipv6)
-		  add_del_route(route.address, route.prefix_length, local6->gateway, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
+		  add_del_route(route.address, route.prefix_length, local6->gateway, iface_name, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
 	      }
 	    else
 	      {
 		if (local4 && !local4->gateway.empty())
-		  add_del_route(route.address, route.prefix_length, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+		  add_del_route(route.address, route.prefix_length, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
 		else
 		  OPENVPN_LOG("ERROR: IPv4 route pushed without IPv4 ifconfig and/or route-gateway");
 	      }
@@ -308,8 +295,8 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		if (gw4.defined())
-		  add_del_route(route.address, route.prefix_length, gw4.to_string(), R_ADD_SYS, rtvec, create, destroy);
+		if (gw.v4.defined())
+		  add_del_route(route.address, route.prefix_length, gw.v4.addr().to_string(), gw.v4.dev(), R_ADD_SYS, rtvec, create, destroy);
 		else
 		  OPENVPN_LOG("NOTE: cannot determine gateway for exclude IPv4 routes");
 	      }
@@ -321,17 +308,21 @@ namespace openvpn {
 	{
 	  // add bypass route
 	  if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
-	    add_del_route(pull.remote_address.address, 32, gw4.to_string(), R_ADD_SYS, rtvec, create, destroy);
+	    add_del_route(pull.remote_address.address, 32, gw.v4.addr().to_string(), gw.v4.dev(), R_ADD_SYS, rtvec, create, destroy);
 
-	  add_del_route("0.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
-	  add_del_route("128.0.0.0", 1, local4->gateway, R_ADD_ALL, rtvec, create, destroy);
+	  add_del_route("0.0.0.0", 1, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
+	  add_del_route("128.0.0.0", 1, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
 	}
 
       // Process IPv6 redirect-gateway
       if (pull.reroute_gw.ipv6 && !pull.block_ipv6)
 	{
-	  add_del_route("0000::", 1, local6->gateway, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
-	  add_del_route("8000::", 1, local6->gateway, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
+	  // add bypass route
+	  if (pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+	    add_del_route(pull.remote_address.address, 128, gw.v6.addr().to_string(), gw.v6.dev(), R_ADD_SYS|R_IPv6, rtvec, create, destroy);
+
+	  add_del_route("0000::", 1, local6->gateway, iface_name, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
+	  add_del_route("8000::", 1, local6->gateway, iface_name, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
 	}
 
       // fixme -- Process block-ipv6
