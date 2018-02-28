@@ -35,6 +35,7 @@
 #include <mbedtls/oid.h>
 #include <mbedtls/sha1.h>
 #include <mbedtls/debug.h>
+#include <mbedtls/asn1.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -211,7 +212,8 @@ namespace openvpn {
 		 tls_cert_profile(TLSCertProfile::UNDEF),
 		 local_cert_enabled(true),
 		 enable_renegotiation(false),
-                 force_aes_cbc_ciphersuites(false) {}
+		 force_aes_cbc_ciphersuites(false),
+		 allow_name_constraints(false) {}
 
       virtual SSLFactoryAPI::Ptr new_factory()
       {
@@ -456,6 +458,8 @@ namespace openvpn {
 	    && opt.exists("client-cert-not-required"))
 	  flags |= SSLConst::NO_VERIFY_PEER;
 
+	allow_name_constraints = lflags & LF_ALLOW_NAME_CONSTRAINTS;
+
 	// ca
 	{
 	  std::string ca_txt = opt.cat("ca");
@@ -532,6 +536,16 @@ namespace openvpn {
 	}
       }
 
+      bool name_constraints_allowed() const
+      {
+	return allow_name_constraints;
+      }
+
+      bool is_server() const
+      {
+	return mode.is_server();
+      }
+
     private:
       const mbedtls_x509_crt_profile *select_crt_profile() const
       {
@@ -553,8 +567,12 @@ namespace openvpn {
       }
 
       Mode mode;
+
+    protected:
       MbedTLSPKI::X509Cert::Ptr crt_chain;  // local cert chain (including client cert + extra certs)
       MbedTLSPKI::X509Cert::Ptr ca_chain;   // CA chain for remote verification
+
+    private:
       MbedTLSPKI::X509CRL::Ptr crl_chain;   // CRL chain for remote verification
       MbedTLSPKI::PKContext::Ptr priv_key;  // private key
       std::string priv_key_pwd;              // private key password
@@ -573,6 +591,7 @@ namespace openvpn {
       bool local_cert_enabled;
       bool enable_renegotiation;
       bool force_aes_cbc_ciphersuites;
+      bool allow_name_constraints;
       RandomAPI::Ptr rng;   // random data source
     };
 
@@ -676,12 +695,12 @@ namespace openvpn {
 	return authcert;
       }
 
-      ~SSL()
+      virtual ~SSL()
       {
 	erase();
       }
 
-    private:
+    protected:
       SSL(MbedTLSContext* ctx, const char *hostname)
       {
 	clear();
@@ -863,6 +882,10 @@ namespace openvpn {
 	  }
       }
 
+      mbedtls_ssl_config *sslconf;          // SSL configuration parameters for SSL connection object
+      MbedTLSContext *parent;
+
+    private:
       // cleartext read callback
       static int ct_read_func(void *arg, unsigned char *data, size_t length)
       {
@@ -925,9 +948,7 @@ namespace openvpn {
 	clear();
       }
 
-      MbedTLSContext *parent;
       mbedtls_ssl_context *ssl;		  // underlying SSL connection object
-      mbedtls_ssl_config *sslconf;	  // SSL configuration parameters for SSL connection object
       MbedTLSPKI::PKContext epki_ctx;    // external PKI context
       RandomAPI::Ptr rng;                 // random data source
       MemQStream ct_in;                   // write ciphertext to here
@@ -954,13 +975,13 @@ namespace openvpn {
     {
       return config->mode;
     }
- 
-    ~MbedTLSContext()
+
+    virtual ~MbedTLSContext()
     {
       erase();
     }
 
-  private:
+  protected:
     MbedTLSContext(Config* config_arg)
       : config(config_arg)
     {
@@ -972,6 +993,7 @@ namespace openvpn {
 	}
     }
 
+  private:
     size_t key_len() const
     {
       return mbedtls_pk_get_bitlen(&config->crt_chain->get()->pk) / 8;
@@ -1114,6 +1136,7 @@ namespace openvpn {
       return os.str();
     }
 
+  protected:
     static int verify_callback_client(void *arg, mbedtls_x509_crt *cert, int depth, uint32_t *flags)
     {
       MbedTLSContext::SSL *ssl = (MbedTLSContext::SSL *)arg;
@@ -1231,6 +1254,9 @@ namespace openvpn {
       return 0;
     }
 
+    Config::Ptr config;
+
+  private:
     static std::string cert_info(const mbedtls_x509_crt *cert, const char *prefix = nullptr)
     {
       const size_t buf_size = 4096;
@@ -1354,8 +1380,6 @@ namespace openvpn {
       MbedTLSContext *self = (MbedTLSContext *) arg;
       return self->key_len();
     }
-
-    Config::Ptr config;
   };
 
 } // namespace openvpn
