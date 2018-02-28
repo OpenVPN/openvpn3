@@ -141,16 +141,15 @@ namespace openvpn {
 	frame_context.prepare(udpfrom->buf);
 	socket.async_receive_from(frame_context.mutable_buffer(udpfrom->buf),
 				  udpfrom->sender_endpoint,
-				  [self=Ptr(this), udpfrom](const openvpn_io::error_code& error, const size_t bytes_recvd)
+				  [self=Ptr(this), udpfrom=PacketFrom::SPtr(udpfrom)](const openvpn_io::error_code& error, const size_t bytes_recvd) mutable
                                   {
-                                    self->handle_read(udpfrom, error, bytes_recvd);
+                                    self->handle_read(std::move(udpfrom), error, bytes_recvd);
                                   });
       }
 
-      void handle_read(PacketFrom *udpfrom, const openvpn_io::error_code& error, const size_t bytes_recvd)
+      void handle_read(PacketFrom::SPtr pfp, const openvpn_io::error_code& error, const size_t bytes_recvd)
       {
 	OPENVPN_LOG_UDPLINK_VERBOSE("UDPLink::handle_read: " << error.message());
-	PacketFrom::SPtr pfp(udpfrom);
 	if (!halt)
 	  {
 	    if (bytes_recvd)
