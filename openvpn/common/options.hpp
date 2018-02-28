@@ -104,7 +104,7 @@ namespace openvpn {
     Option(T first, Args... args)
     {
       reserve(1 + sizeof...(args));
-      from_list(first, args...);
+      from_list(std::move(first), std::forward<Args>(args)...);
     }
 
     static validate_status validate(const std::string& str, const size_t max_len)
@@ -360,8 +360,8 @@ namespace openvpn {
     template<typename T, typename... Args>
     void from_list(T first, Args... args)
     {
-      from_list(first);
-      from_list(args...);
+      from_list(std::move(first));
+      from_list(std::forward<Args>(args)...);
     }
 
     volatile mutable bool touched_ = false;
@@ -660,6 +660,18 @@ namespace openvpn {
 	std::sort(begin(), end(), KeyValue::compare);
       }
     };
+
+    OptionList()
+    {
+    }
+
+    template<typename T, typename... Args>
+    OptionList(T first, Args... args)
+    {
+      reserve(1 + sizeof...(args));
+      from_list(std::move(first), std::forward<Args>(args)...);
+      update_map();
+    }
 
     static OptionList parse_from_csv_static(const std::string& str, Limits* lim)
     {
@@ -1410,6 +1422,18 @@ namespace openvpn {
     static void line_too_long(const int line_num)
     {
       OPENVPN_THROW(option_error, "line " << line_num << " is too long");
+    }
+
+    void from_list(Option opt)
+    {
+      push_back(std::move(opt));
+    }
+
+    template<typename T, typename... Args>
+    void from_list(T first, Args... args)
+    {
+      from_list(std::move(first));
+      from_list(std::forward<Args>(args)...);
     }
 
     IndexMap map_;
