@@ -1,4 +1,6 @@
 import os, sys, re, stat, shutil, tarfile, zipfile, subprocess
+import requests
+import rfc6266
 
 j = os.path.join
 
@@ -260,3 +262,29 @@ def zipdir(path, ziph):
     for root, dirs, files in os.walk(path):
         for file in files:
             ziph.write(os.path.join(root, file))
+
+def download(url):
+    print "Downloading %s" % url
+    response = requests.get(url)
+    fname = rfc6266.parse_headers(response.headers['content-disposition']).filename_unsafe
+    with open(fname, "wb") as f:
+        f.write(response.content)
+    return fname
+
+def read_params():
+    params={}
+    params['BUILD'] = os.environ.get('DEP_DIR').rstrip()
+    params['ARCH'] = os.environ.get('ARCH', 'amd64').rstrip()
+    params['DEBUG'] = os.environ.get('DEBUG')
+    params['STATIC'] = os.environ.get('STATIC', True)
+    params['MSVC_DIR'] = os.environ.get('MSVC_DIR', 'c:\\Program Files (x86)\\Microsoft Visual Studio 14.0').rstrip()
+    params['OVPN3'] = os.environ.get('O3').rstrip()
+    # Community: tap0901, Access Server: tapoas
+    params['TAP_WIN_COMPONENT_ID'] = os.environ.get('TAP_WIN_COMPONENT_ID', 'tap0901')
+    params['CPP_EXTRA'] = os.environ.get('CPP_EXTRA', '').rstrip()
+    if os.environ.get('USE_JSONSPP'):
+        params['USE_JSONCPP'] = True
+    if os.environ.get('USE_JSONSPP'):
+        params['CONNECT'] = True
+    params['GTEST_ROOT'] = os.environ.get('GTEST_ROOT')
+    return params

@@ -1,6 +1,7 @@
 import os, re
 
 from utils import *
+from lib_versions import *
 
 def compile_one_file(parms, srcfile, incdirs):
     extra = {
@@ -14,26 +15,26 @@ def compile_one_file(parms, srcfile, incdirs):
 
 def build_asio(parms):
     print "**************** ASIO"
-    with Cd(build_dir(parms)) as cd:
+    with Cd(build_dir(parms)):
+        url = "https://github.com/chriskohlhoff/asio/archive/%s.tar.gz" % ASIO_VERSION
+        arch_path = os.path.join(build_dir(parms), download(url))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
-            dist = os.path.realpath('asio')
-            rmtree(dist)
-            d = expand('asio', parms['DEP'], parms.get('LIB_VERSIONS'))
-            os.rename(d, dist)
+            extract(arch_path, "gz")
+            rmtree("asio")
+            os.rename("asio-%s" % ASIO_VERSION, "asio")
+            rm(arch_path)
 
 def build_mbedtls(parms):
     print "**************** MBEDTLS"
-    with Cd(build_dir(parms)) as cd:
+    with Cd(build_dir(parms)):
+        url = "https://tls.mbed.org/download/mbedtls-%s-apache.tgz" % MBEDTLS_VERSION
+        arch_path = os.path.join(build_dir(parms), download(url))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
+            extract(arch_path, "gz")
             dist = os.path.realpath('mbedtls')
             rmtree(dist)
-            d = expand('mbedtls', parms['DEP'], parms.get('LIB_VERSIONS'))
-            if d.endswith("-apache"):
-                d = d[:-7]
-            elif d.endswith("-gpl"):
-                d = d[:-4]
-
-            os.rename(d, dist)
+            os.rename("mbedtls-%s" % MBEDTLS_VERSION, dist)
+            rm(arch_path)
 
             # edit mbedTLS config.h
             conf_fn = os.path.join(dist, 'include', 'mbedtls', 'config.h')
@@ -58,30 +59,47 @@ def build_mbedtls(parms):
 
 def build_lz4(parms):
     print "**************** LZ4"
-    with Cd(build_dir(parms)) as cd:
+    with Cd(build_dir(parms)):
+        url = "https://github.com/lz4/lz4/archive/v%s.tar.gz" % LZ4_VERSION
+        arch_name = download(url)
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
+            extract(arch_name, "gz")
             dist = os.path.realpath('lz4')
             rmtree(dist)
-            d = expand('lz4', parms['DEP'], parms.get('LIB_VERSIONS'))
-            os.rename(d, dist)
+            os.rename("lz4-%s" % LZ4_VERSION, dist)
+            rm(arch_name)
             os.chdir(os.path.join(dist, "lib"))
             compile_one_file(parms, "lz4.c", ())
             vc_cmd(parms, r"lib /OUT:lz4.lib lz4.obj")
 
+def build_tap(parms):
+    print "**************** Windows-TAP"
+    with Cd(build_dir(parms)):
+        url = "https://github.com/OpenVPN/tap-windows6/archive/%s.zip" % TAP_VERSION
+        arch_name = download(url)
+        with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
+            extract(arch_name, "zip")
+            dist = os.path.realpath('tap-windows')
+            rmtree(dist)
+            os.rename("tap-windows6-%s" % TAP_VERSION, dist)
+            rm(arch_name)
+
 def build_jsoncpp(parms):
-    if 'jsoncpp' in parms['LIB_VERSIONS']:
-        print "**************** JSONCPP"
-        with Cd(build_dir(parms)) as cd:
-            with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
-                dist = os.path.realpath('jsoncpp')
-                rmtree(dist)
-                d = expand('jsoncpp', parms['DEP'], parms.get('LIB_VERSIONS'))
-                os.rename(d, dist)
-                os.chdir(dist)
-                call(["python", "amalgamate.py"])
-                os.chdir(os.path.join(dist, "dist"))
-                compile_one_file(parms, "jsoncpp.cpp", (".",))
-                vc_cmd(parms, r"lib /OUT:jsoncpp.lib jsoncpp.obj")
+    print "**************** JSONCPP"
+    with Cd(build_dir(parms)):
+        url = "https://github.com/open-source-parsers/jsoncpp/archive/%s.tar.gz" % JSONCPP_VERSION
+        arch_name = download(url)
+        with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
+            dist = os.path.realpath('jsoncpp')
+            rmtree(dist)
+            extract(arch_name, "gz")
+            rm(arch_name)
+            os.rename("jsoncpp-%s" % JSONCPP_VERSION, dist)
+            os.chdir(dist)
+            call(["python", "amalgamate.py"])
+            os.chdir(os.path.join(dist, "dist"))
+            compile_one_file(parms, "jsoncpp.cpp", (".",))
+            vc_cmd(parms, r"lib /OUT:jsoncpp.lib jsoncpp.obj")
 
 def build_all(parms):
     wipetree(build_dir(parms))
@@ -89,13 +107,7 @@ def build_all(parms):
     build_mbedtls(parms)
     build_lz4(parms)
     build_jsoncpp(parms)
+    build_tap(parms)
 
 if __name__ == "__main__":
-    from parms import PARMS
-
-    # some parameters might be redefined, like in Jenkins multibranch pipeline case
-    PARMS['BUILD'] = os.environ.get('BUILD', PARMS['BUILD'])
-    PARMS['OVPN3'] = os.environ.get('OVPN3', PARMS['OVPN3'])
-    PARMS['ARCH'] = os.environ.get('ARCH', PARMS['ARCH'])
-
-    build_all(PARMS)
+    build_all(read_params())
