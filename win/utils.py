@@ -272,13 +272,19 @@ def download(url):
     return fname
 
 def read_params():
+    if not os.environ.get('O3'):
+        sys.exit("Missing required O3 env variable")
+
     params={}
-    params['BUILD'] = os.environ.get('DEP_DIR').rstrip()
+    params['OVPN3'] = os.environ.get('O3').rstrip()
+    if not os.environ.get('DEP_DIR'):
+        params["BUILD"] = os.path.join(params['OVPN3'], "deps")
+    else:
+        params['BUILD'] = os.environ.get('DEP_DIR').rstrip()
     params['ARCH'] = os.environ.get('ARCH', 'amd64').rstrip()
     params['DEBUG'] = os.environ.get('DEBUG')
     params['STATIC'] = os.environ.get('STATIC', True)
     params['MSVC_DIR'] = os.environ.get('MSVC_DIR', 'c:\\Program Files (x86)\\Microsoft Visual Studio 14.0').rstrip()
-    params['OVPN3'] = os.environ.get('O3').rstrip()
     # Community: tap0901, Access Server: tapoas
     params['TAP_WIN_COMPONENT_ID'] = os.environ.get('TAP_WIN_COMPONENT_ID', 'tap0901')
     params['CPP_EXTRA'] = os.environ.get('CPP_EXTRA', '').rstrip()

@@ -1,4 +1,6 @@
-import os, re
+import glob
+import os
+import re
 
 from utils import *
 from lib_versions import *
@@ -43,6 +45,17 @@ def build_mbedtls(parms):
             conf = re.sub(r"^//(?=#define MBEDTLS_MD4_C)", "", conf, flags=re.M);
             with open(conf_fn, 'w') as f:
                 f.write(conf)
+
+            # apply patches
+            unapplicable_patches = ["0005-data_files-pkcs8-v2-add-keys-generated-with-PRF-SHA1.patch"]
+
+            for patch_file in glob.glob(os.path.join(parms.get('OVPN3'), "core", "deps", "mbedtls", "patches", "*.patch")):
+                for unapplicable_patch in unapplicable_patches:
+                    if patch_file.endswith(unapplicable_patch):
+                        print "Skipping %s, 'git apply' doesn't apply it on Windows" % patch_file
+                        break
+                else:
+                    call(["git", "apply", "--whitespace=nowarn", "--ignore-space-change", "--verbose", patch_file], cwd=dist)
 
             # compile the source files
             os.chdir(os.path.join(dist, "library"))
