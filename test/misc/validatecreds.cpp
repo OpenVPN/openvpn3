@@ -12,23 +12,24 @@
 
 using namespace openvpn;
 
-void validate(const std::string& cred, const bool expected_result)
+void validate(const ValidateCreds::Type type, const bool expected_result, const std::string& cred)
 {
   OPENVPN_LOG("VALIDATE '" << cred << "' expected res=" << expected_result);
-  const bool actual_result = validate_auth_cred(cred);
+  const bool actual_result = ValidateCreds::is_valid(type, cred);
   if (actual_result != expected_result)
     OPENVPN_THROW_EXCEPTION("ERROR: expected result=" << expected_result << " but actual result=" << actual_result);
 }
 
 void test1()
 {
-  validate("foobar", true);
-  validate("foo bar", false);
-  validate("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", true);
-  validate("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", false);
-  validate("hello\x07there", false);
-  validate("Привет", true);
-  validate("\xFF\xFF\xFF\xFF", false);
+  validate(ValidateCreds::USERNAME, true, "foobar");
+  validate(ValidateCreds::PASSWORD, true, "xxx\nyyy");
+  validate(ValidateCreds::USERNAME, false, "foo\nbar");
+  validate(ValidateCreds::USERNAME, true, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  validate(ValidateCreds::USERNAME, false, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  validate(ValidateCreds::USERNAME, false, "hello\x07there");
+  validate(ValidateCreds::USERNAME, true, "Привет");
+  validate(ValidateCreds::USERNAME, false, "\xFF\xFF\xFF\xFF");
 }
 
 void validate_creds(std::string username, std::string password, const bool expected_result)
@@ -48,7 +49,7 @@ void test2()
   validate_creds("foo", "", true);
   validate_creds("Привет", "trouble", true);
   validate_creds("Привет", "", true);
-  validate_creds("foo bar", "zoo", false);
+  validate_creds("foo\nbar", "zoo", false);
   validate_creds("hello\x07there", "pass", false);
   validate_creds("হ্যালো", "హలో", true);
   validate_creds("yyy", "\xFF\xFF\xFF\xFF", false);
