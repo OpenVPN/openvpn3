@@ -211,7 +211,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("MacDNSWatchdog::thread_func: " << e.what());
+	  OPENVPN_LOG("MacDNSWatchdog::thread_func exception: " << e.what());
 	}
       cancel_push_timer();
     }
@@ -272,7 +272,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("MacDNSWatchdog::push_timer_callback: " << e.what());
+	  OPENVPN_LOG("MacDNSWatchdog::push_timer_callback exception: " << e.what());
 	}
     }
 

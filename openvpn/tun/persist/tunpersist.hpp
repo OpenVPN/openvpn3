@@ -94,7 +94,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("*** TUN BUILDER CAPTURE ERROR: " << e.what());
+	    OPENVPN_LOG("*** TUN BUILDER CAPTURE exception: " << e.what());
 	  }
       }
 #endif

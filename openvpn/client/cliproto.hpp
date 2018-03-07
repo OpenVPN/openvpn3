@@ -702,7 +702,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("Error parsing client-ip: " << e.what());
+	    OPENVPN_LOG("exception parsing client-ip: " << e.what());
 	  }
 	ev->tun_name = tun->tun_name();
 	connected_ = std::move(ev);
@@ -873,7 +873,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("Error parsing inactive: " << e.what());
+	    OPENVPN_LOG("exception parsing inactive: " << e.what());
 	  }
       }
 

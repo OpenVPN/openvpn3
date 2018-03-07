@@ -113,7 +113,7 @@ namespace openvpn {
 	  }
 	  catch (openvpn_io::system_error& e)
 	    {
-	      OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
+	      OPENVPN_LOG_TUN_ERROR("TUN write exception: " << e.what());
 	      tun_error(Error::TUN_WRITE_ERROR, &e.code());
 	      return false;
 	    }
@@ -146,7 +146,7 @@ namespace openvpn {
 	  }
 	  catch (openvpn_io::system_error& e)
 	    {
-	      OPENVPN_LOG_TUN_ERROR("TUN write error: " << e.what());
+	      OPENVPN_LOG_TUN_ERROR("TUN write exception: " << e.what());
 	      tun_error(Error::TUN_WRITE_ERROR, &e.code());
 	      return false;
 	    }

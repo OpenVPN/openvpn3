@@ -794,7 +794,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("OpenSSLContext::ExternalPKIImpl::rsa_priv_enc: " << e.what());
+	    OPENVPN_LOG("OpenSSLContext::ExternalPKIImpl::rsa_priv_enc exception: " << e.what());
 	    ++self->n_errors;
 	    return -1;
 	  }

@@ -1344,7 +1344,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("MbedTLSContext::epki_sign: " << e.what());
+	  OPENVPN_LOG("MbedTLSContext::epki_sign exception: " << e.what());
 	  return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
 	}
     }

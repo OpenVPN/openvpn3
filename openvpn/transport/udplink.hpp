@@ -199,7 +199,7 @@ namespace openvpn {
 	    }
 	    catch (openvpn_io::system_error& e)
 	      {
-		OPENVPN_LOG_UDPLINK_ERROR("UDP send error: " << e.what());
+		OPENVPN_LOG_UDPLINK_ERROR("UDP send exception: " << e.what());
 		stats->error(Error::NETWORK_SEND_ERROR);
 		return e.code().value();
 	      }

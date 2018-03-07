@@ -330,7 +330,7 @@ namespace openvpn {
 		    }
 		    catch (const std::exception& e)
 		      {
-			OPENVPN_LOG_TCPLINK_ERROR("TCP packet extract error: " << e.what());
+			OPENVPN_LOG_TCPLINK_ERROR("TCP packet extract exception: " << e.what());
 			stats->error(Error::TCP_SIZE_ERROR);
 			read_handler->tcp_error_handler("TCP_SIZE_ERROR");
 			stop();
