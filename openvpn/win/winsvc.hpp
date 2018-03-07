@@ -308,7 +308,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("service error: " << e.what());
+	    OPENVPN_LOG("service exception: " << e.what());
 	    report_service_status(SERVICE_STOPPED, NO_ERROR, 0);
 	  }
       }
@@ -333,7 +333,7 @@ namespace openvpn {
 	    }
 	    catch (const std::exception& e)
 	      {
-		OPENVPN_LOG("service stop error: " << e.what());
+		OPENVPN_LOG("service stop exception: " << e.what());
 	      }
 	    report_service_status(0, NO_ERROR, 0);
 	    return;
