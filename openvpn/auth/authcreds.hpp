@@ -57,7 +57,8 @@ namespace openvpn {
 
       bool is_valid_user_pass() const
       {
-	return validate_auth_cred(username) && validate_auth_cred(password);
+	return ValidateCreds::is_valid(ValidateCreds::USERNAME, username)
+	    && ValidateCreds::is_valid(ValidateCreds::PASSWORD, password);
       }
 
       bool is_valid() const
