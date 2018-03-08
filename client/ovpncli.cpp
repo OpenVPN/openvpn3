@@ -997,6 +997,15 @@ namespace openvpn {
 	}
 #endif
 
+#ifdef USE_OPENSSL
+      if (state->options.exists("allow-name-constraints"))
+	{
+	  ClientEvent::Base::Ptr ev = new ClientEvent::UnsupportedFeature("allow-name-constraints",
+									  "Always verified correctly with OpenSSL", false);
+	  state->events->add_event(std::move(ev));
+	}
+#endif
+
       // build client options object
       ClientOptions::Ptr client_options = new ClientOptions(state->options, cc);
 
