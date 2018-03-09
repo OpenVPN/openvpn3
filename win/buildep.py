@@ -3,7 +3,6 @@ import os
 import re
 
 from utils import *
-from lib_versions import *
 
 def compile_one_file(parms, srcfile, incdirs):
     extra = {
@@ -18,24 +17,31 @@ def compile_one_file(parms, srcfile, incdirs):
 def build_asio(parms):
     print "**************** ASIO"
     with Cd(build_dir(parms)):
-        url = "https://github.com/chriskohlhoff/asio/archive/%s.tar.gz" % ASIO_VERSION
+        asio_ver = parms["ASIO_VERSION"].replace("asio-", "")
+        url = "https://github.com/chriskohlhoff/asio/archive/%s.tar.gz" % asio_ver
         arch_path = os.path.join(build_dir(parms), download(url))
+        checksum = sha256_checksum(arch_path)
+        if checksum != parms["ASIO_CSUM"]:
+            sys.exit("Checksum mismatch, expected %s, actual %s" % (parms["ASIO_CSUM"], checksum))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
             extract(arch_path, "gz")
             rmtree("asio")
-            os.rename("asio-%s" % ASIO_VERSION, "asio")
+            os.rename("asio-%s" % asio_ver, "asio")
             rm(arch_path)
 
 def build_mbedtls(parms):
     print "**************** MBEDTLS"
     with Cd(build_dir(parms)):
-        url = "https://tls.mbed.org/download/mbedtls-%s-apache.tgz" % MBEDTLS_VERSION
+        url = "https://tls.mbed.org/download/%s-apache.tgz" % parms["MBEDTLS_VERSION"]
         arch_path = os.path.join(build_dir(parms), download(url))
+        checksum = sha256_checksum(arch_path)
+        if checksum != parms["MBEDTLS_CSUM"]:
+            sys.exit("Checksum mismatch, expected %s, actual %s" % (parms["MBEDTLS_CSUM"], checksum))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
             extract(arch_path, "gz")
             dist = os.path.realpath('mbedtls')
             rmtree(dist)
-            os.rename("mbedtls-%s" % MBEDTLS_VERSION, dist)
+            os.rename(parms["MBEDTLS_VERSION"], dist)
             rm(arch_path)
 
             # edit mbedTLS config.h
@@ -73,13 +79,16 @@ def build_mbedtls(parms):
 def build_lz4(parms):
     print "**************** LZ4"
     with Cd(build_dir(parms)):
-        url = "https://github.com/lz4/lz4/archive/v%s.tar.gz" % LZ4_VERSION
+        url = "https://github.com/lz4/lz4/archive/v%s.tar.gz" % parms["LZ4_VERSION"][4:]
         arch_name = download(url)
+        checksum = sha256_checksum(arch_name)
+        if checksum != parms["LZ4_CSUM"]:
+            sys.exit("Checksum mismatch, expected %s, actual %s" % (parms["LZ4_CSUM"], checksum))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
             extract(arch_name, "gz")
             dist = os.path.realpath('lz4')
             rmtree(dist)
-            os.rename("lz4-%s" % LZ4_VERSION, dist)
+            os.rename(parms["LZ4_VERSION"], dist)
             rm(arch_name)
             os.chdir(os.path.join(dist, "lib"))
             compile_one_file(parms, "lz4.c", ())
@@ -88,26 +97,32 @@ def build_lz4(parms):
 def build_tap(parms):
     print "**************** Windows-TAP"
     with Cd(build_dir(parms)):
-        url = "https://github.com/OpenVPN/tap-windows6/archive/%s.zip" % TAP_VERSION
+        url = "https://github.com/OpenVPN/tap-windows6/archive/%s.zip" % parms["TAP_VERSION"]
         arch_name = download(url)
+        checksum = sha256_checksum(arch_name)
+        if checksum != parms["TAP_CSUM"]:
+            sys.exit("Checksum mismatch, expected %s, actual %s" % (parms["TAP_CSUM"], checksum))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
             extract(arch_name, "zip")
             dist = os.path.realpath('tap-windows')
             rmtree(dist)
-            os.rename("tap-windows6-%s" % TAP_VERSION, dist)
+            os.rename("tap-windows6-%s" % parms["TAP_VERSION"], dist)
             rm(arch_name)
 
 def build_jsoncpp(parms):
     print "**************** JSONCPP"
     with Cd(build_dir(parms)):
-        url = "https://github.com/open-source-parsers/jsoncpp/archive/%s.tar.gz" % JSONCPP_VERSION
+        url = "https://github.com/open-source-parsers/jsoncpp/archive/%s.tar.gz" % parms["JSONCPP_VERSION"]
         arch_name = download(url)
+        checksum = sha256_checksum(arch_name)
+        if checksum != parms["JSONCPP_CSUM"]:
+            sys.exit("Checksum mismatch, expected %s, actual %s" % (parms["JSONCPP_CSUM"], checksum))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
             dist = os.path.realpath('jsoncpp')
             rmtree(dist)
             extract(arch_name, "gz")
             rm(arch_name)
-            os.rename("jsoncpp-%s" % JSONCPP_VERSION, dist)
+            os.rename("jsoncpp-%s" % parms["JSONCPP_VERSION"], dist)
             os.chdir(dist)
             call(["python", "amalgamate.py"])
             os.chdir(os.path.join(dist, "dist"))

@@ -1,6 +1,7 @@
 import os, sys, re, stat, shutil, tarfile, zipfile, subprocess
 import requests
 import rfc6266
+import hashlib
 
 j = os.path.join
 
@@ -271,6 +272,13 @@ def download(url):
         f.write(response.content)
     return fname
 
+def sha256_checksum(filename, block_size=65536):
+    sha256 = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for block in iter(lambda: f.read(block_size), b''):
+            sha256.update(block)
+    return sha256.hexdigest()
+
 def read_params():
     if not os.environ.get('O3'):
         sys.exit("Missing required O3 env variable")
@@ -293,4 +301,13 @@ def read_params():
     if os.environ.get('USE_JSONSPP'):
         params['CONNECT'] = True
     params['GTEST_ROOT'] = os.environ.get('GTEST_ROOT')
+
+    # read versions
+    with open(os.path.join(params['OVPN3'], "core", "deps", "lib-versions")) as f:
+        for l in [line.strip() for line in f if line.strip()]:
+            name, val = l.split("=")
+            if name.startswith("export"):
+                name = name[6:].strip()
+            params[name] = val
+
     return params
