@@ -17,7 +17,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/file.hpp>
-#include <openvpn/common/stringtempl.hpp>
+#include <openvpn/common/stringtempl2.hpp>
 #include <openvpn/common/jsonlib.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/bufstream.hpp>
@@ -35,9 +35,9 @@ namespace openvpn {
     inline std::string fmt_name(const NAME& name, const TITLE& title)
     {
       if (!StringTempl::empty(title))
-	return StringTempl::to_string(title) + '.' + name;
+	return StringTempl::to_string(title) + '.' + StringTempl::to_string(name);
       else
-	return name;
+	return StringTempl::to_string(name);
     }
 
     template <typename TITLE>
