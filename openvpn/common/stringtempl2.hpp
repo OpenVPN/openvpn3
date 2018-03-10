@@ -22,6 +22,9 @@
 
 #pragma once
 
+#include <string>
+#include <type_traits>
+
 #include <openvpn/common/stringtempl.hpp>
 
 namespace openvpn {
@@ -31,6 +34,13 @@ namespace openvpn {
     inline auto to_string(const T& t) -> decltype(t.to_string())
     {
       return t.to_string();
+    }
+
+    template <typename T,
+	      typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
+    inline std::string to_string(T value)
+    {
+      return std::to_string(value);
     }
 
   }
