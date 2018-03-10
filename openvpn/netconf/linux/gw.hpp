@@ -128,7 +128,7 @@ namespace openvpn {
 	argv.emplace_back("-6");
       argv.emplace_back("route");
       argv.emplace_back("show");
-      const int status = system_cmd(argv[0], argv, nullptr, pipe, false);
+      const int status = system_cmd(argv[0], argv, nullptr, pipe, 0);
       if (status != 0)
 	OPENVPN_THROW(linux_gw_error, "command returned error status " << status << " : " << argv.to_string());
       return pipe.out;
