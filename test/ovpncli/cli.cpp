@@ -68,6 +68,10 @@
 #include <openvpn/ssl/peerinfo.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
 
+#ifdef OPENVPN_REMOTE_OVERRIDE
+#include <openvpn/common/process.hpp>
+#endif
+
 #if defined(USE_MBEDTLS)
 #include <openvpn/mbedtls/util/pkcs1.hpp>
 #endif
@@ -128,6 +132,13 @@ public:
 	  std::cout << "  " << stats_name(i) << " : " << value << std::endl;
       }
   }
+
+#ifdef OPENVPN_REMOTE_OVERRIDE
+  void set_remote_override_cmd(const std::string& cmd)
+  {
+    remote_override_cmd = cmd;
+  }
+#endif
 
 private:
   virtual bool socket_protect(int socket) override
@@ -304,10 +315,51 @@ private:
     return false;
   }
 
+#ifdef OPENVPN_REMOTE_OVERRIDE
+  virtual bool remote_override_enabled() override
+  {
+    return !remote_override_cmd.empty();
+  }
+
+  virtual void remote_override(ClientAPI::RemoteOverride& ro)
+  {
+    RedirectPipe::InOut pio;
+    Argv argv;
+    argv.emplace_back(remote_override_cmd);
+    OPENVPN_LOG(argv.to_string());
+    const int status = system_cmd(remote_override_cmd,
+				  argv,
+				  nullptr,
+				  pio,
+				  RedirectPipe::IGNORE_ERR);
+    if (!status)
+      {
+	const std::string out = string::first_line(pio.out);
+	OPENVPN_LOG("REMOTE OVERRIDE: " << out);
+	auto svec = string::split(out, ',');
+	if (svec.size() == 4)
+	  {
+	    ro.host = svec[0];
+	    ro.ip = svec[1];
+	    ro.port = svec[2];
+	    ro.proto = svec[3];
+	  }
+	else
+	  ro.error = "cannot parse remote-override, expecting host,ip,port,proto (at least one or both of host and ip must be defined)";
+      }
+    else
+      ro.error = "status=" + std::to_string(status);
+  }
+#endif
+
   std::mutex log_mutex;
   std::string dc_cookie;
   RandomAPI::Ptr rng;      // random data source for epki
   volatile ClockTickAction clock_tick_action = CT_UNDEF;
+
+#ifdef OPENVPN_REMOTE_OVERRIDE
+  std::string remote_override_cmd;
+#endif
 };
 
 static Client *the_client = nullptr; // GLOBAL
@@ -549,6 +601,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "epki-cert",      required_argument,  nullptr,       2  },
     { "epki-ca",        required_argument,  nullptr,       3  },
     { "epki-key",       required_argument,  nullptr,       4  },
+#ifdef OPENVPN_REMOTE_OVERRIDE
+    { "remote-override",required_argument,  nullptr,       5  },
+#endif
     { nullptr,          0,                  nullptr,       0  }
   };
 
@@ -598,6 +653,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string epki_cert_fn;
 	std::string epki_ca_fn;
 	std::string epki_key_fn;
+#ifdef OPENVPN_REMOTE_OVERRIDE
+	std::string remote_override_cmd;
+#endif
 
 	int ch;
 	optind = 1;
@@ -617,6 +675,11 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      case 4: // --epki-key
 		epki_key_fn = optarg;
 		break;
+#ifdef OPENVPN_REMOTE_OVERRIDE
+	      case 5: // --remote-override
+		remote_override_cmd = optarg;
+		break;
+#endif
 	      case 'e':
 		eval = true;
 		break;
@@ -891,6 +954,10 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 #endif
 		    }
 
+#ifdef OPENVPN_REMOTE_OVERRIDE
+                  client.set_remote_override_cmd(remote_override_cmd);
+#endif
+
 		  std::cout << "CONNECTING..." << std::endl;
 
 		  // start the client thread
@@ -933,6 +1000,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--proto, -P           : protocol override (udp|tcp)" << std::endl;
       std::cout << "--server, -s          : server override" << std::endl;
       std::cout << "--port, -R            : port override" << std::endl;
+#ifdef OPENVPN_REMOTE_OVERRIDE
+      std::cout << "--remote-override     : command to run to generate next remote (returning host,ip,port,proto)" << std::endl;
+#endif
       std::cout << "--ipv6, -6            : IPv6 (yes|no|default)" << std::endl;
       std::cout << "--timeout, -t         : timeout" << std::endl;
       std::cout << "--compress, -c        : compression mode (yes|no|asym)" << std::endl;
