@@ -322,6 +322,8 @@ namespace openvpn {
 	    const std::string title = "remote-override";
 	    ClientAPI::RemoteOverride ro;
 	    parent->remote_override(ro);
+	    if (!ro.error.empty())
+	      throw Exception("remote override exception: " + ro.error);
 	    RemoteList::Item::Ptr ri(new RemoteList::Item);
 	    if (!ro.ip.empty())
 	      ri->set_ip_addr(IP::Addr(ro.ip, title));

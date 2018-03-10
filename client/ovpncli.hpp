@@ -415,6 +415,7 @@ namespace openvpn {
       std::string ip;     //   or ip must be defined (or both)
       std::string port;
       std::string proto;
+      std::string error;  // if non-empty, indicates an error
     };
 
     namespace Private {
