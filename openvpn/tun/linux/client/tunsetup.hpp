@@ -341,6 +341,27 @@ namespace openvpn {
 	Layer layer; // OSI layer
 	std::string dev_name;
 	int txqueuelen;
+
+#ifdef HAVE_JSON
+	virtual Json::Value to_json() override
+	{
+	  Json::Value root(Json::objectValue);
+	  root["iface_name"] = Json::Value(iface_name);
+	  root["layer"] = Json::Value(layer.str());
+	  root["dev_name"] = Json::Value(dev_name);
+	  root["txqueuelen"] = Json::Value(txqueuelen);
+	  return root;
+	};
+
+	virtual void from_json(const Json::Value& root, const std::string& title) override
+	{
+	  json::assert_dict(root, title);
+	  json::to_string(root, iface_name, "iface_name", title);
+	  layer = Layer::from_str(json::get_string(root, "layer", title));
+	  json::to_string(root, dev_name, "dev_name", title);
+	  json::to_int(root, txqueuelen, "txqueuelen", title);
+	}
+#endif
       };
 
       virtual void destroy(std::ostream &os)
