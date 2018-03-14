@@ -1,0 +1,1766 @@
+From a0af95f052fa734c662dfe420d3e34e6ed777ed5 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Tue, 10 Oct 2017 20:10:46 +0200
+Subject: [PATCH 01/13] Timing: fix mbedtls_set_alarm(0) on Unix/POSIX
+
+The POSIX/Unix implementation of mbedtls_set_alarm did not set the
+mbedtls_timing_alarmed flag when called with 0, which was inconsistent
+with what the documentation implied and with the Windows behavior.
+---
+ library/timing.c | 6 ++++++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/library/timing.c b/library/timing.c
+index a7c7ff0..4576f31 100644
+--- a/library/timing.c
++++ b/library/timing.c
+@@ -315,6 +315,12 @@ void mbedtls_set_alarm( int seconds )
+     mbedtls_timing_alarmed = 0;
+     signal( SIGALRM, sighandler );
+     alarm( seconds );
++    if( seconds == 0 )
++    {
++        /* alarm(0) cancelled any previous pending alarm, but the
++           handler won't fire, so raise the flag straight away. */
++        mbedtls_timing_alarmed = 1;
++    }
+ }
+ 
+ #endif /* _WIN32 && !EFIX64 && !EFI32 */
+-- 
+2.7.4
+
+
+From a9edc4805b5e73885eb3ca1e9fe905e7321c226a Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Tue, 10 Oct 2017 19:46:45 +0200
+Subject: [PATCH 02/13] timing interface documentation: minor clarifications
+
+---
+ include/mbedtls/timing.h | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/include/mbedtls/timing.h b/include/mbedtls/timing.h
+index ae7a713..579de33 100644
+--- a/include/mbedtls/timing.h
++++ b/include/mbedtls/timing.h
+@@ -1,7 +1,7 @@
+ /**
+  * \file timing.h
+  *
+- * \brief Portable interface to the CPU cycle counter
++ * \brief Portable interface to timeouts and to the CPU cycle counter
+  *
+  *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+  *  SPDX-License-Identifier: Apache-2.0
+@@ -65,6 +65,9 @@ extern volatile int mbedtls_timing_alarmed;
+  * \warning        This is only a best effort! Do not rely on this!
+  *                 In particular, it is known to be unreliable on virtual
+  *                 machines.
++ *
++ * \note           This value starts at an unspecified origin and
++ *                 may wrap around.
+  */
+ unsigned long mbedtls_timing_hardclock( void );
+ 
+@@ -73,6 +76,8 @@ unsigned long mbedtls_timing_hardclock( void );
+  *
+  * \param val      points to a timer structure
+  * \param reset    if set to 1, the timer is restarted
++ *
++ * \return         Elapsed time in ms (before the reset, if there is a reset)
+  */
+ unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int reset );
+ 
+@@ -80,6 +85,7 @@ unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int
+  * \brief          Setup an alarm clock
+  *
+  * \param seconds  delay before the "mbedtls_timing_alarmed" flag is set
++ *                 (must be >=0)
+  *
+  * \warning        Only one alarm at a time  is supported. In a threaded
+  *                 context, this means one for the whole process, not one per
+@@ -91,11 +97,15 @@ void mbedtls_set_alarm( int seconds );
+  * \brief          Set a pair of delays to watch
+  *                 (See \c mbedtls_timing_get_delay().)
+  *
+- * \param data     Pointer to timing data
++ * \param data     Pointer to timing data.
+  *                 Must point to a valid \c mbedtls_timing_delay_context struct.
+  * \param int_ms   First (intermediate) delay in milliseconds.
++ *                 The effect if int_ms > fin_ms is unspecified.
+  * \param fin_ms   Second (final) delay in milliseconds.
+  *                 Pass 0 to cancel the current delay.
++ *
++ * \note           To set a single delay, either use \c mbedtls_timing_set_timer
++ *                 directly or use this function with int_ms == fin_ms.
+  */
+ void mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms );
+ 
+@@ -106,7 +116,7 @@ void mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms );
+  * \param data     Pointer to timing data
+  *                 Must point to a valid \c mbedtls_timing_delay_context struct.
+  *
+- * \return         -1 if cancelled (fin_ms = 0)
++ * \return         -1 if cancelled (fin_ms = 0),
+  *                  0 if none of the delays are passed,
+  *                  1 if only the intermediate delay is passed,
+  *                  2 if the final delay is passed.
+-- 
+2.7.4
+
+
+From d92f0aa3bec86b7b74cd4c7372b9a4b5323b0cfc Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Mon, 16 Oct 2017 19:33:06 +0200
+Subject: [PATCH 03/13] mbedtls_timing_get_timer: don't use uninitialized
+ memory
+
+mbedtls_timing_get_timer with reset=1 is called both to initialize a
+timer object and to reset an already-initialized object. In an
+initial call, the content of the data structure is indeterminate, so
+the code should not read from it. This could crash if signed overflows
+trap, for example.
+
+As a consequence, on reset, we can't return the previously elapsed
+time as was previously done on Windows. Return 0 as was done on Unix.
+---
+ include/mbedtls/timing.h | 13 +++++++++++--
+ library/timing.c         | 45 +++++++++++++++++++++++----------------------
+ 3 files changed, 35 insertions(+), 24 deletions(-)
+
+diff --git a/include/mbedtls/timing.h b/include/mbedtls/timing.h
+index 579de33..bfb8579 100644
+--- a/include/mbedtls/timing.h
++++ b/include/mbedtls/timing.h
+@@ -75,9 +75,18 @@ unsigned long mbedtls_timing_hardclock( void );
+  * \brief          Return the elapsed time in milliseconds
+  *
+  * \param val      points to a timer structure
+- * \param reset    if set to 1, the timer is restarted
++ * \param reset    If 0, query the elapsed time. Otherwise (re)start the timer.
+  *
+- * \return         Elapsed time in ms (before the reset, if there is a reset)
++ * \return         Elapsed time since the previous reset in ms. When
++ *                 restarting, this is always 0.
++ *
++ * \note           To initialize a timer, call this function with reset=1.
++ *
++ *                 Determining the elapsed time and resetting the timer is not
++ *                 atomic on all platforms, so after the sequence
++ *                 `{ get_timer(1); ...; time1 = get_timer(1); ...; time2 =
++ *                 get_timer(0) }` the value time1+time2 is only approximately
++ *                 the delay since the first reset.
+  */
+ unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int reset );
+ 
+diff --git a/library/timing.c b/library/timing.c
+index 4576f31..a6067d0 100644
+--- a/library/timing.c
++++ b/library/timing.c
+@@ -244,21 +244,23 @@ volatile int mbedtls_timing_alarmed = 0;
+ 
+ unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int reset )
+ {
+-    unsigned long delta;
+-    LARGE_INTEGER offset, hfreq;
+     struct _hr_time *t = (struct _hr_time *) val;
+ 
+-    QueryPerformanceCounter(  &offset );
+-    QueryPerformanceFrequency( &hfreq );
+-
+-    delta = (unsigned long)( ( 1000 *
+-        ( offset.QuadPart - t->start.QuadPart ) ) /
+-           hfreq.QuadPart );
+-
+     if( reset )
++    {
+         QueryPerformanceCounter( &t->start );
+-
+-    return( delta );
++        return( 0 );
++    }
++    else
++    {
++        unsigned long delta;
++        LARGE_INTEGER now, hfreq;
++        QueryPerformanceCounter(  &now );
++        QueryPerformanceFrequency( &hfreq );
++        delta = (unsigned long)( ( now.QuadPart - t->start.QuadPart ) * 1000ul
++                                 / hfreq.QuadPart );
++        return( delta );
++    }
+ }
+ 
+ /* It's OK to use a global because alarm() is supposed to be global anyway */
+@@ -285,23 +287,22 @@ void mbedtls_set_alarm( int seconds )
+ 
+ unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int reset )
+ {
+-    unsigned long delta;
+-    struct timeval offset;
+     struct _hr_time *t = (struct _hr_time *) val;
+ 
+-    gettimeofday( &offset, NULL );
+-
+     if( reset )
+     {
+-        t->start.tv_sec  = offset.tv_sec;
+-        t->start.tv_usec = offset.tv_usec;
++        gettimeofday( &t->start, NULL );
+         return( 0 );
+     }
+-
+-    delta = ( offset.tv_sec  - t->start.tv_sec  ) * 1000
+-          + ( offset.tv_usec - t->start.tv_usec ) / 1000;
+-
+-    return( delta );
++    else
++    {
++        unsigned long delta;
++        struct timeval now;
++        gettimeofday( &now, NULL );
++        delta = ( now.tv_sec  - t->start.tv_sec  ) * 1000ul
++              + ( now.tv_usec - t->start.tv_usec ) / 1000;
++        return( delta );
++    }
+ }
+ 
+ static void sighandler( int signum )
+-- 
+2.7.4
+
+
+From 0827d5c07d35cb60bcb5b09a06187852c4edd3c9 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Tue, 10 Oct 2017 20:09:26 +0200
+Subject: [PATCH 04/13] Timing self test: print some diagnosis information
+
+Print some not-very-nice-looking but helpful diagnosis information if
+the timing selftest fails. Since the failures tend to be due to heavy
+system load that's hard to reproduce, this information is necessary to
+understand what's going on.
+---
+ library/timing.c | 39 ++++++++++++++++++++-------------------
+ 1 file changed, 20 insertions(+), 19 deletions(-)
+
+diff --git a/library/timing.c b/library/timing.c
+index a6067d0..744e1e7 100644
+--- a/library/timing.c
++++ b/library/timing.c
+@@ -385,13 +385,21 @@ static void busy_msleep( unsigned long msec )
+     (void) j;
+ }
+ 
+-#define FAIL    do                      \
+-{                                       \
+-    if( verbose != 0 )                  \
+-        mbedtls_printf( "failed\n" );   \
+-                                        \
+-    return( 1 );                        \
+-} while( 0 )
++#define FAIL    do                                                      \
++    {                                                                   \
++        if( verbose != 0 )                                              \
++        {                                                               \
++            mbedtls_printf( "failed at line %d\n", __LINE__ );          \
++            mbedtls_printf( " cycles=%lu ratio=%lu millisecs=%lu secs=%lu hardfail=%d a=%lu b=%lu\n", \
++                            cycles, ratio, millisecs, secs, hardfail,   \
++                            (unsigned long) a, (unsigned long) b );     \
++            mbedtls_printf( " elapsed(hires)=%lu elapsed(ctx)=%lu status(ctx)=%d\n", \
++                            mbedtls_timing_get_timer( &hires, 0 ),      \
++                            mbedtls_timing_get_timer( &ctx.timer, 0 ),  \
++                            mbedtls_timing_get_delay( &ctx ) );         \
++        }                                                               \
++        return( 1 );                                                    \
++    } while( 0 )
+ 
+ /*
+  * Checkup routine
+@@ -401,17 +409,16 @@ static void busy_msleep( unsigned long msec )
+  */
+ int mbedtls_timing_self_test( int verbose )
+ {
+-    unsigned long cycles, ratio;
+-    unsigned long millisecs, secs;
+-    int hardfail;
++    unsigned long cycles = 0, ratio = 0;
++    unsigned long millisecs = 0, secs = 0;
++    int hardfail = 0;
+     struct mbedtls_timing_hr_time hires;
+-    uint32_t a, b;
++    uint32_t a = 0, b = 0;
+     mbedtls_timing_delay_context ctx;
+ 
+     if( verbose != 0 )
+         mbedtls_printf( "  TIMING tests note: will take some time!\n" );
+ 
+-
+     if( verbose != 0 )
+         mbedtls_printf( "  TIMING test #1 (set_alarm / get_timer): " );
+ 
+@@ -428,12 +435,7 @@ int mbedtls_timing_self_test( int verbose )
+         /* For some reason on Windows it looks like alarm has an extra delay
+          * (maybe related to creating a new thread). Allow some room here. */
+         if( millisecs < 800 * secs || millisecs > 1200 * secs + 300 )
+-        {
+-            if( verbose != 0 )
+-                mbedtls_printf( "failed\n" );
+-
+-            return( 1 );
+-        }
++            FAIL;
+     }
+ 
+     if( verbose != 0 )
+@@ -482,7 +484,6 @@ int mbedtls_timing_self_test( int verbose )
+      * On a 4Ghz 32-bit machine the cycle counter wraps about once per second;
+      * since the whole test is about 10ms, it shouldn't happen twice in a row.
+      */
+-    hardfail = 0;
+ 
+ hard_test:
+     if( hardfail > 1 )
+-- 
+2.7.4
+
+
+From 319ac801a84b899890e797c65b475f01fe560254 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Fri, 15 Dec 2017 14:57:18 +0100
+Subject: [PATCH 05/13] selftest: refactor to separate the list of tests from
+ the logic
+
+No behavior change.
+---
+ programs/test/selftest.c | 318 ++++++++++++++++-------------------------------
+ 1 file changed, 105 insertions(+), 213 deletions(-)
+
+diff --git a/programs/test/selftest.c b/programs/test/selftest.c
+index 1941ad0..16ff310 100644
+--- a/programs/test/selftest.c
++++ b/programs/test/selftest.c
+@@ -107,8 +107,8 @@ static int run_test_snprintf( void )
+  * self-test. If this fails, we attempt the test anyway, so no error is passed
+  * back.
+  */
+-#if defined(MBEDTLS_SELF_TEST) && defined(MBEDTLS_ENTROPY_C) && \
+-    defined(MBEDTLS_ENTROPY_NV_SEED) && !defined(MBEDTLS_NO_PLATFORM_ENTROPY)
++#if defined(MBEDTLS_SELF_TEST) && defined(MBEDTLS_ENTROPY_C)
++#if defined(MBEDTLS_ENTROPY_NV_SEED) && !defined(MBEDTLS_NO_PLATFORM_ENTROPY)
+ static void create_entropy_seed_file( void )
+ {
+     int result;
+@@ -136,290 +136,182 @@ static void create_entropy_seed_file( void )
+ }
+ #endif
+ 
+-int main( int argc, char *argv[] )
++int mbedtls_entropy_self_test_wrapper( int verbose )
+ {
+-    int v, suites_tested = 0, suites_failed = 0;
+-#if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C) && defined(MBEDTLS_SELF_TEST)
+-    unsigned char buf[1000000];
++#if defined(MBEDTLS_ENTROPY_NV_SEED) && !defined(MBEDTLS_NO_PLATFORM_ENTROPY)
++    create_entropy_seed_file( );
++#endif
++    return( mbedtls_entropy_self_test( verbose ) );
++}
+ #endif
+-    void *pointer;
+-
+-    /*
+-     * The C standard doesn't guarantee that all-bits-0 is the representation
+-     * of a NULL pointer. We do however use that in our code for initializing
+-     * structures, which should work on every modern platform. Let's be sure.
+-     */
+-    memset( &pointer, 0, sizeof( void * ) );
+-    if( pointer != NULL )
+-    {
+-        mbedtls_printf( "all-bits-zero is not a NULL pointer\n" );
+-        mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+-    }
+-
+-    /*
+-     * Make sure we have a snprintf that correctly zero-terminates
+-     */
+-    if( run_test_snprintf() != 0 )
+-    {
+-        mbedtls_printf( "the snprintf implementation is broken\n" );
+-        mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+-    }
+-
+-    if( argc == 2 && ( strcmp( argv[1], "--quiet" ) == 0  ||
+-        strcmp( argv[1], "-q" ) == 0 ) )
+-    {
+-        v = 0;
+-    }
+-    else
+-    {
+-        v = 1;
+-        mbedtls_printf( "\n" );
+-    }
+ 
+ #if defined(MBEDTLS_SELF_TEST)
+-
+ #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
+-    mbedtls_memory_buffer_alloc_init( buf, sizeof(buf) );
+-#endif
+-
+-#if defined(MBEDTLS_MD2_C)
+-    if( mbedtls_md2_self_test( v )  != 0 )
++int mbedtls_memory_buffer_alloc_free_and_self_test( int verbose )
++{
++    if( verbose != 0 )
+     {
+-        suites_failed++;
++#if defined(MBEDTLS_MEMORY_DEBUG)
++        mbedtls_memory_buffer_alloc_status( );
++#endif
+     }
+-    suites_tested++;
++    mbedtls_memory_buffer_alloc_free( );
++    return( mbedtls_memory_buffer_alloc_self_test( verbose ) );
++}
+ #endif
+ 
++typedef struct
++{
++    const char *name;
++    int ( *function )( int );
++} selftest_t;
++
++const selftest_t selftests[] =
++{
++#if defined(MBEDTLS_MD2_C)
++    {"md2", mbedtls_md2_self_test},
++#endif
+ #if defined(MBEDTLS_MD4_C)
+-    if( mbedtls_md4_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"md4", mbedtls_md4_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_MD5_C)
+-    if( mbedtls_md5_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"md5", mbedtls_md5_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_RIPEMD160_C)
+-    if( mbedtls_ripemd160_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"ripemd160", mbedtls_ripemd160_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_SHA1_C)
+-    if( mbedtls_sha1_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"sha1", mbedtls_sha1_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_SHA256_C)
+-    if( mbedtls_sha256_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"sha256", mbedtls_sha256_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_SHA512_C)
+-    if( mbedtls_sha512_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"sha512", mbedtls_sha512_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_ARC4_C)
+-    if( mbedtls_arc4_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"arc4", mbedtls_arc4_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_DES_C)
+-    if( mbedtls_des_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"des", mbedtls_des_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_AES_C)
+-    if( mbedtls_aes_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"aes", mbedtls_aes_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_GCM_C) && defined(MBEDTLS_AES_C)
+-    if( mbedtls_gcm_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"gcm", mbedtls_gcm_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_CCM_C) && defined(MBEDTLS_AES_C)
+-    if( mbedtls_ccm_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"ccm", mbedtls_ccm_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_CMAC_C)
+-    if( ( mbedtls_cmac_self_test( v ) ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"cmac", mbedtls_cmac_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_BASE64_C)
+-    if( mbedtls_base64_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"base64", mbedtls_base64_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_BIGNUM_C)
+-    if( mbedtls_mpi_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"mpi", mbedtls_mpi_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_RSA_C)
+-    if( mbedtls_rsa_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"rsa", mbedtls_rsa_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_X509_USE_C)
+-    if( mbedtls_x509_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"x509", mbedtls_x509_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_XTEA_C)
+-    if( mbedtls_xtea_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"xtea", mbedtls_xtea_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_CAMELLIA_C)
+-    if( mbedtls_camellia_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"camellia", mbedtls_camellia_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_CTR_DRBG_C)
+-    if( mbedtls_ctr_drbg_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"ctr_drbg", mbedtls_ctr_drbg_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_HMAC_DRBG_C)
+-    if( mbedtls_hmac_drbg_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"hmac_drbg", mbedtls_hmac_drbg_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_ECP_C)
+-    if( mbedtls_ecp_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"ecp", mbedtls_ecp_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_ECJPAKE_C)
+-    if( mbedtls_ecjpake_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"ecjpake", mbedtls_ecjpake_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_DHM_C)
+-    if( mbedtls_dhm_self_test( v ) != 0 )
+-    {
+-        suites_failed++;
+-    }
+-    suites_tested++;
++    {"dhm", mbedtls_dhm_self_test},
+ #endif
+-
+ #if defined(MBEDTLS_ENTROPY_C)
++    {"entropy", mbedtls_entropy_self_test_wrapper},
++#endif
++#if defined(MBEDTLS_PKCS5_C)
++    {"pkcs5", mbedtls_pkcs5_self_test},
++#endif
++/* Slower test after the faster ones */
++#if defined(MBEDTLS_TIMING_C)
++    {"timing", mbedtls_timing_self_test},
++#endif
++/* Heap test comes last */
++#if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
++    {"memory_buffer_alloc", mbedtls_memory_buffer_alloc_free_and_self_test},
++#endif
++    {NULL, NULL}
++};
+ 
+-#if defined(MBEDTLS_ENTROPY_NV_SEED) && !defined(MBEDTLS_NO_PLATFORM_ENTROPY)
+-    create_entropy_seed_file();
++int main( int argc, char *argv[] )
++{
++    const selftest_t *test;
++    int v, suites_tested = 0, suites_failed = 0;
++#if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C) && defined(MBEDTLS_SELF_TEST)
++    unsigned char buf[1000000];
+ #endif
++    void *pointer;
+ 
+-    if( mbedtls_entropy_self_test( v ) != 0 )
++    /*
++     * The C standard doesn't guarantee that all-bits-0 is the representation
++     * of a NULL pointer. We do however use that in our code for initializing
++     * structures, which should work on every modern platform. Let's be sure.
++     */
++    memset( &pointer, 0, sizeof( void * ) );
++    if( pointer != NULL )
+     {
+-        suites_failed++;
++        mbedtls_printf( "all-bits-zero is not a NULL pointer\n" );
++        mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+     }
+-    suites_tested++;
+-#endif
+ 
+-#if defined(MBEDTLS_PKCS5_C)
+-    if( mbedtls_pkcs5_self_test( v ) != 0 )
++    /*
++     * Make sure we have a snprintf that correctly zero-terminates
++     */
++    if( run_test_snprintf() != 0 )
+     {
+-        suites_failed++;
++        mbedtls_printf( "the snprintf implementation is broken\n" );
++        mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+     }
+-    suites_tested++;
+-#endif
+-
+-/* Slow tests last */
+ 
+-#if defined(MBEDTLS_TIMING_C)
+-    if( mbedtls_timing_self_test( v ) != 0 )
++    if( argc == 2 && ( strcmp( argv[1], "--quiet" ) == 0  ||
++        strcmp( argv[1], "-q" ) == 0 ) )
+     {
+-        suites_failed++;
++        v = 0;
+     }
+-    suites_tested++;
+-#endif
+-
+-    if( v != 0 )
++    else
+     {
+-#if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C) && defined(MBEDTLS_MEMORY_DEBUG)
+-        mbedtls_memory_buffer_alloc_status();
+-#endif
++        v = 1;
++        mbedtls_printf( "\n" );
+     }
+ 
++#if defined(MBEDTLS_SELF_TEST)
++
+ #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
+-    mbedtls_memory_buffer_alloc_free();
+-    if( mbedtls_memory_buffer_alloc_self_test( v ) != 0 )
++    mbedtls_memory_buffer_alloc_init( buf, sizeof(buf) );
++#endif
++
++    for( test = selftests; test->name != NULL; test++ )
+     {
+-        suites_failed++;
++        if( test->function( v )  != 0 )
++        {
++            suites_failed++;
++        }
++        suites_tested++;
+     }
+-    suites_tested++;
+-#endif
+ 
+ #else
+     mbedtls_printf( " MBEDTLS_SELF_TEST not defined.\n" );
+-- 
+2.7.4
+
+
+From c82fbb4e14faf3ee3006e978d21fb231767a37dc Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Fri, 15 Dec 2017 15:01:27 +0100
+Subject: [PATCH 06/13] selftest: allow running a subset of the tests
+
+If given command line arguments, interpret them as test names and only
+run those tests.
+---
+ programs/test/selftest.c | 43 ++++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 40 insertions(+), 5 deletions(-)
+
+diff --git a/programs/test/selftest.c b/programs/test/selftest.c
+index 16ff310..fc3b0eb 100644
+--- a/programs/test/selftest.c
++++ b/programs/test/selftest.c
+@@ -256,10 +256,14 @@ const selftest_t selftests[] =
+ #endif
+     {NULL, NULL}
+ };
++#endif /* MBEDTLS_SELF_TEST */
+ 
+ int main( int argc, char *argv[] )
+ {
++#if defined(MBEDTLS_SELF_TEST)
+     const selftest_t *test;
++#endif /* MBEDTLS_SELF_TEST */
++    char **argp = argc >= 1 ? argv + 1 : argv;
+     int v, suites_tested = 0, suites_failed = 0;
+ #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C) && defined(MBEDTLS_SELF_TEST)
+     unsigned char buf[1000000];
+@@ -287,10 +291,11 @@ int main( int argc, char *argv[] )
+         mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+     }
+ 
+-    if( argc == 2 && ( strcmp( argv[1], "--quiet" ) == 0  ||
++    if( argc >= 2 && ( strcmp( argv[1], "--quiet" ) == 0  ||
+         strcmp( argv[1], "-q" ) == 0 ) )
+     {
+         v = 0;
++        ++argp;
+     }
+     else
+     {
+@@ -304,13 +309,41 @@ int main( int argc, char *argv[] )
+     mbedtls_memory_buffer_alloc_init( buf, sizeof(buf) );
+ #endif
+ 
+-    for( test = selftests; test->name != NULL; test++ )
++    if( *argp != NULL )
++    {
++        /* Run the specified tests */
++        for( ; *argp != NULL; argp++ )
++        {
++            for( test = selftests; test->name != NULL; test++ )
++            {
++                if( !strcmp( *argp, test->name ) )
++                {
++                    if( test->function( v )  != 0 )
++                    {
++                        suites_failed++;
++                    }
++                    suites_tested++;
++                    break;
++                }
++            }
++            if( test->name == NULL )
++            {
++                mbedtls_printf( "  Test suite %s not available -> failed\n\n", *argp );
++                suites_failed++;
++            }
++        }
++    }
++    else
+     {
+-        if( test->function( v )  != 0 )
++        /* Run all the tests */
++        for( test = selftests; test->name != NULL; test++ )
+         {
+-            suites_failed++;
++            if( test->function( v )  != 0 )
++            {
++                suites_failed++;
++            }
++            suites_tested++;
+         }
+-        suites_tested++;
+     }
+ 
+ #else
+-- 
+2.7.4
+
+
+From ff79d27f5ceb30ea7438f1c172b9a9f80692a18b Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Wed, 20 Dec 2017 18:09:27 +0100
+Subject: [PATCH 07/13] selftest: allow excluding a subset of the tests
+
+E.g. "selftest -x timing" runs all the self-tests except timing.
+---
+ programs/test/selftest.c | 49 ++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 37 insertions(+), 12 deletions(-)
+
+diff --git a/programs/test/selftest.c b/programs/test/selftest.c
+index fc3b0eb..72a3734 100644
+--- a/programs/test/selftest.c
++++ b/programs/test/selftest.c
+@@ -263,8 +263,10 @@ int main( int argc, char *argv[] )
+ #if defined(MBEDTLS_SELF_TEST)
+     const selftest_t *test;
+ #endif /* MBEDTLS_SELF_TEST */
+-    char **argp = argc >= 1 ? argv + 1 : argv;
+-    int v, suites_tested = 0, suites_failed = 0;
++    char **argp;
++    int v = 1; /* v=1 for verbose mode */
++    int exclude_mode = 0;
++    int suites_tested = 0, suites_failed = 0;
+ #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C) && defined(MBEDTLS_SELF_TEST)
+     unsigned char buf[1000000];
+ #endif
+@@ -291,17 +293,24 @@ int main( int argc, char *argv[] )
+         mbedtls_exit( MBEDTLS_EXIT_FAILURE );
+     }
+ 
+-    if( argc >= 2 && ( strcmp( argv[1], "--quiet" ) == 0  ||
+-        strcmp( argv[1], "-q" ) == 0 ) )
++    for( argp = argv + ( argc >= 1 ? 1 : argc ); *argp != NULL; ++argp )
+     {
+-        v = 0;
+-        ++argp;
++        if( strcmp( *argp, "--quiet" ) == 0 ||
++            strcmp( *argp, "-q" ) == 0 )
++        {
++            v = 0;
++        }
++        else if( strcmp( *argp, "--exclude" ) == 0 ||
++                 strcmp( *argp, "-x" ) == 0 )
++        {
++            exclude_mode = 1;
++        }
++        else
++            break;
+     }
+-    else
+-    {
+-        v = 1;
++
++    if( v != 0 )
+         mbedtls_printf( "\n" );
+-    }
+ 
+ #if defined(MBEDTLS_SELF_TEST)
+ 
+@@ -309,7 +318,7 @@ int main( int argc, char *argv[] )
+     mbedtls_memory_buffer_alloc_init( buf, sizeof(buf) );
+ #endif
+ 
+-    if( *argp != NULL )
++    if( *argp != NULL && exclude_mode == 0 )
+     {
+         /* Run the specified tests */
+         for( ; *argp != NULL; argp++ )
+@@ -335,9 +344,24 @@ int main( int argc, char *argv[] )
+     }
+     else
+     {
+-        /* Run all the tests */
++        /* Run all the tests except excluded ones */
+         for( test = selftests; test->name != NULL; test++ )
+         {
++            if( exclude_mode )
++            {
++                char **excluded;
++                for( excluded = argp; *excluded != NULL; ++excluded )
++                {
++                    if( !strcmp( *excluded, test->name ) )
++                        break;
++                }
++                if( *excluded )
++                {
++                    if( v )
++                        mbedtls_printf( "  Skip: %s\n", test->name );
++                    continue;
++                }
++            }
+             if( test->function( v )  != 0 )
+             {
+                 suites_failed++;
+@@ -347,6 +371,7 @@ int main( int argc, char *argv[] )
+     }
+ 
+ #else
++    (void) exclude_mode;
+     mbedtls_printf( " MBEDTLS_SELF_TEST not defined.\n" );
+ #endif
+ 
+-- 
+2.7.4
+
+
+From 8064bf3adf0298873ed4f6bc0dd89ee6efae3959 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Tue, 10 Oct 2017 19:56:06 +0200
+Subject: [PATCH 08/13] New timing unit tests
+
+New set of unit tests for the timing module, instead of just running
+the selftest function.
+
+The selftest function sometimes fails on a heavily loaded
+machine (such as a typical continuous integration system). Because of
+the all-in-one nature of the test and because the exact load pattern
+can be hard to reproduce, it is difficult to diagnose failures of CI
+runs with selftest. The new tests are more separated and I strove to
+point out potential failure modes in comments.
+
+* mbedtls_timing_hardclock: not tested. This function gives so few
+  guarantees that there isn't much to test, and it is hard to test
+  reliably because clock cycles don't easily relate to time in any
+  remotely portable way. This function isn't used in the library
+  anyway, it's only there for benchmark programs.
+* mbedtls_timing_get_timer: tested by setting a timer and verifying
+  that it reaches its target, and by verifying that a timer started
+  later than another always has a smaller elapsed time.
+* mbedtls_set_alarm: tested by setting an alarm, busy-waiting for it
+  and measuring the elapsed time with a timer.
+* mbedtls_timing_set_delay, mbedtls_timing_get_delay: tested by
+  setting a delay object and watching it go through its two delay
+  values, using a timer to check that the delays are passed at the
+  expected time.
+
+The tests pass under light to moderate load, but some of them can be
+defeated with sufficiently heavy load. This is unavoidable since the
+test process to be effectively suspended for any length of time,
+making us think that a timer has gone on for too long.
+---
+ tests/suites/test_suite_timing.data     |  40 ++++-
+ tests/suites/test_suite_timing.function | 309 +++++++++++++++++++++++++++++++-
+ 3 files changed, 345 insertions(+), 5 deletions(-)
+
+diff --git a/tests/suites/test_suite_timing.data b/tests/suites/test_suite_timing.data
+index 3ba79a4..02677d1 100644
+--- a/tests/suites/test_suite_timing.data
++++ b/tests/suites/test_suite_timing.data
+@@ -1,2 +1,38 @@
+-Timing selftest
+-timing_selftest:
++Timing: basic timer operation
++timing_timer_simple:
++
++Timing: timer reset
++timing_timer_reset:
++
++Timing: two parallel timers, delay 0
++timing_two_timers:0:
++
++Timing: two parallel timers, delay 100
++timing_two_timers:100:
++
++Timing: two parallel timers, delay 1000
++timing_two_timers:1000:
++
++Timing: two parallel timers, delay 10000
++timing_two_timers:10000:
++
++Timing: delay 0ms, 0ms
++timing_delay:0:0:
++
++Timing: delay 0ms, 50ms
++timing_delay:0:50:
++
++Timing: delay 50ms, 50ms
++timing_delay:50:50:
++
++Timing: delay 50ms, 100ms
++timing_delay:50:100:
++
++Timing: delay 50ms, 200ms
++timing_delay:50:200:
++
++Timing: alarm in 0 second
++timing_alarm:0:
++
++Timing: alarm in 1 second
++timing_alarm:1:
+diff --git a/tests/suites/test_suite_timing.function b/tests/suites/test_suite_timing.function
+index 5882f85..53e0ac3 100644
+--- a/tests/suites/test_suite_timing.function
++++ b/tests/suites/test_suite_timing.function
+@@ -1,5 +1,43 @@
+ /* BEGIN_HEADER */
++
++/* This test module exercises the timing module. One of the expected failure
++   modes is for timers to never expire, which could lead to an infinite loop.
++   The function timing_timer_simple is protected against this failure mode and
++   checks that timers do expire. Other functions will terminate if their
++   timers do expire. Therefore it is recommended to run timing_timer_simple
++   first and run other test functions only if that timing_timer_simple
++   succeeded. */
++
++#include <limits.h>
++
+ #include "mbedtls/timing.h"
++
++/* Wait this many milliseconds for a short timing test. This duration
++   should be large enough that, in practice, if you read the timer
++   value twice in a row, it won't have jumped by that much. */
++#define TIMING_SHORT_TEST_MS 100
++
++/* A loop that waits TIMING_SHORT_TEST_MS must not take more than this many
++   iterations. This value needs to be large enough to accommodate fast
++   platforms (e.g. at 4GHz and 10 cycles/iteration a CPU can run through 20
++   million iterations in 50ms). The only motivation to keep this value low is
++   to avoid having an infinite loop if the timer functions are not implemented
++   correctly. Ideally this value should be based on the processor speed but we
++   don't have this information! */
++#define TIMING_SHORT_TEST_ITERATIONS_MAX 1e8
++
++/* alarm(0) must fire in no longer than this amount of time. */
++#define TIMING_ALARM_0_DELAY_MS TIMING_SHORT_TEST_MS
++
++static int expected_delay_status( uint32_t int_ms, uint32_t fin_ms,
++                                  unsigned long actual_ms )
++{
++    return( fin_ms == 0 ? -1 :
++            actual_ms >= fin_ms ? 2 :
++            actual_ms >= int_ms ? 1 :
++            0 );
++}
++
+ /* END_HEADER */
+ 
+ /* BEGIN_DEPENDENCIES
+@@ -7,9 +45,274 @@
+  * END_DEPENDENCIES
+  */
+ 
+-/* BEGIN_CASE depends_on:MBEDTLS_SELF_TEST */
+-void timing_selftest()
++/* BEGIN_CASE */
++void timing_timer_simple( )
+ {
+-    TEST_ASSERT( mbedtls_timing_self_test( 1 ) == 0 );
++    struct mbedtls_timing_hr_time timer;
++    unsigned long millis = 0;
++    unsigned long new_millis = 0;
++    unsigned long iterations = 0;
++    /* Start the timer. */
++    (void) mbedtls_timing_get_timer( &timer, 1 );
++    /* Busy-wait loop for a few milliseconds. */
++    do
++    {
++        new_millis = mbedtls_timing_get_timer( &timer, 0 );
++        ++iterations;
++        /* Check that the timer didn't go backwards */
++        TEST_ASSERT( new_millis >= millis );
++        millis = new_millis;
++    }
++    while( millis < TIMING_SHORT_TEST_MS &&
++           iterations <= TIMING_SHORT_TEST_ITERATIONS_MAX );
++    /* The wait duration should have been large enough for at least a
++       few runs through the loop, even on the slowest realistic platform. */
++    TEST_ASSERT( iterations >= 2 );
++    /* The wait duration shouldn't have overflowed the iteration count. */
++    TEST_ASSERT( iterations < TIMING_SHORT_TEST_ITERATIONS_MAX );
++    return;
++
++exit:
++    /* No cleanup needed, but show some diagnostic iterations, because timing
++       problems can be hard to reproduce. */
++    mbedtls_fprintf( stdout, "  Finished with millis=%lu new_millis=%lu get(timer)<=%lu iterations=%lu\n",
++                     millis, new_millis, mbedtls_timing_get_timer( &timer, 0 ),
++                     iterations );
+ }
+ /* END_CASE */
++
++/* BEGIN_CASE */
++void timing_timer_reset( )
++{
++    struct mbedtls_timing_hr_time timer;
++    unsigned long millis = 0;
++    unsigned long iterations = 0;
++    /* Start the timer. Timers are always reset to 0. */
++    TEST_ASSERT( mbedtls_timing_get_timer( &timer, 1 ) == 0 );
++    /* Busy-wait loop for a few milliseconds */
++    do
++    {
++        ++iterations;
++        millis = mbedtls_timing_get_timer( &timer, 0 );
++    }
++    while( millis < TIMING_SHORT_TEST_MS );
++
++    /* Reset the timer and check that it has restarted. */
++    TEST_ASSERT( mbedtls_timing_get_timer( &timer, 1 ) == 0 );
++    /* Read the timer immediately after reset. It should be 0 or close
++       to it. */
++    TEST_ASSERT( mbedtls_timing_get_timer( &timer, 0 ) < TIMING_SHORT_TEST_MS );
++    return;
++
++exit:
++    /* No cleanup needed, but show some diagnostic information, because timing
++       problems can be hard to reproduce. */
++    mbedtls_fprintf( stdout, "  Finished with millis=%lu get(timer)<=%lu iterations=%lu\n",
++                     millis, mbedtls_timing_get_timer( &timer, 0 ),
++                     iterations );
++}
++/* END_CASE */
++
++/* BEGIN_CASE */
++void timing_two_timers( int delta )
++{
++    struct mbedtls_timing_hr_time timer1, timer2;
++    unsigned long millis1, millis2;
++
++    /* Start the first timer and wait for a short time. */
++    (void) mbedtls_timing_get_timer( &timer1, 1 );
++    do
++    {
++        millis1 = mbedtls_timing_get_timer( &timer1, 0 );
++    }
++    while( millis1 < TIMING_SHORT_TEST_MS );
++
++    /* Do a short busy-wait, so that the difference between timer1 and timer2
++       doesn't practically always end up being very close to a whole number of
++       milliseconds. */
++    while( delta > 0 )
++        --delta;
++
++    /* Start the second timer and compare it with the first. */
++    mbedtls_timing_get_timer( &timer2, 1 );
++    do
++    {
++        millis1 = mbedtls_timing_get_timer( &timer1, 0 );
++        millis2 = mbedtls_timing_get_timer( &timer2, 0 );
++        /* The first timer should always be ahead of the first. */
++        TEST_ASSERT( millis1 > millis2 );
++        /* The timers shouldn't drift apart, i.e. millis2-millis1 should stay
++           roughly constant, but this is hard to test reliably, especially in
++           a busy environment such as an overloaded continuous integration
++           system, so we don't test it it. */
++    }
++    while( millis2 < TIMING_SHORT_TEST_MS );
++
++    return;
++
++exit:
++    /* No cleanup needed, but show some diagnostic iterations, because timing
++       problems can be hard to reproduce. */
++    mbedtls_fprintf( stdout, "  Finished with millis1=%lu get(timer1)<=%lu millis2=%lu get(timer2)<=%lu\n",
++                     millis1, mbedtls_timing_get_timer( &timer1, 0 ),
++                     millis2, mbedtls_timing_get_timer( &timer2, 0 ) );
++}
++/* END_CASE */
++
++/* BEGIN_CASE */
++void timing_alarm( int seconds )
++{
++    struct mbedtls_timing_hr_time timer;
++    unsigned long millis = 0;
++    /* We check that about the desired number of seconds has elapsed. Be
++       slightly liberal with the lower bound, so as to allow platforms where
++       the alarm (with second resolution) and the timer (with millisecond
++       resolution) are based on different clocks. Be very liberal with the
++       upper bound, because the platform might be busy. */
++    unsigned long millis_min = ( seconds > 0 ?
++                                 seconds * 900 :
++                                 0 );
++    unsigned long millis_max = ( seconds > 0 ?
++                                 seconds * 1100 + 400 :
++                                 TIMING_ALARM_0_DELAY_MS );
++    unsigned long iterations = 0;
++
++    /* Set an alarm and count how long it takes with a timer. */
++    (void) mbedtls_timing_get_timer( &timer, 1 );
++    mbedtls_set_alarm( seconds );
++
++    if( seconds > 0 )
++    {
++        /* We set the alarm for at least 1 second. It should not have fired
++           immediately, even on a slow and busy platform. */
++        TEST_ASSERT( !mbedtls_timing_alarmed );
++    }
++    /* A 0-second alarm should fire quickly, but we don't guarantee that it
++       fires immediately, so mbedtls_timing_alarmed may or may not be set at
++       this point. */
++
++    /* Busy-wait until the alarm rings */
++    do
++    {
++        ++iterations;
++        millis = mbedtls_timing_get_timer( &timer, 0 );
++    }
++    while( !mbedtls_timing_alarmed && millis <= millis_max );
++
++    TEST_ASSERT( mbedtls_timing_alarmed );
++    TEST_ASSERT( millis >= millis_min );
++    TEST_ASSERT( millis <= millis_max );
++
++    mbedtls_timing_alarmed = 0;
++    return;
++
++exit:
++    /* Show some diagnostic iterations, because timing
++       problems can be hard to reproduce. */
++    mbedtls_fprintf( stdout, "  Finished with alarmed=%d millis=%lu get(timer)<=%lu iterations=%lu\n",
++                     mbedtls_timing_alarmed,
++                     millis, mbedtls_timing_get_timer( &timer, 0 ),
++                     iterations );
++    /* Cleanup */
++    mbedtls_timing_alarmed = 0;
++}
++/* END_CASE */
++
++/* BEGIN_CASE */
++void timing_delay( int int_ms, int fin_ms )
++{
++    /* This function assumes that if int_ms is nonzero then it is large
++       enough that we have time to read all timers at least once in an
++       interval of time lasting int_ms milliseconds, and likewise for (fin_ms
++       - int_ms). So don't call it with arguments that are too small. */
++
++    mbedtls_timing_delay_context delay;
++    struct mbedtls_timing_hr_time timer;
++    unsigned long delta; /* delay started between timer=0 and timer=delta */
++    unsigned long before = 0, after = 0;
++    unsigned long iterations = 0;
++    int status = -2;
++    int saw_status_1 = 0;
++    int warn_inconclusive = 0;
++
++    assert( int_ms >= 0 );
++    assert( fin_ms >= 0 );
++
++    /* Start a reference timer. Program a delay, and verify that the status of
++       the delay is consistent with the time given by the reference timer. */
++    (void) mbedtls_timing_get_timer( &timer, 1 );
++    mbedtls_timing_set_delay( &delay, int_ms, fin_ms );
++    /* Set delta to an upper bound for the interval between the start of timer
++       and the start of delay. Reading timer after starting delay gives us an
++       upper bound for the interval, rounded to a 1ms precision. Since this
++       might have been rounded down, but we need an upper bound, we add 1. */
++    delta = mbedtls_timing_get_timer( &timer, 0 ) + 1;
++
++    status = mbedtls_timing_get_delay( &delay );
++    if( fin_ms == 0 )
++    {
++        /* Cancelled timer. Just check the correct status for this case. */
++        TEST_ASSERT( status == -1 );
++        return;
++    }
++
++    /* Initially, none of the delays must be passed yet if they're nonzero.
++       This could fail for very small values of int_ms and fin_ms, where "very
++       small" depends how fast and how busy the platform is. */
++    if( int_ms > 0 )
++    {
++        TEST_ASSERT( status == 0 );
++    }
++    else
++    {
++        TEST_ASSERT( status == 1 );
++    }
++
++    do
++    {
++        unsigned long delay_min, delay_max;
++        int status_min, status_max;
++        ++iterations;
++        before = mbedtls_timing_get_timer( &timer, 0 );
++        status = mbedtls_timing_get_delay( &delay );
++        after = mbedtls_timing_get_timer( &timer, 0 );
++        /* At a time between before and after, the delay's status was status.
++           Check that this is consistent given that the delay was started
++           between times 0 and delta. */
++        delay_min = ( before > delta ? before - delta : 0 );
++        status_min = expected_delay_status( int_ms, fin_ms, delay_min );
++        delay_max = after;
++        status_max = expected_delay_status( int_ms, fin_ms, delay_max );
++        TEST_ASSERT( status >= status_min );
++        TEST_ASSERT( status <= status_max );
++        if( status == 1 )
++            saw_status_1 = 1;
++    }
++    while ( before <= fin_ms + delta && status != 2 );
++
++    /* Since we've waited at least fin_ms, the delay must have fully
++       expired. */
++    TEST_ASSERT( status == 2 );
++
++    /* If the second delay is more than the first, then there must have been a
++       point in time when the first delay was passed but not the second delay.
++       This could fail for very small values of (fin_ms - int_ms), where "very
++       small" depends how fast and how busy the platform is. In practice, this
++       is the test that's most likely to fail on a heavily loaded machine. */
++    if( fin_ms > int_ms )
++    {
++        warn_inconclusive = 1;
++        TEST_ASSERT( saw_status_1 );
++    }
++
++    return;
++
++exit:
++    /* No cleanup needed, but show some diagnostic iterations, because timing
++       problems can be hard to reproduce. */
++    mbedtls_fprintf( stdout, "  Finished with delta=%lu before=%lu after=%lu status=%d iterations=%lu\n",
++                     delta, before, after, status, iterations );
++    if( warn_inconclusive )
++        mbedtls_fprintf( stdout, "  Inconclusive test, try running it on a less heavily loaded machine.\n" );
++ }
++/* END_CASE */
+-- 
+2.7.4
+
+
+From 078f1a1512fec6e73f5aa318e68b41165f7d9f07 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Wed, 11 Oct 2017 16:13:13 +0200
+Subject: [PATCH 09/13] Unit test for mbedtls_timing_hardclock
+
+Do test mbedtls_timing_hardclock. We can't reliably test much about
+it, but at least test that it doesn't crash, isn't constant, and
+doesn't look completely random.
+---
+ tests/suites/test_suite_timing.data     |  3 +++
+ tests/suites/test_suite_timing.function | 42 +++++++++++++++++++++++++++++++++
+ 2 files changed, 45 insertions(+)
+
+diff --git a/tests/suites/test_suite_timing.data b/tests/suites/test_suite_timing.data
+index 02677d1..4dddcf7 100644
+--- a/tests/suites/test_suite_timing.data
++++ b/tests/suites/test_suite_timing.data
+@@ -36,3 +36,6 @@ timing_alarm:0:
+ 
+ Timing: alarm in 1 second
+ timing_alarm:1:
++
++Timing: hardclock
++timing_hardclock:
+diff --git a/tests/suites/test_suite_timing.function b/tests/suites/test_suite_timing.function
+index 53e0ac3..71fe7ed 100644
+--- a/tests/suites/test_suite_timing.function
++++ b/tests/suites/test_suite_timing.function
+@@ -316,3 +316,45 @@ exit:
+         mbedtls_fprintf( stdout, "  Inconclusive test, try running it on a less heavily loaded machine.\n" );
+  }
+ /* END_CASE */
++
++/* BEGIN_CASE */
++void timing_hardclock( )
++{
++    /* We make very few guarantees about mbedtls_timing_hardclock: its rate is
++       platform-dependent, it can wrap around. So there isn't much we can
++       test. But we do at least test that it doesn't crash, stall or return
++       completely nonsensical values. */
++
++    struct mbedtls_timing_hr_time timer;
++    unsigned long hardclock0, hardclock1, delta1;
++
++    hardclock0 = mbedtls_timing_hardclock( );
++    /* Wait 2ms to ensure a nonzero delay. Since the timer interface has 1ms
++       resolution and unspecified precision, waiting 1ms might be a very small
++       delay that's rounded up. */
++    (void) mbedtls_timing_get_timer( &timer, 1 );
++    while( mbedtls_timing_get_timer( &timer, 0 ) < 2 )
++        /*busy-wait loop*/;
++    hardclock1 = mbedtls_timing_hardclock( );
++
++    /* Although the hardclock counter can wrap around, the difference
++       (hardclock1 - hardclock0) is taken modulo the type size, so it is
++       correct as long as the counter only wrapped around at most once. We
++       further require the difference to be nonzero (after a wait of more than
++       1ms, the counter must have changed), and not to be overly large (after
++       a wait of less than 3ms, plus time lost because other processes were
++       scheduled on the CPU). If the hardclock counter runs at 4GHz, then
++       1000000000 (which is 1/4 of the counter wraparound on a 32-bit machine)
++       allows 250ms. */
++    delta1 = hardclock1 - hardclock0;
++    TEST_ASSERT( delta1 > 0 );
++    TEST_ASSERT( delta1 < 1000000000 );
++    return;
++
++exit:
++    /* No cleanup needed, but show some diagnostic iterations, because timing
++       problems can be hard to reproduce. */
++    mbedtls_fprintf( stdout, "  Finished with hardclock=%lu,%lu\n",
++                     hardclock0, hardclock1 );
++}
++/* END_CASE */
+-- 
+2.7.4
+
+
+From 2a26d620fb4fe186a98e6f4864c658549f4b9913 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Wed, 18 Oct 2017 20:00:32 +0200
+Subject: [PATCH 10/13] Timing unit tests: more protection against infinite
+ loops
+
+If timing_timer_simple fails because it detects that timers are likely
+to never expire (e.g. going backward or not incrementing), skip all
+tests that rely on timers.
+---
+ tests/suites/test_suite_timing.function | 77 +++++++++++++++++++++++++--------
+ 1 file changed, 60 insertions(+), 17 deletions(-)
+
+diff --git a/tests/suites/test_suite_timing.function b/tests/suites/test_suite_timing.function
+index 71fe7ed..1610155 100644
+--- a/tests/suites/test_suite_timing.function
++++ b/tests/suites/test_suite_timing.function
+@@ -38,6 +38,14 @@ static int expected_delay_status( uint32_t int_ms, uint32_t fin_ms,
+             0 );
+ }
+ 
++/* Some conditions in timing_timer_simple suggest that timers are unreliable.
++   Most other test cases rely on timers to terminate, and could loop
++   indefinitely if timers are too broken. So if timing_timer_simple detected a
++   timer that risks not terminating (going backwards, or not reaching the
++   desired count in the alloted clock cycles), set this flag to immediately
++   fail those other tests without running any timers. */
++static int timers_are_badly_broken = 0;
++
+ /* END_HEADER */
+ 
+ /* BEGIN_DEPENDENCIES
+@@ -73,6 +81,15 @@ void timing_timer_simple( )
+     return;
+ 
+ exit:
++    if( iterations >= TIMING_SHORT_TEST_ITERATIONS_MAX ||
++        new_millis < millis )
++    {
++        /* The timer was very unreliable: it didn't increment and the loop ran
++           out, or it went backwards. Other tests that use timers might go
++           into an infinite loop, so we'll skip them. */
++        timers_are_badly_broken = 1;
++    }
++
+     /* No cleanup needed, but show some diagnostic iterations, because timing
+        problems can be hard to reproduce. */
+     mbedtls_fprintf( stdout, "  Finished with millis=%lu new_millis=%lu get(timer)<=%lu iterations=%lu\n",
+@@ -87,6 +104,11 @@ void timing_timer_reset( )
+     struct mbedtls_timing_hr_time timer;
+     unsigned long millis = 0;
+     unsigned long iterations = 0;
++
++    /* Skip this test if it looks like timers don't work at all, to avoid an
++       infinite loop below. */
++    TEST_ASSERT( !timers_are_badly_broken );
++
+     /* Start the timer. Timers are always reset to 0. */
+     TEST_ASSERT( mbedtls_timing_get_timer( &timer, 1 ) == 0 );
+     /* Busy-wait loop for a few milliseconds */
+@@ -107,9 +129,10 @@ void timing_timer_reset( )
+ exit:
+     /* No cleanup needed, but show some diagnostic information, because timing
+        problems can be hard to reproduce. */
+-    mbedtls_fprintf( stdout, "  Finished with millis=%lu get(timer)<=%lu iterations=%lu\n",
+-                     millis, mbedtls_timing_get_timer( &timer, 0 ),
+-                     iterations );
++    if( !timers_are_badly_broken )
++        mbedtls_fprintf( stdout, "  Finished with millis=%lu get(timer)<=%lu iterations=%lu\n",
++                         millis, mbedtls_timing_get_timer( &timer, 0 ),
++                         iterations );
+ }
+ /* END_CASE */
+ 
+@@ -117,7 +140,11 @@ exit:
+ void timing_two_timers( int delta )
+ {
+     struct mbedtls_timing_hr_time timer1, timer2;
+-    unsigned long millis1, millis2;
++    unsigned long millis1 = 0, millis2 = 0;
++
++    /* Skip this test if it looks like timers don't work at all, to avoid an
++       infinite loop below. */
++    TEST_ASSERT( !timers_are_badly_broken );
+ 
+     /* Start the first timer and wait for a short time. */
+     (void) mbedtls_timing_get_timer( &timer1, 1 );
+@@ -153,9 +180,10 @@ void timing_two_timers( int delta )
+ exit:
+     /* No cleanup needed, but show some diagnostic iterations, because timing
+        problems can be hard to reproduce. */
+-    mbedtls_fprintf( stdout, "  Finished with millis1=%lu get(timer1)<=%lu millis2=%lu get(timer2)<=%lu\n",
+-                     millis1, mbedtls_timing_get_timer( &timer1, 0 ),
+-                     millis2, mbedtls_timing_get_timer( &timer2, 0 ) );
++    if( !timers_are_badly_broken )
++        mbedtls_fprintf( stdout, "  Finished with millis1=%lu get(timer1)<=%lu millis2=%lu get(timer2)<=%lu\n",
++                         millis1, mbedtls_timing_get_timer( &timer1, 0 ),
++                         millis2, mbedtls_timing_get_timer( &timer2, 0 ) );
+ }
+ /* END_CASE */
+ 
+@@ -177,6 +205,10 @@ void timing_alarm( int seconds )
+                                  TIMING_ALARM_0_DELAY_MS );
+     unsigned long iterations = 0;
+ 
++    /* Skip this test if it looks like timers don't work at all, to avoid an
++       infinite loop below. */
++    TEST_ASSERT( !timers_are_badly_broken );
++
+     /* Set an alarm and count how long it takes with a timer. */
+     (void) mbedtls_timing_get_timer( &timer, 1 );
+     mbedtls_set_alarm( seconds );
+@@ -209,10 +241,11 @@ void timing_alarm( int seconds )
+ exit:
+     /* Show some diagnostic iterations, because timing
+        problems can be hard to reproduce. */
+-    mbedtls_fprintf( stdout, "  Finished with alarmed=%d millis=%lu get(timer)<=%lu iterations=%lu\n",
+-                     mbedtls_timing_alarmed,
+-                     millis, mbedtls_timing_get_timer( &timer, 0 ),
+-                     iterations );
++    if( !timers_are_badly_broken )
++        mbedtls_fprintf( stdout, "  Finished with alarmed=%d millis=%lu get(timer)<=%lu iterations=%lu\n",
++                         mbedtls_timing_alarmed,
++                         millis, mbedtls_timing_get_timer( &timer, 0 ),
++                         iterations );
+     /* Cleanup */
+     mbedtls_timing_alarmed = 0;
+ }
+@@ -228,7 +261,7 @@ void timing_delay( int int_ms, int fin_ms )
+ 
+     mbedtls_timing_delay_context delay;
+     struct mbedtls_timing_hr_time timer;
+-    unsigned long delta; /* delay started between timer=0 and timer=delta */
++    unsigned long delta = 0; /* delay started between timer=0 and timer=delta */
+     unsigned long before = 0, after = 0;
+     unsigned long iterations = 0;
+     int status = -2;
+@@ -238,6 +271,10 @@ void timing_delay( int int_ms, int fin_ms )
+     assert( int_ms >= 0 );
+     assert( fin_ms >= 0 );
+ 
++    /* Skip this test if it looks like timers don't work at all, to avoid an
++       infinite loop below. */
++    TEST_ASSERT( !timers_are_badly_broken );
++
+     /* Start a reference timer. Program a delay, and verify that the status of
+        the delay is consistent with the time given by the reference timer. */
+     (void) mbedtls_timing_get_timer( &timer, 1 );
+@@ -310,8 +347,9 @@ void timing_delay( int int_ms, int fin_ms )
+ exit:
+     /* No cleanup needed, but show some diagnostic iterations, because timing
+        problems can be hard to reproduce. */
+-    mbedtls_fprintf( stdout, "  Finished with delta=%lu before=%lu after=%lu status=%d iterations=%lu\n",
+-                     delta, before, after, status, iterations );
++    if( !timers_are_badly_broken )
++        mbedtls_fprintf( stdout, "  Finished with delta=%lu before=%lu after=%lu status=%d iterations=%lu\n",
++                         delta, before, after, status, iterations );
+     if( warn_inconclusive )
+         mbedtls_fprintf( stdout, "  Inconclusive test, try running it on a less heavily loaded machine.\n" );
+  }
+@@ -326,7 +364,11 @@ void timing_hardclock( )
+        completely nonsensical values. */
+ 
+     struct mbedtls_timing_hr_time timer;
+-    unsigned long hardclock0, hardclock1, delta1;
++    unsigned long hardclock0 = -1, hardclock1 = -1, delta1 = -1;
++
++    /* Skip this test if it looks like timers don't work at all, to avoid an
++       infinite loop below. */
++    TEST_ASSERT( !timers_are_badly_broken );
+ 
+     hardclock0 = mbedtls_timing_hardclock( );
+     /* Wait 2ms to ensure a nonzero delay. Since the timer interface has 1ms
+@@ -354,7 +396,8 @@ void timing_hardclock( )
+ exit:
+     /* No cleanup needed, but show some diagnostic iterations, because timing
+        problems can be hard to reproduce. */
+-    mbedtls_fprintf( stdout, "  Finished with hardclock=%lu,%lu\n",
+-                     hardclock0, hardclock1 );
++    if( !timers_are_badly_broken )
++        mbedtls_fprintf( stdout, "  Finished with hardclock=%lu,%lu\n",
++                         hardclock0, hardclock1 );
+ }
+ /* END_CASE */
+-- 
+2.7.4
+
+
+From 0f59b130a95a9990fb1f00a5f457d4bad0c23d41 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Tue, 17 Oct 2017 19:39:04 +0200
+Subject: [PATCH 11/13] Timing self test: increased tolerance
+
+mbedtls_timing_self_test fails annoyingly often when running on a busy
+machine such as can be expected of a continous integration system.
+Increase the tolerances in the delay test, to reduce the chance of
+failures that are only due to missing a deadline on a busy machine.
+---
+ library/timing.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/library/timing.c b/library/timing.c
+index 744e1e7..115204d 100644
+--- a/library/timing.c
++++ b/library/timing.c
+@@ -450,19 +450,19 @@ int mbedtls_timing_self_test( int verbose )
+         {
+             mbedtls_timing_set_delay( &ctx, a, a + b );
+ 
+-            busy_msleep( a - a / 8 );
++            busy_msleep( a - a / 4 );
+             if( mbedtls_timing_get_delay( &ctx ) != 0 )
+                 FAIL;
+ 
+-            busy_msleep( a / 4 );
++            busy_msleep( a / 2 );
+             if( mbedtls_timing_get_delay( &ctx ) != 1 )
+                 FAIL;
+ 
+-            busy_msleep( b - a / 8 - b / 8 );
++            busy_msleep( b - a / 4 - b / 4 );
+             if( mbedtls_timing_get_delay( &ctx ) != 1 )
+                 FAIL;
+ 
+-            busy_msleep( b / 4 );
++            busy_msleep( b / 2 );
+             if( mbedtls_timing_get_delay( &ctx ) != 2 )
+                 FAIL;
+         }
+-- 
+2.7.4
+
+
+From 8873bcc4def433aa0edfbe260083f32f04aa097e Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Fri, 27 Oct 2017 18:42:32 +0200
+Subject: [PATCH 12/13] Timing self test: increased duration
+
+Increase the duration of the self test, otherwise it tends to fail on
+a busy machine even with the recently upped tolerance. But run the
+loop only once, it's enough for a simple smoke test.
+---
+ library/timing.c | 30 ++++++++++++------------------
+ 2 files changed, 14 insertions(+), 19 deletions(-)
+
+diff --git a/library/timing.c b/library/timing.c
+index 115204d..f0d1a78 100644
+--- a/library/timing.c
++++ b/library/timing.c
+@@ -444,28 +444,22 @@ int mbedtls_timing_self_test( int verbose )
+     if( verbose != 0 )
+         mbedtls_printf( "  TIMING test #2 (set/get_delay        ): " );
+ 
+-    for( a = 200; a <= 400; a += 200 )
+     {
+-        for( b = 200; b <= 400; b += 200 )
+-        {
+-            mbedtls_timing_set_delay( &ctx, a, a + b );
+-
+-            busy_msleep( a - a / 4 );
+-            if( mbedtls_timing_get_delay( &ctx ) != 0 )
+-                FAIL;
++        a = 800;
++        b = 400;
++        mbedtls_timing_set_delay( &ctx, a, a + b );          /* T = 0 */
+ 
+-            busy_msleep( a / 2 );
+-            if( mbedtls_timing_get_delay( &ctx ) != 1 )
+-                FAIL;
++        busy_msleep( a - a / 4 );                      /* T = a - a/4 */
++        if( mbedtls_timing_get_delay( &ctx ) != 0 )
++            FAIL;
+ 
+-            busy_msleep( b - a / 4 - b / 4 );
+-            if( mbedtls_timing_get_delay( &ctx ) != 1 )
+-                FAIL;
++        busy_msleep( a / 4 + b / 4 );                  /* T = a + b/4 */
++        if( mbedtls_timing_get_delay( &ctx ) != 1 )
++            FAIL;
+ 
+-            busy_msleep( b / 2 );
+-            if( mbedtls_timing_get_delay( &ctx ) != 2 )
+-                FAIL;
+-        }
++        busy_msleep( b );                          /* T = a + b + b/4 */
++        if( mbedtls_timing_get_delay( &ctx ) != 2 )
++            FAIL;
+     }
+ 
+     mbedtls_timing_set_delay( &ctx, 0, 0 );
+-- 
+2.7.4
+
+
+From ada3ee8b9d0dab22714d5de13d9ac9d1cb76cfcd Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Wed, 20 Dec 2017 22:31:17 +0100
+Subject: [PATCH 13/13] Timing self test: shorten redundant tests
+
+We don't need to test multiple delays in a self-test.
+Save 5s of busy-wait.
+---
+ library/timing.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/library/timing.c b/library/timing.c
+index f0d1a78..6df137d 100644
+--- a/library/timing.c
++++ b/library/timing.c
+@@ -422,8 +422,9 @@ int mbedtls_timing_self_test( int verbose )
+     if( verbose != 0 )
+         mbedtls_printf( "  TIMING test #1 (set_alarm / get_timer): " );
+ 
+-    for( secs = 1; secs <= 3; secs++ )
+     {
++        secs = 1;
++
+         (void) mbedtls_timing_get_timer( &hires, 1 );
+ 
+         mbedtls_set_alarm( (int) secs );
+-- 
+2.7.4
+
