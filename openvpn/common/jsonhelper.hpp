@@ -54,6 +54,11 @@ namespace openvpn {
 #endif
     }
 
+    inline Json::Value parse(const std::string& str)
+    {
+      return parse(str, "json");
+    }
+
     inline Json::Value parse_from_file(const std::string& fn)
     {
       return parse(read_text_utf8(fn), fn);
@@ -184,6 +189,12 @@ namespace openvpn {
       if (!value.isString())
 	throw json_parse("string " + fmt_name(std::to_string(index), title) + " is of incorrect type");
       return value.asString();
+    }
+
+    inline std::string get_string_from_array(const Json::Value& root,
+					     const Json::ArrayIndex index)
+    {
+      return get_string_from_array(root, index, nullptr);
     }
 
     template <typename NAME, typename TITLE>
@@ -532,6 +543,12 @@ namespace openvpn {
       if (!value.isArray())
 	throw json_parse("array cast " + StringTempl::to_string(title) + " is of incorrect type");
       return value;
+    }
+
+    inline const Json::Value& cast_array(const Json::Value& value,
+					 const bool optional)
+    {
+      return cast_array(value, optional, nullptr);
     }
 
     template <typename NAME, typename TITLE>
