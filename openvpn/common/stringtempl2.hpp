@@ -30,12 +30,33 @@
 namespace openvpn {
   namespace StringTempl {
 
+    // empty
+
+    // for objects that define a to_string() method
+    template <typename T>
+    inline auto empty(const T& t) -> decltype(t.to_string(), true)
+    {
+      return t.to_string().empty();
+    }
+
+    // for numerical values
+    template <typename T,
+	      typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
+    inline bool empty(T value)
+    {
+      return false;
+    }
+
+    // to_string
+
+    // for objects that define a to_string() method
     template <typename T>
     inline auto to_string(const T& t) -> decltype(t.to_string())
     {
       return t.to_string();
     }
 
+    // for numerical values
     template <typename T,
 	      typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
     inline std::string to_string(T value)
