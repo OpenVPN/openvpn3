@@ -6,8 +6,7 @@
 //  All rights reserved.
 //
 
-#ifndef OPENVPN_COMMON_JSONHELPER_H
-#define OPENVPN_COMMON_JSONHELPER_H
+#pragma once
 
 #include <string>
 #include <cstring>
@@ -17,8 +16,8 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/file.hpp>
-#include <openvpn/common/stringtempl2.hpp>
 #include <openvpn/common/jsonlib.hpp>
+#include <openvpn/common/jsonhelperfmt.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 
@@ -30,15 +29,6 @@ namespace openvpn {
   namespace json {
 
     OPENVPN_EXCEPTION(json_parse);
-
-    template <typename NAME, typename TITLE>
-    inline std::string fmt_name(const NAME& name, const TITLE& title)
-    {
-      if (!StringTempl::empty(title))
-	return StringTempl::to_string(title) + '.' + StringTempl::to_string(name);
-      else
-	return StringTempl::to_string(name);
-    }
 
     template <typename TITLE>
     inline Json::Value parse(const std::string& str, const TITLE& title)
@@ -92,7 +82,7 @@ namespace openvpn {
     inline void assert_dict(const Json::Value& obj, const TITLE& title)
     {
       if (!obj.isObject())
-	throw json_parse(StringTempl::to_string(title) + " is not a JSON dictionary");
+	throw json_parse(fmt_name_cast(title) + " is not a JSON dictionary");
     }
 
     template <typename TITLE>
@@ -185,9 +175,9 @@ namespace openvpn {
     {
       const Json::Value& value = root[index];
       if (value.isNull())
-	throw json_parse("string " + fmt_name(std::to_string(index), title) + " is missing");
+	throw json_parse("string " + fmt_name(index, title) + " is missing");
       if (!value.isString())
-	throw json_parse("string " + fmt_name(std::to_string(index), title) + " is of incorrect type");
+	throw json_parse("string " + fmt_name(index, title) + " is of incorrect type");
       return value.asString();
     }
 
@@ -490,10 +480,10 @@ namespace openvpn {
 	{
 	  if (optional)
 	    return value;
-	  throw json_parse("dictionary cast " + StringTempl::to_string(title) + " is null");
+	  throw json_parse("dictionary cast " + fmt_name_cast(title) + " is null");
 	}
       if (!value.isObject())
-	throw json_parse("dictionary cast " + StringTempl::to_string(title) + " is of incorrect type");
+	throw json_parse("dictionary cast " + fmt_name_cast(title) + " is of incorrect type");
       return value;
     }
 
@@ -538,10 +528,10 @@ namespace openvpn {
 	{
 	  if (optional)
 	    return value;
-	  throw json_parse("array cast " + StringTempl::to_string(title) + " is null");
+	  throw json_parse("array cast " + fmt_name_cast(title) + " is null");
 	}
       if (!value.isArray())
-	throw json_parse("array cast " + StringTempl::to_string(title) + " is of incorrect type");
+	throw json_parse("array cast " + fmt_name_cast(title) + " is of incorrect type");
       return value;
     }
 
@@ -656,5 +646,3 @@ namespace openvpn {
     }
   }
 }
-
-#endif
