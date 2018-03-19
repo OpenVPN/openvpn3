@@ -24,10 +24,26 @@ FNAME=${ASIO_VERSION}.tar.gz
 PV=${ASIO_VERSION#*-}
 URL=https://github.com/chriskohlhoff/asio/archive/${PV}.tar.gz
 CSUM=${ASIO_CSUM}
+DIST=asio
 
 download
 
-cd $DEP_DIR
-rm -rf asio*
-tar xf $DL/$ASIO_VERSION.tar.gz
-cp -a $ASIO_VERSION asio
+if [ "$NO_WIPE" = "1" ]; then
+    echo RETAIN existing source
+else
+    echo WIPE and reunzip source
+    cd $DEP_DIR
+    rm -rf $DIST $ASIO_VERSION
+    tar xfz $DL/$FNAME
+    cd $ASIO_VERSION
+
+    # apply pre-generated patches
+    for file in $O3/core/deps/asio/patches/*.patch; do
+        echo Applying patch: $file
+        git apply $file
+    done
+
+    cd ..
+
+    cp -a $ASIO_VERSION $DIST
+fi
