@@ -17,7 +17,7 @@ def compile_one_file(parms, srcfile, incdirs):
 def build_asio(parms):
     print "**************** ASIO"
     with Cd(build_dir(parms)):
-        asio_ver = parms["ASIO_VERSION"].replace("asio-", "")
+        asio_ver = parms["ASIO_VERSION"]
         url = "https://github.com/chriskohlhoff/asio/archive/%s.tar.gz" % asio_ver
         arch_path = os.path.join(build_dir(parms), download(url))
         checksum = sha256_checksum(arch_path)

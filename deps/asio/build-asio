@@ -21,8 +21,7 @@ fi
 
 PACKAGE=${ASIO_VERSION}
 FNAME=${ASIO_VERSION}.tar.gz
-PV=${ASIO_VERSION#*-}
-URL=https://github.com/chriskohlhoff/asio/archive/${PV}.tar.gz
+URL=https://github.com/chriskohlhoff/asio/archive/${ASIO_VERSION}.tar.gz
 CSUM=${ASIO_CSUM}
 DIST=asio
 
@@ -33,9 +32,9 @@ if [ "$NO_WIPE" = "1" ]; then
 else
     echo WIPE and reunzip source
     cd $DEP_DIR
-    rm -rf $DIST $ASIO_VERSION
+    rm -rf $DIST asio-$ASIO_VERSION
     tar xfz $DL/$FNAME
-    cd $ASIO_VERSION
+    cd asio-$ASIO_VERSION
 
     # apply pre-generated patches
     for file in $O3/core/deps/asio/patches/*.patch; do
@@ -45,5 +44,5 @@ else
 
     cd ..
 
-    cp -a $ASIO_VERSION $DIST
+    cp -a asio-$ASIO_VERSION $DIST
 fi
