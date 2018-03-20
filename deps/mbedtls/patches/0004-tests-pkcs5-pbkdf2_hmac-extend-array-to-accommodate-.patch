@@ -1,4 +1,4 @@
-From ea10371f909419d2634a75ef30fab8cd8df71a91 Mon Sep 17 00:00:00 2001
+From d09cecb5f7d1e66476c97a35caee7248930ef425 Mon Sep 17 00:00:00 2001
 From: Antonio Quartulli <a@unstable.cc>
 Date: Wed, 31 Jan 2018 23:45:09 +0800
 Subject: [PATCH] tests/pkcs5/pbkdf2_hmac: extend array to accommodate longer

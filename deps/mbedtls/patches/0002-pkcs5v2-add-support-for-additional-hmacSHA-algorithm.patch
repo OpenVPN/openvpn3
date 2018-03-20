@@ -1,4 +1,4 @@
-From 4e75bd33172a8a73abfa6a15d442d1f80f466870 Mon Sep 17 00:00:00 2001
+From 56df6d5003b20fa673b67fb06c2ec03a8197c4c2 Mon Sep 17 00:00:00 2001
 From: Antonio Quartulli <antonio@openvpn.net>
 Date: Wed, 20 Dec 2017 07:03:55 +0800
 Subject: [PATCH] pkcs5v2: add support for additional hmacSHA algorithms
@@ -25,10 +25,10 @@ Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
  4 files changed, 66 insertions(+), 5 deletions(-)
 
 diff --git a/include/mbedtls/oid.h b/include/mbedtls/oid.h
-index fcecdafd..d621c075 100644
+index bf2ef5ec..408645ec 100644
 --- a/include/mbedtls/oid.h
 +++ b/include/mbedtls/oid.h
-@@ -227,6 +227,14 @@
+@@ -228,6 +228,14 @@
  
  #define MBEDTLS_OID_HMAC_SHA1                   MBEDTLS_OID_RSA_COMPANY "\x02\x07" /**< id-hmacWithSHA1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 7 } */
  
@@ -43,7 +43,7 @@ index fcecdafd..d621c075 100644
  /*
   * Encryption algorithms
   */
-@@ -513,6 +521,16 @@ int mbedtls_oid_get_oid_by_sig_alg( mbedtls_pk_type_t pk_alg, mbedtls_md_type_t
+@@ -514,6 +522,16 @@ int mbedtls_oid_get_oid_by_sig_alg( mbedtls_pk_type_t pk_alg, mbedtls_md_type_t
   * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
   */
  int mbedtls_oid_get_md_alg( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_alg );

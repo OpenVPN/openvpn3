@@ -1,4 +1,4 @@
-From 8e866133ec2c28a615212d76c85745e5dc2ebd7c Mon Sep 17 00:00:00 2001
+From 4e96327a813d2e1d06dfb7e44caacb400fd8769b Mon Sep 17 00:00:00 2001
 From: Antonio Quartulli <antonio@openvpn.net>
 Date: Thu, 1 Feb 2018 13:54:13 +0800
 Subject: [PATCH] data_files/pkcs8-v2: add keys generated with PRF != SHA1
@@ -122,10 +122,10 @@ Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
  create mode 100644 tests/data_files/rsa_pkcs8_pbes2_pbkdf2_4096_des_sha512.pem
 
 diff --git a/tests/data_files/Makefile b/tests/data_files/Makefile
-index f7826d43..fab04ee8 100644
+index d4aed678..7069b4f3 100644
 --- a/tests/data_files/Makefile
 +++ b/tests/data_files/Makefile
-@@ -66,6 +66,574 @@ all_final += server2-sha256.crt
+@@ -392,6 +392,574 @@ server1_all: server1.csr server1.crt server1.noauthid.crt server1.crt.openssl se
  
  
  

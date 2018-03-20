@@ -1,4 +1,4 @@
-From 5abb7fb80073bc310a96d5a184694b1e29a19faf Mon Sep 17 00:00:00 2001
+From bb029567d8a2b55e500a85c916a8d22ae9434ab3 Mon Sep 17 00:00:00 2001
 From: Antonio Quartulli <antonio@openvpn.net>
 Date: Wed, 31 Jan 2018 23:23:02 +0800
 Subject: [PATCH] tests/pkcs5/pbkdf2_hmac: add unit tests for additional SHA

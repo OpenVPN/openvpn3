@@ -1,4 +1,4 @@
-From 32b9493a889f7a72eb3f124ffc8dc8a3544b26a8 Mon Sep 17 00:00:00 2001
+From 7ed2575f310fd889fba025aa760f74ec1b41924b Mon Sep 17 00:00:00 2001
 From: Antonio Quartulli <antonio@openvpn.net>
 Date: Thu, 1 Feb 2018 14:03:36 +0800
 Subject: [PATCH] tests_suite_pkparse: new PKCS8-v2 keys with PRF != SHA1
@@ -13,12 +13,12 @@ Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
  1 file changed, 576 insertions(+)
 
 diff --git a/tests/suites/test_suite_pkparse.data b/tests/suites/test_suite_pkparse.data
-index 9c0edbb5..01bc1f03 100644
+index 416f9dfe..1bf06270 100644
 --- a/tests/suites/test_suite_pkparse.data
 +++ b/tests/suites/test_suite_pkparse.data
-@@ -102,6 +102,582 @@ Parse RSA Key #20 (PKCS#8 encrypted v2 PBDFK2 DES)
- depends_on:MBEDTLS_DES_C:MBEDTLS_SHA1_C:MBEDTLS_PEM_PARSE_C:MBEDTLS_PKCS5_C:MBEDTLS_CIPHER_MODE_CBC
- pk_parse_keyfile_rsa:"data_files/pkcs8_pbes2_pbkdf2_des.key":"PolarSSLTest":0
+@@ -362,6 +362,582 @@ Parse RSA Key #49.2 (PKCS#8 encrypted v2 PBKDF2 DES DER, 4096-bit, no PW)
+ depends_on:MBEDTLS_DES_C:MBEDTLS_SHA1_C:MBEDTLS_PKCS5_C
+ pk_parse_keyfile_rsa:"data_files/rsa_pkcs8_pbes2_pbkdf2_4096_des.der":"":MBEDTLS_ERR_PK_KEY_INVALID_FORMAT
  
 +Parse RSA Key #50 (PKCS#8 encrypted v2 PBKDF2 3DES hmacWithSHA224)
 +depends_on:MBEDTLS_DES_C:MBEDTLS_SHA256_C:MBEDTLS_PEM_PARSE_C:MBEDTLS_PKCS5_C:MBEDTLS_CIPHER_MODE_CBC
