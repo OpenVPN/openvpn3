@@ -1,0 +1,55 @@
+From 1f7bffd54c78dd140594b7c8474195e2f2f59b85 Mon Sep 17 00:00:00 2001
+From: Gilles Peskine <Gilles.Peskine@arm.com>
+Date: Wed, 18 Oct 2017 19:03:42 +0200
+Subject: [PATCH] RSA PSS: fix minimum length check for keys of size 8N+1
+
+The check introduced by the previous security fix was off by one. It
+fixed the buffer overflow but was not compliant with the definition of
+PSS which technically led to accepting some invalid signatures (but
+not signatures made without the private key).
+---
+ library/rsa.c                          | 7 ++++---
+ tests/suites/test_suite_pkcs1_v21.data | 2 +-
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/library/rsa.c b/library/rsa.c
+index f9aec227..f25137ab 100644
+--- a/library/rsa.c
++++ b/library/rsa.c
+@@ -1363,9 +1363,6 @@ int mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_rsa_context *ctx,
+         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
+ 
+     hlen = mbedtls_md_get_size( md_info );
+-    if( siglen < hlen + 2 )
+-        return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
+-    hash_start = buf + siglen - hlen - 1;
+ 
+     memset( zeros, 0, 8 );
+ 
+@@ -1384,6 +1381,10 @@ int mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_rsa_context *ctx,
+     if( buf[0] >> ( 8 - siglen * 8 + msb ) )
+         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
+ 
++    if( siglen < hlen + 2 )
++        return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
++    hash_start = p + siglen - hlen - 1;
++
+     mbedtls_md_init( &md_ctx );
+     if( ( ret = mbedtls_md_setup( &md_ctx, md_info, 0 ) ) != 0 )
+     {
+diff --git a/tests/suites/test_suite_pkcs1_v21.data b/tests/suites/test_suite_pkcs1_v21.data
+index 7c202e9c..7785b123 100644
+--- a/tests/suites/test_suite_pkcs1_v21.data
++++ b/tests/suites/test_suite_pkcs1_v21.data
+@@ -817,7 +817,7 @@ pkcs1_rsassa_pss_verify_ext:512:16:"00b076d23250816f9aab02307e452b97f0cae7598369
+ 
+ RSASSA-PSS verify ext, 521-bit key, SHA-512, empty salt, bad signature
+ depends_on:MBEDTLS_SHA512_C
+-pkcs1_rsassa_pss_verify_ext:521:16:"0131b69860f3cb9bf85ea358fdf2bd2990f1b77a80d6a4fdf817a43dd896bdf7dd26af8ac0237f526e0d33b105c971fdbd4ffa9ece99fc469f31ecf429e8f562c1c3":16:"010001":MBEDTLS_MD_SHA512:MBEDTLS_MD_SHA512:MBEDTLS_MD_SHA512:0:"":"00471794655837da498cbf27242807b40593a353c707eb22fd2cc5a3259e728ac4f1df676043eeec8e16c1175b3d9ac8cae72ec1d5772dd69de71c5677f19031568e":MBEDTLS_ERR_RSA_INVALID_PADDING:MBEDTLS_ERR_RSA_INVALID_PADDING
++pkcs1_rsassa_pss_verify_ext:521:16:"0131b69860f3cb9bf85ea358fdf2bd2990f1b77a80d6a4fdf817a43dd896bdf7dd26af8ac0237f526e0d33b105c971fdbd4ffa9ece99fc469f31ecf429e8f562c1c3":16:"010001":MBEDTLS_MD_SHA512:MBEDTLS_MD_SHA512:MBEDTLS_MD_SHA512:0:"":"00471794655837da498cbf27242807b40593a353c707eb22fd2cc5a3259e728ac4f1df676043eeec8e16c1175b3d9ac8cae72ec1d5772dd69de71c5677f19031568e":MBEDTLS_ERR_RSA_BAD_INPUT_DATA:MBEDTLS_ERR_RSA_BAD_INPUT_DATA
+ 
+ RSASSA-PSS verify ext, all-zero padding, automatic salt length
+ depends_on:MBEDTLS_SHA256_C
+-- 
+2.16.2
+
