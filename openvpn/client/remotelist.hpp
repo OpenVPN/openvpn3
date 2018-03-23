@@ -341,6 +341,7 @@ namespace openvpn {
 		    resolver.async_resolve(item.server_host, item.server_port,
 					   [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
 					   {
+					     OPENVPN_ASYNC_HANDLER;
 					     self->resolve_callback(error, results);
 					   });
 		    return;

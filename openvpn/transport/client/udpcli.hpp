@@ -28,6 +28,7 @@
 
 #include <openvpn/io/io.hpp>
 
+#include <openvpn/common/bigmutex.hpp>
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/platform.hpp>
 #include <openvpn/transport/udplink.hpp>
@@ -107,6 +108,7 @@ namespace openvpn {
 		    resolver.async_resolve(server_host, server_port,
 					   [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::udp::resolver::results_type results)
 					   {
+					     OPENVPN_ASYNC_HANDLER;
 					     self->do_resolve_(error, results);
 					   });
 		  }
@@ -283,6 +285,7 @@ namespace openvpn {
 #endif
 	socket.async_connect(server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
+                                                OPENVPN_ASYNC_HANDLER;
                                                 self->start_impl_(error);
                                               });
       }

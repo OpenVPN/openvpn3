@@ -52,6 +52,7 @@
 #include <memory>
 #include <utility>
 
+#include <openvpn/common/bigmutex.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/asio/asiowork.hpp>
 #include <openvpn/error/excode.hpp>
@@ -173,6 +174,7 @@ namespace openvpn {
       if (!halt)
 	openvpn_io::post(io_context, [self=Ptr(this)]()
 		   {
+		     OPENVPN_ASYNC_HANDLER;
 		     self->graceful_stop();
 		   });
     }
@@ -220,6 +222,7 @@ namespace openvpn {
 	  restart_wait_timer.expires_after(Time::Duration::seconds(seconds));
 	  restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                         {
+                                          OPENVPN_ASYNC_HANDLER;
                                           self->restart_wait_callback(gen, error);
                                         });
 	}
@@ -230,6 +233,7 @@ namespace openvpn {
       if (!halt)
 	openvpn_io::post(io_context, [self=Ptr(this), reason]()
 		   {
+		     OPENVPN_ASYNC_HANDLER;
 		     self->pause(reason);
 		   });
     }
@@ -239,6 +243,7 @@ namespace openvpn {
       if (!halt)
 	openvpn_io::post(io_context, [self=Ptr(this)]()
 		   {
+		     OPENVPN_ASYNC_HANDLER;
 		     self->resume();
 		   });
     }
@@ -248,6 +253,7 @@ namespace openvpn {
       if (!halt)
 	openvpn_io::post(io_context, [self=Ptr(this), seconds]()
 		   {
+		     OPENVPN_ASYNC_HANDLER;
 		     self->reconnect(seconds);
 		   });
     }
@@ -268,6 +274,7 @@ namespace openvpn {
       if (!halt)
 	openvpn_io::post(io_context, [self=Ptr(this), msg=std::move(msg)]()
 		   {
+		     OPENVPN_ASYNC_HANDLER;
 		     self->post_cc_msg(msg);
 		   });
     }
@@ -351,6 +358,7 @@ namespace openvpn {
 	  conn_timer.expires_after(Time::Duration::seconds(conn_timeout));
 	  conn_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                 {
+                                  OPENVPN_ASYNC_HANDLER;
                                   self->conn_timer_callback(gen, error);
                                 });
 	  conn_timer_pending = true;
@@ -399,6 +407,7 @@ namespace openvpn {
       restart_wait_timer.expires_after(Time::Duration::milliseconds(delay_ms));
       restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                     {
+                                      OPENVPN_ASYNC_HANDLER;
                                       self->restart_wait_callback(gen, error);
                                     });
     }
@@ -602,6 +611,7 @@ namespace openvpn {
 	  server_poll_timer.expires_after(client_options->server_poll_timeout());
 	  server_poll_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                        {
+                                         OPENVPN_ASYNC_HANDLER;
                                          self->server_poll_callback(gen, error);
                                        });
 	}
