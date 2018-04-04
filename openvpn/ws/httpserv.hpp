@@ -378,7 +378,7 @@ namespace openvpn {
 
 	private:
 	  typedef TCPTransport::Link<AsioProtocol, Client*, false> LinkImpl;
-	  friend LinkImpl; // calls tcp_* handlers
+	  friend LinkImpl::Base; // calls tcp_* handlers
 
 	  void generate_reply_headers_http(std::ostream& os)
 	  {
