@@ -54,9 +54,10 @@ namespace openvpn {
     }
 
     // Create a random Session ID.
-    explicit SessionIDType(RandomAPI& rng)
+    explicit SessionIDType(RandomAPI& rng, const bool allow_noncrypto_rng=false)
     {
-      rng.assert_crypto();
+      if (!allow_noncrypto_rng)
+	rng.assert_crypto();
       rng.rand_bytes(u.data, sizeof(u.data));
     }
 
