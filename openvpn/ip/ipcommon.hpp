@@ -19,40 +19,27 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Define the ICMP header
+// Common declarations for IPv4 and IPv6
 
-#ifndef OPENVPN_IP_ICMP_H
-#define OPENVPN_IP_ICMP_H
+#pragma once
 
 #include <cstdint> // for std::uint32_t, uint16_t, uint8_t
 
-#include <openvpn/ip/ip.hpp>
-
-#pragma pack(push)
-#pragma pack(1)
-
 namespace openvpn {
-  struct ICMP {
+  namespace IPCommon {
+
     enum {
-      ECHO_REPLY = 0,
-      ECHO_REQUEST = 8,
+      ICMPv4 = 1,  /* ICMPv4 protocol */
+      ICMPv6 = 58, /* ICMPv6 protocol */
+      IGMP = 2,    /* IGMP protocol */
+      TCP = 6,     /* TCP protocol */
+      UDP = 17,    /* UDP protocol */
     };
 
-    struct IPHeader head;
+    inline unsigned int version(const std::uint8_t version_len_prio)
+    {
+      return (version_len_prio >> 4) & 0x0F;
+    }
 
-    std::uint8_t type;
-    std::uint8_t code;
-    std::uint16_t checksum;
-
-    union {
-      struct {
-	std::uint16_t id;
-	std::uint16_t seq_num;
-      } echo;
-    } hd;
-  };
+  }
 }
-
-#pragma pack(pop)
-
-#endif

@@ -24,7 +24,7 @@
 #ifndef OPENVPN_IP_UDP_H
 #define OPENVPN_IP_UDP_H
 
-#include <openvpn/ip/ip.hpp>
+#include <openvpn/ip/ipcommon.hpp>
 
 namespace openvpn {
 
@@ -68,7 +68,7 @@ namespace openvpn {
       }
 
     /* the protocol number and the length of the UDP packet */
-    sum += (std::uint16_t)IPHeader::UDP + (std::uint16_t)len_udp;
+    sum += (std::uint16_t)IPCommon::UDP + (std::uint16_t)len_udp;
 
     /* keep only the last 16 bits of the 32 bit calculated sum and add the carries */
     while (sum >> 16)

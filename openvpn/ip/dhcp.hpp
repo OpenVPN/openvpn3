@@ -23,7 +23,7 @@
 #define OPENVPN_IP_DHCP_H
 
 #include <openvpn/ip/eth.hpp>
-#include <openvpn/ip/ip.hpp>
+#include <openvpn/ip/ip4.hpp>
 #include <openvpn/ip/udp.hpp>
 
 #pragma pack(push)
@@ -78,7 +78,7 @@ namespace openvpn {
 
   struct DHCPPacket {
     EthHeader eth;
-    IPHeader ip;
+    IPv4Header ip;
     UDPHeader udp;
     DHCP dhcp;
     std::uint8_t options[];

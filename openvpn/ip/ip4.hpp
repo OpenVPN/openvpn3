@@ -19,10 +19,9 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Define the IP protocol header
+// IPv4 header
 
-#ifndef OPENVPN_IP_IP_H
-#define OPENVPN_IP_IP_H
+#pragma once
 
 #include <cstdint> // for std::uint32_t, uint16_t, uint8_t
 
@@ -30,13 +29,9 @@
 #pragma pack(1)
 
 namespace openvpn {
-  struct IPHeader
-  {
-    static unsigned int version(const std::uint8_t version_len)
-    {
-      return (version_len >> 4) & 0x0F;
-    }
 
+  struct IPv4Header
+  {
     static unsigned int length(const std::uint8_t version_len)
     {
       return (version_len & 0x0F) << 2;
@@ -61,12 +56,6 @@ namespace openvpn {
 
     std::uint8_t    ttl;
 
-    enum {
-      ICMP = 1, /* ICMP protocol */
-      IGMP = 2, /* IGMP protocol */
-      TCP = 6,  /* TCP protocol */
-      UDP = 17, /* UDP protocol */
-    };
     std::uint8_t    protocol;
 
     std::uint16_t   check;
@@ -74,28 +63,6 @@ namespace openvpn {
     std::uint32_t   daddr;
     /* The options start here. */
   };
-
-  inline std::uint16_t ip_checksum(const void *ip, unsigned int size)
-  {
-    std::uint16_t *buffer = (std::uint16_t *)ip;
-    std::uint32_t cksum = 0;
-
-    while (size > 1)
-      {
-        cksum += *buffer++;
-        size -= sizeof(uint16_t);
-      }
-
-    if (size)
-      cksum += *(uint8_t*)buffer;
-
-    cksum = (cksum >> 16) + (cksum & 0xffff);
-    cksum += (cksum >> 16);
-    return ~cksum;
-  }
-
 }
 
 #pragma pack(pop)
-
-#endif

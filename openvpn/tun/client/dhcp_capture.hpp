@@ -26,7 +26,7 @@
 
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/addr/ipv4.hpp>
+#include <openvpn/ip/ipcommon.hpp>
 #include <openvpn/ip/dhcp.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
@@ -54,7 +54,7 @@ namespace openvpn {
 	return false;
 
       DHCPPacket* dhcp = (DHCPPacket*)buf.data();
-      if (dhcp->ip.protocol == IPHeader::UDP
+      if (dhcp->ip.protocol == IPCommon::UDP
 	  && dhcp->udp.source == htons(DHCP::BOOTPS_PORT)
 	  && dhcp->udp.dest == htons(DHCP::BOOTPC_PORT)
 	  && dhcp->dhcp.op == DHCP::BOOTREPLY)
