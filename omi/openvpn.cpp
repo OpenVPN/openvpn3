@@ -291,7 +291,7 @@ private:
 	    const std::string& k = o.get(1, 64);
 	    if (string::starts_with(k, "IV_") || string::starts_with(k, "UV_"))
 	      {
-		const std::string& v = o.get(1, 256);
+		const std::string& v = o.get(2, 256);
 		ret.emplace_back(k, v);
 	      }
 	  }
