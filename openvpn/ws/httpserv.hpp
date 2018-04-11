@@ -50,6 +50,7 @@
 #endif
 
 // include acceptors for different protocols
+#include <openvpn/proxy/listener.hpp>
 #include <openvpn/acceptor/base.hpp>
 #include <openvpn/acceptor/tcp.hpp>
 #if defined(OPENVPN_PLATFORM_WIN)
@@ -164,7 +165,7 @@ namespace openvpn {
 	WebSocket::Server::PerRequest::Ptr websocket;
       };
 
-      class Listener : public Acceptor::ListenerBase
+      class Listener : public ProxyListener
       {
       public:
 	class Client;
@@ -756,7 +757,7 @@ namespace openvpn {
 	{
 	}
 
-	void start()
+	virtual void start() override
 	{
 	  if (halt)
 	    return;
@@ -872,7 +873,7 @@ namespace openvpn {
 	    }
 	}
 
-	void stop()
+	virtual void stop() override
 	{
 	  if (halt)
 	    return;
