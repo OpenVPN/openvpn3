@@ -345,16 +345,10 @@ namespace openvpn {
 							Unicode::UTF8_FILTER);
 	if (msg == "PUSH_REQUEST")
 	  {
-	    if (!did_push)
-	      {
-		did_push = true;
-		if (get_management())
-		  ManLink::send->push_request(Base::conf_ptr());
-		else
-		  {
-		    auth_failed("no management provider", false);
-		  }
-	      }
+	    if (get_management())
+	      ManLink::send->push_request(Base::conf_ptr());
+	    else
+	      auth_failed("no management provider", false);
 	  }
 	else if (string::starts_with(msg, "INFO,"))
 	  {
@@ -375,11 +369,14 @@ namespace openvpn {
 
       virtual void relay(const IP::Addr& target, const int port) override
       {
+	if (halt || disconnect_type == DT_HALT_RESTART)
+	  return;
+
 	Base::update_now();
 
-	if (TunLink::send && !relay_transition)
+	if (TunLink::send && (disconnect_type < DT_RELAY_TRANSITION))
 	  {
-	    relay_transition = true;
+	    disconnect_type = DT_RELAY_TRANSITION;
 	    TunLink::send->relay(target, port);
 	    disconnect_in(Time::Duration::seconds(10)); // not a real disconnect, just complete transition to relay
 	  }
@@ -398,8 +395,14 @@ namespace openvpn {
 
       virtual void push_reply(std::vector<BufferPtr>&& push_msgs) override
       {
-	if (halt || relay_transition || !Base::primary_defined())
+	if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !Base::primary_defined())
 	  return;
+
+	if (disconnect_type == DT_AUTH_PENDING)
+	  {
+	    disconnect_type = DT_NONE;
+	    cancel_disconnect();
+	  }
 
 	Base::update_now();
 
@@ -432,7 +435,7 @@ namespace openvpn {
 					 const std::string& reason,
 					 const bool tell_client) override
       {
-	if (halt || did_client_halt_restart)
+	if (halt || disconnect_type == DT_HALT_RESTART)
 	  return;
 
 	Base::update_now();
@@ -498,7 +501,7 @@ namespace openvpn {
 
 	if (type != HaltRestart::RESTART_PASSIVE)
 	  {
-	    did_client_halt_restart = true;
+	    disconnect_type = DT_HALT_RESTART;
 	    disconnect_in(Time::Duration::seconds(1));
 	  }
 
@@ -514,9 +517,19 @@ namespace openvpn {
 
       virtual void schedule_disconnect(const unsigned int seconds)
       {
-	if (halt || did_client_halt_restart)
+	if (halt || disconnect_type == DT_HALT_RESTART)
 	  return;
 	Base::update_now();
+	disconnect_in(Time::Duration::seconds(seconds));
+	set_housekeeping_timer();
+      }
+
+      virtual void schedule_auth_pending_timeout(const unsigned int seconds)
+      {
+	if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !seconds)
+	  return;
+	Base::update_now();
+	disconnect_type = DT_AUTH_PENDING;
 	disconnect_in(Time::Duration::seconds(seconds));
 	set_housekeeping_timer();
       }
@@ -582,6 +595,11 @@ namespace openvpn {
 	disconnect_at = now() + dur;
       }
 
+      void cancel_disconnect()
+      {
+	disconnect_at = Time::infinite();
+      }
+
       void housekeeping_callback(const openvpn_io::error_code& e)
       {
 	try {
@@ -596,10 +614,21 @@ namespace openvpn {
 		invalidation_error(Base::invalidation_reason());
 	      else if (now() >= disconnect_at)
 		{
-		  if (relay_transition && !did_client_halt_restart)
-		    Base::pre_destroy();
-		  else
-		    error("disconnect triggered");
+		  switch (disconnect_type)
+		    {
+		    case DT_HALT_RESTART:
+		      error("disconnect triggered");
+		      break;
+		    case DT_RELAY_TRANSITION:
+		      Base::pre_destroy();
+		      break;
+		    case DT_AUTH_PENDING:
+		      auth_failed("Auth Pending Timeout", true);
+		      break;
+		    default:
+		      error("unknown disconnect");
+		      break;
+		    }
 		}
 	      else
 		set_housekeeping_timer();
@@ -676,9 +705,15 @@ namespace openvpn {
       openvpn_io::io_context& io_context;
 
       bool halt = false;
-      bool did_push = false;
-      bool did_client_halt_restart = false;
-      bool relay_transition = false;
+
+      // higher values are higher priority
+      enum DisconnectType {
+	DT_NONE=0,
+	DT_AUTH_PENDING,
+	DT_RELAY_TRANSITION,
+	DT_HALT_RESTART,
+      };
+      int disconnect_type = DT_NONE;
 
       PeerAddr::Ptr peer_addr;
 
