@@ -12,6 +12,8 @@ echo "******* MBEDTLS"
 $O3/core/scripts/linux/build-mbedtls
 echo "******* LZ4"
 $O3/core/scripts/linux/build-lz4
+echo "******* CITYHASH"
+$O3/core/scripts/linux/build-cityhash
 
 #$O3/core/scripts/linux/build-openssl x64
 #$O3/core/scripts/linux/build-lzo
