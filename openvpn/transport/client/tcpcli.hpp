@@ -334,7 +334,7 @@ namespace openvpn {
       openvpn_io::ip::tcp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent* parent;
-      LinkImpl::Base::Ptr impl;
+      LinkBase::Ptr impl;
       openvpn_io::ip::tcp::resolver resolver;
       LinkImpl::Base::protocol::endpoint server_endpoint;
       bool halt;

@@ -16,6 +16,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
+#include <openvpn/transport/tcplinkbase.hpp>
 #include <openvpn/transport/pktstream.hpp>
 #include <openvpn/transport/mutate.hpp>
 
@@ -38,16 +39,10 @@
 namespace openvpn {
   namespace TCPTransport {
 
-    struct PacketFrom
-    {
-      typedef std::unique_ptr<PacketFrom> SPtr;
-      BufferAllocated buf;
-    };
-
     template <typename Protocol,
 	      typename ReadHandler,
 	      bool RAW_MODE_ONLY>
-    class LinkCommon : public RC<thread_unsafe_refcount>
+    class LinkCommon : public LinkBase
     {
       typedef std::deque<BufferPtr> Queue;
 
