@@ -60,6 +60,7 @@ namespace openvpn {
     virtual ssize_t read_cleartext(void *data, const size_t capacity) = 0;
     virtual bool read_cleartext_ready() const = 0;
     virtual void write_ciphertext(const BufferPtr& buf) = 0;
+    virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size) = 0;
     virtual bool read_ciphertext_ready() const = 0;
     virtual BufferPtr read_ciphertext() = 0;
     virtual std::string ssl_handshake_details() const = 0;

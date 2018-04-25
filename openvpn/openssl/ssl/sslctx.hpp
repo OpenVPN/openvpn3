@@ -469,6 +469,15 @@ namespace openvpn {
 	  overflow = true;
       }
 
+      virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size)
+      {
+	bmq_stream::MemQ* in = bmq_stream::memq_from_bio(ct_in);
+	if (in->size() < MAX_CIPHERTEXT_IN)
+	  in->write(data, size);
+	else
+	  overflow = true;
+      }
+
       virtual bool read_ciphertext_ready() const
       {
 	return !bmq_stream::memq_from_bio(ct_out)->empty();

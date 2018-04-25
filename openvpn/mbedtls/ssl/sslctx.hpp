@@ -649,6 +649,14 @@ namespace openvpn {
 	  overflow = true;
       }
 
+      virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size)
+      {
+	if (ct_in.size() < MAX_CIPHERTEXT_IN)
+	  ct_in.write(data, size);
+	else
+	  overflow = true;
+      }
+
       virtual bool read_ciphertext_ready() const
       {
 	return !ct_out.empty();
