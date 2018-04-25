@@ -130,12 +130,12 @@ namespace openvpn {
 	return chain;
       }
 
-      ~X509Cert()
+      virtual ~X509Cert()
       {
 	dealloc();
       }
 
-    private:
+    protected:
       void alloc()
       {
 	if (!chain)
@@ -145,6 +145,9 @@ namespace openvpn {
 	  }
       }
 
+      mbedtls_x509_crt *chain;
+
+    private:
       void dealloc()
       {
 	if (chain)
@@ -154,8 +157,6 @@ namespace openvpn {
 	    chain = nullptr;
 	  }
       }
-
-      mbedtls_x509_crt *chain;
 
       static const std::string begin_cert;
       static const std::string end_cert;

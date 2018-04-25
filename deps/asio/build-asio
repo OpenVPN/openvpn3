@@ -36,11 +36,7 @@ else
     tar xfz $DL/$FNAME
     cd asio-$ASIO_VERSION
 
-    # apply pre-generated patches
-    for file in $O3/core/deps/asio/patches/*.patch; do
-        echo Applying patch: $file
-        git apply $file
-    done
+    apply_patches "asio"
 
     cd ..
 
