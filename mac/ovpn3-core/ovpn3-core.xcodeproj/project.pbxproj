@@ -13,6 +13,7 @@
 		DF380AE9201F0DB80003272D /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF380AE8201F0DB80003272D /* IOKit.framework */; };
 		DF380AEB201F0DDC0003272D /* CoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF380AEA201F0DDC0003272D /* CoreServices.framework */; };
 		DF380AED201F0E0E0003272D /* libmbedtls.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DF380AEC201F0E0E0003272D /* libmbedtls.a */; };
+		DF838B412090AC2F00B68F90 /* liblz4.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DF838B402090AC2F00B68F90 /* liblz4.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -36,6 +37,7 @@
 		DF380AE8201F0DB80003272D /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		DF380AEA201F0DDC0003272D /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = System/Library/Frameworks/CoreServices.framework; sourceTree = SDKROOT; };
 		DF380AEC201F0E0E0003272D /* libmbedtls.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmbedtls.a; path = "../../../deps/mbedtls/mbedtls-osx/library/libmbedtls.a"; sourceTree = "<group>"; };
+		DF838B402090AC2F00B68F90 /* liblz4.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblz4.a; path = "../../../deps/lz4/lz4-osx/lib/liblz4.a"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,6 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DF838B412090AC2F00B68F90 /* liblz4.a in Frameworks */,
 				DF380AED201F0E0E0003272D /* libmbedtls.a in Frameworks */,
 				DF380AEB201F0DDC0003272D /* CoreServices.framework in Frameworks */,
 				DF380AE9201F0DB80003272D /* IOKit.framework in Frameworks */,
@@ -83,6 +86,7 @@
 		DF380AE3201F0D4F0003272D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				DF838B402090AC2F00B68F90 /* liblz4.a */,
 				DF380AEC201F0E0E0003272D /* libmbedtls.a */,
 				DF380AEA201F0DDC0003272D /* CoreServices.framework */,
 				DF380AE8201F0DB80003272D /* IOKit.framework */,
@@ -267,13 +271,19 @@
 					USE_ASIO,
 					ASIO_STANDALONE,
 					USE_MBEDTLS,
+					HAVE_LZ4,
+					LZ4_DISABLE_DEPRECATE_WARNINGS,
 				);
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../..\"",
 					"\"$(SRCROOT)/../../../deps/asio/asio/include\"",
 					"\"$(SRCROOT)/../../../deps/mbedtls/mbedtls-osx/include\"",
+					"\"$(SRCROOT)/../../../deps/lz4/lz4-osx/include\"",
 				);
-				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../deps/mbedtls/mbedtls-osx/library\"";
+				LIBRARY_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../deps/mbedtls/mbedtls-osx/library\"",
+					"\"$(SRCROOT)/../../../deps/lz4/lz4-osx/lib\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
 			};
@@ -287,13 +297,19 @@
 					USE_ASIO,
 					ASIO_STANDALONE,
 					USE_MBEDTLS,
+					HAVE_LZ4,
+					LZ4_DISABLE_DEPRECATE_WARNINGS,
 				);
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../..\"",
 					"\"$(SRCROOT)/../../../deps/asio/asio/include\"",
 					"\"$(SRCROOT)/../../../deps/mbedtls/mbedtls-osx/include\"",
+					"\"$(SRCROOT)/../../../deps/lz4/lz4-osx/include\"",
 				);
-				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../deps/mbedtls/mbedtls-osx/library\"";
+				LIBRARY_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../deps/mbedtls/mbedtls-osx/library\"",
+					"\"$(SRCROOT)/../../../deps/lz4/lz4-osx/lib\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
 			};
