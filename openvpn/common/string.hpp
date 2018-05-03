@@ -223,7 +223,7 @@ namespace openvpn {
     }
 
     // return the first line (without newline) of a multi-line string
-    std::string first_line(const std::string& str)
+    inline std::string first_line(const std::string& str)
     {
       const size_t pos = str.find_first_of('\n');
       if (pos != std::string::npos)
