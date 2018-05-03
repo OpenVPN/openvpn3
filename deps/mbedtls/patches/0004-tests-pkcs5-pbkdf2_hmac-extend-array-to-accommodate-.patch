@@ -1,0 +1,49 @@
+From d09cecb5f7d1e66476c97a35caee7248930ef425 Mon Sep 17 00:00:00 2001
+From: Antonio Quartulli <a@unstable.cc>
+Date: Wed, 31 Jan 2018 23:45:09 +0800
+Subject: [PATCH] tests/pkcs5/pbkdf2_hmac: extend array to accommodate longer
+ results
+
+Some unit tests for pbkdf2_hmac() have results longer than
+99bytes when represented in hexadecimal form.
+
+For this reason extend the result array to accommodate
+longer strings.
+
+At the same time make memset() parametric to avoid
+bugs in the future.
+
+Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
+---
+ tests/suites/test_suite_pkcs5.function | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tests/suites/test_suite_pkcs5.function b/tests/suites/test_suite_pkcs5.function
+index 8fabec08..3ad64805 100644
+--- a/tests/suites/test_suite_pkcs5.function
++++ b/tests/suites/test_suite_pkcs5.function
+@@ -14,7 +14,7 @@ void pbkdf2_hmac( int hash, char *hex_password_string,
+ {
+     unsigned char pw_str[100];
+     unsigned char salt_str[100];
+-    unsigned char dst_str[100];
++    unsigned char dst_str[200];
+ 
+     mbedtls_md_context_t ctx;
+     const mbedtls_md_info_t *info;
+@@ -24,9 +24,9 @@ void pbkdf2_hmac( int hash, char *hex_password_string,
+ 
+     mbedtls_md_init( &ctx );
+ 
+-    memset(pw_str, 0x00, 100);
+-    memset(salt_str, 0x00, 100);
+-    memset(dst_str, 0x00, 100);
++    memset(pw_str, 0x00, sizeof(pw_str));
++    memset(salt_str, 0x00, sizeof(salt_str));
++    memset(dst_str, 0x00, sizeof(dst_str));
+ 
+     pw_len = unhexify( pw_str, hex_password_string );
+     salt_len = unhexify( salt_str, hex_salt_string );
+-- 
+2.16.2
+

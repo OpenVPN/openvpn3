@@ -41,11 +41,14 @@ namespace openvpn {
       TCPv4,
       UDPv6,
       TCPv6,
+      TLSv4,        // TLS over IPv4
+      TLSv6,        // TLS over IPv6
       UnixStream,   // unix domain socket (stream)
       UnixDGram,    // unix domain socket (datagram)
       NamedPipe,    // named pipe (Windows only)
       UDP=UDPv4,
       TCP=TCPv4,
+      TLS=TLSv4,
     };
 
     enum AllowSuffix {
@@ -64,8 +67,9 @@ namespace openvpn {
 
     bool is_udp() const { return type_ == UDPv4 || type_ == UDPv6; }
     bool is_tcp() const { return type_ == TCPv4 || type_ == TCPv6; }
-    bool is_reliable() const { return is_tcp(); }
-    bool is_ipv6() const { return type_ == UDPv6 || type_ == TCPv6; }
+    bool is_tls() const { return type_ == TLSv4 || type_ == TLSv6; }
+    bool is_reliable() const { return is_tcp() || is_tls(); }
+    bool is_ipv6() const { return type_ == UDPv6 || type_ == TCPv6 || type_ == TLSv6; }
     bool is_unix() const { return type_ == UnixStream || type_ == UnixDGram; }
     bool is_named_pipe() const { return type_ == NamedPipe; }
     bool is_local() const { return is_unix() || is_named_pipe(); }
@@ -87,7 +91,7 @@ namespace openvpn {
 
     unsigned int extra_transport_bytes() const
     {
-      return is_tcp() ? sizeof(std::uint16_t) : 0;
+      return (is_tcp() || is_tls()) ? sizeof(std::uint16_t) : 0;
     }
 
     void mod_addr_version(const IP::Addr& addr)
@@ -101,12 +105,16 @@ namespace openvpn {
 	    type_ = UDPv4;
 	  else if (is_tcp())
 	    type_ = TCPv4;
+	  else if (is_tls())
+	    type_ = TLSv4;
 	  break;
 	case IP::Addr::V6:
 	  if (is_udp())
 	    type_ = UDPv6;
 	  else if (is_tcp())
 	    type_ = TCPv6;
+	  else if (is_tls())
+	    type_ = TLSv6;
 	  break;
 	}
     }
@@ -157,6 +165,9 @@ namespace openvpn {
 	  return 3;
 	case NamedPipe:
 	  return 4;
+	case TLSv4:
+	case TLSv6:
+	  return 5;
 	default:
 	  return -1;
 	}
@@ -174,6 +185,10 @@ namespace openvpn {
 	  return "UDPv6";
 	case TCPv6:
 	  return "TCPv6";
+	case TLSv4:
+	  return "TLSv4";
+	case TLSv6:
+	  return "TLSv6";
 	case UnixStream:
 	  return "UnixStream";
 	case UnixDGram:
@@ -199,6 +214,10 @@ namespace openvpn {
 	  return "udp6";
 	case TCPv6:
 	  return "tcp6";
+	case TLSv4:
+	  return "tls4";
+	case TLSv6:
+	  return "tls6";
 	case UnixStream:
 	  return "unix-stream";
 	case UnixDGram:
@@ -224,6 +243,10 @@ namespace openvpn {
 	  return force_ipv4 ? "UDPv4" : "UDPv6";
 	case TCPv6:
 	  return force_ipv4 ? "TCPv4_CLIENT" : "TCPv6_CLIENT";
+	case TLSv4:
+	  return "TLSv4";
+	case TLSv6:
+	  return force_ipv4 ? "TLSv4" : "TLSv6";
 	default:
 	  return "UNDEF_PROTO";
 	}
@@ -268,6 +291,8 @@ namespace openvpn {
 		ret = UDPv4;
 	      else if (s1 == "tcp")
 		ret = TCPv4;
+	      else if (s1 == "tls")
+		ret = TLSv4;
 	    }
 	  else if (s2 == "6" || s2 == "v6")
 	    {
@@ -275,6 +300,8 @@ namespace openvpn {
 		ret = UDPv6;
 	      else if (s1 == "tcp")
 		ret = TCPv6;
+	      else if (s1 == "tls")
+		ret = TLSv6;
 	    }
 	}
       return ret;

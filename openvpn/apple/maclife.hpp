@@ -154,7 +154,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("MacLifeCycle Exception: " << e.what());
+	  OPENVPN_LOG("MacLifeCycle exception: " << e.what());
 	}
 
       // cleanup
@@ -306,7 +306,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("MacLifeCycle::action_timer_callback: " << e.what());
+	  OPENVPN_LOG("MacLifeCycle::action_timer_callback exception: " << e.what());
 	}
     }
 

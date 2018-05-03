@@ -51,11 +51,18 @@ else
     # enable MD4 (needed for NTLM auth)
     perl -pi -e 's/^\/\/// if /#define MBEDTLS_MD4_C/' include/mbedtls/config.h
 
-    # apply pre-generated patches
-    for file in $O3/core/deps/mbedtls/patches/*.patch; do
-        patch -p1 <$file
-    done
+    apply_patches "mbedtls"
 fi
+
+if [[ "x$TARGET" == xlinux* || "x$TARGET" == xosx* ]]; then
+    # run unit tests and then clean
+    echo RUNNING CHECK
+    make check
+    echo CLEANING
+    make clean
+fi
+
+echo BUILDING
 
 # compiler vars
 CC=cc

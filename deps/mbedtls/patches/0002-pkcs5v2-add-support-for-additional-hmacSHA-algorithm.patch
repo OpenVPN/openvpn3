@@ -1,0 +1,154 @@
+From 56df6d5003b20fa673b67fb06c2ec03a8197c4c2 Mon Sep 17 00:00:00 2001
+From: Antonio Quartulli <antonio@openvpn.net>
+Date: Wed, 20 Dec 2017 07:03:55 +0800
+Subject: [PATCH] pkcs5v2: add support for additional hmacSHA algorithms
+
+Currently only SHA1 is supported as PRF algorithm for PBKDF2
+(PKCS#5 v2.0).
+This means that keys encrypted and authenticated using
+another algorithm of the SHA family cannot be decrypted.
+
+This deficiency has become particularly incumbent now that
+PKIs created with OpenSSL1.1 are encrypting keys using
+hmacSHA256 by default (OpenSSL1.0 used PKCS#5 v1.0 by default
+and even if v2 was forced, it would still use hmacSHA1).
+
+Enable support for all the digest algorithms of the SHA
+family for PKCS#5 v2.0.
+
+Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
+---
+ include/mbedtls/oid.h              | 18 +++++++++++++++
+ library/oid.c                      | 45 ++++++++++++++++++++++++++++++++++++++
+ library/pkcs5.c                    |  4 +---
+ tests/suites/test_suite_pkcs5.data |  4 ++--
+ 4 files changed, 66 insertions(+), 5 deletions(-)
+
+diff --git a/include/mbedtls/oid.h b/include/mbedtls/oid.h
+index bf2ef5ec..408645ec 100644
+--- a/include/mbedtls/oid.h
++++ b/include/mbedtls/oid.h
+@@ -228,6 +228,14 @@
+ 
+ #define MBEDTLS_OID_HMAC_SHA1                   MBEDTLS_OID_RSA_COMPANY "\x02\x07" /**< id-hmacWithSHA1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 7 } */
+ 
++#define MBEDTLS_OID_HMAC_SHA224                 MBEDTLS_OID_RSA_COMPANY "\x02\x08" /**< id-hmacWithSHA224 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 8 } */
++
++#define MBEDTLS_OID_HMAC_SHA256                 MBEDTLS_OID_RSA_COMPANY "\x02\x09" /**< id-hmacWithSHA256 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 9 } */
++
++#define MBEDTLS_OID_HMAC_SHA384                 MBEDTLS_OID_RSA_COMPANY "\x02\x0A" /**< id-hmacWithSHA384 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 10 } */
++
++#define MBEDTLS_OID_HMAC_SHA512                 MBEDTLS_OID_RSA_COMPANY "\x02\x0B" /**< id-hmacWithSHA512 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 11 } */
++
+ /*
+  * Encryption algorithms
+  */
+@@ -514,6 +522,16 @@ int mbedtls_oid_get_oid_by_sig_alg( mbedtls_pk_type_t pk_alg, mbedtls_md_type_t
+  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
+  */
+ int mbedtls_oid_get_md_alg( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_alg );
++
++/**
++ * \brief          Translate hmac algorithm OID into md_type
++ *
++ * \param oid      OID to use
++ * \param md_hmac  place to store message hmac algorithm
++ *
++ * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
++ */
++int mbedtls_oid_get_md_hmac( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_hmac );
+ #endif /* MBEDTLS_MD_C */
+ 
+ /**
+diff --git a/library/oid.c b/library/oid.c
+index f13826ed..edea950f 100644
+--- a/library/oid.c
++++ b/library/oid.c
+@@ -625,6 +625,51 @@ static const oid_md_alg_t oid_md_alg[] =
+ FN_OID_TYPED_FROM_ASN1(oid_md_alg_t, md_alg, oid_md_alg)
+ FN_OID_GET_ATTR1(mbedtls_oid_get_md_alg, oid_md_alg_t, md_alg, mbedtls_md_type_t, md_alg)
+ FN_OID_GET_OID_BY_ATTR1(mbedtls_oid_get_oid_by_md, oid_md_alg_t, oid_md_alg, mbedtls_md_type_t, md_alg)
++
++/*
++ * For HMAC digestAlgorithm
++ */
++typedef struct {
++    mbedtls_oid_descriptor_t    descriptor;
++    mbedtls_md_type_t           md_hmac;
++} oid_md_hmac_t;
++
++static const oid_md_hmac_t oid_md_hmac[] =
++{
++#if defined(MBEDTLS_SHA1_C)
++    {
++        { ADD_LEN( MBEDTLS_OID_HMAC_SHA1 ),      "hmacSHA1",      "HMAC-SHA-1" },
++        MBEDTLS_MD_SHA1,
++    },
++#endif /* MBEDTLS_SHA1_C */
++#if defined(MBEDTLS_SHA256_C)
++    {
++        { ADD_LEN( MBEDTLS_OID_HMAC_SHA224 ),    "hmacSHA224",    "HMAC-SHA-224" },
++        MBEDTLS_MD_SHA224,
++    },
++    {
++        { ADD_LEN( MBEDTLS_OID_HMAC_SHA256 ),    "hmacSHA256",    "HMAC-SHA-256" },
++        MBEDTLS_MD_SHA256,
++    },
++#endif /* MBEDTLS_SHA256_C */
++#if defined(MBEDTLS_SHA512_C)
++    {
++        { ADD_LEN( MBEDTLS_OID_HMAC_SHA384 ),    "hmacSHA384",    "HMAC-SHA-384" },
++        MBEDTLS_MD_SHA384,
++    },
++    {
++        { ADD_LEN( MBEDTLS_OID_HMAC_SHA512 ),    "hmacSHA512",    "HMAC-SHA-512" },
++        MBEDTLS_MD_SHA512,
++    },
++#endif /* MBEDTLS_SHA512_C */
++    {
++        { NULL, 0, NULL, NULL },
++        MBEDTLS_MD_NONE,
++    },
++};
++
++FN_OID_TYPED_FROM_ASN1(oid_md_hmac_t, md_hmac, oid_md_hmac)
++FN_OID_GET_ATTR1(mbedtls_oid_get_md_hmac, oid_md_hmac_t, md_hmac, mbedtls_md_type_t, md_hmac)
+ #endif /* MBEDTLS_MD_C */
+ 
+ #if defined(MBEDTLS_PKCS12_C)
+diff --git a/library/pkcs5.c b/library/pkcs5.c
+index e28d5a84..95f44fa9 100644
+--- a/library/pkcs5.c
++++ b/library/pkcs5.c
+@@ -96,11 +96,9 @@ static int pkcs5_parse_pbkdf2_params( const mbedtls_asn1_buf *params,
+     if( ( ret = mbedtls_asn1_get_alg_null( &p, end, &prf_alg_oid ) ) != 0 )
+         return( MBEDTLS_ERR_PKCS5_INVALID_FORMAT + ret );
+ 
+-    if( MBEDTLS_OID_CMP( MBEDTLS_OID_HMAC_SHA1, &prf_alg_oid ) != 0 )
++    if( mbedtls_oid_get_md_hmac( &prf_alg_oid, md_type ) != 0 )
+         return( MBEDTLS_ERR_PKCS5_FEATURE_UNAVAILABLE );
+ 
+-    *md_type = MBEDTLS_MD_SHA1;
+-
+     if( p != end )
+         return( MBEDTLS_ERR_PKCS5_INVALID_FORMAT +
+                 MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
+diff --git a/tests/suites/test_suite_pkcs5.data b/tests/suites/test_suite_pkcs5.data
+index e609d62b..4c2c0bb6 100644
+--- a/tests/suites/test_suite_pkcs5.data
++++ b/tests/suites/test_suite_pkcs5.data
+@@ -82,9 +82,9 @@ PBES2 Decrypt (bad, PBKDF2 params explicit prf_alg overlong)
+ depends_on:MBEDTLS_SHA1_C:MBEDTLS_DES_C
+ mbedtls_pkcs5_pbes2:MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE:"301D06092A864886F70D01050C301004082ED7F24A1D516DD7020208003001":"":"":MBEDTLS_ERR_PKCS5_INVALID_FORMAT + MBEDTLS_ERR_ASN1_OUT_OF_DATA:""
+ 
+-PBES2 Decrypt (bad, PBKDF2 params explicit prf_alg != HMAC-SHA1)
++PBES2 Decrypt (bad, PBKDF2 params explicit prf_alg != HMAC-SHA*)
+ depends_on:MBEDTLS_SHA1_C:MBEDTLS_DES_C
+-mbedtls_pkcs5_pbes2:MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE:"302706092A864886F70D01050C301A04082ED7F24A1D516DD702020800300A06082A864886F70D0208":"":"":MBEDTLS_ERR_PKCS5_FEATURE_UNAVAILABLE:""
++mbedtls_pkcs5_pbes2:MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE:"302706092A864886F70D01050C301A04082ED7F24A1D516DD702020800300A06082A864886F70D0206":"":"":MBEDTLS_ERR_PKCS5_FEATURE_UNAVAILABLE:""
+ 
+ PBES2 Decrypt (bad, PBKDF2 params extra data)
+ depends_on:MBEDTLS_SHA1_C:MBEDTLS_DES_C
+-- 
+2.16.2
+

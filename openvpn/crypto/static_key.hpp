@@ -40,7 +40,7 @@ namespace openvpn {
   class StaticKey
   {
     friend class OpenVPNStaticKey;
-    typedef BufferAllocatedType<unsigned char> key_t;
+    typedef BufferAllocated key_t;
 
   public:
     StaticKey() {}

@@ -149,60 +149,30 @@ To connect::
 Building the OpenVPN 3 client on Windows
 ----------------------------------------
 
-Those instructions were tested with Git Bash.
-
 Prerequisites:
 
- - Visual Studio 2015
+ - Visual Studio 2017
  - Python 2.7
-
-To make python interpreter work inside Git Bash terminal, add::
-
-    alias python='winpty python.exe'
-
-to ``.bashrc``.
 
 Clone the OpenVPN 3 source repo::
 
-  $ mkdir ovpn3
-  $ cd ovpn3
-  $ git clone https://github.com/OpenVPN/openvpn3.git core
+  > c:\Temp>mkdir O3
+  > c:\Temp>cd O3
+  > c:\Temp\O3>git clone https://github.com/OpenVPN/openvpn3.git core
 
-Create ``parms_local.py`` inside ``~/ovpn3/core/win`` directory which overrides build settings from ``parms.py``. For example:
+Download and build dependencies::
 
-.. code-block:: python
+  > c:\Temp\O3>cd core\win
+  > c:\Temp\O3\core\win>set O3=C:\Temp\O3 && python buildep.py
 
-  PARMS = {
-      "OVPN3" : "c:\\Users\\user\\Projects\\ovpn3",
-      "TAP" : "c:\\Users\\user\\Projects\\tap-windows",
-      "DEP" : "c:\\Users\\user\\Downloads",
-      "BUILD" : "c:\\Users\\user\\Projects\\ovpn3-build",
-      "LIB_VERSIONS" : {
-          "asio" : "asio-cc1bd58f9ebb15afbebf53207015ff690b338195"
-      },
-      "GTEST_ROOT": "c:\\Users\\user\\Projects\\googletest"
-  }
+Build test client::
 
-Download dependencies as tar(zip)balls to DEP directory defined in previous step:
+  > c:\Temp\O3\core\win>set O3=C:\Temp\O3 && python build.py
 
-1. Asio — https://github.com/chriskohlhoff/asio
-2. mbed TLS (2.3.0 or higher) — https://tls.mbed.org/
-3. LZ4 — https://github.com/Cyan4973/lz4
+Visual Studio 2015 project and solution files are located in ``O3\core\win`` directory.
+Before opening project you need to build dependencies and define OVPN3_ROOT
+environmental variable (``C:\Temp\O3`` from example above).
 
-Extract and build dependencies (assuming you are in ``~/ovpn3/core/win`` directory)::
-
-    $ python buildep.py
-
-Build the OpenVPN 3 client executable:
-
-    $ python build.py
-
-Visual Studio 2015 project and solution files are located in ``~/ovpn3/core/win`` directory.
-Before opening project you need to build dependencies and define environmental variables:
-
-- OVPN3_BUILD - path where dependencies are build (BUILD in parms.py)
-- OVPN3_CORE - path where ovpn3-core was checked out (OVPN3 in parms.py)
-- OVPN3_TAP_WINDOWS - path where tap-windows was checked out (TAP in parms.py)
 
 Testing
 -------

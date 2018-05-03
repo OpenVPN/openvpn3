@@ -28,3 +28,20 @@ function download()
 
   check_download || return -1
 }
+
+function apply_patches()
+{
+  DEP_NAME=$1
+
+  # change directory since git apply got confused when
+  # applying patches to files which are not found in index
+  DIR=$(pwd)
+  pushd ${DIR}
+  cd /tmp
+  # apply pre-generated patches
+  for file in $O3/core/deps/${DEP_NAME}/patches/*.patch; do
+    echo Applying patch: $file
+    git apply --directory ${DIR} --unsafe-path $file
+  done
+  popd
+}

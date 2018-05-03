@@ -87,6 +87,9 @@ namespace openvpn {
 				 const std::string* username,
 				 const bool challenge,
 				 const bool throw_on_error) = 0;
+
+      // notify of local user properties update
+      virtual void userprop_local_update() = 0;
     };
 
     // Base class for the client instance receiver.  Note that all
@@ -112,6 +115,9 @@ namespace openvpn {
 
       // send control channel message
       virtual void post_cc_msg(BufferPtr&& msg) = 0;
+
+      // schedule a low-level connection disconnect in seconds
+      virtual void schedule_disconnect(const unsigned int seconds) = 0;
 
       // set up relay to target
       virtual void relay(const IP::Addr& target, const int port) = 0;

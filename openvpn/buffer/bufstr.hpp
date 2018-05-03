@@ -98,6 +98,13 @@ namespace openvpn {
   {
     buf.write((unsigned char *)str, std::strlen(str));
   }
+
+  // Note: ConstBuffer deep links to str, so returned ConstBuffer
+  // is only defined while str is in scope.
+  inline ConstBuffer const_buf_from_string(const std::string& str)
+  {
+    return ConstBuffer((const unsigned char *)str.c_str(), str.size(), true);
+  }
 }
 
 #endif

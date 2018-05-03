@@ -1,5 +1,5 @@
 export PLATFORM=osx-dbg
-export DEP_DIR=$HOME/src/mac
+[ -z "$DEP_DIR" ] && export DEP_DIR=$HOME/src/mac
 export APPLE_FAMILY=1
 export DEBUG_BUILD=1
 export GPP_CMD=clang++

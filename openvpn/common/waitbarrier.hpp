@@ -28,7 +28,7 @@
 namespace openvpn {
   template <typename THREAD_COMMON>
   inline void event_loop_wait_barrier(THREAD_COMMON& tc,
-				      const unsigned int seconds=10)
+				      const unsigned int seconds=30)
   {
     // barrier prior to event-loop entry
     switch (tc.event_loop_bar.wait(seconds))

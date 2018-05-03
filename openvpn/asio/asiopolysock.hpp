@@ -36,7 +36,9 @@
 #include <openvpn/common/sockopt.hpp>
 #include <openvpn/addr/ip.hpp>
 
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+#include <openvpn/asio/alt_routing.hpp>
+#elif defined(OPENVPN_POLYSOCK_SUPPORTS_BIND)
 #include <openvpn/asio/asioboundsock.hpp>
 #endif
 
@@ -67,8 +69,20 @@ namespace openvpn {
       virtual void tcp_nodelay() {}
       virtual void set_cloexec() {}
 
+      virtual int native_handle()
+      {
+	return -1;
+      }
+
 #ifdef ASIO_HAS_LOCAL_SOCKETS
       virtual bool peercreds(SockOpt::Creds& cr)
+      {
+	return false;
+      }
+#endif
+
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+      virtual bool alt_routing_enabled()
       {
 	return false;
       }
@@ -112,10 +126,18 @@ namespace openvpn {
 	socket.async_receive(buf, std::move(callback));
       }
 
+#if !defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
       virtual std::string remote_endpoint_str() const override
       {
-	return to_string(socket.remote_endpoint());
+	try {
+	  return "TCP " + openvpn::to_string(socket.remote_endpoint());
+	}
+	catch (const std::exception&)
+	  {
+	    return "TCP";
+	  }
       }
+#endif
 
       virtual bool remote_ip_port(IP::Addr& addr, unsigned int& port) const override
       {
@@ -124,7 +146,7 @@ namespace openvpn {
 	  port = socket.remote_endpoint().port();
 	  return true;
 	}
-	catch (std::exception&)
+	catch (const std::exception&)
 	  {
 	    return false;
 	  }
@@ -164,7 +186,24 @@ namespace openvpn {
 	return false;
       }
 
-#ifdef OPENVPN_POLYSOCK_SUPPORTS_BIND
+      virtual int native_handle() override
+      {
+	return socket.native_handle();
+      }
+
+#if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
+      virtual std::string remote_endpoint_str() const override
+      {
+	return "TCP ALT " + socket.to_string();
+      }
+
+      virtual bool alt_routing_enabled() override
+      {
+	return socket.alt_routing_enabled();
+      }
+
+      AltRouting::Socket socket;
+#elif defined(OPENVPN_POLYSOCK_SUPPORTS_BIND)
       AsioBoundSocket::Socket socket;
 #else
       openvpn_io::ip::tcp::socket socket;
@@ -235,6 +274,11 @@ namespace openvpn {
       virtual bool is_local() const override
       {
 	return true;
+      }
+
+      virtual int native_handle() override
+      {
+	return socket.native_handle();
       }
 
       openvpn_io::local::stream_protocol::socket socket;

@@ -93,7 +93,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("ActionThread Exception: " << e.what());
+	  OPENVPN_LOG("ActionThread exception: " << e.what());
 	}
       openvpn_io::post(io_context, [self=Ptr(this), status]()
 		 {

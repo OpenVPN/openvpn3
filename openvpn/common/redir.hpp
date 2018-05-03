@@ -202,6 +202,14 @@ namespace openvpn {
   class RedirectPipe : public RedirectStdFD
   {
   public:
+    enum {
+      COMBINE_OUT_ERR = (1<<0),  // capture combined stdout/stderr using a pipe
+      ENABLE_IN       = (1<<1),  // make a string -> stdin pipe, otherwise redirect stdin from /dev/null
+      IGNORE_IN       = (1<<2),  // don't touch stdin
+      IGNORE_OUT      = (1<<3),  // don't touch stdout
+      IGNORE_ERR      = (1<<4),  // don't touch stderr
+    };
+
     struct InOut
     {
       std::string in;
@@ -212,40 +220,50 @@ namespace openvpn {
     RedirectPipe() {}
 
     RedirectPipe(RedirectStdFD& remote,
-		 const bool combine_out_err_arg,
-		 const bool enable_in)
+		 const unsigned int flags_arg)
+      : flags(flags_arg)
     {
-      int fd[2];
-
       // stdout
-      Pipe::make_pipe(fd);
-      out.reset(cloexec(fd[0]));
-      remote.out.reset(fd[1]);
+      if (!(flags & IGNORE_OUT))
+	{
+	  int fd[2];
+	  Pipe::make_pipe(fd);
+	  out.reset(cloexec(fd[0]));
+	  remote.out.reset(fd[1]);
+	}
 
       // stderr
-      combine_out_err = remote.combine_out_err = combine_out_err_arg;
-      if (!combine_out_err)
+      if (!(flags & IGNORE_ERR))
 	{
-	  Pipe::make_pipe(fd);
-	  err.reset(cloexec(fd[0]));
-	  remote.err.reset(fd[1]);
+	  combine_out_err = remote.combine_out_err = ((flags & (COMBINE_OUT_ERR|IGNORE_OUT)) == COMBINE_OUT_ERR);
+	  if (!combine_out_err)
+	    {
+	      int fd[2];
+	      Pipe::make_pipe(fd);
+	      err.reset(cloexec(fd[0]));
+	      remote.err.reset(fd[1]);
+	    }
 	}
 
       // stdin
-      if (enable_in)
+      if (!(flags & IGNORE_IN))
 	{
-	  Pipe::make_pipe(fd);
-	  in.reset(cloexec(fd[1]));
-	  remote.in.reset(fd[0]);
-	}
-      else
-	{
-	  // open /dev/null for stdin
-	  remote.in.reset(::open("/dev/null", O_RDONLY, 0));
-	  if (!remote.in.defined())
+	  if (flags & ENABLE_IN)
 	    {
-	      const int eno = errno;
-	      OPENVPN_THROW(redirect_std_err, "error opening /dev/null : " << strerror_str(eno));
+	      int fd[2];
+	      Pipe::make_pipe(fd);
+	      in.reset(cloexec(fd[1]));
+	      remote.in.reset(fd[0]);
+	    }
+	  else
+	    {
+	      // open /dev/null for stdin
+	      remote.in.reset(::open("/dev/null", O_RDONLY, 0));
+	      if (!remote.in.defined())
+		{
+		  const int eno = errno;
+		  OPENVPN_THROW(redirect_std_err, "error opening /dev/null : " << strerror_str(eno));
+		}
 	    }
 	}
     }
@@ -253,12 +271,24 @@ namespace openvpn {
     void transact(InOut& inout)
     {
       openvpn_io::io_context io_context(1);
-      Pipe::SD_OUT send_in(io_context, inout.in, in);
-      Pipe::SD_IN recv_out(io_context, out);
-      Pipe::SD_IN recv_err(io_context, err);
+
+      std::unique_ptr<Pipe::SD_OUT> send_in;
+      std::unique_ptr<Pipe::SD_IN> recv_out;
+      std::unique_ptr<Pipe::SD_IN> recv_err;
+
+      if (!(flags & IGNORE_IN))
+	send_in.reset(new Pipe::SD_OUT(io_context, inout.in, in));
+      if (!(flags & IGNORE_OUT))
+	recv_out.reset(new Pipe::SD_IN(io_context, out));
+      if (!(flags & IGNORE_ERR))
+	recv_err.reset(new Pipe::SD_IN(io_context, err));
+
       io_context.run();
-      inout.out = recv_out.content();
-      inout.err = recv_err.content();
+
+      if (recv_out)
+	inout.out = recv_out->content();
+      if (recv_err)
+	inout.err = recv_err->content();
     }
 
   private:
@@ -273,6 +303,7 @@ namespace openvpn {
       return fd;
     }
 
+    const unsigned int flags = 0;
   };
 }
 

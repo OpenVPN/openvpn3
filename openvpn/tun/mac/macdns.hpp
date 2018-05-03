@@ -217,7 +217,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("MacDNS: setdns: " << e.what());
+	  OPENVPN_LOG("MacDNS: setdns exception: " << e.what());
 	}
       return mod;
     }
@@ -248,7 +248,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("MacDNS: resetdns: " << e.what());
+	  OPENVPN_LOG("MacDNS: resetdns exception: " << e.what());
 	}
       return mod;
     }

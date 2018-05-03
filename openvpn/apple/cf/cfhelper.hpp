@@ -33,7 +33,7 @@ namespace openvpn {
   namespace CF {
 
     // essentially a vector of void *, used as source for array and dictionary constructors
-    typedef BufferAllocatedType<CFTypeRef> SrcList;
+    typedef BufferAllocatedType<CFTypeRef, thread_unsafe_refcount> SrcList;
 
     inline Array array(const SrcList& values)
     {

@@ -216,7 +216,7 @@ namespace openvpn {
       typedef TCPTransport::Link<openvpn_io::ip::tcp, Client*, false> LinkImpl;
 
       friend class ClientConfig;                        // calls constructor
-      friend LinkImpl;                                  // calls tcp_read_handler
+      friend LinkImpl::Base;                            // calls tcp_read_handler
 
     public:
       virtual void transport_start()

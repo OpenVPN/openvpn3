@@ -22,12 +22,12 @@
 #ifndef OPENVPN_COMMON_APPVERSION_H
 #define OPENVPN_COMMON_APPVERSION_H
 
-// VERSION version can be passed on build command line
+// BUILD_VERSION version can be passed on build command line
 
 #include <openvpn/common/stringize.hpp>
 
-#ifdef VERSION
-#define MY_VERSION OPENVPN_STRINGIZE(VERSION)
+#ifdef BUILD_VERSION
+#define MY_VERSION OPENVPN_STRINGIZE(BUILD_VERSION)
 #else
 #define MY_VERSION "0.1.0"
 #endif

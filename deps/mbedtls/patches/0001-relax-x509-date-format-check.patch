@@ -1,7 +1,18 @@
-diff -urw mbedtls-2.6.0.orig/library/x509.c mbedtls-2.6.0/library/x509.c
---- mbedtls-2.6.0.orig/library/x509.c	2017-11-03 11:46:21.403848065 +0800
-+++ mbedtls-2.6.0/library/x509.c	2017-11-03 11:58:46.259817520 +0800
-@@ -559,13 +559,20 @@
+From 62dd1588a7ec3501edfaf9470cf7a1ca15cb4ba1 Mon Sep 17 00:00:00 2001
+From: Antonio Quartulli <antonio@openvpn.net>
+Date: Tue, 20 Mar 2018 09:35:47 +0800
+Subject: [PATCH] relax x509 date format check
+
+Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
+---
+ library/x509.c | 18 +++++++++++++++++-
+ 1 file changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/library/x509.c b/library/x509.c
+index 371d6da1..df2cea81 100644
+--- a/library/x509.c
++++ b/library/x509.c
+@@ -565,13 +565,20 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
      /*
       * Parse seconds if present
       */
@@ -23,7 +34,7 @@ diff -urw mbedtls-2.6.0.orig/library/x509.c mbedtls-2.6.0/library/x509.c
  
      /*
       * Parse trailing 'Z' if present
-@@ -575,6 +582,15 @@
+@@ -581,6 +588,15 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
          (*p)++;
          len--;
      }
@@ -39,3 +50,6 @@ diff -urw mbedtls-2.6.0.orig/library/x509.c mbedtls-2.6.0/library/x509.c
  
      /*
       * We should have parsed all characters at this point
+-- 
+2.16.2
+

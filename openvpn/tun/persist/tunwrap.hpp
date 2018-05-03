@@ -83,7 +83,7 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  OPENVPN_LOG("TunWrap destructor: " << e.what());
+	  OPENVPN_LOG("TunWrap destructor exception: " << e.what());
 	}
     }
 

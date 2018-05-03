@@ -118,11 +118,13 @@ namespace openvpn {
 			const Argv& argv,
 			const Environ* env,
 			RedirectPipe::InOut& inout,
-			const bool combine_out_err)
+			unsigned int redirect_pipe_flags)
   {
     SignalBlockerPipe sbpipe;
     RedirectPipe remote;
-    RedirectPipe local(remote, combine_out_err, !inout.in.empty());
+    if (!inout.in.empty())
+      redirect_pipe_flags |= RedirectPipe::ENABLE_IN;
+    RedirectPipe local(remote, redirect_pipe_flags);
     const pid_t pid = system_cmd_async(cmd, argv, env, &remote);
     if (pid < pid_t(0))
       return -1;
@@ -159,7 +161,7 @@ namespace openvpn {
 	    os << "Error: command failed to execute" << std::endl;
 #else
 	  RedirectPipe::InOut inout;
-	  const int status = system_cmd(argv[0], argv, nullptr, inout, true);
+	  const int status = system_cmd(argv[0], argv, nullptr, inout, RedirectPipe::COMBINE_OUT_ERR);
 	  if (status < 0)
 	    os << "Error: command failed to execute" << std::endl;
 	  os << inout.out;

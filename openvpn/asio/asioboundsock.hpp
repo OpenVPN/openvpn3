@@ -30,6 +30,7 @@
 
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/common/extern.hpp>
+#include <openvpn/common/to_string.hpp>
 
 namespace openvpn {
   namespace AsioBoundSocket {
@@ -51,7 +52,31 @@ namespace openvpn {
 	bind_local_port = port;
       }
 
-    private:
+      std::string to_string() const
+      {
+	std::string ret;
+	ret.reserve(64);
+	if (bind_local_addr.defined())
+	  {
+	    ret += "local=[";
+	    ret += bind_local_addr.to_string();
+	    ret += "]:";
+	    ret += openvpn::to_string(bind_local_port);
+	  }
+	try {
+	  const std::string re = openvpn::to_string(remote_endpoint());
+	  if (!ret.empty())
+	    ret += ' ';
+	  ret += "remote=";
+	  ret += re;
+	}
+	catch (const std::exception& e)
+	  {
+	  }
+	return ret;
+      }
+
+    protected:
       virtual void async_connect_post_open(const protocol_type& protocol, openvpn_io::error_code& ec) override
       {
 	if (bind_local_addr.defined())
@@ -63,6 +88,7 @@ namespace openvpn {
 	  }
       }
 
+    private:
       IP::Addr bind_local_addr;
       unsigned short bind_local_port = 0;
     };

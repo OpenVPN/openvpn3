@@ -338,6 +338,10 @@ namespace openvpn {
 
       // Compatibility
       bool force_aes_cbc_ciphersuites = false;
+      
+      // For compatibility with openvpn2 we send initial options on rekeying,
+      // instead of possible modifications caused by NCP
+      std::string initial_options;
 
       void load(const OptionList& opt, const ProtoContextOptions& pco,
 		const int default_key_direction, const bool server)
@@ -669,6 +673,9 @@ namespace openvpn {
       // transmitted to peer for options consistency check
       std::string options_string()
       {
+	if (!initial_options.empty())
+	  return initial_options;
+      
 	std::ostringstream out;
 
 	const bool server = ssl_factory->mode().is_server();
@@ -708,8 +715,10 @@ namespace openvpn {
 	  out << ",tls-server";
 	else
 	  out << ",tls-client";
+   
+	initial_options = out.str();
 
-	return out.str();
+	return initial_options;
       }
 
       // generate a string summarizing information about the client
@@ -1593,8 +1602,9 @@ namespace openvpn {
 	      return validate_tls_plain(recv, proto, now);
 	    }
 	}
-	catch (BufferException&)
+	catch (BufferException& e)
 	  {
+	    OPENVPN_LOG_PROTO_VERBOSE("validate() exception: " << e.what());
 	  }
 	return false;
       }
@@ -1764,9 +1774,9 @@ namespace openvpn {
 	// verify tls_auth packet ID
 	const bool pid_ok = proto.ta_pid_recv.test_add(pid, t, false);
 	// make sure that our own PSID is contained in packet received from peer
-	if (ReliableAck::ack_skip(recv))
+	if (ReliableAck::ack_skip(work))
 	  {
-	    ProtoSessionID dest_psid(recv);
+	    ProtoSessionID dest_psid(work);
 	    if (!proto.psid_self.match(dest_psid))
 	      return false;
 	  }

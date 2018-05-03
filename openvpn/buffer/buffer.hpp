@@ -53,7 +53,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
-#include <type_traits> // for std::is_nothrow_move_constructible
+#include <type_traits> // for std::is_nothrow_move_constructible, std::remove_const
 
 #ifndef OPENVPN_NO_IO
 #include <openvpn/io/io.hpp>
@@ -136,11 +136,17 @@ namespace openvpn {
     Status status_;
   };
 
+  template <typename T, typename R>
+  class BufferAllocatedType;
+
   template <typename T>
   class BufferType {
+    template <typename, typename> friend class BufferAllocatedType;
+
   public:
     typedef T* type;
     typedef const T* const_type;
+    typedef typename std::remove_const<T>::type NCT; // non-const type
 
     BufferType()
     {
@@ -469,14 +475,14 @@ namespace openvpn {
       prepend((const T*)data, size);
     }
 
-    void read(T* data, const size_t size)
+    void read(NCT* data, const size_t size)
     {
       std::memcpy(data, read_alloc(size), size * sizeof(T));
     }
 
     void read(void* data, const size_t size)
     {
-      read((T*)data, size);
+      read((NCT*)data, size);
     }
 
     T* write_alloc(const size_t size)
@@ -575,13 +581,15 @@ namespace openvpn {
     size_t capacity_;  // maximum number of array objects of type T for which memory is allocated, starting at data_
   };
 
-  template <typename T, typename R = thread_unsafe_refcount>
+  template <typename T, typename R>
   class BufferAllocatedType : public BufferType<T>, public RC<R>
   {
     using BufferType<T>::data_;
     using BufferType<T>::offset_;
     using BufferType<T>::size_;
     using BufferType<T>::capacity_;
+
+    template <typename, typename> friend class BufferAllocatedType;
 
   public:
     enum {
@@ -636,19 +644,19 @@ namespace openvpn {
         }
     }
 
-    template <typename OT>
-    BufferAllocatedType(const BufferType<OT>& other, const unsigned int flags)
+    template <typename T_>
+    BufferAllocatedType(const BufferType<T_>& other, const unsigned int flags)
     {
-      static_assert(sizeof(T) == sizeof(OT), "size inconsistency");
-      offset_ = other.offset();
-      size_ = other.size();
-      capacity_ = other.capacity();
+      static_assert(sizeof(T) == sizeof(T_), "size inconsistency");
+      offset_ = other.offset_;
+      size_ = other.size_;
+      capacity_ = other.capacity_;
       flags_ = flags;
       if (capacity_)
 	{
 	  data_ = new T[capacity_];
 	  if (size_)
-	    std::memcpy(data_ + offset_, other.c_data(), size_ * sizeof(T));
+	    std::memcpy(data_ + offset_, other.data_ + offset_, size_ * sizeof(T));
 	}
     }
 
@@ -724,16 +732,17 @@ namespace openvpn {
       BufferType<T>::init_headroom(headroom);
     }
 
-    void move(BufferAllocatedType& other)
+    template <typename T_, typename R_>
+    void move(BufferAllocatedType<T_, R_>& other)
     {
       if (data_)
 	delete_(data_, capacity_, flags_);
       move_(other);
     }
 
-    RCPtr<BufferAllocatedType<T>> move_to_ptr()
+    RCPtr<BufferAllocatedType<T, R>> move_to_ptr()
     {
-      RCPtr<BufferAllocatedType<T>> bp = new BufferAllocatedType<T>();
+      RCPtr<BufferAllocatedType<T, R>> bp = new BufferAllocatedType<T, R>();
       bp->move(*this);
       return bp;
     }
@@ -747,7 +756,8 @@ namespace openvpn {
       std::swap(flags_, other.flags_);
     }
 
-    BufferAllocatedType(BufferAllocatedType&& other) noexcept
+    template <typename T_, typename R_>
+    BufferAllocatedType(BufferAllocatedType<T_, R_>&& other) noexcept
     {
       move_(other);
     }
@@ -812,7 +822,8 @@ namespace openvpn {
       capacity_ = newcap;
     }
 
-    void move_(BufferAllocatedType& other)
+    template <typename T_, typename R_>
+    void move_(BufferAllocatedType<T_, R_>& other)
     {
       data_ = other.data_;
       offset_ = other.offset_;
@@ -844,15 +855,28 @@ namespace openvpn {
     unsigned int flags_;
   };
 
+  // specializations of BufferType for unsigned char
   typedef BufferType<unsigned char> Buffer;
   typedef BufferType<const unsigned char> ConstBuffer;
-  typedef BufferAllocatedType<unsigned char> BufferAllocated;
+  typedef BufferAllocatedType<unsigned char, thread_unsafe_refcount> BufferAllocated;
   typedef RCPtr<BufferAllocated> BufferPtr;
+
+  // BufferAllocated with thread-safe refcount
+  typedef BufferAllocatedType<unsigned char, thread_safe_refcount> BufferAllocatedTS;
+  typedef RCPtr<BufferAllocatedTS> BufferPtrTS;
+
+  // cast BufferType<T> to BufferType<const T>
 
   template <typename T>
   inline BufferType<const T>& const_buffer_ref(BufferType<T>& src)
   {
     return (BufferType<const T>&)src;
+  }
+
+  template <typename T>
+  inline const BufferType<const T>& const_buffer_ref(const BufferType<T>& src)
+  {
+    return (const BufferType<const T>&)src;
   }
 
 } // namespace openvpn

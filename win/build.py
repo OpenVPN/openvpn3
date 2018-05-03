@@ -39,7 +39,7 @@ def build(parms, srcfile, unit_test=False):
     # onto VC command line.
     options = {
         "ovpn3"   : parms['OVPN3'],
-        "tap"     : os.path.join(parms['TAP'], 'src'),
+        "tap" : os.path.join(build_dir(parms), "tap-windows", "src"),
         "tap_component_id" : parms['TAP_WIN_COMPONENT_ID'],
         "asio"    : os.path.join(build_dir(parms), "asio"),
         "mbedtls" : os.path.join(build_dir(parms), "mbedtls"),
@@ -62,7 +62,7 @@ def build(parms, srcfile, unit_test=False):
         options['extra_lib'] += " fwpuclnt.lib"
 
     # Add jsoncpp (optional)
-    if 'jsoncpp' in parms['LIB_VERSIONS']:
+    if parms.get('USE_JSONCPP'):
         options["jsoncpp"] = os.path.join(build_dir(parms), "jsoncpp")
         options['extra_inc'] += " /DHAVE_JSONCPP /I %(jsoncpp)s/dist" % options
         options['extra_lib_path'] += " /LIBPATH:%(jsoncpp)s/dist" % options
@@ -82,12 +82,9 @@ def build(parms, srcfile, unit_test=False):
 
 if __name__ == "__main__":
     import sys
-    from parms import PARMS
 
-    # some parameters might be redefined, like in Jenkins multibranch pipeline case
-    PARMS['BUILD'] = os.environ.get('BUILD', PARMS['BUILD'])
-    PARMS['OVPN3'] = os.environ.get('OVPN3', PARMS['OVPN3'])
+    params = read_params()
 
-    src = src_fn_argv(PARMS, sys.argv[1:])
+    src = src_fn_argv(params, sys.argv[1:])
     unit_test = is_unit_test(sys.argv[1:])
-    build(PARMS, src, unit_test)
+    build(params, src, unit_test)

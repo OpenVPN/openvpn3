@@ -203,6 +203,10 @@ namespace openvpn {
       // Enable autologin sessions
       bool autologinSessions = true;
 
+      // If true, consider AUTH_FAILED to be a non-fatal error,
+      // and retry the connection after a pause.
+      bool retryOnAuthFailed = false;
+
       // An ID used for get-certificate and RSA signing callbacks
       // for External PKI profiles.
       std::string externalPkiAlias;
@@ -411,6 +415,7 @@ namespace openvpn {
       std::string ip;     //   or ip must be defined (or both)
       std::string port;
       std::string proto;
+      std::string error;  // if non-empty, indicates an error
     };
 
     namespace Private {

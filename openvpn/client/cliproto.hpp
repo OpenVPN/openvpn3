@@ -702,7 +702,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("Error parsing client-ip: " << e.what());
+	    OPENVPN_LOG("exception parsing client-ip: " << e.what());
 	  }
 	ev->tun_name = tun->tun_name();
 	connected_ = std::move(ev);
@@ -791,10 +791,16 @@ namespace openvpn {
 	uint32_t tls_warnings = get_tls_warnings();
 
 	if (tls_warnings & SSLAPI::TLS_WARN_SIG_MD5)
-	{
-	  ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with MD5. Please inform your admin to upgrade to a stronger algorithm. Support for MD5 will be dropped at end of Apr 2018");
-	  cli_events->add_event(std::move(ev));
-	}
+	  {
+	    ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with MD5. Please inform your admin to upgrade to a stronger algorithm. Support for MD5 will be dropped at end of Apr 2018");
+	    cli_events->add_event(std::move(ev));
+	  }
+
+	if (tls_warnings & SSLAPI::TLS_WARN_NAME_CONSTRAINTS)
+	  {
+	    ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: Your CA contains a 'x509v3 Name Constraints' extension, but its validation is not supported. This might be a security breach, please contact your administrator.");
+	    cli_events->add_event(std::move(ev));
+	  }
       }
 
       // base class calls here when primary session transitions to ACTIVE state
@@ -873,7 +879,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("Error parsing inactive: " << e.what());
+	    OPENVPN_LOG("exception parsing inactive: " << e.what());
 	  }
       }
 

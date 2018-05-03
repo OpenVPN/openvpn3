@@ -25,19 +25,38 @@
 #include <openvpn/common/unicode.hpp>
 
 namespace openvpn {
-  // Authentication credential (username, password, or response) must
-  // satisfy these constraints:
-  //
-  // 1. must be a valid UTF-8 string
-  // 2. must not contain control or space characters
-  // 3. length must be <= 256 unicode characters
-  //
-  // Note that we don't check that string is non-empty here,
-  // callers should do this themselves if necessary.
-  template <typename STRING>
-  inline bool validate_auth_cred(const STRING& cred)
-  {
-    return Unicode::is_valid_utf8(cred, 256 | Unicode::UTF8_NO_CTRL | Unicode::UTF8_NO_SPACE);
+  // Validate authentication credential.
+  // Must be UTF-8.
+  // Other checks on size and content below.
+  // We don't check that the credential is non-empty.
+  namespace ValidateCreds {
+
+    enum Type {
+      USERNAME,
+      PASSWORD,
+      RESPONSE
+    };
+
+    template <typename STRING>
+    static bool is_valid(const Type type, const STRING& cred)
+    {
+      size_t max_len_flags;
+      switch (type)
+	{
+	case USERNAME:
+	  // length <= 256 unicode chars, no control chars allowed
+	  max_len_flags = 256 | Unicode::UTF8_NO_CTRL;
+	  break;
+	case PASSWORD:
+	case RESPONSE:
+	  // length <= 16384 unicode chars
+	  max_len_flags = 16384;
+	  break;
+	default:
+	  return false;
+	}
+      return Unicode::is_valid_utf8(cred, max_len_flags);
+    }
   }
 }
 

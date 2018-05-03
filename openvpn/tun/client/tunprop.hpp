@@ -199,7 +199,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  if (!quiet)
-	    OPENVPN_LOG("Error processing route-metric: " << e.what());
+	    OPENVPN_LOG("exception processing route-metric: " << e.what());
 	}
     }
 
@@ -396,7 +396,7 @@ namespace openvpn {
 		  catch (const std::exception& e)
 		    {
 		      if (!quiet)
-			OPENVPN_LOG("Error parsing IPv4 route: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
+			OPENVPN_LOG("exception parsing IPv4 route: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		    }
 		}
 	    }
@@ -424,7 +424,7 @@ namespace openvpn {
 		  catch (const std::exception& e)
 		    {
 		      if (!quiet)
-			OPENVPN_LOG("Error parsing IPv6 route: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
+			OPENVPN_LOG("exception parsing IPv6 route: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		    }
 		}
 	    }
@@ -451,7 +451,7 @@ namespace openvpn {
 	      catch (const std::exception& e)
 		{
 		  if (!quiet)
-		    OPENVPN_LOG("Error adding remote bypass route: " << addr.to_string() << " : " << e.what());
+		    OPENVPN_LOG("exception adding remote bypass route: " << addr.to_string() << " : " << e.what());
 		}
 	    }
 	}
@@ -561,7 +561,7 @@ namespace openvpn {
 	      catch (const std::exception& e)
 		{
 		  if (!quiet)
-		    OPENVPN_LOG("Error parsing dhcp-option: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
+		    OPENVPN_LOG("exception parsing dhcp-option: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		}
 	    }
 	  try {
@@ -584,7 +584,7 @@ namespace openvpn {
 	  catch (const std::exception& e)
 	    {
 	      if (!quiet)
-		OPENVPN_LOG("Error setting dhcp-option for proxy: " << e.what());
+		OPENVPN_LOG("exception setting dhcp-option for proxy: " << e.what());
 	    }
 	}
       return flags;
@@ -606,7 +606,7 @@ namespace openvpn {
 	      catch (const std::exception& e)
 		{
 		  if (!quiet)
-		    OPENVPN_LOG("Error parsing dhcp-option: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
+		    OPENVPN_LOG("exception parsing dhcp-option: " << o.render(OPT_RENDER_FLAGS) << " : " << e.what());
 		}
 	    }
 	}

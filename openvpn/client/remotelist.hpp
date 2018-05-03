@@ -137,9 +137,8 @@ namespace openvpn {
 
       // cache a list of DNS-resolved IP addresses
       template <class EPRANGE>
-      void set_endpoint_range(EPRANGE& endpoint_range, RandomAPI* rng)
+      void set_endpoint_range(const EPRANGE& endpoint_range, RandomAPI* rng)
       {
-	EPRANGE end;
 	res_addr_list.reset(new ResolvedAddrList());
 	for (const auto &i : endpoint_range)
 	  {

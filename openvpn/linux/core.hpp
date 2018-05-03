@@ -43,6 +43,22 @@ namespace openvpn {
     pthread_t current_thread = pthread_self();
     return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
   }
+
+  inline int exclude_from_core(const int core_id)
+  {
+    const int num_cores = n_cores();
+    if (num_cores <= 1 || core_id >= num_cores)
+      return EINVAL;
+
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    for (int i = 0; i < num_cores; ++i)
+      if (i != core_id)
+	CPU_SET(i, &cpuset);
+
+    pthread_t current_thread = pthread_self();
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+  }
 }
 
 #endif

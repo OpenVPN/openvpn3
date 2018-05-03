@@ -469,6 +469,15 @@ namespace openvpn {
 	  overflow = true;
       }
 
+      virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size)
+      {
+	bmq_stream::MemQ* in = bmq_stream::memq_from_bio(ct_in);
+	if (in->size() < MAX_CIPHERTEXT_IN)
+	  in->write(data, size);
+	else
+	  overflow = true;
+      }
+
       virtual bool read_ciphertext_ready() const
       {
 	return !bmq_stream::memq_from_bio(ct_out)->empty();
@@ -521,6 +530,9 @@ namespace openvpn {
 	  ssl = SSL_new(ctx.ctx);
 	  if (!ssl)
 	    throw OpenSSLException("OpenSSLContext::SSL: SSL_new failed");
+
+	  // release unneeded buffers
+	  SSL_set_mode(ssl, SSL_MODE_RELEASE_BUFFERS);
 
 	  // verify hostname
 	  if (hostname)
@@ -791,7 +803,7 @@ namespace openvpn {
 	}
 	catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG("OpenSSLContext::ExternalPKIImpl::rsa_priv_enc: " << e.what());
+	    OPENVPN_LOG("OpenSSLContext::ExternalPKIImpl::rsa_priv_enc exception: " << e.what());
 	    ++self->n_errors;
 	    return -1;
 	  }

@@ -44,6 +44,9 @@ namespace openvpn {
 	SSLUnspecified,
 	SSLOn,
 	SSLOff,
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	AltRouting,
+#endif
       };
 
       std::string directive;
@@ -60,10 +63,22 @@ namespace openvpn {
 	if (!proto.is_local())
 	  ret += ' ' + port;
 	ret += ' ' + std::string(proto.str()) + ' ' + openvpn::to_string(n_threads);
-	if (ssl == SSLOn)
-	  ret += " ssl";
-	else if (ssl == SSLOff)
-	  ret += " !ssl";
+	switch (ssl)
+	  {
+	  case SSLUnspecified:
+	    break;
+	  case SSLOn:
+	    ret += " ssl";
+	    break;
+	  case SSLOff:
+	    ret += " !ssl";
+	    break;
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+	  case AltRouting:
+	    ret += " alt";
+	    break;
+#endif
+	  }
 	return ret;
       }
 
@@ -192,6 +207,10 @@ namespace openvpn {
 			  }
 			else if (ssl_qualifier == "!ssl")
 			  e.ssl = Item::SSLOff;
+#ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
+			else if (ssl_qualifier == "alt")
+			  e.ssl = Item::AltRouting;
+#endif
 			else
 			  OPENVPN_THROW(option_error, e.directive << ": unrecognized SSL qualifier");
 		      }

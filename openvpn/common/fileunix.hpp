@@ -82,6 +82,13 @@ namespace openvpn {
     write_binary_unix(fn, mode, buf.c_data(), buf.size());
   }
 
+  inline void write_binary_unix(const std::string& fn,
+				const mode_t mode,
+				const ConstBuffer& buf)
+  {
+    write_binary_unix(fn, mode, buf.c_data(), buf.size());
+  }
+
   inline void write_text_unix(const std::string& fn,
 			      const mode_t mode,
 			      const std::string& content)
@@ -138,6 +145,19 @@ namespace openvpn {
     }
 
     return bp;
+  }
+
+  inline bool read_binary_unix_fast(const std::string& fn,
+				    Buffer& out)
+  {
+    ScopedFD fd(::open(fn.c_str(), O_RDONLY|O_CLOEXEC));
+    if (!fd.defined())
+	return errno;
+    const ssize_t status = ::read(fd(), out.data_end(), out.remaining(0));
+    if (status < 0)
+      return errno;
+    out.inc_size(status);
+    return 0;
   }
 
   inline std::string read_text_unix(const std::string& filename,

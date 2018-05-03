@@ -142,6 +142,7 @@ namespace openvpn {
       int default_key_direction = -1;
       bool force_aes_cbc_ciphersuites = false;
       bool autologin_sessions = false;
+      bool retry_on_auth_failed = false;
       std::string tls_version_min_override;
       std::string tls_cert_profile_override;
       PeerInfo::Set::Ptr extra_peer_info;
@@ -193,7 +194,8 @@ namespace openvpn {
 	autologin_sessions(false),
 	creds_locked(false),
 	asio_work_always_on_(false),
-	synchronous_dns_lookup(false)
+	synchronous_dns_lookup(false),
+	retry_on_auth_failed_(config.retry_on_auth_failed)
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
@@ -376,6 +378,8 @@ namespace openvpn {
 	    tunconf->tun_prop.remote_list = remote_list;
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
+	    if (config.tun_persist)
+	      tunconf->tun_persist.reset(new TunLinux::TunPersist(true, false, nullptr));
 	    tunconf->load(opt);
 	    tun_factory = tunconf;
 	  }
@@ -489,8 +493,7 @@ namespace openvpn {
       }
 
       // show unused options
-      if (opt.n_unused())
-	OPENVPN_LOG(OPENVPN_UNUSED_OPTIONS << std::endl << opt.render(Option::RENDER_TRUNC_64|Option::RENDER_NUMBER|Option::RENDER_BRACKET|Option::RENDER_UNUSED));
+      opt.show_unused_options(OPENVPN_UNUSED_OPTIONS);
     }
 
     static PeerInfo::Set::Ptr build_peer_info(const Config& config, const ParseClientConfig& pcc, const bool autologin_sessions)
@@ -546,6 +549,11 @@ namespace openvpn {
 	return reconnect_notify->pause_on_connection_timeout();
       else
 	return false;
+    }
+
+    bool retry_on_auth_failed() const
+    {
+      return retry_on_auth_failed_;
     }
 
     Client::Config::Ptr client_config(const bool relay_mode)
@@ -659,6 +667,9 @@ namespace openvpn {
       if (relay_mode)
 	lflags |= SSLConfigAPI::LF_RELAY_MODE;
 
+      if (opt.exists("allow-name-constraints"))
+	lflags |= SSLConfigAPI::LF_ALLOW_NAME_CONSTRAINTS;
+
       // client SSL config
       SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
       cc->set_external_pki_callback(config.external_pki);
@@ -722,7 +733,6 @@ namespace openvpn {
 #endif
 
 #else
-	
       if (dco)
 	{
 	  DCO::TransportConfig transconf;
@@ -781,7 +791,11 @@ namespace openvpn {
 #endif
 	      transport_factory = udpconf;
 	    }
-	  else if (transport_protocol.is_tcp())
+	  else if (transport_protocol.is_tcp()
+#ifdef OPENVPN_TLS_LINK
+		   || transport_protocol.is_tls()
+#endif
+		  )
 	    {
 	      // TCP transport
 	      TCPTransport::ClientConfig::Ptr tcpconf = TCPTransport::ClientConfig::new_obj();
@@ -789,6 +803,10 @@ namespace openvpn {
 	      tcpconf->frame = frame;
 	      tcpconf->stats = cli_stats;
 	      tcpconf->socket_protect = socket_protect;
+#ifdef OPENVPN_TLS_LINK
+	      if (transport_protocol.is_tls())
+		tcpconf->use_tls = true;
+#endif
 #ifdef OPENVPN_GREMLIN
 	      tcpconf->gremlin_config = gremlin_config;
 #endif
@@ -836,6 +854,7 @@ namespace openvpn {
     bool creds_locked;
     bool asio_work_always_on_;
     bool synchronous_dns_lookup;
+    bool retry_on_auth_failed_;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;

@@ -51,6 +51,7 @@ namespace openvpn {
 
     enum TLSWarnings {
       TLS_WARN_SIG_MD5 = (1 << 0),
+      TLS_WARN_NAME_CONSTRAINTS = (1 << 1)
     };
 
     typedef RCPtr<SSLAPI> Ptr;
@@ -60,6 +61,7 @@ namespace openvpn {
     virtual ssize_t read_cleartext(void *data, const size_t capacity) = 0;
     virtual bool read_cleartext_ready() const = 0;
     virtual void write_ciphertext(const BufferPtr& buf) = 0;
+    virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size) = 0;
     virtual bool read_ciphertext_ready() const = 0;
     virtual BufferPtr read_ciphertext() = 0;
     virtual std::string ssl_handshake_details() const = 0;
@@ -109,9 +111,10 @@ namespace openvpn {
     };
 
     enum LoadFlags {
-      LF_PARSE_MODE = (1<<0),
+      LF_PARSE_MODE                     = (1<<0),
       LF_ALLOW_CLIENT_CERT_NOT_REQUIRED = (1<<1),
-      LF_RELAY_MODE = (1<<2), // look for "relay-ca" instead of "ca" directive
+      LF_RELAY_MODE                     = (1<<2), // look for "relay-ca" instead of "ca" directive
+      LF_ALLOW_NAME_CONSTRAINTS         = (1<<3)  // do not fail on Name Constraints ext and drop a warning to UI
     };
 
     std::string private_key_type_string() const

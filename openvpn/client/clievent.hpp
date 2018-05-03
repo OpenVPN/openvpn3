@@ -54,6 +54,7 @@ namespace openvpn {
       PAUSE,
       RESUME,
       RELAY,
+      UNSUPPORTED_FEATURE,
 
       // start of nonfatal errors, must be marked by NONFATAL_ERROR_START below
       TRANSPORT_ERROR,
@@ -105,6 +106,7 @@ namespace openvpn {
 	"PAUSE",
 	"RESUME",
 	"RELAY",
+	"UNSUPPORTED_FEATURE",
 
 	// nonfatal errors
 	"TRANSPORT_ERROR",
@@ -253,6 +255,28 @@ namespace openvpn {
       TLSVersionMinFail() : Base(TLS_VERSION_MIN) {}
     };
 
+    struct UnsupportedFeature : public Base
+    {
+      typedef RCPtr<UnsupportedFeature> Ptr;
+
+      UnsupportedFeature(const std::string& name_arg, const std::string& reason_arg, bool critical_arg)
+	: Base(UNSUPPORTED_FEATURE),
+	  name(name_arg),
+	  reason(reason_arg),
+	  critical(critical_arg) {}
+
+      std::string name;
+      std::string reason;
+      bool critical;
+
+      virtual std::string render() const
+      {
+	std::ostringstream out;
+	out << "name: " << name << ", reason: " << reason << ", critical: " << critical;
+	return out.str();
+      }
+    };
+
     struct Connected : public Base
     {
       typedef RCPtr<Connected> Ptr;
@@ -275,7 +299,8 @@ namespace openvpn {
       {
 	std::ostringstream out;
 	// eg. "godot@foo.bar.gov:443 (1.2.3.4) via TCPv4 on tun0/5.5.1.1"
-	out << user << '@';
+	if (!user.empty())
+	  out << user << '@';
 	if (server_host.find_first_of(':') == std::string::npos)
 	  out << server_host;
 	else
