@@ -294,6 +294,9 @@ namespace openvpn {
 	    // Process ifconfig and topology
 	    if (!l2_post)
 	      {
+		// set lowest interface metric to make Windows use pushed DNS search domain
+		create.add(new WinCmd("netsh interface ip set interface " + tap_index_name + " metric=1"));
+
 		const std::string metric = route_metric_opt(pull, *local4, MT_IFACE);
 		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
 		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
