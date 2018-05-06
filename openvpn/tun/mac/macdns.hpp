@@ -58,7 +58,8 @@ namespace openvpn {
 
       Config(const TunBuilderCapture& settings)
 	: dns_servers(get_dns_servers(settings)),
-	  search_domains(get_search_domains(settings))
+	  search_domains(get_search_domains(settings)),
+	  adapter_domain_suffix(settings.adapter_domain_suffix)
       {
 	// We redirect DNS if either of the following is true:
 	// 1. redirect-gateway (IPv4) is pushed, or
@@ -73,6 +74,7 @@ namespace openvpn {
 	os << " SO=" << search_order;
 	os << " DNS=" << CF::array_to_string(dns_servers);
 	os << " DOM=" << CF::array_to_string(search_domains);
+	os << " ADS=" << adapter_domain_suffix;
 	return os.str();
       }
 
@@ -80,6 +82,7 @@ namespace openvpn {
       int search_order = 5000;
       CF::Array dns_servers;
       CF::Array search_domains;
+      std::string adapter_domain_suffix;
 
     private:
       static CF::Array get_dns_servers(const TunBuilderCapture& settings)
@@ -170,8 +173,14 @@ namespace openvpn {
 
 	    // set search domains
 	    info->dns.backup_orig("SearchDomains");
-	    if (CF::array_len(config.search_domains))
-	      CF::dict_set_obj(info->dns.mod, "SearchDomains", config.search_domains());
+	    CF::MutableArray search_domains(CF::mutable_array());
+
+	    // add adapter_domain_suffix to SearchDomains for domain autocompletion
+	    if (config.adapter_domain_suffix.length() > 0)
+	      CF::array_append_str(search_domains, config.adapter_domain_suffix);
+
+	    if (CF::array_len(search_domains))
+	      CF::dict_set_obj(info->dns.mod, "SearchDomains", search_domains());
 
 	    // set search order
 	    info->dns.backup_orig("SearchOrder");
@@ -182,16 +191,22 @@ namespace openvpn {
 	  }
 	else
 	  {
-	    // redirect specific domains
+	    // split-DNS - resolve only specific domains
 	    info->ovpn.mod_reset();
 	    if (CF::array_len(config.dns_servers) && CF::array_len(config.search_domains))
 	      {
 		// set DNS servers
 		CF::dict_set_obj(info->ovpn.mod, "ServerAddresses", config.dns_servers());
 
-		// set search domains, reverse domains can be added here as well
+		// DNS will be used only for those domains
 		CF::dict_set_obj(info->ovpn.mod, "SupplementalMatchDomains", config.search_domains());
+  
+		// do not use those domains in autocompletion
+		CF::dict_set_int(info->ovpn.mod, "SupplementalMatchDomainsNoSearch", 1);
 	      }
+       
+	    // in case of split-DNS macOS uses domain suffix of network adapter,
+	    // not the one provided by VPN (which we put to SearchDomains)
 
 	    // push it
 	    mod |= info->ovpn.push_to_store();
