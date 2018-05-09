@@ -237,6 +237,8 @@ fi
 
 # Cityhash
 if [ "$CITY" = "1" ]; then
+    LIBDIRS="$LIBDIRS -L$DEP_DIR/cityhash/cityhash-$PLATFORM/lib"
+    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/cityhash/cityhash-$PLATFORM/include"
     LIBS="$LIBS -lcityhash"
     CPPFLAGS="$CPPFLAGS -DHAVE_CITYHASH"
 fi
