@@ -820,10 +820,10 @@ namespace openvpn {
       AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
       AsioPolySock::Base::Ptr sock(s);
       s->socket.async_connect(ep,
-			      [self=Ptr(this), sock](const openvpn_io::error_code& error)
+			      [self=Ptr(this), sock](const openvpn_io::error_code& error) mutable
 			      {
 				// this is a connect, but we reuse the accept method
-				self->handle_accept(sock, error);
+				self->handle_accept(std::move(sock), error);
 			      });
     }
 
@@ -834,10 +834,10 @@ namespace openvpn {
       AsioPolySock::Unix* s = new AsioPolySock::Unix(io_context, 0);
       AsioPolySock::Base::Ptr sock(s);
       s->socket.async_connect(ep,
-			      [self=Ptr(this), sock](const openvpn_io::error_code& error)
+			      [self=Ptr(this), sock](const openvpn_io::error_code& error) mutable
 			      {
 				// this is a connect, but we reuse the accept method
-				self->handle_accept(sock, error);
+				self->handle_accept(std::move(sock), error);
 			      });
 #else
       throw Exception("unix sockets not supported on this platform");
