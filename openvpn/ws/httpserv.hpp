@@ -494,9 +494,9 @@ namespace openvpn {
 	    if (sock)
 	      sock->close();
 	    if (remove_self_from_map)
-	      openvpn_io::post(io_context, [self=Ptr(this), parent=Listener::Ptr(parent)]()
+	      openvpn_io::post(io_context, [self=Ptr(this), parent=Listener::Ptr(parent)]() mutable
 			 {
-			   parent->remove_client(self);
+			   parent->remove_client(std::move(self));
 			 });
 	  }
 
