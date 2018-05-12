@@ -28,9 +28,9 @@ namespace openvpn {
 				openvpn_io::io_context& io_context) override
       {
 	AsioPolySock::TCP::Ptr sock(new AsioPolySock::TCP(io_context, acceptor_index));
-	acceptor.async_accept(sock->socket, [listener=ListenerBase::Ptr(listener), sock](const openvpn_io::error_code& error)
+	acceptor.async_accept(sock->socket, [listener=ListenerBase::Ptr(listener), sock](const openvpn_io::error_code& error) mutable
 			      {
-				listener->handle_accept(sock, error);
+				listener->handle_accept(std::move(sock), error);
 			      });
       }
 
