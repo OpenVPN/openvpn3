@@ -3177,7 +3177,7 @@ namespace openvpn {
     // configuration
     const Config& conf() const { return *config; }
     Config& conf() { return *config; }
-    const Config::Ptr& conf_ptr() const { return config; }
+    Config::Ptr conf_ptr() const { return config; }
 
     // stats
     SessionStats& stat() const { return *stats; }
