@@ -514,7 +514,7 @@ namespace openvpn {
 
       private:
 	typedef TCPTransport::Link<AsioProtocol, HTTPCore*, false> LinkImpl;
-	friend LinkImpl; // calls tcp_* handlers
+	friend LinkImpl::Base; // calls tcp_* handlers
 
 	void verify_frame()
 	{
