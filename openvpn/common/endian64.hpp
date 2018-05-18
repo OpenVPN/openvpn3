@@ -13,7 +13,11 @@ namespace openvpn {
     inline std::uint64_t rev64(const std::uint64_t value)
     {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-      return __bswap_constant_64(value);  // compiler-builtin
+#ifdef __clang__
+      return __swap64(value);
+#else
+      return __bswap_constant_64(value);
+#endif
 #else
       return value;
 #endif
