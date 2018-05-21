@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Options:
+#   OSSL=1    -- build using OpenSSL
+#   MTLS=1    -- build using mbedTLS
+#   PTPROXY=1 -- build using Private Tunnel proxy
+
+# Other options
 GCC_EXTRA="$GCC_EXTRA -DOPENVPN_SHOW_SESSION_TOKEN"
 [ "$EER" = "1" ] && GCC_EXTRA="$GCC_EXTRA -DTEST_EER"
 [ "$NULL" = "1" ] && GCC_EXTRA="$GCC_EXTRA -DOPENVPN_FORCE_TUN_NULL"
@@ -12,24 +19,24 @@ if [ "$AGENT" = "1" ]; then
     GCC_EXTRA="$GCC_EXTRA -DOPENVPN_COMMAND_AGENT"
 fi
 export GCC_EXTRA
+
+# determine platform
 if [ "$(uname)" == "Darwin" ]; then
-    cd $O3/core
-    if [ "$DEBUG" = "3" ]; then
-	. vars/vars-osx64-dbg
-    else
-	. vars/vars-osx64
-    fi
-    . vars/setpath
-    cd test/ovpncli
-    ASIO=1 MTLS=1 LZ4=1 PTPROXY=1 build cli 2>&1
+    export PROF=osx64
+elif [ "$(uname)" == "Linux" ]; then
+    export PROF=linux
 else
-    cd $O3/core
-    if [ "$DEBUG" = "3" ]; then
-	. vars/vars-linux-dbg
-    else
-	. vars/vars-linux
-    fi
-    . vars/setpath
-    cd test/ovpncli
-    ASIO=1 MTLS=1 LZ4=1 NOSSL=1 PTPROXY=1 build cli 2>&1
+    echo this script only knows how to build on Mac OS or Linux
 fi
+
+# use mbedTLS by default
+[[ -z "$OSSL" && -z "$MTLS" ]] && export MTLS=1
+
+# don't link with OpenSSL if mbedTLS is specified
+if [ "$MTLS" = "1" ]; then
+    export OSSL=0
+    export NOSSL=1
+fi
+
+# build
+ASIO=1 LZ4=1 ../../scripts/build cli

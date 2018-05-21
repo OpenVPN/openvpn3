@@ -38,22 +38,30 @@ namespace openvpn {
     };
 
     template <typename STRING>
-    static bool is_valid(const Type type, const STRING& cred)
+    static bool is_valid(const Type type, const STRING& cred, const bool strict)
     {
       size_t max_len_flags;
-      switch (type)
+      if (strict)
 	{
-	case USERNAME:
-	  // length <= 256 unicode chars, no control chars allowed
-	  max_len_flags = 256 | Unicode::UTF8_NO_CTRL;
-	  break;
-	case PASSWORD:
-	case RESPONSE:
-	  // length <= 16384 unicode chars
-	  max_len_flags = 16384;
-	  break;
-	default:
-	  return false;
+	  // length <= 512 unicode chars, no control chars allowed
+	  max_len_flags = 512 | Unicode::UTF8_NO_CTRL;
+	}
+      else
+	{
+	  switch (type)
+	    {
+	    case USERNAME:
+	      // length <= 512 unicode chars, no control chars allowed
+	      max_len_flags = 512 | Unicode::UTF8_NO_CTRL;
+	      break;
+	    case PASSWORD:
+	    case RESPONSE:
+	      // length <= 16384 unicode chars
+	      max_len_flags = 16384;
+	      break;
+	    default:
+	      return false;
+	    }
 	}
       return Unicode::is_valid_utf8(cred, max_len_flags);
     }

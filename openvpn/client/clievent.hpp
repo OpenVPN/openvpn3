@@ -41,6 +41,7 @@ namespace openvpn {
       DISCONNECTED=0,
       CONNECTED,
       RECONNECTING,
+      AUTH_PENDING,
       RESOLVE,
       WAIT,
       WAIT_PROXY,
@@ -93,6 +94,7 @@ namespace openvpn {
 	"DISCONNECTED",
 	"CONNECTED",
 	"RECONNECTING",
+	"AUTH_PENDING",
 	"RESOLVE",
 	"WAIT",
 	"WAIT_PROXY",
@@ -208,6 +210,11 @@ namespace openvpn {
     struct Reconnecting : public Base
     {
       Reconnecting() : Base(RECONNECTING) {}
+    };
+
+    struct AuthPending : public Base
+    {
+      AuthPending() : Base(AUTH_PENDING) {}
     };
 
     struct GetConfig : public Base

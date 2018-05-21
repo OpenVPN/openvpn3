@@ -55,7 +55,7 @@ namespace openvpn {
       virtual void auth_request(const AuthCreds::Ptr& auth_creds,
 				const AuthCert::Ptr& auth_cert,
 				const PeerAddr::Ptr& peer_addr) = 0;
-      virtual void push_request(const ProtoContext::Config::Ptr& pconf) = 0;
+      virtual void push_request(ProtoContext::Config::Ptr pconf) = 0;
 
       // INFO notification
       virtual void info_request(const std::string& imsg) = 0;
@@ -85,8 +85,7 @@ namespace openvpn {
       // set ACL index for user
       virtual void set_acl_index(const int acl_index,
 				 const std::string* username,
-				 const bool challenge,
-				 const bool throw_on_error) = 0;
+				 const bool challenge) = 0;
 
       // notify of local user properties update
       virtual void userprop_local_update() = 0;
@@ -118,6 +117,9 @@ namespace openvpn {
 
       // schedule a low-level connection disconnect in seconds
       virtual void schedule_disconnect(const unsigned int seconds) = 0;
+
+      // schedule an auth pending disconnect in seconds
+      virtual void schedule_auth_pending_timeout(const unsigned int seconds) = 0;
 
       // set up relay to target
       virtual void relay(const IP::Addr& target, const int port) = 0;

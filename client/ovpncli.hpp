@@ -548,7 +548,7 @@ namespace openvpn {
       virtual bool remote_override_enabled();
       virtual void remote_override(RemoteOverride&);
 
-      // Periodic convenience clock tick, controlled by Config::clock_tick_ms
+      // Periodic convenience clock tick, controlled by Config::clockTickMS
       virtual void clock_tick();
 
       // Do a crypto library self test

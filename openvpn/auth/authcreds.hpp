@@ -55,15 +55,15 @@ namespace openvpn {
 	return !username.empty();
       }
 
-      bool is_valid_user_pass() const
+      bool is_valid_user_pass(const bool strict) const
       {
-	return ValidateCreds::is_valid(ValidateCreds::USERNAME, username)
-	    && ValidateCreds::is_valid(ValidateCreds::PASSWORD, password);
+	return ValidateCreds::is_valid(ValidateCreds::USERNAME, username, strict)
+	    && ValidateCreds::is_valid(ValidateCreds::PASSWORD, password, strict);
       }
 
-      bool is_valid() const
+      bool is_valid(const bool strict) const
       {
-	return defined() && is_valid_user_pass();
+	return defined() && is_valid_user_pass(strict);
       }
 
       void wipe_password()

@@ -313,6 +313,11 @@ namespace openvpn {
       return rc;
     }
 
+    static constexpr bool is_thread_safe()
+    {
+      return false;
+    }
+
 #ifdef OPENVPN_RC_NOTIFY
     void notify_release() noexcept
     {
@@ -394,6 +399,11 @@ namespace openvpn {
       return rc.load(std::memory_order_relaxed);
     }
 
+    static constexpr bool is_thread_safe()
+    {
+      return true;
+    }
+
 #ifdef OPENVPN_RC_NOTIFY
     void notify_release() noexcept
     {
@@ -452,6 +462,11 @@ namespace openvpn {
     olong use_count() const noexcept
     {
       return refcount_.use_count();
+    }
+
+    static constexpr bool is_thread_safe()
+    {
+      return RCImpl::is_thread_safe();
     }
 
   private:

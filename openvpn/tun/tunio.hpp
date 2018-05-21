@@ -29,7 +29,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
-#include <openvpn/ip/ip.hpp>
+#include <openvpn/ip/ipcommon.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/tun/tunlog.hpp>
@@ -73,7 +73,7 @@ namespace openvpn {
 	      {
 		if (buf.offset() >= 4 && buf.size() >= 1)
 		  {
-		    switch (IPHeader::version(buf[0]))
+		    switch (IPCommon::version(buf[0]))
 		      {
 		      case 4:
 			prepend_pf_inet(buf, PF_INET);

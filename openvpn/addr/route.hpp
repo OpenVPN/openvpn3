@@ -176,6 +176,11 @@ namespace openvpn {
 	return std::tie(prefix_len, addr) == std::tie(other.prefix_len, other.addr);
       }
 
+      bool operator!=(const RouteType& other) const
+      {
+	return std::tie(prefix_len, addr) != std::tie(other.prefix_len, other.addr);
+      }
+
       bool operator<(const RouteType& other) const
       {
 	return std::tie(prefix_len, addr) < std::tie(other.prefix_len, other.addr);
