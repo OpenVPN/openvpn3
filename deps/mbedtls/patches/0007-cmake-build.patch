@@ -1,0 +1,28 @@
+From 5d31999442a41c154f6c56e91c8fe7705c74e2be Mon Sep 17 00:00:00 2001
+From: Arne Schwabe <arne@rfc2549.org>
+Date: Thu, 28 Dec 2017 00:19:10 +0100
+Subject: [PATCH] Use current cmake directory instead of source root directory
+ when exuting config.pl
+
+When mdbedtls is added as a subdirectory to another project this will
+call config.pl with the right path If mbedtls is build standalone
+current and root source directory are identical.
+
+Signed-off-by: Arne Schwabe <arne@rfc2549.org>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3e47224ea1..2883eff270 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -31,7 +31,7 @@ find_package(Perl)
+ if(PERL_FOUND)
+ 
+     # If NULL Entropy is configured, display an appropriate warning
+-    execute_process(COMMAND ${PERL_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/config.pl -f ${CMAKE_SOURCE_DIR}/include/mbedtls/config.h get MBEDTLS_TEST_NULL_ENTROPY
++    execute_process(COMMAND ${PERL_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/config.pl -f ${CMAKE_CURRENT_SOURCE_DIR}/include/mbedtls/config.h get MBEDTLS_TEST_NULL_ENTROPY
+                         RESULT_VARIABLE result)
+     if(${result} EQUAL 0)
+         message(WARNING ${NULL_ENTROPY_WARNING})
