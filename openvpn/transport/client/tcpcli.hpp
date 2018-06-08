@@ -103,6 +103,7 @@ namespace openvpn {
 		resolver.async_resolve(server_host, server_port,
 				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
 				       {
+					 OPENVPN_ASYNC_HANDLER;
 					 self->do_resolve_(error, results);
 				       });
 	      }
@@ -301,6 +302,7 @@ namespace openvpn {
 	socket.set_option(openvpn_io::ip::tcp::no_delay(true));
 	socket.async_connect(server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
+                                                OPENVPN_ASYNC_HANDLER;
                                                 self->start_impl_(error);
                                               });
       }

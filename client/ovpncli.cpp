@@ -88,6 +88,7 @@
 #endif
 
 #include <openvpn/init/initprocess.hpp>
+#include <openvpn/common/bigmutex.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/platform_string.hpp>
 #include <openvpn/common/count.hpp>
@@ -550,10 +551,12 @@ namespace openvpn {
 	void setup_async_stop_scopes()
 	{
 	  stop_scope_local.reset(new AsioStopScope(*io_context(), async_stop_local(), [this]() {
+	      OPENVPN_ASYNC_HANDLER;
 	      session->graceful_stop();
 	    }));
 
 	  stop_scope_global.reset(new AsioStopScope(*io_context(), async_stop_global(), [this]() {
+	      OPENVPN_ASYNC_HANDLER;
 	      trigger_async_stop_local();
 	    }));
 	}

@@ -391,6 +391,7 @@ namespace openvpn {
 	l2_timer.expires_after(Time::Duration::seconds(seconds));
 	l2_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 			    {
+			      OPENVPN_ASYNC_HANDLER;
 			      if (!error && !self->halt)
 				self->layer_2_timer_callback();
 			    });

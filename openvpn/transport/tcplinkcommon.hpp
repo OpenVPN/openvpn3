@@ -175,6 +175,7 @@ namespace openvpn {
 	socket.async_receive(frame_context.mutable_buffer_clamp(tcpfrom->buf),
 			     [self=Ptr(this), tcpfrom=PacketFrom::SPtr(tcpfrom)](const openvpn_io::error_code& error, const size_t bytes_recvd) mutable
 			     {
+			       OPENVPN_ASYNC_HANDLER;
 			       try
 			       {
 			         self->handle_recv(std::move(tcpfrom), error, bytes_recvd);
@@ -248,6 +249,7 @@ namespace openvpn {
 	socket.async_send(buf.const_buffer_clamp(),
 			  [self=Ptr(this)](const openvpn_io::error_code& error, const size_t bytes_sent)
 			  {
+			    OPENVPN_ASYNC_HANDLER;
 			    self->handle_send(error, bytes_sent);
 			  });
       }

@@ -810,6 +810,7 @@ namespace openvpn {
 	    push_request_timer.expires_after(dur);
 	    push_request_timer.async_wait([self=Ptr(this), dur](const openvpn_io::error_code& error)
                                           {
+                                            OPENVPN_ASYNC_HANDLER;
                                             self->send_push_request_callback(dur, error);
                                           });
 	  }
@@ -885,6 +886,7 @@ namespace openvpn {
 		housekeeping_timer.expires_at(next);
 		housekeeping_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
+                                                OPENVPN_ASYNC_HANDLER;
                                                 self->housekeeping_callback(error);
                                               });
 	      }
@@ -918,6 +920,7 @@ namespace openvpn {
 	inactive_timer.expires_after(inactive_duration);
 	inactive_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                   {
+                                    OPENVPN_ASYNC_HANDLER;
                                     self->inactive_callback(error);
                                   });
       }
@@ -1008,6 +1011,7 @@ namespace openvpn {
 	info_hold_timer.expires_after(Time::Duration::seconds(1));
 	info_hold_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                                   {
+                                    OPENVPN_ASYNC_HANDLER;
                                     self->info_hold_callback(error);
                                   });
       }
