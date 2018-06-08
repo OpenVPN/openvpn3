@@ -47,6 +47,11 @@ if [ "$NO_WIPE" != "1" ]; then
     tar xfz $DL/$LZ4_VERSION.tar.gz
 fi
 
+if [ "x$NO_BUILD" == x1 ]; then
+   echo "Not building"
+   exit
+fi
+
 DIST=$(pwd)/lz4/lz4-$PLATFORM
 rm -rf $DIST
 mkdir -p $DIST/include

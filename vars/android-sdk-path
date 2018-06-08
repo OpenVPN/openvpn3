@@ -4,3 +4,4 @@
 if [ "$NO_MOD_PATH" != "1" ]; then
    export PATH="$SDK/tools:$SDK/platform-tools:$PATH"
 fi
+export ANDROID_HOME=$SDK

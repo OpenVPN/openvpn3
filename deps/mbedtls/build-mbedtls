@@ -54,6 +54,11 @@ else
     apply_patches "mbedtls"
 fi
 
+if [ "x$NO_BUILD" == x1 ]; then
+   echo "Not building"
+   exit 0
+fi
+
 if [[ "x$TARGET" == xlinux* || "x$TARGET" == xosx* ]]; then
     # run unit tests and then clean
     echo RUNNING CHECK
