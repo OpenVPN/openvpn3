@@ -26,6 +26,7 @@
 
 #include <openvpn/io/io.hpp>
 
+#include <openvpn/common/bigmutex.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
