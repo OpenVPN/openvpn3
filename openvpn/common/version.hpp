@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Inc.
+//    Copyright (C) 2012-2018 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -21,9 +21,8 @@
 
 // Current version of the OpenVPN core
 
-#ifndef OPENVPN_COMMON_VERSION_H
-#define OPENVPN_COMMON_VERSION_H
+#pragma once
 
+#ifndef OPENVPN_VERSION
 #define OPENVPN_VERSION "3.git:master"
-
-#endif // OPENVPN_COMMON_VERSION_H
+#endif
