@@ -33,6 +33,18 @@
 
 namespace openvpn {
 
+  /**
+   *  Renders an integer value within the hexadecimal range (0-15)
+   *  to a hexadecimal character.
+   *
+   *  @param c    Integer to render as a hexadecimal character.
+   *  @param caps Boolean (default false) which sets the outout to
+   *              be either lower case (false) or upper case (true).
+   *
+   *  @return Returns a char with the hexadecimal representation of
+   *          the input value.  If the value is out-of-range (outside
+   *          of 0-15), it will be replaced with a questionmark (?).
+   */
   inline char render_hex_char(const int c, const bool caps=false)
   {
     if (c < 10)
@@ -43,6 +55,18 @@ namespace openvpn {
       return '?';
   }
 
+
+  /**
+   *  Parses a character in the range {0..9,A-F,a-f} to an
+   *  integer value.  Used to convert hexadecimal character to integer.
+   *  Only a single character is parsed by this function.
+   *
+   *  @param c   Character to be be parsed.
+   *
+   *  @return Returns an integer value of the hexadecimal input.  If the
+   *          input character is invalid, outside of {0..9,A-F,a-f}, it will
+   *          return -1.
+   */
   inline int parse_hex_char(const char c)
   {
     if (c >= '0' && c <= '9')
@@ -55,9 +79,20 @@ namespace openvpn {
       return -1;
   }
 
+
+  /**
+   *  Class which Renders a single byte as hexadecimal
+   */
   class RenderHexByte
   {
   public:
+    /**
+     *  Initializes a new object
+     *
+     *  @param byte  Unsigned char (one byte) to be processed
+     *  @param caps  Boolean (default false) which sets the outout to
+     *               be either lower case (false) or upper case (true).
+     */
     RenderHexByte(const unsigned char byte, const bool caps=false)
     {
       c[0] = render_hex_char(byte >> 4, caps);
@@ -67,12 +102,31 @@ namespace openvpn {
     char char1() const { return c[0]; }
     char char2() const { return c[1]; }
 
+    /**
+     *  Retrieve the hexadecimal representation of the value.
+     *  Warning: The result is a non-NULL terminated string.
+     *
+     *  @return Returns a non-NULL terminated 2 byte string with the hexadecimal
+     *          representation of the initial value.  The return value is guaranteed
+     *          to always be 2 bytes.
+     */
     const char *str2() const { return c; } // Note: length=2, NOT null terminated
 
   private:
     char c[2];
   };
 
+
+  /**
+   *  Render a byte buffer (unsigned char *) as a hexadecimal string.
+   *
+   *  @param data  Unsigned char pointer to buffer to render.
+   *  @param size  size_t of the number of bytes to parse from the buffer.
+   *  @param caps  Boolean (default false) which sets the outout to
+   *               be either lower case (false) or upper case (true).
+   *
+   *  @return Returns a std::string of the complete hexadecimal representation
+   */
   inline std::string render_hex(const unsigned char *data, size_t size, const bool caps=false)
   {
     if (!data)
@@ -88,11 +142,36 @@ namespace openvpn {
     return ret;
   }
 
+
+  /**
+   *  Render a byte buffer (void *) as a hexadecimal string.
+   *
+   *  @param data  Void pointer to buffer to render.
+   *  @param size  size_t of the number of bytes to parse from the buffer.
+   *  @param caps  Boolean (default false) which sets the outout to
+   *               be either lower case (false) or upper case (true).
+   *
+   *  @return Returns a std::string of the complete hexadecimal representation.
+   */
   inline std::string render_hex(const void *data, const size_t size, const bool caps=false)
   {
     return render_hex((const unsigned char *)data, size, caps);
   }
 
+
+  /**
+   *  Variant of @render_hex(const unsiged char *,...) which adds a
+   *  separator between each byte
+   *
+   *  @param data  Unsigned char pointer to buffer to render.
+   *  @param size  size_t of the number of bytes to parse from the buffer.
+   *  @param sep   A single character to use as the separator.
+   *  @param caps  Boolean (default false) which sets the outout to
+   *               be either lower case (false) or upper case (true).
+   *
+   *  @return Returns a std::string of the complete hexadecimal representation
+   *          with each byte separated by a given character.
+   */
   inline std::string render_hex_sep(const unsigned char *data, size_t size, const char sep, const bool caps=false)
   {
     if (!data)
@@ -112,11 +191,36 @@ namespace openvpn {
     return ret;
   }
 
+  /**
+   *  Variant of @render_hex(const void *,...) which adds a
+   *  separator between each byte
+
+   *  @param data  Void pointer to buffer to render.
+   *  @param size  size_t of the number of bytes to parse from the buffer.
+   *  @param sep   A single character to use as the separator.
+   *  @param caps  Boolean (default false) which sets the outout to
+   *               be either lower case (false) or upper case (true).
+   *
+   *  @return Returns a std::string of the complete hexadecimal representation
+   *          with each byte separated by a given character.
+   */
   inline std::string render_hex_sep(const void *data, const size_t size, const char sep, const bool caps=false)
   {
     return render_hex_sep((const unsigned char *)data, size, sep, caps);
   }
 
+
+  /**
+   *  Render a std::vector<T> container as a hexadecimal string.
+   *  T must be a data type compatible with
+   *  RenderHexByte(const unsigned char,...)
+   *
+   *  @param data   std::vector<T> containing the data to render
+   *  @param caps   Boolean (default false) which sets the outout to
+   *                be either lower case (false) or upper case (true).
+   *
+   *  @return Returns a std::string of the complete hexadecimal representation.
+   */
   template <typename V>
   inline std::string render_hex_generic(const V& data, const bool caps=false)
   {
@@ -131,6 +235,18 @@ namespace openvpn {
     return ret;
   }
 
+
+  /**
+   *  Renders a combined hexadecimal and character dump of a buffer,
+   *  with the typical 16 bytes split between hexadecimal and character
+   *  separation per line.
+   *
+   *  @param  data  Unsigned char pointer to the buffer to dump.
+   *  @param  size  Size of the buffer to render.
+   *
+   *  @return Returns a string containing a preformatted output of the
+   *          hexadecimal dump.
+   */
   inline std::string dump_hex(const unsigned char *data, size_t size)
   {
     if (!data)
@@ -163,19 +279,56 @@ namespace openvpn {
     return os.str();
   }
 
+
+  /**
+   *  Renders a combined hexadecimal and character dump of a std::string buffer,
+   *  with the typical 16 bytes split between hexadecimal and character
+   *  separation per line.
+   *
+   *  @param  data  std::string containing the buffer to render
+   *
+   *  @return Returns a string containing a preformatted output of the
+   *          hexadecimal dump.
+   */
   inline std::string dump_hex(const std::string& str)
   {
     return dump_hex((const unsigned char *)str.c_str(), str.length());
   }
 
+
+  /**
+   *  Renders a combined hexadecimal and character dump of a std::vector<T>
+   *  based buffer, with the typical 16 bytes split between hexadecimal and
+   *  character separation per line.
+   *
+   *  @param  data  std::vector<T> containing the buffer to render
+   *
+   *  @return Returns a string containing a preformatted output of the
+   *          hexadecimal dump.
+   */
   template <typename V>
   inline std::string dump_hex(const V& data)
   {
     return dump_hex(data.c_data(), data.size());
   }
 
+  /**
+   *  Declaration of a hexadecimal parsing error exception class
+   */
   OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
 
+
+  /**
+   *  Parses a std::string containing a hexadecimal value into
+   *  a std::vector<T>.
+   *
+   *  @param dest  std::vector<T> destination buffer to use.
+   *  @param str   std::string& containing the hexadecimal string to parse.
+   *
+   *  @return Returns nothing on success.  Will throw a parse_hex_error
+   *          exception if the input is invalid/not parseable as a hexadecimal
+   *          number.
+   */
   template <typename V>
   inline void parse_hex(V& dest, const std::string& str)
   {
@@ -193,7 +346,19 @@ namespace openvpn {
       throw parse_hex_error(); // straggler char      
   }
 
-  // note -- currently doesn't detect overflow
+
+  /**
+   *  Parses a char buffer (C string) containing a hexadecimal
+   *  string into a templated (T) variable.  The input buffer
+   *  MUST be NULL terminated.
+   *
+   *  WARNING: There are _NO_ overflow checks.
+   *
+   *  @param str    Char pointer (char *) to the buffer to be parsed.
+   *  @param retval Return buffer where the parsed value is stored.
+   *
+   *  @return Returns true on successful parsing, otherwise false.
+   */
   template <typename T>
   inline bool parse_hex_number(const char *str, T& retval)
   {
@@ -220,12 +385,37 @@ namespace openvpn {
       }
   }
 
+
+  /**
+   *  Variant of @parse_hex_number(const char *, ...) which takes a std::string
+   *  as the input.
+   *
+   *  @param str    std::string containing the hexadecimal string to be parsed.
+   *  @param retval Return buffer where the parsed value is stored.
+   *
+   *  @return Returns true on successful parsing, otherwise false.
+   */
   template <typename T>
   inline bool parse_hex_number(const std::string& str, T& retval)
   {
     return parse_hex_number(str.c_str(), retval);
   }
 
+
+  /**
+   *  Parses a std::string containing a hexadecimal
+   *  string into a templated (T) variable.
+   *
+   *  NOTE:  Currently doesn't detect overflow
+   *
+   *  @param str    std::string containing the hexadecimal
+   *                string to be parsed.
+   *
+   *  @return Returns a template T variable containing the
+   *          parsed value on success.  Will throw the parse_hex_error
+   *          exception on parsing errors.
+   *
+   */
   template <typename T>
   inline T parse_hex_number(const std::string& str)
   {
@@ -235,6 +425,18 @@ namespace openvpn {
     return ret;
   }
 
+  /**
+   *  Renders a templated T variable containing a numeric value
+   *  into a std::string containing a hexadecimal representation.
+   *
+   *  @param value  Numeric (T) value to represent as hexadecimal.
+   *  @param caps   Boolean (default false) which sets the outout to
+   *                be either lower case (false) or upper case (true).
+   *
+   *  @return Retuns a std::string containing the hexadecimal
+   *          representation on succes.  Will throw a parse_hex_error
+   *          exception on parsing errors.
+   */
   template <typename T>
   std::string render_hex_number(T value, const bool caps=false)
   {
@@ -247,6 +449,18 @@ namespace openvpn {
     return render_hex(buf, sizeof(T), caps);
   }
 
+
+  /**
+   *  Renders a single byte as a hexadecimal string
+   *
+   *  @param value  Unsigned char (byte) to be represented as hexadecimal.
+   *  @param caps   Boolean (default false) which sets the outout to
+   *                be either lower case (false) or upper case (true).
+   *
+   *  @return Returns a std::string with the hexadecimal representation
+   *          of the input value.  The result will always contain only
+   *          two characters.
+   */
   std::string render_hex_number(unsigned char uc, const bool caps=false)
   {
     RenderHexByte b(uc, caps);
