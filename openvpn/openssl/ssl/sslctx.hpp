@@ -132,7 +132,7 @@ namespace openvpn {
 
       virtual void load_crl(const std::string& crl_txt)
       {
-	throw ssl_options_error("CRL not implemented yet in OpenSSL driver"); // fixme
+	ca.parse_pem(crl_txt, "crl");
       }
 
       virtual void load_cert(const std::string& cert_txt)
@@ -164,7 +164,7 @@ namespace openvpn {
 
       virtual std::string extract_crl() const
       {
-	throw ssl_options_error("CRL not implemented yet in OpenSSL driver"); // fixme
+	return ca.crls.render_pem();
       }
 
       virtual std::string extract_cert() const
@@ -300,7 +300,8 @@ namespace openvpn {
 
       virtual std::string validate_crl(const std::string& crl_txt) const
       {
-	throw ssl_options_error("CRL not implemented yet in OpenSSL driver"); // fixme
+	OpenSSLPKI::CRL crl(crl_txt);
+	return crl.render_pem();
       }
 
       virtual void load(const OptionList& opt, const unsigned int lflags)
@@ -320,6 +321,13 @@ namespace openvpn {
 	  if (lflags & LF_RELAY_MODE)
 	    ca_txt += opt.cat("relay-extra-ca");
 	  load_ca(ca_txt, true);
+	}
+
+	// CRL
+	{
+	  const std::string crl_txt = opt.cat("crl-verify");
+	  if (!crl_txt.empty())
+	    load_crl(crl_txt);
 	}
 
 	// local cert/key
@@ -387,7 +395,7 @@ namespace openvpn {
 
     private:
       Mode mode;
-      CertCRLList ca;                   // from OpenVPN "ca" option
+      CertCRLList ca;                   // from OpenVPN "ca" and "crl-verify" option
       OpenSSLPKI::X509 cert;            // from OpenVPN "cert" option
       OpenSSLPKI::X509List extra_certs; // from OpenVPN "extra-certs" option
       OpenSSLPKI::PKey pkey;            // private key
