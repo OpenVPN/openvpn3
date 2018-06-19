@@ -189,7 +189,7 @@ namespace openvpn {
 
       virtual std::string extract_dh() const
       {
-	throw ssl_options_error("extract_dh not implemented yet in OpenSSL driver"); // fixme
+	return dh.render_pem();
       }
 
       virtual PKType private_key_type() const
