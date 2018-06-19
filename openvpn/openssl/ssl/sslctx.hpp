@@ -941,10 +941,41 @@ namespace openvpn {
 #endif
 	    }
 
-	  // tls-cert-profile is not implemented yet in OpenSSL (fixme),
-	  // so throw exception if the setting is anything other than LEGACY.
+	  /* HAVE_SSL_CTX_SET_SECURITY_LEVEL exists from OpenSSL-1.1.0 up */
+#ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
+	  switch(TLSCertProfile::default_if_undef(config->tls_cert_profile))
+	  {
+	  case TLSCertProfile::UNDEF:
+	    OPENVPN_THROW(ssl_context_error,
+			  "OpenSSLContext: undefined tls-cert-profile");
+	    break;
+#ifdef OPENVPN_USE_TLS_MD5
+	  case TLSCertProfile::INSECURE:
+	    SSL_CTX_set_security_level(ctx, 0);
+	    break;
+#endif
+	  case TLSCertProfile::LEGACY:
+	    SSL_CTX_set_security_level(ctx, 1);
+	    break;
+	  case TLSCertProfile::PREFERRED:
+	    SSL_CTX_set_security_level(ctx, 2);
+	    break;
+	  case TLSCertProfile::SUITEB:
+	    SSL_CTX_set_security_level(ctx, 3);
+	    break;
+	  default:
+	    OPENVPN_THROW(ssl_context_error,
+			  "OpenSSLContext: unexpected tls-cert-profile value");
+	    break;
+	  }
+#else
+	  // when OpenSSL does not CertProfile support we force the user to set 'legacy'
 	  if (TLSCertProfile::default_if_undef(config->tls_cert_profile) != TLSCertProfile::LEGACY)
-	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: tls-cert-profile not implemented yet");
+	  {
+	    OPENVPN_THROW(ssl_context_error,
+			  "OpenSSLContext: tls-cert-profile not supported by this OpenSSL build. Use 'legacy' instead");
+	  }
+#endif
 
 	  if (config->local_cert_enabled)
 	    {
