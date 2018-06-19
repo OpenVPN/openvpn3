@@ -179,7 +179,7 @@ namespace openvpn {
 
       virtual std::string extract_private_key() const
       {
-	throw ssl_options_error("extract_priv_key not implemented yet in OpenSSL driver"); // fixme
+	return pkey.render_pem();
       }
 
       virtual std::string extract_dh() const
@@ -189,12 +189,14 @@ namespace openvpn {
 
       virtual PKType private_key_type() const
       {
-	throw ssl_options_error("private_key_type not implemented yet in OpenSSL driver"); // fixme
+	if (!pkey.defined())
+	  return PK_NONE;
+	return pkey.key_type();
       }
 
       virtual size_t private_key_length() const
       {
-	throw ssl_options_error("private_key_length not implemented yet in OpenSSL driver"); // fixme
+	return pkey.key_length();
       }
 
       virtual void set_frame(const Frame::Ptr& frame_arg)

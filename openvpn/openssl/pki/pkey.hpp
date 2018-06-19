@@ -62,6 +62,38 @@ namespace openvpn {
       bool defined() const { return pkey_ != nullptr; }
       EVP_PKEY* obj() const { return pkey_; }
 
+      SSLConfigAPI::PKType key_type() const
+      {
+	switch (EVP_PKEY_id(pkey_))
+	{
+	case EVP_PKEY_RSA:
+	case EVP_PKEY_RSA2:
+	  return SSLConfigAPI::PK_RSA;
+	case EVP_PKEY_EC:
+	  return SSLConfigAPI::PK_EC;
+	case EVP_PKEY_DSA:
+	case EVP_PKEY_DSA1:
+	case EVP_PKEY_DSA2:
+	case EVP_PKEY_DSA3:
+	case EVP_PKEY_DSA4:
+	  return SSLConfigAPI::PK_DSA;
+	case EVP_PKEY_NONE:
+	  return SSLConfigAPI::PK_NONE;
+	default:
+	  return SSLConfigAPI::PK_UNKNOWN;
+	}
+      }
+
+      size_t key_length() const
+      {
+	int ret = i2d_PrivateKey(pkey_, NULL);
+	if (ret < 0)
+	  return 0;
+
+	/* convert to bits */
+	return ret * 8;
+      }
+
       void set_private_key_password(const std::string& pwd)
       {
 	priv_key_pwd = pwd;
