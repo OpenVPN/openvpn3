@@ -169,12 +169,17 @@ namespace openvpn {
 
       virtual std::string extract_cert() const
       {
-	throw ssl_options_error("extract_cert not implemented yet in OpenSSL driver"); // fixme
+	return cert.render_pem();
       }
 
       virtual std::vector<std::string> extract_extra_certs() const
       {
-	throw ssl_options_error("extract_extra_certs not implemented yet in OpenSSL driver"); // fixme
+	std::vector<std::string> ret;
+
+	for (auto const& cert : extra_certs)
+	  ret.push_back(cert->render_pem());
+
+	return ret;
       }
 
       virtual std::string extract_private_key() const
