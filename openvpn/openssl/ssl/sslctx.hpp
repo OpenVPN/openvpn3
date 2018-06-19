@@ -159,7 +159,7 @@ namespace openvpn {
 
       virtual std::string extract_ca() const
       {
-	throw ssl_options_error("extract_ca not implemented yet in OpenSSL driver"); // fixme
+	return ca.certs.render_pem();
       }
 
       virtual std::string extract_crl() const
