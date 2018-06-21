@@ -89,6 +89,11 @@ namespace openvpn {
 	return r;
       }
 
+      bool defined() const
+      {
+	return addr.defined();
+      }
+
       IP::Addr::Version version() const
       {
 	return addr.version();
