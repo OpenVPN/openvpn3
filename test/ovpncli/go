@@ -18,6 +18,7 @@ GCC_EXTRA="$GCC_EXTRA -DOPENVPN_SHOW_SESSION_TOKEN"
 if [ "$AGENT" = "1" ]; then
     GCC_EXTRA="$GCC_EXTRA -DOPENVPN_COMMAND_AGENT"
 fi
+GCC_EXTRA="$GCC_EXTRA -DOPENVPN_VERSION=\"$($(dirname $0)/../../scripts/version)\""
 export GCC_EXTRA
 
 # determine platform
