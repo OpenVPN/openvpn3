@@ -25,6 +25,8 @@
 #include <string.h>
 #include <string>
 
+#include <errno.h>
+
 namespace openvpn {
   inline std::string strerror_str(const int errnum)
   {
