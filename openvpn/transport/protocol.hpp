@@ -186,9 +186,9 @@ namespace openvpn {
 	case TCPv6:
 	  return "TCPv6";
 	case TLSv4:
-	  return "TLSv4";
+	  return "TLS/TCPv4";
 	case TLSv6:
-	  return "TLSv6";
+	  return "TLS/TCPv6";
 	case UnixStream:
 	  return "UnixStream";
 	case UnixDGram:
