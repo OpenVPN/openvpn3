@@ -93,7 +93,9 @@ namespace openvpn {
 	  {
 	    halt = false;
 	    stop_requeueing = false;
-	    if (config->remote_list->endpoint_available(&server_host, &server_port, nullptr))
+	    if (config->remote_list->endpoint_available(&server_host,
+							&server_port,
+							&server_protocol))
 	      {
 		start_connect_();
 	      }
@@ -152,8 +154,7 @@ namespace openvpn {
 	host = server_host;
 	port = server_port;
 	const IP::Addr addr = server_endpoint_addr();
-	proto = "TCP";
-	proto += addr.version_string();
+	proto = server_protocol.str();
 	ip_addr = addr.to_string();
       }
 
@@ -164,12 +165,7 @@ namespace openvpn {
 
       virtual Protocol transport_protocol() const
       {
-	if (server_endpoint.address().is_v4())
-	  return Protocol(Protocol::TCPv4);
-	else if (server_endpoint.address().is_v6())
-	  return Protocol(Protocol::TCPv6);
-	else
-	  return Protocol();
+	return server_protocol;
       }
 
       virtual void stop() { stop_(); }
@@ -271,7 +267,7 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << server_host << "' for TCP session: " << error.message();
+		os << "DNS resolve error on '" << server_host << "' for " << server_protocol.str() << " session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		parent->transport_error(Error::UNDEF, os.str());
@@ -283,7 +279,8 @@ namespace openvpn {
       void start_connect_()
       {
 	config->remote_list->get_endpoint(server_endpoint);
-	OPENVPN_LOG("Contacting " << server_endpoint << " via TCP");
+	OPENVPN_LOG("Contacting " << server_endpoint << " via "
+		    << server_protocol.str());
 	parent->transport_wait();
 	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
@@ -294,7 +291,7 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		parent->transport_error(Error::UNDEF, "socket_protect error (TCP)");
+		parent->transport_error(Error::UNDEF, "socket_protect error (" + std::string(server_protocol.str()) + ")");
 		return;
 	      }
 	  }
@@ -354,7 +351,7 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << "TCP connect error on '" << server_host << ':' << server_port << "' (" << server_endpoint << "): " << error.message();
+		os << server_protocol.str() << " connect error on '" << server_host << ':' << server_port << "' (" << server_endpoint << "): " << error.message();
 		config->stats->error(Error::TCP_CONNECT_ERROR);
 		stop();
 		parent->transport_error(Error::UNDEF, os.str());
@@ -364,6 +361,7 @@ namespace openvpn {
 
       std::string server_host;
       std::string server_port;
+      Protocol server_protocol;
 
       openvpn_io::io_context& io_context;
       openvpn_io::ip::tcp::socket socket;
