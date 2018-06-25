@@ -68,17 +68,14 @@ namespace openvpn {
 	switch (mbedtls_pk_get_type(ctx))
 	{
 	case MBEDTLS_PK_RSA:
+	case MBEDTLS_PK_RSA_ALT:
+	case MBEDTLS_PK_RSASSA_PSS:
 	  return SSLConfigAPI::PK_RSA;
 	case MBEDTLS_PK_ECKEY:
-	  return SSLConfigAPI::PK_ECKEY;
 	case MBEDTLS_PK_ECKEY_DH:
-	  return SSLConfigAPI::PK_ECKEY_DH;
+	  return SSLConfigAPI::PK_EC;
 	case MBEDTLS_PK_ECDSA:
 	  return SSLConfigAPI::PK_ECDSA;
-	case MBEDTLS_PK_RSA_ALT:
-	  return SSLConfigAPI::PK_RSA_ALT;
-	case MBEDTLS_PK_RSASSA_PSS:
-	  return SSLConfigAPI::PK_RSASSA_PSS;
 	case MBEDTLS_PK_NONE:
 	  return SSLConfigAPI::PK_NONE;
 	default:

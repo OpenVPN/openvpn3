@@ -102,12 +102,10 @@ namespace openvpn {
     enum PKType {
       PK_UNKNOWN = 0,
       PK_NONE,
+      PK_DSA,
       PK_RSA,
-      PK_ECKEY,
-      PK_ECKEY_DH,
+      PK_EC,
       PK_ECDSA,
-      PK_RSA_ALT,
-      PK_RSASSA_PSS,
     };
 
     enum LoadFlags {
@@ -125,18 +123,14 @@ namespace openvpn {
       {
       case PK_NONE:
 	return "None";
+      case PK_DSA:
+	return "DSA";
       case PK_RSA:
 	return "RSA";
-      case PK_ECKEY:
+      case PK_EC:
 	return "EC";
-      case PK_ECKEY_DH:
-	return "EC_DH";
       case PK_ECDSA:
 	return "ECDSA";
-      case PK_RSA_ALT:
-	return "RSA_ALT";
-      case PK_RSASSA_PSS:
-	return "RSASSA_PSS";
       case PK_UNKNOWN:
       default:
 	return "Unknown";
