@@ -436,11 +436,6 @@ namespace openvpn {
       const Json::Value& jv = root[name];
       if (jv.isConvertibleTo(Json::booleanValue))
 	return jv.asBool();
-      else if (jv.isString())
-	{
-	  const std::string bs = string::to_lower_copy(jv.asString());
-	  return bs == "true" || bs == "1";
-	}
       else
 	return default_value;
     }
