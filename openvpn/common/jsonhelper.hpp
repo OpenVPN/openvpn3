@@ -440,6 +440,17 @@ namespace openvpn {
 	return default_value;
     }
 
+    template <typename NAME>
+    inline int get_bool_tristate(const Json::Value& root,
+				 const NAME& name)
+    {
+      const Json::Value& jv = root[name];
+      if (jv.isConvertibleTo(Json::booleanValue))
+	return jv.asBool() ? 1 : 0;
+      else
+	return -1;
+    }
+
     template <typename NAME, typename TITLE>
     inline const Json::Value& get_dict(const Json::Value& root,
 				       const NAME& name,
