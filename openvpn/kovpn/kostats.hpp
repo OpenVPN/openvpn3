@@ -30,6 +30,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/arraysize.hpp>
+#include <openvpn/common/core.hpp>
 #include <openvpn/kovpn/kovpn.hpp>
 
 namespace openvpn {
@@ -57,7 +58,7 @@ namespace openvpn {
     void output_percpu(std::ostream& os) const
     {
       std::unique_ptr<struct ovpn_percpu_stats> pcs;
-      unsigned int stats_cap = 16;
+      unsigned int stats_cap = std::max(16, n_cores());
       for (int i = 0; i < 2; ++i)
 	{
 	  const size_t pcs_size = sizeof(struct ovpn_percpu_stats) +

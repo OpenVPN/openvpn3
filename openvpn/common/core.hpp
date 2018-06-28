@@ -40,8 +40,13 @@ namespace openvpn {
 
   inline int n_cores()
   {
+    int count = std::thread::hardware_concurrency();
+    // C++11 allows thread::hardware_concurrency() to return 0, fall back
+    // to specific solution if we detect this
+    if (count > 0)
+      return count;
+
 #if defined(OPENVPN_PLATFORM_TYPE_APPLE)
-    int count;
     size_t count_len = sizeof(count);
     if (::sysctlbyname("hw.logicalcpu", &count, &count_len, NULL, 0) != 0)
       count = 1;
