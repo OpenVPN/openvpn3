@@ -144,6 +144,7 @@ namespace openvpn {
     template <typename, typename> friend class BufferAllocatedType;
 
   public:
+    typedef T value_type;
     typedef T* type;
     typedef const T* const_type;
     typedef typename std::remove_const<T>::type NCT; // non-const type
