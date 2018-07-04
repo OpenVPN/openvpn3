@@ -36,6 +36,7 @@ namespace openvpn {
     virtual void add_route(const bool add, const IP::Addr& addr, const int prefix_len) = 0;
     virtual bool enabled(const IPVerFlags& ipv) const = 0;
     virtual void emulate(TunBuilderBase* tb, IPVerFlags& ipv, const IP::Addr& server_addr) const = 0;
+    virtual void add_default_routes(bool ipv4, bool ipv6) = 0;
   };
 
   struct EmulateExcludeRouteFactory : public RC<thread_unsafe_refcount>
