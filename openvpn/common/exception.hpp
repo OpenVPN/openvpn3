@@ -89,14 +89,14 @@ namespace openvpn {
   class C : public openvpn::Exception { \
   public: \
     C() : openvpn::Exception(#C OPENVPN_FILE_LINE) {} \
-    C(std::string err) : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err) {} \
+    C(const std::string err) : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err) {} \
   }
 
   // define a custom exception class that allows extra info, but does not emit a tag
 # define OPENVPN_UNTAGGED_EXCEPTION(C) \
   class C : public openvpn::Exception { \
   public: \
-    C(std::string err) : openvpn::Exception(err) {} \
+    C(const std::string err) : openvpn::Exception(err) {} \
   }
 
   // define a custom exception class that allows extra info, and inherits from a custom base
@@ -104,7 +104,7 @@ namespace openvpn {
   class C : public B { \
   public: \
     C() : B(#C OPENVPN_FILE_LINE) {} \
-    C(std::string err) : B(#C OPENVPN_FILE_LINE ": " + err) {} \
+    C(const std::string err) : B(#C OPENVPN_FILE_LINE ": " + err) {} \
   }
 
   // define a custom exception class that allows extra info, and inherits from a custom base,
@@ -112,7 +112,7 @@ namespace openvpn {
 # define OPENVPN_UNTAGGED_EXCEPTION_INHERIT(B, C) \
   class C : public B { \
   public: \
-    C(std::string err) : B(err) {} \
+    C(const std::string err) : B(err) {} \
   }
 
   // throw an Exception with stringstream concatenation allowed
