@@ -233,7 +233,7 @@ public:
   }
 
 private:
-  virtual void omi_command_in(const std::string& arg0, const Command& cmd) override
+  virtual bool omi_command_in(const std::string& arg0, const Command& cmd) override
   {
     switch (arg0.at(0))
       {
@@ -242,7 +242,7 @@ private:
 	  if (is_auth_cmd(arg0))
 	    {
 	      process_auth_cmd(cmd.option);
-	      return;
+	      return false;
 	    }
 	  break;
 	}
@@ -251,12 +251,12 @@ private:
 	  if (arg0 == "remote")
 	    {
 	      process_remote_cmd(cmd.option);
-	      return;
+	      return false;
 	    }
 	  else if (arg0 == "rsa-sig")
 	    {
 	      epki_sign_reply(cmd);
-	      return;
+	      return false;
 	    }
 	  break;
 	}
@@ -265,12 +265,13 @@ private:
 	  if (is_auth_cmd(arg0))
 	    {
 	      process_auth_cmd(cmd.option);
-	      return;
+	      return false;
 	    }
 	  break;
 	}
       }
     send("ERROR: unknown command, enter 'help' for more options\r\n");
+    return false;
   }
 
   virtual void omi_done(const bool eof) override
