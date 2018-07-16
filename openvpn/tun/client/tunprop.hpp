@@ -63,6 +63,7 @@ namespace openvpn {
       std::string session_name;
       int mtu = 0;
       bool google_dns_fallback = false;
+      bool allow_local_lan_access = false;
       Layer layer{Layer::OSI_LAYER_3};
 
       // If remote_bypass is true, obtain cached remote IPs from
@@ -126,7 +127,28 @@ namespace openvpn {
 	add_remote_bypass_routes(tb, *config.remote_list, server_addr, eer.get(), quiet);
 
       // add routes
-      add_routes(tb, opt, server_addr, ipv, eer.get(), quiet);
+      if (config.allow_local_lan_access)
+	{
+	  // query local lan exclude routes and then
+	  // copy option list to construct a copy with the excluded routes as route options
+	  OptionList excludedRoutesOptions = opt;
+	  for (const std::string& exRoute: tb->tun_builder_get_local_networks(false))
+	    {
+	      excludedRoutesOptions.add_item(Option{"route", exRoute, "", "net_gateway"});
+	    }
+
+	  for (const std::string& exRoute:  tb->tun_builder_get_local_networks(true))
+	    {
+	      excludedRoutesOptions.add_item(Option{"route-ipv6", exRoute, "", "net_gateway"});
+	    }
+
+	  add_routes(tb, excludedRoutesOptions, ipv, eer.get(), quiet);
+	}
+      else
+	{
+	  add_routes(tb, opt, ipv, eer.get(), quiet);
+	}
+
 
       if (eer)
 	{
@@ -377,7 +399,6 @@ namespace openvpn {
 
     static void add_routes(TunBuilderBase* tb,
 			   const OptionList& opt,
-			   const IP::Addr& server_addr,
 			   const IPVerFlags& ipv,
 			   EmulateExcludeRoute* eer,
 			   const bool quiet)

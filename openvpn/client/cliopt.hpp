@@ -143,6 +143,7 @@ namespace openvpn {
       bool force_aes_cbc_ciphersuites = false;
       bool autologin_sessions = false;
       bool retry_on_auth_failed = false;
+      bool allow_local_lan_access = false;
       std::string tls_version_min_override;
       std::string tls_cert_profile_override;
       PeerInfo::Set::Ptr extra_peer_info;
@@ -347,6 +348,7 @@ namespace openvpn {
 	    tunconf->builder = config.builder;
 	    tunconf->tun_prop.session_name = session_name;
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    tunconf->tun_prop.allow_local_lan_access = config.allow_local_lan_access;
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;
 	    tunconf->frame = frame;

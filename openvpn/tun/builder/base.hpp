@@ -228,6 +228,15 @@ namespace openvpn {
       return true;
     }
 
+    // When the exclude local network option is enabled this
+    // function is called to get a list of local networks so routes
+    // to exclude them from the VPN network are generated
+    // This should be a list of CIDR networks (e.g. 192.168.0.0/24)
+    virtual const std::vector<std::string> tun_builder_get_local_networks(bool ipv6)
+    {
+      return {};
+    }
+
     // Indicates a reconnection with persisted tun state.
     virtual void tun_builder_establish_lite()
     {

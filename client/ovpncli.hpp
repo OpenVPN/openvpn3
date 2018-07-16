@@ -282,6 +282,10 @@ namespace openvpn {
       // pass through control channel INFO notifications via "INFO" event
       bool info = false;
 
+      // Allow access to local LAN. This is for platforms like
+      // Android that disable local LAN access by default.
+      bool allowLocalLanAccess = false;
+
       // Periodic convenience clock tick in milliseconds.
       // Will call clock_tick() at a frequency defined by this parameter.
       // Set to 0 to disable.
