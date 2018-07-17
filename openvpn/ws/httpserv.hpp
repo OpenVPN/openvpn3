@@ -549,12 +549,20 @@ namespace openvpn {
 	      }
 	  }
 
+	  // Implemented by child class for any kind of intercept processing
+	  // (i.e. parsing and stripping the Proxy Protocol v1 header)
+	  virtual void tcp_intercept(BufferAllocated& b)
+	  {
+	  }
+
 	  // methods called by LinkImpl
 
 	  bool tcp_read_handler(BufferAllocated& b)
 	  {
 	    if (halt)
 	      return false;
+
+	    tcp_intercept(b);
 
 	    try {
 	      activity();
