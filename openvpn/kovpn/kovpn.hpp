@@ -25,9 +25,6 @@
 #define OPENVPN_KOVPN_KOVPN_HPP
 
 #include <sys/socket.h>
-#include <linux/if.h>
-#include <linux/in.h>
-#include <linux/in6.h>
 
 extern "C" {
 #include <kovpn/kovpn.h>
