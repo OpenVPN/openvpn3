@@ -268,6 +268,8 @@ namespace openvpn {
     {
       if (!defined())
 	return "UNDEF-TIME";
+      if (is_infinite())
+	return "INF";
       const double df = delta_float(t);
       std::string ret;
       if (df >= 0.0)
