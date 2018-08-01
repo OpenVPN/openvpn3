@@ -47,7 +47,7 @@ namespace openvpn {
       // Add range of addresses to pool (pool will own the addresses).
       void add_range(const RangeType<ADDR>& range)
       {
-	typename RangeType<ADDR>::Iterator iter = range.iterator();
+	auto iter = range.iterator();
 	while (iter.more())
 	  {
 	    const ADDR& a = iter.addr();
@@ -59,7 +59,7 @@ namespace openvpn {
       // Add single address to pool (pool will own the address).
       void add_addr(const ADDR& addr)
       {
-	typename std::unordered_map<ADDR, bool>::const_iterator e = map.find(addr);
+	auto e = map.find(addr);
 	if (e == map.end())
 	  {
 	    freelist.push_back(addr);
@@ -73,16 +73,23 @@ namespace openvpn {
 	return map.size() - freelist.size();
       }
 
+      // Return number of pool addresses currently in use.
+      size_t n_free() const
+      {
+	return freelist.size();
+      }
+
       // Acquire an address from pool.  Returns true if successful,
       // with address placed in dest, or false if pool depleted.
       bool acquire_addr(ADDR& dest)
       {
 	while (true)
 	  {
+	    freelist_fill();
 	    if (freelist.empty())
 	      return false;
 	    const ADDR& a = freelist.front();
-	    typename std::unordered_map<ADDR, bool>::iterator e = map.find(a);
+	    auto e = map.find(a);
 	    if (e == map.end()) // any address in freelist must exist in map
 	      throw Exception("PoolType: address in freelist doesn't exist in map");
 	    if (!e->second)
@@ -100,7 +107,7 @@ namespace openvpn {
       // successful, or false if the address is not available.
       bool acquire_specific_addr(const ADDR& addr)
       {
-	typename std::unordered_map<ADDR, bool>::iterator e = map.find(addr);
+	auto e = map.find(addr);
 	if (e != map.end() && !e->second)
 	  {
 	    e->second = true;
@@ -115,7 +122,7 @@ namespace openvpn {
       // (b) the address is not owned by the pool.
       void release_addr(const ADDR& addr)
       {
-	typename std::unordered_map<ADDR, bool>::iterator e = map.find(addr);
+	auto e = map.find(addr);
 	if (e != map.end() && e->second)
 	  {
 	    freelist.push_back(addr);
@@ -125,6 +132,25 @@ namespace openvpn {
 
       // DEBUGGING -- get the map load factor
       float load_factor() const { return map.load_factor(); }
+
+      // Override to refill freelist on demand
+      virtual void freelist_fill()
+      {
+      }
+
+      std::string to_string() const
+      {
+	std::string ret;
+	for (const auto& e : map)
+	  {
+	    if (e.second)
+	      {
+		ret += e.first.to_string();
+		ret += '\n';
+	      }
+	  }
+	return ret;
+      }
 
     private:
       std::deque<ADDR> freelist;
