@@ -27,6 +27,7 @@ namespace openvpn {
 			     RandomAPI& rng)
     {
       BufferPtr bp = new BufferAllocated(size_hint, BufferAllocated::GROW);
+      format_compact(root, *bp);
       write_binary_atomic(fn, tmpdir, mode, *bp, rng);
     }
   }
