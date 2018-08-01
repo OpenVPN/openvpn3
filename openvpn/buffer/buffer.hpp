@@ -532,6 +532,19 @@ namespace openvpn {
 	OPENVPN_BUFFER_THROW(buffer_underflow);
     }
 
+    BufferType read_alloc_buf(const size_t size)
+    {
+      if (size <= size_)
+	{
+	  BufferType ret(data_, offset_, size, capacity_);
+	  offset_ += size;
+	  size_ -= size;
+	  return ret;
+	}
+      else
+	OPENVPN_BUFFER_THROW(buffer_underflow);
+    }
+
     void reset(const size_t min_capacity, const unsigned int flags)
     {
       if (min_capacity > capacity_)
