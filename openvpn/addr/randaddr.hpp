@@ -28,18 +28,26 @@
 namespace openvpn {
   namespace IP {
 
+    inline IPv4::Addr random_addr_v4(RandomAPI& prng)
+    {
+      return IPv4::Addr::from_uint32(prng.rand_get<std::uint32_t>());
+    }
+
+    inline IPv6::Addr random_addr_v6(RandomAPI& prng)
+    {
+      unsigned char bytes[16];
+      prng.rand_fill(bytes);
+      return IPv6::Addr::from_byte_string(bytes);
+    }
+
     inline Addr random_addr(const Addr::Version v, RandomAPI& prng)
     {
       switch (v)
 	{
 	case Addr::V4:
-	  return Addr::from_ipv4(IPv4::Addr::from_uint32(prng.rand_get<std::uint32_t>()));
+	  return Addr::from_ipv4(random_addr_v4(prng));
 	case Addr::V6:
-	  {
-	    unsigned char bytes[16];
-	    prng.rand_fill(bytes);
-	    return Addr::from_ipv6(IPv6::Addr::from_byte_string(bytes));
-	  }
+	  return Addr::from_ipv6(random_addr_v6(prng));
 	default:
 	  throw ip_exception("address unspecified");
 	}
