@@ -40,8 +40,9 @@ namespace openvpn {
   namespace IP {
     // Basic route object
     template <typename ADDR>
-    struct RouteType
+    class RouteType
     {
+    public:
       typedef ADDR Addr;
 
       ADDR addr;
@@ -104,9 +105,19 @@ namespace openvpn {
 	return addr.version_mask();
       }
 
+      RouteType<IPv4::Addr> to_ipv4() const
+      {
+	return RouteType<IPv4::Addr>(addr.to_ipv4(), prefix_len);
+      }
+
+      RouteType<IPv6::Addr> to_ipv6() const
+      {
+	return RouteType<IPv6::Addr>(addr.to_ipv6(), prefix_len);
+      }
+
       ADDR netmask() const
       {
-	return ADDR::netmask_from_prefix_len(version(), prefix_len);
+	return netmask_(addr, prefix_len);
       }
 
       size_t extent() const
@@ -124,6 +135,12 @@ namespace openvpn {
 	addr = addr & netmask();
       }
 
+      void verify_canonical() const
+      {
+	  if (!is_canonical())
+	    throw route_error("route not canonical: " + to_string());
+      }
+
       bool is_host() const
       {
 	return addr.defined() && prefix_len == addr.size();
@@ -139,7 +156,7 @@ namespace openvpn {
 
       bool contains(const ADDR& a) const // assumes canonical address/routes
       {
-	if (addr.defined() && addr.version() == a.version())
+	if (addr.defined() && version_eq(addr, a))
 	  return (a & netmask()) == addr;
 	else
 	  return false;
@@ -158,7 +175,7 @@ namespace openvpn {
 	    r1.addr = addr;
 	    r1.prefix_len = newpl;
 
-	    r2.addr = addr + ADDR::netmask_from_prefix_len(addr.version(), newpl).extent_from_netmask();
+	    r2.addr = addr + netmask_(addr, newpl).extent_from_netmask();
 	    r2.prefix_len = newpl;
 
 	    return true;
@@ -206,6 +223,37 @@ namespace openvpn {
 	return h.value();
       }
 #endif
+
+    private:
+      static IPv4::Addr netmask_(const IPv4::Addr&, unsigned int prefix_len)
+      {
+	return IPv4::Addr::netmask_from_prefix_len(prefix_len);
+      }
+
+      static IPv6::Addr netmask_(const IPv6::Addr&, unsigned int prefix_len)
+      {
+	return IPv6::Addr::netmask_from_prefix_len(prefix_len);
+      }
+
+      static IP::Addr netmask_(const IP::Addr& addr, unsigned int prefix_len)
+      {
+	return IP::Addr::netmask_from_prefix_len(addr.version(), prefix_len);
+      }
+
+      static bool version_eq(const IPv4::Addr&, const IPv4::Addr&)
+      {
+	return true;
+      }
+
+      static bool version_eq(const IPv6::Addr&, const IPv6::Addr&)
+      {
+	return true;
+      }
+
+      static bool version_eq(const IP::Addr& a1, const IP::Addr& a2)
+      {
+	return a1.version() == a2.version();
+      }
     };
 
     template <typename ADDR>
@@ -234,8 +282,7 @@ namespace openvpn {
       void verify_canonical() const
       {
 	for (auto &r : *this)
-	  if (!r.is_canonical())
-	    throw route_list_error("route not canonical: " + r.to_string());
+	  r.verify_canonical();
       }
 
       template <typename R>

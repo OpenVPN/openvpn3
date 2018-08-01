@@ -55,6 +55,11 @@ namespace openvpn {
     public:
       enum { SIZE=128 };
 
+      bool defined() const
+      {
+	return true;
+      }
+
       static Addr from_addr(const Addr& addr)
       {
 	return addr;
@@ -540,6 +545,15 @@ namespace openvpn {
 	h(u.bytes, sizeof(u.bytes));
       }
 
+#ifdef HAVE_CITYHASH
+      std::size_t hashval() const
+      {
+	HashSizeT h;
+	hash(h);
+	return h.value();
+      }
+#endif
+
 #ifdef OPENVPN_IP_IMMUTABLE
     private:
 #endif
@@ -824,5 +838,9 @@ namespace openvpn {
     OPENVPN_OSTREAM(Addr, to_string)
   }
 }
+
+#ifdef HAVE_CITYHASH
+OPENVPN_HASH_METHOD(openvpn::IPv6::Addr, hashval);
+#endif
 
 #endif // OPENVPN_ADDR_IPV6_H

@@ -58,6 +58,11 @@ namespace openvpn {
       typedef std::uint32_t base_type;
       typedef std::int32_t signed_base_type;
 
+      bool defined() const
+      {
+	return true;
+      }
+
       static Addr from_addr(const Addr& addr)
       {
 	return addr;
@@ -498,6 +503,15 @@ namespace openvpn {
 	h(u.addr);
       }
 
+#ifdef HAVE_CITYHASH
+      std::size_t hashval() const
+      {
+	HashSizeT h;
+	hash(h);
+	return h.value();
+      }
+#endif
+
 #ifdef OPENVPN_IP_IMMUTABLE
     private:
 #endif
@@ -565,5 +579,9 @@ namespace openvpn {
     OPENVPN_OSTREAM(Addr, to_string)
   }
 }
+
+#ifdef HAVE_CITYHASH
+OPENVPN_HASH_METHOD(openvpn::IPv4::Addr, hashval);
+#endif
 
 #endif // OPENVPN_ADDR_IPV4_H
