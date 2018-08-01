@@ -24,6 +24,11 @@
 #ifndef OPENVPN_KOVPN_KOVPN_HPP
 #define OPENVPN_KOVPN_KOVPN_HPP
 
+// Not including this file causes redefinition errors
+// when the sys/ and linux/ headers below are included
+// before Asio.
+#include <openvpn/io/io.hpp>
+
 #include <sys/socket.h>
 
 extern "C" {
