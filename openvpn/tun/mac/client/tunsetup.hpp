@@ -41,6 +41,7 @@
 #include <openvpn/tun/mac/utun.hpp>
 #include <openvpn/tun/mac/macgw.hpp>
 #include <openvpn/tun/mac/macdns_watchdog.hpp>
+#include <openvpn/tun/mac/macproxy.hpp>
 #include <openvpn/tun/builder/rgwflags.hpp>
 #include <openvpn/tun/builder/setup.hpp>
 
@@ -463,6 +464,9 @@ namespace openvpn {
 				      create,
 				      destroy);
 	}
+	
+	if (pull.proxy_auto_config_url.defined())
+	  MacProxySettings::add_actions(pull, create, destroy);
       }
 
       ActionList::Ptr remove_cmds;
