@@ -21,45 +21,16 @@
 
 #pragma once
 
-#include <openvpn/common/action.hpp>
-#include <openvpn/tun/builder/capture.hpp>
+#include <openvpn/tun/proxy.hpp>
 #include <openvpn/tun/mac/dsdict.hpp>
 
 namespace openvpn {
-  class MacProxySettings : public RC<thread_unsafe_refcount>
+  class MacProxySettings : public ProxySettings
   {
   public:
     OPENVPN_EXCEPTION(macproxy_error);
   
     typedef RCPtr<MacProxySettings> Ptr;
-    
-    class ProxyAction : public Action
-    {
-    public:
-      typedef RCPtr<ProxyAction> Ptr;
-      
-      ProxyAction(MacProxySettings::Ptr parent_arg, bool del_arg)
-	: parent(parent_arg), del(del_arg) { }
-  
-      virtual void execute(std::ostream& os) override
-      {
-	os << to_string() << std::endl;
-        if (parent)
-	  parent->set_proxy(del);
-      }
-
-      virtual std::string to_string() const override
-      {
-	std::ostringstream os;
-	if (parent && parent->config.defined())
-	  os << "ProxyAction: auto config: " << parent->config.to_string();
-	return os.str();
-      }
-    
-    private:
-      const MacProxySettings::Ptr parent;
-      bool del;
-    };
     
     class Info : public RC<thread_unsafe_refcount>
     {
@@ -97,9 +68,9 @@ namespace openvpn {
     };
     
     MacProxySettings(const TunBuilderCapture::ProxyAutoConfigURL& config_arg)
-      : config(config_arg) { }
+      : ProxySettings(config_arg) { }
     
-    void set_proxy(bool del)
+    void set_proxy(bool del) override
     {
       if (!config.defined())
 	return;
@@ -124,20 +95,5 @@ namespace openvpn {
 
       OPENVPN_LOG("MacProxy: set_proxy " << info->to_string());
     }
-  
-    static void add_actions(const TunBuilderCapture& settings,
-                            ActionList& create,
-                            ActionList& destroy)
-    {
-      MacProxySettings::Ptr proxy(new MacProxySettings(settings.proxy_auto_config_url));
-      ProxyAction::Ptr create_action(new ProxyAction(proxy, false));
-      ProxyAction::Ptr destroy_action(new ProxyAction(proxy, true));
-      create.add(create_action);
-      destroy.add(destroy_action);
-    }
-
-    const std::string sname = "OpenVPNConnect";
-
-    TunBuilderCapture::ProxyAutoConfigURL config;
   };
 }
