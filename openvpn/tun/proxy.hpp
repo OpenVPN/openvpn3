@@ -28,6 +28,8 @@ namespace openvpn {
   class ProxySettings : public RC<thread_unsafe_refcount>
   {
   public:
+    OPENVPN_EXCEPTION(proxy_error);
+
     typedef RCPtr<ProxySettings> Ptr;
 
     class ProxyAction : public Action

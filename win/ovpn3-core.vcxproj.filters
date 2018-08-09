@@ -380,5 +380,8 @@
     <ClInclude Include="..\openvpn\win\sleep.hpp" />
     <ClInclude Include="..\openvpn\win\unicode.hpp" />
     <ClInclude Include="..\openvpn\win\winerr.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\winproxy.hpp" />
+    <ClInclude Include="..\openvpn\tun\proxy.hpp" />
+    <ClInclude Include="..\openvpn\win\impersonate.hpp" />
   </ItemGroup>
 </Project>

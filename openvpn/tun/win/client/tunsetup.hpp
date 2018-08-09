@@ -37,12 +37,14 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/arraysize.hpp>
-#include <openvpn/time/time.hpp>
 #include <openvpn/error/excode.hpp>
+#include <openvpn/time/time.hpp>
+#include <openvpn/tun/proxy.hpp>
+#include <openvpn/tun/win/tunutil.hpp>
+#include <openvpn/tun/win/winproxy.hpp>
+#include <openvpn/tun/win/client/setupbase.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/cmd.hpp>
-#include <openvpn/tun/win/tunutil.hpp>
-#include <openvpn/tun/win/client/setupbase.hpp>
 
 #if _WIN32_WINNT >= 0x0600 // Vista+
 #include <openvpn/tun/win/nrpt.hpp>
@@ -602,6 +604,10 @@ namespace openvpn {
 		}
 	    }
 	}
+
+	OPENVPN_LOG("proxy_auto_config_url " << pull.proxy_auto_config_url.url);
+	if (pull.proxy_auto_config_url.defined())
+	  ProxySettings::add_actions<WinProxySettings>(pull, create, destroy);
 
 	// flush DNS cache
 	create.add(new WinCmd("ipconfig /flushdns"));

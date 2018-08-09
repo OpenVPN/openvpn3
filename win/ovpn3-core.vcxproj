@@ -377,6 +377,7 @@
     <ClInclude Include="..\openvpn\tun\persist\tunpersist.hpp" />
     <ClInclude Include="..\openvpn\tun\persist\tunwrap.hpp" />
     <ClInclude Include="..\openvpn\tun\persist\tunwrapasio.hpp" />
+    <ClInclude Include="..\openvpn\tun\proxy.hpp" />
     <ClInclude Include="..\openvpn\tun\server\tunbase.hpp" />
     <ClInclude Include="..\openvpn\tun\tunio.hpp" />
     <ClInclude Include="..\openvpn\tun\tunlog.hpp" />
@@ -388,10 +389,12 @@
     <ClInclude Include="..\openvpn\tun\win\nrpt.hpp" />
     <ClInclude Include="..\openvpn\tun\win\tunutil.hpp" />
     <ClInclude Include="..\openvpn\tun\win\wfp.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\winproxy.hpp" />
     <ClInclude Include="..\openvpn\win\call.hpp" />
     <ClInclude Include="..\openvpn\win\cmd.hpp" />
     <ClInclude Include="..\openvpn\win\console.hpp" />
     <ClInclude Include="..\openvpn\win\handle.hpp" />
+    <ClInclude Include="..\openvpn\win\impersonate.hpp" />
     <ClInclude Include="..\openvpn\win\modname.hpp" />
     <ClInclude Include="..\openvpn\win\reg.hpp" />
     <ClInclude Include="..\openvpn\win\scoped_handle.hpp" />
@@ -469,7 +472,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OVPN3_ROOT)\deps\amd64\mbedtls\library;$(OVPN3_ROOT)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib</AdditionalDependencies>
+      <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
