@@ -33,7 +33,7 @@
 using namespace openvpn::Win;
 
 namespace openvpn {
-  namespace TunWin {
+  namespace TunWin {   
     class WinProxySettings : public ProxySettings {
     public:
       typedef RCPtr<WinProxySettings> Ptr;
@@ -87,7 +87,7 @@ namespace openvpn {
 	Win::RegKey hkcu;
 
 	status = ::RegOpenCurrentUser(KEY_QUERY_VALUE | KEY_SET_VALUE, hkcu.ref());
-	CHECK_REG_ERROR(status, proxy_error, "RegOpenCurrentUser");
+	check_reg_error<proxy_error>(status, "RegOpenCurrentUser");
 
 	// get previous value
 	std::string prev_key_name = sname + key;
@@ -98,7 +98,7 @@ namespace openvpn {
 				NULL,
 				str ? (PVOID)prev_val_str : (PVOID)&prev_val_dword,
 				&prev_buf_size);
-	CHECK_REG_ERROR(status, proxy_error, prev_key_name);
+	check_reg_error<proxy_error>(status, prev_key_name);
 
 	RegDeleteValueA(regkey(), prev_key_name.c_str());
 
@@ -128,7 +128,7 @@ namespace openvpn {
 	Win::RegKey hkcu;
 
 	status = ::RegOpenCurrentUser(KEY_QUERY_VALUE | KEY_SET_VALUE, hkcu.ref());
-	CHECK_REG_ERROR(status, proxy_error, "RegOpenCurrentUser");
+	check_reg_error<proxy_error>(status, "RegOpenCurrentUser");
 
 	// get original value
 	status = ::RegGetValueA(hkcu(),
@@ -147,7 +147,7 @@ namespace openvpn {
 	  case ERROR_SUCCESS:
 	    break;
 	  default:
-	    CHECK_REG_ERROR(status, proxy_error, key);
+	    check_reg_error<proxy_error>(status, key);
 	    break;
 	  }
 
@@ -159,7 +159,7 @@ namespace openvpn {
 				  str ? REG_SZ : REG_DWORD,
 				  str ? (const BYTE *)prev_val_str : (CONST BYTE *)&prev_val_dword,
 				  str ? strlen(prev_val_str) + 1 : sizeof(DWORD));
-	CHECK_REG_ERROR(status, proxy_error, prev_key_name);
+	check_reg_error<proxy_error>(status, prev_key_name);
 
 	// save new value
 	DWORD val_dword = 0;
@@ -171,7 +171,7 @@ namespace openvpn {
 				  str ? REG_SZ : REG_DWORD,
 				  str ? (const BYTE *)value.c_str() : (CONST BYTE *)&val_dword,
 				  str ? value.length() + 1 : sizeof(val_dword));
-	CHECK_REG_ERROR(status, proxy_error, key);
+	check_reg_error<proxy_error>(status, key);
       }
 
       const char* key_name = "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";

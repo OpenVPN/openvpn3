@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Inc.
+//    Copyright (C) 2012-2018 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -58,11 +58,7 @@ namespace openvpn {
 	      auto key_name = ss.str();
 
 	      const LONG status = ::RegCreateKeyA(HKEY_LOCAL_MACHINE, key_name.c_str(), key.ref());
-	      if (status != ERROR_SUCCESS)
-		{
-		  const Win::Error err(status);
-		  OPENVPN_THROW(nrpt_error, "cannot open/create registry key " << key_name << " : " << err.message());
-		}
+	      check_reg_error<nrpt_error>(status, key_name);
 	    }
 
 	    // Name
@@ -75,11 +71,7 @@ namespace openvpn {
 						   REG_MULTI_SZ,
 						   (const BYTE *)name.c_str(),
 						   (name.length()+1)*2);
-	      if (status != ERROR_SUCCESS)
-		{
-		  const Win::Error err(status);
-		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'Name' : " << err.message());
-		}
+	      check_reg_error<nrpt_error>(status, "Name");
 	    }
 
 	    // GenericDNSServers
@@ -91,11 +83,7 @@ namespace openvpn {
 						   REG_SZ,
 						   (const BYTE *)dns_servers_joined.c_str(),
 						   (dns_servers_joined.length()+1)*2);
-	      if (status != ERROR_SUCCESS)
-		{
-		  const Win::Error err(status);
-		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'GenericDNSServers' : " << err.message());
-		}
+	      check_reg_error<nrpt_error>(status, "GenericDNSServers");
 	    }
 
 	    // ConfigOptions
@@ -107,11 +95,7 @@ namespace openvpn {
 						   REG_DWORD,
 						   (const BYTE *)&value,
 						   sizeof(value));
-	      if (status != ERROR_SUCCESS)
-		{
-		  const Win::Error err(status);
-		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'ConfigOptions' : " << err.message());
-		}
+	      check_reg_error<nrpt_error>(status, "ConfigOptions");
 	    }
 
 	    // Version
@@ -123,11 +107,7 @@ namespace openvpn {
 						   REG_DWORD,
 						   (const BYTE *)&value,
 						   sizeof(value));
-	      if (status != ERROR_SUCCESS)
-		{
-		  const Win::Error err(status);
-		  OPENVPN_THROW(nrpt_error, "cannot set registry value for 'Version' : " << err.message());
-		}
+	      check_reg_error<nrpt_error>(status, "Version");
 	    }
 	  }
       }

@@ -25,19 +25,21 @@
 #define OPENVPN_WIN_REG_H
 
 #include <windows.h>
+#include <openvpn/win/winerr.hpp>
 #include <openvpn/common/size.hpp>
-
-#define CHECK_REG_ERROR(status, ex, key)                                                \
-  do {                                                                                  \
-    if (status != ERROR_SUCCESS)                                                        \
-      {                                                                                 \
-        const Win::Error err(status);                                                   \
-        OPENVPN_THROW(ex, "registry key " << key << " error: " << err.message());       \
-      }                                                                                 \
-  } while(0)
 
 namespace openvpn {
   namespace Win {
+
+    template<typename E>
+    static void check_reg_error(DWORD status, const std::string& key)
+      {
+	if (status != ERROR_SUCCESS)
+	  {
+	    const Win::Error err(status);
+	    OPENVPN_THROW(E, "registry key " << key << " error: " << err.message());
+	  }
+      }
 
     // HKEY wrapper
     class RegKey
