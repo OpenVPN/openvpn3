@@ -795,10 +795,7 @@ namespace openvpn {
 		// Post a call to next_request() under a fresh stack.
 		// Currently we may actually be under tcp_read_handler() and
 		// next_request() can trigger destructors.
-		openvpn_io::post(parent->io_context, [self=Ptr(this)]()
-			   {
-			     self->next_request(false);
-			   });
+		post_next_request();
 	      }
 	    else
 	      {
@@ -812,7 +809,12 @@ namespace openvpn {
 		  {
 		    // fail -- retry
 		    close_http(false);
-		    reconnect_schedule(true);
+
+		    // special case -- no delay after TCP EOF on first retry
+		    if (status == WS::Client::Status::E_EOF_TCP && n_retries == 1)
+		      post_next_request();
+		    else
+		      reconnect_schedule(true);
 		  }
 	      }
 	  }
@@ -823,6 +825,14 @@ namespace openvpn {
 	      if (!halt)
 		done(false);
 	    }
+	}
+
+	void post_next_request()
+	{
+	  openvpn_io::post(parent->io_context, [self=Ptr(this)]()
+			   {
+			     self->next_request(false);
+			   });
 	}
 
 	void http_keepalive_close(HTTPDelegate& hd, const int status, const std::string& description)
