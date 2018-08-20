@@ -217,6 +217,11 @@ namespace openvpn {
 	  return buf_to_string(*in);
 	}
 
+	BufferPtr content_in_buffer() const
+	{
+	  return content_in.join();
+	}
+
 	std::string format_status(const TransactionSet& ts) const
 	{
 	  std::string ret;
