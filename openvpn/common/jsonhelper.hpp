@@ -147,6 +147,25 @@ namespace openvpn {
     }
 
     template <typename NAME, typename TITLE>
+    inline const std::string& get_string_ref(const Json::Value& root,
+					     const NAME& name,
+					     const TITLE& title)
+    {
+      const Json::Value& value = root[name];
+      if (value.isNull())
+	throw json_parse("string " + fmt_name(name, title) + " is missing");
+      if (!value.isString())
+	throw json_parse("string " + fmt_name(name, title) + " is of incorrect type");
+      return value.asStringRef();
+    }
+
+    template <typename NAME>
+    inline std::string get_string_ref(const Json::Value& root, const NAME& name)
+    {
+      return get_string_ref(root, name, nullptr);
+    }
+
+    template <typename NAME, typename TITLE>
     inline std::string get_string_optional(const Json::Value& root,
 					   const NAME& name,
 					   const std::string& default_value,
