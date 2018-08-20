@@ -6,8 +6,7 @@
 
 // AWS credentials
 
-#ifndef OPENVPN_AWS_AWSCREDS_H
-#define OPENVPN_AWS_AWSCREDS_H
+#pragma once
 
 #include <string>
 
@@ -24,10 +23,18 @@ namespace openvpn {
       {
       }
 
+      bool defined() const
+      {
+	return !access_key.empty() && !secret_key.empty();
+      }
+
+      std::string to_string() const
+      {
+	return "AWS::Creds[access_key=" + access_key + " len(secret_key)=" + std::to_string(secret_key.length()) + ']';
+      }
+
       std::string access_key;
       std::string secret_key;
     };
   }
 }
-
-#endif
