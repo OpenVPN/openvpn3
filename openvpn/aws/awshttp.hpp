@@ -64,7 +64,7 @@ namespace openvpn {
       {
 	// SSL flags
 	unsigned int ssl_flags = 0;
-	if (debug_level_ >= 1)
+	if (debug_level_ >= 2)
 	  ssl_flags |= SSLConst::LOG_VERIFY_STATUS;
 
 	// make SSL context using awspc_web_cert() as our CA bundle
