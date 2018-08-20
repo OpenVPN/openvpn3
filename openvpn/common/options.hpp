@@ -1173,6 +1173,16 @@ namespace openvpn {
 	}
     }
 
+    // Return raw C string to option data or nullptr if option doesn't exist.
+    const char *get_c_str(const std::string& name, size_t index, const size_t max_len) const
+    {
+      const Option* o = get_ptr(name);
+      if (o)
+	return o->get(index, max_len).c_str();
+      else
+	return nullptr;
+    }
+
     // Convenience method that gets a particular argument index within an option,
     // while returning a default string if option doesn't exist, and raising an
     // exception if argument index is out-of-bounds.
