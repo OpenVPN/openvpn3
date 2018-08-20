@@ -228,6 +228,14 @@ namespace openvpn {
 	  ret.reserve(256);
 	  ret += title(ts);
 	  ret += " : ";
+	  ret += format_status();
+	  return ret;
+	}
+
+	std::string format_status() const
+	{
+	  std::string ret;
+	  ret.reserve(64);
 	  if (status == WS::Client::Status::E_SUCCESS)
 	    {
 	      ret += openvpn::to_string(reply.status_code);
