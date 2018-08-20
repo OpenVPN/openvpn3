@@ -100,6 +100,11 @@ if [ "$PLATFORM" = "linux" ] && [ "$OSSL" = "1" ] && [ "$NOSSL" != "1" ] && [ -z
     OPENSSL_SYS=1
 fi
 
+# building on Linux, use system LZ4
+if [ "$PLATFORM" = "linux" ] && [ "$LZ4" = "1" ] && [ -z "$LZ4_SYS" ]; then
+    LZ4_SYS=1
+fi
+
 # default commands
 [ -z "$STRIP_CMD" ] && STRIP_CMD=strip
 [ -z "$GPP_CMD" ] && GPP_CMD=g++
