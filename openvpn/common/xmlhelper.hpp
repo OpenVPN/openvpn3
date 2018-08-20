@@ -6,8 +6,7 @@
 //  All rights reserved.
 //
 
-#ifndef OPENVPN_COMMON_WAITFORFILE_H
-#define OPENVPN_COMMON_WAITFORFILE_H
+#pragma once
 
 #include <string>
 
@@ -25,7 +24,7 @@ namespace openvpn {
       Document(const std::string& str,
 	       const std::string& title)
       {
-	if (Parse(str.c_str()))
+	if (tinyxml2::XMLDocument::Parse(str.c_str()))
 	  OPENVPN_THROW(xml_parse, title << " : " << format_error(*this));
       }
     };
@@ -94,7 +93,23 @@ namespace openvpn {
     {
       return elem;
     }
+
+    static const tinyxml2::XMLElement* next_sibling(const tinyxml2::XMLNode* node,
+						    const std::string& name)
+    {
+      return node->NextSiblingElement(name.c_str());
+    }
+
+    static const tinyxml2::XMLElement* next_sibling(const tinyxml2::XMLNode* node,
+						    const char *name)
+    {
+      return node->NextSiblingElement(name);
+    }
+
+    static const tinyxml2::XMLElement* next_sibling(const tinyxml2::XMLNode* node)
+    {
+      return node->NextSiblingElement();
+    }
+
   };
 }
-
-#endif
