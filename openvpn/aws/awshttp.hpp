@@ -25,7 +25,7 @@ namespace openvpn {
     public:
       HTTPContext(RandomAPI::Ptr rng,
 		  const int debug_level)
-	: frame_(frame_init_simple(1024)),
+	: frame_(frame_init_simple(2048)),
 	  digest_factory_(new CryptoDigestFactory<SSLLib::CryptoAPI>()),
 	  rng_(std::move(rng)),
 	  debug_level_(debug_level)
