@@ -108,9 +108,9 @@ namespace openvpn {
 	}
 
 	void construct(openvpn_io::io_context& io_context,
-		       const WS::Client::Config::Ptr& config)
+		       const WS::Client::Config::Ptr config)
 	{
-	  http.reset(new HTTPDelegate(io_context, config, nullptr));
+	  http.reset(new HTTPDelegate(io_context, std::move(config), nullptr));
 	}
 
 	void start_request()
@@ -394,15 +394,15 @@ namespace openvpn {
 	prng = std::move(prng_arg);
       }
 
-      void new_request(const TransactionSet::Ptr& ts)
+      void new_request(const TransactionSet::Ptr ts)
       {
 	const client_t id = new_client_id();
-	Client::Ptr cli = new Client(this, ts, id);
+	Client::Ptr cli = new Client(this, std::move(ts), id);
 	clients[id] = cli;
 	cli->start();
       }
 
-      static void new_request_synchronous(const TransactionSet::Ptr& ts,
+      static void new_request_synchronous(const TransactionSet::Ptr ts,
 					  Stop* stop=nullptr,
 					  RandomAPI* prng=nullptr,
 					  const bool sps=false)
@@ -499,10 +499,10 @@ namespace openvpn {
 	friend HTTPDelegate;
 
 	Client(ClientSet* parent_arg,
-	       const TransactionSet::Ptr& ts_arg,
+	       const TransactionSet::Ptr ts_arg,
 	       client_t client_id_arg)
 	  : parent(parent_arg),
-	    ts(ts_arg),
+	    ts(std::move(ts_arg)),
 	    n_retries(0),
 	    buf_tailroom((*ts->http_config->frame)[Frame::READ_HTTP].tailroom()),
 	    reconnect_timer(parent_arg->io_context),
