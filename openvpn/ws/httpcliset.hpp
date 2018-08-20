@@ -327,6 +327,12 @@ namespace openvpn {
 	  return true;
 	}
 
+	void reset_callbacks()
+	{
+	  completion.reset();
+	  post_connect.reset();
+	}
+
 	void dump(std::ostream& os, const bool content_only=false) const
 	{
 	  for (auto &t : transactions)
@@ -493,7 +499,10 @@ namespace openvpn {
 	  return;
 	halt = true;
 	for (auto &c : clients)
-	  c.second->stop(false);
+	  {
+	    c.second->stop(false);
+	    c.second->reset_callbacks();
+	  }
       }
 
       void abort(const std::string& message)
@@ -551,6 +560,12 @@ namespace openvpn {
 	  halt = true;
 	  reconnect_timer.cancel();
 	  close_http(keepalive);
+	}
+
+	void reset_callbacks()
+	{
+	  if (ts)
+	    ts->reset_callbacks(); // break refcount cycles in callback closures
 	}
 
 	void abort(const std::string& message)
