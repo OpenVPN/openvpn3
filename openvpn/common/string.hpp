@@ -310,6 +310,19 @@ namespace openvpn {
       return false;
     }
 
+    // remove all spaces in string
+    inline std::string remove_spaces(const std::string& str)
+    {
+      std::string ret;
+      for (std::string::const_iterator i = str.begin(); i != str.end(); ++i)
+	{
+	  char c = *i;
+	  if (!is_space(c))
+	    ret += c;
+	}
+      return ret;
+    }
+
     // replace all spaces in string with rep
     inline std::string replace_spaces(const std::string& str, const char rep)
     {
