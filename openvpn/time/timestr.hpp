@@ -25,13 +25,15 @@
 #define OPENVPN_TIME_TIMESTR_H
 
 #include <string>
-#include <cstring> // for std::strlen
+#include <cstring> // for std::strlen and std::memset
 #include <time.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <cstdint> // for std::uint64_t
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/string.hpp>
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <windows.h>
@@ -72,8 +74,25 @@ namespace openvpn {
     struct tm lt;
     char buf[64];
 
+    std::memset(&lt, 0, sizeof(lt));
     if (!localtime_r(&t, &lt))
       return "LOCALTIME_ERROR";
+    if (!asctime_r(&lt, buf))
+      return "ASCTIME_ERROR";
+    const size_t len = std::strlen(buf);
+    if (len > 0 && buf[len-1] == '\n')
+      buf[len-1] = '\0';
+    return std::string(buf);
+  }
+
+  inline std::string date_time_utc(const time_t t)
+  {
+    struct tm lt;
+    char buf[64];
+
+    std::memset(&lt, 0, sizeof(lt));
+    if (!gmtime_r(&t, &lt))
+      return "GMTIME_ERROR";
     if (!asctime_r(&lt, buf))
       return "ASCTIME_ERROR";
     const size_t len = std::strlen(buf);
@@ -93,14 +112,36 @@ namespace openvpn {
 	const size_t pos = dt.find_last_of(':');
 	if (pos != std::string::npos
 	    && pos + 3 < dt.length()
-	    && isdigit(dt[pos+1])
-	    && isdigit(dt[pos+2])
-	    && isspace(dt[pos+3]))
+	    && string::is_digit(dt[pos+1])
+	    && string::is_digit(dt[pos+2])
+	    && string::is_space(dt[pos+3]))
 	  {
 	    char ms[5];
 	    ::snprintf(ms, sizeof(ms), ".%03u", static_cast<unsigned int>(tv->tv_usec / 1000));
 	    return dt.substr(0, pos+3) + ms + dt.substr(pos+3);
 	  }
+      }
+    return dt;
+  }
+
+  inline std::string nanosec_time_to_string(const std::uint64_t ns_time)
+  {
+    const std::uint64_t sec = ns_time / std::uint64_t(1000000000);
+    const std::uint64_t ns = ns_time % std::uint64_t(1000000000);
+
+    const std::string dt = date_time_utc(sec);
+
+    // find correct position in string to insert nanoseconds
+    const size_t pos = dt.find_last_of(':');
+    if (pos != std::string::npos
+	&& pos + 3 < dt.length()
+	&& string::is_digit(dt[pos+1])
+	&& string::is_digit(dt[pos+2])
+	&& string::is_space(dt[pos+3]))
+      {
+	char ms[11];
+	::snprintf(ms, sizeof(ms), ".%09u", (unsigned int)ns);
+	return dt.substr(0, pos+3) + ms + dt.substr(pos+3);
       }
     return dt;
   }
