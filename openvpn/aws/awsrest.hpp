@@ -161,10 +161,10 @@ namespace openvpn {
 
 	void add_amz_parms(const Creds& creds)
 	{
+	  parms.emplace_back("X-Amz-Algorithm", "AWS4-HMAC-SHA256");
+	  parms.emplace_back("X-Amz-Credential", creds.access_key + '/' + amz_credential());
 	  parms.emplace_back("X-Amz-Date", date);
 	  parms.emplace_back("X-Amz-Expires", std::to_string(expires));
-	  parms.emplace_back("X-Amz-Credential", creds.access_key + '/' + amz_credential());
-	  parms.emplace_back("X-Amz-Algorithm", "AWS4-HMAC-SHA256");
 	  parms.emplace_back("X-Amz-SignedHeaders", amz_signed_headers());
 	}
 
@@ -202,8 +202,11 @@ namespace openvpn {
 	    + parms.canonical_query_string() + '\n'
 	    + "host:" + host + '\n'
 	    + '\n'
-	    + amz_signed_headers() + '\n'
-	    + content_hash();
+	    + amz_signed_headers() + '\n';
+	  if (service == "s3")
+	    ret += "UNSIGNED-PAYLOAD";
+	  else
+	    ret += content_hash();
 	  return ret;
 	}
 
