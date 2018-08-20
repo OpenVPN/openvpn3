@@ -333,6 +333,12 @@ namespace openvpn {
 	  post_connect.reset();
 	}
 
+	void stop()
+	{
+	  reset_callbacks();
+	  hsc.stop();
+	}
+
 	void dump(std::ostream& os, const bool content_only=false) const
 	{
 	  for (auto &t : transactions)
