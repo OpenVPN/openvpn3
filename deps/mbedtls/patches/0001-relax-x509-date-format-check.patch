@@ -1,7 +1,7 @@
-From 62dd1588a7ec3501edfaf9470cf7a1ca15cb4ba1 Mon Sep 17 00:00:00 2001
+From 0554efae4e27b6a764def80f600394519ef1addb Mon Sep 17 00:00:00 2001
 From: Antonio Quartulli <antonio@openvpn.net>
 Date: Tue, 20 Mar 2018 09:35:47 +0800
-Subject: [PATCH] relax x509 date format check
+Subject: [PATCH 1/2] relax x509 date format check
 
 Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
 ---
@@ -9,10 +9,10 @@ Signed-off-by: Antonio Quartulli <antonio@openvpn.net>
  1 file changed, 17 insertions(+), 1 deletion(-)
 
 diff --git a/library/x509.c b/library/x509.c
-index 371d6da1..df2cea81 100644
+index 264c7fb0c..9372bcb92 100644
 --- a/library/x509.c
 +++ b/library/x509.c
-@@ -565,13 +565,20 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
+@@ -556,13 +556,20 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
      /*
       * Parse seconds if present
       */
@@ -34,7 +34,7 @@ index 371d6da1..df2cea81 100644
  
      /*
       * Parse trailing 'Z' if present
-@@ -581,6 +588,15 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
+@@ -572,6 +579,15 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
          (*p)++;
          len--;
      }
@@ -51,5 +51,5 @@ index 371d6da1..df2cea81 100644
      /*
       * We should have parsed all characters at this point
 -- 
-2.16.2
+2.18.0
 
