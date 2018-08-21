@@ -317,7 +317,7 @@ namespace openvpn {
 	      cmd->argv.push_back("/sbin/ifconfig");
 	      cmd->argv.push_back(iface_name);
 	      cmd->argv.push_back(local4->address);
-	      cmd->argv.push_back(local4->address);
+	      cmd->argv.push_back(local4->gateway);
 	      cmd->argv.push_back("netmask");
 	      cmd->argv.push_back(netmask.to_string());
 	      cmd->argv.push_back("mtu");
