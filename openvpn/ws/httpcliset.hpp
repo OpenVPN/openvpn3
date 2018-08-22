@@ -201,6 +201,16 @@ namespace openvpn {
 	  return reply.status_code >= 200 && reply.status_code < 300;
 	}
 
+	bool is_redirect() const
+	{
+	  return reply.status_code >= 300 && reply.status_code < 400 && reply.headers.get("location");
+	}
+
+	std::string get_redirect_location() const
+	{
+	  return reply.headers.get_value_trim("location");
+	}
+
 	void dump(std::ostream& os, const TransactionSet& ts) const
 	{
 	  os << "----- " << format_status(ts) << " -----\n";
