@@ -337,6 +337,15 @@ namespace openvpn {
 	  return true;
 	}
 
+	void reset_host(const std::string& new_host)
+	{
+	  if (new_host != host.host)
+	    {
+	      hsc.stop();
+	      host.host = new_host;
+	    }
+	}
+
 	void reset_callbacks()
 	{
 	  completion.reset();
