@@ -93,14 +93,14 @@ namespace openvpn {
 	size_t olen = 0;
 	int ret;
 
-	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(), der,
+	ret = mbedtls_pem_write_buffer(begin_cert, end_cert, der,
 				       der_size, NULL, 0, &olen);
 	if (ret != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)
 	  throw MbedTLSException("X509Cert::extract: can't calculate PEM size");
 
 	BufferAllocated buff(olen, 0);
 
-	ret = mbedtls_pem_write_buffer(begin_cert.c_str(), end_cert.c_str(), der,
+	ret = mbedtls_pem_write_buffer(begin_cert, end_cert, der,
 				       der_size, buff.data(), buff.max_size(), &olen);
 	if (ret)
 	  throw MbedTLSException("X509Cert::extract: can't write PEM buffer");
@@ -158,12 +158,9 @@ namespace openvpn {
 	  }
       }
 
-      static const std::string begin_cert;
-      static const std::string end_cert;
+      constexpr static const char* begin_cert = "-----BEGIN CERTIFICATE-----\n";;
+      constexpr static const char* end_cert  = "-----END CERTIFICATE-----\n";;
     };
-
-    const std::string X509Cert::begin_cert = "-----BEGIN CERTIFICATE-----\n";
-    const std::string X509Cert::end_cert = "-----END CERTIFICATE-----\n";
   }
 }
 

@@ -36,7 +36,7 @@
 
 namespace openvpn {
   namespace bigmutex {
-    std::recursive_mutex the_recursive_mutex;
+    OPENVPN_EXTERN std::recursive_mutex the_recursive_mutex;
   }
   
   #ifdef OPENVPN_ENABLE_BIGMUTEX
