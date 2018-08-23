@@ -78,10 +78,16 @@ namespace openvpn {
       {
       }
 
+#ifndef SWIGPYTHON
+      // When calling IP:Addr with None as the second parameter, Swig will
+      // always pick this function and complain about not being able to convert
+      // a null pointer to a const std::string reference. Hide this function, so
+      // swig is forced to take the const char* variant of this function instead
       Addr(const std::string& ipstr, const std::string& title, Version required_version = UNSPEC)
 	: Addr(from_string(ipstr, title.c_str(), required_version))
       {
       }
+#endif
 
       void validate_version(const char *title, Version required_version) const
       {
@@ -89,10 +95,12 @@ namespace openvpn {
 	  throw ip_exception(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
       }
 
+#ifndef SWIGPYTHON
       void validate_version(const std::string& title, Version required_version) const
       {
 	validate_version(title.c_str(), required_version);
       }
+#endif
 
       static std::string validate(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
       {
@@ -100,10 +108,12 @@ namespace openvpn {
 	return a.to_string();
       }
 
+#ifndef SWIGPYTHON
       static std::string validate(const std::string& ipstr, const std::string& title, Version required_version = UNSPEC)
       {
 	return validate(ipstr, title.c_str(), required_version);
       }
+#endif
 
       static bool is_valid(const std::string& ipstr)
       {
