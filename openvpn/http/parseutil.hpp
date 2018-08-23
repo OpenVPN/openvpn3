@@ -36,13 +36,13 @@ namespace openvpn {
       // Check if a byte is an HTTP character.
       inline bool is_char(const unsigned char c)
       {
-	return c >= 0 && c <= 127;
+	return c <= 127;
       }
 
       // Check if a byte is an HTTP control character.
       inline bool is_ctl(const unsigned char c)
       {
-	return (c >= 0 && c <= 31) || (c == 127);
+	return (c <= 31)|| (c == 127);
       }
 
       // Check if a byte is defined as an HTTP tspecial character.
