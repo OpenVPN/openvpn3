@@ -793,7 +793,7 @@ namespace openvpn {
 	    t.status = status;
 	    t.description = description;
 
-	    if (status == WS::Client::Status::E_SUCCESS)
+	    if (status == WS::Client::Status::E_SUCCESS && !http_status_should_retry(hd.reply().status_code))
 	      {
 		// uncompress if server sent gzip-compressed data
 		if (hd.reply().headers.get_value_trim("content-encoding") == "gzip")
@@ -863,6 +863,11 @@ namespace openvpn {
 	{
 	  if (ts->post_connect)
 	    ts->post_connect(*ts, sock);
+	}
+
+	bool http_status_should_retry(const int status) const
+	{
+	  return status >= 500 && status < 600;
 	}
 
 	ClientSet* parent;
