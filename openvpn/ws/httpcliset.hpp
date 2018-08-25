@@ -856,7 +856,8 @@ namespace openvpn {
 
 	void http_keepalive_close(HTTPDelegate& hd, const int status, const std::string& description)
 	{
-	  // this is a no-op because ts->hsc.alive() is always tested before construction
+	  // this may be a no-op because ts->hsc.alive() is always tested before construction
+	  //OPENVPN_LOG("http_keepalive_close " << WS::Client::Status::error_str(status) << " description=" << description << " http_status=" << std::to_string(hd.reply().status_code) << " http_text=" << hd.reply().status_text);
 	}
 
 	void http_post_connect(HTTPDelegate& hd, AsioPolySock::Base& sock)
