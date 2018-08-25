@@ -416,7 +416,10 @@ namespace openvpn {
 		done = rr_chunked->receive(*this, buf); // will callback to chunked_content_in
 	      }
 	    if (done)
-	      parent().base_http_done_handler(residual, false);
+	      {
+		rr_status = REQUEST_REPLY::Parser::undefined;
+		parent().base_http_done_handler(residual, false);
+	      }
 	  }
       }
 
