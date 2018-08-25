@@ -413,7 +413,7 @@ namespace openvpn {
 	      }
 	    else if (rr_chunked)
 	      {
-		done = rr_chunked->receive(*this, buf);
+		done = rr_chunked->receive(*this, buf); // will callback to chunked_content_in
 	      }
 	    if (done)
 	      parent().base_http_done_handler(residual, false);
