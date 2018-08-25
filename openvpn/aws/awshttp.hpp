@@ -38,8 +38,8 @@ namespace openvpn {
 	ts->host.host = std::move(host);
 	ts->host.port = "443";
 	ts->http_config = http_config();
-	ts->max_retries = 5;
-	ts->retry_duration = Time::Duration::seconds(5);
+	ts->max_retries = 10;
+	ts->retry_duration = Time::Duration::seconds(1);
 	ts->debug_level = debug_level_;
 	return ts;
       }
