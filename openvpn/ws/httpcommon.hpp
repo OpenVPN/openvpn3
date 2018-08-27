@@ -328,7 +328,7 @@ namespace openvpn {
       // Receive incoming HTTP
       void http_in(BufferAllocated& buf)
       {
-	if (halt || ready) // if ready, indicates unsolicited input
+	if (halt || ready || buf.empty()) // if ready, indicates unsolicited input
 	  return;
 
 #if defined(OPENVPN_DEBUG_HTTP)
@@ -416,10 +416,7 @@ namespace openvpn {
 		done = rr_chunked->receive(*this, buf); // will callback to chunked_content_in
 	      }
 	    if (done)
-	      {
-		rr_status = REQUEST_REPLY::Parser::undefined;
-		parent().base_http_done_handler(residual, false);
-	      }
+	      parent().base_http_done_handler(residual, false);
 	  }
       }
 
