@@ -364,7 +364,7 @@ namespace openvpn {
 #endif
       };
 
-      virtual void destroy(std::ostream &os)
+      virtual void destroy(std::ostream &os) override
       {
 	// remove added routes
 	if (remove_cmds)

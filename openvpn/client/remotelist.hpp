@@ -276,8 +276,7 @@ namespace openvpn {
       PreResolve(openvpn_io::io_context& io_context_arg,
 		 const RemoteList::Ptr& remote_list_arg,
 		 const SessionStats::Ptr& stats_arg)
-	:  io_context(io_context_arg),
-	   resolver(io_context_arg),
+	:  resolver(io_context_arg),
 	   notify_callback(nullptr),
 	   remote_list(remote_list_arg),
 	   stats(stats_arg),
@@ -385,7 +384,6 @@ namespace openvpn {
 	  }
       }
 
-      openvpn_io::io_context& io_context;
       openvpn_io::ip::tcp::resolver resolver;
       NotifyCallback* notify_callback;
       RemoteList::Ptr remote_list;
