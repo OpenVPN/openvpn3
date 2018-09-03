@@ -146,6 +146,7 @@ namespace openvpn {
       return get_string(root, name, nullptr);
     }
 
+#ifdef OPENVPN_JSON_INTERNAL
     template <typename NAME, typename TITLE>
     inline const std::string& get_string_ref(const Json::Value& root,
 					     const NAME& name,
@@ -164,6 +165,7 @@ namespace openvpn {
     {
       return get_string_ref(root, name, nullptr);
     }
+#endif
 
     template <typename NAME, typename TITLE>
     inline std::string get_string_optional(const Json::Value& root,
