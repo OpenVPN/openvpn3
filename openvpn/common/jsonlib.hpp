@@ -26,5 +26,6 @@
 #include "json/json.h"             // JsonCpp library
 #elif defined(HAVE_OPENVPN_COMMON)
 #define HAVE_JSON
+#define OPENVPN_JSON_INTERNAL
 #include <openvpn/common/json.hpp> // internal OpenVPN JSON implementation
 #endif
