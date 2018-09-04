@@ -26,7 +26,7 @@
 #include <cstdint> // for std::uint32_t, etc.
 
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/options.hpp>
+#include <openvpn/common/option_error.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/addr/ip.hpp>
 

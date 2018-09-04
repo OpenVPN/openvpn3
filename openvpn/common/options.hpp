@@ -57,7 +57,6 @@
 #include <cstdint>     // for std::uint64_t
 
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/hexstr.hpp>
@@ -65,10 +64,9 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/splitlines.hpp>
 #include <openvpn/common/unicode.hpp>
+#include <openvpn/common/option_error.hpp>
 
 namespace openvpn {
-
-  OPENVPN_EXCEPTION(option_error);
 
   class Option
   {
