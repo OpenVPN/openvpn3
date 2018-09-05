@@ -104,6 +104,28 @@ namespace openvpn {
     }
 
   private:
+#ifdef _MSC_VER
+    template <typename T>
+    void construct(T&& functor) noexcept
+    {
+      constexpr bool is_intern = (sizeof(Intern<T>) <= sizeof(data));
+      static_assert(!INTERN_ONLY || is_intern, "Function: Intern<T> doesn't fit in data[] and INTERN_ONLY=true");
+      static_assert(sizeof(Extern<T>) <= sizeof(data), "Function: Extern<T> doesn't fit in data[]");
+
+      if (is_intern)
+	{
+	  // store functor internally (in data)
+	  setup_methods_intern<T>();
+	  new (data) Intern<T>(std::move(functor));
+	}
+      else
+	{
+	  // store functor externally (using new)
+	  setup_methods_extern<T>();
+	  new (data) Extern<T>(std::move(functor));
+	}
+    }
+#else
     template <typename T>
     static constexpr bool is_intern()
     {
@@ -130,6 +152,7 @@ namespace openvpn {
       setup_methods_extern<T>();
       new (data) Extern<T>(std::move(functor));
     }
+#endif
 
     struct Methods
     {
