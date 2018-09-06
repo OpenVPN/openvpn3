@@ -223,8 +223,8 @@ def vc_cmd(parms, cmd, arch=None, succeed=0):
         arch = parms['ARCH']
     if arch == "x64":
         arch = "amd64"
-    with ModEnv('PATH', "%s;%s\\VC" % (os.environ['PATH'], parms['MSVC_DIR'])):
-        status = call('vcvarsall.bat %s && %s' % (arch, cmd), shell=True, succeed=succeed)
+    with ModEnv('PATH', "%s;%s\\VC;%s\\VC\\Auxiliary\\Build;" % (os.environ['PATH'], parms['MSVC_DIR'], parms['MSVC_DIR'])):
+        call('vcvarsall.bat %s && %s' % (arch, cmd), shell=True, succeed=succeed)
 
 def vc_parms(parms, cmd_dict):
     cmd_dict["dbg_rel_flags"] = "/Zi" if parms['DEBUG'] else "/O2"
@@ -292,7 +292,7 @@ def read_params():
     params['ARCH'] = os.environ.get('ARCH', 'amd64').rstrip()
     params['DEBUG'] = os.environ.get('DEBUG')
     params['STATIC'] = os.environ.get('STATIC')
-    params['MSVC_DIR'] = os.environ.get('MSVC_DIR', 'c:\\Program Files (x86)\\Microsoft Visual Studio 14.0').rstrip()
+    params['MSVC_DIR'] = os.environ.get('MSVC_DIR', 'c:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Professional').rstrip()
     # Community: tap0901, Access Server: tapoas
     params['TAP_WIN_COMPONENT_ID'] = os.environ.get('TAP_WIN_COMPONENT_ID', 'tap0901')
     params['CPP_EXTRA'] = os.environ.get('CPP_EXTRA', '').rstrip()
