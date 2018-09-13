@@ -2,6 +2,7 @@
 
 //#define OPENVPN_PATH_SIMULATE_WINDOWS
 
+#include <openvpn/log/logsimple.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/path.hpp>
@@ -60,6 +61,8 @@ void splitjoin(const std::string& p1)
 
 void test1()
 {
+  OPENVPN_LOG("======= TEST1 =======");
+
   // basename
   basename("");
   basename("/");
@@ -122,6 +125,46 @@ void test1()
   splitjoin("/foo/bar/");
 }
 
+void test_contained(const std::string& path, const bool expected)
+{
+  const bool contained = path::is_contained(path);
+  OPENVPN_LOG("is_contained('" << path << "') = " << contained);
+  if (contained != expected)
+    OPENVPN_THROW_EXCEPTION("contained=" << contained << " expected=" << expected);
+}
+
+void test2()
+{
+  OPENVPN_LOG("======= TEST2 =======");
+  test_contained("", false);
+  test_contained(".", true);
+  test_contained("..", false);
+  test_contained("..x", true);
+  test_contained("x..", true);
+  test_contained("...", true);
+  test_contained("../", false);
+  test_contained("/..", false);
+  test_contained("/foo", false);
+  test_contained("foo", true);
+  test_contained("foo/bar", true);
+  test_contained("foo//bar", true);
+  test_contained("foo/bar/", true);
+  test_contained("foo/bar//", true);
+  test_contained("..foo", true);
+  test_contained(".foo", true);
+  test_contained("./foo", true);
+  test_contained("../foo", false);
+  test_contained("..//foo", false);
+  test_contained(".../foo", true);
+  test_contained("foo/..", false);
+  test_contained("foo/.", true);
+  test_contained("foo//..", false);
+  test_contained("foo/...", true);
+  test_contained("foo/./bar", true);
+  test_contained("foo/../bar", false);
+  test_contained("foo/.../bar", true);
+}
+
 void test_join_speed()
 {
   size_t count = 0;
@@ -137,6 +180,7 @@ int main()
 {
   try {
     test1();
+    test2();
     //test_join_speed();
   }
   catch (const std::exception& e)
