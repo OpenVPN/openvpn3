@@ -30,7 +30,8 @@
 #error atomic file methods not supported on Windows
 #endif
 
-#include <stdio.h> // for rename()
+#include <stdio.h>  // for rename()
+#include <unistd.h> // for unlink()
 #include <errno.h>
 #include <cstring>
 
@@ -63,6 +64,7 @@ namespace openvpn {
     if (::rename(tfn.c_str(), fn.c_str()) == -1)
       {
 	const int eno = errno;
+	::unlink(tfn.c_str());  // move failed, so delete the temporary file
 	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << strerror_str(eno));
       }
   }
