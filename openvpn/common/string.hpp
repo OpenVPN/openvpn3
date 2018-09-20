@@ -296,7 +296,7 @@ namespace openvpn {
     inline bool contains_non_space_ctrl(const std::string& str)
     {
       for (auto &c : str)
-	if (!is_space(c) && is_ctrl(c))
+	if ((!is_space(c) && is_ctrl(c)) || c == 127)
 	  return true;
       return false;
     }
