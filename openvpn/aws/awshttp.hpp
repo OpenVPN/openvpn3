@@ -30,6 +30,7 @@ namespace openvpn {
 	  rng_(std::move(rng)),
 	  debug_level_(debug_level)
       {
+	http_config_ = http_config();
       }
 
       WS::ClientSet::TransactionSet::Ptr transaction_set(std::string host) const
@@ -37,7 +38,7 @@ namespace openvpn {
 	WS::ClientSet::TransactionSet::Ptr ts = new WS::ClientSet::TransactionSet;
 	ts->host.host = std::move(host);
 	ts->host.port = "443";
-	ts->http_config = http_config();
+	ts->http_config = http_config_;
 	ts->max_retries = 10;
 	ts->retry_duration = Time::Duration::seconds(1);
 	ts->debug_level = debug_level_;
@@ -91,6 +92,7 @@ namespace openvpn {
       Frame::Ptr frame_;
       DigestFactory::Ptr digest_factory_;
       RandomAPI::Ptr rng_;
+      WS::Client::Config::Ptr http_config_;
       int debug_level_;
     };
   }
