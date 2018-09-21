@@ -437,6 +437,14 @@ namespace openvpn {
 	  return h;
 	}
 
+	bool host_match(const std::string& host_arg) const
+	{
+	  if (host.host.empty())
+	    return false;
+	  else
+	    return host.host == host_arg;
+	}
+
 	AsioPolySock::Base* get_socket()
 	{
 	  return socket.get();
