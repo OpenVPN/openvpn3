@@ -55,34 +55,46 @@ namespace openvpn {
       class HTTPStateContainer
       {
       public:
+	void create_container()
+	{
+	  if (!c)
+	    c.reset(new Container);
+	}
+
 	void stop()
 	{
-	  if (http)
-	    http->stop();
+	  if (c && c->http)
+	    c->http->stop();
 	}
 
 	void reset()
 	{
-	  http.reset();
+	  if (c)
+	    c->http.reset();
 	}
 
 	void abort(const std::string& message)
 	{
-	  if (http)
-	    http->abort(message);
+	  if (c && c->http)
+	    c->http->abort(message);
 	}
 
 	bool alive() const
 	{
-	  return http && http->is_alive();
+	  return c && c->http && c->http->is_alive();
+	}
+
+	bool alive(const std::string& host) const
+	{
+	  return alive() && c->http->host_match(host);
 	}
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 	int unix_fd()
 	{
-	  if (!http)
+	  if (!c || !c->http)
 	    return -1;
-	  AsioPolySock::Unix* us = dynamic_cast<AsioPolySock::Unix*>(http->get_socket());
+	  AsioPolySock::Unix* us = dynamic_cast<AsioPolySock::Unix*>(c->http->get_socket());
 	  if (!us)
 	    return -1;
 	  return us->socket.native_handle();
@@ -92,16 +104,22 @@ namespace openvpn {
       private:
 	friend Client;
 
+	struct Container : public RC<thread_unsafe_refcount>
+	{
+	  typedef RCPtr<Container> Ptr;
+	  HTTPDelegate::Ptr http;
+	};
+
 	void attach(Client* parent)
 	{
-	  http->attach(parent);
+	  c->http->attach(parent);
 	}
 
 	void close(const bool keepalive)
 	{
-	  if (http)
+	  if (c && c->http)
 	    {
-	      http->detach(keepalive);
+	      c->http->detach(keepalive);
 	      if (!keepalive)
 		stop();
 	    }
@@ -110,15 +128,17 @@ namespace openvpn {
 	void construct(openvpn_io::io_context& io_context,
 		       const WS::Client::Config::Ptr config)
 	{
-	  http.reset(new HTTPDelegate(io_context, std::move(config), nullptr));
+	  create_container();
+	  close(false);
+	  c->http.reset(new HTTPDelegate(io_context, std::move(config), nullptr));
 	}
 
 	void start_request()
 	{
-	  http->start_request();
+	  c->http->start_request();
 	}
 
-	HTTPDelegate::Ptr http;
+	Container::Ptr c;
       };
 
       class TransactionSet;
@@ -307,10 +327,16 @@ namespace openvpn {
 	// such as the hostname.
 	ErrorRecovery::Ptr error_recovery;
 
-	void reset_push_back(std::unique_ptr<Transaction>&& t)
+	void assign_http_state(HTTPStateContainer& http_state)
 	{
-	  transactions.clear();
-	  transactions.push_back(std::move(t));
+	  http_state.create_container();
+	  hsc = http_state;
+	  preserve_http_state = true;
+	}
+
+	bool alive() const
+	{
+	  return hsc.alive(host.host);
 	}
 
 	WS::ClientSet::Transaction& first_transaction()
@@ -335,15 +361,6 @@ namespace openvpn {
 		return false;
 	    }
 	  return true;
-	}
-
-	void reset_host(const std::string& new_host)
-	{
-	  if (new_host != host.host)
-	    {
-	      hsc.stop();
-	      host.host = new_host;
-	    }
 	}
 
 	void reset_callbacks()
@@ -658,9 +675,7 @@ namespace openvpn {
 	{
 	  if (check_if_done())
 	    return;
-	  if (!ts->hsc.alive())
-	    ts->hsc.construct(parent->io_context, ts->http_config);
-	  ts->hsc.attach(this);
+
 	  retry_duration = ts->retry_duration;
 
 	  // get current transaction
@@ -675,6 +690,11 @@ namespace openvpn {
 	  // if this is an error retry, allow user-defined recovery
 	  if (error_retry && ts->error_recovery)
 	    ts->error_recovery->retry(*ts, t);
+
+	  // init and attach HTTPStateContainer
+	  if (!ts->alive())
+	    ts->hsc.construct(parent->io_context, ts->http_config);
+	  ts->hsc.attach(this);
 
 	  ts->hsc.start_request();
 	}
