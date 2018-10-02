@@ -27,7 +27,7 @@
 #include <net/if.h>
 #include <linux/if_tun.h>
 
-#include <openvpn/netconf/linux/gw.hpp>
+#include <openvpn/netconf/linux/gwnetlink.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
@@ -606,7 +606,7 @@ namespace openvpn {
 			   ActionList& create,
 			   ActionList& destroy)
     {
-      const LinuxGW46 gw(true);
+      const LinuxGW46Netlink gw;
 
       // set local4 and local6 to point to IPv4/6 route configurations
       const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
