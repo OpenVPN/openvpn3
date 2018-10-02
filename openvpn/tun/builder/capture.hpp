@@ -342,7 +342,7 @@ namespace openvpn {
       {
 	try {
 	  if (defined())
-	    URL::Parse(url);
+	    (URL::Parse(url));
 	}
 	catch (const std::exception& e)
 	  {
