@@ -30,7 +30,15 @@
 #include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/tunio.hpp>
 #include <openvpn/tun/persist/tunpersist.hpp>
+
+// check if Netlink has been selected at compile time
+#ifdef OPENVPN_USE_SITNL
+#include <openvpn/tun/linux/client/tunnetlink.hpp>
+#define TUN_LINUX TunNetlink
+#else
 #include <openvpn/tun/linux/client/tunsetup.hpp>
+#define TUN_LINUX TunLinux
+#endif
 
 namespace openvpn {
   namespace TunLinux {
@@ -114,7 +122,7 @@ namespace openvpn {
 	if (tun_setup_factory)
 	  return tun_setup_factory->new_setup_obj();
 	else
-	  return new TunLinux::Setup();
+	  return new TUN_LINUX::Setup();
       }
 
     private:
@@ -184,7 +192,7 @@ namespace openvpn {
 		  tun_setup = config->new_setup_obj();
 
 		  // create config object for tun setup layer
-		  Setup::Config tsconf;
+		  TUN_LINUX::Setup::Config tsconf;
 		  tsconf.layer = config->tun_prop.layer;
 		  tsconf.dev_name = config->dev_name;
 		  tsconf.txqueuelen = config->txqueuelen;
