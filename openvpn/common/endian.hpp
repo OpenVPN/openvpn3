@@ -37,7 +37,7 @@
 
 namespace openvpn {
   namespace Endian {
-#   ifdef OPENVPN_LITTLE_ENDIAN
+#   if defined(OPENVPN_LITTLE_ENDIAN)
     inline size_t e16(const size_t v)
     {
       return v;
@@ -62,7 +62,7 @@ namespace openvpn {
     {
       return 1-v;
     }
-#   elif OPENVPN_BIG_ENDIAN
+#   elif defined(OPENVPN_BIG_ENDIAN)
     inline size_t e16rev(const size_t v)
     {
       return v;
