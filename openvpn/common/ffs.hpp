@@ -32,6 +32,18 @@ namespace openvpn {
 
 #if defined(__GNUC__)
 
+  template <typename T>
+  inline constexpr int n_bits_type()
+  {
+    return sizeof(T) * 8;
+  }
+
+  template <typename T>
+  inline constexpr int n_bits_type(T& v)
+  {
+    return sizeof(v) * 8;
+  }
+
   inline int find_first_set(unsigned int v)
   {
     if (!v)
@@ -43,7 +55,35 @@ namespace openvpn {
   {
     if (!v)
       return 0;
-    return 32 - __builtin_clz(v);
+    return n_bits_type(v) - __builtin_clz(v);
+  }
+
+  inline int find_first_set(unsigned long v)
+  {
+    if (!v)
+      return 0;
+    return __builtin_ffsl(v);
+  }
+
+  inline int find_last_set(unsigned long v)
+  {
+    if (!v)
+      return 0;
+    return n_bits_type(v) - __builtin_clzl(v);
+  }
+
+  inline int find_first_set(unsigned long long v)
+  {
+    if (!v)
+      return 0;
+    return __builtin_ffsll(v);
+  }
+
+  inline int find_last_set(unsigned long long v)
+  {
+    if (!v)
+      return 0;
+    return n_bits_type(v) - __builtin_clzll(v);
   }
 
 #elif defined(_MSC_VER)
