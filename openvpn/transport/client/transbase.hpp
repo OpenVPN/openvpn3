@@ -91,6 +91,8 @@ namespace openvpn {
     // the keepalive parameters (in seconds).
     virtual void disable_keepalive(unsigned int& keepalive_ping,
 				   unsigned int& keepalive_timeout) = 0;
+
+    virtual ~TransportClientParent() {}
   };
 
   // Factory for client transport object.
