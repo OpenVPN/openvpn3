@@ -325,7 +325,8 @@ namespace openvpn {
 	cancel();
     }
 
-    void signal(const openvpn_io::error_code& error, int signum)
+  protected:
+    virtual void signal(const openvpn_io::error_code& error, int signum)
     {
       if (!error && !halt)
 	{
@@ -346,10 +347,14 @@ namespace openvpn {
 	      signal_rearm();
 	      break;
 #endif
+	    default:
+	      signal_rearm();
+	      break;
 	    }
 	}
     }
 
+  private:
     void signal_rearm()
     {
       signals->register_signals_all([self=Ptr(this)](const openvpn_io::error_code& error, int signal_number)
@@ -392,7 +397,6 @@ namespace openvpn {
     // servlist and related vars protected by mutex
     std::vector<ServerThread*> servlist;
     int thread_count = 0;
-    volatile bool halt = false;
 
     // stop
     Stop* async_stop_ = nullptr;
@@ -404,6 +408,9 @@ namespace openvpn {
     // logging
     Log::Context log_context;
     Log::Context::Wrapper log_wrap; // must be constructed after log_context
+
+  protected:
+    volatile bool halt = false;
   };
 
 }
