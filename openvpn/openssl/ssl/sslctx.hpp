@@ -867,7 +867,7 @@ namespace openvpn {
       try
 	{
 	  // Create new SSL_CTX for server or client mode
-	  const bool ssl23 = (config->force_aes_cbc_ciphersuites || (config->tls_version_min > TLSVersion::UNDEF));
+	  const bool ssl23 = (!config->force_aes_cbc_ciphersuites || (config->tls_version_min > TLSVersion::UNDEF));
 	  if (config->mode.is_server())
 	    {
 	      ctx = SSL_CTX_new(ssl23 ? SSL::ssl23_method_server() : TLSv1_server_method());
@@ -910,20 +910,17 @@ namespace openvpn {
 	  if (ssl23)
 	    {
 	      sslopt |= SSL_OP_NO_SSLv2;
-	      if (!config->force_aes_cbc_ciphersuites || config->tls_version_min > TLSVersion::UNDEF)
-	        {
-		  sslopt |= SSL_OP_NO_SSLv3;
-		  if (config->tls_version_min > TLSVersion::V1_0)
-		    sslopt |= SSL_OP_NO_TLSv1;
-#                 ifdef SSL_OP_NO_TLSv1_1
-		    if (config->tls_version_min > TLSVersion::V1_1)
-		      sslopt |= SSL_OP_NO_TLSv1_1;
-#                 endif
-#                 ifdef SSL_OP_NO_TLSv1_2
-		    if (config->tls_version_min > TLSVersion::V1_2)
-		      sslopt |= SSL_OP_NO_TLSv1_2;
-#                 endif
-	        }
+	      sslopt |= SSL_OP_NO_SSLv3;
+	      if (config->tls_version_min > TLSVersion::V1_0)
+		sslopt |= SSL_OP_NO_TLSv1;
+#            ifdef SSL_OP_NO_TLSv1_1
+	      if (config->tls_version_min > TLSVersion::V1_1)
+		sslopt |= SSL_OP_NO_TLSv1_1;
+#            endif
+#            ifdef SSL_OP_NO_TLSv1_2
+	      if (config->tls_version_min > TLSVersion::V1_2)
+		sslopt |= SSL_OP_NO_TLSv1_2;
+#            endif
 	    }
 	  SSL_CTX_set_options(ctx, sslopt);
 
