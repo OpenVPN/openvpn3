@@ -23,9 +23,9 @@ export GCC_EXTRA
 
 # determine platform
 if [ "$(uname)" == "Darwin" ]; then
-    export PROF=osx64
+    export PROF=${PROF:-osx64}
 elif [ "$(uname)" == "Linux" ]; then
-    export PROF=linux
+    export PROF=${PROF:-linux}
 else
     echo this script only knows how to build on Mac OS or Linux
 fi
