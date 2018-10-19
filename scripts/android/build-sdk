@@ -15,31 +15,28 @@ fi
 
 if [ -d "$SDK" ]; then
     echo "Android SDK already exists at $SDK. Doing only update"
-    yes | $SDK/tools/bin/sdkmanager --licenses
-    $SDK/tools/bin/sdkmanager --update
-    exit 0
+else
+    . $O3/core/deps/functions.sh
+
+    FNAME=sdk-tools-linux-3859397.zip
+    URL=https://dl.google.com/android/repository/${FNAME}
+    CSUM=444e22ce8ca0f67353bda4b85175ed3731cae3ffa695ca18119cbacef1c1bea0
+
+    download
+
+    cd $DEP_DIR
+    rm -rf android-sdk
+    mkdir android-sdk
+
+    . $O3/core/vars/android-sdk-path
+
+    cd $SDK
+    unzip $DL/$FNAME
 fi
-
-. $O3/core/deps/functions.sh
-
-FNAME=sdk-tools-linux-3859397.zip
-URL=https://dl.google.com/android/repository/${FNAME}
-CSUM=444e22ce8ca0f67353bda4b85175ed3731cae3ffa695ca18119cbacef1c1bea0
-
-download
-
-cd $DEP_DIR
-rm -rf android-sdk
-mkdir android-sdk
-
-. $O3/core/vars/android-sdk-path
-
-cd $SDK
-unzip $DL/$FNAME
 
 yes | $SDK/tools/bin/sdkmanager --licenses
 $SDK/tools/bin/sdkmanager --update
-$SDK/tools/bin/sdkmanager 'build-tools;26.0.2' \
+$SDK/tools/bin/sdkmanager --install 'build-tools;26.0.2' \
         'ndk-bundle' \
         'extras;android;m2repository' \
         'patcher;v4' \
