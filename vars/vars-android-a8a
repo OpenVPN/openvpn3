@@ -7,7 +7,7 @@ export CXX_COMPILER_FLAGS="-std=c++1y"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC="-fPIC"
 export TC=$DEP_DIR/tc-arm64
-export PLATFORM_FLAGS="-D__ANDROID_API__=21 -march=armv8-a -fomit-frame-pointer --sysroot=$TC/sysroot"
+export PLATFORM_FLAGS="-march=armv8-a -fomit-frame-pointer --sysroot=$TC/sysroot"
 export GPP_CMD="$TC/bin/aarch64-linux-android-g++"
 export GCC_CMD="$TC/bin/aarch64-linux-android-gcc"
 

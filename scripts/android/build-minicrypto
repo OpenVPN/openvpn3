@@ -15,7 +15,7 @@ cd $DEP_DIR
 rm -rf minicrypto
 mkdir minicrypto
 
-for target in android android-dbg android-a7a android-a7a-dbg ; do
+for target in android-a7a android-a7a-dbg ; do
     echo '***************' TARGET $target
     TARGET=$target $O3/core/deps/minicrypto/build-minicrypto
 done

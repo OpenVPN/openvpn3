@@ -39,7 +39,7 @@ $NDK/build/tools/make-standalone-toolchain.sh \
     --toolchain=$ABI-$ABI_VER \
     --stl=gnustl \
     --arch=arm \
-    --platform=android-14 \
+    --platform=android-16 \
     --install-dir=$DEST
 cd $DEST/$ABI/bin
 ln -s ../../bin/$ABI-gcc cc
@@ -58,7 +58,7 @@ $NDK/build/tools/make-standalone-toolchain.sh \
     --toolchain=$ABI-$ABI_VER \
     --stl=gnustl \
     --arch=x86 \
-    --platform=android-14 \
+    --platform=android-16 \
     --install-dir=$DEST
 cd $DEST/$SUB/bin
 ln -s ../../bin/$SUB-gcc cc

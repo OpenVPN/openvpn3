@@ -17,7 +17,7 @@ cd $DEP_DIR
 rm -rf boost
 mkdir boost
 export LINK_MODE=static
-export TARGETS="android-a8a android-a8a-dbg android-a7a android-a7a-dbg android android-dbg"
+export TARGETS="android-a8a android-a8a-dbg android-a7a android-a7a-dbg"
 export SDK_PATH_SCRIPT=$O3/core/vars/android-sdk-path
 $O3/core/deps/boost/build-boost
 exit 0
