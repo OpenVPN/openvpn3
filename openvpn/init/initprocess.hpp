@@ -59,10 +59,6 @@ namespace openvpn {
       {
 	base64_uninit_static();
       }
-
-    private:
-      // initialize SSL library
-      crypto_init crypto_init_;
     };
 
     // process-wide singular instance
