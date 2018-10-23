@@ -1224,7 +1224,11 @@ namespace openvpn {
 	    {
 	      const int SHA_DIGEST_LEN = 20;
 	      static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LEN, "size inconsistency");
-	      mbedtls_sha1(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp);
+	      if(!mbedtls_sha1_ret(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp))
+		{
+		  OPENVPN_LOG_SSL("VERIFY FAIL -- SHA1 calculation failed.");
+		  fail = true;
+		}
 	    }
 	}
       else if (depth == 0) // leaf-cert
