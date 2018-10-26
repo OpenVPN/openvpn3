@@ -52,7 +52,7 @@ public:
   }
 
 private:
-  virtual bool socket_protect(int socket) override
+  bool socket_protect(int socket, std::string remote, bool ipv6) override
   {
     return true;
   }
