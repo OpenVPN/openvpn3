@@ -287,7 +287,7 @@ namespace openvpn {
 #if defined(OPENVPN_PLATFORM_TYPE_UNIX) || defined(OPENVPN_PLATFORM_UWP)
 	if (config->socket_protect)
 	  {
-	    if (!config->socket_protect->socket_protect(socket.native_handle()))
+	    if (!config->socket_protect->socket_protect(socket.native_handle(), server_endpoint_addr()))
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();

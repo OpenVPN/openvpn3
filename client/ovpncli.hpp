@@ -466,7 +466,8 @@ namespace openvpn {
 
       // Callback to "protect" a socket from being routed through the tunnel.
       // Will be called from the thread executing connect().
-      virtual bool socket_protect(int socket) = 0;
+      // The remote and ipv6 are the remote host this socket will connect to
+      virtual bool socket_protect(int socket, std::string remote, bool ipv6) = 0;
 
       // Primary VPN client connect method, doesn't return until disconnect.
       // Should be called by a worker thread.  This method will make callbacks

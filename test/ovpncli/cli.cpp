@@ -141,9 +141,10 @@ public:
 #endif
 
 private:
-  virtual bool socket_protect(int socket) override
+  bool socket_protect(int socket, std::string remote, bool ipv6) override
   {
-    std::cout << "*** socket_protect " << socket << std::endl;
+    std::cout << "*** socket_protect " << socket << " "
+	      << remote << std::endl;
     return true;
   }
 

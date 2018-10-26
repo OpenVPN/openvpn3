@@ -22,6 +22,7 @@
 #ifndef OPENVPN_TRANSPORT_SOCKET_PROTECT_H
 #define OPENVPN_TRANSPORT_SOCKET_PROTECT_H
 
+#include <openvpn/addr/ip.hpp>
 #ifdef OPENVPN_PLATFORM_UWP
 #include <openvpn/transport/uwp_socket_protect.hpp>
 #endif
@@ -33,7 +34,7 @@ namespace openvpn {
   // the socket from being routed into the VPN tunnel.
   class BaseSocketProtect {
   public:
-    virtual bool socket_protect(int socket) = 0;
+    virtual bool socket_protect(int socket, IP::Addr endpoint) = 0;
   };
 
 #ifdef OPENVPN_PLATFORM_UWP
