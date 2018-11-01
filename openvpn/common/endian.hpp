@@ -80,5 +80,3 @@ namespace openvpn {
 #   endif
   }
 } // namespace openvpn
-
-#endif // OPENVPN_COMMON_ENDIAN_H
