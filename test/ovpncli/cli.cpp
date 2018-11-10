@@ -80,6 +80,10 @@
 #include <openvpn/win/console.hpp>
 #endif
 
+#ifdef USE_NETCFG
+#include "client/core-client-netcfg.hpp"
+#endif
+
 using namespace openvpn;
 
 namespace {
@@ -911,7 +915,13 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		}
 	      else
 		{
+#if defined(USE_NETCFG)
+		  DBus conn(G_BUS_TYPE_SYSTEM);
+		  conn.Connect();
+		  NetCfgTunBuilder<Client> client(conn.GetConnection());
+#else
 		  Client client;
+#endif
 		  const ClientAPI::EvalConfig eval = client.eval_config(config);
 		  if (eval.error)
 		    OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
