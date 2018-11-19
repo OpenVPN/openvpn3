@@ -114,7 +114,7 @@ namespace openvpn {
 
       inline int memq_new (BIO *b)
       {
-	MemQ *bmq = new MemQ();
+	MemQ *bmq = new(std::nothrow) MemQ();
 	if (!bmq)
 	  return 0;
 	b->shutdown = 1;
