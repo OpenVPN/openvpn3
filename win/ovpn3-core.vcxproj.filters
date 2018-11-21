@@ -422,6 +422,8 @@
     <ClInclude Include="..\openvpn\ip\ip6.hpp" />
     <ClInclude Include="..\openvpn\ip\ipcommon.hpp" />
     <ClInclude Include="..\client\ovpncli.hpp" />
+    <ClInclude Include="..\openvpn\transport\mssfix.hpp" />
+    <ClInclude Include="..\openvpn\ip\tcp.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test\ovpncli\cli.cpp" />

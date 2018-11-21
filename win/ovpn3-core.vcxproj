@@ -240,6 +240,7 @@
     <ClInclude Include="..\openvpn\ip\ip4.hpp" />
     <ClInclude Include="..\openvpn\ip\ip6.hpp" />
     <ClInclude Include="..\openvpn\ip\ipcommon.hpp" />
+    <ClInclude Include="..\openvpn\ip\tcp.hpp" />
     <ClInclude Include="..\openvpn\ip\udp.hpp" />
     <ClInclude Include="..\openvpn\kovpn\kocrypto.hpp" />
     <ClInclude Include="..\openvpn\kovpn\kodev.hpp" />
@@ -361,6 +362,7 @@
     <ClInclude Include="..\openvpn\transport\client\udpcli.hpp" />
     <ClInclude Include="..\openvpn\transport\dco.hpp" />
     <ClInclude Include="..\openvpn\transport\gremlin.hpp" />
+    <ClInclude Include="..\openvpn\transport\mssfix.hpp" />
     <ClInclude Include="..\openvpn\transport\mutate.hpp" />
     <ClInclude Include="..\openvpn\transport\pktstream.hpp" />
     <ClInclude Include="..\openvpn\transport\protocol.hpp" />

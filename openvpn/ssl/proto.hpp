@@ -48,6 +48,10 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
 #include <openvpn/buffer/bufcomposed.hpp>
+#include <openvpn/ip/ip4.hpp>
+#include <openvpn/ip/ip6.hpp>
+#include <openvpn/ip/udp.hpp>
+#include <openvpn/ip/tcp.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/durhelper.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -66,6 +70,8 @@
 #include <openvpn/ssl/psid.hpp>
 #include <openvpn/ssl/tlsprf.hpp>
 #include <openvpn/ssl/datalimit.hpp>
+#include <openvpn/ssl/mssparms.hpp>
+#include <openvpn/transport/mssfix.hpp>
 #include <openvpn/transport/protocol.hpp>
 #include <openvpn/tun/layer.hpp>
 #include <openvpn/tun/tunmtu.hpp>
@@ -338,13 +344,15 @@ namespace openvpn {
 
       // MTU
       unsigned int tun_mtu = 1500;
+      MSSParms mss_parms;
+      unsigned int mss_inter = 0;
 
       // Debugging
       int debug_level = 1;
 
       // Compatibility
       bool force_aes_cbc_ciphersuites = false;
-      
+
       // For compatibility with openvpn2 we send initial options on rekeying,
       // instead of possible modifications caused by NCP
       std::string initial_options;
@@ -555,6 +563,9 @@ namespace openvpn {
 	// tun-mtu
 	tun_mtu = parse_tun_mtu(opt, tun_mtu);
 
+	// mssfix
+	mss_parms.parse(opt);
+
 	// load parameters that can be present in both config file or pushed options
 	load_common(opt, pco, server ? LOAD_COMMON_SERVER : LOAD_COMMON_CLIENT);
       }
@@ -739,7 +750,7 @@ namespace openvpn {
       {
 	if (!initial_options.empty())
 	  return initial_options;
-      
+
 	std::ostringstream out;
 
 	const bool server = ssl_factory->mode().is_server();
@@ -779,7 +790,7 @@ namespace openvpn {
 	  out << ",tls-server";
 	else
 	  out << ",tls-client";
-   
+
 	initial_options = out.str();
 
 	return initial_options;
@@ -1409,7 +1420,7 @@ namespace openvpn {
 	    send_reset();
 	    set_state(state+1);
 	    dirty = true;
-	  }  
+	  }
       }
 
       // control channel flush
@@ -1524,6 +1535,10 @@ namespace openvpn {
 	      // decompress packet
 	      if (compress)
 		compress->decompress(buf);
+
+	      // set MSS for segments server can receive
+	      if (proto.config->mss_inter > 0)
+		MSSFix::mssfix(buf, proto.config->mss_inter);
 	    }
 	  else
 	    buf.reset_size(); // no crypto context available
@@ -1742,6 +1757,35 @@ namespace openvpn {
 
 	    // cache op32 for hot path in do_encrypt
 	    cache_op32();
+
+	    int crypto_encap = (enable_op32 ? OP_SIZE_V2 : 1) +
+			       c.comp_ctx.extra_payload_bytes() +
+			       PacketID::size(PacketID::SHORT_FORM) +
+			       c.dc.context().encap_overhead();
+
+	    int transport_encap = 0;
+	    if (c.mss_parms.mtu)
+	      {
+		if (proto.is_tcp())
+		  transport_encap += sizeof(struct TCPHeader);
+		else
+		  transport_encap += sizeof(struct UDPHeader);
+
+		if (c.protocol.is_ipv6())
+		  transport_encap += sizeof(struct IPv6Header);
+		else
+		  transport_encap += sizeof(struct IPv4Header);
+
+		transport_encap += c.protocol.extra_transport_bytes();
+	      }
+
+	    if (c.mss_parms.mssfix != 0)
+	      {
+		OPENVPN_LOG_PROTO("MTU mssfix=" << c.mss_parms.mssfix <<
+				  " crypto_encap=" << crypto_encap <<
+				  " transport_encap=" << transport_encap);
+		c.mss_inter = c.mss_parms.mssfix - (crypto_encap + transport_encap);
+	      }
 	  }
       }
 
@@ -1887,6 +1931,10 @@ namespace openvpn {
       bool do_encrypt(BufferAllocated& buf, const bool compress_hint)
       {
 	bool pid_wrap;
+
+	// set MSS for segments client can receive
+	if (proto.config->mss_inter > 0)
+	  MSSFix::mssfix(buf, proto.config->mss_inter);
 
 	// compress packet
 	if (compress)
