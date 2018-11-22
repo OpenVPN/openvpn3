@@ -956,8 +956,25 @@ namespace openvpn {
 	    }
 	  else
 	    {
-	      if (!SSL_CTX_set_cipher_list(ctx, "DEFAULT:!EXP:!PSK:!SRP:!LOW:!RC4:!kRSA:!MD5:!SSLv2"))
-		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
+	      if (!SSL_CTX_set_cipher_list(ctx,
+					   /* default list as a basis */
+					   "DEFAULT"
+					   /* Disable export ciphers, low and medium */
+					   ":!EXP:!LOW:!MEDIUM"
+					   /* Disable static (EC)DH keys (no forward secrecy) */
+					   ":!kDH:!kECDH"
+					   /* Disable DSA private keys */
+					   ":!DSS"
+					   /* Disable RC4 cipher */
+					   ":!RC4"
+					   /* Disable MD5 */
+					   ":!MD5"
+					   /* Disable unsupported TLS modes */
+					   ":!PSK:!SRP:!kRSA"
+					   /* Disable SSLv2 cipher suites*/
+					   ":!SSLv2"
+					   ))
+		  OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	      SSL_CTX_set_ecdh_auto(ctx, 1);
 #endif
