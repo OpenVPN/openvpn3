@@ -32,6 +32,7 @@
 
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
+#include <openssl/rsa.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -632,11 +633,11 @@ namespace openvpn {
 	    EVP_PKEY *pkey = X509_get_pubkey (cert);
 	    if (pkey != nullptr)
 	      {
-		if (pkey->type == EVP_PKEY_RSA && pkey->pkey.rsa != nullptr && pkey->pkey.rsa->n != nullptr)
-		  os << ", " << BN_num_bits (pkey->pkey.rsa->n) << " bit RSA";
+		if (EVP_PKEY_id (pkey) == EVP_PKEY_RSA && EVP_PKEY_get0_RSA (pkey) != nullptr && RSA_get0_n(EVP_PKEY_get0_RSA (pkey)) != nullptr)
+		  os << ", " << BN_num_bits (RSA_get0_n(EVP_PKEY_get0_RSA (pkey))) << " bit RSA";
 #ifndef OPENSSL_NO_DSA
-		else if (pkey->type == EVP_PKEY_DSA && pkey->pkey.dsa != nullptr && pkey->pkey.dsa->p != nullptr)
-		  os << ", " << BN_num_bits (pkey->pkey.dsa->p) << " bit DSA";
+		else if (EVP_PKEY_id (pkey) == EVP_PKEY_DSA && EVP_PKEY_get0_DSA (pkey) != nullptr && DSA_get0_p(EVP_PKEY_get0_DSA (pkey))!= nullptr)
+		  os << ", " << BN_num_bits (DSA_get0_p(EVP_PKEY_get0_DSA (pkey))) << " bit DSA";
 #endif
 		EVP_PKEY_free (pkey);
 	      }
@@ -718,9 +719,11 @@ namespace openvpn {
       // Helps us to store pointer to self in ::SSL object
       static int mydata_index;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
       // Modified SSLv23 methods
       static SSL_METHOD ssl23_method_client_;
       static SSL_METHOD ssl23_method_server_;
+#endif
     };
 
   private:
@@ -730,22 +733,20 @@ namespace openvpn {
 	: external_pki(external_pki_arg), n_errors(0)
       {
 	RSA *rsa = nullptr;
-	RSA_METHOD *rsa_meth = nullptr;
-	RSA *pub_rsa = nullptr;
+        RSA *pub_rsa = nullptr;
+        RSA_METHOD *rsa_meth = nullptr;
 	const char *errtext = "";
 
 	/* allocate custom RSA method object */
-	rsa_meth = new RSA_METHOD;
-	std::memset(rsa_meth, 0, sizeof(RSA_METHOD));
-	rsa_meth->name = "OpenSSLContext::ExternalPKIImpl private key RSA Method";
-	rsa_meth->rsa_pub_enc = rsa_pub_enc;
-	rsa_meth->rsa_pub_dec = rsa_pub_dec;
-	rsa_meth->rsa_priv_enc = rsa_priv_enc;
-	rsa_meth->rsa_priv_dec = rsa_priv_dec;
-	rsa_meth->init = nullptr;
-	rsa_meth->finish = rsa_finish;
-	rsa_meth->flags = RSA_METHOD_FLAG_NO_CHECK;
-	rsa_meth->app_data = (char *)this;
+	rsa_meth = RSA_meth_new ("OpenSSLContext::ExternalPKIImpl private key RSA Method", RSA_METHOD_FLAG_NO_CHECK);
+
+	RSA_meth_set_pub_enc (rsa_meth, rsa_pub_enc);
+	RSA_meth_set_pub_dec (rsa_meth, rsa_pub_dec);
+	RSA_meth_set_priv_enc (rsa_meth, rsa_priv_enc);
+	RSA_meth_set_priv_dec (rsa_meth, rsa_priv_dec);
+	RSA_meth_set_init (rsa_meth, nullptr);
+	RSA_meth_set_finish (rsa_meth, rsa_finish);
+	RSA_meth_set0_app_data (rsa_meth, this);
 
 	/* allocate RSA object */
 	rsa = RSA_new();
@@ -789,7 +790,7 @@ namespace openvpn {
 	else
 	  {
 	    if (rsa_meth)
-	      free(rsa_meth);
+	      RSA_meth_free (rsa_meth);
 	  }
 	OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: " << errtext);
       }
@@ -802,15 +803,14 @@ namespace openvpn {
       /* called at RSA_free */
       static int rsa_finish(RSA *rsa)
       {
-	free ((void*)rsa->meth);
-	rsa->meth = nullptr;
+	RSA_meth_free (const_cast<RSA_METHOD*>(RSA_get_method (rsa)));
 	return 1;
       }
 
       /* sign arbitrary data */
       static int rsa_priv_enc(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int padding)
       {
-	ExternalPKIImpl* self = (ExternalPKIImpl*)rsa->meth->app_data;
+	ExternalPKIImpl* self = (ExternalPKIImpl*)(RSA_meth_get0_app_data (RSA_get_method(rsa)));
 
 	try {
 	  if (padding != RSA_PKCS1_PADDING)
@@ -851,7 +851,7 @@ namespace openvpn {
 
       static void not_implemented(RSA *rsa)
       {
-	ExternalPKIImpl* self = (ExternalPKIImpl*)rsa->meth->app_data;
+	ExternalPKIImpl* self = (ExternalPKIImpl*)(RSA_meth_get0_app_data (RSA_get_method (rsa)));
 	++self->n_errors;
       }
 
