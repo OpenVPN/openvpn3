@@ -830,7 +830,7 @@ namespace openvpn {
 	try {
 	  if (padding != RSA_PKCS1_PADDING)
 	    {
-	      RSAerr (RSA_F_RSA_EAY_PRIVATE_ENCRYPT, RSA_R_UNKNOWN_PADDING_TYPE);
+	      RSAerr (RSA_F_RSA_OSSL_PRIVATE_ENCRYPT, RSA_R_UNKNOWN_PADDING_TYPE);
 	      throw ssl_external_pki("OpenSSL: bad padding size");
 	    }
 
