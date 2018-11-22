@@ -1337,9 +1337,14 @@ namespace openvpn {
 				   x509_get_serial_hex(cert));
 		  break;
 		case X509Track::SHA1:
-		  xts.emplace_back(X509Track::SHA1,
-				   depth,
-				   render_hex_sep(cert->sha1_hash, SHA_DIGEST_LENGTH, ':', true));
+		  {
+		    unsigned char buf[EVP_MAX_MD_SIZE];
+		    unsigned int len = EVP_MAX_MD_SIZE;
+		    X509_digest (cert, EVP_sha1 (), buf, &len);
+		    xts.emplace_back (X509Track::SHA1,
+				      depth,
+				      render_hex_sep (buf, len, ':', true));
+		  }
 		  break;
 		case X509Track::CN:
 		  x509_track_extract_nid(X509Track::CN, NID_commonName, cert, depth, xts);
@@ -1503,7 +1508,9 @@ namespace openvpn {
 	  if (self_ssl->authcert)
 	    {
 	      static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH, "size inconsistency");
-	      std::memcpy(self_ssl->authcert->issuer_fp, current_cert->sha1_hash, sizeof(AuthCert::issuer_fp));
+	      unsigned int digest_len = sizeof(AuthCert::issuer_fp);
+	      if (!X509_digest (current_cert, EVP_sha1 (), self_ssl->authcert->issuer_fp, &digest_len))
+	        preverify_ok = false;
 	    }
 	}
       else if (depth == 0) // leaf cert

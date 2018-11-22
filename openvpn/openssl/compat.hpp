@@ -78,6 +78,29 @@ inline void RSA_meth_free(RSA_METHOD *meth)
   delete meth;
 }
 
+inline HMAC_CTX *HMAC_CTX_new()
+{
+  HMAC_CTX *ctx = new HMAC_CTX();
+  HMAC_CTX_init(ctx);
+  return ctx;
+}
+
+inline void HMAC_CTX_free(HMAC_CTX *ctx)
+{
+  HMAC_CTX_cleanup(ctx);
+  delete ctx;
+}
+
+inline EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void)
+{
+  return new EVP_CIPHER_CTX();
+}
+
+inline void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx)
+{
+  delete ctx;
+}
+
 inline void BIO_set_shutdown(BIO *a, int shut)
 {
   a->shutdown = shut;
