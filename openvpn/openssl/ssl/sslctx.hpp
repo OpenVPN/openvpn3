@@ -524,6 +524,7 @@ namespace openvpn {
 	SSL_library_init();
 
 	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
+	context_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext", nullptr, nullptr, nullptr);
 
 	/*
 	 * We actually override some of the OpenSSL SSLv23 methods here,
@@ -604,7 +605,10 @@ namespace openvpn {
 
 	  if (mydata_index < 0)
 	    throw ssl_context_error("OpenSSLContext::SSL: mydata_index is uninitialized");
+	  if (context_data_index < 0)
+	    throw ssl_context_error("OpenSSLContext::SSL: context_data_index is uninitialized");
 	  SSL_set_ex_data (ssl, mydata_index, this);
+	  SSL_set_ex_data (ssl, context_data_index, (void*) &ctx);
 	}
 	catch (...)
 	  {
@@ -718,6 +722,7 @@ namespace openvpn {
 
       // Helps us to store pointer to self in ::SSL object
       static int mydata_index;
+      static int context_data_index;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
       // Modified SSLv23 methods
@@ -1069,9 +1074,6 @@ namespace openvpn {
 	  else if (!(config->flags & SSLConst::NO_VERIFY_PEER))
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: CA not defined");
 
-	  // keep a reference to this in ctx, for use by verify callback
-	  ctx->app_verify_arg = this;
-
 	  // Show handshake debugging info
 	  if (config->ssl_debug_level)
 	    SSL_CTX_set_info_callback (ctx, info_callback);
@@ -1413,7 +1415,7 @@ namespace openvpn {
       ::SSL* ssl = (::SSL*) X509_STORE_CTX_get_ex_data (ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
 
       // get OpenSSLContext
-      const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
+      const OpenSSLContext* self = (OpenSSLContext*) SSL_get_ex_data (ssl, SSL::context_data_index);
 
       // get depth
       const int depth = X509_STORE_CTX_get_error_depth(ctx);
@@ -1473,7 +1475,7 @@ namespace openvpn {
       ::SSL* ssl = (::SSL*) X509_STORE_CTX_get_ex_data (ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
 
       // get OpenSSLContext
-      const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
+      const OpenSSLContext* self = (OpenSSLContext*) SSL_get_ex_data (ssl, SSL::context_data_index);
 
       // get OpenSSLContext::SSL
       SSL* self_ssl = (SSL *) SSL_get_ex_data (ssl, SSL::mydata_index);
@@ -1589,6 +1591,7 @@ namespace openvpn {
   };
 
   int OpenSSLContext::SSL::mydata_index = -1;
+  int OpenSSLContext::SSL::context_data_index = -1;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_METHOD OpenSSLContext::SSL::ssl23_method_client_;
