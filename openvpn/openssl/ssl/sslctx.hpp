@@ -892,10 +892,9 @@ namespace openvpn {
       try
 	{
 	  // Create new SSL_CTX for server or client mode
-	  const bool ssl23 = (!config->force_aes_cbc_ciphersuites || (config->tls_version_min > TLSVersion::UNDEF));
 	  if (config->mode.is_server())
 	    {
-	      ctx = SSL_CTX_new(ssl23 ? SSL::tls_method_server () : TLSv1_server_method());
+	      ctx = SSL_CTX_new(SSL::tls_method_server());
 	      if (ctx == nullptr)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
 
@@ -911,7 +910,7 @@ namespace openvpn {
 	    }
 	  else if (config->mode.is_client())
 	    {
-	      ctx = SSL_CTX_new(ssl23 ? SSL::tls_method_client () : TLSv1_client_method());
+	      ctx = SSL_CTX_new(SSL::tls_method_client());
 	      if (ctx == nullptr)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
 	      if (config->enable_renegotiation)
@@ -932,20 +931,31 @@ namespace openvpn {
 	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION;
 	  if (!config->enable_renegotiation)
 	    sslopt |= SSL_OP_NO_TICKET;
-	  if (ssl23)
+
+	  /* Disable SSLv2 and SSLv3, might be a noop but does not hurt */
+	  sslopt |= SSL_OP_NO_SSLv2;
+	  sslopt |= SSL_OP_NO_SSLv3;
+
+	  /* mbed TLS also ignores tls version when force aes cbc cipher suites is on */
+	  if (!config->force_aes_cbc_ciphersuites)
 	    {
-	      sslopt |= SSL_OP_NO_SSLv2;
-	      sslopt |= SSL_OP_NO_SSLv3;
-	      if (config->tls_version_min > TLSVersion::V1_0)
-		sslopt |= SSL_OP_NO_TLSv1;
-#            ifdef SSL_OP_NO_TLSv1_1
-	      if (config->tls_version_min > TLSVersion::V1_1)
-		sslopt |= SSL_OP_NO_TLSv1_1;
-#            endif
-#            ifdef SSL_OP_NO_TLSv1_2
-	      if (config->tls_version_min > TLSVersion::V1_2)
-		sslopt |= SSL_OP_NO_TLSv1_2;
-#            endif
+	      if (!config->force_aes_cbc_ciphersuites || config->tls_version_min > TLSVersion::UNDEF)
+		{
+		  if (config->tls_version_min > TLSVersion::V1_0)
+		    sslopt |= SSL_OP_NO_TLSv1;
+#                 ifdef SSL_OP_NO_TLSv1_1
+		    if (config->tls_version_min > TLSVersion::V1_1)
+		      sslopt |= SSL_OP_NO_TLSv1_1;
+#                 endif
+#                 ifdef SSL_OP_NO_TLSv1_2
+		    if (config->tls_version_min > TLSVersion::V1_2)
+		      sslopt |= SSL_OP_NO_TLSv1_2;
+#                 endif
+#                 ifdef SSL_OP_NO_TLSv1_3
+		    if (config->tls_version_min > TLSVersion::V1_3)
+		      sslopt |= SSL_OP_NO_TLSv1_3;
+#                 endif
+		}
 	    }
 	  SSL_CTX_set_options(ctx, sslopt);
 
