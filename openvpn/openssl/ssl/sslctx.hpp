@@ -1120,12 +1120,12 @@ namespace openvpn {
       return config->ns_cert_type != NSCert::NONE;
     }
 
-    bool verify_ns_cert_type(const ::X509* cert) const
+    bool verify_ns_cert_type(::X509* cert) const
     {
       if (config->ns_cert_type == NSCert::SERVER)
-	return (cert->ex_flags & EXFLAG_NSCERT) && (cert->ex_nscert & NS_SSL_SERVER);
+	return X509_check_purpose (cert, X509_PURPOSE_SSL_SERVER, 0);
       else if (config->ns_cert_type == NSCert::CLIENT)
-	return (cert->ex_flags & EXFLAG_NSCERT) && (cert->ex_nscert & NS_SSL_CLIENT);
+	return X509_check_purpose (cert, X509_PURPOSE_SSL_CLIENT, 0);
       else
 	return true;
     }
