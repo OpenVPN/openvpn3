@@ -28,6 +28,7 @@
 #include <openssl/crypto.h>
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+#include <openssl/hmac.h>
 
 // make sure type 94 doesn't collide with anything in bio.h
 // Start with the same number as before
