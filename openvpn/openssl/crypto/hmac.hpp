@@ -31,6 +31,8 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/crypto/digest.hpp>
 
+#include <openvpn/openssl/compat.hpp>
+
 namespace openvpn {
   namespace OpenSSLCrypto {
     class HMACContext
@@ -62,8 +64,8 @@ namespace openvpn {
       void init(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
       {
 	erase();
-	HMAC_CTX_init (&ctx);
-	if (!HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), nullptr))
+	ctx = HMAC_CTX_new ();
+	if (!HMAC_Init_ex (ctx, key, int(key_size), DigestContext::digest_type(digest), nullptr))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Init_ex (init)");
@@ -74,7 +76,7 @@ namespace openvpn {
       void reset()
       {
 	check_initialized();
-	if (!HMAC_Init_ex (&ctx, nullptr, 0, nullptr, nullptr))
+	if (!HMAC_Init_ex (ctx, nullptr, 0, nullptr, nullptr))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Init_ex (reset)");
@@ -85,7 +87,7 @@ namespace openvpn {
       {
 	check_initialized();
 
-	if (!HMAC_Update(&ctx, in, int(size)))
+	if (!HMAC_Update(ctx, in, int(size)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Update");
@@ -96,7 +98,7 @@ namespace openvpn {
       {
 	check_initialized();
 	unsigned int outlen;
-	if (!HMAC_Final(&ctx, out, &outlen))
+	if (!HMAC_Final(ctx, out, &outlen))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Final");
@@ -117,14 +119,16 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    HMAC_CTX_cleanup(&ctx);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#endif
+	    HMAC_CTX_free(ctx);
 	    initialized = false;
 	  }
       }
 
       size_t size_() const
       {
-	return HMAC_size(&ctx);
+	return HMAC_size(ctx);
       }
 
       void check_initialized() const
@@ -136,7 +140,7 @@ namespace openvpn {
       }
 
       bool initialized;
-      HMAC_CTX ctx;
+      HMAC_CTX* ctx;
     };
   }
 }
