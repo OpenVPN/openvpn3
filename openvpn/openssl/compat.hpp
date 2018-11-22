@@ -101,6 +101,16 @@ inline void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx)
   delete ctx;
 }
 
+inline EVP_MD_CTX *EVP_MD_CTX_new()
+{
+  return new EVP_MD_CTX();
+}
+
+void EVP_MD_CTX_free(EVP_MD_CTX *ctx)
+{
+  delete ctx;
+}
+
 inline void BIO_set_shutdown(BIO *a, int shut)
 {
   a->shutdown = shut;
