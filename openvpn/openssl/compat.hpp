@@ -273,5 +273,39 @@ inline const BIGNUM *DSA_get0_p(const DSA *d)
   return d->p;
 }
 
+inline void RSA_set_flags(RSA *r, int flags)
+{
+  r->flags |= flags;
+}
 
+inline int RSA_set0_key(RSA *rsa, BIGNUM *n, BIGNUM *e, BIGNUM *d)
+{
+  if ((rsa->n == nullptr && n == nullptr)
+      || (rsa->e == nullptr && e == nullptr))
+    return 0;
+
+  if (n != nullptr)
+    {
+      BN_free(rsa->n);
+      rsa->n = n;
+    }
+
+  if (e != nullptr)
+    {
+      BN_free(rsa->e);
+      rsa->e = e;
+    }
+
+  if (d != nullptr)
+    {
+      BN_free(rsa->d);
+      rsa->d = d;
+    }
+
+  return 1;
+}
+
+/* Renamed in OpenSSL 1.1 */
+#define X509_get0_pubkey X509_get_pubkey
+#define RSA_F_RSA_OSSL_PRIVATE_ENCRYPT RSA_F_RSA_EAY_PRIVATE_ENCRYPT
 #endif
