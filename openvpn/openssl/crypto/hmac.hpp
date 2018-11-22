@@ -63,59 +63,44 @@ namespace openvpn {
       {
 	erase();
 	HMAC_CTX_init (&ctx);
-#if SSLEAY_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), nullptr))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Init_ex (init)");
 	  }
-#else
-	HMAC_Init_ex (&ctx, key, int(key_size), DigestContext::digest_type(digest), nullptr);
-#endif
 	initialized = true;
       }
 
       void reset()
       {
 	check_initialized();
-#if SSLEAY_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Init_ex (&ctx, nullptr, 0, nullptr, nullptr))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Init_ex (reset)");
 	  }
-#else
-	HMAC_Init_ex (&ctx, nullptr, 0, nullptr, nullptr);
-#endif
       }
 
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
-#if SSLEAY_VERSION_NUMBER >= 0x10000000L
+
 	if (!HMAC_Update(&ctx, in, int(size)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Update");
 	  }
-#else
-	HMAC_Update(&ctx, in, int(size));
-#endif
       }
 
       size_t final(unsigned char *out)
       {
 	check_initialized();
 	unsigned int outlen;
-#if SSLEAY_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Final(&ctx, out, &outlen))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_hmac_error("HMAC_Final");
 	  }
-#else
-	HMAC_Final(&ctx, out, &outlen);
-#endif
 	return outlen;
       }
 
