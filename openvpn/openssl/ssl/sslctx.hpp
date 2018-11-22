@@ -763,16 +763,26 @@ namespace openvpn {
 	  }
 
 	/* get the public key */
-	if (cert->cert_info->key->pkey == nullptr) /* nullptr before SSL_CTX_use_certificate() is called */
+	if (X509_get0_pubkey(cert) == nullptr) /* nullptr before SSL_CTX_use_certificate() is called */
 	  {
 	    errtext = "pkey is NULL";
 	    goto err;
 	  }
-	pub_rsa = cert->cert_info->key->pkey->pkey.rsa;
+
+	if (EVP_PKEY_id (X509_get0_pubkey(cert)) != EVP_PKEY_RSA )
+	  {
+	    errtext = "pkey is not RSA";
+	    goto err;
+	  }
+	pub_rsa = EVP_PKEY_get0_RSA (X509_get0_pubkey(cert));
 
 	/* initialize RSA object */
-	rsa->n = BN_dup(pub_rsa->n);
-	rsa->flags |= RSA_FLAG_EXT_PKEY;
+	rsa = RSA_new ();
+
+	/* only set e and n as d (private key) is outside our control */
+	RSA_set0_key(rsa, BN_dup(RSA_get0_n(pub_rsa)), BN_dup(RSA_get0_e(pub_rsa)), nullptr);
+	RSA_set_flags (rsa, RSA_FLAG_EXT_PKEY);
+
 	if (!RSA_set_method(rsa, rsa_meth))
 	  {
 	    errtext = "RSA_set_method";
