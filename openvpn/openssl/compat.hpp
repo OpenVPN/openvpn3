@@ -26,6 +26,8 @@
 
 #include <openssl/bio.h>
 #include <openssl/crypto.h>
+#include <openssl/rsa.h>
+#include <openssl/dsa.h>
 
 // make sure type 94 doesn't collide with anything in bio.h
 // Start with the same number as before
@@ -40,7 +42,7 @@ inline int BIO_get_new_index(void)
 
 inline BIO_METHOD *BIO_meth_new(int type, const char *name)
 {
-  BIO_METHOD *biom = new BIO_METHOD;
+  BIO_METHOD *biom = new BIO_METHOD();
 
   if ((biom->name = OPENSSL_strdup(name)) == nullptr)
     {
@@ -59,6 +61,21 @@ inline void BIO_meth_free(BIO_METHOD *biom)
       OPENSSL_free((void *)biom->name);
       delete biom;
     }
+}
+
+inline RSA_METHOD *RSA_meth_new(const char *name, int flags)
+{
+  RSA_METHOD *meth = new RSA_METHOD();
+
+  meth->flags = flags;
+  meth->name = name;
+
+  return meth;
+}
+
+inline void RSA_meth_free(RSA_METHOD *meth)
+{
+  delete meth;
 }
 
 inline void BIO_set_shutdown(BIO *a, int shut)
@@ -137,4 +154,90 @@ inline int BIO_meth_set_destroy(BIO_METHOD *biom, int (*destroy)(BIO *))
   biom->destroy = destroy;
   return 1;
 }
+
+inline RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey)
+{
+  return pkey->pkey.rsa;
+}
+
+inline const BIGNUM *RSA_get0_n(const RSA *r)
+{
+  return r->n;
+}
+
+inline const BIGNUM *RSA_get0_e(const RSA *r)
+{
+  return r->e;
+}
+
+inline int RSA_meth_set_pub_enc(RSA_METHOD *meth,
+				int (*pub_enc)(int flen, const unsigned char *from,
+					       unsigned char *to, RSA *rsa,
+					       int padding))
+{
+  meth->rsa_pub_enc = pub_enc;
+  return 1;
+}
+
+inline int RSA_meth_set_pub_dec(RSA_METHOD *meth,
+				int (*pub_dec)(int flen, const unsigned char *from,
+					       unsigned char *to, RSA *rsa,
+					       int padding))
+{
+  meth->rsa_pub_dec = pub_dec;
+  return 1;
+}
+
+inline int RSA_meth_set_priv_enc(RSA_METHOD *meth,
+				 int (*priv_enc)(int flen, const unsigned char *from,
+						 unsigned char *to, RSA *rsa,
+						 int padding))
+{
+  meth->rsa_priv_enc = priv_enc;
+  return 1;
+}
+
+int RSA_meth_set_priv_dec(RSA_METHOD *meth,
+			  int (*priv_dec)(int flen, const unsigned char *from,
+					  unsigned char *to, RSA *rsa,
+					  int padding))
+{
+  meth->rsa_priv_dec = priv_dec;
+  return 1;
+}
+
+inline int RSA_meth_set_init(RSA_METHOD *meth, int (*init)(RSA *rsa))
+{
+  meth->init = init;
+  return 1;
+}
+
+inline int RSA_meth_set_finish(RSA_METHOD *meth, int (*finish)(RSA *rsa))
+{
+  meth->finish = finish;
+  return 1;
+}
+
+inline int RSA_meth_set0_app_data(RSA_METHOD *meth, void *app_data)
+{
+  meth->app_data = (char *) app_data;
+  return 1;
+}
+
+inline void *RSA_meth_get0_app_data(const RSA_METHOD *meth)
+{
+  return (void *) meth->app_data;
+}
+
+inline DSA *EVP_PKEY_get0_DSA(EVP_PKEY *pkey)
+{
+  return pkey->pkey.dsa;
+}
+
+inline const BIGNUM *DSA_get0_p(const DSA *d)
+{
+  return d->p;
+}
+
+
 #endif
