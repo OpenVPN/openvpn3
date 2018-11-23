@@ -828,10 +828,19 @@ namespace openvpn {
 	ExternalPKIImpl* self = (ExternalPKIImpl*)(RSA_meth_get0_app_data (RSA_get_method(rsa)));
 
 	try {
-	  if (padding != RSA_PKCS1_PADDING)
+	  if (padding != RSA_PKCS1_PADDING && padding != RSA_NO_PADDING)
 	    {
 	      RSAerr (RSA_F_RSA_OSSL_PRIVATE_ENCRYPT, RSA_R_UNKNOWN_PADDING_TYPE);
-	      throw ssl_external_pki("OpenSSL: bad padding size");
+	      throw ssl_external_pki("OpenSSL: bad padding type");
+	    }
+	  std::string padding_algo;
+	  if (padding == RSA_PKCS1_PADDING)
+	    {
+	      padding_algo = "RSA_PKCS1_PADDING";
+	    }
+          else if (padding == RSA_NO_PADDING)
+	    {
+	      padding_algo = "RSA_NO_PADDING";
 	    }
 
 	  /* convert 'from' to base64 */
@@ -840,7 +849,7 @@ namespace openvpn {
 
 	  /* get signature */
 	  std::string sig_b64;
-	  const bool status = self->external_pki->sign(from_b64, sig_b64);
+	  const bool status = self->external_pki->sign(from_b64, sig_b64, padding_algo);
 	  if (!status)
 	    throw ssl_external_pki("OpenSSL: could not obtain signature");
 

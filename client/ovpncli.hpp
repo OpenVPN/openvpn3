@@ -403,12 +403,16 @@ namespace openvpn {
     };
 
     // Used to request an RSA signature.
-    // Data will be prefixed by an optional PKCS#1 digest prefix
+    // algorithm will determinate what signature is expected:
+    // RSA_PKCS1_PADDING means that
+    // data will be prefixed by an optional PKCS#1 digest prefix
     // per RFC 3447.
+    // RSA_NO_PADDING mean so no padding should be done be the callee
     struct ExternalPKISignRequest : public ExternalPKIRequestBase
     {
       std::string data;  // data rendered as base64 (client reads)
       std::string sig;   // RSA signature, rendered as base64 (client writes)
+      std::string algorithm;
     };
 
     // used to override "remote" directives
@@ -601,7 +605,7 @@ namespace openvpn {
       void on_disconnect();
 
       // from ExternalPKIBase
-      virtual bool sign(const std::string& data, std::string& sig);
+      virtual bool sign(const std::string& data, std::string& sig, const std::string& algorithm);
 
       // disable copy and assignment
       OpenVPNClient(const OpenVPNClient&) = delete;
