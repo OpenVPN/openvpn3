@@ -117,7 +117,8 @@ namespace openvpn {
     class Client : public TransportClient,
 		   public TunClient,
 		   public KoRekey::Receiver,
-		   public SessionStats::DCOTransportSource
+		   public SessionStats::DCOTransportSource,
+		   public AsyncResolvableUDP
     {
       friend class ClientConfig;
 
@@ -473,7 +474,8 @@ namespace openvpn {
       Client(openvpn_io::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TransportClientParent* parent_arg)
-	: io_context(io_context_arg),
+	: AsyncResolvableUDP(io_context),
+	  io_context(io_context_arg),
 	  halt(false),
 	  state(new TunProp::State()),
 	  config(config_arg),
@@ -498,17 +500,13 @@ namespace openvpn {
 	else
 	  {
 	    transport_parent->transport_pre_resolve();
-	    udp().resolver.async_resolve(server_host, server_port,
-					 [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::udp::resolver::results_type results)
-					 {
-					   self->do_resolve_udp(error, results);
-					 });
+	    async_resolve_name(server_host, server_port);
 	  }
       }
 
       // called after DNS resolution has succeeded or failed
-      void do_resolve_udp(const openvpn_io::error_code& error,
-			  openvpn_io::ip::udp::resolver::results_type results)
+      void resolve_callback(const openvpn_io::error_code& error,
+			    openvpn_io::ip::udp::resolver::results_type results)
       {
 	if (!halt)
 	  {
