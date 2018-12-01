@@ -54,8 +54,8 @@ namespace openvpn {
       return parse(read_text_utf8(fn), fn);
     }
 
-    template <typename TITLE>
-    inline Json::Value parse_from_buffer(const Buffer& buf, const TITLE& title)
+    template <typename BUFFER, typename TITLE>
+    inline Json::Value parse_from_buffer(const BUFFER& buf, const TITLE& title)
     {
 #ifdef OPENVPN_JSON
       return Json::Value::parse(buf, StringTempl::to_string(title));
