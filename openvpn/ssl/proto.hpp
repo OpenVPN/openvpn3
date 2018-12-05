@@ -1670,7 +1670,7 @@ namespace openvpn {
 		{
 		  // skip validation of HARD_RESET_V3 because the tls-crypt
 		  // engine has not been initialized yet
-		  std::cout << now->raw() << " SKIPPING VALIDATION OF HARD_RESET_V3" << std::endl;
+		  OPENVPN_LOG_PROTO_VERBOSE("SKIPPING VALIDATION OF HARD_RESET_V3");
 		  return true;
 		}
 	      /* no break */
