@@ -600,6 +600,13 @@ namespace openvpn {
 	    else
 	      OPENVPN_LOG("Options continuation...");
 	  }
+	else if (received_options.complete() && string::starts_with(msg, "PUSH_REPLY,"))
+	{
+	  // We got a PUSH REPLY in the middle of a session. Ignore it apart from
+	  // updating the auth-token if included in the push reply
+	  auto opts = OptionList::parse_from_csv_static(msg.substr(11), nullptr);
+	  extract_auth_token(opts);
+	}
 	else if (string::starts_with(msg, "AUTH_FAILED"))
 	  {
 	    std::string reason;
