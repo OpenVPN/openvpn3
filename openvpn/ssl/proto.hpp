@@ -3486,8 +3486,8 @@ namespace openvpn {
     bool is_client() const { return mode_.is_client(); }
 
     // tcp/udp mode
-    const bool is_tcp() { return config->protocol.is_tcp(); }
-    const bool is_udp() { return config->protocol.is_udp(); }
+    bool is_tcp() { return config->protocol.is_tcp(); }
+    bool is_udp() { return config->protocol.is_udp(); }
 
     // configuration
     const Config& conf() const { return *config; }

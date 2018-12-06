@@ -71,12 +71,12 @@ namespace openvpn {
       return buf_to_string(data);
     }
 
-    const size_t length() const
+    size_t length() const
     {
       return data.size();
     }
 
-    const bool empty() const
+    bool empty() const
     {
       return !length();
     }
