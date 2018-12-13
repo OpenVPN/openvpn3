@@ -242,8 +242,12 @@ fi
 
 # Cityhash
 if [ "$CITY" = "1" ]; then
-    LIBDIRS="$LIBDIRS -L$DEP_DIR/cityhash/cityhash-$PLATFORM/lib"
-    CPPFLAGS="$CPPFLAGS -I$DEP_DIR/cityhash/cityhash-$PLATFORM/include"
+    if [ -d "$DEP_DIR/cityhash/cityhash-$PLATFORM/lib" ]; then
+	LIBDIRS="$LIBDIRS -L$DEP_DIR/cityhash/cityhash-$PLATFORM/lib"
+    fi
+    if [ -d "$DEP_DIR/cityhash/cityhash-$PLATFORM/include" ]; then
+	CPPFLAGS="$CPPFLAGS -I$DEP_DIR/cityhash/cityhash-$PLATFORM/include"
+    fi
     LIBS="$LIBS -lcityhash"
     CPPFLAGS="$CPPFLAGS -DHAVE_CITYHASH"
 fi
