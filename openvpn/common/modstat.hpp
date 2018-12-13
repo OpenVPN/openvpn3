@@ -28,7 +28,11 @@
 
 #include <string>
 
+#include <openvpn/common/platform.hpp>
+
 namespace openvpn {
+
+#if defined(OPENVPN_PLATFORM_LINUX)
 
   inline int update_file_mod_time_nanoseconds(const std::string& filename,
 					      const std::uint64_t nanoseconds_since_epooch)
@@ -53,5 +57,21 @@ namespace openvpn {
       return errno;
     return 0;
   }
+
+#else
+
+  inline int update_file_mod_time_nanoseconds(const std::string& filename,
+					      const std::uint64_t nanoseconds_since_epooch)
+  {
+    return 0;
+  }
+
+  inline int update_file_mod_time_nanoseconds(const int fd,
+					      const std::uint64_t nanoseconds_since_epooch)
+  {
+    return 0;
+  }
+
+#endif
 
 }
