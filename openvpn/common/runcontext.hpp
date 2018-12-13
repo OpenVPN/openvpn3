@@ -346,9 +346,6 @@ namespace openvpn {
 		OPENVPN_LOG(stats->dump());
 	      signal_rearm();
 	      break;
-	    default:
-	      signal_rearm();
-	      break;
 #endif
 	    default:
 	      signal_rearm();
