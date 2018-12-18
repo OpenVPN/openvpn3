@@ -22,11 +22,9 @@ matrix:
   include:
     - env: SSLLIB="openssl"
       os: osx
-      osx_image: xcode8.3
       compiler: clang
     - env: SSLLIB="mbedtls"
       os: osx
-      osx_image: xcode8.3
       compiler: clang
     - env: SSLLIB="openssl" RUN_COVERITY_SCAN="1"
       os: linux
