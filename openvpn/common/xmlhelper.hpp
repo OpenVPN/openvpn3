@@ -39,6 +39,7 @@ namespace openvpn {
     static std::string format_error(const tinyxml2::XMLDocument& doc)
     {
       std::string ret = doc.ErrorName();
+#if OVPN_TINYXML2_VERSION_MAJOR < 6
       const char *es1 = doc.GetErrorStr1();
       const char *es2 = doc.GetErrorStr2();
       if (es1)
@@ -51,6 +52,14 @@ namespace openvpn {
 	  ret += ' ';
 	  ret += es2;
 	}
+#else
+      const char *es = doc.ErrorStr();
+      if (es)
+	{
+	  ret += ' ';
+	  ret += es;
+	}
+#endif
       return ret;
     }
 
