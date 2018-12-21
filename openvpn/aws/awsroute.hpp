@@ -361,7 +361,8 @@ namespace openvpn {
 	t->req.uri = ec2_uri(ctx, std::move(q));
 	t->req.method = "GET";
 	t->ci.keepalive = true;
-	ctx.ts->reset_push_back(std::move(t));
+	ctx.ts->transactions.clear();
+	ctx.ts->transactions.push_back(std::move(t));
       }
 
       static std::string ec2_uri(const Context& ctx, REST::Query&& q)
