@@ -520,8 +520,6 @@ namespace openvpn {
 
       static void init_static()
       {
-	SSL_library_init();
-
 	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
 
 	// We actually override some of the OpenSSL SSLv23 methods here,
