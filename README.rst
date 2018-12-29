@@ -94,7 +94,7 @@ Clone the OpenVPN 3 repo::
 Export the shell variable ``O3`` to point to the OpenVPN 3 top level
 directory::
 
-    export O3=~/src/ovpn3
+    export O3=~/src/mac/ovpn3
 
 Download source tarballs (``.tar.gz`` or ``.tgz``) for these dependency
 libraries into ``~/Downloads``
