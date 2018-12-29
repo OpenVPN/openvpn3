@@ -61,7 +61,7 @@ namespace openvpn {
       }
 
     private:
-      // initialize SSL library
+      // SSL library init happens when instantiated
       crypto_init crypto_init_;
     };
 
