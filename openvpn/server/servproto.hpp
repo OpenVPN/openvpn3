@@ -162,6 +162,11 @@ namespace openvpn {
 	  return PeerStats();
       }
 
+      virtual bool should_preserve_session_id() override
+      {
+	return preserve_session_id;
+      }
+
       virtual void stop() override
       {
 	if (!halt)
@@ -454,6 +459,9 @@ namespace openvpn {
 	      os << reason;
 	    else
 	      os << "client was disconnected from server";
+	    disconnect_type = DT_HALT_RESTART;
+	    disconnect_in(Time::Duration::seconds(1));
+	    preserve_session_id = false;
 	    break;
 	  case HaltRestart::RESTART:
 	    ts = "RESTART";
@@ -462,6 +470,9 @@ namespace openvpn {
 	      os << reason;
 	    else
 	      os << "server requested a client reconnect";
+	    disconnect_type = DT_HALT_RESTART;
+	    disconnect_in(Time::Duration::seconds(1));
+	    preserve_session_id = false;
 	    break;
 	  case HaltRestart::RESTART_PASSIVE:
 	    ts = "RESTART_PASSIVE";
@@ -478,12 +489,17 @@ namespace openvpn {
 	      os << reason;
 	    else
 	      os << "server requested a client reconnect";
+	    disconnect_type = DT_HALT_RESTART;
+	    disconnect_in(Time::Duration::seconds(1));
 	    break;
 	  case HaltRestart::AUTH_FAILED:
 	    ts = "AUTH_FAILED";
 	    os << ts;
 	    if (tell_client && !reason.empty())
 	      os << ',' << reason;
+	    disconnect_type = DT_HALT_RESTART;
+	    disconnect_in(Time::Duration::seconds(1));
+	    preserve_session_id = false;
 	    break;
 	  case HaltRestart::RAW:
 	    {
@@ -493,17 +509,14 @@ namespace openvpn {
 	      else
 		ts = reason;
 	      os << reason;
+	      disconnect_type = DT_HALT_RESTART;
+	      disconnect_in(Time::Duration::seconds(1));
+	      preserve_session_id = false;
 	      break;
 	    }
 	  }
 
 	OPENVPN_LOG("Disconnect: " << ts << ' ' << reason);
-
-	if (type != HaltRestart::RESTART_PASSIVE)
-	  {
-	    disconnect_type = DT_HALT_RESTART;
-	    disconnect_in(Time::Duration::seconds(1));
-	  }
 
 	if (Base::primary_defined())
 	  {
@@ -704,8 +717,6 @@ namespace openvpn {
 
       openvpn_io::io_context& io_context;
 
-      bool halt = false;
-
       // higher values are higher priority
       enum DisconnectType {
 	DT_NONE=0,
@@ -714,6 +725,9 @@ namespace openvpn {
 	DT_HALT_RESTART,
       };
       int disconnect_type = DT_NONE;
+      bool preserve_session_id = true;
+
+      bool halt = false;
 
       PeerAddr::Ptr peer_addr;
 

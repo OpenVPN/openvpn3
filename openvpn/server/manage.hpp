@@ -127,6 +127,9 @@ namespace openvpn {
       // get client bandwidth stats
       virtual PeerStats stats_poll() = 0;
 
+      // return true if management layer should preserve session ID
+      virtual bool should_preserve_session_id() = 0;
+
       // get native reference to client instance
       virtual TunClientInstance::NativeHandle tun_native_handle() = 0;
     };
