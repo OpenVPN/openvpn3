@@ -142,18 +142,29 @@ namespace openvpn {
       return did_replace_password_with_session_id;
     }
 
+    // If we have a saved password that is not a session ID,
+    // restore it and wipe any existing session ID.
     bool can_retry_auth_with_cached_password()
     {
       if (password_save_defined)
 	{
 	  password = password_save;
-	  password_save = "";
+	  password_save.clear();
 	  password_save_defined = false;
 	  did_replace_password_with_session_id = false;
 	  return true;
 	}
       else
 	return false;
+    }
+
+    void purge_session_id()
+    {
+      if (!can_retry_auth_with_cached_password())
+	{
+	  password.clear();
+	  did_replace_password_with_session_id = false;
+	}
     }
 
     std::string auth_info() const

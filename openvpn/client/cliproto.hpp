@@ -1002,7 +1002,7 @@ namespace openvpn {
       void process_halt_restart(const ClientHalt& ch)
       {
 	if (!ch.psid() && creds)
-	  creds->can_retry_auth_with_cached_password(); // purge session ID
+	  creds->purge_session_id();
 	if (ch.restart())
 	  fatal_ = Error::CLIENT_RESTART;
 	else
