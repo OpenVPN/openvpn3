@@ -97,15 +97,25 @@ namespace openvpn {
 
     void start()
     {
-      if (!test_network ())
+      if (!client && !halt)
 	{
-	  /* Starting the lifecycle early in this case to be notified when the
-	   * network becomes available */
-	  pause ("Network unavailable");
-	  start_lifecycle ();
+	  if (!test_network())
+	    throw ErrorCode(Error::NETWORK_UNAVAILABLE, true, "Network Unavailable");
+
+	  RemoteList::Ptr remote_list = client_options->remote_list_precache();
+	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_context,
+									remote_list,
+									client_options->stats_ptr()));
+	  if (preres->work_available())
+	    {
+	      ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
+	      client_options->events().add_event(std::move(ev));
+	      pre_resolve = preres;
+	      pre_resolve->start(this); // asynchronous -- will call back to pre_resolve_done
+	    }
+	  else
+	    new_client();
 	}
-      else
-	do_start();
     }
 
     void send_explicit_exit_notify()
@@ -196,12 +206,7 @@ namespace openvpn {
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Resume();
 	  client_options->events().add_event(std::move(ev));
 	  client_options->remote_reset_cache_item();
-	  /* We did not start the client start() but postponed it since network
-	   * was not available */
-	  if (generation == 0)
-	    do_start();
-	  else
-	    new_client();
+	  new_client();
 	}
     }
 
@@ -280,28 +285,6 @@ namespace openvpn {
     }
 
   private:
-    void do_start()
-    {
-      if (!client && !halt)
-	{
-	  RemoteList::Ptr remote_list = client_options->remote_list_precache();
-	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_context,
-									remote_list,
-									client_options->stats_ptr()));
-	  if (preres->work_available())
-	    {
-	      ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
-	      client_options->events().add_event(std::move(ev));
-	      pre_resolve = preres;
-	      pre_resolve->start(this); // asynchronous -- will call back to pre_resolve_done
-	    }
-	  else
-	    {
-	      new_client ();
-	    }
-	}
-    }
-
     void interim_finalize()
     {
       if (!client_finalized)
@@ -314,9 +297,7 @@ namespace openvpn {
     virtual void pre_resolve_done()
     {
       if (!halt)
-	{
-	  new_client ();
-	}
+	new_client();
     }
 
     void cancel_timers()
@@ -399,12 +380,7 @@ namespace openvpn {
     {
       conn_timer.cancel();
       conn_timer_pending = false;
-      start_lifecycle ();
 
-    }
-
-    void start_lifecycle ()
-    {
       // Monitor connection lifecycle notifications, such as sleep,
       // wakeup, network-unavailable, and network-available.
       // Not all platforms define a lifecycle object.  Some platforms
@@ -413,8 +389,7 @@ namespace openvpn {
       // as needed using the main ovpncli API.
       if (!lifecycle_started)
 	{
-	  ClientLifeCycle* lc = client_options->lifecycle();
-	  // lifecycle is defined by platform, can be nullptr
+	  ClientLifeCycle* lc = client_options->lifecycle(); // lifecycle is defined by platform, and may be NULL
 	  if (lc)
 	    {
 	      lc->start(this);
