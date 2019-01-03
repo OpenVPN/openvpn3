@@ -858,6 +858,9 @@ namespace openvpn {
 #endif
       Log::Context log_context(this);
 #endif
+
+      OPENVPN_LOG(ClientAPI::OpenVPNClient::platform());
+
       return do_connect();
     }
 
