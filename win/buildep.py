@@ -25,9 +25,13 @@ def build_asio(parms):
             sys.exit("Checksum mismatch, expected %s, actual %s" % (parms["ASIO_CSUM"], checksum))
         with ModEnv('PATH', "%s\\bin;%s" % (parms.get('GIT'), os.environ['PATH'])):
             extract(arch_path, "gz")
-            rmtree("asio")
-            os.rename("asio-%s" % asio_ver, "asio")
+            dist = os.path.realpath('asio')
+            rmtree(dist)
+            os.rename("asio-%s" % asio_ver, dist)
             rm(arch_path)
+
+            for patch_file in glob.glob(os.path.join(parms.get('OVPN3'), "core", "deps", "asio", "patches", "*.patch")):
+                call(["git", "apply", "--whitespace=nowarn", "--ignore-space-change", "--verbose", patch_file], cwd=dist)
 
 def build_mbedtls(parms):
     print "**************** MBEDTLS"
