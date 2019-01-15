@@ -233,6 +233,7 @@
     <ClInclude Include="..\openvpn\init\engineinit.hpp" />
     <ClInclude Include="..\openvpn\init\initprocess.hpp" />
     <ClInclude Include="..\openvpn\io\io.hpp" />
+    <ClInclude Include="..\openvpn\ip\csum.hpp" />
     <ClInclude Include="..\openvpn\ip\dhcp.hpp" />
     <ClInclude Include="..\openvpn\ip\eth.hpp" />
     <ClInclude Include="..\openvpn\ip\icmp4.hpp" />
@@ -240,6 +241,9 @@
     <ClInclude Include="..\openvpn\ip\ip4.hpp" />
     <ClInclude Include="..\openvpn\ip\ip6.hpp" />
     <ClInclude Include="..\openvpn\ip\ipcommon.hpp" />
+    <ClInclude Include="..\openvpn\ip\ping4.hpp" />
+    <ClInclude Include="..\openvpn\ip\ping6.hpp" />
+    <ClInclude Include="..\openvpn\ip\ptb.hpp" />
     <ClInclude Include="..\openvpn\ip\tcp.hpp" />
     <ClInclude Include="..\openvpn\ip\udp.hpp" />
     <ClInclude Include="..\openvpn\kovpn\kocrypto.hpp" />

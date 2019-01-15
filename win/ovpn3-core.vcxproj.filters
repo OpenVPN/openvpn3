@@ -424,6 +424,10 @@
     <ClInclude Include="..\client\ovpncli.hpp" />
     <ClInclude Include="..\openvpn\transport\mssfix.hpp" />
     <ClInclude Include="..\openvpn\ip\tcp.hpp" />
+    <ClInclude Include="..\openvpn\ip\ptb.hpp" />
+    <ClInclude Include="..\openvpn\ip\ping4.hpp" />
+    <ClInclude Include="..\openvpn\ip\ping6.hpp" />
+    <ClInclude Include="..\openvpn\ip\csum.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test\ovpncli\cli.cpp" />

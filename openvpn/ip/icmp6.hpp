@@ -34,8 +34,9 @@ namespace openvpn {
 
   struct ICMPv6 {
     enum {
-      ECHO_REQUEST = 128,
-      ECHO_REPLY = 129,
+      ECHO_REQUEST    = 128,
+      ECHO_REPLY      = 129,
+      PACKET_TOO_BIG  = 2
     };
 
     struct IPv6Header head;
@@ -54,6 +55,7 @@ namespace openvpn {
 	std::uint16_t id;
 	std::uint16_t seq_num;
       };
+      std::uint32_t mtu;
     };
   };
 }

@@ -49,6 +49,7 @@
 #include <openvpn/common/count.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/ip/ptb.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/client/relay.hpp>
@@ -376,15 +377,24 @@ namespace openvpn {
 	  // encrypt packet
 	  if (buf.size())
 	    {
-	      Base::data_encrypt(buf);
-	      if (buf.size())
+	      const ProtoContext::Config& c = Base::conf();
+	      if (c.mss_inter > 0 && buf.size() > c.mss_inter)
 		{
-		  // send packet via transport to destination
-		  OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
-		  if (transport->transport_send(buf))
-		    Base::update_last_sent();
-		  else if (halt)
-		    return;
+		  Ptb::generate_icmp_ptb(buf, c.mss_inter);
+		  tun->tun_send(buf);
+		}
+	      else
+		{
+		  Base::data_encrypt(buf);
+		  if (buf.size())
+		  {
+		    // send packet via transport to destination
+		    OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
+		    if (transport->transport_send(buf))
+		      Base::update_last_sent();
+		    else if (halt)
+		      return;
+		  }
 		}
 	    }
 

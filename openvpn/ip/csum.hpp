@@ -1,9 +1,31 @@
+//    OpenVPN -- An application to securely tunnel IP networks
+//               over a single port, with support for SSL/TLS-based
+//               session authentication and key exchange,
+//               packet encryption, packet authentication, and
+//               packet compression.
+//
+//    Copyright (C) 2012-2018 OpenVPN Inc.
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU Affero General Public License Version 3
+//    as published by the Free Software Foundation.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU Affero General Public License for more details.
+//
+//    You should have received a copy of the GNU Affero General Public License
+//    along with this program in the COPYING file.
+//    If not, see <http://www.gnu.org/licenses/>.
+
 // IP checksum based on Linux kernel implementation
 
 #pragma once
 
 #include <cstdint>
 
+#include <openvpn/common/endian.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/size.hpp>
 
@@ -42,7 +64,7 @@ namespace openvpn {
       const bool odd = size_t(buf) & 1;
       if (odd)
 	{
-#ifdef __LITTLE_ENDIAN
+#ifdef OPENVPN_LITTLE_ENDIAN
 	  result += (*buf << 8);
 #else
 	  result = *buf;
@@ -81,7 +103,7 @@ namespace openvpn {
 	}
       if (len & 1)
 	{
-#ifdef __LITTLE_ENDIAN
+#ifdef OPENVPN_LITTLE_ENDIAN
 	  result += *buf;
 #else
 	  result += (*buf << 8);

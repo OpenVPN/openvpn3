@@ -1,7 +1,23 @@
-//  OpenVPN
+//    OpenVPN -- An application to securely tunnel IP networks
+//               over a single port, with support for SSL/TLS-based
+//               session authentication and key exchange,
+//               packet encryption, packet authentication, and
+//               packet compression.
 //
-//  Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
-//  All rights reserved.
+//    Copyright (C) 2012-2018 OpenVPN Inc.
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU Affero General Public License Version 3
+//    as published by the Free Software Foundation.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU Affero General Public License for more details.
+//
+//    You should have received a copy of the GNU Affero General Public License
+//    along with this program in the COPYING file.
+//    If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
@@ -20,45 +36,43 @@
 namespace openvpn {
   namespace Ping6 {
 
+    inline static const std::uint16_t* get_addr16(const struct in6_addr *addr)
+    {
+#if defined(_MSC_VER)
+      return addr->u.Word;
+#elif defined(__APPLE__)
+      return addr->__u6_addr.__u6_addr16;
+#else
+      return addr->s6_addr16;
+#endif
+    }
+
     inline std::uint16_t csum_ipv6_pseudo(const struct in6_addr *saddr,
 					  const struct in6_addr *daddr,
 					  const std::uint32_t len,
 					  const std::uint16_t proto,
 					  std::uint32_t sum)
     {
-      int carry;
+      int carry = 0;
+      std::uint32_t val = 0;
 
-      sum += (std::uint32_t)saddr->s6_addr32[0];
-      carry = (sum < (std::uint32_t)saddr->s6_addr32[0]);
-      sum += carry;
+      const std::uint16_t* addr = get_addr16(saddr);
+      for (int i = 0; i < 4; ++i)
+	{
+	  val = (std::uint32_t)(addr[i * 2] << 16) + addr[i * 2 + 1];
+	  sum += val;
+	  carry = (sum < val);
+	  sum += carry;
+	}
 
-      sum += (std::uint32_t)saddr->s6_addr32[1];
-      carry = (sum < (std::uint32_t)saddr->s6_addr32[1]);
-      sum += carry;
-
-      sum += (std::uint32_t)saddr->s6_addr32[2];
-      carry = (sum < (std::uint32_t)saddr->s6_addr32[2]);
-      sum += carry;
-
-      sum += (std::uint32_t)saddr->s6_addr32[3];
-      carry = (sum < (std::uint32_t)saddr->s6_addr32[3]);
-      sum += carry;
-
-      sum += (std::uint32_t)daddr->s6_addr32[0];
-      carry = (sum < (std::uint32_t)daddr->s6_addr32[0]);
-      sum += carry;
-
-      sum += (std::uint32_t)daddr->s6_addr32[1];
-      carry = (sum < (std::uint32_t)daddr->s6_addr32[1]);
-      sum += carry;
-
-      sum += (std::uint32_t)daddr->s6_addr32[2];
-      carry = (sum < (std::uint32_t)daddr->s6_addr32[2]);
-      sum += carry;
-
-      sum += (std::uint32_t)daddr->s6_addr32[3];
-      carry = (sum < (std::uint32_t)daddr->s6_addr32[3]);
-      sum += carry;
+      addr = get_addr16(daddr);
+      for (int i = 0; i < 4; ++i)
+	{
+	  val = (std::uint32_t)(addr[i * 2] << 16) + addr[i * 2 + 1];
+	  sum += val;
+	  carry = (sum < val);
+	  sum += carry;
+	}
 
       const std::uint32_t ulen = (std::uint32_t)htonl((std::uint32_t) len);
       sum += ulen;
