@@ -76,7 +76,7 @@ public:
 
   virtual void error(const size_t err_type, const std::string* text=nullptr) override
   {
-    OPENVPN_LOG(Error::name(err_type));
+    OPENVPN_LOG(openvpn::Error::name(err_type));
   }
 
   std::string dump() const
@@ -101,7 +101,8 @@ public:
       config(config_arg),
       client_process(io_context),
       client_confirm_event(io_context),
-      client_destroy_event(io_context)
+      client_destroy_event(io_context),
+      io_context_(io_context)
   {
   }
 
@@ -111,7 +112,7 @@ public:
 				  std::ostream& os)
   {
     if (!tun)
-      tun.reset(new TunWin::Setup);
+      tun.reset(new TunWin::Setup(io_context_));
     return Win::ScopedHANDLE(tun->establish(tbc, openvpn_app_path, stop, os));
   }
 
@@ -342,6 +343,7 @@ private:
   openvpn_io::windows::object_handle client_confirm_event;
   openvpn_io::windows::object_handle client_destroy_event;
   std::string remote_tap_handle_hex;
+  openvpn_io::io_context& io_context_;
 };
 
 class MyClientInstance : public WS::Server::Listener::Client
