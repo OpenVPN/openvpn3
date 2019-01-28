@@ -16,12 +16,14 @@ namespace openvpn {
 #ifdef OPENVPN_LITTLE_ENDIAN
 #ifdef __clang__
       return __builtin_bswap64(value);
+#elif _MSC_VER
+      return _byteswap_uint64(value);
 #else
       return __bswap_constant_64(value);
-#endif
+#endif /* _MSC_VER */
 #else
       return value;
-#endif
+#endif /* OPENVPN_LITTLE_ENDIAN */
     }
   }
 }
