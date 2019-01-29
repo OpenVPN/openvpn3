@@ -232,7 +232,7 @@ namespace openvpn {
       if (config)
 	return new SetupClient(io_context, config);
       else
-	return new TunWin::Setup();
+	return new TunWin::Setup(io_context);
     }
 
     WinCommandAgent(const OptionList& opt_parent)
