@@ -42,6 +42,12 @@ namespace openvpn {
     public:
       OPENVPN_EXCEPTION(aws_route_error);
 
+      enum class RouteTargetType
+        {
+	  INTERFACE_ID,
+	  INSTANCE_ID
+	};
+
       class Context
       {
       public:
@@ -264,17 +270,80 @@ namespace openvpn {
 	}
       }
 
+      static void delete_route(Context& ctx,
+      			       const Info& info,
+			       const std::string& cidr,
+			       bool ipv6)
+      {
+	{
+	  REST::Query q;
+	  q.emplace_back("Action", "DeleteRoute");
+	  q.emplace_back(ipv6 ? "DestinationIpv6CidrBlock" : "DestinationCidrBlock", cidr);
+	  q.emplace_back("RouteTableId", info.route_table_id);
+	  add_transaction(ctx, std::move(q));
+	}
+
+	// do transaction
+	execute_transaction(ctx);
+
+	// process reply
+	{
+	  // get the transaction
+	  WS::ClientSet::Transaction& t = ctx.ts->first_transaction();
+
+	  // get reply
+	  const std::string reply = t.content_in_string();
+
+	  // check the reply status
+	  if (!t.http_status_success())
+	    OPENVPN_THROW(aws_route_error, "DeleteRoute: " << t.format_status(*ctx.ts) << '\n' << reply);
+
+	  // parse XML reply
+	  const Xml::Document doc(reply, "DeleteRoute");
+	  const std::string retval = Xml::find_text(&doc,
+						    "DeleteRouteResponse",
+						    "return");
+	  if (retval != "true")
+	    OPENVPN_THROW(aws_route_error, "DeleteRoute: returned failure status: " << '\n' << reply);
+
+	  OPENVPN_LOG("AWS EC2 DeleteRoute " << cidr << " -> " << info.to_string());
+	}
+      }
+
       // Create/replace a VPC route
       static void replace_create_route(Context& ctx,
 				       const Info& info,
-				       const std::string& route)
+				       const std::string& route,
+				       RouteTargetType target_type,
+				       const std::string& target_value,
+				       bool ipv6)
       {
+	std::string target_type_str;
+
+	switch (target_type)
+	{
+	case RouteTargetType::INSTANCE_ID:
+	  target_type_str = "InstanceId";
+	  break;
+
+	case RouteTargetType::INTERFACE_ID:
+	  target_type_str = "NetworkInterfaceId";
+	  break;
+
+	default:
+	  OPENVPN_THROW(aws_route_error,
+	  		"replace_create_route: unknown RouteTargetType " << (int)target_type);
+	}
+
+	const std::string dest_cidr_block_name = ipv6 ?
+		"DestinationCidrIpv6Block" : "DestinationCidrBlock";
+
 	// create API query
 	{
 	  REST::Query q;
 	  q.emplace_back("Action", "ReplaceRoute");
-	  q.emplace_back("DestinationCidrBlock", route);
-	  q.emplace_back("NetworkInterfaceId", info.network_interface_id);
+	  q.emplace_back(dest_cidr_block_name, route);
+	  q.emplace_back(target_type_str, target_value);
 	  q.emplace_back("RouteTableId", info.route_table_id);
 	  add_transaction(ctx, std::move(q));
 	}
@@ -316,8 +385,8 @@ namespace openvpn {
 	{
 	  REST::Query q;
 	  q.emplace_back("Action", "CreateRoute");
-	  q.emplace_back("DestinationCidrBlock", route);
-	  q.emplace_back("NetworkInterfaceId", info.network_interface_id);
+	  q.emplace_back(dest_cidr_block_name, route);
+	  q.emplace_back(target_type_str, target_value);
 	  q.emplace_back("RouteTableId", info.route_table_id);
 	  add_transaction(ctx, std::move(q));
 	}
