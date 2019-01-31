@@ -636,7 +636,11 @@ private:
   static Config config()
   {
     Config c;
+#ifdef OVPNAGENT_NAME
+    c.name = OPENVPN_STRINGIZE(OVPNAGENT_NAME);
+#else
     c.name = "ovpnagent";
+#endif
     c.display_name = "OpenVPN Agent";
 #if _WIN32_WINNT < 0x0600 // pre-Vista
     c.dependencies.push_back("Dhcp"); // DHCP client
