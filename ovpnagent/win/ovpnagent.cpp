@@ -15,12 +15,20 @@
 // debug settings (production setting in parentheses)
 #define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
 
-// VERSION version can be passed on build command line
 #include <openvpn/common/stringize.hpp>
+// VERSION version can be passed on build command line
 #ifdef VERSION
 #define HTTP_SERVER_VERSION OPENVPN_STRINGIZE(VERSION)
 #else
 #define HTTP_SERVER_VERSION "0.1.0"
+#endif
+// OVPNAGENT_NAME can be passed on build command line.
+// Customized agent name is needed with purpose to install 
+// few app with agents on one OS (e.g OC 3.0 and PT)
+#ifdef OVPNAGENT_NAME
+#define OVPNAGENT_NAME_STRING OPENVPN_STRINGIZE(OVPNAGENT_NAME)
+#else
+#define OVPNAGENT_NAME_STRING "ovpnagent"
 #endif
 
 #include <openvpn/log/logbase.hpp>
@@ -636,11 +644,7 @@ private:
   static Config config()
   {
     Config c;
-#ifdef OVPNAGENT_NAME
-    c.name = OPENVPN_STRINGIZE(OVPNAGENT_NAME);
-#else
-    c.name = "ovpnagent";
-#endif
+    c.name = OVPNAGENT_NAME_STRING;
     c.display_name = "OpenVPN Agent";
 #if _WIN32_WINNT < 0x0600 // pre-Vista
     c.dependencies.push_back("Dhcp"); // DHCP client
