@@ -33,6 +33,7 @@
 #include <utility>
 
 #include <openvpn/io/io.hpp>
+#include <openvpn/asio/asiowork.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
@@ -53,6 +54,79 @@
 #endif
 
 namespace openvpn {
+  template<typename RESOLVER_TYPE>
+  class AsyncResolvable: public virtual RC<thread_unsafe_refcount>
+  {
+  private:
+    typedef RCPtr<AsyncResolvable> Ptr;
+
+    openvpn_io::io_context& io_context;
+    std::unique_ptr<AsioWork> asio_work;
+
+  public:
+    AsyncResolvable(openvpn_io::io_context& io_context_arg)
+      : io_context(io_context_arg)
+    {
+    }
+
+    virtual void resolve_callback(const openvpn_io::error_code& error,
+				  typename RESOLVER_TYPE::results_type results) = 0;
+
+    // mimic the asynchronous DNS resolution by performing a
+    // synchronous one in a detached thread.
+    //
+    // This strategy has the advantage of allowing the core to
+    // stop/exit without waiting for the getaddrinfo() (used
+    // internally) to terminate.
+    // Note: getaddrinfo() is non-interruptible by design.
+    //
+    // In other words, we are re-creating exactly what ASIO would
+    // normally do in case of async_resolve(), with the difference
+    // that here we have control over the resolving thread and we
+    // can easily detach it. Deatching the internal thread created
+    // by ASIO would not be feasible as it is not exposed.
+    void async_resolve_name(const std::string& host, const std::string& port)
+    {
+      // there might be nothing else in the main io_context queue
+      // right now, therefore we use AsioWork to prevent the loop
+      // from exiting while we perform the DNS resolution in the
+      // detached thread.
+      asio_work.reset(new AsioWork(io_context));
+
+      std::thread resolve_thread([self=Ptr(this), host, port]() {
+        openvpn_io::io_context io_context(1);
+	openvpn_io::error_code error;
+	RESOLVER_TYPE resolver(io_context);
+	typename RESOLVER_TYPE::results_type results;
+	results = resolver.resolve(host, port, error);
+
+	openvpn_io::post(self->io_context, [self, results, error]() {
+	  OPENVPN_ASYNC_HANDLER;
+	  self->resolve_callback(error, results);
+	});
+
+	// the AsioWork can be released now that we have posted
+	// something else to the main io_context queue
+	self->asio_work.reset();
+      });
+
+      // detach the thread so that the client won't need to wait for
+      // it to join.
+      resolve_thread.detach();
+    }
+
+    // to be called by the child class when the core wants to stop
+    // and we don't need to wait for the detached thread any longer.
+    // It simulates a resolve abort
+    void async_resolve_cancel()
+    {
+      asio_work.reset();
+    }
+  };
+
+  typedef AsyncResolvable<openvpn_io::ip::udp::resolver> AsyncResolvableUDP;
+  typedef AsyncResolvable<openvpn_io::ip::tcp::resolver> AsyncResolvableTCP;
+
 
   class RemoteList : public RC<thread_unsafe_refcount>
   {
@@ -262,7 +336,7 @@ namespace openvpn {
     // This is useful in tun_persist mode, where it may be necessary
     // to pre-resolve all potential remote server items prior
     // to initial tunnel establishment.
-    class PreResolve : public RC<thread_unsafe_refcount>
+    class PreResolve : public virtual RC<thread_unsafe_refcount>, AsyncResolvableTCP
     {
     public:
       typedef RCPtr<PreResolve> Ptr;
@@ -276,7 +350,7 @@ namespace openvpn {
       PreResolve(openvpn_io::io_context& io_context_arg,
 		 const RemoteList::Ptr& remote_list_arg,
 		 const SessionStats::Ptr& stats_arg)
-	:  resolver(io_context_arg),
+	:  AsyncResolvableTCP(io_context_arg),
 	   notify_callback(nullptr),
 	   remote_list(remote_list_arg),
 	   stats(stats_arg),
@@ -312,7 +386,7 @@ namespace openvpn {
       {
 	notify_callback = nullptr;
 	index = 0;
-	resolver.cancel();
+	async_resolve_cancel();
       }
 
     private:
@@ -335,14 +409,8 @@ namespace openvpn {
 		  }
 		else
 		  {
-		    // call into Asio to do the resolve operation
 		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item.server_host << " : " << item.server_port);
-		    resolver.async_resolve(item.server_host, item.server_port,
-					   [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
-					   {
-					     OPENVPN_ASYNC_HANDLER;
-					     self->resolve_callback(error, results);
-					   });
+		    async_resolve_name(item.server_host, item.server_port);
 		    return;
 		  }
 	      }
@@ -363,7 +431,7 @@ namespace openvpn {
 
       // callback on resolve completion
       void resolve_callback(const openvpn_io::error_code& error,
-			    openvpn_io::ip::tcp::resolver::results_type results)
+			    openvpn_io::ip::tcp::resolver::results_type results) override
       {
 	if (notify_callback && index < remote_list->list.size())
 	  {
@@ -384,7 +452,6 @@ namespace openvpn {
 	  }
       }
 
-      openvpn_io::ip::tcp::resolver resolver;
       NotifyCallback* notify_callback;
       RemoteList::Ptr remote_list;
       SessionStats::Ptr stats;
