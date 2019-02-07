@@ -474,7 +474,7 @@ namespace openvpn {
       Client(openvpn_io::io_context& io_context_arg,
 	     ClientConfig* config_arg,
 	     TransportClientParent* parent_arg)
-	: AsyncResolvableUDP(io_context),
+	: AsyncResolvableUDP(io_context_arg),
 	  io_context(io_context_arg),
 	  halt(false),
 	  state(new TunProp::State()),
