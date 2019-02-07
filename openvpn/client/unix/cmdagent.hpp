@@ -223,16 +223,17 @@ namespace openvpn {
 	  }
 
 	// Parse the returned json dict
-	Json::Value jres;
-	Json::Reader reader;
-	if (!reader.parse(content, jres, false))
+        try {
+	  Json::Value jres = json::parse(content);
+	  if (!jres.isObject())
+	    throw ovpnagent("returned JSON content is not a dictionary");
+	  return jres;
+        }
+        catch (const json::json_parse& e)
 	  {
 	    os << content;
-	    OPENVPN_THROW(ovpnagent, "error parsing returned JSON: " << reader.getFormattedErrorMessages());
+	    OPENVPN_THROW(ovpnagent, "error parsing returned JSON: " << e.what());
 	  }
-	if (!jres.isObject())
-	  throw ovpnagent("returned JSON content is not a dictionary");
-	return jres;
       }
 
       Config::Ptr config;
