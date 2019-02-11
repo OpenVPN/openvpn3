@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Inc.
+//    Copyright (C) 2012-2019 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -17,33 +17,20 @@
 //
 //    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
-//    If not, see <http://www.gnu.org/licenses/>.
 
-#include "test_common.h"
-
-
-// The ovpncli.cpp file is not all OPENVPN_EXTERN safe and totally breaks
-// if included in two files. We probably need to fix this or rename this
-// file test_ovpncli and do ALL test that require ovpncli in this file
-// (or have multiple test suites)
-
-#undef OPENVPN_EXTERN
-#define OPENVPN_EXTERN
-
-#include <client/ovpncli.cpp>
+#include <gtest/gtest.h>
 
 
-#include <string>
-#include <sstream>
+// We also need to import here all header files that
+// define globals so that consumers that use them despite
+// requesting them not to be declared with OPENVPN_EXTERN
 
-namespace unittests
-{  
-  TEST(LogInfoTest, TestLogInfo)
-  {    
-    std::string msg("logMessage");
-    openvpn::ClientAPI::LogInfo logInfo(msg);
-    auto text = logInfo.text;
+#include <asio.hpp>
+#include <openvpn/log/logbasesimple.hpp>
 
-    ASSERT_EQ(text, msg);
-  }
-}  // namespace
+
+int main (int argc, char **argv)
+{
+  ::testing::InitGoogleTest (&argc, argv);
+  return RUN_ALL_TESTS ();
+}

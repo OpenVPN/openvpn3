@@ -55,12 +55,15 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 
 
 
-add_executable(testLog
+add_executable(coreUnitTests
+        core_tests.cpp
+        test_route_emulation.cpp
         test_log.cpp
         )
 
-target_link_libraries(testLog gtest_main OpenSSL::SSL)
-target_include_directories(testLog PRIVATE ${CORE_INCLUDES})
-target_compile_definitions(testLog PRIVATE ${CORE_TEST_DEFINES})
+target_link_libraries(coreUnitTests gtest_main)
+target_include_directories(coreUnitTests PRIVATE ${CORE_INCLUDES})
+target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
+target_link_libraries(coreUnitTests gtest_main OpenSSL::SSL)
 
-add_test(NAME LogTest COMMAND  testLog)
+add_test(NAME CoreTests COMMAND coreUnitTests)
