@@ -2,12 +2,21 @@
 //  agentconfig.hpp
 //  OpenVPN
 //
-//  Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
+//  Copyright (C) 2012-2019 OpenVPN Technologies, Inc.
 //  All rights reserved.
 //
 
 #ifndef OPENVPN_CLIENT_WIN_AGENTCONFIG_H
 #define OPENVPN_CLIENT_WIN_AGENTCONFIG_H
+
+// OVPNAGENT_NAME can be passed on build command line.
+// Customized agent name is needed with purpose to install 
+// few app with agents on one OS (e.g OC 3.0 and PT)
+#ifdef OVPNAGENT_NAME
+#define OVPNAGENT_NAME_STRING OPENVPN_STRINGIZE(OVPNAGENT_NAME)
+#else
+#define OVPNAGENT_NAME_STRING "ovpnagent"
+#endif
 
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/path.hpp>
@@ -18,7 +27,7 @@ namespace openvpn {
   public:
     static std::string named_pipe_path()
     {
-      return "\\\\.\\pipe\\ovpnagent";
+      return "\\\\.\\pipe\\" OVPNAGENT_NAME_STRING;
     }
 
     static bool valid_pipe(const std::string& client_exe,
