@@ -590,7 +590,7 @@ public:
 #endif
 
     WS::Server::Config::Ptr hconf = new WS::Server::Config();
-    hconf->http_server_id = "ovpnagent/" HTTP_SERVER_VERSION;
+    hconf->http_server_id = OVPNAGENT_NAME_STRING "/" HTTP_SERVER_VERSION;
     hconf->frame = frame_init_simple(2048);
     hconf->stats.reset(new MySessionStats);
 
