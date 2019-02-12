@@ -36,6 +36,7 @@
 #include <mbedtls/sha1.h>
 #include <mbedtls/debug.h>
 #include <mbedtls/asn1.h>
+#include <mbedtls/version.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -1237,8 +1238,8 @@ namespace openvpn {
 		  OPENVPN_LOG_SSL("VERIFY FAIL -- SHA1 calculation failed.");
 		  fail = true;
 		}
-	    }
 #endif
+	    }
 	}
       else if (depth == 0) // leaf-cert
 	{
