@@ -87,7 +87,7 @@ namespace openvpn {
       friend LinkImpl::Base;             // calls tcp_read_handler
 
     public:
-      virtual void transport_start()
+      void transport_start() override
       {
 	if (!impl)
 	  {
@@ -108,17 +108,17 @@ namespace openvpn {
 	  }
       }
 
-      virtual bool transport_send_const(const Buffer& buf)
+      bool transport_send_const(const Buffer& buf) override
       {
 	return send_const(buf);
       }
 
-      virtual bool transport_send(BufferAllocated& buf)
+      bool transport_send(BufferAllocated& buf) override
       {
 	return send(buf);
       }
 
-      virtual bool transport_send_queue_empty()
+      bool transport_send_queue_empty() override
       {
 	if (impl)
 	  return impl->send_queue_empty();
@@ -126,12 +126,12 @@ namespace openvpn {
 	  return false;
       }
 
-      virtual bool transport_has_send_queue()
+      bool transport_has_send_queue() override
       {
 	return true;
       }
 
-      virtual unsigned int transport_send_queue_size()
+      unsigned int transport_send_queue_size() override
       {
 	if (impl)
 	  return impl->send_queue_size();
@@ -139,13 +139,13 @@ namespace openvpn {
 	  return 0;
       }
 
-      virtual void reset_align_adjust(const size_t align_adjust)
+      void reset_align_adjust(const size_t align_adjust) override
       {
 	if (impl)
 	  impl->reset_align_adjust(align_adjust);
       }
 
-      virtual void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const
+      void server_endpoint_info(std::string& host, std::string& port, std::string& proto, std::string& ip_addr) const override
       {
 	host = server_host;
 	port = server_port;
@@ -154,18 +154,18 @@ namespace openvpn {
 	ip_addr = addr.to_string();
       }
 
-      virtual IP::Addr server_endpoint_addr() const
+      IP::Addr server_endpoint_addr() const override
       {
 	return IP::Addr::from_asio(server_endpoint.address());
       }
 
-      virtual Protocol transport_protocol() const
+      Protocol transport_protocol() const override
       {
 	return server_protocol;
       }
 
-      virtual void stop() { stop_(); }
-      virtual ~Client() { stop_(); }
+      void stop() override { stop_(); }
+      ~Client() override { stop_(); }
 
     private:
       Client(openvpn_io::io_context& io_context_arg,
@@ -182,12 +182,12 @@ namespace openvpn {
       {
       }
 
-      virtual void transport_reparent(TransportClientParent* parent_arg)
+      void transport_reparent(TransportClientParent* parent_arg) override
       {
 	parent = parent_arg;
       }
 
-      virtual void transport_stop_requeueing()
+      void transport_stop_requeueing() override
       {
 	stop_requeueing = true;
       }
