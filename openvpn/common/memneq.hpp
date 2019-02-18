@@ -19,11 +19,15 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_COMMON_MEMNEQ_H
-#define OPENVPN_COMMON_MEMNEQ_H
+#pragma once
 
 #include <openvpn/common/arch.hpp>
 #include <openvpn/common/size.hpp>
+#include <atomic>
+
+#if defined(USE_OPENSSL)
+#include <openssl/crypto.h>
+#endif
 
 // Does this architecture allow efficient unaligned access?
 
@@ -60,7 +64,47 @@ extern "C" void _ReadWriteBarrier();
 
 namespace openvpn {
   namespace crypto {
+    // Clang on Android armeabi-v7a seems to have a compiler bug that compiles
+    // the  function in a segfaulting variant, use an alternative variant of
+    // the function on all 32 bit arm to be safe
 
+
+    /**
+     * memneq - Compare two areas of memory in constant time
+     *
+     * @a: first area of memory
+     * @b: second area of memory
+     * @size: The length of the memory area to compare
+     *
+     * Returns false when data is equal, true otherwise
+     */
+    inline bool memneq(const void *a, const void *b, size_t size);
+
+#if defined(__arm__) && defined(USE_OPENSSL) && !defined(__aarch64__)
+    inline bool memneq(const void *a, const void *b, size_t size)
+    {
+      // memcmp does return 0 (=false) when the memory is equal. It normally
+      // returns the position of first mismatch otherwise but the crypto
+      // variants only promise to return something != 0 (=true)
+      return (bool)(CRYPTO_memcmp(a, b, size));
+    }
+#elif defined(__arm__) && !defined(__aarch64__)
+    inline bool memneq(const void *a, const void *b, size_t size)
+    {
+      // This is inspired by  mbedtls' internal safer_memcmp function:
+      const unsigned char *x = (const unsigned char *) a;
+      const unsigned char *y = (const unsigned char *) b;
+      unsigned char diff = 0;
+
+      for(size_t i = 0; i < size; i++ )
+	{
+	  unsigned char u = x[i], v = y[i];
+	  diff |= u ^ v;
+	}
+      atomic_thread_fence(std::memory_order_release);
+      return bool(diff);
+    }
+#else
 #ifdef OPENVPN_HAVE_EFFICIENT_UNALIGNED_ACCESS
     enum { memneq_unaligned_ok = 1 };
     typedef size_t memneq_t;
@@ -110,7 +154,6 @@ namespace openvpn {
       OPENVPN_COMPILER_FENCE
       return bool(neq);
     }
+#endif
   }
 }
-
-#endif
