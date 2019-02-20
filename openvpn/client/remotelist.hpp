@@ -31,10 +31,12 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <thread>
 
 #include <openvpn/io/io.hpp>
 #include <openvpn/asio/asiowork.hpp>
 
+#include <openvpn/common/bigmutex.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
