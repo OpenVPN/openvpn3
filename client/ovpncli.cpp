@@ -1381,7 +1381,9 @@ namespace openvpn {
 #ifdef OPENVPN_GREMLIN
       ret += " GREMLIN";
 #endif
+#ifdef OPENVPN_DEBUG
       ret += " built on " __DATE__ " " __TIME__;
+#endif
       return ret;
     }
 
