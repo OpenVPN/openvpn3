@@ -166,6 +166,18 @@ namespace openvpn {
 	log_observers.erase(lu);
     }
 
+    std::vector<typename ServerThread::Ptr> get_servers()
+    {
+      std::lock_guard<std::recursive_mutex> lock(mutex);
+      std::vector<typename ServerThread::Ptr> ret;
+      if (halt)
+	return ret;
+      ret.reserve(servlist.size());
+      for (auto sp : servlist)
+	ret.emplace_back(sp);
+      return ret;
+    }
+
     void enable_log_history()
     {
       std::lock_guard<std::recursive_mutex> lock(mutex);
