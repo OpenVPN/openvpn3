@@ -902,6 +902,13 @@ namespace openvpn {
 	    client_factory->stop();
 	}
 
+	template <typename CLIENT_INSTANCE, typename FUNC>
+	void walk(FUNC func) const
+	{
+	  for (auto &c : clients)
+	    func(*static_cast<CLIENT_INSTANCE*>(c.second.get()));
+	}
+
       private:
 	typedef std::unordered_map<client_t, Client::Ptr> ClientMap;
 
