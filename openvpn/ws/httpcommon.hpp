@@ -136,9 +136,10 @@ namespace openvpn {
 	  throw http_exception("http_content_out_finish: no deferred state");
       }
 
-      void update_max_content_bytes(const CONTENT_LENGTH_TYPE new_max_content_bytes)
+      void reduce_max_content_bytes(const CONTENT_LENGTH_TYPE new_max_content_bytes)
       {
-	max_content_bytes = new_max_content_bytes;
+	if (new_max_content_bytes && new_max_content_bytes < max_content_bytes)
+	  max_content_bytes = new_max_content_bytes;
       }
 
     protected:
