@@ -68,6 +68,35 @@ namespace openvpn {
 #endif
     }
 
+#ifdef OPENVPN_JSON_INTERNAL
+    template <typename NAME, typename TITLE>
+    inline const Json::Value& cast(const Json::ValueType target_type,
+				   const Json::Value& value,
+				   const NAME& name,
+				   const bool optional,
+				   const TITLE& title)
+    {
+      if (value.isNull())
+	{
+	  if (optional)
+	    return value;
+	  throw json_parse(Json::Value::type_string(target_type) + " cast " + fmt_name(name, title) + " is null");
+	}
+      if (!value.isConvertibleTo(target_type))
+	throw json_parse(Json::Value::type_string(target_type) + "cast " + fmt_name(name, title) + " is of incorrect type (" + value.type_string() + ')');
+      return value;
+    }
+
+    template <typename NAME, typename TITLE>
+    inline const Json::Value& cast(const Json::ValueType target_type,
+				   const Json::Value& value,
+				   const NAME& name,
+				   const bool optional)
+    {
+      return cast(target_type, value, name, optional, nullptr);
+    }
+#endif
+
     template <typename T, typename NAME>
     inline void from_vector(Json::Value& root, const T& vec, const NAME& name)
     {
