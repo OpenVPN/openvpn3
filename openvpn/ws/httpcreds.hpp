@@ -18,7 +18,7 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/splitlines.hpp>
-#include <openvpn/common/memneq.hpp>
+#include <openvpn/common/strneq.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/userpass.hpp>
 #include <openvpn/common/platform.hpp>
@@ -126,18 +126,16 @@ namespace openvpn {
 
       bool operator==(const Creds& rhs) const
       {
-	if (username != rhs.username)
-	  return false;
-	if (password.length() != rhs.password.length())
-	  return false;
-	if (crypto::memneq(password.c_str(), rhs.password.c_str(), password.length()))
-	  return false;
-	return true;
+	return !operator!=(rhs);
       }
 
       bool operator!=(const Creds& rhs) const
       {
-	return !operator==(rhs);
+	bool neq = crypto::str_neq(username, rhs.username);
+	OPENVPN_COMPILER_FENCE
+        neq |= crypto::str_neq(password, rhs.password);
+	OPENVPN_COMPILER_FENCE
+	return neq;
       }
 
       std::string to_string() const
