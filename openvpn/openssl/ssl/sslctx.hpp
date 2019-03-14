@@ -97,8 +97,7 @@ namespace openvpn {
 		 tls_version_min(TLSVersion::UNDEF),
 		 tls_cert_profile(TLSCertProfile::UNDEF),
 		 local_cert_enabled(true),
-		 force_aes_cbc_ciphersuites(false),
-		 enable_renegotiation(false) {}
+		 force_aes_cbc_ciphersuites(false) {}
 
       virtual SSLFactoryAPI::Ptr new_factory()
       {
@@ -260,11 +259,6 @@ namespace openvpn {
 	local_cert_enabled = v;
       }
 
-      virtual void set_enable_renegotiation(const bool v)
-      {
-	enable_renegotiation = v;
-      }
-
       virtual void set_force_aes_cbc_ciphersuites(const bool v)
       {
 	force_aes_cbc_ciphersuites = v;
@@ -421,7 +415,6 @@ namespace openvpn {
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
       bool force_aes_cbc_ciphersuites;
-      bool enable_renegotiation;
     };
 
     // Represents an actual SSL session.
@@ -925,8 +918,6 @@ namespace openvpn {
 		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: DH not defined");
 	      if (!SSL_CTX_set_tmp_dh(ctx, config->dh.obj()))
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
-	      if (config->enable_renegotiation)
-		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_SERVER);
 	      if (config->flags & SSLConst::SERVER_TO_SERVER)
 		SSL_CTX_set_purpose(ctx, X509_PURPOSE_SSL_SERVER);
 	    }
@@ -935,24 +926,19 @@ namespace openvpn {
 	      ctx = SSL_CTX_new(SSL::tls_method_client());
 	      if (ctx == nullptr)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
-	      if (config->enable_renegotiation)
-		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT); // note: SSL_set_session must be called as well
 	    }
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: unknown config->mode");
 
 	  // Set SSL options
-	  if (!config->enable_renegotiation)
-	    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	  if (!(config->flags & SSLConst::NO_VERIFY_PEER))
 	    {
 	      SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
 				 config->mode.is_client() ? verify_callback_client : verify_callback_server);
 	      SSL_CTX_set_verify_depth(ctx, 16);
 	    }
-	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION;
-	  if (!config->enable_renegotiation)
-	    sslopt |= SSL_OP_NO_TICKET;
+	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION | SSL_OP_NO_TICKET;
 
 	  /* Disable SSLv2 and SSLv3, might be a noop but does not hurt */
 	  sslopt |= SSL_OP_NO_SSLv2;

@@ -212,7 +212,6 @@ namespace openvpn {
 		 tls_version_min(TLSVersion::UNDEF),
 		 tls_cert_profile(TLSCertProfile::UNDEF),
 		 local_cert_enabled(true),
-		 enable_renegotiation(false),
 		 force_aes_cbc_ciphersuites(false),
 		 allow_name_constraints(false) {}
 
@@ -395,11 +394,6 @@ namespace openvpn {
       virtual void set_local_cert_enabled(const bool v)
       {
 	local_cert_enabled = v;
-      }
-
-      virtual void set_enable_renegotiation(const bool v)
-      {
-	enable_renegotiation = v;
       }
 
       virtual void set_force_aes_cbc_ciphersuites(const bool v)
@@ -590,7 +584,6 @@ namespace openvpn {
       TLSCertProfile::Type tls_cert_profile;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
-      bool enable_renegotiation;
       bool force_aes_cbc_ciphersuites;
       bool allow_name_constraints;
       RandomAPI::Ptr rng;   // random data source
@@ -787,15 +780,12 @@ namespace openvpn {
 
 	  // Notes on SSL resume/renegotiation:
 	  // SSL resume on server side is controlled by ssl_set_session_cache.
-	  // SSL renegotiation on/off is handled here via ssl_set_renegotiation.
-	  // Without calling ssl_set_renegotiation, it defaults to
-	  // MBEDTLS_SSL_RENEGOTIATION_DISABLED and ssl_legacy_renegotiation defaults to
+	  // SSL renegotiation is disabled here via MBEDTLS_SSL_RENEGOTIATION_DISABLED
+	  // and ssl_legacy_renegotiation defaults to
 	  // MBEDTLS_SSL_LEGACY_NO_RENEGOTIATION.  To enable session tickets,
 	  // MBEDTLS_SSL_SESSION_TICKETS (compile flag) must be defined
 	  // in mbed TLS config.h.
-	  mbedtls_ssl_conf_renegotiation(sslconf,
-					 c.enable_renegotiation
-					 ? MBEDTLS_SSL_RENEGOTIATION_ENABLED : MBEDTLS_SSL_RENEGOTIATION_DISABLED);
+	  mbedtls_ssl_conf_renegotiation(sslconf, MBEDTLS_SSL_RENEGOTIATION_DISABLED);
 
 	  mbedtls_ssl_conf_ciphersuites(sslconf, c.force_aes_cbc_ciphersuites ?
 					mbedtls_ctx_private::aes_cbc_ciphersuites :
