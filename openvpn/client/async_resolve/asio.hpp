@@ -38,46 +38,7 @@ namespace openvpn {
     typedef RCPtr<AsyncResolvable> Ptr;
 
     openvpn_io::io_context& io_context;
-
-    class ResolveThread : public RC<thread_safe_refcount>
-    {
-      friend class AsyncResolvable<RESOLVER_TYPE>;
-
-    private:
-      typedef RCPtr<ResolveThread> Ptr;
-
-      std::unique_ptr<AsioWork> asio_work;
-      openvpn_io::io_context& io_context;
-      AsyncResolvable<RESOLVER_TYPE> *resolvable;
-
-      ResolveThread(openvpn_io::io_context &io_context_arg,
-		    AsyncResolvable<RESOLVER_TYPE> *resolvable_arg,
-		    const std::string& host, const std::string& port)
-	: asio_work(new AsioWork(io_context_arg)),
-	  io_context(io_context_arg),
-	  resolvable(resolvable_arg)
-      {
-	std::thread resolve_thread([self=Ptr(this), host, port]() {
-	    openvpn_io::io_context io_context(1);
-	    openvpn_io::error_code error;
-	    RESOLVER_TYPE resolver(io_context);
-	    typename RESOLVER_TYPE::results_type results;
-	    results = resolver.resolve(host, port, error);
-
-	    openvpn_io::post(self->io_context, [self, results, error]() {
-	      OPENVPN_ASYNC_HANDLER;
-	      self->resolvable->resolve_callback(error, results);
-	    });
-
-	    // the AsioWork can be released now that we have posted
-	    // something else to the main io_context queue
-	    self->asio_work.reset();
-	  });
-	// detach the thread so that the client won't need to wait for
-	// it to join.
-        resolve_thread.detach();
-      }
-    };
+    std::unique_ptr<AsioWork> asio_work;
 
   public:
     AsyncResolvable(openvpn_io::io_context& io_context_arg)
@@ -107,13 +68,36 @@ namespace openvpn {
       // right now, therefore we use AsioWork to prevent the loop
       // from exiting while we perform the DNS resolution in the
       // detached thread.
-      typename ResolveThread::Ptr t(new ResolveThread(io_context, this, host, port));
+      asio_work.reset(new AsioWork(io_context));
+
+      std::thread resolve_thread([self=Ptr(this), host, port]() {
+        openvpn_io::io_context io_context(1);
+	openvpn_io::error_code error;
+	RESOLVER_TYPE resolver(io_context);
+	typename RESOLVER_TYPE::results_type results;
+	results = resolver.resolve(host, port, error);
+
+	openvpn_io::post(self->io_context, [self, results, error]() {
+	  OPENVPN_ASYNC_HANDLER;
+	  self->resolve_callback(error, results);
+	});
+
+	// the AsioWork can be released now that we have posted
+	// something else to the main io_context queue
+	self->asio_work.reset();
+      });
+
+      // detach the thread so that the client won't need to wait for
+      // it to join.
+      resolve_thread.detach();
     }
 
-    // The core assumes the existence of this method because it is used on
-    // other platforms (i.e. iOS), therefore we must declare it, even if no-op
+    // to be called by the child class when the core wants to stop
+    // and we don't need to wait for the detached thread any longer.
+    // It simulates a resolve abort
     void async_resolve_cancel()
     {
+      asio_work.reset();
     }
   };
 }
