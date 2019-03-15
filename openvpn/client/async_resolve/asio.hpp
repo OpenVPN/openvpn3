@@ -64,12 +64,6 @@ namespace openvpn {
     // by ASIO would not be feasible as it is not exposed.
     void async_resolve_name(const std::string& host, const std::string& port)
     {
-      // there might be nothing else in the main io_context queue
-      // right now, therefore we use AsioWork to prevent the loop
-      // from exiting while we perform the DNS resolution in the
-      // detached thread.
-      asio_work.reset(new AsioWork(io_context));
-
       std::thread resolve_thread([self=Ptr(this), host, port]() {
         openvpn_io::io_context io_context(1);
 	openvpn_io::error_code error;
@@ -81,15 +75,20 @@ namespace openvpn {
 	  OPENVPN_ASYNC_HANDLER;
 	  self->resolve_callback(error, results);
 	});
-
-	// the AsioWork can be released now that we have posted
-	// something else to the main io_context queue
-	self->asio_work.reset();
       });
 
       // detach the thread so that the client won't need to wait for
       // it to join.
       resolve_thread.detach();
+    }
+
+    // there might be nothing else in the main io_context queue
+    // right now, therefore we use AsioWork to prevent the loop
+    // from exiting while we perform the DNS resolution in the
+    // detached thread.
+    void async_resolve_lock()
+    {
+      asio_work.reset(new AsioWork(io_context));
     }
 
     // to be called by the child class when the core wants to stop

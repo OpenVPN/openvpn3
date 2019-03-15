@@ -304,6 +304,7 @@ namespace openvpn {
 		notify_callback = notify_callback_arg;
 		remote_list->index.reset();
 		index = 0;
+		async_resolve_lock();
 		next();
 	      }
 	    else
@@ -350,6 +351,7 @@ namespace openvpn {
 	// resolve unless doing so would result in an empty list.
 	// Then call client's callback method.
 	{
+	  async_resolve_cancel();
 	  NotifyCallback* ncb = notify_callback;
 	  if (remote_list->cached_item_exists())
 	    remote_list->prune_uncached();

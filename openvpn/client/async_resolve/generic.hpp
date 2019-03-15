@@ -64,6 +64,11 @@ namespace openvpn {
 	});
     }
 
+    // no-op: needed to provide the same class signature of the ASIO version
+    void async_resolve_lock()
+    {
+    }
+
     void async_resolve_cancel()
     {
       resolver.cancel();
