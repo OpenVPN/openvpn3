@@ -28,6 +28,7 @@
 #include <vector>
 #include <cstring>
 #include <cctype>
+#include <algorithm>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/size.hpp>
@@ -66,6 +67,18 @@ namespace openvpn {
       strncpy (dest, src, maxlen);
       if (maxlen > 0)
 	dest[maxlen - 1] = 0;
+    }
+
+    // Copy string to dest, make sure dest is always null terminated,
+    // and fill out trailing chars in dest with '\0' up to dest_size.
+    inline void copy_fill (void *dest, const std::string& src, const size_t dest_size)
+    {
+      if (dest_size > 0)
+	{
+	  const size_t ncopy = std::min(dest_size - 1, src.length());
+	  std::memcpy(dest, src.c_str(), ncopy);
+	  std::memset(static_cast<unsigned char *>(dest) + ncopy, 0, dest_size - ncopy);
+	}
     }
 
     inline bool is_true(const std::string& str)
