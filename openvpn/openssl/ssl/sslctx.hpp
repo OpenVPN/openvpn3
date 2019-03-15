@@ -615,12 +615,15 @@ namespace openvpn {
       }
 
       // Print a one line summary of SSL/TLS session handshake.
-      static std::string ssl_handshake_details (const ::SSL *c_ssl)
+      static std::string ssl_handshake_details (::SSL *c_ssl)
       {
 	std::ostringstream os;
 
+	os << SSL_get_version (c_ssl);
+
 	const SSL_CIPHER *ciph = SSL_get_current_cipher (c_ssl);
-	os << SSL_get_version (c_ssl) << ", cipher " << SSL_CIPHER_get_version (ciph) << ' ' << SSL_CIPHER_get_name (ciph);
+	if (ciph)
+	  os << ", cipher " << SSL_CIPHER_get_version (ciph) << ' ' << SSL_CIPHER_get_name (ciph);
 
 	::X509 *cert = SSL_get_peer_certificate (c_ssl);
 	if (cert != nullptr)
