@@ -148,6 +148,11 @@ namespace openvpn {
 	return !cn.empty();
       }
 
+      bool is_uninitialized() const
+      {
+	return cn.empty() && sn < 0 && !fail;
+      }
+
       template <typename T>
       T issuer_fp_prefix() const
       {
