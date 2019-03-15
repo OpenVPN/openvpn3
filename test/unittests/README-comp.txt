@@ -1,12 +1,3 @@
-Test LZO-Asym correctness and performance:
-
-  GCC_EXTRA="-DTEST_LZO_ASYM -DN_EXPAND=1000" LZO=1 build test && time ./test
-
-Compare above LZO-Asym decompression with real LZO compressor:
-
-  GCC_EXTRA="-DTEST_LZO -DN_EXPAND=1000" LZO=1 build test && time ./test
-
-Compare Snappy with LZO performance:
-
-  ASIO=1 GCC_EXTRA="-DTEST_SNAPPY -DN_COMPRESS=1000" SNAP=1 build test && time ./test
-  ASIO=1 GCC_EXTRA="-DTEST_LZO -DN_COMPRESS=1000" LZO=1 build test && time ./test
+To test and compare speed of the decomrpession algorithms define N_EXPAND to be more than 1 by either edition
+the test-comp.c or by add a -DN_EXPAND=1000 or -DN_COMPRESS=1000 for the compression speed in the CmakeLists
+and looks at the time the unit test take for the different combinations.

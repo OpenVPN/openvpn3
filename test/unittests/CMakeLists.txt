@@ -13,7 +13,7 @@ set(DEP_DIR ${O3_DIR}/deps CACHE PATH "Dependencies")
 option(USE_MBEDTLS "Use mbed TLS instead of OpenSSL")
 
 # For the mbedtls cmake script
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake;${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 # Include our DEP_DIR in path used to find libraries
 
@@ -32,20 +32,25 @@ set(CORE_INCLUDES
 set(CORE_TEST_DEFINES
         -DASIO_STANDALONE
         -DUSE_ASIO
+        -DHAVE_LZ4
         -DLZ4_DISABLE_DEPRECATE_WARNINGS
         -DOPENVPN_FORCE_TUN_NULL
         -DMBEDTLS_DEPRECATED_REMOVED
+        -DUNIT_TEST
+        -DUNITTEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\"
         )
 
 if (WIN32)
     list (APPEND CMAKE_PREFIX_PATH
             ${DEP_DIR}/${PLAT}/mbedtls
+            ${DEP_DIR}/${PLAT}/lz4/lib
             )
     list (APPEND CMAKE_LIBRARY_PATH
             ${DEP_DIR}/${PLAT}/mbedtls/library
             )
-    list (APPEND CORE_INCLUDES APPEND
+    list (APPEND CORE_INCLUDES
             ${DEP_DIR}/${PLAT}/asio/asio/include
+            ${DEP_DIR}/${PLAT}/lz4/lz4/include
             ${DEP_DIR}/${PLAT}/tap-windows/src
             )
     list (APPEND CORE_TEST_DEFINES
@@ -56,6 +61,7 @@ if (WIN32)
 else()
     list (APPEND CMAKE_PREFIX_PATH
             ${DEP_DIR}/mbedtls/mbedtls-${PLAT}
+            ${DEP_DIR}/lz4/lz4-${PLAT}
             )
     list (APPEND CMAKE_LIBRARY_PATH
             ${DEP_DIR}/mbedtls/mbedtls-${PLAT}/library
@@ -80,6 +86,21 @@ else()
     list(APPEND CORE_TEST_DEFINES -DUSE_OPENSSL)
 endif()
 
+FIND_PATH(LZO_INCLUDE_DIR NAMES lzo/lzo1x.h)
+FIND_LIBRARY(LZO_LIBRARIES NAMES lzo2)
+
+find_package(LZ4 REQUIRED)
+list(APPEND CORE_INCLUDES ${LZ4_INCLUDE_DIR})
+
+
+if (LZO_INCLUDE_DIR AND LZO_LIBRARIES)
+    list(APPEND CORE_TEST_DEFINES -DHAVE_LZO)
+    list(APPEND EXTRA_LIBS ${LZO_LIBRARIES})
+    list(APPEND CORE_INCLUDES ${LZO_INCLUDE_DIR})
+    message("lzo found, running lzo compression tests")
+else()
+    message("lzo not found, skipping lzo compression tests")
+endif()
 
 # Google Test Unit testing
 # Download and unpack googletest at configure time
@@ -113,11 +134,12 @@ add_executable(coreUnitTests
         core_tests.cpp
         test_route_emulation.cpp
         test_log.cpp
+        test_comp.cpp
         )
 
 target_link_libraries(coreUnitTests gtest_main)
 target_include_directories(coreUnitTests PRIVATE ${CORE_INCLUDES})
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
-target_link_libraries(coreUnitTests gtest_main ${SSL_LIBRARY} ${EXTRA_LIBS})
+target_link_libraries(coreUnitTests gtest_main ${SSL_LIBRARY} ${EXTRA_LIBS} ${LZ4_LIBRARY})
 
 add_test(NAME CoreTests COMMAND coreUnitTests)
