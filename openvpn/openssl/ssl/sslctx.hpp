@@ -90,15 +90,6 @@ namespace openvpn {
     public:
       typedef RCPtr<Config> Ptr;
 
-      Config() : external_pki(nullptr),
-		 ssl_debug_level(0),
-		 flags(0),
-		 ns_cert_type(NSCert::NONE),
-		 tls_version_min(TLSVersion::UNDEF),
-		 tls_cert_profile(TLSCertProfile::UNDEF),
-		 local_cert_enabled(true),
-		 force_aes_cbc_ciphersuites(false) {}
-
       virtual SSLFactoryAPI::Ptr new_factory()
       {
 	return SSLFactoryAPI::Ptr(new OpenSSLContext(this));
@@ -402,19 +393,19 @@ namespace openvpn {
       OpenSSLPKI::X509List extra_certs; // from OpenVPN "extra-certs" option
       OpenSSLPKI::PKey pkey;            // private key
       OpenSSLPKI::DH dh;                // diffie-hellman parameters (only needed in server mode)
-      ExternalPKIBase* external_pki;
+      ExternalPKIBase* external_pki = nullptr;
       Frame::Ptr frame;
-      int ssl_debug_level;
-      unsigned int flags;           // defined in sslconsts.hpp
-      NSCert::Type ns_cert_type;
+      int ssl_debug_level = 0;
+      unsigned int flags = 0;           // defined in sslconsts.hpp
+      NSCert::Type ns_cert_type{NSCert::NONE};
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
-      TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
-      TLSCertProfile::Type tls_cert_profile;
+      TLSVersion::Type tls_version_min{TLSVersion::UNDEF}; // minimum TLS version that we will negotiate
+      TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
       X509Track::ConfigSet x509_track_config;
-      bool local_cert_enabled;
-      bool force_aes_cbc_ciphersuites;
+      bool local_cert_enabled = true;
+      bool force_aes_cbc_ciphersuites = false;
     };
 
     // Represents an actual SSL session.
@@ -903,9 +894,7 @@ namespace openvpn {
     /////// start of main class implementation
 
     OpenSSLContext(Config* config_arg)
-      : config(config_arg),
-	ctx(nullptr),
-	epki(nullptr)
+      : config(config_arg)
     {
       try
 	{
@@ -1599,8 +1588,8 @@ namespace openvpn {
     }
 
     Config::Ptr config;
-    SSL_CTX* ctx;
-    ExternalPKIImpl* epki;
+    SSL_CTX* ctx = nullptr;
+    ExternalPKIImpl* epki = nullptr;
   };
 
   int OpenSSLContext::SSL::mydata_index = -1;
