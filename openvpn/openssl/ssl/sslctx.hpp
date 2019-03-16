@@ -33,6 +33,7 @@
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 #include <openssl/rsa.h>
+#include <openssl/rand.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -61,6 +62,7 @@
 #include <openvpn/openssl/pki/dh.hpp>
 #include <openvpn/openssl/pki/x509store.hpp>
 #include <openvpn/openssl/bio/bio_memq_stream.hpp>
+#include <openvpn/openssl/ssl/sess_cache.hpp>
 
 // An SSL Context is essentially a configuration that can be used
 // to generate an arbitrary number of actual SSL connections objects.
@@ -109,6 +111,18 @@ namespace openvpn {
       virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
       {
 	external_pki = external_pki_arg;
+      }
+
+      // server side
+      virtual void set_session_ticket_handler(TLSSessionTicketBase* session_ticket_handler_arg)
+      {
+	session_ticket_handler = session_ticket_handler_arg;
+      }
+
+      // client side
+      virtual void set_client_session_tickets(const bool v)
+      {
+	client_session_tickets = v;
       }
 
       virtual void set_private_key_password(const std::string& pwd)
@@ -394,6 +408,7 @@ namespace openvpn {
       OpenSSLPKI::PKey pkey;            // private key
       OpenSSLPKI::DH dh;                // diffie-hellman parameters (only needed in server mode)
       ExternalPKIBase* external_pki = nullptr;
+      TLSSessionTicketBase* session_ticket_handler = nullptr; // server side only
       Frame::Ptr frame;
       int ssl_debug_level = 0;
       unsigned int flags = 0;           // defined in sslconsts.hpp
@@ -406,6 +421,7 @@ namespace openvpn {
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
       bool force_aes_cbc_ciphersuites = false;
+      bool client_session_tickets = false;
     };
 
     // Represents an actual SSL session.
@@ -430,7 +446,10 @@ namespace openvpn {
 	    if (status == -1 && BIO_should_retry(ssl_bio))
 	      return SSLConst::SHOULD_RETRY;
 	    else
-	      OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::write_cleartext: BIO_write failed, size=" << size << " status=" << status);
+	      {
+		mark_no_cache();
+		OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::write_cleartext: BIO_write failed, size=" << size << " status=" << status);
+	      }
 	  }
 	else
 	  return status;
@@ -446,7 +465,10 @@ namespace openvpn {
 		if (status == -1 && BIO_should_retry(ssl_bio))
 		  return SSLConst::SHOULD_RETRY;
 		else
-		  OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
+		  {
+		    mark_no_cache();
+		    OPENVPN_THROW(OpenSSLException, "OpenSSLContext::SSL::read_cleartext: BIO_read failed, cap=" << capacity << " status=" << status);
+		  }
 	      }
 	    else
 	      return status;
@@ -493,9 +515,18 @@ namespace openvpn {
 	return ssl_handshake_details(ssl);
       }
 
-      virtual const AuthCert::Ptr& auth_cert() const
+      virtual const AuthCert::Ptr& auth_cert()
       {
+	// Reused sessions don't call the cert verify callbacks,
+	// so we must use an alternative method to build authcert.
+	if (authcert && authcert->is_uninitialized())
+	  rebuild_authcert();
 	return authcert;
+      }
+
+      virtual void mark_no_cache()
+      {
+	sess_cache_key.reset();
       }
 
       ~SSL()
@@ -535,7 +566,7 @@ namespace openvpn {
       }
 
     private:
-      SSL(const OpenSSLContext& ctx, const char *hostname)
+      SSL(const OpenSSLContext& ctx, const std::string* hostname, const std::string* cache_key)
       {
 	ssl_clear();
 	try {
@@ -552,7 +583,7 @@ namespace openvpn {
 	    {
 	      X509_VERIFY_PARAM *param = SSL_get0_param(ssl);
 	      X509_VERIFY_PARAM_set_hostflags(param, 0);
-	      X509_VERIFY_PARAM_set1_host(param, hostname, 0);
+	      X509_VERIFY_PARAM_set1_host(param, hostname->c_str(), 0);
 	    }
 
 	  // init BIOs
@@ -572,6 +603,17 @@ namespace openvpn {
 	    }
 	  else if (ctx.config->mode.is_client())
 	    {
+	      if (cache_key && ctx.sess_cache)
+		{
+		  // see if a cached session already exists for our cache_key
+		  ctx.sess_cache->extract(*cache_key, [this](SSL_SESSION* sess) {
+		      if (!SSL_set_session(ssl, sess))
+			throw OpenSSLException("SSL_set_session failed");
+		    });
+
+		  // cache the session before its end-of-life if no errors occur
+		  sess_cache_key.reset(new OpenSSLSessionCache::Key(*cache_key, ctx.sess_cache));
+		}
 	      SSL_set_connect_state(ssl);
 	      if (ctx.config->flags & SSLConst::ENABLE_SNI)
 		if (SSL_set_tlsext_host_name(ssl, hostname) != 1)
@@ -596,6 +638,27 @@ namespace openvpn {
 	  {
 	    ssl_erase();
 	    throw;
+	  }
+      }
+
+      void rebuild_authcert()
+      {
+	authcert.reset(new AuthCert());
+	::X509 *cert = SSL_get_peer_certificate(ssl);
+	if (cert)
+	  {
+	    // save the issuer cert fingerprint
+	    static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LENGTH, "size inconsistency");
+
+	    unsigned int md_len = sizeof(AuthCert::issuer_fp);
+	    X509_digest (cert, EVP_sha1 (), authcert->issuer_fp, &md_len);
+
+	    // save the Common Name
+	    authcert->cn = x509_get_field(cert, NID_commonName);
+
+	    // save the leaf cert serial number
+	    const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
+	    authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
 	  }
       }
 
@@ -632,6 +695,8 @@ namespace openvpn {
 	      }
 	    X509_free (cert);
 	  }
+	if (SSL_session_reused(c_ssl))
+	  os << " [REUSED]";
 	return os.str();
       }
 
@@ -643,6 +708,7 @@ namespace openvpn {
 	ct_in = nullptr;
 	ct_out = nullptr;
 	overflow = false;
+	sess_cache_key.reset();
       }
 
       void ssl_erase()
@@ -657,7 +723,14 @@ namespace openvpn {
 	if (ssl_bio)
 	  BIO_free_all(ssl_bio);
 	if (ssl)
-	  SSL_free(ssl);
+	  {
+	    if (sess_cache_key)
+	      {
+		SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
+		sess_cache_key->commit(SSL_get1_session(ssl));
+	      }
+	    SSL_free(ssl);
+	  }
 	openssl_clear_error_stack();
 	ssl_clear();
       }
@@ -702,6 +775,7 @@ namespace openvpn {
       BIO *ct_in;          // write ciphertext to here
       BIO *ct_out;         // read ciphertext from here
       AuthCert::Ptr authcert;
+      OpenSSLSessionCache::Key::UPtr sess_cache_key; // client-side only
       bool ssl_bio_linkage;
       bool overflow;
 
@@ -923,18 +997,47 @@ namespace openvpn {
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: unknown config->mode");
 
 	  // Set SSL options
-	  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	  if (!(config->flags & SSLConst::NO_VERIFY_PEER))
 	    {
 	      SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
 				 config->mode.is_client() ? verify_callback_client : verify_callback_server);
 	      SSL_CTX_set_verify_depth(ctx, 16);
 	    }
-	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION | SSL_OP_NO_TICKET;
+
+	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION;
 
 	  /* Disable SSLv2 and SSLv3, might be a noop but does not hurt */
 	  sslopt |= SSL_OP_NO_SSLv2;
 	  sslopt |= SSL_OP_NO_SSLv3;
+
+	  if (config->mode.is_server())
+	    {
+	      SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+	      if (config->session_ticket_handler)
+		{
+		  static const char sess_id_context[] = "OpenVPN";
+		  if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context, sizeof(sess_id_context) - 1))
+		    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
+
+		  if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx, tls_ticket_key_callback))
+		    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_key_cb failed");
+		}
+	      else
+		sslopt |= SSL_OP_NO_TICKET;
+	    }
+	  else
+	    {
+	      if (config->client_session_tickets)
+		{
+		  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT);
+		  sess_cache.reset(new OpenSSLSessionCache);
+		}
+	      else
+		{
+		  SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+		  sslopt |= SSL_OP_NO_TICKET;
+		}
+	    }
 
 	  /* mbed TLS also ignores tls version when force aes cbc cipher suites is on */
 	  if (!config->force_aes_cbc_ciphersuites)
@@ -1084,13 +1187,13 @@ namespace openvpn {
     // create a new SSL instance
     virtual SSLAPI::Ptr ssl()
     {
-      return SSL::Ptr(new SSL(*this, nullptr));
+      return SSL::Ptr(new SSL(*this, nullptr, nullptr));
     }
 
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
-    virtual SSLAPI::Ptr ssl(const std::string& hostname)
+    virtual SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key)
     {
-      return SSL::Ptr(new SSL(*this, hostname.c_str()));
+      return SSL::Ptr(new SSL(*this, hostname, cache_key));
     }
 
     void update_trust(const CertCRLList& cc)
@@ -1573,6 +1676,92 @@ namespace openvpn {
 	}
     }
 
+    static int tls_ticket_key_callback(::SSL *ssl,
+				       unsigned char key_name[16],
+				       unsigned char iv[EVP_MAX_IV_LENGTH],
+				       ::EVP_CIPHER_CTX *ctx,
+				       ::HMAC_CTX *hctx,
+				       int enc)
+    {
+      // get OpenSSLContext
+      const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
+      if (!self)
+	return -1;
+
+      // get user-defined session ticket handler
+      TLSSessionTicketBase* t = self->config->session_ticket_handler;
+      if (!t)
+	return -1;
+
+      if (enc)
+	{
+	  // create new ticket
+	  TLSSessionTicketBase::Name name;
+	  TLSSessionTicketBase::Key key;
+
+	  switch (t->create_session_ticket_key(name, key))
+	    {
+	    case TLSSessionTicketBase::TICKET_AVAILABLE:
+	      if (!RAND_bytes(iv, EVP_MAX_IV_LENGTH))
+		return -1;
+	      if (!tls_ticket_init_cipher_hmac(key, iv, ctx, hctx, enc))
+		return -1;
+	      static_assert(TLSSessionTicketBase::Name::SIZE == 16, "unexpected name size");
+	      name.copy_to(key_name);
+	      //OPENVPN_LOG("tls_ticket_key_callback: created ticket");
+	      return 1;
+	    case TLSSessionTicketBase::NO_TICKET:
+	    case TLSSessionTicketBase::TICKET_EXPIRING: // doesn't really make sense for enc==1?
+	      //OPENVPN_LOG("tls_ticket_key_callback: create: no ticket or expiring ticket");
+	      return 0;
+	    default:
+	      //OPENVPN_LOG("tls_ticket_key_callback: create: bad ticket");
+	      return -1;
+	    }
+	}
+      else
+	{
+	  // lookup existing ticket
+	  static_assert(TLSSessionTicketBase::Name::SIZE == 16, "unexpected name size");
+	  const TLSSessionTicketBase::Name name(key_name);
+	  TLSSessionTicketBase::Key key;
+
+	  switch (t->lookup_session_ticket_key(name, key))
+	    {
+	    case TLSSessionTicketBase::TICKET_AVAILABLE:
+	      if (!tls_ticket_init_cipher_hmac(key, iv, ctx, hctx, enc))
+		return -1;
+	      //OPENVPN_LOG("tls_ticket_key_callback: found ticket");
+	      return 1;
+	    case TLSSessionTicketBase::TICKET_EXPIRING:
+	      if (!tls_ticket_init_cipher_hmac(key, iv, ctx, hctx, enc))
+		return -1;
+	      //OPENVPN_LOG("tls_ticket_key_callback: expiring ticket");
+	      return 2;
+	    case TLSSessionTicketBase::NO_TICKET:
+	      //OPENVPN_LOG("tls_ticket_key_callback: lookup: no ticket");
+	      return 0;
+	    default:
+	      //OPENVPN_LOG("tls_ticket_key_callback: lookup: bad ticket");
+	      return -1;
+	    }
+	}
+    }
+
+    static bool tls_ticket_init_cipher_hmac(const TLSSessionTicketBase::Key& key,
+					    unsigned char iv[EVP_MAX_IV_LENGTH],
+					    ::EVP_CIPHER_CTX *ctx,
+					    ::HMAC_CTX *hctx,
+					    const int enc)
+    {
+      static_assert(TLSSessionTicketBase::Key::CIPHER_KEY_SIZE == 32, "unexpected cipher key size");
+      if (!EVP_CipherInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key.cipher_value(), iv, enc))
+	return false;
+      if (!HMAC_Init_ex(hctx, key.hmac_value(), TLSSessionTicketBase::Key::HMAC_KEY_SIZE, EVP_sha256(), nullptr))
+	return false;
+      return true;
+    }
+
     void erase()
     {
       if (epki)
@@ -1590,6 +1779,7 @@ namespace openvpn {
     Config::Ptr config;
     SSL_CTX* ctx = nullptr;
     ExternalPKIImpl* epki = nullptr;
+    OpenSSLSessionCache::Ptr sess_cache; // client-side only
   };
 
   int OpenSSLContext::SSL::mydata_index = -1;

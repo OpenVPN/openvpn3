@@ -1,0 +1,205 @@
+//    OpenVPN -- An application to securely tunnel IP networks
+//               over a single port, with support for SSL/TLS-based
+//               session authentication and key exchange,
+//               packet encryption, packet authentication, and
+//               packet compression.
+//
+//    Copyright (C) 2012-2019 OpenVPN Inc.
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU Affero General Public License Version 3
+//    as published by the Free Software Foundation.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU Affero General Public License for more details.
+//
+//    You should have received a copy of the GNU Affero General Public License
+//    along with this program in the COPYING file.
+//    If not, see <http://www.gnu.org/licenses/>.
+
+#pragma once
+
+#include <cstring>
+
+#include <openvpn/common/hash.hpp>
+#include <openvpn/common/base64.hpp>
+#include <openvpn/common/string.hpp>
+#include <openvpn/buffer/buffer.hpp>
+#include <openvpn/random/randapi.hpp>
+
+namespace openvpn {
+
+  // Abstract base class used to provide an interface for TLS
+  // Session Ticket keying originally described by RFC 5077.
+  class TLSSessionTicketBase
+  {
+  public:
+    enum Status {
+      NO_TICKET,
+      TICKET_AVAILABLE,
+      TICKET_EXPIRING,
+      ERROR,
+    };
+
+    class Name
+    {
+    public:
+      static constexpr size_t SIZE = 16;
+
+      Name() {} // note that default constructor leaves object in an undefined state
+
+      explicit Name(RandomAPI& rng)
+      {
+	rng.rand_bytes(value_, SIZE);
+      }
+
+      explicit Name(const std::string& name_b64)
+      {
+	b64_to_key(name_b64, "key name", value_, SIZE);
+      }
+
+      explicit Name(const unsigned char name[SIZE])
+      {
+	std::memcpy(value_, name, SIZE);
+      }
+
+      bool operator==(const Name& rhs) const
+      {
+	return std::memcmp(value_, rhs.value_, SIZE) == 0;
+      }
+
+      bool operator!=(const Name& rhs) const
+      {
+	return std::memcmp(value_, rhs.value_, SIZE) != 0;
+      }
+
+      bool operator<(const Name& rhs) const
+      {
+	return std::memcmp(value_, rhs.value_, SIZE) == -1;
+      }
+
+      std::string to_string() const
+      {
+	return "TLSTicketName[" + b64() + ']';
+      }
+
+      std::string b64() const
+      {
+	return base64->encode(value_, SIZE);
+      }
+
+      void copy_to(unsigned char name[SIZE]) const
+      {
+	std::memcpy(name, value_, SIZE);
+      }
+
+      template <typename HASH>
+      void hash(HASH& h) const
+      {
+	h(value_, SIZE);
+      }
+
+#ifdef HAVE_CITYHASH
+      std::size_t hashval() const
+      {
+	HashSizeT h;
+	hash(h);
+	return h.value();
+      }
+#endif
+
+    private:
+      unsigned char value_[SIZE];
+    };
+
+    class Key
+    {
+    public:
+      static constexpr size_t CIPHER_KEY_SIZE = 32;
+      static constexpr size_t HMAC_KEY_SIZE = 16;
+
+      Key() {} // note that default constructor leaves object in an undefined state
+
+      explicit Key(RandomAPI& rng)
+      {
+	rng.assert_crypto();
+	rng.rand_bytes(cipher_value_, CIPHER_KEY_SIZE);
+	rng.rand_bytes(hmac_value_, HMAC_KEY_SIZE);
+      }
+
+      explicit Key(const std::string& cipher_key_b64, const std::string& hmac_key_b64)
+      {
+	b64_to_key(cipher_key_b64, "cipher key", cipher_value_, CIPHER_KEY_SIZE);
+	b64_to_key(hmac_key_b64, "hmac key", hmac_value_, HMAC_KEY_SIZE);
+      }
+
+      std::string to_string() const
+      {
+	return "TLSTicketKey[cipher=" + cipher_b64() + " hmac=" + hmac_b64() + ']';
+      }
+
+      const unsigned char* cipher_value() const
+      {
+	return cipher_value_;
+      }
+
+      const unsigned char* hmac_value() const
+      {
+	return hmac_value_;
+      }
+
+      std::string cipher_b64() const
+      {
+	return base64->encode(cipher_value_, CIPHER_KEY_SIZE);
+      }
+
+      std::string hmac_b64() const
+      {
+	return base64->encode(hmac_value_, HMAC_KEY_SIZE);
+      }
+
+      bool operator==(const Key& rhs) const
+      {
+	return std::memcmp(cipher_value_, rhs.cipher_value_, CIPHER_KEY_SIZE) == 0 && std::memcmp(hmac_value_, rhs.hmac_value_, HMAC_KEY_SIZE) == 0;
+      }
+
+      bool operator!=(const Key& rhs) const
+      {
+	return !operator==(rhs);
+      }
+
+    private:
+      unsigned char cipher_value_[CIPHER_KEY_SIZE];
+      unsigned char hmac_value_[HMAC_KEY_SIZE];
+    };
+
+    // method sets name and key
+    virtual Status create_session_ticket_key(Name& name, Key& key) const = 0;
+
+    // method is passed name and returns key
+    virtual Status lookup_session_ticket_key(const Name& name, Key& key) const = 0;
+
+    virtual ~TLSSessionTicketBase() {}
+
+  private:
+    static void b64_to_key(const std::string& b64, const char *title, unsigned char *out, const size_t outlen)
+    {
+      Buffer srcbuf(out, outlen, false);
+      try {
+	base64->decode(srcbuf, b64);
+      }
+      catch (const std::exception& e)
+	{
+	  throw Exception(std::string("TLSSessionTicketBase: base64 decode for ") + title + ": " + std::string(e.what()));
+	}
+      if (srcbuf.size() != outlen)
+	throw Exception(std::string("TLSSessionTicketBase: wrong input size for ") + title + ", actual=" + std::to_string(srcbuf.size()) + " expected=" + std::to_string(outlen));
+    }
+  };
+}
+
+#ifdef HAVE_CITYHASH
+OPENVPN_HASH_METHOD(openvpn::TLSSessionTicketBase::Name, hashval);
+#endif

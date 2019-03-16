@@ -236,6 +236,18 @@ namespace openvpn {
 	external_pki = external_pki_arg;
       }
 
+      virtual void set_session_ticket_handler(TLSSessionTicketBase* session_ticket_handler_arg)
+      {
+	// fixme -- this method should be implemented for server-side TLS session resumption tickets
+	throw MbedTLSException("set_session_ticket_handler not implemented");
+      }
+
+      virtual void set_client_session_tickets(const bool v)
+      {
+	// fixme -- this method should be implemented for client-side TLS session resumption tickets
+	throw MbedTLSException("set_client_session_tickets not implemented");
+      }
+
       virtual void set_private_key_password(const std::string& pwd)
       {
 	priv_key_pwd = pwd;
@@ -692,9 +704,14 @@ namespace openvpn {
 	return "";
       }
 
-      virtual const AuthCert::Ptr& auth_cert() const
+      virtual const AuthCert::Ptr& auth_cert()
       {
 	return authcert;
+      }
+
+      virtual void mark_no_cache()
+      {
+	// fixme -- this method should be implemented for client-side TLS session resumption tickets
       }
 
       virtual ~SSL()
@@ -972,9 +989,9 @@ namespace openvpn {
     }
 
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
-    virtual SSLAPI::Ptr ssl(const std::string& hostname)
+    virtual SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key)
     {
-      return SSL::Ptr(new SSL(this, hostname.c_str()));
+      return SSL::Ptr(new SSL(this, hostname->c_str()));
     }
 
     virtual const Mode& mode() const
