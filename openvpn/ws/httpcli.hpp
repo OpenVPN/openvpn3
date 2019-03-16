@@ -175,6 +175,7 @@ namespace openvpn {
 	unsigned int keepalive_timeout = 0;
 	unsigned int max_headers = 0;
 	unsigned int max_header_bytes = 0;
+	bool enable_cache = false; // if true, supports TLS session resumption tickets
 	olong max_content_bytes = 0;
 	unsigned int msg_overhead_bytes = 0;
 	int debug_level = 0;
@@ -201,9 +202,14 @@ namespace openvpn {
 	  return hint.empty() ? host : hint;
 	}
 
+	const std::string* host_cn_ptr() const
+	{
+	  return cn.empty() ? &host : &cn;
+	}
+
 	const std::string& host_cn() const
 	{
-	  return cn.empty() ? host : cn;
+	  return *host_cn_ptr();
 	}
 
 	const std::string& host_head() const
@@ -231,6 +237,11 @@ namespace openvpn {
 	      ret += port;
 	    }
 	  return ret;
+	}
+
+	std::string cache_key() const
+	{
+	  return host + '/' + port;
 	}
       };
 
@@ -639,7 +650,15 @@ namespace openvpn {
 	      host.port = config->ssl_factory ? "443" : "80";
 
 	    if (config->ssl_factory)
-	      ssl_sess = config->ssl_factory->ssl(host.host_cn());
+	      {
+		if (config->enable_cache)
+		  {
+		    std::string cache_key = host.cache_key();
+		    ssl_sess = config->ssl_factory->ssl(host.host_cn_ptr(), &cache_key);
+		  }
+		else
+		  ssl_sess = config->ssl_factory->ssl(host.host_cn_ptr(), nullptr);
+	      }
 
 	    if (config->transcli)
 	      {
