@@ -112,6 +112,12 @@ namespace openvpn {
 	  return "";
       }
 
+      void ssl_no_cache()
+      {
+	if (ssl_sess)
+	  ssl_sess->mark_no_cache();
+      }
+
       const CONFIG& http_config() const {
 	return *config;
       }
