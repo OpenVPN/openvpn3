@@ -659,6 +659,8 @@ namespace openvpn {
 	    // save the leaf cert serial number
 	    const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
 	    authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
+
+	    X509_free (cert);
 	  }
       }
 
