@@ -31,5 +31,16 @@ namespace openvpn {
       format_compact(root, *bp);
       write_binary_atomic(fn, tmpdir, mode, mtime_ns, *bp, rng);
     }
+
+    inline void write_fast(const std::string& fn,
+			   const mode_t mode,
+			   const std::uint64_t mtime_ns,  // set explicit modification-time in nanoseconds since epoch, or 0 to defer to system
+			   const Json::Value& root,
+			   const size_t size_hint)
+    {
+      BufferPtr bp = new BufferAllocated(size_hint, BufferAllocated::GROW);
+      format_compact(root, *bp);
+      write_binary_unix(fn, mode, mtime_ns, *bp);
+    }
   }
 }
