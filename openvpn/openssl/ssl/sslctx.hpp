@@ -1017,8 +1017,8 @@ namespace openvpn {
 	      SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	      if (config->session_ticket_handler)
 		{
-		  static const char sess_id_context[] = "OpenVPN";
-		  if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context, sizeof(sess_id_context) - 1))
+		  const std::string sess_id_context = config->session_ticket_handler->session_id_context();
+		  if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
 		    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
 
 		  if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx, tls_ticket_key_callback))

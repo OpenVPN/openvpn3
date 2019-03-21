@@ -22,7 +22,9 @@
 #pragma once
 
 #include <cstring>
+#include <memory>
 
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/hash.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/string.hpp>
@@ -36,6 +38,10 @@ namespace openvpn {
   class TLSSessionTicketBase
   {
   public:
+    typedef std::unique_ptr<TLSSessionTicketBase> UPtr;
+
+    OPENVPN_EXCEPTION(sess_ticket_error);
+
     enum Status {
       NO_TICKET,
       TICKET_AVAILABLE,
@@ -77,7 +83,7 @@ namespace openvpn {
 
       bool operator<(const Name& rhs) const
       {
-	return std::memcmp(value_, rhs.value_, SIZE) == -1;
+	return std::memcmp(value_, rhs.value_, SIZE) < 0;
       }
 
       std::string to_string() const
@@ -135,6 +141,13 @@ namespace openvpn {
 	b64_to_key(hmac_key_b64, "hmac key", hmac_value_, HMAC_KEY_SIZE);
       }
 
+      ~Key()
+      {
+	// wipe keys
+	std::memset(cipher_value_, 0, CIPHER_KEY_SIZE);
+	std::memset(hmac_value_, 0, HMAC_KEY_SIZE);
+      }
+
       std::string to_string() const
       {
 	return "TLSTicketKey[cipher=" + cipher_b64() + " hmac=" + hmac_b64() + ']';
@@ -170,16 +183,45 @@ namespace openvpn {
 	return !operator==(rhs);
       }
 
+      template <typename KEY_TRANSFORM>
+      void key_transform(KEY_TRANSFORM& t)
+      {
+	unsigned char out[KEY_TRANSFORM::MAX_HMAC_SIZE];
+
+	// cipher
+	{
+	  t.cipher_transform.reset();
+	  t.cipher_transform.update(cipher_value_, CIPHER_KEY_SIZE);
+	  const size_t size = t.cipher_transform.final(out);
+	  if (size < CIPHER_KEY_SIZE)
+	    throw sess_ticket_error("insufficient key material for cipher transform");
+	  std::memcpy(cipher_value_, out, CIPHER_KEY_SIZE);
+	}
+
+	// hmac
+	{
+	  t.hmac_transform.reset();
+	  t.hmac_transform.update(hmac_value_, HMAC_KEY_SIZE);
+	  const size_t size = t.hmac_transform.final(out);
+	  if (size < HMAC_KEY_SIZE)
+	    throw sess_ticket_error("insufficient key material for hmac transform");
+	  std::memcpy(hmac_value_, out, HMAC_KEY_SIZE);
+	}
+      }
+
     private:
       unsigned char cipher_value_[CIPHER_KEY_SIZE];
       unsigned char hmac_value_[HMAC_KEY_SIZE];
     };
 
-    // method sets name and key
+    // method returns name and key
     virtual Status create_session_ticket_key(Name& name, Key& key) const = 0;
 
-    // method is passed name and returns key
+    // method is given name and returns key
     virtual Status lookup_session_ticket_key(const Name& name, Key& key) const = 0;
+
+    // return string that identifies the app
+    virtual std::string session_id_context() const = 0;
 
     virtual ~TLSSessionTicketBase() {}
 
@@ -192,10 +234,10 @@ namespace openvpn {
       }
       catch (const std::exception& e)
 	{
-	  throw Exception(std::string("TLSSessionTicketBase: base64 decode for ") + title + ": " + std::string(e.what()));
+	  throw sess_ticket_error(std::string("base64 decode for ") + title + ": " + std::string(e.what()));
 	}
       if (srcbuf.size() != outlen)
-	throw Exception(std::string("TLSSessionTicketBase: wrong input size for ") + title + ", actual=" + std::to_string(srcbuf.size()) + " expected=" + std::to_string(outlen));
+	throw sess_ticket_error(std::string("wrong input size for ") + title + ", actual=" + std::to_string(srcbuf.size()) + " expected=" + std::to_string(outlen));
     }
   };
 }
