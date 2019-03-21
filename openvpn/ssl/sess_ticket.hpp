@@ -33,6 +33,9 @@
 
 namespace openvpn {
 
+  class OpenSSLContext;
+  class MbedTLSContext;
+
   // Abstract base class used to provide an interface for TLS
   // Session Ticket keying originally described by RFC 5077.
   class TLSSessionTicketBase
@@ -53,8 +56,6 @@ namespace openvpn {
     {
     public:
       static constexpr size_t SIZE = 16;
-
-      Name() {} // note that default constructor leaves object in an undefined state
 
       explicit Name(RandomAPI& rng)
       {
@@ -96,11 +97,6 @@ namespace openvpn {
 	return base64->encode(value_, SIZE);
       }
 
-      void copy_to(unsigned char name[SIZE]) const
-      {
-	std::memcpy(name, value_, SIZE);
-      }
-
       template <typename HASH>
       void hash(HASH& h) const
       {
@@ -117,6 +113,12 @@ namespace openvpn {
 #endif
 
     private:
+      // we need to friend SSL implementation classes
+      friend class OpenSSLContext;
+      friend class MbedTLSContext;
+
+      Name() {} // note that default constructor leaves object in an undefined state
+
       unsigned char value_[SIZE];
     };
 
@@ -125,8 +127,6 @@ namespace openvpn {
     public:
       static constexpr size_t CIPHER_KEY_SIZE = 32;
       static constexpr size_t HMAC_KEY_SIZE = 16;
-
-      Key() {} // note that default constructor leaves object in an undefined state
 
       explicit Key(RandomAPI& rng)
       {
@@ -151,16 +151,6 @@ namespace openvpn {
       std::string to_string() const
       {
 	return "TLSTicketKey[cipher=" + cipher_b64() + " hmac=" + hmac_b64() + ']';
-      }
-
-      const unsigned char* cipher_value() const
-      {
-	return cipher_value_;
-      }
-
-      const unsigned char* hmac_value() const
-      {
-	return hmac_value_;
       }
 
       std::string cipher_b64() const
@@ -210,6 +200,12 @@ namespace openvpn {
       }
 
     private:
+      // we need to friend SSL implementation classes
+      friend class OpenSSLContext;
+      friend class MbedTLSContext;
+
+      Key() {} // note that default constructor leaves object in an undefined state
+
       unsigned char cipher_value_[CIPHER_KEY_SIZE];
       unsigned char hmac_value_[HMAC_KEY_SIZE];
     };

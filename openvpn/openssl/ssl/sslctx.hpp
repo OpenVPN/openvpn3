@@ -1703,19 +1703,31 @@ namespace openvpn {
 
 	  switch (t->create_session_ticket_key(name, key))
 	    {
+	    case TLSSessionTicketBase::NO_TICKET:
+	    case TLSSessionTicketBase::TICKET_EXPIRING: // doesn't really make sense for enc==1?
+	      // NOTE: OpenSSL may segfault on a zero return.
+	      // This appears to be fixed by:
+              // commit dbdb96617cce2bd4356d57f53ecc327d0e31f2ad
+              // Author: Todd Short <tshort@akamai.com>
+              // Date:   Thu May 12 18:16:52 2016 -0400
+              // Fix session ticket and SNI
+	      //OPENVPN_LOG("tls_ticket_key_callback: create: no ticket or expiring ticket");
+#if SSLEAY_VERSION_NUMBER < 0x1000212fL // 1.0.2r
+	      if (!randomize_name_key(name, key))
+		return -1;
+	      // fallthrough
+#else
+	      return 0;
+#endif
 	    case TLSSessionTicketBase::TICKET_AVAILABLE:
 	      if (!RAND_bytes(iv, EVP_MAX_IV_LENGTH))
 		return -1;
 	      if (!tls_ticket_init_cipher_hmac(key, iv, ctx, hctx, enc))
 		return -1;
 	      static_assert(TLSSessionTicketBase::Name::SIZE == 16, "unexpected name size");
-	      name.copy_to(key_name);
+	      std::memcpy(key_name, name.value_, TLSSessionTicketBase::Name::SIZE);
 	      //OPENVPN_LOG("tls_ticket_key_callback: created ticket");
 	      return 1;
-	    case TLSSessionTicketBase::NO_TICKET:
-	    case TLSSessionTicketBase::TICKET_EXPIRING: // doesn't really make sense for enc==1?
-	      //OPENVPN_LOG("tls_ticket_key_callback: create: no ticket or expiring ticket");
-	      return 0;
 	    default:
 	      //OPENVPN_LOG("tls_ticket_key_callback: create: bad ticket");
 	      return -1;
@@ -1757,9 +1769,21 @@ namespace openvpn {
 					    const int enc)
     {
       static_assert(TLSSessionTicketBase::Key::CIPHER_KEY_SIZE == 32, "unexpected cipher key size");
-      if (!EVP_CipherInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key.cipher_value(), iv, enc))
+      if (!EVP_CipherInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key.cipher_value_, iv, enc))
 	return false;
-      if (!HMAC_Init_ex(hctx, key.hmac_value(), TLSSessionTicketBase::Key::HMAC_KEY_SIZE, EVP_sha256(), nullptr))
+      if (!HMAC_Init_ex(hctx, key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE, EVP_sha256(), nullptr))
+	return false;
+      return true;
+    }
+
+    static bool randomize_name_key(TLSSessionTicketBase::Name& name,
+				   TLSSessionTicketBase::Key& key)
+    {
+      if (!RAND_bytes(name.value_, TLSSessionTicketBase::Name::SIZE))
+	return false;
+      if (!RAND_bytes(key.cipher_value_, TLSSessionTicketBase::Key::CIPHER_KEY_SIZE))
+	return false;
+      if (!RAND_bytes(key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE))
 	return false;
       return true;
     }
