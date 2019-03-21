@@ -36,6 +36,7 @@
 #include <memory>
 #include <algorithm>         // for std::min, std::max
 
+#include <openvpn/client/async_resolve.hpp>
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
@@ -277,7 +278,7 @@ namespace openvpn {
       class HTTPCore;
       typedef HTTPBase<HTTPCore, Config, Status, HTTP::ReplyType, ContentInfo, olong, RC<thread_unsafe_refcount>> Base;
 
-      class HTTPCore : public Base, public TransportClientParent
+      class HTTPCore : public Base, public TransportClientParent, public AsyncResolvableTCP
       {
       public:
 	friend Base;
@@ -292,8 +293,8 @@ namespace openvpn {
 	HTTPCore(openvpn_io::io_context& io_context_arg,
 		 Config::Ptr config_arg)
 	  : Base(std::move(config_arg)),
+	    AsyncResolvableTCP(io_context_arg),
 	    io_context(io_context_arg),
-	    resolver(io_context_arg),
 	    connect_timer(io_context_arg),
 	    general_timer(io_context_arg),
 	    general_timeout_coarse(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024))
@@ -379,7 +380,7 @@ namespace openvpn {
 		link->stop();
 	      if (socket)
 		socket->close();
-	      resolver.cancel();
+	      async_resolve_cancel();
 	      if (req_timer)
 		req_timer->cancel();
 	      cancel_keepalive_timer();
@@ -647,11 +648,7 @@ namespace openvpn {
 	      }
 	    else
 	      {
-		resolver.async_resolve(host.host_transport(), host.port,
-				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
-				       {
-					 self->handle_tcp_resolve(error, results);
-				       });
+		async_resolve_name(host.host_transport(), host.port);
 	      }
 	    set_connect_timeout(config->connect_timeout);
 	  }
@@ -661,15 +658,15 @@ namespace openvpn {
 	    }
 	}
 
-	void handle_tcp_resolve(const openvpn_io::error_code& error, // called by Asio
-				openvpn_io::ip::tcp::resolver::results_type results)
+	void resolve_callback(const openvpn_io::error_code& error, // called by Asio
+			      openvpn_io::ip::tcp::resolver::results_type results)
 	{
 	  if (halt)
 	    return;
 
 	  if (error)
 	    {
-	      asio_error_handler(Status::E_RESOLVE, "handle_tcp_resolve", error);
+	      asio_error_handler(Status::E_RESOLVE, "resolve_callback", error);
 	      return;
 	    }
 
@@ -695,7 +692,7 @@ namespace openvpn {
 	  }
 	  catch (const std::exception& e)
 	    {
-	      handle_exception("handle_tcp_resolve", e);
+	      handle_exception("resolve_callback", e);
 	    }
 	}
 
@@ -1201,7 +1198,6 @@ namespace openvpn {
 	TimeoutOverride to;
 
 	AsioPolySock::Base::Ptr socket;
-	openvpn_io::ip::tcp::resolver resolver;
 
 	Host host;
 
