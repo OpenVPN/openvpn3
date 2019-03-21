@@ -84,13 +84,102 @@
 #include "client/core-client-netcfg.hpp"
 #endif
 
+#if defined(OPENVPN_PLATFORM_LINUX)
+
+// use SITNL by default
+#ifndef OPENVPN_USE_IPROUTE2
+#define OPENVPN_USE_SITNL
+#endif
+
+#include <openvpn/tun/linux/client/tuncli.hpp>
+
+// we use a static polymorphism and define a
+// platform-specific TunSetup class, responsible
+// for setting up tun device
+#define TUN_CLASS_SETUP TunLinuxSetup::Setup<TUN_LINUX::TunMethods>
+#elif defined(OPENVPN_PLATFORM_MAC)
+#include <openvpn/tun/mac/client/tuncli.hpp>
+#define TUN_CLASS_SETUP TunMac::Setup
+#endif
+
 using namespace openvpn;
 
 namespace {
   OPENVPN_SIMPLE_EXCEPTION(usage);
 }
 
-class Client : public ClientAPI::OpenVPNClient
+#ifdef USE_TUN_BUILDER
+class ClientBase : public ClientAPI::OpenVPNClient
+{
+public:
+  bool tun_builder_new() override
+  {
+    tbc.tun_builder_set_mtu(1500);
+    return true;
+  }
+
+  int tun_builder_establish() override
+  {
+    if (!tun)
+      {
+	tun.reset(new TUN_CLASS_SETUP());
+      }
+
+    TUN_CLASS_SETUP::Config config;
+    config.layer = Layer(Layer::Type::OSI_LAYER_3);
+    return tun->establish(tbc, &config, nullptr, std::cout);
+  }
+
+  bool tun_builder_add_address(const std::string& address,
+			       int prefix_length,
+			       const std::string& gateway, // optional
+			       bool ipv6,
+			       bool net30) override
+  {
+    return tbc.tun_builder_add_address(address, prefix_length, gateway, ipv6, net30);
+  }
+
+  bool tun_builder_add_route(const std::string& address,
+			     int prefix_length,
+			     int metric,
+			     bool ipv6) override
+  {
+    return tbc.tun_builder_add_route(address, prefix_length, metric, ipv6);
+  }
+
+  bool tun_builder_reroute_gw(bool ipv4,
+			      bool ipv6,
+			      unsigned int flags) override
+  {
+    return tbc.tun_builder_reroute_gw(ipv4, ipv6, flags);
+  }
+
+  bool tun_builder_set_remote_address(const std::string& address,
+				      bool ipv6) override
+  {
+    return tbc.tun_builder_set_remote_address(address, ipv6);
+  }
+
+  bool tun_builder_set_session_name(const std::string& name) override
+  {
+    return tbc.tun_builder_set_session_name(name);
+  }
+
+  bool tun_builder_add_dns_server(const std::string& address, bool ipv6) override
+  {
+    return tbc.tun_builder_add_dns_server(address, ipv6);
+  }
+
+private:
+  TUN_CLASS_SETUP::Ptr tun;
+  TunBuilderCapture tbc;
+};
+#define CLIENTBASE ClientBase
+#else // USE_TUN_BUILDER
+#define CLIENTBASE ClientAPI::OpenVPNClient
+#endif
+
+class Client : public CLIENTBASE
 {
 public:
   enum ClockTickAction {

@@ -27,8 +27,10 @@
 #include <net/if.h>
 #include <linux/if_tun.h>
 
+#include <openvpn/asio/asioerr.hpp>
 #include <openvpn/netconf/linux/gwnetlink.hpp>
 #include <openvpn/common/action.hpp>
+#include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 

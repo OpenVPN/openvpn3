@@ -365,6 +365,9 @@ namespace openvpn {
 	    // Android VPN API doesn't support excluded routes, so we must emulate them
 	    tunconf->eer_factory.reset(new EmulateExcludeRouteFactoryImpl(false));
 #endif
+#if defined(OPENVPN_PLATFORM_MAC)
+	    tunconf->tun_prefix = true;
+#endif
 	    if (config.tun_persist)
 	      tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd, config.builder));
 	    tun_factory = tunconf;
