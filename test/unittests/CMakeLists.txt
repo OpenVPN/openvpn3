@@ -135,6 +135,7 @@ add_executable(coreUnitTests
         test_route_emulation.cpp
         test_log.cpp
         test_comp.cpp
+        test_b64.cpp
         )
 
 target_link_libraries(coreUnitTests gtest_main)
