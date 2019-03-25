@@ -96,7 +96,7 @@
 // we use a static polymorphism and define a
 // platform-specific TunSetup class, responsible
 // for setting up tun device
-#define TUN_CLASS_SETUP TunLinuxSetup::Setup<TUN_LINUX::TunMethods>
+#define TUN_CLASS_SETUP TunLinuxSetup::Setup<TUN_LINUX>
 #elif defined(OPENVPN_PLATFORM_MAC)
 #include <openvpn/tun/mac/client/tuncli.hpp>
 #define TUN_CLASS_SETUP TunMac::Setup
