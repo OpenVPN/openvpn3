@@ -113,7 +113,7 @@ namespace openvpn {
       }
 
     private:
-      ClientConfig() {}
+      ClientConfig() = default;
     };
 
     class Client : public TransportClient,
@@ -128,10 +128,10 @@ namespace openvpn {
 
       struct ProtoBase
       {
-	ProtoBase() {}
+	ProtoBase() = default;
 	virtual IP::Addr server_endpoint_addr() const = 0;
 	virtual void close() = 0;
-	virtual ~ProtoBase() {}
+	virtual ~ProtoBase() = default;
 
 	ProtoBase(const ProtoBase&) = delete;
 	ProtoBase& operator=(const ProtoBase&) = delete;
@@ -139,7 +139,7 @@ namespace openvpn {
 
       struct UDP : public ProtoBase
       {
-	UDP(openvpn_io::io_context& io_context)
+	explicit UDP(openvpn_io::io_context& io_context)
 	  : resolver(io_context),
 	    socket(io_context)
 	{
@@ -539,7 +539,7 @@ namespace openvpn {
 
       // called after DNS resolution has succeeded or failed
       void resolve_callback(const openvpn_io::error_code& error,
-			    openvpn_io::ip::udp::resolver::results_type results)
+			    openvpn_io::ip::udp::resolver::results_type results) override
       {
 	if (!halt)
 	  {

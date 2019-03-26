@@ -57,9 +57,7 @@ namespace openvpn {
 
     struct TunConfig
     {
-      TunConfig()
-      {
-      }
+      TunConfig() = default;
 
       TunProp::Config tun_prop;
       Stop* stop = nullptr;
