@@ -43,30 +43,10 @@
 #include <openvpn/kovpn/koroute.hpp>
 #include <openvpn/kovpn/kostats.hpp>
 #include <openvpn/linux/procfs.hpp>
+#include <openvpn/kovpn/kovpn_devconf.hpp>
 
 namespace openvpn {
   namespace KoTun {
-
-    OPENVPN_EXCEPTION(kotun_error);
-
-    struct DevConf
-    {
-      DevConf()
-      {
-	std::memset(&dc, 0, sizeof(dc));
-      }
-
-      void set_dev_name(const std::string& name)
-      {
-	if (name.length() < IFNAMSIZ)
-	  ::strcpy(dc.dev_name, name.c_str());
-	else
-	  OPENVPN_THROW(kotun_error, "ovpn dev name too long");
-      }
-
-      struct ovpn_dev_init dc;
-    };
-
     // kovpn API methods
     namespace API {
 
