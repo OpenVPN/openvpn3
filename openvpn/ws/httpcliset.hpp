@@ -214,6 +214,11 @@ namespace openvpn {
 	  return status == WS::Client::Status::E_SUCCESS;
 	}
 
+	bool comm_status_timeout() const
+	{
+	  return status == WS::Client::Status::E_CONNECT_TIMEOUT;
+	}
+
 	// Return true if request succeeded, i.e. HTTP status
 	// code was in the successful range of 2xx.
 	bool request_status_success() const
