@@ -29,6 +29,7 @@
 #include <openvpn/win/npinfo.hpp>
 #include <openvpn/win/handlecomm.hpp>
 #include <openvpn/win/event.hpp>
+#include <openvpn/error/error.hpp>
 
 namespace openvpn {
 
@@ -192,6 +193,16 @@ namespace openvpn {
 	WS::ClientSet::Transaction& t = *ts.transactions[0];
 	const std::string content = t.content_in.to_string();
 	os << t.format_status(ts) << std::endl;
+
+	if (t.comm_status_timeout())
+	  {
+	    // this could be the case when agent service
+	    // hasn't been started yet, so we throw a non-fatal
+	    // exception which makes core retry.
+	    os << "connection timeout";
+	    throw ExceptionCode(Error::TUN_ERROR);
+	  }
+
 	if (!t.comm_status_success())
 	  {
 	    os << content;
