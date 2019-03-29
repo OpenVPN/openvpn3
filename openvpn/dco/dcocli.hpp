@@ -197,14 +197,25 @@ namespace openvpn {
 	devconf.dc.peer_lookup = OVPN_PEER_LOOKUP_NONE;
 	devconf.dc.cpu_id = -1;
 
-	// create kovpn tun socket (implementation in kodevtun.hpp)
-	impl.reset(new TunImpl(io_context,
-			       devconf,
-			       this,
-			       config->transport.frame,
-			       nullptr,
-			       nullptr));
-
+	/* We have a tun builder, we get the device from the
+	 * tun builder
+	 */
+	if (config->builder)
+	  {
+		int fd = config->builder->tun_builder_open_kovpn(devconf);
+		impl.reset (new TunImpl(io_context, fd, devconf.dc.dev_name,
+					this, config->transport.frame));
+	  }
+	else
+	  {
+	    // create kovpn tun socket (implementation in kodevtun.hpp)
+	    impl.reset (new TunImpl (io_context,
+				     devconf,
+				     this,
+				     config->transport.frame,
+				     nullptr,
+				     nullptr));
+	  }
 	// set kovpn stats hook
 	config->transport.stats->dco_configure(this);
 

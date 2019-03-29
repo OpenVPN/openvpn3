@@ -65,8 +65,11 @@ namespace openvpn {
       Stop* stop = nullptr;
     };
 
+
     virtual TunClientFactory::Ptr new_tun_factory(const TunConfig& conf, const OptionList& opt) = 0;
     virtual TransportClientFactory::Ptr new_transport_factory(const TransportConfig& conf) = 0;
+
+    TunBuilderBase* builder = nullptr;
   };
 }
 

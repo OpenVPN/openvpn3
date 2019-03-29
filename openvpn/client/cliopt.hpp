@@ -325,6 +325,9 @@ namespace openvpn {
       if (dco)
 	{
 	  DCO::TunConfig tunconf;
+#if defined(USE_TUN_BUILDER)
+	  dco->builder = config.builder;
+#endif
 	  tunconf.tun_prop.layer = layer;
 	  tunconf.tun_prop.session_name = session_name;
 	  if (tun_mtu)

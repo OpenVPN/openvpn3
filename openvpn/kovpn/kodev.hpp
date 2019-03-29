@@ -313,6 +313,18 @@ namespace openvpn {
 	Base::stream = new openvpn_io::posix::stream_descriptor(io_context, fd.release());
       }
 
+      // variant that is used when tun builder is in use
+      TunClient(openvpn_io::io_context& io_context,
+		const int kovpnfd,
+		std::string dev_name,
+		ReadHandler read_handler,
+		const Frame::Ptr& frame)
+	  : Base(read_handler, frame, SessionStats::Ptr())
+      {
+	Base::name_ = dev_name;
+	Base::stream = new openvpn_io::posix::stream_descriptor(io_context, kovpnfd);
+      }
+
       // Attach UDP socket to ovpn instance
       void socket_attach_udp(const int sock_fd)
       {
