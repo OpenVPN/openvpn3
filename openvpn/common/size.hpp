@@ -29,8 +29,12 @@
 #include <openvpn/common/platform.hpp>
 
 #ifdef OPENVPN_PLATFORM_WIN
+#if !defined(_SSIZE_T_) && !defined(_SSIZE_T_DEFINED)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
+#define _SSIZE_T_
+#define _SSIZE_T_DEFINED
+#endif
 #else
 #include <unistd.h> // get ssize_t
 #endif
