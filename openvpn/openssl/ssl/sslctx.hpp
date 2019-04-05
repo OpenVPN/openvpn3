@@ -1712,7 +1712,7 @@ namespace openvpn {
               // Date:   Thu May 12 18:16:52 2016 -0400
               // Fix session ticket and SNI
 	      //OPENVPN_LOG("tls_ticket_key_callback: create: no ticket or expiring ticket");
-#if SSLEAY_VERSION_NUMBER < 0x1000212fL // 1.0.2r
+#if OPENSSL_VERSION_NUMBER < 0x1000212fL // 1.0.2r
 	      if (!randomize_name_key(name, key))
 		return -1;
 	      // fallthrough
