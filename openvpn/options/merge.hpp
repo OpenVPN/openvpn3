@@ -414,6 +414,10 @@ namespace openvpn {
 		  return true;
 		}
 	      return false;
+	    case 's':
+	      if (d == "static-key")
+		return true;
+	      return false;
 	    case 't':
 	      if (d == "tls-auth")
 		{
