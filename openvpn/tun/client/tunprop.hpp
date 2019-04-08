@@ -355,7 +355,7 @@ namespace openvpn {
       }
     }
 
-    static void add_exclude_route(TunBuilderBase* tb, 
+    static void add_route_tunbuilder(TunBuilderBase* tb,
 				  bool add,
 				  const IP::Addr& addr,
 				  int prefix_length,
@@ -420,7 +420,7 @@ namespace openvpn {
 		    if (pair.version() != IP::Addr::V4)
 		      throw tun_prop_error("route is not IPv4");
 		    const bool add = route_target(o, 3);
-		    add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, false, eer);
+		    add_route_tunbuilder(tb, add, pair.addr, pair.netmask.prefix_len(), metric, false, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -448,7 +448,7 @@ namespace openvpn {
 		    if (pair.version() != IP::Addr::V6)
 		      throw tun_prop_error("route is not IPv6");
 		    const bool add = route_target(o, 2);
-		    add_exclude_route(tb, add, pair.addr, pair.netmask.prefix_len(), metric, true, eer);
+		    add_route_tunbuilder(tb, add, pair.addr, pair.netmask.prefix_len(), metric, true, eer);
 		  }
 		  catch (const std::exception& e)
 		    {
@@ -475,7 +475,7 @@ namespace openvpn {
 	    {
 	      try {
 		const IP::Addr::Version ver = addr.version();
-		add_exclude_route(tb, false, addr, IP::Addr::version_size(ver), -1, ver == IP::Addr::V6, eer);
+		add_route_tunbuilder(tb, false, addr, IP::Addr::version_size(ver), -1, ver == IP::Addr::V6, eer);
 	      }
 	      catch (const std::exception& e)
 		{
