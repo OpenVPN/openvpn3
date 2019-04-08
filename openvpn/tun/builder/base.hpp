@@ -261,6 +261,15 @@ namespace openvpn {
     {
       return -1;
     }
+    /**
+     * Callback configuring the dco device for use with the
+     * DCO client
+     * @param dcofd   	File descriptor of the DCO device used by the client
+     * @param peerid	Peer ID used by the client
+     */
+    virtual void tun_builder_establish_dco(int dcofd, int peerid)
+    {
+    }
 #endif
   };
 }

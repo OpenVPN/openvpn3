@@ -318,8 +318,22 @@ namespace openvpn {
 	  tun_parent->tun_pre_tun_config();
 
 	  // parse pushed options
-	  TunBuilderCapture::Ptr po(new TunBuilderCapture());
-	  TunProp::configure_builder(po.get(),
+	  TunBuilderCapture::Ptr po;
+	  TunBuilderBase *builder;
+
+	  if (config->builder)
+	    {
+	      /* Also configure the tun builder to set the interface
+	       * config */
+	      builder = config->builder;
+	    }
+	  else
+	    {
+	      po.reset(new TunBuilderCapture());
+	      builder = po.get();
+	    }
+
+	  TunProp::configure_builder(builder,
 				     state.get(),
 				     config->transport.stats.get(),
 				     server_addr,
@@ -328,7 +342,8 @@ namespace openvpn {
 				     nullptr,
 				     false);
 
-	  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
+	  if (po)
+	    OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
 #ifdef ENABLE_PG
 	  if (config->trunk_unit >= 0)
@@ -360,6 +375,11 @@ namespace openvpn {
 	    }
 	  else
 #endif   // ENABLE_PG
+	  if (config->builder)
+	    {
+	      config->builder->tun_builder_establish_dco(impl->native_handle(), peer_id);
+	    }
+	  else // po is defined when builder is nullptr
 	    {
 	      // add/remove command lists
 	      ActionList::Ptr add_cmds = new ActionList();
@@ -658,7 +678,9 @@ namespace openvpn {
 	    halt = true;
 	    config->transport.stats->dco_update(); // final update
 	    config->transport.stats->dco_configure(nullptr);
-	    if (remove_cmds)
+	    if (config->builder)
+	      config->builder->tun_builder_teardown(true);
+	    else if (remove_cmds)
 	      remove_cmds->execute_log();
 	    if (impl)
 	      impl->stop();
