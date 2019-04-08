@@ -1001,7 +1001,10 @@ namespace openvpn {
 	  // Set SSL options
 	  if (!(config->flags & SSLConst::NO_VERIFY_PEER))
 	    {
-	      SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+	      int vf = SSL_VERIFY_PEER;
+	      if (!(config->flags & SSLConst::PEER_CERT_OPTIONAL))
+		vf |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+	      SSL_CTX_set_verify(ctx, vf,
 				 config->mode.is_client() ? verify_callback_client : verify_callback_server);
 	      SSL_CTX_set_verify_depth(ctx, 16);
 	    }

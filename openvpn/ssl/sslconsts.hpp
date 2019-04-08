@@ -58,8 +58,11 @@ namespace openvpn {
       // purpose set to server.
       SERVER_TO_SERVER=(1<<4),
 
+      // Peer certificate is optional
+      PEER_CERT_OPTIONAL=(1<<5),
+
       // last flag marker
-      LAST=(1<<5),
+      LAST=(1<<6),
     };
 
     // filter all but SSL flags
