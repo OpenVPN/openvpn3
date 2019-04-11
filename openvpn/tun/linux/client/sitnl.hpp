@@ -325,6 +325,11 @@ namespace openvpn {
 	      goto out;
 	    }
 
+	    if (h->nlmsg_type == NLMSG_DONE)
+	    {
+	      goto out;
+	    }
+
 	    if (h->nlmsg_type == NLMSG_ERROR)
 	    {
 	      err = (struct nlmsgerr *)NLMSG_DATA(h);
@@ -339,7 +344,11 @@ namespace openvpn {
 		{
 		  ret = 0;
 		  if (cb)
+		  {
 		    ret = cb(h, arg_cb);
+		    if (ret < 0)
+		      goto out;
+		  }
 		}
 		else
 		{
@@ -355,7 +364,6 @@ namespace openvpn {
 	    if (cb)
 	    {
 	      ret = cb(h, arg_cb);
-	      goto out;
 	    }
 	    else
 	    {
@@ -379,6 +387,10 @@ namespace openvpn {
 	    ret = -1;
 	    goto out;
 	  }
+
+	  // continue reading multipart message
+	  if (!(h->nlmsg_flags & NLM_F_MULTI))
+	    goto out;
 	}
 out:
 	close(fd);
@@ -403,6 +415,8 @@ out:
 	int len = n->nlmsg_len - NLMSG_LENGTH(sizeof(*r));
 	int ifindex = 0;
 
+	IP::Addr gw;
+
 	while (RTA_OK(rta, len))
 	{
 	  switch (rta->rta_type)
@@ -422,10 +436,10 @@ out:
 	      switch (res->family)
 	      {
 	      case AF_INET:
-		res->gw = IP::Addr::from_ipv4(IPv4::Addr::from_bytes_net(bytestr));
+		gw = IP::Addr::from_ipv4(IPv4::Addr::from_bytes_net(bytestr));
 		break;
 	      case AF_INET6:
-		res->gw = IP::Addr::from_ipv6(IPv6::Addr::from_byte_string(bytestr));
+		gw = IP::Addr::from_ipv6(IPv6::Addr::from_byte_string(bytestr));
 		break;
 	      }
 	    }
@@ -433,6 +447,15 @@ out:
 	  }
 
 	  rta = RTA_NEXT(rta, len);
+	}
+
+	if (!gw.defined())
+	{
+	  return 0;
+	}
+	else
+	{
+	  OPENVPN_LOG_RTNL(__func__ << ": RTA_GATEWAY " << gw.to_string());
 	}
 
 	if (ifindex > 0)
@@ -445,6 +468,7 @@ out:
 	    return -1;
 	  }
 
+	  res->gw = gw;
 	  res->iface = iface;
 	}
 
