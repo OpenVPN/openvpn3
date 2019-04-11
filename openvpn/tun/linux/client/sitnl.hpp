@@ -404,6 +404,7 @@ out:
 	sa_family_t family;
 	IP::Addr gw;
 	std::string iface;
+	std::string iface_to_ignore;
       } route_res_t;
 
       static int
@@ -468,15 +469,34 @@ out:
 	    return -1;
 	  }
 
-	  res->gw = gw;
-	  res->iface = iface;
+	  if (res->iface_to_ignore == iface)
+	  {
+	    OPENVPN_LOG_RTNL(__func__ << ": Ignore gateway " << gw.to_string() << " on " << iface);
+	  }
+	  else
+	  {
+	    res->iface = iface;
+	    res->gw = gw;
+	  }
 	}
 
 	return 0;
       }
 
+      /**
+       * Searches for best gateway for a given route
+       * @param iface_to_ignore this allows to exclude certain interface
+       * from discovered gateways. Used when we want to exclude VPN interface
+       * when there is active VPN connection with redirected default gateway
+       * @param route route for which we search gw
+       * @param [out] best_gw found gw
+       * @param [out] best_iface network interface on which gw was found
+       * @return
+       */
       static int
-      sitnl_route_best_gw(const IP::Route& route, IP::Addr& best_gw,
+      sitnl_route_best_gw(const std::string& iface_to_ignore,
+			  const IP::Route& route,
+			  IP::Addr& best_gw,
 			  std::string& best_iface)
       {
 	struct sitnl_route_req req = { };
@@ -494,6 +514,8 @@ out:
 	{
 	  req.n.nlmsg_flags |= NLM_F_DUMP;
 	}
+
+	res.iface_to_ignore = iface_to_ignore;
 
 	{
 	  unsigned char bytestr[IP::Addr::V6_SIZE / 8];
@@ -720,14 +742,14 @@ err:
 
       static int
       net_route_best_gw(const IP::Route6& route, IPv6::Addr& best_gw6,
-			std::string& best_iface)
+			std::string& best_iface, const std::string& iface_to_ignore = "")
       {
 	IP::Addr best_gw;
 	int ret;
 
 	OPENVPN_LOG(__func__ << " query IPv6: " << route);
 
-	ret = sitnl_route_best_gw(IP::Route(IP::Addr::from_ipv6(route.addr), route.prefix_len),
+	ret = sitnl_route_best_gw(iface_to_ignore, IP::Route(IP::Addr::from_ipv6(route.addr), route.prefix_len),
 				  best_gw, best_iface);
 	if (ret >= 0)
 	{
@@ -739,14 +761,14 @@ err:
 
       static int
       net_route_best_gw(const IP::Route4& route, IPv4::Addr &best_gw4,
-			std::string& best_iface)
+			std::string& best_iface, const std::string& iface_to_ignore = "")
       {
 	IP::Addr best_gw;
 	int ret;
 
 	OPENVPN_LOG(__func__ << " query IPv4: " << route);
 
-	ret = sitnl_route_best_gw(IP::Route(IP::Addr::from_ipv4(route.addr), route.prefix_len),
+	ret = sitnl_route_best_gw(iface_to_ignore, IP::Route(IP::Addr::from_ipv4(route.addr), route.prefix_len),
 				  best_gw, best_iface);
 	if (ret >= 0)
 	{
