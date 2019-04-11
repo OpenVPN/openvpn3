@@ -604,7 +604,7 @@ namespace openvpn {
 			     ActionList& create,
 			     ActionList& destroy)
       {
-	const LinuxGW46Netlink gw(iface_name);
+	const LinuxGW46Netlink gw("", iface_name);
 
 	// set local4 and local6 to point to IPv4/6 route configurations
 	const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
