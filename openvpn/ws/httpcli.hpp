@@ -1162,10 +1162,6 @@ namespace openvpn {
 	  return error_handler(Status::E_PROXY, err_fmt(fatal_err, err_text));
 	}
 
-	virtual void ip_hole_punch(const IP::Addr& addr)
-	{
-	}
-
 	virtual void transport_pre_resolve()
 	{
 	}
