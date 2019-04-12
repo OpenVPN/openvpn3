@@ -85,11 +85,6 @@ namespace openvpn {
     //   true: this is the final disconnect, or
     //   false: we are in a pause/reconnecting state.
     virtual void finalize(const bool disconnected) {}
-
-    // Called just prior to transport layer opening up a socket to addr.
-    // Allows the implementation to ensure connectivity for outgoing
-    // transport connection to server.
-    virtual void ip_hole_punch(const IP::Addr& addr) {}
   };
 
 } // namespace openvpn

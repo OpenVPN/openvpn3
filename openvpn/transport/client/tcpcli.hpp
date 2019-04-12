@@ -280,7 +280,6 @@ namespace openvpn {
 	OPENVPN_LOG("Contacting " << server_endpoint << " via "
 		    << server_protocol.str());
 	parent->transport_wait();
-	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
 #if defined(OPENVPN_PLATFORM_TYPE_UNIX) || defined(OPENVPN_PLATFORM_UWP)
 	if (config->socket_protect)

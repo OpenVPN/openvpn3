@@ -424,11 +424,6 @@ namespace openvpn {
 	Base::disable_keepalive(keepalive_ping, keepalive_timeout);
       }
 
-      virtual void ip_hole_punch(const IP::Addr& addr)
-      {
-	tun_factory->ip_hole_punch(addr);
-      }
-
       virtual void transport_pre_resolve()
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();

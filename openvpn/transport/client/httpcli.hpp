@@ -908,7 +908,6 @@ namespace openvpn {
 	proxy_remote_list().get_endpoint(server_endpoint);
 	OPENVPN_LOG("Contacting " << server_endpoint << " via HTTP Proxy");
 	parent->transport_wait_proxy();
-	parent->ip_hole_punch(server_endpoint_addr());
 	socket.open(server_endpoint.protocol());
 #ifdef OPENVPN_PLATFORM_TYPE_UNIX
 	if (config->socket_protect)

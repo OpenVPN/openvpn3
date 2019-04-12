@@ -533,7 +533,6 @@ namespace openvpn {
 	config->transport.remote_list->get_endpoint(udp().server_endpoint);
 	OPENVPN_LOG("Contacting " << udp().server_endpoint << " via UDP");
 	transport_parent->transport_wait();
-	transport_parent->ip_hole_punch(server_endpoint_addr());
 	udp().socket.open(udp().server_endpoint.protocol());
 	udp().socket.async_connect(udp().server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                                           {
