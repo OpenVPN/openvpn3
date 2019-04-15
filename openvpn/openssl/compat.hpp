@@ -194,16 +194,6 @@ inline RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey)
   return pkey->pkey.rsa;
 }
 
-inline const BIGNUM *RSA_get0_n(const RSA *r)
-{
-  return r->n;
-}
-
-inline const BIGNUM *RSA_get0_e(const RSA *r)
-{
-  return r->e;
-}
-
 inline int RSA_meth_set_pub_enc(RSA_METHOD *meth,
 				int (*pub_enc)(int flen, const unsigned char *from,
 					       unsigned char *to, RSA *rsa,
@@ -268,9 +258,16 @@ inline DSA *EVP_PKEY_get0_DSA(EVP_PKEY *pkey)
   return pkey->pkey.dsa;
 }
 
-inline const BIGNUM *DSA_get0_p(const DSA *d)
+inline void DSA_get0_pqg(const DSA *d, const BIGNUM **p, const BIGNUM **q, const BIGNUM **g)
 {
-  return d->p;
+  if (p != nullptr)
+    *p = d->p;
+
+  if (q != nullptr)
+    *q = d->q;
+
+  if (g != nullptr)
+    *g = d->g;
 }
 
 inline void RSA_set_flags(RSA *r, int flags)
@@ -305,7 +302,45 @@ inline int RSA_set0_key(RSA *rsa, BIGNUM *n, BIGNUM *e, BIGNUM *d)
   return 1;
 }
 
+inline void RSA_get0_key(const RSA *rsa, const BIGNUM **n, const BIGNUM **e, const BIGNUM **d)
+{
+  if (n != nullptr)
+    *n = rsa->n;
+
+  if (e != nullptr)
+    *e = rsa->e;
+
+  if (d != nullptr)
+    *d = rsa->d;
+}
+
 /* Renamed in OpenSSL 1.1 */
 #define X509_get0_pubkey X509_get_pubkey
 #define RSA_F_RSA_OSSL_PRIVATE_ENCRYPT RSA_F_RSA_EAY_PRIVATE_ENCRYPT
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+#include <openssl/rsa.h>
+#include <openssl/dsa.h>
+
+inline const BIGNUM *RSA_get0_n(const RSA *r)
+{
+    const BIGNUM *n;
+    RSA_get0_key(r, &n, nullptr, nullptr);
+    return n;
+}
+
+inline const BIGNUM *RSA_get0_e(const RSA *r)
+{
+    const BIGNUM *e;
+    RSA_get0_key(r, nullptr, &e, nullptr);
+    return e;
+}
+
+inline const BIGNUM *DSA_get0_p(const DSA *d)
+{
+    const BIGNUM *p;
+    DSA_get0_pqg(d, &p, nullptr, nullptr);
+    return p;
+}
 #endif
