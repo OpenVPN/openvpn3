@@ -128,15 +128,19 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
         ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
         EXCLUDE_FROM_ALL)
 
-
-
-add_executable(coreUnitTests
+set(SOURCES
         core_tests.cpp
         test_route_emulation.cpp
         test_log.cpp
         test_comp.cpp
         test_b64.cpp
         )
+
+if(${PLAT} STREQUAL "linux")
+    list(APPEND SOURCES test_sitnl.cpp)
+endif()
+
+add_executable(coreUnitTests ${SOURCES})
 
 target_link_libraries(coreUnitTests gtest_main)
 target_include_directories(coreUnitTests PRIVATE ${CORE_INCLUDES})
