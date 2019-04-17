@@ -405,6 +405,9 @@ out:
 	IP::Addr gw;
 	std::string iface;
 	std::string iface_to_ignore;
+	int metric;
+	IP::Route dst;
+	int prefix_len;
       } route_res_t;
 
       static int
@@ -415,8 +418,20 @@ out:
 	struct rtattr *rta = RTM_RTA(r);
 	int len = n->nlmsg_len - NLMSG_LENGTH(sizeof(*r));
 	int ifindex = 0;
+	int metric = 0;
 
 	IP::Addr gw;
+
+	IP::Route route;
+	switch (res->family)
+	{
+	  case AF_INET:
+	    route = IP::Route("0.0.0.0/0");
+	    break;
+	  case AF_INET6:
+	    route = IP::Route("::/0");
+	    break;
+	}
 
 	while (RTA_OK(rta, len))
 	{
@@ -428,7 +443,21 @@ out:
 	    break;
 	  case RTA_DST:
 	    /* route prefix */
-	    RTA_DATA(rta);
+	    {
+	      const unsigned char *bytestr = (unsigned char *)RTA_DATA(rta);
+	      switch (res->family)
+	      {
+		case AF_INET:
+		  route = IP::Route(IPv4::Addr::from_bytes_net(bytestr).to_string() + "/" + std::to_string(r->rtm_dst_len));
+		  break;
+		case AF_INET6:
+		  route = IP::Route(IPv6::Addr::from_byte_string(bytestr).to_string() + "/" + std::to_string(r->rtm_dst_len));
+		  break;
+	      }
+	    }
+	    break;
+	  case RTA_PRIORITY:
+	    metric = *(unsigned int *)RTA_DATA(rta);
 	    break;
 	  case RTA_GATEWAY:
 	    /* GW for the route */
@@ -450,7 +479,7 @@ out:
 	  rta = RTA_NEXT(rta, len);
 	}
 
-	if (!gw.defined())
+	if (!gw.defined() || ifindex <= 0)
 	{
 	  return 0;
 	}
@@ -459,26 +488,46 @@ out:
 	  OPENVPN_LOG_RTNL(__func__ << ": RTA_GATEWAY " << gw.to_string());
 	}
 
-	if (ifindex > 0)
+	if (!route.contains(res->dst))
 	{
-	  char iface[IFNAMSIZ];
-	  if (!if_indextoname(ifindex, iface))
-	  {
-	    OPENVPN_LOG(__func__ << ": rtnl: can't get ifname for index "
-			<< ifindex);
-	    return -1;
-	  }
-
-	  if (res->iface_to_ignore == iface)
-	  {
-	    OPENVPN_LOG_RTNL(__func__ << ": Ignore gateway " << gw.to_string() << " on " << iface);
-	  }
-	  else
-	  {
-	    res->iface = iface;
-	    res->gw = gw;
-	  }
+	  OPENVPN_LOG_RTNL(__func__ << ": Ignore gw for unmatched route " << route.to_string());
+	  return 0;
 	}
+
+	char iface[IFNAMSIZ];
+	if (!if_indextoname(ifindex, iface))
+	{
+	  OPENVPN_LOG(__func__ << ": rtnl: can't get ifname for index "
+		      << ifindex);
+	  return -1;
+	}
+
+	if (res->iface_to_ignore == iface)
+	{
+	  OPENVPN_LOG_RTNL(__func__ << ": Ignore gw " << gw.to_string() << " on " << iface);
+	  return 0;
+	}
+
+	// skip if gw's route prefix is shorter
+	if (r->rtm_dst_len < res->prefix_len)
+	{
+	  OPENVPN_LOG_RTNL(__func__ << ": Ignore gw " << gw.to_string() << " with shorter route prefix " << route.to_string());
+	  return 0;
+	}
+
+	// skip if gw's route metric is higher
+	if ((metric > res->metric) && (res->metric != -1))
+	{
+	  OPENVPN_LOG_RTNL(__func__ << ": Ignore gw " << gw.to_string() << " with higher metrics " << metric);
+	  return 0;
+	}
+
+	res->iface = iface;
+	res->gw = gw;
+	res->metric = metric;
+	res->prefix_len = res->prefix_len;
+
+	OPENVPN_LOG_RTNL(__func__ << ": Use gw " << gw.to_string() << " route " << route.to_string() << " metric " << metric);
 
 	return 0;
       }
@@ -500,12 +549,15 @@ out:
 			  std::string& best_iface)
       {
 	struct sitnl_route_req req = { };
-	route_res_t res;
-	int ret = -EINVAL;
-
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.r));
 	req.n.nlmsg_type = RTM_GETROUTE;
 	req.n.nlmsg_flags = NLM_F_REQUEST;
+
+	route_res_t res;
+	res.metric = -1;
+	res.prefix_len = -1;
+
+	int ret = -EINVAL;
 
 	res.family = req.r.rtm_family = route.addr.family();
 	req.r.rtm_dst_len = route.prefix_len;
@@ -516,6 +568,7 @@ out:
 	}
 
 	res.iface_to_ignore = iface_to_ignore;
+	res.dst = route;
 
 	{
 	  unsigned char bytestr[IP::Addr::V6_SIZE / 8];
