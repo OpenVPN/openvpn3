@@ -65,14 +65,18 @@ std::string ssllib_b64enc(const char* text, size_t textlen)
 
 std::string ssllib_b64enc(const char* text, size_t textlen)
 {
-    char* dst = (char *)std::malloc(textlen * 2);
+    size_t olen, outlen;
 
-    size_t olen;
-    mbedtls_base64_encode(reinterpret_cast<unsigned char*>(dst), textlen * 2,
-    	&olen, reinterpret_cast<const unsigned char*>(text), textlen);
+    //make a pessimistic assumption about length always calculate 3 padding bytes
+    outlen = 3 + 4*(textlen+3)/3;
+
+    char *dst = new char[outlen];
+
+    EXPECT_EQ(mbedtls_base64_encode(reinterpret_cast<unsigned char*>(dst), outlen,
+        	&olen, reinterpret_cast<const unsigned char*>(text), textlen), 0);
     std::string ret(dst, olen);
-    free(dst);
-    return dst;
+    delete[] dst;
+    return ret;
 }
 #endif
 
@@ -91,7 +95,7 @@ void b64_test_binary(const Base64& b64, const char* data, unsigned int len)
 {
     auto enc = b64.encode(data, len);
 
-    char decdata[len];
+    char* decdata = new char[len];
     size_t decode_len = b64.decode(decdata, len, enc);
     std::string libenc = ssllib_b64enc(data, len);
 
@@ -99,8 +103,9 @@ void b64_test_binary(const Base64& b64, const char* data, unsigned int len)
 
     ASSERT_EQ(decode_len, len) << "Encode/decode length differs";
     ASSERT_EQ(std::vector<uint8_t>(decdata, decdata + decode_len),
-	    std::vector<uint8_t>(data, data + len)) << "Encode/Decode results differ";
+	      std::vector<uint8_t>(data, data + len)) << "Encode/Decode results differ";
 
+    delete[] decdata;
 }
 
 TEST(Base64, tooshortdest)
@@ -165,11 +170,12 @@ TEST(Base64, binary_data)
     std::srand(0);
     for(unsigned int i=0;i<20;i++)
     {
-        char data[i];
+        char* data = new char[i];
         for (int j=0;j<i;j++)
 	{
             data[j]=(char)(std::rand() & 0xff);
 	}
         b64_test_binary(b64, data, i);
+        delete[] data;
     }
 }
