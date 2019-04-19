@@ -127,6 +127,8 @@ public:
 
     TUN_CLASS_SETUP::Config config;
     config.layer = Layer(Layer::Type::OSI_LAYER_3);
+    // no need to add bypass routes on establish since we do it on socket_protect
+    config.add_bypass_routes_on_establish = false;
     return tun->establish(tbc, &config, nullptr, std::cout);
   }
 
@@ -170,16 +172,38 @@ public:
     return tbc.tun_builder_add_dns_server(address, ipv6);
   }
 
+  void tun_builder_teardown(bool disconnect) override
+  {
+    std::ostringstream os;
+    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
+    tun->destroy(os);
+  }
+
+  bool socket_protect(int socket, std::string remote, bool ipv6) override
+  {
+    (void)socket;
+    std::ostringstream os;
+    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
+    return tun->add_bypass_route(remote, ipv6, os);
+  }
+
 private:
-  TUN_CLASS_SETUP::Ptr tun;
+  TUN_CLASS_SETUP::Ptr tun = new TUN_CLASS_SETUP();
   TunBuilderCapture tbc;
 };
-#define CLIENTBASE ClientBase
 #else // USE_TUN_BUILDER
-#define CLIENTBASE ClientAPI::OpenVPNClient
+class ClientBase : public ClientAPI::OpenVPNClient
+{
+public:
+  bool socket_protect(int socket, std::string remote, bool ipv6) override
+  {
+    std::cout << "NOT IMPLEMENTED: *** socket_protect " << socket << " " << remote << std::endl;
+    return true;
+  }
+};
 #endif
 
-class Client : public CLIENTBASE
+class Client : public ClientBase
 {
 public:
   enum ClockTickAction {
@@ -234,13 +258,6 @@ public:
 #endif
 
 private:
-  bool socket_protect(int socket, std::string remote, bool ipv6) override
-  {
-    std::cout << "*** socket_protect " << socket << " "
-	      << remote << std::endl;
-    return true;
-  }
-
   virtual void event(const ClientAPI::Event& ev) override
   {
     std::cout << date_time() << " EVENT: " << ev.name;
