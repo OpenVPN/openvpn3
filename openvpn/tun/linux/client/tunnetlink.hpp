@@ -599,13 +599,12 @@ namespace openvpn {
     struct TunMethods
     {
       static inline void tun_config(const std::string& iface_name,
-			     const TunBuilderCapture& pull,
-			     std::vector<IP::Route>* rtvec,
-			     ActionList& create,
-			     ActionList& destroy)
+				    const TunBuilderCapture& pull,
+				    std::vector<IP::Route>* rtvec,
+				    ActionList& create,
+				    ActionList& destroy,
+				    bool add_bypass_routes)
       {
-	const LinuxGW46Netlink gw("", iface_name);
-
 	// set local4 and local6 to point to IPv4/6 route configurations
 	const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
 	const TunBuilderCapture::RouteAddress* local6 = pull.vpn_ipv6();
@@ -634,7 +633,10 @@ namespace openvpn {
 	}
 
 	// Process exclude routes
+	if (!pull.exclude_routes.empty())
 	{
+	  LinuxGW46Netlink gw(iface_name);
+
 	  for (const auto &route : pull.exclude_routes)
 	    {
 	      if (route.ipv6)
@@ -655,8 +657,8 @@ namespace openvpn {
 	if (pull.reroute_gw.ipv4)
 	  {
 	    // add bypass route
-	    if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
-	      add_del_route(pull.remote_address.address, 32, gw.v4.addr().to_string(), gw.v4.dev(), R_ADD_SYS, rtvec, create, destroy);
+	    if (add_bypass_routes && !pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+	      add_bypass_route(iface_name, pull.remote_address.address, false, rtvec, create, destroy);
 
 	    add_del_route("0.0.0.0", 1, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
 	    add_del_route("128.0.0.0", 1, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
@@ -666,8 +668,8 @@ namespace openvpn {
 	if (pull.reroute_gw.ipv6 && !pull.block_ipv6)
 	  {
 	    // add bypass route
-	    if (pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
-	      add_del_route(pull.remote_address.address, 128, gw.v6.addr().to_string(), gw.v6.dev(), R_ADD_SYS|R_IPv6, rtvec, create, destroy);
+	    if (add_bypass_routes && pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+	      add_bypass_route(iface_name, pull.remote_address.address, true, rtvec, create, destroy);
 
 	    add_del_route("0000::", 1, local6->gateway, iface_name, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
 	    add_del_route("8000::", 1, local6->gateway, iface_name, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
@@ -676,6 +678,22 @@ namespace openvpn {
 	// fixme -- Process block-ipv6
 
 	// fixme -- Handle pushed DNS servers
+      }
+
+      static inline void add_bypass_route(const std::string& tun_iface_name,
+					  const std::string& address,
+					  bool ipv6,
+					  std::vector<IP::Route>* rtvec,
+					  ActionList& create,
+					  ActionList& destroy)
+      {
+	LinuxGW46Netlink gw(tun_iface_name, address);
+
+	if (!ipv6 && gw.v4.defined())
+	  add_del_route(address, 32, gw.v4.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);
+
+	if (ipv6 && gw.v6.defined())
+	  add_del_route(address, 128, gw.v6.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);
       }
     };
   }

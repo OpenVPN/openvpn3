@@ -88,7 +88,7 @@ namespace openvpn {
 	      add->argv.push_back("/sbin/ip");
 	      add->argv.push_back("-6");
 	      add->argv.push_back("route");
-	      add->argv.push_back("add");
+	      add->argv.push_back("prepend");
 	      add->argv.push_back(net.to_string() + '/' + openvpn::to_string(prefix_len));
 	      add->argv.push_back("via");
 	      add->argv.push_back(gateway_str);
@@ -121,10 +121,15 @@ namespace openvpn {
 	    add->argv.push_back("/sbin/ip");
 	    add->argv.push_back("-4");
 	    add->argv.push_back("route");
-	    add->argv.push_back("add");
+	    add->argv.push_back("prepend");
 	    add->argv.push_back(net.to_string() + '/' + openvpn::to_string(prefix_len));
 	    add->argv.push_back("via");
 	    add->argv.push_back(gateway_str);
+	    if (!dev.empty())
+	    {
+	      add->argv.push_back("dev");
+	      add->argv.push_back(dev);
+	    }
 	    create = add;
 
 	    // for the destroy command, copy the add command but replace "add" with "delete"
@@ -248,7 +253,8 @@ namespace openvpn {
 			     const TunBuilderCapture& pull,
 			     std::vector<IP::Route>* rtvec,
 			     ActionList& create,
-			     ActionList& destroy)
+			     ActionList& destroy,
+			     bool add_bypass_routes = true)
       {
 	const LinuxGW46 gw(true);
 
@@ -301,7 +307,7 @@ namespace openvpn {
 	if (pull.reroute_gw.ipv4)
 	  {
 	    // add bypass route
-	    if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+	    if (add_bypass_routes && !pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL) && gw.v4.defined())
 	      add_del_route(pull.remote_address.address, 32, gw.v4.addr().to_string(), gw.v4.dev(), R_ADD_SYS, rtvec, create, destroy);
 
 	    add_del_route("0.0.0.0", 1, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
@@ -312,7 +318,7 @@ namespace openvpn {
 	if (pull.reroute_gw.ipv6 && !pull.block_ipv6)
 	  {
 	    // add bypass route
-	    if (pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+	    if (add_bypass_routes && pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL) && gw.v4.defined())
 	      add_del_route(pull.remote_address.address, 128, gw.v6.addr().to_string(), gw.v6.dev(), R_ADD_SYS|R_IPv6, rtvec, create, destroy);
 
 	    add_del_route("0000::", 1, local6->gateway, iface_name, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
@@ -322,6 +328,22 @@ namespace openvpn {
 	// fixme -- Process block-ipv6
 
 	// fixme -- Handle pushed DNS servers
+      }
+
+      static inline void add_bypass_route(const std::string& tun_iface_name,
+					  const std::string& address,
+					  bool ipv6,
+					  std::vector<IP::Route>* rtvec,
+					  ActionList& create,
+					  ActionList& destroy)
+      {
+	LinuxGW46 gw(true);
+
+	if (!ipv6 && gw.v4.defined())
+	  add_del_route(address, 32, gw.v4.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);
+
+	if (ipv6 && gw.v6.defined())
+	  add_del_route(address, 128, gw.v6.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);
       }
     };
   }

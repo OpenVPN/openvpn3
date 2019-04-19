@@ -69,6 +69,7 @@ namespace openvpn {
 	Layer layer; // OSI layer
 	std::string dev_name;
 	int txqueuelen;
+	bool add_bypass_routes_on_establish; // required when not using tunbuilder
 
 #ifdef HAVE_JSON
 	virtual Json::Value to_json() override
@@ -92,17 +93,39 @@ namespace openvpn {
 #endif
       };
 
-      virtual void destroy(std::ostream &os) override
+      void destroy(std::ostream &os) override
       {
 	// remove added routes
-	if (remove_cmds)
-	  remove_cmds->execute(std::cout);
+	remove_cmds->execute(os);
+
+	// remove bypass route
+	remove_cmds_bypass_gw->execute(os);
       }
 
-      virtual int establish(const TunBuilderCapture& pull, // defined by TunBuilderSetup::Base
-			    TunBuilderSetup::Config* config,
-			    Stop* stop,
-			    std::ostream& os) override
+      bool add_bypass_route(const std::string& address,
+			    bool ipv6,
+			    std::ostream& os)
+      {
+	// nothing to do if we reconnect to the same gateway
+	if (connected_gw == address)
+	  return true;
+
+	// remove previous bypass route
+	remove_cmds_bypass_gw->execute(os);
+	remove_cmds_bypass_gw->clear();
+
+	ActionList::Ptr add_cmds = new ActionList();
+	TUNMETHODS::add_bypass_route(tun_iface_name, address, ipv6, nullptr, *add_cmds, *remove_cmds_bypass_gw);
+
+	// add gateway bypass route
+	add_cmds->execute(os);
+	return true;
+      }
+
+      int establish(const TunBuilderCapture& pull, // defined by TunBuilderSetup::Base
+		    TunBuilderSetup::Config* config,
+		    Stop* stop,
+		    std::ostream& os) override
       {
 	// get configuration
 	Config *conf = dynamic_cast<Config *>(config);
@@ -149,15 +172,22 @@ namespace openvpn {
 	  }
 
 	conf->iface_name = ifr.ifr_name;
+	tun_iface_name = ifr.ifr_name;
 
 	ActionList::Ptr add_cmds = new ActionList();
-	remove_cmds.reset(new ActionListReversed()); // remove commands executed in reversed order
+	ActionList::Ptr remove_cmds_new = new ActionListReversed();
 
 	// configure tun properties
-	TUNMETHODS::tun_config(ifr.ifr_name, pull, nullptr, *add_cmds, *remove_cmds);
+	TUNMETHODS::tun_config(ifr.ifr_name, pull, nullptr, *add_cmds, *remove_cmds_new, conf->add_bypass_routes_on_establish);
 
 	// execute commands to bring up interface
-	add_cmds->execute(std::cout);
+	add_cmds->execute(os);
+
+	// tear down old routes
+	remove_cmds->execute(os);
+	std::swap(remove_cmds, remove_cmds_new);
+
+	connected_gw = pull.remote_address.to_string();
 
 	return fd.release();
       }
@@ -193,7 +223,12 @@ namespace openvpn {
 	  }
       }
 
-      ActionListReversed::Ptr remove_cmds;
+      ActionList::Ptr remove_cmds_bypass_gw = new ActionList();
+      ActionListReversed::Ptr remove_cmds = new ActionListReversed();
+
+      std::string connected_gw;
+
+      std::string tun_iface_name; // used to skip tun-based default gw when add bypass route
     };
   }
 } // namespace openvpn

@@ -196,6 +196,7 @@ namespace openvpn {
 		  tsconf.layer = config->tun_prop.layer;
 		  tsconf.dev_name = config->dev_name;
 		  tsconf.txqueuelen = config->txqueuelen;
+		  tsconf.add_bypass_routes_on_establish = true;
 
 		  // open/config tun
 		  {

@@ -721,7 +721,7 @@ err:
 		      const std::string& iface, const uint32_t table,
 		      const int metric)
       {
-	return sitnl_route_set(RTM_NEWROUTE, NLM_F_CREATE | NLM_F_REPLACE, iface,
+	return sitnl_route_set(RTM_NEWROUTE, NLM_F_CREATE, iface,
 			       route, gw,
 			       (enum rt_class_t)(!table ? RT_TABLE_MAIN : table),
 			       metric, RT_SCOPE_UNIVERSE, RTPROT_BOOT, RTN_UNICAST);
