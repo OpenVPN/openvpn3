@@ -370,7 +370,7 @@ namespace openvpn {
 	  if (string::starts_with(dev_type, "tun"))
 	    layer = Layer(Layer::OSI_LAYER_3);
 	  else if (string::starts_with(dev_type, "tap"))
-	    layer = Layer(Layer::OSI_LAYER_2);
+	    throw proto_option_error("TAP mode is not supported");
 	  else
 	    throw proto_option_error("bad dev-type");
 	}
