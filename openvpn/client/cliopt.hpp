@@ -440,8 +440,9 @@ namespace openvpn {
 #endif
 	}
 
-      // verify that tun implementation can handle OSI layer declared by config
-      if (layer == Layer(Layer::OSI_LAYER_2) && !tun_factory->layer_2_supported())
+      // The Core Library itself does not handle TAP/OSI_LAYER_2 currently,
+      // so we bail out early whenever someone tries to use TAP configurations
+      if (layer == Layer(Layer::OSI_LAYER_2))
 	throw ErrorCode(Error::TAP_NOT_SUPPORTED, true, "OSI layer 2 tunnels are not currently supported");
 
       // server-poll-timeout
