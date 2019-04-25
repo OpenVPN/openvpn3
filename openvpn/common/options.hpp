@@ -214,14 +214,15 @@ namespace openvpn {
     template <typename T>
     T get_num(const size_t idx) const
     {
-      T n;
+      typedef typename std::remove_const<T>::type T_nonconst;
+      T_nonconst n;
       const std::string& numstr = get(idx, 64);
       if (numstr.length() >= 2 && numstr[0] == '0' && numstr[1] == 'x')
 	{
 	  if (!parse_hex_number(numstr.substr(2), n))
 	    OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] expecting a hex number");
 	}
-      else if (!parse_number<T>(numstr, n))
+      else if (!parse_number<T_nonconst>(numstr, n))
 	OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be a number");
       return n;
     }
@@ -1230,7 +1231,8 @@ namespace openvpn {
     template <typename T>
     T get_num(const std::string& name, const size_t idx, const T default_value) const
     {
-      T n = default_value;
+      typedef typename std::remove_const<T>::type T_nonconst;
+      T_nonconst n = default_value;
       const Option* o = get_ptr(name);
       if (o)
 	n = o->get_num<T>(idx, default_value);
@@ -1241,7 +1243,8 @@ namespace openvpn {
     T get_num(const std::string& name, const size_t idx, const T default_value,
 	      const T min_value, const T max_value) const
     {
-      T n = default_value;
+      typedef typename std::remove_const<T>::type T_nonconst;
+      T_nonconst n = default_value;
       const Option* o = get_ptr(name);
       if (o)
 	n = o->get_num<T>(idx, default_value, min_value, max_value);
