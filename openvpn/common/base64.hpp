@@ -61,7 +61,7 @@ namespace openvpn {
       {
       public:
 	UCharWrap(unsigned char *data, size_t size):
-	  size(size), data(data), index(0)
+	  data(data), size(size), index(0)
 	{
 	}
 
@@ -75,9 +75,8 @@ namespace openvpn {
 
 	unsigned char *data;
 	size_t size;
-      public:
 	size_t index;
-    };
+      };
 
   public:
     OPENVPN_SIMPLE_EXCEPTION(base64_bad_map);
