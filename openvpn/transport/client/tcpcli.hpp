@@ -315,7 +315,8 @@ namespace openvpn {
 		  SSLLib::SSLAPI::Config::Ptr ssl_conf;
 		  ssl_conf.reset(new SSLLib::SSLAPI::Config());
 		  ssl_conf->set_mode(Mode(Mode::CLIENT));
-		  ssl_conf->set_flags(SSLConst::LOG_VERIFY_STATUS|SSLConst::NO_VERIFY_PEER);
+		  ssl_conf->set_flags(SSLConst::LOG_VERIFY_STATUS|SSLConst::NO_VERIFY_PEER|
+				      SSLConst::ENABLE_SNI);
 		  ssl_conf->set_local_cert_enabled(false);
 		  ssl_conf->set_frame(config->frame);
 		  ssl_conf->set_rng(new SSLLib::RandomAPI(false));
