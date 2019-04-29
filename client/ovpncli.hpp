@@ -169,6 +169,14 @@ namespace openvpn {
       // Passed to server as IV_GUI_VER.
       std::string guiVersion;
 
+      // Set to a comma seperated list of supported SSO mechanisms that may
+      // be signalled via INFO_PRE to the client.
+      // "openurl" is to continue authentication by opening an url in a browser
+      // "crtext" gives a challenge response in text format that needs to
+      // responded via control channel. (
+      // Passed to the server as IV_SSO
+      std::string ssoMethods;
+
       // Use a different server than that specified in "remote"
       // option of profile
       std::string serverOverride;

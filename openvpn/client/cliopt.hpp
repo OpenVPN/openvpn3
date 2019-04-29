@@ -120,6 +120,7 @@ namespace openvpn {
     struct Config
     {
       std::string gui_version;
+      std::string sso_methods;
       std::string server_override;
       std::string port_override;
       Protocol proto_override;
@@ -717,6 +718,7 @@ namespace openvpn {
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
       cp->gui_version = config.gui_version;
+      cp->sso_methods = config.sso_methods;
       cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
       cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
       cp->frame = frame;

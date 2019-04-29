@@ -436,6 +436,7 @@ namespace openvpn {
 	std::string tls_version_min_override;
 	std::string tls_cert_profile_override;
 	std::string gui_version;
+	std::string sso_methods;
 	bool allow_local_lan_access;
 	ProtoContextOptions::Ptr proto_context_options;
 	PeerInfo::Set::Ptr extra_peer_info;
@@ -689,6 +690,7 @@ namespace openvpn {
 	state->tls_cert_profile_override = config.tlsCertProfileOverride;
 	state->allow_local_lan_access = config.allowLocalLanAccess;
 	state->gui_version = config.guiVersion;
+	state->sso_methods = config.ssoMethods;
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
 	state->echo = config.echo;
@@ -962,6 +964,7 @@ namespace openvpn {
       cc.tls_version_min_override = state->tls_version_min_override;
       cc.tls_cert_profile_override = state->tls_cert_profile_override;
       cc.gui_version = state->gui_version;
+      cc.sso_methods = state->sso_methods;
       cc.extra_peer_info = state->extra_peer_info;
       cc.stop = state->async_stop_local();
       cc.allow_local_lan_access = state->allow_local_lan_access;

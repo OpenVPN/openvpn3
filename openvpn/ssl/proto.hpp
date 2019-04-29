@@ -337,6 +337,9 @@ namespace openvpn {
       // GUI version, passed to server as IV_GUI_VER
       std::string gui_version;
 
+      // SSO methods, passed to the server as IV_SSO
+      std::string sso_methods;
+
       // op header
       bool enable_op32 = false;
       int remote_peer_id = -1; // -1 to disable
@@ -805,6 +808,8 @@ namespace openvpn {
 
 	if (!gui_version.empty())
 	  out << "IV_GUI_VER=" << gui_version << '\n';
+	if (!sso_methods.empty())
+	  out << "IV_SSO=" << sso_methods << '\n';
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
 	if (!force_aes_cbc_ciphersuites)
