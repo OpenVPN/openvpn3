@@ -22,7 +22,7 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <set>
 #include <tuple>
 #include <memory>
@@ -171,7 +171,7 @@ namespace openvpn {
     {
     };
 
-    typedef std::unordered_map<std::string, SessionSet> Map;
+    typedef std::map<std::string, SessionSet> Map;
 
     void remove_session(Map::iterator mi, SessionSet& ss, SessionSet::iterator ssi)
     {
