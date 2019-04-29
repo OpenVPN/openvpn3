@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <atomic>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
@@ -132,9 +133,9 @@ namespace openvpn {
       bool operator!=(const Creds& rhs) const
       {
 	bool neq = crypto::str_neq(username, rhs.username);
-	OPENVPN_COMPILER_FENCE
+	atomic_thread_fence(std::memory_order_acq_rel);
         neq |= crypto::str_neq(password, rhs.password);
-	OPENVPN_COMPILER_FENCE
+	atomic_thread_fence(std::memory_order_acq_rel);
 	return neq;
       }
 
