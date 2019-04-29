@@ -20,8 +20,7 @@
 //    If not, see <http://www.gnu.org/licenses/>.
 
 #include <string>
-
-#include <openvpn/common/memneq.hpp> // for OPENVPN_COMPILER_FENCE
+#include <atomic>
 
 namespace openvpn {
   namespace crypto {
@@ -47,14 +46,14 @@ namespace openvpn {
 	    break;
 	  i++;
 
-	  OPENVPN_COMPILER_FENCE
+	  atomic_thread_fence(std::memory_order_acq_rel);
 	  if (s2[j] != '\0')
 	    j++;
-	  OPENVPN_COMPILER_FENCE
+	  atomic_thread_fence(std::memory_order_acq_rel);
 	  if (s2[j] == '\0')
 	    k++;
 	}
-      OPENVPN_COMPILER_FENCE
+      atomic_thread_fence(std::memory_order_acq_rel);
       return bool(neq);
     }
 
