@@ -191,6 +191,7 @@ namespace openvpn {
 	std::string host;
 	std::string hint;   // overrides host for transport, may be IP address
 	std::string cn;     // host for CN verification, defaults to host if empty
+	std::string key;    // host for TLS session ticket cache key, defaults to host if empty
 	std::string head;   // host to send in HTTP header, defaults to host if empty
 	std::string port;
 
@@ -241,7 +242,7 @@ namespace openvpn {
 
 	std::string cache_key() const
 	{
-	  return host + '/' + port;
+	  return key.empty() ? (host + '/' + port ) : key;
 	}
       };
 
