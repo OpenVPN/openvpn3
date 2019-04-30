@@ -521,8 +521,6 @@ namespace openvpn {
 
       static void init_static()
       {
-	SSL_library_init();
-
 	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
 	context_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext", nullptr, nullptr, nullptr);
 
