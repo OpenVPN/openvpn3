@@ -35,6 +35,10 @@
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/buflist.hpp>
 
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <openvpn/win/unicode.hpp>
+#endif
+
 namespace openvpn {
 
   OPENVPN_UNTAGGED_EXCEPTION(file_exception);
@@ -61,7 +65,12 @@ namespace openvpn {
 			       const std::uint64_t max_size = 0,
 			       const unsigned int buffer_flags = 0)
   {
+#if defined(OPENVPN_PLATFORM_WIN)
+    Win::UTF16 filenamew(Win::utf16(filename));
+    std::ifstream ifs(filenamew.get(), std::ios::binary);
+#else
     std::ifstream ifs(filename.c_str(), std::ios::binary);
+#endif
     if (!ifs)
       OPENVPN_THROW(open_file_error, "cannot open for read: " << filename);
 

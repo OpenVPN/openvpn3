@@ -33,6 +33,7 @@
 namespace openvpn {
   namespace Win {
     typedef std::unique_ptr<wchar_t[]> UTF16;
+    typedef std::unique_ptr<char[]> UTF8;
 
     OPENVPN_SIMPLE_EXCEPTION(win_utf16);
 
@@ -62,6 +63,33 @@ namespace openvpn {
     inline size_t utf16_strlen(const wchar_t *str)
     {
       return ::wcslen(str);
+    }
+
+    inline char* utf8(wchar_t* str)
+    {
+      // first get output length (return value includes space for trailing nul)
+      const int len = ::WideCharToMultiByte(CP_UTF8,
+					    0,
+					    str,
+					    -1,
+					    NULL,
+					    0,
+					    NULL,
+					    NULL);
+      if (len <= 0)
+	throw win_utf16();
+      UTF8 ret(new char[len]);
+      const int len2 = ::WideCharToMultiByte(CP_UTF8,
+					     0,
+					     str,
+					     -1,
+					     ret.get(),
+					     len,
+					     NULL,
+					     NULL);
+      if (len != len2)
+	throw win_utf16();
+      return ret.release();
     }
   }
 }

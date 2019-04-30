@@ -78,6 +78,7 @@
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/console.hpp>
+#include <shellapi.h>
 #endif
 
 using namespace openvpn;
@@ -827,7 +828,14 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	      ClientAPI::Config config;
 	      config.guiVersion = "cli 1.0";
+#if defined(OPENVPN_PLATFORM_WIN)
+	      int nargs = 0;
+	      auto argvw = CommandLineToArgvW(GetCommandLineW(), &nargs);
+	      UTF8 utf8(Win::utf8(argvw[nargs - 1]));
+	      config.content = read_profile(utf8.get(), profile_content);
+#else
 	      config.content = read_profile(argv[0], profile_content);
+#endif
 	      for (int i = 1; i < argc; ++i)
 		{
 		  config.content += argv[i];
