@@ -37,10 +37,10 @@ namespace openvpn {
 
     OPENVPN_SIMPLE_EXCEPTION(win_utf16);
 
-    inline wchar_t* utf16(const std::string& str)
+    inline wchar_t* utf16(const std::string& str, int cp=CP_UTF8)
     {
       // first get output length (return value includes space for trailing nul)
-      const int len = ::MultiByteToWideChar(CP_UTF8,
+      const int len = ::MultiByteToWideChar(cp,
 					    0,
 					    str.c_str(),
 					    -1,
@@ -49,7 +49,7 @@ namespace openvpn {
       if (len <= 0)
 	throw win_utf16();
       UTF16 ret(new wchar_t[len]);
-      const int len2 = ::MultiByteToWideChar(CP_UTF8,
+      const int len2 = ::MultiByteToWideChar(cp,
 					     0,
 					     str.c_str(),
 					     -1,
