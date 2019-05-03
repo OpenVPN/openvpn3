@@ -112,6 +112,13 @@ namespace openvpn {
 	  return "";
       }
 
+      bool ssl_did_full_handshake() const {
+	if (ssl_sess)
+	  return ssl_sess->did_full_handshake();
+	else
+	  return false;
+      }
+
       void ssl_no_cache()
       {
 	if (ssl_sess)
