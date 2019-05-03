@@ -704,6 +704,11 @@ namespace openvpn {
 	return "";
       }
 
+      virtual bool did_full_handshake() override
+      {
+	return false; // fixme -- not implemented
+      }
+
       virtual const AuthCert::Ptr& auth_cert()
       {
 	return authcert;

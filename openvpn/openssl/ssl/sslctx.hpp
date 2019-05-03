@@ -515,6 +515,17 @@ namespace openvpn {
 	return ssl_handshake_details(ssl);
       }
 
+      // Return true if we did a full SSL handshake/negotiation.
+      // Return false for cached, reused, or persisted sessions.
+      // Also returns false if previously called on this session.
+      virtual bool did_full_handshake() override
+      {
+	if (called_did_full_handshake)
+	  return false;
+	called_did_full_handshake = true;
+	return !SSL_session_reused(ssl);
+      }
+
       virtual const AuthCert::Ptr& auth_cert()
       {
 	// Reused sessions don't call the cert verify callbacks,
@@ -710,6 +721,7 @@ namespace openvpn {
 	ct_in = nullptr;
 	ct_out = nullptr;
 	overflow = false;
+	called_did_full_handshake = false;
 	sess_cache_key.reset();
       }
 
@@ -780,6 +792,7 @@ namespace openvpn {
       OpenSSLSessionCache::Key::UPtr sess_cache_key; // client-side only
       bool ssl_bio_linkage;
       bool overflow;
+      bool called_did_full_handshake;
 
       // Helps us to store pointer to self in ::SSL object
       static int mydata_index;
