@@ -1058,6 +1058,10 @@ int main(int argc, char *argv[])
   LogBaseSimple log;
 #endif
 
+#if defined(OPENVPN_PLATFORM_WIN)
+  SetConsoleOutputCP(CP_UTF8);
+#endif
+
   try {
     Client::init_process();
     ret = openvpn_client(argc, argv, nullptr);
