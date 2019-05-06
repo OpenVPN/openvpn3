@@ -22,6 +22,7 @@
 #pragma once
 
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #include <string>
@@ -32,10 +33,14 @@
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
-  inline double cpu_time()
+  inline double cpu_time(const bool thread=false)
   {
     try {
-      const std::string stat_fn = "/proc/" + std::to_string(::getpid()) + "/stat";
+      std::string stat_fn;
+      if (thread)
+	stat_fn = "/proc/" + std::to_string(::getpid()) + "/task/" + std::to_string(::syscall(SYS_gettid)) +  "/stat";
+      else
+	stat_fn = "/proc/" + std::to_string(::getpid()) + "/stat";
       const std::string stat_str = read_text_simple(stat_fn);
       auto sv = string::split(stat_str, ' ');
       if (sv.size() < 15)
