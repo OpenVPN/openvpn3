@@ -874,7 +874,7 @@ namespace openvpn {
 	      keepalive_timer->expires_after(dur);
 	      keepalive_timer->async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 	              {
-			if (!self->halt && !error)
+			if (!self->halt && !error && self->ready)
 			  {
 			    self->error_handler(Status::E_KEEPALIVE_TIMEOUT, "Keepalive timeout");
 			  }
