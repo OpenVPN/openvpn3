@@ -33,7 +33,7 @@ namespace openvpn {
     //  https://nachtimwald.com/2017/04/02/constant-time-string-comparison-in-c/
     inline bool str_neq(const char *s1, const char *s2)
     {
-      unsigned int neq;
+      unsigned int neq = 0;
       size_t i = 0;
       size_t j = 0;
       size_t k = 0;
