@@ -29,12 +29,12 @@
 namespace openvpn {
   namespace MSF {
 
-    template <typename MS, typename ITER>
-    class Iter : public ITER
+    template <typename MAP_SET, typename ITERATOR>
+    class Iter : public ITERATOR
     {
     public:
-      Iter(const MS& ms, ITER&& iter)
-	: ITER(std::move(iter)),
+      Iter(const MAP_SET& ms, ITERATOR&& iter)
+	: ITERATOR(std::move(iter)),
 	  exists_(*this != ms.end())
       {
       }
@@ -51,10 +51,10 @@ namespace openvpn {
     // Like ordinary map/set find, but returns an iterator
     // that defines an operator bool() method for testing if
     // the iterator is defined, i.e. iter != map_or_set.end()
-    template <typename MS, typename KEY>
-    inline auto find(MS& ms, const KEY& k)
+    template <typename MAP_SET, typename KEY>
+    inline auto find(MAP_SET& ms, const KEY& k)
     {
-      return Iter<MS, decltype(ms.find(k))>(ms, ms.find(k));
+      return Iter<MAP_SET, decltype(ms.find(k))>(ms, ms.find(k));
     }
   }
 }
