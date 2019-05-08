@@ -645,7 +645,7 @@ private:
   {
     Config c;
     c.name = OVPNAGENT_NAME_STRING;
-    c.display_name = "OpenVPN Agent";
+    c.display_name = "OpenVPN Agent " OVPNAGENT_NAME_STRING;
 #if _WIN32_WINNT < 0x0600 // pre-Vista
     c.dependencies.push_back("Dhcp"); // DHCP client
 #endif
