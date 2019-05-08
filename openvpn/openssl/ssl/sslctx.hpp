@@ -1702,7 +1702,7 @@ namespace openvpn {
 				       int enc)
     {
       // get OpenSSLContext
-      const OpenSSLContext* self = (OpenSSLContext*) ssl->ctx->app_verify_arg;
+      const OpenSSLContext* self = (OpenSSLContext*) SSL_get_ex_data (ssl, SSL::context_data_index);
       if (!self)
 	return -1;
 
