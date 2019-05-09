@@ -996,7 +996,7 @@ namespace openvpn {
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
     virtual SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key)
     {
-      return SSL::Ptr(new SSL(this, hostname->c_str()));
+      return SSL::Ptr(new SSL(this, hostname ? hostname->c_str() : nullptr));
     }
 
     virtual const Mode& mode() const
