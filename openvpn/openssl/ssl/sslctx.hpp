@@ -547,6 +547,8 @@ namespace openvpn {
 
       static void init_static()
       {
+	bmq_stream::init_static();
+
 	mydata_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
 	context_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext", nullptr, nullptr, nullptr);
 

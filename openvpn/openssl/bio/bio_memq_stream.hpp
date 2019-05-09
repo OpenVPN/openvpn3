@@ -82,7 +82,7 @@ namespace openvpn {
 	return (ret);
       }
 
-       bool return_eof_on_empty;
+       bool return_eof_on_empty = false;
     };
 
     namespace bio_memq_internal {
@@ -98,7 +98,6 @@ namespace openvpn {
 	BIO_set_shutdown(b, 1);
 	BIO_set_init(b, 1);
 	BIO_set_data(b, (void *)bmq);
-	bmq->return_eof_on_empty = false;
 	return 1;
       }
 
@@ -179,13 +178,9 @@ namespace openvpn {
 	return ret;
       }
 
-      inline void create_bio_method()
+      inline void init_static ()
       {
-	if (memq_method)
-	  return;
-	if (!memq_method_type)
-	  memq_method_type = BIO_get_new_index ();
-
+	memq_method_type = BIO_get_new_index ();
 	memq_method = BIO_meth_new (memq_method_type, "stream memory queue");
 	BIO_meth_set_write (memq_method, memq_write);
 	BIO_meth_set_read (memq_method, memq_read);
@@ -203,11 +198,13 @@ namespace openvpn {
       }
     } // namespace bio_memq_internal
 
+    inline void init_static()
+    {
+      bio_memq_internal::init_static();
+    }
 
     inline BIO_METHOD *BIO_s_memq(void)
     {
-      // TODO: Somehow do deallocate of this
-      bio_memq_internal::create_bio_method();
       return (bio_memq_internal::memq_method);
     }
 
