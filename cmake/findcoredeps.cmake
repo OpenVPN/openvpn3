@@ -6,8 +6,14 @@ set(CMAKE_CXX_STANDARD 14)
 
 set(CORE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
 
+
 set(DEP_DIR ${CORE_DIR}/../deps CACHE PATH "Dependencies")
 option(USE_MBEDTLS "Use mbed TLS instead of OpenSSL")
+
+if (DEFINED ENV{DEP_DIR})
+    message(WARNING "Overriding DEP_DIR setting with environment variable")
+    set(DEP_DIR $ENV{DEP_DIR})
+endif ()
 
 # Include our DEP_DIR in path used to find libraries
 
