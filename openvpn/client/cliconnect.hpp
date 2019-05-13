@@ -473,7 +473,7 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunIfaceDisabled(client->fatal_reason());
 		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TUN_IFACE_DISABLED);
-		    stop();
+		    queue_restart(5000);
 		  }
 		  break;
 		case Error::PROXY_ERROR:
