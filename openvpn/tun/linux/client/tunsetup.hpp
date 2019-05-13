@@ -63,6 +63,13 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
+      // This empty constructor shouldn't be needed, but due to a
+      // plausible compiler bug in GCC 4.8.5 (RHEL 7), this empty
+      // constructor is required to be able to build.  This is
+      // related to the member initialization of the private
+      // remove_cmds_bypass_gw and remove_cmds class members.
+      Setup() {}
+
       struct Config : public TunBuilderSetup::Config
       {
 	std::string iface_name;
