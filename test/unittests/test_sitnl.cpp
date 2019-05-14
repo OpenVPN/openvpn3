@@ -242,13 +242,27 @@ namespace unittests
 
       std::string dst{"fe80:20c3:cccc:dddd:cccc:dddd:eeee:ffff"};
 
-      ip_route_get(dst, [this, &dst](std::vector<std::string> &v, const std::string &out, bool &called) {
-	  if (v[0] == dst)
+      ip_route_get(dst, [this, &dst](std::vector<std::string> &v1, const std::string &out, bool &called) {
+	  if (v1[0] == dst)
 	  {
 	    called = true;
-	    v.resize(7);
-	    auto expected = std::vector<std::string>{dst, "from", "::", "via", gw6, "dev", dev};
-	    ASSERT_EQ(v, expected) << out;
+	    v1.resize(7);
+	    // iptools 4.15 (Ubuntu 18)
+	    auto expected1 = std::vector<std::string>{dst, "from", "::", "via", gw6, "dev", dev};
+	    auto ok1 = (v1 == expected1);
+
+	    auto v2 = v1;
+	    v2.resize(5);
+	    // iptools 4.11 (CentOS 7)
+	    auto expected2 = std::vector<std::string>{dst, "via", gw6, "dev", dev};
+	    auto ok2 = (v2 == expected2);
+
+	    if (!ok1 && !ok2)
+	    {
+	      // this is just a way to print actual value and all expected values
+	      EXPECT_EQ(v1, expected1);
+	      EXPECT_EQ(v2, expected2);
+	    }
 	  }
       });
     }
