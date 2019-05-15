@@ -21,8 +21,10 @@
 
 #pragma once
 
+#include <errno.h>
+#include <sys/time.h>
 #include <sys/types.h>
-#include <sys/syscall.h>
+#include <sys/resource.h>
 #include <unistd.h>
 
 #include <string>
@@ -33,25 +35,34 @@
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
+  /**
+   * Retrieve the time (in seconds) the current process or thread
+   * has been running.  Runing time includes both system and user
+   * times.
+   *
+   * @param thread  Boolean flag controlling if process or thread
+   *                runtime should be returned
+   *
+   * @return Returns a double containing number of seconds the
+   *         current process (PID) or thread has been running.
+   *         On errors -1.0 is returned.
+   *
+   */
   inline double cpu_time(const bool thread=false)
   {
-    try {
-      std::string stat_fn;
-      if (thread)
-	stat_fn = "/proc/" + std::to_string(::getpid()) + "/task/" + std::to_string(::syscall(SYS_gettid)) +  "/stat";
-      else
-	stat_fn = "/proc/" + std::to_string(::getpid()) + "/stat";
-      const std::string stat_str = read_text_simple(stat_fn);
-      auto sv = string::split(stat_str, ' ');
-      if (sv.size() < 15)
-	throw Exception(stat_fn + " must have at least 15 fields");
-      const unsigned long utime = parse_number_throw<unsigned long>(sv[13], "error parsing utime");
-      const unsigned long stime = parse_number_throw<unsigned long>(sv[14], "error parsing stime");
-      const long denom = ::sysconf(_SC_CLK_TCK);
-      if (denom < 0)
-	throw Exception("sysconf(_SC_CLK_TCK) failed");
-      return double(utime + stime) / double(denom);
-    }
+    try
+      {
+        struct rusage usage;
+
+        if (getrusage((thread ? RUSAGE_THREAD : RUSAGE_SELF), &usage) != 0)
+          {
+            throw Exception("getrusage() call failed: " + std::string(strerror(errno)));
+          }
+        double utime = usage.ru_utime.tv_sec + ((double)usage.ru_utime.tv_usec / 1000000);
+        double stime = usage.ru_stime.tv_sec + ((double)usage.ru_stime.tv_usec / 1000000);
+
+        return utime + stime;
+      }
     catch (const std::exception& e)
       {
 	//OPENVPN_LOG("cpu_time exception: " << e.what());
