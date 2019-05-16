@@ -1108,8 +1108,8 @@ namespace openvpn {
 					   ":!SSLv2"
 					   ))
 		  OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-	      SSL_CTX_set_ecdh_auto(ctx, 1);
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && OPENSSL_VERSION_NUMBER < 0x10100000L
+	      SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
 	    }
 
