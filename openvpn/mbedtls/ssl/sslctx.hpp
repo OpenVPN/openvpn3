@@ -617,12 +617,12 @@ namespace openvpn {
     public:
       typedef RCPtr<SSL> Ptr;
 
-      virtual void start_handshake()
+      virtual void start_handshake() override
       {
 	mbedtls_ssl_handshake(ssl);
       }
 
-      virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
+      virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size) override
       {
 	const int status = mbedtls_ssl_write(ssl, (const unsigned char*)data, size);
 	if (status < 0)
@@ -638,7 +638,7 @@ namespace openvpn {
 	  return status;
       }
 
-      virtual ssize_t read_cleartext(void *data, const size_t capacity)
+      virtual ssize_t read_cleartext(void *data, const size_t capacity) override
       {
 	if (!overflow)
 	  {
@@ -661,12 +661,12 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      virtual bool read_cleartext_ready() const
+      virtual bool read_cleartext_ready() const override
       {
 	return !ct_in.empty() || mbedtls_ssl_get_bytes_avail(ssl);
       }
 
-      virtual void write_ciphertext(const BufferPtr& buf)
+      virtual void write_ciphertext(const BufferPtr& buf) override
       {
 	if (ct_in.size() < MAX_CIPHERTEXT_IN)
 	  ct_in.write_buf(buf);
@@ -674,7 +674,7 @@ namespace openvpn {
 	  overflow = true;
       }
 
-      virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size)
+      virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size) override
       {
 	if (ct_in.size() < MAX_CIPHERTEXT_IN)
 	  ct_in.write(data, size);
@@ -682,17 +682,17 @@ namespace openvpn {
 	  overflow = true;
       }
 
-      virtual bool read_ciphertext_ready() const
+      virtual bool read_ciphertext_ready() const override
       {
 	return !ct_out.empty();
       }
 
-      virtual BufferPtr read_ciphertext()
+      virtual BufferPtr read_ciphertext() override
       {
 	return ct_out.read_buf();
       }
 
-      virtual std::string ssl_handshake_details() const
+      virtual std::string ssl_handshake_details() const override
       {
 	if (ssl)
 	  {
@@ -709,12 +709,12 @@ namespace openvpn {
 	return false; // fixme -- not implemented
       }
 
-      virtual const AuthCert::Ptr& auth_cert()
+      virtual const AuthCert::Ptr& auth_cert() override
       {
 	return authcert;
       }
 
-      virtual void mark_no_cache()
+      virtual void mark_no_cache() override
       {
 	// fixme -- this method should be implemented for client-side TLS session resumption tickets
       }
