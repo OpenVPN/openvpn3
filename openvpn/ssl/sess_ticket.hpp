@@ -49,7 +49,6 @@ namespace openvpn {
       NO_TICKET,
       TICKET_AVAILABLE,
       TICKET_EXPIRING,
-      ERROR
     };
 
     class Name
