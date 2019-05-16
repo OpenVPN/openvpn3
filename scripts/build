@@ -36,6 +36,7 @@ if [ -z "$1" ]; then
     echo " MTLS_PATH=path -- use user specified mbedTLS source folder"
     echo " MTLS_LIBS=ldflags -- user specific mbedTLS LDFLAGS"
     echo " MA_HYBRID=1 -- use mbedTLS/AppleCrypto hybrid"
+    echo " OPENSSL_DIST=<dir> -- specify custom OpenSSL build"
     echo " NOSSL=1 -- don't include OpenSSL"
     echo " OPENSSL_SYS=1 -- include system OpenSSL"
     echo " MINI=1 -- link with OpenSSL mini crypto lib"
@@ -148,7 +149,11 @@ elif [ "$MTLS" = "1" ]; then
 fi
 
 # OpenSSL
-if [ "$APPLE_FAMILY" = "1" ]; then
+if [ "$OPENSSL_DIST" ]; then
+    CPPFLAGS="$CPPFLAGS -DUSE_OPENSSL -I$OPENSSL_DIST/include"
+    LIBDIRS="$LIBDIRS -L$OPENSSL_DIST/lib"
+    LIBS="$LIBS -lssl -lcrypto"
+elif [ "$APPLE_FAMILY" = "1" ]; then
     # On Mac, only link with OpenSSL if OSSL is defined.
     # On other platforms, usually link with OpenSSL.
     if [ "$OPENSSL_SYS" == "1" ]; then
@@ -181,7 +186,7 @@ else
 	LIBS="$LIBS -lssl -lcrypto -ldl"
     fi
 fi
-if [ "$OPENSSL_SYS" != "1" ] && [ "$OPENSSL_LINK" != "1" ] && [ "$NOSSL" != "1" ]; then
+if [ "$OPENSSL_SYS" != "1" ] && [ "$OPENSSL_LINK" != "1" ] && [ "$NOSSL" != "1" ] && [ -z "$OPENSSL_DIST" ]; then
     CPPFLAGS="$CPPFLAGS -I$DEP_DIR/openssl/openssl-$PLATFORM/include"
     LIBDIRS="$LIBDIRS -L$DEP_DIR/openssl/openssl-$PLATFORM/lib"
 fi
