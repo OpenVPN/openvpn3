@@ -422,6 +422,7 @@ namespace openvpn {
 	IPv6Setting ipv6;
 	int conn_timeout = 0;
 	bool tun_persist = false;
+	bool wintun = false;
 	bool google_dns_fallback = false;
 	bool synchronous_dns_lookup = false;
 	bool autologin_sessions = false;
@@ -666,6 +667,7 @@ namespace openvpn {
 	state->port_override = config.portOverride;
 	state->conn_timeout = config.connTimeout;
 	state->tun_persist = config.tunPersist;
+	state->wintun = config.wintun;
 	state->google_dns_fallback = config.googleDnsFallback;
 	state->synchronous_dns_lookup = config.synchronousDnsLookup;
 	state->autologin_sessions = config.autologinSessions;
@@ -938,6 +940,7 @@ namespace openvpn {
       cc.ipv6 = state->ipv6;
       cc.conn_timeout = state->conn_timeout;
       cc.tun_persist = state->tun_persist;
+      cc.wintun = state->wintun;
       cc.google_dns_fallback = state->google_dns_fallback;
       cc.synchronous_dns_lookup = state->synchronous_dns_lookup;
       cc.autologin_sessions = state->autologin_sessions;

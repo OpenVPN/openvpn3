@@ -60,8 +60,9 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
-      Setup(openvpn_io::io_context& io_context_arg)
-	: delete_route_timer(io_context_arg) {}
+      Setup(openvpn_io::io_context& io_context_arg, bool wintun_arg=true)
+	: delete_route_timer(io_context_arg),
+	  wintun(wintun_arg) {}
 
       // Set up the TAP device
       virtual HANDLE establish(const TunBuilderCapture& pull,
@@ -73,13 +74,13 @@ namespace openvpn {
 	destroy(os);
 
 	// enumerate available TAP adapters
-	Util::TapNameGuidPairList guids;
+	Util::TapNameGuidPairList guids(wintun);
 	os << "TAP ADAPTERS:" << std::endl << guids.to_string() << std::endl;
 
 	// open TAP device handle
 	std::string path_opened;
 	Util::TapNameGuidPair tap;
-	Win::ScopedHANDLE th(Util::tap_open(guids, path_opened, tap));
+	Win::ScopedHANDLE th(Util::tap_open(guids, path_opened, tap, wintun));
 	const std::string msg = "Open TAP device \"" + tap.name + "\" PATH=\"" + path_opened + '\"';
 
 	if (!th.defined())
@@ -89,8 +90,11 @@ namespace openvpn {
 	  }
 
 	os << msg << " SUCCEEDED" << std::endl;
-	Util::TAPDriverVersion version(th());
-	os << version.to_string() << std::endl;
+	if (!wintun)
+	  {
+	    Util::TAPDriverVersion version(th());
+	    os << version.to_string() << std::endl;
+	  }
 
 	// create ActionLists for setting up and removing adapter properties
 	ActionList::Ptr add_cmds(new ActionList());
@@ -100,7 +104,7 @@ namespace openvpn {
 	switch (pull.layer())
 	  {
 	  case Layer::OSI_LAYER_3:
-	    adapter_config(th(), openvpn_app_path, tap, pull, false, *add_cmds, *remove_cmds, os);
+	    adapter_config(th(), openvpn_app_path, tap, wintun, pull, false, *add_cmds, *remove_cmds, os);
 	    break;
 	  case Layer::OSI_LAYER_2:
 	    adapter_config_l2(th(), openvpn_app_path, tap, pull, *add_cmds, *remove_cmds, os);
@@ -158,7 +162,7 @@ namespace openvpn {
 	  {
 	    Win::ScopedHANDLE nh;
 	    ActionList::Ptr add_cmds(new ActionList());
-	    adapter_config(nh(), l2s->openvpn_app_path, l2s->tap, pull, true, *add_cmds, *remove_cmds, os);
+	    adapter_config(nh(), l2s->openvpn_app_path, l2s->tap, wintun, pull, true, *add_cmds, *remove_cmds, os);
 	    add_cmds->execute(os);
 	  }
       }
@@ -251,6 +255,7 @@ namespace openvpn {
       void adapter_config(HANDLE th,
 			  const std::wstring& openvpn_app_path,
 			  const Util::TapNameGuidPair& tap,
+			  bool wintun,
 			  const TunBuilderCapture& pull,
 			  const bool l2_post,
 			  ActionList& create,
@@ -273,7 +278,8 @@ namespace openvpn {
 	if (!l2_post)
 	  {
 	    // set TAP media status to CONNECTED
-	    Util::tap_set_media_status(th, true);
+	    if (!wintun)
+	      Util::tap_set_media_status(th, true);
 
 	    // try to delete any stale routes on interface left over from previous session
 	    create.add(new Util::ActionDeleteAllRoutesOnInterface(tap.index));
@@ -302,10 +308,13 @@ namespace openvpn {
 		const std::string metric = route_metric_opt(pull, *local4, MT_IFACE);
 		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
 		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
-		if (local4->net30)
-		  Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
-		else
-		  Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
+		if (!wintun)
+		  {
+		    if (local4->net30)
+		      Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
+		    else
+		      Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
+		  }
 		create.add(new WinCmd("netsh interface ip set address " + tap_index_name + " static " + local4->address + ' ' + netmask + " gateway=" + local4->gateway + metric + " store=active"));
 		destroy.add(new WinCmd("netsh interface ip delete address " + tap_index_name + ' ' + local4->address + " gateway=all store=active"));
 
@@ -671,7 +680,8 @@ namespace openvpn {
 	    }
 
 	    // set TAP media status to CONNECTED
-	    Util::tap_set_media_status(th, true);
+	    if (!wintun)
+	      Util::tap_set_media_status(th, true);
 
 	    // ARP
 	    Util::flush_arp(tap.index, os);
@@ -859,6 +869,8 @@ namespace openvpn {
       ActionList::Ptr remove_cmds;
 
       AsioTimer delete_route_timer;
+
+      bool wintun = false;
     };
   }
 }

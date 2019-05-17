@@ -41,6 +41,10 @@
 #include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/win/modname.hpp>
 
+#define OPENVPN_WINTUN_START_PADDING_LEN  12
+#define OPENVPN_WINTUN_PACKET_SIZE_LEN    4
+#define OPENVPN_WINTUN_PACKET_ALIGN       16
+
 namespace openvpn {
   namespace TunWin {
 
@@ -67,8 +71,9 @@ namespace openvpn {
 	  const bool retain_stream,
 	  ReadHandler read_handler,
 	  const Frame::Ptr& frame,
-	  const SessionStats::Ptr& stats)
-	: Base(read_handler, frame, stats)
+	  const SessionStats::Ptr& stats,
+	  const bool wintun)
+	: Base(read_handler, frame, stats, wintun ? Frame::READ_WINTUN : Frame::READ_TUN)
       {
 	Base::name_ = name;
 	Base::retain_stream = retain_stream;
@@ -90,6 +95,7 @@ namespace openvpn {
 
       TunProp::Config tun_prop;
       int n_parallel = 8;         // number of parallel async reads on tun socket
+      bool wintun = false;	  // wintun may return up to 256 packets
 
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -105,7 +111,7 @@ namespace openvpn {
 	if (tun_setup_factory)
 	  return tun_setup_factory->new_setup_obj(io_context);
 	else
-	  return new TunWin::Setup(io_context);
+	  return new TunWin::Setup(io_context, wintun);
       }
 
       static Ptr new_obj()
@@ -219,8 +225,8 @@ namespace openvpn {
 				     true,
 				     this,
 				     config->frame,
-				     config->stats
-				     ));
+				     config->stats,
+				     config->wintun));
 	      impl->start(config->n_parallel);
 
 	      if (!dhcp_capture)
@@ -301,7 +307,8 @@ namespace openvpn {
 	   parent(parent_arg),
 	   state(new TunProp::State()),
 	   l2_timer(io_context_arg),
-	   halt(false)
+	   halt(false),
+	   frame_context((*config_arg->frame)[Frame::READ_TUN])
       {
       }
 
@@ -311,6 +318,20 @@ namespace openvpn {
 	  {
 	    if (dhcp_capture)
 	      dhcp_inspect(buf);
+
+	    if (config->wintun)
+	    {
+	      // end padding
+	      auto packet_size = buf.size();
+	      auto end_padding_size = OPENVPN_WINTUN_PACKET_ALIGN -
+		(buf.size() & (OPENVPN_WINTUN_PACKET_ALIGN - 1));
+	      buf.write(wintun_padding, end_padding_size);
+
+	      // start padding and size
+	      buf.prepend(wintun_padding, OPENVPN_WINTUN_START_PADDING_LEN);
+	      buf.prepend((unsigned char *)&packet_size, OPENVPN_WINTUN_PACKET_SIZE_LEN);
+	    }
+
 	    return impl->write(buf);
 	  }
 	else
@@ -322,7 +343,35 @@ namespace openvpn {
 
       void tun_read_handler(PacketFrom::SPtr& pfp) // called by TunImpl
       {
-	parent.tun_recv(pfp->buf);
+	if (config->wintun)
+	  {
+	    // we might receive up to 256 packets
+	    while (pfp->buf.size() > 0)
+	    {
+	      // parse wintun encapsulation
+	      auto packet_size = *(std::uint32_t*)pfp->buf.c_data();
+	      pfp->buf.advance(OPENVPN_WINTUN_PACKET_SIZE_LEN);
+	      pfp->buf.advance(OPENVPN_WINTUN_START_PADDING_LEN);
+
+	      // extract individual packet
+	      frame_context.prepare(wintun_packet);
+	      wintun_packet.write(pfp->buf.c_data(), packet_size);
+
+	      parent.tun_recv(wintun_packet);
+
+	      // skip to the next packet
+	      pfp->buf.advance(packet_size);
+
+	      auto padding = (OPENVPN_WINTUN_PACKET_ALIGN -
+		(packet_size & (OPENVPN_WINTUN_PACKET_ALIGN - 1))) % OPENVPN_WINTUN_PACKET_ALIGN;
+	      pfp->buf.advance(padding);
+	    }
+	  }
+	else
+	  {
+	    parent.tun_recv(pfp->buf);
+	  }
+
 #ifdef OPENVPN_DEBUG_TAPWIN
 	tap_process_logging();
 #endif
@@ -437,6 +486,10 @@ namespace openvpn {
       // Layer 2 DHCP stuff
       std::unique_ptr<DHCPCapture> dhcp_capture;
       AsioTimer l2_timer;
+
+      unsigned char wintun_padding[OPENVPN_WINTUN_PACKET_ALIGN] = {};
+      BufferAllocated wintun_packet;
+      Frame::Context& frame_context;
 
       bool halt;
     };

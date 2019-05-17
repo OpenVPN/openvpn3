@@ -45,14 +45,15 @@ namespace openvpn {
 
     TunIO(ReadHandler read_handler_arg,
 	  const Frame::Ptr& frame_arg,
-	  const SessionStats::Ptr& stats_arg)
+	  const SessionStats::Ptr& stats_arg,
+	  const size_t frame_context_type=Frame::READ_TUN)
       : stream(nullptr),
 	retain_stream(false),
 	tun_prefix(false),
 	halt(false),
 	read_handler(read_handler_arg),
 	frame(frame_arg),
-	frame_context((*frame_arg)[Frame::READ_TUN]),
+	frame_context((*frame_arg)[frame_context_type]),
 	stats(stats_arg)
       {
       }

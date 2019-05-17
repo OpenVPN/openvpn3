@@ -46,6 +46,7 @@ namespace openvpn {
       READ_LINK_UDP,
       READ_LINK_TCP,
       READ_TUN,
+      READ_WINTUN,
       READ_BIO_MEMQ_DGRAM,
       READ_BIO_MEMQ_STREAM,
       READ_SSL_CLEARTEXT,

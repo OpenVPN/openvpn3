@@ -293,6 +293,9 @@ namespace openvpn {
 
       // Gremlin configuration (requires that the core is built with OPENVPN_GREMLIN)
       std::string gremlinConfig;
+
+      // Use wintun instead of tap-windows6 on Windows
+      bool wintun = false;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

@@ -702,6 +702,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "force-aes-cbc",  no_argument,        nullptr,      'f' },
     { "google-dns",     no_argument,        nullptr,      'g' },
     { "persist-tun",    no_argument,        nullptr,      'j' },
+    { "wintun",         no_argument,        nullptr,      'w' },
     { "def-keydir",     required_argument,  nullptr,      'k' },
     { "merge",          no_argument,        nullptr,      'm' },
     { "version",        no_argument,        nullptr,      'v' },
@@ -757,6 +758,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool autologinSessions = false;
 	bool retryOnAuthFailed = false;
 	bool tunPersist = false;
+	bool wintun = false;
 	bool merge = false;
 	bool version = false;
 	bool altProxy = false;
@@ -770,7 +772,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -875,6 +877,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      case 'j':
 		tunPersist = true;
 		break;
+	      case 'w':
+		wintun = true;
+		break;
 	      case 'm':
 		merge = true;
 		break;
@@ -969,6 +974,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.tunPersist = tunPersist;
 	      config.gremlinConfig = gremlin;
 	      config.info = true;
+	      config.wintun = wintun;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;
 #endif
@@ -1146,6 +1152,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--auto-sess, -a       : request autologin session" << std::endl;
       std::cout << "--auth-retry, -Y      : retry connection on auth failure" << std::endl;
       std::cout << "--persist-tun, -j     : keep TUN interface open across reconnects" << std::endl;
+      std::cout << "--wintun, -w          : use WinTun instead of TAP-Windows6 on Windows" << std::endl;
       std::cout << "--peer-info, -I       : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
       std::cout << "--gremlin, -G         : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
       std::cout << "--epki-ca             : simulate external PKI cert supporting intermediate/root certs" << std::endl;

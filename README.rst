@@ -169,7 +169,7 @@ Build test client::
 
   > c:\Temp\O3\core\win>set O3=C:\Temp\O3 && python build.py
 
-Visual Studio 2015 project and solution files are located in ``O3\core\win`` directory.
+Visual Studio 2017 project and solution files are located in ``O3\core\win`` directory.
 Before opening project you need to build dependencies and define OVPN3_ROOT
 environmental variable (``C:\Temp\O3`` from example above).
 
