@@ -804,11 +804,23 @@ namespace openvpn {
 #endif
 	    }
 
-	  // peer must present a valid certificate unless SSLConst::NO_VERIFY_PEER is set
-	  mbedtls_ssl_conf_authmode(sslconf,
-				    (c.flags & SSLConst::NO_VERIFY_PEER)
-				    ? MBEDTLS_SSL_VERIFY_NONE
-				    : MBEDTLS_SSL_VERIFY_REQUIRED);
+
+	  {
+	    // peer must present a valid certificate unless SSLConst::NO_VERIFY_PEER.
+	    // Presenting a valid certificate can be made optional by specifying
+	    // SSL:Const::PEER_CERT_OPTIONAL
+
+	    int authmode;
+
+	    if (c.flags & SSLConst::NO_VERIFY_PEER)
+	      authmode = MBEDTLS_SSL_VERIFY_NONE;
+	    else if (c.flags & SSLConst::PEER_CERT_OPTIONAL)
+	      throw MbedTLSException("Optional peer verification not supported");
+	    else
+	      authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
+
+	    mbedtls_ssl_conf_authmode(sslconf, authmode);
+	  }
 
 	  // set verify callback
 	  mbedtls_ssl_conf_verify(sslconf, c.mode.is_server() ? verify_callback_server : verify_callback_client, this);
