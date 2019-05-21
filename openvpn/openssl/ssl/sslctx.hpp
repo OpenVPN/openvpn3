@@ -830,7 +830,7 @@ namespace openvpn {
       }
 
       // Print a one line summary of SSL/TLS session handshake.
-      static std::string ssl_handshake_details (::SSL *c_ssl)
+      static std::string ssl_handshake_details (const ::SSL *c_ssl)
       {
 	std::ostringstream os;
 
@@ -860,7 +860,10 @@ namespace openvpn {
 	      }
 	    X509_free (cert);
 	  }
-	if (SSL_session_reused(c_ssl))
+	// This has been changed in upstream SSL to have a const
+	// parameter, so we cast away const for older versions compatibility
+	// (Upstream commit: c04b66b18d1a90f0c6326858e4b8367be5444582)
+	if (SSL_session_reused(const_cast<::SSL *>(c_ssl)))
 	  os << " [REUSED]";
 	return os.str();
       }
