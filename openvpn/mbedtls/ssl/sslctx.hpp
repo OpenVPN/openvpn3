@@ -248,6 +248,12 @@ namespace openvpn {
 	throw MbedTLSException("set_client_session_tickets not implemented");
       }
 
+      virtual void set_sni_handler(SNIHandlerBase* sni_handler)
+      {
+	// fixme -- this method should be implemented on the server-side for SNI
+	throw MbedTLSException("set_sni_handler not implemented");
+      }
+
       virtual void set_private_key_password(const std::string& pwd)
       {
 	priv_key_pwd = pwd;
@@ -543,6 +549,13 @@ namespace openvpn {
 	}
       }
 
+#ifdef HAVE_JSON
+      virtual SSLConfigAPI::Ptr json_override(const Json::Value& root) const
+      {
+	throw MbedTLSException("json_override not implemented");
+      }
+#endif
+
       bool name_constraints_allowed() const
       {
 	return allow_name_constraints;
@@ -825,7 +838,7 @@ namespace openvpn {
 	  // In pre-mbedtls-2.x the hostname for the CA chain was set in ssl_set_ca_chain().
 	  // From mbedtls-2.x, the hostname must be set via mbedtls_ssl_set_hostname()
 	  // https://tls.mbed.org/kb/how-to/upgrade-2.0
-	  if (hostname && ((c.flags & SSLConst::ENABLE_SNI) || c.ca_chain))
+	  if (hostname && ((c.flags & SSLConst::ENABLE_CLIENT_SNI) || c.ca_chain))
 	    {
 	      if (mbedtls_ssl_set_hostname(ssl, hostname))
 		throw MbedTLSException("mbedtls_ssl_set_hostname failed");

@@ -32,6 +32,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/mode.hpp>
+#include <openvpn/common/jsonlib.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/auth/authcert.hpp>
@@ -45,6 +46,8 @@
 #include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
+
+  class SNIHandlerBase;
 
   class SSLAPI : public RC<thread_unsafe_refcount>
   {
@@ -146,6 +149,7 @@ namespace openvpn {
     virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg) = 0; // private key alternative
     virtual void set_session_ticket_handler(TLSSessionTicketBase* session_ticket_handler) = 0; // server side
     virtual void set_client_session_tickets(const bool v) = 0; // client side
+    virtual void set_sni_handler(SNIHandlerBase* sni_handler) = 0; // server side
     virtual void set_private_key_password(const std::string& pwd) = 0;
     virtual void load_ca(const std::string& ca_txt, bool strict) = 0;
     virtual void load_crl(const std::string& crl_txt) = 0;
@@ -176,6 +180,10 @@ namespace openvpn {
     virtual void set_x509_track(X509Track::ConfigSet x509_track_config_arg) = 0;
     virtual void set_rng(const RandomAPI::Ptr& rng_arg) = 0;
     virtual void load(const OptionList& opt, const unsigned int lflags) = 0;
+
+#ifdef HAVE_JSON
+    virtual SSLConfigAPI::Ptr json_override(const Json::Value& root) const = 0;
+#endif
 
     virtual std::string validate_cert(const std::string& cert_txt) const = 0;
     virtual std::string validate_cert_list(const std::string& certs_txt) const = 0;

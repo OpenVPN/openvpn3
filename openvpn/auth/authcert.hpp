@@ -58,6 +58,7 @@ namespace openvpn {
 	  OTHER,
 	  BAD_CERT_TYPE,
 	  EXPIRED,
+	  SNI_ERROR,
 	  N
 	};
 
@@ -124,6 +125,8 @@ namespace openvpn {
 	      return "BAD_CERT_TYPE";
 	    case EXPIRED:
 	      return "EXPIRED";
+	    case SNI_ERROR:
+	      return "SNI_ERROR";
 	    }
 	}
 
