@@ -230,7 +230,7 @@ namespace openvpn {
 	  OPENVPN_LOG("PRODUCT CODE: " << pc);
 
 	// SSL flags
-	unsigned int ssl_flags = SSLConst::ENABLE_SNI;
+	unsigned int ssl_flags = SSLConst::ENABLE_CLIENT_SNI;
 	if (debug_level >= 1)
 	  ssl_flags |= SSLConst::LOG_VERIFY_STATUS;
 
