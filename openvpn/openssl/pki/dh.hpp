@@ -68,12 +68,13 @@ namespace openvpn {
       DH(const DH& other)
 	: dh_(nullptr)
       {
-	assign(other.dh_);
+	dup(other.dh_);
       }
 
       void operator=(const DH& other)
       {
-	assign(other.dh_);
+	erase();
+	dup(other.dh_);
       }
 
       bool defined() const { return dh_ != nullptr; }
@@ -133,9 +134,8 @@ namespace openvpn {
       }
 
     private:
-      void assign(const ::DH *dh)
+      void dup(const ::DH *dh)
       {
-	erase();
 	dh_ = DH_private::dup(dh);
       }
 
