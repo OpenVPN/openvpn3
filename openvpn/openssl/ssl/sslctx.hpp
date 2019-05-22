@@ -688,13 +688,17 @@ namespace openvpn {
       {
 	std::ostringstream os;
 
+	::X509 *cert = SSL_get_peer_certificate (c_ssl);
+
+	if (cert)
+	  os << "CN=" << x509_get_field(cert, NID_commonName) << ", ";
+
 	os << SSL_get_version (c_ssl);
 
 	const SSL_CIPHER *ciph = SSL_get_current_cipher (c_ssl);
 	if (ciph)
 	  os << ", cipher " << SSL_CIPHER_get_version (ciph) << ' ' << SSL_CIPHER_get_name (ciph);
 
-	::X509 *cert = SSL_get_peer_certificate (c_ssl);
 	if (cert != nullptr)
 	  {
 	    EVP_PKEY *pkey = X509_get_pubkey (cert);
