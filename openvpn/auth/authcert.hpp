@@ -61,7 +61,7 @@ namespace openvpn {
 	  N
 	};
 
-	void add_fail(const size_t depth, const Type new_code, const char *reason)
+	void add_fail(const size_t depth, const Type new_code, std::string reason)
 	{
 	  if (new_code > code)
 	    code = new_code;
@@ -69,7 +69,7 @@ namespace openvpn {
 	    errors.emplace_back();
 	  std::string& err = errors[depth];
 	  if (err.empty())
-	    err = reason;
+	    err = std::move(reason);
 	  else if (err.find(reason) == std::string::npos)
 	    {
 	      err += ", ";
@@ -111,7 +111,7 @@ namespace openvpn {
 	  return ret;
 	}
 
-	static const char *render_code(const Type code)
+	static std::string render_code(const Type code)
 	{
 	  switch (code)
 	    {
@@ -214,11 +214,11 @@ namespace openvpn {
 	return std::move(x509_track);
       }
 
-      void add_fail(const size_t depth, const Fail::Type new_code, const char *reason)
+      void add_fail(const size_t depth, const Fail::Type new_code, std::string reason)
       {
 	if (!fail)
 	  fail.reset(new Fail());
-	fail->add_fail(depth, new_code, reason);
+	fail->add_fail(depth, new_code, std::move(reason));
       }
 
       bool is_fail() const
@@ -229,6 +229,14 @@ namespace openvpn {
       const Fail* get_fail() const
       {
 	return fail.get();
+      }
+
+      std::string fail_str() const
+      {
+	if (fail)
+	  return fail->to_string(true);
+	else
+	  return "OK";
       }
 
     private:
