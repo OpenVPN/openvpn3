@@ -90,6 +90,8 @@ namespace openvpn {
     class X509 : public X509Base, public RC<thread_unsafe_refcount>
     {
     public:
+      typedef RCPtr<X509> Ptr;
+
       X509() {}
 
       X509(const std::string& cert_txt, const std::string& title)
@@ -99,12 +101,13 @@ namespace openvpn {
 
       X509(const X509& other)
       {
-	assign(other.x509_);
+	dup(other.x509_);
       }
 
       void operator=(const X509& other)
       {
-	assign(other.x509_);
+	erase();
+	dup(other.x509_);
       }
 
       void parse_pem(const std::string& cert_txt, const std::string& title)
@@ -137,20 +140,17 @@ namespace openvpn {
       }
 
     private:
-      void assign(const ::X509 *x509)
+      void dup(const ::X509 *x509)
       {
-	erase();
-	x509_ = dup(x509);
+	x509_ = X509Base::dup(x509);
       }
     };
 
-    typedef RCPtr<X509> X509Ptr;
-
-    class X509List : public std::vector<X509Ptr>
+    class X509List : public std::vector<X509::Ptr>
     {
     public:
       typedef X509 Item;
-      typedef X509Ptr ItemPtr;
+      typedef X509::Ptr ItemPtr;
 
       bool defined() const { return !empty(); }
 
