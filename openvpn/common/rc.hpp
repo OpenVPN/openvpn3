@@ -197,6 +197,12 @@ namespace openvpn {
     }
 
     template <typename U>
+    RCPtr<U> static_pointer_cast() const noexcept
+    {
+      return RCPtr<U>(static_cast<U*>(px));
+    }
+
+    template <typename U>
     RCPtr<U> dynamic_pointer_cast() const noexcept
     {
       return RCPtr<U>(dynamic_cast<U*>(px));
