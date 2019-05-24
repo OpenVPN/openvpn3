@@ -174,7 +174,7 @@ namespace openvpn {
     virtual void load(const OptionList& opt, const unsigned int lflags) = 0;
 
 #ifdef HAVE_JSON
-    virtual SSLConfigAPI::Ptr json_override(const Json::Value& root) const = 0;
+    virtual SSLConfigAPI::Ptr json_override(const Json::Value& root, const bool load_cert_key) const = 0;
 #endif
 
     virtual std::string validate_cert(const std::string& cert_txt) const = 0;

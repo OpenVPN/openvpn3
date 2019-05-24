@@ -391,18 +391,7 @@ namespace openvpn {
 	tls_remote = opt.get_optional(relay_prefix + "tls-remote", 1, 256);
 
 	// Parse tls-version-min option.
-	// Assume that presence of SSL_OP_NO_TLSvX macro indicates
-	// that local OpenSSL library implements TLSvX.
-	{
-#         if defined(SSL_OP_NO_TLSv1_2)
-	    const TLSVersion::Type maxver = TLSVersion::V1_2;
-#         elif defined(SSL_OP_NO_TLSv1_1)
-	    const TLSVersion::Type maxver = TLSVersion::V1_1;
-#         else
-            const TLSVersion::Type maxver = TLSVersion::V1_0;
-#         endif
-	  tls_version_min = TLSVersion::parse_tls_version_min(opt, relay_prefix, maxver);
-	}
+	tls_version_min = TLSVersion::parse_tls_version_min(opt, relay_prefix, maxver());
 
 	// parse tls-cert-profile
 	tls_cert_profile = TLSCertProfile::parse_tls_cert_profile(opt, relay_prefix);
@@ -413,7 +402,7 @@ namespace openvpn {
       }
 
 #ifdef HAVE_JSON
-      virtual SSLConfigAPI::Ptr json_override(const Json::Value& root) const override
+      virtual SSLConfigAPI::Ptr json_override(const Json::Value& root, const bool load_cert_key) const override
       {
 	static const char title[] = "json_override";
 
@@ -421,16 +410,10 @@ namespace openvpn {
 
 	// inherit from self
 	ret->mode = mode;
-	ret->extra_certs = extra_certs;
 	ret->dh = dh;
 	ret->frame = frame;
 	ret->ssl_debug_level = ssl_debug_level;
 	ret->flags = flags;
-	ret->ns_cert_type = ns_cert_type;
-	ret->ku = ku;
-	ret->eku = eku;
-	ret->tls_version_min = tls_version_min;
-	ret->tls_cert_profile = tls_cert_profile;
 	ret->local_cert_enabled = local_cert_enabled;
 
 	// ca
@@ -446,28 +429,94 @@ namespace openvpn {
 	    ret->load_crl(crl_txt);
 	}
 
-	// local cert/key
-	if (local_cert_enabled)
+	// cert/key
+	if (load_cert_key && local_cert_enabled)
 	  {
-	    // cert
+	    bool loaded_cert = false;
+
+	    // cert/extra_certs
 	    {
-	      const std::string& cert_txt = json::get_string_ref(root, "cert", title);
-	      ret->load_cert(cert_txt);
+	      const std::string cert_txt = json::get_string_optional(root, "cert", std::string(), title);
+	      if (!cert_txt.empty())
+		{
+		  const std::string ec_txt = json::get_string_optional(root, "extra_certs", std::string(), title);
+		  ret->load_cert(cert_txt, ec_txt);
+		  loaded_cert = true;
+		}
+	      else
+		{
+		  ret->cert = cert;
+		  ret->extra_certs = extra_certs;
+		}
 	    }
 
 	    // private key
-	    if (!external_pki)
+	    if (loaded_cert && !external_pki)
 	      {
 		const std::string& key_txt = json::get_string_ref(root, "key", title);
-		ret->load_private_key(key_txt);
+		if (!key_txt.empty())
+		  ret->load_private_key(key_txt);
+		else
+		  ret->pkey = pkey;
 	      }
 	  }
+	else
+	  {
+	    // inherit from self
+	    ret->cert = cert;
+	    ret->extra_certs = extra_certs;
+	    ret->pkey = pkey;
+	  }
+
+	// ns_cert_type
+	{
+	  const std::string ct = json::get_string_optional(root, "ns_cert_type", std::string(), title);
+	  if (!ct.empty())
+	    ret->ns_cert_type = NSCert::ns_cert_type(ct);
+	}
+
+	// ku, eku
+	{
+	  const std::string ct = json::get_string_optional(root, "remote_cert_tls", std::string(), title);
+	  if (!ct.empty())
+	    KUParse::remote_cert_tls(ct, ret->ku, ret->eku);
+	}
+
+	// tls_version_min
+	{
+	  const std::string tvm = json::get_string_optional(root, "tls_version_min", std::string(), title);
+	  if (!tvm.empty())
+	    ret->tls_version_min = TLSVersion::parse_tls_version_min(tvm, false, maxver());
+	}
+
+	// tls_cert_profile
+	{
+	  const std::string prof = json::get_string_optional(root, "tls_cert_profile", std::string(), title);
+	  if (!prof.empty())
+	    ret->tls_cert_profile = TLSCertProfile::parse_tls_cert_profile(prof);
+	}
 
 	return ret;
       }
 #endif
 
     private:
+      static TLSVersion::Type maxver()
+      {
+	// Return maximum TLS version supported by OpenSSL.
+	// Assume that presence of SSL_OP_NO_TLSvX macro indicates
+	// that local OpenSSL library implements TLSvX.
+#if defined(SSL_OP_NO_TLSv1_3)
+	return TLSVersion::V1_3;
+#elif defined(SSL_OP_NO_TLSv1_2)
+	return TLSVersion::V1_2;
+#elif defined(SSL_OP_NO_TLSv1_1)
+	return TLSVersion::V1_1;
+#else
+	return TLSVersion::V1_0;
+#endif
+      }
+
       Mode mode;
       CertCRLList ca;                   // from OpenVPN "ca" and "crl-verify" option
       OpenSSLPKI::X509 cert;            // from OpenVPN "cert" option

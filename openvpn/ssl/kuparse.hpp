@@ -65,6 +65,23 @@ namespace openvpn {
 	}
     }
 
+    inline TLSWebType remote_cert_type(const std::string& ct)
+    {
+      if (ct == "server")
+	return TLS_WEB_SERVER;
+      else if (ct == "client")
+	return TLS_WEB_CLIENT;
+      else
+	throw option_error("remote-cert-tls must be 'client' or 'server'");
+    }
+
+    inline void remote_cert_tls(const std::string& ct,
+				std::vector<unsigned int>& ku,
+				std::string& eku)
+    {
+      remote_cert_tls(remote_cert_type(ct), ku, eku);
+    }
+
     inline void remote_cert_tls(const OptionList& opt,
 				const std::string& relay_prefix,
 				std::vector<unsigned int>& ku,
@@ -75,12 +92,7 @@ namespace openvpn {
       if (o)
 	{
 	  const std::string ct = o->get_optional(1, 16);
-	  if (ct == "server")
-	    wt = TLS_WEB_SERVER;
-	  else if (ct == "client")
-	    wt = TLS_WEB_CLIENT;
-	  else
-	    throw option_error("remote-cert-tls must be 'client' or 'server'");	      
+	  wt = remote_cert_type(ct);
 	}
       remote_cert_tls(wt, ku, eku);
     }
