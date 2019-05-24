@@ -194,7 +194,7 @@ namespace openvpn {
 	std::vector<std::string> ret;
 
 	for (auto const& cert : extra_certs)
-	  ret.push_back(cert->render_pem());
+	  ret.push_back(cert.render_pem());
 
 	return ret;
       }
@@ -1262,9 +1262,9 @@ namespace openvpn {
 	      // chain but shouldn't be included in the verify chain.
 	      if (config->extra_certs.defined())
 		{
-		  for (OpenSSLPKI::X509List::const_iterator i = config->extra_certs.begin(); i != config->extra_certs.end(); ++i)
+		  for (const auto& e : config->extra_certs)
 		    {
-		      if (SSL_CTX_add_extra_chain_cert(ctx, (*i)->obj_dup()) != 1)
+		      if (SSL_CTX_add_extra_chain_cert(ctx, e.obj_dup()) != 1)
 			throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
 		    }
 		}
@@ -1303,7 +1303,7 @@ namespace openvpn {
     void update_trust(const CertCRLList& cc)
     {
       OpenSSLPKI::X509Store store(cc);
-      SSL_CTX_set_cert_store(ctx, store.move());
+      SSL_CTX_set_cert_store(ctx, store.release());
     }
 
     ~OpenSSLContext()
