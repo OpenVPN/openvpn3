@@ -345,10 +345,10 @@ namespace openvpn {
 	return dh->extract();
       }
 
-      virtual PKType private_key_type() const
+      virtual PKType::Type private_key_type() const
       {
 	if (!priv_key)
-	  return PK_NONE;
+	  return PKType::PK_NONE;
 	return priv_key->key_type();
       }
 

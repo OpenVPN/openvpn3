@@ -209,10 +209,10 @@ namespace openvpn {
 	return dh.render_pem();
       }
 
-      virtual PKType private_key_type() const
+      virtual PKType::Type private_key_type() const
       {
 	if (!pkey.defined())
-	  return PK_NONE;
+	  return PKType::PK_NONE;
 	return pkey.key_type();
       }
 

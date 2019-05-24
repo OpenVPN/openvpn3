@@ -37,6 +37,7 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/auth/authcert.hpp>
 #include <openvpn/pki/epkibase.hpp>
+#include <openvpn/pki/pktype.hpp>
 #include <openvpn/ssl/kuparse.hpp>
 #include <openvpn/ssl/nscert.hpp>
 #include <openvpn/ssl/tlsver.hpp>
@@ -106,15 +107,6 @@ namespace openvpn {
   public:
     typedef RCPtr<SSLConfigAPI> Ptr;
 
-    enum PKType {
-      PK_UNKNOWN = 0,
-      PK_NONE,
-      PK_DSA,
-      PK_RSA,
-      PK_EC,
-      PK_ECDSA,
-    };
-
     enum LoadFlags {
       LF_PARSE_MODE                     = (1<<0),
       LF_ALLOW_CLIENT_CERT_NOT_REQUIRED = (1<<1),
@@ -124,21 +116,21 @@ namespace openvpn {
 
     std::string private_key_type_string() const
     {
-      PKType type = private_key_type();
+      PKType::Type type = private_key_type();
 
       switch (type)
       {
-      case PK_NONE:
+      case PKType::PK_NONE:
 	return "None";
-      case PK_DSA:
+      case PKType::PK_DSA:
 	return "DSA";
-      case PK_RSA:
+      case PKType::PK_RSA:
 	return "RSA";
-      case PK_EC:
+      case PKType::PK_EC:
 	return "EC";
-      case PK_ECDSA:
+      case PKType::PK_ECDSA:
 	return "ECDSA";
-      case PK_UNKNOWN:
+      case PKType::PK_UNKNOWN:
       default:
 	return "Unknown";
       }
@@ -163,7 +155,7 @@ namespace openvpn {
     virtual std::vector<std::string> extract_extra_certs() const = 0;
     virtual std::string extract_private_key() const = 0;
     virtual std::string extract_dh() const = 0;
-    virtual PKType private_key_type() const = 0;
+    virtual PKType::Type private_key_type() const = 0;
     virtual size_t private_key_length() const = 0;
     virtual void set_frame(const Frame::Ptr& frame_arg) = 0;
     virtual void set_debug_level(const int debug_level) = 0;
