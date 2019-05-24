@@ -52,13 +52,14 @@ namespace openvpn {
       class Fail
       {
       public:
-	// ordered by priority
+	// Ordered by severity.  If many errors are present, the
+	// most severe error will be returned by get_code().
 	enum Type {
-	  OK=0, // OK MUST be 0
-	  OTHER,
+	  OK=0,                // OK MUST be 0
+	  EXPIRED,             // less severe...
 	  BAD_CERT_TYPE,
-	  EXPIRED,
-	  SNI_ERROR,
+	  CERT_FAIL,
+	  SNI_ERROR,           // more severe...
 	  N
 	};
 
@@ -118,7 +119,7 @@ namespace openvpn {
 	    {
 	    case OK:
 	      return "OK";
-	    case OTHER:
+	    case CERT_FAIL:
 	    default:
 	      return "CERT_FAIL";
 	    case BAD_CERT_TYPE:

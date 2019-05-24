@@ -1612,7 +1612,7 @@ namespace openvpn {
 	case X509_V_ERR_CERT_HAS_EXPIRED:
 	  return AuthCert::Fail::EXPIRED;
 	default:
-	  return AuthCert::Fail::OTHER;
+	  return AuthCert::Fail::CERT_FAIL;
 	}
     }
 
