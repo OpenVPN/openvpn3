@@ -71,7 +71,7 @@ namespace openvpn {
     virtual BufferPtr read_ciphertext() = 0;
     virtual std::string ssl_handshake_details() const = 0;
     virtual bool did_full_handshake() = 0;
-    virtual const AuthCert::Ptr& auth_cert() = 0;
+    virtual const AuthCert::Ptr& auth_cert() const = 0;
     virtual void mark_no_cache() = 0; // prevent caching of client-side session (only meaningful when client_session_tickets is enabled)
     uint32_t get_tls_warnings() const
     {

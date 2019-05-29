@@ -643,7 +643,7 @@ namespace openvpn {
 	return !SSL_session_reused(ssl);
       }
 
-      virtual const AuthCert::Ptr& auth_cert()
+      virtual const AuthCert::Ptr& auth_cert() const
       {
 	// Reused sessions don't call the cert verify callbacks,
 	// so we must use an alternative method to build authcert.
@@ -778,9 +778,8 @@ namespace openvpn {
 	SSL_set_ex_data(ssl, context_data_index, (void *)ctx);
       }
 
-      void rebuild_authcert()
+      void rebuild_authcert() const
       {
-	authcert.reset(new AuthCert());
 	::X509 *cert = SSL_get_peer_certificate(ssl);
 	if (cert)
 	  {

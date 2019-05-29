@@ -722,7 +722,7 @@ namespace openvpn {
 	return false; // fixme -- not implemented
       }
 
-      virtual const AuthCert::Ptr& auth_cert() override
+      virtual const AuthCert::Ptr& auth_cert() const override
       {
 	return authcert;
       }
