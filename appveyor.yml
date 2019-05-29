@@ -1,0 +1,24 @@
+version: 1.0.{build}
+
+image: Visual Studio 2017
+
+clone_folder: c:\ovpn3\core
+
+install:
+- pip install rfc6266 requests
+
+environment:
+  MSVC_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
+  O3: C:\ovpn3
+  STATIC: 1
+
+before_build:
+- cmd: cd win && python buildep.py
+
+platform: x64
+
+configuration: Release
+
+artifacts:
+  - path: win\x64\Release\cli.exe
+
