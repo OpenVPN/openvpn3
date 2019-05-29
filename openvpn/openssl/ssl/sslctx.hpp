@@ -1955,6 +1955,10 @@ namespace openvpn {
 	// process the SNI name, if provided
 	if (!sni_name.empty())
 	  {
+	    // save the SNI name in authcert
+	    if (self_ssl->authcert)
+	      self_ssl->authcert->sni = sni_name;
+
 	    // ignore the SNI if no handler was provided
 	    if (self->config->sni_handler)
 	      {

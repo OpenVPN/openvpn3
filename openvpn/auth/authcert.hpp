@@ -147,6 +147,11 @@ namespace openvpn {
 	return sn >= 0;
       }
 
+      bool sni_defined() const
+      {
+	return !sni.empty();
+      }
+
       bool cn_defined() const
       {
 	return !cn.empty();
@@ -165,7 +170,7 @@ namespace openvpn {
 
       bool operator==(const AuthCert& other) const
       {
-	return cn == other.cn && sn == other.sn && !std::memcmp(issuer_fp, other.issuer_fp, sizeof(issuer_fp));
+	return sni == other.sni && cn == other.cn && sn == other.sn && !std::memcmp(issuer_fp, other.issuer_fp, sizeof(issuer_fp));
       }
 
       bool operator!=(const AuthCert& other) const
@@ -176,6 +181,8 @@ namespace openvpn {
       std::string to_string() const
       {
 	std::ostringstream os;
+	if (!sni.empty())
+	  os << "SNI=" << sni << ' ';
 	os << "CN=" << cn
 	   << " SN=" << sn
 	   << " ISSUER_FP=" << issuer_fp_str(false);
@@ -196,6 +203,11 @@ namespace openvpn {
 	  return cn.substr(0, cn.length() - 10);
 	else
 	  return cn;
+      }
+
+      const std::string& get_sni() const
+      {
+	return sni;
       }
 
       const std::string& get_cn() const
@@ -244,6 +256,7 @@ namespace openvpn {
       }
 
     private:
+      std::string sni;               // SNI (server name indication)
       std::string cn;                // common name
       long sn;                       // serial number
       unsigned char issuer_fp[20];   // issuer cert fingerprint
