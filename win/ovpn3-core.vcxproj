@@ -467,7 +467,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(OVPN3_ROOT)\deps\amd64\mbedtls\include;$(OVPN3_ROOT)\deps\amd64\tap-windows\src;$(OVPN3_ROOT)\deps\amd64\asio\asio\include;$(OVPN3_ROOT)\deps\amd64\lz4\lib;$(OVPN3_ROOT)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(O3)\deps\amd64\mbedtls\include;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SuppressStartupBanner>false</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -475,7 +475,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OVPN3_ROOT)\deps\amd64\mbedtls\library;$(OVPN3_ROOT)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(O3)\deps\amd64\mbedtls\library;$(O3)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
@@ -488,14 +488,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(OVPN3_ROOT)\deps\amd64\mbedtls\include;$(OVPN3_ROOT)\deps\amd64\tap-windows\src;$(OVPN3_ROOT)\deps\amd64\asio\asio\include;$(OVPN3_ROOT)\deps\amd64\lz4\lib;$(OVPN3_ROOT)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(O3)\deps\amd64\mbedtls\include;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(OVPN3_ROOT)\deps\amd64\mbedtls\library;$(OVPN3_ROOT)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(O3)\deps\amd64\mbedtls\library;$(O3)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
