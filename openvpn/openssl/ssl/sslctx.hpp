@@ -1179,6 +1179,16 @@ namespace openvpn {
 		}
 	      else
 		sslopt |= SSL_OP_NO_TICKET;
+
+	      // send a client CA list to the client
+	      if (config->flags & SSLConst::SEND_CLIENT_CA_LIST)
+		{
+		  for (const auto& e : config->ca.certs)
+		    {
+		      if (SSL_CTX_add_client_CA(ctx, e.obj()) != 1)
+			throw OpenSSLException("OpenSSLContext: SSL_CTX_add_client_CA failed");
+		    }
+		}
 	    }
 	  else
 	    {

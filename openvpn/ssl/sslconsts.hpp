@@ -66,8 +66,11 @@ namespace openvpn {
       // Peer certificate is optional
       PEER_CERT_OPTIONAL=(1<<6),
 
+      // [server only] Send a list of client CAs to the client
+      SEND_CLIENT_CA_LIST=(1<<7),
+
       // last flag marker
-      LAST=(1<<7)
+      LAST=(1<<8)
     };
 
     // filter all but SSL flags
