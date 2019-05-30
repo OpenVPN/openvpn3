@@ -109,7 +109,7 @@ namespace openvpn {
       TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context)
       {
 	if (tun_setup_factory)
-	  return tun_setup_factory->new_setup_obj(io_context);
+	  return tun_setup_factory->new_setup_obj(io_context, wintun);
 	else
 	  return new TunWin::Setup(io_context, wintun);
       }

@@ -60,7 +60,7 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
-      Setup(openvpn_io::io_context& io_context_arg, bool wintun_arg=true)
+      Setup(openvpn_io::io_context& io_context_arg, bool wintun_arg=false)
 	: delete_route_timer(io_context_arg),
 	  wintun(wintun_arg) {}
 

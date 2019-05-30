@@ -67,7 +67,7 @@ namespace openvpn {
     {
       typedef RCPtr<SetupFactory> Ptr;
 
-      virtual SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context) = 0;
+      virtual SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, bool wintun) = 0;
     };
   }
 }
