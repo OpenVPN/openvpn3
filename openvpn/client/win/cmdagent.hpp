@@ -55,11 +55,13 @@ namespace openvpn {
 	npserv = Agent::named_pipe_path();
 	client_exe = Win::module_name_utf8();
 	debug_level = 1;
+	wintun = false;
       }
 
       std::string npserv;     // server pipe
       std::string client_exe; // for validation
       int debug_level;
+      bool wintun;
     };
 
     class SetupClient : public TunWin::SetupBase
@@ -85,6 +87,7 @@ namespace openvpn {
 #if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
 	jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
 #endif
+	jreq["wintun"] = config->wintun;
 	jreq["confirm_event"] = confirm_event.duplicate_local();
 	jreq["destroy_event"] = destroy_event.duplicate_local();
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
@@ -238,12 +241,15 @@ namespace openvpn {
       Win::DestroyEvent destroy_event;
     };
 
-    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context) override
+    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, bool wintun) override
     {
       if (config)
-	return new SetupClient(io_context, config);
+	{
+	  config->wintun = wintun;
+	  return new SetupClient(io_context, config);
+	}
       else
-	return new TunWin::Setup(io_context);
+	return new TunWin::Setup(io_context, wintun);
     }
 
     WinCommandAgent(const OptionList& opt_parent)
