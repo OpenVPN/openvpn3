@@ -23,7 +23,7 @@
 #define HTTP_SERVER_VERSION "0.1.0"
 #endif
 // OVPNAGENT_NAME can be passed on build command line.
-// Customized agent name is needed with purpose to install 
+// Customized agent name is needed with purpose to install
 // few app with agents on one OS (e.g OC 3.0 and PT)
 #ifdef OVPNAGENT_NAME
 #define OVPNAGENT_NAME_STRING OPENVPN_STRINGIZE(OVPNAGENT_NAME)
@@ -117,10 +117,11 @@ public:
   Win::ScopedHANDLE establish_tun(const TunBuilderCapture& tbc,
 				  const std::wstring& openvpn_app_path,
 				  Stop* stop,
-				  std::ostream& os)
+				  std::ostream& os,
+				  bool wintun)
   {
     if (!tun)
-      tun.reset(new TunWin::Setup(io_context_));
+      tun.reset(new TunWin::Setup(io_context_, wintun));
     return Win::ScopedHANDLE(tun->establish(tbc, openvpn_app_path, stop, os));
   }
 
@@ -400,6 +401,8 @@ private:
 	  // get PID
 	  ULONG pid = json::get_uint_optional(root, "pid", 0);
 
+	  bool wintun = json::get_bool_optional(root, "wintun");
+
 	  // get remote event handles for tun object confirmation/destruction
 	  const std::string confirm_event_hex = json::get_string(root, "confirm_event");
 	  const std::string destroy_event_hex = json::get_string(root, "destroy_event");
@@ -428,7 +431,7 @@ private:
 	  }
 
 	  // establish the tun setup object
-	  Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os));
+	  Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, wintun));
 
 	  // post-establish impersonation
 	  {
