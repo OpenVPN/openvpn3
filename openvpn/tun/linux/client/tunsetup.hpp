@@ -39,6 +39,7 @@
 #include <openvpn/common/process.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/addr/route.hpp>
+#include <openvpn/asio/asioerr.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
