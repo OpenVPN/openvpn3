@@ -59,6 +59,7 @@
 #include <openvpn/win/unicode.hpp>
 #include <openvpn/win/cmd.hpp>
 #include <openvpn/win/winerr.hpp>
+#include <openvpn/win/impersonate.hpp>
 
 namespace openvpn {
   namespace TunWin {
@@ -342,87 +343,6 @@ namespace openvpn {
 	}
       };
 
-      inline HANDLE impersonate_as_system()
-      {
-	HANDLE thread_token, process_snapshot, winlogon_process, winlogon_token, duplicated_token, file_handle;
-	PROCESSENTRY32 entry = {};
-	entry.dwSize = sizeof(PROCESSENTRY32);
-	BOOL ret;
-	DWORD pid = 0;
-	TOKEN_PRIVILEGES privileges = {};
-	privileges.PrivilegeCount = 1;
-	privileges.Privileges->Attributes = SE_PRIVILEGE_ENABLED;
-
-	if (!LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &privileges.Privileges[0].Luid))
-	  return INVALID_HANDLE_VALUE;
-	if (!ImpersonateSelf(SecurityImpersonation))
-	  return INVALID_HANDLE_VALUE;
-	if (!OpenThreadToken(GetCurrentThread(), TOKEN_ADJUST_PRIVILEGES, FALSE, &thread_token))
-	  {
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-	if (!AdjustTokenPrivileges(thread_token, FALSE, &privileges, sizeof(privileges), NULL, NULL))
-	  {
-	    CloseHandle(thread_token);
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-	CloseHandle(thread_token);
-
-	process_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (process_snapshot == INVALID_HANDLE_VALUE)
-	  {
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-	for (ret = Process32First(process_snapshot, &entry); ret; ret = Process32Next(process_snapshot, &entry))
-	  {
-	    if (!_stricmp(entry.szExeFile, "winlogon.exe"))
-	      {
-		pid = entry.th32ProcessID;
-		break;
-	      }
-	  }
-	CloseHandle(process_snapshot);
-	if (!pid)
-	  {
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-
-	winlogon_process = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
-	if (!winlogon_process)
-	  {
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-
-	if (!OpenProcessToken(winlogon_process, TOKEN_IMPERSONATE | TOKEN_DUPLICATE, &winlogon_token))
-	  {
-	    CloseHandle(winlogon_process);
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-	CloseHandle(winlogon_process);
-
-	if (!DuplicateToken(winlogon_token, SecurityImpersonation, &duplicated_token))
-	  {
-	    CloseHandle(winlogon_token);
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-	CloseHandle(winlogon_token);
-
-	if (!SetThreadToken(NULL, duplicated_token))
-	  {
-	    CloseHandle(duplicated_token);
-	    RevertToSelf();
-	    return INVALID_HANDLE_VALUE;
-	  }
-	CloseHandle(duplicated_token);
-      }
-
       // given a TAP GUID, form the pathname of the TAP device node
       inline std::string tap_path(const TapNameGuidPair& tap, bool wintun)
       {
@@ -446,19 +366,21 @@ namespace openvpn {
 	    const TapNameGuidPair& tap = *i;
 	    const std::string path = tap_path(tap, wintun);
 
-	    // wintun device can be only opened under LocalSystem account
-	    if (wintun)
-	      impersonate_as_system();
+	    {
+	      // wintun device can be only opened under LocalSystem account
+	      std::unique_ptr<Win::Impersonate> imp;
 
-	    hand.reset(::CreateFileA(path.c_str(),
-				     GENERIC_READ | GENERIC_WRITE,
-				     0, /* was: FILE_SHARE_READ */
-				     0,
-				     OPEN_EXISTING,
-				     FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
-				     0));
-	    if (wintun)
-	      RevertToSelf();
+	      if (wintun)
+		imp.reset(new Win::Impersonate(true));
+
+	      hand.reset(::CreateFileA(path.c_str(),
+			 GENERIC_READ | GENERIC_WRITE,
+			 0, /* was: FILE_SHARE_READ */
+			 0,
+			 OPEN_EXISTING,
+			 FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
+			 0));
+	    }
 
 	    if (hand.defined())
 	      {
