@@ -550,7 +550,7 @@ namespace openvpn {
       }
 
 #ifdef HAVE_JSON
-      virtual SSLConfigAPI::Ptr json_override(const Json::Value& root) const
+      virtual SSLConfigAPI::Ptr json_override(const Json::Value& root, const bool load_cert_key) const
       {
 	throw MbedTLSException("json_override not implemented");
       }
