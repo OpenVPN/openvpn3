@@ -38,7 +38,7 @@ namespace openvpn {
 
     inline static const std::uint16_t* get_addr16(const struct in6_addr *addr)
     {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
       return addr->u.Word;
 #elif defined(__APPLE__)
       return addr->__u6_addr.__u6_addr16;
