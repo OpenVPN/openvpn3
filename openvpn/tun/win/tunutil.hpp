@@ -210,7 +210,7 @@ namespace openvpn {
 	  // first get the TAP guids
 	  {
 	    std::vector<TapGuidLuid> guids = tap_guids(wintun);
-	    for (auto& i = guids.begin(); i != guids.end(); i++)
+	    for (auto i = guids.begin(); i != guids.end(); i++)
 	      {
 		TapNameGuidPair pair;
 		pair.guid = i->first;
