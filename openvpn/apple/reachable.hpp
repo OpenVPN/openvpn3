@@ -202,6 +202,8 @@ namespace openvpn {
     virtual Type vtype() const = 0;
     virtual Status vstatus(const SCNetworkReachabilityFlags flags) const = 0;
 
+    virtual ~ReachabilityBase() {}
+
     CF::NetworkReachability reach;
   };
 
