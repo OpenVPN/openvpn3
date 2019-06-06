@@ -41,7 +41,7 @@ namespace openvpn {
      * On success, return.
      * On fail, throw exception.
      */
-    inline void verify_pkcs7(const OpenSSLPKI::X509Base& cert,
+    inline void verify_pkcs7(const OpenSSLPKI::X509& cert,
 			     const std::string& sig,
 			     const std::string& data)
     {
