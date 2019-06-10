@@ -104,7 +104,7 @@ namespace openvpn {
 	switch (pull.layer())
 	  {
 	  case Layer::OSI_LAYER_3:
-	    adapter_config(th(), openvpn_app_path, tap, wintun, pull, false, *add_cmds, *remove_cmds, os);
+	    adapter_config(th(), openvpn_app_path, tap, pull, false, *add_cmds, *remove_cmds, os);
 	    break;
 	  case Layer::OSI_LAYER_2:
 	    adapter_config_l2(th(), openvpn_app_path, tap, pull, *add_cmds, *remove_cmds, os);
@@ -162,7 +162,7 @@ namespace openvpn {
 	  {
 	    Win::ScopedHANDLE nh;
 	    ActionList::Ptr add_cmds(new ActionList());
-	    adapter_config(nh(), l2s->openvpn_app_path, l2s->tap, wintun, pull, true, *add_cmds, *remove_cmds, os);
+	    adapter_config(nh(), l2s->openvpn_app_path, l2s->tap, pull, true, *add_cmds, *remove_cmds, os);
 	    add_cmds->execute(os);
 	  }
       }
@@ -255,7 +255,6 @@ namespace openvpn {
       void adapter_config(HANDLE th,
 			  const std::wstring& openvpn_app_path,
 			  const Util::TapNameGuidPair& tap,
-			  bool wintun,
 			  const TunBuilderCapture& pull,
 			  const bool l2_post,
 			  ActionList& create,
