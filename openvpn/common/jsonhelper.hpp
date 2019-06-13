@@ -83,7 +83,7 @@ namespace openvpn {
 	  throw json_parse(Json::Value::type_string(target_type) + " cast " + fmt_name(name, title) + " is null");
 	}
       if (!value.isConvertibleTo(target_type))
-	throw json_parse(Json::Value::type_string(target_type) + "cast " + fmt_name(name, title) + " is of incorrect type (" + value.type_string() + ')');
+	throw json_parse(Json::Value::type_string(target_type) + " cast " + fmt_name(name, title) + " is of incorrect type (" + value.type_string() + ')');
       return value;
     }
 
