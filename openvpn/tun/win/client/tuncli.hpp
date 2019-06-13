@@ -320,17 +320,17 @@ namespace openvpn {
 	      dhcp_inspect(buf);
 
 	    if (config->wintun)
-	    {
-	      // end padding
-	      auto packet_size = buf.size();
-	      auto end_padding_size = OPENVPN_WINTUN_PACKET_ALIGN -
-		(buf.size() & (OPENVPN_WINTUN_PACKET_ALIGN - 1));
-	      buf.write(wintun_padding, end_padding_size);
+	      {
+		// end padding
+		auto packet_size = buf.size();
+		auto end_padding_size = OPENVPN_WINTUN_PACKET_ALIGN -
+		  (buf.size() & (OPENVPN_WINTUN_PACKET_ALIGN - 1));
+		buf.write(wintun_padding, end_padding_size);
 
-	      // start padding and size
-	      buf.prepend(wintun_padding, OPENVPN_WINTUN_START_PADDING_LEN);
-	      buf.prepend((unsigned char *)&packet_size, OPENVPN_WINTUN_PACKET_SIZE_LEN);
-	    }
+		// start padding and size
+		buf.prepend(wintun_padding, OPENVPN_WINTUN_START_PADDING_LEN);
+		buf.prepend((unsigned char *)&packet_size, OPENVPN_WINTUN_PACKET_SIZE_LEN);
+	      }
 
 	    return impl->write(buf);
 	  }
@@ -347,25 +347,25 @@ namespace openvpn {
 	  {
 	    // we might receive up to 256 packets
 	    while (pfp->buf.size() > 0)
-	    {
-	      // parse wintun encapsulation
-	      auto packet_size = *(std::uint32_t*)pfp->buf.c_data();
-	      pfp->buf.advance(OPENVPN_WINTUN_PACKET_SIZE_LEN);
-	      pfp->buf.advance(OPENVPN_WINTUN_START_PADDING_LEN);
+	      {
+		// parse wintun encapsulation
+		auto packet_size = *(std::uint32_t*)pfp->buf.c_data();
+		pfp->buf.advance(OPENVPN_WINTUN_PACKET_SIZE_LEN);
+		pfp->buf.advance(OPENVPN_WINTUN_START_PADDING_LEN);
 
-	      // extract individual packet
-	      frame_context.prepare(wintun_packet);
-	      wintun_packet.write(pfp->buf.c_data(), packet_size);
+		// extract individual packet
+		frame_context.prepare(wintun_packet);
+		wintun_packet.write(pfp->buf.c_data(), packet_size);
 
-	      parent.tun_recv(wintun_packet);
+		parent.tun_recv(wintun_packet);
 
-	      // skip to the next packet
-	      pfp->buf.advance(packet_size);
+		// skip to the next packet
+		pfp->buf.advance(packet_size);
 
-	      auto padding = (OPENVPN_WINTUN_PACKET_ALIGN -
-		(packet_size & (OPENVPN_WINTUN_PACKET_ALIGN - 1))) % OPENVPN_WINTUN_PACKET_ALIGN;
-	      pfp->buf.advance(padding);
-	    }
+		auto padding = (OPENVPN_WINTUN_PACKET_ALIGN -
+		  (packet_size & (OPENVPN_WINTUN_PACKET_ALIGN - 1))) % OPENVPN_WINTUN_PACKET_ALIGN;
+		pfp->buf.advance(padding);
+	      }
 	  }
 	else
 	  {
