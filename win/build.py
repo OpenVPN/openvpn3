@@ -80,7 +80,7 @@ def build(parms, srcfile, unit_test=False):
 
     if parms.get("USE_OPENSSL"):
         options['extra_inc'] += ' /DUSE_OPENSSL /I %s' % os.path.join(options['openssl'], 'inc32')
-        options['extra_lib_path'] += ' /LIBPATH:%s' % os.path.join(options['openssl'], 'out32')
+        options['extra_lib_path'] += ' /LIBPATH:%s' % os.path.join(options['openssl'], 'out32dll')
         options['extra_lib'] += ' libeay32.lib ssleay32.lib'
     else:
         options['extra_inc'] += ' /DUSE_MBEDTLS /I %s' % os.path.join(options['mbedtls'], 'include')

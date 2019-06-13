@@ -149,7 +149,7 @@ def build_openssl(parms):
             rm(arch_path)
 
             os.chdir(dist)
-            for cmd in ["perl Configure VC-WIN64A", "ms\\do_win64a", "nmake -f ms\\nt.mak"]:
+            for cmd in ["perl Configure VC-WIN64A", "ms\\do_win64a", "nmake -f ms\\ntdll.mak"]:
                 vc_cmd(parms, cmd)
 
 def build_all(parms):
