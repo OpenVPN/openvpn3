@@ -323,9 +323,10 @@ namespace openvpn {
 	      {
 		// end padding
 		auto packet_size = buf.size();
-		auto end_padding_size = OPENVPN_WINTUN_PACKET_ALIGN -
-		  (buf.size() & (OPENVPN_WINTUN_PACKET_ALIGN - 1));
-		buf.write(wintun_padding, end_padding_size);
+		auto end_padding_size = (OPENVPN_WINTUN_PACKET_ALIGN -
+		  buf.size() & (OPENVPN_WINTUN_PACKET_ALIGN - 1)) % OPENVPN_WINTUN_PACKET_ALIGN;
+		if (end_padding_size > 0)
+		  buf.write(wintun_padding, end_padding_size);
 
 		// start padding and size
 		buf.prepend(wintun_padding, OPENVPN_WINTUN_START_PADDING_LEN);
