@@ -78,7 +78,7 @@ namespace openvpn {
 	if (ckeysz > keysize)
 	  throw openssl_gcm_error("insufficient key material");
 	ctx = EVP_CIPHER_CTX_new();
-	EVP_CIPHER_CTX_init(ctx);
+	EVP_CIPHER_CTX_reset(ctx);
 	switch (mode)
 	  {
 	  case ENCRYPT:
@@ -223,7 +223,6 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    EVP_CIPHER_CTX_cleanup(ctx);
 	    EVP_CIPHER_CTX_free(ctx);
 	    initialized = false;
 	  }

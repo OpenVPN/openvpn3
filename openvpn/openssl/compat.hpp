@@ -307,6 +307,19 @@ inline void RSA_get0_key(const RSA *rsa, const BIGNUM **n, const BIGNUM **e, con
 /* Renamed in OpenSSL 1.1 */
 #define X509_get0_pubkey X509_get_pubkey
 #define RSA_F_RSA_OSSL_PRIVATE_ENCRYPT RSA_F_RSA_EAY_PRIVATE_ENCRYPT
+
+/*
+ * EVP_CIPHER_CTX_init and EVP_CIPHER_CTX_cleanup are both replaced by
+ * EVP_CIPHER_CTX_reset in OpenSSL 1.1 but replacing them both with
+ * reset is wrong for older version. The man page mention cleanup
+ * being officially removed and init to be an alias for reset.
+ *
+ * So we only use reset as alias for init in older versions.
+ *
+ * EVP_CIPHER_CTX_free already implicitly calls EVP_CIPHER_CTX_cleanup in
+ * 1.0.2, so we can avoid using the old API.
+ */
+#define EVP_CIPHER_CTX_reset	EVP_CIPHER_CTX_init
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
