@@ -76,6 +76,7 @@ namespace openvpn {
       AUTH_FAILED,         // general authentication failure
       CLIENT_HALT,         // HALT message from server received
       CLIENT_RESTART,      // RESTART message from server received
+      TUN_HALT,            // halt command from tun interface
       RELAY,               // RELAY message from server received
       RELAY_ERROR,         // RELAY error
       N_PAUSE,             // Number of transitions to Pause state
@@ -152,6 +153,7 @@ namespace openvpn {
 	"AUTH_FAILED",
 	"CLIENT_HALT",
 	"CLIENT_RESTART",
+	"TUN_HALT",
 	"RELAY",
 	"RELAY_ERROR",
 	"N_PAUSE",

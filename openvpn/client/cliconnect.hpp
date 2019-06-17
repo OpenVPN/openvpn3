@@ -551,6 +551,14 @@ namespace openvpn {
 		    queue_restart(5000);
 		  }
 		  break;
+		case Error::TUN_HALT:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunHalt(client->fatal_reason());
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::TUN_HALT);
+		    stop();
+		  }
+		  break;
 		case Error::RELAY:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::Relay();

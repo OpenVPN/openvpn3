@@ -739,6 +739,8 @@ namespace openvpn {
 
       virtual void tun_error(const Error::Type fatal_err, const std::string& err_text)
       {
+	if (fatal_err == Error::TUN_HALT)
+	  send_explicit_exit_notify();
 	if (fatal_err != Error::UNDEF)
 	  {
 	    fatal_ = fatal_err;

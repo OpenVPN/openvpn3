@@ -68,6 +68,7 @@ namespace openvpn {
       TLS_VERSION_MIN,
       CLIENT_HALT,
       CLIENT_SETUP,
+      TUN_HALT,
       CONNECTION_TIMEOUT,
       INACTIVE_TIMEOUT,
       DYNAMIC_CHALLENGE,
@@ -121,6 +122,7 @@ namespace openvpn {
 	"TLS_VERSION_MIN",
 	"CLIENT_HALT",
 	"CLIENT_SETUP",
+	"TUN_HALT",
 	"CONNECTION_TIMEOUT",
 	"INACTIVE_TIMEOUT",
 	"DYNAMIC_CHALLENGE",
@@ -359,6 +361,11 @@ namespace openvpn {
     struct ClientRestart : public ReasonBase
     {
       ClientRestart(std::string reason) : ReasonBase(CLIENT_RESTART, std::move(reason)) {}
+    };
+
+    struct TunHalt : public ReasonBase
+    {
+      TunHalt(std::string reason) : ReasonBase(TUN_HALT, std::move(reason)) {}
     };
 
     struct RelayError : public ReasonBase
