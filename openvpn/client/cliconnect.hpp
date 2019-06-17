@@ -529,7 +529,10 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::InactiveTimeout();
 		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::INACTIVE_TIMEOUT);
-		    graceful_stop();
+
+		    // explicit exit notify is sent earlier by
+		    // ClientProto::Session::inactive_callback()
+		    stop();
 		  }
 		  break;
 		case Error::TRANSPORT_ERROR:
