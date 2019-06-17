@@ -330,6 +330,7 @@ namespace openvpn {
 		  }
 
 		  ssl_conf->set_flags(flags);
+		  ssl_factory = ssl_conf->new_factory();
 
 		  impl.reset(new LinkImplTLS(this,
 					     io_context,
@@ -338,7 +339,7 @@ namespace openvpn {
 					     config->free_list_max_size,
 					     config->frame,
 					     config->stats,
-					     ssl_conf->new_factory()));
+					     ssl_factory));
 		}
 		else
 #endif
@@ -381,6 +382,10 @@ namespace openvpn {
       LinkImpl::Base::protocol::endpoint server_endpoint;
       bool halt;
       bool stop_requeueing;
+
+#ifdef OPENVPN_TLS_LINK
+      SSLFactoryAPI::Ptr ssl_factory;
+#endif
     };
 
     inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
