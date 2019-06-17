@@ -700,5 +700,14 @@ namespace openvpn {
     {
       return root.toStyledString();
     }
+
+    inline std::string error(const Json::Value& root)
+    {
+      const Json::Value& je = root["error"];
+      if (je.isString())
+	return je.asString();
+      else
+	return std::string();
+    }
   }
 }
