@@ -132,7 +132,7 @@ namespace openvpn {
       }
 
       // server side
-      virtual void set_sni_handler(SNIHandlerBase* sni_handler_arg)
+      virtual void set_sni_handler(SNI::HandlerBase* sni_handler_arg)
       {
 	sni_handler = sni_handler_arg;
       }
@@ -525,7 +525,7 @@ namespace openvpn {
       OpenSSLPKI::DH dh;                // diffie-hellman parameters (only needed in server mode)
       ExternalPKIBase* external_pki = nullptr;
       TLSSessionTicketBase* session_ticket_handler = nullptr; // server side only
-      SNIHandlerBase* sni_handler = nullptr; // server side only
+      SNI::HandlerBase* sni_handler = nullptr; // server side only
       Frame::Ptr frame;
       int ssl_debug_level = 0;
       unsigned int flags = 0;           // defined in sslconsts.hpp

@@ -248,7 +248,7 @@ namespace openvpn {
 	throw MbedTLSException("set_client_session_tickets not implemented");
       }
 
-      virtual void set_sni_handler(SNIHandlerBase* sni_handler)
+      virtual void set_sni_handler(SNI::HandlerBase* sni_handler)
       {
 	// fixme -- this method should be implemented on the server-side for SNI
 	throw MbedTLSException("set_sni_handler not implemented");

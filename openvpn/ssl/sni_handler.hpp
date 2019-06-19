@@ -27,19 +27,20 @@
 #include <openvpn/ssl/sslapi.hpp>
 
 namespace openvpn {
+  namespace SNI {
 
-  // Abstract base class used to provide an SNI handler
-  // 
-  class SNIHandlerBase
-  {
-  public:
-    // Return a new SSLFactoryAPI for this SNI name.
-    // Return SSLFactoryAPI::Ptr() if sni_name is not recognized.
-    // The caller guarantees that sni_name is valid UTF-8 and
-    // doesn't contain any control characters.
-    virtual SSLFactoryAPI::Ptr sni_hello(const std::string& sni_name, SSLConfigAPI::Ptr default_factory) const = 0;
+    // Abstract base class used to provide an SNI handler
+    class HandlerBase
+    {
+    public:
+      // Return a new SSLFactoryAPI for this SNI name.
+      // Return SSLFactoryAPI::Ptr() if sni_name is not recognized.
+      // The caller guarantees that sni_name is valid UTF-8 and
+      // doesn't contain any control characters.
+      virtual SSLFactoryAPI::Ptr sni_hello(const std::string& sni_name, SSLConfigAPI::Ptr default_factory) const = 0;
 
-    virtual ~SNIHandlerBase() {}
-  };
+      virtual ~HandlerBase() {}
+    };
 
+  }
 }

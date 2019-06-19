@@ -48,7 +48,9 @@
 
 namespace openvpn {
 
-  class SNIHandlerBase;
+  namespace SNI {
+    class HandlerBase;
+  }
 
   class SSLAPI : public RC<thread_unsafe_refcount>
   {
@@ -141,7 +143,7 @@ namespace openvpn {
     virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg) = 0; // private key alternative
     virtual void set_session_ticket_handler(TLSSessionTicketBase* session_ticket_handler) = 0; // server side
     virtual void set_client_session_tickets(const bool v) = 0; // client side
-    virtual void set_sni_handler(SNIHandlerBase* sni_handler) = 0; // server side
+    virtual void set_sni_handler(SNI::HandlerBase* sni_handler) = 0; // server side
     virtual void set_private_key_password(const std::string& pwd) = 0;
     virtual void load_ca(const std::string& ca_txt, bool strict) = 0;
     virtual void load_crl(const std::string& crl_txt) = 0;
