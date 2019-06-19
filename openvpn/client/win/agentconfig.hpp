@@ -10,7 +10,7 @@
 #define OPENVPN_CLIENT_WIN_AGENTCONFIG_H
 
 // OVPNAGENT_NAME can be passed on build command line.
-// Customized agent name is needed with purpose to install 
+// Customized agent name is needed with purpose to install
 // few app with agents on one OS (e.g OC 3.0 and PT)
 #ifdef OVPNAGENT_NAME
 #define OVPNAGENT_NAME_STRING OPENVPN_STRINGIZE(OVPNAGENT_NAME)
@@ -33,7 +33,11 @@ namespace openvpn {
     static bool valid_pipe(const std::string& client_exe,
 			   const std::string& server_exe)
     {
+#ifdef OVPNAGENT_DISABLE_PATH_CHECK
+      return true;
+#else
       return normalize_exe_path(client_exe) == normalize_exe_path(server_exe);
+#endif
     }
 
   private:
