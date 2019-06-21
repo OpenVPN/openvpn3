@@ -1975,7 +1975,10 @@ namespace openvpn {
 		// get an alternative SSLFactoryAPI from the sni_handler
 		SSLFactoryAPI::Ptr fapi;
 		try {
-		  fapi = self->config->sni_handler->sni_hello(sni_name, self->config);
+		  SNI::Metadata::UPtr sm;
+		  fapi = self->config->sni_handler->sni_hello(sni_name, sm, self->config);
+		  if (self_ssl->authcert)
+		    self_ssl->authcert->sni_metadata = std::move(sm);
 		}
 		catch (const std::exception& e)
 		  {

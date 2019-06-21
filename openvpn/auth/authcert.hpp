@@ -35,14 +35,16 @@
 #include <openvpn/common/binprefix.hpp>
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/pki/x509track.hpp>
+#include <openvpn/ssl/sni_metadata.hpp>
 
 namespace openvpn {
 
     class OpenSSLContext;
     class MbedTLSContext;
 
-    struct AuthCert : public RC<thread_unsafe_refcount>
+    class AuthCert : public RC<thread_unsafe_refcount>
     {
+    public:
       // AuthCert needs to friend SSL implementation classes
       friend class OpenSSLContext;
       friend class MbedTLSContext;
@@ -183,6 +185,8 @@ namespace openvpn {
 	std::ostringstream os;
 	if (!sni.empty())
 	  os << "SNI=" << sni << ' ';
+	if (sni_metadata)
+	  os << "SNI_CN=" << sni_metadata->sni_client_name(*this) << ' ';
 	os << "CN=" << cn
 	   << " SN=" << sn
 	   << " ISSUER_FP=" << issuer_fp_str(false);
@@ -203,6 +207,16 @@ namespace openvpn {
 	  return cn.substr(0, cn.length() - 10);
 	else
 	  return cn;
+      }
+
+      // Allow sni_metadata object, if it exists, to generate the client name.
+      // Otherwise fall back to normalize_cn().
+      std::string sni_client_name() const
+      {
+	if (sni_metadata)
+	  return sni_metadata->sni_client_name(*this);
+	else
+	  return normalize_cn();
       }
 
       const std::string& get_sni() const
@@ -263,6 +277,7 @@ namespace openvpn {
 
       std::unique_ptr<Fail> fail;
       std::unique_ptr<X509Track::Set> x509_track;
+      SNI::Metadata::UPtr sni_metadata;
     };
 }
 
