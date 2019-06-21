@@ -11,6 +11,7 @@
 #include <string>
 #include <cstring>
 #include <cstdint>
+#include <utility>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
@@ -708,6 +709,20 @@ namespace openvpn {
 	return je.asString();
       else
 	return std::string();
+    }
+
+    // Guarantee that json object jr is a dictionary.
+    // Do this by encapsulating jr in a dictionary
+    // { "result": jr } if it is not already one.
+    inline Json::Value dict_result(Json::Value jr)
+    {
+      if (jr.isObject())
+	return std::move(jr);
+      else {
+	Json::Value jret(Json::objectValue);
+	jret["result"] = std::move(jr);
+	return jret;
+      }
     }
   }
 }
