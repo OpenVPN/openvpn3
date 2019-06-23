@@ -41,7 +41,7 @@
 #include <openvpn/mbedtls/crypto/api.hpp>
 #include <openvpn/mbedtls/ssl/sslctx.hpp>
 #include <openvpn/mbedtls/util/rand.hpp>
-#ifdef HAVE_OPENVPN_COMMON
+#if defined(HAVE_OPENVPN_COMMON) && !defined(MBEDTLS_DISABLE_NAME_CONSTRAINTS)
 #include <openvpn/mbedtls/ssl/sslctxnc.hpp>
 #endif
 #ifdef OPENVPN_PLATFORM_UWP
@@ -61,7 +61,7 @@ namespace openvpn {
 #if defined(USE_MBEDTLS)
 #define SSL_LIB_NAME "MbedTLS"
     typedef MbedTLSCryptoAPI CryptoAPI;
-    #ifdef HAVE_OPENVPN_COMMON
+    #if defined(HAVE_OPENVPN_COMMON) && !defined(MBEDTLS_DISABLE_NAME_CONSTRAINTS)
       typedef MbedTLSContextNameConstraints SSLAPI;
     #else
       typedef MbedTLSContext SSLAPI;
