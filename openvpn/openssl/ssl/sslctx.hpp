@@ -137,6 +137,12 @@ namespace openvpn {
 	sni_handler = sni_handler_arg;
       }
 
+      // client side
+      virtual void set_sni_name(const std::string& sni_name_arg)
+      {
+	sni_name = sni_name_arg;
+      }
+
       virtual void set_private_key_password(const std::string& pwd)
       {
 	pkey.set_private_key_password(pwd);
@@ -334,6 +340,13 @@ namespace openvpn {
 	    && opt.exists("client-cert-not-required"))
 	  flags |= SSLConst::NO_VERIFY_PEER;
 
+	// sni
+	{
+	  const std::string name = opt.get_optional("sni", 1, 256);
+	  if (!name.empty())
+	    set_sni_name(name);
+	}
+
 	// ca
 	{
 	  std::string ca_txt = opt.cat("ca");
@@ -529,6 +542,7 @@ namespace openvpn {
       Frame::Ptr frame;
       int ssl_debug_level = 0;
       unsigned int flags = 0;           // defined in sslconsts.hpp
+      std::string sni_name;             // client side only
       NSCert::Type ns_cert_type{NSCert::NONE};
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
@@ -747,9 +761,16 @@ namespace openvpn {
 	      SSL_set_connect_state(ssl);
 
 	      // client-side SNI
-	      if ((ctx.config->flags & SSLConst::ENABLE_CLIENT_SNI) && hostname)
-		if (SSL_set_tlsext_host_name(ssl, hostname->c_str()) != 1)
-		  throw OpenSSLException("OpenSSLContext::SSL: SSL_set_tlsext_host_name failed");
+	      if (!ctx.config->sni_name.empty())
+		{
+		  if (SSL_set_tlsext_host_name(ssl, ctx.config->sni_name.c_str()) != 1)
+		    throw OpenSSLException("OpenSSLContext::SSL: SSL_set_tlsext_host_name failed (sni_name)");
+		}
+	      else if ((ctx.config->flags & SSLConst::ENABLE_CLIENT_SNI) && hostname)
+		{
+		  if (SSL_set_tlsext_host_name(ssl, hostname->c_str()) != 1)
+		    throw OpenSSLException("OpenSSLContext::SSL: SSL_set_tlsext_host_name failed (hostname)");
+		}
 	    }
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext::SSL: unknown client/server mode");

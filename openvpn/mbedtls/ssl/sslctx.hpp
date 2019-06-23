@@ -254,6 +254,12 @@ namespace openvpn {
 	throw MbedTLSException("set_sni_handler not implemented");
       }
 
+      virtual void set_sni_name(const std::string& sni_name_arg)
+      {
+	// fixme -- this method should be implemented on the client-side for SNI
+	throw MbedTLSException("set_sni_name not implemented");
+      }
+
       virtual void set_private_key_password(const std::string& pwd)
       {
 	priv_key_pwd = pwd;
@@ -472,6 +478,13 @@ namespace openvpn {
 	  flags |= SSLConst::NO_VERIFY_PEER;
 
 	allow_name_constraints = lflags & LF_ALLOW_NAME_CONSTRAINTS;
+
+	// sni
+	{
+	  const std::string name = opt.get_optional("sni", 1, 256);
+	  if (!name.empty())
+	    set_sni_name(name);
+	}
 
 	// ca
 	{
