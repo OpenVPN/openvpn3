@@ -1157,9 +1157,10 @@ namespace openvpn {
 	      if (config->sni_handler)
 		{
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#define OPENSSL_SERVER_SNI
 		  SSL_CTX_set_client_hello_cb(ctx, client_hello_callback, nullptr);
 #else
-		  OPENVPN_THROW(ssl_context_error, "OpenSSLContext: ENABLE_SERVER_SNI requires OpenSSL 1.1 or higher");
+		  OPENVPN_THROW(ssl_context_error, "OpenSSLContext: server-side SNI requires OpenSSL 1.1 or higher");
 #endif
 		}
 	    }
