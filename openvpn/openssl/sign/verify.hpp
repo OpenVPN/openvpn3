@@ -34,6 +34,8 @@
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
+#include <openvpn/openssl/compat.hpp>
+
 namespace openvpn {
   namespace OpenSSLSign {
     /*
@@ -47,15 +49,19 @@ namespace openvpn {
 		       const std::string& digest)
     {
       const EVP_MD *dig;
-      EVP_MD_CTX md_ctx;
-      bool md_ctx_initialized = false;
+      EVP_MD_CTX* md_ctx = nullptr;
       EVP_PKEY *pkey = nullptr;
 
       auto clean = Cleanup([&]() {
 	  if (pkey)
 	    EVP_PKEY_free(pkey);
-	  if (md_ctx_initialized)
-	    EVP_MD_CTX_cleanup(&md_ctx);
+	  if (md_ctx)
+	    {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	      EVP_MD_CTX_cleanup(md_ctx);
+#endif
+	      EVP_MD_CTX_free(md_ctx);
+	    }
 	});
 
       // get digest
@@ -78,11 +84,13 @@ namespace openvpn {
 	  throw Exception(std::string("OpenSSLSign::verify: base64 decode error on signature: ") + e.what());
 	}
 
+      // initialize digest context
+      md_ctx = EVP_MD_CTX_new();
+
       // verify signature
-      EVP_VerifyInit (&md_ctx, dig);
-      md_ctx_initialized = 1;
-      EVP_VerifyUpdate(&md_ctx, data.c_str(), data.length());
-      if (EVP_VerifyFinal(&md_ctx, binsig.c_data(), binsig.length(), pkey) != 1)
+      EVP_VerifyInit (md_ctx, dig);
+      EVP_VerifyUpdate(md_ctx, data.c_str(), data.length());
+      if (EVP_VerifyFinal(md_ctx, binsig.c_data(), binsig.length(), pkey) != 1)
 	throw OpenSSLException("OpenSSLSign::verify: verification failed");
     }
   }
