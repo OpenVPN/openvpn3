@@ -224,14 +224,17 @@ namespace openvpn {
 	if (initialized)
 	  {
 	    EVP_CIPHER_CTX_cleanup(ctx);
+	    EVP_CIPHER_CTX_free(ctx);
 	    initialized = false;
 	  }
       }
 
       void check_initialized() const
       {
+#ifdef OPENVPN_ENABLE_ASSERT
 	if (unlikely(!initialized))
 	  throw openssl_gcm_error("uninitialized");
+#endif
       }
 
       bool initialized;

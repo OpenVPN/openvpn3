@@ -68,14 +68,16 @@ namespace openvpn {
       ctx = EVP_CIPHER_CTX_new ();
       EVP_CIPHER_CTX_init (ctx);
       if (!EVP_CipherInit_ex(ctx, EVP_aes_128_ecb(), nullptr, key.data, nullptr, mode))
-	throw OpenSSLException("TokenEncrypt: EVP_CipherInit_ex[1] failed");
+	{
+	  erase();
+	  throw OpenSSLException("TokenEncrypt: EVP_CipherInit_ex[1] failed");
+	}
       EVP_CIPHER_CTX_set_padding(ctx, 0);
     }
 
     ~TokenEncrypt()
     {
-      EVP_CIPHER_CTX_cleanup(ctx);
-      EVP_CIPHER_CTX_free(ctx);
+      erase();
     }
 
     // Do the encrypt/decrypt
@@ -97,6 +99,12 @@ namespace openvpn {
     }
 
   private:
+    void erase()
+    {
+      EVP_CIPHER_CTX_cleanup(ctx);
+      EVP_CIPHER_CTX_free(ctx);
+    }
+
     TokenEncrypt(const TokenEncrypt&) = delete;
     TokenEncrypt& operator=(const TokenEncrypt&) = delete;
 
