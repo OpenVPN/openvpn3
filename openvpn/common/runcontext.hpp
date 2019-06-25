@@ -37,6 +37,7 @@
 #include <mutex>
 #include <memory>
 #include <type_traits> // for std::is_nothrow_move_constructible
+#include <utility>
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
@@ -49,6 +50,7 @@
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/timestr.hpp>
+#include <openvpn/common/logsetup.hpp>
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 #include <openvpn/common/scoped_fd.hpp>
@@ -129,6 +131,11 @@ namespace openvpn {
     void set_async_stop(Stop* async_stop)
     {
       async_stop_ = async_stop;
+    }
+
+    void set_log_reopen(LogSetup::Ptr lr)
+    {
+      log_reopen = std::move(lr);
     }
 
     void set_thread(const unsigned int unit, std::thread* thread)
@@ -358,6 +365,11 @@ namespace openvpn {
 		OPENVPN_LOG(stats->dump());
 	      signal_rearm();
 	      break;
+	    case SIGHUP:
+	      if (log_reopen)
+		log_reopen->reopen();
+	      signal_rearm();
+	      break;
 #endif
 	    default:
 	      signal_rearm();
@@ -420,6 +432,7 @@ namespace openvpn {
     // logging
     Log::Context log_context;
     Log::Context::Wrapper log_wrap; // must be constructed after log_context
+    LogSetup::Ptr log_reopen;
 
   protected:
     volatile bool halt = false;
