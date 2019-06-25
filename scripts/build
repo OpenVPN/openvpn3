@@ -336,8 +336,12 @@ fi
 
 # release/debug builds
 if [ "$DEBUG" = "1" ]; then
-    # debug build
-    FLAGS="-g $FLAGS"
+    # build with debug symbols
+    if [ "$PLATFORM" = "linux" ]; then
+	FLAGS="-ggdb $FLAGS"
+    else
+	FLAGS="-g $FLAGS"
+    fi
 else
     # release build
     [ "$LTO" = "1" ] && [ "$CLANG" != "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
