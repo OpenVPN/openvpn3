@@ -273,6 +273,10 @@ if [ "$JAVA" = "1" ]; then
     LIBS="$LIBS -ljvm"
 fi
 
+if [ "$EXTRA_LIBS" ]; then
+    LIBS="$LIBS $EXTRA_LIBS"
+fi
+
 # other environments
 for s in $(enum_build_extras) ; do
     . $s deps
