@@ -115,6 +115,12 @@ namespace openvpn {
       return u.dataz[0];
     }
 
+    template <typename HASH>
+    void hash(HASH& h) const
+    {
+      h(u.dataz[0]);
+    }
+
     // Use a URL-safe base64 encoding.
     std::string to_string() const
     {
