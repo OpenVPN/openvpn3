@@ -432,7 +432,7 @@ namespace openvpn {
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;
-	    tunconf->wintun = config.wintun;
+	    tunconf->set_wintun(config.wintun);
 	    if (config.tun_persist)
 	    {
 	      tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
