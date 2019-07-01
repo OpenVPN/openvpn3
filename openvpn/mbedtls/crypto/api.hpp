@@ -23,7 +23,7 @@
 #define OPENVPN_MBEDTLS_CRYPTO_API_H
 
 #include <openvpn/mbedtls/crypto/cipher.hpp>
-#include <openvpn/mbedtls/crypto/ciphergcm.hpp>
+#include <openvpn/mbedtls/crypto/cipheraead.hpp>
 #include <openvpn/mbedtls/crypto/digest.hpp>
 #include <openvpn/mbedtls/crypto/hmac.hpp>
 
@@ -33,7 +33,7 @@ namespace openvpn {
   struct MbedTLSCryptoAPI {
     // cipher
     typedef MbedTLSCrypto::CipherContext CipherContext;
-    typedef MbedTLSCrypto::CipherContextGCM CipherContextGCM;
+    typedef MbedTLSCrypto::CipherContextAEAD CipherContextAEAD;
 
     // digest
     typedef MbedTLSCrypto::DigestContext DigestContext;

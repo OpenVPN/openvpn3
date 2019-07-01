@@ -86,6 +86,7 @@ namespace openvpn {
 	  case CryptoAlgs::AES_192_CBC:
 	  case CryptoAlgs::AES_256_CBC:
 	  case CryptoAlgs::BF_CBC:
+      case CryptoAlgs::CHACHA20_POLY1305:
 	    break;
 	  default:
 	    OPENVPN_THROW(korekey_error, "cipher alg " << calg.name() << " is not currently supported by kovpn");
@@ -204,6 +205,10 @@ namespace openvpn {
 		break;
 	      case CryptoAlgs::AES_256_CBC:
 		key.cipher_alg = OVPN_ALG_AES_CBC;
+		key.encrypt.cipher_key_size = 256 / 8;
+		break;
+	      case CryptoAlgs::CHACHA20_POLY1305:
+		key.cipher_alg = OVPN_ALG_CHACHA20_POLY1305;
 		key.encrypt.cipher_key_size = 256 / 8;
 		break;
 	      case CryptoAlgs::BF_CBC:

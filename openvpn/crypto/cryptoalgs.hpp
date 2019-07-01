@@ -56,6 +56,7 @@ namespace openvpn {
       AES_128_GCM,
       AES_192_GCM,
       AES_256_GCM,
+      CHACHA20_POLY1305,
 
       // digests
       MD4,
@@ -122,24 +123,25 @@ namespace openvpn {
     };
 
     constexpr Alg algs[] = { // NOTE: MUST be indexed by CryptoAlgs::Type (CONST GLOBAL)
-      { "NONE",         F_CIPHER|F_DIGEST|F_ALLOW_DC|CBC_HMAC,  0,  0,  0 },
-      { "AES-128-CBC",  F_CIPHER|F_ALLOW_DC|CBC_HMAC,          16, 16, 16 },
-      { "AES-192-CBC",  F_CIPHER|F_ALLOW_DC|CBC_HMAC,          24, 16, 16 },
-      { "AES-256-CBC",  F_CIPHER|F_ALLOW_DC|CBC_HMAC,          32, 16, 16 },
-      { "DES-CBC",      F_CIPHER|F_ALLOW_DC|CBC_HMAC,           8,  8,  8 },
-      { "DES-EDE3-CBC", F_CIPHER|F_ALLOW_DC|CBC_HMAC,          24,  8,  8 },
-      { "BF-CBC",       F_CIPHER|F_ALLOW_DC|CBC_HMAC,          16,  8,  8 },
-      { "AES-256-CTR",  F_CIPHER,                              32, 16, 16 },
-      { "AES-128-GCM",  F_CIPHER|F_ALLOW_DC|AEAD,              16, 12, 16 },
-      { "AES-192-GCM",  F_CIPHER|F_ALLOW_DC|AEAD,              24, 12, 16 },
-      { "AES-256-GCM",  F_CIPHER|F_ALLOW_DC|AEAD,              32, 12, 16 },
-      { "MD4",          F_DIGEST,                              16,  0,  0 },
-      { "MD5",          F_DIGEST|F_ALLOW_DC,                   16,  0,  0 },
-      { "SHA1",         F_DIGEST|F_ALLOW_DC,                   20,  0,  0 },
-      { "SHA224",       F_DIGEST|F_ALLOW_DC,                   28,  0,  0 },
-      { "SHA256",       F_DIGEST|F_ALLOW_DC,                   32,  0,  0 },
-      { "SHA384",       F_DIGEST|F_ALLOW_DC,                   48,  0,  0 },
-      { "SHA512",       F_DIGEST|F_ALLOW_DC,                   64,  0,  0 },
+      { "NONE",                 F_CIPHER|F_DIGEST|F_ALLOW_DC|CBC_HMAC,  0,  0,  0 },
+      { "AES-128-CBC",          F_CIPHER|F_ALLOW_DC|CBC_HMAC,          16, 16, 16 },
+      { "AES-192-CBC",          F_CIPHER|F_ALLOW_DC|CBC_HMAC,          24, 16, 16 },
+      { "AES-256-CBC",          F_CIPHER|F_ALLOW_DC|CBC_HMAC,          32, 16, 16 },
+      { "DES-CBC",              F_CIPHER|F_ALLOW_DC|CBC_HMAC,           8,  8,  8 },
+      { "DES-EDE3-CBC",         F_CIPHER|F_ALLOW_DC|CBC_HMAC,          24,  8,  8 },
+      { "BF-CBC",               F_CIPHER|F_ALLOW_DC|CBC_HMAC,          16,  8,  8 },
+      { "AES-256-CTR",          F_CIPHER,                              32, 16, 16 },
+      { "AES-128-GCM",          F_CIPHER|F_ALLOW_DC|AEAD,              16, 12, 16 },
+      { "AES-192-GCM",          F_CIPHER|F_ALLOW_DC|AEAD,              24, 12, 16 },
+      { "AES-256-GCM",          F_CIPHER|F_ALLOW_DC|AEAD,              32, 12, 16 },
+      { "CHACHA20-POLY1305",    F_CIPHER|F_ALLOW_DC|AEAD,              32, 12, 16 },
+      { "MD4",                  F_DIGEST,                              16,  0,  0 },
+      { "MD5",                  F_DIGEST|F_ALLOW_DC,                   16,  0,  0 },
+      { "SHA1",                 F_DIGEST|F_ALLOW_DC,                   20,  0,  0 },
+      { "SHA224",               F_DIGEST|F_ALLOW_DC,                   28,  0,  0 },
+      { "SHA256",               F_DIGEST|F_ALLOW_DC,                   32,  0,  0 },
+      { "SHA384",               F_DIGEST|F_ALLOW_DC,                   48,  0,  0 },
+      { "SHA512",               F_DIGEST|F_ALLOW_DC,                   64,  0,  0 },
     };
 
     inline bool defined(const Type type)
