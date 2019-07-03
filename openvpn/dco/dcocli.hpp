@@ -41,11 +41,9 @@
 #include <openvpn/kovpn/korekey.hpp>
 #include <openvpn/kovpn/kostats.hpp>
 #include <openvpn/linux/procfs.hpp>
-#include <openvpn/dco/ipcollbase.hpp>
 
 #ifdef ENABLE_PG
 #include <openvpn/kovpn/kodevtun.hpp>
-#include <openvpn/kovpn/ipcoll.hpp>
 #endif
 
 // client-side DCO (Data Channel Offload) module for Linux/kovpn
@@ -68,6 +66,7 @@ namespace openvpn {
       DCO::TunConfig tun;
 
       int trunk_unit = -1;
+      unsigned int ping_restart_override = 0;
 
       virtual TunClientFactory::Ptr new_tun_factory(const DCO::TunConfig& conf, const OptionList& opt) override
       {
@@ -88,6 +87,9 @@ namespace openvpn {
 
 	// parse trunk-unit
 	trunk_unit = opt.get_num<decltype(trunk_unit)>("trunk-unit", 1, trunk_unit, 0, 511);
+
+	// parse ping-restart-override
+	ping_restart_override = opt.get_num<decltype(ping_restart_override)>("ping-restart-override", 1, ping_restart_override, 0, 3600);
 
 	return TunClientFactory::Ptr(this);
       }
@@ -195,7 +197,7 @@ namespace openvpn {
 	devconf.dc.peer_lookup = OVPN_PEER_LOOKUP_NONE;
 	devconf.dc.cpu_id = -1;
 
-	// create kovpn tun socket
+	// create kovpn tun socket (implementation in kodevtun.hpp)
 	impl.reset(new TunImpl(io_context,
 			       devconf,
 			       this,
@@ -214,12 +216,6 @@ namespace openvpn {
 	  transport_start_tcp();
 	else
 	  transport_start_udp();
-      }
-
-      // VPN IP collision detection for multi-channel trunking
-      static void set_vpn_ip_collision(IPCollisionDetectBase* vpn_ip_collision_arg)
-      {
-	vpn_ip_collision = vpn_ip_collision_arg;
       }
 
       virtual bool transport_send_const(const Buffer& buf) override
@@ -323,46 +319,55 @@ namespace openvpn {
 
 	  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
-	  // add/remove command lists
-	  ActionList::Ptr add_cmds = new ActionList();
-	  remove_cmds.reset(new ActionListReversed());
-
-	  // configure tun properties
-	  std::vector<IP::Route> rtvec;
 	  if (config->trunk_unit >= 0)
 	    {
-	      // VPN IP collision detection, will throw on collision
-	      if (vpn_ip_collision)
-		detect_vpn_ip_collision(*vpn_ip_collision, *po, config->trunk_unit, *remove_cmds);
-
 	      // trunk setup
-	      TunIPRoute::iface_config(state->iface_name,
-				      config->trunk_unit,
-				      *po,
-				      nullptr,
-				      *add_cmds,
-				      *remove_cmds);
+	      ovpn_peer_assign_route_id kri;
+	      std::memset(&kri, 0, sizeof(kri));
+	      kri.peer_id = peer_id;
+	      kri.route_id = config->trunk_unit;
+	      kri.allow_incoming = true;
+	      kri.snat_flags = OVPN_SNAT_DEFAULT_ON | OVPN_SNAT_REQUIRED;
 
-	      // Note that in trunking mode, kovpn must be
-	      // configured for source routing.
-	      add_vpn_ips_as_source_routes(*po, rtvec, IP::Addr::V4);
-	      add_vpn_ips_as_source_routes(*po, rtvec, IP::Addr::V6);
+	      // SNAT via VPN IPv4 addresses received from server
+	      {
+		const TunBuilderCapture::RouteAddress *ra = po->vpn_ip(IP::Addr::V4);
+		if (ra)
+		  kri.snat.a4 = IP::Addr(ra->address, "server-assigned-vpn4-addr", IP::Addr::V4).to_ipv4().to_in_addr();
+	      }
+
+	      // SNAT via VPN IPv6 addresses received from server
+	      {
+		const TunBuilderCapture::RouteAddress *ra = po->vpn_ip(IP::Addr::V6);
+		if (ra)
+		  kri.snat.a6 = IP::Addr(ra->address, "server-assigned-vpn6-addr", IP::Addr::V4).to_ipv6().to_in6_addr();
+	      }
+
+	      // kovpn route ID setup
+	      KoTun::API::peer_assign_route_id(impl->native_handle(), &kri);
 	    }
 	  else
 	    {
+	      // add/remove command lists
+	      ActionList::Ptr add_cmds = new ActionList();
+	      remove_cmds.reset(new ActionListReversed());
+
+	      // configure tun properties
+	      std::vector<IP::Route> rtvec;
+
 	      // non-trunk setup
 	      TunIPRoute::TunMethods::tun_config(state->iface_name,
 						 *po,
 						 &rtvec,
 						 *add_cmds,
 						 *remove_cmds);
+
+	      // Add routes to DCO implementation
+	      impl->peer_add_routes(peer_id, rtvec);
+
+	      // execute commands to bring up interface
+	      add_cmds->execute_log();
 	    }
-
-	  // Add routes to DCO implementation
-	  impl->peer_add_routes(peer_id, rtvec);
-
-	  // execute commands to bring up interface
-	  add_cmds->execute_log();
 
 	  // Add a hook so ProtoContext will call back to
 	  // rekey() on rekey ops.
@@ -371,12 +376,6 @@ namespace openvpn {
 	  // signal that we are connected
 	  tun_parent->tun_connected();
 	}
-	catch (const IPCollisionDetectBase::ip_collision& e)
-	  {
-	    // on VPN IP address collision, just reconnect to get a new address
-	    stop_();
-	    tun_parent->tun_error(Error::TUN_ERROR, e.what());
-	  }
 	catch (const std::exception& e)
 	  {
 	    stop_();
@@ -452,6 +451,10 @@ namespace openvpn {
 	    ka.peer_id = peer_id;
 	    transport_parent->disable_keepalive(ka.keepalive_ping,
 						ka.keepalive_timeout);
+
+	    // Allow overide of keepalive timeout
+	    if (config->ping_restart_override)
+	      ka.keepalive_timeout = config->ping_restart_override;
 
 	    // Modify the peer
 	    impl->peer_set_keepalive(&ka);
@@ -659,35 +662,6 @@ namespace openvpn {
 	return *static_cast<UDP*>(proto.get());
       }
 
-      static void add_vpn_ips_as_source_routes(const TunBuilderCapture& pull,
-					       std::vector<IP::Route>& rtvec,
-					       const IP::Addr::Version ver)
-      {
-	const TunBuilderCapture::RouteAddress *ra = pull.vpn_ip(ver);
-	if (ra)
-	  rtvec.push_back(IP::route_from_string_prefix(ra->address,
-						       IP::Addr::version_size(ver),
-						       "DCOTransport::Client::add_vpn_ips_as_source_routes",
-						       ver));
-      }
-
-      // Throw an exception of type IPCollisionDetectBase::ip_collision
-      // if VPN IP is already in use by another client thread.
-      // This is intended to force a reconnect and obtain a
-      // new non-colliding address.
-      static void detect_vpn_ip_collision(IPCollisionDetectBase& ipcoll,
-					  const TunBuilderCapture& pull,
-					  unsigned int unit,
-					  ActionList& remove)
-      {
-	const TunBuilderCapture::RouteAddress* local4 = pull.vpn_ipv4();
-	const TunBuilderCapture::RouteAddress* local6 = pull.vpn_ipv6();
-	if (local4)
-	  ipcoll.add(local4->address, unit, remove);
-	if (local6)
-	  ipcoll.add(local6->address, unit, remove);
-      }
-
       // override for SessionStats::DCOTransportSource
       virtual SessionStats::DCOTransportSource::Data dco_transport_stats_delta() override
       {
@@ -727,8 +701,6 @@ namespace openvpn {
 
       SessionStats::DCOTransportSource::Data last_stats;
       __u64 cc_rx_bytes = 0;
-
-      static IPCollisionDetectBase* vpn_ip_collision;
     };
 
     inline DCO::Ptr new_controller()
@@ -750,8 +722,6 @@ namespace openvpn {
       cli->tun_parent = &parent;
       return TunClient::Ptr(cli);
     }
-
-    IPCollisionDetectBase* Client::vpn_ip_collision; // GLOBAL
   }
 };
 
