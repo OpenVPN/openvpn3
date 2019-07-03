@@ -867,9 +867,6 @@ private:
 	  {
 	  case SIGINT:
 	  case SIGTERM:
-#if !defined(OPENVPN_PLATFORM_WIN)
-	  case SIGQUIT:
-#endif
 	    omi_sigterm();
 	    break;
 #if !defined(OPENVPN_PLATFORM_WIN)
