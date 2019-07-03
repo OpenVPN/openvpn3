@@ -50,6 +50,7 @@ if [ -z "$1" ]; then
     echo " LZ4_SYS=1 -- build with system LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
     echo " CITY=1 -- build with Cityhash hash library"
+    echo " CAP=1 -- build with libcap"
     echo " VAL=1 -- build with valgrind run-time extensions"
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
@@ -261,6 +262,12 @@ if [ "$CITY" = "1" ]; then
     fi
     LIBS="$LIBS -lcityhash"
     CPPFLAGS="$CPPFLAGS -DHAVE_CITYHASH"
+fi
+
+# libcap
+if [ "$CAP" = "1" ]; then
+    LIBS="$LIBS -lcap"
+    CPPFLAGS="$CPPFLAGS -DHAVE_LIBCAP"
 fi
 
 # Valgrind
