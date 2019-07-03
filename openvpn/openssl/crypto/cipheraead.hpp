@@ -295,6 +295,7 @@ namespace openvpn
                         
                         return EVP_aes_128_gcm();
                     }
+                    break;
 
                     case CryptoAlgs::AES_192_GCM:
                     {
@@ -302,6 +303,7 @@ namespace openvpn
 	    
                         return EVP_aes_192_gcm();
                     }
+                    break;
 
                     case CryptoAlgs::AES_256_GCM:
                     {
@@ -309,6 +311,7 @@ namespace openvpn
 	    
                         return EVP_aes_256_gcm();
                     }
+                    break;
 
                     case CryptoAlgs::CHACHA20_POLY1305:
                     {
@@ -316,6 +319,7 @@ namespace openvpn
 	    
                         return EVP_chacha20_poly1305();
                     }
+                    break;
 
                     default:
                     {

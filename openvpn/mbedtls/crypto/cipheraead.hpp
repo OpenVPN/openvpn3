@@ -182,6 +182,7 @@ namespace openvpn
                         
                         return MBEDTLS_CIPHER_ID_AES;
                     }
+                    break;
 
                     case CryptoAlgs::AES_192_GCM:
                     {
@@ -189,6 +190,7 @@ namespace openvpn
 
                         return MBEDTLS_CIPHER_ID_AES;
                     }
+                    break;
 
                     case CryptoAlgs::AES_256_GCM:
                     {
@@ -196,6 +198,7 @@ namespace openvpn
                 
                         return MBEDTLS_CIPHER_ID_AES;
                     }
+                    break;
 
                     case CryptoAlgs::CHACHA20_POLY1305:
                     {
@@ -203,11 +206,13 @@ namespace openvpn
                 
                         return MBEDTLS_CIPHER_ID_CHACHA20;
                     }
+                    break;
                     
                     default:
                     {
                         OPENVPN_THROW(mbedtls_aead_error, CryptoAlgs::name(alg) << ": not usable");
                     }
+                    break;
                 }
             }
 
