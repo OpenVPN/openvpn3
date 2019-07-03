@@ -78,7 +78,6 @@ namespace openvpn {
 		         S_SIGINT
 		       | S_SIGTERM
 #ifndef OPENVPN_PLATFORM_WIN
-		       | S_SIGQUIT
 		       | S_SIGHUP
 		       | S_SIGUSR1
 		       | S_SIGUSR2

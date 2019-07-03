@@ -354,9 +354,6 @@ namespace openvpn {
 	    {
 	    case SIGINT:
 	    case SIGTERM:
-#if !defined(OPENVPN_PLATFORM_WIN)
-	    case SIGQUIT:
-#endif
 	      cancel();
 	      break;
 #if !defined(OPENVPN_PLATFORM_WIN)
