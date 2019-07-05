@@ -92,17 +92,21 @@ void test()
     std::unordered_map<SessionID128, std::string> map;
     const std::unordered_map<SessionID128, std::string>& cmap = map;
     map[a] = "hello";
-    if (!b.find_weak(map))
+    if (!b.find_weak(map, true))
       throw Exception("test4/1: wrong, weak exists");
-    if (!d.find_weak(map))
+    if (!d.find_weak(map, true))
       throw Exception("test4/2: wrong, weak exists");
-    if (x.find_weak(map))
+    if (a.find_weak(map, true))
+      throw Exception("test4/3: wrong, weak doesn't exist");
+    if (!a.find_weak(map, false))
+      throw Exception("test4/4: wrong, weak exists");
+    if (x.find_weak(map, true))
       throw Exception("test4: wrong, weak doesn't exist");
-    const SessionID128* s1 = d.find_weak(cmap);
+    const SessionID128* s1 = d.find_weak(cmap, true);
     if (!s1)
       throw Exception("test4: can't find s1");
     std::cout << "lookup: " << *s1 << ' ' << std::endl;
-    const SessionID128* s2 = x.find_weak(cmap);
+    const SessionID128* s2 = x.find_weak(cmap, true);
     if (s2)
       throw Exception("test4: shouldn't have found s2");
   }
