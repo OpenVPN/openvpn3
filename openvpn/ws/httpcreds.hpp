@@ -16,7 +16,6 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
 #include <openvpn/common/string.hpp>
-#include <openvpn/common/split.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/splitlines.hpp>
 #include <openvpn/common/strneq.hpp>
@@ -47,7 +46,7 @@ namespace openvpn {
 		    && string::strcasecmp(h.value.substr(0, 6), "basic ") == 0)
 		  {
 		    const std::string creds = base64->decode(h.value.substr(6));
-		    const auto cv = Split::by_char<std::vector<std::string>, NullLex, Split::NullLimit>(creds, ':', 0, 1);
+		    const auto cv = string::split(creds, ':', 1);
 		    if (cv.size() != 2)
 		      throw Exception("error splitting credentials");
 		    if (!Unicode::is_valid_utf8(cv[0]))
