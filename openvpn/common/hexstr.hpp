@@ -279,6 +279,21 @@ namespace openvpn {
     return os.str();
   }
 
+  /**
+   *  Renders a combined hexadecimal and character dump of a buffer,
+   *  with the typical 16 bytes split between hexadecimal and character
+   *  separation per line.
+   *
+   *  @param  data  Void pointer to the buffer to dump.
+   *  @param  size  Size of the buffer to render.
+   *
+   *  @return Returns a string containing a preformatted output of the
+   *          hexadecimal dump.
+   */
+  inline std::string dump_hex(void* data, size_t size)
+  {
+    return dump_hex((const unsigned char *)data, size);
+  }
 
   /**
    *  Renders a combined hexadecimal and character dump of a std::string buffer,
