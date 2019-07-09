@@ -456,13 +456,13 @@ namespace openvpn {
       int nterms = 0;
       std::string term;
 
-      for (auto &c : str)
+      for (const auto c : str)
 	{
 	  if (c == sep && (maxsplit < 0 || nterms < maxsplit))
 	    {
 	      ret.push_back(std::move(term));
 	      ++nterms;
-	      term = "";
+	      term.clear();
 	    }
 	  else
 	    term += c;
