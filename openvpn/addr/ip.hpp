@@ -268,7 +268,7 @@ namespace openvpn {
 	  }
 	else
 	  {
-	    a.ver = V4;
+	    a.ver = V6;
 	    a.u.v6 = IPv6::Addr::from_byte_string(bytestr);
 	  }
 	return a;
