@@ -41,9 +41,8 @@
 #include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/win/modname.hpp>
 
-#define OPENVPN_WINTUN_START_PADDING_LEN  12
 #define OPENVPN_WINTUN_PACKET_SIZE_LEN    4
-#define OPENVPN_WINTUN_PACKET_ALIGN       16
+#define OPENVPN_WINTUN_PACKET_ALIGN       4
 
 namespace openvpn {
   namespace TunWin {
@@ -369,7 +368,6 @@ namespace openvpn {
 		  buf.write(wintun_padding, end_padding_size);
 
 		// start padding and size
-		buf.prepend(wintun_padding, OPENVPN_WINTUN_START_PADDING_LEN);
 		buf.prepend((unsigned char *)&packet_size, OPENVPN_WINTUN_PACKET_SIZE_LEN);
 
 		frame_context.prepare(wintun_write);
@@ -399,7 +397,6 @@ namespace openvpn {
 		// parse wintun encapsulation
 		auto packet_size = *(std::uint32_t*)pfp->buf.c_data();
 		pfp->buf.advance(OPENVPN_WINTUN_PACKET_SIZE_LEN);
-		pfp->buf.advance(OPENVPN_WINTUN_START_PADDING_LEN);
 
 		// extract individual packet
 		frame_context.prepare(wintun_read);
