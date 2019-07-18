@@ -30,6 +30,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/random/randistrib.hpp>
 
 namespace openvpn {
 
@@ -85,16 +86,6 @@ namespace openvpn {
       return rand_get_positive<T>() % end;
     }
 
-    // Return a uniformly distributed random number in the range [0, end).
-    // This version is strictly 32-bit only and optimizes by avoiding
-    // integer division.
-    std::uint32_t randrange32(const std::uint32_t end)
-    {
-      std::uint32_t r;
-      rand_fill(r);
-      return (std::uint64_t(r) * end) >> 32;
-    }
-
     // Return a uniformly distributed random number in the range [start, end].
     template <typename T>
     T randrange(const T start, const T end)
@@ -103,6 +94,27 @@ namespace openvpn {
 	return start;
       else
 	return start + rand_get_positive<T>() % (end - start + 1);
+    }
+
+    // Return a uniformly distributed random number in the range [0, end).
+    // This version is strictly 32-bit only and optimizes by avoiding
+    // integer division.
+    std::uint32_t randrange32(const std::uint32_t end)
+    {
+      std::uint32_t r;
+      rand_fill(r);
+      return rand32_distribute(r, end);
+    }
+
+    // Return a uniformly distributed random number in the range [start, end].
+    // This version is strictly 32-bit only and optimizes by avoiding
+    // integer division.
+    std::uint32_t randrange32(const std::uint32_t start, const std::uint32_t end)
+    {
+      if (start >= end)
+	return start;
+      else
+	return start + randrange32(end - start + 1);
     }
 
     // Throw an exception if algorithm is not crypto-strength.
