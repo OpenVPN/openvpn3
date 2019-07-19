@@ -37,6 +37,9 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(win_call);
 
+    // console codepage, used to decode output
+    int console_cp = ::GetOEMCP();
+
     inline std::string call(const std::string& cmd)
     {
       // split command name from args
@@ -144,6 +147,13 @@ namespace openvpn {
 	    break;
 	  out += std::string(outbuf.get(), 0, dwRead);
 	}
+
+      // decode output using console codepage, convert to utf16
+      UTF16 utf16output(Win::utf16(out, console_cp));
+
+      // re-encode utf16 to utf8
+      UTF8 utf8output(Win::utf8(utf16output.get()));
+      out.assign(utf8output.get());
 
       // wait for child to exit
       if (::WaitForSingleObject(process_hand(), INFINITE) == WAIT_FAILED)
