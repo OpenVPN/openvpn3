@@ -456,6 +456,9 @@ namespace openvpn {
       int nterms = 0;
       std::string term;
 
+      if (maxsplit >= 0)
+	ret.reserve(maxsplit + 1);
+
       for (const auto c : str)
 	{
 	  if (c == sep && (maxsplit < 0 || nterms < maxsplit))
