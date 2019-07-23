@@ -46,6 +46,7 @@
 #include <openvpn/common/stop.hpp>
 #include <openvpn/common/environ.hpp>
 #include <openvpn/common/number.hpp>
+#include <openvpn/common/signal_name.hpp>
 #include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/asiotimer.hpp>
@@ -349,7 +350,7 @@ namespace openvpn {
     {
       if (!error && !halt)
 	{
-	  OPENVPN_LOG("ASIO SIGNAL " << signum);
+	  OPENVPN_LOG("ASIO SIGNAL: " << signal_name(signum));
 	  switch (signum)
 	    {
 	    case SIGINT:
