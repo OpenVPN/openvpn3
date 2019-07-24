@@ -117,6 +117,20 @@ namespace openvpn {
 	return start + randrange32(end - start + 1);
     }
 
+    // Return a random byte
+    std::uint8_t randbyte()
+    {
+      std::uint8_t byte;
+      rand_fill(byte);
+      return byte;
+    }
+
+    // Return a random boolean
+    bool randbool()
+    {
+      return bool(randbyte() & 1);
+    }
+
     // Throw an exception if algorithm is not crypto-strength.
     // Be sure to always call this method before using an rng
     // for crypto purposes.
