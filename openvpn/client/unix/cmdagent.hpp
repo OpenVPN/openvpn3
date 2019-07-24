@@ -71,6 +71,7 @@ namespace openvpn {
 
 	// Build JSON request
 	Json::Value jreq(Json::objectValue);
+	jreq["pid"] = Json::Value(getpid());
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
 	if (tbs_config)
 	  {
