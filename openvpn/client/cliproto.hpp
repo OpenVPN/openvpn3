@@ -506,7 +506,7 @@ namespace openvpn {
 	{
 	  const Option* o = opt.get_ptr("auth-token-user");
 	  if (o)
-	    username = base64->decode(o->get(1, 256));
+	    username = base64->decode(o->get(1, 340)); // 255 chars after base64 decode
 	}
 
 	// auth-token
