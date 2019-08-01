@@ -420,6 +420,7 @@
     <ClInclude Include="..\openvpn\tun\tunlog.hpp" />
     <ClInclude Include="..\openvpn\tun\tunmtu.hpp" />
     <ClInclude Include="..\openvpn\tun\tunspec.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\client\clientconfig.hpp" />
     <ClInclude Include="..\openvpn\tun\win\client\setupbase.hpp" />
     <ClInclude Include="..\openvpn\tun\win\client\tuncli.hpp" />
     <ClInclude Include="..\openvpn\tun\win\client\tunsetup.hpp" />

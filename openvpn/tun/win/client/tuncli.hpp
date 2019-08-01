@@ -38,6 +38,7 @@
 #include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
+#include <openvpn/tun/win/client/clientconfig.hpp>
 #include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/win/modname.hpp>
 
@@ -95,77 +96,7 @@ namespace openvpn {
 	  }
       }
     };
-
-    // These types manage the underlying TAP driver HANDLE
-    typedef openvpn_io::windows::stream_handle TAPStream;
-    typedef ScopedAsioStream<TAPStream> ScopedTAPStream;
-    typedef TunPersistTemplate<ScopedTAPStream> TunPersist;
-
-    class ClientConfig : public TunClientFactory
-    {
-      friend class Client; // accesses wfp
-
-    public:
-      typedef RCPtr<ClientConfig> Ptr;
-
-      TunProp::Config tun_prop;
-      int n_parallel = 8;         // number of parallel async reads on tun socket
-      bool wintun = false;	  // wintun may return multiple packets
-
-      Frame::Ptr frame;
-      SessionStats::Ptr stats;
-
-      Stop* stop = nullptr;
-
-      TunPersist::Ptr tun_persist;
-
-      TunWin::SetupFactory::Ptr tun_setup_factory;
-
-      TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context)
-      {
-	if (tun_setup_factory)
-	  return tun_setup_factory->new_setup_obj(io_context, wintun);
-	else
-	  return new TunWin::Setup(io_context, wintun);
-      }
-
-      static Ptr new_obj()
-      {
-	return new ClientConfig;
-      }
-
-      virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
-						TunClientParent& parent,
-						TransportClient* transcli) override;
-
-      virtual void finalize(const bool disconnected) override
-      {
-	if (disconnected)
-	  tun_persist.reset();
-      }
-
-      virtual bool layer_2_supported() const override
-      {
-	return true;
-      }
-
-      void set_wintun(bool wintun_arg)
-      {
-	  if (wintun_arg)
-	    {
-	      wintun = true;
-	      // we cannot use parallel reads with wintun, since it requires
-	      // the same buffer with the same length for every write() call
-	      n_parallel = 1;
-	    }
-	  else
-	    {
-	      wintun = false;
-	      n_parallel = 8;
-	    }
-      }
-    };
-
+    
     class Client : public TunClient
     {
       friend class ClientConfig;  // calls constructor
