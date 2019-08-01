@@ -45,7 +45,7 @@ namespace openvpn {
 
       TunProp::Config tun_prop;
       int n_parallel = 8;         // number of parallel async reads on tun socket
-      bool wintun = false;	  // wintun may return multiple packets
+      bool wintun = false;
 
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -82,22 +82,6 @@ namespace openvpn {
       virtual bool layer_2_supported() const override
       {
 	return true;
-      }
-
-      void set_wintun(bool wintun_arg)
-      {
-	if (wintun_arg)
-	{
-	  wintun = true;
-	  // we cannot use parallel reads with wintun, since it requires
-	  // the same buffer with the same length for every write() call
-	  n_parallel = 1;
-	}
-	else
-	{
-	  wintun = false;
-	  n_parallel = 8;
-	}
       }
     };
   }

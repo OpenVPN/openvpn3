@@ -392,7 +392,7 @@ namespace openvpn {
 	  DevInfoSetHelper device_info_set;
 	  if (!device_info_set.is_valid())
 	    return;
-	  
+
 	  for (DWORD i = 0;; ++i)
 	    {
 	      SP_DEVINFO_DATA dev_info_data;
@@ -411,9 +411,9 @@ namespace openvpn {
 	      *regkey.ref() = SetupDiOpenDevRegKey(device_info_set, &dev_info_data, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_QUERY_VALUE);
 	      if (!regkey.defined())
 		continue;
-	      
+
 	      std::string str_net_cfg_instance_id;
-	      
+
 	      DWORD size;
 	      LONG status = RegQueryValueExA(regkey(), "NetCfgInstanceId", NULL, NULL, NULL, &size);
 	      if (status != ERROR_SUCCESS)
@@ -421,14 +421,14 @@ namespace openvpn {
 	      BufferAllocatedType<char, thread_unsafe_refcount> buf_net_cfg_inst_id(size, BufferAllocated::CONSTRUCT_ZERO);
 
 	      status = RegQueryValueExA(regkey(), "NetCfgInstanceId", NULL, NULL, (LPBYTE)buf_net_cfg_inst_id.data(), &size);
-	      if (status == ERROR_SUCCESS)		
+	      if (status == ERROR_SUCCESS)
 		{
 		  buf_net_cfg_inst_id.data()[size - 1] = '\0';
 		  str_net_cfg_instance_id = std::string(buf_net_cfg_inst_id.data());
 		}
 	      else
 		continue;
-	      
+
 	      res = SetupDiGetDeviceInstanceId(device_info_set, &dev_info_data, NULL, 0, &size);
 	      if (res != FALSE && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 		continue;
@@ -437,8 +437,8 @@ namespace openvpn {
 	      if (!SetupDiGetDeviceInstanceId(device_info_set, &dev_info_data, buf_dev_inst_id.data(), size, &size))
 		continue;
 	      buf_dev_inst_id.set_size(size);
-	      
-	      ULONG dev_interface_list_size = 0;	      
+
+	      ULONG dev_interface_list_size = 0;
 	      CONFIGRET cr = CM_Get_Device_Interface_List_Size(&dev_interface_list_size,
 							       (LPGUID)& GUID_DEVINTERFACE_NET,
 							       buf_dev_inst_id.data(),
@@ -500,16 +500,10 @@ namespace openvpn {
 	    else
 	      {
 		path = tap_path(tap);
-	      }	      	    
+	      }
 
 	    if (path.length() > 0)
 	      {
-		// wintun device can be only opened under LocalSystem account
-		std::unique_ptr<Win::Impersonate> imp;
-
-		if (wintun)
-		  imp.reset(new Win::Impersonate(true));
-
 		hand.reset(::CreateFileA(path.c_str(),
 			   GENERIC_READ | GENERIC_WRITE,
 			   0, /* was: FILE_SHARE_READ */
@@ -524,7 +518,7 @@ namespace openvpn {
 		    path_opened = path;
 		    break;
 		  }
-	      }	    
+	      }
 	  }
 	return hand.release();
       }

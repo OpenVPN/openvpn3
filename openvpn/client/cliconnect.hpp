@@ -460,6 +460,14 @@ namespace openvpn {
 		    stop();
 		  }
 		  break;
+		case Error::TUN_REGISTER_RINGS_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::TUN_REGISTER_RINGS_ERROR);
+		    stop();
+		  }
+		  break;
 		case Error::TUN_IFACE_CREATE:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunIfaceCreate(client->fatal_reason());
