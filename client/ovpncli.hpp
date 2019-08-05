@@ -177,6 +177,12 @@ namespace openvpn {
       // Passed to the server as IV_SSO
       std::string ssoMethods;
 
+      // Override the string that is passed as IV_HWADDR to the server
+      std::string hwAddrOverride;
+
+      // Set the string that is passed to the server as IV_PLAT_VER
+      std::string platformVersion;
+
       // Use a different server than that specified in "remote"
       // option of profile
       std::string serverOverride;
