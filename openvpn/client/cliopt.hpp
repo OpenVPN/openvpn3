@@ -542,6 +542,13 @@ namespace openvpn {
       // setenv UV_ options
       pi->append_foreign_set_ptr(pcc.peerInfoUV());
 
+      // UI version
+      if (!config.gui_version.empty())
+	pi->emplace_back("IV_GUI_VER", config.gui_version);
+
+      // Supported SSO methods
+      if (!config.sso_methods.empty())
+	pi->emplace_back("IV_SSO", config.sso_methods);
       // MAC address
       if (pcc.pushPeerInfo())
 	{
