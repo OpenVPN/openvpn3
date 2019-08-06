@@ -1,6 +1,6 @@
 version: 1.0.{build}
 
-image: Visual Studio 2017
+image: Visual Studio 2019
 
 clone_folder: c:\ovpn3\core
 
@@ -8,7 +8,7 @@ install:
 - pip install rfc6266 requests
 
 environment:
-  MSVC_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
+  MSVC_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
   O3: C:\ovpn3
   STATIC: 1
 
