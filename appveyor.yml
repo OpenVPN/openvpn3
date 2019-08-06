@@ -6,6 +6,8 @@ clone_folder: c:\ovpn3\core
 
 install:
 - pip install rfc6266 requests
+- if not exist "C:\strawberry" choco install strawberryperl -y
+- set PATH=C:\strawberry\c\bin;C:\strawberry\perl\site\bin;C:\strawberry\perl\bin;%PATH%
 
 environment:
   MSVC_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
