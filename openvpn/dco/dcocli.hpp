@@ -319,6 +319,7 @@ namespace openvpn {
 
 	  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
+#ifdef ENABLE_PG
 	  if (config->trunk_unit >= 0)
 	    {
 	      // trunk setup
@@ -347,6 +348,7 @@ namespace openvpn {
 	      KoTun::API::peer_assign_route_id(impl->native_handle(), &kri);
 	    }
 	  else
+#endif   // ENABLE_PG
 	    {
 	      // add/remove command lists
 	      ActionList::Ptr add_cmds = new ActionList();
