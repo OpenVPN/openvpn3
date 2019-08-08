@@ -104,7 +104,7 @@ namespace openvpn {
 	      // Check if persisted tun session matches properties of to-be-created session
 	      if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
 		{
-		  state = tun_persist->state();
+		  state = tun_persist->state().state;
 		  OPENVPN_LOG("TunPersist: reused tun context");
 		}
 	      else
@@ -135,14 +135,14 @@ namespace openvpn {
 		  {
 		    std::ostringstream os;
 		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
-		    th = tun_setup->establish(*po, Win::module_name(), config->stop, os);
+		    th = tun_setup->establish(*po, Win::module_name(), config->stop, os, NULL);
 		  }
 
 		  // create ASIO wrapper for HANDLE
 		  TAPStream* ts = new TAPStream(io_context, th);
 
 		  // persist tun settings state
-		  if (tun_persist->persist_tun_state(ts, state))
+		  if (tun_persist->persist_tun_state(ts, { state, nullptr }))
 		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 
 		  // setup handler for external tun close

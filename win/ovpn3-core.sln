@@ -10,6 +10,9 @@ Global
 		Debug|ARM = Debug|ARM
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		DebugAgent|ARM = DebugAgent|ARM
+		DebugAgent|x64 = DebugAgent|x64
+		DebugAgent|x86 = DebugAgent|x86
 		DebugOpenSSL|ARM = DebugOpenSSL|ARM
 		DebugOpenSSL|x64 = DebugOpenSSL|x64
 		DebugOpenSSL|x86 = DebugOpenSSL|x86
@@ -25,6 +28,10 @@ Global
 		{1F891260-2039-494F-9777-EC5166AF31BC}.Debug|x64.ActiveCfg = Debug|x64
 		{1F891260-2039-494F-9777-EC5166AF31BC}.Debug|x64.Build.0 = Debug|x64
 		{1F891260-2039-494F-9777-EC5166AF31BC}.Debug|x86.ActiveCfg = Debug|x64
+		{1F891260-2039-494F-9777-EC5166AF31BC}.DebugAgent|ARM.ActiveCfg = DebugAgent|x64
+		{1F891260-2039-494F-9777-EC5166AF31BC}.DebugAgent|x64.ActiveCfg = DebugAgent|x64
+		{1F891260-2039-494F-9777-EC5166AF31BC}.DebugAgent|x64.Build.0 = DebugAgent|x64
+		{1F891260-2039-494F-9777-EC5166AF31BC}.DebugAgent|x86.ActiveCfg = DebugAgent|x64
 		{1F891260-2039-494F-9777-EC5166AF31BC}.DebugOpenSSL|ARM.ActiveCfg = DebugOpenSSL|x64
 		{1F891260-2039-494F-9777-EC5166AF31BC}.DebugOpenSSL|x64.ActiveCfg = DebugOpenSSL|x64
 		{1F891260-2039-494F-9777-EC5166AF31BC}.DebugOpenSSL|x64.Build.0 = DebugOpenSSL|x64

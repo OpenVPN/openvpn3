@@ -429,6 +429,8 @@
     <ClInclude Include="..\openvpn\ip\ping6.hpp" />
     <ClInclude Include="..\openvpn\ip\csum.hpp" />
     <ClInclude Include="..\openvpn\tun\win\client\clientconfig.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\ringbuffer.hpp" />
+    <ClInclude Include="..\openvpn\common\event.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test\ovpncli\cli.cpp" />

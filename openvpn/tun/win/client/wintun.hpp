@@ -6,15 +6,6 @@
 #include <openvpn/tun/win/client/clientconfig.hpp>
 #include <openvpn/win/modname.hpp>
 
-#define TUN_IOCTL_REGISTER_RINGS CTL_CODE(51820U, 0x970U, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
-#define TUN_IOCTL_FORCE_CLOSE_HANDLES CTL_CODE(51820U, 0x971U, METHOD_NEITHER, FILE_READ_DATA | FILE_WRITE_DATA)
-
-#define WINTUN_RING_CAPACITY 0x800000
-#define WINTUN_RING_TRAILING_BYTES 0x10000
-#define WINTUN_RING_FRAMING_SIZE 12
-#define WINTUN_MAX_PACKET_SIZE 0xffff
-#define WINTUN_PACKET_ALIGN 4
-
 namespace openvpn {
   namespace TunWin {
 
@@ -30,53 +21,78 @@ namespace openvpn {
 	  config(config_arg),
 	  parent(parent_arg),
 	  state(new TunProp::State()),
-	  ring_send_tail_moved_event(io_context_arg),
 	  frame(config_arg->frame)
       {
-
       }
 
       // Inherited via TunClient
       void tun_start(const OptionList& opt, TransportClient& transcli, CryptoDCSettings&) override
       {
 	halt = false;
+	if (config->tun_persist)
+	  tun_persist = config->tun_persist; // long-term persistent
+	else
+	  tun_persist.reset(new TunPersist(false, false, nullptr)); // short-term
 
 	try {
+
 	  const IP::Addr server_addr = transcli.server_endpoint_addr();
 
-	  // notify parent
-	  parent.tun_pre_tun_config();
+	  // Check if persisted tun session matches properties of to-be-created session
+	  if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
+	    {
+	      state = tun_persist->state().state;
+	      ring_buffer = tun_persist->state().ring_buffer;
+	      OPENVPN_LOG("TunPersist: reused tun context");
+	    }
+	  else
+	    {
+	      // notify parent
+	      parent.tun_pre_tun_config();
 
-	  // parse pushed options
-	  TunBuilderCapture::Ptr po(new TunBuilderCapture());
-	  TunProp::configure_builder(po.get(),
-				     state.get(),
-				     config->stats.get(),
-				     server_addr,
-				     config->tun_prop,
-				     opt,
-				     nullptr,
-				     false);
-	  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
+	      // close old TAP handle if persisted
+	      tun_persist->close();
 
-	  // create new tun setup object
-	  tun_setup = config->new_setup_obj(io_context);
+	      // parse pushed options
+	      TunBuilderCapture::Ptr po(new TunBuilderCapture());
+	      TunProp::configure_builder(po.get(),
+					 state.get(),
+					 config->stats.get(),
+					 server_addr,
+					 config->tun_prop,
+					 opt,
+					 nullptr,
+					 false);
+	      OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
-	  // open/config TAP
-	  {
-	    std::ostringstream os;
-	    auto os_print = Cleanup([&os]() { OPENVPN_LOG_STRING(os.str()); });
-	    driver_handle = tun_setup->establish(*po, Win::module_name(), config->stop, os);
-	  }
+	      // create new tun setup object
+	      tun_setup = config->new_setup_obj(io_context);
 
-	  // assert ownership over TAP device handle
-	  tun_setup->confirm();
+	      ring_buffer.reset(new RingBuffer(io_context));
 
-	  register_rings();
+	      // open/config TAP
+	      HANDLE th;
+	      {
+		std::ostringstream os;
+		auto os_print = Cleanup([&os]() { OPENVPN_LOG_STRING(os.str()); });
+		th = tun_setup->establish(*po, Win::module_name(), config->stop, os, ring_buffer);
+	      }
 
+	      // create ASIO wrapper for HANDLE
+	      TAPStream* ts = new TAPStream(io_context, th);
 
+	      // persist tun settings state
+	      if (tun_persist->persist_tun_state(ts, { state, ring_buffer }))
+		OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 
-	  openvpn_io::post([self=Ptr(this)](){
+	      // enable tun_setup destructor
+	      tun_persist->add_destructor(tun_setup);
+
+	      // assert ownership over TAP device handle
+	      tun_setup->confirm();
+	    }
+
+	  openvpn_io::post([self = Ptr(this)](){
 	    self->read();
 	  });
 
@@ -98,11 +114,8 @@ namespace openvpn {
 	if (!halt)
 	  {
 	    halt = true;
-	    unregister_rings();
 
-	    std::ostringstream os;
-	    auto os_print = Cleanup([&os]() { OPENVPN_LOG_STRING(os.str()); });
-	    tun_setup->destroy(os);
+	    tun_persist.reset();
 	  }
       }
 
@@ -113,7 +126,9 @@ namespace openvpn {
 
       bool tun_send(BufferAllocated& buf) override
       {
-	ULONG head = rings.receive.ring->head;
+	TUN_RING* receive_ring = ring_buffer->receive_ring();
+
+	ULONG head = receive_ring->head;
 	if (head > WINTUN_RING_CAPACITY)
 	  {
 	    if (head == 0xFFFFFFFF)
@@ -121,7 +136,7 @@ namespace openvpn {
 	    return false;
 	  }
 
-	ULONG tail = rings.receive.ring->tail;
+	ULONG tail = receive_ring->tail;
 	if (tail >= WINTUN_RING_CAPACITY)
 	  return false;
 
@@ -134,15 +149,15 @@ namespace openvpn {
 	  }
 
 	// copy packet size and data into ring
-	TUN_PACKET* packet = (TUN_PACKET*)& rings.receive.ring->data[tail];
+	TUN_PACKET* packet = (TUN_PACKET*)& receive_ring->data[tail];
 	packet->size = buf.size();
 	std::memcpy(packet->data, buf.data(), buf.size());
 
 	// move ring tail
 	tail = wrap(tail + aligned_packet_size);
-	rings.receive.ring->tail = tail;
-	if (rings.receive.ring->alertable != 0)
-	  SetEvent(rings.receive.tail_moved);
+	receive_ring->tail = tail;
+	if (receive_ring->alertable != 0)
+	  SetEvent(ring_buffer->receive_ring_tail_moved());
 
 	return true;
       }
@@ -187,17 +202,19 @@ namespace openvpn {
     private:
       void read()
       {
+	TUN_RING* send_ring = ring_buffer->send_ring();
+
 	if (halt)
 	  return;
 
-	ULONG head = rings.send.ring->head;
+	ULONG head = send_ring->head;
 	if (head >= WINTUN_RING_CAPACITY)
 	  {
 	    parent.tun_error(Error::TUN_ERROR, "ring head exceeds ring capacity");
 	    return;
 	  }
 
-	ULONG tail = rings.send.ring->tail;
+	ULONG tail = send_ring->tail;
 	if (tail >= WINTUN_RING_CAPACITY)
 	  {
 	    parent.tun_error(Error::TUN_ERROR, "ring tail exceeds ring capacity");
@@ -207,7 +224,7 @@ namespace openvpn {
 	// tail has moved?
 	if (head == tail)
 	  {
-	    ring_send_tail_moved_event.async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
+	    ring_buffer->send_tail_moved_asio_event().async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
 	      if (!error)
 		self->read();
 	      else
@@ -227,7 +244,7 @@ namespace openvpn {
 	    return;
 	  }
 
-	TUN_PACKET* packet = (TUN_PACKET*)& rings.send.ring->data[head];
+	TUN_PACKET* packet = (TUN_PACKET*)&send_ring->data[head];
 	if (packet->size > WINTUN_MAX_PACKET_SIZE)
 	  {
 	    parent.tun_error(Error::TUN_ERROR, "packet too big in send ring");
@@ -246,7 +263,7 @@ namespace openvpn {
 	buf.write(packet->data, packet->size);
 
 	head = wrap(head + aligned_packet_size);
-	rings.send.ring->head = head;
+	send_ring->head = head;
 
 	parent.tun_recv(buf);
 
@@ -257,65 +274,6 @@ namespace openvpn {
 	    });
 	  }
       }
-
-      void register_rings()
-      {
-	ZeroMemory(&rings, sizeof(rings));
-
-	rings.receive.ring = new TUN_RING();
-	ZeroMemory(rings.receive.ring, sizeof(rings.receive.ring));
-	rings.receive.tail_moved = CreateEvent(NULL, FALSE, FALSE, NULL);
-	rings.receive.ring_size = sizeof(rings.receive.ring->data);
-
-	rings.send.ring = new TUN_RING();
-	ZeroMemory(rings.send.ring, sizeof(rings.send.ring));
-	rings.send.tail_moved = CreateEvent(NULL, FALSE, FALSE, NULL);
-	rings.send.ring_size = sizeof(rings.send.ring->data);
-
-	ring_send_tail_moved_event.assign(rings.send.tail_moved);
-
-	{
-	  Win::Impersonate imp(true);
-
-	  if (!DeviceIoControl(driver_handle, TUN_IOCTL_REGISTER_RINGS, &rings, sizeof(rings), NULL, NULL, NULL, NULL))
-	    {
-	      const Win::LastError err;
-	      throw ErrorCode(Error::TUN_REGISTER_RINGS_ERROR, true, "Error registering ring buffers: " + err.message());
-	    }
-	}
-      }
-
-      void unregister_rings()
-      {
-	// delete ring buffers
-	delete rings.send.ring;
-	rings.send.ring = nullptr;
-
-	delete rings.receive.ring;
-	rings.receive.ring = nullptr;
-
-	// close event handles
-	CloseHandle(rings.receive.tail_moved);
-
-	CloseHandle(driver_handle);
-      }
-
-      struct TUN_RING {
-	volatile ULONG head;
-	volatile ULONG tail;
-	volatile LONG alertable;
-	UCHAR data[WINTUN_RING_CAPACITY + WINTUN_RING_TRAILING_BYTES + WINTUN_RING_FRAMING_SIZE];
-      };
-
-      struct TUN_REGISTER_RINGS
-      {
-	struct
-	{
-	  ULONG ring_size;
-	  TUN_RING* ring;
-	  HANDLE tail_moved;
-	} send, receive;
-      };
 
       struct TUN_PACKET_HEADER
       {
@@ -328,7 +286,6 @@ namespace openvpn {
 	UCHAR data[WINTUN_MAX_PACKET_SIZE];
       };
 
-
       ULONG packet_align(ULONG size)
       {
 	return (size + (WINTUN_PACKET_ALIGN - 1)) & ~(WINTUN_PACKET_ALIGN - 1);
@@ -340,22 +297,24 @@ namespace openvpn {
       }
 
       openvpn_io::io_context& io_context;
+      TunPersist::Ptr tun_persist; // contains the TAP device HANDLE
       ClientConfig::Ptr config;
       TunClientParent& parent;
       TunProp::State::Ptr state;
       TunWin::SetupBase::Ptr tun_setup;
 
-      TUN_REGISTER_RINGS rings = {};
+      TUN_RING* receive_ring = nullptr;
+      TUN_RING* send_ring = nullptr;
 
       BufferAllocated buf;
 
       Frame::Ptr frame;
 
-      bool halt;
+      bool halt = false;
 
-      HANDLE driver_handle = NULL;
+      ScopedHANDLE driver_handle;
 
-      openvpn_io::windows::object_handle ring_send_tail_moved_event;
+      RingBuffer::Ptr ring_buffer;
     };
   }
 }

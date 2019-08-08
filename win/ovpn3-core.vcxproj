@@ -1,6 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DebugAgent|x64">
+      <Configuration>DebugAgent</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="DebugOpenSSL|x64">
       <Configuration>DebugOpenSSL</Configuration>
       <Platform>x64</Platform>
@@ -121,6 +125,7 @@
     <ClInclude Include="..\openvpn\common\endian.hpp" />
     <ClInclude Include="..\openvpn\common\enumdir.hpp" />
     <ClInclude Include="..\openvpn\common\environ.hpp" />
+    <ClInclude Include="..\openvpn\common\event.hpp" />
     <ClInclude Include="..\openvpn\common\exception.hpp" />
     <ClInclude Include="..\openvpn\common\extern.hpp" />
     <ClInclude Include="..\openvpn\common\ffs.hpp" />
@@ -425,6 +430,7 @@
     <ClInclude Include="..\openvpn\tun\win\client\tuncli.hpp" />
     <ClInclude Include="..\openvpn\tun\win\client\tunsetup.hpp" />
     <ClInclude Include="..\openvpn\tun\win\nrpt.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\ringbuffer.hpp" />
     <ClInclude Include="..\openvpn\tun\win\tunutil.hpp" />
     <ClInclude Include="..\openvpn\tun\win\wfp.hpp" />
     <ClInclude Include="..\openvpn\tun\win\winproxy.hpp" />
@@ -451,6 +457,12 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugAgent|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
@@ -500,6 +512,26 @@
       <AdditionalLibraryDirectories>$(O3)\deps\amd64\mbedtls\library;$(O3)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAgent|x64'">
+    <ClCompile>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;OPENVPN_COMMAND_AGENT;HAVE_JSONCPP;OVPNAGENT_DISABLE_PATH_CHECK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(O3)\deps\amd64\mbedtls\include;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\common;$(O3)\core;$(O3)\deps\amd64\jsoncpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(O3)\deps\amd64\mbedtls\library;$(O3)\deps\amd64\lz4\lib;$(O3)\deps\amd64\jsoncpp\dist;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib;jsoncpp.lib</AdditionalDependencies>
+      <ShowProgress>NotSet</ShowProgress>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugOpenSSL|x64'">

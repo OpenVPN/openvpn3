@@ -68,7 +68,8 @@ namespace openvpn {
       virtual HANDLE establish(const TunBuilderCapture& pull,
 			       const std::wstring& openvpn_app_path,
 			       Stop* stop,
-			       std::ostream& os) override // defined by SetupBase
+			       std::ostream& os,
+			       RingBuffer::Ptr ring_buffer) override // defined by SetupBase
       {
 	// close out old remove cmds, if they exist
 	destroy(os);
@@ -122,6 +123,9 @@ namespace openvpn {
 	// if layer 2, save state
 	if (pull.layer() == Layer::OSI_LAYER_2)
 	  l2_state.reset(new L2State(tap, openvpn_app_path));
+
+	if (ring_buffer)
+	  register_rings(th(), ring_buffer);
 
 	return th.release();
       }
@@ -249,6 +253,31 @@ namespace openvpn {
       private:
 	int indices[2] = {0, 0};
       };
+
+      void register_rings(HANDLE handle, RingBuffer::Ptr ring_buffer)
+      {
+	TUN_REGISTER_RINGS rings;
+
+	ZeroMemory(&rings, sizeof(rings));
+
+	rings.receive.ring = ring_buffer->receive_ring();
+	rings.receive.tail_moved = ring_buffer->receive_ring_tail_moved();
+	rings.receive.ring_size = sizeof(rings.receive.ring->data);
+
+	rings.send.ring = ring_buffer->send_ring();
+	rings.send.tail_moved = ring_buffer->send_ring_tail_moved();
+	rings.send.ring_size = sizeof(rings.send.ring->data);
+
+	{
+	  Win::Impersonate imp(true);
+
+	  if (!DeviceIoControl(handle, TUN_IOCTL_REGISTER_RINGS, &rings, sizeof(rings), NULL, NULL, NULL, NULL))
+	    {
+	      const Win::LastError err;
+	      throw ErrorCode(Error::TUN_REGISTER_RINGS_ERROR, true, "Error registering ring buffers: " + err.message());
+	    }
+	}
+      }
 
 #if _WIN32_WINNT >= 0x0600
       // Configure TAP adapter on Vista and higher
