@@ -78,7 +78,8 @@ namespace openvpn {
       virtual HANDLE establish(const TunBuilderCapture& pull,
 			       const std::wstring& openvpn_app_path,
 			       Stop* stop,
-			       std::ostream& os) override // TunWin::SetupBase
+			       std::ostream& os,
+			       TunWin::RingBuffer::Ptr ring_buffer) override // TunWin::SetupBase
       {
 	os << "SetupClient: transmitting tun setup list to " << config->npserv << std::endl;
 
@@ -87,6 +88,10 @@ namespace openvpn {
 #if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
 	jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
 #endif
+
+	if (ring_buffer)
+	  ring_buffer->serialize(jreq);
+
 	jreq["wintun"] = config->wintun;
 	jreq["confirm_event"] = confirm_event.duplicate_local();
 	jreq["destroy_event"] = destroy_event.duplicate_local();
