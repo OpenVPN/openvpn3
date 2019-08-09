@@ -122,7 +122,7 @@ public:
   {
     if (!tun)
       tun.reset(new TunWin::Setup(io_context_, wintun));
-    return Win::ScopedHANDLE(tun->establish(tbc, openvpn_app_path, stop, os));
+    return Win::ScopedHANDLE(tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer));
   }
 
   // return true if we did any work
@@ -159,6 +159,8 @@ public:
       }
 
     try {
+      ring_buffer.reset();
+
       // undo the effects of establish_tun
       if (tun)
 	{
@@ -323,7 +325,14 @@ public:
     return remote_tap_handle_hex;
   }
 
+  void assign_ring_buffer(TunWin::RingBuffer* ring_buffer_arg)
+  {
+    ring_buffer.reset(ring_buffer_arg);
+  }
+
   const MyConfig& config;
+
+  TunWin::RingBuffer::Ptr ring_buffer;
 
 private:
   virtual bool allow_client(AsioPolySock::Base& sock) override
@@ -429,6 +438,16 @@ private:
 	    parent()->set_client_destroy_event(destroy_event_hex);
 	    parent()->set_client_confirm_event(confirm_event_hex);
 	  }
+
+	  if (wintun)
+	    {
+	      parent()->assign_ring_buffer(new TunWin::RingBuffer(io_context,
+								  parent()->get_client_process(),
+								  json::get_string(root, "send_ring_hmem"),
+								  json::get_string(root, "receive_ring_hmem"),
+								  json::get_string(root, "send_ring_tail_moved"),
+								  json::get_string(root, "receive_ring_tail_moved")));
+	    }
 
 	  // establish the tun setup object
 	  Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, wintun));
