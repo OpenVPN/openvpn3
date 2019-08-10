@@ -35,6 +35,7 @@
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/openssl/util/error.hpp>
+#include <openvpn/openssl/compat.hpp>
 
 namespace openvpn {
   namespace OpenSSLCrypto {
