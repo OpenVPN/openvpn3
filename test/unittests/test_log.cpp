@@ -27,6 +27,10 @@
 // file test_ovpncli and do ALL test that require ovpncli in this file
 // (or have multiple test suites)
 
+// This file needs to included with OPENVPN_EXTERN still defined otherwise
+// the include from ovpncli.cpp breaks with duplicate symbols
+#include <openvpn/common/base64.hpp>
+
 #undef OPENVPN_EXTERN
 #define OPENVPN_EXTERN
 

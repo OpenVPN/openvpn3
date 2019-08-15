@@ -27,6 +27,7 @@
 
 #include <asio.hpp>
 #include <openvpn/log/logbasesimple.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
 
 
 int main (int argc, char **argv)

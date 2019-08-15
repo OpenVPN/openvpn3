@@ -2123,8 +2123,10 @@ namespace openvpn {
     OpenSSLSessionCache::Ptr sess_cache; // client-side only
   };
 
+#ifdef OPENVPN_NO_EXTERN
   int OpenSSLContext::SSL::ssl_data_index = -1;
   int OpenSSLContext::SSL::context_data_index = -1;
+#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_METHOD OpenSSLContext::SSL::ssl23_method_client_;
