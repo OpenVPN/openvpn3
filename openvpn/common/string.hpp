@@ -250,14 +250,21 @@ namespace openvpn {
       return str.find_first_of('\n') != std::string::npos;
     }
 
-    // return the first line (without newline) of a multi-line string
-    inline std::string first_line(const std::string& str)
+    // Return string up to a delimiter (without the delimiter).
+    // Returns the entire string if no delimiter is found.
+    inline std::string to_delim(const std::string& str, const char delim)
     {
-      const size_t pos = str.find_first_of('\n');
+      const size_t pos = str.find_first_of(delim);
       if (pos != std::string::npos)
 	return str.substr(0, pos);
       else
 	return str;
+    }
+
+    // return the first line (without newline) of a multi-line string
+    inline std::string first_line(const std::string& str)
+    {
+      return to_delim(str, '\n');
     }
 
     // Define a common interpretation of what constitutes a space character.
