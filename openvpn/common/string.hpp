@@ -469,7 +469,8 @@ namespace openvpn {
     }
 
     // Split a string on sep delimiter.  The size of the
-    // returned string list will be at most maxsplit + 1.
+    // returned string vector will be at least 1 and at
+    // most maxsplit + 1 (unless maxsplit is passed as -1).
     inline std::vector<std::string> split(const std::string& str,
 					  const char sep,
 					  const int maxsplit = -1)
