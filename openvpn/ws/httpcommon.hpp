@@ -44,6 +44,14 @@ namespace openvpn {
     {
       friend ChunkedHelper;
 
+      enum HTTPOutState {
+	S_PRE,
+	S_OUT,
+	S_DEFERRED,
+	S_EOF,
+	S_DONE
+      };
+
     public:
       void rr_reset()
       {
@@ -146,7 +154,7 @@ namespace openvpn {
 	    http_out_buffer();
 	  }
 	else
-	  throw http_exception("http_content_out_finish: no deferred state");
+	  OPENVPN_THROW(http_exception, "http_content_out_finish: no deferred state=" << http_out_state_string(out_state) << " outbuf_size=" + (outbuf ? int(outbuf->size()) : -1) << " halt=" << halt << " ready=" << ready << " async_out=" << async_out << " websock=" << websocket);
       }
 
       void reduce_max_content_bytes(const CONTENT_LENGTH_TYPE new_max_content_bytes)
@@ -499,6 +507,25 @@ namespace openvpn {
 	  }
       }
 
+      static std::string http_out_state_string(const HTTPOutState hos)
+      {
+	switch (hos)
+	  {
+	  case S_PRE:
+	    return "S_PRE";
+	  case S_OUT:
+	    return "S_OUT";
+	  case S_DEFERRED:
+	    return "S_DEFERRED";
+	  case S_EOF:
+	    return "S_EOF";
+	  case S_DONE:
+	    return "S_DONE";
+	  default:
+	    return "S_?";
+	  }
+      }
+
       // private member vars
 
       typename REQUEST_REPLY::Parser::status rr_status;
@@ -514,13 +541,6 @@ namespace openvpn {
 
       CONTENT_LENGTH_TYPE max_content_bytes;
 
-      enum HTTPOutState {
-	S_PRE,
-	S_OUT,
-	S_DEFERRED,
-	S_EOF,
-	S_DONE
-      };
       HTTPOutState out_state;
     };
 
