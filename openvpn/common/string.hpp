@@ -150,6 +150,21 @@ namespace openvpn {
 	return false;
     }
 
+    // Prepend leading characters (c) to str to obtain a minimum string length (min_len).
+    // Useful for adding leading zeros to numeric values or formatting tables.
+    inline std::string add_leading(const std::string& str, const size_t min_len, const char c)
+    {
+      if (min_len <= str.length())
+	return str;
+      size_t len = min_len - str.length();
+      std::string ret;
+      ret.reserve(min_len);
+      while (len--)
+	ret += c;
+      ret += str;
+      return ret;
+    }
+
     // make sure that string ends with char c, if not append it
     inline std::string add_trailing_copy(const std::string& str, const char c)
     {
