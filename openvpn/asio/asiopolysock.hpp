@@ -194,7 +194,8 @@ namespace openvpn {
 #if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
       virtual std::string remote_endpoint_str() const override
       {
-	return "TCP ALT " + socket.to_string();
+	const char *proto = (socket.alt_routing_enabled() ? "TCP ALT " : "TCP ");
+	return proto + socket.to_string();
       }
 
       virtual bool alt_routing_enabled() override
