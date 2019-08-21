@@ -25,6 +25,7 @@
 #include <Windows.h>
 
 #include <string>
+#include <type_traits>
 
 #include <openvpn/buffer/bufhex.hpp>
 #include <openvpn/common/rc.hpp>
@@ -44,9 +45,9 @@ namespace openvpn
   namespace TunWin
   {
     struct TUN_RING {
-      volatile ULONG head;
-      volatile ULONG tail;
-      volatile LONG alertable;
+      std::atomic_ulong head;
+      std::atomic_ulong tail;
+      std::atomic_long alertable;
       UCHAR data[WINTUN_RING_CAPACITY + WINTUN_RING_TRAILING_BYTES + WINTUN_RING_FRAMING_SIZE];
     };
 
@@ -72,6 +73,12 @@ namespace openvpn
 	  receive_ring_hmem(CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(TUN_RING), NULL)),
 	  send_tail_moved_asio_event_(io_context)
       {
+	// sanity checks
+	static_assert((sizeof(TUN_RING) - sizeof(TUN_RING::data)) == 12, "sizeof(TUN_RING) is expected to be 12");
+#if !defined(ATOMIC_LONG_LOCK_FREE) || (ATOMIC_LONG_LOCK_FREE != 2)
+#error Atomic long is expected to be always lock-free
+#endif
+
 	send_ring_ = (TUN_RING*)MapViewOfFile(send_ring_hmem(), FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TUN_RING));
 	receive_ring_ = (TUN_RING*)MapViewOfFile(receive_ring_hmem(), FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TUN_RING));
 	send_tail_moved_asio_event_.assign(send_ring_tail_moved_());

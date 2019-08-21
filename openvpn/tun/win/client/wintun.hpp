@@ -128,7 +128,7 @@ namespace openvpn {
       {
 	TUN_RING* receive_ring = ring_buffer->receive_ring();
 
-	ULONG head = receive_ring->head;
+	ULONG head = receive_ring->head.load(std::memory_order_acquire);
 	if (head > WINTUN_RING_CAPACITY)
 	  {
 	    if (head == 0xFFFFFFFF)
@@ -136,7 +136,7 @@ namespace openvpn {
 	    return false;
 	  }
 
-	ULONG tail = receive_ring->tail;
+	ULONG tail = receive_ring->tail.load(std::memory_order_acquire);
 	if (tail >= WINTUN_RING_CAPACITY)
 	  return false;
 
@@ -154,9 +154,8 @@ namespace openvpn {
 	std::memcpy(packet->data, buf.data(), buf.size());
 
 	// move ring tail
-	tail = wrap(tail + aligned_packet_size);
-	receive_ring->tail = tail;
-	if (receive_ring->alertable != 0)
+	receive_ring->tail.store(wrap(tail + aligned_packet_size), std::memory_order_release);
+	if (receive_ring->alertable.load(std::memory_order_acquire) != 0)
 	  SetEvent(ring_buffer->receive_ring_tail_moved());
 
 	return true;
@@ -207,14 +206,14 @@ namespace openvpn {
 	if (halt)
 	  return;
 
-	ULONG head = send_ring->head;
+	ULONG head = send_ring->head.load(std::memory_order_acquire);
 	if (head >= WINTUN_RING_CAPACITY)
 	  {
 	    parent.tun_error(Error::TUN_ERROR, "ring head exceeds ring capacity");
 	    return;
 	  }
 
-	ULONG tail = send_ring->tail;
+	ULONG tail = send_ring->tail.load(std::memory_order_acquire);
 	if (tail >= WINTUN_RING_CAPACITY)
 	  {
 	    parent.tun_error(Error::TUN_ERROR, "ring tail exceeds ring capacity");
@@ -262,8 +261,7 @@ namespace openvpn {
 
 	buf.write(packet->data, packet->size);
 
-	head = wrap(head + aligned_packet_size);
-	send_ring->head = head;
+	send_ring->head.store(wrap(head + aligned_packet_size), std::memory_order_release);
 
 	parent.tun_recv(buf);
 

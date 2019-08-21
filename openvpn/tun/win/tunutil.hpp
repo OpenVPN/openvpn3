@@ -65,7 +65,6 @@
 #include <openvpn/win/unicode.hpp>
 #include <openvpn/win/cmd.hpp>
 #include <openvpn/win/winerr.hpp>
-#include <openvpn/win/impersonate.hpp>
 
 namespace openvpn {
   namespace TunWin {
