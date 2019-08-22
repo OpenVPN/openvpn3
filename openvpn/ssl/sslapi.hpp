@@ -188,6 +188,15 @@ namespace openvpn {
 
     virtual SSLFactoryAPI::Ptr new_factory() = 0;
   };
+
+  /**
+   * Reports a human readable string of the SSL library in use and its version.
+   * E.g. mbed TLS 1.2.4
+   *
+   * @return a human readable SSL library version string
+   */
+  inline const std::string get_ssl_library_version();
+
 }
 
 #endif

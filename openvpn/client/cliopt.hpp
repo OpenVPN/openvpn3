@@ -548,6 +548,7 @@ namespace openvpn {
 	  std::string hwaddr = get_hwaddr();
 	  if (!hwaddr.empty())
 	    pi->emplace_back("IV_HWADDR", hwaddr);
+	  pi->emplace_back ("IV_SSL", get_ssl_library_version());
 	}
 
       return pi;
