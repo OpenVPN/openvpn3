@@ -358,11 +358,8 @@ namespace openvpn {
 	      std::vector<IP::Route> rtvec;
 
 	      // non-trunk setup
-	      TunIPRoute::TunMethods::tun_config(state->iface_name,
-						 *po,
-						 &rtvec,
-						 *add_cmds,
-						 *remove_cmds);
+	      TUN_LINUX::tun_config(state->iface_name, *po, &rtvec, *add_cmds,
+				    *remove_cmds);
 
 	      // Add routes to DCO implementation
 	      impl->peer_add_routes(peer_id, rtvec);
