@@ -2138,7 +2138,7 @@ namespace openvpn {
 
   inline const std::string get_ssl_library_version()
   {
-    return OpenSSL_version(OPENSSL_VERSION);
+    return OPENSSL_VERSION_TEXT;
   }
 }
 #endif
