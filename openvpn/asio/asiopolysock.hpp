@@ -48,6 +48,12 @@
 
 namespace openvpn {
   namespace AsioPolySock {
+    // for shutdown()
+    enum ShutdownFlags {
+      SHUTDOWN_SEND = (1<<0),
+      SHUTDOWN_RECV = (1<<1),
+    };
+
     class Base : public RC<thread_unsafe_refcount>
     {
     public:
@@ -65,6 +71,8 @@ namespace openvpn {
       virtual void non_blocking(const bool state) = 0;
 
       virtual void close() = 0;
+
+      virtual void shutdown(const unsigned int flags) {}
 
       virtual void tcp_nodelay() {}
       virtual void set_cloexec() {}
@@ -171,6 +179,14 @@ namespace openvpn {
       }
 #endif
 
+      virtual void shutdown(const unsigned int flags) override
+      {
+	if (flags & SHUTDOWN_SEND)
+	  socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_send);
+	else if (flags & SHUTDOWN_RECV)
+	  socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_receive);
+      }
+
       virtual void close() override
       {
 	socket.close();
@@ -260,6 +276,14 @@ namespace openvpn {
 	const int fd = socket.native_handle();
 	if (fd >= 0)
 	  SockOpt::set_cloexec(fd);
+      }
+
+      virtual void shutdown(const unsigned int flags) override
+      {
+	if (flags & SHUTDOWN_SEND)
+	  socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_send);
+	else if (flags & SHUTDOWN_RECV)
+	  socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_receive);
       }
 
       virtual void close() override
