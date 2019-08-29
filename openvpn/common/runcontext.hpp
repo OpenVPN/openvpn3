@@ -395,7 +395,7 @@ namespace openvpn {
       exit_timer.expires_after(Time::Duration::seconds(n_sec));
       exit_timer.async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
                             {
-			      if (error)
+			      if (error || self->halt)
 				return;
 			      OPENVPN_LOG("DEBUG EXIT");
 			      self->cancel();
