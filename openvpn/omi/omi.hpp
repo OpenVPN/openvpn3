@@ -730,7 +730,7 @@ namespace openvpn {
       a->acceptor.open(a->local_endpoint.protocol());
 
       // set options
-      a->set_socket_options();
+      a->set_socket_options(0);
 
       // bind to local address
       a->acceptor.bind(a->local_endpoint);
