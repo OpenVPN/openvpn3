@@ -23,7 +23,7 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/complog.hpp>
-#include <openvpn/time/asiotimer.hpp>
+#include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/buffer/zlib.hpp>
@@ -904,7 +904,7 @@ namespace openvpn {
 	unsigned int n_retries;
 	unsigned int buf_tailroom;
 	Time::Duration retry_duration;
-	AsioTimer reconnect_timer;
+	AsioTimerSafe reconnect_timer;
 	client_t client_id;
 	bool halt;
 	bool started;
