@@ -30,7 +30,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/common/stop.hpp>
-#include <openvpn/time/asiotimer.hpp>
+#include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/omi/omi.hpp>
 
 using namespace openvpn;
@@ -927,10 +927,10 @@ private:
   std::string reconnect_reason;
 
   // reconnect
-  AsioTimer reconnect_timer;
+  AsioTimerSafe reconnect_timer;
 
   // bytecount
-  AsioTimer bytecount_timer;
+  AsioTimerSafe bytecount_timer;
 
   // external PKI
   bool management_external_key = false;
