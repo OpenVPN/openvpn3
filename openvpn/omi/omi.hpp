@@ -27,7 +27,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/time/timestr.hpp>
-#include <openvpn/time/asiotimer.hpp>
+#include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/asio/asiowork.hpp>
 
 // include acceptors for different protocols
@@ -977,7 +977,7 @@ namespace openvpn {
 
     // stopping
     volatile bool stop_called = false;
-    AsioTimer stop_timer;
+    AsioTimerSafe stop_timer;
 
     // hold
     bool hold_wait = false;
