@@ -10,6 +10,7 @@
 #define OPENVPN_ACCEPTOR_TCP_H
 
 #include <openvpn/acceptor/base.hpp>
+#include <openvpn/ssl/sslconsts.hpp>
 
 namespace openvpn {
   namespace Acceptor {
@@ -39,20 +40,38 @@ namespace openvpn {
 	acceptor.close();
       }
 
-      void set_socket_options()
+      enum {
+	// start at (1<<24) to avoid conflicting with SSLConst flags
+	DISABLE_REUSE_ADDR = (1<<24),
+	REUSE_PORT = (1<<25),
+
+	FIRST=DISABLE_REUSE_ADDR
+      };
+      void set_socket_options(unsigned int flags)
       {
+	static_assert(int(FIRST) > int(SSLConst::LAST), "TCP flags in conflict with SSL flags");
+
 #if defined(OPENVPN_PLATFORM_WIN)
 	// set Windows socket flags
-	acceptor.set_option(openvpn_io::ip::tcp::acceptor::reuse_address(true));
+	if (!(flags & DISABLE_REUSE_ADDR))
+	  acceptor.set_option(openvpn_io::ip::tcp::acceptor::reuse_address(true));
 #else
 	// set Unix socket flags
 	{
 	  const int fd = acceptor.native_handle();
-	  SockOpt::reuseport(fd);
-	  SockOpt::reuseaddr(fd);
+	  if (flags & REUSE_PORT)
+	    SockOpt::reuseport(fd);
+	  if (!(flags & DISABLE_REUSE_ADDR))
+	    SockOpt::reuseaddr(fd);
 	  SockOpt::set_cloexec(fd);
 	}
 #endif
+      }
+
+      // filter all but socket option flags
+      static unsigned int sockopt_flags(const unsigned int flags)
+      {
+	return flags & (DISABLE_REUSE_ADDR|REUSE_PORT);
       }
 
       openvpn_io::ip::tcp::endpoint local_endpoint;
