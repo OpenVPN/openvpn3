@@ -220,7 +220,7 @@ namespace openvpn {
 
 	  virtual ~Client()
 	  {
-	    stop(false);
+	    stop(false, false);
 	  }
 
 	  bool remote_ip_port(IP::Addr& addr, unsigned int& port) const
@@ -483,7 +483,7 @@ namespace openvpn {
 	    handoff = false;
 	  }
 
-	  void stop(const bool remove_self_from_map)
+	  void stop(const bool remove_self_from_map, const bool shutdown)
 	  {
 	    if (halt)
 	      return;
@@ -493,7 +493,11 @@ namespace openvpn {
 	    if (link)
 	      link->stop();
 	    if (sock)
-	      sock->close();
+	      {
+		if (shutdown)
+		  sock->shutdown(AsioPolySock::SHUTDOWN_SEND|AsioPolySock::SHUTDOWN_RECV);
+		sock->close();
+	      }
 	    if (remove_self_from_map)
 	      openvpn_io::post(io_context, [self=Ptr(this), parent=Listener::Ptr(parent)]() mutable
 			 {
@@ -689,8 +693,8 @@ namespace openvpn {
 
 	  void error_handler(const int errcode, const std::string& err)
 	  {
-	    http_stop(errcode, err);
-	    stop(true);
+	    const bool shutdown = http_stop(errcode, err);
+	    stop(true, shutdown);
 	  }
 
 	  // virtual methods
@@ -730,8 +734,9 @@ namespace openvpn {
 	    return true;
 	  }
 
-	  virtual void http_stop(const int status, const std::string& description)
+	  virtual bool http_stop(const int status, const std::string& description)
 	  {
+	    return false;
 	  }
 
 	  virtual void http_destroy()
@@ -895,7 +900,7 @@ namespace openvpn {
 
 	  // stop clients
 	  for (auto &c : clients)
-	    c.second->stop(false);
+	    c.second->stop(false, false);
 	  clients.clear();
 
 	  // stop client factory
