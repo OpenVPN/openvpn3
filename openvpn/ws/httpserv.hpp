@@ -143,6 +143,7 @@ namespace openvpn {
 	unsigned int send_queue_max_size = 0;
 	unsigned int free_list_max_size = 8;
 	unsigned int pipeline_max_size = 64;
+	unsigned int sockopt_flags = 0;
 	std::string http_server_id;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
@@ -813,7 +814,7 @@ namespace openvpn {
 		    a->acceptor.open(a->local_endpoint.protocol());
 
 		    // set options
-		    a->set_socket_options();
+		    a->set_socket_options(config->sockopt_flags);
 
 		    // bind to local address
 		    a->acceptor.bind(a->local_endpoint);
