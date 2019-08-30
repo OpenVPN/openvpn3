@@ -50,7 +50,7 @@
 #include <openvpn/error/error.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/http/reply.hpp>
-#include <openvpn/time/asiotimer.hpp>
+#include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/time/coarsetime.hpp>
 #include <openvpn/transport/tcplink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
@@ -370,7 +370,7 @@ namespace openvpn {
 	  ready = false;
 	  cancel_keepalive_timer();
 	  if (!req_timer)
-	    req_timer.reset(new AsioTimer(io_context));
+	    req_timer.reset(new AsioTimerSafe(io_context));
 	  req_timer->expires_after(dur);
 	  req_timer->async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 				{
@@ -870,7 +870,7 @@ namespace openvpn {
 								 ? to.keepalive
 								 : config->keepalive_timeout);
 	      if (!keepalive_timer)
-		keepalive_timer.reset(new AsioTimer(io_context));
+		keepalive_timer.reset(new AsioTimerSafe(io_context));
 	      keepalive_timer->expires_after(dur);
 	      keepalive_timer->async_wait([self=Ptr(this)](const openvpn_io::error_code& error)
 	              {
@@ -1221,10 +1221,10 @@ namespace openvpn {
 
 	TransportClient::Ptr transcli;
 
-	AsioTimer connect_timer;
-	AsioTimer general_timer;
-	std::unique_ptr<AsioTimer> req_timer;
-	std::unique_ptr<AsioTimer> keepalive_timer;
+	AsioTimerSafe connect_timer;
+	AsioTimerSafe general_timer;
+	std::unique_ptr<AsioTimerSafe> req_timer;
+	std::unique_ptr<AsioTimerSafe> keepalive_timer;
 
 	Time::Duration general_timeout_duration;
 	CoarseTime general_timeout_coarse;
