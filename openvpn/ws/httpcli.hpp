@@ -315,7 +315,7 @@ namespace openvpn {
 
 	virtual ~HTTPCore()
 	{
-	  stop();
+	  stop(false);
 	}
 
 	// Should be called before start_request().
@@ -379,7 +379,7 @@ namespace openvpn {
 				});
 	}
 
-	void stop()
+	void stop(const bool shutdown)
 	{
 	  if (!halt)
 	    {
@@ -391,7 +391,11 @@ namespace openvpn {
 	      if (link)
 		link->stop();
 	      if (socket)
-		socket->close();
+		{
+		  if (shutdown)
+		    socket->shutdown(AsioPolySock::SHUTDOWN_SEND|AsioPolySock::SHUTDOWN_RECV);
+		  socket->close();
+		}
 	      async_resolve_cancel();
 	      if (req_timer)
 		req_timer->cancel();
@@ -1006,11 +1010,12 @@ namespace openvpn {
 	{
 	  const bool in_transaction = !ready;
 	  const bool keepalive = alive;
+	  const bool error = Status::is_error(errcode);
 #if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
-	  if (config->shim_factory && Status::is_error(errcode) && in_transaction && socket)
+	  if (config->shim_factory && error && in_transaction && socket)
 	    config->shim_factory->report_error(host, socket->alt_routing_enabled());
 #endif
-	  stop();
+	  stop(!error);
 	  if (in_transaction)
 	    http_done(errcode, err);
 	  else if (keepalive)
@@ -1089,7 +1094,7 @@ namespace openvpn {
 	{
 	  if (websocket)
 	    {
-	      stop();
+	      stop(true);
 	      http_done(Status::E_SUCCESS, "Succeeded");
 	    }
 	}
@@ -1137,7 +1142,7 @@ namespace openvpn {
 	      ready = true;
 	    }
 	  else
-	    stop();
+	    stop(true);
 	  http_done(Status::E_SUCCESS, "Succeeded");
 	}
 
@@ -1254,13 +1259,13 @@ namespace openvpn {
 	  parent_ = parent;
 	}
 
-	void detach(const bool keepalive=false)
+	void detach(const bool keepalive, const bool shutdown)
 	{
 	  if (parent_)
 	    {
 	      parent_ = nullptr;
 	      if (!keepalive)
-		stop();
+		stop(shutdown);
 	    }
 	}
 
