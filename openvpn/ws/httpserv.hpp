@@ -31,7 +31,7 @@
 #include <openvpn/common/core.hpp>
 #include <openvpn/buffer/bufstream.hpp>
 #include <openvpn/time/timestr.hpp>
-#include <openvpn/time/asiotimer.hpp>
+#include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/time/coarsetime.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/log/sessionstats.hpp>
@@ -738,7 +738,7 @@ namespace openvpn {
 	  }
 
 	  Listener* parent;
-	  AsioTimer timeout_timer;
+	  AsioTimerSafe timeout_timer;
 	  CoarseTime timeout_coarse;
 	  client_t client_id;
 	  LinkImpl::Ptr link;
@@ -1062,7 +1062,7 @@ namespace openvpn {
 
 	Acceptor::Set acceptors;
 
-	AsioTimer throttle_timer;
+	AsioTimerSafe throttle_timer;
 	Time throttle_expire;
 	int throttle_connections = 0;
 	std::deque<size_t> throttle_acceptor_indices;
