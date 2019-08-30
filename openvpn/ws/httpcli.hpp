@@ -36,7 +36,10 @@
 #include <memory>
 #include <algorithm>         // for std::min, std::max
 
+#ifdef USE_ASYNC_RESOLVE
 #include <openvpn/client/async_resolve.hpp>
+#endif
+
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/common/olong.hpp>
@@ -290,7 +293,10 @@ namespace openvpn {
       class HTTPCore;
       typedef HTTPBase<HTTPCore, Config, Status, HTTP::ReplyType, ContentInfo, olong, RC<thread_unsafe_refcount>> Base;
 
-      class HTTPCore : public Base, public TransportClientParent, public AsyncResolvableTCP
+      class HTTPCore : public Base, public TransportClientParent
+#ifdef USE_ASYNC_RESOLVE
+		     , public AsyncResolvableTCP
+#endif
       {
       public:
 	friend Base;
@@ -305,8 +311,13 @@ namespace openvpn {
 	HTTPCore(openvpn_io::io_context& io_context_arg,
 		 Config::Ptr config_arg)
 	  : Base(std::move(config_arg)),
+#ifdef USE_ASYNC_RESOLVE
 	    AsyncResolvableTCP(io_context_arg),
+#endif
 	    io_context(io_context_arg),
+#ifndef USE_ASYNC_RESOLVE
+	    resolver(io_context_arg),
+#endif
 	    connect_timer(io_context_arg),
 	    general_timer(io_context_arg),
 	    general_timeout_coarse(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024))
@@ -396,7 +407,11 @@ namespace openvpn {
 		    socket->shutdown(AsioPolySock::SHUTDOWN_SEND|AsioPolySock::SHUTDOWN_RECV);
 		  socket->close();
 		}
+#ifdef USE_ASYNC_RESOLVE
 	      async_resolve_cancel();
+#else
+	      resolver.cancel();
+#endif
 	      if (req_timer)
 		req_timer->cancel();
 	      cancel_keepalive_timer();
@@ -672,7 +687,15 @@ namespace openvpn {
 	      }
 	    else
 	      {
+#ifdef USE_ASYNC_RESOLVE
 		async_resolve_name(host.host_transport(), host.port);
+#else
+		resolver.async_resolve(host.host_transport(), host.port,
+				       [self=Ptr(this)](const openvpn_io::error_code& error, openvpn_io::ip::tcp::resolver::results_type results)
+				       {
+					 self->resolve_callback(error, results);
+				       });
+#endif
 	      }
 	    set_connect_timeout(config->connect_timeout);
 	  }
@@ -1220,6 +1243,9 @@ namespace openvpn {
 
 	AsioPolySock::Base::Ptr socket;
 
+#ifndef USE_ASYNC_RESOLVE
+	openvpn_io::ip::tcp::resolver resolver;
+#endif
 	Host host;
 
 	LinkImpl::Ptr link;
