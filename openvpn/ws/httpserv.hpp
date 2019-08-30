@@ -996,6 +996,10 @@ namespace openvpn {
 	      {
 		const Acceptor::Item::SSLMode ssl_mode = acceptors[acceptor_index].ssl_mode;
 
+#ifdef OPENVPN_DEBUG_ACCEPT
+		OPENVPN_LOG("ACCEPT from " << sock->remote_endpoint_str());
+#endif
+
 		sock->non_blocking(true);
 		sock->set_cloexec();
 		sock->tcp_nodelay();
