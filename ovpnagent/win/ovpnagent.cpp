@@ -523,10 +523,15 @@ private:
     return true;
   }
 
-  virtual void http_stop(const int status, const std::string& description) override
+  virtual bool http_stop(const int status, const std::string& description) override
   {
     if (status != WS::Server::Status::E_SUCCESS)
-      OPENVPN_LOG("INSTANCE STOP : " << WS::Server::Status::error_str(status) << " : " << description);
+      {
+	OPENVPN_LOG("INSTANCE STOP : " << WS::Server::Status::error_str(status) << " : " << description);
+	return false;
+      }
+    else
+      return true;
   }
 
   HANDLE get_client_pipe() const
