@@ -61,10 +61,10 @@ namespace openvpn {
 	    c.reset(new Container);
 	}
 
-	void stop()
+	void stop(const bool shutdown)
 	{
 	  if (c && c->http)
-	    c->http->stop();
+	    c->http->stop(shutdown);
 	}
 
 	void reset()
@@ -115,13 +115,13 @@ namespace openvpn {
 	  c->http->attach(parent);
 	}
 
-	void close(const bool keepalive)
+	void close(const bool keepalive, const bool shutdown)
 	{
 	  if (c && c->http)
 	    {
-	      c->http->detach(keepalive);
+	      c->http->detach(keepalive, shutdown);
 	      if (!keepalive)
-		stop();
+		stop(shutdown);
 	    }
 	}
 
@@ -129,7 +129,7 @@ namespace openvpn {
 		       const WS::Client::Config::Ptr config)
 	{
 	  create_container();
-	  close(false);
+	  close(false, false);
 	  c->http.reset(new HTTPDelegate(io_context, std::move(config), nullptr));
 	}
 
@@ -374,10 +374,10 @@ namespace openvpn {
 	  post_connect.reset();
 	}
 
-	void stop()
+	void stop(const bool shutdown)
 	{
 	  reset_callbacks();
-	  hsc.stop();
+	  hsc.stop(shutdown);
 	}
 
 	void dump(std::ostream& os, const bool content_only=false) const
@@ -547,7 +547,7 @@ namespace openvpn {
 	halt = true;
 	for (auto &c : clients)
 	  {
-	    c.second->stop(false);
+	    c.second->stop(false, false);
 	    c.second->reset_callbacks();
 	  }
       }
@@ -600,13 +600,13 @@ namespace openvpn {
 	  return true;
 	}
 
-	void stop(const bool keepalive)
+	void stop(const bool keepalive, const bool shutdown)
 	{
 	  if (halt)
 	    return;
 	  halt = true;
 	  reconnect_timer.cancel();
-	  close_http(keepalive);
+	  close_http(keepalive, shutdown);
 	}
 
 	void reset_callbacks()
@@ -622,9 +622,9 @@ namespace openvpn {
 	}
 
       private:
-	void close_http(const bool keepalive)
+	void close_http(const bool keepalive, const bool shutdown)
 	{
-	  ts->hsc.close(keepalive);
+	  ts->hsc.close(keepalive, shutdown);
 	}
 
 	void remove_self_from_map()
@@ -639,21 +639,21 @@ namespace openvpn {
 	{
 	  if (ts_iter == ts->transactions.end())
 	    {
-	      done(true);
+	      done(true, true);
 	      return true;
 	    }
 	  else
 	    return false;
 	}
 
-	void done(const bool status)
+	void done(const bool status, const bool shutdown)
 	{
 	  {
-	    auto clean = Cleanup([this]() {
+	    auto clean = Cleanup([this, shutdown]() {
 		if (!ts->preserve_http_state)
-		  ts->hsc.stop();
+		  ts->hsc.stop(shutdown);
 	      });
-	    stop(status);
+	    stop(status, shutdown);
 	    remove_self_from_map();
 	    ts->status = status;
 	  }
@@ -847,12 +847,12 @@ namespace openvpn {
 		if (++n_retries >= ts->max_retries)
 		  {
 		    // fail -- no more retries
-		    done(false);
+		    done(false, false);
 		  }
 		else
 		  {
 		    // fail -- retry
-		    close_http(false);
+		    close_http(false, false);
 
 		    // special case -- no delay after TCP EOF on first retry
 		    if (status == WS::Client::Status::E_EOF_TCP && n_retries == 1)
@@ -867,7 +867,7 @@ namespace openvpn {
 	      t.status = WS::Client::Status::E_EXCEPTION;
 	      t.description = std::string("http_done: ") + e.what();
 	      if (!halt)
-		done(false);
+		done(false, false);
 	    }
 	}
 
