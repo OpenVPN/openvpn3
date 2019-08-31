@@ -822,6 +822,9 @@ namespace openvpn {
 		    a->set_socket_options(config->sockopt_flags);
 
 		    // bind to local address
+#ifdef OPENVPN_DEBUG_ACCEPT
+		    OPENVPN_LOG("ACCEPTOR BIND " << a->local_endpoint);
+#endif
 		    a->acceptor.bind(a->local_endpoint);
 
 		    // listen for incoming client connections
