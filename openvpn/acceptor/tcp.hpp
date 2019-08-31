@@ -37,6 +37,9 @@ namespace openvpn {
 
       virtual void close() override
       {
+#ifdef OPENVPN_DEBUG_ACCEPT
+	OPENVPN_LOG("ACCEPTOR CLOSE " << local_endpoint);
+#endif
 	acceptor.close();
       }
 
