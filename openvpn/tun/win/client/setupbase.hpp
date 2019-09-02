@@ -33,7 +33,6 @@
 
 #include <openvpn/common/destruct.hpp>
 #include <openvpn/common/stop.hpp>
-#include <openvpn/common/event.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
 #include <openvpn/tun/win/ringbuffer.hpp>

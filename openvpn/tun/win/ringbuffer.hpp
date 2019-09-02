@@ -30,6 +30,7 @@
 #include <openvpn/buffer/bufhex.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/win/scoped_handle.hpp>
+#include <openvpn/win/event.hpp>
 
 #define TUN_IOCTL_REGISTER_RINGS CTL_CODE(51820U, 0x970U, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
 #define TUN_IOCTL_FORCE_CLOSE_HANDLES CTL_CODE(51820U, 0x971U, METHOD_NEITHER, FILE_READ_DATA | FILE_WRITE_DATA)
@@ -154,8 +155,8 @@ namespace openvpn
     protected:
       Win::ScopedHANDLE send_ring_hmem;
       Win::ScopedHANDLE receive_ring_hmem;
-      Win::Event send_ring_tail_moved_;
-      Win::Event receive_ring_tail_moved_;
+      Win::Event send_ring_tail_moved_{FALSE};
+      Win::Event receive_ring_tail_moved_{FALSE};
       AsioEvent send_tail_moved_asio_event_;
 
       TUN_RING* send_ring_ = nullptr;

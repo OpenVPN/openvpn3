@@ -38,9 +38,9 @@ namespace openvpn {
     class Event
     {
     public:
-      Event()
+      explicit Event(BOOL manual_reset=TRUE)
       {
-	event.reset(::CreateEvent(NULL, TRUE, FALSE, NULL));
+	event.reset(::CreateEvent(NULL, manual_reset, FALSE, NULL));
 	if (!event.defined())
 	  {
 	    const Win::LastError err;
