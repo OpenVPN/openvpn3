@@ -220,56 +220,56 @@ namespace openvpn {
 	    return;
 	  }
 
-	// tail has moved?
-	if (head == tail)
+	while (true)
 	  {
-	    ring_buffer->send_tail_moved_asio_event().async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
-	      if (!error)
-		self->read();
-	      else
-		{
-		  if (!self->halt)
-		    self->parent.tun_error(Error::TUN_ERROR, "error waiting on ring send tail moved");
-		}
-	    });
-	    return;
-	  }
+	    // tail has moved?
+	    if (head == tail)
+	      {
+		ring_buffer->send_tail_moved_asio_event().async_wait([self = Ptr(this)](const openvpn_io::error_code& error) {
+		  if (!error)
+		    self->read();
+		  else
+		    {
+		      if (!self->halt)
+			self->parent.tun_error(Error::TUN_ERROR, "error waiting on ring send tail moved");
+		    }
+		});
+		return;
+	      }
 
-	// read buffer content
-	ULONG content_len = wrap(tail - head);
-	if (content_len < sizeof(TUN_PACKET_HEADER))
-	  {
-	    parent.tun_error(Error::TUN_ERROR, "incomplete packet header in send ring");
-	    return;
-	  }
+	    // read buffer content
+	    ULONG content_len = wrap(tail - head);
+	    if (content_len < sizeof(TUN_PACKET_HEADER))
+	      {
+		parent.tun_error(Error::TUN_ERROR, "incomplete packet header in send ring");
+		return;
+	      }
 
-	TUN_PACKET* packet = (TUN_PACKET*)&send_ring->data[head];
-	if (packet->size > WINTUN_MAX_PACKET_SIZE)
-	  {
-	    parent.tun_error(Error::TUN_ERROR, "packet too big in send ring");
-	    return;
-	  }
+	    TUN_PACKET* packet = (TUN_PACKET *)&send_ring->data[head];
+	    if (packet->size > WINTUN_MAX_PACKET_SIZE)
+	      {
+		parent.tun_error(Error::TUN_ERROR, "packet too big in send ring");
+		return;
+	      }
 
-	ULONG aligned_packet_size = packet_align(sizeof(TUN_PACKET_HEADER) + packet->size);
-	if (aligned_packet_size > content_len)
-	  {
-	    parent.tun_error(Error::TUN_ERROR, "incomplete packet in send ring");
-	    return;
-	  }
+	    ULONG aligned_packet_size = packet_align(sizeof(TUN_PACKET_HEADER) + packet->size);
+	    if (aligned_packet_size > content_len)
+	      {
+		parent.tun_error(Error::TUN_ERROR, "incomplete packet in send ring");
+		return;
+	      }
 
-	frame->prepare(Frame::READ_TUN, buf);
+	    frame->prepare(Frame::READ_TUN, buf);
 
-	buf.write(packet->data, packet->size);
+	    buf.write(packet->data, packet->size);
 
-	send_ring->head.store(wrap(head + aligned_packet_size), std::memory_order_release);
+	    head = wrap(head + aligned_packet_size);
+	    send_ring->head.store(head, std::memory_order_release);
 
-	parent.tun_recv(buf);
+	    parent.tun_recv(buf);
 
-	if (!halt)
-	  {
-	    openvpn_io::post(io_context, [self=Ptr(this)]() {
-	      self->read();
-	    });
+	    if (halt)
+	      return;
 	  }
       }
 
