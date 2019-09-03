@@ -92,7 +92,7 @@ namespace openvpn {
 	      tun_setup->confirm();
 	    }
 
-	  openvpn_io::post([self = Ptr(this)](){
+	  openvpn_io::post(io_context, [self=Ptr(this)](){
 	    self->read();
 	  });
 
