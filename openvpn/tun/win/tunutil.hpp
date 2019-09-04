@@ -476,6 +476,10 @@ namespace openvpn {
       {
 	Win::ScopedHANDLE hand;
 
+	std::unique_ptr<DeviceInstanceIdInterfaceList> inst_id_interface_list;
+	if (wintun)
+	  inst_id_interface_list.reset(new DeviceInstanceIdInterfaceList());
+
 	// iterate over list of TAP adapters on system
 	for (TapNameGuidPairList::const_iterator i = guids.begin(); i != guids.end(); i++)
 	  {
@@ -485,9 +489,7 @@ namespace openvpn {
 
 	    if (wintun)
 	      {
-		DeviceInstanceIdInterfaceList inst_id_interface_list;
-
-		for (const auto& inst_id_interface : inst_id_interface_list)
+		for (const auto& inst_id_interface : *inst_id_interface_list)
 		  {
 		    if (inst_id_interface.net_cfg_instance_id != tap.guid)
 		      continue;
