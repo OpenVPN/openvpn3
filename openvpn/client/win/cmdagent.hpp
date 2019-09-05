@@ -28,7 +28,7 @@
 #include <openvpn/tun/win/client/setupbase.hpp>
 #include <openvpn/win/npinfo.hpp>
 #include <openvpn/win/handlecomm.hpp>
-#include <openvpn/common/event.hpp>
+#include <openvpn/win/event.hpp>
 #include <openvpn/error/error.hpp>
 
 namespace openvpn {
