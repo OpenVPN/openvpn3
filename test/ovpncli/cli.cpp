@@ -983,6 +983,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.gremlinConfig = gremlin;
 	      config.info = true;
 	      config.wintun = wintun;
+	      config.ssoMethods = "openurl";
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;
 #endif
