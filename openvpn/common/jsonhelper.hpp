@@ -717,7 +717,7 @@ namespace openvpn {
     inline Json::Value dict_result(Json::Value jr)
     {
       if (jr.isObject())
-	return std::move(jr);
+	return jr;
       else {
 	Json::Value jret(Json::objectValue);
 	jret["result"] = std::move(jr);
