@@ -320,7 +320,7 @@ namespace openvpn {
       stats = stats_arg;
     }
 
-    virtual Stop* async_stop()
+    virtual Stop* async_stop() override
     {
       return async_stop_;
     }
