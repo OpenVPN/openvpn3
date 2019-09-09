@@ -659,7 +659,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  eval.error = true;
-	  eval.message = Unicode::utf8_printable<std::string>(e.what(), 256);
+	  eval.message = Unicode::utf8_printable<std::string>(std::string("ERR_PROFILE_GENERIC: ") + e.what(), 256);
 	}
     }
 

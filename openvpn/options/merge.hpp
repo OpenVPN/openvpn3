@@ -140,14 +140,14 @@ namespace openvpn {
 	  else
 	    {
 	      status_ = MERGE_OVPN_EXT_FAIL;
-	      error_ = basename_;
+	      error_ = std::string("ERR_PROFILE_NO_OVPN_EXTENSION: ") + basename_;
 	      return;
 	    }
 	}
 	catch (const std::exception& e)
 	  {
 	    status_ = MERGE_OVPN_FILE_FAIL;
-	    error_ = e.what();
+	    error_ = std::string("ERR_PROFILE_GENERIC: ") + e.what();
 	    return;
 	  }
 
@@ -157,7 +157,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  status_ = MERGE_EXCEPTION;
-	  error_ = e.what();
+	  error_ = std::string("ERR_PROFILE_GENERIC: ") + e.what();
 	}
     }
 
@@ -189,7 +189,7 @@ namespace openvpn {
       if (total_size > max_size)
 	{
 	  status_ = MERGE_EXCEPTION;
-	  error_ = "file too large";
+	  error_ = "ERR_PROFILE_FILE_TOO_LARGE: file too large";
 	  return;
 	}
 
@@ -207,7 +207,7 @@ namespace openvpn {
 	  if (in.line_overflow())
 	    {
 	      status_ = MERGE_EXCEPTION;
-	      error_ = "line too long";
+	      error_ = "ERR_PROFILE_LINE_TOO_LONG: line too long";
 	      return;
 	    }
 	  const std::string& line = in.line_ref();
@@ -276,12 +276,13 @@ namespace openvpn {
 			    {
 			      echo = false;
 			      status_ = MERGE_REF_FAIL;
+			      error_ = "ERR_PROFILE_NO_FILENAME: filename not provided";
 			    }
 			  else if (follow_references != FOLLOW_FULL && !path::is_flat(fn))
 			    {
 			      echo = false;
 			      status_ = MERGE_REF_FAIL;
-			      error_ = fn;
+			      error_ = std::string("ERR_PROFILE_CANT_FOLLOW_LINK: ") + fn;
 			      if (ref_fail_list_.size() < MAX_FN_LIST_SIZE)
 				ref_fail_list_.push_back(fn);
 			    }
@@ -294,7 +295,7 @@ namespace openvpn {
 				if (follow_references == FOLLOW_NONE)
 				  {
 				    status_ = MERGE_EXCEPTION;
-				    error_ = fn + ": cannot follow file reference";
+				    error_ = std::string("ERR_PROFILE_CANT_FOLLOW_LINK: ") + fn + ": cannot follow file reference";
 				    return;
 				  }
 				path = path::join(profile_dir, fn);
@@ -303,7 +304,7 @@ namespace openvpn {
 				if (total_size > max_size)
 				  {
 				    status_ = MERGE_EXCEPTION;
-				    error_ = fn + ": file too large";
+				    error_ = std::string("ERR_PROFILE_FILE_TOO_LARGE: ") + fn + ": file too large";
 				    return;
 				  }
 				OptionList::detect_multiline_breakout(file_content, opt.ref(0));
@@ -312,7 +313,7 @@ namespace openvpn {
 				{
 				  error = true;
 				  status_ = MERGE_REF_FAIL;
-				  error_ = fn + " : " + e.what();
+				  error_ = std::string("ERR_PROFILE_GENERIC: ") + fn + " : " + e.what();
 				  if (ref_fail_list_.size() < MAX_FN_LIST_SIZE)
 				    ref_fail_list_.push_back(fn);
 				}
@@ -363,7 +364,7 @@ namespace openvpn {
       if (ref_fail_list_.size() >= 2)
 	{
 	  status_ = MERGE_MULTIPLE_REF_FAIL;
-	  error_ = "";
+	  error_ = "ERR_PROFILE_GENERIC: ";
 	  for (size_t i = 0; i < ref_fail_list_.size(); ++i)
 	    {
 	      if (i)
@@ -459,7 +460,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  status_ = MERGE_EXCEPTION;
-	  error_ = e.what();
+	  error_ = std::string("ERR_PROFILE_GENERIC: ") + e.what();
 	}
     }
 
