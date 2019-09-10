@@ -71,7 +71,7 @@ namespace openvpn {
       virtual std::uint64_t instance_id() const = 0;
 
       // return a JSON string describing connected user
-      virtual std::string describe_user() = 0;
+      virtual std::string describe_user(const bool show_userprop) = 0;
 
       // disconnect
       virtual void disconnect_user(const HaltRestart::Type type,
