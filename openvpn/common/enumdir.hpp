@@ -34,13 +34,13 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/uniqueptr.hpp>
-#include <openvpn/common/function.hpp>
 
 namespace openvpn {
   OPENVPN_EXCEPTION(enum_dir_error);
 
+  template <typename F>
   inline bool enum_dir(const std::string& dirname,
-		       Function<void(std::string fn)> func)
+		       F func)
   {
     unique_ptr_del<DIR> dir(::opendir(dirname.c_str()), [](DIR* d) { ::closedir(d); });
     if (!dir)
