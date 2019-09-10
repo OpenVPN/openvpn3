@@ -69,7 +69,7 @@ namespace openvpn {
 
       std::string to_string() const
       {
-	return '[' + net.to_string() + ',' + server_gw.to_string() + ']';
+	return '[' + net.to_string() + '/' + std::to_string(prefix_len) + ',' + server_gw.to_string() + ']';
       }
 
       IP::Addr net;
