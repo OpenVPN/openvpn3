@@ -407,12 +407,16 @@ namespace openvpn {
     // indent a multiline string
     inline std::string indent(const std::string& str, const int first, const int remaining)
     {
-      std::string ret = spaces(first);
+      std::string ret;
+      int n_spaces = first;
       for (auto &c : str)
 	{
+	  if (n_spaces)
+	    ret += spaces(n_spaces);
+	  n_spaces = 0;
 	  ret += c;
 	  if (c == '\n')
-	    ret += spaces(remaining);
+	    n_spaces = remaining;
 	}
       return ret;
     }
