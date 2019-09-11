@@ -2131,7 +2131,7 @@ namespace openvpn {
   int OpenSSLContext::SSL::context_data_index = -1;
 #endif
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L && defined(OPENVPN_NO_EXTERN)
   SSL_METHOD OpenSSLContext::SSL::ssl23_method_client_;
   SSL_METHOD OpenSSLContext::SSL::ssl23_method_server_;
 #endif
