@@ -117,6 +117,12 @@ namespace openvpn
       RingBuffer(RingBuffer const&) = delete;
       RingBuffer& operator=(RingBuffer const&) = delete;
 
+      ~RingBuffer()
+      {
+	UnmapViewOfFile(send_ring_);
+	UnmapViewOfFile(receive_ring_);
+      }
+
       HANDLE send_ring_tail_moved()
       {
 	return send_ring_tail_moved_();
