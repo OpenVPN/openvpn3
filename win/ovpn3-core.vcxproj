@@ -437,6 +437,7 @@
     <ClInclude Include="..\openvpn\win\call.hpp" />
     <ClInclude Include="..\openvpn\win\cmd.hpp" />
     <ClInclude Include="..\openvpn\win\console.hpp" />
+    <ClInclude Include="..\openvpn\win\event.hpp" />
     <ClInclude Include="..\openvpn\win\handle.hpp" />
     <ClInclude Include="..\openvpn\win\impersonate.hpp" />
     <ClInclude Include="..\openvpn\win\modname.hpp" />
