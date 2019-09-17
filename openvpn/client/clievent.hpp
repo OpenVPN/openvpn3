@@ -55,6 +55,7 @@ namespace openvpn {
       PAUSE,
       RESUME,
       RELAY,
+      COMPRESSION_ENABLED,
       UNSUPPORTED_FEATURE,
 
       // start of nonfatal errors, must be marked by NONFATAL_ERROR_START below
@@ -109,6 +110,7 @@ namespace openvpn {
 	"PAUSE",
 	"RESUME",
 	"RELAY",
+	"COMPRESSION_ENABLED",
 	"UNSUPPORTED_FEATURE",
 
 	// nonfatal errors
@@ -461,6 +463,14 @@ namespace openvpn {
 	ret += message;
 	return ret;
       }
+    };
+
+    struct CompressionEnabled : public ReasonBase
+    {
+       CompressionEnabled(std::string msg)
+         : ReasonBase(COMPRESSION_ENABLED, std::move(msg))
+       {
+       }
     };
 
     class Queue : public RC<thread_unsafe_refcount>

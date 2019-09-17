@@ -601,6 +601,18 @@ namespace openvpn {
 
 		// send the Connected event
 		cli_events->add_event(connected_);
+
+		// Issue an event if compression is enabled
+		if (proto_context_options->is_comp())
+		{
+		  std::ostringstream msg;
+		  msg << (proto_context_options->is_comp_asym()
+			  ? "Asymmetric compression enabled.  Server may send compressed data."
+			  : "Compression enabled.");
+		  msg << "  This may be a potential security issue.";
+		  ClientEvent::Base::Ptr ev = new ClientEvent::CompressionEnabled(msg.str());
+		  cli_events->add_event(std::move(ev));
+		}
 	      }
 	    else
 	      OPENVPN_LOG("Options continuation...");
