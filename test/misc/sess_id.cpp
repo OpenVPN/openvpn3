@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go sess_id"}
+
 #include <iostream>
 #include <unordered_map>
 

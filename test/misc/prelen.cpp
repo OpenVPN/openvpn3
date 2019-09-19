@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go prelen", "expected_output": "prelen.txt"}
+
 #include <iostream>
 #include <string>
 

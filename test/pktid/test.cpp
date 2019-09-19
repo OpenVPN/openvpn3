@@ -1,12 +1,15 @@
+// TEST : {"cmd": "./go"}
+
 #include <iostream>
 #include <vector>
 
+#include <openvpn/io/io.hpp>
 #include <openvpn/log/logsimple.hpp>
+
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
 #include <openvpn/random/devurand.hpp>
-#include <openvpn/random/randint.hpp>
 
 #include <openvpn/crypto/packet_id.hpp>
 
@@ -23,7 +26,7 @@ void testcase(PIDRecv& pr,
   const Error::Type status = pr.do_test_add(pid, t, true);
   OPENVPN_LOG("[" << t << "] id=" << pkt_id << " time=" << pkt_time << ' ' << Error::name(status));
   if (status != expected_status)
-    OPENVPN_LOG("******** UNEXPECTED result=" << Error::name(status) << " expected=" << Error::name(expected_status));
+    OPENVPN_THROW_EXCEPTION("UNEXPECTED result=" << Error::name(status) << " expected=" << Error::name(expected_status));
 }
 
 void test()
@@ -101,7 +104,6 @@ void perfiter(const long n,
   constexpr PacketID::time_t pkt_time = 1234;
 
   DevURand urand;
-  RandomInt ri(urand);
   std::vector<bool> bv(n);
   long high = 0;
   SessionStats::Ptr stats(new SessionStats());
@@ -112,7 +114,7 @@ void perfiter(const long n,
     {
       for (long j = 0; j < iter_per_step; ++j)
 	{
-	  const long delta = long(ri.randrange(range)) - range/2;
+	  const long delta = long(urand.randrange32(range)) - range/2;
 	  const long id = i + delta;
 	  if (id >= 0 && id < n)
 	    {
@@ -144,14 +146,14 @@ void perf(long& count)
 {
   typedef PacketIDReceiveType<ORDER, EXPIRE> PIDRecv;
 
-  perfiter<ORDER, EXPIRE>(2000000, PIDRecv::REPLAY_WINDOW_SIZE*3, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(2000000, PIDRecv::REPLAY_WINDOW_SIZE*3, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
-  perfiter<ORDER, EXPIRE>(2000000, PIDRecv::REPLAY_WINDOW_SIZE*2, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(2000000, PIDRecv::REPLAY_WINDOW_SIZE*2, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
-  perfiter<ORDER, EXPIRE>(2000000, 16, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(2000000, 16, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
-  perfiter<ORDER, EXPIRE>(2000000, 4, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(2000000, 4, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*3, 1, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*3, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*2, 1, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*2, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, 16, 1, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, 16, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, 4, 1, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, 4, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
 }
 
 int main(int /*argc*/, char* /*argv*/[])

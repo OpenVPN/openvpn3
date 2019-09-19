@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go capture"}
+
 #include <iostream>
 
 #include <openvpn/log/logsimple.hpp>
@@ -60,8 +62,8 @@ int main(int argc, char* argv[])
     write_string(fn2, j2_txt);
     //OPENVPN_LOG("JSON #2:\n" << j2_txt);
 
-    if (j1_txt == j2_txt)
-      OPENVPN_LOG("******* EQUAL!");
+    if (j1_txt != j2_txt)
+      throw Exception("round trip failed");
   }
   catch (const std::exception& e)
     {

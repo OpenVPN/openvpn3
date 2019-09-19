@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go pool", "expected_output": "pool.txt"}
+
 #include <iostream>
 
 #include <openvpn/addr/ip.hpp>

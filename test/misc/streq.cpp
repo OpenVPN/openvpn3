@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go streq"}
+
 #include <iostream>
 
 #include <openvpn/log/logsimple.hpp>
@@ -38,7 +40,7 @@ int main(int /*argc*/, char* /*argv*/[])
 {
   try {
     test_logic();
-    test_timing();
+    //test_timing();
   }
   catch (const std::exception& e)
     {

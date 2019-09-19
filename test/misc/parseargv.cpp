@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <openvpn/log/logsimple.hpp>
+
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/options.hpp>

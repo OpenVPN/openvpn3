@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go timeaddsub"}
+
 #include <iostream>
 
 #include <openvpn/common/size.hpp>
@@ -19,7 +21,7 @@ void sub(const Time::Duration& d1, const Time::Duration& d2)
   Time::Duration x = d1;
   x -= d2;
   if (x != d)
-    std::cout << "D-D INCONSISTENCY DETECTED" << std::endl;
+    OPENVPN_THROW_EXCEPTION("D-D INCONSISTENCY DETECTED");
 }
 
 void add(const Time& t1, const Time::Duration& d1)
@@ -29,7 +31,7 @@ void add(const Time& t1, const Time::Duration& d1)
   Time x = t1;
   x += d1;
   if (x != t)
-    std::cout << "T+D INCONSISTENCY DETECTED" << std::endl;
+    OPENVPN_THROW_EXCEPTION("T+D INCONSISTENCY DETECTED");
 }
 
 void add(const Time::Duration& d1, const Time::Duration& d2)
@@ -39,7 +41,7 @@ void add(const Time::Duration& d1, const Time::Duration& d2)
   Time::Duration x = d1;
   x += d2;
   if (x != d)
-    std::cout << "D+D INCONSISTENCY DETECTED" << std::endl;
+    OPENVPN_THROW_EXCEPTION("D+D INCONSISTENCY DETECTED");
 }
 
 int main()

@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go cleanup"}
+
 #include <iostream>
 #include <memory>
 
@@ -12,14 +14,16 @@ using namespace openvpn;
 int main(int /*argc*/, char* /*argv*/[])
 {
   try {
-    std::unique_ptr<std::string> str(new std::string("Hello world!"));
-    auto c = Cleanup([str=std::move(str)]() {
-	OPENVPN_LOG("HIT IT: " << *str);
-      });
-    static_assert(std::is_nothrow_move_constructible<decltype(c)>::value,
-		  "Cleanup should be noexcept MoveConstructible");
-
-    OPENVPN_LOG("Starting...");
+    bool ran_cleanup = false;
+    {
+      auto c = Cleanup([&]() {
+	  ran_cleanup = true;
+	});
+      static_assert(std::is_nothrow_move_constructible<decltype(c)>::value,
+		    "Cleanup should be noexcept MoveConstructible");
+    }
+    if (!ran_cleanup)
+      throw Exception("cleanup didn't run as expected");
   }
   catch (const std::exception& e)
     {

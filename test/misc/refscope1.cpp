@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go refscope1", "expected_output": "refscope1-PLATFORM.txt"}
+
 #include <string>
 #include <iostream>
 #include <utility>
@@ -6,7 +8,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
-#include <openvpn/random/devurand.hpp>
+#include <openvpn/random/mtrandapi.hpp>
 #include <openvpn/common/sess_id.hpp>
 #include <openvpn/openssl/util/tokenencrypt.hpp>
 
@@ -20,7 +22,7 @@ struct SessionID : public SessionID128
   }
 
   SessionID(RandomAPI& rng)
-    : SessionID128(rng)
+    : SessionID128(rng, true)
   {
     dump("rng");
   }
@@ -67,7 +69,7 @@ void test(Session* session)
 
 void run()
 {
-  DevURand rng;
+  MTRand rng(123456789);
   Session sess(rng);
   std::cout << "--- TEST1 ---" << std::endl;
   test(&sess);

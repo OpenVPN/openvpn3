@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go csum"}
+
 #include <iostream>
 
 #include <openvpn/log/logsimple.hpp>

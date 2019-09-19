@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go"}
+
 #include <iostream>
 
 #include <openvpn/log/logsimple.hpp>
@@ -45,21 +47,21 @@ void test_cert_crl()
   ccl3.parse_pem_file("certcrl.pem");
   std::string rend3 = ccl3.render_pem();
 
-  if (rend2 == rend3)
-    std::cout << "GOOD COMPARE #1" << std::endl;
+  if (rend2 != rend3)
+    throw Exception("BAD COMPARE #1");
 
   CertCRLList ccl4(rend3, "TEST2");
   CertCRLList ccl5(std::move(ccl4));
   ccl2 = ccl5;
   rend2 = ccl2.render_pem();
-  if (rend2 == rend3)
-    std::cout << "GOOD COMPARE #2" << std::endl;
+  if (rend2 != rend3)
+    throw Exception("BAD COMPARE #2");
 
   CertCRLList ccl6(rend3, "TEST3");
   move_contents(ccl2, ccl6);
   rend2 = ccl2.render_pem();
-  if (rend2 == rend3)
-    std::cout << "GOOD COMPARE #3" << std::endl;
+  if (rend2 != rend3)
+    throw Exception("BAD COMPARE #3");
 
   OpenSSLPKI::X509Store xs(ccl2);
 
@@ -82,15 +84,15 @@ void test_pkey()
   OpenSSLPKI::PKey pkey3(pkey_txt, "TEST2");
   std::string rend3 = pkey3.render_pem();
 
-  if (rend2 == rend3)
-    std::cout << "GOOD COMPARE #1" << std::endl;
+  if (rend2 != rend3)
+    throw Exception("BAD COMPARE #1");
 
   OpenSSLPKI::PKey pkey4(rend3, "TEST3");
   OpenSSLPKI::PKey pkey5(std::move(pkey4));
   pkey2 = pkey5;
   rend2 = pkey2.render_pem();
-  if (rend2 == rend3)
-    std::cout << "GOOD COMPARE #2" << std::endl;
+  if (rend2 != rend3)
+    throw Exception("BAD COMPARE #2");
 
   //std::cout << rend2;
 }
@@ -110,15 +112,15 @@ void test_dh()
   OpenSSLPKI::DH dh3(dh_txt);
   std::string rend3 = dh3.render_pem();
 
-  if (rend2 == rend3)
-    std::cout << "GOOD COMPARE #1" << std::endl;
+  if (rend2 != rend3)
+    throw Exception("BAD COMPARE #1");
 
   OpenSSLPKI::DH dh4(rend3);
   OpenSSLPKI::DH dh5(std::move(dh4));
   dh2 = dh5;
   rend2 = dh2.render_pem();
-  if (rend2 == rend3)
-    std::cout << "GOOD COMPARE #2" << std::endl;
+  if (rend2 != rend3)
+    throw Exception("BAD COMPARE #2");
 
   //std::cout << rend2;
 }

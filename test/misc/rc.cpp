@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go rc", "expected_output": "rc.txt"}
+
 #include <iostream>
 #include <string>
 #include <functional>

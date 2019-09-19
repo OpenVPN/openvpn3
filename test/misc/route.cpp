@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go route", "expected_output": "route.txt"}
+
 #include <iostream>
 #include <set>
 

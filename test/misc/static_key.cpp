@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go static_key"}
+
 #include <iostream>
 
 #include <openvpn/log/logsimple.hpp>

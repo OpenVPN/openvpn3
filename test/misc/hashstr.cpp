@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go hashstr"}
+
 #include <iostream>
 
 #include <openvpn/log/logsimple.hpp>
@@ -21,7 +23,10 @@ int main(int /*argc*/, char* /*argv*/[])
     DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
     HashString hash(*digest_factory, CryptoAlgs::MD5);
     hash.update(content);
-    std::cout << hash.final_hex() << std::endl;
+    const std::string actual = hash.final_hex();
+    const std::string expected = "2bea7a83bf94971af26372126ebba7e3";
+    if (actual != expected)
+      throw Exception("actual does not match expected");
   }
   catch (const std::exception& e)
     {

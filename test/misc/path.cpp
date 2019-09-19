@@ -1,3 +1,5 @@
+// TEST : {"cmd": "./go path", "expected_output": "path.txt"}
+
 #include <iostream>
 
 //#define OPENVPN_PATH_SIMULATE_WINDOWS
