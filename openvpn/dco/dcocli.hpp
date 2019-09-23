@@ -390,7 +390,7 @@ namespace openvpn {
 
 	      // non-trunk setup
 	      TUN_LINUX::tun_config(state->iface_name, *po, &rtvec, *add_cmds,
-				    *remove_cmds);
+				    *remove_cmds, false);
 
 	      // Add routes to DCO implementation
 	      impl->peer_add_routes(peer_id, rtvec);
