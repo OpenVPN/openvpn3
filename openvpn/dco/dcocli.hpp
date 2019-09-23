@@ -34,7 +34,7 @@
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/builder/capture.hpp>
-#include <openvpn/tun/linux/client/tuniproute.hpp>
+#include <openvpn/tun/linux/client/tunmethods.hpp>
 #include <openvpn/transport/dco.hpp>
 #include <openvpn/kovpn/kovpn.hpp>
 #include <openvpn/kovpn/kodev.hpp>
