@@ -603,7 +603,9 @@ namespace openvpn {
 		cli_events->add_event(connected_);
 
 		// Issue an event if compression is enabled
-		if (proto_context_options->is_comp())
+		CompressContext::Type comp_type = Base::conf().comp_ctx.type();
+		if (comp_type != CompressContext::NONE
+		    && !CompressContext::is_any_stub(comp_type))
 		{
 		  std::ostringstream msg;
 		  msg << (proto_context_options->is_comp_asym()
