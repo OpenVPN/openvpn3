@@ -26,6 +26,7 @@ set(SOURCES
         test_log.cpp
         test_comp.cpp
         test_b64.cpp
+        test_verify_x509_name.cpp
         )
 
 
