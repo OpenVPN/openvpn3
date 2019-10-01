@@ -55,6 +55,7 @@
 #include <openvpn/ssl/nscert.hpp>
 #include <openvpn/ssl/tlsver.hpp>
 #include <openvpn/ssl/tls_remote.hpp>
+#include <openvpn/ssl/verify_x509_name.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/ssllog.hpp>
@@ -405,6 +406,9 @@ namespace openvpn {
 	// parse tls-remote
 	tls_remote = opt.get_optional(relay_prefix + "tls-remote", 1, 256);
 
+	// parse verify-x509-name
+	verify_x509_name.init(opt, relay_prefix);
+
 	// Parse tls-version-min option.
 	tls_version_min = TLSVersion::parse_tls_version_min(opt, relay_prefix, maxver());
 
@@ -550,6 +554,7 @@ namespace openvpn {
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
+      VerifyX509Name verify_x509_name;   // --verify-x509-name feature
       TLSVersion::Type tls_version_min{TLSVersion::UNDEF}; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
       X509Track::ConfigSet x509_track_config;
@@ -1505,15 +1510,38 @@ namespace openvpn {
       return found;
     }
 
-
-    static std::string x509_get_subject(::X509 *cert)
+    static std::string x509_get_subject(::X509 *cert, bool new_format = false)
     {
-      unique_ptr_del<char> subject(X509_NAME_oneline(X509_get_subject_name(cert), nullptr, 0),
-				   [](char* p) { OPENSSL_free(p); });
-      if (subject)
-	return std::string(subject.get());
-      else
+      if (!new_format)
+      {
+	unique_ptr_del<char> subject(X509_NAME_oneline(X509_get_subject_name(cert), nullptr, 0),
+				     [](char* p) { OPENSSL_free(p); });
+	if (subject)
+	  return std::string(subject.get());
+	else
+	  return std::string("");
+      }
+
+      unique_ptr_del<BIO> subject_bio(BIO_new(BIO_s_mem()),
+                                      [] (BIO *p) { BIO_free(p);});
+      if (subject_bio == nullptr)
+      {
 	return std::string("");
+      }
+
+      X509_NAME_print_ex(subject_bio.get(), X509_get_subject_name(cert), 0,
+                         XN_FLAG_SEP_CPLUS_SPC
+                         | XN_FLAG_FN_SN
+                         | ASN1_STRFLGS_UTF8_CONVERT
+                         | ASN1_STRFLGS_ESC_CTRL);
+      if (BIO_eof(subject_bio.get()))
+      {
+	return std::string("");
+      }
+
+      BUF_MEM *subject_mem = nullptr;
+      BIO_get_mem_ptr(subject_bio.get(), &subject_mem);
+      return std::string(subject_mem->data, subject_mem->data + subject_mem->length);
     }
 
     static std::string x509_get_field(::X509 *cert, const int nid)
@@ -1744,6 +1772,30 @@ namespace openvpn {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
 	      preverify_ok = false;
 	    }
+
+	  // verify-x509-name
+	  const VerifyX509Name& verify_x509 = self->config->verify_x509_name;
+	  if (verify_x509.get_mode() != VerifyX509Name::VERIFY_X509_NONE)
+	  {
+	    switch (verify_x509.get_mode())
+	    {
+	      case VerifyX509Name::VERIFY_X509_SUBJECT_DN:
+		preverify_ok = verify_x509.verify(x509_get_subject(current_cert, true));
+		break;
+
+	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN:
+	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN_PREFIX:
+		preverify_ok = verify_x509.verify(x509_get_field(current_cert, NID_commonName));
+		break;
+
+	      default:
+		break;
+	    }
+	    if (!preverify_ok)
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- verify-x509-name failed");
+	    }
+	  }
 
 	  // verify tls-remote
 	  if (!self->config->tls_remote.empty())
