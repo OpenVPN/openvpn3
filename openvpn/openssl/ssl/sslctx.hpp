@@ -66,6 +66,7 @@
 #include <openvpn/openssl/pki/pkey.hpp>
 #include <openvpn/openssl/pki/dh.hpp>
 #include <openvpn/openssl/pki/x509store.hpp>
+#include <openvpn/openssl/pki/x509certinfo.hpp>
 #include <openvpn/openssl/bio/bio_memq_stream.hpp>
 #include <openvpn/openssl/ssl/sess_cache.hpp>
 
@@ -819,7 +820,7 @@ namespace openvpn {
 	    X509_digest (cert, EVP_sha1 (), authcert->issuer_fp, &md_len);
 
 	    // save the Common Name
-	    authcert->cn = x509_get_field(cert, NID_commonName);
+	    authcert->cn = OpenSSLPKI::x509_get_field(cert, NID_commonName);
 
 	    // save the leaf cert serial number
 	    const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
@@ -843,7 +844,7 @@ namespace openvpn {
 	::X509 *cert = SSL_get_peer_certificate (c_ssl);
 
 	if (cert)
-	  os << "CN=" << x509_get_field(cert, NID_commonName) << ", ";
+	  os << "CN=" << OpenSSLPKI::x509_get_field(cert, NID_commonName) << ", ";
 
 	os << SSL_get_version (c_ssl);
 
@@ -1510,125 +1511,15 @@ namespace openvpn {
       return found;
     }
 
-    static std::string x509_get_subject(::X509 *cert, bool new_format = false)
-    {
-      if (!new_format)
-      {
-	unique_ptr_del<char> subject(X509_NAME_oneline(X509_get_subject_name(cert), nullptr, 0),
-				     [](char* p) { OPENSSL_free(p); });
-	if (subject)
-	  return std::string(subject.get());
-	else
-	  return std::string("");
-      }
-
-      unique_ptr_del<BIO> subject_bio(BIO_new(BIO_s_mem()),
-                                      [] (BIO *p) { BIO_free(p);});
-      if (subject_bio == nullptr)
-      {
-	return std::string("");
-      }
-
-      X509_NAME_print_ex(subject_bio.get(), X509_get_subject_name(cert), 0,
-                         XN_FLAG_SEP_CPLUS_SPC
-                         | XN_FLAG_FN_SN
-                         | ASN1_STRFLGS_UTF8_CONVERT
-                         | ASN1_STRFLGS_ESC_CTRL);
-      if (BIO_eof(subject_bio.get()))
-      {
-	return std::string("");
-      }
-
-      BUF_MEM *subject_mem = nullptr;
-      BIO_get_mem_ptr(subject_bio.get(), &subject_mem);
-      return std::string(subject_mem->data, subject_mem->data + subject_mem->length);
-    }
-
-    static std::string x509_get_field(::X509 *cert, const int nid)
-    {
-      static const char nullc = '\0';
-      std::string ret;
-      X509_NAME *x509_name = X509_get_subject_name(cert);
-      int i = X509_NAME_get_index_by_NID(x509_name, nid, -1);
-      if (i >= 0)
-	{
-	  X509_NAME_ENTRY *ent = X509_NAME_get_entry(x509_name, i);
-	  if (ent)
-	    {
-	      ASN1_STRING *val = X509_NAME_ENTRY_get_data(ent);
-	      unsigned char *buf;
-	      buf = (unsigned char *)1; // bug in OpenSSL 0.9.6b ASN1_STRING_to_UTF8 requires this workaround
-	      const int len = ASN1_STRING_to_UTF8(&buf, val);
-	      if (len > 0)
-		{
-		  if (std::strlen((char *)buf) == len)
-		    ret = (char *)buf;
-		  OPENSSL_free(buf);
-		}
-	    }
-	}
-      else
-	{
-	  i = X509_get_ext_by_NID(cert, nid, -1);
-	  if (i >= 0)
-	    {
-	      X509_EXTENSION *ext = X509_get_ext(cert, i);
-	      if (ext)
-		{
-		  BIO *bio = BIO_new(BIO_s_mem());
-		  if (bio)
-		    {
-		      if (X509V3_EXT_print(bio, ext, 0, 0))
-			{
-			  if (BIO_write(bio, &nullc, 1) == 1)
-			    {
-			      char *str;
-			      const long len = BIO_get_mem_data(bio, &str);
-			      if (std::strlen(str) == len)
-				ret = str;
-			    }
-			}
-		      BIO_free(bio);
-		    }
-		}
-	    }
-	}
-      return ret;
-    }
-
-    static std::string x509_get_serial(::X509 *cert)
-    {
-      ASN1_INTEGER *asn1_i;
-      BIGNUM *bignum;
-      char *openssl_serial;
-
-      asn1_i = X509_get_serialNumber(cert);
-      bignum = ASN1_INTEGER_to_BN(asn1_i, NULL);
-      openssl_serial = BN_bn2dec(bignum);
-
-      const std::string ret = openssl_serial;
-
-      BN_free(bignum);
-      OPENSSL_free(openssl_serial);
-
-      return ret;
-    }
-
-    static std::string x509_get_serial_hex(::X509 *cert)
-    {
-      const ASN1_INTEGER *asn1_i = X509_get_serialNumber(cert);
-      return render_hex_sep(asn1_i->data, asn1_i->length, ':', false);
-    }
-
     static void x509_track_extract_nid(const X509Track::Type xt_type,
 				       const int nid,
 				       ::X509 *cert,
 				       const int depth,
 				       X509Track::Set& xts)
     {
-      const std::string value = x509_get_field(cert, nid);
+      const std::string value = OpenSSLPKI::x509_get_field(cert, nid);
       if (!value.empty())
-	xts.emplace_back(xt_type, depth, x509_get_field(cert, nid));
+	xts.emplace_back(xt_type, depth, OpenSSLPKI::x509_get_field(cert, nid));
     }
 
     static void x509_track_extract_from_cert(::X509 *cert,
@@ -1645,12 +1536,12 @@ namespace openvpn {
 		case X509Track::SERIAL:
 		  xts.emplace_back(X509Track::SERIAL,
 				   depth,
-				   x509_get_serial(cert));
+				   OpenSSLPKI::x509_get_serial(cert));
 		  break;
 		case X509Track::SERIAL_HEX:
 		  xts.emplace_back(X509Track::SERIAL_HEX,
 				   depth,
-				   x509_get_serial_hex(cert));
+				   OpenSSLPKI::x509_get_serial_hex(cert));
 		  break;
 		case X509Track::SHA1:
 		  {
@@ -1745,7 +1636,7 @@ namespace openvpn {
       X509* current_cert = X509_STORE_CTX_get_current_cert (ctx);
 
       // log subject
-      const std::string subject = x509_get_subject(current_cert);
+      const std::string subject = OpenSSLPKI::x509_get_subject(current_cert);
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
 	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, X509_STORE_CTX_get_error(ctx), subject));
 
@@ -1780,12 +1671,12 @@ namespace openvpn {
 	    switch (verify_x509.get_mode())
 	    {
 	      case VerifyX509Name::VERIFY_X509_SUBJECT_DN:
-		preverify_ok = verify_x509.verify(x509_get_subject(current_cert, true));
+		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_subject(current_cert, true));
 		break;
 
 	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN:
 	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN_PREFIX:
-		preverify_ok = verify_x509.verify(x509_get_field(current_cert, NID_commonName));
+		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_field(current_cert, NID_commonName));
 		break;
 
 	      default:
@@ -1801,7 +1692,7 @@ namespace openvpn {
 	  if (!self->config->tls_remote.empty())
 	    {
 	      const std::string subj = TLSRemote::sanitize_x509_name(subject);
-	      const std::string common_name = TLSRemote::sanitize_common_name(x509_get_field(current_cert, NID_commonName));
+	      const std::string common_name = TLSRemote::sanitize_common_name(OpenSSLPKI::x509_get_field(current_cert, NID_commonName));
 	      TLSRemote::log(self->config->tls_remote, subj, common_name);
 	      if (!TLSRemote::test(self->config->tls_remote, subj, common_name))
 		{
@@ -1836,7 +1727,7 @@ namespace openvpn {
 
       // log subject
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
-	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, x509_get_subject(current_cert)));
+	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, OpenSSLPKI::x509_get_subject(current_cert)));
 
       // record cert error in authcert
       if (!preverify_ok && self_ssl->authcert)
@@ -1885,7 +1776,7 @@ namespace openvpn {
 	  if (self_ssl->authcert)
 	    {
 	      // save the Common Name
-	      self_ssl->authcert->cn = x509_get_field(current_cert, NID_commonName);
+	      self_ssl->authcert->cn = OpenSSLPKI::x509_get_field(current_cert, NID_commonName);
 
 	      // save the leaf cert serial number
 	      const ASN1_INTEGER *ai = X509_get_serialNumber(current_cert);
