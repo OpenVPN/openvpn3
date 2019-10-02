@@ -27,6 +27,7 @@ set(SOURCES
         test_comp.cpp
         test_b64.cpp
         test_verify_x509_name.cpp
+        test_openssl_x509certinfo.cpp
         )
 
 
