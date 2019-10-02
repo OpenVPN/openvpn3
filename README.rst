@@ -117,6 +117,7 @@ not required for Mac builds.
 
 Build the dependencies::
 
+    $ DL=~/Downloads
     $ OSX_ONLY=1 $O3/core/scripts/mac/build-all
 
 Now build the OpenVPN 3 client executable::
@@ -125,7 +126,7 @@ Now build the OpenVPN 3 client executable::
     $ . vars/vars-osx64
     $ . vars/setpath
     $ cd test/ovpncli
-    $ MTLS=1 LZ4=1 build cli
+    $ MTLS=1 LZ4=1 ASIO=1 build cli
 
 This will build the OpenVPN 3 client library with a small client
 wrapper (``cli``).  It will also statically link in all external
