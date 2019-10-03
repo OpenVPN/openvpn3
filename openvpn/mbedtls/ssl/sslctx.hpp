@@ -49,6 +49,7 @@
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/ssllog.hpp>
+#include <openvpn/ssl/verify_x509_name.hpp>
 
 #include <openvpn/mbedtls/pki/x509cert.hpp>
 #include <openvpn/mbedtls/pki/x509certinfo.hpp>
@@ -543,6 +544,9 @@ namespace openvpn {
 	// parse tls-remote
 	tls_remote = opt.get_optional(relay_prefix + "tls-remote", 1, 256);
 
+	// parse verify-x509-name
+	verify_x509_name.init(opt, relay_prefix);
+
 	// parse tls-version-min option
 	{
 #         if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
@@ -619,6 +623,7 @@ namespace openvpn {
       std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
       std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
       std::string tls_remote;
+      VerifyX509Name verify_x509_name;  // --verify-x509-name feature
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile;
       X509Track::ConfigSet x509_track_config;
@@ -1207,6 +1212,33 @@ namespace openvpn {
 		  fail = true;
 		}
 	    }
+
+	  // verify-x509-name
+	  const VerifyX509Name& verify_x509 = self->config->verify_x509_name;
+	  if (verify_x509.get_mode() != VerifyX509Name::VERIFY_X509_NONE)
+	  {
+	    bool res = false;
+	    switch (verify_x509.get_mode())
+	    {
+	      case VerifyX509Name::VERIFY_X509_SUBJECT_DN:
+	        res = verify_x509.verify(MbedTLSPKI::x509_get_subject(cert, true));
+	        break;
+
+	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN:
+	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN_PREFIX:
+	        res = verify_x509.verify(MbedTLSPKI::x509_get_common_name(cert));
+	        break;
+
+	      default:
+	        break;
+	    }
+	    if (!res)
+	    {
+	      OPENVPN_LOG_SSL("VERIFY FAIL -- verify-x509-name failed");
+	      fail = true;
+	    }
+
+	  }
 	}
 
       if (fail)
