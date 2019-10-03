@@ -20,6 +20,16 @@ else ()
     message("lzo not found, skipping lzo compression tests")
 endif ()
 
+if (${USE_MBEDTLS})
+    set(TESTS_CRYPTO
+        test_mbedtls_x509certinfo.cpp
+       )
+else ()
+    set(TESTS_CRYPTO
+        test_openssl_x509certinfo.cpp
+        )
+endif ()
+
 set(SOURCES
         core_tests.cpp
         test_route_emulation.cpp
@@ -27,7 +37,7 @@ set(SOURCES
         test_comp.cpp
         test_b64.cpp
         test_verify_x509_name.cpp
-        test_openssl_x509certinfo.cpp
+        ${TESTS_CRYPTO}
         )
 
 
