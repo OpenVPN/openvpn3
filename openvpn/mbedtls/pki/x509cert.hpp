@@ -36,6 +36,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/mbedtls/util/error.hpp>
 
 namespace openvpn {
