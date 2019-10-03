@@ -51,6 +51,7 @@
 #include <openvpn/ssl/ssllog.hpp>
 
 #include <openvpn/mbedtls/pki/x509cert.hpp>
+#include <openvpn/mbedtls/pki/x509certinfo.hpp>
 #include <openvpn/mbedtls/pki/x509crl.hpp>
 #include <openvpn/mbedtls/pki/dh.hpp>
 #include <openvpn/mbedtls/pki/pkctx.hpp>
@@ -1140,55 +1141,6 @@ namespace openvpn {
       return false;
     }
 
-    // Try to return the x509 subject formatted like the OpenSSL X509_NAME_oneline method.
-    // Only attributes matched in the switch statements below will be rendered.  All other
-    // attributes will be ignored.
-    static std::string x509_get_subject(const mbedtls_x509_crt *cert)
-    {
-      std::string ret;
-      for (const mbedtls_x509_name *name = &cert->subject; name != nullptr; name = name->next)
-	{
-	  const char *key = nullptr;
-	  if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid))
-	    key = "CN";
-	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_COUNTRY, &name->oid))
-	    key = "C";
-	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_LOCALITY, &name->oid))
-	    key = "L";
-	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_STATE, &name->oid))
-	    key = "ST";
-	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_ORGANIZATION, &name->oid))
-	    key = "O";
-	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_ORG_UNIT, &name->oid))
-	    key = "OU";
-	  else if (!MBEDTLS_OID_CMP(MBEDTLS_OID_PKCS9_EMAIL, &name->oid))
-	    key = "emailAddress";
-
-	  // make sure that key is defined and value has no embedded nulls
-	  if (key && !string::embedded_null((const char *)name->val.p, name->val.len))
-	    ret += "/" + std::string(key) + "=" + std::string((const char *)name->val.p, name->val.len);
-	}
-      return ret;
-    }
-
-    static std::string x509_get_common_name(const mbedtls_x509_crt *cert)
-    {
-      const mbedtls_x509_name *name = &cert->subject;
-
-      // find common name
-      while (name != nullptr)
-	{
-	  if (!MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid))
-	    break;
-	  name = name->next;
-	}
-
-      if (name)
-	return std::string((const char *)name->val.p, name->val.len);
-      else
-	return std::string("");
-    }
-
     static std::string status_string(const mbedtls_x509_crt *cert, const int depth, const uint32_t *flags)
     {
       std::ostringstream os;
@@ -1246,8 +1198,8 @@ namespace openvpn {
 	  // verify tls-remote
 	  if (!self->config->tls_remote.empty())
 	    {
-	      const std::string subject = TLSRemote::sanitize_x509_name(x509_get_subject(cert));
-	      const std::string common_name = TLSRemote::sanitize_common_name(x509_get_common_name(cert));
+	      const std::string subject = TLSRemote::sanitize_x509_name(MbedTLSPKI::x509_get_subject(cert));
+	      const std::string common_name = TLSRemote::sanitize_common_name(MbedTLSPKI::x509_get_common_name(cert));
 	      TLSRemote::log(self->config->tls_remote, subject, common_name);
 	      if (!TLSRemote::test(self->config->tls_remote, subject, common_name))
 		{
@@ -1317,7 +1269,7 @@ namespace openvpn {
 	  if (ssl->authcert)
 	    {
 	      // save the Common Name
-	      ssl->authcert->cn = x509_get_common_name(cert);
+	      ssl->authcert->cn = MbedTLSPKI::x509_get_common_name(cert);
 
 	      // save the leaf cert serial number
 	      const mbedtls_x509_buf *s = &cert->serial;
