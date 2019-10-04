@@ -262,7 +262,13 @@ namespace openvpn {
       bool socket_protect(int socket, IP::Addr endpoint) override
       {
 	if (parent)
-	  return parent->socket_protect(socket, endpoint.to_string(), endpoint.is_ipv6());
+	  {
+#if defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_WIN)
+	    return WinCommandAgent::add_bypass_route(endpoint);
+#else
+	    return parent->socket_protect(socket, endpoint.to_string(), endpoint.is_ipv6());
+#endif
+	  }
 	else
 	  return true;
       }
