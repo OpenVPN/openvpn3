@@ -431,6 +431,7 @@
     <ClInclude Include="..\openvpn\tun\win\client\clientconfig.hpp" />
     <ClInclude Include="..\openvpn\tun\win\ringbuffer.hpp" />
     <ClInclude Include="..\openvpn\common\event.hpp" />
+    <ClInclude Include="..\openvpn\win\event.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test\ovpncli\cli.cpp" />
