@@ -436,12 +436,14 @@ namespace openvpn {
 	    tunconf->stop = config.stop;
 	    tunconf->wintun = config.wintun;
 	    if (config.tun_persist)
-	    {
-	      tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
-	      tunconf->tun_prop.remote_bypass = true;
-	      /* remote_list is required by remote_bypass to work */
-	      tunconf->tun_prop.remote_list = remote_list;
-	    }
+	      {
+		tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
+#ifndef OPENVPN_COMMAND_AGENT
+		/* remote_list is required by remote_bypass to work */
+		tunconf->tun_prop.remote_bypass = true;
+		tunconf->tun_prop.remote_list = remote_list;
+#endif
+	      }
 #ifdef OPENVPN_COMMAND_AGENT
 	    tunconf->tun_setup_factory = WinCommandAgent::new_agent(opt);
 #endif
