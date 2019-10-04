@@ -624,7 +624,12 @@ namespace openvpn {
 		      // server pushes compression but client has compression disabled
 		      // degrade to asymmetric compression (downlink only)
 		      comp_ctx = CompressContext(meth, true);
-		      OPENVPN_LOG("Server has pushed compressor " << comp_ctx.str() << ", but client has disabled compression, switching to asymmetric");
+		      if (!comp_ctx.is_any_stub(meth))
+		        {
+			  OPENVPN_LOG("Server has pushed compressor "
+				      << comp_ctx.str()
+			              << ", but client has disabled compression, switching to asymmetric");
+		        }
 		    }
 		}
 	    }
