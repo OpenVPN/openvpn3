@@ -807,6 +807,11 @@ namespace openvpn {
       return ret;
     }
 
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::socket_protect(int socket, std::string remote, bool ipv6)
+    {
+      return true;
+    }
+
     OPENVPN_CLIENT_EXPORT bool OpenVPNClient::parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc)
     {
       try {
@@ -977,8 +982,8 @@ namespace openvpn {
 #ifdef OPENVPN_GREMLIN
       cc.gremlin_config = state->gremlin_config;
 #endif
-#if defined(USE_TUN_BUILDER)
       cc.socket_protect = &state->socket_protect;
+#if defined(USE_TUN_BUILDER)
       cc.builder = this;
 #endif
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
