@@ -201,11 +201,22 @@ public:
 
     // special failsafe to destroy tun in case client crashes without closing it
     client_process.async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
-	if (!error && self->tun)
+	if (!error)
 	  {
-	    std::ostringstream os;
-	    self->destroy_tun(os);
-	    OPENVPN_LOG_NTNL("TUN CLOSE (failsafe)\n" << os.str());
+	    {
+	      std::ostringstream os;
+	      self->remove_cmds_bypass_hosts.execute(os);
+	      self->remove_cmds_bypass_hosts.clear();
+	      self->bypass_host.clear();
+	      OPENVPN_LOG_NTNL("remove bypass route (failsafe)\n" << os.str());
+	    }
+
+	    if (self->tun)
+	      {
+		std::ostringstream os;
+		self->destroy_tun(os);
+		OPENVPN_LOG_NTNL("TUN CLOSE (failsafe)\n" << os.str());
+	      }
 	  }
       });
   }
@@ -299,11 +310,22 @@ public:
 
     // normal event-based tun close processing
     client_destroy_event.async_wait([self=Ptr(this)](const openvpn_io::error_code& error) {
-	if (!error && self->tun)
+	if (!error)
 	  {
-	    std::ostringstream os;
-	    self->destroy_tun(os);
-	    OPENVPN_LOG_NTNL("TUN CLOSE (event)\n" << os.str());
+	    {
+	      std::ostringstream os;
+	      self->remove_cmds_bypass_hosts.execute(os);
+	      self->remove_cmds_bypass_hosts.clear();
+	      self->bypass_host.clear();
+	      OPENVPN_LOG_NTNL("remove bypass route (event)\n" << os.str());
+	    }
+
+	    if (self->tun)
+	      {
+		std::ostringstream os;
+		self->destroy_tun(os);
+		OPENVPN_LOG_NTNL("TUN CLOSE (event)\n" << os.str());
+	      }
 	  }
       });
   }
@@ -330,7 +352,27 @@ public:
     ring_buffer.reset(ring_buffer_arg);
   }
 
+  void add_bypass_route(const std::string& host, bool ipv6)
+  {
+    if (host != bypass_host)
+      {
+	bypass_host = host;
+
+	std::ostringstream os;
+	remove_cmds_bypass_hosts.execute(os);
+	remove_cmds_bypass_hosts.clear();
+
+	ActionList add_cmds;
+	TunWin::Setup::add_bypass_route(host, ipv6, add_cmds, remove_cmds_bypass_hosts);
+	add_cmds.execute(os);
+
+	OPENVPN_LOG(os.str());
+      }
+  }
+
   const MyConfig& config;
+  ActionList remove_cmds_bypass_hosts;
+  std::string bypass_host;
 
   TunWin::RingBuffer::Ptr ring_buffer;
 
@@ -381,6 +423,18 @@ public:
   }
 
 private:
+  void generate_reply(const Json::Value& jout)
+  {
+    out = buf_from_string(jout.toStyledString());
+
+    WS::Server::ContentInfo ci;
+    ci.http_status = HTTP::Status::OK;
+    ci.type = "application/json";
+    ci.length = out->size();
+    ci.keepalive = keepalive_request();
+    generate_reply_headers(ci);
+  }
+
   virtual void http_request_received() override
   {
     // alloc output buffer
@@ -396,7 +450,7 @@ private:
       // get content-type
       const std::string content_type = req.headers.get_value_trim("content-type");
 
-      if (req.method == "POST" && req.uri == "/tun-setup")
+      if (req.method == "POST")
 	{
 	  // verify correct content-type
 	  if (string::strcasecmp(content_type, "application/json"))
@@ -407,74 +461,90 @@ private:
 	  if (!root.isObject())
 	    throw Exception("json parse error: top level json object is not a dictionary");
 
-	  // get PID
-	  ULONG pid = json::get_uint_optional(root, "pid", 0);
-
-	  bool wintun = json::get_bool_optional(root, "wintun");
-
-	  // get remote event handles for tun object confirmation/destruction
-	  const std::string confirm_event_hex = json::get_string(root, "confirm_event");
-	  const std::string destroy_event_hex = json::get_string(root, "destroy_event");
-
-	  // parse JSON data into a TunBuilderCapture object
-	  TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
-	  tbc->validate();
-
-	  // destroy previous instance
-	  if (parent()->destroy_tun(os))
+	  if (req.uri == "/tun-setup")
 	    {
-	      os << "Destroyed previous TAP instance" << std::endl;
-	      ::Sleep(1000);
+	      // get PID
+	      ULONG pid = json::get_uint_optional(root, "pid", 0);
+
+	      bool wintun = json::get_bool_optional(root, "wintun");
+
+	      // get remote event handles for tun object confirmation/destruction
+	      const std::string confirm_event_hex = json::get_string(root, "confirm_event");
+	      const std::string destroy_event_hex = json::get_string(root, "destroy_event");
+
+	      // parse JSON data into a TunBuilderCapture object
+	      TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
+	      tbc->validate();
+
+	      // destroy previous instance
+	      if (parent()->destroy_tun(os))
+		{
+		  os << "Destroyed previous TAP instance" << std::endl;
+		  ::Sleep(1000);
+		}
+
+	      // pre-establish impersonation
+	      {
+		Win::NamedPipeImpersonate impersonate(client_pipe);
+
+		// remember the client process that sent the request
+		parent()->set_client_process(get_client_process(client_pipe, pid));
+
+		// save the confirm/destroy events
+		parent()->set_client_destroy_event(destroy_event_hex);
+		parent()->set_client_confirm_event(confirm_event_hex);
+	      }
+
+	      if (wintun)
+		{
+		  parent()->assign_ring_buffer(new TunWin::RingBuffer(io_context,
+					       parent()->get_client_process(),
+					       json::get_string(root, "send_ring_hmem"),
+					       json::get_string(root, "receive_ring_hmem"),
+					       json::get_string(root, "send_ring_tail_moved"),
+					       json::get_string(root, "receive_ring_tail_moved")));
+		}
+
+	      // establish the tun setup object
+	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, wintun));
+
+	      // post-establish impersonation
+	      {
+		Win::NamedPipeImpersonate impersonate(client_pipe);
+
+		// duplicate the TAP handle into the client process
+		parent()->set_remote_tap_handle_hex(tap_handle());
+	      }
+
+	      // build JSON return dictionary
+	      const std::string log_txt = string::remove_blanks(os.str());
+	      Json::Value jout(Json::objectValue);
+	      jout["log_txt"] = log_txt;
+	      jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
+	      OPENVPN_LOG_NTNL("TUN SETUP\n" << log_txt);
+
+	      generate_reply(jout);
 	    }
-
-	  // pre-establish impersonation
-	  {
-	    Win::NamedPipeImpersonate impersonate(client_pipe);
-
-	    // remember the client process that sent the request
-	    parent()->set_client_process(get_client_process(client_pipe, pid));
-
-	    // save the confirm/destroy events
-	    parent()->set_client_destroy_event(destroy_event_hex);
-	    parent()->set_client_confirm_event(confirm_event_hex);
-	  }
-
-	  if (wintun)
+	  else if (req.uri == "/add-bypass-route")
 	    {
-	      parent()->assign_ring_buffer(new TunWin::RingBuffer(io_context,
-								  parent()->get_client_process(),
-								  json::get_string(root, "send_ring_hmem"),
-								  json::get_string(root, "receive_ring_hmem"),
-								  json::get_string(root, "send_ring_tail_moved"),
-								  json::get_string(root, "receive_ring_tail_moved")));
+	      ULONG pid = json::get_uint_optional(root, "pid", 0);
+	      bool ipv6 = json::get_bool(root, "ipv6");
+	      const std::string host = json::get_string(root, "host");
+
+	      // pre-establish impersonation
+	      {
+		Win::NamedPipeImpersonate impersonate(client_pipe);
+
+		// remember the client process that sent the request
+		parent()->set_client_process(get_client_process(client_pipe, pid));
+	      }
+
+	      parent()->add_bypass_route(host, ipv6);
+
+	      Json::Value jout(Json::objectValue);
+
+	      generate_reply(jout);
 	    }
-
-	  // establish the tun setup object
-	  Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, wintun));
-
-	  // post-establish impersonation
-	  {
-	    Win::NamedPipeImpersonate impersonate(client_pipe);
-
-	    // duplicate the TAP handle into the client process
-	    parent()->set_remote_tap_handle_hex(tap_handle());
-	  }
-
-	  // build JSON return dictionary
-	  const std::string log_txt = string::remove_blanks(os.str());
-	  Json::Value jout(Json::objectValue);
-	  jout["log_txt"] = log_txt;
-	  jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
-	  OPENVPN_LOG_NTNL("TUN SETUP\n" << log_txt);
-
-	  out = buf_from_string(jout.toStyledString());
-
-	  WS::Server::ContentInfo ci;
-	  ci.http_status = HTTP::Status::OK;
-	  ci.type = "application/json";
-	  ci.length = out->size();
-	  ci.keepalive = keepalive_request();
-	  generate_reply_headers(ci);
 	}
       else
 	{
