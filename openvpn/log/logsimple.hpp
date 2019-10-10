@@ -33,9 +33,9 @@
 #define OPENVPN_LOG(args) OPENVPN_LOG_STREAM << args << std::endl
 
 // like OPENVPN_LOG but no trailing newline
-#define OPENVPN_LOG_NTNL(args) OPENVPN_LOG_STREAM << args
+#define OPENVPN_LOG_NTNL(args) OPENVPN_LOG_STREAM << args << std::flush
 
-#define OPENVPN_LOG_STRING(str) OPENVPN_LOG_STREAM << (str)
+#define OPENVPN_LOG_STRING(str) OPENVPN_LOG_STREAM << (str) << std::flush
 
 // no-op constructs normally used with logthread.hpp
 namespace openvpn {
