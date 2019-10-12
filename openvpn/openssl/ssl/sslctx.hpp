@@ -100,104 +100,104 @@ namespace openvpn {
     public:
       typedef RCPtr<Config> Ptr;
 
-      virtual SSLFactoryAPI::Ptr new_factory()
+      SSLFactoryAPI::Ptr new_factory() override
       {
 	return SSLFactoryAPI::Ptr(new OpenSSLContext(this));
       }
 
-      virtual void set_mode(const Mode& mode_arg)
+      void set_mode(const Mode& mode_arg) override
       {
 	mode = mode_arg;
       }
 
-      virtual const Mode& get_mode() const
+      const Mode& get_mode() const override
       {
 	return mode;
       }
 
       // if this callback is defined, no private key needs to be loaded
-      virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg)
+      void set_external_pki_callback(ExternalPKIBase* external_pki_arg) override
       {
 	external_pki = external_pki_arg;
       }
 
       // server side
-      virtual void set_session_ticket_handler(TLSSessionTicketBase* session_ticket_handler_arg)
+      void set_session_ticket_handler(TLSSessionTicketBase* session_ticket_handler_arg) override
       {
 	session_ticket_handler = session_ticket_handler_arg;
       }
 
       // client side
-      virtual void set_client_session_tickets(const bool v)
+      void set_client_session_tickets(const bool v) override
       {
 	client_session_tickets = v;
       }
 
       // server side
-      virtual void set_sni_handler(SNI::HandlerBase* sni_handler_arg)
+      void set_sni_handler(SNI::HandlerBase* sni_handler_arg) override
       {
 	sni_handler = sni_handler_arg;
       }
 
       // client side
-      virtual void set_sni_name(const std::string& sni_name_arg)
+      void set_sni_name(const std::string& sni_name_arg) override
       {
 	sni_name = sni_name_arg;
       }
 
-      virtual void set_private_key_password(const std::string& pwd)
+      void set_private_key_password(const std::string& pwd) override
       {
 	pkey.set_private_key_password(pwd);
       }
 
-      virtual void load_ca(const std::string& ca_txt, bool strict)
+      void load_ca(const std::string& ca_txt, bool strict) override
       {
 	ca.parse_pem(ca_txt, "ca");
       }
 
-      virtual void load_crl(const std::string& crl_txt)
+      void load_crl(const std::string& crl_txt) override
       {
 	ca.parse_pem(crl_txt, "crl");
       }
 
-      virtual void load_cert(const std::string& cert_txt)
+      void load_cert(const std::string& cert_txt) override
       {
 	cert.parse_pem(cert_txt, "cert");
       }
 
-      virtual void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt)
+      void load_cert(const std::string& cert_txt, const std::string& extra_certs_txt) override
       {
 	load_cert(cert_txt);
 	if (!extra_certs_txt.empty())
 	  CertCRLList::from_string(extra_certs_txt, "extra-certs", &extra_certs, nullptr);
       }
 
-      virtual void load_private_key(const std::string& key_txt)
+      void load_private_key(const std::string& key_txt) override
       {
 	pkey.parse_pem(key_txt, "private key");
       }
 
-      virtual void load_dh(const std::string& dh_txt)
+      void load_dh(const std::string& dh_txt) override
       {
 	dh.parse_pem(dh_txt);
       }
 
-      virtual std::string extract_ca() const
+      std::string extract_ca() const override
       {
 	return ca.certs.render_pem();
       }
 
-      virtual std::string extract_crl() const
+      std::string extract_crl() const override
       {
 	return ca.crls.render_pem();
       }
 
-      virtual std::string extract_cert() const
+      std::string extract_cert() const override
       {
 	return cert.render_pem();
       }
 
-      virtual std::vector<std::string> extract_extra_certs() const
+      std::vector<std::string> extract_extra_certs() const override
       {
 	std::vector<std::string> ret;
 
@@ -207,131 +207,131 @@ namespace openvpn {
 	return ret;
       }
 
-      virtual std::string extract_private_key() const
+      std::string extract_private_key() const override
       {
 	return pkey.render_pem();
       }
 
-      virtual std::string extract_dh() const
+      std::string extract_dh() const override
       {
 	return dh.render_pem();
       }
 
-      virtual PKType::Type private_key_type() const
+      PKType::Type private_key_type() const override
       {
 	if (!pkey.defined())
 	  return PKType::PK_NONE;
 	return pkey.key_type();
       }
 
-      virtual size_t private_key_length() const
+      size_t private_key_length() const override
       {
 	return pkey.key_length();
       }
 
-      virtual void set_frame(const Frame::Ptr& frame_arg)
+      void set_frame(const Frame::Ptr& frame_arg) override
       {
 	frame = frame_arg;
       }
 
-      virtual void set_debug_level(const int debug_level)
+      void set_debug_level(const int debug_level) override
       {
 	ssl_debug_level = debug_level;
       }
 
-      virtual void set_flags(const unsigned int flags_arg)
+      void set_flags(const unsigned int flags_arg) override
       {
 	flags = flags_arg;
       }
 
-      virtual void set_ns_cert_type(const NSCert::Type ns_cert_type_arg)
+      void set_ns_cert_type(const NSCert::Type ns_cert_type_arg) override
       {
 	ns_cert_type = ns_cert_type_arg;
       }
 
-      virtual void set_remote_cert_tls(const KUParse::TLSWebType wt)
+      void set_remote_cert_tls(const KUParse::TLSWebType wt) override
       {
 	KUParse::remote_cert_tls(wt, ku, eku);
       }
 
-      virtual void set_tls_remote(const std::string& tls_remote_arg)
+      void set_tls_remote(const std::string& tls_remote_arg) override
       {
 	tls_remote = tls_remote_arg;
       }
 
-      virtual void set_tls_version_min(const TLSVersion::Type tvm)
+      void set_tls_version_min(const TLSVersion::Type tvm) override
       {
 	tls_version_min = tvm;
       }
 
-      virtual void set_tls_version_min_override(const std::string& override)
+      void set_tls_version_min_override(const std::string& override) override
       {
 	TLSVersion::apply_override(tls_version_min, override);
       }
 
-      virtual void set_tls_cert_profile(const TLSCertProfile::Type type)
+      void set_tls_cert_profile(const TLSCertProfile::Type type) override
       {
 	tls_cert_profile = type;
       }
 
-      virtual void set_tls_cert_profile_override(const std::string& override)
+      void set_tls_cert_profile_override(const std::string& override) override
       {
 	TLSCertProfile::apply_override(tls_cert_profile, override);
       }
 
-      virtual void set_local_cert_enabled(const bool v)
+      void set_local_cert_enabled(const bool v) override
       {
 	local_cert_enabled = v;
       }
 
-      virtual void set_force_aes_cbc_ciphersuites(const bool v)
+      void set_force_aes_cbc_ciphersuites(const bool v) override
       {
 	force_aes_cbc_ciphersuites = v;
       }
 
-      virtual void set_x509_track(X509Track::ConfigSet x509_track_config_arg)
+      void set_x509_track(X509Track::ConfigSet x509_track_config_arg) override
       {
 	x509_track_config = std::move(x509_track_config_arg);
       }
 
-      virtual void set_rng(const RandomAPI::Ptr& rng_arg)
+      void set_rng(const RandomAPI::Ptr& rng_arg) override
       {
 	// Not implemented (other than assert_crypto check)
 	// because OpenSSL is hardcoded to use its own RNG.
 	rng_arg->assert_crypto();
       }
 
-      virtual std::string validate_cert(const std::string& cert_txt) const
+      std::string validate_cert(const std::string& cert_txt) const override
       {
 	OpenSSLPKI::X509 cert(cert_txt, "cert");
 	return cert.render_pem();
       }
 
-      virtual std::string validate_cert_list(const std::string& certs_txt) const
+      std::string validate_cert_list(const std::string& certs_txt) const override
       {
 	CertCRLList certs(certs_txt, "cert list");
 	return certs.render_pem();
       }
 
-      virtual std::string validate_private_key(const std::string& key_txt) const
+      std::string validate_private_key(const std::string& key_txt) const override
       {
 	OpenSSLPKI::PKey pkey(key_txt, "private key");
 	return pkey.render_pem();
       }
 
-      virtual std::string validate_dh(const std::string& dh_txt) const
+      std::string validate_dh(const std::string& dh_txt) const override
       {
 	OpenSSLPKI::DH dh(dh_txt);
 	return dh.render_pem();
       }
 
-      virtual std::string validate_crl(const std::string& crl_txt) const
+      std::string validate_crl(const std::string& crl_txt) const override
       {
 	OpenSSLPKI::CRL crl(crl_txt);
 	return crl.render_pem();
       }
 
-      virtual void load(const OptionList& opt, const unsigned int lflags)
+      void load(const OptionList& opt, const unsigned int lflags) override
       {
 	// client/server
 	if (lflags & LF_PARSE_MODE)
@@ -417,7 +417,7 @@ namespace openvpn {
       }
 
 #ifdef HAVE_JSON
-      virtual SSLConfigAPI::Ptr json_override(const Json::Value& root, const bool load_cert_key) const override
+      SSLConfigAPI::Ptr json_override(const Json::Value& root, const bool load_cert_key) const override
       {
 	static const char title[] = "json_override";
 
