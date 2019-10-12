@@ -26,12 +26,16 @@
 // requesting them not to be declared with OPENVPN_EXTERN
 
 #include <asio.hpp>
-#include <openvpn/log/logbasesimple.hpp>
+#include "test_helper.hpp"
 #include <openvpn/ssl/sslchoose.hpp>
 
+openvpn::LogOutputCollector *testLog;
 
 int main (int argc, char **argv)
 {
+  testLog = new openvpn::LogOutputCollector();
   ::testing::InitGoogleTest (&argc, argv);
-  return RUN_ALL_TESTS ();
+  auto ret = RUN_ALL_TESTS ();
+  delete testLog;
+  return ret;
 }

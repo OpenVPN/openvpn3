@@ -32,5 +32,5 @@
  * See also https://stackoverflow.com/questions/9750344/boostasio-winsock-and-winsock-2-compatibility-issue
  */
 #include <asio.hpp>
-#include <openvpn/log/logbasesimple.hpp>
+#include "test_helper.hpp"
 #include <gtest/gtest.h>
