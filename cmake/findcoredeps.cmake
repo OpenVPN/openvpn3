@@ -17,15 +17,17 @@ endif ()
 
 # Include our DEP_DIR in path used to find libraries
 
+if (APPLE)
+    set(OPENVPN_PLAT osx)
+elseif (WIN32)
+    set(OPENVPN_PLAT amd64)
+else ()
+    set(OPENVPN_PLAT linux)
+endif ()
+
 
 function(add_core_dependencies target)
-    if (APPLE)
-        set(PLAT osx)
-    elseif (WIN32)
-        set(PLAT amd64)
-    else ()
-        set(PLAT linux)
-    endif ()
+    set(PLAT ${OPENVPN_PLAT})
 
     set(CORE_INCLUDES
             ${CORE_DIR}
