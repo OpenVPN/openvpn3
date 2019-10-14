@@ -23,6 +23,7 @@
 #include <openvpn/log/logbase.hpp>
 #include <iostream>
 #include <gtest/gtest.h>
+#include <fstream>
 
 namespace openvpn {
   class LogOutputCollector : public LogBase
@@ -126,4 +127,25 @@ inline void override_logOutput(bool doLogOutput, void (* test_func)())
   testLog->setPrintOutput(doLogOutput);
   test_func();
   testLog->setPrintOutput(previousOutputState);
+}
+
+/**
+ * Reads the file with the expected output and returns it as a
+ * string. This function delibrately does not include the
+ * ASSERT_EQ call since otherwise gtest will report a the
+ * assert failure in this file rather than in the right place
+ * @param filename
+ * @return
+ */
+inline std::string getExpectedOutput(const std::string& filename)
+{
+  auto fullpath = UNITTEST_SOURCE_DIR "/output/" + filename;
+  std::ifstream f(fullpath);
+  if (!f.good())
+    {
+      throw std::runtime_error("Error opening file " + fullpath);
+    }
+  std::string expected_output((std::istreambuf_iterator<char>(f)),
+			      std::istreambuf_iterator<char>());
+  return expected_output;
 }
