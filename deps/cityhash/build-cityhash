@@ -33,11 +33,11 @@ CSUM=${CITYHASH_CSUM}
 
 download
 
-CC=cc
+CXX=c++
 LD=ld
 AR=ar
 RANLIB=ranlib
-[ "$GCC_CMD" ] && CC=$GCC_CMD
+[ "$GPP_CMD" ] && CXX=$GPP_CMD
 [ "$LD_CMD" ] && LD=$LD_CMD
 [ "$AR_CMD" ] && AR=$AR_CMD
 [ "$RANLIB_CMD" ] && RANLIB=$RANLIB_CMD
@@ -55,7 +55,7 @@ cd cityhash-$CITYHASH_VERSION
 CMD=./configure
 echo $CMD
 $CMD
-CMD="$CC $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -I. -Isrc -c src/city.cc"
+CMD="$CXX $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -I. -Isrc -c src/city.cc"
 echo $CMD
 $CMD
 $AR rc $DIST/lib/libcityhash.a city.o
