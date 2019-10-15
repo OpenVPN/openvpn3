@@ -24,6 +24,7 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include <fstream>
+#include <regex>
 
 namespace openvpn {
   class LogOutputCollector : public LogBase
@@ -148,4 +149,57 @@ inline std::string getExpectedOutput(const std::string& filename)
   std::string expected_output((std::istreambuf_iterator<char>(f)),
 			      std::istreambuf_iterator<char>());
   return expected_output;
+}
+
+#ifdef WIN32
+#include "Windows.h"
+
+inline std::string getTempDirPath(const std::string& fn)
+{
+  char buf [MAX_PATH];
+
+  EXPECT_NE(GetTempPathA(MAX_PATH, buf), 0);
+  return std::string(buf) + fn;
+}
+#else
+
+inline std::string getTempDirPath(const std::string& fn)
+{
+  return "/tmp/" + fn;
+}
+
+#endif
+
+/**
+ * Returns a sorted string join with the delimiter
+ * This function modifes the input
+ * @param r the array to join
+ * @param delim the delimiter to use
+ * @return A string joined by delim from the sorted vector r
+ */
+inline std::string getSortedJoinedString(std::vector<std::string>& r, const std::string& delim = "|")
+{
+  std::sort(r.begin(), r.end());
+  std::stringstream s;
+  std::copy(r.begin(), r.end(), std::ostream_iterator<std::string>(s, delim.c_str()));
+  return s.str();
+}
+
+/**
+ * Splits a string into lines and returns them in a sorted output string
+ */
+inline std::string getSortedString(const std::string& output, const std::string& regex_split = "\\n")
+{
+  static const std::regex re{regex_split};
+  std::vector<std::string> lines{
+    std::sregex_token_iterator(output.begin(), output.end(), re, -1),
+    std::sregex_token_iterator()
+  };
+  // sort lines
+  std::sort(lines.begin(), lines.end());
+
+  // join strings with \n
+  std::stringstream s;
+  std::copy(lines.begin(), lines.end(), std::ostream_iterator<std::string>(s, "\n"));
+  return s.str();
 }
