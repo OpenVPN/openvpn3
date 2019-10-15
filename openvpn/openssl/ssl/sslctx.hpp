@@ -416,7 +416,8 @@ namespace openvpn {
 	}
       }
 
-#ifdef HAVE_JSON
+#ifdef OPENVPN_JSON_INTERNAL
+      // The get_string_ref methods require internal JSON and do not work with jsoncpp
       virtual SSLConfigAPI::Ptr json_override(const Json::Value& root, const bool load_cert_key) const override
       {
 	static const char title[] = "json_override";
