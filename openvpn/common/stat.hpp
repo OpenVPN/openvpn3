@@ -54,7 +54,11 @@ namespace openvpn {
     typedef std::uint64_t T;
     struct stat s;
     if (::stat(filename.c_str(), &s) == 0)
+#if defined(__APPLE__)
+      return T(s.st_mtimespec.tv_sec) * T(1000000000) + T(s.st_mtimespec.tv_nsec);
+#else
       return T(s.st_mtim.tv_sec) * T(1000000000) + T(s.st_mtim.tv_nsec);
+#endif
     else
       return 0;
   }
