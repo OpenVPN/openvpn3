@@ -21,6 +21,8 @@
 #pragma once
 
 #include <openvpn/log/logbase.hpp>
+#include <openvpn/random/mtrandapi.hpp>
+
 #include <iostream>
 #include <gtest/gtest.h>
 #include <fstream>
@@ -177,7 +179,8 @@ inline std::string getTempDirPath(const std::string& fn)
  * @param delim the delimiter to use
  * @return A string joined by delim from the sorted vector r
  */
-inline std::string getSortedJoinedString(std::vector<std::string>& r, const std::string& delim = "|")
+template<class T>
+inline std::string getSortedJoinedString(std::vector<T>& r, const std::string& delim = "|")
 {
   std::sort(r.begin(), r.end());
   std::stringstream s;
@@ -203,3 +206,21 @@ inline std::string getSortedString(const std::string& output, const std::string&
   std::copy(lines.begin(), lines.end(), std::ostream_iterator<std::string>(s, "\n"));
   return s.str();
 }
+
+/**
+ * Predictable RNG that claims to be secure to be used in reproducable unit
+ * tests
+ */
+class FakeSecureMTRand : public openvpn::MTRand
+{
+public:
+  explicit FakeSecureMTRand(const rand_type::result_type seed) : openvpn::MTRand(seed)
+  {
+
+  }
+
+  bool is_crypto() const override
+  {
+    return true;
+  }
+};
