@@ -22,6 +22,12 @@
 #ifndef OPENVPN_COMMON_TEMPFILE_H
 #define OPENVPN_COMMON_TEMPFILE_H
 
+#include <openvpn/common/platform.hpp>
+
+#if defined(OPENVPN_PLATFORM_WIN)
+#error temporary file methods not supported on Windows
+#endif
+
 #include <stdlib.h>
 #include <errno.h>
 #include <cstring>     // for memcpy
