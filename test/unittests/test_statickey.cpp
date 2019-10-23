@@ -1,8 +1,6 @@
-// TEST : {"cmd": "./go static_key"}
-
+#include "test_common.h"
 #include <iostream>
 
-#include <openvpn/log/logsimple.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
@@ -31,18 +29,17 @@ const char key_text[] =
   "f7591ead4710bd0e74c0b37e37c84374\n"
   "-----END OpenVPN Static key V1-----\n";
 
-void test1()
+TEST(misc, statickey1)
 {
-  std::cout << "======= TEST1 =======" << std::endl;
+  // This test only tests if loading a static key works
   OpenVPNStaticKey sk;
   sk.parse(std::string(key_text));
   std::string rend = sk.render();
-  std::cout << rend;
 }
 
-void test2(RandomAPI& rng)
+TEST(misc, statickey2)
 {
-  std::cout << "======= TEST2 =======" << std::endl;
+  DevURand rng;
   const size_t key_len = 16;
   StaticKey sk1;
   sk1.init_from_rng(rng, key_len);
@@ -50,24 +47,5 @@ void test2(RandomAPI& rng)
   StaticKey sk2;
   sk2.parse_from_base64(s1, key_len);
   const std::string s2 = sk2.render_to_base64();
-  std::cout << s1 << std::endl;
-  if (s1 != s2)
-    throw Exception("test2 failed");
-}
-
-int main(int /*argc*/, char* /*argv*/[])
-{
-  base64_init_static();
-  try {
-    DevURand rng;
-    test1();
-    test2(rng);
-  }
-  catch (const std::exception& e)
-    {
-      std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
-    }
-  base64_uninit_static();
-  return 0;
+  ASSERT_EQ(s1, s2);
 }
