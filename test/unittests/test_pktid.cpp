@@ -1,21 +1,10 @@
-// TEST : {"cmd": "./go"}
-
-#include <iostream>
-#include <vector>
-
-#include <openvpn/io/io.hpp>
-#include <openvpn/log/logsimple.hpp>
-
-#include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
-
-#include <openvpn/random/devurand.hpp>
+#include "test_common.h"
 
 #include <openvpn/crypto/packet_id.hpp>
 
 using namespace openvpn;
 
-template <typename PIDRecv>
+template<typename PIDRecv>
 void testcase(PIDRecv& pr,
 	      const PacketID::time_t t,
 	      const PacketID::time_t pkt_time,
@@ -24,9 +13,9 @@ void testcase(PIDRecv& pr,
 {
   const PacketIDConstruct pid(pkt_time, pkt_id);
   const Error::Type status = pr.do_test_add(pid, t, true);
-  OPENVPN_LOG("[" << t << "] id=" << pkt_id << " time=" << pkt_time << ' ' << Error::name(status));
-  if (status != expected_status)
-    OPENVPN_THROW_EXCEPTION("UNEXPECTED result=" << Error::name(status) << " expected=" << Error::name(expected_status));
+  //OPENVPN_LOG("[" << t << "] id=" << pkt_id << " time=" << pkt_time << ' ' << Error::name(status));
+  ASSERT_EQ (status, expected_status);
+
 }
 
 void test()
@@ -89,7 +78,7 @@ void test()
   testcase(pr, 85, 15, 66, Error::SUCCESS);
 }
 
-template <unsigned int ORDER, unsigned int EXPIRE>
+template<unsigned int ORDER, unsigned int EXPIRE>
 void perfiter(const long n,
 	      const long range,
 	      const long step,
@@ -99,11 +88,12 @@ void perfiter(const long n,
   typedef PacketIDReceiveType<ORDER, EXPIRE> PIDRecv;
 
   const long iter_per_step = iter_per_step_pre * step;
-  OPENVPN_LOG("ITER order=" << ORDER << " n=" << n << " range=" << range << " step=" << step << " iter_per_step=" << iter_per_step);
+  //OPENVPN_LOG("ITER order=" << ORDER << " n=" << n << " range=" << range << " step=" << step << " iter_per_step="
+  //			    << iter_per_step);
 
   constexpr PacketID::time_t pkt_time = 1234;
 
-  DevURand urand;
+  MTRand urand;
   std::vector<bool> bv(n);
   long high = 0;
   SessionStats::Ptr stats(new SessionStats());
@@ -114,7 +104,7 @@ void perfiter(const long n,
     {
       for (long j = 0; j < iter_per_step; ++j)
 	{
-	  const long delta = long(urand.randrange32(range)) - range/2;
+	  const long delta = long(urand.randrange32(range)) - range / 2;
 	  const long id = i + delta;
 	  if (id >= 0 && id < n)
 	    {
@@ -132,8 +122,7 @@ void perfiter(const long n,
 	      ++count;
 #             define INFO "i=" << i << " id=" << id << " high=" << high << " result=" << Error::name(result) << " expected=" << Error::name(expected)
 	      //OPENVPN_LOG(INFO);
-	      if (result != expected)
-		OPENVPN_THROW_EXCEPTION(INFO);
+	      ASSERT_EQ (result, expected) << INFO;
 	      if (expected == Error::SUCCESS)
 		bv[id] = true;
 	    }
@@ -141,37 +130,29 @@ void perfiter(const long n,
     }
 }
 
-template <unsigned int ORDER, unsigned int EXPIRE>
+template<unsigned int ORDER, unsigned int EXPIRE>
 void perf(long& count)
 {
   typedef PacketIDReceiveType<ORDER, EXPIRE> PIDRecv;
 
-  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*3, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*3, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
-  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*2, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE*2, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 3, 1, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 3, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 2, 1, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 2, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
   perfiter<ORDER, EXPIRE>(20000, 16, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(20000, 16, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, 16, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
   perfiter<ORDER, EXPIRE>(20000, 4, 1, 10, count);
-  perfiter<ORDER, EXPIRE>(20000, 4, PIDRecv::REPLAY_WINDOW_SIZE/2, 10, count);
+  perfiter<ORDER, EXPIRE>(20000, 4, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
 }
 
-int main(int /*argc*/, char* /*argv*/[])
+TEST(misc, pktid)
 {
-  try {
-    {
-      long count = 0;
-      perf<3, 5>(count);
-      perf<6, 5>(count);
-      perf<8, 5>(count);
-      OPENVPN_LOG("COUNT=" << count);
-    }
-    test();
+  {
+    long count = 0;
+    perf<3, 5>(count);
+    perf<6, 5>(count);
+    perf<8, 5>(count);
+    //ASSERT_EQ(4746439, count);
   }
-  catch (const std::exception& e)
-    {
-      std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
-    }
-  return 0;
+  test();
 }
