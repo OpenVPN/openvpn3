@@ -1,15 +1,8 @@
-// TEST : {"cmd": "./go rc", "expected_output": "rc.txt"}
+#include "test_common.h"
 
 #include <iostream>
 #include <string>
 #include <functional>
-
-#define OPENVPN_RC_NOTIFY
-
-#include <openvpn/log/logsimple.hpp>
-#include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
-
 #include <openvpn/common/rc.hpp>
 
 using namespace openvpn;
@@ -35,7 +28,7 @@ public:
 
   void go(const char *title)
   {
-    OPENVPN_LOG(title << ": " << name);    
+    OPENVPN_LOG(title << ": " << name);
   }
 
   std::string name;
@@ -57,9 +50,36 @@ public:
   std::string parent_name;
 };
 
+const char* expected_output = "*** TEST1\n"
+                              "Test1()\n"
+                              "~Test1()\n"
+                              "*** TEST2\n"
+                              "Test2()\n"
+                              "t1a: Test2\n"
+                              "t2a: Test2\n"
+                              "t1b: Test2\n"
+                              "t2b: Test2\n"
+                              "tz: Test2\n"
+                              "w1z=3 w2z=3\n"
+                              "~Test2()\n"
+                              "*** TEST3\n"
+                              "Test3()\n"
+                              "N#3: Test3\n"
+                              "NOTIFY #3\n"
+                              "N#2: Test3\n"
+                              "NOTIFY #2\n"
+                              "N#1: Test3\n"
+                              "NOTIFY #1\n"
+                              "~Test3()\n"
+                              "*** TEST4\n"
+                              "Test4()\n"
+                              "parent of Test4\n"
+                              "~Test4()\n";
+
 template <typename Test>
 void test()
 {
+  testLog->startCollecting();
   typedef TestParentType<typename Test::Base> TestParent;
 
   {
@@ -99,23 +119,18 @@ void test()
       tz->go("tz");
 
       tz = w1.lock();
-      if (tz)
-	OPENVPN_LOG("BUG ALERT #1");
+      ASSERT_FALSE (tz) << "BUG ALERT #1";
 
       z.reset();
       tz = z.lock();
-      if (tz)
-	OPENVPN_LOG("BUG ALERT #2");
+      ASSERT_FALSE (tz) << "BUG ALERT #2";
 
       OPENVPN_LOG("w1z=" << w1z.use_count() << " w2z=" << w2z.use_count());
     }
 
     typename Test::Ptr x = w1z.lock();
     typename Test::Ptr y = w2z.lock();
-    if (x || y || !w1z.expired() || !w2z.expired())
-      OPENVPN_LOG("BUG ALERT #3");
-    else
-      OPENVPN_LOG("OK!");
+    ASSERT_FALSE (x || y || !w1z.expired() || !w2z.expired()) << "BUG ALERT #3";
     w1z = w2z;
   }
   {
@@ -144,20 +159,13 @@ void test()
     typename TestParent::Ptr t3 = t2.template dynamic_pointer_cast<TestParent>();
     OPENVPN_LOG(t3->parent_name);
   }
+  ASSERT_EQ(expected_output, testLog->stopCollecting());
 }
 
-int main(int /*argc*/, char* /*argv*/[])
-{
-  try {
-    test<TestType<RCWeak<thread_unsafe_refcount>>>();
-    OPENVPN_LOG("----------------------------------------------");
-    test<TestType<RCWeak<thread_safe_refcount>>>();
-    OPENVPN_LOG("----------------------------------------------");
-  }
-  catch (const std::exception& e)
-    {
-      std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
-    }
-  return 0;
+TEST(misc, RCthreadUnsafe) {
+  test<TestType<RCWeak<thread_unsafe_refcount>>>();
+}
+
+TEST(misc, RCthreadSafe) {
+  test<TestType<RCWeak<thread_safe_refcount>>>();
 }
