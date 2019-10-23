@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-PROF=auto ASIO=1 ZLIB=1 LZ4=1 CITY=1 $O3/core/scripts/build pkitest
-./pkitest
