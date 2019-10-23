@@ -3,8 +3,8 @@
 #include <iostream>
 #include <cstring>
 
-#include <openvpn/random/devurand.hpp>
 #include <openvpn/openssl/util/tokenencrypt.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
 
 using namespace openvpn;
 
@@ -26,7 +26,7 @@ static void tryit(RandomAPI& rng, TokenEncryptDecrypt& encdec)
 
 TEST(misc, tokenEncrypt)
 {
-  RandomAPI::Ptr rng(new DevURand());
+  RandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
   const TokenEncrypt::Key key(*rng);
   TokenEncryptDecrypt encdec(key);
 

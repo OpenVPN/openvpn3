@@ -2,10 +2,9 @@
 #include <iostream>
 
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
 
 #include <openvpn/crypto/static_key.hpp>
-#include <openvpn/random/devurand.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
 
 using namespace openvpn;
 
@@ -39,10 +38,10 @@ TEST(misc, statickey1)
 
 TEST(misc, statickey2)
 {
-  DevURand rng;
+  RandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
   const size_t key_len = 16;
   StaticKey sk1;
-  sk1.init_from_rng(rng, key_len);
+  sk1.init_from_rng(*rng, key_len);
   const std::string s1 = sk1.render_to_base64();
   StaticKey sk2;
   sk2.parse_from_base64(s1, key_len);

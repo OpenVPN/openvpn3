@@ -2,12 +2,10 @@
 #include "test_common.h"
 
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
 
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/ip/csum.hpp>
 #include <openvpn/random/mtrandapi.hpp>
-#include <openvpn/random/devurand.hpp>
 
 using namespace openvpn;
 
