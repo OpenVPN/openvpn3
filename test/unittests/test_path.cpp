@@ -1,56 +1,54 @@
-// TEST : {"cmd": "./go path", "expected_output": "path.txt"}
+#include "test_common.h"
 
 #include <iostream>
 
-//#define OPENVPN_PATH_SIMULATE_WINDOWS
-
-#include <openvpn/log/logsimple.hpp>
-#include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
 #include <openvpn/common/path.hpp>
 
 using namespace openvpn;
 
-void basename(const std::string& path)
+// Ugly hack
+static std::stringstream out;
+
+void test_basename(const std::string& path)
 {
   const std::string res = path::basename(path);
-  std::cout << "basename('" << path << "') = '" << res << "'" << std::endl;
+  out << "basename('" << path << "') = '" << res << "'" << std::endl;
 }
 
 void dirname(const std::string& path)
 {
   const std::string res = path::dirname(path);
-  std::cout << "dirname('" << path << "') = '" << res << "'" << std::endl;
+  out << "dirname('" << path << "') = '" << res << "'" << std::endl;
 }
 
 void ext(const std::string& path)
 {
   const std::string res = path::ext(path);
-  std::cout << "ext('" << path << "') = '" << res << "'" << std::endl;
+  out << "ext('" << path << "') = '" << res << "'" << std::endl;
 }
 
 void is_flat(const std::string& path)
 {
   const bool res = path::is_flat(path);
-  std::cout << "is_flat('" << path << "') = " << res << std::endl;
+  out << "is_flat('" << path << "') = " << res << std::endl;
 }
 
 void join(const std::string& p1, const std::string& p2)
 {
   const std::string res = path::join(p1, p2);
-  std::cout << "join('" << p1 << "', '" << p2 << "') = '" << res << "'" << std::endl;
+  out << "join('" << p1 << "', '" << p2 << "') = '" << res << "'" << std::endl;
 }
 
 void join3(const std::string& p1, const std::string& p2, const std::string& p3)
 {
   const std::string res = path::join(p1, p2, p3);
-  std::cout << "join('" << p1 << "', '" << p2 << "', '" << p3 << "') = '" << res << "'" << std::endl;
+  out << "join('" << p1 << "', '" << p2 << "', '" << p3 << "') = '" << res << "'" << std::endl;
 }
 
 void join4(const std::string& p1, const std::string& p2, const std::string& p3, const std::string& p4)
 {
   const std::string res = path::join(p1, p2, p3, p4);
-  std::cout << "join('" << p1 << "', '" << p2 << "', '" << p3 << "', '" << p4 << "') = '" << res << "'" << std::endl;
+  out << "join('" << p1 << "', '" << p2 << "', '" << p3 << "', '" << p4 << "') = '" << res << "'" << std::endl;
 }
 
 void splitjoin(const std::string& p1)
@@ -58,21 +56,21 @@ void splitjoin(const std::string& p1)
   const std::string d = path::dirname(p1);
   const std::string b = path::basename(p1);
   const std::string p2 = path::join(d, b);
-  std::cout << "splitjoin p1='" << p1 << "' dir='" << d << "' bn='" << b << "' p2='" << p2 << "'" << std::endl;
+  out << "splitjoin p1='" << p1 << "' dir='" << d << "' bn='" << b << "' p2='" << p2 << "'" << std::endl;
 }
 
-void test1()
+TEST(path, test1)
 {
-  OPENVPN_LOG("======= TEST1 =======");
-
+  out.clear();
+  out.str("");
   // basename
-  basename("");
-  basename("/");
-  basename("/foo");
-  basename("/foo/bar");
-  basename("foo/bar/boo");
-  basename("foo/bar/");
-  basename("foo\\bar\\boo");
+  test_basename("");
+  test_basename("/");
+  test_basename("/foo");
+  test_basename("/foo/bar");
+  test_basename("foo/bar/boo");
+  test_basename("foo/bar/");
+  test_basename("foo\\bar\\boo");
 
   // dirname
   dirname("");
@@ -125,19 +123,22 @@ void test1()
   splitjoin("/foo/");
   splitjoin("/foo/bar");
   splitjoin("/foo/bar/");
+
+#ifdef WIN32
+  ASSERT_EQ(getExpectedOutput("test_path_win32.txt"), out.str());
+#else
+  ASSERT_EQ(getExpectedOutput("test_path.txt"), out.str());
+#endif
 }
 
 void test_contained(const std::string& path, const bool expected)
 {
   const bool contained = path::is_contained(path);
-  OPENVPN_LOG("is_contained('" << path << "') = " << contained);
-  if (contained != expected)
-    OPENVPN_THROW_EXCEPTION("contained=" << contained << " expected=" << expected);
+  ASSERT_EQ (contained, expected);
 }
 
-void test2()
+TEST(path, test2)
 {
-  OPENVPN_LOG("======= TEST2 =======");
   test_contained("", false);
   test_contained(".", true);
   test_contained("..", false);
@@ -176,19 +177,4 @@ void test_join_speed()
       count += s.length();
     }
   std::cout << count << std::endl;
-}
-
-int main()
-{
-  try {
-    test1();
-    test2();
-    //test_join_speed();
-  }
-  catch (const std::exception& e)
-    {
-      std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
-    }
-  return 0;
 }
