@@ -4,6 +4,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/server/listenlist.hpp>
 
 using namespace openvpn;
 
@@ -42,8 +43,49 @@ static const char *input[] = {"unittest",
                               "--auth-retry", "interact", "--push-peer-info", "--setenv",
                               "UV_ASCLI_VER", "2.0.18.200", "--setenv", "UV_PLAT_REL", "12.5.0"};
 
-TEST(misc, parseargv){
-  const OptionList opt = OptionList::parse_from_argv_static(string::from_argv(sizeof(input)/sizeof(char*),
+TEST(argv, parse) {
+  const OptionList opt = OptionList::parse_from_argv_static(string::from_argv(sizeof(input)/sizeof(char *),
                                                                               const_cast<char **>(input), true));
-  ASSERT_EQ(expected, opt.render(Option::RENDER_NUMBER|Option::RENDER_BRACKET));
+  ASSERT_EQ(expected, opt.render(Option::RENDER_NUMBER | Option::RENDER_BRACKET));
+}
+
+static const char config[] =
+    "listen 1.2.3.4 1000 tcp 2\n"
+    "listen 0.0.0.0 4000 tcp 4*N\n"
+    "listen ::0 8000 tcp\n"
+    "listen sock/ststrack-%s.sock unix-stream\n";
+
+TEST(argv, portoffset1) {
+  const OptionList opt1 = OptionList::parse_from_config_static(config, nullptr);
+  const Listen::List ll1(opt1, "listen", Listen::List::Nominal, 4);
+
+  EXPECT_EQ(
+      "listen 1.2.3.4 1000 TCPv4 2\nlisten 0.0.0.0 4000 TCPv4 16\nlisten ::0 8000 TCPv6 1\nlisten sock/ststrack-%s.sock UnixStream 1\n",
+      ll1.to_string());
+
+  std::string exp2("listen 1.2.3.4 1000 TCPv4 0\nlisten 1.2.3.4 1001 TCPv4 0\n");
+
+  for (int i = 4000; i < 4016; i++)
+    exp2 += "listen 0.0.0.0 " + std::to_string(i) + " TCPv4 0\n";
+
+  exp2 += "listen ::0 8000 TCPv6 0\n"
+          "listen sock/ststrack-0.sock UnixStream 0\n";
+
+  const Listen::List ll2 = ll1.expand_ports_by_n_threads(100);
+  EXPECT_EQ(exp2, ll2.to_string());
+}
+
+TEST(argv, portoffset2) {
+  const OptionList opt = OptionList::parse_from_config_static(config, nullptr);
+  const Listen::List ll(opt, "listen", Listen::List::Nominal, 4);
+  for (unsigned int unit = 0; unit < 4; ++unit) {
+    std::stringstream exp;
+    exp << "listen 1.2.3.4 " << 1000 + unit << " TCPv4 0\n";;
+    exp << "listen 0.0.0.0 400" << unit << " TCPv4 0\n";
+    exp << "listen ::0 800" << unit << " TCPv6 0\n";
+    exp << "listen sock/ststrack-" << unit << ".sock UnixStream 0\n";
+
+    const Listen::List llu = ll.expand_ports_by_unit(unit);
+    EXPECT_EQ(exp.str(), llu.to_string());
+  }
 }
