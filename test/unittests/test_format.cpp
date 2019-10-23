@@ -1,10 +1,7 @@
-// TEST : {"cmd": "./go format"}
-
+#include "test_common.h"
 #include <iostream>
-#include <type_traits>
-#include <sstream>
 
-#include <openvpn/log/logsimple.hpp>
+
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
@@ -56,7 +53,7 @@ const std::string expected =
   "EX1: bad foo\n"
   "EX2: this prog is done 4 U\n";
 
-void test()
+TEST(misc, format)
 {
   std::ostringstream os;
 
@@ -104,14 +101,7 @@ void test()
       os << prints("EX2:", e.what()) << std::endl;
     }
   const std::string actual = os.str();
-  if (expected != actual)
-    {
-      std::cout << "EXPECTED" << std::endl;
-      std::cout << expected;
-      std::cout << "ACTUAL" << std::endl;
-      std::cout << actual;
-      throw Exception("actual output doesn't match expected!");
-    }
+  ASSERT_EQ(expected, actual);
 }
 
 template<typename... Args>
@@ -143,17 +133,4 @@ void perf()
       count += str.length();
     }
   std::cout << count << std::endl;
-}
-
-int main(int /*argc*/, char* /*argv*/[])
-{
-  try {
-    test();
-  }
-  catch (const std::exception& e)
-    {
-      std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
-    }
-  return 0;
 }
