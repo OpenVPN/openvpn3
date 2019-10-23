@@ -37,10 +37,14 @@ namespace openvpn {
 #ifdef OPENVPN_JSON
       return Json::Value::parse(str, StringTempl::to_string(title));
 #else
+      Json::CharReaderBuilder builder;
+      builder["collectComments"] = false;
       Json::Value root;
-      Json::Reader reader;
-      if (!reader.parse(str, root, false))
-	throw json_parse(StringTempl::to_string(title) + " : " + reader.getFormattedErrorMessages());
+      std::string errors;
+      std::istringstream instr(str);
+
+      if (!Json::parseFromStream(builder, instr, &root, &errors))
+	throw json_parse(StringTempl::to_string(title) + " : " + errors);
       return root;
 #endif
     }
@@ -61,10 +65,14 @@ namespace openvpn {
 #ifdef OPENVPN_JSON
       return Json::Value::parse(buf, StringTempl::to_string(title));
 #else
+      Json::CharReaderBuilder builder;
+      builder["collectComments"] = false;
       Json::Value root;
-      Json::Reader reader;
-      if (!reader.parse(reinterpret_cast<const char *>(buf.c_data()), reinterpret_cast<const char *>(buf.c_data()) + buf.size(), root, false))
-	throw json_parse(StringTempl::to_string(title) + " : " + reader.getFormattedErrorMessages());
+      std::string errors;
+
+      std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+      if (!reader->parse(reinterpret_cast<const char *>(buf.c_data()), reinterpret_cast<const char *>(buf.c_data()) + buf.size(), &root, &errors))
+	throw json_parse(StringTempl::to_string(title) + " : " + errors);
       return root;
 #endif
     }
