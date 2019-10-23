@@ -1,9 +1,7 @@
-// TEST : {"cmd": "./go cleanup"}
-
+#include "test_common.h"
 #include <iostream>
 #include <memory>
 
-#include <openvpn/log/logsimple.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
@@ -11,9 +9,9 @@
 
 using namespace openvpn;
 
-int main(int /*argc*/, char* /*argv*/[])
+TEST(misc, cleanup)
 {
-  try {
+
     bool ran_cleanup = false;
     {
       auto c = Cleanup([&]() {
@@ -22,13 +20,5 @@ int main(int /*argc*/, char* /*argv*/[])
       static_assert(std::is_nothrow_move_constructible<decltype(c)>::value,
 		    "Cleanup should be noexcept MoveConstructible");
     }
-    if (!ran_cleanup)
-      throw Exception("cleanup didn't run as expected");
-  }
-  catch (const std::exception& e)
-    {
-      std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
-    }
-  return 0;
+    ASSERT_TRUE(ran_cleanup) << "cleanup didn't run as expected";
 }
