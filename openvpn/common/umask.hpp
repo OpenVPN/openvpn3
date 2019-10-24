@@ -56,5 +56,13 @@ namespace openvpn {
     {
     }
   };
+
+  struct UMaskDaemon : public UMask
+  {
+    UMaskDaemon()
+      : UMask(S_IWOTH)
+    {
+    }
+  };
 }
 #endif

@@ -35,6 +35,8 @@
 #include <openvpn/random/randapi.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
+#include <openvpn/openssl/compat.hpp>
+
 namespace openvpn {
   class TokenEncrypt
   {
@@ -63,15 +65,19 @@ namespace openvpn {
 
     TokenEncrypt(const Key& key, const int mode)
     {
-      EVP_CIPHER_CTX_init(&ctx);
-      if (!EVP_CipherInit_ex(&ctx, EVP_aes_128_ecb(), nullptr, key.data, nullptr, mode))
-	throw OpenSSLException("TokenEncrypt: EVP_CipherInit_ex[1] failed");
-      EVP_CIPHER_CTX_set_padding(&ctx, 0);
+      ctx = EVP_CIPHER_CTX_new ();
+      EVP_CIPHER_CTX_reset (ctx);
+      if (!EVP_CipherInit_ex(ctx, EVP_aes_128_ecb(), nullptr, key.data, nullptr, mode))
+	{
+	  EVP_CIPHER_CTX_free(ctx);
+	  throw OpenSSLException("TokenEncrypt: EVP_CipherInit_ex[1] failed");
+	}
+      EVP_CIPHER_CTX_set_padding(ctx, 0);
     }
 
     ~TokenEncrypt()
     {
-      EVP_CIPHER_CTX_cleanup(&ctx);
+      EVP_CIPHER_CTX_free(ctx);
     }
 
     // Do the encrypt/decrypt
@@ -80,12 +86,12 @@ namespace openvpn {
       // NOTE: since this algorithm uses the ECB block cipher mode,
       // it should only be used to encrypt/decrypt a message which
       // is exactly equal to the AES block size (16 bytes).
-      if (size != EVP_CIPHER_CTX_block_size(&ctx))
+      if (size != EVP_CIPHER_CTX_block_size(ctx))
 	throw Exception("TokenEncrypt: encrypt/decrypt data must be equal to AES block size");
       int outlen=0;
-      if (!EVP_CipherInit_ex(&ctx, nullptr, nullptr, nullptr, nullptr, -1))
+      if (!EVP_CipherInit_ex(ctx, nullptr, nullptr, nullptr, nullptr, -1))
 	throw OpenSSLException("TokenEncrypt: EVP_CipherInit_ex[2] failed");
-      if (!EVP_CipherUpdate(&ctx, dest, &outlen, src, size))
+      if (!EVP_CipherUpdate(ctx, dest, &outlen, src, size))
 	throw OpenSSLException("TokenEncrypt: EVP_CipherUpdate failed");
       // NOTE: we skip EVP_CipherFinal_ex because we are running in ECB mode without padding
       if (outlen != size)
@@ -96,7 +102,7 @@ namespace openvpn {
     TokenEncrypt(const TokenEncrypt&) = delete;
     TokenEncrypt& operator=(const TokenEncrypt&) = delete;
 
-    EVP_CIPHER_CTX ctx;
+    EVP_CIPHER_CTX* ctx;
   };
 
   struct TokenEncryptDecrypt

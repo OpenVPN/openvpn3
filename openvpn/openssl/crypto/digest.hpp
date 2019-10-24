@@ -39,6 +39,8 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
+#include <openvpn/openssl/compat.hpp>
+
 namespace openvpn {
   namespace OpenSSLCrypto {
     class HMACContext;
@@ -74,7 +76,8 @@ namespace openvpn {
       void init(const CryptoAlgs::Type alg)
       {
 	erase();
-	if (!EVP_DigestInit(&ctx, digest_type(alg)))
+	ctx=EVP_MD_CTX_new ();
+	if (!EVP_DigestInit(ctx, digest_type(alg)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_digest_error("EVP_DigestInit");
@@ -85,7 +88,7 @@ namespace openvpn {
       void update(const unsigned char *in, const size_t size)
       {
 	check_initialized();
-	if (!EVP_DigestUpdate(&ctx, in, int(size)))
+	if (!EVP_DigestUpdate(ctx, in, int(size)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_digest_error("EVP_DigestUpdate");
@@ -96,7 +99,7 @@ namespace openvpn {
       {
 	check_initialized();
 	unsigned int outlen;
-	if (!EVP_DigestFinal(&ctx, out, &outlen))
+	if (!EVP_DigestFinal(ctx, out, &outlen))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_digest_error("EVP_DigestFinal");
@@ -107,7 +110,7 @@ namespace openvpn {
       size_t size() const
       {
 	check_initialized();
-	return EVP_MD_CTX_size(&ctx);
+	return EVP_MD_CTX_size(ctx);
       }
 
       bool is_initialized() const { return initialized; }
@@ -140,7 +143,10 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    EVP_MD_CTX_cleanup(&ctx);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	    EVP_MD_CTX_cleanup(ctx);
+#endif
+	    EVP_MD_CTX_free(ctx);
 	    initialized = false;
 	  }
       }
@@ -154,7 +160,7 @@ namespace openvpn {
       }
 
       bool initialized;
-      EVP_MD_CTX ctx;
+      EVP_MD_CTX *ctx;
     };
   }
 }

@@ -33,6 +33,13 @@
 #include <ntddndis.h>
 #include <wininet.h>
 #include <ws2tcpip.h> // for IPv6
+#include <tlhelp32.h> // for impersonating as LocalSystem
+
+
+#include <SetupAPI.h>
+#include <devguid.h>
+#include <cfgmgr32.h>
+#include <ndisguid.h>
 
 #include <string>
 #include <vector>
@@ -71,17 +78,20 @@ namespace openvpn {
 
 	// generally defined on cl command line
 	const char COMPONENT_ID[] = OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID); // CONST GLOBAL
+	const char WINTUN_COMPONENT_ID[] = "wintun"; // CONST GLOBAL
       }
+
+      using TapGuidLuid = std::pair<std::string, DWORD>;
 
       // Return a list of TAP device GUIDs installed on the system,
       // filtered by TAP_WIN_COMPONENT_ID.
-      inline std::vector<std::string> tap_guids()
+      inline std::vector<TapGuidLuid> tap_guids(bool wintun)
       {
 	LONG status;
 	DWORD len;
 	DWORD data_type;
 
-	std::vector<std::string> ret;
+	std::vector<TapGuidLuid> ret;
 
 	Win::RegKey adapter_key;
 	status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
@@ -139,8 +149,10 @@ namespace openvpn {
 	    if (status != ERROR_SUCCESS || data_type != REG_SZ)
 	      continue;
 	    strbuf[len] = '\0';
-	    if (std::strcmp(strbuf, COMPONENT_ID))
+	    if (std::strcmp(strbuf, wintun ? WINTUN_COMPONENT_ID : COMPONENT_ID))
 	      continue;
+
+	    TapGuidLuid tgl;
 
 	    len = sizeof(strbuf);
 	    status = ::RegQueryValueExA(unit_key(),
@@ -153,8 +165,24 @@ namespace openvpn {
 	    if (status == ERROR_SUCCESS && data_type == REG_SZ)
 	      {
 		strbuf[len] = '\0';
-		ret.push_back(std::string(strbuf));
+		tgl.first = std::string(strbuf);
 	      }
+
+	    DWORD luid;
+	    len = sizeof(luid);
+	    status = ::RegQueryValueExA(unit_key(),
+					"NetLuidIndex",
+					nullptr,
+					&data_type,
+					(LPBYTE)&luid,
+					&len);
+
+	    if (status == ERROR_SUCCESS && data_type == REG_DWORD)
+	      {
+		tgl.second = luid;
+	      }
+
+	    ret.push_back(tgl);
 	  }
 	return ret;
       }
@@ -177,20 +205,22 @@ namespace openvpn {
 
 	std::string name;
 	std::string guid;
+	DWORD net_luid_index;
 	DWORD index;
       };
 
       struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
       {
-	TapNameGuidPairList()
+	TapNameGuidPairList(bool wintun)
 	{
 	  // first get the TAP guids
 	  {
-	    std::vector<std::string> guids = tap_guids();
-	    for (std::vector<std::string>::const_iterator i = guids.begin(); i != guids.end(); i++)
+	    std::vector<TapGuidLuid> guids = tap_guids(wintun);
+	    for (auto i = guids.begin(); i != guids.end(); i++)
 	      {
 		TapNameGuidPair pair;
-		pair.guid = *i;
+		pair.guid = i->first;
+		pair.net_luid_index = i->second;
 
 		// lookup adapter index
 		{
@@ -318,16 +348,131 @@ namespace openvpn {
 	}
       };
 
-      // given a TAP GUID, form the pathname of the TAP device node
-      inline std::string tap_path(const std::string& tap_guid)
+      struct DeviceInstanceIdInterfacePair
       {
-	return std::string(USERMODEDEVICEDIR) + tap_guid + std::string(TAP_WIN_SUFFIX);
+	std::string net_cfg_instance_id;
+	std::string device_interface_list;
+      };
+
+      class DevInfoSetHelper
+      {
+      public:
+	DevInfoSetHelper()
+	{
+	  handle = SetupDiGetClassDevsEx(&GUID_DEVCLASS_NET, NULL, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+	}
+
+	bool is_valid()
+	{
+	  return handle != INVALID_HANDLE_VALUE;
+	}
+
+	operator HDEVINFO()
+	{
+	  return handle;
+	}
+
+	~DevInfoSetHelper()
+	{
+	  if (is_valid())
+	    {
+	      SetupDiDestroyDeviceInfoList(handle);
+	    }
+	}
+
+      private:
+	HDEVINFO handle;
+      };
+
+      struct DeviceInstanceIdInterfaceList : public std::vector<DeviceInstanceIdInterfacePair>
+      {
+	DeviceInstanceIdInterfaceList()
+	{
+	  DevInfoSetHelper device_info_set;
+	  if (!device_info_set.is_valid())
+	    return;
+
+	  for (DWORD i = 0;; ++i)
+	    {
+	      SP_DEVINFO_DATA dev_info_data;
+	      ZeroMemory(&dev_info_data, sizeof(SP_DEVINFO_DATA));
+	      dev_info_data.cbSize = sizeof(SP_DEVINFO_DATA);
+	      BOOL res = SetupDiEnumDeviceInfo(device_info_set, i, &dev_info_data);
+	      if (!res)
+		{
+		  if (GetLastError() == ERROR_NO_MORE_ITEMS)
+		    break;
+		  else
+		    continue;
+		}
+
+	      Win::RegKey regkey;
+	      *regkey.ref() = SetupDiOpenDevRegKey(device_info_set, &dev_info_data, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_QUERY_VALUE);
+	      if (!regkey.defined())
+		continue;
+
+	      std::string str_net_cfg_instance_id;
+
+	      DWORD size;
+	      LONG status = RegQueryValueExA(regkey(), "NetCfgInstanceId", NULL, NULL, NULL, &size);
+	      if (status != ERROR_SUCCESS)
+		continue;
+	      BufferAllocatedType<char, thread_unsafe_refcount> buf_net_cfg_inst_id(size, BufferAllocated::CONSTRUCT_ZERO);
+
+	      status = RegQueryValueExA(regkey(), "NetCfgInstanceId", NULL, NULL, (LPBYTE)buf_net_cfg_inst_id.data(), &size);
+	      if (status == ERROR_SUCCESS)
+		{
+		  buf_net_cfg_inst_id.data()[size - 1] = '\0';
+		  str_net_cfg_instance_id = std::string(buf_net_cfg_inst_id.data());
+		}
+	      else
+		continue;
+
+	      res = SetupDiGetDeviceInstanceId(device_info_set, &dev_info_data, NULL, 0, &size);
+	      if (res != FALSE && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+		continue;
+
+	      BufferAllocatedType<char, thread_unsafe_refcount> buf_dev_inst_id(size, BufferAllocated::CONSTRUCT_ZERO);
+	      if (!SetupDiGetDeviceInstanceId(device_info_set, &dev_info_data, buf_dev_inst_id.data(), size, &size))
+		continue;
+	      buf_dev_inst_id.set_size(size);
+
+	      ULONG dev_interface_list_size = 0;
+	      CONFIGRET cr = CM_Get_Device_Interface_List_Size(&dev_interface_list_size,
+							       (LPGUID)& GUID_DEVINTERFACE_NET,
+							       buf_dev_inst_id.data(),
+							       CM_GET_DEVICE_INTERFACE_LIST_PRESENT);
+
+	      if (cr != CR_SUCCESS)
+		continue;
+
+	      BufferAllocatedType<char, thread_unsafe_refcount> buf_dev_iface_list(dev_interface_list_size, BufferAllocated::CONSTRUCT_ZERO);
+	      cr = CM_Get_Device_Interface_List((LPGUID)& GUID_DEVINTERFACE_NET, buf_dev_inst_id.data(),
+						buf_dev_iface_list.data(),
+      						dev_interface_list_size,
+						CM_GET_DEVICE_INTERFACE_LIST_PRESENT);
+	      if (cr != CR_SUCCESS)
+		continue;
+
+	      DeviceInstanceIdInterfacePair pair;
+	      pair.net_cfg_instance_id = str_net_cfg_instance_id;
+	      pair.device_interface_list = std::string(buf_dev_iface_list.data());
+	      push_back(pair);
+	    }
+	}
+      };
+
+      // given a TAP GUID, form the pathname of the TAP device node
+      inline std::string tap_path(const TapNameGuidPair& tap)
+      {
+	  return std::string(USERMODEDEVICEDIR) + tap.guid + std::string(TAP_WIN_SUFFIX);
       }
 
       // open an available TAP adapter
       inline HANDLE tap_open(const TapNameGuidPairList& guids,
 			     std::string& path_opened,
-			     TapNameGuidPair& used)
+			     TapNameGuidPair& used,
+			     bool wintun)
       {
 	Win::ScopedHANDLE hand;
 
@@ -335,19 +480,43 @@ namespace openvpn {
 	for (TapNameGuidPairList::const_iterator i = guids.begin(); i != guids.end(); i++)
 	  {
 	    const TapNameGuidPair& tap = *i;
-	    const std::string path = tap_path(tap.guid);
-	    hand.reset(::CreateFileA(path.c_str(),
-				     GENERIC_READ | GENERIC_WRITE,
-				     0, /* was: FILE_SHARE_READ */
-				     0,
-				     OPEN_EXISTING,
-				     FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
-				     0));
-	    if (hand.defined())
+
+	    std::string path;
+
+	    if (wintun)
 	      {
-		used = tap;
-		path_opened = path;
-		break;
+		DeviceInstanceIdInterfaceList inst_id_interface_list;
+
+		for (const auto& inst_id_interface : inst_id_interface_list)
+		  {
+		    if (inst_id_interface.net_cfg_instance_id != tap.guid)
+		      continue;
+
+		    path = inst_id_interface.device_interface_list;
+		    break;
+		  }
+	      }
+	    else
+	      {
+		path = tap_path(tap);
+	      }
+
+	    if (path.length() > 0)
+	      {
+		hand.reset(::CreateFileA(path.c_str(),
+			   GENERIC_READ | GENERIC_WRITE,
+			   0, /* was: FILE_SHARE_READ */
+			   0,
+			   OPEN_EXISTING,
+			   FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
+			   0));
+
+		if (hand.defined())
+		  {
+		    used = tap;
+		    path_opened = path;
+		    break;
+		  }
 	      }
 	  }
 	return hand.release();

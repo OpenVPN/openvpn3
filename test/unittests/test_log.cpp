@@ -19,8 +19,24 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
+#include "test_common.h"
+
+
+// The ovpncli.cpp file is not all OPENVPN_EXTERN safe and totally breaks
+// if included in two files. We probably need to fix this or rename this
+// file test_ovpncli and do ALL test that require ovpncli in this file
+// (or have multiple test suites)
+
+// This file needs to included with OPENVPN_EXTERN still defined otherwise
+// the include from ovpncli.cpp breaks with duplicate symbols
+#include <openvpn/common/base64.hpp>
+
+#undef OPENVPN_EXTERN
+#define OPENVPN_EXTERN
+
 #include <client/ovpncli.cpp>
-#include <gtest/gtest.h>
+
+
 #include <string>
 #include <sstream>
 
@@ -35,9 +51,3 @@ namespace unittests
     ASSERT_EQ(text, msg);
   }
 }  // namespace
-
-int main(int argc, char **argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

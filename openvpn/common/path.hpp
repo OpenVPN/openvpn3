@@ -113,6 +113,56 @@ namespace openvpn {
 	return "";
     }
 
+    // return true if path is a regular file that doesn't try to traverse via ".." or "/..."
+    inline bool is_contained(const std::string& path)
+    {
+      if (path.empty())
+	return false;
+      if (win_dev(path, false))
+	return false;
+      if (is_dirsep(path[0]))
+	return false;
+
+      // look for ".." in path
+      enum State {
+	SEP,           // immediately after separator
+	MID,           // middle of dir
+	DOT_2,         // looking for second '.'
+	POST_DOT_2,    // after ".."
+      };
+      State state = SEP;
+      for (const auto c : path)
+	{
+	  switch (state)
+	    {
+	    case SEP:
+	      if (c == '.')
+		state = DOT_2;
+	      else if (!is_dirsep(c))
+		state = MID;
+	      break;
+	    case MID:
+	      if (is_dirsep(c))
+		state = SEP;
+	      break;
+	    case DOT_2:
+	      if (c == '.')
+		state = POST_DOT_2;
+	      else if (is_dirsep(c))
+		state = SEP;
+	      else
+		state = MID;
+	      break;
+	    case POST_DOT_2:
+	      if (is_dirsep(c))
+		return false;
+	      state = MID;
+	      break;
+	    }
+	}
+      return state != POST_DOT_2;
+    }
+
     inline std::string ext(const std::string& basename)
     {
       const size_t pos = basename.find_last_of('.');

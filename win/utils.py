@@ -267,7 +267,10 @@ def zipdir(path, ziph):
 def download(url):
     print "Downloading %s" % url
     response = requests.get(url)
-    fname = rfc6266.parse_headers(response.headers['content-disposition']).filename_unsafe
+    if "Content-Disposition" in response.headers.keys():
+        fname = rfc6266.parse_headers(response.headers['Content-Disposition']).filename_unsafe
+    else:
+        fname = url.split("/")[-1]
     with open(fname, "wb") as f:
         f.write(response.content)
     return fname
@@ -301,6 +304,7 @@ def read_params():
     if os.environ.get('USE_JSONSPP'):
         params['CONNECT'] = True
     params['GTEST_ROOT'] = os.environ.get('GTEST_ROOT')
+    params['USE_OPENSSL'] = os.environ.get('USE_OPENSSL')
 
     # read versions
     with open(os.path.join(params['OVPN3'], "core", "deps", "lib-versions")) as f:

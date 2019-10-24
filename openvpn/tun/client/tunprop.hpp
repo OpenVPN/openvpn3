@@ -63,6 +63,7 @@ namespace openvpn {
       std::string session_name;
       int mtu = 0;
       bool google_dns_fallback = false;
+      bool allow_local_lan_access = false;
       Layer layer{Layer::OSI_LAYER_3};
 
       // If remote_bypass is true, obtain cached remote IPs from
@@ -126,15 +127,43 @@ namespace openvpn {
 	add_remote_bypass_routes(tb, *config.remote_list, server_addr, eer.get(), quiet);
 
       // add routes
-      add_routes(tb, opt, server_addr, ipv, eer.get(), quiet);
+      if (config.allow_local_lan_access)
+	{
+	  // query local lan exclude routes and then
+	  // copy option list to construct a copy with the excluded routes as route options
+	  OptionList excludedRoutesOptions = opt;
+	  for (const std::string& exRoute: tb->tun_builder_get_local_networks(false))
+	    {
+	      excludedRoutesOptions.add_item(Option{"route", exRoute, "", "net_gateway"});
+	    }
 
-      // emulate exclude routes
-      if (eer && eer->enabled(ipv))
-	eer->emulate(tb, ipv, server_addr);
+	  for (const std::string& exRoute:  tb->tun_builder_get_local_networks(true))
+	    {
+	      excludedRoutesOptions.add_item(Option{"route-ipv6", exRoute, "", "net_gateway"});
+	    }
 
-      // configure redirect-gateway
-      if (!tb->tun_builder_reroute_gw(ipv.rgv4(), ipv.rgv6(), ipv.api_flags()))
-	throw tun_prop_route_error("tun_builder_reroute_gw for redirect-gateway failed");
+	  add_routes(tb, excludedRoutesOptions, ipv, eer.get(), quiet);
+	}
+      else
+	{
+	  add_routes(tb, opt, ipv, eer.get(), quiet);
+	}
+
+
+      if (eer)
+	{
+	  // Route emulation needs to know if default routes are included
+	  // from redirect-gateway
+	  eer->add_default_routes(ipv.rgv4(), ipv.rgv6());
+	  // emulate exclude routes
+	  eer->emulate(tb, ipv, server_addr);
+	}
+      else
+	{
+	  // configure redirect-gateway
+	  if (!tb->tun_builder_reroute_gw(ipv.rgv4(), ipv.rgv6(), ipv.api_flags()))
+	      throw tun_prop_route_error("tun_builder_reroute_gw for redirect-gateway failed");
+	}
 
       // add DNS servers and domain prefixes
       const unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
@@ -335,7 +364,9 @@ namespace openvpn {
 				  EmulateExcludeRoute* eer)
     {
       const std::string addr_str = addr.to_string();
-      if (add)
+      if (eer)
+	eer->add_route(add, addr, prefix_length);
+      else if (add)
 	{
 	  if (!tb->tun_builder_add_route(addr_str, prefix_length, metric, ipv6))
 	    throw tun_prop_route_error("tun_builder_add_route failed");
@@ -345,8 +376,7 @@ namespace openvpn {
 	  if (!tb->tun_builder_exclude_route(addr_str, prefix_length, metric, ipv6))
 	    throw tun_prop_route_error("tun_builder_exclude_route failed");
 	}
-      if (eer)
-	eer->add_route(add, addr, prefix_length);
+
     }
 
     // Check the target of a route.
@@ -369,7 +399,6 @@ namespace openvpn {
 
     static void add_routes(TunBuilderBase* tb,
 			   const OptionList& opt,
-			   const IP::Addr& server_addr,
 			   const IPVerFlags& ipv,
 			   EmulateExcludeRoute* eer,
 			   const bool quiet)

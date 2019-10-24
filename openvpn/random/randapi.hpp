@@ -25,6 +25,7 @@
 #define OPENVPN_MBEDTLS_UTIL_RANDAPI_H
 
 #include <string>
+#include <cstdint>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
@@ -82,6 +83,16 @@ namespace openvpn {
     T randrange(const T end)
     {
       return rand_get_positive<T>() % end;
+    }
+
+    // Return a uniformly distributed random number in the range [0, end).
+    // This version is strictly 32-bit only and optimizes by avoiding
+    // integer division.
+    std::uint32_t randrange32(const std::uint32_t end)
+    {
+      std::uint32_t r;
+      rand_fill(r);
+      return (std::uint64_t(r) * end) >> 32;
     }
 
     // Return a uniformly distributed random number in the range [start, end].

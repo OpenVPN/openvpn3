@@ -557,7 +557,8 @@ namespace openvpn {
       init_headroom(headroom);
     }
 
-    void append(const BufferType& other)
+    template <typename B>
+    void append(const B& other)
     {
       write(other.c_data(), other.size());
     }

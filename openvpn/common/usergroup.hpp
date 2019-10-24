@@ -76,6 +76,16 @@ namespace openvpn {
 	}
     }
 
+    const std::string& user() const
+    {
+      return user_name;
+    }
+
+    const std::string& group() const
+    {
+      return group_name;
+    }
+
     void activate() const
     {
       if (gr)

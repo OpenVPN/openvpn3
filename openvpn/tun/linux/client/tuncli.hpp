@@ -34,10 +34,10 @@
 // check if Netlink has been selected at compile time
 #ifdef OPENVPN_USE_SITNL
 #include <openvpn/tun/linux/client/tunnetlink.hpp>
-#define TUN_LINUX TunNetlink
+#define TUN_LINUX openvpn::TunNetlink::TunMethods
 #else
-#include <openvpn/tun/linux/client/tunsetup.hpp>
-#define TUN_LINUX TunLinux
+#include <openvpn/tun/linux/client/tuniproute.hpp>
+#define TUN_LINUX openvpn::TunIPRoute::TunMethods
 #endif
 
 namespace openvpn {
@@ -122,7 +122,7 @@ namespace openvpn {
 	if (tun_setup_factory)
 	  return tun_setup_factory->new_setup_obj();
 	else
-	  return new TUN_LINUX::Setup();
+	  return new TunLinuxSetup::Setup<TUN_LINUX>();
       }
 
     private:
@@ -192,10 +192,11 @@ namespace openvpn {
 		  tun_setup = config->new_setup_obj();
 
 		  // create config object for tun setup layer
-		  TUN_LINUX::Setup::Config tsconf;
+		  TunLinuxSetup::Setup<TUN_LINUX>::Config tsconf;
 		  tsconf.layer = config->tun_prop.layer;
 		  tsconf.dev_name = config->dev_name;
 		  tsconf.txqueuelen = config->txqueuelen;
+		  tsconf.add_bypass_routes_on_establish = true;
 
 		  // open/config tun
 		  {

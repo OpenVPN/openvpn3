@@ -53,6 +53,7 @@ namespace openvpn {
 	}
     }
 
+    // bit positions between templ.prefix_len and prefix_len are randomized
     inline Route random_subnet(const Route& templ,
 			       const unsigned int prefix_len,
 			       RandomAPI& prng)

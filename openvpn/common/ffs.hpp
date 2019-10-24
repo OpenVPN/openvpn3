@@ -32,18 +32,88 @@ namespace openvpn {
 
 #if defined(__GNUC__)
 
-  inline int find_first_set(unsigned int v)
+  template <typename T>
+  inline constexpr int n_bits_type()
+  {
+    return sizeof(T) * 8;
+  }
+
+  template <typename T>
+  inline constexpr int n_bits_type(const T& v)
+  {
+    return sizeof(v) * 8;
+  }
+
+  inline int find_first_set(const unsigned int v)
   {
     if (!v)
       return 0;
     return __builtin_ffs(v);
   }
 
-  inline int find_last_set(unsigned int v)
+  inline int find_first_set(const int v)
+  {
+    return find_first_set(static_cast<unsigned int>(v));
+  }
+
+  inline int find_last_set(const unsigned int v)
   {
     if (!v)
       return 0;
-    return 32 - __builtin_clz(v);
+    return n_bits_type(v) - __builtin_clz(v);
+  }
+
+  inline int find_last_set(const int v)
+  {
+    return find_last_set(static_cast<unsigned int>(v));
+  }
+
+  inline int find_first_set(const unsigned long v)
+  {
+    if (!v)
+      return 0;
+    return __builtin_ffsl(v);
+  }
+
+  inline int find_first_set(const long v)
+  {
+    return find_first_set(static_cast<unsigned long>(v));
+  }
+
+  inline int find_last_set(const unsigned long v)
+  {
+    if (!v)
+      return 0;
+    return n_bits_type(v) - __builtin_clzl(v);
+  }
+
+  inline int find_last_set(const long v)
+  {
+    return find_last_set(static_cast<unsigned long>(v));
+  }
+
+  inline int find_first_set(const unsigned long long v)
+  {
+    if (!v)
+      return 0;
+    return __builtin_ffsll(v);
+  }
+
+  inline int find_first_set(const long long v)
+  {
+    return find_first_set(static_cast<unsigned long long>(v));
+  }
+
+  inline int find_last_set(const unsigned long long v)
+  {
+    if (!v)
+      return 0;
+    return n_bits_type(v) - __builtin_clzll(v);
+  }
+
+  inline int find_last_set(const long long v)
+  {
+    return find_last_set(static_cast<unsigned long long>(v));
   }
 
 #elif defined(_MSC_VER)

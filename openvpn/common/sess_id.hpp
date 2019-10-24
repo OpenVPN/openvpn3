@@ -115,6 +115,12 @@ namespace openvpn {
       return u.dataz[0];
     }
 
+    template <typename HASH>
+    void hash(HASH& h) const
+    {
+      h(u.dataz[0]);
+    }
+
     // Use a URL-safe base64 encoding.
     std::string to_string() const
     {
@@ -160,13 +166,15 @@ namespace openvpn {
     }
 
     // Find an element in an unordered map (keyed by Session ID)
-    // using weak equality.
+    // using weak equality.  If conflict is true, only return
+    // element that is present by weak equality, but which is
+    // not equal to *this by strong equality.
     template <typename UNORDERED_MAP>
-    const SessionIDType* find_weak(const UNORDERED_MAP& m) const
+    const SessionIDType* find_weak(const UNORDERED_MAP& m, const bool conflict) const
     {
       const size_t bi = m.bucket(*this);
       for (auto i = m.cbegin(bi); i != m.cend(bi); ++i)
-	if (shortform() == i->first.shortform())
+	if (shortform() == i->first.shortform() && (!conflict || *this != i->first))
 	  return &i->first;
       return nullptr;
     }

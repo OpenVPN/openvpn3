@@ -23,6 +23,10 @@
 #define OPENVPN_COMMON_EXTERN_H
 
 #ifndef OPENVPN_EXTERN
+// Remember that OPENVPN_EXTERN was not defined since something like
+// #if OPENVPN_EXTERN == extern or OPENVPN_EXTERN == "" is not allowed
+// in C/C++ preprocessor
+#define OPENVPN_NO_EXTERN
 #define OPENVPN_EXTERN
 #endif
 

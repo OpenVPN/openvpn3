@@ -36,7 +36,8 @@ namespace openvpn {
       UNDEF=0,
       V1_0,
       V1_1,
-      V1_2
+      V1_2,
+      V1_3
     };
 
     inline const std::string to_string(const Type version)
@@ -51,6 +52,8 @@ namespace openvpn {
 	  return "V1_1";
 	case V1_2:
 	  return "V1_2";
+	case V1_3:
+	  return "V1_3";
 	default:
 	  return "???";
 	}
@@ -65,7 +68,9 @@ namespace openvpn {
       else if (ver == "1.1" && V1_1 <= max_version)
 	return V1_1;
       else if (ver == "1.2" && V1_2 <= max_version)
-	return V1_2;
+        return V1_2;
+      else if (ver == "1.3" && V1_3 <= max_version)
+        return V1_2;
       else if (or_highest)
 	return max_version;
       else
@@ -99,6 +104,8 @@ namespace openvpn {
 	tvm = V1_1;
       else if (override == "tls_1_2")
 	tvm = V1_2;
+      else if (override == "tls_1_3")
+        tvm = V1_3;
       else
 	throw option_error("tls-version-min: unrecognized override string");
 

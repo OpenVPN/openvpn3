@@ -460,6 +460,14 @@ namespace openvpn {
 		    stop();
 		  }
 		  break;
+		case Error::TUN_REGISTER_RINGS_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunSetupFailed(client->fatal_reason());
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::TUN_REGISTER_RINGS_ERROR);
+		    stop();
+		  }
+		  break;
 		case Error::TUN_IFACE_CREATE:
 		  {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::TunIfaceCreate(client->fatal_reason());
@@ -529,7 +537,10 @@ namespace openvpn {
 		    ClientEvent::Base::Ptr ev = new ClientEvent::InactiveTimeout();
 		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::INACTIVE_TIMEOUT);
-		    graceful_stop();
+
+		    // explicit exit notify is sent earlier by
+		    // ClientProto::Session::inactive_callback()
+		    stop();
 		  }
 		  break;
 		case Error::TRANSPORT_ERROR:
@@ -546,6 +557,14 @@ namespace openvpn {
 		    client_options->events().add_event(std::move(ev));
 		    client_options->stats().error(Error::TUN_ERROR);
 		    queue_restart(5000);
+		  }
+		  break;
+		case Error::TUN_HALT:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::TunHalt(client->fatal_reason());
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::TUN_HALT);
+		    stop();
 		  }
 		  break;
 		case Error::RELAY:

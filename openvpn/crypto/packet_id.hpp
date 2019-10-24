@@ -83,10 +83,13 @@ namespace openvpn {
     static size_t size(const int form)
     {
       if (form == PacketID::LONG_FORM)
-	return sizeof(id_t) + sizeof(net_time_t);
+	return longidsize;
       else
-	return sizeof(id_t);
+	return shortidsize;
     }
+
+    constexpr static size_t shortidsize = sizeof(id_t);
+    constexpr static size_t longidsize = sizeof(id_t) + sizeof(net_time_t);
 
     bool is_valid() const
     {

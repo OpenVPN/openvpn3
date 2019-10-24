@@ -26,9 +26,16 @@
 #include <openvpn/common/pthreadcond.hpp>
 
 namespace openvpn {
+
+#ifdef HAVE_VALGRIND
+  static constexpr unsigned int WAIT_BARRIER_TIMEOUT = 300;
+#else
+  static constexpr unsigned int WAIT_BARRIER_TIMEOUT = 30;
+#endif
+
   template <typename THREAD_COMMON>
   inline void event_loop_wait_barrier(THREAD_COMMON& tc,
-				      const unsigned int seconds=30)
+				      const unsigned int seconds=WAIT_BARRIER_TIMEOUT)
   {
     // barrier prior to event-loop entry
     switch (tc.event_loop_bar.wait(seconds))

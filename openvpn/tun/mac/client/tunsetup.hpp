@@ -64,6 +64,7 @@ namespace openvpn {
 	std::string iface_name;
 	Layer layer;               // OSI layer
 	bool tun_prefix = false;
+	bool add_bypass_routes_on_establish = false;
 
 #ifdef HAVE_JSON
 	virtual Json::Value to_json() override
@@ -84,6 +85,14 @@ namespace openvpn {
 	}
 #endif
       };
+
+      bool add_bypass_route(const std::string& address,
+			    bool ipv6,
+			    std::ostream& os)
+      {
+        // not yet implemented
+        return true;
+      }
 
       virtual int establish(const TunBuilderCapture& pull, // defined by TunBuilderSetup::Base
 			    TunBuilderSetup::Config* config,

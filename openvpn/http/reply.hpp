@@ -93,7 +93,6 @@ namespace openvpn {
 
     public:
       enum status {
-	undefined,
 	pending,
 	fail,
 	success,

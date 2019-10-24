@@ -77,18 +77,19 @@ namespace openvpn {
 	const EVP_CIPHER *ciph = cipher_type(alg, ckeysz);
 	if (ckeysz > keysize)
 	  throw openssl_gcm_error("insufficient key material");
-	EVP_CIPHER_CTX_init(&ctx);
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_CIPHER_CTX_reset(ctx);
 	switch (mode)
 	  {
 	  case ENCRYPT:
-	    if (!EVP_EncryptInit_ex(&ctx, ciph, nullptr, key, nullptr))
+	    if (!EVP_EncryptInit_ex(ctx, ciph, nullptr, key, nullptr))
 	      {
 		openssl_clear_error_stack();
 		throw openssl_gcm_error("EVP_EncryptInit_ex (init)");
 	      }
 	    break;
 	  case DECRYPT:
-	    if (!EVP_DecryptInit_ex(&ctx, ciph, nullptr, key, nullptr))
+	    if (!EVP_DecryptInit_ex(ctx, ciph, nullptr, key, nullptr))
 	      {
 		openssl_clear_error_stack();
 		throw openssl_gcm_error("EVP_DecryptInit_ex (init)");
@@ -97,7 +98,7 @@ namespace openvpn {
 	  default:
 	    throw openssl_gcm_error("bad mode");
 	  }
-	if (EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LEN, nullptr) != 1)
+	if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LEN, nullptr) != 1)
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl set IV len");
@@ -117,23 +118,23 @@ namespace openvpn {
 	int ciphertext_len;
 
 	check_initialized();
-	if (!EVP_EncryptInit_ex(&ctx, nullptr, nullptr, nullptr, iv))
+	if (!EVP_EncryptInit_ex(ctx, nullptr, nullptr, nullptr, iv))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_EncryptInit_ex (reset)");
 	  }
-	if (!EVP_EncryptUpdate(&ctx, nullptr, &len, ad, int(ad_len)))
+	if (!EVP_EncryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_EncryptUpdate AD");
 	  }
-	if (!EVP_EncryptUpdate(&ctx, output, &len, input, int(length)))
+	if (!EVP_EncryptUpdate(ctx, output, &len, input, int(length)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_EncryptUpdate data");
 	  }
 	ciphertext_len = len;
-	if (!EVP_EncryptFinal_ex(&ctx, output+len, &len))
+	if (!EVP_EncryptFinal_ex(ctx, output+len, &len))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_EncryptFinal_ex");
@@ -143,7 +144,7 @@ namespace openvpn {
 	  {
 	    throw openssl_gcm_error("encrypt size inconsistency");
 	  }
-	if (!EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_GET_TAG, AUTH_TAG_LEN, tag))
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AUTH_TAG_LEN, tag))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl get tag");
@@ -162,28 +163,28 @@ namespace openvpn {
 	int plaintext_len;
 
 	check_initialized();
-	if (!EVP_DecryptInit_ex(&ctx, nullptr, nullptr, nullptr, iv))
+	if (!EVP_DecryptInit_ex(ctx, nullptr, nullptr, nullptr, iv))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_DecryptInit_ex (reset)");
 	  }
-	if (!EVP_DecryptUpdate(&ctx, nullptr, &len, ad, int(ad_len)))
+	if (!EVP_DecryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_DecryptUpdate AD");
 	  }
-	if (!EVP_DecryptUpdate(&ctx, output, &len, input, int(length)))
+	if (!EVP_DecryptUpdate(ctx, output, &len, input, int(length)))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_DecryptUpdate data");
 	  }
 	plaintext_len = len;
-	if (!EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_TAG, AUTH_TAG_LEN, tag))
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AUTH_TAG_LEN, tag))
 	  {
 	    openssl_clear_error_stack();
 	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl set tag");
 	  }
-	if (!EVP_DecryptFinal_ex(&ctx, output+len, &len))
+	if (!EVP_DecryptFinal_ex(ctx, output+len, &len))
 	  {
 	    openssl_clear_error_stack();
 	    return false;
@@ -222,19 +223,21 @@ namespace openvpn {
       {
 	if (initialized)
 	  {
-	    EVP_CIPHER_CTX_cleanup(&ctx);
+	    EVP_CIPHER_CTX_free(ctx);
 	    initialized = false;
 	  }
       }
 
       void check_initialized() const
       {
+#ifdef OPENVPN_ENABLE_ASSERT
 	if (unlikely(!initialized))
 	  throw openssl_gcm_error("uninitialized");
+#endif
       }
 
       bool initialized;
-      EVP_CIPHER_CTX ctx;
+      EVP_CIPHER_CTX *ctx;
     };
   }
 }

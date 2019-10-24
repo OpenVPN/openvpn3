@@ -36,6 +36,11 @@ namespace openvpn {
       UDP = 17,    /* UDP protocol */
     };
 
+    enum {
+      IPv4 = 4,
+      IPv6 = 6
+    };
+
     inline unsigned int version(const std::uint8_t version_len_prio)
     {
       return (version_len_prio >> 4) & 0x0F;

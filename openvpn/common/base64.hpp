@@ -35,10 +35,10 @@ namespace openvpn {
 
   class Base64 {
 
-    class UCharWrap
+    class ConstUCharWrap
     {
     public:
-      UCharWrap(const unsigned char *data, size_t size)
+      ConstUCharWrap(const unsigned char *data, size_t size)
 	: data_(data),
 	  size_(size)
       {}
@@ -46,10 +46,37 @@ namespace openvpn {
       size_t size() const { return size_; }
       unsigned char operator[](const size_t i) const { return data_[i]; }
 
+
     private:
       const unsigned char *data_;
       size_t size_;
     };
+
+    public:
+      OPENVPN_SIMPLE_EXCEPTION(base64_decode_out_of_bound_error);
+
+    private:
+      // Minimal class to minic the container our decode method expects
+      class UCharWrap
+      {
+      public:
+	UCharWrap(unsigned char *data, size_t size):
+	  data(data), size(size), index(0)
+	{
+	}
+
+	void push_back(unsigned char c)
+	{
+	  if (index >= size)
+	    throw base64_decode_out_of_bound_error();
+
+	  data[index++]=c;
+	}
+
+	unsigned char *data;
+	size_t size;
+	size_t index;
+      };
 
   public:
     OPENVPN_SIMPLE_EXCEPTION(base64_bad_map);
@@ -75,9 +102,9 @@ namespace openvpn {
 	  altmap = "+/=";
 	if (std::strlen(altmap) != 3)
 	  throw base64_bad_map();
-	enc[62] = altmap[0];
-	enc[63] = altmap[1];
-	equal = altmap[2];
+	enc[62] = (unsigned char)altmap[0];
+	enc[63] = (unsigned char)altmap[1];
+	equal = (unsigned char)altmap[2];
       }
 
       // build decoding map
@@ -88,7 +115,7 @@ namespace openvpn {
 	    const unsigned char c = enc[i];
 	    if (c >= 128)
 	      throw base64_bad_map();
-	    dec[c] = i;
+	    dec[c] = (unsigned char)i;
 	  }
       }
     }
@@ -139,7 +166,22 @@ namespace openvpn {
 
     std::string encode(const void *data, size_t size) const
     {
-      return encode(UCharWrap((const unsigned char *)data, size));
+      return encode(ConstUCharWrap((const unsigned char *)data, size));
+    }
+
+    /**
+     * Decodes data from the passed string and stores the
+     * result in data
+     * @param data 	Destination of the decoded data
+     * @param len	Length of the region in data
+     * @param str	Base64 string to decode
+     * @return 		Number of bytes written to data
+     */
+    size_t decode(void *data, size_t len, const std::string& str) const
+    {
+      UCharWrap ret((unsigned char*)data, len);
+      decode(ret, str);
+      return ret.index;
     }
 
     std::string decode(const std::string& str) const

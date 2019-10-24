@@ -117,8 +117,6 @@ namespace openvpn {
 	OPENVPN_LOG("TransportRelayFactory: Proxy Error in null parent: " << Error::name(fatal_err) << " : " << err_text);
       }
 
-      virtual void ip_hole_punch(const IP::Addr& addr) {}
-
       // Return true if we are transporting OpenVPN protocol
       virtual bool transport_is_openvpn_protocol() { return is_openvpn_protocol; }
 

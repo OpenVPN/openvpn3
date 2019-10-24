@@ -214,14 +214,15 @@ namespace openvpn {
     template <typename T>
     T get_num(const size_t idx) const
     {
-      T n;
+      typedef typename std::remove_const<T>::type T_nonconst;
+      T_nonconst n;
       const std::string& numstr = get(idx, 64);
       if (numstr.length() >= 2 && numstr[0] == '0' && numstr[1] == 'x')
 	{
 	  if (!parse_hex_number(numstr.substr(2), n))
 	    OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] expecting a hex number");
 	}
-      else if (!parse_number<T>(numstr, n))
+      else if (!parse_number<T_nonconst>(numstr, n))
 	OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be a number");
       return n;
     }
@@ -240,7 +241,16 @@ namespace openvpn {
     {
       const T ret = get_num<T>(idx, default_value);
       if (ret != default_value && (ret < min_value || ret > max_value))
-	OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be in the range [" << min_value << ',' << max_value << ']');
+	range_error(idx, min_value, max_value);
+      return ret;
+    }
+
+    template <typename T>
+    T get_num(const size_t idx, const T min_value, const T max_value) const
+    {
+      const T ret = get_num<T>(idx);
+      if (ret < min_value || ret > max_value)
+	range_error(idx, min_value, max_value);
       return ret;
     }
 
@@ -360,6 +370,12 @@ namespace openvpn {
     {
       from_list(std::move(first));
       from_list(std::forward<Args>(args)...);
+    }
+
+    template <typename T>
+    void range_error(const size_t idx, const T min_value, const T max_value) const
+    {
+      OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be in the range [" << min_value << ',' << max_value << ']');
     }
 
     volatile mutable bool touched_ = false;
@@ -1215,7 +1231,8 @@ namespace openvpn {
     template <typename T>
     T get_num(const std::string& name, const size_t idx, const T default_value) const
     {
-      T n = default_value;
+      typedef typename std::remove_const<T>::type T_nonconst;
+      T_nonconst n = default_value;
       const Option* o = get_ptr(name);
       if (o)
 	n = o->get_num<T>(idx, default_value);
@@ -1226,11 +1243,19 @@ namespace openvpn {
     T get_num(const std::string& name, const size_t idx, const T default_value,
 	      const T min_value, const T max_value) const
     {
-      T n = default_value;
+      typedef typename std::remove_const<T>::type T_nonconst;
+      T_nonconst n = default_value;
       const Option* o = get_ptr(name);
       if (o)
 	n = o->get_num<T>(idx, default_value, min_value, max_value);
       return n;
+    }
+
+    template <typename T>
+    T get_num(const std::string& name, const size_t idx, const T min_value, const T max_value) const
+    {
+      const Option& o = get(name);
+      return o.get_num<T>(idx, min_value, max_value);
     }
 
     // Touch an option, if it exists.

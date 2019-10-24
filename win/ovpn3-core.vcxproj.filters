@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\test\ovpncli\cli.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\client\ovpncli.hpp" />
     <ClInclude Include="..\openvpn\addr\addrlist.hpp" />
     <ClInclude Include="..\openvpn\addr\addrpair.hpp" />
     <ClInclude Include="..\openvpn\addr\ip.hpp" />
@@ -13,6 +9,8 @@
     <ClInclude Include="..\openvpn\addr\ipv6.hpp" />
     <ClInclude Include="..\openvpn\addr\macaddr.hpp" />
     <ClInclude Include="..\openvpn\addr\pool.hpp" />
+    <ClInclude Include="..\openvpn\addr\quoteip.hpp" />
+    <ClInclude Include="..\openvpn\addr\randaddr.hpp" />
     <ClInclude Include="..\openvpn\addr\range.hpp" />
     <ClInclude Include="..\openvpn\addr\regex.hpp" />
     <ClInclude Include="..\openvpn\addr\route.hpp" />
@@ -44,6 +42,7 @@
     <ClInclude Include="..\openvpn\asio\asiocontext.hpp" />
     <ClInclude Include="..\openvpn\asio\asioerr.hpp" />
     <ClInclude Include="..\openvpn\asio\asiopolysock.hpp" />
+    <ClInclude Include="..\openvpn\asio\asioresolverres.hpp" />
     <ClInclude Include="..\openvpn\asio\asiosignal.hpp" />
     <ClInclude Include="..\openvpn\asio\asiostop.hpp" />
     <ClInclude Include="..\openvpn\asio\asiowork.hpp" />
@@ -63,6 +62,7 @@
     <ClInclude Include="..\openvpn\buffer\bufread.hpp" />
     <ClInclude Include="..\openvpn\buffer\bufstr.hpp" />
     <ClInclude Include="..\openvpn\buffer\bufstream.hpp" />
+    <ClInclude Include="..\openvpn\buffer\lz4.hpp" />
     <ClInclude Include="..\openvpn\buffer\memq.hpp" />
     <ClInclude Include="..\openvpn\buffer\safestr.hpp" />
     <ClInclude Include="..\openvpn\buffer\zlib.hpp" />
@@ -83,12 +83,14 @@
     <ClInclude Include="..\openvpn\common\abort.hpp" />
     <ClInclude Include="..\openvpn\common\action.hpp" />
     <ClInclude Include="..\openvpn\common\actionthread.hpp" />
+    <ClInclude Include="..\openvpn\common\appversion.hpp" />
     <ClInclude Include="..\openvpn\common\arch.hpp" />
     <ClInclude Include="..\openvpn\common\argv.hpp" />
     <ClInclude Include="..\openvpn\common\arraysize.hpp" />
     <ClInclude Include="..\openvpn\common\asyncsleep.hpp" />
     <ClInclude Include="..\openvpn\common\autoreset.hpp" />
     <ClInclude Include="..\openvpn\common\base64.hpp" />
+    <ClInclude Include="..\openvpn\common\bigmutex.hpp" />
     <ClInclude Include="..\openvpn\common\binprefix.hpp" />
     <ClInclude Include="..\openvpn\common\circ_list.hpp" />
     <ClInclude Include="..\openvpn\common\cleanup.hpp" />
@@ -116,17 +118,19 @@
     <ClInclude Include="..\openvpn\common\hostlist.hpp" />
     <ClInclude Include="..\openvpn\common\hostname.hpp" />
     <ClInclude Include="..\openvpn\common\hostport.hpp" />
-    <ClInclude Include="..\openvpn\common\inotify.hpp" />
+    <ClInclude Include="..\openvpn\common\jsonlib.hpp" />
     <ClInclude Include="..\openvpn\common\lex.hpp" />
     <ClInclude Include="..\openvpn\common\likely.hpp" />
     <ClInclude Include="..\openvpn\common\link.hpp" />
     <ClInclude Include="..\openvpn\common\logrotate.hpp" />
     <ClInclude Include="..\openvpn\common\memneq.hpp" />
     <ClInclude Include="..\openvpn\common\mode.hpp" />
+    <ClInclude Include="..\openvpn\common\modstat.hpp" />
     <ClInclude Include="..\openvpn\common\msgwin.hpp" />
     <ClInclude Include="..\openvpn\common\number.hpp" />
     <ClInclude Include="..\openvpn\common\olong.hpp" />
     <ClInclude Include="..\openvpn\common\options.hpp" />
+    <ClInclude Include="..\openvpn\common\option_error.hpp" />
     <ClInclude Include="..\openvpn\common\ostream.hpp" />
     <ClInclude Include="..\openvpn\common\path.hpp" />
     <ClInclude Include="..\openvpn\common\peercred.hpp" />
@@ -164,6 +168,7 @@
     <ClInclude Include="..\openvpn\common\usecount.hpp" />
     <ClInclude Include="..\openvpn\common\usergroup.hpp" />
     <ClInclude Include="..\openvpn\common\userpass.hpp" />
+    <ClInclude Include="..\openvpn\common\valgrind.hpp" />
     <ClInclude Include="..\openvpn\common\version.hpp" />
     <ClInclude Include="..\openvpn\common\waitbarrier.hpp" />
     <ClInclude Include="..\openvpn\common\write.hpp" />
@@ -192,6 +197,9 @@
     <ClInclude Include="..\openvpn\crypto\packet_id.hpp" />
     <ClInclude Include="..\openvpn\crypto\selftest.hpp" />
     <ClInclude Include="..\openvpn\crypto\static_key.hpp" />
+    <ClInclude Include="..\openvpn\crypto\tls_crypt.hpp" />
+    <ClInclude Include="..\openvpn\dco\dcocli.hpp" />
+    <ClInclude Include="..\openvpn\dco\ipcollbase.hpp" />
     <ClInclude Include="..\openvpn\error\error.hpp" />
     <ClInclude Include="..\openvpn\error\excode.hpp" />
     <ClInclude Include="..\openvpn\frame\frame.hpp" />
@@ -208,6 +216,7 @@
     <ClInclude Include="..\openvpn\http\urlencode.hpp" />
     <ClInclude Include="..\openvpn\http\urlparm.hpp" />
     <ClInclude Include="..\openvpn\http\urlparse.hpp" />
+    <ClInclude Include="..\openvpn\http\validate_uri.hpp" />
     <ClInclude Include="..\openvpn\http\webexcept.hpp" />
     <ClInclude Include="..\openvpn\init\cryptoinit.hpp" />
     <ClInclude Include="..\openvpn\init\engineinit.hpp" />
@@ -215,14 +224,26 @@
     <ClInclude Include="..\openvpn\io\io.hpp" />
     <ClInclude Include="..\openvpn\ip\dhcp.hpp" />
     <ClInclude Include="..\openvpn\ip\eth.hpp" />
-    <ClInclude Include="..\openvpn\ip\icmp.hpp" />
-    <ClInclude Include="..\openvpn\ip\ip.hpp" />
+    <ClInclude Include="..\openvpn\ip\icmp4.hpp" />
+    <ClInclude Include="..\openvpn\ip\icmp6.hpp" />
+    <ClInclude Include="..\openvpn\ip\ip4.hpp" />
+    <ClInclude Include="..\openvpn\ip\ip6.hpp" />
+    <ClInclude Include="..\openvpn\ip\ipcommon.hpp" />
     <ClInclude Include="..\openvpn\ip\udp.hpp" />
+    <ClInclude Include="..\openvpn\kovpn\kocrypto.hpp" />
+    <ClInclude Include="..\openvpn\kovpn\kodev.hpp" />
+    <ClInclude Include="..\openvpn\kovpn\korekey.hpp" />
+    <ClInclude Include="..\openvpn\kovpn\koroute.hpp" />
+    <ClInclude Include="..\openvpn\kovpn\kostats.hpp" />
+    <ClInclude Include="..\openvpn\kovpn\kovpn.hpp" />
     <ClInclude Include="..\openvpn\legal\copyright.hpp" />
     <ClInclude Include="..\openvpn\linux\core.hpp" />
     <ClInclude Include="..\openvpn\linux\daemon_alive.hpp" />
+    <ClInclude Include="..\openvpn\linux\procfs.hpp" />
     <ClInclude Include="..\openvpn\log\logbase.hpp" />
     <ClInclude Include="..\openvpn\log\logbasesimple.hpp" />
+    <ClInclude Include="..\openvpn\log\logbasesimplemac.hpp" />
+    <ClInclude Include="..\openvpn\log\logdatetime.hpp" />
     <ClInclude Include="..\openvpn\log\lognull.hpp" />
     <ClInclude Include="..\openvpn\log\logperiod.hpp" />
     <ClInclude Include="..\openvpn\log\logsimple.hpp" />
@@ -280,6 +301,7 @@
     <ClInclude Include="..\openvpn\proxy\proxyauth.hpp" />
     <ClInclude Include="..\openvpn\random\devurand.hpp" />
     <ClInclude Include="..\openvpn\random\mtrandapi.hpp" />
+    <ClInclude Include="..\openvpn\random\rand2.hpp" />
     <ClInclude Include="..\openvpn\random\randapi.hpp" />
     <ClInclude Include="..\openvpn\random\randbytestore.hpp" />
     <ClInclude Include="..\openvpn\reliable\relack.hpp" />
@@ -307,6 +329,7 @@
     <ClInclude Include="..\openvpn\ssl\sslapi.hpp" />
     <ClInclude Include="..\openvpn\ssl\sslchoose.hpp" />
     <ClInclude Include="..\openvpn\ssl\sslconsts.hpp" />
+    <ClInclude Include="..\openvpn\ssl\ssllog.hpp" />
     <ClInclude Include="..\openvpn\ssl\tlsprf.hpp" />
     <ClInclude Include="..\openvpn\ssl\tlsver.hpp" />
     <ClInclude Include="..\openvpn\ssl\tls_cert_profile.hpp" />
@@ -314,9 +337,12 @@
     <ClInclude Include="..\openvpn\time\asiotimer.hpp" />
     <ClInclude Include="..\openvpn\time\coarsetime.hpp" />
     <ClInclude Include="..\openvpn\time\durhelper.hpp" />
+    <ClInclude Include="..\openvpn\time\epoch.hpp" />
     <ClInclude Include="..\openvpn\time\time.hpp" />
     <ClInclude Include="..\openvpn\time\timestr.hpp" />
     <ClInclude Include="..\openvpn\transport\altproxy.hpp" />
+    <ClInclude Include="..\openvpn\transport\client\extern\config.hpp" />
+    <ClInclude Include="..\openvpn\transport\client\extern\fw.hpp" />
     <ClInclude Include="..\openvpn\transport\client\httpcli.hpp" />
     <ClInclude Include="..\openvpn\transport\client\relay.hpp" />
     <ClInclude Include="..\openvpn\transport\client\tcpcli.hpp" />
@@ -331,6 +357,8 @@
     <ClInclude Include="..\openvpn\transport\server\transbase.hpp" />
     <ClInclude Include="..\openvpn\transport\socket_protect.hpp" />
     <ClInclude Include="..\openvpn\transport\tcplink.hpp" />
+    <ClInclude Include="..\openvpn\transport\tcplinkbase.hpp" />
+    <ClInclude Include="..\openvpn\transport\tcplinkcommon.hpp" />
     <ClInclude Include="..\openvpn\transport\udplink.hpp" />
     <ClInclude Include="..\openvpn\tun\builder\base.hpp" />
     <ClInclude Include="..\openvpn\tun\builder\capture.hpp" />
@@ -347,18 +375,21 @@
     <ClInclude Include="..\openvpn\tun\ipv6_setting.hpp" />
     <ClInclude Include="..\openvpn\tun\layer.hpp" />
     <ClInclude Include="..\openvpn\tun\linux\client\tuncli.hpp" />
-    <ClInclude Include="..\openvpn\tun\linux\tun.hpp" />
+    <ClInclude Include="..\openvpn\tun\linux\client\tunsetup.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\client\tuncli.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\client\tunsetup.hpp" />
+    <ClInclude Include="..\openvpn\tun\mac\dsdict.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\gwv4.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\macdns.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\macdns_watchdog.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\macgw.hpp" />
+    <ClInclude Include="..\openvpn\tun\mac\macproxy.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\tunutil.hpp" />
     <ClInclude Include="..\openvpn\tun\mac\utun.hpp" />
     <ClInclude Include="..\openvpn\tun\persist\tunpersist.hpp" />
     <ClInclude Include="..\openvpn\tun\persist\tunwrap.hpp" />
     <ClInclude Include="..\openvpn\tun\persist\tunwrapasio.hpp" />
+    <ClInclude Include="..\openvpn\tun\proxy.hpp" />
     <ClInclude Include="..\openvpn\tun\server\tunbase.hpp" />
     <ClInclude Include="..\openvpn\tun\tunio.hpp" />
     <ClInclude Include="..\openvpn\tun\tunlog.hpp" />
@@ -370,10 +401,12 @@
     <ClInclude Include="..\openvpn\tun\win\nrpt.hpp" />
     <ClInclude Include="..\openvpn\tun\win\tunutil.hpp" />
     <ClInclude Include="..\openvpn\tun\win\wfp.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\winproxy.hpp" />
     <ClInclude Include="..\openvpn\win\call.hpp" />
     <ClInclude Include="..\openvpn\win\cmd.hpp" />
     <ClInclude Include="..\openvpn\win\console.hpp" />
     <ClInclude Include="..\openvpn\win\handle.hpp" />
+    <ClInclude Include="..\openvpn\win\impersonate.hpp" />
     <ClInclude Include="..\openvpn\win\modname.hpp" />
     <ClInclude Include="..\openvpn\win\reg.hpp" />
     <ClInclude Include="..\openvpn\win\scoped_handle.hpp" />
@@ -383,5 +416,23 @@
     <ClInclude Include="..\openvpn\tun\win\winproxy.hpp" />
     <ClInclude Include="..\openvpn\tun\proxy.hpp" />
     <ClInclude Include="..\openvpn\win\impersonate.hpp" />
+    <ClInclude Include="..\openvpn\ip\icmp4.hpp" />
+    <ClInclude Include="..\openvpn\ip\icmp6.hpp" />
+    <ClInclude Include="..\openvpn\ip\ip4.hpp" />
+    <ClInclude Include="..\openvpn\ip\ip6.hpp" />
+    <ClInclude Include="..\openvpn\ip\ipcommon.hpp" />
+    <ClInclude Include="..\client\ovpncli.hpp" />
+    <ClInclude Include="..\openvpn\transport\mssfix.hpp" />
+    <ClInclude Include="..\openvpn\ip\tcp.hpp" />
+    <ClInclude Include="..\openvpn\ip\ptb.hpp" />
+    <ClInclude Include="..\openvpn\ip\ping4.hpp" />
+    <ClInclude Include="..\openvpn\ip\ping6.hpp" />
+    <ClInclude Include="..\openvpn\ip\csum.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\client\clientconfig.hpp" />
+    <ClInclude Include="..\openvpn\tun\win\ringbuffer.hpp" />
+    <ClInclude Include="..\openvpn\common\event.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\test\ovpncli\cli.cpp" />
   </ItemGroup>
 </Project>

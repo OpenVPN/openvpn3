@@ -43,7 +43,7 @@ namespace openvpn {
 
       void set_proxy(bool del) override
       {
-	ImpersonateAsUser imp;
+	Impersonate imp{false};
 
   	LONG status;
 	RegKey hkcu;

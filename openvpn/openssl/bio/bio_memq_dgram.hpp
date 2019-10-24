@@ -63,13 +63,13 @@ namespace openvpn {
 	    ret = (long)empty();
 	    break;
 	  case BIO_C_SET_BUF_MEM_EOF_RETURN:
-	    b->num = (int)num;
+	    return_eof_on_empty = (num == 0);
 	    break;
 	  case BIO_CTRL_GET_CLOSE:
-	    ret = (long)b->shutdown;
+	    ret = (long)(BIO_get_shutdown (b));
 	    break;
 	  case BIO_CTRL_SET_CLOSE:
-	    b->shutdown = (int)num;
+	    BIO_set_shutdown (b, (int)num);
 	    break;
 	  case BIO_CTRL_WPENDING:
 	    ret = 0L;
@@ -91,7 +91,7 @@ namespace openvpn {
 	    ret = mtu = num;
 	    break;
 	  case BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT:
-	    std::memcpy(&next_timeout, ptr, sizeof(struct timeval));		
+	    std::memcpy(&next_timeout, ptr, sizeof(struct timeval));
 	    break;
 	  default:
 	    //OPENVPN_LOG("*** MemQ-dgram unimplemented ctrl method=" << cmd);
@@ -104,23 +104,23 @@ namespace openvpn {
     private:
       long mtu;
       long query_mtu_return;
+      bool return_eof_on_empty;
       struct timeval next_timeout;
     };
 
     namespace bio_memq_internal {
-      enum {
-	BIO_TYPE_MEMQ = (94|BIO_TYPE_SOURCE_SINK) // make sure type 94 doesn't collide with anything in bio.h
-      };
+      static int memq_method_type=0;
+      static BIO_METHOD* memq_method = nullptr;
 
       inline int memq_new (BIO *b)
       {
-	MemQ *bmq = new MemQ();
+	MemQ *bmq = new(std::nothrow) MemQ();
 	if (!bmq)
 	  return 0;
-	b->shutdown = 1;
-	b->init = 1;
-	b->num = -1;
-	b->ptr = (void *)bmq;
+	BIO_set_shutdown(b, 1);
+	BIO_set_init(b, 1);
+	b->return_eof_on_empty = false;
+	BIO_set_data(b, (void *)bmq);
 	return 1;
       }
 
@@ -128,13 +128,13 @@ namespace openvpn {
       {
 	if (b == nullptr)
 	  return (0);
-	if (b->shutdown)
+	if (BIO_get_shutdown (b))
 	  {
-	    if ((b->init) && (b->ptr != nullptr))
+	    MemQ *bmq = (MemQ*) (BIO_get_data (b));
+	    if (BIO_get_init (b) && (bmq != nullptr))
 	      {
-		MemQ *bmq = (MemQ*)b->ptr;
 		delete bmq;
-		b->ptr = nullptr;
+		BIO_set_data (b, nullptr);
 	      }
 	  }
 	return 1;
@@ -142,7 +142,7 @@ namespace openvpn {
 
       inline int memq_write (BIO *b, const char *in, int len)
       {
-	MemQ *bmq = (MemQ*)b->ptr;
+	MemQ *bmq = (MemQ*) (BIO_get_data (b));
 	if (in)
 	  {
 	    BIO_clear_retry_flags (b);
@@ -166,7 +166,7 @@ namespace openvpn {
 
       inline int memq_read (BIO *b, char *out, int size)
       {
-	MemQ *bmq = (MemQ*)b->ptr;
+	MemQ *bmq = (MemQ*) (BIO_get_data (b));
 	int ret = -1;
 	BIO_clear_retry_flags (b);
 	if (!bmq->empty())
@@ -191,7 +191,7 @@ namespace openvpn {
 
       inline long memq_ctrl (BIO *b, int cmd, long arg1, void *arg2)
       {
-	MemQ *bmq = (MemQ*)b->ptr;
+	MemQ *bmq = (MemQ*) (BIO_get_data (b));
 	return bmq->ctrl(b, cmd, arg1, arg2);
       }
 
@@ -202,43 +202,60 @@ namespace openvpn {
 	return ret;
       }
 
-      BIO_METHOD memq_method =
-	{
-	  BIO_TYPE_MEMQ,
-	  "datagram memory queue",
-	  memq_write,
-	  memq_read,
-	  memq_puts,
-	  nullptr, /* memq_gets */
-	  memq_ctrl,
-	  memq_new,
-	  memq_free,
-	  nullptr,
-	};
+      inline void create_bio_method ()
+      {
+	if (!memq_method_type)
+          memq_method_type = BIO_get_new_index ();
 
+	memq_method = BIO_meth_new (memq_method_type, "datagram memory queue");
+	BIO_meth_set_write (memq_method, memq_write);
+	BIO_meth_set_read (memq_read);
+	BIO_meth_set_puts (memq_puts);
+	BIO_meth_set_create (memq_new);
+	BIO_meth_set_destroy (memq_destroy);
+	BIO_meth_set_gets (nullptr);
+	BIO_meth_set_ctrl (memq_method, memq_ctrl);
+      }
+
+      inline void free_bio_method()
+      {
+	BIO_meth_free (memq_method);
+      }
     } // namespace bio_memq_internal
 
     inline BIO_METHOD *BIO_s_memq(void)
     {
-      return (&bio_memq_internal::memq_method);
+      // TODO: call free in some cleanup
+      bio_memq_internal::create_bio_method ();
+      return bio_memq_internal::memq_method;
     }
 
     inline MemQ *memq_from_bio(BIO *b)
     {
-      if (b->method->type == bio_memq_internal::BIO_TYPE_MEMQ)
-	return (MemQ *)b->ptr;
+      if (BIO_method_type (b) == bio_memq_internal::memq_method_type)
+	return (MemQ *)(BIO_get_data (b));
       else
 	return nullptr;
     }
 
     inline const MemQ *const_memq_from_bio(const BIO *b)
     {
-      if (b->method->type == bio_memq_internal::BIO_TYPE_MEMQ)
-	return (const MemQ *)b->ptr;
+      if (BIO_method_type (b) == bio_memq_internal::memq_method_type)
+        return (const MemQ *)(BIO_get_data (const_cast<BIO*>(b)));
       else
 	return nullptr;
     }
 
+    MemQ()
+    {
+      mtu = 0;
+      query_mtu_return = 0;
+      std::memset(&next_timeout, 0, sizeof(next_timeout));
+
+      bio_memq_internal::create_bio_method ();
+    }
+
+    ~MemQ() { bio_memq_internal::free_bio_method(); }
   } // namespace bmq_dgram
 } // namespace openvpn
 

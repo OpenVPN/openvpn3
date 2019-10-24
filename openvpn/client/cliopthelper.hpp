@@ -558,8 +558,8 @@ namespace openvpn {
 
         // JSON config is aimed to users, therefore we do not export the raw private
         // key, but only some basic info
-        SSLConfigAPI::PKType priv_key_type = sslConfig->private_key_type();
-        if (priv_key_type != SSLConfigAPI::PK_NONE)
+        PKType::Type priv_key_type = sslConfig->private_key_type();
+        if (priv_key_type != PKType::PK_NONE)
         {
 	  root["key"] = Json::Value(Json::objectValue);
 	  root["key"]["type"] = Json::Value(sslConfig->private_key_type_string());

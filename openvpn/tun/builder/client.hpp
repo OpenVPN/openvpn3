@@ -97,11 +97,11 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
+      TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
 						TunClientParent& parent,
-						TransportClient* transcli);
+						TransportClient* transcli) override;
 
-      virtual void finalize(const bool disconnected)
+      void finalize(const bool disconnected) override
       {
 	if (disconnected)
 	  tun_persist.reset();

@@ -89,11 +89,8 @@ namespace openvpn {
     bool hmac_gen(unsigned char *header, const size_t header_len,
 		  const unsigned char *payload, const size_t payload_len)
     {
-      if (header_len < head_size + output_hmac_size())
-	return false;
-
-      hmac_pre(header, payload, payload_len);
-      ctx_hmac.final(header + head_size);
+      hmac_pre(header, header_len, payload, payload_len);
+      ctx_hmac.final(header + header_len);
 
       return true;
     }
@@ -103,13 +100,10 @@ namespace openvpn {
     {
       unsigned char local_hmac[CRYPTO_API::HMACContext::MAX_HMAC_SIZE];
 
-      if (header_len < head_size + output_hmac_size())
-	return false;
-
-      hmac_pre(header, payload, payload_len);
+      hmac_pre(header, header_len, payload, payload_len);
       ctx_hmac.final(local_hmac);
 
-      return !crypto::memneq(header + head_size, local_hmac, output_hmac_size());
+      return !crypto::memneq(header + header_len, local_hmac, output_hmac_size());
     }
 
     size_t encrypt(const unsigned char *iv, unsigned char *out, const size_t olen,
@@ -132,11 +126,11 @@ namespace openvpn {
 
   private:
     // assume length check on header has already been performed
-    void hmac_pre(const unsigned char *header, const unsigned char *payload,
-		  const size_t payload_len)
+    void hmac_pre(const unsigned char *header, const size_t header_len,
+		  const unsigned char *payload, const size_t payload_len)
     {
       ctx_hmac.reset();
-      ctx_hmac.update(header, head_size);
+      ctx_hmac.update(header, header_len);
       ctx_hmac.update(payload, payload_len);
     }
 
@@ -159,18 +153,7 @@ namespace openvpn {
     typename CRYPTO_API::HMACContext ctx_hmac;
     typename CRYPTO_API::CipherContext ctx_crypt;
     int mode;
-
-    static const size_t head_size;
   };
-
-  // initialize static member with non-constexpr.
-  // This is the size of the header in a TLSCrypt-wrapped packets,
-  // excluding the HMAC. Format:
-  //
-  // [OP]  [PSID]  [PID]  [HMAC] [...]
-  //
-  template <typename CRYPTO_API>
-  const size_t TLSCrypt<CRYPTO_API>::head_size = 1 + ProtoSessionID::SIZE + PacketID::size(PacketID::LONG_FORM);
 
   // OvpnHMAC wrapper API using dynamic polymorphism
 
@@ -208,7 +191,18 @@ namespace openvpn {
     virtual TLSCryptInstance::Ptr new_obj_send() = 0;
 
     virtual TLSCryptInstance::Ptr new_obj_recv() = 0;
+
+    // This is the size of the header in a TLSCrypt-wrapped packets,
+    // excluding the HMAC. Format:
+    //
+    // [OP]  [PSID]  [PID]  [HMAC] [...]
+    //
+
+    constexpr const static size_t hmac_offset = 1 + ProtoSessionID::SIZE + PacketID::longidsize;
+
   };
+
+
 
   class TLSCryptFactory : public RC<thread_unsafe_refcount>
   {
@@ -242,21 +236,6 @@ namespace openvpn {
     size_t output_hmac_size() const
     {
       return tls_crypt.output_hmac_size();
-    }
-
-    void ovpn_hmac_reset()
-    {
-      tls_crypt.ovpn_hmac_reset();
-    }
-
-    void ovpn_hmac_update(const unsigned char *in, const size_t in_size)
-    {
-      tls_crypt.ovpn_hmac_update(in, in_size);
-    }
-
-    void ovpn_hmac_write(unsigned char *out)
-    {
-      tls_crypt.ovpn_hmac_write(out);
     }
 
     bool hmac_gen(unsigned char *header, const size_t header_len,
