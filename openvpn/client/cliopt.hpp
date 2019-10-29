@@ -413,9 +413,11 @@ namespace openvpn {
 	    if (config.tun_persist)
 	    {
 	      tunconf->tun_persist.reset(new TunMac::TunPersist(true, false, nullptr));
-	      tunconf->tun_prop.remote_bypass = true;
+#ifndef OPENVPN_COMMAND_AGENT
 	      /* remote_list is required by remote_bypass to work */
+	      tunconf->tun_prop.remote_bypass = true;
 	      tunconf->tun_prop.remote_list = remote_list;
+#endif
 	    }
 	    client_lifecycle.reset(new MacLifeCycle);
 #ifdef OPENVPN_COMMAND_AGENT

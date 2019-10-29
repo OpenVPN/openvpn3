@@ -265,6 +265,8 @@ namespace openvpn {
 	  {
 #if defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_WIN)
 	    return WinCommandAgent::add_bypass_route(endpoint);
+#elif defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_MAC)
+	    return UnixCommandAgent::add_bypass_route(endpoint);
 #else
 	    return parent->socket_protect(socket, endpoint.to_string(), endpoint.is_ipv6());
 #endif
