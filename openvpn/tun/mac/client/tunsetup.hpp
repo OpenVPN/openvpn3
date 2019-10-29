@@ -480,6 +480,26 @@ namespace openvpn {
       }
 
       ActionList::Ptr remove_cmds;
+
+    public:
+      static void add_bypass_route(const std::string& route,
+				   bool ipv6,
+				   ActionList& add_cmds,
+				   ActionList& remove_cmds_bypass_gw)
+      {
+      	MacGWInfo gw;
+
+      	if (!ipv6)
+	  {
+	    if (gw.v4.defined())
+	      add_del_route(route, 32, gw.v4.router.to_string(), gw.v4.iface, 0, add_cmds, remove_cmds_bypass_gw);
+	  }
+	else
+	  {
+	    if (gw.v6.defined())
+	      add_del_route(route, 128, gw.v6.router.to_string(), gw.v6.iface, R_IPv6|R_IFACE_HINT, add_cmds, remove_cmds_bypass_gw);
+	  }
+      }
     };
   }
 }
