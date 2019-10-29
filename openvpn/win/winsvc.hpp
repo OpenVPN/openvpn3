@@ -54,8 +54,6 @@ namespace openvpn {
 
       void install()
       {
-	const std::wstring modname = Win::module_name();
-
 	// open service control manager
 	ScopedSCHandle scmgr(::OpenSCManagerW(
 	    NULL,                     // local computer
@@ -75,6 +73,10 @@ namespace openvpn {
 	const std::wstring deps = wstring::pack_string_vector(config.dependencies);
 
 	// create the service
+
+	// as stated here https://docs.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-createservicew
+	// path must be quoted if it contains a space
+	const std::wstring binary_path = L"\"" + Win::module_name() + L"\"";
 	ScopedSCHandle svc(::CreateServiceW(
 	    scmgr(),                   // SCM database
 	    wname.c_str(),             // name of service
@@ -83,7 +85,7 @@ namespace openvpn {
 	    SERVICE_WIN32_OWN_PROCESS, // service type
 	    config.autostart ? SERVICE_AUTO_START : SERVICE_DEMAND_START, // start type
 	    SERVICE_ERROR_NORMAL,      // error control type
-	    modname.c_str(),           // path to service's binary
+	    binary_path.c_str(),       // path to service's binary
 	    NULL,                      // no load ordering group
 	    NULL,                      // no tag identifier
 	    deps.c_str(),              // dependencies
