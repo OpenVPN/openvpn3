@@ -40,10 +40,12 @@
 //#define DEBUG  // Define this macro to get more details
 
 #include "test_common.h"
-#include <stdint.h>
+#include <cstdint>
 #include <unistd.h>
+#include <memory>
 #include <mutex>
-#include <openvpn/linux/cputime.hpp>
+#include <openvpn/time/cputime.hpp>
+#include <algorithm>
 
 #ifdef DEBUG
 #define DEBUG_DUMP(msg, st, en, rt, chst, chen, chrt, md)             \
@@ -100,23 +102,24 @@ namespace unittests
         // as this does not increase the tracked runtime
         // in the kernel; the process does not really run.
         //
-        std::stringstream buf;
+
+	std::random_device rd;
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+
+
+        double d=0;
         for (unsigned int i = UINT16_MAX * multiplier; i > 0; i--)
         {
-            buf << ".";
-
-            // We do this clearing to not spend too much
-            // memory when running multiple threads
-            buf.str(std::string());
+            d += gen();
         }
     }
 
 
-    TEST(LinuxCPUTime, cpu_time_pid)
+    TEST(CPUTime, cpu_time_pid)
     {
         // Measure the runtime of the workload
         MEASURE(start, chk_start, false);
-        workload(1500);
+        workload(400);
         MEASURE(end, chk_end, false);
 
         // Calculate runtimes and differences
@@ -125,14 +128,14 @@ namespace unittests
                   chk_start, chk_end, chk_runtime,
                   measurement_diff);
 
-        ASSERT_LT(measurement_diff, 1);
+        ASSERT_LT(measurement_diff, 10);
     }
 
 
     void worker_thread(const uint8_t id)
     {
         MEASURE(thr_start, chk_thr_start, true);
-        workload(1500);
+        workload(400);
         MEASURE(thr_end, chk_thr_end, true);
 
         CALCULATE("Worker thread " << std::to_string(id),
@@ -165,7 +168,7 @@ namespace unittests
         for (uint8_t i = 0; i < num_threads; i++)
         {
             ThreadPtr tp;
-            tp.reset(new std::thread([id=i](){ worker_thread(id); }));
+            tp = std::make_shared<std::thread>([id=i](){ worker_thread(id); });
             threads.push_back(tp);
         }
 
@@ -176,7 +179,7 @@ namespace unittests
     }
 
 
-    TEST(LinuxCPUTime, cpu_time_thread_1)
+    TEST(CPUTime, cpu_time_thread_1)
     {
         // Meassure running a single worker thread
         MEASURE(parent_start, chk_parent_start, false);
@@ -188,14 +191,14 @@ namespace unittests
                   chk_parent_start, chk_parent_end, chk_runtime,
                   parent_diff);
 
-        ASSERT_LT(parent_diff, 1);
+        ASSERT_LT(parent_diff, 10);
     }
 
 
-    TEST(LinuxCPUTime, cpu_time_thread_numcores)
+    TEST(CPUTime, cpu_time_thread_numcores)
     {
         // Use number of available cores
-        int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+        auto num_cores = std::min(std::thread::hardware_concurrency(), 1u);
 
         // Meassure running a single worker thread
         MEASURE(parent_start, chk_parent_start, false);

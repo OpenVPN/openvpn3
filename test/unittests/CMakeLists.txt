@@ -29,8 +29,12 @@ set(SOURCES
         )
 
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    list(APPEND SOURCES test_sitnl.cpp test_cpu_time.cpp)
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    list(APPEND SOURCES test_sitnl.cpp)
+endif ()
+
+if (UNIX)
+    list(APPEND SOURCES test_cpu_time.cpp)
 endif ()
 
 

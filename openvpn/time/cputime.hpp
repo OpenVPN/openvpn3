@@ -34,6 +34,38 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/exception.hpp>
 
+#if defined(__APPLE__)
+#include <mach/mach.h>
+
+  /**
+   * Wrapper around the mach thread_info call that emulates the Linux
+   * getrusage with Thread specific call.
+   */
+  static int getrusage_thread(struct rusage& rusage)
+  {
+    int ret = -1;
+    thread_basic_info_data_t info = { 0 };
+    mach_msg_type_number_t info_count = THREAD_BASIC_INFO_COUNT;
+    kern_return_t kern_err;
+
+    kern_err = thread_info(mach_thread_self(),
+			   THREAD_BASIC_INFO,
+			   (thread_info_t)&info,
+			   &info_count);
+    if (kern_err == KERN_SUCCESS) {
+	rusage.ru_utime.tv_sec = info.user_time.seconds;
+	rusage.ru_utime.tv_usec = info.user_time.microseconds;
+	rusage.ru_stime.tv_sec = info.system_time.seconds;
+	rusage.ru_stime.tv_usec = info.system_time.microseconds;
+	ret = 0;
+      } else {
+	errno = EINVAL;
+      }
+    return ret;
+  }
+
+#endif
+
 namespace openvpn {
   /**
    * Retrieve the time (in seconds) the current process or thread
@@ -52,9 +84,18 @@ namespace openvpn {
   {
     try
       {
-        struct rusage usage;
+        struct rusage usage{};
 
-        if (getrusage((thread ? RUSAGE_THREAD : RUSAGE_SELF), &usage) != 0)
+        int ret = 0;
+#if defined(__APPLE__)
+	if (thread)
+	  ret = getrusage_thread(usage);
+	else
+	  ret = getrusage(RUSAGE_SELF, &usage);
+#else
+	ret = getrusage((thread ? RUSAGE_THREAD : RUSAGE_SELF), &usage);
+#endif
+        if (ret != 0)
           {
             throw Exception("getrusage() call failed: " + std::string(strerror(errno)));
           }
@@ -69,4 +110,6 @@ namespace openvpn {
 	return -1.0;
       }
   }
+
+
 }
