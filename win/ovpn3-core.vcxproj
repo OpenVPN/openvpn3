@@ -459,9 +459,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v142</PlatformToolset>
+    <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugAgent|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -477,7 +477,6 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
@@ -499,97 +498,77 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(O3)\deps\amd64\mbedtls\include;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <SuppressStartupBanner>false</SuppressStartupBanner>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(O3)\deps\amd64\mbedtls\library;$(O3)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugAgent|x64'">
     <ClCompile>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;OPENVPN_COMMAND_AGENT;HAVE_JSONCPP;OVPNAGENT_DISABLE_PATH_CHECK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(O3)\deps\amd64\mbedtls\include;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\common;$(O3)\core;$(O3)\deps\amd64\jsoncpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <SuppressStartupBanner>false</SuppressStartupBanner>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;TAP_WIN_COMPONENT_ID=tap0901;OPENVPN_COMMAND_AGENT;HAVE_JSONCPP;OVPNAGENT_DISABLE_PATH_CHECK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(O3)\common;$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(O3)\deps\amd64\mbedtls\library;$(O3)\deps\amd64\lz4\lib;$(O3)\deps\amd64\jsoncpp\dist;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib;jsoncpp.lib</AdditionalDependencies>
-      <ShowProgress>NotSet</ShowProgress>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib;jsoncpp.lib</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugOpenSSL|x64'">
     <ClCompile>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_OPENSSL;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(O3)\deps\amd64\openssl\inc32;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <SuppressStartupBanner>false</SuppressStartupBanner>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_OPENSSL;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(O3)\deps\amd64\openssl\out32dll;$(O3)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gdi32.lib;user32.lib;ssleay32.lib;libeay32.lib;lz4.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gdi32.lib;user32.lib;ssleay32.lib;libeay32.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(O3)\deps\amd64\mbedtls\include;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_MBEDTLS;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(O3)\deps\amd64\mbedtls\library;$(O3)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lz4.lib;mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>mbedtls.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseOpenSSL|x64'">
     <ClCompile>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_OPENSSL;HAVE_LZ4;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(O3)\deps\amd64\openssl\inc32;$(O3)\deps\amd64\tap-windows\src;$(O3)\deps\amd64\asio\asio\include;$(O3)\deps\amd64\lz4\lib;$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_WIN32_WINNT=0x0600;USE_ASIO;ASIO_STANDALONE;USE_OPENSSL;TAP_WIN_COMPONENT_ID=tap0901;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(O3)\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(O3)\deps\amd64\openssl\out32dll;$(O3)\deps\amd64\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ssleay32.lib;libeay32.lib;lz4.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ssleay32.lib;libeay32.lib;fwpuclnt.lib;ws2_32.lib;crypt32.lib;iphlpapi.lib;winmm.lib;advapi32.lib;wininet.lib;shell32.lib;ole32.lib;rpcrt4.lib;Wtsapi32.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
