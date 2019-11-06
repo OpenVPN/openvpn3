@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2018 OpenVPN Inc.
+//    Copyright (C) 2012-2019 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,10 +19,19 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Current version of the OpenVPN core
-
 #pragma once
 
-#ifndef OPENVPN_VERSION
-#define OPENVPN_VERSION "3.5"
-#endif
+#include <cstdint>
+
+namespace openvpn {
+
+  // Return a uniformly distributed random number in the range [0, end)
+  // using seed as a random seed.  This version is strictly 32-bit only
+  // and optimizes by avoiding integer division.
+  inline std::uint32_t rand32_distribute(const std::uint32_t seed,
+					 const std::uint32_t end)
+  {
+    return (std::uint64_t(seed) * end) >> 32;
+  }
+
+}

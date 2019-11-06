@@ -50,6 +50,11 @@ namespace openvpn {
     {
     }
 
+    MTRand(const rand_type::result_type seed)
+      : rng(seed)
+    {
+    }
+
     // Random algorithm name
     virtual std::string name() const
     {
@@ -59,7 +64,11 @@ namespace openvpn {
     // Return true if algorithm is crypto-strength
     virtual bool is_crypto() const
     {
+#ifdef OPENVPN_INSECURE_RANDOM // DO NOT enable in production!
+      return true;
+#else
       return false;
+#endif
     }
 
     // Fill buffer with random bytes

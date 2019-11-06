@@ -14,6 +14,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/socktypes.hpp>
+#include <openvpn/error/excode.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/transport/tcplinkbase.hpp>

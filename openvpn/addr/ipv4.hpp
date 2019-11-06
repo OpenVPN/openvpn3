@@ -35,6 +35,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/ffs.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/hash.hpp>
 #include <openvpn/addr/iperr.hpp>
 
 namespace openvpn {

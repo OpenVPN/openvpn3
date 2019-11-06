@@ -511,6 +511,26 @@ namespace openvpn {
 	}
     }
 
+    /**
+     *  Checks if the compression type is one of the available stub modes
+     *
+     * @param t  The CompressContext::Type value
+     * @return   Returns true if the type is one of the *_STUB{,v2} types,
+     *           otherwise false.
+     */
+    static bool is_any_stub(const Type t)
+    {
+      switch (t)
+      {
+        case LZO_STUB:
+        case COMP_STUB:
+        case COMP_STUBv2:
+          return true;
+        default:
+          return false;
+      }
+    }
+
     static void init_static()
     {
 #ifndef NO_LZO

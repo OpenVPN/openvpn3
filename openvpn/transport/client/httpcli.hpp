@@ -909,7 +909,7 @@ namespace openvpn {
 	OPENVPN_LOG("Contacting " << server_endpoint << " via HTTP Proxy");
 	parent->transport_wait_proxy();
 	socket.open(server_endpoint.protocol());
-#ifdef OPENVPN_PLATFORM_TYPE_UNIX
+
 	if (config->socket_protect)
 	  {
 	    if (!config->socket_protect->socket_protect(socket.native_handle(), server_endpoint_addr()))
@@ -920,7 +920,7 @@ namespace openvpn {
 		return;
 	      }
 	  }
-#endif
+
 	socket.set_option(openvpn_io::ip::tcp::no_delay(true));
 	socket.async_connect(server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                               {

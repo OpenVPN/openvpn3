@@ -29,13 +29,20 @@
 namespace openvpn {
   namespace MSF {
 
-    template <typename MAP_SET, typename ITERATOR>
+    template <typename ITERATOR>
     class Iter : public ITERATOR
     {
     public:
+      template <typename MAP_SET>
       Iter(const MAP_SET& ms, ITERATOR&& iter)
 	: ITERATOR(std::move(iter)),
 	  exists_(*this != ms.end())
+      {
+      }
+
+      Iter(ITERATOR&& iter)
+	: ITERATOR(std::move(iter)),
+	  exists_(true)
       {
       }
 
@@ -50,11 +57,34 @@ namespace openvpn {
 
     // Like ordinary map/set find, but returns an iterator
     // that defines an operator bool() method for testing if
-    // the iterator is defined, i.e. iter != map_or_set.end()
+    // the iterator is defined, so instead of:
+    //
+    //   if (iter != map.end())
+    //     do_stuff();
+    //
+    // you can say:
+    //
+    //   if (iter)
+    //     do_stuff();
+    //
     template <typename MAP_SET, typename KEY>
     inline auto find(MAP_SET& ms, const KEY& k)
     {
-      return Iter<MAP_SET, decltype(ms.find(k))>(ms, ms.find(k));
+      return Iter<decltype(ms.find(k))>(ms, ms.find(k));
+    }
+
+    // Does key exist in map/set?
+    template <typename MAP_SET, typename KEY>
+    inline bool exists(MAP_SET& ms, const KEY& k)
+    {
+      return ms.find(k) != ms.end();
+    }
+
+    // Convert an ordinary, dereferenceable iterator to an MSF::Iter
+    template <typename ITERATOR>
+    inline auto iter(ITERATOR i)
+    {
+      return Iter<ITERATOR>(std::move(i));
     }
   }
 }

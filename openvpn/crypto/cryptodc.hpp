@@ -184,7 +184,19 @@ namespace openvpn {
     }
 
     CryptoAlgs::Type cipher() const { return cipher_; }
-    CryptoAlgs::Type digest() const { return digest_; }
+
+    /**
+     *  Retrieve the digest configured for the data channel.
+     *  If the configured data channel cipher does not use any
+     *  additional digest, CryptoAlgs::NONE is returned.
+     *
+     * @return  Returns the cipher digest in use
+     */
+    CryptoAlgs::Type digest() const
+    {
+      return (CryptoAlgs::use_cipher_digest(cipher_) ? digest_ : CryptoAlgs::NONE);
+    }
+
 
     CryptoDCFactory::Ptr factory() const { return factory_; }
 

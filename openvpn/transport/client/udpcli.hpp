@@ -266,7 +266,7 @@ namespace openvpn {
 	OPENVPN_LOG("Contacting " << server_endpoint << " via UDP");
 	parent->transport_wait();
 	socket.open(server_endpoint.protocol());
-#if defined(OPENVPN_PLATFORM_TYPE_UNIX) || defined(OPENVPN_PLATFORM_UWP)
+
 	if (config->socket_protect)
 	  {
 	    if (!config->socket_protect->socket_protect(socket.native_handle(), server_endpoint_addr()))
@@ -277,7 +277,7 @@ namespace openvpn {
 		return;
 	      }
 	  }
-#endif
+
 	socket.async_connect(server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                               {
                                                 OPENVPN_ASYNC_HANDLER;

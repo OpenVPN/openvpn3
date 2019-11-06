@@ -262,7 +262,13 @@ namespace openvpn {
       bool socket_protect(int socket, IP::Addr endpoint) override
       {
 	if (parent)
-	  return parent->socket_protect(socket, endpoint.to_string(), endpoint.is_ipv6());
+	  {
+#if defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_WIN)
+	    return WinCommandAgent::add_bypass_route(endpoint);
+#else
+	    return parent->socket_protect(socket, endpoint.to_string(), endpoint.is_ipv6());
+#endif
+	  }
 	else
 	  return true;
       }
@@ -659,7 +665,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  eval.error = true;
-	  eval.message = Unicode::utf8_printable<std::string>(e.what(), 256);
+	  eval.message = Unicode::utf8_printable<std::string>(std::string("ERR_PROFILE_GENERIC: ") + e.what(), 256);
 	}
     }
 
@@ -805,6 +811,11 @@ namespace openvpn {
 	  ret.message = Unicode::utf8_printable<std::string>(e.what(), 256);
 	}
       return ret;
+    }
+
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::socket_protect(int socket, std::string remote, bool ipv6)
+    {
+      return true;
     }
 
     OPENVPN_CLIENT_EXPORT bool OpenVPNClient::parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc)
@@ -977,8 +988,8 @@ namespace openvpn {
 #ifdef OPENVPN_GREMLIN
       cc.gremlin_config = state->gremlin_config;
 #endif
-#if defined(USE_TUN_BUILDER)
       cc.socket_protect = &state->socket_protect;
+#if defined(USE_TUN_BUILDER)
       cc.builder = this;
 #endif
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)

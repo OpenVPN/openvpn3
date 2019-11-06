@@ -36,6 +36,7 @@ namespace openvpn {
     enum {
       ECHO_REQUEST    = 128,
       ECHO_REPLY      = 129,
+      DEST_UNREACH    = 1,
       PACKET_TOO_BIG  = 2
     };
 

@@ -204,6 +204,20 @@ namespace openvpn {
 	destroy(os);
       }
 
+      static void add_bypass_route(const std::string& route,
+				   bool ipv6,
+				   ActionList& add_cmds,
+				   ActionList& remove_cmds_bypass_gw)
+      {
+	const Util::DefaultGateway gw;
+
+	if (!ipv6)
+	  {
+	    add_cmds.add(new WinCmd("netsh interface ip add route " + route + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
+	    remove_cmds_bypass_gw.add(new WinCmd("netsh interface ip delete route " + route + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
+	  }
+      }
+
     private:
       struct L2State
       {

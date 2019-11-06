@@ -97,7 +97,7 @@ inline EVP_MD_CTX *EVP_MD_CTX_new()
   return new EVP_MD_CTX();
 }
 
-void EVP_MD_CTX_free(EVP_MD_CTX *ctx)
+inline void EVP_MD_CTX_free(EVP_MD_CTX *ctx)
 {
   delete ctx;
 }
@@ -211,10 +211,10 @@ inline int RSA_meth_set_priv_enc(RSA_METHOD *meth,
   return 1;
 }
 
-int RSA_meth_set_priv_dec(RSA_METHOD *meth,
-			  int (*priv_dec)(int flen, const unsigned char *from,
-					  unsigned char *to, RSA *rsa,
-					  int padding))
+inline int RSA_meth_set_priv_dec(RSA_METHOD *meth,
+				 int (*priv_dec)(int flen, const unsigned char *from,
+				 unsigned char *to, RSA *rsa,
+				 int padding))
 {
   meth->rsa_priv_dec = priv_dec;
   return 1;

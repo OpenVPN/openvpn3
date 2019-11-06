@@ -27,6 +27,8 @@
 
 namespace openvpn {
 
+  typedef std::uint64_t nanotime_t;
+
   inline std::uint64_t milliseconds_since_epoch()
   {
     struct timespec ts;
@@ -36,7 +38,7 @@ namespace openvpn {
          + std::uint64_t(ts.tv_nsec) / std::uint64_t(1000000);
   }
 
-  inline std::uint64_t nanoseconds_since_epoch()
+  inline nanotime_t nanoseconds_since_epoch()
   {
     struct timespec ts;
     if (::clock_gettime(CLOCK_REALTIME, &ts))

@@ -61,6 +61,18 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+# determine platform if PROF is set to "auto"
+if [ "$PROF" = "auto" ]; then
+    if [ "$(uname)" == "Darwin" ]; then
+	export PROF=osx64
+    elif [ "$(uname)" == "Linux" ]; then
+	export PROF=linux
+    else
+	echo "PROF=auto : cannot determine platform"
+	exit 1
+    fi
+fi
+
 # source vars file
 if [ "$PROF" ]; then
     suffix=""

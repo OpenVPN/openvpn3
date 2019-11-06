@@ -97,7 +97,7 @@ namespace openvpn {
 		  if (arg1 == "GENERIC_CONFIG")
 		    {
 		      error_ = true;
-		      message_ = "SERVER_LOCKED_UNSUPPORTED: server locked profiles are currently unsupported";
+		      message_ = "ERR_PROFILE_SERVER_LOCKED_UNSUPPORTED: server locked profiles are currently unsupported";
 		      return;
 		    }
 		  else if (arg1 == "ALLOW_PASSWORD_SAVE")
@@ -307,7 +307,7 @@ namespace openvpn {
       catch (const std::exception& e)
 	{
 	  error_ = true;
-	  message_ = Unicode::utf8_printable<std::string>(e.what(), 256);
+	  message_ = Unicode::utf8_printable<std::string>(std::string("ERR_PROFILE_GENERIC: ") + e.what(), 256);
 	}
     }
 
@@ -374,7 +374,7 @@ namespace openvpn {
 	{
 	  ParseClientConfig ret;
 	  ret.error_ = true;
-	  ret.message_ = Unicode::utf8_printable<std::string>(e.what(), 256);
+	  ret.message_ = Unicode::utf8_printable<std::string>(std::string("ERR_PROFILE_GENERIC: ") + e.what(), 256);
           return ret;
 	}
     }
