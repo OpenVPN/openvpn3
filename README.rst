@@ -152,29 +152,21 @@ Building the OpenVPN 3 client on Windows
 
 Prerequisites:
 
-* Visual Studio 2017
-* Python 2.7
-* Perl (for building openssl)
-
-Clone the OpenVPN 3 source repo::
-
-  > c:\Temp>mkdir O3
-  > c:\Temp>cd O3
-  > c:\Temp\O3>git clone https://github.com/OpenVPN/openvpn3.git core
-
-Add environment variable ``O3`` with value ``c:\Temp\O3`` and reopen commmand prompt.
+* Visual Studio 2019
+* vcpkg
 
 Download and build dependencies::
 
-  > c:\Temp\O3>cd core\win
-  > c:\Temp\O3\core\win>set STATIC=1&& set DEBUG=1&& python buildep.py
+  > git clone https://github.com/Microsoft/vcpkg.git
+  > cd vcpkg
+  > bootstrap-vcpkg.bat
+  > vcpkg integrate install
+  > vcpkg install openssl-windows:x64-windows asio:x64-windows tap-windows6:x64-windows
 
-Now you can open project in Visual Studio. Project and solution files are
-located in ``O3\core\win`` directory.
+Download and build core test client::
 
-You can also build the test client from command prompt::
-
-  > c:\Temp\O3\core\win>set STATIC=1&& set DEBUG=1&& python build.py
+  > git clone https://github.com/OpenVPN/openvpn3.git
+  > MSBuild.exe openvpn3\win\ovpn3-core.sln
 
 Testing
 -------
