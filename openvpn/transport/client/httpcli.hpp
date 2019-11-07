@@ -246,6 +246,7 @@ namespace openvpn {
 		// resolve it
 		parent->transport_pre_resolve();
 
+		async_resolve_lock();
 		async_resolve_name(proxy_host, proxy_port);
 	      }
 	  }
@@ -862,6 +863,9 @@ namespace openvpn {
       void resolve_callback(const openvpn_io::error_code& error,
 		            openvpn_io::ip::tcp::resolver::results_type results) override
       {
+	// release resolver allocated resources
+	async_resolve_cancel();
+
 	if (!halt)
 	  {
 	    if (!error)
