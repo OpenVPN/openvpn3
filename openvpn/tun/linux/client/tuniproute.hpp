@@ -272,7 +272,7 @@ namespace openvpn {
 	    {
 	      if (route.ipv6)
 		{
-		  if (!pull.block_ipv6)
+		  if (local6 && !pull.block_ipv6)
 		    add_del_route(route.address, route.prefix_length, local6->gateway, iface_name, R_ADD_ALL|R_IPv6, rtvec, create, destroy);
 		}
 	      else
