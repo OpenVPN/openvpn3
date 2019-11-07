@@ -340,7 +340,6 @@ namespace openvpn {
 	   socket(io_context_arg),
 	   config(config_arg),
 	   parent(parent_arg),
-	   resolver(io_context_arg),
 	   halt(false),
 	   n_transactions(0),
 	   proxy_established(false),
@@ -855,7 +854,6 @@ namespace openvpn {
 	      impl->stop();
 
 	    socket.close();
-	    resolver.cancel();
 	    async_resolve_cancel();
 	  }
       }
@@ -1009,7 +1007,6 @@ namespace openvpn {
       ClientConfig::Ptr config;
       TransportClientParent* parent;
       LinkImpl::Ptr impl;
-      openvpn_io::ip::tcp::resolver resolver;
       LinkImpl::protocol::endpoint server_endpoint;
       bool halt;
 
