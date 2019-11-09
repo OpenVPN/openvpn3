@@ -161,7 +161,10 @@ namespace openvpn {
 	UDPTransport::AsioEndpoint server_endpoint;
       };
 
-#ifdef ENABLE_PG
+#if defined(ENABLE_PG)
+#if defined(USE_TUN_BUILDER)
+#error ENABLE_PG and USE_TUN_BUILDER cannot be used together
+#endif
       typedef KoTun::Tun<Client*> TunImpl;
 #else
       typedef KoTun::TunClient<Client*> TunImpl;
@@ -202,9 +205,13 @@ namespace openvpn {
 	 */
 	if (config->builder)
 	  {
-		int fd = config->builder->tun_builder_open_kovpn(devconf);
+#ifdef ENABLE_PG
+            throw Exception("tun builder does not work with ENABLE_PG");
+#else
+            int fd = config->builder->tun_builder_open_kovpn(devconf);
 		impl.reset (new TunImpl(io_context, fd, devconf.dc.dev_name,
 					this, config->transport.frame));
+#endif
 	  }
 	else
 	  {
