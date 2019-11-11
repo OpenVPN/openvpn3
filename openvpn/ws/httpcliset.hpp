@@ -29,6 +29,7 @@
 #include <openvpn/buffer/zlib.hpp>
 #include <openvpn/random/randapi.hpp>
 #include <openvpn/http/urlparse.hpp>
+#include <openvpn/http/headredact.hpp>
 #include <openvpn/ws/httpcli.hpp>
 
 #ifndef OPENVPN_HTTP_CLISET_RC
@@ -749,7 +750,7 @@ namespace openvpn {
 	      os << "    ENDPOINT: " << hd.remote_endpoint_str() << '\n';
 	      os << "    HANDSHAKE_DETAILS: " << hd.ssl_handshake_details() << '\n';
 	      os << "    CONTENT-LENGTH: " << hd.content_length() << '\n';
-	      os << "    HEADERS: " << string::indent(hd.reply().to_string(), 0, 13) << '\n';
+	      os << "    HEADERS: " << string::indent(HTTP::headers_redact(hd.reply().to_string()), 0, 13) << '\n';
 	      OPENVPN_LOG_STRING(os.str());
 	    }
 
@@ -783,7 +784,7 @@ namespace openvpn {
 	      os << "----- HEADERS SENT -----\n";
 	      os << "    " << title() << '\n';
 	      os << "    ENDPOINT: " << hd.remote_endpoint_str() << '\n';
-	      os << "    HEADERS: " << string::indent(buf_to_string(buf), 0, 13) << '\n';
+	      os << "    HEADERS: " << string::indent(HTTP::headers_redact(buf_to_string(buf)), 0, 13) << '\n';
 	      OPENVPN_LOG_STRING(os.str());
 	    }
 	}
