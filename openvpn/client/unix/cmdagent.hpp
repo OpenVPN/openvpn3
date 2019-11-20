@@ -38,6 +38,30 @@ namespace openvpn {
       return new UnixCommandAgent(opt);
     }
 
+    static bool add_bypass_route(IP::Addr endpoint)
+    {
+      Config config;
+
+      std::ostringstream os;
+      os << "UnixCommandAgent: transmitting bypass route to " << config.uds_name << std::endl;;
+
+      // Build JSON request
+      Json::Value jreq(Json::objectValue);
+      jreq["pid"] = Json::Value(getpid());
+      jreq["host"] = Json::Value(endpoint.to_string());
+      jreq["ipv6"] = Json::Value(endpoint.is_ipv6());
+      const std::string jtxt = jreq.toStyledString();
+      os << jtxt; // dump it
+
+      OPENVPN_LOG(os.str());
+
+      WS::ClientSet::TransactionSet::Ptr ts = SetupClient::new_transaction_set(config.uds_name, config.debug_level);
+      SetupClient::make_transaction("add-bypass-route", jtxt, false, ts);
+      WS::ClientSet::new_request_synchronous(ts);
+
+      return ts->http_status_success();
+    }
+
   private:
     struct Config : public RC<thread_unsafe_refcount>
     {
@@ -59,6 +83,48 @@ namespace openvpn {
       SetupClient(const Config::Ptr& config_arg)
 	: config(config_arg)
       {
+      }
+
+      static WS::ClientSet::TransactionSet::Ptr new_transaction_set(const std::string& host,
+								    int debug_level)
+      {
+	WS::Client::Config::Ptr hc(new WS::Client::Config());
+	hc->frame = frame_init_simple(2048);
+	hc->connect_timeout = 10;
+	hc->general_timeout = 60;
+
+	WS::ClientSet::TransactionSet::Ptr ts = new WS::ClientSet::TransactionSet;
+	ts->host.host = host;
+	ts->host.port = "unix";
+	ts->http_config = hc;
+	ts->debug_level = debug_level;
+
+	ts->post_connect = [host](WS::ClientSet::TransactionSet& ts, AsioPolySock::Base& sock) {
+	  SockOpt::Creds creds;
+	  if (sock.peercreds(creds))
+	    {
+	      if (!creds.root_uid())
+		OPENVPN_THROW(ovpnagent, "unix socket server " << host << " not running as root");
+	    }
+	  else
+	    OPENVPN_THROW(ovpnagent, "unix socket server " << host << " could not be validated");
+	};
+
+	return ts;
+      }
+
+      static void make_transaction(const std::string& method,
+				   const std::string& content,
+				   const bool keepalive,
+				   WS::ClientSet::TransactionSet::Ptr ts)
+      {
+	std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+	t->req.method = "POST";
+	t->req.uri = "/" + method;
+	t->ci.keepalive = keepalive;
+	t->ci.type = "application/json";
+	t->content_out.push_back(buf_from_string(content));
+	ts->transactions.push_back(std::move(t));
       }
 
     private:
@@ -83,7 +149,7 @@ namespace openvpn {
 	os << jtxt; // dump it
 
 	// Create HTTP transaction container
-	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set();
+	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set(config->uds_name, config->debug_level);
 
 	// Set up a completion function to fetch the tunnel fd
 	ScopedFD tun_fd;
@@ -111,16 +177,7 @@ namespace openvpn {
 	    }
 	};
 
-	// Make transaction
-	{
-	  std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
-	  t->req.method = "POST";
-	  t->req.uri = "/tun-setup";
-	  t->ci.keepalive = true;
-	  t->ci.type = "application/json";
-	  t->content_out.push_back(buf_from_string(jtxt));
-	  ts->transactions.push_back(std::move(t));
-	}
+	SetupClient::make_transaction("tun-setup", jtxt, true, ts);
 
 	// Execute transaction.  sps is true because we need to hold the
 	// HTTP connection state long enough to fetch the received tun socket.
@@ -149,7 +206,7 @@ namespace openvpn {
 	os << "SetupClient: transmitting tun destroy request to " << config->uds_name << std::endl;
 
 	// Create HTTP transaction container
-	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set();
+	WS::ClientSet::TransactionSet::Ptr ts = new_transaction_set(config->uds_name, config->debug_level);
 
 	// Make transaction
 	{
@@ -168,33 +225,6 @@ namespace openvpn {
 	// Dump log
 	const std::string log_txt = json::get_string(jres, "log_txt");
 	os << log_txt;
-      }
-
-      WS::ClientSet::TransactionSet::Ptr new_transaction_set()
-      {
-	WS::Client::Config::Ptr hc(new WS::Client::Config());
-	hc->frame = frame_init_simple(2048);
-	hc->connect_timeout = 10;
-	hc->general_timeout = 60;
-
-	WS::ClientSet::TransactionSet::Ptr ts = new WS::ClientSet::TransactionSet;
-	ts->host.host = config->uds_name;
-	ts->host.port = "unix";
-	ts->http_config = hc;
-	ts->debug_level = config->debug_level;
-
-	ts->post_connect = [this](WS::ClientSet::TransactionSet& ts, AsioPolySock::Base& sock) {
-	  SockOpt::Creds creds;
-	  if (sock.peercreds(creds))
-	    {
-	      if (!creds.root_uid())
-		OPENVPN_THROW(ovpnagent, "unix socket server " << config->uds_name << " not running as root");
-	    }
-	  else
-	    OPENVPN_THROW(ovpnagent, "unix socket server " << config->uds_name << " could not be validated");
-	};
-
-	return ts;
       }
 
       Json::Value get_json_result(std::ostream& os, WS::ClientSet::TransactionSet& ts)
