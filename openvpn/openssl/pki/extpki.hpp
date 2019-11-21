@@ -24,6 +24,9 @@
 #include <openssl/rsa.h>
 #include <openssl/evp.h>
 
+#include <openssl/ec.h>
+#include <openssl/ecdsa.h>
+
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/ssl/sslapi.hpp>
 
@@ -217,4 +220,200 @@ namespace openvpn {
     unsigned int n_errors;
   };
 
+  /* The OpenSSL EC_* methods we are using here are only available for OpennSSL 1.1.0 and later */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
+  class ExternalPKIECImpl : public ExternalPKIImpl
+  {
+
+  public:
+    ExternalPKIECImpl(SSL_CTX* ssl_ctx, ::X509* cert, ExternalPKIBase* external_pki_arg)
+      : external_pki(external_pki_arg)
+    {
+
+      if (ec_self_data_index < 0)
+	throw ssl_external_pki("ExternalPKIECImpl::ec_self_data_index is uninitialized");
+
+      std::string errtext;
+
+      EVP_PKEY* privkey = nullptr;
+      EC_KEY* ec = nullptr;
+      EC_KEY_METHOD* ec_method = EC_KEY_METHOD_new(EC_KEY_OpenSSL());
+
+      /* we only need to override a small number of methods */
+      EC_KEY_METHOD_set_init(ec_method, NULL, ec_finish, NULL, NULL, NULL, NULL);
+      EC_KEY_METHOD_set_sign(ec_method, ecdsa_sign, ecdsa_sign_setup, ecdsa_sign_sig);
+
+      /* get the public key */
+      EVP_PKEY* pubkey = X509_get0_pubkey(cert);
+
+      if (pubkey == nullptr) /* nullptr before SSL_CTX_use_certificate() is called */
+	{
+	  errtext = "public key is NULL";
+	  goto err;
+	}
+
+      if (EVP_PKEY_id(pubkey) != EVP_PKEY_EC)
+	{
+	  errtext = "public key is not EC";
+	  goto err;
+	}
+
+      ec = EC_KEY_dup(static_cast<const EC_KEY*>(EVP_PKEY_get0(pubkey)));
+
+      /* This will move responsibility to free ec_method to ec */
+      if (!EC_KEY_set_method(ec, ec_method))
+	{
+	  errtext = "Could not set EC method";
+	  EC_KEY_METHOD_free(ec_method);
+	  goto err;
+	}
+
+      if (!EC_KEY_set_ex_data(ec, ec_self_data_index, this))
+	{
+	  errtext = "Could not set EC Key ex data";
+	  EC_KEY_METHOD_free(ec_method);
+	  goto err;
+	}
+
+      privkey = EVP_PKEY_new();
+      if (!EVP_PKEY_assign_EC_KEY(privkey, ec))
+	{
+	  errtext = "assigning EC key methods failed";
+	  goto err;
+	}
+
+      if (!SSL_CTX_use_PrivateKey(ssl_ctx, privkey))
+	{
+	  errtext = "assigning EC private key to SSL context failed";
+	  goto err;
+	}
+
+      EVP_PKEY_free(privkey); /* release ref to privkey and ec */
+
+      return;
+
+      err:
+      if (privkey)
+	{
+	  EVP_PKEY_free(privkey);
+	}
+      else
+	{
+	  EC_KEY_free(ec);
+	}
+      OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIECImpl: " << errtext);
+    }
+
+    ~ExternalPKIECImpl() override = default;
+
+    static void init_static()
+    {
+      ec_self_data_index = EC_KEY_get_ex_new_index(0, (char*) "ExternalPKIECImpl", nullptr, nullptr, nullptr);
+    }
+
+  private:
+    static void ec_finish(EC_KEY* ec)
+    {
+      EC_KEY_METHOD_free(const_cast<EC_KEY_METHOD*>(EC_KEY_get_method(ec)));
+    }
+
+    /* sign arbitrary data */
+    static int
+    ecdsa_sign(int type, const unsigned char* dgst,
+	       int dlen, unsigned char* sig,
+	       unsigned int* siglen,
+	       const BIGNUM* kinv, const BIGNUM* r,
+	       EC_KEY* eckey)
+    {
+      ExternalPKIECImpl* self = (ExternalPKIECImpl*) (EC_KEY_get_ex_data(eckey, ec_self_data_index));
+
+      try
+	{
+	  const unsigned int len = ECDSA_size(eckey);
+
+	  Buffer out = self->do_sign(dgst, dlen, sig, len);
+	  *siglen = out.size();
+	  /* No error */
+	  return 1;
+	}
+      catch (const std::exception& e)
+	{
+	  OPENVPN_LOG("OpenSSLContext::ExternalPKIECImpl::ecdsa_sign exception: " << e.what());
+	  return 0;
+	}
+    }
+
+    static int ecdsa_sign_setup(EC_KEY* eckey, BN_CTX* ctx_in, BIGNUM** kinvp, BIGNUM** rp)
+    {
+      /* No precomputation, return success */
+      return 1;
+    }
+
+    static ECDSA_SIG*
+    ecdsa_sign_sig(const unsigned char* dgst, int dgstlen, const BIGNUM* kinvp,
+		   const BIGNUM* rp, EC_KEY* eckey)
+    {
+      ExternalPKIECImpl* self = (ExternalPKIECImpl*) (EC_KEY_get_ex_data(eckey, ec_self_data_index));
+
+      auto len = ECDSA_size(eckey);
+
+      auto sig = new unsigned char[len];
+
+      ECDSA_SIG* ecsig = nullptr;
+      try
+	{
+	  const unsigned int siglen = ECDSA_size(eckey);
+	  Buffer out = self->do_sign(dgst, dgstlen, sig, siglen);
+
+	  ecsig = d2i_ECDSA_SIG(NULL, (const unsigned char**) &sig, len);
+	}
+      catch (const std::exception& e)
+	{
+	  OPENVPN_LOG("OpenSSLContext::ExternalPKIECImpl::ecdsa_sign_sig exception: " << e.what());
+	}
+
+      delete[] sig;
+      return ecsig;
+    }
+
+    /**
+     * Sign the input via external pki callback
+     * @param dgst digest to be signed
+     * @param dlen length of the digest to be signed
+     * @param sig buffer backing the signature
+     * @param siglen maximum size for the signature
+     * @return Buffer containing the signature
+     */
+    Buffer do_sign(const unsigned char* dgst, int dlen,
+		   unsigned char* sig, const unsigned int siglen)
+    {
+      /* convert 'dgst' to base64 */
+      ConstBuffer dgst_buf(dgst, dlen, true);
+      const std::string dgst_b64 = base64->encode(dgst_buf);
+
+      /* get signature */
+      std::string sig_b64;
+      const bool status = external_pki->sign(dgst_b64, sig_b64, "ECDSA");
+      if (!status)
+	throw ssl_external_pki("OpenSSL: could not obtain signature");
+
+      /* decode base64 signature to binary */
+      Buffer sigout(sig, siglen, false);
+      base64->decode(sigout, sig_b64);
+
+      /* verify length */
+      if (sigout.size() > siglen)
+	throw ssl_external_pki("OpenSSL: incorrect signature length");
+
+      return sigout;
+    }
+
+    ExternalPKIBase* external_pki;
+    static int ec_self_data_index;
+  };
+
+#ifdef OPENVPN_NO_EXTERN
+  int ExternalPKIECImpl::ec_self_data_index = -1;
+#endif
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC) */
 }

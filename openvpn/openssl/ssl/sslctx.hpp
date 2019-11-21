@@ -689,6 +689,10 @@ namespace openvpn {
       static void init_static()
       {
 	bmq_stream::init_static();
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
+	ExternalPKIECImpl::init_static();
+#endif
+
 
 	ssl_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
 	context_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext", nullptr, nullptr, nullptr);
@@ -1168,6 +1172,12 @@ namespace openvpn {
 		    {
 		      epki = new ExternalPKIRsaImpl (ctx, config->cert.obj(), config->external_pki);
 		    }
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
+		  else if (certType == EVP_PKEY_EC)
+		    {
+		      epki = new ExternalPKIECImpl (ctx, config->cert.obj(), config->external_pki);
+		    }
+#endif
 		  else
 		    {
 		      throw OpenSSLException("OpenSSLContext: pkey is neither RSA nor EC. Unsupported with external pki");
