@@ -2,24 +2,17 @@ version: 1.0.{build}
 
 image: Visual Studio 2019
 
+cache: c:\tools\vcpkg\installed\
+
 clone_folder: c:\ovpn3\core
 
 install:
-- pip install rfc6266 requests
-- if not exist "C:\strawberry" choco install strawberryperl -y
-- set PATH=C:\strawberry\c\bin;C:\strawberry\perl\site\bin;C:\strawberry\perl\bin;%PATH%
-
-environment:
-  MSVC_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
-  O3: C:\ovpn3
-  STATIC: 1
-
-before_build:
-- cmd: cd win && python buildep.py
-
-after_build:
-- cmd: copy c:\ovpn3\deps\amd64\openssl\out32dll\ssleay32.dll c:\ovpn3\core\win\x64\ReleaseOpenSSL\
-- cmd: copy c:\ovpn3\deps\amd64\openssl\out32dll\libeay32.dll c:\ovpn3\core\win\x64\ReleaseOpenSSL\
+- cd C:\Tools\vcpkg
+- git pull
+- .\bootstrap-vcpkg.bat
+- .\vcpkg integrate install
+- .\vcpkg install asio:x64-windows openssl-windows:x64-windows tap-windows6:x64-windows"
+- cd %APPVEYOR_BUILD_FOLDER%\win
 
 platform: x64
 
