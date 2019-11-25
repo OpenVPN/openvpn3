@@ -263,12 +263,16 @@ namespace openvpn {
 		  // handle compression V1
 		  switch (rkinfo.comp_ctx.type())
 		    {
-		    case CompressContext::LZO_STUB:
+		    case CompressContext::NONE:
 		      key.compress.alg = OVPN_COMP_NONE;
 		      key.compress.swap = false;
 		      break;
+		    case CompressContext::LZO_STUB:
+		      key.compress.alg = OVPN_COMP_STUB;
+		      key.compress.swap = false;
+		      break;
 		    case CompressContext::COMP_STUB:
-		      key.compress.alg = OVPN_COMP_NONE;
+		      key.compress.alg = OVPN_COMP_STUB;
 		      key.compress.swap = true;
 		      break;
 		    case CompressContext::LZ4:
@@ -278,6 +282,7 @@ namespace openvpn {
 		    default:
 		      OPENVPN_THROW(korekey_error, "Compression alg " << rkinfo.comp_ctx.str() << " is not supported by kovpn in CBC/HMAC mode");
 		    }
+		  key.compress.v2 = false;
 		  break;
 		}
 	      case CryptoAlgs::AEAD:
@@ -295,8 +300,11 @@ namespace openvpn {
 		  // handle compression V2
 		  switch (rkinfo.comp_ctx.type())
 		    {
-		    case CompressContext::COMP_STUBv2:
+		    case CompressContext::NONE:
 		      key.compress.alg = OVPN_COMP_NONE;
+		      break;
+		    case CompressContext::COMP_STUBv2:
+		      key.compress.alg = OVPN_COMP_STUB;
 		      break;
 		    case CompressContext::LZ4v2:
 		      key.compress.alg = OVPN_COMP_LZ4;
@@ -305,7 +313,7 @@ namespace openvpn {
 		      OPENVPN_THROW(korekey_error, "Compression alg " << rkinfo.comp_ctx.str() << " is not supported by kovpn in AEAD mode");
 		    }
 		  key.compress.swap = false;
-
+		  key.compress.v2 = true;
 		  break;
 		}
 	      default:
