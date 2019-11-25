@@ -27,6 +27,7 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include <regex>
+#include <mutex>
 
 namespace openvpn {
   class LogOutputCollector : public LogBase
