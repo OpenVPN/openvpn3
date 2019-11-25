@@ -235,7 +235,7 @@ fi
 # gtest
 if [ "$GTEST_DIR" ]; then
     CPPFLAGS="$CPPFLAGS -I$GTEST_DIR/googletest/include"
-    LIBDIRS="$LIBDIRS -L$GTEST_DIR/googlemock/gtest"
+    LIBDIRS="$LIBDIRS -L$GTEST_DIR/lib"
     LIBS="$LIBS -lgtest"
 fi
 
