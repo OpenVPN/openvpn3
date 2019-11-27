@@ -79,9 +79,9 @@ def build(parms, srcfile, unit_test=False):
         options['extra_inc'] += " /I " + os.path.join(parms['OVPN3'], "common")
 
     if parms.get("USE_OPENSSL"):
-        options['extra_inc'] += ' /DUSE_OPENSSL /I %s' % os.path.join(options['openssl'], 'inc32')
-        options['extra_lib_path'] += ' /LIBPATH:%s' % os.path.join(options['openssl'], 'out32dll')
-        options['extra_lib'] += ' libeay32.lib ssleay32.lib'
+        options['extra_inc'] += ' /DUSE_OPENSSL /I %s' % os.path.join(options['openssl'], 'include')
+        options['extra_lib_path'] += ' /LIBPATH:%s' % options['openssl']
+        options['extra_lib'] += ' libssl.lib libcrypto.lib'
     else:
         options['extra_inc'] += ' /DUSE_MBEDTLS /I %s' % os.path.join(options['mbedtls'], 'include')
         options['extra_lib_path'] += ' /LIBPATH:%s' % os.path.join(options['mbedtls'], 'library')
