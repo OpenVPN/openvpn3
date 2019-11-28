@@ -93,13 +93,31 @@ namespace openvpn {
     };
 
     BufferException(Status status)
-      : status_(status) {}
+      : status_(status)
+    {
+    }
+
+    BufferException(Status status, const std::string& msg)
+      : status_(status),
+	msg_(std::string(status_string(status)) + " : " + msg)
+    {
+    }
+
+    virtual const char* what() const throw()
+    {
+      if (!msg_.empty())
+	return msg_.c_str();
+      else
+	return status_string(status_);
+    }
 
     Status status() const { return status_; }
+    virtual ~BufferException() throw() {}
 
-    const char *status_string() const
+  private:
+    static const char *status_string(const Status status)
     {
-      switch (status_)
+      switch (status)
 	{
 	case buffer_full:
 	  return "buffer_full";
@@ -130,13 +148,8 @@ namespace openvpn {
 	}
     }
 
-    virtual const char* what() const throw() {
-      return status_string();
-    }
-    virtual ~BufferException() throw() {}
-
-  private:
     Status status_;
+    std::string msg_;
   };
 
   template <typename T, typename R>
@@ -597,9 +610,12 @@ namespace openvpn {
     virtual void resize(const size_t new_capacity)
     {
       if (new_capacity > capacity_)
-	{
-	  OPENVPN_BUFFER_THROW(buffer_full);
-	}
+	buffer_full_error(new_capacity, false);
+    }
+
+    void buffer_full_error(const size_t newcap, const bool allocated) const
+    {
+      throw BufferException(BufferException::buffer_full, "allocated=" + std::to_string(allocated) + " size=" + std::to_string(size_) + " offset=" + std::to_string(offset_) + " capacity=" + std::to_string(capacity_) + " newcap=" + std::to_string(newcap));
     }
 
     T* data_;          // pointer to data
@@ -615,6 +631,7 @@ namespace openvpn {
     using BufferType<T>::offset_;
     using BufferType<T>::size_;
     using BufferType<T>::capacity_;
+    using BufferType<T>::buffer_full_error;
 
     template <typename, typename> friend class BufferAllocatedType;
 
@@ -834,7 +851,7 @@ namespace openvpn {
 	  if (flags_ & GROW)
 	    realloc_(newcap);
 	  else
-	    OPENVPN_BUFFER_THROW(buffer_full);
+	    buffer_full_error(newcap, true);
 	}
     }
 
