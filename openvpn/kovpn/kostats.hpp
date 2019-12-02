@@ -35,7 +35,7 @@
 
 namespace openvpn {
   namespace kostats_private {
-#   include <kovpn/ovpnerrstr.c>
+#   include "kovpn/ovpnerrstr.h"
   }
 
   class KovpnStats
