@@ -351,10 +351,11 @@ namespace openvpn {
 		const std::string metric = route_metric_opt(pull, *local4, MT_IFACE);
 		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
 		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
+		const IP::Addr remoteaddr = IP::Addr::from_string(local4->gateway);
 		if (!wintun)
 		  {
 		    if (local4->net30)
-		      Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
+		      Util::tap_configure_topology_net30(th, localaddr, remoteaddr);
 		    else
 		      Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
 		  }
