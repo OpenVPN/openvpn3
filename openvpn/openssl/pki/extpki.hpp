@@ -63,14 +63,6 @@ namespace openvpn {
       RSA_meth_set_finish(rsa_meth, rsa_finish);
       RSA_meth_set0_app_data(rsa_meth, this);
 
-      /* allocate RSA object */
-      rsa = RSA_new();
-      if (rsa == nullptr)
-	{
-	  SSLerr(SSL_F_SSL_USE_PRIVATEKEY, ERR_R_MALLOC_FAILURE);
-	  errtext = "RSA_new";
-	  goto err;
-	}
 
       /* get the public key */
       if (X509_get0_pubkey(cert) == nullptr) /* nullptr before SSL_CTX_use_certificate() is called */
@@ -86,8 +78,14 @@ namespace openvpn {
 	}
       pub_rsa = EVP_PKEY_get0_RSA(X509_get0_pubkey(cert));
 
-      /* initialize RSA object */
+      /* allocate RSA object */
       rsa = RSA_new();
+      if (rsa == nullptr)
+	{
+	  SSLerr(SSL_F_SSL_USE_PRIVATEKEY, ERR_R_MALLOC_FAILURE);
+	  errtext = "RSA_new";
+	  goto err;
+	}
 
       /* only set e and n as d (private key) is outside our control */
       RSA_set0_key(rsa, BN_dup(RSA_get0_n(pub_rsa)), BN_dup(RSA_get0_e(pub_rsa)), nullptr);
@@ -95,9 +93,14 @@ namespace openvpn {
 
       if (!RSA_set_method(rsa, rsa_meth))
 	{
+	  RSA_meth_free(rsa_meth);
 	  errtext = "RSA_set_method";
 	  goto err;
 	}
+      /* rsa_meth will be freed when rsa is freed from this point,
+       * set pointer to nullptr so the err does not try to free it
+       */
+      rsa_meth = nullptr;
 
       /* bind our custom RSA object to ssl_ctx */
       if (!SSL_CTX_use_RSAPrivateKey(ssl_ctx, rsa))
@@ -110,13 +113,9 @@ namespace openvpn {
       return;
 
       err:
-      if (rsa)
 	RSA_free(rsa);
-      else
-	{
-	  if (rsa_meth)
-	    RSA_meth_free(rsa_meth);
-	}
+	RSA_meth_free(rsa_meth);
+
       OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIRsaImpl: " << errtext);
     }
 
@@ -329,10 +328,8 @@ namespace openvpn {
 
       try
 	{
-	  const unsigned int len = ECDSA_size(eckey);
-
-	  Buffer out = self->do_sign(dgst, dlen, sig, len);
-	  *siglen = out.size();
+	  *siglen = ECDSA_size(eckey);
+	  self->do_sign(dgst, dlen, sig, *siglen);
 	  /* No error */
 	  return 1;
 	}
@@ -355,17 +352,17 @@ namespace openvpn {
     {
       ExternalPKIECImpl* self = (ExternalPKIECImpl*) (EC_KEY_get_ex_data(eckey, ec_self_data_index));
 
-      auto len = ECDSA_size(eckey);
+      unsigned len = ECDSA_size(eckey);
 
       auto sig = new unsigned char[len];
 
       ECDSA_SIG* ecsig = nullptr;
       try
 	{
-	  const unsigned int siglen = ECDSA_size(eckey);
-	  Buffer out = self->do_sign(dgst, dgstlen, sig, siglen);
+	  unsigned int siglen = len;
+	  self->do_sign(dgst, dgstlen, sig, siglen);
 
-	  ecsig = d2i_ECDSA_SIG(NULL, (const unsigned char**) &sig, len);
+	  ecsig = d2i_ECDSA_SIG(NULL, (const unsigned char**) &sig, siglen);
 	}
       catch (const std::exception& e)
 	{
@@ -378,14 +375,16 @@ namespace openvpn {
 
     /**
      * Sign the input via external pki callback
-     * @param dgst digest to be signed
-     * @param dlen length of the digest to be signed
-     * @param sig buffer backing the signature
-     * @param siglen maximum size for the signature
-     * @return Buffer containing the signature
+     *
+     * @param dgst 	digest to be signed
+     * @param dlen 	length of the digest to be signed
+     * @param sig 	buffer backing the signature
+     * @param siglen 	maximum size for the signature, and length of the signature
+     * 	   		returned in sig
+     * @return
      */
-    Buffer do_sign(const unsigned char* dgst, int dlen,
-		   unsigned char* sig, const unsigned int siglen)
+    void do_sign(const unsigned char* dgst, int dlen,
+		   unsigned char* sig, unsigned int& siglen)
     {
       /* convert 'dgst' to base64 */
       ConstBuffer dgst_buf(dgst, dlen, true);
@@ -401,11 +400,7 @@ namespace openvpn {
       Buffer sigout(sig, siglen, false);
       base64->decode(sigout, sig_b64);
 
-      /* verify length */
-      if (sigout.size() > siglen)
-	throw ssl_external_pki("OpenSSL: incorrect signature length");
-
-      return sigout;
+      siglen = sigout.size();
     }
 
     ExternalPKIBase* external_pki;
