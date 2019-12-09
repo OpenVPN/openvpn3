@@ -278,6 +278,10 @@ namespace openvpn {
 	  SockOpt::set_cloexec(fd);
       }
 
+#if !defined(OPENVPN_PLATFORM_MAC)
+      // shutdown() throws "socket is not connected" exception
+      // on macos if another side has called close() - this behavior
+      // breaks communication with agent, and hence disabled
       virtual void shutdown(const unsigned int flags) override
       {
 	if (flags & SHUTDOWN_SEND)
@@ -285,6 +289,7 @@ namespace openvpn {
 	else if (flags & SHUTDOWN_RECV)
 	  socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_receive);
       }
+#endif
 
       virtual void close() override
       {
