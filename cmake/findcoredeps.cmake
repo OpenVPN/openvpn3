@@ -46,7 +46,7 @@ function(add_core_dependencies target)
                 -DTAP_WIN_COMPONENT_ID=tap0901
                 -D_CRT_SECURE_NO_WARNINGS
                 )
-        set(EXTRA_LIBS fwpuclnt.lib Iphlpapi.lib lz4::lz4)
+        set(EXTRA_LIBS fwpuclnt.lib Iphlpapi.lib Wininet.lib Setupapi.lib Rpcrt4.lib Wtsapi32.lib lz4::lz4)
         target_compile_options(${target} PRIVATE "/bigobj")
 
         find_package(lz4 CONFIG REQUIRED)
