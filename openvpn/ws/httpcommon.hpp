@@ -154,7 +154,7 @@ namespace openvpn {
 	    http_out_buffer();
 	  }
 	else
-	  OPENVPN_THROW(http_exception, "http_content_out_finish: no deferred state=" << http_out_state_string(out_state) << " outbuf_size=" + (outbuf ? int(outbuf->size()) : -1) << " halt=" << halt << " ready=" << ready << " async_out=" << async_out << " websock=" << websocket);
+	  OPENVPN_THROW(http_exception, "http_content_out_finish: no deferred state=" << http_out_state_string(out_state) << " outbuf_size=" + (std::to_string(outbuf ? int(outbuf->size()) : -1)) << " halt=" << halt << " ready=" << ready << " async_out=" << async_out << " websock=" << websocket);
       }
 
       void reduce_max_content_bytes(const CONTENT_LENGTH_TYPE new_max_content_bytes)
