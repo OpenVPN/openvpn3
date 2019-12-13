@@ -149,7 +149,12 @@ def build_openssl(parms):
             rm(arch_path)
 
             os.chdir(dist)
-            for cmd in ["perl Configure VC-WIN64A", "nmake"]:
+
+            if parms["ARCH"] in ["amd64", "x64"]:
+                arch = "VC-WIN64A"
+            else:
+                arch = "VC-WIN32"
+            for cmd in ["perl Configure %s" % arch, "nmake"]:
                 vc_cmd(parms, cmd)
 
 def build_all(parms):
