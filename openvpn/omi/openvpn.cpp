@@ -97,7 +97,8 @@ public:
       opt(std::move(opt_arg)),
       reconnect_timer(io_context),
       bytecount_timer(io_context),
-      log_context(this)
+      log_context(this),
+      exit_event(io_context)
   {
     signals.reset(new ASIOSignals(io_context));
     signal_rearm();
@@ -118,6 +119,16 @@ public:
     remote_override = opt.get_optional("remote-override", 1, 256);
     management_up_down = opt.exists("management-up-down");
     management_query_remote = opt.exists("management-query-remote");
+    exit_event_name = opt.get_optional("exit-event-name", 1, 256);
+
+    // passed by OpenVPN GUI to trigger exit
+    if (!exit_event_name.empty())
+    {
+        exit_event.assign(::CreateEvent(NULL, FALSE, FALSE, exit_event_name.c_str()));
+        exit_event.async_wait([self = Ptr(this)](const openvpn_io::error_code& error) {
+            self->stop();
+        });
+    }
 
     // http-proxy-override
     {
@@ -963,6 +974,10 @@ private:
 
   // signals
   ASIOSignals::Ptr signals;
+
+  typedef openvpn_io::windows::object_handle AsioEvent;
+  AsioEvent exit_event;
+  std::string exit_event_name;
 
   Log::Context log_context; // should be initialized last
 };
