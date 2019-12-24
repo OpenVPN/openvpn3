@@ -92,7 +92,7 @@ namespace unittests {
 	openvpn::OptionList emptyOptionList;
 
 	RouteEmulationTest()
-		:tb(nullptr), ipflags(nullptr)
+		: ipflags(nullptr), tb(nullptr)
 	{
 
 	}

@@ -44,7 +44,7 @@
   static int getrusage_thread(struct rusage& rusage)
   {
     int ret = -1;
-    thread_basic_info_data_t info = { 0 };
+    thread_basic_info_data_t info{};
     mach_msg_type_number_t info_count = THREAD_BASIC_INFO_COUNT;
     kern_return_t kern_err;
 

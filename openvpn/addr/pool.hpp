@@ -42,7 +42,7 @@ namespace openvpn {
     class PoolType
     {
     public:
-      PoolType() {}
+      PoolType() = default;
 
       // Add range of addresses to pool (pool will own the addresses).
       void add_range(const RangeType<ADDR>& range)
@@ -151,6 +151,8 @@ namespace openvpn {
 	  }
 	return ret;
       }
+
+      virtual ~PoolType<ADDR>() = default;
 
     private:
       std::deque<ADDR> freelist;
