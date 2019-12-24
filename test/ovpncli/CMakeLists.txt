@@ -23,8 +23,11 @@ endif ()
 
 
 if (${CLI_DCO})
+    include(kovpn)
+
     add_executable(ovpnclidco cli.cpp)
     add_core_dependencies(ovpnclidco)
+    add_kovpn_dependency(ovpnclidco)
     target_include_directories(ovpnclidco PRIVATE ${KOVPN_SOURCE})
     target_compile_definitions(ovpnclidco PRIVATE -DENABLE_DCO)
 endif ()

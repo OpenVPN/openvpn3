@@ -10,6 +10,8 @@ set(CORE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
 set(DEP_DIR ${CORE_DIR}/../deps CACHE PATH "Dependencies")
 option(USE_MBEDTLS "Use mbed TLS instead of OpenSSL")
 
+option(USE_WERROR "Treat compiler warnings as errors (-Werror)")
+
 if (DEFINED ENV{DEP_DIR})
     message(WARNING "Overriding DEP_DIR setting with environment variable")
     set(DEP_DIR $ENV{DEP_DIR})
@@ -100,4 +102,25 @@ function(add_core_dependencies target)
     target_include_directories(${target} PRIVATE ${CORE_INCLUDES})
     target_compile_definitions(${target} PRIVATE ${CORE_DEFINES})
     target_link_libraries(${target} ${SSL_LIBRARY} ${EXTRA_LIBS} ${LZ4_LIBRARY})
+
+
+
+    if (USE_WERROR)
+        if (MSVC)
+            target_compile_options(${target} PRIVATE /WX)
+        else ()
+            target_compile_options(${target} PRIVATE -Werror)
+        endif ()
+    endif ()
+
+
+    if (MSVC)
+        # I think this is too much currently
+        # target_compile_options(${target} PRIVATE /W4)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wsign-compare)
+    endif()
+
+
+
 endfunction()
