@@ -146,6 +146,7 @@ TEST(argv, parsetest)
 	    "ifconfig 5.5.8.4 255.255.252.0 \n", opt.render(0));
   extract_auth_token(opt);
   extract_ifconfig(opt);
+  verify_topology(opt);
   ASSERT_EQ(1066, limits.get_bytes());
 }
 
@@ -209,15 +210,6 @@ static void options_csv_test(const std::string& str, const std::string& elem)
       OptionList::IndexMap::const_iterator e = olist.map().find(elem);
       ASSERT_TRUE (e != olist.map().end());
     }
-}
-
-static void extract_auth_token(const std::string& str)
-{
-  std::cout << "*** EXTRACT auth-token" << std::endl;
-  const OptionList opt = OptionList::parse_from_csv_static(str, NULL);
-  const Option& o = opt.get("auth-token");
-  o.min_args(3);
-  std::cout << o.render(0) << std::endl;
 }
 
 TEST(argv, parsetest1)

@@ -45,7 +45,7 @@ TEST(IPAddr, pool)
   pool.add_range(IP::Range(IP::Addr::from_string("1.2.3.4"), 16));
   pool.add_range(IP::Range(IP::Addr::from_string("Fe80::23a1:b152"), 4));
   pool.add_addr(IP::Addr::from_string("10.10.1.1"));
-  const bool b = pool.acquire_specific_addr(IP::Addr::from_string("1.2.3.10"));
+  ASSERT_TRUE(pool.acquire_specific_addr(IP::Addr::from_string("1.2.3.10")));
 
   std::stringstream s;
   for (int i = 0;; ++i)

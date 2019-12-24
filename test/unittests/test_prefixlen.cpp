@@ -45,9 +45,10 @@ TEST(IPAddr, test32)
 {
   for (unsigned int i = 1; i <= 32; ++i) {
     const IPv4::Addr::base_type mask = prefix_len_to_netmask(i);
-    IPv4::Addr a = IPv4::Addr::from_uint32(mask);
     const int pl = prefix_len(mask);
     ASSERT_EQ(pl, i);
+
+    //IPv4::Addr a = IPv4::Addr::from_uint32(mask);
     //std::cout << i << ' ' << pl << ' ' << a << std::endl;
   }
 }

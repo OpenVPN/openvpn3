@@ -114,10 +114,14 @@ TEST(time, test1)
     }
 }
 
-static void sub(const Time& t1, const Time& t2)
+static void sub(const Time& t1, const Time& t2, bool large)
 {
   const Time::Duration d = t1 - t2;
   //std::cout << "T-T " << t1.raw() << " - " << t2.raw() << " = " << d.raw() << std::endl;
+  if (large)
+    ASSERT_GE(d.raw(), 100000);
+  else
+    ASSERT_EQ(d.raw(), 0);
 }
 
 static void sub(const Time::Duration& d1, const Time::Duration& d2)
@@ -152,10 +156,10 @@ TEST(time, timeaddsub)
   {
     const Time now = Time::now();
     const Time inf = Time::infinite();
-    sub(now, now);
-    sub(inf, now);
-    sub(now, inf);
-    sub(inf, inf);
+    sub(now, now, false);
+    sub(inf, now, true);
+    sub(now, inf, false);
+    sub(inf, inf, false);
   }
   {
     const Time::Duration sec = Time::Duration::seconds(1);
