@@ -106,6 +106,15 @@ namespace openvpn {
 	return false;
     }
 
+    // Return true if str == prefix or if str starts with prefix + delim
+    inline bool starts_with_delim(const std::string& str, const std::string& prefix, const char delim)
+    {
+      if (prefix.length() < str.length())
+	return str[prefix.length()] == delim && string::starts_with(str, prefix);
+      else
+	return prefix == str;
+    }
+
     inline bool ends_with(const std::string& str, const std::string& suffix)
     {
       const size_t len = str.length();
