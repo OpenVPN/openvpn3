@@ -171,7 +171,7 @@ namespace openvpn {
 	  base64->decode(sig, sig_b64);
 
 	  /* verify length */
-	  if (sig.size() != len)
+	  if (sig.size() != static_cast<size_t>(len))
 	    throw ssl_external_pki("OpenSSL: incorrect signature length");
 
 	  /* return length of signature */

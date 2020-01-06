@@ -140,7 +140,7 @@ namespace openvpn {
 	    throw openssl_gcm_error("EVP_EncryptFinal_ex");
 	  }
 	ciphertext_len += len;
-	if (ciphertext_len != length)
+	if ((size_t) ciphertext_len != length)
 	  {
 	    throw openssl_gcm_error("encrypt size inconsistency");
 	  }
@@ -190,7 +190,7 @@ namespace openvpn {
 	    return false;
 	  }
 	plaintext_len += len;
-	if (plaintext_len != length)
+	if (static_cast<size_t>(plaintext_len) != length)
 	  {
 	    throw openssl_gcm_error("decrypt size inconsistency");
 	  }

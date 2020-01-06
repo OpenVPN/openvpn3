@@ -621,7 +621,7 @@ namespace openvpn {
 	    {
 	    case OVPN_TH_TRANS_BY_PEER_ID:
 	      {
-		if (peer_id < 0 || th->peer_id != peer_id)
+		if (peer_id < 0 || th->peer_id != static_cast<uint32_t>(peer_id))
 		  {
 		    OPENVPN_LOG("dcocli: OVPN_TH_TRANS_BY_PEER_ID unrecognized peer_id=" << th->peer_id);
 		    return;
@@ -635,7 +635,7 @@ namespace openvpn {
 	      {
 		const struct ovpn_tun_head_status *thn = (const struct ovpn_tun_head_status *)th;
 
-		if (peer_id < 0 || thn->head.peer_id != peer_id)
+		if (peer_id < 0 || thn->head.peer_id != static_cast<uint32_t>(peer_id))
 		  {
 		    OPENVPN_LOG("dcocli: OVPN_TH_NOTIFY_STATUS unrecognized peer_id=" << thn->head.peer_id);
 		    return;

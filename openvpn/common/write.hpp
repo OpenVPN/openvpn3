@@ -35,7 +35,7 @@ namespace openvpn {
 	const ssize_t status = ::write(fd, buf, count);
 	if (status < 0)
 	  return status;
-	if (status > count) // should never happen
+	if (static_cast<size_t>(status) > count) // should never happen
 	  std::abort();
 	total += status;
 	count -= status;

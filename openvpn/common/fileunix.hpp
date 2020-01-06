@@ -53,7 +53,7 @@ namespace openvpn {
 				const mode_t mode,
 				const std::uint64_t mtime_ns,  // set explicit modification-time in nanoseconds since epoch, or 0 to defer to system
 				const void *buf,
-				const size_t size)
+				const ssize_t size)
   {
     // open
     ScopedFD fd(::open(fn.c_str(), O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC, mode));

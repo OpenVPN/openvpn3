@@ -140,7 +140,7 @@ namespace openvpn {
 		    o.touch();
 
 		    unsigned int mult = 1;
-		    int local = 0;
+		    unsigned int local = 0;
 
 		    Item e;
 

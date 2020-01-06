@@ -74,7 +74,7 @@ namespace openvpn {
 
     int find_index(const std::string& name) const
     {
-      for (int i = 0; i < size(); ++i)
+      for (size_type i = 0; i < size(); ++i)
 	{
 	  const std::string& s = (*this)[i];
 	  const size_t pos = s.find_first_of('=');

@@ -119,7 +119,7 @@ static std::string x509_get_field(::X509 *cert, const int nid) {
                                  // requires this workaround
       const int len = ASN1_STRING_to_UTF8(&buf, val);
       if (len > 0) {
-        if (std::strlen((char *)buf) == len) ret = (char *)buf;
+        if (std::strlen((char *)buf) == static_cast<unsigned int>(len)) ret = (char *)buf;
         OPENSSL_free(buf);
       }
     }
@@ -134,7 +134,7 @@ static std::string x509_get_field(::X509 *cert, const int nid) {
             if (BIO_write(bio, &nullc, 1) == 1) {
               char *str;
               const long len = BIO_get_mem_data(bio, &str);
-              if (std::strlen(str) == len) ret = str;
+              if (std::strlen(str) == static_cast<size_t>(len)) ret = str;
             }
           }
           BIO_free(bio);

@@ -62,7 +62,7 @@ namespace openvpn {
 	if (stop)
 	  {
 	    std::lock_guard<std::recursive_mutex> lock(stop->mutex);
-	    if (index >= 0 && index < stop->scopes.size() && stop->scopes[index] == this)
+	    if (index >= 0 && index < static_cast<int>(stop->scopes.size()) && stop->scopes[index] == this)
 	      {
 		stop->scopes[index] = nullptr;
 		stop->prune();

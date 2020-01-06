@@ -787,7 +787,7 @@ namespace openvpn {
     {
       if (index == -1)
 	return true;
-      return index >= 0 && index <= tunnel_addresses.size();
+      return index >= 0 && static_cast<unsigned int>(index) <= tunnel_addresses.size();
     }
 
     void validate_tunnel_address_indices(const std::string& title) const

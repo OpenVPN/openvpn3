@@ -55,14 +55,14 @@ namespace openvpn {
 	return !uid;
       }
 
-      bool match_uid(const int other_uid) const
+      bool match_uid(const uid_t other_uid) const
       {
 	return uid >= 0 && uid == other_uid;
       }
 
-      int uid;
-      int gid;
-      int pid;
+      uid_t uid;
+      uid_t gid;
+      uid_t pid;
     };
 
     // get credentials of process on other side of unix socket

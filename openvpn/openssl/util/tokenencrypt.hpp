@@ -81,7 +81,7 @@ namespace openvpn {
     }
 
     // Do the encrypt/decrypt
-    void operator()(std::uint8_t* dest, const std::uint8_t* src, const size_t size)
+    void operator()(std::uint8_t* dest, const std::uint8_t* src, const int size)
     {
       // NOTE: since this algorithm uses the ECB block cipher mode,
       // it should only be used to encrypt/decrypt a message which

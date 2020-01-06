@@ -80,7 +80,7 @@ namespace openvpn {
       std::unique_lock<std::mutex> lock(mutex);
       const unsigned int c = ++count;
       while (state == UNSIGNALED
-	     && (limit < 0 || c < limit)
+	     && (limit < 0 || c < static_cast<unsigned int>(limit))
 	     && !timeout)
 	timeout = (cv.wait_for(lock, std::chrono::seconds(seconds)) == std::cv_status::timeout);
       if (timeout)
@@ -134,7 +134,7 @@ namespace openvpn {
     Stop* stop;
     State state{UNSIGNALED};
     bool chosen = false;
-    unsigned int count = 0;
+    int count = 0;
     int limit;
   };
 

@@ -171,7 +171,7 @@ TEST(Base64, binary_data)
     for(unsigned int i=0;i<20;i++)
     {
         char* data = new char[i];
-        for (int j=0;j<i;j++)
+        for (unsigned int j=0;j<i;j++)
 	{
             data[j]=(char)(std::rand() & 0xff);
 	}

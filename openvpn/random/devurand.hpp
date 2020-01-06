@@ -74,7 +74,7 @@ namespace openvpn {
     }
 
   private:
-    bool rndbytes(unsigned char *buf, size_t size)
+    bool rndbytes(unsigned char *buf, ssize_t size)
     {
       const ssize_t actual = ::read(dev_urandom(), buf, size);
       return size == actual;
