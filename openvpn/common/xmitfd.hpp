@@ -68,7 +68,7 @@ namespace openvpn {
 	  const int eno = errno;
 	  OPENVPN_THROW(xmit_fd_error, "xmit_fd: " << strerror_str(eno));
 	}
-      else if (status != message.length())
+      else if (status != static_cast<ssize_t>(message.length()))
 	OPENVPN_THROW(xmit_fd_error, "xmit_fd: unexpected send size");
     }
 
@@ -97,7 +97,7 @@ namespace openvpn {
 	}
       else if (status == 0)
 	OPENVPN_THROW(xmit_fd_error, "recv_fd: eof");
-      else if (status > buf_size)
+      else if (status > static_cast<ssize_t>(buf_size))
 	OPENVPN_THROW(xmit_fd_error, "recv_fd: unexpectedly large message");
 
       int fd;
