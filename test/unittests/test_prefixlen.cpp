@@ -23,7 +23,7 @@ inline IPv4::Addr::base_type prefix_len_to_netmask(const unsigned int prefix_len
 }
 
 inline int prefix_len(const IPv4::Addr::base_type mask) {
-  if (mask!=~0) {
+  if (mask!=~0u) {
     unsigned int high = 32;
     unsigned int low = 1;
     for (unsigned int i = 0; i < 5; ++i) {

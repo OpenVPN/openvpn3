@@ -9,7 +9,7 @@
 
 using namespace openvpn;
 
-std::uint16_t ip_checksum_slow(const void *ip, int size) {
+std::uint16_t ip_checksum_slow(const void *ip, size_t size) {
   const std::uint16_t *buf = (const std::uint16_t *) ip;
   std::uint32_t cksum = 0;
 
