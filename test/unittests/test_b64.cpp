@@ -47,7 +47,7 @@ std::string ssllib_b64enc(const char* text, size_t textlen)
 
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); //Ignore newlines - write everything in one line
     BIO_write(bio, text, (int)textlen);
-    BIO_flush(bio);
+    EXPECT_TRUE(BIO_flush(bio) == 1);
     const char* encdata;
     long len = BIO_get_mem_data(bio, &encdata);
 
