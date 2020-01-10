@@ -37,10 +37,12 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/options.hpp>
+#include <openvpn/common/string.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/asio/asiowork.hpp>
+#include <openvpn/win/console.hpp>
 
 // include acceptors for different protocols
 #include <openvpn/acceptor/base.hpp>
@@ -261,6 +263,14 @@ namespace openvpn {
       const Option& o = opt.get("management");
       const std::string addr = o.get(1, 256);
       const std::string port = o.get(2, 16);
+      const std::string password_file = o.get_optional(3, 256);
+
+      if (password_file == "stdin")
+	{
+	  password_defined = true;
+	  std::cout << "Enter Management Password:";
+	  std::cin >> password;
+	}
 
       hold_flag = opt.exists("management-hold");
 
@@ -683,11 +693,47 @@ namespace openvpn {
       send(">INFO:OpenVPN Management Interface Version 1 -- type 'help' for more info\r\n");
     }
 
+    void send_password_prompt()
+    {
+      send("ENTER PASSWORD:");
+    }
+
+    void send_password_correct()
+    {
+      send("SUCCESS: password is correct");
+    }
+
+    bool process_password()
+    {
+      if (password_defined && !password_verified)
+	{
+	  if (password == in_partial)
+	    {
+	      password_verified = true;
+	      send_password_correct();
+	      send_title_message();
+	      hold_cycle();
+	    }
+	  else
+	    {
+	      // wrong password, kick the client
+	      stop_omi_client(false, 250);
+	    }
+	  return true;
+	}
+
+      return false;
+    }
+
     bool process_in_line() // process incoming line in in_partial
     {
       bool ret = false;
       const bool utf8 = Unicode::is_valid_utf8(in_partial);
       string::trim_crlf(in_partial);
+
+      if (process_password())
+	return false;
+
       if (multiline)
 	{
 	  if (!command)
@@ -825,9 +871,17 @@ namespace openvpn {
 	sock->set_cloexec();
 	socket = std::move(sock);
 
-	send_title_message();
+	password_verified = false;
+
+	if (password_defined)
+	  send_password_prompt();
+	else
+	  send_title_message();
+
 	queue_recv();
-	hold_cycle();
+
+	if (!password_defined)
+	  hold_cycle();
       }
       catch (const std::exception& e)
 	{
@@ -986,6 +1040,9 @@ namespace openvpn {
     bool multiline = false;
     bool errors_to_stderr = false;
     bool recv_queued = false;
+    bool password_defined = false;
+    bool password_verified = false;
+    std::string password;
 
     // stopping
     volatile bool stop_called = false;
