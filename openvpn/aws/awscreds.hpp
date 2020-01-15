@@ -17,9 +17,11 @@ namespace openvpn {
       Creds() {}
 
       Creds(std::string access_key_arg,
-	    std::string secret_key_arg)
+	    std::string secret_key_arg,
+	    std::string token_arg = "")
 	: access_key(std::move(access_key_arg)),
-	  secret_key(std::move(secret_key_arg))
+	  secret_key(std::move(secret_key_arg)),
+	  token(std::move(token_arg))
       {
       }
 
@@ -35,6 +37,7 @@ namespace openvpn {
 
       std::string access_key;
       std::string secret_key;
+      std::string token;
     };
   }
 }
