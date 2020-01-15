@@ -18,7 +18,8 @@
 //                 "ec2:DescribeNetworkInterfaces",
 //                 "ec2:DescribeRouteTables",
 //                 "ec2:ModifyNetworkInterfaceAttribute",
-//                 "ec2:ReplaceRoute"
+//                 "ec2:ReplaceRoute",
+//                 "ec2:DeleteRoute"
 //             ],
 //             "Resource": [
 //                 "*"
@@ -68,6 +69,11 @@ namespace openvpn {
 	{
 	  if (ts)
 	    ts->hsc.reset();
+	}
+
+	std::string instance_id() const
+	{
+	  return instance_info.instanceId;
 	}
 
       private:
@@ -193,7 +199,7 @@ namespace openvpn {
 
       // Set sourceDestCheck flag on AWS network interface.
       static void set_source_dest_check(Context& ctx,
-					const Info& info,
+					const std::string& network_interface_id,
 					const bool source_dest_check)
       {
 	const std::string sdc = source_dest_check ? "true" : "false";
@@ -203,7 +209,7 @@ namespace openvpn {
 	{
 	  REST::Query q;
 	  q.emplace_back("Action", "DescribeNetworkInterfaceAttribute");
-	  q.emplace_back("NetworkInterfaceId", info.network_interface_id);
+	  q.emplace_back("NetworkInterfaceId", network_interface_id);
 	  q.emplace_back("Attribute", "sourceDestCheck");
 	  add_transaction(ctx, std::move(q));
 	}
@@ -238,7 +244,7 @@ namespace openvpn {
 	{
 	  REST::Query q;
 	  q.emplace_back("Action", "ModifyNetworkInterfaceAttribute");
-	  q.emplace_back("NetworkInterfaceId", info.network_interface_id);
+	  q.emplace_back("NetworkInterfaceId", network_interface_id);
 	  q.emplace_back("SourceDestCheck.Value", sdc);
 	  add_transaction(ctx, std::move(q));
 	}
@@ -266,12 +272,12 @@ namespace openvpn {
 	  if (retval != "true")
 	    OPENVPN_THROW(aws_route_error, "ModifyNetworkInterfaceAttribute: returned failure status: " << '\n' << reply);
 
-	  OPENVPN_LOG("AWS EC2 ModifyNetworkInterfaceAttribute " << info.network_interface_id << " SourceDestCheck.Value=" << sdc);
+	  OPENVPN_LOG("AWS EC2 ModifyNetworkInterfaceAttribute " << network_interface_id << " SourceDestCheck.Value=" << sdc);
 	}
       }
 
       static void delete_route(Context& ctx,
-      			       const Info& info,
+      			       const std::string& route_table_id,
 			       const std::string& cidr,
 			       bool ipv6)
       {
@@ -279,7 +285,7 @@ namespace openvpn {
 	  REST::Query q;
 	  q.emplace_back("Action", "DeleteRoute");
 	  q.emplace_back(ipv6 ? "DestinationIpv6CidrBlock" : "DestinationCidrBlock", cidr);
-	  q.emplace_back("RouteTableId", info.route_table_id);
+	  q.emplace_back("RouteTableId", route_table_id);
 	  add_transaction(ctx, std::move(q));
 	}
 
@@ -306,13 +312,13 @@ namespace openvpn {
 	  if (retval != "true")
 	    OPENVPN_THROW(aws_route_error, "DeleteRoute: returned failure status: " << '\n' << reply);
 
-	  OPENVPN_LOG("AWS EC2 DeleteRoute " << cidr << " -> " << info.to_string());
+	  OPENVPN_LOG("AWS EC2 DeleteRoute " << cidr << " -> table " << route_table_id);
 	}
       }
 
       // Create/replace a VPC route
       static void replace_create_route(Context& ctx,
-				       const Info& info,
+				       const std::string& route_table_id,
 				       const std::string& route,
 				       RouteTargetType target_type,
 				       const std::string& target_value,
@@ -344,7 +350,7 @@ namespace openvpn {
 	  q.emplace_back("Action", "ReplaceRoute");
 	  q.emplace_back(dest_cidr_block_name, route);
 	  q.emplace_back(target_type_str, target_value);
-	  q.emplace_back("RouteTableId", info.route_table_id);
+	  q.emplace_back("RouteTableId", route_table_id);
 	  add_transaction(ctx, std::move(q));
 	}
 
@@ -375,7 +381,7 @@ namespace openvpn {
 							"return");
 	      if (retval == "true")
 		{
-		  OPENVPN_LOG("AWS EC2 ReplaceRoute " << route << " -> " << info.to_string());
+		  OPENVPN_LOG("AWS EC2 ReplaceRoute " << route << " -> table " << route_table_id);
 		  return;
 		}
 	    }
@@ -387,7 +393,7 @@ namespace openvpn {
 	  q.emplace_back("Action", "CreateRoute");
 	  q.emplace_back(dest_cidr_block_name, route);
 	  q.emplace_back(target_type_str, target_value);
-	  q.emplace_back("RouteTableId", info.route_table_id);
+	  q.emplace_back("RouteTableId", route_table_id);
 	  add_transaction(ctx, std::move(q));
 	}
 
@@ -414,7 +420,7 @@ namespace openvpn {
 	  if (retval != "true")
 	    OPENVPN_THROW(aws_route_error, "CreateRoute: returned failure status: " << '\n' << reply);
 
-	  OPENVPN_LOG("AWS EC2 CreateRoute " << route << " -> " << info.to_string());
+	  OPENVPN_LOG("AWS EC2 CreateRoute " << route << " -> table " << route_table_id);
 	}
       }
 
