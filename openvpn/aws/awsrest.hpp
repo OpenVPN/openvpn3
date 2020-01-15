@@ -166,6 +166,9 @@ namespace openvpn {
 	  parms.emplace_back("X-Amz-Date", date);
 	  parms.emplace_back("X-Amz-Expires", std::to_string(expires));
 	  parms.emplace_back("X-Amz-SignedHeaders", amz_signed_headers());
+
+	  if (!creds.token.empty())
+	    parms.emplace_back("X-Amz-Security-Token", creds.token);
 	}
 
 	void sort_parms()
