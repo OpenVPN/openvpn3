@@ -14,6 +14,7 @@
 #include <string>
 #include <utility>
 
+#include <openvpn/aws/awscreds.hpp>
 #include <openvpn/ws/httpcliset.hpp>
 #include <openvpn/common/jsonhelper.hpp>
 #include <openvpn/common/hexstr.hpp>
@@ -38,6 +39,9 @@ namespace openvpn {
 	std::string instanceId;
 	std::string region;
 	std::string privateIp;
+
+	Creds creds;
+
 	int concurrentConnections = -1;
 	std::string error;
 
@@ -74,6 +78,17 @@ namespace openvpn {
 	  frame(frame_init_simple(1024)),
 	  lookup_product_code(lookup_product_code_arg),
 	  debug_level(debug_level_arg)
+      {
+      }
+
+      PCQuery(WS::ClientSet::Ptr cs_arg,
+	      std::string role_for_credentials_arg)
+	: cs(std::move(cs_arg)),
+	  rng(new DevURand()),
+	  frame(frame_init_simple(1024)),
+	  lookup_product_code(false),
+	  debug_level(0),
+	  role_for_credentials(role_for_credentials_arg)
       {
       }
 
@@ -127,6 +142,15 @@ namespace openvpn {
 	      std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
 	      t->req.method = "GET";
 	      t->req.uri = "/latest/meta-data/product-codes";
+	      ts->transactions.push_back(std::move(t));
+	    }
+
+	  // transaction #4
+	  if (!role_for_credentials.empty())
+	    {
+	      std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+	      t->req.method = "GET";
+	      t->req.uri = "/latest/meta-data/iam/security-credentials/" + role_for_credentials;
 	      ts->transactions.push_back(std::move(t));
 	    }
 
@@ -214,6 +238,22 @@ namespace openvpn {
 		}
 	      else
 		done("could not fetch AWS product code: " + pc_trans.format_status(lts));
+	    }
+
+	  if (!role_for_credentials.empty())
+	    {
+	      WS::ClientSet::Transaction& cred_trans = *lts.transactions.at(lookup_product_code ? 3 : 2);
+	      if (cred_trans.request_status_success())
+		{
+		  const std::string creds = cred_trans.content_in.to_string();
+		  const Json::Value root = json::parse(creds);
+		  info.creds.access_key = json::get_string(root, "AccessKeyId");
+		  info.creds.secret_key = json::get_string(root, "SecretAccessKey");
+		  info.creds.token = json::get_string(root, "Token");
+		  done("");
+		}
+	      else
+		done("could not fetch role credentials: " + cred_trans.format_status(lts));
 	    }
 	  else
 	    done("");
@@ -478,6 +518,7 @@ namespace openvpn {
       Frame::Ptr frame;
       const bool lookup_product_code;
       const int debug_level;
+      std::string role_for_credentials;
 
       std::function<void(Info info)> completion;
       Info info;
