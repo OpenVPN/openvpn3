@@ -42,7 +42,6 @@
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/asio/asiowork.hpp>
-#include <openvpn/win/console.hpp>
 
 // include acceptors for different protocols
 #include <openvpn/acceptor/base.hpp>
