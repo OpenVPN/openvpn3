@@ -432,7 +432,7 @@ namespace openvpn {
 	      }
 	    else if (rr_content_length >= 0)
 	      {
-		const CONTENT_LENGTH_TYPE needed = std::max(rr_content_length - rr_content_bytes, CONTENT_LENGTH_TYPE(0));
+		const size_t needed = std::max(rr_content_length - rr_content_bytes, CONTENT_LENGTH_TYPE(0));
 		if (needed <= buf.size())
 		  {
 		    done = true;

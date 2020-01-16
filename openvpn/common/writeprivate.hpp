@@ -54,7 +54,7 @@ namespace openvpn {
 
 #else
 
-  inline void write_private(const std::string& path, const void *buf, size_t count)
+  inline void write_private(const std::string& path, const void *buf, ssize_t count)
   {
     ScopedFD fd(::open(path.c_str(), O_WRONLY|O_CREAT|O_CLOEXEC, S_IRUSR|S_IWUSR));
     if (!fd.defined())
