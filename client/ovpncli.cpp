@@ -440,7 +440,6 @@ namespace openvpn {
 	bool disable_client_cert = false;
 	int ssl_debug_level = 0;
 	int default_key_direction = -1;
-	bool force_aes_cbc_ciphersuites = false;
 	std::string tls_version_min_override;
 	std::string tls_cert_profile_override;
 	std::string gui_version;
@@ -696,7 +695,6 @@ namespace openvpn {
 	state->disable_client_cert = config.disableClientCert;
 	state->ssl_debug_level = config.sslDebugLevel;
 	state->default_key_direction = config.defaultKeyDirection;
-	state->force_aes_cbc_ciphersuites = config.forceAesCbcCiphersuites;
 	state->tls_version_min_override = config.tlsVersionMinOverride;
 	state->tls_cert_profile_override = config.tlsCertProfileOverride;
 	state->allow_local_lan_access = config.allowLocalLanAccess;
@@ -978,7 +976,6 @@ namespace openvpn {
       cc.disable_client_cert = state->disable_client_cert;
       cc.ssl_debug_level = state->ssl_debug_level;
       cc.default_key_direction = state->default_key_direction;
-      cc.force_aes_cbc_ciphersuites = state->force_aes_cbc_ciphersuites;
       cc.tls_version_min_override = state->tls_version_min_override;
       cc.tls_cert_profile_override = state->tls_cert_profile_override;
       cc.gui_version = state->gui_version;

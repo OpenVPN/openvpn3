@@ -202,11 +202,6 @@ namespace openvpn {
 	return not_implemented("set_enable_renegotiation");
       }
 
-      virtual void set_force_aes_cbc_ciphersuites(const bool v)
-      {
-	return not_implemented("set_force_aes_cbc_ciphersuites");
-      }
-
       virtual void set_rng(const RandomAPI::Ptr& rng_arg)
       {
 	return not_implemented("set_rng");

@@ -287,11 +287,6 @@ namespace openvpn {
 	local_cert_enabled = v;
       }
 
-      void set_force_aes_cbc_ciphersuites(const bool v) override
-      {
-	force_aes_cbc_ciphersuites = v;
-      }
-
       void set_x509_track(X509Track::ConfigSet x509_track_config_arg) override
       {
 	x509_track_config = std::move(x509_track_config_arg);
@@ -561,7 +556,6 @@ namespace openvpn {
       TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
-      bool force_aes_cbc_ciphersuites = false;
       bool client_session_tickets = false;
     };
 
@@ -1069,56 +1063,45 @@ namespace openvpn {
 		}
 	    }
 
-	  /* mbed TLS also ignores tls version when force aes cbc cipher suites is on */
-	  if (!config->force_aes_cbc_ciphersuites)
-	    {
-	      if (config->tls_version_min > TLSVersion::V1_0)
-		sslopt |= SSL_OP_NO_TLSv1;
-#             ifdef SSL_OP_NO_TLSv1_1
-		if (config->tls_version_min > TLSVersion::V1_1)
-		  sslopt |= SSL_OP_NO_TLSv1_1;
-#             endif
-#             ifdef SSL_OP_NO_TLSv1_2
-		if (config->tls_version_min > TLSVersion::V1_2)
-		  sslopt |= SSL_OP_NO_TLSv1_2;
-#             endif
-#             ifdef SSL_OP_NO_TLSv1_3
-		if (config->tls_version_min > TLSVersion::V1_3)
-		  sslopt |= SSL_OP_NO_TLSv1_3;
-#             endif
-	    }
+	  if (config->tls_version_min > TLSVersion::V1_0)
+	    sslopt |= SSL_OP_NO_TLSv1;
+#ifdef SSL_OP_NO_TLSv1_1
+	    if (config->tls_version_min > TLSVersion::V1_1)
+	      sslopt |= SSL_OP_NO_TLSv1_1;
+#endif
+#ifdef SSL_OP_NO_TLSv1_2
+	    if (config->tls_version_min > TLSVersion::V1_2)
+	      sslopt |= SSL_OP_NO_TLSv1_2;
+#endif
+#ifdef SSL_OP_NO_TLSv1_3
+	    if (config->tls_version_min > TLSVersion::V1_3)
+	      sslopt |= SSL_OP_NO_TLSv1_3;
+#endif
 	  SSL_CTX_set_options(ctx, sslopt);
 
-	  if (config->force_aes_cbc_ciphersuites)
-	    {
-	      if (!SSL_CTX_set_cipher_list(ctx, "DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA"))
-		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed for force_aes_cbc_ciphersuites");
-	    }
-	  else
-	    {
-	      if (!SSL_CTX_set_cipher_list(ctx,
-					   /* default list as a basis */
-					   "DEFAULT"
-					   /* Disable export ciphers, low and medium */
-					   ":!EXP:!LOW:!MEDIUM"
-					   /* Disable static (EC)DH keys (no forward secrecy) */
-					   ":!kDH:!kECDH"
-					   /* Disable DSA private keys */
-					   ":!DSS"
-					   /* Disable RC4 cipher */
-					   ":!RC4"
-					   /* Disable MD5 */
-					   ":!MD5"
-					   /* Disable unsupported TLS modes */
-					   ":!PSK:!SRP:!kRSA"
-					   /* Disable SSLv2 cipher suites*/
-					   ":!SSLv2"
-					   ))
-		  OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
+
+	  if (!SSL_CTX_set_cipher_list(ctx,
+				       /* default list as a basis */
+				       "DEFAULT"
+				       /* Disable export ciphers, low and medium */
+				       ":!EXP:!LOW:!MEDIUM"
+				       /* Disable static (EC)DH keys (no forward secrecy) */
+				       ":!kDH:!kECDH"
+				       /* Disable DSA private keys */
+				       ":!DSS"
+				       /* Disable RC4 cipher */
+				       ":!RC4"
+				       /* Disable MD5 */
+				       ":!MD5"
+				       /* Disable unsupported TLS modes */
+				       ":!PSK:!SRP:!kRSA"
+				       /* Disable SSLv2 cipher suites*/
+				       ":!SSLv2"
+				       ))
+	      OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && OPENSSL_VERSION_NUMBER < 0x10100000L
-	      SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
+	  SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
-	    }
 
 	  /* HAVE_SSL_CTX_SET_SECURITY_LEVEL exists from OpenSSL-1.1.0 up */
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL

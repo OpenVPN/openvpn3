@@ -349,9 +349,6 @@ namespace openvpn {
       // Debugging
       int debug_level = 1;
 
-      // Compatibility
-      bool force_aes_cbc_ciphersuites = false;
-
       // For compatibility with openvpn2 we send initial options on rekeying,
       // instead of possible modifications caused by NCP
       std::string initial_options;
@@ -809,29 +806,30 @@ namespace openvpn {
 
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
-	if (!force_aes_cbc_ciphersuites)
-	  {
-	    out << "IV_NCP=2\n"; // negotiable crypto parameters V2
-	    out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
-	    out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
-	    compstr = comp_ctx.peer_info_string();
+	out << "IV_NCP=2\n"; // negotiable crypto parameters V2
+	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
+	out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
+	compstr = comp_ctx.peer_info_string();
 
-	    /*
-	     * OpenVPN3 allows to be pushed any cipher that it supports as it
-	     * only implements secure ones and BF-CBC for backwards
-	     * compatibility and generally adopts the concept of the server being
-	     * responsible for sensible choices.
-	     *
-	     * IV_NCP already implies AES-256-GCM and AES-128-GCM, so we will
-	     * announce IV_CIPHER if we also support Chacha20-Poly1305
-	     */
-	    if (openvpn::AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
-	      {
-	        out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305\n";
-	      }
+	/*
+	 * OpenVPN3 allows to be pushed any cipher that it supports as it
+	 * only implements secure ones and BF-CBC for backwards
+	 * compatibility and generally adopts the concept of the server being
+	 * responsible for sensible choices.
+	 *
+	 * IV_NCP already implies AES-256-GCM and AES-128-GCM, so we will
+	 * announce IV_CIPHER if we also support Chacha20-Poly1305
+	 */
+	if (openvpn::AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
+	  {
+	    out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305\n";
 	  }
-	else
-	  compstr = comp_ctx.peer_info_string_v1();
+
+	out << "IV_NCP=2\n"; // negotiable crypto parameters V2
+	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
+	out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
+	compstr = comp_ctx.peer_info_string();
+
 	if (compstr)
 	  out << compstr;
 	if (extra_peer_info)

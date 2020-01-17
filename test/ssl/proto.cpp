@@ -842,9 +842,6 @@ int test(const int thread_num)
     ClientSSLAPI::Config::Ptr cc(new ClientSSLAPI::Config());
     cc->set_mode(Mode(Mode::CLIENT));
     cc->set_frame(frame);
-#ifdef FORCE_AES_CBC
-    cc->set_force_aes_cbc_ciphersuites(true);
-#endif
 #ifdef USE_APPLE_SSL
     cc->load_identity("etest");
 #else

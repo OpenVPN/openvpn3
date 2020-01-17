@@ -68,13 +68,6 @@ namespace openvpn {
 
   namespace mbedtls_ctx_private {
     namespace {
-      const int aes_cbc_ciphersuites[] = // CONST GLOBAL
-	{
-	  MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
-	  MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
-	  0
-	};
-
       /*
        * This is a modified list from mbed TLS ssl_ciphersuites.c.
        * We removed some SHA1 methods near the top of the list to
@@ -214,7 +207,6 @@ namespace openvpn {
 		 tls_version_min(TLSVersion::UNDEF),
 		 tls_cert_profile(TLSCertProfile::UNDEF),
 		 local_cert_enabled(true),
-		 force_aes_cbc_ciphersuites(false),
 		 allow_name_constraints(false) {}
 
       virtual SSLFactoryAPI::Ptr new_factory()
@@ -422,11 +414,6 @@ namespace openvpn {
 	local_cert_enabled = v;
       }
 
-      virtual void set_force_aes_cbc_ciphersuites(const bool v)
-      {
-	force_aes_cbc_ciphersuites = v;
-      }
-
       virtual void set_x509_track(X509Track::ConfigSet x509_track_config_arg)
       {
 	x509_track_config = std::move(x509_track_config_arg);
@@ -628,7 +615,6 @@ namespace openvpn {
       TLSCertProfile::Type tls_cert_profile;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
-      bool force_aes_cbc_ciphersuites;
       bool allow_name_constraints;
       RandomAPI::Ptr rng;   // random data source
     };
@@ -793,36 +779,32 @@ namespace openvpn {
 	  mbedtls_ssl_init(ssl);
 
 	  // set minimum TLS version
-	  if (!c.force_aes_cbc_ciphersuites || c.tls_version_min > TLSVersion::UNDEF)
+	  int major;
+	  int minor;
+	  switch (c.tls_version_min)
 	    {
-	      int major;
-	      int minor;
-	      switch (c.tls_version_min)
-		{
-		case TLSVersion::V1_0:
-		default:
-		  major = MBEDTLS_SSL_MAJOR_VERSION_3;
-		  minor = MBEDTLS_SSL_MINOR_VERSION_1;
-		  break;
-#               if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_2)
-	          case TLSVersion::V1_1:
-		    major = MBEDTLS_SSL_MAJOR_VERSION_3;
-		    minor = MBEDTLS_SSL_MINOR_VERSION_2;
-		    break;
-#               endif
-#               if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
-	          case TLSVersion::V1_2:
-		    major = MBEDTLS_SSL_MAJOR_VERSION_3;
-		    minor = MBEDTLS_SSL_MINOR_VERSION_3;
-		    break;
-#               endif
-	        }
-	      mbedtls_ssl_conf_min_version(sslconf, major, minor);
-#if 0 // force TLS 1.0 as maximum version (debugging only, disable in production)
-	      mbedtls_ssl_conf_max_version(sslconf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_1);
+	    case TLSVersion::V1_0:
+	    default:
+	      major = MBEDTLS_SSL_MAJOR_VERSION_3;
+	      minor = MBEDTLS_SSL_MINOR_VERSION_1;
+	      break;
+#if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_2)
+	      case TLSVersion::V1_1:
+		major = MBEDTLS_SSL_MAJOR_VERSION_3;
+		minor = MBEDTLS_SSL_MINOR_VERSION_2;
+		break;
 #endif
-	    }
-
+#if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
+	      case TLSVersion::V1_2:
+		major = MBEDTLS_SSL_MAJOR_VERSION_3;
+		minor = MBEDTLS_SSL_MINOR_VERSION_3;
+		break;
+#endif
+	       }
+	    mbedtls_ssl_conf_min_version(sslconf, major, minor);
+#if 0 // force TLS 1.0 as maximum version (debugging only, disable in production)
+	    mbedtls_ssl_conf_max_version(sslconf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_1);
+#endif
 
 	  {
 	    // peer must present a valid certificate unless SSLConst::NO_VERIFY_PEER.
@@ -853,9 +835,7 @@ namespace openvpn {
 	  // in mbed TLS config.h.
 	  mbedtls_ssl_conf_renegotiation(sslconf, MBEDTLS_SSL_RENEGOTIATION_DISABLED);
 
-	  mbedtls_ssl_conf_ciphersuites(sslconf, c.force_aes_cbc_ciphersuites ?
-					mbedtls_ctx_private::aes_cbc_ciphersuites :
-					mbedtls_ctx_private::ciphersuites);
+	  mbedtls_ssl_conf_ciphersuites(sslconf, mbedtls_ctx_private::ciphersuites);
 
 	  // set CA chain
 	  if (c.ca_chain)

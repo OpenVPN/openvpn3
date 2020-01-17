@@ -144,7 +144,6 @@ namespace openvpn {
       bool disable_client_cert = false;
       int ssl_debug_level = 0;
       int default_key_direction = -1;
-      bool force_aes_cbc_ciphersuites = false;
       bool autologin_sessions = false;
       bool retry_on_auth_failed = false;
       bool allow_local_lan_access = false;
@@ -727,7 +726,6 @@ namespace openvpn {
       cc->set_rng(rng);
       cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
       cc->set_private_key_password(config.private_key_password);
-      cc->set_force_aes_cbc_ciphersuites(config.force_aes_cbc_ciphersuites);
       cc->load(opt, lflags);
       cc->set_tls_version_min_override(config.tls_version_min_override);
       cc->set_tls_cert_profile_override(config.tls_cert_profile_override);
@@ -746,7 +744,6 @@ namespace openvpn {
       cp->ssl_factory = cc->new_factory();
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
-      cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
       cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
       cp->frame = frame;
       cp->now = &now_;
