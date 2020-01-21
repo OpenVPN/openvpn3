@@ -59,7 +59,7 @@ set(CORE_TEST_DEFINES
 add_executable(coreUnitTests ${SOURCES})
 
 add_core_dependencies(coreUnitTests)
-target_link_libraries(coreUnitTests gtest_main ${EXTRA_LIBS})
+target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
 
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
 target_include_directories(coreUnitTests PRIVATE ${EXTRA_INCLUDES})

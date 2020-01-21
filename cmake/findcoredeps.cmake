@@ -49,6 +49,11 @@ function(add_core_dependencies target)
                 -D_CRT_SECURE_NO_WARNINGS
                 )
         set(EXTRA_LIBS fwpuclnt.lib Iphlpapi.lib Wininet.lib Setupapi.lib Rpcrt4.lib Wtsapi32.lib lz4::lz4)
+        if ("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "ARM64")
+            # by some reasons CMake doesn't add those for ARM64
+            list(APPEND EXTRA_LIBS advapi32.lib Ole32.lib Shell32.lib)
+        endif ()
+
         target_compile_options(${target} PRIVATE "/bigobj")
 
         find_package(lz4 CONFIG REQUIRED)
@@ -121,6 +126,18 @@ function(add_core_dependencies target)
         target_compile_options(${target} PRIVATE -Wall -Wsign-compare)
     endif()
 
-
-
 endfunction()
+
+function (add_json_library target)
+    if (WIN32)
+        find_package(jsoncpp CONFIG REQUIRED)
+        target_link_libraries(${target} jsoncpp_lib)
+        target_compile_definitions(${target} PRIVATE -DHAVE_JSONCPP)
+        message("Adding jsoncpp to " ${target})
+    else ()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(JSONCPP jsoncpp)
+        target_link_libraries(${target} ${JSONCPP_LDFLAGS})
+        target_include_directories(${target} PRIVATE ${JSONCPP_INCLUDE_DIRS})
+    endif ()
+endfunction ()

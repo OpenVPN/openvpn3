@@ -1,3 +1,9 @@
+if (WIN32)
+    find_package(GTest CONFIG REQUIRED)
+    set(GTEST_LIB GTest::gtest_main)
+else()
+
+set(GTEST_LIB gtest_main)
 
 # Google Test Unit testing
 # Download and unpack googletest at configure time
@@ -33,3 +39,5 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
         ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
         EXCLUDE_FROM_ALL)
+
+endif ()
