@@ -24,6 +24,12 @@
 #include <openvpn/ws/httpcliset.hpp>
 #include <openvpn/tun/builder/setup.hpp>
 
+#ifdef OVPNAGENT_NAME
+#define OVPNAGENT_NAME_STRING OPENVPN_STRINGIZE(OVPNAGENT_NAME)
+#else
+#define OVPNAGENT_NAME_STRING "ovpnagent"
+#endif
+
 namespace openvpn {
 
   class UnixCommandAgent : public TunBuilderSetup::Factory
@@ -69,7 +75,7 @@ namespace openvpn {
 
       Config()
       {
-	uds_name = "/var/run/ovpnagent.sock";
+	uds_name = "/var/run/" OVPNAGENT_NAME_STRING ".sock";
 	debug_level = 1;
       }
 
