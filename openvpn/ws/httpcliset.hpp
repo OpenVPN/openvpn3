@@ -35,6 +35,7 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/complog.hpp>
+#include <openvpn/common/sfinae.hpp>
 #include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -801,10 +802,23 @@ namespace openvpn {
 	    }
 	}
 
+	template <typename RESULTS>
+	static auto do_randomize(RESULTS& results, RandomAPI& prng, SFINAE::Rank<1>) -> decltype(results.randomize(prng))
+	{
+	  results.randomize(prng);
+	}
+
+#ifndef HTTPCLI_RANDOMIZE_RESULTS_REQUIRED
+	template <typename RESULTS>
+	static void do_randomize(RESULTS& results, RandomAPI& prng, SFINAE::Rank<0>)
+	{
+	}
+#endif
+
 	void http_mutate_resolver_results(HTTPDelegate& hd, openvpn_io::ip::tcp::resolver::results_type& results)
 	{
 	  if (parent->prng && trans().randomize_resolver_results)
-	    results.randomize(*parent->prng);
+	    do_randomize(results, *parent->prng, SFINAE::Rank<1>());
 	}
 
 	void http_content_in(HTTPDelegate& hd, BufferAllocated& buf)
