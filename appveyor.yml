@@ -7,19 +7,19 @@ cache: c:\tools\vcpkg\installed\
 clone_folder: c:\ovpn3\core
 
 install:
-- cd C:\Tools\vcpkg
-- git pull
-- .\bootstrap-vcpkg.bat
-- .\vcpkg integrate install
-- .\vcpkg install asio:x64-windows openssl-windows:x64-windows tap-windows6:x64-windows"
-- cd %APPVEYOR_BUILD_FOLDER%\win
+ - cd C:\Tools\vcpkg
+ - git pull
+ - .\bootstrap-vcpkg.bat
+ - .\vcpkg upgrade --no-dry-run --overlay-ports=%APPVEYOR_BUILD_FOLDER%\deps\vcpkg-ports
+ - .\vcpkg install asio:x64-windows openssl-windows:x64-windows tap-windows6:x64-windows lz4:x64-windows gtest:x64-windows jsoncpp:x64-windows --overlay-ports=%APPVEYOR_BUILD_FOLDER%\deps\vcpkg-ports"
+ - cd %APPVEYOR_BUILD_FOLDER%
 
-platform: x64
-
-configuration: ReleaseOpenSSL
+build_script:
+ - cmake -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64 -B build .
+ - cmake --build build --config Release
 
 artifacts:
-  - path: win\x64\ReleaseOpenSSL\cli.exe
-  - path: win\x64\ReleaseOpenSSL\*.dll
+ - path: build\test\ovpncli\Release\*
+ - path: build\openvpn\omi\Release\*
 
 
