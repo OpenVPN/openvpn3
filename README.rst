@@ -153,6 +153,7 @@ Building the OpenVPN 3 client on Windows
 Prerequisites:
 
 * Visual Studio 2019
+* CMake
 * vcpkg
 
 Download and build dependencies::
@@ -161,12 +162,13 @@ Download and build dependencies::
   > cd vcpkg
   > bootstrap-vcpkg.bat
   > vcpkg integrate install
-  > vcpkg install openssl-windows:x64-windows asio:x64-windows tap-windows6:x64-windows
+  > vcpkg install openssl-windows:x64-windows asio:x64-windows tap-windows6:x64-windows lz4:x64-windows gtest:x64-windows
 
 Download and build core test client::
 
   > git clone https://github.com/OpenVPN/openvpn3.git
-  > MSBuild.exe openvpn3\win\ovpn3-core.sln
+  > cmake -DCMAKE_TOOLCHAIN_FILE=<path_to_vcpkg>\scripts\buildsystems\vcpkg.cmake -A x64 -B build openvpn3
+  > cmake --build build --config Release --target ovpncli
 
 Testing
 -------
