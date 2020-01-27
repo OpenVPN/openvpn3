@@ -26,7 +26,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include <fstream>
-#include <regex>
 #include <mutex>
 
 namespace openvpn {
@@ -189,16 +188,33 @@ inline std::string getSortedJoinedString(std::vector<T>& r, const std::string& d
   return s.str();
 }
 
+namespace detail {
+  class line
+  {
+    std::string data;
+  public:
+    friend std::istream& operator>>(std::istream& is, line& l)
+    {
+      std::getline(is, l.data);
+      return is;
+    }
+
+    operator std::string() const
+    { return data; }
+  };
+}
+
 /**
  * Splits a string into lines and returns them in a sorted output string
  */
-inline std::string getSortedString(const std::string& output, const std::string& regex_split = "\\n")
+inline std::string getSortedString(const std::string& output)
 {
-  static const std::regex re{regex_split};
-  std::vector<std::string> lines{
-    std::sregex_token_iterator(output.begin(), output.end(), re, -1),
-    std::sregex_token_iterator()
-  };
+  std::stringstream ss{output};
+
+  std::istream_iterator<detail::line> begin{ss};
+  std::istream_iterator<detail::line> end;
+  std::vector<std::string> lines {begin, end};
+
   // sort lines
   std::sort(lines.begin(), lines.end());
 
