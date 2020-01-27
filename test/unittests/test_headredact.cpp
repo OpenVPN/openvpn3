@@ -1,12 +1,6 @@
-// TEST : {"cmd": "./go headredact"}
+#include "test_common.h"
 
 //#define OPENVPN_HTTP_HEADERS_NO_REDACT
-
-#include <iostream>
-
-#include <openvpn/log/logsimple.hpp>
-#include <openvpn/common/size.hpp>
-#include <openvpn/common/exception.hpp>
 
 #include <openvpn/http/headredact.hpp>
 
@@ -56,32 +50,15 @@ static const std::string out2 =
     "         Accept: */*\r\n"
     "         \r\n";
 
-void test1()
+TEST(http, headredact1)
 {
   const std::string out = HTTP::headers_redact(in1);
-  OPENVPN_LOG_STRING(out);
-  if (out != out1)
-    throw Exception("test1 failed");
+  ASSERT_EQ (out, out1);
 }
 
-void test2()
+TEST(http, headredact2)
 {
   const std::string out = HTTP::headers_redact(in2);
-  OPENVPN_LOG_STRING(out);
-  if (out != out2)
-    throw Exception("test2 failed");
-}
+  ASSERT_EQ(out, out2);
 
-int main(int /*argc*/, char* /*argv*/[])
-{
-  try {
-    test1();
-    test2();
-  }
-  catch (const std::exception& e)
-    {
-      std::cerr << "Exception: " << e.what() << std::endl;
-      return 1;
-    }
-  return 0;
 }
