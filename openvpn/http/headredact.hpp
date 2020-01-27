@@ -32,8 +32,38 @@ namespace openvpn {
 #ifdef OPENVPN_HTTP_HEADERS_NO_REDACT
       return headers;
 #else
-      static const std::regex re("(authorization[\\s:=]+basic\\s+)([^\\s]+)", std::regex_constants::ECMAScript | std::regex_constants::icase);
-      return std::regex_replace(headers, re, "$1[REDACTED]");
+      // C++14 only solution (not compatible with RHEL7/CentOS7)
+      //static const std::regex re(R"((authorization[\s:=]+basic\s+)([^\s]+))", std::regex_constants::ECMAScript | std::regex_constants::icase);
+      //return std::regex_replace(headers, re, "$1[REDACTED]");
+      std::stringstream result;
+
+      std::istringstream iss(headers);
+
+      for (std::string line; std::getline(iss, line);)
+	{
+	  int authpos;
+	  if ((authpos = line.find("Authorization: ")) !=-1)
+	    {
+	      auto auth = line.substr(authpos);
+	      auto argument = auth.substr(auth.find(' ') + 1);
+	      std::string authtype;
+	      int arg1=-1;
+	      if ((arg1 = argument.find(' ')) !=  -1)
+		{
+		  authtype = argument.substr(0, arg1);
+		}
+	      result << line.substr(0, authpos) << "Authorization: " << authtype << " [REDACTED]\r" << std::endl;
+	    }
+	  else if ((authpos = line.find("authorization=basic ")) != -1)
+	    {
+	      result << line.substr(0, authpos)  << "authorization=basic [REDACTED]\r" << std::endl;
+	    }
+	  else
+	    {
+	      result << line << std::endl;
+	    }
+	}
+      return result.str();
 #endif
     }
 
