@@ -7,3 +7,4 @@ cmake_minimum_required(VERSION 3.5)
 
 add_subdirectory(test/unittests)
 add_subdirectory(test/ovpncli)
+add_subdirectory(test/ssl)
