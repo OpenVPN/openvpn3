@@ -904,17 +904,8 @@ namespace openvpn {
 
       Addr& operator=(const Addr& other)
       {
-	switch (ver = other.ver)
-	  {
-	  case V4:
-	    u.v4 = other.u.v4;
-	    break;
-	  case V6:
-	    u.v6 = other.u.v6;
-	    break;
-	  default:
-	    break;
-	  }
+	ver = other.ver;
+	u = other.u;
 	return *this;
       }
 
@@ -976,7 +967,7 @@ namespace openvpn {
       union {
 	IPv4::Addr v4;
 	IPv6::Addr v6;
-      } u;
+      } u {};
 
       Version ver;
     };
