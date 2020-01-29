@@ -88,8 +88,10 @@ inline HMAC_CTX *HMAC_CTX_new()
 
 inline void HMAC_CTX_free(HMAC_CTX *ctx)
 {
-  HMAC_CTX_cleanup(ctx);
-  delete ctx;
+  if (ctx) {
+    HMAC_CTX_cleanup(ctx);
+    delete ctx;
+  }
 }
 
 inline EVP_MD_CTX *EVP_MD_CTX_new()
