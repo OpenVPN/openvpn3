@@ -82,6 +82,10 @@
 #include <openvpn/win/winerr.hpp>
 #endif
 
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+#include <openvpn/common/periodic_fail.hpp>
+#endif
+
 namespace openvpn {
   namespace WS {
     namespace Client {
@@ -576,6 +580,10 @@ namespace openvpn {
 
 	void activity(const bool init)
 	{
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	  if (periodic_fail.trigger("httpcli", SIMULATE_HTTPCLI_FAILURES))
+	    throw http_client_exception("bogon");
+#endif
 	  const Time now = Time::now();
 	  if (general_timeout_duration.defined())
 	    {
@@ -1274,6 +1282,10 @@ namespace openvpn {
 
 	bool content_out_hold = true;
 	bool alive = false;
+
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	PeriodicFail periodic_fail;
+#endif
       };
 
       template <typename PARENT>
