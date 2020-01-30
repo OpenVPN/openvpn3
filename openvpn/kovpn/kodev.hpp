@@ -180,6 +180,19 @@ namespace openvpn {
 	    return false;
 	  }
       }
+
+      // Simulate mesh keepalive failures
+      inline void set_simulate_mesh_keepalive_failures(const int kovpn_fd,
+						       const bool enabled)
+      {
+	struct ovpn_simulate_mesh_keepalive_failures smkf;
+	smkf.enabled = enabled;
+	if (::ioctl(kovpn_fd, OVPN_SIMULATE_MESH_KEEPALIVE_FAILURES, &smkf) < 0)
+	  {
+	    const int eno = errno;
+	    OPENVPN_THROW(kotun_error, "OVPN_SIMULATE_MESH_KEEPALIVE_FAILURES failed, errno=" << eno << ' ' << KovpnStats::errstr(eno));
+	  }
+      }
     }
 
     struct PacketFrom
