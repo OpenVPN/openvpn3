@@ -212,7 +212,7 @@ namespace openvpn {
     }
 
     template <typename NAME>
-    inline std::string get_string_ref(const Json::Value& root, const NAME& name)
+    inline const std::string& get_string_ref(const Json::Value& root, const NAME& name)
     {
       return get_string_ref(root, name, nullptr);
     }
