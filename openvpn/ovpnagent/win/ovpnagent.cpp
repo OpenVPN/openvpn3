@@ -88,11 +88,15 @@ struct MyConfig
   {
     pipe_name = Agent::named_pipe_path();
     server_exe = Win::module_name_utf8();
+#ifdef OPENVPN_AGENT_START_PROCESS
+    omiclient_exe = Win::omiclient_path();
+#endif
     n_pipe_instances = 4;
   }
 
   std::string pipe_name;
   std::string server_exe;
+  std::string omiclient_exe;
   unsigned int n_pipe_instances;
 };
 
@@ -389,6 +393,90 @@ public:
       }
   }
 
+#ifdef OPENVPN_AGENT_START_PROCESS
+  void start_openvpn_process(HANDLE client_pipe,
+			     const std::string& config_file,
+			     const std::string& config_dir,
+			     const std::string& exit_event_name,
+			     const std::string& management_host,
+			     const std::string& management_password,
+			     const int management_port,
+			     const std::string& log,
+			     const bool log_append)
+  {
+    // impersonate pipe client
+    Win::NamedPipeImpersonate impersonate{ client_pipe };
+
+    {
+      // create primary token from impersonation token
+      HANDLE imp_token = NULL, pri_token = NULL;
+      BOOL res = OpenThreadToken(GetCurrentThread(), TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY, FALSE, &imp_token);
+      if (res == 0)
+	{
+	  const openvpn_io::error_code err(::GetLastError(), openvpn_io::error::get_system_category());
+	  OPENVPN_THROW_EXCEPTION("failed to open thread token: " << err.message());
+	}
+      res = DuplicateTokenEx(imp_token, 0, NULL, SECURITY_IMPERSONATION_LEVEL::SecurityAnonymous, TokenPrimary, &pri_token);
+      if (res == 0)
+	{
+	  const openvpn_io::error_code err(::GetLastError(), openvpn_io::error::get_system_category());
+	  OPENVPN_THROW_EXCEPTION("failed to duplicate token: " << err.message());
+	}
+
+      // create pipe which is used to write password to openvpn process's stdin
+      HANDLE stdin_read = NULL, stdin_write = NULL;
+      SECURITY_ATTRIBUTES inheritable = { sizeof(inheritable), NULL, TRUE };
+      if (!CreatePipe(&stdin_read, &stdin_write, &inheritable, 0)
+	|| !SetHandleInformation(stdin_write, HANDLE_FLAG_INHERIT, 0))
+	{
+	  const openvpn_io::error_code err(::GetLastError(), openvpn_io::error::get_system_category());
+	  OPENVPN_THROW_EXCEPTION("failed to set up pipe: " << err.message());
+	}
+
+      // create command line for openvpn process
+      std::ostringstream ss;
+      ss << "client --config " << config_dir << "\\" << config_file << " --exit-event-name "
+	 << exit_event_name << " --auth-retry interact --management " << management_host << " "
+	 << management_port << " stdin --management-query-passwords --management-hold " << "--log"
+	 << (log_append ? "-append " : " ") << log;
+      std::string cmd = ss.str();
+      std::unique_ptr<char[]> buf(new char[cmd.length() + 1]);
+      strcpy(buf.get(), cmd.c_str());
+
+      STARTUPINFO startup_info = { 0 };
+      startup_info.cb = sizeof(startup_info);
+      startup_info.dwFlags = STARTF_USESTDHANDLES;
+      startup_info.hStdInput = stdin_read;
+
+      // create openvpn process
+      PROCESS_INFORMATION proc_info;
+      ZeroMemory(&proc_info, sizeof(proc_info));
+      res = CreateProcessAsUser(pri_token,
+				config.omiclient_exe.c_str(),
+				buf.get(),
+				NULL,
+				NULL,
+				TRUE,
+				CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
+				0,
+				0,
+				&startup_info,
+				&proc_info);
+      if (res == 0)
+	{
+	  const openvpn_io::error_code err(::GetLastError(), openvpn_io::error::get_system_category());
+	  OPENVPN_THROW_EXCEPTION("failed to create openvpn process: " << err.message());
+	}
+      CloseHandle(proc_info.hProcess);
+      CloseHandle(proc_info.hThread);
+
+      // write management password to process's stdin
+      DWORD written;
+      WriteFile(stdin_write, management_password.c_str(), management_password.length(), &written, NULL);
+    }
+  }
+#endif
+
   const MyConfig& config;
   ActionList remove_cmds_bypass_hosts;
   std::string bypass_host;
@@ -564,17 +652,37 @@ private:
 
 	      generate_reply(jout);
 	    }
-	}
-      else
-	{
-	  OPENVPN_LOG("PAGE NOT FOUND");
-	  out = buf_from_string("page not found\n");
-	  WS::Server::ContentInfo ci;
-	  ci.http_status = HTTP::Status::NotFound;
-	  ci.type = "text/plain";
-	  ci.length = out->size();
-	  generate_reply_headers(ci);
-	}
+#ifdef OPENVPN_AGENT_START_PROCESS
+	  else if (req.uri == "/start")
+	    {
+	      const std::string config_file = json::get_string(root, "config_file");
+	      const std::string config_dir = json::get_string(root, "config_dir");
+	      const std::string exit_event_name = json::get_string(root, "exit_event_name");
+	      const std::string management_host = json::get_string(root, "management_host");
+	      const std::string management_password = json::get_string(root, "management_password") + "\n";
+	      const int management_port = json::get_int(root, "management_port");
+	      const std::string log = json::get_string(root, "log");
+	      const bool log_append = json::get_int(root, "log-append") == 1;
+
+	      parent()->start_openvpn_process(client_pipe, config_file, config_dir, exit_event_name,
+					      management_host, management_password, management_port,
+					      log, log_append);
+
+	      Json::Value jout(Json::objectValue);
+	      generate_reply(jout);
+	  }
+#endif
+	else
+	  {
+	    OPENVPN_LOG("PAGE NOT FOUND");
+	    out = buf_from_string("page not found\n");
+	    WS::Server::ContentInfo ci;
+	    ci.http_status = HTTP::Status::NotFound;
+	    ci.type = "text/plain";
+	    ci.length = out->size();
+	    generate_reply_headers(ci);
+	  }
+        }
     }
     catch (const std::exception& e)
       {
