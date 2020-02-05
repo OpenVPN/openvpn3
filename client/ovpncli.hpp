@@ -91,6 +91,9 @@ namespace openvpn {
 
       // optional list of user-selectable VPN servers
       std::vector<ServerEntry> serverList;
+
+      // optional, values are "tap-windows6" and "wintun"
+      std::string windowsDriver;
     };
 
     // used to pass credentials to VPN core

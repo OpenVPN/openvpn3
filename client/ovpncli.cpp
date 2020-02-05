@@ -656,6 +656,7 @@ namespace openvpn {
 	eval.remoteHost = config.serverOverride.empty() ? cc.firstRemoteListItem().host : config.serverOverride;
 	eval.remotePort = cc.firstRemoteListItem().port;
 	eval.remoteProto = cc.firstRemoteListItem().proto;
+	eval.windowsDriver = cc.windowsDriver();
 	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
 	  {
 	    ServerEntry se;
