@@ -14,7 +14,7 @@ TEST(misc, pipe) {
     argv.emplace_back("sort");
     argv.emplace_back("-u");
     //OPENVPN_LOG(argv.to_string());
-    const int status = system_cmd("/usr/bin/sort", argv, nullptr, io, 0);
+    const int status = system_cmd("/usr/bin/sort", argv, nullptr, io, 0, nullptr);
 
     ASSERT_EQ(0, status) << "bad sort status=" << status << " stderr=" << io.err;
 
