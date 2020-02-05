@@ -21,5 +21,6 @@ build_script:
 artifacts:
  - path: build\test\ovpncli\Release\*
  - path: build\openvpn\omi\Release\*
+ - path: build\openvpn\ovpnagent\win\Release\*
 
 
