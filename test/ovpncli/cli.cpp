@@ -443,7 +443,8 @@ private:
 				  argv,
 				  nullptr,
 				  pio,
-				  RedirectPipe::IGNORE_ERR);
+				  RedirectPipe::IGNORE_ERR,
+				  nullptr);
     if (!status)
       {
 	const std::string out = string::first_line(pio.out);
