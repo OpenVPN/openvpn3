@@ -366,6 +366,10 @@ private:
 
       autologin = eval.autologin;
 
+      // for compatibility with openvpn2
+      if (eval.windowsDriver == "wintun")
+	config->wintun = true;
+
       if (!eval.autologin && management_query_passwords && !creds)
 	query_username_password("Auth", false, eval.staticChallenge, eval.staticChallengeEcho);
       else if (proxy_need_creds)
