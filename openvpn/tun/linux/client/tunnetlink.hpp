@@ -693,7 +693,7 @@ namespace openvpn {
 	  add_del_route(address, 32, gw.v4.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);
 
 	if (ipv6 && gw.v6.defined())
-	  add_del_route(address, 128, gw.v6.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);
+	  add_del_route(address, 128, gw.v6.addr().to_string(), gw.dev(), R_IPv6|R_ADD_SYS, rtvec, create, destroy);
       }
     };
   }
