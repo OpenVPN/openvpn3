@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <Windows.h>
-#include <Lmcons.h>
+#include <windows.h>
+#include <lmcons.h>
 #include <wtsapi32.h>
 
 #include <openvpn/win/winerr.hpp>

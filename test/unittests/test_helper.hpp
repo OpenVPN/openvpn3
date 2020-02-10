@@ -154,7 +154,7 @@ inline std::string getExpectedOutput(const std::string& filename)
 }
 
 #ifdef WIN32
-#include "Windows.h"
+#include <windows.h>
 
 inline std::string getTempDirPath(const std::string& fn)
 {

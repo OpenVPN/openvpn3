@@ -24,11 +24,11 @@
 
 #pragma once
 
-#include <WinInet.h>
+#include <wininet.h>
 
-#include <openvpn\win\impersonate.hpp>
-#include <openvpn\tun\proxy.hpp>
-#include <openvpn\win\reg.hpp>
+#include <openvpn/win/impersonate.hpp>
+#include <openvpn/tun/proxy.hpp>
+#include <openvpn/win/reg.hpp>
 
 using namespace openvpn::Win;
 

@@ -36,7 +36,7 @@
 #include <tlhelp32.h> // for impersonating as LocalSystem
 
 
-#include <SetupAPI.h>
+#include <setupapi.h>
 #include <devguid.h>
 #include <cfgmgr32.h>
 #include <ndisguid.h>
