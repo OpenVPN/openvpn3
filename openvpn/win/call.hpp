@@ -26,6 +26,7 @@
 
 #include <windows.h>
 #include <shlobj.h>
+#include <knownfolders.h>
 
 #include <cstring>
 
