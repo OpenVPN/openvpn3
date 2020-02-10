@@ -87,17 +87,10 @@ namespace openvpn {
       {
 	if (defined())
 	  {
-	    __try
-	      {
-		const BOOL ret = ::CloseHandle(handle);
-		//OPENVPN_LOG("**** SH CLOSE hand=" << handle << " ret=" << ret);
-		handle = nullptr;
-		return ret != 0;
-	      }
-	    __except (EXCEPTION_EXECUTE_HANDLER)
-	      {
-		return false;
-	      }
+	    const BOOL ret = ::CloseHandle(handle);
+	    //OPENVPN_LOG("**** SH CLOSE hand=" << handle << " ret=" << ret);
+	    handle = nullptr;
+	    return ret != 0;
 	  }
 	else
 	  return true;
