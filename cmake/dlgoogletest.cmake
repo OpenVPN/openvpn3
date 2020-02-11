@@ -1,4 +1,4 @@
-if (WIN32)
+if (MSVC)
     find_package(GTest CONFIG REQUIRED)
     set(GTEST_LIB GTest::gtest_main)
 else()
