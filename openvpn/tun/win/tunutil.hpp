@@ -39,7 +39,12 @@
 #include <setupapi.h>
 #include <devguid.h>
 #include <cfgmgr32.h>
+
+#ifdef __MINGW32__
+#include <ddk/ndisguid.h>
+#else
 #include <ndisguid.h>
+#endif
 
 #include <string>
 #include <vector>
