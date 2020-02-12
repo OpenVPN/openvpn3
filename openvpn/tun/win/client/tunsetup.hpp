@@ -857,7 +857,7 @@ namespace openvpn {
 	// We must do DHCP release/renew in a background thread
 	// so the foreground can forward the DHCP negotiation packets
 	// over the tunnel.
-	l2_thread.reset(new std::thread([this, tap, logwrap=Log::Context::Wrapper()]() {
+	l2_thread.reset(new std::thread([tap, logwrap=Log::Context::Wrapper()]() {
 	      Log::Context logctx(logwrap);
 	      ::Sleep(250);
 	      const Util::InterfaceInfoList ii;

@@ -301,9 +301,6 @@ namespace openvpn {
       TunProp::State::Ptr state;
       TunWin::SetupBase::Ptr tun_setup;
 
-      TUN_RING* receive_ring = nullptr;
-      TUN_RING* send_ring = nullptr;
-
       BufferAllocated buf;
 
       Frame::Ptr frame;
