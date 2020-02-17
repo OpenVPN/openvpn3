@@ -33,7 +33,7 @@ namespace openvpn {
   struct AppleCryptoAPI {
     // cipher
     typedef AppleCrypto::CipherContext CipherContext;
-    typedef AppleCrypto::CipherContextGCM CipherContextGCM;
+    typedef AppleCrypto::CipherContextAEAD CipherContextAEAD;
 
     // digest
     typedef AppleCrypto::DigestContext DigestContext;

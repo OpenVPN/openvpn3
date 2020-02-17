@@ -38,10 +38,10 @@
 
 namespace openvpn {
   namespace OpenSSLCrypto {
-    class CipherContextGCM
+    class CipherContextAEAD
     {
-      CipherContextGCM(const CipherContextGCM&) = delete;
-      CipherContextGCM& operator=(const CipherContextGCM&) = delete;
+      CipherContextAEAD(const CipherContextAEAD&) = delete;
+      CipherContextAEAD& operator=(const CipherContextAEAD&) = delete;
 
     public:
       OPENVPN_EXCEPTION(openssl_gcm_error);
@@ -60,12 +60,12 @@ namespace openvpn {
 	SUPPORTS_IN_PLACE_ENCRYPT = 0,
       };
 
-      CipherContextGCM()
+      CipherContextAEAD()
 	: initialized(false)
       {
       }
 
-      ~CipherContextGCM() { erase() ; }
+      ~CipherContextAEAD() { erase() ; }
 
       void init(const CryptoAlgs::Type alg,
 		const unsigned char *key,

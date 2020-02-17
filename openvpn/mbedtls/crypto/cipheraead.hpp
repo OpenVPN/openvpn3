@@ -36,13 +36,13 @@
 
 namespace openvpn {
   namespace MbedTLSCrypto {
-    class CipherContextGCM
+    class CipherContextAEAD
     {
-      CipherContextGCM(const CipherContextGCM&) = delete;
-      CipherContextGCM& operator=(const CipherContextGCM&) = delete;
+      CipherContextAEAD(const CipherContextAEAD&) = delete;
+      CipherContextAEAD& operator=(const CipherContextAEAD&) = delete;
 
     public:
-      OPENVPN_EXCEPTION(mbedtls_gcm_error);
+      OPENVPN_EXCEPTION(mbedtls_aead_error);
 
       // mode parameter for constructor
       enum {
@@ -66,12 +66,12 @@ namespace openvpn {
       };
 #endif
 
-      CipherContextGCM()
+      CipherContextAEAD()
 	: initialized(false)
       {
       }
 
-      ~CipherContextGCM() { erase() ; }
+      ~CipherContextAEAD() { erase() ; }
 
       void init(const CryptoAlgs::Type alg,
 		const unsigned char *key,
@@ -84,12 +84,12 @@ namespace openvpn {
 	unsigned int ckeysz = 0;
 	const mbedtls_cipher_id_t cid = cipher_type(alg, ckeysz);
 	if (ckeysz > keysize)
-	  throw mbedtls_gcm_error("insufficient key material");
+	  throw mbedtls_aead_error("insufficient key material");
 
 	// initialize cipher context
 	mbedtls_gcm_init(&ctx);
 	if (mbedtls_gcm_setkey(&ctx, cid, key, ckeysz * 8) < 0)
-	    throw mbedtls_gcm_error("mbedtls_gcm_setkey");
+	    throw mbedtls_aead_error("mbedtls_gcm_setkey");
 
 	initialized = true;
       }
@@ -107,7 +107,7 @@ namespace openvpn {
 						     length, iv, IV_LEN, ad, ad_len,
 						     input, output, AUTH_TAG_LEN, tag);
 	if (unlikely(status))
-	  OPENVPN_THROW(mbedtls_gcm_error, "mbedtls_gcm_crypt_and_tag failed with status=" << status);
+	  OPENVPN_THROW(mbedtls_aead_error, "mbedtls_gcm_crypt_and_tag failed with status=" << status);
       }
 
       // input and output may NOT be equal
@@ -142,7 +142,7 @@ namespace openvpn {
 	    keysize = 32;
 	    return MBEDTLS_CIPHER_ID_AES;
 	  default:
-	    OPENVPN_THROW(mbedtls_gcm_error, CryptoAlgs::name(alg) << ": not usable");
+	    OPENVPN_THROW(mbedtls_aead_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
       }
 
@@ -158,7 +158,7 @@ namespace openvpn {
       void check_initialized() const
       {
 	if (unlikely(!initialized))
-	  throw mbedtls_gcm_error("uninitialized");
+	  throw mbedtls_aead_error("uninitialized");
       }
 
       bool initialized;
