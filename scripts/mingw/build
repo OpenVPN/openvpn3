@@ -6,9 +6,15 @@ DL="${DL:-/tmp/dl}"
 DEP_DIR_PREFIX=$PWD/deps
 CMAKE_C_COMPILER="w64-mingw32-gcc-posix"
 CMAKE_CXX_COMPILER="w64-mingw32-g++-posix"
+ARCH=${ARCH:-i686 x86_64}
 
 download_deps()
 {
+    if [ -n "$NO_DEPS" ]; then
+        echo "Skip dependencies download"
+        return
+    fi
+
     pushd $DL
 
     rm -rf lz4
@@ -17,8 +23,10 @@ download_deps()
     rm -rf jsoncpp
     git clone https://github.com/open-source-parsers/jsoncpp.git
 
-    rm -rf openssl
-    git clone --single-branch --branch OpenSSL_1_1_1-stable https://github.com/openssl/openssl.git
+    if [ -z "$NO_OPENSSL" ]; then
+        rm -rf openssl
+        git clone --single-branch --branch OpenSSL_1_1_1-stable https://github.com/openssl/openssl.git
+    fi
 
     rm -rf tap-windows6
     git clone https://github.com/OpenVPN/tap-windows6.git
@@ -70,6 +78,11 @@ build_jsoncpp()
 
 build_openssl()
 {
+    if [ -n "$NO_OPENSSL" ]; then
+        echo "Skip OpenSSL build"
+        return
+    fi
+
     ARCH=$1
 
     pushd $DL/openssl
@@ -99,6 +112,11 @@ build_asio()
 
 build_deps()
 {
+    if [ -n "$NO_DEPS" ]; then
+        echo "Skip dependencies build"
+        return
+    fi
+
     ARCH=$1
 
     echo "Building deps for $arch"
@@ -124,7 +142,7 @@ build_core()
     pushd build-$ARCH
 
     DEP_DIR=$DEP_DIR_PREFIX-$ARCH \
-    OPENSSL_ROOT_DIR=$DEP_DIR_PREFIX-$ARCH \
+    OPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR:-$DEP_DIR_PREFIX-$ARCH} \
     cmake -D CMAKE_C_COMPILER=$ARCH-$CMAKE_C_COMPILER \
           -D CMAKE_CXX_COMPILER=$ARCH-$CMAKE_CXX_COMPILER \
           -D CMAKE_SYSTEM_NAME=Windows \
@@ -138,7 +156,7 @@ build_core()
 }
 
 download_deps
-for arch in i686 x86_64
+for arch in $ARCH
 do
     echo "Building for $arch"
     build_deps $arch
