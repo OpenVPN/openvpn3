@@ -76,6 +76,9 @@ namespace openvpn {
 	// get cipher type
 	unsigned int ckeysz = 0;
 	const mbedtls_cipher_type_t cid = cipher_type(alg, ckeysz);
+	if (cid == MBEDTLS_CIPHER_NONE)
+		OPENVPN_THROW(mbedtls_aead_error, CryptoAlgs::name(alg) << ": not usable");
+
 	if (ckeysz > keysize)
 	  throw mbedtls_aead_error("insufficient key material");
 
@@ -126,6 +129,12 @@ namespace openvpn {
 
       bool is_initialized() const { return initialized; }
 
+      static bool is_supported(const CryptoAlgs::Type alg)
+      {
+        unsigned int keysize;
+       	return (cipher_type(alg, keysize) != MBEDTLS_CIPHER_NONE);
+      }
+
     private:
       static mbedtls_cipher_type_t cipher_type(const CryptoAlgs::Type alg, unsigned int& keysize)
       {
@@ -146,7 +155,8 @@ namespace openvpn {
 	    return MBEDTLS_CIPHER_CHACHA20_POLY1305;
 #endif
 	  default:
-	    OPENVPN_THROW(mbedtls_aead_error, CryptoAlgs::name(alg) << ": not usable");
+	    keysize =0;
+	    return MBEDTLS_CIPHER_NONE;
 	  }
       }
     };

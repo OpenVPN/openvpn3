@@ -74,6 +74,10 @@ namespace openvpn {
 	erase();
 	unsigned int ckeysz = 0;
 	const EVP_CIPHER *ciph = cipher_type(alg, ckeysz);
+
+	if (ciph == nullptr)
+	  OPENVPN_THROW(openssl_gcm_error, CryptoAlgs::name(alg) << ": not usable");
+
 	if (ckeysz > keysize)
 	  throw openssl_gcm_error("insufficient key material");
 	ctx = EVP_CIPHER_CTX_new();
@@ -198,6 +202,13 @@ namespace openvpn {
 
       bool is_initialized() const { return initialized; }
 
+      static bool is_supported(const CryptoAlgs::Type alg)
+      {
+	unsigned int keysize;
+	return (cipher_type(alg, keysize) != nullptr);
+      }
+
+
     private:
       static const EVP_CIPHER *cipher_type(const CryptoAlgs::Type alg,
 					   unsigned int& keysize)
@@ -219,7 +230,8 @@ namespace openvpn {
 	      return EVP_chacha20_poly1305();
 #endif
 	  default:
-	    OPENVPN_THROW(openssl_gcm_error, CryptoAlgs::name(alg) << ": not usable");
+	       keysize = 0;
+	       return nullptr;
 	  }
       }
 
