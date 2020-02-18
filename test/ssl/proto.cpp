@@ -814,7 +814,7 @@ int test(const int thread_num)
 {
   try {
     // frame
-    Frame::Ptr frame(new Frame(Frame::Context(128, 256, 128, 0, 16, 0)));
+    Frame::Ptr frame(new Frame(Frame::Context(128, 378, 128, 0, 16, 0)));
 
     // RNG
     ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI(false));
