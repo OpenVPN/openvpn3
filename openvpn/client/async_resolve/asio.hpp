@@ -111,12 +111,6 @@ namespace openvpn {
 
     virtual ~AsyncResolvable()
     {
-      if (resolve_thread)
-      {
-	resolve_thread->detach();
-	resolve_thread.reset();
-      }
-
       async_resolve_cancel();
     }
 
@@ -155,6 +149,12 @@ namespace openvpn {
     // It simulates a resolve abort
     void async_resolve_cancel()
     {
+      if (resolve_thread)
+      {
+	resolve_thread->detach();
+	resolve_thread.reset();
+      }
+
       asio_work.reset();
     }
   };
