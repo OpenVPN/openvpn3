@@ -21,8 +21,7 @@
 
 // Wrap the OpenSSL GCM API.
 
-#ifndef OPENVPN_OPENSSL_CRYPTO_CIPHERGCM_H
-#define OPENVPN_OPENSSL_CRYPTO_CIPHERGCM_H
+#pragma once
 
 #include <string>
 
@@ -212,8 +211,13 @@ namespace openvpn {
 	    keysize = 24;
 	    return EVP_aes_192_gcm();
 	  case CryptoAlgs::AES_256_GCM:
-	    keysize = 32;
+	      keysize = 32;
 	    return EVP_aes_256_gcm();
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_POLY1305) && !defined(OPENSSL_NO_CHACHA)
+	  case CryptoAlgs::CHACHA20_POLY1305:
+	      keysize = 32;
+	      return EVP_chacha20_poly1305();
+#endif
 	  default:
 	    OPENVPN_THROW(openssl_gcm_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
@@ -242,4 +246,3 @@ namespace openvpn {
   }
 }
 
-#endif

@@ -19,10 +19,9 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Wrap the mbed TLS GCM API.
+// Wrap the mbed TLS AEAD API.
 
-#ifndef OPENVPN_MBEDTLS_CRYPTO_CIPHERGCM_H
-#define OPENVPN_MBEDTLS_CRYPTO_CIPHERGCM_H
+#pragma once
 
 #include <string>
 
@@ -33,10 +32,11 @@
 #include <openvpn/common/likely.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
+#include <openvpn/mbedtls/crypto/cipher.hpp>
 
 namespace openvpn {
   namespace MbedTLSCrypto {
-    class CipherContextAEAD
+    class CipherContextAEAD : public CipherContextCommon
     {
       CipherContextAEAD(const CipherContextAEAD&) = delete;
       CipherContextAEAD& operator=(const CipherContextAEAD&) = delete;
@@ -44,12 +44,6 @@ namespace openvpn {
     public:
       OPENVPN_EXCEPTION(mbedtls_aead_error);
 
-      // mode parameter for constructor
-      enum {
-	MODE_UNDEF = MBEDTLS_OPERATION_NONE,
-	ENCRYPT = MBEDTLS_ENCRYPT,
-	DECRYPT = MBEDTLS_DECRYPT
-      };
 
       // mbed TLS cipher constants
       enum {
@@ -66,30 +60,33 @@ namespace openvpn {
       };
 #endif
 
-      CipherContextAEAD()
-	: initialized(false)
-      {
-      }
+      CipherContextAEAD() = default;
 
       ~CipherContextAEAD() { erase() ; }
 
       void init(const CryptoAlgs::Type alg,
 		const unsigned char *key,
 		const unsigned int keysize,
-		const int mode) // unused
+		const int mode)
       {
 	erase();
 
+	check_mode(mode);
+
 	// get cipher type
 	unsigned int ckeysz = 0;
-	const mbedtls_cipher_id_t cid = cipher_type(alg, ckeysz);
+	const mbedtls_cipher_type_t cid = cipher_type(alg, ckeysz);
 	if (ckeysz > keysize)
 	  throw mbedtls_aead_error("insufficient key material");
 
-	// initialize cipher context
-	mbedtls_gcm_init(&ctx);
-	if (mbedtls_gcm_setkey(&ctx, cid, key, ckeysz * 8) < 0)
-	    throw mbedtls_aead_error("mbedtls_gcm_setkey");
+	auto* ci = mbedtls_cipher_info_from_type(cid);
+
+	// initialize cipher context with cipher type
+	if (mbedtls_cipher_setup(&ctx, ci) < 0)
+	  throw mbedtls_aead_error("mbedtls_cipher_setup");
+
+	if (mbedtls_cipher_setkey(&ctx, key, ckeysz * 8, (mbedtls_operation_t)mode) < 0)
+	    throw mbedtls_aead_error("mbedtls_cipher_setkey");
 
 	initialized = true;
       }
@@ -103,9 +100,8 @@ namespace openvpn {
 		   size_t ad_len)
       {
 	check_initialized();
-	const int status = mbedtls_gcm_crypt_and_tag(&ctx, MBEDTLS_GCM_ENCRYPT,
-						     length, iv, IV_LEN, ad, ad_len,
-						     input, output, AUTH_TAG_LEN, tag);
+	const int status = mbedtls_cipher_auth_encrypt(&ctx, iv, IV_LEN, ad, ad_len, input, length,
+						       output, &length, tag, AUTH_TAG_LEN);
 	if (unlikely(status))
 	  OPENVPN_THROW(mbedtls_aead_error, "mbedtls_gcm_crypt_and_tag failed with status=" << status);
       }
@@ -120,51 +116,39 @@ namespace openvpn {
 		  size_t ad_len)
       {
 	check_initialized();
-	const int status = mbedtls_gcm_auth_decrypt(&ctx, length, iv, IV_LEN, ad, ad_len, tag,
-						    AUTH_TAG_LEN, input, output);
+
+	// Older versions of mbed TLS have the tag a non const, even though it is
+	// not modified, const cast it here
+	const int status = mbedtls_cipher_auth_encrypt(&ctx, iv, IV_LEN, ad, ad_len, input, length, output, &length,
+						       const_cast<unsigned char*>(tag), AUTH_TAG_LEN);
 	return status == 0;
       }
 
       bool is_initialized() const { return initialized; }
 
     private:
-      static mbedtls_cipher_id_t cipher_type(const CryptoAlgs::Type alg, unsigned int& keysize)
+      static mbedtls_cipher_type_t cipher_type(const CryptoAlgs::Type alg, unsigned int& keysize)
       {
 	switch (alg)
 	  {
 	  case CryptoAlgs::AES_128_GCM:
 	    keysize = 16;
-	    return MBEDTLS_CIPHER_ID_AES;
+	    return MBEDTLS_CIPHER_AES_128_GCM;
 	  case CryptoAlgs::AES_192_GCM:
 	    keysize = 24;
-	    return MBEDTLS_CIPHER_ID_AES;
+	    return MBEDTLS_CIPHER_AES_192_GCM;
 	  case CryptoAlgs::AES_256_GCM:
 	    keysize = 32;
-	    return MBEDTLS_CIPHER_ID_AES;
+	    return MBEDTLS_CIPHER_AES_256_GCM;
+#ifdef MBEDTLS_CHACHAPOLY_C
+	  case CryptoAlgs::CHACHA20_POLY1305:
+	    keysize = 32;
+	    return MBEDTLS_CIPHER_CHACHA20_POLY1305;
+#endif
 	  default:
 	    OPENVPN_THROW(mbedtls_aead_error, CryptoAlgs::name(alg) << ": not usable");
 	  }
       }
-
-      void erase()
-      {
-	if (initialized)
-	  {
-	    mbedtls_gcm_free(&ctx);
-	    initialized = false;
-	  }
-      }
-
-      void check_initialized() const
-      {
-	if (unlikely(!initialized))
-	  throw mbedtls_aead_error("uninitialized");
-      }
-
-      bool initialized;
-      mbedtls_gcm_context ctx;
     };
   }
 }
-
-#endif

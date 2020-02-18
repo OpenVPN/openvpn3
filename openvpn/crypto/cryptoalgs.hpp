@@ -56,6 +56,7 @@ namespace openvpn {
       AES_128_GCM,
       AES_192_GCM,
       AES_256_GCM,
+      CHACHA20_POLY1305,
 
       // digests
       MD4,
@@ -134,6 +135,7 @@ namespace openvpn {
       { "AES-128-GCM",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  16, 12, 16 },
       { "AES-192-GCM",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  24, 12, 16 },
       { "AES-256-GCM",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
+      { "CHACHA20-POLY1305",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
       { "MD4",          F_DIGEST,                              16,  0,  0 },
       { "MD5",          F_DIGEST|F_ALLOW_DC,                   16,  0,  0 },
       { "SHA1",         F_DIGEST|F_ALLOW_DC,                   20,  0,  0 },
