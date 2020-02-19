@@ -62,6 +62,7 @@
 #include <openvpn/common/stringize.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/uniqueptr.hpp>
+#include <openvpn/common/wstring.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/tun/builder/capture.hpp>
@@ -291,17 +292,16 @@ namespace openvpn {
 		if (status != ERROR_SUCCESS)
 		  continue;
 
-		len = sizeof(strbuf);
-		status = ::RegQueryValueExA(connection_key(),
-					    "Name",
+		wchar_t wbuf[256] = L"";
+		status = ::RegQueryValueExW(connection_key(),
+					    L"Name",
 					    nullptr,
 					    &data_type,
-					    (LPBYTE)strbuf,
+					    (LPBYTE)wbuf,
 					    &len);
 		if (status != ERROR_SUCCESS || data_type != REG_SZ)
 		  continue;
-		strbuf[len] = '\0';
-		const std::string name = std::string(strbuf);
+		wbuf[(sizeof(wbuf) / sizeof(wchar_t)) - 1] = L'\0';
 
 		// iterate through self and try to patch the name
 		{
@@ -309,7 +309,7 @@ namespace openvpn {
 		    {
 		      TapNameGuidPair& pair = *j;
 		      if (pair.guid == guid)
-			pair.name = name;
+			pair.name = wstring::to_utf8(wbuf);
 		    }
 		}
 	      }

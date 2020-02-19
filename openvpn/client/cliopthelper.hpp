@@ -314,6 +314,11 @@ namespace openvpn {
 	  sslConfig.reset();
 	}
       }
+      catch (const option_error& e)
+	{
+	  error_ = true;
+	  message_ = Unicode::utf8_printable<std::string>(std::string("ERR_PROFILE_OPTION: ") + e.what(), 256);
+	}
       catch (const std::exception& e)
 	{
 	  error_ = true;

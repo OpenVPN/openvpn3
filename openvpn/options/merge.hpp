@@ -144,6 +144,18 @@ namespace openvpn {
 	      return;
 	    }
 	}
+	catch (const file_is_binary& e)
+	  {
+	    status_ = MERGE_OVPN_FILE_FAIL;
+	    error_ = std::string("ERR_PROFILE_FILE_IS_BINARY: ") + e.what();
+	    return;
+	  }
+	catch (const file_too_large& e)
+	  {
+	    status_ = MERGE_OVPN_FILE_FAIL;
+	    error_ = std::string("ERR_PROFILE_FILE_TOO_LARGE: ") + e.what();
+	    return;
+	  }
 	catch (const std::exception& e)
 	  {
 	    status_ = MERGE_OVPN_FILE_FAIL;
