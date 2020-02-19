@@ -442,6 +442,8 @@ namespace openvpn {
 	int default_key_direction = -1;
 	std::string tls_version_min_override;
 	std::string tls_cert_profile_override;
+	std::string tls_cipher_list;
+	std::string tls_ciphersuite_list;
 	std::string gui_version;
 	std::string sso_methods;
 	bool allow_local_lan_access;
@@ -697,6 +699,8 @@ namespace openvpn {
 	state->default_key_direction = config.defaultKeyDirection;
 	state->tls_version_min_override = config.tlsVersionMinOverride;
 	state->tls_cert_profile_override = config.tlsCertProfileOverride;
+	state->tls_cipher_list = config.tlsCipherList;
+	state->tls_ciphersuite_list = config.tlsCiphersuitesList;
 	state->allow_local_lan_access = config.allowLocalLanAccess;
 	state->gui_version = config.guiVersion;
 	state->sso_methods = config.ssoMethods;
@@ -978,6 +982,8 @@ namespace openvpn {
       cc.default_key_direction = state->default_key_direction;
       cc.tls_version_min_override = state->tls_version_min_override;
       cc.tls_cert_profile_override = state->tls_cert_profile_override;
+      cc.tls_cipher_list = state->tls_cipher_list;
+      cc.tls_ciphersuite_list = state->tls_ciphersuite_list;
       cc.gui_version = state->gui_version;
       cc.sso_methods = state->sso_methods;
       cc.hw_addr_override = state->hw_addr_override;

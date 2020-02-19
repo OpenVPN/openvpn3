@@ -277,6 +277,13 @@ namespace openvpn {
       //                        doesn't specify tls-cert-profile
       std::string tlsCertProfileOverride;
 
+      // Overrides the list of tls ciphers like the tls-cipher option
+      std::string tlsCipherList;
+
+      // Overrides the list of TLS 1.3 ciphersuites like the tls-ciphersuites
+      // option
+      std::string tlsCiphersuitesList;
+
       // Pass custom key/value pairs to OpenVPN server.
       std::vector<KeyValue> peerInfo;
 

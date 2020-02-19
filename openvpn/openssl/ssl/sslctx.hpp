@@ -282,6 +282,18 @@ namespace openvpn {
 	TLSCertProfile::apply_override(tls_cert_profile, override);
       }
 
+      virtual void set_tls_cipher_list(const std::string& override)
+      {
+	if(!override.empty())
+	  tls_cipher_list = override;
+      }
+
+      virtual void set_tls_ciphersuite_list(const std::string& override)
+      {
+	if(!override.empty())
+	  tls_ciphersuite_list = override;
+      }
+
       void set_local_cert_enabled(const bool v) override
       {
 	local_cert_enabled = v;
@@ -411,6 +423,13 @@ namespace openvpn {
 
 	// parse tls-cert-profile
 	tls_cert_profile = TLSCertProfile::parse_tls_cert_profile(opt, relay_prefix);
+
+	// Overrides for tls cipher suites
+	if (opt.exists("tls-cipher"))
+	  tls_cipher_list = opt.get_optional("tls-cipher", 1, 256);
+
+	if (opt.exists("tls-ciphersuites"))
+	  tls_ciphersuite_list = opt.get_optional("tls-ciphersuites", 1, 256);
 
 	// unsupported cert checkers
 	{
@@ -554,6 +573,8 @@ namespace openvpn {
       VerifyX509Name verify_x509_name;   // --verify-x509-name feature
       TLSVersion::Type tls_version_min{TLSVersion::UNDEF}; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
+      std::string tls_cipher_list;
+      std::string tls_ciphersuite_list
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
       bool client_session_tickets = false;
@@ -1079,25 +1100,37 @@ namespace openvpn {
 #endif
 	  SSL_CTX_set_options(ctx, sslopt);
 
+#if defined(TLS1_3_VERSION)
+	  if (!config->tls_ciphersuite_list.empty())
+	    {
+	      if(!SSL_CTX_set_ciphersuites(ctx, config->tls_ciphersuite_list.c_str()))
+		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_ciphersuites_list failed");
+	    }
+#endif
+	  const char* tls_cipher_list =
+	    /* default list as a basis */
+	    "DEFAULT"
+	    /* Disable export ciphers, low and medium */
+	    ":!EXP:!LOW:!MEDIUM"
+	    /* Disable static (EC)DH keys (no forward secrecy) */
+	    ":!kDH:!kECDH"
+	    /* Disable DSA private keys */
+	    ":!DSS"
+	    /* Disable RC4 cipher */
+	    ":!RC4"
+	    /* Disable MD5 */
+	    ":!MD5"
+	    /* Disable unsupported TLS modes */
+	    ":!PSK:!SRP:!kRSA"
+	    /* Disable SSLv2 cipher suites*/
+	    ":!SSLv2";
 
-	  if (!SSL_CTX_set_cipher_list(ctx,
-				       /* default list as a basis */
-				       "DEFAULT"
-				       /* Disable export ciphers, low and medium */
-				       ":!EXP:!LOW:!MEDIUM"
-				       /* Disable static (EC)DH keys (no forward secrecy) */
-				       ":!kDH:!kECDH"
-				       /* Disable DSA private keys */
-				       ":!DSS"
-				       /* Disable RC4 cipher */
-				       ":!RC4"
-				       /* Disable MD5 */
-				       ":!MD5"
-				       /* Disable unsupported TLS modes */
-				       ":!PSK:!SRP:!kRSA"
-				       /* Disable SSLv2 cipher suites*/
-				       ":!SSLv2"
-				       ))
+	   if (!config->tls_cipher_list.empty())
+	    {
+		tls_cipher_list = config->tls_cipher_list.c_str();
+	    }
+
+	  if (!SSL_CTX_set_cipher_list(ctx, tls_cipher_list))
 	      OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && OPENSSL_VERSION_NUMBER < 0x10100000L
 	  SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1

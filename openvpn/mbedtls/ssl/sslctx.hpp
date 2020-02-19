@@ -404,6 +404,17 @@ namespace openvpn {
 	tls_cert_profile = type;
       }
 
+      virtual void set_tls_cipher_list(const std::string& override)
+      {
+	if(!override.empty())
+	  tls_cipher_list = override;
+      }
+
+      virtual void set_tls_ciphersuite_list(const std::string& override)
+      {
+	// mbed TLS does not have TLS 1.3 support
+      }
+
       virtual void set_tls_cert_profile_override(const std::string& override)
       {
 	TLSCertProfile::apply_override(tls_cert_profile, override);
@@ -549,6 +560,10 @@ namespace openvpn {
 	// parse tls-cert-profile
 	tls_cert_profile = TLSCertProfile::parse_tls_cert_profile(opt, relay_prefix);
 
+	// Overrides for tls cipher suites
+	if (opt.exists("tls-cipher"))
+	  tls_cipher_list = opt.get_optional("tls-cipher", 1, 256);
+
 	// unsupported cert verification options
 	{
 	}
@@ -613,6 +628,7 @@ namespace openvpn {
       VerifyX509Name verify_x509_name;  // --verify-x509-name feature
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile;
+      std::string tls_cipher_list;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
       bool allow_name_constraints;
@@ -835,7 +851,14 @@ namespace openvpn {
 	  // in mbed TLS config.h.
 	  mbedtls_ssl_conf_renegotiation(sslconf, MBEDTLS_SSL_RENEGOTIATION_DISABLED);
 
-	  mbedtls_ssl_conf_ciphersuites(sslconf, mbedtls_ctx_private::ciphersuites);
+	  if (!c.tls_cipher_list.empty())
+	    {
+	      set_mbedtls_cipherlist(c.tls_cipher_list);
+	    }
+	  else
+	    {
+	      mbedtls_ssl_conf_ciphersuites(sslconf, mbedtls_ctx_private::ciphersuites);
+	    }
 
 	  // set CA chain
 	  if (c.ca_chain)
@@ -935,9 +958,44 @@ namespace openvpn {
       }
 
       mbedtls_ssl_config *sslconf;          // SSL configuration parameters for SSL connection object
+      std::unique_ptr<int[]> allowed_ciphers;	//! Hold the array that is used for setting the allowed ciphers
+						// must have the same lifetime as sslconf
       MbedTLSContext *parent;
 
     private:
+
+      void set_mbedtls_cipherlist(const std::string& cipher_list)
+      {
+	auto num_ciphers = std::count(cipher_list.begin(), cipher_list.end(), ':') + 1;
+
+	allowed_ciphers.reset(new int[num_ciphers+1]);
+
+	std::stringstream cipher_list_ss(cipher_list);
+	std::string ciphersuite;
+
+	int i=0;
+	while(std::getline(cipher_list_ss, ciphersuite, ':'))
+	  {
+	    auto cipher_id = mbedtls_ssl_get_ciphersuite_id(ciphersuite.c_str());
+	    if (cipher_id != 0)
+	      {
+		allowed_ciphers[i] = cipher_id;
+		i++;
+	      }
+	    else
+	      {
+	        /* OpenVPN 2.x ignores silently ignores unknown cipher suites with
+	         * mbed TLS. We warn about them in OpenVPN 3.x */
+		OPENVPN_LOG_SSL("mbed TLS -- warning ignoring unknown cipher suite '"
+		                  << ciphersuite << "' in tls-cipher");
+	      }
+	  }
+
+	  // Last element needs to be null
+	allowed_ciphers[i] = 0;
+	mbedtls_ssl_conf_ciphersuites(sslconf, allowed_ciphers.get());
+      }
+
       // cleartext read callback
       static int ct_read_func(void *arg, unsigned char *data, size_t length)
       {
@@ -986,6 +1044,7 @@ namespace openvpn {
 	ssl = nullptr;
 	sslconf = nullptr;
 	overflow = false;
+	allowed_ciphers = nullptr;
       }
 
       void erase()

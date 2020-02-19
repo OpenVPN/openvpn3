@@ -149,6 +149,8 @@ namespace openvpn {
       bool allow_local_lan_access = false;
       std::string tls_version_min_override;
       std::string tls_cert_profile_override;
+      std::string tls_cipher_list;
+      std::string tls_ciphersuite_list;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
@@ -729,6 +731,8 @@ namespace openvpn {
       cc->load(opt, lflags);
       cc->set_tls_version_min_override(config.tls_version_min_override);
       cc->set_tls_cert_profile_override(config.tls_cert_profile_override);
+      cc->set_tls_cipher_list(config.tls_cipher_list);
+      cc->set_tls_ciphersuite_list(config.tls_ciphersuite_list);
       if (!cc->get_mode().is_client())
 	throw option_error("only client configuration supported");
 
