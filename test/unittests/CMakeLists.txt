@@ -19,23 +19,8 @@ else ()
     message("lzo not found, skipping lzo compression tests")
 endif ()
 
-if (${USE_MBEDTLS})
-    set(TESTS_CRYPTO
-        test_mbedtls_x509certinfo.cpp
-       )
-else ()
-    set(TESTS_CRYPTO
-        test_openssl_x509certinfo.cpp
-        )
-endif ()
-
 set(SOURCES
-        core_tests.cpp
-        test_route_emulation.cpp
-        test_log.cpp
-        test_comp.cpp
-        test_b64.cpp
-        test_verify_x509_name.cpp
+
         ${TESTS_CRYPTO}
         )
 
@@ -55,7 +40,26 @@ set(CORE_TEST_DEFINES
         -DUNITTEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\"
         )
 
-add_executable(coreUnitTests ${SOURCES})
+add_executable(coreUnitTests
+        core_tests.cpp
+        test_route_emulation.cpp
+        test_log.cpp
+        test_comp.cpp
+        test_b64.cpp
+        test_verify_x509_name.cpp
+        test_ssl.cpp
+        )
+
+if (${USE_MBEDTLS})
+    target_sources(coreUnitTests PRIVATE
+            test_mbedtls_x509certinfo.cpp
+            )
+else ()
+    target_sources(coreUnitTests PRIVATE
+            test_openssl_x509certinfo.cpp
+            )
+endif ()
+
 
 add_core_dependencies(coreUnitTests)
 target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})

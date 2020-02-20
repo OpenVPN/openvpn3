@@ -60,6 +60,7 @@
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/ssl/sni_handler.hpp>
+#include <openvpn/ssl/iana_ciphers.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/extpki.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
@@ -574,7 +575,7 @@ namespace openvpn {
       TLSVersion::Type tls_version_min{TLSVersion::UNDEF}; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
       std::string tls_cipher_list;
-      std::string tls_ciphersuite_list
+      std::string tls_ciphersuite_list;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
       bool client_session_tickets = false;
@@ -988,9 +989,45 @@ namespace openvpn {
 #endif
     };
 
-  private:
     /////// start of main class implementation
+    static std::string translate_cipher_list(std::string cipherlist)
+    {
+      // OpenVPN 2.x accepts IANA ciphers instead in the cipher list, we need
+      // to do the same
 
+      std::stringstream cipher_list_ss(cipherlist);
+      std::string ciphersuite;
+
+      std::stringstream result;
+
+
+      while(std::getline(cipher_list_ss, ciphersuite, ':'))
+	{
+	  const tls_cipher_name_pair* pair = tls_get_cipher_name_pair(ciphersuite);
+
+	  if (!result.str().empty())
+	    result << ":";
+
+	  if (pair)
+	    {
+	      if (pair->iana_name != ciphersuite)
+		{
+		  OPENVPN_LOG_SSL("OpenSSLContext: Deprecated cipher suite name '"
+				    << pair->openssl_name << "' please use IANA name ' "
+				    << pair->iana_name << "'");
+		}
+	      result << pair->openssl_name;
+	    }
+	  else
+	    {
+	      result << ciphersuite;
+	    }
+	}
+
+	return result.str();
+    }
+
+  private:
     OpenSSLContext(Config* config_arg)
       : config(config_arg)
     {
@@ -1125,9 +1162,13 @@ namespace openvpn {
 	    /* Disable SSLv2 cipher suites*/
 	    ":!SSLv2";
 
-	   if (!config->tls_cipher_list.empty())
+	  std::string translated_cipherlist;
+
+	  if (!config->tls_cipher_list.empty())
 	    {
-		tls_cipher_list = config->tls_cipher_list.c_str();
+	      translated_cipherlist = translate_cipher_list(config->tls_cipher_list);
+
+	      tls_cipher_list = translated_cipherlist.c_str();
 	    }
 
 	  if (!SSL_CTX_set_cipher_list(ctx, tls_cipher_list))

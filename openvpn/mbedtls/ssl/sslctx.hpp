@@ -50,6 +50,7 @@
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/ssl/verify_x509_name.hpp>
+#include <openvpn/ssl/iana_ciphers.hpp>
 
 #include <openvpn/mbedtls/pki/x509cert.hpp>
 #include <openvpn/mbedtls/pki/x509certinfo.hpp>
@@ -976,6 +977,15 @@ namespace openvpn {
 	int i=0;
 	while(std::getline(cipher_list_ss, ciphersuite, ':'))
 	  {
+	    const tls_cipher_name_pair* pair = tls_get_cipher_name_pair(ciphersuite);
+
+	    if (pair && pair->iana_name != ciphersuite)
+	      {
+		OPENVPN_LOG_SSL("mbed TLS -- Deprecated cipher suite name '"
+				  << pair->openssl_name << "' please use IANA name ' "
+				  << pair->iana_name << "'");
+	      }
+
 	    auto cipher_id = mbedtls_ssl_get_ciphersuite_id(ciphersuite.c_str());
 	    if (cipher_id != 0)
 	      {
