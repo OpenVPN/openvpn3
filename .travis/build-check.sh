@@ -4,6 +4,10 @@ set -eux
 PREFIX="${PREFIX:-${HOME}/opt}"
 RUN_COVERITY_SCAN="${RUN_COVERITY_SCAN:-0}"
 
+if [ -n "${MINGW-}" ]; then
+    exit 0
+fi
+
 if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
     export LD_LIBRARY_PATH="${PREFIX}/lib:${LD_LIBRARY_PATH:-}"
 fi

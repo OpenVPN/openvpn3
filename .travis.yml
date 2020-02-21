@@ -38,6 +38,18 @@ matrix:
     - env: SSLLIB="mbedtls"
       os: linux
       compiler: clang
+    - env: MINGW=1 ARCH=x86_64
+      os: linux
+      addons:
+        apt:
+          packages:
+            - mingw-w64
+    - env: MINGW=1 ARCH=i686
+      os: linux
+      addons:
+        apt:
+          packages:
+            - mingw-w64
 
 addons:
   apt:
