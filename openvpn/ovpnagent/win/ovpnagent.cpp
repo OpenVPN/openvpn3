@@ -19,8 +19,6 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
-
 // OpenVPN agent for Windows
 
 #include <iostream>

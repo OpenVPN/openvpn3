@@ -94,7 +94,7 @@ namespace openvpn {
 	  return;
 
 	const int MAX_KEY_LENGTH = 255;
-	for (auto i = 0; i < subkeys_num; ++ i)
+	for (DWORD i = 0; i < subkeys_num; ++ i)
 	  {
 	    DWORD subkey_size = MAX_KEY_LENGTH;
 	    char subkey[MAX_KEY_LENGTH];

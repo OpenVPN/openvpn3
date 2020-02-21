@@ -72,7 +72,7 @@ namespace openvpn {
     private:
       void impersonate_as_local_system()
       {
-	HANDLE thread_token, process_snapshot, winlogon_process, winlogon_token, duplicated_token, file_handle;
+	HANDLE thread_token, process_snapshot, winlogon_process, winlogon_token, duplicated_token;
 	PROCESSENTRY32 entry = {};
 	entry.dwSize = sizeof(PROCESSENTRY32);
 	BOOL ret;

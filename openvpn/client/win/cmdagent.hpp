@@ -276,12 +276,14 @@ namespace openvpn {
 	  }
 
 	// Parse the returned json dict
+	Json::CharReaderBuilder builder;
+	std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
 	Json::Value jres;
-	Json::Reader reader;
-	if (!reader.parse(content, jres, false))
+	std::string err;
+	if (!reader->parse(content.c_str(), content.c_str() + content.size(), &jres, &err))
 	  {
 	    os << content;
-	    OPENVPN_THROW(ovpnagent, "error parsing returned JSON: " << reader.getFormattedErrorMessages());
+	    OPENVPN_THROW(ovpnagent, "error parsing returned JSON: " << err);
 	  }
 	return jres;
       }

@@ -97,8 +97,8 @@ public:
       opt(std::move(opt_arg)),
       reconnect_timer(io_context),
       bytecount_timer(io_context),
-      log_context(this),
-      exit_event(io_context)
+      exit_event(io_context),
+      log_context(this)
   {
     signals.reset(new ASIOSignals(io_context));
     signal_rearm();

@@ -128,7 +128,7 @@ namespace openvpn {
 	    servFailActions.lpsaActions = failActions;
 
 	    ::ChangeServiceConfig2(svc(), SERVICE_CONFIG_FAILURE_ACTIONS, &servFailActions); // Apply above settings
-	    ::StartService(svc(), NULL, NULL);
+	    ::StartService(svc(), 0, NULL);
 	  }
       }
 

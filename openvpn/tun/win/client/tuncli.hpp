@@ -249,8 +249,8 @@ namespace openvpn {
 	   parent(parent_arg),
 	   state(new TunProp::State()),
 	   l2_timer(io_context_arg),
-	   halt(false),
-	   frame_context((*config_arg->frame)[Frame::READ_TUN])
+	   frame_context((*config_arg->frame)[Frame::READ_TUN]),
+	   halt(false)
       {
       }
 

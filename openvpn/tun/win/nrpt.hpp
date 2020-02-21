@@ -49,7 +49,7 @@ namespace openvpn {
       {
 	Win::RegKey key;
 
-	for (auto i = 0; i < names.size(); ++ i)
+	for (size_t i = 0; i < names.size(); ++ i)
 	  {
 	    // open/create the key
 	    {

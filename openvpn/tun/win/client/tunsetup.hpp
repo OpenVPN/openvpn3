@@ -286,7 +286,7 @@ namespace openvpn {
 	  Win::Impersonate imp(true);
 
 	  DWORD len;
-	  if (!DeviceIoControl(handle, TUN_IOCTL_REGISTER_RINGS, &rings, sizeof(rings), NULL, NULL, &len, NULL))
+	  if (!DeviceIoControl(handle, TUN_IOCTL_REGISTER_RINGS, &rings, sizeof(rings), NULL, 0, &len, NULL))
 	    {
 	      const Win::LastError err;
 	      throw ErrorCode(Error::TUN_REGISTER_RINGS_ERROR, true, "Error registering ring buffers: " + err.message());

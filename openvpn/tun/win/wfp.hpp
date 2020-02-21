@@ -34,6 +34,7 @@
 #include <fwpmu.h>
 #include <fwpmtypes.h>
 #include <iphlpapi.h>
+#include <wchar.h>
 
 #ifdef __MINGW32__
 
@@ -46,7 +47,7 @@
 #endif
 
 // defines below are taken from openvpn2 code (https://github.com/OpenVPN/openvpn/blob/master/src/openvpn/block_dns.c)
-// which likely borrowed them from Windows SDK header fwpmu.h 
+// which likely borrowed them from Windows SDK header fwpmu.h
 
 /* c38d57d1-05a7-4c33-904f-7fbceee60e82 */
 DEFINE_GUID(
@@ -137,8 +138,8 @@ namespace openvpn {
 	{
 	  FWPM_SUBLAYER0 subLayer = {0};
 	  subLayer.subLayerKey = subLayerGUID;
-	  subLayer.displayData.name = L"OpenVPN";
-	  subLayer.displayData.description = L"OpenVPN";
+	  subLayer.displayData.name = const_cast<wchar_t*>(L"OpenVPN");
+	  subLayer.displayData.description = const_cast<wchar_t*>(L"OpenVPN");
 	  subLayer.flags = 0;
 	  subLayer.weight = 0x100;
 
@@ -150,7 +151,7 @@ namespace openvpn {
 
 	// Prepare filter
 	filter.subLayerKey = subLayerGUID;
-	filter.displayData.name = L"OpenVPN";
+	filter.displayData.name = const_cast<wchar_t*>(L"OpenVPN");
 	filter.weight.type = FWP_UINT8;
 	filter.weight.uint8 = 0xF;
 	filter.filterCondition = condition;

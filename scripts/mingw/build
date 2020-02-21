@@ -90,7 +90,7 @@ build_openssl()
     [ "$ARCH" == "x86_64" ] && OUT="mingw64" || OUT="mingw"
     make clean || true
     ./Configure --prefix=$DEP_DIR_PREFIX-$ARCH no-idea no-mdc2 no-rc5 shared $OUT --cross-compile-prefix=$ARCH-w64-mingw32-
-    make && make install || true
+    make && make -j1 install || true
 
     popd
 }
@@ -139,6 +139,8 @@ build_core()
     rm -rf build-$ARCH
     mkdir build-$ARCH
 
+    CORE_DIR=$(dirname $(realpath -s $0))/../..
+
     pushd build-$ARCH
 
     DEP_DIR=$DEP_DIR_PREFIX-$ARCH \
@@ -148,12 +150,15 @@ build_core()
           -D CMAKE_SYSTEM_NAME=Windows \
           -D CMAKE_PREFIX_PATH=/usr/local/$ARCH-w64-mingw32 \
           -D CMAKE_BUILD_TYPE=Release \
-          ../../..
+          -D USE_WERROR=true \
+          $CORE_DIR
 
     make
 
     popd
 }
+
+mkdir -p $DL
 
 download_deps
 for arch in $ARCH

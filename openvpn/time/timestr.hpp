@@ -179,8 +179,10 @@ namespace openvpn {
 #if defined(OPENVPN_PLATFORM_WIN)
     if (gmtime_s(&lt, &t))
       return "";
+    // MinGW doesn't yet support %T, so use %H:%M:%S
+    // https://sourceforge.net/p/mingw-w64/bugs/793/
     if (!strftime(buf, sizeof(buf),
-		  "%a, %d %b %Y %T GMT",
+		  "%a, %d %b %Y %H:%M:%S GMT",
 		  &lt))
       return "";
 #else

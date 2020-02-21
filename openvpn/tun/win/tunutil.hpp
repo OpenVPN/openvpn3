@@ -609,7 +609,7 @@ namespace openvpn {
 	{
 	  if (list)
 	    {
-	      for (unsigned int i = 0; i < list->NumAdapters; ++i)
+	      for (LONG i = 0; i < list->NumAdapters; ++i)
 		{
 		  IP_ADAPTER_INDEX_MAP* inter = &list->Adapter[i];
 		  if (index == inter->Index)
