@@ -27,6 +27,7 @@
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
+#include <openssl/dh.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
