@@ -93,7 +93,6 @@ namespace openvpn {
 
       if (!RSA_set_method(rsa, rsa_meth))
 	{
-	  RSA_meth_free(rsa_meth);
 	  errtext = "RSA_set_method";
 	  goto err;
 	}
