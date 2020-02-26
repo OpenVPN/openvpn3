@@ -39,10 +39,10 @@ namespace openvpn {
   namespace OpenSSLCrypto {
     class CipherContextAEAD
     {
+    public:
       CipherContextAEAD(const CipherContextAEAD&) = delete;
       CipherContextAEAD& operator=(const CipherContextAEAD&) = delete;
 
-    public:
       OPENVPN_EXCEPTION(openssl_gcm_error);
 
       // mode parameter for constructor
@@ -59,19 +59,16 @@ namespace openvpn {
 	SUPPORTS_IN_PLACE_ENCRYPT = 0,
       };
 
-      CipherContextAEAD()
-	: initialized(false)
-      {
-      }
+      CipherContextAEAD() = default;
 
-      ~CipherContextAEAD() { erase() ; }
+      ~CipherContextAEAD() { free_cipher_context(); }
 
       void init(const CryptoAlgs::Type alg,
 		const unsigned char *key,
 		const unsigned int keysize,
 		const int mode)
       {
-	erase();
+	free_cipher_context();
 	unsigned int ckeysz = 0;
 	const EVP_CIPHER *ciph = cipher_type(alg, ckeysz);
 
@@ -88,6 +85,7 @@ namespace openvpn {
 	    if (!EVP_EncryptInit_ex(ctx, ciph, nullptr, key, nullptr))
 	      {
 		openssl_clear_error_stack();
+		free_cipher_context();
 		throw openssl_gcm_error("EVP_EncryptInit_ex (init)");
 	      }
 	    break;
@@ -95,6 +93,7 @@ namespace openvpn {
 	    if (!EVP_DecryptInit_ex(ctx, ciph, nullptr, key, nullptr))
 	      {
 		openssl_clear_error_stack();
+		free_cipher_context();
 		throw openssl_gcm_error("EVP_DecryptInit_ex (init)");
 	      }
 	    break;
@@ -104,9 +103,9 @@ namespace openvpn {
 	if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LEN, nullptr) != 1)
 	  {
 	    openssl_clear_error_stack();
+	    free_cipher_context();
 	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl set IV len");
 	  }
-	initialized = true;
       }
 
       void encrypt(const unsigned char *input,
@@ -200,7 +199,7 @@ namespace openvpn {
 	return true;
       }
 
-      bool is_initialized() const { return initialized; }
+      bool is_initialized() const { return ctx != nullptr; }
 
       static bool is_supported(const CryptoAlgs::Type alg)
       {
@@ -235,25 +234,21 @@ namespace openvpn {
 	  }
       }
 
-      void erase()
+      void free_cipher_context()
       {
-	if (initialized)
-	  {
-	    EVP_CIPHER_CTX_free(ctx);
-	    initialized = false;
-	  }
+	EVP_CIPHER_CTX_free(ctx);
+	ctx = nullptr;
       }
 
       void check_initialized() const
       {
 #ifdef OPENVPN_ENABLE_ASSERT
-	if (unlikely(!initialized))
+	if (!ctx)
 	  throw openssl_gcm_error("uninitialized");
 #endif
       }
 
-      bool initialized;
-      EVP_CIPHER_CTX *ctx;
+      EVP_CIPHER_CTX *ctx = nullptr;
     };
   }
 }
