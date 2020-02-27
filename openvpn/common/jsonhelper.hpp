@@ -424,12 +424,67 @@ namespace openvpn {
       return value.asUInt64();
     }
 
+    template <typename NAME, typename TITLE>
+    inline std::int64_t get_int64_optional(const Json::Value& root,
+					   const NAME& name,
+					   const std::uint64_t default_value,
+					   const TITLE& title)
+    {
+      const Json::Value& value = root[name];
+      if (value.isNull())
+	return default_value;
+      if (!value.isInt64())
+	throw json_parse("int64 " + fmt_name(name, title) + " is of incorrect type");
+      return value.asInt64();
+    }
+
     template <typename NAME>
     inline std::uint64_t get_uint64_optional(const Json::Value& root,
 					     const NAME& name,
 					     const std::uint64_t default_value)
     {
       return get_uint64_optional(root, name, default_value, nullptr);
+    }
+
+    /*
+     * The get_integer_optional function are used to select the right
+     * method based on the default_value parameter
+     */
+
+    template<typename NAME, typename TITLE>
+    std::uint64_t get_integer_optional(const Json::Value& root,
+				       const NAME& name,
+				       const std::uint64_t default_value,
+				       const TITLE& title)
+    {
+      return get_uint64_optional(root, name, default_value, title);
+    }
+
+    template<typename NAME, typename TITLE>
+    std::int64_t get_integer_optional(const Json::Value& root,
+				      const NAME& name,
+				      const std::int64_t default_value,
+				      const TITLE& title)
+    {
+      return get_int64_optional(root, name, default_value, title);
+    }
+
+    template<typename NAME, typename TITLE>
+    inline unsigned int get_integer_optional(const Json::Value& root,
+					     const NAME& name,
+					     const unsigned int default_value,
+					     const TITLE& title)
+    {
+      return get_uint_optional(root, name, default_value, title);
+    }
+
+    template<typename NAME, typename TITLE>
+    inline int get_integer_optional(const Json::Value& root,
+				   const NAME& name,
+				   const int default_value,
+				   const TITLE& title)
+    {
+      return get_int_optional(root, name, default_value, title);
     }
 
     template <typename NAME, typename TITLE>
