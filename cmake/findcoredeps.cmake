@@ -143,7 +143,9 @@ function (add_json_library target)
     else ()
         find_package(PkgConfig REQUIRED)
         if (MINGW)
-            list(APPEND CMAKE_PREFIX_PATH ${DEP_DIR})
+            #  due to cmake bug, APPEND doesn't work for mingw
+            # https://github.com/Kitware/CMake/commit/f92a4b23994fa7516f16fbb5b3c02caa07534b3f
+            set(CMAKE_PREFIX_PATH ${DEP_DIR})
         endif ()
         pkg_check_modules(JSONCPP jsoncpp)
         target_link_libraries(${target} ${JSONCPP_LDFLAGS})
