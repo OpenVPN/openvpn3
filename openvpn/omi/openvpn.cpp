@@ -125,9 +125,12 @@ public:
     if (!exit_event_name.empty())
     {
         exit_event.assign(::CreateEvent(NULL, FALSE, FALSE, exit_event_name.c_str()));
-        exit_event.async_wait([self = Ptr(this)](const openvpn_io::error_code& error) {
-            self->stop();
-        });
+        exit_event.async_wait([self = Ptr(this)](const openvpn_io::error_code& error)
+			      {
+				if (error)
+				  return;
+				self->stop();
+			      });
     }
 
     // http-proxy-override
@@ -640,6 +643,10 @@ private:
 
     // in case connect thread is blocking in external_pki_sign_request
     async_stop.stop();
+
+    // cancel wait on exit_event
+    if (exit_event.is_open())
+      exit_event.cancel();
 
     // stop timers
     reconnect_timer.cancel();
