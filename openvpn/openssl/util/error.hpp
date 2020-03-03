@@ -148,7 +148,7 @@ namespace openvpn {
 	      set_code(Error::SSL_CA_MD_TOO_WEAK, true);
 	      break;
 	    case SSL_R_CA_KEY_TOO_SMALL:
-	      set_code(Error:SSL_CA_KEY_TOO_SMALL, true);
+	      set_code(Error::SSL_CA_KEY_TOO_SMALL, true);
 	      break;
 	    case SSL_R_DH_KEY_TOO_SMALL:
 	      set_code(Error::SSL_DH_KEY_TOO_SMALL, true);
