@@ -31,8 +31,6 @@
 // the include from ovpncli.cpp breaks with duplicate symbols
 #include <openvpn/common/base64.hpp>
 
-#undef OPENVPN_EXTERN
-#define OPENVPN_EXTERN
 
 #include <client/ovpncli.cpp>
 

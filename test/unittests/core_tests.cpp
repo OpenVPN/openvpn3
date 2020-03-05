@@ -28,6 +28,7 @@
 #include <asio.hpp>
 #include "test_helper.hpp"
 #include <openvpn/ssl/sslchoose.hpp>
+#include <openvpn/init/initprocess.hpp>
 
 openvpn::LogOutputCollector *testLog;
 
@@ -35,7 +36,10 @@ int main (int argc, char **argv)
 {
   testLog = new openvpn::LogOutputCollector();
   ::testing::InitGoogleTest (&argc, argv);
+  openvpn::InitProcess::init();
   auto ret = RUN_ALL_TESTS ();
+
+  openvpn::InitProcess::uninit();
   delete testLog;
   return ret;
 }
