@@ -258,6 +258,11 @@ public:
   }
 #endif
 
+  void set_write_url_fn(const std::string& fn)
+  {
+    write_url_fn = fn;
+  }
+
 private:
   virtual void event(const ClientAPI::Event& ev) override
   {
@@ -287,6 +292,10 @@ private:
       {
 	// launch URL
 	const std::string url_str = ev.info.substr(9);
+
+	if (!write_url_fn.empty())
+	  write_string(write_url_fn, url_str + '\n');
+
 #ifdef OPENVPN_PLATFORM_MAC
 	std::thread thr([url_str]() {
 	    CFURLRef url = CFURLCreateWithBytes(
@@ -473,6 +482,8 @@ private:
 #ifdef OPENVPN_REMOTE_OVERRIDE
   std::string remote_override_cmd;
 #endif
+
+  std::string write_url_fn;
 };
 
 static Client *the_client = nullptr; // GLOBAL
@@ -711,6 +722,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "auto-sess",      no_argument,        nullptr,      'a' },
     { "auth-retry",     no_argument,        nullptr,      'Y' },
     { "tcprof-override", required_argument, nullptr,      'X' },
+    { "write-url",      required_argument,  nullptr,      'Z' },
     { "ssl-debug",      required_argument,  nullptr,       1  },
     { "epki-cert",      required_argument,  nullptr,       2  },
     { "epki-ca",        required_argument,  nullptr,       3  },
@@ -771,10 +783,11 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 #ifdef OPENVPN_REMOTE_OVERRIDE
 	std::string remote_override_cmd;
 #endif
+	std::string write_url_fn;
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -909,6 +922,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'G':
 		gremlin = optarg;
+		break;
+	      case 'Z':
+		write_url_fn = optarg;
 		break;
 	      default:
 		throw usage();
@@ -1091,6 +1107,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
                   client.set_remote_override_cmd(remote_override_cmd);
 #endif
 
+		  client.set_write_url_fn(write_url_fn);
+
 		  std::cout << "CONNECTING..." << std::endl;
 
 		  // start the client thread
@@ -1168,6 +1186,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--epki-ca             : simulate external PKI cert supporting intermediate/root certs" << std::endl;
       std::cout << "--epki-cert           : simulate external PKI cert" << std::endl;
       std::cout << "--epki-key            : simulate external PKI private key" << std::endl;
+      std::cout << "--write-url, -Z       : write INFO URL to file" << std::endl;
       ret = 2;
     }
   return ret;
