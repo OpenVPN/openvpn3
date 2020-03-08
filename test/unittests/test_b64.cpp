@@ -117,22 +117,23 @@ TEST(Base64, tooshortdest)
     EXPECT_THROW(b64.decode(buf, 2, enc), Base64::base64_decode_out_of_bound_error);
 }
 
-void b64_test_bad(const Base64& b64, const std::string& text)
+void b64_test_bad_decode(const Base64& b64, const std::string& text)
 {
     std::string dec;
     EXPECT_THROW(b64.decode(dec, text), Base64::base64_decode_error);
 }
 
-TEST(Base64, badencode)
+TEST(Base64, baddecode)
 {
     const Base64 b64;
 
-    b64_test_bad(b64, "plausible deniability");
-    b64_test_bad(b64, "plausible != deniability");
-    b64_test_bad(b64, "x");
-    b64_test_bad(b64, "====");
-    b64_test_bad(b64, "xxxx=");
-    b64_test_bad(b64, "01*=");
+    b64_test_bad_decode(b64, "!@#$%^&*()_");
+    b64_test_bad_decode(b64, "plausible deniability");
+    b64_test_bad_decode(b64, "plausible != deniability");
+    b64_test_bad_decode(b64, "x");
+    b64_test_bad_decode(b64, "====");
+    b64_test_bad_decode(b64, "xxxx=");
+    b64_test_bad_decode(b64, "01*=");
 }
 
 TEST(Base64, encode)

@@ -25,7 +25,9 @@
 #define OPENVPN_COMMON_BASE64_H
 
 #include <string>
-#include <cstring> // for std::memset, std::strlen
+#include <cstring>   // for std::memset, std::strlen
+#include <algorithm> // for std::min
+#include <cstddef>   // for ptrdiff_t
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -195,10 +197,11 @@ namespace openvpn {
     template <typename V>
     void decode(V& dest, const std::string& str) const
     {
-      for (const char *p = str.c_str(); *p != '\0' && (*p == equal || is_base64_char(*p)); p += 4)
+      const char *endp = str.c_str() + str.length();
+      for (const char *p = str.c_str(); p < endp; p += 4)
 	{
 	  unsigned int marker;
-	  const unsigned int val = token_decode(p, marker);
+	  const unsigned int val = token_decode(p, std::min(endp - p, ptrdiff_t(4)), marker);
 	  dest.push_back((val >> 16) & 0xff);
 	  if (marker < 2)
 	    dest.push_back((val >> 8) & 0xff);
@@ -249,12 +252,12 @@ namespace openvpn {
       return v;
     }
 
-    unsigned int token_decode(const char *token, unsigned int& marker) const
+    unsigned int token_decode(const char *token, const ptrdiff_t len, unsigned int& marker) const
     {
       size_t i;
       unsigned int val = 0;
       marker = 0; // number of equal chars seen
-      if (std::strlen(token) < 4)
+      if (len < 4)
 	throw base64_decode_error();
       for (i = 0; i < 4; i++)
 	{
