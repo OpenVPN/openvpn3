@@ -35,6 +35,11 @@
 // should always use a 64-bit data type to avoid this
 // limitation.
 
+// This code was originally designed to be efficient on 32-bit
+// processors.  On 64-bit processors, define OPENVPN_TIME_NO_BASE
+// to optimize out the base_ variable.  This also has the benefit
+// of allowing Time to represent any arbitrary time_t value.
+
 #ifndef OPENVPN_TIME_TIME_H
 #define OPENVPN_TIME_TIME_H
 
@@ -302,12 +307,16 @@ namespace openvpn {
 
     static void reset_base()
     {
+#ifdef OPENVPN_TIME_NO_BASE
+      static_assert(sizeof(base_type) >= 8, "OPENVPN_TIME_NO_BASE requires time_t to be 64 bits");
+#else
       base_ = ::time(0);
 #ifdef OPENVPN_PLATFORM_WIN
 #if (_WIN32_WINNT >= 0x0600)
       win_recalibrate((DWORD)::GetTickCount64());
 #else
       win_recalibrate(::GetTickCount());
+#endif
 #endif
 #endif
     }
@@ -359,7 +368,12 @@ namespace openvpn {
 
 #endif
 
+#ifdef OPENVPN_TIME_NO_BASE
+    static constexpr base_type base_ = 0;
+#else
     static base_type base_;
+#endif
+
     T time_;
   };
 
@@ -368,7 +382,9 @@ namespace openvpn {
   template <typename T> time_t TimeType<T>::gtc_base;
 #endif
 
+#ifndef OPENVPN_TIME_NO_BASE
   template <typename T> typename TimeType<T>::base_type TimeType<T>::base_;
+#endif
 
   typedef TimeType<oulong> Time;
 
