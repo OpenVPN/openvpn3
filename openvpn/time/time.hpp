@@ -200,6 +200,14 @@ namespace openvpn {
     static TimeType zero() { return TimeType(T(0)); }
     static TimeType infinite() { return TimeType(std::numeric_limits<T>::max()); }
 
+    static TimeType from_seconds_since_epoch(const time_t t)
+    {
+      if (t <= base_)
+	return TimeType(T(1));
+      else
+	return TimeType(T((t - base_) * prec));
+    }
+
     bool is_infinite() const { return time_ == std::numeric_limits<T>::max(); }
 
     void reset() { time_ = 0; }
