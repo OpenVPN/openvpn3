@@ -55,6 +55,7 @@ if [ -z "$1" ]; then
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
     echo " GTEST_DIR=<dir> -- specify googletest tree, required for building unit tests"
+    echo " PCRE=1 -- build with PCRE library"
     for s in $(enum_build_extras) ; do
 	. $s args
     done
@@ -280,6 +281,11 @@ fi
 if [ "$CAP" = "1" ]; then
     LIBS="$LIBS -lcap"
     CPPFLAGS="$CPPFLAGS -DHAVE_LIBCAP"
+fi
+
+# PCRE
+if [ "$PCRE" = "1" ]; then
+    LIBS="$LIBS -lpcre"
 fi
 
 # Valgrind
