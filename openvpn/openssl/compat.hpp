@@ -307,6 +307,23 @@ inline void RSA_get0_key(const RSA *rsa, const BIGNUM **n, const BIGNUM **e, con
     *d = rsa->d;
 }
 
+inline EC_KEY *EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey)
+{
+    if (pkey->type != EVP_PKEY_EC) {
+        return NULL;
+    }
+    return pkey->pkey.ec;
+}
+
+inline int EC_GROUP_order_bits(const EC_GROUP *group)
+{
+    BIGNUM *order = BN_new();
+    EC_GROUP_get_order(group, order, NULL);
+    int bits = BN_num_bits(order);
+    BN_free(order);
+    return bits;
+}
+
 /* Renamed in OpenSSL 1.1 */
 #define X509_get0_pubkey X509_get_pubkey
 #define RSA_F_RSA_OSSL_PRIVATE_ENCRYPT RSA_F_RSA_EAY_PRIVATE_ENCRYPT

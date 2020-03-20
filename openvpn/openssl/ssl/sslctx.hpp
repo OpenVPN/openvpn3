@@ -34,8 +34,10 @@
 #include <openssl/x509v3.h>
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+#include <openssl/ec.h>
 #include <openssl/bn.h>
 #include <openssl/rand.h>
+#include <openssl/evp.h>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -865,28 +867,70 @@ namespace openvpn {
 	::X509 *cert = SSL_get_peer_certificate (c_ssl);
 
 	if (cert)
-	  os << "CN=" << OpenSSLPKI::x509_get_field(cert, NID_commonName) << ", ";
-
-	os << SSL_get_version (c_ssl);
-
-	const SSL_CIPHER *ciph = SSL_get_current_cipher (c_ssl);
-	if (ciph)
-	  os << ", cipher " << SSL_CIPHER_get_version (ciph) << ' ' << SSL_CIPHER_get_name (ciph);
+	  os << "peer certificate: CN=" << OpenSSLPKI::x509_get_field(cert, NID_commonName);
 
 	if (cert != nullptr)
 	  {
 	    EVP_PKEY *pkey = X509_get_pubkey (cert);
 	    if (pkey != nullptr)
 	      {
-		if (EVP_PKEY_id (pkey) == EVP_PKEY_RSA && EVP_PKEY_get0_RSA (pkey) != nullptr && RSA_get0_n(EVP_PKEY_get0_RSA (pkey)) != nullptr)
-		  os << ", " << BN_num_bits (RSA_get0_n(EVP_PKEY_get0_RSA (pkey))) << " bit RSA";
-#ifndef OPENSSL_NO_DSA
-		else if (EVP_PKEY_id (pkey) == EVP_PKEY_DSA && EVP_PKEY_get0_DSA (pkey) != nullptr && DSA_get0_p(EVP_PKEY_get0_DSA (pkey))!= nullptr)
-		  os << ", " << BN_num_bits (DSA_get0_p(EVP_PKEY_get0_DSA (pkey))) << " bit DSA";
+#ifndef OPENSSL_NO_EC
+		if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC) && (EVP_PKEY_get0_EC_KEY(pkey) != nullptr &&
+		  EVP_PKEY_get0_EC_KEY(pkey) != nullptr))
+		  {
+		    EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
+		    const EC_GROUP* group = EC_KEY_get0_group(ec);
+		    const char* curve = nullptr;
+
+		    int nid = EC_GROUP_get_curve_name(group);
+
+		    if (nid != 0)
+		      {
+			curve = OBJ_nid2sn(nid);
+		      }
+
+		    if(!curve)
+		      {
+			curve = "Error getting curve name";
+		      }
+
+		    os << ", " << EC_GROUP_order_bits(group) << " bit EC, curve:" << curve;
+		  }
+
+		else
 #endif
-		EVP_PKEY_free (pkey);
+		  {
+		    int pkeyId = EVP_PKEY_id(pkey);
+		    const char* pkeySN = OBJ_nid2sn(pkeyId);
+		    if (!pkeySN)
+		      pkeySN = "Unknown";
+
+		    // Nicer names instead of rsaEncryption and dsaEncryption
+		    if (pkeyId == EVP_PKEY_RSA)
+		      pkeySN = "RSA";
+		    else if (pkeyId == EVP_PKEY_DSA)
+		      pkeySN = "DSA";
+
+		    os << ", " << EVP_PKEY_bits(pkey) << " bit " << pkeySN;
+		  }
+		EVP_PKEY_free(pkey);
 	      }
 	    X509_free (cert);
+	  }
+
+	const SSL_CIPHER *ciph = SSL_get_current_cipher (c_ssl);
+	if (ciph)
+	  {
+	    char* desc = SSL_CIPHER_description(ciph, nullptr, 0);
+	    if (!desc)
+	      {
+		os << ", cipher: Error getting TLS cipher description from SSL_CIPHER_description";
+	      }
+	    else
+	      {
+		os << ", cipher: " << desc;
+		OPENSSL_free(desc);
+	      }
 	  }
 	// This has been changed in upstream SSL to have a const
 	// parameter, so we cast away const for older versions compatibility
