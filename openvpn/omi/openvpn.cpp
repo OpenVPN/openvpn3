@@ -374,7 +374,7 @@ private:
 	config->wintun = true;
 
       if (!eval.autologin && management_query_passwords && !creds)
-	query_username_password("Auth", false, eval.staticChallenge, eval.staticChallengeEcho);
+	query_username_password("Auth", !dc_cookie.empty(), eval.staticChallenge, eval.staticChallengeEcho);
       else if (proxy_need_creds)
 	query_username_password("HTTP Proxy", false, "", false);
       else if (management_query_remote && !did_query_remote)
@@ -465,7 +465,23 @@ private:
 
   void provide_username_password(const std::string& type, const std::string& username, const std::string& password)
   {
-    if (type == "Auth")
+    if (!dc_cookie.empty())
+      {
+	creds.reset(new ClientAPI::ProvideCreds);
+	creds->dynamicChallengeCookie = dc_cookie;
+	try {
+	  // response could be whole challenge string in case of connect 2.x
+	  ChallengeResponse cr{ auth_password };
+	  creds->response = std::string{ cr.get_challenge_text() };
+	}
+	catch (const ChallengeResponse::dynamic_challenge_parse_error&) {
+	  // response contains only challenge text
+	  creds->response = auth_password;
+	}
+	creds->cachePassword = !auth_nocache;
+	creds->replacePasswordWithSessionID = true;
+      }
+    else if (type == "Auth")
       {
 	creds.reset(new ClientAPI::ProvideCreds);
 	creds->username = username;
@@ -772,6 +788,15 @@ private:
     // process events
     if ((ev.name == "AUTH_FAILED" || ev.name == "DYNAMIC_CHALLENGE") && management_query_passwords)
       {
+	if (ev.name == "DYNAMIC_CHALLENGE")
+	  {
+	    dc_cookie = ev.info;
+	  }
+	else
+	  {
+	    dc_cookie = "";
+	  }
+
 	// handle auth failures
 	std::string msg = ">PASSWORD:Verification Failed: 'Auth'";
 	if (!ev.info.empty())
@@ -947,6 +972,7 @@ private:
   bool auth_password_only = false;
   std::string auth_username;
   std::string auth_password;
+  std::string dc_cookie;
 
   // remote override
   bool management_query_remote = false;
