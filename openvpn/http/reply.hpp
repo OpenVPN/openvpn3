@@ -245,7 +245,12 @@ namespace openvpn {
 		return fail;
 	      }
 	  case status_text_start:
-	    if (!Util::is_char(input) || Util::is_ctl(input) || Util::is_tspecial(input))
+	    if (input == '\r')
+	      {
+		state_ = expecting_newline_1;
+		return pending;
+	      }
+	    else if (!Util::is_char(input) || Util::is_ctl(input) || Util::is_tspecial(input))
 	      {
 		return fail;
 	      }
