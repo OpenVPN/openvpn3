@@ -50,19 +50,54 @@ TEST(ssl, sslciphersuites)
 
 TEST(ssl, sslciphers)
 {
+  RandomAPI::Ptr rng(new FakeSecureMTRand(0xdeadcafe));
+
   bool previousLogOutput = testLog->isStdoutEnabled();
   testLog->setPrintOutput(false);
   SSLFactoryAPI::Ptr sslfact;
   SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
   sslcfg->set_local_cert_enabled(false);
   sslcfg->set_flags(SSLConst::NO_VERIFY_PEER);
+  sslcfg->set_rng(rng);
 
   /* This list mixes IANA and OpenSSL ciphers to see if ciphers are translated for mbed TLS and for OpenSSL */
   sslcfg->set_tls_cipher_list("TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256:AES256-SHA");
 
   sslfact = sslcfg->new_factory();
+  sslfact->ssl();
 
   testLog->setPrintOutput(previousLogOutput);
+}
+
+TEST(ssl, tls_groups)
+{
+  RandomAPI::Ptr rng(new FakeSecureMTRand(0xdeadcafe));
+
+  SSLFactoryAPI::Ptr sslfact;
+
+  SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
+  sslcfg->set_local_cert_enabled(false);
+  sslcfg->set_flags(SSLConst::NO_VERIFY_PEER);
+  sslcfg->set_rng(rng);
+
+  sslcfg->set_tls_groups("secp521r1:secp384r1");
+
+  /* Should not throw an error */
+  auto f = sslcfg->new_factory();
+  f->ssl();
+
+  sslcfg->set_tls_groups("secp521r1:secp384r1:greenhell");
+
+
+  testLog->startCollecting();
+  f = sslcfg->new_factory();
+  f->ssl();
+#ifdef USE_OPENSSL
+  EXPECT_EQ("OpenSSL -- warning ignoring unknown group 'greenhell' in tls-groups\n",testLog->stopCollecting());
+#else
+  EXPECT_EQ("mbed TLS -- warning ignoring unknown group 'greenhell' in tls-groups\n", testLog->stopCollecting());
+#endif
+
 }
 
 #if defined(USE_OPENSSL)

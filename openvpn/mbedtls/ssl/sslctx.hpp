@@ -416,6 +416,12 @@ namespace openvpn {
 	// mbed TLS does not have TLS 1.3 support
       }
 
+      virtual void set_tls_groups(const std::string& groups)
+      {
+        if (!groups.empty())
+          tls_groups = groups;
+      }
+
       virtual void set_tls_cert_profile_override(const std::string& override)
       {
 	TLSCertProfile::apply_override(tls_cert_profile, override);
@@ -565,6 +571,9 @@ namespace openvpn {
 	if (opt.exists("tls-cipher"))
 	  tls_cipher_list = opt.get_optional("tls-cipher", 1, 256);
 
+	if (opt.exists("tls-groups"))
+	  tls_groups = opt.get_optional("tls-groups", 1, 256);
+
 	// unsupported cert verification options
 	{
 	}
@@ -630,6 +639,7 @@ namespace openvpn {
       TLSVersion::Type tls_version_min; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile;
       std::string tls_cipher_list;
+      std::string tls_groups;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
       bool allow_name_constraints;
@@ -861,6 +871,10 @@ namespace openvpn {
 	      mbedtls_ssl_conf_ciphersuites(sslconf, mbedtls_ctx_private::ciphersuites);
 	    }
 
+	  if (!c.tls_groups.empty())
+	    {
+	      set_mbedtls_groups(c.tls_groups);
+	    }
 	  // set CA chain
 	  if (c.ca_chain)
 	    mbedtls_ssl_conf_ca_chain(sslconf,
@@ -961,6 +975,9 @@ namespace openvpn {
       mbedtls_ssl_config *sslconf;          // SSL configuration parameters for SSL connection object
       std::unique_ptr<int[]> allowed_ciphers;	//! Hold the array that is used for setting the allowed ciphers
 						// must have the same lifetime as sslconf
+      std::unique_ptr<mbedtls_ecp_group_id[]> groups;	//! Hold the array that is used for setting the curves
+
+
       MbedTLSContext *parent;
 
     private:
@@ -1004,6 +1021,38 @@ namespace openvpn {
 	  // Last element needs to be null
 	allowed_ciphers[i] = 0;
 	mbedtls_ssl_conf_ciphersuites(sslconf, allowed_ciphers.get());
+      }
+
+      void set_mbedtls_groups(const std::string& tls_groups)
+      {
+	auto num_groups = std::count(tls_groups.begin(), tls_groups.end(), ':') + 1;
+
+	/* add extra space for sentinel at the end */
+	groups.reset(new mbedtls_ecp_group_id[num_groups + 1]);
+
+	std::stringstream groups_ss(tls_groups);
+	std::string group;
+
+	int i=0;
+	while(std::getline(groups_ss, group, ':'))
+	  {
+	    const mbedtls_ecp_curve_info *ci =
+	      mbedtls_ecp_curve_info_from_name(group.c_str());
+
+	    if (ci)
+	      {
+		groups[i] = ci->grp_id;
+		i++;
+	      }
+	    else
+	      {
+		OPENVPN_LOG_SSL("mbed TLS -- warning ignoring unknown group '"
+				  << group << "' in tls-groups");
+	      }
+	  }
+
+	groups[i] = MBEDTLS_ECP_DP_NONE;
+	mbedtls_ssl_conf_curves(sslconf, groups.get());
       }
 
       // cleartext read callback

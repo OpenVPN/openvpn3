@@ -297,6 +297,12 @@ namespace openvpn {
 	  tls_ciphersuite_list = override;
       }
 
+      virtual void set_tls_groups(const std::string& groups)
+      {
+        if (!groups.empty())
+          tls_groups = groups;
+      }
+
       void set_local_cert_enabled(const bool v) override
       {
 	local_cert_enabled = v;
@@ -433,6 +439,9 @@ namespace openvpn {
 
 	if (opt.exists("tls-ciphersuites"))
 	  tls_ciphersuite_list = opt.get_optional("tls-ciphersuites", 1, 256);
+
+	if (opt.exists("tls-groups"))
+	  tls_groups = opt.get_optional("tls-groups", 1, 256);
 
 	// unsupported cert checkers
 	{
@@ -578,6 +587,7 @@ namespace openvpn {
       TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
       std::string tls_cipher_list;
       std::string tls_ciphersuite_list;
+      std::string tls_groups;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
       bool client_session_tickets = false;
@@ -1181,6 +1191,10 @@ namespace openvpn {
 #endif
 	  SSL_CTX_set_options(ctx, sslopt);
 
+	  if (!config->tls_groups.empty())
+	    {
+	      set_openssl_tls_groups(config->tls_groups);
+	    }
 #if defined(TLS1_3_VERSION)
 	  if (!config->tls_ciphersuite_list.empty())
 	    {
@@ -1370,6 +1384,45 @@ namespace openvpn {
 	return X509_check_purpose (cert, X509_PURPOSE_SSL_CLIENT, 0);
       else
 	return true;
+    }
+
+
+    void set_openssl_tls_groups(const std::string& tls_groups)
+    {
+      auto num_groups = std::count(tls_groups.begin(), tls_groups.end(), ':') + 1;
+
+      std::unique_ptr<int[]> glist(new int[num_groups]);
+
+      std::stringstream groups_ss(tls_groups);
+      std::string group;
+
+      int glistlen = 0;
+      while (std::getline(groups_ss, group, ':'))
+	{
+	  /* Dance around that the fact that even though OpenSSL authors
+	   * call this group secp256r1 in their own source code, OpenSSL
+	   * externally only knows this by prime256v1 or P-256 */
+	  if (group == "secp256r1")
+	    {
+	      group = "prime256v1";
+	    }
+
+	  int nid = OBJ_sn2nid(group.c_str());
+	  if (nid != 0)
+	    {
+	      glist[glistlen] = nid;
+	      glistlen++;
+	    }
+	  else
+	    {
+	      OPENVPN_LOG_SSL("OpenSSL -- warning ignoring unknown group '"
+				<< group << "' in tls-groups");
+	    }
+	}
+
+      if (!SSL_CTX_set1_groups(ctx, glist.get(), glistlen))
+	OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set1_groups failed");
+
     }
 
     // remote-cert-ku verification

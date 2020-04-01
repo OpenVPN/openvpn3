@@ -366,4 +366,9 @@ inline const BIGNUM *DSA_get0_p(const DSA *d)
     DSA_get0_pqg(d, &p, nullptr, nullptr);
     return p;
 }
+
+inline int SSL_CTX_set1_groups(SSL_CTX *ctx, int *glist, int glistlen)
+{
+    return SSL_CTX_set1_curves(ctx, glist, glistlen);
+}
 #endif
