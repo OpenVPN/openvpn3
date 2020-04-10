@@ -172,6 +172,11 @@ namespace openvpn {
       offset_ = size_ = capacity_ = 0;
     }
 
+    BufferType(void* data, const size_t size, const bool filled)
+      : BufferType((T*)data, size, filled)
+    {
+    }
+
     BufferType(T* data, const size_t size, const bool filled)
     {
       data_ = data;
