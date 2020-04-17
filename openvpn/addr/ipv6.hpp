@@ -113,7 +113,11 @@ namespace openvpn {
       {
 	const openvpn_io::ip::address_v6 a = to_asio();
 	std::string ret = a.to_string();
+#ifdef UNIT_TEST
+	return string::to_lower_copy(ret);
+#else
 	return ret;
+#endif
       }
 
       static Addr from_hex(const std::string& s)
