@@ -55,6 +55,52 @@ namespace openvpn {
       {
       }
 
+      RouteType(const ADDR& addr_arg,
+		const unsigned int prefix_len_arg)
+	: addr(addr_arg),
+	  prefix_len(prefix_len_arg)
+      {
+      }
+
+#ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
+
+      template <typename TITLE>
+      RouteType(const std::string& rtstr, const TITLE& title)
+	: RouteType(RouteType::from_string(rtstr, title))
+      {
+      }
+
+      RouteType(const std::string& rtstr)
+	: RouteType(RouteType::from_string(rtstr, nullptr))
+      {
+      }
+
+      template <typename TITLE>
+      static RouteType from_string(const std::string& rtstr, const TITLE& title)
+      {
+	RouteType r;
+	std::vector<std::string> pair;
+	pair.reserve(2);
+	Split::by_char_void<std::vector<std::string>, NullLex, Split::NullLimit>(pair, rtstr, '/', 0, 1);
+	r.addr = ADDR::from_string(pair[0], title);
+	if (pair.size() >= 2)
+	  {
+	    r.prefix_len = parse_number_throw<unsigned int>(pair[1], "prefix length");
+	    if (r.prefix_len > r.addr.size())
+	      OPENVPN_THROW(route_error, (!StringTempl::empty(title) ? title : "route") << " : bad prefix length : " << rtstr);
+	  }
+	else
+	  r.prefix_len = r.addr.size();
+	return r;
+      }
+
+      static RouteType from_string(const std::string& rtstr)
+      {
+	return from_string(rtstr, nullptr);
+      }
+
+#else
+
       RouteType(const std::string& rtstr, const char *title = nullptr)
 	: RouteType(RouteType::from_string(rtstr, title))
       {
@@ -62,13 +108,6 @@ namespace openvpn {
 
       RouteType(const std::string& rtstr, const std::string& title)
 	: RouteType(RouteType::from_string(rtstr, title.c_str()))
-      {
-      }
-
-      RouteType(const ADDR& addr_arg,
-		const unsigned int prefix_len_arg)
-	: addr(addr_arg),
-	  prefix_len(prefix_len_arg)
       {
       }
 
@@ -89,6 +128,8 @@ namespace openvpn {
 	  r.prefix_len = r.addr.size();
 	return r;
       }
+
+#endif
 
       bool defined() const
       {
@@ -311,6 +352,34 @@ namespace openvpn {
     OPENVPN_OSTREAM(Route4List, to_string);
     OPENVPN_OSTREAM(Route6List, to_string);
 
+#ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
+
+    template <typename TITLE>
+    inline Route route_from_string_prefix(const std::string& addrstr,
+					  const unsigned int prefix_len,
+					  const TITLE& title,
+					  const IP::Addr::Version required_version = IP::Addr::UNSPEC)
+    {
+      Route r;
+      r.addr = IP::Addr(addrstr, title, required_version);
+      r.prefix_len = prefix_len;
+      if (r.prefix_len > r.addr.size())
+	OPENVPN_THROW(Route::route_error, title << " : bad prefix length : " << addrstr);
+      return r;
+    }
+
+    template <typename TITLE>
+    inline Route route_from_string(const std::string& rtstr,
+				   const TITLE& title,
+				   const IP::Addr::Version required_version = IP::Addr::UNSPEC)
+    {
+      Route r(rtstr, title);
+      r.addr.validate_version(title, required_version);
+      return r;
+    }
+
+#else
+
     inline Route route_from_string_prefix(const std::string& addrstr,
 					  const unsigned int prefix_len,
 					  const std::string& title,
@@ -332,6 +401,9 @@ namespace openvpn {
       r.addr.validate_version(title, required_version);
       return r;
     }
+
+#endif
+
   }
 }
 

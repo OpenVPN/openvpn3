@@ -56,6 +56,109 @@ namespace openvpn {
 	V6_SIZE = IPv6::Addr::SIZE,
       };
 
+#ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
+
+      template <typename TITLE>
+      Addr(const Addr& other, const TITLE& title, const Version required_version)
+	: ver(other.ver)
+      {
+	other.validate_version(title, required_version);
+	switch (ver)
+	  {
+	  case V4:
+	    u.v4 = other.u.v4;
+	    break;
+	  case V6:
+	    u.v6 = other.u.v6;
+	    break;
+	  default:
+	    break;
+	  }
+      }
+
+      template <typename TITLE>
+      Addr(const Addr& other, const TITLE& title)
+	: Addr(other, title, UNSPEC)
+      {
+      }
+
+      Addr(const Addr& other)
+	: Addr(other, nullptr, UNSPEC)
+      {
+      }
+
+      template <typename TITLE>
+      Addr(const std::string& ipstr, const TITLE& title, const Version required_version)
+	: Addr(from_string(ipstr, title, required_version))
+      {
+      }
+
+      template <typename TITLE>
+      Addr(const std::string& ipstr, const TITLE& title)
+	: Addr(from_string(ipstr, title, UNSPEC))
+      {
+      }
+
+      Addr(const std::string& ipstr)
+	: Addr(from_string(ipstr, nullptr, UNSPEC))
+      {
+      }
+
+      template <typename TITLE>
+      static Addr from_string(const std::string& ipstr,
+			      const TITLE& title,
+			      const Version required_version)
+      {
+	openvpn_io::error_code ec;
+	openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
+	if (ec)
+	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
+	const Addr ret = from_asio(a);
+	if (required_version != UNSPEC && required_version != ret.ver)
+	  throw ip_exception(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
+	return ret;
+      }
+
+      template <typename TITLE>
+      static Addr from_string(const std::string& ipstr, const TITLE& title)
+      {
+	return from_string(ipstr, title, UNSPEC);
+      }
+
+      static Addr from_string(const std::string& ipstr)
+      {
+	return from_string(ipstr, nullptr, UNSPEC);
+      }
+
+      template <typename TITLE>
+      static std::string validate(const std::string& ipstr,
+				  const TITLE& title,
+				  const Version required_version)
+      {
+	Addr a = from_string(ipstr, title, required_version);
+	return a.to_string();
+      }
+
+      template <typename TITLE>
+      static std::string validate(const std::string& ipstr, const TITLE& title)
+      {
+	return validate(ipstr, title, UNSPEC);
+      }
+
+      static std::string validate(const std::string& ipstr)
+      {
+	return validate(ipstr, nullptr, UNSPEC);
+      }
+
+      template <typename TITLE>
+      void validate_version(const TITLE& title, const Version required_version) const
+      {
+	if (required_version != UNSPEC && required_version != ver)
+	  throw ip_exception(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
+      }
+
+#else
+
       Addr(const Addr& other, const char *title = nullptr, Version required_version = UNSPEC)
 	: ver(other.ver)
       {
@@ -115,6 +218,20 @@ namespace openvpn {
       }
 #endif
 
+      static Addr from_string(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
+      {
+	openvpn_io::error_code ec;
+	openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
+	if (ec)
+	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
+	const Addr ret = from_asio(a);
+	if (required_version != UNSPEC && required_version != ret.ver)
+	  throw ip_exception(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
+	return ret;
+      }
+
+#endif
+
       static bool is_valid(const std::string& ipstr)
       {
 	// fast path -- rule out validity if invalid chars
@@ -134,18 +251,6 @@ namespace openvpn {
 	  openvpn_io::ip::make_address(ipstr, ec);
 	  return !ec;
 	}
-      }
-
-      static Addr from_string(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
-      {
-	openvpn_io::error_code ec;
-	openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
-	if (ec)
-	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
-	const Addr ret = from_asio(a);
-	if (required_version != UNSPEC && required_version != ret.ver)
-	  throw ip_exception(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
-	return ret;
       }
 
       static Addr from_hex(Version v, const std::string& s)

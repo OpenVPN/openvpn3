@@ -19,17 +19,59 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_ADDR_IPERR_H
-#define OPENVPN_ADDR_IPERR_H
+// Called internally by IP, IPv4, and IPv6 classes
+
+#pragma once
 
 #include <string>
 
 #include <openvpn/io/io.hpp>
 
+#ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
+#include <openvpn/common/stringtempl2.hpp>
+#endif
+
 namespace openvpn {
   namespace IP {
     namespace internal {
-      // Called internally by IP, IPv4, and IPv6 classes
+
+#ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
+
+      template <typename TITLE>
+      inline std::string format_error(const std::string& ipstr,
+				      const TITLE& title,
+				      const char *ipver,
+				      const std::string& message)
+      {
+	std::string err = "error parsing";
+	if (!StringTempl::empty(title))
+	  {
+	    err += ' ';
+	    err += StringTempl::to_string(title);
+	  }
+	err += " IP";
+	err += ipver;
+	err += " address '";
+	err += ipstr;
+	err += '\'';
+	if (!message.empty())
+	  {
+	    err += " : ";
+	    err += message;
+	  }
+	return err;
+      }
+
+      template <typename TITLE>
+      inline std::string format_error(const std::string& ipstr,
+				      const TITLE& title,
+				      const char *ipver,
+				      const openvpn_io::error_code& ec)
+      {
+	return format_error(ipstr, title, ipver, ec.message());
+      }
+
+#else
 
       inline std::string format_error(const std::string& ipstr, const char *title, const char *ipver, const openvpn_io::error_code& ec)
       {
@@ -68,8 +110,8 @@ namespace openvpn {
 	  }
 	return err;
       }
+
+#endif
     }
   }
 }
-
-#endif

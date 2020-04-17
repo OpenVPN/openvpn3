@@ -206,6 +206,25 @@ namespace openvpn {
 	return netmask_from_prefix_len(SIZE - lb);
       }
 
+#ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
+
+      template <typename TITLE>
+      static Addr from_string(const std::string& ipstr, const TITLE& title)
+      {
+	openvpn_io::error_code ec;
+	openvpn_io::ip::address_v4 a = openvpn_io::ip::make_address_v4(ipstr, ec);
+	if (ec)
+	  throw ipv4_exception(IP::internal::format_error(ipstr, title, "v4", ec));
+	return from_asio(a);
+      }
+
+      static Addr from_string(const std::string& ipstr)
+      {
+	return from_string(ipstr, nullptr);
+      }
+
+#else
+
       static Addr from_string(const std::string& ipstr, const char *title = nullptr)
       {
 	openvpn_io::error_code ec;
@@ -214,6 +233,8 @@ namespace openvpn {
 	  throw ipv4_exception(IP::internal::format_error(ipstr, title, "v4", ec));
 	return from_asio(a);
       }
+
+#endif
 
       std::string to_string() const
       {
