@@ -32,11 +32,11 @@ namespace openvpn {
 
     // empty
 
-    // for objects that define a to_string() method
+    // for objects that define an empty method
     template <typename T>
-    inline auto empty(const T& t) -> decltype(t.to_string(), true)
+    inline auto empty(const T& t) -> decltype(t.empty())
     {
-      return t.to_string().empty();
+      return t.empty();
     }
 
     // for numerical values
