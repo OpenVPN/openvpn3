@@ -170,7 +170,7 @@ void test_with_corpus(Compress& compressor,
     "comp-testdata/xargs.1",
    };
   for (auto fn: filenames) {
-      test(UNITTEST_SOURCE_DIR + fn, compressor, decompressor, frame, block_size, n_compress, n_expand_per_compress, bytes,
+      test(std::string(UNITTEST_SOURCE_DIR) + '/' + fn, compressor, decompressor, frame, block_size, n_compress, n_expand_per_compress, bytes,
 	      compress_bytes);
   }
 }
