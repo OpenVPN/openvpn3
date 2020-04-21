@@ -288,15 +288,16 @@ namespace openvpn {
 		  continue;
 
 		wchar_t wbuf[256] = L"";
+		DWORD cbwbuf = sizeof(wbuf);
 		status = ::RegQueryValueExW(connection_key(),
 					    L"Name",
 					    nullptr,
 					    &data_type,
 					    (LPBYTE)wbuf,
-					    &len);
+					    &cbwbuf);
 		if (status != ERROR_SUCCESS || data_type != REG_SZ)
 		  continue;
-		wbuf[(sizeof(wbuf) / sizeof(wchar_t)) - 1] = L'\0';
+		wbuf[(cbwbuf / sizeof(wchar_t)) - 1] = L'\0';
 
 		// iterate through self and try to patch the name
 		{
