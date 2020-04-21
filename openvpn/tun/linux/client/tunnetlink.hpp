@@ -431,6 +431,58 @@ namespace openvpn {
       R_ADD_ALL=R_ADD_SYS|R_ADD_DCO,
     };
 
+    /**
+     * @brief Add new interface
+     *
+     * @param os output stream to where error message is written
+     * @param dev interface name
+     * @param type interface link type (such as "ovpn-dco")
+     * @return int 0 on success, negative error code on error
+     */
+    inline int iface_new(std::ostringstream& os, const std::string& dev, const std::string& type)
+    {
+      int ret = -1;
+
+      if (dev.empty())
+      {
+	os << "Error: can't call NetlinkLinkNew with no interface" << std::endl;
+	return ret;
+      }
+
+      if (type.empty())
+      {
+	os << "Error: can't call NetlinkLinkNew with no interfacei type" << std::endl;
+	return ret;
+      }
+
+      ret = SITNL::net_iface_new(dev, type);
+      if (ret)
+      {
+	os << "Error while executing NetlinkLinkNew " << dev << ": " << ret << std::endl;
+      }
+
+      return ret;
+    }
+
+    inline int iface_del(std::ostringstream& os, const std::string& dev)
+    {
+      int ret = -1;
+
+      if (dev.empty())
+      {
+	os << "Error: can't call NetlinkLinkDel with no interface" << std::endl;
+	return ret;
+      }
+
+      ret = SITNL::net_iface_del(dev);
+      if (ret)
+      {
+	os << "Error while executing NetlinkLinkDel " << dev << ": " << ret << std::endl;
+      }
+
+      return ret;
+    }
+
     /*inline IPv4::Addr cvt_pnr_ip_v4(const std::string& hexaddr)
     {
       BufferAllocated v(4, BufferAllocated::CONSTRUCT_ZERO);

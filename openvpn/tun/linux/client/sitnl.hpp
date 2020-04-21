@@ -831,6 +831,80 @@ err:
 	return ret;
       }
 
+      /**
+       * @brief Add new interface (similar to ip link add)
+       *
+       * @param iface interface name
+       * @param type interface link type (for example "ovpn-dco")
+       * @return int 0 on success, negative error code on error
+       */
+      static int
+      net_iface_new(const std::string& iface, const std::string& type)
+      {
+	struct sitnl_link_req req = { };
+	struct rtattr *tail = NULL;
+	int ret = -1;
+
+	if (iface.empty())
+	{
+	  OPENVPN_LOG(__func__ << ": passed empty interface");
+	  return -EINVAL;
+	}
+
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.i));
+	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+	req.n.nlmsg_type = RTM_NEWLINK;
+
+	SITNL_ADDATTR(&req.n, sizeof(req), IFLA_IFNAME, iface.c_str(),
+		      iface.length() + 1);
+	tail = NLMSG_TAIL(&req.n);
+	SITNL_ADDATTR(&req.n, sizeof(req), IFLA_LINKINFO, NULL, 0);
+	SITNL_ADDATTR(&req.n, sizeof(req), IFLA_INFO_KIND, type.c_str(),
+		      type.length() + 1);
+	tail->rta_len = (uint8_t *)NLMSG_TAIL(&req.n) - (uint8_t *)tail;
+
+	req.i.ifi_family = AF_PACKET;
+	req.i.ifi_index = 0;
+
+	OPENVPN_LOG(__func__ << ": add " << iface << " type " << type);
+
+	ret = sitnl_send(&req.n, 0, 0, NULL, NULL);
+err:
+	return ret;
+      }
+
+      static int
+      net_iface_del(const std::string& iface)
+      {
+	struct sitnl_link_req req = { };
+	int ifindex;
+
+	if (iface.empty())
+	{
+	  OPENVPN_LOG(__func__ << ": passed empty interface");
+	  return -EINVAL;
+	}
+
+	ifindex = if_nametoindex(iface.c_str());
+	if (ifindex == 0)
+	{
+	  OPENVPN_LOG(__func__ << ": rtnl: cannot get ifindex for " << iface
+		      << ": " << strerror(errno));
+	  return -ENOENT;
+	}
+
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.i));
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req.n.nlmsg_type = RTM_DELLINK;
+
+	req.i.ifi_family = AF_PACKET;
+	req.i.ifi_index = ifindex;
+
+	OPENVPN_LOG(__func__ << ": idel " << iface);
+
+	return sitnl_send(&req.n, 0, 0, NULL, NULL);
+      }
+
       static int
       net_iface_up(std::string& iface, bool up)
       {
