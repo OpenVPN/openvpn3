@@ -38,7 +38,7 @@ fi
 # source helper functions
 . $O3/core/deps/functions.sh
 
-FNAME=openssl-${OPNESSL_VERSION}.tar.gz
+FNAME=openssl-${OPENSSL_VERSION}.tar.gz
 URL=https://www.openssl.org/source/${OPENSSL_VERSION}.tar.gz
 CSUM=${OPENSSL_CSUM}
 

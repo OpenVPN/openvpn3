@@ -144,6 +144,18 @@ namespace openvpn {
 	    case SSL_R_UNSUPPORTED_PROTOCOL:
 	      set_code(Error::TLS_VERSION_MIN, true);
 	      break;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+            // These error codes are not available in older OpenSSL versions
+	    case SSL_R_CA_MD_TOO_WEAK:
+	      set_code(Error::SSL_CA_MD_TOO_WEAK, true);
+	      break;
+	    case SSL_R_CA_KEY_TOO_SMALL:
+	      set_code(Error::SSL_CA_KEY_TOO_SMALL, true);
+	      break;
+#endif // OpenSSL >= 1.1.0
+	    case SSL_R_DH_KEY_TOO_SMALL:
+	      set_code(Error::SSL_DH_KEY_TOO_SMALL, true);
+	      break;
 	    }
 	}
       errtxt = tmp.str();
