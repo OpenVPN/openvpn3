@@ -31,8 +31,8 @@ namespace openvpn {
   {
   public:
     AsioConstBufferSeq2(const Buffer& b1, const Buffer& b2)
-      : buf({{b1.c_data(), b1.size()},
-	     {b2.c_data(), b2.size()}})
+      : buf{openvpn_io::const_buffer{b1.c_data(), b1.size()},
+	     openvpn_io::const_buffer{b2.c_data(), b2.size()}}
     {
     }
 
