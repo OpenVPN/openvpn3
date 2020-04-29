@@ -345,7 +345,7 @@ namespace openvpn {
 	    requeue = gremlin_recv(buf);
 	  else
 #endif
-	    requeue = read_handler->tcp_read_handler(buf);
+	  requeue = read_handler->tcp_read_handler(buf);
 	}
 
 	return requeue;

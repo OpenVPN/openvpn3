@@ -1168,16 +1168,16 @@ namespace openvpn {
 	  if (config->tls_version_min > TLSVersion::V1_0)
 	    sslopt |= SSL_OP_NO_TLSv1;
 #ifdef SSL_OP_NO_TLSv1_1
-	    if (config->tls_version_min > TLSVersion::V1_1)
-	      sslopt |= SSL_OP_NO_TLSv1_1;
+	  if (config->tls_version_min > TLSVersion::V1_1)
+	    sslopt |= SSL_OP_NO_TLSv1_1;
 #endif
 #ifdef SSL_OP_NO_TLSv1_2
-	    if (config->tls_version_min > TLSVersion::V1_2)
-	      sslopt |= SSL_OP_NO_TLSv1_2;
+	  if (config->tls_version_min > TLSVersion::V1_2)
+	    sslopt |= SSL_OP_NO_TLSv1_2;
 #endif
 #ifdef SSL_OP_NO_TLSv1_3
-	    if (config->tls_version_min > TLSVersion::V1_3)
-	      sslopt |= SSL_OP_NO_TLSv1_3;
+	  if (config->tls_version_min > TLSVersion::V1_3)
+	    sslopt |= SSL_OP_NO_TLSv1_3;
 #endif
 	  SSL_CTX_set_options(ctx, sslopt);
 

@@ -300,7 +300,6 @@ namespace openvpn {
 	      ManClientInstance::Factory::Ptr man_factory_arg,
 	      TunClientInstance::Factory::Ptr tun_factory_arg)
 	: Base(factory.clone_proto_config(), factory.stats),
-	  io_context(io_context_arg),
 	  housekeeping_timer(io_context_arg),
 	  disconnect_at(Time::infinite()),
 	  stats(factory.stats),
@@ -714,8 +713,6 @@ namespace openvpn {
 	    break;
 	  }
       }
-
-      openvpn_io::io_context& io_context;
 
       // higher values are higher priority
       enum DisconnectType {
