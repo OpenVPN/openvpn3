@@ -525,7 +525,7 @@ namespace openvpn {
       {
       }
 
-      virtual void transport_reparent(TransportClientParent* parent_arg)
+      virtual void transport_reparent(TransportClientParent* parent_arg) override
       {
 	transport_parent = parent_arg;
       }

@@ -528,7 +528,7 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
-      virtual void schedule_disconnect(const unsigned int seconds)
+      virtual void schedule_disconnect(const unsigned int seconds) override
       {
 	if (halt || disconnect_type == DT_HALT_RESTART)
 	  return;
@@ -537,7 +537,7 @@ namespace openvpn {
 	set_housekeeping_timer();
       }
 
-      virtual void schedule_auth_pending_timeout(const unsigned int seconds)
+      virtual void schedule_auth_pending_timeout(const unsigned int seconds) override
       {
 	if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !seconds)
 	  return;
