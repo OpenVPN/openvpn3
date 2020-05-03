@@ -1008,7 +1008,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      if (!epki_cert_fn.empty())
 		config.externalPkiAlias = "epki"; // dummy string
 
-	      PeerInfo::Set::parse_csv(peer_info, config.peerInfo);
+	      PeerInfo::Set::parse_flexible(peer_info, config.peerInfo);
 
 	      // allow -s server override to reference a friendly name
 	      // in the config.
@@ -1181,7 +1181,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--auth-retry, -Y      : retry connection on auth failure" << std::endl;
       std::cout << "--persist-tun, -j     : keep TUN interface open across reconnects" << std::endl;
       std::cout << "--wintun, -w          : use WinTun instead of TAP-Windows6 on Windows" << std::endl;
-      std::cout << "--peer-info, -I       : peer info key/value list in the form K1=V1,K2=V2,..." << std::endl;
+      std::cout << "--peer-info, -I       : peer info key/value list in the form K1=V1,K2=V2,... or @kv.json" << std::endl;
       std::cout << "--gremlin, -G         : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
       std::cout << "--epki-ca             : simulate external PKI cert supporting intermediate/root certs" << std::endl;
       std::cout << "--epki-cert           : simulate external PKI cert" << std::endl;
