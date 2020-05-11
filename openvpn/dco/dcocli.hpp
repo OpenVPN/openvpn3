@@ -40,7 +40,7 @@
 #include <openvpn/kovpn/kodev.hpp>
 #include <openvpn/kovpn/korekey.hpp>
 #include <openvpn/kovpn/kostats.hpp>
-#include <openvpn/linux/procfs.hpp>
+#include <openvpn/kovpn/rps_xps.hpp>
 
 #ifdef ENABLE_PG
 #include <openvpn/kovpn/kodevtun.hpp>
@@ -68,6 +68,8 @@ namespace openvpn {
       int trunk_unit = -1;
       unsigned int ping_restart_override = 0;
 
+      std::unique_ptr<Configure_RPS_XPS> config_rps_xps;
+
       virtual TunClientFactory::Ptr new_tun_factory(const DCO::TunConfig& conf, const OptionList& opt) override
       {
 	tun = conf;
@@ -87,6 +89,8 @@ namespace openvpn {
 
 	// parse trunk-unit
 	trunk_unit = opt.get_num<decltype(trunk_unit)>("trunk-unit", 1, trunk_unit, 0, 511);
+	if (trunk_unit)
+	  config_rps_xps.reset(new Configure_RPS_XPS(opt));
 
 	// parse ping-restart-override
 	ping_restart_override = opt.get_num<decltype(ping_restart_override)>("ping-restart-override", 1, ping_restart_override, 0, 3600);
@@ -227,8 +231,8 @@ namespace openvpn {
 	config->transport.stats->dco_configure(this);
 
 	// if trunking, set RPS/XPS on iface
-	if (config->trunk_unit >= 0)
-	  KoTun::KovpnBase::set_rps_xps(config->dev_name, devconf.dc.queue_index, config->tun.stop);
+	if (config->config_rps_xps)
+	  config->config_rps_xps->set(config->dev_name, devconf.dc.queue_index, config->tun.stop);
 
 	if (devconf.dc.tcp)
 	  transport_start_tcp();

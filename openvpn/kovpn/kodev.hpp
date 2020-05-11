@@ -252,15 +252,6 @@ namespace openvpn {
 	return fd;
       }
 
-      static void set_rps_xps(const std::string& dev_name, const unsigned int dev_queue_index, Stop* async_stop)
-      {
-	// set RPS/XPS on iface
-	ProcFS::write_sys(fmt_qfn(dev_name, "rx", dev_queue_index, "rps_cpus"), "ffffffff\n", async_stop);
-	ProcFS::write_sys(fmt_qfn(dev_name, "rx", dev_queue_index, "rps_cpus"), "ffffffff\n", async_stop);
-	ProcFS::write_sys(fmt_qfn(dev_name, "rx", dev_queue_index, "rps_flow_cnt"), "1024\n", async_stop);
-	ProcFS::write_sys(fmt_qfn(dev_name, "tx", dev_queue_index, "xps_cpus"), "0\n", async_stop);
-      }
-
       static void disable_reverse_path_filter(const std::string& dev_name, Stop* async_stop)
       {
 	// disable reverse path filter on iface
@@ -296,13 +287,6 @@ namespace openvpn {
       static std::string ver_string()
       {
 	return ver_string(OVPN_VER_MAJOR, OVPN_VER_MINOR, OVPN_VER_BUILD);
-      }
-
-      static std::string fmt_qfn(const std::string& dev, const std::string& type, int qnum, const std::string& bn)
-      {
-	std::ostringstream os;
-	os << "/sys/class/net/" << dev << "/queues/" << type << "-" << qnum << '/' << bn;
-	return os.str();
       }
     };
 
