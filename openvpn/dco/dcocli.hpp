@@ -198,7 +198,7 @@ namespace openvpn {
 	devconf.dc.max_tun_queue_len = 4096;
 	devconf.dc.max_tcp_send_queue_len = 64;
 	devconf.dc.peer_lookup = OVPN_PEER_LOOKUP_NONE;
-	devconf.dc.cpu_id = -1;
+	devconf.dc.cpu_affinity = OVPN_CPU_AFFINITY_UNDEF;
 
 	/* We have a tun builder, we get the device from the
 	 * tun builder
