@@ -1258,6 +1258,13 @@ namespace openvpn {
       return o.get_num<T>(idx, min_value, max_value);
     }
 
+    template <typename T>
+    T get_num(const std::string& name, const size_t idx) const
+    {
+      const Option& o = get(name);
+      return o.get_num<T>(idx);
+    }
+
     // Touch an option, if it exists.
     void touch(const std::string& name) const
     {
