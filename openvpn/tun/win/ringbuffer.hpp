@@ -85,7 +85,7 @@ namespace openvpn
 
 	HANDLE handle;
 	DuplicateHandle(GetCurrentProcess(), send_ring_tail_moved_(),
-                        GetCurrentProcess(), &handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
+			GetCurrentProcess(), &handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
 	send_tail_moved_asio_event_.assign(handle);
       }
 
