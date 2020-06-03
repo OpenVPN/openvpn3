@@ -561,7 +561,7 @@ namespace openvpn {
 	tun_mtu = parse_tun_mtu(opt, tun_mtu);
 
 	// mssfix
-	mss_parms.parse(opt);
+	mss_parms.parse(opt, true);
 
 	// load parameters that can be present in both config file or pushed options
 	load_common(opt, pco, server ? LOAD_COMMON_SERVER : LOAD_COMMON_CLIENT);
