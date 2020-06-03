@@ -277,6 +277,8 @@ namespace openvpn {
       return (double(time_) - double(t.time_)) / double(prec);
     }
 
+    // Return a human-readable number of seconds that *this is ahead of t.
+    // t is usually now().
     std::string delta_str(const TimeType& t) const
     {
       if (!defined())
