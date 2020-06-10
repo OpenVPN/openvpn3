@@ -33,18 +33,41 @@ namespace openvpn {
     {
     }
 
-    void parse(const OptionList& opt)
+    void parse(const OptionList& opt, bool nothrow=false)
     {
       const Option *o = opt.get_ptr("mssfix");
       if (o)
 	{
-	  const bool status = parse_number_validate<decltype(mssfix)>(o->get(1, 16),
+	  const std::string* val = o->get_ptr(1, 16);
+	  if (val == nullptr)
+	    {
+	      if (nothrow)
+		{
+		  OPENVPN_LOG("Missing mssfix value, mssfix functionality disabled");
+		  return;
+		}
+	      else
+		throw option_error("mssfix must have a value");
+	    }
+
+	  const bool status = parse_number_validate<decltype(mssfix)>(*val,
 								      16,
 								      576,
 								      65535,
 								      &mssfix);
 	  if (!status)
-	    throw option_error("mssfix: parse/range issue");
+	    {
+	      if (nothrow)
+		{
+		  // no need to warn if mssfix is actually 0
+		  if (*val != "0")
+		    {
+		      OPENVPN_LOG("Invalid mssfix value " << *val << ", mssfix functionality disabled");
+		    }
+		}
+	      else
+		throw option_error("mssfix: parse/range issue");
+	    }
 	  mtu = (o->get_optional(2, 16) == "mtu");
 	}
     }
