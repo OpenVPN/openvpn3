@@ -27,6 +27,7 @@
 
 #include <string>
 #include <cstring>
+#include <cstdint>
 #include <sstream>
 #include <utility>
 
@@ -857,7 +858,7 @@ namespace openvpn {
 
 	    // save the leaf cert serial number
 	    const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
-	    authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
+	    authcert->sn = extract_serial_number(ai);
 
 	    X509_free (cert);
 	  }
@@ -1579,6 +1580,18 @@ namespace openvpn {
 	}
     }
 
+    static std::int64_t extract_serial_number(const ASN1_INTEGER *ai)
+    {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+      std::int64_t ret;
+      if (ASN1_INTEGER_get_int64(&ret, ai) == 0)
+	return -1;
+      return ret;
+#else
+      return ai ? ASN1_INTEGER_get(ai) : -1;
+#endif
+    }
+
     static std::string cert_status_line(int preverify_ok,
 					int depth,
 					int err,
@@ -1778,7 +1791,7 @@ namespace openvpn {
 
 	      // save the leaf cert serial number
 	      const ASN1_INTEGER *ai = X509_get_serialNumber(current_cert);
-	      self_ssl->authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
+	      self_ssl->authcert->sn =  extract_serial_number(ai);
 	    }
 	}
 
