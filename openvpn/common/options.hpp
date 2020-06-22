@@ -680,7 +680,7 @@ namespace openvpn {
     }
 
     template<typename T, typename... Args>
-    OptionList(T first, Args... args)
+    explicit OptionList(T first, Args... args)
     {
       reserve(1 + sizeof...(args));
       from_list(std::move(first), std::forward<Args>(args)...);
