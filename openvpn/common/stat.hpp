@@ -48,17 +48,33 @@ namespace openvpn {
       return buffer.st_mtime;
   }
 
-  // Return file modification time (in nanoseconds since unix epoch) or 0 on error
-  inline std::uint64_t file_mod_time_nanoseconds(const std::string& filename)
+  // Return file modification time from a struct stat
+  inline std::uint64_t stat_mod_time_nanoseconds(const struct stat& s)
   {
     typedef std::uint64_t T;
+#if defined(__APPLE__)
+    return T(s.st_mtimespec.tv_sec) * T(1000000000) + T(s.st_mtimespec.tv_nsec);
+#else
+    return T(s.st_mtim.tv_sec) * T(1000000000) + T(s.st_mtim.tv_nsec);
+#endif
+  }
+
+  // Return file modification time from a file path (in nanoseconds since unix epoch) or 0 on error
+  inline std::uint64_t file_mod_time_nanoseconds(const std::string& filename)
+  {
     struct stat s;
     if (::stat(filename.c_str(), &s) == 0)
-#if defined(__APPLE__)
-      return T(s.st_mtimespec.tv_sec) * T(1000000000) + T(s.st_mtimespec.tv_nsec);
-#else
-      return T(s.st_mtim.tv_sec) * T(1000000000) + T(s.st_mtim.tv_nsec);
-#endif
+      return stat_mod_time_nanoseconds(s);
+    else
+      return 0;
+  }
+
+  // Return file modification time from a file descriptor (in nanoseconds since unix epoch) or 0 on error
+  inline std::uint64_t fd_mod_time_nanoseconds(const int fd)
+  {
+    struct stat s;
+    if (::fstat(fd, &s) == 0)
+      return stat_mod_time_nanoseconds(s);
     else
       return 0;
   }
