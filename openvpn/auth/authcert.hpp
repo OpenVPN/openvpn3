@@ -270,7 +270,9 @@ namespace openvpn {
 	  return "OK";
       }
 
+#ifndef UNIT_TEST
     private:
+#endif
       std::string sni;               // SNI (server name indication)
       std::string cn;                // common name
       std::int64_t sn;               // serial number
