@@ -21,8 +21,9 @@
 
 // OpenVPN 3 kovpn-based tun interface
 
-#ifndef OPENVPN_KOVPN_KODEV_H
-#define OPENVPN_KOVPN_KODEV_H
+#pragma once
+
+#ifndef UNIT_TEST
 
 #include <sys/ioctl.h>
 
