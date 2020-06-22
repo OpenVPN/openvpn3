@@ -21,8 +21,7 @@
 
 // API for random number implementations.
 
-#ifndef OPENVPN_MBEDTLS_UTIL_RANDAPI_H
-#define OPENVPN_MBEDTLS_UTIL_RANDAPI_H
+#pragma once
 
 #include <string>
 #include <cstdint>
@@ -148,5 +147,3 @@ namespace openvpn {
   };
 
 }
-
-#endif
