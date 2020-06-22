@@ -50,6 +50,16 @@ namespace openvpn {
 	peer_info.update_map();
       }
 
+      // for unit test
+      AuthCreds(std::string username_arg,
+		SafeString password_arg,
+		OptionList peer_info_arg)
+	: username(std::move(username_arg)),
+	  password(std::move(password_arg)),
+	  peer_info(std::move(peer_info_arg))
+      {
+      }
+
       bool defined() const
       {
 	return !username.empty();
