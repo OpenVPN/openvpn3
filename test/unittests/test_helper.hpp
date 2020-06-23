@@ -22,6 +22,7 @@
 
 #include <openvpn/log/logbase.hpp>
 #include <openvpn/random/mtrandapi.hpp>
+#include <openvpn/common/hexstr.hpp>
 
 #include <iostream>
 #include <gtest/gtest.h>
@@ -228,16 +229,43 @@ inline std::string getSortedString(const std::string& output)
  * Predictable RNG that claims to be secure to be used in reproducable unit
  * tests
  */
-class FakeSecureMTRand : public openvpn::MTRand
+class FakeSecureRand : public openvpn::RandomAPI
 {
 public:
-  explicit FakeSecureMTRand(const rand_type::result_type seed) : openvpn::MTRand(seed)
+  FakeSecureRand(const unsigned char initial=0)
+    : next(initial)
   {
-
   }
 
-  bool is_crypto() const override
+  virtual std::string name() const override
+  {
+    return "FakeRNG";
+  }
+
+  virtual bool is_crypto() const override
   {
     return true;
   }
+
+  virtual void rand_bytes(unsigned char *buf, size_t size) override
+  {
+    rand_bytes_(buf, size);
+    //OPENVPN_LOG("RAND: " << openvpn::render_hex(buf, size));
+  }
+
+  virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
+  {
+    rand_bytes(buf, size);
+    return true;
+  }
+
+private:
+  // fake RNG -- just use an incrementing sequence
+  void rand_bytes_(unsigned char *buf, size_t size)
+  {
+    while (size--)
+      *buf++ = next++;
+  }
+
+  unsigned char next;
 };

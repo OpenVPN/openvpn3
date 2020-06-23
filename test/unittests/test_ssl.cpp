@@ -50,7 +50,7 @@ TEST(ssl, sslciphersuites)
 
 TEST(ssl, sslciphers)
 {
-  RandomAPI::Ptr rng(new FakeSecureMTRand(0xdeadcafe));
+  RandomAPI::Ptr rng(new FakeSecureRand);
 
   bool previousLogOutput = testLog->isStdoutEnabled();
   testLog->setPrintOutput(false);
@@ -71,7 +71,7 @@ TEST(ssl, sslciphers)
 
 TEST(ssl, tls_groups)
 {
-  RandomAPI::Ptr rng(new FakeSecureMTRand(0xdeadcafe));
+  RandomAPI::Ptr rng(new FakeSecureRand);
 
   SSLFactoryAPI::Ptr sslfact;
 
