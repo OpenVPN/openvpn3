@@ -32,7 +32,7 @@ download_deps()
     git clone https://github.com/OpenVPN/tap-windows6.git
 
     rm -rf asio
-    git clone https://github.com/chriskohlhoff/asio.git
+    git clone --single-branch --branch asio-1-16-1 https://github.com/chriskohlhoff/asio
 
     popd
 }
