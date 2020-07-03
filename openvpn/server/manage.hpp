@@ -30,6 +30,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
+#include <openvpn/common/jsonlib.hpp>
 #include <openvpn/tun/server/tunbase.hpp>
 #include <openvpn/addr/route.hpp>
 #include <openvpn/auth/authcreds.hpp>
@@ -89,6 +90,9 @@ namespace openvpn {
 
       // notify of local user properties update
       virtual void userprop_local_update() = 0;
+
+      // create, update, or delete a DOMA ACL
+      virtual Json::Value doma_acl(const Json::Value& root) = 0;
     };
 
     // Base class for the client instance receiver.  Note that all
