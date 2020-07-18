@@ -196,6 +196,13 @@ namespace openvpn {
       return px != rhs.px;
     }
 
+    RCPtr<T> move_strong() noexcept
+    {
+      T* p = px;
+      px = nullptr;
+      return RCPtr<T>(p, false);
+    }
+
     template <typename U>
     RCPtr<U> static_pointer_cast() const noexcept
     {
@@ -277,6 +284,16 @@ namespace openvpn {
     {
       if (controller)
 	return controller->template lock<Strong>();
+      else
+	return Strong();
+    }
+
+    Strong move_strong() noexcept
+    {
+      typename T::Controller::Ptr c;
+      c.swap(controller);
+      if (c)
+	return c->template lock<Strong>();
       else
 	return Strong();
     }
