@@ -21,8 +21,9 @@
 #pragma once
 
 #include <openvpn/log/logbase.hpp>
-#include <openvpn/random/mtrandapi.hpp>
+#include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/random/mtrandapi.hpp>
 
 #include <iostream>
 #include <gtest/gtest.h>
@@ -269,3 +270,44 @@ private:
 
   unsigned char next;
 };
+
+// googletest is missing the ability to test for specific
+// text inside a thrown exception, so we implement it here
+
+#define JY_EXPECT_THROW(statement, expected_exception, expected_text) \
+try { \
+    statement; \
+    OPENVPN_THROW_EXCEPTION("JY_EXPECT_THROW: no exception was thrown " << __FILE__ << ':' << __LINE__); \
+} \
+catch (const expected_exception& e) \
+{ \
+  if (std::string(e.what()).find(expected_text) == std::string::npos) \
+    OPENVPN_THROW_EXCEPTION("JY_EXPECT_THROW: did not find expected text in exception at " << __FILE__ << ':' << __LINE__); \
+}
+
+// googletest ASSERT macros can't be used inside constructors
+// or non-void-returning functions, so implement workaround here
+
+#define JY_ASSERT_TRUE(value) \
+{ \
+  if (!(value)) \
+    OPENVPN_THROW_EXCEPTION("JY_ASSERT_TRUE: failure at " << __FILE__ << ':' << __LINE__); \
+}
+
+#define JY_ASSERT_FALSE(value) \
+{ \
+  if (value) \
+    OPENVPN_THROW_EXCEPTION("JY_ASSERT_FALSE: failure at " << __FILE__ << ':' << __LINE__); \
+}
+
+#define JY_ASSERT_EQ(v1, v2) \
+{ \
+  if ((v1) != (v2)) \
+    OPENVPN_THROW_EXCEPTION("JY_ASSERT_EQ: failure at " << __FILE__ << ':' << __LINE__); \
+}
+
+#define JY_ASSERT_NE(v1, v2) \
+{ \
+  if ((v1) == (v2)) \
+    OPENVPN_THROW_EXCEPTION("JY_ASSERT_NE: failure at " << __FILE__ << ':' << __LINE__); \
+}
