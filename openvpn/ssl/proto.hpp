@@ -808,8 +808,8 @@ namespace openvpn {
 	out << "IV_PLAT=" << platform_name() << '\n';
 	out << "IV_NCP=2\n"; // negotiable crypto parameters V2
 	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
-	out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
-	compstr = comp_ctx.peer_info_string();
+	out << "IV_PROTO=6\n"; // supports op32 and P_DATA_V2 and expects a push reply
+	                       // See ssl.h in openvpn2 for detailed documentation of IV_PROTO
 
 	/*
 	 * OpenVPN3 allows to be pushed any cipher that it supports as it
@@ -825,9 +825,6 @@ namespace openvpn {
 	    out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305\n";
 	  }
 
-	out << "IV_NCP=2\n"; // negotiable crypto parameters V2
-	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
-	out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
 	compstr = comp_ctx.peer_info_string();
 
 	if (compstr)
