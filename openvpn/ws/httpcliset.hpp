@@ -35,7 +35,6 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/common/function.hpp>
 #include <openvpn/common/complog.hpp>
-#include <openvpn/common/sfinae.hpp>
 #include <openvpn/time/asiotimersafe.hpp>
 #include <openvpn/buffer/buflist.hpp>
 #include <openvpn/buffer/bufstr.hpp>
@@ -44,6 +43,7 @@
 #include <openvpn/http/urlparse.hpp>
 #include <openvpn/http/headredact.hpp>
 #include <openvpn/ws/httpcli.hpp>
+#include <openvpn/ws/resolver_results.hpp>
 
 #ifndef OPENVPN_HTTP_CLISET_RC
 #define OPENVPN_HTTP_CLISET_RC RC<thread_unsafe_refcount>
@@ -174,6 +174,7 @@ namespace openvpn {
 	BufferList content_out;
 	bool accept_gzip_in = false;
 	bool randomize_resolver_results = false;
+	IP::Addr::Version ip_version_preference = IP::Addr::UNSPEC;
 
 	// output
 	int status = UNDEF;
@@ -802,23 +803,15 @@ namespace openvpn {
 	    }
 	}
 
-	template <typename RESULTS>
-	static auto do_randomize(RESULTS& results, RandomAPI& prng, SFINAE::Rank<1>) -> decltype(results.randomize(prng))
-	{
-	  results.randomize(prng);
-	}
-
-#ifndef HTTPCLI_RANDOMIZE_RESULTS_REQUIRED
-	template <typename RESULTS>
-	static void do_randomize(RESULTS& results, RandomAPI& prng, SFINAE::Rank<0>)
-	{
-	}
-#endif
-
 	void http_mutate_resolver_results(HTTPDelegate& hd, openvpn_io::ip::tcp::resolver::results_type& results)
 	{
+	  // filter results by IP version
+	  if (trans().ip_version_preference != IP::Addr::UNSPEC)
+	    filter_by_ip_version(results, trans().ip_version_preference);
+
+	  // randomize results
 	  if (parent->prng && trans().randomize_resolver_results)
-	    do_randomize(results, *parent->prng, SFINAE::Rank<1>());
+	    randomize_results(results, *parent->prng);
 	}
 
 	void http_content_in(HTTPDelegate& hd, BufferAllocated& buf)

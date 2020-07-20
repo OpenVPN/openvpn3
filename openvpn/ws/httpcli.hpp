@@ -755,11 +755,9 @@ namespace openvpn {
 	    }
 
 	  try {
-	    // asio docs say this should never happen, but check just in case
+	    http_mutate_resolver_results(results);
 	    if (results.empty())
 	      OPENVPN_THROW_EXCEPTION("no results");
-
-	    http_mutate_resolver_results(results);
 
 	    AsioPolySock::TCP* s = new AsioPolySock::TCP(io_context, 0);
 	    socket.reset(s);
