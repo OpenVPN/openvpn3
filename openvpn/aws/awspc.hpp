@@ -32,6 +32,8 @@
 #include <openvpn/ws/httpcliset.hpp>
 #include <openvpn/common/jsonhelper.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/enumdir.hpp>
+#include <openvpn/common/file.hpp>
 #include <openvpn/random/devurand.hpp>
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/openssl/sign/verify.hpp>
@@ -96,13 +98,15 @@ namespace openvpn {
       }
 
       PCQuery(WS::ClientSet::Ptr cs_arg,
-	      std::string role_for_credentials_arg)
+	      const std::string& role_for_credentials_arg,
+	      const std::string& certs_dir_arg)
 	: cs(std::move(cs_arg)),
 	  rng(new DevURand()),
 	  frame(frame_init_simple(1024)),
 	  lookup_product_code(false),
 	  debug_level(0),
-	  role_for_credentials(role_for_credentials_arg)
+	  role_for_credentials(role_for_credentials_arg),
+	  certs_dir(certs_dir_arg)
       {
       }
 
@@ -229,8 +233,16 @@ namespace openvpn {
 
 	  // verify signature on identity document
 	  {
-	    const OpenSSLPKI::X509 cert(awscert(), "AWS Cert");
-	    OpenSSLSign::verify_pkcs7(cert, sig, ident);
+	    std::list<OpenSSLPKI::X509> certs;
+	    if (certs_dir.empty())
+	      certs.emplace_back(awscert(), "AWS Cert");
+	    else
+	      {
+		enum_dir(certs_dir, [&certs, certs_dir=certs_dir](const std::string& file) {
+		  certs.emplace_back(read_text(certs_dir + "/" + file), "AWS Cert");
+		});
+	      }
+	    OpenSSLSign::verify_pkcs7(certs, sig, ident);
 	  }
 
 	  // parse the identity document (JSON)
@@ -533,6 +545,7 @@ namespace openvpn {
       const bool lookup_product_code;
       const int debug_level;
       std::string role_for_credentials;
+      std::string certs_dir;
 
       std::function<void(Info info)> completion;
       Info info;

@@ -41,7 +41,7 @@ namespace openvpn {
      * On success, return.
      * On fail, throw exception.
      */
-    inline void verify_pkcs7(const OpenSSLPKI::X509& cert,
+    inline void verify_pkcs7(const std::list<OpenSSLPKI::X509>& certs,
 			     const std::string& sig,
 			     const std::string& data)
     {
@@ -60,7 +60,8 @@ namespace openvpn {
 
       /* create x509_stack from cert */
       x509_stack = sk_X509_new_null();
-      sk_X509_push(x509_stack, cert.obj());
+      for (const auto& cert : certs)
+	sk_X509_push(x509_stack, cert.obj());
 
       /* get signature */
       in = BIO_new_mem_buf(sig.c_str(), sig.length());
