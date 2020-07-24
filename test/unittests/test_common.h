@@ -31,6 +31,6 @@
 /* Without the asio.hpp include we get winsocket.h related errors
  * See also https://stackoverflow.com/questions/9750344/boostasio-winsock-and-winsock-2-compatibility-issue
  */
-#include <asio.hpp>
+#include <openvpn/io/io.hpp>
 #include "test_helper.hpp"
 #include <gtest/gtest.h>
