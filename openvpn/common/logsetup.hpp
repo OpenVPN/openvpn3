@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include <openvpn/common/rc.hpp>
 
 namespace openvpn {
@@ -30,7 +32,20 @@ namespace openvpn {
   public:
     typedef RCPtr<LogSetup> Ptr;
 
-    virtual void reopen() const = 0;
+    virtual void reopen() = 0;
+  };
+
+  class MultiLogSetup : public std::vector<LogSetup::Ptr>,
+			public LogSetup
+  {
+  public:
+    typedef RCPtr<MultiLogSetup> Ptr;
+
+    virtual void reopen() override
+    {
+      for (const auto &e : *this)
+	e->reopen();
+    }
   };
 
 }
