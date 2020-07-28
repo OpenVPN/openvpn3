@@ -815,15 +815,26 @@ namespace openvpn {
 	 * OpenVPN3 allows to be pushed any cipher that it supports as it
 	 * only implements secure ones and BF-CBC for backwards
 	 * compatibility and generally adopts the concept of the server being
-	 * responsible for sensible choices.
+	 * responsible for sensible choices. Include the cipher here since
+	 * OpenVPN 2.5 will otherwise ignore it and break on conrer cases
+	 * like --cipher AES-128-CBC on client and --data-ciphers "AES-128-CBC"
+	 * on server.
 	 *
-	 * IV_NCP already implies AES-256-GCM and AES-128-GCM, so we will
-	 * announce IV_CIPHER if we also support Chacha20-Poly1305
 	 */
+	out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM";
 	if (openvpn::AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
 	  {
-	    out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305\n";
+	   out << ":CHACHA20-POLY1305";
 	  }
+
+	if (openvpn::CryptoAlgs::defined(dc.cipher()) &&
+		      dc.cipher() != CryptoAlgs::AES_128_GCM &&
+		      dc.cipher() != CryptoAlgs::AES_256_GCM &&
+		      dc.cipher() != CryptoAlgs::CHACHA20_POLY1305)
+	  {
+	    out << ":" << openvpn::CryptoAlgs::name(dc.cipher());
+	  }
+	out << "\n";
 
 	compstr = comp_ctx.peer_info_string();
 
