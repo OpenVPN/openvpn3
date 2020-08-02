@@ -620,7 +620,11 @@ namespace openvpn {
 
     void buffer_full_error(const size_t newcap, const bool allocated) const
     {
+#ifdef OPENVPN_BUFFER_ABORT
+      std::abort();
+#else
       throw BufferException(BufferException::buffer_full, "allocated=" + std::to_string(allocated) + " size=" + std::to_string(size_) + " offset=" + std::to_string(offset_) + " capacity=" + std::to_string(capacity_) + " newcap=" + std::to_string(newcap));
+#endif
     }
 
     T* data_;          // pointer to data
