@@ -8,25 +8,25 @@
 
 using namespace openvpn;
 
-static std::string expected = "0 [errors-to-stderr] \n"
-			      "1 [log] [/Library/Application Support/OpenVPN/log/ovpn3_yonan_net_p0977.log] \n"
-			      "2 [config] [stdin] \n"
-			      "3 [proto-force] [udp] \n"
-			      "4 [management] [/Library/Application Support/OpenVPN/sock/ovpn-6QSai9SzvRcm.sock] [unix] \n"
-			      "5 [setenv] [UV_ASCLI_VER] [2.0.18.200] \n"
-			      "6 [setenv] [UV_PLAT_REL] [12.5.0] \n"
-			      "7 [auth-nocache] \n"
-			      "8 [management-hold] \n"
-			      "9 [management-client] \n"
-			      "10 [management-query-passwords] \n"
-			      "11 [management-query-remote] \n"
-			      "12 [management-up-down] \n"
-			      "13 [management-client-user] [root] \n"
-			      "14 [allow-pull-fqdn] \n"
-			      "15 [auth-retry] [interact] \n"
-			      "16 [push-peer-info] \n"
-			      "17 [setenv] [UV_ASCLI_VER] [2.0.18.200] \n"
-			      "18 [setenv] [UV_PLAT_REL] [12.5.0] \n";
+static std::string expected = "0 [errors-to-stderr]\n"
+			      "1 [log] [/Library/Application Support/OpenVPN/log/ovpn3_yonan_net_p0977.log]\n"
+			      "2 [config] [stdin]\n"
+			      "3 [proto-force] [udp]\n"
+			      "4 [management] [/Library/Application Support/OpenVPN/sock/ovpn-6QSai9SzvRcm.sock] [unix]\n"
+			      "5 [setenv] [UV_ASCLI_VER] [2.0.18.200]\n"
+			      "6 [setenv] [UV_PLAT_REL] [12.5.0]\n"
+			      "7 [auth-nocache]\n"
+			      "8 [management-hold]\n"
+			      "9 [management-client]\n"
+			      "10 [management-query-passwords]\n"
+			      "11 [management-query-remote]\n"
+			      "12 [management-up-down]\n"
+			      "13 [management-client-user] [root]\n"
+			      "14 [allow-pull-fqdn]\n"
+			      "15 [auth-retry] [interact]\n"
+			      "16 [push-peer-info]\n"
+			      "17 [setenv] [UV_ASCLI_VER] [2.0.18.200]\n"
+			      "18 [setenv] [UV_PLAT_REL] [12.5.0]\n";
 
 static const char* input[] = {"unittest",
 			      "--errors-to-stderr",
@@ -98,7 +98,7 @@ static void extract_auth_token(const OptionList& opt)
 {
   const Option& o = opt.get("auth-token");
   o.min_args(2);
-  ASSERT_EQ("auth-token SESS_ID_wJdhHMc7tr9GwbMNEW6b+A== ", o.render(0));
+  ASSERT_EQ("auth-token SESS_ID_wJdhHMc7tr9GwbMNEW6b+A==", o.render(0));
 }
 
 static void verify_topology(const OptionList& opt)
@@ -126,24 +126,24 @@ TEST(argv, parsetest)
   OptionList::Limits limits("parsetest limit out of range", 2048, 16, 8, 512, 64);
   opt.parse_from_csv(opt_csv, &limits);
   opt.update_map();
-  ASSERT_EQ("explicit-exit-notify \n"
-	    "topology subnet \n"
-	    "route-delay 5 30 \n"
-	    "dhcp-pre-release \n"
-	    "dhcp-renew \n"
-	    "dhcp-release \n"
-	    "route-metric 101 \n"
-	    "ping 5 \n"
-	    "ping-restart 40 \n"
-	    "redirect-gateway def1 \n"
-	    "redirect-gateway bypass-dhcp \n"
-	    "redirect-gateway autolocal \n"
-	    "route-gateway 5.5.8.1 \n"
-	    "dhcp-option DNS 172.16.0.23 \n"
-	    "register-dns \n"
-	    "auth-token SESS_ID_wJdhHMc7tr9GwbMNEW6b+A== \n"
-	    "comp-lzo no \n"
-	    "ifconfig 5.5.8.4 255.255.252.0 \n", opt.render(0));
+  ASSERT_EQ("explicit-exit-notify\n"
+	    "topology subnet\n"
+	    "route-delay 5 30\n"
+	    "dhcp-pre-release\n"
+	    "dhcp-renew\n"
+	    "dhcp-release\n"
+	    "route-metric 101\n"
+	    "ping 5\n"
+	    "ping-restart 40\n"
+	    "redirect-gateway def1\n"
+	    "redirect-gateway bypass-dhcp\n"
+	    "redirect-gateway autolocal\n"
+	    "route-gateway 5.5.8.1\n"
+	    "dhcp-option DNS 172.16.0.23\n"
+	    "register-dns\n"
+	    "auth-token SESS_ID_wJdhHMc7tr9GwbMNEW6b+A==\n"
+	    "comp-lzo no\n"
+	    "ifconfig 5.5.8.4 255.255.252.0\n", opt.render(0));
   extract_auth_token(opt);
   extract_ifconfig(opt);
   verify_topology(opt);
@@ -175,19 +175,19 @@ static void space_test(const std::string& str, const std::string& expected)
 static void options_csv_test(const std::string& str, const std::string& elem)
 {
   const OptionList olist = OptionList::parse_from_csv_static(str, NULL);
-  ASSERT_EQ(getSortedString("V4 \n"
-			    "dev-type tun \n"
-			    "link-mtu 1558 \n"
-			    "tun-mtu 1500 \n"
-			    "proto UDPv4 \n"
-			    "comp-lzo \n"
-			    "keydir 1 \n"
-			    "cipher AES-256-CBC \n"
-			    "auth SHA1 \n"
-			    "keysize 256 \n"
-			    "tls-auth \n"
-			    "key-method 2 \n"
-			    "tls-client \n"),
+  ASSERT_EQ(getSortedString("V4\n"
+			    "dev-type tun\n"
+			    "link-mtu 1558\n"
+			    "tun-mtu 1500\n"
+			    "proto UDPv4\n"
+			    "comp-lzo\n"
+			    "keydir 1\n"
+			    "cipher AES-256-CBC\n"
+			    "auth SHA1\n"
+			    "keysize 256\n"
+			    "tls-auth\n"
+			    "key-method 2\n"
+			    "tls-client\n"),
 	    getSortedString(olist.render(0)));
 
   ASSERT_EQ(getSortedString("tls-client [ 12 ]\n"
