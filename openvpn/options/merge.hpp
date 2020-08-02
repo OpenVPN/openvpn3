@@ -265,7 +265,7 @@ namespace openvpn {
 				  if (authfile != "auto" && authfile != "auto-nct")
 				    {
 				      opt.ref(3) = "auto";
-				      profile_content_ += opt.escape();
+				      profile_content_ += opt.escape(false);
 				      profile_content_ += '\n';
 				      opt.ref(0) = "http-proxy-user-pass";
 				      opt.ref(1) = authfile;
