@@ -200,6 +200,14 @@ namespace openvpn {
 	return addr.to_string() + ' ' + netmask().to_string();
       }
 
+      std::string to_string_optional_prefix_len() const
+      {
+	if (prefix_len == addr.size())
+	  return addr.to_string();
+	else
+	  return addr.to_string() + '/' + openvpn::to_string(prefix_len);
+      }
+
       bool operator==(const RouteType& other) const
       {
 	return std::tie(prefix_len, addr) == std::tie(other.prefix_len, other.addr);
