@@ -172,10 +172,13 @@ namespace openvpn {
     template <typename UNORDERED_MAP>
     const SessionIDType* find_weak(const UNORDERED_MAP& m, const bool conflict) const
     {
-      const size_t bi = m.bucket(*this);
-      for (auto i = m.cbegin(bi); i != m.cend(bi); ++i)
-	if (shortform() == i->first.shortform() && (!conflict || *this != i->first))
-	  return &i->first;
+      if (m.bucket_count())
+	{
+	  const size_t bi = m.bucket(*this);
+	  for (auto i = m.cbegin(bi); i != m.cend(bi); ++i)
+	    if (shortform() == i->first.shortform() && (!conflict || *this != i->first))
+	      return &i->first;
+	}
       return nullptr;
     }
 
