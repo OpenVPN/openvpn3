@@ -53,7 +53,7 @@ namespace openvpn {
     std::uint16_t port;
   };
 
-  struct PeerAddr : public RC<thread_unsafe_refcount>
+  struct PeerAddr : public RCCopyable<thread_unsafe_refcount>
   {
     typedef RCPtr<PeerAddr> Ptr;
 
