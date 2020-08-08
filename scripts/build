@@ -359,6 +359,12 @@ else
     OUTPUT="-o $OUTBIN"
 fi
 
+# main source file
+MAIN_CPP="$1.cpp"
+if ! [ -e "$MAIN_CPP" ] && [ "$EXTRA_CPP" ]; then
+    MAIN_CPP=""
+fi
+
 # release/debug builds
 if [ "$DEBUG" = "1" ]; then
     # build with debug symbols
@@ -380,7 +386,7 @@ if [ "$OBJC" == "1" ]; then
     SRC="$1.mm"
     CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $SRC $EXTRA_CPP $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 else
-    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $1.cpp $EXTRA_CPP $EXTRA_SRC_OBJ $OUTPUT $LIBS"
+    CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $MAIN_CPP $EXTRA_CPP $EXTRA_SRC_OBJ $OUTPUT $LIBS"
 fi
 
 # execute CMD
