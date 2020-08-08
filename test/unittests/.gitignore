@@ -1,3 +1,4 @@
+test_all
 test_b64
 test_common
 test_comp
