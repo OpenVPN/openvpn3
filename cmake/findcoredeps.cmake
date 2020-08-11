@@ -57,7 +57,7 @@ function(add_core_dependencies target)
                 -DTAP_WIN_COMPONENT_ID=tap0901
                 -D_CRT_SECURE_NO_WARNINGS
                 )
-        set(EXTRA_LIBS fwpuclnt.lib Iphlpapi.lib)
+        set(EXTRA_LIBS fwpuclnt.lib Iphlpapi.lib wininet.lib setupapi.lib rpcrt4.lib wtsapi32.lib)        
         target_compile_options(${target} PRIVATE "/bigobj")
     else ()
         list(APPEND CMAKE_PREFIX_PATH
