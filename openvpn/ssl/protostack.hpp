@@ -238,6 +238,13 @@ namespace openvpn {
       return ssl_->ssl_handshake_details();
     }
 
+    void export_key_material(OpenVPNStaticKey& key) const
+    {
+      if (!ssl_->export_keying_material("EXPORTER-OpenVPN-datakeys", key.raw_alloc(),
+      	OpenVPNStaticKey::KEY_SIZE))
+	throw ErrorCode(Error::KEY_EXPANSION_ERROR, true, "TLS Keying material export error");
+    }
+
     const AuthCert::Ptr& auth_cert() const
     {
       return ssl_->auth_cert();

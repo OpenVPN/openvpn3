@@ -320,9 +320,11 @@ namespace openvpn {
       typedef RCPtr<CryptoContext> Ptr;
 
       CryptoContext(const CryptoAlgs::Type cipher_arg,
+		    const CryptoAlgs::KeyDerivation key_method,
 		    const Frame::Ptr& frame_arg,
 		    const SessionStats::Ptr& stats_arg)
-	: cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
+	: CryptoDCContext(key_method),
+	  cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
 	  frame(frame_arg),
 	  stats(stats_arg)
       {
@@ -339,6 +341,7 @@ namespace openvpn {
 	Info ret;
 	ret.cipher_alg = cipher;
 	ret.hmac_alg = CryptoAlgs::NONE;
+	ret.key_derivation = key_derivation;
 	return ret;
       }
 

@@ -94,6 +94,7 @@ namespace openvpn {
       KEV_NEGOTIATE_ERROR,
       KEV_PENDING_ERROR,
       N_KEV_EXPIRE,
+      KEY_EXPANSION_ERROR,
 
       // Packet ID error detail
       PKTID_INVALID,
@@ -173,6 +174,7 @@ namespace openvpn {
 	"KEV_NEGOTIATE_ERROR",
 	"KEV_PENDING_ERROR",
 	"N_KEV_EXPIRE",
+	"KEV_EXPANSION_ERROR",
 	"PKTID_INVALID",
 	"PKTID_BACKTRACK",
 	"PKTID_EXPIRE",

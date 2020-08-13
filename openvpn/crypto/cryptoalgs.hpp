@@ -38,6 +38,27 @@ namespace openvpn {
     OPENVPN_EXCEPTION(crypto_alg);
     OPENVPN_SIMPLE_EXCEPTION(crypto_alg_index);
 
+    enum class KeyDerivation {
+      UNDEFINED,
+      OPENVPN_PRF,
+      TLS_EKM
+    };
+
+    inline const char* name(const KeyDerivation kd)
+    {
+      switch (kd)
+	{
+	  case KeyDerivation::UNDEFINED:
+	    return "[PRF undefined]";
+	  case KeyDerivation::OPENVPN_PRF:
+	    return "OpenVPN PRF";
+	  case KeyDerivation::TLS_EKM:
+	    return "TLS Keying Material Exporter [RFC5705]";
+	  default:
+	    return "Unknown";
+	}
+    }
+
     enum Type {
       NONE=0,
 
