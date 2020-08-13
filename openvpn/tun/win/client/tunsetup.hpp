@@ -488,7 +488,7 @@ namespace openvpn {
 	    // add server bypass route
 	    if (gw.defined())
 	      {
-		if (!pull.remote_address.ipv6)
+		if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
 		  {
 		    create.add(new WinCmd("netsh interface ip add route " + pull.remote_address.address + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
 		    destroy.add(new WinCmd("netsh interface ip delete route " + pull.remote_address.address + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
