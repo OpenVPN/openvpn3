@@ -88,7 +88,7 @@
 #if defined(OPENVPN_PLATFORM_LINUX)
 
 // use SITNL by default
-#ifndef OPENVPN_USE_IPROUTE2
+#if !defined(OPENVPN_USE_IPROUTE2) && !defined(OPENVPN_USE_SITNL)
 #define OPENVPN_USE_SITNL
 #endif
 
