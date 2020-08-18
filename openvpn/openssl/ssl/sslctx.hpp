@@ -1180,7 +1180,12 @@ namespace openvpn {
 		  sslopt |= SSL_OP_NO_TICKET;
 		}
 	    }
-
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	if (config->tls_version_min > TLSVersion::V1_0)
+	  {
+	    SSL_CTX_set_min_proto_version(ctx, TLSVersion::toTLSVersion(config->tls_version_min));
+	  }
+#else
 	  if (config->tls_version_min > TLSVersion::V1_0)
 	    sslopt |= SSL_OP_NO_TLSv1;
 #ifdef SSL_OP_NO_TLSv1_1
@@ -1194,6 +1199,7 @@ namespace openvpn {
 #ifdef SSL_OP_NO_TLSv1_3
 	  if (config->tls_version_min > TLSVersion::V1_3)
 	    sslopt |= SSL_OP_NO_TLSv1_3;
+#endif
 #endif
 	  SSL_CTX_set_options(ctx, sslopt);
 

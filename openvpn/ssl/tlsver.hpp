@@ -40,6 +40,32 @@ namespace openvpn {
       V1_3
     };
 
+    inline int toTLSVersion(const Type version)
+    {
+
+      switch (version)
+	{
+	  case UNDEF:
+	  default:
+	    return 0;
+	  case V1_0:
+	    return TLS1_VERSION;
+	  case V1_1:
+	    return TLS1_1_VERSION;
+	  case V1_2:
+	    return TLS1_2_VERSION;
+	  case V1_3:
+#ifdef TLS1_3_VERSION
+	    return TLS1_3_VERSION;
+#else
+	    // TLS 1.3 is SSL 3.4
+	    return 0x0304;
+#endif
+	}
+
+
+    }
+
     inline const std::string to_string(const Type version)
     {
       switch (version)
