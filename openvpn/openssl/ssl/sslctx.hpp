@@ -1235,8 +1235,7 @@ namespace openvpn {
 	  SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
 
-	  /* HAVE_SSL_CTX_SET_SECURITY_LEVEL exists from OpenSSL-1.1.0 up */
-#ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	  switch(TLSCertProfile::default_if_undef(config->tls_cert_profile))
 	  {
 	  case TLSCertProfile::UNDEF:
