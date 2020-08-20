@@ -53,6 +53,11 @@
 // don't export core symbols
 #define OPENVPN_CORE_API_VISIBILITY_HIDDEN
 
+// use SITNL on Linux by default
+#if defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_USE_IPROUTE2) && !defined(OPENVPN_USE_SITNL)
+#define OPENVPN_USE_SITNL
+#endif
+
 // should be included before other openvpn includes,
 // with the exception of openvpn/log includes
 #include <client/ovpncli.cpp>
@@ -87,17 +92,13 @@
 
 #if defined(OPENVPN_PLATFORM_LINUX)
 
-// use SITNL by default
-#if !defined(OPENVPN_USE_IPROUTE2) && !defined(OPENVPN_USE_SITNL)
-#define OPENVPN_USE_SITNL
-#endif
-
 #include <openvpn/tun/linux/client/tuncli.hpp>
 
 // we use a static polymorphism and define a
 // platform-specific TunSetup class, responsible
 // for setting up tun device
 #define TUN_CLASS_SETUP TunLinuxSetup::Setup<TUN_LINUX>
+#include <openvpn/tun/linux/client/tuncli.hpp>
 #elif defined(OPENVPN_PLATFORM_MAC)
 #include <openvpn/tun/mac/client/tuncli.hpp>
 #define TUN_CLASS_SETUP TunMac::Setup
