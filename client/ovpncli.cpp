@@ -1404,8 +1404,8 @@ namespace openvpn {
 #ifdef PRIVATE_TUNNEL_PROXY
       ret += " PT_PROXY";
 #endif
-#ifdef ENABLE_DCO
-      ret += " DCO";
+#ifdef ENABLE_KOVPN
+      ret += " KOVPN";
 #endif
 #ifdef OPENVPN_GREMLIN
       ret += " GREMLIN";

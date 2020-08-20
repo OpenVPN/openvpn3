@@ -100,7 +100,7 @@
 #include <openvpn/pt/ptproxy.hpp>
 #endif
 
-#if defined(ENABLE_DCO)
+#if defined(ENABLE_KOVPN)
 #include <openvpn/dco/dcocli.hpp>
 #endif
 
@@ -221,7 +221,7 @@ namespace openvpn {
       rng.reset(new SSLLib::RandomAPI(false));
       prng.reset(new SSLLib::RandomAPI(true));
 
-#if defined(ENABLE_DCO) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+#if defined(ENABLE_KOVPN) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       if (config.dco)
 	dco = DCOTransport::new_controller();
 #else

@@ -23,7 +23,7 @@
 #define OPENVPN_TUN_BUILDER_BASE_H
 
 #include <string>
-#if defined(ENABLE_DCO)
+#if defined(ENABLE_KOVPN)
 #include <openvpn/kovpn/kovpn_devconf.hpp>
 #endif
 
@@ -251,7 +251,7 @@ namespace openvpn {
     virtual void tun_builder_teardown(bool disconnect) {}
 
     virtual ~TunBuilderBase() {}
-#if defined(ENABLE_DCO)
+#if defined(ENABLE_KOVPN)
     /**
      * Opens the kovpn device to use for the DCOTransport
      * @param devconf   Parameters for opening device, will be overwritten with the return values
