@@ -790,6 +790,7 @@ namespace openvpn {
 	  transconf.frame = frame;
 	  transconf.stats = cli_stats;
 	  transconf.server_addr_float = server_addr_float;
+	  transconf.socket_protect = socket_protect;
 	  transport_factory = dco->new_transport_factory(transconf);
 	}
       else if (alt_proxy)

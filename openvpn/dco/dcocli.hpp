@@ -335,6 +335,16 @@ namespace openvpn {
 	transport_parent->transport_wait();
 	udp().socket.open(udp().server_endpoint.protocol());
 
+	if (config->transport.socket_protect)
+	  {
+	    if (!config->transport.socket_protect->socket_protect(udp().socket.native_handle(), server_endpoint_addr()))
+	      {
+		stop();
+		transport_parent->transport_error(Error::UNDEF, "socket_protect error (UDP)");
+		return;
+	      }
+	  }
+
 	udp().socket.async_connect(udp().server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
                                                           {
                                                             self->start_impl_udp(error);
