@@ -5,6 +5,7 @@ include(findcoredeps)
 
 option(CLI_NULLTUN "Build ovpncli variant with null tun" OFF)
 option(CLI_KOVPN "Build ovpncli variant with kovpn kernel moduke support" OFF)
+option(CLI_OVPNDCO "Build ovpncli variant with ovpn-dco kernel module support" OFF)
 
 set(KOVPN_SOURCE "${CORE_DIR}/../kovpn" CACHE PATH "ovpn-dco kernel module source tree")
 
@@ -27,6 +28,13 @@ if (${CLI_KOVPN})
     include(kovpn)
     add_kovpn_dependency(ovpnclikovpn)
     target_include_directories(ovpnclikovpn PRIVATE ${KOVPN_SOURCE})
+endif()
+
+if (${CLI_OVPNDCO})
+    add_executable(ovpncliovpndco cli.cpp)
+    add_core_dependencies(ovpncliovpndco)
+
+    target_compile_definitions(ovpncliovpndco PRIVATE -DENABLE_OVPNDCO)
 endif()
 
 if (WIN32)

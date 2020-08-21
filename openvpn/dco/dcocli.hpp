@@ -36,15 +36,22 @@
 #include <openvpn/tun/linux/client/tunmethods.hpp>
 #include <openvpn/transport/dco.hpp>
 
+#ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kovpn.hpp>
 #include <openvpn/kovpn/kodev.hpp>
 #include <openvpn/kovpn/korekey.hpp>
 #include <openvpn/kovpn/kostats.hpp>
-#include <openvpn/kovpn/rps_xps.hpp>
+#elif ENABLE_OVPNDCO
+#include <openvpn/tun/linux/client/sitnl.hpp>
+#else
+#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
+#endif
 
 #ifdef ENABLE_PG
 #include <openvpn/kovpn/kodevtun.hpp>
 #endif
+
+#include <openvpn/kovpn/rps_xps.hpp>
 
 // client-side DCO (Data Channel Offload) module for Linux/kovpn
 
@@ -390,12 +397,24 @@ namespace openvpn {
       return ClientConfig::new_controller();
     }
 
+#ifdef ENABLE_KOVPN
     #include <openvpn/dco/kovpncli.hpp>
+#elif ENABLE_OVPNDCO
+    #include <openvpn/dco/ovpndcocli.hpp>
+#else
+#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
+#endif
 
     inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
 								       TransportClientParent* parent)
     {
+#ifdef ENABLE_KOVPN
       return TransportClient::Ptr(new KovpnClient(io_context, this, parent));
+#elif ENABLE_OVPNDCO
+      return TransportClient::Ptr(new OvpnDcoClient(io_context, this, parent));
+#else
+#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
+#endif
     }
 
     inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context& io_context,
