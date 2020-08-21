@@ -32,6 +32,35 @@ class OvpnDcoClient : public Client {
 public:
   virtual void tun_start(const OptionList &opt, TransportClient &transcli,
                          CryptoDCSettings &dc_settings) override {
+    // notify parent
+    tun_parent->tun_pre_tun_config();
+
+    // parse pushed options
+    TunBuilderCapture::Ptr po;
+    TunBuilderBase *builder;
+
+    po.reset(new TunBuilderCapture());
+    builder = po.get();
+
+    TunProp::configure_builder(
+        builder, state.get(), config->transport.stats.get(),
+        server_endpoint_addr(), config->tun.tun_prop, opt, nullptr, false);
+
+    if (po)
+      OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
+
+    ActionList::Ptr add_cmds = new ActionList();
+    remove_cmds.reset(new ActionListReversed());
+
+    std::vector<IP::Route> rtvec;
+
+    TUN_LINUX::tun_config(config->dev_name, *po, &rtvec, *add_cmds,
+                          *remove_cmds, true);
+
+    // execute commands to bring up interface
+    add_cmds->execute_log();
+
+    // signal that we are connected
     tun_parent->tun_connected();
   }
 
