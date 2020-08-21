@@ -24,49 +24,72 @@
 
 class OvpnDcoClient : public Client {
   friend class ClientConfig;
+  friend class GeNL;
 
   typedef RCPtr<OvpnDcoClient> Ptr;
+  typedef GeNL<OvpnDcoClient *> GeNLImpl;
 
 public:
   virtual void tun_start(const OptionList &opt, TransportClient &transcli,
-                         CryptoDCSettings &dc_settings) override {}
+                         CryptoDCSettings &dc_settings) override {
+    tun_parent->tun_connected();
+  }
 
   virtual std::string tun_name() const override { return "ovpn-dco"; }
 
-  virtual void transport_start() override {
-    std::ostringstream os;
-    int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
-    if (res != 0) {
-      stop_();
-      transport_parent->transport_error(Error::TUN_IFACE_CREATE, os.str());
-    } else {
-      transport_start_udp();
-    }
-  }
+  virtual void transport_start() override { transport_start_udp(); }
 
   virtual bool transport_send_const(const Buffer &buf) override {
-    return false;
+    return send(buf);
   }
 
-  virtual bool transport_send(BufferAllocated &buf) override { return false; }
+  virtual bool transport_send(BufferAllocated &buf) override {
+    return send(buf);
+  }
+
+  bool send(const Buffer &buf) {
+    genl->send_data(buf.c_data(), buf.size());
+    return true;
+  }
 
   virtual void start_impl_udp(const openvpn_io::error_code &error) override {
-    if (!halt) {
-      if (!error) {
-        transport_parent->transport_connecting();
-      } else {
-        std::ostringstream os;
-        os << "UDP connect error on '" << server_host << ':' << server_port
-           << "' (" << udp().server_endpoint << "): " << error.message();
-        config->transport.stats->error(Error::UDP_CONNECT_ERROR);
+    if (halt)
+      return;
+
+    if (!error) {
+      auto &sock = udp().socket;
+      auto local = sock.local_endpoint();
+      auto remote = sock.remote_endpoint();
+
+      std::ostringstream os;
+      int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
+      if (res != 0) {
         stop_();
-        transport_parent->transport_error(Error::UNDEF, os.str());
+        transport_parent->transport_error(Error::TUN_IFACE_CREATE, os.str());
+      } else {
+        genl.reset(new GeNLImpl(
+            io_context, if_nametoindex(config->dev_name.c_str()), this));
+
+        genl->start_vpn(sock.native_handle());
+        genl->new_peer(local, remote);
+
+        transport_parent->transport_connecting();
       }
+    } else {
+      std::ostringstream os;
+      os << "UDP connect error on '" << server_host << ':' << server_port
+         << "' (" << udp().server_endpoint << "): " << error.message();
+      config->transport.stats->error(Error::UDP_CONNECT_ERROR);
+      stop_();
+      transport_parent->transport_error(Error::UNDEF, os.str());
     }
   }
 
   virtual void stop_() override {
     if (!halt) {
+      halt = true;
+      if (genl)
+        genl->stop();
       std::ostringstream os;
       int res = TunNetlink::iface_del(os, config->dev_name);
       if (res != 0) {
@@ -75,8 +98,56 @@ public:
     }
   }
 
+  bool tun_read_handler(BufferAllocated &buf) {
+    if (halt)
+      return false;
+
+    int8_t cmd = -1;
+    buf.read(&cmd, sizeof(cmd));
+
+    switch (cmd) {
+    case OVPN_CMD_PACKET:
+      transport_parent->transport_recv(buf);
+      break;
+
+    case OVPN_CMD_DEL_PEER: {
+      stop_();
+      int8_t reason = -1;
+      buf.read(&reason, sizeof(reason));
+      switch (reason) {
+      case OVPN_DEL_PEER_REASON_EXPIRED:
+        transport_parent->transport_error(Error::TRANSPORT_ERROR,
+                                          "keepalive timeout");
+        break;
+
+      default:
+        std::ostringstream os;
+        os << "peer deleted, reason " << reason;
+        transport_parent->transport_error(Error::TUN_HALT, os.str());
+        break;
+      }
+      break;
+    }
+
+    case -1:
+      // consider all errors as fatal
+      stop_();
+      transport_parent->transport_error(Error::TUN_HALT, buf_to_string(buf));
+      return false;
+      break;
+
+    default:
+      OPENVPN_LOG("Unknown ovpn-dco cmd " << cmd);
+      break;
+    }
+
+    return true;
+  }
+
 private:
   OvpnDcoClient(openvpn_io::io_context &io_context_arg,
                 ClientConfig *config_arg, TransportClientParent *parent_arg)
       : Client(io_context_arg, config_arg, parent_arg) {}
+
+  GeNLImpl::Ptr genl;
 };

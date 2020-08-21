@@ -43,6 +43,8 @@
 #include <openvpn/kovpn/kostats.hpp>
 #elif ENABLE_OVPNDCO
 #include <openvpn/tun/linux/client/sitnl.hpp>
+#include <openvpn/common/uniqueptr.hpp>
+#include <openvpn/tun/linux/client/genl.hpp>
 #else
 #error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
 #endif

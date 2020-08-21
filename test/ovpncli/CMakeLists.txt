@@ -8,6 +8,7 @@ option(CLI_KOVPN "Build ovpncli variant with kovpn kernel moduke support" OFF)
 option(CLI_OVPNDCO "Build ovpncli variant with ovpn-dco kernel module support" OFF)
 
 set(KOVPN_SOURCE "${CORE_DIR}/../kovpn" CACHE PATH "ovpn-dco kernel module source tree")
+set(OVPN_DCO_SOURCE "${CORE_DIR}/../ovpn-dco" CACHE PATH "ovpn-dco kernel module source tree")
 
 add_executable(ovpncli cli.cpp)
 
@@ -35,6 +36,12 @@ if (${CLI_OVPNDCO})
     add_core_dependencies(ovpncliovpndco)
 
     target_compile_definitions(ovpncliovpndco PRIVATE -DENABLE_OVPNDCO)
+
+    find_package(PkgConfig)
+    pkg_search_module(LIBNL REQUIRED libnl-genl-3.0)
+
+    target_include_directories(ovpncliovpndco PRIVATE ${OVPN_DCO_SOURCE}/include/uapi ${LIBNL_INCLUDE_DIRS})
+    target_link_libraries(ovpncliovpndco ${LIBNL_LIBRARIES})
 endif()
 
 if (WIN32)
