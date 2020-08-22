@@ -327,12 +327,12 @@ namespace openvpn {
       return ret;
     }
 
-    T front()
+    T front() const
     {
       return (*this)[0];
     }
 
-    T back()
+    T back() const
     {
       return (*this)[size_-1];
     }
