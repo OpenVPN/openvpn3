@@ -69,7 +69,15 @@ namespace openvpn {
       {
 	const ssize_t len = write_retry(fd(), buf, size);
 	if (len != size)
-	  throw file_unix_error(fn + " : incomplete write");
+	  {
+	    if (len == -1)
+	      {
+		const int eno = errno;
+		throw file_unix_error(fn + " : write error : " + strerror_str(eno));
+	      }
+	    else
+	      throw file_unix_error(fn + " : incomplete write, request_size=" + std::to_string(size) + " actual_size=" + std::to_string(len));
+	  }
       }
 
     // explicit modification time
