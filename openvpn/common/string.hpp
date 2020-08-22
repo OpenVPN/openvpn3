@@ -231,7 +231,8 @@ namespace openvpn {
     }
 
     // remove trailing \r or \n chars
-    inline void trim_crlf(std::string& str)
+    template <typename STRING>
+    inline void trim_crlf(STRING& str)
     {
       while (ends_with_crlf(str))
 	str.pop_back();
