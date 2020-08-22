@@ -172,6 +172,7 @@ namespace openvpn {
     return bp;
   }
 
+  // read file into a fixed buffer, return zero or errno
   inline int read_binary_unix_fast(const std::string& fn,
 				   Buffer& out,
 				   std::uint64_t* mtime_ns = nullptr)
@@ -181,11 +182,18 @@ namespace openvpn {
       return errno;
     if (mtime_ns)
       *mtime_ns = fd_mod_time_nanoseconds(fd());
-    const ssize_t status = ::read(fd(), out.data_end(), out.remaining(0));
-    if (status < 0)
-      return errno;
-    out.inc_size(status);
-    return 0;
+    while (true)
+      {
+	const size_t remaining = out.remaining(0);
+	if (!remaining)
+	  return EAGAIN; // note that we also return EAGAIN if buffer is exactly the same size as content
+	const ssize_t status = ::read(fd(), out.data_end(), remaining);
+	if (status == 0)
+	  return 0;
+	else if (status < 0)
+	  return errno;
+	out.inc_size(status);
+      }
   }
 
   inline std::string read_text_unix(const std::string& filename,
