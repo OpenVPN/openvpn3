@@ -289,6 +289,30 @@ public:
     OPENVPN_THROW(netlink_error, " del_key() nla_put_failure");
   }
 
+  /**
+   * Set peer properties. Currently used for keepalive settings.
+   *
+   * @param keepalive_interval how often to send ping packet in absence of
+   * traffic
+   * @param keepalive_timeout when to trigger keepalive_timeout in absence of
+   * traffic
+   * @throws netlink_error thrown if error occurs during sending netlink message
+   */
+  void set_peer(unsigned int keepalive_interval,
+                unsigned int keepalive_timeout) {
+    auto msg_ptr = create_msg(OVPN_CMD_SET_PEER);
+    auto* msg = msg_ptr.get();
+
+    NLA_PUT_U32(msg, OVPN_ATTR_KEEPALIVE_INTERVAL, keepalive_interval);
+    NLA_PUT_U32(msg, OVPN_ATTR_KEEPALIVE_TIMEOUT, keepalive_timeout);
+
+    send_netlink_message(msg);
+    return;
+
+  nla_put_failure:
+    OPENVPN_THROW(netlink_error, " set_peer() nla_put_failure");
+  }
+
   void stop() {
     if (!halt) {
       halt = true;

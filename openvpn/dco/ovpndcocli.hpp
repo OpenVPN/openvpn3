@@ -148,6 +148,8 @@ public:
     switch (rktype) {
     case CryptoDCInstance::ACTIVATE_PRIMARY:
       genl->new_key(OVPN_KEY_SLOT_PRIMARY, kc);
+
+      handle_keepalive();
       break;
 
     case CryptoDCInstance::NEW_SECONDARY:
@@ -223,6 +225,29 @@ private:
   OvpnDcoClient(openvpn_io::io_context &io_context_arg,
                 ClientConfig *config_arg, TransportClientParent *parent_arg)
       : Client(io_context_arg, config_arg, parent_arg) {}
+
+  void handle_keepalive() {
+    // since userspace doesn't know anything about presense or
+    // absense of data channel traffic, ping should be handled in kernel
+    if (transport_parent->is_keepalive_enabled()) {
+      unsigned int keepalive_interval = 0;
+      unsigned int keepalive_timeout = 0;
+
+      // In addition to disabling userspace keepalive,
+      // this call also assigns keepalive values to provided arguments
+      // default keepalive values could be overwritten by config values,
+      // which in turn could be overwritten by pushed options
+      transport_parent->disable_keepalive(keepalive_interval,
+                                          keepalive_timeout);
+
+      // Allow overide of keepalive timeout
+      if (config->ping_restart_override)
+        keepalive_timeout = config->ping_restart_override;
+
+      // enable keepalive in kernel
+      genl->set_peer(keepalive_interval, keepalive_timeout);
+    }
+  }
 
   GeNLImpl::Ptr genl;
 };
