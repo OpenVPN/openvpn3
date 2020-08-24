@@ -22,7 +22,7 @@
 
 // tun/transport client for ovpn-dco
 
-class OvpnDcoClient : public Client {
+class OvpnDcoClient : public Client, public KoRekey::Receiver {
   friend class ClientConfig;
   friend class GeNL;
 
@@ -59,6 +59,11 @@ public:
 
     // execute commands to bring up interface
     add_cmds->execute_log();
+
+    // Add a hook so ProtoContext will call back to
+    // rekey() on rekey ops.
+    dc_settings.set_factory(CryptoDCFactory::Ptr(new KoRekey::Factory(
+        dc_settings.factory(), this, config->transport.frame)));
 
     // signal that we are connected
     tun_parent->tun_connected();
@@ -124,6 +129,47 @@ public:
       if (res != 0) {
         OPENVPN_LOG("ovpndcocli: error deleting iface ovpn:" << os.str());
       }
+    }
+  }
+
+  virtual void rekey(const CryptoDCInstance::RekeyType rktype,
+                     const KoRekey::Info &rkinfo) override {
+    if (halt)
+      return;
+
+    rekey_impl(rktype, rkinfo);
+  }
+
+  void rekey_impl(const CryptoDCInstance::RekeyType rktype,
+                  const KoRekey::Info &rkinfo) {
+    KoRekey::OvpnDcoKey key(rktype, rkinfo);
+    auto kc = key();
+
+    switch (rktype) {
+    case CryptoDCInstance::ACTIVATE_PRIMARY:
+      genl->new_key(OVPN_KEY_SLOT_PRIMARY, kc);
+      break;
+
+    case CryptoDCInstance::NEW_SECONDARY:
+      genl->new_key(OVPN_KEY_SLOT_SECONDARY, kc);
+      break;
+
+    case CryptoDCInstance::PRIMARY_SECONDARY_SWAP:
+      genl->swap_keys();
+      break;
+
+    case CryptoDCInstance::DEACTIVATE_SECONDARY:
+      genl->del_key(OVPN_KEY_SLOT_SECONDARY);
+      break;
+
+    case CryptoDCInstance::DEACTIVATE_ALL:
+      // TODO: deactivate all keys
+      OPENVPN_LOG("ovpndcocli: deactivate all keys");
+      break;
+
+    default:
+      OPENVPN_LOG("ovpndcocli: unknown rekey type: " << rktype);
+      break;
     }
   }
 

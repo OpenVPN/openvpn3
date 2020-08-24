@@ -25,6 +25,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/dco/key.hpp>
 
 #include <linux/ovpn_dco.h>
 #include <netlink/genl/ctrl.h>
@@ -47,11 +48,13 @@ typedef int (*ovpn_nl_cb)(struct nl_msg *msg, void *arg);
  *
  * Before using this class, caller should create ovpn-dco network device.
  *
- * @tparam ReadHandler class which implements <tt>tun_read_handler(BufferAllocated &buf)</tt> method. \n 
+ * @tparam ReadHandler class which implements
+ * <tt>tun_read_handler(BufferAllocated &buf)</tt> method. \n
  *
  * buf has following layout:
- *  \li first byte - command type ( \p OVPN_CMD_PACKET, \p OVPN_CMD_DEL_PEER or -1 for error)
- *  \li following bytes - command-specific payload
+ *  \li first byte - command type ( \p OVPN_CMD_PACKET, \p OVPN_CMD_DEL_PEER or
+ * -1 for error)
+ * \li following bytes - command-specific payload
  */
 template <typename ReadHandler> class GeNL : public RC<thread_unsafe_refcount> {
   OPENVPN_EXCEPTION(netlink_error);
@@ -200,6 +203,92 @@ public:
     OPENVPN_THROW(netlink_error, " send_data() nla_put_failure");
   }
 
+  /**
+   * Inject new key into kernel module
+   *
+   * @param key_slot OVPN_KEY_SLOT_PRIMARY or OVPN_KEY_SLOT_SECONDARY
+   * @param kc pointer to KeyConfig struct which contains key data
+   * @throws netlink_error thrown if error occurs during sending netlink message
+   */
+  void new_key(unsigned int key_slot, const KoRekey::KeyConfig *kc) {
+    auto msg_ptr = create_msg(OVPN_CMD_NEW_KEY);
+    auto* msg = msg_ptr.get();
+
+    const int NONCE_LEN = 12;
+
+    struct nlattr *key_dir;
+
+    NLA_PUT_U32(msg, OVPN_ATTR_REMOTE_PEER_ID, kc->remote_peer_id);
+    NLA_PUT_U8(msg, OVPN_ATTR_KEY_SLOT, key_slot);
+    NLA_PUT_U16(msg, OVPN_ATTR_KEY_ID, kc->key_id);
+    NLA_PUT_U16(msg, OVPN_ATTR_CIPHER_ALG, kc->cipher_alg);
+    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_CBC) {
+      NLA_PUT_U16(msg, OVPN_ATTR_HMAC_ALG, kc->hmac_alg);
+    }
+
+    key_dir = nla_nest_start(msg, OVPN_ATTR_ENCRYPT_KEY);
+    NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->encrypt.cipher_key_size,
+            kc->encrypt.cipher_key);
+    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_LEN,
+              kc->encrypt.nonce_tail);
+    } else {
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_HMAC_KEY, kc->encrypt.hmac_key_size,
+              kc->encrypt.hmac_key);
+    }
+    nla_nest_end(msg, key_dir);
+
+    key_dir = nla_nest_start(msg, OVPN_ATTR_DECRYPT_KEY);
+    NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->decrypt.cipher_key_size,
+            kc->decrypt.cipher_key);
+    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_LEN,
+              kc->decrypt.nonce_tail);
+    } else {
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_HMAC_KEY, kc->decrypt.hmac_key_size,
+              kc->decrypt.hmac_key);
+    }
+    nla_nest_end(msg, key_dir);
+
+    send_netlink_message(msg);
+    return;
+
+  nla_put_failure:
+    OPENVPN_THROW(netlink_error, " set_keys() nla_put_failure");
+  }
+
+  /**
+   * Swap keys between primary and secondary slots. Called
+   * by client as part of rekeying logic to promote and demote keys.
+   *
+   * @throws netlink_error thrown if error occurs during sending netlink message
+   */
+  void swap_keys() {
+    auto msg_ptr = create_msg(OVPN_CMD_SWAP_KEYS);
+    auto* msg = msg_ptr.get();
+
+    send_netlink_message(msg);
+  }
+
+  /**
+   * Remove key from key slot.
+   *
+   * @param key_slot OVPN_KEY_SLOT_PRIMARY or OVPN_KEY_SLOT_SECONDARY
+   * @throws netlink_error thrown if error occurs during sending netlink message
+   */
+  void del_key(unsigned int key_slot) {
+    auto msg_ptr = create_msg(OVPN_CMD_DEL_KEY);
+    auto* msg = msg_ptr.get();
+
+    NLA_PUT_U8(msg, OVPN_ATTR_KEY_SLOT, key_slot);
+
+    send_netlink_message(msg);
+    return;
+
+  nla_put_failure:
+    OPENVPN_THROW(netlink_error, " del_key() nla_put_failure");
+  }
+
   void stop() {
     if (!halt) {
       halt = true;
@@ -208,7 +297,7 @@ public:
         stream->cancel();
         stream->close();
       } catch (...) {
-	// ASIO might throw transport exceptions which I found is safe to ignore
+        // ASIO might throw transport exceptions which I found is safe to ignore
       }
 
       // contrary to what ASIO doc says, stream->close() doesn't

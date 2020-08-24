@@ -32,7 +32,6 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/bs64_data_limit.hpp>
-#include <openvpn/kovpn/kovpn.hpp>
 
 namespace openvpn {
   namespace KoRekey {
@@ -130,4 +129,10 @@ namespace openvpn {
   }
 }
 
+#ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kovpnkocrypto.hpp>
+#elif ENABLE_OVPNDCO
+#include <openvpn/kovpn/ovpndcokocrypto.hpp>
+#else
+#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
+#endif

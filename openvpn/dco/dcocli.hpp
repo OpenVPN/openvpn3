@@ -39,15 +39,17 @@
 #ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kovpn.hpp>
 #include <openvpn/kovpn/kodev.hpp>
-#include <openvpn/kovpn/korekey.hpp>
 #include <openvpn/kovpn/kostats.hpp>
 #elif ENABLE_OVPNDCO
+#include <openvpn/dco/key.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/tun/linux/client/genl.hpp>
 #else
 #error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
 #endif
+
+#include <openvpn/kovpn/korekey.hpp>
 
 #ifdef ENABLE_PG
 #include <openvpn/kovpn/kodevtun.hpp>
