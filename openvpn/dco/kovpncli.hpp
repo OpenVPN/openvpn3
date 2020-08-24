@@ -249,7 +249,7 @@ public:
         if (halt)
             return;
 
-        KoRekey::Key key(rktype, rkinfo, peer_id, false);
+        KoRekey::KovpnKey key(rktype, rkinfo, peer_id, false);
         impl->peer_keys_reset(key());
         if (transport_parent->is_keepalive_enabled())
         {
