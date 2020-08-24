@@ -19,6 +19,10 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
+#if defined(USE_TUN_BUILDER)
+#error kovpn does not work with tunbuilder
+#endif
+
 class KovpnClient : public Client,
                     public KoRekey::Receiver,
                     public SessionStats::DCOTransportSource
@@ -28,9 +32,6 @@ class KovpnClient : public Client,
     typedef RCPtr<KovpnClient> Ptr;
 
 #if defined(ENABLE_PG)
-#if defined(USE_TUN_BUILDER)
-#error ENABLE_PG and USE_TUN_BUILDER cannot be used together
-#endif
     typedef KoTun::Tun<KovpnClient *> TunImpl;
 #else
     typedef KoTun::TunClient<KovpnClient *> TunImpl;
@@ -76,29 +77,15 @@ public:
         devconf.dc.peer_lookup = OVPN_PEER_LOOKUP_NONE;
         devconf.dc.cpu_affinity = OVPN_CPU_AFFINITY_UNDEF;
 
-        /* We have a tun builder, we get the device from the
-         * tun builder
-         */
-        if (config->builder)
-        {
-#ifdef ENABLE_PG
-            throw Exception("tun builder does not work with ENABLE_PG");
-#else
-            int fd = config->builder->tun_builder_open_kovpn(devconf);
-            impl.reset(new TunImpl(io_context, fd, devconf.dc.dev_name,
-                                   this, config->transport.frame));
-#endif
-        }
-        else
-        {
-            // create kovpn tun socket (implementation in kodevtun.hpp)
-            impl.reset(new TunImpl(io_context,
-                                   devconf,
-                                   this,
-                                   config->transport.frame,
-                                   nullptr,
-                                   nullptr));
-        }
+
+        // create kovpn tun socket (implementation in kodevtun.hpp)
+        impl.reset(new TunImpl(io_context,
+                               devconf,
+                               this,
+                               config->transport.frame,
+                               nullptr,
+                               nullptr));
+
         // set kovpn stats hook
         config->transport.stats->dco_configure(this);
 
@@ -146,19 +133,9 @@ public:
 
             // parse pushed options
             TunBuilderCapture::Ptr po;
-            TunBuilderBase *builder;
 
-            if (config->builder)
-            {
-                /* Also configure the tun builder to set the interface
-               * config */
-                builder = config->builder;
-            }
-            else
-            {
-                po.reset(new TunBuilderCapture());
-                builder = po.get();
-            }
+            po.reset(new TunBuilderCapture());
+            TunBuilderBase *builder = po.get();
 
             TunProp::configure_builder(builder,
                                        state.get(),
@@ -203,11 +180,7 @@ public:
             }
             else
 #endif // ENABLE_PG
-                if (config->builder)
-            {
-                config->builder->tun_builder_establish_dco(impl->native_handle(), peer_id);
-            }
-            else // po is defined when builder is nullptr
+            // po is defined when builder is nullptr
             {
                 // add/remove command lists
                 ActionList::Ptr add_cmds = new ActionList();
@@ -282,9 +255,7 @@ public:
             halt = true;
             config->transport.stats->dco_update(); // final update
             config->transport.stats->dco_configure(nullptr);
-            if (config->builder)
-                config->builder->tun_builder_teardown(true);
-            else if (remove_cmds)
+            if (remove_cmds)
                 remove_cmds->execute_log();
             if (impl)
                 impl->stop();

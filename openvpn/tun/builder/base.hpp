@@ -23,8 +23,9 @@
 #define OPENVPN_TUN_BUILDER_BASE_H
 
 #include <string>
-#if defined(ENABLE_KOVPN)
-#include <openvpn/kovpn/kovpn_devconf.hpp>
+
+#ifdef ENABLE_OVPNDCO
+#include <openvpn/dco/key.hpp>
 #endif
 
 namespace openvpn {
@@ -251,26 +252,81 @@ namespace openvpn {
     virtual void tun_builder_teardown(bool disconnect) {}
 
     virtual ~TunBuilderBase() {}
-#if defined(ENABLE_KOVPN)
+
+#ifdef ENABLE_OVPNDCO
     /**
-     * Opens the kovpn device to use for the DCOTransport
-     * @param devconf   Parameters for opening device, will be overwritten with the return values
-     * @return          file descriptor of the opened device (/dev/net/ovpn)
+     * Enable ovpn-dco support
+     *
+     * @param transport_fd file descriptor of client-created transport socket
+     * @param dev_name name of ovpn-dco net device, which should be created by client
+     * @return int file descriptor of socket used to direct communication with ovpn-dco kernel module
      */
-    virtual int tun_builder_open_kovpn(KoTun::DevConf& devconf)
+    virtual int tun_builder_dco_enable(int transport_fd, const std::string& dev_name)
     {
       return -1;
     }
+
     /**
-     * Callback configuring the dco device for use with the
-     * DCO client
-     * @param dcofd   	File descriptor of the DCO device used by the client
-     * @param peerid	Peer ID used by the client
+     * Add peer information to kernel module
+     *
+     * @param local_ip local ip
+     * @param local_port local port
+     * @param remote_ip remote ip
+     * @param remote_port remote port
      */
-    virtual void tun_builder_establish_dco(int dcofd, int peerid)
+    virtual void tun_builder_dco_new_peer(const std::string& local_ip, unsigned int local_port,
+                                          const std::string& remote_ip, unsigned int remote_port)
     {
     }
-#endif
+
+    /**
+     * Set peer properties. Currently used for keepalive settings.
+     *
+     * @param keepalive_interval how often to send ping packet in absence of traffic
+     * @param keepalive_timeout when to trigger keepalive_timeout in absence of traffic
+     */
+    virtual void tun_builder_dco_set_peer(int keepalive_interval, int keepalive_timeout)
+    {
+    }
+
+    /**
+     * Inject new key into kernel module
+     *
+     * @param key_slot \c OVPN_KEY_SLOT_PRIMARY or \c OVPN_KEY_SLOT_SECONDARY
+     * @param kc pointer to \c KeyConfig struct which contains key data
+     */
+    virtual void tun_builder_dco_new_key(unsigned int key_slot, const KoRekey::KeyConfig* kc)
+    {
+    }
+
+    /**
+     * Swap keys between primary and secondary slot. Called
+     * by client as part of rekeying logic to promote and demote keys.
+     *
+     */
+    virtual void tun_builder_dco_swap_keys()
+    {
+    }
+
+    /**
+     * Remove key from key slot.
+     *
+     * @param key_slot OVPN_KEY_SLOT_PRIMARY or OVPN_KEY_SLOT_SECONDARY
+     */
+    virtual void tun_builder_dco_del_key(unsigned int key_slot)
+    {
+    }
+
+    /**
+     * Establishes VPN tunnel. Should be called last after tun_builder
+     * session has been configured.
+     *
+     */
+    virtual void tun_builder_dco_establish()
+    {
+    }
+#endif // ENABLE_DCO
+
   };
 }
 

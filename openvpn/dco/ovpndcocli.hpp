@@ -29,6 +29,11 @@ class OvpnDcoClient : public Client, public KoRekey::Receiver {
   typedef RCPtr<OvpnDcoClient> Ptr;
   typedef GeNL<OvpnDcoClient *> GeNLImpl;
 
+  struct PacketFrom {
+    typedef std::unique_ptr<PacketFrom> SPtr;
+    BufferAllocated buf;
+  };
+
 public:
   virtual void tun_start(const OptionList &opt, TransportClient &transcli,
                          CryptoDCSettings &dc_settings) override {
@@ -39,8 +44,12 @@ public:
     TunBuilderCapture::Ptr po;
     TunBuilderBase *builder;
 
-    po.reset(new TunBuilderCapture());
-    builder = po.get();
+    if (config->builder) {
+      builder = config->builder;
+    } else {
+      po.reset(new TunBuilderCapture());
+      builder = po.get();
+    }
 
     TunProp::configure_builder(
         builder, state.get(), config->transport.stats.get(),
@@ -49,16 +58,20 @@ public:
     if (po)
       OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
-    ActionList::Ptr add_cmds = new ActionList();
-    remove_cmds.reset(new ActionListReversed());
+    if (config->builder) {
+      config->builder->tun_builder_dco_establish();
+    } else {
+      ActionList::Ptr add_cmds = new ActionList();
+      remove_cmds.reset(new ActionListReversed());
 
-    std::vector<IP::Route> rtvec;
+      std::vector<IP::Route> rtvec;
 
-    TUN_LINUX::tun_config(config->dev_name, *po, &rtvec, *add_cmds,
-                          *remove_cmds, true);
+      TUN_LINUX::tun_config(config->dev_name, *po, &rtvec, *add_cmds,
+                            *remove_cmds, true);
 
-    // execute commands to bring up interface
-    add_cmds->execute_log();
+      // execute commands to bring up interface
+      add_cmds->execute_log();
+    }
 
     // Add a hook so ProtoContext will call back to
     // rekey() on rekey ops.
@@ -82,7 +95,11 @@ public:
   }
 
   bool send(const Buffer &buf) {
-    genl->send_data(buf.c_data(), buf.size());
+    if (config->builder) {
+      pipe->write_some(buf.const_buffer());
+    } else {
+      genl->send_data(buf.c_data(), buf.size());
+    }
     return true;
   }
 
@@ -95,19 +112,41 @@ public:
       auto local = sock.local_endpoint();
       auto remote = sock.remote_endpoint();
 
-      std::ostringstream os;
-      int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
-      if (res != 0) {
-        stop_();
-        transport_parent->transport_error(Error::TUN_IFACE_CREATE, os.str());
-      } else {
-        genl.reset(new GeNLImpl(
-            io_context, if_nametoindex(config->dev_name.c_str()), this));
+      TunBuilderBase *tb = config->builder;
+      if (tb) {
+        tb->tun_builder_new();
+        // pipe fd which is used to communicate to kernel
+        int fd =
+            tb->tun_builder_dco_enable(sock.native_handle(), config->dev_name);
+        if (fd == -1) {
+          stop_();
+          transport_parent->transport_error(Error::TUN_IFACE_CREATE,
+                                            "error creating ovpn-dco device");
+          return;
+        }
+        pipe.reset(new openvpn_io::posix::stream_descriptor(io_context, fd));
+        tb->tun_builder_dco_new_peer(local.address().to_string(), local.port(),
+                                     remote.address().to_string(),
+                                     remote.port());
 
-        genl->start_vpn(sock.native_handle());
-        genl->new_peer(local, remote);
+        queue_read_pipe(nullptr);
 
         transport_parent->transport_connecting();
+      } else {
+        std::ostringstream os;
+        int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
+        if (res != 0) {
+          stop_();
+          transport_parent->transport_error(Error::TUN_IFACE_CREATE, os.str());
+        } else {
+          genl.reset(new GeNLImpl(
+              io_context, if_nametoindex(config->dev_name.c_str()), this));
+
+          genl->start_vpn(sock.native_handle());
+          genl->new_peer(local, remote);
+
+          transport_parent->transport_connecting();
+        }
       }
     } else {
       std::ostringstream os;
@@ -122,12 +161,19 @@ public:
   virtual void stop_() override {
     if (!halt) {
       halt = true;
-      if (genl)
-        genl->stop();
-      std::ostringstream os;
-      int res = TunNetlink::iface_del(os, config->dev_name);
-      if (res != 0) {
-        OPENVPN_LOG("ovpndcocli: error deleting iface ovpn:" << os.str());
+
+      if (config->builder) {
+        config->builder->tun_builder_teardown(true);
+        if (pipe)
+          pipe->close();
+      } else {
+        std::ostringstream os;
+        if (genl)
+          genl->stop();
+        int res = TunNetlink::iface_del(os, config->dev_name);
+        if (res != 0) {
+          OPENVPN_LOG("ovpndcocli: error deleting iface ovpn:" << os.str());
+        }
       }
     }
   }
@@ -137,7 +183,10 @@ public:
     if (halt)
       return;
 
-    rekey_impl(rktype, rkinfo);
+    if (config->builder)
+      rekey_impl_tb(rktype, rkinfo);
+    else
+      rekey_impl(rktype, rkinfo);
   }
 
   void rekey_impl(const CryptoDCInstance::RekeyType rktype,
@@ -162,6 +211,43 @@ public:
 
     case CryptoDCInstance::DEACTIVATE_SECONDARY:
       genl->del_key(OVPN_KEY_SLOT_SECONDARY);
+      break;
+
+    case CryptoDCInstance::DEACTIVATE_ALL:
+      // TODO: deactivate all keys
+      OPENVPN_LOG("ovpndcocli: deactivate all keys");
+      break;
+
+    default:
+      OPENVPN_LOG("ovpndcocli: unknown rekey type: " << rktype);
+      break;
+    }
+  }
+
+  void rekey_impl_tb(const CryptoDCInstance::RekeyType rktype,
+                     const KoRekey::Info &rkinfo) {
+    KoRekey::OvpnDcoKey key(rktype, rkinfo);
+    auto kc = key();
+
+    TunBuilderBase *tb = config->builder;
+
+    switch (rktype) {
+    case CryptoDCInstance::ACTIVATE_PRIMARY:
+      tb->tun_builder_dco_new_key(OVPN_KEY_SLOT_PRIMARY, kc);
+
+      handle_keepalive();
+      break;
+
+    case CryptoDCInstance::NEW_SECONDARY:
+      tb->tun_builder_dco_new_key(OVPN_KEY_SLOT_SECONDARY, kc);
+      break;
+
+    case CryptoDCInstance::PRIMARY_SECONDARY_SWAP:
+      tb->tun_builder_dco_swap_keys();
+      break;
+
+    case CryptoDCInstance::DEACTIVATE_SECONDARY:
+      tb->tun_builder_dco_del_key(OVPN_KEY_SLOT_SECONDARY);
       break;
 
     case CryptoDCInstance::DEACTIVATE_ALL:
@@ -244,10 +330,46 @@ private:
       if (config->ping_restart_override)
         keepalive_timeout = config->ping_restart_override;
 
-      // enable keepalive in kernel
-      genl->set_peer(keepalive_interval, keepalive_timeout);
+      if (config->builder) {
+        config->builder->tun_builder_dco_set_peer(keepalive_interval,
+                                                  keepalive_timeout);
+      } else {
+        // enable keepalive in kernel
+        genl->set_peer(keepalive_interval, keepalive_timeout);
+      }
     }
   }
+
+  void queue_read_pipe(PacketFrom *pkt) {
+    if (!pkt) {
+      pkt = new PacketFrom();
+    }
+    // good enough values for control channel packets
+    pkt->buf.reset(512, 3072,
+                   BufferAllocated::GROW | BufferAllocated::CONSTRUCT_ZERO |
+                       BufferAllocated::DESTRUCT_ZERO);
+    pipe->async_read_some(
+        pkt->buf.mutable_buffer(),
+        [self = Ptr(this),
+         pkt = PacketFrom::SPtr(pkt)](const openvpn_io::error_code &error,
+                                      const size_t bytes_recvd) mutable {
+          if (!error) {
+            pkt->buf.set_size(bytes_recvd);
+            if (self->tun_read_handler(pkt->buf))
+              self->queue_read_pipe(pkt.release());
+          } else {
+            if (!self->halt) {
+              OPENVPN_LOG("ovpn-dco pipe read error: " << error.message());
+              self->stop_();
+              self->transport_parent->transport_error(Error::TUN_HALT,
+                                                      error.message());
+            }
+          }
+        });
+  }
+
+  // used to communicate to kernel via privileged process
+  std::unique_ptr<openvpn_io::posix::stream_descriptor> pipe;
 
   GeNLImpl::Ptr genl;
 };
