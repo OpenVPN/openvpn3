@@ -49,7 +49,7 @@ build_lz4()
     cmake -D CMAKE_C_COMPILER=$ARCH-$CMAKE_C_COMPILER \
           -D CMAKE_SYSTEM_NAME=Windows \
           -D CMAKE_INSTALL_PREFIX=$DEP_DIR_PREFIX-$ARCH \
-          ../contrib/cmake_unofficial/
+          ../build/cmake/
     make && make install
 
     popd
