@@ -38,6 +38,18 @@ namespace openvpn {
     return stat(filename.c_str(), &buffer) == 0; 
   }
 
+  // Return true if dirname is a directory
+  inline bool is_directory(const std::string& pathname, const bool follow_symlinks=false)
+  {
+    if (pathname.empty())
+      return false;
+    struct stat sb;
+    if (follow_symlinks)
+      return ::stat(pathname.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode);
+    else
+      return ::lstat(pathname.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode);
+  }
+
   // Return file modification time (in seconds since unix epoch) or 0 on error
   inline time_t file_mod_time(const std::string& filename)
   {
