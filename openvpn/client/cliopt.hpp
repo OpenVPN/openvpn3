@@ -716,9 +716,6 @@ namespace openvpn {
       if (relay_mode)
 	lflags |= SSLConfigAPI::LF_RELAY_MODE;
 
-      if (opt.exists("allow-name-constraints"))
-	lflags |= SSLConfigAPI::LF_ALLOW_NAME_CONSTRAINTS;
-
       // client SSL config
       SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
       cc->set_external_pki_callback(config.external_pki);

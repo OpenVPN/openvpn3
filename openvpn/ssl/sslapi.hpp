@@ -58,7 +58,6 @@ namespace openvpn {
 
     enum TLSWarnings {
       TLS_WARN_SIG_MD5 = (1 << 0),
-      TLS_WARN_NAME_CONSTRAINTS = (1 << 1)
     };
 
     typedef RCPtr<SSLAPI> Ptr;
@@ -114,7 +113,6 @@ namespace openvpn {
       LF_PARSE_MODE                     = (1<<0),
       LF_ALLOW_CLIENT_CERT_NOT_REQUIRED = (1<<1),
       LF_RELAY_MODE                     = (1<<2), // look for "relay-ca" instead of "ca" directive
-      LF_ALLOW_NAME_CONSTRAINTS         = (1<<3)  // do not fail on Name Constraints ext and drop a warning to UI
     };
 
     std::string private_key_type_string() const

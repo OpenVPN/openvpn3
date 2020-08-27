@@ -854,12 +854,6 @@ namespace openvpn {
 	    ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with MD5. Please inform your admin to upgrade to a stronger algorithm. Support for MD5 will be dropped at end of Apr 2018");
 	    cli_events->add_event(std::move(ev));
 	  }
-
-	if (tls_warnings & SSLAPI::TLS_WARN_NAME_CONSTRAINTS)
-	  {
-	    ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: Your CA contains a 'x509v3 Name Constraints' extension, but its validation is not supported. This might be a security breach, please contact your administrator.");
-	    cli_events->add_event(std::move(ev));
-	  }
       }
 
       // base class calls here when primary session transitions to ACTIVE state

@@ -207,8 +207,7 @@ namespace openvpn {
 		 ns_cert_type(NSCert::NONE),
 		 tls_version_min(TLSVersion::UNDEF),
 		 tls_cert_profile(TLSCertProfile::UNDEF),
-		 local_cert_enabled(true),
-		 allow_name_constraints(false) {}
+		 local_cert_enabled(true) {}
 
       virtual SSLFactoryAPI::Ptr new_factory()
       {
@@ -484,8 +483,6 @@ namespace openvpn {
 	    && opt.exists("client-cert-not-required"))
 	  flags |= SSLConst::NO_VERIFY_PEER;
 
-	allow_name_constraints = lflags & LF_ALLOW_NAME_CONSTRAINTS;
-
 	// sni
 	{
 	  const std::string name = opt.get_optional("sni", 1, 256);
@@ -586,11 +583,6 @@ namespace openvpn {
       }
 #endif
 
-      bool name_constraints_allowed() const
-      {
-	return allow_name_constraints;
-      }
-
       bool is_server() const
       {
 	return mode.is_server();
@@ -642,7 +634,6 @@ namespace openvpn {
       std::string tls_groups;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled;
-      bool allow_name_constraints;
       RandomAPI::Ptr rng;   // random data source
     };
 

@@ -303,9 +303,6 @@ namespace openvpn {
 
 	unsigned int lflags = SSLConfigAPI::LF_PARSE_MODE;
 
-	if (options.exists("allow-name-constraints"))
-	  lflags |= SSLConfigAPI::LF_ALLOW_NAME_CONSTRAINTS;
-
 	// ssl lib configuration
 	try {
 	  sslConfig.reset(new SSLLib::SSLAPI::Config());
