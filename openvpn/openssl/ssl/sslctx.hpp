@@ -74,6 +74,8 @@
 #include <openvpn/openssl/pki/x509certinfo.hpp>
 #include <openvpn/openssl/bio/bio_memq_stream.hpp>
 #include <openvpn/openssl/ssl/sess_cache.hpp>
+#include <openvpn/openssl/ssl/tlsver.hpp>
+
 
 #ifdef HAVE_JSON
 #include <openvpn/common/jsonhelper.hpp>
