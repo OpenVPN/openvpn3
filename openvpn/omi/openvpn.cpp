@@ -1079,7 +1079,6 @@ int main(int argc, char *argv[])
   int ret = 0;
 
   try {
-    Client::init_process();
     if (argc >= 2)
       {
 	ret = run(OptionList::parse_from_argv_static(string::from_argv(argc, argv, true)));
@@ -1096,6 +1095,5 @@ int main(int argc, char *argv[])
       std::cerr << "openvpn: " << e.what() << std::endl;
       ret = 1;
     }
-  Client::uninit_process();
   return ret;
 }

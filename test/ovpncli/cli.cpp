@@ -1208,7 +1208,6 @@ int main(int argc, char *argv[])
 #endif
 
   try {
-    Client::init_process();
     ret = openvpn_client(argc, argv, nullptr);
   }
   catch (const std::exception& e)
@@ -1216,7 +1215,6 @@ int main(int argc, char *argv[])
       std::cout << "Main thread exception: " << e.what() << std::endl;
       ret = 1;
     }  
-  Client::uninit_process();
   return ret;
 }
 

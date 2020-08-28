@@ -896,7 +896,7 @@ int main(int argc, char* argv[])
   int ret = 0;
 
   // process-wide initialization
-  InitProcess::init();
+  InitProcess::Init init;
 
   try {
     MyService serv;
@@ -936,6 +936,5 @@ int main(int argc, char* argv[])
       ret = 1;
     }
 
-  InitProcess::uninit();
   return ret;
 }

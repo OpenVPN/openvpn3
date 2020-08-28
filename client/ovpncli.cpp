@@ -467,6 +467,9 @@ namespace openvpn {
 	bool echo = false;
 	bool info = false;
 
+	// Ensure that init is called
+	InitProcess::Init init;
+
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent,
 		    openvpn_io::io_context* io_context,
@@ -601,16 +604,6 @@ namespace openvpn {
 	std::atomic<bool> foreign_thread_ready{false};
       };
     };
-
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::init_process()
-    {
-      InitProcess::init();
-    }
-
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::uninit_process()
-    {
-      InitProcess::uninit();
-    }
 
     OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
     {

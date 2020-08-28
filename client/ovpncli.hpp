@@ -468,13 +468,6 @@ namespace openvpn {
       OpenVPNClient();
       virtual ~OpenVPNClient();
 
-      // Call me first, before calling any other method (static or instance methods)
-      // in this class.
-      static void init_process();
-
-      // Release any resources allocated by init_process.
-      static void uninit_process();
-
       // Read an OpenVPN profile that might contain external
       // file references, returning a unified profile.
       static MergeConfig merge_config_static(const std::string& path, bool follow_references);
