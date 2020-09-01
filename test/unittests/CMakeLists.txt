@@ -19,19 +19,6 @@ else ()
     message("lzo not found, skipping lzo compression tests")
 endif ()
 
-set(SOURCES
-
-        ${TESTS_CRYPTO}
-        )
-
-
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    list(APPEND SOURCES test_sitnl.cpp)
-endif ()
-
-if (UNIX)
-    list(APPEND SOURCES test_cpu_time.cpp)
-endif ()
 
 
 set(CORE_TEST_DEFINES
@@ -48,7 +35,7 @@ add_executable(coreUnitTests
         test_b64.cpp
         test_verify_x509_name.cpp
         test_ssl.cpp
-	test_continuation.cpp
+        test_continuation.cpp
         )
 
 if (${USE_MBEDTLS})
@@ -61,6 +48,13 @@ else ()
             )
 endif ()
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    target_sources(coreUnitTests PRIVATE test_sitnl.cpp)
+endif ()
+
+if (UNIX)
+    target_sources(coreUnitTests PRIVATE test_cpu_time.cpp)
+endif ()
 
 add_core_dependencies(coreUnitTests)
 target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
