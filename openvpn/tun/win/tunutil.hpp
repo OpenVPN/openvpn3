@@ -1220,6 +1220,47 @@ namespace openvpn {
 	}
       };
 
+      namespace TunNETSH
+      {
+	class AddRoute4Cmd : public Action
+	{
+	public:
+	  typedef RCPtr<AddRoute4Cmd> Ptr;
+
+	  AddRoute4Cmd(const std::string& route_address,
+		       int prefix_length,
+		       const TunWin::Util::TapNameGuidPair& tap,
+		       const std::string& gw_address,
+		       int metric,
+		       bool add)
+	  {
+	    std::ostringstream os;
+	    os << "netsh interface ip ";
+	    if (add)
+	      os << "add ";
+	    else
+	      os << "delete ";
+	    os << "route " << route_address << "/" << std::to_string(prefix_length) << " " << tap.index_or_name() << " " << gw_address << " ";
+	    if (add && metric >= 0)
+	      os << "metric=" << std::to_string(metric) << " ";
+	    os << "store=active";
+	    cmd.reset(new WinCmd(os.str()));
+	  };
+
+	  void execute(std::ostream& os) override
+	  {
+	    cmd->execute(os);
+	  }
+
+	  std::string to_string() const override
+	  {
+	    return cmd->to_string();
+	  }
+
+	private:
+	  WinCmd::Ptr cmd;
+	};
+      }
     }
   }
 }
