@@ -56,6 +56,10 @@ if (UNIX)
     target_sources(coreUnitTests PRIVATE test_cpu_time.cpp)
 endif ()
 
+if (WIN32)
+    target_sources(coreUnitTests PRIVATE test_iphelper.cpp)
+endif ()
+
 add_core_dependencies(coreUnitTests)
 target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
 
