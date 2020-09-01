@@ -1261,6 +1261,89 @@ namespace openvpn {
 	  WinCmd::Ptr cmd;
 	};
       }
+
+      namespace TunIPHELPER
+      {
+	static SOCKADDR_INET sockaddr_inet(short family, const std::string& addr)
+	{
+	  SOCKADDR_INET sa;
+	  ZeroMemory(&sa, sizeof(sa));
+	  sa.si_family = family;
+	  inet_pton(family, addr.c_str(), family == AF_INET ? &(sa.Ipv4.sin_addr) : (PVOID) & (sa.Ipv6.sin6_addr));
+	  return sa;
+	}
+
+	static DWORD InterfaceLuid(const std::string& iface_name, PNET_LUID luid)
+	{
+	  NETIO_STATUS status;
+	  auto wide_name = wstring::from_utf8(iface_name);
+	  return ConvertInterfaceAliasToLuid(wide_name.c_str(), luid);
+	}
+
+	class AddRoute4Cmd : public Action
+	{
+	public:
+	  typedef RCPtr<AddRoute4Cmd> Ptr;
+
+	  AddRoute4Cmd(const std::string& route_address,
+		       int prefix_length,
+		       const TunWin::Util::TapNameGuidPair& tap,
+		       const std::string& gw_address,
+		       int metric,
+		       bool add) : add(add)
+	  {
+	    os_ << "IPHelper: ";
+	    if (add)
+	      os_ << "add ";
+	    else
+	      os_ << "delete ";
+	    os_ << "route " << route_address << "/" << std::to_string(prefix_length) << " " << tap.index_or_name() << " " << gw_address << " ";
+	    os_ << "metric=" << std::to_string(metric);
+
+	    ZeroMemory(&fwd_row, sizeof(fwd_row));
+	    fwd_row.ValidLifetime = 0xffffffff;
+	    fwd_row.PreferredLifetime = 0xffffffff;
+	    fwd_row.Protocol = MIB_IPPROTO_NETMGMT;
+	    fwd_row.Metric = metric;
+	    fwd_row.DestinationPrefix.Prefix = sockaddr_inet(AF_INET, route_address);
+	    fwd_row.DestinationPrefix.PrefixLength = prefix_length;
+	    fwd_row.NextHop = sockaddr_inet(AF_INET, gw_address);
+
+	    if (tap.index_defined())
+	      fwd_row.InterfaceIndex = tap.index;
+	    else if (!tap.name.empty())
+	      {
+		NET_LUID luid;
+		auto err = InterfaceLuid(tap.name, &luid);
+		if (err)
+		  OPENVPN_THROW(tun_win_util, "Cannot convert interface name " << tap.name << " to LUID");
+		fwd_row.InterfaceLuid = luid;
+	      }
+	  };
+
+	  void execute(std::ostream& os) override
+	  {
+	    os << os_.str() << std::endl;
+	    DWORD res;
+	    if (add)
+	      res = CreateIpForwardEntry2(&fwd_row);
+	    else
+	      res = DeleteIpForwardEntry2(&fwd_row);
+	    if (res)
+	      os << "cannot modify route: error " << res << std::endl;
+	  }
+
+	  std::string to_string() const override
+	  {
+	    return os_.str();
+	  }
+
+	private:
+	  MIB_IPFORWARD_ROW2 fwd_row;
+	  bool add;
+	  std::ostringstream os_;
+	};
+      }
     }
   }
 }

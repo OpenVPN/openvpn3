@@ -53,7 +53,12 @@
 
 #include <versionhelpers.h>
 
+// use IP Helper on Windows by default
+#ifdef OPENVPN_USE_NETSH
 #define TUNWINDOWS Util::TunNETSH
+#else
+#define TUNWINDOWS Util::TunIPHELPER
+#endif
 
 namespace openvpn {
   namespace TunWin {

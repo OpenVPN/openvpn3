@@ -42,6 +42,10 @@ set(CORE_TEST_DEFINES
 
 add_executable(coreUnitTests ${SOURCES})
 
+if (WIN32)
+    target_sources(coreUnitTests PRIVATE test_iphelper.cpp)
+endif ()
+
 add_core_dependencies(coreUnitTests)
 target_link_libraries(coreUnitTests gtest_main ${EXTRA_LIBS})
 
