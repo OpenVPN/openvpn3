@@ -53,6 +53,8 @@
 
 #include <versionhelpers.h>
 
+#define TUNWINDOWS Util::TunNETSH
+
 namespace openvpn {
   namespace TunWin {
     class Setup : public SetupBase
@@ -435,11 +437,11 @@ namespace openvpn {
 	{
 	  for (auto &route : pull.add_routes)
 	    {
-	      const std::string metric = route_metric_opt(pull, route, MT_NETSH);
 	      if (route.ipv6)
 		{
 		  if (!pull.block_ipv6)
 		    {
+		      const std::string metric = route_metric_opt(pull, route, MT_NETSH);
 		      create.add(new WinCmd("netsh interface ipv6 add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + metric + " store=active"));
 		      destroy.add(new WinCmd("netsh interface ipv6 delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
 		    }
@@ -448,8 +450,11 @@ namespace openvpn {
 		{
 		  if (local4)
 		    {
-		      create.add(new WinCmd("netsh interface ip add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + local4->gateway + metric + " store=active"));
-		      destroy.add(new WinCmd("netsh interface ip delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + tap_index_name + ' ' + local4->gateway + " store=active"));
+		      int metric = pull.route_metric_default;
+		      if (route.metric >= 0)
+			metric = route.metric;
+		      create.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, tap,  local4->gateway, metric, true));
+		      destroy.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, tap, local4->gateway, metric, false));
 		    }
 		  else
 		    throw tun_win_setup("IPv4 routes pushed without IPv4 ifconfig");
