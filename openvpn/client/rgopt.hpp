@@ -73,6 +73,11 @@ namespace openvpn {
       return rg_enabled() && (flags_ & RG_IPv6);
     }
 
+    bool redirect_gateway_local() const
+    {
+      return flags_ & RG_LOCAL;
+    }
+
     std::string to_string() const
     {
       std::string ret;

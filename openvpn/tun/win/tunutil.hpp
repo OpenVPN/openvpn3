@@ -85,6 +85,9 @@ namespace openvpn {
 	// generally defined on cl command line
 	const char COMPONENT_ID[] = OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID); // CONST GLOBAL
 	const char WINTUN_COMPONENT_ID[] = "wintun"; // CONST GLOBAL
+
+	const char ROOT_COMPONENT_ID[] = "root\\" OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID);
+	const char ROOT_WINTUN_COMPONENT_ID[] = "root\\wintun"; 
       }
 
       using TapGuidLuid = std::pair<std::string, DWORD>;
@@ -155,7 +158,8 @@ namespace openvpn {
 	    if (status != ERROR_SUCCESS || data_type != REG_SZ)
 	      continue;
 	    strbuf[len] = '\0';
-	    if (std::strcmp(strbuf, wintun ? WINTUN_COMPONENT_ID : COMPONENT_ID))
+	    if (string::strcasecmp(strbuf, wintun ? WINTUN_COMPONENT_ID : COMPONENT_ID) &&
+	      string::strcasecmp(strbuf, wintun ? ROOT_WINTUN_COMPONENT_ID : ROOT_COMPONENT_ID))
 	      continue;
 
 	    TapGuidLuid tgl;
