@@ -1072,12 +1072,13 @@ namespace openvpn {
       }
 #endif
 
-      // Get the current default gateway
-      class DefaultGateway
+      class BestGateway
       {
       public:
-	DefaultGateway()
-	  : index(DWORD(-1))
+	/**
+	 * Construct object which represents default gateway
+	 */
+	BestGateway()
 	{
 	  std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
 	  if (rt)
@@ -1098,6 +1099,85 @@ namespace openvpn {
 	    }
 	}
 
+	/**
+	 * Construct object which represents best gateway to given
+	 * destination, excluding gateway on VPN interface. Gateway is chosen
+	 * first by the longest prefix match and then by metric. If destination
+	 * is in local network, no gateway is selected and "local_route" flag is set.
+	 *
+	 * @param dest destination IPv4 address
+	 * @param vpn_interface_index index of VPN interface which is excluded from gateway selection
+	 */
+	BestGateway(const std::string& dest, DWORD vpn_interface_index)
+	{
+	  DWORD dest_addr;
+	  auto res = inet_pton(AF_INET, dest.c_str(), &dest_addr);
+	  switch (res)
+	    {
+	    case -1:
+	      OPENVPN_THROW(tun_win_util, "GetBestGateway: error converting IPv4 address " << dest << " to int: " << ::WSAGetLastError());
+
+	    case 0:
+	      OPENVPN_THROW(tun_win_util, "GetBestGateway: " << dest << " is not a valid IPv4 address");
+	    }
+
+	  {
+	    MIB_IPFORWARDROW row;
+	    DWORD res2 = GetBestRoute(dest_addr, 0, &row);
+	    if (res2 != NO_ERROR)
+	      {
+		OPENVPN_THROW(tun_win_util, "GetBestGateway: error retrieving the best route for " << dest << ": " << res2);
+	      }
+
+	    if (row.dwForwardType == MIB_IPROUTE_TYPE_DIRECT)
+	      {
+		local_route_ = true;
+		return;
+	      }
+	  }
+
+	  std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
+	  if (rt)
+	    {
+	      const MIB_IPFORWARDROW* gw = nullptr;
+	      for (size_t i = 0; i < rt->dwNumEntries; ++i)
+		{
+		  const MIB_IPFORWARDROW* row = &rt->table[i];
+		  // does route match?
+		  if ((dest_addr & row->dwForwardMask) == (row->dwForwardDest & row->dwForwardMask))
+		    {
+		      // skip gateway on VPN interface
+		      if ((vpn_interface_index != DWORD(-1)) && (row->dwForwardIfIndex == vpn_interface_index))
+			{
+			  OPENVPN_LOG("GetBestGateway: skip gateway " <<
+				      IPv4::Addr::from_uint32(ntohl(gw->dwForwardNextHop)).to_string() <<
+				      " on VPN interface " << vpn_interface_index);
+			  continue;
+			}
+
+		      if (!gw)
+			{
+			  gw = row;
+			  continue;
+			}
+
+		      auto cur_prefix = IPv4::Addr::prefix_len_32(ntohl(gw->dwForwardMask));
+		      auto new_prefix = IPv4::Addr::prefix_len_32(ntohl(row->dwForwardMask));
+		      auto new_metric_is_higher = row->dwForwardMetric1 > gw->dwForwardMetric1;
+
+		      if ((new_prefix > cur_prefix) || ((new_prefix == cur_prefix) && (new_metric_is_higher)))
+			gw = row;
+		    }
+		}
+	      if (gw)
+		{
+		  index = gw->dwForwardIfIndex;
+		  addr = IPv4::Addr::from_uint32(ntohl(gw->dwForwardNextHop)).to_string();
+		  OPENVPN_LOG("GetBestGateway: selected gateway " << addr << " on adapter " << index << " for destination " << dest);
+		}
+	    }
+	}
+
 	bool defined() const
 	{
 	  return index != DWORD(-1) && !addr.empty();
@@ -1113,9 +1193,19 @@ namespace openvpn {
 	  return addr;
 	}
 
+	/**
+	 * Return true if destination, provided to constructor,
+	 * doesn't require gateway, false otherwise.
+	 */
+	bool local_route() const
+	{
+	  return local_route_;
+	}
+
       private:
-	DWORD index;
+	DWORD index = -1;
 	std::string addr;
+	bool local_route_ = false;
       };
 
       // An action to delete all routes on an interface
