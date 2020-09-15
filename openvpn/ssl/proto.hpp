@@ -3165,6 +3165,11 @@ namespace openvpn {
       return 0;
     }
 
+    bool uses_bs64_cipher() const
+    {
+      return is_bs64_cipher(conf().dc.cipher());
+    }
+
     void reset_tls_crypt(const Config& c, const OpenVPNStaticKey& key)
     {
       tls_crypt_send = c.tls_crypt_context->new_obj_send();

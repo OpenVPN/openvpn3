@@ -1275,6 +1275,11 @@ namespace openvpn {
 	ssl->tls_warnings |= SSLAPI::TLS_WARN_SIG_MD5;
       }
 
+      if (cert->sig_md == MBEDTLS_MD_SHA1)
+      {
+	ssl->tls_warnings |= SSLAPI::TLS_WARN_SIG_SHA1;
+      }
+
       // leaf-cert verification
       if (depth == 0)
 	{

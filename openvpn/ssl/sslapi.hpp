@@ -57,7 +57,9 @@ namespace openvpn {
   public:
 
     enum TLSWarnings {
+      TLS_WARN_NONE = 0,
       TLS_WARN_SIG_MD5 = (1 << 0),
+      TLS_WARN_SIG_SHA1 = (1 << 1)
     };
 
     typedef RCPtr<SSLAPI> Ptr;

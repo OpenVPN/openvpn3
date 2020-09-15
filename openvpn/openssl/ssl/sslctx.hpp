@@ -1649,6 +1649,25 @@ namespace openvpn {
 	}
     }
 
+
+    static int check_cert_warnings(const X509* cert)
+    {
+      int nid = X509_get_signature_nid(cert);
+
+      switch (nid) {
+        case NID_ecdsa_with_SHA1:
+	case NID_dsaWithSHA:
+	case NID_dsaWithSHA1:
+	case NID_sha1WithRSAEncryption:
+	  return SSLAPI::TLS_WARN_SIG_SHA1;
+	case NID_md5WithRSA:
+	case NID_md5WithRSAEncryption:
+	  return SSLAPI::TLS_WARN_SIG_MD5;
+	default:
+	  return SSLAPI::TLS_WARN_NONE;
+      }
+    }
+
     static int verify_callback_client(int preverify_ok, X509_STORE_CTX *ctx)
     {
       // get the OpenSSL SSL object
@@ -1656,6 +1675,9 @@ namespace openvpn {
 
       // get OpenSSLContext
       const OpenSSLContext* self = (OpenSSLContext*) SSL_get_ex_data (ssl, SSL::context_data_index);
+
+      // get OpenSSLContext::SSL
+      SSL* self_ssl = (SSL *) SSL_get_ex_data (ssl, SSL::ssl_data_index);
 
       // get depth
       const int depth = X509_STORE_CTX_get_error_depth(ctx);
@@ -1667,6 +1689,9 @@ namespace openvpn {
       const std::string subject = OpenSSLPKI::x509_get_subject(current_cert);
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
 	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, X509_STORE_CTX_get_error(ctx), subject));
+
+      // Add warnings if Cert parameters are wrong
+      self_ssl->tls_warnings |= self->check_cert_warnings(current_cert);
 
       // leaf-cert verification
       if (depth == 0)
