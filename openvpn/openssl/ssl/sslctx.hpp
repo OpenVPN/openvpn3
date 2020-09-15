@@ -1612,6 +1612,7 @@ namespace openvpn {
     static std::string cert_status_line(int preverify_ok,
 					int depth,
 					int err,
+					const std::string& signature,
 					const std::string& subject)
     {
       std::string ret;
@@ -1628,6 +1629,7 @@ namespace openvpn {
 	ret += subject;
       else
 	ret += "NO_SUBJECT";
+      ret += ", signature: " + signature;
       if (!preverify_ok)
 	{
 	  ret += " [";
@@ -1687,8 +1689,10 @@ namespace openvpn {
 
       // log subject
       const std::string subject = OpenSSLPKI::x509_get_subject(current_cert);
+      auto signature = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
-	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, X509_STORE_CTX_get_error(ctx), subject));
+	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, X509_STORE_CTX_get_error(ctx),
+				 signature, subject));
 
       // Add warnings if Cert parameters are wrong
       self_ssl->tls_warnings |= self->check_cert_warnings(current_cert);
@@ -1780,7 +1784,9 @@ namespace openvpn {
 
       // log subject
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
-	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, OpenSSLPKI::x509_get_subject(current_cert)));
+	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err,
+				  OpenSSLPKI::x509_get_subject(current_cert),
+				  OpenSSLPKI::x509_get_signature_algorithm(current_cert)));
 
       // record cert error in authcert
       if (!preverify_ok && self_ssl->authcert)

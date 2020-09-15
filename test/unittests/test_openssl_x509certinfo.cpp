@@ -121,4 +121,12 @@ TEST(OpenSSL_X509_get_field, basic_checks) {
   ASSERT_EQ(OpenSSLPKI::x509_get_field(x509crt.obj(), NID_countryName), "US");
 }
 
+TEST(OpenSSL_X509_get_field, signature) {
+    OpenSSLPKI::X509 x509crt(test_cert, "Embedded Test Server Cert");
+
+    ASSERT_EQ(OpenSSLPKI::x509_get_signature_algorithm(x509crt.obj()), "RSA-SHA256");
+
+  }
+
+
 }  // namespace unittests

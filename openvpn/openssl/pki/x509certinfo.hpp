@@ -32,6 +32,7 @@
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/x509v3.h>
+#include <openssl/x509.h>
 
 #include "openvpn/common/hexstr.hpp"
 #include "openvpn/common/uniqueptr.hpp"
@@ -91,6 +92,24 @@ static std::string x509_get_subject(::X509 *cert, bool new_format = false) {
   BIO_get_mem_ptr(subject_bio.get(), &subject_mem);
   return std::string(subject_mem->data,
                      subject_mem->data + subject_mem->length);
+}
+
+/**
+ * Retrives the algorithm used to sign a X509 certificate
+ * @param cert 	OpenSSL certificate
+ * @return
+ */
+static const std::string x509_get_signature_algorithm(const ::X509* cert)
+{
+  int nid = X509_get_signature_nid(cert);
+  const char *sig = OBJ_nid2sn(nid);
+
+  if (sig)
+    {
+      return sig;
+    }
+  else
+    return "(error getting signature algorithm)";
 }
 
 /**
