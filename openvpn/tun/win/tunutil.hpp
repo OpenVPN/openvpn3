@@ -1368,7 +1368,6 @@ namespace openvpn {
 
 	static DWORD InterfaceLuid(const std::string& iface_name, PNET_LUID luid)
 	{
-	  NETIO_STATUS status;
 	  auto wide_name = wstring::from_utf8(iface_name);
 	  return ConvertInterfaceAliasToLuid(wide_name.c_str(), luid);
 	}
@@ -1396,7 +1395,7 @@ namespace openvpn {
 	    ZeroMemory(&fwd_row, sizeof(fwd_row));
 	    fwd_row.ValidLifetime = 0xffffffff;
 	    fwd_row.PreferredLifetime = 0xffffffff;
-	    fwd_row.Protocol = MIB_IPPROTO_NETMGMT;
+	    fwd_row.Protocol = (NL_ROUTE_PROTOCOL)MIB_IPPROTO_NETMGMT;
 	    fwd_row.Metric = metric;
 	    fwd_row.DestinationPrefix.Prefix = sockaddr_inet(AF_INET, route_address);
 	    fwd_row.DestinationPrefix.PrefixLength = prefix_length;
