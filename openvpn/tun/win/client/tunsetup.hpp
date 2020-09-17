@@ -512,16 +512,17 @@ namespace openvpn {
 	    // get default gateway
 	    const Util::BestGateway gw{ pull.remote_address.address, tap.index };
 
-	    // add server bypass route
-	    if (gw.defined() && !gw.local_route())
+	    if (!gw.local_route())
 	      {
-		if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+		// add server bypass route
+		if (gw.defined())
 		  {
-		    add_bypass_route(gw, pull.remote_address.address, false, create, destroy);
+		    if (!pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
+		      add_bypass_route(gw, pull.remote_address.address, false, create, destroy);
 		  }
+		else
+		  throw tun_win_setup("redirect-gateway error: cannot find gateway for bypass route");
 	      }
-	    else if (!gw.defined())
-	      throw tun_win_setup("redirect-gateway error: cannot detect default gateway");
 
 	    create.add(new WinCmd("netsh interface ip add route 0.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active"));
 	    create.add(new WinCmd("netsh interface ip add route 128.0.0.0/1 " + tap_index_name + ' ' + local4->gateway + " store=active"));
