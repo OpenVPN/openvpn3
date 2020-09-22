@@ -275,10 +275,13 @@ namespace openvpn {
 
       // Disable keepalive for rest of session, but fetch
       // the keepalive parameters (in seconds).
+      // Also, allow the management layer to override parameters.
       virtual void disable_keepalive(unsigned int& keepalive_ping,
 				     unsigned int& keepalive_timeout) override
       {
 	Base::disable_keepalive(keepalive_ping, keepalive_timeout);
+	if (ManLink::send)
+	  ManLink::send->keepalive_override(keepalive_ping, keepalive_timeout);
       }
 
       // override the data channel factory
