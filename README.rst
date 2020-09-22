@@ -65,6 +65,35 @@ Options used::
   myprofile.ovpn : OpenVPN config file (must have .ovpn extension)
   route-nopull   : if you are connected via ssh, prevent ssh session lockout
 
+Using cli with ovpn-dco
+.......................
+
+ovpn-dco is a kernel module which handles data channel
+and provides better proformance.
+
+Download, build and install ovpn-dco::
+
+  $ cd $O3
+  $ git clone https://github.com/OpenVPN/ovpn-dco.git
+  $ cd ovpn-dco
+  $ make && sudo make install
+  $ sudo modprobe ovpn-dco
+
+Install core dependencies::
+
+  $ sudo apt install pkg-config libnl-genl-3-dev
+
+Build cli with ovpn-dco support::
+
+  $ cd $O3/core/build
+  $ cmake -DCLI_OVPNDCO=on .. && make
+  $ sudo test/ovpncli/ovpncliovpndco --dco myprofile.ovpn
+
+Options used::
+
+  myprofile.ovpn : OpenVPN config file (must have .ovpn extension)
+  --dco          : enable data channel offload
+
 
 Building the OpenVPN 3 client on Mac OS X
 -----------------------------------------
