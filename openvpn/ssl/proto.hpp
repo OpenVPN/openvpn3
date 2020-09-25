@@ -223,7 +223,8 @@ namespace openvpn {
       // See ssl.h in openvpn2 for detailed documentation of IV_PROTO
        IV_PROTO_DATA_V2=(1<<1),
        IV_PROTO_REQUEST_PUSH=(1<<2),
-       IV_PROTO_TLS_KEY_EXPORT=(1<<3)
+       IV_PROTO_TLS_KEY_EXPORT=(1<<3),
+       IV_PROTO_AUTH_PENDING_KW=(1<<4)
     };
     static unsigned int opcode_extract(const unsigned int op)
     {
@@ -846,7 +847,9 @@ namespace openvpn {
 
 	// supports op32 and P_DATA_V2 and expects a push reply
 
-	unsigned int iv_proto = IV_PROTO_DATA_V2 | IV_PROTO_REQUEST_PUSH;
+	unsigned int iv_proto = IV_PROTO_DATA_V2
+	  | IV_PROTO_REQUEST_PUSH
+	  | IV_PROTO_AUTH_PENDING_KW;
 
 	if (SSLLib::SSLAPI::support_key_material_export())
 	  {

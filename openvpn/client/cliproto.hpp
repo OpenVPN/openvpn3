@@ -78,6 +78,7 @@ namespace openvpn {
     struct NotifyCallback {
       virtual void client_proto_terminate() = 0;
       virtual void client_proto_connected() {}
+      virtual void client_proto_auth_pending_timeout(int timeout) {}
     };
 
     class Session : ProtoContext,
@@ -670,14 +671,45 @@ namespace openvpn {
 	    ClientEvent::Base::Ptr ev = new ClientEvent::Info(msg.substr(9));
 	    cli_events->add_event(std::move(ev));
 	  }
-	else if (msg == "AUTH_PENDING")
+	else if (msg == "AUTH_PENDING" || string::starts_with(msg, "AUTH_PENDING,"))
 	  {
 	    // AUTH_PENDING indicates an out-of-band authentication step must
 	    // be performed before the server will send the PUSH_REPLY message.
 	    if (!auth_pending)
 	      {
 		auth_pending = true;
-		ClientEvent::Base::Ptr ev = new ClientEvent::AuthPending();
+		std::string key_words;
+
+		unsigned int timeout = 0;
+
+		if (string::starts_with(msg, "AUTH_PENDING,"))
+		  {
+		    key_words = msg.substr(::strlen("AUTH_PENDING,"));
+		    auto opts = OptionList::parse_from_csv_static(key_words, nullptr);
+		    std::string timeout_str = opts.get_optional("timeout", 1, 20);
+		    if (timeout_str != "")
+		      {
+			try
+			  {
+			    timeout = std::stoul(timeout_str);
+			    // Cap the timeout to end well before renegotiation starts
+			    timeout = std::min(timeout, static_cast<decltype(timeout)>(conf().renegotiate.to_seconds() / 2));
+			  }
+			catch (const std::logic_error& e)
+			  {
+			    OPENVPN_LOG("could not parse AUTH_PENDING timeout: " << timeout_str);
+			  }
+		      }
+		  }
+
+
+
+		if (notify_callback && timeout > 0)
+		  {
+		    notify_callback->client_proto_auth_pending_timeout(timeout);
+		  }
+
+		ClientEvent::Base::Ptr ev = new ClientEvent::AuthPending(timeout, key_words);
 		cli_events->add_event(std::move(ev));
 	      }
 	  }
