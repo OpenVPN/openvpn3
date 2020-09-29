@@ -294,7 +294,7 @@ namespace openvpn {
 	}
     }
 
-    virtual void pre_resolve_done()
+    virtual void pre_resolve_done() override
     {
       if (!halt)
 	new_client();
@@ -376,7 +376,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual void client_proto_connected()
+    virtual void client_proto_connected() override
     {
       conn_timer.cancel();
       conn_timer_pending = false;
@@ -413,6 +413,7 @@ namespace openvpn {
     }
 
     virtual void client_proto_terminate()
+    virtual void client_proto_terminate() override
     {
       if (!halt)
 	{
@@ -640,22 +641,22 @@ namespace openvpn {
 
     // ClientLifeCycle::NotifyCallback callbacks
 
-    virtual void cln_stop()
+    virtual void cln_stop() override
     {
       thread_safe_stop();
     }
 
-    virtual void cln_pause(const std::string& reason)
+    virtual void cln_pause(const std::string& reason) override
     {
       thread_safe_pause(reason);
     }
 
-    virtual void cln_resume()
+    virtual void cln_resume() override
     {
       thread_safe_resume();
     }
 
-    virtual void cln_reconnect(int seconds)
+    virtual void cln_reconnect(int seconds) override
     {
       thread_safe_reconnect(seconds);
     }
