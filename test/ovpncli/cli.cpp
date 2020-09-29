@@ -724,6 +724,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "auth-retry",     no_argument,        nullptr,      'Y' },
     { "tcprof-override", required_argument, nullptr,      'X' },
     { "write-url",      required_argument,  nullptr,      'Z' },
+    { "sso-methods",	required_argument,   nullptr,	  'S' },
     { "ssl-debug",      required_argument,  nullptr,       1  },
     { "epki-cert",      required_argument,  nullptr,       2  },
     { "epki-ca",        required_argument,  nullptr,       3  },
@@ -761,6 +762,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string proxyPassword;
 	std::string peer_info;
 	std::string gremlin;
+	std::string ssoMethods;
 	bool eval = false;
 	bool self_test = false;
 	bool cachePassword = false;
@@ -788,7 +790,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmvaYu:p:r:D:P:6:s:S:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -842,6 +844,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      case 'R':
 		port = optarg;
 		break;
+	      case 'S':
+	        ssoMethods = optarg;
+	        break;
 	      case 't':
 		timeout = ::atoi(optarg);
 		break;
@@ -1001,7 +1006,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.gremlinConfig = gremlin;
 	      config.info = true;
 	      config.wintun = wintun;
-	      config.ssoMethods = "openurl";
+	      config.ssoMethods =ssoMethods;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;
 #endif
@@ -1187,6 +1192,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--epki-ca             : simulate external PKI cert supporting intermediate/root certs" << std::endl;
       std::cout << "--epki-cert           : simulate external PKI cert" << std::endl;
       std::cout << "--epki-key            : simulate external PKI private key" << std::endl;
+      std::cout << "--sso-methods         : auth pending methods to announce via IV_SSO" << std::endl;
       std::cout << "--write-url, -Z       : write INFO URL to file" << std::endl;
       ret = 2;
     }
