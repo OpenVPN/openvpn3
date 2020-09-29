@@ -215,7 +215,7 @@ namespace openvpn {
     T get_num(const size_t idx) const
     {
       typedef typename std::remove_const<T>::type T_nonconst;
-      T_nonconst n;
+      T_nonconst n(0); // we shouldn't need to initialize here, but some compilers complain "may be used uninitialized in this function"
       const std::string& numstr = get(idx, 64);
       if (numstr.length() >= 2 && numstr[0] == '0' && numstr[1] == 'x')
 	{
