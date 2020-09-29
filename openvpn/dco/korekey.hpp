@@ -24,7 +24,7 @@
 #ifndef OPENVPN_KOVPN_KOREKEY_H
 #define OPENVPN_KOVPN_KOREKEY_H
 
-#include <openvpn/kovpn/kocrypto.hpp>
+#include <openvpn/dco/kocrypto.hpp>
 
 namespace openvpn {
   namespace KoRekey {

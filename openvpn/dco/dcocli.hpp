@@ -38,8 +38,9 @@
 
 #ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kovpn.hpp>
-#include <openvpn/kovpn/kodev.hpp>
 #include <openvpn/kovpn/kostats.hpp>
+#include <openvpn/kovpn/rps_xps.hpp>
+#include <openvpn/kovpn/kodevtun.hpp>
 #elif ENABLE_OVPNDCO
 #include <openvpn/dco/key.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
@@ -50,13 +51,7 @@
 #error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
 #endif
 
-#include <openvpn/kovpn/korekey.hpp>
-
-#ifdef ENABLE_PG
-#include <openvpn/kovpn/kodevtun.hpp>
-#endif
-
-#include <openvpn/kovpn/rps_xps.hpp>
+#include <openvpn/dco/korekey.hpp>
 
 // client-side DCO (Data Channel Offload) module for Linux/kovpn
 
@@ -77,10 +72,7 @@ namespace openvpn {
       DCO::TransportConfig transport;
       DCO::TunConfig tun;
 
-      int trunk_unit = -1;
       unsigned int ping_restart_override = 0;
-
-      std::unique_ptr<Configure_RPS_XPS> config_rps_xps;
 
       virtual TunClientFactory::Ptr new_tun_factory(const DCO::TunConfig& conf, const OptionList& opt) override
       {
@@ -98,11 +90,6 @@ namespace openvpn {
 	  else
 	    dev_name = "ovpnc";
 	}
-
-	// parse trunk-unit
-	trunk_unit = opt.get_num<decltype(trunk_unit)>("trunk-unit", 1, trunk_unit, 0, 511);
-	if (trunk_unit)
-	  config_rps_xps.reset(new Configure_RPS_XPS(opt));
 
 	// parse ping-restart-override
 	ping_restart_override = opt.get_num<decltype(ping_restart_override)>("ping-restart-override", 1, ping_restart_override, 0, 3600);
@@ -128,7 +115,7 @@ namespace openvpn {
 	return new ClientConfig();
       }
 
-    private:
+    protected:
       ClientConfig() = default;
     };
 
@@ -397,30 +384,31 @@ namespace openvpn {
       int peer_id;
     };
 
+#ifdef ENABLE_KOVPN
+    #include <openvpn/kovpn/kovpncli.hpp>
+    inline DCO::Ptr new_controller()
+    {
+      return KovpnClientConfig::new_controller();
+    }
+    inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
+								       TransportClientParent* parent)
+    {
+      return TransportClient::Ptr(new KovpnClient(io_context, this, parent));
+    }
+#elif ENABLE_OVPNDCO
+    #include <openvpn/dco/ovpndcocli.hpp>
     inline DCO::Ptr new_controller()
     {
       return ClientConfig::new_controller();
     }
-
-#ifdef ENABLE_KOVPN
-    #include <openvpn/dco/kovpncli.hpp>
-#elif ENABLE_OVPNDCO
-    #include <openvpn/dco/ovpndcocli.hpp>
-#else
-#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
-#endif
-
     inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
 								       TransportClientParent* parent)
     {
-#ifdef ENABLE_KOVPN
-      return TransportClient::Ptr(new KovpnClient(io_context, this, parent));
-#elif ENABLE_OVPNDCO
       return TransportClient::Ptr(new OvpnDcoClient(io_context, this, parent));
+    }
 #else
 #error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
 #endif
-    }
 
     inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context& io_context,
 							   TunClientParent& parent,
