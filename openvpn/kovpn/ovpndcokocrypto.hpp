@@ -41,6 +41,10 @@ public:
     const CryptoDCContext::Info ci = rkinfo.dc_context_delegate->crypto_info();
     const CryptoAlgs::Alg &calg = CryptoAlgs::get(ci.cipher_alg);
     switch (ci.cipher_alg) {
+    case CryptoAlgs::NONE:
+      kc.cipher_alg = OVPN_CIPHER_ALG_NONE;
+      kc.encrypt.cipher_key_size = 0;
+      break;
     case CryptoAlgs::AES_128_GCM:
       kc.cipher_alg = OVPN_CIPHER_ALG_AES_GCM;
       kc.encrypt.cipher_key_size = 128 / 8;
@@ -73,12 +77,17 @@ public:
     }
     kc.decrypt.cipher_key_size = kc.encrypt.cipher_key_size;
 
-    kc.encrypt.cipher_key = verify_key("cipher encrypt", rkinfo.encrypt_cipher,
-                                       kc.encrypt.cipher_key_size);
-    kc.decrypt.cipher_key = verify_key("cipher decrypt", rkinfo.decrypt_cipher,
-                                       kc.decrypt.cipher_key_size);
+    if (kc.cipher_alg != CryptoAlgs::NONE)
+    {
+	kc.encrypt.cipher_key = verify_key("cipher encrypt", rkinfo.encrypt_cipher,
+					   kc.encrypt.cipher_key_size);
+	kc.decrypt.cipher_key = verify_key("cipher decrypt", rkinfo.decrypt_cipher,
+					   kc.decrypt.cipher_key_size);
+    }
 
     switch (calg.mode()) {
+    case CryptoAlgs::NONE:
+      break;
     case CryptoAlgs::CBC_HMAC:
       // if CBC mode, process HMAC digest
       {
