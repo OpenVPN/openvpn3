@@ -233,7 +233,6 @@ public:
 	      std::ostringstream os;
 	      self->remove_cmds_bypass_hosts.execute(os);
 	      self->remove_cmds_bypass_hosts.clear();
-	      self->bypass_host.clear();
 	      OPENVPN_LOG_NTNL("remove bypass route (failsafe)\n" << os.str());
 	    }
 
@@ -342,7 +341,6 @@ public:
 	      std::ostringstream os;
 	      self->remove_cmds_bypass_hosts.execute(os);
 	      self->remove_cmds_bypass_hosts.clear();
-	      self->bypass_host.clear();
 	      OPENVPN_LOG_NTNL("remove bypass route (event)\n" << os.str());
 	    }
 
@@ -380,23 +378,18 @@ public:
 
   void add_bypass_route(const std::string& host, bool ipv6)
   {
-    if (host != bypass_host)
-      {
-	bypass_host = host;
+    std::ostringstream os;
+    remove_cmds_bypass_hosts.execute(os);
+    remove_cmds_bypass_hosts.clear();
 
-	std::ostringstream os;
-	remove_cmds_bypass_hosts.execute(os);
-	remove_cmds_bypass_hosts.clear();
+    ActionList add_cmds;
+    // we might have broken VPN connection up, so we must
+    // exclude VPN interface whe searching for the best gateway
+    const TunWin::Util::BestGateway gw { host, vpn_interface_index };
+    TunWin::Setup::add_bypass_route(gw, host, ipv6, add_cmds, remove_cmds_bypass_hosts);
+    add_cmds.execute(os);
 
-	ActionList add_cmds;
-	// we might have broken VPN connection up, so we must
-	// exclude VPN interface whe searching for the best gateway
-	const TunWin::Util::BestGateway gw { host, vpn_interface_index };
-	TunWin::Setup::add_bypass_route(gw, host, ipv6, add_cmds, remove_cmds_bypass_hosts);
-	add_cmds.execute(os);
-
-	OPENVPN_LOG(os.str());
-      }
+    OPENVPN_LOG(os.str());
   }
 
 #ifdef OPENVPN_AGENT_START_PROCESS
@@ -485,7 +478,6 @@ public:
 
   const MyConfig& config;
   ActionList remove_cmds_bypass_hosts;
-  std::string bypass_host;
 
   TunWin::RingBuffer::Ptr ring_buffer;
 
