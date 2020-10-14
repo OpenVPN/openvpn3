@@ -222,7 +222,8 @@ public:
     NLA_PUT_U8(msg, OVPN_ATTR_KEY_SLOT, key_slot);
     NLA_PUT_U16(msg, OVPN_ATTR_KEY_ID, kc->key_id);
     NLA_PUT_U16(msg, OVPN_ATTR_CIPHER_ALG, kc->cipher_alg);
-    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_CBC) {
+    if ((kc->cipher_alg == OVPN_CIPHER_ALG_AES_CBC) ||
+        (kc->cipher_alg == OVPN_CIPHER_ALG_NONE)) {
       NLA_PUT_U16(msg, OVPN_ATTR_HMAC_ALG, kc->hmac_alg);
     }
 

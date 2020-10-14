@@ -84,6 +84,9 @@ namespace openvpn {
 	  case CryptoAlgs::AES_192_CBC:
 	  case CryptoAlgs::AES_256_CBC:
 	  case CryptoAlgs::BF_CBC:
+#ifdef ENABLE_OVPNDCO
+	  case CryptoAlgs::NONE:
+#endif
 	    break;
 	  default:
 	    OPENVPN_THROW(korekey_error, "cipher alg " << calg.name() << " is not currently supported by kovpn");
@@ -95,6 +98,9 @@ namespace openvpn {
 	      {
 	      case CryptoAlgs::SHA1:
 	      case CryptoAlgs::SHA256:
+#ifdef ENABLE_OVPNDCO
+	      case CryptoAlgs::NONE:
+#endif
 		break;
 	      default:
 		OPENVPN_THROW(korekey_error, "HMAC alg " << halg.name() << " is not currently supported by kovpn");

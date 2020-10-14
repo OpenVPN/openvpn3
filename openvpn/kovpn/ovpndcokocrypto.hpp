@@ -86,8 +86,6 @@ public:
     }
 
     switch (calg.mode()) {
-    case CryptoAlgs::NONE:
-      break;
     case CryptoAlgs::CBC_HMAC:
       // if CBC mode, process HMAC digest
       {
@@ -98,6 +96,9 @@ public:
           break;
         case CryptoAlgs::SHA512:
           kc.hmac_alg = OVPN_HMAC_ALG_SHA512;
+          break;
+        case CryptoAlgs::NONE:
+          kc.hmac_alg = OVPN_HMAC_ALG_NONE;
           break;
         default:
           OPENVPN_THROW(korekey_error,
