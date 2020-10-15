@@ -1150,7 +1150,7 @@ namespace openvpn {
 		      if ((vpn_interface_index != DWORD(-1)) && (row->dwForwardIfIndex == vpn_interface_index))
 			{
 			  OPENVPN_LOG("GetBestGateway: skip gateway " <<
-				      IPv4::Addr::from_uint32(ntohl(gw->dwForwardNextHop)).to_string() <<
+				      IPv4::Addr::from_uint32(ntohl(row->dwForwardNextHop)).to_string() <<
 				      " on VPN interface " << vpn_interface_index);
 			  continue;
 			}
