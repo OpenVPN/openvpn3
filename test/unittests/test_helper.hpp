@@ -109,12 +109,18 @@ namespace openvpn {
       return getOutput();
     }
 
+    const Log::Context::Wrapper& log_wrapper()
+    {
+      return log_wrap;
+    }
+
   private:
     bool output_log = true;
     bool collect_log = false;
     std::stringstream out;
     std::mutex mutex{};
     Log::Context log_context;
+    Log::Context::Wrapper log_wrap; // must be constructed after log_context
   };
 }
 
