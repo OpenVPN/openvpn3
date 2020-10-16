@@ -50,6 +50,7 @@ if [ -z "$1" ]; then
     echo " LZ4_SYS=1 -- build with system LZ4 compression library"
     echo " SNAP=1 -- build with Snappy compression library"
     echo " CITY=1 -- build with Cityhash hash library"
+    echo " XXHASH=1 -- build with XXHash hash library"
     echo " CAP=1 -- build with libcap"
     echo " VAL=1 -- build with valgrind run-time extensions"
     echo " JAVA=1 -- build with JVM"
@@ -275,6 +276,12 @@ if [ "$CITY" = "1" ]; then
     fi
     LIBS="$LIBS -lcityhash"
     CPPFLAGS="$CPPFLAGS -DHAVE_CITYHASH"
+fi
+
+# XXHash
+if [ "$XXHASH" = "1" ] || [ "$XXHASH_DIR" ]; then
+    [ -z "$XXHASH_DIR" ] && XXHASH_DIR="$DEP_DIR/xxHash"
+    CPPFLAGS="$CPPFLAGS -DHAVE_XXHASH -I$XXHASH_DIR"
 fi
 
 # libcap
