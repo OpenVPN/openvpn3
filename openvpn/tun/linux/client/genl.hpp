@@ -109,8 +109,6 @@ public:
         [](struct nl_msg *, void *) { return (int)NL_OK; }, NULL);
     nl_socket_set_cb(sock, cb);
 
-    register_packet();
-
     // wrap netlink socket into ASIO primitive for async read
     stream.reset(new openvpn_io::posix::stream_descriptor(
         io_context, nl_socket_get_fd(sock)));
@@ -314,6 +312,16 @@ public:
     OPENVPN_THROW(netlink_error, " set_peer() nla_put_failure");
   }
 
+  /**
+   * Subscribe for certain kind of packets (like control channel packets)
+   */
+  void register_packet() {
+    auto msg_ptr = create_msg(OVPN_CMD_REGISTER_PACKET);
+    auto* msg = msg_ptr.get();
+
+    send_netlink_message(msg);
+  }
+
   void stop() {
     if (!halt) {
       halt = true;
@@ -333,13 +341,6 @@ public:
   }
 
 private:
-  void register_packet() {
-    auto msg_ptr = create_msg(OVPN_CMD_REGISTER_PACKET);
-    auto* msg = msg_ptr.get();
-
-    send_netlink_message(msg);
-  }
-
   struct mcast_handler_args {
     const char *group;
     int id;
@@ -484,7 +485,7 @@ private:
     return msg_ptr;
 
   nla_put_failure:
-    OPENVPN_THROW(netlink_error, " start_vpn() nla_put_failure");
+    OPENVPN_THROW(netlink_error, " create_msg() nla_put_failure");
   }
 
   void read_netlink_message() {

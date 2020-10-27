@@ -143,6 +143,7 @@ public:
               io_context, if_nametoindex(config->dev_name.c_str()), this));
 
           genl->start_vpn(sock.native_handle());
+          genl->register_packet();
           genl->new_peer(local, remote);
 
           transport_parent->transport_connecting();
