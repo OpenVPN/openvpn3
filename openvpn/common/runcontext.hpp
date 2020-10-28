@@ -31,6 +31,7 @@
 #ifndef OPENVPN_COMMON_RUNCONTEXT_H
 #define OPENVPN_COMMON_RUNCONTEXT_H
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <thread>
