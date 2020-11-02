@@ -300,6 +300,11 @@ public:
                                           "keepalive timeout");
         break;
 
+      case OVPN_DEL_PEER_REASON_TRANSPORT_ERROR:
+        transport_parent->transport_error(Error::TRANSPORT_ERROR,
+                                          "transport error");
+        break;
+
       default:
         std::ostringstream os;
         os << "peer deleted, reason " << reason;
