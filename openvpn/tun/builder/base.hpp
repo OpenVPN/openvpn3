@@ -258,10 +258,11 @@ namespace openvpn {
      * Enable ovpn-dco support
      *
      * @param transport_fd file descriptor of client-created transport socket
+     * @param proto transport protocol such as OVPN_PROTO_UDP4. See enum ovpn_dco for values.
      * @param dev_name name of ovpn-dco net device, which should be created by client
      * @return int file descriptor of socket used to direct communication with ovpn-dco kernel module
      */
-    virtual int tun_builder_dco_enable(int transport_fd, const std::string& dev_name)
+    virtual int tun_builder_dco_enable(int transport_fd, unsigned int proto, const std::string& dev_name)
     {
       return -1;
     }

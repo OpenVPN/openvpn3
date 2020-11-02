@@ -127,14 +127,21 @@ public:
       openvpn_io::ip::address remote_addr = proto->remote_address();
       unsigned short local_port = proto->local_port();
       unsigned short remote_port = proto->remote_port();
-      int handle = proto->native_handle();
+
+      auto conf_proto = config->transport.protocol;
+      ovpn_proto p = OVPN_PROTO_UNDEF;
+      if (conf_proto.is_tcp()) {
+        p = conf_proto.is_ipv6() ? OVPN_PROTO_TCP6 : OVPN_PROTO_TCP4;
+      } else {
+        p = conf_proto.is_ipv6() ? OVPN_PROTO_UDP6 : OVPN_PROTO_UDP4;
+      }
 
       TunBuilderBase *tb = config->builder;
       if (tb) {
         tb->tun_builder_new();
         // pipe fd which is used to communicate to kernel
-        int fd =
-            tb->tun_builder_dco_enable(handle, config->dev_name);
+        int fd = tb->tun_builder_dco_enable(proto->native_handle(), p,
+                                            config->dev_name);
         if (fd == -1) {
           stop_();
           transport_parent->transport_error(Error::TUN_IFACE_CREATE,
@@ -142,7 +149,8 @@ public:
           return;
         }
         pipe.reset(new openvpn_io::posix::stream_descriptor(io_context, fd));
-        tb->tun_builder_dco_new_peer(local_addr.to_string(), local_port, remote_addr.to_string(), remote_port);
+        tb->tun_builder_dco_new_peer(local_addr.to_string(), local_port,
+                                     remote_addr.to_string(), remote_port);
 
         queue_read_pipe(nullptr);
 
@@ -157,7 +165,7 @@ public:
           genl.reset(new GeNLImpl(
               io_context, if_nametoindex(config->dev_name.c_str()), this));
 
-          genl->start_vpn(handle, config->transport.protocol.is_tcp() ? OVPN_PROTO_TCP4 : OVPN_PROTO_UDP4);
+          genl->start_vpn(proto->native_handle(), p);
           genl->register_packet();
           genl->new_peer(local_addr, local_port, remote_addr, remote_port);
 
@@ -167,9 +175,11 @@ public:
     } else {
       std::ostringstream os;
       os << proto->proto();
-      os << " connect error on '" << server_host << ':' << server_port
-           << "' (" << proto->server_endpoint_addr() << "): " << error.message();
-      config->transport.stats->error(config->transport.protocol.is_tcp() ? Error::TCP_CONNECT_ERROR : Error::UDP_CONNECT_ERROR);
+      os << " connect error on '" << server_host << ':' << server_port << "' ("
+         << proto->server_endpoint_addr() << "): " << error.message();
+      config->transport.stats->error(config->transport.protocol.is_tcp()
+                                         ? Error::TCP_CONNECT_ERROR
+                                         : Error::UDP_CONNECT_ERROR);
       stop_();
       transport_parent->transport_error(Error::UNDEF, os.str());
     }
