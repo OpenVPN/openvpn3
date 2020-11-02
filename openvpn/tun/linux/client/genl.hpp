@@ -129,12 +129,12 @@ public:
    * @param socket file descriptor of transport socket, created by client
    * @throws netlink_error thrown if error occurs during sending netlink message
    */
-  void start_vpn(int socket) {
+  void start_vpn(int socket, ovpn_proto proto) {
     auto msg_ptr = create_msg(OVPN_CMD_START_VPN);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
 
     NLA_PUT_U32(msg, OVPN_ATTR_SOCKET, socket);
-    NLA_PUT_U8(msg, OVPN_ATTR_PROTO, OVPN_PROTO_UDP4);
+    NLA_PUT_U8(msg, OVPN_ATTR_PROTO, proto);
     NLA_PUT_U8(msg, OVPN_ATTR_MODE, OVPN_MODE_CLIENT);
 
     send_netlink_message(msg);
@@ -148,29 +148,33 @@ public:
    * Add peer information to kernel module
    *
    * @tparam T ASIO's transport socket endpoint type
-   * @param local_endpoint local endpoint
-   * @param remote_endpoint remote endpoiont
+   * @param local_addr local address
+   * @param local_port local port
+   * @param local_addr remote address
+   * @param local_port remote port
    * @throws netlink_error thrown if error occurs during sending netlink message
    */
-  template <typename T> void new_peer(T local_endpoint, T remote_endpoint) {
+  void new_peer(openvpn_io::ip::address local_addr, unsigned short local_port,
+                openvpn_io::ip::address remote_addr,
+                unsigned short remote_port) {
     auto msg_ptr = create_msg(OVPN_CMD_NEW_PEER);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
 
     struct in_addr laddr;
     std::memcpy(&laddr.s_addr,
-                local_endpoint.address().to_v4().to_bytes().data(), 4);
+                local_addr.to_v4().to_bytes().data(), 4);
     struct in_addr raddr;
     std::memcpy(&raddr.s_addr,
-                remote_endpoint.address().to_v4().to_bytes().data(), 4);
+                remote_addr.to_v4().to_bytes().data(), 4);
 
     struct nlattr *addr = nla_nest_start(msg, OVPN_ATTR_SOCKADDR_REMOTE);
     NLA_PUT(msg, OVPN_SOCKADDR_ATTR_ADDRESS, 4, &raddr);
-    NLA_PUT_U16(msg, OVPN_SOCKADDR_ATTR_PORT, remote_endpoint.port());
+    NLA_PUT_U16(msg, OVPN_SOCKADDR_ATTR_PORT, remote_port);
     nla_nest_end(msg, addr);
 
     addr = nla_nest_start(msg, OVPN_ATTR_SOCKADDR_LOCAL);
     NLA_PUT(msg, OVPN_SOCKADDR_ATTR_ADDRESS, 4, &laddr);
-    NLA_PUT_U16(msg, OVPN_SOCKADDR_ATTR_PORT, local_endpoint.port());
+    NLA_PUT_U16(msg, OVPN_SOCKADDR_ATTR_PORT, local_port);
     nla_nest_end(msg, addr);
 
     send_netlink_message(msg);

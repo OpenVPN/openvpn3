@@ -84,7 +84,18 @@ public:
 
   virtual std::string tun_name() const override { return "ovpn-dco"; }
 
-  virtual void transport_start() override { transport_start_udp(); }
+  virtual void transport_start() override {
+    if (config->transport.protocol.is_udp())
+      transport_start_udp();
+    else if (config->transport.protocol.is_tcp())
+      transport_start_tcp();
+    else {
+      stop();
+      std::ostringstream os;
+      os << "unsupported protocol: " << config->transport.protocol.str();
+      transport_parent->transport_error(Error::UNDEF, os.str());
+    }
+  }
 
   virtual bool transport_send_const(const Buffer &buf) override {
     return send(buf);
@@ -104,20 +115,26 @@ public:
   }
 
   virtual void start_impl_udp(const openvpn_io::error_code &error) override {
+    start_impl(error);
+  }
+
+  void start_impl(const openvpn_io::error_code &error) {
     if (halt)
       return;
 
     if (!error) {
-      auto &sock = udp().socket;
-      auto local = sock.local_endpoint();
-      auto remote = sock.remote_endpoint();
+      openvpn_io::ip::address local_addr = proto->local_address();
+      openvpn_io::ip::address remote_addr = proto->remote_address();
+      unsigned short local_port = proto->local_port();
+      unsigned short remote_port = proto->remote_port();
+      int handle = proto->native_handle();
 
       TunBuilderBase *tb = config->builder;
       if (tb) {
         tb->tun_builder_new();
         // pipe fd which is used to communicate to kernel
         int fd =
-            tb->tun_builder_dco_enable(sock.native_handle(), config->dev_name);
+            tb->tun_builder_dco_enable(handle, config->dev_name);
         if (fd == -1) {
           stop_();
           transport_parent->transport_error(Error::TUN_IFACE_CREATE,
@@ -125,9 +142,7 @@ public:
           return;
         }
         pipe.reset(new openvpn_io::posix::stream_descriptor(io_context, fd));
-        tb->tun_builder_dco_new_peer(local.address().to_string(), local.port(),
-                                     remote.address().to_string(),
-                                     remote.port());
+        tb->tun_builder_dco_new_peer(local_addr.to_string(), local_port, remote_addr.to_string(), remote_port);
 
         queue_read_pipe(nullptr);
 
@@ -142,18 +157,19 @@ public:
           genl.reset(new GeNLImpl(
               io_context, if_nametoindex(config->dev_name.c_str()), this));
 
-          genl->start_vpn(sock.native_handle());
+          genl->start_vpn(handle, config->transport.protocol.is_tcp() ? OVPN_PROTO_TCP4 : OVPN_PROTO_UDP4);
           genl->register_packet();
-          genl->new_peer(local, remote);
+          genl->new_peer(local_addr, local_port, remote_addr, remote_port);
 
           transport_parent->transport_connecting();
         }
       }
     } else {
       std::ostringstream os;
-      os << "UDP connect error on '" << server_host << ':' << server_port
-         << "' (" << udp().server_endpoint << "): " << error.message();
-      config->transport.stats->error(Error::UDP_CONNECT_ERROR);
+      os << proto->proto();
+      os << " connect error on '" << server_host << ':' << server_port
+           << "' (" << proto->server_endpoint_addr() << "): " << error.message();
+      config->transport.stats->error(config->transport.protocol.is_tcp() ? Error::TCP_CONNECT_ERROR : Error::UDP_CONNECT_ERROR);
       stop_();
       transport_parent->transport_error(Error::UNDEF, os.str());
     }

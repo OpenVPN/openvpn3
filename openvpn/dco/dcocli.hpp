@@ -52,6 +52,7 @@
 #endif
 
 #include <openvpn/dco/korekey.hpp>
+#include <openvpn/dco/protowrapper.hpp>
 
 // client-side DCO (Data Channel Offload) module for Linux/kovpn
 
@@ -127,42 +128,6 @@ namespace openvpn {
 
       typedef RCPtr<Client> Ptr;
 
-    protected:
-      struct ProtoBase
-      {
-	ProtoBase() = default;
-	virtual IP::Addr server_endpoint_addr() const = 0;
-	virtual void close() = 0;
-	virtual ~ProtoBase() = default;
-
-	ProtoBase(const ProtoBase&) = delete;
-	ProtoBase& operator=(const ProtoBase&) = delete;
-      };
-
-      struct UDP : public ProtoBase
-      {
-	explicit UDP(openvpn_io::io_context& io_context)
-	  : resolver(io_context),
-	    socket(io_context)
-	{
-	}
-
-	virtual IP::Addr server_endpoint_addr() const override
-	{
-	  return IP::Addr::from_asio(server_endpoint.address());
-	}
-
-	virtual void close() override
-	{
-	  socket.close();
-	  resolver.cancel();
-	}
-
-	openvpn_io::ip::udp::resolver resolver;
-	openvpn_io::ip::udp::socket socket;
-	UDPTransport::AsioEndpoint server_endpoint;
-      };
-
     public:
       // transport methods
 
@@ -194,7 +159,7 @@ namespace openvpn {
 	host = server_host;
 	port = server_port;
 	const IP::Addr addr = server_endpoint_addr();
-	proto = "UDP";
+	proto = config->transport.protocol.is_tcp() ? "TCP" : "UDP";
 	proto += addr.version_string();
 	proto += "-DCO";
 	ip_addr = addr.to_string();
@@ -291,10 +256,24 @@ namespace openvpn {
 
       void transport_start_udp()
       {
-	proto.reset(new UDP(io_context));
+	transport_start_impl(false);
+      }
+
+      void transport_start_tcp()
+      {
+	transport_start_impl(true);
+      }
+
+      void transport_start_impl(bool tcp)
+      {
+	if (tcp)
+	  proto.reset(new TCP(io_context));
+	else
+	  proto.reset(new UDP(io_context));
+
 	if (config->transport.remote_list->endpoint_available(&server_host, &server_port, nullptr))
 	  {
-	    start_connect_udp();
+	    start_connect();
 	  }
 	else
 	  {
@@ -313,12 +292,12 @@ namespace openvpn {
 	      {
 		// save resolved endpoint list in remote_list
 		config->transport.remote_list->set_endpoint_range(results);
-		start_connect_udp();
+		start_connect();
 	      }
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << server_host << "' for UDP session: " << error.message();
+		os << "DNS resolve error on '" << server_host << "' for session: " << error.message();
 		config->transport.stats->error(Error::RESOLVE_ERROR);
 		stop_();
 		transport_parent->transport_error(Error::UNDEF, os.str());
@@ -326,42 +305,34 @@ namespace openvpn {
 	  }
       }
 
-      // do UDP connect
-      void start_connect_udp()
+      void start_connect()
       {
-	config->transport.remote_list->get_endpoint(udp().server_endpoint);
-	OPENVPN_LOG("Contacting " << udp().server_endpoint << " via UDP");
+	proto->get_endpoint(config->transport.remote_list);
+	OPENVPN_LOG("Contacting " << proto->server_endpoint_addr() << " via " << proto->proto());
 	transport_parent->transport_wait();
-	udp().socket.open(udp().server_endpoint.protocol());
+	proto->open();
 
 	if (config->transport.socket_protect)
 	  {
-	    if (!config->transport.socket_protect->socket_protect(udp().socket.native_handle(), server_endpoint_addr()))
+	    if (!config->transport.socket_protect->socket_protect(proto->native_handle(), server_endpoint_addr()))
 	      {
 		stop();
-		transport_parent->transport_error(Error::UNDEF, "socket_protect error (UDP)");
+		std::ostringstream os;
+		os << "socket_protect error (";
+		os << proto->proto();
+		os << ")";
+		transport_parent->transport_error(Error::UNDEF, os.str());
 		return;
 	      }
 	  }
 
-	udp().socket.async_connect(udp().server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
-                                                          {
-                                                            self->start_impl_udp(error);
-                                                          });
+	proto->async_connect([self=Ptr(this)](const openvpn_io::error_code &error) {
+	    self->start_impl_udp(error);
+	});
       }
 
       // start I/O on UDP socket
       virtual void start_impl_udp(const openvpn_io::error_code& error) = 0;
-
-      void transport_start_tcp()
-      {
-	OPENVPN_THROW(dco_error, "TCP not implemented yet"); // fixme for DCO
-      }
-
-      UDP& udp()
-      {
-	return *static_cast<UDP*>(proto.get());
-      }
 
       virtual void stop_() = 0;
 
@@ -374,7 +345,7 @@ namespace openvpn {
       TransportClientParent* transport_parent;
       TunClientParent* tun_parent;
 
-      std::unique_ptr<ProtoBase> proto;
+      ProtoBase::Ptr proto;
 
       ActionList::Ptr remove_cmds;
 
