@@ -159,21 +159,29 @@ public:
                 unsigned short remote_port) {
     auto msg_ptr = create_msg(OVPN_CMD_NEW_PEER);
     auto *msg = msg_ptr.get();
+    union {
+      in_addr addr4;
+      in6_addr addr6;
+    } laddr, raddr;
+    int len;
 
-    struct in_addr laddr;
-    std::memcpy(&laddr.s_addr,
-                local_addr.to_v4().to_bytes().data(), 4);
-    struct in_addr raddr;
-    std::memcpy(&raddr.s_addr,
-                remote_addr.to_v4().to_bytes().data(), 4);
+    if (local_addr.is_v4()) {
+      len = sizeof(in_addr);
+      std::memcpy(&laddr, local_addr.to_v4().to_bytes().data(), len);
+      std::memcpy(&raddr, remote_addr.to_v4().to_bytes().data(), len);
+    } else {
+      len = sizeof(in6_addr);
+      std::memcpy(&laddr, local_addr.to_v6().to_bytes().data(), len);
+      std::memcpy(&raddr, remote_addr.to_v6().to_bytes().data(), len);
+    }
 
     struct nlattr *addr = nla_nest_start(msg, OVPN_ATTR_SOCKADDR_REMOTE);
-    NLA_PUT(msg, OVPN_SOCKADDR_ATTR_ADDRESS, 4, &raddr);
+    NLA_PUT(msg, OVPN_SOCKADDR_ATTR_ADDRESS, len, &raddr);
     NLA_PUT_U16(msg, OVPN_SOCKADDR_ATTR_PORT, remote_port);
     nla_nest_end(msg, addr);
 
     addr = nla_nest_start(msg, OVPN_ATTR_SOCKADDR_LOCAL);
-    NLA_PUT(msg, OVPN_SOCKADDR_ATTR_ADDRESS, 4, &laddr);
+    NLA_PUT(msg, OVPN_SOCKADDR_ATTR_ADDRESS, len, &laddr);
     NLA_PUT_U16(msg, OVPN_SOCKADDR_ATTR_PORT, local_port);
     nla_nest_end(msg, addr);
 
