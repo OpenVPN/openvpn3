@@ -28,7 +28,7 @@ namespace KoRekey {
 struct KeyDirection {
   const unsigned char *cipher_key;
   const unsigned char *hmac_key; // only CBC
-  unsigned char nonce_tail[12];  // only GCM
+  unsigned char nonce_tail[8];  // only GCM
   unsigned int cipher_key_size;
   unsigned int hmac_key_size; // only CBC
 };

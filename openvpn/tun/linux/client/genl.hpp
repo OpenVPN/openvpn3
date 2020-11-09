@@ -212,7 +212,7 @@ public:
     auto msg_ptr = create_msg(OVPN_CMD_NEW_KEY);
     auto* msg = msg_ptr.get();
 
-    const int NONCE_LEN = 12;
+    const int NONCE_TAIL_LEN = 8;
 
     struct nlattr *key_dir;
 
@@ -229,7 +229,7 @@ public:
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->encrypt.cipher_key_size,
             kc->encrypt.cipher_key);
     if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
-      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_LEN,
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->encrypt.nonce_tail);
     } else {
       NLA_PUT(msg, OVPN_KEY_DIR_ATTR_HMAC_KEY, kc->encrypt.hmac_key_size,
@@ -241,7 +241,7 @@ public:
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->decrypt.cipher_key_size,
             kc->decrypt.cipher_key);
     if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
-      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_LEN,
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->decrypt.nonce_tail);
     } else {
       NLA_PUT(msg, OVPN_KEY_DIR_ATTR_HMAC_KEY, kc->decrypt.hmac_key_size,
