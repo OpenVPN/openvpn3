@@ -510,10 +510,10 @@ namespace openvpn {
 	h(u.addr);
       }
 
-#ifdef HAVE_CITYHASH
+#ifdef USE_OPENVPN_HASH
       std::size_t hashval() const
       {
-	HashSizeT h;
+	Hash64 h;
 	hash(h);
 	return h.value();
       }
@@ -587,7 +587,7 @@ namespace openvpn {
   }
 }
 
-#ifdef HAVE_CITYHASH
+#ifdef USE_OPENVPN_HASH
 OPENVPN_HASH_METHOD(openvpn::IPv4::Addr, hashval);
 #endif
 

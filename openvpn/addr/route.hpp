@@ -230,10 +230,10 @@ namespace openvpn {
 	h(prefix_len);
       }
 
-#ifdef HAVE_CITYHASH
+#ifdef USE_OPENVPN_HASH
       std::size_t hash_value() const
       {
-	HashSizeT h;
+	Hash64 h;
 	hash(h);
 	return h.value();
       }
@@ -353,7 +353,7 @@ namespace openvpn {
   }
 }
 
-#ifdef HAVE_CITYHASH
+#ifdef USE_OPENVPN_HASH
 OPENVPN_HASH_METHOD(openvpn::IP::Route, hash_value);
 OPENVPN_HASH_METHOD(openvpn::IP::Route4, hash_value);
 OPENVPN_HASH_METHOD(openvpn::IP::Route6, hash_value);
