@@ -224,7 +224,8 @@ public:
     key_dir = nla_nest_start(msg, OVPN_ATTR_ENCRYPT_KEY);
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->encrypt.cipher_key_size,
             kc->encrypt.cipher_key);
-    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
+    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM
+	|| kc->cipher_alg == OVPN_CIPHER_ALG_CHACHA20_POLY1305) {
       NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->encrypt.nonce_tail);
     }
@@ -233,7 +234,8 @@ public:
     key_dir = nla_nest_start(msg, OVPN_ATTR_DECRYPT_KEY);
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->decrypt.cipher_key_size,
             kc->decrypt.cipher_key);
-    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
+    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM
+	|| kc->cipher_alg == OVPN_CIPHER_ALG_CHACHA20_POLY1305) {
       NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->decrypt.nonce_tail);
     }

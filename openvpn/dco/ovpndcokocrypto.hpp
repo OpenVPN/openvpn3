@@ -57,6 +57,10 @@ public:
       kc.cipher_alg = OVPN_CIPHER_ALG_AES_GCM;
       kc.encrypt.cipher_key_size = 256 / 8;
       break;
+    case CryptoAlgs::CHACHA20_POLY1305:
+      kc.cipher_alg = OVPN_CIPHER_ALG_CHACHA20_POLY1305;
+      kc.encrypt.cipher_key_size = 256 / 8;
+      break;
     default:
       OPENVPN_THROW(korekey_error,
                     "cipher alg " << calg.name()
