@@ -73,6 +73,9 @@
 #include <openvpn/ws/httpcreds.hpp>
 #include <openvpn/ws/websocket.hpp>
 
+// debugging -- simulate network failures
+#include <openvpn/common/periodic_fail.hpp>
+
 #if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
 #include <openvpn/asio/alt_routing.hpp>
 #endif
@@ -80,10 +83,6 @@
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/winerr.hpp>
-#endif
-
-#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
-#include <openvpn/common/periodic_fail.hpp>
 #endif
 
 namespace openvpn {
