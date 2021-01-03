@@ -317,3 +317,15 @@ catch (const expected_exception& e) \
   if ((v1) == (v2)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_NE: failure at " << __FILE__ << ':' << __LINE__); \
 }
+
+#define JY_ASSERT_LE(v1, v2) \
+{ \
+  if ((v1) > (v2)) \
+    OPENVPN_THROW_EXCEPTION("JY_ASSERT_LE: failure at " << __FILE__ << ':' << __LINE__); \
+}
+
+#define JY_ASSERT_GE(v1, v2) \
+{ \
+  if ((v1) < (v2)) \
+    OPENVPN_THROW_EXCEPTION("JY_ASSERT_GE: failure at " << __FILE__ << ':' << __LINE__); \
+}
