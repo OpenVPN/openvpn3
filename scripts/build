@@ -280,7 +280,7 @@ fi
 
 # XXHash
 if [ "$XXHASH" = "1" ] || [ "$XXHASH_DIR" ]; then
-    [ -z "$XXHASH_DIR" ] && XXHASH_DIR="$DEP_DIR/xxhash"
+    [ -z "$XXHASH_DIR" ] && XXHASH_DIR="$DEP_DIR/xxHash"
     CPPFLAGS="$CPPFLAGS -DHAVE_XXHASH -I$XXHASH_DIR"
 fi
 
