@@ -73,8 +73,10 @@
 #include <openvpn/ws/httpcreds.hpp>
 #include <openvpn/ws/websocket.hpp>
 
+#ifdef SIMULATE_HTTPCLI_FAILURES
 // debugging -- simulate network failures
 #include <openvpn/common/periodic_fail.hpp>
+#endif
 
 #if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
 #include <openvpn/asio/alt_routing.hpp>
