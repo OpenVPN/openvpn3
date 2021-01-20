@@ -30,8 +30,9 @@ fi
 
 echo "******* LZ4"
 $O3/core/scripts/mac/build-lz4
-echo "******* CITYHASH"
-$O3/core/scripts/mac/build-cityhash
+echo "******* xxHash"
+$O3/core/deps/xxHash/build-xxHash
+
 
 #echo "******* MINICRYPTO"
 #$O3/core/scripts/mac/build-minicrypto
