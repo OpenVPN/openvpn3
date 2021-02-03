@@ -523,7 +523,7 @@ namespace openvpn {
 		      throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
 		    flags |= F_ADD_DNS;
 		  }
-		else if (type == "DOMAIN")
+		else if (type == "DOMAIN" || type == "DOMAIN-SEARCH")
 		  {
 		    o.min_args(3);
 		    for (size_t j = 2; j < o.size(); ++j)
