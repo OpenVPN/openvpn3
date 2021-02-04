@@ -71,6 +71,7 @@ namespace openvpn {
   class Option
   {
   public:
+    OPENVPN_UNTAGGED_EXCEPTION(RejectedException);
     enum {
       MULTILINE = 0x8000000,
     };

@@ -59,6 +59,7 @@
 #include <openvpn/client/clicreds.hpp>
 #include <openvpn/client/cliconstants.hpp>
 #include <openvpn/client/clihalt.hpp>
+#include <openvpn/client/optfilt.hpp>
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/time/coarsetime.hpp>
 #include <openvpn/time/durhelper.hpp>
@@ -551,8 +552,16 @@ namespace openvpn {
 	if (!received_options.complete() && string::starts_with(msg, "PUSH_REPLY,"))
 	  {
 	    // parse the received options
-	    received_options.add(OptionList::parse_from_csv_static(msg.substr(11), &pushed_options_limit),
-				 pushed_options_filter.get());
+	    auto pushed_options_list = OptionList::parse_from_csv_static(msg.substr(11), &pushed_options_limit);
+	    try
+	      {
+		received_options.add(pushed_options_list, pushed_options_filter.get());
+	      }
+	    catch (const Option::RejectedException& e)
+	      {
+		ClientHalt ch("RESTART,rejected pushed option: " + e.err(), true);
+		process_halt_restart(ch);
+	      }
 	    if (received_options.complete())
 	      {
 		// show options
