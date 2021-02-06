@@ -36,6 +36,7 @@ add_executable(coreUnitTests
         test_verify_x509_name.cpp
         test_ssl.cpp
         test_continuation.cpp
+        test_optfilt.cpp
         )
 
 if (${USE_MBEDTLS})
