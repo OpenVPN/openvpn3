@@ -19,11 +19,10 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
+// Base class for PluggableTransport links.
 
-// Base class for TCP link objects.
-
-#ifndef OPENVPN_TRANSPORT_COMMONLINK_H
-#define OPENVPN_TRANSPORT_COMMONLINK_H
+#ifndef OPENVPN_TRANSPORT_PTLINK_H
+#define OPENVPN_TRANSPORT_PTLINK_H
 
 #include <deque>
 #include <utility> // for std::move
@@ -45,30 +44,36 @@
 #include <openvpn/transport/gremlin.hpp>
 #endif
 
-#if defined(OPENVPN_DEBUG_TCPLINK) && OPENVPN_DEBUG_TCPLINK >= 1
-#define OPENVPN_LOG_TCPLINK_ERROR(x) OPENVPN_LOG(x)
+#if defined(OPENVPN_DEBUG_PTLINK) && OPENVPN_DEBUG_PTLINK >= 1
+#define OPENVPN_LOG_PTLINK_ERROR(x) OPENVPN_LOG(x)
 #else
-#define OPENVPN_LOG_TCPLINK_ERROR(x)
+#define OPENVPN_LOG_PTLINK_ERROR(x)
 #endif
 
-#if defined(OPENVPN_DEBUG_TCPLINK) && OPENVPN_DEBUG_TCPLINK >= 3
-#define OPENVPN_LOG_TCPLINK_VERBOSE(x) OPENVPN_LOG(x)
+#if defined(OPENVPN_DEBUG_PTLINK) && OPENVPN_DEBUG_PTLINK >= 3
+#define OPENVPN_LOG_PTLINK_VERBOSE(x) OPENVPN_LOG(x)
 #else
-#define OPENVPN_LOG_TCPLINK_VERBOSE(x)
+#define OPENVPN_LOG_PTLINK_VERBOSE(x)
 #endif
 
 namespace openvpn {
-  namespace TCPTransport {
+  namespace PluggableTransports {
+
+    struct PacketFrom
+    {
+      typedef std::unique_ptr<PacketFrom> SPtr;
+      BufferAllocated buf;
+    };
 
     template <typename Protocol,
 	      typename ReadHandler,
 	      bool RAW_MODE_ONLY>
-    class LinkCommon : public LinkBase
+    class LinkImpl : public RC<thread_unsafe_refcount>
     {
       typedef std::deque<BufferPtr> Queue;
 
     public:
-      typedef RCPtr<LinkCommon<Protocol, ReadHandler, RAW_MODE_ONLY>> Ptr;
+      typedef RCPtr<LinkImpl<Protocol, ReadHandler, RAW_MODE_ONLY>> Ptr;
       typedef Protocol protocol;
 
       // In raw mode, data is sent and received without any special encapsulation.
@@ -111,7 +116,7 @@ namespace openvpn {
       void inject(const Buffer& src)
       {
 	const size_t size = src.size();
-	OPENVPN_LOG_TCPLINK_VERBOSE("TCP inject size=" << size);
+	OPENVPN_LOG_PTLINK_VERBOSE("PT inject size=" << size);
 	if (size && !RAW_MODE_ONLY)
 	  {
 	    BufferAllocated buf;
@@ -158,8 +163,8 @@ namespace openvpn {
 
 	if (send_queue_max_size && send_queue_size() >= send_queue_max_size)
 	  {
-	    stats->error(Error::TCP_OVERFLOW);
-	    read_handler->tcp_error_handler("TCP_OVERFLOW");
+	    stats->error(Error::PT_OVERFLOW);
+	    read_handler->pt_error_handler("PT_OVERFLOW");
 	    stop();
 	    return false;
 	  }
@@ -182,13 +187,13 @@ namespace openvpn {
 	  gremlin_queue_send_buffer(buf);
 	else
 #endif
-	from_app_send_buffer(buf);
+	queue_send_buffer(buf);
 	return true;
       }
 
       void queue_recv(PacketFrom *tcpfrom)
       {
-	OPENVPN_LOG_TCPLINK_VERBOSE("TLSLink::queue_recv");
+	OPENVPN_LOG_PTLINK_VERBOSE("Link::queue_recv");
 	if (!tcpfrom)
 	  tcpfrom = new PacketFrom();
 	frame_context.prepare(tcpfrom->buf);
@@ -203,8 +208,8 @@ namespace openvpn {
 			       }
 			       catch (const std::exception& e)
 			       {
-			         Error::Type err = Error::TCP_SIZE_ERROR;
-				 const char *msg = "TCP_SIZE_ERROR";
+			         Error::Type err = Error::PT_SIZE_ERROR;
+				 const char *msg = "PT_SIZE_ERROR";
 			         // if exception is an ExceptionCode, translate the code
 				 // to return status string
 				 {
@@ -216,16 +221,15 @@ namespace openvpn {
 				   }
 				 }
 
-			         OPENVPN_LOG_TCPLINK_ERROR("TCP packet extract exception: " << e.what());
+			         OPENVPN_LOG_PTLINK_ERROR("PT packet extract exception: " << e.what());
 				 self->stats->error(err);
-				 self->read_handler->tcp_error_handler(msg);
+				 self->read_handler->pt_error_handler(msg);
 				 self->stop();
 			       }
 			     });
       }
 
-    protected:
-      LinkCommon(ReadHandler read_handler_arg,
+      LinkImpl(ReadHandler read_handler_arg,
 		 typename Protocol::socket& socket_arg,
 		 const size_t send_queue_max_size_arg, // 0 to disable
 		 const size_t free_list_max_size_arg,
@@ -242,6 +246,7 @@ namespace openvpn {
 	set_raw_mode(false);
       }
 
+    protected:
 #ifdef OPENVPN_GREMLIN
       void gremlin_config(const Gremlin::Config::Ptr& config)
       {
@@ -268,7 +273,7 @@ namespace openvpn {
 	  return raw_mode_write;
       }
 
-      LinkCommon() { stop(); }
+      LinkImpl() { stop(); }
 
       void queue_send_buffer(BufferPtr& buf)
       {
@@ -294,7 +299,7 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-		OPENVPN_LOG_TCPLINK_VERBOSE("TLS-TCP send raw=" << raw_mode_write << " size=" << bytes_sent);
+		OPENVPN_LOG_PTLINK_VERBOSE("PT send size=" << bytes_sent);
 		stats->inc_stat(SessionStats::BYTES_OUT, bytes_sent);
 		stats->inc_stat(SessionStats::PACKETS_OUT, 1);
 
@@ -312,32 +317,43 @@ namespace openvpn {
 		  buf->advance(bytes_sent);
 		else
 		  {
-		    stats->error(Error::TCP_OVERFLOW);
-		    read_handler->tcp_error_handler("TCP_INTERNAL_ERROR"); // error sent more bytes than we asked for
+		    stats->error(Error::PT_OVERFLOW);
+		    read_handler->pt_error_handler("PT_OVERFLOW"); // error sent more bytes than we asked for
 		    stop();
 		    return;
 		  }
 	      }
 	    else
 	      {
-		OPENVPN_LOG_TCPLINK_ERROR("TLS-TCP send error: " << error.message());
+		OPENVPN_LOG_PTLINK_ERROR("PT send error");
 		stats->error(Error::NETWORK_SEND_ERROR);
-		read_handler->tcp_error_handler("NETWORK_SEND_ERROR");
+		read_handler->pt_error_handler("NETWORK_SEND_ERROR");
 		stop();
 		return;
 	      }
 	    if (!queue.empty())
 	      queue_send();
 	    else
-	      tcp_write_queue_needs_send();
+	      pt_write_queue_needs_send();
 	  }
+      }
+
+      void recv_buffer(PacketFrom::SPtr& pfp, const size_t bytes_recvd)
+      {
+	bool requeue = true;
+	OPENVPN_LOG_PTLINK_VERBOSE("PT recv raw=" << raw_mode_read << " size=" << bytes_recvd);
+
+	pfp->buf.set_size(bytes_recvd);
+	requeue = process_recv_buffer(pfp->buf);
+	if (!halt && requeue)
+	  queue_recv(pfp.release()); // reuse PacketFrom object
       }
 
       bool process_recv_buffer(BufferAllocated& buf)
       {
 	bool requeue = true;
+	OPENVPN_LOG_PTLINK_VERBOSE("PT process_recv_buffer size=" << buf.size());
 
-	OPENVPN_LOG_TCPLINK_VERBOSE("TLSLink::process_recv_buffer: size=" << buf.size());
 
 	if (!is_raw_mode_read())
 	{
@@ -349,9 +365,9 @@ namespace openvpn {
 	  }
 	  catch (const std::exception& e)
 	  {
-	    OPENVPN_LOG_TCPLINK_ERROR("TLS-TCP packet extract error: " << e.what());
-	    stats->error(Error::TCP_SIZE_ERROR);
-	    read_handler->tcp_error_handler("TCP_SIZE_ERROR");
+	    OPENVPN_LOG_PTLINK_ERROR("packet extract error: " << e.what());
+	    stats->error(Error::PT_SIZE_ERROR);
+	    read_handler->pt_error_handler("PT_SIZE_ERROR");
 	    stop();
 	    return false;
 	  }
@@ -365,7 +381,7 @@ namespace openvpn {
 	    requeue = gremlin_recv(buf);
 	  else
 #endif
-	  requeue = read_handler->tcp_read_handler(buf);
+	  requeue = read_handler->pt_read_handler(buf);
 	}
 
 	return requeue;
@@ -373,7 +389,7 @@ namespace openvpn {
 
       void handle_recv(PacketFrom::SPtr pfp, const openvpn_io::error_code& error, const size_t bytes_recvd)
       {
-	OPENVPN_LOG_TCPLINK_VERBOSE("Link::handle_recv: " << error.message());
+	OPENVPN_LOG_PTLINK_VERBOSE("Link::handle_recv: " << error.message());
 	if (!halt)
 	{
 	  if (!error)
@@ -382,14 +398,14 @@ namespace openvpn {
 	  }
 	  else if (error == openvpn_io::error::eof)
 	  {
-	    OPENVPN_LOG_TCPLINK_ERROR("TCP recv EOF");
-	    read_handler->tcp_eof_handler();
+	    OPENVPN_LOG_PTLINK_ERROR("PT recv EOF");
+	    read_handler->pt_eof_handler();
 	  }
 	  else
 	  {
-	    OPENVPN_LOG_TCPLINK_ERROR("TCP recv error: " << error.message());
+	    OPENVPN_LOG_PTLINK_ERROR("PT recv error: " << error.message());
 	    stats->error(Error::NETWORK_RECV_ERROR);
-	    read_handler->tcp_error_handler("NETWORK_RECV_ERROR");
+	    read_handler->pt_error_handler("NETWORK_RECV_ERROR");
 	    stop();
 	  }
 	}
@@ -413,7 +429,7 @@ namespace openvpn {
 		  requeue = gremlin_recv(pkt);
 		else
 #endif
-		requeue = read_handler->tcp_read_handler(pkt);
+		requeue = read_handler->pt_read_handler(pkt);
 	      }
 	  }
 	return requeue;
@@ -435,7 +451,7 @@ namespace openvpn {
 	gremlin->recv_queue([self=Ptr(this), buf=std::move(buf)]() mutable {
 	    if (!self->halt)
 	      {
-		const bool requeue = self->read_handler->tcp_read_handler(buf);
+		const bool requeue = self->read_handler->pt_read_handler(buf);
 		if (requeue)
 		  self->queue_recv(nullptr);
 	      }
@@ -444,9 +460,9 @@ namespace openvpn {
       }
 #endif
 
-      void tcp_write_queue_needs_send()
+      void pt_write_queue_needs_send()
       {
-	read_handler->tcp_write_queue_needs_send();
+	read_handler->pt_write_queue_needs_send();
       }
 
       typename Protocol::socket& socket;
@@ -466,10 +482,6 @@ namespace openvpn {
 #ifdef OPENVPN_GREMLIN
       std::unique_ptr<Gremlin::SendRecvQueue> gremlin;
 #endif
-
-    private:
-      virtual void recv_buffer(PacketFrom::SPtr& pfp, const size_t bytes_recvd) = 0;
-      virtual void from_app_send_buffer(BufferPtr& buf) = 0;
     };
   }
 } // namespace openvpn

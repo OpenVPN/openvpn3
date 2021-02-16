@@ -19,16 +19,16 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// TCP transport object specialized for client.
+// Pluggable Transport object specialized for client.
 
-#ifndef OPENVPN_TRANSPORT_CLIENT_TCPCLI_H
-#define OPENVPN_TRANSPORT_CLIENT_TCPCLI_H
+#ifndef OPENVPN_TRANSPORT_CLIENT_PTCLI_H
+#define OPENVPN_TRANSPORT_CLIENT_PTCLI_H
 
 #include <sstream>
 
 #include <openvpn/io/io.hpp>
 
-#include <openvpn/transport/tcplink.hpp>
+#include <openvpn/transport/ptlink.hpp>
 #ifdef OPENVPN_TLS_LINK
 #include <openvpn/transport/tlslink.hpp>
 #endif
@@ -37,7 +37,7 @@
 #include <openvpn/client/remotelist.hpp>
 
 namespace openvpn {
-  namespace TCPTransport {
+  namespace PluggableTransports {
 
     class ClientConfig : public TransportClientFactory
     {
@@ -79,13 +79,13 @@ namespace openvpn {
     {
       typedef RCPtr<Client> Ptr;
 
-      typedef Link<openvpn_io::ip::tcp, Client*, false> LinkImpl;
+      typedef LinkImpl<openvpn_io::ip::tcp, Client*, false> Link;
 #ifdef OPENVPN_TLS_LINK
       typedef TLSLink<openvpn_io::ip::tcp, Client*, false> LinkImplTLS;
 #endif
 
       friend class ClientConfig;         // calls constructor
-      friend LinkImpl::Base;             // calls tcp_read_handler
+      friend Link;                       // calls pt_read_handler
 
     public:
       void transport_start() override
@@ -212,24 +212,24 @@ namespace openvpn {
 	  return false;
       }
 
-      void tcp_eof_handler() // called by LinkImpl::Base
+      void pt_eof_handler() // called by Link
       {
 	config->stats->error(Error::NETWORK_EOF_ERROR);
-	tcp_error_handler("NETWORK_EOF_ERROR");
+	pt_error_handler("NETWORK_EOF_ERROR");
       }
 
-      bool tcp_read_handler(BufferAllocated& buf) // called by LinkImpl::Base
+      bool pt_read_handler(BufferAllocated& buf) // called by Link
       {
 	parent->transport_recv(buf);
 	return !stop_requeueing;
       }
 
-      void tcp_write_queue_needs_send() // called by LinkImpl::Base
+      void pt_write_queue_needs_send() // called by Link
       {
 	parent->transport_needs_send();
       }
 
-      void tcp_error_handler(const char *error) // called by LinkImpl::Base
+      void pt_error_handler(const char *error) // called by Link
       {
 	std::ostringstream os;
 	os << "Transport error on '" << server_host << ": " << error;
@@ -266,7 +266,7 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << "DNS resolve error on '" << server_host << "' for " << server_protocol.str() << " session: " << error.message();
+		os << "DNS resolve error on '" << server_host << "' for PluggableTransports session: " << error.message();
 		config->stats->error(Error::RESOLVE_ERROR);
 		stop();
 		parent->transport_error(Error::UNDEF, os.str());
@@ -274,12 +274,11 @@ namespace openvpn {
 	  }
       }
 
-      // do TCP connect
+      // do Pluggable Transports connect
       void start_connect_()
       {
 	config->remote_list->get_endpoint(server_endpoint);
-	OPENVPN_LOG("Contacting " << server_endpoint << " via "
-		    << server_protocol.str());
+	OPENVPN_LOG("Contacting " << server_endpoint << " via PluggableTransports");
 	parent->transport_wait();
 	socket.open(server_endpoint.protocol());
 
@@ -343,12 +342,12 @@ namespace openvpn {
 		}
 		else
 #endif
-		  impl.reset(new LinkImpl(this,
-					  socket,
-					  0, // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
-					  config->free_list_max_size,
-					  (*config->frame)[Frame::READ_LINK_TCP],
-					  config->stats));
+		  impl.reset(new Link(this,
+				      socket,
+				      0, // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
+				      config->free_list_max_size,
+				      (*config->frame)[Frame::READ_LINK_TCP],
+				      config->stats));
 
 #ifdef OPENVPN_GREMLIN
 		impl->gremlin_config(config->gremlin_config);
@@ -361,8 +360,8 @@ namespace openvpn {
 	    else
 	      {
 		std::ostringstream os;
-		os << server_protocol.str() << " connect error on '" << server_host << ':' << server_port << "' (" << server_endpoint << "): " << error.message();
-		config->stats->error(Error::TCP_CONNECT_ERROR);
+		os <<  "PT connect error on '" << server_host << ':' << server_port << "' (" << server_endpoint << ") ";
+		config->stats->error(Error::PT_CONNECT_ERROR);
 		stop();
 		parent->transport_error(Error::UNDEF, os.str());
 	      }
@@ -377,9 +376,9 @@ namespace openvpn {
       openvpn_io::ip::tcp::socket socket;
       ClientConfig::Ptr config;
       TransportClientParent* parent;
-      LinkBase::Ptr impl;
+      Link::Ptr impl;
       openvpn_io::ip::tcp::resolver resolver;
-      LinkImpl::Base::protocol::endpoint server_endpoint;
+      Link::protocol::endpoint server_endpoint;
       bool halt;
       bool stop_requeueing;
 
