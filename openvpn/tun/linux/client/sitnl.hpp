@@ -900,7 +900,7 @@ err:
 	req.i.ifi_family = AF_PACKET;
 	req.i.ifi_index = ifindex;
 
-	OPENVPN_LOG(__func__ << ": idel " << iface);
+	OPENVPN_LOG(__func__ << ": del " << iface);
 
 	return sitnl_send(&req.n, 0, 0, NULL, NULL);
       }
