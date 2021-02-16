@@ -28,6 +28,8 @@
 #include <openvpn/dco/key.hpp>
 #endif
 
+#include <openvpn/addr/ip.hpp>
+
 namespace openvpn {
   class TunBuilderBase
   {
@@ -257,12 +259,10 @@ namespace openvpn {
     /**
      * Enable ovpn-dco support
      *
-     * @param transport_fd file descriptor of client-created transport socket
-     * @param proto transport protocol such as OVPN_PROTO_UDP4. See enum ovpn_dco for values.
      * @param dev_name name of ovpn-dco net device, which should be created by client
      * @return int file descriptor of socket used to direct communication with ovpn-dco kernel module
      */
-    virtual int tun_builder_dco_enable(int transport_fd, unsigned int proto, const std::string& dev_name)
+    virtual int tun_builder_dco_enable(const std::string& dev_name)
     {
       return -1;
     }
@@ -270,23 +270,36 @@ namespace openvpn {
     /**
      * Add peer information to kernel module
      *
-     * @param local_ip local ip
-     * @param local_port local port
-     * @param remote_ip remote ip
-     * @param remote_port remote port
+     * @param peer_id Peer ID of the peer being created
+     * @param transport_fd socket to be used to communicate with the peer
+     * @param sa sockaddr object representing the remote endpoint
+     * @param salen length of sa (either sizeof(sockaddr_in) or sizeof(sockaddr_in6)
+     * @vpn4 IPv4 address associated with this peer in the tunnel
+     * @vpn6 IPv6 address associated with this peer in the tunnel
      */
-    virtual void tun_builder_dco_new_peer(const std::string& local_ip, unsigned int local_port,
-                                          const std::string& remote_ip, unsigned int remote_port)
+    virtual void tun_builder_dco_new_peer(uint32_t peer_id, uint32_t transport_fd, struct sockaddr *sa,
+					  socklen_t salen, IPv4::Addr vpn4, IPv6::Addr vpn6)
     {
     }
 
     /**
      * Set peer properties. Currently used for keepalive settings.
      *
+     * @param peer_id ID of the peer whose properties have to be modified
      * @param keepalive_interval how often to send ping packet in absence of traffic
      * @param keepalive_timeout when to trigger keepalive_timeout in absence of traffic
      */
-    virtual void tun_builder_dco_set_peer(int keepalive_interval, int keepalive_timeout)
+    virtual void tun_builder_dco_set_peer(uint32_t peer_id, int keepalive_interval, int keepalive_timeout)
+    {
+    }
+
+    /**
+     * Delete an existing peer.
+     *
+     * @param peer_id the ID of the peer to delete
+     * @throws netlink_error thrown if error occurs during sending netlink message
+     */
+    virtual void tun_builder_dco_del_peer(uint32_t peer_id)
     {
     }
 
@@ -304,17 +317,19 @@ namespace openvpn {
      * Swap keys between primary and secondary slot. Called
      * by client as part of rekeying logic to promote and demote keys.
      *
+     * @param peer_id the ID of the peer whose keys have to be swapped
      */
-    virtual void tun_builder_dco_swap_keys()
+    virtual void tun_builder_dco_swap_keys(uint32_t peer_id)
     {
     }
 
     /**
      * Remove key from key slot.
      *
+     * @param peer_id the ID of the peer whose keys has to be deleted
      * @param key_slot OVPN_KEY_SLOT_PRIMARY or OVPN_KEY_SLOT_SECONDARY
      */
-    virtual void tun_builder_dco_del_key(unsigned int key_slot)
+    virtual void tun_builder_dco_del_key(uint32_t peer_id, unsigned int key_slot)
     {
     }
 
