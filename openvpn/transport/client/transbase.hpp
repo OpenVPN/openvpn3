@@ -27,14 +27,10 @@
 
 #include <string>
 
-#include <openvpn/io/io.hpp>
-
-#include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/error/error.hpp>
-#include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/transport/protocol.hpp>
 
 namespace openvpn {
