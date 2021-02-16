@@ -235,7 +235,7 @@ namespace openvpn {
 	    if (impl)
 	      impl->stop();
 
-	    if (connection) 
+	    if (connection)
 	      connection->close();
 
 	    resolver.cancel();
@@ -315,7 +315,7 @@ namespace openvpn {
       }
 
       bool socket_protect() {
-	if (config->socket_protect) 
+	if (config->socket_protect)
 	  {
 	    int fd = connection->native_handle();
 	    // short circuit prevents socket_protect from being evaluated when fd < 0
@@ -327,12 +327,12 @@ namespace openvpn {
 	return true;
       }
 
-      // start I/O 
+      // start I/O
       void start_impl_(const Error::Type error)
       {
 	if (!halt)
 	  {
-	    if (!error) 
+	    if (!error)
 	      {
 		impl.reset(new Link(io_context,
 				    this,

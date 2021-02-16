@@ -239,7 +239,7 @@ namespace openvpn {
 	openvpn_io::post([&io_context, connection, mut_buf, completion=std::move(completion)]() mutable {
 	  Error::Type error_code = Error::SUCCESS;
 	  size_t bytes_recvd = 0;
-	  try 
+	  try
 	  {
 	    bytes_recvd = connection->receive(mut_buf);
 	  }
@@ -258,7 +258,7 @@ namespace openvpn {
       }
 
       template <typename Handler>
-      void async_send(openvpn_io::const_buffer buf, Handler&& completion) 
+      void async_send(openvpn_io::const_buffer buf, Handler&& completion)
       {
 	// capture io_context and connection to avoid capturing self. This assumes that completion captures a reference-counted version of self.
 	openvpn_io::io_context& io_context = this->io_context;
@@ -267,7 +267,7 @@ namespace openvpn {
 	openvpn_io::post([&io_context, connection, buf, completion=std::move(completion)]() {
 	  Error::Type error_code = Error::SUCCESS;
 	  size_t bytes_sent = 0;
-	  try 
+	  try
 	  {
 	    bytes_sent = connection->send(buf);
 	  }
@@ -463,7 +463,7 @@ namespace openvpn {
 
       openvpn_io::io_context& io_context;
       openvpn::PluggableTransports::Connection::Ptr connection;
-      
+
       bool halt;
       ReadHandler read_handler;
       Frame::Context frame_context;
