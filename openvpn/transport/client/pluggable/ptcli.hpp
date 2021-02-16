@@ -29,9 +29,6 @@
 #include <openvpn/io/io.hpp>
 
 #include <openvpn/transport/ptlink.hpp>
-#ifdef OPENVPN_TLS_LINK
-#include <openvpn/transport/tlslink.hpp>
-#endif
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/client/remotelist.hpp>
@@ -50,11 +47,6 @@ namespace openvpn {
       SessionStats::Ptr stats;
 
       SocketProtect* socket_protect;
-
-#ifdef OPENVPN_TLS_LINK
-      bool use_tls = false;
-      std::string tls_ca;
-#endif
 
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
@@ -79,10 +71,7 @@ namespace openvpn {
     {
       typedef RCPtr<Client> Ptr;
 
-      typedef LinkImpl<openvpn_io::ip::tcp, Client*> Link;
-#ifdef OPENVPN_TLS_LINK
-      typedef TLSLink<openvpn_io::ip::tcp, Client*> LinkImplTLS;
-#endif
+      typedef LinkImpl<Client*> Link;
 
       friend class ClientConfig;         // calls constructor
       friend Link;                       // calls pt_read_handler
@@ -96,7 +85,7 @@ namespace openvpn {
 	    stop_requeueing = false;
 	    if (config->remote_list->endpoint_available(&server_host,
 							&server_port,
-							&server_protocol))
+							nullptr))
 	      {
 		start_connect_();
 	      }
@@ -151,7 +140,7 @@ namespace openvpn {
 	host = server_host;
 	port = server_port;
 	const IP::Addr addr = server_endpoint_addr();
-	proto = server_protocol.str();
+	proto = "PluggableTransports";
 	ip_addr = addr.to_string();
       }
 
@@ -162,7 +151,7 @@ namespace openvpn {
 
       Protocol transport_protocol() const override
       {
-	return server_protocol;
+	return Protocol();
       }
 
       void stop() override { stop_(); }
@@ -288,7 +277,6 @@ namespace openvpn {
 	      {
 		config->stats->error(Error::SOCKET_PROTECT_ERROR);
 		stop();
-		parent->transport_error(Error::UNDEF, "socket_protect error (" + std::string(server_protocol.str()) + ")");
 		return;
 	      }
 	  }
@@ -308,46 +296,12 @@ namespace openvpn {
 	  {
 	    if (!error)
 	      {
-#ifdef OPENVPN_TLS_LINK
-		if (config->use_tls)
-		{
-		  int flags = SSLConst::LOG_VERIFY_STATUS|SSLConst::ENABLE_CLIENT_SNI;
-		  SSLLib::SSLAPI::Config::Ptr ssl_conf;
-		  ssl_conf.reset(new SSLLib::SSLAPI::Config());
-		  ssl_conf->set_mode(Mode(Mode::CLIENT));
-		  ssl_conf->set_local_cert_enabled(false);
-		  ssl_conf->set_frame(config->frame);
-		  ssl_conf->set_rng(new SSLLib::RandomAPI(false));
-
-		  if (!config->tls_ca.empty())
-		  {
-		    ssl_conf->load_ca(config->tls_ca, true);
-		  }
-		  else
-		  {
-		    flags |= SSLConst::NO_VERIFY_PEER;
-		  }
-
-		  ssl_conf->set_flags(flags);
-		  ssl_factory = ssl_conf->new_factory();
-
-		  impl.reset(new LinkImplTLS(this,
-					     io_context,
-					     socket,
-					     0,
-					     config->free_list_max_size,
-					     config->frame,
-					     config->stats,
-					     ssl_factory));
-		}
-		else
-#endif
-		  impl.reset(new Link(this,
-				      socket,
-				      0, // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
-				      config->free_list_max_size,
-				      (*config->frame)[Frame::READ_LINK_TCP],
-				      config->stats));
+		impl.reset(new Link(this,
+				    socket,
+				    0, // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
+				    config->free_list_max_size,
+				    (*config->frame)[Frame::READ_LINK_TCP],
+				    config->stats));
 
 #ifdef OPENVPN_GREMLIN
 		impl->gremlin_config(config->gremlin_config);
@@ -368,7 +322,6 @@ namespace openvpn {
 
       std::string server_host;
       std::string server_port;
-      Protocol server_protocol;
 
       openvpn_io::io_context& io_context;
       openvpn_io::ip::tcp::socket socket;
@@ -379,10 +332,6 @@ namespace openvpn {
       Link::protocol::endpoint server_endpoint;
       bool halt;
       bool stop_requeueing;
-
-#ifdef OPENVPN_TLS_LINK
-      SSLFactoryAPI::Ptr ssl_factory;
-#endif
     };
 
     inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,

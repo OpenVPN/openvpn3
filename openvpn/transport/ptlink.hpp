@@ -65,15 +65,14 @@ namespace openvpn {
       BufferAllocated buf;
     };
 
-    template <typename Protocol,
-	      typename ReadHandler>
+    template <typename ReadHandler>
     class LinkImpl : public RC<thread_unsafe_refcount>
     {
       typedef std::deque<BufferPtr> Queue;
 
     public:
-      typedef RCPtr<LinkImpl<Protocol, ReadHandler>> Ptr;
-      typedef Protocol protocol;
+      typedef openvpn_io::ip::tcp protocol;
+      typedef RCPtr<LinkImpl<ReadHandler>> Ptr;
 
       void set_mutate(const TransportMutateStream::Ptr& mutate_arg)
       {
