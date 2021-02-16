@@ -28,6 +28,7 @@
 
 #include <openvpn/io/io.hpp>
 
+#include <openvpn/transport/client/pluggable/pt.hpp>
 #include <openvpn/transport/ptlink.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/socket_protect.hpp>
@@ -47,6 +48,7 @@ namespace openvpn {
       SessionStats::Ptr stats;
 
       SocketProtect* socket_protect;
+      openvpn::PluggableTransports::Transport::Ptr transport;
 
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
@@ -163,7 +165,6 @@ namespace openvpn {
 	     TransportClientParent* parent_arg)
 	:  AsyncResolvableTCP(io_context_arg),
 	   io_context(io_context_arg),
-	   socket(io_context_arg),
 	   config(config_arg),
 	   parent(parent_arg),
 	   resolver(io_context_arg),
@@ -234,7 +235,9 @@ namespace openvpn {
 	    if (impl)
 	      impl->stop();
 
-	    socket.close();
+	    if (connection) 
+	      connection->close();
+
 	    resolver.cancel();
 	    async_resolve_cancel();
 	  }
@@ -269,35 +272,71 @@ namespace openvpn {
 	config->remote_list->get_endpoint(server_endpoint);
 	OPENVPN_LOG("Contacting " << server_endpoint << " via PluggableTransports");
 	parent->transport_wait();
-	socket.open(server_endpoint.protocol());
 
-	if (config->socket_protect)
-	  {
-	    if (!config->socket_protect->socket_protect(socket.native_handle(), server_endpoint_addr()))
-	      {
-		config->stats->error(Error::SOCKET_PROTECT_ERROR);
-		stop();
-		return;
-	      }
-	  }
-
-	socket.set_option(openvpn_io::ip::tcp::no_delay(true));
-	socket.async_connect(server_endpoint, [self=Ptr(this)](const openvpn_io::error_code& error)
-                                              {
-                                                OPENVPN_ASYNC_HANDLER;
-                                                self->start_impl_(error);
-                                              });
+	async_connect(server_endpoint, [self=Ptr(this)](const Error::Type error_code)
+					      {
+						OPENVPN_ASYNC_HANDLER;
+						if (!error_code && !self->socket_protect())
+						  {
+						    self->config->stats->error(Error::SOCKET_PROTECT_ERROR);
+						    self->stop();
+						    self->parent->transport_error(Error::UNDEF, "socket_protect error");
+						    return;
+						  }
+						self->start_impl_(error_code);
+					      });
       }
 
-      // start I/O on TCP socket
-      void start_impl_(const openvpn_io::error_code& error)
+      template <typename Handler>
+      void async_connect(openvpn_io::ip::tcp::endpoint server_endpoint, Handler&& completion) {
+	// capture io_context, config, and connection to avoid capturing self. This assumes that completion captures a reference-counted version of self.
+	openvpn_io::io_context& io_context = this->io_context;
+	auto config = this->config;
+	auto& connection = this->connection;
+	// handle async connect. We use post to dispatch elsewhere, then post again to come back to the "main" thread
+	openvpn_io::post([&io_context, config, &connection, server_endpoint, completion=std::move(completion)]() {
+	  Error::Type error_code = Error::SUCCESS;
+	  try
+	  {
+	    connection = config->transport->dial(server_endpoint);
+	  }
+	  catch (const std::exception& e)
+	  {
+	      error_code = Error::PT_CONNECT_ERROR;
+	      const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
+	      if (ec && ec->code_defined())
+		error_code = ec->code();
+	  }
+
+	  openvpn_io::post(io_context, [error_code, completion=std::move(completion)]() {
+	      completion(error_code);
+	  });
+	});
+      }
+
+      bool socket_protect() {
+	if (config->socket_protect) 
+	  {
+	    int fd = connection->native_handle();
+	    // short circuit prevents socket_protect from being evaluated when fd < 0
+	    if (fd < 0 || !config->socket_protect->socket_protect(fd, server_endpoint_addr()))
+	      {
+		return false;
+	      }
+	  }
+	return true;
+      }
+
+      // start I/O 
+      void start_impl_(const Error::Type error)
       {
 	if (!halt)
 	  {
-	    if (!error)
+	    if (!error) 
 	      {
-		impl.reset(new Link(this,
-				    socket,
+		impl.reset(new Link(io_context,
+				    this,
+				    connection,
 				    0, // send_queue_max_size is unlimited because we regulate size in cliproto.hpp
 				    config->free_list_max_size,
 				    (*config->frame)[Frame::READ_LINK_TCP],
@@ -320,11 +359,13 @@ namespace openvpn {
 	  }
       }
 
+      openvpn_io::io_context& io_context;
+
       std::string server_host;
       std::string server_port;
 
-      openvpn_io::io_context& io_context;
-      openvpn_io::ip::tcp::socket socket;
+      openvpn::PluggableTransports::Connection::Ptr connection;
+
       ClientConfig::Ptr config;
       TransportClientParent* parent;
       Link::Ptr impl;

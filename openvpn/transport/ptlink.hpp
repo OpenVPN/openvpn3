@@ -36,9 +36,10 @@
 #include <openvpn/error/excode.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
-#include <openvpn/transport/tcplinkbase.hpp>
 #include <openvpn/transport/pktstream.hpp>
 #include <openvpn/transport/mutate.hpp>
+
+#include <openvpn/transport/client/pluggable/pt.hpp>
 
 #ifdef OPENVPN_GREMLIN
 #include <openvpn/transport/gremlin.hpp>
@@ -161,20 +162,20 @@ namespace openvpn {
 	return true;
       }
 
-      void queue_recv(PacketFrom *tcpfrom)
+      void queue_recv(PacketFrom *ptfrom)
       {
 	OPENVPN_LOG_PTLINK_VERBOSE("Link::queue_recv");
-	if (!tcpfrom)
-	  tcpfrom = new PacketFrom();
-	frame_context.prepare(tcpfrom->buf);
+	if (!ptfrom)
+	  ptfrom = new PacketFrom();
+	frame_context.prepare(ptfrom->buf);
 
-	socket.async_receive(frame_context.mutable_buffer_clamp(tcpfrom->buf),
-			     [self=Ptr(this), tcpfrom=PacketFrom::SPtr(tcpfrom)](const openvpn_io::error_code& error, const size_t bytes_recvd) mutable
+	async_recv(frame_context.mutable_buffer_clamp(ptfrom->buf),
+			     [self=Ptr(this), ptfrom=PacketFrom::SPtr(ptfrom)](const Error::Type error, const size_t bytes_recvd) mutable
 			     {
 			       OPENVPN_ASYNC_HANDLER;
 			       try
 			       {
-			         self->handle_recv(std::move(tcpfrom), error, bytes_recvd);
+			         self->handle_recv(std::move(ptfrom), error, bytes_recvd);
 			       }
 			       catch (const std::exception& e)
 			       {
@@ -199,13 +200,15 @@ namespace openvpn {
 			     });
       }
 
-      LinkImpl(ReadHandler read_handler_arg,
-		 typename Protocol::socket& socket_arg,
-		 const size_t send_queue_max_size_arg, // 0 to disable
-		 const size_t free_list_max_size_arg,
-		 const Frame::Context& frame_context_arg,
-		 const SessionStats::Ptr& stats_arg)
-	: socket(socket_arg),
+      LinkImpl(openvpn_io::io_context& io_context_arg,
+	     ReadHandler read_handler_arg,
+	     openvpn::PluggableTransports::Connection::Ptr connection_arg,
+	     const size_t send_queue_max_size_arg, // 0 to disable
+	     const size_t free_list_max_size_arg,
+	     const Frame::Context& frame_context_arg,
+	     const SessionStats::Ptr& stats_arg)
+	: io_context(io_context_arg),
+	  connection(connection_arg),
 	  halt(false),
 	  read_handler(read_handler_arg),
 	  frame_context(frame_context_arg),
@@ -226,6 +229,62 @@ namespace openvpn {
 
       LinkImpl() { stop(); }
 
+      template <typename Handler>
+      void async_recv(openvpn_io::mutable_buffer mut_buf, Handler&& completion)
+      {
+	// capture io_context and connection to avoid capturing self. This assumes that completion captures a reference-counted version of self.
+	openvpn_io::io_context& io_context = this->io_context;
+	auto connection = this->connection;
+	// post to do an async recv, then post ot come back to the "main" thread.
+	openvpn_io::post([&io_context, connection, mut_buf, completion=std::move(completion)]() mutable {
+	  Error::Type error_code = Error::SUCCESS;
+	  size_t bytes_recvd = 0;
+	  try 
+	  {
+	    bytes_recvd = connection->receive(mut_buf);
+	  }
+	  catch (const std::exception& e)
+	  {
+	      error_code = Error::NETWORK_RECV_ERROR;
+	      const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
+	      if (ec && ec->code_defined())
+		error_code = ec->code();
+	  }
+
+	  openvpn_io::post(io_context, [error_code, bytes_recvd, completion=std::move(completion)]() mutable {
+	    completion(error_code, bytes_recvd);
+	  });
+	});
+      }
+
+      template <typename Handler>
+      void async_send(openvpn_io::const_buffer buf, Handler&& completion) 
+      {
+	// capture io_context and connection to avoid capturing self. This assumes that completion captures a reference-counted version of self.
+	openvpn_io::io_context& io_context = this->io_context;
+	auto connection = this->connection;
+	// post to do an async send, then post ot come back to the "main" thread.
+	openvpn_io::post([&io_context, connection, buf, completion=std::move(completion)]() {
+	  Error::Type error_code = Error::SUCCESS;
+	  size_t bytes_sent = 0;
+	  try 
+	  {
+	    bytes_sent = connection->send(buf);
+	  }
+	  catch (const std::exception& e)
+	  {
+	      error_code = Error::NETWORK_SEND_ERROR;
+	      const ExceptionCode *ec = dynamic_cast<const ExceptionCode *>(&e);
+	      if (ec && ec->code_defined())
+		error_code = ec->code();
+	  }
+
+	  openvpn_io::post(io_context, [error_code, bytes_sent, completion=std::move(completion)]() {
+	    completion(error_code, bytes_sent);
+	  });
+	});
+      }
+
       void queue_send_buffer(BufferPtr& buf)
       {
 	queue.push_back(std::move(buf));
@@ -236,15 +295,15 @@ namespace openvpn {
       void queue_send()
       {
 	BufferAllocated& buf = *queue.front();
-	socket.async_send(buf.const_buffer_clamp(),
-			  [self=Ptr(this)](const openvpn_io::error_code& error, const size_t bytes_sent)
+	async_send(buf.const_buffer_clamp(),
+			  [self=Ptr(this)](const Error::Type error_code, const size_t bytes_sent)
 			  {
 			    OPENVPN_ASYNC_HANDLER;
-			    self->handle_send(error, bytes_sent);
+			    self->handle_send(error_code, bytes_sent);
 			  });
       }
 
-      void handle_send(const openvpn_io::error_code& error, const size_t bytes_sent)
+      void handle_send(const Error::Type error, const size_t bytes_sent)
       {
 	if (!halt)
 	  {
@@ -324,23 +383,23 @@ namespace openvpn {
 	return requeue;
       }
 
-      void handle_recv(PacketFrom::SPtr pfp, const openvpn_io::error_code& error, const size_t bytes_recvd)
+      void handle_recv(PacketFrom::SPtr pfp, Error::Type error, const int bytes_recvd)
       {
-	OPENVPN_LOG_PTLINK_VERBOSE("Link::handle_recv: " << error.message());
+	OPENVPN_LOG_PTLINK_VERBOSE("Link::handle_recv: error_code=" << error_code);
 	if (!halt)
 	{
 	  if (!error)
 	  {
 	    recv_buffer(pfp, bytes_recvd);
 	  }
-	  else if (error == openvpn_io::error::eof)
+	  else if (error == Error::NETWORK_EOF_ERROR)
 	  {
 	    OPENVPN_LOG_PTLINK_ERROR("PT recv EOF");
 	    read_handler->pt_eof_handler();
 	  }
 	  else
 	  {
-	    OPENVPN_LOG_PTLINK_ERROR("PT recv error: " << error.message());
+	    OPENVPN_LOG_PTLINK_ERROR("PT recv error: error_code=" << error);
 	    stats->error(Error::NETWORK_RECV_ERROR);
 	    read_handler->pt_error_handler("NETWORK_RECV_ERROR");
 	    stop();
@@ -402,7 +461,9 @@ namespace openvpn {
 	read_handler->pt_write_queue_needs_send();
       }
 
-      typename Protocol::socket& socket;
+      openvpn_io::io_context& io_context;
+      openvpn::PluggableTransports::Connection::Ptr connection;
+      
       bool halt;
       ReadHandler read_handler;
       Frame::Context frame_context;
