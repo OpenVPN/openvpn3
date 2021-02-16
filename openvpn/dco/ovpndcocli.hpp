@@ -22,9 +22,13 @@
 
 // tun/transport client for ovpn-dco
 
-class OvpnDcoClient : public Client, public KoRekey::Receiver {
+#include <openvpn/dco/dcocli.hpp>
+
+class OvpnDcoClient : public Client, public KoRekey::Receiver, public TransportClientParent {
   friend class ClientConfig;
   friend class GeNL;
+
+  OPENVPN_EXCEPTION(dcocli_error);
 
   typedef RCPtr<OvpnDcoClient> Ptr;
   typedef GeNL<OvpnDcoClient *> GeNLImpl;
@@ -37,6 +41,26 @@ class OvpnDcoClient : public Client, public KoRekey::Receiver {
 public:
   virtual void tun_start(const OptionList &opt, TransportClient &transcli,
                          CryptoDCSettings &dc_settings) override {
+    // extract peer ID from pushed options
+    try {
+      const Option *o = opt.get_ptr("peer-id");
+      if (o)
+      {
+	bool status = parse_number_validate<uint32_t>(o->get(1, 16), 16, 0, OVPN_PEER_ID_UNDEF - 1,
+						      &peer_id);
+	if (!status)
+	  OPENVPN_THROW(dcocli_error, "Parse/range issue with pushed peer-id");
+      }
+      else
+      {
+	OPENVPN_THROW(dcocli_error, "No peer-id pushed by server");
+      }
+    }
+    catch (const std::exception& e)
+    {
+      OPENVPN_THROW(dcocli_error, "Cannot extract peer-id: " << e.what());
+    }
+
     // notify parent
     tun_parent->tun_pre_tun_config();
 
@@ -78,111 +102,135 @@ public:
     dc_settings.set_factory(CryptoDCFactory::Ptr(new KoRekey::Factory(
         dc_settings.factory(), this, config->transport.frame)));
 
+    // add peer in ovpn-dco
+    add_peer(peer_id, state->vpn_ip4_gw.to_ipv4_zero(), state->vpn_ip6_gw.to_ipv6_zero());
     // signal that we are connected
     tun_parent->tun_connected();
   }
 
   virtual std::string tun_name() const override { return "ovpn-dco"; }
 
+  virtual IP::Addr server_endpoint_addr() const override
+  {
+    if (transport)
+      return transport->server_endpoint_addr();
+    else
+      return IP::Addr();
+  }
+
+  virtual unsigned short server_endpoint_port() const override
+  {
+    if (transport)
+      return transport->server_endpoint_port();
+    else
+      return 0;
+  }
+
+  virtual Protocol transport_protocol() const override
+  {
+    return transport->transport_protocol();
+  }
+
   virtual void transport_start() override {
-    if (config->transport.protocol.is_udp())
-      transport_start_udp();
-    else if (config->transport.protocol.is_tcp())
-      transport_start_tcp();
-    else {
-      stop();
-      std::ostringstream os;
-      os << "unsupported protocol: " << config->transport.protocol.str();
-      transport_parent->transport_error(Error::UNDEF, os.str());
+    TransportClientFactory::Ptr transport_factory;
+
+    if (!config->transport.protocol.is_tcp())
+    {
+      UDPTransport::ClientConfig::Ptr udpconf = UDPTransport::ClientConfig::new_obj();
+      udpconf->remote_list = config->transport.remote_list;
+      udpconf->frame = config->transport.frame;
+      udpconf->stats = config->transport.stats;
+      udpconf->socket_protect = config->transport.socket_protect;
+      udpconf->server_addr_float = config->transport.server_addr_float;
+      transport_factory = udpconf;
     }
+    else
+    {
+      TCPTransport::ClientConfig::Ptr tcpconf = TCPTransport::ClientConfig::new_obj();
+      tcpconf->remote_list = config->transport.remote_list;
+      tcpconf->frame = config->transport.frame;
+      tcpconf->stats = config->transport.stats;
+      tcpconf->socket_protect = config->transport.socket_protect;
+      transport_factory = tcpconf;
+    }
+
+    transport = transport_factory->new_transport_client_obj(io_context, this);
+    transport->transport_start();
   }
 
   virtual bool transport_send_const(const Buffer &buf) override {
+    if (peer_id == OVPN_PEER_ID_UNDEF)
+      return transport->transport_send_const(buf);
+
     return send(buf);
   }
 
   virtual bool transport_send(BufferAllocated &buf) override {
+    if (peer_id == OVPN_PEER_ID_UNDEF)
+      return transport->transport_send(buf);
+
     return send(buf);
   }
 
   bool send(const Buffer &buf) {
-    if (config->builder) {
+    if (config->builder)
       pipe->write_some(buf.const_buffer());
-    } else {
-      genl->send_data(buf.c_data(), buf.size());
-    }
+    else
+      genl->send_data(peer_id, buf.c_data(), buf.size());
+
     return true;
   }
 
-  virtual void start_impl_udp(const openvpn_io::error_code &error) override {
-    start_impl(error);
+  void get_remote_sockaddr(struct sockaddr_storage &sa, socklen_t &salen)
+  {
+    memset(&sa, 0, sizeof(sa));
+
+    struct sockaddr_in *sa4 = (struct sockaddr_in *)&sa;
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&sa;
+
+    IP::Addr remote_addr = transport->server_endpoint_addr();
+    if (remote_addr.version() == IP::Addr::V4) {
+      salen = sizeof(*sa4);
+      *sa4 = remote_addr.to_ipv4().to_sockaddr(transport->server_endpoint_port());
+    } else {
+      salen = sizeof(*sa6);
+      *sa6 = remote_addr.to_ipv6().to_sockaddr(transport->server_endpoint_port());
+    }
   }
 
-  void start_impl(const openvpn_io::error_code &error) {
-    if (halt)
+  void del_peer(uint32_t peer_id)
+  {
+    TunBuilderBase *tb = config->builder;
+    if (tb) {
+      tb->tun_builder_dco_del_peer(peer_id);
       return;
-
-    if (!error) {
-      openvpn_io::ip::address local_addr = proto->local_address();
-      openvpn_io::ip::address remote_addr = proto->remote_address();
-      unsigned short local_port = proto->local_port();
-      unsigned short remote_port = proto->remote_port();
-
-      auto conf_proto = config->transport.protocol;
-      ovpn_proto p = OVPN_PROTO_UNDEF;
-      if (conf_proto.is_tcp()) {
-        p = conf_proto.is_ipv6() ? OVPN_PROTO_TCP6 : OVPN_PROTO_TCP4;
-      } else {
-        p = conf_proto.is_ipv6() ? OVPN_PROTO_UDP6 : OVPN_PROTO_UDP4;
-      }
-
-      TunBuilderBase *tb = config->builder;
-      if (tb) {
-        tb->tun_builder_new();
-        // pipe fd which is used to communicate to kernel
-        int fd = tb->tun_builder_dco_enable(proto->native_handle(), p,
-                                            config->dev_name);
-        if (fd == -1) {
-          stop_();
-          transport_parent->transport_error(Error::TUN_IFACE_CREATE,
-                                            "error creating ovpn-dco device");
-          return;
-        }
-        pipe.reset(new openvpn_io::posix::stream_descriptor(io_context, fd));
-        tb->tun_builder_dco_new_peer(local_addr.to_string(), local_port,
-                                     remote_addr.to_string(), remote_port);
-
-        queue_read_pipe(nullptr);
-
-        transport_parent->transport_connecting();
-      } else {
-        std::ostringstream os;
-        int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
-        if (res != 0) {
-          stop_();
-          transport_parent->transport_error(Error::TUN_IFACE_CREATE, os.str());
-        } else {
-          genl.reset(new GeNLImpl(
-              io_context, if_nametoindex(config->dev_name.c_str()), this));
-
-          genl->start_vpn(proto->native_handle(), p);
-          genl->register_packet();
-          genl->new_peer(local_addr, local_port, remote_addr, remote_port);
-
-          transport_parent->transport_connecting();
-        }
-      }
-    } else {
-      std::ostringstream os;
-      os << proto->proto();
-      os << " connect error on '" << server_host << ':' << server_port << "' ("
-         << proto->server_endpoint_addr() << "): " << error.message();
-      config->transport.stats->error(config->transport.protocol.is_tcp()
-                                         ? Error::TCP_CONNECT_ERROR
-                                         : Error::UDP_CONNECT_ERROR);
-      stop_();
-      transport_parent->transport_error(Error::UNDEF, os.str());
     }
+
+    genl->del_peer(peer_id);
+  }
+
+  void add_peer(uint32_t peer_id, IPv4::Addr ipv4, IPv6::Addr ipv6)
+  {
+    struct sockaddr_storage sa;
+    socklen_t salen;
+
+    get_remote_sockaddr(sa, salen);
+
+    TunBuilderBase *tb = config->builder;
+    if (tb) {
+      tb->tun_builder_dco_new_peer(peer_id, transport->native_handle(), (struct sockaddr *)&sa, salen,
+				   ipv4, ipv6);
+
+      queue_read_pipe(nullptr);
+      return;
+    }
+
+    genl->new_peer(peer_id, transport->native_handle(), (struct sockaddr *)&sa, salen, ipv4, ipv6);
+  }
+
+  virtual void resolve_callback(const openvpn_io::error_code& error,
+				openvpn_io::ip::udp::resolver::results_type results) override
+  {
   }
 
   virtual void stop_() override {
@@ -197,11 +245,15 @@ public:
         std::ostringstream os;
         if (genl)
           genl->stop();
+
         int res = TunNetlink::iface_del(os, config->dev_name);
         if (res != 0) {
           OPENVPN_LOG("ovpndcocli: error deleting iface ovpn:" << os.str());
         }
       }
+
+      if (transport)
+	transport->stop();
     }
   }
 
@@ -229,15 +281,18 @@ public:
       break;
 
     case CryptoDCInstance::NEW_SECONDARY:
+
       genl->new_key(OVPN_KEY_SLOT_SECONDARY, kc);
       break;
 
     case CryptoDCInstance::PRIMARY_SECONDARY_SWAP:
-      genl->swap_keys();
+
+      genl->swap_keys(peer_id);
       break;
 
     case CryptoDCInstance::DEACTIVATE_SECONDARY:
-      genl->del_key(OVPN_KEY_SLOT_SECONDARY);
+
+      genl->del_key(peer_id, OVPN_KEY_SLOT_SECONDARY);
       break;
 
     case CryptoDCInstance::DEACTIVATE_ALL:
@@ -270,11 +325,11 @@ public:
       break;
 
     case CryptoDCInstance::PRIMARY_SECONDARY_SWAP:
-      tb->tun_builder_dco_swap_keys();
+      tb->tun_builder_dco_swap_keys(peer_id);
       break;
 
     case CryptoDCInstance::DEACTIVATE_SECONDARY:
-      tb->tun_builder_dco_del_key(OVPN_KEY_SLOT_SECONDARY);
+      tb->tun_builder_dco_del_key(peer_id, OVPN_KEY_SLOT_SECONDARY);
       break;
 
     case CryptoDCInstance::DEACTIVATE_ALL:
@@ -286,6 +341,10 @@ public:
       OPENVPN_LOG("ovpndcocli: unknown rekey type: " << rktype);
       break;
     }
+  }
+
+  virtual void transport_recv(BufferAllocated& buf) override {
+    transport_parent->transport_recv(buf);
   }
 
   bool tun_read_handler(BufferAllocated &buf) {
@@ -301,26 +360,44 @@ public:
       break;
 
     case OVPN_CMD_DEL_PEER: {
-      stop_();
-      int8_t reason = -1;
+      uint32_t peer_id;
+      buf.read(&peer_id, sizeof(peer_id));
+      uint8_t reason;
       buf.read(&reason, sizeof(reason));
+
+      std::ostringstream os;
+      Error::Type err;
+
       switch (reason) {
       case OVPN_DEL_PEER_REASON_EXPIRED:
-        transport_parent->transport_error(Error::TRANSPORT_ERROR,
-                                          "keepalive timeout");
-        break;
+	err = Error::TRANSPORT_ERROR;
+	os << "keepalive timeout";
+	break;
 
       case OVPN_DEL_PEER_REASON_TRANSPORT_ERROR:
-        transport_parent->transport_error(Error::TRANSPORT_ERROR,
-                                          "transport error");
-        break;
+	err = Error::TRANSPORT_ERROR;
+	os << "transport error";
+	break;
+
+      case OVPN_DEL_PEER_REASON_TEARDOWN:
+	err = Error::TRANSPORT_ERROR;
+	os << "peer deleted, id=" << peer_id << ", teardown";
+	break;
+
+      case OVPN_DEL_PEER_REASON_USERSPACE:
+	// volountary delete - do not stop client
+	OPENVPN_LOG("peer deleted, id=" << peer_id << ", requested by userspace");
+	peer_id = OVPN_PEER_ID_UNDEF;
+	return true;
 
       default:
-        std::ostringstream os;
-        os << "peer deleted, reason " << reason;
-        transport_parent->transport_error(Error::TUN_HALT, os.str());
-        break;
+	err = Error::TUN_HALT;
+	os << "peer deleted, id=" << peer_id << ", reason=" << reason;
+	break;
       }
+
+      stop_();
+      transport_parent->transport_error(err, os.str());
       break;
     }
 
@@ -339,10 +416,80 @@ public:
     return true;
   }
 
+
+  virtual void transport_needs_send() override {
+    transport_parent->transport_needs_send();
+  }
+
+  virtual void transport_error(const Error::Type fatal_err, const std::string& err_text) override {
+    transport_parent->transport_error(fatal_err, err_text);
+  }
+
+  virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text) override {
+    transport_parent->proxy_error(fatal_err, err_text);
+  }
+
+  virtual bool transport_is_openvpn_protocol() override {
+    return transport_parent->transport_is_openvpn_protocol();
+  }
+
+  virtual void transport_pre_resolve() override {
+    transport_parent->transport_pre_resolve();
+  }
+
+  virtual void transport_wait_proxy() override {
+    transport_parent->transport_wait_proxy();
+  }
+
+  virtual void transport_wait() override {
+    transport_parent->transport_wait();
+  }
+
+  virtual void transport_connecting() override {
+    transport_parent->transport_connecting();
+  }
+
+  virtual bool is_keepalive_enabled() const override {
+    return transport_parent->is_keepalive_enabled();
+  }
+
+  virtual void disable_keepalive(unsigned int& keepalive_ping,
+				 unsigned int &keepalive_timeout) override {
+    transport_parent->disable_keepalive(keepalive_ping, keepalive_timeout);
+  }
+
 private:
   OvpnDcoClient(openvpn_io::io_context &io_context_arg,
                 ClientConfig *config_arg, TransportClientParent *parent_arg)
-      : Client(io_context_arg, config_arg, parent_arg) {}
+      : Client(io_context_arg, config_arg, parent_arg)
+  {
+    TunBuilderBase *tb = config->builder;
+    if (tb) {
+      tb->tun_builder_new();
+      // pipe fd which is used to communicate to kernel
+      int fd = tb->tun_builder_dco_enable(config->dev_name);
+      if (fd == -1) {
+	stop_();
+	transport_parent->transport_error(Error::TUN_IFACE_CREATE,
+					  "error creating ovpn-dco device");
+	return;
+      }
+
+      pipe.reset(new openvpn_io::posix::stream_descriptor(io_context, fd));
+      return;
+    }
+
+    std::ostringstream os;
+    int res = TunNetlink::iface_new(os, config->dev_name, "ovpn-dco");
+    if (res != 0) {
+      stop_();
+      transport_parent->transport_error(Error::TUN_IFACE_CREATE, os.str());
+      return;
+    }
+
+    genl.reset(new GeNLImpl(io_context_arg, if_nametoindex(config_arg->dev_name.c_str()), this));
+    genl->register_packet();
+  }
 
   void handle_keepalive() {
     // since userspace doesn't know anything about presense or
@@ -363,11 +510,11 @@ private:
         keepalive_timeout = config->ping_restart_override;
 
       if (config->builder) {
-        config->builder->tun_builder_dco_set_peer(keepalive_interval,
+        config->builder->tun_builder_dco_set_peer(peer_id, keepalive_interval,
                                                   keepalive_timeout);
       } else {
         // enable keepalive in kernel
-        genl->set_peer(keepalive_interval, keepalive_timeout);
+        genl->set_peer(peer_id, keepalive_interval, keepalive_timeout);
       }
     }
   }
@@ -404,4 +551,5 @@ private:
   std::unique_ptr<openvpn_io::posix::stream_descriptor> pipe;
 
   GeNLImpl::Ptr genl;
+  TransportClient::Ptr transport;
 };

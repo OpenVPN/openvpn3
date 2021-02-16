@@ -52,12 +52,14 @@
 #endif
 
 #include <openvpn/dco/korekey.hpp>
-#include <openvpn/dco/protowrapper.hpp>
 
 // client-side DCO (Data Channel Offload) module for Linux/kovpn
 
 namespace openvpn {
   namespace DCOTransport {
+    enum {
+      OVPN_PEER_ID_UNDEF = 0x00FFFFFF,
+    };
 
     OPENVPN_EXCEPTION(dco_error);
 
@@ -165,27 +167,6 @@ namespace openvpn {
 	ip_addr = addr.to_string();
       }
 
-      virtual IP::Addr server_endpoint_addr() const override
-      {
-	if (proto)
-	  return proto->server_endpoint_addr();
-	else
-	  return IP::Addr();
-      }
-
-      virtual Protocol transport_protocol() const override
-      {
-	switch (server_endpoint_addr().version())
-	  {
-	  case IP::Addr::V4:
-	    return Protocol(Protocol::UDPv4);
-	  case IP::Addr::V6:
-	    return Protocol(Protocol::UDPv6);
-	  default:
-	    return Protocol();
-	  }
-      }
-
       virtual void stop() override
       {
 	stop_();
@@ -245,7 +226,7 @@ namespace openvpn {
 	  config(config_arg),
 	  transport_parent(parent_arg),
 	  tun_parent(nullptr),
-	  peer_id(-1)
+	  peer_id(OVPN_PEER_ID_UNDEF)
       {
       }
 
@@ -253,86 +234,6 @@ namespace openvpn {
       {
 	transport_parent = parent_arg;
       }
-
-      void transport_start_udp()
-      {
-	transport_start_impl(false);
-      }
-
-      void transport_start_tcp()
-      {
-	transport_start_impl(true);
-      }
-
-      void transport_start_impl(bool tcp)
-      {
-	if (tcp)
-	  proto.reset(new TCP(io_context));
-	else
-	  proto.reset(new UDP(io_context));
-
-	if (config->transport.remote_list->endpoint_available(&server_host, &server_port, nullptr))
-	  {
-	    start_connect();
-	  }
-	else
-	  {
-	    transport_parent->transport_pre_resolve();
-	    async_resolve_name(server_host, server_port);
-	  }
-      }
-
-      // called after DNS resolution has succeeded or failed
-      void resolve_callback(const openvpn_io::error_code& error,
-			    openvpn_io::ip::udp::resolver::results_type results) override
-      {
-	if (!halt)
-	  {
-	    if (!error)
-	      {
-		// save resolved endpoint list in remote_list
-		config->transport.remote_list->set_endpoint_range(results);
-		start_connect();
-	      }
-	    else
-	      {
-		std::ostringstream os;
-		os << "DNS resolve error on '" << server_host << "' for session: " << error.message();
-		config->transport.stats->error(Error::RESOLVE_ERROR);
-		stop_();
-		transport_parent->transport_error(Error::UNDEF, os.str());
-	      }
-	  }
-      }
-
-      void start_connect()
-      {
-	proto->get_endpoint(config->transport.remote_list);
-	OPENVPN_LOG("Contacting " << proto->server_endpoint_addr() << " via " << proto->proto());
-	transport_parent->transport_wait();
-	proto->open();
-
-	if (config->transport.socket_protect)
-	  {
-	    if (!config->transport.socket_protect->socket_protect(proto->native_handle(), server_endpoint_addr()))
-	      {
-		stop();
-		std::ostringstream os;
-		os << "socket_protect error (";
-		os << proto->proto();
-		os << ")";
-		transport_parent->transport_error(Error::UNDEF, os.str());
-		return;
-	      }
-	  }
-
-	proto->async_connect([self=Ptr(this)](const openvpn_io::error_code &error) {
-	    self->start_impl_udp(error);
-	});
-      }
-
-      // start I/O on UDP socket
-      virtual void start_impl_udp(const openvpn_io::error_code& error) = 0;
 
       virtual void stop_() = 0;
 
@@ -345,14 +246,12 @@ namespace openvpn {
       TransportClientParent* transport_parent;
       TunClientParent* tun_parent;
 
-      ProtoBase::Ptr proto;
-
       ActionList::Ptr remove_cmds;
 
       std::string server_host;
       std::string server_port;
 
-      int peer_id;
+      uint32_t peer_id;
     };
 
 #ifdef ENABLE_KOVPN
