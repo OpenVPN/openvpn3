@@ -466,6 +466,7 @@ namespace openvpn {
 	bool dco = false;
 	bool echo = false;
 	bool info = false;
+	bool pt = false;
 
 	// Ensure that init is called
 	InitProcess::Init init;
@@ -710,6 +711,7 @@ namespace openvpn {
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
 	state->echo = config.echo;
+	state->pt = config.usePluggableTransports;
 	state->info = config.info;
 	state->clock_tick_ms = config.clockTickMS;
 	if (!config.gremlinConfig.empty())
@@ -1001,6 +1003,11 @@ namespace openvpn {
 #endif
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       cc.extern_tun_factory = this;
+#endif
+#if defined(OPENVPN_PLUGGABLE_TRANSPORTS)
+      if (state->pt) {
+        cc.pluggable_transports_factory = this;
+      }
 #endif
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
       cc.extern_transport_factory = this;
