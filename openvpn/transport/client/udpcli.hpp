@@ -159,6 +159,16 @@ namespace openvpn {
 	return IP::Addr::from_asio(server_endpoint.address());
       }
 
+      unsigned short server_endpoint_port() const override
+      {
+	return server_endpoint.port();
+      }
+
+      int native_handle() override
+      {
+	return socket.native_handle();
+      }
+
       Protocol transport_protocol() const override
       {
 	if (server_endpoint.address().is_v4())
