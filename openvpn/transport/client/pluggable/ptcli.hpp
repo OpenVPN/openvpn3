@@ -79,9 +79,9 @@ namespace openvpn {
     {
       typedef RCPtr<Client> Ptr;
 
-      typedef LinkImpl<openvpn_io::ip::tcp, Client*, false> Link;
+      typedef LinkImpl<openvpn_io::ip::tcp, Client*> Link;
 #ifdef OPENVPN_TLS_LINK
-      typedef TLSLink<openvpn_io::ip::tcp, Client*, false> LinkImplTLS;
+      typedef TLSLink<openvpn_io::ip::tcp, Client*> LinkImplTLS;
 #endif
 
       friend class ClientConfig;         // calls constructor
@@ -353,8 +353,6 @@ namespace openvpn {
 		impl->gremlin_config(config->gremlin_config);
 #endif
 		impl->start();
-		if (!parent->transport_is_openvpn_protocol())
-		  impl->set_raw_mode(true);
 		parent->transport_connecting();
 	      }
 	    else

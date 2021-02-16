@@ -66,42 +66,14 @@ namespace openvpn {
     };
 
     template <typename Protocol,
-	      typename ReadHandler,
-	      bool RAW_MODE_ONLY>
+	      typename ReadHandler>
     class LinkImpl : public RC<thread_unsafe_refcount>
     {
       typedef std::deque<BufferPtr> Queue;
 
     public:
-      typedef RCPtr<LinkImpl<Protocol, ReadHandler, RAW_MODE_ONLY>> Ptr;
+      typedef RCPtr<LinkImpl<Protocol, ReadHandler>> Ptr;
       typedef Protocol protocol;
-
-      // In raw mode, data is sent and received without any special encapsulation.
-      // In non-raw mode, data is packetized by prepending a 16-bit length word
-      // onto each packet.  The OpenVPN protocol runs in non-raw mode, while other
-      // TCP protocols such as HTTP or HTTPS would run in raw mode.
-      // This method is a no-op if RAW_MODE_ONLY is true.
-      void set_raw_mode(const bool mode)
-      {
-	set_raw_mode_read(mode);
-	set_raw_mode_write(mode);
-      }
-
-      void set_raw_mode_read(const bool mode)
-      {
-	if (RAW_MODE_ONLY)
-	  raw_mode_read = true;
-	else
-	  raw_mode_read = mode;
-      }
-
-      void set_raw_mode_write(const bool mode)
-      {
-	if (RAW_MODE_ONLY)
-	  raw_mode_write = true;
-	else
-	  raw_mode_write = mode;
-      }
 
       void set_mutate(const TransportMutateStream::Ptr& mutate_arg)
       {
@@ -117,7 +89,7 @@ namespace openvpn {
       {
 	const size_t size = src.size();
 	OPENVPN_LOG_PTLINK_VERBOSE("PT inject size=" << size);
-	if (size && !RAW_MODE_ONLY)
+	if (size)
 	  {
 	    BufferAllocated buf;
 	    frame_context.prepare(buf);
@@ -144,7 +116,7 @@ namespace openvpn {
 
       void reset_align_adjust(const size_t align_adjust)
       {
-	frame_context.reset_align_adjust(align_adjust + (is_raw_mode() ? 0 : 2));
+	frame_context.reset_align_adjust(align_adjust + 2);
       }
 
       unsigned int send_queue_size() const
@@ -178,8 +150,7 @@ namespace openvpn {
 	else
 	  buf.reset(new BufferAllocated());
 	buf->swap(b);
-	if (!is_raw_mode_write())
-	  PacketStream::prepend_size(*buf);
+	PacketStream::prepend_size(*buf);
 	if (mutate)
 	  mutate->pre_send(*buf);
 #ifdef OPENVPN_GREMLIN
@@ -243,7 +214,6 @@ namespace openvpn {
 	  send_queue_max_size(send_queue_max_size_arg),
 	  free_list_max_size(free_list_max_size_arg)
       {
-	set_raw_mode(false);
       }
 
     protected:
@@ -254,24 +224,6 @@ namespace openvpn {
 	  gremlin.reset(new Gremlin::SendRecvQueue(socket.get_executor().context(), config, true));
       }
 #endif
-
-      bool is_raw_mode() const {
-	return is_raw_mode_read() && is_raw_mode_write();
-      }
-
-      bool is_raw_mode_read() const {
-	if (RAW_MODE_ONLY)
-	  return true;
-	else
-	  return raw_mode_read;
-      }
-
-      bool is_raw_mode_write() const {
-	if (RAW_MODE_ONLY)
-	  return true;
-	else
-	  return raw_mode_write;
-      }
 
       LinkImpl() { stop(); }
 
@@ -341,7 +293,7 @@ namespace openvpn {
       void recv_buffer(PacketFrom::SPtr& pfp, const size_t bytes_recvd)
       {
 	bool requeue = true;
-	OPENVPN_LOG_PTLINK_VERBOSE("PT recv raw=" << raw_mode_read << " size=" << bytes_recvd);
+	OPENVPN_LOG_PTLINK_VERBOSE("PT recv size=" << bytes_recvd);
 
 	pfp->buf.set_size(bytes_recvd);
 	requeue = process_recv_buffer(pfp->buf);
@@ -355,33 +307,19 @@ namespace openvpn {
 	OPENVPN_LOG_PTLINK_VERBOSE("PT process_recv_buffer size=" << buf.size());
 
 
-	if (!is_raw_mode_read())
-	{
-	  try {
-	    BufferAllocated pkt;
-	    requeue = put_pktstream(buf, pkt);
-	    if (!buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
-	      buf.move(pkt);
-	  }
-	  catch (const std::exception& e)
-	  {
-	    OPENVPN_LOG_PTLINK_ERROR("packet extract error: " << e.what());
-	    stats->error(Error::PT_SIZE_ERROR);
-	    read_handler->pt_error_handler("PT_SIZE_ERROR");
-	    stop();
-	    return false;
-	  }
+	try {
+	  BufferAllocated pkt;
+	  requeue = put_pktstream(buf, pkt);
+	  if (!buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
+	    buf.move(pkt);
 	}
-	else
+	catch (const std::exception& e)
 	{
-	  if (mutate)
-	    mutate->post_recv(buf);
-#ifdef OPENVPN_GREMLIN
-	  if (gremlin)
-	    requeue = gremlin_recv(buf);
-	  else
-#endif
-	  requeue = read_handler->pt_read_handler(buf);
+	  OPENVPN_LOG_PTLINK_ERROR("packet extract error: " << e.what());
+	  stats->error(Error::PT_SIZE_ERROR);
+	  read_handler->pt_error_handler("PT_SIZE_ERROR");
+	  stop();
+	  return false;
 	}
 
 	return requeue;
@@ -476,8 +414,6 @@ namespace openvpn {
       Queue free_list;  // recycled free buffers for send queue
       PacketStream pktstream;
       TransportMutateStream::Ptr mutate;
-      bool raw_mode_read;
-      bool raw_mode_write;
 
 #ifdef OPENVPN_GREMLIN
       std::unique_ptr<Gremlin::SendRecvQueue> gremlin;
