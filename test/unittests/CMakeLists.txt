@@ -37,6 +37,7 @@ add_executable(coreUnitTests
         test_ssl.cpp
         test_continuation.cpp
         test_optfilt.cpp
+        test_remotelist.cpp
         )
 
 if (${USE_MBEDTLS})

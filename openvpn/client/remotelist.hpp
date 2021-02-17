@@ -117,7 +117,10 @@ namespace openvpn {
       std::string server_port;
       Protocol transport_protocol;
 
-      // IP address list defined after server_host is resolved
+      // Non-empty if --remote-random-hostname is active.
+      std::string random_host;
+
+      // IP address list defined after actual_host() is resolved
       ResolvedAddrList::Ptr res_addr_list;
 
       // Other options if this is a <connection> block
@@ -126,6 +129,11 @@ namespace openvpn {
       bool res_addr_list_defined() const
       {
 	return res_addr_list && res_addr_list->size() > 0;
+      }
+
+      std::string actual_host() const
+      {
+	return random_host.empty() ? server_host : random_host;
       }
 
       // cache a single IP address
@@ -172,7 +180,7 @@ namespace openvpn {
       std::string to_string() const
       {
 	std::ostringstream out;
-	out << "host=" << server_host;
+	out << "host=" << actual_host();
 	if (res_addr_list)
 	  out << '[' << res_addr_list->to_string() << ']';
 	out << " port=" << server_port
@@ -330,13 +338,15 @@ namespace openvpn {
 		if (sitem)
 		  {
 		    // item's server_host matches one previously resolved -- use it
-		    OPENVPN_LOG_REMOTELIST("*** PreResolve USED CACHE for " << item.server_host);
+		    OPENVPN_LOG_REMOTELIST("*** PreResolve USED CACHE for " << sitem.actual_host());
 		    item.res_addr_list = sitem->res_addr_list;
+		    item.random_host = sitem->random_host;
 		  }
 		else
 		  {
-		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item.server_host << " : " << item.server_port);
-		    async_resolve_name(item.server_host, item.server_port);
+		    const std::string& host = item.actual_host();
+		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << host << " : " << item.server_port);
+		    async_resolve_name(host, item.server_port);
 		    return;
 		  }
 	      }
@@ -366,12 +376,13 @@ namespace openvpn {
 	    if (!error)
 	      {
 		// resolve succeeded
-		item.set_endpoint_range(results, remote_list->rng.get());
+		auto rand = remote_list->random ? remote_list->rng.get() : nullptr;
+		item.set_endpoint_range(results, rand);
 	      }
 	    else
 	      {
 		// resolve failed
-		OPENVPN_LOG("DNS pre-resolve error on " << item.server_host << ": " << error.message());
+		OPENVPN_LOG("DNS pre-resolve error on " << item.actual_host() << ": " << error.message());
 		if (stats)
 		  stats->error(Error::RESOLVE_ERROR);
 	      }
@@ -419,8 +430,11 @@ namespace openvpn {
     RemoteList(const OptionList& opt,
 	       const std::string& connection_tag,
 	       const unsigned int flags,
-	       ConnBlockFactory* conn_block_factory)
-      : directives(connection_tag)
+	       ConnBlockFactory* conn_block_factory,
+	       RandomAPI::Ptr rng_arg = RandomAPI::Ptr())
+      : random_hostname(opt.exists("remote-random-hostname"))
+      , directives(connection_tag)
+      , rng(rng_arg)
     {
       // defaults
       Protocol default_proto(Protocol::UDPv4);
@@ -504,8 +518,10 @@ namespace openvpn {
       for (auto &item : list)
 	{
 	  item->server_host = server_override;
+	  item->random_host.clear();
 	  item->res_addr_list.reset();
 	}
+      random_hostname = false;
       reset_cache();
     }
 
@@ -532,6 +548,7 @@ namespace openvpn {
     {
       if (rng)
 	{
+	  random = true;
 	  std::shuffle(list.begin(), list.end(), *rng);
 	  index.reset();
 	}
@@ -592,7 +609,7 @@ namespace openvpn {
     {
       const Item& item = *list[primary_index()];
       if (server_host)
-	*server_host = item.server_host;
+	*server_host = item.actual_host();
       if (server_port)
 	*server_port = item.server_port;
       const bool cached = (item.res_addr_list && index.secondary() < item.res_addr_list->size());
@@ -617,7 +634,8 @@ namespace openvpn {
     void set_endpoint_range(EPRANGE& endpoint_range)
     {
       Item& item = *list[primary_index()];
-      item.set_endpoint_range(endpoint_range, rng.get());
+      auto rand = random ? rng.get() : nullptr;
+      item.set_endpoint_range(endpoint_range, rand);
       index.reset_secondary();
     }
 
@@ -642,10 +660,10 @@ namespace openvpn {
     }
 
     // return hostname (or IP address) of current connection entry
-    const std::string& current_server_host() const
+    std::string current_server_host() const
     {
       const Item& item = *list[primary_index()];
-      return item.server_host;
+      return item.actual_host();
     }
 
     // return transport protocol of current connection entry
@@ -673,7 +691,7 @@ namespace openvpn {
     std::string first_server_host() const
     {
       const Item& item = *list.at(0);
-      return item.server_host;
+      return item.actual_host();
     }
 
     const Item* first_item() const
@@ -717,7 +735,10 @@ namespace openvpn {
     void reset_cache()
     {
       for (auto &e : list)
-	e->res_addr_list.reset(nullptr);
+	{
+	  e->res_addr_list.reset(nullptr);
+	  randomize_host(*e);
+	}
       index.reset();
     }
 
@@ -732,8 +753,11 @@ namespace openvpn {
     // reset the cache associated with a given item
     void reset_item(const size_t i)
     {
-      if (i <= list.size())
-	list[i]->res_addr_list.reset(nullptr);
+      if (i < list.size())
+	{
+	  list[i]->res_addr_list.reset(nullptr);
+	  randomize_host(*list[i]);
+	}
     }
 
     // return the current primary index (into list) and raise an exception
@@ -874,6 +898,7 @@ namespace openvpn {
 		else
 		  e->transport_protocol = default_proto;
 		e->conn_block = conn_block;
+		randomize_host(*e);
 		if (conn_block)
 		  conn_block->new_item(*e);
 		list.push_back(e);
@@ -888,6 +913,41 @@ namespace openvpn {
 	OPENVPN_LOG("NOTE: " << option << " directive is not currently supported in <connection> blocks");
     }
 
+    void randomize_host(Item& item)
+    {
+      if (!random_hostname)
+	return;
+
+      try
+	{
+	  // Throws if server_host is not an IP address
+	  IP::Addr(item.server_host);
+	}
+      catch (const IP::ip_exception& e)
+	{
+	  if (!rng)
+	    throw remote_list_error("remote-random-hostname without PRNG");
+
+	  // Produce 6 bytes of random prefix data
+	  unsigned char prefix[6];
+	  rng->rand_bytes(prefix, sizeof(prefix));
+
+	  // Prepend it to the server_host
+	  std::ostringstream random_host;
+	  random_host << std::hex;
+	  for (std::size_t i = 0; i < sizeof(prefix); ++i)
+	    {
+	      random_host << std::setw(2) << std::setfill('0')
+			  << static_cast<unsigned>(prefix[i]);
+	    }
+	  random_host << "." << item.server_host;
+
+	  item.random_host = random_host.str();
+	}
+    }
+
+    bool random_hostname = false;
+    bool random = false;
     bool enable_cache = false;
     Index index;
 

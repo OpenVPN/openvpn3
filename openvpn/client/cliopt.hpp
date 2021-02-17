@@ -256,14 +256,14 @@ namespace openvpn {
 
       // load remote list
       if (config.remote_override)
+	{
 	  remote_list.reset(new RemoteList(config.remote_override));
-	else
-	  remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr));
+	  remote_list->set_random(prng);
+	}
+      else
+	remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr, prng));
       if (!remote_list->defined())
 	throw option_error("no remote option specified");
-
-      // Set remote list prng
-      remote_list->set_random(prng);
 
       // If running in tun_persist mode, we need to do basic DNS caching so that
       // we can avoid emitting DNS requests while the tunnel is blocked during
