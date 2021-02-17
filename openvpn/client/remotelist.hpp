@@ -251,7 +251,7 @@ namespace openvpn {
     // This is useful in tun_persist mode, where it may be necessary
     // to pre-resolve all potential remote server items prior
     // to initial tunnel establishment.
-    class PreResolve : public virtual RC<thread_unsafe_refcount>, AsyncResolvableTCP
+    class PreResolve : public virtual RC<thread_unsafe_refcount>, protected AsyncResolvableTCP
     {
     public:
       typedef RCPtr<PreResolve> Ptr;
@@ -305,7 +305,7 @@ namespace openvpn {
 	async_resolve_cancel();
       }
 
-    private:
+    protected:
       void next()
       {
 	while (index < remote_list->list.size())

@@ -21,6 +21,7 @@
 #pragma once
 
 #include <openvpn/log/logbase.hpp>
+#include <openvpn/io/io.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/random/mtrandapi.hpp>
@@ -233,8 +234,68 @@ inline std::string getSortedString(const std::string& output)
 }
 
 /**
+ * Fake DNS resolver.
+ * Inherits from tested class and overrides async_resolve_name().
+ * Returns error if host/service pair has not been added with set_results() before.
+ */
+template<typename RESOLVABLE, typename... CTOR_ARGS>
+class FakeAsyncResolvable : public RESOLVABLE
+{
+public:
+  using Result = std::pair<const std::string, const unsigned short>;
+  using ResultList = std::vector<Result>;
+
+  using ResultsType = typename RESOLVABLE::resolver_type::results_type;
+  using EndpointType = typename RESOLVABLE::resolver_type::endpoint_type;
+  using EndpointList = std::vector<EndpointType>;
+
+  std::map<const std::string, EndpointList> results_;
+
+  EndpointType init_endpoint() const
+  {
+    return EndpointType();
+  }
+
+  void set_results(const std::string& host, const std::string& service, const ResultList&& results)
+  {
+    EndpointList endpoints;
+    for (const auto& result : results)
+      {
+	EndpointType ep(openvpn_io::ip::make_address(result.first), result.second);
+	endpoints.push_back(ep);
+      }
+    results_[host +":"+ service] = endpoints;
+  }
+
+  FakeAsyncResolvable(CTOR_ARGS... args) : RESOLVABLE(args...) {}
+
+  void async_resolve_name(const std::string& host, const std::string& service) override
+  {
+    const std::string key(host +":"+ service);
+    openvpn_io::error_code error =  openvpn_io::error::host_not_found;
+    ResultsType results;
+
+    if (results_.count(key))
+      {
+	const EndpointList& ep = results_[key];
+	if (ep.size())
+	  {
+	    error = openvpn_io::error_code();
+	    results = ResultsType::create(ep.cbegin(), ep.cend(), host, service);
+	  }
+      }
+
+    this->resolve_callback(error, results);
+  }
+};
+
+/**
  * Predictable RNG that claims to be secure to be used in reproducable unit
  * tests
+ *
+ * Note: this is not fit to be used as UniformRandomBitGenerator since
+ * its maximum range is [0x03020100, 0xfffefdfc]. Especially the lower
+ * bound makes the std::shuffle implementation in libc++ loop endlessly.
  */
 class FakeSecureRand : public openvpn::RandomAPI
 {
