@@ -190,18 +190,14 @@ namespace openvpn {
     // Directive names that we search for in options
     struct Directives
     {
-      void init(const std::string& connection_tag)
-      {
-	connection = connection_tag.length() ? connection_tag : "connection";
-	remote = "remote";
-	proto = "proto";
-	port = "port";
-      }
+      explicit Directives(const std::string& conn_tag = "")
+	: connection(conn_tag.length() ? conn_tag : "connection")
+      {}
 
-      std::string connection;
-      std::string remote;
-      std::string proto;
-      std::string port;
+      const std::string connection;
+      const std::string remote = "remote";
+      const std::string proto = "proto";
+      const std::string port = "port";
     };
 
     // Used to index into remote list.
@@ -389,17 +385,10 @@ namespace openvpn {
       size_t index;
     };
 
-    // create an empty remote list
-    RemoteList()
-    {
-      init("");
-    }
-
     // create a remote list with a RemoteOverride callback
     RemoteList(RemoteOverride* remote_override_arg)
       : remote_override(remote_override_arg)
     {
-      init("");
       next();
     }
 
@@ -409,8 +398,6 @@ namespace openvpn {
 	       const Protocol& transport_protocol,
 	       const std::string& title)
     {
-      init("");
-
       HostPort::validate_port(server_port, title);
 
       Item::Ptr item(new Item());
@@ -433,9 +420,8 @@ namespace openvpn {
 	       const std::string& connection_tag,
 	       const unsigned int flags,
 	       ConnBlockFactory* conn_block_factory)
+      : directives(connection_tag)
     {
-      init(connection_tag);
-
       // defaults
       Protocol default_proto(Protocol::UDPv4);
       std::string default_port = "1194";
@@ -743,13 +729,6 @@ namespace openvpn {
     }
 
   private:
-    // initialization, called by constructors
-    void init(const std::string& connection_tag)
-    {
-      enable_cache = false;
-      directives.init(connection_tag);
-    }
-
     // reset the cache associated with a given item
     void reset_item(const size_t i)
     {
@@ -909,7 +888,7 @@ namespace openvpn {
 	OPENVPN_LOG("NOTE: " << option << " directive is not currently supported in <connection> blocks");
     }
 
-    bool enable_cache;
+    bool enable_cache = false;
     Index index;
 
     std::vector<Item::Ptr> list;
