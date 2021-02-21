@@ -86,7 +86,7 @@ TEST(time, timeskew)
     }
   //OPENVPN_LOG(md.to_string());
   md.mean.check_mean_range("mean", 10100, 10300);
-  md.dev.check_mean_range("dev", 1250, 1300);
+  md.dev.check_mean_range("dev", 1250, 1350);
 }
 
 TEST(time, test1)
