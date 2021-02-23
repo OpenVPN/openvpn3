@@ -24,7 +24,9 @@
 
 #include <openvpn/dco/dcocli.hpp>
 
-class OvpnDcoClient : public Client, public KoRekey::Receiver, public TransportClientParent {
+class OvpnDcoClient : public Client,
+                      public KoRekey::Receiver,
+                      public TransportClientParent {
   friend class ClientConfig;
   friend class GeNL;
 
@@ -44,20 +46,15 @@ public:
     // extract peer ID from pushed options
     try {
       const Option *o = opt.get_ptr("peer-id");
-      if (o)
-      {
-	bool status = parse_number_validate<uint32_t>(o->get(1, 16), 16, 0, OVPN_PEER_ID_UNDEF - 1,
-						      &peer_id);
-	if (!status)
-	  OPENVPN_THROW(dcocli_error, "Parse/range issue with pushed peer-id");
+      if (o) {
+        bool status = parse_number_validate<uint32_t>(
+            o->get(1, 16), 16, 0, OVPN_PEER_ID_UNDEF - 1, &peer_id);
+        if (!status)
+          OPENVPN_THROW(dcocli_error, "Parse/range issue with pushed peer-id");
+      } else {
+        OPENVPN_THROW(dcocli_error, "No peer-id pushed by server");
       }
-      else
-      {
-	OPENVPN_THROW(dcocli_error, "No peer-id pushed by server");
-      }
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception &e) {
       OPENVPN_THROW(dcocli_error, "Cannot extract peer-id: " << e.what());
     }
 
@@ -103,50 +100,47 @@ public:
         dc_settings.factory(), this, config->transport.frame)));
 
     // add peer in ovpn-dco
-    add_peer(peer_id, state->vpn_ip4_gw.to_ipv4_zero(), state->vpn_ip6_gw.to_ipv6_zero());
+    add_peer(peer_id, state->vpn_ip4_gw.to_ipv4_zero(),
+             state->vpn_ip6_gw.to_ipv6_zero());
     // signal that we are connected
     tun_parent->tun_connected();
   }
 
   virtual std::string tun_name() const override { return "ovpn-dco"; }
 
-  virtual IP::Addr server_endpoint_addr() const override
-  {
+  virtual IP::Addr server_endpoint_addr() const override {
     if (transport)
       return transport->server_endpoint_addr();
     else
       return IP::Addr();
   }
 
-  virtual unsigned short server_endpoint_port() const override
-  {
+  virtual unsigned short server_endpoint_port() const override {
     if (transport)
       return transport->server_endpoint_port();
     else
       return 0;
   }
 
-  virtual Protocol transport_protocol() const override
-  {
+  virtual Protocol transport_protocol() const override {
     return transport->transport_protocol();
   }
 
   virtual void transport_start() override {
     TransportClientFactory::Ptr transport_factory;
 
-    if (!config->transport.protocol.is_tcp())
-    {
-      UDPTransport::ClientConfig::Ptr udpconf = UDPTransport::ClientConfig::new_obj();
+    if (!config->transport.protocol.is_tcp()) {
+      UDPTransport::ClientConfig::Ptr udpconf =
+          UDPTransport::ClientConfig::new_obj();
       udpconf->remote_list = config->transport.remote_list;
       udpconf->frame = config->transport.frame;
       udpconf->stats = config->transport.stats;
       udpconf->socket_protect = config->transport.socket_protect;
       udpconf->server_addr_float = config->transport.server_addr_float;
       transport_factory = udpconf;
-    }
-    else
-    {
-      TCPTransport::ClientConfig::Ptr tcpconf = TCPTransport::ClientConfig::new_obj();
+    } else {
+      TCPTransport::ClientConfig::Ptr tcpconf =
+          TCPTransport::ClientConfig::new_obj();
       tcpconf->remote_list = config->transport.remote_list;
       tcpconf->frame = config->transport.frame;
       tcpconf->stats = config->transport.stats;
@@ -181,8 +175,7 @@ public:
     return true;
   }
 
-  void get_remote_sockaddr(struct sockaddr_storage &sa, socklen_t &salen)
-  {
+  void get_remote_sockaddr(struct sockaddr_storage &sa, socklen_t &salen) {
     memset(&sa, 0, sizeof(sa));
 
     struct sockaddr_in *sa4 = (struct sockaddr_in *)&sa;
@@ -191,15 +184,16 @@ public:
     IP::Addr remote_addr = transport->server_endpoint_addr();
     if (remote_addr.version() == IP::Addr::V4) {
       salen = sizeof(*sa4);
-      *sa4 = remote_addr.to_ipv4().to_sockaddr(transport->server_endpoint_port());
+      *sa4 =
+          remote_addr.to_ipv4().to_sockaddr(transport->server_endpoint_port());
     } else {
       salen = sizeof(*sa6);
-      *sa6 = remote_addr.to_ipv6().to_sockaddr(transport->server_endpoint_port());
+      *sa6 =
+          remote_addr.to_ipv6().to_sockaddr(transport->server_endpoint_port());
     }
   }
 
-  void del_peer(uint32_t peer_id)
-  {
+  void del_peer(uint32_t peer_id) {
     TunBuilderBase *tb = config->builder;
     if (tb) {
       tb->tun_builder_dco_del_peer(peer_id);
@@ -209,8 +203,7 @@ public:
     genl->del_peer(peer_id);
   }
 
-  void add_peer(uint32_t peer_id, IPv4::Addr ipv4, IPv6::Addr ipv6)
-  {
+  void add_peer(uint32_t peer_id, IPv4::Addr ipv4, IPv6::Addr ipv6) {
     struct sockaddr_storage sa;
     socklen_t salen;
 
@@ -218,20 +211,20 @@ public:
 
     TunBuilderBase *tb = config->builder;
     if (tb) {
-      tb->tun_builder_dco_new_peer(peer_id, transport->native_handle(), (struct sockaddr *)&sa, salen,
-				   ipv4, ipv6);
+      tb->tun_builder_dco_new_peer(peer_id, transport->native_handle(),
+                                   (struct sockaddr *)&sa, salen, ipv4, ipv6);
 
       queue_read_pipe(nullptr);
       return;
     }
 
-    genl->new_peer(peer_id, transport->native_handle(), (struct sockaddr *)&sa, salen, ipv4, ipv6);
+    genl->new_peer(peer_id, transport->native_handle(), (struct sockaddr *)&sa,
+                   salen, ipv4, ipv6);
   }
 
-  virtual void resolve_callback(const openvpn_io::error_code& error,
-				openvpn_io::ip::udp::resolver::results_type results) override
-  {
-  }
+  virtual void resolve_callback(
+      const openvpn_io::error_code &error,
+      openvpn_io::ip::udp::resolver::results_type results) override {}
 
   virtual void stop_() override {
     if (!halt) {
@@ -253,7 +246,7 @@ public:
       }
 
       if (transport)
-	transport->stop();
+        transport->stop();
     }
   }
 
@@ -343,7 +336,7 @@ public:
     }
   }
 
-  virtual void transport_recv(BufferAllocated& buf) override {
+  virtual void transport_recv(BufferAllocated &buf) override {
     transport_parent->transport_recv(buf);
   }
 
@@ -370,30 +363,31 @@ public:
 
       switch (reason) {
       case OVPN_DEL_PEER_REASON_EXPIRED:
-	err = Error::TRANSPORT_ERROR;
-	os << "keepalive timeout";
-	break;
+        err = Error::TRANSPORT_ERROR;
+        os << "keepalive timeout";
+        break;
 
       case OVPN_DEL_PEER_REASON_TRANSPORT_ERROR:
-	err = Error::TRANSPORT_ERROR;
-	os << "transport error";
-	break;
+        err = Error::TRANSPORT_ERROR;
+        os << "transport error";
+        break;
 
       case OVPN_DEL_PEER_REASON_TEARDOWN:
-	err = Error::TRANSPORT_ERROR;
-	os << "peer deleted, id=" << peer_id << ", teardown";
-	break;
+        err = Error::TRANSPORT_ERROR;
+        os << "peer deleted, id=" << peer_id << ", teardown";
+        break;
 
       case OVPN_DEL_PEER_REASON_USERSPACE:
-	// volountary delete - do not stop client
-	OPENVPN_LOG("peer deleted, id=" << peer_id << ", requested by userspace");
-	peer_id = OVPN_PEER_ID_UNDEF;
-	return true;
+        // volountary delete - do not stop client
+        OPENVPN_LOG("peer deleted, id=" << peer_id
+                                        << ", requested by userspace");
+        peer_id = OVPN_PEER_ID_UNDEF;
+        return true;
 
       default:
-	err = Error::TUN_HALT;
-	os << "peer deleted, id=" << peer_id << ", reason=" << reason;
-	break;
+        err = Error::TUN_HALT;
+        os << "peer deleted, id=" << peer_id << ", reason=" << reason;
+        break;
       }
 
       stop_();
@@ -416,16 +410,17 @@ public:
     return true;
   }
 
-
   virtual void transport_needs_send() override {
     transport_parent->transport_needs_send();
   }
 
-  virtual void transport_error(const Error::Type fatal_err, const std::string& err_text) override {
+  virtual void transport_error(const Error::Type fatal_err,
+                               const std::string &err_text) override {
     transport_parent->transport_error(fatal_err, err_text);
   }
 
-  virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text) override {
+  virtual void proxy_error(const Error::Type fatal_err,
+                           const std::string &err_text) override {
     transport_parent->proxy_error(fatal_err, err_text);
   }
 
@@ -441,9 +436,7 @@ public:
     transport_parent->transport_wait_proxy();
   }
 
-  virtual void transport_wait() override {
-    transport_parent->transport_wait();
-  }
+  virtual void transport_wait() override { transport_parent->transport_wait(); }
 
   virtual void transport_connecting() override {
     transport_parent->transport_connecting();
@@ -453,26 +446,25 @@ public:
     return transport_parent->is_keepalive_enabled();
   }
 
-  virtual void disable_keepalive(unsigned int& keepalive_ping,
-				 unsigned int &keepalive_timeout) override {
+  virtual void disable_keepalive(unsigned int &keepalive_ping,
+                                 unsigned int &keepalive_timeout) override {
     transport_parent->disable_keepalive(keepalive_ping, keepalive_timeout);
   }
 
 private:
   OvpnDcoClient(openvpn_io::io_context &io_context_arg,
                 ClientConfig *config_arg, TransportClientParent *parent_arg)
-      : Client(io_context_arg, config_arg, parent_arg)
-  {
+      : Client(io_context_arg, config_arg, parent_arg) {
     TunBuilderBase *tb = config->builder;
     if (tb) {
       tb->tun_builder_new();
       // pipe fd which is used to communicate to kernel
       int fd = tb->tun_builder_dco_enable(config->dev_name);
       if (fd == -1) {
-	stop_();
-	transport_parent->transport_error(Error::TUN_IFACE_CREATE,
-					  "error creating ovpn-dco device");
-	return;
+        stop_();
+        transport_parent->transport_error(Error::TUN_IFACE_CREATE,
+                                          "error creating ovpn-dco device");
+        return;
       }
 
       pipe.reset(new openvpn_io::posix::stream_descriptor(io_context, fd));
@@ -487,7 +479,8 @@ private:
       return;
     }
 
-    genl.reset(new GeNLImpl(io_context_arg, if_nametoindex(config_arg->dev_name.c_str()), this));
+    genl.reset(new GeNLImpl(
+        io_context_arg, if_nametoindex(config_arg->dev_name.c_str()), this));
     genl->register_packet();
   }
 

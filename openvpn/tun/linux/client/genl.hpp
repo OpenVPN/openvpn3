@@ -22,12 +22,12 @@
 
 #pragma once
 
+#include <openvpn/addr/ipv4.hpp>
+#include <openvpn/addr/ipv6.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/dco/key.hpp>
-#include <openvpn/addr/ipv4.hpp>
-#include <openvpn/addr/ipv6.hpp>
 
 #include <linux/ovpn_dco.h>
 #include <netlink/genl/ctrl.h>
@@ -126,14 +126,15 @@ public:
    * @param id Peer ID of the peer being created
    * @param transport_fd socket to be used to communicate with the peer
    * @param sa sockaddr object representing the remote endpoint
-   * @param salen length of sa (either sizeof(sockaddr_in) or sizeof(sockaddr_in6)
+   * @param salen length of sa (either sizeof(sockaddr_in) or
+   * sizeof(sockaddr_in6)
    * @param vpn4 IPv4 address associated with this peer in the tunnel
    * @param vpn6 IPv6 address associated with this peer in the tunnel
    *
    * @throws netlink_error thrown if error occurs during sending netlink message
    */
-  void new_peer(int peer_id, int fd, struct sockaddr *sa, socklen_t salen, IPv4::Addr vpn4,
-		IPv6::Addr vpn6) {
+  void new_peer(int peer_id, int fd, struct sockaddr *sa, socklen_t salen,
+                IPv4::Addr vpn4, IPv6::Addr vpn6) {
     auto msg_ptr = create_msg(OVPN_CMD_NEW_PEER);
     auto *msg = msg_ptr.get();
     struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_NEW_PEER);
@@ -142,13 +143,11 @@ public:
     NLA_PUT_U32(msg, OVPN_NEW_PEER_ATTR_SOCKET, fd);
     NLA_PUT(msg, OVPN_NEW_PEER_ATTR_SOCKADDR_REMOTE, salen, sa);
 
-    if (vpn4.specified())
-    {
+    if (vpn4.specified()) {
       NLA_PUT_U32(msg, OVPN_NEW_PEER_ATTR_IPV4, vpn4.to_uint32_net());
     }
 
-    if (vpn6.specified())
-    {
+    if (vpn6.specified()) {
       struct in6_addr addr6 = vpn6.to_in6_addr();
       NLA_PUT(msg, OVPN_NEW_PEER_ATTR_IPV6, sizeof(addr6), &addr6);
     }
@@ -172,7 +171,7 @@ public:
    */
   void send_data(int peer_id, const void *data, size_t len) {
     auto msg_ptr = create_msg(OVPN_CMD_PACKET);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
     struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_PACKET);
 
     NLA_PUT_U32(msg, OVPN_PACKET_ATTR_PEER_ID, peer_id);
@@ -196,7 +195,7 @@ public:
    */
   void new_key(unsigned int key_slot, const KoRekey::KeyConfig *kc) {
     auto msg_ptr = create_msg(OVPN_CMD_NEW_KEY);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
 
     const int NONCE_TAIL_LEN = 8;
 
@@ -213,12 +212,13 @@ public:
 
     key_dir = nla_nest_start(msg, OVPN_NEW_KEY_ATTR_ENCRYPT_KEY);
     if (!key_dir)
-      OPENVPN_THROW(netlink_error, " new_key() cannot allocate encrypt key submessage");
+      OPENVPN_THROW(netlink_error,
+                    " new_key() cannot allocate encrypt key submessage");
 
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->encrypt.cipher_key_size,
             kc->encrypt.cipher_key);
-    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM
-	|| kc->cipher_alg == OVPN_CIPHER_ALG_CHACHA20_POLY1305) {
+    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM ||
+        kc->cipher_alg == OVPN_CIPHER_ALG_CHACHA20_POLY1305) {
       NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->encrypt.nonce_tail);
     }
@@ -226,12 +226,13 @@ public:
 
     key_dir = nla_nest_start(msg, OVPN_NEW_KEY_ATTR_DECRYPT_KEY);
     if (!key_dir)
-      OPENVPN_THROW(netlink_error, " new_key() cannot allocate decrypt key submessage");
+      OPENVPN_THROW(netlink_error,
+                    " new_key() cannot allocate decrypt key submessage");
 
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->decrypt.cipher_key_size,
             kc->decrypt.cipher_key);
-    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM
-	|| kc->cipher_alg == OVPN_CIPHER_ALG_CHACHA20_POLY1305) {
+    if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM ||
+        kc->cipher_alg == OVPN_CIPHER_ALG_CHACHA20_POLY1305) {
       NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->decrypt.nonce_tail);
     }
@@ -255,7 +256,7 @@ public:
    */
   void swap_keys(int peer_id) {
     auto msg_ptr = create_msg(OVPN_CMD_SWAP_KEYS);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
     struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_SWAP_KEYS);
     if (!attr)
       OPENVPN_THROW(netlink_error, " swap_keys() cannot allocate submessage");
@@ -280,7 +281,7 @@ public:
    */
   void del_key(int peer_id, unsigned int key_slot) {
     auto msg_ptr = create_msg(OVPN_CMD_DEL_KEY);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
     struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_DEL_KEY);
     if (!attr)
       OPENVPN_THROW(netlink_error, " del_key() cannot allocate submessage");
@@ -310,7 +311,7 @@ public:
   void set_peer(int peer_id, unsigned int keepalive_interval,
                 unsigned int keepalive_timeout) {
     auto msg_ptr = create_msg(OVPN_CMD_SET_PEER);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
     struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_SET_PEER);
     if (!attr)
       OPENVPN_THROW(netlink_error, " set_peer() cannot allocate submessage");
@@ -336,7 +337,7 @@ public:
    */
   void del_peer(int peer_id) {
     auto msg_ptr = create_msg(OVPN_CMD_DEL_PEER);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
     struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_DEL_PEER);
     if (!attr)
       OPENVPN_THROW(netlink_error, " del_peer() cannot allocate submessage");
@@ -357,7 +358,7 @@ public:
    */
   void register_packet() {
     auto msg_ptr = create_msg(OVPN_CMD_REGISTER_PACKET);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
 
     send_netlink_message(msg);
   }
@@ -441,10 +442,10 @@ private:
         .id = -ENOENT,
     };
     NlMsgPtr msg_ptr(nlmsg_alloc(), nlmsg_free);
-    auto* msg = msg_ptr.get();
+    auto *msg = msg_ptr.get();
 
     NlCbPtr mcast_cb_ptr(nl_cb_alloc(NL_CB_DEFAULT), nl_cb_put);
-    auto* mcast_cb = mcast_cb_ptr.get();
+    auto *mcast_cb = mcast_cb_ptr.get();
 
     int ctrlid = genl_ctrl_resolve(sock, "nlctrl");
 
@@ -571,15 +572,19 @@ private:
     switch (gnlh->cmd) {
     case OVPN_CMD_PACKET:
       if (!attrs[OVPN_ATTR_PACKET])
-        OPENVPN_THROW(netlink_error, "missing OVPN_ATTR_PACKET attribute in OVPN_CMD_PACKET command");
+        OPENVPN_THROW(
+            netlink_error,
+            "missing OVPN_ATTR_PACKET attribute in OVPN_CMD_PACKET command");
 
       struct nlattr *pkt_attrs[OVPN_PACKET_ATTR_MAX + 1];
-      ret = nla_parse_nested(pkt_attrs, OVPN_PACKET_ATTR_MAX, attrs[OVPN_ATTR_PACKET], NULL);
+      ret = nla_parse_nested(pkt_attrs, OVPN_PACKET_ATTR_MAX,
+                             attrs[OVPN_ATTR_PACKET], NULL);
       if (ret)
-	OPENVPN_THROW(netlink_error, "cannot parse OVPN_ATTR_PACKET attribute");
+        OPENVPN_THROW(netlink_error, "cannot parse OVPN_ATTR_PACKET attribute");
 
-      if (!pkt_attrs[OVPN_PACKET_ATTR_PEER_ID] || !pkt_attrs[OVPN_PACKET_ATTR_PACKET])
-	OPENVPN_THROW(netlink_error, "missing attributes in OVPN_CMD_PACKET");
+      if (!pkt_attrs[OVPN_PACKET_ATTR_PEER_ID] ||
+          !pkt_attrs[OVPN_PACKET_ATTR_PACKET])
+        OPENVPN_THROW(netlink_error, "missing attributes in OVPN_CMD_PACKET");
 
       if (!pkt_attrs[OVPN_PACKET_ATTR_PACKET])
         OPENVPN_THROW(
@@ -589,30 +594,34 @@ private:
       self->reset_buffer();
       self->buf.write(&gnlh->cmd, sizeof(gnlh->cmd));
       self->buf.write(nla_data(pkt_attrs[OVPN_PACKET_ATTR_PACKET]),
-		      nla_len(pkt_attrs[OVPN_PACKET_ATTR_PACKET]));
+                      nla_len(pkt_attrs[OVPN_PACKET_ATTR_PACKET]));
       // pass control channel message to upper layer
       self->read_handler->tun_read_handler(self->buf);
       break;
 
     case OVPN_CMD_DEL_PEER:
       if (!attrs[OVPN_ATTR_DEL_PEER])
-        OPENVPN_THROW(netlink_error, "missing OVPN_ATTR_DEL_PEER attribute in OVPN_CMD_DEL_PEER command");
+        OPENVPN_THROW(netlink_error, "missing OVPN_ATTR_DEL_PEER attribute in "
+                                     "OVPN_CMD_DEL_PEER command");
 
       struct nlattr *del_peer_attrs[OVPN_DEL_PEER_ATTR_MAX + 1];
-      ret = nla_parse_nested(del_peer_attrs, OVPN_DEL_PEER_ATTR_MAX, attrs[OVPN_ATTR_DEL_PEER],
-			     NULL);
+      ret = nla_parse_nested(del_peer_attrs, OVPN_DEL_PEER_ATTR_MAX,
+                             attrs[OVPN_ATTR_DEL_PEER], NULL);
       if (ret)
-	OPENVPN_THROW(netlink_error, "cannot parse OVPN_ATTR_DEL_PEER attribute");
+        OPENVPN_THROW(netlink_error,
+                      "cannot parse OVPN_ATTR_DEL_PEER attribute");
 
-      if (!del_peer_attrs[OVPN_DEL_PEER_ATTR_PEER_ID] || !del_peer_attrs[OVPN_DEL_PEER_ATTR_REASON])
-	OPENVPN_THROW(netlink_error, "missing attributes in OVPN_CMD_DEL_PEER");
+      if (!del_peer_attrs[OVPN_DEL_PEER_ATTR_PEER_ID] ||
+          !del_peer_attrs[OVPN_DEL_PEER_ATTR_REASON])
+        OPENVPN_THROW(netlink_error, "missing attributes in OVPN_CMD_DEL_PEER");
 
       self->reset_buffer();
       self->buf.write(&gnlh->cmd, sizeof(gnlh->cmd));
 
       {
-	uint32_t peer_id = nla_get_u32(del_peer_attrs[OVPN_DEL_PEER_ATTR_PEER_ID]);
-	self->buf.write(&peer_id, sizeof(peer_id));
+        uint32_t peer_id =
+            nla_get_u32(del_peer_attrs[OVPN_DEL_PEER_ATTR_PEER_ID]);
+        self->buf.write(&peer_id, sizeof(peer_id));
       }
 
       {
@@ -646,7 +655,7 @@ private:
    * @param arg argument passed by \c nl_cb_err()
    * @return int callback action
    */
-  static int ovpn_nl_cb_error(struct sockaddr_nl* /*nla*/,
+  static int ovpn_nl_cb_error(struct sockaddr_nl * /*nla*/,
                               struct nlmsgerr *err, void *arg) {
     struct nlmsghdr *nlh = (struct nlmsghdr *)err - 1;
     struct nlattr *tb_msg[NLMSGERR_ATTR_MAX + 1];
