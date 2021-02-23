@@ -278,7 +278,7 @@ namespace openvpn {
      * @vpn6 IPv6 address associated with this peer in the tunnel
      */
     virtual void tun_builder_dco_new_peer(uint32_t peer_id, uint32_t transport_fd, struct sockaddr *sa,
-					  socklen_t salen, IPv4::Addr vpn4, IPv6::Addr vpn6)
+					  socklen_t salen, IPv4::Addr& vpn4, IPv6::Addr& vpn6)
     {
     }
 
