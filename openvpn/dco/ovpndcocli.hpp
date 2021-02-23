@@ -156,23 +156,21 @@ public:
     if (peer_id == OVPN_PEER_ID_UNDEF)
       return transport->transport_send_const(buf);
 
-    return send(buf);
+    if (config->builder) {
+      Buffer tmp(buf);
+      tmp.prepend(&peer_id, sizeof(peer_id));
+      pipe->write_some(tmp.const_buffer());
+    } else {
+      genl->send_data(peer_id, buf.c_data(), buf.size());
+    }
+
+    return true;
   }
 
   virtual bool transport_send(BufferAllocated &buf) override {
-    if (peer_id == OVPN_PEER_ID_UNDEF)
-      return transport->transport_send(buf);
-
-    return send(buf);
-  }
-
-  bool send(const Buffer &buf) {
-    if (config->builder)
-      pipe->write_some(buf.const_buffer());
-    else
-      genl->send_data(peer_id, buf.c_data(), buf.size());
-
-    return true;
+    OPENVPN_THROW(dcocli_error,
+                  "Non-const send expected for data channel only, but "
+                  "ovpndcocli is not expected to handle data packets");
   }
 
   void get_remote_sockaddr(struct sockaddr_storage &sa, socklen_t &salen) {
