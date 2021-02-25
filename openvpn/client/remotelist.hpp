@@ -419,8 +419,8 @@ namespace openvpn {
       , rng(rng_arg)
     {
       // defaults
-      Protocol default_proto(Protocol::UDPv4);
-      std::string default_port = "1194";
+      const Protocol default_proto = get_proto(opt, Protocol(Protocol::UDPv4));
+      const std::string default_port = get_port(opt, "1194");
 
       // handle remote, port, and proto at the top-level
       if (!(flags & CONN_BLOCK_ONLY))
@@ -445,8 +445,8 @@ namespace openvpn {
 					    ProfileParseLimits::MAX_LINE_SIZE,
 					    ProfileParseLimits::MAX_DIRECTIVE_SIZE);
 		  OptionList::Ptr conn_block = OptionList::parse_from_config_static_ptr(conn_block_text, &limits);
-		  Protocol proto(default_proto);
-		  std::string port(default_port);
+		  const Protocol block_proto = get_proto(*conn_block, default_proto);
+		  const std::string block_port = get_port(*conn_block, default_port);
 
 		  // unsupported options
 		  if (flags & WARN_UNSUPPORTED)
@@ -462,7 +462,7 @@ namespace openvpn {
 		    if (conn_block_factory)
 		      cb = conn_block_factory->new_conn_block(conn_block);
 		    if (!(flags & CONN_BLOCK_OMIT_UNDEF) || cb)
-		      add(*conn_block, proto, port, cb);
+		      add(*conn_block, block_proto, block_port, cb);
 		  }
 		}
 		catch (Exception& e)
@@ -831,62 +831,65 @@ namespace openvpn {
       index.reset();
     }
 
-    void add(const OptionList& opt, Protocol& default_proto, std::string& default_port, ConnBlock::Ptr conn_block)
+    std::string get_port(const OptionList& opt, const std::string& default_port)
+    {
+      // parse "port" option if present
+      const Option* o = opt.get_ptr(directives.port);
+      if (!o)
+        return default_port;
+
+      std::string port = o->get(1, 16);
+      HostPort::validate_port(port, directives.port);
+      return port;
+    }
+
+    Protocol get_proto(const OptionList& opt, const Protocol& default_proto)
     {
       // parse "proto" option if present
-      {
-	const Option* o = opt.get_ptr(directives.proto);
-	if (o)
-	  default_proto = Protocol::parse(o->get(1, 16), Protocol::CLIENT_SUFFIX);
-      }
+      const Option* o = opt.get_ptr(directives.proto);
+      if (o)
+        return Protocol::parse(o->get(1, 16), Protocol::CLIENT_SUFFIX);
 
-      // parse "port" option if present
-      {
-	const Option* o = opt.get_ptr(directives.port);
-	if (o)
-	  {
-	    default_port = o->get(1, 16);
-	    HostPort::validate_port(default_port, directives.port);
-	  }
-      }
+      return default_proto;
+    }
+
+    void add(const OptionList& opt, const Protocol& default_proto, const std::string& default_port, ConnBlock::Ptr conn_block)
+    {
+      const OptionList::IndexList* rem = opt.get_index_ptr(directives.remote);
+      if (!rem)
+        return;
 
       // cycle through remote entries
-      {
-	const OptionList::IndexList* rem = opt.get_index_ptr(directives.remote);
-	if (rem)
-	  {
-	    for (OptionList::IndexList::const_iterator i = rem->begin(); i != rem->end(); ++i)
-	      {
-		Item::Ptr e(new Item());
-		const Option& o = opt[*i];
-		o.touch();
-		e->server_host = o.get(1, 256);
-		int adj = 0;
-		if (o.size() >= 3)
-		  {
-		    e->server_port = o.get(2, 16);
-		    if (Protocol::is_local_type(e->server_port))
-		      {
-			adj = -1;
-			e->server_port = "";
-		      }
-		    else
-		      HostPort::validate_port(e->server_port, directives.port);
-		  }
-		else
-		  e->server_port = default_port;
-		if (o.size() >= (size_t)(4+adj))
-		  e->transport_protocol = Protocol::parse(o.get(3+adj, 16), Protocol::CLIENT_SUFFIX);
-		else
-		  e->transport_protocol = default_proto;
-		e->conn_block = conn_block;
-		randomize_host(*e);
-		if (conn_block)
-		  conn_block->new_item(*e);
-		list.push_back(e);
-	      }
-	  }
-      }
+      for (const auto& i : *rem)
+        {
+          Item::Ptr e(new Item());
+          const Option& o = opt[i];
+          o.touch();
+          e->server_host = o.get(1, 256);
+          int adj = 0;
+          if (o.size() >= 3)
+            {
+              e->server_port = o.get(2, 16);
+              if (Protocol::is_local_type(e->server_port))
+                {
+                  adj = -1;
+                  e->server_port = "";
+                }
+              else
+                HostPort::validate_port(e->server_port, directives.port);
+            }
+          else
+            e->server_port = default_port;
+          if (o.size() >= (size_t)(4+adj))
+            e->transport_protocol = Protocol::parse(o.get(3+adj, 16), Protocol::CLIENT_SUFFIX);
+          else
+            e->transport_protocol = default_proto;
+          e->conn_block = conn_block;
+          randomize_host(*e);
+          if (conn_block)
+            conn_block->new_item(*e);
+          list.push_back(e);
+        }
     }
 
     void unsupported_in_connection_block(const OptionList& options, const std::string& option)
