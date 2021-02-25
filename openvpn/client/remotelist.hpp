@@ -212,23 +212,13 @@ namespace openvpn {
     // The primary index is the remote list index.
     // The secondary index is the index into the
     // Item's IP address list (res_addr_list).
-    class Index
+    struct Index
     {
-    public:
-      Index()
-      {
-	reset();
-      }
+      void reset() { primary_ = secondary_ = 0; }
+      void reset_secondary() { secondary_ = 0; }
 
-      void reset()
-      {
-	primary_ = secondary_ = 0;
-      }
-
-      void reset_secondary()
-      {
-	secondary_ = 0;
-      }
+      size_t primary() const { return primary_; }
+      size_t secondary() const { return secondary_; }
 
       // return true if primary index was incremented
       bool increment(const size_t pri_len, const size_t sec_len)
@@ -244,17 +234,9 @@ namespace openvpn {
 	  return false;
       }
 
-      bool equals(const Index& other) const
-      {
-	return primary_ == other.primary_ && secondary_ == other.secondary_;
-      }
-
-      size_t primary() const { return primary_; }
-      size_t secondary() const { return secondary_; }
-
     private:
-      size_t primary_;
-      size_t secondary_;
+      size_t primary_ = 0;
+      size_t secondary_ = 0;
     };
 
   public:
