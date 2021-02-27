@@ -477,8 +477,6 @@ namespace openvpn {
 
       if (!(flags & ALLOW_EMPTY) && list.empty())
 	throw option_error("remote option not specified");
-
-      //OPENVPN_LOG(to_string());
     }
 
     // if cache is enabled, all DNS names will be preemptively queried
@@ -534,17 +532,6 @@ namespace openvpn {
 	  std::shuffle(list.begin(), list.end(), *rng);
 	  index.reset();
 	}
-    }
-
-    // return true if at least one remote entry is of type proto
-    bool contains_protocol(const Protocol& proto)
-    {
-      for (std::vector<Item::Ptr>::const_iterator i = list.begin(); i != list.end(); ++i)
-	{
-	  if (proto.transport_match((*i)->transport_protocol))
-	    return true;
-	}
-      return false;
     }
 
     // Higher-level version of set_proto_override that also supports indication
@@ -656,24 +643,10 @@ namespace openvpn {
     }
 
     template <typename T>
-    typename T::Ptr current_conn_block() const
-    {
-      const Item& item = *list[primary_index()];
-      return item.conn_block.template dynamic_pointer_cast<T>();
-    }
-
-    template <typename T>
     T* current_conn_block_rawptr() const
     {
       const Item& item = *list[primary_index()];
       return dynamic_cast<T*>(item.conn_block.get());
-    }
-
-    // return hostname (or IP address) of first connection entry
-    std::string first_server_host() const
-    {
-      const Item& item = *list.at(0);
-      return item.actual_host();
     }
 
     const Item* first_item() const
@@ -775,6 +748,17 @@ namespace openvpn {
 	    return item;
 	}
       return nullptr;
+    }
+
+    // return true if at least one remote entry is of type proto
+    bool contains_protocol(const Protocol& proto)
+    {
+      for (std::vector<Item::Ptr>::const_iterator i = list.begin(); i != list.end(); ++i)
+	{
+	  if (proto.transport_match((*i)->transport_protocol))
+	    return true;
+	}
+      return false;
     }
 
     // prune remote entries so that only those of Protocol proto_override remain

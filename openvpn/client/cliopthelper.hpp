@@ -237,7 +237,7 @@ namespace openvpn {
 	  else
 	    {
 	      if (remoteList)
-		profileName_ = remoteList->first_server_host();
+		profileName_ = remoteList->first_item()->server_host;
 	    }
 
 	  // windows-driver
