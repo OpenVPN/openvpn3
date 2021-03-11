@@ -1,9 +1,3 @@
-cmake_minimum_required(VERSION 3.5)
-
-project(tests)
-set(CMAKE_CXX_STANDARD 14)
-
-include(findcoredeps)
 include(dlgoogletest)
 
 # Extra includes/libraries that are currently only use by the core unit test

@@ -1,6 +1,3 @@
-cmake_minimum_required(VERSION 3.5)
-
-include(findcoredeps)
 
 add_executable(proto proto.cpp)
 add_core_dependencies(proto)
