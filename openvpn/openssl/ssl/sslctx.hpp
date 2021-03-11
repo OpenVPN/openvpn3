@@ -896,7 +896,7 @@ namespace openvpn {
 		if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC) && (EVP_PKEY_get0_EC_KEY(pkey) != nullptr &&
 		  EVP_PKEY_get0_EC_KEY(pkey) != nullptr))
 		  {
-		    EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
+		    const EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
 		    const EC_GROUP* group = EC_KEY_get0_group(ec);
 		    const char* curve = nullptr;
 

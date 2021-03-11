@@ -48,7 +48,7 @@ namespace openvpn {
       : external_pki(external_pki_arg), n_errors(0)
     {
       RSA* rsa = nullptr;
-      RSA* pub_rsa = nullptr;
+      const RSA* pub_rsa = nullptr;
       RSA_METHOD* rsa_meth = nullptr;
       const char* errtext = "";
 
