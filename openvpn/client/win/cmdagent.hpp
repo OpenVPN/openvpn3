@@ -88,18 +88,10 @@ namespace openvpn {
     {
       typedef RCPtr<Config> Ptr;
 
-      Config()
-      {
-	npserv = Agent::named_pipe_path();
-	client_exe = Win::module_name_utf8();
-	debug_level = 1;
-	wintun = false;
-      }
-
-      std::string npserv;     // server pipe
-      std::string client_exe; // for validation
-      int debug_level;
-      bool wintun;
+      std::string npserv = Agent::named_pipe_path();    // server pipe
+      std::string client_exe = Win::module_name_utf8(); // for validation
+      int debug_level = 1;
+      TunWin::Type tun_type = TunWin::TapWindows6;
     };
 
     class SetupClient : public TunWin::SetupBase
@@ -173,7 +165,7 @@ namespace openvpn {
 	if (ring_buffer)
 	  ring_buffer->serialize(jreq);
 
-	jreq["wintun"] = config->wintun;
+	jreq["tun_type"] = config->tun_type;
 	jreq["confirm_event"] = confirm_event.duplicate_local();
 	jreq["destroy_event"] = destroy_event.duplicate_local();
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
@@ -294,15 +286,15 @@ namespace openvpn {
       Win::DestroyEvent destroy_event;
     };
 
-    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, bool wintun) override
+    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, TunWin::Type tun_type) override
     {
       if (config)
 	{
-	  config->wintun = wintun;
+	  config->tun_type = tun_type;
 	  return new SetupClient(io_context, config);
 	}
       else
-	return new TunWin::Setup(io_context, wintun);
+	return new TunWin::Setup(io_context, tun_type);
     }
 
     WinCommandAgent(const OptionList& opt_parent)

@@ -74,6 +74,11 @@
 
 namespace openvpn {
   namespace TunWin {
+    enum Type {
+      TapWindows6,
+      Wintun
+    };
+
     namespace Util {
       OPENVPN_EXCEPTION(tun_win_util);
 
@@ -94,13 +99,30 @@ namespace openvpn {
 
       // Return a list of TAP device GUIDs installed on the system,
       // filtered by TAP_WIN_COMPONENT_ID.
-      inline std::vector<TapGuidLuid> tap_guids(bool wintun)
+      inline std::vector<TapGuidLuid> tap_guids(const Type tun_type)
       {
 	LONG status;
 	DWORD len;
 	DWORD data_type;
 
 	std::vector<TapGuidLuid> ret;
+
+	const char *component_id;
+	const char *root_component_id;
+
+	switch (tun_type) {
+	case TapWindows6:
+	  component_id = COMPONENT_ID;
+	  root_component_id = ROOT_COMPONENT_ID;
+	  break;
+	case Wintun:
+	  component_id = WINTUN_COMPONENT_ID;
+	  root_component_id = ROOT_WINTUN_COMPONENT_ID;
+	  break;
+	default:
+	  OPENVPN_THROW(tun_win_util, "tap_guids: unsupported TAP type");
+	  break;
+	}
 
 	Win::RegKey adapter_key;
 	status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
@@ -158,8 +180,8 @@ namespace openvpn {
 	    if (status != ERROR_SUCCESS || data_type != REG_SZ)
 	      continue;
 	    strbuf[len] = '\0';
-	    if (string::strcasecmp(strbuf, wintun ? WINTUN_COMPONENT_ID : COMPONENT_ID) &&
-	      string::strcasecmp(strbuf, wintun ? ROOT_WINTUN_COMPONENT_ID : ROOT_COMPONENT_ID))
+	    if (string::strcasecmp(strbuf, component_id) &&
+	        string::strcasecmp(strbuf, root_component_id))
 	      continue;
 
 	    TapGuidLuid tgl;
@@ -221,11 +243,11 @@ namespace openvpn {
 
       struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
       {
-	TapNameGuidPairList(bool wintun)
+	TapNameGuidPairList(const Type tun_type)
 	{
 	  // first get the TAP guids
 	  {
-	    std::vector<TapGuidLuid> guids = tap_guids(wintun);
+	    std::vector<TapGuidLuid> guids = tap_guids(tun_type);
 	    for (auto i = guids.begin(); i != guids.end(); i++)
 	      {
 		TapNameGuidPair pair;
@@ -479,15 +501,15 @@ namespace openvpn {
       }
 
       // open an available TAP adapter
-      inline HANDLE tap_open(const TapNameGuidPairList& guids,
+      inline HANDLE tap_open(const Type tun_type,
+			     const TapNameGuidPairList& guids,
 			     std::string& path_opened,
-			     TapNameGuidPair& used,
-			     bool wintun)
+			     TapNameGuidPair& used)
       {
 	Win::ScopedHANDLE hand;
 
 	std::unique_ptr<DeviceInstanceIdInterfaceList> inst_id_interface_list;
-	if (wintun)
+	if (tun_type != TapWindows6)
 	  inst_id_interface_list.reset(new DeviceInstanceIdInterfaceList());
 
 	// iterate over list of TAP adapters on system
@@ -497,7 +519,7 @@ namespace openvpn {
 
 	    std::string path;
 
-	    if (wintun)
+	    if (tun_type != TapWindows6)
 	      {
 		for (const auto& inst_id_interface : *inst_id_interface_list)
 		  {

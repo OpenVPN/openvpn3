@@ -68,9 +68,9 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
-      Setup(openvpn_io::io_context& io_context_arg, bool wintun_arg=false)
+      Setup(openvpn_io::io_context& io_context_arg, const Type tun_type=TapWindows6)
 	: delete_route_timer(io_context_arg),
-	  wintun(wintun_arg) {}
+	  tun_type_(tun_type) {}
 
       // Set up the TAP device
       virtual HANDLE establish(const TunBuilderCapture& pull,
@@ -83,13 +83,14 @@ namespace openvpn {
 	destroy(os);
 
 	// enumerate available TAP adapters
-	Util::TapNameGuidPairList guids(wintun);
-	os << "TAP ADAPTERS:" << std::endl << guids.to_string() << std::endl;
+	Util::TapNameGuidPairList guids(tun_type_);
+	os << "TAP ADAPTERS:" << std::endl
+	   << guids.to_string() << std::endl;
 
 	// open TAP device handle
 	std::string path_opened;
 	Util::TapNameGuidPair tap;
-	Win::ScopedHANDLE th(Util::tap_open(guids, path_opened, tap, wintun));
+	Win::ScopedHANDLE th(Util::tap_open(tun_type_, guids, path_opened, tap));
 	const std::string msg = "Open TAP device \"" + tap.name + "\" PATH=\"" + path_opened + '\"';
 	vpn_interface_index_ = tap.index;
 
@@ -100,7 +101,7 @@ namespace openvpn {
 	  }
 
 	os << msg << " SUCCEEDED" << std::endl;
-	if (!wintun)
+	if (tun_type_ == TapWindows6)
 	  {
 	    Util::TAPDriverVersion version(th());
 	    os << version.to_string() << std::endl;
@@ -340,7 +341,7 @@ namespace openvpn {
 	if (!l2_post)
 	  {
 	    // set TAP media status to CONNECTED
-	    if (!wintun)
+	    if (tun_type_ == TapWindows6)
 	      Util::tap_set_media_status(th, true);
 
 	    // try to delete any stale routes on interface left over from previous session
@@ -371,7 +372,7 @@ namespace openvpn {
 		const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
 		const IP::Addr localaddr = IP::Addr::from_string(local4->address);
 		const IP::Addr remoteaddr = IP::Addr::from_string(local4->gateway);
-		if (!wintun)
+		if (tun_type_ == TapWindows6)
 		  {
 		    if (local4->net30)
 		      Util::tap_configure_topology_net30(th, localaddr, remoteaddr);
@@ -750,7 +751,7 @@ namespace openvpn {
 	    }
 
 	    // set TAP media status to CONNECTED
-	    if (!wintun)
+	    if (tun_type_ == TapWindows6)
 	      Util::tap_set_media_status(th, true);
 
 	    // ARP
@@ -941,7 +942,7 @@ namespace openvpn {
 
       AsioTimer delete_route_timer;
 
-      bool wintun = false;
+      const Type tun_type_;
     };
   }
 }

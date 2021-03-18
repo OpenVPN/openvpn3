@@ -139,10 +139,11 @@ public:
 				  const std::wstring& openvpn_app_path,
 				  Stop* stop,
 				  std::ostream& os,
-				  bool wintun)
+				  TunWin::Type tun_type)
   {
     if (!tun)
-      tun.reset(new TunWin::Setup(io_context_, wintun));
+      tun.reset(new TunWin::Setup(io_context_, tun_type));
+
     auto th = tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer);
     // store VPN interface index to be able to exclude it
     // when next time adding bypass route
@@ -576,7 +577,15 @@ private:
 	      // get PID
 	      ULONG pid = json::get_uint_optional(root, "pid", 0);
 
-	      bool wintun = json::get_bool_optional(root, "wintun");
+	      TunWin::Type tun_type;
+	      switch (json::get_int_optional(root, "tun_type", TunWin::TapWindows6))
+		{
+		case TunWin::Wintun:
+		  tun_type = TunWin::Wintun;
+		case TunWin::TapWindows6:
+		default:
+		  tun_type = TunWin::TapWindows6;
+		}
 
 	      // get remote event handles for tun object confirmation/destruction
 	      const std::string confirm_event_hex = json::get_string(root, "confirm_event");
@@ -605,7 +614,7 @@ private:
 		parent()->set_client_confirm_event(confirm_event_hex);
 	      }
 
-	      if (wintun)
+	      if (tun_type == TunWin::Wintun)
 		{
 		  parent()->assign_ring_buffer(new TunWin::RingBuffer(io_context,
 					       parent()->get_client_process(),
@@ -616,7 +625,7 @@ private:
 		}
 
 	      // establish the tun setup object
-	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, wintun));
+	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, tun_type));
 
 	      // post-establish impersonation
 	      {
