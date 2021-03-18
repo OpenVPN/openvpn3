@@ -245,7 +245,7 @@ public:
   using Result = std::pair<const std::string, const unsigned short>;
   using ResultList = std::vector<Result>;
 
-  using ResultsType = typename RESOLVABLE::resolver_type::results_type;
+  using ResultsType = typename RESOLVABLE::results_type;
   using EndpointType = typename RESOLVABLE::resolver_type::endpoint_type;
   using EndpointList = std::vector<EndpointType>;
 

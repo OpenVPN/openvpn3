@@ -263,7 +263,7 @@ namespace openvpn {
 
       // do DNS resolve
       void resolve_callback(const openvpn_io::error_code& error,
-			    openvpn_io::ip::tcp::resolver::results_type results) override
+			    results_type results) override
       {
 	if (!halt)
 	  {

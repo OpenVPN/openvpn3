@@ -350,7 +350,7 @@ namespace openvpn {
 
       // callback on resolve completion
       void resolve_callback(const openvpn_io::error_code& error,
-			    openvpn_io::ip::tcp::resolver::results_type results) override
+			    results_type results) override
       {
 	if (notify_callback && index < remote_list->list.size())
 	  {

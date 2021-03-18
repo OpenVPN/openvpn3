@@ -220,9 +220,8 @@ public:
                    salen, ipv4, ipv6);
   }
 
-  virtual void resolve_callback(
-      const openvpn_io::error_code &error,
-      openvpn_io::ip::udp::resolver::results_type results) override {}
+  virtual void resolve_callback(const openvpn_io::error_code &error,
+                                results_type results) override {}
 
   virtual void stop_() override {
     if (!halt) {
