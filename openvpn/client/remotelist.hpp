@@ -153,6 +153,10 @@ namespace openvpn {
 	res_addr_list.reset(new ResolvedAddrList());
 	for (const auto &i : endpoint_range)
 	  {
+	    // Skip addresses with incompatible family
+	    if ((transport_protocol.is_ipv6() && i.endpoint().address().is_v4())
+	        || (transport_protocol.is_ipv4() && i.endpoint().address().is_v6()))
+	      continue;
 	    ResolvedAddr::Ptr addr(new ResolvedAddr());
 	    addr->addr = IP::Addr::from_asio(i.endpoint().address());
 	    res_addr_list->push_back(addr);
@@ -316,21 +320,10 @@ namespace openvpn {
 	    if (!item.res_addr_list_defined())
 	      {
 		// next item to resolve
-		const Item* sitem = remote_list->search_server_host(item.server_host);
-		if (sitem)
-		  {
-		    // item's server_host matches one previously resolved -- use it
-		    OPENVPN_LOG_REMOTELIST("*** PreResolve USED CACHE for " << sitem.actual_host());
-		    item.res_addr_list = sitem->res_addr_list;
-		    item.random_host = sitem->random_host;
-		  }
-		else
-		  {
-		    const std::string& host = item.actual_host();
-		    OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << host << " : " << item.server_port);
-		    async_resolve_name(host, item.server_port);
-		    return;
-		  }
+		const std::string& host = item.actual_host();
+		OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << host << " : " << item.server_port);
+		async_resolve_name(host, item.server_port);
+		return;
 	      }
 	    ++index;
 	  }
@@ -354,17 +347,27 @@ namespace openvpn {
       {
 	if (notify_callback && index < remote_list->list.size())
 	  {
-	    Item& item = *remote_list->list[index++];
+	    const auto resolve_item(remote_list->list[index++]);
 	    if (!error)
 	      {
-		// resolve succeeded
+		// Set results to Items, where applicable
 		auto rand = remote_list->random ? remote_list->rng.get() : nullptr;
-		item.set_endpoint_range(results, rand);
+		for (auto& item : remote_list->list)
+		  {
+		    // Skip already resolved items and items with different hostname
+		    if (item->res_addr_list_defined()
+		        || item->server_host != resolve_item->server_host)
+		      continue;
+
+		    item->set_endpoint_range(results, rand);
+		    item->random_host = resolve_item->random_host;
+		  }
 	      }
 	    else
 	      {
 		// resolve failed
-		OPENVPN_LOG("DNS pre-resolve error on " << item.actual_host() << ": " << error.message());
+		OPENVPN_LOG("DNS pre-resolve error on " << resolve_item->actual_host()
+			    << ": " << error.message());
 		if (stats)
 		  stats->error(Error::RESOLVE_ERROR);
 	      }
@@ -737,18 +740,6 @@ namespace openvpn {
 	    return item.res_addr_list->size();
 	}
       return 0;
-    }
-
-    // Search for cached Item by server_host
-    Item* search_server_host(const std::string& server_host)
-    {
-      for (std::vector<Item::Ptr>::iterator i = list.begin(); i != list.end(); ++i)
-	{
-	  Item* item = i->get();
-	  if (server_host == item->server_host && item->res_addr_list_defined())
-	    return item;
-	}
-      return nullptr;
     }
 
     // return true if at least one remote entry is of type proto
