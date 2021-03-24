@@ -135,6 +135,14 @@ public:
   {
   }
 
+  Win::ScopedHANDLE tun_get_handle(std::ostream& os,
+				   const TunWin::Type tun_type)
+  {
+    if (!tun)
+      tun.reset(new TunWin::Setup(io_context_, tun_type));
+    return Win::ScopedHANDLE(tun->get_handle(os));
+  }
+
   Win::ScopedHANDLE establish_tun(const TunBuilderCapture& tbc,
 				  const std::wstring& openvpn_app_path,
 				  Stop* stop,
@@ -572,7 +580,46 @@ private:
 	  if (!root.isObject())
 	    throw Exception("json parse error: top level json object is not a dictionary");
 
-	  if (req.uri == "/tun-setup")
+	  if (req.uri == "/tun-open")
+	    {
+	      // destroy previous instance
+	      if (parent()->destroy_tun(os))
+		{
+		  os << "Destroyed previous TAP instance" << std::endl;
+		  ::Sleep(1000);
+		}
+
+	      {
+		// remember the client process that sent the request
+		ULONG pid = json::get_uint_optional(root, "pid", 0);
+		const std::string confirm_event_hex = json::get_string(root, "confirm_event");
+		const std::string destroy_event_hex = json::get_string(root, "destroy_event");
+
+		Win::NamedPipeImpersonate impersonate(client_pipe);
+
+		parent()->set_client_process(get_client_process(client_pipe, pid));
+		parent()->set_client_confirm_event(confirm_event_hex);
+		parent()->set_client_destroy_event(destroy_event_hex);
+	      }
+
+	      Win::ScopedHANDLE th(parent()->tun_get_handle(os, TunWin::OvpnDco));
+
+	      {
+		// duplicate the TAP handle into the client process
+		Win::NamedPipeImpersonate impersonate(client_pipe);
+		parent()->set_remote_tap_handle_hex(th());
+	      }
+
+	      // build JSON return dictionary
+	      const std::string log_txt = string::remove_blanks(os.str());
+	      Json::Value jout(Json::objectValue);
+	      jout["log_txt"] = log_txt;
+	      jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
+	      OPENVPN_LOG_NTNL("TUN SETUP\n" << log_txt);
+
+	      generate_reply(jout);
+	    }
+	  else if (req.uri == "/tun-setup")
 	    {
 	      // get PID
 	      ULONG pid = json::get_uint_optional(root, "pid", 0);
@@ -582,21 +629,22 @@ private:
 		{
 		case TunWin::Wintun:
 		  tun_type = TunWin::Wintun;
+		  break;
+		case TunWin::OvpnDco:
+		  tun_type = TunWin::OvpnDco;
+		  break;
 		case TunWin::TapWindows6:
 		default:
 		  tun_type = TunWin::TapWindows6;
+		  break;
 		}
-
-	      // get remote event handles for tun object confirmation/destruction
-	      const std::string confirm_event_hex = json::get_string(root, "confirm_event");
-	      const std::string destroy_event_hex = json::get_string(root, "destroy_event");
 
 	      // parse JSON data into a TunBuilderCapture object
 	      TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
 	      tbc->validate();
 
 	      // destroy previous instance
-	      if (parent()->destroy_tun(os))
+	      if (tun_type != TunWin::OvpnDco && parent()->destroy_tun(os))
 		{
 		  os << "Destroyed previous TAP instance" << std::endl;
 		  ::Sleep(1000);
@@ -609,9 +657,16 @@ private:
 		// remember the client process that sent the request
 		parent()->set_client_process(get_client_process(client_pipe, pid));
 
-		// save the confirm/destroy events
-		parent()->set_client_destroy_event(destroy_event_hex);
-		parent()->set_client_confirm_event(confirm_event_hex);
+		if (tun_type != TunWin::OvpnDco)
+		  {
+		    // get remote event handles for tun object confirmation/destruction
+		    const std::string confirm_event_hex = json::get_string(root, "confirm_event");
+		    const std::string destroy_event_hex = json::get_string(root, "destroy_event");
+
+		    // save the confirm/destroy events
+		    parent()->set_client_destroy_event(destroy_event_hex);
+		    parent()->set_client_confirm_event(confirm_event_hex);
+		  }
 	      }
 
 	      if (tun_type == TunWin::Wintun)
@@ -682,19 +737,19 @@ private:
 
 	      Json::Value jout(Json::objectValue);
 	      generate_reply(jout);
-	  }
+	    }
 #endif
-	else
-	  {
-	    OPENVPN_LOG("PAGE NOT FOUND");
-	    out = buf_from_string("page not found\n");
-	    WS::Server::ContentInfo ci;
-	    ci.http_status = HTTP::Status::NotFound;
-	    ci.type = "text/plain";
-	    ci.length = out->size();
-	    generate_reply_headers(ci);
-	  }
-        }
+	  else
+	    {
+	      OPENVPN_LOG("PAGE NOT FOUND");
+	      out = buf_from_string("page not found\n");
+	      WS::Server::ContentInfo ci;
+	      ci.http_status = HTTP::Status::NotFound;
+	      ci.type = "text/plain";
+	      ci.length = out->size();
+	      generate_reply_headers(ci);
+	    }
+	}
     }
     catch (const std::exception& e)
       {

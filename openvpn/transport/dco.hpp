@@ -36,6 +36,10 @@
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunprop.hpp>
 
+#if defined(OPENVPN_PLATFORM_WIN)
+#include <openvpn/tun/win/client/tunsetup.hpp>
+#endif
+
 namespace openvpn {
   struct DCO : public virtual RC<thread_unsafe_refcount>
   {
@@ -59,6 +63,18 @@ namespace openvpn {
     struct TunConfig
     {
       TunConfig() = default;
+
+#if defined(OPENVPN_PLATFORM_WIN)
+      TunWin::SetupFactory::Ptr setup_factory;
+
+      TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context)
+      {
+	if (setup_factory)
+	  return setup_factory->new_setup_obj(io_context, TunWin::OvpnDco);
+	else
+	  return new TunWin::Setup(io_context, TunWin::OvpnDco);
+      }
+#endif
 
       TunProp::Config tun_prop;
       Stop* stop = nullptr;

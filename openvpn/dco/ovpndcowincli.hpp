@@ -142,15 +142,22 @@ protected:
       return;
 
     // create new tun setup object
-    tun_setup_ = new TunWin::Setup(io_context, TunWin::OvpnDco);
+    tun_setup_ = config->tun.new_setup_obj(io_context);
 
     std::ostringstream os;
-    HANDLE th = tun_setup_->get_tap_handle(os);
+    HANDLE th = tun_setup_->get_handle(os);
     OPENVPN_LOG_STRING(os.str());
     if (th == INVALID_HANDLE_VALUE)
       return;
 
     handle_ = std::make_unique<asio::windows::stream_handle>(io_context, th);
+
+    tun_setup_->confirm();
+    tun_setup_->set_service_fail_handler([self=Ptr(this)]() {
+	if (!self->halt)
+	  self->tun_parent->tun_error(Error::TUN_IFACE_DISABLED, "service failure");
+      }
+    );
 
     config->transport.remote_list->get_endpoint(endpoint_);
     if (add_peer_()) {
@@ -194,9 +201,12 @@ protected:
 
   void stop_() override {
     if (!halt) {
+      std::ostringstream os;
       halt = true;
       async_resolve_cancel();
+      tun_setup_->destroy(os);
       handle_.reset();
+      OPENVPN_LOG_STRING(os.str());
     }
   }
 
@@ -328,7 +338,7 @@ protected:
 
   std::unique_ptr<openvpn_io::windows::stream_handle> handle_;
   TunBuilderCapture::Ptr po_;
-  TunWin::Setup::Ptr tun_setup_;
+  TunWin::SetupBase::Ptr tun_setup_;
   BufferAllocated buf_;
   Protocol proto_;
   openvpn_io::ip::udp::endpoint endpoint_;

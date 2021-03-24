@@ -72,7 +72,7 @@ namespace openvpn {
 	: delete_route_timer(io_context_arg),
 	  tun_type_(tun_type) {}
 
-      HANDLE get_tap_handle(std::ostream& os)
+      HANDLE get_handle(std::ostream& os) override
       {
 	if (tap_.index_defined())
 	  // tap has already been opened
@@ -113,7 +113,7 @@ namespace openvpn {
 	// close out old remove cmds, if they exist
 	destroy(os);
 
-	Win::ScopedHANDLE th(get_tap_handle(os));
+	Win::ScopedHANDLE th(get_handle(os));
 	vpn_interface_index_ = tap_.index;
 
 	// create ActionLists for setting up and removing adapter properties

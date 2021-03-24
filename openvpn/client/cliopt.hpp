@@ -329,6 +329,9 @@ namespace openvpn {
 #if defined(USE_TUN_BUILDER)
 	  dco->builder = config.builder;
 #endif
+#if defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_WIN)
+	  tunconf.setup_factory = WinCommandAgent::new_agent(opt);
+#endif
 	  tunconf.tun_prop.layer = layer;
 	  tunconf.tun_prop.session_name = session_name;
 	  if (tun_mtu)
