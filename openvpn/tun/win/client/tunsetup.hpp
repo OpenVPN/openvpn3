@@ -72,6 +72,37 @@ namespace openvpn {
 	: delete_route_timer(io_context_arg),
 	  tun_type_(tun_type) {}
 
+      HANDLE get_tap_handle(std::ostream& os)
+      {
+	if (tap_.index_defined())
+	  // tap has already been opened
+	  return INVALID_HANDLE_VALUE;
+
+	// enumerate available TAP adapters
+	Util::TapNameGuidPairList guids(tun_type_);
+	os << "TAP ADAPTERS:" << std::endl
+	   << guids.to_string() << std::endl;
+
+	// open TAP device handle
+	std::string path_opened;
+	Win::ScopedHANDLE th(Util::tap_open(tun_type_, guids, path_opened, tap_));
+	os << "Open TAP device \"" + tap_.name + "\" PATH=\"" + path_opened + '\"';
+	if (!th.defined())
+	  {
+	    os << " FAILED" << std::endl;
+	    throw ErrorCode(Error::TUN_IFACE_CREATE, true, "cannot acquire TAP handle");
+	  }
+
+	os << " SUCCEEDED" << std::endl;
+	if (tun_type_ == TapWindows6)
+	  {
+	    Util::TAPDriverVersion version(th());
+	    os << version.to_string() << std::endl;
+	  }
+
+	return th.release();
+      }
+
       // Set up the TAP device
       virtual HANDLE establish(const TunBuilderCapture& pull,
 			       const std::wstring& openvpn_app_path,
@@ -82,30 +113,8 @@ namespace openvpn {
 	// close out old remove cmds, if they exist
 	destroy(os);
 
-	// enumerate available TAP adapters
-	Util::TapNameGuidPairList guids(tun_type_);
-	os << "TAP ADAPTERS:" << std::endl
-	   << guids.to_string() << std::endl;
-
-	// open TAP device handle
-	std::string path_opened;
-	Util::TapNameGuidPair tap;
-	Win::ScopedHANDLE th(Util::tap_open(tun_type_, guids, path_opened, tap));
-	const std::string msg = "Open TAP device \"" + tap.name + "\" PATH=\"" + path_opened + '\"';
-	vpn_interface_index_ = tap.index;
-
-	if (!th.defined())
-	  {
-	    os << msg << " FAILED" << std::endl;
-	    throw ErrorCode(Error::TUN_IFACE_CREATE, true, "cannot acquire TAP handle");
-	  }
-
-	os << msg << " SUCCEEDED" << std::endl;
-	if (tun_type_ == TapWindows6)
-	  {
-	    Util::TAPDriverVersion version(th());
-	    os << version.to_string() << std::endl;
-	  }
+	Win::ScopedHANDLE th(get_tap_handle(os));
+	vpn_interface_index_ = tap_.index;
 
 	// create ActionLists for setting up and removing adapter properties
 	ActionList::Ptr add_cmds(new ActionList());
@@ -115,10 +124,10 @@ namespace openvpn {
 	switch (pull.layer())
 	  {
 	  case Layer::OSI_LAYER_3:
-	    adapter_config(th(), openvpn_app_path, tap, pull, false, *add_cmds, *remove_cmds, os);
+	    adapter_config(th(), openvpn_app_path, tap_, pull, false, *add_cmds, *remove_cmds, os);
 	    break;
 	  case Layer::OSI_LAYER_2:
-	    adapter_config_l2(th(), openvpn_app_path, tap, pull, *add_cmds, *remove_cmds, os);
+	    adapter_config_l2(th(), openvpn_app_path, tap_, pull, *add_cmds, *remove_cmds, os);
 	    break;
 	  default:
 	    throw tun_win_setup("layer undefined");
@@ -132,7 +141,7 @@ namespace openvpn {
 
 	// if layer 2, save state
 	if (pull.layer() == Layer::OSI_LAYER_2)
-	  l2_state.reset(new L2State(tap, openvpn_app_path));
+	  l2_state.reset(new L2State(tap_, openvpn_app_path));
 
 	if (ring_buffer)
 	  register_rings(th(), ring_buffer);
@@ -943,6 +952,7 @@ namespace openvpn {
       AsioTimer delete_route_timer;
 
       const Type tun_type_;
+      Util::TapNameGuidPair tap_;
     };
   }
 }

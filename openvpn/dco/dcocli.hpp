@@ -34,7 +34,10 @@
 #include <openvpn/transport/dco.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
+
+#ifndef ENABLE_OVPNDCOWIN
 #include <openvpn/tun/linux/client/tunmethods.hpp>
+#endif
 
 #ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kodevtun.hpp>
@@ -47,8 +50,11 @@
 #include <openvpn/dco/key.hpp>
 #include <openvpn/tun/linux/client/genl.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
+#elif ENABLE_OVPNDCOWIN
+#include <openvpn/dco/key.hpp>
+#include <ovpn-dco-win/uapi.h>
 #else
-#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
+#error either ENABLE_KOVPN, ENABLE_OVPNDCO or ENABLE_OVPNDCOWIN must be defined
 #endif
 
 #include <openvpn/dco/korekey.hpp>
@@ -239,8 +245,16 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
                                        TransportClientParent *parent) {
   return TransportClient::Ptr(new OvpnDcoClient(io_context, this, parent));
 }
+#elif ENABLE_OVPNDCOWIN
+#include <openvpn/dco/ovpndcowincli.hpp>
+inline DCO::Ptr new_controller() { return ClientConfig::new_controller(); }
+inline TransportClient::Ptr
+ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
+                                       TransportClientParent* parent) {
+  return TransportClient::Ptr(new OvpnDcoWinClient(io_context, this, parent));
+}
 #else
-#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
+#error either ENABLE_KOVPN, ENABLE_OVPNDCO or ENABLE_OVPNDCOWIN must be defined
 #endif
 
 inline TunClient::Ptr

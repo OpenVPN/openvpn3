@@ -138,8 +138,8 @@ namespace openvpn {
 
 #ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kovpnkocrypto.hpp>
-#elif ENABLE_OVPNDCO
+#elif defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
 #include <openvpn/dco/ovpndcokocrypto.hpp>
 #else
-#error either ENABLE_KOVPN or ENABLE_OVPNDCO must be defined
+#error either ENABLE_KOVPN, ENABLE_OVPNDCO or ENABLE_OVPNDCOWIN must be defined
 #endif

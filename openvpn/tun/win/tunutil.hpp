@@ -76,7 +76,8 @@ namespace openvpn {
   namespace TunWin {
     enum Type {
       TapWindows6,
-      Wintun
+      Wintun,
+      OvpnDco
     };
 
     namespace Util {
@@ -90,9 +91,11 @@ namespace openvpn {
 	// generally defined on cl command line
 	const char COMPONENT_ID[] = OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID); // CONST GLOBAL
 	const char WINTUN_COMPONENT_ID[] = "wintun"; // CONST GLOBAL
+	const char OVPNDCO_COMPONENT_ID[] = "ovpn-dco"; // CONST GLOBAL
 
 	const char ROOT_COMPONENT_ID[] = "root\\" OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID);
 	const char ROOT_WINTUN_COMPONENT_ID[] = "root\\wintun"; 
+	const char ROOT_OVPNDCO_COMPONENT_ID[] = "root\\ovpn-dco";
       }
 
       using TapGuidLuid = std::pair<std::string, DWORD>;
@@ -118,6 +121,10 @@ namespace openvpn {
 	case Wintun:
 	  component_id = WINTUN_COMPONENT_ID;
 	  root_component_id = ROOT_WINTUN_COMPONENT_ID;
+	  break;
+	case OvpnDco:
+	  component_id = OVPNDCO_COMPONENT_ID;
+	  root_component_id = ROOT_OVPNDCO_COMPONENT_ID;
 	  break;
 	default:
 	  OPENVPN_THROW(tun_win_util, "tap_guids: unsupported TAP type");

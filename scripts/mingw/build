@@ -140,6 +140,7 @@ build_core()
     mkdir build-$ARCH
 
     CORE_DIR=$(dirname $(realpath -s $0))/../..
+    [ -z "$DCO" ] || WITH_OVPNDCOWIN='-D CLI_OVPNDCOWIN=ON'
 
     pushd build-$ARCH
 
@@ -151,6 +152,7 @@ build_core()
           -D CMAKE_PREFIX_PATH=/usr/local/$ARCH-w64-mingw32 \
           -D CMAKE_BUILD_TYPE=Release \
           -D USE_WERROR=true \
+          $WITH_OVPNDCOWIN \
           $CORE_DIR
 
     make
