@@ -38,6 +38,7 @@ add_executable(coreUnitTests
         test_continuation.cpp
         test_optfilt.cpp
         test_remotelist.cpp
+        test_http_proxy.cpp
         )
 
 if (${USE_MBEDTLS})
