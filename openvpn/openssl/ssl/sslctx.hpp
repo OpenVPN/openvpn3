@@ -1144,6 +1144,10 @@ namespace openvpn {
 	  /* Disable SSLv2 and SSLv3, might be a noop but does not hurt */
 	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 
+#ifdef SSL_OP_NO_RENEGOTIATION
+	  sslopt |= SSL_OP_NO_RENEGOTIATION;
+#endif
+
 	  if (config->mode.is_server())
 	    {
 	      SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
