@@ -160,11 +160,12 @@ protected:
     );
 
     config->transport.remote_list->get_endpoint(endpoint_);
-    if (add_peer_()) {
-      transport_parent->transport_connecting();
-      queue_read_();
-    } else
-      stop_();
+    add_peer_([self=Ptr(this)]() {
+      if (!self->halt) {
+	self->transport_parent->transport_connecting();
+	self->queue_read_();
+      }
+    });
   }
 
   void queue_read_() {
@@ -210,7 +211,8 @@ protected:
     }
   }
 
-  bool add_peer_() {
+  template <typename CB>
+  void add_peer_(CB complete) {
     OVPN_NEW_PEER peer = {};
 
     peer.Proto = proto_.is_tcp() ? OVPN_PROTO_TCP : OVPN_PROTO_UDP;
@@ -232,20 +234,33 @@ protected:
       peer.Local.Addr6.sin6_port = peer.Remote.Addr6.sin6_port;
     }
 
-    // TODO: Driver will return better suiting error in the future
-    const DWORD connect_timeout_error_code = ERROR_SEM_TIMEOUT;
-    const DWORD ec = dco_ioctl_(OVPN_IOCTL_NEW_PEER, &peer, sizeof(peer),
-				connect_timeout_error_code);
-    if (ec != ERROR_SUCCESS) {
+    openvpn_io::windows::overlapped_ptr ov {io_context,
+      [self=Ptr(this), complete](const openvpn_io::error_code& ec,
+				 std::size_t len) {
+	if (self->halt)
+	  return;
+	if (!ec)
+	  complete();
+	else {
+	  std::ostringstream errmsg;
+	  errmsg << "TCP connection error: " << ec.message();
+	  self->config->transport.stats->error(Error::TCP_CONNECT_ERROR);
+	  self->transport_parent->transport_error(Error::UNDEF, errmsg.str());
+	  self->stop_();
+	}
+      }
+    };
+
+    const DWORD ec = dco_ioctl_(OVPN_IOCTL_NEW_PEER, &peer, sizeof(peer), &ov);
+    if (ec == ERROR_SUCCESS)
+      complete();
+    else if (ec != ERROR_IO_PENDING) {
       std::ostringstream errmsg;
       errmsg << "failed to connect '" << server_host << "' " << endpoint_;
-
       config->transport.stats->error(Error::TCP_CONNECT_ERROR);
       transport_parent->transport_error(Error::UNDEF, errmsg.str());
-      return false;
+      stop_();
     }
-
-    return true;
   }
 
   void add_keepalive_() {
@@ -313,7 +328,7 @@ protected:
   void swap_keys_() { dco_ioctl_(OVPN_IOCTL_SWAP_KEYS); }
 
   DWORD dco_ioctl_(DWORD code, LPVOID data = NULL, DWORD size = 0,
-		   const DWORD non_fatal_error = ERROR_SUCCESS) {
+		   openvpn_io::windows::overlapped_ptr* ov = nullptr) {
     static const std::map<const DWORD, const char*> code_str {
       { OVPN_IOCTL_NEW_PEER,  "OVPN_IOCTL_NEW_PEER"  },
       { OVPN_IOCTL_GET_STATS, "OVPN_IOCTL_GET_STATS" },
@@ -324,10 +339,17 @@ protected:
     };
 
     HANDLE th(handle_->native_handle());
-    if (!DeviceIoControl(th, code, data, size, NULL, 0, NULL, NULL)) {
+    LPOVERLAPPED ov_ = (ov ? ov->get() : NULL);
+    if (!DeviceIoControl(th, code, data, size, NULL, 0, NULL, ov_)) {
       const DWORD error_code = GetLastError();
-      if (error_code == non_fatal_error)
-	return error_code;
+      if (ov) {
+	if (error_code == ERROR_IO_PENDING) {
+	  ov->release();
+	  return error_code;
+	}
+	openvpn_io::error_code error(error_code, openvpn_io::system_category());
+	ov->complete(error, 0);
+      }
 
       OPENVPN_LOG("DeviceIoControl(" << code_str.at(code) << ")"
 		  << " failed with code " << error_code);
