@@ -62,7 +62,7 @@ namespace openvpn {
     ::GetSystemInfo(&si);
     return si.dwNumberOfProcessors;
 #else
-#error no implementation for n_cores()
+    return 1;
 #endif
   }
 
