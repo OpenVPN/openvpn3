@@ -10,7 +10,6 @@ option(CLI_OVPNDCOWIN "Build ovpncli variant with ovpn-dco-win windows driver" O
 
 set(KOVPN_SOURCE "${CORE_DIR}/../kovpn" CACHE PATH "ovpn-dco kernel module source tree")
 set(OVPN_DCO_SOURCE "${CORE_DIR}/../ovpn-dco" CACHE PATH "ovpn-dco kernel module source tree")
-set(OVPN_DCO_WIN_SOURCE "${CORE_DIR}/../ovpn-dco-win" CACHE PATH "ovpn-dco-win driver source tree")
 
 add_executable(ovpncli cli.cpp)
 
@@ -55,12 +54,14 @@ if (WIN32)
                                                     OVPNAGENT_DISABLE_PATH_CHECK)
 
     if (${CLI_OVPNDCOWIN})
+        find_path(OVPN_DCO_WIN_INCLUDE_DIRS "ovpn-dco-win/uapi.h")
+
         target_compile_definitions(ovpncliagent PRIVATE ENABLE_OVPNDCOWIN)
-        target_include_directories(ovpncliagent PRIVATE ${OVPN_DCO_WIN_SOURCE}/include)
+        target_include_directories(ovpncliagent PRIVATE ${OVPN_DCO_WIN_INCLUDE_DIRS})
 
         add_executable(ovpncliovpndcowin cli.cpp)
         add_core_dependencies(ovpncliovpndcowin)
         target_compile_definitions(ovpncliovpndcowin PRIVATE ENABLE_OVPNDCOWIN)
-        target_include_directories(ovpncliovpndcowin PRIVATE ${OVPN_DCO_WIN_SOURCE}/include)
+        target_include_directories(ovpncliovpndcowin PRIVATE ${OVPN_DCO_WIN_INCLUDE_DIRS})
     endif()
 endif ()
