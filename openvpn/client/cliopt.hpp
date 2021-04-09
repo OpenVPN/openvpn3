@@ -635,7 +635,16 @@ namespace openvpn {
 
     void submit_creds(const ClientCreds::Ptr& creds_arg)
     {
-      if (creds_arg && !creds_locked)
+      if (!creds_arg)
+	return;
+
+      // Override HTTP proxy credentials if provided dynamically
+      if (http_proxy_options && creds_arg->http_proxy_username_defined())
+	http_proxy_options->username = creds_arg->get_http_proxy_username();
+      if (http_proxy_options && creds_arg->http_proxy_password_defined())
+	http_proxy_options->password = creds_arg->get_http_proxy_password();
+
+      if (!creds_locked)
 	{
 	  // if no username is defined in creds and userlocked_username is defined
 	  // in profile, set the creds username to be the userlocked_username

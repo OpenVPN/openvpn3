@@ -805,6 +805,8 @@ namespace openvpn {
 	ClientCreds::Ptr cc = new ClientCreds();
 	cc->set_username(creds.username);
 	cc->set_password(creds.password);
+	cc->set_http_proxy_username(creds.http_proxy_user);
+	cc->set_http_proxy_password(creds.http_proxy_pass);
 	cc->set_response(creds.response);
 	cc->set_dynamic_challenge_cookie(creds.dynamicChallengeCookie, creds.username);
 	cc->set_replace_password_with_session_id(creds.replacePasswordWithSessionID);

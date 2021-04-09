@@ -103,6 +103,9 @@ namespace openvpn {
       std::string username;
       std::string password;
 
+      std::string http_proxy_user;
+      std::string http_proxy_pass;
+
       // response to challenge
       std::string response;
 

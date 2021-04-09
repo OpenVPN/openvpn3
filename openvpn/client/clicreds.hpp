@@ -57,6 +57,16 @@ namespace openvpn {
       did_replace_password_with_session_id = false;
     }
 
+    void set_http_proxy_username(const std::string& username)
+    {
+      http_proxy_user = username;
+    }
+
+    void set_http_proxy_password(const std::string& password)
+    {
+      http_proxy_pass = password;
+    }
+
     void set_response(const std::string& response_arg)
     {
       response = response_arg;
@@ -127,6 +137,16 @@ namespace openvpn {
 	return ChallengeResponse::construct_static_password(password, response);
     }
 
+    std::string get_http_proxy_username() const
+    {
+      return http_proxy_user;
+    }
+
+    std::string get_http_proxy_password() const
+    {
+      return http_proxy_pass;
+    }
+
     bool username_defined() const
     {
       return !username.empty();
@@ -135,6 +155,16 @@ namespace openvpn {
     bool password_defined() const
     {
       return !password.empty();
+    }
+
+    bool http_proxy_username_defined() const
+    {
+      return !http_proxy_user.empty();
+    }
+
+    bool http_proxy_password_defined() const
+    {
+      return !http_proxy_pass.empty();
     }
 
     bool session_id_defined() const
@@ -202,6 +232,10 @@ namespace openvpn {
     // Standard credentials
     std::string username;
     std::string password;
+
+    // HTTP proxy credentials
+    std::string http_proxy_user;
+    std::string http_proxy_pass;
 
     // Password caching
     bool allow_cache_password;
