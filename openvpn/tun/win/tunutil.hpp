@@ -660,7 +660,7 @@ namespace openvpn {
       inline void flush_arp(const DWORD adapter_index,
 			    std::ostream& os)
       {
-	const DWORD status = ::FlushIpNetTable(adapter_index);
+	const DWORD status = ::FlushIpNetTable2(AF_INET, adapter_index);
 	if (status == NO_ERROR)
 	  os << "TAP: ARP flush succeeded" << std::endl;
 	else
