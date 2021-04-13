@@ -31,6 +31,9 @@ download_deps()
     rm -rf tap-windows6
     git clone https://github.com/OpenVPN/tap-windows6.git
 
+    rm -rf ovpn-dco-win
+    git clone https://github.com/OpenVPN/ovpn-dco-win.git
+
     rm -rf asio
     git clone --single-branch --branch asio-1-16-1 https://github.com/chriskohlhoff/asio
 
@@ -102,6 +105,15 @@ build_tap_windows6()
     cp $DL/tap-windows6/src/tap-windows.h $DEP_DIR_PREFIX-$ARCH/include
 }
 
+build_ovpn_dco_win()
+{
+    ARCH=$1
+    local DST_DIR="$DEP_DIR_PREFIX-$ARCH/include/ovpn-dco-win"
+
+    mkdir -p $DST_DIR
+    cp $DL/ovpn-dco-win/uapi.h $DST_DIR/
+}
+
 build_asio()
 {
     ARCH=$1
@@ -126,6 +138,7 @@ build_deps()
     build_lz4 $ARCH
     build_jsoncpp $ARCH
     build_tap_windows6 $ARCH
+    build_ovpn_dco_win $ARCH
     build_asio $ARCH
     build_openssl $ARCH
 }
@@ -140,7 +153,10 @@ build_core()
     mkdir build-$ARCH
 
     CORE_DIR=$(dirname $(realpath -s $0))/../..
-    [ -z "$DCO" ] || WITH_OVPNDCOWIN='-D CLI_OVPNDCOWIN=ON'
+    [ -z "$DCO" ] || {
+        WITH_OVPNDCOWIN="-D CLI_OVPNDCOWIN=ON \
+                         -D OVPN_DCO_WIN_INCLUDE_DIRS=$DEP_DIR_PREFIX-$ARCH"
+    }
 
     pushd build-$ARCH
 
