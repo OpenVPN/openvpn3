@@ -146,6 +146,9 @@ namespace openvpn {
 	if (ring_buffer)
 	  register_rings(th(), ring_buffer);
 
+	if (!wintun && tap.index_defined())
+	  Util::flush_arp(tap.index, os);
+
 	return th.release();
       }
 
