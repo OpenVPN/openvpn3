@@ -196,20 +196,10 @@ Prerequisites:
 * CMake
 * vcpkg
 
-Download and build dependencies:
 ::
 
-    > git clone https://github.com/Microsoft/vcpkg.git
-    > cd vcpkg
-    > bootstrap-vcpkg.bat
-    > vcpkg integrate install
-    > vcpkg install openssl-windows:x64-windows asio:x64-windows tap-windows6:x64-windows lz4:x64-windows gtest:x64-windows
-
-Download and build core test client:
-::
-
-    > git clone https://github.com/OpenVPN/openvpn3.git
-    > cmake -DCMAKE_TOOLCHAIN_FILE=<path_to_vcpkg>\scripts\buildsystems\vcpkg.cmake -A x64 -B build openvpn3
+    > git clone https://github.com/OpenVPN/openvpn3.git core && cd core
+    > cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=<path_to_vcpkg>\scripts\buildsystems\vcpkg.cmake -DVCPKG_OVERLAY_PORTS=deps\vcpkg-ports
     > cmake --build build --config Release --target ovpncli
 
 Testing
