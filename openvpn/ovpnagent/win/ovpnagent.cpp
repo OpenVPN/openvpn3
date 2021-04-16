@@ -75,7 +75,7 @@
 
 void log_version()
 {
-  OPENVPN_LOG("OpenVPN Agent " HTTP_SERVER_VERSION " [" SSL_LIB_NAME "] built on " __DATE__ " " __TIME__);
+  OPENVPN_LOG("OpenVPN Agent " HTTP_SERVER_VERSION " [" SSL_LIB_NAME "]");
 }
 
 using namespace openvpn;
