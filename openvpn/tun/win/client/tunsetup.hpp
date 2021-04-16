@@ -146,8 +146,8 @@ namespace openvpn {
 	if (ring_buffer)
 	  register_rings(th(), ring_buffer);
 
-	if (!wintun && tap.index_defined())
-	  Util::flush_arp(tap.index, os);
+	if (tun_type_ == Type::TapWindows6 && tap_.index_defined())
+	  Util::flush_arp(tap_.index, os);
 
 	return th.release();
       }
