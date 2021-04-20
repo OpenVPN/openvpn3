@@ -161,15 +161,12 @@ Now build the OpenVPN 3 client executable:
 ::
 
     $ cd $O3/core
-    $ . vars/vars-osx64
-    $ . vars/setpath
-    $ cd test/ovpncli
-    $ MTLS=1 LZ4=1 ASIO=1 build cli
+    $ cd $O3/core && mkdir build && cd build
+    $ cmake -DUSE_MBEDTLS=1 ..
+    $ cmake --build .
 
 This will build the OpenVPN 3 client library with a small client
-wrapper (``cli``).  It will also statically link in all external
-dependencies (Asio, mbed TLS, and LZ4), so ``cli`` may be distributed
-to other Macs and will run as a standalone executable.
+wrapper (``ovpncli``).
 
 These build scripts will create a **x86_x64** Mac OS X executable,
 with a minimum deployment target of 10.8.x.  The Mac OS X tuntap driver is not
@@ -179,12 +176,12 @@ available.
 To view the client wrapper options:
 ::
 
-    $ ./cli -h
+    $ ./test/ovpncli/ovpncli -h
 
 To connect:
 ::
 
-    $ ./cli client.ovpn
+    $ ./test/ovpncli/ovpncli client.ovpn
 
 
 Building the OpenVPN 3 client on Windows
@@ -223,12 +220,13 @@ The test code itself is here: `<test/ssl/proto.cpp>`_
 Build the test:
 ::
 
-    $ cd ovpn3/core/test/ssl
-    $ ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 NOSSL=1 $O3/core/scripts/build proto
+    $ cd $O3
+    $ cmake --build . -- test/ssl/proto
 
 Run the test:
 ::
 
+    $ cd test/ssl
     $ time ./proto
     *** app bytes=72777936 net_bytes=122972447 data_bytes=415892854 prog=0000216599/0000216598 D=12700/600/12700/600 N=109/109 SH=17400/15300 HE=0/0
 
@@ -240,36 +238,13 @@ The OpenVPN 3 core also includes unit tests, which are based on
 Google Test framework. To run unit tests, you need to install
 CMake and build Google Test.
 
-Building Google Test on Linux:
-::
-
-    $ git clone https://github.com/google/googletest.git
-    $ cd googletest
-    $ cmake . && cmake --build .
-
-Building Google Test on Windows:
-::
-
-    > git clone https://github.com/google/googletest.git
-    > cd googletest
-    > cmake -G "Visual Studio 14 2015 Win64" .
-    > cmake --build .
-
-After Google Test is built you are ready to build and run unit tests.
-
 Build and run tests on Linux:
 ::
 
-    $ cd ovpn3/core/test/unittests
-    $ GTEST_DIR=~/googletest ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build test_log
-    $ ./test_log
+    $ cd $O3/core/build
+    $ cmake --build . -- test/unittests/coreUnitTests
+    $ ./test/unittests/coreUnitTests
 
-Build and run tests on Windows:
-::
-
-    $ cd ovpn3/core/win
-    $ python build.py ../test/unittests/test_log.cpp unittest
-    $ test_log.exe
 
 
 Developer Guide
