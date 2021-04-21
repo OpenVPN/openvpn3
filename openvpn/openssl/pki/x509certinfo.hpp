@@ -204,5 +204,26 @@ static std::string x509_get_serial_hex(::X509 *cert) {
   return render_hex_sep(asn1_i->data, asn1_i->length, ':', false);
 }
 
+/**
+ *  Retrieves the X.509 certificate SHA256 fingerprint as binary
+ *
+ * @param cert     Pointer to a native OpenSSL X509 object containing the
+ *                 certificate
+ *
+ * @return Returns a uint8_t std:vector containing the binary representation
+ *         of the certificate's SHA256 fingerprint.
+ */
+static std::size_t x509_fingerprint_size() { return EVP_MD_size(EVP_sha256()); }
+static std::vector<uint8_t> x509_get_fingerprint(const ::X509 *cert)
+{
+  std::vector<uint8_t> fingerprint;
+  fingerprint.resize(x509_fingerprint_size());
+
+  if (::X509_digest(cert, EVP_sha256(), fingerprint.data(), NULL) != 1)
+    throw OpenSSLException("OpenSSL error while calling X509_digest()");
+
+  return fingerprint;
+}
+
 }  // namespace OpenSSLPKI
 }  // namespace openvpn
