@@ -190,6 +190,8 @@ To connect:
 Building the OpenVPN 3 client on Windows
 ----------------------------------------
 
+.. image:: ../../../actions/workflows/msbuild.yml/badge.svg
+
 Prerequisites:
 
 * Visual Studio 2019

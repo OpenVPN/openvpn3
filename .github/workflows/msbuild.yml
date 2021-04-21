@@ -1,0 +1,34 @@
+name: MSBuild
+
+on: [push]
+
+env:
+  SOLUTION_FILE_PATH: .
+  BUILD_CONFIGURATION: Release
+  buildDir: '${{ github.workspace }}/build'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: lukka/get-cmake@latest
+    - uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Restore from cache and install vcpkg
+      uses: lukka/run-vcpkg@v6
+      with:
+        setupOnly: true
+        vcpkgGitCommitId: 'a267ab118c09f56f3dae96c9a4b3410820ad2f0b'
+        additionalCachedPaths: ${{ env.buildDir }}/vcpkg_installed
+
+    - name: Run CMake with vcpkg.json manifest
+      uses: lukka/run-cmake@main
+      env:
+        VCPKG_OVERLAY_PORTS: '${{ github.workspace }}/deps/vcpkg-ports'
+      with:
+        useVcpkgToolchainFile: true
+        buildDirectory: '{{ env.buildDir }}'
+        buildWithCMake: true
+        cmakeAppendedArgs: '-DCLI_OVPNDCOWIN=ON'
