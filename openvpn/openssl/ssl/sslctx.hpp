@@ -1728,12 +1728,12 @@ namespace openvpn {
 	    switch (verify_x509.get_mode())
 	    {
 	      case VerifyX509Name::VERIFY_X509_SUBJECT_DN:
-		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_subject(current_cert, true));
+		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_subject(current_cert, true)) && preverify_ok;
 		break;
 
 	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN:
 	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN_PREFIX:
-		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_field(current_cert, NID_commonName));
+		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_field(current_cert, NID_commonName)) && preverify_ok;
 		break;
 
 	      default:
