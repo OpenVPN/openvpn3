@@ -29,7 +29,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/exception.hpp>
 
-#if defined(OPENVPN_PLATFORM_TYPE_APPLE) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
 #include <sys/ucred.h>
 #endif
 
@@ -68,7 +68,7 @@ namespace openvpn {
     // get credentials of process on other side of unix socket
     inline bool peercreds(const int fd, Creds& cr)
     {
-#if defined(OPENVPN_PLATFORM_TYPE_APPLE) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
       xucred cred;
       socklen_t credLen = sizeof(cred);
       if (::getsockopt(fd, SOL_LOCAL, LOCAL_PEERCRED, &cred, &credLen) != 0)
