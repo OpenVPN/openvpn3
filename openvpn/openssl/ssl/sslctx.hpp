@@ -1729,23 +1729,16 @@ namespace openvpn {
 	  const VerifyX509Name& verify_x509 = self->config->verify_x509_name;
 	  if (verify_x509.get_mode() != VerifyX509Name::VERIFY_X509_NONE)
 	  {
-	    switch (verify_x509.get_mode())
-	    {
-	      case VerifyX509Name::VERIFY_X509_SUBJECT_DN:
-		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_subject(current_cert, true));
-		break;
+	    std::string name;
+	    if (verify_x509.get_mode() == VerifyX509Name::VERIFY_X509_SUBJECT_DN)
+	      name = OpenSSLPKI::x509_get_subject(current_cert, true);
+	    else
+	      name = OpenSSLPKI::x509_get_field(current_cert, NID_commonName);
 
-	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN:
-	      case VerifyX509Name::VERIFY_X509_SUBJECT_RDN_PREFIX:
-		preverify_ok = verify_x509.verify(OpenSSLPKI::x509_get_field(current_cert, NID_commonName));
-		break;
-
-	      default:
-		break;
-	    }
-	    if (!preverify_ok)
+	    if (!verify_x509.verify(name))
 	    {
 	      OPENVPN_LOG_SSL("VERIFY FAIL -- verify-x509-name failed");
+	      preverify_ok = false;
 	    }
 	  }
 
