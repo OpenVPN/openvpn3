@@ -589,7 +589,8 @@ namespace openvpn {
 	      // Since we know whether resolved address is IPv4 or IPv6, add
 	      // that info to the returned Protocol object.
 	      Protocol proto(item.transport_protocol);
-	      proto.mod_addr_version((*item.res_addr_list)[index.secondary()]->addr);
+	      const IP::Addr& addr = (*item.res_addr_list)[index.secondary()]->addr;
+	      proto.mod_addr_version(addr.version());
 	      *transport_protocol = proto;
 	    }
 	  else

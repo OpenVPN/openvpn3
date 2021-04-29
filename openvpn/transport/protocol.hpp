@@ -94,9 +94,9 @@ namespace openvpn {
       return (is_tcp() || is_tls()) ? sizeof(std::uint16_t) : 0;
     }
 
-    void mod_addr_version(const IP::Addr& addr)
+    void mod_addr_version(const IP::Addr::Version ip_version)
     {
-      switch (addr.version())
+      switch (ip_version)
 	{
 	case IP::Addr::UNSPEC:
 	  break;
