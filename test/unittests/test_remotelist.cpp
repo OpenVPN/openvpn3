@@ -422,16 +422,25 @@ TEST(RemoteList, OverrideFunctions)
     "remote-random-hostname\n"
     "remote config.host.invalid 1111 udp6\n"
     "remote config.host.invalid 1111 tcp\n"
+    "remote config.host.invalid 1111 tls4\n"
     , nullptr);
   cfg.update_map();
 
   RandomAPI::Ptr rng(new FakeSecureRand(0xf7));
   RemoteList rl(cfg, "", 0, nullptr, rng);
-  ASSERT_EQ(rl.size(), 2);
+  ASSERT_EQ(rl.size(), 3);
+
+  rl.set_proto_version_override(IP::Addr::Version::V6);
+  for (size_t i=0; i < rl.size(); ++i)
+    ASSERT_TRUE(rl.get_item(i).transport_protocol.is_ipv6());
+
+  rl.set_proto_version_override(IP::Addr::Version::V4);
+  for (size_t i=0; i < rl.size(); ++i)
+    ASSERT_TRUE(rl.get_item(i).transport_protocol.is_ipv4());
 
   rl.handle_proto_override(Protocol(Protocol::UDPv4), true);
   ASSERT_EQ(rl.size(), 1);
-  ASSERT_EQ(rl.current_transport_protocol(), Protocol(Protocol::TCP));
+  ASSERT_EQ(rl.current_transport_protocol(), Protocol(Protocol::TCPv4));
 
   rl.set_port_override("4711");
   ASSERT_EQ(rl.size(), 1);

@@ -201,6 +201,10 @@ namespace openvpn {
       // Should be tcp, udp, or adaptive.
       std::string protoOverride;
 
+      // Force transport protocol IP version
+      // Should be 4 for IPv4 or 6 for IPv6.
+      int protoVersionOverride = 0;
+
       // IPv6 preference
       //  no      -- disable IPv6, so tunnel will be IPv4-only
       //  yes     -- request combined IPv4/IPv6 tunnel

@@ -521,6 +521,16 @@ namespace openvpn {
       reset_cache();
     }
 
+    // override all Item's transport_protocol version to v
+    void set_proto_version_override(const IP::Addr::Version v)
+    {
+      if (v == IP::Addr::Version::UNSPEC)
+	return;
+      for (auto item : list)
+	item->transport_protocol.mod_addr_version(v);
+      reset_cache();
+    }
+
     void set_random(const RandomAPI::Ptr& rng_arg)
     {
       rng = rng_arg;
