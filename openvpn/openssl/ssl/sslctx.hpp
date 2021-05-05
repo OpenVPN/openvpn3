@@ -593,7 +593,7 @@ namespace openvpn {
       std::string tls_remote;
       VerifyX509Name verify_x509_name;   // --verify-x509-name feature
       PeerFingerprints peer_fingerprints; // --peer-fingerprint
-      TLSVersion::Type tls_version_min{TLSVersion::UNDEF}; // minimum TLS version that we will negotiate
+      TLSVersion::Type tls_version_min{TLSVersion::V1_2}; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
       std::string tls_cipher_list;
       std::string tls_ciphersuite_list;

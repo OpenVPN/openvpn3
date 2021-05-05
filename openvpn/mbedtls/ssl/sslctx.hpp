@@ -205,7 +205,7 @@ namespace openvpn {
 		 ssl_debug_level(0),
 		 flags(0),
 		 ns_cert_type(NSCert::NONE),
-		 tls_version_min(TLSVersion::UNDEF),
+		 tls_version_min(TLSVersion::V1_2),
 		 tls_cert_profile(TLSCertProfile::UNDEF),
 		 local_cert_enabled(true) {}
 
