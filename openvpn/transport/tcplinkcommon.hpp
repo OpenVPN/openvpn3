@@ -212,7 +212,6 @@ namespace openvpn {
 		 const Frame::Context& frame_context_arg,
 		 const SessionStats::Ptr& stats_arg)
 	: socket(socket_arg),
-	  halt(false),
 	  read_handler(read_handler_arg),
 	  frame_context(frame_context_arg),
 	  stats(stats_arg),
@@ -430,7 +429,6 @@ namespace openvpn {
       }
 
       typename Protocol::socket& socket;
-      bool halt;
       ReadHandler read_handler;
       Frame::Context frame_context;
       SessionStats::Ptr stats;
@@ -442,6 +440,7 @@ namespace openvpn {
       TransportMutateStream::Ptr mutate;
       bool raw_mode_read;
       bool raw_mode_write;
+      bool halt = false;
 
 #ifdef OPENVPN_GREMLIN
       std::unique_ptr<Gremlin::SendRecvQueue> gremlin;
