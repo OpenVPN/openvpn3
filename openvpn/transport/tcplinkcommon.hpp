@@ -53,8 +53,8 @@ namespace openvpn {
 
       // In raw mode, data is sent and received without any special encapsulation.
       // In non-raw mode, data is packetized by prepending a 16-bit length word
-      // onto each packet.  The OpenVPN protocol runs in non-raw mode, while other
-      // TCP protocols such as HTTP or HTTPS would run in raw mode.
+      // onto each packet.  The OpenVPN and DNS protocols run in non-raw mode,
+      // while other TCP protocols such as HTTP or HTTPS would run in raw mode.
       // This method is a no-op if RAW_MODE_ONLY is true.
       void set_raw_mode(const bool mode)
       {
