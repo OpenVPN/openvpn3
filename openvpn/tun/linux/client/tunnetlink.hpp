@@ -706,7 +706,7 @@ namespace openvpn {
 	}
 
 	// Process IPv4 redirect-gateway
-	if (pull.reroute_gw.ipv4)
+	if (pull.reroute_gw.ipv4 && local4)
 	  {
 	    // add bypass route
 	    if (add_bypass_routes && !pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
@@ -717,7 +717,7 @@ namespace openvpn {
 	  }
 
 	// Process IPv6 redirect-gateway
-	if (pull.reroute_gw.ipv6 && !pull.block_ipv6)
+	if (pull.reroute_gw.ipv6 && !pull.block_ipv6 && local6)
 	  {
 	    // add bypass route
 	    if (add_bypass_routes && pull.remote_address.ipv6 && !(pull.reroute_gw.flags & RedirectGatewayFlags::RG_LOCAL))
