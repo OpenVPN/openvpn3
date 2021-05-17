@@ -3911,7 +3911,7 @@ namespace openvpn {
     size_t hmac_size;
     TLSWrapMode tls_wrap_mode;
     Mode mode_;                        // client or server
-    unsigned int upcoming_key_id;
+    unsigned int upcoming_key_id = 0;
     unsigned int n_key_ids;
 
     TimePtr now_;                      // pointer to current time (a clone of config->now)
@@ -3937,7 +3937,7 @@ namespace openvpn {
 
     KeyContext::Ptr primary;
     KeyContext::Ptr secondary;
-    bool dc_deferred;
+    bool dc_deferred = false;
 
     // END ProtoContext data members
   };
