@@ -73,7 +73,7 @@ namespace openvpn {
 	tailroom_ = 0;
 	buffer_flags_ = 0;
 	align_adjust_ = 0;
-
+	align_block_ = sizeof(std::size_t);
 	adj_headroom_ = 0;
 	adj_capacity_ = 0;
       }
