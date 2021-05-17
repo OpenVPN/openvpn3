@@ -453,7 +453,7 @@ namespace openvpn {
 	std::string tls_ciphersuite_list;
 	std::string gui_version;
 	std::string sso_methods;
-	bool allow_local_lan_access;
+	bool allow_local_lan_access = false;
 	std::string hw_addr_override;
 	std::string platform_version;
 	ProtoContextOptions::Ptr proto_context_options;
