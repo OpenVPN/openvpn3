@@ -131,7 +131,7 @@ namespace openvpn {
 	  return ad_op32 ? data : data + 4;
 	}
 
-	const size_t ad_len() const
+	size_t ad_len() const
 	{
 	  return ad_op32 ? 8 : 4;
 	}
