@@ -872,7 +872,7 @@ namespace openvpn {
 
 	  // set connect timeout
 	  {
-	    unsigned int ct = sf.connect_timeout();
+	    int ct = sf.connect_timeout();
 	    if (ct < 0)
 	      ct = config->connect_timeout;
 	    set_connect_timeout(ct);
