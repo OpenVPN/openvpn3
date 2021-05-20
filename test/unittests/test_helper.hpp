@@ -356,37 +356,37 @@ catch (const expected_exception& e) \
 // or non-void-returning functions, so implement workaround here
 
 #define JY_ASSERT_TRUE(value) \
-{ \
+do { \
   if (!(value)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_TRUE: failure at " << __FILE__ << ':' << __LINE__); \
-}
+} while (0)
 
 #define JY_ASSERT_FALSE(value) \
-{ \
+do { \
   if (value) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_FALSE: failure at " << __FILE__ << ':' << __LINE__); \
-}
+} while (0)
 
 #define JY_ASSERT_EQ(v1, v2) \
-{ \
+do { \
   if ((v1) != (v2)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_EQ: failure at " << __FILE__ << ':' << __LINE__); \
-}
+} while (0)
 
 #define JY_ASSERT_NE(v1, v2) \
-{ \
+do { \
   if ((v1) == (v2)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_NE: failure at " << __FILE__ << ':' << __LINE__); \
-}
+} while (0)
 
 #define JY_ASSERT_LE(v1, v2) \
-{ \
+do { \
   if ((v1) > (v2)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_LE: failure at " << __FILE__ << ':' << __LINE__); \
-}
+} while (0)
 
 #define JY_ASSERT_GE(v1, v2) \
-{ \
+do { \
   if ((v1) < (v2)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_GE: failure at " << __FILE__ << ':' << __LINE__); \
-}
+} while (0)
