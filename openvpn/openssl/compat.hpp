@@ -30,6 +30,8 @@
 #include <openssl/dsa.h>
 #include <openssl/hmac.h>
 #include <openssl/err.h>
+#include <openssl/ec.h>
+#include <openssl/ssl.h>
 
 // make sure type 94 doesn't collide with anything in bio.h
 // Start with the same number as before
