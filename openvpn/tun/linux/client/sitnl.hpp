@@ -525,7 +525,7 @@ out:
 	res->iface = iface;
 	res->gw = gw;
 	res->metric = metric;
-	res->prefix_len = res->prefix_len;
+	res->prefix_len = r->rtm_dst_len;
 
 	OPENVPN_LOG_RTNL(__func__ << ": Use gw " << gw.to_string() << " route " << route.to_string() << " metric " << metric);
 
