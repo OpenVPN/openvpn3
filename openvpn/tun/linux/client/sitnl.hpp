@@ -211,11 +211,12 @@ namespace openvpn {
 		 sitnl_parse_reply_cb cb, void *arg_cb)
       {
 	int len, rem_len, fd, ret, rcv_len;
+	const size_t buf_len = 16 * 1024;
 	struct sockaddr_nl nladdr = { };
 	struct nlmsgerr *err;
 	struct nlmsghdr *h;
 	unsigned int seq;
-	char buf[1024 * 16];
+	void *buf = NULL;
 	struct iovec iov =
 	{
 	  .iov_base = payload,
@@ -265,7 +266,13 @@ namespace openvpn {
 	}
 
 	/* prepare buffer to store RTNL replies */
-	memset(buf, 0, sizeof(buf));
+	buf = calloc(1, buf_len);
+	if (!buf)
+	{
+	  ret = -ENOMEM;
+	  goto out;
+	}
+
 	iov.iov_base = buf;
 
 	while (1)
@@ -275,7 +282,7 @@ namespace openvpn {
 	   * using it again
 	   */
 	  OPENVPN_LOG_RTNL(__func__ << ": checking for received messages");
-	  iov.iov_len = sizeof(buf);
+	  iov.iov_len = buf_len;
 	  rcv_len = recvmsg(fd, &nlmsg, 0);
 	  OPENVPN_LOG_RTNL(__func__ << ": rtnl: received " << rcv_len << " bytes");
 	  if (rcv_len < 0)
@@ -394,6 +401,7 @@ namespace openvpn {
 	}
 out:
 	close(fd);
+	free(buf);
 
 	return ret;
       }
