@@ -77,7 +77,9 @@ Using cli with ovpn-dco
 """""""""""""""""""""""
 
 ovpn-dco is a kernel module which optimises data channel encryption and
-transport, providing better performance.
+transport, providing better performance. The cli will detect when the
+kernel module is available and enable dco automatically (use --no-dco
+to disable this).
 
 Download, build and install ovpn-dco:
 ::
@@ -98,12 +100,12 @@ Build cli with ovpn-dco support:
 
     $ cd $O3/core/build
     $ cmake -DCLI_OVPNDCO=on .. && make
-    $ sudo test/ovpncli/ovpncliovpndco --dco myprofile.ovpn
+    $ sudo test/ovpncli/ovpncli [--no-dco] myprofile.ovpn
 
-Options used:
+Options:
 
 - :code:`myprofile.ovpn` : OpenVPN config file (must have .ovpn extension)
-- :code:`--dco`          : enable data channel offload
+- :code:`--no-dco`       : disable data channel offload (optional)
 
 
 Building the OpenVPN 3 client on Mac OS X

@@ -712,7 +712,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "gremlin",        required_argument,  nullptr,      'G' },
     { "proxy-basic",    no_argument,        nullptr,      'B' },
     { "alt-proxy",      no_argument,        nullptr,      'A' },
-    { "dco",            no_argument,        nullptr,      'd' },
+#if defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
+    { "no-dco",         no_argument,        nullptr,      'd' },
+#endif
     { "eval",           no_argument,        nullptr,      'e' },
     { "self-test",      no_argument,        nullptr,      'T' },
     { "cache-password", no_argument,        nullptr,      'C' },
@@ -783,7 +785,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool merge = false;
 	bool version = false;
 	bool altProxy = false;
-	bool dco = false;
+	bool dco = true;
 	std::string epki_cert_fn;
 	std::string epki_ca_fn;
 	std::string epki_key_fn;
@@ -885,7 +887,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		altProxy = true;
 		break;
 	      case 'd':
-		dco = true;
+		dco = false;
 		break;
 	      case 'f':
 		forceAesCbcCiphersuites = true;
@@ -1193,7 +1195,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--proxy-password, -W  : HTTP proxy password" << std::endl;
       std::cout << "--proxy-basic, -B     : allow HTTP basic auth" << std::endl;
       std::cout << "--alt-proxy, -A       : enable alternative proxy module" << std::endl;
-      std::cout << "--dco, -d             : enable data channel offload" << std::endl;
+#if defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
+      std::cout << "--no-dco, -d          : disable data channel offload" << std::endl;
+#endif
       std::cout << "--cache-password, -C  : cache password" << std::endl;
       std::cout << "--no-cert, -x         : disable client certificate" << std::endl;
       std::cout << "--def-keydir, -k      : default key direction ('bi', '0', or '1')" << std::endl;

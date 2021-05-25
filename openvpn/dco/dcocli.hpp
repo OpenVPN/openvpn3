@@ -239,7 +239,9 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 }
 #elif ENABLE_OVPNDCO
 #include <openvpn/dco/ovpndcocli.hpp>
-inline DCO::Ptr new_controller() { return ClientConfig::new_controller(); }
+inline DCO::Ptr new_controller() {
+  return OvpnDcoClient::available() ? ClientConfig::new_controller() : nullptr;
+}
 inline TransportClient::Ptr
 ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
                                        TransportClientParent *parent) {
@@ -247,14 +249,14 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 }
 #elif ENABLE_OVPNDCOWIN
 #include <openvpn/dco/ovpndcowincli.hpp>
-inline DCO::Ptr new_controller() { return ClientConfig::new_controller(); }
+inline DCO::Ptr new_controller() {
+  return OvpnDcoWinClient::available() ? ClientConfig::new_controller() : nullptr;
+}
 inline TransportClient::Ptr
 ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
                                        TransportClientParent* parent) {
   return TransportClient::Ptr(new OvpnDcoWinClient(io_context, this, parent));
 }
-#else
-#error either ENABLE_KOVPN, ENABLE_OVPNDCO or ENABLE_OVPNDCOWIN must be defined
 #endif
 
 inline TunClient::Ptr

@@ -464,7 +464,7 @@ namespace openvpn {
 	Gremlin::Config::Ptr gremlin_config;
 #endif
 	bool alt_proxy = false;
-	bool dco = false;
+	bool dco = true;
 	bool echo = false;
 	bool info = false;
 
@@ -1415,7 +1415,7 @@ namespace openvpn {
 #endif
 #ifdef ENABLE_KOVPN
       ret += " KOVPN";
-#elif ENABLE_OVPNDCO
+#elif defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
       ret += " OVPN-DCO";
 #endif
 #ifdef OPENVPN_GREMLIN

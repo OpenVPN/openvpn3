@@ -1,8 +1,8 @@
 
 option(CLI_NULLTUN "Build ovpncli variant with null tun" OFF)
 option(CLI_KOVPN "Build ovpncli variant with kovpn kernel moduke support" OFF)
-option(CLI_OVPNDCO "Build ovpncli variant with ovpn-dco kernel module support" OFF)
-option(CLI_OVPNDCOWIN "Build ovpncli variant with ovpn-dco-win windows driver" OFF)
+option(CLI_OVPNDCO "Build ovpncli with ovpn-dco kernel module support" OFF)
+option(CLI_OVPNDCOWIN "Build ovpncli with ovpn-dco-win driver support" OFF)
 
 set(KOVPN_SOURCE "${CORE_DIR}/../kovpn" CACHE PATH "ovpn-dco kernel module source tree")
 set(OVPN_DCO_SOURCE "${CORE_DIR}/../ovpn-dco" CACHE PATH "ovpn-dco kernel module source tree")
@@ -29,16 +29,13 @@ if (${CLI_KOVPN})
 endif()
 
 if (${CLI_OVPNDCO})
-    add_executable(ovpncliovpndco cli.cpp)
-    add_core_dependencies(ovpncliovpndco)
-
-    target_compile_definitions(ovpncliovpndco PRIVATE -DENABLE_OVPNDCO)
+    target_compile_definitions(ovpncli PRIVATE -DENABLE_OVPNDCO)
 
     find_package(PkgConfig)
     pkg_search_module(LIBNL REQUIRED libnl-genl-3.0)
 
-    target_include_directories(ovpncliovpndco PRIVATE ${OVPN_DCO_SOURCE}/include/uapi ${LIBNL_INCLUDE_DIRS})
-    target_link_libraries(ovpncliovpndco ${LIBNL_LIBRARIES})
+    target_include_directories(ovpncli PRIVATE ${OVPN_DCO_SOURCE}/include/uapi ${LIBNL_INCLUDE_DIRS})
+    target_link_libraries(ovpncli ${LIBNL_LIBRARIES})
 endif()
 
 if (WIN32)
@@ -55,9 +52,7 @@ if (WIN32)
         target_compile_definitions(ovpncliagent PRIVATE ENABLE_OVPNDCOWIN)
         target_include_directories(ovpncliagent PRIVATE ${OVPN_DCO_WIN_INCLUDE_DIRS})
 
-        add_executable(ovpncliovpndcowin cli.cpp)
-        add_core_dependencies(ovpncliovpndcowin)
-        target_compile_definitions(ovpncliovpndcowin PRIVATE ENABLE_OVPNDCOWIN)
-        target_include_directories(ovpncliovpndcowin PRIVATE ${OVPN_DCO_WIN_INCLUDE_DIRS})
+        target_compile_definitions(ovpncli PRIVATE ENABLE_OVPNDCOWIN)
+        target_include_directories(ovpncli PRIVATE ${OVPN_DCO_WIN_INCLUDE_DIRS})
     endif()
 endif ()

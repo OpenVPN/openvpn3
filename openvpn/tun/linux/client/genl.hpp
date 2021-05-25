@@ -69,6 +69,21 @@ public:
   typedef RCPtr<GeNL> Ptr;
 
   /**
+   * Detect ovpn-dco kernel module
+   *
+   * @returns bool value indicating whether the module is loaded
+   */
+  static bool available() {
+    NlSockPtr sock_ptr(nl_socket_alloc(), nl_socket_free);
+
+    int nl_family_id = -1;
+    if (sock_ptr && genl_connect(sock_ptr.get()) == 0)
+      nl_family_id = genl_ctrl_resolve(sock_ptr.get(), OVPN_NL_NAME);
+
+    return nl_family_id >= 0;
+  }
+
+  /**
    * Construct a new GeNL object
    *
    * @param io_context reference to io_context

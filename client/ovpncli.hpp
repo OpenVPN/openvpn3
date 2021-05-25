@@ -304,8 +304,8 @@ namespace openvpn {
       // Custom proxy implementation
       bool altProxy = false;
 
-      // Custom Data Channel Offload implementation
-      bool dco = false;
+      // Enable automatic Data Channel Offload
+      bool dco = true;
 
       // pass through pushed "echo" directives via "ECHO" event
       bool echo = false;

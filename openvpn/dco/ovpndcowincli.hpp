@@ -26,6 +26,15 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver {
   typedef RCPtr<OvpnDcoWinClient> Ptr;
 
 public:
+  static bool available() {
+    std::string path;
+    TunWin::Util::TapNameGuidPair tap;
+    TunWin::Type tun_type(TunWin::OvpnDco);
+    TunWin::Util::TapNameGuidPairList guids(tun_type);
+    Win::ScopedHANDLE hnd(TunWin::Util::tap_open(tun_type, guids, path, tap));
+    return hnd.defined();
+  }
+
   void transport_start() override {
     if (handle_)
       return;
