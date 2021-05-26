@@ -347,6 +347,7 @@ inline int EC_GROUP_order_bits(const EC_GROUP *group)
 #if OPENSSL_VERSION_NUMBER < 0x10101000L
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+#include <openssl/ssl.h>
 
 inline const BIGNUM *RSA_get0_n(const RSA *r)
 {
