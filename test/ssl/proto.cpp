@@ -125,6 +125,11 @@
 #define SITER 1
 #endif
 
+// number of retries for failed test
+#ifndef N_RETRIES
+#define N_RETRIES 5
+#endif
+
 // abort if we reach this limit
 //#define DROUGHT_LIMIT 100000
 
@@ -1102,6 +1107,21 @@ int test(const int thread_num)
   return 0;
 }
 
+int test_retry(const int thread_num)
+{
+  const int n_retries = N_RETRIES;
+  int ret = 1;
+  for (int i = 0; i < n_retries; ++i)
+    {
+      ret = test(thread_num);
+      if (!ret)
+	return 0;
+      std::cout << "Retry " << (i+1) << '/' << n_retries << std::endl;
+    }
+  std::cout << "Failed" << std::endl;
+  return ret;
+}
+
 int main(int argc, char* argv[])
 {
   int ret = 0;
@@ -1126,7 +1146,7 @@ int main(int argc, char* argv[])
   for (i = 0; i < N_THREADS; ++i)
     {
       threads[i] = new std::thread([i]() {
-	  test(i);
+	  test_retry(i);
 	});
     }
   for (i = 0; i < N_THREADS; ++i)
@@ -1135,7 +1155,7 @@ int main(int argc, char* argv[])
       delete threads[i];
     }
 #else
-  ret = test(1);
+  ret = test_retry(1);
 #endif
 
 out:
