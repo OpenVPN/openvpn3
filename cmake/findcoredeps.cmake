@@ -47,6 +47,7 @@ function(add_core_dependencies target)
                 -D_WIN32_WINNT=0x0600
                 -DTAP_WIN_COMPONENT_ID=tap0901
                 -D_CRT_SECURE_NO_WARNINGS
+                -DASIO_DISABLE_LOCAL_SOCKETS
                 )
         set(EXTRA_LIBS fwpuclnt.lib iphlpapi.lib wininet.lib setupapi.lib rpcrt4.lib wtsapi32.lib)
         if ("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "ARM64")

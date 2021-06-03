@@ -20,7 +20,7 @@ jobs:
       uses: lukka/run-vcpkg@v6
       with:
         setupOnly: true
-        vcpkgGitCommitId: 'a267ab118c09f56f3dae96c9a4b3410820ad2f0b'
+        vcpkgGitCommitId: '668f048edbadbd85db43084e6d93c6a45d262f5c'
         additionalCachedPaths: ${{ env.buildDir }}/vcpkg_installed
 
     - name: Run CMake with vcpkg.json manifest
