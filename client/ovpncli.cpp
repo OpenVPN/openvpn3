@@ -1268,6 +1268,7 @@ namespace openvpn {
 	  // data.  Vice versa for TUN_*_IN.
 	  if (stats)
 	    {
+	      stats->dco_update();
 	      ret.bytesOut = stats->stat_count(SessionStats::TUN_BYTES_IN);
 	      ret.bytesIn = stats->stat_count(SessionStats::TUN_BYTES_OUT);
 	      ret.packetsOut = stats->stat_count(SessionStats::TUN_PACKETS_IN);
