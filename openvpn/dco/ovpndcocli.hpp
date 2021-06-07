@@ -26,7 +26,8 @@
 
 class OvpnDcoClient : public Client,
                       public KoRekey::Receiver,
-                      public TransportClientParent {
+                      public TransportClientParent,
+                      public SessionStats::DCOTransportSource {
   friend class ClientConfig;
   friend class GeNL;
 
@@ -150,6 +151,8 @@ public:
       transport_factory = tcpconf;
     }
 
+    config->transport.stats->dco_configure(this);
+
     transport = transport_factory->new_transport_client_obj(io_context, this);
     transport->transport_start();
   }
@@ -222,11 +225,31 @@ public:
                    salen, ipv4, ipv6);
   }
 
+  void update_peer_stats(uint32_t peer_id, bool sync) {
+    const SessionStats::DCOTransportSource::Data old_stats = last_stats;
+
+    if (peer_id == OVPN_PEER_ID_UNDEF)
+      return;
+
+    TunBuilderBase *tb = config->builder;
+    if (tb) {
+      tb->tun_builder_dco_get_peer(peer_id, sync);
+      queue_read_pipe(nullptr);
+    } else {
+      genl->get_peer(peer_id, sync);
+    }
+
+    last_delta = last_stats - old_stats;
+  }
+
   virtual void resolve_callback(const openvpn_io::error_code &error,
                                 results_type results) override {}
 
   virtual void stop_() override {
     if (!halt) {
+      /* update stats before deleting peer in kernelspace */
+      update_peer_stats(peer_id, true);
+
       halt = true;
 
       if (config->builder) {
@@ -547,10 +570,23 @@ private:
         });
   }
 
+  virtual SessionStats::DCOTransportSource::Data dco_transport_stats_delta() override {
+    if (halt) {
+      /* retrieve the last stats update and erase it to avoid race conditions with other queries */
+      SessionStats::DCOTransportSource::Data delta = last_delta;
+      last_delta = SessionStats::DCOTransportSource::Data(0, 0);
+      return delta;
+    }
+
+    update_peer_stats(peer_id, true);
+    return last_delta;
+  }
+
   // used to communicate to kernel via privileged process
   std::unique_ptr<openvpn_io::posix::stream_descriptor> pipe;
 
   GeNLImpl::Ptr genl;
   TransportClient::Ptr transport;
   SessionStats::DCOTransportSource::Data last_stats;
+  SessionStats::DCOTransportSource::Data last_delta;
 };
