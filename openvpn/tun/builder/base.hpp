@@ -304,6 +304,17 @@ namespace openvpn {
     }
 
     /**
+     * Retrieve the status of an existing peer.
+     *
+     * @param peer_id the ID of the peer to query
+     * @param sync if true the netlink invocation will be synchronous
+     * @throws netlink_error thrown if error occurs while sending netlink message
+     */
+    virtual void tun_builder_dco_get_peer(uint32_t peer_id, bool sync)
+    {
+    }
+
+    /**
      * Inject new key into kernel module
      *
      * @param key_slot \c OVPN_KEY_SLOT_PRIMARY or \c OVPN_KEY_SLOT_SECONDARY
