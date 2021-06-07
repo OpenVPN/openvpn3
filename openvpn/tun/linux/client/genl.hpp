@@ -44,6 +44,21 @@ namespace openvpn {
 
 typedef int (*ovpn_nl_cb)(struct nl_msg *msg, void *arg);
 
+struct OvpnDcoPeer {
+  typedef RCPtr<struct OvpnDcoPeer> Ptr;
+  __u32 id;
+  struct in_addr ipv4;
+  struct in6_addr ipv6;
+  __u16 local_port;
+  struct sockaddr_storage remote;
+  struct {
+    __u32 interval;
+    __u32 timeout;
+  } keepalive;
+  __u64 rx_bytes, tx_bytes;
+  __u32 rx_pkts, tx_pkts;
+};
+
 /**
  * Implements asynchronous communication with ovpn-dco kernel module
  * via generic netlink protocol.
@@ -370,6 +385,40 @@ public:
   }
 
   /**
+   * Retrieve he current status of a peer.
+   *
+   * @param peer_id the ID of the peer to query
+   * @throws netlink_error thrown if error occurs during sending netlink message
+   */
+  void get_peer(int peer_id, bool sync) {
+    auto msg_ptr = create_msg(OVPN_CMD_GET_PEER);
+    auto *msg = msg_ptr.get();
+    struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_GET_PEER);
+    if (!attr)
+      OPENVPN_THROW(netlink_error, " get_peer() cannot allocate submessage");
+
+    NLA_PUT_U32(msg, OVPN_GET_PEER_ATTR_PEER_ID, peer_id);
+
+    nla_nest_end(msg, attr);
+
+    nl_status = 1;
+    send_netlink_message(msg);
+
+    /* if the user has requested a synchronous execution, wait for the reply and parse
+     * it here directly
+     */
+    while (sync && nl_status == 1) {
+      stream->wait(openvpn_io::posix::stream_descriptor::wait_read);
+      read_netlink_message();
+    }
+
+    return;
+
+  nla_put_failure:
+    OPENVPN_THROW(netlink_error, " get_peer() nla_put_failure");
+  }
+
+  /**
    * Subscribe for certain kind of packets (like control channel packets)
    */
   void register_packet() {
@@ -648,6 +697,43 @@ private:
       self->read_handler->tun_read_handler(self->buf);
       break;
 
+    case OVPN_CMD_GET_PEER: {
+      if (!attrs[OVPN_ATTR_GET_PEER])
+	OPENVPN_THROW(netlink_error, "missing OVPN_ATTR_GET_PEER attribute in "
+				     "OVPN_CMD_GET_PEER command reply");
+
+      struct nlattr *get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_MAX + 1];
+      ret = nla_parse_nested(get_peer_attrs, OVPN_GET_PEER_RESP_ATTR_MAX,
+                             attrs[OVPN_ATTR_GET_PEER], NULL);
+      if (ret)
+        OPENVPN_THROW(netlink_error, "cannot parse OVPN_ATTR_GET_PEER attribute");
+
+      if (!get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_PEER_ID])
+        OPENVPN_THROW(netlink_error, "missing attributes in OVPN_CMD_DEL_PEER");
+
+      struct OvpnDcoPeer peer = { 0 };
+      peer.id = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_PEER_ID]);
+      memcpy(&peer.ipv4, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV4]), sizeof(peer.ipv4));
+      memcpy(&peer.ipv6, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_IPV6]), sizeof(peer.ipv6));
+      peer.local_port = nla_get_u16(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_LOCAL_PORT]);
+      memcpy(&peer.remote, nla_data(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE]),
+	     nla_len(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE]));
+      peer.keepalive.interval = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_KEEPALIVE_INTERVAL]);
+      peer.keepalive.timeout = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_KEEPALIVE_TIMEOUT]);
+      peer.rx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_RX_BYTES]);
+      peer.tx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_TX_BYTES]);
+      peer.rx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_RX_PACKETS]);
+      peer.tx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_TX_PACKETS]);
+
+      self->reset_buffer();
+      self->buf.write(&gnlh->cmd, sizeof(gnlh->cmd));
+      self->buf.write(&peer, sizeof(peer));
+
+      self->read_handler->tun_read_handler(self->buf);
+      /* report to the other context that the reply has been received */
+      nl_status = 0;
+      break;
+    }
     default:
       OPENVPN_LOG(__func__ << " unknown netlink command: " << (int)gnlh->cmd);
     }
@@ -729,5 +815,9 @@ private:
   BufferAllocated buf;
 
   std::unique_ptr<openvpn_io::posix::stream_descriptor> stream;
+  static int nl_status;
 };
+
+  template <typename ReadHandler> int GeNL<ReadHandler>::nl_status = 0;
+
 } // namespace openvpn
