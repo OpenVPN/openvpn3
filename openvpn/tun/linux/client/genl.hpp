@@ -123,7 +123,8 @@ public:
 
     nl_cb_set(
         cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM,
-        [](struct nl_msg *, void *) { return (int)NL_OK; }, NULL);
+        [](struct nl_msg *, void *) -> int { return NL_OK; }, NULL);
+
     nl_socket_set_cb(sock, cb);
 
     // wrap netlink socket into ASIO primitive for async read
@@ -471,18 +472,18 @@ private:
 
     nl_cb_err(
         mcast_cb, NL_CB_CUSTOM,
-        [](struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) {
+        [](struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg) -> int {
           int *ret = static_cast<int *>(arg);
           *ret = err->error;
-          return (int)NL_STOP;
+          return NL_STOP;
         },
         &ret);
     nl_cb_set(
         mcast_cb, NL_CB_ACK, NL_CB_CUSTOM,
-        [](struct nl_msg *msg, void *arg) {
+        [](struct nl_msg *msg, void *arg) -> int {
           int *ret = static_cast<int *>(arg);
           *ret = 0;
-          return (int)NL_STOP;
+          return NL_STOP;
         },
         &ret);
 
