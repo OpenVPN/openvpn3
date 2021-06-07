@@ -394,6 +394,14 @@ public:
       break;
     }
 
+    case OVPN_CMD_GET_PEER: {
+      struct OvpnDcoPeer peer;
+      buf.read(&peer, sizeof(peer));
+
+      last_stats = SessionStats::DCOTransportSource::Data(peer.rx_bytes, peer.tx_bytes);
+      break;
+    }
+
     case -1:
       // consider all errors as fatal
       stop_();
@@ -544,4 +552,5 @@ private:
 
   GeNLImpl::Ptr genl;
   TransportClient::Ptr transport;
+  SessionStats::DCOTransportSource::Data last_stats;
 };
