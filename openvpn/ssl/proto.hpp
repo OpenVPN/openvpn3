@@ -803,7 +803,7 @@ namespace openvpn {
 	out << ",dev-type " << layer.dev_type();
 	out << ",link-mtu " << tun_mtu + link_mtu_adjust() + l2extra;
 	out << ",tun-mtu " << tun_mtu + l2extra;
-	out << ",proto " << protocol.str_client(true);
+	out << ",proto " << protocol.occ_str(server);
 
 	{
 	  const char *compstr = comp_ctx.options_string();

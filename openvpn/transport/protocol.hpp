@@ -245,28 +245,24 @@ namespace openvpn {
 	}
     }
 
-    const char *str_client(const bool force_ipv4) const
+    // OpenVPN has always sent UDPv4, TCPv4_* over the wire.
+    // Keep all strings v4 for backward compatibility.
+    const char *occ_str(const bool server) const
     {
       switch (type_)
 	{
 	case UDP:
-	  return "UDP";
 	case UDPv4:
-	  return "UDPv4";
 	case UDPv6:
-	  return force_ipv4 ? "UDPv4" : "UDPv6";
+	  return "UDPv4";
 	case TCP:
-	  return "TCP_CLIENT";
 	case TCPv4:
-	  return "TCPv4_CLIENT";
 	case TCPv6:
-	  return force_ipv4 ? "TCPv4_CLIENT" : "TCPv6_CLIENT";
+	  return server ? "TCPv4_SERVER" : "TCPv4_CLIENT";
 	case TLS:
-	  return "TLS";
 	case TLSv4:
-	  return "TLSv4";
 	case TLSv6:
-	  return force_ipv4 ? "TLSv4" : "TLSv6";
+	  return "TLSv4";
 	default:
 	  return "UNDEF_PROTO";
 	}
