@@ -480,6 +480,16 @@ public:
       throw session_invalidated(Error::name(Base::invalidation_reason()));
   }
 
+  bool is_state_client_wait_reset_ack() const
+  {
+    return primary_state() == C_WAIT_RESET_ACK;
+  }
+
+  void disable_xmit()
+  {
+    disable_xmit_ = true;
+  }
+
   std::deque<BufferPtr> net_out;
 
   DroughtMeasure control_drought;
@@ -488,6 +498,8 @@ public:
 private:
   virtual void control_net_send(const Buffer& net_buf)
   {
+    if (disable_xmit_)
+      return;
     net_bytes_ += net_buf.size();
     net_out.push_back(BufferPtr(new BufferAllocated(net_buf, 0)));
   }
@@ -556,6 +568,7 @@ private:
   BufferPtr templ;
   size_t iteration = 0;
   char progress_[11];
+  bool disable_xmit_ = false;
 };
 
 class TestProtoClient : public TestProto
@@ -702,6 +715,17 @@ public:
 #endif
 	    b.stat().error(Error::KEY_STATE_ERROR);
 	  }
+
+#ifdef SIMULATE_UDP_AMPLIFY_ATTACK
+	if (b.is_state_client_wait_reset_ack())
+	  {
+	    b.disable_xmit();
+#ifdef VERBOSE
+	    std::cout << now->raw() << " " << title << " SIMULATE_UDP_AMPLIFY_ATTACK disable client xmit" << std::endl;
+#endif
+	  }
+#endif
+
       }
     b.flush(true);
   }
@@ -930,6 +954,7 @@ int test(const int thread_num)
     cp->expire = cp->renegotiate + cp->renegotiate;
     cp->keepalive_ping = Time::Duration::seconds(5);
     cp->keepalive_timeout = Time::Duration::seconds(60);
+    cp->keepalive_timeout_early = cp->keepalive_timeout;
 
 #ifdef VERBOSE
     std::cout << "CLIENT OPTIONS: " << cp->options_string() << std::endl;
@@ -1022,6 +1047,7 @@ int test(const int thread_num)
     sp->expire = sp->renegotiate + sp->renegotiate;
     sp->keepalive_ping = Time::Duration::seconds(5);
     sp->keepalive_timeout = Time::Duration::seconds(60);
+    sp->keepalive_timeout_early = Time::Duration::seconds(10);
 
 #ifdef VERBOSE
     std::cout << "SERVER OPTIONS: " << sp->options_string() << std::endl;
