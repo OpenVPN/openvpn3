@@ -871,19 +871,17 @@ namespace openvpn {
 	 * on server.
 	 *
 	 */
-	out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM";
-	if (openvpn::AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
-	  {
-	   out << ":CHACHA20-POLY1305";
-	  }
-
-	if (openvpn::CryptoAlgs::defined(dc.cipher()) &&
-		      dc.cipher() != CryptoAlgs::AES_128_GCM &&
-		      dc.cipher() != CryptoAlgs::AES_256_GCM &&
-		      dc.cipher() != CryptoAlgs::CHACHA20_POLY1305)
-	  {
-	    out << ":" << openvpn::CryptoAlgs::name(dc.cipher());
-	  }
+	out << "IV_CIPHERS=";
+	CryptoAlgs::for_each([&out](CryptoAlgs::Type type, const CryptoAlgs::Alg& alg) -> bool {
+	  if (!CryptoAlgs::defined(type) || !alg.dc_cipher())
+	    return false;
+	  if (type == CryptoAlgs::CHACHA20_POLY1305 &&
+	      !AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
+	    return false;
+	  out << alg.name() << ':';
+	  return true;
+	});
+	out.seekp(-1, std::ios_base::cur);
 	out << "\n";
 
 	compstr = comp_ctx.peer_info_string();
