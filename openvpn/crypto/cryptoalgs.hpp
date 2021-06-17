@@ -24,6 +24,7 @@
 #ifndef OPENVPN_CRYPTO_CRYPTOALGS_H
 #define OPENVPN_CRYPTO_CRYPTOALGS_H
 
+#include <functional>
 #include <string>
 
 #include <openvpn/common/size.hpp>
@@ -191,6 +192,15 @@ namespace openvpn {
     inline const Alg& get(const Type type)
     {
       return get_index(static_cast<size_t>(type));
+    }
+
+    inline std::size_t for_each(std::function<bool (Type, const Alg&)> fn)
+    {
+      std::size_t count = 0;
+      for (std::size_t i = 0; i < algs.size(); ++i)
+	if (fn(static_cast<Type>(i), algs[i]))
+	  count++;
+      return count;
     }
 
     inline Type lookup(const std::string& name)
