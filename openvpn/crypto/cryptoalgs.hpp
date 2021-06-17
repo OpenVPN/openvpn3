@@ -135,6 +135,10 @@ namespace openvpn {
       size_t key_length() const { return size_; }        // cipher key length
       size_t iv_length() const { return iv_length_; }    // cipher only
       size_t block_size() const { return block_size_; }  // cipher only
+      void allow_dc(bool allow) {
+	if (allow) flags_ |= F_ALLOW_DC;
+	else       flags_ &= ~F_ALLOW_DC;
+      }
 
     private:
       const char *name_;
@@ -145,25 +149,25 @@ namespace openvpn {
     };
 
     static std::array<Alg, Type::SIZE> algs = {
-      Alg {"NONE",               F_CIPHER|F_DIGEST|F_ALLOW_DC|CBC_HMAC,         0,  0,  0 },
-      Alg {"AES-128-CBC",        F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 16, 16, 16 },
-      Alg {"AES-192-CBC",        F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 24, 16, 16 },
-      Alg {"AES-256-CBC",        F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 32, 16, 16 },
-      Alg {"DES-CBC",            F_CIPHER|F_ALLOW_DC|CBC_HMAC,                  8,  8,  8 },
-      Alg {"DES-EDE3-CBC",       F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 24,  8,  8 },
-      Alg {"BF-CBC",             F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 16,  8,  8 },
-      Alg {"AES-256-CTR",        F_CIPHER,                                     32, 16, 16 },
-      Alg {"AES-128-GCM",        F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  16, 12, 16 },
-      Alg {"AES-192-GCM",        F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  24, 12, 16 },
-      Alg {"AES-256-GCM",        F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
-      Alg {"CHACHA20-POLY1305",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
-      Alg {"MD4",                F_DIGEST,                                     16,  0,  0 },
-      Alg {"MD5",                F_DIGEST|F_ALLOW_DC,                          16,  0,  0 },
-      Alg {"SHA1",               F_DIGEST|F_ALLOW_DC,                          20,  0,  0 },
-      Alg {"SHA224",             F_DIGEST|F_ALLOW_DC,                          28,  0,  0 },
-      Alg {"SHA256",             F_DIGEST|F_ALLOW_DC,                          32,  0,  0 },
-      Alg {"SHA384",             F_DIGEST|F_ALLOW_DC,                          48,  0,  0 },
-      Alg {"SHA512",             F_DIGEST|F_ALLOW_DC,                          64,  0,  0 }
+      Alg {"NONE",               F_CIPHER|F_DIGEST|CBC_HMAC,         0,  0,  0 },
+      Alg {"AES-128-CBC",        F_CIPHER|CBC_HMAC,                 16, 16, 16 },
+      Alg {"AES-192-CBC",        F_CIPHER|CBC_HMAC,                 24, 16, 16 },
+      Alg {"AES-256-CBC",        F_CIPHER|CBC_HMAC,                 32, 16, 16 },
+      Alg {"DES-CBC",            F_CIPHER|CBC_HMAC,                  8,  8,  8 },
+      Alg {"DES-EDE3-CBC",       F_CIPHER|CBC_HMAC,                 24,  8,  8 },
+      Alg {"BF-CBC",             F_CIPHER|CBC_HMAC,                 16,  8,  8 },
+      Alg {"AES-256-CTR",        F_CIPHER,                          32, 16, 16 },
+      Alg {"AES-128-GCM",        F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  16, 12, 16 },
+      Alg {"AES-192-GCM",        F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  24, 12, 16 },
+      Alg {"AES-256-GCM",        F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
+      Alg {"CHACHA20-POLY1305",  F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
+      Alg {"MD4",                F_DIGEST,                          16,  0,  0 },
+      Alg {"MD5",                F_DIGEST,                          16,  0,  0 },
+      Alg {"SHA1",               F_DIGEST,                          20,  0,  0 },
+      Alg {"SHA224",             F_DIGEST,                          28,  0,  0 },
+      Alg {"SHA256",             F_DIGEST,                          32,  0,  0 },
+      Alg {"SHA384",             F_DIGEST,                          48,  0,  0 },
+      Alg {"SHA512",             F_DIGEST,                          64,  0,  0 }
     };
 
     inline bool defined(const Type type)
@@ -251,6 +255,24 @@ namespace openvpn {
       if ((alg.flags() & (F_DIGEST|F_ALLOW_DC)) != (F_DIGEST|F_ALLOW_DC))
 	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest for data channel use");
       return type;
+    }
+
+    inline void allow_dc_algs(const std::initializer_list<Type> types)
+    {
+      for (auto& alg : algs)
+	alg.allow_dc(false);
+      for (auto& type : types)
+	algs.at(type).allow_dc(true);
+    }
+
+    inline void allow_default_dc_algs()
+    {
+      allow_dc_algs({
+	NONE, AES_128_CBC, AES_192_CBC, AES_256_CBC,
+	DES_CBC, DES_EDE3_CBC, BF_CBC,
+	AES_128_GCM, AES_192_GCM, AES_256_GCM, CHACHA20_POLY1305,
+	MD5, SHA1, SHA224, SHA256, SHA384, SHA512
+      });
     }
 
     /**

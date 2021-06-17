@@ -865,6 +865,7 @@ int test(const int thread_num)
     MySessionStats::Ptr serv_stats(new MySessionStats);
 
     // client ProtoContext config
+    CryptoAlgs::allow_default_dc_algs();
     typedef ProtoContext ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_factory = cc->new_factory();

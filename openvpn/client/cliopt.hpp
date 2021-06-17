@@ -207,6 +207,13 @@ namespace openvpn {
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
     {
+      CryptoAlgs::allow_default_dc_algs();
+
+#if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+      if (config.dco)
+	dco = DCOTransport::new_controller();
+#endif
+
       // parse general client options
       const ParseClientConfig pcc(opt);
 
@@ -221,11 +228,6 @@ namespace openvpn {
       // initialize RNG/PRNG
       rng.reset(new SSLLib::RandomAPI(false));
       prng.reset(new SSLLib::RandomAPI(true));
-
-#if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
-      if (config.dco)
-	dco = DCOTransport::new_controller();
-#endif
 
       // frame
       const unsigned int tun_mtu = parse_tun_mtu(opt, 0); // get tun-mtu parameter from config

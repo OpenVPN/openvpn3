@@ -240,7 +240,16 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 #elif ENABLE_OVPNDCO
 #include <openvpn/dco/ovpndcocli.hpp>
 inline DCO::Ptr new_controller() {
-  return OvpnDcoClient::available() ? ClientConfig::new_controller() : nullptr;
+  if (!OvpnDcoClient::available())
+    return nullptr;
+
+  CryptoAlgs::allow_dc_algs({
+    CryptoAlgs::CHACHA20_POLY1305,
+    CryptoAlgs::AES_128_GCM,
+    CryptoAlgs::AES_192_GCM,
+    CryptoAlgs::AES_256_GCM
+  });
+  return ClientConfig::new_controller();
 }
 inline TransportClient::Ptr
 ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
@@ -250,7 +259,15 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 #elif ENABLE_OVPNDCOWIN
 #include <openvpn/dco/ovpndcowincli.hpp>
 inline DCO::Ptr new_controller() {
-  return OvpnDcoWinClient::available() ? ClientConfig::new_controller() : nullptr;
+  if (!OvpnDcoWinClient::available())
+    return nullptr;
+
+  CryptoAlgs::allow_dc_algs({
+    CryptoAlgs::AES_128_GCM,
+    CryptoAlgs::AES_192_GCM,
+    CryptoAlgs::AES_256_GCM
+  });
+  return ClientConfig::new_controller();
 }
 inline TransportClient::Ptr
 ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,
