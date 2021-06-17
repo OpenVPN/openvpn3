@@ -205,14 +205,9 @@ namespace openvpn {
       OPENVPN_THROW(crypto_alg, name << ": not found");
     }
 
-    inline const char *name(const Type type)
+    inline const char *name(const Type type, const char *default_name = nullptr)
     {
-      return get(type).name();
-    }
-
-    inline const char *name(const Type type, const char *default_name)
-    {
-      if (type == NONE)
+      if (type == NONE && default_name)
 	return default_name;
       else
 	return get(type).name();
