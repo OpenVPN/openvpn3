@@ -136,6 +136,8 @@ namespace openvpn {
       size_t key_length() const { return size_; }        // cipher key length
       size_t iv_length() const { return iv_length_; }    // cipher only
       size_t block_size() const { return block_size_; }  // cipher only
+      bool dc_cipher() const { return (flags_ & F_CIPHER) && (flags_ & F_ALLOW_DC); }
+      bool dc_digest() const { return (flags_ & F_DIGEST) && (flags_ & F_ALLOW_DC); }
       void allow_dc(bool allow) {
 	if (allow) flags_ |= F_ALLOW_DC;
 	else       flags_ &= ~F_ALLOW_DC;
@@ -254,7 +256,7 @@ namespace openvpn {
     inline Type legal_dc_cipher(const Type type)
     {
       const Alg& alg = get(type);
-      if ((alg.flags() & (F_CIPHER|F_ALLOW_DC)) != (F_CIPHER|F_ALLOW_DC))
+      if (!alg.dc_cipher())
 	OPENVPN_THROW(crypto_alg, alg.name() << ": bad cipher for data channel use");
       return type;
     }
@@ -262,7 +264,7 @@ namespace openvpn {
     inline Type legal_dc_digest(const Type type)
     {
       const Alg& alg = get(type);
-      if ((alg.flags() & (F_DIGEST|F_ALLOW_DC)) != (F_DIGEST|F_ALLOW_DC))
+      if (!alg.dc_digest())
 	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest for data channel use");
       return type;
     }
