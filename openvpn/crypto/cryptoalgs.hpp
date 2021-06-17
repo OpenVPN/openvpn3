@@ -144,26 +144,26 @@ namespace openvpn {
       unsigned int block_size_;
     };
 
-    constexpr Alg algs[] = { // NOTE: MUST be indexed by CryptoAlgs::Type (CONST GLOBAL)
-      { "NONE",         F_CIPHER|F_DIGEST|F_ALLOW_DC|CBC_HMAC,  0,  0,  0 },
-      { "AES-128-CBC",  F_CIPHER|F_ALLOW_DC|CBC_HMAC,          16, 16, 16 },
-      { "AES-192-CBC",  F_CIPHER|F_ALLOW_DC|CBC_HMAC,          24, 16, 16 },
-      { "AES-256-CBC",  F_CIPHER|F_ALLOW_DC|CBC_HMAC,          32, 16, 16 },
-      { "DES-CBC",      F_CIPHER|F_ALLOW_DC|CBC_HMAC,           8,  8,  8 },
-      { "DES-EDE3-CBC", F_CIPHER|F_ALLOW_DC|CBC_HMAC,          24,  8,  8 },
-      { "BF-CBC",       F_CIPHER|F_ALLOW_DC|CBC_HMAC,          16,  8,  8 },
-      { "AES-256-CTR",  F_CIPHER,                              32, 16, 16 },
-      { "AES-128-GCM",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  16, 12, 16 },
-      { "AES-192-GCM",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  24, 12, 16 },
-      { "AES-256-GCM",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
-      { "CHACHA20-POLY1305",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
-      { "MD4",          F_DIGEST,                              16,  0,  0 },
-      { "MD5",          F_DIGEST|F_ALLOW_DC,                   16,  0,  0 },
-      { "SHA1",         F_DIGEST|F_ALLOW_DC,                   20,  0,  0 },
-      { "SHA224",       F_DIGEST|F_ALLOW_DC,                   28,  0,  0 },
-      { "SHA256",       F_DIGEST|F_ALLOW_DC,                   32,  0,  0 },
-      { "SHA384",       F_DIGEST|F_ALLOW_DC,                   48,  0,  0 },
-      { "SHA512",       F_DIGEST|F_ALLOW_DC,                   64,  0,  0 },
+    static std::array<Alg, Type::SIZE> algs = {
+      Alg {"NONE",               F_CIPHER|F_DIGEST|F_ALLOW_DC|CBC_HMAC,         0,  0,  0 },
+      Alg {"AES-128-CBC",        F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 16, 16, 16 },
+      Alg {"AES-192-CBC",        F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 24, 16, 16 },
+      Alg {"AES-256-CBC",        F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 32, 16, 16 },
+      Alg {"DES-CBC",            F_CIPHER|F_ALLOW_DC|CBC_HMAC,                  8,  8,  8 },
+      Alg {"DES-EDE3-CBC",       F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 24,  8,  8 },
+      Alg {"BF-CBC",             F_CIPHER|F_ALLOW_DC|CBC_HMAC,                 16,  8,  8 },
+      Alg {"AES-256-CTR",        F_CIPHER,                                     32, 16, 16 },
+      Alg {"AES-128-GCM",        F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  16, 12, 16 },
+      Alg {"AES-192-GCM",        F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  24, 12, 16 },
+      Alg {"AES-256-GCM",        F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
+      Alg {"CHACHA20-POLY1305",  F_CIPHER|F_ALLOW_DC|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
+      Alg {"MD4",                F_DIGEST,                                     16,  0,  0 },
+      Alg {"MD5",                F_DIGEST|F_ALLOW_DC,                          16,  0,  0 },
+      Alg {"SHA1",               F_DIGEST|F_ALLOW_DC,                          20,  0,  0 },
+      Alg {"SHA224",             F_DIGEST|F_ALLOW_DC,                          28,  0,  0 },
+      Alg {"SHA256",             F_DIGEST|F_ALLOW_DC,                          32,  0,  0 },
+      Alg {"SHA384",             F_DIGEST|F_ALLOW_DC,                          48,  0,  0 },
+      Alg {"SHA512",             F_DIGEST|F_ALLOW_DC,                          64,  0,  0 }
     };
 
     inline bool defined(const Type type)
@@ -171,22 +171,17 @@ namespace openvpn {
       return type != NONE;
     }
 
-    inline const Alg* get_index_ptr(const size_t i)
-    {
-      static_assert(SIZE == array_size(algs), "algs array inconsistency");
-      if (unlikely(i >= SIZE))
-	throw crypto_alg_index();
-      return &algs[i];
-    }
-
     inline const Alg& get_index(const size_t i)
     {
-      return *get_index_ptr(i);
+      if (unlikely(i >= algs.size()))
+	throw crypto_alg_index();
+      return algs[i];
     }
 
     inline const Alg* get_ptr(const Type type)
     {
-      return get_index_ptr(static_cast<size_t>(type));
+      const Alg& alg_ref = get_index(static_cast<size_t>(type));
+      return &alg_ref;
     }
 
     inline const Alg& get(const Type type)
@@ -196,10 +191,9 @@ namespace openvpn {
 
     inline Type lookup(const std::string& name)
     {
-      for (size_t i = 0; i < SIZE; ++i)
+      for (size_t i = 0; i < algs.size(); ++i)
 	{
-	  const Alg& alg = algs[i];
-	  if (string::strcasecmp(name, alg.name()) == 0)
+	  if (string::strcasecmp(name, algs[i].name()) == 0)
 	    return static_cast<Type>(i);
 	}
       OPENVPN_THROW(crypto_alg, name << ": not found");
