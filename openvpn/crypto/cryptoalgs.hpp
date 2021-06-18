@@ -103,7 +103,6 @@ namespace openvpn {
       F_CIPHER=(1<<2),    // alg is a cipher
       F_DIGEST=(1<<3),    // alg is a digest
       F_ALLOW_DC=(1<<4),  // alg may be used in OpenVPN data channel
-      F_NO_CIPHER_DIGEST=(1<<5), // cipher alg does not depend on any additional digest
     };
 
     // size in bytes of AEAD "nonce tail" normally taken from
@@ -152,25 +151,25 @@ namespace openvpn {
     };
 
     static std::array<Alg, Type::SIZE> algs = {
-      Alg {"NONE",               F_CIPHER|F_DIGEST|CBC_HMAC,         0,  0,  0 },
-      Alg {"AES-128-CBC",        F_CIPHER|CBC_HMAC,                 16, 16, 16 },
-      Alg {"AES-192-CBC",        F_CIPHER|CBC_HMAC,                 24, 16, 16 },
-      Alg {"AES-256-CBC",        F_CIPHER|CBC_HMAC,                 32, 16, 16 },
-      Alg {"DES-CBC",            F_CIPHER|CBC_HMAC,                  8,  8,  8 },
-      Alg {"DES-EDE3-CBC",       F_CIPHER|CBC_HMAC,                 24,  8,  8 },
-      Alg {"BF-CBC",             F_CIPHER|CBC_HMAC,                 16,  8,  8 },
-      Alg {"AES-256-CTR",        F_CIPHER,                          32, 16, 16 },
-      Alg {"AES-128-GCM",        F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  16, 12, 16 },
-      Alg {"AES-192-GCM",        F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  24, 12, 16 },
-      Alg {"AES-256-GCM",        F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
-      Alg {"CHACHA20-POLY1305",  F_CIPHER|AEAD|F_NO_CIPHER_DIGEST,  32, 12, 16 },
-      Alg {"MD4",                F_DIGEST,                          16,  0,  0 },
-      Alg {"MD5",                F_DIGEST,                          16,  0,  0 },
-      Alg {"SHA1",               F_DIGEST,                          20,  0,  0 },
-      Alg {"SHA224",             F_DIGEST,                          28,  0,  0 },
-      Alg {"SHA256",             F_DIGEST,                          32,  0,  0 },
-      Alg {"SHA384",             F_DIGEST,                          48,  0,  0 },
-      Alg {"SHA512",             F_DIGEST,                          64,  0,  0 }
+      Alg {"NONE",               F_CIPHER|F_DIGEST|CBC_HMAC,   0,  0,  0 },
+      Alg {"AES-128-CBC",        F_CIPHER|CBC_HMAC,           16, 16, 16 },
+      Alg {"AES-192-CBC",        F_CIPHER|CBC_HMAC,           24, 16, 16 },
+      Alg {"AES-256-CBC",        F_CIPHER|CBC_HMAC,           32, 16, 16 },
+      Alg {"DES-CBC",            F_CIPHER|CBC_HMAC,            8,  8,  8 },
+      Alg {"DES-EDE3-CBC",       F_CIPHER|CBC_HMAC,           24,  8,  8 },
+      Alg {"BF-CBC",             F_CIPHER|CBC_HMAC,           16,  8,  8 },
+      Alg {"AES-256-CTR",        F_CIPHER,                    32, 16, 16 },
+      Alg {"AES-128-GCM",        F_CIPHER|AEAD,               16, 12, 16 },
+      Alg {"AES-192-GCM",        F_CIPHER|AEAD,               24, 12, 16 },
+      Alg {"AES-256-GCM",        F_CIPHER|AEAD,               32, 12, 16 },
+      Alg {"CHACHA20-POLY1305",  F_CIPHER|AEAD,               32, 12, 16 },
+      Alg {"MD4",                F_DIGEST,                    16,  0,  0 },
+      Alg {"MD5",                F_DIGEST,                    16,  0,  0 },
+      Alg {"SHA1",               F_DIGEST,                    20,  0,  0 },
+      Alg {"SHA224",             F_DIGEST,                    28,  0,  0 },
+      Alg {"SHA256",             F_DIGEST,                    32,  0,  0 },
+      Alg {"SHA384",             F_DIGEST,                    48,  0,  0 },
+      Alg {"SHA512",             F_DIGEST,                    64,  0,  0 }
     };
 
     inline bool defined(const Type type)
@@ -293,13 +292,12 @@ namespace openvpn {
      * @param type CryptoAlgs::Type to check
      *
      * @return Returns true if the queried algorithm depends on a digest,
-     * 	       otherwise false.  The check is done strictly against the
-     * 	       CryptoAlgs::AlgFlags F_NO_CIPHER_DIGEST flag.
+     *         otherwise false.
      */
     inline bool use_cipher_digest(const Type type)
     {
       const Alg& alg = get(type);
-      return !(alg.flags() & F_NO_CIPHER_DIGEST);
+      return alg.mode() != AEAD;
     }
   }
 }
