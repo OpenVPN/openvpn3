@@ -80,11 +80,6 @@ namespace openvpn {
       {
       }
 
-      Addr(const Addr& other)
-	: Addr(other, nullptr, UNSPEC)
-      {
-      }
-
       template <typename TITLE>
       Addr(const std::string& ipstr, const TITLE& title, const Version required_version)
 	: Addr(from_string(ipstr, title, required_version))
