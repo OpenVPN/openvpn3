@@ -8,6 +8,7 @@ test_helper
 test_log
 test_mbedtls_x509certinfo
 test_openssl_x509certinfo
+test_pktstream
 test_route_emulation
 test_sitnl
 test_ssl

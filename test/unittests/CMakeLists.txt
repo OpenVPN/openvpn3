@@ -31,6 +31,7 @@ add_executable(coreUnitTests
         test_ssl.cpp
         test_continuation.cpp
         test_optfilt.cpp
+        test_pktstream.cpp
         test_remotelist.cpp
         test_http_proxy.cpp
         test_peer_fingerprint.cpp
