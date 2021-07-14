@@ -105,7 +105,8 @@ TEST(RemoteList, CtorRemoteList)
     , nullptr);
   cfg.update_map();
 
-  RemoteList rl(cfg, "", 0, nullptr);
+  RandomAPI::Ptr rng;
+  RemoteList rl(cfg, "", 0, nullptr, rng);
   ASSERT_EQ(rl.defined(), true);
   ASSERT_EQ(rl.size(), 4);
   ASSERT_EQ(rl.get_item(0).server_host, "0.default.invalid");
@@ -132,7 +133,8 @@ TEST(RemoteList, CtorRemoteListConnBlockOnly)
     , nullptr);
   cfg.update_map();
 
-  RemoteList rl(cfg, "", RemoteList::CONN_BLOCK_ONLY, nullptr);
+  RandomAPI::Ptr rng;
+  RemoteList rl(cfg, "", RemoteList::CONN_BLOCK_ONLY, nullptr, rng);
   ASSERT_EQ(rl.defined(), true);
   ASSERT_EQ(rl.size(), 1);
   ASSERT_EQ(rl.get_item(0).server_host, "2.block.invalid");
@@ -143,8 +145,9 @@ TEST(RemoteList, CtorRemoteListEmpty)
   cfg.parse_from_config("", nullptr);
   cfg.update_map();
 
-  ASSERT_THROW(RemoteList(cfg, "", 0, nullptr), option_error);
-  RemoteList rl(cfg, "", RemoteList::ALLOW_EMPTY, nullptr);
+  RandomAPI::Ptr rng;
+  ASSERT_THROW(RemoteList(cfg, "", 0, nullptr, rng), option_error);
+  RemoteList rl(cfg, "", RemoteList::ALLOW_EMPTY, nullptr, rng);
 }
 TEST(RemoteList, CtorRemoteListConnBlockFactory)
 {
@@ -179,14 +182,15 @@ TEST(RemoteList, CtorRemoteListConnBlockFactory)
   cfg.update_map();
   TestConnBlockFactory tcbf;
 
+  RandomAPI::Ptr rng;
   testLog->startCollecting();
-  RemoteList rl1(cfg, "block", 0, &tcbf);
+  RemoteList rl1(cfg, "block", 0, &tcbf, rng);
   std::string output1(testLog->stopCollecting());
   ASSERT_NE(output1.find("TestConnBlock"), std::string::npos);
   ASSERT_EQ(rl1.size(), 2);
 
   testLog->startCollecting();
-  RemoteList rl2(cfg, "block", RemoteList::CONN_BLOCK_OMIT_UNDEF, &tcbf);
+  RemoteList rl2(cfg, "block", RemoteList::CONN_BLOCK_OMIT_UNDEF, &tcbf, rng);
   std::string output2(testLog->stopCollecting());
   ASSERT_NE(output2.find("TestConnBlock"), std::string::npos);
   ASSERT_EQ(rl2.size(), 1);
@@ -204,8 +208,9 @@ TEST(RemoteList, CtorRemoteListWarnUnsupported)
     , nullptr);
   cfg.update_map();
 
+  RandomAPI::Ptr rng;
   testLog->startCollecting();
-  RemoteList rl(cfg, "", RemoteList::WARN_UNSUPPORTED, nullptr);
+  RemoteList rl(cfg, "", RemoteList::WARN_UNSUPPORTED, nullptr, rng);
   std::string output(testLog->stopCollecting());
 
   ASSERT_NE(output.find(" http-proxy "), std::string::npos);
@@ -223,7 +228,8 @@ TEST(RemoteList, CtorRemoteListBlockLimit)
     , nullptr);
   cfg.update_map();
 
-  JY_EXPECT_THROW(RemoteList(cfg, "", 0, nullptr), option_error, "connection_block");
+  RandomAPI::Ptr rng;
+  JY_EXPECT_THROW(RemoteList(cfg, "", 0, nullptr, rng), option_error, "connection_block");
 }
 
 
@@ -240,11 +246,9 @@ TEST(RemoteList, RemoteListPreResolve)
     , nullptr);
   cfg.update_map();
 
-  RemoteList::Ptr rl(new RemoteList(cfg, "", 0, nullptr));
-  rl->set_enable_cache(true);
-
   RandomAPI::Ptr rng(new MTRand(3735928559));
-  rl->set_random(rng);
+  RemoteList::Ptr rl(new RemoteList(cfg, "", 0, nullptr, rng));
+  rl->set_enable_cache(true);
 
   openvpn_io::io_context ioctx;
   SessionStats::Ptr stats(new SessionStats());
@@ -402,7 +406,7 @@ TEST(RemoteList, RemoteRandomHostname)
   rl.next();
   ASSERT_EQ(rl.current_server_host(), "090a0b0c0d0e.3.domain.invalid");
 }
-TEST(RemoteList, RemoteRandomHostnameNoPRNG)
+TEST(RemoteList, RemoteRandomHostnameNoRNG)
 {
   OptionList cfg;
   cfg.parse_from_config(
@@ -411,7 +415,9 @@ TEST(RemoteList, RemoteRandomHostnameNoPRNG)
     , nullptr);
   cfg.update_map();
 
-  ASSERT_THROW(RemoteList(cfg, "", 0, nullptr), RemoteList::remote_list_error);
+  RandomAPI::Ptr no_rng;
+  RemoteList rl(cfg, "", 0, nullptr, no_rng);
+  ASSERT_EQ(rl.current_server_host(), "domain.invalid");
 }
 
 

@@ -191,8 +191,9 @@ namespace openvpn {
 	    }
 	}
 
-	// validate remote list
-	remoteList.reset(new RemoteList(options, "", 0, nullptr));
+	// validate remote list - don't randomize it at this point
+	RandomAPI::Ptr no_rng;
+	remoteList.reset(new RemoteList(options, "", 0, nullptr, no_rng));
 	{
 	  const RemoteList::Item* ri = remoteList->first_item();
 	  if (ri)

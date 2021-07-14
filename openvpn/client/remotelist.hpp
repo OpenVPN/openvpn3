@@ -416,7 +416,7 @@ namespace openvpn {
 	       const std::string& connection_tag,
 	       const unsigned int flags,
 	       ConnBlockFactory* conn_block_factory,
-	       RandomAPI::Ptr rng_arg = RandomAPI::Ptr())
+	       RandomAPI::Ptr rng_arg)
       : random_hostname(opt.exists("remote-random-hostname"))
       , directives(connection_tag)
       , rng(rng_arg)
@@ -886,7 +886,7 @@ namespace openvpn {
 
     void randomize_host(Item& item)
     {
-      if (!random_hostname)
+      if (!random_hostname || !rng)
 	return;
 
       try
@@ -896,9 +896,6 @@ namespace openvpn {
 	}
       catch (const IP::ip_exception& e)
 	{
-	  if (!rng)
-	    throw remote_list_error("remote-random-hostname without PRNG");
-
 	  // Produce 6 bytes of random prefix data
 	  unsigned char prefix[6];
 	  rng->rand_bytes(prefix, sizeof(prefix));
