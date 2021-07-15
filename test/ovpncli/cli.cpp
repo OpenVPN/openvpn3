@@ -292,32 +292,53 @@ private:
       {
 	std::cout << "PROXY_NEED_CREDS " << ev.info << std::endl;
       }
-    else if (ev.name == "INFO" && (string::starts_with(ev.info, "OPEN_URL:http://")
-				|| string::starts_with(ev.info, "OPEN_URL:https://")))
+    else if (ev.name == "INFO")
       {
-	// launch URL
-	const std::string url_str = ev.info.substr(9);
+     	if (string::starts_with(ev.info, "OPEN_URL:"))
+	  {
+	    open_url(ev.info.substr(9), "");
+	  }
+    	else if (string::starts_with(ev.info, "WEB_AUTH:"))
+	  {
+	    auto extra = ev.info.substr(9);
+	    size_t flagsend = extra.find(':');
+	    if (flagsend != std::string::npos)
+	      {
 
-	if (!write_url_fn.empty())
-	  write_string(write_url_fn, url_str + '\n');
+		auto flags = extra.substr(0, flagsend);
+		auto url = extra.substr(flagsend + 1);
+		open_url(url, flags);
+	      }
+	  }
+      }
+  }
+
+  void open_url(std::string url_str, std::string flags)
+  {
+      if (string::starts_with(url_str, "http://")
+	|| string::starts_with(url_str, "https://"))
+	{
+	  if (!write_url_fn.empty())
+	    write_string(write_url_fn, url_str + '\n');
 
 #ifdef OPENVPN_PLATFORM_MAC
-	std::thread thr([url_str]() {
-	    CFURLRef url = CFURLCreateWithBytes(
-	        NULL,                        // allocator
-		(UInt8*)url_str.c_str(),     // URLBytes
-		url_str.length(),            // length
-		kCFStringEncodingUTF8,       // encoding
-		NULL                         // baseURL
-	    );
-	    LSOpenCFURLRef(url, 0);
-	    CFRelease(url);
-	  });
-	thr.detach();
+	  std::thread thr([url_str]()
+			  {
+			    CFURLRef url = CFURLCreateWithBytes(
+			      NULL,                        // allocator
+			      (UInt8*) url_str.c_str(),     // URLBytes
+			      url_str.length(),            // length
+			      kCFStringEncodingUTF8,       // encoding
+			      NULL                         // baseURL
+			    );
+			    LSOpenCFURLRef(url, 0);
+			    CFRelease(url);
+			  });
+	  thr.detach();
 #else
-	std::cout << "No implementation to launch " << url_str << std::endl;
+	  std::cout << "No implementation to launch " << url_str << std::endl;
 #endif
-      }
+	}
   }
 
   virtual void log(const ClientAPI::LogInfo& log) override
