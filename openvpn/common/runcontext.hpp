@@ -48,6 +48,7 @@
 #include <openvpn/common/environ.hpp>
 #include <openvpn/common/number.hpp>
 #include <openvpn/common/signal_name.hpp>
+#include <openvpn/common/pthreadcond.hpp>
 #include <openvpn/asio/asiosignal.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/time/asiotimer.hpp>
@@ -248,6 +249,26 @@ namespace openvpn {
 	      threadlist[i] = nullptr;
 	    }
 	}
+    }
+
+    template <typename SVC>
+    void process_exception(const std::string& thread_name,
+			   const unsigned int unit,
+			   const bool io_context_run_called,
+			   openvpn_io::io_context& io_context,
+			   SVC& svc,
+			   PThreadBarrier& event_loop_bar,
+			   const std::exception& e)
+    {
+      event_loop_bar.error();
+      if (svc)
+	{
+	  clear_server(unit);
+	  svc->stop();      // on exception, stop service,
+	}
+      if (io_context_run_called)
+	io_context.poll();   //   execute completion handlers,
+      OPENVPN_LOG(thread_name << " thread exception: " << e.what());
     }
 
     virtual void log(const std::string& str) override
