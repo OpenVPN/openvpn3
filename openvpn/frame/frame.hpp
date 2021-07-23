@@ -114,6 +114,14 @@ namespace openvpn {
 	return payload();
       }
 
+      // Allocated a new prepared buffer
+      BufferAllocated alloc() const
+      {
+	BufferAllocated buf;
+	prepare(buf);
+	return buf;
+      }
+
       // Realign a buffer to headroom
       void realign(Buffer& buf) const
       {
