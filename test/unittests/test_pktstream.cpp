@@ -118,3 +118,35 @@ TEST(pktstream, test_1)
 
   OPENVPN_LOG("count=" << count);
 }
+
+static void validate_size(const Frame::Context& fc, const size_t size, const bool expect_throw)
+{
+  bool actual_throw = false;
+  try {
+    PacketStream::validate_size(size, fc);
+  }
+  catch (PacketStream::embedded_packet_size_error&)
+    {
+      actual_throw = true;
+    }
+  if (expect_throw != actual_throw)
+    THROW_FMT("validate_size: bad throw, expect=%s, actual=%s, FC=%s size=%s",
+	      expect_throw,
+	      actual_throw,
+	      fc.info(),
+	      size);
+}
+
+TEST(pktstream, test_2)
+{
+  const size_t payload = 2048;
+  const size_t headroom = 16;
+  const size_t tailroom = 0;
+  const size_t align_block = 16;
+  const Frame::Context fixed(headroom, payload, tailroom, 0, align_block, 0);
+  const Frame::Context grow(headroom, payload, tailroom, 0, align_block, BufferAllocated::GROW);
+  validate_size(fixed, 2048, false); // succeeds
+  validate_size(fixed, 2049, true);  // exceeded payload, throw
+  validate_size(grow, 2048, false);  // succeeds
+  validate_size(grow, 2049, false);  // exceeded payload, but okay with growable buffer
+}

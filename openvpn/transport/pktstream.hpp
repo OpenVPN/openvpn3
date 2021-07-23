@@ -128,7 +128,9 @@ namespace openvpn {
       buf.prepend((const unsigned char *)&net_len, sizeof(net_len));
     }
 
+#ifndef UNIT_TEST
   private:
+#endif
     bool declared_size_defined() const
     {
       return declared_size != SIZE_UNDEF;
@@ -155,7 +157,9 @@ namespace openvpn {
 
     static void validate_size(const size_t size, const Frame::Context& frame_context)
     {
-      if (!size || size > frame_context.payload())
+      // Don't validate upper bound on size if BufferAllocated::GROW is set,
+      // allowing it to range up to 64kb.
+      if (!size || (!(frame_context.buffer_flags() & BufferAllocated::GROW) && size > frame_context.payload()))
 	throw embedded_packet_size_error();
     }
 
