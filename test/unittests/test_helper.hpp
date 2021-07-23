@@ -24,6 +24,7 @@
 #include <openvpn/io/io.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/random/mtrandapi.hpp>
 
 #include <iostream>
@@ -409,3 +410,6 @@ do { \
   if ((v1) < (v2)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_GE: failure at " << __FILE__ << ':' << __LINE__); \
 } while (0)
+
+// Convenience macro for throwing exceptions
+#define THROW_FMT(...) throw Exception(printfmt(__VA_ARGS__))
