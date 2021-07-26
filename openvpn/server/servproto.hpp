@@ -211,7 +211,7 @@ namespace openvpn {
 	if (!Base::primary_defined())
 	  return false;
 	try {
-	  OPENVPN_LOG_SERVPROTO("Transport RECV[" << buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(buf));
+	  OPENVPN_LOG_SERVPROTO(instance_name() << " : Transport RECV[" << buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(buf));
 
 	  // update current time
 	  Base::update_now();
@@ -232,7 +232,7 @@ namespace openvpn {
 		  // make packet appear as incoming on tun interface
 		  if (true) // fixme: was tun
 		    {
-		      OPENVPN_LOG_SERVPROTO("TUN SEND[" << buf.size() << ']');
+		      OPENVPN_LOG_SERVPROTO(instance_name() << " : TUN SEND[" << buf.size() << ']');
 		      // fixme -- code me
 		    }
 		}
@@ -318,7 +318,7 @@ namespace openvpn {
       // proto base class calls here for control channel network sends
       virtual void control_net_send(const Buffer& net_buf) override
       {
-	OPENVPN_LOG_SERVPROTO("Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(net_buf));
+	OPENVPN_LOG_SERVPROTO(instance_name() << " : Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << Base::dump_packet(net_buf));
 	if (TransportLink::send)
 	  {
 	    if (TransportLink::send->transport_send_const(net_buf))
@@ -364,7 +364,7 @@ namespace openvpn {
 	  }
 	else
 	  {
-	    OPENVPN_LOG("Unrecognized client request: " << msg);
+	    OPENVPN_LOG(instance_name() << " : Unrecognized client request: " << msg);
 	  }
       }
 
@@ -518,7 +518,7 @@ namespace openvpn {
 	    }
 	  }
 
-	OPENVPN_LOG("Disconnect: " << ts << ' ' << reason);
+	OPENVPN_LOG(instance_name() << " : Disconnect: " << ts << ' ' << reason);
 
 	if (Base::primary_defined())
 	  {
@@ -689,7 +689,7 @@ namespace openvpn {
 
       void error(const std::string& error)
       {
-	OPENVPN_LOG("ServerProto: " << error);
+	OPENVPN_LOG(instance_name() << " : ServerProto: " << error);
 	stop();
       }
 
@@ -715,6 +715,14 @@ namespace openvpn {
 	    error(std::string("Session invalidated: ") + Error::name(err));
 	    break;
 	  }
+      }
+
+      std::string instance_name() const
+      {
+	if (ManLink::send)
+	  return ManLink::send->instance_name();
+	else
+	  return "UNNAMED_CLIENT";
       }
 
       // higher values are higher priority
