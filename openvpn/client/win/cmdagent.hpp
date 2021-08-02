@@ -100,6 +100,7 @@ namespace openvpn {
       std::string client_exe; // for validation
       int debug_level;
       bool wintun;
+      bool allow_local_dns_resolvers = false;
     };
 
     class SetupClient : public TunWin::SetupBase
@@ -174,6 +175,7 @@ namespace openvpn {
 	  ring_buffer->serialize(jreq);
 
 	jreq["wintun"] = config->wintun;
+	jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
 	jreq["confirm_event"] = confirm_event.duplicate_local();
 	jreq["destroy_event"] = destroy_event.duplicate_local();
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
@@ -294,15 +296,16 @@ namespace openvpn {
       Win::DestroyEvent destroy_event;
     };
 
-    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, bool wintun) override
+    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, bool wintun, bool allow_local_dns_resolvers) override
     {
       if (config)
 	{
 	  config->wintun = wintun;
+	  config->allow_local_dns_resolvers = allow_local_dns_resolvers;
 	  return new SetupClient(io_context, config);
 	}
       else
-	return new TunWin::Setup(io_context, wintun);
+	return new TunWin::Setup(io_context, wintun, allow_local_dns_resolvers);
     }
 
     WinCommandAgent(const OptionList& opt_parent)

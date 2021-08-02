@@ -139,10 +139,11 @@ public:
 				  const std::wstring& openvpn_app_path,
 				  Stop* stop,
 				  std::ostream& os,
-				  bool wintun)
+				  bool wintun,
+				  bool allow_local_dns_resolvers)
   {
     if (!tun)
-      tun.reset(new TunWin::Setup(io_context_, wintun));
+      tun.reset(new TunWin::Setup(io_context_, wintun, allow_local_dns_resolvers));
     auto th = tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer);
     // store VPN interface index to be able to exclude it
     // when next time adding bypass route
@@ -578,6 +579,8 @@ private:
 
 	      bool wintun = json::get_bool_optional(root, "wintun");
 
+	      bool allow_local_dns_resolvers = json::get_bool_optional(root, "allow_local_dns_resolvers");
+
 	      // get remote event handles for tun object confirmation/destruction
 	      const std::string confirm_event_hex = json::get_string(root, "confirm_event");
 	      const std::string destroy_event_hex = json::get_string(root, "destroy_event");
@@ -616,7 +619,7 @@ private:
 		}
 
 	      // establish the tun setup object
-	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, wintun));
+	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, wintun, allow_local_dns_resolvers));
 
 	      // post-establish impersonation
 	      {

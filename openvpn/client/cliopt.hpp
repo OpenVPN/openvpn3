@@ -138,6 +138,7 @@ namespace openvpn {
       bool info = false;
       bool tun_persist = false;
       bool wintun = false;
+      bool allow_local_dns_resolvers = false;
       bool google_dns_fallback = false;
       bool synchronous_dns_lookup = false;
       std::string private_key_password;
@@ -441,6 +442,7 @@ namespace openvpn {
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;
 	    tunconf->wintun = config.wintun;
+	    tunconf->allow_local_dns_resolvers = config.allow_local_dns_resolvers;
 	    if (config.tun_persist)
 	      {
 		tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
