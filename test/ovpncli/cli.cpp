@@ -310,6 +310,13 @@ private:
 		open_url(url, flags);
 	      }
 	  }
+	else if (string::starts_with(ev.info, "CR_TEXT:"))
+          {
+            std::string cr_response;
+            std::cout << "\n\n" << ev.info.substr(8) << ": ";
+            std::getline(std::cin, cr_response);
+            post_cc_msg("CR_RESPONSE," + base64->encode(cr_response));
+          }
       }
   }
 
