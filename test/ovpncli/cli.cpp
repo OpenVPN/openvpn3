@@ -21,7 +21,7 @@
 
 // OpenVPN 3 test client
 
-#include <stdlib.h> // for atoi
+#include <stdlib.h>
 
 #include <string>
 #include <iostream>
@@ -342,6 +342,17 @@ private:
 			    CFRelease(url);
 			  });
 	  thr.detach();
+#elif defined(OPENVPN_PLATFORM_TYPE_UNIX)
+	  Argv argv;
+	  if (::getuid() == 0 && ::getenv("SUDO_USER"))
+	    {
+	      argv.emplace_back("/usr/sbin/runuser");
+	      argv.emplace_back("-u");
+	      argv.emplace_back(::getenv("SUDO_USER"));
+	    }
+	  argv.emplace_back("/usr/bin/xdg-open");
+	  argv.emplace_back(url_str);
+	  system_cmd(argv);
 #else
 	  std::cout << "No implementation to launch " << url_str << std::endl;
 #endif
