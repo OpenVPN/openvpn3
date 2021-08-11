@@ -527,6 +527,9 @@ namespace openvpn {
 #else
 		  OPENVPN_LOG("Session token: [redacted]");
 #endif
+		  autologin_sessions = true;
+		  conf().set_xmit_creds(true);
+		  creds->set_replace_password_with_session_id(true);
 		  creds->set_session_id(username, sess_id);
 		}
 	    }
