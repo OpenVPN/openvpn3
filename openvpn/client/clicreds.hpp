@@ -174,7 +174,7 @@ namespace openvpn {
 
     // If we have a saved password that is not a session ID,
     // restore it and wipe any existing session ID.
-    bool can_retry_auth_with_cached_password()
+    bool reset_to_cached_password()
     {
       if (password_save_defined)
 	{
@@ -190,7 +190,7 @@ namespace openvpn {
 
     void purge_session_id()
     {
-      if (!can_retry_auth_with_cached_password())
+      if (!reset_to_cached_password())
 	{
 	  password.clear();
 	  did_replace_password_with_session_id = false;

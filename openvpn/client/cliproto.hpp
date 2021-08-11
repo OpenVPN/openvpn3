@@ -640,7 +640,7 @@ namespace openvpn {
 	    // If session token problem (such as expiration), and we have a cached
 	    // password, retry with it.  Otherwise, fail without retry.
 	    if (string::starts_with(reason, "SESSION:")
-		&& ((creds && creds->can_retry_auth_with_cached_password())
+		&& ((creds && creds->reset_to_cached_password())
 		    || autologin_sessions))
 	      {
 		log_reason = "SESSION_AUTH_FAILED";
