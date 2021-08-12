@@ -810,7 +810,17 @@ namespace openvpn {
 	  {
 	    OPENVPN_LOG("Creds: " << creds->auth_info());
 	    Base::write_auth_string(creds->get_username(), buf);
-	    Base::write_auth_string(creds->get_password(), buf);
+#ifdef OPENVPN_DISABLE_AUTH_TOKEN // debugging only
+	    if (creds->session_id_defined())
+	      {
+		OPENVPN_LOG("NOTE: not sending auth-token");
+		Base::write_empty_string(buf);
+	      }
+	    else
+#endif
+	      {
+		Base::write_auth_string(creds->get_password(), buf);
+	      }
 	  }
 	else
 	  {
