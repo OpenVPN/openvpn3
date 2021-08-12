@@ -19,13 +19,13 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_BUFFER_SAFESTR_H
-#define OPENVPN_BUFFER_SAFESTR_H
+#pragma once
 
+#include <string>
 #include <cstring> // for std::strlen, and std::memset
 #include <ostream>
 
-#include <openvpn/common/memneq.hpp>
+#include <openvpn/common/strneq.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 
@@ -93,15 +93,22 @@ namespace openvpn {
 
     bool operator==(const char *str) const
     {
-      const size_t len = std::strlen(str);
-      if (len != length())
-	return false;
-      return !crypto::memneq(str, c_str(), len);
+      return !operator!=(str);
     }
 
     bool operator!=(const char *str) const
     {
-      return !operator==(str);
+      return crypto::str_neq(str, c_str());
+    }
+
+    bool operator==(const std::string& str) const
+    {
+      return !operator!=(str);
+    }
+
+    bool operator!=(const std::string& str) const
+    {
+      return crypto::str_neq(str.c_str(), c_str());
     }
 
     SafeString& operator+=(char c)
@@ -182,5 +189,3 @@ namespace openvpn {
     return os;
   }
 }
-
-#endif

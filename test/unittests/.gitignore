@@ -10,6 +10,7 @@ test_mbedtls_x509certinfo
 test_openssl_x509certinfo
 test_pktstream
 test_route_emulation
+test_safestr
 test_sitnl
 test_ssl
 test_verify_x509_name
