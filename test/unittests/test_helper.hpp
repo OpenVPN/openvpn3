@@ -131,6 +131,28 @@ namespace openvpn {
     Log::Context log_context;
     Log::Context::Wrapper log_wrap; // must be constructed after log_context
   };
+
+  // When a test steps on Log::global_log, save and restore previous
+  // Log::global_log so as not to mess up other tests when running a
+  // multiple-compilation-unit build.
+  class SaveCurrentLogObject
+  {
+  public:
+    SaveCurrentLogObject()
+    {
+      saved_log = Log::global_log;
+      Log::global_log = nullptr;
+    }
+
+    ~SaveCurrentLogObject()
+    {
+      Log::global_log = saved_log;
+    }
+
+  private:
+    OPENVPN_LOG_CLASS *saved_log;
+  };
+
 }
 
 extern openvpn::LogOutputCollector* testLog;
