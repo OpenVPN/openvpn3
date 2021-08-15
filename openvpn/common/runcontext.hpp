@@ -131,6 +131,11 @@ namespace openvpn {
       schedule_debug_exit();
     }
 
+    openvpn_io::io_context* io_context_ptr()
+    {
+      return &io_context;
+    }
+
     void set_async_stop(Stop* async_stop)
     {
       async_stop_ = async_stop;
