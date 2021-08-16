@@ -62,7 +62,7 @@ namespace openvpn {
 
       uid_t uid;
       uid_t gid;
-      uid_t pid;
+      pid_t pid;
     };
 
     // get credentials of process on other side of unix socket
