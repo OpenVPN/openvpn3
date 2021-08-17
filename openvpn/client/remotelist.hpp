@@ -579,8 +579,8 @@ namespace openvpn {
 	    }
 	}
 
-      index.increment(list.size(), secondary_length(index.primary()));
-      if (!enable_cache)
+      bool item_changed = index.increment(list.size(), secondary_length(index.primary()));
+      if (item_changed && !enable_cache)
 	reset_item(index.primary());
     }
 
