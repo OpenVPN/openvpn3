@@ -233,6 +233,62 @@ TEST(RemoteList, CtorRemoteListBlockLimit)
 }
 
 
+TEST(RemoteList, ListTraversal)
+{
+  OptionList cfg;
+  cfg.parse_from_config(
+    "remote 1.domain.tld 1111 udp\n"
+    "remote 2.domain.tld 2222 udp\n"
+    , nullptr);
+  cfg.update_map();
+
+  using ResultsType = openvpn_io::ip::tcp::resolver::results_type;
+  using EndpointType = ResultsType::endpoint_type;
+  using EndpointList = std::vector<EndpointType>;
+
+  std::string addr;
+  std::string port;
+  Protocol proto;
+
+  RemoteList::Ptr rl(new RemoteList(cfg, "", 0, nullptr, nullptr));
+  bool available = rl->endpoint_available(&addr, &port, &proto);
+  ASSERT_EQ(available, false);
+  ASSERT_EQ(addr, "1.domain.tld");
+
+  // Create fake resolver results and feed them into RemoteList
+  EndpointType ep;
+  EndpointList epl;
+  epl.push_back({ openvpn_io::ip::make_address("1.1.1.1"), 1111 });
+  epl.push_back({ openvpn_io::ip::make_address("1.1.1.11"), 1111 });
+  epl.push_back({ openvpn_io::ip::make_address("1::1"), 1111 });
+  ResultsType results(ResultsType::create(epl.cbegin(), epl.cend(), addr, port));
+  rl->set_endpoint_range(results);
+
+  // Iterate through results
+  available = rl->endpoint_available(&addr, &port, &proto);
+  ASSERT_EQ(available, true);
+  ASSERT_EQ(addr, "1.domain.tld");
+  ASSERT_NO_THROW(rl->get_endpoint(ep));
+  ASSERT_EQ(ep.address().to_string(), "1.1.1.1");
+  rl->next();
+  ASSERT_NO_THROW(rl->get_endpoint(ep));
+  ASSERT_EQ(ep.address().to_string(), "1.1.1.11");
+  rl->next();
+  ASSERT_NO_THROW(rl->get_endpoint(ep));
+  ASSERT_EQ(ep.address().to_string(), "1::1");
+
+  rl->next();
+  available = rl->endpoint_available(&addr, &port, &proto);
+  ASSERT_EQ(available, false);
+  ASSERT_EQ(addr, "2.domain.tld");
+
+  rl->next();
+  available = rl->endpoint_available(&addr, &port, &proto);
+  ASSERT_EQ(available, false);
+  ASSERT_EQ(addr, "1.domain.tld");
+}
+
+
 TEST(RemoteList, RemoteListPreResolve)
 {
   OptionList cfg;
