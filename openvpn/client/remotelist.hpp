@@ -26,6 +26,7 @@
 #ifndef OPENVPN_CLIENT_REMOTELIST_H
 #define OPENVPN_CLIENT_REMOTELIST_H
 
+#include <ctime>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -126,6 +127,9 @@ namespace openvpn {
       // Other options if this is a <connection> block
       ConnBlock::Ptr conn_block;
 
+      // Time when the item's resolved addresses are considered outdated
+      std::time_t decay_time = std::numeric_limits<std::time_t>::max();
+
       bool res_addr_list_defined() const
       {
 	return res_addr_list && res_addr_list->size() > 0;
@@ -143,12 +147,13 @@ namespace openvpn {
 	ResolvedAddr::Ptr ra(new ResolvedAddr());
 	ra->addr = addr;
 	res_addr_list->push_back(std::move(ra));
+	decay_time = std::numeric_limits<std::time_t>::max();
 	OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint SET " << to_string());
       }
 
       // cache a list of DNS-resolved IP addresses
       template <class EPRANGE>
-      void set_endpoint_range(const EPRANGE& endpoint_range, RandomAPI* rng)
+      void set_endpoint_range(const EPRANGE& endpoint_range, RandomAPI* rng, std::size_t addr_lifetime)
       {
 	res_addr_list.reset(new ResolvedAddrList());
 	for (const auto &i : endpoint_range)
@@ -163,6 +168,8 @@ namespace openvpn {
 	  }
 	if (rng && res_addr_list->size() >= 2)
 	  std::shuffle(res_addr_list->begin(), res_addr_list->end(), *rng);
+	if (addr_lifetime)
+	  decay_time = time(nullptr) + addr_lifetime;
 	OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint SET " << to_string());
       }
 
@@ -360,7 +367,7 @@ namespace openvpn {
 		        || item->server_host != resolve_item->server_host)
 		      continue;
 
-		    item->set_endpoint_range(results, rand);
+		    item->set_endpoint_range(results, rand, remote_list->cache_lifetime);
 		    item->random_host = resolve_item->random_host;
 		  }
 	      }
@@ -422,6 +429,9 @@ namespace openvpn {
       , directives(connection_tag)
       , rng(rng_arg)
     {
+      if (opt.exists("remote-cache-lifetime"))
+	cache_lifetime = opt.get("remote-cache-lifetime").get_num(1, 0);
+
       // defaults
       const Protocol default_proto = get_proto(opt, Protocol(Protocol::UDPv4));
       const std::string default_port = get_port(opt, "1194");
@@ -619,7 +629,8 @@ namespace openvpn {
     {
       Item& item = *list[primary_index()];
       auto rand = random ? rng.get() : nullptr;
-      item.set_endpoint_range(endpoint_range, rand);
+      std::size_t lifetime = enable_cache ? cache_lifetime : 0;
+      item.set_endpoint_range(endpoint_range, rand, lifetime);
       index.reset_secondary();
     }
 
@@ -726,6 +737,7 @@ namespace openvpn {
       if (i < list.size())
 	{
 	  list[i]->res_addr_list.reset(nullptr);
+	  list[i]->decay_time = std::numeric_limits<std::time_t>::max();
 	  randomize_host(*list[i]);
 	}
     }
@@ -918,6 +930,7 @@ namespace openvpn {
 	}
     }
 
+    std::size_t cache_lifetime = 0;
     bool random_hostname = false;
     bool random = false;
     bool enable_cache = false;
