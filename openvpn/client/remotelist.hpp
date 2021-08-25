@@ -809,13 +809,16 @@ namespace openvpn {
 	  if (item.res_addr_list_defined())
 	    {
 	      if (si != di)
-		list[di] = list[si];
+		{
+		  list[di] = list[si];
+		  if (si == index.primary())
+		    index.set_primary(di);
+		}
 	      ++di;
 	    }
 	}
       if (di != list.size())
 	list.resize(di);
-      index.reset();
     }
 
     std::string get_port(const OptionList& opt, const std::string& default_port)
