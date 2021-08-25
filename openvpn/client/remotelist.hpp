@@ -295,7 +295,7 @@ namespace openvpn {
 		remote_list->index.reset();
 		index = 0;
 		async_resolve_lock();
-		next();
+		resolve_next();
 	      }
 	    else
 	      notify_callback_arg->pre_resolve_done();
@@ -310,7 +310,7 @@ namespace openvpn {
       }
 
     protected:
-      void next()
+      void resolve_next()
       {
 	while (index < remote_list->list.size())
 	  {
@@ -371,7 +371,7 @@ namespace openvpn {
 		if (stats)
 		  stats->error(Error::RESOLVE_ERROR);
 	      }
-	    next();
+	    resolve_next();
 	  }
       }
 
