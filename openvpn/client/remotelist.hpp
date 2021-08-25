@@ -220,6 +220,7 @@ namespace openvpn {
     {
       void reset() { primary_ = secondary_ = 0; }
       void reset_secondary() { secondary_ = 0; }
+      void set_primary(const size_t i) { primary_ = i; }
 
       size_t primary() const { return primary_; }
       size_t secondary() const { return secondary_; }
