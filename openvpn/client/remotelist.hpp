@@ -276,6 +276,7 @@ namespace openvpn {
 	   stats(stats_arg),
 	   index(0)
       {
+	remote_list->index.reset();
       }
 
       bool work_available() const
@@ -293,7 +294,6 @@ namespace openvpn {
 	    if (!notify_callback && work_available())
 	      {
 		notify_callback = notify_callback_arg;
-		remote_list->index.reset();
 		index = 0;
 		async_resolve_lock();
 		resolve_next();
