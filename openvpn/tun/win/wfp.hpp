@@ -104,6 +104,15 @@ DEFINE_GUID(
   0xa1, 0x81, 0x00, 0x1e, 0x8c, 0x6e, 0x04, 0xa2
 );
 
+/* b235ae9a-1d64-49b8-a44c-5ff3d9095045 */
+DEFINE_GUID(
+   FWPM_CONDITION_IP_REMOTE_ADDRESS,
+   0xb235ae9a,
+   0x1d64,
+   0x49b8,
+   0xa4, 0x4c, 0x5f, 0xf3, 0xd9, 0x09, 0x50, 0x45
+);
+
 #endif
 
 namespace openvpn {
@@ -414,8 +423,8 @@ namespace openvpn {
       const std::wstring openvpn_app_path;
       const NET_IFINDEX tap_index;
       const bool enable;
-      const bool allow_local_dns_resolvers;
       WFPContext::Ptr wfp;
+      const bool allow_local_dns_resolvers;
     };
   }
 }
