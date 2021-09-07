@@ -41,8 +41,9 @@ TEST(PeerFingerprint, parse_config) {
     "<peer-fingerprint>\n"
     "02:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44\n"
     "03:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44 \n"
+    "04:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44  \n"
     "</peer-fingerprint>\n"
-    "peer-fingerprint 04:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44 \n"
+    "peer-fingerprint 05:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44 \n"
     , nullptr);
   cfg.update_map();
 
@@ -54,7 +55,7 @@ TEST(PeerFingerprint, parse_config) {
   };
 
   TestPeerFingerprints fps(cfg, test_fingerprint.size());
-  ASSERT_EQ(fps.size(), 4);
+  ASSERT_EQ(fps.size(), 5);
 
   for (std::size_t i = 1; i <= fps.size(); ++i)
     {

@@ -99,7 +99,7 @@ struct PeerFingerprints {
 
     for (const auto i : *indices)
       {
-	std::istringstream fps(opt[i].get(1, 256 | Option::MULTILINE));
+	std::istringstream fps(opt[i].get(1, Option::MULTILINE));
 	std::string fp;
 
 	opt[i].touch();
