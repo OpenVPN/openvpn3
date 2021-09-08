@@ -42,7 +42,7 @@ inline static const std::uint16_t *get_addr16(const struct in6_addr *addr)
 {
 #if defined(_WIN32)
     return addr->u.Word;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
     return addr->__u6_addr.__u6_addr16;
 #else
     return addr->s6_addr16;

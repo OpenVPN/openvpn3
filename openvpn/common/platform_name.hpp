@@ -46,8 +46,10 @@ inline const char *platform_name()
     return "android";
 #elif defined(OPENVPN_PLATFORM_LINUX)
     return "linux";
+#elif defined(OPENVPN_PLATFORM_FREEBSD)
+    return "FreeBSD";
 #else
-    return nullptr;
+    static_assert(false);
 #endif
 }
 

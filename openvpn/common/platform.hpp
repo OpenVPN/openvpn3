@@ -32,6 +32,8 @@
 #define OPENVPN_PLATFORM_UWP
 #endif // WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
 #endif // defined(__cplusplus_winrt)
+#elif defined(__FreeBSD__)
+#define OPENVPN_PLATFORM_FREEBSD
 #elif defined(__APPLE__)
 #include "TargetConditionals.h"
 #if TARGET_OS_IPHONE // includes iPad
