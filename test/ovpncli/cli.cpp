@@ -79,6 +79,8 @@
 
 #if defined(USE_MBEDTLS)
 #include <openvpn/mbedtls/util/pkcs1.hpp>
+#elif defined(USE_OPENSSL)
+#include <openssl/evp.h>
 #endif
 
 #if defined(OPENVPN_PLATFORM_WIN)
@@ -231,6 +233,8 @@ public:
   std::string epki_cert;
 #if defined(USE_MBEDTLS)
   MbedTLSPKI::PKContext epki_ctx; // external PKI context
+#elif defined(USE_OPENSSL)
+  openvpn::OpenSSLPKI::PKey epki_pkey;
 #endif
 
   void set_clock_tick_action(const ClockTickAction action)
@@ -456,6 +460,64 @@ private:
 	  }
       }
     else
+#elif defined(USE_OPENSSL)
+      if (epki_pkey.defined())
+      {
+        EVP_PKEY_CTX* pkey_ctx = nullptr;
+        try {
+          BufferAllocated signdata(256, BufferAllocated::GROW);
+          base64->decode(signdata, signreq.data);
+
+          EVP_PKEY* pkey = epki_pkey.obj();
+
+
+          if(!(pkey_ctx = EVP_PKEY_CTX_new(pkey, NULL)))
+            throw Exception("epki_sign failed, error creating PKEY ctx");
+
+          if ((EVP_PKEY_sign_init(pkey_ctx) < 0))
+          {
+            throw Exception("epki_sign failed, error in EVP_PKEY_sign_init: " + openssl_error());
+          }
+
+          if (signreq.algorithm == "RSA_PKCS1_PADDING")
+          {
+            EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PADDING);
+          }
+          else if (signreq.algorithm == "RSA_NO_PADDING")
+          {
+            EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_NO_PADDING);
+          }
+
+          /* determine the output length */
+          std::size_t outlen;
+
+          if ((EVP_PKEY_sign(pkey_ctx, nullptr, &outlen, signdata.c_data(), signdata.size())) < 0)
+          {
+            throw Exception("epki_sign failed, error signing data: " + openssl_error());
+          }
+
+          BufferAllocated sig(outlen, BufferAllocated::ARRAY);
+
+
+          if ((EVP_PKEY_sign(pkey_ctx, sig.data(), &outlen, signdata.c_data(), signdata.size())) < 0)
+          {
+            throw Exception("epki_sign failed, error signing data: " + openssl_error());
+          }
+
+          sig.set_size(outlen);
+
+          // encode base64 signature
+          signreq.sig = base64->encode(sig);
+          OPENVPN_LOG("SIGNATURE[" << outlen << "]: " << signreq.sig);
+        }
+        catch (const std::exception& e)
+        {
+          signreq.error = true;
+          signreq.errorText = std::string("external_pki_sign_request: ") + e.what();
+        }
+        EVP_PKEY_CTX_free(pkey_ctx);
+      }
+      else
 #endif
       {
 	signreq.error = true;
@@ -1162,11 +1224,15 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		      client.epki_cert = read_text_utf8(epki_cert_fn);
 		      if (!epki_ca_fn.empty())
 			client.epki_ca = read_text_utf8(epki_ca_fn);
-#if defined(USE_MBEDTLS)
+#if defined(USE_MBEDTLS) || defined(USE_OPENSSL)
 		      if (!epki_key_fn.empty())
 			{
 			  const std::string epki_key_txt = read_text_utf8(epki_key_fn);
+#if defined(USE_MBEDTLS)
 			  client.epki_ctx.parse(epki_key_txt, "EPKI", privateKeyPassword);
+#else
+			  client.epki_pkey.parse_pem(epki_key_txt, "epki private key");
+#endif
 			}
 		      else
 			OPENVPN_THROW_EXCEPTION("--epki-key must be specified");
