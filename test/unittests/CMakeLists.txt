@@ -54,6 +54,7 @@ add_executable(coreUnitTests
         test_verify_x509_name.cpp
         test_ssl.cpp
         test_continuation.cpp
+        test_crypto.cpp
         test_optfilt.cpp
         test_pktstream.cpp
         test_remotelist.cpp

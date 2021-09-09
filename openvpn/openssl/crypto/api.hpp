@@ -25,7 +25,7 @@
 #include <openvpn/openssl/crypto/cipher.hpp>
 #include <openvpn/openssl/crypto/cipheraead.hpp>
 #include <openvpn/openssl/crypto/digest.hpp>
-#include <openvpn/openssl/crypto/hmac.hpp>
+#include <openvpn/openssl/crypto/mac.hpp>
 
 namespace openvpn {
 
