@@ -884,6 +884,20 @@ namespace openvpn {
 	return 0;
       }
 
+      static void print_ec_key_details(EVP_PKEY *pkey, std::ostream &os)
+      {
+	char gname[1024];
+	size_t gname_sz = sizeof(gname_sz);
+
+	const char* curve = gname;
+
+	if (!EVP_PKEY_get_group_name(pkey, gname, gname_sz, &gname_sz))
+	{
+	   curve = "Error getting group name";
+	}
+	os << ", " << EVP_PKEY_get_bits(pkey) << " bit EC, curve:" << curve;
+      }
+
       // Print a one line summary of SSL/TLS session handshake.
       static std::string ssl_handshake_details (const ::SSL *c_ssl)
       {
@@ -900,27 +914,9 @@ namespace openvpn {
 	    if (pkey != nullptr)
 	      {
 #ifndef OPENSSL_NO_EC
-		if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC) && (EVP_PKEY_get0_EC_KEY(pkey) != nullptr &&
-		  EVP_PKEY_get0_EC_KEY(pkey) != nullptr))
-		  {
-		    const EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
-		    const EC_GROUP* group = EC_KEY_get0_group(ec);
-		    const char* curve = nullptr;
+		if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC))
 
-		    int nid = EC_GROUP_get_curve_name(group);
-
-		    if (nid != 0)
-		      {
-			curve = OBJ_nid2sn(nid);
-		      }
-
-		    if(!curve)
-		      {
-			curve = "Error getting curve name";
-		      }
-
-		    os << ", " << EC_GROUP_order_bits(group) << " bit EC, curve:" << curve;
-		  }
+		  print_ec_key_details(pkey, os);
 
 		else
 #endif

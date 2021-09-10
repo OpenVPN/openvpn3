@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2021 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -374,4 +374,40 @@ inline int SSL_CTX_set1_groups(SSL_CTX *ctx, int *glist, int glistlen)
 {
     return SSL_CTX_set1_curves(ctx, glist, glistlen);
 }
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#include <openssl/evp.h>
+#include <openssl/ec.h>
+#include <openssl/objects.h>
+
+
+/* Note that this is not a perfect emulation of the new function but
+ * is good enough for our case of printing certificate details during
+ * handshake */
+static inline
+int EVP_PKEY_get_group_name(EVP_PKEY *pkey, char *gname, size_t gname_sz,
+			    size_t *gname_len)
+{
+  if (EVP_PKEY_get0_EC_KEY(pkey) == nullptr)
+    {
+      return 0;
+    }
+  const EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
+  const EC_GROUP* group = EC_KEY_get0_group(ec);
+
+  int nid = EC_GROUP_get_curve_name(group);
+
+  if (nid != 0)
+    {
+      return 0;
+    }
+  const char *curve = OBJ_nid2sn(nid);
+
+  std::strncpy(gname, curve, gname_sz - 1);
+  *gname_len = std::strlen(curve);
+  return 1;
+}
+
+#define EVP_PKEY_get_bits EVP_PKEY_bits
 #endif
