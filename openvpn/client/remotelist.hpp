@@ -155,22 +155,29 @@ namespace openvpn {
       template <class EPRANGE>
       void set_endpoint_range(const EPRANGE& endpoint_range, RandomAPI* rng, std::size_t addr_lifetime)
       {
-	res_addr_list.reset(new ResolvedAddrList());
-	for (const auto &i : endpoint_range)
+	// Keep addresses in case there are no results
+	if (endpoint_range.size())
 	  {
-	    // Skip addresses with incompatible family
-	    if ((transport_protocol.is_ipv6() && i.endpoint().address().is_v4())
-	        || (transport_protocol.is_ipv4() && i.endpoint().address().is_v6()))
-	      continue;
-	    ResolvedAddr::Ptr addr(new ResolvedAddr());
-	    addr->addr = IP::Addr::from_asio(i.endpoint().address());
-	    res_addr_list->push_back(addr);
+	    res_addr_list.reset(new ResolvedAddrList());
+	    for (const auto &i : endpoint_range)
+	      {
+		// Skip addresses with incompatible family
+		if ((transport_protocol.is_ipv6() && i.endpoint().address().is_v4())
+		    || (transport_protocol.is_ipv4() && i.endpoint().address().is_v6()))
+		  continue;
+		ResolvedAddr::Ptr addr(new ResolvedAddr());
+		addr->addr = IP::Addr::from_asio(i.endpoint().address());
+		res_addr_list->push_back(addr);
+	      }
+	    if (rng && res_addr_list->size() >= 2)
+	      std::shuffle(res_addr_list->begin(), res_addr_list->end(), *rng);
+	    OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint SET " << to_string());
 	  }
-	if (rng && res_addr_list->size() >= 2)
-	  std::shuffle(res_addr_list->begin(), res_addr_list->end(), *rng);
+	else if (!res_addr_list)
+	  res_addr_list.reset(new ResolvedAddrList());
+
 	if (addr_lifetime)
 	  decay_time = time(nullptr) + addr_lifetime;
-	OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint SET " << to_string());
       }
 
       // get an endpoint for contacting server
@@ -186,6 +193,11 @@ namespace openvpn {
 	  }
 	else
 	  return false;
+      }
+
+      bool need_resolve()
+      {
+	return !res_addr_list || decay_time <= time(nullptr);
       }
 
       std::string to_string() const
@@ -322,15 +334,15 @@ namespace openvpn {
       {
 	while (index < remote_list->list.size())
 	  {
-	    Item& item = *remote_list->list[index];
-
-	    // try to resolve item if no cached data present
-	    if (!item.res_addr_list_defined())
+	    // try to resolve item if needed
+	    auto& item = remote_list->list[index];
+	    bool item_in_use = item == remote_list->list[remote_list->primary_index()]
+			       && item->res_addr_list_defined();
+	    if (item->need_resolve() && !item_in_use)
 	      {
 		// next item to resolve
-		const std::string& host = item.actual_host();
-		OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << host << " : " << item.server_port);
-		async_resolve_name(host, item.server_port);
+		OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item->to_string());
+		async_resolve_name(item->actual_host(), item->server_port);
 		return;
 	      }
 	    ++index;
@@ -362,9 +374,11 @@ namespace openvpn {
 		auto rand = remote_list->random ? remote_list->rng.get() : nullptr;
 		for (auto& item : remote_list->list)
 		  {
-		    // Skip already resolved items and items with different hostname
-		    if (item->res_addr_list_defined()
-		        || item->server_host != resolve_item->server_host)
+		    // Skip current, already resolved and items with different hostname
+		    bool item_in_use = item == remote_list->list[remote_list->primary_index()]
+				       && item->res_addr_list_defined();
+		    if (item_in_use || !item->need_resolve()
+			|| item->server_host != resolve_item->server_host)
 		      continue;
 
 		    item->set_endpoint_range(results, rand, remote_list->cache_lifetime);

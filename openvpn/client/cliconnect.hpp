@@ -296,7 +296,7 @@ namespace openvpn {
 
     virtual void pre_resolve_done() override
     {
-      if (!halt)
+      if (!halt && generation == 0)
 	new_client();
     }
 
@@ -396,6 +396,13 @@ namespace openvpn {
 	      lifecycle_started = true;
 	    }
 	}
+    }
+
+    void client_proto_renegotiated() override
+    {
+      // Try to re-lookup potentially outdated RemoteList::Items
+      if (pre_resolve)
+	pre_resolve->start(this);
     }
 
     void queue_restart(const unsigned int delay_ms = 2000)
@@ -608,7 +615,10 @@ namespace openvpn {
 
     void new_client()
     {
-      ++generation;
+      // Make sure generation is > 0 in case of overflow
+      if (++generation == 0)
+	++generation;
+
       if (client_options->asio_work_always_on())
 	asio_work.reset(new AsioWork(io_context));
       else
