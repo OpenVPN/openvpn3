@@ -231,27 +231,24 @@ namespace openvpn {
       const std::string port = "port";
     };
 
-    // Used to index into remote list.
-    // The primary index is the remote list index.
-    // The secondary index is the index into the
-    // Item's IP address list (res_addr_list).
+    // Used to index into remote list items and their address(es).
     struct Index
     {
-      void reset() { primary_ = secondary_ = 0; }
-      void reset_secondary() { secondary_ = 0; }
-      void set_primary(const size_t i) { primary_ = i; }
+      void reset() { item_ = item_addr_ = 0; }
+      void reset_item_addr() { item_addr_ = 0; }
+      void set_item(const size_t i) { item_ = i; }
 
-      size_t primary() const { return primary_; }
-      size_t secondary() const { return secondary_; }
+      size_t item() const { return item_; }
+      size_t item_addr() const { return item_addr_; }
 
-      // return true if primary index was incremented
-      bool increment(const size_t pri_len, const size_t sec_len)
+      // return true if item index was incremented
+      bool increment(const size_t item_len, const size_t addr_len)
       {
-	if (++secondary_ >= sec_len)
+	if (++item_addr_ >= addr_len)
 	  {
-	    secondary_ = 0;
-	    if (++primary_ >= pri_len)
-	      primary_ = 0;
+	    item_addr_ = 0;
+	    if (++item_ >= item_len)
+	      item_ = 0;
 	    return true;
 	  }
 	else
@@ -259,8 +256,8 @@ namespace openvpn {
       }
 
     private:
-      size_t primary_ = 0;
-      size_t secondary_ = 0;
+      size_t item_ = 0;
+      size_t item_addr_ = 0;
     };
 
   public:
@@ -337,7 +334,7 @@ namespace openvpn {
 	  {
 	    // try to resolve item if needed
 	    auto& item = remote_list->list[index];
-	    bool item_in_use = item == remote_list->list[remote_list->primary_index()]
+	    bool item_in_use = item == remote_list->list[remote_list->item_index()]
 			       && item->res_addr_list_defined();
 	    if (item->need_resolve() && !item_in_use)
 	      {
@@ -376,7 +373,7 @@ namespace openvpn {
 		for (auto& item : remote_list->list)
 		  {
 		    // Skip current, already resolved and items with different hostname
-		    bool item_in_use = item == remote_list->list[remote_list->primary_index()]
+		    bool item_in_use = item == remote_list->list[remote_list->item_index()]
 				       && item->res_addr_list_defined();
 		    if (item_in_use || !item->need_resolve()
 			|| item->server_host != resolve_item->server_host)
@@ -609,9 +606,9 @@ namespace openvpn {
 	    }
 	}
 
-      bool item_changed = index.increment(list.size(), secondary_length(index.primary()));
+      bool item_changed = index.increment(list.size(), item_addr_length(index.item()));
       if (item_changed && !enable_cache)
-	reset_item(index.primary());
+	reset_item(index.item());
     }
 
     // Return details about current connection entry.
@@ -619,12 +616,12 @@ namespace openvpn {
     // without raising an exception.
     bool endpoint_available(std::string* server_host, std::string* server_port, Protocol* transport_protocol) const
     {
-      const Item& item = *list[primary_index()];
+      const Item& item = *list[item_index()];
       if (server_host)
 	*server_host = item.actual_host();
       if (server_port)
 	*server_port = item.server_port;
-      const bool cached = (item.res_addr_list && index.secondary() < item.res_addr_list->size());
+      const bool cached = (item.res_addr_list && index.item_addr() < item.res_addr_list->size());
       if (transport_protocol)
 	{
 	  if (cached)
@@ -632,7 +629,7 @@ namespace openvpn {
 	      // Since we know whether resolved address is IPv4 or IPv6, add
 	      // that info to the returned Protocol object.
 	      Protocol proto(item.transport_protocol);
-	      const IP::Addr& addr = (*item.res_addr_list)[index.secondary()]->addr;
+	      const IP::Addr& addr = (*item.res_addr_list)[index.item_addr()]->addr;
 	      proto.mod_addr_version(addr.version());
 	      *transport_protocol = proto;
 	    }
@@ -646,19 +643,19 @@ namespace openvpn {
     template <class EPRANGE>
     void set_endpoint_range(EPRANGE& endpoint_range)
     {
-      Item& item = *list[primary_index()];
+      Item& item = *list[item_index()];
       auto rand = random ? rng.get() : nullptr;
       std::size_t lifetime = enable_cache ? cache_lifetime : 0;
       item.set_endpoint_range(endpoint_range, rand, lifetime);
-      index.reset_secondary();
+      index.reset_item_addr();
     }
 
     // get an endpoint for contacting server
     template <class EP>
     void get_endpoint(EP& endpoint) const
     {
-      const Item& item = *list[primary_index()];
-      if (!item.get_endpoint(endpoint, index.secondary()))
+      const Item& item = *list[item_index()];
+      if (!item.get_endpoint(endpoint, index.item_addr()))
 	throw remote_list_error("current remote server endpoint is undefined");
     }
 
@@ -676,21 +673,21 @@ namespace openvpn {
     // return hostname (or IP address) of current connection entry
     std::string current_server_host() const
     {
-      const Item& item = *list[primary_index()];
+      const Item& item = *list[item_index()];
       return item.actual_host();
     }
 
     // return transport protocol of current connection entry
     const Protocol& current_transport_protocol() const
     {
-      const Item& item = *list[primary_index()];
+      const Item& item = *list[item_index()];
       return item.transport_protocol;
     }
 
     template <typename T>
     T* current_conn_block_rawptr() const
     {
-      const Item& item = *list[primary_index()];
+      const Item& item = *list[item_index()];
       return dynamic_cast<T*>(item.conn_block.get());
     }
 
@@ -746,7 +743,7 @@ namespace openvpn {
     void reset_cache_item()
     {
       if (!enable_cache)
-	reset_item(index.primary());
+	reset_item(index.item());
     }
 
   private:
@@ -780,11 +777,11 @@ namespace openvpn {
 	}
     }
 
-    // return the current primary index (into list) and raise an exception
+    // return the current item index (into list) and raise an exception
     // if it is undefined
-    size_t primary_index() const
+    size_t item_index() const
     {
-      const size_t pri = index.primary();
+      const size_t pri = index.item();
       if (pri < list.size())
 	return pri;
       else
@@ -792,7 +789,7 @@ namespace openvpn {
     }
 
     // return the number of cached IP addresses associated with a given item
-    size_t secondary_length(const size_t i) const
+    size_t item_addr_length(const size_t i) const
     {
       if (i < list.size())
 	{
@@ -861,8 +858,8 @@ namespace openvpn {
 	      if (si != di)
 		{
 		  list[di] = list[si];
-		  if (si == index.primary())
-		    index.set_primary(di);
+		  if (si == index.item())
+		    index.set_item(di);
 		}
 	      ++di;
 	    }
