@@ -65,6 +65,11 @@ namespace openvpn {
       virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
 							    TransportClientParent* parent);
 
+      void process_push(const OptionList& opt) override
+      {
+	remote_list->process_push(opt);
+      }
+
     private:
       ClientConfig()
 	: server_addr_float(false),

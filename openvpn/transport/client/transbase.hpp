@@ -104,6 +104,7 @@ namespace openvpn {
     virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
 							  TransportClientParent* parent) = 0;
     virtual bool is_relay() { return false; }
+    virtual void process_push(const OptionList&) { return; }
   };
 
 } // namespace openvpn

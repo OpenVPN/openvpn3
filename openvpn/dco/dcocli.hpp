@@ -84,6 +84,11 @@ public:
 
   unsigned int ping_restart_override = 0;
 
+  void process_push(const OptionList& opt) override
+  {
+    transport.remote_list->process_push(opt);
+  }
+
   virtual TunClientFactory::Ptr
   new_tun_factory(const DCO::TunConfig &conf, const OptionList &opt) override {
     tun = conf;

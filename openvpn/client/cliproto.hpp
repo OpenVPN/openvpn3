@@ -584,6 +584,9 @@ namespace openvpn {
 		// process auth-token
 		extract_auth_token(received_options);
 
+		// process pushed transport options
+		transport_factory->process_push(received_options);
+
 		// modify proto config (cipher, auth, key-derivation and compression methods)
 		Base::process_push(received_options, *proto_context_options);
 

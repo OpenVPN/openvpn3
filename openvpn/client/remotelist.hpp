@@ -429,8 +429,7 @@ namespace openvpn {
       , directives(connection_tag)
       , rng(rng_arg)
     {
-      if (opt.exists("remote-cache-lifetime"))
-	cache_lifetime = opt.get("remote-cache-lifetime").get_num(1, 0);
+      process_cache_lifetime(opt);
 
       // defaults
       const Protocol default_proto = get_proto(opt, Protocol(Protocol::UDPv4));
@@ -491,6 +490,11 @@ namespace openvpn {
 
       if (!(flags & ALLOW_EMPTY) && list.empty())
 	throw option_error("remote option not specified");
+    }
+
+    void process_push(const OptionList& opt)
+    {
+      process_cache_lifetime(opt);
     }
 
     // if cache is enabled, all DNS names will be preemptively queried
@@ -731,6 +735,25 @@ namespace openvpn {
     }
 
   private:
+    // Process --remote-cache-lifetime option
+    void process_cache_lifetime(const OptionList& opt)
+    {
+      if (!opt.exists("remote-cache-lifetime"))
+	return;
+
+      const bool lifetimes_set = cache_lifetime != 0;
+      cache_lifetime = opt.get("remote-cache-lifetime").get_num(1, 0);
+      if (!enable_cache || lifetimes_set)
+	return;
+
+      // Init lifetimes on items with adresses
+      for (auto& item : list)
+	{
+	  if (item->res_addr_list_defined())
+	    item->decay_time = time(nullptr) + cache_lifetime;
+	}
+    }
+
     // reset the cache associated with a given item
     void reset_item(const size_t i)
     {
