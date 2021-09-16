@@ -80,6 +80,7 @@ namespace openvpn {
       virtual void client_proto_terminate() = 0;
       virtual void client_proto_connected() {}
       virtual void client_proto_auth_pending_timeout(int timeout) {}
+      virtual void client_proto_renegotiated() {}
     };
 
     class Session : ProtoContext,
@@ -931,12 +932,17 @@ namespace openvpn {
 	  }
       }
 
-      // base class calls here when primary session transitions to ACTIVE state
-      virtual void active()
+      // base class calls here when session transitions to ACTIVE state
+      void active(bool primary) override
       {
-	OPENVPN_LOG("Session is ACTIVE");
-	check_tls_warnings();
-	schedule_push_request_callback(Time::Duration::seconds(0));
+	if (primary)
+	  {
+	    OPENVPN_LOG("Session is ACTIVE");
+	    check_tls_warnings();
+	    schedule_push_request_callback(Time::Duration::seconds(0));
+	  }
+	else if (notify_callback)
+	  notify_callback->client_proto_renegotiated();
       }
 
       void housekeeping_callback(const openvpn_io::error_code& e)
