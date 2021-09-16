@@ -24,13 +24,13 @@
 
 using namespace openvpn;
 
-struct PreResolveNotifyIgn : RemoteList::PreResolve::NotifyCallback {
-  void pre_resolve_done() override {}
+struct BulkResolveNotifyIgn : RemoteList::BulkResolve::NotifyCallback {
+  void bulk_resolve_done() override {}
 };
-struct PreResolveNotifyLog : RemoteList::PreResolve::NotifyCallback {
-  explicit PreResolveNotifyLog(const std::string& msg = "")
+struct BulkResolveNotifyLog : RemoteList::BulkResolve::NotifyCallback {
+  explicit BulkResolveNotifyLog(const std::string& msg = "")
     : msg_(msg) {}
-  void pre_resolve_done() override {
+  void bulk_resolve_done() override {
     OPENVPN_LOG(msg_);
   }
   const std::string msg_;
@@ -289,7 +289,7 @@ TEST(RemoteList, ListTraversal)
 }
 
 
-TEST(RemoteList, RemoteListPreResolve)
+TEST(RemoteList, RemoteListBulkResolve)
 {
   OptionList cfg;
   cfg.parse_from_config(
@@ -309,22 +309,22 @@ TEST(RemoteList, RemoteListPreResolve)
   openvpn_io::io_context ioctx;
   SessionStats::Ptr stats(new SessionStats());
   FakeAsyncResolvable<
-      RemoteList::PreResolve,
+      RemoteList::BulkResolve,
       openvpn_io::io_context&,
       const RemoteList::Ptr&,
       const SessionStats::Ptr&>
-    fake_preres(ioctx, rl, stats);
+    fake_bulkres(ioctx, rl, stats);
 
-  fake_preres.set_results("1.1.1.1", "1111", { {"1.1.1.1", 1111} });
-  fake_preres.set_results("2:cafe::1", "2222", { {"2:cafe::1", 2222} });
-  fake_preres.set_results("3.domain.tld", "3333", { {"3.3.3.3", 3333}, {"3::3", 3333} });
-  fake_preres.set_results("4.domain.tld", "4444", { {"4.4.4.4", 4444}, {"4::4", 4444} });
+  fake_bulkres.set_results("1.1.1.1", "1111", { {"1.1.1.1", 1111} });
+  fake_bulkres.set_results("2:cafe::1", "2222", { {"2:cafe::1", 2222} });
+  fake_bulkres.set_results("3.domain.tld", "3333", { {"3.3.3.3", 3333}, {"3::3", 3333} });
+  fake_bulkres.set_results("4.domain.tld", "4444", { {"4.4.4.4", 4444}, {"4::4", 4444} });
 
-  PreResolveNotifyLog logmsg("<<<RemoteListPreResolve>>>");
+  BulkResolveNotifyLog logmsg("<<<RemoteListBulkResolve>>>");
   testLog->startCollecting();
-  fake_preres.start(&logmsg);
+  fake_bulkres.start(&logmsg);
   std::string output(testLog->stopCollecting());
-  ASSERT_NE(output.find("<<<RemoteListPreResolve>>>"), std::string::npos);
+  ASSERT_NE(output.find("<<<RemoteListBulkResolve>>>"), std::string::npos);
 
   ASSERT_EQ(5, rl->size())
     << "Unexpected remote list item count" << std::endl
@@ -349,13 +349,13 @@ TEST(RemoteList, RemoteListPreResolve)
   ASSERT_EQ(rl->get_item(4).res_addr_list->at(0)->to_string(), "4::4");
 
   // in case it gets randomized before the other 3.domain.tld
-  fake_preres.set_results("3.domain.tld", "33333", { {"3.3.3.3", 33333}, {"3::3", 33333} });
+  fake_bulkres.set_results("3.domain.tld", "33333", { {"3.3.3.3", 33333}, {"3::3", 33333} });
   rl->reset_cache();
   rl->randomize();
 
-  PreResolveNotifyIgn ignore;
+  BulkResolveNotifyIgn ignore;
   testLog->startCollecting();
-  fake_preres.start(&ignore);
+  fake_bulkres.start(&ignore);
   output = testLog->stopCollecting();
 
   ASSERT_EQ(5, rl->size())
@@ -409,8 +409,8 @@ TEST(RemoteList, RemoteListPreResolve)
 	    ASSERT_EQ(rl->current_transport_protocol(), proto);
 	  }
 
-	  auto ep1 = fake_preres.init_endpoint();
-	  auto ep2 = fake_preres.init_endpoint();
+	  auto ep1 = fake_bulkres.init_endpoint();
+	  auto ep2 = fake_bulkres.init_endpoint();
 	  rl->get_endpoint(ep1);
 	  rl->get_item(i).get_endpoint(ep2, j);
 	  ASSERT_EQ(ep1, ep2);

@@ -271,22 +271,23 @@ namespace openvpn {
 
     typedef RCPtr<RemoteList> Ptr;
 
-    // Helper class used to pre-resolve all items in remote list.
+    // Helper class used to resolve all items in remote list.
     // This is useful in tun_persist mode, where it may be necessary
     // to pre-resolve all potential remote server items prior
-    // to initial tunnel establishment.
-    class PreResolve : public virtual RC<thread_unsafe_refcount>, protected AsyncResolvableTCP
+    // to initial tunnel establishment. Also used when trying to
+    // re-resolve items which had too many failed attempts.
+    class BulkResolve : public virtual RC<thread_unsafe_refcount>, protected AsyncResolvableTCP
     {
     public:
-      typedef RCPtr<PreResolve> Ptr;
+      typedef RCPtr<BulkResolve> Ptr;
 
       struct NotifyCallback
       {
 	// client callback when resolve operation is complete
-	virtual void pre_resolve_done() = 0;
+	virtual void bulk_resolve_done() = 0;
       };
 
-      PreResolve(openvpn_io::io_context& io_context_arg,
+      BulkResolve(openvpn_io::io_context& io_context_arg,
 		 const RemoteList::Ptr& remote_list_arg,
 		 const SessionStats::Ptr& stats_arg)
 	:  AsyncResolvableTCP(io_context_arg),
@@ -307,7 +308,7 @@ namespace openvpn {
       {
 	if (notify_callback_arg)
 	  {
-	    // This method is a no-op (i.e. pre_resolve_done is called immediately)
+	    // This method is a no-op (i.e. bulk_resolve_done is called immediately)
 	    // if caching not enabled in underlying remote_list or if start() was
 	    // previously called and is still in progress.
 	    if (!notify_callback && work_available())
@@ -318,7 +319,7 @@ namespace openvpn {
 		resolve_next();
 	      }
 	    else
-	      notify_callback_arg->pre_resolve_done();
+	      notify_callback_arg->bulk_resolve_done();
 	  }
       }
 
@@ -341,7 +342,7 @@ namespace openvpn {
 	    if (item->need_resolve() && !item_in_use)
 	      {
 		// next item to resolve
-		OPENVPN_LOG_REMOTELIST("*** PreResolve RESOLVE on " << item->to_string());
+		OPENVPN_LOG_REMOTELIST("*** BulkResolve RESOLVE on " << item->to_string());
 		async_resolve_name(item->actual_host(), item->server_port);
 		return;
 	      }
@@ -357,7 +358,7 @@ namespace openvpn {
 	  if (remote_list->cached_item_exists())
 	    remote_list->prune_uncached();
 	  cancel();
-	  ncb->pre_resolve_done();
+	  ncb->bulk_resolve_done();
 	}
       }
 
@@ -388,7 +389,7 @@ namespace openvpn {
 	    else
 	      {
 		// resolve failed
-		OPENVPN_LOG("DNS pre-resolve error on " << resolve_item->actual_host()
+		OPENVPN_LOG("DNS bulk-resolve error on " << resolve_item->actual_host()
 			    << ": " << error.message());
 		if (stats)
 		  stats->error(Error::RESOLVE_ERROR);

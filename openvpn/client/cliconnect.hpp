@@ -67,7 +67,7 @@ namespace openvpn {
   // list rotation.  Only gives up on auth failure or other fatal errors that
   // cannot be remedied by retrying.
   class ClientConnect : ClientProto::NotifyCallback,
-			RemoteList::PreResolve::NotifyCallback,
+			RemoteList::BulkResolve::NotifyCallback,
 			ClientLifeCycle::NotifyCallback,
 			public RC<thread_unsafe_refcount>
   {
@@ -103,15 +103,15 @@ namespace openvpn {
 	    throw ErrorCode(Error::NETWORK_UNAVAILABLE, true, "Network Unavailable");
 
 	  RemoteList::Ptr remote_list = client_options->remote_list_precache();
-	  RemoteList::PreResolve::Ptr preres(new RemoteList::PreResolve(io_context,
-									remote_list,
-									client_options->stats_ptr()));
-	  if (preres->work_available())
+	  RemoteList::BulkResolve::Ptr bulkres(new RemoteList::BulkResolve(io_context,
+									   remote_list,
+									   client_options->stats_ptr()));
+	  if (bulkres->work_available())
 	    {
 	      ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
 	      client_options->events().add_event(std::move(ev));
-	      pre_resolve = preres;
-	      pre_resolve->start(this); // asynchronous -- will call back to pre_resolve_done
+	      bulk_resolve = bulkres;
+	      bulk_resolve->start(this); // asynchronous -- will call back to bulk_resolve_done
 	    }
 	  else
 	    new_client();
@@ -136,8 +136,8 @@ namespace openvpn {
       if (!halt)
 	{
 	  halt = true;
-	  if (pre_resolve)
-	    pre_resolve->cancel();
+	  if (bulk_resolve)
+	    bulk_resolve->cancel();
 	  if (client)
 	    {
 	      client->tun_set_disconnect();
@@ -294,7 +294,7 @@ namespace openvpn {
 	}
     }
 
-    virtual void pre_resolve_done() override
+    virtual void bulk_resolve_done() override
     {
       if (!halt && generation == 0)
 	new_client();
@@ -401,8 +401,8 @@ namespace openvpn {
     void client_proto_renegotiated() override
     {
       // Try to re-lookup potentially outdated RemoteList::Items
-      if (pre_resolve)
-	pre_resolve->start(this);
+      if (bulk_resolve)
+	bulk_resolve->start(this);
     }
 
     void queue_restart(const unsigned int delay_ms = 2000)
@@ -701,7 +701,7 @@ namespace openvpn {
     AsioTimer conn_timer;
     bool conn_timer_pending;
     std::unique_ptr<AsioWork> asio_work;
-    RemoteList::PreResolve::Ptr pre_resolve;
+    RemoteList::BulkResolve::Ptr bulk_resolve;
   };
 
 }
