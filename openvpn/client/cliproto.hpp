@@ -268,13 +268,13 @@ namespace openvpn {
       }
 
     private:
-      virtual bool transport_is_openvpn_protocol()
+      bool transport_is_openvpn_protocol() override
       {
 	return true;
       }
 
       // transport obj calls here with incoming packets
-      virtual void transport_recv(BufferAllocated& buf)
+      void transport_recv(BufferAllocated& buf) override
       {
 	try {
 	  OPENVPN_LOG_CLIPROTO("Transport RECV " << server_endpoint_render() << ' ' << Base::dump_packet(buf));
@@ -349,12 +349,12 @@ namespace openvpn {
 	  }
       }
 
-      virtual void transport_needs_send()
+      void transport_needs_send() override
       {
       }
 
       // tun i/o driver calls here with incoming packets
-      virtual void tun_recv(BufferAllocated& buf)
+      void tun_recv(BufferAllocated& buf) override
       {
 	try {
 	  OPENVPN_LOG_CLIPROTO("TUN recv, size=" << buf.size());
@@ -414,20 +414,20 @@ namespace openvpn {
       }
 
       // Return true if keepalive parameter(s) are enabled.
-      virtual bool is_keepalive_enabled() const
+      bool is_keepalive_enabled() const override
       {
 	return Base::is_keepalive_enabled();
       }
 
       // Disable keepalive for rest of session, but fetch
       // the keepalive parameters (in seconds).
-      virtual void disable_keepalive(unsigned int& keepalive_ping,
-				     unsigned int& keepalive_timeout)
+      void disable_keepalive(unsigned int& keepalive_ping,
+			     unsigned int& keepalive_timeout) override
       {
 	Base::disable_keepalive(keepalive_ping, keepalive_timeout);
       }
 
-      virtual void transport_pre_resolve()
+      void transport_pre_resolve() override
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::Resolve();
 	cli_events->add_event(std::move(ev));
@@ -442,19 +442,19 @@ namespace openvpn {
 	return out.str();
       }
 
-      virtual void transport_wait_proxy()
+      void transport_wait_proxy() override
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::WaitProxy();
 	cli_events->add_event(std::move(ev));
       }
 
-      virtual void transport_wait()
+      void transport_wait() override
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::Wait();
 	cli_events->add_event(std::move(ev));
       }
 
-      virtual void transport_connecting()
+      void transport_connecting() override
       {
 	try {
 	  OPENVPN_LOG("Connecting to " << server_endpoint_render());
@@ -469,7 +469,7 @@ namespace openvpn {
 	  }
       }
 
-      virtual void transport_error(const Error::Type fatal_err, const std::string& err_text)
+      void transport_error(const Error::Type fatal_err, const std::string& err_text) override
       {
 	if (fatal_err != Error::UNDEF)
 	  {
@@ -485,7 +485,7 @@ namespace openvpn {
 	  throw transport_exception(err_text);
       }
 
-      virtual void proxy_error(const Error::Type fatal_err, const std::string& err_text)
+      void proxy_error(const Error::Type fatal_err, const std::string& err_text) override
       {
 	if (fatal_err != Error::UNDEF)
 	  {
@@ -538,7 +538,7 @@ namespace openvpn {
       }
 
       // proto base class calls here for control channel network sends
-      virtual void control_net_send(const Buffer& net_buf)
+      void control_net_send(const Buffer& net_buf) override
       {
 	OPENVPN_LOG_CLIPROTO("Transport SEND " << server_endpoint_render() << ' ' << Base::dump_packet(net_buf));
 	if (transport->transport_send_const(net_buf))
@@ -546,7 +546,7 @@ namespace openvpn {
       }
 
       // proto base class calls here for app-level control-channel messages received
-      virtual void control_recv(BufferPtr&& app_bp)
+      void control_recv(BufferPtr&& app_bp) override
       {
 	const std::string msg = Unicode::utf8_printable(Base::template read_control_string<std::string>(*app_bp),
 							Unicode::UTF8_FILTER|Unicode::UTF8_PASS_FMT);
@@ -751,19 +751,19 @@ namespace openvpn {
 	  }
       }
 
-      virtual void tun_pre_tun_config()
+      void tun_pre_tun_config() override
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::AssignIP();
 	cli_events->add_event(std::move(ev));
       }
 
-      virtual void tun_pre_route_config()
+      void tun_pre_route_config() override
       {
 	ClientEvent::Base::Ptr ev = new ClientEvent::AddRoutes();
 	cli_events->add_event(std::move(ev));
       }
 
-      virtual void tun_connected()
+      void tun_connected() override
       {
 	OPENVPN_LOG("Connected via " + tun->tun_name());
 
@@ -788,7 +788,7 @@ namespace openvpn {
 	connected_ = std::move(ev);
       }
 
-      virtual void tun_error(const Error::Type fatal_err, const std::string& err_text)
+      void tun_error(const Error::Type fatal_err, const std::string& err_text) override
       {
 	if (fatal_err == Error::TUN_HALT)
 	  send_explicit_exit_notify();
@@ -807,7 +807,7 @@ namespace openvpn {
       }
 
       // proto base class calls here to get auth credentials
-      virtual void client_auth(Buffer& buf)
+      void client_auth(Buffer& buf) override
       {
 	// we never send creds to a relay server
 	if (creds && !Base::conf().relay_mode)
