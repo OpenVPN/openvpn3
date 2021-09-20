@@ -88,6 +88,12 @@
 // OpenSSLContext is an SSL Context implementation that uses the
 // OpenSSL library as a backend.
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+using ssl_mac_ctx=::HMAC_CTX;
+#else
+using ssl_mac_ctx=::EVP_MAC_CTX;
+#endif
+
 namespace openvpn {
 
   // Represents an SSL configuration that can be used
@@ -1093,6 +1099,22 @@ namespace openvpn {
     }
 
   private:
+    void setup_server_ticket_callback() const
+    {
+      const std::string sess_id_context = config->session_ticket_handler->session_id_context();
+      if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
+	throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+      if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx, tls_ticket_key_callback))
+	throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_key_cb failed");
+#else
+
+      if (!SSL_CTX_set_tlsext_ticket_key_evp_cb(ctx, tls_ticket_key_callback))
+	throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_evp_cb failed");
+#endif
+    }
+
     OpenSSLContext(Config* config_arg)
       : config(config_arg)
     {
@@ -1156,12 +1178,7 @@ namespace openvpn {
 	      SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	      if (config->session_ticket_handler)
 		{
-		  const std::string sess_id_context = config->session_ticket_handler->session_id_context();
-		  if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
-		    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
-
-		  if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx, tls_ticket_key_callback))
-		    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_key_cb failed");
+		  setup_server_ticket_callback();
 		}
 	      else
 		sslopt |= SSL_OP_NO_TICKET;
@@ -1904,7 +1921,7 @@ namespace openvpn {
 				       unsigned char key_name[16],
 				       unsigned char iv[EVP_MAX_IV_LENGTH],
 				       ::EVP_CIPHER_CTX *ctx,
-				       ::HMAC_CTX *hctx,
+				       ssl_mac_ctx *hctx,
 				       int enc)
     {
       // get OpenSSLContext
@@ -1987,14 +2004,26 @@ namespace openvpn {
     static bool tls_ticket_init_cipher_hmac(const TLSSessionTicketBase::Key& key,
 					    unsigned char iv[EVP_MAX_IV_LENGTH],
 					    ::EVP_CIPHER_CTX *ctx,
-					    ::HMAC_CTX *hctx,
+					    ssl_mac_ctx *mctx,
 					    const int enc)
     {
       static_assert(TLSSessionTicketBase::Key::CIPHER_KEY_SIZE == 32, "unexpected cipher key size");
       if (!EVP_CipherInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key.cipher_value_, iv, enc))
 	return false;
-      if (!HMAC_Init_ex(hctx, key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE, EVP_sha256(), nullptr))
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+      OSSL_PARAM params[]  {
+
+	/* The OSSL_PARAM_construct_utf8_string needs a non const str */
+	OSSL_PARAM_construct_utf8_string("digest", (char*) "sha256", 0),
+	OSSL_PARAM_construct_end()
+      };
+
+      if (!EVP_MAC_init(mctx, key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE, params))
 	return false;
+#else
+      if (!HMAC_Init_ex(mctx, key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE, EVP_sha256(), nullptr))
+	return false;
+#endif
       return true;
     }
 
