@@ -156,7 +156,7 @@ namespace openvpn {
 
 	    {
 	      char *temp;
-	      const int buf_len = ::BIO_get_mem_data(bio, &temp);
+	      const size_t buf_len = ::BIO_get_mem_data(bio, &temp);
 	      std::string ret = std::string(temp, buf_len);
 	      ::BIO_free(bio);
 	      return ret;
@@ -190,6 +190,7 @@ namespace openvpn {
 	  ::EVP_PKEY_free(pkey_);
       }
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
       static ::EVP_PKEY *dup(const ::EVP_PKEY *pkey)
       {
 	// No OpenSSL EVP_PKEY_dup method so we roll our own 
@@ -206,6 +207,15 @@ namespace openvpn {
 	else
 	  return nullptr;
       }
+#else
+      static ::EVP_PKEY *dup(const ::EVP_PKEY *pkey)
+      {
+	if (pkey)
+	  return EVP_PKEY_dup(const_cast<EVP_PKEY*>(pkey));
+	else
+	  return nullptr;
+      }
+#endif
 
       ::EVP_PKEY *pkey_;
       std::string priv_key_pwd;
