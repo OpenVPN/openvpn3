@@ -80,6 +80,8 @@ public:
   DCO::TransportConfig transport;
   DCO::TunConfig tun;
 
+  bool allow_local_dns_resolvers = false;
+
   unsigned int ping_restart_override = 0;
 
   virtual TunClientFactory::Ptr

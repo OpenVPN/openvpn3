@@ -73,7 +73,7 @@ namespace openvpn {
       typedef RCPtr<SetupFactory> Ptr;
 
       virtual SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context,
-					   const TunWin::Type tun_type) = 0;
+					   const TunWin::Type tun_type, bool allow_local_dns_resolvers) = 0;
     };
   }
 }

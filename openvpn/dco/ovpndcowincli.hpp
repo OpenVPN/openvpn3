@@ -151,7 +151,7 @@ protected:
       return;
 
     // create new tun setup object
-    tun_setup_ = config->tun.new_setup_obj(io_context);
+    tun_setup_ = config->tun.new_setup_obj(io_context, config->allow_local_dns_resolvers);
 
     std::ostringstream os;
     HANDLE th = tun_setup_->get_handle(os);

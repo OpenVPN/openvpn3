@@ -92,6 +92,7 @@ namespace openvpn {
       std::string client_exe = Win::module_name_utf8(); // for validation
       int debug_level = 1;
       TunWin::Type tun_type = TunWin::TapWindows6;
+      bool allow_local_dns_resolvers = false;
     };
 
     class SetupClient : public TunWin::SetupBase
@@ -168,6 +169,7 @@ namespace openvpn {
 	  }
 	);
 
+	jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
 	make_transaction("tun-open", jtxt, ts);
 
 	// Execute transaction
@@ -210,6 +212,7 @@ namespace openvpn {
 	    jreq["destroy_event"] = destroy_event.duplicate_local();
 	  }
 
+    jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
 	jreq["tun_type"] = config->tun_type;
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
 	const std::string jtxt = jreq.toStyledString();
@@ -330,15 +333,16 @@ namespace openvpn {
       Win::DestroyEvent destroy_event;
     };
 
-    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, TunWin::Type tun_type) override
+    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, TunWin::Type tun_type, bool allow_local_dns_resolvers) override
     {
       if (config)
 	{
 	  config->tun_type = tun_type;
+      config->allow_local_dns_resolvers = allow_local_dns_resolvers;
 	  return new SetupClient(io_context, config);
 	}
       else
-	return new TunWin::Setup(io_context, tun_type);
+	return new TunWin::Setup(io_context, tun_type, allow_local_dns_resolvers);
     }
 
     WinCommandAgent(const OptionList& opt_parent)

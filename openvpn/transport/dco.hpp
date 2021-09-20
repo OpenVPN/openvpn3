@@ -67,12 +67,12 @@ namespace openvpn {
 #if defined(OPENVPN_PLATFORM_WIN)
       TunWin::SetupFactory::Ptr setup_factory;
 
-      TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context)
+      TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context, bool allow_local_dns_resolvers)
       {
 	if (setup_factory)
-	  return setup_factory->new_setup_obj(io_context, TunWin::OvpnDco);
+	  return setup_factory->new_setup_obj(io_context, TunWin::OvpnDco, allow_local_dns_resolvers);
 	else
-	  return new TunWin::Setup(io_context, TunWin::OvpnDco);
+	  return new TunWin::Setup(io_context, TunWin::OvpnDco, allow_local_dns_resolvers);
       }
 #endif
 

@@ -762,6 +762,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "google-dns",     no_argument,        nullptr,      'g' },
     { "persist-tun",    no_argument,        nullptr,      'j' },
     { "wintun",         no_argument,        nullptr,      'w' },
+    { "allow-local-dns-resolvers", no_argument, nullptr,  'l' },
     { "def-keydir",     required_argument,  nullptr,      'k' },
     { "merge",          no_argument,        nullptr,      'm' },
     { "version",        no_argument,        nullptr,      'v' },
@@ -821,6 +822,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool retryOnAuthFailed = false;
 	bool tunPersist = false;
 	bool wintun = false;
+	bool allowLocalDnsResolvers = false;
 	bool merge = false;
 	bool version = false;
 	bool altProxy = false;
@@ -835,7 +837,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmvaYu:p:r:D:P:6:s:S:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmlvaYu:p:r:D:P:6:s:S:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -946,6 +948,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      case 'w':
 		wintun = true;
 		break;
+	      case 'l':
+		allowLocalDnsResolvers = true;
+		break;
 	      case 'm':
 		merge = true;
 		break;
@@ -1051,6 +1056,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.gremlinConfig = gremlin;
 	      config.info = true;
 	      config.wintun = wintun;
+	      config.allowLocalDnsResolvers = allowLocalDnsResolvers;
 	      config.ssoMethods =ssoMethods;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;

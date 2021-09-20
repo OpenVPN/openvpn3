@@ -328,6 +328,10 @@ namespace openvpn {
 
       // Use wintun instead of tap-windows6 on Windows
       bool wintun = false;
+
+      // On Windows allow DNS resolvers on localhost, such as Umbrella Roaming Client
+      // This disables adding NRPT rule for "." zone and permits DNS requests to localhost
+      bool allowLocalDnsResolvers = false;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

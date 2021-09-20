@@ -68,9 +68,10 @@ namespace openvpn {
     public:
       typedef RCPtr<Setup> Ptr;
 
-      Setup(openvpn_io::io_context& io_context_arg, const Type tun_type=TapWindows6)
+      Setup(openvpn_io::io_context& io_context_arg, const Type tun_type, bool allow_local_dns_resolvers_arg)
 	: delete_route_timer(io_context_arg),
-	  tun_type_(tun_type) {}
+	  tun_type_(tun_type),
+      allow_local_dns_resolvers(allow_local_dns_resolvers_arg) {}
 
       HANDLE get_handle(std::ostream& os) override
       {
@@ -646,7 +647,7 @@ namespace openvpn {
 			}
 		    }
 		}
-	      if (dsfx.empty())
+	      if (dsfx.empty() && !allow_local_dns_resolvers)
 		dsfx.emplace_back(".");
 
 	      // DNS server list
@@ -663,8 +664,8 @@ namespace openvpn {
 	  // the TAP adapter.
 	  if (use_wfp && !split_dns && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
 	    {
-	      create.add(new ActionWFP(openvpn_app_path, tap.index, true, wfp));
-	      destroy.add(new ActionWFP(openvpn_app_path, tap.index, false, wfp));
+	      create.add(new ActionWFP(openvpn_app_path, tap.index, true, allow_local_dns_resolvers ,wfp));
+	      destroy.add(new ActionWFP(openvpn_app_path, tap.index, false, allow_local_dns_resolvers, wfp));
 	    }
 	}
 
@@ -956,6 +957,7 @@ namespace openvpn {
 
       const Type tun_type_;
       Util::TapNameGuidPair tap_;
+      bool allow_local_dns_resolvers = false;
     };
   }
 }

@@ -136,10 +136,10 @@ public:
   }
 
   Win::ScopedHANDLE tun_get_handle(std::ostream& os,
-				   const TunWin::Type tun_type)
+				   const TunWin::Type tun_type, bool allow_local_dns_resolvers)
   {
     if (!tun)
-      tun.reset(new TunWin::Setup(io_context_, tun_type));
+      tun.reset(new TunWin::Setup(io_context_, tun_type, allow_local_dns_resolvers));
     return Win::ScopedHANDLE(tun->get_handle(os));
   }
 
@@ -147,10 +147,11 @@ public:
 				  const std::wstring& openvpn_app_path,
 				  Stop* stop,
 				  std::ostream& os,
-				  TunWin::Type tun_type)
+				  TunWin::Type tun_type,
+                  bool allow_local_dns_resolvers)
   {
     if (!tun)
-      tun.reset(new TunWin::Setup(io_context_, tun_type));
+      tun.reset(new TunWin::Setup(io_context_, tun_type, allow_local_dns_resolvers));
 
     auto th = tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer);
     // store VPN interface index to be able to exclude it
@@ -602,7 +603,8 @@ private:
 		parent()->set_client_destroy_event(destroy_event_hex);
 	      }
 
-	      Win::ScopedHANDLE th(parent()->tun_get_handle(os, TunWin::OvpnDco));
+		  bool allow_local_dns_resolvers = json::get_bool_optional(root, "allow_local_dns_resolvers");
+	      Win::ScopedHANDLE th(parent()->tun_get_handle(os, TunWin::OvpnDco, allow_local_dns_resolvers));
 
 	      {
 		// duplicate the TAP handle into the client process
@@ -639,6 +641,7 @@ private:
 		  break;
 		}
 
+          bool allow_local_dns_resolvers = json::get_bool_optional(root, "allow_local_dns_resolvers");
 	      // parse JSON data into a TunBuilderCapture object
 	      TunBuilderCapture::Ptr tbc = TunBuilderCapture::from_json(json::get_dict(root, "tun", false));
 	      tbc->validate();
@@ -680,7 +683,7 @@ private:
 		}
 
 	      // establish the tun setup object
-	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, tun_type));
+	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, tun_type, allow_local_dns_resolvers));
 
 	      // post-establish impersonation
 	      {

@@ -56,6 +56,7 @@ namespace openvpn {
       TunProp::Config tun_prop;
       int n_parallel = 8;         // number of parallel async reads on tun socket
       TunWin::Type tun_type = TunWin::TapWindows6;
+      bool allow_local_dns_resolvers = false;
 
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -69,9 +70,9 @@ namespace openvpn {
       TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context)
       {
 	if (tun_setup_factory)
-	  return tun_setup_factory->new_setup_obj(io_context, tun_type);
+	  return tun_setup_factory->new_setup_obj(io_context, tun_type, allow_local_dns_resolvers);
 	else
-	  return new TunWin::Setup(io_context, tun_type);
+	  return new TunWin::Setup(io_context, tun_type, allow_local_dns_resolvers);
       }
 
       static Ptr new_obj()

@@ -1192,9 +1192,10 @@ namespace openvpn {
 
 		      auto cur_prefix = IPv4::Addr::prefix_len_32(ntohl(gw->dwForwardMask));
 		      auto new_prefix = IPv4::Addr::prefix_len_32(ntohl(row->dwForwardMask));
-		      auto new_metric_is_higher = row->dwForwardMetric1 > gw->dwForwardMetric1;
+		      auto new_metric_is_lower = row->dwForwardMetric1 < gw->dwForwardMetric1;
 
-		      if ((new_prefix > cur_prefix) || ((new_prefix == cur_prefix) && (new_metric_is_higher)))
+		      /* use new gateway if it has longer prefix OR same prefix but lower metric */
+		      if ((new_prefix > cur_prefix) || ((new_prefix == cur_prefix) && new_metric_is_lower))
 			gw = row;
 		    }
 		}
