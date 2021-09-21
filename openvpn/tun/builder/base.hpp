@@ -257,6 +257,16 @@ namespace openvpn {
 
 #ifdef ENABLE_OVPNDCO
     /**
+     * Check if ovpn-dco kernel module is available
+     *
+     * @return bool indicating whether the ovpn-dco module is loaded
+     */
+    virtual bool tun_builder_dco_available()
+    {
+      return false;
+    }
+
+    /**
      * Enable ovpn-dco support
      *
      * @param dev_name name of ovpn-dco net device, which should be created by client

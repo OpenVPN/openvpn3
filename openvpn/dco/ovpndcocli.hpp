@@ -42,7 +42,12 @@ class OvpnDcoClient : public Client,
   };
 
 public:
-  static bool available() { return GeNLImpl::available(); }
+  static bool available(TunBuilderBase* tb) {
+    if (tb)
+      return tb->tun_builder_dco_available();
+    else
+      return GeNLImpl::available();
+  }
 
   virtual void tun_start(const OptionList &opt, TransportClient &transcli,
                          CryptoDCSettings &dc_settings) override {

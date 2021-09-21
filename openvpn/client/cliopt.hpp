@@ -212,7 +212,11 @@ namespace openvpn {
 
 #if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       if (config.dco)
-	dco = DCOTransport::new_controller();
+#if defined(USE_TUN_BUILDER)
+	dco = DCOTransport::new_controller(config.builder);
+#else
+	dco = DCOTransport::new_controller(nullptr);
+#endif
 #endif
 
       // parse general client options
@@ -328,9 +332,6 @@ namespace openvpn {
       if (dco)
 	{
 	  DCO::TunConfig tunconf;
-#if defined(USE_TUN_BUILDER)
-	  dco->builder = config.builder;
-#endif
 #if defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_WIN)
 	  tunconf.setup_factory = WinCommandAgent::new_agent(opt);
 #endif
