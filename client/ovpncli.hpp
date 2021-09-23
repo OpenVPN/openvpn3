@@ -206,11 +206,11 @@ namespace openvpn {
       // Should be 4 for IPv4 or 6 for IPv6.
       int protoVersionOverride = 0;
 
-      // IPv6 preference
-      //  no      -- disable IPv6, so tunnel will be IPv4-only
-      //  yes     -- request combined IPv4/IPv6 tunnel
-      //  default (or empty string) -- leave decision to server
-      std::string ipv6;
+      // allowUnusedAddrFamilies preference
+      //  no      -- disable IPv6/IPv4, so tunnel will be IPv4 or IPv6 only if not dualstack
+      //  yes     -- Allow continuing using native IPv4/IPv6 connectivity for single IP family tunnel
+      //  default (or empty string) -- leave decision to server/config
+      std::string allowUnusedAddrFamilies;
 
       // Connection timeout in seconds, or 0 to retry indefinitely
       int connTimeout = 0;

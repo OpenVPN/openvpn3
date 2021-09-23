@@ -25,7 +25,7 @@
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
-  class IPv6Setting
+  class TriStateSetting
   {
   public:
     enum Type {
@@ -34,11 +34,11 @@ namespace openvpn {
       Default,
     };
 
-    IPv6Setting()
+    TriStateSetting()
     {
     }
 
-    explicit IPv6Setting(const Type t)
+    explicit TriStateSetting(const Type t)
       : type_(t)
     {
     }
@@ -59,24 +59,24 @@ namespace openvpn {
 	}
     }
 
-    static IPv6Setting parse(const std::string& str)
+    static TriStateSetting parse(const std::string& str)
     {
       if (str == "no")
-	return IPv6Setting(No);
+	return TriStateSetting(No);
       else if (str == "yes")
-	return IPv6Setting(Yes);
+	return TriStateSetting(Yes);
       else if (str == "default")
-	return IPv6Setting(Default);
+	return TriStateSetting(Default);
       else
 	throw Exception("IPv6Setting: unrecognized setting: '" + str + '\'');
     }
 
-    bool operator==(const IPv6Setting& other) const
+    bool operator==(const TriStateSetting& other) const
     {
       return type_ == other.type_;
     }
 
-    bool operator!=(const IPv6Setting& other) const
+    bool operator!=(const TriStateSetting& other) const
     {
       return type_ != other.type_;
     }

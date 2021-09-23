@@ -195,11 +195,16 @@ namespace openvpn {
       return false;
     }
 
-    // Optional callback that indicates whether IPv6 traffic should be
-    // blocked, to prevent unencrypted IPv6 packet leakage when the
-    // tunnel is IPv4-only, but the local machine has IPv6 connectivity
-    // to the internet.  Enabled by "block-ipv6" config var.
-    virtual bool tun_builder_set_block_ipv6(bool block_ipv6)
+    // Optional callback that indicates whether traffic of a certain
+    // address family (AF_INET or AF_INET6) should be
+    // blocked or allowed, to prevent unencrypted packet leakage when
+    // the tunnel is IPv4-only/IPv6-only, but the local machine
+    // has connectivity with the other protocol to the internet.
+    // Controlled by "block-ipv6" and block-ipv6 config var.
+    // If addresses are added for a family this setting should be
+    // ignored for that family
+    // See also Android's VPNService.Builder.allowFamily method
+    virtual bool tun_builder_set_allow_family(int af, bool allow)
     {
       return true;
     }

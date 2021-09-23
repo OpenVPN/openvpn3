@@ -856,7 +856,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	std::string response;
 	std::string dynamicChallengeCookie;
 	std::string proto;
-	std::string ipv6;
+	std::string allowUnusedAddrFamilies;
 	std::string server;
 	std::string port;
 	int timeout = 0;
@@ -945,7 +945,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		proto = optarg;
 		break;
 	      case '6':
-		ipv6 = optarg;
+		allowUnusedAddrFamilies = optarg;
 		break;
 	      case 's':
 		server = optarg;
@@ -1096,7 +1096,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.protoOverride = proto;
 	      config.connTimeout = timeout;
 	      config.compressionMode = compress;
-	      config.ipv6 = ipv6;
+	      config.allowUnusedAddrFamilies = allowUnusedAddrFamilies;
 	      config.privateKeyPassword = privateKeyPassword;
 	      config.tlsVersionMinOverride = tlsVersionMinOverride;
 	      config.tlsCertProfileOverride = tlsCertProfileOverride;
@@ -1290,7 +1290,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 #ifdef OPENVPN_REMOTE_OVERRIDE
       std::cout << "--remote-override     : command to run to generate next remote (returning host,ip,port,proto)" << std::endl;
 #endif
-      std::cout << "--ipv6, -6            : IPv6 (yes|no|default)" << std::endl;
+      std::cout << "--allowAF, -6            : Allow unused Adrress families (yes|no|default)" << std::endl;
       std::cout << "--timeout, -t         : timeout" << std::endl;
       std::cout << "--compress, -c        : compression mode (yes|no|asym)" << std::endl;
       std::cout << "--pk-password, -z     : private key password" << std::endl;

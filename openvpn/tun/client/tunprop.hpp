@@ -168,8 +168,9 @@ namespace openvpn {
       // add DNS servers and domain prefixes
       const unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
 
-      // Block IPv6?
-      tb->tun_builder_set_block_ipv6(opt.exists("block-ipv6"));
+      // Block protocols if explicitly requested
+      tb->tun_builder_set_allow_family(AF_INET, opt.exists("block-ipv4"));
+      tb->tun_builder_set_allow_family(AF_INET6, opt.exists("block-ipv6"));
 
       // DNS fallback
       if (ipv.rgv4() && !(dhcp_option_flags & F_ADD_DNS))

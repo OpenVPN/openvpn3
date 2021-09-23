@@ -434,7 +434,7 @@ namespace openvpn {
 	std::string port_override;
 	Protocol proto_override;
 	IP::Addr::Version proto_version_override;
-	IPv6Setting ipv6;
+	TriStateSetting allowUnusedAddrFamilies;
 	int conn_timeout = 0;
 	bool tun_persist = false;
 	bool wintun = false;
@@ -628,8 +628,8 @@ namespace openvpn {
 	  Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
 
 	// validate IPv6 setting
-	if (!config.ipv6.empty())
-	  IPv6Setting::parse(config.ipv6);
+	if (!config.allowUnusedAddrFamilies.empty())
+	  TriStateSetting::parse(config.allowUnusedAddrFamilies);
 
 	// parse config
 	OptionList::KeyValueList kvl;
@@ -696,8 +696,8 @@ namespace openvpn {
 	  state->proto_version_override = IP::Addr::Version::V4;
 	else if (config.protoVersionOverride == 6)
 	  state->proto_version_override = IP::Addr::Version::V6;
-	if (!config.ipv6.empty())
-	  state->ipv6 = IPv6Setting::parse(config.ipv6);
+	if (!config.allowUnusedAddrFamilies.empty())
+	  state->allowUnusedAddrFamilies = TriStateSetting::parse(config.allowUnusedAddrFamilies);
 	if (!config.compressionMode.empty())
 	  state->proto_context_options->parse_compression_mode(config.compressionMode);
 	if (eval.externalPki)
@@ -970,7 +970,7 @@ namespace openvpn {
       cc.port_override = state->port_override;
       cc.proto_override = state->proto_override;
       cc.proto_version_override = state->proto_version_override;
-      cc.ipv6 = state->ipv6;
+      cc.allowUnusedAddrFamilies = state->allowUnusedAddrFamilies;
       cc.conn_timeout = state->conn_timeout;
       cc.tun_persist = state->tun_persist;
       cc.wintun = state->wintun;
