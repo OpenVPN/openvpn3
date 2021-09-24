@@ -665,9 +665,9 @@ namespace openvpn {
     // return remote list size
     size_t size() const { return list.size(); }
 
-    const Item& get_item(const size_t index) const
+    Item::Ptr get_item(const size_t index) const
     {
-      return *list.at(index);
+      return list.at(index);
     }
 
     // return hostname (or IP address) of current connection entry
