@@ -691,14 +691,6 @@ namespace openvpn {
       return dynamic_cast<T*>(item.conn_block.get());
     }
 
-    const Item* first_item() const
-    {
-      if (defined())
-	return list[0].get();
-      else
-	return nullptr;
-    }
-
     std::string to_string() const
     {
       std::ostringstream out;

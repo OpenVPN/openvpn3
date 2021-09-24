@@ -195,14 +195,14 @@ namespace openvpn {
 	RandomAPI::Ptr no_rng;
 	remoteList.reset(new RemoteList(options, "", 0, nullptr, no_rng));
 	{
-	  const RemoteList::Item* ri = remoteList->first_item();
-	  if (ri)
+	  if (remoteList->defined())
 	    {
-	      firstRemoteListItem_.host = ri->server_host;
-	      firstRemoteListItem_.port = ri->server_port;
-	      if (ri->transport_protocol.is_udp())
+	      const RemoteList::Item& ri = remoteList->get_item(0);
+	      firstRemoteListItem_.host = ri.server_host;
+	      firstRemoteListItem_.port = ri.server_port;
+	      if (ri.transport_protocol.is_udp())
 		firstRemoteListItem_.proto = "udp";
-	      else if (ri->transport_protocol.is_tcp())
+	      else if (ri.transport_protocol.is_tcp())
 		firstRemoteListItem_.proto = "tcp-client";
 	    }
 	}
@@ -238,7 +238,7 @@ namespace openvpn {
 	  else
 	    {
 	      if (remoteList)
-		profileName_ = remoteList->first_item()->server_host;
+		profileName_ = remoteList->get_item(0).server_host;
 	    }
 
 	  // windows-driver
