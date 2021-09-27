@@ -334,9 +334,7 @@ namespace openvpn {
 	  {
 	    // try to resolve item if needed
 	    auto& item = remote_list->list[index];
-	    bool item_in_use = item == remote_list->list[remote_list->item_index()]
-			       && item->res_addr_list_defined();
-	    if (item->need_resolve() && !item_in_use)
+	    if (item->need_resolve())
 	      {
 		// next item to resolve
 		OPENVPN_LOG_REMOTELIST("*** BulkResolve RESOLVE on " << item->to_string());
@@ -365,6 +363,8 @@ namespace openvpn {
       {
 	if (notify_callback && index < remote_list->list.size())
 	  {
+	    auto indexed_item(remote_list->index.item());
+	    const auto item_in_use(remote_list->list[indexed_item]);
 	    const auto resolve_item(remote_list->list[index++]);
 	    if (!error)
 	      {
@@ -372,12 +372,14 @@ namespace openvpn {
 		auto rand = remote_list->random ? remote_list->rng.get() : nullptr;
 		for (auto& item : remote_list->list)
 		  {
-		    // Skip current, already resolved and items with different hostname
-		    bool item_in_use = item == remote_list->list[remote_list->item_index()]
-				       && item->res_addr_list_defined();
-		    if (item_in_use || !item->need_resolve()
+		    // Skip already resolved and items with different hostname
+		    if (!item->need_resolve()
 			|| item->server_host != resolve_item->server_host)
 		      continue;
+
+		    // Reset item's address index as the list changes
+		    if (item == item_in_use)
+		      remote_list->index.reset_item_addr();
 
 		    item->set_endpoint_range(results, rand, remote_list->cache_lifetime);
 		    item->random_host = resolve_item->random_host;
