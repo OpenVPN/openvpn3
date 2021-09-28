@@ -72,7 +72,7 @@ TEST(RemoteList, CtorSingleHost)
 {
   RemoteList rl("1.1.1.1", "1111", Protocol(Protocol::TCPv6), "");
   ASSERT_EQ(rl.defined(), true);
-  ASSERT_EQ(rl.size(), 1);
+  ASSERT_EQ(rl.size(), 1UL);
   ASSERT_EQ(rl.get_item(0)->server_host, "1.1.1.1");
   ASSERT_EQ(rl.get_item(0)->server_port, "1111");
   ASSERT_EQ(rl.get_item(0)->transport_protocol, Protocol(Protocol::TCPv6));
@@ -108,7 +108,7 @@ TEST(RemoteList, CtorRemoteList)
   RandomAPI::Ptr rng;
   RemoteList rl(cfg, "", 0, nullptr, rng);
   ASSERT_EQ(rl.defined(), true);
-  ASSERT_EQ(rl.size(), 4);
+  ASSERT_EQ(rl.size(), 4UL);
   ASSERT_EQ(rl.get_item(0)->server_host, "0.default.invalid");
   ASSERT_EQ(rl.get_item(0)->server_port, "9999");
   ASSERT_EQ(rl.get_item(0)->transport_protocol, Protocol(Protocol::TCPv6));
@@ -136,7 +136,7 @@ TEST(RemoteList, CtorRemoteListConnBlockOnly)
   RandomAPI::Ptr rng;
   RemoteList rl(cfg, "", RemoteList::CONN_BLOCK_ONLY, nullptr, rng);
   ASSERT_EQ(rl.defined(), true);
-  ASSERT_EQ(rl.size(), 1);
+  ASSERT_EQ(rl.size(), 1UL);
   ASSERT_EQ(rl.get_item(0)->server_host, "2.block.invalid");
 }
 TEST(RemoteList, CtorRemoteListEmpty)
@@ -187,13 +187,13 @@ TEST(RemoteList, CtorRemoteListConnBlockFactory)
   RemoteList rl1(cfg, "block", 0, &tcbf, rng);
   std::string output1(testLog->stopCollecting());
   ASSERT_NE(output1.find("TestConnBlock"), std::string::npos);
-  ASSERT_EQ(rl1.size(), 2);
+  ASSERT_EQ(rl1.size(), 2UL);
 
   testLog->startCollecting();
   RemoteList rl2(cfg, "block", RemoteList::CONN_BLOCK_OMIT_UNDEF, &tcbf, rng);
   std::string output2(testLog->stopCollecting());
   ASSERT_NE(output2.find("TestConnBlock"), std::string::npos);
-  ASSERT_EQ(rl2.size(), 1);
+  ASSERT_EQ(rl2.size(), 1UL);
 }
 TEST(RemoteList, CtorRemoteListWarnUnsupported)
 {
@@ -326,26 +326,26 @@ TEST(RemoteList, RemoteListBulkResolve)
   std::string output(testLog->stopCollecting());
   ASSERT_NE(output.find("<<<RemoteListBulkResolve>>>"), std::string::npos);
 
-  ASSERT_EQ(5, rl->size())
+  ASSERT_EQ(5UL, rl->size())
     << "Unexpected remote list item count" << std::endl
     << output;
 
   ASSERT_EQ(rl->get_item(0)->res_addr_list_defined(), true);
-  ASSERT_EQ(rl->get_item(0)->res_addr_list->size(), 1);
+  ASSERT_EQ(rl->get_item(0)->res_addr_list->size(), 1UL);
   ASSERT_EQ(rl->get_item(0)->res_addr_list->at(0)->to_string(), "1.1.1.1");
   ASSERT_EQ(rl->get_item(1)->res_addr_list_defined(), true);
-  ASSERT_EQ(rl->get_item(1)->res_addr_list->size(), 1);
+  ASSERT_EQ(rl->get_item(1)->res_addr_list->size(), 1UL);
   ASSERT_EQ(rl->get_item(1)->res_addr_list->at(0)->to_string(), "2:cafe::1");
   ASSERT_EQ(rl->get_item(2)->res_addr_list_defined(), true);
-  ASSERT_EQ(rl->get_item(2)->res_addr_list->size(), 1);
+  ASSERT_EQ(rl->get_item(2)->res_addr_list->size(), 1UL);
   ASSERT_EQ(rl->get_item(2)->res_addr_list->at(0)->to_string(), "3.3.3.3");
   ASSERT_EQ(rl->get_item(3)->res_addr_list_defined(), true);
-  ASSERT_EQ(rl->get_item(3)->res_addr_list->size(), 2);
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->size(), 2UL);
   ASSERT_EQ(rl->get_item(3)->res_addr_list->at(0)->to_string(), "3.3.3.3");
   ASSERT_EQ(rl->get_item(3)->res_addr_list->at(1)->to_string(), "3::3");
   ASSERT_EQ(rl->get_item(3)->actual_host(), rl->get_item(2)->actual_host());
   ASSERT_EQ(rl->get_item(4)->res_addr_list_defined(), true);
-  ASSERT_EQ(rl->get_item(4)->res_addr_list->size(), 1);
+  ASSERT_EQ(rl->get_item(4)->res_addr_list->size(), 1UL);
   ASSERT_EQ(rl->get_item(4)->res_addr_list->at(0)->to_string(), "4::4");
 
   // in case it gets randomized before the other 3.domain.tld
@@ -358,7 +358,7 @@ TEST(RemoteList, RemoteListBulkResolve)
   fake_bulkres.start(&ignore);
   output = testLog->stopCollecting();
 
-  ASSERT_EQ(5, rl->size())
+  ASSERT_EQ(5UL, rl->size())
     << "Unexpected remote list item count" << std::endl
     << output;
 
@@ -367,29 +367,29 @@ TEST(RemoteList, RemoteListBulkResolve)
       ASSERT_EQ(rl->get_item(i)->res_addr_list_defined(), true);
       if (rl->get_item(i)->server_host[0] == '1')
 	{
-	  ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1);
+	  ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1UL);
 	  ASSERT_EQ(rl->get_item(i)->res_addr_list->at(0)->to_string(), "1.1.1.1");
 	}
       else if (rl->get_item(i)->server_host[0] == '2')
 	{
-	  ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1);
+	  ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1UL);
 	  ASSERT_EQ(rl->get_item(i)->res_addr_list->at(0)->to_string(), "2:cafe::1");
 	}
       else if (rl->get_item(i)->server_host[0] == '3')
 	{
 	  if (rl->get_item(i)->transport_protocol.is_ipv4())
 	    {
-	      ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1);
+	      ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1UL);
 	      ASSERT_EQ(rl->get_item(i)->res_addr_list->at(0)->to_string(), "3.3.3.3");
 	    }
 	  else
 	    {
-	      ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 2);
+	      ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 2UL);
 	    }
 	}
       else if (rl->get_item(i)->server_host[0] == '4')
 	{
-	  ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1);
+	  ASSERT_EQ(rl->get_item(i)->res_addr_list->size(), 1UL);
 	  ASSERT_EQ(rl->get_item(i)->res_addr_list->at(0)->to_string(), "4::4");
 	}
     }
@@ -441,7 +441,7 @@ TEST(RemoteList, RemoteRandomHostname)
   RandomAPI::Ptr rng(new FakeSecureRand(0xf7));
   RemoteList rl(cfg, "", 0, nullptr, rng);
 
-  ASSERT_EQ(rl.size(), 4);
+  ASSERT_EQ(rl.size(), 4UL);
   ASSERT_EQ(rl.get_item(0)->actual_host(), "1.1.1.1");
   ASSERT_EQ(rl.get_item(1)->actual_host(), "f7f8f9fafbfc.2.domain.invalid");
   ASSERT_EQ(rl.get_item(2)->actual_host(), "fdfeff000102.3.domain.invalid");
@@ -490,7 +490,7 @@ TEST(RemoteList, OverrideFunctions)
 
   RandomAPI::Ptr rng(new FakeSecureRand(0xf7));
   RemoteList rl(cfg, "", 0, nullptr, rng);
-  ASSERT_EQ(rl.size(), 3);
+  ASSERT_EQ(rl.size(), 3UL);
 
   rl.set_proto_version_override(IP::Addr::Version::V6);
   for (size_t i=0; i < rl.size(); ++i)
@@ -501,15 +501,15 @@ TEST(RemoteList, OverrideFunctions)
     ASSERT_TRUE(rl.get_item(i)->transport_protocol.is_ipv4());
 
   rl.handle_proto_override(Protocol(Protocol::UDPv4), true);
-  ASSERT_EQ(rl.size(), 1);
+  ASSERT_EQ(rl.size(), 1UL);
   ASSERT_EQ(rl.current_transport_protocol(), Protocol(Protocol::TCPv4));
 
   rl.set_port_override("4711");
-  ASSERT_EQ(rl.size(), 1);
+  ASSERT_EQ(rl.size(), 1UL);
   ASSERT_EQ(rl.get_item(0)->server_port, "4711");
 
   rl.set_server_override("override.host.invalid");
-  ASSERT_EQ(rl.size(), 1);
+  ASSERT_EQ(rl.size(), 1UL);
   ASSERT_EQ(rl.current_server_host(), "override.host.invalid");
 }
 
