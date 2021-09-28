@@ -293,6 +293,7 @@ TEST(RemoteList, RemoteListBulkResolve)
 {
   OptionList cfg;
   cfg.parse_from_config(
+    "remote-cache-lifetime 1\n"
     "remote 1.1.1.1 1111 udp\n"
     "remote 2:cafe::1 2222 tcp\n"
     "remote 3.domain.tld 3333 udp4\n"
@@ -348,12 +349,95 @@ TEST(RemoteList, RemoteListBulkResolve)
   ASSERT_EQ(rl->get_item(4)->res_addr_list->size(), 1UL);
   ASSERT_EQ(rl->get_item(4)->res_addr_list->at(0)->to_string(), "4::4");
 
-  // in case it gets randomized before the other 3.domain.tld
+
+  // Process PUSH reply, setting cache lifetime to 24 hours
+  OptionList push_options;
+  push_options.parse_from_config("remote-cache-lifetime 86400\n", nullptr);
+  push_options.update_map();
+  rl->process_push(push_options);
+
+  rl->next();
+  rl->next();
+  rl->next();
+  rl->next();
+
+  // Now at IPv6 address of 'remote 3.domain.tld 33333 udp'
+  auto ep = fake_bulkres.init_endpoint();
+  rl->get_endpoint(ep);
+  ASSERT_EQ(ep.address().to_string(), "3::3");
+
+
+  // Test re-resolve of list items with different results
+  fake_bulkres.set_results("3.domain.tld", "3333", { {"333::333", 3333}, {"33::33", 3333}, {"33.33.33.33", 3333} });
+  fake_bulkres.set_results("4.domain.tld", "4444", { {"44::44", 4444}, {"444::444", 4444} });
+
+  std::this_thread::sleep_for(std::chrono::seconds(1)); // for cache decay, sorry mom
+  BulkResolveNotifyIgn ignore;
+  testLog->startCollecting();
+  fake_bulkres.start(&ignore);
+  output = testLog->stopCollecting();
+
+  ASSERT_EQ(5UL, rl->size())
+    << "Unexpected remote list item count" << std::endl
+    << output;
+
+  ASSERT_EQ(rl->get_item(0)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(0)->res_addr_list->size(), 1UL);
+  ASSERT_EQ(rl->get_item(0)->res_addr_list->at(0)->to_string(), "1.1.1.1");
+  ASSERT_EQ(rl->get_item(1)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(1)->res_addr_list->size(), 1UL);
+  ASSERT_EQ(rl->get_item(1)->res_addr_list->at(0)->to_string(), "2:cafe::1");
+  ASSERT_EQ(rl->get_item(2)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(2)->res_addr_list->size(), 1UL);
+  ASSERT_EQ(rl->get_item(2)->res_addr_list->at(0)->to_string(), "33.33.33.33");
+  ASSERT_EQ(rl->get_item(3)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->size(), 3UL);
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->at(0)->to_string(), "333::333");
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->at(1)->to_string(), "33::33");
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->at(2)->to_string(), "33.33.33.33");
+  ASSERT_EQ(rl->get_item(4)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(4)->res_addr_list->size(), 2UL);
+  ASSERT_EQ(rl->get_item(4)->res_addr_list->at(0)->to_string(), "44::44");
+  ASSERT_EQ(rl->get_item(4)->res_addr_list->at(1)->to_string(), "444::444");
+
+  // Now we should be at first address of 'remote 3.domain.tld 33333 udp'
+  // as the item address index was reset
+  rl->get_endpoint(ep);
+  ASSERT_EQ(ep.address().to_string(), "333::333");
+
+
+  // back to old results, add 33333 in case it gets randomized before the other 3.domain.tld
+  fake_bulkres.set_results("3.domain.tld", "3333", { {"3.3.3.3", 3333}, {"3::3", 3333} });
   fake_bulkres.set_results("3.domain.tld", "33333", { {"3.3.3.3", 33333}, {"3::3", 33333} });
+  fake_bulkres.set_results("4.domain.tld", "4444", { {"4.4.4.4", 4444}, {"4::4", 4444} });
+
+  testLog->startCollecting();
+  fake_bulkres.start(&ignore);
+  output = testLog->stopCollecting();
+
+  // Cache was still be good, i.e. no updated 3 and 4
+  ASSERT_EQ(5UL, rl->size())
+    << "Unexpected remote list item count" << std::endl
+    << output;
+
+  ASSERT_EQ(rl->get_item(2)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(2)->res_addr_list->size(), 1UL);
+  ASSERT_EQ(rl->get_item(2)->res_addr_list->at(0)->to_string(), "33.33.33.33");
+  ASSERT_EQ(rl->get_item(3)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->size(), 3UL);
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->at(0)->to_string(), "333::333");
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->at(1)->to_string(), "33::33");
+  ASSERT_EQ(rl->get_item(3)->res_addr_list->at(2)->to_string(), "33.33.33.33");
+  ASSERT_EQ(rl->get_item(4)->res_addr_list_defined(), true);
+  ASSERT_EQ(rl->get_item(4)->res_addr_list->size(), 2UL);
+  ASSERT_EQ(rl->get_item(4)->res_addr_list->at(0)->to_string(), "44::44");
+  ASSERT_EQ(rl->get_item(4)->res_addr_list->at(1)->to_string(), "444::444");
+
+
+  // And now for something completely different
   rl->reset_cache();
   rl->randomize();
 
-  BulkResolveNotifyIgn ignore;
   testLog->startCollecting();
   fake_bulkres.start(&ignore);
   output = testLog->stopCollecting();
