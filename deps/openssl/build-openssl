@@ -60,6 +60,7 @@ rm -rf $OPENSSL $DIST
 mkdir -p $DIST
 tar xfz $DL/$FNAME
 pushd $OPENSSL
+export SOURCE_DATE_EPOCH=$(date -r CHANGES +%s)
 CMD="./Configure $OPENSSL_TARGET $LINK_MODE threads no-idea no-mdc2 no-rc5 --prefix=$DIST"
 echo $CMD
 $CMD
@@ -71,7 +72,7 @@ touch apps/openssl
 touch openssl.pc
 touch libcrypto.pc
 touch libssl.pc
-make install_sw
+make RANLIB="$RANLIB" install_sw
 popd
 
 exit 0
