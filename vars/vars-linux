@@ -13,5 +13,5 @@ export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC="-fPIC"
 export GPP_CMD=g++
 export GCC_CMD=gcc
-export AR_CMD=gcc-ar
+export AR_CMD="gcc-ar rc"
 export RANLIB_CMD=gcc-ranlib
