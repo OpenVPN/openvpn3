@@ -51,10 +51,11 @@ if [ -z "$1" ]; then
     echo " CITY=1 -- build with Cityhash hash library"
     echo " XXHASH=1 -- build with XXHash hash library"
     echo " CAP=1 -- build with libcap"
-    echo " VAL=1 -- build with valgrind run-time extensions"
     echo " JAVA=1 -- build with JVM"
     echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
     echo " GTEST_DIR=<dir> -- specify googletest tree, required for building unit tests"
+    echo " VAL=1 -- (optional) build with valgrind run-time extensions"
+    echo " ASAN=1 -- (optional) enable ASAN run-time checks"
     echo " PCRE=1 -- build with PCRE library"
     for s in $(enum_build_extras) ; do
 	. $s args
@@ -294,8 +295,15 @@ if [ "$PCRE" = "1" ]; then
     LIBS="$LIBS -lpcre"
 fi
 
-# Valgrind
-if [ "$VAL" = "1" ]; then
+# ASAN requested -- ensure higher-fidelity stacks
+if [ "$ASAN" = "1" ]; then
+    FLAGS+=" -ggdb3 -fno-omit-frame-pointer -fsanitize=address"
+else
+    ASAN=
+fi
+
+# Valgrind -- but only if ASAN is not enabled
+if [ "$ASAN" = "" -a "$VAL" = "1" ]; then
     CPPFLAGS="$CPPFLAGS -DHAVE_VALGRIND"
 fi
 
