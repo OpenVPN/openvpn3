@@ -28,6 +28,7 @@
 #include <openvpn/crypto/decrypt_chm.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/random/randapi.hpp>
+#include <openvpn/ssl/sslapi.hpp>
 
 namespace openvpn {
 
@@ -37,7 +38,9 @@ namespace openvpn {
   public:
     typedef CryptoDCInstance Base;
 
-    CryptoCHM(const CryptoAlgs::Type cipher_arg,
+    CryptoCHM(
+		  SSLLib::Ctx libctx_arg,
+		  const CryptoAlgs::Type cipher_arg,
 	      const CryptoAlgs::Type digest_arg,
 	      const Frame::Ptr& frame_arg,
 	      const SessionStats::Ptr& stats_arg,
@@ -46,7 +49,8 @@ namespace openvpn {
 	digest(digest_arg),
 	frame(frame_arg),
 	stats(stats_arg),
-	prng(prng_arg)
+	prng(prng_arg),
+	libctx(libctx_arg)
     {
       encrypt_.frame = frame;
       decrypt_.frame = frame;
@@ -56,52 +60,52 @@ namespace openvpn {
     // Encrypt/Decrypt
 
     /* returns true if packet ID is close to wrapping */
-    virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32)
+    bool encrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32) override
     {
       encrypt_.encrypt(buf, now);
       return encrypt_.pid_send.wrap_warning();
     }
 
-    virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32)
+    Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32) override
     {
       return decrypt_.decrypt(buf, now);
     }
 
     // Initialization
 
-    virtual void init_cipher(StaticKey&& encrypt_key,
-			     StaticKey&& decrypt_key)
+    void init_cipher(StaticKey&& encrypt_key,
+			     	 StaticKey&& decrypt_key) override
     {
-      encrypt_.cipher.init(cipher, encrypt_key, CRYPTO_API::CipherContext::ENCRYPT);
-      decrypt_.cipher.init(cipher, decrypt_key, CRYPTO_API::CipherContext::DECRYPT);
+      encrypt_.cipher.init(libctx, cipher, encrypt_key, CRYPTO_API::CipherContext::ENCRYPT);
+      decrypt_.cipher.init(libctx, cipher, decrypt_key, CRYPTO_API::CipherContext::DECRYPT);
     }
 
-    virtual void init_hmac(StaticKey&& encrypt_key,
-			   StaticKey&& decrypt_key)
+    void init_hmac(StaticKey&& encrypt_key,
+			   StaticKey&& decrypt_key) override
     {
       encrypt_.hmac.init(digest, encrypt_key);
       decrypt_.hmac.init(digest, decrypt_key);
     }
 
-    virtual void init_pid(const int send_form,
+    void init_pid(const int send_form,
 			  const int recv_mode,
 			  const int recv_form,
 			  const char *recv_name,
 			  const int recv_unit,
-			  const SessionStats::Ptr& recv_stats_arg)
+			  const SessionStats::Ptr& recv_stats_arg) override
     {
       encrypt_.pid_send.init(send_form);
       decrypt_.pid_recv.init(recv_mode, recv_form, recv_name, recv_unit, recv_stats_arg);
     }
 
-    virtual bool consider_compression(const CompressContext& comp_ctx)
+    bool consider_compression(const CompressContext& comp_ctx) override
     {
       return true;
     }
 
     // Indicate whether or not cipher/digest is defined
 
-    virtual unsigned int defined() const
+    unsigned int defined() const override
     {
       unsigned int ret = CRYPTO_DEFINED;
       if (CryptoAlgs::defined(cipher))
@@ -113,7 +117,7 @@ namespace openvpn {
 
     // Rekeying
 
-    virtual void rekey(const typename Base::RekeyType type)
+    void rekey(const typename Base::RekeyType type) override
     {
     }
 
@@ -123,8 +127,9 @@ namespace openvpn {
     Frame::Ptr frame;
     SessionStats::Ptr stats;
     RandomAPI::Ptr prng;
+	SSLLib::Ctx libctx;
 
-    EncryptCHM<CRYPTO_API> encrypt_;
+	EncryptCHM<CRYPTO_API> encrypt_;
     DecryptCHM<CRYPTO_API> decrypt_;
   };
 
@@ -134,7 +139,9 @@ namespace openvpn {
   public:
     typedef RCPtr<CryptoContextCHM> Ptr;
 
-    CryptoContextCHM(const CryptoAlgs::Type cipher_arg,
+    CryptoContextCHM(
+		     SSLLib::Ctx libctx_arg,
+			 const CryptoAlgs::Type cipher_arg,
 		     const CryptoAlgs::Type digest_arg,
 		     const CryptoAlgs::KeyDerivation key_method,
 		     const Frame::Ptr& frame_arg,
@@ -145,13 +152,14 @@ namespace openvpn {
 	digest(CryptoAlgs::legal_dc_digest(digest_arg)),
 	frame(frame_arg),
 	stats(stats_arg),
-	prng(prng_arg)
+	prng(prng_arg),
+	libctx(libctx_arg)
     {
     }
 
     virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id)
     {
-      return new CryptoCHM<CRYPTO_API>(cipher, digest, frame, stats, prng);
+      return new CryptoCHM<CRYPTO_API>(libctx, cipher, digest, frame, stats, prng);
     }
 
     // cipher/HMAC/key info
@@ -179,6 +187,7 @@ namespace openvpn {
     Frame::Ptr frame;
     SessionStats::Ptr stats;
     RandomAPI::Ptr prng;
+	SSLLib::Ctx libctx;
   };
 }
 

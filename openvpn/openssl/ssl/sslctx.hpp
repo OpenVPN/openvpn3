@@ -31,6 +31,7 @@
 #include <sstream>
 #include <utility>
 
+#include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 #include <openssl/rsa.h>
@@ -988,17 +989,14 @@ namespace openvpn {
 	    if (ct_out)
 	      BIO_free(ct_out);
 	  }
-	if (ssl_bio)
-	  BIO_free_all(ssl_bio);
-	if (ssl)
+
+	BIO_free_all(ssl_bio);
+	if (sess_cache_key)
 	  {
-	    if (sess_cache_key)
-	      {
-		SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
-		sess_cache_key->commit(SSL_get1_session(ssl));
-	      }
-	    SSL_free(ssl);
+	    SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
+	    sess_cache_key->commit(SSL_get1_session(ssl));
 	  }
+	SSL_free(ssl);
 	openssl_clear_error_stack();
 	ssl_clear();
       }
@@ -1115,17 +1113,29 @@ namespace openvpn {
 #endif
     }
 
+    void initalise_lib_context()
+    {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+      lib_ctx = OSSL_LIB_CTX_new();
+      if (!lib_ctx) {
+	  throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
+	}
+#endif
+    }
+
     OpenSSLContext(Config* config_arg)
       : config(config_arg)
     {
       try
 	{
+	  // Initialise our library context for OpenSSL 3.0
+	  initalise_lib_context();
 	  // Create new SSL_CTX for server or client mode
 	  if (config->mode.is_server())
 	    {
-	      ctx = SSL_CTX_new(SSL::tls_method_server());
+	      ctx = SSL_CTX_new_ex(lib_ctx, nullptr, SSL::tls_method_server());
 	      if (ctx == nullptr)
-		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
+		throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
 
 	      // Set DH object
 	      if (!config->dh.defined())
@@ -1153,9 +1163,9 @@ namespace openvpn {
 	    }
 	  else if (config->mode.is_client())
 	    {
-	      ctx = SSL_CTX_new(SSL::tls_method_client());
+	      ctx = SSL_CTX_new_ex(lib_ctx, nullptr, SSL::tls_method_client());
 	      if (ctx == nullptr)
-		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
+		throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for client method");
 	    }
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: unknown config->mode");
@@ -1394,7 +1404,18 @@ namespace openvpn {
       return SSL::Ptr(new SSL(*this, hostname, cache_key));
     }
 
-    void update_trust(const CertCRLList& cc)
+	virtual SSLLib::Ctx libctx()
+	{
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	  if (!lib_ctx)
+		throw OpenSSLException("OpenSSLContext: library context is not initialised");
+#endif
+
+	  return lib_ctx;
+	}
+
+
+	void update_trust(const CertCRLList& cc)
     {
       OpenSSLPKI::X509Store store(cc);
       SSL_CTX_set_cert_store(ctx, store.release());
@@ -2184,14 +2205,19 @@ namespace openvpn {
 	  delete epki;
 	  epki = nullptr;
 	}
-      if (ctx)
-	{
-	  SSL_CTX_free(ctx);
-	  ctx = nullptr;
-	}
+
+	SSL_CTX_free(ctx);
+	ctx = nullptr;
+#if OPENSSL_VERSION_NUMBER > 0x30000000L
+	OSSL_LIB_CTX_free(lib_ctx);
+#endif
+	  lib_ctx = nullptr;
     }
 
     Config::Ptr config;
+
+    /* OpenSSL library context, used to load non-default providers etc */
+	SSLLib::Ctx lib_ctx;
     SSL_CTX* ctx = nullptr;
     ExternalPKIImpl* epki = nullptr;
     OpenSSLSessionCache::Ptr sess_cache; // client-side only

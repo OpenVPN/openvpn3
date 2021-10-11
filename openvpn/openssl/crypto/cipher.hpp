@@ -77,7 +77,7 @@ namespace openvpn {
 
       ~CipherContext() { free_cipher_context() ; }
 
-      void init(const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
+      void init(SSLLib::Ctx libctx, const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
       {
 	// check that mode is valid
 	if (!(mode == ENCRYPT || mode == DECRYPT))
@@ -85,7 +85,8 @@ namespace openvpn {
 	free_cipher_context();
 	ctx = EVP_CIPHER_CTX_new();
 	EVP_CIPHER_CTX_reset (ctx);
-	CIPHER_unique_ptr cipher(cipher_type(alg), EVP_CIPHER_free);
+	CIPHER_unique_ptr cipher(cipher_type(libctx, alg), EVP_CIPHER_free);
+
 	if (!cipher)
 		OPENVPN_THROW(openssl_cipher_error, CryptoAlgs::name(alg) << ": not usable");
 
@@ -163,24 +164,24 @@ namespace openvpn {
       }
 
     private:
-     static evp_cipher_type *cipher_type(const CryptoAlgs::Type alg)
+      static evp_cipher_type *cipher_type(SSLLib::Ctx libctx, const CryptoAlgs::Type alg)
       {
 	switch (alg)
 	  {
 	  case CryptoAlgs::AES_128_CBC:
-	    return EVP_CIPHER_fetch(nullptr, "AES-128-CBC", nullptr);
+	    return EVP_CIPHER_fetch(libctx, "AES-128-CBC", nullptr);
 	  case CryptoAlgs::AES_192_CBC:
-	    return EVP_CIPHER_fetch(nullptr, "AES-192-CBC", nullptr);
+	    return EVP_CIPHER_fetch(libctx, "AES-192-CBC", nullptr);
 	  case CryptoAlgs::AES_256_CBC:
-	    return EVP_CIPHER_fetch(nullptr, "AES-256-CBC", nullptr);
+	    return EVP_CIPHER_fetch(libctx, "AES-256-CBC", nullptr);
 	  case CryptoAlgs::AES_256_CTR:
-	    return EVP_CIPHER_fetch(nullptr, "AES-256-CTR", nullptr);
+	    return EVP_CIPHER_fetch(libctx, "AES-256-CTR", nullptr);
 	  case CryptoAlgs::DES_CBC:
-	    return EVP_CIPHER_fetch(nullptr, "DES-CBC", nullptr);
+	    return EVP_CIPHER_fetch(libctx, "DES-CBC", nullptr);
 	  case CryptoAlgs::DES_EDE3_CBC:
-	    return EVP_CIPHER_fetch(nullptr, "DES-EDE-CBC", nullptr);
+	    return EVP_CIPHER_fetch(libctx, "DES-EDE-CBC", nullptr);
 	  case CryptoAlgs::BF_CBC:
-	    return EVP_CIPHER_fetch(nullptr, "BF-CBC", nullptr);
+	    return EVP_CIPHER_fetch(libctx, "BF-CBC", nullptr);
 	  default:
 	    return nullptr;
 	  }

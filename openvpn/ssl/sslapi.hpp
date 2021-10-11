@@ -36,6 +36,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/auth/authcert.hpp>
+#include <openvpn/crypto/definitions.hpp>
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/pki/pktype.hpp>
 #include <openvpn/ssl/kuparse.hpp>
@@ -97,6 +98,9 @@ namespace openvpn {
 
     // create a new SSLAPI instance
     virtual SSLAPI::Ptr ssl() = 0;
+
+	// get the library context that is used with this SSLAPI instance
+	virtual SSLLib::Ctx libctx() = 0;
 
     // like ssl() above but optionally verify hostname against cert CommonName and/or
     // SubjectAltName, and optionally set/lookup a cache key for this session.

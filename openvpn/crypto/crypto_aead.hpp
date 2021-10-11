@@ -51,9 +51,9 @@ namespace openvpn {
      * crypto library
      */
     template  <typename CRYPTO_API>
-    static inline bool is_algorithm_supported(const CryptoAlgs::Type cipher)
+    static inline bool is_algorithm_supported(SSLLib::Ctx libctx, const CryptoAlgs::Type cipher)
     {
-      return CRYPTO_API::CipherContextAEAD::is_supported(cipher);
+      return CRYPTO_API::CipherContextAEAD::is_supported(libctx, cipher);
     }
 
     template <typename CRYPTO_API>
@@ -161,19 +161,21 @@ namespace openvpn {
     public:
       typedef CryptoDCInstance Base;
 
-      Crypto(const CryptoAlgs::Type cipher_arg,
+      Crypto(SSLLib::Ctx libctx_arg,
+		  const CryptoAlgs::Type cipher_arg,
 	     const Frame::Ptr& frame_arg,
 	     const SessionStats::Ptr& stats_arg)
 	: cipher(cipher_arg),
 	  frame(frame_arg),
-	  stats(stats_arg)
+	  stats(stats_arg),
+	  libctx(libctx_arg)
       {
       }
 
       // Encrypt/Decrypt
 
       // returns true if packet ID is close to wrapping
-      virtual bool encrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32)
+      bool encrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32) override
       {
 	// only process non-null packets
 	if (buf.size())
@@ -216,7 +218,7 @@ namespace openvpn {
 	return e.pid_send.wrap_warning();
       }
 
-      virtual Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32)
+      Error::Type decrypt(BufferAllocated& buf, const PacketID::time_t now, const unsigned char *op32) override
       {
 	// only process non-null packets
 	if (buf.size())
@@ -256,26 +258,25 @@ namespace openvpn {
 
       // Initialization
 
-      virtual void init_cipher(StaticKey&& encrypt_key,
-			       StaticKey&& decrypt_key)
+      void init_cipher(StaticKey&& encrypt_key, StaticKey&& decrypt_key) override
       {
-	e.impl.init(cipher, encrypt_key.data(), encrypt_key.size(), CRYPTO_API::CipherContextAEAD::ENCRYPT);
-	d.impl.init(cipher, decrypt_key.data(), decrypt_key.size(), CRYPTO_API::CipherContextAEAD::DECRYPT);
+	e.impl.init(libctx, cipher, encrypt_key.data(), encrypt_key.size(), CRYPTO_API::CipherContextAEAD::ENCRYPT);
+	d.impl.init(libctx, cipher, decrypt_key.data(), decrypt_key.size(), CRYPTO_API::CipherContextAEAD::DECRYPT);
       }
 
-      virtual void init_hmac(StaticKey&& encrypt_key,
-			     StaticKey&& decrypt_key)
+      void init_hmac(StaticKey&& encrypt_key,
+			     StaticKey&& decrypt_key) override
       {
 	e.nonce.set_tail(encrypt_key);
 	d.nonce.set_tail(decrypt_key);
       }
 
-      virtual void init_pid(const int send_form,
+      void init_pid(const int send_form,
 			    const int recv_mode,
 			    const int recv_form,
 			    const char *recv_name,
 			    const int recv_unit,
-			    const SessionStats::Ptr& recv_stats_arg)
+			    const SessionStats::Ptr& recv_stats_arg) override
       {
 	e.pid_send.init(send_form);
 	d.pid_recv.init(recv_mode, recv_form, recv_name, recv_unit, recv_stats_arg);
@@ -283,7 +284,7 @@ namespace openvpn {
 
       // Indicate whether or not cipher/digest is defined
 
-      virtual unsigned int defined() const
+      unsigned int defined() const override
       {
 	unsigned int ret = CRYPTO_DEFINED;
 
@@ -294,14 +295,14 @@ namespace openvpn {
 	return ret;
       }
 
-      virtual bool consider_compression(const CompressContext& comp_ctx)
+      bool consider_compression(const CompressContext& comp_ctx) override
       {
 	return true;
       }
 
       // Rekeying
 
-      virtual void rekey(const typename Base::RekeyType type)
+      void rekey(const typename Base::RekeyType type) override
       {
       }
 
@@ -309,6 +310,7 @@ namespace openvpn {
       CryptoAlgs::Type cipher;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
+	  SSLLib::Ctx libctx;
       Encrypt e;
       Decrypt d;
     };
@@ -319,24 +321,26 @@ namespace openvpn {
     public:
       typedef RCPtr<CryptoContext> Ptr;
 
-      CryptoContext(const CryptoAlgs::Type cipher_arg,
+      CryptoContext(SSLLib::Ctx libctx_arg,
+		  const CryptoAlgs::Type cipher_arg,
 		    const CryptoAlgs::KeyDerivation key_method,
 		    const Frame::Ptr& frame_arg,
 		    const SessionStats::Ptr& stats_arg)
 	: CryptoDCContext(key_method),
 	  cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
 	  frame(frame_arg),
-	  stats(stats_arg)
+	  stats(stats_arg),
+	  libctx(libctx_arg)
       {
       }
 
-      virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id)
+      CryptoDCInstance::Ptr new_obj(const unsigned int key_id) override
       {
-	return new Crypto<CRYPTO_API>(cipher, frame, stats);
+	return new Crypto<CRYPTO_API>(libctx, cipher, frame, stats);
       }
 
       // cipher/HMAC/key info
-      virtual Info crypto_info()
+      Info crypto_info() override
       {
 	Info ret;
 	ret.cipher_alg = cipher;
@@ -347,7 +351,7 @@ namespace openvpn {
 
       // Info for ProtoContext::link_mtu_adjust
 
-      virtual size_t encap_overhead() const
+      size_t encap_overhead() const override
       {
 	return CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN;
       }
@@ -356,6 +360,7 @@ namespace openvpn {
       CryptoAlgs::Type cipher;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
+	  SSLLib::Ctx libctx;
     };
   }
 }

@@ -1131,6 +1131,12 @@ namespace openvpn {
       return SSL::Ptr(new SSL(this, nullptr));
     }
 
+	// Get the library context. This currently does not exist for mbed TLS
+	virtual SSLLib::Ctx libctx()
+	{
+	  return nullptr;
+	}
+
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
     virtual SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key)
     {

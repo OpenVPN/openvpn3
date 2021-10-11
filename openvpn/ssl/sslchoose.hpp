@@ -22,6 +22,8 @@
 #ifndef OPENVPN_SSL_SSLCHOOSE_H
 #define OPENVPN_SSL_SSLCHOOSE_H
 
+#include <openvpn/crypto/definitions.hpp>
+
 #ifdef USE_OPENSSL
 #include <openvpn/openssl/crypto/api.hpp>
 #include <openvpn/openssl/ssl/sslctx.hpp>

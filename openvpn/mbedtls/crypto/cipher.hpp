@@ -33,6 +33,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
+#include <openvpn/ssl/sslapi.hpp>
 
 namespace openvpn {
   namespace MbedTLSCrypto {
@@ -106,7 +107,7 @@ namespace openvpn {
 		return (cipher_type(alg) != nullptr);
 	  }
 
-	  void init(const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
+      void init(SSLLib::Ctx libctx, const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
       {
 	erase();
 

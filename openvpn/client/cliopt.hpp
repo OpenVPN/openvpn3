@@ -753,14 +753,14 @@ namespace openvpn {
 
       // client ProtoContext config
       Client::ProtoConfig::Ptr cp(new Client::ProtoConfig());
-      cp->relay_mode = relay_mode;
-      cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, cli_stats, prng));
+	  cp->ssl_factory = cc->new_factory();
+	  cp->relay_mode = relay_mode;
+      cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, prng));
       cp->dc_deferred = true; // defer data channel setup until after options pull
       cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
       cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<SSLLib::CryptoAPI>());
       cp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
-      cp->ssl_factory = cc->new_factory();
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
       cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);

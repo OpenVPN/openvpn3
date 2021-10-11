@@ -426,5 +426,10 @@ EVP_CIPHER_free(const EVP_CIPHER * cipher)
    * a noop */
 }
 
+static inline SSL_CTX *
+SSL_CTX_new_ex(void *libctx, const char *propq, const SSL_METHOD *meth)
+{
+  return SSL_CTX_new(meth);
+}
 #define EVP_PKEY_get_bits EVP_PKEY_bits
 #endif
