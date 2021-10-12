@@ -416,7 +416,17 @@ EVP_CIPHER_fetch(void *ctx, const char *algorithm, const char *properties)
 {
   assert(!ctx);
   assert(!properties);
-  return EVP_get_cipherbyname(algorithm);
+  const EVP_CIPHER *cipher = EVP_get_cipherbyname(algorithm);
+#ifdef OPENSSL_FIPS
+  /* Rhel 8/CentOS 8 have a patched OpenSSL version that return a cipher
+   * here that is actually not usable if in FIPS mode */
+
+  if (FIPS_mode() && !(EVP_CIPHER_flags(cipher) & EVP_CIPH_FLAG_FIPS))
+  {
+	  return nullptr;
+  }
+#endif
+  return cipher;
 }
 
 static inline void
