@@ -332,6 +332,12 @@ namespace openvpn {
       // On Windows allow DNS resolvers on localhost, such as Umbrella Roaming Client
       // This disables adding NRPT rule for "." zone and permits DNS requests to localhost
       bool allowLocalDnsResolvers = false;
+
+	  // Allow usage of legacy (cipher) algorithm that are no longer considered safe
+	  // This includes BF-CBC, single DES and RC2 private key encryption. This option
+	  // currently only has an effect on OpenSSL 3.0+ and istructs OpenSSL to load
+	  // the legacy provider
+	  bool enableLegacyAlgorithms = false;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

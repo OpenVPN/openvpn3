@@ -154,6 +154,7 @@ namespace openvpn {
       std::string tls_cert_profile_override;
       std::string tls_cipher_list;
       std::string tls_ciphersuite_list;
+	  bool enable_legacy_algorithms = false;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
@@ -750,6 +751,7 @@ namespace openvpn {
       cc->set_tls_cert_profile_override(config.tls_cert_profile_override);
       cc->set_tls_cipher_list(config.tls_cipher_list);
       cc->set_tls_ciphersuite_list(config.tls_ciphersuite_list);
+	  cc->enable_legacy_algorithms(config.enable_legacy_algorithms);
       if (!cc->get_mode().is_client())
 	throw option_error("only client configuration supported");
 
