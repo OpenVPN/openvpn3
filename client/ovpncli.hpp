@@ -335,7 +335,7 @@ namespace openvpn {
 
 	  // Allow usage of legacy (cipher) algorithm that are no longer considered safe
 	  // This includes BF-CBC, single DES and RC2 private key encryption. This option
-	  // currently only has an effect on OpenSSL 3.0+ and istructs OpenSSL to load
+	  // currently only has an effect on OpenSSL 3.0+ and instructs OpenSSL to load
 	  // the legacy provider
 	  bool enableLegacyAlgorithms = false;
     };
