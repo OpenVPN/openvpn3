@@ -242,6 +242,11 @@ namespace openvpn {
 	throw MbedTLSException("set_client_session_tickets not implemented");
       }
 
+      virtual void enable_legacy_algorithms(const bool v) {
+	// We ignore the request to enable legacy as we do not have a runtime
+	// configuration for this
+      }
+
       virtual void set_sni_handler(SNI::HandlerBase* sni_handler)
       {
 	// fixme -- this method should be implemented on the server-side for SNI

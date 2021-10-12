@@ -40,6 +40,9 @@
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/evp.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/provider.h>
+#endif
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -148,6 +151,11 @@ namespace openvpn {
       void set_client_session_tickets(const bool v) override
       {
 	client_session_tickets = v;
+      }
+
+      void enable_legacy_algorithms(const bool v) override
+      {
+	load_legacy_provider = v;
       }
 
       // server side
@@ -608,6 +616,7 @@ namespace openvpn {
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
       bool client_session_tickets = false;
+      bool load_legacy_provider = false;
     };
 
     // Represents an actual SSL session.
@@ -1118,10 +1127,20 @@ namespace openvpn {
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
       lib_ctx = OSSL_LIB_CTX_new();
       if (!lib_ctx) {
-	  throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
-	}
+		throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
+	  }
+	  if (config->load_legacy_provider) {
+		legacy_provider = OSSL_PROVIDER_load(lib_ctx, "legacy");
+
+		if (!legacy_provider)
+		  throw OpenSSLException("OpenSSLContext: loading legacy provider failed");
+
+		default_provider = OSSL_PROVIDER_load(lib_ctx, "default");
+		if (!default_provider)
+		  throw OpenSSLException("OpenSSLContext: laoding default provider failed");
+	  }
 #endif
-    }
+	 }
 
     OpenSSLContext(Config* config_arg)
       : config(config_arg)
@@ -2209,6 +2228,8 @@ namespace openvpn {
 	SSL_CTX_free(ctx);
 	ctx = nullptr;
 #if OPENSSL_VERSION_NUMBER > 0x30000000L
+	OSSL_PROVIDER_unload(default_provider);
+	OSSL_PROVIDER_unload(legacy_provider);
 	OSSL_LIB_CTX_free(lib_ctx);
 #endif
 	  lib_ctx = nullptr;
@@ -2218,6 +2239,11 @@ namespace openvpn {
 
     /* OpenSSL library context, used to load non-default providers etc */
 	SSLLib::Ctx lib_ctx;
+    /* Rerferences to the Providers we loaded, so we can unlaod them */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	OSSL_PROVIDER *legacy_provider = nullptr;
+    OSSL_PROVIDER *default_provider = nullptr;
+#endif
     SSL_CTX* ctx = nullptr;
     ExternalPKIImpl* epki = nullptr;
     OpenSSLSessionCache::Ptr sess_cache; // client-side only

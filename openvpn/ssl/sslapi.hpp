@@ -148,6 +148,7 @@ namespace openvpn {
     virtual void set_external_pki_callback(ExternalPKIBase* external_pki_arg) = 0; // private key alternative
     virtual void set_session_ticket_handler(TLSSessionTicketBase* session_ticket_handler) = 0; // server side
     virtual void set_client_session_tickets(const bool v) = 0; // client side
+    virtual void enable_legacy_algorithms(const bool v) = 0;  // loads legacy+default provider in OpenSSL 3
     virtual void set_sni_handler(SNI::HandlerBase* sni_handler) = 0; // server side
     virtual void set_sni_name(const std::string& sni_name_arg) = 0; // client side
     virtual void set_private_key_password(const std::string& pwd) = 0;
