@@ -256,7 +256,13 @@ namespace openvpn {
 	  goto err;
 	}
 
-      ec = EC_KEY_dup(static_cast<const EC_KEY*>(EVP_PKEY_get0(pubkey)));
+      ec = EVP_PKEY_get1_EC_KEY(pubkey);
+
+      if (!ec)
+      {
+	  errtext = "cannot get public EC key";
+	  goto err;
+      }
 
       /* This will move responsibility to free ec_method to ec */
       if (!EC_KEY_set_method(ec, ec_method))
