@@ -149,6 +149,7 @@ namespace openvpn {
       bool autologin_sessions = false;
       bool retry_on_auth_failed = false;
       bool allow_local_lan_access = false;
+	  bool preferred_security = true;
       std::string tls_version_min_override;
       std::string tls_cert_profile_override;
       std::string tls_cipher_list;
@@ -208,8 +209,6 @@ namespace openvpn {
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
     {
-      CryptoAlgs::allow_default_dc_algs();
-
 #if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       if (config.dco)
 #if defined(USE_TUN_BUILDER)
@@ -248,7 +247,10 @@ namespace openvpn {
       // OpenVPN Protocol context (including SSL)
       cp_main = proto_config(opt, config, pcc, false);
       cp_relay = proto_config(opt, config, pcc, true); // may be null
-      layer = cp_main->layer;
+
+	  CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(), false);
+
+	  layer = cp_main->layer;
 
 #ifdef PRIVATE_TUNNEL_PROXY
       if (config.alt_proxy && !dco)

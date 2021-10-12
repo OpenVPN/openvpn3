@@ -877,12 +877,8 @@ namespace openvpn {
 	 *
 	 */
 	out << "IV_CIPHERS=";
-	auto libctx=ssl_factory->libctx();
-	CryptoAlgs::for_each([&out,libctx](CryptoAlgs::Type type, const CryptoAlgs::Alg& alg) -> bool {
+	CryptoAlgs::for_each([&out](CryptoAlgs::Type type, const CryptoAlgs::Alg& alg) -> bool {
 	  if (!CryptoAlgs::defined(type) || !alg.dc_cipher())
-	    return false;
-	  if (type == CryptoAlgs::CHACHA20_POLY1305 &&
-	      !AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(libctx, CryptoAlgs::CHACHA20_POLY1305))
 	    return false;
 	  out << alg.name() << ':';
 	  return true;

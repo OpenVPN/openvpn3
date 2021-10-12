@@ -46,16 +46,6 @@ namespace openvpn {
 
     OPENVPN_EXCEPTION(aead_error);
 
-    /**
-     * Check if a specific algorithm is support or not in the underlying
-     * crypto library
-     */
-    template  <typename CRYPTO_API>
-    static inline bool is_algorithm_supported(SSLLib::Ctx libctx, const CryptoAlgs::Type cipher)
-    {
-      return CRYPTO_API::CipherContextAEAD::is_supported(libctx, cipher);
-    }
-
     template <typename CRYPTO_API>
     class Crypto : public CryptoDCInstance
     {

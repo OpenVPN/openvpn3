@@ -32,6 +32,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/arraysize.hpp>
+#include <openvpn/crypto/definitions.hpp>
 
 namespace openvpn {
   namespace CryptoAlgs {
@@ -102,7 +103,7 @@ namespace openvpn {
     enum AlgFlags {       // bits below must start after Mode bits
       F_CIPHER=(1<<2),    // alg is a cipher
       F_DIGEST=(1<<3),    // alg is a digest
-      F_ALLOW_DC=(1<<4),  // alg may be used in OpenVPN data channel
+      F_ALLOW_DC=(1<<4)  // alg may be used in OpenVPN data channel
     };
 
     // size in bytes of AEAD "nonce tail" normally taken from
@@ -137,7 +138,8 @@ namespace openvpn {
       size_t block_size() const { return block_size_; }  // cipher only
       bool dc_cipher() const { return (flags_ & F_CIPHER) && (flags_ & F_ALLOW_DC); }
       bool dc_digest() const { return (flags_ & F_DIGEST) && (flags_ & F_ALLOW_DC); }
-      void allow_dc(bool allow) {
+
+	  void allow_dc(bool allow) {
 	if (allow) flags_ |= F_ALLOW_DC;
 	else       flags_ &= ~F_ALLOW_DC;
       }
@@ -276,14 +278,39 @@ namespace openvpn {
 	algs.at(type).allow_dc(true);
     }
 
-    inline void allow_default_dc_algs()
+	/**
+	 * Allows the default algorithms but only those which are available with
+	 * the library context.
+	 * @param libctx 		Library context to use
+	 * @param preferred 	Allow only the preferred algorithms, disabling
+	 * 						legacy (only AEAD)
+	 */
+  	template  <typename CRYPTO_API>
+    inline void allow_default_dc_algs(SSLLib::Ctx libctx, bool preferred=false)
     {
-      allow_dc_algs({
-	NONE, AES_128_CBC, AES_192_CBC, AES_256_CBC,
-	DES_CBC, DES_EDE3_CBC, BF_CBC,
-	AES_128_GCM, AES_192_GCM, AES_256_GCM, CHACHA20_POLY1305,
-	MD5, SHA1, SHA224, SHA256, SHA384, SHA512
-      });
+	  /* Disable all and reenable the ones actually allowed later */
+	  for (auto& alg : algs)
+		alg.allow_dc(false);
+
+	  CryptoAlgs::for_each([preferred, libctx](CryptoAlgs::Type type, const CryptoAlgs::Alg& alg) -> bool {
+		/* Defined in the algorithm but not actually related to data channel */
+		if (type == MD4 || type == AES_256_CTR)
+		  return false;
+
+		if (preferred && alg.mode() != AEAD)
+		  return false;
+
+		if (alg.mode() == AEAD && !CRYPTO_API::CipherContextAEAD::is_supported(libctx, type))
+		  return false;
+
+		if ((alg.flags() & F_CIPHER && alg.mode() != AEAD && type != NONE)
+			&& !CRYPTO_API::CipherContext::is_supported(libctx, type))
+		  return false;
+
+		/* This algorithm has passed all checks, enable it for DC */
+		algs.at(type).allow_dc(true);
+		return true;
+	  });
     }
 
     /**

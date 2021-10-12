@@ -77,6 +77,11 @@ namespace openvpn {
 
       ~CipherContext() { free_cipher_context() ; }
 
+	  static bool is_supported(SSLLib::Ctx libctx, const CryptoAlgs::Type alg)
+	  {
+		return (cipher_type(libctx, alg) != nullptr);
+	  }
+
       void init(SSLLib::Ctx libctx, const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
       {
 	// check that mode is valid
