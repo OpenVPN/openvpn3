@@ -138,7 +138,7 @@ namespace openvpn {
        * X509 cert profiles.
        */
 
-#ifdef OPENVPN_USE_TLS_MD5
+#ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
       // This profile includes the broken MD5 alrogithm.
       // We are going to ship support for this algorithm for a limited
       // amount of time to allow our users to switch to something else
@@ -598,7 +598,7 @@ namespace openvpn {
       {
 	switch (TLSCertProfile::default_if_undef(tls_cert_profile))
 	  {
-#ifdef OPENVPN_USE_TLS_MD5
+#ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
 	  case TLSCertProfile::INSECURE:
 	    return &mbedtls_ctx_private::crt_profile_insecure;
 #endif

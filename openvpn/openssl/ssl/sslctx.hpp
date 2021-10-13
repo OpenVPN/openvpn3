@@ -1314,7 +1314,7 @@ namespace openvpn {
 	    OPENVPN_THROW(ssl_context_error,
 			  "OpenSSLContext: undefined tls-cert-profile");
 	    break;
-#ifdef OPENVPN_USE_TLS_MD5
+#ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
 	  case TLSCertProfile::INSECURE:
 	    SSL_CTX_set_security_level(ctx, 0);
 	    break;

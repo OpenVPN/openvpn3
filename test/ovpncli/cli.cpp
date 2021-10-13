@@ -1302,7 +1302,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
       std::cout << "--legacy-algorithms, -L: Enable legacy algorithm (OpenSSL legacy provider)" << std::endl;
       std::cout << "--tcprof-override, -X : tls-cert-profile override (" <<
-#ifdef OPENVPN_USE_TLS_MD5
+#ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
           "insecure, " <<
 #endif
           "legacy, preferred, etc.)" << std::endl;
