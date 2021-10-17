@@ -56,6 +56,11 @@ namespace openvpn {
     public:
       enum { SIZE=128 };
 
+      static constexpr int ip_version()
+      {
+	return 6;
+      }
+
       bool defined() const
       {
 	return true;

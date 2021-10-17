@@ -59,6 +59,11 @@ namespace openvpn {
       typedef std::uint32_t base_type;
       typedef std::int32_t signed_base_type;
 
+      static constexpr int ip_version()
+      {
+	return 4;
+      }
+
       bool defined() const
       {
 	return true;
