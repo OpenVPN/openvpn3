@@ -57,7 +57,7 @@ rm -rf $DIST
 mkdir -p $DIST/include
 mkdir $DIST/lib
 cd $LZ4_VERSION/lib
-CMD="$CC $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c lz4.c"
+CMD="$CC $PLATFORM_FLAGS $(lto_flags lz4.c) $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c lz4.c"
 echo $CMD
 $CMD
 $AR rc $DIST/lib/liblz4.a lz4.o

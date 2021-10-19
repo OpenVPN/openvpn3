@@ -85,7 +85,7 @@ cd library
 rm -f *.o
 for c in *.c ; do
     CMD="$CC -I../include -DMBEDTLS_RELAXED_X509_DATE \
-         $PLATFORM_FLAGS $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c $c"
+         $PLATFORM_FLAGS $(lto_flags $c) $OTHER_COMPILER_FLAGS $LIB_OPT_LEVEL $LIB_FPIC -c $c"
     echo $CMD
     $CMD
 done
