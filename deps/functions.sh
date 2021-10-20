@@ -49,7 +49,7 @@ function apply_patches()
 function lto_flags()
 {
   local seed=$1
-  if [ "$LTO" == "1" -a "$TARGET" == "linux" ]; then
+  if [ "$TARGET" == "linux" ]; then
     echo -n " -flto=4 -Wl,--no-as-needed "
     if [ -n "$seed" ]; then
       echo -n " -frandom-seed=$seed "

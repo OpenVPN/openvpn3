@@ -25,7 +25,6 @@ if [ -z "$1" ]; then
     echo ' OUTBIN=name -- write binary to name'
     echo " STRIP=1 -- strip binary"
     echo " STRICT=1 -- more warnings"
-    echo " LTO=1 -- build with LTO"
     echo " GPROF=1 -- build for gprof profiling"
     echo " PGEN=1 -- generate data for profile-guided optimization"
     echo " PUSE=1 -- use data from previous run of PGEN=1 build"
@@ -382,7 +381,7 @@ if [ "$DEBUG" = "1" ]; then
     fi
 else
     # release build
-    [ "$LTO" = "1" ] && [ "$CLANG" != "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
+    [ "$CLANG" != "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
 fi
 
