@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2021 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -583,9 +583,9 @@ namespace openvpn {
     virtual bool tun_builder_set_allow_family(int af, bool value) override
     {
       if (af == AF_INET)
-	block_ipv4 = value;
+	block_ipv4 = !value;
       else if (af == AF_INET6)
-      	block_ipv6 = value;
+      	block_ipv6 = !value;
       return true;
     }
 
