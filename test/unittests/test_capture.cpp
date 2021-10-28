@@ -36,7 +36,7 @@ TEST(misc, capture) {
   tbc->tun_builder_set_proxy_https("zoo.bar.gov", 4321);
   tbc->tun_builder_add_wins_server("6.6.6.6");
   tbc->tun_builder_add_wins_server("7.7.7.7");
-  tbc->tun_builder_set_block_ipv6(false);
+  tbc->tun_builder_set_allow_family(AF_INET6, true);
 
   //OPENVPN_LOG("TEXT #1:\n" << tbc->to_string());
 
