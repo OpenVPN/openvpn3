@@ -330,8 +330,10 @@ private:
 	|| string::starts_with(url_str, "https://"))
 	{
 	  if (!write_url_fn.empty())
-	    write_string(write_url_fn, url_str + '\n');
-
+	    {
+	      write_string(write_url_fn, url_str + '\n');
+	      return;
+	    }
 #ifdef OPENVPN_PLATFORM_MAC
 	  std::thread thr([url_str]()
 			  {
