@@ -905,11 +905,24 @@ namespace openvpn {
       // Not const because dc.context() caches the DC context.
       unsigned int link_mtu_adjust()
       {
+	size_t dc_overhead;
+	if (dc.cipher() == CryptoAlgs::BF_CBC)
+	{
+	  /* since often configuration lack BF-CBC, we hardcode the overhead for BF-CBC to avoid
+	   * trying to load BF-CBC, which is not available anymore in modern crypto libraries */
+	  dc_overhead = CryptoAlgs::size(dc.digest()) +       // HMAC
+	      		64/8 +       // Cipher IV
+	      		64/8;       // worst-case PKCS#7 padding expansion (blocksize)
+	}
+	else
+	{
+	  dc_overhead = dc.context().encap_overhead();
+	}
 	const size_t adj = protocol.extra_transport_bytes() + // extra 2 bytes for TCP-streamed packet length
           (enable_op32 ? 4 : 1) +                        // leading op
 	  comp_ctx.extra_payload_bytes() +               // compression header
 	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
-	  dc.context().encap_overhead();                 // data channel crypto layer overhead
+	  dc_overhead;                 // data channel crypto layer overhead
 	return (unsigned int)adj;
       }
 
