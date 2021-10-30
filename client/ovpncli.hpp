@@ -257,13 +257,6 @@ namespace openvpn {
       // for compatibility with 2.x branch
       int defaultKeyDirection = -1;
 
-      // If true, force ciphersuite to be one of:
-      // 1. TLS_DHE_RSA_WITH_AES_256_CBC_SHA, or
-      // 2. TLS_DHE_RSA_WITH_AES_128_CBC_SHA
-      // and disable setting TLS minimum version.
-      // This is intended for compatibility with legacy systems.
-      bool forceAesCbcCiphersuites = false;
-
       // Override the minimum TLS version:
       //   disabled -- don't specify a minimum, and disable any minimum
       //               specified in profile

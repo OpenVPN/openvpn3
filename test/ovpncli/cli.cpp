@@ -878,7 +878,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool disableClientCert = false;
 	bool proxyAllowCleartextAuth = false;
 	int defaultKeyDirection = -1;
-	bool forceAesCbcCiphersuites = false;
 	int sslDebugLevel = 0;
 	bool googleDnsFallback = false;
 	bool autologinSessions = false;
@@ -901,7 +900,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCLxfgjwmlvaYu:p:r:D:P:6:s:S:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCLxgjwmlvaYu:p:r:D:P:6:s:S:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -993,9 +992,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'd':
 		dco = false;
-		break;
-	      case 'f':
-		forceAesCbcCiphersuites = true;
 		break;
 	      case 'g':
 		googleDnsFallback = true;
@@ -1113,7 +1109,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.altProxy = altProxy;
 	      config.dco = dco;
 	      config.defaultKeyDirection = defaultKeyDirection;
-	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 	      config.sslDebugLevel = sslDebugLevel;
 	      config.googleDnsFallback = googleDnsFallback;
 	      config.autologinSessions = autologinSessions;
@@ -1318,7 +1313,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--cache-password, -C  : cache password" << std::endl;
       std::cout << "--no-cert, -x         : disable client certificate" << std::endl;
       std::cout << "--def-keydir, -k      : default key direction ('bi', '0', or '1')" << std::endl;
-      std::cout << "--force-aes-cbc, -f   : force AES-CBC ciphersuites" << std::endl;
       std::cout << "--ssl-debug           : SSL debug level" << std::endl;
       std::cout << "--google-dns, -g      : enable Google DNS fallback" << std::endl;
       std::cout << "--auto-sess, -a       : request autologin session" << std::endl;
