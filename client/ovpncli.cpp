@@ -453,6 +453,7 @@ namespace openvpn {
 	std::string tls_cipher_list;
 	std::string tls_ciphersuite_list;
 	bool enable_legacy_algorithms = false;
+	bool enable_nonpreferred_dcalgs = false;
 	std::string gui_version;
 	std::string sso_methods;
 	bool allow_local_lan_access = false;
@@ -711,6 +712,7 @@ namespace openvpn {
 	state->tls_cipher_list = config.tlsCipherList;
 	state->tls_ciphersuite_list = config.tlsCiphersuitesList;
 	state->enable_legacy_algorithms = config.enableLegacyAlgorithms;
+	state->enable_nonpreferred_dcalgs = config.enableNonPreferredDCOAlgorithms;
 	state->allow_local_lan_access = config.allowLocalLanAccess;
 	state->gui_version = config.guiVersion;
 	state->sso_methods = config.ssoMethods;
@@ -999,6 +1001,7 @@ namespace openvpn {
       cc.tls_cipher_list = state->tls_cipher_list;
       cc.tls_ciphersuite_list = state->tls_ciphersuite_list;
 	  cc.enable_legacy_algorithms = state->enable_legacy_algorithms;
+      cc.enable_nonpreferred_dcalgs = state->enable_nonpreferred_dcalgs;
       cc.gui_version = state->gui_version;
       cc.sso_methods = state->sso_methods;
       cc.hw_addr_override = state->hw_addr_override;

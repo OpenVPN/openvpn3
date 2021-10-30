@@ -838,6 +838,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "epki-ca",        required_argument,  nullptr,       3  },
     { "epki-key",       required_argument,  nullptr,       4  },
 	{ "legacy-algorithms", no_argument,      nullptr,      'L' },
+    { "enable_nonpreferred_dcalgs", no_argument, nullptr, 'Q' },
 #ifdef OPENVPN_REMOTE_OVERRIDE
     { "remote-override",required_argument,  nullptr,       5  },
 #endif
@@ -886,6 +887,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool wintun = false;
 	bool allowLocalDnsResolvers = false;
 	bool enableLegacyAlgorithms = false;
+	bool enableNonPreferredDCO = false;
 	bool merge = false;
 	bool version = false;
 	bool altProxy = false;
@@ -900,7 +902,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCLxgjwmlvaYu:p:r:D:P:6:s:S:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
+
+	while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:LM:P:QR:S:TU:W:X:YZ:ac:degh:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -977,6 +980,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'q':
 		proxyPort = optarg;
+		break;
+	      case 'Q':
+		enableNonPreferredDCO = true;
 		break;
 	      case 'U':
 		proxyUsername = optarg;
@@ -1119,6 +1125,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.wintun = wintun;
 	      config.allowLocalDnsResolvers = allowLocalDnsResolvers;
 		  config.enableLegacyAlgorithms = enableLegacyAlgorithms;
+	      config.enableNonPreferredDCOAlgorithms = enableNonPreferredDCO;
 	      config.ssoMethods =ssoMethods;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;

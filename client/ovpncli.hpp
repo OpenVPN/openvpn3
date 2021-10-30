@@ -331,6 +331,12 @@ namespace openvpn {
 	  // currently only has an effect on OpenSSL 3.0+ and instructs OpenSSL to load
 	  // the legacy provider
 	  bool enableLegacyAlgorithms = false;
+
+      // By default modern OpenVPN version (OpenVPN 2.6 and OpenVPN core 3.7) will only allow
+      // preferred algorithms (AES-GCM, Chacha20-Poly1305) that also work with the newer DCO
+      // implementations. If this enable, we fall back to allowing all algorithms (if these are
+      // supported by the crypto library)
+      bool enableNonPreferredDCOAlgorithms;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

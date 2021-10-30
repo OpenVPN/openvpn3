@@ -155,6 +155,7 @@ namespace openvpn {
       std::string tls_cipher_list;
       std::string tls_ciphersuite_list;
 	  bool enable_legacy_algorithms = false;
+      bool enable_nonpreferred_dcalgs;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
@@ -249,7 +250,7 @@ namespace openvpn {
       cp_main = proto_config(opt, config, pcc, false);
       cp_relay = proto_config(opt, config, pcc, true); // may be null
 
-	  CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(), false);
+      CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(), !config.enable_nonpreferred_dcalgs);
 
 	  layer = cp_main->layer;
 

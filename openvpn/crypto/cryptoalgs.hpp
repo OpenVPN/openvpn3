@@ -270,6 +270,23 @@ namespace openvpn {
       return type;
     }
 
+    inline Type dc_cbc_cipher(const Type type)
+    {
+      const Alg& alg = get(type);
+      if (!(alg.flags() & CBC_HMAC))
+	OPENVPN_THROW(crypto_alg, alg.name() << ": bad cipher for data channel use");
+      return type;
+    }
+
+    inline Type dc_cbc_hash(const Type type)
+    {
+      const Alg& alg = get(type);
+      if (!(alg.flags() & F_DIGEST))
+	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest for data channel use");
+      return type;
+    }
+
+
     inline void allow_dc_algs(const std::initializer_list<Type> types)
     {
       for (auto& alg : algs)

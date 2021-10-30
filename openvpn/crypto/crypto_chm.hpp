@@ -148,8 +148,8 @@ namespace openvpn {
 		     const SessionStats::Ptr& stats_arg,
 		     const RandomAPI::Ptr& prng_arg)
       : CryptoDCContext(key_method),
-        cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
-	digest(CryptoAlgs::legal_dc_digest(digest_arg)),
+        cipher(CryptoAlgs::dc_cbc_cipher(cipher_arg)),
+	digest(CryptoAlgs::dc_cbc_hash(digest_arg)),
 	frame(frame_arg),
 	stats(stats_arg),
 	prng(prng_arg),
@@ -159,7 +159,11 @@ namespace openvpn {
 
     virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id)
     {
-      return new CryptoCHM<CRYPTO_API>(libctx, cipher, digest, frame, stats, prng);
+      /* The check if the data channel cipher is valid is moved here, so encap_overhead
+       * can be called and calculated for the OCC strings even if we do not allow the cipher
+       * to be actually used */
+      return new CryptoCHM<CRYPTO_API>(libctx, CryptoAlgs::legal_dc_cipher(cipher),
+				       CryptoAlgs::legal_dc_digest(digest), frame, stats, prng);
     }
 
     // cipher/HMAC/key info
