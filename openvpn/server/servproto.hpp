@@ -306,8 +306,8 @@ namespace openvpn {
 	  housekeeping_timer(io_context_arg),
 	  disconnect_at(Time::infinite()),
 	  stats(factory.stats),
-	  man_factory(man_factory_arg),
-	  tun_factory(tun_factory_arg)
+	  man_factory(std::move(man_factory_arg)),
+	  tun_factory(std::move(tun_factory_arg))
       {}
 
       bool defined_() const
