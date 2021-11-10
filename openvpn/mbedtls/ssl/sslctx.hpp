@@ -1131,24 +1131,24 @@ namespace openvpn {
     /////// start of main class implementation
 
     // create a new SSL instance
-    virtual SSLAPI::Ptr ssl()
+    virtual SSLAPI::Ptr ssl() override
     {
       return SSL::Ptr(new SSL(this, nullptr));
     }
 
 	// Get the library context. This currently does not exist for mbed TLS
-	virtual SSLLib::Ctx libctx()
+	SSLLib::Ctx libctx() override
 	{
 	  return nullptr;
 	}
 
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
-    virtual SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key)
+    SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key) override
     {
       return SSL::Ptr(new SSL(this, hostname ? hostname->c_str() : nullptr));
     }
 
-    virtual const Mode& mode() const
+    const Mode& mode() const override
     {
       return config->mode;
     }
