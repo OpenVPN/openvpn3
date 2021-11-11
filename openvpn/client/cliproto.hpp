@@ -647,6 +647,8 @@ namespace openvpn {
 		&& ((creds && creds->reset_to_cached_password())
 		    || autologin_sessions))
 	      {
+		if (creds && creds->session_id_defined())
+		  creds->purge_session_id();
 		log_reason = "SESSION_AUTH_FAILED";
 	      }
 	    else
