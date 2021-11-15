@@ -377,6 +377,8 @@ inline int SSL_CTX_set1_groups(SSL_CTX *ctx, int *glist, int glistlen)
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
+#include <cassert>
+#include <cstring>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
 #include <openssl/objects.h>
