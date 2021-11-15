@@ -115,6 +115,8 @@ namespace openvpn {
       IP::Range range6_;
     };
 
+    VPNServerNetblock() {}
+
     VPNServerNetblock(const OptionList& opt,
 		      const std::string& opt_name,
 		      const bool ipv4_optional,
