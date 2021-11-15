@@ -123,7 +123,7 @@ namespace openvpn {
       add_route_metric_default(tb, opt, quiet);
 
       // add remote bypass routes
-      if (config.remote_list && config.remote_bypass)
+      if (config.remote_list && config.remote_bypass && server_addr.defined())
 	add_remote_bypass_routes(tb, *config.remote_list, server_addr, eer.get(), quiet);
 
       // add routes
@@ -150,7 +150,7 @@ namespace openvpn {
 	}
 
 
-      if (eer)
+      if (eer && server_addr.defined())
 	{
 	  // Route emulation needs to know if default routes are included
 	  // from redirect-gateway
@@ -186,8 +186,8 @@ namespace openvpn {
 	}
 
       // set remote server address
-      if (!tb->tun_builder_set_remote_address(server_addr.to_string(),
-					      server_addr.version() == IP::Addr::V6))
+      if (server_addr.defined() && !tb->tun_builder_set_remote_address(server_addr.to_string(),
+								       server_addr.version() == IP::Addr::V6))
 	throw tun_prop_error("tun_builder_set_remote_address failed");
 
       // set layer
