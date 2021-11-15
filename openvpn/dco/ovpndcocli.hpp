@@ -23,6 +23,7 @@
 // tun/transport client for ovpn-dco
 
 #include <openvpn/dco/dcocli.hpp>
+#include <openvpn/tun/client/tunconfigflags.hpp>
 
 class OvpnDcoClient : public Client,
                       public KoRekey::Receiver,
@@ -96,7 +97,7 @@ public:
       std::vector<IP::Route> rtvec;
 
       TUN_LINUX::tun_config(config->dev_name, *po, &rtvec, *add_cmds,
-                            *remove_cmds, true);
+                            *remove_cmds, TunConfigFlags::ADD_BYPASS_ROUTES);
 
       // execute commands to bring up interface
       add_cmds->execute_log();
