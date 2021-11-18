@@ -22,7 +22,6 @@
 #pragma once
 
 #include <cstdint>
-#include <features.h>
 
 #include <openvpn/common/endian_platform.hpp>
 
