@@ -2238,7 +2238,7 @@ namespace openvpn {
     Config::Ptr config;
 
     /* OpenSSL library context, used to load non-default providers etc */
-	SSLLib::Ctx lib_ctx;
+    SSLLib::Ctx lib_ctx = nullptr;
     /* Rerferences to the Providers we loaded, so we can unlaod them */
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 	OSSL_PROVIDER *legacy_provider = nullptr;
