@@ -1312,6 +1312,15 @@ namespace openvpn {
       {
       }
 
+      // clone packet, including buffer content
+      Packet clone() const
+      {
+	Packet pkt;
+	pkt.opcode = opcode;
+	pkt.buf.reset(new BufferAllocated(*buf));
+	return pkt;
+      }
+
       void reset()
       {
 	reset_non_buf();
