@@ -400,7 +400,7 @@ int EVP_PKEY_get_group_name(EVP_PKEY *pkey, char *gname, size_t gname_sz,
 
   int nid = EC_GROUP_get_curve_name(group);
 
-  if (nid != 0)
+  if (nid == NID_undef)
     {
       return 0;
     }

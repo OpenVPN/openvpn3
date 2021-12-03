@@ -902,16 +902,15 @@ namespace openvpn {
 
       static void print_ec_key_details(EVP_PKEY *pkey, std::ostream &os)
       {
-	char gname[1024];
-	size_t gname_sz = sizeof(gname_sz);
+	std::array<char, 1024> gname {};
+	size_t gname_sz = gname.size();
 
-	const char* curve = gname;
-
-	if (!EVP_PKEY_get_group_name(pkey, gname, gname_sz, &gname_sz))
+	const char* group = gname.data();
+	if (!EVP_PKEY_get_group_name(pkey, gname.data(), gname_sz, &gname_sz))
 	{
-	   curve = "Error getting group name";
+	   group = "Error getting group name";
 	}
-	os << ", " << EVP_PKEY_get_bits(pkey) << " bit EC, curve:" << curve;
+	os << ", " << EVP_PKEY_get_bits(pkey) << " bit EC, group:" << group;
       }
 
       // Print a one line summary of SSL/TLS session handshake.
