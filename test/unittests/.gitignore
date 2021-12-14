@@ -1,5 +1,6 @@
 test_all
 test_b64
+test_buffer_ip
 test_common
 test_comp
 test_continuation

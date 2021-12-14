@@ -78,7 +78,12 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 endif ()
 
 if (UNIX)
-    target_sources(coreUnitTests PRIVATE test_cpu_time.cpp)
+    target_sources(coreUnitTests PRIVATE
+      # includes <arpa/inet.h>
+      test_buffer_ip.cpp
+
+      test_cpu_time.cpp
+      )
 endif ()
 
 if (WIN32)
