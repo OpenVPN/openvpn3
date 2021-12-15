@@ -587,9 +587,6 @@ namespace openvpn {
       // Do a crypto library self test
       static std::string crypto_self_test();
 
-      // Returns date/time of app expiration as a unix time value
-      static int app_expire();
-
       // Returns platform description string
       static std::string platform();
 
@@ -622,7 +619,6 @@ namespace openvpn {
       void parse_extras(const Config&, EvalConfig&);
       void external_pki_error(const ExternalPKIRequestBase&, const size_t);
       void process_epki_cert_chain(const ExternalPKICertRequest&);
-      void check_app_expired();
       static MergeConfig build_merge_config(const ProfileMerge&);
 
       friend class MyClientEvents;

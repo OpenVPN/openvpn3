@@ -1072,9 +1072,6 @@ namespace openvpn {
 	  state->clock_tick->schedule();
 	}
 
-      // raise an exception if app has expired
-      check_app_expired();
-
       // start VPN
       state->session->start(); // queue reads on socket/tun
       session_started = true;
@@ -1380,22 +1377,6 @@ namespace openvpn {
       return SelfTest::crypto_self_test();
     }
 
-    OPENVPN_CLIENT_EXPORT int OpenVPNClient::app_expire()
-    {
-#ifdef APP_EXPIRE_TIME
-      return APP_EXPIRE_TIME;
-#else
-      return 0;
-#endif
-    }
-
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::check_app_expired()
-    {
-#ifdef APP_EXPIRE_TIME
-      if (Time::now().seconds_since_epoch() >= APP_EXPIRE_TIME)
-	throw app_expired();
-#endif
-    }
 
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::copyright()
     {
