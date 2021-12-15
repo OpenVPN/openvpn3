@@ -9,6 +9,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 cmake_minimum_required(VERSION 3.5)
 
+add_subdirectory(client)
 add_subdirectory(test/unittests)
 add_subdirectory(test/ovpncli)
 add_subdirectory(test/ssl)
