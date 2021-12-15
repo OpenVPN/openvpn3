@@ -19,6 +19,7 @@
 
 // modify exported C++ class names to incorporate their enclosing namespace
 %rename(ClientAPI_OpenVPNClient) OpenVPNClient;
+%rename(ClientAPI_OpenVPNClientHelper) OpenVPNClientHelper;
 %rename(ClientAPI_TunBuilderBase) TunBuilderBase;
 %rename(ClientAPI_ExternalPKIBase) ExternalPKIBase;
 %rename(ClientAPI_ServerEntry) ServerEntry;

@@ -38,6 +38,10 @@ namespace openvpn {
   class ProfileMerge;
   class Stop;
 
+  namespace InitProcess {
+    class Init;
+  };
+
   namespace ClientAPI {
     // Represents an OpenVPN server and its friendly name
     // (client reads)
@@ -461,6 +465,60 @@ namespace openvpn {
       class ClientState;
     };
 
+    /**
+     * Helper class for OpenVPN clients. Provider helper method to be used with
+     * the \sa OpenVPNClient class.
+     */
+    class OpenVPNClientHelper {
+      /* To call parse_config */
+      friend class OpenVPNClient;
+    public:
+      OpenVPNClientHelper();
+
+      ~OpenVPNClientHelper();
+
+      OpenVPNClientHelper(OpenVPNClientHelper &) = delete;
+
+      // Read an OpenVPN profile that might contain external
+      // file references, returning a unified profile.
+      MergeConfig merge_config(const std::string& path, bool follow_references);
+
+      // Read an OpenVPN profile that might contain external
+      // file references, returning a unified profile.
+      MergeConfig merge_config_string(const std::string& config_content);
+
+      // Parse profile and determine needed credentials statically.
+      EvalConfig eval_config(const Config& config);
+
+      // Maximum size of profile that should be allowed
+      static long max_profile_size();
+
+      // Parse a dynamic challenge cookie, placing the result in dc.
+      // Return true on success or false if parse error.
+      static bool parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc);
+
+      // Do a crypto library self test
+      std::string crypto_self_test();
+
+      // Returns platform description string
+      static std::string platform();
+
+      // Returns core copyright
+      static std::string copyright();
+    private:
+      static MergeConfig build_merge_config(const ProfileMerge&);
+
+      static void parse_config(const Config&, EvalConfig&, OptionList&);
+
+      /* including initprocess.hpp here break since it pulls in logging
+       * (OPENVPN_LOG) which not setup when including this header, so break that
+       * cycle here with a pointer instead a normal member, std::unique_ptr
+       * and std::unique_ptr because they still need to have the initprocess.hpp
+       * included in the same compilation unit which breaks in the swig wrapped
+       * class, so we use a plain pointer and new/delete in constructor/destructor */
+      InitProcess::Init* init;
+    };
+
     // Top-level OpenVPN client class.
     class OpenVPNClient : public TunBuilderBase,            // expose tun builder virtual methods
 			  public LogReceiver,               // log message notification
@@ -471,24 +529,6 @@ namespace openvpn {
     public:
       OpenVPNClient();
       virtual ~OpenVPNClient();
-
-      // Read an OpenVPN profile that might contain external
-      // file references, returning a unified profile.
-      static MergeConfig merge_config_static(const std::string& path, bool follow_references);
-
-      // Read an OpenVPN profile that might contain external
-      // file references, returning a unified profile.
-      static MergeConfig merge_config_string_static(const std::string& config_content);
-
-      // Parse profile and determine needed credentials statically.
-      static EvalConfig eval_config_static(const Config& config);
-
-      // Maximum size of profile that should be allowed
-      static long max_profile_size();
-
-      // Parse a dynamic challenge cookie, placing the result in dc.
-      // Return true on success or false if parse error.
-      static bool parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc);
 
       // Parse OpenVPN configuration file.
       EvalConfig eval_config(const Config&);
@@ -584,15 +624,6 @@ namespace openvpn {
       // Periodic convenience clock tick, controlled by Config::clockTickMS
       virtual void clock_tick();
 
-      // Do a crypto library self test
-      static std::string crypto_self_test();
-
-      // Returns platform description string
-      static std::string platform();
-
-      // Returns core copyright
-      static std::string copyright();
-
       // Hide protected methods/data from SWIG
 #ifdef SWIGJAVA
     private:
@@ -615,11 +646,9 @@ namespace openvpn {
       void connect_setup(Status&, bool&);
       void do_connect_async();
       static Status status_from_exception(const std::exception&);
-      static void parse_config(const Config&, EvalConfig&, OptionList&);
       void parse_extras(const Config&, EvalConfig&);
       void external_pki_error(const ExternalPKIRequestBase&, const size_t);
       void process_epki_cert_chain(const ExternalPKICertRequest&);
-      static MergeConfig build_merge_config(const ProfileMerge&);
 
       friend class MyClientEvents;
       void on_disconnect();

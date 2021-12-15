@@ -280,7 +280,7 @@ private:
 	dc_cookie = ev.info;
 
 	ClientAPI::DynamicChallenge dc;
-	if (ClientAPI::OpenVPNClient::parse_dynamic_challenge(ev.info, dc)) {
+	if (ClientAPI::OpenVPNClientHelper::parse_dynamic_challenge(ev.info, dc)) {
 	  std::cout << "DYNAMIC CHALLENGE" << std::endl;
 	  std::cout << "challenge: " << dc.challenge << std::endl;
 	  std::cout << "echo: " << dc.echo << std::endl;
@@ -947,12 +947,13 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	if (version)
 	  {
 	    std::cout << "OpenVPN cli 1.0" << std::endl;
-	    std::cout << ClientAPI::OpenVPNClient::platform() << std::endl;
-	    std::cout << ClientAPI::OpenVPNClient::copyright() << std::endl;
+	    std::cout << ClientAPI::OpenVPNClientHelper::platform() << std::endl;
+	    std::cout << ClientAPI::OpenVPNClientHelper::copyright() << std::endl;
 	  }
 	else if (self_test)
 	  {
-	    std::cout << ClientAPI::OpenVPNClient::crypto_self_test();
+	    ClientAPI::OpenVPNClientHelper clihelper;
+	    std::cout << clihelper.crypto_self_test();
 	  }
 	else if (merge)
 	  {
@@ -1027,8 +1028,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      //   setenv SERVER <HOST>/<FRIENDLY_NAME>
 	      if (!config.serverOverride.empty())
 		{
-		  const ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
-		  for (auto &se : eval.serverList)
+		  ClientAPI::OpenVPNClientHelper clihelper;
+		  const ClientAPI::EvalConfig cfg_eval = clihelper.eval_config(config);
+		  for (auto &se : cfg_eval.serverList)
 		    {
 		      if (config.serverOverride == se.friendlyName)
 			{
@@ -1040,26 +1042,27 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	      if (eval)
 		{
-		  const ClientAPI::EvalConfig eval = ClientAPI::OpenVPNClient::eval_config_static(config);
+		  ClientAPI::OpenVPNClientHelper clihelper;
+		  const ClientAPI::EvalConfig cfg_eval = clihelper.eval_config(config);
 		  std::cout << "EVAL PROFILE" << std::endl;
-		  std::cout << "error=" << eval.error << std::endl;
-		  std::cout << "message=" << eval.message << std::endl;
-		  std::cout << "userlockedUsername=" << eval.userlockedUsername << std::endl;
-		  std::cout << "profileName=" << eval.profileName << std::endl;
-		  std::cout << "friendlyName=" << eval.friendlyName << std::endl;
-		  std::cout << "autologin=" << eval.autologin << std::endl;
-		  std::cout << "externalPki=" << eval.externalPki << std::endl;
-		  std::cout << "staticChallenge=" << eval.staticChallenge << std::endl;
-		  std::cout << "staticChallengeEcho=" << eval.staticChallengeEcho << std::endl;
-		  std::cout << "privateKeyPasswordRequired=" << eval.privateKeyPasswordRequired << std::endl;
-		  std::cout << "allowPasswordSave=" << eval.allowPasswordSave << std::endl;
+		  std::cout << "error=" << cfg_eval.error << std::endl;
+		  std::cout << "message=" << cfg_eval.message << std::endl;
+		  std::cout << "userlockedUsername=" << cfg_eval.userlockedUsername << std::endl;
+		  std::cout << "profileName=" << cfg_eval.profileName << std::endl;
+		  std::cout << "friendlyName=" << cfg_eval.friendlyName << std::endl;
+		  std::cout << "autologin=" << cfg_eval.autologin << std::endl;
+		  std::cout << "externalPki=" << cfg_eval.externalPki << std::endl;
+		  std::cout << "staticChallenge=" << cfg_eval.staticChallenge << std::endl;
+		  std::cout << "staticChallengeEcho=" << cfg_eval.staticChallengeEcho << std::endl;
+		  std::cout << "privateKeyPasswordRequired=" << cfg_eval.privateKeyPasswordRequired << std::endl;
+		  std::cout << "allowPasswordSave=" << cfg_eval.allowPasswordSave << std::endl;
 
 		  if (!config.serverOverride.empty())
 		    std::cout << "server=" << config.serverOverride << std::endl;
 
-		  for (size_t i = 0; i < eval.serverList.size(); ++i)
+		  for (size_t i = 0; i < cfg_eval.serverList.size(); ++i)
 		    {
-		      const ClientAPI::ServerEntry& se = eval.serverList[i];
+		      const ClientAPI::ServerEntry& se = cfg_eval.serverList[i];
 		      std::cout << '[' << i << "] " << se.server << '/' << se.friendlyName << std::endl;
 		    }
 		}
