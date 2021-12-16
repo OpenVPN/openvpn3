@@ -369,6 +369,11 @@ namespace openvpn {
       push_back(std::string(arg));
     }
 
+    void from_list(std::vector<std::string> arg)
+    {
+        data.insert(data.end(), arg.begin(), arg.end());
+    }
+
     template<typename T, typename... Args>
     void from_list(T first, Args... args)
     {
