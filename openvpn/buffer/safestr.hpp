@@ -43,6 +43,8 @@ namespace openvpn {
     SafeString(const char *str, const size_t size)
       : data(size+1, BUF_FLAGS)
     {
+      if (size == SIZE_MAX)
+        OPENVPN_BUFFER_THROW(buffer_overflow)
       data.write((unsigned char *)str, size);
       trail();
     }
