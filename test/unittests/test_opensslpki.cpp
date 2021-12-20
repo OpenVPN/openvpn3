@@ -72,18 +72,18 @@ void test_pkey()
   std::string pkey_txt = read_text(CERTDIR "/key.pem");
 
   OpenSSLPKI::PKey pkey, pkey2;
-  pkey.parse_pem(pkey_txt, "TEST0");
+  pkey.parse_pem(pkey_txt, "TEST0", nullptr);
   OpenSSLPKI::PKey pkey1(pkey);
   pkey2 = pkey1;
   pkey2 = pkey1;
   std::string rend2 = pkey2.render_pem();
 
-  OpenSSLPKI::PKey pkey3(pkey_txt, "TEST2");
+  OpenSSLPKI::PKey pkey3(pkey_txt, "TEST2", nullptr);
   std::string rend3 = pkey3.render_pem();
 
   ASSERT_EQ(rend2, rend3);
 
-  OpenSSLPKI::PKey pkey4(rend3, "TEST3");
+  OpenSSLPKI::PKey pkey4(rend3, "TEST3", nullptr);
   OpenSSLPKI::PKey pkey5(std::move(pkey4));
   pkey2 = pkey5;
   rend2 = pkey2.render_pem();
