@@ -27,7 +27,7 @@
 #endif
 
 /* We need to define this very early and in its own small header file so we
- * can ensure that these definition are always available */
+ * can ensure that these definitions are always available */
 namespace openvpn {
 namespace SSLLib {
 

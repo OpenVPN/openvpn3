@@ -155,6 +155,10 @@ namespace openvpn {
 
       void enable_legacy_algorithms(const bool v) override
       {
+        if (lib_ctx)
+          throw OpenSSLException("Library context already initialised, "
+				 "cannot enable/disable legacy algorithms");
+
 	load_legacy_provider = v;
       }
 
@@ -199,7 +203,7 @@ namespace openvpn {
 
       void load_private_key(const std::string& key_txt) override
       {
-	pkey.parse_pem(key_txt, "private key");
+	pkey.parse_pem(key_txt, "private key", ctx());
       }
 
       void load_dh(const std::string& dh_txt) override
@@ -353,7 +357,7 @@ namespace openvpn {
 
       std::string validate_private_key(const std::string& key_txt) const override
       {
-	OpenSSLPKI::PKey pkey(key_txt, "private key");
+	OpenSSLPKI::PKey pkey(key_txt, "private key", ctx());
 	return pkey.render_pem();
       }
 
@@ -573,6 +577,34 @@ namespace openvpn {
 #endif
 
     private:
+      SSLLib::Ctx ctx() const {
+        initalise_lib_context();
+        return lib_ctx.get();
+      }
+
+      void initalise_lib_context() const {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        /* Already initialised */
+        if (lib_ctx)
+          return;
+
+	lib_ctx.reset(OSSL_LIB_CTX_new());
+	if (!lib_ctx) {
+	  throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
+	}
+	if (load_legacy_provider) {
+	  legacy_provider.reset(OSSL_PROVIDER_load(lib_ctx.get(), "legacy"));
+
+	  if (!legacy_provider)
+	    throw OpenSSLException("OpenSSLContext: loading legacy provider failed");
+
+	  default_provider.reset(OSSL_PROVIDER_load(lib_ctx.get(), "default"));
+	  if (!default_provider)
+	    throw OpenSSLException("OpenSSLContext: laoding default provider failed");
+	}
+#endif
+      }
+
       static TLSVersion::Type maxver()
       {
 	// Return maximum TLS version supported by OpenSSL.
@@ -617,6 +649,16 @@ namespace openvpn {
       bool local_cert_enabled = true;
       bool client_session_tickets = false;
       bool load_legacy_provider = false;
+
+      /* OpenSSL library context, used to load non-default providers etc,
+       * made mutable so const function can use/initialise the context */
+      using SSLCtxType = std::remove_pointer<SSLLib::Ctx>::type;
+      mutable std::unique_ptr<SSLCtxType, decltype(&::OSSL_LIB_CTX_free)> lib_ctx{nullptr, &::OSSL_LIB_CTX_free};
+      /* References to the Providers we loaded, so we can unload them */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+      mutable std::unique_ptr<OSSL_PROVIDER, decltype(&::OSSL_PROVIDER_unload)> legacy_provider {nullptr, &::OSSL_PROVIDER_unload };
+      mutable std::unique_ptr<OSSL_PROVIDER, decltype(&::OSSL_PROVIDER_unload)> default_provider {nullptr, &::OSSL_PROVIDER_unload };
+#endif
     };
 
     // Represents an actual SSL session.
@@ -1121,37 +1163,15 @@ namespace openvpn {
 #endif
     }
 
-    void initalise_lib_context()
-    {
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-      lib_ctx = OSSL_LIB_CTX_new();
-      if (!lib_ctx) {
-		throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
-	  }
-	  if (config->load_legacy_provider) {
-		legacy_provider = OSSL_PROVIDER_load(lib_ctx, "legacy");
-
-		if (!legacy_provider)
-		  throw OpenSSLException("OpenSSLContext: loading legacy provider failed");
-
-		default_provider = OSSL_PROVIDER_load(lib_ctx, "default");
-		if (!default_provider)
-		  throw OpenSSLException("OpenSSLContext: laoding default provider failed");
-	  }
-#endif
-	 }
-
     OpenSSLContext(Config* config_arg)
       : config(config_arg)
     {
       try
 	{
-	  // Initialise our library context for OpenSSL 3.0
-	  initalise_lib_context();
 	  // Create new SSL_CTX for server or client mode
 	  if (config->mode.is_server())
 	    {
-	      ctx = SSL_CTX_new_ex(lib_ctx, nullptr, SSL::tls_method_server());
+	      ctx = SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_server());
 	      if (ctx == nullptr)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
 
@@ -1181,7 +1201,7 @@ namespace openvpn {
 	    }
 	  else if (config->mode.is_client())
 	    {
-	      ctx = SSL_CTX_new_ex(lib_ctx, nullptr, SSL::tls_method_client());
+	      ctx = SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_client());
 	      if (ctx == nullptr)
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for client method");
 	    }
@@ -1424,11 +1444,11 @@ namespace openvpn {
 
 	SSLLib::Ctx libctx() override
 	{
+	  SSLLib::Ctx lib_ctx = config->ctx();
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 	  if (!lib_ctx)
 		throw OpenSSLException("OpenSSLContext: library context is not initialised");
 #endif
-
 	  return lib_ctx;
 	}
 
@@ -2226,23 +2246,10 @@ namespace openvpn {
 
 	SSL_CTX_free(ctx);
 	ctx = nullptr;
-#if OPENSSL_VERSION_NUMBER > 0x30000000L
-	OSSL_PROVIDER_unload(default_provider);
-	OSSL_PROVIDER_unload(legacy_provider);
-	OSSL_LIB_CTX_free(lib_ctx);
-#endif
-	  lib_ctx = nullptr;
     }
 
     Config::Ptr config;
 
-    /* OpenSSL library context, used to load non-default providers etc */
-    SSLLib::Ctx lib_ctx = nullptr;
-    /* Rerferences to the Providers we loaded, so we can unlaod them */
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	OSSL_PROVIDER *legacy_provider = nullptr;
-    OSSL_PROVIDER *default_provider = nullptr;
-#endif
     SSL_CTX* ctx = nullptr;
     ExternalPKIImpl* epki = nullptr;
     OpenSSLSessionCache::Ptr sess_cache; // client-side only

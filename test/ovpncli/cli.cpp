@@ -1240,7 +1240,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 #if defined(USE_MBEDTLS)
 			  client.epki_ctx.parse(epki_key_txt, "EPKI", privateKeyPassword);
 #else
-			  client.epki_pkey.parse_pem(epki_key_txt, "epki private key");
+			  client.epki_pkey.parse_pem(epki_key_txt, "epki private key", nullptr);
 #endif
 			}
 		      else

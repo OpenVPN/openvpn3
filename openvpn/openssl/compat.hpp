@@ -431,6 +431,14 @@ EVP_CIPHER_fetch(void *ctx, const char *algorithm, const char *properties)
   return cipher;
 }
 
+static inline EVP_PKEY *
+PEM_read_bio_PrivateKey_ex(BIO *bp, EVP_PKEY **x,
+				     pem_password_cb *cb, void *u,
+				     void *libctx, const char *propq)
+{
+  return PEM_read_bio_PrivateKey(bp, x, cb, u);
+}
+
 static inline void
 EVP_CIPHER_free(const EVP_CIPHER * cipher)
 {
@@ -442,6 +450,12 @@ static inline SSL_CTX *
 SSL_CTX_new_ex(void *libctx, const char *propq, const SSL_METHOD *meth)
 {
   return SSL_CTX_new(meth);
+}
+
+static inline void
+OSSL_LIB_CTX_free(void *libctx)
+{
+
 }
 #define EVP_PKEY_get_bits EVP_PKEY_bits
 #endif
