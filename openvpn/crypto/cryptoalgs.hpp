@@ -299,17 +299,19 @@ namespace openvpn {
 	 * Allows the default algorithms but only those which are available with
 	 * the library context.
 	 * @param libctx 		Library context to use
-	 * @param preferred 	Allow only the preferred algorithms, disabling
+	 * @param preferred 	Allow only the preferred algorithms, also disabling
 	 * 						legacy (only AEAD)
+	 * @param legacy	Allow also legacy algorithm that are vulnerable to SWEET32
+	 * 			no effect if preferred is true
 	 */
   	template  <typename CRYPTO_API>
-    inline void allow_default_dc_algs(SSLLib::Ctx libctx, bool preferred=false)
+    inline void allow_default_dc_algs(SSLLib::Ctx libctx, bool preferred=false, bool legacy=false)
     {
 	  /* Disable all and reenable the ones actually allowed later */
 	  for (auto& alg : algs)
 		alg.allow_dc(false);
 
-	  CryptoAlgs::for_each([preferred, libctx](CryptoAlgs::Type type, const CryptoAlgs::Alg& alg) -> bool {
+	  CryptoAlgs::for_each([preferred, libctx, legacy](CryptoAlgs::Type type, const CryptoAlgs::Alg& alg) -> bool {
 		/* Defined in the algorithm but not actually related to data channel */
 		if (type == MD4 || type == AES_256_CTR)
 		  return false;
@@ -318,6 +320,14 @@ namespace openvpn {
 		  return false;
 
 		if (alg.mode() == AEAD && !CRYPTO_API::CipherContextAEAD::is_supported(libctx, type))
+		  return false;
+
+		/* 64 bit block ciphers vulnerable to SWEET32 */
+		if (alg.flags() & F_CIPHER && !legacy && alg.block_size() <= 8)
+		  return false;
+
+		/* This excludes MD4 */
+		if (alg.flags() & F_DIGEST && !legacy && alg.size() < 20)
 		  return false;
 
 		if ((alg.flags() & F_CIPHER && alg.mode() != AEAD && type != NONE)

@@ -250,7 +250,9 @@ namespace openvpn {
       cp_main = proto_config(opt, config, pcc, false);
       cp_relay = proto_config(opt, config, pcc, true); // may be null
 
-      CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(), !config.enable_nonpreferred_dcalgs);
+      CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(),
+							   !config.enable_nonpreferred_dcalgs,
+							   config.enable_legacy_algorithms);
 
 	  layer = cp_main->layer;
 

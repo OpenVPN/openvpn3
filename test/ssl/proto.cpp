@@ -892,7 +892,7 @@ int test(const int thread_num)
     typedef ProtoContext ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_factory = cc->new_factory();
-	CryptoAlgs::allow_default_dc_algs<ClientCryptoAPI>(cp->ssl_factory->libctx(), false);
+	CryptoAlgs::allow_default_dc_algs<ClientCryptoAPI>(cp->ssl_factory->libctx(), false, false);
 	cp->dc.set_factory(new CryptoDCSelect<ClientCryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, prng_cli));
     cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ClientCryptoAPI>());
     cp->frame = frame;

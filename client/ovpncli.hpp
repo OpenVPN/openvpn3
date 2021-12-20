@@ -326,11 +326,10 @@ namespace openvpn {
       // This disables adding NRPT rule for "." zone and permits DNS requests to localhost
       bool allowLocalDnsResolvers = false;
 
-	  // Allow usage of legacy (cipher) algorithm that are no longer considered safe
-	  // This includes BF-CBC, single DES and RC2 private key encryption. This option
-	  // currently only has an effect on OpenSSL 3.0+ and instructs OpenSSL to load
-	  // the legacy provider
-	  bool enableLegacyAlgorithms = false;
+      // Allow usage of legacy (cipher) algorithm that are no longer considered safe
+      // This includes BF-CBC, single DES and RC2 private key encryption.
+      // With OpenSSL 3.0 this also instructs OpenSSL to load the legacy provider.
+      bool enableLegacyAlgorithms = false;
 
       // By default modern OpenVPN version (OpenVPN 2.6 and OpenVPN core 3.7) will only allow
       // preferred algorithms (AES-GCM, Chacha20-Poly1305) that also work with the newer DCO
