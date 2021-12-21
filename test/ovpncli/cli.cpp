@@ -1127,7 +1127,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.wintun = wintun;
 	      config.allowLocalDnsResolvers = allowLocalDnsResolvers;
 		  config.enableLegacyAlgorithms = enableLegacyAlgorithms;
-	      config.enableNonPreferredDCOAlgorithms = enableNonPreferredDCO;
+	      config.enableNonPreferredDCAlgorithms = enableNonPreferredDCO;
 	      config.ssoMethods =ssoMethods;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;

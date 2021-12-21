@@ -712,7 +712,7 @@ namespace openvpn {
 	state->tls_cipher_list = config.tlsCipherList;
 	state->tls_ciphersuite_list = config.tlsCiphersuitesList;
 	state->enable_legacy_algorithms = config.enableLegacyAlgorithms;
-	state->enable_nonpreferred_dcalgs = config.enableNonPreferredDCOAlgorithms;
+	state->enable_nonpreferred_dcalgs = config.enableNonPreferredDCAlgorithms;
 	state->allow_local_lan_access = config.allowLocalLanAccess;
 	state->gui_version = config.guiVersion;
 	state->sso_methods = config.ssoMethods;
