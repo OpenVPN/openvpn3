@@ -840,7 +840,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "epki-ca",        required_argument,  nullptr,       3  },
     { "epki-key",       required_argument,  nullptr,       4  },
 	{ "legacy-algorithms", no_argument,      nullptr,      'L' },
-    { "enable_nonpreferred_dcalgs", no_argument, nullptr, 'Q' },
+    { "non-preffered-algorithms", no_argument, nullptr, 'Q' },
 #ifdef OPENVPN_REMOTE_OVERRIDE
     { "remote-override",required_argument,  nullptr,       5  },
 #endif
@@ -1305,6 +1305,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--pk-password, -z     : private key password" << std::endl;
       std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
       std::cout << "--legacy-algorithms, -L: Enable legacy algorithm (OpenSSL legacy provider)" << std::endl;
+      std::cout << "--non-preffered-algorithms, -Q: Enables non preferred data channel algorithms" << std::endl;
       std::cout << "--tcprof-override, -X : tls-cert-profile override (" <<
 #ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
           "insecure, " <<
