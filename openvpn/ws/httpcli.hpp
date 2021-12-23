@@ -506,7 +506,7 @@ namespace openvpn {
 
 	void streaming_start()
 	{
-	  cancel_general_timeout();
+	  cancel_general_timeout(); // cancel general timeout once websocket streaming begins
 	  content_out_hold = false;
 	  if (is_deferred())
 	    http_content_out_needed();
