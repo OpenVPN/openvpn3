@@ -39,6 +39,9 @@
 #define OPENVPN_DEBUG
 #define OPENVPN_ENABLE_ASSERT
 
+// EKM vs. TLS_PRF mode
+//#define USE_TLS_EKM
+
 #if !defined(USE_TLS_AUTH) && !defined(USE_TLS_CRYPT)
 //#define USE_TLS_AUTH
 //#define USE_TLS_CRYPT
@@ -908,6 +911,9 @@ int test(const int thread_num)
     cp->comp_ctx = CompressContext(COMP_METH, false);
     cp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
     cp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
+#ifdef USE_TLS_EKM
+    cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
+#endif
 #ifdef USE_TLS_AUTH
     cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ClientCryptoAPI>());
     cp->tls_key.parse(tls_auth_key);
@@ -995,6 +1001,9 @@ int test(const int thread_num)
     sp->comp_ctx = CompressContext(COMP_METH, false);
     sp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
     sp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
+#ifdef USE_TLS_EKM
+    sp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
+#endif
 #ifdef USE_TLS_AUTH
     sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
     sp->tls_key.parse(tls_auth_key);
