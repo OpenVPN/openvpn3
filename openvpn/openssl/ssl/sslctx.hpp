@@ -754,7 +754,7 @@ namespace openvpn {
 
       virtual bool export_keying_material(const std::string& label, unsigned char *dest, size_t size) override
       {
-         return SSL_export_keying_material(ssl, dest, size, label.c_str(), label.size(), nullptr, 0, 0) == 1;
+         return SSL_get_session(ssl) && SSL_export_keying_material(ssl, dest, size, label.c_str(), label.size(), nullptr, 0, 0) == 1;
       }
 
       // Return true if we did a full SSL handshake/negotiation.
