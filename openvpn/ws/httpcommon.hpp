@@ -481,12 +481,12 @@ namespace openvpn {
 		stats->error(Error::SSL_ERROR);
 		throw;
 	      }
-	    if (size >= 0)
+	    if (size > 0)
 	      {
 		buf.set_size(size);
 		http_in(buf);
 	      }
-	    else if (size == SSLConst::SHOULD_RETRY)
+	    else if (size == SSLConst::SHOULD_RETRY || !size)
 	      break;
 	    else if (size == SSLConst::PEER_CLOSE_NOTIFY)
 	      parent().base_error_handler(STATUS::E_EOF_SSL, "SSL PEER_CLOSE_NOTIFY");
