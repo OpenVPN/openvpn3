@@ -56,6 +56,8 @@ namespace openvpn {
 	V6_SIZE = IPv6::Addr::SIZE,
       };
 
+#ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
+
       template <typename TITLE>
       Addr(const Addr& other, const TITLE& title, const Version required_version)
 	: ver(other.ver)
@@ -149,6 +151,81 @@ namespace openvpn {
 	if (required_version != UNSPEC && required_version != ver)
 	  throw ip_exception(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
       }
+
+#else
+
+      Addr(const Addr& other, const char *title = nullptr, Version required_version = UNSPEC)
+	: ver(other.ver)
+      {
+	other.validate_version(title, required_version);
+	switch (ver)
+	  {
+	  case V4:
+	    u.v4 = other.u.v4;
+	    break;
+	  case V6:
+	    u.v6 = other.u.v6;
+	    break;
+	  default:
+	    break;
+	  }
+      }
+
+      Addr(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
+	: Addr(from_string(ipstr, title, required_version))
+      {
+      }
+
+#ifndef SWIGPYTHON
+      // When calling IP:Addr with None as the second parameter, Swig will
+      // always pick this function and complain about not being able to convert
+      // a null pointer to a const std::string reference. Hide this function, so
+      // swig is forced to take the const char* variant of this function instead
+      Addr(const std::string& ipstr, const std::string& title, Version required_version = UNSPEC)
+	: Addr(from_string(ipstr, title.c_str(), required_version))
+      {
+      }
+#endif
+
+      void validate_version(const char *title, Version required_version) const
+      {
+	if (required_version != UNSPEC && required_version != ver)
+	  throw ip_exception(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
+      }
+
+#ifndef SWIGPYTHON
+      void validate_version(const std::string& title, Version required_version) const
+      {
+	validate_version(title.c_str(), required_version);
+      }
+#endif
+
+      static std::string validate(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
+      {
+	Addr a = from_string(ipstr, title, required_version);
+	return a.to_string();
+      }
+
+#ifndef SWIGPYTHON
+      static std::string validate(const std::string& ipstr, const std::string& title, Version required_version = UNSPEC)
+      {
+	return validate(ipstr, title.c_str(), required_version);
+      }
+#endif
+
+      static Addr from_string(const std::string& ipstr, const char *title = nullptr, Version required_version = UNSPEC)
+      {
+	openvpn_io::error_code ec;
+	openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
+	if (ec)
+	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
+	const Addr ret = from_asio(a);
+	if (required_version != UNSPEC && required_version != ret.ver)
+	  throw ip_exception(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
+	return ret;
+      }
+
+#endif
 
       static bool is_valid(const std::string& ipstr)
       {
