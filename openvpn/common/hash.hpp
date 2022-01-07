@@ -28,8 +28,8 @@
 #define USE_OPENVPN_HASH
 #define XXH_INLINE_ALL
 #include <xxhash.h>
-#if XXH_VERSION_NUMBER < 800
-#error requires XXHash version 0.8.0 or higher
+#if XXH_VERSION_NUMBER < 700
+#error requires XXHash version 0.7.0 or higher
 #endif
 #endif
 
