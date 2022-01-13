@@ -1801,12 +1801,13 @@ namespace openvpn {
 	return false;
       }
 
+      // Resets data_channel_key but also retains old
+      // rekey_defined and rekey_type from previous instance.
       void generate_datachannel_keys()
       {
 	std::unique_ptr<DataChannelKey> dck(new DataChannelKey());
 
-
-	if(proto.config->dc.key_derivation() == CryptoAlgs::KeyDerivation::TLS_EKM)
+	if (proto.config->dc.key_derivation() == CryptoAlgs::KeyDerivation::TLS_EKM)
 	  {
 	    // USE RFC 5705 key material export
 	    export_key_material(dck->key);
@@ -1832,11 +1833,12 @@ namespace openvpn {
       // Initialize the components of the OpenVPN data channel protocol
       void init_data_channel()
       {
+	// don't run until our prerequisites are satisfied
+	if (!data_channel_key)
+	  return;
+	generate_datachannel_keys();
+
 	// set up crypto for data channel
-	if (!data_channel_key || !data_channel_key->key.defined())
-	  {
-	    generate_datachannel_keys();
-	  }
 	bool enable_compress = true;
 	Config& c = *proto.config;
 	const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
@@ -2418,16 +2420,14 @@ namespace openvpn {
       {
 	if (proto.config->debug_level >= 1)
 	  OPENVPN_LOG_SSL("SSL Handshake: " << Base::ssl_handshake_details());
-	/*  Our internal state machine only decides after push request what protocol
+
+	/* Our internal state machine only decides after push request what protocol
 	 * options we want to use. Therefore we also have to postpone data key
 	 * generation until this happens, create a empty DataChannelKey as
 	 * placeholder */
 	data_channel_key.reset(new DataChannelKey());
-
 	if (!proto.dc_deferred)
-	  {
-	    init_data_channel();
-	  }
+	  init_data_channel();
 
 	while (!app_pre_write_queue.empty())
 	  {
