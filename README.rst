@@ -108,72 +108,57 @@ Options:
 - :code:`--no-dco`       : disable data channel offload (optional)
 
 
-Building the OpenVPN 3 client on Mac OS X
------------------------------------------
+Building the OpenVPN 3 client on macOS
+--------------------------------------
 
-OpenVPN 3 should be built in a non-root Mac OS X account.
+OpenVPN 3 should be built in a non-root macOS account.
 Make sure that Xcode is installed with optional command-line tools.
-(These instructions have been tested with Xcode 5.1.1).
 
-Create the directories ``~/src`` and ``~/src/mac``:
+Create the directory ``~/src``:
 ::
 
-      $ mkdir -p ~/src/mac
+      $ mkdir -p ~/src
 
 Clone the OpenVPN 3 repo:
 ::
 
       $ cd ~/src
-      $ mkdir ovpn3
-      $ cd ovpn3
-      $ git clone https://github.com/OpenVPN/openvpn3.git core
+      $ git clone https://github.com/OpenVPN/openvpn3.git openvpn3
 
-Export the shell variable ``O3`` to point to the OpenVPN 3 top level
-directory:
+
+Install the dependencies:
+
+Ensure that [homebrew](https://brew.sh/) is set up.
+
 ::
 
-      $ export O3=~/src/ovpn3
-
-Download source tarballs (``.tar.gz`` or ``.tgz``) for these dependency
-libraries into ``~/Downloads``
-
-See the file ``$O3/core/deps/lib-versions`` for the expected
-version numbers of each dependency.  If you want to use a different
-version of the library than listed here, you can edit this file.
-
-1. Asio - https://github.com/chriskohlhoff/asio
-2. mbed TLS (2.3.0 or higher) - https://tls.mbed.org/
-3. LZ4 - https://github.com/Cyan4973/lz4
-
-For dependencies that are typically cloned from github vs.
-provided as a .tar.gz file, tools are provided to convert
-the github to a .tar.gz file.  See "snapshot" scripts under
-``$O3/core/deps``
-
-Note that while OpenSSL is listed in lib-versions, it is
-not required for Mac builds.
-
-Build the dependencies:
-::
-
-    $ DL=~/Downloads
-    $ OSX_ONLY=1 $O3/core/scripts/mac/build-all
+    $  brew install lz4 openssl cmake asio jsoncpp
 
 Now build the OpenVPN 3 client executable:
 ::
 
-    $ cd $O3/core
-    $ cd $O3/core && mkdir build && cd build
-    $ cmake -DUSE_MBEDTLS=1 ..
+On a ARM64 based Mac:
+
+    $ cd ~/src/
+    $ mkdir build-openvpn3
+    $ cd build-openvpn3
+    $ cmake -DOPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl -DCMAKE_PREFIX_PATH=/opt/homebrew ~/src/openvpn3
+    $ cmake --build .
+
+For a build on a Intel based Mac:
+
+    $ cd ~/src/
+    $ mkdir build-openvpn3
+    $ cd build-openvpn3
+    $ cmake -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl -DCMAKE_PREFIX_PATH=/usr/local/opt ~/src/openvpn3
     $ cmake --build .
 
 This will build the OpenVPN 3 client library with a small client
-wrapper (``ovpncli``).
+wrapper (``ovpncli``) and the unit tests.
 
-These build scripts will create a **x86_x64** Mac OS X executable,
-with a minimum deployment target of 10.8.x.  The Mac OS X tuntap driver is not
-required, as OpenVPN 3 can use the integrated utun interface if
-available.
+These build scripts will create binaries with the same architecture as the host it is
+running on. The Mac OS X tuntap driver is not required, as OpenVPN 3 can use the integrated
+utun interface if available.
 
 To view the client wrapper options:
 ::

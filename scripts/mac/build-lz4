@@ -14,7 +14,7 @@ rm -rf lz4
 mkdir lz4
 
 if [ "$OSX_ONLY" != "1" ]; then
-    for target in ios ios-dbg iossim iossim-dbg ; do
+    for target in ios ios-dbg ; do
 	echo '***************' TARGET $target
 	TARGET=$target $O3/core/deps/lz4/build-lz4
     done

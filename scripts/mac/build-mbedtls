@@ -19,12 +19,6 @@ if [ "$OSX_ONLY" != "1" ]; then
 	VERBOSE=1 TARGET=$target USE_MINICRYPTO=0 $O3/core/deps/mbedtls/build-mbedtls
 	[ "$IOS_DBG_ONLY" = "1" ] && exit
     done
-
-    # ios simulators
-    for target in iossim iossim-dbg ; do
-	echo '***************' TARGET $target
-	VERBOSE=1 TARGET=$target $O3/core/deps/mbedtls/build-mbedtls
-    done
 fi
 
 # osx

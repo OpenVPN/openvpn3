@@ -15,7 +15,7 @@ rm -rf jsoncpp
 mkdir jsoncpp
 
 if [ "$OSX_ONLY" != "1" ]; then
-    for target in ios ios-dbg iossim iossim-dbg ; do
+    for target in ios ios-dbg ; do
 	echo '***************' TARGET $target
 	TARGET=$target $O3/core/deps/jsoncpp/build-jsoncpp
     done

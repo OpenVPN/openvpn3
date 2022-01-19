@@ -104,7 +104,7 @@ if [ "$MA_HYBRID" = "1" ]; then
     MTLS=1
 fi
 
-# building on Mac OS X for osx, ios, or iossim?
+# building on Mac OS X for osx or ios?
 if [ "$APPLE_FAMILY" = "1" ]; then
     [ -z "$CLANG" ] && CLANG=1
 fi
