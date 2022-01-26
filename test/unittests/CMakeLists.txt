@@ -59,6 +59,7 @@ add_executable(coreUnitTests
         test_http_proxy.cpp
         test_peer_fingerprint.cpp
         test_safestr.cpp
+        test_dns.cpp
         )
 
 if (${USE_MBEDTLS})

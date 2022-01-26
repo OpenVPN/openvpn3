@@ -287,3 +287,20 @@ TEST(PushedOptionsFilter, PullFilterOverrideRouteNopull)
     << "The host route option has been accepted, expected network route" << std::endl
     << filter_output;
 }
+
+TEST(PushedOptionsFilter, RejectDnsServerPrioNegative)
+{
+  OptionList cfg;
+  PushedOptionsFilter filter_static(cfg);
+
+  const std::string opt = "dns server -1 address ::1";
+
+  OptionList src;
+  OptionList dst;
+  src.parse_from_config(opt, nullptr);
+  src.update_map();
+
+  testLog->startCollecting();
+  JY_EXPECT_THROW(dst.extend(src, &filter_static), option_error, opt)
+  std::string filter_output(testLog->stopCollecting());
+}

@@ -578,6 +578,9 @@ namespace openvpn {
 		    return;
 		  }
 
+		// Merge local and pushed options
+		received_options.finalize(pushed_options_merger);
+
 		// process "echo" directives
 		if (echo)
 		  process_echo(received_options);
@@ -1197,6 +1200,7 @@ namespace openvpn {
 
       OptionList::Limits pushed_options_limit;
       OptionList::FilterBase::Ptr pushed_options_filter;
+      PushOptionsMerger::Ptr pushed_options_merger;
 
       AsioTimer inactive_timer;
       Time::Duration inactive_duration;

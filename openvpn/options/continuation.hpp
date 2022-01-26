@@ -35,8 +35,16 @@ namespace openvpn {
   {
     typedef RCPtr<PushOptionsBase> Ptr;
 
+    OptionList merge;
     OptionList multi;
     OptionList singleton;
+  };
+
+  // Used by OptionListContinuation::finalize() to merge static and pushed options
+  struct PushOptionsMerger : public RC<thread_unsafe_refcount>
+  {
+    typedef RCPtr<PushOptionsMerger> Ptr;
+    virtual void merge(OptionList& pushed, const OptionList& config) const = 0;
   };
 
   // Aggregate pushed option continuations into a singular option list.
@@ -93,6 +101,15 @@ namespace openvpn {
 	}
       else
 	throw olc_complete();
+    }
+
+    void finalize(const PushOptionsMerger::Ptr merger)
+    {
+      if (merger)
+	{
+	  merger->merge(*this, push_base->merge);
+	  update_map();
+	}
     }
 
     // returns true if add() was called at least once

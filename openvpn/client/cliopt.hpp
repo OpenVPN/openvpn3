@@ -527,6 +527,9 @@ namespace openvpn {
 	push_base->multi.extend(opt, "redirect-private");
 	push_base->multi.extend(opt, "dhcp-option");
 
+	// base options which need to be merged, not just aggregated
+	push_base->merge.extend(opt, "dns");
+
 	// base options where only a single instance of each option makes sense
 	push_base->singleton.extend(opt, "redirect-dns");
 	push_base->singleton.extend(opt, "inactive");

@@ -35,6 +35,7 @@
 #include <openvpn/addr/addrpair.hpp>
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/client/ipverflags.hpp>
+#include <openvpn/client/dns.hpp>
 #include <openvpn/tun/client/emuexr.hpp>
 #include <openvpn/tun/layer.hpp>
 
@@ -502,6 +503,30 @@ namespace openvpn {
       //   [dhcp-option] [PROXY_BYPASS] [server1] [server2] ...
       //   [dhcp-option] [PROXY_AUTO_CONFIG_URL] [http://...]
       unsigned int flags = 0;
+
+      DnsOptions dns_options(opt);
+      for (const auto& domain : dns_options.search_domains)
+	{
+	  if (!tb->tun_builder_add_search_domain(domain))
+	    throw tun_prop_dhcp_option_error("tun_builder_add_search_domain failed");
+	}
+      for (const auto& keyval : dns_options.servers)
+	{
+	  const auto& server = keyval.second;
+	  if (server.address4.specified())
+	    {
+	      if (!tb->tun_builder_add_dns_server(server.address4.to_string(), false))
+		throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
+	      flags |= F_ADD_DNS;
+	    }
+	  if (server.address6.specified())
+	    {
+	      if (!tb->tun_builder_add_dns_server(server.address6.to_string(), true))
+		throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
+	      flags |= F_ADD_DNS;
+	    }
+	}
+
       OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
       if (dopt != opt.map().end())
 	{
@@ -515,7 +540,7 @@ namespace openvpn {
 	      const Option& o = opt[*i];
 	      try {
 		const std::string& type = o.get(1, 64);
-		if (type == "DNS" || type == "DNS6")
+		if ((type == "DNS" || type == "DNS6") && dns_options.servers.empty())
 		  {
 		    o.exact_args(3);
 		    const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
@@ -524,7 +549,7 @@ namespace openvpn {
 		      throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
 		    flags |= F_ADD_DNS;
 		  }
-		else if (type == "DOMAIN" || type == "DOMAIN-SEARCH")
+		else if ((type == "DOMAIN" || type == "DOMAIN-SEARCH") && dns_options.search_domains.empty())
 		  {
 		    o.min_args(3);
 		    for (size_t j = 2; j < o.size(); ++j)

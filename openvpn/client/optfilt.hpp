@@ -26,6 +26,7 @@
 
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/client/dns.hpp>
 
 // Options filters, consumes the route-nopull and pull-filter client options
 
@@ -83,6 +84,8 @@ namespace openvpn {
 
     FilterAction filter_(const Option& opt)
     {
+      static_filter_(opt);
+
       FilterAction action = pull_filter_(opt);
       if (action == None)
 	{
@@ -92,6 +95,14 @@ namespace openvpn {
 	    action = Accept;
 	}
       return action;
+    }
+
+    void static_filter_(const Option& o)
+    {
+      // Reject pushed DNS servers with priority < 0
+      if (o.size() >= 3 && o.ref(0) == "dns" && o.ref(1) == "server" &&
+	  DnsServer::parse_priority(o.ref(2)) < 0)
+	throw option_error(o.escape(false));
     }
 
     // Return an action if a pull-filter directive matches the pushed option
