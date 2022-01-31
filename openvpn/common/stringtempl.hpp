@@ -76,6 +76,18 @@ namespace openvpn {
     {
       return str;
     }
+
+    // to_cstring
+
+    inline const char *to_cstring(const std::string& str)
+    {
+      return str.c_str();
+    }
+
+    inline const char *to_cstring(const char *str)
+    {
+      return str;
+    }
   }
 }
 

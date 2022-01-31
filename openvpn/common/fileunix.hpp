@@ -21,8 +21,7 @@
 
 // Unix file read/write
 
-#ifndef OPENVPN_COMMON_FILEUNIX_H
-#define OPENVPN_COMMON_FILEUNIX_H
+#pragma once
 
 #include <openvpn/common/platform.hpp>
 
@@ -44,6 +43,7 @@
 #include <openvpn/common/strerror.hpp>
 #include <openvpn/common/stat.hpp>
 #include <openvpn/common/modstat.hpp>
+#include <openvpn/common/stringtempl.hpp>
 #include <openvpn/buffer/bufread.hpp>
 
 namespace openvpn {
@@ -173,11 +173,12 @@ namespace openvpn {
   }
 
   // read file into a fixed buffer, return zero or errno
-  inline int read_binary_unix_fast(const std::string& fn,
+  template <typename STRING>
+  inline int read_binary_unix_fast(const STRING& fn,
 				   Buffer& out,
 				   std::uint64_t* mtime_ns = nullptr)
   {
-    ScopedFD fd(::open(fn.c_str(), O_RDONLY|O_CLOEXEC));
+    ScopedFD fd(::open(StringTempl::to_cstring(fn), O_RDONLY|O_CLOEXEC));
     if (!fd.defined())
       return errno;
     if (mtime_ns)
@@ -208,5 +209,3 @@ namespace openvpn {
       return std::string();
   }
 }
-
-#endif
