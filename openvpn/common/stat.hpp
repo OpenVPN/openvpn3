@@ -35,7 +35,7 @@ namespace openvpn {
     if (filename.empty())
       return false;
     struct stat buffer;   
-    return stat(filename.c_str(), &buffer) == 0; 
+    return ::stat(filename.c_str(), &buffer) == 0;
   }
 
   // Return true if dirname is a directory
@@ -54,7 +54,7 @@ namespace openvpn {
   inline time_t file_mod_time(const std::string& filename)
   {
     struct stat buffer;
-    if (stat(filename.c_str(), &buffer) != 0)
+    if (::stat(filename.c_str(), &buffer) != 0)
       return 0;
     else
       return buffer.st_mtime;
@@ -72,13 +72,19 @@ namespace openvpn {
   }
 
   // Return file modification time from a file path (in nanoseconds since unix epoch) or 0 on error
-  inline std::uint64_t file_mod_time_nanoseconds(const std::string& filename)
+  inline std::uint64_t file_mod_time_nanoseconds(const char *filename)
   {
     struct stat s;
-    if (::stat(filename.c_str(), &s) == 0)
+    if (::stat(filename, &s) == 0)
       return stat_mod_time_nanoseconds(s);
     else
       return 0;
+  }
+
+  // Return file modification time from a file path (in nanoseconds since unix epoch) or 0 on error
+  inline std::uint64_t file_mod_time_nanoseconds(const std::string& filename)
+  {
+    return file_mod_time_nanoseconds(filename.c_str());
   }
 
   // Return file modification time from a file descriptor (in nanoseconds since unix epoch) or 0 on error
