@@ -573,6 +573,12 @@ namespace openvpn {
 	  ManLink::send->float_notify(addr);
       }
 
+      virtual void ipma_notify(const struct ovpn_tun_head_ipma& ipma) override
+      {
+	if (ManLink::send)
+	  ManLink::send->ipma_notify(ipma);
+      }
+
       virtual void data_limit_notify(const int key_id,
 				     const DataLimit::Mode cdl_mode,
 				     const DataLimit::State cdl_status) override

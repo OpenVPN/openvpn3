@@ -41,6 +41,9 @@
 #include <openvpn/auth/authcert.hpp>
 #include <openvpn/auth/authstatusconst.hpp>
 
+// used by ipma_notify()
+struct ovpn_tun_head_ipma;
+
 namespace openvpn {
   namespace ManClientInstance {
 
@@ -66,6 +69,9 @@ namespace openvpn {
 
       // client float notification
       virtual void float_notify(const PeerAddr::Ptr& addr) = 0;
+
+      // IP-mapped ACL (IPMA) notification
+      virtual void ipma_notify(const struct ovpn_tun_head_ipma& ipma) = 0;
 
       // ID
       virtual std::string instance_name() const = 0;
