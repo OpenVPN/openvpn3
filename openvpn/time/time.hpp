@@ -217,6 +217,7 @@ namespace openvpn {
     bool operator!() const { return time_ == 0; }
 
     base_type seconds_since_epoch() const { return base_ + time_ / prec; }
+    std::uint64_t nanoseconds_since_epoch() const { return base_ * 1000000000ull + time_ * (1000000000ull / prec);  }
     T fractional_binary_ms() const { return time_ % prec; }
 
     static TimeType now() { return TimeType(now_()); }
