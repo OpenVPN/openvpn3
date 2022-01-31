@@ -21,8 +21,9 @@
 
 // String methods on Buffer objects
 
-#ifndef OPENVPN_BUFFER_BUFSTR_H
-#define OPENVPN_BUFFER_BUFSTR_H
+#pragma once
+
+#include <cstring>
 
 #include <openvpn/buffer/buffer.hpp>
 
@@ -105,6 +106,19 @@ namespace openvpn {
   {
     return ConstBuffer((const unsigned char *)str.c_str(), str.size(), true);
   }
-}
 
-#endif
+  // Return a C string from buffer.
+  // Note: requires that the buffer be null-terminated.
+  inline const char *buf_c_str(const Buffer& buf)
+  {
+    return (const char *)buf.c_data();
+  }
+
+  // Return true if std::string equals string in buffer
+  inline bool buf_eq_str(const Buffer& buf, const std::string& str)
+  {
+    if (buf.size() != str.length())
+      return false;
+    return std::memcmp(buf.c_data(), str.c_str(), buf.size()) == 0;
+  }
+}
