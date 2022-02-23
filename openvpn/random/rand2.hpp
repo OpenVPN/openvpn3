@@ -43,8 +43,8 @@ namespace openvpn {
     }
 
     Rand2(RandomAPI::Ptr rng_arg)
-      : rng(std::move(rng_arg)),
-	prng(std::move(rng_arg))
+      : rng(rng_arg),
+	prng(rng_arg)
     {
     }
 
