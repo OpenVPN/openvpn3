@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: BSD-4-Clause-UC */
+/* Source: pkg:generic/netbsd?download_url=http%3A%2F%2Fcvsweb.netbsd.org%2Fbsdweb.cgi%2F~checkout~%2Fsrc%2Flib%2Flibc%2Fstdlib%2Fgetopt_long.c%3Frev%3D1.1#src/lib/libc/stdlib/getopt_long.c */
 /*
  * Copyright (c) 1987, 1993, 1994, 1996
  *	The Regents of the University of California.  All rights reserved.
