@@ -19,6 +19,7 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 //
+// Source: pkg:github/chriskohlhoff/asio@asio-1-8-0#asio/src/examples/http
 //  Adapted from code Copyright (c) 2003-2012 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
