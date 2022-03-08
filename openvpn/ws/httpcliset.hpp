@@ -103,6 +103,22 @@ namespace openvpn {
 	  return alive() && c->http->host_match(host);
 	}
 
+	// used for synchronous io_context
+
+	std::unique_ptr<openvpn_io::io_context> acquire_io_context()
+	{
+	  if (c)
+	    return std::move(c->sps.io_context);
+	  else
+	    return std::unique_ptr<openvpn_io::io_context>();
+	}
+
+	void persist_io_context(std::unique_ptr<openvpn_io::io_context>&& io_context)
+	{
+	  if (c)
+	    c->sps.io_context = std::move(io_context);
+	}
+
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 	int unix_fd()
 	{
@@ -121,6 +137,7 @@ namespace openvpn {
 	struct Container : public RC<thread_unsafe_refcount>
 	{
 	  typedef RCPtr<Container> Ptr;
+	  SyncPersistState sps;
 	  HTTPDelegate::Ptr http;
 	};
 
@@ -153,6 +170,25 @@ namespace openvpn {
 	}
 
 	Container::Ptr c;
+      };
+
+      // like HTTPStateContainer, but destructor automatically
+      // calls stop() method
+      class HTTPStateContainerAutoStop : public HTTPStateContainer
+      {
+      public:
+	HTTPStateContainerAutoStop(const bool shutdown)
+	  : shutdown_(shutdown)
+	{
+	}
+
+	~HTTPStateContainerAutoStop()
+	{
+	  HTTPStateContainer::stop(shutdown_);
+	}
+
+      private:
+	const bool shutdown_;
       };
 
       class TransactionSet;
@@ -304,12 +340,6 @@ namespace openvpn {
 
       class TransactionSet : public RC<thread_unsafe_refcount>
       {
-      private:
-	// optionally contains an openvpn_io::io_context for
-	// persistent synchronous operations
-	friend class ClientSet;
-	SyncPersistState sps;
-
       public:
 	typedef RCPtr<TransactionSet> Ptr;
 	typedef std::vector<std::unique_ptr<Transaction>> Vector;
@@ -498,7 +528,7 @@ namespace openvpn {
 	  });
 	ts->preserve_http_state = sps;
 	if (sps)
-	  io_context = std::move(ts->sps.io_context);
+	  io_context = ts->hsc.acquire_io_context();
 	if (!io_context)
 	  io_context.reset(new openvpn_io::io_context(1));
 	ClientSet::Ptr cs;
@@ -527,7 +557,7 @@ namespace openvpn {
 	    throw;
 	  }
 	if (sps)
-	  ts->sps.io_context = std::move(io_context);
+	  ts->hsc.persist_io_context(std::move(io_context));
       }
 
       static void run_synchronous(Function<void(ClientSet::Ptr)> job,
