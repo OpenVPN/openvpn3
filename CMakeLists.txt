@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 include(findcoredeps)
 
+add_subdirectory(client)
 add_subdirectory(test/unittests)
 add_subdirectory(test/ovpncli)
 add_subdirectory(test/ssl)

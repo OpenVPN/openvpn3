@@ -622,7 +622,7 @@ namespace openvpn {
       state->proto_context_options.reset(new ProtoContextOptions());
     }
 
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
+    OPENVPN_CLIENT_EXPORT void OpenVPNClientHelper::parse_config(const Config& config, EvalConfig& eval, OptionList& options)
     {
       try {
 	// validate proto_override
@@ -749,27 +749,37 @@ namespace openvpn {
 	}
     }
 
-    OPENVPN_CLIENT_EXPORT long OpenVPNClient::max_profile_size()
+    OpenVPNClientHelper::OpenVPNClientHelper() : init(new InitProcess::Init())
+    {
+
+    }
+
+    OpenVPNClientHelper::~OpenVPNClientHelper()
+    {
+       delete init;
+    }
+
+    OPENVPN_CLIENT_EXPORT long OpenVPNClientHelper::max_profile_size()
     {
       return ProfileParseLimits::MAX_PROFILE_SIZE;
     }
 
-    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_static(const std::string& path,
-									 bool follow_references)
+    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClientHelper::merge_config(const std::string& path,
+									bool follow_references)
     {
       ProfileMerge pm(path, "ovpn", "", follow_references ? ProfileMerge::FOLLOW_PARTIAL : ProfileMerge::FOLLOW_NONE,
 		      ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
       return build_merge_config(pm);
     }
 
-    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::merge_config_string_static(const std::string& config_content)
+    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClientHelper::merge_config_string(const std::string& config_content)
     {
       ProfileMergeFromString pm(config_content, "", ProfileMerge::FOLLOW_NONE,
 				ProfileParseLimits::MAX_LINE_SIZE, ProfileParseLimits::MAX_PROFILE_SIZE);
       return build_merge_config(pm);
     }
 
-    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClient::build_merge_config(const ProfileMerge& pm)
+    OPENVPN_CLIENT_EXPORT MergeConfig OpenVPNClientHelper::build_merge_config(const ProfileMerge& pm)
     {
       MergeConfig ret;
       ret.status = pm.status_string();
@@ -786,7 +796,7 @@ namespace openvpn {
       return ret;
     }
 
-    OPENVPN_CLIENT_EXPORT EvalConfig OpenVPNClient::eval_config_static(const Config& config)
+    OPENVPN_CLIENT_EXPORT EvalConfig OpenVPNClientHelper::eval_config(const Config& config)
     {
       EvalConfig eval;
       OptionList options;
@@ -799,7 +809,7 @@ namespace openvpn {
     {
       // parse and validate configuration file
       EvalConfig eval;
-      parse_config(config, eval, state->options);
+      OpenVPNClientHelper::parse_config(config, eval, state->options);
       if (eval.error)
 	return eval;
 
@@ -837,7 +847,7 @@ namespace openvpn {
       return true;
     }
 
-    OPENVPN_CLIENT_EXPORT bool OpenVPNClient::parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc)
+    OPENVPN_CLIENT_EXPORT bool OpenVPNClientHelper::parse_dynamic_challenge(const std::string& cookie, DynamicChallenge& dc)
     {
       try {
 	ChallengeResponse cr(cookie);
@@ -899,7 +909,7 @@ namespace openvpn {
       Log::Context log_context(this);
 #endif
 
-      OPENVPN_LOG(ClientAPI::OpenVPNClient::platform());
+      OPENVPN_LOG(ClientAPI::OpenVPNClientHelper::platform());
 
       return do_connect();
     }
@@ -1085,9 +1095,6 @@ namespace openvpn {
 	  state->clock_tick.reset(new MyClockTick(*state->io_context(), this, state->clock_tick_ms));
 	  state->clock_tick->schedule();
 	}
-
-      // raise an exception if app has expired
-      check_app_expired();
 
       // start VPN
       state->session->start(); // queue reads on socket/tun
@@ -1390,34 +1397,17 @@ namespace openvpn {
       state->on_disconnect();
     }
 
-    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::crypto_self_test()
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClientHelper::crypto_self_test()
     {
       return SelfTest::crypto_self_test();
     }
 
-    OPENVPN_CLIENT_EXPORT int OpenVPNClient::app_expire()
-    {
-#ifdef APP_EXPIRE_TIME
-      return APP_EXPIRE_TIME;
-#else
-      return 0;
-#endif
-    }
-
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::check_app_expired()
-    {
-#ifdef APP_EXPIRE_TIME
-      if (Time::now().seconds_since_epoch() >= APP_EXPIRE_TIME)
-	throw app_expired();
-#endif
-    }
-
-    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::copyright()
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClientHelper::copyright()
     {
       return openvpn_copyright;
     }
 
-    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::platform()
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClientHelper::platform()
     {
       std::string ret = platform_string();
 #ifdef PRIVATE_TUNNEL_PROXY
