@@ -34,7 +34,7 @@ These instructions were tested on Ubuntu 20.
 Prepare directory structure:
 ::
 
-    $ sudo apt install g++ make libmbedtls-dev libssl-dev liblz4-dev cmake
+    $ sudo apt install g++ make libmbedtls-dev libssl-dev liblz4-dev libcap-dev cmake
     $ export O3=~/O3 && mkdir $O3
     $ export DEP_DIR=$O3/deps && mkdir $DEP_DIR
     $ export DL=$O3/dl && mkdir $DL
@@ -207,7 +207,7 @@ The test code itself is here: `<test/ssl/proto.cpp>`_
 Build the test:
 ::
 
-    $ cd $O3
+    $ cd $O3/core/build
     $ cmake --build . -- test/ssl/proto
 
 Run the test:
