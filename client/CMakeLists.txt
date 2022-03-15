@@ -30,8 +30,10 @@ if (${PYTHONLIBS_FOUND} AND ${SWIG_FOUND})
     set_target_properties(ovpnclilib PROPERTIES OUTPUT_NAME "_ovpncli")
     set_target_properties(ovpnclilib PROPERTIES PREFIX "")
 
-    # Swig generates code with deprecated python declarations
-    set_source_files_properties(ovpncli_wrap.cxx PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations -Wno-sometimes-uninitialized -Wno-class-memaccess -Wno-unknown-warning-option")
+    if (NOT WIN32)
+        # Swig generates code with deprecated python declarations
+        set_source_files_properties(ovpncli_wrap.cxx PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations -Wno-sometimes-uninitialized -Wno-class-memaccess -Wno-unknown-warning-option")
+    endif()
 else ()
     MESSAGE(INFO "Python libraries or swig not found, skipping ovpncli swig build")
 endif ()
