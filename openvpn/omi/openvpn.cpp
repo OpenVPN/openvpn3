@@ -363,7 +363,8 @@ private:
 	  did_query_remote = false;
 	}
 
-      const ClientAPI::EvalConfig eval = Client::eval_config_static(*config);
+      ClientAPI::OpenVPNClientHelper clihelper;
+      const ClientAPI::EvalConfig eval = clihelper.eval_config(*config);
       if (eval.error)
 	OPENVPN_THROW_EXCEPTION("eval config error: " << eval.message);
 

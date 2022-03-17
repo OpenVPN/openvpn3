@@ -24,7 +24,7 @@
 // To stress test this code, in client after serv->start() add:
 //   if (unit == 3 || unit == 5)
 //     throw Exception("HIT IT");
-// And after "case PThreadBarrier::ERROR:"
+// And after "case PThreadBarrier::ERROR_SIGNAL:"
 //   if (unit & 1)
 //     break;
 

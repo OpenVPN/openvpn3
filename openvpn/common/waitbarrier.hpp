@@ -49,7 +49,7 @@ namespace openvpn {
 	break;
       case PThreadBarrier::TIMEOUT:
 	throw Exception("event loop barrier timeout");
-      case PThreadBarrier::ERROR:
+      case PThreadBarrier::ERROR_SIGNAL:
 	throw Exception("event loop barrier error");
       }
   }

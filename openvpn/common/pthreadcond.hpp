@@ -45,10 +45,10 @@ namespace openvpn {
   public:
     // status return from wait()
     enum Status {
-      SUCCESS=0,  // successful
-      CHOSEN_ONE, // successful and chosen (only one thread is chosen)
-      TIMEOUT,    // timeout
-      ERROR,      // at least one thread called error()
+      SUCCESS=0,    // successful
+      CHOSEN_ONE,   // successful and chosen (only one thread is chosen)
+      TIMEOUT,      // timeout
+      ERROR_SIGNAL, // at least one thread called error()
     };
 
     PThreadBarrier(const int initial_limit = -1)
@@ -86,7 +86,7 @@ namespace openvpn {
       if (timeout)
 	ret = TIMEOUT;
       else if (state == ERROR_THROWN)
-	ret = ERROR;
+	ret = ERROR_SIGNAL;
       else if (state == UNSIGNALED && !chosen)
 	{
 	  ret = CHOSEN_ONE;
@@ -112,7 +112,7 @@ namespace openvpn {
     }
 
     // Causes all threads waiting on wait() (and those which call wait()
-    // in the future) to exit with ERROR status.
+    // in the future) to exit with ERROR_SIGNAL status.
     void error()
     {
       signal_(ERROR_THROWN);
