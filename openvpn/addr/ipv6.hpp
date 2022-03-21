@@ -75,7 +75,6 @@ namespace openvpn {
       {
 	Addr ret;
 	network_to_host_order(&ret.u, (const union ipv6addr *)in6->s6_addr);
-	ret.scope_id_ = 0;
 	return ret;
       }
 
@@ -149,7 +148,6 @@ namespace openvpn {
       static Addr from_hex(const std::string& s)
       {
 	Addr ret;
-	ret.scope_id_ = 0;
 	ret.zero();
 	size_t len = s.length();
 	size_t base = 0;
@@ -198,7 +196,6 @@ namespace openvpn {
       static Addr from_ulong(unsigned long ul)
       {
 	Addr ret;
-	ret.scope_id_ = 0;
 	ret.u.u64[Endian::e2(0)] = std::uint64_t(ul);
 	ret.u.u64[Endian::e2(1)] = 0;
 	return ret;
@@ -218,7 +215,6 @@ namespace openvpn {
       {
 	bool neg = false;
 	Addr ret;
-	ret.scope_id_ = 0;
 	if (ul < 0)
 	  {
 	    ul = -(ul + 1);
@@ -267,7 +263,6 @@ namespace openvpn {
       {
 	Addr ret;
 	network_to_host_order(&ret.u, (const union ipv6addr *)bytestr);
-	ret.scope_id_ = 0;
 	return ret;
       }
 
@@ -306,7 +301,6 @@ namespace openvpn {
       static Addr from_zero()
       {
 	Addr ret;
-	ret.scope_id_ = 0;
 	ret.zero();
 	return ret;
       }
@@ -314,7 +308,6 @@ namespace openvpn {
       static Addr from_one()
       {
 	Addr ret;
-	ret.scope_id_ = 0;
 	ret.one();
 	return ret;
       }
@@ -322,7 +315,6 @@ namespace openvpn {
       static Addr from_zero_complement()
       {
 	Addr ret;
-	ret.scope_id_ = 0;
 	ret.zero_complement();
 	return ret;
       }
@@ -331,7 +323,6 @@ namespace openvpn {
       static Addr netmask_from_prefix_len(const unsigned int prefix_len)
       {
 	Addr ret;
-	ret.scope_id_ = 0;
 	ret.prefix_len_to_netmask(prefix_len);
 	return ret;
       }
@@ -554,7 +545,6 @@ namespace openvpn {
 	if (hl < SIZE)
 	  {
 	    Addr a;
-	    a.scope_id_ = 0;
 	    a.one();
 	    return a << hl;
 	  }
@@ -863,7 +853,7 @@ namespace openvpn {
       }
 
       union ipv6addr u;
-      unsigned int scope_id_;
+      unsigned int scope_id_ = 0;
     };
 
     OPENVPN_OSTREAM(Addr, to_string)
