@@ -433,7 +433,7 @@ namespace openvpn {
 	std::string server_override;
 	std::string port_override;
 	Protocol proto_override;
-	IP::Addr::Version proto_version_override;
+	IP::Addr::Version proto_version_override = IP::Addr::Version::UNSPEC;
 	TriStateSetting allowUnusedAddrFamilies;
 	int conn_timeout = 0;
 	bool tun_persist = false;
