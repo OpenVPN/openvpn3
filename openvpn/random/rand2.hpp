@@ -48,6 +48,11 @@ namespace openvpn {
     {
     }
 
+    bool defined() const
+    {
+      return rng && prng;
+    }
+
     RandomAPI::Ptr rng;
     RandomAPI::Ptr prng;
   };
