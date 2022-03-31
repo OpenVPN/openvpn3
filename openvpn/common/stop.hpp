@@ -99,6 +99,11 @@ namespace openvpn {
 	}
     }
 
+    static bool is_triggered(const Stop* stop)
+    {
+      return stop && stop->stop_called;
+    }
+
   private:
     Stop(const Stop&) = delete;
     Stop& operator=(const Stop&) = delete;
