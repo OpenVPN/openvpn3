@@ -32,6 +32,12 @@
 
 #include <openvpn/openssl/compat.hpp>
 
+// FIXME: don't use deprecated functions with OpenSSL 3
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 namespace openvpn {
   using ssl_external_pki = SSLFactoryAPI::ssl_external_pki;
 
@@ -218,7 +224,7 @@ namespace openvpn {
     unsigned int n_errors;
   };
 
-  /* The OpenSSL EC_* methods we are using here are only available for OpennSSL 1.1.0 and later */
+  /* The OpenSSL EC_* methods we are using here are only available for OpenSSL 1.1.0 and later */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
   class ExternalPKIECImpl : public ExternalPKIImpl
   {
@@ -417,3 +423,7 @@ namespace openvpn {
 #endif
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC) */
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#pragma GCC diagnostic pop
+#endif
