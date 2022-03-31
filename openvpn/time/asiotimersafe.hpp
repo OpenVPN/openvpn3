@@ -32,6 +32,8 @@ namespace openvpn {
   class AsioTimerSafe
   {
   public:
+    typedef std::unique_ptr<AsioTimerSafe> UPtr;
+
     AsioTimerSafe(openvpn_io::io_context& io_context)
       : timer_(io_context),
 	epoch_(new Epoch)

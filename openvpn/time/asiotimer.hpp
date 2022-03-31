@@ -22,10 +22,10 @@
 // Create an Asio time_traits class to allow Asio to natively handle
 // our Time and Time::Duration classes.
 
-#ifndef OPENVPN_TIME_ASIOTIMER_H
-#define OPENVPN_TIME_ASIOTIMER_H
+#pragma once
 
 #include <chrono>
+#include <memory>
 
 #include <openvpn/io/io.hpp> // was: #include <asio/basic_waitable_timer.hpp>
 
@@ -64,6 +64,8 @@ namespace openvpn {
   class AsioTimer : public openvpn_io::basic_waitable_timer<AsioClock>
   {
   public:
+    typedef std::unique_ptr<AsioTimer> UPtr;
+
     AsioTimer(openvpn_io::io_context& io_context)
       : openvpn_io::basic_waitable_timer<AsioClock>(io_context)
     {
@@ -80,5 +82,3 @@ namespace openvpn {
     }
   };
 }
-
-#endif
