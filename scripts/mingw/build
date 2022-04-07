@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 DL="${DL:-/tmp/dl}"
 DEP_DIR_PREFIX=$PWD/deps
@@ -114,8 +114,8 @@ build_openssl()
 
     [ "$ARCH" == "x86_64" ] && OUT="mingw64" || OUT="mingw"
     make clean || true
-    ./Configure --prefix=$DEP_DIR_PREFIX-$ARCH no-idea no-mdc2 no-rc5 shared $OUT --cross-compile-prefix=$ARCH-w64-mingw32-
-    make && make -j1 install || true
+    ./Configure --prefix=$DEP_DIR_PREFIX-$ARCH --libdir=lib no-idea no-mdc2 no-rc5 shared $OUT --cross-compile-prefix=$ARCH-w64-mingw32-
+    make && make install
 
     popd
 }
