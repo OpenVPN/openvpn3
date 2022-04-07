@@ -126,12 +126,16 @@ TEST(ssl, enablelegacyProvider)
 
   auto f_nolegacy = sslcfg->new_factory();
 
-  sslcfg->enable_legacy_algorithms(true);
+  EXPECT_EQ(SSLLib::CryptoAPI::CipherContext::is_supported(f_nolegacy->libctx(), openvpn::CryptoAlgs::BF_CBC), false);
+
+  SSLLib::SSLAPI::Config::Ptr sslcfg_legacy(new SSLLib::SSLAPI::Config);
+  sslcfg_legacy->set_local_cert_enabled(false);
+  sslcfg_legacy->set_flags(SSLConst::NO_VERIFY_PEER);
+  sslcfg_legacy->set_rng(rng);
+  sslcfg_legacy->enable_legacy_algorithms(true);
 
   /* Should not throw an error */
-  auto f_legacy = sslcfg->new_factory();
-
-  EXPECT_EQ(SSLLib::CryptoAPI::CipherContext::is_supported(f_nolegacy->libctx(), openvpn::CryptoAlgs::BF_CBC), false);
+  auto f_legacy = sslcfg_legacy->new_factory();
 
   EXPECT_EQ(SSLLib::CryptoAPI::CipherContext::is_supported(f_legacy->libctx(), openvpn::CryptoAlgs::BF_CBC), true);
 }
