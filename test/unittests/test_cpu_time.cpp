@@ -112,6 +112,7 @@ namespace unittests
         {
             d += gen();
         }
+        (void)d;
     }
 
 
