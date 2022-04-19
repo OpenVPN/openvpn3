@@ -125,7 +125,7 @@ namespace openvpn {
     // point to objects of type memneq_t.
     inline bool memneq_deref_ok(const void *a, const void *b)
     {
-      return memneq_unaligned_ok || (is_aligned<const void *, memneq_t>(a)|is_aligned<const void *, memneq_t>(b));
+      return memneq_unaligned_ok || (is_aligned<const void *, memneq_t>(a)||is_aligned<const void *, memneq_t>(b));
     }
 
     // Constant-time memory equality method.  Can be used in
