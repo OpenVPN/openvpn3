@@ -67,8 +67,6 @@ enum {
   OVPN_PEER_ID_UNDEF = 0x00FFFFFF,
 };
 
-OPENVPN_EXCEPTION(dco_error);
-
 class ClientConfig : public DCO,
                      public TransportClientFactory,
                      public TunClientFactory {

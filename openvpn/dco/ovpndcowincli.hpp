@@ -184,10 +184,13 @@ protected:
       buf_.mutable_buffer_clamp(),
       [self = Ptr(this)](const openvpn_io::error_code &error,
 			 const size_t bytes_recvd) {
+	if (self->halt)
+	  return;
 	if (!error) {
 	  self->buf_.set_size(bytes_recvd);
 	  self->transport_parent->transport_recv(self->buf_);
-	  self->queue_read_();
+	  if (!self->halt)
+	    self->queue_read_();
 	} else if (!self->halt) {
 	  self->stop_();
 	  self->transport_parent->transport_error(Error::TRANSPORT_ERROR,
@@ -214,7 +217,8 @@ protected:
       std::ostringstream os;
       halt = true;
       async_resolve_cancel();
-      tun_setup_->destroy(os);
+      if (tun_setup_)
+	tun_setup_->destroy(os);
       handle_.reset();
       OPENVPN_LOG_STRING(os.str());
     }
@@ -298,8 +302,7 @@ protected:
   void add_crypto_(const CryptoDCInstance::RekeyType type,
                    const KoRekey::KeyConfig *kc) {
     if (kc->cipher_alg != OVPN_CIPHER_ALG_AES_GCM) {
-      OPENVPN_LOG("unsupported cipher for DCO");
-      throw dco_error();
+      throw ErrorCode(Error::TUN_SETUP_FAILED, true, "unsupported cipher for DCO");
     }
 
     OVPN_CRYPTO_DATA data;
@@ -360,9 +363,9 @@ protected:
 	ov->complete(error, 0);
       }
 
-      OPENVPN_LOG("DeviceIoControl(" << code_str.at(code) << ")"
-		  << " failed with code " << error_code);
-      throw dco_error();
+      std::ostringstream os;
+      os << "DeviceIoControl(" << code_str.at(code) << ")" << " failed with code " << error_code;
+      throw ErrorCode(Error::TUN_SETUP_FAILED, true, os.str());
     }
     return ERROR_SUCCESS;
   }
