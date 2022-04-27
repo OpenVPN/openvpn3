@@ -35,6 +35,8 @@
 #include <openvpn/addr/ipv6.hpp>
 #include <openvpn/addr/iperr.hpp>
 
+#define OPENVPN_IP_THROW(ERR) throw openvpn::IP::ip_exception(ERR)
+
 namespace openvpn {
   // This is our fundamental IP address class that handles IPv4 or IPv6
   // IP addresses.  It is implemented as a discriminated union of IPv4::Addr
@@ -107,10 +109,10 @@ namespace openvpn {
 	openvpn_io::error_code ec;
 	openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
 	if (ec)
-	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
+	  OPENVPN_IP_THROW(internal::format_error(ipstr, title, "", ec));
 	const Addr ret = from_asio(a);
 	if (required_version != UNSPEC && required_version != ret.ver)
-	  throw ip_exception(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
+	  OPENVPN_IP_THROW(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
 	return ret;
       }
 
@@ -149,7 +151,7 @@ namespace openvpn {
       void validate_version(const TITLE& title, const Version required_version) const
       {
 	if (required_version != UNSPEC && required_version != ver)
-	  throw ip_exception(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
+	  OPENVPN_IP_THROW(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
       }
 
 #else
@@ -190,7 +192,7 @@ namespace openvpn {
       void validate_version(const char *title, Version required_version) const
       {
 	if (required_version != UNSPEC && required_version != ver)
-	  throw ip_exception(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
+	  OPENVPN_IP_THROW(internal::format_error(to_string(), title, version_string_static(required_version), "wrong IP version"));
       }
 
 #ifndef SWIGPYTHON
@@ -218,10 +220,10 @@ namespace openvpn {
 	openvpn_io::error_code ec;
 	openvpn_io::ip::address a = openvpn_io::ip::make_address(ipstr, ec);
 	if (ec)
-	  throw ip_exception(internal::format_error(ipstr, title, "", ec));
+	  OPENVPN_IP_THROW(internal::format_error(ipstr, title, "", ec));
 	const Addr ret = from_asio(a);
 	if (required_version != UNSPEC && required_version != ret.ver)
-	  throw ip_exception(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
+	  OPENVPN_IP_THROW(internal::format_error(ipstr, title, version_string_static(required_version), "wrong IP version"));
 	return ret;
       }
 
@@ -255,7 +257,7 @@ namespace openvpn {
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_hex(s));
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("from_hex: address unspecified");
       }
 
       static Addr from_ipv4(IPv4::Addr addr)
@@ -279,7 +281,7 @@ namespace openvpn {
 	if (ver == V4)
 	  return u.v4;
 	else
-	  throw ip_exception("address is not IPv4");
+	  OPENVPN_IP_THROW("to_ipv4: address is not IPv4");
       }
 
       IPv4::Addr to_ipv4_zero() const
@@ -289,7 +291,7 @@ namespace openvpn {
 	else if (ver == UNSPEC)
 	  return IPv4::Addr::from_zero();
 	else
-	  throw ip_exception("address is not IPv4 (zero)");
+	  OPENVPN_IP_THROW("to_ipv4_zero: address is not IPv4");
       }
 
       const IPv6::Addr& to_ipv6() const
@@ -297,7 +299,7 @@ namespace openvpn {
 	if (ver == V6)
 	  return u.v6;
 	else
-	  throw ip_exception("address is not IPv6");
+	  OPENVPN_IP_THROW("to_ipv6: address is not IPv6");
       }
 
       IPv6::Addr to_ipv6_zero() const
@@ -307,7 +309,7 @@ namespace openvpn {
 	else if (ver == UNSPEC)
 	  return IPv6::Addr::from_zero();
 	else
-	  throw ip_exception("address is not IPv6 (zero)");
+	  OPENVPN_IP_THROW("to_ipv6_zero: address is not IPv6");
       }
 
       const IPv4::Addr& to_ipv4_nocheck() const
@@ -342,7 +344,7 @@ namespace openvpn {
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_ulong(ul));
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("from_ulong: address unspecified");
       }
 
       // return *this as a ulong, will raise exception on overflow
@@ -353,7 +355,7 @@ namespace openvpn {
 	else if (ver == V6)
 	  return u.v6.to_ulong();
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("to_ulong: address unspecified");
       }
 
       static Addr from_long(Version v, long ul)
@@ -363,7 +365,7 @@ namespace openvpn {
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_long(ul));
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("from_long: address unspecified");
       }
 
       // return *this as a long, will raise exception on overflow
@@ -374,7 +376,7 @@ namespace openvpn {
 	else if (ver == V6)
 	  return u.v6.to_long();
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("to_long: address unspecified");
       }
 
       // return Addr from 16 byte binary string
@@ -413,7 +415,7 @@ namespace openvpn {
 	else if (ver == V6)
 	  u.v6.to_byte_string(bytestr);
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("to_byte_string_variable: address unspecified");
       }
 
       std::uint32_t to_uint32_net() const // return value in net byte order
@@ -432,7 +434,7 @@ namespace openvpn {
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_zero());
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("from_zero: address unspecified");
       }
 
       // construct an address where all bits are zero
@@ -443,7 +445,7 @@ namespace openvpn {
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_one());
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("from_one: address unspecified");
       }
 
       // construct an address where all bits are one
@@ -454,7 +456,7 @@ namespace openvpn {
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_zero_complement());
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("from_zero_complement: address unspecified");
       }
 
       // validate the prefix length for the IP version
@@ -481,7 +483,7 @@ namespace openvpn {
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::netmask_from_prefix_len(prefix_len));
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("netmask_from_prefix_len: address unspecified");
       }
 
       // build a netmask using *this as extent
@@ -492,7 +494,7 @@ namespace openvpn {
 	else if (ver == V6)
 	  return from_ipv6(u.v6.netmask_from_extent());
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("netmask_from_extent: address unspecified");
       }
 
       std::string to_string() const
@@ -525,7 +527,7 @@ namespace openvpn {
 	else if (ver == V6)
 	  return u.v6.to_hex();
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("to_hex: address unspecified");
       }
 
       std::string arpa() const
@@ -535,7 +537,7 @@ namespace openvpn {
 	else if (ver == V6)
 	  return u.v6.arpa();
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("arpa: address unspecified");
       }
 
       static Addr from_asio(const openvpn_io::ip::address& addr)
@@ -555,7 +557,7 @@ namespace openvpn {
 	    return a;
 	  }
 	else
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("from_asio: address unspecified");
       }
 
       openvpn_io::ip::address to_asio() const
@@ -567,7 +569,7 @@ namespace openvpn {
 	  case V6:
 	    return openvpn_io::ip::address_v6(u.v6.to_asio());
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("to_asio: address unspecified");
 	  }
       }
 
@@ -589,7 +591,7 @@ namespace openvpn {
 	      return ret;
 	    }
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("operator+: address unspecified");
 	  }
       }
 
@@ -600,7 +602,7 @@ namespace openvpn {
 #define OPENVPN_IP_OPERATOR_BINOP(OP)		       \
       Addr operator OP (const Addr& other) const {     \
 	if (ver != other.ver)                          \
-	  throw ip_exception("version inconsistency"); \
+	  OPENVPN_IP_THROW("binop: version inconsistency"); \
 	switch (ver)                                   \
 	  {                                            \
 	  case V4:                                     \
@@ -618,7 +620,7 @@ namespace openvpn {
 	      return ret;                              \
 	    }                                          \
 	  default:                                     \
-	    throw ip_exception("address unspecified"); \
+	    OPENVPN_IP_THROW("binop: address unspecified"); \
 	  }                                            \
       }
 
@@ -650,7 +652,7 @@ namespace openvpn {
 	      return ret;
 	    }
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("operator<<: address unspecified");
 	  }
       }
 
@@ -672,7 +674,7 @@ namespace openvpn {
 	      return ret;
 	    }
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("operator>>: address unspecified");
 	  }
       }
 
@@ -694,7 +696,7 @@ namespace openvpn {
 	      return ret;
 	    }
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("operator~: address unspecified");
 	  }
       }
 
@@ -716,7 +718,7 @@ namespace openvpn {
 	      return ret;
 	    }
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("network_addr: address unspecified");
 	  }
       }
 
@@ -872,7 +874,7 @@ namespace openvpn {
 	  case V6:
 	    return 1;
 	  default:
-	    throw ip_exception("version index undefined");
+	    OPENVPN_IP_THROW("version_index: version index undefined");
 	  }
       }
 
@@ -902,7 +904,7 @@ namespace openvpn {
       void verify_version_consistency(const Addr& other) const
       {
 	if (!is_compatible(other))
-	  throw ip_exception("version inconsistency");
+	  OPENVPN_IP_THROW("verify_version_consistency: version inconsistency");
       }
 
       // throw exception if address is not a valid netmask
@@ -922,7 +924,7 @@ namespace openvpn {
 	  case V6:
 	    return u.v6.prefix_len();
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("prefix_len: address unspecified");
 	  }
       }
 
@@ -942,7 +944,7 @@ namespace openvpn {
 	  case V6:
 	    return u.v6.host_len();
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("host_len: address unspecified");
 	  }
       }
 
@@ -956,7 +958,7 @@ namespace openvpn {
 	  case V6:
 	    return from_ipv6(u.v6.extent_from_netmask());
 	  default:
-	    throw ip_exception("address unspecified");
+	    OPENVPN_IP_THROW("extent_from_netmask: address unspecified");
 	  }
       }
 

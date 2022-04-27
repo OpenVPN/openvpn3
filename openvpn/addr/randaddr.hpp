@@ -49,7 +49,7 @@ namespace openvpn {
 	case Addr::V6:
 	  return Addr::from_ipv6(random_addr_v6(prng));
 	default:
-	  throw ip_exception("address unspecified");
+	  OPENVPN_IP_THROW("random_addr: address unspecified");
 	}
     }
 
