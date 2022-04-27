@@ -150,6 +150,13 @@ namespace openvpn {
 	return neq;
       }
 
+      bool password_eq(const Creds& rhs) const
+      {
+	bool neq = crypto::str_neq(password, rhs.password);
+	atomic_thread_fence(std::memory_order_acq_rel);
+	return !neq;
+      }
+
       std::string to_string() const
       {
 	return username + '/' + password;
