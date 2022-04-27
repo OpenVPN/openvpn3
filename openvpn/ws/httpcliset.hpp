@@ -742,6 +742,7 @@ namespace openvpn {
 	    ts->error_recovery->retry(*ts, t);
 
 	  // init and attach HTTPStateContainer
+	  //OPENVPN_LOG("******* HTTPStateContainer alive=" << ts->alive() << " error_retry=" << error_retry << " n_clients=" << parent->clients.size());
 	  if (!ts->alive())
 	    ts->hsc.construct(parent->io_context, ts->http_config);
 	  ts->hsc.attach(this);
