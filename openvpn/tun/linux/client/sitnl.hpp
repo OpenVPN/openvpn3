@@ -36,10 +36,12 @@
 #include <openvpn/addr/route.hpp>
 
 
+#ifndef OPENVPN_LOG_RTNL
 #ifdef DEBUG_RTNL
 #define OPENVPN_LOG_RTNL(_x) OPENVPN_LOG(_x)
 #else
 #define OPENVPN_LOG_RTNL(_x)
+#endif
 #endif
 
 namespace openvpn {
