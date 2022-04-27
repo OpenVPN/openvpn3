@@ -491,6 +491,8 @@ out:
 	  rta = RTA_NEXT(rta, len);
 	}
 
+	OPENVPN_LOG_RTNL(__func__ << ": ROUTE " << route.to_string() << " metric=" << metric << " ifindex=" << ifindex << " proto=" << int(r->rtm_protocol) << " scope=" << int(r->rtm_scope) << " type=" << int(r->rtm_type) << " table=" << int(r->rtm_table));
+
 	if (!gw.defined() || ifindex <= 0)
 	{
 	  return 0;
