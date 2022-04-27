@@ -458,10 +458,12 @@ out:
 	      switch (res->family)
 	      {
 		case AF_INET:
-		  route = IP::Route(IPv4::Addr::from_bytes_net(bytestr).to_string() + "/" + std::to_string(r->rtm_dst_len));
+		  route = IP::Route(IP::Addr::from_ipv4(IPv4::Addr::from_bytes_net(bytestr)), r->rtm_dst_len);
+		  route.validate_prefix_length("SITNL route4");
 		  break;
 		case AF_INET6:
-		  route = IP::Route(IPv6::Addr::from_byte_string(bytestr).to_string() + "/" + std::to_string(r->rtm_dst_len));
+		  route = IP::Route(IP::Addr::from_ipv6(IPv6::Addr::from_byte_string(bytestr)), r->rtm_dst_len);
+		  route.validate_prefix_length("SITNL route6");
 		  break;
 	      }
 	    }
