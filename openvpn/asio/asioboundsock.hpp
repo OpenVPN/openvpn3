@@ -45,24 +45,41 @@ namespace openvpn {
       {
       }
 
-      // if port 0, kernel will dynamically allocate free port
+      // May be called twice with IPv4 and IPv6 address.
+      // If port 0, kernel will dynamically allocate free port.
       void bind_local(const IP::Addr& addr, const unsigned short port=0)
       {
-	bind_local_addr = addr;
-	bind_local_port = port;
+	switch (addr.version())
+	  {
+	  case IP::Addr::V4:
+	    v4.bind_local(addr.to_ipv4(), port);
+	    break;
+	  case IP::Addr::V6:
+	    v6.bind_local(addr.to_ipv6(), port);
+	    break;
+	  default:
+	    return;
+	  }
       }
 
       std::string to_string() const
       {
 	std::string ret;
 	ret.reserve(64);
-	if (bind_local_addr.defined())
+
+	if (v4.defined())
 	  {
-	    ret += "local=[";
-	    ret += bind_local_addr.to_string();
-	    ret += "]:";
-	    ret += openvpn::to_string(bind_local_port);
+	    ret += "local4=";
+	    ret += v4.to_string();
 	  }
+	if (v6.defined())
+	  {
+	    if (!ret.empty())
+	      ret += ' ';
+	    ret += "local6=";
+	    ret += v6.to_string();
+	  }
+
 	try {
 	  const std::string re = openvpn::to_string(remote_endpoint());
 	  if (!ret.empty())
@@ -77,20 +94,59 @@ namespace openvpn {
       }
 
     protected:
+      template <typename IP_ADDR>
+      class Proto
+      {
+      public:
+	Proto()
+	{
+	  local_.zero();
+	  port_ = 0;
+	}
+
+	bool defined() const
+	{
+	  return local_.specified();
+	}
+
+	void bind_local(const IP_ADDR& local, const unsigned short port)
+	{
+	  local_ = local;
+	  port_ = port;
+	}
+
+	template <typename PARENT>
+	void post_open(PARENT* parent, openvpn_io::error_code& ec) const
+	{
+	  if (local_.specified())
+	    {
+	      parent->set_option(openvpn_io::socket_base::reuse_address(true), ec);
+	      if (!ec)
+		parent->bind(openvpn_io::ip::tcp::endpoint(local_.to_asio(), port_), ec);
+	    }
+	}
+
+	std::string to_string() const
+	{
+	  return '[' + local_.to_string() + "]:" + std::to_string(port_);
+	}
+
+      private:
+	IP_ADDR local_;
+	unsigned short port_;
+      };
+
       virtual void async_connect_post_open(const protocol_type& protocol, openvpn_io::error_code& ec) override
       {
-	if (bind_local_addr.defined())
-	  {
-	    set_option(openvpn_io::socket_base::reuse_address(true), ec);
-	    if (ec)
-	      return;
-	    bind(openvpn_io::ip::tcp::endpoint(bind_local_addr.to_asio(), bind_local_port), ec);
-	  }
+	if (protocol == openvpn_io::ip::tcp::v4())
+	  v4.post_open(this, ec);
+	else if (protocol == openvpn_io::ip::tcp::v6())
+	  v6.post_open(this, ec);
       }
 
     private:
-      IP::Addr bind_local_addr;
-      unsigned short bind_local_port = 0;
+      Proto<IPv4::Addr> v4;
+      Proto<IPv6::Addr> v6;
     };
 
   }
