@@ -90,7 +90,7 @@ namespace openvpn {
 #endif
 
 #if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
-      virtual bool alt_routing_enabled()
+      virtual bool alt_routing_enabled() const
       {
 	return false;
       }
@@ -214,7 +214,7 @@ namespace openvpn {
 	return proto + socket.to_string();
       }
 
-      virtual bool alt_routing_enabled() override
+      virtual bool alt_routing_enabled() const override
       {
 	return socket.alt_routing_enabled();
       }
