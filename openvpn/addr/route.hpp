@@ -86,8 +86,7 @@ namespace openvpn {
 	if (pair.size() >= 2)
 	  {
 	    r.prefix_len = parse_number_throw<unsigned int>(pair[1], "prefix length");
-	    if (r.prefix_len > r.addr.size())
-	      OPENVPN_THROW(route_error, (!StringTempl::empty(title) ? title : "route") << " : bad prefix length : " << rtstr);
+	    r.validate_prefix_length(title);
 	  }
 	else
 	  r.prefix_len = r.addr.size();
@@ -97,6 +96,13 @@ namespace openvpn {
       static RouteType from_string(const std::string& rtstr)
       {
 	return from_string(rtstr, nullptr);
+      }
+
+      template <typename TITLE>
+      void validate_prefix_length(const TITLE& title)
+      {
+	if (!is_valid())
+	  OPENVPN_THROW(route_error, (!StringTempl::empty(title) ? title : "route") << ' ' << addr.to_string() << " : bad prefix length : " << prefix_len);
       }
 
 #else
@@ -121,12 +127,17 @@ namespace openvpn {
 	if (pair.size() >= 2)
 	  {
 	    r.prefix_len = parse_number_throw<unsigned int>(pair[1], "prefix length");
-	    if (r.prefix_len > r.addr.size())
-	      OPENVPN_THROW(route_error, (title ? title : "route") << " : bad prefix length : " << rtstr);
+	    r.validate_prefix_length(title);
 	  }
 	else
 	  r.prefix_len = r.addr.size();
 	return r;
+      }
+
+      void validate_prefix_length(const char *title = nullptr)
+      {
+	if (!is_valid())
+	  OPENVPN_THROW(route_error, (title ? title : "route") << ' ' << addr.to_string() << " : bad prefix length : " << prefix_len);
       }
 
 #endif
@@ -169,6 +180,11 @@ namespace openvpn {
       bool is_canonical() const
       {
 	return (addr & netmask()) == addr;
+      }
+
+      bool is_valid() const
+      {
+	return prefix_len <= addr.size();
       }
 
       void force_canonical()
