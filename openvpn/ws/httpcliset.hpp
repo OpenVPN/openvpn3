@@ -543,7 +543,7 @@ namespace openvpn {
 	  cs->new_request(ts);
 	  if (sps)
 	    {
-	      while (cs->clients.size())
+	      while (cs->clients.size() && !io_context->stopped())
 		io_context->run_one();
 	    }
 	  else
@@ -556,7 +556,7 @@ namespace openvpn {
 	    io_context->poll();   // execute completion handlers
 	    throw;
 	  }
-	if (sps)
+	if (sps && !io_context->stopped())
 	  ts->hsc.persist_io_context(std::move(io_context));
       }
 
