@@ -351,9 +351,9 @@ namespace openvpn {
       int local_peer_id = -1;  // -1 to disable
 
       // MTU
-      unsigned int tun_mtu = 1500;
+      unsigned int tun_mtu = TUN_MTU_DEFAULT;
       MSSParms mss_parms;
-      unsigned int mss_inter = 0;
+      unsigned int mss_fix = 0;
 
       // Debugging
       int debug_level = 1;
@@ -571,6 +571,19 @@ namespace openvpn {
 
 	// mssfix
 	mss_parms.parse(opt, true);
+	if (mss_parms.mssfix_default)
+	  {
+	    if (tun_mtu == TUN_MTU_DEFAULT)
+	      {
+		mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
+		mss_parms.mtu = true;
+	      }
+	    else
+	      {
+		mss_parms.mssfix = tun_mtu;
+		mss_parms.fixed = true;
+	      }
+	  }
 
 	// load parameters that can be present in both config file or pushed options
 	load_common(opt, pco, server ? LOAD_COMMON_SERVER : LOAD_COMMON_CLIENT);
@@ -1636,8 +1649,8 @@ namespace openvpn {
 		compress->decompress(buf);
 
 	      // set MSS for segments server can receive
-	      if (proto.config->mss_inter > 0)
-		MSSFix::mssfix(buf, proto.config->mss_inter);
+	      if (proto.config->mss_fix > 0)
+		MSSFix::mssfix(buf, proto.config->mss_fix);
 	    }
 	  else
 	    buf.reset_size(); // no crypto context available
@@ -1830,6 +1843,67 @@ namespace openvpn {
 	dck.swap(data_channel_key);
       }
 
+      void calculate_mssfix(Config& c)
+      {
+	if (c.mss_parms.fixed)
+	  {
+	    // substract IPv4 and TCP overhead, mssfix method will add extra 20 bytes for IPv6
+	    c.mss_fix = c.mss_parms.mssfix - (20 + 20);
+	    OPENVPN_LOG("fixed mssfix=" << c.mss_fix);
+	    return;
+	  }
+
+	int payload_overhead = 0;
+
+	// compv2 doesn't increase payload size
+	switch (c.comp_ctx.type())
+	  {
+	  case CompressContext::NONE:
+	  case CompressContext::COMP_STUBv2:
+	  case CompressContext::LZ4v2:
+	    break;
+	  default:
+	    payload_overhead += 1;
+	  }
+
+	if (CryptoAlgs::mode(c.dc.cipher()) == CryptoAlgs::CBC_HMAC)
+	  payload_overhead += PacketID::size(PacketID::SHORT_FORM);
+
+	// account for IPv4 and TCP headers of the payload, mssfix method will add 20 extra bytes if payload is IPv6
+	payload_overhead += 20 + 20;
+
+	int overhead = c.protocol.extra_transport_bytes() +
+	  (enable_op32 ? OP_SIZE_V2 : 1) +
+	  c.dc.context().encap_overhead();
+
+	// in CBC mode, the packet id is part of the payload size / overhead
+	if (CryptoAlgs::mode(c.dc.cipher()) != CryptoAlgs::CBC_HMAC)
+	  overhead += PacketID::size(PacketID::SHORT_FORM);
+
+	if (c.mss_parms.mtu)
+	  {
+	    overhead += c.protocol.is_ipv6() ? sizeof(struct IPv6Header) : sizeof(struct IPv4Header);
+	    overhead += proto.is_tcp() ? sizeof(struct TCPHeader) : sizeof(struct UDPHeader);
+	  }
+
+	int target = c.mss_parms.mssfix - overhead;
+	if (CryptoAlgs::mode(c.dc.cipher()) == CryptoAlgs::CBC_HMAC)
+	  {
+	    // openvpn3 crypto includes blocksize in overhead, but we can be a bit smarter here
+	    // and instead make sure that resulting ciphertext size (which is always multiple blocksize)
+	    // is not larger than target by running down target to the nearest multiple of multiple and substracting 1.
+
+	    int block_size = CryptoAlgs::block_size(c.dc.cipher());
+	    target += block_size;
+	    target = (target / block_size) * block_size;
+	    target -= 1;
+	  }
+
+	c.mss_fix = target - payload_overhead;
+	OPENVPN_LOG("mssfix=" << c.mss_fix << " (upper bound=" << c.mss_parms.mssfix << ", overhead=" <<
+	  overhead << ", payload_overhead=" << payload_overhead << ", target=" << target << ")");
+      }
+
       // Initialize the components of the OpenVPN data channel protocol
       void init_data_channel()
       {
@@ -1890,34 +1964,7 @@ namespace openvpn {
 	// cache op32 for hot path in do_encrypt
 	cache_op32();
 
-	int crypto_encap = (enable_op32 ? OP_SIZE_V2 : 1) +
-			   c.comp_ctx.extra_payload_bytes() +
-			   PacketID::size(PacketID::SHORT_FORM) +
-			   c.dc.context().encap_overhead();
-
-	int transport_encap = 0;
-	if (c.mss_parms.mtu)
-	  {
-	    if (proto.is_tcp())
-	      transport_encap += sizeof(struct TCPHeader);
-	    else
-	      transport_encap += sizeof(struct UDPHeader);
-
-	    if (c.protocol.is_ipv6())
-	      transport_encap += sizeof(struct IPv6Header);
-	    else
-	      transport_encap += sizeof(struct IPv4Header);
-
-	    transport_encap += c.protocol.extra_transport_bytes();
-	  }
-
-	if (c.mss_parms.mssfix != 0)
-	  {
-	    OPENVPN_LOG_PROTO("MTU mssfix=" << c.mss_parms.mssfix <<
-			      " crypto_encap=" << crypto_encap <<
-			      " transport_encap=" << transport_encap);
-	    c.mss_inter = c.mss_parms.mssfix - (crypto_encap + transport_encap);
-	  }
+	calculate_mssfix(c);
       }
 
       void data_limit_notify(const DataLimit::Mode cdl_mode,
@@ -2069,8 +2116,8 @@ namespace openvpn {
 	bool pid_wrap;
 
 	// set MSS for segments client can receive
-	if (proto.config->mss_inter > 0)
-	  MSSFix::mssfix(buf, proto.config->mss_inter);
+	if (proto.config->mss_fix > 0)
+	  MSSFix::mssfix(buf, proto.config->mss_fix);
 
 	// compress packet
 	if (compress)

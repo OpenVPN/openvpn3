@@ -32,6 +32,7 @@
 #include <openvpn/time/time.hpp>
 #include <openvpn/transport/client/transbase.hpp>
 #include <openvpn/transport/dco.hpp>
+#include <openvpn/tun/tunmtu.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 
@@ -93,7 +94,7 @@ public:
 
     // set a default MTU
     if (!tun.tun_prop.mtu)
-      tun.tun_prop.mtu = 1500;
+      tun.tun_prop.mtu = TUN_MTU_DEFAULT;
 
     // parse "dev" option
     {

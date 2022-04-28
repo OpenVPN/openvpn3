@@ -36,7 +36,7 @@
 namespace openvpn {
   class MSSFix {
   public:
-    static void mssfix(BufferAllocated& buf, int mss_inter)
+    static void mssfix(BufferAllocated& buf, int mss_fix)
     {
       if (buf.empty())
 	return;
@@ -61,7 +61,7 @@ namespace openvpn {
 	      TCPHeader* tcphdr = (TCPHeader*)(buf.data() + ipv4hlen);
 	      int ip_payload_len = buf.length() - ipv4hlen;
 
-	      do_mssfix(tcphdr, mss_inter - (sizeof(struct IPv4Header) + sizeof(struct TCPHeader)), ip_payload_len);
+	      do_mssfix(tcphdr, mss_fix, ip_payload_len);
 	    }
 	}
 	break;
@@ -96,8 +96,8 @@ namespace openvpn {
 	  if (payload_len >= (int) sizeof(struct TCPHeader))
 	    {
 	      TCPHeader *tcphdr = (TCPHeader *)(buf.data() + sizeof(struct IPv6Header));
-	      do_mssfix(tcphdr, mss_inter - (sizeof(struct IPv6Header) + sizeof(struct TCPHeader)),
-			payload_len);
+	      // mssfix is calculated for IPv4, and since IPv6 header is 20 bytes larger we need to account for it
+	      do_mssfix(tcphdr, mss_fix - 20, payload_len);
 	    }
 	}
 	break;

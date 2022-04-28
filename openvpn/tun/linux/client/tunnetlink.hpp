@@ -97,7 +97,7 @@ namespace openvpn {
 
       std::string dev;
       bool up = true;
-      int mtu = 1500;
+      int mtu = TUN_MTU_DEFAULT;
     };
 
     struct NetlinkAddr4 : public Action

@@ -89,7 +89,7 @@ namespace openvpn {
       {
 	// set a default MTU
 	if (!tun_prop.mtu)
-	  tun_prop.mtu = 1500;
+	  tun_prop.mtu = TUN_MTU_DEFAULT;
 
 	// parse "dev" option
 	if (dev_name.empty())

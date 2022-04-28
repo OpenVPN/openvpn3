@@ -36,6 +36,7 @@
 #include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
+#include <openvpn/tun/tunmtu.hpp>
 #include <openvpn/tun/mac/client/tunsetup.hpp>
 
 #ifdef TEST_EER // test emulated exclude routes
@@ -199,7 +200,7 @@ namespace openvpn {
 
 		  // handle MTU default
 		  if (!po->mtu)
-		    po->mtu = 1500;
+		    po->mtu = TUN_MTU_DEFAULT;
 
 		  OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
 
