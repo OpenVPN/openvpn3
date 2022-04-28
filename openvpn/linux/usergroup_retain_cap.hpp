@@ -49,12 +49,17 @@ namespace openvpn {
       : SetUserGroup(user, group, strict),
 	retain_caps(retain_caps_arg)
     {
-      // get full root privileges
-      if (::setresuid(0, 0, 0))
-	{
-	  const int eno = errno;
-	  OPENVPN_THROW(user_group_err, "SetUserGroupRetainCap setresuid root fail: " << strerror_str(eno));
-	}
+      grab_root();
+    }
+
+    SetUserGroupRetainCap(const char *user,
+			  const char *group,
+			  const bool strict,
+			  std::initializer_list<cap_value_t> retain_caps_arg)
+      : SetUserGroup(user, group, strict),
+	retain_caps(retain_caps_arg)
+    {
+      grab_root();
     }
 
     // call first in all threads before user/group downgrade
@@ -182,6 +187,16 @@ namespace openvpn {
       const cap_t capabilities;
       const std::string title;
     };
+
+    void grab_root()
+    {
+      // get full root privileges
+      if (::setresuid(0, 0, 0))
+	{
+	  const int eno = errno;
+	  OPENVPN_THROW(user_group_err, "SetUserGroupRetainCap setresuid root fail: " << strerror_str(eno));
+	}
+    }
 
     const std::vector<cap_value_t> retain_caps;
   };
