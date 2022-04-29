@@ -85,6 +85,12 @@ public:
 
   std::string tun_name() const override { return "ovpn-dco-win"; }
 
+  void adjust_mss(int mss) override
+  {
+    OVPN_SET_PEER peer {-1, -1, mss};
+    dco_ioctl_(OVPN_IOCTL_SET_PEER, &peer, sizeof(peer));
+  }
+
   IP::Addr server_endpoint_addr() const override {
     return IP::Addr::from_asio(endpoint_.address());
   }

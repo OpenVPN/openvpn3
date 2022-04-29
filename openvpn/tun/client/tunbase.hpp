@@ -52,6 +52,8 @@ namespace openvpn {
 
     virtual std::string vpn_gw4() const { return std::string(); } // VPN gateways
     virtual std::string vpn_gw6() const { return std::string(); }
+
+    virtual void adjust_mss(int mss) {};
   };
 
   // Base class for parent of tun interface object, used to

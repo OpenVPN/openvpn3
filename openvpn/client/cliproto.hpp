@@ -608,6 +608,9 @@ namespace openvpn {
 		// initialize data channel after pushed options have been processed
 		Base::init_data_channel();
 
+		// we got pushed options and initializated crypto - now we can push mss to dco
+		tun->adjust_mss(conf().mss_fix);
+
 		// Allow ProtoContext to suggest an alignment adjustment
 		// hint for transport layer.
 		transport->reset_align_adjust(Base::align_adjust_hint());
