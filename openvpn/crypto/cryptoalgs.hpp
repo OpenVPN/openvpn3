@@ -287,7 +287,7 @@ namespace openvpn {
     }
 
 
-    inline void allow_dc_algs(const std::initializer_list<Type> types)
+    inline void allow_dc_algs(const std::list<Type> types)
     {
       for (auto& alg : algs)
 	alg.allow_dc(false);

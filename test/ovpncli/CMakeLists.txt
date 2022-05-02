@@ -48,6 +48,8 @@ if (WIN32)
     if (${CLI_OVPNDCOWIN})
         target_compile_definitions(ovpncliagent PRIVATE ENABLE_OVPNDCOWIN)
         target_compile_definitions(ovpncli PRIVATE ENABLE_OVPNDCOWIN)
+        target_link_libraries(ovpncli "bcrypt.lib")
+        target_link_libraries(ovpncliagent "bcrypt.lib")
     endif()
 endif ()
 

@@ -53,6 +53,8 @@ public:
   }
 
   bool transport_send_const(const Buffer &buf) override {
+    if (halt)
+      return false;
     return send_(buf);
   }
 
@@ -304,10 +306,6 @@ protected:
 
   void add_crypto_(const CryptoDCInstance::RekeyType type,
                    const KoRekey::KeyConfig *kc) {
-    if (kc->cipher_alg != OVPN_CIPHER_ALG_AES_GCM) {
-      throw ErrorCode(Error::TUN_SETUP_FAILED, true, "unsupported cipher for DCO");
-    }
-
     OVPN_CRYPTO_DATA data;
     ZeroMemory(&data, sizeof(data));
 
@@ -323,7 +321,7 @@ protected:
 
     data.KeyId = kc->key_id;
     data.PeerId = kc->remote_peer_id;
-    data.CipherAlg = OVPN_CIPHER_ALG::OVPN_CIPHER_ALG_AES_GCM;
+    data.CipherAlg = (OVPN_CIPHER_ALG)kc->cipher_alg;
     data.KeySlot = (type == CryptoDCInstance::ACTIVATE_PRIMARY
       ? OVPN_KEY_SLOT::OVPN_KEY_SLOT_PRIMARY
       : OVPN_KEY_SLOT::OVPN_KEY_SLOT_SECONDARY);
@@ -337,7 +335,6 @@ protected:
     std::ostringstream os;
     tun_setup_->establish(*po_, Win::module_name(), NULL, os, NULL);
     OPENVPN_LOG_STRING(os.str());
-
   }
 
   void swap_keys_() { dco_ioctl_(OVPN_IOCTL_SWAP_KEYS); }

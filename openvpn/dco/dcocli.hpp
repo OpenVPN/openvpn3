@@ -52,6 +52,7 @@
 #include <openvpn/tun/linux/client/genl.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
 #elif ENABLE_OVPNDCOWIN
+#include <bcrypt.h>
 #include <openvpn/dco/key.hpp>
 #include <openvpn/dco/ovpn-dco.h>
 #else
@@ -274,11 +275,15 @@ inline DCO::Ptr new_controller(TunBuilderBase* tb) {
   if (!OvpnDcoWinClient::available())
     return nullptr;
 
-  CryptoAlgs::allow_dc_algs({
-    CryptoAlgs::AES_128_GCM,
-    CryptoAlgs::AES_192_GCM,
-    CryptoAlgs::AES_256_GCM
-  });
+  std::list<CryptoAlgs::Type> algs { CryptoAlgs::AES_128_GCM, CryptoAlgs::AES_192_GCM, CryptoAlgs::AES_256_GCM };
+  BCRYPT_ALG_HANDLE h;
+  NTSTATUS status = BCryptOpenAlgorithmProvider(&h, L"CHACHA20_POLY1305", NULL, 0);
+  if (BCRYPT_SUCCESS(status)) {
+    BCryptCloseAlgorithmProvider(h, 0);
+    algs.push_back(CryptoAlgs::CHACHA20_POLY1305);
+  }
+
+  CryptoAlgs::allow_dc_algs(algs);
   return ClientConfig::new_controller(nullptr);
 }
 inline TransportClient::Ptr
