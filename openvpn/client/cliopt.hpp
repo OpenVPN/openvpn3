@@ -211,15 +211,6 @@ namespace openvpn {
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
     {
-#if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
-      if (config.dco)
-#if defined(USE_TUN_BUILDER)
-	dco = DCOTransport::new_controller(config.builder);
-#else
-	dco = DCOTransport::new_controller(nullptr);
-#endif
-#endif
-
       // parse general client options
       const ParseClientConfig pcc(opt);
 
@@ -254,7 +245,16 @@ namespace openvpn {
 							   !config.enable_nonpreferred_dcalgs,
 							   config.enable_legacy_algorithms);
 
-	  layer = cp_main->layer;
+#if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+      if (config.dco)
+#if defined(USE_TUN_BUILDER)
+	dco = DCOTransport::new_controller(config.builder);
+#else
+	dco = DCOTransport::new_controller(nullptr);
+#endif
+#endif
+
+      layer = cp_main->layer;
 
 #ifdef PRIVATE_TUNNEL_PROXY
       if (config.alt_proxy && !dco)
