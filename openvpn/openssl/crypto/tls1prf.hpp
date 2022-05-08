@@ -38,7 +38,7 @@ public:
 				  unsigned char *out1,
 				  const size_t olen) {
 	/* TODO use EVP_PKEY_CTX_new_from_name and library context for OpenSSL 3.0 but
-	 * this needs passing trhe library context down here.*/
+	 * this needs passing the library context down here.*/
 	using EVP_PKEY_CTX_ptr = std::unique_ptr<EVP_PKEY_CTX, decltype(&::EVP_PKEY_CTX_free)>;
 
 	EVP_PKEY_CTX_ptr pctx(EVP_PKEY_CTX_new_id(EVP_PKEY_TLS1_PRF, NULL), ::EVP_PKEY_CTX_free);

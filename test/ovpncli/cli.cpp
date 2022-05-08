@@ -81,6 +81,9 @@
 #include <openvpn/mbedtls/util/pkcs1.hpp>
 #elif defined(USE_OPENSSL)
 #include <openssl/evp.h>
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+#include <openssl/core_names.h>
+#endif
 #endif
 
 #if defined(OPENVPN_PLATFORM_WIN)
@@ -417,6 +420,159 @@ private:
       }
   }
 
+#ifdef USE_OPENSSL
+  void doOpenSSLSignature(ClientAPI::ExternalPKISignRequest &signreq) const
+  {
+	using PKEY_CTX_unique_ptr = std::unique_ptr<::EVP_PKEY_CTX, decltype(&::EVP_PKEY_CTX_free)>;
+
+	BufferAllocated signdata(256, BufferAllocated::GROW);
+	base64->decode(signdata, signreq.data);
+
+	EVP_PKEY* pkey = epki_pkey.obj();
+
+
+	PKEY_CTX_unique_ptr pkey_ctx(EVP_PKEY_CTX_new(pkey, nullptr), EVP_PKEY_CTX_free);
+
+	if(!(pkey_ctx))
+	  throw Exception("epki_sign failed, error creating PKEY ctx");
+
+
+	if ((EVP_PKEY_sign_init(pkey_ctx.get()) < 0))
+	{
+	  throw Exception("epki_sign failed, error in EVP_PKEY_sign_init: " + openssl_error());
+	}
+
+	if (signreq.algorithm == "RSA_PKCS1_PSS_PADDING")
+	{
+	  EVP_PKEY_CTX_set_rsa_padding(pkey_ctx.get(), RSA_PKCS1_PSS_PADDING);
+	}
+	else if (signreq.algorithm == "RSA_PKCS1_PADDING")
+	{
+	  EVP_PKEY_CTX_set_rsa_padding(pkey_ctx.get(), RSA_PKCS1_PADDING);
+	}
+	else if (signreq.algorithm == "RSA_NO_PADDING")
+	{
+	  EVP_PKEY_CTX_set_rsa_padding(pkey_ctx.get(), RSA_NO_PADDING);
+	}
+
+	/* determine the output length */
+	size_t outlen;
+
+	if ((EVP_PKEY_sign(pkey_ctx.get(), nullptr, &outlen, signdata.c_data(), signdata.size())) < 0)
+	{
+	  throw Exception("epki_sign failed, error signing data: " + openssl_error());
+	}
+
+	BufferAllocated sig(outlen, BufferAllocated::ARRAY);
+
+	if ((EVP_PKEY_sign(pkey_ctx.get(), sig.data(), &outlen, signdata.c_data(), signdata.size())) < 0)
+	{
+	  throw Exception("epki_sign failed, error signing data: " + openssl_error());
+	}
+
+	sig.set_size(outlen);
+	signreq.sig = base64->encode(sig);
+	OPENVPN_LOG("SIGNATURE[" << outlen << "]: " << signreq.sig);
+
+  }
+
+#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+  void doOpenSSLDigestSignature(ClientAPI::ExternalPKISignRequest &signreq)
+  {
+	/* technically implementing this without OpenSSL 3.0 is possible but
+	 * only the xkey_provider implementation for OpenSSL 3.0 requires this,
+	 * so in the cli.cpp, which is only a test cient, we skip this extra
+	 * effort and just use only the modern APIs in doOpenSSLDigestSignature
+	 */
+	throw Exception("epki_sign failed, digest sign only implemented in OpenSSL 3.0");
+  }
+#else
+  void doOpenSSLDigestSignature(ClientAPI::ExternalPKISignRequest &signreq)
+  {
+	EVP_PKEY_CTX* pkey_ctx = nullptr;
+	BufferAllocated signdata(256, BufferAllocated::GROW);
+	base64->decode(signdata, signreq.data);
+
+	using MD_unique_ptr = std::unique_ptr<::EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
+
+	MD_unique_ptr md(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+
+	if(!md)
+	  throw Exception("epki_sign failed, error creating MD ctx");
+
+	if (!signreq.saltlen.empty() && signreq.saltlen != "digest")
+	{
+	  throw Exception("epki_sign failed, only padding=digest supported" + openssl_error());
+	}
+
+	const char *padding = "none";
+
+	if (signreq.algorithm == "RSA_PKCS1_PSS_PADDING")
+	{
+	  padding = "pss";
+	}
+	else if (signreq.algorithm == "RSA_PKCS1_PADDING")
+	{
+	  padding = "pkcs1";
+	}
+	else if (signreq.algorithm == "RSA_NO_PADDING")
+	{
+	  padding = "none";
+	}
+
+	EVP_PKEY* pkey = epki_pkey.obj();
+	OSSL_PARAM params[6] = {OSSL_PARAM_END};
+
+	char *hashalg = const_cast<char *>(signreq.hashalg.c_str());
+	if (signreq.hashalg == "none")
+		hashalg = nullptr;
+
+	params[0] = OSSL_PARAM_construct_utf8_string(OSSL_SIGNATURE_PARAM_DIGEST, hashalg, 0);
+	params[1] = OSSL_PARAM_construct_utf8_string(OSSL_SIGNATURE_PARAM_PAD_MODE, const_cast<char *>(padding), 0);
+
+	if (EVP_PKEY_get_id(pkey) == EVP_PKEY_RSA && !signreq.saltlen.empty())
+	{
+	  /* The strings are used const in OpenSSL but the API definition has char * */
+	  char *saltlen = const_cast<char *>(signreq.saltlen.c_str());
+	  params[2] = OSSL_PARAM_construct_utf8_string(OSSL_SIGNATURE_PARAM_PSS_SALTLEN, saltlen, 0);
+	  params[3] = OSSL_PARAM_construct_utf8_string(OSSL_SIGNATURE_PARAM_MGF1_DIGEST, hashalg, 0);
+	  params[4] = OSSL_PARAM_construct_end();
+	}
+
+	EVP_DigestSignInit_ex(md.get(), &pkey_ctx, hashalg, nullptr,
+						  nullptr, pkey, params);
+
+	/* determine the output length */
+	size_t outlen;
+
+	if (EVP_DigestSign(md.get(), nullptr, &outlen, signdata.data(), signdata.size()) < 0)
+	{
+	  throw Exception("epki_sign failed, error signing data: " + openssl_error());
+	}
+
+	BufferAllocated sig(outlen, BufferAllocated::ARRAY);
+
+	if (EVP_DigestSign(md.get(), sig.data(), &outlen, signdata.data(), signdata.size()) < 0)
+	{
+	  throw Exception("epki_sign failed, error signing data: " + openssl_error());
+	}
+
+	sig.set_size(outlen);
+	signreq.sig = base64->encode(sig);
+	OPENVPN_LOG("SIGNATURE[" << outlen << "]: " << signreq.sig);
+  }
+#endif
+
+  void doOpenSSLSignRequest(ClientAPI::ExternalPKISignRequest &signreq)
+  {
+	if (signreq.hashalg.empty()) {
+	  doOpenSSLSignature(signreq);
+	} else {
+	  doOpenSSLDigestSignature(signreq);
+	}
+  }
+#endif
+
   virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest& signreq) override
   {
 #if defined(USE_MBEDTLS)
@@ -465,59 +621,14 @@ private:
 #elif defined(USE_OPENSSL)
       if (epki_pkey.defined())
       {
-        EVP_PKEY_CTX* pkey_ctx = nullptr;
         try {
-          BufferAllocated signdata(256, BufferAllocated::GROW);
-          base64->decode(signdata, signreq.data);
-
-          EVP_PKEY* pkey = epki_pkey.obj();
-
-
-          if(!(pkey_ctx = EVP_PKEY_CTX_new(pkey, NULL)))
-            throw Exception("epki_sign failed, error creating PKEY ctx");
-
-          if ((EVP_PKEY_sign_init(pkey_ctx) < 0))
-          {
-            throw Exception("epki_sign failed, error in EVP_PKEY_sign_init: " + openssl_error());
-          }
-
-          if (signreq.algorithm == "RSA_PKCS1_PADDING")
-          {
-            EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PADDING);
-          }
-          else if (signreq.algorithm == "RSA_NO_PADDING")
-          {
-            EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_NO_PADDING);
-          }
-
-          /* determine the output length */
-          std::size_t outlen;
-
-          if ((EVP_PKEY_sign(pkey_ctx, nullptr, &outlen, signdata.c_data(), signdata.size())) < 0)
-          {
-            throw Exception("epki_sign failed, error signing data: " + openssl_error());
-          }
-
-          BufferAllocated sig(outlen, BufferAllocated::ARRAY);
-
-
-          if ((EVP_PKEY_sign(pkey_ctx, sig.data(), &outlen, signdata.c_data(), signdata.size())) < 0)
-          {
-            throw Exception("epki_sign failed, error signing data: " + openssl_error());
-          }
-
-          sig.set_size(outlen);
-
-          // encode base64 signature
-          signreq.sig = base64->encode(sig);
-          OPENVPN_LOG("SIGNATURE[" << outlen << "]: " << signreq.sig);
-        }
+		  doOpenSSLSignRequest(signreq);
+		}
         catch (const std::exception& e)
         {
           signreq.error = true;
           signreq.errorText = std::string("external_pki_sign_request: ") + e.what();
         }
-        EVP_PKEY_CTX_free(pkey_ctx);
       }
       else
 #endif

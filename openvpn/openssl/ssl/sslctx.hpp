@@ -70,7 +70,13 @@
 #include <openvpn/ssl/sni_handler.hpp>
 #include <openvpn/ssl/iana_ciphers.hpp>
 #include <openvpn/openssl/util/error.hpp>
+#if ENABLE_EXTERNAL_PKI
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openvpn/openssl/pki/xkey.hpp>
+#else
 #include <openvpn/openssl/pki/extpki.hpp>
+#endif
+#endif
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/pki/crl.hpp>
 #include <openvpn/openssl/pki/pkey.hpp>
@@ -790,7 +796,7 @@ namespace openvpn {
       static void init_static()
       {
 	bmq_stream::init_static();
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER < 0x30000010L && !defined(OPENSSL_NO_EC) && defined(ENABLE_EXTERNAL_PKI)
 	ExternalPKIECImpl::init_static();
 #endif
 
@@ -1372,6 +1378,11 @@ namespace openvpn {
 	      // Set private key
 	      if (config->external_pki)
 		{
+#ifdef ENABLE_EXTERNAL_PKI
+#if OPENSSL_VERSION_NUMBER >= 0x30000010L
+		 epki = new XKeyExternalPKIImpl(ctx, config->cert.obj(), config->external_pki);
+
+#else
 		  auto certType = EVP_PKEY_id (X509_get0_pubkey(config->cert.obj()));
 		  if (certType == EVP_PKEY_RSA )
 		    {
@@ -1387,8 +1398,12 @@ namespace openvpn {
 		    {
 		      throw OpenSSLException("OpenSSLContext: pkey is neither RSA nor EC. Unsupported with external pki");
 		    }
+#endif
+#else
+			throw OpenSSLException("OpenSSLContext: External PKI is not enabled in this build. ");
+#endif
 		}
-	      else
+		else
 		{
 		  if (!config->pkey.defined())
 		    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");

@@ -32,20 +32,8 @@
 
 #include <openvpn/openssl/compat.hpp>
 
-// FIXME: don't use deprecated functions with OpenSSL 3
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 namespace openvpn {
   using ssl_external_pki = SSLFactoryAPI::ssl_external_pki;
-
-  class ExternalPKIImpl
-  {
-  public:
-    virtual ~ExternalPKIImpl() = default;
-  };
 
   class ExternalPKIRsaImpl : public ExternalPKIImpl
   {
@@ -166,7 +154,7 @@ namespace openvpn {
 
 	  /* get signature */
 	  std::string sig_b64;
-	  const bool status = self->external_pki->sign(from_b64, sig_b64, padding_algo);
+	  const bool status = self->external_pki->sign(from_b64, sig_b64, padding_algo, "", "");
 	  if (!status)
 	    throw ssl_external_pki("OpenSSL: could not obtain signature");
 
@@ -403,7 +391,7 @@ namespace openvpn {
 
       /* get signature */
       std::string sig_b64;
-      const bool status = external_pki->sign(dgst_b64, sig_b64, "ECDSA");
+      const bool status = external_pki->sign(dgst_b64, sig_b64, "ECDSA", "", "");
       if (!status)
 	throw ssl_external_pki("OpenSSL: could not obtain signature");
 
@@ -424,6 +412,3 @@ namespace openvpn {
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC) */
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#pragma GCC diagnostic pop
-#endif

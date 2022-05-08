@@ -454,17 +454,28 @@ namespace openvpn {
       std::string supportingChain; // (client writes)
     };
 
-    // Used to request an RSA signature.
+    // Used to request an external certificate signature.
     // algorithm will determinate what signature is expected:
-    // RSA_PKCS1_PADDING means that
-    // data will be prefixed by an optional PKCS#1 digest prefix
-    // per RFC 3447.
-    // RSA_NO_PADDING mean so no padding should be done be the callee
+	// algorithm, hashalg and saltlen together determine what
+	// should be used. hashalg and saltlen can be empty
+	// - ECDSA
+	// 			do a ECDSA signature.
+	// - ECDSA  hashalg=ALG
+	// 			Use hashAlg for the ECDSA signature (e.g. SHA512withECDSA in Java)
+    // - RSA_PKCS1_PADDING
+	// 			data will be prefixed by an optional PKCS#1 digest prefix per RFC 3447.
+	// - RSA_PKCS1_PSS_PADDING
+	// 			Use PSS padding for the signature
+	// - RSA_PKCS1_PSS_PADDING,saltlen=digest,hashalg=ALG
+	//			Use a PSS padding with hash algorithm ALG and a salt of length
+	//			of the digest (hash ALG).
     struct ExternalPKISignRequest : public ExternalPKIRequestBase
     {
       std::string data;  // data rendered as base64 (client reads)
       std::string sig;   // RSA signature, rendered as base64 (client writes)
       std::string algorithm;
+      std::string hashalg;		// If non-empty use this algorith for hashing (e.g. SHA384)
+      std::string saltlen;
     };
 
     // used to override "remote" directives
@@ -627,7 +638,7 @@ namespace openvpn {
 
       // Callback for logging.
       // Will be called from the thread executing connect().
-      virtual void log(const LogInfo&) = 0;
+      virtual void log(const LogInfo&) override = 0;
 
       // External PKI callbacks
       // Will be called from the thread executing connect().
@@ -671,7 +682,8 @@ namespace openvpn {
       void on_disconnect();
 
       // from ExternalPKIBase
-      virtual bool sign(const std::string& data, std::string& sig, const std::string& algorithm);
+	  bool sign(const std::string& data, std::string& sig, const std::string& algorithm,
+						const std::string& hashalg, const std::string& saltlen) override;
 
       // disable copy and assignment
       OpenVPNClient(const OpenVPNClient&) = delete;

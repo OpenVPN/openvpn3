@@ -4,7 +4,8 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2022 OpenVPN Inc.
+//    Copyright (C) 2021-2022 Selva Nair <selva.nair@gmail.com>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,31 +20,19 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_PKI_EPKIBASE_H
-#define OPENVPN_PKI_EPKIBASE_H
+#define msg(flags, ...) openvpn_msg_xkey_compat(flags, __VA_ARGS__);
+#define dmsg(flags, ...) openvpn_msg_xkey_compat(flags, __VA_ARGS__);
 
-#include <string>
+/* dummy definitions for the flags, not identical with the real values from
+ * OpenVPN 2.x */
+#define D_XKEY 1u
+#define M_NOLF 2u
+#define M_WARN 4u
+#define M_NOPREFIX 8u
+#define M_NONFATAL 16u
 
-namespace openvpn {
-
-  // Abstract base class used to provide an interface where core SSL implementation
-  // can use an external private key.
-  class ExternalPKIBase
-  {
-  public:
-    // Sign data (base64) and return signature as sig (base64).
-    // Return true on success or false on error.
-	virtual bool sign(const std::string& data, std::string& sig, const std::string& algorithm,
-			  		  const std::string& hashalg, const std::string& saltlen) = 0;
-
-    virtual ~ExternalPKIBase() {}
-  };
-
-  class ExternalPKIImpl
-  {
-  public:
-    virtual ~ExternalPKIImpl() = default;
-  };
-};
-
+void openvpn_msg_xkey_compat(unsigned int flags, const char *format, ...)
+#ifdef __GNUC__
+__attribute__ ((format(__printf__, 2, 3)))
 #endif
+;
