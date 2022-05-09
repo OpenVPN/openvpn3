@@ -173,7 +173,12 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl {
 	unsigned char enc[EVP_MAX_MD_SIZE + 32]; /* 32 bytes enough for digest info structure */
 	size_t enc_len = sizeof(enc);
 
-	if (!strcmp(alg.keytype, "EC")) {
+	if (!strcmp(alg.keytype, "ED448") || !strcmp(alg.keytype, "ED25519"))
+	{
+	  algstr = alg.keytype;
+	  hashalg = alg.mdname;
+	}
+	else if (!strcmp(alg.keytype, "EC")) {
 	  algstr = "ECDSA";
 	  if (strcmp(alg.op, "Sign")) {
 		hashalg = alg.mdname;
