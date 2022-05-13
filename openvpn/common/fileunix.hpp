@@ -50,6 +50,7 @@ namespace openvpn {
   OPENVPN_EXCEPTION(file_unix_error);
 
   // write binary buffer to file
+  static constexpr mode_t WRITE_BINARY_UNIX_EXISTING = 010000; // special mode that is useful for writing /proc files
   inline void write_binary_unix(const std::string& fn,
 				const mode_t mode,
 				const std::uint64_t mtime_ns,  // set explicit modification-time in nanoseconds since epoch, or 0 to defer to system
@@ -57,7 +58,10 @@ namespace openvpn {
 				const ssize_t size)
   {
     // open
-    ScopedFD fd(::open(fn.c_str(), O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC, mode));
+    int flags = O_WRONLY|O_CLOEXEC;
+    if (!(mode & WRITE_BINARY_UNIX_EXISTING))
+      flags |= O_CREAT|O_TRUNC;
+    ScopedFD fd(::open(fn.c_str(), flags, mode & (WRITE_BINARY_UNIX_EXISTING-1)));
     if (!fd.defined())
       {
 	const int eno = errno;
