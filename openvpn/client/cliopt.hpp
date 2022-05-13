@@ -142,6 +142,7 @@ namespace openvpn {
       bool allow_local_dns_resolvers = false;
       bool google_dns_fallback = false;
       bool synchronous_dns_lookup = false;
+      bool generate_tun_builder_capture_event = false;
       std::string private_key_password;
       bool disable_client_cert = false;
       int ssl_debug_level = 0;
@@ -407,6 +408,7 @@ namespace openvpn {
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+	    tunconf->generate_tun_builder_capture_event = config.generate_tun_builder_capture_event;
 	    tunconf->tun_prop.remote_list = remote_list;
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;

@@ -774,6 +774,11 @@ namespace openvpn {
 	cli_events->add_event(std::move(ev));
       }
 
+      void tun_event(ClientEvent::Base::Ptr ev) override
+      {
+	cli_events->add_event(std::move(ev));
+      }
+
       void tun_connected() override
       {
 	OPENVPN_LOG("Connected via " + tun->tun_name());

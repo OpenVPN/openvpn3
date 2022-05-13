@@ -78,6 +78,8 @@ namespace openvpn {
 
       TunProp::Config tun_prop;
 
+      bool generate_tun_builder_capture_event = false;
+
       int n_parallel = 8;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
@@ -196,6 +198,14 @@ namespace openvpn {
 		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
 		    sd = tun_setup->establish(*po, &tsconf, nullptr, os);
 		  }
+
+#if defined(HAVE_JSON)
+		  if (config->generate_tun_builder_capture_event)
+		    {
+		      // create an event with TunBuilderCapture data as JSON
+		      parent.tun_event(new ClientEvent::InfoJSON("TUN_BUILDER_CAPTURE", po->to_json()));
+		    }
+#endif
 
 		  // persist tun settings state
 		  state->iface_name = tsconf.iface_name;

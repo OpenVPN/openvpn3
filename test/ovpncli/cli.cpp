@@ -844,6 +844,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 #ifdef OPENVPN_REMOTE_OVERRIDE
     { "remote-override",required_argument,  nullptr,       5  },
 #endif
+    { "tbc",            no_argument,        nullptr,       6  },
     { nullptr,          0,                  nullptr,       0  }
   };
 
@@ -894,6 +895,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool version = false;
 	bool altProxy = false;
 	bool dco = true;
+	bool generate_tun_builder_capture_event = false;
 	std::string epki_cert_fn;
 	std::string epki_ca_fn;
 	std::string epki_key_fn;
@@ -926,6 +928,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		remote_override_cmd = optarg;
 		break;
 #endif
+	      case 6: // --tbc
+		generate_tun_builder_capture_event = true;
+		break;
 	      case 'e':
 		eval = true;
 		break;
@@ -1118,6 +1123,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
 	      config.altProxy = altProxy;
 	      config.dco = dco;
+	      config.generate_tun_builder_capture_event = generate_tun_builder_capture_event;
 	      config.defaultKeyDirection = defaultKeyDirection;
 	      config.sslDebugLevel = sslDebugLevel;
 	      config.googleDnsFallback = googleDnsFallback;
@@ -1340,6 +1346,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--epki-key            : simulate external PKI private key" << std::endl;
       std::cout << "--sso-methods         : auth pending methods to announce via IV_SSO" << std::endl;
       std::cout << "--write-url, -Z       : write INFO URL to file" << std::endl;
+      std::cout << "--tbc                 : generate INFO_JSON/TUN_BUILDER_CAPTURE event" << std::endl;
       ret = 2;
     }
   return ret;

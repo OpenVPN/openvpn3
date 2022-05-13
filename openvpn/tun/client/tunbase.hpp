@@ -32,6 +32,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/transport/client/transbase.hpp>
+#include <openvpn/client/clievent.hpp>
 
 namespace openvpn {
 
@@ -57,8 +58,8 @@ namespace openvpn {
   };
 
   // Base class for parent of tun interface object, used to
-  // communicate received data packets, exceptions, and progress
-  // notifications.
+  // communicate received data packets, exceptions,
+  // special events, and progress notifications.
   struct TunClientParent
   {
     virtual void tun_recv(BufferAllocated& buf) = 0;
@@ -68,6 +69,9 @@ namespace openvpn {
     virtual void tun_pre_tun_config() = 0;
     virtual void tun_pre_route_config() = 0;
     virtual void tun_connected() = 0;
+
+    // allow tunclient to generate events
+    virtual void tun_event(ClientEvent::Base::Ptr ev) {}
   };
 
   // Factory for tun interface objects.

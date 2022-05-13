@@ -340,6 +340,11 @@ namespace openvpn {
       // implementations. If this is enabled, we fall back to allowing all algorithms (if these are
       // supported by the crypto library)
       bool enableNonPreferredDCAlgorithms = false;
+
+      // Generate an INFO_JSON/TUN_BUILDER_CAPTURE event
+      // with all tun builder properties pushed by server.
+      // Currently only implemented on Linux.
+      bool generate_tun_builder_capture_event = false;
     };
 
     // used to communicate VPN events such as connect, disconnect, etc.

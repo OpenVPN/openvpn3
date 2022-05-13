@@ -441,6 +441,7 @@ namespace openvpn {
 	bool allow_local_dns_resolvers = false;
 	bool google_dns_fallback = false;
 	bool synchronous_dns_lookup = false;
+	bool generate_tun_builder_capture_event = false;
 	bool autologin_sessions = false;
 	bool retry_on_auth_failed = false;
 	std::string private_key_password;
@@ -689,6 +690,7 @@ namespace openvpn {
 	state->allow_local_dns_resolvers = config.allowLocalDnsResolvers;
 	state->google_dns_fallback = config.googleDnsFallback;
 	state->synchronous_dns_lookup = config.synchronousDnsLookup;
+	state->generate_tun_builder_capture_event = config.generate_tun_builder_capture_event;
 	state->autologin_sessions = config.autologinSessions;
 	state->retry_on_auth_failed = config.retryOnAuthFailed;
 	state->private_key_password = config.privateKeyPassword;
@@ -991,6 +993,7 @@ namespace openvpn {
       cc.allow_local_dns_resolvers = state->allow_local_dns_resolvers;
       cc.google_dns_fallback = state->google_dns_fallback;
       cc.synchronous_dns_lookup = state->synchronous_dns_lookup;
+      cc.generate_tun_builder_capture_event = state->generate_tun_builder_capture_event;
       cc.autologin_sessions = state->autologin_sessions;
       cc.retry_on_auth_failed = state->retry_on_auth_failed;
       cc.proto_context_options = state->proto_context_options;
