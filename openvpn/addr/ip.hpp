@@ -427,36 +427,36 @@ namespace openvpn {
       }
 
       // construct an address where all bits are zero
-      static Addr from_zero(Version v)
+      static Addr from_zero(const Version v)
       {
 	if (v == V4)
 	  return from_ipv4(IPv4::Addr::from_zero());
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_zero());
 	else
-	  OPENVPN_IP_THROW("from_zero: address unspecified");
+	  OPENVPN_IP_THROW("from_zero: IP version unspecified");
       }
 
-      // construct an address where all bits are zero
-      static Addr from_one(Version v)
+      // construct the "one" address
+      static Addr from_one(const Version v)
       {
 	if (v == V4)
 	  return from_ipv4(IPv4::Addr::from_one());
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_one());
 	else
-	  OPENVPN_IP_THROW("from_one: address unspecified");
+	  OPENVPN_IP_THROW("from_one: IP version unspecified");
       }
 
       // construct an address where all bits are one
-      static Addr from_zero_complement(Version v)
+      static Addr from_zero_complement(const Version v)
       {
 	if (v == V4)
 	  return from_ipv4(IPv4::Addr::from_zero_complement());
 	else if (v == V6)
 	  return from_ipv6(IPv6::Addr::from_zero_complement());
 	else
-	  OPENVPN_IP_THROW("from_zero_complement: address unspecified");
+	  OPENVPN_IP_THROW("from_zero_complement: IP version unspecified");
       }
 
       // validate the prefix length for the IP version
@@ -841,7 +841,7 @@ namespace openvpn {
 	  case V6:
 	    return "v6";
 	  default:
-	    return "v?";
+	    return "UNSPEC";
 	  }
       }
 
