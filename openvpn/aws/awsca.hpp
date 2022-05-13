@@ -24,6 +24,7 @@
 #pragma once
 
 #include <openvpn/common/fileunix.hpp>
+#include <openvpn/common/stat.hpp>
 
 namespace openvpn {
   namespace AWS {
@@ -40,7 +41,7 @@ namespace openvpn {
       };
       for (const auto& cert : certs)
         {
-	  if (std::ifstream{cert})
+	  if (file_exists(cert))
 	    return read_text_unix(cert);
         }
       throw file_unix_error("No CA certificate files found in system paths");
