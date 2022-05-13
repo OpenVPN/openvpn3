@@ -40,6 +40,14 @@ namespace openvpn {
       {
       }
 
+      // can be used to load from HTTP creds
+      template <typename CREDS>
+      Creds(const CREDS& creds)
+	: access_key(creds.username),
+	  secret_key(creds.password)
+      {
+      }
+
       bool defined() const
       {
 	return !access_key.empty() && !secret_key.empty();
