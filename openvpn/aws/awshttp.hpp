@@ -48,11 +48,24 @@ namespace openvpn {
 	http_config_ = http_config();
       }
 
+#ifdef VPN_CONNECTION_PROFILES
+      HTTPContext(RandomAPI::Ptr rng,
+		  const int debug_level,
+		  const OptionList& opt) // for VPN connection profile
+	: HTTPContext(rng, debug_level)
+      {
+	via_vpn_ = WS::ViaVPN::client_new_if_enabled(opt);
+      }
+#endif
+
       WS::ClientSet::TransactionSet::Ptr transaction_set(std::string host) const
       {
 	WS::ClientSet::TransactionSet::Ptr ts = new WS::ClientSet::TransactionSet;
 	ts->host.host = std::move(host);
 	ts->host.port = "443";
+#ifdef VPN_CONNECTION_PROFILES
+	ts->host.via_vpn = via_vpn_;
+#endif
 	ts->http_config = http_config_;
 	ts->max_retries = 10;
 	ts->retry_duration = Time::Duration::seconds(1);
@@ -108,6 +121,9 @@ namespace openvpn {
       DigestFactory::Ptr digest_factory_;
       RandomAPI::Ptr rng_;
       WS::Client::Config::Ptr http_config_;
+#ifdef VPN_CONNECTION_PROFILES
+      WS::ViaVPN::Ptr via_vpn_;
+#endif
       int debug_level_;
     };
   }

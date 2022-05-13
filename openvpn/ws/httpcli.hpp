@@ -58,6 +58,7 @@
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/random/randapi.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/asio/asiopolysock.hpp>
 #include <openvpn/asio/asioresolverres.hpp>
@@ -72,6 +73,14 @@
 #include <openvpn/ws/httpcommon.hpp>
 #include <openvpn/ws/httpcreds.hpp>
 #include <openvpn/ws/websocket.hpp>
+
+#ifdef VPN_CONNECTION_PROFILES
+#ifdef USE_ASYNC_RESOLVE
+#error VPN_CONNECTION_PROFILES and USE_ASYNC_RESOLVE cannot be used together
+#endif
+#include <openvpn/ws/httpvpn.hpp>
+#include <openvpn/dns/dnscli.hpp>
+#endif
 
 #ifdef SIMULATE_HTTPCLI_FAILURES
 // debugging -- simulate network failures
@@ -203,6 +212,7 @@ namespace openvpn {
 	int debug_level = 0;
 	Frame::Ptr frame;
 	SessionStats::Ptr stats;
+	RandomAPI::Ptr prng;
 
 #ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
 	AltRoutingShimFactory::Ptr shim_factory;
@@ -217,8 +227,15 @@ namespace openvpn {
 	std::string head;   // host to send in HTTP header, defaults to host if empty
 	std::string port;
 
-	std::string local_addr;  // bind to local IP addr (optional)
-	std::string local_port;  // bind to local port (optional)
+	std::string local_addr;      // bind to local address
+	std::string local_addr_alt;  // alt local addr for different IP version (optional)
+	std::string local_port;      // bind to local port (optional)
+
+#ifdef VPN_CONNECTION_PROFILES
+	// use a VPN client connection profile to obtain hint
+	// and local_addr and possibly DNS resolvers as well
+	ViaVPN::Ptr via_vpn;
+#endif
 
 	const std::string& host_transport() const
 	{
@@ -434,6 +451,10 @@ namespace openvpn {
 #else
 	      resolver.cancel();
 #endif
+#ifdef VPN_CONNECTION_PROFILES
+	      if (alt_resolve)
+		alt_resolve->stop();
+#endif
 	      if (req_timer)
 		req_timer->cancel();
 	      cancel_keepalive_timer();
@@ -646,7 +667,15 @@ namespace openvpn {
 		return;
 	      }
 
+	    // get new Host object
 	    host = http_host();
+
+#ifdef VPN_CONNECTION_PROFILES
+	    // support VPN client connection profile
+	    Json::Value via_vpn_conf;
+	    if (host.via_vpn)
+	      via_vpn_conf = host.via_vpn->client_update_host(host);
+#endif
 
 #ifdef ASIO_HAS_LOCAL_SOCKETS
 	    // unix domain socket?
@@ -726,11 +755,28 @@ namespace openvpn {
 #ifdef USE_ASYNC_RESOLVE
 		async_resolve_name(host.host_transport(), host.port);
 #else
+#ifdef VPN_CONNECTION_PROFILES
+		if (via_vpn_conf)
+		  {
+		    DNSClient::ResolverList::Ptr resolver_list(new DNSClient::ResolverList(via_vpn_conf));
+		    alt_resolve = DNSClient::async_resolve(io_context,
+							   std::move(resolver_list),
+							   config->prng.get(),
+							   host.host_transport(),
+							   host.port,
+							   [self=Ptr(this)](const openvpn_io::error_code& error,
+									    results_type results) mutable
+							   {
+							     self->resolve_callback(error, std::move(results));
+							   });
+		  }
+		else
+#endif
 		resolver.async_resolve(host.host_transport(), host.port,
 				       [self=Ptr(this)](const openvpn_io::error_code& error,
-							results_type results)
+							results_type results) mutable
 				       {
-					 self->resolve_callback(error, results);
+					 self->resolve_callback(error, std::move(results));
 				       });
 #endif
 	      }
@@ -932,6 +978,14 @@ namespace openvpn {
 	      if (!host.local_port.empty())
 		local_port = HostPort::parse_port(host.local_port, "local_port");
 	      s->socket.bind_local(local_addr, local_port);
+
+	      if (!host.local_addr_alt.empty())
+		{
+		  const IP::Addr local_addr_alt(host.local_addr_alt, "local_addr_alt");
+		  if (local_addr.version() == local_addr_alt.version())
+		    throw Exception("local bind addresses having the same IP version don't make sense: " + local_addr.to_string() + ' ' + local_addr_alt.to_string());
+		  s->socket.bind_local(local_addr_alt, local_port);
+		}
 #else
 	      throw Exception("httpcli must be built with OPENVPN_POLYSOCK_SUPPORTS_BIND or OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING to support local bind");
 #endif
@@ -1310,6 +1364,9 @@ namespace openvpn {
 
 #ifndef USE_ASYNC_RESOLVE
 	openvpn_io::ip::tcp::resolver resolver;
+#endif
+#ifdef VPN_CONNECTION_PROFILES
+	DNSClient::Context::Ptr alt_resolve;
 #endif
 	Host host;
 

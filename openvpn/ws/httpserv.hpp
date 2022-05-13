@@ -57,6 +57,10 @@
 #include <openvpn/ws/websocket.hpp>
 #include <openvpn/server/listenlist.hpp>
 
+#ifdef VPN_CONNECTION_PROFILES
+#include <openvpn/ws/httpvpn.hpp>
+#endif
+
 #ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
 #include <openvpn/kovpn/sock_mark.hpp>
 #endif
@@ -793,6 +797,7 @@ namespace openvpn {
 	    {
 	      switch (listen_item.proto())
 		{
+		case Protocol::TCP:
 		case Protocol::TCPv4:
 		case Protocol::TCPv6:
 		  {
@@ -823,7 +828,11 @@ namespace openvpn {
 		    Acceptor::TCP::Ptr a(new Acceptor::TCP(io_context));
 
 		    // parse address/port of local endpoint
-		    const IP::Addr ip_addr = IP::Addr::from_string(listen_item.addr);
+#ifdef VPN_CONNECTION_PROFILES
+		    const IP::Addr ip_addr = ViaVPN::server_local_addr(listen_item, via_vpn_gw(listen_item.proto));
+#else
+		    const IP::Addr ip_addr(listen_item.addr, listen_item.directive);
+#endif
 		    a->local_endpoint.address(ip_addr.to_asio());
 		    a->local_endpoint.port(HostPort::parse_port(listen_item.port, "http listen"));
 
@@ -1078,6 +1087,21 @@ namespace openvpn {
 	{
 	  return true;
 	}
+
+#ifdef VPN_CONNECTION_PROFILES
+	static ViaVPN::GatewayType via_vpn_gw(const Protocol& proto)
+	{
+	  switch (proto())
+	    {
+	    case Protocol::TCPv4:
+	      return ViaVPN::GW4;
+	    case Protocol::TCPv6:
+	      return ViaVPN::GW6;
+	    default:
+	      return ViaVPN::GW;
+	    }
+	}
+#endif
 
 	openvpn_io::io_context& io_context;
 	Listen::List listen_list;

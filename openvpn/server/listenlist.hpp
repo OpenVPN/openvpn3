@@ -100,9 +100,11 @@ namespace openvpn {
     public:
       enum LoadMode {
 	Nominal,
-	AllowVPNClientConnectionProfile,
 	AllowDefault,
-	AllowEmpty
+	AllowEmpty,
+#ifdef VPN_CONNECTION_PROFILES
+	AllowVPNClientConnectionProfile,
+#endif
       };
 
       List() {}
@@ -163,8 +165,7 @@ namespace openvpn {
 		// special address case for WS::ViaVPN, where address
 		// begins with '@' followed by a client connection
 		// profile filename.
-		if (!local && (load_mode != AllowVPNClientConnectionProfile
-			       || e.addr.empty() || e.addr[0] != '@'))
+		if (!local && !is_vpn_client_connection_profile(load_mode, e))
 		  {
 		    const std::string title = e.directive + " addr";
 		    const IP::Addr addr = IP::Addr(e.addr, title.c_str());
@@ -319,6 +320,19 @@ namespace openvpn {
 	for (const auto &e : *this)
 	  ret.emplace_back(e.port_offset(unit));
 	return ret;
+      }
+
+    private:
+      static bool is_vpn_client_connection_profile(const LoadMode load_mode,
+						   const Item& e)
+      {
+#ifdef VPN_CONNECTION_PROFILES
+	return load_mode == AllowVPNClientConnectionProfile
+	  && !e.addr.empty()
+	  && e.addr[0] == '@';
+#else
+	return false;
+#endif
       }
     };
   }
