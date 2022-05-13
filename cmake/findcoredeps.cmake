@@ -27,14 +27,32 @@ else ()
     set(OPENVPN_PLAT linux)
 endif ()
 
+function(add_ssl_library target)
+    if (${USE_MBEDTLS})
+        find_package(mbedTLS REQUIRED)
+
+        set(SSL_LIBRARY ${MBEDTLS_LIBRARIES})
+
+        target_compile_definitions(${target} PRIVATE -DUSE_MBEDTLS)
+
+        # The findpackage function does not set these automatically :(
+        target_include_directories(${target} PRIVATE ${MBEDTLS_INCLUDE_DIR})
+    else ()
+        find_package(OpenSSL REQUIRED)
+        SET(SSL_LIBRARY OpenSSL::SSL)
+        target_compile_definitions(${target} PRIVATE -DUSE_OPENSSL)
+    endif ()
+
+    target_link_libraries(${target} ${SSL_LIBRARY})
+endfunction()
+
 
 function(add_core_dependencies target)
     set(PLAT ${OPENVPN_PLAT})
 
-    set(CORE_INCLUDES
-            ${CORE_DIR}
-            )
-    set(CORE_DEFINES
+    target_include_directories(${target} PRIVATE ${CORE_DIR})
+
+    target_compile_definitions(${target} PRIVATE
             -DASIO_STANDALONE
             -DUSE_ASIO
             -DHAVE_LZ4
@@ -43,7 +61,7 @@ function(add_core_dependencies target)
             )
 
     if (WIN32)
-        list(APPEND CORE_DEFINES
+        target_compile_definitions(${target} PRIVATE
                 -D_WIN32_WINNT=0x0600
                 -DTAP_WIN_COMPONENT_ID=tap0901
                 -D_CRT_SECURE_NO_WARNINGS
@@ -67,11 +85,10 @@ function(add_core_dependencies target)
                 ${DEP_DIR}
             )
             find_package(LZ4 REQUIRED)
-            list(APPEND CORE_INCLUDES ${DEP_DIR}/asio/asio/include)
+            target_include_directories(${target} PRIVATE ${DEP_DIR}/asio/asio/include)
         endif ()
     else ()
-        list(APPEND CORE_INCLUDES
-                ${DEP_DIR}/asio/asio/include
+        target_include_directories(${target} PRIVATE ${DEP_DIR}/asio/asio/include
                 )
         list(APPEND CMAKE_PREFIX_PATH
                 ${DEP_DIR}/mbedtls/mbedtls-${PLAT}
@@ -84,38 +101,23 @@ function(add_core_dependencies target)
         find_package(LZ4 REQUIRED)
     endif ()
 
-    if (${USE_MBEDTLS})
-        find_package(mbedTLS REQUIRED)
-
-        set(SSL_LIBRARY ${MBEDTLS_LIBRARIES})
-
-        list(APPEND CORE_DEFINES -DUSE_MBEDTLS)
-
-        # The findmbedTLS does not set these automatically :(
-        list(APPEND CORE_INCLUDES ${MBEDTLS_INCLUDE_DIR})
-    else ()
-        find_package(OpenSSL REQUIRED)
-        SET(SSL_LIBRARY OpenSSL::SSL)
-        list(APPEND CORE_DEFINES -DUSE_OPENSSL)
-    endif ()
+    add_ssl_library(${target})
 
     if (APPLE)
         find_library(coreFoundation CoreFoundation)
         find_library(iokit IOKit)
         find_library(coreServices CoreServices)
         find_library(systemConfiguration SystemConfiguration)
-        target_link_libraries(${target} ${coreFoundation} ${iokit} ${coreServices} ${systemConfiguration} ${lz4} ${SSL_LIBRARY})
+        target_link_libraries(${target} ${coreFoundation} ${iokit} ${coreServices} ${systemConfiguration} ${lz4})
     endif()
 
     if(UNIX)
         target_link_libraries(${target} pthread)
     endif()
 
-    list(APPEND CORE_INCLUDES ${LZ4_INCLUDE_DIR})
+    target_include_directories(${target} PRIVATE ${LZ4_INCLUDE_DIR})
 
-    target_include_directories(${target} PRIVATE ${CORE_INCLUDES})
-    target_compile_definitions(${target} PRIVATE ${CORE_DEFINES})
-    target_link_libraries(${target} ${SSL_LIBRARY} ${EXTRA_LIBS} ${LZ4_LIBRARY})
+    target_link_libraries(${target} ${EXTRA_LIBS} ${LZ4_LIBRARY})
 
     if (USE_WERROR)
         if (MSVC)
