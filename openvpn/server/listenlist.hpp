@@ -100,6 +100,7 @@ namespace openvpn {
     public:
       enum LoadMode {
 	Nominal,
+	AllowVPNClientConnectionProfile,
 	AllowDefault,
 	AllowEmpty
       };
@@ -156,9 +157,15 @@ namespace openvpn {
 		  const std::string title = e.directive + " protocol";
 		  e.proto = Protocol::parse(o.get(3-local, 16), Protocol::NO_SUFFIX, title.c_str());
 		}
-		if (!local)
+
+		// Modify protocol based on IP version of given address.
+		// AllowVPNClientConnectionProfile tells us to support
+		// special address case for WS::ViaVPN, where address
+		// begins with '@' followed by a client connection
+		// profile filename.
+		if (!local && (load_mode != AllowVPNClientConnectionProfile
+			       || e.addr.empty() || e.addr[0] != '@'))
 		  {
-		    // modify protocol based on IP version of given address
 		    const std::string title = e.directive + " addr";
 		    const IP::Addr addr = IP::Addr(e.addr, title.c_str());
 		    e.proto.mod_addr_version(addr.version());
