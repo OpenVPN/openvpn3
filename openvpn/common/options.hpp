@@ -981,17 +981,29 @@ namespace openvpn {
 
     // Append elements in other to self,
     // caller should call update_map() after this function.
-    void extend(const OptionList& other, FilterBase* filt)
+    void extend(const OptionList& other, FilterBase* filt=nullptr)
     {
       reserve(size() + other.size());
-      for (std::vector<Option>::const_iterator i = other.begin(); i != other.end(); ++i)
+      for (const auto &opt : other)
 	{
-	  const Option& opt = *i;
 	  if (!filt || filt->filter(opt))
 	    {
 	      push_back(opt);
 	      opt.touch();
 	    }
+	}
+    }
+
+    // Append elements in other to self,
+    // consumes other,
+    // caller should call update_map() after this function.
+    void extend(OptionList&& other, FilterBase* filt=nullptr)
+    {
+      reserve(size() + other.size());
+      for (auto &opt : other)
+	{
+	  if (!filt || filt->filter(opt))
+	    push_back(std::move(opt));
 	}
     }
 
