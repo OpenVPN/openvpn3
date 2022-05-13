@@ -179,7 +179,7 @@ namespace openvpn {
 
       bool is_canonical() const
       {
-	return (addr & netmask()) == addr;
+	return canonical_addr() == addr;
       }
 
       bool is_valid() const
@@ -187,9 +187,14 @@ namespace openvpn {
 	return prefix_len <= addr.size();
       }
 
+      ADDR canonical_addr() const
+      {
+	return addr & netmask();
+      }
+
       void force_canonical()
       {
-	addr = addr & netmask();
+	addr = canonical_addr();
       }
 
       void verify_canonical() const
