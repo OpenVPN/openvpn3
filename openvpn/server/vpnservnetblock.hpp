@@ -67,6 +67,11 @@ namespace openvpn {
 	  return false;
       }
 
+      IP::Route route() const
+      {
+	return IP::Route(server_gw, prefix_len);
+      }
+
       std::string to_string() const
       {
 	return '[' + net.to_string() + '/' + std::to_string(prefix_len) + ',' + server_gw.to_string() + ']';
