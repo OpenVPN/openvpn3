@@ -60,6 +60,7 @@ if [ -z "$1" ]; then
     echo " VAL=1 -- (optional) build with valgrind run-time extensions"
     echo " ASAN=1 -- (optional) enable ASAN run-time checks"
     echo " PCRE=1 -- build with PCRE library"
+    echo " SYSD=1 -- build with systemd library"
     for s in $(enum_build_extras) ; do
 	. $s args
     done
@@ -291,6 +292,12 @@ fi
 if [ "$CAP" = "1" ]; then
     LIBS="$LIBS -lcap"
     CPPFLAGS="$CPPFLAGS -DHAVE_LIBCAP"
+fi
+
+# libsystemd
+if [ "$SYSD" = "1" ]; then
+    LIBS="$LIBS -lsystemd"
+    CPPFLAGS="$CPPFLAGS -DHAVE_LIBSYSTEMD"
 fi
 
 # PCRE
