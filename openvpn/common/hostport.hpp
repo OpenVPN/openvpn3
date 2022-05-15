@@ -117,13 +117,16 @@ namespace openvpn {
     {
       if (port_save)
 	*port_save = 0;
-      const size_t pos = str.find_last_of(':');
+      const size_t fpos = str.find_first_of(':');
+      const size_t lpos = str.find_last_of(':');
       const size_t cb = str.find_last_of(']');
-      if (pos != std::string::npos && (cb == std::string::npos || pos > cb))
+      if (lpos != std::string::npos                        // has one or more colons (':')
+	  && (cb == std::string::npos || cb + 1 == lpos)   // either has no closing bracket (']') or closing bracket followed by a colon ("]:")
+	  && (cb != std::string::npos || fpos == lpos))    // either has a closing bracket (']') or a single colon (':') to avoid fake-out by IPv6 addresses without a port
 	{
 	  // host:port or [host]:port specified
-	  host = str.substr(0, pos);
-	  port = str.substr(pos + 1);
+	  host = str.substr(0, lpos);
+	  port = str.substr(lpos + 1);
 	}
       else if (!default_port.empty())
 	{
