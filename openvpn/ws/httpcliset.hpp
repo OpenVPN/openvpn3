@@ -895,7 +895,8 @@ namespace openvpn {
 	    else
 	      {
 		// failed
-		if (++n_retries >= ts->max_retries)
+		++n_retries;
+		if (ts->max_retries && n_retries >= ts->max_retries)
 		  {
 		    // fail -- no more retries
 		    done(false, false);
