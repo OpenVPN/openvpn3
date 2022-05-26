@@ -1,0 +1,9 @@
+README.html
+x64
+*.vcxproj.user
+*.ipch
+out
+.vs
+.vscode
+tags*
+build
