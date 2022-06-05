@@ -61,7 +61,7 @@ namespace openvpn {
       }
 
       template <typename HOST>
-      Json::Value client_update_host(HOST& host)
+      Json::Value client_update_host(HOST& host) const
       {
 	Json::Value root = json::parse_from_file(connection_info_fn);
 	set_host_field(host.local_addr, root, "vpn_ip4", connection_info_fn);
