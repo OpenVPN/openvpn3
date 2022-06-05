@@ -96,6 +96,7 @@ namespace openvpn {
     }
 
     // Return a uniformly distributed random number in the range [0, end).
+    // If end==0 or end==1, will always return 0.
     // This version is strictly 32-bit only and optimizes by avoiding
     // integer division.
     std::uint32_t randrange32(const std::uint32_t end)
