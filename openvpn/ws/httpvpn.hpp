@@ -103,6 +103,13 @@ namespace openvpn {
 	  return IP::Addr(listen_item.addr, listen_item.directive);
       }
 
+      // returns the "client-ip" directive pushed by the server
+      IP::Addr client_ip() const
+      {
+	const Json::Value root = json::parse_from_file(connection_info_fn);
+	return IP::Addr(json::get_string_ref(root, "client_ip", connection_info_fn), connection_info_fn);
+      }
+
       std::string to_string() const
       {
 	std::string ret;
