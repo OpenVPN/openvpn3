@@ -157,6 +157,18 @@ namespace openvpn {
 	}
     }
 
+    bool is_multiline() const
+    {
+      if (data.size() == 2)
+	{
+	  const std::string& str = data[1];
+	  const size_t pos = str.find_first_of("\r\n");
+	  return pos != std::string::npos;
+	}
+      else
+	return false;
+    }
+
     static void validate_string(const std::string& name, const std::string& str, const size_t max_len)
     {
       const validate_status status = validate(str, max_len);
