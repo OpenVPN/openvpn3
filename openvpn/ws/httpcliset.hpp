@@ -528,9 +528,29 @@ namespace openvpn {
 	  });
 	ts->preserve_http_state = sps;
 	if (sps)
-	  io_context = ts->hsc.acquire_io_context();
+	  {
+	    io_context = ts->hsc.acquire_io_context();
+	    if (io_context)
+	      {
+		if (io_context->stopped())
+		  {
+		    //OPENVPN_LOG("RESTART IO_CONTEXT");
+		    io_context->restart();
+		  }
+		else
+		  {
+		    //OPENVPN_LOG("GET IO_CONTEXT");
+		  }
+	      }
+	  }
 	if (!io_context)
-	  io_context.reset(new openvpn_io::io_context(1));
+	  {
+	    if (sps)
+	      {
+		//OPENVPN_LOG("NEW IO_CONTEXT");
+	      }
+	    io_context.reset(new openvpn_io::io_context(1));
+	  }
 	ClientSet::Ptr cs;
 	try {
 	  AsioStopScope scope(*io_context, stop, [&]() {
@@ -556,8 +576,11 @@ namespace openvpn {
 	    io_context->poll();   // execute completion handlers
 	    throw;
 	  }
-	if (sps && !io_context->stopped())
-	  ts->hsc.persist_io_context(std::move(io_context));
+	if (sps)
+	  {
+	    //OPENVPN_LOG("PUT IO_CONTEXT");
+	    ts->hsc.persist_io_context(std::move(io_context));
+	  }
       }
 
       static void run_synchronous(Function<void(ClientSet::Ptr)> job,
