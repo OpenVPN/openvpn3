@@ -504,6 +504,8 @@ namespace openvpn {
 	    if (halt)
 	      return;
 	    halt = true;
+	    if (!http_stop_called)
+	      http_stop(Status::E_SUCCESS, "stop");
 	    http_destroy();
 	    timeout_timer.cancel();
 	    if (link)
@@ -710,6 +712,7 @@ namespace openvpn {
 	  void error_handler(const int errcode, const std::string& err)
 	  {
 	    const bool shutdown = http_stop(errcode, err);
+	    http_stop_called = true;
 	    stop(true, shutdown);
 	  }
 
@@ -766,6 +769,8 @@ namespace openvpn {
 	  LinkImpl::Ptr link;
 	  bool keepalive = false;
 	  bool handoff = false;
+	  bool http_stop_called = false;
+
 #ifdef OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING
 	  bool is_alt_routing_ = false;
 #endif
