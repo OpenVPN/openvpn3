@@ -118,7 +118,7 @@ namespace openvpn {
 	template <typename PARENT>
 	void post_open(PARENT* parent, openvpn_io::error_code& ec) const
 	{
-	  if (local_.specified())
+	  if (defined())
 	    {
 	      parent->set_option(openvpn_io::socket_base::reuse_address(true), ec);
 	      if (!ec)
