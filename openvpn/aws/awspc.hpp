@@ -54,6 +54,7 @@ namespace openvpn {
       {
 	std::string instanceId;
 	std::string region;
+	std::string az;
 	std::string privateIp;
 
 	Creds creds;
@@ -250,6 +251,7 @@ namespace openvpn {
 	    const std::string title = "identity-document";
 	    const Json::Value root = json::parse(ident, title);
 	    info.region = json::get_string(root, "region", title);
+	    info.az = json::get_string(root, "availabilityZone", title);
 	    info.instanceId = json::get_string(root, "instanceId", title);
 	    info.privateIp = json::get_string(root, "privateIp", title);
 	  }
