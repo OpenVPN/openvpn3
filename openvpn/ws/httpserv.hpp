@@ -57,7 +57,7 @@
 #include <openvpn/ws/websocket.hpp>
 #include <openvpn/server/listenlist.hpp>
 
-#ifdef VPN_CONNECTION_PROFILES
+#ifdef VPN_BINDING_PROFILES
 #include <openvpn/ws/httpvpn.hpp>
 #endif
 
@@ -833,7 +833,7 @@ namespace openvpn {
 		    Acceptor::TCP::Ptr a(new Acceptor::TCP(io_context));
 
 		    // parse address/port of local endpoint
-#ifdef VPN_CONNECTION_PROFILES
+#ifdef VPN_BINDING_PROFILES
 		    const IP::Addr ip_addr = ViaVPN::server_local_addr(listen_item, via_vpn_gw(listen_item.proto));
 #else
 		    const IP::Addr ip_addr(listen_item.addr, listen_item.directive);
@@ -1093,7 +1093,7 @@ namespace openvpn {
 	  return true;
 	}
 
-#ifdef VPN_CONNECTION_PROFILES
+#ifdef VPN_BINDING_PROFILES
 	static ViaVPN::GatewayType via_vpn_gw(const Protocol& proto)
 	{
 	  switch (proto())

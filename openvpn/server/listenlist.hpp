@@ -102,8 +102,8 @@ namespace openvpn {
 	Nominal,
 	AllowDefault,
 	AllowEmpty,
-#ifdef VPN_CONNECTION_PROFILES
-	AllowVPNClientConnectionProfile,
+#ifdef VPN_BINDING_PROFILES
+	AllowVPNBindingProfile,
 #endif
       };
 
@@ -161,11 +161,11 @@ namespace openvpn {
 		}
 
 		// Modify protocol based on IP version of given address.
-		// AllowVPNClientConnectionProfile tells us to support
+		// AllowVPNBindingProfile tells us to support
 		// special address case for WS::ViaVPN, where address
 		// begins with '@' followed by a client connection
 		// profile filename.
-		if (!local && !is_vpn_client_connection_profile(load_mode, e))
+		if (!local && !is_vpn_binding_profile(load_mode, e))
 		  {
 		    const std::string title = e.directive + " addr";
 		    const IP::Addr addr = IP::Addr(e.addr, title.c_str());
@@ -323,11 +323,11 @@ namespace openvpn {
       }
 
     private:
-      static bool is_vpn_client_connection_profile(const LoadMode load_mode,
+      static bool is_vpn_binding_profile(const LoadMode load_mode,
 						   const Item& e)
       {
-#ifdef VPN_CONNECTION_PROFILES
-	return load_mode == AllowVPNClientConnectionProfile
+#ifdef VPN_BINDING_PROFILES
+	return load_mode == AllowVPNBindingProfile
 	  && !e.addr.empty()
 	  && e.addr[0] == '@';
 #else
