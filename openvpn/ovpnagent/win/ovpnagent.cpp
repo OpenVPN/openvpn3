@@ -444,13 +444,15 @@ public:
 
       // create command line for openvpn process
       std::ostringstream ss;
-      ss << "client --config " << config_dir << "\\" << config_file << " --exit-event-name "
+      ss << "client --config \"" << config_dir << "\\" << config_file << "\" --exit-event-name "
 	 << exit_event_name << " --auth-retry interact --management " << management_host << " "
 	 << management_port << " stdin --management-query-passwords --management-hold " << "--log"
-	 << (log_append ? "-append " : " ") << log;
+	 << (log_append ? "-append \"" : " \"") << log << "\"";
       std::string cmd = ss.str();
       std::unique_ptr<char[]> buf(new char[cmd.length() + 1]);
       strcpy(buf.get(), cmd.c_str());
+
+      // OPENVPN_LOG("Launching omiclient: " << config.omiclient_exe.c_str() << " " << buf.get());
 
       STARTUPINFO startup_info = { 0 };
       startup_info.cb = sizeof(startup_info);
