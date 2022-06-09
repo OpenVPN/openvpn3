@@ -125,6 +125,7 @@ namespace openvpn {
 	  E_KEEPALIVE_TIMEOUT,
 	  E_SHUTDOWN,
 	  E_ABORTED,
+	  E_HOST_UPDATE,
 	  E_BOGON, // simulated fault injection for testing
 
 	  N_ERRORS
@@ -152,6 +153,7 @@ namespace openvpn {
 	    "E_KEEPALIVE_TIMEOUT",
 	    "E_SHUTDOWN",
 	    "E_ABORTED",
+	    "E_HOST_UPDATE",
 	    "E_BOGON",
 	  };
 
