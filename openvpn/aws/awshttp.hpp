@@ -68,6 +68,7 @@ namespace openvpn {
 #endif
 	ts->http_config = http_config_;
 	ts->max_retries = 10;
+	ts->retry_on_http_4xx = true;
 	ts->retry_duration = Time::Duration::seconds(1);
 	ts->debug_level = debug_level_;
 	return ts;
