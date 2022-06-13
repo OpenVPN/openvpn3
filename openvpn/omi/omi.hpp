@@ -699,7 +699,7 @@ namespace openvpn {
 
     void send_password_correct()
     {
-      send("SUCCESS: password is correct");
+      send("SUCCESS: password is correct\r\n");
     }
 
     bool process_password()
