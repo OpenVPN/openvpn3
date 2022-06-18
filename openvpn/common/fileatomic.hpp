@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -21,8 +21,7 @@
 
 // Atomic file-handling methods.
 
-#ifndef OPENVPN_COMMON_FILEATOMIC_H
-#define OPENVPN_COMMON_FILEATOMIC_H
+#pragma once
 
 #include <openvpn/common/platform.hpp>
 
@@ -36,11 +35,9 @@
 #include <cstring>
 
 #include <openvpn/common/file.hpp>
-#include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/fileunix.hpp>
-#include <openvpn/common/path.hpp>
 #include <openvpn/common/strerror.hpp>
-#include <openvpn/random/randapi.hpp>
+#include <openvpn/common/tmpfilename.hpp>
 
 namespace openvpn {
   // Atomically write binary buffer to file (relies on
@@ -53,9 +50,7 @@ namespace openvpn {
 				  RandomAPI& rng)
   {
     // generate temporary filename
-    unsigned char data[16];
-    rng.rand_fill(data);
-    const std::string tfn = path::join(tmpdir, '.' + path::basename(fn).substr(0, 64) + '.' + render_hex(data, sizeof(data)));
+    const std::string tfn = tmp_filename(fn, tmpdir, rng);
 
     // write to temporary file
     write_binary_unix(tfn, mode, mtime_ns, buf);
@@ -76,8 +71,6 @@ namespace openvpn {
 				  const Buffer& buf,
 				  RandomAPI& rng)
   {
-    return write_binary_atomic(fn, tmpdir, mode, mtime_ns, const_buffer_ref(buf), rng);
+    write_binary_atomic(fn, tmpdir, mode, mtime_ns, const_buffer_ref(buf), rng);
   }
 }
-
-#endif
