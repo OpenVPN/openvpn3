@@ -34,7 +34,7 @@ public:
   void check_mean_range(const std::string& title, const int low, const int hi) const
   {
     const int m = mean();
-    ASSERT_TRUE (m > low && m < hi) << title << ' ' << to_string() << " outside of range=[" << low << ',' << hi << ']';
+    ASSERT_TRUE (m > low && m < hi) << title << ' ' << to_string() << " outside of range=(" << low << ',' << hi << ')';
   }
 
   int count() const
