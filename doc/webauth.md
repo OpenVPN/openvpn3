@@ -202,6 +202,35 @@ with the following optional parameters:
                 challenge response and the web based authentication would add 
                 `auth=crtext&auth=openurl` to the request.
 
+Optional web based profile support
+----------------------------------
+
+In certain scenarios the web-based and the Rest API based profile import might be mixed.
+In these cases the client should offer the Rest API based import by default but also offer 
+some way of switching to the web based import flow. 
+
+The server will indicate the optional web based import by adding the `Ovpn-WebAuth-Optional` 
+header with the same format as the `Ovpn-Webauth` header instead of the `Ovpn-WebAuth` header.
+The header has the same format as the `Ovpn-WebAuth` header:
+
+    Ovpn-WebAuth-Optional: providername,flags
+
+In addition to the flags specified for `Ovpn-WebAuth`,  the `Ovpn-WebAuth-Optional` can have 
+one additional optional flag:
+
+    * name=description
+
+to allow the UI to show the name of the web import to give the user a hint when to use the
+web based import in lieu of the simple username/password based REST import. As an example
+the `Ovpn-WebAuth-Optional` header might look like:
+    
+    Ovpn-WebAuth-Optional: FlowerVPN,name=Smartcard SAML authentication,external
+
+The normal user/password based VPN import dialog for the Rest-API would then show an
+additional button/link that says: 
+    
+    Import profile using "Smartcard SAML authentication" 
+
 State API
 ---------
 
