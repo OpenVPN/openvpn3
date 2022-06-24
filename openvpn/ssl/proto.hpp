@@ -352,6 +352,7 @@ namespace openvpn {
 
       // MTU
       unsigned int tun_mtu = TUN_MTU_DEFAULT;
+      unsigned int tun_mtu_max = TUN_MTU_DEFAULT + 100;
       MSSParms mss_parms;
       unsigned int mss_fix = 0;
 
@@ -568,6 +569,7 @@ namespace openvpn {
 
 	// tun-mtu
 	tun_mtu = parse_tun_mtu(opt, tun_mtu);
+	tun_mtu_max = parse_tun_mtu_max(opt, tun_mtu_max);
 
 	// mssfix
 	mss_parms.parse(opt, true);
@@ -879,6 +881,7 @@ namespace openvpn {
 	out << "IV_NCP=2\n"; // negotiable crypto parameters V2
 	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
 	out << "IV_PROTO=" << std::to_string(iv_proto) << '\n';
+	out << "IV_MTU=" << std::to_string(tun_mtu_max) << "\n";
 	/*
 	 * OpenVPN3 allows to be pushed any cipher that it supports as it
 	 * only implements secure ones and BF-CBC for backwards
@@ -1852,6 +1855,16 @@ namespace openvpn {
 	    OPENVPN_LOG("fixed mssfix=" << c.mss_fix);
 	    return;
 	  }
+
+	/* If we are running default mssfix but have a different tun-mtu pushed
+	 * disable mssfix */
+	if (c.tun_mtu != TUN_MTU_DEFAULT && c.tun_mtu != 0 && c.mss_parms.mssfix_default)
+	{
+	  c.mss_fix = 0;
+	  OPENVPN_LOG("mssfix disabled since tun-mtu is non-default ("
+	  		<< c.tun_mtu << ")");
+			  return;
+	}
 
 	int payload_overhead = 0;
 

@@ -306,6 +306,11 @@ namespace openvpn {
 	  return "";
       }
 
+      int vpn_mtu() const override
+      {
+	return state->mtu;
+      }
+
       virtual void set_disconnect() override
       {
       }

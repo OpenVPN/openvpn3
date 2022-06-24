@@ -198,6 +198,11 @@ namespace openvpn {
 	  return "";
       }
 
+      int vpn_mtu() const override
+      {
+	return state->mtu;
+      }
+
     private:
       void read()
       {

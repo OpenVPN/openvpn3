@@ -605,6 +605,9 @@ namespace openvpn {
 		if (!connected_)
 		  throw tun_exception("not connected");
 
+		// Propagate tun-mtu back, it might have been overwritten by a pushed tun-mtu option
+		conf().tun_mtu = tun->vpn_mtu();
+
 		// initialize data channel after pushed options have been processed
 		Base::init_data_channel();
 
@@ -791,6 +794,12 @@ namespace openvpn {
 	ev->vpn_ip6 = tun->vpn_ip6();
 	ev->vpn_gw4 = tun->vpn_gw4();
 	ev->vpn_gw6 = tun->vpn_gw6();
+	if (tun->vpn_mtu()) {
+	  ev->vpn_mtu = std::to_string(tun->vpn_mtu());
+	} else {
+	  ev->vpn_mtu = "(default)";
+	}
+
 	try {
 	  std::string client_ip = received_options.get_optional("client-ip", 1, 256);
 	  if (!client_ip.empty())

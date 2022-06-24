@@ -233,6 +233,7 @@ namespace openvpn {
 		ci.clientIp = c->client_ip;
 		ci.tunName = c->tun_name;
 		ci.defined = true;
+		ci.vpnMtu = c->vpn_mtu;
 		return;
 	      }
 	  }

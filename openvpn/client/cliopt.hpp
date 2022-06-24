@@ -228,9 +228,12 @@ namespace openvpn {
       prng.reset(new SSLLib::RandomAPI(true));
 
       // frame
-      const unsigned int tun_mtu = parse_tun_mtu(opt, 0); // get tun-mtu parameter from config
+      // get tun-mtu and tun-mtu-max parameter from config
+      const unsigned int tun_mtu = parse_tun_mtu(opt, 0);
+      const unsigned int tun_mtu_max = std::max(parse_tun_mtu_max(opt, TUN_MTU_DEFAULT + 100), tun_mtu);
+
       const MSSCtrlParms mc(opt);
-      frame = frame_init(true, tun_mtu, mc.mssfix_ctrl, true);
+      frame = frame_init(true, tun_mtu_max, mc.mssfix_ctrl, true);
 
       // TCP queue limit
       tcp_queue_limit = opt.get_num<decltype(tcp_queue_limit)>("tcp-queue-limit", 1, tcp_queue_limit, 1, 65536);
@@ -346,6 +349,7 @@ namespace openvpn {
 	  tunconf.tun_prop.session_name = session_name;
 	  if (tun_mtu)
 	    tunconf.tun_prop.mtu = tun_mtu;
+	  tunconf.tun_prop.mtu_max = tun_mtu_max;
 	  tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
 	  tunconf.tun_prop.remote_list = remote_list;
 	  tunconf.stop = config.stop;
@@ -361,6 +365,7 @@ namespace openvpn {
 	    tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    if (tun_mtu)
 	      tunconf.tun_prop.mtu = tun_mtu;
+	    tunconf.tun_prop.mtu_max = tun_mtu_max;
 	    tunconf.frame = frame;
 	    tunconf.stats = cli_stats;
 	    tunconf.tun_prop.remote_list = remote_list;
@@ -379,6 +384,7 @@ namespace openvpn {
 	    tunconf->tun_prop.allow_local_lan_access = config.allow_local_lan_access;
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->tun_prop.mtu_max = tun_mtu_max;
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    tunconf->tun_prop.remote_list = remote_list;
@@ -407,6 +413,7 @@ namespace openvpn {
 	    tunconf->tun_prop.session_name = session_name;
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->tun_prop.mtu_max = tun_mtu_max;
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    tunconf->generate_tun_builder_capture_event = config.generate_tun_builder_capture_event;
 	    tunconf->tun_prop.remote_list = remote_list;
@@ -425,6 +432,7 @@ namespace openvpn {
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->tun_prop.mtu_max = tun_mtu_max;
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;
@@ -451,6 +459,7 @@ namespace openvpn {
 	    tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
 	    if (tun_mtu)
 	      tunconf->tun_prop.mtu = tun_mtu;
+	    tunconf->tun_prop.mtu_max = tun_mtu_max;
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;

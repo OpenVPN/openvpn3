@@ -54,6 +54,8 @@ namespace openvpn {
     virtual std::string vpn_gw4() const { return std::string(); } // VPN gateways
     virtual std::string vpn_gw6() const { return std::string(); }
 
+    virtual int vpn_mtu() const  = 0;
+
     virtual void adjust_mss(int mss) {};
   };
 

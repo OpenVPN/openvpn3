@@ -63,6 +63,7 @@ namespace openvpn {
     {
       std::string session_name;
       int mtu = 0;
+      int mtu_max = 0;
       bool google_dns_fallback = false;
       bool allow_local_lan_access = false;
       Layer layer{Layer::OSI_LAYER_3};
@@ -89,6 +90,7 @@ namespace openvpn {
       IP::Addr vpn_ip6_addr;
       IP::Addr vpn_ip4_gw;
       IP::Addr vpn_ip6_gw;
+      int mtu = 0;
       bool tun_prefix = false;
     };
 
@@ -195,12 +197,8 @@ namespace openvpn {
       if (!tb->tun_builder_set_layer(config.layer.value()))
 	throw tun_prop_error("tun_builder_set_layer failed");
 
-      // set MTU
-      if (config.mtu)
-	{
-	  if (!tb->tun_builder_set_mtu(config.mtu))
-	    throw tun_prop_error("tun_builder_set_mtu failed");
-	}
+      // configure MTU
+      tun_mtu(tb, state, opt, config.mtu, config.mtu_max);
 
       // set session name
       if (!config.session_name.empty())
@@ -245,6 +243,34 @@ namespace openvpn {
 	    throw tun_prop_error("route-gateway is not IPv4 (IPv6 route-gateway is passed with ifconfig-ipv6 directive)");
 	}
       return gateway;
+    }
+
+    static void tun_mtu(TunBuilderBase *tb, State *state, const OptionList &opt,
+			int config_mtu, int config_mtu_max)
+    {
+      // MTU
+      int tun_mtu = config_mtu;
+      const Option *o = opt.get_ptr("tun-mtu");
+      if (o) {
+	bool status = parse_number_validate<decltype(tun_mtu)>(o->get(1, 16),
+							       16,
+							       68,
+							       65535,
+							       &tun_mtu);
+	tun_mtu = std::min(tun_mtu, config_mtu_max);
+
+	if (!status)
+	  throw option_error("tun-mtu parse/range issue");
+
+	if (state)
+	  state->mtu = tun_mtu;
+      }
+
+      if (tun_mtu != 0)
+      {
+	if (!tb->tun_builder_set_mtu(tun_mtu))
+	  throw tun_prop_error("tun_builder_set_mtu failed");
+      }
     }
 
     static IP::Addr::VersionMask tun_ifconfig(TunBuilderBase* tb,

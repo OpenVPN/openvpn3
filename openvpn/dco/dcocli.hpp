@@ -211,6 +211,10 @@ public:
       return "";
   }
 
+  int vpn_mtu() const override {
+    return state->mtu;
+  }
+
 protected:
   Client(openvpn_io::io_context &io_context_arg, ClientConfig *config_arg,
          TransportClientParent *parent_arg)
