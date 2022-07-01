@@ -43,7 +43,12 @@ public:
     RemoteList& rl = *config->transport.remote_list;
     if (rl.endpoint_available(&server_host, &server_port, &proto_))
       {
-	start_impl_();
+	// defer to let pending IO finish
+	openvpn_io::post(io_context, [self=Ptr(this)]()
+	{
+	  OPENVPN_ASYNC_HANDLER;
+	  self->start_impl_();
+	});
       }
     else
       {
