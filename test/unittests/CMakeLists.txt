@@ -41,6 +41,7 @@ set(CORE_TEST_DEFINES
         -DOPENVPN_FORCE_TUN_NULL
         -DUNIT_TEST
         -DUNITTEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\"
+        -DOPENVPN_RC_NOTIFY
         )
 
 add_executable(coreUnitTests
@@ -60,6 +61,27 @@ add_executable(coreUnitTests
         test_peer_fingerprint.cpp
         test_safestr.cpp
         test_dns.cpp
+
+        test_capture.cpp
+        test_cleanup.cpp
+        test_crypto_hashstr.cpp
+        test_csum.cpp
+        test_format.cpp
+        test_headredact.cpp
+        test_hostport.cpp
+        test_ip.cpp
+        test_parseargv.cpp
+        test_path.cpp
+        test_pktid.cpp
+        test_prefixlen.cpp
+        test_rc.cpp
+        test_route.cpp
+        test_statickey.cpp
+        test_streq.cpp
+        test_time.cpp
+        test_typeindex.cpp
+        test_validatecreds.cpp
+        test_weak.cpp
         )
 
 if (${USE_MBEDTLS})
@@ -69,6 +91,8 @@ if (${USE_MBEDTLS})
 else ()
     target_sources(coreUnitTests PRIVATE
             test_openssl_x509certinfo.cpp
+            test_opensslpki.cpp
+            test_session_id.cpp
             )
 endif ()
 
@@ -84,6 +108,12 @@ if (UNIX)
       test_buffer_ip.cpp
 
       test_cpu_time.cpp
+
+      # directly includes tempfile.hpp
+      test_misc_unix.cpp
+
+      # Uses Unix Pipe semantics
+      test_pipe.cpp
       )
 endif ()
 
@@ -91,11 +121,13 @@ if (WIN32)
     target_sources(coreUnitTests PRIVATE test_iphelper.cpp)
 endif ()
 
-if (WIN32)
-    target_sources(coreUnitTests PRIVATE test_iphelper.cpp)
-endif ()
-
 add_core_dependencies(coreUnitTests)
+add_json_library(coreUnitTests)
+
+# xxHash
+target_compile_definitions(coreUnitTests PRIVATE -DHAVE_XXHASH)
+target_include_directories(coreUnitTests PRIVATE ${DEP_DIR}/xxHash)
+
 target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
 
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
