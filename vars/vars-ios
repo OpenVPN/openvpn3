@@ -3,8 +3,14 @@ export APPLE_FAMILY=1
 export GPP_CMD=clang++
 export GCC_CMD=clang
 export IOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"
-export PLATFORM_FLAGS="-arch armv7 -arch armv7s -arch arm64 -mthumb -miphoneos-version-min=10.0 -isysroot $IOS_SDK"
+export PLATFORM_FLAGS="-arch arm64 -mthumb -miphoneos-version-min=10.0 -isysroot $IOS_SDK"
 export OTHER_COMPILER_FLAGS="-fvisibility=hidden -fvisibility-inlines-hidden"
 export CXX_COMPILER_FLAGS="-std=c++14 -stdlib=libc++"
 export LIB_OPT_LEVEL="-O3"
 export LIB_FPIC=""
+
+# Used by OpenSSL build
+export CC=clang
+export CROSS_TOP=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer
+export CROSS_SDK=iPhoneOS.sdk
+export PATH="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin:$PATH"
