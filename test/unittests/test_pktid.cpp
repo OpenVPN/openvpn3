@@ -113,7 +113,7 @@ void perfiter(const long n,
 	      Error::Type expected = Error::SUCCESS;
 	      if (!id)
 		expected = Error::PKTID_INVALID;
-	      else if (high - id >= PIDRecv::REPLAY_WINDOW_SIZE)
+	      else if (high - id >= (const long)PIDRecv::REPLAY_WINDOW_SIZE)
 		expected = Error::PKTID_BACKTRACK;
 	      else if (bv[id])
 		expected = Error::PKTID_REPLAY;
