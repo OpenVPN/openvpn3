@@ -59,6 +59,12 @@ download_deps()
         patch -d asio -p1 < "${CORE_DIR}/deps/asio/patches/$patchfile"
     done
 
+    rm -rf xxHash
+    git clone https://github.com/Cyan4973/xxHash.git
+    portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/xxhash/portfile.cmake
+    gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2)
+    git -C xxHash checkout "${gitref}"
+
     popd
 }
 
@@ -135,6 +141,14 @@ build_asio()
     cp -R $DL/asio/* $DEP_DIR_PREFIX-$ARCH/asio
 }
 
+build_xxhash()
+{
+    ARCH=$1
+
+    mkdir -p $DEP_DIR_PREFIX-$ARCH/xxHash
+    cp -R $DL/xxHash/* $DEP_DIR_PREFIX-$ARCH/xxHash
+}
+
 build_deps()
 {
     if [ -n "$NO_DEPS" ]; then
@@ -152,6 +166,7 @@ build_deps()
     build_jsoncpp $ARCH
     build_tap_windows6 $ARCH
     build_asio $ARCH
+    build_xxhash $ARCH
     build_openssl $ARCH
 }
 
