@@ -132,12 +132,12 @@ Ensure that [homebrew](https://brew.sh/) is set up.
 
 ::
 
-    $  brew install lz4 openssl cmake asio jsoncpp
+    $  brew install asio cmake jsoncpp lz4 openssl pkg-config
 
 Now build the OpenVPN 3 client executable:
-::
 
 On a ARM64 based Mac:
+::
 
     $ cd ~/src/
     $ mkdir build-openvpn3
@@ -146,6 +146,7 @@ On a ARM64 based Mac:
     $ cmake --build .
 
 For a build on a Intel based Mac:
+::
 
     $ cd ~/src/
     $ mkdir build-openvpn3
