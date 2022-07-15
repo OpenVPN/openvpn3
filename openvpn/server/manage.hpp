@@ -39,7 +39,18 @@
 #include <openvpn/server/peerstats.hpp>
 #include <openvpn/server/peeraddr.hpp>
 #include <openvpn/auth/authcert.hpp>
-#include <openvpn/auth/authstatusconst.hpp>
+
+
+namespace openvpn
+{
+  namespace AuthStatus
+  {
+    // Auth constants
+    enum Type : unsigned char;
+  }
+}
+
+
 
 // used by ipma_notify()
 struct ovpn_tun_head_ipma;
