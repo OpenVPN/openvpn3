@@ -107,8 +107,16 @@ namespace openvpn {
 
   inline void daemonize()
   {
+    // ignore daemon() deprecated on macOS
+#if defined(__APPLE__)
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     if (daemon(1, 1) < 0)
       throw daemon_err("daemon() failed");
+#if defined(__APPLE__)
+# pragma clang diagnostic pop
+#endif
   }
 
   inline LogSetup::Ptr daemonize(const std::string& log_fn,
