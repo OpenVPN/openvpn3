@@ -61,6 +61,7 @@ add_executable(coreUnitTests
         test_peer_fingerprint.cpp
         test_safestr.cpp
         test_dns.cpp
+	test_header_deps.cpp
 
         test_capture.cpp
         test_cleanup.cpp
