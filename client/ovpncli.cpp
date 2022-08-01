@@ -465,6 +465,9 @@ namespace openvpn {
 	PeerInfo::Set::Ptr extra_peer_info;
 	HTTPProxyTransport::Options::Ptr http_proxy_options;
 	unsigned int clock_tick_ms = 0;
+#ifdef OPENVPN_PLATFORM_ANDROID
+	bool enable_route_emulation = true;
+#endif
 #ifdef OPENVPN_GREMLIN
 	Gremlin::Config::Ptr gremlin_config;
 #endif
@@ -726,6 +729,9 @@ namespace openvpn {
 	state->echo = config.echo;
 	state->info = config.info;
 	state->clock_tick_ms = config.clockTickMS;
+#ifdef OPENVPN_PLATFORM_ANDROID
+	state->enable_route_emulation = config.enableRouteEmulation;
+#endif
 	if (!config.gremlinConfig.empty())
 	  {
 #ifdef OPENVPN_GREMLIN

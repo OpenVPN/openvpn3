@@ -158,6 +158,9 @@ namespace openvpn {
 	  bool enable_legacy_algorithms = false;
       bool enable_nonpreferred_dcalgs;
       PeerInfo::Set::Ptr extra_peer_info;
+#ifdef OPENVPN_PLATFORM_ANDROID
+      bool enable_route_emulation = true;
+#endif
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
 #endif
@@ -396,8 +399,13 @@ namespace openvpn {
 	      tunconf->tun_prop.remote_bypass = true;
 #endif
 #if defined(OPENVPN_PLATFORM_ANDROID)
-	    // Android VPN API doesn't support excluded routes, so we must emulate them
-	    tunconf->eer_factory.reset(new EmulateExcludeRouteFactoryImpl(false));
+	// Android VPN API only supports excluded IP prefixes starting with Android 13/API 33,
+	// so we must emulate them for earlier platforms
+	if (config.enable_route_emulation) {
+	  tunconf->eer_factory.reset(new EmulateExcludeRouteFactoryImpl(false));
+	} else {
+	  tunconf->eer_factory.reset(nullptr);
+	}
 #endif
 #if defined(OPENVPN_PLATFORM_MAC)
 	    tunconf->tun_prefix = true;

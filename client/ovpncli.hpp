@@ -315,6 +315,13 @@ namespace openvpn {
       // Android that disable local LAN access by default.
       bool allowLocalLanAccess = false;
 
+#ifdef OPENVPN_PLATFORM_ANDROID
+      // Instead of setting include and exclude routes, calculate a set of
+      // include routes only to emulate the lack of excluding routes
+      // (Android earlier than Tiramisu (Android 13))
+      bool enableRouteEmulation = true;
+#endif
+
       // Periodic convenience clock tick in milliseconds.
       // Will call clock_tick() at a frequency defined by this parameter.
       // Set to 0 to disable.
