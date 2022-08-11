@@ -94,8 +94,10 @@ namespace openvpn {
 	const char OVPNDCO_COMPONENT_ID[] = "ovpn-dco"; // CONST GLOBAL
 
 	const char ROOT_COMPONENT_ID[] = "root\\" OPENVPN_STRINGIZE(TAP_WIN_COMPONENT_ID);
-	const char ROOT_WINTUN_COMPONENT_ID[] = "root\\wintun"; 
+	const char ROOT_WINTUN_COMPONENT_ID[] = "root\\wintun";
 	const char ROOT_OVPNDCO_COMPONENT_ID[] = "root\\ovpn-dco";
+
+	const char OVPNDCO_DEV_INTERFACE_REF_STRING[] = "\\ovpn-dco";
       }
 
       using TapGuidLuid = std::pair<std::string, DWORD>;
@@ -390,7 +392,7 @@ namespace openvpn {
       struct DeviceInstanceIdInterfacePair
       {
 	std::string net_cfg_instance_id;
-	std::string device_interface_list;
+	std::string device_interface;
       };
 
       class DevInfoSetHelper
@@ -493,10 +495,16 @@ namespace openvpn {
 	      if (cr != CR_SUCCESS)
 		continue;
 
-	      DeviceInstanceIdInterfacePair pair;
-	      pair.net_cfg_instance_id = str_net_cfg_instance_id;
-	      pair.device_interface_list = std::string(buf_dev_iface_list.data());
-	      push_back(pair);
+	      char *dev_if = buf_dev_iface_list.data();
+	      while (strlen(dev_if) > 0)
+		{
+		  DeviceInstanceIdInterfacePair pair;
+		  pair.net_cfg_instance_id = str_net_cfg_instance_id;
+		  pair.device_interface = std::string(dev_if);
+		  push_back(pair);
+
+		  dev_if += strlen(dev_if) + 1;
+		}
 	    }
 	}
       };
@@ -533,7 +541,12 @@ namespace openvpn {
 		    if (inst_id_interface.net_cfg_instance_id != tap.guid)
 		      continue;
 
-		    path = inst_id_interface.device_interface_list;
+		    if (tun_type == OvpnDco)
+		      {
+			if (!string::ends_with(inst_id_interface.device_interface, OVPNDCO_DEV_INTERFACE_REF_STRING))
+			  continue;
+		      }
+		    path = inst_id_interface.device_interface;
 		    break;
 		  }
 	      }
