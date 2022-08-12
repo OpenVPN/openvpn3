@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <time.h>
+
 #include <openvpn/time/timespec.hpp>
 
 namespace openvpn {
