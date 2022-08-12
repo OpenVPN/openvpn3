@@ -37,6 +37,9 @@ namespace openvpn {
     if (!app_version.empty())
       os << app_version << '/';
     os << OPENVPN_VERSION;
+#if defined OPENVPN_CORE_GIT_VERSION
+    os << "(" <<  OPENVPN_CORE_GIT_VERSION << ")";
+#endif
     os << ' ' << platform_name();
 #   if defined(__amd64__) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
       os << " x86_64";
