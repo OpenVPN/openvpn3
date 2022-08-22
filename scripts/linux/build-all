@@ -21,5 +21,3 @@ fi
 echo "******* LZ4"
 "$O3"/core/scripts/linux/build-lz4
 
-#$O3/core/scripts/linux/build-openssl x64
-#$O3/core/scripts/linux/build-lzo
