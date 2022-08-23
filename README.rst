@@ -132,7 +132,7 @@ Ensure that [homebrew](https://brew.sh/) is set up.
 
 ::
 
-    $  brew install lz4 openssl cmake asio jsoncpp
+    $  brew install lz4 openssl cmake asio jsoncpp xxhash
 
 Now build the OpenVPN 3 client executable:
 ::
