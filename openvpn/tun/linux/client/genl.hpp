@@ -634,6 +634,14 @@ private:
     nla_parse(attrs, OVPN_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
               genlmsg_attrlen(gnlh, 0), NULL);
 
+    if (!attrs[OVPN_ATTR_IFINDEX]) {
+      OPENVPN_LOG("missing OVPN_ATTR_IFINDEX attribute in message");
+      return NL_SKIP;
+    }
+
+    if (self->ifindex != nla_get_u32(attrs[OVPN_ATTR_IFINDEX]))
+      return NL_SKIP;
+
     switch (gnlh->cmd) {
     case OVPN_CMD_PACKET:
       if (!attrs[OVPN_ATTR_PACKET])
