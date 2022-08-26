@@ -35,7 +35,8 @@ if (${CLI_KOVPN})
     add_core_dependencies(ovpnclikovpn)
     target_link_libraries(ovpnclikovpn xkey)
 
-    target_compile_definitions(ovpnclikovpn PRIVATE -DENABLE_KOVPN )
+    target_compile_definitions(ovpnclikovpn PRIVATE -DENABLE_KOVPN
+      -DOPENVPN_REMOTE_OVERRIDE -DPRIVATE_TUNNEL_PROXY)
 
     include(kovpn)
     add_kovpn_dependency(ovpnclikovpn)
