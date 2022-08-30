@@ -61,8 +61,7 @@ add_executable(coreUnitTests
         test_peer_fingerprint.cpp
         test_safestr.cpp
         test_dns.cpp
-	test_header_deps.cpp
-
+        test_header_deps.cpp
         test_capture.cpp
         test_cleanup.cpp
         test_crypto_hashstr.cpp
@@ -83,6 +82,7 @@ add_executable(coreUnitTests
         test_typeindex.cpp
         test_validatecreds.cpp
         test_weak.cpp
+        test_cliopt.cpp
         )
 
 if (${USE_MBEDTLS})

@@ -321,12 +321,18 @@ namespace openvpn {
       return out.str();
     }
 
+    void clear() {
+      data.clear();
+      touched_ = false;
+      warn_only_if_unknown_ = false;
+      meta_ = false;
+    }
+
     // delegate to data
     size_t size() const { return data.size(); }
     bool empty() const { return data.empty(); }
     void push_back(const std::string& item) { data.push_back(item); }
     void push_back(std::string&& item) { data.push_back(std::move(item)); }
-    void clear() { data.clear(); }
     void reserve(const size_t n) { data.reserve(n); }
     void resize(const size_t n) { data.resize(n); }
 
@@ -354,6 +360,16 @@ namespace openvpn {
       touched_ = true;
     }
 
+    void enableWarnOnly()
+    {
+      warn_only_if_unknown_ = true;
+    }
+
+    bool warnonlyunknown() const
+    {
+      return warn_only_if_unknown_;
+    }
+
     // was this option processed?
     bool touched() const { return touched_; }
 
@@ -370,7 +386,25 @@ namespace openvpn {
       return ret;
     }
 
-  private:
+    /**
+     * Marks this option as parsed from a meta options like
+     * # OVPN_ACCESS_SERVER_USERNAME=username
+     */
+    void set_meta(bool value = true) {
+	meta_ = value;
+    }
+
+    /**
+     * This option has been parsed from a meta options like
+     * # OVPN_ACCESS_SERVER_USERNAME=username
+     * @return
+     */
+    bool meta() const
+    {
+      return meta_;
+    }
+
+   private:
     void from_list(std::string arg)
     {
       push_back(std::move(arg));
@@ -412,6 +446,8 @@ namespace openvpn {
     }
 
     volatile mutable bool touched_ = false;
+    bool warn_only_if_unknown_ = false;
+    bool meta_ = false;
     std::vector<std::string> data;
   };
 
@@ -882,6 +918,7 @@ namespace openvpn {
 		      lim->add_opt();
 		      lim->validate_directive(multiline);
 		    }
+		  multiline.set_meta(true);
 		  push_back(std::move(multiline));
 		  multiline.clear();
 		  in_multiline = false;
@@ -949,6 +986,7 @@ namespace openvpn {
 			  lim->add_opt();
 			  lim->validate_directive(multiline);
 			}
+		      multiline.set_meta(true);
 		      push_back(std::move(multiline));
 		      multiline.clear();
 		      in_multiline = false;
@@ -981,6 +1019,7 @@ namespace openvpn {
 			      lim->add_opt();
 			      lim->validate_directive(opt);
 			    }
+			  opt.set_meta(true);
 			  push_back(std::move(opt));
 			}
 		    }
@@ -1374,15 +1413,29 @@ namespace openvpn {
 
     // Return number of unused options based on the notion that
     // all used options have been touched.
-    size_t n_unused() const
+    size_t n_unused(bool ignore_meta=false) const
     {
       size_t n = 0;
       for (std::vector<Option>::const_iterator i = begin(); i != end(); ++i)
 	{
 	  const Option& opt = *i;
-	  if (!opt.touched())
+	  if (!opt.touched() && !(opt.meta() && ignore_meta))
 	    ++n;
 	}
+      return n;
+    }
+
+    // Return number of unused meta options based on the notion that
+    // all used options have been touched.
+    size_t meta_unused() const
+    {
+      size_t n = 0;
+      for (std::vector<Option>::const_iterator i = begin(); i != end(); ++i)
+      {
+	const Option& opt = *i;
+	if (opt.meta() && !opt.touched())
+	  ++n;
+      }
       return n;
     }
 

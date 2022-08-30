@@ -638,7 +638,10 @@ namespace openvpn {
 	{
 	  Option& o = *i;
 	  if (o.size() >= 3 && o.ref(0) == "setenv" && o.ref(1) == "opt")
+	  {
 	    o.remove_first(2);
+	    o.enableWarnOnly();
+	  }
 	}
     }
 
