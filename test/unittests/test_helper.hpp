@@ -383,16 +383,19 @@ private:
 // googletest is missing the ability to test for specific
 // text inside a thrown exception, so we implement it here
 
-#define JY_EXPECT_THROW(statement, expected_exception, expected_text) \
+#define OVPN_EXPECT_THROW(statement, expected_exception, expected_text) \
 try { \
     statement; \
-    OPENVPN_THROW_EXCEPTION("JY_EXPECT_THROW: no exception was thrown " << __FILE__ << ':' << __LINE__); \
+    OPENVPN_THROW_EXCEPTION("OVPN_EXPECT_THROW: no exception was thrown " << __FILE__ << ':' << __LINE__); \
 } \
 catch (const expected_exception& e) \
 { \
   if (std::string(e.what()).find(expected_text) == std::string::npos) \
-    OPENVPN_THROW_EXCEPTION("JY_EXPECT_THROW: did not find expected text in exception at " << __FILE__ << ':' << __LINE__); \
+    OPENVPN_THROW_EXCEPTION("OVPN_EXPECT_THROW: did not find expected text in exception at " << __FILE__ << ':' << __LINE__ \
+        << ". Got: " << e.what()); \
 }
+#define JY_EXPECT_THROW OVPN_EXPECT_THROW
+
 
 // googletest ASSERT macros can't be used inside constructors
 // or non-void-returning functions, so implement workaround here
