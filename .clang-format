@@ -1,0 +1,6 @@
+BasedOnStyle: Microsoft
+ColumnLimit: 0
+SortIncludes: Never
+BreakBeforeBinaryOperators: All
+BinPackArguments: False
+BinPackParameters: False
