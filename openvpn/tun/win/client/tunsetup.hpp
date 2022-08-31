@@ -484,8 +484,8 @@ namespace openvpn {
 		      int metric = pull.route_metric_default;
 		      if (route.metric >= 0)
 			metric = route.metric;
-		      create.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, tap,  local4->gateway, metric, true));
-		      destroy.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, tap, local4->gateway, metric, false));
+		      create.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, tap.index, tap.name, local4->gateway, metric, true));
+		      destroy.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, tap.index, tap.name, local4->gateway, metric, false));
 		    }
 		  else
 		    throw tun_win_setup("IPv4 routes pushed without IPv4 ifconfig");
@@ -502,15 +502,18 @@ namespace openvpn {
 		bool ipv6_error = false;
 		for (auto &route : pull.exclude_routes)
 		  {
-		    const std::string metric = route_metric_opt(pull, route, MT_NETSH);
+		    int metric = pull.route_metric_default;
+		    if (route.metric >= 0)
+		      metric = route.metric;
+
 		    if (route.ipv6)
 		      {
 			ipv6_error = true;
 		      }
 		    else
 		      {
-			create.add(new WinCmd("netsh interface ip add route " + route.address + '/' + to_string(route.prefix_length) + ' ' + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + metric + " store=active"));
-			destroy.add(new WinCmd("netsh interface ip delete route " + route.address + '/' + to_string(route.prefix_length) + ' ' + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
+			create.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, gw.interface_index(), "", gw.gateway_address(), metric, true));
+			destroy.add(new TUNWINDOWS::AddRoute4Cmd(route.address, route.prefix_length, gw.interface_index(), "", gw.gateway_address(), metric, false));
 		      }
 		  }
 		if (ipv6_error)

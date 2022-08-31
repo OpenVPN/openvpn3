@@ -1365,7 +1365,8 @@ namespace openvpn {
 
 	  AddRoute4Cmd(const std::string& route_address,
 		       int prefix_length,
-		       const TunWin::Util::TapNameGuidPair& tap,
+		       DWORD iface_index,
+		       const std::string& iface_name,
 		       const std::string& gw_address,
 		       int metric,
 		       bool add)
@@ -1376,7 +1377,12 @@ namespace openvpn {
 	      os << "add ";
 	    else
 	      os << "delete ";
-	    os << "route " << route_address << "/" << std::to_string(prefix_length) << " " << tap.index_or_name() << " " << gw_address << " ";
+	    os << "route " << route_address << "/" << std::to_string(prefix_length) << " ";
+	    if (iface_index != DWORD(-1))
+	      os << iface_index;
+	    else
+	      os << iface_name;
+	    os << " " << gw_address << " ";
 	    if (add && metric >= 0)
 	      os << "metric=" << std::to_string(metric) << " ";
 	    os << "store=active";
@@ -1422,7 +1428,8 @@ namespace openvpn {
 
 	  AddRoute4Cmd(const std::string& route_address,
 		       int prefix_length,
-		       const TunWin::Util::TapNameGuidPair& tap,
+		       DWORD iface_index,
+		       const std::string& iface_name,
 		       const std::string& gw_address,
 		       int metric,
 		       bool add) : add(add)
@@ -1432,8 +1439,12 @@ namespace openvpn {
 	      os_ << "add ";
 	    else
 	      os_ << "delete ";
-	    os_ << "route " << route_address << "/" << std::to_string(prefix_length) << " " << tap.index_or_name() << " " << gw_address << " ";
-	    os_ << "metric=" << std::to_string(metric);
+	    os_ << "route " << route_address << "/" << std::to_string(prefix_length) << " ";
+	    if (iface_index != DWORD(-1))
+	      os_ << iface_index;
+	    else
+	      os_ << iface_name;
+	    os_ << " " << gw_address << " metric=" << std::to_string(metric);
 
 	    ZeroMemory(&fwd_row, sizeof(fwd_row));
 	    fwd_row.ValidLifetime = 0xffffffff;
@@ -1444,14 +1455,14 @@ namespace openvpn {
 	    fwd_row.DestinationPrefix.PrefixLength = prefix_length;
 	    fwd_row.NextHop = sockaddr_inet(AF_INET, gw_address);
 
-	    if (tap.index_defined())
-	      fwd_row.InterfaceIndex = tap.index;
-	    else if (!tap.name.empty())
+	    if (iface_index != DWORD(-1))
+	      fwd_row.InterfaceIndex = iface_index;
+	    else if (!iface_name.empty())
 	      {
 		NET_LUID luid;
-		auto err = InterfaceLuid(tap.name, &luid);
+		auto err = InterfaceLuid(iface_name, &luid);
 		if (err)
-		  OPENVPN_THROW(tun_win_util, "Cannot convert interface name " << tap.name << " to LUID");
+		  OPENVPN_THROW(tun_win_util, "Cannot convert interface name " << iface_name << " to LUID");
 		fwd_row.InterfaceLuid = luid;
 	      }
 	  };

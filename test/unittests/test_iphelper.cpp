@@ -61,8 +61,8 @@ namespace unittests
 	int route_prefix = 16;
 	int metric = 123;
 
-	TunIPHELPER::AddRoute4Cmd cmd{route, route_prefix, tap, gw, metric, true};
-	remove_cmds.add(new TunIPHELPER::AddRoute4Cmd{route, route_prefix, tap, gw, metric, false});
+	TunIPHELPER::AddRoute4Cmd cmd{route, route_prefix, tap.index, tap.name, gw, metric, true};
+	remove_cmds.add(new TunIPHELPER::AddRoute4Cmd{route, route_prefix, tap.index, tap.name, gw, metric, false});
 
 	// add route
 	cmd.execute(os);
@@ -75,7 +75,7 @@ namespace unittests
 	char next_hop[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &row.dwForwardNextHop, next_hop, INET_ADDRSTRLEN);
 
-	// the next hop should equal route gw 
+	// the next hop should equal route gw
 	ASSERT_STREQ(gw, next_hop);
     }
 }
