@@ -137,7 +137,7 @@ namespace openvpn {
       std::string process_cmd(const Option& o)
       {
 	try {
-	  const std::string arg1 = o.get(1, 16);
+	  const std::string arg1 = o.get_default(1, 16, "1");
 	  if (arg1 == "on")
 	    {
 	      const std::string arg2 = o.get_optional(2, 16);
