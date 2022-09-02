@@ -61,6 +61,7 @@ if [ -z "$1" ]; then
     echo " ASAN=1 -- (optional) enable ASAN run-time checks"
     echo " PCRE=1 -- build with PCRE library"
     echo " SYSD=1 -- build with systemd library"
+    echo " SQLITE=1 -- build with sqlite3 library"
     for s in $(enum_build_extras) ; do
 	. $s args
     done
@@ -298,6 +299,12 @@ fi
 if [ "$SYSD" = "1" ]; then
     LIBS="$LIBS -lsystemd"
     CPPFLAGS="$CPPFLAGS -DHAVE_LIBSYSTEMD"
+fi
+
+# libsqlite3
+if [ "$SQLITE" = "1" ]; then
+    LIBS="$LIBS -lsqlite3"
+    CPPFLAGS="$CPPFLAGS -DHAVE_SQLITE"
 fi
 
 # PCRE
