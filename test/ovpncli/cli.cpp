@@ -661,7 +661,7 @@ private:
     return !remote_override_cmd.empty();
   }
 
-  virtual void remote_override(ClientAPI::RemoteOverride& ro)
+  virtual void remote_override(ClientAPI::RemoteOverride& ro) override
   {
     RedirectPipe::InOut pio;
     Argv argv;
