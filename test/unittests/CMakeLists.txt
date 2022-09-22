@@ -88,10 +88,12 @@ add_executable(coreUnitTests
 if (${USE_MBEDTLS})
     target_sources(coreUnitTests PRIVATE
             test_mbedtls_x509certinfo.cpp
+            test_mbedtls_authcert.cpp
             )
 else ()
     target_sources(coreUnitTests PRIVATE
             test_openssl_x509certinfo.cpp
+            test_openssl_authcert.cpp
             test_opensslpki.cpp
             test_session_id.cpp
             )

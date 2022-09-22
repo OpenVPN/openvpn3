@@ -778,7 +778,7 @@ namespace openvpn {
       {
 	// Reused sessions don't call the cert verify callbacks,
 	// so we must use an alternative method to build authcert.
-	if (authcert && authcert->is_uninitialized())
+	if (authcert && !authcert->defined())
 	  rebuild_authcert();
 	return authcert;
       }
@@ -935,8 +935,9 @@ namespace openvpn {
 	    authcert->cn = OpenSSLPKI::x509_get_field(cert, NID_commonName);
 
 	    // save the leaf cert serial number
-	    const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
-	    authcert->sn = extract_serial_number(ai);
+	    load_serial_number_into_authcert(*authcert, cert);
+
+	    authcert->defined_ = true;
 
 	    X509_free (cert);
 	  }
@@ -1488,6 +1489,28 @@ namespace openvpn {
     {
       return true;
     }
+
+#ifdef UNIT_TEST
+    static void load_cert_info_into_authcert(AuthCert& authcert, const std::string& cert_txt)
+    {
+      const OpenSSLPKI::X509 cert(cert_txt, "OpenSSLContext::load_cert_info_into_authcert");
+
+      // save the issuer cert fingerprint
+      {
+	unsigned int md_len = sizeof(AuthCert::issuer_fp);
+	X509_digest (cert.obj(), EVP_sha1(), authcert.issuer_fp, &md_len);
+      }
+
+      // save the Common Name
+      authcert.cn = OpenSSLPKI::x509_get_field(cert.obj(), NID_commonName);
+
+      // save the cert serial number
+      load_serial_number_into_authcert(authcert, cert.obj());
+
+      authcert.defined_ = true;
+    }
+#endif
+
   private:
     // ns-cert-type verification
 
@@ -1700,16 +1723,24 @@ namespace openvpn {
 	}
     }
 
-    static std::int64_t extract_serial_number(const ASN1_INTEGER *ai)
+    static void load_serial_number_into_authcert(AuthCert& authcert, ::X509 *cert)
     {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-      std::int64_t ret;
-      if (ASN1_INTEGER_get_int64(&ret, ai) == 0)
-	return -1;
-      return ret;
+      const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
+      BIGNUM *bn = ASN1_INTEGER_to_BN(ai, NULL);
+      if (!bn)
+	return;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+      const size_t nb = BN_num_bytes(bn);
+      if (nb <= sizeof(authcert.serial_number))
+	{
+	  const size_t offset = sizeof(authcert.serial_number) - nb;
+	  std::memset(authcert.serial_number, 0, offset);
+	  BN_bn2bin(bn, authcert.serial_number + offset);
+	}
 #else
-      return ai ? ASN1_INTEGER_get(ai) : -1;
+      BN_bn2binpad(bn, authcert.serial_number, sizeof(authcert.serial_number));
 #endif
+      BN_free(bn);
     }
 
     static std::string cert_status_line(int preverify_ok,
@@ -1968,8 +1999,9 @@ namespace openvpn {
 	      self_ssl->authcert->cn = OpenSSLPKI::x509_get_field(current_cert, NID_commonName);
 
 	      // save the leaf cert serial number
-	      const ASN1_INTEGER *ai = X509_get_serialNumber(current_cert);
-	      self_ssl->authcert->sn =  extract_serial_number(ai);
+	      load_serial_number_into_authcert(*self_ssl->authcert, current_cert);
+
+	      self_ssl->authcert->defined_ = true;
 	    }
 	}
 

@@ -37,6 +37,7 @@
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/pki/x509track.hpp>
 #include <openvpn/ssl/sni_metadata.hpp>
+#include <openvpn/common/socktypes.hpp> // for ntohl/htonl
 
 namespace openvpn {
 
@@ -140,18 +141,32 @@ namespace openvpn {
       };
 
       AuthCert()
+	: defined_(false)
       {
+	std::memset(serial_number, 0xff, sizeof(serial_number));
+	std::memset(issuer_fp, 0, sizeof(issuer_fp));
       }
 
-      AuthCert(std::string cn_arg, const std::int64_t sn_arg)
-	: cn(std::move(cn_arg)),
-	  sn(sn_arg)
+      AuthCert(std::string cn_arg, const std::int64_t sn)
+	: defined_(true),
+	  cn(std::move(cn_arg))
       {
+	std::memset(issuer_fp, 0, sizeof(issuer_fp));
+	if (sn >= 0)
+	  {
+	    serial_number32[0] = 0;
+	    serial_number32[1] = 0;
+	    serial_number32[2] = 0;
+	    serial_number32[3] = htonl(std::uint32_t(sn >> 32));
+	    serial_number32[4] = htonl(std::uint32_t(sn));
+	  }
+	else
+	  std::memset(serial_number, 0xff, sizeof(serial_number));
       }
 
       bool defined() const
       {
-	return sn >= 0;
+	return defined_;
       }
 
       bool sni_defined() const
@@ -164,20 +179,39 @@ namespace openvpn {
 	return !cn.empty();
       }
 
-      bool is_uninitialized() const
-      {
-	return cn.empty() && sn < 0 && !fail;
-      }
-
       template <typename T>
       T issuer_fp_prefix() const
       {
 	return bin_prefix<T>(issuer_fp);
       }
 
+      bool sn_defined() const
+      {
+	for (size_t i = 0; i < 5; ++i)
+	  if (serial_number32[i] != 0xffffffffu)
+	    return true;
+	return false;
+      }
+
+      std::int64_t serial_number_as_int64() const
+      {
+	if (serial_number32[0] != 0 ||
+	    serial_number32[1] != 0 ||
+	    serial_number32[2] != 0)
+	  return -1;
+	const std::int64_t ret = std::int64_t((std::uint64_t(ntohl(serial_number32[3])) << 32)
+					     | std::uint64_t(ntohl(serial_number32[4])));
+	if (ret < 0)
+	  return -1;
+	return ret;
+      }
+
       bool operator==(const AuthCert& other) const
       {
-	return sni == other.sni && cn == other.cn && sn == other.sn && !std::memcmp(issuer_fp, other.issuer_fp, sizeof(issuer_fp));
+	return sni == other.sni
+	  && cn == other.cn
+	  && !std::memcmp(serial_number, other.serial_number, sizeof(serial_number))
+	  && !std::memcmp(issuer_fp, other.issuer_fp, sizeof(issuer_fp));
       }
 
       bool operator!=(const AuthCert& other) const
@@ -193,9 +227,30 @@ namespace openvpn {
 	if (sni_metadata)
 	  os << "SNI_CN=" << sni_metadata->sni_client_name(*this) << ' ';
 	os << "CN=" << cn
-	   << " SN=" << sn
+	   << " SN=" << serial_number_str()
 	   << " ISSUER_FP=" << issuer_fp_str(false);
 	return os.str();
+      }
+
+      // example return for SN=65536: 01:00:00:00:00
+      std::string serial_number_str() const
+      {
+	std::string ret;
+	bool leading0 = true;
+	for (size_t i = 0; i < sizeof(serial_number); ++i)
+	  {
+	    const std::uint8_t byte = serial_number[i];
+	    const bool last = (i == sizeof(serial_number) - 1);
+	    if (!byte && leading0 && !last)
+	      continue;
+	    RenderHexByte rhb(byte);
+	    ret += rhb.char1();
+	    ret += rhb.char2();
+	    if (!last)
+	      ret += ':';
+	    leading0 = false;
+	  }
+	return ret;
       }
 
       std::string issuer_fp_str(const bool openssl_fmt) const
@@ -232,11 +287,6 @@ namespace openvpn {
       const std::string& get_cn() const
       {
 	return cn;
-      }
-
-      std::int64_t get_sn() const
-      {
-	return sn;
       }
 
       const X509Track::Set* x509_track_get() const
@@ -277,12 +327,19 @@ namespace openvpn {
 #ifndef UNIT_TEST
     private:
 #endif
+      bool defined_;
+
       std::string sni;               // SNI (server name indication)
       std::string cn;                // common name
-      std::int64_t sn = -1;          // serial number
+
+      // certificate serial number in big-endian format
+      union {
+	std::uint8_t serial_number[20];
+	std::uint32_t serial_number32[5];
+      };
 
       // issuer cert fingerprint
-      unsigned char issuer_fp[20] = {};
+      std::uint8_t issuer_fp[20];
 
       std::unique_ptr<Fail> fail;
       std::unique_ptr<X509Track::Set> x509_track;

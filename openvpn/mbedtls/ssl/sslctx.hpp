@@ -1163,6 +1163,25 @@ namespace openvpn {
       /* mbed TLS 2.18+ can support RFC5705 but the API is painful to use */
       return false;
     }
+
+#ifdef UNIT_TEST
+    static void load_cert_info_into_authcert(AuthCert& authcert, const std::string& cert_txt)
+    {
+      const MbedTLSPKI::X509Cert cert(cert_txt, "MbedTLSContext::load_cert_info_into_authcert", true);
+
+      // save the Common Name
+      authcert.cn = MbedTLSPKI::x509_get_common_name(cert.get());
+
+      // save the issuer fingerprint
+      load_issuer_fingerprint_into_authcert(authcert, cert.get());
+
+      // save the leaf cert serial number
+      load_serial_number_into_authcert(authcert, cert.get());
+
+      authcert.defined_ = true;
+    }
+#endif
+
   protected:
     MbedTLSContext(Config* config_arg)
       : config(config_arg)
@@ -1372,22 +1391,11 @@ namespace openvpn {
 	  // save the issuer cert fingerprint
 	  if (ssl->authcert)
 	    {
-	      const int SHA_DIGEST_LEN = 20;
-	      static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LEN, "size inconsistency");
-#if MBEDTLS_VERSION_NUMBER < 0x02070000
-	      // mbed TLS 2.7.0 and newer deprecates mbedtls_sha1()
-	      // in favour of mbedtls_sha1_ret().
-
-	      // We support for older mbed TLS versions
-	      // to be able to build on Debian 9 and Ubuntu 16.
-	      mbedtls_sha1(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp);
-#else
-	      if(mbedtls_sha1_ret(cert->raw.p, cert->raw.len, ssl->authcert->issuer_fp))
+	      if (!load_issuer_fingerprint_into_authcert(*ssl->authcert, cert))
 		{
 		  OPENVPN_LOG_SSL("VERIFY FAIL -- SHA1 calculation failed.");
 		  fail = true;
 		}
-#endif
 	    }
 	}
       else if (depth == 0) // leaf-cert
@@ -1419,11 +1427,9 @@ namespace openvpn {
 	      ssl->authcert->cn = MbedTLSPKI::x509_get_common_name(cert);
 
 	      // save the leaf cert serial number
-	      const mbedtls_x509_buf *s = &cert->serial;
-	      if (s->len > 0 && s->len <= sizeof(ssl->authcert->sn))
-		ssl->authcert->sn = bin_prefix_floor<decltype(ssl->authcert->sn)>(s->p, s->len, -1);
-	      else
-		ssl->authcert->sn = -1;
+	      load_serial_number_into_authcert(*ssl->authcert, cert);
+
+	      ssl->authcert->defined_ = true;
 	    }
 	}
 
@@ -1557,6 +1563,35 @@ namespace openvpn {
     {
       MbedTLSContext *self = (MbedTLSContext *) arg;
       return self->key_len();
+    }
+
+    static void load_serial_number_into_authcert(AuthCert& authcert, const mbedtls_x509_crt *cert)
+    {
+      const mbedtls_x509_buf *s = &cert->serial;
+      if (s->len > 0 && s->len <= sizeof(authcert.serial_number))
+	{
+	  const size_t offset = sizeof(authcert.serial_number) - s->len;
+	  std::memset(authcert.serial_number, 0, offset);
+	  std::memcpy(authcert.serial_number + offset, s->p, s->len);
+	}
+    }
+
+    static bool load_issuer_fingerprint_into_authcert(AuthCert& authcert, const mbedtls_x509_crt *cert)
+    {
+      const int SHA_DIGEST_LEN = 20;
+      static_assert(sizeof(AuthCert::issuer_fp) == SHA_DIGEST_LEN, "size inconsistency");
+#if MBEDTLS_VERSION_NUMBER < 0x02070000
+      // mbed TLS 2.7.0 and newer deprecates mbedtls_sha1()
+      // in favour of mbedtls_sha1_ret().
+
+      // We support for older mbed TLS versions
+      // to be able to build on Debian 9 and Ubuntu 16.
+      mbedtls_sha1(cert->raw.p, cert->raw.len, authcert->issuer_fp);
+#else
+      if (mbedtls_sha1_ret(cert->raw.p, cert->raw.len, authcert.issuer_fp))
+	return false;
+#endif
+      return true;
     }
   };
 
