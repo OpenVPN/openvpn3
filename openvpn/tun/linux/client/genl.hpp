@@ -4,8 +4,8 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
-//    Copyright (C) 2020-2020 Lev Stipakov <lev@openvpn.net>
+//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2020-2022 Lev Stipakov <lev@openvpn.net>
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
