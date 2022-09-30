@@ -262,6 +262,11 @@ namespace openvpn {
       Error::Type fatal() const { return fatal_; }
       const std::string& fatal_reason() const { return fatal_reason_; }
 
+      // Getters for values which could potentially be modified by
+      // a server's AUTH_FAILED,TEMP response flags
+      RemoteList::Advance advance_type() const { return temp_fail_advance_; }
+      unsigned int reconnect_delay() const { return temp_fail_backoff_; }
+
       virtual ~Session()
       {
 	stop(false);
@@ -540,6 +545,96 @@ namespace openvpn {
 	}
       }
 
+      /**
+       * Parses a AUTH_FAILED,TEMP string, extracts the flags and returns
+       * the human readable reason part of it, if there is one. The string
+       * passed has the format "[flag(s)]:reason".
+       *
+       * Flags are optional and delimited by a comma (","). They are given
+       * as "key=value" strings. Currently there's support for parsing two keys:
+       *   - backoff: seconds to wait between reconnects
+       *   - advance: how to advance through the remote addresses list.
+       *     Possible values are:
+       *     - no: do not advance
+       *     - addr: use the next address in the list (default)
+       *     - remote: use the next remote's first address
+       *
+       * The reason string is free text and returned verbatim.
+       *
+       * @param msg  The string to be parsed
+       *
+       * @return Returns the human readable reason for the auth failure or an
+       *         empty string if not applicable.
+       */
+      std::string parse_auth_failed_temp(const std::string& msg)
+      {
+	if (msg.empty())
+	  return msg;
+
+	// Reset to default values
+	temp_fail_backoff_ = 0;
+	temp_fail_advance_ = RemoteList::Advance::Addr;
+
+	std::string::size_type reason_idx = 0;
+	auto endofflags = msg.find(']');
+	if (msg.at(0) == '[' && endofflags != std::string::npos)
+	  {
+	    reason_idx = ++endofflags;
+	    auto flags = string::split({msg, 1, endofflags - 2}, ',');
+	    for (const auto& flag : flags)
+	      {
+		std::string key;
+		std::string value;
+		std::istringstream f(flag);
+
+		f >> key >> value;
+		if (f.fail())
+		  {
+		    OPENVPN_LOG("invalid AUTH_FAILED,TEMP flag: " << flag);
+		    continue;
+		  }
+
+		if (key == "backoff")
+		  {
+		    if (!parse_number(value, temp_fail_backoff_))
+		      {
+			OPENVPN_LOG("invalid AUTH_FAILED,TEMP flag: " << flag);
+		      }
+		    temp_fail_backoff_ *= 1000; // Convert to ms
+		  }
+		else if (key == "advance")
+		  {
+		    if (value == "no")
+		      {
+			temp_fail_advance_ = RemoteList::Advance::None;
+		      }
+		    else if (value == "addr")
+		      {
+			temp_fail_advance_ = RemoteList::Advance::Addr;
+		      }
+		    else if (value == "remote")
+		      {
+			temp_fail_advance_ = RemoteList::Advance::Remote;
+		      }
+		    else
+		      {
+			OPENVPN_LOG("unknown AUTH_FAILED,TEMP flag: " << flag);
+		      }
+		  }
+		else
+		  {
+		    OPENVPN_LOG("unknown AUTH_FAILED,TEMP flag: " << flag);
+		  }
+	      }
+	  }
+
+	if (reason_idx >= msg.size() || msg[reason_idx] != ':')
+	  return "";
+
+	// skip leading colon
+	return msg.substr(reason_idx + 1);
+      }
+
       // proto base class calls here for control channel network sends
       void control_net_send(const Buffer& net_buf) override
       {
@@ -662,6 +757,13 @@ namespace openvpn {
 		if (creds && creds->session_id_defined())
 		  creds->purge_session_id();
 		log_reason = "SESSION_AUTH_FAILED";
+	      }
+	    // If session token problem (such as expiration), and we have a cached
+	    // password, retry with it.  Otherwise, fail without retry.
+	    if (string::starts_with(reason, "TEMP"))
+	      {
+		log_reason = "AUTH_FAILED_TEMP:" +
+			     parse_auth_failed_temp(std::string(reason, 4));
 	      }
 	    else
 	      {
@@ -1229,6 +1331,10 @@ namespace openvpn {
 
       std::unique_ptr<std::vector<ClientEvent::Base::Ptr>> info_hold;
       AsioTimer info_hold_timer;
+
+      // AUTH_FAILED,TEMP flag values
+      unsigned int temp_fail_backoff_ = 0;
+      RemoteList::Advance temp_fail_advance_ = RemoteList::Advance::Addr;
 
 #ifdef OPENVPN_PACKET_LOG
       std::ofstream packet_log;

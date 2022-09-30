@@ -218,7 +218,6 @@ namespace openvpn {
 	    seconds = 0;
 	  OPENVPN_LOG("Client terminated, reconnecting in " << seconds << "...");
 	  server_poll_timer.cancel();
-	  client_options->remote_reset_cache_item();
 	  restart_wait_timer.expires_after(Time::Duration::seconds(seconds));
 	  restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                         {
@@ -405,12 +404,11 @@ namespace openvpn {
 	bulk_resolve->start(this);
     }
 
-    void queue_restart(const unsigned int delay_ms = 2000)
+    void queue_restart(const unsigned int delay_ms = default_delay_)
     {
       OPENVPN_LOG("Client terminated, restarting in " << delay_ms << " ms...");
       server_poll_timer.cancel();
       interim_finalize();
-      client_options->remote_reset_cache_item();
       restart_wait_timer.expires_after(Time::Duration::milliseconds(delay_ms));
       restart_wait_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                     {
@@ -447,7 +445,10 @@ namespace openvpn {
 	      switch (client->fatal())
 		{
 		case Error::UNDEF: // means that there wasn't a fatal error
-		  queue_restart();
+		  {
+		    auto client_delay = client->reconnect_delay();
+		    queue_restart(client_delay ? client_delay : default_delay_);
+		  }
 		  break;
 
 		// Errors below will cause the client to NOT retry the connection,
@@ -623,8 +624,11 @@ namespace openvpn {
 	asio_work.reset(new AsioWork(io_context));
       else
 	asio_work.reset();
+
+      RemoteList::Advance advance_type = RemoteList::Advance::Addr;
       if (client)
 	{
+	  advance_type = client->advance_type();
 	  client->stop(false);
 	  interim_finalize();
 	}
@@ -634,7 +638,9 @@ namespace openvpn {
 	  client_options->events().add_event(std::move(ev));
 	  client_options->stats().error(Error::N_RECONNECT);
 	  if (!(client && client->reached_connected_state()))
-	    client_options->next();
+	    client_options->next(advance_type);
+	  else
+	    client_options->remote_reset_cache_item();
 	}
 
       // client_config in cliopt.hpp
@@ -702,6 +708,8 @@ namespace openvpn {
     bool conn_timer_pending;
     std::unique_ptr<AsioWork> asio_work;
     RemoteList::BulkResolve::Ptr bulk_resolve;
+
+    static constexpr unsigned int default_delay_ = 2000; // ms
   };
 
 }

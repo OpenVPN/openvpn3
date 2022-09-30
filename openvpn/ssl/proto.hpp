@@ -225,7 +225,8 @@ namespace openvpn {
        IV_PROTO_REQUEST_PUSH=(1<<2),
        IV_PROTO_TLS_KEY_EXPORT=(1<<3),
        IV_PROTO_AUTH_PENDING_KW=(1<<4),
-       IV_PROTO_DNS_OPTION=(1<<6)
+       IV_PROTO_DNS_OPTION=(1<<6),
+       IV_PROTO_AUTH_FAIL_TEMP=(1<<8)
     };
     static unsigned int opcode_extract(const unsigned int op)
     {
@@ -871,7 +872,8 @@ namespace openvpn {
 	unsigned int iv_proto = IV_PROTO_DATA_V2
 	  | IV_PROTO_REQUEST_PUSH
 	  | IV_PROTO_AUTH_PENDING_KW
-	  | IV_PROTO_DNS_OPTION;
+	  | IV_PROTO_DNS_OPTION
+	  | IV_PROTO_AUTH_FAIL_TEMP;
 
 	if (SSLLib::SSLAPI::support_key_material_export())
 	  {

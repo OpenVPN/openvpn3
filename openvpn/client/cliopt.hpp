@@ -976,14 +976,14 @@ namespace openvpn {
       return pi;
     }
 
-    void next()
+    void next(RemoteList::Advance type)
     {
       bool omit_next = false;
 
       if (alt_proxy)
 	omit_next = alt_proxy->next();
       if (!omit_next)
-	remote_list->next();
+	remote_list->next(type);
       load_transport_config();
     }
 
