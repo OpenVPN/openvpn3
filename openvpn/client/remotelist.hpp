@@ -92,6 +92,8 @@ namespace openvpn {
     };
 
   public:
+    enum class Advance { None, Addr, Remote };
+
     struct Item;
 
     struct ConnBlock : public RC<thread_unsafe_refcount>
@@ -242,9 +244,9 @@ namespace openvpn {
       size_t item_addr() const { return item_addr_; }
 
       // return true if item index was incremented
-      bool increment(const size_t item_len, const size_t addr_len)
+      bool increment(const Advance type, const size_t item_len, const size_t addr_len)
       {
-	if (++item_addr_ >= addr_len)
+	if (type == Advance::Remote || ++item_addr_ >= addr_len)
 	  {
 	    item_addr_ = 0;
 	    if (++item_ >= item_len)
@@ -593,8 +595,8 @@ namespace openvpn {
 	set_proto_override(proto_override);
     }
 
-    // increment to next IP address
-    void next()
+    // increment to next IP address or remote list entry
+    void next(Advance type = Advance::Addr)
     {
       if (remote_override)
 	{
@@ -608,9 +610,12 @@ namespace openvpn {
 	    }
 	}
 
-      bool item_changed = index.increment(list.size(), item_addr_length(index.item()));
-      if (item_changed && !enable_cache)
-	reset_item(index.item());
+      if (type != Advance::None)
+	{
+	  bool item_changed = index.increment(type, list.size(), item_addr_length(index.item()));
+	  if (item_changed && !enable_cache)
+	    reset_item(index.item());
+	}
     }
 
     // Return details about current connection entry.
