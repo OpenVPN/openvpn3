@@ -42,7 +42,7 @@ namespace openvpn {
 	  if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
 	    {
 	      state = tun_persist->state().state;
-	      ring_buffer = tun_persist->state().ring_buffer;
+	      ring_buffer = tun_persist->state().adapter_state;
 	      OPENVPN_LOG("TunPersist: reused tun context");
 	    }
 	  else

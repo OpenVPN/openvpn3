@@ -34,17 +34,19 @@ namespace openvpn {
     // These types manage the underlying TAP driver HANDLE
     typedef openvpn_io::windows::stream_handle TAPStream;
     typedef ScopedAsioStream<TAPStream> ScopedTAPStream;
+
+    template <typename ADAPTER_STATE>
     struct TunPersistState {
       TunProp::State::Ptr state;
-      RingBuffer::Ptr ring_buffer;
+      ADAPTER_STATE adapter_state;
 
       void reset()
       {
 	state.reset();
-	ring_buffer.reset();
+	adapter_state.reset();
       }
     };
-    typedef TunPersistTemplate<ScopedTAPStream, TunPersistState> TunPersist;
+    typedef TunPersistTemplate<ScopedTAPStream, TunPersistState<RingBuffer::Ptr>> TunPersist;
 
     class ClientConfig : public TunClientFactory
     {

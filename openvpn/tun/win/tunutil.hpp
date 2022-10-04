@@ -244,10 +244,18 @@ namespace openvpn {
 	    OPENVPN_THROW(tun_win_util, "TapNameGuidPair: TAP interface " << guid << " has no name or interface index");
 	}
 
+	void reset()
+	{
+	  name.clear();
+	  guid.clear();
+	  net_luid_index = DWORD(-1);
+	  index = DWORD(-1);
+	}
+
 	std::string name;
 	std::string guid;
-	DWORD net_luid_index;
-	DWORD index;
+	DWORD net_luid_index = DWORD(-1);
+	DWORD index = DWORD(-1);
       };
 
       struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
