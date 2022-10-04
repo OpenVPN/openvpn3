@@ -129,7 +129,7 @@ namespace openvpn {
 	    if (config->tun_persist)
 	      tun_persist = config->tun_persist; // long-term persistent
 	    else
-	      tun_persist.reset(new TunPersist(false, config->retain_sd, config->builder)); // short-term
+	      tun_persist.reset(new TunPersist(false, config->retain_sd ? TunWrapObjRetain::RETAIN : TunWrapObjRetain::NO_RETAIN, config->builder)); // short-term
 
 	    try {
 	      int sd = -1;

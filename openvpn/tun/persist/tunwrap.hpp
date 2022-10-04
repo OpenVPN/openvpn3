@@ -27,6 +27,24 @@
 
 namespace openvpn {
 
+  // defines how the new tun/fd handle replaces old one and close() behaviour
+  enum class TunWrapObjRetain {
+      // close the old handle, then replace it with a new handle and
+      // perform cleanup on close
+      NO_RETAIN,
+
+      // replace the old handle with a new one without closing the old one and
+      // don't perform cleanup on close - used in iOS
+      RETAIN,
+
+      // same as NO_RETAIN, but don't replace the old handle if it is already defined.
+      // used by dco-win where we need to perform cleanup on close _and_ cannot do replace -
+      // old and new handles are the same (we got handle before establishing connection,
+      // since dco-win also implements transport) and replacing means closing the old handle -
+      // which would mean that we loose peer state in the driver
+      NO_RETAIN_NO_REPLACE
+  };
+
   // TunWrapTemplate is used client-side to store the underlying tun
   // interface fd/handle.  SCOPED_OBJ is generally a ScopedFD (unix) or a
   // ScopedHANDLE (Windows).  It can also be a ScopedAsioStream.
@@ -36,7 +54,7 @@ namespace openvpn {
   public:
     typedef RCPtr<TunWrapTemplate> Ptr;
 
-    TunWrapTemplate(const bool retain_obj)
+    TunWrapTemplate(const TunWrapObjRetain retain_obj)
       : retain_obj_(retain_obj)
     {
     }
@@ -89,7 +107,7 @@ namespace openvpn {
 
     void close()
     {
-      if (retain_obj_)
+      if (retain_obj_ == TunWrapObjRetain::RETAIN)
 	obj_.release();
       else
 	{
@@ -98,16 +116,18 @@ namespace openvpn {
 	}
     }
 
+    // replace the old handle with a new one, the replacement behavior
+    // is determined by retain_obj_ enum.
     void save_replace_sock(const typename SCOPED_OBJ::base_type obj)
     {
-      if (retain_obj_)
+      if (retain_obj_ == TunWrapObjRetain::RETAIN)
 	obj_.replace(obj);
-      else
+      else if (!obj_defined() || (retain_obj_ == TunWrapObjRetain::NO_RETAIN))
 	obj_.reset(obj);
     }
 
   private:
-    const bool retain_obj_;
+    const TunWrapObjRetain retain_obj_;
     DestructorBase::Ptr destruct_;
     SCOPED_OBJ obj_;
   };

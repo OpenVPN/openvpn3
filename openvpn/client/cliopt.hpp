@@ -406,7 +406,7 @@ namespace openvpn {
 	    tunconf->tun_prefix = true;
 #endif
 	    if (config.tun_persist)
-	      tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd, config.builder));
+	      tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd ? TunWrapObjRetain::RETAIN : TunWrapObjRetain::NO_RETAIN, config.builder));
 	    tun_factory = tunconf;
 	  }
 #elif defined(OPENVPN_PLATFORM_LINUX) && !defined(OPENVPN_FORCE_TUN_NULL)
@@ -423,7 +423,7 @@ namespace openvpn {
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    if (config.tun_persist)
-	      tunconf->tun_persist.reset(new TunLinux::TunPersist(true, false, nullptr));
+	      tunconf->tun_persist.reset(new TunLinux::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
 	    tunconf->load(opt);
 	    tun_factory = tunconf;
 	  }
@@ -441,7 +441,7 @@ namespace openvpn {
 	    tunconf->stop = config.stop;
 	    if (config.tun_persist)
 	    {
-	      tunconf->tun_persist.reset(new TunMac::TunPersist(true, false, nullptr));
+	      tunconf->tun_persist.reset(new TunMac::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
 #ifndef OPENVPN_COMMAND_AGENT
 	      /* remote_list is required by remote_bypass to work */
 	      tunconf->tun_prop.remote_bypass = true;
@@ -469,7 +469,7 @@ namespace openvpn {
 	    tunconf->tun_type = config.wintun ? TunWin::Wintun : TunWin::TapWindows6;
 	    if (config.tun_persist)
 	      {
-		tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
+		tunconf->tun_persist.reset(new TunWin::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
 #ifndef OPENVPN_COMMAND_AGENT
 		/* remote_list is required by remote_bypass to work */
 		tunconf->tun_prop.remote_bypass = true;

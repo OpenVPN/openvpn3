@@ -145,7 +145,7 @@ namespace openvpn {
 	    else
 	      {
 		OPENVPN_LOG("TunPersist: short-term connection scope");
-		tun_persist.reset(new TunPersist(true, false, nullptr)); // short-term
+		tun_persist.reset(new TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr)); // short-term
 	      }
 
 	    try {

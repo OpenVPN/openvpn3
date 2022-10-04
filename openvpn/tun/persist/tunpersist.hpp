@@ -37,7 +37,7 @@ namespace openvpn {
   public:
     typedef RCPtr<TunPersistTemplate> Ptr;
 
-    TunPersistTemplate(const bool enable_persistence, const bool retain_obj, TunBuilderBase* tb)
+    TunPersistTemplate(const bool enable_persistence, const TunWrapObjRetain retain_obj, TunBuilderBase* tb)
       : TunWrapTemplate<SCOPED_OBJ>(retain_obj),
 	enable_persistence_(enable_persistence),
 	tb_(tb),
