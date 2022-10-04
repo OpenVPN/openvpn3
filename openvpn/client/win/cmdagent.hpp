@@ -185,8 +185,24 @@ namespace openvpn {
 	// Parse TAP handle
 	const std::string tap_handle_hex = json::get_string(jres, "tap_handle_hex");
 	os << "TAP handle: " << tap_handle_hex << std::endl;
-	const HANDLE tap = BufHex::parse<HANDLE>(tap_handle_hex, "TAP handle");
-	return tap;
+	const HANDLE h = BufHex::parse<HANDLE>(tap_handle_hex, "TAP handle");
+
+	tap_.index = (DWORD)json::get_int(jres, "adapter_index");
+	tap_.name = json::get_string(jres, "adapter_name");
+
+	return h;
+      }
+
+      TunWin::Util::TapNameGuidPair tap_;
+
+      void set_adapter_state(const TunWin::Util::TapNameGuidPair& tap) override
+      {
+	tap_ = tap;
+      }
+
+      TunWin::Util::TapNameGuidPair get_adapter_state() override
+      {
+	return tap_;
       }
 
       virtual HANDLE establish(const TunBuilderCapture& pull,
@@ -211,8 +227,13 @@ namespace openvpn {
 	    jreq["confirm_event"] = confirm_event.duplicate_local();
 	    jreq["destroy_event"] = destroy_event.duplicate_local();
 	  }
+	else
+	  {
+	    jreq["adapter_name"] = tap_.name;
+	    jreq["adapter_index"] = Json::Int(tap_.index);
+	  }
 
-    jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
+	jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
 	jreq["tun_type"] = config->tun_type;
 	jreq["tun"] = pull.to_json(); // convert TunBuilderCapture to JSON
 	const std::string jtxt = jreq.toStyledString();
@@ -338,7 +359,7 @@ namespace openvpn {
       if (config)
 	{
 	  config->tun_type = tun_type;
-      config->allow_local_dns_resolvers = allow_local_dns_resolvers;
+	  config->allow_local_dns_resolvers = allow_local_dns_resolvers;
 	  return new SetupClient(io_context, config);
 	}
       else

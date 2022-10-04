@@ -66,6 +66,10 @@ namespace openvpn {
       virtual void set_service_fail_handler(std::function<void()>&& handler)
       {
       }
+
+      virtual Util::TapNameGuidPair get_adapter_state() = 0;
+
+      virtual void set_adapter_state(const Util::TapNameGuidPair& state) = 0;
     };
 
     struct SetupFactory : public RC<thread_unsafe_refcount>

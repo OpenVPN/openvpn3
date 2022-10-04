@@ -73,6 +73,16 @@ namespace openvpn {
 	  tun_type_(tun_type),
       allow_local_dns_resolvers(allow_local_dns_resolvers_arg) {}
 
+      Util::TapNameGuidPair get_adapter_state() override
+      {
+	return tap_;
+      }
+
+      void set_adapter_state(const Util::TapNameGuidPair& tap) override
+      {
+	tap_ = tap;
+      }
+
       HANDLE get_handle(std::ostream& os) override
       {
 	if (tap_.index_defined())
@@ -114,7 +124,9 @@ namespace openvpn {
 	// close out old remove cmds, if they exist
 	destroy(os);
 
-	Win::ScopedHANDLE th(get_handle(os));
+	ScopedHANDLE adapter_handle;
+	if (tun_type_ != OvpnDco)
+	  adapter_handle.replace(get_handle(os));
 	vpn_interface_index_ = tap_.index;
 
 	// create ActionLists for setting up and removing adapter properties
@@ -125,10 +137,10 @@ namespace openvpn {
 	switch (pull.layer())
 	  {
 	  case Layer::OSI_LAYER_3:
-	    adapter_config(th(), openvpn_app_path, tap_, pull, false, *add_cmds, *remove_cmds, os);
+	    adapter_config(adapter_handle(), openvpn_app_path, tap_, pull, false, *add_cmds, *remove_cmds, os);
 	    break;
 	  case Layer::OSI_LAYER_2:
-	    adapter_config_l2(th(), openvpn_app_path, tap_, pull, *add_cmds, *remove_cmds, os);
+	    adapter_config_l2(adapter_handle(), openvpn_app_path, tap_, pull, *add_cmds, *remove_cmds, os);
 	    break;
 	  default:
 	    throw tun_win_setup("layer undefined");
@@ -145,12 +157,12 @@ namespace openvpn {
 	  l2_state.reset(new L2State(tap_, openvpn_app_path));
 
 	if (ring_buffer)
-	  register_rings(th(), ring_buffer);
+	  register_rings(adapter_handle(), ring_buffer);
 
 	if (tun_type_ == Type::TapWindows6 && tap_.index_defined())
 	  Util::flush_arp(tap_.index, os);
 
-	return th.release();
+	return adapter_handle.release();
       }
 
       // In layer 2 mode, return true route_delay seconds after

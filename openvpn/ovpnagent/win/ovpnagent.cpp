@@ -143,15 +143,24 @@ public:
     return Win::ScopedHANDLE(tun->get_handle(os));
   }
 
+  TunWin::Util::TapNameGuidPair get_adapter_state()
+  {
+    return tun->get_adapter_state();
+  }
+
   Win::ScopedHANDLE establish_tun(const TunBuilderCapture& tbc,
 				  const std::wstring& openvpn_app_path,
 				  Stop* stop,
 				  std::ostream& os,
 				  TunWin::Type tun_type,
-                  bool allow_local_dns_resolvers)
+				  bool allow_local_dns_resolvers,
+				  TunWin::Util::TapNameGuidPair tap)
   {
     if (!tun)
       tun.reset(new TunWin::Setup(io_context_, tun_type, allow_local_dns_resolvers));
+
+    if ((tun_type == TunWin::OvpnDco) && (tap.index != DWORD(-1)))
+      tun->set_adapter_state(tap);
 
     auto th = tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer);
     // store VPN interface index to be able to exclude it
@@ -605,9 +614,8 @@ private:
 		parent()->set_client_destroy_event(destroy_event_hex);
 	      }
 
-		  bool allow_local_dns_resolvers = json::get_bool_optional(root, "allow_local_dns_resolvers");
+	      bool allow_local_dns_resolvers = json::get_bool_optional(root, "allow_local_dns_resolvers");
 	      Win::ScopedHANDLE th(parent()->tun_get_handle(os, TunWin::OvpnDco, allow_local_dns_resolvers));
-
 	      {
 		// duplicate the TAP handle into the client process
 		Win::NamedPipeImpersonate impersonate(client_pipe);
@@ -619,6 +627,11 @@ private:
 	      Json::Value jout(Json::objectValue);
 	      jout["log_txt"] = log_txt;
 	      jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
+
+	      auto tap = parent()->get_adapter_state();
+	      jout["adapter_index"] = Json::Int(tap.index);
+	      jout["adapter_name"] = tap.name;
+
 	      OPENVPN_LOG_NTNL("TUN SETUP\n" << log_txt);
 
 	      generate_reply(jout);
@@ -684,8 +697,15 @@ private:
 					       json::get_string(root, "receive_ring_tail_moved")));
 		}
 
+	      TunWin::Util::TapNameGuidPair tap;
+	      if (tun_type == TunWin::OvpnDco)
+		{
+		  tap.index = (DWORD)json::get_int(root, "adapter_index");
+		  tap.name = json::get_string(root, "adapter_name");
+		}
+
 	      // establish the tun setup object
-	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, tun_type, allow_local_dns_resolvers));
+	      Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, tun_type, allow_local_dns_resolvers, tap));
 
 	      // post-establish impersonation
 	      {
