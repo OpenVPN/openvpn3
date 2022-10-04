@@ -43,12 +43,6 @@ download_deps()
     gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2)
     git -C tap-windows6 checkout "${gitref}"
 
-    rm -rf ovpn-dco-win
-    git clone https://github.com/OpenVPN/ovpn-dco-win.git
-    portfile=${CORE_DIR}/deps/vcpkg-ports/ovpn-dco-win/portfile.cmake
-    gitref=$(grep -oP '\bREF\s+\S+' "$portfile" | cut -d' ' -f2)
-    git -C ovpn-dco-win checkout "${gitref}"
-
     rm -rf asio
     portfile=${CORE_DIR}/deps/vcpkg-ports/asio/portfile.cmake
     gitref=$(grep -oP '\bREF\s+\S+' "$portfile" | cut -d' ' -f2)
