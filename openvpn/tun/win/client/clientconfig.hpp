@@ -47,6 +47,7 @@ namespace openvpn {
       }
     };
     typedef TunPersistTemplate<ScopedTAPStream, TunPersistState<RingBuffer::Ptr>> TunPersist;
+    typedef TunPersistTemplate<ScopedTAPStream, TunPersistState<Util::TapNameGuidPair>> DcoTunPersist;
 
     class ClientConfig : public TunClientFactory
     {

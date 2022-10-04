@@ -36,7 +36,7 @@ public:
   }
 
   void transport_start() override {
-    if (handle_)
+    if (tun_persist)
       return;
 
     halt = false;
@@ -71,21 +71,50 @@ public:
                  CryptoDCSettings& dc_settings) override {
     halt = false;
 
-    tun_parent->tun_pre_tun_config();
+    const IP::Addr server_addr = transcli.server_endpoint_addr();
 
-    // parse pushed options
-    po_ = new TunBuilderCapture();
-    TunProp::configure_builder(po_.get(), state.get(), nullptr,
-                               transcli.server_endpoint_addr(),
-                               config->tun.tun_prop, opt, nullptr, false);
-    OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po_->to_string());
+    // Check if persisted tun session matches properties of to-be-created session
+    if (tun_persist->use_persisted_tun(server_addr, config->tun.tun_prop, opt))
+      {
+	state = tun_persist->state().state;
+
+	OPENVPN_LOG("TunPersist: reused tun context");
+      }
+    else
+      {
+	// notify parent
+	tun_parent->tun_pre_tun_config();
+
+	OPENVPN_LOG("TunPersist: clear tun settings");
+	std::ostringstream os;
+	tun_persist->close_destructor();
+
+	dco_ioctl_(OVPN_IOCTL_START_VPN);
+
+	// parse pushed options
+	TunBuilderCapture::Ptr po(new TunBuilderCapture());
+	TunProp::configure_builder(po.get(), state.get(), nullptr,
+	  transcli.server_endpoint_addr(), config->tun.tun_prop, opt, nullptr, false);
+	OPENVPN_LOG("CAPTURED OPTIONS:" << std::endl << po->to_string());
+
+	tun_setup_->establish(*po, Win::module_name(), NULL, os, NULL);
+	OPENVPN_LOG_STRING(os.str());
+
+	// persist tun settings state
+	if (tun_persist->persist_tun_state(handle_(), { state, tun_setup_->get_adapter_state() }))
+	  OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
+
+	handle_.release();
+
+	// enable tun_setup destructor
+	tun_persist->add_destructor(tun_setup_);
+      }
+
+    set_keepalive_();
 
     // Add a hook so ProtoContext will call back to rekey() on rekey ops.
     dc_settings.set_factory(CryptoDCFactory::Ptr(new KoRekey::Factory(
         dc_settings.factory(), this, config->transport.frame)));
-
-    set_keepalive_();
-    start_vpn_();
 
     tun_parent->tun_connected();
   }
@@ -160,6 +189,8 @@ protected:
     }
   }
 
+  TunWin::ScopedTAPStream handle_;
+
   void start_impl_() {
     if (halt)
       return;
@@ -167,15 +198,30 @@ protected:
     // create new tun setup object
     tun_setup_ = config->tun.new_setup_obj(io_context, config->allow_local_dns_resolvers);
 
-    std::ostringstream os;
-    HANDLE th = tun_setup_->get_handle(os);
-    OPENVPN_LOG_STRING(os.str());
-    if (th == INVALID_HANDLE_VALUE)
-      return;
+    if (config->tun.tun_persist)
+      tun_persist = config->tun.tun_persist; // long-term persistent
+    else
+      tun_persist.reset(new TunWin::DcoTunPersist(false, TunWrapObjRetain::NO_RETAIN, nullptr)); // short-term
 
-    handle_ = std::make_unique<asio::windows::stream_handle>(io_context, th);
+    if (!tun_persist->obj_defined())
+      {
+	std::ostringstream os;
+	HANDLE th = tun_setup_->get_handle(os);
+	OPENVPN_LOG_STRING(os.str());
+	if (th == INVALID_HANDLE_VALUE)
+	  return;
+
+	handle_.reset(new TunWin::TAPStream(io_context, th));
+
+	tun_persist->add_destructor(tun_setup_);
+      }
+    else
+      {
+	tun_setup_->set_adapter_state(tun_persist->state().adapter_state);
+      }
 
     tun_setup_->confirm();
+
     tun_setup_->set_service_fail_handler([self=Ptr(this)]() {
 	if (!self->halt)
 	  self->tun_parent->tun_error(Error::TUN_IFACE_DISABLED, "service failure");
@@ -194,7 +240,7 @@ protected:
   void queue_read_() {
     buf_.reset(0, 2048, 0);
 
-    handle_->async_read_some(
+    get_handle()->async_read_some(
       buf_.mutable_buffer_clamp(),
       [self = Ptr(this)](const openvpn_io::error_code &error,
 			 const size_t bytes_recvd) {
@@ -216,7 +262,7 @@ protected:
 
   bool send_(const Buffer &buf) {
     openvpn_io::error_code error;
-    handle_->write_some(buf.const_buffer(), error);
+    get_handle()->write_some(buf.const_buffer(), error);
     if (error) {
       transport_parent->transport_error(Error::TRANSPORT_ERROR,
 					error.message());
@@ -228,13 +274,21 @@ protected:
 
   void stop_() override {
     if (!halt) {
-      std::ostringstream os;
       halt = true;
       async_resolve_cancel();
-      if (tun_setup_)
-	tun_setup_->destroy(os);
-      handle_.reset();
-      OPENVPN_LOG_STRING(os.str());
+
+      try {
+	dco_ioctl_(OVPN_IOCTL_DEL_PEER);
+      }
+      catch (const ErrorCode& e) {
+	// this is fine - stopped before we got driver handle
+	if (e.code() != Error::TUN_SETUP_FAILED)
+	  throw e;
+      }
+
+      handle_.close();
+
+      tun_persist.reset();
     }
   }
 
@@ -334,14 +388,6 @@ protected:
     dco_ioctl_(OVPN_IOCTL_NEW_KEY, &data, sizeof(data));
   }
 
-  void start_vpn_() {
-    dco_ioctl_(OVPN_IOCTL_START_VPN);
-
-    std::ostringstream os;
-    tun_setup_->establish(*po_, Win::module_name(), NULL, os, NULL);
-    OPENVPN_LOG_STRING(os.str());
-  }
-
   void swap_keys_() { dco_ioctl_(OVPN_IOCTL_SWAP_KEYS); }
 
   DWORD dco_ioctl_(DWORD code, LPVOID data = NULL, DWORD size = 0,
@@ -355,7 +401,11 @@ protected:
       { OVPN_IOCTL_START_VPN, "OVPN_IOCTL_START_VPN" },
     };
 
-    HANDLE th(handle_->native_handle());
+    auto handle = get_handle();
+    if (handle == nullptr)
+      throw ErrorCode(Error::TUN_SETUP_FAILED, false, "no device handle");
+
+    HANDLE th(handle->native_handle());
     LPOVERLAPPED ov_ = (ov ? ov->get() : NULL);
     if (!DeviceIoControl(th, code, data, size, NULL, 0, NULL, ov_)) {
       const DWORD error_code = GetLastError();
@@ -375,10 +425,20 @@ protected:
     return ERROR_SUCCESS;
   }
 
-  std::unique_ptr<openvpn_io::windows::stream_handle> handle_;
-  TunBuilderCapture::Ptr po_;
+  TunWin::TAPStream* get_handle()
+  {
+    if (tun_persist && tun_persist->obj_defined())
+      return tun_persist->obj();
+    else if (handle_.defined())
+      return handle_();
+
+    return nullptr;
+  }
+
   TunWin::SetupBase::Ptr tun_setup_;
   BufferAllocated buf_;
   Protocol proto_;
   openvpn_io::ip::udp::endpoint endpoint_;
+
+  TunWin::DcoTunPersist::Ptr tun_persist;
 };

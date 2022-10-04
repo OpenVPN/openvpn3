@@ -89,6 +89,14 @@ public:
     transport.remote_list->process_push(opt);
   }
 
+  virtual void finalize(const bool disconnected) override
+  {
+#ifdef ENABLE_OVPNDCOWIN
+    if (disconnected)
+      tun.tun_persist.reset();
+#endif
+  }
+
   virtual TunClientFactory::Ptr
   new_tun_factory(const DCO::TunConfig &conf, const OptionList &opt) override {
     tun = conf;

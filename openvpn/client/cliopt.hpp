@@ -351,6 +351,10 @@ namespace openvpn {
 	  tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
 	  tunconf.tun_prop.remote_list = remote_list;
 	  tunconf.stop = config.stop;
+#if defined(OPENVPN_PLATFORM_WIN)
+	  if (config.tun_persist)
+	    tunconf.tun_persist.reset(new TunWin::DcoTunPersist(true, TunWrapObjRetain::NO_RETAIN_NO_REPLACE, nullptr));
+#endif
 	  tun_factory = dco->new_tun_factory(tunconf, opt);
 	}
       else

@@ -38,6 +38,7 @@
 
 #if defined(OPENVPN_PLATFORM_WIN)
 #include <openvpn/tun/win/client/tunsetup.hpp>
+#include <openvpn/tun/win/client/clientconfig.hpp>
 #endif
 
 namespace openvpn {
@@ -74,12 +75,13 @@ namespace openvpn {
 	else
 	  return new TunWin::Setup(io_context, TunWin::OvpnDco, allow_local_dns_resolvers);
       }
+
+      TunWin::DcoTunPersist::Ptr tun_persist;
 #endif
 
       TunProp::Config tun_prop;
       Stop* stop = nullptr;
     };
-
 
     virtual TunClientFactory::Ptr new_tun_factory(const TunConfig& conf, const OptionList& opt) = 0;
     virtual TransportClientFactory::Ptr new_transport_factory(const TransportConfig& conf) = 0;
