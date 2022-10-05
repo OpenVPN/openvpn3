@@ -225,7 +225,9 @@ namespace openvpn {
        IV_PROTO_REQUEST_PUSH=(1<<2),
        IV_PROTO_TLS_KEY_EXPORT=(1<<3),
        IV_PROTO_AUTH_PENDING_KW=(1<<4),
+       IV_PROTO_NCP_P2P=(1<<5), // not implemented
        IV_PROTO_DNS_OPTION=(1<<6),
+       IV_PROTO_CC_EXIT_NOTIFY=(1<<7), // not implemented
        IV_PROTO_AUTH_FAIL_TEMP=(1<<8)
     };
     static unsigned int opcode_extract(const unsigned int op)
