@@ -232,7 +232,9 @@ protected:
     add_peer_([self=Ptr(this)]() {
       if (!self->halt) {
 	self->transport_parent->transport_connecting();
-	self->queue_read_();
+	/* above line might set halt to true in case of TCP reconnect */
+	if (!self->halt)
+	  self->queue_read_();
       }
     });
   }
