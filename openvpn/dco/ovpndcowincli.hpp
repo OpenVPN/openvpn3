@@ -108,6 +108,10 @@ public:
 
 	// enable tun_setup destructor
 	tun_persist->add_destructor(tun_setup_);
+
+	// rearm fail handler for WinCommandAgent, which was
+	// fired by close_destructor() call above
+	set_service_fail_handler();
       }
 
     set_keepalive_();
@@ -120,6 +124,14 @@ public:
   }
 
   std::string tun_name() const override { return "ovpn-dco-win"; }
+
+  void set_service_fail_handler()
+  {
+    tun_setup_->set_service_fail_handler([self = Ptr(this)]() {
+      if (!self->halt)
+	self->tun_parent->tun_error(Error::TUN_IFACE_DISABLED, "service failure");
+    });
+  }
 
   void adjust_mss(int mss) override
   {
@@ -222,11 +234,7 @@ protected:
 
     tun_setup_->confirm();
 
-    tun_setup_->set_service_fail_handler([self=Ptr(this)]() {
-	if (!self->halt)
-	  self->tun_parent->tun_error(Error::TUN_IFACE_DISABLED, "service failure");
-      }
-    );
+    set_service_fail_handler();
 
     config->transport.remote_list->get_endpoint(endpoint_);
     add_peer_([self=Ptr(this)]() {
