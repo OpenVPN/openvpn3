@@ -924,11 +924,33 @@ namespace openvpn {
       if (autologin_sessions)
 	pi->emplace_back("IV_AUTO_SESS", "1");
 
-      // Config::peerInfo
-      pi->append_foreign_set_ptr(config.extra_peer_info.get());
+      if (pcc.pushPeerInfo())
+      {
+          /* ensure that we use only one variable with the same name */
+          std::unordered_map<std::string, std::string> extra_values;
 
-      // setenv UV_ options
-      pi->append_foreign_set_ptr(pcc.peerInfoUV());
+          if (pcc.peerInfoUV())
+          {
+              for (auto const &kv : *pcc.peerInfoUV())
+              {
+                  extra_values[kv.key] = kv.value;
+              }
+          }
+
+          /* Config::peerInfo takes precedence */
+          if (config.extra_peer_info.get())
+          {
+              for (auto const &kv : *config.extra_peer_info.get())
+              {
+                  extra_values[kv.key] = kv.value;
+              }
+          }
+
+          for (auto kv : extra_values)
+          {
+              pi->emplace_back(kv.first, kv.second);
+          }
+      }
 
       // UI version
       if (!config.gui_version.empty())
