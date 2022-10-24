@@ -208,7 +208,6 @@ namespace openvpn {
       status_ = MERGE_SUCCESS;
 
       SplitLines in(orig_profile_content, max_line_len);
-      int line_num = 0;
       bool in_multiline = false;
       bool opaque_multiline = false;
       Option multiline;
@@ -224,7 +223,6 @@ namespace openvpn {
 	    }
 	  const std::string& line = in.line_ref();
 	  bool echo = true;
-	  ++line_num;
 	  if (in_multiline)
 	    {
 	      if (OptionList::is_close_tag(line, multiline.ref(0)))

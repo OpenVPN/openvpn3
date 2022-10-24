@@ -38,7 +38,6 @@ namespace openvpn {
       unsigned int neq = 0;
       size_t i = 0;
       size_t j = 0;
-      size_t k = 0;
 
       while (true)
 	{
@@ -52,8 +51,6 @@ namespace openvpn {
 	  if (s2[j] != '\0')
 	    j++;
 	  atomic_thread_fence(std::memory_order_acq_rel);
-	  if (s2[j] == '\0')
-	    k++;
 	}
       atomic_thread_fence(std::memory_order_acq_rel);
       return bool(neq);
