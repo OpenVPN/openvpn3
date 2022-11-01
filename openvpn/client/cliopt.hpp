@@ -66,6 +66,11 @@
 #include <openvpn/client/cliemuexr.hpp>
 #endif
 
+#if defined(OPENVPN_PLUGGABLE_TRANSPORTS)
+#include <openvpn/transport/client/pluggable/fw.hpp>
+#include <openvpn/transport/client/pluggable/ptcli.hpp>
+#endif
+
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
 #include <openvpn/transport/client/extern/config.hpp>
 #include <openvpn/transport/client/extern/fw.hpp>
@@ -171,6 +176,10 @@ namespace openvpn {
       ExternalTun::Factory* extern_tun_factory = nullptr;
 #endif
 
+#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
+      PluggableTransports::Factory* pluggable_transports_factory = nullptr;
+#endif
+
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
       ExternalTransport::Factory* extern_transport_factory = nullptr;
 #endif
@@ -202,6 +211,9 @@ namespace openvpn {
 	asio_work_always_on_(false),
 	synchronous_dns_lookup(false),
 	retry_on_auth_failed_(config.retry_on_auth_failed)
+#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
+	,pluggable_transports_factory(config.pluggable_transports_factory)
+#endif
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
@@ -803,6 +815,18 @@ namespace openvpn {
 	  conf.rng = rng;
 	  transport_factory = alt_proxy->new_transport_client_factory(conf);
 	}
+#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
+      else if (pluggable_transports_factory) 
+	{
+	  openvpn::PluggableTransports::ClientConfig::Ptr ptconf = openvpn::PluggableTransports::ClientConfig::new_obj();
+	  ptconf->remote_list = remote_list;
+	  ptconf->frame = frame;
+	  ptconf->stats = cli_stats;
+	  ptconf->socket_protect = socket_protect;
+	  ptconf->transport = pluggable_transports_factory->new_transport_factory();
+	  transport_factory = ptconf;
+	}
+#endif
       else if (http_proxy_options)
 	{
 	  if (!transport_protocol.is_tcp())
@@ -908,6 +932,9 @@ namespace openvpn {
     ClientLifeCycle::Ptr client_lifecycle;
     AltProxy::Ptr alt_proxy;
     DCO::Ptr dco;
+#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
+    PluggableTransports::Factory* pluggable_transports_factory; 
+#endif
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
     ExternalTransport::Factory* extern_transport_factory;
 #endif
