@@ -32,7 +32,7 @@ namespace openvpn {
     struct Config;
     struct Factory
     {
-      virtual TransportClientFactory* new_transport_factory(const Config& conf) = 0;
+      virtual TransportClientFactory::Ptr new_transport_factory(const Config& conf) = 0;
       virtual ~Factory() {}
     };
 #else
