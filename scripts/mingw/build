@@ -32,8 +32,8 @@ download_deps()
 
     if [ -z "$NO_OPENSSL" ]; then
         rm -rf openssl
-        portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/openssl/portfile.cmake
-        osslver=$(wget -q -O- "$portfile_url" | grep -oP '\bOPENSSL_VERSION\s+\S+' | cut -d' ' -f2 | tr -d ')')
+        portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/openssl/vcpkg.json
+        osslver=$(wget -q -O- "$portfile_url" | grep -oP '\"version": \"\S+' | cut -d' ' -f2 | tr -d "\",")
         git clone --single-branch --branch "openssl-$osslver" https://github.com/openssl/openssl.git
     fi
 
