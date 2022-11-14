@@ -174,6 +174,7 @@ namespace openvpn {
       //CONTROL_HARD_RESET_SERVER_V1 = 2,   // (obsolete) initial key from server, forget previous state
       CONTROL_SOFT_RESET_V1 =        3,   // new key, graceful transition from old to new key
       CONTROL_V1 =                   4,   // control channel packet (usually TLS ciphertext)
+      CONTROL_WKC_V1 =               11,  // control channel packet with wrapped client key appended
       ACK_V1 =                       5,   // acknowledgement for packets received
       DATA_V1 =                      6,   // data channel packet with 1-byte header
       DATA_V2 =                      9,   // data channel packet with 4-byte header
@@ -1077,6 +1078,7 @@ namespace openvpn {
 		    break;
 		  }
 		case CONTROL_HARD_RESET_SERVER_V2:
+                case CONTROL_WKC_V1:
 		  {
 		    if (proto.is_server())
 		      return;
@@ -1127,6 +1129,8 @@ namespace openvpn {
 	  return "CONTROL_HARD_RESET_CLIENT_V3";
 	case CONTROL_HARD_RESET_SERVER_V2:
 	  return "CONTROL_HARD_RESET_SERVER_V2";
+        case CONTROL_WKC_V1:
+          return "CONTROL_WKC_V1";
 	}
       return nullptr;
     }
@@ -1166,7 +1170,7 @@ namespace openvpn {
 	      out << " SRC_PSID=" << src_psid.str();
 	    }
 
-	    if (tls_wrap_mode == TLS_CRYPT)
+	    if (tls_wrap_mode == TLS_CRYPT || tls_wrap_mode == TLS_CRYPT_V2)
 	      {
 		PacketID pid;
 		pid.read(b, PacketID::LONG_FORM);
@@ -1174,9 +1178,7 @@ namespace openvpn {
 
 		const unsigned char *hmac = b.read_alloc(hmac_size);
 		out << " HMAC=" << render_hex(hmac, hmac_size);
-
-		// nothing else to print as the content is encrypted beyond this point
-		out << " TLS-CRYPT ENCRYPTED";
+                out << " TLS-CRYPT ENCRYPTED PAYLOAD=" << b.size() << " bytes";
 	      }
 	    else
 	      {
@@ -1209,9 +1211,9 @@ namespace openvpn {
 
 	        if (opcode != ACK_V1)
 	          out << " MSG_ID=" << ReliableAck::read_id(b);
-	      }
-	    if (opcode != ACK_V1)
-	      out << " SIZE=" << b.size() << '/' << orig_size;
+
+	        out << " SIZE=" << b.size() << '/' << orig_size;
+            }
 	  }
 #ifdef OPENVPN_DEBUG_PROTO_DUMP
 	out << '\n' << string::trim_crlf_copy(dump_hex(buf));

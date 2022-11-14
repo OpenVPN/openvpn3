@@ -141,7 +141,7 @@ namespace openvpn {
     std::string str() const
     {
       std::ostringstream os;
-      os << "[" << time << "," << id << "]";
+      os << std::hex << "[0x" << time << ", 0x" << id << "]";
       return os.str();
     }
   };
