@@ -1358,7 +1358,11 @@ namespace openvpn {
 	frame.prepare(context, *buf);
       }
 
-      bool is_raw() const { return opcode != CONTROL_V1; }
+      /**
+       * This returns if this packet type has a payload that should considered
+       * to be TLS ciphertext/TLS packet
+       */
+      bool contains_tls_ciphertext() const { return opcode == CONTROL_V1; }
       operator bool() const { return bool(buf); }
       const BufferPtr& buffer_ptr() { return buf; }
       const Buffer& buffer() const { return *buf; }

@@ -62,8 +62,8 @@ namespace openvpn {
   // Test if defined:
   //   operator bool() const
   //
-  // Return true if packet is raw, or false if packet is SSL ciphertext:
-  //   bool is_raw() const
+  // Return false if packet is raw, or true if packet is SSL ciphertext:
+  //   bool contains_tls_ciphertext() const
   //
   // Reset back to post-default-constructor state:
   //   void reset()
@@ -424,7 +424,7 @@ namespace openvpn {
       while (rel_recv.ready())
 	{
 	  typename ReliableRecv::Message& m = rel_recv.next_sequenced();
-	  if (m.packet.is_raw())
+	  if (!m.packet.contains_tls_ciphertext())
 	    parent().raw_recv(std::move(m.packet));
 	  else // SSL packet
 	    {
