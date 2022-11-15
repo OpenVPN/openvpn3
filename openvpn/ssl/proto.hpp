@@ -1230,7 +1230,7 @@ namespace openvpn {
 
     // used for reading/writing authentication strings (username, password, etc.)
 
-    static void write_string_length(const size_t size, Buffer& buf)
+    static void write_uint16_length(const size_t size, Buffer& buf)
     {
       if (size > 0xFFFF)
 	throw proto_error("auth_string_overflow");
@@ -1238,7 +1238,7 @@ namespace openvpn {
       buf.write((const unsigned char *)&net_size, sizeof(net_size));
     }
 
-    static size_t read_string_length(Buffer& buf)
+    static size_t read_uint16_length(Buffer& buf)
     {
       if (buf.size())
 	{
@@ -1256,18 +1256,18 @@ namespace openvpn {
       const size_t len = str.length();
       if (len)
 	{
-	  write_string_length(len+1, buf);
+          write_uint16_length(len + 1, buf);
 	  buf.write((const unsigned char *)str.c_str(), len);
 	  buf.null_terminate();
 	}
       else
-	write_string_length(0, buf);
+          write_uint16_length(0, buf);
     }
 
     template <typename S>
     static S read_auth_string(Buffer& buf)
     {
-      const size_t len = read_string_length(buf);
+      const size_t len = read_uint16_length(buf);
       if (len)
 	{
 	  const char *data = (const char *) buf.read_alloc(len);
@@ -1310,13 +1310,13 @@ namespace openvpn {
 
     static unsigned char *skip_string(Buffer& buf)
     {
-      const size_t len = read_string_length(buf);
+      const size_t len = read_uint16_length(buf);
       return buf.read_alloc(len);
     }
 
     static void write_empty_string(Buffer& buf)
     {
-      write_string_length(0, buf);
+        write_uint16_length(0, buf);
     }
 
     // Packet structure for managing network packets, passed as a template
