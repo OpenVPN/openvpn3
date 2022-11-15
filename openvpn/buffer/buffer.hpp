@@ -92,7 +92,7 @@ namespace openvpn {
       buffer_range,
     };
 
-    BufferException(Status status)
+    explicit BufferException(Status status)
       : status_(status)
     {
     }
@@ -103,7 +103,7 @@ namespace openvpn {
     {
     }
 
-    virtual const char* what() const throw()
+    virtual const char* what() const noexcept
     {
       if (!msg_.empty())
 	return msg_.c_str();
@@ -112,7 +112,7 @@ namespace openvpn {
     }
 
     Status status() const { return status_; }
-    virtual ~BufferException() throw() {}
+    virtual ~BufferException() noexcept = default;
 
   private:
     static const char *status_string(const Status status)

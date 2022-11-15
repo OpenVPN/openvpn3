@@ -47,11 +47,11 @@ namespace openvpn {
   class Exception : public std::exception
   {
   public:
-    Exception(const std::string& err) noexcept : err_(err) {}
-    Exception(std::string&& err) noexcept : err_(std::move(err)) {}
-    virtual const char* what() const throw() { return err_.c_str(); }
+    explicit Exception(const std::string& err) noexcept : err_(err) {}
+    explicit Exception(std::string&& err) noexcept : err_(std::move(err)) {}
+    virtual const char* what() const noexcept { return err_.c_str(); }
     const std::string& err() const noexcept { return err_; }
-    virtual ~Exception() throw() {}
+    virtual ~Exception() noexcept = default;
 
     void add_label(const std::string& label)
     {
@@ -73,7 +73,7 @@ namespace openvpn {
 # define OPENVPN_SIMPLE_EXCEPTION(C) \
   class C : public std::exception { \
   public: \
-    virtual const char* what() const throw() { return #C OPENVPN_FILE_LINE; } \
+    virtual const char* what() const noexcept { return #C OPENVPN_FILE_LINE; } \
   }
 
   // define a simple custom exception class with no extra info that inherits from a custom base
@@ -81,7 +81,7 @@ namespace openvpn {
   class C : public B { \
   public: \
     C() : B(#C OPENVPN_FILE_LINE) {} \
-    virtual const char* what() const throw() { return #C OPENVPN_FILE_LINE; } \
+    virtual const char* what() const noexcept { return #C OPENVPN_FILE_LINE; } \
   }
 
   // define a custom exception class that allows extra info

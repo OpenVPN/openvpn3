@@ -365,7 +365,7 @@ namespace openvpn {
 
     struct cppstring_error : public std::exception
     {
-      virtual const char* what() const throw()
+      virtual const char* what() const noexcept
       {
 	return "cppstring_error";
       }

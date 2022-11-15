@@ -57,7 +57,7 @@ namespace openvpn {
       int status() const { return status_; }
       const std::string& error() const { return error_; }
 
-      virtual const char* what() const throw() { return formatted.c_str(); }
+      virtual const char* what() const noexcept { return formatted.c_str(); }
 
     private:
       const int status_;

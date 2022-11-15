@@ -59,7 +59,7 @@ namespace openvpn {
 
     bool code_defined() const { return code_ != 0; }
 
-    virtual ~ExceptionCode() throw() {}
+    virtual ~ExceptionCode() noexcept {}
 
   private:
     static unsigned int mkcode(const Error::Type code, const bool fatal)
@@ -79,9 +79,9 @@ namespace openvpn {
     ErrorCode(const Error::Type code, const bool fatal, const std::string& err)
       : ExceptionCode(code, fatal) , err_(err) {}
 
-    virtual const char* what() const throw() { return err_.c_str(); }
+    virtual const char* what() const noexcept { return err_.c_str(); }
 
-    virtual ~ErrorCode() throw() {}
+    virtual ~ErrorCode() noexcept {}
 
   private:
     std::string err_;

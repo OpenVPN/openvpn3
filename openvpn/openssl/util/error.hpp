@@ -67,7 +67,7 @@ namespace openvpn {
       init_ssl_error(ssl_error, error_text.c_str());
     }
 
-    virtual const char* what() const throw() { return errtxt.c_str(); }
+    virtual const char* what() const noexcept { return errtxt.c_str(); }
     std::string what_str() const { return errtxt; }
 
     size_t len() const { return n_err; }
@@ -81,7 +81,7 @@ namespace openvpn {
 
     int ssl_error() const { return ssl_err; }
 
-    virtual ~OpenSSLException() throw() {}
+    virtual ~OpenSSLException() noexcept = default;
 
     static const char *ssl_error_text(const int ssl_error, bool *unknown = nullptr)
     {

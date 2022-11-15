@@ -36,7 +36,7 @@ namespace openvpn {
   class CFException : public std::exception
   {
   public:
-    CFException(const std::string& text)
+    explicit CFException(const std::string& text)
     {
       errtxt = text;
     }
@@ -46,10 +46,10 @@ namespace openvpn {
       set_errtxt(text, status);
     }
 
-    virtual const char* what() const throw() { return errtxt.c_str(); }
+    virtual const char* what() const noexcept { return errtxt.c_str(); }
     std::string what_str() const { return errtxt; }
 
-    virtual ~CFException() throw() {}
+    virtual ~CFException() noexcept {}
 
   private:
     void set_errtxt(const std::string& text, const OSStatus status)

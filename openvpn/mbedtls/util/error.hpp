@@ -41,28 +41,23 @@ namespace openvpn {
   class MbedTLSException : public ExceptionCode
   {
   public:
-    MbedTLSException()
+    MbedTLSException() : errtxt("mbed TLS"), errnum(0)
     {
-      errnum = 0;
-      errtxt = "mbed TLS";
     }
 
-    explicit MbedTLSException(const std::string& error_text)
+    explicit MbedTLSException(const std::string& error_text) : errnum(0)
     {
-      errnum = 0;
       errtxt = "mbed TLS: " + error_text;
     }
 
     explicit MbedTLSException(const std::string& error_text, const Error::Type code, const bool fatal)
-      : ExceptionCode(code, fatal)
+      : ExceptionCode(code, fatal), errnum(0)
     {
-      errnum = 0;
       errtxt = "mbed TLS: " + error_text;
     }
 
-    explicit MbedTLSException(const std::string& error_text, const int mbedtls_errnum)
+    explicit MbedTLSException(const std::string& error_text, const int mbedtls_errnum) : errnum(mbedtls_errnum)
     {
-      errnum = mbedtls_errnum;
       errtxt = "mbed TLS: " + error_text + " : " + mbedtls_errtext(mbedtls_errnum);
 
       // cite forum URL for mbed TLS invalid date
@@ -86,12 +81,12 @@ namespace openvpn {
       }
     }
 
-    virtual const char* what() const throw() { return errtxt.c_str(); }
+    virtual const char* what() const noexcept { return errtxt.c_str(); }
     std::string what_str() const { return errtxt; }
 
     int get_errnum() const { return errnum; }
 
-    virtual ~MbedTLSException() throw() {}
+    virtual ~MbedTLSException() noexcept = default;
 
     static std::string mbedtls_errtext(int errnum)
     {
