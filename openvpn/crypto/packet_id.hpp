@@ -162,14 +162,28 @@ namespace openvpn {
 
     PacketIDSend()
     {
-      init(PacketID::SHORT_FORM);
+      init(PacketID::SHORT_FORM, 0);
     }
 
-    void init(const int form) // PacketID::LONG_FORM or PacketID::SHORT_FORM
+    PacketIDSend(const int form, PacketID::id_t startid)
     {
-      pid_.id = PacketID::id_t(0);
+        init(PacketID::SHORT_FORM, startid);
+    }
+
+    /**
+     * @param form PacketID::LONG_FORM or PacketID::SHORT_FORM
+     * @param initial id for the sending
+     */
+    void init(const int form, PacketID::id_t startid)
+    {
+      pid_.id = PacketID::id_t(startid);
       pid_.time = PacketID::time_t(0);
       form_ = form;
+    }
+
+    void init(const int form)
+    {
+        init(form, 0);
     }
 
     PacketID next(const PacketID::time_t now)

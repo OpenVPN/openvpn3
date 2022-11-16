@@ -89,6 +89,7 @@ namespace openvpn {
       KEY_STATE_ERROR,     // Received packet didn't match expected key state
       PROXY_ERROR,         // HTTP proxy error
       PROXY_NEED_CREDS,    // HTTP proxy needs credentials
+      EARLY_NEG_INVALID,   // Early protoctol negotiation information invalid/parse error
 
       // key event errors
       KEV_NEGOTIATE_ERROR,
@@ -171,6 +172,7 @@ namespace openvpn {
 	"KEY_STATE_ERROR",
 	"PROXY_ERROR",
 	"PROXY_NEED_CREDS",
+        "EARLY_NEG_INVALID",
 	"KEV_NEGOTIATE_ERROR",
 	"KEV_PENDING_ERROR",
 	"N_KEV_EXPIRE",

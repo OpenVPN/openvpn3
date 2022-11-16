@@ -231,6 +231,17 @@ namespace openvpn {
        IV_PROTO_CC_EXIT_NOTIFY=(1<<7), // not implemented
        IV_PROTO_AUTH_FAIL_TEMP=(1<<8)
     };
+
+    enum tlv_types : uint16_t
+    {
+        EARLY_NEG_FLAGS = 0x0001
+    };
+
+    enum early_neg_flags : uint16_t
+    {
+        EARLY_NEG_FLAG_RESEND_WKC = 0x0001
+    };
+
     static unsigned int opcode_extract(const unsigned int op)
     {
       return op >> OPCODE_SHIFT;
@@ -1362,7 +1373,7 @@ namespace openvpn {
        * This returns if this packet type has a payload that should considered
        * to be TLS ciphertext/TLS packet
        */
-      bool contains_tls_ciphertext() const { return opcode == CONTROL_V1; }
+      bool contains_tls_ciphertext() const { return opcode == CONTROL_V1 || opcode == CONTROL_WKC_V1; }
       operator bool() const { return bool(buf); }
       const BufferPtr& buffer_ptr() { return buf; }
       const Buffer& buffer() const { return *buf; }
@@ -2341,23 +2352,70 @@ namespace openvpn {
 	raw_send(std::move(pkt));
       }
 
-      void raw_recv(Packet&& raw_pkt)  // called by ProtoStackBase
+      bool parse_early_negotiation(const Packet &pkt)
       {
-	if (raw_pkt.buf->empty() &&
-	    raw_pkt.opcode == initial_op(false, proto.tls_wrap_mode == TLS_CRYPT_V2))
-	  {
-	    switch (state)
-	      {
-	      case C_WAIT_RESET:
-		//send_reset(); // fixme -- possibly not needed
-		set_state(C_WAIT_RESET_ACK);
-		break;
-	      case S_WAIT_RESET:
-		send_reset();
-		set_state(S_WAIT_RESET_ACK);
-		break;
-	      }
-	  }
+          /* The data in the early negotiation packet is structured as
+           * TLV (type, length, value) */
+
+          Buffer buf = pkt.buffer();
+          while(!buf.empty())
+          {
+             if(buf.size() < 4)
+             {
+                 /* Buffer does not have enough bytes for type (uint16) and length (uint16) */
+                 return false;
+             }
+
+             uint16_t type = read_uint16_length(buf);
+             uint16_t len = read_uint16_length(buf);
+
+             /* TLV defines a length that is larger than the remainder in the buffer.  */
+            if (buf.size() < len)
+                return false;
+
+             if (type == EARLY_NEG_FLAGS)
+             {
+                 if (len != 2)
+                     return false;
+                 uint16_t flags = read_uint16_length(buf);
+
+                 if (flags & EARLY_NEG_FLAG_RESEND_WKC)
+                 {
+                     resend_wkc = true;
+                 }
+             }
+             else
+             {
+                 /* skip over unknown types. We rather ignore undefined TLV to
+                  * not needing to add bits initial reset message (where space
+                  * is really tight) for optional features. */
+                 buf.advance(len);
+             }
+
+          }
+          return true;
+      }
+
+
+      void raw_recv(Packet &&raw_pkt) // called by ProtoStackBase
+      {
+          if (raw_pkt.opcode == initial_op(false, proto.tls_wrap_mode == TLS_CRYPT_V2))
+          {
+              switch (state)
+              {
+              case C_WAIT_RESET:
+                  set_state(C_WAIT_RESET_ACK);
+                  if (!parse_early_negotiation(raw_pkt))
+                  {
+                    invalidate(Error::EARLY_NEG_INVALID);
+                  }
+                  break;
+              case S_WAIT_RESET:
+                  send_reset();
+                  set_state(S_WAIT_RESET_ACK);
+                  break;
+              }
+          }
       }
 
       void app_recv(BufferPtr&& to_app_buf) // called by ProtoStackBase
@@ -2604,19 +2662,19 @@ namespace openvpn {
 	const size_t data_offset = TLSCryptContext::hmac_offset + proto.hmac_size;
 
 	// encrypt the content of 'buf' (packet payload) into 'work'
-	const size_t decrypt_bytes = proto.tls_crypt_send->encrypt(work.c_data() + TLSCryptContext::hmac_offset,
+	const size_t encrypt_bytes = proto.tls_crypt_send->encrypt(work.c_data() + TLSCryptContext::hmac_offset,
 								   work.data() + data_offset,
 								   work.max_size() - data_offset,
 								   buf.c_data(), buf.size());
-	if (!decrypt_bytes)
+	if (!encrypt_bytes)
 	  {
 	    buf.reset_size();
 	    return;
 	  }
-	work.inc_size(decrypt_bytes);
+	work.inc_size(encrypt_bytes);
 
 	// append WKc to wrapped packet for tls-crypt-v2
-	if ((opcode == CONTROL_HARD_RESET_CLIENT_V3)
+	if ((opcode == CONTROL_HARD_RESET_CLIENT_V3 || opcode == CONTROL_WKC_V1)
 	    && (proto.tls_wrap_mode == TLS_CRYPT_V2))
 	  proto.tls_crypt_append_wkc(work);
 
@@ -2660,7 +2718,13 @@ namespace openvpn {
 	prepend_dest_psid_and_acks(buf);
 
 	// generate message head
-	gen_head(pkt.opcode, buf);
+        int opcode = pkt.opcode;
+        if (id == 1 && resend_wkc)
+        {
+            opcode = CONTROL_WKC_V1;
+        }
+
+	gen_head(opcode, buf);
       }
 
       void generate_ack(Packet& pkt) // called by ProtoStackBase
@@ -3046,6 +3110,8 @@ namespace openvpn {
       unsigned int crypto_flags;
       int remote_peer_id; // -1 to disable
       bool enable_op32;
+      /** early negotiation enabled resending of wrapped tls-crypt-v2 client key with third packet of the three-way handshake */
+      bool resend_wkc = false;
       bool dirty;
       bool key_limit_renegotiation_fired;
       bool is_reliable;
@@ -3333,6 +3399,7 @@ namespace openvpn {
       upcoming_key_id = 0;
 
       unsigned int key_dir;
+      const PacketID::id_t EARLY_NEG_START = 0x0f000000;
 
       // tls-auth initialization
       switch (tls_wrap_mode)
@@ -3351,8 +3418,10 @@ namespace openvpn {
 	      reset_tls_crypt_server(c);
 	    else
 	      reset_tls_crypt(c, c.tls_key);
-	    // init tls_crypt packet ID
-	    ta_pid_send.init(PacketID::LONG_FORM);
+           /** tls-auth/tls-crypt packet id. We start with a different id here
+            * to indicate EARLY_NEG_START/CONTROL_WKC_V1 support */
+            // init tls_crypt packet ID
+	    ta_pid_send.init(PacketID::LONG_FORM, EARLY_NEG_START);
 	    ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
 	    break;
 	  case TLS_AUTH:
