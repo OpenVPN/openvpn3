@@ -198,4 +198,109 @@ TEST(authcert_openssl, empty)
   ASSERT_FALSE(ac.sn_defined());
 }
 
+static void verify_serial_parse(const std::string& parse, const std::string& expected)
+{
+  const AuthCert::Serial ser(parse);
+  if (ser.to_string() != expected)
+    THROW_FMT("verify_serial_parse: parse=%s expected=%s actual=%s", parse, expected, ser.to_string());
+  const AuthCert::Serial ser1(ser.to_string());
+  if (ser != ser1)
+    THROW_FMT("verify_serial_parse: roundtrip failed (object) parse=%s expected=%s actual=[%s,%s]", parse, expected, ser.to_string(), ser1.to_string());
+  if (ser.to_string() != ser1.to_string())
+    THROW_FMT("verify_serial_parse: roundtrip failed (to_string) parse=%s expected=%s actual=[%s,%s]", parse, expected, ser.to_string(), ser1.to_string());
+}
+
+TEST(authcert_openssl, serial_parse)
+{
+  // successful cases
+  verify_serial_parse("0", "00");
+  verify_serial_parse("00", "00");
+  verify_serial_parse("1", "01");
+  verify_serial_parse("11", "11");
+  verify_serial_parse("11:ff", "11:ff");
+  verify_serial_parse("11ff", "11:ff");
+  verify_serial_parse("1ff", "01:ff");
+  verify_serial_parse("01ff", "01:ff");
+  verify_serial_parse("001ff", "01:ff");
+  verify_serial_parse("1:ff", "01:ff");
+  verify_serial_parse("1:f", "01:0f");
+  verify_serial_parse("01:0f", "01:0f");
+  verify_serial_parse("0:1:2:3:4:5:6:7:8:9:a:b:c:d:e:f", "01:02:03:04:05:06:07:08:09:0a:0b:0c:0d:0e:0f");
+  verify_serial_parse("11:22:33:44:55:66:77:88:99:aa:BB:cc:dd:ee:ff:00:0f:1f:2f:3f", "11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:0f:1f:2f:3f");
+  verify_serial_parse("112233445566778899aaBBccddeeff000f1f2f3f", "11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:0f:1f:2f:3f");
+  verify_serial_parse("112233445566778899aaBBccddeeff:000f1f2f3f", "11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:0f:1f:2f:3f");
+  verify_serial_parse("00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00", "00");
+  verify_serial_parse("00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:01", "01");
+  verify_serial_parse("01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00", "01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00");
+  verify_serial_parse("ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff", "ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff");
+
+  // failure cases
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser("");
+    }, AuthCert::Serial::serial_number_error, "expected leading serial number hex digit");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser(" ");
+    }, AuthCert::Serial::serial_number_error, "' ' is not a hex char");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser(":");
+    }, AuthCert::Serial::serial_number_error, "spurious colon");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser(":aa");
+    }, AuthCert::Serial::serial_number_error, "expected leading serial number hex digit");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser("aa:");
+    }, AuthCert::Serial::serial_number_error, "spurious colon");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser("x");
+    }, AuthCert::Serial::serial_number_error, "'x' is not a hex char");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser("1:2:3x:4");
+    }, AuthCert::Serial::serial_number_error, "'x' is not a hex char");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser("aa::bb");
+    }, AuthCert::Serial::serial_number_error, "spurious colon");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser("11:22:33:44:55:66:77:88:99:aa:BB:cc:dd:ee:ff:00:0f:1f:2f:3f:4f");
+    }, AuthCert::Serial::serial_number_error, "serial number too large (C2)");
+
+  JY_EXPECT_THROW({
+      const AuthCert::Serial ser("112233445566778899aaBBccddeeff000f1f2f3ff");
+    }, AuthCert::Serial::serial_number_error, "serial number too large (C2)");
+}
+
+#ifdef OPENVPN_JSON_INTERNAL
+
+TEST(authcert_openssl, sn_json_1)
+{
+  const Json::Value jv(81985529216486895ll);
+  const AuthCert::Serial ser(jv);
+  ASSERT_EQ(ser.to_string(), "01:23:45:67:89:ab:cd:ef");
+}
+
+TEST(authcert_openssl, sn_json_2)
+{
+  const Json::Value jv("01:23:45:67:89:ab:cd:ef");
+  const AuthCert::Serial ser(jv);
+  ASSERT_EQ(ser.to_string(), "01:23:45:67:89:ab:cd:ef");
+}
+
+TEST(authcert_openssl, sn_json_type_err)
+{
+  JY_EXPECT_THROW({
+      const Json::Value jv;
+      const AuthCert::Serial ser(jv);
+    }, AuthCert::Serial::serial_number_error, "JSON serial is missing");
+}
+
+#endif
+
 #endif

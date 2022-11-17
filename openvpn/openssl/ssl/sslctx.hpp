@@ -1731,14 +1731,14 @@ namespace openvpn {
 	return;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
       const size_t nb = BN_num_bytes(bn);
-      if (nb <= sizeof(authcert.serial_number))
+      if (nb <= authcert.serial.size())
 	{
-	  const size_t offset = sizeof(authcert.serial_number) - nb;
-	  std::memset(authcert.serial_number, 0, offset);
-	  BN_bn2bin(bn, authcert.serial_number + offset);
+	  const size_t offset = authcert.serial.size() - nb;
+	  std::memset(authcert.serial.number(), 0, offset);
+	  BN_bn2bin(bn, authcert.serial.number() + offset);
 	}
 #else
-      BN_bn2binpad(bn, authcert.serial_number, sizeof(authcert.serial_number));
+      BN_bn2binpad(bn, authcert.serial.number(), authcert.serial.size());
 #endif
       BN_free(bn);
     }
