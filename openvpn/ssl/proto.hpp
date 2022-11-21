@@ -184,9 +184,6 @@ namespace openvpn {
       CONTROL_HARD_RESET_CLIENT_V3 = 10,  // initial key from client, forget previous state
       CONTROL_HARD_RESET_SERVER_V2 = 8,   // initial key from server, forget previous state
 
-      // define the range of legal opcodes
-      FIRST_OPCODE =                3,
-      LAST_OPCODE =                 9,
       INVALID_OPCODE =              0,
 
       // DATA_V2 constants
@@ -339,10 +336,6 @@ namespace openvpn {
 
       TLSCryptMetadataFactory::Ptr tls_crypt_metadata_factory;
 
-      // reliability layer parms
-      reliable::id_t reliable_window = 0;
-      size_t max_ack_list = 0;
-
       // packet_id parms for both data and control channels
       int pid_mode = 0;                // PacketIDReceive::UDP_MODE or PacketIDReceive::TCP_MODE
 
@@ -383,8 +376,6 @@ namespace openvpn {
 		const int default_key_direction, const bool server)
       {
 	// first set defaults
-	reliable_window = 4;
-	max_ack_list = 4;
 	handshake_window = Time::Duration::seconds(60);
 	renegotiate = Time::Duration::seconds(3600);
 	tls_timeout = Time::Duration::seconds(1);
@@ -1203,7 +1194,7 @@ namespace openvpn {
 		    out << " PID=" << pid.str();
 	          }
 
-	        ReliableAck ack(0);
+	        ReliableAck ack{};
 	        ack.read(b);
 	        const bool dest_psid_defined = !ack.empty();
 	        out << " ACK=[";
@@ -1512,8 +1503,7 @@ namespace openvpn {
       KeyContext(ProtoContext& p, const bool initiator)
 	: Base(*p.config->ssl_factory,
 	       p.config->now, p.config->tls_timeout,
-	       p.config->frame, p.stats,
-	       p.config->reliable_window, p.config->max_ack_list),
+	       p.config->frame, p.stats),
 	  proto(p),
 	  state(STATE_UNDEF),
 	  crypto_flags(0),
@@ -2570,10 +2560,10 @@ namespace openvpn {
 	active_event();
       }
 
-      void prepend_dest_psid_and_acks(Buffer& buf)
+      void prepend_dest_psid_and_acks(Buffer &buf, unsigned int opcode)
       {
 	// if sending ACKs, prepend dest PSID
-	if (!xmit_acks.empty())
+	if (xmit_acks.acks_ready())
 	  {
 	    if (proto.psid_peer.defined())
 	      proto.psid_peer.prepend(buf);
@@ -2585,7 +2575,7 @@ namespace openvpn {
 	  }
 
 	// prepend ACKs for messages received from peer
-	xmit_acks.prepend(buf);
+	xmit_acks.prepend(buf, opcode == ACK_V1);
       }
 
       bool verify_src_psid(const ProtoSessionID& src_psid)
@@ -2715,7 +2705,7 @@ namespace openvpn {
 	ReliableAck::prepend_id(buf, id);
 
 	// prepend dest PSID and ACKs to reply to peer
-	prepend_dest_psid_and_acks(buf);
+        prepend_dest_psid_and_acks(buf, pkt.opcode);
 
 	// generate message head
         int opcode = pkt.opcode;
@@ -2732,7 +2722,7 @@ namespace openvpn {
 	BufferAllocated& buf = *pkt.buf;
 
 	// prepend dest PSID and ACKs to reply to peer
-	prepend_dest_psid_and_acks(buf);
+        prepend_dest_psid_and_acks(buf, pkt.opcode);
 
 	gen_head(ACK_V1, buf);
       }

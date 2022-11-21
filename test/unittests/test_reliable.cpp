@@ -20,45 +20,106 @@
 #include <openvpn/reliable/relack.hpp>
 #include <openvpn/crypto/packet_id.hpp>
 
-
 using namespace openvpn;
 
 TEST(reliable, ack)
 {
-  std::string expected
-    ("04000000010000000b0000001600000021\n"
-     "040000002c00000037000000420000004d\n"
-     "03000000580000006300000064\n"
-     "00\n"
-     "00\n");
-  std::ostringstream actual;
-  try {
-    ReliableAck ack(4);
+    std::string expected{"0400000021000000160000000b00000001\n"};
+    std::ostringstream actual;
+
+    ReliableAck ack{};
     ack.push_back(1);
     ack.push_back(11);
     ack.push_back(22);
     ack.push_back(33);
-    ack.push_back(44);
-    ack.push_back(55);
-    ack.push_back(66);
-    ack.push_back(77);
-    ack.push_back(88);
-    ack.push_back(99);
-    ack.push_back(100);
 
-    for (int i = 0; i < 5; ++i)
-      {
-	BufferAllocated buf(256, 0);
-	buf.init_headroom(128);
-	ack.prepend(buf);
-	actual << render_hex_generic(buf) << std::endl;
-      }
-  }
-  catch (const std::exception& e)
-    {
-      ASSERT_TRUE(false) << "Exception: " << e.what() << std::endl;
-    }
-  ASSERT_EQ(actual.str(), expected);
+    ack.push_back(0x44);
+    ack.push_back(0x55);
+    ack.push_back(0x66);
+    ack.push_back(0x77);
+    ack.push_back(0x88);
+    ack.push_back(0x99);
+    ack.push_back(0x100);
+
+    BufferAllocated buf(256, 0);
+    buf.init_headroom(128);
+    ack.prepend(buf, false);
+    actual << render_hex_generic(buf) << std::endl;
+    EXPECT_EQ(actual.str(), expected);
+
+    std::string expected2{"080000002100000100000000990000008800000077000000660000005500000044\n"};
+
+    std::ostringstream actual2;
+
+    BufferAllocated buf2(256, 0);
+    buf2.init_headroom(128);
+    ack.prepend(buf2, true);
+    actual2 << render_hex_generic(buf2) << std::endl;
+    EXPECT_EQ(actual2.str(), expected2);
+}
+
+TEST(reliable, ack_dup)
+{
+    std::ostringstream actual;
+    ReliableAck ack{};
+
+    ack.push_back(1);
+    ack.push_back(2);
+    ack.push_back(3);
+    ack.push_back(4);
+
+    std::string expected{"0400000004000000030000000200000001\n"};
+
+    BufferAllocated buf(256, 0);
+    buf.init_headroom(128);
+    ack.prepend(buf, false);
+    actual << render_hex_generic(buf) << std::endl;
+    EXPECT_EQ(actual.str(), expected);
+    EXPECT_EQ(ack.resend_size(), 4u);
+
+    ack.push_back(3);
+    ack.push_back(6);
+
+    actual.str("");
+    std::string expected2{"0400000002000000040000000600000003\n"};
+
+    BufferAllocated buf2(256, 0);
+    buf2.init_headroom(128);
+
+    ack.prepend(buf2, false);
+    actual << render_hex_generic(buf2) << std::endl;
+    EXPECT_EQ(actual.str(), expected2);
+    /* The duplicate 3 should have be there only once */
+    EXPECT_EQ(ack.resend_size(), 5u);
+
+    actual.str("");
+    BufferAllocated buf3(256, 0);
+    buf3.init_headroom(128);
+    ack.prepend(buf3, false);
+
+    actual << render_hex_generic(buf3) << std::endl;
+
+    std::string expected3{"0400000002000000040000000300000006\n"};
+    EXPECT_EQ(actual.str(), expected3);
+
+}
+
+TEST(reliable, simple_packet)
+{
+    std::ostringstream actual;
+    ReliableAck ack{};
+
+    BufferAllocated buf(256, 0);
+    buf.init_headroom(128);
+
+    ack.push_back(0);
+
+    ack.prepend(buf, false);
+
+
+    ack.push_back(1);
+    ack.push_back(2);
+    ack.push_back(3);
 }
 
 
@@ -108,7 +169,7 @@ void test(MTRand& rand,
   ReliableSend send(relsize);
 
   std::deque<Message> wire; // simulate transmission wire
-  ReliableAck acklist(relsize); // back-channel for receiver to send packet ACKs back to sender
+  ReliableAck acklist{}; // back-channel for receiver to send packet ACKs back to sender
 
   Time retrans = Time::infinite();
 

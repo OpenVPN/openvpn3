@@ -78,6 +78,9 @@ namespace openvpn {
   class ProtoStackBase
   {
   public:
+    static constexpr size_t ovpn_sending_window = 6;
+    static constexpr size_t ovpn_receiving_window = ReliableAck::maximum_acks_ack_v1;
+
     typedef reliable::id_t id_t;
     typedef ReliableSendTemplate<PACKET> ReliableSend;
     typedef ReliableRecvTemplate<PACKET> ReliableRecv;
@@ -96,17 +99,12 @@ namespace openvpn {
 		   TimePtr now_arg,                   // pointer to current time
 		   const Time::Duration& tls_timeout_arg, // packet retransmit timeout
 		   const Frame::Ptr& frame,           // contains info on how to allocate and align buffers
-		   const SessionStats::Ptr& stats_arg,  // error statistics
-		   const id_t span,                   // basically the window size for our reliability layer
-		   const size_t max_ack_list)         // maximum number of ACK messages to bundle in one packet
+		   const SessionStats::Ptr& stats_arg) // error statistics
       : tls_timeout(tls_timeout_arg),
 	ssl_(ssl_factory.ssl()),
 	frame_(frame),
 	stats(stats_arg),
-	now(now_arg),
-	rel_recv(span),
-	rel_send(span),
-	xmit_acks(max_ack_list)
+	now(now_arg)
     {
     }
 
@@ -498,9 +496,9 @@ namespace openvpn {
 
   protected:
     TimePtr now;
-    ReliableRecv rel_recv;
-    ReliableSend rel_send;
-    ReliableAck xmit_acks;
+    ReliableRecv rel_recv{ovpn_receiving_window};
+    ReliableSend rel_send{ovpn_sending_window};
+    ReliableAck xmit_acks{};
   };
 
 } // namespace openvpn

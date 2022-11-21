@@ -936,8 +936,6 @@ int test(const int thread_num)
     }
     cp->tls_crypt_v2 = true;
 #endif
-    cp->reliable_window = 4;
-    cp->max_ack_list = 4;
     cp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)
     cp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
@@ -1026,8 +1024,6 @@ int test(const int thread_num)
     sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
     sp->tls_crypt_v2 = true;
 #endif
-    sp->reliable_window = 4;
-    sp->max_ack_list = 4;
     sp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)
     sp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);

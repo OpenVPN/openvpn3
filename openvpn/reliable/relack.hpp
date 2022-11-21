@@ -21,8 +21,8 @@
 
 // Handle ACK tracking for reliability layer
 
-#ifndef OPENVPN_RELIABLE_RELACK_H
-#define OPENVPN_RELIABLE_RELACK_H
+#pragma once
+
 
 #include <deque>
 #include <algorithm>
@@ -37,14 +37,15 @@ namespace openvpn {
 
   class ReliableAck
   {
-  public:
+    public:
+    static constexpr size_t maximum_acks_ack_v1 = 8;
+    static constexpr size_t maximum_acks_control_v1 = 4;
     typedef reliable::id_t id_t;
 
-    ReliableAck(const size_t max_ack_list)
-      : max_ack_list_(max_ack_list ? max_ack_list : std::numeric_limits<size_t>::max()) {}
-
-    size_t size() const        { return data.size(); }
-    bool empty() const         { return data.empty(); }
+    explicit ReliableAck() = default;
+    size_t size() const;
+    bool empty() const;
+    bool acks_ready() const;
     void push_back(id_t value) { data.push_back(value); }
     id_t front() const         { return data.front(); }
     void pop_front()           { data.pop_front(); }
@@ -84,16 +85,36 @@ namespace openvpn {
 	}
     }
 
-    // called to write outgoing ACKs to buf
-    void prepend(Buffer& buf)
+    /**
+     * handles the reACK logic and reACK/ACK list manipulation. pulls as many repeated ACKs as we can fit
+     * into the packet from the reACK queue, and pushes the fresh never-been-ACKed ids into the other end
+     * of the reACK queue. Enforces a limit on the size of the reACK queue and may discard reACKs sometimes.
+     *
+     */
+    void prepend(Buffer &buf, bool ackv1)
     {
-      const size_t len = std::min(data.size(), max_ack_list_);
-      for (size_t i = len; i > 0; --i)
-	{
-	  prepend_id(buf, data[i-1]);
-	}
-      buf.push_front((unsigned char)len);
-      data.erase (data.begin(), data.begin()+len);
+        size_t max_acks = ackv1 ? maximum_acks_ack_v1 :maximum_acks_control_v1;
+
+        size_t acks_added = 0;
+
+        while (acks_added < max_acks && data.size() > 0)
+        {
+            auto ack = data.front();
+            data.pop_front();
+
+            prepend_id(buf, ack);
+            acks_added++;
+            add_ack_to_reack(ack);
+        }
+
+        /* the already pushed acks are in front of the re_acks list, so we
+         * skip over them */
+        while (acks_added <  re_acks.size() && acks_added < max_acks)
+        {
+            prepend_id(buf, re_acks[acks_added]);
+            acks_added++;
+        }
+        buf.push_front((unsigned char)acks_added);
     }
 
     static void prepend_id(Buffer& buf, const id_t id)
@@ -109,11 +130,68 @@ namespace openvpn {
       return ntohl(net_id);
     }
 
+    size_t resend_size();
+
   private:
-    size_t max_ack_list_; // Maximum number of ACKs placed in a single message by prepend_acklist()
+    void add_ack_to_reack(id_t ack);
+
     std::deque<id_t> data;
+    std::deque<id_t> re_acks;
   };
 
-} // namespace openvpn
+  /**
+   * Returns the number of outstanding ACKs that have been sent.
+   */
+  inline size_t ReliableAck::size() const
+  {
+    return data.size();
+  }
 
-#endif // OPENVPN_RELIABLE_RELACK_H
+  /**
+   * Returns true if all outstanding ACKs are empty, otherwise false. Acks
+   * that can be resend are ignored.
+   *
+   * @return Returns true if all ACKs are empty, otherwise false;
+   *
+   */
+  inline bool ReliableAck::empty() const
+  {
+    return data.empty();
+  }
+
+  /**
+   * Returns true if either outstanding acks are present or ACKs for resending
+   * are present.
+   *
+   */
+  inline bool ReliableAck::acks_ready() const
+  {
+      return !data.empty()  || !re_acks.empty();
+  }
+
+  inline void ReliableAck::add_ack_to_reack(id_t ack)
+  {
+      /* Check if the element is already in the array to avoid duplicates */
+      for (auto it = re_acks.begin(); it != re_acks.end(); it++)
+      {
+          if (*it == ack)
+          {
+              re_acks.erase(it);
+              break;
+          }
+      }
+
+      re_acks.push_front(ack);
+      if (re_acks.size() > maximum_acks_ack_v1)
+      {
+          re_acks.pop_back();
+      }
+  }
+
+  inline size_t ReliableAck::resend_size()
+  {
+      return re_acks.size();
+  }
+
+  } // namespace openvpn
+
