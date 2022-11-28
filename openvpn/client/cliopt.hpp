@@ -471,6 +471,7 @@ namespace openvpn {
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;
 	    tunconf->tun_type = config.wintun ? TunWin::Wintun : TunWin::TapWindows6;
+      tunconf->allow_local_dns_resolvers = config.allow_local_dns_resolvers;
 	    if (config.tun_persist)
 	      {
 		tunconf->tun_persist.reset(new TunWin::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
