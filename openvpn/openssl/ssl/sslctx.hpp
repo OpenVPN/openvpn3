@@ -1726,6 +1726,10 @@ namespace openvpn {
     static void load_serial_number_into_authcert(AuthCert& authcert, ::X509 *cert)
     {
       const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
+      if (!ai)
+	return;
+      if (ai->type == V_ASN1_NEG_INTEGER) // negative serial number is considered to be undefined
+	return;
       BIGNUM *bn = ASN1_INTEGER_to_BN(ai, NULL);
       if (!bn)
 	return;

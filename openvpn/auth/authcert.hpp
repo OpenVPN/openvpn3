@@ -424,9 +424,10 @@ namespace openvpn {
 	  os << "SNI=" << sni << ' ';
 	if (sni_metadata)
 	  os << "SNI_CN=" << sni_metadata->sni_client_name(*this) << ' ';
-	os << "CN=" << cn
-	   << " SN=" << serial.to_string()
-	   << " ISSUER_FP=" << issuer_fp_str(false);
+	os << "CN=" << cn;
+	if (serial.defined())
+	  os << " SN=" << serial.to_string();
+	os << " ISSUER_FP=" << issuer_fp_str(false);
 	return os.str();
       }
 
