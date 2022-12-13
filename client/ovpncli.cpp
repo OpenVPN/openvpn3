@@ -1042,6 +1042,9 @@ namespace openvpn {
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
       cc.extern_transport_factory = this;
 #endif
+#if defined(OPENVPN_PLATFORM_ANDROID)
+    cc.enable_route_emulation = state->enable_route_emulation;
+#endif
       // force Session ID use and disable password cache if static challenge is enabled
       if (state->creds
 	  && !state->creds->get_replace_password_with_session_id()
