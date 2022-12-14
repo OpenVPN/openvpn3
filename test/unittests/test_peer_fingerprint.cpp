@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2021 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -39,8 +39,11 @@ TEST(PeerFingerprint, parse_config) {
   cfg.parse_from_config(
     "peer-fingerprint 01:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44\n"
     "<peer-fingerprint>\n"
+    "  \n"
     "02:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44\n"
+    "# comment\n"
     "03:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44 \n"
+    "  ; comment\n"
     "04:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44  \n"
     "</peer-fingerprint>\n"
     "peer-fingerprint 05:F5:A6:4D:4A:CB:65:E1:8A:9F:55:89:7F:77:A0:79:AA:FB:CC:A1:37:2F:D8:B3:47:AA:9D:E3:D0:76:B1:44 \n"

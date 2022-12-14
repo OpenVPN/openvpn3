@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -225,7 +225,7 @@ namespace openvpn {
        IV_PROTO_AUTH_PENDING_KW=(1<<4),
        IV_PROTO_NCP_P2P=(1<<5), // not implemented
        IV_PROTO_DNS_OPTION=(1<<6),
-       IV_PROTO_CC_EXIT_NOTIFY=(1<<7), // not implemented
+       IV_PROTO_CC_EXIT_NOTIFY=(1<<7),
        IV_PROTO_AUTH_FAIL_TEMP=(1<<8)
     };
 
@@ -312,6 +312,9 @@ namespace openvpn {
 
       // transmit username/password creds to server (client-only)
       bool xmit_creds = true;
+
+      // send client exit notifications via control channel
+      bool cc_exit_notify = false;
 
       // Transport protocol, i.e. UDPv4, etc.
       Protocol protocol; // set with set_protocol()
@@ -656,6 +659,38 @@ namespace openvpn {
 	      OPENVPN_THROW(process_server_push_error, "Problem accepting key-derivation method '" << key_method << "': " << e.what());
 	    }
 	}
+
+	// protocol-flags
+	try
+	  {
+	    const Option *o = opt.get_ptr("protocol-flags");
+	    if (o)
+	      {
+		o->min_args(2);
+		for (std::size_t i = 1; i < o->size(); i++)
+		  {
+		    std::string flag = o->get(i, 128);
+		    if (flag == "cc-exit")
+		      {
+			cc_exit_notify = true;
+		      }
+		    else if (flag == "tls-ekm")
+		      {
+			// Overrides "key-derivation" method set above
+			dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
+		      }
+		    else
+		      {
+			OPENVPN_THROW(process_server_push_error, "unknown flag '" << flag << "'");
+		      }
+		  }
+	      }
+	  }
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_THROW(process_server_push_error, "Problem accepting protocol-flags: " << e.what());
+	  }
+
 	// compression
 	std::string new_comp;
 	try {
@@ -878,6 +913,7 @@ namespace openvpn {
 	  | IV_PROTO_REQUEST_PUSH
 	  | IV_PROTO_AUTH_PENDING_KW
 	  | IV_PROTO_DNS_OPTION
+	  | IV_PROTO_CC_EXIT_NOTIFY
 	  | IV_PROTO_AUTH_FAIL_TEMP;
 
 	if (SSLLib::SSLAPI::support_key_material_export())
@@ -1766,13 +1802,11 @@ namespace openvpn {
       // send explicit-exit-notify message to peer
       void send_explicit_exit_notify()
       {
-#ifndef OPENVPN_DISABLE_EXPLICIT_EXIT // explicit exit should always be enabled in production
 	if (crypto_flags & CryptoDCInstance::EXPLICIT_EXIT_NOTIFY_DEFINED)
 	  crypto->explicit_exit_notify();
 	else
 	  send_data_channel_message(proto_context_private::explicit_exit_notify_message,
 				    sizeof(proto_context_private::explicit_exit_notify_message));
-#endif
       }
 
       // general purpose method for sending constant string messages
@@ -3645,8 +3679,22 @@ namespace openvpn {
     // they are disconnecting
     void send_explicit_exit_notify()
     {
-      if (is_client() && is_udp() && primary)
-	primary->send_explicit_exit_notify();
+#ifndef OPENVPN_DISABLE_EXPLICIT_EXIT // explicit exit should always be enabled in production
+      if (!is_client() || !is_udp() || !primary)
+	{
+	  return;
+	}
+
+      if (config->cc_exit_notify)
+	{
+	  write_control_string(std::string("EXIT"));
+	  primary->flush();
+	}
+      else
+	{
+	  primary->send_explicit_exit_notify();
+	}
+#endif // OPENVPN_DISABLE_EXPLICIT_EXIT
     }
 
     // should be called after a successful network packet transmit

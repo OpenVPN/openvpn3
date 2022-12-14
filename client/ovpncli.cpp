@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -1041,6 +1041,9 @@ namespace openvpn {
 #endif
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
       cc.extern_transport_factory = this;
+#endif
+#if defined(OPENVPN_PLATFORM_ANDROID)
+    cc.enable_route_emulation = state->enable_route_emulation;
 #endif
       // force Session ID use and disable password cache if static challenge is enabled
       if (state->creds

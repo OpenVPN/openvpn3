@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -1568,11 +1568,11 @@ namespace openvpn {
     static void load_serial_number_into_authcert(AuthCert& authcert, const mbedtls_x509_crt *cert)
     {
       const mbedtls_x509_buf *s = &cert->serial;
-      if (s->len > 0 && s->len <= sizeof(authcert.serial_number))
+      if (s->len > 0 && s->len <= authcert.serial.size())
 	{
-	  const size_t offset = sizeof(authcert.serial_number) - s->len;
-	  std::memset(authcert.serial_number, 0, offset);
-	  std::memcpy(authcert.serial_number + offset, s->p, s->len);
+	  const size_t offset = authcert.serial.size() - s->len;
+	  std::memset(authcert.serial.number(), 0, offset);
+	  std::memcpy(authcert.serial.number() + offset, s->p, s->len);
 	}
     }
 

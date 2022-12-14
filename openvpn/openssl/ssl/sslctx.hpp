@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -1726,19 +1726,23 @@ namespace openvpn {
     static void load_serial_number_into_authcert(AuthCert& authcert, ::X509 *cert)
     {
       const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
+      if (!ai)
+	return;
+      if (ai->type == V_ASN1_NEG_INTEGER) // negative serial number is considered to be undefined
+	return;
       BIGNUM *bn = ASN1_INTEGER_to_BN(ai, NULL);
       if (!bn)
 	return;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
       const size_t nb = BN_num_bytes(bn);
-      if (nb <= sizeof(authcert.serial_number))
+      if (nb <= authcert.serial.size())
 	{
-	  const size_t offset = sizeof(authcert.serial_number) - nb;
-	  std::memset(authcert.serial_number, 0, offset);
-	  BN_bn2bin(bn, authcert.serial_number + offset);
+	  const size_t offset = authcert.serial.size() - nb;
+	  std::memset(authcert.serial.number(), 0, offset);
+	  BN_bn2bin(bn, authcert.serial.number() + offset);
 	}
 #else
-      BN_bn2binpad(bn, authcert.serial_number, sizeof(authcert.serial_number));
+      BN_bn2binpad(bn, authcert.serial.number(), authcert.serial.size());
 #endif
       BN_free(bn);
     }
