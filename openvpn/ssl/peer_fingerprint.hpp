@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2021 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -104,7 +104,16 @@ struct PeerFingerprints {
 
 	opt[i].touch();
 	while (std::getline(fps, fp))
-	  fingerprints_.emplace_back(PeerFingerprint(fp, fp_size));
+	  {
+	    // Ignore empty lines and comments in fingerprint blocks
+	    std::string trimmed = string::trim_copy(fp);
+	    if (trimmed.empty() ||
+		string::starts_with(trimmed, "#") ||
+		string::starts_with(trimmed, ";"))
+	      continue;
+
+	    fingerprints_.emplace_back(PeerFingerprint(fp, fp_size));
+	  }
       }
   }
 

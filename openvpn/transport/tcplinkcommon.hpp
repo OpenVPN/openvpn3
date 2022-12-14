@@ -1,4 +1,4 @@
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2022 OpenVPN Inc.
 
 // Base class for TCP link objects.
 
