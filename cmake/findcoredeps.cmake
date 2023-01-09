@@ -56,7 +56,6 @@ function(add_core_dependencies target)
             -DASIO_STANDALONE
             -DUSE_ASIO
             -DHAVE_LZ4
-            -DLZ4_DISABLE_DEPRECATE_WARNINGS
             -DMBEDTLS_DEPRECATED_REMOVED
             )
 
