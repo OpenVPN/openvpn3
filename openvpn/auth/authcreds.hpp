@@ -86,7 +86,14 @@ class AuthCreds : public RC<thread_unsafe_refcount>
         std::ostringstream os;
         os << "*** AuthCreds ***" << std::endl;
         os << "user: '" << username << "'" << std::endl;
-        os << "pass: (" << password.length() << " chars)" << std::endl;
+        if (password.empty())
+        {
+            os << "pass: (empty)" << std::endl;
+        }
+        else
+        {
+            os << "pass: (non-empty)" << std::endl;
+        }
         os << "peer info:" << std::endl;
         os << peer_info.render(Option::RENDER_BRACKET | Option::RENDER_NUMBER);
         return os.str();
