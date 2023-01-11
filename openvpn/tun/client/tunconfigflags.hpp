@@ -22,11 +22,13 @@
 #pragma once
 
 namespace openvpn {
-  struct TunConfigFlags {
-    enum {
-	  ADD_BYPASS_ROUTES=(1<<0),
-	  DISABLE_IFACE_UP=(1<<1),
-	  DISABLE_REROUTE_GW=(1<<2),
+struct TunConfigFlags
+{
+    enum
+    {
+        ADD_BYPASS_ROUTES = (1 << 0),
+        DISABLE_IFACE_UP = (1 << 1),
+        DISABLE_REROUTE_GW = (1 << 2),
     };
-  };
-}
+};
+} // namespace openvpn

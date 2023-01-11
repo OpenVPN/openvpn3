@@ -28,13 +28,13 @@
 #include <openvpn/random/devurand.hpp>
 
 namespace openvpn {
-  inline void openssl_reseed_rng()
-  {
+inline void openssl_reseed_rng()
+{
     unsigned char entropy[64];
 
     RandomAPI::Ptr rng(new DevURand);
     rng->rand_bytes(entropy, sizeof(entropy));
 
     RAND_seed(entropy, sizeof(entropy));
-  }
 }
+} // namespace openvpn

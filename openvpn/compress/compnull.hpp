@@ -26,18 +26,25 @@
 
 namespace openvpn {
 
-  class CompressNull : public Compress
-  {
+class CompressNull : public Compress
+{
   public:
-    CompressNull(const Frame::Ptr& frame, const SessionStats::Ptr& stats)
-      : Compress(frame, stats)
+    CompressNull(const Frame::Ptr &frame, const SessionStats::Ptr &stats)
+        : Compress(frame, stats)
     {
     }
 
-    virtual const char *name() const { return "null"; }
-    virtual void compress(BufferAllocated& buf, const bool hint) {}
-    virtual void decompress(BufferAllocated& buf) {}
-  };
+    virtual const char *name() const
+    {
+        return "null";
+    }
+    virtual void compress(BufferAllocated &buf, const bool hint)
+    {
+    }
+    virtual void decompress(BufferAllocated &buf)
+    {
+    }
+};
 
 } // namespace openvpn
 

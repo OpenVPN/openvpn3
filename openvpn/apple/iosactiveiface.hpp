@@ -29,46 +29,46 @@
 
 namespace openvpn {
 
-  class iOSActiveInterface : public ReachabilityInterface
-  {
+class iOSActiveInterface : public ReachabilityInterface
+{
   public:
     virtual Status reachable() const
     {
-      if (ei.iface_up("en0"))
-	return ReachableViaWiFi;
-      else if (ei.iface_up("pdp_ip0"))
-	return ReachableViaWWAN;
-      else
-	return NotReachable;
+        if (ei.iface_up("en0"))
+            return ReachableViaWiFi;
+        else if (ei.iface_up("pdp_ip0"))
+            return ReachableViaWWAN;
+        else
+            return NotReachable;
     }
 
-    virtual bool reachableVia(const std::string& net_type) const
+    virtual bool reachableVia(const std::string &net_type) const
     {
-      const Status r = reachable();
-      if (net_type == "cellular")
-	return r == ReachableViaWWAN;
-      else if (net_type == "wifi")
-	return r == ReachableViaWiFi;
-      else
-	return r != NotReachable;
+        const Status r = reachable();
+        if (net_type == "cellular")
+            return r == ReachableViaWWAN;
+        else if (net_type == "wifi")
+            return r == ReachableViaWiFi;
+        else
+            return r != NotReachable;
     }
 
     virtual std::string to_string() const
     {
-      switch (reachable())
-	{
-	case ReachableViaWiFi:
-	  return "ReachableViaWiFi";
-	case ReachableViaWWAN:
-	  return "ReachableViaWWAN";
-	case NotReachable:
-	  return "NotReachable";
-	}
+        switch (reachable())
+        {
+        case ReachableViaWiFi:
+            return "ReachableViaWiFi";
+        case ReachableViaWWAN:
+            return "ReachableViaWWAN";
+        case NotReachable:
+            return "NotReachable";
+        }
     }
 
   private:
     EnumIface ei;
-  };
+};
 
-}
+} // namespace openvpn
 #endif

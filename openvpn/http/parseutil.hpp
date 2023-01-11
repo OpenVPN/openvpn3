@@ -31,57 +31,72 @@
 #define OPENVPN_HTTP_PARSEUTIL_H
 
 namespace openvpn {
-  namespace HTTP {
-    namespace Util {
+namespace HTTP {
+namespace Util {
 
-      // Check if a byte is an HTTP character.
-      inline bool is_char(const unsigned char c)
-      {
-	return c <= 127;
-      }
-
-      // Check if a byte is an HTTP control character.
-      inline bool is_ctl(const unsigned char c)
-      {
-	return (c <= 31)|| (c == 127);
-      }
-
-      // Check if a byte is defined as an HTTP tspecial character.
-      inline bool is_tspecial(const unsigned char c)
-      {
-	switch (c)
-	  {
-	  case '(': case ')': case '<': case '>': case '@':
-	  case ',': case ';': case ':': case '\\': case '"':
-	  case '/': case '[': case ']': case '?': case '=':
-	  case '{': case '}': case ' ': case '\t':
-	    return true;
-	  default:
-	    return false;
-	  }
-      }
-
-      // Check if a byte is a digit.
-      inline bool is_digit(const unsigned char c)
-      {
-	return c >= '0' && c <= '9';
-      }
-
-      // Check if char should be URL-escaped
-      inline bool is_escaped(const unsigned char c)
-      {
-	if (c >= 'a' && c <= 'z')
-	  return false;
-	if (c >= 'A' && c <= 'Z')
-	  return false;
-	if (c >= '0' && c <= '9')
-	  return false;
-	if (c == '.' || c == '-' || c == '_')
-	  return false;
-	return true;
-      }
-    }
-  }
+// Check if a byte is an HTTP character.
+inline bool is_char(const unsigned char c)
+{
+    return c <= 127;
 }
+
+// Check if a byte is an HTTP control character.
+inline bool is_ctl(const unsigned char c)
+{
+    return (c <= 31) || (c == 127);
+}
+
+// Check if a byte is defined as an HTTP tspecial character.
+inline bool is_tspecial(const unsigned char c)
+{
+    switch (c)
+    {
+    case '(':
+    case ')':
+    case '<':
+    case '>':
+    case '@':
+    case ',':
+    case ';':
+    case ':':
+    case '\\':
+    case '"':
+    case '/':
+    case '[':
+    case ']':
+    case '?':
+    case '=':
+    case '{':
+    case '}':
+    case ' ':
+    case '\t':
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Check if a byte is a digit.
+inline bool is_digit(const unsigned char c)
+{
+    return c >= '0' && c <= '9';
+}
+
+// Check if char should be URL-escaped
+inline bool is_escaped(const unsigned char c)
+{
+    if (c >= 'a' && c <= 'z')
+        return false;
+    if (c >= 'A' && c <= 'Z')
+        return false;
+    if (c >= '0' && c <= '9')
+        return false;
+    if (c == '.' || c == '-' || c == '_')
+        return false;
+    return true;
+}
+} // namespace Util
+} // namespace HTTP
+} // namespace openvpn
 
 #endif

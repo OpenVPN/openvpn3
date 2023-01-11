@@ -34,8 +34,8 @@ namespace SSLLib {
 #if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
 using Ctx = OSSL_LIB_CTX *;
 #else
-using Ctx = void*;
+using Ctx = void *;
 #endif
 
-}
-}
+} // namespace SSLLib
+} // namespace openvpn

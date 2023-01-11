@@ -31,15 +31,15 @@
 #include <openvpn/common/stop.hpp>
 
 namespace openvpn {
-  namespace ExternalTun {
-    struct Config
-    {
-      TunProp::Config tun_prop;
-      Frame::Ptr frame;
-      SessionStats::Ptr stats;
-      Stop* stop = nullptr;
-      bool tun_persist = false;
-    };
-  }
-}
+namespace ExternalTun {
+struct Config
+{
+    TunProp::Config tun_prop;
+    Frame::Ptr frame;
+    SessionStats::Ptr stats;
+    Stop *stop = nullptr;
+    bool tun_persist = false;
+};
+} // namespace ExternalTun
+} // namespace openvpn
 #endif

@@ -29,103 +29,103 @@
 #include <openvpn/common/hexstr.hpp>
 
 namespace openvpn {
-  namespace BufferFormat {
+namespace BufferFormat {
 
-    template <typename T>
-    class UnsignedDecimal
+template <typename T>
+class UnsignedDecimal
+{
+  public:
+    static void write(Buffer &buf, T value)
     {
-    public:
-      static void write(Buffer& buf, T value)
-      {
-	UnsignedDecimal dec(std::move(value));
-	char ret[max_length()];
-	for (size_t i = sizeof(ret); i --> 0;)
-	  {
-	    ret[i] = dec.next();
-	    if (dec.is_zero())
-	      {
-		buf.write(ret + i, sizeof(ret) - i);
-		return;
-	      }
-	  }
-	throw Exception("BufferFormat::UnsignedDecimal::write: overflow");
-      }
+        UnsignedDecimal dec(std::move(value));
+        char ret[max_length()];
+        for (size_t i = sizeof(ret); i-- > 0;)
+        {
+            ret[i] = dec.next();
+            if (dec.is_zero())
+            {
+                buf.write(ret + i, sizeof(ret) - i);
+                return;
+            }
+        }
+        throw Exception("BufferFormat::UnsignedDecimal::write: overflow");
+    }
 
-      static constexpr size_t max_length()
-      {
-	return sizeof(T) * 3;
-      }
-
-    private:
-      UnsignedDecimal(T&& value)
-	: value_(std::move(value))
-      {
-	static_assert(std::is_unsigned<T>::value, "UnsignedDecimal: unsigned type required");
-      }
-
-      char next()
-      {
-	T d = value_ / T(10);
-	T r = value_ % T(10);
-	value_ = d;
-	return '0' + r;
-      }
-
-      bool is_zero() const
-      {
-	return !value_;
-      }
-
-      T value_;
-    };
-
-    template <typename T>
-    class Hex
+    static constexpr size_t max_length()
     {
-    public:
-      static void write(Buffer& buf, T value)
-      {
-	Hex hex(std::move(value));
-	char ret[max_length()];
-	for (size_t i = sizeof(ret); i --> 0;)
-	  {
-	    ret[i] = hex.next();
-	    if (hex.is_zero())
-	      {
-		buf.write(ret + i, sizeof(ret) - i);
-		return;
-	      }
-	  }
-	throw Exception("BufferFormat::Hex::write: overflow");
-      }
+        return sizeof(T) * 3;
+    }
 
-      static constexpr size_t max_length()
-      {
-	return sizeof(T) * 2;
-      }
+  private:
+    UnsignedDecimal(T &&value)
+        : value_(std::move(value))
+    {
+        static_assert(std::is_unsigned<T>::value, "UnsignedDecimal: unsigned type required");
+    }
 
-    private:
-      Hex(T&& value)
-	: value_(std::move(value))
-      {
-	static_assert(std::is_unsigned<T>::value, "BufferFormat::Hex: unsigned type required");
-      }
+    char next()
+    {
+        T d = value_ / T(10);
+        T r = value_ % T(10);
+        value_ = d;
+        return '0' + r;
+    }
 
-      char next()
-      {
-	T d = value_ / T(16);
-	T r = value_ % T(16);
-	value_ = d;
-	return render_hex_char(r);
-      }
+    bool is_zero() const
+    {
+        return !value_;
+    }
 
-      bool is_zero() const
-      {
-	return !value_;
-      }
+    T value_;
+};
 
-      T value_;
-    };
+template <typename T>
+class Hex
+{
+  public:
+    static void write(Buffer &buf, T value)
+    {
+        Hex hex(std::move(value));
+        char ret[max_length()];
+        for (size_t i = sizeof(ret); i-- > 0;)
+        {
+            ret[i] = hex.next();
+            if (hex.is_zero())
+            {
+                buf.write(ret + i, sizeof(ret) - i);
+                return;
+            }
+        }
+        throw Exception("BufferFormat::Hex::write: overflow");
+    }
 
-  }
-}
+    static constexpr size_t max_length()
+    {
+        return sizeof(T) * 2;
+    }
+
+  private:
+    Hex(T &&value)
+        : value_(std::move(value))
+    {
+        static_assert(std::is_unsigned<T>::value, "BufferFormat::Hex: unsigned type required");
+    }
+
+    char next()
+    {
+        T d = value_ / T(16);
+        T r = value_ % T(16);
+        value_ = d;
+        return render_hex_char(r);
+    }
+
+    bool is_zero() const
+    {
+        return !value_;
+    }
+
+    T value_;
+};
+
+} // namespace BufferFormat
+} // namespace openvpn

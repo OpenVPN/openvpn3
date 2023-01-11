@@ -27,21 +27,19 @@
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/client/remotelist.hpp>
 
-namespace openvpn
+namespace openvpn {
+namespace ExternalTransport {
+struct Config
 {
-  namespace ExternalTransport
-  {
-    struct Config
-    {
-      Protocol protocol;
-      RemoteList::Ptr remote_list;
-      bool server_addr_float = false;
-      bool synchronous_dns_lookup = false;
-      Frame::Ptr frame;
-      SessionStats::Ptr stats;
-      SocketProtect* socket_protect = nullptr;
-    };
-  }
-}
+    Protocol protocol;
+    RemoteList::Ptr remote_list;
+    bool server_addr_float = false;
+    bool synchronous_dns_lookup = false;
+    Frame::Ptr frame;
+    SessionStats::Ptr stats;
+    SocketProtect *socket_protect = nullptr;
+};
+} // namespace ExternalTransport
+} // namespace openvpn
 
 #endif

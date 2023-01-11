@@ -27,17 +27,21 @@
 #endif
 
 namespace openvpn {
-  namespace ExternalTransport {
+namespace ExternalTransport {
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
-    struct Config;
-    struct Factory
+struct Config;
+struct Factory
+{
+    virtual TransportClientFactory *new_transport_factory(const Config &conf) = 0;
+    virtual ~Factory()
     {
-      virtual TransportClientFactory* new_transport_factory(const Config& conf) = 0;
-      virtual ~Factory() {}
-    };
+    }
+};
 #else
-    struct Factory {};
+struct Factory
+{
+};
 #endif
-  }
-}
+} // namespace ExternalTransport
+} // namespace openvpn
 #endif

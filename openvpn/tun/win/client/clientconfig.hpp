@@ -29,75 +29,75 @@
 #include <openvpn/tun/win/client/tunsetup.hpp>
 
 namespace openvpn {
-  namespace TunWin {
+namespace TunWin {
 
-    // These types manage the underlying TAP driver HANDLE
-    typedef openvpn_io::windows::stream_handle TAPStream;
-    typedef ScopedAsioStream<TAPStream> ScopedTAPStream;
+// These types manage the underlying TAP driver HANDLE
+typedef openvpn_io::windows::stream_handle TAPStream;
+typedef ScopedAsioStream<TAPStream> ScopedTAPStream;
 
-    template <typename ADAPTER_STATE>
-    struct TunPersistState {
-      TunProp::State::Ptr state;
-      ADAPTER_STATE adapter_state;
+template <typename ADAPTER_STATE>
+struct TunPersistState
+{
+    TunProp::State::Ptr state;
+    ADAPTER_STATE adapter_state;
 
-      void reset()
-      {
-	state.reset();
-	adapter_state.reset();
-      }
-    };
-    typedef TunPersistTemplate<ScopedTAPStream, TunPersistState<RingBuffer::Ptr>> TunPersist;
-    typedef TunPersistTemplate<ScopedTAPStream, TunPersistState<Util::TapNameGuidPair>> DcoTunPersist;
-
-    class ClientConfig : public TunClientFactory
+    void reset()
     {
-      friend class Client; // accesses wfp
+        state.reset();
+        adapter_state.reset();
+    }
+};
+typedef TunPersistTemplate<ScopedTAPStream, TunPersistState<RingBuffer::Ptr>> TunPersist;
+typedef TunPersistTemplate<ScopedTAPStream, TunPersistState<Util::TapNameGuidPair>> DcoTunPersist;
 
-    public:
-      typedef RCPtr<ClientConfig> Ptr;
+class ClientConfig : public TunClientFactory
+{
+    friend class Client; // accesses wfp
 
-      TunProp::Config tun_prop;
-      int n_parallel = 8;         // number of parallel async reads on tun socket
-      TunWin::Type tun_type = TunWin::TapWindows6;
-      bool allow_local_dns_resolvers = false;
+  public:
+    typedef RCPtr<ClientConfig> Ptr;
 
-      Frame::Ptr frame;
-      SessionStats::Ptr stats;
+    TunProp::Config tun_prop;
+    int n_parallel = 8; // number of parallel async reads on tun socket
+    TunWin::Type tun_type = TunWin::TapWindows6;
+    bool allow_local_dns_resolvers = false;
 
-      Stop* stop = nullptr;
+    Frame::Ptr frame;
+    SessionStats::Ptr stats;
 
-      TunPersist::Ptr tun_persist;
+    Stop *stop = nullptr;
 
-      TunWin::SetupFactory::Ptr tun_setup_factory;
+    TunPersist::Ptr tun_persist;
 
-      TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context)
-      {
-	if (tun_setup_factory)
-	  return tun_setup_factory->new_setup_obj(io_context, tun_type, allow_local_dns_resolvers);
-	else
-	  return new TunWin::Setup(io_context, tun_type, allow_local_dns_resolvers);
-      }
+    TunWin::SetupFactory::Ptr tun_setup_factory;
 
-      static Ptr new_obj()
-      {
-	return new ClientConfig;
-      }
+    TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context &io_context)
+    {
+        if (tun_setup_factory)
+            return tun_setup_factory->new_setup_obj(io_context, tun_type, allow_local_dns_resolvers);
+        else
+            return new TunWin::Setup(io_context, tun_type, allow_local_dns_resolvers);
+    }
 
-      virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
-	TunClientParent& parent,
-	TransportClient* transcli) override;
+    static Ptr new_obj()
+    {
+        return new ClientConfig;
+    }
 
-      virtual void finalize(const bool disconnected) override
-      {
-	if (disconnected)
-	  tun_persist.reset();
-      }
+    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
+                                              TunClientParent &parent,
+                                              TransportClient *transcli) override;
 
-      virtual bool layer_2_supported() const override
-      {
-	return true;
-      }
-    };
-  }
-}
+    virtual void finalize(const bool disconnected) override
+    {
+        if (disconnected)
+            tun_persist.reset();
+    }
 
+    virtual bool layer_2_supported() const override
+    {
+        return true;
+    }
+};
+} // namespace TunWin
+} // namespace openvpn

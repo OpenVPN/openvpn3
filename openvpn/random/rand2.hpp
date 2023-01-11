@@ -27,34 +27,36 @@
 
 namespace openvpn {
 
-  // By convention, rng is crypto-strength while prng is
-  // not.  Be sure to always call RandomAPI::assert_crypto()
-  // before using an rng for crypto purposes, to verify that
-  // it is crypto-capable.
-  struct Rand2
-  {
-    Rand2() {}
+// By convention, rng is crypto-strength while prng is
+// not.  Be sure to always call RandomAPI::assert_crypto()
+// before using an rng for crypto purposes, to verify that
+// it is crypto-capable.
+struct Rand2
+{
+    Rand2()
+    {
+    }
 
     Rand2(RandomAPI::Ptr rng_arg,
-	  RandomAPI::Ptr prng_arg)
-      : rng(std::move(rng_arg)),
-	prng(std::move(prng_arg))
+          RandomAPI::Ptr prng_arg)
+        : rng(std::move(rng_arg)),
+          prng(std::move(prng_arg))
     {
     }
 
     Rand2(RandomAPI::Ptr rng_arg)
-      : rng(rng_arg),
-	prng(rng_arg)
+        : rng(rng_arg),
+          prng(rng_arg)
     {
     }
 
     bool defined() const
     {
-      return rng && prng;
+        return rng && prng;
     }
 
     RandomAPI::Ptr rng;
     RandomAPI::Ptr prng;
-  };
+};
 
-}
+} // namespace openvpn

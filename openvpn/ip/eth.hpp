@@ -30,12 +30,13 @@
 #pragma pack(1)
 
 namespace openvpn {
-  struct EthHeader {
-    std::uint8_t   dest_mac[6];
-    std::uint8_t   src_mac[6];
-    std::uint16_t  ethertype;
-  };
-}
+struct EthHeader
+{
+    std::uint8_t dest_mac[6];
+    std::uint8_t src_mac[6];
+    std::uint16_t ethertype;
+};
+} // namespace openvpn
 
 #pragma pack(pop)
 

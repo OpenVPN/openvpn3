@@ -32,35 +32,36 @@
 
 namespace openvpn {
 
-  // Fundamental class for representing an ethernet MAC address.
+// Fundamental class for representing an ethernet MAC address.
 
-  class MACAddr {
+class MACAddr
+{
   public:
     MACAddr()
     {
-      std::memset(addr_, 0, sizeof(addr_));
+        std::memset(addr_, 0, sizeof(addr_));
     }
 
     MACAddr(const unsigned char *addr)
     {
-      reset(addr);
+        reset(addr);
     }
 
     void reset(const unsigned char *addr)
     {
-      std::memcpy(addr_, addr, sizeof(addr_));
+        std::memcpy(addr_, addr, sizeof(addr_));
     }
 
     std::string to_string() const
     {
-      return render_hex_sep(addr_, sizeof(addr_), ':');
+        return render_hex_sep(addr_, sizeof(addr_), ':');
     }
 
   private:
     unsigned char addr_[6];
-  };
+};
 
-  OPENVPN_OSTREAM(MACAddr, to_string)
+OPENVPN_OSTREAM(MACAddr, to_string)
 
 } // namespace openvpn
 

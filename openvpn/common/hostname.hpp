@@ -31,14 +31,14 @@
 #endif
 
 namespace openvpn {
-  inline std::string get_hostname()
-  {
+inline std::string get_hostname()
+{
 #ifdef USE_ASIO
     return asio::ip::host_name();
 #else
     return "HOSTNAME_UNDEFINED";
 #endif
-  }
 }
+} // namespace openvpn
 
 #endif

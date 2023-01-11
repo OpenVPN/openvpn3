@@ -28,10 +28,13 @@
 
 namespace openvpn {
 
-  class BufferStream : public std::streambuf
-  {
+class BufferStream : public std::streambuf
+{
   public:
-    BufferStream(Buffer& buffer) : buf(buffer) {}
+    BufferStream(Buffer &buffer)
+        : buf(buffer)
+    {
+    }
 
   protected:
 #if 0 // not implemented yet
@@ -44,40 +47,40 @@ namespace openvpn {
 #endif
 
     // output
-    virtual std::streamsize xsputn(const char* s, std::streamsize n)
+    virtual std::streamsize xsputn(const char *s, std::streamsize n)
     {
-      buf.write((unsigned char *)s, (size_t)n);
-      return n;
+        buf.write((unsigned char *)s, (size_t)n);
+        return n;
     }
 
     virtual int overflow(int c = EOF)
     {
-      if (c != EOF)
-	{
-	  unsigned char uc = (unsigned char)c;
-	  buf.push_back(uc);
-	}
-      return c;
+        if (c != EOF)
+        {
+            unsigned char uc = (unsigned char)c;
+            buf.push_back(uc);
+        }
+        return c;
     }
 
   private:
-    Buffer& buf;
-  };
+    Buffer &buf;
+};
 
-  class BufferStreamOut : public std::ostream
-  {
+class BufferStreamOut : public std::ostream
+{
   public:
-    BufferStreamOut(Buffer& buffer)
-      : std::ostream(new BufferStream(buffer))
+    BufferStreamOut(Buffer &buffer)
+        : std::ostream(new BufferStream(buffer))
     {
     }
 
     ~BufferStreamOut()
     {
-      delete rdbuf();
+        delete rdbuf();
     }
-  };
+};
 
-}
+} // namespace openvpn
 
 #endif

@@ -28,13 +28,13 @@
 #include <ostream>
 #include <string>
 
-#define OPENVPN_OSTREAM(TYPE, METH) \
-    template <typename Elem, typename Traits> \
-    std::basic_ostream<Elem, Traits>& operator<<( \
-      std::basic_ostream<Elem, Traits>& os, const TYPE& addr) \
-    { \
-      os << addr.METH(); \
-      return os; \
+#define OPENVPN_OSTREAM(TYPE, METH)                             \
+    template <typename Elem, typename Traits>                   \
+    std::basic_ostream<Elem, Traits> &operator<<(               \
+        std::basic_ostream<Elem, Traits> &os, const TYPE &addr) \
+    {                                                           \
+        os << addr.METH();                                      \
+        return os;                                              \
     }
 
 #endif // OPENVPN_COMMON_OSTREAM_H

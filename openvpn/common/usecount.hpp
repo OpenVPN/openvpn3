@@ -25,18 +25,18 @@
 
 namespace openvpn {
 
-  class UseCount
-  {
+class UseCount
+{
   public:
     /**
      * Temporarily increments the variable by one for the scope an instance
      * of this class is defined.
      * @param count
      */
-    explicit UseCount(int& count)
-      : count_(count)
+    explicit UseCount(int &count)
+        : count_(count)
     {
-      ++count_;
+        ++count_;
     }
 
     /* make this class not copyable. */
@@ -45,11 +45,11 @@ namespace openvpn {
 
     ~UseCount()
     {
-      --count_;
+        --count_;
     }
 
   private:
-    int& count_;
-  };
+    int &count_;
+};
 
-}
+} // namespace openvpn

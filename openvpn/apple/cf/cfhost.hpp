@@ -25,9 +25,9 @@
 #include <openvpn/apple/cf/cf.hpp>
 
 namespace openvpn {
-  namespace CF {
-    OPENVPN_CF_WRAP(Host, host_cast, CFHostRef, CFHostGetTypeID)
-  }
+namespace CF {
+OPENVPN_CF_WRAP(Host, host_cast, CFHostRef, CFHostGetTypeID)
 }
+} // namespace openvpn
 
 #endif

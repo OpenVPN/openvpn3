@@ -25,36 +25,42 @@
 
 namespace openvpn {
 
-  namespace C2os {
-    // Support a coercion safe method to insert a container into an ostream.  The type T
-    // contained must be ostream'able.
-    //
-    // Note also that C2os::Container can be extended by passing in optional arguments
-    // to the Container ctor that could adjust the formatting (e.g., different
-    // delimiter, curlies vs square brackets, etc.)
-    template<typename C>
-    struct Container
+namespace C2os {
+// Support a coercion safe method to insert a container into an ostream.  The type T
+// contained must be ostream'able.
+//
+// Note also that C2os::Container can be extended by passing in optional arguments
+// to the Container ctor that could adjust the formatting (e.g., different
+// delimiter, curlies vs square brackets, etc.)
+template <typename C>
+struct Container
+{
+    explicit Container(const C &container)
+        : ref(container)
     {
-      explicit Container(const C& container) : ref(container) {}
-      const C& ref;
-    };
-
-    template<typename C>
-    inline const auto cast(const C& container) {
-      return Container<C>(container);
     }
+    const C &ref;
+};
 
-    template<typename C>
-    inline std::ostream& operator<<(std::ostream& os, const Container<C>& container) {
-      constexpr char separator[] = ", ";
-      const char* delimiter = "";
-      os << "[";
-      for(const auto& e : container.ref) {
+template <typename C>
+inline const auto cast(const C &container)
+{
+    return Container<C>(container);
+}
+
+template <typename C>
+inline std::ostream &operator<<(std::ostream &os, const Container<C> &container)
+{
+    constexpr char separator[] = ", ";
+    const char *delimiter = "";
+    os << "[";
+    for (const auto &e : container.ref)
+    {
         os << delimiter << e;
         delimiter = separator;
-      }
-      os << "]";
-      return os;
     }
-  }
+    os << "]";
+    return os;
 }
+} // namespace C2os
+} // namespace openvpn

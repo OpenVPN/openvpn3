@@ -28,41 +28,41 @@
 #include <openvpn/common/stringtempl.hpp>
 
 namespace openvpn {
-  namespace StringTempl {
+namespace StringTempl {
 
-    // empty
+// empty
 
-    // for objects that define an empty method
-    template <typename T>
-    inline auto empty(const T& t) -> decltype(t.empty())
-    {
-      return t.empty();
-    }
-
-    // for numerical values
-    template <typename T,
-	      typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
-    inline bool empty(T value)
-    {
-      return false;
-    }
-
-    // to_string
-
-    // for objects that define a to_string() method
-    template <typename T>
-    inline auto to_string(const T& t) -> decltype(t.to_string())
-    {
-      return t.to_string();
-    }
-
-    // for numerical values
-    template <typename T,
-	      typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
-    inline std::string to_string(T value)
-    {
-      return std::to_string(value);
-    }
-
-  }
+// for objects that define an empty method
+template <typename T>
+inline auto empty(const T &t) -> decltype(t.empty())
+{
+    return t.empty();
 }
+
+// for numerical values
+template <typename T,
+          typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
+inline bool empty(T value)
+{
+    return false;
+}
+
+// to_string
+
+// for objects that define a to_string() method
+template <typename T>
+inline auto to_string(const T &t) -> decltype(t.to_string())
+{
+    return t.to_string();
+}
+
+// for numerical values
+template <typename T,
+          typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
+inline std::string to_string(T value)
+{
+    return std::to_string(value);
+}
+
+} // namespace StringTempl
+} // namespace openvpn

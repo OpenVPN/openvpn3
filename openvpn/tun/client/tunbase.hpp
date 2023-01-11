@@ -36,36 +36,42 @@
 
 namespace openvpn {
 
-  // Base class for objects that implement a client tun interface.
-  struct TunClient : public virtual RC<thread_unsafe_refcount>
-  {
+// Base class for objects that implement a client tun interface.
+struct TunClient : public virtual RC<thread_unsafe_refcount>
+{
     typedef RCPtr<TunClient> Ptr;
 
-    virtual void tun_start(const OptionList&, TransportClient&, CryptoDCSettings&) = 0;
+    virtual void tun_start(const OptionList &, TransportClient &, CryptoDCSettings &) = 0;
     virtual void stop() = 0;
     virtual void set_disconnect() = 0;
-    virtual bool tun_send(BufferAllocated& buf) = 0; // return true if send succeeded
+    virtual bool tun_send(BufferAllocated &buf) = 0; // return true if send succeeded
 
     virtual std::string tun_name() const = 0;
 
     virtual std::string vpn_ip4() const = 0; // VPN IP addresses
     virtual std::string vpn_ip6() const = 0;
 
-    virtual std::string vpn_gw4() const { return std::string(); } // VPN gateways
-    virtual std::string vpn_gw6() const { return std::string(); }
+    virtual std::string vpn_gw4() const
+    {
+        return std::string();
+    } // VPN gateways
+    virtual std::string vpn_gw6() const
+    {
+        return std::string();
+    }
 
-    virtual int vpn_mtu() const  = 0;
+    virtual int vpn_mtu() const = 0;
 
-    virtual void adjust_mss(int mss) {};
-  };
+    virtual void adjust_mss(int mss){};
+};
 
-  // Base class for parent of tun interface object, used to
-  // communicate received data packets, exceptions,
-  // special events, and progress notifications.
-  struct TunClientParent
-  {
-    virtual void tun_recv(BufferAllocated& buf) = 0;
-    virtual void tun_error(const Error::Type fatal_err, const std::string& err_text) = 0;
+// Base class for parent of tun interface object, used to
+// communicate received data packets, exceptions,
+// special events, and progress notifications.
+struct TunClientParent
+{
+    virtual void tun_recv(BufferAllocated &buf) = 0;
+    virtual void tun_error(const Error::Type fatal_err, const std::string &err_text) = 0;
 
     // progress notifications
     virtual void tun_pre_tun_config() = 0;
@@ -73,27 +79,32 @@ namespace openvpn {
     virtual void tun_connected() = 0;
 
     // allow tunclient to generate events
-    virtual void tun_event(ClientEvent::Base::Ptr ev) {}
-  };
+    virtual void tun_event(ClientEvent::Base::Ptr ev)
+    {
+    }
+};
 
-  // Factory for tun interface objects.
-  struct TunClientFactory : public virtual RC<thread_unsafe_refcount>
-  {
+// Factory for tun interface objects.
+struct TunClientFactory : public virtual RC<thread_unsafe_refcount>
+{
     typedef RCPtr<TunClientFactory> Ptr;
 
-    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
-					      TunClientParent& parent,
-					      TransportClient* transcli) = 0;
+    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context, TunClientParent &parent, TransportClient *transcli) = 0;
 
     // return true if layer 2 tunnels are supported
-    virtual bool layer_2_supported() const { return false; }
+    virtual bool layer_2_supported() const
+    {
+        return false;
+    }
 
     // Called on TunClient close, after TunClient::stop has been called.
     // disconnected ->
     //   true: this is the final disconnect, or
     //   false: we are in a pause/reconnecting state.
-    virtual void finalize(const bool disconnected) {}
-  };
+    virtual void finalize(const bool disconnected)
+    {
+    }
+};
 
 } // namespace openvpn
 

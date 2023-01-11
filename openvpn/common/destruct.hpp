@@ -28,13 +28,15 @@
 
 namespace openvpn {
 
-  struct DestructorBase : public RC<thread_unsafe_refcount>
-  {
+struct DestructorBase : public RC<thread_unsafe_refcount>
+{
     typedef RCPtr<DestructorBase> Ptr;
-    virtual void destroy(std::ostream& os) = 0;
-    virtual ~DestructorBase() {}
-  };
+    virtual void destroy(std::ostream &os) = 0;
+    virtual ~DestructorBase()
+    {
+    }
+};
 
-}
+} // namespace openvpn
 
 #endif

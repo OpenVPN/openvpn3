@@ -31,27 +31,26 @@
 
 namespace openvpn {
 
-  // returns false if Stop signal prevented full wait
-  inline bool async_sleep_milliseconds(int milliseconds, Stop* async_stop)
-  {
+// returns false if Stop signal prevented full wait
+inline bool async_sleep_milliseconds(int milliseconds, Stop *async_stop)
+{
     const int milliseconds_per_retry = 250;
     volatile bool stop = false;
 
     // allow asynchronous stop
-    Stop::Scope stop_scope(async_stop, [&stop]() {
-	stop = true;
-      });
+    Stop::Scope stop_scope(async_stop, [&stop]()
+                           { stop = true; });
 
     while (milliseconds > 0 && !stop)
-      {
-	const int ms = std::min(milliseconds, milliseconds_per_retry);
-	sleep_milliseconds(ms);
-	milliseconds -= ms;
-      }
+    {
+        const int ms = std::min(milliseconds, milliseconds_per_retry);
+        sleep_milliseconds(ms);
+        milliseconds -= ms;
+    }
 
     return !stop;
-  }
-
 }
+
+} // namespace openvpn
 
 #endif

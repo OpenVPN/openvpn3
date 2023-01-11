@@ -35,8 +35,8 @@
 #include <mbedtls/sha512.h>
 
 namespace openvpn {
-  inline std::string crypto_self_test_mbedtls()
-  {
+inline std::string crypto_self_test_mbedtls()
+{
     std::ostringstream os;
 #ifdef MBEDTLS_SELF_TEST
     const int verbose = 1;
@@ -50,7 +50,7 @@ namespace openvpn {
     os << "mbed TLS self test: not compiled" << std::endl;
 #endif
     return os.str();
-  }
 }
+} // namespace openvpn
 
 #endif

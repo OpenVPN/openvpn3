@@ -22,10 +22,16 @@
 #pragma once
 
 namespace openvpn {
-  namespace SFINAE {
+namespace SFINAE {
 
-    template <int I> struct Rank : Rank<I-1> {};
-    template <> struct Rank<0> {};
+template <int I>
+struct Rank : Rank<I - 1>
+{
+};
+template <>
+struct Rank<0>
+{
+};
 
-  }
-}
+} // namespace SFINAE
+} // namespace openvpn

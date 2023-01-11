@@ -30,8 +30,8 @@
 
 // create shortcuts for common templated classes
 namespace openvpn {
-  typedef AsyncResolvable<openvpn_io::ip::udp::resolver> AsyncResolvableUDP;
-  typedef AsyncResolvable<openvpn_io::ip::tcp::resolver> AsyncResolvableTCP;
-}
+typedef AsyncResolvable<openvpn_io::ip::udp::resolver> AsyncResolvableUDP;
+typedef AsyncResolvable<openvpn_io::ip::tcp::resolver> AsyncResolvableTCP;
+} // namespace openvpn
 
 #endif /* OPENVPN_CLIENT_ASYNC_RESOLVE_H */

@@ -28,54 +28,58 @@
 
 
 static uint8_t testkey[20] = {0x0b, 0x00};
-static uint8_t goodhash[20] = {0x58, 0xea, 0x5a, 0xf0, 0x42, 0x94, 0xe9, 0x17,
-			       0xed, 0x84, 0xb9, 0xf0, 0x83, 0x30, 0x23, 0xae,
-			       0x8b, 0xa7, 0x7e, 0xb8};
+static uint8_t goodhash[20] = {
+    // clang-format off
+    0x58, 0xea, 0x5a, 0xf0, 0x42, 0x94, 0xe9, 0x17,
+    0xed, 0x84, 0xb9, 0xf0, 0x83, 0x30, 0x23, 0xae,
+    0x8b, 0xa7, 0x7e, 0xb8
+    // clang-format on
+};
 
-static const char* ipsumlorem = "Lorem ipsum dolor sit amet, consectetur "
-				"adipisici elit, sed eiusmod tempor incidunt "
-				"ut labore et dolore magna aliqua.";
+static const char *ipsumlorem = "Lorem ipsum dolor sit amet, consectetur "
+                                "adipisici elit, sed eiusmod tempor incidunt "
+                                "ut labore et dolore magna aliqua.";
 
 TEST(crypto, hmac)
 {
-  uint8_t key[20];
-  std::memcpy(key, testkey, sizeof(key));
+    uint8_t key[20];
+    std::memcpy(key, testkey, sizeof(key));
 
-  openvpn::SSLLib::CryptoAPI::HMACContext hmac(openvpn::CryptoAlgs::SHA1, key, sizeof(key));
+    openvpn::SSLLib::CryptoAPI::HMACContext hmac(openvpn::CryptoAlgs::SHA1, key, sizeof(key));
 
-  const uint8_t *ipsum = reinterpret_cast<const uint8_t*>(ipsumlorem);
+    const uint8_t *ipsum = reinterpret_cast<const uint8_t *>(ipsumlorem);
 
-  hmac.update(ipsum, std::strlen(ipsumlorem));
-  hmac.update(ipsum, std::strlen(ipsumlorem));
+    hmac.update(ipsum, std::strlen(ipsumlorem));
+    hmac.update(ipsum, std::strlen(ipsumlorem));
 
-  uint8_t hash[20];
+    uint8_t hash[20];
 
-  ASSERT_EQ(hmac.final(hash), 20);
+    ASSERT_EQ(hmac.final(hash), 20);
 
-  /* Google test does not seem to have a good memory equality test macro */
-  ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
+    /* Google test does not seem to have a good memory equality test macro */
+    ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
 
-  hmac.reset();
+    hmac.reset();
 
-  /* Do this again to ensure that reset works */
-  hmac.update(ipsum, std::strlen(ipsumlorem));
-  hmac.update(ipsum, std::strlen(ipsumlorem));
-  ASSERT_EQ(hmac.final(hash), 20);
+    /* Do this again to ensure that reset works */
+    hmac.update(ipsum, std::strlen(ipsumlorem));
+    hmac.update(ipsum, std::strlen(ipsumlorem));
+    ASSERT_EQ(hmac.final(hash), 20);
 
-  /* Google test does not seem to have a good memory equality test macro */
-  ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
+    /* Google test does not seem to have a good memory equality test macro */
+    ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
 
-  /* Overwrite the key to ensure that the memory is no referenced by internal
-   * structs of the hmac */
-  std::memset(key, 0x55, sizeof(key));
+    /* Overwrite the key to ensure that the memory is no referenced by internal
+     * structs of the hmac */
+    std::memset(key, 0x55, sizeof(key));
 
-  hmac.reset();
+    hmac.reset();
 
-  /* Do this again to ensure that reset works */
-  hmac.update(ipsum, std::strlen(ipsumlorem));
-  hmac.update(ipsum, std::strlen(ipsumlorem));
-  ASSERT_EQ(hmac.final(hash), 20);
+    /* Do this again to ensure that reset works */
+    hmac.update(ipsum, std::strlen(ipsumlorem));
+    hmac.update(ipsum, std::strlen(ipsumlorem));
+    ASSERT_EQ(hmac.final(hash), 20);
 
-  /* Google test does not seem to have a good memory equality test macro */
-  ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
+    /* Google test does not seem to have a good memory equality test macro */
+    ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
 }

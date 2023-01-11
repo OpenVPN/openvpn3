@@ -29,9 +29,9 @@
 
 namespace openvpn {
 
-  // process-wide initialization for crypto subsystem
-  class crypto_init
-  {
+// process-wide initialization for crypto subsystem
+class crypto_init
+{
 #if defined(OPENSSL_NEEDS_INIT)
     openssl_init openssl_init_;
 #endif
@@ -41,6 +41,6 @@ namespace openvpn {
      *  warning: private field 'crypto_init_' is not used [-Wunused-private-field]
      */
     std::string dummy;
-  };
+};
 
-}
+} // namespace openvpn

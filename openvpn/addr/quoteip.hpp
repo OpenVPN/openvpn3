@@ -25,12 +25,12 @@
 
 namespace openvpn {
 
-  // return ip_addr in brackets if it is IPv6
-  std::string quote_ip(const std::string& ip_addr)
-  {
+// return ip_addr in brackets if it is IPv6
+std::string quote_ip(const std::string &ip_addr)
+{
     if (ip_addr.find(':') != std::string::npos)
-      return '[' + ip_addr + ']';
+        return '[' + ip_addr + ']';
     else
-      return ip_addr;
-  }
+        return ip_addr;
 }
+} // namespace openvpn

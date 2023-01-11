@@ -29,23 +29,23 @@
 #include <openvpn/io/io.hpp>
 
 namespace openvpn {
-  class AsioContextStore
-  {
+class AsioContextStore
+{
   public:
-    openvpn_io::io_context& new_context(int concurrency_hint)
+    openvpn_io::io_context &new_context(int concurrency_hint)
     {
-      openvpn_io::io_context* ioc = new openvpn_io::io_context(concurrency_hint);
-      {
-	std::lock_guard<std::mutex> lock(mutex);
-	contexts.emplace_back(ioc);
-      }
-      return *ioc;
+        openvpn_io::io_context *ioc = new openvpn_io::io_context(concurrency_hint);
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            contexts.emplace_back(ioc);
+        }
+        return *ioc;
     }
 
   private:
     std::mutex mutex;
     std::vector<std::unique_ptr<openvpn_io::io_context>> contexts;
-  };
-}
+};
+} // namespace openvpn
 
 #endif

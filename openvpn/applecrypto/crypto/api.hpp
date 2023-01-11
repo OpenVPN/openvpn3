@@ -29,8 +29,9 @@
 
 namespace openvpn {
 
-  // type container for Apple Crypto-level API
-  struct AppleCryptoAPI {
+// type container for Apple Crypto-level API
+struct AppleCryptoAPI
+{
     // cipher
     typedef AppleCrypto::CipherContext CipherContext;
     typedef AppleCrypto::CipherContextAEAD CipherContextAEAD;
@@ -40,7 +41,7 @@ namespace openvpn {
 
     // HMAC
     typedef AppleCrypto::HMACContext HMACContext;
-  };
-}
+};
+} // namespace openvpn
 
 #endif

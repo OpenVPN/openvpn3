@@ -32,19 +32,19 @@
 
 namespace openvpn {
 
-  struct IPv6Header
-  {
-    std::uint8_t    version_prio;
+struct IPv6Header
+{
+    std::uint8_t version_prio;
 
-    std::uint8_t    flow_lbl[3];
+    std::uint8_t flow_lbl[3];
 
-    std::uint16_t   payload_len;
-    std::uint8_t    nexthdr;
-    std::uint8_t    hop_limit;
+    std::uint16_t payload_len;
+    std::uint8_t nexthdr;
+    std::uint8_t hop_limit;
 
     struct in6_addr saddr;
     struct in6_addr daddr;
-  };
-}
+};
+} // namespace openvpn
 
 #pragma pack(pop)

@@ -44,112 +44,112 @@
 #include <openvpn/buffer/bufread.hpp>
 
 namespace openvpn {
-  class TempFile
-  {
+class TempFile
+{
   public:
     OPENVPN_EXCEPTION(tempfile_exception);
 
-    TempFile(const std::string& fn_template,
-	     const bool fn_delete)
-      : fn(new char[fn_template.length()+1]),
-	del(fn_delete)
+    TempFile(const std::string &fn_template,
+             const bool fn_delete)
+        : fn(new char[fn_template.length() + 1]),
+          del(fn_delete)
     {
-      std::memcpy(fn.get(), fn_template.c_str(), fn_template.length()+1);
-      const size_t pos = fn_template.find("XXXXXX");
-      if (pos != std::string::npos)
-	{
-	  const int suffixlen = fn_template.length() - pos - 6;
-	  if (suffixlen > 0)
-	    fd.reset(::mkstemps(fn.get(), suffixlen));
-	  else
-	    fd.reset(::mkstemp(fn.get()));
-	  if (!fd.defined())
-	    {
-	      const int eno = errno;
-	      OPENVPN_THROW(tempfile_exception, "error creating temporary file from template: " << fn_template << " : " << strerror_str(eno));
-	    }
-	}
-      else
-	OPENVPN_THROW(tempfile_exception, "badly formed temporary file template: " << fn_template);
+        std::memcpy(fn.get(), fn_template.c_str(), fn_template.length() + 1);
+        const size_t pos = fn_template.find("XXXXXX");
+        if (pos != std::string::npos)
+        {
+            const int suffixlen = fn_template.length() - pos - 6;
+            if (suffixlen > 0)
+                fd.reset(::mkstemps(fn.get(), suffixlen));
+            else
+                fd.reset(::mkstemp(fn.get()));
+            if (!fd.defined())
+            {
+                const int eno = errno;
+                OPENVPN_THROW(tempfile_exception, "error creating temporary file from template: " << fn_template << " : " << strerror_str(eno));
+            }
+        }
+        else
+            OPENVPN_THROW(tempfile_exception, "badly formed temporary file template: " << fn_template);
     }
 
     ~TempFile()
     {
-      fd.close();
-      delete_file();
+        fd.close();
+        delete_file();
     }
 
     void reset()
     {
-      const off_t off = ::lseek(fd(), 0, SEEK_SET);
-      if (off < 0)
-	{
-	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "seek error on temporary file: " << filename() << " : " << strerror_str(eno));
-	}
-      if (off)
-	OPENVPN_THROW(tempfile_exception, "unexpected seek on temporary file: " << filename());
+        const off_t off = ::lseek(fd(), 0, SEEK_SET);
+        if (off < 0)
+        {
+            const int eno = errno;
+            OPENVPN_THROW(tempfile_exception, "seek error on temporary file: " << filename() << " : " << strerror_str(eno));
+        }
+        if (off)
+            OPENVPN_THROW(tempfile_exception, "unexpected seek on temporary file: " << filename());
     }
 
     void truncate()
     {
-      reset();
-      if (::ftruncate(fd(), 0) < 0)
-	{
-	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "ftruncate error on temporary file: " << filename() << " : " << strerror_str(eno));
-	}
+        reset();
+        if (::ftruncate(fd(), 0) < 0)
+        {
+            const int eno = errno;
+            OPENVPN_THROW(tempfile_exception, "ftruncate error on temporary file: " << filename() << " : " << strerror_str(eno));
+        }
     }
 
-    void write(const std::string& content)
+    void write(const std::string &content)
     {
-      const ssize_t size = write_retry(fd(), content.c_str(), content.length());
-      if (size < 0)
-	{
-	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "error writing to temporary file: " << filename() << " : " << strerror_str(eno));
-	}
-      else if (static_cast<std::string::size_type>(size) != content.length())
-	{
-	  OPENVPN_THROW(tempfile_exception, "incomplete write to temporary file: " << filename());
-	}
+        const ssize_t size = write_retry(fd(), content.c_str(), content.length());
+        if (size < 0)
+        {
+            const int eno = errno;
+            OPENVPN_THROW(tempfile_exception, "error writing to temporary file: " << filename() << " : " << strerror_str(eno));
+        }
+        else if (static_cast<std::string::size_type>(size) != content.length())
+        {
+            OPENVPN_THROW(tempfile_exception, "incomplete write to temporary file: " << filename());
+        }
     }
 
     std::string read()
     {
-      BufferList buflist = buf_read(fd(), filename());
-      return buflist.to_string();
+        BufferList buflist = buf_read(fd(), filename());
+        return buflist.to_string();
     }
 
     std::string filename() const
     {
-      if (fn)
-	return fn.get();
-      else
-	return "";
+        if (fn)
+            return fn.get();
+        else
+            return "";
     }
 
     void close_file()
     {
-      if (!fd.close())
-	{
-	  const int eno = errno;
-	  OPENVPN_THROW(tempfile_exception, "error closing temporary file: " << filename() << " : " << strerror_str(eno));
-	}
+        if (!fd.close())
+        {
+            const int eno = errno;
+            OPENVPN_THROW(tempfile_exception, "error closing temporary file: " << filename() << " : " << strerror_str(eno));
+        }
     }
 
     void set_delete(const bool del_flag)
     {
-      del = del_flag;
+        del = del_flag;
     }
 
     void delete_file()
     {
-      if (fn && del)
-	{
-	  ::unlink(fn.get());
-	  del = false;
-	}
+        if (fn && del)
+        {
+            ::unlink(fn.get());
+            del = false;
+        }
     }
 
     ScopedFD fd;
@@ -157,7 +157,7 @@ namespace openvpn {
   private:
     std::unique_ptr<char[]> fn;
     bool del;
-  };
-}
+};
+} // namespace openvpn
 
 #endif

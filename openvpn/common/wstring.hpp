@@ -29,54 +29,54 @@
 #include <memory>
 
 namespace openvpn {
-  namespace wstring {
+namespace wstring {
 
-    inline std::wstring from_utf8(const std::string& str)
-    {
+inline std::wstring from_utf8(const std::string &str)
+{
 #ifdef __MINGW32__
-      // https://sourceforge.net/p/mingw-w64/bugs/538/
-      typedef std::codecvt_utf8<wchar_t, 0x10ffff, std::little_endian> cvt_type;
+    // https://sourceforge.net/p/mingw-w64/bugs/538/
+    typedef std::codecvt_utf8<wchar_t, 0x10ffff, std::little_endian> cvt_type;
 #else
-      typedef std::codecvt_utf8<wchar_t> cvt_type;
+    typedef std::codecvt_utf8<wchar_t> cvt_type;
 #endif
-      std::wstring_convert<cvt_type, wchar_t> cvt;
-      return cvt.from_bytes(str);
-    }
-
-    inline std::string to_utf8(const std::wstring& wstr)
-    {
-#ifdef __MINGW32__
-      typedef std::codecvt_utf8<wchar_t, 0x10ffff, std::little_endian> cvt_type;
-#else
-      typedef std::codecvt_utf8<wchar_t> cvt_type;
-#endif
-      std::wstring_convert<cvt_type, wchar_t> cvt;
-      return cvt.to_bytes(wstr);
-    }
-
-    inline std::unique_ptr<wchar_t[]> to_wchar_t(const std::wstring& wstr)
-    {
-      const size_t len = wstr.length();
-      std::unique_ptr<wchar_t[]> ret(new wchar_t[len+1]);
-      size_t i;
-      for (i = 0; i < len; ++i)
-	ret[i] = wstr[i];
-      ret[i] = L'\0';
-      return ret;
-    }
-
-    // return value corresponds to the MULTI_SZ string format on Windows
-    inline std::wstring pack_string_vector(const std::vector<std::string>& strvec)
-    {
-      std::wstring ret;
-      for (auto &s : strvec)
-	{
-	  ret += from_utf8(s);
-	  ret += L'\0';
-	}
-      return ret;
-    }
-  }
+    std::wstring_convert<cvt_type, wchar_t> cvt;
+    return cvt.from_bytes(str);
 }
+
+inline std::string to_utf8(const std::wstring &wstr)
+{
+#ifdef __MINGW32__
+    typedef std::codecvt_utf8<wchar_t, 0x10ffff, std::little_endian> cvt_type;
+#else
+    typedef std::codecvt_utf8<wchar_t> cvt_type;
+#endif
+    std::wstring_convert<cvt_type, wchar_t> cvt;
+    return cvt.to_bytes(wstr);
+}
+
+inline std::unique_ptr<wchar_t[]> to_wchar_t(const std::wstring &wstr)
+{
+    const size_t len = wstr.length();
+    std::unique_ptr<wchar_t[]> ret(new wchar_t[len + 1]);
+    size_t i;
+    for (i = 0; i < len; ++i)
+        ret[i] = wstr[i];
+    ret[i] = L'\0';
+    return ret;
+}
+
+// return value corresponds to the MULTI_SZ string format on Windows
+inline std::wstring pack_string_vector(const std::vector<std::string> &strvec)
+{
+    std::wstring ret;
+    for (auto &s : strvec)
+    {
+        ret += from_utf8(s);
+        ret += L'\0';
+    }
+    return ret;
+}
+} // namespace wstring
+} // namespace openvpn
 
 #endif

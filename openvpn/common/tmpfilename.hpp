@@ -27,15 +27,15 @@
 
 namespace openvpn {
 
-  // Generate a temporary filename that is a variant
-  // of an existing filename.
-  inline std::string tmp_filename(const std::string& fn,
-				  const std::string& tmpdir,
-				  RandomAPI& rng)
-  {
+// Generate a temporary filename that is a variant
+// of an existing filename.
+inline std::string tmp_filename(const std::string &fn,
+                                const std::string &tmpdir,
+                                RandomAPI &rng)
+{
     unsigned char data[16];
     rng.rand_fill(data);
     return path::join(tmpdir, '.' + path::basename(fn).substr(0, 64) + '.' + render_hex(data, sizeof(data)));
-  }
-
 }
+
+} // namespace openvpn

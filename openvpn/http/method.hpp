@@ -23,25 +23,26 @@
 #define OPENVPN_HTTP_METHOD_H
 
 namespace openvpn {
-  namespace HTTP {
-    namespace Method {
-      enum Type {
-	OTHER,
-	GET,
-	POST,
-      };
+namespace HTTP {
+namespace Method {
+enum Type
+{
+    OTHER,
+    GET,
+    POST,
+};
 
-      Type parse(const std::string& methstr)
-      {
-	if (methstr == "GET")
-	  return GET;
-	else if (methstr == "POST")
-	  return POST;
-	else
-	  return OTHER;
-      }
-    }
-  }
+Type parse(const std::string &methstr)
+{
+    if (methstr == "GET")
+        return GET;
+    else if (methstr == "POST")
+        return POST;
+    else
+        return OTHER;
 }
+} // namespace Method
+} // namespace HTTP
+} // namespace openvpn
 
 #endif

@@ -35,9 +35,9 @@
 
 namespace openvpn {
 
-  class ReliableAck
-  {
-    public:
+class ReliableAck
+{
+  public:
     static constexpr size_t maximum_acks_ack_v1 = 8;
     static constexpr size_t maximum_acks_control_v1 = 4;
     typedef reliable::id_t id_t;
@@ -46,43 +46,52 @@ namespace openvpn {
     size_t size() const;
     bool empty() const;
     bool acks_ready() const;
-    void push_back(id_t value) { data.push_back(value); }
-    id_t front() const         { return data.front(); }
-    void pop_front()           { data.pop_front(); }
+    void push_back(id_t value)
+    {
+        data.push_back(value);
+    }
+    id_t front() const
+    {
+        return data.front();
+    }
+    void pop_front()
+    {
+        data.pop_front();
+    }
 
     // Called to read incoming ACK IDs from buf and mark them as ACKed in rel_send.
     // If live is false, read the ACK IDs, but don't modify rel_send.
     // Return the number of ACK IDs read.
     template <typename REL_SEND>
-    static size_t ack(REL_SEND& rel_send, Buffer& buf, const bool live)
+    static size_t ack(REL_SEND &rel_send, Buffer &buf, const bool live)
     {
-      const size_t len = buf.pop_front();
-      for (size_t i = 0; i < len; ++i)
-	{
-	  const id_t id = read_id(buf);
-	  if (live)
-	    rel_send.ack(id);
-	}
-      return len;
+        const size_t len = buf.pop_front();
+        for (size_t i = 0; i < len; ++i)
+        {
+            const id_t id = read_id(buf);
+            if (live)
+                rel_send.ack(id);
+        }
+        return len;
     }
 
-    static size_t ack_skip(Buffer& buf)
+    static size_t ack_skip(Buffer &buf)
     {
-      const size_t len = buf.pop_front();
-      for (size_t i = 0; i < len; ++i)
-	read_id(buf);
-      return len;
+        const size_t len = buf.pop_front();
+        for (size_t i = 0; i < len; ++i)
+            read_id(buf);
+        return len;
     }
 
     // copy ACKs from buffer to self
-    void read(Buffer& buf)
+    void read(Buffer &buf)
     {
-      const size_t len = buf.pop_front();
-      for (size_t i = 0; i < len; ++i)
-	{
-	  const id_t id = read_id(buf);
-	  data.push_back(id);
-	}
+        const size_t len = buf.pop_front();
+        for (size_t i = 0; i < len; ++i)
+        {
+            const id_t id = read_id(buf);
+            data.push_back(id);
+        }
     }
 
     /**
@@ -93,7 +102,7 @@ namespace openvpn {
      */
     void prepend(Buffer &buf, bool ackv1)
     {
-        size_t max_acks = ackv1 ? maximum_acks_ack_v1 :maximum_acks_control_v1;
+        size_t max_acks = ackv1 ? maximum_acks_ack_v1 : maximum_acks_control_v1;
 
         size_t acks_added = 0;
 
@@ -109,7 +118,7 @@ namespace openvpn {
 
         /* the already pushed acks are in front of the re_acks list, so we
          * skip over them */
-        while (acks_added <  re_acks.size() && acks_added < max_acks)
+        while (acks_added < re_acks.size() && acks_added < max_acks)
         {
             prepend_id(buf, re_acks[acks_added]);
             acks_added++;
@@ -117,17 +126,17 @@ namespace openvpn {
         buf.push_front((unsigned char)acks_added);
     }
 
-    static void prepend_id(Buffer& buf, const id_t id)
+    static void prepend_id(Buffer &buf, const id_t id)
     {
-      const id_t net_id = htonl(id);
-      buf.prepend ((unsigned char *)&net_id, sizeof (net_id));
+        const id_t net_id = htonl(id);
+        buf.prepend((unsigned char *)&net_id, sizeof(net_id));
     }
 
-    static id_t read_id(Buffer& buf)
+    static id_t read_id(Buffer &buf)
     {
-      id_t net_id;
-      buf.read ((unsigned char *)&net_id, sizeof (net_id));
-      return ntohl(net_id);
+        id_t net_id;
+        buf.read((unsigned char *)&net_id, sizeof(net_id));
+        return ntohl(net_id);
     }
 
     size_t resend_size();
@@ -137,61 +146,60 @@ namespace openvpn {
 
     std::deque<id_t> data;
     std::deque<id_t> re_acks;
-  };
+};
 
-  /**
-   * Returns the number of outstanding ACKs that have been sent.
-   */
-  inline size_t ReliableAck::size() const
-  {
+/**
+ * Returns the number of outstanding ACKs that have been sent.
+ */
+inline size_t ReliableAck::size() const
+{
     return data.size();
-  }
+}
 
-  /**
-   * Returns true if all outstanding ACKs are empty, otherwise false. Acks
-   * that can be resend are ignored.
-   *
-   * @return Returns true if all ACKs are empty, otherwise false;
-   *
-   */
-  inline bool ReliableAck::empty() const
-  {
+/**
+ * Returns true if all outstanding ACKs are empty, otherwise false. Acks
+ * that can be resend are ignored.
+ *
+ * @return Returns true if all ACKs are empty, otherwise false;
+ *
+ */
+inline bool ReliableAck::empty() const
+{
     return data.empty();
-  }
+}
 
-  /**
-   * Returns true if either outstanding acks are present or ACKs for resending
-   * are present.
-   *
-   */
-  inline bool ReliableAck::acks_ready() const
-  {
-      return !data.empty()  || !re_acks.empty();
-  }
+/**
+ * Returns true if either outstanding acks are present or ACKs for resending
+ * are present.
+ *
+ */
+inline bool ReliableAck::acks_ready() const
+{
+    return !data.empty() || !re_acks.empty();
+}
 
-  inline void ReliableAck::add_ack_to_reack(id_t ack)
-  {
-      /* Check if the element is already in the array to avoid duplicates */
-      for (auto it = re_acks.begin(); it != re_acks.end(); it++)
-      {
-          if (*it == ack)
-          {
-              re_acks.erase(it);
-              break;
-          }
-      }
+inline void ReliableAck::add_ack_to_reack(id_t ack)
+{
+    /* Check if the element is already in the array to avoid duplicates */
+    for (auto it = re_acks.begin(); it != re_acks.end(); it++)
+    {
+        if (*it == ack)
+        {
+            re_acks.erase(it);
+            break;
+        }
+    }
 
-      re_acks.push_front(ack);
-      if (re_acks.size() > maximum_acks_ack_v1)
-      {
-          re_acks.pop_back();
-      }
-  }
+    re_acks.push_front(ack);
+    if (re_acks.size() > maximum_acks_ack_v1)
+    {
+        re_acks.pop_back();
+    }
+}
 
-  inline size_t ReliableAck::resend_size()
-  {
-      return re_acks.size();
-  }
+inline size_t ReliableAck::resend_size()
+{
+    return re_acks.size();
+}
 
-  } // namespace openvpn
-
+} // namespace openvpn

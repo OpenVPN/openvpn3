@@ -31,30 +31,30 @@
 
 namespace openvpn {
 
-  class WinSleep : public Action
-  {
+class WinSleep : public Action
+{
   public:
     typedef RCPtr<WinSleep> Ptr;
 
     WinSleep(DWORD dwMilliseconds_arg)
-      : dwMilliseconds(dwMilliseconds_arg)
+        : dwMilliseconds(dwMilliseconds_arg)
     {
     }
 
-    virtual void execute(std::ostream& os) override
+    virtual void execute(std::ostream &os) override
     {
-      os << to_string() << std::endl;
-      ::Sleep(dwMilliseconds);
+        os << to_string() << std::endl;
+        ::Sleep(dwMilliseconds);
     }
 
     virtual std::string to_string() const override
     {
-      return "Sleeping for " + openvpn::to_string(dwMilliseconds) + " milliseconds...";
+        return "Sleeping for " + openvpn::to_string(dwMilliseconds) + " milliseconds...";
     }
 
   private:
     DWORD dwMilliseconds;
-  };
+};
 
-}
+} // namespace openvpn
 #endif

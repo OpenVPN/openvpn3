@@ -32,35 +32,43 @@
 
 namespace openvpn {
 
-  // string exception class
-  class CFException : public std::exception
-  {
+// string exception class
+class CFException : public std::exception
+{
   public:
-    explicit CFException(const std::string& text)
+    explicit CFException(const std::string &text)
     {
-      errtxt = text;
+        errtxt = text;
     }
 
-    CFException(const std::string& text, const OSStatus status)
+    CFException(const std::string &text, const OSStatus status)
     {
-      set_errtxt(text, status);
+        set_errtxt(text, status);
     }
 
-    virtual const char* what() const noexcept { return errtxt.c_str(); }
-    std::string what_str() const { return errtxt; }
+    virtual const char *what() const noexcept
+    {
+        return errtxt.c_str();
+    }
+    std::string what_str() const
+    {
+        return errtxt;
+    }
 
-    virtual ~CFException() noexcept {}
+    virtual ~CFException() noexcept
+    {
+    }
 
   private:
-    void set_errtxt(const std::string& text, const OSStatus status)
+    void set_errtxt(const std::string &text, const OSStatus status)
     {
-      std::ostringstream s;
-      s << text << ": OSX Error code=" << status;
-      errtxt = s.str();
+        std::ostringstream s;
+        s << text << ": OSX Error code=" << status;
+        errtxt = s.str();
     }
 
     std::string errtxt;
-  };
+};
 
 } // namespace openvpn
 

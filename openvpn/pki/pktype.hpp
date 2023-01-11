@@ -24,16 +24,17 @@
 // private key types
 
 namespace openvpn {
-  namespace PKType {
+namespace PKType {
 
-    enum Type {
-      PK_UNKNOWN = 0,
-      PK_NONE,
-      PK_DSA,
-      PK_RSA,
-      PK_EC,
-      PK_ECDSA,
-    };
+enum Type
+{
+    PK_UNKNOWN = 0,
+    PK_NONE,
+    PK_DSA,
+    PK_RSA,
+    PK_EC,
+    PK_ECDSA,
+};
 
-  }
-}
+} // namespace PKType
+} // namespace openvpn

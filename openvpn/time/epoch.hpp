@@ -27,22 +27,22 @@
 
 namespace openvpn {
 
-  typedef std::uint64_t nanotime_t;
+typedef std::uint64_t nanotime_t;
 
-  inline std::uint64_t milliseconds_since_epoch()
-  {
+inline std::uint64_t milliseconds_since_epoch()
+{
     struct timespec ts;
     if (::clock_gettime(CLOCK_REALTIME, &ts))
-      return 0;
+        return 0;
     return TimeSpec::milliseconds_since_epoch(ts);
-  }
+}
 
-  inline nanotime_t nanoseconds_since_epoch()
-  {
+inline nanotime_t nanoseconds_since_epoch()
+{
     struct timespec ts;
     if (::clock_gettime(CLOCK_REALTIME, &ts))
-      return 0;
+        return 0;
     return TimeSpec::nanoseconds_since_epoch(ts);
-  }
-
 }
+
+} // namespace openvpn

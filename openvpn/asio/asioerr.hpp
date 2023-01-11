@@ -28,14 +28,14 @@
 
 namespace openvpn {
 
-  // returns a string describing an i/o error code
-  template <typename ErrorCode>
-  inline std::string errinfo(ErrorCode err)
-  {
+// returns a string describing an i/o error code
+template <typename ErrorCode>
+inline std::string errinfo(ErrorCode err)
+{
     openvpn_io::error_code e(err, openvpn_io::system_category());
     return e.message();
-  }
-
 }
+
+} // namespace openvpn
 
 #endif

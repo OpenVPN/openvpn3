@@ -36,10 +36,10 @@
 #endif
 
 namespace openvpn {
-  inline bool is_bs64_cipher(const CryptoAlgs::Type cipher)
-  {
+inline bool is_bs64_cipher(const CryptoAlgs::Type cipher)
+{
     return CryptoAlgs::get(cipher).block_size() == 8;
-  }
 }
+} // namespace openvpn
 
 #endif

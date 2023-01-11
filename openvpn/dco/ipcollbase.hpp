@@ -31,14 +31,16 @@
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
-  class IPCollisionDetectBase
-  {
+class IPCollisionDetectBase
+{
   public:
     OPENVPN_EXCEPTION(ip_collision);
 
-    virtual void add(const std::string& addr_str,
-	     const unsigned int unit,
-	     ActionList& late_remove) { }
-  };
+    virtual void add(const std::string &addr_str,
+                     const unsigned int unit,
+                     ActionList &late_remove)
+    {
+    }
+};
 
-}
+} // namespace openvpn

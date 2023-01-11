@@ -29,29 +29,29 @@
 #include <openvpn/time/timestr.hpp>
 
 namespace openvpn {
-  class LogBaseSimple : public LogBase
-  {
+class LogBaseSimple : public LogBase
+{
   public:
     typedef RCPtr<LogBaseSimple> Ptr;
 
     LogBaseSimple()
-      : log_context(this)
+        : log_context(this)
     {
     }
 
-    virtual void log(const std::string& str) override
+    virtual void log(const std::string &str) override
     {
-      const std::string ts = date_time();
-      {
-	std::lock_guard<std::mutex> lock(mutex);
-	std::cout << ts << ' ' << str << std::flush;
-      }
+        const std::string ts = date_time();
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            std::cout << ts << ' ' << str << std::flush;
+        }
     }
 
   private:
     std::mutex mutex;
     Log::Context log_context;
-  };
-}
+};
+} // namespace openvpn
 
 #endif

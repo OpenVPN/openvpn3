@@ -27,19 +27,19 @@
 #include <windows.h>
 
 namespace openvpn {
-  namespace Win {
-    namespace Handle {
-      inline HANDLE undefined()
-      {
-	return INVALID_HANDLE_VALUE;
-      }
-
-      inline bool defined(HANDLE handle)
-      {
-	return handle != nullptr && handle != INVALID_HANDLE_VALUE;
-      }
-    }
-  }
+namespace Win {
+namespace Handle {
+inline HANDLE undefined()
+{
+    return INVALID_HANDLE_VALUE;
 }
+
+inline bool defined(HANDLE handle)
+{
+    return handle != nullptr && handle != INVALID_HANDLE_VALUE;
+}
+} // namespace Handle
+} // namespace Win
+} // namespace openvpn
 
 #endif

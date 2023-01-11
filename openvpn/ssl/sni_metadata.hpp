@@ -26,19 +26,19 @@
 
 namespace openvpn {
 
-  class AuthCert;
+class AuthCert;
 
-  namespace SNI {
+namespace SNI {
 
-    class Metadata
-    {
-    public:
-      typedef std::unique_ptr<Metadata> UPtr;
+class Metadata
+{
+  public:
+    typedef std::unique_ptr<Metadata> UPtr;
 
-      virtual std::string sni_client_name(const AuthCert& ac) const = 0;
+    virtual std::string sni_client_name(const AuthCert &ac) const = 0;
 
-      virtual ~Metadata() = default;
-    };
+    virtual ~Metadata() = default;
+};
 
-  }
-}
+} // namespace SNI
+} // namespace openvpn

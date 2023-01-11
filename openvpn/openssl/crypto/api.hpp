@@ -31,8 +31,9 @@
 
 namespace openvpn {
 
-  // type container for OpenSSL Crypto-level API
-  struct OpenSSLCryptoAPI {
+// type container for OpenSSL Crypto-level API
+struct OpenSSLCryptoAPI
+{
     // cipher
     typedef OpenSSLCrypto::CipherContext CipherContext;
     typedef OpenSSLCrypto::CipherContextAEAD CipherContextAEAD;
@@ -45,7 +46,7 @@ namespace openvpn {
 
     // TLS 1.0/1.1 PRF function
     using TLS1PRF = OpenSSLCrypto::TLS1PRF;
-  };
-}
+};
+} // namespace openvpn
 
 #endif

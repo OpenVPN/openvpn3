@@ -40,15 +40,15 @@
 #include <openvpn/common/tmpfilename.hpp>
 
 namespace openvpn {
-  // Atomically write binary buffer to file (relies on
-  // the atomicity of rename())
-  inline void write_binary_atomic(const std::string& fn,
-				  const std::string& tmpdir,
-				  const mode_t mode,
-				  const std::uint64_t mtime_ns,  // set explicit modification-time in nanoseconds since epoch, or 0 to defer to system
-				  const ConstBuffer& buf,
-				  RandomAPI& rng)
-  {
+// Atomically write binary buffer to file (relies on
+// the atomicity of rename())
+inline void write_binary_atomic(const std::string &fn,
+                                const std::string &tmpdir,
+                                const mode_t mode,
+                                const std::uint64_t mtime_ns, // set explicit modification-time in nanoseconds since epoch, or 0 to defer to system
+                                const ConstBuffer &buf,
+                                RandomAPI &rng)
+{
     // generate temporary filename
     const std::string tfn = tmp_filename(fn, tmpdir, rng);
 
@@ -57,20 +57,20 @@ namespace openvpn {
 
     // then move into position
     if (::rename(tfn.c_str(), fn.c_str()) == -1)
-      {
-	const int eno = errno;
-	::unlink(tfn.c_str());  // move failed, so delete the temporary file
-	OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << strerror_str(eno));
-      }
-  }
-
-  inline void write_binary_atomic(const std::string& fn,
-				  const std::string& tmpdir,
-				  const mode_t mode,
-				  const std::uint64_t mtime_ns,
-				  const Buffer& buf,
-				  RandomAPI& rng)
-  {
-    write_binary_atomic(fn, tmpdir, mode, mtime_ns, const_buffer_ref(buf), rng);
-  }
+    {
+        const int eno = errno;
+        ::unlink(tfn.c_str()); // move failed, so delete the temporary file
+        OPENVPN_THROW(file_unix_error, "error moving '" << tfn << "' -> '" << fn << "' : " << strerror_str(eno));
+    }
 }
+
+inline void write_binary_atomic(const std::string &fn,
+                                const std::string &tmpdir,
+                                const mode_t mode,
+                                const std::uint64_t mtime_ns,
+                                const Buffer &buf,
+                                RandomAPI &rng)
+{
+    write_binary_atomic(fn, tmpdir, mode, mtime_ns, const_buffer_ref(buf), rng);
+}
+} // namespace openvpn

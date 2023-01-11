@@ -25,9 +25,9 @@
 #include <openvpn/apple/cf/cf.hpp>
 
 namespace openvpn {
-  namespace CF {
-    OPENVPN_CF_WRAP(Socket, socket_cast, CFSocketRef, CFSocketGetTypeID)
-  }
+namespace CF {
+OPENVPN_CF_WRAP(Socket, socket_cast, CFSocketRef, CFSocketGetTypeID)
 }
+} // namespace openvpn
 
 #endif

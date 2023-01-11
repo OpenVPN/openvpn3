@@ -25,21 +25,21 @@
 
 namespace openvpn {
 
-  // constant-length Buffer for writing that cannot be extended
-  template <std::size_t N>
-  class StaticBuffer : public Buffer
-  {
+// constant-length Buffer for writing that cannot be extended
+template <std::size_t N>
+class StaticBuffer : public Buffer
+{
   public:
     StaticBuffer()
-      : Buffer(data, N, false)
+        : Buffer(data, N, false)
     {
     }
 
-    StaticBuffer(const StaticBuffer&) = delete;
-    StaticBuffer& operator=(const StaticBuffer&) = delete;
+    StaticBuffer(const StaticBuffer &) = delete;
+    StaticBuffer &operator=(const StaticBuffer &) = delete;
 
   private:
     unsigned char data[N];
-  };
+};
 
-}
+} // namespace openvpn

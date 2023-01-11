@@ -28,20 +28,21 @@
 #endif
 
 namespace openvpn {
-  // Used as an interface in cases where the high-level controlling app
-  // needs early access to newly created transport sockets for making
-  // property changes.  For example, on Android, we need to "protect"
-  // the socket from being routed into the VPN tunnel.
-  class BaseSocketProtect {
+// Used as an interface in cases where the high-level controlling app
+// needs early access to newly created transport sockets for making
+// property changes.  For example, on Android, we need to "protect"
+// the socket from being routed into the VPN tunnel.
+class BaseSocketProtect
+{
   public:
     virtual bool socket_protect(int socket, IP::Addr endpoint) = 0;
-  };
+};
 
 #ifdef OPENVPN_PLATFORM_UWP
-  typedef UWPSocketProtect SocketProtect;
+typedef UWPSocketProtect SocketProtect;
 #else
-  typedef BaseSocketProtect SocketProtect;
+typedef BaseSocketProtect SocketProtect;
 #endif
-}
+} // namespace openvpn
 
 #endif

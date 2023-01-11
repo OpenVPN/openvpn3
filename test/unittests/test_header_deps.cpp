@@ -6,7 +6,8 @@
 
 using namespace openvpn;
 
-TEST(misc, header_deps) {
-  // this is a compile test, no runtime value
-  ASSERT_TRUE(true);
+TEST(misc, header_deps)
+{
+    // this is a compile test, no runtime value
+    ASSERT_TRUE(true);
 }

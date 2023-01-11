@@ -33,8 +33,8 @@
 #include <openvpn/time/time.hpp>
 
 namespace openvpn {
-  struct AsioClock
-  {
+struct AsioClock
+{
     typedef olong rep;
     typedef std::ratio<1, 1024> period; // time resolution of openvpn::Time
     typedef std::chrono::duration<rep, period> duration;
@@ -42,43 +42,43 @@ namespace openvpn {
 
     static constexpr bool is_steady()
     {
-      return false;
+        return false;
     }
 
     static time_point now()
     {
-      return to_time_point(Time::now());
+        return to_time_point(Time::now());
     }
 
-    static time_point to_time_point(const Time& t)
+    static time_point to_time_point(const Time &t)
     {
-      return time_point(duration(t.raw()));
+        return time_point(duration(t.raw()));
     }
 
-    static duration to_duration(const Time::Duration& d)
+    static duration to_duration(const Time::Duration &d)
     {
-      return duration(d.raw());
+        return duration(d.raw());
     }
-  };
+};
 
-  class AsioTimer : public openvpn_io::basic_waitable_timer<AsioClock>
-  {
+class AsioTimer : public openvpn_io::basic_waitable_timer<AsioClock>
+{
   public:
     typedef std::unique_ptr<AsioTimer> UPtr;
 
-    AsioTimer(openvpn_io::io_context& io_context)
-      : openvpn_io::basic_waitable_timer<AsioClock>(io_context)
+    AsioTimer(openvpn_io::io_context &io_context)
+        : openvpn_io::basic_waitable_timer<AsioClock>(io_context)
     {
     }
 
-    std::size_t expires_at(const Time& t)
+    std::size_t expires_at(const Time &t)
     {
-      return openvpn_io::basic_waitable_timer<AsioClock>::expires_at(AsioClock::to_time_point(t));
+        return openvpn_io::basic_waitable_timer<AsioClock>::expires_at(AsioClock::to_time_point(t));
     }
 
-    std::size_t expires_after(const Time::Duration& d)
+    std::size_t expires_after(const Time::Duration &d)
     {
-      return openvpn_io::basic_waitable_timer<AsioClock>::expires_after(AsioClock::to_duration(d));
+        return openvpn_io::basic_waitable_timer<AsioClock>::expires_after(AsioClock::to_duration(d));
     }
-  };
-}
+};
+} // namespace openvpn

@@ -27,27 +27,27 @@
 
 namespace openvpn {
 
-  struct PeerStats
-  {
+struct PeerStats
+{
     std::string to_string() const
     {
-      std::string ret;
-      ret.reserve(64);
-      ret += "[rx=";
-      ret += std::to_string(rx_bytes);
-      ret += " tx=";
-      ret += std::to_string(tx_bytes);
-      ret += " status=";
-      ret += std::to_string(status);
-      ret += ']';
-      return ret;
+        std::string ret;
+        ret.reserve(64);
+        ret += "[rx=";
+        ret += std::to_string(rx_bytes);
+        ret += " tx=";
+        ret += std::to_string(tx_bytes);
+        ret += " status=";
+        ret += std::to_string(status);
+        ret += ']';
+        return ret;
     }
 
     std::uint64_t rx_bytes = 0;
     std::uint64_t tx_bytes = 0;
     int status = 0;
-  };
+};
 
-}
+} // namespace openvpn
 
 #endif

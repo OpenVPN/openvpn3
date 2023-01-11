@@ -34,15 +34,15 @@
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
-  inline std::string get_password(const char *prompt)
-  {
+inline std::string get_password(const char *prompt)
+{
 #if !defined(OPENVPN_PLATFORM_WIN)
     char *ret = getpass(prompt);
     return ret;
 #else
     throw Exception("get_password not implemented yet for Windows");
 #endif
-  }
 }
+} // namespace openvpn
 
 #endif

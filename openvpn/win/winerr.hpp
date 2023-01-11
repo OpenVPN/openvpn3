@@ -29,23 +29,23 @@
 #include <openvpn/io/io.hpp>
 
 namespace openvpn {
-  namespace Win {
-    struct Error : public openvpn_io::error_code
+namespace Win {
+struct Error : public openvpn_io::error_code
+{
+    Error(const DWORD err)
+        : openvpn_io::error_code(err, openvpn_io::error::get_system_category())
     {
-      Error(const DWORD err)
-	: openvpn_io::error_code(err, openvpn_io::error::get_system_category())
-      {
-      }
-    };
+    }
+};
 
-    struct LastError : public Error
+struct LastError : public Error
+{
+    LastError()
+        : Error(::GetLastError())
     {
-      LastError()
-	: Error(::GetLastError())
-      {
-      }
-    };
-  }
-}
+    }
+};
+} // namespace Win
+} // namespace openvpn
 
 #endif

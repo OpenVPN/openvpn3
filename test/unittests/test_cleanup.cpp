@@ -14,11 +14,10 @@ TEST(misc, cleanup)
 
     bool ran_cleanup = false;
     {
-      auto c = Cleanup([&]() {
-	  ran_cleanup = true;
-	});
-      static_assert(std::is_nothrow_move_constructible<decltype(c)>::value,
-		    "Cleanup should be noexcept MoveConstructible");
+        auto c = Cleanup([&]()
+                         { ran_cleanup = true; });
+        static_assert(std::is_nothrow_move_constructible<decltype(c)>::value,
+                      "Cleanup should be noexcept MoveConstructible");
     }
     ASSERT_TRUE(ran_cleanup) << "cleanup didn't run as expected";
 }

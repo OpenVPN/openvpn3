@@ -25,19 +25,20 @@
 #include <openvpn/common/options.hpp>
 
 namespace openvpn {
-  enum {
+enum
+{
     TUN_MTU_DEFAULT = 1500,
-  };
+};
 
-  inline unsigned int parse_tun_mtu(const OptionList& opt, unsigned int default_value)
-  {
+inline unsigned int parse_tun_mtu(const OptionList &opt, unsigned int default_value)
+{
     return opt.get_num<unsigned int>("tun-mtu", 1, default_value, 576, 65535);
-  }
-
-  inline unsigned int parse_tun_mtu_max(const OptionList& opt, unsigned int default_value)
-  {
-    return opt.get_num<unsigned int>("tun-mtu-max", 1, default_value, 576, 65535);
-  }
 }
+
+inline unsigned int parse_tun_mtu_max(const OptionList &opt, unsigned int default_value)
+{
+    return opt.get_num<unsigned int>("tun-mtu-max", 1, default_value, 576, 65535);
+}
+} // namespace openvpn
 
 #endif

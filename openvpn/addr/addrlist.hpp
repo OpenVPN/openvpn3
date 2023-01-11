@@ -26,29 +26,29 @@
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
-  namespace IP {
+namespace IP {
 
-    // A list of unique IP addresses
-    class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
+// A list of unique IP addresses
+class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
+{
+  public:
+    typedef RCPtr<AddrList> Ptr;
+
+    void add(const IP::Addr &a)
     {
-    public:
-      typedef RCPtr<AddrList> Ptr;
+        if (!exists(a))
+            push_back(a);
+    }
 
-      void add(const IP::Addr& a)
-      {
-	if (!exists(a))
-	  push_back(a);
-      }
-
-      bool exists(const IP::Addr& a) const
-      {
-	for (const_iterator i = begin(); i != end(); ++i)
-	  {
-	    if (a == *i)
-	      return true;
-	  }
-	return false;
-      }
+    bool exists(const IP::Addr &a) const
+    {
+        for (const_iterator i = begin(); i != end(); ++i)
+        {
+            if (a == *i)
+                return true;
+        }
+        return false;
+    }
 
 #if 0
       void dump() const
@@ -58,8 +58,8 @@ namespace openvpn {
 	  OPENVPN_LOG(i->to_string());
       }
 #endif
-    };
-  }
-}
+};
+} // namespace IP
+} // namespace openvpn
 
 #endif

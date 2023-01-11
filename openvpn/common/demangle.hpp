@@ -31,18 +31,18 @@
 
 namespace openvpn {
 
-  inline std::string cxx_demangle(const char *mangled_name)
-  {
+inline std::string cxx_demangle(const char *mangled_name)
+{
     int status;
     std::unique_ptr<char[]> realname;
 
     realname.reset(abi::__cxa_demangle(mangled_name, 0, 0, &status));
     if (!status)
-      return std::string(realname.get());
+        return std::string(realname.get());
     else
-      return "DEMANGLE_ERROR";
-  }
-
+        return "DEMANGLE_ERROR";
 }
+
+} // namespace openvpn
 
 #endif

@@ -25,9 +25,9 @@
 
 namespace openvpn {
 
-  // When exceptions are used to trigger a daemon
-  // restart, use this exception to disable such
-  // behavior.
-  OPENVPN_EXCEPTION(signaling_exception);
+// When exceptions are used to trigger a daemon
+// restart, use this exception to disable such
+// behavior.
+OPENVPN_EXCEPTION(signaling_exception);
 
-}
+} // namespace openvpn

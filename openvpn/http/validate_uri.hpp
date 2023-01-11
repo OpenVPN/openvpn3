@@ -24,29 +24,29 @@
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
-  namespace HTTP {
-    inline bool is_valid_uri_char(const unsigned char c)
-    {
-      return c >= 0x21 && c <= 0x7E;
-    }
-
-    inline bool is_valid_uri_char(const char c)
-    {
-      return is_valid_uri_char((unsigned char)c);
-    }
-
-    inline void validate_uri(const std::string& uri, const std::string& title)
-    {
-      if (uri.empty())
-	throw Exception(title + " : URI is empty");
-      if (uri[0] != '/')
-	throw Exception(title + " : URI must begin with '/'");
-      for (auto &c : uri)
-	{
-	  if (!is_valid_uri_char(c))
-	    throw Exception(title + " : URI contains illegal character");
-	}
-    }
-
-  }
+namespace HTTP {
+inline bool is_valid_uri_char(const unsigned char c)
+{
+    return c >= 0x21 && c <= 0x7E;
 }
+
+inline bool is_valid_uri_char(const char c)
+{
+    return is_valid_uri_char((unsigned char)c);
+}
+
+inline void validate_uri(const std::string &uri, const std::string &title)
+{
+    if (uri.empty())
+        throw Exception(title + " : URI is empty");
+    if (uri[0] != '/')
+        throw Exception(title + " : URI must begin with '/'");
+    for (auto &c : uri)
+    {
+        if (!is_valid_uri_char(c))
+            throw Exception(title + " : URI contains illegal character");
+    }
+}
+
+} // namespace HTTP
+} // namespace openvpn

@@ -25,6 +25,6 @@
 
 namespace openvpn {
 
-  OPENVPN_EXCEPTION(option_error);
+OPENVPN_EXCEPTION(option_error);
 
 }

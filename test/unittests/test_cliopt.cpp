@@ -113,7 +113,6 @@ TEST(config, parse_management)
         load_client_config(minimalConfig + "management"),
         option_error,
         "OpenVPN management interface is not supported by this client");
-
 }
 
 TEST(config, duplicate_options_sets)

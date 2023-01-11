@@ -41,16 +41,19 @@
 
 #define OPENVPN_COMPILER_FENCE __memory_barrier();
 
-#elif defined( _MSC_VER ) && _MSC_VER >= 1310
+#elif defined(_MSC_VER) && _MSC_VER >= 1310
 
 extern "C" void _ReadWriteBarrier();
-#pragma intrinsic( _ReadWriteBarrier )
+#pragma intrinsic(_ReadWriteBarrier)
 
 #define OPENVPN_COMPILER_FENCE _ReadWriteBarrier();
 
 #elif defined(__GNUC__)
 
-#define OPENVPN_COMPILER_FENCE __asm__ __volatile__( "" : : : "memory" );
+#define OPENVPN_COMPILER_FENCE __asm__ __volatile__("" \
+                                                    :  \
+                                                    :  \
+                                                    : "memory");
 
 #else
 
@@ -60,45 +63,45 @@ extern "C" void _ReadWriteBarrier();
 
 // C++ doesn't allow increment of void *
 
-#define OPENVPN_INCR_VOID_PTR(var, incr) (var) = static_cast<const unsigned char*>(var) + (incr)
+#define OPENVPN_INCR_VOID_PTR(var, incr) (var) = static_cast<const unsigned char *>(var) + (incr)
 
 namespace openvpn {
-  namespace crypto {
-    /**
-     * memneq - Compare two areas of memory in constant time
-     *
-     * @a: first area of memory
-     * @b: second area of memory
-     * @size: The length of the memory area to compare
-     *
-     * Returns false when data is equal, true otherwise
-     */
-    inline bool memneq(const void *a, const void *b, size_t size);
+namespace crypto {
+/**
+ * memneq - Compare two areas of memory in constant time
+ *
+ * @a: first area of memory
+ * @b: second area of memory
+ * @size: The length of the memory area to compare
+ *
+ * Returns false when data is equal, true otherwise
+ */
+inline bool memneq(const void *a, const void *b, size_t size);
 
 #if defined(USE_OPENSSL)
-    inline bool memneq(const void *a, const void *b, size_t size)
-    {
-      // memcmp does return 0 (=false) when the memory is equal. It normally
-      // returns the position of first mismatch otherwise but the crypto
-      // variants only promise to return something != 0 (=true)
-      return (bool)(CRYPTO_memcmp(a, b, size));
-    }
-#else
-    inline bool memneq(const void *a, const void *b, size_t size)
-    {
-      // This is inspired by  mbedtls' internal safer_memcmp function:
-      const unsigned char *x = (const unsigned char *) a;
-      const unsigned char *y = (const unsigned char *) b;
-      unsigned char diff = 0;
-
-      for(size_t i = 0; i < size; i++ )
-	{
-	  unsigned char u = x[i], v = y[i];
-	  diff |= u ^ v;
-	}
-      atomic_thread_fence(std::memory_order_release);
-      return bool(diff);
-    }
-#endif
-  }
+inline bool memneq(const void *a, const void *b, size_t size)
+{
+    // memcmp does return 0 (=false) when the memory is equal. It normally
+    // returns the position of first mismatch otherwise but the crypto
+    // variants only promise to return something != 0 (=true)
+    return (bool)(CRYPTO_memcmp(a, b, size));
 }
+#else
+inline bool memneq(const void *a, const void *b, size_t size)
+{
+    // This is inspired by  mbedtls' internal safer_memcmp function:
+    const unsigned char *x = (const unsigned char *)a;
+    const unsigned char *y = (const unsigned char *)b;
+    unsigned char diff = 0;
+
+    for (size_t i = 0; i < size; i++)
+    {
+        unsigned char u = x[i], v = y[i];
+        diff |= u ^ v;
+    }
+    atomic_thread_fence(std::memory_order_release);
+    return bool(diff);
+}
+#endif
+} // namespace crypto
+} // namespace openvpn

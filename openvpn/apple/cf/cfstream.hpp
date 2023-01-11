@@ -25,10 +25,10 @@
 #include <openvpn/apple/cf/cf.hpp>
 
 namespace openvpn {
-  namespace CF {
-    OPENVPN_CF_WRAP(ReadStream, read_stream_cast, CFReadStreamRef, CFReadStreamGetTypeID)
-    OPENVPN_CF_WRAP(WriteStream, write_stream_cast, CFWriteStreamRef, CFWriteStreamGetTypeID)
-  }
-}
+namespace CF {
+OPENVPN_CF_WRAP(ReadStream, read_stream_cast, CFReadStreamRef, CFReadStreamGetTypeID)
+OPENVPN_CF_WRAP(WriteStream, write_stream_cast, CFWriteStreamRef, CFWriteStreamGetTypeID)
+} // namespace CF
+} // namespace openvpn
 
 #endif

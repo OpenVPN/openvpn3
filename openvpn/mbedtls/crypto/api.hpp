@@ -30,8 +30,9 @@
 
 namespace openvpn {
 
-  // type container for MbedTLS Crypto-level API
-  struct MbedTLSCryptoAPI {
+// type container for MbedTLS Crypto-level API
+struct MbedTLSCryptoAPI
+{
     // cipher
     typedef MbedTLSCrypto::CipherContext CipherContext;
     typedef MbedTLSCrypto::CipherContextAEAD CipherContextAEAD;
@@ -44,7 +45,7 @@ namespace openvpn {
 
     // TLS 1.0/1.1 PRF function
     using TLS1PRF = MbedTLSCrypto::TLS1PRF;
-  };
-}
+};
+} // namespace openvpn
 
 #endif

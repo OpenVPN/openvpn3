@@ -28,25 +28,30 @@
 #include <openvpn/ssl/sni_metadata.hpp>
 
 namespace openvpn {
-  namespace SNI {
+namespace SNI {
 
-    // Abstract base class used to provide an SNI handler
-    class HandlerBase
+// Abstract base class used to provide an SNI handler
+class HandlerBase
+{
+  public:
+    typedef std::unique_ptr<HandlerBase> UPtr;
+
+    // Return a new SSLFactoryAPI for this SNI name.
+    // Implementation may also set sni_metadata.
+    // Return SSLFactoryAPI::Ptr() if sni_name is not recognized.
+    // The caller guarantees that sni_name is valid UTF-8 and
+    // doesn't contain any control characters.
+
+    // clang-format off
+    virtual SSLFactoryAPI::Ptr sni_hello(const std::string &sni_name,
+                                         SNI::Metadata::UPtr &sni_metadata,
+                                         SSLConfigAPI::Ptr default_factory) const = 0;
+    // clang-format on
+
+    virtual ~HandlerBase()
     {
-    public:
-      typedef std::unique_ptr<HandlerBase> UPtr;
+    }
+};
 
-      // Return a new SSLFactoryAPI for this SNI name.
-      // Implementation may also set sni_metadata.
-      // Return SSLFactoryAPI::Ptr() if sni_name is not recognized.
-      // The caller guarantees that sni_name is valid UTF-8 and
-      // doesn't contain any control characters.
-      virtual SSLFactoryAPI::Ptr sni_hello(const std::string& sni_name,
-					   SNI::Metadata::UPtr& sni_metadata,
-					   SSLConfigAPI::Ptr default_factory) const = 0;
-
-      virtual ~HandlerBase() {}
-    };
-
-  }
-}
+} // namespace SNI
+} // namespace openvpn

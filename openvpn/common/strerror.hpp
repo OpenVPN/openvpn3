@@ -28,8 +28,8 @@
 #include <errno.h>
 
 namespace openvpn {
-  inline std::string strerror_str(const int errnum)
-  {
+inline std::string strerror_str(const int errnum)
+{
     static const char unknown_err[] = "UNKNOWN_SYSTEM_ERROR";
     char buf[128];
 
@@ -37,14 +37,14 @@ namespace openvpn {
     // GNU
     const char *errstr = ::strerror_r(errnum, buf, sizeof(buf));
     if (errstr)
-      return std::string(errstr);
+        return std::string(errstr);
 #else
     // POSIX
     if (::strerror_r(errnum, buf, sizeof(buf)) == 0)
-      return std::string(buf);
+        return std::string(buf);
 #endif
     return std::string(unknown_err);
-  }
 }
+} // namespace openvpn
 
 #endif

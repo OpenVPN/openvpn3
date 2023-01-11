@@ -25,10 +25,11 @@
 #include <cstddef> // defines size_t
 
 namespace openvpn {
-  template <typename T, std::size_t N>
-  constexpr std::size_t array_size( T (&)[N] ) {
+template <typename T, std::size_t N>
+constexpr std::size_t array_size(T (&)[N])
+{
     return N;
-  }
 }
+} // namespace openvpn
 
 #endif

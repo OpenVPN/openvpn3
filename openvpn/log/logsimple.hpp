@@ -39,13 +39,17 @@
 
 // no-op constructs normally used with logthread.hpp
 namespace openvpn {
-  namespace Log {
-    struct Context
+namespace Log {
+struct Context
+{
+    struct Wrapper
     {
-      struct Wrapper {};
-      Context(const Wrapper&) {}
     };
-  }
-}
+    Context(const Wrapper &)
+    {
+    }
+};
+} // namespace Log
+} // namespace openvpn
 
 #endif // OPENVPN_LOG_LOGSIMPLE_H

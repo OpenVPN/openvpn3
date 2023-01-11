@@ -26,21 +26,21 @@
 
 namespace openvpn {
 
-  typedef std::uint64_t nanotime_t;
+typedef std::uint64_t nanotime_t;
 
-  namespace TimeSpec {
+namespace TimeSpec {
 
-    inline std::uint64_t milliseconds_since_epoch(const struct timespec& ts)
-    {
-      return std::uint64_t(ts.tv_sec)  * std::uint64_t(1000)
-	   + std::uint64_t(ts.tv_nsec) / std::uint64_t(1000000);
-    }
-
-    inline nanotime_t nanoseconds_since_epoch(const struct timespec& ts)
-    {
-      return std::uint64_t(ts.tv_sec) * std::uint64_t(1000000000)
-	   + std::uint64_t(ts.tv_nsec);
-    }
-
-  }
+inline std::uint64_t milliseconds_since_epoch(const struct timespec &ts)
+{
+    return std::uint64_t(ts.tv_sec) * std::uint64_t(1000)
+           + std::uint64_t(ts.tv_nsec) / std::uint64_t(1000000);
 }
+
+inline nanotime_t nanoseconds_since_epoch(const struct timespec &ts)
+{
+    return std::uint64_t(ts.tv_sec) * std::uint64_t(1000000000)
+           + std::uint64_t(ts.tv_nsec);
+}
+
+} // namespace TimeSpec
+} // namespace openvpn

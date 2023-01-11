@@ -28,17 +28,17 @@
 #include <openvpn/io/io.hpp>
 
 namespace openvpn {
-  class AsioWork
-  {
+class AsioWork
+{
   public:
-    AsioWork(openvpn_io::io_context& io_context)
-      : work(openvpn_io::make_work_guard(io_context))
+    AsioWork(openvpn_io::io_context &io_context)
+        : work(openvpn_io::make_work_guard(io_context))
     {
     }
 
   private:
     openvpn_io::executor_work_guard<openvpn_io::io_context::executor_type> work;
-  };
-}
+};
+} // namespace openvpn
 
 #endif

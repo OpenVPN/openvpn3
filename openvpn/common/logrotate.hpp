@@ -22,24 +22,24 @@
 #ifndef OPENVPN_COMMON_LOGROTATE_H
 #define OPENVPN_COMMON_LOGROTATE_H
 
-#include <stdio.h>     // for rename()
+#include <stdio.h> // for rename()
 
 #include <openvpn/common/to_string.hpp>
 
 namespace openvpn {
-  inline void log_rotate(const std::string& fn, const int max_versions)
-  {
+inline void log_rotate(const std::string &fn, const int max_versions)
+{
     for (int i = max_versions - 1; i >= 0; --i)
-      {
-	std::string src;
-	if (i)
-	  src = fn + '.' + to_string(i);
-	else
-	  src = fn;
-	std::string dest = fn + '.' + to_string(i+1);
-	::rename(src.c_str(), dest.c_str());
-      }
-  }
+    {
+        std::string src;
+        if (i)
+            src = fn + '.' + to_string(i);
+        else
+            src = fn;
+        std::string dest = fn + '.' + to_string(i + 1);
+        ::rename(src.c_str(), dest.c_str());
+    }
 }
+} // namespace openvpn
 
 #endif

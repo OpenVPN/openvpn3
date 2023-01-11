@@ -25,19 +25,21 @@
 namespace openvpn {
 namespace KoRekey {
 
-struct KeyDirection {
-  const unsigned char *cipher_key;
-  unsigned char nonce_tail[8];  // only AEAD
-  unsigned int cipher_key_size;
+struct KeyDirection
+{
+    const unsigned char *cipher_key;
+    unsigned char nonce_tail[8]; // only AEAD
+    unsigned int cipher_key_size;
 };
 
-struct KeyConfig {
-  KeyDirection encrypt;
-  KeyDirection decrypt;
+struct KeyConfig
+{
+    KeyDirection encrypt;
+    KeyDirection decrypt;
 
-  int key_id;
-  int remote_peer_id;
-  unsigned int cipher_alg;
+    int key_id;
+    int remote_peer_id;
+    unsigned int cipher_alg;
 };
 
 } // namespace KoRekey

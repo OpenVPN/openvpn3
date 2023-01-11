@@ -25,13 +25,13 @@
 
 namespace openvpn {
 
-  // Return a uniformly distributed random number in the range [0, end)
-  // using seed as a random seed.  This version is strictly 32-bit only
-  // and optimizes by avoiding integer division.
-  inline std::uint32_t rand32_distribute(const std::uint32_t seed,
-					 const std::uint32_t end)
-  {
+// Return a uniformly distributed random number in the range [0, end)
+// using seed as a random seed.  This version is strictly 32-bit only
+// and optimizes by avoiding integer division.
+inline std::uint32_t rand32_distribute(const std::uint32_t seed,
+                                       const std::uint32_t end)
+{
     return (std::uint64_t(seed) * end) >> 32;
-  }
-
 }
+
+} // namespace openvpn

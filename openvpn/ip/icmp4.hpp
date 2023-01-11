@@ -31,37 +31,42 @@
 #pragma pack(1)
 
 namespace openvpn {
-  struct ICMPv4 {
-    enum {
-      ECHO_REQUEST  = 8,
-      ECHO_REPLY    = 0,
-      DEST_UNREACH  = 3,
-      FRAG_NEEDED   = 4,
-      MIN_DATA_SIZE = 8
+struct ICMPv4
+{
+    enum
+    {
+        ECHO_REQUEST = 8,
+        ECHO_REPLY = 0,
+        DEST_UNREACH = 3,
+        FRAG_NEEDED = 4,
+        MIN_DATA_SIZE = 8
     };
 
     struct IPv4Header head;
 
     union {
-      struct {
-	std::uint8_t type;
-	std::uint8_t code;
-      };
-      std::uint16_t type_code;
+        struct
+        {
+            std::uint8_t type;
+            std::uint8_t code;
+        };
+        std::uint16_t type_code;
     };
     std::uint16_t checksum;
 
     union {
-      struct {
-	std::uint16_t id;
-	std::uint16_t seq_num;
-      };
-      struct {
-	std::uint16_t unused;
-	std::uint16_t nexthop_mtu;
-      };
+        struct
+        {
+            std::uint16_t id;
+            std::uint16_t seq_num;
+        };
+        struct
+        {
+            std::uint16_t unused;
+            std::uint16_t nexthop_mtu;
+        };
     };
-  };
-}
+};
+} // namespace openvpn
 
 #pragma pack(pop)
