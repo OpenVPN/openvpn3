@@ -3,6 +3,22 @@ cmake_policy(SET CMP0048 NEW)
 
 project(OpenVPN3-core VERSION 3)
 
+# AddressSanitize - use CXX=clang++ CC=clang cmake -DCMAKE_BUILD_TYPE=asan to build with ASAN
+# export  UBSAN_OPTIONS=print_stacktrace=1 helps debugging these
+set(CMAKE_C_FLAGS_ASAN
+        "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -g -O1"
+        CACHE STRING "Flags used by the C compiler during AddressSanitizer builds."
+        FORCE)
+set(CMAKE_CXX_FLAGS_ASAN
+        "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -g -O1"
+        CACHE STRING "Flags used by the C++ compiler during AddressSanitizer builds."
+        FORCE)
+
+set(CMAKE_LINKER_FLAGS_ASAN
+        "-fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-address-use-after-scope"
+        CACHE STRING "Flags used by the linker during AddressSanitizer builds."
+        FORCE)
+
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake
                       ${CMAKE_MODULE_PATH})
 set(CMAKE_CXX_STANDARD 17)
