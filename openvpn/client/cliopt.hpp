@@ -157,7 +157,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         std::string tls_cipher_list;
         std::string tls_ciphersuite_list;
         bool enable_legacy_algorithms = false;
-        bool enable_nonpreferred_dcalgs;
+        bool enable_nonpreferred_dcalgs = false;
         PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_PLATFORM_ANDROID
         bool enable_route_emulation = true;
