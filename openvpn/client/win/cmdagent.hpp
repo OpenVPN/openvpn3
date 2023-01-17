@@ -224,10 +224,10 @@ class WinCommandAgent : public TunWin::SetupFactory
             if (ring_buffer)
                 ring_buffer->serialize(jreq);
 
+            jreq["destroy_event"] = destroy_event.duplicate_local();
             if (config->tun_type != TunWin::OvpnDco)
             {
                 jreq["confirm_event"] = confirm_event.duplicate_local();
-                jreq["destroy_event"] = destroy_event.duplicate_local();
             }
             else
             {

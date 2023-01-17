@@ -124,8 +124,7 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
             // enable tun_setup destructor
             tun_persist->add_destructor(tun_setup_);
 
-            // rearm fail handler for WinCommandAgent, which was
-            // fired by close_destructor() call above
+            // arm fail handler which is invoked when service process exits
             set_service_fail_handler();
         }
 
@@ -256,8 +255,6 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
                 return;
 
             handle_.reset(new TunWin::TAPStream(io_context, th));
-
-            tun_persist->add_destructor(tun_setup_);
         }
         else
         {
@@ -265,8 +262,6 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
         }
 
         tun_setup_->confirm();
-
-        set_service_fail_handler();
 
         config->transport.remote_list->get_endpoint(endpoint_);
         add_peer_([self = Ptr(this)]()

@@ -684,14 +684,16 @@ class MyClientInstance : public WS::Server::Listener::Client
                         // remember the client process that sent the request
                         parent()->set_client_process(get_client_process(client_pipe, pid));
 
+                        // save destroy event
+                        const std::string destroy_event_hex = json::get_string(root, "destroy_event");
+                        parent()->set_client_destroy_event(destroy_event_hex);
+
                         if (tun_type != TunWin::OvpnDco)
                         {
-                            // get remote event handles for tun object confirmation/destruction
+                            // get remote event handle for tun object confirmation
                             const std::string confirm_event_hex = json::get_string(root, "confirm_event");
-                            const std::string destroy_event_hex = json::get_string(root, "destroy_event");
 
-                            // save the confirm/destroy events
-                            parent()->set_client_destroy_event(destroy_event_hex);
+                            // save the confirm event
                             parent()->set_client_confirm_event(confirm_event_hex);
                         }
                     }
