@@ -13,7 +13,7 @@ OPENVPN_SIMPLE_EXCEPTION(ipv4_bad_netmask);
 
 inline IPv4::Addr::base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
 {
-    return ~((1 << (32 - prefix_len)) - 1);
+    return ~((1u << (32 - prefix_len)) - 1);
 }
 
 inline IPv4::Addr::base_type prefix_len_to_netmask(const unsigned int prefix_len)

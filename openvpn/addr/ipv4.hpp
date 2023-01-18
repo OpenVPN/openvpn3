@@ -599,7 +599,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     static base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
     {
         if (prefix_len)
-            return ~((1 << (SIZE - prefix_len)) - 1);
+            return ~((1u << (SIZE - prefix_len)) - 1);
         else
             return 0;
     }

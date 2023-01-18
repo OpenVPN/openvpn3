@@ -732,7 +732,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         if (prefix_len > 0)
         {
             const unsigned int pl = prefix_len - 1;
-            const std::uint32_t mask = ~((1 << (31 - (pl & 31))) - 1);
+            const std::uint32_t mask = ~((1u << (31 - (pl & 31))) - 1);
             switch (pl >> 5)
             {
             case 0:
