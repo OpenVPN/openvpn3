@@ -789,34 +789,39 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         dest->u32[3] = ntohl(src->u32[Endian::e4rev(3)]);
     }
 
+
     static void shiftl128(std::uint64_t &low,
                           std::uint64_t &high,
                           unsigned int shift)
     {
         if (shift == 1)
         {
-            high <<= 1;
-            if (low & (std::uint64_t(1) << 63))
-                high |= 1;
-            low <<= 1;
+            high <<= 1u;
+            if (low & (std::uint64_t(1) << 63u))
+                high |= 1u;
+            low <<= 1u;
         }
         else if (shift == 0)
-            ;
-        else if (shift <= 128)
         {
-            if (shift >= 64)
-            {
-                high = low;
-                low = 0;
-                shift -= 64;
-            }
-            if (shift < 64)
-            {
-                high = (high << shift) | (low >> (64 - shift));
-                low <<= shift;
-            }
-            else // shift == 64
-                high = 0;
+            // Nothing to do
+        }
+        else if (shift == 128)
+        {
+            /* shifts everything away */
+            high = low = 0;
+        }
+        else if (shift < 64)
+        {
+            high = (high << shift) | (low >> (64u - shift));
+            low <<= shift;
+        }
+        else if (shift < 128) /* in [64, 127] */
+        {
+            high = low;
+            low = 0;
+            /* Shift is guaranteed to be in [0, 63], so
+             * recursion will not come here again */
+            shiftl128(low, high, shift - 64);
         }
         else
             throw ipv6_exception("l-shift too large");
@@ -828,28 +833,24 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     {
         if (shift == 1)
         {
-            low >>= 1;
-            if (high & 1)
-                low |= (std::uint64_t(1) << 63);
-            high >>= 1;
+            low >>= 1u;
+            if (high & 1u)
+                low |= (std::uint64_t(1) << 63u);
+            high >>= 1u;
         }
         else if (shift == 0)
-            ;
-        else if (shift <= 128)
         {
-            if (shift >= 64)
-            {
-                low = high;
-                high = 0;
-                shift -= 64;
-            }
-            if (shift < 64)
-            {
-                low = (low >> shift) | (high << (64 - shift));
-                high >>= shift;
-            }
-            else // shift == 64
-                low = 0;
+        }
+        else if (shift < 64)
+        {
+            low = (low >> shift) | (high << (64 - shift));
+            high >>= shift;
+        }
+        else if (shift <= 128) // shift in [64, 128]
+        {
+            low = high;
+            high = 0;
+            shiftr128(low, high, shift - 64);
         }
         else
             throw ipv6_exception("r-shift too large");
