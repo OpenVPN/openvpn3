@@ -39,6 +39,7 @@ void load_client_config(const std::string &config_content)
 {
     OptionList options;
     ClientOptions::Config config;
+    config.proto_context_options.reset(new ProtoContextOptions());
 
     ClientAPI::OpenVPNClientHelper client_helper;
 
@@ -120,6 +121,7 @@ TEST(config, duplicate_options_sets)
     /* Do the whole dance to get a ClientOption object to access the list */
     OptionList options;
     ClientOptions::Config config;
+    config.proto_context_options = new ProtoContextOptions();
 
     ClientAPI::OpenVPNClientHelper client_helper;
 
