@@ -86,6 +86,7 @@ add_executable(coreUnitTests
         test_validatecreds.cpp
         test_weak.cpp
         test_cliopt.cpp
+        test_buffer.cpp
         )
 
 if (${USE_MBEDTLS})

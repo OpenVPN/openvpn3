@@ -17,3 +17,4 @@ test_safestr
 test_sitnl
 test_ssl
 test_verify_x509_name
+test_buffer
