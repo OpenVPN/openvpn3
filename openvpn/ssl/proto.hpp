@@ -973,12 +973,14 @@ class ProtoContext
              *
              */
             out << "IV_CIPHERS=";
-            CryptoAlgs::for_each([&out](CryptoAlgs::Type type, const CryptoAlgs::Alg &alg) -> bool
-                                 {
-	  if (!CryptoAlgs::defined(type) || !alg.dc_cipher())
-	    return false;
-	  out << alg.name() << ':';
-	  return true; });
+            CryptoAlgs::for_each(
+                [&out](CryptoAlgs::Type type, const CryptoAlgs::Alg &alg) -> bool
+                {
+                if (!CryptoAlgs::defined(type) || !alg.dc_cipher())
+                    return false;
+                out << alg.name() << ':';
+                return true;
+                });
             out.seekp(-1, std::ios_base::cur);
             out << "\n";
 
@@ -3114,7 +3116,7 @@ class ProtoContext
         {
             // the ``WKc`` is located at the end of the packet, after the tls-crypt
             // payload.
-            // Format is as follows (as documented by Steffan Krager):
+            // Format is as follows (as documented by Steffan Karger):
             //
             // ``len = len(WKc)`` (16 bit, network byte order)
             // ``T = HMAC-SHA256(Ka, len || Kc || metadata)``
@@ -3145,7 +3147,7 @@ class ProtoContext
                 return false;
 
             BufferAllocated plaintext(wkc_len, BufferAllocated::CONSTRUCT_ZERO);
-            // plaintext will be used to compute the Auth Tag, therefore start by prepnding
+            // plaintext will be used to compute the Auth Tag, therefore start by prepending
             // the WKc length in network order
             wkc_len = htons(wkc_len);
             plaintext.write(&wkc_len, sizeof(wkc_len));
