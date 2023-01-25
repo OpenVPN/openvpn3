@@ -257,9 +257,9 @@ class ProtoStackBase
         return ssl_->ssl_handshake_details();
     }
 
-    void export_key_material(OpenVPNStaticKey &key) const
+    void export_key_material(OpenVPNStaticKey &key, const std::string &label) const
     {
-        if (!ssl_->export_keying_material("EXPORTER-OpenVPN-datakeys", key.raw_alloc(), OpenVPNStaticKey::KEY_SIZE))
+        if (!ssl_->export_keying_material(label, key.raw_alloc(), OpenVPNStaticKey::KEY_SIZE))
             throw ErrorCode(Error::KEY_EXPANSION_ERROR, true, "TLS Keying material export error");
     }
 

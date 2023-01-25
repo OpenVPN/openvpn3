@@ -1493,6 +1493,9 @@ class ProtoContext
       public:
         typedef RCPtr<KeyContext> Ptr;
 
+        // ProtoStackBase member functions
+        using Base::export_key_material;
+
         OPENVPN_SIMPLE_EXCEPTION(tls_crypt_unwrap_wkc_error);
 
         // KeyContext events occur on two basic key types:
@@ -1946,7 +1949,7 @@ class ProtoContext
             if (proto.config->dc.key_derivation() == CryptoAlgs::KeyDerivation::TLS_EKM)
             {
                 // USE RFC 5705 key material export
-                export_key_material(dck->key);
+                export_key_material(dck->key, "EXPORTER-OpenVPN-datakeys");
             }
             else
             {
