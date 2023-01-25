@@ -231,7 +231,8 @@ class ProtoContext
         IV_PROTO_NCP_P2P = (1 << 5), // not implemented
         IV_PROTO_DNS_OPTION = (1 << 6),
         IV_PROTO_CC_EXIT_NOTIFY = (1 << 7),
-        IV_PROTO_AUTH_FAIL_TEMP = (1 << 8)
+        IV_PROTO_AUTH_FAIL_TEMP = (1 << 8),
+        IV_PROTO_DYN_TLS_CRYPT = (1 << 9),
     };
 
     enum tlv_types : uint16_t
@@ -331,9 +332,16 @@ class ProtoContext
         CompressContext comp_ctx;
 
         // tls_auth/crypt parms
-        OpenVPNStaticKey tls_key;  // leave this undefined to disable tls_auth/crypt
-        bool tls_crypt_v2 = false; // needed to distinguish between tls-crypt and tls-crypt-v2 server mode
-        BufferAllocated wkc;       // leave this undefined to disable tls-crypt-v2 on client
+        enum TLSCrypt
+        {
+            None = 0,
+            V1 = (1 << 0),
+            V2 = (1 << 1),
+            Dynamic = (1 << 2)
+        };
+        OpenVPNStaticKey tls_key;             // leave this undefined to disable tls_auth/crypt
+        unsigned tls_crypt_ = TLSCrypt::None; // needed to distinguish between tls-crypt and tls-crypt-v2 server mode
+        BufferAllocated wkc;                  // leave this undefined to disable tls-crypt-v2 on client
 
         OvpnHMACFactory::Ptr tls_auth_factory;
         OvpnHMACContext::Ptr tls_auth_context;
@@ -474,6 +482,7 @@ class ProtoContext
                         if (tls_crypt_context)
                             throw proto_option_error("tls-crypt and tls-crypt-v2 are mutually exclusive");
 
+                        tls_crypt_ = TLSCrypt::V1;
                         tls_key.parse(o->get(1, 0));
 
                         set_tls_crypt_algs();
@@ -510,7 +519,7 @@ class ProtoContext
                             tls_crypt_v2_key.parse(keyfile);
                             tls_crypt_v2_key.extract_key(tls_key);
                         }
-                        tls_crypt_v2 = true;
+                        tls_crypt_ = TLSCrypt::V2;
                     }
                 }
             }
@@ -672,6 +681,11 @@ class ProtoContext
                         {
                             cc_exit_notify = true;
                         }
+                        else if (flag == "dyn-tls-crypt")
+                        {
+                            set_tls_crypt_algs();
+                            tls_crypt_ |= TLSCrypt::Dynamic;
+                        }
                         else if (flag == "tls-ekm")
                         {
                             // Overrides "key-derivation" method set above
@@ -787,13 +801,17 @@ class ProtoContext
             {
                 os << "  control channel: tls-auth enabled" << std::endl;
             }
-            else if (tls_crypt_v2_enabled())
+            if (tls_crypt_v2_enabled())
             {
                 os << "  control channel: tls-crypt v2 enabled" << std::endl;
             }
             else if (tls_crypt_enabled())
             {
                 os << "  control channel: tls-crypt enabled" << std::endl;
+            }
+            else if (dynamic_tls_crypt_enabled())
+            {
+                os << "  control channel: dynamic tls-crypt enabled" << std::endl;
             }
             return os.str();
         }
@@ -849,12 +867,17 @@ class ProtoContext
 
         bool tls_crypt_enabled() const
         {
-            return tls_key.defined() && tls_crypt_context;
+            return tls_key.defined() && (tls_crypt_ & TLSCrypt::V1);
         }
 
         bool tls_crypt_v2_enabled() const
         {
-            return tls_crypt_enabled() && tls_crypt_v2;
+            return tls_key.defined() && (tls_crypt_ & TLSCrypt::V2);
+        }
+
+        bool dynamic_tls_crypt_enabled() const
+        {
+            return (tls_crypt_ & TLSCrypt::Dynamic);
         }
 
         // generate a string summarizing options that will be
@@ -924,6 +947,9 @@ class ProtoContext
                                     | IV_PROTO_DNS_OPTION
                                     | IV_PROTO_CC_EXIT_NOTIFY
                                     | IV_PROTO_AUTH_FAIL_TEMP;
+
+            if (CryptoAlgs::lookup("SHA256") != CryptoAlgs::NONE && CryptoAlgs::lookup("AES-256-CTR") != CryptoAlgs::NONE)
+                iv_proto |= IV_PROTO_DYN_TLS_CRYPT;
 
             if (SSLLib::SSLAPI::support_key_material_export())
             {
@@ -3463,8 +3489,11 @@ class ProtoContext
           n_key_ids(0),
           now_(config_arg->now)
     {
-        const Config &c = *config;
+        reset_tls_wrap_mode(*config);
+    }
 
+    void reset_tls_wrap_mode(const Config &c)
+    {
         // tls-auth setup
         if (c.tls_crypt_v2_enabled())
         {
@@ -3524,6 +3553,25 @@ class ProtoContext
                              key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
     }
 
+    void set_dynamic_tls_crypt(const Config &c, const KeyContext::Ptr &key_ctx)
+    {
+        OpenVPNStaticKey dyn_key;
+        key_ctx->export_key_material(dyn_key, "EXPORTER-OpenVPN-dynamic-tls-crypt");
+
+        if (c.tls_auth_enabled() || c.tls_crypt_enabled() || c.tls_crypt_v2_enabled())
+            dyn_key.XOR(c.tls_key);
+
+        tls_wrap_mode = TLS_CRYPT;
+
+        // get HMAC size from Digest object
+        hmac_size = c.tls_crypt_context->digest_size();
+
+        ta_pid_send.init(PacketID::LONG_FORM);
+        ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
+
+        reset_tls_crypt(c, dyn_key);
+    }
+
     void reset_tls_crypt_server(const Config &c)
     {
         // tls-crypt session key is derived later from WKc received from the client
@@ -3559,6 +3607,7 @@ class ProtoContext
         const PacketID::id_t EARLY_NEG_START = 0x0f000000;
 
         // tls-auth initialization
+        reset_tls_wrap_mode(c);
         switch (tls_wrap_mode)
         {
         case TLS_CRYPT:
@@ -3666,6 +3715,11 @@ class ProtoContext
     // trigger a protocol renegotiation
     void renegotiate()
     {
+        // set up dynamic tls-crypt keys when the first rekeying happens
+        // primary key_id 0 indicates that it is the first rekey
+        if (conf().dynamic_tls_crypt_enabled() && primary && primary->key_id() == 0)
+            set_dynamic_tls_crypt(conf(), primary);
+
         // initialize secondary key context
         new_secondary_key(true);
         secondary->start();
@@ -4091,6 +4145,11 @@ class ProtoContext
     // we're getting a request from peer to renegotiate.
     bool renegotiate_request(Packet &pkt)
     {
+        // set up dynamic tls-crypt keys when the first rekeying happens
+        // primary key_id 0 indicates that it is the first rekey
+        if (conf().dynamic_tls_crypt_enabled() && primary && primary->key_id() == 0)
+            set_dynamic_tls_crypt(conf(), primary);
+
         if (KeyContext::validate(pkt.buffer(), *this, now_))
         {
             new_secondary_key(false);

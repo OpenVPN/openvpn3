@@ -947,6 +947,7 @@ int test(const int thread_num)
         cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
         cp->tls_key.parse(tls_auth_key);
         cp->set_tls_crypt_algs();
+        cp->tls_crypt_ = ClientProtoContext::Config::TLSCrypt::V1;
 #endif
 #ifdef USE_TLS_CRYPT_V2
         cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
@@ -957,7 +958,7 @@ int test(const int thread_num)
             tls_crypt_v2_key.extract_key(cp->tls_key);
             tls_crypt_v2_key.extract_wkc(cp->wkc);
         }
-        cp->tls_crypt_v2 = true;
+        cp->tls_crypt_ = ClientProtoContext::Config::TLSCrypt::V2;
 #endif
         cp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)
@@ -1035,6 +1036,7 @@ int test(const int thread_num)
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
         sp->tls_key.parse(tls_auth_key);
         sp->set_tls_crypt_algs();
+        cp->tls_crypt_ = ClientProtoContext::Config::TLSCrypt::V1;
 #endif
 #ifdef USE_TLS_CRYPT_V2
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
@@ -1045,7 +1047,7 @@ int test(const int thread_num)
         }
         sp->set_tls_crypt_algs();
         sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
-        sp->tls_crypt_v2 = true;
+        sp->tls_crypt_ = ClientProtoContext::Config::TLSCrypt::V2;
 #endif
         sp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)
