@@ -87,7 +87,7 @@ class MacGatewayInfoV4
     {
         struct rtmsg m_rtmsg;
         ScopedFD sockfd;
-        int seq, l, pid, rtm_addrs, i;
+        int seq, l, pid, rtm_addrs;
         struct sockaddr so_dst, so_mask;
         char *cp = m_rtmsg.m_space;
         struct sockaddr *gate = nullptr, *ifp = nullptr, *sa;
@@ -136,7 +136,7 @@ class MacGatewayInfoV4
         cp = ((char *)(rtm_aux + 1));
         if (rtm_aux->rtm_addrs)
         {
-            for (i = 1; i; i <<= 1)
+            for (unsigned int i = 1; i; i <<= 1u)
             {
                 if (i & rtm_aux->rtm_addrs)
                 {
@@ -199,7 +199,6 @@ class MacGatewayInfoV4
         if (flags_ & IFACE_DEFINED)
         {
             struct ifconf ifc;
-            struct ifreq *ifr;
             const int bufsize = 4096;
 
             std::unique_ptr<char[]> buffer(new char[bufsize]);
@@ -217,16 +216,28 @@ class MacGatewayInfoV4
 
             for (cp = buffer.get(); cp <= buffer.get() + ifc.ifc_len - sizeof(struct ifreq);)
             {
-                ifr = (struct ifreq *)cp;
-                const size_t len = sizeof(ifr->ifr_name) + std::max(sizeof(ifr->ifr_addr), size_t(ifr->ifr_addr.sa_len));
-                if (!ifr->ifr_addr.sa_family)
+                ifreq ifr = {};
+                std::memcpy(&ifr, cp, sizeof(ifr));
+                const size_t len = sizeof(ifr.ifr_name) + std::max(sizeof(ifr.ifr_addr), size_t(ifr.ifr_addr.sa_len));
+                if (!ifr.ifr_addr.sa_family)
                     break;
-                if (!::strncmp(ifr->ifr_name, iface_, IFNAMSIZ))
+                if (!::strncmp(ifr.ifr_name, iface_, IFNAMSIZ))
                 {
-                    if (ifr->ifr_addr.sa_family == AF_LINK)
+                    if (ifr.ifr_addr.sa_family == AF_LINK)
                     {
-                        struct sockaddr_dl *sdl = (struct sockaddr_dl *)&ifr->ifr_addr;
-                        hwaddr_.reset((const unsigned char *)LLADDR(sdl));
+                        /* This is a broken member access. struct sockaddr_dl has
+                         * 20 bytes while if_addr has only 16 bytes. But sockaddr_dl
+                         * has 12 bytes space for the hw address and Ethernet only uses
+                         * 6 bytes. So the last 4 that are truncated can be ignored here
+                         *
+                         * So we use a memcpy here to avoid the warnings with ASAN that we
+                         * are doing a very nasty cast here
+                         */
+                        static_assert(sizeof(ifr.ifr_addr) >= 12, "size of if_addr too small to contain MAC");
+                        static_assert(sizeof(sockaddr_dl) >= sizeof(ifr.ifr_addr), "dest struct needs to be larger than source struct");
+                        sockaddr_dl sdl{};
+                        std::memcpy(&sdl, &ifr.ifr_addr, sizeof(ifr.ifr_addr));
+                        hwaddr_.reset((const unsigned char *)LLADDR(&sdl));
                         flags_ |= HWADDR_DEFINED;
                     }
                 }
