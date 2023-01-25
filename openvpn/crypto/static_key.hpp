@@ -126,6 +126,14 @@ class OpenVPNStaticKey
         return key_data_.defined();
     }
 
+    void XOR(const OpenVPNStaticKey &other)
+    {
+        assert(defined() && other.defined());
+
+        for (std::size_t i = 0; i < key_data_.size(); ++i)
+            key_data_[i] ^= other.key_data_[i];
+    }
+
     StaticKey slice(unsigned int key_specifier) const
     {
         if (key_data_.size() != KEY_SIZE)
