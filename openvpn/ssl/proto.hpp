@@ -476,13 +476,7 @@ class ProtoContext
 
                         tls_key.parse(o->get(1, 0));
 
-                        digest = CryptoAlgs::lookup("SHA256");
-                        cipher = CryptoAlgs::lookup("AES-256-CTR");
-
-                        if ((digest == CryptoAlgs::NONE) || (cipher == CryptoAlgs::NONE))
-                            throw proto_option_error("missing support for tls-crypt algorithms");
-
-                        set_tls_crypt_algs(digest, cipher);
+                        set_tls_crypt_algs();
                     }
                 }
 
@@ -496,14 +490,8 @@ class ProtoContext
                         if (tls_crypt_context)
                             throw proto_option_error("tls-crypt and tls-crypt-v2 are mutually exclusive");
 
-                        digest = CryptoAlgs::lookup("SHA256");
-                        cipher = CryptoAlgs::lookup("AES-256-CTR");
-
-                        if ((digest == CryptoAlgs::NONE) || (cipher == CryptoAlgs::NONE))
-                            throw proto_option_error("missing support for tls-crypt-v2 algorithms");
-
                         // initialize tls_crypt_context
-                        set_tls_crypt_algs(digest, cipher);
+                        set_tls_crypt_algs();
 
                         std::string keyfile = o->get(1, 0);
 
@@ -832,9 +820,17 @@ class ProtoContext
             tls_auth_context = tls_auth_factory->new_obj(digest);
         }
 
-        void set_tls_crypt_algs(const CryptoAlgs::Type digest,
-                                const CryptoAlgs::Type cipher)
+        void set_tls_crypt_algs()
         {
+            if (tls_crypt_context)
+                return;
+
+            auto digest = CryptoAlgs::lookup("SHA256");
+            auto cipher = CryptoAlgs::lookup("AES-256-CTR");
+
+            if ((digest == CryptoAlgs::NONE) || (cipher == CryptoAlgs::NONE))
+                throw proto_option_error("missing support for tls-crypt algorithms");
+
             /* TODO: we currently use the default SSL library context here as the
              * library context is not available this early. This should not matter
              * for the algorithms used by tls_crypt */

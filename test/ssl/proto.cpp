@@ -946,11 +946,11 @@ int test(const int thread_num)
 #ifdef USE_TLS_CRYPT
         cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
         cp->tls_key.parse(tls_auth_key);
-        cp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+        cp->set_tls_crypt_algs();
 #endif
 #ifdef USE_TLS_CRYPT_V2
         cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
-        cp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+        cp->set_tls_crypt_algs();
         {
             TLSCryptV2ClientKey tls_crypt_v2_key(cp->tls_crypt_context);
             tls_crypt_v2_key.parse(tls_crypt_v2_client_key);
@@ -1034,7 +1034,7 @@ int test(const int thread_num)
 #if defined(USE_TLS_CRYPT)
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
         sp->tls_key.parse(tls_auth_key);
-        sp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+        sp->set_tls_crypt_algs();
 #endif
 #ifdef USE_TLS_CRYPT_V2
         sp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<ClientCryptoAPI>());
@@ -1043,7 +1043,7 @@ int test(const int thread_num)
             tls_crypt_v2_key.parse(tls_crypt_v2_server_key);
             tls_crypt_v2_key.extract_key(sp->tls_key);
         }
-        sp->set_tls_crypt_algs(CryptoAlgs::lookup("SHA256"), CryptoAlgs::lookup("AES-256-CTR"));
+        sp->set_tls_crypt_algs();
         sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
         sp->tls_crypt_v2 = true;
 #endif
