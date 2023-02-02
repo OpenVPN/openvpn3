@@ -68,6 +68,9 @@ class NTLM
         if (password.empty())
             throw Exception("password is blank");
 
+        if (phase_2_response.size() < 32)
+            throw Exception("phase2 response from server too short (" + std::to_string(phase_2_response.size()) + ")");
+
         // ensure that RNG is crypto-strength
         rng.assert_crypto();
 
@@ -116,7 +119,7 @@ class NTLM
 
         // add target information block to the blob
         size_t tib_len = 0;
-        if (response[0x16] & 0x80) // check for Target Information block (TIB)
+        if (response[0x16] & 0x80u) // check for Target Information block (TIB)
         {
             tib_len = response[0x28]; // get TIB size
             if (tib_len > 96)
