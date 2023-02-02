@@ -31,6 +31,8 @@
 #include <algorithm> // for std::min
 #include <cstdint>   // for std::uint32_t, etc.
 #include <memory>
+#include <optional>
+
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
@@ -1509,13 +1511,11 @@ class ProtoContext
         struct DataChannelKey
         {
             DataChannelKey()
-                : rekey_defined(false)
             {
             }
 
             OpenVPNStaticKey key;
-            bool rekey_defined;
-            CryptoDCInstance::RekeyType rekey_type;
+            std::optional<CryptoDCInstance::RekeyType> rekey_type;
         };
 
       public:
@@ -1885,7 +1885,6 @@ class ProtoContext
             {
                 // save for deferred processing
                 data_channel_key->rekey_type = type;
-                data_channel_key->rekey_defined = true;
             }
         }
 
@@ -1992,7 +1991,6 @@ class ProtoContext
 
             if (data_channel_key)
             {
-                dck->rekey_defined = data_channel_key->rekey_defined;
                 dck->rekey_type = data_channel_key->rekey_type;
             }
             dck.swap(data_channel_key);
@@ -2128,8 +2126,8 @@ class ProtoContext
 
             enable_compress = crypto->consider_compression(proto.config->comp_ctx);
 
-            if (data_channel_key->rekey_defined)
-                crypto->rekey(data_channel_key->rekey_type);
+            if (data_channel_key->rekey_type.has_value())
+                crypto->rekey(data_channel_key->rekey_type.value());
             data_channel_key.reset();
 
             // set up compression for data channel
