@@ -79,8 +79,8 @@ class Setup : public TunBuilderSetup::Base
         std::string iface_name;
         Layer layer; // OSI layer
         std::string dev_name;
-        int txqueuelen;
-        bool add_bypass_routes_on_establish; // required when not using tunbuilder
+        int txqueuelen = 0;
+        bool add_bypass_routes_on_establish = false; // required when not using tunbuilder
         bool dco = false;
 
 #ifdef HAVE_JSON
