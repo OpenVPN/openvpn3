@@ -332,7 +332,11 @@ inline std::string printfmt(const std::string &fmt, Args... args)
     return pf.str();
 }
 
+// log with formatting
 #define OPENVPN_FMT(...) OPENVPN_LOG_STRING(printfmt(__VA_ARGS__))
+
+// throw a formatted exception
+#define OPENVPN_THROW_FMT(EXC, ...) throw EXC(printfmt(__VA_ARGS__))
 
 } // namespace openvpn
 
