@@ -22,11 +22,9 @@ jobs:
         arch: ${{ matrix.arch }}
 
     - name: Restore from cache and install vcpkg
-      uses: lukka/run-vcpkg@v6
+      uses: lukka/run-vcpkg@v10
       with:
-        setupOnly: true
-        vcpkgGitCommitId: 'd8d61c941c333a147edffdcbdc9964dc0c0962f5'
-        additionalCachedPaths: ${{ env.buildDir }}/vcpkg_installed
+        vcpkgGitCommitId: '36fb23307e10cc6ffcec566c46c4bb3f567c82c6'
         appendedCacheKey: ${{ matrix.arch }}-${{ hashFiles( '**/vcpkg.json' ) }}
 
     - name: Run CMake with vcpkg.json manifest
