@@ -11,6 +11,9 @@ vcpkg_from_github(
         ../../asio/patches/0002-Added-randomize-method-to-asio-ip-tcp-resolver-resul.patch
         ../../asio/patches/0003-Added-user-code-hook-async_connect_post_open-to-be-c.patch
         ../../asio/patches/0004-error_code.ipp-Use-English-for-Windows-error-message.patch
+        ../../asio/patches/0005-Added-kovpn-route_id-support-to-endpoints-for-sendto.patch
+        ../../asio/patches/0006-basic_resolver_results-added-data-and-cdata-members-.patch
+        ../../asio/patches/0007-reactive_socker_service_base-make-sure-reactor_data_.patch
 )
 
 # Always use "ASIO_STANDALONE" to avoid boost dependency
