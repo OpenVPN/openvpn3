@@ -1,27 +1,6 @@
 
 # current latest GTEST version
 set(OVPN_GTEST_VERSION release-1.11.0)
-# use an older version of gtest for GCC < 5.1.0; 1.10.1 is the latest
-# version that works with the 4.8.x compilers
-if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.1.0)
-  set(OVPN_GTEST_VERSION release-1.10.0)
-  # Note: not all the test compilation units hit the
-  # "'is_trivially_copy_constructible' is not a member of 'std'"
-  # issue; only the following do (with line number as of this
-  # writing and the include on the line):
-  # core_tests.cpp:21:  // #include <gtest/gtest.h>
-  # test_b64.cpp:22:  // #include "test_common.h"
-  # test_comp.cpp:45:  // #include "test_common.h"
-  # test_log.cpp:22:  // #include "test_common.h"
-  # test_route_emulation.cpp:23:  // #include "test_common.h"
-  # test_verify_x509_name.cpp:25:  // #include "test_common.h"
-  #
-  # Note further: test_common.h includes gtest/gtest.h; but that is
-  # not a sufficient condition to hit the bust.  For example,
-  # test_continuation.cpp includes test_common.h but does not manifest
-  # the issue.
-endif()
-
 include(dlgoogletest)
 
 # Extra includes/libraries that are currently only use by the core unit test
