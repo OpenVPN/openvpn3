@@ -11,9 +11,7 @@ the library and provides basic command line functionality.
 OpenVPN 3 is currently used in production as the core of the
 OpenVPN Connect clients for iOS, Android, Linux, Windows, and Mac OS X.
 
-NOTE: As of 2017, OpenVPN 3 is primarily of interest to developers,
-as it does not yet replicate the full functionality of OpenVPN 2.x.
-In particular, server functionality is not yet implemented.
+NOTE: OpenVPN 3 does not currently implement server functionality.
 
 .. contents:: Table of Contents
 
@@ -31,40 +29,34 @@ Building the OpenVPN 3 client on Linux
 
 These instructions were tested on Ubuntu 20.
 
-Prepare directory structure:
-::
+Prepare directory structure::
 
     $ sudo apt install g++ make libmbedtls-dev libssl-dev liblz4-dev cmake
     $ export O3=~/O3 && mkdir $O3
     $ export DEP_DIR=$O3/deps && mkdir $DEP_DIR
     $ export DL=$O3/dl && mkdir $DL
 
-Clone the OpenVPN 3 source repo:
-::
+Clone the OpenVPN 3 source repo::
 
     $ cd $O3
     $ git clone https://github.com/OpenVPN/openvpn3.git core
 
-Build dependencies:
-::
+Build dependencies::
 
     $ cd core/scripts/linux/
     $ ./build-all
 
-Build the OpenVPN 3 client wrapper (cli) with OpenSSL library:
-::
+Build the OpenVPN 3 client wrapper (cli) with OpenSSL library::
 
     $ cd $O3/core && mkdir build && cd build
     $ cmake ..
     $ cmake --build .
 
-To use mbed TLS, use:
-::
+To use mbed TLS, use::
 
     $ cmake -DUSE_MBEDTLS=on ..
 
-Run OpenVPN 3 client:
-::
+Run OpenVPN 3 client::
 
     $ sudo test/ovpncli/ovpncli myprofile.ovpn route-nopull
 
@@ -81,8 +73,7 @@ transport, providing better performance. The cli will detect when the
 kernel module is available and enable dco automatically (use --no-dco
 to disable this).
 
-Download, build and install ovpn-dco:
-::
+Download, build and install ovpn-dco::
 
     $ cd $O3
     $ git clone https://github.com/OpenVPN/ovpn-dco.git
@@ -90,13 +81,11 @@ Download, build and install ovpn-dco:
     $ make && sudo make install
     $ sudo modprobe ovpn-dco
 
-Install core dependencies:
-::
+Install core dependencies::
 
     $ sudo apt install pkg-config libnl-genl-3-dev
 
-Build cli with ovpn-dco support:
-::
+Build cli with ovpn-dco support::
 
     $ cd $O3/core/build
     $ cmake -DCLI_OVPNDCO=on .. && make
@@ -114,13 +103,11 @@ Building the OpenVPN 3 client on macOS
 OpenVPN 3 should be built in a non-root macOS account.
 Make sure that Xcode is installed with optional command-line tools.
 
-Create the directory ``~/src``:
-::
+Create the directory ``~/src``::
 
       $ mkdir -p ~/src
 
-Clone the OpenVPN 3 repo:
-::
+Clone the OpenVPN 3 repo::
 
       $ cd ~/src
       $ git clone https://github.com/OpenVPN/openvpn3.git openvpn3
@@ -136,8 +123,7 @@ Ensure that [homebrew](https://brew.sh/) is set up.
 
 Now build the OpenVPN 3 client executable:
 
-On a ARM64 based Mac:
-::
+On a ARM64 based Mac::
 
     $ cd ~/src/
     $ mkdir build-openvpn3
@@ -145,8 +131,7 @@ On a ARM64 based Mac:
     $ cmake -DOPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl -DCMAKE_PREFIX_PATH=/opt/homebrew ~/src/openvpn3
     $ cmake --build .
 
-For a build on a Intel based Mac:
-::
+For a build on a Intel based Mac::
 
     $ cd ~/src/
     $ mkdir build-openvpn3
@@ -161,13 +146,11 @@ These build scripts will create binaries with the same architecture as the host 
 running on. The Mac OS X tuntap driver is not required, as OpenVPN 3 can use the integrated
 utun interface if available.
 
-To view the client wrapper options:
-::
+To view the client wrapper options::
 
     $ ./test/ovpncli/ovpncli -h
 
-To connect:
-::
+To connect::
 
     $ ./test/ovpncli/ovpncli client.ovpn
 
@@ -179,7 +162,7 @@ Building the OpenVPN 3 client on Windows
 
 Prerequisites:
 
-* Visual Studio 2019
+* Visual Studio 2019 or 2022
 * CMake
 * vcpkg
 
@@ -205,14 +188,12 @@ is here: `<openvpn/ssl/proto.hpp>`_
 
 The test code itself is here: `<test/ssl/proto.cpp>`_
 
-Build the test:
-::
+Build the test::
 
     $ cd $O3
     $ cmake --build . -- test/ssl/proto
 
-Run the test:
-::
+Run the test::
 
     $ cd test/ssl
     $ time ./proto
@@ -226,12 +207,11 @@ The OpenVPN 3 core also includes unit tests, which are based on
 Google Test framework. To run unit tests, you need to install
 CMake and build Google Test.
 
-Build and run tests on Linux:
-::
+Build and run tests on Linux::
 
     $ cd $O3/core/build
     $ cmake --build . -- test/unittests/coreUnitTests
-    $ ./test/unittests/coreUnitTests
+    $ make test
 
 
 
@@ -440,7 +420,7 @@ Here is a brief set of guidelines:
 * When dealing with strings, use a :code:`std::string`
   rather than a :code:`char *`.
 
-* When dealing with binary data or buffers, always try to use a 
+* When dealing with binary data or buffers, always try to use a
   :code:`Buffer`, :code:`ConstBuffer`, :code:`BufferAllocated`, or
   :code:`BufferPtr` object to provide managed access to the buffer, to
   protect against security bugs that arise when using raw buffer pointers.
