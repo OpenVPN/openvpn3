@@ -1,7 +1,7 @@
 {
     "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
     "name": "openvpn3",
-    "version-string": "3.7",
+    "version-string": "3.8",
     "dependencies": [
         "asio",
         "gtest",
