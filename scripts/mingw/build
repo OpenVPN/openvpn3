@@ -48,7 +48,7 @@ download_deps()
     gitref=$(grep -oP '\bREF\s+\S+' "$portfile" | cut -d' ' -f2)
     git clone --single-branch --branch "$gitref" https://github.com/chriskohlhoff/asio
     # apply asio patches
-    for patchfile in $(grep -o patches.* "$portfile" | cut -d '\' -f3); do
+    for patchfile in $(grep -o patches.* "$portfile" | cut -d '/' -f2); do
         echo applying patch $patchfile
         patch -d asio -p1 < "${CORE_DIR}/deps/asio/patches/$patchfile"
     done

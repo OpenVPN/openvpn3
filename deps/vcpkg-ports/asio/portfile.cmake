@@ -7,10 +7,10 @@ vcpkg_from_github(
     SHA512 a5d6e597e5611b7293375965f37c09cb73e27639ebdda6163557fab8bbff2ddbb301080ad86ff7f97e8ed8454da25176385cfc43103447a4a04e35a9c41aec3e
     HEAD_REF master
     PATCHES
-        ..\\..\\asio\\patches\\0001-Added-Apple-NAT64-support-when-both-ASIO_HAS_GETADDR.patch
-        ..\\..\\asio\\patches\\0002-Added-randomize-method-to-asio-ip-tcp-resolver-resul.patch
-        ..\\..\\asio\\patches\\0003-Added-user-code-hook-async_connect_post_open-to-be-c.patch
-        ..\\..\\asio\\patches\\0004-error_code.ipp-Use-English-for-Windows-error-message.patch
+        ../../asio/patches/0001-Added-Apple-NAT64-support-when-both-ASIO_HAS_GETADDR.patch
+        ../../asio/patches/0002-Added-randomize-method-to-asio-ip-tcp-resolver-resul.patch
+        ../../asio/patches/0003-Added-user-code-hook-async_connect_post_open-to-be-c.patch
+        ../../asio/patches/0004-error_code.ipp-Use-English-for-Windows-error-message.patch
 )
 
 # Always use "ASIO_STANDALONE" to avoid boost dependency
