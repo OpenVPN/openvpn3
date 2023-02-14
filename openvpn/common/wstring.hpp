@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2023 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -33,25 +33,42 @@ namespace wstring {
 
 inline std::wstring from_utf8(const std::string &str)
 {
-#ifdef __MINGW32__
-    // https://sourceforge.net/p/mingw-w64/bugs/538/
-    typedef std::codecvt_utf8<wchar_t, 0x10ffff, std::little_endian> cvt_type;
+#ifdef WIN32
+    std::wstring wStr; // enable RVO
+    if (str.empty())
+        return wStr;
+    const auto reqSize = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+    if (reqSize == 0)
+        throw std::runtime_error("MultiByteToWideChar(1) failed with code: [" + std::to_string(::GetLastError()) + "]");
+    wStr.resize(reqSize, L'\0'); // Allocate space
+    if (MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &wStr[0], reqSize) == 0)
+        throw std::runtime_error("MultiByteToWideChar(2) failed with code: [" + std::to_string(::GetLastError()) + "]");
+    return wStr;
 #else
     typedef std::codecvt_utf8<wchar_t> cvt_type;
-#endif
     std::wstring_convert<cvt_type, wchar_t> cvt;
     return cvt.from_bytes(str);
+#endif
 }
 
 inline std::string to_utf8(const std::wstring &wstr)
 {
-#ifdef __MINGW32__
-    typedef std::codecvt_utf8<wchar_t, 0x10ffff, std::little_endian> cvt_type;
+#ifdef WIN32
+    std::string str; // For RVO
+    if (wstr.empty())
+        return str;
+    const auto reqSize = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (reqSize == 0)
+        throw std::runtime_error("WideCharToMultiByte(1) failed with code: [" + std::to_string(::GetLastError()) + "]");
+    str.resize(reqSize, '\0'); // Allocate space
+    if (WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], reqSize, nullptr, nullptr) == 0)
+        throw std::runtime_error("WideCharToMultiByte(2) failed with code: [" + std::to_string(::GetLastError()) + "]");
+    return str;
 #else
     typedef std::codecvt_utf8<wchar_t> cvt_type;
-#endif
     std::wstring_convert<cvt_type, wchar_t> cvt;
     return cvt.to_bytes(wstr);
+#endif
 }
 
 inline std::unique_ptr<wchar_t[]> to_wchar_t(const std::wstring &wstr)
