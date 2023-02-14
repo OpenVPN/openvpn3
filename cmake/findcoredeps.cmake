@@ -30,13 +30,8 @@ endif ()
 function(add_ssl_library target)
     if (${USE_MBEDTLS})
         find_package(mbedTLS REQUIRED)
-
-        set(SSL_LIBRARY ${MBEDTLS_LIBRARIES})
-
+        set(SSL_LIBRARY mbedTLS::mbedTLS)
         target_compile_definitions(${target} PRIVATE -DUSE_MBEDTLS)
-
-        # The findpackage function does not set these automatically :(
-        target_include_directories(${target} PRIVATE ${MBEDTLS_INCLUDE_DIR})
     else ()
         find_package(OpenSSL REQUIRED)
         SET(SSL_LIBRARY OpenSSL::SSL)
