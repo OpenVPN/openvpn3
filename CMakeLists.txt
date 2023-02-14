@@ -30,22 +30,13 @@ include(findcoredeps)
 include(ovpn-doxygen)
 
 add_subdirectory(client)
-if (BUILD_TESTING)
-  add_subdirectory(test/unittests)
-endif()
+add_subdirectory(test/unittests)
 add_subdirectory(test/ovpncli)
 add_subdirectory(test/ssl)
 
-
-if (WIN32)
-    add_subdirectory(openvpn/omi)
-    add_subdirectory(openvpn/ovpnagent/win)
-endif ()
-
-if (APPLE)
-    add_subdirectory(openvpn/ovpnagent/mac)
-endif ()
-
+add_subdirectory(openvpn/omi)
+add_subdirectory(openvpn/ovpnagent/win)
+add_subdirectory(openvpn/ovpnagent/mac)
 
 if (ENABLE_DOXYGEN)
     # Exclude some project specific directories
