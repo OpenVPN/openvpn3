@@ -53,7 +53,7 @@ TEST(IPAddr, test32)
     {
         const IPv4::Addr::base_type mask = prefix_len_to_netmask(i);
         const int pl = prefix_len(mask);
-        ASSERT_EQ(pl, i);
+        ASSERT_EQ(pl, (int)i);
 
         // IPv4::Addr a = IPv4::Addr::from_uint32(mask);
         // std::cout << i << ' ' << pl << ' ' << a << std::endl;

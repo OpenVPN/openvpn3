@@ -48,12 +48,12 @@ TEST(Dns, Options)
 
     DnsOptions dns(config);
 
-    ASSERT_EQ(dns.search_domains.size(), 3);
+    ASSERT_EQ(dns.search_domains.size(), 3u);
     ASSERT_EQ(dns.search_domains[0], "domain0");
     ASSERT_EQ(dns.search_domains[1], "domain1");
     ASSERT_EQ(dns.search_domains[2], "domain2");
 
-    ASSERT_EQ(dns.servers.size(), 3);
+    ASSERT_EQ(dns.servers.size(), 3u);
 
     int i = 1;
     for (const auto &keyval : dns.servers)
@@ -67,12 +67,12 @@ TEST(Dns, Options)
 
             ASSERT_TRUE(server.address4.specified());
             ASSERT_EQ(server.address4.to_string(), "2.2.2.2");
-            ASSERT_EQ(server.port4, 5353);
+            ASSERT_EQ(server.port4, 5353u);
 
             ASSERT_TRUE(server.address6.unspecified());
-            ASSERT_EQ(server.port6, 0);
+            ASSERT_EQ(server.port6, 0u);
 
-            ASSERT_EQ(server.domains.size(), 2);
+            ASSERT_EQ(server.domains.size(), 2u);
             ASSERT_EQ(server.domain_type, DnsServer::DomainType::Resolve);
             ASSERT_EQ(server.domains[0], "rdom0");
             ASSERT_EQ(server.domains[1], "rdom1");
@@ -88,13 +88,13 @@ TEST(Dns, Options)
 
             ASSERT_TRUE(server.address4.specified());
             ASSERT_EQ(server.address4.to_string(), "1.1.1.1");
-            ASSERT_EQ(server.port4, 0);
+            ASSERT_EQ(server.port4, 0u);
 
             ASSERT_TRUE(server.address6.specified());
             ASSERT_EQ(server.address6.to_string(), "1::1");
-            ASSERT_EQ(server.port6, 5353);
+            ASSERT_EQ(server.port6, 5353u);
 
-            ASSERT_EQ(server.domains.size(), 1);
+            ASSERT_EQ(server.domains.size(), 1u);
             ASSERT_EQ(server.domain_type, DnsServer::DomainType::Exclude);
             ASSERT_EQ(server.domains[0], "xdom0");
 
@@ -109,13 +109,13 @@ TEST(Dns, Options)
 
             ASSERT_TRUE(server.address4.specified());
             ASSERT_EQ(server.address4.to_string(), "3.2.1.0");
-            ASSERT_EQ(server.port4, 4242);
+            ASSERT_EQ(server.port4, 4242u);
 
             ASSERT_TRUE(server.address6.specified());
             ASSERT_EQ(server.address6.to_string(), "3::3");
-            ASSERT_EQ(server.port6, 0);
+            ASSERT_EQ(server.port6, 0u);
 
-            ASSERT_EQ(server.domains.size(), 0);
+            ASSERT_EQ(server.domains.size(), 0u);
             ASSERT_EQ(server.domain_type, DnsServer::DomainType::Unset);
 
             ASSERT_EQ(server.dnssec, DnsServer::Security::No);
@@ -142,8 +142,8 @@ TEST(Dns, OptionsMerger)
     config.update_map();
 
     merger.merge(pushed, config);
-    ASSERT_EQ(config.size(), 2);
-    ASSERT_EQ(pushed.size(), 2);
+    ASSERT_EQ(config.size(), 2u);
+    ASSERT_EQ(pushed.size(), 2u);
     ASSERT_EQ(pushed[0].ref(4), "::1");
     ASSERT_EQ(pushed[1].ref(4), "2.2.2.2");
 }

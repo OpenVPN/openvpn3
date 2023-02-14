@@ -160,7 +160,7 @@ TEST(argv, parsetest)
     extract_auth_token(opt);
     extract_ifconfig(opt);
     verify_topology(opt);
-    ASSERT_EQ(1066, limits.get_bytes());
+    ASSERT_EQ(1066u, limits.get_bytes());
 }
 
 static void csv_test(const std::string &str)

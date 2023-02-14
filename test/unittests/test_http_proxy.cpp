@@ -45,7 +45,7 @@ TEST(HttpProxyClient, Options)
     ASSERT_EQ(po->password, "pazzword");
     ASSERT_EQ(po->http_version, "1.1");
     ASSERT_EQ(po->user_agent, "Mosaic/0.9");
-    ASSERT_EQ(po->headers.size(), 1);
+    ASSERT_EQ(po->headers.size(), 1u);
     ASSERT_EQ(po->headers.at(0)->p1, "X-Greeting");
     ASSERT_EQ(po->headers.at(0)->p2, "Hi mom!");
 

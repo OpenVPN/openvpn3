@@ -196,7 +196,7 @@ void test()
     obj->vec.emplace_back(new Ref("Three", obj));
 
     // verify obj
-    ASSERT_EQ(obj->vec.size(), 3);
+    ASSERT_EQ(obj->vec.size(), 3u);
     ASSERT_EQ(obj->vec.at(0)->to_string(), "I am One whose parent is Regular Joe");
     ASSERT_EQ(obj->vec.at(1)->to_string(), "I am Two whose parent is Regular Joe");
     ASSERT_EQ(obj->vec.at(2)->to_string(), "I am Three whose parent is Regular Joe");

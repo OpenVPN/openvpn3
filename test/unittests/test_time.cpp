@@ -119,9 +119,9 @@ static void sub(const Time &t1, const Time &t2, bool large)
     const Time::Duration d = t1 - t2;
     // std::cout << "T-T " << t1.raw() << " - " << t2.raw() << " = " << d.raw() << std::endl;
     if (large)
-        ASSERT_GE(d.raw(), 100000);
+        ASSERT_GE(d.raw(), 100000u);
     else
-        ASSERT_EQ(d.raw(), 0);
+        ASSERT_EQ(d.raw(), 0u);
 }
 
 static void sub(const Time::Duration &d1, const Time::Duration &d2)

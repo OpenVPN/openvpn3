@@ -161,7 +161,7 @@ TEST_F(RouteEmulationTest, ExcludeOneSubnet)
 
     doEmulate();
 
-    ASSERT_EQ(tb->routes.size(), 24);
+    ASSERT_EQ(tb->routes.size(), 24u);
 }
 
 TEST_F(RouteEmulationTest, ExcludeSubnetsNoDefault)
@@ -175,7 +175,7 @@ TEST_F(RouteEmulationTest, ExcludeSubnetsNoDefault)
 
     doEmulate();
 
-    ASSERT_EQ(tb->routes.size(), 1);
+    ASSERT_EQ(tb->routes.size(), 1u);
     ASSERT_EQ(tb->routes.at(0), "10.20.128.0/17");
 
     setup(true, false);
@@ -186,7 +186,7 @@ TEST_F(RouteEmulationTest, ExcludeSubnetsNoDefault)
 
     doEmulate();
 
-    ASSERT_EQ(tb->routes.size(), 1);
+    ASSERT_EQ(tb->routes.size(), 1u);
     ASSERT_EQ(tb->routes.at(0), "2500:1000::/33");
 }
 
@@ -196,7 +196,7 @@ TEST_F(RouteEmulationTest, excludeServer)
     emu->add_default_routes(true, true);
     doEmulate("1.2.3.4");
 
-    ASSERT_EQ(tb->routes.size(), 32);
+    ASSERT_EQ(tb->routes.size(), 32u);
     ASSERT_FALSE(tb->containsIP("1.2.3.4"));
     ASSERT_TRUE(tb->containsIP("1.2.3.5"));
     ASSERT_TRUE(tb->containsIP("1.2.3.3"));
@@ -206,7 +206,7 @@ TEST_F(RouteEmulationTest, excludeServer)
     emu->add_default_routes(true, true);
     doEmulate("::1.2.3.4");
 
-    ASSERT_EQ(tb->routes.size(), 128);
+    ASSERT_EQ(tb->routes.size(), 128u);
     ASSERT_FALSE(tb->containsIP("::1.2.3.4"));
     ASSERT_TRUE(tb->containsIP("::1.2.3.5"));
     ASSERT_TRUE(tb->containsIP("::1.2.3.3"));
@@ -278,7 +278,7 @@ TEST_F(RouteEmulationTest, DefaultRoute)
 
     doEmulate();
 
-    ASSERT_EQ(tb->routes.size(), 1);
+    ASSERT_EQ(tb->routes.size(), 1u);
     ASSERT_EQ(tb->routes.at(0), "0.0.0.0/0");
 
     // Now something more tricky add unnecessary extra route
@@ -289,7 +289,7 @@ TEST_F(RouteEmulationTest, DefaultRoute)
 
     doEmulate();
 
-    ASSERT_EQ(tb->routes.size(), 2);
+    ASSERT_EQ(tb->routes.size(), 2u);
     ASSERT_EQ(tb->routes.at(0), "0.0.0.0/0");
 }
 
