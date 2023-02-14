@@ -30,7 +30,9 @@ include(findcoredeps)
 include(ovpn-doxygen)
 
 add_subdirectory(client)
-add_subdirectory(test/unittests)
+if (BUILD_TESTING)
+  add_subdirectory(test/unittests)
+endif()
 add_subdirectory(test/ovpncli)
 add_subdirectory(test/ssl)
 
