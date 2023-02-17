@@ -33,6 +33,7 @@ build_core()
 
     cmake -D CMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
           -D VCPKG_TARGET_TRIPLET="$VCPKG_ARCH-mingw-dynamic" \
+          -D VCPKG_APPLOCAL_DEPS=OFF \
           -D VCPKG_OVERLAY_PORTS="$CORE_DIR/deps/vcpkg-ports" \
           -D CMAKE_C_COMPILER="$ARCH-$CMAKE_C_COMPILER" \
           -D CMAKE_CXX_COMPILER="$ARCH-$CMAKE_CXX_COMPILER" \
