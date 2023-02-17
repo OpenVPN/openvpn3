@@ -4,7 +4,6 @@
     "version-string": "3.8",
     "dependencies": [
         "asio",
-        "gtest",
         "jsoncpp",
         "lz4",
         "openssl",
