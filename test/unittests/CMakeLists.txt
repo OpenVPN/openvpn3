@@ -55,12 +55,14 @@ add_executable(coreUnitTests
         test_continuation.cpp
         test_crypto.cpp
         test_optfilt.cpp
+        test_clamp_typerange.cpp
         test_pktstream.cpp
         test_remotelist.cpp
         test_relack.cpp
         test_http_proxy.cpp
         test_peer_fingerprint.cpp
         test_safestr.cpp
+        test_numeric_cast.cpp
         test_dns.cpp
         test_header_deps.cpp
         test_capture.cpp
