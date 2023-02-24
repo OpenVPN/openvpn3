@@ -230,5 +230,17 @@
             "configurePreset": "win-x86-release",
             "configuration": "Release"
         }
-    ]
+    ],
+    "testPresets": [
+        {
+            "name": "win-amd64",
+            "configurePreset": "win-amd64-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "win-x86",
+            "configurePreset": "win-x86-debug",
+            "configuration": "Debug"
+        }
+     ]
 }
