@@ -6,19 +6,6 @@ endif()
 set(OVPN_GTEST_VERSION release-1.11.0)
 include(dlgoogletest)
 
-# Extra includes/libraries that are currently only use by the core unit test
-FIND_PATH(LZO_INCLUDE_DIR NAMES lzo/lzo1x.h)
-FIND_LIBRARY(LZO_LIBRARIES NAMES lzo2)
-
-if (LZO_INCLUDE_DIR AND LZO_LIBRARIES)
-    list(APPEND CORE_TEST_DEFINES -DHAVE_LZO)
-    list(APPEND EXTRA_LIBS ${LZO_LIBRARIES})
-    list(APPEND EXTRA_INCLUDES ${LZO_INCLUDE_DIR})
-    message("lzo found, running lzo compression tests")
-else ()
-    message("lzo not found, skipping lzo compression tests")
-endif ()
-
 set(CORE_TEST_DEFINES
         -DOPENVPN_FORCE_TUN_NULL
         -DUNIT_TEST
@@ -116,7 +103,23 @@ add_json_library(coreUnitTests)
 
 # xxHash
 target_compile_definitions(coreUnitTests PRIVATE -DHAVE_XXHASH)
-target_include_directories(coreUnitTests PRIVATE ${DEP_DIR}/xxHash)
+if(NOT MSVC)
+  list(APPEND CMAKE_PREFIX_PATH
+    ${DEP_DIR}/xxHash
+    ${DEP_DIR}
+    )
+endif()
+find_package(xxHash REQUIRED)
+target_link_libraries(coreUnitTests xxHash::xxhash)
+
+find_package(LZO)
+if (LZO_FOUND)
+  target_compile_definitions(coreUnitTests PRIVATE -DHAVE_LZO)
+  target_link_libraries(coreUnitTests lzo::lzo)
+  message("lzo found, running lzo compression tests")
+else ()
+    message("lzo not found, skipping lzo compression tests")
+endif ()
 
 target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
 

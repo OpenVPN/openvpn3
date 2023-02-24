@@ -69,31 +69,30 @@ function(add_core_dependencies target)
 
         if (MSVC)
             target_compile_options(${target} PRIVATE "/bigobj")
-            find_package(lz4 CONFIG REQUIRED)
-            set(LZ4_LIBRARY lz4::lz4)
         else ()
             find_package(Threads REQUIRED)
             target_compile_options(${target} PRIVATE "-Wa,-mbig-obj")
             list(APPEND EXTRA_LIBS ws2_32 wsock32 ${CMAKE_THREAD_LIBS_INIT})
             list(APPEND CMAKE_PREFIX_PATH
-                ${DEP_DIR}
+              ${DEP_DIR}/asio/asio
+              ${DEP_DIR}
             )
-            find_package(LZ4 REQUIRED)
-            target_include_directories(${target} PRIVATE ${DEP_DIR}/asio/asio/include)
         endif ()
     else ()
-        target_include_directories(${target} PRIVATE ${DEP_DIR}/asio/asio/include
-                )
         list(APPEND CMAKE_PREFIX_PATH
                 ${DEP_DIR}/mbedtls/mbedtls-${PLAT}
                 ${DEP_DIR}/lz4/lz4-${PLAT}
+                ${DEP_DIR}/asio/asio
                 )
         list(APPEND CMAKE_LIBRARY_PATH
                 ${DEP_DIR}/mbedtls/mbedtls-${PLAT}/library
                 )
-
-        find_package(LZ4 REQUIRED)
     endif ()
+
+    find_package(lz4 REQUIRED)
+    find_package(asio REQUIRED)
+    target_link_libraries(${target} lz4::lz4)
+    target_link_libraries(${target} asio::asio)
 
     add_ssl_library(${target})
 
@@ -109,9 +108,7 @@ function(add_core_dependencies target)
         target_link_libraries(${target} pthread)
     endif()
 
-    target_include_directories(${target} PRIVATE ${LZ4_INCLUDE_DIR})
-
-    target_link_libraries(${target} ${EXTRA_LIBS} ${LZ4_LIBRARY})
+    target_link_libraries(${target} ${EXTRA_LIBS})
 
     if (USE_WERROR)
         if (MSVC)
