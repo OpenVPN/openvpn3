@@ -25,6 +25,7 @@ jobs:
       with:
         vcpkgGitCommitId: '36fb23307e10cc6ffcec566c46c4bb3f567c82c6'
         vcpkgJsonGlob: '**/windows/vcpkg.json'
+        appendedCacheKey: msvc_${{ matrix.arch }}
 
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@v10
@@ -63,6 +64,7 @@ jobs:
       with:
         vcpkgGitCommitId: '36fb23307e10cc6ffcec566c46c4bb3f567c82c6'
         vcpkgJsonGlob: '**/mingw/vcpkg.json'
+        appendedCacheKey: mingw_${{ matrix.arch }}
 
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@v10
