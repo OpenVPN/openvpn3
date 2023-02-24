@@ -14,7 +14,7 @@ jobs:
 
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: lukka/get-cmake@latest
     - uses: ilammy/msvc-dev-cmd@v1
       with:
@@ -32,7 +32,7 @@ jobs:
         configurePreset: win-${{ matrix.arch }}-release
         buildPreset: win-${{ matrix.arch }}-release
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: openvpn3-msvc-${{ matrix.arch }}
         path: |
@@ -52,7 +52,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: lukka/get-cmake@latest
 
     - name: Install dependencies
@@ -70,11 +70,7 @@ jobs:
         configurePreset: mingw-${{ matrix.arch }}-release
         buildPreset: mingw-${{ matrix.arch }}-release
 
-    - name: List $RUNNER_WORKSPACE after build
-      run: find $RUNNER_WORKSPACE
-      shell: bash
-
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: openvpn3-mingw-${{ matrix.arch }}
         path: |
