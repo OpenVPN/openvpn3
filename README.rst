@@ -155,22 +155,46 @@ To connect::
     $ ./test/ovpncli/ovpncli client.ovpn
 
 
-Building the OpenVPN 3 client on Windows
-----------------------------------------
+Building the OpenVPN 3 client for Windows
+-----------------------------------------
 
 .. image:: ../../../actions/workflows/msbuild.yml/badge.svg
+
+Building with Visual Studio
+"""""""""""""""""""""""""""
 
 Prerequisites:
 
 * Visual Studio 2019 or 2022
 * CMake
 * vcpkg
+* git
 
 ::
 
     > git clone https://github.com/OpenVPN/openvpn3.git core && cd core
-    > cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=<path_to_vcpkg>\scripts\buildsystems\vcpkg.cmake -DVCPKG_OVERLAY_PORTS=deps\vcpkg-ports
-    > cmake --build build --config Release --target ovpncli
+    > set VCPKG_ROOT=<path to vcpkg checkout>
+    > cmake --preset win-amd64-release
+    > cmake --build --preset win-amd64-release --target ovpncli
+
+Building with MinGW
+"""""""""""""""""""
+
+This build should work on both Windows and Linux.
+
+Prerequisites:
+
+* mingw-w64
+* CMake
+* vcpkg
+* git
+
+::
+
+    $ git clone https://github.com/OpenVPN/openvpn3.git core && cd core
+    $ export VCPKG_ROOT=<path to vcpkg checkout>
+    $ cmake --preset mingw-x64-release
+    $ cmake --build --preset mingw-x64-release --target ovpncli
 
 Testing
 -------
