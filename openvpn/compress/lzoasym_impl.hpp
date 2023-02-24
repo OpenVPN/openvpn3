@@ -107,9 +107,7 @@ inline size_t ptr_diff(const T *a, const T *b)
 // read uint16_t from memory
 inline size_t get_u16(const unsigned char *p)
 {
-    // NOTE: assumes little-endian and unaligned 16-bit access is okay.
-    // For a slower alternative without these assumptions, try: p[0] | (p[1] << 8)
-    return get_mem<std::uint16_t>(p);
+    return p[0] | (p[1] << 8);
 }
 
 /**
