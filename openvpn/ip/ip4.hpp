@@ -40,7 +40,7 @@ struct IPv4Header
     static std::uint8_t ver_len(const unsigned int version,
                                 const unsigned int len)
     {
-        return ((len >> 2) & 0x0F) | (version & 0x0F) << 4;
+        return static_cast<uint8_t>(((len >> 2) & 0x0F) | (version & 0x0F) << 4);
     }
 
     std::uint8_t version_len;

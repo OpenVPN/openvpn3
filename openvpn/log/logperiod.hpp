@@ -81,7 +81,7 @@ class LogPeriod
         return period_ != UNDEF;
     }
 
-    unsigned int expires_in(const time_t now)
+    time_t expires_in(const time_t now)
     {
         const olong onow = olong(now);
         if (onow < end_)

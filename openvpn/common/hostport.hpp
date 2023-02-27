@@ -59,7 +59,7 @@ inline unsigned short parse_port(const std::string &port, const std::string &tit
 {
     unsigned int ret = 0;
     validate_port(port, title, &ret);
-    return ret;
+    return static_cast<unsigned short>(ret);
 }
 
 // An IP address is also considered to be a valid host

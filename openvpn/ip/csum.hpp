@@ -36,12 +36,12 @@ inline std::uint16_t fold(std::uint32_t sum)
 {
     sum = (sum >> 16) + (sum & 0xffff);
     sum += (sum >> 16);
-    return sum;
+    return static_cast<uint16_t>(sum & 0x0000FFFF);
 }
 
 inline std::uint16_t cfold(const std::uint32_t sum)
 {
-    return ~fold(sum);
+    return static_cast<uint16_t>(~fold(sum));
 }
 
 inline std::uint32_t unfold(const std::uint16_t sum)

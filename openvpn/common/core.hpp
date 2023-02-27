@@ -56,7 +56,7 @@ inline int n_cores()
     long ret = ::sysconf(_SC_NPROCESSORS_ONLN);
     if (ret <= 0)
         ret = 1;
-    return ret;
+    return static_cast<int>(ret);
 #elif defined(OPENVPN_PLATFORM_WIN)
     SYSTEM_INFO si;
     ::GetSystemInfo(&si);

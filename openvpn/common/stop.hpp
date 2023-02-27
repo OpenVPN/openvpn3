@@ -27,7 +27,12 @@
 #include <utility>
 #include <mutex>
 
+#include <openvpn/common/exception.hpp>
+
+OPENVPN_EXCEPTION_INHERIT(std::range_error, openvpn_stop_limit);
+
 namespace openvpn {
+
 class Stop
 {
   public:
@@ -41,6 +46,7 @@ class Stop
               method(std::move(method_arg)),
               index(-1)
         {
+            constexpr int stop_index_limit = 1000;
             if (stop)
             {
                 std::lock_guard<std::recursive_mutex> lock(stop->mutex);
@@ -51,7 +57,10 @@ class Stop
                 }
                 else
                 {
-                    index = stop->scopes.size();
+                    if (index > stop_index_limit)
+                        throw openvpn_stop_limit("Stop count limit exceeded");
+
+                    index = static_cast<decltype(index)>(stop->scopes.size());
                     stop->scopes.push_back(this);
                 }
             }
@@ -104,10 +113,10 @@ class Stop
         return stop && stop->stop_called;
     }
 
-  private:
     Stop(const Stop &) = delete;
     Stop &operator=(const Stop &) = delete;
 
+  private:
     void prune()
     {
         while (scopes.size() && !scopes.back())

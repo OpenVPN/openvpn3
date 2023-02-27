@@ -28,11 +28,17 @@
 
 #include <zlib.h>
 
+#include <openvpn/common/clamp_typerange.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/buflist.hpp>
 
+
 namespace openvpn {
+
+using namespace numeric_util;
+
 namespace ZLib {
 OPENVPN_EXCEPTION(zlib_error);
 
@@ -74,7 +80,7 @@ inline BufferPtr compress_gzip(BufferPtr src,
         int status;
         ZStream zs;
         zs.s.next_in = src->data();
-        zs.s.avail_in = src->size();
+        zs.s.avail_in = numeric_cast<decltype(zs.s.avail_in)>(src->size());
         status = ::deflateInit2(&zs.s,
                                 level,
                                 Z_DEFLATED,
@@ -87,7 +93,7 @@ inline BufferPtr compress_gzip(BufferPtr src,
         BufferPtr b = new BufferAllocated(outcap + headroom + tailroom, 0);
         b->init_headroom(headroom);
         zs.s.next_out = b->data();
-        zs.s.avail_out = outcap;
+        zs.s.avail_out = numeric_cast<decltype(zs.s.avail_out)>(outcap);
         status = ::deflate(&zs.s, Z_FINISH);
         if (status != Z_STREAM_END)
             OPENVPN_THROW(zlib_error, "zlib deflate failed, error=" << status);
@@ -120,7 +126,7 @@ inline BufferPtr decompress_gzip(BufferPtr src,
         int status;
         ZStream zs;
         zs.s.next_in = src->data();
-        zs.s.avail_in = src->size();
+        zs.s.avail_in = numeric_cast<decltype(zs.s.avail_in)>(src->size());
         status = ::inflateInit2(&zs.s, GZIP_ENCODING + window_bits);
         if (status != Z_OK)
             OPENVPN_THROW(zlib_error, "zlib inflateinit2 failed, error=" << status);
@@ -136,7 +142,7 @@ inline BufferPtr decompress_gzip(BufferPtr src,
             b->init_headroom(hr);
             const size_t avail = b->remaining(tr);
             zs.s.next_out = b->data();
-            zs.s.avail_out = avail;
+            zs.s.avail_out = clamp_to_typerange<decltype(zs.s.avail_out)>(avail);
             status = ::inflate(&zs.s, Z_SYNC_FLUSH);
             if (status != Z_OK && status != Z_STREAM_END)
                 OPENVPN_THROW(zlib_error, "zlib inflate failed, error=" << status);

@@ -123,7 +123,9 @@ struct PacketID
     void write(Buffer &buf, const int form, const bool prepend) const
     {
         const id_t net_id = htonl(id);
-        const net_time_t net_time = htonl(time);
+        const net_time_t net_time = htonl(static_cast<uint32_t>(time & 0x00000000FFFFFFFF));
+        // TODO: [OVPN3-931] Make our code handle rollover of this value gracefully as possible
+        // since at the current time this will probably force a reconnect.
 
         if (prepend)
         {
@@ -260,6 +262,7 @@ class PacketIDReceiveType
 
     OPENVPN_SIMPLE_EXCEPTION(packet_id_not_initialized);
 
+    // TODO: [OVPN3-933] Consider RAII'ifying this code
     PacketIDReceiveType()
         : initialized_(false)
     {
@@ -350,7 +353,7 @@ class PacketIDReceiveType
             if (!mod)
                 return Error::SUCCESS;
             base = REPLAY_INDEX(-1);
-            history[base / 8] |= (1 << (base % 8));
+            history[base / 8] |= static_cast<uint8_t>(1 << (base % 8));
             if (extent < REPLAY_WINDOW_SIZE)
                 ++extent;
             id_high = pin.id;
@@ -364,14 +367,14 @@ class PacketIDReceiveType
             if (delta < REPLAY_WINDOW_SIZE)
             {
                 base = REPLAY_INDEX(-delta);
-                history[base / 8] |= (1 << (base % 8));
+                history[base / 8] |= static_cast<uint8_t>(1 << (base % 8));
                 extent += delta;
                 if (extent > REPLAY_WINDOW_SIZE)
                     extent = REPLAY_WINDOW_SIZE;
                 for (unsigned i = 1; i < delta; ++i)
                 {
                     const unsigned int newbase = REPLAY_INDEX(i);
-                    history[newbase / 8] &= ~(1 << (newbase % 8));
+                    history[newbase / 8] &= static_cast<uint8_t>(~(1 << (newbase % 8)));
                 }
             }
             else
@@ -395,7 +398,7 @@ class PacketIDReceiveType
                 {
                     const unsigned int ri = REPLAY_INDEX(delta);
                     std::uint8_t *p = &history[ri / 8];
-                    const std::uint8_t mask = (1 << (ri % 8));
+                    const std::uint8_t mask = static_cast<uint8_t>(1 << (ri % 8));
                     if (*p & mask)
                         return Error::PKTID_REPLAY;
                     if (!mod)

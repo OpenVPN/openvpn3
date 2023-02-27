@@ -41,7 +41,10 @@ class Base64
     class ConstUCharWrap
     {
       public:
-        ConstUCharWrap(const unsigned char *data, size_t size)
+        using value_type = unsigned char;
+
+      public:
+        ConstUCharWrap(const value_type *data, size_t size)
             : data_(data),
               size_(size)
         {
@@ -51,14 +54,14 @@ class Base64
         {
             return size_;
         }
-        unsigned char operator[](const size_t i) const
+        value_type operator[](const size_t i) const
         {
             return data_[i];
         }
 
 
       private:
-        const unsigned char *data_;
+        const value_type *data_;
         size_t size_;
     };
 
@@ -70,12 +73,15 @@ class Base64
     class UCharWrap
     {
       public:
-        UCharWrap(unsigned char *data, size_t size)
+        using value_type = unsigned char;
+
+      public:
+        UCharWrap(value_type *data, size_t size)
             : data(data), size(size), index(0)
         {
         }
 
-        void push_back(unsigned char c)
+        void push_back(value_type c)
         {
             if (index >= size)
                 throw base64_decode_out_of_bound_error();
@@ -83,7 +89,7 @@ class Base64
             data[index++] = c;
         }
 
-        unsigned char *data;
+        value_type *data;
         size_t size;
         size_t index;
     };
@@ -99,7 +105,7 @@ class Base64
         // build encoding map
         {
             unsigned int i;
-            unsigned int j = 65;
+            unsigned char j = 65;
             for (i = 0; i < 62; ++i)
             {
                 enc[i] = j++;
@@ -209,13 +215,14 @@ class Base64
         const char *endp = str.c_str() + str.length();
         for (const char *p = str.c_str(); p < endp; p += 4)
         {
+            using vvalue_t = typename V::value_type;
             unsigned int marker;
             const unsigned int val = token_decode(p, std::min(endp - p, ptrdiff_t(4)), marker);
-            dest.push_back((val >> 16) & 0xff);
+            dest.push_back(static_cast<vvalue_t>((val >> 16) & 0xff));
             if (marker < 2)
-                dest.push_back((val >> 8) & 0xff);
+                dest.push_back(static_cast<vvalue_t>((val >> 8) & 0xff));
             if (marker < 1)
-                dest.push_back(val & 0xff);
+                dest.push_back(static_cast<vvalue_t>(val & 0xff));
         }
     }
 

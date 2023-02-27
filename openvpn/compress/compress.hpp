@@ -117,7 +117,7 @@ class Compress : public RC<thread_unsafe_refcount>
 
     // Push a COMPRESS_V2 header byte (value).
     // Pass value == 0 to omit push.
-    void v2_push(Buffer &buf, int value)
+    void v2_push(Buffer &buf, unsigned char value)
     {
         unsigned char uc = buf[0];
         if (value == 0 && uc != COMPRESS_V2_ESCAPE)

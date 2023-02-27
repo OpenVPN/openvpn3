@@ -32,7 +32,7 @@ inline std::string headers_redact(const std::string &headers)
 #ifdef OPENVPN_HTTP_HEADERS_NO_REDACT
     return headers;
 #else
-    // C++14 only solution (not compatible with RHEL7/CentOS7)
+    // Alternative regex implementation:
     // static const std::regex re(R"((authorization[\s:=]+basic\s+)([^\s]+))", std::regex_constants::ECMAScript | std::regex_constants::icase);
     // return std::regex_replace(headers, re, "$1[REDACTED]");
     std::stringstream result;
@@ -41,20 +41,18 @@ inline std::string headers_redact(const std::string &headers)
 
     for (std::string line; std::getline(iss, line);)
     {
-        int authpos;
-        if ((authpos = line.find("Authorization: ")) != -1)
+        if (auto authpos = line.find("Authorization: "); authpos != std::string::npos)
         {
             auto auth = line.substr(authpos);
             auto argument = auth.substr(auth.find(' ') + 1);
             std::string authtype;
-            int arg1 = -1;
-            if ((arg1 = argument.find(' ')) != -1)
+            if (auto arg1 = argument.find(' '); arg1 != std::string::npos)
             {
                 authtype = argument.substr(0, arg1);
             }
             result << line.substr(0, authpos) << "Authorization: " << authtype << " [REDACTED]\r" << std::endl;
         }
-        else if ((authpos = line.find("authorization=basic ")) != -1)
+        else if ((authpos = line.find("authorization=basic ")) != std::string::npos)
         {
             result << line.substr(0, authpos) << "authorization=basic [REDACTED]\r" << std::endl;
         }

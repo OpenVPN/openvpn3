@@ -194,7 +194,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
             if (res_addr_list && index < res_addr_list->size())
             {
                 endpoint.address((*res_addr_list)[index]->addr.to_asio());
-                endpoint.port(parse_number_throw<unsigned int>(server_port, "remote_port"));
+                endpoint.port(parse_number_throw<unsigned short>(server_port, "remote_port"));
                 OPENVPN_LOG_REMOTELIST("*** RemoteList::Item endpoint GET[" << index << "] " << endpoint << ' ' << to_string());
                 return true;
             }

@@ -27,9 +27,13 @@
 #include <string>
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
 
+#include <openvpn/common/clamp_typerange.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
+
+using namespace openvpn::numeric_util;
 
 namespace openvpn {
 
@@ -47,6 +51,8 @@ namespace openvpn {
  */
 inline char render_hex_char(const int c, const bool caps = false)
 {
+    if (c < 0)
+        return '?';
     if (c < 10)
         return '0' + c;
     else if (c < 16)
@@ -54,7 +60,6 @@ inline char render_hex_char(const int c, const bool caps = false)
     else
         return '?';
 }
-
 
 /**
  *  Parses a character in the range {0..9,A-F,a-f} to an
@@ -284,7 +289,7 @@ inline std::string dump_hex(const unsigned char *data, size_t size)
             chars += '.';
     }
     if (i)
-        os << string::spaces(2 + (((i - 1) & mask) ^ mask) * 3) << chars << std::endl;
+        os << string::spaces(clamp_to_typerange<int>(2 + (((i - 1) & mask) ^ mask) * 3)) << chars << std::endl;
     return os.str();
 }
 
@@ -356,6 +361,7 @@ OPENVPN_SIMPLE_EXCEPTION(parse_hex_error);
 template <typename V>
 inline void parse_hex(V &dest, const std::string &str)
 {
+    using vvalue_t = typename V::value_type;
     const int len = int(str.length());
     int i;
     for (i = 0; i <= len - 2; i += 2)
@@ -364,7 +370,7 @@ inline void parse_hex(V &dest, const std::string &str)
         const int low = parse_hex_char(str[i + 1]);
         if (high == -1 || low == -1)
             throw parse_hex_error();
-        dest.push_back((high << 4) + low);
+        dest.push_back(static_cast<vvalue_t>((high << 4) + low));
     }
     if (i != len)
         throw parse_hex_error(); // straggler char

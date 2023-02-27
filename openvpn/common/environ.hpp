@@ -81,12 +81,12 @@ class Environ : public std::vector<std::string>
             if (pos != std::string::npos)
             {
                 if (name == s.substr(0, pos))
-                    return i;
+                    return static_cast<int>(i); // TODO: [OVPN3-928] Evaluate the safety of casting this down
             }
             else
             {
                 if (name == s)
-                    return i;
+                    return static_cast<int>(i); // Same as above
             }
         }
         return -1;

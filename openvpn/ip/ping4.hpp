@@ -25,6 +25,7 @@
 #include <cstring>
 #include <utility>
 
+#include <openvpn/common/clamp_typerange.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/buffer/buffer.hpp>
@@ -33,16 +34,17 @@
 #include <openvpn/ip/icmp4.hpp>
 #include <openvpn/ip/csum.hpp>
 
-namespace openvpn {
-namespace Ping4 {
+using openvpn::numeric_util::clamp_to_typerange;
+
+namespace openvpn::Ping4 {
 
 inline void generate_echo_request(Buffer &buf,
                                   const IPv4::Addr &src,
                                   const IPv4::Addr &dest,
                                   const void *extra_data,
                                   const size_t extra_data_size,
-                                  const unsigned int id,
-                                  const unsigned int seq_num,
+                                  const uint16_t id,
+                                  const uint16_t seq_num,
                                   const size_t total_size,
                                   std::string *log_info)
 {
@@ -51,13 +53,14 @@ inline void generate_echo_request(Buffer &buf,
     if (log_info)
         *log_info = "PING4 " + src.to_string() + " -> " + dest.to_string() + " id=" + std::to_string(id) + " seq_num=" + std::to_string(seq_num) + " data_size=" + std::to_string(data_size);
 
-    std::uint8_t *b = buf.write_alloc(sizeof(ICMPv4) + data_size);
+    const auto total_length = clamp_to_typerange<uint16_t>(sizeof(ICMPv4) + data_size);
+    std::uint8_t *b = buf.write_alloc(total_length);
     ICMPv4 *icmp = (ICMPv4 *)b;
 
     // IP Header
-    icmp->head.version_len = IPv4Header::ver_len(4, sizeof(IPv4Header));
+    icmp->head.version_len = IPv4Header::ver_len(4, static_cast<int>(sizeof(IPv4Header)));
     icmp->head.tos = 0;
-    icmp->head.tot_len = htons(sizeof(ICMPv4) + data_size);
+    icmp->head.tot_len = htons(total_length);
     icmp->head.id = 0;
     icmp->head.frag_off = 0;
     icmp->head.ttl = 64;
@@ -109,5 +112,4 @@ inline void generate_echo_reply(Buffer &buf,
     if (log_info)
         *log_info = "ECHO4_REPLY size=" + std::to_string(buf.size()) + ' ' + IPv4::Addr::from_uint32_net(icmp->head.saddr).to_string() + " -> " + IPv4::Addr::from_uint32_net(icmp->head.daddr).to_string();
 }
-} // namespace Ping4
-} // namespace openvpn
+} // namespace openvpn::Ping4

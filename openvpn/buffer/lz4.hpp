@@ -25,12 +25,15 @@
 
 #include <lz4.h>
 
+#include <openvpn/common/clamp_typerange.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/socktypes.hpp> // for ntohl/htonl
 #include <openvpn/buffer/buffer.hpp>
 
-namespace openvpn {
-namespace LZ4 {
+using openvpn::numeric_util::clamp_to_typerange;
+
+namespace openvpn::LZ4 {
+
 OPENVPN_EXCEPTION(lz4_error);
 
 inline BufferPtr compress(const ConstBuffer &src,
@@ -47,7 +50,7 @@ inline BufferPtr compress(const ConstBuffer &src,
 
     // as a hint to receiver, write the decompressed size
     {
-        const std::uint32_t size = htonl(src.size());
+        const std::uint32_t size = htonl(clamp_to_typerange<uint32_t>(src.size()));
         dest->write(&size, sizeof(size));
     }
 
@@ -96,5 +99,4 @@ inline BufferPtr decompress(const ConstBuffer &source,
     return dest;
 }
 
-} // namespace LZ4
-} // namespace openvpn
+} // namespace openvpn::LZ4

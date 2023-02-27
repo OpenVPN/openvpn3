@@ -30,6 +30,7 @@
 #include <utility>
 #include <initializer_list>
 
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/usergroup.hpp>
 
 #ifndef OPENVPN_PLATFORM_LINUX
@@ -147,8 +148,8 @@ class SetUserGroupRetainCap : public SetUserGroup
 
         void set_flag(const std::vector<cap_value_t> &caps)
         {
-            if (::cap_set_flag(capabilities, CAP_PERMITTED, caps.size(), caps.data(), CAP_SET)
-                || ::cap_set_flag(capabilities, CAP_EFFECTIVE, caps.size(), caps.data(), CAP_SET))
+            if (::cap_set_flag(capabilities, CAP_PERMITTED, numeric_cast<int>(caps.size()), caps.data(), CAP_SET)
+                || ::cap_set_flag(capabilities, CAP_EFFECTIVE, numeric_cast<int>(caps.size()), caps.data(), CAP_SET))
             {
                 const int eno = errno;
                 OPENVPN_THROW(user_group_err, "SetUserGroupRetainCap::Capabilities: cap_set_flag " << title << " fail: " << strerror_str(eno));

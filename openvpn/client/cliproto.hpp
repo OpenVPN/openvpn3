@@ -49,6 +49,7 @@
 #include <openvpn/common/count.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/common/clamp_typerange.hpp>
 #include <openvpn/ip/ptb.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/transport/client/transbase.hpp>
@@ -73,8 +74,9 @@
 #define OPENVPN_LOG_CLIPROTO(x)
 #endif
 
-namespace openvpn {
-namespace ClientProto {
+using openvpn::numeric_util::clamp_to_typerange;
+
+namespace openvpn::ClientProto {
 
 struct NotifyCallback
 {
@@ -416,10 +418,12 @@ class Session : ProtoContext,
                 const ProtoContext::Config &c = Base::conf();
                 // when calculating mss, we take IPv4 and TCP headers into account
                 // here we need to add it back since we check the whole IP packet size, not just TCP payload
-                size_t mss_no_tcp_ip_encap = (size_t)c.mss_fix + (20 + 20);
+                constexpr size_t MinTcpHeader = 20;
+                constexpr size_t MinIpHeader = 20;
+                size_t mss_no_tcp_ip_encap = c.mss_fix + (MinTcpHeader + MinIpHeader);
                 if (c.mss_fix > 0 && buf.size() > mss_no_tcp_ip_encap)
                 {
-                    Ptb::generate_icmp_ptb(buf, mss_no_tcp_ip_encap);
+                    Ptb::generate_icmp_ptb(buf, clamp_to_typerange<unsigned short>(mss_no_tcp_ip_encap));
                     tun->tun_send(buf);
                 }
                 else
@@ -852,7 +856,7 @@ class Session : ProtoContext,
                     {
                         try
                         {
-                            timeout = std::stoul(timeout_str);
+                            timeout = clamp_to_typerange<unsigned int>(std::stoul(timeout_str));
                             // Cap the timeout to end well before renegotiation starts
                             timeout = std::min(timeout, static_cast<decltype(timeout)>(conf().renegotiate.to_seconds() / 2));
                         }
@@ -1374,7 +1378,6 @@ class Session : ProtoContext,
     std::ofstream packet_log;
 #endif
 };
-} // namespace ClientProto
-} // namespace openvpn
+} // namespace openvpn::ClientProto
 
 #endif

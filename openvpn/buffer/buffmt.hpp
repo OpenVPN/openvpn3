@@ -68,7 +68,7 @@ class UnsignedDecimal
         T d = value_ / T(10);
         T r = value_ % T(10);
         value_ = d;
-        return '0' + r;
+        return static_cast<char>('0' + r);
     }
 
     bool is_zero() const

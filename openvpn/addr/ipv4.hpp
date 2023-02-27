@@ -274,7 +274,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
             const int bl = parse_hex_char(s[idx + 1]);
             if (bh == -1 || bl == -1)
                 throw ipv4_exception("parse hex error");
-            ret.u.bytes[Endian::e4(di--)] = (bh << 4) + bl;
+            ret.u.bytes[Endian::e4(di--)] = static_cast<unsigned char>((bh << 4) + bl);
         }
         return ret;
     }
@@ -289,7 +289,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
             const unsigned char b = u.bytes[Endian::e4rev(i)];
             if (b || firstnonzero || i == 3)
             {
-                const char bh = b >> 4;
+                const char bh = static_cast<decltype(bh)>(b >> 4);
                 if (bh || firstnonzero)
                     ret += render_hex_char(bh);
                 ret += render_hex_char(b & 0x0F);

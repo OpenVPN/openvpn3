@@ -236,8 +236,8 @@ inline BufferPtr string_to_utf16(const STRING &str)
     UTF8 *d = ret->data();
     for (const UTF16 *s = utf16_dest.get(); s < dest; ++s)
     {
-        *d++ = *s & 0xFF;
-        *d++ = (*s >> 8) & 0xFF;
+        *d++ = static_cast<UTF8>(*s & 0xFF);
+        *d++ = static_cast<UTF8>((*s >> 8) & 0xFF);
     }
     return ret;
 }
@@ -298,7 +298,7 @@ class UTF8Iterator
 
   private:
     const unsigned char *str;
-    unsigned int size;
+    size_t size;
 };
 } // namespace Unicode
 } // namespace openvpn

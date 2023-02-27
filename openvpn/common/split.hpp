@@ -32,9 +32,13 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/lex.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 
-namespace openvpn {
-namespace Split {
+
+using namespace openvpn::numeric_util;
+
+namespace openvpn::Split {
+
 enum
 {
     TRIM_LEADING_SPACES = (1 << 0),
@@ -122,7 +126,7 @@ inline void by_space_void(V &ret, const std::string &input, LIM *lim = nullptr)
             defined = true;
         if (lex.available())
         {
-            const char tc = lex.get();
+            const char tc = numeric_cast<char>(lex.get());
             if (!SPACE::is_space(tc) || lex.in_quote())
             {
                 defined = true;
@@ -154,7 +158,6 @@ inline V by_space(const std::string &input, LIM *lim = nullptr)
     by_space_void<V, LEX, SPACE, LIM>(ret, input, lim);
     return ret;
 }
-} // namespace Split
-} // namespace openvpn
+} // namespace openvpn::Split
 
 #endif // OPENVPN_COMMON_SPLIT_H

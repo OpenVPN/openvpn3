@@ -38,10 +38,13 @@
 #include <memory>
 
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/common/write.hpp>
 #include <openvpn/common/strerror.hpp>
 #include <openvpn/buffer/bufread.hpp>
+
+using openvpn::numeric_util::numeric_cast;
 
 namespace openvpn {
 class TempFile
@@ -54,13 +57,17 @@ class TempFile
         : fn(new char[fn_template.length() + 1]),
           del(fn_delete)
     {
+        constexpr char pattern[] = "XXXXXX";
+        constexpr size_t patternLen = sizeof(pattern) - 1;
         std::memcpy(fn.get(), fn_template.c_str(), fn_template.length() + 1);
-        const size_t pos = fn_template.find("XXXXXX");
+        const size_t pos = fn_template.rfind(pattern);
         if (pos != std::string::npos)
         {
-            const int suffixlen = fn_template.length() - pos - 6;
-            if (suffixlen > 0)
-                fd.reset(::mkstemps(fn.get(), suffixlen));
+            if (fn_template.length() > pos + patternLen)
+            {
+                const auto suffixlen = fn_template.length() - pos - patternLen;
+                fd.reset(::mkstemps(fn.get(), numeric_cast<int>(suffixlen)));
+            }
             else
                 fd.reset(::mkstemp(fn.get()));
             if (!fd.defined())

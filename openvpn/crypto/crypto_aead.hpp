@@ -28,6 +28,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/static_key.hpp>
@@ -41,8 +42,9 @@
 //            [4-byte
 //            IV head]
 
-namespace openvpn {
-namespace AEAD {
+using openvpn::numeric_util::numeric_cast;
+
+namespace openvpn::AEAD {
 
 OPENVPN_EXCEPTION(aead_error);
 
@@ -252,8 +254,16 @@ class Crypto : public CryptoDCInstance
 
     void init_cipher(StaticKey &&encrypt_key, StaticKey &&decrypt_key) override
     {
-        e.impl.init(libctx, cipher, encrypt_key.data(), encrypt_key.size(), CRYPTO_API::CipherContextAEAD::ENCRYPT);
-        d.impl.init(libctx, cipher, decrypt_key.data(), decrypt_key.size(), CRYPTO_API::CipherContextAEAD::DECRYPT);
+        e.impl.init(libctx,
+                    cipher,
+                    encrypt_key.data(),
+                    numeric_cast<unsigned int>(encrypt_key.size()),
+                    CRYPTO_API::CipherContextAEAD::ENCRYPT);
+        d.impl.init(libctx,
+                    cipher,
+                    decrypt_key.data(),
+                    numeric_cast<unsigned int>(decrypt_key.size()),
+                    CRYPTO_API::CipherContextAEAD::DECRYPT);
     }
 
     void init_hmac(StaticKey &&encrypt_key,
@@ -354,7 +364,6 @@ class CryptoContext : public CryptoDCContext
     SessionStats::Ptr stats;
     SSLLib::Ctx libctx;
 };
-} // namespace AEAD
-} // namespace openvpn
+} // namespace openvpn::AEAD
 
 #endif

@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 #include <cstring>
-#include <cctype>
+#include <locale>
 #include <algorithm>
 
 #include <openvpn/common/platform.hpp>
@@ -582,18 +582,20 @@ inline std::string trim_copy(const std::string &str)
 inline std::string to_upper_copy(const std::string &str)
 {
     std::string ret;
+    std::locale loc;
     ret.reserve(str.length());
     for (const auto &c : str)
-        ret.push_back(std::toupper(static_cast<unsigned char>(c)));
+        ret.push_back(std::toupper(c, loc));
     return ret;
 }
 
 inline std::string to_lower_copy(const std::string &str)
 {
     std::string ret;
+    std::locale loc;
     ret.reserve(str.length());
     for (const auto &c : str)
-        ret.push_back(std::tolower(static_cast<unsigned char>(c)));
+        ret.push_back(std::tolower(c, loc));
     return ret;
 }
 
