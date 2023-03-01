@@ -9,6 +9,7 @@ test_cpu_time
 test_helper
 test_log
 test_mbedtls_x509certinfo
+test_numeric_cast
 test_openssl_x509certinfo
 test_mbedtls_authcert
 test_openssl_authcert
