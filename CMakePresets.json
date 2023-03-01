@@ -45,6 +45,10 @@
                     "value": "ON",
                     "type": "BOOL"
                 },
+                "VCPKG_APPLOCAL_DEPS": {
+                    "value": "OFF",
+                    "type": "BOOL"
+                },
                 "VCPKG_MANIFEST_DIR": "${sourceDir}/deps/vcpkg_manifests/mingw"
             }
         },
