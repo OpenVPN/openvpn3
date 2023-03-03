@@ -176,34 +176,35 @@ class Crypto : public CryptoDCInstance
             // build nonce/IV/AD
             Nonce nonce(e.nonce, e.pid_send, now, op32);
 
-            if (CRYPTO_API::CipherContextAEAD::SUPPORTS_IN_PLACE_ENCRYPT)
+            // encrypt to work buf
+            frame->prepare(Frame::ENCRYPT_WORK, e.work);
+            if (e.work.max_size() < buf.size())
+                throw aead_error("encrypt work buffer too small");
+
+            // alloc auth tag in buffer
+            unsigned char *auth_tag = e.work.prepend_alloc(CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
+
+            unsigned char *auth_tag_end;
+
+            // prepare output buffer
+            unsigned char *work_data = e.work.write_alloc(buf.size());
+            if (e.impl.requires_authtag_at_end())
             {
-                unsigned char *data = buf.data();
-                const size_t size = buf.size();
-
-                // alloc auth tag in buffer
-                unsigned char *auth_tag = buf.prepend_alloc(CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
-
-                // encrypt in-place
-                e.impl.encrypt(data, data, size, nonce.iv(), auth_tag, nonce.ad(), nonce.ad_len());
+                auth_tag_end = e.work.write_alloc(CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
             }
-            else
+
+            // encrypt
+            e.impl.encrypt(buf.data(), work_data, buf.size(), nonce.iv(), auth_tag, nonce.ad(), nonce.ad_len());
+
+            if (e.impl.requires_authtag_at_end())
             {
-                // encrypt to work buf
-                frame->prepare(Frame::ENCRYPT_WORK, e.work);
-                if (e.work.max_size() < buf.size())
-                    throw aead_error("encrypt work buffer too small");
-
-                // alloc auth tag in buffer
-                unsigned char *auth_tag = e.work.prepend_alloc(CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
-
-                // prepare output buffer
-                unsigned char *work_data = e.work.write_alloc(buf.size());
-
-                // encrypt
-                e.impl.encrypt(buf.data(), work_data, buf.size(), nonce.iv(), auth_tag, nonce.ad(), nonce.ad_len());
-                buf.swap(e.work);
+                /* move the auth tag to the front */
+                std::memcpy(auth_tag, auth_tag_end, CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
+                /* Ignore the auth tag at the end */
+                e.work.inc_size(-CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
             }
+
+            buf.swap(e.work);
 
             // prepend additional data
             nonce.prepend_ad(buf);
@@ -227,13 +228,26 @@ class Crypto : public CryptoDCInstance
             if (d.work.max_size() < buf.size())
                 throw aead_error("decrypt work buffer too small");
 
+            if (e.impl.requires_authtag_at_end())
+            {
+                unsigned char *auth_tag_end = buf.write_alloc(CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
+                std::memcpy(auth_tag_end, auth_tag, CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
+            }
+
             // decrypt from buf -> work
             if (!d.impl.decrypt(buf.c_data(), d.work.data(), buf.size(), nonce.iv(), auth_tag, nonce.ad(), nonce.ad_len()))
             {
                 buf.reset_size();
                 return Error::DECRYPT_ERROR;
             }
-            d.work.set_size(buf.size());
+            if (e.impl.requires_authtag_at_end())
+            {
+                d.work.set_size(buf.size() - CRYPTO_API::CipherContextAEAD::AUTH_TAG_LEN);
+            }
+            else
+            {
+                d.work.set_size(buf.size());
+            }
 
             // verify packet ID
             if (!nonce.verify_packet_id(d.pid_recv, now))

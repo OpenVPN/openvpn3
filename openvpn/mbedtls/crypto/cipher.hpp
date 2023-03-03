@@ -51,6 +51,16 @@ class CipherContextCommon
         DECRYPT = MBEDTLS_DECRYPT
     };
 
+    /**
+     * This crypto library requires the auth tag to be at the end for
+     * encryption and decryption
+     * @return
+     */
+    bool constexpr requires_authtag_at_end()
+    {
+        return true;
+    }
+
   protected:
     static void check_mode(int mode)
     {

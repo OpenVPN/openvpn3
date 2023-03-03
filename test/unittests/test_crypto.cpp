@@ -25,6 +25,7 @@
 
 #include <openvpn/ssl/sslchoose.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
+#include <openvpn/crypto/crypto_aead.hpp>
 
 
 static uint8_t testkey[20] = {0x0b, 0x00};
@@ -82,4 +83,91 @@ TEST(crypto, hmac)
 
     /* Google test does not seem to have a good memory equality test macro */
     ASSERT_EQ(std::memcmp(hash, goodhash, sizeof(goodhash)), 0);
+}
+
+static openvpn::Frame::Context frame_ctx()
+{
+    const size_t payload = 2048;
+    const size_t headroom = 64;
+    const size_t tailroom = 64;
+    const size_t align_block = 16;
+    const unsigned int buffer_flags = 0;
+    return openvpn::Frame::Context{headroom, payload, tailroom, 0, align_block, buffer_flags};
+}
+
+
+TEST(crypto, dcaead)
+{
+
+    auto frameptr = openvpn::Frame::Ptr{new openvpn::Frame{frame_ctx()}};
+    auto statsptr = openvpn::SessionStats::Ptr{new openvpn::SessionStats{}};
+
+    openvpn::AEAD::Crypto<openvpn::SSLLib::CryptoAPI> cryptodc{nullptr, openvpn::CryptoAlgs::AES_256_GCM, frameptr, statsptr};
+
+    const char *plaintext = "The quick little fox jumps over the bureaucratic hurdles";
+
+    const uint8_t key[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', '0', '1', '2', '3', '4', '5', '6', '7', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'j', 'k', 'u', 'c', 'h', 'e', 'n', 'l'};
+
+    static_assert(sizeof(key) == 32, "Size of key should be 32 bytes");
+
+    /* copy the key a few times to ensure to have the size we need for
+     * Statickey but XOR it to not repeat it */
+    uint8_t bigkey[openvpn::OpenVPNStaticKey::KEY_SIZE]{};
+
+    for (int i = 0; i < openvpn::OpenVPNStaticKey::KEY_SIZE; i++)
+    {
+        bigkey[i] = key[i % sizeof(key)] ^ i;
+    }
+
+    openvpn::StaticKey const static_bigkey{bigkey, openvpn::OpenVPNStaticKey::KEY_SIZE};
+    openvpn::StaticKey static_key{key, sizeof(key)};
+
+    /* our API is a bit broken here. Statickey does not implement any move
+     * semantics but init_cipher requires rvalue-references */
+    cryptodc.init_cipher(std::move(static_key), std::move(static_key));
+    cryptodc.init_pid(openvpn::PacketID::SHORT_FORM,
+                      0,
+                      openvpn::PacketID::SHORT_FORM,
+                      "DATA",
+                      0,
+                      statsptr);
+
+    openvpn::BufferAllocated work{2048, 0};
+
+    /* reserve some headroom */
+    work.realign(128);
+
+    std::memcpy(work.write_alloc(std::strlen(plaintext)), plaintext, std::strlen(plaintext));
+    const unsigned char *data = work.data();
+    EXPECT_TRUE(std::memcmp(data, plaintext, std::strlen(plaintext)) == 0);
+
+    const openvpn::PacketID::time_t now = 42;
+
+    const unsigned char op32[]{7, 0, 0, 23};
+
+    bool const wrapwarn = cryptodc.encrypt(work, now, op32);
+    ASSERT_FALSE(wrapwarn);
+
+    /* 16 for tag, 4 for IV */
+    EXPECT_EQ(work.size(), std::strlen(plaintext) + 4 + 16);
+
+    const uint8_t expected_tag[16]{0xe0, 0xa7, 0x19, '*', 0x89, ']', 0x1d, 0x90, 0xc9, 0xd6, '\n', 0xee, '8', 'z', 0x01, 0xbd};
+    // Packet id/IV should 1
+    uint8_t packetid1[]{0, 0, 0, 1};
+    EXPECT_TRUE(std::memcmp(work.data(), packetid1, 4) == 0);
+
+    // Tag is in the front after packet id
+    EXPECT_TRUE(std::memcmp(work.data() + 4, expected_tag, 16) == 0);
+
+    // Check a few random bytes of the encrypted output
+    const uint8_t bytesat30[6]{0x52, 0x2e, 0xbf, 0xdf, 0x24, 0x1c};
+    EXPECT_TRUE(std::memcmp(work.data() + 30, bytesat30, 6) == 0);
+
+    /* Check now if decrypting also works */
+    auto ret = cryptodc.decrypt(work, now, op32);
+
+    EXPECT_EQ(ret, openvpn::Error::SUCCESS);
+    EXPECT_EQ(work.size(), std::strlen(plaintext));
+
+    EXPECT_TRUE(std::memcmp(work.data(), plaintext, std::strlen(plaintext)) == 0);
 }
