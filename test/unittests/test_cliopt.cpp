@@ -87,6 +87,12 @@ TEST(config, parse_unknown_option)
         "sorry, unsupported options present in configuration: UNKNOWN/UNSUPPORTED OPTIONS");
 }
 
+TEST(config, duplicate_option)
+{
+    /* A duplicate option should not cause our parser to fail */
+    load_client_config(minimalConfig + "cipher AES-192-CBC\ncipher AES-256-GCM\n");
+}
+
 TEST(config, parse_ignore_unkown)
 {
     /* Bikeshed colour is ignored should throw no error */
