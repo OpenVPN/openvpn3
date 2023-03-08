@@ -328,7 +328,7 @@ class Option
     void clear()
     {
         data.clear();
-        touched_ = false;
+        touched_ = touchedState::NOT_TOUCHED;
         warn_only_if_unknown_ = false;
         meta_ = false;
     }
@@ -387,12 +387,24 @@ class Option
             data.erase(data.begin(), data.begin() + n);
     }
 
-    // indicate that this option was processed
-    void touch() const
+    /**
+     * indicate that this option was processed
+     *
+     * @param lightly an option of the same name has been used
+     */
+    void touch(bool lightly = false) const
     {
         // Note that we violate constness here, which is done
         // because the touched bit is considered to be option metadata.
-        touched_ = true;
+        if (lightly)
+        {
+            if (touched_ != touchedState::TOUCHED)
+                touched_ = touchedState::OPTION_OF_SAME_NAME_TOUCHED;
+        }
+        else
+        {
+            touched_ = touchedState::TOUCHED;
+        }
     }
 
     void enableWarnOnly()
@@ -408,8 +420,16 @@ class Option
     // was this option processed?
     bool touched() const
     {
-        return touched_;
+        return touched_ == touchedState::TOUCHED;
     }
+
+    // was an option of the same name (or this option see \c touched)
+    // touched
+    bool touched_lightly() const
+    {
+        return touched_ == touchedState::OPTION_OF_SAME_NAME_TOUCHED;
+    }
+
 
     // refer to the option when constructing an error message
     std::string err_ref() const
@@ -484,7 +504,20 @@ class Option
         return false;
     }
 
-    volatile mutable bool touched_ = false;
+    /** Indicates that this option was used/consumed */
+    enum class touchedState
+    {
+        /* Option was never used */
+        NOT_TOUCHED,
+        /** Indicates that another option with the same name
+         * was considered. Ie, the option was not used because
+         * another option with same overrode it */
+        OPTION_OF_SAME_NAME_TOUCHED,
+        /** Option has be used */
+        TOUCHED
+    };
+    volatile mutable touchedState touched_ = touchedState::NOT_TOUCHED;
+
     bool warn_only_if_unknown_ = false;
     bool meta_ = false;
     std::vector<std::string> data;
@@ -1165,6 +1198,10 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             const size_t size = e->second.size();
             if (size)
             {
+                for (const auto &optidx : e->second)
+                {
+                    (*this)[optidx].touch(true);
+                }
                 const Option *ret = &((*this)[e->second[size - 1]]);
                 ret->touch();
                 return ret;

@@ -884,10 +884,13 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         { return !option.touched() && option.get(0, 0).rfind("management", 0) == 0; };
         showOptionsByFunction(opt, managmentOpt, "OpenVPN management interface is not supported by this client", true);
 
-        // If we still have options that are unaccounted for, we print them and throw an error
-        auto nonTouchedOptions = [](const Option &option)
-        { return !option.touched(); };
+        // If we still have options that are unaccounted for, we print them and throw an error or just warn about them
+        auto onlyLightlyTouchedOptions = [](const Option &option)
+        { return option.touched_lightly(); };
+        showOptionsByFunction(opt, onlyLightlyTouchedOptions, "Unused options, probably specified multiple times in the configuration file", false);
 
+        auto nonTouchedOptions = [](const Option &option)
+        { return !option.touched() && !option.touched_lightly(); };
         showOptionsByFunction(opt, nonTouchedOptions, OPENVPN_UNUSED_OPTIONS, true);
     }
 

@@ -67,9 +67,13 @@ class CipherContextAEAD
     enum
     {
         IV_LEN = 12,
-        AUTH_TAG_LEN = 16,
-        SUPPORTS_IN_PLACE_ENCRYPT = 0,
+        AUTH_TAG_LEN = 16
     };
+
+    bool constexpr requires_authtag_at_end()
+    {
+        return false;
+    }
 
     CipherContextAEAD() = default;
 
