@@ -266,12 +266,17 @@ struct Config
     int defaultKeyDirection = -1;
 
     // Override the minimum TLS version:
+    // Will not lower the minimum if already a higher minimum has been
+    // specified by tls-version-min in the profile
     //   disabled -- don't specify a minimum, and disable any minimum
     //               specified in profile
-    //   default or ""  -- use profile minimum
-    //   tls_1_0  -- use TLS 1.0 minimum (overrides profile)
-    //   tls_1_1  -- use TLS 1.1 minimum (overrides profile)
-    //   tls_1_2  -- use TLS 1.2 minimum (overrides profile)
+    //   default or ""  -- use profile minimum or system minimum
+    //   tls_1_0  -- use TLS 1.0 minimum
+    //   tls_1_1  -- use TLS 1.1 minimum
+    //   tls_1_2     -- use TLS 1.2 minimum
+    //   tls_1_3     -- use TLS 1.3 minimum
+
+
     std::string tlsVersionMinOverride;
 
     // Override or default the tls-cert-profile setting:

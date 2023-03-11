@@ -29,30 +29,35 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 
-namespace openvpn {
-namespace TLSVersion {
-enum Type
+namespace openvpn::TLSVersion {
+
+enum class Type
 {
-    UNDEF = 0,
+    UNDEF,
     V1_0,
     V1_1,
     V1_2,
     V1_3
 };
 
+inline const bool operator<(const Type &A, const Type &B)
+{
+    return static_cast<int>(A) < static_cast<int>(B);
+}
+
 inline const std::string to_string(const Type version)
 {
     switch (version)
     {
-    case UNDEF:
+    case Type::UNDEF:
         return "UNDEF";
-    case V1_0:
+    case Type::V1_0:
         return "V1_0";
-    case V1_1:
+    case Type::V1_1:
         return "V1_1";
-    case V1_2:
+    case Type::V1_2:
         return "V1_2";
-    case V1_3:
+    case Type::V1_3:
         return "V1_3";
     default:
         return "???";
@@ -63,14 +68,14 @@ inline Type parse_tls_version_min(const std::string &ver,
                                   const bool or_highest,
                                   const Type max_version)
 {
-    if (ver == "1.0" && V1_0 <= max_version)
-        return V1_0;
-    else if (ver == "1.1" && V1_1 <= max_version)
-        return V1_1;
-    else if (ver == "1.2" && V1_2 <= max_version)
-        return V1_2;
-    else if (ver == "1.3" && V1_3 <= max_version)
-        return V1_2;
+    if (ver == "1.0" && Type::V1_0 <= max_version)
+        return Type::V1_0;
+    else if (ver == "1.1" && Type::V1_1 <= max_version)
+        return Type::V1_1;
+    else if (ver == "1.2" && Type::V1_2 <= max_version)
+        return Type::V1_2;
+    else if (ver == "1.3" && Type::V1_3 <= max_version)
+        return Type::V1_3;
     else if (or_highest)
         return max_version;
     else
@@ -88,28 +93,32 @@ inline Type parse_tls_version_min(const OptionList &opt,
         const bool or_highest = (o->get_optional(2, 16) == "or-highest");
         return parse_tls_version_min(ver, or_highest, max_version);
     }
-    return UNDEF;
+    return Type::UNDEF;
 }
 
 inline void apply_override(Type &tvm, const std::string &override)
 {
-    // const Type orig = tvm;
+    const Type orig = tvm;
+    Type newtvm = Type::UNDEF;
+
     if (override.empty() || override == "default")
-        ;
+        newtvm = tvm;
     else if (override == "disabled")
-        tvm = UNDEF;
+        tvm = Type::UNDEF;
     else if (override == "tls_1_0")
-        tvm = V1_0;
+        newtvm = Type::V1_0;
     else if (override == "tls_1_1")
-        tvm = V1_1;
+        newtvm = Type::V1_1;
     else if (override == "tls_1_2")
-        tvm = V1_2;
+        newtvm = Type::V1_2;
     else if (override == "tls_1_3")
-        tvm = V1_3;
+        newtvm = Type::V1_3;
     else
         throw option_error("tls-version-min: unrecognized override string");
 
+    if (newtvm > orig || newtvm == Type::UNDEF)
+        tvm = newtvm;
+
     // OPENVPN_LOG("*** TLS-version-min before=" << to_string(orig) << " override=" << override << " after=" << to_string(tvm)); // fixme
 }
-} // namespace TLSVersion
-} // namespace openvpn
+} // namespace openvpn::TLSVersion

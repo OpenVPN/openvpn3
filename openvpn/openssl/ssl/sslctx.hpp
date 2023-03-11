@@ -622,13 +622,13 @@ class OpenSSLContext : public SSLFactoryAPI
             // Assume that presence of SSL_OP_NO_TLSvX macro indicates
             // that local OpenSSL library implements TLSvX.
 #if defined(SSL_OP_NO_TLSv1_3)
-            return TLSVersion::V1_3;
+            return TLSVersion::Type::V1_3;
 #elif defined(SSL_OP_NO_TLSv1_2)
-            return TLSVersion::V1_2;
+            return TLSVersion::Type::V1_2;
 #elif defined(SSL_OP_NO_TLSv1_1)
-            return TLSVersion::V1_1;
+            return TLSVersion::Type::V1_1;
 #else
-            return TLSVersion::V1_0;
+            return TLSVersion::Type::V1_0;
 #endif
         }
 
@@ -649,9 +649,9 @@ class OpenSSLContext : public SSLFactoryAPI
         std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
         std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
         std::string tls_remote;
-        VerifyX509Name verify_x509_name;                    // --verify-x509-name feature
-        PeerFingerprints peer_fingerprints;                 // --peer-fingerprint
-        TLSVersion::Type tls_version_min{TLSVersion::V1_2}; // minimum TLS version that we will negotiate
+        VerifyX509Name verify_x509_name;                          // --verify-x509-name feature
+        PeerFingerprints peer_fingerprints;                       // --peer-fingerprint
+        TLSVersion::Type tls_version_min{TLSVersion::Type::V1_2}; // minimum TLS version that we will negotiate
         TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
         std::string tls_cipher_list;
         std::string tls_ciphersuite_list;
@@ -1276,7 +1276,7 @@ class OpenSSLContext : public SSLFactoryAPI
                 }
             }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-            if (config->tls_version_min > TLSVersion::V1_0)
+            if (config->tls_version_min > TLSVersion::Type::V1_0)
             {
                 SSL_CTX_set_min_proto_version(ctx, TLSVersion::toTLSVersion(config->tls_version_min));
             }

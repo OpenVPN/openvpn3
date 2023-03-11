@@ -206,7 +206,7 @@ class MbedTLSContext : public SSLFactoryAPI
               ssl_debug_level(0),
               flags(0),
               ns_cert_type(NSCert::NONE),
-              tls_version_min(TLSVersion::V1_2),
+              tls_version_min(TLSVersion::Type::V1_2),
               tls_cert_profile(TLSCertProfile::UNDEF),
               local_cert_enabled(true)
         {
@@ -561,11 +561,11 @@ class MbedTLSContext : public SSLFactoryAPI
             // parse tls-version-min option
             {
 #if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
-                const TLSVersion::Type maxver = TLSVersion::V1_2;
+                const TLSVersion::Type maxver = TLSVersion::Type::V1_2;
 #elif defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_2)
-                const TLSVersion::Type maxver = TLSVersion::V1_1;
+                const TLSVersion::Type maxver = TLSVersion::Type::V1_1;
 #else
-                const TLSVersion::Type maxver = TLSVersion::V1_0;
+                const TLSVersion::Type maxver = TLSVersion::Type::V1_0;
 #endif
                 tls_version_min = TLSVersion::parse_tls_version_min(opt, relay_prefix, maxver);
             }
@@ -818,19 +818,19 @@ class MbedTLSContext : public SSLFactoryAPI
                 int minor;
                 switch (c.tls_version_min)
                 {
-                case TLSVersion::V1_0:
+                case TLSVersion::Type::V1_0:
                 default:
                     major = MBEDTLS_SSL_MAJOR_VERSION_3;
                     minor = MBEDTLS_SSL_MINOR_VERSION_1;
                     break;
 #if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_2)
-                case TLSVersion::V1_1:
+                case TLSVersion::Type::V1_1:
                     major = MBEDTLS_SSL_MAJOR_VERSION_3;
                     minor = MBEDTLS_SSL_MINOR_VERSION_2;
                     break;
 #endif
 #if defined(MBEDTLS_SSL_MAJOR_VERSION_3) && defined(MBEDTLS_SSL_MINOR_VERSION_3)
-                case TLSVersion::V1_2:
+                case TLSVersion::Type::V1_2:
                     major = MBEDTLS_SSL_MAJOR_VERSION_3;
                     minor = MBEDTLS_SSL_MINOR_VERSION_3;
                     break;
