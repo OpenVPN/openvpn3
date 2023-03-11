@@ -40,7 +40,7 @@ enum class Type
     V1_3
 };
 
-inline const bool operator<(const Type &A, const Type &B)
+inline bool operator<(const Type &A, const Type &B)
 {
     return static_cast<int>(A) < static_cast<int>(B);
 }

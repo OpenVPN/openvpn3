@@ -102,7 +102,7 @@ class HTTPContext
         ssl->set_mode(Mode(Mode::CLIENT));
         ssl->load_ca(api_ca(), false);
         ssl->set_local_cert_enabled(false);
-        ssl->set_tls_version_min(TLSVersion::V1_2);
+        ssl->set_tls_version_min(TLSVersion::Type::V1_2);
         ssl->set_remote_cert_tls(KUParse::TLS_WEB_SERVER);
         ssl->set_flags(ssl_flags);
         ssl->set_frame(frame_);
