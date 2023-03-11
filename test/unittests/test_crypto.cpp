@@ -120,11 +120,12 @@ TEST(crypto, dcaead)
     }
 
     openvpn::StaticKey const static_bigkey{bigkey, openvpn::OpenVPNStaticKey::KEY_SIZE};
-    openvpn::StaticKey static_key{key, sizeof(key)};
+    openvpn::StaticKey static_en_key{key, sizeof(key)};
+    openvpn::StaticKey static_de_key = static_en_key;
 
-    /* our API is a bit broken here. Statickey does not implement any move
-     * semantics but init_cipher requires rvalue-references */
-    cryptodc.init_cipher(std::move(static_key), std::move(static_key));
+    /* StaticKey implements all implicit copy and move operations as it
+       explicitly defines none of them nor does it explicitly define a dtor */
+    cryptodc.init_cipher(std::move(static_en_key), std::move(static_de_key));
     cryptodc.init_pid(openvpn::PacketID::SHORT_FORM,
                       0,
                       openvpn::PacketID::SHORT_FORM,
