@@ -38,7 +38,7 @@ class Input
     Input &operator=(const Input &) = delete;
 
   public:
-    Input()
+    Input(bool password)
         : std_input(Handle::undefined()),
           console_mode_save(0)
     {
@@ -50,12 +50,15 @@ class Input
         if (Handle::defined(in) && ::GetConsoleMode(in, &mode))
         {
             // running on a console
-            const DWORD newmode = mode
-                                  & ~(ENABLE_WINDOW_INPUT
-                                      | ENABLE_PROCESSED_INPUT
-                                      | ENABLE_LINE_INPUT
-                                      | ENABLE_ECHO_INPUT
-                                      | ENABLE_MOUSE_INPUT);
+            DWORD newmode = mode
+                            & ~(ENABLE_WINDOW_INPUT
+                                | ENABLE_ECHO_INPUT
+                                | ENABLE_MOUSE_INPUT);
+
+            if (!password)
+            {
+                newmode &= ~(ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT);
+            }
 
             if (newmode == mode || ::SetConsoleMode(in, newmode))
             {
@@ -80,6 +83,16 @@ class Input
                 return n > 0;
         }
         return false;
+    }
+
+    std::string get_password(const std::string &prompt)
+    {
+        std::cout << prompt;
+        std::string s;
+        std::getline(std::cin, s);
+        std::cout << std::endl;
+
+        return s;
     }
 
     unsigned int get()

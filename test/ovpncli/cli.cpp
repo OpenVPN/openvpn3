@@ -763,7 +763,7 @@ static void start_thread(Client &client)
     // Set Windows title bar
     const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
     Win::Console::Title title(ClientAPI::OpenVPNClientHelper::platform() + "     " + title_text);
-    Win::Console::Input console;
+    Win::Console::Input console{false};
 
     // start connect thread
     std::unique_ptr<std::thread> thread;
