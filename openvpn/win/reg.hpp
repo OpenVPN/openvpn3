@@ -54,7 +54,7 @@ class RegKey
     }
     bool defined() const
     {
-        return key != nullptr;
+        return key != nullptr && key != INVALID_HANDLE_VALUE;
     }
     HKEY *ref()
     {
