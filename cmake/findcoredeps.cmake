@@ -80,19 +80,23 @@ function(add_core_dependencies target)
         endif ()
     else ()
         list(APPEND CMAKE_PREFIX_PATH
-                ${DEP_DIR}/mbedtls/mbedtls-${PLAT}
-                ${DEP_DIR}/lz4/lz4-${PLAT}
                 ${DEP_DIR}/asio/asio
+                ${DEP_DIR}/lz4/lz4-${PLAT}
+                ${DEP_DIR}/mbedtls/mbedtls-${PLAT}
                 )
         list(APPEND CMAKE_LIBRARY_PATH
                 ${DEP_DIR}/mbedtls/mbedtls-${PLAT}/library
                 )
     endif ()
 
-    find_package(lz4 REQUIRED)
+    # asio should go first since some of our code requires
+    # a patched version. So we want to prefer its include
+    # directories.
     find_package(asio REQUIRED)
-    target_link_libraries(${target} lz4::lz4)
     target_link_libraries(${target} asio::asio)
+
+    find_package(lz4 REQUIRED)
+    target_link_libraries(${target} lz4::lz4)
 
     add_ssl_library(${target})
 
