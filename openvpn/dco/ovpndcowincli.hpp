@@ -264,6 +264,19 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
         tun_setup_->confirm();
 
         config->transport.remote_list->get_endpoint(endpoint_);
+
+        if (config->transport.socket_protect)
+        {
+            /* socket descriptor is not used on dco-win */
+            if (!config->transport.socket_protect->socket_protect(-1, server_endpoint_addr()))
+            {
+                config->transport.stats->error(Error::SOCKET_PROTECT_ERROR);
+                stop();
+                transport_parent->transport_error(Error::UNDEF, "socket_protect error (dco-win)");
+                return;
+            }
+        }
+
         add_peer_([self = Ptr(this)]()
                   {
       if (!self->halt) {
