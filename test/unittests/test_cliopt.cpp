@@ -35,19 +35,14 @@ std::string minimalConfig = "remote wooden.box\n"
                             + "<key>\n" + dummysecp256key
                             + "</key>\n";
 
-void load_client_config(const std::string &config_content)
+void load_client_config(const std::string &config_content, bool dco = false)
 {
     OptionList options;
     ClientOptions::Config config;
+    config.clientconf.dco = true;
     config.proto_context_options.reset(new ProtoContextOptions());
 
     ClientAPI::OpenVPNClientHelper client_helper;
-
-    ClientAPI::Config api_config;
-    api_config.content = config_content;
-    auto eval = client_helper.eval_config(api_config);
-    config.dco_compatible = eval.dcoCompatible;
-
     ParseClientConfig conf = ParseClientConfig::parse(config_content);
 
     auto parsed_config = ParseClientConfig::parse(config_content, nullptr, options);
@@ -132,7 +127,7 @@ TEST(config, duplicate_options_sets)
     /* Do the whole dance to get a ClientOption object to access the list */
     OptionList options;
     ClientOptions::Config config;
-    config.dco = false;
+    config.clientconf.dco = false;
     config.proto_context_options = new ProtoContextOptions();
 
     ClientAPI::OpenVPNClientHelper client_helper;
@@ -170,8 +165,22 @@ TEST(config, duplicate_options_sets)
 
 TEST(config, dco_compatibility)
 {
-    for (auto &optname : ClientAPI::OpenVPNClientHelper::dco_incompatible_opts)
+    for (auto optname : ClientOptions::dco_incompatible_opts)
     {
+        ClientAPI::Config api_config;
+
+        /* If we just use http-proxy without argument, we will bail out for
+         * missing parameter instead */
+        if (optname == "http-proxy")
+            optname = "proto tcp\nhttp-proxy 1.1.1.1 8080";
+
+        api_config.dco = true;
+        api_config.content = minimalConfig + optname;
+        ClientAPI::OpenVPNClientHelper client_helper;
+        auto eval = client_helper.eval_config(api_config);
+
+        EXPECT_FALSE(eval.dcoCompatible);
+
         OVPN_EXPECT_THROW(
             load_client_config(minimalConfig + optname),
             option_error,

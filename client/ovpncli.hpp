@@ -25,9 +25,9 @@
 // and TunBuilderBase.
 
 #include <string>
-#include <vector>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/extern/fw.hpp>
@@ -171,9 +171,9 @@ struct KeyValue
     std::string value;
 };
 
-// OpenVPN config-file/profile
-// (client writes)
-struct Config
+/* Settings in this struct do not need to be parsed, so we can share them
+ * between the parsed and unparsed client settings */
+struct ConfigCommon
 {
     // OpenVPN profile as a string
     std::string content;
@@ -210,20 +210,6 @@ struct Config
     // option of profile
     std::string portOverride;
 
-    // Force a given transport protocol
-    // Should be tcp, udp, or adaptive.
-    std::string protoOverride;
-
-    // Force transport protocol IP version
-    // Should be 4 for IPv4 or 6 for IPv6.
-    int protoVersionOverride = 0;
-
-    // allowUnusedAddrFamilies preference
-    //  no      -- disable IPv6/IPv4, so tunnel will be IPv4 or IPv6 only if not dualstack
-    //  yes     -- Allow continuing using native IPv4/IPv6 connectivity for single IP family tunnel
-    //  default (or empty string) -- leave decision to server/config
-    std::string allowUnusedAddrFamilies;
-
     // Connection timeout in seconds, or 0 to retry indefinitely
     int connTimeout = 0;
 
@@ -244,21 +230,11 @@ struct Config
     // and retry the connection after a pause.
     bool retryOnAuthFailed = false;
 
-    // An ID used for get-certificate and RSA signing callbacks
-    // for External PKI profiles.
-    std::string externalPkiAlias;
-
     // If true, don't send client cert/key to peer.
     bool disableClientCert = false;
 
     // SSL library debug level
     int sslDebugLevel = 0;
-
-    // Compression mode, one of:
-    // yes -- allow compression on both uplink and downlink
-    // asym -- allow compression on downlink only (i.e. server -> client)
-    // no (default if empty) -- support compression stubs only
-    std::string compressionMode;
 
     // private key password (optional)
     std::string privateKeyPassword;
@@ -301,9 +277,6 @@ struct Config
     // Overrides the list of TLS 1.3 ciphersuites like the tls-ciphersuites
     // option
     std::string tlsCiphersuitesList;
-
-    // Pass custom key/value pairs to OpenVPN server.
-    std::vector<KeyValue> peerInfo;
 
     // HTTP Proxy parameters (optional)
     std::string proxyHost;                // hostname or IP address of proxy
@@ -369,6 +342,39 @@ struct Config
     // with all tun builder properties pushed by server.
     // Currently only implemented on Linux.
     bool generate_tun_builder_capture_event = false;
+};
+
+// OpenVPN config-file/profile. Includes a few settings that we do not just
+// copy but also parse
+// (client writes)
+struct Config : public ConfigCommon
+{
+    // Force a given transport protocol
+    // Should be tcp, udp, or adaptive.
+    std::string protoOverride;
+
+    // Force transport protocol IP version
+    // Should be 4 for IPv4 or 6 for IPv6.
+    int protoVersionOverride = 0;
+
+    // allowUnusedAddrFamilies preference
+    //  no      -- disable IPv6/IPv4, so tunnel will be IPv4 or IPv6 only if not dualstack
+    //  yes     -- Allow continuing using native IPv4/IPv6 connectivity for single IP family tunnel
+    //  default (or empty string) -- leave decision to server/config
+    std::string allowUnusedAddrFamilies;
+
+    // Compression mode, one of:
+    // yes -- allow compression on both uplink and downlink
+    // asym -- allow compression on downlink only (i.e. server -> client)
+    // no (default if empty) -- support compression stubs only
+    std::string compressionMode;
+
+    // An ID used for get-certificate and RSA signing callbacks
+    // for External PKI profiles.
+    std::string externalPkiAlias;
+
+    // Pass custom key/value pairs to OpenVPN server.
+    std::vector<KeyValue> peerInfo;
 };
 
 // used to communicate VPN events such as connect, disconnect, etc.
@@ -567,12 +573,6 @@ class OpenVPNClientHelper
     // Returns core copyright
     static std::string copyright();
 
-    // If those options are present, dco cannot be used
-    inline static std::unordered_set<std::string> dco_incompatible_opts = {
-        "http-proxy",
-        "compress",
-        "comp-lzo"};
-
   private:
     static MergeConfig build_merge_config(const ProfileMerge &);
 
@@ -585,11 +585,6 @@ class OpenVPNClientHelper
      * included in the same compilation unit which breaks in the swig wrapped
      * class, so we use a plain pointer and new/delete in constructor/destructor */
     InitProcess::Init *init;
-
-    /* Checks if there are dco-incompatible options in options list or config has
-     * dco-incompatible settings. Sets dcoCompatible flag and dcoIncompatibilityReason
-     * string property (if applicable) in EvalConfig object */
-    static void check_dco_compatibility(const Config &, EvalConfig &, OptionList &);
 };
 
 // Top-level OpenVPN client class.

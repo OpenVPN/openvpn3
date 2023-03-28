@@ -29,6 +29,7 @@
 #define OPENVPN_CLIENT_CLIOPT_H
 
 #include <string>
+#include <tuple>
 #include <unordered_set>
 
 #include <openvpn/error/excode.hpp>
@@ -111,6 +112,42 @@
 
 namespace openvpn {
 
+struct ClientConfigParsed : public ClientAPI::ConfigCommon
+{
+
+    /**
+     * Imports the settings from the UI set ClientAPI::Config
+     * into this class.
+     */
+    void import_client_settings(const ClientAPI::Config &config)
+    {
+        /* explicitly allow slicing to only copy the settings that
+         * are in the common base class \c ConfigCommon */
+        ClientAPI::ConfigCommon::operator=(config);
+
+        if (!config.protoOverride.empty())
+            proto_override = Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
+
+        if (config.protoVersionOverride == 4)
+            proto_version_override = IP::Addr::Version::V4;
+        else if (config.protoVersionOverride == 6)
+            proto_version_override = IP::Addr::Version::V6;
+
+        if (!config.allowUnusedAddrFamilies.empty())
+            allowUnusedAddrFamilies = TriStateSetting::parse(config.allowUnusedAddrFamilies);
+    }
+
+    IP::Addr::Version proto_version_override = IP::Addr::Version::UNSPEC;
+
+    Protocol proto_override;
+
+    TriStateSetting allowUnusedAddrFamilies;
+
+    /* from eval config */
+    std::string external_pki_alias;
+};
+
+
 class ClientOptions : public RC<thread_unsafe_refcount>
 {
   public:
@@ -120,45 +157,25 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
     struct Config
     {
-        std::string gui_version;
-        std::string sso_methods;
-        std::string server_override;
-        std::string port_override;
-        std::string hw_addr_override;
-        std::string platform_version;
-        Protocol proto_override;
-        IP::Addr::Version proto_version_override = IP::Addr::Version::UNSPEC;
-        TriStateSetting allowUnusedAddrFamilies;
+        /* Options set by the client application.
+         * This class only uses a subset. For simplicity
+         * we keep all client settings here instead of creating a new
+         * subset class of configuration options */
+        ClientConfigParsed clientconf;
+
         int conn_timeout = 0;
         SessionStats::Ptr cli_stats;
         ClientEvent::Queue::Ptr cli_events;
         ProtoContextOptions::Ptr proto_context_options;
         HTTPProxyTransport::Options::Ptr http_proxy_options;
         bool alt_proxy = false;
-        bool dco = true;
-        bool dco_compatible = false;
-        bool echo = false;
-        bool info = false;
-        bool tun_persist = false;
-        bool wintun = false;
-        bool allow_local_dns_resolvers = false;
-        bool google_dns_fallback = false;
         bool synchronous_dns_lookup = false;
         bool generate_tun_builder_capture_event = false;
-        std::string private_key_password;
         bool disable_client_cert = false;
-        int ssl_debug_level = 0;
         int default_key_direction = -1;
         bool autologin_sessions = false;
-        bool retry_on_auth_failed = false;
         bool allow_local_lan_access = false;
-        bool preferred_security = true;
-        std::string tls_version_min_override;
-        std::string tls_cert_profile_override;
-        std::string tls_cipher_list;
-        std::string tls_ciphersuite_list;
-        bool enable_legacy_algorithms = false;
-        bool enable_nonpreferred_dcalgs = false;
+
         PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_PLATFORM_ANDROID
         bool enable_route_emulation = true;
@@ -189,30 +206,21 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
     ClientOptions(const OptionList &opt, // only needs to remain in scope for duration of constructor call
                   const Config &config)
-        : server_addr_float(false),
+        : clientconf(config.clientconf),
+          server_addr_float(false),
           socket_protect(config.socket_protect),
           reconnect_notify(config.reconnect_notify),
           cli_stats(config.cli_stats),
           cli_events(config.cli_events),
           server_poll_timeout_(10),
-          server_override(config.server_override),
-          port_override(config.port_override),
-          proto_override(config.proto_override),
-          conn_timeout_(config.conn_timeout),
           tcp_queue_limit(64),
           proto_context_options(config.proto_context_options),
           http_proxy_options(config.http_proxy_options),
-#ifdef OPENVPN_GREMLIN
-          gremlin_config(config.gremlin_config),
-#endif
-          echo(config.echo),
-          info(config.info),
           autologin(false),
           autologin_sessions(false),
           creds_locked(false),
           asio_work_always_on_(false),
-          synchronous_dns_lookup(false),
-          retry_on_auth_failed_(config.retry_on_auth_failed)
+          synchronous_dns_lookup(false)
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
           ,
           extern_transport_factory(config.extern_transport_factory)
@@ -252,17 +260,11 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cp_relay = proto_config(opt, config, pcc, true); // may be null
 
         CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(),
-                                                             !config.enable_nonpreferred_dcalgs,
-                                                             config.enable_legacy_algorithms);
-
-        // throw an exception of dco is requested but config/options are dco-incompatible
-        if (config.dco && !config.dco_compatible)
-        {
-            throw option_error("dco_compatibility: config/options are not compatible with dco");
-        }
+                                                             !config.clientconf.enableNonPreferredDCAlgorithms,
+                                                             config.clientconf.enableLegacyAlgorithms);
 
 #if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
-        if (config.dco)
+        if (config.clientconf.dco)
 #if defined(USE_TUN_BUILDER)
             dco = DCOTransport::new_controller(config.builder);
 #else
@@ -295,15 +297,15 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         // If running in tun_persist mode, we need to do basic DNS caching so that
         // we can avoid emitting DNS requests while the tunnel is blocked during
         // reconnections.
-        remote_list->set_enable_cache(config.tun_persist);
+        remote_list->set_enable_cache(config.clientconf.tunPersist);
 
         // process server/port/family overrides
-        remote_list->set_server_override(config.server_override);
-        remote_list->set_port_override(config.port_override);
-        remote_list->set_proto_version_override(config.proto_version_override);
+        remote_list->set_server_override(config.clientconf.serverOverride);
+        remote_list->set_port_override(config.clientconf.portOverride);
+        remote_list->set_proto_version_override(config.clientconf.proto_version_override);
 
         // process protocol override, should be called after set_enable_cache
-        remote_list->handle_proto_override(config.proto_override,
+        remote_list->handle_proto_override(config.clientconf.proto_override,
                                            http_proxy_options || (alt_proxy && alt_proxy->requires_tcp()));
 
         // process remote-random
@@ -317,15 +319,23 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (alt_proxy)
         {
             remote_list->set_enable_cache(false); // remote server addresses will be resolved by proxy
-            alt_proxy->set_enable_cache(config.tun_persist);
+            alt_proxy->set_enable_cache(config.clientconf.tunPersist);
         }
         else if (http_proxy_options)
         {
             remote_list->set_enable_cache(false); // remote server addresses will be resolved by proxy
-            http_proxy_options->proxy_server_set_enable_cache(config.tun_persist);
+            http_proxy_options->proxy_server_set_enable_cache(config.clientconf.tunPersist);
         }
 
         check_for_incompatible_options(opt);
+
+        // throw an exception if dco is requested but config/options are dco-incompatible
+        bool dco_compatible = false;
+        std::tie(dco_compatible, std::ignore) = check_dco_compatibility(clientconf, opt);
+        if (config.clientconf.dco && !dco_compatible)
+        {
+            throw option_error("dco_compatibility: config/options are not compatible with dco");
+        }
 
 #ifdef OPENVPN_PLATFORM_UWP
         // workaround for OVPN3-62 Busy loop in win_event.hpp
@@ -356,12 +366,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             if (tun_mtu)
                 tunconf.tun_prop.mtu = tun_mtu;
             tunconf.tun_prop.mtu_max = tun_mtu_max;
-            tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
+            tunconf.tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
             tunconf.tun_prop.remote_list = remote_list;
             tunconf.stop = config.stop;
-            tunconf.allow_local_dns_resolvers = config.allow_local_dns_resolvers;
+            tunconf.allow_local_dns_resolvers = config.clientconf.allowLocalDnsResolvers;
 #if defined(OPENVPN_PLATFORM_WIN)
-            if (config.tun_persist)
+            if (config.clientconf.tunPersist)
                 tunconf.tun_persist.reset(new TunWin::DcoTunPersist(true, TunWrapObjRetain::NO_RETAIN_NO_REPLACE, nullptr));
 #endif
             tun_factory = dco->new_tun_factory(tunconf, opt);
@@ -373,14 +383,14 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 ExternalTun::Config tunconf;
                 tunconf.tun_prop.layer = layer;
                 tunconf.tun_prop.session_name = session_name;
-                tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
+                tunconf.tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
                 if (tun_mtu)
                     tunconf.tun_prop.mtu = tun_mtu;
                 tunconf.tun_prop.mtu_max = tun_mtu_max;
                 tunconf.frame = frame;
                 tunconf.stats = cli_stats;
                 tunconf.tun_prop.remote_list = remote_list;
-                tunconf.tun_persist = config.tun_persist;
+                tunconf.tun_persist = config.clientconf.tunPersist;
                 tunconf.stop = config.stop;
                 tun_factory.reset(config.extern_tun_factory->new_tun_factory(tunconf, opt));
                 if (!tun_factory)
@@ -391,7 +401,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 TunBuilderClient::ClientConfig::Ptr tunconf = TunBuilderClient::ClientConfig::new_obj();
                 tunconf->builder = config.builder;
                 tunconf->tun_prop.session_name = session_name;
-                tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+                tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
                 tunconf->tun_prop.allow_local_lan_access = config.allow_local_lan_access;
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
@@ -403,7 +413,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 #if defined(OPENVPN_PLATFORM_IPHONE)
                 tunconf->retain_sd = true;
                 tunconf->tun_prefix = true;
-                if (config.tun_persist)
+                if (config.clientconf.tunPersist)
                     tunconf->tun_prop.remote_bypass = true;
 #endif
 #if defined(OPENVPN_PLATFORM_ANDROID)
@@ -421,7 +431,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 #if defined(OPENVPN_PLATFORM_MAC)
                 tunconf->tun_prefix = true;
 #endif
-                if (config.tun_persist)
+                if (config.clientconf.tunPersist)
                     tunconf->tun_persist.reset(new TunBuilderClient::TunPersist(true, tunconf->retain_sd ? TunWrapObjRetain::RETAIN : TunWrapObjRetain::NO_RETAIN, config.builder));
                 tun_factory = tunconf;
             }
@@ -433,12 +443,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
-                tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+                tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
                 tunconf->generate_tun_builder_capture_event = config.generate_tun_builder_capture_event;
                 tunconf->tun_prop.remote_list = remote_list;
                 tunconf->frame = frame;
                 tunconf->stats = cli_stats;
-                if (config.tun_persist)
+                if (config.clientconf.tunPersist)
                     tunconf->tun_persist.reset(new TunLinux::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
                 tunconf->load(opt);
                 tun_factory = tunconf;
@@ -448,14 +458,14 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 TunMac::ClientConfig::Ptr tunconf = TunMac::ClientConfig::new_obj();
                 tunconf->tun_prop.layer = layer;
                 tunconf->tun_prop.session_name = session_name;
-                tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+                tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
                 tunconf->frame = frame;
                 tunconf->stats = cli_stats;
                 tunconf->stop = config.stop;
-                if (config.tun_persist)
+                if (config.clientconf.tunPersist)
                 {
                     tunconf->tun_persist.reset(new TunMac::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
 #ifndef OPENVPN_COMMAND_AGENT
@@ -475,16 +485,16 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 TunWin::ClientConfig::Ptr tunconf = TunWin::ClientConfig::new_obj();
                 tunconf->tun_prop.layer = layer;
                 tunconf->tun_prop.session_name = session_name;
-                tunconf->tun_prop.google_dns_fallback = config.google_dns_fallback;
+                tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
                 if (tun_mtu)
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
                 tunconf->frame = frame;
                 tunconf->stats = cli_stats;
                 tunconf->stop = config.stop;
-                tunconf->tun_type = config.wintun ? TunWin::Wintun : TunWin::TapWindows6;
-                tunconf->allow_local_dns_resolvers = config.allow_local_dns_resolvers;
-                if (config.tun_persist)
+                tunconf->tun_type = config.clientconf.wintun ? TunWin::Wintun : TunWin::TapWindows6;
+                tunconf->allow_local_dns_resolvers = config.clientconf.allowLocalDnsResolvers;
+                if (config.clientconf.tunPersist)
                 {
                     tunconf->tun_persist.reset(new TunWin::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
 #ifndef OPENVPN_COMMAND_AGENT
@@ -571,11 +581,11 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 const unsigned int n6 = push_base->singleton.extend(opt, "block-ipv6");
                 const unsigned int n4 = push_base->singleton.extend(opt, "block-ipv4");
 
-                if (!n6 && config.allowUnusedAddrFamilies() == TriStateSetting::No)
+                if (!n6 && config.clientconf.allowUnusedAddrFamilies() == TriStateSetting::No)
                 {
                     push_base->singleton.emplace_back("block-ipv6");
                 }
-                if (!n4 && config.allowUnusedAddrFamilies() == TriStateSetting::No)
+                if (!n4 && config.clientconf.allowUnusedAddrFamilies() == TriStateSetting::No)
                 {
                     push_base->singleton.emplace_back("block-ipv4");
                 }
@@ -583,6 +593,58 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         }
 
         handle_unused_options(opt);
+    }
+
+    // If those options are present, dco cannot be used
+    inline static std::unordered_set<std::string> dco_incompatible_opts = {
+        "http-proxy",
+        "compress",
+        "comp-lzo"};
+
+
+    /** Checks if there are dco-incompatible options in options list or config has
+     * dco-incompatible settings. Return dcoCompatible flag and dcoIncompatibilityReason
+     * string property (if applicable)  */
+    static std::tuple<bool, std::string> check_dco_compatibility(const ClientAPI::ConfigCommon &config, const OptionList &opt)
+    {
+#if defined(ENABLE_KOVPN)
+        // only care about dco/dco-win
+        return std::make_tuple(true, "");
+#endif
+
+        std::vector<std::string> reasons;
+
+        for (auto &optname : dco_incompatible_opts)
+        {
+            if (opt.exists(optname))
+            {
+                reasons.push_back("option " + optname + " is not compatible with dco");
+            }
+        }
+
+        if (config.enableLegacyAlgorithms)
+        {
+            reasons.emplace_back("legacy algorithms are not compatible with dco");
+        }
+
+        if (config.enableNonPreferredDCAlgorithms)
+        {
+            reasons.emplace_back("non-preferred data channel algorithms are not compatible with dco");
+        }
+
+        if (!config.proxyHost.empty())
+        {
+            reasons.emplace_back("proxyHost config setting is not compatible with dco");
+        }
+
+        if (reasons.empty())
+        {
+            return std::make_tuple(true, "");
+        }
+        else
+        {
+            return std::make_tuple(false, string::join(reasons, "\n"));
+        }
     }
 
     void check_for_incompatible_options(const OptionList &opt)
@@ -974,25 +1036,25 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         }
 
         // UI version
-        if (!config.gui_version.empty())
-            pi->emplace_back("IV_GUI_VER", config.gui_version);
+        if (!config.clientconf.guiVersion.empty())
+            pi->emplace_back("IV_GUI_VER", config.clientconf.guiVersion);
 
         // Supported SSO methods
-        if (!config.sso_methods.empty())
-            pi->emplace_back("IV_SSO", config.sso_methods);
+        if (!config.clientconf.ssoMethods.empty())
+            pi->emplace_back("IV_SSO", config.clientconf.ssoMethods);
 
         // MAC address
         if (pcc.pushPeerInfo())
         {
             std::string hwaddr = get_hwaddr();
-            if (!config.hw_addr_override.empty())
-                pi->emplace_back("IV_HWADDR", config.hw_addr_override);
+            if (!config.clientconf.hwAddrOverride.empty())
+                pi->emplace_back("IV_HWADDR", config.clientconf.hwAddrOverride);
             else if (!hwaddr.empty())
                 pi->emplace_back("IV_HWADDR", hwaddr);
             pi->emplace_back("IV_SSL", get_ssl_library_version());
 
-            if (!config.platform_version.empty())
-                pi->emplace_back("IV_PLAT_VER", config.platform_version);
+            if (!config.clientconf.platformVersion.empty())
+                pi->emplace_back("IV_PLAT_VER", config.clientconf.platformVersion);
         }
         return pi;
     }
@@ -1023,9 +1085,16 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
     bool retry_on_auth_failed() const
     {
-        return retry_on_auth_failed_;
+        return clientconf.retryOnAuthFailed;
     }
 
+    /**
+     * Return a client configuration to be used as configuration for the
+     * control layer.
+     *
+     * Will basically copy a subset of this configuration object to a new
+     * smaller configuration object
+     */
     Client::Config::Ptr client_config(const bool relay_mode)
     {
         Client::Config::Ptr cli_config = new Client::Config;
@@ -1043,8 +1112,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cli_config->creds = creds;
         cli_config->pushed_options_filter = pushed_options_filter;
         cli_config->tcp_queue_limit = tcp_queue_limit;
-        cli_config->echo = echo;
-        cli_config->info = info;
+        cli_config->echo = clientconf.echo;
+        cli_config->info = clientconf.info;
         cli_config->autologin_sessions = autologin_sessions;
         return cli_config;
     }
@@ -1104,7 +1173,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
     int conn_timeout() const
     {
-        return conn_timeout_;
+        return clientconf.connTimeout;
     }
 
     bool asio_work_always_on() const
@@ -1169,17 +1238,17 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cc->set_external_pki_callback(config.external_pki);
         cc->set_frame(frame);
         cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
-        cc->set_debug_level(config.ssl_debug_level);
+        cc->set_debug_level(config.clientconf.sslDebugLevel);
         cc->set_rng(rng);
         cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
         /* load depends on private key password and legacy algorithms */
-        cc->enable_legacy_algorithms(config.enable_legacy_algorithms);
-        cc->set_private_key_password(config.private_key_password);
+        cc->enable_legacy_algorithms(config.clientconf.enableLegacyAlgorithms);
+        cc->set_private_key_password(config.clientconf.privateKeyPassword);
         cc->load(opt, lflags);
-        cc->set_tls_version_min_override(config.tls_version_min_override);
-        cc->set_tls_cert_profile_override(config.tls_cert_profile_override);
-        cc->set_tls_cipher_list(config.tls_cipher_list);
-        cc->set_tls_ciphersuite_list(config.tls_ciphersuite_list);
+        cc->set_tls_version_min_override(config.clientconf.tlsVersionMinOverride);
+        cc->set_tls_cert_profile_override(config.clientconf.tlsCertProfileOverride);
+        cc->set_tls_cipher_list(config.clientconf.tlsCipherList);
+        cc->set_tls_ciphersuite_list(config.clientconf.tlsCiphersuitesList);
         if (!cc->get_mode().is_client())
             throw option_error("only client configuration supported");
 
@@ -1316,6 +1385,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 #endif // OPENVPN_EXTERNAL_TRANSPORT_FACTORY
         return remote_list->current_server_host();
     }
+    // General client options.
+    ClientConfigParsed clientconf;
 
     Time now_; // current time
     RandomAPI::Ptr rng;
@@ -1334,10 +1405,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     ClientEvent::Queue::Ptr cli_events;
     ClientCreds::Ptr creds;
     unsigned int server_poll_timeout_;
-    std::string server_override;
-    std::string port_override;
-    Protocol proto_override;
-    int conn_timeout_;
     unsigned int tcp_queue_limit;
     ProtoContextOptions::Ptr proto_context_options;
     HTTPProxyTransport::Options::Ptr http_proxy_options;
@@ -1345,14 +1412,11 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     Gremlin::Config::Ptr gremlin_config;
 #endif
     std::string userlocked_username;
-    bool echo;
-    bool info;
     bool autologin;
     bool autologin_sessions;
     bool creds_locked;
     bool asio_work_always_on_;
     bool synchronous_dns_lookup;
-    bool retry_on_auth_failed_;
     PushOptionsBase::Ptr push_base;
     OptionList::FilterBase::Ptr pushed_options_filter;
     ClientLifeCycle::Ptr client_lifecycle;
