@@ -368,7 +368,7 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
                         addr.to_v4().to_bytes().data(),
                         sizeof(peer.Remote.Addr4.sin_addr));
             peer.Local.Addr4.sin_family = peer.Remote.Addr4.sin_family;
-            peer.Local.Addr4.sin_port = peer.Remote.Addr4.sin_port;
+            peer.Local.Addr4.sin_port = 0;
         }
         else
         {
@@ -378,7 +378,7 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
                         addr.to_v6().to_bytes().data(),
                         sizeof(peer.Remote.Addr6.sin6_addr));
             peer.Local.Addr6.sin6_family = peer.Remote.Addr6.sin6_family;
-            peer.Local.Addr6.sin6_port = peer.Remote.Addr6.sin6_port;
+            peer.Local.Addr6.sin6_port = 0;
         }
 
         openvpn_io::windows::overlapped_ptr ov{io_context,
