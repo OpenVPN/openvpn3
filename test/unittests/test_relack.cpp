@@ -24,13 +24,14 @@
 
 using namespace openvpn;
 using namespace openvpn::reliable;
+namespace orel = openvpn::reliable;
 
 TEST(relack, test_size_1)
 {
     constexpr size_t ACK_CNT = 11;
 
     auto ra = ReliableAck{};
-    for (auto i = id_t(1); i <= ACK_CNT; ++i)
+    for (auto i = orel::id_t(1); i <= ACK_CNT; ++i)
         ra.push_back(i);
     EXPECT_EQ(ra.size(), ACK_CNT);
     EXPECT_EQ(ra.resend_size(), size_t{0});
@@ -41,7 +42,7 @@ TEST(relack, test_prepend_1)
     constexpr size_t ACK_CNT = 11;
 
     auto ra = ReliableAck{};
-    for (auto i = id_t{1}; i <= ACK_CNT; ++i)
+    for (auto i = orel::id_t{1}; i <= ACK_CNT; ++i)
         ra.push_back(i);
     EXPECT_EQ(ra.size(), ACK_CNT);
 
@@ -84,11 +85,11 @@ TEST(relack, test_prepend_1)
 
 struct RelSendMck
 {
-    void ack(id_t id)
+    void ack(orel::id_t id)
     {
         mAcks.push_back(id);
     };
-    std::vector<id_t> mAcks;
+    std::vector<orel::id_t> mAcks;
 };
 
 TEST(relack, test_ack_1)
@@ -96,7 +97,7 @@ TEST(relack, test_ack_1)
     constexpr size_t ACK_CNT = 9;
 
     auto ra = ReliableAck{};
-    for (auto i = id_t{1}; i <= ACK_CNT; ++i)
+    for (auto i = orel::id_t{1}; i <= ACK_CNT; ++i)
         ra.push_back(i);
     EXPECT_EQ(ra.size(), ACK_CNT);
 
@@ -123,7 +124,7 @@ TEST(relack, test_ack_2)
     constexpr size_t ACK_CNT = 9;
 
     auto ra = ReliableAck{};
-    for (auto i = id_t(1); i <= ACK_CNT; ++i)
+    for (auto i = orel::id_t(1); i <= ACK_CNT; ++i)
         ra.push_back(i);
     EXPECT_EQ(ra.size(), ACK_CNT);
 
