@@ -72,6 +72,8 @@
 #include <openvpn/time/timestr.hpp>
 #include <openvpn/ssl/peerinfo.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
+#include <openvpn/common/argv.hpp>
+#include <openvpn/common/process.hpp>
 
 #ifdef OPENVPN_REMOTE_OVERRIDE
 #include <openvpn/common/process.hpp>

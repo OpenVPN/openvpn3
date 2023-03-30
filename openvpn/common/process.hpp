@@ -21,8 +21,8 @@
 
 // General-purpose classes for instantiating a posix process with arguments.
 
-#ifndef OPENVPN_COMMON_PROCESS_H
-#define OPENVPN_COMMON_PROCESS_H
+#pragma once
+#ifndef _WIN32
 
 #include <stdlib.h>    // exit
 #include <unistd.h>    // fork, execve
@@ -197,4 +197,4 @@ struct Command : public Action
 
 } // namespace openvpn
 
-#endif // OPENVPN_COMMON_PROCESS_H
+#endif
