@@ -128,28 +128,37 @@ class SessionStats : public RC<thread_safe_refcount>
 
         struct Data
         {
-            count_t bytes_in;
-            count_t bytes_out;
+            count_t transport_bytes_in = 0;
+            count_t transport_bytes_out = 0;
+            count_t tun_bytes_in = 0;
+            count_t tun_bytes_out = 0;
 
-            Data()
-                : bytes_in(0),
-                  bytes_out(0)
+            Data() = default;
+
+            Data(count_t transport_bytes_in_arg, count_t transport_bytes_out_arg)
+                : transport_bytes_in(transport_bytes_in_arg),
+                  transport_bytes_out(transport_bytes_out_arg)
             {
             }
 
-            Data(count_t bytes_in_arg, count_t bytes_out_arg)
-                : bytes_in(bytes_in_arg),
-                  bytes_out(bytes_out_arg)
+            Data(count_t transport_bytes_in_arg, count_t transport_bytes_out_arg, count_t tun_bytes_in_arg, count_t tun_bytes_out_arg)
+                : transport_bytes_in(transport_bytes_in_arg),
+                  transport_bytes_out(transport_bytes_out_arg),
+                  tun_bytes_in(tun_bytes_in_arg), tun_bytes_out(tun_bytes_out_arg)
             {
             }
 
             Data operator-(const Data &rhs) const
             {
                 Data data;
-                if (bytes_in > rhs.bytes_in)
-                    data.bytes_in = bytes_in - rhs.bytes_in;
-                if (bytes_out > rhs.bytes_out)
-                    data.bytes_out = bytes_out - rhs.bytes_out;
+                if (transport_bytes_in > rhs.transport_bytes_in)
+                    data.transport_bytes_in = transport_bytes_in - rhs.transport_bytes_in;
+                if (transport_bytes_out > rhs.transport_bytes_out)
+                    data.transport_bytes_out = transport_bytes_out - rhs.transport_bytes_out;
+                if (tun_bytes_in > rhs.tun_bytes_in)
+                    data.tun_bytes_in = tun_bytes_in - rhs.tun_bytes_in;
+                if (tun_bytes_out > rhs.tun_bytes_out)
+                    data.tun_bytes_out = tun_bytes_out - rhs.tun_bytes_out;
                 return data;
             }
         };
@@ -167,8 +176,10 @@ class SessionStats : public RC<thread_safe_refcount>
         if (dco_)
         {
             const DCOTransportSource::Data data = dco_->dco_transport_stats_delta();
-            stats_[BYTES_IN] += data.bytes_in;
-            stats_[BYTES_OUT] += data.bytes_out;
+            stats_[BYTES_IN] += data.transport_bytes_in;
+            stats_[BYTES_OUT] += data.transport_bytes_out;
+            stats_[TUN_BYTES_IN] += data.tun_bytes_in;
+            stats_[TUN_BYTES_OUT] += data.tun_bytes_out;
         }
     }
 

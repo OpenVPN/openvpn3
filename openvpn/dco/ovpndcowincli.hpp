@@ -21,7 +21,9 @@
 
 #pragma once
 
-class OvpnDcoWinClient : public Client, public KoRekey::Receiver
+class OvpnDcoWinClient : public Client,
+                         public KoRekey::Receiver,
+                         public SessionStats::DCOTransportSource
 {
     friend class ClientConfig;
     typedef RCPtr<OvpnDcoWinClient> Ptr;
@@ -264,6 +266,19 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
         tun_setup_->confirm();
 
         config->transport.remote_list->get_endpoint(endpoint_);
+
+        if (config->transport.socket_protect)
+        {
+            /* socket descriptor is not used on dco-win */
+            if (!config->transport.socket_protect->socket_protect(-1, server_endpoint_addr()))
+            {
+                config->transport.stats->error(Error::SOCKET_PROTECT_ERROR);
+                stop();
+                transport_parent->transport_error(Error::UNDEF, "socket_protect error (dco-win)");
+                return;
+            }
+        }
+
         add_peer_([self = Ptr(this)]()
                   {
       if (!self->halt) {
@@ -272,6 +287,8 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
 	if (!self->halt)
 	  self->queue_read_();
       } });
+
+        config->transport.stats->dco_configure(this);
     }
 
     void queue_read_()
@@ -319,6 +336,8 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
     {
         if (!halt)
         {
+            get_stats_();
+
             halt = true;
             async_resolve_cancel();
 
@@ -355,7 +374,7 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
                         addr.to_v4().to_bytes().data(),
                         sizeof(peer.Remote.Addr4.sin_addr));
             peer.Local.Addr4.sin_family = peer.Remote.Addr4.sin_family;
-            peer.Local.Addr4.sin_port = peer.Remote.Addr4.sin_port;
+            peer.Local.Addr4.sin_port = 0;
         }
         else
         {
@@ -365,7 +384,7 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
                         addr.to_v6().to_bytes().data(),
                         sizeof(peer.Remote.Addr6.sin6_addr));
             peer.Local.Addr6.sin6_family = peer.Remote.Addr6.sin6_family;
-            peer.Local.Addr6.sin6_port = peer.Remote.Addr6.sin6_port;
+            peer.Local.Addr6.sin6_port = 0;
         }
 
         openvpn_io::windows::overlapped_ptr ov{io_context,
@@ -386,7 +405,7 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
             }
                                                }};
 
-        const DWORD ec = dco_ioctl_(OVPN_IOCTL_NEW_PEER, &peer, sizeof(peer), &ov);
+        const DWORD ec = dco_ioctl_(OVPN_IOCTL_NEW_PEER, &peer, sizeof(peer), NULL, 0, &ov);
         if (ec == ERROR_SUCCESS)
             complete();
         else if (ec != ERROR_IO_PENDING)
@@ -450,9 +469,34 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
         dco_ioctl_(OVPN_IOCTL_SWAP_KEYS);
     }
 
+    void get_stats_()
+    {
+        const SessionStats::DCOTransportSource::Data old_stats = last_stats;
+
+        try
+        {
+            OVPN_STATS stats{0};
+            DWORD res = dco_ioctl_(OVPN_IOCTL_GET_STATS, 0, 0, &stats, sizeof(stats));
+            if (res == ERROR_SUCCESS)
+            {
+                last_stats = SessionStats::DCOTransportSource::Data(stats.TransportBytesReceived, stats.TransportBytesSent, stats.TunBytesReceived, stats.TunBytesSent);
+            }
+        }
+        catch (const ErrorCode &e)
+        {
+            // no device handle - ignore
+            if (e.code() != Error::TUN_SETUP_FAILED)
+                throw e;
+        }
+
+        last_delta = last_stats - old_stats;
+    }
+
     DWORD dco_ioctl_(DWORD code,
-                     LPVOID data = NULL,
-                     DWORD size = 0,
+                     LPVOID in_buf = NULL,
+                     DWORD in_buf_size = 0,
+                     LPVOID out_buf = NULL,
+                     DWORD out_buf_size = 0,
                      openvpn_io::windows::overlapped_ptr *ov = nullptr)
     {
         static const std::map<const DWORD, const char *> code_str{
@@ -470,7 +514,7 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
 
         HANDLE th(handle->native_handle());
         LPOVERLAPPED ov_ = (ov ? ov->get() : NULL);
-        if (!DeviceIoControl(th, code, data, size, NULL, 0, NULL, ov_))
+        if (!DeviceIoControl(th, code, in_buf, in_buf_size, out_buf, out_buf_size, NULL, ov_))
         {
             const DWORD error_code = GetLastError();
             if (ov)
@@ -502,10 +546,27 @@ class OvpnDcoWinClient : public Client, public KoRekey::Receiver
         return nullptr;
     }
 
+    virtual SessionStats::DCOTransportSource::Data dco_transport_stats_delta() override
+    {
+        if (halt)
+        {
+            /* retrieve the last stats update and erase it to avoid race conditions with other queries */
+            SessionStats::DCOTransportSource::Data delta = last_delta;
+            last_delta = SessionStats::DCOTransportSource::Data();
+            return delta;
+        }
+
+        get_stats_();
+        return last_delta;
+    }
+
     TunWin::SetupBase::Ptr tun_setup_;
     BufferAllocated buf_;
     Protocol proto_;
     openvpn_io::ip::udp::endpoint endpoint_;
 
     TunWin::DcoTunPersist::Ptr tun_persist;
+
+    SessionStats::DCOTransportSource::Data last_stats;
+    SessionStats::DCOTransportSource::Data last_delta;
 };

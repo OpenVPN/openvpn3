@@ -102,7 +102,7 @@ typedef void (XKEY_PRIVKEY_FREE_fn)(void *handle);
  */
 EVP_PKEY *
 xkey_load_generic_key(OSSL_LIB_CTX *libctx, void *handle, EVP_PKEY *pubkey,
-					  XKEY_EXTERNAL_SIGN_fn sign_op, XKEY_PRIVKEY_FREE_fn free_op);
+					  XKEY_EXTERNAL_SIGN_fn *sign_op, XKEY_PRIVKEY_FREE_fn *free_op);
 
 /**
  * Add PKCS1 DigestInfo to tbs and return the result in *enc.

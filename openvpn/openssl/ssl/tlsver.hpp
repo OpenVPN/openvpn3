@@ -33,16 +33,16 @@ inline int toTLSVersion(const Type version)
 
     switch (version)
     {
-    case UNDEF:
+    case Type::UNDEF:
     default:
         return 0;
-    case V1_0:
+    case Type::V1_0:
         return TLS1_VERSION;
-    case V1_1:
+    case Type::V1_1:
         return TLS1_1_VERSION;
-    case V1_2:
+    case Type::V1_2:
         return TLS1_2_VERSION;
-    case V1_3:
+    case Type::V1_3:
 #ifdef TLS1_3_VERSION
         return TLS1_3_VERSION;
 #else

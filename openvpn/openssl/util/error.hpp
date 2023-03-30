@@ -166,6 +166,12 @@ class OpenSSLException : public ExceptionCode
                 set_code(Error::SSL_CA_KEY_TOO_SMALL, true);
                 break;
 #endif // OpenSSL >= 1.1.0
+#if defined(SSL_R_LEGACY_SIGALG_DISALLOWED_OR_UNSUPPORTED)
+                /* This error code has been added in OpenSSL 3.0.8 */
+            case SSL_R_LEGACY_SIGALG_DISALLOWED_OR_UNSUPPORTED:
+                set_code(Error::TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED, true);
+                break;
+#endif
             case SSL_R_DH_KEY_TOO_SMALL:
                 set_code(Error::SSL_DH_KEY_TOO_SMALL, true);
                 break;

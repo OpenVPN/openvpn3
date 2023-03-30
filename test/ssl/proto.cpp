@@ -154,10 +154,10 @@
 #ifndef PROTO_CIPHER
 #ifdef PROTOv2
 #define PROTO_CIPHER "AES-256-GCM"
-#define TLS_VER_MIN TLSVersion::V1_2
+#define TLS_VER_MIN TLSVersion::Type::V1_2
 #else
 #define PROTO_CIPHER "AES-128-CBC"
-#define TLS_VER_MIN TLSVersion::UNDEF
+#define TLS_VER_MIN TLSVersion::Type::UNDEF
 #endif
 #endif
 

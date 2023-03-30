@@ -622,13 +622,13 @@ class OpenSSLContext : public SSLFactoryAPI
             // Assume that presence of SSL_OP_NO_TLSvX macro indicates
             // that local OpenSSL library implements TLSvX.
 #if defined(SSL_OP_NO_TLSv1_3)
-            return TLSVersion::V1_3;
+            return TLSVersion::Type::V1_3;
 #elif defined(SSL_OP_NO_TLSv1_2)
-            return TLSVersion::V1_2;
+            return TLSVersion::Type::V1_2;
 #elif defined(SSL_OP_NO_TLSv1_1)
-            return TLSVersion::V1_1;
+            return TLSVersion::Type::V1_1;
 #else
-            return TLSVersion::V1_0;
+            return TLSVersion::Type::V1_0;
 #endif
         }
 
@@ -649,9 +649,9 @@ class OpenSSLContext : public SSLFactoryAPI
         std::vector<unsigned int> ku; // if defined, peer cert X509 key usage must match one of these values
         std::string eku;              // if defined, peer cert X509 extended key usage must match this OID/string
         std::string tls_remote;
-        VerifyX509Name verify_x509_name;                    // --verify-x509-name feature
-        PeerFingerprints peer_fingerprints;                 // --peer-fingerprint
-        TLSVersion::Type tls_version_min{TLSVersion::V1_2}; // minimum TLS version that we will negotiate
+        VerifyX509Name verify_x509_name;                          // --verify-x509-name feature
+        PeerFingerprints peer_fingerprints;                       // --peer-fingerprint
+        TLSVersion::Type tls_version_min{TLSVersion::Type::V1_2}; // minimum TLS version that we will negotiate
         TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
         std::string tls_cipher_list;
         std::string tls_ciphersuite_list;
@@ -1276,23 +1276,23 @@ class OpenSSLContext : public SSLFactoryAPI
                 }
             }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-            if (config->tls_version_min > TLSVersion::V1_0)
+            if (config->tls_version_min > TLSVersion::Type::V1_0)
             {
                 SSL_CTX_set_min_proto_version(ctx, TLSVersion::toTLSVersion(config->tls_version_min));
             }
 #else
-            if (config->tls_version_min > TLSVersion::V1_0)
+            if (config->tls_version_min > TLSVersion::Type::V1_0)
                 sslopt |= SSL_OP_NO_TLSv1;
 #ifdef SSL_OP_NO_TLSv1_1
-            if (config->tls_version_min > TLSVersion::V1_1)
+            if (config->tls_version_min > TLSVersion::Type::V1_1)
                 sslopt |= SSL_OP_NO_TLSv1_1;
 #endif
 #ifdef SSL_OP_NO_TLSv1_2
-            if (config->tls_version_min > TLSVersion::V1_2)
+            if (config->tls_version_min > TLSVersion::Type::V1_2)
                 sslopt |= SSL_OP_NO_TLSv1_2;
 #endif
 #ifdef SSL_OP_NO_TLSv1_3
-            if (config->tls_version_min > TLSVersion::V1_3)
+            if (config->tls_version_min > TLSVersion::Type::V1_3)
                 sslopt |= SSL_OP_NO_TLSv1_3;
 #endif
 #endif
@@ -1309,7 +1309,7 @@ class OpenSSLContext : public SSLFactoryAPI
                     OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_ciphersuites_list failed");
             }
 #endif
-            const char *tls_cipher_list =
+            std::string tls_cipher_list =
                 /* default list as a basis */
                 "DEFAULT"
                 /* Disable export ciphers, low and medium */
@@ -1327,16 +1327,21 @@ class OpenSSLContext : public SSLFactoryAPI
                 /* Disable SSLv2 cipher suites*/
                 ":!SSLv2";
 
+            /* If we are using preferred, we also do not want to allow SHA1
+             * cipher suites. This is also included in security level 4 of
+             * OpenSSL*/
+            if (TLSCertProfile::default_if_undef(config->tls_cert_profile) >= TLSCertProfile::PREFERRED)
+                tls_cipher_list += ":!SHA1";
+
+
             std::string translated_cipherlist;
 
             if (!config->tls_cipher_list.empty())
             {
-                translated_cipherlist = translate_cipher_list(config->tls_cipher_list);
-
-                tls_cipher_list = translated_cipherlist.c_str();
+                tls_cipher_list = translate_cipher_list(config->tls_cipher_list);
             }
 
-            if (!SSL_CTX_set_cipher_list(ctx, tls_cipher_list))
+            if (!SSL_CTX_set_cipher_list(ctx, tls_cipher_list.c_str()))
                 OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && OPENSSL_VERSION_NUMBER < 0x10100000L
             SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
