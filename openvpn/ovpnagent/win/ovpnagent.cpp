@@ -409,7 +409,8 @@ class MyListener : public WS::Server::Listener
         ActionList add_cmds;
         // we might have broken VPN connection up, so we must
         // exclude VPN interface whe searching for the best gateway
-        const TunWin::Util::BestGateway gw{host, vpn_interface_index};
+        ADDRESS_FAMILY af = ipv6 ? AF_INET6 : AF_INET;
+        const TunWin::Util::BestGateway gw{af, host, vpn_interface_index};
         TunWin::Setup::add_bypass_route(gw, host, ipv6, add_cmds, remove_cmds_bypass_hosts);
         add_cmds.execute(os);
 

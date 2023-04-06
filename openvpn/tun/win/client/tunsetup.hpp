@@ -255,17 +255,17 @@ class Setup : public SetupBase
                                  ActionList &add_cmds,
                                  ActionList &remove_cmds_bypass_gw)
     {
-        if (!ipv6)
+        if (!gw.local_route())
         {
-            if (!gw.local_route())
-            {
-                add_cmds.add(new WinCmd("netsh interface ip add route " + route + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
-                remove_cmds_bypass_gw.add(new WinCmd("netsh interface ip delete route " + route + "/32 " + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active"));
-            }
-            else
-            {
-                OPENVPN_LOG("Skip bypass route to " << route << ", route is local");
-            }
+            std::string cmd1 = "netsh interface " + std::string{ipv6 ? "ipv6" : "ip"};
+            std::string cmd2 = "route " + route + (ipv6 ? "/128 " : "/32 ") + to_string(gw.interface_index()) + ' ' + gw.gateway_address() + " store=active";
+
+            add_cmds.add(new WinCmd(cmd1 + " add " + cmd2));
+            remove_cmds_bypass_gw.add(new WinCmd(cmd1 + " delete " + cmd2));
+        }
+        else
+        {
+            OPENVPN_LOG("Skip bypass route to " << route << ", route is local");
         }
     }
 
@@ -518,7 +518,7 @@ class Setup : public SetupBase
         // Process exclude routes
         if (!pull.exclude_routes.empty())
         {
-            const Util::BestGateway gw;
+            const Util::BestGateway gw{AF_INET};
             if (gw.defined())
             {
                 bool ipv6_error = false;
@@ -549,7 +549,7 @@ class Setup : public SetupBase
         if (pull.reroute_gw.ipv4)
         {
             // get default gateway
-            const Util::BestGateway gw{pull.remote_address.address, tap.index};
+            const Util::BestGateway gw{AF_INET, pull.remote_address.address, tap.index};
 
             if (!gw.local_route())
             {
