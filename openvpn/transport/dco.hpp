@@ -81,6 +81,8 @@ struct DCO : public virtual RC<thread_unsafe_refcount>
 
         TunProp::Config tun_prop;
         Stop *stop = nullptr;
+
+        bool allow_local_dns_resolvers = false;
     };
 
     virtual TunClientFactory::Ptr new_tun_factory(const TunConfig &conf, const OptionList &opt) = 0;

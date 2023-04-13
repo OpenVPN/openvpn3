@@ -352,6 +352,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
             tunconf.tun_prop.remote_list = remote_list;
             tunconf.stop = config.stop;
+            tunconf.allow_local_dns_resolvers = config.allow_local_dns_resolvers;
 #if defined(OPENVPN_PLATFORM_WIN)
             if (config.tun_persist)
                 tunconf.tun_persist.reset(new TunWin::DcoTunPersist(true, TunWrapObjRetain::NO_RETAIN_NO_REPLACE, nullptr));
@@ -475,6 +476,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf->stats = cli_stats;
                 tunconf->stop = config.stop;
                 tunconf->tun_type = config.wintun ? TunWin::Wintun : TunWin::TapWindows6;
+                tunconf->allow_local_dns_resolvers = config.allow_local_dns_resolvers;
                 if (config.tun_persist)
                 {
                     tunconf->tun_persist.reset(new TunWin::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));
