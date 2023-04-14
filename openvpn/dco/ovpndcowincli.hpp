@@ -506,6 +506,7 @@ class OvpnDcoWinClient : public Client,
             {OVPN_IOCTL_SWAP_KEYS, "OVPN_IOCTL_SWAP_KEYS"},
             {OVPN_IOCTL_SET_PEER, "OVPN_IOCTL_SET_PEER"},
             {OVPN_IOCTL_START_VPN, "OVPN_IOCTL_START_VPN"},
+            {OVPN_IOCTL_DEL_PEER, "OVPN_IOCTL_DEL_PEER"},
         };
 
         auto handle = get_handle();
