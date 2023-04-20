@@ -54,36 +54,22 @@ inline std::string call(const std::string &cmd)
     else
         name = cmd;
 
-#if _WIN32_WINNT >= 0x0600
-    // get system path (Vista and higher)
+    // get system path
     wchar_t *syspath_ptr = nullptr;
     if (::SHGetKnownFolderPath(FOLDERID_System, 0, nullptr, &syspath_ptr) != S_OK)
         throw win_call("cannot get system path using SHGetKnownFolderPath");
     unique_ptr_del<wchar_t> syspath(syspath_ptr,
                                     [](wchar_t *p)
                                     { ::CoTaskMemFree(p); });
-#define SYSPATH_FMT_CHAR L"s"
-#define SYSPATH_LEN_METH(x) ::wcslen(x)
-#else
-    // get system path (XP and higher)
-    std::unique_ptr<wchar_t[]> syspath(new wchar_t[MAX_PATH]);
-    if (::SHGetFolderPathW(nullptr, CSIDL_SYSTEM, nullptr, 0, syspath.get()) != S_OK)
-        throw win_call("cannot get system path using SHGetFolderPathW");
-#define SYSPATH_FMT_CHAR L"s"
-#define SYSPATH_LEN_METH(x) ::wcslen(x)
-#endif
-
     // build command line
-    const size_t wcmdlen = SYSPATH_LEN_METH(syspath.get()) + name.length() + args.length() + 64;
+    const size_t wcmdlen = ::wcslen(syspath.get()) + name.length() + args.length() + 64;
     std::unique_ptr<wchar_t[]> wcmd(new wchar_t[wcmdlen]);
     const char *spc = "";
     if (!args.empty())
         spc = " ";
-    ::_snwprintf(wcmd.get(), wcmdlen, L"\"%" SYSPATH_FMT_CHAR L"\\%S.exe\"%S%S", syspath.get(), name.c_str(), spc, args.c_str());
+    ::_snwprintf(wcmd.get(), wcmdlen, L"\"%s\\%S.exe\"%S%S", syspath.get(), name.c_str(), spc, args.c_str());
     wcmd.get()[wcmdlen - 1] = 0;
     //::wprintf(L"CMD[%d]: %s\n", (int)::wcslen(wcmd.get()), wcmd.get());
-#undef SYSPATH_FMT_CHAR
-#undef SYSPATH_LEN_METH
 
     // Set the bInheritHandle flag so pipe handles are inherited.
     SECURITY_ATTRIBUTES saAttr;

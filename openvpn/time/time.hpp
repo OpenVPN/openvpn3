@@ -418,11 +418,7 @@ class TimeType
 #else
         base_ = ::time(0);
 #ifdef OPENVPN_PLATFORM_WIN
-#if (_WIN32_WINNT >= 0x0600)
         win_recalibrate((DWORD)::GetTickCount64());
-#else
-        win_recalibrate(::GetTickCount());
-#endif
 #endif
 #endif
     }
@@ -450,11 +446,7 @@ class TimeType
 
     static T now_()
     {
-#if (_WIN32_WINNT >= 0x0600)
         const DWORD gtc = (DWORD)::GetTickCount64();
-#else
-        const DWORD gtc = ::GetTickCount();
-#endif
         if (gtc < gtc_last)
             win_recalibrate(gtc);
         const time_t sec = gtc_base + gtc / 1000;

@@ -514,16 +514,12 @@ class MyListener : public WS::Server::Listener
         AsioPolySock::NamedPipe *np = dynamic_cast<AsioPolySock::NamedPipe *>(&sock);
         if (np)
         {
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
             Win::NamedPipePeerInfoClient npinfo(np->handle.native_handle());
             const std::string client_exe = wstring::to_utf8(npinfo.exe_path);
             OPENVPN_LOG("connection from " << client_exe);
             if (Agent::valid_pipe(client_exe, config.server_exe))
                 return true;
             OPENVPN_LOG(client_exe << " not recognized as a valid client");
-#else
-            return true;
-#endif
         }
         else
             OPENVPN_LOG("only named pipe clients are allowed");
@@ -852,19 +848,13 @@ class MyClientInstance : public WS::Server::Listener::Client
 
     std::wstring get_client_exe(const HANDLE client_pipe)
     {
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
         Win::NamedPipePeerInfoClient npinfo(client_pipe);
         return npinfo.exe_path;
-#else
-        return std::wstring();
-#endif
     }
 
     Win::ScopedHANDLE get_client_process(const HANDLE pipe, ULONG pid_hint) const
     {
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
         pid_hint = Win::NamedPipePeerInfo::get_pid(pipe, true);
-#endif
         if (!pid_hint)
             throw Exception("cannot determine client PID");
         return Win::NamedPipePeerInfo::get_process(pid_hint, false);
@@ -920,10 +910,8 @@ class MyService : public Win::Service
 
         MyConfig conf;
 
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
         Win::NamedPipePeerInfo::allow_client_query();
         TunWin::NRPT::delete_rule(); // remove stale NRPT rules
-#endif
 
         WS::Server::Config::Ptr hconf = new WS::Server::Config();
         hconf->http_server_id = OVPNAGENT_NAME_STRING "/" HTTP_SERVER_VERSION;
@@ -981,9 +969,6 @@ class MyService : public Win::Service
         Config c;
         c.name = OVPNAGENT_NAME_STRING;
         c.display_name = "OpenVPN Agent " OVPNAGENT_NAME_STRING;
-#if _WIN32_WINNT < 0x0600                 // pre-Vista
-        c.dependencies.push_back("Dhcp"); // DHCP client
-#endif
         c.autostart = true;
         c.restart_on_fail = true;
         return c;

@@ -69,11 +69,7 @@ struct NamedPipePeerInfo
     {
         // open process
         Win::ScopedHANDLE proc(::OpenProcess(
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
             limited ? (PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE) : PROCESS_ALL_ACCESS,
-#else
-            PROCESS_ALL_ACCESS,
-#endif
             FALSE,
             pid));
         if (!proc.defined())
@@ -83,8 +79,6 @@ struct NamedPipePeerInfo
         }
         return proc;
     }
-
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
 
     // Servers must call this method to modify their process
     // access rights to grant clients the
@@ -163,11 +157,7 @@ struct NamedPipePeerInfo
         }
         return std::wstring(exe, exe_size);
     }
-
-#endif
 };
-
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
 
 struct NamedPipePeerInfoCS : public NamedPipePeerInfo
 {
@@ -199,8 +189,6 @@ struct NamedPipePeerInfoServer : public NamedPipePeerInfoCS
     {
     }
 };
-
-#endif
 
 } // namespace Win
 } // namespace openvpn

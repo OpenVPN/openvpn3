@@ -21,8 +21,7 @@
 
 // tun interface utilities for Windows
 
-#ifndef OPENVPN_TUN_WIN_TUNUTIL_H
-#define OPENVPN_TUN_WIN_TUNUTIL_H
+#pragma once
 
 #include <openvpn/common/socktypes.hpp> // prevent winsock multiple def errors
 
@@ -867,194 +866,6 @@ struct IPPerAdapterInfo
     std::unique_ptr<IP_PER_ADAPTER_INFO> adapt;
 };
 
-// Use the TAP DHCP masquerade capability to set TAP adapter properties.
-// Generally only used on pre-Vista.
-class TAPDHCPMasquerade
-{
-  public:
-    OPENVPN_EXCEPTION(dhcp_masq);
-
-    // VPN IP/netmask
-    IPNetmask4 vpn;
-
-    // IP address of fake DHCP server in TAP adapter
-    IPv4::Addr dhcp_serv_addr = IPv4::Addr::from_zero();
-
-    // DHCP lease for one year
-    unsigned int lease_time = 31536000;
-
-    // DHCP options
-    std::string domain;           // DOMAIN (15)
-    std::string netbios_scope;    // NBS (47)
-    int netbios_node_type = 0;    // NBT 1,2,4,8 (46)
-    bool disable_nbt = false;     // DISABLE_NBT (43, Vendor option 001)
-    std::vector<IPv4::Addr> dns;  // DNS (6)
-    std::vector<IPv4::Addr> wins; // WINS (44)
-    std::vector<IPv4::Addr> ntp;  // NTP (42)
-    std::vector<IPv4::Addr> nbdd; // NBDD (45)
-
-    void init_from_capture(const TunBuilderCapture &pull)
-    {
-        // VPN IP/netmask
-        vpn = IPNetmask4(pull, "VPN IP");
-
-        // DHCP server address
-        {
-            const IPv4::Addr network_addr = vpn.ip & vpn.netmask;
-            const std::uint32_t extent = vpn.netmask.extent_from_netmask_uint32();
-            if (extent >= 16)
-                dhcp_serv_addr = network_addr + (extent - 2);
-            else
-                dhcp_serv_addr = network_addr;
-        }
-
-        // DNS
-        for (auto &ds : pull.dns_servers)
-        {
-            if (!ds.ipv6)
-                dns.push_back(IPv4::Addr::from_string(ds.address, "DNS Server"));
-        }
-
-        // WINS
-        for (auto &ws : pull.wins_servers)
-            wins.push_back(IPv4::Addr::from_string(ws.address, "WINS Server"));
-
-        // DOMAIN
-        if (!pull.search_domains.empty())
-            domain = pull.search_domains[0].domain;
-    }
-
-    void ioctl(HANDLE th) const
-    {
-        // TAP_WIN_IOCTL_CONFIG_DHCP_MASQ
-        {
-            std::uint32_t ep[4];
-            ep[0] = vpn.ip.to_uint32_net();
-            ep[1] = vpn.netmask.to_uint32_net();
-            ep[2] = dhcp_serv_addr.to_uint32_net();
-            ep[3] = lease_time;
-
-            DWORD len;
-            if (!::DeviceIoControl(th,
-                                   TAP_WIN_IOCTL_CONFIG_DHCP_MASQ,
-                                   ep,
-                                   sizeof(ep),
-                                   ep,
-                                   sizeof(ep),
-                                   &len,
-                                   nullptr))
-            {
-                throw dhcp_masq("DeviceIoControl TAP_WIN_IOCTL_CONFIG_DHCP_MASQ failed");
-            }
-        }
-
-        // TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT
-        {
-            BufferAllocated buf(256, BufferAllocated::GROW);
-            write_options(buf);
-
-            DWORD len;
-            if (!::DeviceIoControl(th,
-                                   TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT,
-                                   buf.data(),
-                                   buf.size(),
-                                   buf.data(),
-                                   buf.size(),
-                                   &len,
-                                   nullptr))
-            {
-                throw dhcp_masq("DeviceIoControl TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT failed");
-            }
-        }
-    }
-
-  private:
-    void write_options(Buffer &buf) const
-    {
-        // DOMAIN
-        write_dhcp_str(buf, 15, domain);
-
-        // NBS
-        write_dhcp_str(buf, 47, netbios_scope);
-
-        // NBT
-        if (netbios_node_type)
-            write_dhcp_u8(buf, 46, netbios_node_type);
-
-        // DNS
-        write_dhcp_addr_list(buf, 6, dns);
-
-        // WINS
-        write_dhcp_addr_list(buf, 44, wins);
-
-        // NTP
-        write_dhcp_addr_list(buf, 42, ntp);
-
-        // NBDD
-        write_dhcp_addr_list(buf, 45, nbdd);
-
-        // DISABLE_NBT
-        //
-        // The MS DHCP server option 'Disable Netbios-over-TCP/IP
-        // is implemented as vendor option 001, value 002.
-        // A value of 001 means 'leave NBT alone' which is the default.
-        if (disable_nbt)
-        {
-            buf.push_back(43);
-            buf.push_back(6); // total length field
-            buf.push_back(0x001);
-            buf.push_back(4); // length of the vendor-specified field
-            {
-                const std::uint32_t raw = 0x002;
-                buf.write((const unsigned char *)&raw, sizeof(raw));
-            }
-        }
-    }
-
-    static void write_dhcp_u8(Buffer &buf,
-                              const unsigned char type,
-                              const unsigned char data)
-    {
-        buf.push_back(type);
-        buf.push_back(1);
-        buf.push_back(data);
-    }
-
-    static void write_dhcp_str(Buffer &buf,
-                               const unsigned char type,
-                               const std::string &str)
-    {
-        const size_t len = str.length();
-        if (len)
-        {
-            if (len > 255)
-                OPENVPN_THROW(dhcp_masq, "string '" << str << "' must be > 0 bytes and <= 255 bytes");
-            buf.push_back(type);
-            buf.push_back((unsigned char)len);
-            buf.write((const unsigned char *)str.c_str(), len);
-        }
-    }
-
-    static void write_dhcp_addr_list(Buffer &buf,
-                                     const unsigned char type,
-                                     const std::vector<IPv4::Addr> &addr_list)
-    {
-        if (!addr_list.empty())
-        {
-            const size_t size = addr_list.size() * sizeof(std::uint32_t);
-            if (size < 1 || size > 255)
-                OPENVPN_THROW(dhcp_masq, "array size=" << size << " must be > 0 bytes and <= 255 bytes");
-            buf.push_back(type);
-            buf.push_back((unsigned char)size);
-            for (auto &a : addr_list)
-            {
-                const std::uint32_t rawaddr = a.to_uint32_net();
-                buf.write((const unsigned char *)&rawaddr, sizeof(std::uint32_t));
-            }
-        }
-    }
-};
-
 class TAPDriverVersion
 {
   public:
@@ -1167,7 +978,6 @@ inline const MIB_IPFORWARDTABLE *windows_routing_table()
     return rt.release();
 }
 
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
 // Get the Windows IPv4/IPv6 routing table.
 // Note that returned pointer must be freed with FreeMibTable.
 inline const MIB_IPFORWARD_TABLE2 *windows_routing_table2(ADDRESS_FAMILY af)
@@ -1179,7 +989,6 @@ inline const MIB_IPFORWARD_TABLE2 *windows_routing_table2(ADDRESS_FAMILY af)
     else
         return nullptr;
 }
-#endif
 
 class BestGateway
 {
@@ -1342,9 +1151,7 @@ class ActionDeleteAllRoutesOnInterface : public Action
 
         ActionList::Ptr actions = new ActionList();
         remove_all_ipv4_routes_on_iface(iface_index, *actions);
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
         remove_all_ipv6_routes_on_iface(iface_index, *actions);
-#endif
         actions->execute(os);
     }
 
@@ -1381,7 +1188,6 @@ class ActionDeleteAllRoutesOnInterface : public Action
         }
     }
 
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
     static void remove_all_ipv6_routes_on_iface(DWORD index, ActionList &actions)
     {
         unique_ptr_del<const MIB_IPFORWARD_TABLE2> rt2(windows_routing_table2(AF_INET6),
@@ -1413,7 +1219,6 @@ class ActionDeleteAllRoutesOnInterface : public Action
             }
         }
     }
-#endif
 
     const DWORD iface_index;
 };
@@ -1569,5 +1374,3 @@ class AddRoute4Cmd : public Action
 } // namespace Util
 } // namespace TunWin
 } // namespace openvpn
-
-#endif

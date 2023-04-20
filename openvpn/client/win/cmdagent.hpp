@@ -61,9 +61,6 @@ class WinCommandAgent : public TunWin::SetupFactory
 
         // Build JSON request
         Json::Value jreq(Json::objectValue);
-#if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
-        jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
-#endif
 
         jreq["host"] = endpoint.to_string();
         jreq["ipv6"] = endpoint.is_ipv6();
@@ -122,7 +119,6 @@ class WinCommandAgent : public TunWin::SetupFactory
             ts->http_config = hc;
             ts->debug_level = debug_level;
 
-#if _WIN32_WINNT >= 0x0600 // Vista and higher
             ts->post_connect = [host, client_exe, cb = std::move(cb)](WS::ClientSet::TransactionSet &ts, AsioPolySock::Base &sock)
             {
                 AsioPolySock::NamedPipe *np = dynamic_cast<AsioPolySock::NamedPipe *>(&sock);
@@ -135,7 +131,6 @@ class WinCommandAgent : public TunWin::SetupFactory
                     cb(npinfo.proc.release());
                 }
             };
-#endif
             return ts;
         }
 
@@ -154,9 +149,6 @@ class WinCommandAgent : public TunWin::SetupFactory
         {
             // Build JSON request
             Json::Value jreq(Json::objectValue);
-#if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
-            jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
-#endif
             jreq["confirm_event"] = confirm_event.duplicate_local();
             jreq["destroy_event"] = destroy_event.duplicate_local();
             const std::string jtxt = jreq.toStyledString();
@@ -217,9 +209,6 @@ class WinCommandAgent : public TunWin::SetupFactory
 
             // Build JSON request
             Json::Value jreq(Json::objectValue);
-#if _WIN32_WINNT < 0x0600 // pre-Vista needs us to explicitly communicate our PID
-            jreq["pid"] = Json::Value((Json::UInt)::GetProcessId(::GetCurrentProcess()));
-#endif
 
             if (ring_buffer)
                 ring_buffer->serialize(jreq);
