@@ -55,6 +55,7 @@
 #include <bcrypt.h>
 #include <openvpn/dco/key.hpp>
 #include <openvpn/dco/ovpn-dco.h>
+#include <openvpn/win/modname.hpp>
 #else
 #error either ENABLE_KOVPN, ENABLE_OVPNDCO or ENABLE_OVPNDCOWIN must be defined
 #endif

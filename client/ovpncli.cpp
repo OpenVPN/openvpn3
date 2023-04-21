@@ -484,6 +484,7 @@ class ClientState
     bool dco = true;
     bool echo = false;
     bool info = false;
+    bool dco_compatible = false;
 
     // Ensure that init is called
     InitProcess::Init init;
@@ -659,6 +660,9 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClientHelper::parse_config(const Config &confi
             kvl.push_back(new OptionList::KeyValue(kv.key, kv.value));
         }
         const ParseClientConfig cc = ParseClientConfig::parse(config.content, &kvl, options);
+
+        check_dco_compatibility(config, eval, options);
+
 #ifdef OPENVPN_DUMP_CONFIG
         std::cout << "---------- ARGS ----------" << std::endl;
         std::cout << options.render(Option::RENDER_PASS_FMT | Option::RENDER_NUMBER | Option::RENDER_BRACKET) << std::endl;
@@ -763,6 +767,7 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::parse_extras(const Config &config, Eva
             ho->allow_cleartext_auth = config.proxyAllowCleartextAuth;
             state->http_proxy_options = ho;
         }
+        state->dco_compatible = eval.dcoCompatible;
     }
     catch (const std::exception &e)
     {
@@ -1031,6 +1036,7 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::connect_setup(Status &status, bool &se
     cc.http_proxy_options = state->http_proxy_options;
     cc.alt_proxy = state->alt_proxy;
     cc.dco = state->dco;
+    cc.dco_compatible = state->dco_compatible;
     cc.echo = state->echo;
     cc.info = state->info;
     cc.reconnect_notify = &state->reconnect_notify;
@@ -1469,6 +1475,50 @@ OPENVPN_CLIENT_EXPORT std::string OpenVPNClientHelper::platform()
     ret += " built on " __DATE__ " " __TIME__;
 #endif
     return ret;
+}
+
+OPENVPN_CLIENT_EXPORT void OpenVPNClientHelper::check_dco_compatibility(const Config &config, EvalConfig &eval, OptionList &opt)
+{
+#if defined(ENABLE_KOVPN)
+    // only care about dco/dco-win
+    eval.dcoCompatible = true;
+    return;
+#endif
+
+    std::vector<std::string> reasons;
+
+    for (auto &optname : dco_incompatible_opts)
+    {
+        if (opt.exists(optname))
+        {
+            reasons.push_back("option " + optname + " is not compatible with dco");
+        }
+    }
+
+    if (config.enableLegacyAlgorithms)
+    {
+        reasons.push_back("legacy algorithms are not compatible with dco");
+    }
+
+    if (config.enableNonPreferredDCAlgorithms)
+    {
+        reasons.push_back("non-preferred data channel algorithms are not compatible with dco");
+    }
+
+    if (!config.proxyHost.empty())
+    {
+        reasons.push_back("proxyHost config setting is not compatible with dco");
+    }
+
+    if (reasons.empty())
+    {
+        eval.dcoCompatible = true;
+    }
+    else
+    {
+        eval.dcoCompatible = false;
+        eval.dcoIncompatibilityReason = string::join(reasons, "\n");
+    }
 }
 
 OPENVPN_CLIENT_EXPORT OpenVPNClient::~OpenVPNClient()

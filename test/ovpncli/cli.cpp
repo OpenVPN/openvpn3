@@ -1018,7 +1018,11 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             bool merge = false;
             bool version = false;
             bool altProxy = false;
+#if defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
             bool dco = true;
+#else
+            bool dco = false;
+#endif
             bool generate_tun_builder_capture_event = false;
             std::string epki_cert_fn;
             std::string epki_ca_fn;

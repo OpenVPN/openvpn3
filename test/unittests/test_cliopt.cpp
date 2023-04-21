@@ -43,6 +43,11 @@ void load_client_config(const std::string &config_content)
 
     ClientAPI::OpenVPNClientHelper client_helper;
 
+    ClientAPI::Config api_config;
+    api_config.content = config_content;
+    auto eval = client_helper.eval_config(api_config);
+    config.dco_compatible = eval.dcoCompatible;
+
     ParseClientConfig conf = ParseClientConfig::parse(config_content);
 
     auto parsed_config = ParseClientConfig::parse(config_content, nullptr, options);
@@ -127,6 +132,7 @@ TEST(config, duplicate_options_sets)
     /* Do the whole dance to get a ClientOption object to access the list */
     OptionList options;
     ClientOptions::Config config;
+    config.dco = false;
     config.proto_context_options = new ProtoContextOptions();
 
     ClientAPI::OpenVPNClientHelper client_helper;
@@ -159,5 +165,16 @@ TEST(config, duplicate_options_sets)
                 throw std::runtime_error("duplicate element: " + optname);
             allOptions.insert(optname);
         }
+    }
+}
+
+TEST(config, dco_compatibility)
+{
+    for (auto &optname : ClientAPI::OpenVPNClientHelper::dco_incompatible_opts)
+    {
+        OVPN_EXPECT_THROW(
+            load_client_config(minimalConfig + optname),
+            option_error,
+            "option_error: dco_compatibility: config/options are not compatible with dco");
     }
 }

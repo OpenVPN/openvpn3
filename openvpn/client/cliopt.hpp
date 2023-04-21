@@ -136,6 +136,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         HTTPProxyTransport::Options::Ptr http_proxy_options;
         bool alt_proxy = false;
         bool dco = true;
+        bool dco_compatible = false;
         bool echo = false;
         bool info = false;
         bool tun_persist = false;
@@ -253,6 +254,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(),
                                                              !config.enable_nonpreferred_dcalgs,
                                                              config.enable_legacy_algorithms);
+
+        // throw an exception of dco is requested but config/options are dco-incompatible
+        if (config.dco && !config.dco_compatible)
+        {
+            throw option_error("dco_compatibility: config/options are not compatible with dco");
+        }
 
 #if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
         if (config.dco)
