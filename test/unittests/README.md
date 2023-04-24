@@ -11,7 +11,7 @@ The unit test cmake files assume here that the deps directory is on the same
 level as the openvpn3 directory unless overridden by the DEP_DIR variable.
 
 The directory for cmake to build a project can be everywhere, but it is recommended to keep
-it outside of the source tree. 
+it outside of the source tree.
 
 Building unit tests (assuming you are in the openvpn3 directory):
 
@@ -43,27 +43,27 @@ Examplary commands for building and running on Windows:
     ➜ cmake -DDEP_DIR=C:\o3\deps -DUSE_MBEDTLS=true -DCMAKE_GENERATOR_PLATFORM=x64 C:\o3\openvpn3
     ➜ cmake --build . --target coreUnitTests
     ➜ test\unittests\Debug\coreUnitTests.exe --gtest_output="xml:test_core.xml" --gtest_shuffle
-    
+
 ### Frequently used command line options ###
 
 Show the help for gtest command line options:
-    
+
     ➜ ./test/unittests/coreUnitTests --help
-    
+
 Run only tests starting with Base64 or a sepcific Base64 test:
 
     ➜ ./test/unittests/coreUnitTests --gtest_filter='Base64.*'
     ➜ ./test/unittests/coreUnitTests --gtest_filter=Base64.tooshortdest
-    
+
 Run all test but the Base64 tests
 
     ➜ ./test/unittests/coreUnitTests --gtest_filter='-Base64.*'
-    
+
 Multiple pattern can be specified with a list separated by :
 
     ➜ ./test/unittests/coreUnitTests --gtest_filter='OpenSSL_X509_get_serial.*:Base64.*'
-    
-    
+
+
 Shuffle order the order in which the tests are run:
 
     ➜ ./test/unittests/coreUnitTests --gtest_shuffle
@@ -71,12 +71,12 @@ Shuffle order the order in which the tests are run:
 If a certain order yields failures, repeat that order:
 
     ➜ ./test/unittests/coreUnitTests --gtest_shuffle --gtest_random_seed=23
-    
+
 Run also the tests that are normally disabled
 
     ➜ ./test/unittests/coreUnitTests --gtest_also_run_disabled_tests
 
-## Writing unit tetss ##
+## Writing unit tests ##
 
 Each new test suite should be a new a file called `test_suitename.cpp` and added to the
 `CMakeLists.txt` file. Each test includes an `#include test_common.h` at the top to setup
