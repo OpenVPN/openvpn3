@@ -41,16 +41,17 @@ add_subdirectory(openvpn/ovpnagent/mac)
 if (ENABLE_DOXYGEN)
     # Exclude some project specific directories
     set(DOXYGEN_EXCLUDE_PATTERNS
-        ${CMAKE_BINARY_DIR}/test/unittests/googletest-*
-        ${PROJECT_SOURCE_DIR}/deps/*
-        ${PROJECT_SOURCE_DIR}/test/unittests/googletest-*)
+        "*/vcpkg_installed/*"
+        "*/googletest-src/*"
+        "${PROJECT_SOURCE_DIR}/deps/*")
 
     # Use README.rst as the Doxygen main page
     # Due to some doxygen oddities, it rejects processing README.rst, but a .md file is fine
     # So we copy it into our build tree as a .md file and use that
-    file(COPY "${CMAKE_SOURCE_DIR}/README.rst" DESTINATION "${CMAKE_BINARY_DIR}/doxygen")
-    file(RENAME "${CMAKE_BINARY_DIR}/doxygen/README.rst" "${CMAKE_BINARY_DIR}/doxygen/mainpage.md")
-    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${CMAKE_BINARY_DIR}/doxygen/mainpage.md")
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/README.rst"
+        "${CMAKE_CURRENT_BINARY_DIR}/doxygen/mainpage.md"
+        COPYONLY)
+    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${CMAKE_CURRENT_BINARY_DIR}/doxygen/mainpage.md")
 
     configure_doxygen("OpenVPN 3 Core Library" "doxygen/core")
 endif ()
