@@ -1111,13 +1111,13 @@ class OpenSSLContext : public SSLFactoryAPI
         bool called_did_full_handshake;
 
         // Helps us to store pointer to self in ::SSL object
-        static int ssl_data_index;
-        static int context_data_index;
+        inline static int ssl_data_index = -1;
+        inline static int context_data_index = -1;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
         // Modified SSLv23 methods
-        static SSL_METHOD ssl23_method_client_;
-        static SSL_METHOD ssl23_method_server_;
+        inline static SSL_METHOD ssl23_method_client_;
+        inline static SSL_METHOD ssl23_method_server_;
 #endif
     };
 
@@ -2341,16 +2341,6 @@ class OpenSSLContext : public SSLFactoryAPI
     ExternalPKIImpl *epki = nullptr;
     OpenSSLSessionCache::Ptr sess_cache; // client-side only
 };
-
-#ifdef OPENVPN_NO_EXTERN
-int OpenSSLContext::SSL::ssl_data_index = -1;
-int OpenSSLContext::SSL::context_data_index = -1;
-#endif
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L && defined(OPENVPN_NO_EXTERN)
-SSL_METHOD OpenSSLContext::SSL::ssl23_method_client_;
-SSL_METHOD OpenSSLContext::SSL::ssl23_method_server_;
-#endif
 
 inline const std::string get_ssl_library_version()
 {

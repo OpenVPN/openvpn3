@@ -406,11 +406,7 @@ class ExternalPKIECImpl : public ExternalPKIImpl
     }
 
     ExternalPKIBase *external_pki;
-    static int ec_self_data_index;
+    inline static int ec_self_data_index = -1;
 };
-
-#ifdef OPENVPN_NO_EXTERN
-int ExternalPKIECImpl::ec_self_data_index = -1;
-#endif
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC) */
 } // namespace openvpn

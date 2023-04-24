@@ -91,8 +91,8 @@ class MemQ : public MemQStream
 class bio_memq_internal
 {
   public:
-    static int memq_method_type;
-    static BIO_METHOD *memq_method;
+    inline static int memq_method_type = -1;
+    inline static BIO_METHOD *memq_method = nullptr;
 
 
     static inline int memq_new(BIO *b)
@@ -204,11 +204,6 @@ class bio_memq_internal
         memq_method = nullptr;
     }
 }; // class bio_memq_internal
-
-#if defined(OPENVPN_NO_EXTERN)
-int bio_memq_internal::memq_method_type = -1;
-BIO_METHOD *bio_memq_internal::memq_method = nullptr;
-#endif
 
 inline void init_static()
 {

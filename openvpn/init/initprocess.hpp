@@ -28,7 +28,6 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/base64.hpp>
-#include <openvpn/common/extern.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/compress/compress.hpp>
 #include <openvpn/init/cryptoinit.hpp>
@@ -67,8 +66,8 @@ class Init
     };
 
     // process-wide singular instance
-    static std::weak_ptr<InitImpl> init_instance; // GLOBAL
-    static std::mutex the_instance_mutex;         // GLOBAL
+    inline static std::weak_ptr<InitImpl> init_instance; // GLOBAL
+    inline static std::mutex the_instance_mutex;         // GLOBAL
 
     // istance of this class to refcount
     std::shared_ptr<InitImpl> initptr;
@@ -94,9 +93,5 @@ class Init
     }
 };
 
-#ifdef OPENVPN_NO_EXTERN
-std::weak_ptr<Init::InitImpl> Init::init_instance; // GLOBAL
-std::mutex Init::the_instance_mutex;               // GLOBAL
-#endif
 } // namespace InitProcess
 } // namespace openvpn

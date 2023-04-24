@@ -29,7 +29,6 @@
 #include <openvpn/io/io.hpp>
 
 #include <openvpn/addr/ip.hpp>
-#include <openvpn/common/extern.hpp>
 #include <openvpn/common/to_string.hpp>
 
 namespace openvpn {

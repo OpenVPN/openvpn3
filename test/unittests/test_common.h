@@ -20,14 +20,6 @@
 
 #pragma once
 
-/* Globals get defined multiple times, normally we set this to extern
- * in the part of the program that pulls in a subset of the other
- * In the unit tests that does not work. So all unit tests are told not
- * to include them and all includes are included in core_tests.cpp to pull
- * them in
- */
-#define OPENVPN_EXTERN extern
-
 /* Without the asio.hpp include we get winsocket.h related errors
  * See also https://stackoverflow.com/questions/9750344/boostasio-winsock-and-winsock-2-compatibility-issue
  */

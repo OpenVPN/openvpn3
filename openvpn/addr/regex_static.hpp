@@ -25,13 +25,12 @@
 
 #include <regex>
 
-#include <openvpn/common/extern.hpp>
 #include <openvpn/addr/regex.hpp>
 
 namespace openvpn {
 namespace IP {
-OPENVPN_EXTERN const std::regex re_v4(v4_regex(), std::regex_constants::ECMAScript | std::regex_constants::nosubs);
-OPENVPN_EXTERN const std::regex re_v6(v6_regex(), std::regex_constants::ECMAScript | std::regex_constants::nosubs);
+inline const std::regex re_v4(v4_regex(), std::regex_constants::ECMAScript | std::regex_constants::nosubs);
+inline const std::regex re_v6(v6_regex(), std::regex_constants::ECMAScript | std::regex_constants::nosubs);
 
 inline bool is_ipv4_address(const std::string &host)
 {

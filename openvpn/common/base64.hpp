@@ -31,7 +31,6 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/extern.hpp>
 
 namespace openvpn {
 
@@ -307,8 +306,8 @@ class Base64
 
 // provide a static Base64 object
 
-OPENVPN_EXTERN const Base64 *base64;         // GLOBAL
-OPENVPN_EXTERN const Base64 *base64_urlsafe; // GLOBAL
+inline const Base64 *base64;         // GLOBAL
+inline const Base64 *base64_urlsafe; // GLOBAL
 
 inline void base64_init_static()
 {

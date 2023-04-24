@@ -34,11 +34,9 @@
 
 #include <mutex>
 
-#include <openvpn/common/extern.hpp>
-
 namespace openvpn {
 namespace bigmutex {
-OPENVPN_EXTERN std::recursive_mutex the_recursive_mutex;
+inline std::recursive_mutex the_recursive_mutex;
 }
 
 #ifdef OPENVPN_ENABLE_BIGMUTEX
