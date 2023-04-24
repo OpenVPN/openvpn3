@@ -26,7 +26,7 @@
 // on 64-bit machines.
 
 namespace openvpn {
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
 typedef long long olong;
 typedef unsigned long long oulong;
 #else

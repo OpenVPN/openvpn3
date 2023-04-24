@@ -28,7 +28,7 @@
 #define OPENVPN_ARCH_x86_64
 #elif defined(__i386__) || defined(_M_IX86)
 #define OPENVPN_ARCH_i386
-#elif defined(__aarch64__) || defined(__arm64__)
+#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
 #define OPENVPN_ARCH_ARM64
 #elif defined(__arm__) || defined(_M_ARM)
 #define OPENVPN_ARCH_ARM
