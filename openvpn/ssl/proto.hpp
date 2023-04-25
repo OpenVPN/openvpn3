@@ -1153,7 +1153,10 @@ class ProtoContext
                         {
                             if (unlikely(buf.size() < 4))
                                 return;
-                            const int opi = ntohl(*(const std::uint32_t *)buf.c_data()) & 0x00FFFFFF;
+                            std::uint32_t opi;
+                            // avoid unaligned access
+                            std::memcpy(&opi, buf.c_data(), sizeof(opi));
+                            opi = ntohl(opi) & 0x00FFFFFF;
                             if (opi != OP_PEER_ID_UNDEF)
                                 peer_id_ = opi;
                             opcode = opc;
@@ -3139,7 +3142,10 @@ class ProtoContext
             const unsigned char *wkc_raw = orig_data + tls_frame_size;
             const size_t wkc_raw_size = orig_size - tls_frame_size - sizeof(uint16_t);
             // retrieve the ``WKc`` len from the bottom of the packet and convert it to Host Order
-            uint16_t wkc_len = ntohs(*(uint16_t *)(wkc_raw + wkc_raw_size));
+            uint16_t wkc_len;
+            // avoid unaligned access
+            std::memcpy(&wkc_len, wkc_raw + wkc_raw_size, sizeof(wkc_len));
+            wkc_len = ntohs(wkc_len);
             // length sanity check (the size of the ``len`` field is included in the value)
             if ((wkc_len - sizeof(uint16_t)) != wkc_raw_size)
                 return false;
