@@ -1048,7 +1048,7 @@ class Listener : public ProxyListener
                 if (ssl_mode == Acceptor::Item::AltRouting)
                 {
                     const KovpnSockMark ksm(sock->native_handle());
-                    if (!ksm.is_internal())
+                    if (!ksm.is_internal()) // error if !OVPN_SHIM_INTERNAL in shim flags
                         throw http_server_exception("non alt-routing socket: " + ksm.to_string());
                 }
 #endif
