@@ -203,6 +203,10 @@ struct AltRoutingShimFactory : public RC<thread_unsafe_refcount>
     {
         return IP::Addr();
     }
+    virtual IP::Addr local_ip()
+    {
+        return IP::Addr();
+    }
     virtual int remote_port()
     {
         return -1;
@@ -915,7 +919,13 @@ class HTTPCore : public Base, public TransportClientParent
         // build socket and assign shim
         AsioPolySock::TCP *s = new AsioPolySock::TCP(io_context, 0);
         socket.reset(s);
-        bind_local_addr(s);
+
+        // bind local?
+        const IP::Addr local_addr = sf.local_ip();
+        if (local_addr.defined())
+            s->socket.bind_local(local_addr, 0);
+
+        // add shim to socket
         s->socket.shim = std::move(shim);
 
         // build results
