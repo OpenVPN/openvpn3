@@ -52,7 +52,7 @@ inline bool enum_dir(const std::string &dirname,
     {
         std::string fn(e->d_name);
         if (fn != "." && fn != "..")
-            func(std::move(fn));
+            std::invoke(func, fn);
     }
     return true;
 }
