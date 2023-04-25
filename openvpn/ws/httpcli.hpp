@@ -211,6 +211,10 @@ struct AltRoutingShimFactory : public RC<thread_unsafe_refcount>
     {
         return 0;
     }
+    virtual int alt_routing_debug_level()
+    {
+        return 0;
+    }
 };
 #endif
 
@@ -926,7 +930,7 @@ class HTTPCore : public Base, public TransportClientParent
                                                     host.host,
                                                     "");
 
-        if (config->debug_level >= 2)
+        if (sf.alt_routing_debug_level() >= 2)
             OPENVPN_LOG("ALT_ROUTING HTTP CONNECT to " << s->remote_endpoint_str() << " res=" << asio_resolver_results_to_string(results));
 
         // do async connect
