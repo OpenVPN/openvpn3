@@ -232,6 +232,7 @@ struct Config : public RCCopyable<thread_unsafe_refcount>
     unsigned int connect_timeout = 0;
     unsigned int general_timeout = 0;
     unsigned int keepalive_timeout = 0;
+    unsigned int websocket_timeout = 0; // becomes general_timeout when websocket begins streaming
     unsigned int max_headers = 0;
     unsigned int max_header_bytes = 0;
     bool enable_cache = false; // if true, supports TLS session resumption tickets
@@ -354,6 +355,7 @@ struct TimeoutOverride
     int connect = -1;
     int general = -1;
     int keepalive = -1;
+    int websocket = -1;
 };
 
 class HTTPCore;
@@ -555,9 +557,18 @@ class HTTPCore : public Base, public TransportClientParent
         return socket.get();
     }
 
+    void alter_general_timeout_for_streaming()
+    {
+        const unsigned int sec = to.websocket >= 0 ? to.websocket : config->websocket_timeout;
+        if (sec)
+            reset_general_timeout(sec, true);
+        else
+            cancel_general_timeout();
+    }
+
     void streaming_start()
     {
-        cancel_general_timeout(); // cancel general timeout once websocket streaming begins
+        alter_general_timeout_for_streaming();
         content_out_hold = false;
         if (is_deferred())
             http_content_out_needed();
@@ -684,11 +695,7 @@ class HTTPCore : public Base, public TransportClientParent
 
             verify_frame();
 
-            general_timeout_duration = Time::Duration::seconds(to.general >= 0
-                                                                   ? to.general
-                                                                   : config->general_timeout);
-            general_timeout_coarse.reset();
-            activity(true);
+            reset_general_timeout(to.general >= 0 ? to.general : config->general_timeout, false);
 
             // already in persistent session?
             if (alive)
@@ -1050,10 +1057,20 @@ class HTTPCore : public Base, public TransportClientParent
             keepalive_timer->cancel();
     }
 
+    void reset_general_timeout(const unsigned int seconds,
+                               const bool register_activity_on_input_only_arg)
+    {
+        general_timeout_duration = Time::Duration::seconds(seconds);
+        general_timeout_coarse.reset();
+        activity(true);
+        register_activity_on_input_only = register_activity_on_input_only_arg;
+    }
+
     void cancel_general_timeout()
     {
         general_timeout_duration.set_zero();
         general_timer.cancel();
+        register_activity_on_input_only = false;
     }
 
     void general_timeout_handler(const openvpn_io::error_code &e) // called by Asio
@@ -1286,7 +1303,8 @@ class HTTPCore : public Base, public TransportClientParent
             if (inject_fault("base_link_send"))
                 return false;
 #endif
-            activity(false);
+            if (!register_activity_on_input_only)
+                activity(false);
             if (transcli)
                 return transcli->transport_send(buf);
             else
@@ -1417,6 +1435,7 @@ class HTTPCore : public Base, public TransportClientParent
 
     Time::Duration general_timeout_duration;
     CoarseTime general_timeout_coarse;
+    bool register_activity_on_input_only = false;
 
     bool content_out_hold = true;
     bool alive = false;
