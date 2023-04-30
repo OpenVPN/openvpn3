@@ -524,13 +524,31 @@ class RCCopyable
     RCCopyable() noexcept
     {
     }
+
+    // Copy/move construction/assignment are no-ops because
+    // we always want to default-construct the refcount from
+    // scratch.  We never want to actually copy or move
+    // the refcount because that would break any
+    // referencing smart pointers.
+
     RCCopyable(const RCCopyable &) noexcept
     {
     }
+
+    RCCopyable(RCCopyable &&) noexcept
+    {
+    }
+
     RCCopyable &operator=(const RCCopyable &) noexcept
     {
         return *this;
     }
+
+    RCCopyable &operator=(RCCopyable &&) noexcept
+    {
+        return *this;
+    }
+
     virtual ~RCCopyable()
     {
     }
