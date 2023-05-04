@@ -1415,6 +1415,15 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                             client.print_stats();
                         }
                     }
+#ifdef USE_OPENSSL
+                    /* Since this is a debug/test program we check if the
+                     * internal OpenSSL error stack is empty on exit and
+                     * print the warnings otherwise */
+                    if (ERR_peek_error())
+                    {
+                        throw OpenSSLException{};
+                    }
+#endif
                 } while (retry);
             }
         }
