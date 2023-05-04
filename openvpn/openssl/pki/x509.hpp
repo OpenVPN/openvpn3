@@ -33,19 +33,16 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
-namespace openvpn {
-namespace OpenSSLPKI {
+namespace openvpn::OpenSSLPKI {
 
 class X509
 {
+    using X509_unique_ptr = std::unique_ptr<::X509, decltype(&::X509_free)>;
+
   public:
-    X509()
-        : x509_(nullptr)
-    {
-    }
+    X509() = default;
 
     X509(const std::string &cert_txt, const std::string &title)
-        : x509_(nullptr)
     {
         parse_pem(cert_txt, title);
     }
@@ -53,28 +50,26 @@ class X509
     explicit X509(::X509 *x509, const bool create = true)
     {
         if (create)
-            x509_ = x509;
+            x509_ = {x509, ::X509_free};
         else
-            x509_ = dup(x509);
+            x509_ = {dup(x509), ::X509_free};
     }
 
     X509(const X509 &other)
-        : x509_(dup(other.x509_))
+        : x509_{dup(other.x509_.get()), ::X509_free}
     {
     }
 
     X509(X509 &&other)
     noexcept
-        : x509_(other.x509_)
+        : x509_(std::move(other.x509_))
     {
-        other.x509_ = nullptr;
     }
 
     X509 &operator=(const X509 &other)
     {
         if (this != &other)
         {
-            erase();
             x509_ = dup(other.x509_);
         }
         return *this;
@@ -84,24 +79,24 @@ class X509
     {
         if (this != &other)
         {
-            erase();
-            x509_ = other.x509_;
-            other.x509_ = nullptr;
+            x509_ = std::move(other.x509_);
         }
         return *this;
     }
 
     bool defined() const
     {
-        return x509_ != nullptr;
+        return static_cast<bool>(x509_);
     }
+
     ::X509 *obj() const
     {
-        return x509_;
+        return x509_.get();
     }
-    ::X509 *obj_dup() const
+
+    [[nodiscard]] ::X509 *obj_dup() const
     {
-        return dup(x509_);
+        return dup(x509_.get());
     }
 
     void parse_pem(const std::string &cert_txt, const std::string &title)
@@ -115,16 +110,15 @@ class X509
         if (!cert)
             throw OpenSSLException(std::string("X509::parse_pem: error in ") + title + std::string(":"));
 
-        erase();
-        x509_ = cert;
+        x509_ = {cert, X509_free};
     }
 
-    std::string render_pem() const
+    [[nodiscard]] std::string render_pem() const
     {
         if (x509_)
         {
             BIO *bio = ::BIO_new(BIO_s_mem());
-            const int ret = ::PEM_write_bio_X509(bio, x509_);
+            const int ret = ::PEM_write_bio_X509(bio, x509_.get());
             if (ret == 0)
             {
                 ::BIO_free(bio);
@@ -143,12 +137,21 @@ class X509
             return "";
     }
 
-    ~X509()
-    {
-        erase();
-    }
+
 
   private:
+    static X509_unique_ptr dup(const X509_unique_ptr &x509)
+    {
+        if (x509)
+        {
+            ::X509 *dup = ::X509_dup(const_cast<::X509 *>(x509.get()));
+            return {dup, ::X509_free};
+        }
+        else
+        {
+            return {nullptr, ::X509_free};
+        }
+    }
     static ::X509 *dup(const ::X509 *x509)
     {
         if (x509)
@@ -157,13 +160,7 @@ class X509
             return nullptr;
     }
 
-    void erase()
-    {
-        if (x509_)
-            ::X509_free(x509_);
-    }
-
-    ::X509 *x509_;
+    X509_unique_ptr x509_{nullptr, ::X509_free};
 };
 
 class X509List : public std::vector<X509>
@@ -184,5 +181,4 @@ class X509List : public std::vector<X509>
         return ret;
     }
 };
-} // namespace OpenSSLPKI
-} // namespace openvpn
+} // namespace openvpn::OpenSSLPKI
