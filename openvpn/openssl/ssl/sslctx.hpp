@@ -634,6 +634,14 @@ class OpenSSLContext : public SSLFactoryAPI
 #endif
         }
 
+
+        /* OpenSSL library context, used to load non-default providers etc,
+         * made mutable so const function can use/initialise the context.
+         *
+         * First field in this class so it gets destructed last*/
+        using SSLCtxType = std::remove_pointer<SSLLib::Ctx>::type;
+        mutable std::unique_ptr<SSLCtxType, decltype(&::OSSL_LIB_CTX_free)> lib_ctx{nullptr, &::OSSL_LIB_CTX_free};
+
         Mode mode;
         CertCRLList ca;                   // from OpenVPN "ca" and "crl-verify" option
         OpenSSLPKI::X509 cert;            // from OpenVPN "cert" option
@@ -663,10 +671,6 @@ class OpenSSLContext : public SSLFactoryAPI
         bool client_session_tickets = false;
         bool load_legacy_provider = false;
 
-        /* OpenSSL library context, used to load non-default providers etc,
-         * made mutable so const function can use/initialise the context */
-        using SSLCtxType = std::remove_pointer<SSLLib::Ctx>::type;
-        mutable std::unique_ptr<SSLCtxType, decltype(&::OSSL_LIB_CTX_free)> lib_ctx{nullptr, &::OSSL_LIB_CTX_free};
 
         /* References to the Providers we loaded, so we can unload them */
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
