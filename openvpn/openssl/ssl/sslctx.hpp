@@ -1400,18 +1400,18 @@ class OpenSSLContext : public SSLFactoryAPI
             {
 #ifdef ENABLE_EXTERNAL_PKI
 #if OPENSSL_VERSION_NUMBER >= 0x30000010L
-                epki.reset(new XKeyExternalPKIImpl{ctx.get(), config->cert.obj(), config->external_pki});
+                epki = XKeyExternalPKIImpl::create(ctx.get(), config->cert.obj(), config->external_pki);
 
 #else
                 auto certType = EVP_PKEY_id(X509_get0_pubkey(config->cert.obj()));
                 if (certType == EVP_PKEY_RSA)
                 {
-                    epki = new ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki);
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki));
                 }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
                 else if (certType == EVP_PKEY_EC)
                 {
-                    epki = new ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki);
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki));
                 }
 #endif
                 else
@@ -2319,12 +2319,15 @@ class OpenSSLContext : public SSLFactoryAPI
                && ssl.authcert->is_fail(); //   authcert has recorded it
     }
 
-
-
+    /* The order of epki and config is important here. epki holds a library
+     * context that is need for the certificate (cert) object from config
+     * with external key as that internally refrences the library context
+     * and must not be destructed before the objects referencing it have
+     * been destructed */
+    std::shared_ptr<ExternalPKIImpl> epki = nullptr;
     Config::Ptr config;
 
     SSL_CTX_unique_ptr ctx{nullptr, &SSL_CTX_free};
-    std::unique_ptr<ExternalPKIImpl> epki = nullptr;
     OpenSSLSessionCache::Ptr sess_cache; // client-side only
 };
 

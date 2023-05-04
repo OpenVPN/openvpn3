@@ -34,7 +34,7 @@
 #include <openvpn/openssl/xkey/xkey_common.h>
 
 namespace openvpn {
-class XKeyExternalPKIImpl : public ExternalPKIImpl
+class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKIImpl>, public ExternalPKIImpl
 {
   private:
     using OSSL_LIB_CTX_unique_ptr = std::unique_ptr<::OSSL_LIB_CTX, decltype(&::OSSL_LIB_CTX_free)>;
@@ -104,14 +104,6 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
         EVP_set_default_properties(tls_libctx.get(), "?provider!=ovpn.xkey");
     }
 
-    ~XKeyExternalPKIImpl()
-    {
-        if (tls_libctx)
-        {
-            OSSL_PROVIDER_do_all(tls_libctx.get(), provider_unload, nullptr);
-        }
-    }
-
     EVP_PKEY *
     tls_ctx_use_external_key(::SSL_CTX *ctx, ::X509 *cert)
     {
@@ -123,22 +115,43 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
         if (!pkey)
             OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: X509_get0_pubkey");
 
-        EVP_PKEY *privkey = xkey_load_generic_key(tls_libctx.get(), this, pkey, xkey_sign_cb, nullptr);
+        /* keep a refrence of XKeyExternalPKIImpl in the EVP_PKEY object, see also xkey_free_cb */
+        std::unique_ptr<decltype(shared_from_this())> thisptr{new std::shared_ptr(shared_from_this())};
+        EVP_PKEY *privkey = xkey_load_generic_key(tls_libctx.get(), thisptr.get(), pkey, xkey_sign_cb, xkey_free_cb);
         if (!privkey
             || !SSL_CTX_use_PrivateKey(ctx, privkey))
         {
             EVP_PKEY_free(privkey);
             return nullptr;
         }
+        thisptr.release();
 
         return privkey;
     }
 
   public:
-    XKeyExternalPKIImpl(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki)
+    [[nodiscard]] static std::shared_ptr<XKeyExternalPKIImpl> create(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki)
+    {
+        auto ret = std::shared_ptr<XKeyExternalPKIImpl>{new XKeyExternalPKIImpl{external_pki}};
+        ret->use_external_key(ssl_ctx, cert);
+        return ret;
+    }
+
+    ~XKeyExternalPKIImpl()
+    {
+        if (tls_libctx)
+        {
+            OSSL_PROVIDER_do_all(tls_libctx.get(), provider_unload, nullptr);
+        }
+    }
+
+    XKeyExternalPKIImpl(ExternalPKIBase *external_pki)
         : external_pki(external_pki)
     {
+    }
 
+    void use_external_key(SSL_CTX *ssl_ctx, ::X509 *cert)
+    {
         /* Ensure provider is loaded */
         load_xkey_provider();
 
@@ -154,6 +167,8 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
         EVP_PKEY_free(privkey);
     }
 
+
+  private:
     static int xkey_sign_cb(void *this_ptr,
                             unsigned char *sig,
                             size_t *siglen,
@@ -161,7 +176,20 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
                             size_t tbslen,
                             XKEY_SIGALG alg)
     {
-        return static_cast<XKeyExternalPKIImpl *>(this_ptr)->xkey_sign(sig, siglen, tbs, tbslen, alg);
+        return static_cast<std::shared_ptr<XKeyExternalPKIImpl> *>(this_ptr)->get()->xkey_sign(sig, siglen, tbs, tbslen, alg);
+    }
+
+    static void xkey_free_cb(void *this_ptr)
+    {
+        /* This method implements a reference counting for the library context.
+         * Normally objects in OpenSSL are refcounted and will only be freed
+         * when no object still uses that object. However library contexts are
+         * not reference counted. So we use the shared_ptr here to keep this
+         * objects and the \c tls_libctx alive as long as there still OpenSSL
+         * objects using it.The xkey provider will be kept alive as
+         * long as is still an object referencing it (like an ::EVP_PKEY).
+         */
+        delete static_cast<std::shared_ptr<XKeyExternalPKIImpl> *>(this_ptr);
     }
 
     /**
