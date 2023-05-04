@@ -37,7 +37,9 @@ namespace openvpn {
 class XKeyExternalPKIImpl : public ExternalPKIImpl
 {
   private:
-    OSSL_LIB_CTX *tls_libctx = nullptr;
+    using OSSL_LIB_CTX_unique_ptr = std::unique_ptr<::OSSL_LIB_CTX, decltype(&::OSSL_LIB_CTX_free)>;
+
+    OSSL_LIB_CTX_unique_ptr tls_libctx{nullptr, ::OSSL_LIB_CTX_free};
     ExternalPKIBase *external_pki;
 
     static void
@@ -70,7 +72,7 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
         /* Make a new library context for use in TLS context */
         if (!tls_libctx)
         {
-            tls_libctx = OSSL_LIB_CTX_new();
+            tls_libctx = OSSL_LIB_CTX_unique_ptr{::OSSL_LIB_CTX_new(), OSSL_LIB_CTX_free};
             if (!tls_libctx)
                 OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: OSSL_LIB_CTX_new");
 
@@ -79,13 +81,13 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
              * but currently that is usable only from within providers.
              * So we do something close to it manually here.
              */
-            OSSL_PROVIDER_do_all(nullptr, provider_load, tls_libctx);
+            OSSL_PROVIDER_do_all(nullptr, provider_load, tls_libctx.get());
         }
 
-        if (!OSSL_PROVIDER_available(tls_libctx, "ovpn.xkey"))
+        if (!OSSL_PROVIDER_available(tls_libctx.get(), "ovpn.xkey"))
         {
-            OSSL_PROVIDER_add_builtin(tls_libctx, "ovpn.xkey", xkey_provider_init);
-            if (!OSSL_PROVIDER_load(tls_libctx, "ovpn.xkey"))
+            OSSL_PROVIDER_add_builtin(tls_libctx.get(), "ovpn.xkey", xkey_provider_init);
+            if (!OSSL_PROVIDER_load(tls_libctx.get(), "ovpn.xkey"))
             {
                 OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: "
                                                     << "failed loading external key provider: "
@@ -99,17 +101,15 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
          * libctx that unprefers, but does not forbid, ovpn.xkey. See also man page
          * of "property" in OpenSSL 3.0.
          */
-        EVP_set_default_properties(tls_libctx, "?provider!=ovpn.xkey");
+        EVP_set_default_properties(tls_libctx.get(), "?provider!=ovpn.xkey");
     }
 
-    void unload_xkey_provider()
+    ~XKeyExternalPKIImpl()
     {
         if (tls_libctx)
         {
-            OSSL_PROVIDER_do_all(tls_libctx, provider_unload, nullptr);
-            OSSL_LIB_CTX_free(tls_libctx);
+            OSSL_PROVIDER_do_all(tls_libctx.get(), provider_unload, nullptr);
         }
-        tls_libctx = nullptr;
     }
 
     EVP_PKEY *
@@ -123,7 +123,7 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
         if (!pkey)
             OPENVPN_THROW(OpenSSLException, "OpenSSLContext::ExternalPKIImpl: X509_get0_pubkey");
 
-        EVP_PKEY *privkey = xkey_load_generic_key(tls_libctx, this, pkey, xkey_sign_cb, nullptr);
+        EVP_PKEY *privkey = xkey_load_generic_key(tls_libctx.get(), this, pkey, xkey_sign_cb, nullptr);
         if (!privkey
             || !SSL_CTX_use_PrivateKey(ctx, privkey))
         {
@@ -152,11 +152,6 @@ class XKeyExternalPKIImpl : public ExternalPKIImpl
         }
 
         EVP_PKEY_free(privkey);
-    }
-
-    virtual ~XKeyExternalPKIImpl()
-    {
-        unload_xkey_provider();
     }
 
     static int xkey_sign_cb(void *this_ptr,
