@@ -203,17 +203,13 @@ struct AltRoutingShimFactory : public RC<thread_unsafe_refcount>
     {
         return IP::Addr();
     }
-    virtual IP::Addr local_ip()
+    virtual std::vector<IP::Addr> local_addrs()
     {
-        return IP::Addr();
+        return std::vector<IP::Addr>();
     }
     virtual int remote_port()
     {
         return -1;
-    }
-    virtual int error_expire()
-    {
-        return 0;
     }
     virtual int alt_routing_debug_level()
     {
@@ -928,9 +924,9 @@ class HTTPCore : public Base, public TransportClientParent
         socket.reset(s);
 
         // bind local?
-        const IP::Addr local_addr = sf.local_ip();
-        if (local_addr.defined())
-            s->socket.bind_local(local_addr, 0);
+        const std::vector<IP::Addr> local_addrs = sf.local_addrs();
+        for (const auto &la : local_addrs)
+            s->socket.bind_local(la, 0);
 
         // add shim to socket
         s->socket.shim = std::move(shim);
