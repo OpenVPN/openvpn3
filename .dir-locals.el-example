@@ -5,6 +5,6 @@
   (innamespace . -)
   (inline-open . 0)
   (inher-cont . c-lineup-multi-inher)
-  (arglist-cont-nonempty . +)
+  (arglist-cont-nonempty . c-lineup-arglist)
   (template-args-cont . +))
 )
