@@ -175,13 +175,6 @@ struct KeyValue
  * between the parsed and unparsed client settings */
 struct ConfigCommon
 {
-    // OpenVPN profile as a string
-    std::string content;
-
-    // OpenVPN profile as series of key/value pairs (may be provided exclusively
-    // or in addition to content string above).
-    std::vector<KeyValue> contentList;
-
     // Set to identity OpenVPN GUI version.
     // Format should be "<gui_identifier><space><version>"
     // Passed to server as IV_GUI_VER.
@@ -349,6 +342,13 @@ struct ConfigCommon
 // (client writes)
 struct Config : public ConfigCommon
 {
+    // OpenVPN profile as a string
+    std::string content;
+
+    // OpenVPN profile as series of key/value pairs (may be provided exclusively
+    // or in addition to content string above).
+    std::vector<KeyValue> contentList;
+
     // Force a given transport protocol
     // Should be tcp, udp, or adaptive.
     std::string protoOverride;
