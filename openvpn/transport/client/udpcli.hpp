@@ -95,7 +95,7 @@ class Client : public TransportClient, AsyncResolvableUDP
         if (!impl)
         {
             halt = false;
-            if (config->remote_list->endpoint_available(&server_host, &server_port, nullptr))
+            if (config->remote_list->endpoint_available(&server_host, &server_port, &server_protocol))
             {
                 start_connect_();
             }
@@ -156,9 +156,8 @@ class Client : public TransportClient, AsyncResolvableUDP
     {
         host = server_host;
         port = server_port;
+        proto = server_protocol.str();
         const IP::Addr addr = server_endpoint_addr();
-        proto = "UDP";
-        proto += addr.version_string();
         ip_addr = addr.to_string();
     }
 
@@ -179,12 +178,7 @@ class Client : public TransportClient, AsyncResolvableUDP
 
     Protocol transport_protocol() const override
     {
-        if (server_endpoint.address().is_v4())
-            return Protocol(Protocol::UDPv4);
-        else if (server_endpoint.address().is_v6())
-            return Protocol(Protocol::UDPv6);
-        else
-            return Protocol();
+        return server_protocol;
     }
 
     void stop() override
@@ -338,6 +332,8 @@ class Client : public TransportClient, AsyncResolvableUDP
 
     std::string server_host;
     std::string server_port;
+
+    Protocol server_protocol;
 
     openvpn_io::ip::udp::socket socket;
     ClientConfig::Ptr config;

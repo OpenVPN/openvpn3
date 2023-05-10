@@ -192,8 +192,7 @@ class Client : public TransportClient,
         host = server_host;
         port = server_port;
         const IP::Addr addr = server_endpoint_addr();
-        proto = config->transport.protocol.is_tcp() ? "TCP" : "UDP";
-        proto += addr.version_string();
+        proto = std::string(transport_protocol().str());
         proto += "-DCO";
         ip_addr = addr.to_string();
     }
