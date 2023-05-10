@@ -763,7 +763,7 @@ static void start_thread(Client &client)
     // Set Windows title bar
     const std::string title_text = "F2:Stats F3:Reconnect F4:Stop F5:Pause";
     Win::Console::Title title(ClientAPI::OpenVPNClientHelper::platform() + "     " + title_text);
-    Win::Console::Input console;
+    Win::Console::Input console{false};
 
     // start connect thread
     std::unique_ptr<std::thread> thread;
@@ -1018,7 +1018,11 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             bool merge = false;
             bool version = false;
             bool altProxy = false;
+#if defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
             bool dco = true;
+#else
+            bool dco = false;
+#endif
             bool generate_tun_builder_capture_event = false;
             std::string epki_cert_fn;
             std::string epki_ca_fn;
@@ -1411,6 +1415,15 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                             client.print_stats();
                         }
                     }
+#ifdef USE_OPENSSL
+                    /* Since this is a debug/test program we check if the
+                     * internal OpenSSL error stack is empty on exit and
+                     * print the warnings otherwise */
+                    if (ERR_peek_error())
+                    {
+                        throw OpenSSLException{};
+                    }
+#endif
                 } while (retry);
             }
         }

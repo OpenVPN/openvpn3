@@ -136,6 +136,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         HTTPProxyTransport::Options::Ptr http_proxy_options;
         bool alt_proxy = false;
         bool dco = true;
+        bool dco_compatible = false;
         bool echo = false;
         bool info = false;
         bool tun_persist = false;
@@ -254,6 +255,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                                                              !config.enable_nonpreferred_dcalgs,
                                                              config.enable_legacy_algorithms);
 
+        // throw an exception of dco is requested but config/options are dco-incompatible
+        if (config.dco && !config.dco_compatible)
+        {
+            throw option_error("dco_compatibility: config/options are not compatible with dco");
+        }
+
 #if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
         if (config.dco)
 #if defined(USE_TUN_BUILDER)
@@ -352,6 +359,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             tunconf.tun_prop.google_dns_fallback = config.google_dns_fallback;
             tunconf.tun_prop.remote_list = remote_list;
             tunconf.stop = config.stop;
+            tunconf.allow_local_dns_resolvers = config.allow_local_dns_resolvers;
 #if defined(OPENVPN_PLATFORM_WIN)
             if (config.tun_persist)
                 tunconf.tun_persist.reset(new TunWin::DcoTunPersist(true, TunWrapObjRetain::NO_RETAIN_NO_REPLACE, nullptr));
@@ -475,6 +483,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf->stats = cli_stats;
                 tunconf->stop = config.stop;
                 tunconf->tun_type = config.wintun ? TunWin::Wintun : TunWin::TapWindows6;
+                tunconf->allow_local_dns_resolvers = config.allow_local_dns_resolvers;
                 if (config.tun_persist)
                 {
                     tunconf->tun_persist.reset(new TunWin::TunPersist(true, TunWrapObjRetain::NO_RETAIN, nullptr));

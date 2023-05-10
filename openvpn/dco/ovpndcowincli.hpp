@@ -241,7 +241,7 @@ class OvpnDcoWinClient : public Client,
             return;
 
         // create new tun setup object
-        tun_setup_ = config->tun.new_setup_obj(io_context, config->allow_local_dns_resolvers);
+        tun_setup_ = config->tun.new_setup_obj(io_context, config->tun.allow_local_dns_resolvers);
 
         if (config->tun.tun_persist)
             tun_persist = config->tun.tun_persist; // long-term persistent

@@ -55,6 +55,7 @@
 #include <bcrypt.h>
 #include <openvpn/dco/key.hpp>
 #include <openvpn/dco/ovpn-dco.h>
+#include <openvpn/win/modname.hpp>
 #else
 #error either ENABLE_KOVPN, ENABLE_OVPNDCO or ENABLE_OVPNDCOWIN must be defined
 #endif
@@ -81,8 +82,6 @@ class ClientConfig : public DCO,
 
     DCO::TransportConfig transport;
     DCO::TunConfig tun;
-
-    bool allow_local_dns_resolvers = false;
 
     unsigned int ping_restart_override = 0;
 
@@ -193,8 +192,7 @@ class Client : public TransportClient,
         host = server_host;
         port = server_port;
         const IP::Addr addr = server_endpoint_addr();
-        proto = config->transport.protocol.is_tcp() ? "TCP" : "UDP";
-        proto += addr.version_string();
+        proto = std::string(transport_protocol().str());
         proto += "-DCO";
         ip_addr = addr.to_string();
     }

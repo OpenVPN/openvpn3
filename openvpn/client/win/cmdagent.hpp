@@ -151,6 +151,7 @@ class WinCommandAgent : public TunWin::SetupFactory
             Json::Value jreq(Json::objectValue);
             jreq["confirm_event"] = confirm_event.duplicate_local();
             jreq["destroy_event"] = destroy_event.duplicate_local();
+            jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
             const std::string jtxt = jreq.toStyledString();
             os << jtxt; // dump it
 
@@ -163,7 +164,6 @@ class WinCommandAgent : public TunWin::SetupFactory
 	    if (!service_process.is_open())
 	      service_process.assign(handle); });
 
-            jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
             make_transaction("tun-open", jtxt, ts);
 
             // Execute transaction

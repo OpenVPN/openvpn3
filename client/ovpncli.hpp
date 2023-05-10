@@ -26,6 +26,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <utility>
 
 #include <openvpn/tun/builder/base.hpp>
@@ -98,6 +99,9 @@ struct EvalConfig
 
     // optional, values are "tap-windows6" and "wintun"
     std::string windowsDriver;
+
+    bool dcoCompatible;
+    std::string dcoIncompatibilityReason;
 };
 
 // used to pass credentials to VPN core
@@ -312,7 +316,11 @@ struct Config
     bool altProxy = false;
 
     // Enable automatic Data Channel Offload
+#if defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
     bool dco = true;
+#else
+    bool dco = false;
+#endif
 
     // pass through pushed "echo" directives via "ECHO" event
     bool echo = false;
@@ -559,6 +567,12 @@ class OpenVPNClientHelper
     // Returns core copyright
     static std::string copyright();
 
+    // If those options are present, dco cannot be used
+    inline static std::unordered_set<std::string> dco_incompatible_opts = {
+        "http-proxy",
+        "compress",
+        "comp-lzo"};
+
   private:
     static MergeConfig build_merge_config(const ProfileMerge &);
 
@@ -571,6 +585,11 @@ class OpenVPNClientHelper
      * included in the same compilation unit which breaks in the swig wrapped
      * class, so we use a plain pointer and new/delete in constructor/destructor */
     InitProcess::Init *init;
+
+    /* Checks if there are dco-incompatible options in options list or config has
+     * dco-incompatible settings. Sets dcoCompatible flag and dcoIncompatibilityReason
+     * string property (if applicable) in EvalConfig object */
+    static void check_dco_compatibility(const Config &, EvalConfig &, OptionList &);
 };
 
 // Top-level OpenVPN client class.

@@ -49,6 +49,13 @@ class Signal
         F_SIGPIPE = (1 << 5),
     };
 
+    /**
+     * configure a signal handler to be active on the signal specified in the
+     * \c flags parameter. The signal handler will receive the original system
+     * signal numbers and not the ones from the enum of this class.
+     * @param handler
+     * @param flags
+     */
     Signal(const handler_t handler, const unsigned int flags)
     {
         struct sigaction sa;

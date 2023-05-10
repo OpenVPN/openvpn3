@@ -110,6 +110,8 @@ namespace openvpn {
 // to instantiate actual SSL sessions.
 class OpenSSLContext : public SSLFactoryAPI
 {
+    using SSL_CTX_unique_ptr = std::unique_ptr<::SSL_CTX, decltype(&::SSL_CTX_free)>;
+
   public:
     typedef RCPtr<OpenSSLContext> Ptr;
     typedef CertCRLListTemplate<OpenSSLPKI::X509List, OpenSSLPKI::CRLList> CertCRLList;
@@ -632,6 +634,14 @@ class OpenSSLContext : public SSLFactoryAPI
 #endif
         }
 
+
+        /* OpenSSL library context, used to load non-default providers etc,
+         * made mutable so const function can use/initialise the context.
+         *
+         * First field in this class so it gets destructed last*/
+        using SSLCtxType = std::remove_pointer<SSLLib::Ctx>::type;
+        mutable std::unique_ptr<SSLCtxType, decltype(&::OSSL_LIB_CTX_free)> lib_ctx{nullptr, &::OSSL_LIB_CTX_free};
+
         Mode mode;
         CertCRLList ca;                   // from OpenVPN "ca" and "crl-verify" option
         OpenSSLPKI::X509 cert;            // from OpenVPN "cert" option
@@ -661,10 +671,7 @@ class OpenSSLContext : public SSLFactoryAPI
         bool client_session_tickets = false;
         bool load_legacy_provider = false;
 
-        /* OpenSSL library context, used to load non-default providers etc,
-         * made mutable so const function can use/initialise the context */
-        using SSLCtxType = std::remove_pointer<SSLLib::Ctx>::type;
-        mutable std::unique_ptr<SSLCtxType, decltype(&::OSSL_LIB_CTX_free)> lib_ctx{nullptr, &::OSSL_LIB_CTX_free};
+
         /* References to the Providers we loaded, so we can unload them */
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
         mutable std::unique_ptr<OSSL_PROVIDER, decltype(&::OSSL_PROVIDER_unload)> legacy_provider{nullptr, &::OSSL_PROVIDER_unload};
@@ -842,7 +849,7 @@ class OpenSSLContext : public SSLFactoryAPI
             try
             {
                 // init SSL objects
-                ssl = SSL_new(ctx.ctx);
+                ssl = SSL_new(ctx.ctx.get());
                 if (!ssl)
                     throw OpenSSLException("OpenSSLContext::SSL: SSL_new failed");
 
@@ -1163,15 +1170,15 @@ class OpenSSLContext : public SSLFactoryAPI
     void setup_server_ticket_callback() const
     {
         const std::string sess_id_context = config->session_ticket_handler->session_id_context();
-        if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
+        if (!SSL_CTX_set_session_id_context(ctx.get(), (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
             throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-        if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx, tls_ticket_key_callback))
+        if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx.get(), tls_ticket_key_callback))
             throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_key_cb failed");
 #else
 
-        if (!SSL_CTX_set_tlsext_ticket_key_evp_cb(ctx, tls_ticket_key_callback))
+        if (!SSL_CTX_set_tlsext_ticket_key_evp_cb(ctx.get(), tls_ticket_key_callback))
             throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_evp_cb failed");
 #endif
     }
@@ -1179,284 +1186,276 @@ class OpenSSLContext : public SSLFactoryAPI
     OpenSSLContext(Config *config_arg)
         : config(config_arg)
     {
-        try
+        // Create new SSL_CTX for server or client mode
+        if (config->mode.is_server())
         {
-            // Create new SSL_CTX for server or client mode
-            if (config->mode.is_server())
-            {
-                ctx = SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_server());
-                if (ctx == nullptr)
-                    throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
+            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_server()), ::SSL_CTX_free};
+            if (!ctx)
+                throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
 
-                // Set DH object
-                if (!config->dh.defined())
-                    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: DH not defined");
+            // Set DH object
+            if (!config->dh.defined())
+                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: DH not defined");
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-                if (!SSL_CTX_set0_tmp_dh_pkey(ctx, config->dh.obj_release()))
-                    throw OpenSSLException("OpenSSLContext: SSL_CTX_set0_tmp_dh_pkey failed");
+            if (!SSL_CTX_set0_tmp_dh_pkey(ctx.get(), config->dh.obj_release()))
+                throw OpenSSLException("OpenSSLContext: SSL_CTX_set0_tmp_dh_pkey failed");
 #else
-                if (!SSL_CTX_set_tmp_dh(ctx, config->dh.obj()))
-                    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
+            if (!SSL_CTX_set_tmp_dh(ctx.get(), config->dh.obj()))
+                throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
 #endif
-                if (config->flags & SSLConst::SERVER_TO_SERVER)
-                    SSL_CTX_set_purpose(ctx, X509_PURPOSE_SSL_SERVER);
+            if (config->flags & SSLConst::SERVER_TO_SERVER)
+                SSL_CTX_set_purpose(ctx.get(), X509_PURPOSE_SSL_SERVER);
 
-                // server-side SNI
-                if (config->sni_handler)
-                {
+            // server-side SNI
+            if (config->sni_handler)
+            {
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
 #define OPENSSL_SERVER_SNI
-                    SSL_CTX_set_client_hello_cb(ctx, client_hello_callback, nullptr);
+                SSL_CTX_set_client_hello_cb(ctx.get(), client_hello_callback, nullptr);
 #else
-                    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: server-side SNI requires OpenSSL 1.1 or higher");
+                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: server-side SNI requires OpenSSL 1.1 or higher");
 #endif
-                }
             }
-            else if (config->mode.is_client())
-            {
-                ctx = SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_client());
-                if (ctx == nullptr)
-                    throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for client method");
-            }
-            else
-                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: unknown config->mode");
+        }
+        else if (config->mode.is_client())
+        {
+            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_client()), &::SSL_CTX_free};
+            if (!ctx)
+                throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for client method");
+        }
+        else
+            OPENVPN_THROW(ssl_context_error, "OpenSSLContext: unknown config->mode");
 
-            // Set SSL options
-            if (!(config->flags & SSLConst::NO_VERIFY_PEER))
-            {
-                int vf = SSL_VERIFY_PEER;
-                if (!(config->flags & SSLConst::PEER_CERT_OPTIONAL))
-                    vf |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-                SSL_CTX_set_verify(ctx,
-                                   vf,
-                                   config->mode.is_client()
-                                       ? verify_callback_client
-                                       : verify_callback_server);
-                SSL_CTX_set_verify_depth(ctx, 16);
-            }
+        // Set SSL options
+        if (!(config->flags & SSLConst::NO_VERIFY_PEER))
+        {
+            int vf = SSL_VERIFY_PEER;
+            if (!(config->flags & SSLConst::PEER_CERT_OPTIONAL))
+                vf |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+            SSL_CTX_set_verify(ctx.get(),
+                               vf,
+                               config->mode.is_client()
+                                   ? verify_callback_client
+                                   : verify_callback_server);
+            SSL_CTX_set_verify_depth(ctx.get(), 16);
+        }
 
-            /* Disable SSLv2 and SSLv3, might be a noop but does not hurt */
-            long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+        /* Disable SSLv2 and SSLv3, might be a noop but does not hurt */
+        long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 
 #ifdef SSL_OP_NO_RENEGOTIATION
-            sslopt |= SSL_OP_NO_RENEGOTIATION;
+        sslopt |= SSL_OP_NO_RENEGOTIATION;
 #endif
 
-            if (config->mode.is_server())
+        if (config->mode.is_server())
+        {
+            SSL_CTX_set_session_cache_mode(ctx.get(), SSL_SESS_CACHE_OFF);
+            if (config->session_ticket_handler)
             {
-                SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
-                if (config->session_ticket_handler)
-                {
-                    setup_server_ticket_callback();
-                }
-                else
-                    sslopt |= SSL_OP_NO_TICKET;
+                setup_server_ticket_callback();
+            }
+            else
+                sslopt |= SSL_OP_NO_TICKET;
 
-                // send a client CA list to the client
-                if (config->flags & SSLConst::SEND_CLIENT_CA_LIST)
+            // send a client CA list to the client
+            if (config->flags & SSLConst::SEND_CLIENT_CA_LIST)
+            {
+                for (const auto &e : config->ca.certs)
                 {
-                    for (const auto &e : config->ca.certs)
-                    {
-                        if (SSL_CTX_add_client_CA(ctx, e.obj()) != 1)
-                            throw OpenSSLException("OpenSSLContext: SSL_CTX_add_client_CA failed");
-                    }
+                    if (SSL_CTX_add_client_CA(ctx.get(), e.obj()) != 1)
+                        throw OpenSSLException("OpenSSLContext: SSL_CTX_add_client_CA failed");
                 }
+            }
+        }
+        else
+        {
+            if (config->client_session_tickets)
+            {
+                SSL_CTX_set_session_cache_mode(ctx.get(), SSL_SESS_CACHE_CLIENT);
+                sess_cache.reset(new OpenSSLSessionCache);
             }
             else
             {
-                if (config->client_session_tickets)
-                {
-                    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT);
-                    sess_cache.reset(new OpenSSLSessionCache);
-                }
-                else
-                {
-                    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
-                    sslopt |= SSL_OP_NO_TICKET;
-                }
+                SSL_CTX_set_session_cache_mode(ctx.get(), SSL_SESS_CACHE_OFF);
+                sslopt |= SSL_OP_NO_TICKET;
             }
+        }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-            if (config->tls_version_min > TLSVersion::Type::V1_0)
-            {
-                SSL_CTX_set_min_proto_version(ctx, TLSVersion::toTLSVersion(config->tls_version_min));
-            }
+        if (config->tls_version_min > TLSVersion::Type::V1_0)
+        {
+            SSL_CTX_set_min_proto_version(ctx.get(), TLSVersion::toTLSVersion(config->tls_version_min));
+        }
 #else
-            if (config->tls_version_min > TLSVersion::Type::V1_0)
-                sslopt |= SSL_OP_NO_TLSv1;
+        if (config->tls_version_min > TLSVersion::Type::V1_0)
+            sslopt |= SSL_OP_NO_TLSv1;
 #ifdef SSL_OP_NO_TLSv1_1
-            if (config->tls_version_min > TLSVersion::Type::V1_1)
-                sslopt |= SSL_OP_NO_TLSv1_1;
+        if (config->tls_version_min > TLSVersion::Type::V1_1)
+            sslopt |= SSL_OP_NO_TLSv1_1;
 #endif
 #ifdef SSL_OP_NO_TLSv1_2
-            if (config->tls_version_min > TLSVersion::Type::V1_2)
-                sslopt |= SSL_OP_NO_TLSv1_2;
+        if (config->tls_version_min > TLSVersion::Type::V1_2)
+            sslopt |= SSL_OP_NO_TLSv1_2;
 #endif
 #ifdef SSL_OP_NO_TLSv1_3
-            if (config->tls_version_min > TLSVersion::Type::V1_3)
-                sslopt |= SSL_OP_NO_TLSv1_3;
+        if (config->tls_version_min > TLSVersion::Type::V1_3)
+            sslopt |= SSL_OP_NO_TLSv1_3;
 #endif
 #endif
-            SSL_CTX_set_options(ctx, sslopt);
+        SSL_CTX_set_options(ctx.get(), sslopt);
 
-            if (!config->tls_groups.empty())
-            {
-                set_openssl_tls_groups(config->tls_groups);
-            }
+        if (!config->tls_groups.empty())
+        {
+            set_openssl_tls_groups(config->tls_groups);
+        }
 #if defined(TLS1_3_VERSION)
-            if (!config->tls_ciphersuite_list.empty())
-            {
-                if (!SSL_CTX_set_ciphersuites(ctx, config->tls_ciphersuite_list.c_str()))
-                    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_ciphersuites_list failed");
-            }
+        if (!config->tls_ciphersuite_list.empty())
+        {
+            if (!SSL_CTX_set_ciphersuites(ctx.get(), config->tls_ciphersuite_list.c_str()))
+                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_ciphersuites_list failed");
+        }
 #endif
-            std::string tls_cipher_list =
-                /* default list as a basis */
-                "DEFAULT"
-                /* Disable export ciphers, low and medium */
-                ":!EXP:!LOW:!MEDIUM"
-                /* Disable static (EC)DH keys (no forward secrecy) */
-                ":!kDH:!kECDH"
-                /* Disable DSA private keys */
-                ":!DSS"
-                /* Disable RC4 cipher */
-                ":!RC4"
-                /* Disable MD5 */
-                ":!MD5"
-                /* Disable unsupported TLS modes */
-                ":!PSK:!SRP:!kRSA"
-                /* Disable SSLv2 cipher suites*/
-                ":!SSLv2";
+        std::string tls_cipher_list =
+            /* default list as a basis */
+            "DEFAULT"
+            /* Disable export ciphers, low and medium */
+            ":!EXP:!LOW:!MEDIUM"
+            /* Disable static (EC)DH keys (no forward secrecy) */
+            ":!kDH:!kECDH"
+            /* Disable DSA private keys */
+            ":!DSS"
+            /* Disable RC4 cipher */
+            ":!RC4"
+            /* Disable MD5 */
+            ":!MD5"
+            /* Disable unsupported TLS modes */
+            ":!PSK:!SRP:!kRSA"
+            /* Disable SSLv2 cipher suites*/
+            ":!SSLv2";
 
-            /* If we are using preferred, we also do not want to allow SHA1
-             * cipher suites. This is also included in security level 4 of
-             * OpenSSL*/
-            if (TLSCertProfile::default_if_undef(config->tls_cert_profile) >= TLSCertProfile::PREFERRED)
-                tls_cipher_list += ":!SHA1";
+        /* If we are using preferred, we also do not want to allow SHA1
+         * cipher suites. This is also included in security level 4 of
+         * OpenSSL*/
+        if (TLSCertProfile::default_if_undef(config->tls_cert_profile) >= TLSCertProfile::PREFERRED)
+            tls_cipher_list += ":!SHA1";
 
 
-            std::string translated_cipherlist;
+        std::string translated_cipherlist;
 
-            if (!config->tls_cipher_list.empty())
-            {
-                tls_cipher_list = translate_cipher_list(config->tls_cipher_list);
-            }
+        if (!config->tls_cipher_list.empty())
+        {
+            tls_cipher_list = translate_cipher_list(config->tls_cipher_list);
+        }
 
-            if (!SSL_CTX_set_cipher_list(ctx, tls_cipher_list.c_str()))
-                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
+        if (!SSL_CTX_set_cipher_list(ctx.get(), tls_cipher_list.c_str()))
+            OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && OPENSSL_VERSION_NUMBER < 0x10100000L
-            SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
+        SSL_CTX_set_ecdh_auto(ctx.get(), 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-            switch (TLSCertProfile::default_if_undef(config->tls_cert_profile))
-            {
-            case TLSCertProfile::UNDEF:
-                OPENVPN_THROW(ssl_context_error,
-                              "OpenSSLContext: undefined tls-cert-profile");
-                break;
+        switch (TLSCertProfile::default_if_undef(config->tls_cert_profile))
+        {
+        case TLSCertProfile::UNDEF:
+            OPENVPN_THROW(ssl_context_error,
+                          "OpenSSLContext: undefined tls-cert-profile");
+            break;
 #ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
-            case TLSCertProfile::INSECURE:
-                SSL_CTX_set_security_level(ctx, 0);
-                break;
+        case TLSCertProfile::INSECURE:
+            SSL_CTX_set_security_level(ctx.get(), 0);
+            break;
 #endif
-            case TLSCertProfile::LEGACY:
-                SSL_CTX_set_security_level(ctx, 1);
-                break;
-            case TLSCertProfile::PREFERRED:
-                SSL_CTX_set_security_level(ctx, 2);
-                break;
-            case TLSCertProfile::SUITEB:
-                SSL_CTX_set_security_level(ctx, 3);
-                break;
-            default:
-                OPENVPN_THROW(ssl_context_error,
-                              "OpenSSLContext: unexpected tls-cert-profile value");
-                break;
-            }
+        case TLSCertProfile::LEGACY:
+            SSL_CTX_set_security_level(ctx.get(), 1);
+            break;
+        case TLSCertProfile::PREFERRED:
+            SSL_CTX_set_security_level(ctx.get(), 2);
+            break;
+        case TLSCertProfile::SUITEB:
+            SSL_CTX_set_security_level(ctx.get(), 3);
+            break;
+        default:
+            OPENVPN_THROW(ssl_context_error,
+                          "OpenSSLContext: unexpected tls-cert-profile value");
+            break;
+        }
 #else
-            // when OpenSSL does not CertProfile support we force the user to set 'legacy'
-            if (TLSCertProfile::default_if_undef(config->tls_cert_profile) != TLSCertProfile::LEGACY)
-            {
-                OPENVPN_THROW(ssl_context_error,
-                              "OpenSSLContext: tls-cert-profile not supported by this OpenSSL build. Use 'legacy' instead");
-            }
+        // when OpenSSL does not CertProfile support we force the user to set 'legacy'
+        if (TLSCertProfile::default_if_undef(config->tls_cert_profile) != TLSCertProfile::LEGACY)
+        {
+            OPENVPN_THROW(ssl_context_error,
+                          "OpenSSLContext: tls-cert-profile not supported by this OpenSSL build. Use 'legacy' instead");
+        }
 #endif
 
-            if (config->local_cert_enabled)
-            {
-                // Set certificate
-                if (!config->cert.defined())
-                    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: cert not defined");
-                if (SSL_CTX_use_certificate(ctx, config->cert.obj()) != 1)
-                    throw OpenSSLException("OpenSSLContext: SSL_CTX_use_certificate failed");
+        if (config->local_cert_enabled)
+        {
+            // Set certificate
+            if (!config->cert.defined())
+                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: cert not defined");
+            if (SSL_CTX_use_certificate(ctx.get(), config->cert.obj()) != 1)
+                throw OpenSSLException("OpenSSLContext: SSL_CTX_use_certificate failed");
 
-                // Set private key
-                if (config->external_pki)
-                {
+            // Set private key
+            if (config->external_pki)
+            {
 #ifdef ENABLE_EXTERNAL_PKI
 #if OPENSSL_VERSION_NUMBER >= 0x30000010L
-                    epki = new XKeyExternalPKIImpl(ctx, config->cert.obj(), config->external_pki);
+                epki = XKeyExternalPKIImpl::create(ctx.get(), config->cert.obj(), config->external_pki);
 
 #else
-                    auto certType = EVP_PKEY_id(X509_get0_pubkey(config->cert.obj()));
-                    if (certType == EVP_PKEY_RSA)
-                    {
-                        epki = new ExternalPKIRsaImpl(ctx, config->cert.obj(), config->external_pki);
-                    }
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
-                    else if (certType == EVP_PKEY_EC)
-                    {
-                        epki = new ExternalPKIECImpl(ctx, config->cert.obj(), config->external_pki);
-                    }
-#endif
-                    else
-                    {
-                        throw OpenSSLException("OpenSSLContext: pkey is neither RSA nor EC. Unsupported with external pki");
-                    }
-#endif
-#else
-                    throw OpenSSLException("OpenSSLContext: External PKI is not enabled in this build. ");
-#endif
+                auto certType = EVP_PKEY_id(X509_get0_pubkey(config->cert.obj()));
+                if (certType == EVP_PKEY_RSA)
+                {
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki));
                 }
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
+                else if (certType == EVP_PKEY_EC)
+                {
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki));
+                }
+#endif
                 else
                 {
-                    if (!config->pkey.defined())
-                        OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");
-                    if (SSL_CTX_use_PrivateKey(ctx, config->pkey.obj()) != 1)
-                        throw OpenSSLException("OpenSSLContext: SSL_CTX_use_PrivateKey failed");
-
-                    // Check cert/private key compatibility
-                    if (!SSL_CTX_check_private_key(ctx))
-                        throw OpenSSLException("OpenSSLContext: private key does not match the certificate");
+                    throw OpenSSLException("OpenSSLContext: pkey is neither RSA nor EC. Unsupported with external pki");
                 }
+#endif
+#else
+                throw OpenSSLException("OpenSSLContext: External PKI is not enabled in this build. ");
+#endif
+            }
+            else
+            {
+                if (!config->pkey.defined())
+                    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: private key not defined");
+                if (SSL_CTX_use_PrivateKey(ctx.get(), config->pkey.obj()) != 1)
+                    throw OpenSSLException("OpenSSLContext: SSL_CTX_use_PrivateKey failed");
 
-                // Set extra certificates that are part of our own certificate
-                // chain but shouldn't be included in the verify chain.
-                if (config->extra_certs.defined())
-                {
-                    for (const auto &e : config->extra_certs)
-                    {
-                        if (SSL_CTX_add_extra_chain_cert(ctx, e.obj_dup()) != 1)
-                            throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
-                    }
-                }
+                // Check cert/private key compatibility
+                if (!SSL_CTX_check_private_key(ctx.get()))
+                    throw OpenSSLException("OpenSSLContext: private key does not match the certificate");
             }
 
-            // Set CAs/CRLs
-            if (config->ca.certs.defined())
-                update_trust(config->ca);
-            else if (!(config->flags & (SSLConst::NO_VERIFY_PEER | SSLConst::VERIFY_PEER_FINGERPRINT)))
-                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: CA not defined");
+            // Set extra certificates that are part of our own certificate
+            // chain but shouldn't be included in the verify chain.
+            if (config->extra_certs.defined())
+            {
+                for (const auto &e : config->extra_certs)
+                {
+                    if (SSL_CTX_add_extra_chain_cert(ctx.get(), e.obj_dup()) != 1)
+                        throw OpenSSLException("OpenSSLContext: SSL_CTX_add_extra_chain_cert failed");
+                }
+            }
+        }
 
-            // Show handshake debugging info
-            if (config->ssl_debug_level)
-                SSL_CTX_set_info_callback(ctx, info_callback);
-        }
-        catch (...)
-        {
-            erase();
-            throw;
-        }
+        // Set CAs/CRLs
+        if (config->ca.certs.defined())
+            update_trust(config->ca);
+        else if (!(config->flags & (SSLConst::NO_VERIFY_PEER | SSLConst::VERIFY_PEER_FINGERPRINT)))
+            OPENVPN_THROW(ssl_context_error, "OpenSSLContext: CA not defined");
+
+        // Show handshake debugging info
+        if (config->ssl_debug_level)
+            SSL_CTX_set_info_callback(ctx.get(), info_callback);
     }
 
   public:
@@ -1486,13 +1485,10 @@ class OpenSSLContext : public SSLFactoryAPI
     void update_trust(const CertCRLList &cc)
     {
         OpenSSLPKI::X509Store store(cc);
-        SSL_CTX_set_cert_store(ctx, store.release());
+        SSL_CTX_set_cert_store(ctx.get(), store.release());
     }
 
-    ~OpenSSLContext()
-    {
-        erase();
-    }
+    ~OpenSSLContext() = default;
 
     const Mode &mode() const override
     {
@@ -1577,7 +1573,7 @@ class OpenSSLContext : public SSLFactoryAPI
             }
         }
 
-        if (!SSL_CTX_set1_groups(ctx, glist.get(), glistlen))
+        if (!SSL_CTX_set1_groups(ctx.get(), glist.get(), glistlen))
             OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set1_groups failed");
     }
 
@@ -2240,7 +2236,7 @@ class OpenSSLContext : public SSLFactoryAPI
                     // don't modify SSL CTX if the returned SSLFactoryAPI is ourself
                     if (fapi.get() != self)
                     {
-                        SSL_set_SSL_CTX(s, self_ssl->sni_ctx->ctx);
+                        SSL_set_SSL_CTX(s, self_ssl->sni_ctx->ctx.get());
                         self_ssl->set_parent(self_ssl->sni_ctx.get());
                     }
                 }
@@ -2323,22 +2319,15 @@ class OpenSSLContext : public SSLFactoryAPI
                && ssl.authcert->is_fail(); //   authcert has recorded it
     }
 
-    void erase()
-    {
-        if (epki)
-        {
-            delete epki;
-            epki = nullptr;
-        }
-
-        SSL_CTX_free(ctx);
-        ctx = nullptr;
-    }
-
+    /* The order of epki and config is important here. epki holds a library
+     * context that is need for the certificate (cert) object from config
+     * with external key as that internally refrences the library context
+     * and must not be destructed before the objects referencing it have
+     * been destructed */
+    std::shared_ptr<ExternalPKIImpl> epki = nullptr;
     Config::Ptr config;
 
-    SSL_CTX *ctx = nullptr;
-    ExternalPKIImpl *epki = nullptr;
+    SSL_CTX_unique_ptr ctx{nullptr, &SSL_CTX_free};
     OpenSSLSessionCache::Ptr sess_cache; // client-side only
 };
 

@@ -64,6 +64,7 @@
 #include <openvpn/common/wstring.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/ip.hpp>
+#include <openvpn/addr/ipv6.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/scoped_handle.hpp>
@@ -996,23 +997,46 @@ class BestGateway
     /**
      * Construct object which represents default gateway
      */
-    BestGateway()
+    BestGateway(ADDRESS_FAMILY af)
     {
-        std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
-        if (rt)
+        unique_ptr_del<const MIB_IPFORWARD_TABLE2> rt2(windows_routing_table2(af),
+                                                       [](const MIB_IPFORWARD_TABLE2 *p)
+                                                       { FreeMibTable((PVOID)p); });
+
+        if (!rt2)
         {
-            const MIB_IPFORWARDROW *gw = nullptr;
-            for (size_t i = 0; i < rt->dwNumEntries; ++i)
+            OPENVPN_THROW(tun_win_util, "Failed to get routing table");
+        }
+
+        std::map<NET_IFINDEX, ULONG> metric_per_iface;
+        ULONG gw_metric = 0;
+
+        const MIB_IPFORWARD_ROW2 *gw = nullptr;
+        for (size_t i = 0; i < rt2->NumEntries; ++i)
+        {
+            const MIB_IPFORWARD_ROW2 *row = &rt2->Table[i];
+
+            IP::Addr dst = IP::Addr::from_sockaddr((const sockaddr *)&row->DestinationPrefix.Prefix);
+            bool default_gw = dst.all_zeros() && row->DestinationPrefix.PrefixLength == 0;
+
+            ULONG metric = row->Metric + get_iface_metric(metric_per_iface, row->InterfaceIndex, af);
+
+            if (default_gw && (!gw || metric < gw_metric))
             {
-                const MIB_IPFORWARDROW *row = &rt->table[i];
-                if (!row->dwForwardDest && !row->dwForwardMask
-                    && (!gw || row->dwForwardMetric1 < gw->dwForwardMetric1))
-                    gw = row;
+                gw = row;
+                gw_metric = metric;
             }
-            if (gw)
+        }
+        if (gw)
+        {
+            index = gw->InterfaceIndex;
+            if (af == AF_INET6)
             {
-                index = gw->dwForwardIfIndex;
-                addr = IPv4::Addr::from_uint32(ntohl(gw->dwForwardNextHop)).to_string();
+                addr = IPv6::Addr::from_in6_addr(&gw->NextHop.Ipv6.sin6_addr).to_string();
+            }
+            else
+            {
+                addr = IPv4::Addr::from_in_addr(&gw->NextHop.Ipv4.sin_addr).to_string();
             }
         }
     }
@@ -1023,86 +1047,113 @@ class BestGateway
      * first by the longest prefix match and then by metric. If destination
      * is in local network, no gateway is selected and "local_route" flag is set.
      *
-     * @param dest destination IPv4 address
+     * @param af address family, AF_INET or AF_INET6
+     * @param dest destination IPv4/IPv6 address
      * @param vpn_interface_index index of VPN interface which is excluded from gateway selection
      */
-    BestGateway(const std::string &dest, DWORD vpn_interface_index)
+    BestGateway(ADDRESS_FAMILY af, const std::string &dest_str, DWORD vpn_interface_index)
     {
-        DWORD dest_addr;
-        auto res = inet_pton(AF_INET, dest.c_str(), &dest_addr);
-        switch (res)
-        {
-        case -1:
-            OPENVPN_THROW(tun_win_util,
-                          "GetBestGateway: error converting IPv4 address " << dest
-                                                                           << " to int: " << ::WSAGetLastError());
+        unique_ptr_del<const MIB_IPFORWARD_TABLE2> rt2(windows_routing_table2(af),
+                                                       [](const MIB_IPFORWARD_TABLE2 *p)
+                                                       { FreeMibTable((PVOID)p); });
 
-        case 0:
-            OPENVPN_THROW(tun_win_util,
-                          "GetBestGateway: " << dest
-                                             << " is not a valid IPv4 address");
+        if (!rt2)
+        {
+            OPENVPN_THROW(tun_win_util, "Failed to get routing table");
         }
 
-        {
-            MIB_IPFORWARDROW row;
-            DWORD res2 = GetBestRoute(dest_addr, 0, &row);
-            if (res2 != NO_ERROR)
-            {
-                OPENVPN_THROW(tun_win_util,
-                              "GetBestGateway: error retrieving the best route for " << dest
-                                                                                     << ": " << res2);
-            }
+        IP::Addr dest = IP::Addr::from_string(dest_str);
 
-            if (row.dwForwardType == MIB_IPROUTE_TYPE_DIRECT)
-            {
-                local_route_ = true;
-                return;
-            }
+        void *dst_addr = NULL;
+        struct sockaddr_in sa4;
+        struct sockaddr_in6 sa6;
+        if (af == AF_INET6)
+        {
+            sa6 = dest.to_ipv6().to_sockaddr();
+            dst_addr = &sa6;
+        }
+        else
+        {
+            sa4 = dest.to_ipv4().to_sockaddr();
+            dst_addr = &sa4;
         }
 
-        std::unique_ptr<const MIB_IPFORWARDTABLE> rt(windows_routing_table());
-        if (rt)
+        NET_IFINDEX best_interface = 0;
+        DWORD res = ::GetBestInterfaceEx((sockaddr *)dst_addr, &best_interface);
+        if (res != NO_ERROR)
         {
-            const MIB_IPFORWARDROW *gw = nullptr;
-            for (size_t i = 0; i < rt->dwNumEntries; ++i)
+            OPENVPN_THROW(tun_win_util,
+                          "GetBestInterfaceEx: error retrieving the best interface for " << dest
+                                                                                         << ": " << res);
+        }
+
+        // check if route is local
+        MIB_IPFORWARD_ROW2 row{};
+        SOCKADDR_INET best_source{};
+        res = ::GetBestRoute2(NULL, best_interface, NULL, (const SOCKADDR_INET *)dst_addr, 0, &row, &best_source);
+        if (res != NO_ERROR)
+        {
+            OPENVPN_THROW(tun_win_util,
+                          "GetBestGateway: error retrieving the best route for " << dest
+                                                                                 << ": " << res);
+        }
+
+        // no gw needed, route is local
+        if (row.Protocol == RouteProtocolLocal)
+        {
+            local_route_ = true;
+            return;
+        }
+
+        // if there is no VPN interface - we're done
+        if (vpn_interface_index == DWORD(-1))
+        {
+            fill_gw_details(&row, dest_str);
+            return;
+        }
+
+        // find the best route excluding VPN interface
+        const MIB_IPFORWARD_ROW2 *gw = nullptr;
+        std::map<NET_IFINDEX, ULONG> metric_per_iface;
+        ULONG gw_metric = 0;
+        for (size_t i = 0; i < rt2->NumEntries; ++i)
+        {
+            const MIB_IPFORWARD_ROW2 *row = &rt2->Table[i];
+            IP::Addr mask = IP::Addr::netmask_from_prefix_len(af == AF_INET6 ? IP::Addr::Version::V6 : IP::Addr::Version::V4, row->DestinationPrefix.PrefixLength);
+
+            IP::Addr dest_prefix = IP::Addr::from_sockaddr((const sockaddr *)&row->DestinationPrefix.Prefix);
+
+            if ((dest & mask) == dest_prefix)
             {
-                const MIB_IPFORWARDROW *row = &rt->table[i];
-                // does route match?
-                if ((dest_addr & row->dwForwardMask) == (row->dwForwardDest & row->dwForwardMask))
+                // skip gateway on VPN interface
+                if ((vpn_interface_index != DWORD(-1)) && (row->InterfaceIndex == vpn_interface_index))
                 {
-                    // skip gateway on VPN interface
-                    if ((vpn_interface_index != DWORD(-1)) && (row->dwForwardIfIndex == vpn_interface_index))
-                    {
-                        OPENVPN_LOG("GetBestGateway: skip gateway "
-                                    << IPv4::Addr::from_uint32(ntohl(row->dwForwardNextHop)).to_string()
-                                    << " on VPN interface " << vpn_interface_index);
-                        continue;
-                    }
+                    OPENVPN_LOG("GetBestGateway: skip gateway "
+                                << IP::Addr::from_sockaddr((const sockaddr *)&row->NextHop).to_string()
+                                << " on VPN interface " << vpn_interface_index);
+                    continue;
+                }
 
-                    if (!gw)
-                    {
-                        gw = row;
-                        continue;
-                    }
+                if (!gw)
+                {
+                    gw = row;
+                    continue;
+                }
 
-                    auto cur_prefix = IPv4::Addr::prefix_len_32(ntohl(gw->dwForwardMask));
-                    auto new_prefix = IPv4::Addr::prefix_len_32(ntohl(row->dwForwardMask));
-                    auto new_metric_is_lower = row->dwForwardMetric1 < gw->dwForwardMetric1;
+                ULONG metric = row->Metric + get_iface_metric(metric_per_iface, row->InterfaceIndex, af);
 
-                    /* use new gateway if it has longer prefix OR same prefix but lower metric */
-                    if ((new_prefix > cur_prefix) || ((new_prefix == cur_prefix) && new_metric_is_lower))
-                        gw = row;
+                // use new gateway if it has longer prefix OR the same prefix but lower metric
+                if ((row->DestinationPrefix.PrefixLength > gw->DestinationPrefix.PrefixLength) || ((row->DestinationPrefix.PrefixLength == gw->DestinationPrefix.PrefixLength) && (metric < gw_metric)))
+                {
+                    gw = row;
+                    gw_metric = metric;
                 }
             }
-            if (gw)
-            {
-                index = gw->dwForwardIfIndex;
-                addr = IPv4::Addr::from_uint32(ntohl(gw->dwForwardNextHop)).to_string();
-                OPENVPN_LOG("GetBestGateway: "
-                            << "selected gateway " << addr
-                            << " on adapter " << index
-                            << " for destination " << dest);
-            }
+        }
+
+        if (gw)
+        {
+            fill_gw_details(gw, dest_str);
         }
     }
 
@@ -1131,6 +1182,29 @@ class BestGateway
     }
 
   private:
+    void fill_gw_details(const MIB_IPFORWARD_ROW2 *row, const std::string &dest)
+    {
+        index = row->InterfaceIndex;
+        addr = IP::Addr::from_sockaddr((const sockaddr *)&row->NextHop).to_string();
+        OPENVPN_LOG("GetBestGateway: "
+                    << "selected gateway " << addr
+                    << " on adapter " << index
+                    << " for destination " << dest);
+    }
+
+    static ULONG get_iface_metric(std::map<NET_IFINDEX, ULONG> &metric_per_iface, NET_IFINDEX iface, ADDRESS_FAMILY af)
+    {
+        if (metric_per_iface.find(iface) == metric_per_iface.end())
+        {
+            MIB_IPINTERFACE_ROW ir{};
+            ir.InterfaceIndex = iface;
+            ir.Family = af;
+            ::GetIpInterfaceEntry(&ir);
+            metric_per_iface[iface] = ir.Metric;
+        }
+        return metric_per_iface[iface];
+    }
+
     DWORD index = -1;
     std::string addr;
     bool local_route_ = false;

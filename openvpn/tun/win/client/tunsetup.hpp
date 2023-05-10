@@ -46,8 +46,10 @@
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/cmd.hpp>
 
+#if _WIN32_WINNT >= 0x0600 // Vista+
 #include <openvpn/tun/win/nrpt.hpp>
 #include <openvpn/tun/win/wfp.hpp>
+#endif
 
 #include <versionhelpers.h>
 
@@ -350,7 +352,8 @@ class Setup : public SetupBase
         }
     }
 
-    // Configure TAP adapter
+#if _WIN32_WINNT >= 0x0600
+    // Configure TAP adapter on Vista and higher
     void adapter_config(HANDLE th,
                         const std::wstring &openvpn_app_path,
                         const Util::TapNameGuidPair &tap,
@@ -728,6 +731,167 @@ class Setup : public SetupBase
         create.add(new WinCmd("ipconfig /flushdns"));
         destroy.add(new WinCmd("ipconfig /flushdns"));
     }
+#else
+    // Configure TAP adapter for pre-Vista
+    // Currently we don't support IPv6 on pre-Vista
+    void adapter_config(HANDLE th,
+                        const std::wstring &openvpn_app_path,
+                        const Util::TapNameGuidPair &tap,
+                        const TunBuilderCapture &pull,
+                        const bool l2_post,
+                        ActionList &create,
+                        ActionList &destroy,
+                        std::ostream &os)
+    {
+        // Windows interface index
+        const std::string tap_index_name = tap.index_or_name();
+
+        // get default gateway
+        const Util::DefaultGateway gw;
+
+        // set local4 to point to IPv4 route configurations
+        const TunBuilderCapture::RouteAddress *local4 = pull.vpn_ipv4();
+
+        // This section skipped on layer 2 post-config
+        if (!l2_post)
+        {
+            // Make sure the TAP adapter is set for DHCP
+            {
+                const Util::IPAdaptersInfo ai;
+                if (!ai.is_dhcp_enabled(tap.index))
+                {
+                    os << "TAP: DHCP is disabled, attempting to enable" << std::endl;
+                    ActionList::Ptr cmds(new ActionList());
+                    cmds->add(new Util::ActionEnableDHCP(tap));
+                    cmds->execute(os);
+                }
+            }
+
+            // Set IPv4 Interface
+            if (local4)
+            {
+                // Process ifconfig and topology
+                const std::string netmask = IPv4::Addr::netmask_from_prefix_len(local4->prefix_length).to_string();
+                const IP::Addr localaddr = IP::Addr::from_string(local4->address);
+                if (local4->net30)
+                    Util::tap_configure_topology_net30(th, localaddr, local4->prefix_length);
+                else
+                    Util::tap_configure_topology_subnet(th, localaddr, local4->prefix_length);
+            }
+
+            // On pre-Vista, set up TAP adapter DHCP masquerade for
+            // configuring adapter properties.
+            {
+                os << "TAP: configure DHCP masquerade" << std::endl;
+                Util::TAPDHCPMasquerade dhmasq;
+                dhmasq.init_from_capture(pull);
+                dhmasq.ioctl(th);
+            }
+
+            // set TAP media status to CONNECTED
+            if (tun_type_ == TapWindows6)
+                Util::tap_set_media_status(th, true);
+
+            // ARP
+            Util::flush_arp(tap.index, os);
+
+            // DHCP release/renew
+            {
+                const Util::InterfaceInfoList ii;
+                Util::dhcp_release(ii, tap.index, os);
+                Util::dhcp_renew(ii, tap.index, os);
+            }
+
+            // Wait for TAP adapter to come up
+            {
+                bool succeed = false;
+                const Util::IPNetmask4 vpn_addr(pull, "VPN IP");
+                for (int i = 1; i <= 30; ++i)
+                {
+                    os << '[' << i << "] waiting for TAP adapter to receive DHCP settings..." << std::endl;
+                    const Util::IPAdaptersInfo ai;
+                    if (ai.is_up(tap.index, vpn_addr))
+                    {
+                        succeed = true;
+                        break;
+                    }
+                    ::Sleep(1000);
+                }
+                if (!succeed)
+                    throw tun_win_setup("TAP adapter DHCP handshake failed");
+            }
+
+            // Pre route-add sleep
+            os << "Sleeping 5 seconds prior to adding routes..." << std::endl;
+            ::Sleep(5000);
+        }
+
+        // Process routes
+        for (auto &route : pull.add_routes)
+        {
+            const std::string metric = route_metric_opt(pull, route, MT_ROUTE);
+            if (!route.ipv6)
+            {
+                if (local4)
+                {
+                    const std::string netmask = IPv4::Addr::netmask_from_prefix_len(route.prefix_length).to_string();
+                    create.add(new WinCmd("route ADD " + route.address + " MASK " + netmask + ' ' + local4->gateway + metric));
+                    destroy.add(new WinCmd("route DELETE " + route.address + " MASK " + netmask + ' ' + local4->gateway));
+                }
+                else
+                    throw tun_win_setup("IPv4 routes pushed without IPv4 ifconfig");
+            }
+        }
+
+        // Process exclude routes
+        if (!pull.exclude_routes.empty())
+        {
+            if (gw.defined())
+            {
+                for (auto &route : pull.exclude_routes)
+                {
+                    const std::string metric = route_metric_opt(pull, route, MT_ROUTE);
+                    if (!route.ipv6)
+                    {
+                        const std::string netmask = IPv4::Addr::netmask_from_prefix_len(route.prefix_length).to_string();
+                        create.add(new WinCmd("route ADD " + route.address + " MASK " + netmask + ' ' + gw.gateway_address() + metric));
+                        destroy.add(new WinCmd("route DELETE " + route.address + " MASK " + netmask + ' ' + gw.gateway_address()));
+                    }
+                }
+            }
+            else
+                os << "NOTE: exclude routes error: cannot detect default gateway" << std::endl;
+        }
+
+        // Process IPv4 redirect-gateway
+        if (pull.reroute_gw.ipv4)
+        {
+            // add server bypass route
+            if (gw.defined())
+            {
+                if (!pull.remote_address.ipv6)
+                {
+                    create.add(new WinCmd("route ADD " + pull.remote_address.address + " MASK 255.255.255.255 " + gw.gateway_address()));
+                    destroy.add(new WinCmd("route DELETE " + pull.remote_address.address + " MASK 255.255.255.255 " + gw.gateway_address()));
+                }
+            }
+            else
+                throw tun_win_setup("redirect-gateway error: cannot detect default gateway");
+
+            create.add(new WinCmd("route ADD 0.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+            create.add(new WinCmd("route ADD 128.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+            destroy.add(new WinCmd("route DELETE 0.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+            destroy.add(new WinCmd("route DELETE 128.0.0.0 MASK 128.0.0.0 " + local4->gateway));
+        }
+
+        // flush DNS cache
+        // create.add(new WinCmd("net stop dnscache"));
+        // create.add(new WinCmd("net start dnscache"));
+        create.add(new WinCmd("ipconfig /flushdns"));
+        // create.add(new WinCmd("ipconfig /registerdns"));
+        destroy.add(new WinCmd("ipconfig /flushdns"));
+    }
+#endif
 
     void adapter_config_l2(HANDLE th,
                            const std::wstring &openvpn_app_path,
@@ -805,7 +969,9 @@ class Setup : public SetupBase
         return "";
     }
 
+#if _WIN32_WINNT >= 0x0600 // Vista+
     TunWin::WFPContext::Ptr wfp{new TunWin::WFPContext};
+#endif
 
     std::unique_ptr<std::thread> l2_thread;
     std::unique_ptr<L2State> l2_state;
