@@ -170,7 +170,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         HTTPProxyTransport::Options::Ptr http_proxy_options;
         bool alt_proxy = false;
         bool synchronous_dns_lookup = false;
-        bool generate_tun_builder_capture_event = false;
         bool disable_client_cert = false;
         int default_key_direction = -1;
         bool autologin_sessions = false;
@@ -444,7 +443,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                     tunconf->tun_prop.mtu = tun_mtu;
                 tunconf->tun_prop.mtu_max = tun_mtu_max;
                 tunconf->tun_prop.google_dns_fallback = config.clientconf.googleDnsFallback;
-                tunconf->generate_tun_builder_capture_event = config.generate_tun_builder_capture_event;
+                tunconf->generate_tun_builder_capture_event = config.clientconf.generateTunBuilderCaptureEvent;
                 tunconf->tun_prop.remote_list = remote_list;
                 tunconf->frame = frame;
                 tunconf->stats = cli_stats;

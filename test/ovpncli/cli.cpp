@@ -1025,7 +1025,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
 #else
             bool dco = false;
 #endif
-            bool generate_tun_builder_capture_event = false;
+            bool generateTunBuilderCaptureEvent = false;
             std::string epki_cert_fn;
             std::string epki_ca_fn;
             std::string epki_key_fn;
@@ -1059,7 +1059,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     break;
 #endif
                 case 6: // --tbc
-                    generate_tun_builder_capture_event = true;
+                    generateTunBuilderCaptureEvent = true;
                     break;
                 case 'e':
                     eval = true;
@@ -1254,7 +1254,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     config.proxyAllowCleartextAuth = proxyAllowCleartextAuth;
                     config.altProxy = altProxy;
                     config.dco = dco;
-                    config.generate_tun_builder_capture_event = generate_tun_builder_capture_event;
+                    config.generateTunBuilderCaptureEvent = generateTunBuilderCaptureEvent;
                     config.defaultKeyDirection = defaultKeyDirection;
                     config.sslDebugLevel = sslDebugLevel;
                     config.googleDnsFallback = googleDnsFallback;

@@ -334,7 +334,7 @@ struct ConfigCommon
     // Generate an INFO_JSON/TUN_BUILDER_CAPTURE event
     // with all tun builder properties pushed by server.
     // Currently only implemented on Linux.
-    bool generate_tun_builder_capture_event = false;
+    bool generateTunBuilderCaptureEvent = false;
 };
 
 // OpenVPN config-file/profile. Includes a few settings that we do not just
