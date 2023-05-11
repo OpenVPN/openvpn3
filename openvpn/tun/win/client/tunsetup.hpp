@@ -517,7 +517,7 @@ class Setup : public SetupBase
         // Process exclude routes
         if (!pull.exclude_routes.empty())
         {
-            const Util::BestGateway gw;
+            const Util::BestGateway gw{AF_INET};
             if (gw.defined())
             {
                 bool ipv6_error = false;
@@ -548,7 +548,7 @@ class Setup : public SetupBase
         if (pull.reroute_gw.ipv4)
         {
             // get default gateway
-            const Util::BestGateway gw{pull.remote_address.address, tap.index};
+            const Util::BestGateway gw{AF_INET, pull.remote_address.address, tap.index};
 
             if (!gw.local_route())
             {
