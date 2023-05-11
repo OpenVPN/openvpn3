@@ -488,12 +488,10 @@ class RC
     typedef RCPtr<RC> Ptr;
 
     RC()
-    noexcept
-    {
-    }
-    virtual ~RC()
-    {
-    }
+    noexcept = default;
+    virtual ~RC() = default;
+    RC(const RC &) = delete;
+    RC &operator=(const RC &) = delete;
 
     olong use_count() const noexcept
     {
@@ -506,9 +504,6 @@ class RC
     }
 
   private:
-    RC(const RC &) = delete;
-    RC &operator=(const RC &) = delete;
-
     template <typename R>
     friend void intrusive_ptr_add_ref(R *p) noexcept;
     template <typename R>
@@ -692,7 +687,7 @@ class RCWeak
 
     struct ControllerRef
     {
-        ControllerRef(RCWeak *parent) noexcept
+        explicit ControllerRef(RCWeak *parent) noexcept
             : controller(new Controller(parent))
         {
         }
@@ -730,9 +725,9 @@ class RCWeak
     {
     }
 
-    virtual ~RCWeak()
-    {
-    }
+    virtual ~RCWeak() = default;
+    RCWeak(const RCWeak &) = delete;
+    RCWeak &operator=(const RCWeak &) = delete;
 
 #ifdef OPENVPN_RC_NOTIFY
     // Add observers to be called just prior to object deletion,
@@ -756,43 +751,40 @@ class RCWeak
 #endif
 
   private:
-    RCWeak(const RCWeak &) = delete;
-    RCWeak &operator=(const RCWeak &) = delete;
-
     template <typename R>
-    friend void intrusive_ptr_add_ref(R *p) noexcept;
+    friend void intrusive_ptr_add_ref(R *rcptr) noexcept;
     template <typename R>
-    friend void intrusive_ptr_release(R *p) noexcept;
+    friend void intrusive_ptr_release(R *rcptr) noexcept;
 
     ControllerRef refcount_;
 };
 
 template <typename R>
-inline void intrusive_ptr_add_ref(R *p) noexcept
+inline void intrusive_ptr_add_ref(R *rcptr) noexcept
 {
 #ifdef OPENVPN_RC_DEBUG
-    std::cout << "ADD REF " << cxx_demangle(typeid(p).name()) << std::endl;
+    std::cout << "ADD REF " << cxx_demangle(typeid(rcptr).name()) << std::endl;
 #endif
-    ++p->refcount_;
+    ++rcptr->refcount_;
 }
 
 template <typename R>
-inline void intrusive_ptr_release(R *p) noexcept
+inline void intrusive_ptr_release(R *rcptr) noexcept
 {
-    if (--p->refcount_ == 0)
+    if (--rcptr->refcount_ == 0)
     {
 #ifdef OPENVPN_RC_DEBUG
-        std::cout << "DEL OBJ " << cxx_demangle(typeid(p).name()) << std::endl;
+        std::cout << "DEL OBJ " << cxx_demangle(typeid(rcptr).name()) << std::endl;
 #endif
 #ifdef OPENVPN_RC_NOTIFY
-        p->refcount_.notify_release();
+        rcptr->refcount_.notify_release();
 #endif
-        delete p;
+        delete rcptr;
     }
     else
     {
 #ifdef OPENVPN_RC_DEBUG
-        std::cout << "REL REF " << cxx_demangle(typeid(p).name()) << std::endl;
+        std::cout << "REL REF " << cxx_demangle(typeid(rcptr).name()) << std::endl;
 #endif
     }
 }
