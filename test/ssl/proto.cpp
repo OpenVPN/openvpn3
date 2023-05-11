@@ -384,6 +384,8 @@ class TestProto : public ProtoContext
     {
         net_out.clear();
         Base::reset();
+
+        Base::conf().mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
     }
 
     void initial_app_send(const char *msg)
