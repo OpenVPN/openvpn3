@@ -2070,11 +2070,14 @@ class ProtoContext
             }
 
             c.mss_fix = target - payload_overhead;
-            OPENVPN_LOG("mssfix=" << c.mss_fix
-                                  << " (upper bound=" << c.mss_parms.mssfix
-                                  << ", overhead=" << overhead
-                                  << ", payload_overhead=" << payload_overhead
-                                  << ", target=" << target << ")");
+            if (c.debug_level > 1)
+            {
+                OPENVPN_LOG("mssfix=" << c.mss_fix
+                                      << " (upper bound=" << c.mss_parms.mssfix
+                                      << ", overhead=" << overhead
+                                      << ", payload_overhead=" << payload_overhead
+                                      << ", target=" << target << ")");
+            }
         }
 
         // Initialize the components of the OpenVPN data channel protocol
