@@ -89,6 +89,7 @@ enum Type
     EPKI_ERROR,         // EPKI refers to External PKI errors, i.e. errors in accessing external
     EPKI_INVALID_ALIAS, //    certificates or keys.
     RELAY_ERROR,
+    COMPRESS_ERROR,
 
     N_TYPES
 };
@@ -148,7 +149,7 @@ inline const char *event_name(const Type type)
         "EPKI_ERROR",
         "EPKI_INVALID_ALIAS",
         "RELAY_ERROR",
-    };
+        "COMPRESS_ERROR"};
 
     static_assert(N_TYPES == array_size(names), "event names array inconsistency");
     if (type < N_TYPES)
@@ -481,6 +482,14 @@ struct RelayError : public ReasonBase
 {
     RelayError(std::string reason)
         : ReasonBase(RELAY_ERROR, std::move(reason))
+    {
+    }
+};
+
+struct CompressError : public ReasonBase
+{
+    CompressError(std::string reason)
+        : ReasonBase(COMPRESS_ERROR, std::move(reason))
     {
     }
 };

@@ -599,6 +599,14 @@ class ClientConnect : ClientProto::NotifyCallback,
                         stop();
                     }
                     break;
+                case Error::COMPRESS_ERROR:
+                    {
+                        ClientEvent::Base::Ptr ev = new ClientEvent::CompressError(client->fatal_reason());
+                        client_options->events().add_event(std::move(ev));
+                        client_options->stats().error(Error::COMPRESS_ERROR);
+                        stop();
+                    }
+                    break;
                 default:
                     throw client_connect_unhandled_exception();
                 }
