@@ -57,8 +57,16 @@ struct OvpnDcoPeer
         __u32 interval;
         __u32 timeout;
     } keepalive;
-    __u64 rx_bytes, tx_bytes;
-    __u32 rx_pkts, tx_pkts;
+    struct
+    {
+        __u64 rx_bytes, tx_bytes;
+        __u32 rx_pkts, tx_pkts;
+    } vpn;
+    struct
+    {
+        __u64 rx_bytes, tx_bytes;
+        __u32 rx_pkts, tx_pkts;
+    } transport;
 };
 
 /**
@@ -685,8 +693,7 @@ class GeNL : public RC<thread_unsafe_refcount>
             return NL_SKIP;
         }
 
-        if (nla_parse(attrs, OVPN_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-                      genlmsg_attrlen(gnlh, 0), NULL))
+        if (nla_parse(attrs, OVPN_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL))
         {
             OPENVPN_LOG("received bogus data from ovpn-dco");
             return NL_SKIP;
@@ -784,10 +791,15 @@ class GeNL : public RC<thread_unsafe_refcount>
                        nla_len(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_SOCKADDR_REMOTE]));
                 peer.keepalive.interval = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_KEEPALIVE_INTERVAL]);
                 peer.keepalive.timeout = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_KEEPALIVE_TIMEOUT]);
-                peer.rx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_RX_BYTES]);
-                peer.tx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_TX_BYTES]);
-                peer.rx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_RX_PACKETS]);
-                peer.tx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_TX_PACKETS]);
+                peer.vpn.rx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_VPN_RX_BYTES]);
+                peer.vpn.tx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_VPN_TX_BYTES]);
+                peer.vpn.rx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_VPN_RX_PACKETS]);
+                peer.vpn.tx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_VPN_TX_PACKETS]);
+
+                peer.transport.rx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_LINK_RX_BYTES]);
+                peer.transport.tx_bytes = nla_get_u64(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_LINK_TX_BYTES]);
+                peer.transport.rx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_LINK_RX_PACKETS]);
+                peer.transport.tx_pkts = nla_get_u32(get_peer_attrs[OVPN_GET_PEER_RESP_ATTR_LINK_TX_PACKETS]);
 
                 self->reset_buffer();
                 self->buf.write(&gnlh->cmd, sizeof(gnlh->cmd));

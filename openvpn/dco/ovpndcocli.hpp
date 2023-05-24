@@ -505,7 +505,15 @@ class OvpnDcoClient : public Client,
                 struct OvpnDcoPeer peer;
                 buf.read(&peer, sizeof(peer));
 
-                last_stats = SessionStats::DCOTransportSource::Data(peer.rx_bytes, peer.tx_bytes);
+                last_stats = SessionStats::DCOTransportSource::Data(peer.transport.rx_bytes,
+                                                                    peer.transport.tx_bytes,
+                                                                    peer.vpn.rx_bytes,
+                                                                    peer.vpn.tx_bytes,
+                                                                    peer.transport.rx_pkts,
+                                                                    peer.transport.tx_pkts,
+                                                                    peer.vpn.rx_pkts,
+                                                                    peer.vpn.tx_pkts);
+
                 break;
             }
 
