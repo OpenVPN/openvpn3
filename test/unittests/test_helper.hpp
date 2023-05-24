@@ -32,13 +32,6 @@
 #include <fstream>
 #include <mutex>
 
-// does <regex> work?
-#if defined(__clang__) || !defined(__GNUC__) || __GNUC__ >= 5
-#define REGEX_WORKS 1
-#else
-#define REGEX_WORKS 0
-#endif
-
 namespace openvpn {
 class LogOutputCollector : public LogBase
 {
