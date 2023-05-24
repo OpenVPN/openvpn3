@@ -29,7 +29,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/dco/key.hpp>
 
-#include <linux/ovpn_dco.h>
+#include <openvpn/dco/ovpn_dco_linux.h>
 #include <netlink/genl/ctrl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/genl.h>
