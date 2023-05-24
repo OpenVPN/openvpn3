@@ -79,8 +79,7 @@ struct OvpnDcoPeer
  * <tt>tun_read_handler(BufferAllocated &buf)</tt> method. \n
  *
  * buf has following layout:
- *  \li first byte - command type ( \p OVPN_CMD_PACKET, \p OVPN_CMD_DEL_PEER or
- * -1 for error)
+ *  \li first byte - command type ( \p OVPN_CMD_DEL_PEER or -1 for error)
  * \li following bytes - command-specific payload
  */
 template <typename ReadHandler>
@@ -218,32 +217,6 @@ class GeNL : public RC<thread_unsafe_refcount>
 
     nla_put_failure:
         OPENVPN_THROW(netlink_error, " new_peer() nla_put_failure");
-    }
-
-    /**
-     * Send data to kernel module, which is then sent to remote.
-     * Used for sending control channel packets.
-     *
-     * @param data binary blob
-     * @param len length of binary blob
-     * @throws netlink_error thrown if error occurs during sending netlink message
-     */
-    void send_data(int peer_id, const void *data, size_t len)
-    {
-        auto msg_ptr = create_msg(OVPN_CMD_PACKET);
-        auto *msg = msg_ptr.get();
-        struct nlattr *attr = nla_nest_start(msg, OVPN_ATTR_PACKET);
-
-        NLA_PUT_U32(msg, OVPN_PACKET_ATTR_PEER_ID, peer_id);
-        NLA_PUT(msg, OVPN_PACKET_ATTR_PACKET, len, data);
-
-        nla_nest_end(msg, attr);
-
-        send_netlink_message(msg);
-        return;
-
-    nla_put_failure:
-        OPENVPN_THROW(netlink_error, " send_data() nla_put_failure");
     }
 
     /**
@@ -449,17 +422,6 @@ class GeNL : public RC<thread_unsafe_refcount>
 
     nla_put_failure:
         OPENVPN_THROW(netlink_error, " get_peer() nla_put_failure");
-    }
-
-    /**
-     * Subscribe for certain kind of packets (like control channel packets)
-     */
-    void register_packet()
-    {
-        auto msg_ptr = create_msg(OVPN_CMD_REGISTER_PACKET);
-        auto *msg = msg_ptr.get();
-
-        send_netlink_message(msg);
     }
 
     void stop()
@@ -710,33 +672,6 @@ class GeNL : public RC<thread_unsafe_refcount>
 
         switch (gnlh->cmd)
         {
-        case OVPN_CMD_PACKET:
-            if (!attrs[OVPN_ATTR_PACKET])
-                OPENVPN_THROW(
-                    netlink_error,
-                    "missing OVPN_ATTR_PACKET attribute in OVPN_CMD_PACKET command");
-
-            struct nlattr *pkt_attrs[OVPN_PACKET_ATTR_MAX + 1];
-            ret = nla_parse_nested(pkt_attrs, OVPN_PACKET_ATTR_MAX, attrs[OVPN_ATTR_PACKET], NULL);
-            if (ret)
-                OPENVPN_THROW(netlink_error, "cannot parse OVPN_ATTR_PACKET attribute");
-
-            if (!pkt_attrs[OVPN_PACKET_ATTR_PEER_ID] || !pkt_attrs[OVPN_PACKET_ATTR_PACKET])
-                OPENVPN_THROW(netlink_error, "missing attributes in OVPN_CMD_PACKET");
-
-            if (!pkt_attrs[OVPN_PACKET_ATTR_PACKET])
-                OPENVPN_THROW(
-                    netlink_error,
-                    "missing OVPN_ATTR_PACKET attribute in OVPN_CMD_PACKET command");
-
-            self->reset_buffer();
-            self->buf.write(&gnlh->cmd, sizeof(gnlh->cmd));
-            self->buf.write(nla_data(pkt_attrs[OVPN_PACKET_ATTR_PACKET]),
-                            nla_len(pkt_attrs[OVPN_PACKET_ATTR_PACKET]));
-            // pass control channel message to upper layer
-            self->read_handler->tun_read_handler(self->buf);
-            break;
-
         case OVPN_CMD_DEL_PEER:
             if (!attrs[OVPN_ATTR_DEL_PEER])
                 OPENVPN_THROW(netlink_error, "missing OVPN_ATTR_DEL_PEER attribute in "

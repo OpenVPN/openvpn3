@@ -201,21 +201,7 @@ class OvpnDcoClient : public Client,
 
     virtual bool transport_send_const(const Buffer &buf) override
     {
-        if (peer_id == OVPN_PEER_ID_UNDEF)
-            return transport->transport_send_const(buf);
-
-        if (config->builder)
-        {
-            Buffer tmp(buf);
-            tmp.prepend(&peer_id, sizeof(peer_id));
-            pipe->write_some(tmp.const_buffer());
-        }
-        else
-        {
-            genl->send_data(peer_id, buf.c_data(), buf.size());
-        }
-
-        return true;
+        return transport->transport_send_const(buf);
     }
 
     virtual bool transport_send(BufferAllocated &buf) override
@@ -451,10 +437,6 @@ class OvpnDcoClient : public Client,
 
         switch (cmd)
         {
-        case OVPN_CMD_PACKET:
-            transport_parent->transport_recv(buf);
-            break;
-
         case OVPN_CMD_DEL_PEER:
             {
                 uint32_t peer_id;
@@ -620,7 +602,6 @@ class OvpnDcoClient : public Client,
 
         genl.reset(new GeNLImpl(
             io_context_arg, if_nametoindex(config_arg->dev_name.c_str()), this));
-        genl->register_packet();
     }
 
     void handle_keepalive()
