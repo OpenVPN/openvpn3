@@ -676,9 +676,21 @@ class GeNL : public RC<thread_unsafe_refcount>
 
         struct genlmsghdr *gnlh = static_cast<genlmsghdr *>(
             nlmsg_data(reinterpret_cast<const nlmsghdr *>(nlmsg_hdr(msg))));
+        struct nlmsghdr *nlh = nlmsg_hdr(msg);
         struct nlattr *attrs[OVPN_ATTR_MAX + 1];
 
-        nla_parse(attrs, OVPN_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
+        if (!genlmsg_valid_hdr(nlh, 0))
+        {
+            OPENVPN_LOG("ovpn-dco: invalid header");
+            return NL_SKIP;
+        }
+
+        if (nla_parse(attrs, OVPN_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+                      genlmsg_attrlen(gnlh, 0), NULL))
+        {
+            OPENVPN_LOG("received bogus data from ovpn-dco");
+            return NL_SKIP;
+        }
 
         if (!attrs[OVPN_ATTR_IFINDEX])
         {
