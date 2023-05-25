@@ -52,27 +52,10 @@ class HMACInstance : public RC<thread_unsafe_refcount>
     virtual size_t size() const = 0;
 };
 
-class DigestContext : public RC<thread_unsafe_refcount>
-{
-  public:
-    typedef RCPtr<DigestContext> Ptr;
-
-    virtual std::string name() const = 0;
-    virtual size_t size() const = 0;
-
-    virtual DigestInstance::Ptr new_digest() = 0;
-
-    virtual HMACInstance::Ptr new_hmac(const unsigned char *key,
-                                       const size_t key_size)
-        = 0;
-};
-
 class DigestFactory : public RC<thread_unsafe_refcount>
 {
   public:
     typedef RCPtr<DigestFactory> Ptr;
-
-    virtual DigestContext::Ptr new_context(const CryptoAlgs::Type digest_type) = 0;
 
     virtual DigestInstance::Ptr new_digest(const CryptoAlgs::Type digest_type) = 0;
 
@@ -145,50 +128,9 @@ class CryptoHMACInstance : public HMACInstance
 };
 
 template <typename CRYPTO_API>
-class CryptoDigestContext : public DigestContext
-{
-  public:
-    CryptoDigestContext(const CryptoAlgs::Type digest_type)
-        : digest(digest_type)
-    {
-    }
-
-    virtual std::string name() const
-    {
-        return CryptoAlgs::name(digest);
-    }
-
-    virtual size_t size() const
-    {
-        return CryptoAlgs::size(digest);
-    }
-
-    virtual DigestInstance::Ptr new_digest()
-    {
-        return new CryptoDigestInstance<CRYPTO_API>(digest);
-    }
-
-    virtual HMACInstance::Ptr new_hmac(const unsigned char *key,
-                                       const size_t key_size)
-    {
-        return new CryptoHMACInstance<CRYPTO_API>(digest,
-                                                  key,
-                                                  key_size);
-    }
-
-  private:
-    CryptoAlgs::Type digest;
-};
-
-template <typename CRYPTO_API>
 class CryptoDigestFactory : public DigestFactory
 {
   public:
-    virtual DigestContext::Ptr new_context(const CryptoAlgs::Type digest_type)
-    {
-        return new CryptoDigestContext<CRYPTO_API>(digest_type);
-    }
-
     virtual DigestInstance::Ptr new_digest(const CryptoAlgs::Type digest_type)
     {
         return new CryptoDigestInstance<CRYPTO_API>(digest_type);
