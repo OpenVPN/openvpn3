@@ -50,6 +50,15 @@ class DigestContext
     DigestContext(const DigestContext &) = delete;
     DigestContext &operator=(const DigestContext &) = delete;
 
+    /* In OpenSSL 3.0 the method that returns EVP_MD, the cipher needs to be
+     * freed afterwards, thus needing a non-const type. In contrast, OpenSSL 1.1.1
+     * and lower returns a const type, needing a const type */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    using evp_md_type = const EVP_MD;
+#else
+    using evp_md_type = EVP_MD;
+#endif
+
   public:
     friend class HMACContext;
 
@@ -66,10 +75,10 @@ class DigestContext
     {
     }
 
-    DigestContext(const CryptoAlgs::Type alg)
+    DigestContext(const CryptoAlgs::Type alg, SSLLib::Ctx libctx_arg)
         : initialized(false)
     {
-        init(alg);
+        init(alg, libctx_arg);
     }
 
     ~DigestContext()
@@ -77,11 +86,13 @@ class DigestContext
         erase();
     }
 
-    void init(const CryptoAlgs::Type alg)
+    void init(const CryptoAlgs::Type alg, SSLLib::Ctx libctx)
     {
         erase();
         ctx = EVP_MD_CTX_new();
-        if (!EVP_DigestInit(ctx, digest_type(alg)))
+
+        md.reset(digest_type(alg, libctx));
+        if (!EVP_DigestInit(ctx, md.get()))
         {
             openssl_clear_error_stack();
             throw openssl_digest_error("EVP_DigestInit");
@@ -123,24 +134,18 @@ class DigestContext
     }
 
   private:
-    static const EVP_MD *digest_type(const CryptoAlgs::Type alg)
+    static evp_md_type *digest_type(const CryptoAlgs::Type alg, SSLLib::Ctx libctx)
     {
         switch (alg)
         {
         case CryptoAlgs::MD4:
-            return EVP_md4();
         case CryptoAlgs::MD5:
-            return EVP_md5();
         case CryptoAlgs::SHA1:
-            return EVP_sha1();
         case CryptoAlgs::SHA224:
-            return EVP_sha224();
         case CryptoAlgs::SHA256:
-            return EVP_sha256();
         case CryptoAlgs::SHA384:
-            return EVP_sha384();
         case CryptoAlgs::SHA512:
-            return EVP_sha512();
+            return EVP_MD_fetch(libctx, CryptoAlgs::name(alg), NULL);
         default:
             OPENVPN_THROW(openssl_digest_error, CryptoAlgs::name(alg) << ": not usable");
         }
@@ -167,7 +172,10 @@ class DigestContext
     }
 
     bool initialized;
-    EVP_MD_CTX *ctx;
+    EVP_MD_CTX *ctx = NULL;
+
+    using MD_unique_ptr = std::unique_ptr<evp_md_type, decltype(&::EVP_MD_free)>;
+    MD_unique_ptr md{nullptr, ::EVP_MD_free};
 };
 } // namespace OpenSSLCrypto
 } // namespace openvpn

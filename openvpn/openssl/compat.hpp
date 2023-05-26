@@ -471,4 +471,17 @@ OSSL_LIB_CTX_free(void *libctx)
 {
 }
 #define EVP_PKEY_get_bits EVP_PKEY_bits
+
+static inline const EVP_MD *
+EVP_MD_fetch(void *, const char *algorithm, const char *)
+{
+    return EVP_get_digestbyname(algorithm);
+}
+
+static inline void
+EVP_MD_free(const EVP_MD *md)
+{
+    /* OpenSSL 1.1.1 and lower use only const EVP_CIPHER, nothing to free */
+}
+
 #endif

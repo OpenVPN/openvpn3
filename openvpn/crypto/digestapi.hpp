@@ -68,8 +68,8 @@ template <typename CRYPTO_API>
 class CryptoDigestInstance : public DigestInstance
 {
   public:
-    CryptoDigestInstance(const CryptoAlgs::Type digest)
-        : impl(digest)
+    CryptoDigestInstance(const CryptoAlgs::Type digest, SSLLib::Ctx libctx)
+        : impl(digest, libctx)
     {
     }
 
@@ -131,9 +131,14 @@ template <typename CRYPTO_API>
 class CryptoDigestFactory : public DigestFactory
 {
   public:
+    CryptoDigestFactory(SSLLib::Ctx libctx_arg = nullptr)
+        : libctx(libctx_arg)
+    {
+    }
+
     virtual DigestInstance::Ptr new_digest(const CryptoAlgs::Type digest_type)
     {
-        return new CryptoDigestInstance<CRYPTO_API>(digest_type);
+        return new CryptoDigestInstance<CRYPTO_API>(digest_type, libctx);
     }
 
     virtual HMACInstance::Ptr new_hmac(const CryptoAlgs::Type digest_type,
@@ -144,6 +149,8 @@ class CryptoDigestFactory : public DigestFactory
                                                   key,
                                                   key_size);
     }
+
+    SSLLib::Ctx libctx;
 };
 
 } // namespace openvpn

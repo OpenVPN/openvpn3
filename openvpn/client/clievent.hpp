@@ -90,6 +90,7 @@ enum Type
     EPKI_INVALID_ALIAS, //    certificates or keys.
     RELAY_ERROR,
     COMPRESS_ERROR,
+    NTLM_MISSING_CRYPTO,
 
     N_TYPES
 };
@@ -149,7 +150,8 @@ inline const char *event_name(const Type type)
         "EPKI_ERROR",
         "EPKI_INVALID_ALIAS",
         "RELAY_ERROR",
-        "COMPRESS_ERROR"};
+        "COMPRESS_ERROR",
+        "NTLM_MISSING_CRYPTO"};
 
     static_assert(N_TYPES == array_size(names), "event names array inconsistency");
     if (type < N_TYPES)
@@ -514,6 +516,14 @@ struct ProxyError : public ReasonBase
 {
     ProxyError(std::string reason)
         : ReasonBase(PROXY_ERROR, std::move(reason))
+    {
+    }
+};
+
+struct NtlmMissingCryptoError : public ReasonBase
+{
+    NtlmMissingCryptoError(std::string reason)
+        : ReasonBase(NTLM_MISSING_CRYPTO, std::move(reason))
     {
     }
 };

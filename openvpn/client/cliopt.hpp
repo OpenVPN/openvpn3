@@ -1263,7 +1263,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             httpconf->remote_list = remote_list;
             httpconf->frame = frame;
             httpconf->stats = cli_stats;
-            httpconf->digest_factory.reset(new CryptoDigestFactory<SSLLib::CryptoAPI>());
+            httpconf->digest_factory.reset(new CryptoDigestFactory<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx()));
             httpconf->socket_protect = socket_protect;
             httpconf->http_proxy_options = http_proxy_options;
             httpconf->rng = rng;

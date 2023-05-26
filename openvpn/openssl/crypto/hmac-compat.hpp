@@ -73,7 +73,7 @@ class HMACContext
     {
         erase();
         ctx = HMAC_CTX_new();
-        if (!HMAC_Init_ex(ctx, key, int(key_size), DigestContext::digest_type(digest), nullptr))
+        if (!HMAC_Init_ex(ctx, key, int(key_size), DigestContext::digest_type(digest, nullptr), nullptr))
         {
             openssl_clear_error_stack();
             HMAC_CTX_free(ctx);

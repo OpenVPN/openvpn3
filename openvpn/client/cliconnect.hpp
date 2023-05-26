@@ -607,6 +607,14 @@ class ClientConnect : ClientProto::NotifyCallback,
                         stop();
                     }
                     break;
+                case Error::NTLM_MISSING_CRYPTO:
+                    {
+                        ClientEvent::Base::Ptr ev = new ClientEvent::NtlmMissingCryptoError(client->fatal_reason());
+                        client_options->events().add_event(std::move(ev));
+                        client_options->stats().error(Error::NTLM_MISSING_CRYPTO);
+                        stop();
+                    }
+                    break;
                 default:
                     throw client_connect_unhandled_exception();
                 }

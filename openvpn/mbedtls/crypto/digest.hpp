@@ -65,6 +65,13 @@ class DigestContext
         init(alg);
     }
 
+    // SSLLib::Ctx is unused in mbedtls
+    DigestContext(const CryptoAlgs::Type alg, SSLLib::Ctx)
+        : initialized(false)
+    {
+        init(alg);
+    }
+
     ~DigestContext()
     {
         erase();

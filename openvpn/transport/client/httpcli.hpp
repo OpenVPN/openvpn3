@@ -872,7 +872,15 @@ class Client : public TransportClient, AsyncResolvableTCP
         }
         catch (const std::exception &e)
         {
-            proxy_error(Error::PROXY_ERROR, std::string("NTLM Auth: ") + e.what());
+            std::string what{e.what()};
+            if (what.find("openssl_digest_error") != std::string::npos)
+            {
+                proxy_error(Error::NTLM_MISSING_CRYPTO, "Crypto primitives required for NTLM authentication are unavailable");
+            }
+            else
+            {
+                proxy_error(Error::PROXY_ERROR, std::string("NTLM Auth: ") + e.what());
+            }
         }
     }
 
