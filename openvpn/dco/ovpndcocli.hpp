@@ -259,8 +259,6 @@ class OvpnDcoClient : public Client,
                                          salen,
                                          ipv4,
                                          ipv6);
-
-            queue_read_pipe(nullptr);
             return;
         }
 
