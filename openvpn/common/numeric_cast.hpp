@@ -25,6 +25,7 @@
 #include "numeric_util.hpp"
 
 #include <stdexcept>
+#include <cstdint>
 
 #include <openvpn/common/exception.hpp> // For OPENVPN_EXCEPTION_INHERIT
 
