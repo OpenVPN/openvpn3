@@ -70,40 +70,23 @@ class DigestContext
         MAX_DIGEST_SIZE = EVP_MAX_MD_SIZE
     };
 
-    DigestContext()
-        : initialized(false)
-    {
-    }
+    DigestContext() = default;
 
-    DigestContext(const CryptoAlgs::Type alg, SSLLib::Ctx libctx_arg)
-        : initialized(false)
+    DigestContext(const CryptoAlgs::Type alg, SSLLib::Ctx libctx)
     {
-        init(alg, libctx_arg);
-    }
-
-    ~DigestContext()
-    {
-        erase();
-    }
-
-    void init(const CryptoAlgs::Type alg, SSLLib::Ctx libctx)
-    {
-        erase();
-        ctx = EVP_MD_CTX_new();
+        ctx.reset(EVP_MD_CTX_new());
 
         md.reset(digest_type(alg, libctx));
-        if (!EVP_DigestInit(ctx, md.get()))
+        if (!EVP_DigestInit(ctx.get(), md.get()))
         {
             openssl_clear_error_stack();
             throw openssl_digest_error("EVP_DigestInit");
         }
-        initialized = true;
     }
 
     void update(const unsigned char *in, const size_t size)
     {
-        check_initialized();
-        if (!EVP_DigestUpdate(ctx, in, int(size)))
+        if (!EVP_DigestUpdate(ctx.get(), in, int(size)))
         {
             openssl_clear_error_stack();
             throw openssl_digest_error("EVP_DigestUpdate");
@@ -112,9 +95,8 @@ class DigestContext
 
     size_t final(unsigned char *out)
     {
-        check_initialized();
         unsigned int outlen;
-        if (!EVP_DigestFinal(ctx, out, &outlen))
+        if (!EVP_DigestFinal(ctx.get(), out, &outlen))
         {
             openssl_clear_error_stack();
             throw openssl_digest_error("EVP_DigestFinal");
@@ -124,13 +106,7 @@ class DigestContext
 
     size_t size() const
     {
-        check_initialized();
-        return EVP_MD_CTX_size(ctx);
-    }
-
-    bool is_initialized() const
-    {
-        return initialized;
+        return EVP_MD_CTX_size(ctx.get());
     }
 
   private:
@@ -151,31 +127,11 @@ class DigestContext
         }
     }
 
-    void erase()
-    {
-        if (initialized)
-        {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-            EVP_MD_CTX_cleanup(ctx);
-#endif
-            EVP_MD_CTX_free(ctx);
-            initialized = false;
-        }
-    }
-
-    void check_initialized() const
-    {
-#ifdef OPENVPN_ENABLE_ASSERT
-        if (!initialized)
-            throw openssl_digest_uninitialized();
-#endif
-    }
-
-    bool initialized;
-    EVP_MD_CTX *ctx = NULL;
-
     using MD_unique_ptr = std::unique_ptr<evp_md_type, decltype(&::EVP_MD_free)>;
     MD_unique_ptr md{nullptr, ::EVP_MD_free};
+
+    using EVP_MD_CTX_unique_ptr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
+    EVP_MD_CTX_unique_ptr ctx{nullptr, ::EVP_MD_CTX_free};
 };
 } // namespace OpenSSLCrypto
 } // namespace openvpn

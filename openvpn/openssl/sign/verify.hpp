@@ -58,9 +58,6 @@ inline void verify(const OpenSSLPKI::X509 &cert,
 	    EVP_PKEY_free(pkey);
 	  if (md_ctx)
 	    {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	      EVP_MD_CTX_cleanup(md_ctx);
-#endif
 	      EVP_MD_CTX_free(md_ctx);
 	    } });
 
