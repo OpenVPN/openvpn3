@@ -169,7 +169,7 @@ void test_with_corpus(Compress &compressor,
         "comp-testdata/urls.10K",
         "comp-testdata/xargs.1",
     };
-    for (auto fn : filenames)
+    for (const auto &fn : filenames)
     {
         test(std::string(UNITTEST_SOURCE_DIR) + '/' + fn,
              compressor,
