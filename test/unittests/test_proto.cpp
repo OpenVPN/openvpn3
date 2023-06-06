@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2023 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -21,6 +21,8 @@
 
 // Unit test for OpenVPN Protocol implementation (class ProtoContext)
 
+#include "test_common.h"
+
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -29,6 +31,8 @@
 #include <cstring>
 #include <limits>
 #include <thread>
+
+#define OPENVPN_DEBUG_COMPRESS 0 // debug level for compression objects (0)
 
 #include <openvpn/common/platform.hpp>
 
@@ -47,8 +51,6 @@
 // #define USE_TLS_CRYPT
 #define USE_TLS_CRYPT_V2
 #endif
-
-#define OPENVPN_INSTRUMENTATION
 
 // Data limits for Blowfish and other 64-bit block-size ciphers
 #ifndef BF
@@ -133,6 +135,9 @@
 #define N_RETRIES 5
 #endif
 
+// potentially, the above manifest constants can be converted to variables and modified
+// within the different TEST() functions that replace main() in the original file
+
 // abort if we reach this limit
 // #define DROUGHT_LIMIT 100000
 
@@ -176,8 +181,6 @@
 #else
 #define COMP_METH CompressContext::LZO_STUB
 #endif
-
-#include <openvpn/log/logsimple.hpp>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/file.hpp>
@@ -591,7 +594,9 @@ class TestProto : public ProtoContext
     size_t n_control_send_ = 0;
     size_t n_control_recv_ = 0;
     BufferPtr templ;
+#if !FEEDBACK
     size_t iteration = 0;
+#endif
     char progress_[11];
     bool disable_xmit_ = false;
 };
@@ -657,7 +662,9 @@ class NoisyWire
               const unsigned int drop_prob_arg,
               const unsigned int corrupt_prob_arg)
         : title(title_arg),
+#ifdef VERBOSE
           now(now_arg),
+#endif
           random(rand_arg),
           reorder_prob(reorder_prob_arg),
           drop_prob(drop_prob_arg),
@@ -819,7 +826,9 @@ class NoisyWire
     }
 
     std::string title;
+#ifdef VERBOSE
     TimePtr now;
+#endif
     RandomAPI &random;
     unsigned int reorder_prob;
     unsigned int drop_prob;
@@ -885,15 +894,15 @@ int test(const int thread_num)
         const Time::Duration time_step = Time::Duration::binary_ms(100);
 
         // client config files
-        const std::string ca_crt = read_text("ca.crt");
-        const std::string client_crt = read_text("client.crt");
-        const std::string client_key = read_text("client.key");
-        const std::string server_crt = read_text("server.crt");
-        const std::string server_key = read_text("server.key");
-        const std::string dh_pem = read_text("dh.pem");
-        const std::string tls_auth_key = read_text("tls-auth.key");
-        const std::string tls_crypt_v2_server_key = read_text("tls-crypt-v2-server.key");
-        const std::string tls_crypt_v2_client_key = read_text("tls-crypt-v2-client.key");
+        const std::string ca_crt = read_text(UNITTEST_SOURCE_DIR "../ssl/ca.crt");
+        const std::string client_crt = read_text(UNITTEST_SOURCE_DIR "../ssl/client.crt");
+        const std::string client_key = read_text(UNITTEST_SOURCE_DIR "../ssl/client.key");
+        const std::string server_crt = read_text(UNITTEST_SOURCE_DIR "../ssl/server.crt");
+        const std::string server_key = read_text(UNITTEST_SOURCE_DIR "../ssl/server.key");
+        const std::string dh_pem = read_text(UNITTEST_SOURCE_DIR "../ssl/dh.pem");
+        const std::string tls_auth_key = read_text(UNITTEST_SOURCE_DIR "../ssl/tls-auth.key");
+        const std::string tls_crypt_v2_server_key = read_text(UNITTEST_SOURCE_DIR "../ssl/tls-crypt-v2-server.key");
+        const std::string tls_crypt_v2_client_key = read_text(UNITTEST_SOURCE_DIR "../ssl/tls-crypt-v2-client.key");
 
         // client config
         ClientSSLAPI::Config::Ptr cc(new ClientSSLAPI::Config());
@@ -1182,25 +1191,17 @@ int test_retry(const int thread_num)
     return ret;
 }
 
-int main(int argc, char *argv[])
+TEST(proto, base_1_thread)
 {
     int ret = 0;
-    // process-wide initialization
-    InitProcess::Init init;
 
     // set global MbedTLS debug level
 #if defined(USE_MBEDTLS)
     mbedtls_debug_set_threshold(1);
 #endif
 
-    if (argc >= 2 && !strcmp(argv[1], "test"))
-    {
-        const std::string out = SelfTest::crypto_self_test();
-        OPENVPN_LOG(out);
-        goto out;
-    }
-
 #if N_THREADS >= 2
+    // probably ought to set ret in this compile path too
     std::thread *threads[N_THREADS];
     int i;
     for (i = 0; i < N_THREADS; ++i)
@@ -1217,6 +1218,5 @@ int main(int argc, char *argv[])
     ret = test_retry(1);
 #endif
 
-out:
-    return ret;
+    EXPECT_EQ(ret, 0);
 }
