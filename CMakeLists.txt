@@ -32,7 +32,6 @@ include(ovpn-doxygen)
 add_subdirectory(client)
 add_subdirectory(test/unittests)
 add_subdirectory(test/ovpncli)
-add_subdirectory(test/ssl)
 
 add_subdirectory(openvpn/omi)
 add_subdirectory(openvpn/ovpnagent/win)
