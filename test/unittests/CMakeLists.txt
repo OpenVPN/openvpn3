@@ -1,6 +1,18 @@
+##
+##  Tunable protoUnitTests parameters
+##
+set(TEST_PROTO_NTHREADS 1 CACHE STRING "protoUnitTests - Number of threads")
+set(TEST_PROTO_RENEG 900 CACHE STRING "protoUnitTests - Renegotiation intervall")
+set(TEST_PROTO_ITER 1000000 CACHE STRING "protoUnitTests - Number of iterations")
+set(TEST_PROTO_SITER 1 CACHE STRING "protoUnitTests - Number of high-level iterations")
+set(TEST_KEYCERT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ssl" CACHE STRING "protoUnitTests - Certificate/private keys for testing")
+option(TEST_PROTO_VERBOSE "test/ssl/proto - Enable verbose logging" OFF)
+
+
 if (NOT BUILD_TESTING)
   return()
 endif()
+
 
 # current latest GTEST version
 set(OVPN_GTEST_VERSION release-1.11.0)
@@ -65,6 +77,18 @@ add_executable(protoUnitTests
 	test_proto.cpp
 	)
 
+if (${TEST_PROTO_VERBOSE})
+        set(PROTO_CFLAGS_VERBOSE -DVERBOSE)
+endif()
+
+target_compile_definitions(protoUnitTests PRIVATE
+        ${PROTO_CFLAGS_VERBOSE}
+        -DN_THREADS=${TEST_PROTO_NTHREADS}
+        -DRENEG=${TEST_PROTO_RENEG}
+        -DITER=${TEST_PROTO_ITER}
+        -DSITER=${TEST_PROTO_SITER}
+        -DTEST_KEYCERT_DIR=\"${TEST_KEYCERT_DIR}/\"
+)
 
 if (${USE_MBEDTLS})
     target_sources(coreUnitTests PRIVATE

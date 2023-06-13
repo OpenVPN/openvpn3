@@ -890,15 +890,15 @@ int test(const int thread_num)
         const Time::Duration time_step = Time::Duration::binary_ms(100);
 
         // client config files
-        const std::string ca_crt = read_text(UNITTEST_SOURCE_DIR "../ssl/ca.crt");
-        const std::string client_crt = read_text(UNITTEST_SOURCE_DIR "../ssl/client.crt");
-        const std::string client_key = read_text(UNITTEST_SOURCE_DIR "../ssl/client.key");
-        const std::string server_crt = read_text(UNITTEST_SOURCE_DIR "../ssl/server.crt");
-        const std::string server_key = read_text(UNITTEST_SOURCE_DIR "../ssl/server.key");
-        const std::string dh_pem = read_text(UNITTEST_SOURCE_DIR "../ssl/dh.pem");
-        const std::string tls_auth_key = read_text(UNITTEST_SOURCE_DIR "../ssl/tls-auth.key");
-        const std::string tls_crypt_v2_server_key = read_text(UNITTEST_SOURCE_DIR "../ssl/tls-crypt-v2-server.key");
-        const std::string tls_crypt_v2_client_key = read_text(UNITTEST_SOURCE_DIR "../ssl/tls-crypt-v2-client.key");
+        const std::string ca_crt = read_text(TEST_KEYCERT_DIR "ca.crt");
+        const std::string client_crt = read_text(TEST_KEYCERT_DIR "client.crt");
+        const std::string client_key = read_text(TEST_KEYCERT_DIR "client.key");
+        const std::string server_crt = read_text(TEST_KEYCERT_DIR "server.crt");
+        const std::string server_key = read_text(TEST_KEYCERT_DIR "server.key");
+        const std::string dh_pem = read_text(TEST_KEYCERT_DIR "dh.pem");
+        const std::string tls_auth_key = read_text(TEST_KEYCERT_DIR "tls-auth.key");
+        const std::string tls_crypt_v2_server_key = read_text(TEST_KEYCERT_DIR "tls-crypt-v2-server.key");
+        const std::string tls_crypt_v2_client_key = read_text(TEST_KEYCERT_DIR "tls-crypt-v2-client.key");
 
         // client config
         ClientSSLAPI::Config::Ptr cc(new ClientSSLAPI::Config());
