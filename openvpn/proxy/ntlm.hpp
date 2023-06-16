@@ -166,9 +166,10 @@ class NTLM
         add_security_buffer(0x1c, domain.c_str(), domain.size(), phase3);
 
         // other security buffers will be empty
-        phase3[0x10] = phase3.size(); // lm not used
-        phase3[0x30] = phase3.size(); // no workstation name supplied
-        phase3[0x38] = phase3.size(); // no session key
+        const unsigned char phase3_size = static_cast<unsigned char>(phase3.size());
+        phase3[0x10] = phase3_size; // lm not used
+        phase3[0x30] = phase3_size; // no workstation name supplied
+        phase3[0x38] = phase3_size; // no session key
 
         // flags
         phase3[0x3c] = 0x02; // negotiate oem

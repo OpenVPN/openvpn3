@@ -1334,11 +1334,11 @@ class ProtoContext
     {
         if (size > 0xFFFF)
             throw proto_error("auth_string_overflow");
-        const std::uint16_t net_size = htons(size);
+        const std::uint16_t net_size = htons(static_cast<std::uint16_t>(size));
         buf.write((const unsigned char *)&net_size, sizeof(net_size));
     }
 
-    static size_t read_uint16_length(Buffer &buf)
+    static uint16_t read_uint16_length(Buffer &buf)
     {
         if (buf.size())
         {

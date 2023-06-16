@@ -235,11 +235,11 @@ class Sender
         std::uint8_t len8;
 
         if (len <= 125)
-            len8 = len;
+            len8 = static_cast<std::uint8_t>(len);
         else if (len <= 65535)
         {
             len8 = 126;
-            const std::uint16_t len16 = htons(len);
+            const std::uint16_t len16 = htons(static_cast<std::uint16_t>(len));
             buf.prepend(&len16, sizeof(len16));
         }
         else
@@ -271,7 +271,7 @@ class Receiver
         verify_message_complete();
         if (size > buf.size())
             throw websocket_error("Receiver::buf_unframed: internal error");
-        return Buffer(buf.data(), size, true);
+        return Buffer(buf.data(), static_cast<size_t>(size), true);
     }
 
     // return true if message is complete
@@ -363,7 +363,7 @@ class Receiver
         {
             if (size < buf.size())
             {
-                buf.advance(size);
+                buf.advance(static_cast<size_t>(size));
                 buf.realign(0);
             }
             else if (size == buf.size())
@@ -397,7 +397,7 @@ class Receiver
             // un-xor the data on the server side only
             if (!is_client)
             {
-                Buffer b(buf.data(), size, true);
+                Buffer b(buf.data(), static_cast<size_t>(size), true);
                 const Protocol::MaskingKey mk(mask);
                 mk.xor_buf(b);
             }
