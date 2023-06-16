@@ -78,7 +78,7 @@ class OptionListContinuation : public OptionList
                 // throws if pull-filter rejects
                 extend(other, filt);
             }
-            catch (const Option::RejectedException &e)
+            catch (const Option::RejectedException &)
             {
                 // remove all server pushed options on reject
                 clear();

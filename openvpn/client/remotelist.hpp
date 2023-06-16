@@ -970,7 +970,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
             // Throws if server_host is not an IP address
             IP::Addr(item.server_host);
         }
-        catch (const IP::ip_exception &e)
+        catch (const IP::ip_exception &)
         {
             // Produce 6 bytes of random prefix data
             unsigned char prefix[6];

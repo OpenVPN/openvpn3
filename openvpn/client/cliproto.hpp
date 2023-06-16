@@ -858,7 +858,7 @@ class Session : ProtoContext,
                             // Cap the timeout to end well before renegotiation starts
                             timeout = std::min(timeout, static_cast<decltype(timeout)>(conf().renegotiate.to_seconds() / 2));
                         }
-                        catch (const std::logic_error &e)
+                        catch (const std::logic_error &)
                         {
                             OPENVPN_LOG("could not parse AUTH_PENDING timeout: " << timeout_str);
                         }
