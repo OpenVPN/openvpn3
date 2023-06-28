@@ -92,6 +92,7 @@ enum Type
     PROXY_ERROR,                          // HTTP proxy error
     PROXY_NEED_CREDS,                     // HTTP proxy needs credentials
     EARLY_NEG_INVALID,                    // Early protoctol negotiation information invalid/parse error
+    NTLM_MISSING_CRYPTO,                  // crypto primitives requires for NTLM are unavailable
 
     // key event errors
     KEV_NEGOTIATE_ERROR,
@@ -176,6 +177,7 @@ inline const char *name(const size_t type)
         "PROXY_ERROR",
         "PROXY_NEED_CREDS",
         "EARLY_NEG_INVALID",
+        "NTLM_MISSING_CRYPTO",
         "KEV_NEGOTIATE_ERROR",
         "KEV_PENDING_ERROR",
         "N_KEV_EXPIRE",

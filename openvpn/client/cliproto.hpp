@@ -1079,8 +1079,19 @@ class Session : ProtoContext,
             cli_events->add_event(std::move(ev));
         }
 
-        // Issue an event if compression is enabled
         CompressContext::Type comp_type = Base::conf().comp_ctx.type();
+
+        // abort connection if compression is pushed and its support is unannounced
+        if (comp_type != CompressContext::COMP_STUBv2
+            && comp_type != CompressContext::NONE
+            && proto_context_options->compression_mode == ProtoContextOptions::COMPRESS_NO)
+        {
+            throw ErrorCode(Error::COMPRESS_ERROR, true, "server pushed compression "
+                                                         "settings that are not allowed and will result "
+                                                         "in a non-working connection. ");
+        }
+
+        // Issue an event if compression is enabled
         if (comp_type != CompressContext::NONE
             && !CompressContext::is_any_stub(comp_type))
         {

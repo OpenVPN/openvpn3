@@ -44,7 +44,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
         for (auto i : opt.get_index("pull-filter"))
         {
             FilterAction action = None;
-            auto o = opt[i];
+            auto &o = opt[i];
             o.exact_args(3);
             o.touch();
 

@@ -187,7 +187,7 @@ class Alg
     unsigned int block_size_;
 };
 
-static std::array<Alg, Type::SIZE> algs = {
+inline static std::array<Alg, Type::SIZE> algs = {
     // clang-format off
     Alg{"NONE",               F_CIPHER|F_DIGEST|CBC_HMAC,   0,  0,  0 },
     Alg{"AES-128-CBC",        F_CIPHER|CBC_HMAC,           16, 16, 16 },

@@ -133,6 +133,11 @@ class SessionStats : public RC<thread_safe_refcount>
             count_t tun_bytes_in = 0;
             count_t tun_bytes_out = 0;
 
+            count_t transport_pkts_in = 0;
+            count_t transport_pkts_out = 0;
+            count_t tun_pkts_in = 0;
+            count_t tun_pkts_out = 0;
+
             Data() = default;
 
             Data(count_t transport_bytes_in_arg, count_t transport_bytes_out_arg)
@@ -148,6 +153,26 @@ class SessionStats : public RC<thread_safe_refcount>
             {
             }
 
+            Data(count_t transport_bytes_in_arg,
+                 count_t transport_bytes_out_arg,
+                 count_t tun_bytes_in_arg,
+                 count_t tun_bytes_out_arg,
+                 count_t transport_pkts_in_arg,
+                 count_t transport_pkts_out_arg,
+                 count_t tun_pkts_in_arg,
+                 count_t tun_pkts_out_arg)
+
+                : transport_bytes_in(transport_bytes_in_arg),
+                  transport_bytes_out(transport_bytes_out_arg),
+                  tun_bytes_in(tun_bytes_in_arg),
+                  tun_bytes_out(tun_bytes_out_arg),
+                  transport_pkts_in(transport_pkts_in_arg),
+                  transport_pkts_out(transport_pkts_out_arg),
+                  tun_pkts_in(tun_pkts_in_arg),
+                  tun_pkts_out(tun_pkts_out_arg)
+            {
+            }
+
             Data operator-(const Data &rhs) const
             {
                 Data data;
@@ -159,6 +184,14 @@ class SessionStats : public RC<thread_safe_refcount>
                     data.tun_bytes_in = tun_bytes_in - rhs.tun_bytes_in;
                 if (tun_bytes_out > rhs.tun_bytes_out)
                     data.tun_bytes_out = tun_bytes_out - rhs.tun_bytes_out;
+                if (transport_pkts_in > rhs.transport_pkts_in)
+                    data.transport_pkts_in = transport_pkts_in - rhs.transport_pkts_in;
+                if (transport_pkts_out > rhs.transport_pkts_out)
+                    data.transport_pkts_out = transport_pkts_out - rhs.transport_pkts_out;
+                if (tun_pkts_in > rhs.tun_pkts_in)
+                    data.tun_pkts_in = tun_pkts_in - rhs.tun_pkts_in;
+                if (tun_pkts_out > rhs.tun_pkts_out)
+                    data.tun_pkts_out = tun_pkts_out - rhs.tun_pkts_out;
                 return data;
             }
         };
@@ -180,6 +213,10 @@ class SessionStats : public RC<thread_safe_refcount>
             stats_[BYTES_OUT] += data.transport_bytes_out;
             stats_[TUN_BYTES_IN] += data.tun_bytes_in;
             stats_[TUN_BYTES_OUT] += data.tun_bytes_out;
+            stats_[PACKETS_IN] += data.transport_pkts_in;
+            stats_[PACKETS_OUT] += data.transport_pkts_out;
+            stats_[TUN_PACKETS_IN] += data.tun_pkts_in;
+            stats_[TUN_PACKETS_OUT] += data.tun_pkts_out;
         }
     }
 

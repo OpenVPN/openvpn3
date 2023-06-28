@@ -50,6 +50,15 @@ class DigestContext
     DigestContext(const DigestContext &) = delete;
     DigestContext &operator=(const DigestContext &) = delete;
 
+    /* In OpenSSL 3.0 the method that returns EVP_MD, the cipher needs to be
+     * freed afterwards, thus needing a non-const type. In contrast, OpenSSL 1.1.1
+     * and lower returns a const type, needing a const type */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    using evp_md_type = const EVP_MD;
+#else
+    using evp_md_type = EVP_MD;
+#endif
+
   public:
     friend class HMACContext;
 
@@ -61,38 +70,23 @@ class DigestContext
         MAX_DIGEST_SIZE = EVP_MAX_MD_SIZE
     };
 
-    DigestContext()
-        : initialized(false)
-    {
-    }
+    DigestContext() = default;
 
-    DigestContext(const CryptoAlgs::Type alg)
-        : initialized(false)
+    DigestContext(const CryptoAlgs::Type alg, SSLLib::Ctx libctx)
     {
-        init(alg);
-    }
+        ctx.reset(EVP_MD_CTX_new());
 
-    ~DigestContext()
-    {
-        erase();
-    }
-
-    void init(const CryptoAlgs::Type alg)
-    {
-        erase();
-        ctx = EVP_MD_CTX_new();
-        if (!EVP_DigestInit(ctx, digest_type(alg)))
+        md.reset(digest_type(alg, libctx));
+        if (!EVP_DigestInit(ctx.get(), md.get()))
         {
             openssl_clear_error_stack();
             throw openssl_digest_error("EVP_DigestInit");
         }
-        initialized = true;
     }
 
     void update(const unsigned char *in, const size_t size)
     {
-        check_initialized();
-        if (!EVP_DigestUpdate(ctx, in, int(size)))
+        if (!EVP_DigestUpdate(ctx.get(), in, int(size)))
         {
             openssl_clear_error_stack();
             throw openssl_digest_error("EVP_DigestUpdate");
@@ -101,9 +95,8 @@ class DigestContext
 
     size_t final(unsigned char *out)
     {
-        check_initialized();
         unsigned int outlen;
-        if (!EVP_DigestFinal(ctx, out, &outlen))
+        if (!EVP_DigestFinal(ctx.get(), out, &outlen))
         {
             openssl_clear_error_stack();
             throw openssl_digest_error("EVP_DigestFinal");
@@ -113,61 +106,32 @@ class DigestContext
 
     size_t size() const
     {
-        check_initialized();
-        return EVP_MD_CTX_size(ctx);
-    }
-
-    bool is_initialized() const
-    {
-        return initialized;
+        return EVP_MD_CTX_size(ctx.get());
     }
 
   private:
-    static const EVP_MD *digest_type(const CryptoAlgs::Type alg)
+    static evp_md_type *digest_type(const CryptoAlgs::Type alg, SSLLib::Ctx libctx)
     {
         switch (alg)
         {
         case CryptoAlgs::MD4:
-            return EVP_md4();
         case CryptoAlgs::MD5:
-            return EVP_md5();
         case CryptoAlgs::SHA1:
-            return EVP_sha1();
         case CryptoAlgs::SHA224:
-            return EVP_sha224();
         case CryptoAlgs::SHA256:
-            return EVP_sha256();
         case CryptoAlgs::SHA384:
-            return EVP_sha384();
         case CryptoAlgs::SHA512:
-            return EVP_sha512();
+            return EVP_MD_fetch(libctx, CryptoAlgs::name(alg), NULL);
         default:
             OPENVPN_THROW(openssl_digest_error, CryptoAlgs::name(alg) << ": not usable");
         }
     }
 
-    void erase()
-    {
-        if (initialized)
-        {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-            EVP_MD_CTX_cleanup(ctx);
-#endif
-            EVP_MD_CTX_free(ctx);
-            initialized = false;
-        }
-    }
+    using MD_unique_ptr = std::unique_ptr<evp_md_type, decltype(&::EVP_MD_free)>;
+    MD_unique_ptr md{nullptr, ::EVP_MD_free};
 
-    void check_initialized() const
-    {
-#ifdef OPENVPN_ENABLE_ASSERT
-        if (!initialized)
-            throw openssl_digest_uninitialized();
-#endif
-    }
-
-    bool initialized;
-    EVP_MD_CTX *ctx;
+    using EVP_MD_CTX_unique_ptr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
+    EVP_MD_CTX_unique_ptr ctx{nullptr, ::EVP_MD_CTX_free};
 };
 } // namespace OpenSSLCrypto
 } // namespace openvpn
