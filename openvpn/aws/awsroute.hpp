@@ -376,6 +376,9 @@ class Route
             add_transaction(ctx, std::move(q));
         }
 
+        // we expect to get 400 if route doesn't exist, so no need to retry
+        ctx.ts->retry_on_http_4xx = false;
+
         // do transaction
         execute_transaction(ctx);
 
@@ -419,6 +422,8 @@ class Route
             q.emplace_back("RouteTableId", route_table_id);
             add_transaction(ctx, std::move(q));
         }
+
+        ctx.ts->retry_on_http_4xx = true;
 
         // do transaction
         execute_transaction(ctx);
