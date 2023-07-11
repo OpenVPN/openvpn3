@@ -41,16 +41,18 @@ template <typename SEND, typename RECV>
 class Link : public RECV
 {
   protected:
-    Link()
-    {
-    }
+    Link() = default;
+
     Link(typename SEND::Ptr send_arg)
         : send(std::move(send_arg))
     {
     }
+
     Link(SEND *send_arg)
         : send(send_arg)
     {
+        static_assert(std::is_base_of_v<RC<thread_unsafe_refcount>, SEND> || std::is_base_of_v<RC<thread_safe_refcount>, SEND>,
+                      "Using a raw pointer to initialise Link requires an intrusive pointer");
     }
 
     typename SEND::Ptr send;
