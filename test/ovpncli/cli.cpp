@@ -337,6 +337,12 @@ class Client : public ClientBase
         }
     }
 
+    void acc_event(const ClientAPI::AppCustomControlMessageEvent &acev) override
+    {
+        std::cout << "received app custom control message for protocol " << acev.protocol
+                  << " msg payload: " << acev.payload << std::endl;
+    }
+
     void open_url(std::string url_str, std::string flags)
     {
         if (string::starts_with(url_str, "http://")
@@ -940,6 +946,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
         { "proxy-username", required_argument,  nullptr,      'U' },
         { "proxy-password", required_argument,  nullptr,      'W' },
         { "peer-info",      required_argument,  nullptr,      'I' },
+        { "acc-protos",     required_argument,  nullptr,      'K' },
         { "gremlin",        required_argument,  nullptr,      'G' },
         { "proxy-basic",    no_argument,        nullptr,      'B' },
         { "alt-proxy",      no_argument,        nullptr,      'A' },
@@ -1005,6 +1012,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             std::string peer_info;
             std::string gremlin;
             std::string ssoMethods;
+            std::string appCustomProtocols;
             bool eval = false;
             bool self_test = false;
             bool cachePassword = false;
@@ -1040,7 +1048,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             int ch;
             optind = 1;
 
-            while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:LM:P:QR:S:TU:W:X:YZ:ac:degh:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
+            while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:K:LM:P:QR:S:TU:W:X:YZ:ac:degh:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
             {
                 switch (ch)
                 {
@@ -1185,6 +1193,9 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                 case 'G':
                     gremlin = optarg;
                     break;
+                case 'K':
+                    appCustomProtocols = optarg;
+                    break;
                 case 'L':
                     enableLegacyAlgorithms = true;
                     break;
@@ -1271,6 +1282,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     config.enableLegacyAlgorithms = enableLegacyAlgorithms;
                     config.enableNonPreferredDCAlgorithms = enableNonPreferredDCO;
                     config.ssoMethods = ssoMethods;
+                    config.appCustomProtocols = appCustomProtocols;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
                     config.clockTickMS = 250;
 #endif

@@ -387,6 +387,18 @@ struct Event
     std::string info;   // additional event info
 };
 
+/**
+ * Used to signal messages from the peer. There is a special event that
+ *
+ * uses internal:supported_protocols as protocol and a : separated list
+ * as the list of protocols the server pushed to us as supported.
+ */
+struct AppCustomControlMessageEvent
+{
+    std::string protocol;
+    std::string payload;
+};
+
 // used to communicate extra details about successful connection
 // (client reads)
 struct ConnectionInfo
@@ -672,9 +684,17 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
     // post control channel message
     void post_cc_msg(const std::string &msg);
 
+    // send custom app control channel message
+    void send_app_control_channel_msg(const std::string &protocol, const std::string &msg);
+
     // Callback for delivering events during connect() call.
     // Will be called from the thread executing connect().
+    // Will also deliver custom message from the server like AUTH_PENDING AUTH
+    // events and custom control message events
     virtual void event(const Event &) = 0;
+
+    // Call for delivering event from app custom control channel
+    virtual void acc_event(const AppCustomControlMessageEvent &) = 0;
 
     // Callback for logging.
     // Will be called from the thread executing connect().

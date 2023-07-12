@@ -56,6 +56,7 @@ enum Type
     ADD_ROUTES,
     ECHO_OPT,
     INFO,
+    CUSTOM_CONTROL,
 #ifdef HAVE_JSON
     INFO_JSON,
 #endif
@@ -117,6 +118,7 @@ inline const char *event_name(const Type type)
         "ADD_ROUTES",
         "ECHO",
         "INFO",
+        "CUSTOM_CONTROL",
 #ifdef HAVE_JSON
         "INFO_JSON",
 #endif
@@ -606,6 +608,19 @@ struct Info : public ReasonBase
         : ReasonBase(INFO, std::move(value))
     {
     }
+};
+
+/**
+ * Message to signal a custom app control message from the peer
+ */
+struct AppCustomControlMessage : public Base
+{
+    AppCustomControlMessage(std::string protocol, std::string message)
+        : Base(CUSTOM_CONTROL), protocol(protocol), custommessage(message)
+    {
+    }
+    std::string protocol;
+    std::string custommessage;
 };
 
 struct AuthPending : public ReasonBase

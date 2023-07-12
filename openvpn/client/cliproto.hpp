@@ -241,6 +241,19 @@ class Session : ProtoContext,
         set_housekeeping_timer();
     }
 
+    void post_app_control_message(const std::string proto, const std::string message)
+    {
+        if (!conf().app_control_config.supports_protocol(proto))
+        {
+            ClientEvent::Base::Ptr ev = new ClientEvent::UnsupportedFeature{"missing acc protocol support", "server has not announced support of this custom app control protocol", false};
+            cli_events->add_event(std::move(ev));
+            return;
+        }
+
+        for (auto fragment : conf().app_control_config.format_message(proto, message))
+            post_cc_msg(fragment);
+    }
+
     void stop(const bool call_terminate_callback)
     {
         if (!halt)
@@ -834,6 +847,29 @@ class Session : ProtoContext,
         {
             recv_relay();
         }
+        else if (string::starts_with(msg, "ACC,"))
+        {
+            recv_custom_control_message(msg);
+        }
+    }
+    void recv_custom_control_message(const std::string msg)
+    {
+
+        bool fullmessage = conf().app_control_recv.receive_message(msg);
+        if (!fullmessage)
+            return;
+
+        auto [proto, app_proto_msg] = conf().app_control_recv.get_message();
+
+        if (conf().app_control_config.supports_protocol(proto))
+        {
+            auto ev = new ClientEvent::AppCustomControlMessage(proto, app_proto_msg);
+            cli_events->add_event(std::move(ev));
+        }
+        else
+        {
+            OPENVPN_LOG("App custom control message with unsupported protocol received");
+        }
     }
 
     void recv_push_reply(const std::string &msg)
@@ -912,6 +948,14 @@ class Session : ProtoContext,
 
                 // send the Connected event
                 cli_events->add_event(connected_);
+
+                // send an event for custom app control if present
+                if (!conf().app_control_config.supported_protocols.empty())
+                {
+                    // Signal support for supported protocols
+                    auto ev = new ClientEvent::AppCustomControlMessage("internal:supported_protocols", string::join(conf().app_control_config.supported_protocols, ":"));
+                    cli_events->add_event(std::move(ev));
+                }
 
                 // check for proto options
                 check_proto_warnings();

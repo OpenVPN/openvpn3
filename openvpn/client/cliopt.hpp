@@ -1045,6 +1045,9 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (!config.clientconf.ssoMethods.empty())
             pi->emplace_back("IV_SSO", config.clientconf.ssoMethods);
 
+        if (!config.clientconf.appCustomProtocols.empty())
+            pi->emplace_back("IV_ACC", "2048,6:A," + config.clientconf.appCustomProtocols);
+
         // MAC address
         if (pcc.pushPeerInfo())
         {

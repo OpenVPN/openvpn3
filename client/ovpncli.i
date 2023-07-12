@@ -30,6 +30,7 @@
 %rename(ClientAPI_KeyValue) KeyValue;
 %rename(ClientAPI_Config) Config;
 %rename(ClientAPI_Event) Event;
+%rename(ClientAPI_AppCustomControlMessageEvent) AppCustomControlMessageEvent;
 %rename(ClientAPI_ConnectionInfo) ConnectionInfo;
 %rename(ClientAPI_Status) Status;
 %rename(ClientAPI_LogInfo) LogInfo;

@@ -99,6 +99,7 @@
 #include <openvpn/options/merge.hpp>
 #include <openvpn/error/excode.hpp>
 #include <openvpn/crypto/selftest.hpp>
+#include <openvpn/client/clievent.hpp>
 
 // copyright
 #include <openvpn/legal/copyright.hpp>
@@ -201,18 +202,30 @@ class MyClientEvents : public ClientEvent::Queue
     {
         if (parent)
         {
-            Event ev;
-            ev.name = event->name();
-            ev.info = event->render();
-            ev.error = event->is_error();
-            ev.fatal = event->is_fatal();
+            if (event->id() == ClientEvent::CUSTOM_CONTROL)
+            {
+                AppCustomControlMessageEvent ev;
+                ClientEvent::AppCustomControlMessage *accm = static_cast<ClientEvent::AppCustomControlMessage *>(event.get());
+                ev.protocol = accm->protocol;
+                ev.payload = accm->custommessage;
+                parent->acc_event(ev);
+            }
+            else
+            {
+                Event ev;
+                ev.name = event->name();
+                ev.info = event->render();
+                ev.error = event->is_error();
+                ev.fatal = event->is_fatal();
 
-            // save connected event
-            if (event->id() == ClientEvent::CONNECTED)
-                last_connected = std::move(event);
-            else if (event->id() == ClientEvent::DISCONNECTED)
-                parent->on_disconnect();
-            parent->event(ev);
+                // save connected event
+                if (event->id() == ClientEvent::CONNECTED)
+                    last_connected = std::move(event);
+                else if (event->id() == ClientEvent::DISCONNECTED)
+                    parent->on_disconnect();
+
+                parent->event(ev);
+            }
         }
     }
 
@@ -1323,6 +1336,17 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::post_cc_msg(const std::string &msg)
             session->thread_safe_post_cc_msg(msg);
     }
 }
+
+OPENVPN_CLIENT_EXPORT void OpenVPNClient::send_app_control_channel_msg(const std::string &protocol, const std::string &msg)
+{
+    if (state->is_foreign_thread_access())
+    {
+        ClientConnect *session = state->session.get();
+        if (session)
+            session->thread_safe_send_app_control_channel_msg(protocol, msg);
+    }
+}
+
 
 OPENVPN_CLIENT_EXPORT void OpenVPNClient::clock_tick()
 {
