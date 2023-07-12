@@ -676,6 +676,128 @@ class Session : ProtoContext,
             Base::update_last_sent();
     }
 
+    void recv_auth_failed(const std::string &msg)
+    {
+        std::string reason;
+        std::string log_reason;
+
+        // get reason (if it exists) for authentication failure
+        if (msg.length() >= 13)
+            reason = string::trim_left_copy(std::string(msg, 12));
+
+        // If session token problem (such as expiration), and we have a cached
+        // password, retry with it.  Otherwise, fail without retry.
+        if (string::starts_with(reason, "SESSION:")
+            && ((creds && creds->reset_to_cached_password())
+                || autologin_sessions))
+        {
+            if (creds && creds->session_id_defined())
+                creds->purge_session_id();
+            log_reason = "SESSION_AUTH_FAILED";
+        }
+        else if (string::starts_with(reason, "TEMP"))
+        {
+            log_reason = "AUTH_FAILED_TEMP:" + parse_auth_failed_temp(std::string(reason, 4));
+        }
+        else
+        {
+            fatal_ = Error::AUTH_FAILED;
+            fatal_reason_ = reason;
+            log_reason = "AUTH_FAILED";
+        }
+        if (notify_callback)
+        {
+            OPENVPN_LOG(log_reason);
+            stop(true);
+        }
+        else
+            throw authentication_failed();
+    }
+
+    void recv_auth_pending(const std::string &msg)
+    {
+        // AUTH_PENDING indicates an out-of-band authentication step must
+        // be performed before the server will send the PUSH_REPLY message.
+        if (!auth_pending)
+        {
+            auth_pending = true;
+            std::string key_words;
+
+            unsigned int timeout = 0;
+
+            if (string::starts_with(msg, "AUTH_PENDING,"))
+            {
+                key_words = msg.substr(strlen("AUTH_PENDING,"));
+                auto opts = OptionList::parse_from_csv_static(key_words, nullptr);
+                std::string timeout_str = opts.get_optional("timeout", 1, 20);
+                if (timeout_str != "")
+                {
+                    try
+                    {
+                        timeout = clamp_to_typerange<unsigned int>(std::stoul(timeout_str));
+                        // Cap the timeout to end well before renegotiation starts
+                        timeout = std::min(timeout, static_cast<decltype(timeout)>(conf().renegotiate.to_seconds() / 2));
+                    }
+                    catch (const std::logic_error &)
+                    {
+                        OPENVPN_LOG("could not parse AUTH_PENDING timeout: " << timeout_str);
+                    }
+                }
+            }
+
+
+
+            if (notify_callback && timeout > 0)
+            {
+                notify_callback->client_proto_auth_pending_timeout(timeout);
+            }
+
+            ClientEvent::Base::Ptr ev = new ClientEvent::AuthPending(timeout, key_words);
+            cli_events->add_event(std::move(ev));
+        }
+    }
+
+    void recv_relay()
+    {
+        if (conf().relay_mode)
+        {
+            fatal_ = Error::RELAY;
+            fatal_reason_ = "";
+        }
+        else
+        {
+            fatal_ = Error::RELAY_ERROR;
+            fatal_reason_ = "not in relay mode";
+        }
+        if (notify_callback)
+        {
+            OPENVPN_LOG(Error::name(fatal_) << ' ' << fatal_reason_);
+            stop(true);
+        }
+        else
+            throw relay_event();
+    }
+
+    void recv_info(const std::string &msg, bool info_pre)
+    {
+        // Buffer INFO messages received near Connected event to fire
+        // one second after Connected event, to reduce the chance of
+        // race conditions in the client app, if the INFO event
+        // triggers the client app to perform an operation that
+        // requires the VPN tunnel to be ready.
+        ClientEvent::Base::Ptr ev;
+        if (info_pre)
+            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO,")));
+        else
+            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO_PRE,")));
+
+        // INFO_PRE is like INFO but it is never buffered
+        if (info_hold && !info_pre)
+            info_hold->push_back(std::move(ev));
+        else
+            cli_events->add_event(std::move(ev));
+    }
+
     // proto base class calls here for app-level control-channel messages received
     void control_recv(BufferPtr &&app_bp) override
     {
@@ -684,7 +806,39 @@ class Session : ProtoContext,
 
         // OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 
-        if (!received_options.complete() && string::starts_with(msg, "PUSH_REPLY,"))
+        if (string::starts_with(msg, "PUSH_REPLY,"))
+        {
+            recv_push_reply(msg);
+        }
+        else if (string::starts_with(msg, "AUTH_FAILED"))
+        {
+            recv_auth_failed(msg);
+        }
+        else if (ClientHalt::match(msg))
+        {
+            recv_halt_restart(msg);
+        }
+        else if (info && string::starts_with(msg, "INFO,"))
+        {
+            recv_info(msg, false);
+        }
+        else if (info && string::starts_with(msg, "INFO_PRE,"))
+        {
+            recv_info(msg, true);
+        }
+        else if (msg == "AUTH_PENDING" || string::starts_with(msg, "AUTH_PENDING,"))
+        {
+            recv_auth_pending(msg);
+        }
+        else if (msg == "RELAY")
+        {
+            recv_relay();
+        }
+    }
+
+    void recv_push_reply(const std::string &msg)
+    {
+        if (!received_options.complete())
         {
             // parse the received options
             auto pushed_options_list = OptionList::parse_from_csv_static(msg.substr(11), &pushed_options_limit);
@@ -694,8 +848,7 @@ class Session : ProtoContext,
             }
             catch (const Option::RejectedException &e)
             {
-                ClientHalt ch("RESTART,rejected pushed option: " + e.err(), true);
-                process_halt_restart(ch);
+                recv_halt_restart("RESTART,rejected pushed option: " + e.err());
             }
             if (received_options.complete())
             {
@@ -766,135 +919,12 @@ class Session : ProtoContext,
             else
                 OPENVPN_LOG("Options continuation...");
         }
-        else if (received_options.complete() && string::starts_with(msg, "PUSH_REPLY,"))
+        else if (received_options.complete())
         {
             // We got a PUSH REPLY in the middle of a session. Ignore it apart from
             // updating the auth-token if included in the push reply
             auto opts = OptionList::parse_from_csv_static(msg.substr(11), nullptr);
             extract_auth_token(opts);
-        }
-        else if (string::starts_with(msg, "AUTH_FAILED"))
-        {
-            std::string reason;
-            std::string log_reason;
-
-            // get reason (if it exists) for authentication failure
-            if (msg.length() >= 13)
-                reason = string::trim_left_copy(std::string(msg, 12));
-
-            // If session token problem (such as expiration), and we have a cached
-            // password, retry with it.  Otherwise, fail without retry.
-            if (string::starts_with(reason, "SESSION:")
-                && ((creds && creds->reset_to_cached_password())
-                    || autologin_sessions))
-            {
-                if (creds && creds->session_id_defined())
-                    creds->purge_session_id();
-                log_reason = "SESSION_AUTH_FAILED";
-            }
-            else if (string::starts_with(reason, "TEMP"))
-            {
-                log_reason = "AUTH_FAILED_TEMP:" + parse_auth_failed_temp(std::string(reason, 4));
-            }
-            else
-            {
-                fatal_ = Error::AUTH_FAILED;
-                fatal_reason_ = reason;
-                log_reason = "AUTH_FAILED";
-            }
-            if (notify_callback)
-            {
-                OPENVPN_LOG(log_reason);
-                stop(true);
-            }
-            else
-                throw authentication_failed();
-        }
-        else if (ClientHalt::match(msg))
-        {
-            const ClientHalt ch(msg, true);
-            process_halt_restart(ch);
-        }
-        else if (info && string::starts_with(msg, "INFO,"))
-        {
-            // Buffer INFO messages received near Connected event to fire
-            // one second after Connected event, to reduce the chance of
-            // race conditions in the client app, if the INFO event
-            // triggers the client app to perform an operation that
-            // requires the VPN tunnel to be ready.
-            ClientEvent::Base::Ptr ev = new ClientEvent::Info(msg.substr(5));
-            if (info_hold)
-                info_hold->push_back(std::move(ev));
-            else
-                cli_events->add_event(std::move(ev));
-        }
-        else if (info && string::starts_with(msg, "INFO_PRE,"))
-        {
-            // INFO_PRE is like INFO but it is never buffered
-            ClientEvent::Base::Ptr ev = new ClientEvent::Info(msg.substr(9));
-            cli_events->add_event(std::move(ev));
-        }
-        else if (msg == "AUTH_PENDING" || string::starts_with(msg, "AUTH_PENDING,"))
-        {
-            // AUTH_PENDING indicates an out-of-band authentication step must
-            // be performed before the server will send the PUSH_REPLY message.
-            if (!auth_pending)
-            {
-                auth_pending = true;
-                std::string key_words;
-
-                unsigned int timeout = 0;
-
-                if (string::starts_with(msg, "AUTH_PENDING,"))
-                {
-                    key_words = msg.substr(::strlen("AUTH_PENDING,"));
-                    auto opts = OptionList::parse_from_csv_static(key_words, nullptr);
-                    std::string timeout_str = opts.get_optional("timeout", 1, 20);
-                    if (timeout_str != "")
-                    {
-                        try
-                        {
-                            timeout = clamp_to_typerange<unsigned int>(std::stoul(timeout_str));
-                            // Cap the timeout to end well before renegotiation starts
-                            timeout = std::min(timeout, static_cast<decltype(timeout)>(conf().renegotiate.to_seconds() / 2));
-                        }
-                        catch (const std::logic_error &)
-                        {
-                            OPENVPN_LOG("could not parse AUTH_PENDING timeout: " << timeout_str);
-                        }
-                    }
-                }
-
-
-
-                if (notify_callback && timeout > 0)
-                {
-                    notify_callback->client_proto_auth_pending_timeout(timeout);
-                }
-
-                ClientEvent::Base::Ptr ev = new ClientEvent::AuthPending(timeout, key_words);
-                cli_events->add_event(std::move(ev));
-            }
-        }
-        else if (msg == "RELAY")
-        {
-            if (Base::conf().relay_mode)
-            {
-                fatal_ = Error::RELAY;
-                fatal_reason_ = "";
-            }
-            else
-            {
-                fatal_ = Error::RELAY_ERROR;
-                fatal_reason_ = "not in relay mode";
-            }
-            if (notify_callback)
-            {
-                OPENVPN_LOG(Error::name(fatal_) << ' ' << fatal_reason_);
-                stop(true);
-            }
-            else
-                throw relay_event();
         }
     }
 
@@ -1264,8 +1294,9 @@ class Session : ProtoContext,
             throw client_exception(e.what());
     }
 
-    void process_halt_restart(const ClientHalt &ch)
+    void recv_halt_restart(const std::string &msg)
     {
+        const ClientHalt ch(msg, true);
         if (!ch.psid() && creds)
             creds->purge_session_id();
         if (ch.restart())
