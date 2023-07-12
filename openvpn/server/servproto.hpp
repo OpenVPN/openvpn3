@@ -357,11 +357,6 @@ class ServerProto
                 else
                     auth_failed("no management provider", false);
             }
-            else if (string::starts_with(msg, "INFO,"))
-            {
-                if (get_management())
-                    ManLink::send->info_request(msg.substr(5));
-            }
             else
             {
                 OPENVPN_LOG(instance_name() << " : Unrecognized client request: " << msg);

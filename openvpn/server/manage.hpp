@@ -113,9 +113,6 @@ struct Send : public SendBase
                               const PeerAddr::Ptr &peer_addr) = 0;
     virtual void push_request(ProtoContext::ProtoConfig::Ptr pconf) = 0;
 
-    // INFO notification
-    virtual void info_request(const std::string &imsg) = 0;
-
     // bandwidth stats notification
     virtual void stats_notify(const PeerStats &ps, const bool final) = 0;
 
