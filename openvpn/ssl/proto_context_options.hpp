@@ -30,9 +30,9 @@
 #include <openvpn/common/options.hpp>
 
 namespace openvpn {
-struct ProtoContextOptions : public RC<thread_safe_refcount>
+struct ProtoContextCompressionOptions : public RC<thread_safe_refcount>
 {
-    typedef RCPtr<ProtoContextOptions> Ptr;
+    typedef RCPtr<ProtoContextCompressionOptions> Ptr;
 
     enum CompressionMode
     {
@@ -41,7 +41,7 @@ struct ProtoContextOptions : public RC<thread_safe_refcount>
         COMPRESS_ASYM
     };
 
-    ProtoContextOptions()
+    ProtoContextCompressionOptions()
         : compression_mode(COMPRESS_NO)
     {
     }

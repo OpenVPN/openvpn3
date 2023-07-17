@@ -395,7 +395,7 @@ class ProtoContext
         std::string initial_options;
 
         void load(const OptionList &opt,
-                  const ProtoContextOptions &pco,
+                  const ProtoContextCompressionOptions &pco,
                   const int default_key_direction,
                   const bool server)
         {
@@ -612,7 +612,7 @@ class ProtoContext
         }
 
         // load options string pushed by server
-        void process_push(const OptionList &opt, const ProtoContextOptions &pco)
+        void process_push(const OptionList &opt, const ProtoContextCompressionOptions &pco)
         {
             // data channel
             parse_pushed_data_channel_options(opt);
@@ -758,7 +758,7 @@ class ProtoContext
             }
         }
 
-        void parse_pushed_compression(const OptionList &opt, const ProtoContextOptions &pco)
+        void parse_pushed_compression(const OptionList &opt, const ProtoContextCompressionOptions &pco)
         {
             std::string new_comp;
             try
@@ -1057,7 +1057,7 @@ class ProtoContext
 
         // load parameters that can be present in both config file or pushed options
         void load_common(const OptionList &opt,
-                         const ProtoContextOptions &pco,
+                         const ProtoContextCompressionOptions &pco,
                          const LoadCommonType type)
         {
             // duration parms
@@ -3984,7 +3984,7 @@ class ProtoContext
     }
 
     // Call on client with server-pushed options
-    void process_push(const OptionList &opt, const ProtoContextOptions &pco)
+    void process_push(const OptionList &opt, const ProtoContextCompressionOptions &pco)
     {
         // modify config with pushed options
         config->process_push(opt, pco);

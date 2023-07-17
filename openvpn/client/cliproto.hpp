@@ -134,7 +134,7 @@ class Session : ProtoContext,
         }
 
         ProtoConfig::Ptr proto_context_config;
-        ProtoContextOptions::Ptr proto_context_options;
+        ProtoContextCompressionOptions::Ptr proto_context_options;
         PushOptionsBase::Ptr push_base;
         TransportClientFactory::Ptr transport_factory;
         TunClientFactory::Ptr tun_factory;
@@ -1114,7 +1114,7 @@ class Session : ProtoContext,
         // abort connection if compression is pushed and its support is unannounced
         if (comp_type != CompressContext::COMP_STUBv2
             && comp_type != CompressContext::NONE
-            && proto_context_options->compression_mode == ProtoContextOptions::COMPRESS_NO)
+            && proto_context_options->compression_mode == ProtoContextCompressionOptions::COMPRESS_NO)
         {
             throw ErrorCode(Error::COMPRESS_ERROR, true, "server pushed compression "
                                                          "settings that are not allowed and will result "
@@ -1380,7 +1380,7 @@ class Session : ProtoContext,
 
     ClientCreds::Ptr creds;
 
-    ProtoContextOptions::Ptr proto_context_options;
+    ProtoContextCompressionOptions::Ptr proto_context_options;
 
     bool first_packet_received_ = false;
     bool sent_push_request = false;

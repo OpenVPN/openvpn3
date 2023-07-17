@@ -40,7 +40,7 @@ void load_client_config(const std::string &config_content, bool dco = false)
     OptionList options;
     ClientOptions::Config config;
     config.clientconf.dco = true;
-    config.proto_context_options.reset(new ProtoContextOptions());
+    config.proto_context_options.reset(new ProtoContextCompressionOptions());
 
     ClientAPI::OpenVPNClientHelper client_helper;
     ParseClientConfig conf = ParseClientConfig::parse(config_content);
@@ -128,7 +128,7 @@ TEST(config, duplicate_options_sets)
     OptionList options;
     ClientOptions::Config config;
     config.clientconf.dco = false;
-    config.proto_context_options = new ProtoContextOptions();
+    config.proto_context_options = new ProtoContextCompressionOptions();
 
     ClientAPI::OpenVPNClientHelper client_helper;
 

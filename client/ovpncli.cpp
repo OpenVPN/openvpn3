@@ -440,10 +440,9 @@ class ClientState
     std::unique_ptr<MyClockTick> clock_tick;
 
     // extra settings submitted by API client
-
     ClientConfigParsed clientconf;
 
-    ProtoContextOptions::Ptr proto_context_options;
+    ProtoContextCompressionOptions::Ptr proto_context_options;
     PeerInfo::Set::Ptr extra_peer_info;
     HTTPProxyTransport::Options::Ptr http_proxy_options;
 
@@ -600,7 +599,7 @@ OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
 #endif
 
     state = new Private::ClientState();
-    state->proto_context_options.reset(new ProtoContextOptions());
+    state->proto_context_options.reset(new ProtoContextCompressionOptions());
 }
 
 OPENVPN_CLIENT_EXPORT void OpenVPNClientHelper::parse_config(const Config &config, EvalConfig &eval, OptionList &options)

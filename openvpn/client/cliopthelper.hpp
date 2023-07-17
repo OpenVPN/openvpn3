@@ -301,7 +301,7 @@ class ParseClientConfig
                 protoConfig.reset(new ProtoContext::Config());
                 protoConfig->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
                 protoConfig->tls_crypt_factory.reset(new CryptoTLSCryptFactory<SSLLib::CryptoAPI>());
-                protoConfig->load(options, ProtoContextOptions(), -1, false);
+                protoConfig->load(options, ProtoContextCompressionOptions(), -1, false);
             }
 
             unsigned int lflags = SSLConfigAPI::LF_PARSE_MODE;
