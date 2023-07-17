@@ -180,7 +180,7 @@ struct ConfigCommon
     // Passed to server as IV_GUI_VER.
     std::string guiVersion;
 
-    // Set to a comma seperated list of supported SSO mechanisms that may
+    // Set to a comma separated list of supported SSO mechanisms that may
     // be signalled via INFO_PRE to the client.
     // "openurl"   deprecated version of webauth
     // "webauth" to continue authentication by opening an url in a browser
@@ -188,6 +188,11 @@ struct ConfigCommon
     // responded via control channel. (
     // Passed to the server as IV_SSO
     std::string ssoMethods;
+
+    // Set to a comma separated list of supported custom app control channel
+    // protocols. The semantics of these protocols are determined by the
+    // app/server and not by the OpenVPN protocol.
+    std::string appCustomProtocols;
 
     // Override the string that is passed as IV_HWADDR to the server
     std::string hwAddrOverride;
@@ -388,10 +393,11 @@ struct Event
 };
 
 /**
- * Used to signal messages from the peer. There is a special event that
+ * Used to signal messages from the peer.
  *
- * uses internal:supported_protocols as protocol and a : separated list
- * as the list of protocols the server pushed to us as supported.
+ * There is a special event that uses internal:supported_protocols as
+ * protocol and a : separated list as the list of protocols the server
+ * pushed to us as supported protocols.
  */
 struct AppCustomControlMessageEvent
 {

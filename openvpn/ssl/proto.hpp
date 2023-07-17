@@ -84,6 +84,7 @@
 #include <openvpn/ssl/peerinfo.hpp>
 #include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/crypto/crypto_aead.hpp>
+#include <openvpn/ssl/customcontrolchannel.hpp>
 
 
 #if OPENVPN_DEBUG_PROTO >= 1
