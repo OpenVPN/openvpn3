@@ -615,65 +615,113 @@ class ProtoContext
         void process_push(const OptionList &opt, const ProtoContextOptions &pco)
         {
             // data channel
-            {
-                // cipher
-                std::string new_cipher;
-                try
-                {
-                    const Option *o = opt.get_ptr("cipher");
-                    if (o)
-                    {
-                        new_cipher = o->get(1, 128);
-                        if (new_cipher != "none")
-                            dc.set_cipher(CryptoAlgs::lookup(new_cipher));
-                    }
-                }
-                catch (const std::exception &e)
-                {
-                    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed cipher '" << new_cipher << "': " << e.what());
-                }
-
-                // digest
-                std::string new_digest;
-                try
-                {
-                    const Option *o = opt.get_ptr("auth");
-                    if (o)
-                    {
-                        new_digest = o->get(1, 128);
-                        if (new_digest != "none")
-                            dc.set_digest(CryptoAlgs::lookup(new_digest));
-                    }
-                }
-                catch (const std::exception &e)
-                {
-                    OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
-                }
-
-
-                // tls key-derivation method
-                std::string key_method;
-                try
-                {
-                    const Option *o = opt.get_ptr("key-derivation");
-                    if (o)
-                    {
-                        key_method = o->get(1, 128);
-                        if (key_method == "tls-ekm")
-                            dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
-                        else
-                            OPENVPN_THROW(process_server_push_error, "Problem accepting key-derivation method '" << key_method << "'");
-                    }
-                    else
-                        dc.set_key_derivation(CryptoAlgs::KeyDerivation::OPENVPN_PRF);
-                }
-                catch (const std::exception &e)
-                {
-                    OPENVPN_THROW(process_server_push_error, "Problem accepting key-derivation method '" << key_method << "': " << e.what());
-                }
-            }
+            parse_pushed_data_channel_options(opt);
 
             // protocol-flags
+            parse_pushed_protocol_flags(opt);
+
+            // compression
+            parse_pushed_compression(opt, pco);
+
+            // peer ID
+            parse_pushed_peer_id(opt);
+
+            try
+            {
+                // load parameters that can be present in both config file or pushed options
+                load_common(opt, pco, LOAD_COMMON_CLIENT_PUSHED);
+            }
+            catch (const std::exception &e)
+            {
+                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
+            }
+
+            // show negotiated options
+            OPENVPN_LOG_STRING_PROTO(show_options());
+        }
+        void parse_pushed_data_channel_options(const OptionList &opt)
+        {
+            // cipher
+            std::string new_cipher;
+            try
+            {
+                const Option *o = opt.get_ptr("cipher");
+                if (o)
+                {
+                    new_cipher = o->get(1, 128);
+                    if (new_cipher != "none")
+                        dc.set_cipher(CryptoAlgs::lookup(new_cipher));
+                }
+            }
+            catch (const std::exception &e)
+            {
+                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed cipher '" << new_cipher << "': " << e.what());
+            }
+
+            // digest
+            std::string new_digest;
+            try
+            {
+                const Option *o = opt.get_ptr("auth");
+                if (o)
+                {
+                    new_digest = o->get(1, 128);
+                    if (new_digest != "none")
+                        dc.set_digest(CryptoAlgs::lookup(new_digest));
+                }
+            }
+            catch (const std::exception &e)
+            {
+                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed digest '" << new_digest << "': " << e.what());
+            }
+        }
+
+        void parse_pushed_peer_id(const OptionList &opt)
+        {
+            try
+            {
+                const Option *o = opt.get_ptr("peer-id");
+                if (o)
+                {
+                    bool status = parse_number_validate<int>(o->get(1, 16),
+                                                             16,
+                                                             -1,
+                                                             0xFFFFFE,
+                                                             &remote_peer_id);
+                    if (!status)
+                        throw Exception("parse/range issue");
+                    enable_op32 = true;
+                }
+            }
+            catch (const std::exception &e)
+            {
+                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed peer-id: " << e.what());
+            }
+        }
+
+        void parse_pushed_protocol_flags(const OptionList &opt)
+        {
+            // tls key-derivation method with old key-derivation option
+            std::string key_method;
+            try
+            {
+                const Option *o = opt.get_ptr("key-derivation");
+                if (o)
+                {
+                    key_method = o->get(1, 128);
+                    if (key_method == "tls-ekm")
+                        dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
+                    else
+                        OPENVPN_THROW(process_server_push_error, "Problem accepting key-derivation method '" << key_method << "'");
+                }
+                else
+                    dc.set_key_derivation(CryptoAlgs::KeyDerivation::OPENVPN_PRF);
+            }
+            catch (const std::exception &e)
+            {
+                OPENVPN_THROW(process_server_push_error, "Problem accepting key-derivation method '" << key_method << "': " << e.what());
+            }
+
             try
             {
                 const Option *o = opt.get_ptr("protocol-flags");
@@ -690,7 +738,7 @@ class ProtoContext
                         else if (flag == "dyn-tls-crypt")
                         {
                             set_tls_crypt_algs();
-                            tls_crypt_ |= TLSCrypt::Dynamic;
+                            tls_crypt_ |= Dynamic;
                         }
                         else if (flag == "tls-ekm")
                         {
@@ -708,8 +756,10 @@ class ProtoContext
             {
                 OPENVPN_THROW(process_server_push_error, "Problem accepting protocol-flags: " << e.what());
             }
+        }
 
-            // compression
+        void parse_pushed_compression(const OptionList &opt, const ProtoContextOptions &pco)
+        {
             std::string new_comp;
             try
             {
@@ -758,40 +808,6 @@ class ProtoContext
             {
                 OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed compressor '" << new_comp << "': " << e.what());
             }
-
-            // peer ID
-            try
-            {
-                const Option *o = opt.get_ptr("peer-id");
-                if (o)
-                {
-                    bool status = parse_number_validate<int>(o->get(1, 16),
-                                                             16,
-                                                             -1,
-                                                             0xFFFFFE,
-                                                             &remote_peer_id);
-                    if (!status)
-                        throw Exception("parse/range issue");
-                    enable_op32 = true;
-                }
-            }
-            catch (const std::exception &e)
-            {
-                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed peer-id: " << e.what());
-            }
-
-            try
-            {
-                // load parameters that can be present in both config file or pushed options
-                load_common(opt, pco, LOAD_COMMON_CLIENT_PUSHED);
-            }
-            catch (const std::exception &e)
-            {
-                OPENVPN_THROW(process_server_push_error, "Problem accepting server-pushed parameter: " << e.what());
-            }
-
-            // show negotiated options
-            OPENVPN_LOG_STRING_PROTO(show_options());
         }
 
         std::string show_options() const
