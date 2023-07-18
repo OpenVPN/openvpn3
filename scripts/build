@@ -55,7 +55,8 @@ if [ -z "$1" ]; then
     echo " XXHASH=1 -- build with XXHash hash library"
     echo " CAP=1 -- build with libcap"
     echo " JAVA=1 -- build with JVM"
-    echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files'
+    echo ' EXTRA_CPP="foo1.cpp foo2.cpp" -- add extra .cpp files into single compilation unit'
+    echo ' EXTRA_CPP_OBJS="bar1.cpp foo2.cpp" -- add extra .cpp as separate compilation units'
     echo " GTEST_DIR=<dir> -- specify googletest tree, required for building unit tests"
     echo " VAL=1 -- (optional) build with valgrind run-time extensions"
     echo " ASAN=1 -- (optional) enable ASAN run-time checks"
@@ -408,6 +409,18 @@ else
     # release build
     [ "$CLANG" != "1" ] && FLAGS="$FLAGS -flto=4 -Wl,--no-as-needed"
     [ "$GPROF" = "1" ] && FLAGS="$FLAGS -pg"
+fi
+
+
+if [ ! -z "${EXTRA_CPP_OBJS}" ]; then
+  for CPP_OBJ in $EXTRA_CPP_OBJS $MAIN_CPP; do
+      [ "$ECHO" = "1" ] && echo "compiling $CPP_OBJ"
+      CMD="$GPP_CMD $FLAGS $GCC_EXTRA $CPPFLAGS $LIBDIRS $CPP_OBJ -c -o $CPP_OBJ.o"
+      [ "$ECHO" = "1" ] && echo $CMD
+      $CMD
+      EXTRA_SRC_OBJ="${EXTRA_SRC_OBJ} $CPP_OBJ.o"
+  done
+  MAIN_CPP=""
 fi
 
 # Construct command
