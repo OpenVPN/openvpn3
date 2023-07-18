@@ -295,11 +295,11 @@ for callbacks including event and logging notifications:
         ...
     };
 
-To start the client, first create a :code:`ClientAPI::Config` object
+To start the client, first create a :code:`ClientAPI::ProtoConfig` object
 and initialize it with the OpenVPN config file and other options:
 ::
 
-    ClientAPI::Config config;
+    ClientAPI::ProtoConfig config;
     config.content = <config_file_content_as_multiline_string>;
     ...
 

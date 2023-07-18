@@ -368,7 +368,7 @@ class TestProto : public ProtoContext
 
     OPENVPN_EXCEPTION(session_invalidated);
 
-    TestProto(const Base::Config::Ptr &config,
+    TestProto(const Base::ProtoConfig::Ptr &config,
               const SessionStats::Ptr &stats)
         : Base(config, stats),
           control_drought("control", config->now),
@@ -602,7 +602,7 @@ class TestProtoClient : public TestProto
     typedef TestProto Base;
 
   public:
-    TestProtoClient(const Base::Config::Ptr &config,
+    TestProtoClient(const Base::ProtoConfig::Ptr &config,
                     const SessionStats::Ptr &stats)
         : Base(config, stats)
     {
@@ -625,7 +625,7 @@ class TestProtoServer : public TestProto
   public:
     OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
-    TestProtoServer(const Base::Config::Ptr &config,
+    TestProtoServer(const Base::ProtoConfig::Ptr &config,
                     const SessionStats::Ptr &stats)
         : Base(config, stats)
     {
@@ -923,7 +923,7 @@ int test(const int thread_num)
 
         // client ProtoContext config
         typedef ProtoContext ClientProtoContext;
-        ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
+        ClientProtoContext::ProtoConfig::Ptr cp(new ClientProtoContext::ProtoConfig);
         cp->ssl_factory = cc->new_factory();
         CryptoAlgs::allow_default_dc_algs<ClientCryptoAPI>(cp->ssl_factory->libctx(), false, false);
         cp->dc.set_factory(new CryptoDCSelect<ClientCryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, prng_cli));
@@ -965,7 +965,7 @@ int test(const int thread_num)
             tls_crypt_v2_key.extract_key(cp->tls_key);
             tls_crypt_v2_key.extract_wkc(cp->wkc);
         }
-        cp->tls_crypt_ = ClientProtoContext::Config::TLSCrypt::V2;
+        cp->tls_crypt_ = ClientProtoContext::ProtoConfig::TLSCrypt::V2;
 #endif
         cp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)
@@ -1013,7 +1013,7 @@ int test(const int thread_num)
 
         // server ProtoContext config
         typedef ProtoContext ServerProtoContext;
-        ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
+        ServerProtoContext::ProtoConfig::Ptr sp(new ServerProtoContext::ProtoConfig);
         sp->ssl_factory = sc->new_factory();
         sp->dc.set_factory(new CryptoDCSelect<ServerCryptoAPI>(sp->ssl_factory->libctx(), frame, serv_stats, prng_serv));
         sp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ServerCryptoAPI>());
@@ -1054,7 +1054,7 @@ int test(const int thread_num)
         }
         sp->set_tls_crypt_algs();
         sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
-        sp->tls_crypt_ = ClientProtoContext::Config::TLSCrypt::V2;
+        sp->tls_crypt_ = ClientProtoContext::ProtoConfig::TLSCrypt::V2;
 #endif
         sp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)

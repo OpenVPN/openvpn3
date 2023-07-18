@@ -65,10 +65,10 @@ class ServerProto
     {
       public:
         typedef RCPtr<Factory> Ptr;
-        typedef Base::Config ProtoConfig;
+        typedef Base::ProtoConfig ProtoConfig;
 
         Factory(openvpn_io::io_context &io_context_arg,
-                const Base::Config &c)
+                const Base::ProtoConfig &c)
             : io_context(io_context_arg)
         {
             if (c.tls_crypt_enabled())

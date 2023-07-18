@@ -298,7 +298,7 @@ class ParseClientConfig
 
             // protocol configuration
             {
-                protoConfig.reset(new ProtoContext::Config());
+                protoConfig.reset(new ProtoContext::ProtoConfig());
                 protoConfig->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
                 protoConfig->tls_crypt_factory.reset(new CryptoTLSCryptFactory<SSLLib::CryptoAPI>());
                 protoConfig->load(options, ProtoContextCompressionOptions(), -1, false);
@@ -792,7 +792,7 @@ class ParseClientConfig
     RemoteList::Ptr remoteList;
     RemoteItem firstRemoteListItem_;
     PeerInfo::Set::Ptr peerInfoUV_;
-    ProtoContext::Config::Ptr protoConfig;
+    ProtoContext::ProtoConfig::Ptr protoConfig;
     SSLLib::SSLAPI::Config::Ptr sslConfig;
     std::string dev;
     std::string windowsDriver_;

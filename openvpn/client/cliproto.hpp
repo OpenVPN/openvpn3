@@ -105,7 +105,7 @@ class Session : ProtoContext,
 
   public:
     typedef RCPtr<Session> Ptr;
-    typedef Base::Config ProtoConfig;
+    typedef Base::ProtoConfig ProtoConfig;
 
     OPENVPN_EXCEPTION(client_exception);
     OPENVPN_EXCEPTION(client_halt_restart);
@@ -415,7 +415,7 @@ class Session : ProtoContext,
             // encrypt packet
             if (buf.size())
             {
-                const ProtoContext::Config &c = Base::conf();
+                const ProtoContext::ProtoConfig &c = Base::conf();
                 // when calculating mss, we take IPv4 and TCP headers into account
                 // here we need to add it back since we check the whole IP packet size, not just TCP payload
                 constexpr size_t MinTcpHeader = 20;

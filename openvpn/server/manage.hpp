@@ -69,7 +69,7 @@ struct Send : public virtual RC<thread_unsafe_refcount>
     virtual void auth_request(const AuthCreds::Ptr &auth_creds,
                               const AuthCert::Ptr &auth_cert,
                               const PeerAddr::Ptr &peer_addr) = 0;
-    virtual void push_request(ProtoContext::Config::Ptr pconf) = 0;
+    virtual void push_request(ProtoContext::ProtoConfig::Ptr pconf) = 0;
 
     // INFO notification
     virtual void info_request(const std::string &imsg) = 0;

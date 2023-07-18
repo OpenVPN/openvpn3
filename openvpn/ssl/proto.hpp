@@ -284,10 +284,10 @@ class ProtoContext
     OPENVPN_EXCEPTION_INHERIT(option_error, proto_option_error);
 
     // configuration data passed to ProtoContext constructor
-    class Config : public RCCopyable<thread_unsafe_refcount>
+    class ProtoConfig : public RCCopyable<thread_unsafe_refcount>
     {
       public:
-        typedef RCPtr<Config> Ptr;
+        typedef RCPtr<ProtoConfig> Ptr;
 
         // master SSL context factory
         SSLFactoryAPI::Ptr ssl_factory;
@@ -2020,7 +2020,7 @@ class ProtoContext
             dck.swap(data_channel_key);
         }
 
-        void calculate_mssfix(Config &c)
+        void calculate_mssfix(ProtoConfig &c)
         {
             if (c.mss_parms.fixed)
             {
@@ -2122,7 +2122,7 @@ class ProtoContext
 
             // set up crypto for data channel
             bool enable_compress = true;
-            Config &c = *proto.config;
+            ProtoConfig &c = *proto.config;
             const unsigned int key_dir = proto.is_server() ? OpenVPNStaticKey::INVERSE : OpenVPNStaticKey::NORMAL;
             const OpenVPNStaticKey &key = data_channel_key->key;
 
@@ -3377,7 +3377,7 @@ class ProtoContext
       public:
         OPENVPN_SIMPLE_EXCEPTION(tls_auth_pre_validate);
 
-        TLSAuthPreValidate(const Config &c, const bool server)
+        TLSAuthPreValidate(const ProtoConfig &c, const bool server)
         {
             if (!c.tls_auth_enabled())
                 throw tls_auth_pre_validate();
@@ -3438,7 +3438,7 @@ class ProtoContext
       public:
         OPENVPN_SIMPLE_EXCEPTION(tls_crypt_pre_validate);
 
-        TLSCryptPreValidate(const Config &c, const bool server)
+        TLSCryptPreValidate(const ProtoConfig &c, const bool server)
         {
             if (!c.tls_crypt_enabled())
                 throw tls_crypt_pre_validate();
@@ -3512,7 +3512,7 @@ class ProtoContext
       public:
         OPENVPN_SIMPLE_EXCEPTION(tls_crypt_v2_pre_validate);
 
-        TLSCryptV2PreValidate(const Config &c, const bool server)
+        TLSCryptV2PreValidate(const ProtoConfig &c, const bool server)
             : TLSCryptPreValidate(c, server)
         {
             if (!c.tls_crypt_v2_enabled())
@@ -3526,7 +3526,7 @@ class ProtoContext
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
 
-    ProtoContext(const Config::Ptr &config_arg,      // configuration
+    ProtoContext(const ProtoConfig::Ptr &config_arg, // configuration
                  const SessionStats::Ptr &stats_arg) // error stats
         : config(config_arg),
           stats(stats_arg),
@@ -3537,7 +3537,7 @@ class ProtoContext
         reset_tls_wrap_mode(*config);
     }
 
-    void reset_tls_wrap_mode(const Config &c)
+    void reset_tls_wrap_mode(const ProtoConfig &c)
     {
         // tls-auth setup
         if (c.tls_crypt_v2_enabled())
@@ -3582,7 +3582,7 @@ class ProtoContext
         return is_bs64_cipher(conf().dc.cipher());
     }
 
-    void reset_tls_crypt(const Config &c, const OpenVPNStaticKey &key)
+    void reset_tls_crypt(const ProtoConfig &c, const OpenVPNStaticKey &key)
     {
         tls_crypt_send = c.tls_crypt_context->new_obj_send();
         tls_crypt_recv = c.tls_crypt_context->new_obj_recv();
@@ -3598,7 +3598,7 @@ class ProtoContext
                              key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
     }
 
-    void set_dynamic_tls_crypt(const Config &c, const KeyContext::Ptr &key_ctx)
+    void set_dynamic_tls_crypt(const ProtoConfig &c, const KeyContext::Ptr &key_ctx)
     {
         OpenVPNStaticKey dyn_key;
         key_ctx->export_key_material(dyn_key, "EXPORTER-OpenVPN-dynamic-tls-crypt");
@@ -3617,7 +3617,7 @@ class ProtoContext
         reset_tls_crypt(c, dyn_key);
     }
 
-    void reset_tls_crypt_server(const Config &c)
+    void reset_tls_crypt_server(const ProtoConfig &c)
     {
         // tls-crypt session key is derived later from WKc received from the client
         tls_crypt_send.reset();
@@ -3637,7 +3637,7 @@ class ProtoContext
 
     void reset()
     {
-        const Config &c = *config;
+        const ProtoConfig &c = *config;
 
         // defer data channel initialization until after client options pull?
         dc_deferred = c.dc_deferred;
@@ -4097,15 +4097,15 @@ class ProtoContext
     }
 
     // configuration
-    const Config &conf() const
+    const ProtoConfig &conf() const
     {
         return *config;
     }
-    Config &conf()
+    ProtoConfig &conf()
     {
         return *config;
     }
-    Config::Ptr conf_ptr() const
+    ProtoConfig::Ptr conf_ptr() const
     {
         return config;
     }
@@ -4443,7 +4443,7 @@ class ProtoContext
 
     // BEGIN ProtoContext data members
 
-    Config::Ptr config;
+    ProtoConfig::Ptr config;
     SessionStats::Ptr stats;
 
     size_t hmac_size;
