@@ -797,6 +797,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "mute-replay-warnings",
         "nobind", /* only behaviour in v3 client anyway */
         "prng",
+        "pull", /* option is implied by 'client' */
         "rcvbuf",         /* present in many configs */
         "replay-persist", /* Makes little sense in TLS mode */
         "script-security",
