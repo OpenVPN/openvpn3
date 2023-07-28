@@ -21,11 +21,10 @@ jobs:
         arch: ${{ matrix.arch }}
 
     - name: Restore from cache and install vcpkg
-      uses: lukka/run-vcpkg@v10
+      uses: lukka/run-vcpkg@v11
       with:
-        vcpkgGitCommitId: '36fb23307e10cc6ffcec566c46c4bb3f567c82c6'
+        vcpkgGitCommitId: '8b04a7bd93bef991818fc372bb83ce00ec1c1c16'
         vcpkgJsonGlob: '**/windows/vcpkg.json'
-        appendedCacheKey: msvc_${{ matrix.arch }}
 
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@v10
@@ -60,11 +59,10 @@ jobs:
       run: sudo apt update && sudo apt install -y mingw-w64 unzip cmake build-essential
 
     - name: Restore from cache and install vcpkg
-      uses: lukka/run-vcpkg@v10
+      uses: lukka/run-vcpkg@v11
       with:
-        vcpkgGitCommitId: '36fb23307e10cc6ffcec566c46c4bb3f567c82c6'
+        vcpkgGitCommitId: '8b04a7bd93bef991818fc372bb83ce00ec1c1c16'
         vcpkgJsonGlob: '**/mingw/vcpkg.json'
-        appendedCacheKey: mingw_${{ matrix.arch }}
 
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@v10
