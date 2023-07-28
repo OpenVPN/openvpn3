@@ -1,0 +1,57 @@
+name: coverity-scan
+on:
+  schedule:
+    - cron: '0 20 * * *' # Daily at 20:00 UTC
+  workflow_dispatch:
+
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y libcap-dev libjsoncpp-dev liblzo2-dev liblz4-dev libssl-dev swig
+      - name: Checkout OpenVPN 3
+        uses: actions/checkout@v3
+        with:
+          path: openvpn3
+      - name: Checkout asio
+        uses: actions/checkout@v3
+        with:
+          repository: chriskohlhoff/asio
+          path: asio
+          ref: asio-1-28-0
+      - name: Checkout xxHash
+        uses: actions/checkout@v3
+        with:
+          repository: Cyan4973/xxHash
+          path: xxHash
+          ref: v0.8.2
+      - uses: lukka/get-cmake@latest
+
+      - name: Download Coverity Build Tool
+        run: |
+          wget -q https://scan.coverity.com/download/cxx/linux64 --post-data "token=$TOKEN&project=OpenVPN%2Fopenvpn3" -O cov-analysis-linux64.tar.gz
+          mkdir cov-analysis-linux64
+          tar xzf cov-analysis-linux64.tar.gz --strip 1 -C cov-analysis-linux64
+        env:
+          TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+
+      - name: CMake configure
+        run: cmake -S openvpn3 -B cmake -DDEP_DIR=$PWD -GNinja
+      - name: Build with cov-build
+        run: |
+          PATH=`pwd`/cov-analysis-linux64/bin:$PATH
+          cov-build --dir cov-int cmake --build cmake
+
+      - name: Submit the result to Coverity Scan
+        run: |
+          tar czvf openvpn.tgz cov-int
+          curl --form token=$TOKEN \
+          --form email=$EMAIL \
+          --form file=@openvpn.tgz \
+          --form version="$GITHUB_SHA" \
+          --form description="master" \
+          https://scan.coverity.com/builds?project=OpenVPN%2Fopenvpn3
+        env:
+          TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+          EMAIL: ${{ secrets.COVERITY_SCAN_EMAIL }}
