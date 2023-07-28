@@ -127,6 +127,10 @@ function(add_core_dependencies target)
         # target_compile_options(${target} PRIVATE /W4)
     else()
         target_compile_options(${target} PRIVATE -Wall -Wsign-compare)
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            # disable noisy warnings
+            target_compile_options(${target} PRIVATE -Wno-maybe-uninitialized)
+        endif()
     endif()
 
 endfunction()
