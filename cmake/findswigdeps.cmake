@@ -1,11 +1,10 @@
-find_package(PythonInterp)
-find_package(PythonLibs)
+find_package(Python3 COMPONENTS Interpreter Development)
 
 FIND_PACKAGE(SWIG 3.0)
 
 # We test building this library with python instead of java since that is easier to do and both languages should work
 
-if (PYTHONLIBS_FOUND AND SWIG_FOUND)
+if (Python3_Development_FOUND AND SWIG_FOUND)
     if (NOT WIN32)
         set(BUILD_SWIG_LIB TRUE)
     elseif("${CMAKE_EXE_LINKER_FLAGS}" MATCHES "x64")

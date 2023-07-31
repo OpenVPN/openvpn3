@@ -16,8 +16,8 @@ if (${BUILD_SWIG_LIB})
             )
 
     add_core_dependencies(ovpnclilib)
-    target_link_libraries(ovpnclilib ${PYTHON_LIBRARIES})
-    target_include_directories(ovpnclilib PRIVATE ${PYTHON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(ovpnclilib ${Python3_LIBRARIES})
+    target_include_directories(ovpnclilib PRIVATE ${Python3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
 
     # Use proper python library name to generate _ovpncli.so/dylib/dll
     set_target_properties(ovpnclilib PROPERTIES OUTPUT_NAME "_ovpncli")
