@@ -533,7 +533,7 @@ class MbedTLSContext : public SSLFactoryAPI
             }
 
             // DH
-            if (mode.is_server())
+            if (mode.is_server() && opt.exists("dh"))
             {
                 const std::string &dh_txt = opt.get("dh", 1, Option::MULTILINE);
                 load_dh(dh_txt);
