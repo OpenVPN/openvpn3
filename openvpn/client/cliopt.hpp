@@ -595,6 +595,9 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (opt.exists("fragment"))
             throw option_error("sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
 
+        if (!opt.exists("client"))
+            throw option_error("Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
+
         // Only p2p mode accept
         if (opt.exists("mode"))
         {
@@ -801,7 +804,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "replay-persist", /* Makes little sense in TLS mode */
         "script-security",
         "sndbuf",
-        "tls-client", /* Always enabled */
         "tmp-dir",
         "tun-ipv6",   /* ignored in v2 as well */
         "txqueuelen", /* so platforms evaluate that in tun, some do not, do not warn about that */
@@ -1180,8 +1182,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cc->set_tls_cert_profile_override(config.tls_cert_profile_override);
         cc->set_tls_cipher_list(config.tls_cipher_list);
         cc->set_tls_ciphersuite_list(config.tls_ciphersuite_list);
-        if (!cc->get_mode().is_client())
-            throw option_error("only client configuration supported");
 
         // client ProtoContext config
         Client::ProtoConfig::Ptr cp(new Client::ProtoConfig());

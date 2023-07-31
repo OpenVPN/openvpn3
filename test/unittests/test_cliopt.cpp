@@ -27,13 +27,16 @@ std::string dummysecp256key = "-----BEGIN PRIVATE KEY-----\n"
                               "3oP+eSyQewIqu8XJECJhmt8NoXqNNYRUF0P+Jit8LC2a+2WZeyAwuIYT\n"
                               "-----END PRIVATE KEY-----\n";
 
-std::string minimalConfig = "remote wooden.box\n"
-                            "<ca>\n"
-                            + dummysecp256cert + "</ca>\n"
-                            + "<cert>\n"
-                            + dummysecp256cert + "</cert>\n"
-                            + "<key>\n" + dummysecp256key
-                            + "</key>\n";
+std::string certconfig = "<ca>\n"
+                         + dummysecp256cert + "</ca>\n"
+                         + "<cert>\n"
+                         + dummysecp256cert + "</cert>\n"
+                         + "<key>\n" + dummysecp256key
+                         + "</key>\n";
+
+std::string minimalConfig = certconfig + "\n"
+                            + "client\n"
+                              "remote wooden.box\n";
 
 void load_client_config(const std::string &config_content)
 {
@@ -176,5 +179,42 @@ TEST(config, dco_compatibility)
             load_client_config(minimalConfig + optname),
             option_error,
             "option_error: dco_compatibility: config/options are not compatible with dco");
+    }
+}
+
+TEST(config, client_missing_in_config)
+{
+    std::string configNoClient = certconfig + "\nremote 1.2.3.4\n";
+    OVPN_EXPECT_THROW(
+        load_client_config(configNoClient),
+        option_error,
+        "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
+}
+
+TEST(config, pull_and_tlsclient_in_config)
+{
+    std::string configNoClient = certconfig + "\nremote 1.2.3.4\ntls-client\npull\n";
+    /* Should not trigger an error, even without --client in place */
+    load_client_config(configNoClient);
+}
+
+TEST(config, pull_and_client_and_tlsclient_in_config)
+{
+    std::string configNoClient = certconfig + "\nremote 1.2.3.4\ntls-client\npull\nclient\n";
+    /* Should not trigger an error. Redundant options are no problem */
+    load_client_config(configNoClient);
+}
+
+TEST(config, onlypullortlsclient)
+{
+    std::array<std::string, 2> options{"tls-client", "pull"};
+
+    for (const auto &opt : options)
+    {
+        std::string configNoClient = certconfig + "\nremote 1.2.3.4\n" + opt + "\n";
+        OVPN_EXPECT_THROW(
+            load_client_config(configNoClient),
+            option_error,
+            "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
     }
 }

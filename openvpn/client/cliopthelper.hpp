@@ -367,7 +367,7 @@ class ParseClientConfig
             bool added = false;
 
             // client
-            if (!options.exists("client"))
+            if (options.exists("tls-client") && options.exists("pull"))
             {
                 Option opt;
                 opt.push_back("client");
