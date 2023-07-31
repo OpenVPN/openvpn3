@@ -28,6 +28,15 @@ jobs:
 
     - name: Run CMake with vcpkg.json manifest
       uses: lukka/run-cmake@v10
+      if: ${{ matrix.arch != 'amd64_arm64' }}
+      with:
+        configurePreset: win-${{ matrix.arch }}-release
+        buildPreset: win-${{ matrix.arch }}-release
+        testPreset: win-${{ matrix.arch }}-release
+
+    - name: Run CMake with vcpkg.json manifest (NO TESTS)
+      uses: lukka/run-cmake@v10
+      if: ${{ matrix.arch == 'amd64_arm64' }}
       with:
         configurePreset: win-${{ matrix.arch }}-release
         buildPreset: win-${{ matrix.arch }}-release

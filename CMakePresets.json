@@ -237,14 +237,24 @@
     ],
     "testPresets": [
         {
-            "name": "win-amd64",
+            "name": "win-amd64-debug",
             "configurePreset": "win-amd64-debug",
             "configuration": "Debug"
         },
         {
-            "name": "win-x86",
+            "name": "win-x86-debug",
             "configurePreset": "win-x86-debug",
             "configuration": "Debug"
+        },
+        {
+            "name": "win-amd64-release",
+            "configurePreset": "win-amd64-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "win-x86-release",
+            "configurePreset": "win-x86-release",
+            "configuration": "Release"
         }
      ]
 }
