@@ -4345,6 +4345,7 @@ class ProtoContext
                 break;
             case KeyContext::KEV_NEGOTIATE:
                 stats->error(Error::HANDSHAKE_TIMEOUT);
+                [[fallthrough]];
             case KeyContext::KEV_PRIMARY_PENDING:
             case KeyContext::KEV_RENEGOTIATE_FORCE:
                 renegotiate();

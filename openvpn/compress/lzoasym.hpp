@@ -101,10 +101,12 @@ class CompressLZOAsym : public Compress
         {
         case NO_COMPRESS_SWAP:
             do_unswap(buf);
+            [[fallthrough]];
         case NO_COMPRESS:
             break;
         case LZO_COMPRESS_SWAP:
             do_unswap(buf);
+            [[fallthrough]];
         case LZO_COMPRESS:
             decompress_work(buf);
             break;
