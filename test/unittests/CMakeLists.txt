@@ -13,9 +13,6 @@ if (NOT BUILD_TESTING)
   return()
 endif()
 
-
-# current latest GTEST version
-set(OVPN_GTEST_VERSION release-1.11.0)
 include(dlgoogletest)
 
 set(CORE_TEST_DEFINES

@@ -12,7 +12,7 @@ set(GTEST_LIB gtest_main)
 include_guard(GLOBAL)
 
 if(NOT OVPN_GTEST_VERSION)
-    set(OVPN_GTEST_VERSION release-1.11.0)
+    set(OVPN_GTEST_VERSION v1.13.0)
 endif()
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt.in googletest-download/CMakeLists.txt)
