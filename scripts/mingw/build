@@ -55,9 +55,9 @@ download_deps()
 
     rm -rf xxHash
     git clone https://github.com/Cyan4973/xxHash.git
-    portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/xxhash/portfile.cmake
-    gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2)
-    git -C xxHash checkout "${gitref}"
+    portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/xxhash/vcpkg.json
+    gitref=$(wget -q -O- "$portfile_url" | grep -oP '\"version": \"\S+' | cut -d' ' -f2 | tr -d "\",")
+    git -C xxHash checkout "v${gitref}"
 
     popd
 }
