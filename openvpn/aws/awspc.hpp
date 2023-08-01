@@ -111,6 +111,25 @@ class PCQuery : public RC<thread_unsafe_refcount>
     {
     }
 
+    WS::ClientSet::TransactionSet::Ptr prepare_transaction_set()
+    {
+        // make HTTP context
+        WS::Client::Config::Ptr http_config(new WS::Client::Config());
+        http_config->frame = frame;
+        http_config->connect_timeout = 15;
+        http_config->general_timeout = 30;
+
+        // make transation set
+        WS::ClientSet::TransactionSet::Ptr ts = new WS::ClientSet::TransactionSet;
+        ts->host.host = "169.254.169.254";
+        ts->host.port = "80";
+        ts->http_config = http_config;
+        ts->max_retries = 3;
+        ts->debug_level = debug_level;
+
+        return ts;
+    }
+
     void start(std::function<void(Info info)> completion_arg)
     {
         // make sure we are not in a pending state
@@ -126,58 +145,20 @@ class PCQuery : public RC<thread_unsafe_refcount>
 
         try
         {
-            // make HTTP context
-            WS::Client::Config::Ptr http_config(new WS::Client::Config());
-            http_config->frame = frame;
-            http_config->connect_timeout = 15;
-            http_config->general_timeout = 30;
+            auto ts = prepare_transaction_set();
 
-            // make transaction set for initial local query
-            WS::ClientSet::TransactionSet::Ptr ts = new WS::ClientSet::TransactionSet;
-            ts->host.host = "169.254.169.254";
-            ts->host.port = "80";
-            ts->http_config = http_config;
-            ts->max_retries = 3;
-            ts->debug_level = debug_level;
-
-            // transaction #1
             {
                 std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
-                t->req.method = "GET";
-                t->req.uri = "/latest/dynamic/instance-identity/document";
-                ts->transactions.push_back(std::move(t));
-            }
-
-            // transaction #2
-            {
-                std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
-                t->req.method = "GET";
-                t->req.uri = "/latest/dynamic/instance-identity/pkcs7";
-                ts->transactions.push_back(std::move(t));
-            }
-
-            // transaction #3
-            if (lookup_product_code)
-            {
-                std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
-                t->req.method = "GET";
-                t->req.uri = "/latest/meta-data/product-codes";
-                ts->transactions.push_back(std::move(t));
-            }
-
-            // transaction #4
-            if (!role_for_credentials.empty())
-            {
-                std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
-                t->req.method = "GET";
-                t->req.uri = "/latest/meta-data/iam/security-credentials/" + role_for_credentials;
+                t->req.method = "PUT";
+                t->req.uri = "/latest/api/token";
+                t->ci.extra_headers.emplace_back("X-aws-ec2-metadata-token-ttl-seconds: 60");
                 ts->transactions.push_back(std::move(t));
             }
 
             // completion handler
             ts->completion = [self = Ptr(this)](WS::ClientSet::TransactionSet &ts)
             {
-                self->local_query_complete(ts);
+                self->token_query_complete(ts);
             };
 
             // do the request
@@ -289,6 +270,74 @@ class PCQuery : public RC<thread_unsafe_refcount>
             }
             else
                 done("");
+        }
+        catch (const std::exception &e)
+        {
+            done(e.what());
+        }
+    }
+
+    void token_query_complete(WS::ClientSet::TransactionSet &lts)
+    {
+        try
+        {
+            // get transaction and check that they succeeded
+            WS::ClientSet::Transaction &token_trans = *lts.transactions.at(0);
+            if (!token_trans.request_status_success())
+            {
+                done("could not fetch AWS session token: " + token_trans.format_status(lts));
+                return;
+            }
+            const std::string token = token_trans.content_in.to_string();
+
+            auto ts = prepare_transaction_set();
+
+            // transaction #1
+            {
+                std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+                t->req.method = "GET";
+                t->req.uri = "/latest/dynamic/instance-identity/document";
+                t->ci.extra_headers.emplace_back("X-aws-ec2-metadata-token: " + token);
+                ts->transactions.push_back(std::move(t));
+            }
+
+            // transaction #2
+            {
+                std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+                t->req.method = "GET";
+                t->req.uri = "/latest/dynamic/instance-identity/pkcs7";
+                t->ci.extra_headers.emplace_back("X-aws-ec2-metadata-token: " + token);
+                ts->transactions.push_back(std::move(t));
+            }
+
+            // transaction #3
+            if (lookup_product_code)
+            {
+                std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+                t->req.method = "GET";
+                t->req.uri = "/latest/meta-data/product-codes";
+                t->ci.extra_headers.emplace_back("X-aws-ec2-metadata-token: " + token);
+                ts->transactions.push_back(std::move(t));
+            }
+
+            // transaction #4
+            if (!role_for_credentials.empty())
+            {
+                std::unique_ptr<WS::ClientSet::Transaction> t(new WS::ClientSet::Transaction);
+                t->req.method = "GET";
+                t->req.uri = "/latest/meta-data/iam/security-credentials/" + role_for_credentials;
+                t->ci.extra_headers.emplace_back("X-aws-ec2-metadata-token: " + token);
+                ts->transactions.push_back(std::move(t));
+            }
+
+            // completion handler
+            ts->completion = [self = Ptr(this)](WS::ClientSet::TransactionSet &ts)
+            {
+                self->local_query_complete(ts);
+            };
+
+            // do the request
+            cs->new_request(ts);
         }
         catch (const std::exception &e)
         {

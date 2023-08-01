@@ -24,5 +24,5 @@
 #pragma once
 
 #ifndef OPENVPN_VERSION
-#define OPENVPN_VERSION "3.8"
+#define OPENVPN_VERSION "3.9_git:master"
 #endif
