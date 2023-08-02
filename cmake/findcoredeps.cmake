@@ -123,8 +123,9 @@ function(add_core_dependencies target)
     endif ()
 
     if (MSVC)
-        # I think this is too much currently
-        # target_compile_options(${target} PRIVATE /W4)
+        # C4200: nonstandard extension used : zero-sized array in struct/union
+        # C4146: unary minus operator applied to unsigned type, result still unsigned
+        target_compile_options(${target} PRIVATE /W2 /wd4200 /wd4146)
     else()
         target_compile_options(${target} PRIVATE -Wall -Wsign-compare)
         if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
