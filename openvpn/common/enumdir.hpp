@@ -30,6 +30,7 @@
 #include <utility>
 #include <memory>
 #include <algorithm>
+#include <functional>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -52,7 +53,7 @@ inline bool enum_dir(const std::string &dirname,
     {
         std::string fn(e->d_name);
         if (fn != "." && fn != "..")
-            std::invoke(func, fn);
+            std::invoke(func, std::move(fn));
     }
     return true;
 }
