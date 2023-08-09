@@ -201,7 +201,7 @@ class MacGatewayInfoV4
             struct ifconf ifc;
             const int bufsize = 4096;
 
-            std::unique_ptr<char[]> buffer(new char[bufsize]);
+            const std::unique_ptr<char[]> buffer(new char[bufsize]);
             std::memset(buffer.get(), 0, bufsize);
             sockfd.reset(socket(AF_INET, SOCK_DGRAM, 0));
             if (!sockfd.defined())
@@ -218,26 +218,41 @@ class MacGatewayInfoV4
             {
                 ifreq ifr = {};
                 std::memcpy(&ifr, cp, sizeof(ifr));
-                const size_t len = sizeof(ifr.ifr_name) + std::max(sizeof(ifr.ifr_addr), size_t(ifr.ifr_addr.sa_len));
+                const size_t len = sizeof(ifr.ifr_name) + std::max(sizeof(ifr.ifr_addr), size_t{ifr.ifr_addr.sa_len});
+
                 if (!ifr.ifr_addr.sa_family)
                     break;
                 if (!::strncmp(ifr.ifr_name, iface_, IFNAMSIZ))
                 {
                     if (ifr.ifr_addr.sa_family == AF_LINK)
                     {
-                        /* This is a broken member access. struct sockaddr_dl has
-                         * 20 bytes while if_addr has only 16 bytes. But sockaddr_dl
-                         * has 12 bytes space for the hw address and Ethernet only uses
-                         * 6 bytes. So the last 4 that are truncated can be ignored here
+                        /* This is a confusing member access on multiple levels.
                          *
-                         * So we use a memcpy here to avoid the warnings with ASAN that we
-                         * are doing a very nasty cast here
+                         * struct sockaddr_dl is 20 bytes in size and has
+                         * 12 bytes space for the hw address (6 bytes)
+                         * and Ethernet interface name (max 16 bytes)
+                         *
+                         * So if the interface name is more than 6 byte, it
+                         * extends beyond the struct.
+                         *
+                         * This struct is embedded into ifreq that has
+                         * 16 bytes for a sockaddr and also expects this
+                         * struct to potentially extend beyond the bounds of
+                         * the struct.
+                         *
+                         * Since we only copied 32 bytes from cp to ifr but sdl
+                         * might extend after ifr's end, we  need to copy from
+                         * cp directly to avoid missing out on extra bytes
+                         * behind the struct
                          */
-                        static_assert(sizeof(ifr.ifr_addr) >= 12, "size of if_addr too small to contain MAC");
-                        static_assert(sizeof(sockaddr_dl) >= sizeof(ifr.ifr_addr), "dest struct needs to be larger than source struct");
-                        sockaddr_dl sdl{};
-                        std::memcpy(&sdl, &ifr.ifr_addr, sizeof(ifr.ifr_addr));
-                        hwaddr_.reset((const unsigned char *)LLADDR(&sdl));
+                        const size_t sock_dl_len = std::max(sizeof(sockaddr_dl), size_t{ifr.ifr_addr.sa_len});
+
+                        const std::unique_ptr<char[]> sock_dl_buf(new char[sock_dl_len]);
+                        std::memcpy(sock_dl_buf.get(), cp + offsetof(struct ifreq, ifr_addr), sock_dl_len);
+
+                        const struct sockaddr_dl *sockaddr_dl = reinterpret_cast<struct sockaddr_dl *>(sock_dl_buf.get());
+
+                        hwaddr_.reset(reinterpret_cast<unsigned char *>(LLADDR(sockaddr_dl)));
                         flags_ |= HWADDR_DEFINED;
                     }
                 }
