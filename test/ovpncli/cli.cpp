@@ -189,9 +189,8 @@ class ClientBase : public ClientAPI::OpenVPNClient
         tun->destroy(os);
     }
 
-    bool socket_protect(int socket, std::string remote, bool ipv6) override
+    bool socket_protect([[maybe_unused]] int socket, std::string remote, bool ipv6) override
     {
-        (void)socket;
         std::ostringstream os;
         auto os_print = Cleanup([&os]()
                                 { OPENVPN_LOG_STRING(os.str()); });

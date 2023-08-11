@@ -732,7 +732,7 @@ class NoisyWire
                     }
 #endif
                 }
-                catch (const std::exception &e)
+                catch ([[maybe_unused]] const std::exception &e)
                 {
 #ifdef VERBOSE
                     std::cout << now->raw() << " " << title << " Exception on data channel decrypt: " << e.what() << std::endl;

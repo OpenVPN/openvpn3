@@ -345,7 +345,7 @@ class LinkCommon : public LinkBase
                 if (!buf.allocated() && pkt.allocated()) // recycle pkt allocated buffer
                     buf.move(pkt);
             }
-            catch (const std::exception &e)
+            catch ([[maybe_unused]] const std::exception &e)
             {
                 OPENVPN_LOG_TCPLINK_ERROR("TLS-TCP packet extract error: " << e.what());
                 stats->error(Error::TCP_SIZE_ERROR);

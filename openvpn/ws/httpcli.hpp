@@ -508,7 +508,7 @@ class HTTPCore : public Base, public TransportClientParent
             if (socket)
                 return socket->remote_endpoint_str();
         }
-        catch (const std::exception &e)
+        catch (const std::exception &)
         {
         }
         return "[unknown endpoint]";

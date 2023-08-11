@@ -1984,7 +1984,7 @@ class ProtoContext
                     return validate_tls_plain(recv, proto, now);
                 }
             }
-            catch (BufferException &e)
+            catch ([[maybe_unused]] BufferException &e)
             {
                 OPENVPN_LOG_PROTO_VERBOSE("validate() exception: " << e.what());
             }

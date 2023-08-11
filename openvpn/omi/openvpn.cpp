@@ -648,7 +648,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
             if (thread)
                 thread->join(); // may throw if thread has already exited
         }
-        catch (const std::exception &e)
+        catch (const std::exception &)
         {
         }
     }
