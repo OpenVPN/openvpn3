@@ -1864,7 +1864,9 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 preverify_ok = self->config->peer_fingerprints.match(fp);
                 if (!preverify_ok)
+                {
                     OPENVPN_LOG_SSL("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                }
             }
 
             // verify ns-cert-type

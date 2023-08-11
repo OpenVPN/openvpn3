@@ -2760,7 +2760,9 @@ class ProtoContext
         void active()
         {
             if (proto.config->debug_level >= 1)
+            {
                 OPENVPN_LOG_SSL("SSL Handshake: " << Base::ssl_handshake_details());
+            }
 
             /* Our internal state machine only decides after push request what protocol
              * options we want to use. Therefore we also have to postpone data key
