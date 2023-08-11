@@ -1855,69 +1855,73 @@ class OpenSSLContext : public SSLFactoryAPI
         // Add warnings if Cert parameters are wrong
         self_ssl->tls_warnings |= self->check_cert_warnings(current_cert);
 
-        // leaf-cert verification
-        if (depth == 0)
+        // If a verification error occured in the certificate chain, we
+        // never override the result of the verification.
+        if (depth != 0)
+            return preverify_ok;
+
+        // peer-fingerprint
+        PeerFingerprint fp(OpenSSLPKI::x509_get_fingerprint(current_cert));
+        if (self->config->peer_fingerprints)
         {
-            // peer-fingerprint
-            PeerFingerprint fp(OpenSSLPKI::x509_get_fingerprint(current_cert));
-            if (self->config->peer_fingerprints)
+            // might override the OpenSSL verification result to "true"
+            // since we only care about the fingerprint and not the
+            // certificate chain.
+            preverify_ok = self->config->peer_fingerprints.match(fp);
+            if (!preverify_ok)
             {
-                preverify_ok = self->config->peer_fingerprints.match(fp);
-                if (!preverify_ok)
-                {
-                    OPENVPN_LOG_SSL("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
-                }
+                OPENVPN_LOG_SSL("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
             }
+        }
 
-            // verify ns-cert-type
-            if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
+        // verify ns-cert-type
+        if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
+        {
+            OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+            preverify_ok = false;
+        }
+
+        // verify X509 key usage
+        if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
+        {
+            OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+            preverify_ok = false;
+        }
+
+        // verify X509 extended key usage
+        if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
+        {
+            OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+            preverify_ok = false;
+        }
+
+        // verify-x509-name
+        const VerifyX509Name &verify_x509 = self->config->verify_x509_name;
+        if (verify_x509.get_mode() != VerifyX509Name::VERIFY_X509_NONE)
+        {
+            std::string name;
+            if (verify_x509.get_mode() == VerifyX509Name::VERIFY_X509_SUBJECT_DN)
+                name = OpenSSLPKI::x509_get_subject(current_cert, true);
+            else
+                name = OpenSSLPKI::x509_get_field(current_cert, NID_commonName);
+
+            if (!verify_x509.verify(name))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+                OPENVPN_LOG_SSL("VERIFY FAIL -- verify-x509-name failed");
                 preverify_ok = false;
             }
+        }
 
-            // verify X509 key usage
-            if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
+        // verify tls-remote
+        if (!self->config->tls_remote.empty())
+        {
+            const std::string subj = TLSRemote::sanitize_x509_name(subject);
+            const std::string common_name = TLSRemote::sanitize_common_name(OpenSSLPKI::x509_get_field(current_cert, NID_commonName));
+            TLSRemote::log(self->config->tls_remote, subj, common_name);
+            if (!TLSRemote::test(self->config->tls_remote, subj, common_name))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+                OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
                 preverify_ok = false;
-            }
-
-            // verify X509 extended key usage
-            if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
-            {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
-                preverify_ok = false;
-            }
-
-            // verify-x509-name
-            const VerifyX509Name &verify_x509 = self->config->verify_x509_name;
-            if (verify_x509.get_mode() != VerifyX509Name::VERIFY_X509_NONE)
-            {
-                std::string name;
-                if (verify_x509.get_mode() == VerifyX509Name::VERIFY_X509_SUBJECT_DN)
-                    name = OpenSSLPKI::x509_get_subject(current_cert, true);
-                else
-                    name = OpenSSLPKI::x509_get_field(current_cert, NID_commonName);
-
-                if (!verify_x509.verify(name))
-                {
-                    OPENVPN_LOG_SSL("VERIFY FAIL -- verify-x509-name failed");
-                    preverify_ok = false;
-                }
-            }
-
-            // verify tls-remote
-            if (!self->config->tls_remote.empty())
-            {
-                const std::string subj = TLSRemote::sanitize_x509_name(subject);
-                const std::string common_name = TLSRemote::sanitize_common_name(OpenSSLPKI::x509_get_field(current_cert, NID_commonName));
-                TLSRemote::log(self->config->tls_remote, subj, common_name);
-                if (!TLSRemote::test(self->config->tls_remote, subj, common_name))
-                {
-                    OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
-                    preverify_ok = false;
-                }
             }
         }
 
