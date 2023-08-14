@@ -25,6 +25,7 @@
 
 #include <string>
 #include <cstdint>
+#include <type_traits>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/rc.hpp>
@@ -72,8 +73,12 @@ class RandomAPI : public RC<thread_unsafe_refcount>
     T rand_get_positive()
     {
         T ret = rand_get<T>();
-        if (ret < 0)
-            ret = -ret;
+        if constexpr (std::is_signed_v<T>)
+        {
+            // maps (T:min, -1) to (0, T:max) which is fine for random generation
+            ret &= std::numeric_limits<T>::max();
+        }
+
         return ret;
     }
 

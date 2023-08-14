@@ -56,6 +56,7 @@ add_executable(coreUnitTests
         test_path.cpp
         test_pktid.cpp
         test_prefixlen.cpp
+        test_randapi.cpp
         test_rc.cpp
         test_route.cpp
 	test_reliable.cpp
