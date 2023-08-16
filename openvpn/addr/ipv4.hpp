@@ -546,7 +546,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     }
 
 #ifdef USE_OPENVPN_HASH
-    std::size_t hashval() const
+    std::uint64_t hashval() const
     {
         Hash64 h;
         hash(h);

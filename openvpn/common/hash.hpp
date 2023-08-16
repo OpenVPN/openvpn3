@@ -37,16 +37,16 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/hexstr.hpp>
 
-#define OPENVPN_HASH_METHOD(T, meth)                      \
-    namespace std {                                       \
-    template <>                                           \
-    struct hash<T>                                        \
-    {                                                     \
-        inline std::size_t operator()(const T &obj) const \
-        {                                                 \
-            return obj.meth();                            \
-        }                                                 \
-    };                                                    \
+#define OPENVPN_HASH_METHOD(T, meth)                        \
+    namespace std {                                         \
+    template <>                                             \
+    struct hash<T>                                          \
+    {                                                       \
+        inline std::uint64_t operator()(const T &obj) const \
+        {                                                   \
+            return obj.meth();                              \
+        }                                                   \
+    };                                                      \
     }
 
 #ifdef USE_OPENVPN_HASH

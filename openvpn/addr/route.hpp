@@ -286,7 +286,7 @@ class RouteType
     }
 
 #ifdef USE_OPENVPN_HASH
-    std::size_t hash_value() const
+    std::uint64_t hash_value() const
     {
         Hash64 h;
         hash(h);
