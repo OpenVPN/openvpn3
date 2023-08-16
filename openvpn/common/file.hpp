@@ -127,7 +127,7 @@ inline BufferPtr read_binary_linear(const std::string &filename,
         const std::streamsize size = ifs.gcount();
         if (size)
         {
-            b->set_size(size);
+            b->set_size(static_cast<size_t>(size));
             total_size += size;
             if (max_size && std::uint64_t(total_size) > max_size)
                 OPENVPN_THROW(file_too_large, "file too large [" << total_size << '/' << max_size << "]: " << filename);
