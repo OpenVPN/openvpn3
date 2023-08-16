@@ -441,7 +441,7 @@ class HTTPBase : public REFCOUNT_BASE
             }
             else if (rr_content_length >= 0)
             {
-                const size_t needed = std::max(rr_content_length - rr_content_bytes, CONTENT_LENGTH_TYPE(0));
+                const size_t needed = static_cast<size_t>(std::max(rr_content_length - rr_content_bytes, CONTENT_LENGTH_TYPE(0)));
                 if (needed <= buf.size())
                 {
                     done = true;
