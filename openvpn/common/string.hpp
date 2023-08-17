@@ -525,10 +525,13 @@ inline std::vector<std::string> split(const std::string &str,
     return ret;
 }
 
-inline std::string join(const std::vector<std::string> &strings,
+template <class T>
+inline std::string join(const T &strings,
                         const std::string &delim,
                         const bool tail = false)
 {
+    /* ensure we have a container with strings as values */
+    static_assert(std::is_same_v<typename T::value_type, std::string>);
     std::string ret;
     bool first = true;
     for (const auto &s : strings)
