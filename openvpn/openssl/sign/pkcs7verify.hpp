@@ -31,6 +31,7 @@
 #include <openssl/pkcs7.h>
 
 #include <openvpn/common/cleanup.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
@@ -64,7 +65,7 @@ inline void verify_pkcs7(const std::list<OpenSSLPKI::X509> &certs,
         sk_X509_push(x509_stack, cert.obj());
 
     /* get signature */
-    in = BIO_new_mem_buf(sig.c_str(), sig.length());
+    in = BIO_new_mem_buf(sig.c_str(), numeric_cast<int>(sig.length()));
     p7 = PEM_read_bio_PKCS7(in, NULL, NULL, NULL);
     if (!p7)
         throw OpenSSLException("OpenSSLSign::verify_pkcs7: failed to parse pkcs7 signature");
@@ -72,7 +73,7 @@ inline void verify_pkcs7(const std::list<OpenSSLPKI::X509> &certs,
     in = nullptr;
 
     /* get data */
-    in = BIO_new_mem_buf(data.c_str(), data.length());
+    in = BIO_new_mem_buf(data.c_str(), numeric_cast<int>(data.length()));
 
     /* OpenSSL 1.0.2e and higher no longer allows calling PKCS7_verify
    with both data and content.  Empty out the content. */

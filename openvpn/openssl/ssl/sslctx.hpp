@@ -52,6 +52,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/frame/frame.hpp>
@@ -695,7 +696,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
         ssize_t write_cleartext_unbuffered(const void *data, const size_t size) override
         {
-            const int status = BIO_write(ssl_bio, data, size);
+            const int status = BIO_write(ssl_bio, data, numeric_cast<int>(size));
             if (status < 0)
             {
                 if (status == -1 && BIO_should_retry(ssl_bio))
@@ -714,7 +715,7 @@ class OpenSSLContext : public SSLFactoryAPI
         {
             if (!overflow)
             {
-                const int status = BIO_read(ssl_bio, data, capacity);
+                const int status = BIO_read(ssl_bio, data, numeric_cast<int>(capacity));
                 if (status < 0)
                 {
                     if (status == -1 && BIO_should_retry(ssl_bio))
@@ -1170,7 +1171,7 @@ class OpenSSLContext : public SSLFactoryAPI
     void setup_server_ticket_callback() const
     {
         const std::string sess_id_context = config->session_ticket_handler->session_id_context();
-        if (!SSL_CTX_set_session_id_context(ctx.get(), (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
+        if (!SSL_CTX_set_session_id_context(ctx.get(), (unsigned char *)sess_id_context.c_str(), numeric_cast<unsigned int>(sess_id_context.length())))
             throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
 
 #if OPENSSL_VERSION_NUMBER < 0x30000000L

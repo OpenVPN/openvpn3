@@ -324,7 +324,7 @@ class AuthCert : public RC<thread_unsafe_refcount>
                         }
                         if (i < 0)
                             throw Exception("serial number too large (C1)");
-                        serial_number[i--] |= parse_hex(c) << 4;
+                        serial_number[i--] |= static_cast<uint8_t>(parse_hex(c) << 4);
                         state = C2;
                         break;
                     default:

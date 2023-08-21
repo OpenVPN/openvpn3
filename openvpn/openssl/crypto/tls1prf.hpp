@@ -25,6 +25,8 @@
 #include <openssl/kdf.h>
 #endif
 
+#include <openvpn/common/numeric_cast.hpp>
+
 namespace openvpn {
 namespace OpenSSLCrypto {
 
@@ -54,10 +56,10 @@ class TLS1PRF
         if (!EVP_PKEY_CTX_set_tls1_prf_md(pctx.get(), EVP_md5_sha1()))
             return false;
 
-        if (!EVP_PKEY_CTX_set1_tls1_prf_secret(pctx.get(), sec, slen))
+        if (!EVP_PKEY_CTX_set1_tls1_prf_secret(pctx.get(), sec, numeric_cast<int>(slen)))
             return false;
 
-        if (!EVP_PKEY_CTX_add1_tls1_prf_seed(pctx.get(), label, label_len))
+        if (!EVP_PKEY_CTX_add1_tls1_prf_seed(pctx.get(), label, numeric_cast<int>(label_len)))
             return false;
 
         size_t out_len = olen;

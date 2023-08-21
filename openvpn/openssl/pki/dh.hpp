@@ -27,6 +27,7 @@
 
 
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
@@ -109,7 +110,7 @@ class DH
 
     void parse_pem(const std::string &dh_txt)
     {
-        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(dh_txt.c_str()), dh_txt.length());
+        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(dh_txt.c_str()), numeric_cast<int>(dh_txt.length()));
         if (!bio)
             throw OpenSSLException();
 

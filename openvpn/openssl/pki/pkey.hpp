@@ -30,6 +30,7 @@
 #include <openssl/bio.h>
 
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/pki/pktype.hpp>
@@ -137,7 +138,7 @@ class PKey
 
     void parse_pem(const std::string &pkey_txt, const std::string &title, SSLLib::Ctx libctx)
     {
-        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(pkey_txt.c_str()), pkey_txt.length());
+        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(pkey_txt.c_str()), numeric_cast<int>(pkey_txt.length()));
         if (!bio)
             throw OpenSSLException();
 
@@ -187,7 +188,7 @@ class PKey
         if (buf)
         {
             string::strncpynt(buf, self->priv_key_pwd.c_str(), size);
-            return std::strlen(buf);
+            return numeric_cast<int>(std::strlen(buf));
         }
         return 0;
     }

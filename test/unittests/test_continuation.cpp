@@ -100,7 +100,7 @@ static std::string random_term(RandomAPI &prng)
     const int len = prng.randrange32(1, 16);
     ret.reserve(len);
     for (int i = 0; i < len; ++i)
-        ret += rchrs[prng.randrange32(rchrs.size())];
+        ret += rchrs[prng.randrange32(static_cast<uint32_t>(rchrs.size()))];
     return ret;
 }
 

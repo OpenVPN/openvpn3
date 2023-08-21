@@ -27,7 +27,7 @@ class LinkBase : public RC<thread_unsafe_refcount>
     typedef RCPtr<LinkBase> Ptr;
 
     virtual bool send_queue_empty() const = 0;
-    virtual unsigned int send_queue_size() const = 0;
+    virtual size_t send_queue_size() const = 0;
     virtual void reset_align_adjust(const size_t align_adjust) = 0;
     virtual bool send(BufferAllocated &b) = 0;
     virtual void set_raw_mode(const bool mode) = 0;

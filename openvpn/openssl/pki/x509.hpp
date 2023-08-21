@@ -30,6 +30,7 @@
 #include <openssl/bio.h>
 
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
@@ -101,7 +102,7 @@ class X509
 
     void parse_pem(const std::string &cert_txt, const std::string &title)
     {
-        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(cert_txt.c_str()), cert_txt.length());
+        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(cert_txt.c_str()), numeric_cast<int>(cert_txt.length()));
         if (!bio)
             throw OpenSSLException();
 
@@ -127,7 +128,7 @@ class X509
 
             {
                 char *temp;
-                const int buf_len = ::BIO_get_mem_data(bio, &temp);
+                const auto buf_len = ::BIO_get_mem_data(bio, &temp);
                 std::string ret = std::string(temp, buf_len);
                 ::BIO_free(bio);
                 return ret;

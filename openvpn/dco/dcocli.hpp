@@ -171,7 +171,7 @@ class Client : public TransportClient,
         return false;
     }
 
-    virtual unsigned int transport_send_queue_size() override
+    virtual size_t transport_send_queue_size() override
     {
         return 0;
     }

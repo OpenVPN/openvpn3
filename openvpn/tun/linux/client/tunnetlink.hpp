@@ -30,6 +30,7 @@
 #include <openvpn/asio/asioerr.hpp>
 #include <openvpn/netconf/linux/gwnetlink.hpp>
 #include <openvpn/common/action.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/tun/builder/setup.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 #include <openvpn/tun/client/tunconfigflags.hpp>
@@ -112,7 +113,7 @@ struct NetlinkAddr4 : public Action
 
     NetlinkAddr4(std::string dev_arg,
                  IPv4::Addr &addr_arg,
-                 int prefixlen_arg,
+                 unsigned char prefixlen_arg,
                  IPv4::Addr &broadcast_arg,
                  bool add_arg)
         : dev(dev_arg),
@@ -171,7 +172,7 @@ struct NetlinkAddr4 : public Action
 
     std::string dev;
     IPv4::Addr addr;
-    int prefixlen = 0;
+    unsigned char prefixlen = 0;
     IPv4::Addr broadcast;
     bool add = true;
 };
@@ -186,7 +187,7 @@ struct NetlinkAddr6 : public Action
 
     NetlinkAddr6(std::string dev_arg,
                  IPv6::Addr &addr_arg,
-                 int prefixlen_arg,
+                 unsigned char prefixlen_arg,
                  bool add_arg)
         : dev(dev_arg),
           addr(addr_arg),
@@ -241,7 +242,7 @@ struct NetlinkAddr6 : public Action
 
     std::string dev;
     IPv6::Addr addr;
-    int prefixlen = 0;
+    unsigned char prefixlen = 0;
     bool add = true;
 };
 
@@ -633,7 +634,7 @@ inline void iface_config(const std::string &iface_name,
     {
         NetlinkAddr4::Ptr add(new NetlinkAddr4);
         add->addr = IPv4::Addr::from_string(local4->address);
-        add->prefixlen = local4->prefix_length;
+        add->prefixlen = numeric_cast<decltype(add->prefixlen)>(local4->prefix_length);
         add->broadcast = IPv4::Addr::from_string(local4->address)
                          | ~IPv4::Addr::netmask_from_prefix_len(local4->prefix_length);
         add->dev = iface_name;
@@ -666,7 +667,7 @@ inline void iface_config(const std::string &iface_name,
     {
         NetlinkAddr6::Ptr add(new NetlinkAddr6);
         add->addr = IPv6::Addr::from_string(local6->address);
-        add->prefixlen = local6->prefix_length;
+        add->prefixlen = numeric_cast<decltype(add->prefixlen)>(local6->prefix_length);
         add->dev = iface_name;
         add->add = true;
 

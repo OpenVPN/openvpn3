@@ -71,7 +71,7 @@ TEST(PeerFingerprint, parse_config)
     for (std::size_t i = 1; i <= fps.size(); ++i)
     {
         auto fingerprint = test_fingerprint;
-        fingerprint[0] = i;
+        fingerprint[0] = static_cast<unsigned char>(i);
         PeerFingerprint fp(fingerprint);
         ASSERT_EQ(fps.match(fp), true);
     }

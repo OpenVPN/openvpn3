@@ -30,6 +30,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/ipv4.hpp>
 #include <openvpn/addr/ipv6.hpp>
@@ -101,9 +102,9 @@ class SITNL
      * Helper function used to easily add attributes to a rtnl message
      */
     static int
-    sitnl_addattr(struct nlmsghdr *n, int maxlen, int type, const void *data, int alen)
+    sitnl_addattr(struct nlmsghdr *n, int maxlen, uint16_t type, const void *data, uint16_t alen)
     {
-        int len = RTA_LENGTH(alen);
+        uint16_t len = RTA_LENGTH(alen);
         struct rtattr *rta;
 
         if ((int)(NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len)) > maxlen)
@@ -210,7 +211,8 @@ class SITNL
     static int
     sitnl_send(struct nlmsghdr *payload, pid_t peer, unsigned int groups, sitnl_parse_reply_cb cb, void *arg_cb)
     {
-        int len, rem_len, fd, ret, rcv_len;
+        int len, fd, ret;
+        ssize_t rem_len, rcv_len;
         const size_t buf_len = 16 * 1024;
         struct sockaddr_nl nladdr = {};
         struct nlmsgerr *err;
@@ -232,7 +234,7 @@ class SITNL
         nladdr.nl_pid = peer;
         nladdr.nl_groups = groups;
 
-        payload->nlmsg_seq = seq = time(NULL);
+        payload->nlmsg_seq = seq = static_cast<__u32>(time(NULL));
 
         /* no need to send reply */
         if (!cb)
@@ -255,7 +257,7 @@ class SITNL
             goto out;
         }
 
-        ret = sendmsg(fd, &nlmsg, 0);
+        ret = numeric_cast<decltype(ret)>(sendmsg(fd, &nlmsg, 0));
         if (ret < 0)
         {
             OPENVPN_LOG(__func__ << ": rtnl: error on sendmsg()");
@@ -422,7 +424,7 @@ class SITNL
         route_res_t *res = (route_res_t *)arg;
         struct rtmsg *r = (struct rtmsg *)NLMSG_DATA(n);
         struct rtattr *rta = RTM_RTA(r);
-        int len = n->nlmsg_len - NLMSG_LENGTH(sizeof(*r));
+        int len = numeric_cast<decltype(len)>(n->nlmsg_len - NLMSG_LENGTH(sizeof(*r)));
         int ifindex = 0;
         int metric = 0;
 
@@ -580,8 +582,8 @@ class SITNL
 
         int ret = -EINVAL;
 
-        res.family = req.r.rtm_family = route.addr.family();
-        req.r.rtm_dst_len = route.prefix_len;
+        res.family = req.r.rtm_family = numeric_cast<unsigned char>(route.addr.family());
+        req.r.rtm_dst_len = numeric_cast<decltype(req.r.rtm_dst_len)>(route.prefix_len);
 
         if (route.addr.family() == AF_INET)
         {
@@ -595,7 +597,7 @@ class SITNL
             unsigned char bytestr[IP::Addr::V6_SIZE / 8];
             route.addr.to_byte_string_variable(bytestr);
 
-            SITNL_ADDATTR(&req.n, sizeof(req), RTA_DST, bytestr, route.addr.size_bytes());
+            SITNL_ADDATTR(&req.n, sizeof(req), RTA_DST, bytestr, numeric_cast<uint16_t>(route.addr.size_bytes()));
         }
 
         ret = sitnl_send(&req.n, 0, 0, sitnl_route_save, &res);
@@ -630,7 +632,7 @@ class SITNL
         iface_addr_res_t *res = (iface_addr_res_t *)arg;
         struct ifaddrmsg *ifa = (struct ifaddrmsg *)NLMSG_DATA(n);
         struct rtattr *rta = IFA_RTA(ifa);
-        int len = n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
+        int len = numeric_cast<decltype(len)>(n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
         IP::Route route;
         struct ifaddrmsg save = {};
 
@@ -699,7 +701,7 @@ class SITNL
 
         iface_addr_res_t res;
         res.ifindex = ifindex;
-        res.family = req.r.rtm_family = family;
+        res.family = req.r.rtm_family = numeric_cast<unsigned char>(family);
 
         req.n.nlmsg_flags |= NLM_F_DUMP;
 
@@ -721,12 +723,12 @@ class SITNL
     }
 
     static int
-    sitnl_addr_set(const int cmd,
-                   const uint32_t flags,
+    sitnl_addr_set(const unsigned short cmd,
+                   const unsigned short flags,
                    const std::string &iface,
                    const IP::Addr &local,
                    const IP::Addr &remote,
-                   int prefixlen,
+                   unsigned char prefixlen,
                    const IP::Addr &broadcast)
     {
         struct sitnl_addr_req req = {};
@@ -748,7 +750,7 @@ class SITNL
         req.n.nlmsg_type = cmd;
         req.n.nlmsg_flags = NLM_F_REQUEST | flags;
 
-        req.i.ifa_family = local.family();
+        req.i.ifa_family = numeric_cast<decltype(req.i.ifa_family)>(local.family());
         req.i.ifa_index = if_nametoindex(iface.c_str());
         if (req.i.ifa_index == 0)
         {
@@ -760,7 +762,7 @@ class SITNL
         /* if no prefixlen has been specified, assume host address */
         if (prefixlen == 0)
         {
-            prefixlen = local.size();
+            prefixlen = numeric_cast<decltype(prefixlen)>(local.size());
         }
         req.i.ifa_prefixlen = prefixlen;
 
@@ -768,18 +770,18 @@ class SITNL
             unsigned char bytestr[IP::Addr::V6_SIZE / 8];
 
             local.to_byte_string_variable(bytestr);
-            SITNL_ADDATTR(&req.n, sizeof(req), IFA_LOCAL, bytestr, local.size_bytes());
+            SITNL_ADDATTR(&req.n, sizeof(req), IFA_LOCAL, bytestr, numeric_cast<uint16_t>(local.size_bytes()));
 
             if (remote.specified())
             {
                 remote.to_byte_string_variable(bytestr);
-                SITNL_ADDATTR(&req.n, sizeof(req), IFA_ADDRESS, bytestr, remote.size_bytes());
+                SITNL_ADDATTR(&req.n, sizeof(req), IFA_ADDRESS, bytestr, numeric_cast<uint16_t>(remote.size_bytes()));
             }
 
             if (broadcast.specified())
             {
                 broadcast.to_byte_string_variable(bytestr);
-                SITNL_ADDATTR(&req.n, sizeof(req), IFA_BROADCAST, bytestr, broadcast.size_bytes());
+                SITNL_ADDATTR(&req.n, sizeof(req), IFA_BROADCAST, bytestr, numeric_cast<uint16_t>(broadcast.size_bytes()));
             }
         }
 
@@ -820,16 +822,16 @@ class SITNL
     }
 
     static int
-    sitnl_route_set(const int cmd,
-                    const uint32_t flags,
+    sitnl_route_set(const unsigned short cmd,
+                    const unsigned short flags,
                     const std::string &iface,
                     const IP::Route &route,
                     const IP::Addr &gw,
                     const enum rt_class_t table,
                     const int metric,
                     const enum rt_scope_t scope,
-                    const int protocol,
-                    const int type)
+                    const unsigned char protocol,
+                    const unsigned char type)
     {
         struct sitnl_route_req req = {};
         int ret = -1;
@@ -838,11 +840,11 @@ class SITNL
         req.n.nlmsg_type = cmd;
         req.n.nlmsg_flags = NLM_F_REQUEST | flags;
 
-        req.r.rtm_family = route.addr.family();
+        req.r.rtm_family = numeric_cast<decltype(req.r.rtm_family)>(route.addr.family());
         req.r.rtm_scope = scope;
         req.r.rtm_protocol = protocol;
         req.r.rtm_type = type;
-        req.r.rtm_dst_len = route.prefix_len;
+        req.r.rtm_dst_len = numeric_cast<decltype(req.r.rtm_dst_len)>(route.prefix_len);
 
         if (table < 256)
         {
@@ -858,12 +860,12 @@ class SITNL
             unsigned char bytestr[IP::Addr::V6_SIZE / 8];
 
             route.addr.to_byte_string_variable(bytestr);
-            SITNL_ADDATTR(&req.n, sizeof(req), RTA_DST, bytestr, route.addr.size_bytes());
+            SITNL_ADDATTR(&req.n, sizeof(req), RTA_DST, bytestr, numeric_cast<uint16_t>(route.addr.size_bytes()));
 
             if (gw.specified())
             {
                 gw.to_byte_string_variable(bytestr);
-                SITNL_ADDATTR(&req.n, sizeof(req), RTA_GATEWAY, bytestr, gw.size_bytes());
+                SITNL_ADDATTR(&req.n, sizeof(req), RTA_GATEWAY, bytestr, numeric_cast<uint16_t>(gw.size_bytes()));
             }
         }
 
@@ -897,7 +899,7 @@ class SITNL
     static int
     sitnl_addr_add(const std::string &iface,
                    const IP::Addr &addr,
-                   int prefixlen,
+                   unsigned char prefixlen,
                    const IP::Addr &broadcast)
     {
         return sitnl_addr_set(RTM_NEWADDR,
@@ -910,7 +912,7 @@ class SITNL
     }
 
     static int
-    sitnl_addr_del(const std::string &iface, const IP::Addr &addr, int prefixlen)
+    sitnl_addr_del(const std::string &iface, const IP::Addr &addr, unsigned char prefixlen)
     {
         return sitnl_addr_set(RTM_DELADDR,
                               0,
@@ -1052,11 +1054,11 @@ class SITNL
         req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
         req.n.nlmsg_type = RTM_NEWLINK;
 
-        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_IFNAME, iface.c_str(), iface.length() + 1);
+        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_IFNAME, iface.c_str(), numeric_cast<uint16_t>(iface.length() + 1));
         tail = NLMSG_TAIL(&req.n);
         SITNL_ADDATTR(&req.n, sizeof(req), IFLA_LINKINFO, NULL, 0);
-        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_INFO_KIND, type.c_str(), type.length() + 1);
-        tail->rta_len = (uint8_t *)NLMSG_TAIL(&req.n) - (uint8_t *)tail;
+        SITNL_ADDATTR(&req.n, sizeof(req), IFLA_INFO_KIND, type.c_str(), numeric_cast<uint16_t>(type.length() + 1));
+        tail->rta_len = numeric_cast<decltype(tail->rta_len)>((uint8_t *)NLMSG_TAIL(&req.n) - (uint8_t *)tail);
 
         req.i.ifi_family = AF_PACKET;
         req.i.ifi_index = 0;
@@ -1178,7 +1180,7 @@ class SITNL
     static int
     net_addr_add(const std::string &iface,
                  const IPv4::Addr &addr,
-                 const int prefixlen,
+                 const unsigned char prefixlen,
                  const IPv4::Addr &broadcast)
     {
         OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
@@ -1194,7 +1196,7 @@ class SITNL
     static int
     net_addr_add(const std::string &iface,
                  const IPv6::Addr &addr,
-                 const int prefixlen)
+                 const unsigned char prefixlen)
     {
         OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
                              << " dev " << iface);
@@ -1208,7 +1210,7 @@ class SITNL
     static int
     net_addr_del(const std::string &iface,
                  const IPv4::Addr &addr,
-                 const int prefixlen)
+                 const unsigned char prefixlen)
     {
         OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
                              << " dev " << iface);
@@ -1221,7 +1223,7 @@ class SITNL
     static int
     net_addr_del(const std::string &iface,
                  const IPv6::Addr &addr,
-                 const int prefixlen)
+                 const unsigned char prefixlen)
     {
         OPENVPN_LOG(__func__ << ": " << addr << "/" << prefixlen
                              << " dev " << iface);

@@ -47,6 +47,7 @@
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/to_string.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/buffer/safestr.hpp>
 #include <openvpn/buffer/bufcomposed.hpp>
@@ -262,9 +263,9 @@ class ProtoContext
         return opcode_extract(op) == DATA_V2 ? OP_SIZE_V2 : 1;
     }
 
-    static unsigned int op_compose(const unsigned int opcode, const unsigned int key_id)
+    static unsigned char op_compose(const unsigned int opcode, const unsigned int key_id)
     {
-        return (opcode << OPCODE_SHIFT) | key_id;
+        return numeric_cast<unsigned char>((opcode << OPCODE_SHIFT) | key_id);
     }
 
     static unsigned int op32_compose(const unsigned int opcode,
@@ -1784,7 +1785,7 @@ class ProtoContext
 
                     // set MSS for segments server can receive
                     if (proto.config->mss_fix > 0)
-                        MSSFix::mssfix(buf, proto.config->mss_fix);
+                        MSSFix::mssfix(buf, numeric_cast<uint16_t>(proto.config->mss_fix));
                 }
                 else
                     buf.reset_size(); // no crypto context available
@@ -2019,7 +2020,7 @@ class ProtoContext
                 return;
             }
 
-            int payload_overhead = 0;
+            auto payload_overhead = size_t(0);
 
             // compv2 doesn't increase payload size
             switch (c.comp_ctx.type())
@@ -2039,9 +2040,9 @@ class ProtoContext
             // will add 20 extra bytes if payload is IPv6
             payload_overhead += 20 + 20;
 
-            int overhead = c.protocol.extra_transport_bytes()
-                           + (enable_op32 ? OP_SIZE_V2 : 1)
-                           + c.dc.context().encap_overhead();
+            auto overhead = c.protocol.extra_transport_bytes()
+                            + (enable_op32 ? OP_SIZE_V2 : 1)
+                            + c.dc.context().encap_overhead();
 
             // in CBC mode, the packet id is part of the payload size / overhead
             if (CryptoAlgs::mode(c.dc.cipher()) != CryptoAlgs::CBC_HMAC)
@@ -2057,7 +2058,7 @@ class ProtoContext
                                 : sizeof(struct UDPHeader);
             }
 
-            int target = c.mss_parms.mssfix - overhead;
+            auto target = c.mss_parms.mssfix - overhead;
             if (CryptoAlgs::mode(c.dc.cipher()) == CryptoAlgs::CBC_HMAC)
             {
                 // openvpn3 crypto includes blocksize in overhead, but we can
@@ -2066,13 +2067,13 @@ class ProtoContext
                 // larger than target by running down target to the nearest
                 // multiple of multiple and substracting 1.
 
-                int block_size = CryptoAlgs::block_size(c.dc.cipher());
+                auto block_size = CryptoAlgs::block_size(c.dc.cipher());
                 target += block_size;
                 target = (target / block_size) * block_size;
                 target -= 1;
             }
 
-            c.mss_fix = target - payload_overhead;
+            c.mss_fix = numeric_cast<decltype(c.mss_fix)>(target - payload_overhead);
             if (c.debug_level > 1)
             {
                 OPENVPN_LOG("mssfix=" << c.mss_fix
@@ -2304,7 +2305,7 @@ class ProtoContext
 
             // set MSS for segments client can receive
             if (proto.config->mss_fix > 0)
-                MSSFix::mssfix(buf, proto.config->mss_fix);
+                MSSFix::mssfix(buf, numeric_cast<uint16_t>(proto.config->mss_fix));
 
             // compress packet
             if (compress)
@@ -2408,7 +2409,7 @@ class ProtoContext
         // Handle data-limited keys such as Blowfish and other 64-bit block-size ciphers.
         void data_limit_add(const DataLimit::Mode mode, const size_t size)
         {
-            const DataLimit::State state = data_limit->add(mode, size);
+            const DataLimit::State state = data_limit->add(mode, numeric_cast<DataLimit::size_type>(size));
             if (state > DataLimit::None)
                 data_limit_event(mode, state);
         }
@@ -3290,7 +3291,7 @@ class ProtoContext
             if (d.is_infinite())
                 return -1;
             else
-                return d.to_seconds();
+                return numeric_cast<int>(d.to_seconds());
         }
 
         // BEGIN KeyContext data members
@@ -3976,10 +3977,10 @@ class ProtoContext
                            unsigned int &keepalive_timeout)
     {
         keepalive_ping = config->keepalive_ping.enabled()
-                             ? config->keepalive_ping.to_seconds()
+                             ? numeric_cast<std::remove_reference_t<decltype(keepalive_ping)>>(config->keepalive_ping.to_seconds())
                              : 0;
         keepalive_timeout = config->keepalive_timeout.enabled()
-                                ? config->keepalive_timeout.to_seconds()
+                                ? numeric_cast<std::remove_reference_t<decltype(keepalive_timeout)>>(config->keepalive_timeout.to_seconds())
                                 : 0;
         config->keepalive_ping = Time::Duration::infinite();
         config->keepalive_timeout = Time::Duration::infinite();

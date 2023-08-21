@@ -54,9 +54,9 @@ inline char render_hex_char(const int c, const bool caps = false)
     if (c < 0)
         return '?';
     if (c < 10)
-        return '0' + c;
+        return '0' + static_cast<char>(c);
     else if (c < 16)
-        return (caps ? 'A' : 'a') - 10 + c;
+        return static_cast<char>((caps ? 'A' : 'a') - 10 + c);
     else
         return '?';
 }

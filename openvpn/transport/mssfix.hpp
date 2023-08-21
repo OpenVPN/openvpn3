@@ -37,7 +37,7 @@ namespace openvpn {
 class MSSFix
 {
   public:
-    static void mssfix(BufferAllocated &buf, int mss_fix)
+    static void mssfix(BufferAllocated &buf, uint16_t mss_fix)
     {
         if (buf.empty())
             return;
@@ -59,8 +59,8 @@ class MSSFix
                     && ipv4hlen <= buf.length()
                     && buf.length() - ipv4hlen >= sizeof(struct TCPHeader))
                 {
-                    TCPHeader *tcphdr = (TCPHeader *)(buf.data() + ipv4hlen);
-                    int ip_payload_len = buf.length() - ipv4hlen;
+                    TCPHeader *tcphdr = reinterpret_cast<TCPHeader *>(buf.data() + ipv4hlen);
+                    auto ip_payload_len = buf.length() - ipv4hlen;
 
                     do_mssfix(tcphdr, mss_fix, ip_payload_len);
                 }
@@ -93,10 +93,10 @@ class MSSFix
                 /* skip IPv6 header (40 bytes),
                  * verify remainder is large enough to contain a full TCP header
                  */
-                int payload_len = buf.length() - sizeof(struct IPv6Header);
-                if (payload_len >= (int)sizeof(struct TCPHeader))
+                auto payload_len = buf.length() - sizeof(struct IPv6Header);
+                if (payload_len >= sizeof(struct TCPHeader))
                 {
-                    TCPHeader *tcphdr = (TCPHeader *)(buf.data() + sizeof(struct IPv6Header));
+                    TCPHeader *tcphdr = reinterpret_cast<TCPHeader *>(buf.data() + sizeof(struct IPv6Header));
                     // mssfix is calculated for IPv4, and since IPv6 header is 20 bytes larger we need to account for it
                     do_mssfix(tcphdr, mss_fix - 20, payload_len);
                 }
@@ -106,17 +106,17 @@ class MSSFix
     }
 
   private:
-    static void do_mssfix(TCPHeader *tcphdr, int max_mss, int ip_payload_len)
+    static void do_mssfix(TCPHeader *tcphdr, uint16_t max_mss, size_t ip_payload_len)
     {
         if ((tcphdr->flags & TCPHeader::FLAG_SYN) == 0)
             return;
 
-        int tcphlen = TCPHeader::length(tcphdr->doff_res);
+        auto tcphlen = TCPHeader::length(tcphdr->doff_res);
         if (tcphlen <= (int)sizeof(struct TCPHeader) || tcphlen > ip_payload_len)
             return;
 
-        int olen, optlen; // length of options field and Option-Length
-        uint8_t *opt;     // option type
+        size_t olen, optlen; // length of options field and Option-Length
+        uint8_t *opt;        // option type
 
         for (olen = tcphlen - sizeof(struct TCPHeader), opt = (uint8_t *)(tcphdr + 1);
              olen > 1;
@@ -133,13 +133,13 @@ class MSSFix
                     break;
                 if ((*opt == TCPHeader::OPT_MAXSEG) && (optlen == TCPHeader::OPTLEN_MAXSEG))
                 {
-                    uint16_t mssval = (opt[2] << 8) + opt[3];
+                    uint16_t mssval = numeric_cast<uint16_t>((opt[2] << 8) + opt[3]);
                     if (mssval > max_mss)
                     {
                         OPENVPN_LOG_MSSFIX("MTU MSS " << mssval << " -> " << max_mss);
                         int accumulate = htons(mssval);
-                        opt[2] = (max_mss >> 8) & 0xff;
-                        opt[3] = max_mss & 0xff;
+                        opt[2] = static_cast<uint8_t>((max_mss >> 8) & 0xff);
+                        opt[3] = static_cast<uint8_t>(max_mss & 0xff);
                         accumulate -= htons(max_mss);
                         tcp_adjust_checksum(accumulate, tcphdr->check);
                     }

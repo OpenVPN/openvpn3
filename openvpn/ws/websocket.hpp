@@ -123,7 +123,7 @@ class Status
 
     Status(unsigned int opcode,
            bool fin = true,
-           unsigned int close_status_code = 0)
+           uint16_t close_status_code = 0)
         : opcode_(std::move(opcode)),
           fin_(std::move(fin)),
           close_status_code_(std::move(close_status_code))
@@ -153,7 +153,7 @@ class Status
         return fin_;
     }
 
-    unsigned int close_status_code() const
+    auto close_status_code() const
     {
         return close_status_code_;
     }
@@ -191,7 +191,7 @@ class Status
 
     unsigned int opcode_;
     bool fin_;
-    unsigned int close_status_code_;
+    uint16_t close_status_code_;
 };
 
 class Sender

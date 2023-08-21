@@ -141,7 +141,7 @@ class Client : public TransportClient, AsyncResolvableUDP
     {
     }
 
-    unsigned int transport_send_queue_size() override
+    size_t transport_send_queue_size() override
     {
         return 0;
     }

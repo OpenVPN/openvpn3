@@ -122,7 +122,7 @@ class LinkCommon : public LinkBase
         frame_context.reset_align_adjust(align_adjust + (is_raw_mode() ? 0 : 2));
     }
 
-    unsigned int send_queue_size() const
+    size_t send_queue_size() const
     {
         return queue.size()
 #ifdef OPENVPN_GREMLIN

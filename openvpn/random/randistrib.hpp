@@ -31,7 +31,7 @@ namespace openvpn {
 inline std::uint32_t rand32_distribute(const std::uint32_t seed,
                                        const std::uint32_t end)
 {
-    return (std::uint64_t(seed) * end) >> 32;
+    return static_cast<uint32_t>((std::uint64_t(seed) * end) >> 32);
 }
 
 } // namespace openvpn

@@ -997,7 +997,7 @@ class ClientSet : public RC<thread_unsafe_refcount>
         BufferList content_out;
         BufferList::const_iterator out_iter;
         unsigned int n_retries;
-        unsigned int buf_tailroom;
+        size_t buf_tailroom;
         Time::Duration retry_duration;
         AsioTimerSafe reconnect_timer;
         client_t client_id;

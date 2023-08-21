@@ -67,7 +67,7 @@ TEST(pktstream, test_1)
                 fc.prepare(src);
                 const size_t r = rand_size(*prng);
                 for (size_t i = 0; i < r; ++i)
-                    src.push_back('a' + (i % 26));
+                    src.push_back('a' + static_cast<unsigned char>(i % 26));
                 PacketStream::prepend_size(src);
                 if (src.size() > fc_big.remaining_payload(big))
                     break;

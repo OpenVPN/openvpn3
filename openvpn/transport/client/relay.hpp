@@ -57,53 +57,53 @@ class TransportRelayFactory : public TransportClientFactory
         }
 
       private:
-        virtual void transport_start()
+        virtual void transport_start() override
         {
         }
-        virtual void stop()
+        virtual void stop() override
         {
         }
-        virtual bool transport_send_const(const Buffer &buf)
-        {
-            return false;
-        }
-        virtual bool transport_send(BufferAllocated &buf)
+        virtual bool transport_send_const(const Buffer &buf) override
         {
             return false;
         }
-        virtual bool transport_send_queue_empty()
+        virtual bool transport_send(BufferAllocated &buf) override
         {
             return false;
         }
-        virtual bool transport_has_send_queue()
+        virtual bool transport_send_queue_empty() override
         {
             return false;
         }
-        virtual unsigned int transport_send_queue_size()
+        virtual bool transport_has_send_queue() override
+        {
+            return false;
+        }
+        virtual size_t transport_send_queue_size() override
         {
             return 0;
         }
-        virtual void transport_stop_requeueing()
+        virtual void transport_stop_requeueing() override
         {
         }
-        virtual void reset_align_adjust(const size_t align_adjust)
+        virtual void reset_align_adjust(const size_t align_adjust) override
         {
         }
-        virtual void transport_reparent(TransportClientParent *parent)
+        virtual void transport_reparent(TransportClientParent *parent) override
         {
         }
 
-        virtual IP::Addr server_endpoint_addr() const
+        virtual IP::Addr server_endpoint_addr() const override
         {
             return endpoint_;
         }
 
-        virtual Protocol transport_protocol() const
+        virtual Protocol transport_protocol() const override
         {
             return protocol_;
         }
 
-        virtual void server_endpoint_info(std::string &host, std::string &port, std::string &proto, std::string &ip_addr) const
+        virtual void server_endpoint_info(std::string &host, std::string &port, std::string &proto, std::string &ip_addr) const override
         {
             host = host_;
             port = port_;

@@ -116,7 +116,7 @@ TEST(crypto, dcaead)
 
     for (int i = 0; i < openvpn::OpenVPNStaticKey::KEY_SIZE; i++)
     {
-        bigkey[i] = key[i % sizeof(key)] ^ i;
+        bigkey[i] = static_cast<uint8_t>(key[i % sizeof(key)] ^ i);
     }
 
     openvpn::StaticKey const static_bigkey{bigkey, openvpn::OpenVPNStaticKey::KEY_SIZE};

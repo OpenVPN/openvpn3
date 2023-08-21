@@ -138,7 +138,7 @@ class Client : public TransportClient, AsyncResolvableTCP
         return true;
     }
 
-    unsigned int transport_send_queue_size() override
+    size_t transport_send_queue_size() override
     {
         if (impl)
             return impl->send_queue_size();

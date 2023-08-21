@@ -94,7 +94,7 @@ class CRL
 
     void parse_pem(const std::string &crl_txt)
     {
-        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(crl_txt.c_str()), crl_txt.length());
+        BIO *bio = ::BIO_new_mem_buf(const_cast<char *>(crl_txt.c_str()), numeric_cast<int>(crl_txt.length()));
         if (!bio)
             throw OpenSSLException();
 
@@ -121,7 +121,7 @@ class CRL
 
             {
                 char *temp;
-                const int buf_len = ::BIO_get_mem_data(bio, &temp);
+                const auto buf_len = ::BIO_get_mem_data(bio, &temp);
                 std::string ret = std::string(temp, buf_len);
                 ::BIO_free(bio);
                 return ret;

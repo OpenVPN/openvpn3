@@ -25,6 +25,7 @@
 #ifndef OPENVPN_OPENSSL_UTIL_PEM_H
 #define OPENVPN_OPENSSL_UTIL_PEM_H
 
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
 #include <openssl/pem.h>
@@ -67,7 +68,7 @@ class OpenSSLPEM
         bool ret = false;
         BIO *bio;
 
-        if (!(bio = BIO_new_mem_buf(src, src_len)))
+        if (!(bio = BIO_new_mem_buf(src, numeric_cast<int>(src_len))))
             throw OpenSSLException("Cannot open memory BIO for PEM decode");
 
         char *name_read = NULL;

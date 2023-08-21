@@ -45,7 +45,7 @@ struct TimeSkew
     // Skew a duration by some random flux.
     static Time::Duration skew(const Time::Duration &dur, const unsigned int factor, RandomAPI &prng)
     {
-        const std::uint32_t bms = std::min(dur.to_binary_ms() >> factor, oulong(0x40000000)); // avoid 32-bit overflow in next step
+        const std::uint32_t bms = static_cast<uint32_t>(std::min(dur.to_binary_ms() >> factor, oulong(0x40000000))); // avoid 32-bit overflow in next step
         const int flux = int(prng.randrange32(bms)) - int(bms / 2);
         return dur + flux;
     }

@@ -25,7 +25,7 @@ std::uint16_t ip_checksum_slow(const void *ip, size_t size)
 
     cksum = (cksum >> 16) + (cksum & 0xffff);
     cksum += (cksum >> 16);
-    return ~cksum;
+    return static_cast<uint16_t>(~cksum);
 }
 
 TEST(misc, stress_csum)

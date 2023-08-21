@@ -35,6 +35,7 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/string.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/time/time.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/crypto/digestapi.hpp>
@@ -157,13 +158,13 @@ class NTLM
         phase3[8] = 3;                                 // type 3
 
         // NTLMv2 response
-        add_security_buffer(0x14, ntlmv2_response, ntlmv2_blob_size + 16, phase3);
+        add_security_buffer(0x14, ntlmv2_response, numeric_cast<unsigned char>(ntlmv2_blob_size + 16), phase3);
 
         // username
-        add_security_buffer(0x24, username.c_str(), username.length(), phase3);
+        add_security_buffer(0x24, username.c_str(), numeric_cast<unsigned char>(username.length()), phase3);
 
         // Set domain. If <domain> is empty, default domain will be used (i.e. proxy's domain).
-        add_security_buffer(0x1c, domain.c_str(), domain.size(), phase3);
+        add_security_buffer(0x1c, domain.c_str(), numeric_cast<unsigned char>(domain.size()), phase3);
 
         // other security buffers will be empty
         const unsigned char phase3_size = static_cast<unsigned char>(phase3.size());

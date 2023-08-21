@@ -54,6 +54,7 @@
 
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/common/hostport.hpp>
@@ -939,7 +940,7 @@ class HTTPCore : public Base, public TransportClientParent
         if (!addr.defined())
             addr = IP::Addr(host.host_transport(), "AltRouting");
         results_type results = results_type::create(openvpn_io::ip::tcp::endpoint(addr.to_asio(),
-                                                                                  port),
+                                                                                  numeric_cast<asio::ip::port_type>(port)),
                                                     host.host,
                                                     "");
 
