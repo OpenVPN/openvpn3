@@ -123,7 +123,7 @@ class bio_memq_internal
         return 1;
     }
 
-    static inline int memq_write_ex(BIO *b, const char *in, size_t len, size_t *written)
+    static inline int memq_write(BIO *b, const char *in, int len)
     {
         MemQ *bmq = (MemQ *)(BIO_get_data(b));
         if (in)
@@ -132,22 +132,19 @@ class bio_memq_internal
             try
             {
                 if (len)
-                {
-                    bmq->write((const unsigned char *)in, len);
-                    *written = len;
-                }
-                return 1; // 1 is success
+                    bmq->write((const unsigned char *)in, (size_t)len);
+                return len;
             }
             catch (...)
             {
                 BIOerr(BIO_F_MEM_WRITE, BIO_R_INVALID_ARGUMENT);
-                return 0;
+                return -1;
             }
         }
         else
         {
             BIOerr(BIO_F_MEM_WRITE, BIO_R_NULL_PARAMETER);
-            return 0;
+            return -1;
         }
     }
 
@@ -184,16 +181,15 @@ class bio_memq_internal
 
     static inline int memq_puts(BIO *b, const char *str)
     {
-        size_t written = 0;
-        const int ret = memq_write_ex(b, str, std::strlen(str), &written);
-        return ret ? numeric_cast<int>(written) : -1;
+        const int ret = memq_write(b, str, numeric_cast<int>(std::strlen(str)));
+        return ret;
     }
 
     static inline void init_static()
     {
         memq_method_type = BIO_get_new_index();
         memq_method = BIO_meth_new(memq_method_type, "stream memory queue");
-        BIO_meth_set_write_ex(memq_method, memq_write_ex);
+        BIO_meth_set_write(memq_method, memq_write);
         BIO_meth_set_read(memq_method, memq_read);
         BIO_meth_set_puts(memq_method, memq_puts);
         BIO_meth_set_create(memq_method, memq_new);
