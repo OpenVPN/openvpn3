@@ -240,7 +240,7 @@ void runTest(comppair alg, bool verbose = false)
                   << " blk=" << BLOCK_SIZE
                   << " bytes=" << bytes
                   << " comp-bytes=" << compress_bytes
-                  << " comp-ratio=" << (bytes ? (float)compress_bytes / (float)bytes : 0.0)
+                  << " comp-ratio=" << (bytes ? static_cast<float>(compress_bytes) / static_cast<float>(bytes) : 0.0)
                   << std::endl;
 }
 

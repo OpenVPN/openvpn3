@@ -69,7 +69,7 @@
 #define MEASURE(v, chkv, thread)          \
     double v = openvpn::cpu_time(thread); \
     ASSERT_GE(v, 0);                      \
-    double chkv = (double)time(NULL)
+    double chkv = static_cast<double>(time(NULL))
 
 #define CALCULATE(msg, st, en, rt, chst, chen, chrt, md) \
     double rt = en - st;                                 \
@@ -111,7 +111,7 @@ static void workload(const uint16_t multiplier)
     double d = 0;
     for (unsigned int i = UINT16_MAX * multiplier; i > 0; i--)
     {
-        d += (double)gen();
+        d += static_cast<double>(gen());
     }
     (void)d;
 }
@@ -217,7 +217,7 @@ TEST(CPUTime, cpu_time_thread_numcores)
 
     // Meassure running a single worker thread
     MEASURE(parent_start, chk_parent_start, false);
-    run_threads((uint8_t)num_cores);
+    run_threads(static_cast<uint8_t>(num_cores));
     MEASURE(parent_end, chk_parent_end, false);
 
     CALCULATE("Parent thread - " << std::to_string(num_cores) << " child thread",

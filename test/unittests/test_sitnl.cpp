@@ -176,7 +176,7 @@ class SitnlTest : public testing::Test
 TEST_F(SitnlTest, TestAddrAdd4)
 {
     auto broadcast = IPv4::Addr::from_string(addr4) | ~IPv4::Addr::netmask_from_prefix_len(ipv4_prefix_len);
-    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), (unsigned char)ipv4_prefix_len, broadcast), 0);
+    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), static_cast<unsigned char>(ipv4_prefix_len), broadcast), 0);
 
     ip_a_show_dev([this, &broadcast](std::vector<std::string> &v, const std::string &out, bool &called)
                   {
@@ -190,7 +190,7 @@ TEST_F(SitnlTest, TestAddrAdd4)
 
 TEST_F(SitnlTest, TestAddrAdd6)
 {
-    ASSERT_EQ(SITNL::net_addr_add(dev, IPv6::Addr::from_string(addr6), (unsigned char)ipv6_prefix_len), 0);
+    ASSERT_EQ(SITNL::net_addr_add(dev, IPv6::Addr::from_string(addr6), static_cast<unsigned char>(ipv6_prefix_len)), 0);
 
     ip_a_show_dev([this](std::vector<std::string> &v, const std::string &out, bool &called)
                   {
@@ -218,7 +218,7 @@ TEST_F(SitnlTest, TestAddRoute4)
 {
     // add address
     auto broadcast = IPv4::Addr::from_string(addr4) | ~IPv4::Addr::netmask_from_prefix_len(ipv4_prefix_len);
-    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), (unsigned char)ipv4_prefix_len, broadcast), 0);
+    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), static_cast<unsigned char>(ipv4_prefix_len), broadcast), 0);
 
     // up interface
     ASSERT_EQ(SITNL::net_iface_up(dev, true), 0);
@@ -242,7 +242,7 @@ TEST_F(SitnlTest, TestAddRoute4)
 TEST_F(SitnlTest, TestAddRoute6)
 {
     // add address
-    ASSERT_EQ(SITNL::net_addr_add(dev, IPv6::Addr::from_string(addr6), (unsigned char)ipv6_prefix_len), 0);
+    ASSERT_EQ(SITNL::net_addr_add(dev, IPv6::Addr::from_string(addr6), static_cast<unsigned char>(ipv6_prefix_len)), 0);
 
     // up interface
     ASSERT_EQ(SITNL::net_iface_up(dev, true), 0);
@@ -281,7 +281,7 @@ TEST_F(SitnlTest, TestBestGw4)
 {
     // add address
     auto broadcast = IPv4::Addr::from_string(addr4) | ~IPv4::Addr::netmask_from_prefix_len(ipv4_prefix_len);
-    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), (unsigned char)ipv4_prefix_len, broadcast), 0);
+    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), static_cast<unsigned char>(ipv4_prefix_len), broadcast), 0);
 
     // up interface
     ASSERT_EQ(SITNL::net_iface_up(dev, true), 0);
@@ -311,10 +311,10 @@ TEST_F(SitnlTest, TestBestGw4FilterIface)
 {
     // add addresses
     auto broadcast = IPv4::Addr::from_string(addr4) | ~IPv4::Addr::netmask_from_prefix_len(ipv4_prefix_len);
-    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), (unsigned char)ipv4_prefix_len, broadcast), 0);
+    ASSERT_EQ(SITNL::net_addr_add(dev, IPv4::Addr::from_string(addr4), static_cast<unsigned char>(ipv4_prefix_len), broadcast), 0);
 
     broadcast = IPv4::Addr::from_string("10.20.0.2") | ~IPv4::Addr::netmask_from_prefix_len(ipv4_prefix_len);
-    ASSERT_EQ(SITNL::net_addr_add(dev2, IPv4::Addr::from_string("10.20.0.2"), (unsigned char)ipv4_prefix_len, broadcast), 0);
+    ASSERT_EQ(SITNL::net_addr_add(dev2, IPv4::Addr::from_string("10.20.0.2"), static_cast<unsigned char>(ipv4_prefix_len), broadcast), 0);
 
     // up interfaces
     SITNL::net_iface_up(dev, true);

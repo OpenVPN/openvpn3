@@ -103,7 +103,7 @@ void perfiter(const long n,
     {
         for (long j = 0; j < iter_per_step; ++j)
         {
-            const long delta = long(urand.randrange32((uint32_t)range)) - range / 2;
+            const long delta = long(urand.randrange32(static_cast<uint32_t>(range))) - range / 2;
             const long id = i + delta;
             if (id >= 0 && id < n)
             {
@@ -116,7 +116,7 @@ void perfiter(const long n,
                     expected = Error::PKTID_BACKTRACK;
                 else if (bv[id])
                     expected = Error::PKTID_REPLAY;
-                const PacketIDConstruct pid(0, (unsigned)id);
+                const PacketIDConstruct pid(0, static_cast<unsigned>(id));
                 const Error::Type result = pr.do_test_add(pid, pkt_time, true);
                 ++count;
 #define INFO "i=" << i << " id=" << id << " high=" << high << " result=" << Error::name(result) << " expected=" << Error::name(expected)
