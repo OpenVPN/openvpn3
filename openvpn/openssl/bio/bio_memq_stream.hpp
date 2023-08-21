@@ -30,6 +30,7 @@
 #include <openssl/bio.h>
 
 #include <openvpn/common/size.hpp>
+#include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_stream.hpp>
@@ -122,7 +123,7 @@ class bio_memq_internal
         return 1;
     }
 
-    static inline int memq_write(BIO *b, const char *in, int len)
+    static inline int memq_write_ex(BIO *b, const char *in, size_t len, size_t *written)
     {
         MemQ *bmq = (MemQ *)(BIO_get_data(b));
         if (in)
@@ -131,19 +132,22 @@ class bio_memq_internal
             try
             {
                 if (len)
-                    bmq->write((const unsigned char *)in, (size_t)len);
-                return len;
+                {
+                    bmq->write((const unsigned char *)in, len);
+                    *written = len;
+                }
+                return 1; // 1 is success
             }
             catch (...)
             {
                 BIOerr(BIO_F_MEM_WRITE, BIO_R_INVALID_ARGUMENT);
-                return -1;
+                return 0;
             }
         }
         else
         {
             BIOerr(BIO_F_MEM_WRITE, BIO_R_NULL_PARAMETER);
-            return -1;
+            return 0;
         }
     }
 
@@ -180,16 +184,16 @@ class bio_memq_internal
 
     static inline int memq_puts(BIO *b, const char *str)
     {
-        const int len = std::strlen(str);
-        const int ret = memq_write(b, str, len);
-        return ret;
+        size_t written = 0;
+        const int ret = memq_write_ex(b, str, std::strlen(str), &written);
+        return ret ? numeric_cast<int>(written) : -1;
     }
 
     static inline void init_static()
     {
         memq_method_type = BIO_get_new_index();
         memq_method = BIO_meth_new(memq_method_type, "stream memory queue");
-        BIO_meth_set_write(memq_method, memq_write);
+        BIO_meth_set_write_ex(memq_method, memq_write_ex);
         BIO_meth_set_read(memq_method, memq_read);
         BIO_meth_set_puts(memq_method, memq_puts);
         BIO_meth_set_create(memq_method, memq_new);
