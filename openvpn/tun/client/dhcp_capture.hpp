@@ -52,6 +52,8 @@ class DHCPCapture
     {
         if (buf.size() < sizeof(DHCPPacket))
             return false;
+        if (!is_safe_conversion<unsigned int>(buf.size()))
+            return false;
 
         DHCPPacket *dhcp = (DHCPPacket *)buf.data();
         if (dhcp->ip.protocol == IPCommon::UDP
@@ -59,7 +61,7 @@ class DHCPCapture
             && dhcp->udp.dest == htons(DHCP::BOOTPC_PORT)
             && dhcp->dhcp.op == DHCP::BOOTREPLY)
         {
-            const unsigned int optlen = buf.size() - sizeof(DHCPPacket);
+            const unsigned int optlen = static_cast<unsigned int>(buf.size() - sizeof(DHCPPacket));
             const int message_type = dhcp_message_type(dhcp, optlen);
             if (message_type == DHCP::DHCPACK || message_type == DHCP::DHCPOFFER)
             {
@@ -199,10 +201,10 @@ class DHCPCapture
                         const unsigned int owlen = len + 2; /* len of data to overwrite */
                         std::uint8_t *src = dest + owlen;
                         std::uint8_t *end = p + optlen;
-                        const int movlen = end - src;
+                        const ssize_t movlen = end - src;
                         if (movlen > 0)
-                            std::memmove(dest, src, movlen);             /* overwrite router option */
-                        std::memset(end - owlen, DHCP::DHCP_PAD, owlen); /* pad tail */
+                            std::memmove(dest, src, static_cast<size_t>(movlen)); /* overwrite router option */
+                        std::memset(end - owlen, DHCP::DHCP_PAD, owlen);          /* pad tail */
                     }
                     else
                         break;
