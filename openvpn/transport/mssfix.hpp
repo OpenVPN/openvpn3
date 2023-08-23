@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <openvpn/common/numeric_util.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/ip/ipcommon.hpp>
 #include <openvpn/ip/ip4.hpp>
@@ -133,15 +134,24 @@ class MSSFix
                     break;
                 if ((*opt == TCPHeader::OPT_MAXSEG) && (optlen == TCPHeader::OPTLEN_MAXSEG))
                 {
-                    uint16_t mssval = numeric_cast<uint16_t>((opt[2] << 8) + opt[3]);
-                    if (mssval > max_mss)
+                    auto mssRaw = (opt[2] << 8) + opt[3];
+                    if (is_safe_conversion<uint16_t>(mssRaw))
                     {
-                        OPENVPN_LOG_MSSFIX("MTU MSS " << mssval << " -> " << max_mss);
-                        int accumulate = htons(mssval);
-                        opt[2] = static_cast<uint8_t>((max_mss >> 8) & 0xff);
-                        opt[3] = static_cast<uint8_t>(max_mss & 0xff);
-                        accumulate -= htons(max_mss);
-                        tcp_adjust_checksum(accumulate, tcphdr->check);
+                        uint16_t mssval = static_cast<uint16_t>(mssRaw);
+                        if (mssval > max_mss)
+                        {
+                            OPENVPN_LOG_MSSFIX("MTU MSS " << mssval << " -> " << max_mss);
+                            int accumulate = htons(mssval);
+                            opt[2] = static_cast<uint8_t>((max_mss >> 8) & 0xff);
+                            opt[3] = static_cast<uint8_t>(max_mss & 0xff);
+                            accumulate -= htons(max_mss);
+                            tcp_adjust_checksum(accumulate, tcphdr->check);
+                        }
+                    }
+                    else
+                    {
+                        OPENVPN_LOG_MSSFIX("Rejecting MSS fix: value out of bounds for type " << ((opt[2] << 8) + opt[3]));
+                        break;
                     }
                 }
             }

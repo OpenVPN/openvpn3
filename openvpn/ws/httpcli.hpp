@@ -939,8 +939,9 @@ class HTTPCore : public Base, public TransportClientParent
         IP::Addr addr = sf.remote_ip();
         if (!addr.defined())
             addr = IP::Addr(host.host_transport(), "AltRouting");
+        // TODO: the static_cast of port is not proven safe
         results_type results = results_type::create(openvpn_io::ip::tcp::endpoint(addr.to_asio(),
-                                                                                  numeric_cast<asio::ip::port_type>(port)),
+                                                                                  static_cast<asio::ip::port_type>(port)),
                                                     host.host,
                                                     "");
 

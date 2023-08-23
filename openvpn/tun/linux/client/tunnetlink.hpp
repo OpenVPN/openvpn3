@@ -68,7 +68,7 @@ struct NetlinkLinkSet : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        int ret;
+        ssize_t ret;
 
         if (dev.empty())
         {
@@ -137,7 +137,7 @@ struct NetlinkAddr4 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        int ret;
+        ssize_t ret;
 
         if (dev.empty())
         {
@@ -208,7 +208,7 @@ struct NetlinkAddr6 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        int ret;
+        ssize_t ret;
 
         if (dev.empty())
         {
@@ -277,7 +277,7 @@ struct NetlinkAddr4PtP : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        int ret;
+        ssize_t ret;
 
         if (dev.empty())
         {
@@ -344,7 +344,7 @@ struct NetlinkRoute4 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        int ret;
+        ssize_t ret;
 
         if (dev.empty())
         {
@@ -413,7 +413,7 @@ struct NetlinkRoute6 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        int ret;
+        ssize_t ret;
 
         if (dev.empty())
         {
@@ -467,9 +467,9 @@ enum
  * @param type interface link type (such as "ovpn-dco")
  * @return int 0 on success, negative error code on error
  */
-inline int iface_new(std::ostringstream &os, const std::string &dev, const std::string &type)
+inline ssize_t iface_new(std::ostringstream &os, const std::string &dev, const std::string &type)
 {
-    int ret = -1;
+    ssize_t ret = -1;
 
     if (dev.empty())
     {
@@ -492,9 +492,9 @@ inline int iface_new(std::ostringstream &os, const std::string &dev, const std::
     return ret;
 }
 
-inline int iface_del(std::ostringstream &os, const std::string &dev)
+inline ssize_t iface_del(std::ostringstream &os, const std::string &dev)
 {
-    int ret = -1;
+    ssize_t ret = -1;
 
     if (dev.empty())
     {
@@ -634,7 +634,7 @@ inline void iface_config(const std::string &iface_name,
     {
         NetlinkAddr4::Ptr add(new NetlinkAddr4);
         add->addr = IPv4::Addr::from_string(local4->address);
-        add->prefixlen = numeric_cast<decltype(add->prefixlen)>(local4->prefix_length);
+        add->prefixlen = local4->prefix_length;
         add->broadcast = IPv4::Addr::from_string(local4->address)
                          | ~IPv4::Addr::netmask_from_prefix_len(local4->prefix_length);
         add->dev = iface_name;
@@ -667,7 +667,7 @@ inline void iface_config(const std::string &iface_name,
     {
         NetlinkAddr6::Ptr add(new NetlinkAddr6);
         add->addr = IPv6::Addr::from_string(local6->address);
-        add->prefixlen = numeric_cast<decltype(add->prefixlen)>(local6->prefix_length);
+        add->prefixlen = local6->prefix_length;
         add->dev = iface_name;
         add->add = true;
 

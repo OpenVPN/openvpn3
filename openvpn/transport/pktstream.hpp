@@ -123,9 +123,10 @@ class PacketStream
     }
 
     // prepend uint16_t size to buffer
+    // TODO: static_cast below may be unsafe, verify best fix
     static void prepend_size(Buffer &buf)
     {
-        const std::uint16_t net_len = htons(numeric_cast<uint16_t>(buf.size()));
+        const std::uint16_t net_len = htons(static_cast<uint16_t>(buf.size()));
         buf.prepend((const unsigned char *)&net_len, sizeof(net_len));
     }
 

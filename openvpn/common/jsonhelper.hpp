@@ -843,6 +843,20 @@ inline void to_int(const Json::Value &root,
 }
 
 template <typename NAME, typename TITLE>
+inline void to_uchar(const Json::Value &root,
+                     unsigned char &dest,
+                     const NAME &name,
+                     const TITLE &title)
+{
+    auto temp = get_int(root, name, title);
+    dest = clamp_notify<unsigned char>(temp,
+                                       [](decltype(temp) temp) -> unsigned char
+                                       { 
+        auto why = std::string("Conversion error [" + std::to_string(temp) + "] to unsigned char");
+        throw json_parse(std::move(why)); });
+}
+
+template <typename NAME, typename TITLE>
 inline void to_uint(const Json::Value &root,
                     unsigned int &dest,
                     const NAME &name,

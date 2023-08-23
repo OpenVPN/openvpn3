@@ -28,7 +28,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/numeric_cast.hpp>
+#include <openvpn/common/clamp_typerange.hpp>
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/static_key.hpp>
@@ -42,7 +42,7 @@
 //            [4-byte
 //            IV head]
 
-using openvpn::numeric_util::numeric_cast;
+using openvpn::numeric_util::clamp_to_default;
 
 namespace openvpn::AEAD {
 
@@ -266,17 +266,18 @@ class Crypto : public CryptoDCInstance
 
     // Initialization
 
+    // TODO: clamp_to_default probably will cause an error further along if triggered, investigate
     void init_cipher(StaticKey &&encrypt_key, StaticKey &&decrypt_key) override
     {
         e.impl.init(libctx,
                     cipher,
                     encrypt_key.data(),
-                    numeric_cast<unsigned int>(encrypt_key.size()),
+                    clamp_to_default<unsigned int>(encrypt_key.size(), 0),
                     CRYPTO_API::CipherContextAEAD::ENCRYPT);
         d.impl.init(libctx,
                     cipher,
                     decrypt_key.data(),
-                    numeric_cast<unsigned int>(decrypt_key.size()),
+                    clamp_to_default<unsigned int>(decrypt_key.size(), 0),
                     CRYPTO_API::CipherContextAEAD::DECRYPT);
     }
 

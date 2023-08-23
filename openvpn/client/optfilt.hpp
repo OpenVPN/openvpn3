@@ -25,7 +25,7 @@
 #include <vector>
 
 #include <openvpn/common/options.hpp>
-#include <openvpn/common/numeric_cast.hpp>
+#include <openvpn/common/numeric_util.hpp>
 #include <openvpn/common/string.hpp>
 #include <openvpn/client/dns.hpp>
 
@@ -136,8 +136,9 @@ class PushedOptionsFilter : public OptionList::FilterBase
     {
         if (pushed.size() < match.size())
             return false;
-
-        int i = numeric_cast<int>(match.size() - 1);
+        if (!is_safe_conversion<int>(match.size() - 1))
+            return false;
+        int i = static_cast<int>(match.size() - 1);
         if (!string::starts_with(pushed.get(i, -1), match.get(i, -1)))
             return false;
 

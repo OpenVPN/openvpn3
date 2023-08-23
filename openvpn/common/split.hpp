@@ -32,7 +32,7 @@
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/lex.hpp>
-#include <openvpn/common/numeric_cast.hpp>
+#include <openvpn/common/clamp_typerange.hpp>
 
 
 using namespace openvpn::numeric_util;
@@ -126,7 +126,7 @@ inline void by_space_void(V &ret, const std::string &input, LIM *lim = nullptr)
             defined = true;
         if (lex.available())
         {
-            const char tc = numeric_cast<char>(lex.get());
+            const char tc = clamp_to_default<char>(lex.get(), '?');
             if (!SPACE::is_space(tc) || lex.in_quote())
             {
                 defined = true;

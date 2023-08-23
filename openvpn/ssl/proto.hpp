@@ -34,6 +34,7 @@
 #include <optional>
 
 
+#include <openvpn/common/clamp_typerange.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/version.hpp>
@@ -265,7 +266,9 @@ class ProtoContext
 
     static unsigned char op_compose(const unsigned int opcode, const unsigned int key_id)
     {
-        return numeric_cast<unsigned char>((opcode << OPCODE_SHIFT) | key_id);
+        // As long as 'opcode' stays within the range specified by the enum the cast should be safe.
+        // TODO: Use a more constrained type for opcode to ensure range violations can't happen.
+        return static_cast<unsigned char>((opcode << OPCODE_SHIFT) | key_id);
     }
 
     static unsigned int op32_compose(const unsigned int opcode,
@@ -1777,7 +1780,8 @@ class ProtoContext
 
                     // trigger renegotiation if we hit decrypt data limit
                     if (data_limit)
-                        data_limit_add(DataLimit::Decrypt, buf.size());
+                        if (!data_limit_add(DataLimit::Decrypt, buf.size()))
+                            throw proto_option_error("Unable to add data limit");
 
                     // decompress packet
                     if (compress)
@@ -1790,7 +1794,7 @@ class ProtoContext
                 else
                     buf.reset_size(); // no crypto context available
             }
-            catch (BufferException &)
+            catch (std::exception &)
             {
                 proto.stats->error(Error::BUFFER_ERROR);
                 buf.reset_size();
@@ -2073,7 +2077,15 @@ class ProtoContext
                 target -= 1;
             }
 
-            c.mss_fix = numeric_cast<decltype(c.mss_fix)>(target - payload_overhead);
+            if (!is_safe_conversion<decltype(c.mss_fix)>(target - payload_overhead))
+            {
+                OPENVPN_LOG("mssfix disabled since computed value is outside type bounds ("
+                            << c.mss_fix << ")");
+                c.mss_fix = 0;
+                return;
+            }
+
+            c.mss_fix = static_cast<decltype(c.mss_fix)>(target - payload_overhead);
             if (c.debug_level > 1)
             {
                 OPENVPN_LOG("mssfix=" << c.mss_fix
@@ -2301,11 +2313,12 @@ class ProtoContext
 
         bool do_encrypt(BufferAllocated &buf, const bool compress_hint)
         {
-            bool pid_wrap;
+            if (!is_safe_conversion<uint16_t>(proto.config->mss_fix))
+                return false;
 
             // set MSS for segments client can receive
             if (proto.config->mss_fix > 0)
-                MSSFix::mssfix(buf, numeric_cast<uint16_t>(proto.config->mss_fix));
+                MSSFix::mssfix(buf, static_cast<uint16_t>(proto.config->mss_fix));
 
             // compress packet
             if (compress)
@@ -2313,7 +2326,10 @@ class ProtoContext
 
             // trigger renegotiation if we hit encrypt data limit
             if (data_limit)
-                data_limit_add(DataLimit::Encrypt, buf.size());
+                if (!data_limit_add(DataLimit::Encrypt, buf.size()))
+                    return false;
+
+            bool pid_wrap;
 
             if (enable_op32)
             {
@@ -2407,11 +2423,14 @@ class ProtoContext
         }
 
         // Handle data-limited keys such as Blowfish and other 64-bit block-size ciphers.
-        void data_limit_add(const DataLimit::Mode mode, const size_t size)
+        bool data_limit_add(const DataLimit::Mode mode, const size_t size)
         {
-            const DataLimit::State state = data_limit->add(mode, numeric_cast<DataLimit::size_type>(size));
+            if (is_safe_conversion<DataLimit::size_type>(size))
+                return false;
+            const DataLimit::State state = data_limit->add(mode, static_cast<DataLimit::size_type>(size));
             if (state > DataLimit::None)
                 data_limit_event(mode, state);
+            return true;
         }
 
         // Handle a DataLimit event.
@@ -3977,10 +3996,10 @@ class ProtoContext
                            unsigned int &keepalive_timeout)
     {
         keepalive_ping = config->keepalive_ping.enabled()
-                             ? numeric_cast<std::remove_reference_t<decltype(keepalive_ping)>>(config->keepalive_ping.to_seconds())
+                             ? clamp_to_typerange<std::remove_reference_t<decltype(keepalive_ping)>>(config->keepalive_ping.to_seconds())
                              : 0;
         keepalive_timeout = config->keepalive_timeout.enabled()
-                                ? numeric_cast<std::remove_reference_t<decltype(keepalive_timeout)>>(config->keepalive_timeout.to_seconds())
+                                ? clamp_to_typerange<std::remove_reference_t<decltype(keepalive_timeout)>>(config->keepalive_timeout.to_seconds())
                                 : 0;
         config->keepalive_ping = Time::Duration::infinite();
         config->keepalive_timeout = Time::Duration::infinite();

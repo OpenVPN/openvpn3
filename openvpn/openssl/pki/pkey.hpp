@@ -188,7 +188,9 @@ class PKey
         if (buf)
         {
             string::strncpynt(buf, self->priv_key_pwd.c_str(), size);
-            return numeric_cast<int>(std::strlen(buf));
+            auto len = std::strlen(buf);
+            if (is_safe_conversion<int>(len))
+                return static_cast<int>(len);
         }
         return 0;
     }

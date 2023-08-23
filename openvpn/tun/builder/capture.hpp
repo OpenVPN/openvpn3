@@ -141,7 +141,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
       public:
         std::string address;
-        int prefix_length = 0;
+        unsigned char prefix_length = 0;
         int metric = -1;     // optional
         std::string gateway; // optional
         bool ipv6 = false;
@@ -179,7 +179,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         {
             json::assert_dict(root, title);
             json::to_string(root, address, "address", title);
-            json::to_int(root, prefix_length, "prefix_length", title);
+            json::to_uchar(root, prefix_length, "prefix_length", title);
             json::to_int(root, metric, "metric", title);
             json::to_string(root, gateway, "gateway", title);
             json::to_bool(root, ipv6, "ipv6", title);

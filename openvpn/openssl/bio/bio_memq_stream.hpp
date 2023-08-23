@@ -30,7 +30,7 @@
 #include <openssl/bio.h>
 
 #include <openvpn/common/size.hpp>
-#include <openvpn/common/numeric_cast.hpp>
+#include <openvpn/common/numeric_util.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_stream.hpp>
@@ -181,7 +181,12 @@ class bio_memq_internal
 
     static inline int memq_puts(BIO *b, const char *str)
     {
-        const int ret = memq_write(b, str, numeric_cast<int>(std::strlen(str)));
+        int ret = -1;
+        auto len = std::strlen(str);
+        if (is_safe_conversion<int>(len))
+        {
+            ret = memq_write(b, str, static_cast<int>(len));
+        }
         return ret;
     }
 

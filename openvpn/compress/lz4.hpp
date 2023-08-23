@@ -27,7 +27,7 @@
 
 #include <algorithm> // for std::max
 
-#include <openvpn/common/numeric_cast.hpp>
+#include <openvpn/common/numeric_util.hpp>
 
 #include <lz4.h>
 
@@ -43,8 +43,12 @@ class CompressLZ4Base : public Compress
 
     bool do_decompress(BufferAllocated &buf)
     {
+        auto prepRes = frame->prepare(Frame::DECOMPRESS_WORK, work);
+        if (!numeric_util::is_safe_conversion<const int>(prepRes))
+            return false;
+
         // initialize work buffer
-        const int payload_size = numeric_util::numeric_cast<decltype(payload_size)>(frame->prepare(Frame::DECOMPRESS_WORK, work));
+        auto payload_size = static_cast<const int>(prepRes);
 
         // do uncompress
         const int decomp_size = LZ4_decompress_safe((const char *)buf.c_data(),
