@@ -40,11 +40,13 @@ class OpenSSLPEM
                            const std::string &key_name)
     {
         bool ret = false;
+        if (!is_safe_conversion<int>(src_len))
+            return false;
         BIO *bio = BIO_new(BIO_s_mem());
         if (!bio)
             return false;
 
-        if (!PEM_write_bio(bio, key_name.c_str(), "", src, src_len))
+        if (!PEM_write_bio(bio, key_name.c_str(), "", src, static_cast<int>(src_len)))
             goto out;
 
         BUF_MEM *bptr;

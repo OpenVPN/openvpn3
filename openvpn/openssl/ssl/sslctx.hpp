@@ -1741,6 +1741,8 @@ class OpenSSLContext : public SSLFactoryAPI
             return;
         if (ai->type == V_ASN1_NEG_INTEGER) // negative serial number is considered to be undefined
             return;
+        if (!is_safe_conversion<int>(authcert.serial.size()))
+            return;
         BIGNUM *bn = ASN1_INTEGER_to_BN(ai, NULL);
         if (!bn)
             return;
@@ -1753,7 +1755,7 @@ class OpenSSLContext : public SSLFactoryAPI
             BN_bn2bin(bn, authcert.serial.number() + offset);
         }
 #else
-        BN_bn2binpad(bn, authcert.serial.number(), authcert.serial.size());
+        BN_bn2binpad(bn, authcert.serial.number(), static_cast<int>(authcert.serial.size()));
 #endif
         BN_free(bn);
     }
