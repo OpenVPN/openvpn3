@@ -118,8 +118,8 @@ class WinProxySettings : public ProxySettings
                              key.c_str(),
                              0,
                              str ? REG_SZ : REG_DWORD,
-                             str ? (const BYTE *)prev_val_str : (CONST BYTE *)&prev_val_dword,
-                             str ? strlen(prev_val_str) + 1 : sizeof(prev_val_dword));
+                             str ? reinterpret_cast<const BYTE *>(prev_val_str) : reinterpret_cast<CONST BYTE *>(&prev_val_dword),
+                             str ? static_cast<DWORD>(strlen(prev_val_str) + 1) : sizeof(prev_val_dword));
     }
 
     void save_key(Win::RegKey &regkey, const std::string &key, const std::string &value, bool str)
@@ -160,8 +160,8 @@ class WinProxySettings : public ProxySettings
                                   prev_key_name.c_str(),
                                   0,
                                   str ? REG_SZ : REG_DWORD,
-                                  str ? (const BYTE *)prev_val_str : (CONST BYTE *)&prev_val_dword,
-                                  str ? strlen(prev_val_str) + 1 : sizeof(DWORD));
+                                  str ? reinterpret_cast<const BYTE *>(prev_val_str) : reinterpret_cast<CONST BYTE *>(&prev_val_dword),
+                                  str ? static_cast<DWORD>(strlen(prev_val_str) + 1) : sizeof(prev_val_dword));
         check_reg_error<proxy_error>(status, prev_key_name);
 
         // save new value
@@ -172,8 +172,8 @@ class WinProxySettings : public ProxySettings
                                   key.c_str(),
                                   0,
                                   str ? REG_SZ : REG_DWORD,
-                                  str ? (const BYTE *)value.c_str() : (CONST BYTE *)&val_dword,
-                                  str ? value.length() + 1 : sizeof(val_dword));
+                                  str ? reinterpret_cast<const BYTE *>(value.c_str()) : reinterpret_cast<CONST BYTE *>(&val_dword),
+                                  str ? static_cast<DWORD>(value.length() + 1) : sizeof(val_dword));
         check_reg_error<proxy_error>(status, key);
     }
 

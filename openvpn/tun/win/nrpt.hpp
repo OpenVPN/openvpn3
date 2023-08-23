@@ -69,8 +69,8 @@ class NRPT
                                                      L"Name",
                                                      0,
                                                      REG_MULTI_SZ,
-                                                     (const BYTE *)name.c_str(),
-                                                     (name.length() + 1) * 2);
+                                                     reinterpret_cast<const BYTE *>(name.c_str()),
+                                                     static_cast<DWORD>((name.length() + 1) * sizeof(wchar_t)));
                 check_reg_error<nrpt_error>(status, "Name");
             }
 
@@ -81,8 +81,8 @@ class NRPT
                                                      L"GenericDNSServers",
                                                      0,
                                                      REG_SZ,
-                                                     (const BYTE *)dns_servers_joined.c_str(),
-                                                     (dns_servers_joined.length() + 1) * 2);
+                                                     reinterpret_cast<const BYTE *>(dns_servers_joined.c_str()),
+                                                     static_cast<DWORD>((dns_servers_joined.length() + 1) * sizeof(wchar_t)));
                 check_reg_error<nrpt_error>(status, "GenericDNSServers");
             }
 
@@ -93,7 +93,7 @@ class NRPT
                                                      L"ConfigOptions",
                                                      0,
                                                      REG_DWORD,
-                                                     (const BYTE *)&value,
+                                                     reinterpret_cast<const BYTE *>(&value),
                                                      sizeof(value));
                 check_reg_error<nrpt_error>(status, "ConfigOptions");
             }
@@ -105,7 +105,7 @@ class NRPT
                                                      L"Version",
                                                      0,
                                                      REG_DWORD,
-                                                     (const BYTE *)&value,
+                                                     reinterpret_cast<const BYTE *>(&value),
                                                      sizeof(value));
                 check_reg_error<nrpt_error>(status, "Version");
             }

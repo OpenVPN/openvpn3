@@ -942,8 +942,8 @@ class ActionSetAdapterDomainSuffix : public Action
                                   L"Domain",
                                   0,
                                   REG_SZ,
-                                  (const BYTE *)dom.get(),
-                                  (Win::utf16_strlen(dom.get()) + 1) * 2);
+                                  reinterpret_cast<const BYTE *>(dom.get()),
+                                  static_cast<DWORD>((Win::utf16_strlen(dom.get()) + 1) * sizeof(wchar_t)));
         if (status != ERROR_SUCCESS)
             OPENVPN_THROW(tun_win_util, "ActionSetAdapterDomainSuffix: error writing Domain registry key: " << reg_key_name);
     }
