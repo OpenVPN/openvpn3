@@ -499,7 +499,9 @@ class MyListener : public WS::Server::Listener
 
             // write management password to process's stdin
             DWORD written;
-            WriteFile(stdin_write, management_password.c_str(), management_password.length(), &written, NULL);
+            if (!is_safe_conversion<DWORD>(management_password.length()))
+                return;
+            WriteFile(stdin_write, management_password.c_str(), static_cast<DWORD>(management_password.length()), &written, NULL);
         }
     }
 #endif

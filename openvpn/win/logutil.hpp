@@ -40,7 +40,7 @@ inline void log(const HANDLE file, const std::string &str)
 {
     DWORD n_written;
     const std::string line = date_time() + ' ' + str;
-    ::WriteFile(file, line.c_str(), line.length(), &n_written, NULL);
+    ::WriteFile(file, line.c_str(), static_cast<DWORD>(line.length()), &n_written, NULL);
 }
 
 inline ScopedHANDLE create_file(const std::string &fn,
