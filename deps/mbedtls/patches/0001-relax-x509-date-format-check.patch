@@ -12,39 +12,34 @@ diff --git a/library/x509.c b/library/x509.c
 index 264c7fb0c..9372bcb92 100644
 --- a/library/x509.c
 +++ b/library/x509.c
-@@ -556,13 +556,20 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
+@@ -624,11 +624,16 @@ static int x509_parse_time(unsigned char
      /*
       * Parse seconds if present
       */
--    if ( len >= 2 )
-+    if ( len >= 2 && **p >= '0' && **p <= '9' )
-     {
-         CHECK( x509_parse_int( p, 2, &tm->sec ) );
+-    if (len >= 2) {
++    if (len >= 2 && **p >= '0' && **p <= '9') {
+         CHECK(x509_parse_int(p, 2, &tm->sec));
          len -= 2;
-     }
-     else
-+    {
+     } else {
 +#if defined(MBEDTLS_RELAXED_X509_DATE)
-+	/* if relaxed mode, allow seconds to be absent */
-+	tm->sec = 0;
++        /* if relaxed mode, allow seconds to be absent */
++        tm->sec = 0;
 +#else
-         return ( MBEDTLS_ERR_X509_INVALID_DATE );
+         return MBEDTLS_ERR_X509_INVALID_DATE;
 +#endif
-+    }
+     }
  
      /*
-      * Parse trailing 'Z' if present
-@@ -572,6 +579,15 @@ static int x509_parse_time( unsigned char **p, size_t len, size_t yearlen,
+@@ -638,6 +643,14 @@ static int x509_parse_time(unsigned char
          (*p)++;
          len--;
      }
 +#if defined(MBEDTLS_RELAXED_X509_DATE)
-+    else if ( len == 5 && **p == '+' )
-+    {
-+	int tz; /* throwaway timezone */
-+	(*p)++;
-+	CHECK( x509_parse_int( p, 4, &tz ) );
-+	return 0;
++    else if ( len == 5 && **p == '+' ) {
++        int tz; /* throwaway timezone */
++        (*p)++;
++        CHECK( x509_parse_int( p, 4, &tz ) );
++        return 0;
 +    }
 +#endif
  
