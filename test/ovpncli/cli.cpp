@@ -189,7 +189,7 @@ class ClientBase : public ClientAPI::OpenVPNClient
         tun->destroy(os);
     }
 
-    bool socket_protect([[maybe_unused]] int socket, std::string remote, bool ipv6) override
+    bool socket_protect([[maybe_unused]] openvpn_io::detail::socket_type socket, std::string remote, bool ipv6) override
     {
         std::ostringstream os;
         auto os_print = Cleanup([&os]()
@@ -205,7 +205,7 @@ class ClientBase : public ClientAPI::OpenVPNClient
 class ClientBase : public ClientAPI::OpenVPNClient
 {
   public:
-    bool socket_protect(int socket, std::string remote, bool ipv6) override
+    bool socket_protect(openvpn_io::detail::socket_type socket, std::string remote, bool ipv6) override
     {
         std::cout << "NOT IMPLEMENTED: *** socket_protect " << socket << " " << remote << std::endl;
         return true;

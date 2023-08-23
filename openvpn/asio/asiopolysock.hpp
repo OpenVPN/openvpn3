@@ -86,7 +86,7 @@ class Base : public RC<thread_unsafe_refcount>
     {
     }
 
-    virtual int native_handle()
+    virtual openvpn_io::detail::socket_type native_handle()
     {
         return -1;
     }
@@ -216,7 +216,7 @@ struct TCP : public Base
         return false;
     }
 
-    virtual int native_handle() override
+    virtual openvpn_io::detail::socket_type native_handle() override
     {
         return socket.native_handle();
     }
@@ -320,7 +320,7 @@ struct Unix : public Base
         return true;
     }
 
-    virtual int native_handle() override
+    virtual openvpn_io::detail::socket_type native_handle() override
     {
         return socket.native_handle();
     }

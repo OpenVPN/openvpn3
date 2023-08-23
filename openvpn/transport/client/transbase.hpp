@@ -59,7 +59,7 @@ struct TransportClient : public virtual RC<thread_unsafe_refcount>
     {
         return 0;
     }
-    virtual int native_handle()
+    virtual openvpn_io::detail::socket_type native_handle()
     {
         return 0;
     }

@@ -271,7 +271,7 @@ class MySocketProtect : public SocketProtect
         rg_local = rg_local_arg;
     }
 
-    bool socket_protect(int socket, IP::Addr endpoint) override
+    bool socket_protect(openvpn_io::detail::socket_type socket, IP::Addr endpoint) override
     {
         if (parent)
         {
@@ -801,7 +801,7 @@ OPENVPN_CLIENT_EXPORT Status OpenVPNClient::provide_creds(const ProvideCreds &cr
     return ret;
 }
 
-OPENVPN_CLIENT_EXPORT bool OpenVPNClient::socket_protect(int socket, std::string remote, bool ipv6)
+OPENVPN_CLIENT_EXPORT bool OpenVPNClient::socket_protect(openvpn_io::detail::socket_type socket, std::string remote, bool ipv6)
 {
     return true;
 }

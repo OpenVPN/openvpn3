@@ -69,7 +69,7 @@ class Client : public ClientAPI::OpenVPNClient
     }
 
   private:
-    bool socket_protect(int socket, std::string remote, bool ipv6) override
+    bool socket_protect(openvpn_io::detail::socket_type socket, std::string remote, bool ipv6) override
     {
         return true;
     }

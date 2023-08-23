@@ -171,7 +171,7 @@ class Client : public TransportClient, AsyncResolvableTCP
         return server_endpoint.port();
     }
 
-    int native_handle() override
+    openvpn_io::detail::socket_type native_handle() override
     {
         return socket.native_handle();
     }
