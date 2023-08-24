@@ -710,12 +710,22 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
             return key.length() + value.length();
         }
 
-        Option convert_to_option(Limits *lim) const
+        Option convert_to_option(Limits *lim, const std::string &meta_prefix) const
         {
             bool newline_present = false;
             Option opt;
             const std::string unesc_value = unescape(value, newline_present);
-            opt.push_back(key);
+
+            if (string::starts_with(key, meta_prefix))
+            {
+                opt.push_back(std::string(key, meta_prefix.length()));
+                opt.set_meta();
+            }
+            else
+            {
+                opt.push_back(key);
+            }
+
             if (newline_present || singular_arg(key))
                 opt.push_back(unesc_value);
             else if (unesc_value != "NOARGS")
@@ -966,14 +976,17 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
 
     // caller may want to call list.preprocess() before this function
     // caller should call update_map() after this function
-    void parse_from_key_value_list(const KeyValueList &list, Limits *lim)
+    void parse_from_key_value_list(const KeyValueList &list, const std::string &meta_tag, Limits *lim)
     {
+        const std::string meta_prefix = meta_tag + "_";
+
         for (KeyValueList::const_iterator i = list.begin(); i != list.end(); ++i)
         {
             const KeyValue &kv = **i;
             if (lim)
                 lim->add_bytes(kv.combined_length());
-            const Option opt = kv.convert_to_option(lim);
+
+            Option opt = kv.convert_to_option(lim, meta_prefix);
             if (lim)
             {
                 lim->add_opt();

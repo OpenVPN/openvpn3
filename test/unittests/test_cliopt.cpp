@@ -218,3 +218,27 @@ TEST(config, onlypullortlsclient)
             "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
     }
 }
+
+TEST(config, meta_option_in_content)
+{
+    OptionList options;
+    auto cfg = minimalConfig + "\n# OVPN_ACCESS_SERVER_AAA=BBB";
+
+    OptionList::KeyValueList kvl;
+    kvl.push_back(new OptionList::KeyValue("OVPN_ACCESS_SERVER_CCC", "DDD"));
+
+    auto parsed_config = ParseClientConfig::parse(cfg, &kvl, options);
+
+    ClientOptions::Config config;
+    config.dco_compatible = true;
+    config.proto_context_options.reset(new ProtoContextOptions());
+    ClientOptions cliopt(options, config);
+
+    auto opt = options.get("AAA");
+    ASSERT_TRUE(opt.meta());
+    ASSERT_EQ(opt.get(1, 256), "BBB");
+
+    opt = options.get("CCC");
+    ASSERT_TRUE(opt.meta());
+    ASSERT_EQ(opt.get(1, 256), "DDD");
+}
