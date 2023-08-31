@@ -546,8 +546,9 @@ class TunProp
         DnsOptions dns_options(opt);
         for (const auto &domain : dns_options.search_domains)
         {
-            if (!tb->tun_builder_add_search_domain(domain))
-                throw tun_prop_dhcp_option_error("tun_builder_add_search_domain failed");
+            if (!tb->tun_builder_set_adapter_domain_suffix(domain))
+                throw tun_prop_dhcp_option_error("tun_builder_set_adapter_domain_suffix");
+            break; // use only the first domain for now
         }
         for (const auto &keyval : dns_options.servers)
         {
@@ -563,6 +564,11 @@ class TunProp
                 if (!tb->tun_builder_add_dns_server(server.address6.to_string(), true))
                     throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
                 flags |= F_ADD_DNS;
+            }
+            for (const auto &domain : server.domains)
+            {
+                if (!tb->tun_builder_add_search_domain(domain))
+                    throw tun_prop_dhcp_option_error("tun_builder_add_search_domain failed");
             }
         }
 
@@ -589,7 +595,7 @@ class TunProp
                             throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
                         flags |= F_ADD_DNS;
                     }
-                    else if ((type == "DOMAIN" || type == "DOMAIN-SEARCH") && dns_options.search_domains.empty())
+                    else if ((type == "DOMAIN" || type == "DOMAIN-SEARCH") && dns_options.servers.empty())
                     {
                         o.min_args(3);
                         for (size_t j = 2; j < o.size(); ++j)
@@ -603,7 +609,7 @@ class TunProp
                             }
                         }
                     }
-                    else if (type == "ADAPTER_DOMAIN_SUFFIX")
+                    else if (type == "ADAPTER_DOMAIN_SUFFIX" && dns_options.search_domains.empty())
                     {
                         o.exact_args(3);
                         const std::string &adapter_domain_suffix = o.get(2, 256);
