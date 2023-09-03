@@ -320,7 +320,7 @@ else
 fi
 
 # Valgrind -- but only if ASAN is not enabled
-if [ "$ASAN" = "" -a "$VAL" = "1" ]; then
+if [ "$ASAN" = "" -a "$VAL" ]; then
     CPPFLAGS="$CPPFLAGS -DHAVE_VALGRIND"
 fi
 
