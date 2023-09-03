@@ -103,7 +103,7 @@ class Option
     }
 
     template <typename T, typename... Args>
-    Option(T first, Args... args)
+    explicit Option(T first, Args... args)
     {
         reserve(1 + sizeof...(args));
         from_list(std::move(first), std::forward<Args>(args)...);
