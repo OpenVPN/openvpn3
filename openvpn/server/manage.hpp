@@ -58,7 +58,49 @@ namespace ManClientInstance {
 
 // Base class for the per-client-instance state of the ManServer.
 // Each client instance uses this class to send data to the man layer.
-struct Send : public virtual RC<thread_unsafe_refcount>
+// The methods here are VPN protocol agnostic.
+struct SendBase : public virtual RC<thread_unsafe_refcount>
+{
+    typedef RCPtr<SendBase> Ptr;
+
+    // clang-format off
+
+    // ID
+    virtual std::string instance_name() const = 0;
+    virtual std::uint64_t instance_id() const = 0;
+
+    // IP-mapped ACL (IPMA) notification
+    virtual void ipma_notify(const struct ovpn_tun_head_ipma &ipma) = 0;
+
+    // return a JSON string describing connected user
+    virtual std::string describe_user(const bool show_userprop) = 0;
+
+    // disconnect
+    virtual void disconnect_user(const HaltRestart::Type type,
+                                 const AuthStatus::Type auth_status,
+                                 const std::string &reason,
+                                 const bool tell_client) = 0;
+
+    // set ACL index for user
+    virtual void set_acl_index(const int acl_index,
+                               const std::string *username,
+                               const bool challenge) = 0;
+
+    // notify of local user properties update
+    virtual void userprop_local_update() = 0;
+
+    // create, update, or delete a DOMA ACL
+    virtual Json::Value doma_acl(const Json::Value &root) = 0;
+
+    // send a control channel message to client
+    virtual void post_info_user(BufferPtr &&info) = 0;
+
+    // clang-format on
+};
+
+// Send builds on SendBase but also adds OpenVPN
+// protocol-specific methods.
+struct Send : public SendBase
 {
     typedef RCPtr<Send> Ptr;
 
@@ -79,36 +121,6 @@ struct Send : public virtual RC<thread_unsafe_refcount>
 
     // client float notification
     virtual void float_notify(const PeerAddr::Ptr &addr) = 0;
-
-    // IP-mapped ACL (IPMA) notification
-    virtual void ipma_notify(const struct ovpn_tun_head_ipma &ipma) = 0;
-
-    // ID
-    virtual std::string instance_name() const = 0;
-    virtual std::uint64_t instance_id() const = 0;
-
-    // return a JSON string describing connected user
-    virtual std::string describe_user(const bool show_userprop) = 0;
-
-    // disconnect
-    virtual void disconnect_user(const HaltRestart::Type type,
-                                 const AuthStatus::Type auth_status,
-                                 const std::string &reason,
-                                 const bool tell_client) = 0;
-
-    // send control channel message
-    virtual void post_info_user(BufferPtr &&info) = 0;
-
-    // set ACL index for user
-    virtual void set_acl_index(const int acl_index,
-                               const std::string *username,
-                               const bool challenge) = 0;
-
-    // notify of local user properties update
-    virtual void userprop_local_update() = 0;
-
-    // create, update, or delete a DOMA ACL
-    virtual Json::Value doma_acl(const Json::Value &root) = 0;
 
     // override keepalive parameters
     virtual void keepalive_override(unsigned int &keepalive_ping,
