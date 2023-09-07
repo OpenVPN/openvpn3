@@ -211,26 +211,26 @@ done:
 
 void xkey_set_logging_cb_function(XKEY_LOGGING_CALLBACK_fn logfunc)
 {
-  xkey_log_callback = logfunc;
+    xkey_log_callback = logfunc;
 }
 
 
-void
-openvpn_msg_xkey_compat(const unsigned int flags, const char *format, ...) {
-  va_list arglist;
-  va_start(arglist, format);
+void openvpn_msg_xkey_compat(const unsigned int flags, const char *format, ...)
+{
+    va_list arglist;
+    va_start(arglist, format);
 
-  char msgbuf[4096] = { 0 };
+    char msgbuf[4096] = {0};
 
-  vsnprintf(msgbuf, sizeof(msgbuf), format, arglist);
+    vsnprintf(msgbuf, sizeof(msgbuf), format, arglist);
 
-  /* Do not print debug messages from the xkey provider */
-  bool debug = (flags & D_XKEY) == 0;
-  if (debug && xkey_log_callback != NULL)
-  {
-	  xkey_log_callback(msgbuf, debug);
-  }
-  va_end(arglist);
+    /* Do not print debug messages from the xkey provider */
+    bool debug = (flags & D_XKEY) == 0;
+    if (debug && xkey_log_callback != NULL)
+    {
+        xkey_log_callback(msgbuf, debug);
+    }
+    va_end(arglist);
 }
 
 #endif /* HAVE_XKEY_PROVIDER */
