@@ -251,21 +251,27 @@ TEST_F(SitnlTest, TestAddRoute6)
     ASSERT_EQ(SITNL::net_route_add(IP::Route6(route6), IPv6::Addr::from_string(gw6), dev, 0, 0), 0);
 
     std::string dst{"fe80:20c3:cccc:dddd:cccc:dddd:eeee:ffff"};
+    /* Bug in iproute 6.1.0 with glibc 2.37+ that truncates
+       long ipv6 addresses due to strcpy on overlapping buffers.
+       See also https://bugzilla.redhat.com/show_bug.cgi?id=2209701 */
+    std::string dst_trunc{dst};
+    dst_trunc.resize(31);
 
-    ip_route_get(dst, [this, &dst](std::vector<std::string> &v1, const std::string &out, bool &called)
+    ip_route_get(dst, [this, &dst, &dst_trunc](std::vector<std::string> &v1, const std::string &out, bool &called)
                  {
-	  if (v1[0] == dst)
+	  if (v1[0] == dst || v1[0] == dst_trunc)
 	  {
+	    std::string dst_out = (v1[0] == dst) ? dst : dst_trunc;
 	    called = true;
 	    v1.resize(7);
-	    // iptools 4.15 (Ubuntu 18)
-	    auto expected1 = std::vector<std::string>{dst, "from", "::", "via", gw6, "dev", dev};
+	    // iproute 4.15 (Ubuntu 18)
+	    auto expected1 = std::vector<std::string>{dst_out, "from", "::", "via", gw6, "dev", dev};
 	    auto ok1 = (v1 == expected1);
 
 	    auto v2 = v1;
 	    v2.resize(5);
-	    // iptools 4.11 (CentOS 7)
-	    auto expected2 = std::vector<std::string>{dst, "via", gw6, "dev", dev};
+	    // iproute 4.11 (CentOS 7)
+	    auto expected2 = std::vector<std::string>{dst_out, "via", gw6, "dev", dev};
 	    auto ok2 = (v2 == expected2);
 
 	    if (!ok1 && !ok2)

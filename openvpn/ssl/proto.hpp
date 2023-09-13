@@ -1017,8 +1017,8 @@ class ProtoContext
             if (relay_mode)
                 out << "IV_RELAY=1\n";
             const std::string ret = out.str();
-            OPENVPN_LOG_PROTO("Peer Info:" << std::endl
-                                           << ret);
+            OPENVPN_LOG_PROTO("Sending Peer Info:" << std::endl
+                                                   << ret);
             return ret;
         }
 

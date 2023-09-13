@@ -548,7 +548,8 @@ class Setup : public SetupBase
         if (pull.reroute_gw.ipv4)
         {
             // get default gateway
-            const Util::BestGateway gw{AF_INET, pull.remote_address.address, tap.index};
+            ADDRESS_FAMILY af = pull.remote_address.ipv6 ? AF_INET6 : AF_INET;
+            const Util::BestGateway gw{af, pull.remote_address.address, tap.index};
 
             if (!gw.local_route())
             {

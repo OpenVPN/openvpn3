@@ -358,7 +358,7 @@ class ParseClientConfig
             if (content_list)
             {
                 content_list->preprocess();
-                options.parse_from_key_value_list(*content_list, &limits);
+                options.parse_from_key_value_list(*content_list, "OVPN_ACCESS_SERVER", &limits);
             }
             process_setenv_opt(options);
             options.update_map();
@@ -367,7 +367,7 @@ class ParseClientConfig
             bool added = false;
 
             // client
-            if (!options.exists("client"))
+            if (options.exists("tls-client") && options.exists("pull"))
             {
                 Option opt;
                 opt.push_back("client");

@@ -435,7 +435,7 @@ class OpenSSLContext : public SSLFactoryAPI
             }
 
             // DH
-            if (mode.is_server())
+            if (mode.is_server() && opt.exists("dh"))
             {
                 const std::string &dh_txt = opt.get("dh", 1, Option::MULTILINE);
                 load_dh(dh_txt);
@@ -1195,15 +1195,16 @@ class OpenSSLContext : public SSLFactoryAPI
                 throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
 
             // Set DH object
-            if (!config->dh.defined())
-                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: DH not defined");
+            if (config->dh.defined())
+            {
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-            if (!SSL_CTX_set0_tmp_dh_pkey(ctx.get(), config->dh.obj_release()))
-                throw OpenSSLException("OpenSSLContext: SSL_CTX_set0_tmp_dh_pkey failed");
+                if (!SSL_CTX_set0_tmp_dh_pkey(ctx.get(), config->dh.obj_release()))
+                    throw OpenSSLException("OpenSSLContext: SSL_CTX_set0_tmp_dh_pkey failed");
 #else
-            if (!SSL_CTX_set_tmp_dh(ctx.get(), config->dh.obj()))
-                throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
+                if (!SSL_CTX_set_tmp_dh(ctx.get(), config->dh.obj()))
+                    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
 #endif
+            }
             if (config->flags & SSLConst::SERVER_TO_SERVER)
                 SSL_CTX_set_purpose(ctx.get(), X509_PURPOSE_SSL_SERVER);
 
