@@ -223,3 +223,88 @@ TEST(continuation, test2)
     }
 #endif
 }
+
+TEST(continuation, push_update_add)
+{
+    OptionListContinuation cc;
+
+    auto orig_opts = OptionList::parse_from_csv_static("a,b,c", nullptr);
+    cc.add(orig_opts, nullptr);
+    cc.finalize(nullptr);
+
+    cc.reset_completion();
+
+    auto update = OptionList::parse_from_csv_static("dns,ifconfig", nullptr);
+    cc.add(update, nullptr, true);
+    cc.finalize(nullptr);
+
+    ASSERT_EQ(cc.size(), 5);
+}
+
+TEST(continuation, push_update_add_unsupported)
+{
+    OptionListContinuation cc;
+
+    auto orig_opts = OptionList::parse_from_csv_static("a,b,c", nullptr);
+    cc.add(orig_opts, nullptr);
+    cc.finalize(nullptr);
+
+    cc.reset_completion();
+
+    auto update = OptionList::parse_from_csv_static("my_unsupported_option,?e", nullptr);
+    JY_EXPECT_THROW(cc.add(update, nullptr, true), OptionListContinuation::push_update_unsupported_option, "my_unsupported_option");
+    cc.finalize(nullptr);
+
+    update = OptionList::parse_from_csv_static("?f,?g", nullptr);
+    cc.add(update, nullptr, true);
+    cc.finalize(nullptr);
+
+    ASSERT_EQ(cc.size(), 5);
+}
+
+TEST(continuation, push_update_remove)
+{
+    OptionListContinuation cc;
+
+    auto update = OptionList::parse_from_csv_static("-my_unsupported_option", nullptr);
+    JY_EXPECT_THROW(cc.add(update, nullptr, true), OptionListContinuation::push_update_unsupported_option, "my_unsupported_option");
+    cc.finalize(nullptr);
+    cc.reset_completion();
+
+    update = OptionList::parse_from_csv_static("-?my_unsupported_optional_option", nullptr);
+    cc.add(update, nullptr, true);
+    cc.finalize(nullptr);
+    cc.reset_completion();
+}
+
+TEST(continuation, push_update_add_multiple)
+{
+    OptionListContinuation cc;
+
+    // this adds 7 options
+    auto orig_opts = OptionList::parse_from_csv_static("a,b,c,route 0,ifconfig,f,dns", nullptr);
+    cc.add(orig_opts, nullptr);
+    cc.finalize(nullptr);
+
+    cc.reset_completion();
+
+    // after we should have 9 options
+    auto update = OptionList::parse_from_csv_static("route 1,route 2,-ifconfig,?bla,push-continuation 2", nullptr);
+    cc.add(update, nullptr, true);
+
+    // after we should have 10 options (9 + push-continuation)
+    update = OptionList::parse_from_csv_static("route 3,route 4,-dns", nullptr);
+    cc.add(update, nullptr, true);
+
+    cc.finalize(nullptr);
+
+    ASSERT_TRUE(cc.exists("f"));
+    ASSERT_FALSE(cc.exists("dns"));
+    ASSERT_FALSE(cc.exists("ifconfig"));
+    ASSERT_TRUE(cc.exists("bla"));
+
+    const auto &idx = cc.get_index_ptr("route");
+    ASSERT_EQ(idx->size(), 4);
+
+    ASSERT_EQ(cc.size(), 10);
+}

@@ -874,6 +874,37 @@ class Session : ProtoContextCallbackInterface,
         }
     }
 
+    /**
+     * @brief Handles incoming PUSH_UPDATE message
+     *
+     * @param msg Comma-separated list of options prefixed with PUSH_UPDATE tag
+     */
+    void recv_push_update(const std::string &msg)
+    {
+        received_options.reset_completion();
+
+        // parse the received options
+        auto opt_str = msg.substr(strlen("PUSH_UPDATE,"));
+        auto opts = OptionList::parse_from_csv_static(opt_str, &pushed_options_limit);
+
+        received_options.add(opts, pushed_options_filter.get(), true);
+
+        if (received_options.complete())
+        {
+            // show options
+            OPENVPN_LOG("PUSH UPDATE:\n"
+                        << render_options_sanitized(opts, Option::RENDER_PASS_FMT | Option::RENDER_NUMBER | Option::RENDER_BRACKET));
+
+            // Merge local and pushed options
+            received_options.finalize(pushed_options_merger);
+
+            if (tun)
+            {
+                tun->apply_push_update(received_options, *transport);
+            }
+        }
+    }
+
     // proto base class calls here for app-level control-channel messages received
     void control_recv(BufferPtr &&app_bp) override
     {
@@ -918,7 +949,12 @@ class Session : ProtoContextCallbackInterface,
         {
             recv_custom_control_message(msg);
         }
+        else if (string::starts_with(msg, "PUSH_UPDATE,"))
+        {
+            recv_push_update(msg);
+        }
     }
+
     /**
       @brief receive, validate, and dispatch ACC messages
       @param msg the received message
