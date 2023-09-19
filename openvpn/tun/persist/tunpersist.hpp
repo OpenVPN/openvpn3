@@ -127,9 +127,10 @@ class TunPersistTemplate : public TunWrapTemplate<SCOPED_OBJ>
 
     // Possibly save tunnel fd/handle, state, and options.
     bool persist_tun_state(const typename SCOPED_OBJ::base_type obj,
-                           const STATE &state)
+                           const STATE &state,
+                           bool save_replace_sock = true)
     {
-        if (!enable_persistence_ || !use_persisted_tun_)
+        if ((!enable_persistence_ || !use_persisted_tun_) && save_replace_sock)
         {
             TunWrapTemplate<SCOPED_OBJ>::save_replace_sock(obj);
         }

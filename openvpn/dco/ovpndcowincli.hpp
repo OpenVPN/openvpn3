@@ -73,12 +73,8 @@ class OvpnDcoWinClient : public Client,
         return send_(buf);
     }
 
-    void tun_start(const OptionList &opt,
-                   TransportClient &transcli,
-                   CryptoDCSettings &dc_settings) override
+    void setup_tun(const OptionList &opt, TransportClient &transcli, bool is_tun_start = true)
     {
-        halt = false;
-
         const IP::Addr server_addr = transcli.server_endpoint_addr();
 
         // Check if persisted tun session matches properties of to-be-created session
@@ -117,7 +113,8 @@ class OvpnDcoWinClient : public Client,
 
             // persist tun settings state
             if (tun_persist->persist_tun_state(handle_(),
-                                               {state, tun_setup_->get_adapter_state()}))
+                                               {state, tun_setup_->get_adapter_state()},
+                                               is_tun_start))
                 OPENVPN_LOG("TunPersist: saving tun context:" << std::endl
                                                               << tun_persist->options());
 
@@ -129,6 +126,28 @@ class OvpnDcoWinClient : public Client,
             // arm fail handler which is invoked when service process exits
             set_service_fail_handler();
         }
+    }
+
+    void apply_push_update(const OptionList &opt, TransportClient &transcli) override
+    {
+        auto adapter_state = tun_setup_->get_adapter_state();
+
+        // create new tun setup object
+        tun_setup_ = config->tun.new_setup_obj(io_context, config->tun.allow_local_dns_resolvers);
+        tun_setup_->set_adapter_state(adapter_state);
+
+        setup_tun(opt, transcli, false);
+
+        tun_parent->tun_connected();
+    }
+
+    void tun_start(const OptionList &opt,
+                   TransportClient &transcli,
+                   CryptoDCSettings &dc_settings) override
+    {
+        halt = false;
+
+        setup_tun(opt, transcli);
 
         set_keepalive_();
 
