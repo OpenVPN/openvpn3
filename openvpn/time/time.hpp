@@ -136,6 +136,8 @@ class TimeType
 
         Duration operator+(const int delta) const
         {
+            if (is_infinite())
+                return infinite();
             T duration = duration_;
             if (delta >= 0)
                 duration += delta;
