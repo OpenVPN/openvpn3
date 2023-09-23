@@ -380,7 +380,11 @@ class TimeType
         std::string ret;
         if (df >= 0.0)
             ret += '+';
-        ret += openvpn::to_string(df);
+        const int idf = int(df);
+        if (df == static_cast<double>(idf))
+            ret += openvpn::to_string(idf);
+        else
+            ret += openvpn::to_string(df);
         return ret;
     }
 
