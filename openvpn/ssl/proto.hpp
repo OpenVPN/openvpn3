@@ -226,6 +226,7 @@ class ProtoContext
         ACTIVE = 10,
     };
 
+  public:
     enum iv_proto_flag : unsigned int
     {
         // See ssl.h in openvpn2 for detailed documentation of IV_PROTO
@@ -240,6 +241,7 @@ class ProtoContext
         IV_PROTO_DYN_TLS_CRYPT = (1 << 9),
     };
 
+  protected:
     enum tlv_types : uint16_t
     {
         EARLY_NEG_FLAGS = 0x0001
