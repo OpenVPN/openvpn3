@@ -803,7 +803,7 @@ class NoisyWire
                 std::cout << now->raw() << " " << title << " Simulating a corrupted packet" << std::endl;
 #endif
                 const size_t pos = random.randrange(bp->size());
-                const unsigned char value = random.randrange(256);
+                const unsigned char value = random.randrange(std::numeric_limits<unsigned char>::max());
                 (*bp)[pos] = value;
             }
 #endif
