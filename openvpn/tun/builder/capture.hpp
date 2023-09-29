@@ -458,14 +458,14 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
         RouteAddress r;
         r.address = address;
-        r.prefix_length = prefix_length;
+        r.prefix_length = static_cast<unsigned char>(prefix_length);
         r.gateway = gateway;
         r.ipv6 = ipv6;
         r.net30 = net30;
         if (ipv6)
-            tunnel_address_index_ipv6 = (int)tunnel_addresses.size();
+            tunnel_address_index_ipv6 = static_cast<int>(tunnel_addresses.size());
         else
-            tunnel_address_index_ipv4 = (int)tunnel_addresses.size();
+            tunnel_address_index_ipv4 = static_cast<int>(tunnel_addresses.size());
         tunnel_addresses.push_back(r);
         return true;
     }
@@ -488,7 +488,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
         Route r;
         r.address = address;
-        r.prefix_length = prefix_length;
+        r.prefix_length = static_cast<unsigned char>(prefix_length);
         r.metric = metric;
         r.ipv6 = ipv6;
         add_routes.push_back(r);
@@ -499,7 +499,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     {
         Route r;
         r.address = address;
-        r.prefix_length = prefix_length;
+        r.prefix_length = static_cast<unsigned char>(prefix_length);
         r.metric = metric;
         r.ipv6 = ipv6;
         exclude_routes.push_back(r);
