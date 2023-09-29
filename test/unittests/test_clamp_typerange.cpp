@@ -250,7 +250,7 @@ TEST(clamp_notify, sign_mismatch_32_5)
 TEST(clamp_notify, sign_mismatch_32_6)
 {
     int32_t s32 = std::numeric_limits<int32_t>::max();
-    auto result = clamp_notify<uint8_t>(s32, [](int32_t inVal)
+    auto result = clamp_notify<uint8_t>(s32, [](int32_t inVal) -> uint8_t
                                         { return 0; });
     EXPECT_EQ(result, 0);
 }
@@ -258,15 +258,15 @@ TEST(clamp_notify, sign_mismatch_32_6)
 TEST(clamp_notify, sign_mismatch_32_7)
 {
     int32_t s32 = 42;
-    auto result = clamp_notify<uint8_t>(s32, [](int32_t inVal)
-                                        { return -1; });
+    auto result = clamp_notify<uint8_t>(s32, [](int32_t inVal) -> uint8_t
+                                        { return 0; });
     EXPECT_EQ(result, 42);
 }
 
 TEST(clamp_notify, s_range_mismatch_16_64_1)
 {
     int64_t s64 = std::numeric_limits<int64_t>::max();
-    auto result = clamp_notify<int16_t>(s64, [](int64_t inVal)
+    auto result = clamp_notify<int16_t>(s64, [](int64_t inVal) -> int16_t
                                         { return 0; });
     EXPECT_EQ(result, 0);
 }
@@ -274,7 +274,7 @@ TEST(clamp_notify, s_range_mismatch_16_64_1)
 TEST(clamp_notify, s_range_match_16_64_1)
 {
     int64_t s64 = 0;
-    auto result = clamp_notify<int16_t>(s64, [](int64_t inVal)
+    auto result = clamp_notify<int16_t>(s64, [](int64_t inVal) -> int16_t
                                         { return -1; });
     EXPECT_EQ(result, 0);
 }
@@ -282,7 +282,7 @@ TEST(clamp_notify, s_range_match_16_64_1)
 TEST(clamp_notify, u_range_mismatch_16_64_1)
 {
     uint64_t u64 = std::numeric_limits<uint64_t>::max();
-    auto result = clamp_notify<uint16_t>(u64, [](uint64_t inVal)
+    auto result = clamp_notify<uint16_t>(u64, [](uint64_t inVal) -> uint16_t
                                          { return 42; });
     EXPECT_EQ(result, 42);
 }
