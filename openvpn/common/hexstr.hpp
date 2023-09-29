@@ -72,7 +72,7 @@ inline char render_hex_char(const int c, const bool caps = false)
  *          input character is invalid, outside of {0..9,A-F,a-f}, it will
  *          return -1.
  */
-inline int parse_hex_char(const char c)
+inline int parse_hex_char(const int c)
 {
     if (c >= '0' && c <= '9')
         return c - '0';
