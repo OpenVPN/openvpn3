@@ -401,7 +401,7 @@ class Listener : public ProxyListener
         Time::Duration timeout_duration;
 
       private:
-        typedef TCPTransport::Link<AsioProtocol, Client *, false> LinkImpl;
+        typedef TCPTransport::TCPLink<AsioProtocol, Client *, false> LinkImpl;
         friend LinkImpl::Base; // calls tcp_* handlers
 
         void generate_reply_headers_http(std::ostream &os)

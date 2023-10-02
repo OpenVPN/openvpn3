@@ -84,10 +84,10 @@ class Client : public TransportClient, AsyncResolvableUDP
 {
     typedef RCPtr<Client> Ptr;
 
-    friend class ClientConfig;   // calls constructor
-    friend class Link<Client *>; // calls udp_read_handler
+    friend class ClientConfig;      // calls constructor
+    friend class UDPLink<Client *>; // calls udp_read_handler
 
-    typedef Link<Client *> LinkImpl;
+    typedef UDPLink<Client *> LinkImpl;
 
   public:
     void transport_start() override

@@ -68,15 +68,15 @@ struct PacketFrom
 };
 
 template <typename ReadHandler>
-class Link : public RC<thread_unsafe_refcount>
+class UDPLink : public RC<thread_unsafe_refcount>
 {
   public:
-    typedef RCPtr<Link> Ptr;
+    typedef RCPtr<UDPLink> Ptr;
 
-    Link(ReadHandler read_handler_arg,
-         openvpn_io::ip::udp::socket &socket_arg,
-         const Frame::Context &frame_context_arg,
-         const SessionStats::Ptr &stats_arg)
+    UDPLink(ReadHandler read_handler_arg,
+            openvpn_io::ip::udp::socket &socket_arg,
+            const Frame::Context &frame_context_arg,
+            const SessionStats::Ptr &stats_arg)
         : socket(socket_arg),
           halt(false),
           read_handler(read_handler_arg),
@@ -131,7 +131,7 @@ class Link : public RC<thread_unsafe_refcount>
         frame_context.reset_align_adjust(align_adjust);
     }
 
-    ~Link()
+    ~UDPLink()
     {
         stop();
     }

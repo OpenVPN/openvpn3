@@ -634,7 +634,7 @@ class HTTPCore : public Base, public TransportClientParent
     }
 
   private:
-    typedef TCPTransport::Link<AsioProtocol, HTTPCore *, false> LinkImpl;
+    typedef TCPTransport::TCPLink<AsioProtocol, HTTPCore *, false> LinkImpl;
     friend LinkImpl::Base; // calls tcp_* handlers
 
     void verify_frame()

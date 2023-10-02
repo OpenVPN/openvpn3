@@ -85,7 +85,7 @@ class Client : public TransportClient, AsyncResolvableTCP
 {
     typedef RCPtr<Client> Ptr;
 
-    typedef Link<openvpn_io::ip::tcp, Client *, false> LinkImpl;
+    typedef TCPLink<openvpn_io::ip::tcp, Client *, false> LinkImpl;
 #ifdef OPENVPN_TLS_LINK
     typedef TLSLink<openvpn_io::ip::tcp, Client *, false> LinkImplTLS;
 #endif

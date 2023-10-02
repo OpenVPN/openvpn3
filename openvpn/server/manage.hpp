@@ -179,7 +179,7 @@ struct Factory : public RC<thread_unsafe_refcount>
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    virtual Send::Ptr new_obj(Recv *instance) = 0;
+    virtual Send::Ptr new_man_obj(Recv *instance) = 0;
 };
 
 } // namespace ManClientInstance

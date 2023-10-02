@@ -3929,6 +3929,9 @@ class ProtoContext
         return select_key_context(type, true).net_recv(std::move(pkt));
     }
 
+    // this version only appears to support test_proto.cpp; suggest creating a
+    // local BufferAllocated and move the BufferPtr contents into it; then use
+    // the version above
     bool control_net_recv(const PacketType &type, BufferPtr &&net_bp)
     {
         Packet pkt(std::move(net_bp), type.opcode);

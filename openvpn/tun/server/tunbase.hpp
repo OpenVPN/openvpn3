@@ -113,7 +113,7 @@ struct Factory : public RC<thread_unsafe_refcount>
 {
     typedef RCPtr<Factory> Ptr;
 
-    virtual Send::Ptr new_obj(Recv *parent) = 0;
+    virtual Send::Ptr new_tun_obj(Recv *parent) = 0;
 };
 
 } // namespace TunClientInstance

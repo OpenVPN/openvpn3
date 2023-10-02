@@ -376,7 +376,7 @@ class LinkCommon : public LinkBase
 
     void handle_recv(PacketFrom::SPtr pfp, const openvpn_io::error_code &error, const size_t bytes_recvd)
     {
-        OPENVPN_LOG_TCPLINK_VERBOSE("Link::handle_recv: " << error.message());
+        OPENVPN_LOG_TCPLINK_VERBOSE("TCPLink::handle_recv: " << error.message());
         if (!halt)
         {
             if (!error)

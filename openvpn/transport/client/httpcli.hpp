@@ -257,7 +257,7 @@ class Client : public TransportClient, AsyncResolvableTCP
 {
     typedef RCPtr<Client> Ptr;
 
-    typedef TCPTransport::Link<openvpn_io::ip::tcp, Client *, false> LinkImpl;
+    typedef TCPTransport::TCPLink<openvpn_io::ip::tcp, Client *, false> LinkImpl;
 
     friend class ClientConfig; // calls constructor
     friend LinkImpl::Base;     // calls tcp_read_handler

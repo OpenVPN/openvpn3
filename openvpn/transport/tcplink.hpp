@@ -48,9 +48,9 @@ namespace openvpn {
 namespace TCPTransport {
 
 template <typename Protocol, typename ReadHandler, bool RAW_MODE_ONLY>
-class Link : public LinkCommon<Protocol,
-                               ReadHandler,
-                               RAW_MODE_ONLY>
+class TCPLink : public LinkCommon<Protocol,
+                                  ReadHandler,
+                                  RAW_MODE_ONLY>
 {
     typedef std::deque<BufferPtr> Queue;
 
@@ -59,18 +59,18 @@ class Link : public LinkCommon<Protocol,
                        ReadHandler,
                        RAW_MODE_ONLY>
         Base;
-    typedef RCPtr<Link> Ptr;
+    typedef RCPtr<TCPLink> Ptr;
 
     typedef Protocol protocol;
 
     friend Base;
 
-    Link(ReadHandler read_handler_arg,
-         typename Protocol::socket &socket_arg,
-         const size_t send_queue_max_size_arg, // 0 to disable
-         const size_t free_list_max_size_arg,
-         const Frame::Context &frame_context_arg,
-         const SessionStats::Ptr &stats_arg)
+    TCPLink(ReadHandler read_handler_arg,
+            typename Protocol::socket &socket_arg,
+            const size_t send_queue_max_size_arg, // 0 to disable
+            const size_t free_list_max_size_arg,
+            const Frame::Context &frame_context_arg,
+            const SessionStats::Ptr &stats_arg)
         : Base(read_handler_arg,
                socket_arg,
                send_queue_max_size_arg,
