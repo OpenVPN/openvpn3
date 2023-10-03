@@ -52,10 +52,10 @@ namespace openvpn {
  *
  * This data structure is always sent
  * over the net in network byte order,
- * by calling htonpid, ntohpid,
- * htontime, and ntohtime on the
- * data elements to change them
- * to and from standard sizes.
+ * by calling htonl, ntohl, on the
+ * 32-bit data elements, id_t and
+ * net_time_t, to change them to and
+ * from network order.
  *
  * In addition, time is converted to
  * a PacketID::net_time_t before sending,
@@ -81,7 +81,7 @@ struct PacketID
     id_t id;     // legal values are 1 through 2^32-1
     time_t time; // converted to PacketID::net_time_t before transmission
 
-    static size_t size(const int form)
+    static constexpr size_t size(const int form)
     {
         if (form == PacketID::LONG_FORM)
             return longidsize;
@@ -103,7 +103,8 @@ struct PacketID
         time = time_t(0);
     }
 
-    void read(Buffer &buf, const int form)
+    template <typename BufType> // so it can take a Buffer or a ConstBuffer
+    void read(BufType &buf, const int form)
     {
         id_t net_id;
         net_time_t net_time;
@@ -165,28 +166,23 @@ class PacketIDSend
 
     PacketIDSend()
     {
-        init(PacketID::SHORT_FORM, 0);
+        init(PacketID::SHORT_FORM);
     }
 
-    PacketIDSend(const int form, PacketID::id_t startid)
+    explicit PacketIDSend(int form, PacketID::id_t start_at = PacketID::id_t(0))
     {
-        init(PacketID::SHORT_FORM, startid);
+        init(form, start_at);
     }
 
     /**
      * @param form PacketID::LONG_FORM or PacketID::SHORT_FORM
-     * @param initial id for the sending
+     * @param start_at initial id for the sending
      */
-    void init(const int form, PacketID::id_t startid)
+    void init(const int form, PacketID::id_t start_at = 0)
     {
-        pid_.id = PacketID::id_t(startid);
+        pid_.id = start_at;
         pid_.time = PacketID::time_t(0);
         form_ = form;
-    }
-
-    void init(const int form)
-    {
-        init(form, 0);
     }
 
     PacketID next(const PacketID::time_t now)

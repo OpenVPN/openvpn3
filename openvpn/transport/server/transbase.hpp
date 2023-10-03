@@ -35,11 +35,21 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/addr/route.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
-#include <openvpn/tun/server/tunbase.hpp>
 #include <openvpn/server/servhalt.hpp>
 #include <openvpn/server/peerstats.hpp>
 #include <openvpn/server/peeraddr.hpp>
 #include <openvpn/ssl/datalimit.hpp>
+#include <openvpn/ssl/psid.hpp>
+
+// TunClientInstance fwd decl replaces
+//#include <openvpn/tun/server/tunbase.hpp>
+namespace openvpn {
+class PsidCookie;
+namespace TunClientInstance {
+struct Recv;
+struct Send;
+} // namespace TunClientInstance
+} // namespace openvpn
 
 // used by ipma_notify()
 struct ovpn_tun_head_ipma;
@@ -100,7 +110,8 @@ struct Recv : public virtual RC<thread_unsafe_refcount>
 
     virtual void start(const Send::Ptr &parent,
                        const PeerAddr::Ptr &addr,
-                       const int local_peer_id) = 0;
+                       const int local_peer_id,
+                       const ProtoSessionID cookie_psid = ProtoSessionID()) = 0;
 
     // Called with OpenVPN-encapsulated packets from transport layer.
     // Returns true if packet successfully validated.

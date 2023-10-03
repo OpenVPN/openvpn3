@@ -70,14 +70,14 @@ class ReliableSendTemplate
         : next(0)
     {
     }
-    ReliableSendTemplate(const id_t span)
+    ReliableSendTemplate(const id_t span, id_t start_at = 0)
     {
-        init(span);
+        init(span, start_at);
     }
 
-    void init(const id_t span)
+    void init(const id_t span, id_t start_at = 0)
     {
-        next = 0;
+        next = start_at;
         window_.init(next, span);
     }
 

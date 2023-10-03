@@ -110,7 +110,7 @@ class ServerProto
     };
 
     // This is the main server-side client instance object
-    class Session : Base,                 // OpenVPN protocol implementation
+    class Session : ProtoContext,         // OpenVPN protocol impl (aka, Base per typedef above)
                     public TransportLink, // Transport layer
                     public TunLink,       // Tun/routing layer
                     public ManLink        // Management layer
@@ -138,16 +138,17 @@ class ServerProto
 
         virtual void start(const TransportClientInstance::Send::Ptr &parent,
                            const PeerAddr::Ptr &addr,
-                           const int local_peer_id) override
+                           const int local_peer_id,
+                           const ProtoSessionID cookie_psid = ProtoSessionID()) override
         {
             TransportLink::send = parent;
             peer_addr = addr;
 
             // init OpenVPN protocol handshake
             Base::update_now();
-            Base::reset();
+            Base::reset(cookie_psid);
             Base::set_local_peer_id(local_peer_id);
-            Base::start();
+            Base::start(cookie_psid);
             Base::flush(true);
 
             // coarse wakeup range

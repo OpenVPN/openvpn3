@@ -47,14 +47,14 @@ class ReliableRecvTemplate
     ReliableRecvTemplate()
     {
     }
-    ReliableRecvTemplate(const id_t span)
+    ReliableRecvTemplate(const id_t span, id_t start_at = 0)
     {
-        init(span);
+        init(span, start_at);
     }
 
-    void init(const id_t span)
+    void init(const id_t span, id_t start_at = 0)
     {
-        window_.init(0, span);
+        window_.init(start_at, span);
     }
 
     // Call with unsequenced packet off of the wire.
@@ -66,15 +66,17 @@ class ReliableRecvTemplate
     };
     unsigned int receive(const PACKET &packet, const id_t id)
     {
+        unsigned int rflags;
         if (window_.in_window(id))
         {
             Message &m = window_.ref_by_id(id);
             m.id_ = id;
             m.packet = packet;
-            return ACK_TO_SENDER | IN_WINDOW;
+            rflags = ACK_TO_SENDER | IN_WINDOW;
         }
         else
-            return window_.pre_window(id) ? ACK_TO_SENDER : 0;
+            rflags = window_.pre_window(id) ? ACK_TO_SENDER : 0;
+        return rflags;
     }
 
     // Return true if next_sequenced() is ready to return next message

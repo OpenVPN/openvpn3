@@ -100,12 +100,16 @@ class ProtoStackBase
                    TimePtr now_arg,                       // pointer to current time
                    const Time::Duration &tls_timeout_arg, // packet retransmit timeout
                    const Frame::Ptr &frame,               // contains info on how to allocate and align buffers
-                   const SessionStats::Ptr &stats_arg)    // error statistics
+                   const SessionStats::Ptr &stats_arg,    // error statistics
+                   bool psid_cookie_mode)                 // start the reliability layer at packet id 1, not 0
+
         : tls_timeout(tls_timeout_arg),
           ssl_(ssl_factory.ssl()),
           frame_(frame),
           stats(stats_arg),
-          now(now_arg)
+          now(now_arg),
+          rel_recv(ovpn_receiving_window, psid_cookie_mode ? 1 : 0),
+          rel_send(ovpn_sending_window, psid_cookie_mode ? 1 : 0)
     {
     }
 
@@ -510,8 +514,8 @@ class ProtoStackBase
 
   protected:
     TimePtr now;
-    ReliableRecv rel_recv{ovpn_receiving_window};
-    ReliableSend rel_send{ovpn_sending_window};
+    ReliableRecv rel_recv;
+    ReliableSend rel_send;
     ReliableAck xmit_acks{};
 };
 

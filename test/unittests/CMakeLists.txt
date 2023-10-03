@@ -119,6 +119,9 @@ if (UNIX)
 
       # Uses Unix Pipe semantics
       test_pipe.cpp
+
+      # for now, only for ovpn3 servers (i.e., pgserv)
+      test_psid_cookie.cpp
       )
 endif ()
 

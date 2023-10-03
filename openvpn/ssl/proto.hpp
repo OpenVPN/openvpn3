@@ -1635,12 +1635,13 @@ class ProtoContext
             }
         }
 
-        KeyContext(ProtoContext &p, const bool initiator)
+        KeyContext(ProtoContext &p, const bool initiator, bool psid_cookie_mode = false)
             : Base(*p.config->ssl_factory,
                    p.config->now,
                    p.config->tls_timeout,
                    p.config->frame,
-                   p.stats),
+                   p.stats,
+                   psid_cookie_mode),
               proto(p),
               state(STATE_UNDEF),
               crypto_flags(0),
@@ -1677,9 +1678,20 @@ class ProtoContext
             return Base::get_tls_warnings();
         }
 
-        // need to call only on the initiator side of the connection
-        void start()
+        /**
+         * @brief Initialize the state machine and start protocol negotiation
+         *
+         * Called by ProtoContext::start()
+         *
+         * @param cookie_psid  see comment in ProtoContext::reset()
+         */
+        void start(const ProtoSessionID cookie_psid = ProtoSessionID())
         {
+            if (cookie_psid.defined())
+            {
+                set_state(S_WAIT_RESET_ACK);
+                dirty = true;
+            }
             if (state == C_INITIAL || state == S_INITIAL)
             {
                 send_reset();
@@ -3365,6 +3377,34 @@ class ProtoContext
     };
 
   public:
+    class PsidCookieHelper
+    {
+      public:
+        PsidCookieHelper(unsigned int op_field)
+            : op_code_(opcode_extract(op_field)), key_id_(key_id_extract(op_field))
+        {
+        }
+
+        bool is_clients_initial_reset() const
+        {
+            return key_id_ == 0 && op_code_ == CONTROL_HARD_RESET_CLIENT_V2;
+        }
+
+        bool is_clients_server_reset_ack() const
+        {
+            return key_id_ == 0 && (op_code_ == CONTROL_V1 || op_code_ == ACK_V1);
+        }
+
+        static unsigned int get_server_hard_reset_opfield()
+        {
+            return op_compose(CONTROL_HARD_RESET_SERVER_V2, 0);
+        }
+
+      private:
+        const unsigned int op_code_;
+        const unsigned int key_id_;
+    };
+
     class TLSWrapPreValidate : public RC<thread_unsafe_refcount>
     {
       public:
@@ -3637,7 +3677,18 @@ class ProtoContext
         tls_crypt_metadata = c.tls_crypt_metadata_factory->new_obj();
     }
 
-    void reset()
+    /**
+     * @brief Resets ProtoContext *this to it's initial state
+     *
+     * @param cookie_psid the ProtoSessionID parameter that allows a server
+     *  implementation using the psid cookie mechanism to pass in the verified hmac
+     *  server session cookie.  In the client implementation, the parameter is
+     *  meaningless and defaults to an empty ProtoSessionID which is created at compile
+     *  time since the default ProtoSessionID ctor is constexpr.  For the default
+     *  cookie_psid, defined() returns false (vs true for the verified session cookie)
+     *  so the absence of a parameter selects the correct code path.
+     */
+    void reset(const ProtoSessionID cookie_psid = ProtoSessionID())
     {
         const ProtoConfig &c = *config;
 
@@ -3697,8 +3748,16 @@ class ProtoContext
                 ta_hmac_recv->init(c.tls_key.slice(OpenVPNStaticKey::HMAC));
             }
 
-            // init tls_auth packet ID
-            ta_pid_send.init(PacketID::LONG_FORM);
+            /**
+             * @brief Initialize tls_auth packet ID for the send case
+             *
+             * The second argument sets the expected packet id.  If the server
+             * implementation is using the psid cookie mechanism, the state creation is
+             * deferred until the client's second packet, id 1, is received; otherwise we
+             * expect to handle the 1st packet, id 0.
+             *
+             */
+            ta_pid_send.init(PacketID::LONG_FORM, cookie_psid.defined() ? 1 : 0);
             ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
             break;
         case TLS_PLAIN:
@@ -3706,11 +3765,14 @@ class ProtoContext
         }
 
         // initialize proto session ID
-        psid_self.randomize(*c.prng);
+        if (cookie_psid.defined())
+            psid_self = cookie_psid;
+        else
+            psid_self.randomize(*c.prng);
         psid_peer.reset();
 
         // initialize key contexts
-        primary.reset(new KeyContext(*this, is_client()));
+        primary.reset(new KeyContext(*this, is_client(), cookie_psid.defined()));
         OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " New KeyContext PRIMARY id=" << primary->key_id());
 
         // initialize keepalive timers
@@ -3750,12 +3812,19 @@ class ProtoContext
         return PacketType(buf, *this);
     }
 
-    // start protocol negotiation
-    void start()
+    /**
+     * @brief Initialize the state machine and start protocol negotiation
+     *
+     * Called by both derived client and server protocol classes, this function hands
+     * off to the implementation in KeyContext::start()
+     *
+     * @param cookie_psid  see ProtoContext::reset()
+     */
+    void start(const ProtoSessionID cookie_psid = ProtoSessionID())
     {
         if (!primary)
             throw proto_error("start: no primary key");
-        primary->start();
+        primary->start(cookie_psid);
         update_last_received(); // set an upper bound on when we expect a response
     }
 
