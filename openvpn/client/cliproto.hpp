@@ -787,9 +787,9 @@ class Session : ProtoContext,
         // requires the VPN tunnel to be ready.
         ClientEvent::Base::Ptr ev;
         if (info_pre)
-            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO,")));
-        else
             ev = new ClientEvent::Info(msg.substr(std::strlen("INFO_PRE,")));
+        else
+            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO,")));
 
         // INFO_PRE is like INFO but it is never buffered
         if (info_hold && !info_pre)

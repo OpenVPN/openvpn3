@@ -330,6 +330,10 @@ class Client : public ClientBase
                 std::getline(std::cin, cr_response);
                 post_cc_msg("CR_RESPONSE," + base64->encode(cr_response));
             }
+            else
+            {
+                std::cout << "Unrecognized INFO/INFO_PRE message: " << ev.info << std::endl;
+            }
         }
     }
 
@@ -344,6 +348,7 @@ class Client : public ClientBase
                 return;
             }
 #ifdef OPENVPN_PLATFORM_MAC
+            std::cout << "Trying to launch " << url_str << std::endl;
             std::thread thr([url_str]()
                             {
 			    CFURLRef url = CFURLCreateWithBytes(
