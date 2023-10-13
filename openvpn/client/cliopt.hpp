@@ -647,6 +647,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "replay-window",
         "resolv-retry",
         "route-method", /* Windows specific fine tuning option */
+        "route-delay",
         "show-net-up",
         "socket-flags",
         "suppress-timestamps", /* harmless to ignore  */
