@@ -30,6 +30,7 @@
 
 #include <string>
 #include <unordered_set>
+#include <set>
 
 #include <openvpn/error/excode.hpp>
 
@@ -918,6 +919,9 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     void showOptionsByFunction(const OptionList &opt, T func, const std::string &message, bool fatal)
     {
         bool messageShown = false;
+        /* Remember options that caused a fatal error */
+        std::set<std::string> unsupported_option_in_config;
+
         for (size_t i = 0; i < opt.size(); ++i)
         {
             auto &o = opt[i];
@@ -929,13 +933,15 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                     messageShown = true;
                 }
                 o.touch();
+                unsupported_option_in_config.emplace(o.get(0, 0));
 
                 OPENVPN_LOG_NTNL(std::to_string(i) << ' ' << o.render(Option::RENDER_BRACKET | Option::RENDER_TRUNC_64) << std::endl);
             }
         }
         if (fatal && messageShown)
         {
-            throw option_error("sorry, unsupported options present in configuration: " + message);
+            throw option_error("sorry, unsupported options present in configuration: " + message
+                               + " (" + string::join(unsupported_option_in_config, ",") + ")");
         }
     }
 

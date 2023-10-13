@@ -182,6 +182,42 @@ TEST(config, dco_compatibility)
     }
 }
 
+
+TEST(config, server_options_present_in_error_msg)
+{
+    std::vector<std::string> server_options = {"server 10.0.0.0 255.255.255.0",
+                                               "push \"foo bar\""};
+
+    for (auto &option : server_options)
+    {
+        auto optname = option.substr(0, option.find(' '));
+        auto expected_error_string = "Server only option (" + optname;
+
+        OVPN_EXPECT_THROW(
+            load_client_config(minimalConfig + option),
+            option_error,
+            expected_error_string);
+    }
+}
+
+TEST(config, unknown_options_present_in_error_msg)
+{
+    std::vector<std::string> server_options = {"make-a-lot-of-noise", "water-the-plants"};
+
+    for (auto &option : server_options)
+    {
+        auto optname = option.substr(0, option.find(' '));
+        auto expected_error_string = "UNKNOWN/UNSUPPORTED OPTIONS (" + optname;
+
+        OVPN_EXPECT_THROW(
+            load_client_config(minimalConfig + option),
+            option_error,
+            expected_error_string);
+    }
+}
+
+
+
 TEST(config, client_missing_in_config)
 {
     std::string configNoClient = certconfig + "\nremote 1.2.3.4\n";
