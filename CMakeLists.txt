@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
-cmake_policy(SET CMP0048 NEW)
+cmake_minimum_required(VERSION 3.13...3.28)
 
 project(OpenVPN3-core VERSION 3)
 
