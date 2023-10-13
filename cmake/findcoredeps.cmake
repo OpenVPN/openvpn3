@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 3.13...3.28)
 
 set(CMAKE_CXX_STANDARD 17)
-
-#cmake_policy(SET CMP0079 NEW)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CORE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
-
 
 set(DEP_DIR ${CORE_DIR}/../deps CACHE PATH "Dependencies")
 option(USE_MBEDTLS "Use mbed TLS instead of OpenSSL")
