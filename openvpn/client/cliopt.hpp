@@ -880,7 +880,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         showUnusedOptionsByList(opt, settings_feature_not_implemented_warn, "Feature not implemented (option ignored)", false);
         showUnusedOptionsByList(opt, settings_pushonlyoptions, "Option allowed only to be pushed by the server", true);
 
-        showUnusedOptionsByList(opt, settings_feature_not_implemented_warn, "feature not implemented/available", false);
         showUnusedOptionsByList(opt, settings_script_plugin_feature, "Ignored (no script/plugin support)", false);
         showUnusedOptionsByList(opt, ignore_unknown_option_list, "Ignored by option 'ignore-unknown-option'", false);
         showUnusedOptionsByList(opt, settings_ignoreWithWarning, "Unsupported option (ignored)", false);
