@@ -603,9 +603,19 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (opt.exists("mode"))
         {
             auto mode = opt.get("mode");
-            if (mode.size() != 1 || mode.get(1, 128) != "p2p")
+            if (mode.size() != 2 || mode.get(1, 128) != "p2p")
             {
                 throw option_error("Only 'mode p2p' supported");
+            }
+        }
+
+        // key-method 2 is the only thing that 2.5+ and 3.x support
+        if (opt.exists("key-method"))
+        {
+            auto keymethod = opt.get("key-method");
+            if (keymethod.size() != 2 || keymethod.get(1, 128) != "2")
+            {
+                throw option_error("Only 'key-method 2' is supported: " + keymethod.get(1, 128));
             }
         }
     }
@@ -723,7 +733,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "status-version",
         "syslog",
         "tls-server",    /* No p2p mode in v3 */
-        "tun-mtu-extra", /*(only really used in tap in OpenVPN 2.x)*/
+        "tun-mtu-extra", /* (only really used in tap in OpenVPN 2.x)*/
         "verify-hash",
         "win-sys",
         "writepid",

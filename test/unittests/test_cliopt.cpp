@@ -77,9 +77,19 @@ TEST(config, parse_missing_option)
 TEST(config, parse_forbidden_option)
 {
     OVPN_EXPECT_THROW(
+        load_client_config(minimalConfig + "mode"),
+        option_error,
+        "Only 'mode p2p' supported");
+
+    OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "mode server"),
         option_error,
         "Only 'mode p2p' supported");
+
+    OVPN_EXPECT_THROW(
+        load_client_config(minimalConfig + "key-method 1"),
+        option_error,
+        "Only 'key-method 2' is supported");
 
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "fragment"),
