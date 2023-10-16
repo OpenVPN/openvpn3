@@ -793,7 +793,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
     /* Deprecated/throwing error in OpenVPN 2.x already: */
     std::unordered_set<std::string> settings_removedOptions = {
-        "mtu-dynamic", "no-replay", "no-name-remapping", "compat-names", "ncp-disable"};
+        "mtu-dynamic", "no-replay", "no-name-remapping", "compat-names", "ncp-disable", "no-iv"};
 
     std::unordered_set<std::string> settings_ignoreSilently = {
         "ecdh-curve", /* Deprecated in v2, not needed with modern OpenSSL */
