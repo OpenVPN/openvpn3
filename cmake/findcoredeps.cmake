@@ -11,6 +11,7 @@ set(DEP_DIR ${CORE_DIR}/../deps CACHE PATH "Dependencies")
 option(USE_MBEDTLS "Use mbed TLS instead of OpenSSL")
 
 option(USE_WERROR "Treat compiler warnings as errors (-Werror)")
+option(USE_WCONVERSION "Enable -Wconversion")
 
 if (DEFINED ENV{DEP_DIR})
     message("Overriding DEP_DIR setting with environment variable $ENV{DEP_DIR}")
@@ -128,9 +129,16 @@ function(add_core_dependencies target)
         target_compile_options(${target} PRIVATE /W3 /wd4200 /wd4146)
     else()
         target_compile_options(${target} PRIVATE -Wall -Wsign-compare)
+        if (USE_WCONVERSION)
+            target_compile_options(${target} PRIVATE -Wconversion -Wno-sign-conversion)
+        endif()
         if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             # disable noisy warnings
             target_compile_options(${target} PRIVATE -Wno-maybe-uninitialized)
+        endif()
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            # display all warnings
+            target_compile_options(${target} PRIVATE -ferror-limit=0 -Wno-enum-enum-conversion)
         endif()
     endif()
 
