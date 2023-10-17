@@ -196,7 +196,7 @@ class PsidCookieImpl : public PsidCookie
         const ProtoSessionID srv_psid = calculate_session_id_hmac(cli_psid, pcaib, 0);
         srv_psid.prepend(send_buf);
         // write opcode
-        const unsigned int op_field = CookieHelper::get_server_hard_reset_opfield();
+        const unsigned char op_field = CookieHelper::get_server_hard_reset_opfield();
         send_buf.push_front(op_field);
         // write hmac
         ta_hmac_send_->ovpn_hmac_gen(send_buf.data(), send_buf.size(), 1 + SID_SIZE, ta_hmac_send_->output_size(), long_pktid_size_);
@@ -278,12 +278,12 @@ class PsidCookieImpl : public PsidCookie
     }
 
     /**
-     * @brief Calculate the psid cookie
+     * @brief Calculate the psid cookie, the ProtoSessionID hmac
      *
      * @param cli_psid  Client's protocol session id, ProtoSessionID
      * @param pcaib  Client's address information, reproducibly hashable
-     * @param offset  moves the time quantisation window backward from current
-     * @return ProtoSessionID  the resulting psid cookie
+     * @param offset  moves the time valid time window backward from current
+     * @return ProtoSessionID  the psid cookie
      */
     ProtoSessionID calculate_session_id_hmac(const ProtoSessionID &cli_psid,
                                              const PsidCookieAddrInfoBase &pcaib,
@@ -291,13 +291,20 @@ class PsidCookieImpl : public PsidCookie
     {
         hmac_ctx_.reset();
 
-        // Get the valid time quantisation for our hmac, we divide time by handwindow/2
-        // and allow the current time window, offset 0, or any previous time windows,
-        // offsets 1 to n, to be used for the calculation
-        uint32_t session_id_time = now_->raw() / ((handwindow_.raw() + 1) / 2) - offset;
+        // Get the time window for which the ProtoSessionID hmac is valid.  The window
+        // size is an interval given by handwindow/2, one half of the configured
+        // handshake timeout, typically 30 seconds.  The valid_time is the count of
+        // intervals since the beginning of the epoch.  With offset zero, the valid_time
+        // is the server's current interval; with offsets 1 to n, it is the server's nth
+        // previous interval.
+        //
+        // There is the theoretical issue of valid_time wrapping after 2^32 intervals.
+        // With 30 second intervals, around the year 4010.  Will not spoil my weekend.
+        uint64_t interval = (handwindow_.raw() + 1) / 2;
+        uint32_t valid_time = static_cast<uint32_t>(now_->raw() / interval - offset);
         // no endian concerns; hmac is created and checked by the same host
-        hmac_ctx_.update(reinterpret_cast<const unsigned char *>(&session_id_time),
-                         sizeof(session_id_time));
+        hmac_ctx_.update(reinterpret_cast<const unsigned char *>(&valid_time),
+                         sizeof(valid_time));
 
         // the memory slab at cli_addr_port of size cli_addrport_size is a reproducibly
         // hashable representation of the client's address and port
@@ -322,8 +329,9 @@ class PsidCookieImpl : public PsidCookie
                                const ProtoSessionID &cli_psid,
                                const PsidCookieAddrInfoBase &pcaib)
     {
-        /* check adjacent timestamps too */
-        for (int offset = 0; offset <= 1; ++offset)
+        // check the current timestamp and the previous one in case the server's clock
+        // has moved to the one following that given to the client
+        for (unsigned int offset = 0; offset <= 1; ++offset)
         {
             ProtoSessionID calc_psid = calculate_session_id_hmac(cli_psid, pcaib, offset);
 
