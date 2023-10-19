@@ -134,7 +134,9 @@ class PsidCookieImpl : public PsidCookie
         pctb_ = pctb;
     }
 
+#ifndef UNIT_TEST
   private:
+#endif
     using CookieHelper = ProtoContext::PsidCookieHelper;
 
     Intercept process_clients_initial_reset(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib)
