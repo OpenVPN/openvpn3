@@ -282,18 +282,19 @@ class PsidCookieImpl : public PsidCookie
      *
      * @param cli_psid  Client's protocol session id, ProtoSessionID
      * @param pcaib  Client's address information, reproducibly hashable
-     * @param offset moves the time quantisation window
+     * @param offset  moves the time quantisation window backward from current
      * @return ProtoSessionID  the resulting psid cookie
      */
     ProtoSessionID calculate_session_id_hmac(const ProtoSessionID &cli_psid,
                                              const PsidCookieAddrInfoBase &pcaib,
-                                             int offset)
+                                             unsigned int offset)
     {
         hmac_ctx_.reset();
 
         // Get the valid time quantisation for our hmac, we divide time by handwindow/2
-        // and allow the previous and future session time if specified by offset
-        uint32_t session_id_time = now_->raw() / ((handwindow_.raw() + 1) / 2) + offset;
+        // and allow the current time window, offset 0, or any previous time windows,
+        // offsets 1 to n, to be used for the calculation
+        uint32_t session_id_time = now_->raw() / ((handwindow_.raw() + 1) / 2) - offset;
         // no endian concerns; hmac is created and checked by the same host
         hmac_ctx_.update(reinterpret_cast<const unsigned char *>(&session_id_time),
                          sizeof(session_id_time));
