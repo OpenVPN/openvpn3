@@ -81,6 +81,8 @@ inline void parse(const OptionList &options,
                   std::string &user,
                   std::string &pass)
 {
+    user.clear();
+    pass.clear();
     std::vector<std::string> up;
     up.reserve(2);
     if (!parse(options, opt_name, flags, &up) && (flags & OPT_OPTIONAL))
