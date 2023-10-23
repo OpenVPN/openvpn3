@@ -97,10 +97,10 @@ inline void parse(const OptionList &options,
         throw creds_error(opt_name + " : password empty");
 }
 
-inline void parse(const std::string &path,
-                  const unsigned int flags,
-                  std::string &user,
-                  std::string &pass)
+inline void parse_file(const std::string &path,
+                       const unsigned int flags,
+                       std::string &user,
+                       std::string &pass)
 {
     user.clear();
     pass.clear();
