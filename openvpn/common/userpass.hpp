@@ -39,13 +39,44 @@ OPENVPN_EXCEPTION(creds_error);
 
 enum Flags
 {
-    OPT_REQUIRED = (1 << 0),      // option must be present
-    OPT_OPTIONAL = (1 << 1),      // if option is not present, USERNAME_REQUIRED and PASSWORD_REQUIRED are ignored
-    USERNAME_REQUIRED = (1 << 2), // username must be present
-    PASSWORD_REQUIRED = (1 << 3), // password must be present
-    TRY_FILE = (1 << 4),          // option argument might be a filename, try to load creds from it
+    OPT_REQUIRED = (1 << 0),      //!< option must be present
+    OPT_OPTIONAL = (1 << 1),      //!< if option is not present, USERNAME_REQUIRED and PASSWORD_REQUIRED are ignored
+    USERNAME_REQUIRED = (1 << 2), //!< username must be present
+    PASSWORD_REQUIRED = (1 << 3), //!< password must be present
+    TRY_FILE = (1 << 4),          //!< option argument might be a filename, try to load creds from it
 };
 
+/**
+ * @brief interpret user-pass option
+ *
+ * If the option is present without argument, then returns true unless
+ * OPT_REQUIRED flag set. If OPT_REQUIRED flag is set, the option needs
+ * to have exactly one argument.
+ *
+ * The argument might be specified as a multiline argument. I.e.
+ * <opt_name>
+ * username
+ * password
+ * </opt_name>
+ *
+ * The multiline argument is allowed to be 1024 characters in
+ * length.
+ *
+ * If the TRY_FILE flag is set and the argument is not multiline,
+ * then it is interpreted as a filepath and the contents of the file
+ * will replace the argument.
+ *
+ * If the argument contains a newline, then the first line is used as the
+ * username and the second line is used as the password, otherwise the argument
+ * is the username. Note that no empty entry will be appended to the vector if
+ * the password is missing.
+ *
+ * @param options   parsed option list
+ * @param opt_name  name of the option to interpret
+ * @param flags     SplitLines::Flags, only OPT_REQUIRED and TRY_FILE are used
+ * @param user_pass vector of strings, user and password will be appended if present
+ * @return bool     True if the option was present, False otherwise
+ */
 inline bool parse(const OptionList &options,
                   const std::string &opt_name,
                   const unsigned int flags,
@@ -75,6 +106,44 @@ inline bool parse(const OptionList &options,
     return true;
 }
 
+/**
+ * @brief interpret user-pass option
+ *
+ * If the option is present without argument, then returns true unless
+ * OPT_REQUIRED flag set. If OPT_REQUIRED flag is set, the option needs
+ * to have exactly one argument.
+ *
+ * The argument might be specified as a multiline argument. I.e.
+ * <opt_name>
+ * username
+ * password
+ * </opt_name>
+ *
+ * The multiline argument is allowed to be 1024 characters in
+ * length.
+ *
+ * If the TRY_FILE flag is set and the argument is not multiline,
+ * then it is interpreted as a filepath and the contents of the file
+ * will replace the argument.
+ *
+ * Lines in the file are only allowed to be 1024 characters in length.
+ *
+ * If the argument contains a newline, then the first line is used as the
+ * username and the second line is used as the password, otherwise the argument
+ * is the username.
+ *
+ * If USERNAME_REQUIRED and/or PASSWORD_REQUIRED flag is set, and the option is
+ * present, then it will throw creds_error instead of returning empty values.
+ * If the option is not present, it will only throw if OPT_OPTIONAL flag is not
+ * set. If neither USERNAME_REQUIRED nor PASSWORD_REQUIRED flag are set, then
+ * OPT_OPTIONAL has no effect.
+ *
+ * @param options   parsed option list
+ * @param opt_name  name of the option to interpret
+ * @param flags     SplitLines::Flags, all flags are used
+ * @param user      Returns the username, if present. Otherwise empty
+ * @param pass      Returns the password, if present. Otherwise empty
+ */
 inline void parse(const OptionList &options,
                   const std::string &opt_name,
                   const unsigned int flags,
@@ -99,6 +168,23 @@ inline void parse(const OptionList &options,
         throw creds_error(opt_name + " : password empty");
 }
 
+/**
+ * @brief read username/password from file
+ *
+ * If the file contents contain a newline, then the first line is used as the
+ * username and the second line is used as the password, otherwise the content
+ * is the username.
+ *
+ * Lines in the file are only allowed to be 1024 characters in length.
+ *
+ * If USERNAME_REQUIRED and/or PASSWORD_REQUIRED flag is set, then it will throw
+ * creds_error instead of returning empty values.
+ *
+ * @param path   file path
+ * @param flags  SplitLines::Flags, only *_REQUIRED flags are relevant
+ * @param user   Returns the username, if present. Otherwise empty
+ * @param pass   Returns the password, if present. Otherwise empty
+ */
 inline void parse_file(const std::string &path,
                        const unsigned int flags,
                        std::string &user,
