@@ -872,7 +872,7 @@ class SITNL
 
         if (table < 256)
         {
-            req.r.rtm_table = table;
+            req.r.rtm_table = static_cast<decltype(req.r.rtm_table)>(table);
         }
         else
         {
