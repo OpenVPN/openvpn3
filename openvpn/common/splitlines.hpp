@@ -33,6 +33,9 @@ template <typename STRING>
 class SplitLinesType
 {
   public:
+    OPENVPN_EXCEPTION(splitlines_overflow_error);
+    OPENVPN_EXCEPTION(splitlines_moved_error);
+
     // Note: string/buffer passed to constructor is not locally stored,
     // so it must remain in scope and not be modified during the lifetime
     // of the SplitLines object.
@@ -47,6 +50,7 @@ class SplitLinesType
     {
         line.clear();
         overflow = false;
+        line_valid = true;
         const size_t overflow_index = index + max_line_len;
         while (index < size)
         {
@@ -64,6 +68,7 @@ class SplitLinesType
                 return true;
             }
         }
+        line_valid = false;
         return false;
     }
 
@@ -74,16 +79,20 @@ class SplitLinesType
 
     std::string &line_ref()
     {
+        validate();
         return line;
     }
 
     const std::string &line_ref() const
     {
+        validate();
         return line;
     }
 
     std::string line_move()
     {
+        validate();
+        line_valid = false;
         return std::move(line);
     }
 
@@ -102,15 +111,25 @@ class SplitLinesType
         if (overflow)
             return S_ERROR;
         ln = std::move(line);
+        line_valid = false;
         return S_OKAY;
     }
 
   private:
+    void validate()
+    {
+        if (!line_valid)
+            throw splitlines_moved_error();
+        if (overflow)
+            throw splitlines_overflow_error(line);
+    }
+
     const char *data;
     size_t size;
-    size_t max_line_len;
+    const size_t max_line_len;
     size_t index = 0;
     std::string line;
+    bool line_valid = false;
     bool overflow = false;
 };
 
