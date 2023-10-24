@@ -625,6 +625,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "allow-recursive-routing",
         "auth-nocache",
         "auth-retry",
+        "block-outside-dns", /* Core will decide on its own when to block outside dns, so this is not 100% identical in behaviour, so still warn */
         "compat-mode",
         "connect-retry",
         "connect-retry-max",
@@ -663,6 +664,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "suppress-timestamps", /* harmless to ignore  */
         "tcp-nodelay",
         "tls-version-max", /* We don't allow restricting max version */
+        "tun-mtu-extra",   /* (only really used in tap in OpenVPN 2.x)*/
         "udp-mtu",         /* Alias for link-mtu */
         "user",
     };
@@ -732,8 +734,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "status",
         "status-version",
         "syslog",
-        "tls-server",    /* No p2p mode in v3 */
-        "tun-mtu-extra", /* (only really used in tap in OpenVPN 2.x)*/
+        "tls-server", /* No p2p mode in v3 */
         "verify-hash",
         "win-sys",
         "writepid",
