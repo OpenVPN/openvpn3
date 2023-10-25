@@ -240,9 +240,9 @@ class GeNL : public RC<thread_unsafe_refcount>
             OPENVPN_THROW(netlink_error, " new_key() cannot allocate submessage");
 
         NLA_PUT_U32(msg, OVPN_NEW_KEY_ATTR_PEER_ID, kc->remote_peer_id);
-        NLA_PUT_U8(msg, OVPN_NEW_KEY_ATTR_KEY_SLOT, key_slot);
-        NLA_PUT_U8(msg, OVPN_NEW_KEY_ATTR_KEY_ID, kc->key_id);
-        NLA_PUT_U16(msg, OVPN_NEW_KEY_ATTR_CIPHER_ALG, kc->cipher_alg);
+        NLA_PUT_U8(msg, OVPN_NEW_KEY_ATTR_KEY_SLOT, static_cast<uint8_t>(key_slot));
+        NLA_PUT_U8(msg, OVPN_NEW_KEY_ATTR_KEY_ID, static_cast<uint8_t>(kc->key_id));
+        NLA_PUT_U16(msg, OVPN_NEW_KEY_ATTR_CIPHER_ALG, static_cast<uint16_t>(kc->cipher_alg));
 
         key_dir = nla_nest_start(msg, OVPN_NEW_KEY_ATTR_ENCRYPT_KEY);
         if (!key_dir)
@@ -321,7 +321,7 @@ class GeNL : public RC<thread_unsafe_refcount>
             OPENVPN_THROW(netlink_error, " del_key() cannot allocate submessage");
 
         NLA_PUT_U32(msg, OVPN_DEL_KEY_ATTR_PEER_ID, peer_id);
-        NLA_PUT_U8(msg, OVPN_DEL_KEY_ATTR_KEY_SLOT, key_slot);
+        NLA_PUT_U8(msg, OVPN_DEL_KEY_ATTR_KEY_SLOT, static_cast<uint8_t>(key_slot));
 
         nla_nest_end(msg, attr);
 
@@ -784,7 +784,7 @@ class GeNL : public RC<thread_unsafe_refcount>
             return NL_STOP;
 
         if (!(nlh->nlmsg_flags & NLM_F_CAPPED))
-            ack_len += err->msg.nlmsg_len - sizeof(*nlh);
+            ack_len += static_cast<int>(err->msg.nlmsg_len - sizeof(*nlh));
 
         if (len <= ack_len)
             return NL_STOP;
@@ -795,8 +795,6 @@ class GeNL : public RC<thread_unsafe_refcount>
         nla_parse(tb_msg, NLMSGERR_ATTR_MAX, attrs, len, NULL);
         if (tb_msg[NLMSGERR_ATTR_MSG])
         {
-            len = strnlen((char *)nla_data(tb_msg[NLMSGERR_ATTR_MSG]),
-                          nla_len(tb_msg[NLMSGERR_ATTR_MSG]));
             OPENVPN_LOG(__func__ << " kernel error "
                                  << (char *)nla_data(tb_msg[NLMSGERR_ATTR_MSG]));
         }
