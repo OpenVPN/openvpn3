@@ -198,20 +198,18 @@ static std::string x509_get_field(::X509 *cert, const int nid)
  */
 static std::string x509_get_serial(::X509 *cert)
 {
-    ASN1_INTEGER *asn1_i;
-    BIGNUM *bignum;
-    char *openssl_serial;
-
-    asn1_i = X509_get_serialNumber(cert);
-    bignum = ASN1_INTEGER_to_BN(asn1_i, NULL);
-    openssl_serial = BN_bn2dec(bignum);
-
-    const std::string ret = openssl_serial;
-
+    const ASN1_INTEGER *asn1_i = X509_get_serialNumber(cert);
+    BIGNUM *bignum = ASN1_INTEGER_to_BN(asn1_i, NULL);
+    char *openssl_serial = BN_bn2dec(bignum);
     BN_free(bignum);
-    OPENSSL_free(openssl_serial);
 
-    return ret;
+    if (openssl_serial)
+    {
+        const std::string ret = openssl_serial;
+        OPENSSL_free(openssl_serial);
+        return ret;
+    }
+    return std::string();
 }
 
 /**

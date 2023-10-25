@@ -1687,9 +1687,13 @@ class OpenSSLContext : public SSLFactoryAPI
                 switch (c.type)
                 {
                 case X509Track::SERIAL:
-                    xts.emplace_back(X509Track::SERIAL,
-                                     depth,
-                                     OpenSSLPKI::x509_get_serial(cert));
+                    {
+                        std::string serial = OpenSSLPKI::x509_get_serial(cert);
+                        if (!serial.empty())
+                            xts.emplace_back(X509Track::SERIAL,
+                                             depth,
+                                             serial);
+                    }
                     break;
                 case X509Track::SERIAL_HEX:
                     xts.emplace_back(X509Track::SERIAL_HEX,
