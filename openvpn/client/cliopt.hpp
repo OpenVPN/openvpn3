@@ -769,7 +769,10 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "key-derivation",
         "peer-id",
         "protocol-flags",
-    };
+        "ifconfig",
+        "ifconfig-ipv6",
+        "topology",
+        "route-gateway"};
 
     /* Features related to scripts/plugins */
     std::unordered_set<std::string> settings_script_plugin_feature = {
