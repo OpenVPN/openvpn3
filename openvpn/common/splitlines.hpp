@@ -36,9 +36,16 @@ class SplitLinesType
     OPENVPN_EXCEPTION(splitlines_overflow_error);
     OPENVPN_EXCEPTION(splitlines_moved_error);
 
-    // Note: string/buffer passed to constructor is not locally stored,
-    // so it must remain in scope and not be modified during the lifetime
-    // of the SplitLines object.
+    /**
+     * Initialises SplitLinesType object with pointer to str.
+     *
+     * Note: string/buffer passed to constructor is not locally stored,
+     * so it must remain in scope and not be modified during the lifetime
+     * of the SplitLines object.
+     *
+     * @param max_line_len_arg If not 0, specifies line length that will trigger
+     *                         overflow error.
+     */
     SplitLinesType(const STRING &str, const size_t max_line_len_arg = 0)
         : data((const char *)str.c_str()),
           size(str.length()),
@@ -46,6 +53,12 @@ class SplitLinesType
     {
     }
 
+    /**
+     * Read next line so that it can be accessed with line_ref or line_move
+     *
+     * @param trim If true, remove trailing \n or \r\n
+     * @return Returns true if any characters were read.
+     */
     bool operator()(const bool trim = true)
     {
         line.clear();
@@ -72,23 +85,43 @@ class SplitLinesType
         return false;
     }
 
+    /**
+     * Returns true if current line triggered an overflow error.
+     */
     bool line_overflow() const
     {
         return overflow;
     }
 
+    /**
+     * Returns reference to current line.
+     *
+     * Throws an exception if there is no line available currently.
+     */
     std::string &line_ref()
     {
         validate();
         return line;
     }
 
+    /**
+     * Returns const reference to current line.
+     *
+     * Throws an exception if there is no line available currently.
+     */
     const std::string &line_ref() const
     {
         validate();
         return line;
     }
 
+    /**
+     * Returns the moved current line.
+     *
+     * Throws an exception if there is no line available currently.
+     * Further calls to line_ref or line_moved will throw an exception until
+     * operator() is called again.
+     */
     std::string line_move()
     {
         validate();
@@ -103,6 +136,21 @@ class SplitLinesType
         S_ERROR
     };
 
+    /**
+     * Read the next line and move it into ln.
+     *
+     * Does not throw an exception on overflow but instead
+     * returns S_ERROR. If nothing could be read, returns
+     * S_EOF.
+     * Since the line is moved into the argument, you can't
+     * use line_ref or line_moved on the object afterwards.
+     * In general calls to operator()+line_ref and next()
+     * are not intended to be mixed.
+     *
+     * @param ln   string to move the line into.
+     * @param trim If true, remove trailing \n or \r\n
+     * @return Returns S_OKAY if a line was moved.
+     */
     Status next(std::string &ln, const bool trim = true)
     {
         const bool s = (*this)(trim);
