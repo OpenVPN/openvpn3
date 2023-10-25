@@ -42,6 +42,12 @@
 //         }
 //     ]
 // }
+//
+// Creating and tagging route tables also require these policy actions:
+//
+//     ec2:CreateRouteTable
+//     ec2:CreateTags
+//
 
 #pragma once
 
@@ -114,7 +120,6 @@ class Route
         Info(Context &ctx)
         {
             // AWS IDs local to this constructor
-            std::string vpc_id;
             std::string subnet_id;
 
             // first request -- get the AWS network interface
@@ -213,6 +218,7 @@ class Route
 
         std::string network_interface_id;
         std::string route_table_id;
+        std::string vpc_id;
     };
 
     // Set sourceDestCheck flag on AWS network interface.
@@ -339,6 +345,71 @@ class Route
         }
     }
 
+    static std::string create_route_table(Context &ctx,
+                                          const std::string &vpc_id,
+                                          const std::string &name)
+    {
+        std::string route_table_id;
+
+        // create route table
+        {
+            REST::Query q;
+            q.emplace_back("Action", "CreateRouteTable");
+            q.emplace_back("VpcId", vpc_id);
+            add_transaction(ctx, std::move(q));
+        }
+
+        execute_transaction(ctx);
+
+        // process reply
+        {
+            // get the transaction
+            WS::ClientSet::Transaction &t = ctx.ts->first_transaction();
+
+            auto reply = t.content_in_string();
+
+            // check the reply status
+            if (!t.http_status_success())
+                OPENVPN_THROW(aws_route_error, "CreateRouteTable: " << t.format_status(*ctx.ts) << '\n'
+                                                                    << reply);
+
+            const Xml::Document doc(reply, "CreateRouteTable");
+            route_table_id = Xml::find_text(&doc,
+                                            "CreateRouteTableResponse",
+                                            "routeTable",
+                                            "routeTableId");
+
+            OPENVPN_LOG("AWS EC2 CreateRouteTable -> RouteTableId " << route_table_id);
+        }
+
+        // tag route table with provided name
+        {
+            REST::Query q;
+            q.emplace_back("Action", "CreateTags");
+            q.emplace_back("ResourceId.1", route_table_id);
+            q.emplace_back("Tag.1.Key", "Name");
+            q.emplace_back("Tag.1.Value", name);
+            add_transaction(ctx, std::move(q));
+        }
+
+        execute_transaction(ctx);
+
+        // process reply
+        {
+            // get the transaction
+            WS::ClientSet::Transaction &t = ctx.ts->first_transaction();
+
+            // get reply
+            const std::string reply = t.content_in_string();
+
+            if (!t.request_status_success())
+                OPENVPN_THROW(aws_route_error, "CreateTags: " << t.format_status(*ctx.ts) << '\n'
+                                                              << reply);
+        }
+
+        return route_table_id;
+    }
+
     // Create/replace a VPC route
     static void replace_create_route(Context &ctx,
                                      const std::string &route_table_id,
@@ -452,6 +523,43 @@ class Route
 
             OPENVPN_LOG("AWS EC2 CreateRoute " << route << " -> table " << route_table_id);
         }
+    }
+
+    static std::string get_route_table_by_name(Context &ctx, std::string &name)
+    {
+        REST::Query q;
+        q.emplace_back("Action", "DescribeRouteTables");
+        q.emplace_back("Filter.1.Name", "tag:Name");
+        q.emplace_back("Filter.1.Value.1", name);
+        add_transaction(ctx, std::move(q));
+
+        // do transaction
+        execute_transaction(ctx);
+
+        // process reply
+
+        // get the transaction
+        WS::ClientSet::Transaction &t = ctx.ts->first_transaction();
+
+        // get reply
+        const std::string reply = t.content_in_string();
+
+        // check the reply status
+        if (!t.http_status_success())
+            OPENVPN_THROW(aws_route_error, "DescribeRouteTables: " << t.format_status(*ctx.ts) << '\n'
+                                                                   << reply);
+
+        // parse XML reply
+        const Xml::Document doc(reply, "DescribeRouteTables");
+        auto route_table_id = Xml::find_text(&doc,
+                                             "DescribeRouteTablesResponse",
+                                             "routeTableSet",
+                                             "item",
+                                             "routeTableId");
+
+        OPENVPN_LOG("AWS EC2 DescribeRouteTables " << name << " -> routeTableId " << (route_table_id.empty() ? "<none>" : route_table_id));
+
+        return route_table_id;
     }
 
   private:
