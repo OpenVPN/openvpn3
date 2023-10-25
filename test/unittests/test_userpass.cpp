@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2023 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -362,7 +362,7 @@ TEST(UserPass, parse_file_user_pass)
     }
 }
 
-TEST(DISABLED_UserPass, parse_file_overflow)
+TEST(UserPass, parse_file_overflow)
 {
     for (auto flags : flag_combos_nofile)
     {

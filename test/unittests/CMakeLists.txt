@@ -59,7 +59,8 @@ add_executable(coreUnitTests
         test_randapi.cpp
         test_rc.cpp
         test_route.cpp
-	test_reliable.cpp
+        test_reliable.cpp
+        test_splitlines.cpp
         test_statickey.cpp
         test_streq.cpp
         test_time.cpp
