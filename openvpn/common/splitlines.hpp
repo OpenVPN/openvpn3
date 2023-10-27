@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2023 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -33,18 +33,18 @@ template <typename STRING>
 class SplitLinesType
 {
   public:
-    OPENVPN_EXCEPTION(splitlines_overflow_error);
-    OPENVPN_EXCEPTION(splitlines_moved_error);
+    OPENVPN_EXCEPTION(overflow_error);
+    OPENVPN_EXCEPTION(moved_error);
 
     /**
-     * Initialises SplitLinesType object with pointer to str.
+     * Initialises SplitLinesType object with pointer to str
      *
      * Note: string/buffer passed to constructor is not locally stored,
      * so it must remain in scope and not be modified during the lifetime
      * of the SplitLines object.
      *
-     * @param max_line_len_arg If not 0, specifies line length that will trigger
-     *                         overflow error.
+     * @param max_line_len_arg If not 0, specifies line length that
+     *                         will trigger overflow error.
      */
     SplitLinesType(const STRING &str, const size_t max_line_len_arg = 0)
         : data((const char *)str.c_str()),
@@ -54,7 +54,9 @@ class SplitLinesType
     }
 
     /**
-     * Read next line so that it can be accessed with line_ref or line_move
+     * Read next line so that it can be accessed with line_ref or line_move.
+     *
+     * If max_line_len is greater zero, read at most max_line_len characters.
      *
      * @param trim If true, remove trailing \n or \r\n
      * @return Returns true if any characters were read.
@@ -86,7 +88,8 @@ class SplitLinesType
     }
 
     /**
-     * Returns true if current line triggered an overflow error.
+     * Returns true if max_line_len is greater zero and the current line was
+     * longer than max_line_len characters.
      */
     bool line_overflow() const
     {
@@ -97,6 +100,7 @@ class SplitLinesType
      * Returns reference to current line.
      *
      * Throws an exception if there is no line available currently.
+     * Throws an exception if line_overflow() returns true.
      */
     std::string &line_ref()
     {
@@ -108,6 +112,7 @@ class SplitLinesType
      * Returns const reference to current line.
      *
      * Throws an exception if there is no line available currently.
+     * Throws an exception if line_overflow() returns true.
      */
     const std::string &line_ref() const
     {
@@ -119,7 +124,8 @@ class SplitLinesType
      * Returns the moved current line.
      *
      * Throws an exception if there is no line available currently.
-     * Further calls to line_ref or line_moved will throw an exception until
+     * Throws an exception if line_overflow() returns true.
+     * Further calls to line_ref() or line_moved() will throw an exception until
      * operator() is called again.
      */
     std::string line_move()
@@ -131,9 +137,9 @@ class SplitLinesType
 
     enum Status
     {
-        S_OKAY,
-        S_EOF,
-        S_ERROR
+        S_OKAY, //!< next line was successfully read
+        S_EOF,  //!< no further characters are available
+        S_ERROR //!< line was longer than allowed
     };
 
     /**
@@ -143,13 +149,13 @@ class SplitLinesType
      * returns S_ERROR. If nothing could be read, returns
      * S_EOF.
      * Since the line is moved into the argument, you can't
-     * use line_ref or line_moved on the object afterwards.
-     * In general calls to operator()+line_ref and next()
+     * use line_ref() or line_moved() on the object afterwards.
+     * In general calls to operator()+line_ref() and next()
      * are not intended to be mixed.
      *
      * @param ln   string to move the line into.
      * @param trim If true, remove trailing \n or \r\n
-     * @return Returns S_OKAY if a line was moved.
+     * @return Returns S_OKAY if a line was moved into ln.
      */
     Status next(std::string &ln, const bool trim = true)
     {
@@ -167,9 +173,9 @@ class SplitLinesType
     void validate()
     {
         if (!line_valid)
-            throw splitlines_moved_error();
+            throw moved_error();
         if (overflow)
-            throw splitlines_overflow_error(line);
+            throw overflow_error(line);
     }
 
     const char *data;

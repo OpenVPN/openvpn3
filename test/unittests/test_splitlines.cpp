@@ -104,7 +104,7 @@ TEST(SplitLines, max_length_overflow)
     SplitLines in(short_text, 3);
     ASSERT_TRUE(in(true));
     ASSERT_TRUE(in.line_overflow());
-    ASSERT_THROW(in.line_ref(), SplitLines::splitlines_overflow_error);
+    ASSERT_THROW(in.line_ref(), SplitLines::overflow_error);
 }
 
 TEST(SplitLines, next_max_length_overflow)
@@ -120,5 +120,5 @@ TEST(SplitLines, moved_error)
     ASSERT_TRUE(in(true));
     ASSERT_FALSE(in.line_overflow());
     std::string line = in.line_move();
-    ASSERT_THROW(in.line_ref(), SplitLines::splitlines_moved_error);
+    ASSERT_THROW(in.line_ref(), SplitLines::moved_error);
 }

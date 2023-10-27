@@ -59,12 +59,15 @@ enum Flags
  * password
  * </opt_name>
  *
- * The multiline argument is allowed to be 1024 characters in
- * length.
+ * The multiline argument is allowed to be 1024 UTF-8 characters in
+ * length. If it is longer, the function will throw an exception.
  *
  * If the TRY_FILE flag is set and the argument is not multiline,
  * then it is interpreted as a filepath and the contents of the file
  * will replace the argument.
+ *
+ * Lines in the file are only allowed to be 1024 bytes in length.
+ * Longer lines will cause an exception to be thrown.
  *
  * If the argument contains a newline, then the first line is used as the
  * username and the second line is used as the password, otherwise the argument
@@ -119,14 +122,15 @@ inline bool parse(const OptionList &options,
  * password
  * </opt_name>
  *
- * The multiline argument is allowed to be 1024 characters in
- * length.
+ * The multiline argument is allowed to be 1024 UTF-8 characters in
+ * length. If it is longer, the function will throw an exception.
  *
  * If the TRY_FILE flag is set and the argument is not multiline,
  * then it is interpreted as a filepath and the contents of the file
  * will replace the argument.
  *
- * Lines in the file are only allowed to be 1024 characters in length.
+ * Lines in the file are only allowed to be 1024 bytes in length.
+ * Longer lines will cause an exception to be thrown.
  *
  * If the argument contains a newline, then the first line is used as the
  * username and the second line is used as the password, otherwise the argument
@@ -175,7 +179,8 @@ inline void parse(const OptionList &options,
  * username and the second line is used as the password, otherwise the content
  * is the username.
  *
- * Lines in the file are only allowed to be 1024 characters in length.
+ * Lines in the file are only allowed to be 1024 bytes in length.
+ * Longer lines will cause an exception to be thrown.
  *
  * If USERNAME_REQUIRED and/or PASSWORD_REQUIRED flag is set, then it will throw
  * creds_error instead of returning empty values.

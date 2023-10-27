@@ -132,7 +132,7 @@ class Options : public RC<thread_safe_refcount>
             set_proxy_server(hp->get(1, 256), hp->get(2, 16));
 
             // get creds
-            UserPass::parse(opt, "http-proxy-user-pass", UserPass::OPT_OPTIONAL, username, password);
+            UserPass::parse(opt, "http-proxy-user-pass", 0, username, password);
 
             const std::string auth = hp->get_optional(3, 16);
             if (!auth.empty())
