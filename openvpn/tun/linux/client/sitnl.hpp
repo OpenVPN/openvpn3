@@ -228,10 +228,10 @@ class SITNL
      * @param arg_cb    data argument for cb, can be NULL
      * @return If any error occurs, negative errno. If cb is set, return value of last cb call, if not then value of error attribute in NLMSG_ERROR.
      */
-    static ssize_t
+    static int
     sitnl_send(struct nlmsghdr *payload, pid_t peer, unsigned int groups, sitnl_parse_reply_cb cb, void *arg_cb)
     {
-        ssize_t ret = 0;
+        int ret = 0;
         const size_t buf_len = 16 * 1024;
         struct sockaddr_nl nladdr = {
             .nl_family = AF_NETLINK,
@@ -575,7 +575,7 @@ class SITNL
      * @param [out] best_iface network interface on which gw was found
      * @return
      */
-    static ssize_t
+    static int
     sitnl_route_best_gw(const std::string &iface_to_ignore,
                         const IP::Route &route,
                         IP::Addr &best_gw,
@@ -590,7 +590,7 @@ class SITNL
         res.metric = -1;
         res.prefix_len = -1;
 
-        ssize_t ret = -EINVAL;
+        int ret = -EINVAL;
 
         if (!is_safe_conversion<unsigned char>(route.addr.family()))
             return -EINVAL;
@@ -706,7 +706,7 @@ class SITNL
      * @param [out] address/netmask of interface
      * @return success if 0, error if < 0
      */
-    static ssize_t
+    static int
     sitnl_iface_addr(const int ifindex,
                      const int family,
                      IP::Route &route)
@@ -726,7 +726,7 @@ class SITNL
         req.n.nlmsg_flags |= NLM_F_DUMP;
 
         const auto ret = sitnl_send(&req.n, 0, 0, sitnl_iface_addr_save, &res);
-        if (ret >= 0 && res.route.defined())
+        if (ret == 0 && res.route.defined())
         {
             /* save result in output variables */
             route = res.route;
@@ -742,7 +742,7 @@ class SITNL
         return ret;
     }
 
-    static ssize_t
+    static int
     sitnl_addr_set(const unsigned short cmd,
                    const unsigned short flags,
                    const std::string &iface,
@@ -752,7 +752,7 @@ class SITNL
                    const IP::Addr &broadcast)
     {
         struct sitnl_addr_req req = {};
-        ssize_t ret = -EINVAL;
+        int ret = -EINVAL;
 
         if (iface.empty())
         {
@@ -821,11 +821,12 @@ class SITNL
             ret = 0;
         }
 
+        /* for SITNL_ADDATTR */
     err:
-        return ret;
+        return -EINVAL;
     }
 
-    static ssize_t
+    static int
     sitnl_addr_ptp_add(const std::string &iface,
                        const IP::Addr &local,
                        const IP::Addr &remote)
@@ -839,7 +840,7 @@ class SITNL
                               IP::Addr::from_zero(local.version()));
     }
 
-    static ssize_t
+    static int
     sitnl_addr_ptp_del(const std::string &iface, const IP::Addr &local)
     {
         return sitnl_addr_set(RTM_DELADDR,
@@ -851,7 +852,7 @@ class SITNL
                               IP::Addr::from_zero(local.version()));
     }
 
-    static ssize_t
+    static int
     sitnl_route_set(const unsigned short cmd,
                     const unsigned short flags,
                     const std::string &iface,
@@ -864,7 +865,7 @@ class SITNL
                     const unsigned char type)
     {
         struct sitnl_route_req req = {};
-        ssize_t ret = -1;
+        int ret = -1;
 
         req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.r));
         req.n.nlmsg_type = cmd;
@@ -930,11 +931,12 @@ class SITNL
             ret = 0;
         }
 
+        /* for SITNL_ADDATTR */
     err:
-        return ret;
+        return -1;
     }
 
-    static ssize_t
+    static int
     sitnl_addr_add(const std::string &iface,
                    const IP::Addr &addr,
                    unsigned char prefixlen,
@@ -949,7 +951,7 @@ class SITNL
                               broadcast);
     }
 
-    static ssize_t
+    static int
     sitnl_addr_del(const std::string &iface, const IP::Addr &addr, unsigned char prefixlen)
     {
         return sitnl_addr_set(RTM_DELADDR,
@@ -961,7 +963,7 @@ class SITNL
                               IP::Addr::from_zero(addr.version()));
     }
 
-    static ssize_t
+    static int
     sitnl_route_add(const IP::Route &route,
                     const IP::Addr &gw,
                     const std::string &iface,
@@ -980,7 +982,7 @@ class SITNL
                                RTN_UNICAST);
     }
 
-    static ssize_t
+    static int
     sitnl_route_del(const IP::Route &route,
                     const IP::Addr &gw,
                     const std::string &iface,
@@ -1000,22 +1002,21 @@ class SITNL
     }
 
   public:
-    static ssize_t
+    static int
     net_route_best_gw(const IP::Route6 &route,
                       IPv6::Addr &best_gw6,
                       std::string &best_iface,
                       const std::string &iface_to_ignore = "")
     {
         IP::Addr best_gw;
-        ssize_t ret;
 
         OPENVPN_LOG(__func__ << " query IPv6: " << route);
 
-        ret = sitnl_route_best_gw(iface_to_ignore,
-                                  IP::Route(IP::Addr::from_ipv6(route.addr), route.prefix_len),
-                                  best_gw,
-                                  best_iface);
-        if (ret >= 0)
+        const auto ret = sitnl_route_best_gw(iface_to_ignore,
+                                             IP::Route(IP::Addr::from_ipv6(route.addr), route.prefix_len),
+                                             best_gw,
+                                             best_iface);
+        if (ret == 0)
         {
             best_gw6 = best_gw.to_ipv6();
         }
@@ -1023,22 +1024,21 @@ class SITNL
         return ret;
     }
 
-    static ssize_t
+    static int
     net_route_best_gw(const IP::Route4 &route,
                       IPv4::Addr &best_gw4,
                       std::string &best_iface,
                       const std::string &iface_to_ignore = "")
     {
         IP::Addr best_gw;
-        ssize_t ret;
 
         OPENVPN_LOG(__func__ << " query IPv4: " << route);
 
-        ret = sitnl_route_best_gw(iface_to_ignore,
-                                  IP::Route(IP::Addr::from_ipv4(route.addr), route.prefix_len),
-                                  best_gw,
-                                  best_iface);
-        if (ret >= 0)
+        const auto ret = sitnl_route_best_gw(iface_to_ignore,
+                                             IP::Route(IP::Addr::from_ipv4(route.addr), route.prefix_len),
+                                             best_gw,
+                                             best_iface);
+        if (ret == 0)
         {
             best_gw4 = best_gw.to_ipv4();
         }
@@ -1075,12 +1075,11 @@ class SITNL
      * @param type interface link type (for example "ovpn-dco")
      * @return int 0 on success, negative error code on error
      */
-    static ssize_t
+    static int
     net_iface_new(const std::string &iface, const std::string &type)
     {
         struct sitnl_link_req req = {};
         struct rtattr *tail = NULL;
-        ssize_t ret = -1;
 
         if (iface.empty())
         {
@@ -1109,12 +1108,13 @@ class SITNL
 
         OPENVPN_LOG(__func__ << ": add " << iface << " type " << type);
 
-        ret = sitnl_send(&req.n, 0, 0, NULL, NULL);
+        return sitnl_send(&req.n, 0, 0, NULL, NULL);
+        /* for SITNL_ADDATTR */
     err:
-        return ret;
+        return -1;
     }
 
-    static ssize_t
+    static int
     net_iface_del(const std::string &iface)
     {
         struct sitnl_link_req req = {};
@@ -1146,7 +1146,7 @@ class SITNL
         return sitnl_send(&req.n, 0, 0, NULL, NULL);
     }
 
-    static ssize_t
+    static int
     net_iface_up(std::string &iface, bool up)
     {
         struct sitnl_link_req req = {};
@@ -1187,7 +1187,7 @@ class SITNL
         return sitnl_send(&req.n, 0, 0, NULL, NULL);
     }
 
-    static ssize_t
+    static int
     net_iface_mtu_set(std::string &iface, uint32_t mtu)
     {
         struct sitnl_link_req req = {};
@@ -1221,7 +1221,7 @@ class SITNL
         return sitnl_send(&req.n, 0, 0, NULL, NULL);
     }
 
-    static ssize_t
+    static int
     net_addr_add(const std::string &iface,
                  const IPv4::Addr &addr,
                  const unsigned char prefixlen,
@@ -1237,7 +1237,7 @@ class SITNL
                               IP::Addr::from_ipv4(broadcast));
     }
 
-    static ssize_t
+    static int
     net_addr_add(const std::string &iface,
                  const IPv6::Addr &addr,
                  const unsigned char prefixlen)
@@ -1251,7 +1251,7 @@ class SITNL
                               IP::Addr::from_zero(IP::Addr::V6));
     }
 
-    static ssize_t
+    static int
     net_addr_del(const std::string &iface,
                  const IPv4::Addr &addr,
                  const unsigned char prefixlen)
@@ -1264,7 +1264,7 @@ class SITNL
                               prefixlen);
     }
 
-    static ssize_t
+    static int
     net_addr_del(const std::string &iface,
                  const IPv6::Addr &addr,
                  const unsigned char prefixlen)
@@ -1277,7 +1277,7 @@ class SITNL
                               prefixlen);
     }
 
-    static ssize_t
+    static int
     net_addr_ptp_add(const std::string &iface,
                      const IPv4::Addr &local,
                      const IPv4::Addr &remote)
@@ -1291,7 +1291,7 @@ class SITNL
                                   IP::Addr::from_ipv4(remote));
     }
 
-    static ssize_t
+    static int
     net_addr_ptp_del(const std::string &iface,
                      const IPv4::Addr &local,
                      const IPv4::Addr &remote)
@@ -1303,7 +1303,7 @@ class SITNL
                                   IP::Addr::from_ipv4(local));
     }
 
-    static ssize_t
+    static int
     net_route_add(const IP::Route4 &route,
                   const IPv4::Addr &gw,
                   const std::string &iface,
@@ -1323,7 +1323,7 @@ class SITNL
                                metric);
     }
 
-    static ssize_t
+    static int
     net_route_add(const IP::Route6 &route,
                   const IPv6::Addr &gw,
                   const std::string &iface,
@@ -1343,7 +1343,7 @@ class SITNL
                                metric);
     }
 
-    static ssize_t
+    static int
     net_route_del(const IP::Route4 &route,
                   const IPv4::Addr &gw,
                   const std::string &iface,
@@ -1360,7 +1360,7 @@ class SITNL
                                metric);
     }
 
-    static ssize_t
+    static int
     net_route_del(const IP::Route6 &route,
                   const IPv6::Addr &gw,
                   const std::string &iface,

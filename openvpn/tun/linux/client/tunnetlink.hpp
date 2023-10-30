@@ -68,15 +68,13 @@ struct NetlinkLinkSet : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        ssize_t ret;
-
         if (dev.empty())
         {
             os << "Error: can't call NetlinkLinkSet with no interface" << std::endl;
             return;
         }
 
-        ret = SITNL::net_iface_mtu_set(dev, mtu);
+        auto ret = SITNL::net_iface_mtu_set(dev, mtu);
         if (ret)
         {
             os << "Error while executing NetlinkLinkSet " << dev << " mtu " << mtu
@@ -137,14 +135,13 @@ struct NetlinkAddr4 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        ssize_t ret;
-
         if (dev.empty())
         {
             os << "Error: can't call NetlinkAddr4 with no interface" << std::endl;
             return;
         }
 
+        int ret;
         if (add)
         {
             ret = SITNL::net_addr_add(dev, addr, prefixlen, broadcast);
@@ -208,14 +205,13 @@ struct NetlinkAddr6 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        ssize_t ret;
-
         if (dev.empty())
         {
             os << "Error: can't call NetlinkAddr6 with no interface" << std::endl;
             return;
         }
 
+        int ret;
         if (add)
         {
             ret = SITNL::net_addr_add(dev, addr, prefixlen);
@@ -277,14 +273,13 @@ struct NetlinkAddr4PtP : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        ssize_t ret;
-
         if (dev.empty())
         {
             os << "Error: can't call NetlinkAddr4PtP with no interface" << std::endl;
             return;
         }
 
+        int ret;
         if (add)
         {
             ret = SITNL::net_addr_ptp_add(dev, local, remote);
@@ -344,14 +339,13 @@ struct NetlinkRoute4 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        ssize_t ret;
-
         if (dev.empty())
         {
             os << "Error: can't call NetlinkRoute4 with no interface" << std::endl;
             return;
         }
 
+        int ret;
         if (add)
         {
             ret = SITNL::net_route_add(route, gw, dev, 0, 0);
@@ -413,14 +407,13 @@ struct NetlinkRoute6 : public Action
 
     virtual void execute(std::ostream &os) override
     {
-        ssize_t ret;
-
         if (dev.empty())
         {
             os << "Error: can't call NetlinkRoute6 with no interface" << std::endl;
             return;
         }
 
+        int ret;
         if (add)
         {
             ret = SITNL::net_route_add(route, gw, dev, 0, 0);
@@ -467,9 +460,9 @@ enum
  * @param type interface link type (such as "ovpn-dco")
  * @return int 0 on success, negative error code on error
  */
-inline ssize_t iface_new(std::ostringstream &os, const std::string &dev, const std::string &type)
+inline int iface_new(std::ostringstream &os, const std::string &dev, const std::string &type)
 {
-    ssize_t ret = -1;
+    int ret = -1;
 
     if (dev.empty())
     {
@@ -492,9 +485,9 @@ inline ssize_t iface_new(std::ostringstream &os, const std::string &dev, const s
     return ret;
 }
 
-inline ssize_t iface_del(std::ostringstream &os, const std::string &dev)
+inline int iface_del(std::ostringstream &os, const std::string &dev)
 {
-    ssize_t ret = -1;
+    int ret = -1;
 
     if (dev.empty())
     {
