@@ -207,18 +207,37 @@ class SITNL
 
     /**
      * Send Netlink message and run callback on reply (if specified)
+     *
+     * If cb is not set, will request an ack message with NLM_F_ACK.
+     * Will return the value of error attribute of the ack message unless
+     * any other error occured during send or receive. Only NLMSG_ERROR and
+     * NLMSG_DONE messages are expected and handled without a callback function.
+     *
+     * If any other messages will be returned, a callback should be used. The
+     * callback will called on every message header except NLMSG_DONE (which ends
+     * the processing immediately). NLMSG_ERROR message is treated special in that
+     * if the callback returns a negative result on a NLMSG_ERROR message, the
+     * processing ends and that result is returned immediately. Otherwise, the
+     * function returns the return value of the callback called on the last message
+     * before NLMSG_DONE.
+     *
+     * @param payload   nlmsghdr to embed into a nlmsg and send
+     * @param peer      nladdr.nl_pid to use, can be 0
+     * @param groups    nladdr.nl_groups to use, can be 0
+     * @param cb        callback to call on returned nlmsghdrs, can be NULL
+     * @param arg_cb    data argument for cb, can be NULL
+     * @return If any error occurs, negative errno. If cb is set, return value of last cb call, if not then value of error attribute in NLMSG_ERROR.
      */
     static ssize_t
     sitnl_send(struct nlmsghdr *payload, pid_t peer, unsigned int groups, sitnl_parse_reply_cb cb, void *arg_cb)
     {
-        int len, fd;
-        ssize_t ret, rem_len, rcv_len;
+        ssize_t ret = 0;
         const size_t buf_len = 16 * 1024;
-        struct sockaddr_nl nladdr = {};
-        struct nlmsgerr *err;
-        struct nlmsghdr *h;
-        unsigned int seq;
-        void *buf = NULL;
+        struct sockaddr_nl nladdr = {
+            .nl_family = AF_NETLINK,
+            .nl_pid = static_cast<__u32>(peer),
+            .nl_groups = groups,
+        };
         struct iovec iov = {
             .iov_base = payload,
             .iov_len = payload->nlmsg_len,
@@ -230,35 +249,31 @@ class SITNL
             .msg_iovlen = 1,
         };
 
-        nladdr.nl_family = AF_NETLINK;
-        nladdr.nl_pid = peer;
-        nladdr.nl_groups = groups;
+        payload->nlmsg_seq = static_cast<__u32>(time(NULL));
 
-        payload->nlmsg_seq = seq = static_cast<__u32>(time(NULL));
-
-        /* no need to send reply */
+        /* request ACK if no cb is used */
         if (!cb)
         {
             payload->nlmsg_flags |= NLM_F_ACK;
         }
 
-        fd = sitnl_socket();
+        /* resources that need cleaning on out */
+        void *buf = NULL;
+        int fd = sitnl_socket();
         if (fd < 0)
         {
             OPENVPN_LOG(__func__ << ": can't open rtnl socket");
             return -errno;
         }
 
-        ret = sitnl_bind(fd, 0);
-        if (ret < 0)
+        if (sitnl_bind(fd, 0) < 0)
         {
             OPENVPN_LOG(__func__ << ": can't bind rtnl socket");
             ret = -errno;
             goto out;
         }
 
-        ret = sendmsg(fd, &nlmsg, 0);
-        if (ret < 0)
+        if (sendmsg(fd, &nlmsg, 0) < 0)
         {
             OPENVPN_LOG(__func__ << ": rtnl: error on sendmsg()");
             ret = -errno;
@@ -283,7 +298,7 @@ class SITNL
              */
             OPENVPN_LOG_RTNL(__func__ << ": checking for received messages");
             iov.iov_len = buf_len;
-            rcv_len = recvmsg(fd, &nlmsg, 0);
+            ssize_t rcv_len = recvmsg(fd, &nlmsg, 0);
             OPENVPN_LOG_RTNL(__func__ << ": rtnl: received " << rcv_len << " bytes");
             if (rcv_len < 0)
             {
@@ -313,13 +328,13 @@ class SITNL
                 goto out;
             }
 
-            h = (struct nlmsghdr *)buf;
-            while (rcv_len >= (int)sizeof(*h))
+            struct nlmsghdr *h = (struct nlmsghdr *)buf;
+            while (rcv_len >= static_cast<ssize_t>(sizeof(*h)))
             {
-                len = h->nlmsg_len;
-                rem_len = len - sizeof(*h);
+                const auto len = h->nlmsg_len;
+                const auto data_len = len - sizeof(*h);
 
-                if ((rem_len < 0) || (len > rcv_len))
+                if ((sizeof(*h) > len) || (len > rcv_len))
                 {
                     if (nlmsg.msg_flags & MSG_TRUNC)
                     {
@@ -339,31 +354,26 @@ class SITNL
 
                 if (h->nlmsg_type == NLMSG_ERROR)
                 {
-                    err = (struct nlmsgerr *)NLMSG_DATA(h);
-                    if (rem_len < (int)sizeof(struct nlmsgerr))
+                    if (data_len < sizeof(struct nlmsgerr))
                     {
                         OPENVPN_LOG(__func__ << ": ERROR truncated");
                         ret = -EIO;
+                        goto out;
+                    }
+
+                    struct nlmsgerr *err = (struct nlmsgerr *)NLMSG_DATA(h);
+                    if (!err->error)
+                    {
+                        ret = 0;
+                        if (cb)
+                            ret = cb(h, arg_cb);
                     }
                     else
                     {
-                        if (!err->error)
-                        {
-                            ret = 0;
-                            if (cb)
-                            {
-                                ret = cb(h, arg_cb);
-                                if (ret < 0)
-                                    goto out;
-                            }
-                        }
-                        else
-                        {
-                            OPENVPN_LOG(__func__ << ": rtnl: generic error: "
-                                                 << strerror(-err->error)
-                                                 << " (" << err->error << ")");
-                            ret = err->error;
-                        }
+                        OPENVPN_LOG(__func__ << ": rtnl: generic error: "
+                                             << strerror(-err->error)
+                                             << " (" << err->error << ")");
+                        ret = err->error;
                     }
                     goto out;
                 }
