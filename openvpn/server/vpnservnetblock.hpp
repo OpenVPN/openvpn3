@@ -54,6 +54,16 @@ class VPNServerNetblock
             prefix_len = route.prefix_len;
         }
 
+        // The Netblock constructor already sets the server
+        // gateway to the .1 address of the subnet, but call
+        // here to override that selection.
+        void override_server_gw(const IP::Addr &gw)
+        {
+            if (!contains(gw))
+                throw vpn_serv_netblock("override_server_gw: server gateway address is not contained by netblock");
+            server_gw = gw;
+        }
+
         bool defined() const
         {
             return net.defined();
