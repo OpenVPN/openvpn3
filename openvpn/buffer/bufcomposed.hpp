@@ -59,7 +59,7 @@ class BufferComposed
             return iter != bc.bv.end();
         }
 
-        virtual void next_buffer() override
+        virtual void next_buffer() final
         {
             if (iter_defined())
                 reset_buf(**iter++);
