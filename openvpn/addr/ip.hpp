@@ -839,6 +839,23 @@ class Addr
         }
     }
 
+    /**
+     * Determines if the IP address is a mapped IP address (e.g. ::ffff:127.0.0.1)
+     */
+    bool is_mapped_address() const
+    {
+        if (ver != V6)
+            return false;
+
+        return u.v6.is_mapped_address();
+    }
+
+    IP::Addr to_v4_addr() const
+    {
+        const std::uint32_t ipv4 = u.v6.get_mapped_ipv4_address();
+        return IP::Addr::from_ipv4(IPv4::Addr::from_uint32(ipv4));
+    };
+
     bool defined() const
     {
         return ver != UNSPEC;

@@ -43,10 +43,18 @@ struct AddrPort
     }
 
 #ifdef HAVE_JSON
-    Json::Value to_json() const
+    Json::Value to_json(bool convert_mapped_addresses = false) const
     {
         Json::Value jret(Json::objectValue);
-        jret["addr"] = Json::Value(addr.to_string());
+        if (convert_mapped_addresses && addr.is_mapped_address())
+        {
+            auto v4addr = addr.to_v4_addr();
+            jret["addr"] = Json::Value(v4addr.to_string());
+        }
+        else
+        {
+            jret["addr"] = Json::Value(addr.to_string());
+        }
         jret["port"] = Json::Value(port);
         return jret;
     }
@@ -76,12 +84,12 @@ struct PeerAddr : public RCCopyable<thread_unsafe_refcount>
     }
 
 #ifdef HAVE_JSON
-    Json::Value to_json() const
+    Json::Value to_json(bool convert_mapped_addresses = false) const
     {
         Json::Value jret(Json::objectValue);
         jret["tcp"] = Json::Value(tcp);
-        jret["local"] = local.to_json();
-        jret["remote"] = remote.to_json();
+        jret["local"] = local.to_json(convert_mapped_addresses);
+        jret["remote"] = remote.to_json(convert_mapped_addresses);
         return jret;
     }
 #endif

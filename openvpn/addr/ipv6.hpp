@@ -525,6 +525,16 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         return u.u64[Endian::e2(1)] == 0 && u.u64[Endian::e2(0)] == 1;
     }
 
+    bool is_mapped_address() const
+    {
+        return u.u32[Endian::e4(1)] == 0xffff && u.u32[Endian::e4(2)] == 0 && u.u32[Endian::e4(3)] == 0;
+    }
+
+    std::uint32_t get_mapped_ipv4_address() const
+    {
+        return u.u32[Endian::e2(0)];
+    }
+
     bool bit(unsigned int pos) const
     {
         if (pos < 64)
