@@ -51,7 +51,7 @@ class BufferComposed
             : bc(bc_arg),
               iter(bc.bv.cbegin())
         {
-            next_buffer();
+            next_buffer_impl();
         }
 
         bool iter_defined()
@@ -59,7 +59,13 @@ class BufferComposed
             return iter != bc.bv.end();
         }
 
-        virtual void next_buffer() final
+        virtual void next_buffer() override
+        {
+            next_buffer_impl();
+        }
+
+        // Both ctor and next_buffer delegate here
+        void next_buffer_impl()
         {
             if (iter_defined())
                 reset_buf(**iter++);
