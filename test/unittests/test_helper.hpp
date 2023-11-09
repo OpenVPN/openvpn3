@@ -375,6 +375,48 @@ class FakeSecureRand : public openvpn::StrongRandomAPI
     unsigned char next;
 };
 
+class unit_test_uniform_int_distribution
+{
+    /* std::uniform_int_distribution is unfortunately implementation specific and generates different
+     * random numbers on different platforms. So use our own implementation to guarantee it for the unit tests.
+     *
+     * Based on https://arxiv.org/abs/1805.10941
+     *
+     * No guarantees that it is implemented correctly but even a bad implementation is good enough for unit tests
+     * if it is deterministic */
+
+  public:
+    template <typename generator>
+    uint32_t operator()(generator &prng)
+    {
+        /* Get random number in (0, range) first */
+        uint32_t range = B - A + 1;
+
+        uint64_t product = uint64_t{prng()} * uint64_t{range};
+
+        uint32_t low = static_cast<uint32_t>(product);
+
+        if (low < range)
+        {
+            uint32_t threshold = -range % range;
+            while (low < threshold)
+            {
+                product = uint64_t{prng()} * uint64_t{range};
+                low = static_cast<uint32_t>(product);
+            }
+        }
+        return A + (product >> 32u);
+    }
+
+    explicit unit_test_uniform_int_distribution(uint32_t low = 0, uint32_t high = std::numeric_limits<uint32_t>::max())
+        : A(low), B(high)
+    {
+    }
+
+    std::uint32_t A;
+    std::uint32_t B;
+};
+
 // googletest is missing the ability to test for specific
 // text inside a thrown exception, so we implement it here
 
