@@ -304,6 +304,26 @@ class RCWeakPtr
     typename T::Controller::Ptr controller;
 };
 
+/* We're pretty sure these are false positives. They only occur with very
+   specific compiler versions and/or architectures.
+
+   For some reason some gcc versions think that the reference counter goes
+   away too soon when destructing certain MultiCompleteType objects. The
+   warnings/errors do not tell us why they think that.
+
+   So for now we display the warnings, but do not fail -Werror builds over
+   them. So that we can fail them for any other new warnings.
+ */
+#if !defined(__clang__) && defined(__GNUC__)
+#pragma GCC diagnostic push
+#if __GNUC__ == 12
+#pragma GCC diagnostic warning "-Wuse-after-free"
+#endif
+#if __GNUC__ == 13
+#pragma GCC diagnostic warning "-Wstringop-overflow"
+#endif
+#endif
+
 class thread_unsafe_refcount
 {
   public:
@@ -478,6 +498,10 @@ class thread_safe_refcount
 
     std::atomic<olong> rc;
 };
+
+#if !defined(__clang__) && defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 // Reference count base class for objects tracked by RCPtr.
 // Disallows copying and assignment.
