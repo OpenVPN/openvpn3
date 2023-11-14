@@ -61,7 +61,7 @@ class NTLM
                                const std::string &phase_2_response,
                                const std::string &dom_username,
                                const std::string &password,
-                               RandomAPI &rng)
+                               StrongRandomAPI &rng)
     {
         // sanity checks
         if (dom_username.empty())
@@ -71,9 +71,6 @@ class NTLM
 
         if (phase_2_response.size() < 32)
             throw Exception("phase2 response from server too short (" + std::to_string(phase_2_response.size()) + ")");
-
-        // ensure that RNG is crypto-strength
-        rng.assert_crypto();
 
         // split domain\username
         std::string domain;

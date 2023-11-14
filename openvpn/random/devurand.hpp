@@ -33,7 +33,7 @@
 
 namespace openvpn {
 
-class DevURand : public RandomAPI
+class DevURand : public StrongRandomAPI
 {
   public:
     OPENVPN_EXCEPTION(dev_urand_error);
@@ -51,12 +51,6 @@ class DevURand : public RandomAPI
     virtual std::string name() const
     {
         return "DevURand";
-    }
-
-    // Return true if algorithm is crypto-strength
-    virtual bool is_crypto() const
-    {
-        return true;
     }
 
     // Fill buffer with random bytes

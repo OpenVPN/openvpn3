@@ -6,7 +6,7 @@
 using namespace openvpn;
 
 template <typename IntegralT>
-class IntegralMin : public RandomAPI
+class IntegralMin : public WeakRandomAPI
 {
   public:
     OPENVPN_EXCEPTION(s_min_error);
@@ -17,12 +17,6 @@ class IntegralMin : public RandomAPI
     std::string name() const override
     {
         return "IntegralMin";
-    }
-
-    // Return true if algorithm is crypto-strength
-    bool is_crypto() const override
-    {
-        return false;
     }
 
     // Fill buffer with minimum value

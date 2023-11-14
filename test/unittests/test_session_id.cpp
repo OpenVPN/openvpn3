@@ -118,7 +118,7 @@ struct SessionID : public SessionID128
     }
 
     SessionID(RandomAPI &rng)
-        : SessionID128(rng, true)
+        : SessionID128(rng)
     {
         // dump("rng");
     }
@@ -184,7 +184,7 @@ static void tryit(RandomAPI &rng, TokenEncryptDecrypt &encdec)
 
 TEST(sessid, tokenEncrypt)
 {
-    RandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
     const TokenEncrypt::Key key(*rng);
     TokenEncryptDecrypt encdec(key);
 

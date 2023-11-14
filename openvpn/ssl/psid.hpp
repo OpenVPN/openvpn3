@@ -59,11 +59,9 @@ class ProtoSessionID
         defined_ = true;
     }
 
-    template <typename PRNG_TYPE>
-    void randomize(PRNG_TYPE &prng)
+    void randomize(StrongRandomAPI &rng)
     {
-        prng.assert_crypto();
-        prng.rand_bytes(id_, SIZE);
+        rng.rand_bytes(id_, SIZE);
         defined_ = true;
     }
 

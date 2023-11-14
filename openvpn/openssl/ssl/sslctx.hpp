@@ -346,11 +346,9 @@ class OpenSSLContext : public SSLFactoryAPI
             x509_track_config = std::move(x509_track_config_arg);
         }
 
-        void set_rng(const RandomAPI::Ptr &rng_arg) override
+        void set_rng(const StrongRandomAPI::Ptr &rng_arg) override
         {
-            // Not implemented (other than assert_crypto check)
-            // because OpenSSL is hardcoded to use its own RNG.
-            rng_arg->assert_crypto();
+            // Not implemented because OpenSSL is hardcoded to use its own RNG.
         }
 
         std::string validate_cert(const std::string &cert_txt) const override

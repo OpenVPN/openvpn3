@@ -55,10 +55,8 @@ class SessionIDType
     }
 
     // Create a random Session ID.
-    explicit SessionIDType(RandomAPI &rng, const bool allow_noncrypto_rng = false)
+    explicit SessionIDType(RandomAPI &rng)
     {
-        if (!allow_noncrypto_rng)
-            rng.assert_crypto();
         rng.rand_bytes(u.data, sizeof(u.data));
     }
 

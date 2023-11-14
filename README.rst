@@ -480,13 +480,12 @@ Here is a brief set of guidelines:
 
 * When grabbing random entropy that is to be used
   for cryptographic purposes (i.e. for keys, tokens, etc.),
-  always ensure that the RNG is crypto-grade by calling
-  :code:`assert_crypto()` on the RNG.  This will throw
-  an exception if the RNG is not crypto-grade:
+  always ensure that the RNG is crypto-grade by using
+  :code:`class StrongRandomAPI` as the RNG type:
   ::
 
-    void set_rng(RandomAPI::Ptr rng_arg) {
-        rng_arg->assert_crypto();
+    StrongRandomAPI::Ptr rng;
+    void set_rng(StrongRandomAPI::Ptr rng_arg) {
         rng = std::move(rng_arg);
     }
 

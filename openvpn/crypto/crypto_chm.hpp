@@ -44,17 +44,17 @@ class CryptoCHM : public CryptoDCInstance
         const CryptoAlgs::Type digest_arg,
         const Frame::Ptr &frame_arg,
         const SessionStats::Ptr &stats_arg,
-        const RandomAPI::Ptr &prng_arg)
+        const StrongRandomAPI::Ptr &rng_arg)
         : cipher(cipher_arg),
           digest(digest_arg),
           frame(frame_arg),
           stats(stats_arg),
-          prng(prng_arg),
+          rng(rng_arg),
           libctx(libctx_arg)
     {
         encrypt_.frame = frame;
         decrypt_.frame = frame;
-        encrypt_.set_prng(prng);
+        encrypt_.set_rng(rng);
     }
 
     // Encrypt/Decrypt
@@ -126,7 +126,7 @@ class CryptoCHM : public CryptoDCInstance
     CryptoAlgs::Type digest;
     Frame::Ptr frame;
     SessionStats::Ptr stats;
-    RandomAPI::Ptr prng;
+    StrongRandomAPI::Ptr rng;
     SSLLib::Ctx libctx;
 
     EncryptCHM<CRYPTO_API> encrypt_;
@@ -146,13 +146,13 @@ class CryptoContextCHM : public CryptoDCContext
         const CryptoAlgs::KeyDerivation key_method,
         const Frame::Ptr &frame_arg,
         const SessionStats::Ptr &stats_arg,
-        const RandomAPI::Ptr &prng_arg)
+        const StrongRandomAPI::Ptr &rng_arg)
         : CryptoDCContext(key_method),
           cipher(CryptoAlgs::dc_cbc_cipher(cipher_arg)),
           digest(CryptoAlgs::dc_cbc_hash(digest_arg)),
           frame(frame_arg),
           stats(stats_arg),
-          prng(prng_arg),
+          rng(rng_arg),
           libctx(libctx_arg)
     {
     }
@@ -167,7 +167,7 @@ class CryptoContextCHM : public CryptoDCContext
                                          CryptoAlgs::legal_dc_digest(digest),
                                          frame,
                                          stats,
-                                         prng);
+                                         rng);
     }
 
     // cipher/HMAC/key info
@@ -194,7 +194,7 @@ class CryptoContextCHM : public CryptoDCContext
     CryptoAlgs::Type digest;
     Frame::Ptr frame;
     SessionStats::Ptr stats;
-    RandomAPI::Ptr prng;
+    StrongRandomAPI::Ptr rng;
     SSLLib::Ctx libctx;
 };
 } // namespace openvpn

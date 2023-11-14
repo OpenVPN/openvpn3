@@ -205,7 +205,7 @@ class AppleSSLContext : public SSLFactoryAPI
             return not_implemented("set_enable_renegotiation");
         }
 
-        virtual void set_rng(const RandomAPI::Ptr &rng_arg)
+        virtual void set_rng(const StrongRandomAPI::Ptr &rng_arg)
         {
             return not_implemented("set_rng");
         }

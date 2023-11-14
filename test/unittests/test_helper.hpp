@@ -339,7 +339,7 @@ class FakeAsyncResolvable : public RESOLVABLE
  * its maximum range is [0x03020100, 0xfffefdfc]. Especially the lower
  * bound makes the std::shuffle implementation in libc++ loop endlessly.
  */
-class FakeSecureRand : public openvpn::RandomAPI
+class FakeSecureRand : public openvpn::StrongRandomAPI
 {
   public:
     FakeSecureRand(const unsigned char initial = 0)
@@ -350,11 +350,6 @@ class FakeSecureRand : public openvpn::RandomAPI
     virtual std::string name() const override
     {
         return "FakeRNG";
-    }
-
-    virtual bool is_crypto() const override
-    {
-        return true;
     }
 
     virtual void rand_bytes(unsigned char *buf, size_t size) override

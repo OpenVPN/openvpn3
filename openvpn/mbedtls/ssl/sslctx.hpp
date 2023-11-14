@@ -445,9 +445,8 @@ class MbedTLSContext : public SSLFactoryAPI
             x509_track_config = std::move(x509_track_config_arg);
         }
 
-        virtual void set_rng(const RandomAPI::Ptr &rng_arg)
+        virtual void set_rng(const StrongRandomAPI::Ptr &rng_arg)
         {
-            rng_arg->assert_crypto();
             rng = rng_arg;
         }
 
@@ -643,7 +642,7 @@ class MbedTLSContext : public SSLFactoryAPI
         std::string tls_groups;
         X509Track::ConfigSet x509_track_config;
         bool local_cert_enabled;
-        RandomAPI::Ptr rng; // random data source
+        StrongRandomAPI::Ptr rng; // random data source
     };
 
     // Represents an actual SSL session.

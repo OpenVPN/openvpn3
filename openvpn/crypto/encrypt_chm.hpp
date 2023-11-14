@@ -61,7 +61,7 @@ class EncryptCHM
             if (cipher_mode == CRYPTO_API::CipherContext::CIPH_CBC_MODE)
             {
                 // in CBC mode, use an explicit, random IV
-                prng->rand_bytes(iv_buf, iv_length);
+                rng->rand_bytes(iv_buf, iv_length);
 
                 // generate fresh outgoing packet ID and prepend to cleartext buffer
                 pid_send.write_next(buf, true, now);
@@ -102,10 +102,9 @@ class EncryptCHM
         }
     }
 
-    void set_prng(RandomAPI::Ptr prng_arg)
+    void set_rng(StrongRandomAPI::Ptr rng_arg)
     {
-        prng_arg->assert_crypto();
-        prng = std::move(prng_arg);
+        rng = std::move(rng_arg);
     }
 
     Frame::Ptr frame;
@@ -129,7 +128,7 @@ class EncryptCHM
     }
 
     BufferAllocated work;
-    RandomAPI::Ptr prng;
+    StrongRandomAPI::Ptr rng;
 };
 
 } // namespace openvpn

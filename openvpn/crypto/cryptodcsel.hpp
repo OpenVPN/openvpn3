@@ -43,10 +43,10 @@ class CryptoDCSelect : public CryptoDCFactory
     CryptoDCSelect(SSLLib::Ctx libctx_arg,
                    const Frame::Ptr &frame_arg,
                    const SessionStats::Ptr &stats_arg,
-                   const RandomAPI::Ptr &prng_arg)
+                   const StrongRandomAPI::Ptr &rng_arg)
         : frame(frame_arg),
           stats(stats_arg),
-          prng(prng_arg),
+          rng(rng_arg),
           libctx(libctx_arg)
     {
     }
@@ -57,7 +57,7 @@ class CryptoDCSelect : public CryptoDCFactory
     {
         const CryptoAlgs::Alg &alg = CryptoAlgs::get(cipher);
         if (alg.flags() & CryptoAlgs::CBC_HMAC)
-            return new CryptoContextCHM<CRYPTO_API>(libctx, cipher, digest, method, frame, stats, prng);
+            return new CryptoContextCHM<CRYPTO_API>(libctx, cipher, digest, method, frame, stats, rng);
         else if (alg.flags() & CryptoAlgs::AEAD)
             return new AEAD::CryptoContext<CRYPTO_API>(libctx, cipher, method, frame, stats);
         else
@@ -67,7 +67,7 @@ class CryptoDCSelect : public CryptoDCFactory
   private:
     Frame::Ptr frame;
     SessionStats::Ptr stats;
-    RandomAPI::Ptr prng;
+    StrongRandomAPI::Ptr rng;
     SSLLib::Ctx libctx;
 };
 

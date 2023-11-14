@@ -1255,7 +1255,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         Client::ProtoConfig::Ptr cp(new Client::ProtoConfig());
         cp->ssl_factory = cc->new_factory();
         cp->relay_mode = relay_mode;
-        cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, prng));
+        cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, rng));
         cp->dc_deferred = true; // defer data channel setup until after options pull
         cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
         cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<SSLLib::CryptoAPI>());
@@ -1388,7 +1388,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     ClientConfigParsed clientconf;
 
     Time now_; // current time
-    RandomAPI::Ptr rng;
+    StrongRandomAPI::Ptr rng;
     RandomAPI::Ptr prng;
     Frame::Ptr frame;
     Layer layer;

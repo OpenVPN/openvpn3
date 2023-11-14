@@ -38,7 +38,7 @@ namespace AWS {
 class HTTPContext
 {
   public:
-    HTTPContext(RandomAPI::Ptr rng,
+    HTTPContext(StrongRandomAPI::Ptr rng,
                 const int debug_level)
         : frame_(frame_init_simple(2048)),
           digest_factory_(new CryptoDigestFactory<SSLLib::CryptoAPI>()),
@@ -49,7 +49,7 @@ class HTTPContext
     }
 
 #ifdef VPN_BINDING_PROFILES
-    HTTPContext(RandomAPI::Ptr rng,
+    HTTPContext(StrongRandomAPI::Ptr rng,
                 const int debug_level,
                 const OptionList &opt) // for VPN binding profile
         : HTTPContext(rng, debug_level)
@@ -84,7 +84,7 @@ class HTTPContext
         return *digest_factory_;
     }
 
-    RandomAPI *rng() const
+    StrongRandomAPI *rng() const
     {
         return rng_.get();
     }
@@ -120,7 +120,7 @@ class HTTPContext
 
     Frame::Ptr frame_;
     DigestFactory::Ptr digest_factory_;
-    RandomAPI::Ptr rng_;
+    StrongRandomAPI::Ptr rng_;
     WS::Client::Config::Ptr http_config_;
 #ifdef VPN_BINDING_PROFILES
     WS::ViaVPN::Ptr via_vpn_;

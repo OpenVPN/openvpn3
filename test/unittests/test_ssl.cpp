@@ -50,7 +50,7 @@ TEST(ssl, sslciphersuites)
 
 TEST(ssl, sslciphers)
 {
-    RandomAPI::Ptr rng(new FakeSecureRand);
+    StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
     bool previousLogOutput = testLog->isStdoutEnabled();
     testLog->setPrintOutput(false);
@@ -71,7 +71,7 @@ TEST(ssl, sslciphers)
 
 TEST(ssl, tls_groups)
 {
-    RandomAPI::Ptr rng(new FakeSecureRand);
+    StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
     SSLFactoryAPI::Ptr sslfact;
 
@@ -116,7 +116,7 @@ TEST(ssl, translate_ciphers_openssl)
 #if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
 TEST(ssl, enablelegacyProvider)
 {
-    RandomAPI::Ptr rng(new FakeSecureRand);
+    StrongRandomAPI::Ptr rng(new FakeSecureRand);
 
     SSLLib::SSLAPI::Config::Ptr sslcfg(new SSLLib::SSLAPI::Config);
     sslcfg->set_local_cert_enabled(false);

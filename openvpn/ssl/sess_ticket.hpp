@@ -130,9 +130,8 @@ class TLSSessionTicketBase
         static constexpr size_t CIPHER_KEY_SIZE = 32;
         static constexpr size_t HMAC_KEY_SIZE = 16;
 
-        explicit Key(RandomAPI &rng)
+        explicit Key(StrongRandomAPI &rng)
         {
-            rng.assert_crypto();
             rng.rand_bytes(cipher_value_, CIPHER_KEY_SIZE);
             rng.rand_bytes(hmac_value_, HMAC_KEY_SIZE);
         }

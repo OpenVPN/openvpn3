@@ -85,6 +85,7 @@ class PsidCookieTest : public testing::Test
         pcfg->now = &now;
         pcfg->handshake_window = Time::Duration::seconds(60);
         pcfg->key_direction = 0;
+        pcfg->rng.reset(new SSLLib::RandomAPI(false));
         pcfg->prng.reset(new SSLLib::RandomAPI(true));
 
         spf.reset(new ServerProto::Factory(dummy_io_context, *pcfg));
@@ -141,7 +142,7 @@ TEST_F(PsidCookieTest, valid_time)
     uint64_t interval = (pci_dut.pcfg_.handshake_window.raw() + 1) / 2;
     bool hmac_ok;
 
-    cli_psid.randomize(*pci_dut.pcfg_.prng);
+    cli_psid.randomize(*pci_dut.pcfg_.rng);
 
     set_clock(Time::now());
     srv_psid = pci_dut.calculate_session_id_hmac(cli_psid, cli_addr, 0);

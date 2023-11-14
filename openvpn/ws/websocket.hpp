@@ -197,11 +197,9 @@ class Status
 class Sender
 {
   public:
-    Sender(RandomAPI::Ptr cli_rng_arg) // only provide rng on client side
+    Sender(StrongRandomAPI::Ptr cli_rng_arg) // only provide rng on client side
         : cli_rng(std::move(cli_rng_arg))
     {
-        if (cli_rng)
-            cli_rng->assert_crypto();
     }
 
     void frame(Buffer &buf, const Status &s) const
@@ -254,7 +252,7 @@ class Sender
         buf.prepend(&len8, sizeof(len8));
     }
 
-    RandomAPI::Ptr cli_rng;
+    StrongRandomAPI::Ptr cli_rng;
 };
 
 class Receiver
@@ -434,7 +432,7 @@ struct Config : public RC<thread_unsafe_refcount>
 
     std::string origin;
     std::string protocol;
-    RandomAPI::Ptr rng;
+    StrongRandomAPI::Ptr rng;
     DigestFactory::Ptr digest_factory;
 
     // compression
@@ -483,7 +481,6 @@ class PerRequest : public RC<thread_unsafe_refcount>
     {
         if (!conf)
             throw websocket_error("no config");
-        conf->rng->assert_crypto();
         if (!conf->digest_factory)
             throw websocket_error("no digest factory in config");
         return conf;
@@ -521,7 +518,7 @@ class PerRequest : public RC<thread_unsafe_refcount>
 
     PerRequest(Config::Ptr conf_arg)
         : conf(validate_conf(std::move(conf_arg))),
-          sender(RandomAPI::Ptr()),
+          sender(StrongRandomAPI::Ptr()),
           receiver(false)
     {
     }

@@ -264,7 +264,7 @@ class PsidCookieImpl : public PsidCookie
     // key must be common to all threads
     static StaticKey create_key()
     {
-        RandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
+        StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
         const CryptoAlgs::Alg &alg = CryptoAlgs::get(digest_);
 
         // guarantee that the key is large enough

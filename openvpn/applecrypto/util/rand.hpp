@@ -31,7 +31,7 @@
 #include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
-class AppleRandom : public RandomAPI
+class AppleRandom : public StrongRandomAPI
 {
   public:
     OPENVPN_EXCEPTION(rand_error_apple);
@@ -45,12 +45,6 @@ class AppleRandom : public RandomAPI
     virtual std::string name() const
     {
         return "AppleRandom";
-    }
-
-    // Return true if algorithm is crypto-strength
-    virtual bool is_crypto() const
-    {
-        return true;
     }
 
     // Fill buffer with random bytes

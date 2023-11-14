@@ -46,7 +46,7 @@ struct AltProxy : public RC<thread_unsafe_refcount>
         Frame::Ptr frame;
         SessionStats::Ptr stats;
 
-        RandomAPI::Ptr rng;
+        StrongRandomAPI::Ptr rng;
         DigestFactory::Ptr digest_factory;
 
         SocketProtect *socket_protect;

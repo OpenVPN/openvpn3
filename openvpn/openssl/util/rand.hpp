@@ -32,7 +32,7 @@
 #include <openvpn/common/numeric_util.hpp>
 
 namespace openvpn {
-class OpenSSLRandom : public RandomAPI
+class OpenSSLRandom : public StrongRandomAPI
 {
   public:
     OPENVPN_EXCEPTION(rand_error_openssl);
@@ -46,12 +46,6 @@ class OpenSSLRandom : public RandomAPI
     virtual std::string name() const
     {
         return "OpenSSLRandom";
-    }
-
-    // Return true if algorithm is crypto-strength
-    virtual bool is_crypto() const
-    {
-        return true;
     }
 
     // Fill buffer with random bytes

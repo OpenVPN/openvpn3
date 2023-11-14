@@ -46,9 +46,8 @@ class TokenEncrypt
       public:
         static constexpr size_t SIZE = 16;
 
-        Key(RandomAPI &rng)
+        Key(StrongRandomAPI &rng)
         {
-            rng.assert_crypto();
             rng.rand_bytes(data, sizeof(data));
         }
 

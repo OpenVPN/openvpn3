@@ -219,7 +219,7 @@ class ClientConfig : public TransportClientFactory
 
     Options::Ptr http_proxy_options;
 
-    RandomAPI::Ptr rng; // random data source
+    StrongRandomAPI::Ptr rng; // random data source
 
     DigestFactory::Ptr digest_factory; // needed by proxy auth methods
 
@@ -733,7 +733,6 @@ class Client : public TransportClient, AsyncResolvableTCP
 
             // generate a client nonce
             unsigned char cnonce_raw[8];
-            config->rng->assert_crypto();
             config->rng->rand_bytes(cnonce_raw, sizeof(cnonce_raw));
             const std::string cnonce = render_hex(cnonce_raw, sizeof(cnonce_raw));
 

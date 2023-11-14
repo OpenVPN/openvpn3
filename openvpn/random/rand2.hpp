@@ -27,24 +27,21 @@
 
 namespace openvpn {
 
-// By convention, rng is crypto-strength while prng is
-// not.  Be sure to always call RandomAPI::assert_crypto()
-// before using an rng for crypto purposes, to verify that
-// it is crypto-capable.
+// By convention, rng is crypto-strength while prng is not.
 struct Rand2
 {
     Rand2()
     {
     }
 
-    Rand2(RandomAPI::Ptr rng_arg,
+    Rand2(StrongRandomAPI::Ptr rng_arg,
           RandomAPI::Ptr prng_arg)
         : rng(std::move(rng_arg)),
           prng(std::move(prng_arg))
     {
     }
 
-    Rand2(RandomAPI::Ptr rng_arg)
+    Rand2(StrongRandomAPI::Ptr rng_arg)
         : rng(rng_arg),
           prng(rng_arg)
     {
@@ -55,7 +52,7 @@ struct Rand2
         return rng && prng;
     }
 
-    RandomAPI::Ptr rng;
+    StrongRandomAPI::Ptr rng;
     RandomAPI::Ptr prng;
 };
 

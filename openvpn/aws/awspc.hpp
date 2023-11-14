@@ -516,7 +516,6 @@ class PCQuery : public RC<thread_unsafe_refcount>
     std::string nonce() const
     {
         unsigned char data[16];
-        rng->assert_crypto();
         rng->rand_fill(data);
         return render_hex(data, sizeof(data));
     }
@@ -598,7 +597,7 @@ class PCQuery : public RC<thread_unsafe_refcount>
     }
 
     WS::ClientSet::Ptr cs;
-    RandomAPI::Ptr rng;
+    StrongRandomAPI::Ptr rng;
     Frame::Ptr frame;
     const bool lookup_product_code;
     const int debug_level;

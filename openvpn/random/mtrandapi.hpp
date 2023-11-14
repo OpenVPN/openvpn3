@@ -32,7 +32,7 @@
 
 namespace openvpn {
 
-class MTRand : public RandomAPI
+class MTRand : public WeakRandomAPI
 {
   public:
     OPENVPN_EXCEPTION(mtrand_error);
@@ -59,12 +59,6 @@ class MTRand : public RandomAPI
     virtual std::string name() const
     {
         return "MTRand";
-    }
-
-    // Return true if algorithm is crypto-strength
-    virtual bool is_crypto() const
-    {
-        return false;
     }
 
     // Fill buffer with random bytes

@@ -55,9 +55,8 @@ class TLSPRF
     {
     }
 
-    void randomize(RandomAPI &rng)
+    void randomize(StrongRandomAPI &rng)
     {
-        rng.assert_crypto();
         if (!server_)
             rng.rand_bytes(pre_master, sizeof(pre_master));
         rng.rand_bytes(random1, sizeof(random1));
@@ -234,7 +233,7 @@ class TLSPRFInstance : public RC<thread_unsafe_refcount>
   public:
     typedef RCPtr<TLSPRFInstance> Ptr;
 
-    virtual void self_randomize(RandomAPI &rng) = 0;
+    virtual void self_randomize(StrongRandomAPI &rng) = 0;
     virtual void self_write(Buffer &buf) = 0;
     virtual void peer_read(Buffer &buf) = 0;
     virtual bool peer_read_complete(BufferComplete &bc) = 0;
@@ -267,7 +266,7 @@ class CryptoTLSPRFInstance : public TLSPRFInstance
     {
     }
 
-    virtual void self_randomize(RandomAPI &rng)
+    virtual void self_randomize(StrongRandomAPI &rng)
     {
         self.randomize(rng);
     }
