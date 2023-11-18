@@ -401,6 +401,12 @@ class TimeType
     OPENVPN_TIME_REL(<=)
 #undef OPENVPN_TIME_REL
 
+    template <typename HASH>
+    void hash(HASH &h) const
+    {
+        h(time_);
+    }
+
     T raw() const
     {
         return time_;
