@@ -57,7 +57,7 @@ class TLSSessionTicketBase
       public:
         static constexpr size_t SIZE = 16;
 
-        explicit Name(RandomAPI &rng)
+        explicit Name(StrongRandomAPI &rng)
         {
             rng.rand_bytes(value_, SIZE);
         }
