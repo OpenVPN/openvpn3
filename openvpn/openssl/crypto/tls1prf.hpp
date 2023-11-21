@@ -20,10 +20,16 @@
 //    If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+#include <openssl/core_names.h>
+#include <openssl/params.h>
+#endif
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 #include <openssl/kdf.h>
 #endif
+
+
 
 #include <openvpn/common/numeric_util.hpp>
 
@@ -33,7 +39,51 @@ namespace OpenSSLCrypto {
 class TLS1PRF
 {
   public:
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    static bool PRF(unsigned char *label,
+                    const size_t label_len,
+                    const unsigned char *sec,
+                    const size_t slen,
+                    unsigned char *out1,
+                    const size_t olen)
+
+    {
+        using EVP_KDF_ptr = std::unique_ptr<EVP_KDF, decltype(&::EVP_KDF_free)>;
+        using EVP_KDF_CTX_ptr = std::unique_ptr<EVP_KDF_CTX, decltype(&::EVP_KDF_CTX_free)>;
+
+        EVP_KDF_ptr kdf{::EVP_KDF_fetch(NULL, "TLS1-PRF", NULL), ::EVP_KDF_free};
+        if (!kdf)
+        {
+            return false;
+        }
+
+        EVP_KDF_CTX_ptr kctx{::EVP_KDF_CTX_new(kdf.get()), ::EVP_KDF_CTX_free};
+
+        if (!kctx)
+        {
+            return false;
+        }
+
+        OSSL_PARAM params[4];
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST,
+                                                     const_cast<char *>(SN_md5_sha1),
+                                                     strlen(SN_md5_sha1));
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SECRET,
+                                                      const_cast<unsigned char *>(sec),
+                                                      slen);
+        params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SEED,
+                                                      label,
+                                                      label_len);
+        params[3] = OSSL_PARAM_construct_end();
+
+        if (::EVP_KDF_derive(kctx.get(), out1, olen, params) <= 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
     static bool PRF(unsigned char *label,
                     const size_t label_len,
                     const unsigned char *sec,
