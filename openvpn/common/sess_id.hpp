@@ -55,7 +55,7 @@ class SessionIDType
     }
 
     // Create a random Session ID.
-    explicit SessionIDType(RandomAPI &rng)
+    explicit SessionIDType(StrongRandomAPI &rng)
     {
         rng.rand_bytes(u.data, sizeof(u.data));
     }

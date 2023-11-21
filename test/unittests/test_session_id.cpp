@@ -117,7 +117,7 @@ struct SessionID : public SessionID128
         // dump("default");
     }
 
-    SessionID(RandomAPI &rng)
+    SessionID(StrongRandomAPI &rng)
         : SessionID128(rng)
     {
         // dump("rng");
@@ -137,7 +137,7 @@ struct SessionID : public SessionID128
 class Session
 {
   public:
-    Session(RandomAPI &rng)
+    Session(StrongRandomAPI &rng)
         : sid(rng)
     {
     }
@@ -160,9 +160,9 @@ std::string test(Session *session)
 
 TEST(sessid, refscope1)
 {
-    MTRand rng(123456789);
-    Session sess(rng);
-    EXPECT_EQ("Name: myname SessID: DsiRkfGnT1l1WtMoM59SRA..", test(&sess));
+    FakeSecureRand fake_rng(0x42);
+    Session sess(fake_rng);
+    EXPECT_EQ("Name: myname SessID: QkNERUZHSElKS0xNTk9QUQ..", test(&sess));
     EXPECT_EQ("Name: myname SessID: AAAAAAAAAAAAAAAAAAAAAA..", test(nullptr));
 }
 
