@@ -47,7 +47,7 @@ inline void write_binary_atomic(const std::string &fn,
                                 const mode_t mode,
                                 const std::uint64_t mtime_ns, // set explicit modification-time in nanoseconds since epoch, or 0 to defer to system
                                 const ConstBuffer &buf,
-                                RandomAPI &rng)
+                                StrongRandomAPI &rng)
 {
     // generate temporary filename
     const std::string tfn = tmp_filename(fn, tmpdir, rng);
@@ -69,7 +69,7 @@ inline void write_binary_atomic(const std::string &fn,
                                 const mode_t mode,
                                 const std::uint64_t mtime_ns,
                                 const Buffer &buf,
-                                RandomAPI &rng)
+                                StrongRandomAPI &rng)
 {
     write_binary_atomic(fn, tmpdir, mode, mtime_ns, const_buffer_ref(buf), rng);
 }

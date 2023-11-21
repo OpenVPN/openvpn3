@@ -31,7 +31,7 @@ namespace openvpn {
 // of an existing filename.
 inline std::string tmp_filename(const std::string &fn,
                                 const std::string &tmpdir,
-                                RandomAPI &rng)
+                                StrongRandomAPI &rng)
 {
     unsigned char data[16];
     rng.rand_fill(data);
