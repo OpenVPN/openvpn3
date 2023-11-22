@@ -1382,9 +1382,9 @@ class Session : ProtoContext,
                 }
             }
         }
-        catch (const std::exception &e)
+        catch (const std::exception &exc)
         {
-            process_exception(e, "info_hold_callback");
+            process_exception(exc, "info_hold_callback");
         }
     }
 
