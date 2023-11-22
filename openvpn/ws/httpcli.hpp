@@ -851,8 +851,8 @@ class HTTPCore : public Base, public TransportClientParent
 
             openvpn_io::async_connect(s->socket,
                                       std::move(results),
-                                      [self = Ptr(this)](const openvpn_io::error_code &error, const openvpn_io::ip::tcp::endpoint &endpoint)
-                                      { self->handle_tcp_connect(error, endpoint); });
+                                      [self = Ptr(this)](const openvpn_io::error_code &error_, const openvpn_io::ip::tcp::endpoint &endpoint)
+                                      { self->handle_tcp_connect(error_, endpoint); });
         }
         catch (const std::exception &e)
         {
