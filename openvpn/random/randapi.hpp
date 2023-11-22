@@ -42,9 +42,6 @@ class RandomAPI : public RC<thread_unsafe_refcount>
     // Random algorithm name
     virtual std::string name() const = 0;
 
-    // Return true if algorithm is crypto-strength
-    virtual bool is_crypto() const = 0;
-
     // Fill buffer with random bytes
     virtual void rand_bytes(unsigned char *buf, size_t size) = 0;
 
@@ -159,22 +156,12 @@ class RandomAPI : public RC<thread_unsafe_refcount>
 
 class StrongRandomAPI : public RandomAPI
 {
-    bool is_crypto() const final override
-    {
-        return true;
-    }
-
   public:
     typedef RCPtr<StrongRandomAPI> Ptr;
 };
 
 class WeakRandomAPI : public RandomAPI
 {
-    bool is_crypto() const final override
-    {
-        return false;
-    }
-
   public:
     typedef RCPtr<WeakRandomAPI> Ptr;
 };
