@@ -879,10 +879,10 @@ int test(const int thread_num)
         Frame::Ptr frame(new Frame(Frame::Context(128, 378, 128, 0, 16, 0)));
 
         // RNG
-        ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI(false));
-        ClientRandomAPI::Ptr prng_cli(new ClientRandomAPI(true));
-        ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI(false));
-        ServerRandomAPI::Ptr prng_serv(new ServerRandomAPI(true));
+        ClientRandomAPI::Ptr rng_cli(new ClientRandomAPI());
+        ClientRandomAPI::Ptr prng_cli(new ClientRandomAPI());
+        ServerRandomAPI::Ptr rng_serv(new ServerRandomAPI());
+        ServerRandomAPI::Ptr prng_serv(new ServerRandomAPI());
         MTRand rng_noncrypto;
 
         // init simulated time

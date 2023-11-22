@@ -85,8 +85,8 @@ class PsidCookieTest : public testing::Test
         pcfg->now = &now;
         pcfg->handshake_window = Time::Duration::seconds(60);
         pcfg->key_direction = 0;
-        pcfg->rng.reset(new SSLLib::RandomAPI(false));
-        pcfg->prng.reset(new SSLLib::RandomAPI(true));
+        pcfg->rng.reset(new SSLLib::RandomAPI());
+        pcfg->prng.reset(new MTRand(2020303));
 
         spf.reset(new ServerProto::Factory(dummy_io_context, *pcfg));
         spf->proto_context_config = pcfg;

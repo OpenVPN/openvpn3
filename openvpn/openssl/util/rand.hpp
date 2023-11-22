@@ -39,9 +39,7 @@ class OpenSSLRandom : public StrongRandomAPI
 
     typedef RCPtr<OpenSSLRandom> Ptr;
 
-    OpenSSLRandom(const bool prng)
-    {
-    }
+    OpenSSLRandom() = default;
 
     virtual std::string name() const
     {

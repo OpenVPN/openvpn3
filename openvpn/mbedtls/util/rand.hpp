@@ -42,7 +42,7 @@ class MbedTLSRandom : public StrongRandomAPI
 
     typedef RCPtr<MbedTLSRandom> Ptr;
 
-    MbedTLSRandom(const bool prng, StrongRandomAPI::Ptr entropy_source)
+    MbedTLSRandom(StrongRandomAPI::Ptr entropy_source)
         : entropy(std::move(entropy_source))
     {
         // Init RNG context
@@ -52,15 +52,10 @@ class MbedTLSRandom : public StrongRandomAPI
         const int errnum = mbedtls_ctr_drbg_seed(&ctx, entropy_poll, entropy.get(), nullptr, 0);
         if (errnum < 0)
             throw MbedTLSException("mbedtls_ctr_drbg_seed", errnum);
-
-        // If prng is set, configure for higher performance
-        // by reseeding less frequently.
-        if (prng)
-            mbedtls_ctr_drbg_set_reseed_interval(&ctx, 1000000);
     }
 
-    MbedTLSRandom(const bool prng)
-        : MbedTLSRandom(prng, StrongRandomAPI::Ptr())
+    MbedTLSRandom()
+        : MbedTLSRandom(StrongRandomAPI::Ptr())
     {
     }
 

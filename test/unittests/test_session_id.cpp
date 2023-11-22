@@ -9,7 +9,7 @@ using namespace openvpn;
 
 TEST(sessid, test1)
 {
-    SSLLib::RandomAPI rng(false);
+    SSLLib::RandomAPI rng;
 
     // test 1
     {
@@ -38,7 +38,7 @@ TEST(sessid, test1)
 }
 TEST(sessid, test2)
 {
-    SSLLib::RandomAPI rng(false);
+    SSLLib::RandomAPI rng;
     {
         const SessionID64 sid1(rng);
         // std::cout << "SID1: " << sid1 << std::endl;
@@ -60,7 +60,7 @@ TEST(sessid, test3)
 
 TEST(sessid, test4)
 {
-    SSLLib::RandomAPI rng(false);
+    SSLLib::RandomAPI rng;
     const SessionID128 x;
     const SessionID128 a("YmtN7B2edrDRlefk3vQ_YQ..");
     const SessionID128 b("YmtN7B2edrDRlefk3vQ_YA..");
@@ -97,7 +97,7 @@ TEST(sessid, test4)
 
 TEST(sessid, speed)
 {
-    SSLLib::RandomAPI rng(false);
+    SSLLib::RandomAPI rng;
 
     const SessionID128 sid(rng);
     const TokenEncrypt::Key key(rng);
@@ -184,7 +184,7 @@ static void tryit(RandomAPI &rng, TokenEncryptDecrypt &encdec)
 
 TEST(sessid, tokenEncrypt)
 {
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     const TokenEncrypt::Key key(*rng);
     TokenEncryptDecrypt encdec(key);
 

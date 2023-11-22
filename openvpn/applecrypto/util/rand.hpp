@@ -38,9 +38,7 @@ class AppleRandom : public StrongRandomAPI
 
     typedef RCPtr<AppleRandom> Ptr;
 
-    AppleRandom(const bool prng)
-    {
-    }
+    AppleRandom() = default;
 
     virtual std::string name() const
     {

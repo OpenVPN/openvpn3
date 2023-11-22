@@ -657,7 +657,7 @@ class Client : public ClientBase
         Client *self = (Client *)arg;
         if (!self->rng)
         {
-            self->rng.reset(new SSLLib::RandomAPI(false));
+            self->rng.reset(new SSLLib::RandomAPI());
         }
         return self->rng->rand_bytes_noexcept(data, len) ? 0 : -1; // using -1 as a general-purpose mbed TLS error code
     }

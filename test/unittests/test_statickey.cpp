@@ -37,7 +37,7 @@ TEST(statickey, key1)
 
 TEST(statickey, key2)
 {
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI(false));
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     const size_t key_len = 16;
     StaticKey sk1;
     sk1.init_from_rng(*rng, key_len);

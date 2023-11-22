@@ -41,6 +41,7 @@
 #include <openvpn/frame/frame_init.hpp>
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/crypto/cryptodcsel.hpp>
+#include <openvpn/random/mtrandapi.hpp>
 #include <openvpn/ssl/mssparms.hpp>
 #include <openvpn/tun/tunmtu.hpp>
 #include <openvpn/tun/tristate_setting.hpp>
@@ -237,8 +238,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
 
         // initialize RNG/PRNG
-        rng.reset(new SSLLib::RandomAPI(false));
-        prng.reset(new SSLLib::RandomAPI(true));
+        rng.reset(new SSLLib::RandomAPI());
+        prng.reset(new MTRand(time(nullptr)));
 
         // frame
         // get tun-mtu and tun-mtu-max parameter from config

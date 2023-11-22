@@ -339,7 +339,7 @@ class Client : public TransportClient, AsyncResolvableTCP
                     ssl_conf->set_mode(Mode(Mode::CLIENT));
                     ssl_conf->set_local_cert_enabled(false);
                     ssl_conf->set_frame(config->frame);
-                    ssl_conf->set_rng(new SSLLib::RandomAPI(false));
+                    ssl_conf->set_rng(new SSLLib::RandomAPI());
 
                     if (!config->tls_ca.empty())
                     {
