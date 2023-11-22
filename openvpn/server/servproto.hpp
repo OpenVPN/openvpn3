@@ -656,9 +656,9 @@ class ServerProto
                         set_housekeeping_timer();
                 }
             }
-            catch (const std::exception &e)
+            catch (const std::exception &exc)
             {
-                error(e);
+                error(exc);
             }
         }
 
