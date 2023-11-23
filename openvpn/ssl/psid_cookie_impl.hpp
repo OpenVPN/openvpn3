@@ -226,8 +226,10 @@ class PsidCookieImpl : public PsidCookie
 
         static const size_t reqd_packet_size
             // clang-format off
-            // [op_field] [cli_psid] [HMAC]      [cli_auth_pktid]   [acked] [srv_psid] [cli_pktid]
-            =  1 +        SID_SIZE + hmac_size + long_pktid_size_ + 5 +     SID_SIZE + short_pktid_size_;
+            // [op_field] [cli_psid] [HMAC]      [cli_auth_pktid]   [acked] [srv_psid]
+            =  1 +        SID_SIZE + hmac_size + long_pktid_size_ + 5 +     SID_SIZE;
+        // the fixed size, 5, of the [acked] field recognizes that the client's first
+        // response will ack exactly one packet, the server's HARD_RESET
         // clang-format on
         if (pkt_buf.size() < reqd_packet_size)
         {
