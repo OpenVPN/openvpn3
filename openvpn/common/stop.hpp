@@ -125,7 +125,7 @@ class Stop
 
     std::recursive_mutex mutex;
     std::vector<Scope *> scopes;
-    bool stop_called = false;
+    volatile bool stop_called = false;
 };
 
 } // namespace openvpn
