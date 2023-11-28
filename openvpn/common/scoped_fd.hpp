@@ -108,15 +108,10 @@ class ScopedFD
         {
             if (::close(fd) == -1)
                 eno = errno;
-            post_close(eno);
             // OPENVPN_LOG("**** SFD CLOSE fd=" << fd << " errno=" << eno);
             fd = -1;
         }
         return eno;
-    }
-
-    virtual void post_close(const int close_errno)
-    {
     }
 
     virtual ~ScopedFD()
