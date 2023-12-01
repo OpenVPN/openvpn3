@@ -79,7 +79,7 @@ struct SendBase : public virtual RC<thread_unsafe_refcount>
     virtual void disconnect_user(const HaltRestart::Type type,
                                  const AuthStatus::Type auth_status,
                                  const std::string &reason,
-                                 const bool tell_client) = 0;
+                                 const std::string &client_reason) = 0;
 
     // set ACL index for user
     virtual void set_acl_index(const int acl_index,
@@ -140,14 +140,14 @@ struct Recv : public virtual RC<thread_unsafe_refcount>
 
     // clang-format off
     virtual void auth_failed(const std::string &reason,
-                             const bool tell_client) = 0;
+                             const std::string &client_reason) = 0;
 
     virtual void push_reply(std::vector<BufferPtr> &&push_msgs) = 0;
 
     // push a halt or restart message to client
     virtual void push_halt_restart_msg(const HaltRestart::Type type,
                                        const std::string &reason,
-                                       const bool tell_client) = 0;
+                                       const std::string &client_reason) = 0;
     // clang-format on
 
     // send control channel message

@@ -42,7 +42,7 @@
 #include <openvpn/ssl/psid.hpp>
 
 // TunClientInstance fwd decl replaces
-//#include <openvpn/tun/server/tunbase.hpp>
+// #include <openvpn/tun/server/tunbase.hpp>
 namespace openvpn {
 class PsidCookie;
 namespace TunClientInstance {
@@ -149,7 +149,7 @@ struct Recv : public virtual RC<thread_unsafe_refcount>
     // push a halt or restart message to client
     virtual void push_halt_restart_msg(const HaltRestart::Type type,
                                        const std::string &reason,
-                                       const bool tell_client) = 0;
+                                       const std::string &client_reason) = 0;
     // clang-format on
 };
 

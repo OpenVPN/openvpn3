@@ -355,7 +355,7 @@ class ServerProto
                 if (get_management())
                     ManLink::send->push_request(ProtoContext::conf_ptr());
                 else
-                    auth_failed("no management provider", false);
+                    auth_failed("no management provider", "");
             }
             else if (string::starts_with(msg, "ACC,"))
             {
@@ -369,9 +369,9 @@ class ServerProto
         }
 
         virtual void auth_failed(const std::string &reason,
-                                 const bool tell_client) override
+                                 const std::string &client_reason) override
         {
-            push_halt_restart_msg(HaltRestart::AUTH_FAILED, reason, tell_client);
+            push_halt_restart_msg(HaltRestart::AUTH_FAILED, reason, client_reason);
         }
 
         virtual void relay(const IP::Addr &target, const int port) override
@@ -426,7 +426,7 @@ class ServerProto
             }
             else
             {
-                auth_failed("no tun provider", false);
+                auth_failed("no tun provider", "");
             }
         }
 
@@ -440,7 +440,7 @@ class ServerProto
 
         virtual void push_halt_restart_msg(const HaltRestart::Type type,
                                            const std::string &reason,
-                                           const bool tell_client) override
+                                           const std::string &client_reason) override
         {
             if (halt || disconnect_type == DT_HALT_RESTART)
                 return;
@@ -457,8 +457,8 @@ class ServerProto
             case HaltRestart::HALT:
                 ts = "HALT";
                 os << "HALT,";
-                if (tell_client && !reason.empty())
-                    os << reason;
+                if (!client_reason.empty())
+                    os << client_reason;
                 else
                     os << "client was disconnected from server";
                 disconnect_type = DT_HALT_RESTART;
@@ -468,8 +468,8 @@ class ServerProto
             case HaltRestart::RESTART:
                 ts = "RESTART";
                 os << "RESTART,";
-                if (tell_client && !reason.empty())
-                    os << reason;
+                if (!client_reason.empty())
+                    os << client_reason;
                 else
                     os << "server requested a client reconnect";
                 disconnect_type = DT_HALT_RESTART;
@@ -479,16 +479,16 @@ class ServerProto
             case HaltRestart::RESTART_PASSIVE:
                 ts = "RESTART_PASSIVE";
                 os << "RESTART,[P]:";
-                if (tell_client && !reason.empty())
-                    os << reason;
+                if (!client_reason.empty())
+                    os << client_reason;
                 else
                     os << "server requested a client reconnect";
                 break;
             case HaltRestart::RESTART_PSID:
                 ts = "RESTART_PSID";
                 os << "RESTART,[P]:";
-                if (tell_client && !reason.empty())
-                    os << reason;
+                if (!client_reason.empty())
+                    os << client_reason;
                 else
                     os << "server requested a client reconnect";
                 disconnect_type = DT_HALT_RESTART;
@@ -497,8 +497,8 @@ class ServerProto
             case HaltRestart::AUTH_FAILED:
                 ts = "AUTH_FAILED";
                 os << ts;
-                if (tell_client && !reason.empty())
-                    os << ',' << reason;
+                if (!client_reason.empty())
+                    os << ',' << client_reason;
                 disconnect_type = DT_HALT_RESTART;
                 disconnect_in(Time::Duration::seconds(1));
                 preserve_session_id = false;
@@ -645,7 +645,7 @@ class ServerProto
                             ProtoContext::pre_destroy();
                             break;
                         case DT_AUTH_PENDING:
-                            auth_failed("Auth Pending Timeout", true);
+                            auth_failed("Auth Pending Timeout", "Auth Pending Timeout");
                             break;
                         default:
                             error("unknown disconnect");
