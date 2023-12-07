@@ -226,7 +226,6 @@ class ProtoContext
         ACTIVE = 10,
     };
 
-  public:
     enum iv_proto_flag : unsigned int
     {
         // See ssl.h in openvpn2 for detailed documentation of IV_PROTO
@@ -241,7 +240,6 @@ class ProtoContext
         IV_PROTO_DYN_TLS_CRYPT = (1 << 9),
     };
 
-  protected:
     enum tlv_types : uint16_t
     {
         EARLY_NEG_FLAGS = 0x0001
@@ -3446,6 +3444,38 @@ class ProtoContext
       private:
         const unsigned int op_code_;
         const unsigned int key_id_;
+    };
+
+    class IvProtoHelper
+    {
+      public:
+        IvProtoHelper(const OptionList &peer_info)
+            : proto_field_(peer_info.get_num<unsigned int>("IV_PROTO", 1, 0))
+        {
+        }
+
+        bool client_supports_ekm_key_method() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_TLS_KEY_EXPORT;
+        }
+
+        bool client_supports_temp_auth_failed() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_AUTH_FAIL_TEMP;
+        }
+
+        bool client_supports_data_v2() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_DATA_V2;
+        }
+
+        bool client_supports_auth_pending_kwargs() const
+        {
+            return proto_field_ & iv_proto_flag::IV_PROTO_AUTH_PENDING_KW;
+        }
+
+      private:
+        unsigned int proto_field_;
     };
 
     class TLSWrapPreValidate : public RC<thread_unsafe_refcount>
