@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <string>
+#include <utility>
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/base64.hpp>
@@ -57,9 +58,9 @@ struct AppControlMessageConfig
         return (encoding_base64 == other.encoding_base64) && (encoding_text == other.encoding_text) && (encoding_binary == other.encoding_binary) && (supported_protocols == other.supported_protocols) && (max_msg_size == other.max_msg_size);
     }
 
-    void parse_flags(std::string flags)
+    void parse_flags(const std::string &flags)
     {
-        for (auto flag : string::split(flags, ':'))
+        for (const auto &flag : string::split(flags, ':'))
         {
             if (flag == "A")
                 encoding_text = true;
@@ -165,7 +166,7 @@ class AppControlMessageReceiver
      * is complete it will return true to signal that the complete message
      * can be retrieved via the \c get_message method
      */
-    bool receive_message(std::string msg)
+    bool receive_message(const std::string &msg)
     {
         if (!recvbuf.defined())
             recvbuf.reset(256, BufferAllocated::GROW);
@@ -176,10 +177,10 @@ class AppControlMessageReceiver
             throw parse_acc_message{"Discarding malformed custom app control message"};
         }
 
-        auto protocol = parts[1];
-        auto length = parts[2];
-        auto flags = parts[3];
-        auto message = parts[4];
+        auto protocol = std::move(parts[1]);
+        auto length = std::move(parts[2]);
+        auto flags = std::move(parts[3]);
+        auto message = std::move(parts[4]);
 
         bool base64Encoding = false;
         bool textEncoding = false;

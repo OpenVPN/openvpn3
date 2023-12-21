@@ -275,7 +275,7 @@ class ClientConnect : ClientProto::NotifyCallback,
     void send_app_control_channel_msg(std::string protocol, std::string msg)
     {
         if (!halt && client)
-            client->post_app_control_message(protocol, msg);
+            client->post_app_control_message(std::move(protocol), std::move(msg));
     }
 
     void thread_safe_send_app_control_channel_msg(std::string protocol, std::string msg)

@@ -251,7 +251,7 @@ class Session : ProtoContext,
         }
 
         for (auto fragment : conf().app_control_config.format_message(proto, message))
-            post_cc_msg(fragment);
+            post_cc_msg(std::move(fragment));
     }
 
     void stop(const bool call_terminate_callback)
@@ -765,7 +765,7 @@ class Session : ProtoContext,
                 notify_callback->client_proto_auth_pending_timeout(timeout);
             }
 
-            ClientEvent::Base::Ptr ev = new ClientEvent::AuthPending(timeout, key_words);
+            ClientEvent::Base::Ptr ev = new ClientEvent::AuthPending(timeout, std::move(key_words));
             cli_events->add_event(std::move(ev));
         }
     }
@@ -863,7 +863,7 @@ class Session : ProtoContext,
 
         if (conf().app_control_config.supports_protocol(proto))
         {
-            auto ev = new ClientEvent::AppCustomControlMessage(proto, app_proto_msg);
+            auto ev = new ClientEvent::AppCustomControlMessage(std::move(proto), std::move(app_proto_msg));
             cli_events->add_event(std::move(ev));
         }
         else

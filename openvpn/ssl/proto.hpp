@@ -656,8 +656,8 @@ class ProtoContext
                 if (o)
                 {
                     app_control_config.max_msg_size = o->get_num(1, 1, std::numeric_limits<int>::max());
-                    auto flags = o->get(2, 1024);
-                    auto protocols = o->get(3, 1024);
+                    const auto &flags = o->get(2, 1024);
+                    const auto &protocols = o->get(3, 1024);
                     app_control_config.parse_flags(flags);
 
                     app_control_config.supported_protocols = string::split(protocols, ':');

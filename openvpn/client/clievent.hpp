@@ -616,7 +616,7 @@ struct Info : public ReasonBase
 struct AppCustomControlMessage : public Base
 {
     AppCustomControlMessage(std::string protocol, std::string message)
-        : Base(CUSTOM_CONTROL), protocol(protocol), custommessage(message)
+        : Base(CUSTOM_CONTROL), protocol(std::move(protocol)), custommessage(std::move(message))
     {
     }
     std::string protocol;
