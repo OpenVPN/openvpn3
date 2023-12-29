@@ -70,7 +70,7 @@ class NTLM
             throw Exception("password is blank");
 
         if (phase_2_response.size() < 32)
-            throw Exception("phase2 response from server too short (" + std::to_string(phase_2_response.size()) + ")");
+            throw Exception("phase2 base64 response from server too short (" + std::to_string(phase_2_response.size()) + ")");
 
         // split domain\username
         std::string domain;
@@ -88,6 +88,9 @@ class NTLM
         // decode phase_2_response from base64 to raw data
         BufferAllocated response(phase_2_response.size(), 0);
         base64->decode(response, phase_2_response);
+
+        if (response.size() < 32)
+            throw Exception("phase2 decoded response from server too short (" + std::to_string(response.size()) + ")");
 
         // extract the challenge from bytes 24-31 in the response
         unsigned char challenge[8];
