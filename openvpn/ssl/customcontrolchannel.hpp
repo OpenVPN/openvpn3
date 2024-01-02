@@ -32,6 +32,7 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/common/base64.hpp>
 #include <openvpn/buffer/bufstr.hpp>
+#include <openvpn/common/number.hpp>
 
 namespace openvpn {
 
@@ -177,14 +178,21 @@ class AppControlMessageReceiver
             throw parse_acc_message{"Discarding malformed custom app control message"};
         }
 
+
         auto protocol = std::move(parts[1]);
-        auto length = std::move(parts[2]);
+        auto length_str = std::move(parts[2]);
         auto flags = std::move(parts[3]);
         auto message = std::move(parts[4]);
 
         bool base64Encoding = false;
         bool textEncoding = false;
         bool fragment = false;
+
+        size_t length = 0;
+        if (!parse_number(length_str, length) || length != message.length())
+        {
+            throw parse_acc_message{"Discarding malformed custom app control message"};
+        }
 
         for (char const &c : flags)
         {

@@ -169,3 +169,47 @@ TEST(customcontrolchannel, send_with_nul)
     EXPECT_EQ(cmsgs.size(), 1);
     EXPECT_EQ(cmsgs[0], expected_control_msg);
 }
+
+TEST(customcontrolchannel, test_incorrect_len)
+{
+    std::string control_msg{"ACC,fortune,62,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
+
+    AppControlMessageReceiver accrecv{};
+
+    EXPECT_THROW(
+        accrecv.receive_message(control_msg),
+        parse_acc_message);
+}
+
+TEST(customcontrolchannel, test_wrong_header)
+{
+    std::string control_msg{"ABC,fortune,64,6,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
+
+    AppControlMessageReceiver accrecv{};
+
+    EXPECT_THROW(
+        accrecv.receive_message(control_msg),
+        parse_acc_message);
+}
+
+TEST(customcontrolchannel, test_unsupported_encoding)
+{
+    std::string control_msg{"ACC,fortune,64,Q,InsgIm1lIjogImZyb2ciLCAAeGZm/SJtc2ciOiAiSSBhbSAAS2VybWl0IiB9Ig=="};
+
+    AppControlMessageReceiver accrecv{};
+
+    EXPECT_THROW(
+        accrecv.receive_message(control_msg),
+        parse_acc_message);
+}
+
+TEST(customcontrolchannel, test_missing_message)
+{
+    std::string control_msg{"ABC,fortune,64,6"};
+
+    AppControlMessageReceiver accrecv{};
+
+    EXPECT_THROW(
+        accrecv.receive_message(control_msg),
+        parse_acc_message);
+}
