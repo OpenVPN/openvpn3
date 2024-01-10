@@ -106,7 +106,7 @@ class SitnlTest : public testing::Test
     }
 
     template <typename CALLBACK>
-    void cmd(Argv argv, CALLBACK cb)
+    void cmd(const Argv &argv, CALLBACK cb)
     {
         // runs command, reads output and calls a callback
         RedirectPipe::InOut pipe;

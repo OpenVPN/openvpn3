@@ -110,7 +110,7 @@ struct test_case
 
 
 
-void do_shift_tests(std::vector<test_case> test_vectors, bool leftshift)
+void do_shift_tests(const std::vector<test_case> &test_vectors, bool leftshift)
 {
     sockaddr_in6 sa{};
 
@@ -120,7 +120,7 @@ void do_shift_tests(std::vector<test_case> test_vectors, bool leftshift)
         sa.sin6_addr.s6_addr[i] = test_vectors[0].ip[i];
     }
 
-    for (auto &t : test_vectors)
+    for (const auto &t : test_vectors)
     {
         // Shift by zero should not change anything
         auto addr = IPv6::Addr::from_sockaddr(&sa);
