@@ -140,7 +140,7 @@ struct Set : public std::vector<KeyValue>, public RCCopyable<thread_unsafe_refco
     {
         if (!src.isObject())
             OPENVPN_THROW(peer_info_error, title << ": top level JSON object must be a dictionary");
-        auto m = src.map();
+        auto m = src.asObject();
         for (auto &e : m)
         {
             if (e.second.isString())

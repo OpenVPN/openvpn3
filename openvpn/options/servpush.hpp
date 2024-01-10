@@ -64,7 +64,7 @@ class ServerPushList : public std::vector<std::string>
     void parse(const std::string &title, const Json::Value &push_list) // push_list is JSON array
     {
         reserve(16); // arbitrary, just a guess
-        const auto &ja = json::cast_array(push_list, false, title).array();
+        const auto &ja = json::cast_array(push_list, false, title).asArray();
         for (size_t i = 0; i < ja.size(); ++i)
         {
             const Json::Value &jv = ja[i];
@@ -77,7 +77,7 @@ class ServerPushList : public std::vector<std::string>
                     push_back(ji.asStringRef());
                 else if (ji.isArray())
                 {
-                    const auto &ia = ji.array();
+                    const auto &ia = ji.asArray();
                     for (size_t j = 0; j < ia.size(); ++j)
                     {
                         const Json::Value &iv = ia[j];
