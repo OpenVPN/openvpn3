@@ -308,7 +308,7 @@ class Client : public ClientBase
         {
             if (string::starts_with(ev.info, "OPEN_URL:"))
             {
-                open_url(ev.info.substr(9), "");
+                open_url(ev.info.substr(9));
             }
             else if (string::starts_with(ev.info, "WEB_AUTH:"))
             {
@@ -316,10 +316,7 @@ class Client : public ClientBase
                 size_t flagsend = extra.find(':');
                 if (flagsend != std::string::npos)
                 {
-
-                    auto flags = extra.substr(0, flagsend);
-                    auto url = extra.substr(flagsend + 1);
-                    open_url(url, flags);
+                    open_url(extra.substr(flagsend + 1));
                 }
             }
             else if (string::starts_with(ev.info, "CR_TEXT:"))
@@ -343,7 +340,7 @@ class Client : public ClientBase
                   << " msg payload: " << acev.payload << std::endl;
     }
 
-    void open_url(std::string url_str, std::string flags)
+    void open_url(std::string url_str)
     {
         if (string::starts_with(url_str, "http://")
             || string::starts_with(url_str, "https://"))
