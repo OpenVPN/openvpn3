@@ -284,7 +284,7 @@ class ParseClientConfig
                 if (options.exists("push-peer-info"))
                     pushPeerInfo_ = true;
                 if (pushPeerInfo_)
-                    peerInfoUV_ = peer_info_uv;
+                    peerInfoUV_ = std::move(peer_info_uv);
             }
 
             // dev name

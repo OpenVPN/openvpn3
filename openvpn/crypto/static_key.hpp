@@ -165,7 +165,7 @@ class OpenVPNStaticKey
         }
         if (in_body || data.size() != KEY_SIZE)
             throw static_key_parse_error();
-        key_data_ = data;
+        key_data_ = std::move(data);
     }
 
     std::string render() const

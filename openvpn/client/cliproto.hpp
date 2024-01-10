@@ -715,7 +715,7 @@ class Session : ProtoContext,
         else
         {
             fatal_ = Error::AUTH_FAILED;
-            fatal_reason_ = reason;
+            fatal_reason_ = std::move(reason);
             log_reason = "AUTH_FAILED";
         }
         if (notify_callback)

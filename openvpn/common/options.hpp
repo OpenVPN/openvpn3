@@ -1049,7 +1049,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
                             extraneous_err(line_num, "option", opt);
                         untag_open_tag(opt.ref(0));
                         opt.push_back("");
-                        multiline = opt;
+                        multiline = std::move(opt);
                         in_multiline = true;
                     }
                     else
@@ -1117,7 +1117,7 @@ class OptionList : public std::vector<Option>, public RCCopyable<thread_unsafe_r
                                 extraneous_err(line_num, "meta option", opt);
                             untag_open_meta_tag(opt.ref(0));
                             opt.push_back("");
-                            multiline = opt;
+                            multiline = std::move(opt);
                             in_multiline = true;
                         }
                         else

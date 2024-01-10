@@ -109,7 +109,7 @@ class LinuxGW
                 if (m < best_metric || best_metric == std::numeric_limits<int>::max())
                 {
                     best_metric = m;
-                    dev_ = d;
+                    dev_ = std::move(d);
                     addr_ = a;
                 }
             }

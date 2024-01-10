@@ -693,8 +693,8 @@ class SITNL
 
         if (!res->route.defined() && save.ifa_index == res->ifindex)
         {
-            res->route = route;
-            OPENVPN_LOG_RTNL(__func__ << ": MATCH " << route.to_string() << " ifindex=" << save.ifa_index);
+            res->route = std::move(route);
+            OPENVPN_LOG_RTNL(__func__ << ": MATCH " << res->route.to_string() << " ifindex=" << save.ifa_index);
         }
         return 0;
     }

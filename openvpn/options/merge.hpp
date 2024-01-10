@@ -268,7 +268,7 @@ class ProfileMerge
                     if (OptionList::is_open_tag(opt.ref(0)) && opt.size() == 1)
                     {
                         OptionList::untag_open_tag(opt.ref(0));
-                        multiline = opt;
+                        multiline = std::move(opt);
                         in_multiline = true;
                         unsigned int flags = 0; // not used
                         opaque_multiline = is_fileref_directive(multiline.ref(0), flags);

@@ -131,7 +131,7 @@ class PsidCookieImpl : public PsidCookie
 
     virtual void provide_psid_cookie_transport(PsidCookieTransportBase::Ptr pctb) override
     {
-        pctb_ = pctb;
+        pctb_ = std::move(pctb);
     }
 
 #ifndef UNIT_TEST

@@ -303,7 +303,7 @@ class FakeAsyncResolvable : public RESOLVABLE
             EndpointType ep(openvpn_io::ip::make_address(result.first), result.second);
             endpoints.push_back(ep);
         }
-        results_[host + ":" + service] = endpoints;
+        results_[host + ":" + service] = std::move(endpoints);
     }
 
     FakeAsyncResolvable(CTOR_ARGS... args)

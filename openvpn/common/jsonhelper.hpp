@@ -164,7 +164,7 @@ inline void from_vector(Json::Value &root, const T &vec, const NAME &name)
     for (auto &e : vec)
         array.append(e.to_json());
     if (array.size())
-        root[name] = array;
+        root[name] = std::move(array);
 }
 
 template <typename TITLE>
