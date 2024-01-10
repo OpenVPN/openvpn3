@@ -155,7 +155,7 @@ TEST(config, duplicate_options_sets)
 
     for (auto set : allsets)
     {
-        for (auto optname : set)
+        for (const auto &optname : set)
         {
             /* Use an expection instead of an assert to get the name of the option
              * that is a duplicate */

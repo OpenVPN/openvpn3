@@ -43,8 +43,7 @@ TEST(LogInfoTest, TestLogInfo)
 {
     std::string msg("logMessage");
     openvpn::ClientAPI::LogInfo logInfo(msg);
-    auto text = logInfo.text;
 
-    ASSERT_EQ(text, msg);
+    ASSERT_EQ(logInfo.text, msg);
 }
 } // namespace unittests

@@ -49,7 +49,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
             o.exact_args(3);
             o.touch();
 
-            auto action_str = o.get(1, -1);
+            const auto &action_str = o.get(1, -1);
             if (action_str == "accept")
                 action = Accept;
             else if (action_str == "ignore")
