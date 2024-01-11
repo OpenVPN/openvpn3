@@ -169,6 +169,7 @@ class Base : public RC<thread_safe_refcount>
 {
   public:
     typedef RCPtr<Base> Ptr;
+    virtual ~Base() = default;
     Base(Type id)
         : id_(id)
     {
