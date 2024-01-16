@@ -19,16 +19,33 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// This is a general-purpose logging framework that allows for OPENVPN_LOG and
-// OPENVPN_LOG_NTNL macros to dispatch logging data to a thread-local handler.
+#ifndef OPENVPN_LOG_LOGBASE_CLASS_H
+#define OPENVPN_LOG_LOGBASE_CLASS_H
 
-// NOTE: define USE_ASIO_THREADLOCAL if your C++ doesn't support the
-// "thread_local" attribute.
+#include <string>
 
-#ifndef OPENVPN_LOG_LOGTHREAD_H
-#define OPENVPN_LOG_LOGTHREAD_H
+#include <openvpn/common/rc.hpp>
 
-#include "openvpn/log/logthread_macros.hpp"
-#include "openvpn/log/logthread_class.hpp"
+#define OPENVPN_LOG_CLASS openvpn::LogBase
+
+namespace openvpn {
+
+#ifdef OPENVPN_LOGBASE_NO_RC
+
+struct LogBase
+{
+    virtual void log(const std::string &str) = 0;
+};
+
+#else
+
+struct LogBase : public RC<thread_safe_refcount>
+{
+    typedef RCPtr<LogBase> Ptr;
+    virtual void log(const std::string &str) = 0;
+};
+
+#endif
+} // namespace openvpn
 
 #endif

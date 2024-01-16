@@ -37,19 +37,4 @@
 
 #define OPENVPN_LOG_STRING(str) OPENVPN_LOG_STREAM << (str) << std::flush
 
-// no-op constructs normally used with logthread.hpp
-namespace openvpn {
-namespace Log {
-struct Context
-{
-    struct Wrapper
-    {
-    };
-    Context(const Wrapper &)
-    {
-    }
-};
-} // namespace Log
-} // namespace openvpn
-
 #endif // OPENVPN_LOG_LOGSIMPLE_H
