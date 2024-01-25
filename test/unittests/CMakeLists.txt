@@ -31,6 +31,7 @@ add_executable(coreUnitTests
         test_b64.cpp
         test_verify_x509_name.cpp
         test_ssl.cpp
+        test_sslctx.cpp
         test_continuation.cpp
         test_crypto.cpp
         test_optfilt.cpp

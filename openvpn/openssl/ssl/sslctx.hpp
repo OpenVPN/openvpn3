@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -122,7 +122,16 @@ class OpenSSLContext : public SSLFactoryAPI
         MAX_CIPHERTEXT_IN = 64 // maximum number of queued input ciphertext packets
     };
 
-    // The data needed to construct an OpenSSLContext.
+    /**
+      @brief The data needed to construct an OpenSSLContext.
+      @class OpenSSLContext::Config
+      @note The factory and/or ssl objects that are eventually instantiated using an instance of
+            this type may share some state with the instance that participated in their creation
+            so make sure the Config outlives the factory and the factory (from .new_factory())
+            outlives the ssl instance(s) created via .ssl().
+      @see  OpenSSLContext::Config::new_factory()
+      @see  SSLFactoryAPI::ssl()
+    */
     class Config : public SSLConfigAPI
     {
         friend class OpenSSLContext;
@@ -130,6 +139,16 @@ class OpenSSLContext : public SSLFactoryAPI
       public:
         typedef RCPtr<Config> Ptr;
 
+        /**
+          @brief Return a pointer-like object that refers to a ssl factory
+          @return SSLFactoryAPI::Ptr that refers to an instance of a factory
+          @note The SSLAPI::Ptr that is returned by the .ssl() implementation may refer to shared
+                state within this factory, so ensure the factory outlives any instances returned
+                by the associated .ssl() API.
+
+          This function returns a SSLFactoryAPI::Ptr that refers to an instance of a factory that
+          implements the SSLFactoryAPI for OpenSSL.
+        */
         SSLFactoryAPI::Ptr new_factory() override
         {
             return SSLFactoryAPI::Ptr(new OpenSSLContext(this));
@@ -774,9 +793,11 @@ class OpenSSLContext : public SSLFactoryAPI
             return SSL_get_session(ssl) && SSL_export_keying_material(ssl, dest, size, label.c_str(), label.size(), nullptr, 0, 0) == 1;
         }
 
-        // Return true if we did a full SSL handshake/negotiation.
-        // Return false for cached, reused, or persisted sessions.
-        // Also returns false if previously called on this session.
+        /**
+          @brief Returns the cached/reused status of the session.
+          @return true if we did a full SSL handshake/negotiation or if the handshake attempt failed with an exception.
+          @return false for cached, reused, or persisted sessions or if previously called on this session.
+        */
         virtual bool did_full_handshake() override
         {
             if (called_did_full_handshake)
