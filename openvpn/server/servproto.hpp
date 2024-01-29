@@ -307,6 +307,12 @@ class ServerProto
         {
         }
 
+        bool supports_proto_v3() override
+        {
+            /* TODO: currently all server implementations do not implement this feature in their data channel */
+            return false;
+        }
+
         bool defined_() const
         {
             return !halt && TransportLink::send;

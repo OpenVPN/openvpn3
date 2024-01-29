@@ -116,6 +116,11 @@ class ClientConfig : public TunClientFactory
         return new ClientConfig;
     }
 
+    bool supports_proto_v3() override
+    {
+        return true;
+    }
+
     TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
                                       TunClientParent &parent,
                                       TransportClient *transcli) override;

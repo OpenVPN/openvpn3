@@ -45,10 +45,13 @@ class ClientConfig : public TunClientFactory
                                       TunClientParent &parent,
                                       TransportClient *transcli) override;
 
-  private:
-    ClientConfig()
+    bool supports_proto_v3() override
     {
+        return true;
     }
+
+  private:
+    ClientConfig() = default;
 };
 
 class Client : public TunClient

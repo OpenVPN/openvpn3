@@ -87,6 +87,11 @@ class ClientConfig : public TunClientFactory
                                       TunClientParent &parent,
                                       TransportClient *transcli) override;
 
+    bool supports_proto_v3() override
+    {
+        return tun_type != TunWin::OvpnDco;
+    }
+
     void finalize(const bool disconnected) override
     {
         if (disconnected)

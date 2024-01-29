@@ -121,6 +121,12 @@ class ClientConfig : public TunClientFactory
             return new TunLinuxSetup::Setup<TUN_LINUX>();
     }
 
+    bool supports_proto_v3() override
+    {
+        /* The normal tun implementation that uses the internal data channel */
+        return true;
+    }
+
   private:
     ClientConfig()
     {

@@ -109,6 +109,11 @@ class ClientConfig : public TunClientFactory
             tun_persist.reset();
     }
 
+    bool supports_proto_v3() override
+    {
+        return true;
+    }
+
   private:
     ClientConfig()
         : n_parallel(8), retain_sd(false), tun_prefix(false), builder(nullptr)

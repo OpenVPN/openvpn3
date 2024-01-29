@@ -351,6 +351,10 @@ class TestProto : public ProtoContextCallbackInterface
     {
     }
 
+    bool supports_proto_v3() override
+    {
+        return true;
+    }
 
   public:
     OPENVPN_EXCEPTION(session_invalidated);
@@ -1258,7 +1262,7 @@ TEST(proto, iv_ciphers_aead)
 
     auto protoConf = openvpn::ProtoContext::ProtoConfig();
 
-    auto infostring = protoConf.peer_info_string();
+    auto infostring = protoConf.peer_info_string(false);
 
     auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
     ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
@@ -1277,7 +1281,7 @@ TEST(proto, iv_ciphers_non_preferred)
 
     auto protoConf = openvpn::ProtoContext::ProtoConfig();
 
-    auto infostring = protoConf.peer_info_string();
+    auto infostring = protoConf.peer_info_string(true);
 
     auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
     ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
@@ -1316,7 +1320,7 @@ TEST(proto, iv_ciphers_legacy)
 
     auto protoConf = openvpn::ProtoContext::ProtoConfig();
 
-    auto infostring = protoConf.peer_info_string();
+    auto infostring = protoConf.peer_info_string(false);
 
     auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
     ivciphers = ivciphers.substr(0, ivciphers.find("\n"));

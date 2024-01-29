@@ -203,6 +203,11 @@ class ProtoContextCallbackInterface
         buf.write(&empty, 2);
     }
 
+    /** the protocol context needs to know if the parent and its tun/transport layer are able to
+     * support 64bit and AEAD tag at the end in order to properly handshake this protocol feature
+     */
+    virtual bool supports_proto_v3() = 0;
+
     //! Called when KeyContext transitions to ACTIVE state
     virtual void active(bool primary) = 0;
 };
@@ -279,6 +284,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         IV_PROTO_CC_EXIT_NOTIFY = (1 << 7),
         IV_PROTO_AUTH_FAIL_TEMP = (1 << 8),
         IV_PROTO_DYN_TLS_CRYPT = (1 << 9),
+        IV_PROTO_DATA_V3 = (1 << 10),
         IV_PROTO_DNS_OPTION_V2 = (1 << 11),
         IV_PROTO_PUSH_UPDATE = (1 << 12)
     };
@@ -831,6 +837,14 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                             // Overrides "key-derivation" method set above
                             dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
                         }
+                        else if (flag == "aead-tag-end")
+                        {
+                            dc.set_aead_tag_end(true);
+                        }
+                        else if (flag == "pkt-id-64-bit")
+                        {
+                            dc.set_64_bit_packet_id(true);
+                        }
                         else
                         {
                             OPENVPN_THROW(process_server_push_error, "unknown flag '" << flag << "'");
@@ -904,6 +918,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 os << ", digest " << CryptoAlgs::name(dc.digest());
 
             os << ", peer-id " << remote_peer_id;
+
+            if (dc.aeadTagAtTheEnd())
+                os << ", aead-tag-end";
+
+            if (dc.use64bitPktCounter())
+                os << ", pkt-id-64-bit";
 
             os << std::endl;
         }
@@ -1085,13 +1105,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         // generate a string summarizing information about the client
         // including capabilities
-        std::string peer_info_string() const
+        std::string peer_info_string(bool proto_v3_support) const
         {
             std::ostringstream out;
             const char *compstr = nullptr;
 
             // supports op32 and P_DATA_V2 and expects a push reply
-
             unsigned int iv_proto = IV_PROTO_DATA_V2
                                     | IV_PROTO_REQUEST_PUSH
                                     | IV_PROTO_AUTH_PENDING_KW
@@ -1099,6 +1118,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                                     | IV_PROTO_CC_EXIT_NOTIFY
                                     | IV_PROTO_AUTH_FAIL_TEMP
                                     | IV_PROTO_PUSH_UPDATE;
+
+            if (proto_v3_support)
+                iv_proto |= IV_PROTO_DATA_V3;
 
             if (CryptoAlgs::lookup("SHA256") != CryptoAlgs::NONE && CryptoAlgs::lookup("AES-256-CTR") != CryptoAlgs::NONE)
                 iv_proto |= IV_PROTO_DYN_TLS_CRYPT;
@@ -2860,7 +2882,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                     write_empty_string(*buf); // username
                     write_empty_string(*buf); // password
                 }
-                const std::string peer_info = proto.config->peer_info_string();
+                const std::string peer_info = proto.config->peer_info_string(proto.proto_callback->supports_proto_v3());
                 write_auth_string(peer_info, *buf);
             }
             app_send_validate(std::move(buf));

@@ -122,6 +122,16 @@ class CryptoDCSettingsData
         digest_ = digest;
     }
 
+    void set_aead_tag_end(bool at_the_end)
+    {
+        aead_tag_at_the_end = at_the_end;
+    }
+
+    void set_64_bit_packet_id(bool use_64bit_packet_id)
+    {
+        pktcounter_64bit = use_64bit_packet_id;
+    }
+
     CryptoAlgs::Type cipher() const
     {
         return cipher_;
@@ -139,6 +149,16 @@ class CryptoDCSettingsData
         return (CryptoAlgs::use_cipher_digest(cipher_) ? digest_ : CryptoAlgs::NONE);
     }
 
+    bool use64bitPktCounter() const
+    {
+        return pktcounter_64bit;
+    }
+
+    bool aeadTagAtTheEnd() const
+    {
+        return aead_tag_at_the_end;
+    }
+
     void set_key_derivation(CryptoAlgs::KeyDerivation method)
     {
         key_derivation_ = method;
@@ -154,6 +174,8 @@ class CryptoDCSettingsData
     CryptoAlgs::Type cipher_ = CryptoAlgs::NONE;
     CryptoAlgs::Type digest_ = CryptoAlgs::NONE;
     CryptoAlgs::KeyDerivation key_derivation_ = CryptoAlgs::KeyDerivation::OPENVPN_PRF;
+    bool pktcounter_64bit = false;
+    bool aead_tag_at_the_end = false;
 };
 
 // Factory for CryptoDCInstance objects
@@ -217,6 +239,24 @@ class CryptoDCSettings : public CryptoDCSettingsData
         if (new_digest != digest())
         {
             CryptoDCSettingsData::set_digest(new_digest);
+            dirty = true;
+        }
+    }
+
+    void set_aead_tag_end(bool at_the_end)
+    {
+        if (at_the_end != aeadTagAtTheEnd())
+        {
+            CryptoDCSettingsData::set_aead_tag_end(at_the_end);
+            dirty = true;
+        }
+    }
+
+    void set_64_bit_packet_id(bool use_64bit_packet_id)
+    {
+        if (use_64bit_packet_id != use64bitPktCounter())
+        {
+            CryptoDCSettingsData::set_64_bit_packet_id(use_64bit_packet_id);
             dirty = true;
         }
     }
