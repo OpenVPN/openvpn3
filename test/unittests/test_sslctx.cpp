@@ -22,7 +22,6 @@
 
 #include <openvpn/ssl/sslchoose.hpp>
 
-#ifdef USE_OPENSSL
 
 #include <openvpn/ssl/sslapi.hpp>
 
@@ -256,6 +255,9 @@ TEST(sslctx_ut, config_new_factory_server)
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
 
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    config->set_rng(rng);
+
     config->set_mode(Mode(Mode::SERVER));
     config->load_cert(cert_txt);
     config->load_private_key(pvt_key_txt);
@@ -272,6 +274,9 @@ TEST(sslctx_ut, config_new_factory_client)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
+
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    config->set_rng(rng);
 
     config->set_mode(Mode(Mode::CLIENT));
     config->load_cert(cert_txt);
@@ -357,6 +362,9 @@ static inline auto MakeClient(Frame::Ptr frame)
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     EXPECT_TRUE(config);
 
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    config->set_rng(rng);
+
     config->set_mode(Mode(Mode::CLIENT));
     config->load_cert(cert_txt);
     config->load_private_key(pvt_key_txt);
@@ -377,6 +385,9 @@ static inline auto MakeServer(Frame::Ptr frame, const std::string &pvt_key, cons
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     config->enable_legacy_algorithms(false);
     EXPECT_TRUE(config);
+
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    config->set_rng(rng);
 
     config->set_mode(Mode(Mode::SERVER));
     config->load_cert(cert);
@@ -470,5 +481,3 @@ TEST(sslctx_ut, clienthello)
     auto buf = server->read_ciphertext();
     ASSERT_TRUE(buf->length() > 1);
 }
-
-#endif
