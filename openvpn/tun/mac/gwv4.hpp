@@ -123,8 +123,10 @@ class MacGatewayInfoV4
         sockfd.reset(socket(PF_ROUTE, SOCK_RAW, 0));
         if (!sockfd.defined())
             throw route_gateway_error("GDG: socket #1 failed");
-        if (::write(sockfd(), (char *)&m_rtmsg, l) < 0)
-            throw route_gateway_error("GDG: problem writing to routing socket");
+        auto ret = ::write(sockfd(), (char *)&m_rtmsg, l);
+        if (ret < 0)
+            throw route_gateway_error("GDG: problem writing to routing socket: " + std::to_string(ret)
+                                      + " errno: " + std::to_string(errno) + " msg: " + strerror(errno));
         do
         {
             l = ::read(sockfd(), (char *)&m_rtmsg, sizeof(m_rtmsg));

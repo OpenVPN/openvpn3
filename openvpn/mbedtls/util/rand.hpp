@@ -27,7 +27,9 @@
 #define OPENVPN_MBEDTLS_UTIL_RAND_H
 
 #include <mbedtls/entropy.h>
+#if MBEDTLS_VERSION_NUMBER < 0x03000000
 #include <mbedtls/entropy_poll.h>
+#endif
 #include <mbedtls/ctr_drbg.h>
 
 #include <openvpn/random/randapi.hpp>
@@ -41,6 +43,7 @@ class MbedTLSRandom : public StrongRandomAPI
     OPENVPN_EXCEPTION(rand_error_mbedtls);
 
     typedef RCPtr<MbedTLSRandom> Ptr;
+
 
     MbedTLSRandom(StrongRandomAPI::Ptr entropy_source)
         : entropy(std::move(entropy_source))
@@ -88,6 +91,17 @@ class MbedTLSRandom : public StrongRandomAPI
     virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
     {
         return rndbytes(buf, size) >= 0;
+    }
+
+    /**
+     * function to get the mbedtls_ctr_drbg_context. This is needed for the pk_parse
+     * methods in mbed TLS 3.0 that require a random number generator to avoid side
+     * channel attacks when loading private keys. The returned context is tied
+     * to the internal state of this random number generator.
+     */
+    mbedtls_ctr_drbg_context *get_ctr_drbg_ctx()
+    {
+        return &ctx;
     }
 
   private:

@@ -143,7 +143,7 @@ class CipherContext
             throw mbedtls_cipher_error("mbedtls_cipher_setup");
 
         // set key and encrypt/decrypt mode
-        if (mbedtls_cipher_setkey(&ctx, key, ci->key_bitlen, (mbedtls_operation_t)mode) < 0)
+        if (mbedtls_cipher_setkey(&ctx, key, mbedtls_cipher_get_key_bitlen(&ctx), (mbedtls_operation_t)mode) < 0)
             throw mbedtls_cipher_error("mbedtls_cipher_setkey");
 
         initialized = true;
@@ -229,8 +229,11 @@ class CipherContext
             return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_CBC);
         case CryptoAlgs::DES_EDE3_CBC:
             return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_EDE3_CBC);
+#if MBEDTLS_VERSION_NUMBER < 0x03000000
+            /* no longer supported in newer mbed TLS versions */
         case CryptoAlgs::BF_CBC:
             return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_BLOWFISH_CBC);
+#endif
         default:
             return nullptr;
         }

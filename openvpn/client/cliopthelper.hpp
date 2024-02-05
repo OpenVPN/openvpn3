@@ -310,6 +310,7 @@ class ParseClientConfig
             try
             {
                 sslConfig.reset(new SSLLib::SSLAPI::Config());
+                sslConfig->set_rng(new SSLLib::RandomAPI());
                 sslConfig->load(options, lflags);
             }
             catch (...)

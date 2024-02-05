@@ -614,6 +614,9 @@ class Client : public ClientBase
                                                    signdata.c_data(),
                                                    signdata.size(),
                                                    sig.data(),
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+                                                   sig.length(),
+#endif
                                                    &sig_size,
                                                    rng_callback,
                                                    this);
@@ -1391,7 +1394,9 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                             {
                                 const std::string epki_key_txt = read_text_utf8(epki_key_fn);
 #if defined(USE_MBEDTLS)
-                                client.epki_ctx.parse(epki_key_txt, "EPKI", privateKeyPassword);
+
+                                auto mbedrng = std::make_unique<MbedTLSRandom>();
+                                client.epki_ctx.parse(epki_key_txt, "EPKI", privateKeyPassword, *mbedrng);
 #else
                                 client.epki_pkey.parse_pem(epki_key_txt, "epki private key", nullptr);
 #endif

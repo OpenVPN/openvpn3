@@ -34,6 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
 #include <openvpn/mbedtls/util/error.hpp>
+#include <openvpn/mbedtls/util/rand.hpp>
 
 namespace openvpn {
 namespace MbedTLSPKI {
@@ -48,12 +49,12 @@ class PKContext : public RC<thread_unsafe_refcount>
     {
     }
 
-    PKContext(const std::string &key_txt, const std::string &title, const std::string &priv_key_pwd)
+    PKContext(const std::string &key_txt, const std::string &title, const std::string &priv_key_pwd, MbedTLSRandom &rand)
         : ctx(nullptr)
     {
         try
         {
-            parse(key_txt, title, priv_key_pwd);
+            parse(key_txt, title, priv_key_pwd, rand);
         }
         catch (...)
         {
@@ -92,7 +93,7 @@ class PKContext : public RC<thread_unsafe_refcount>
         return mbedtls_pk_get_bitlen(ctx);
     }
 
-    void parse(const std::string &key_txt, const std::string &title, const std::string &priv_key_pwd)
+    void parse(const std::string &key_txt, const std::string &title, const std::string &priv_key_pwd, MbedTLSRandom &rand)
     {
         alloc();
         // key_txt.length() is increased by 1 as it does not include the NULL-terminator
@@ -101,7 +102,13 @@ class PKContext : public RC<thread_unsafe_refcount>
                                                 (const unsigned char *)key_txt.c_str(),
                                                 key_txt.length() + 1,
                                                 (const unsigned char *)priv_key_pwd.c_str(),
-                                                priv_key_pwd.length());
+                                                priv_key_pwd.length()
+#if MBEDTLS_VERSION_NUMBER > 0x03000000
+                                                    ,
+                                                mbedtls_ctr_drbg_random,
+                                                rand.get_ctr_drbg_ctx()
+#endif
+        );
         if (status < 0)
             throw MbedTLSException("error parsing " + title + " private key", status);
     }

@@ -68,6 +68,10 @@ const unsigned char SHA512[] = {
 // clang-format on
 } // namespace
 
+/**
+ * Class that parses an PKCS #1 header (RFC 3447) to identify the used digest type
+ * @tparam T    the type of the crypto library that used should be used for the digest algorithm identification
+ */
 template <typename T>
 class Parse
 {
@@ -81,6 +85,23 @@ class Parse
           const T sha512)
         : none_(none),
           md2_(md2),
+          md5_(md5),
+          sha1_(sha1),
+          sha256_(sha256),
+          sha384_(sha384),
+          sha512_(sha512)
+    {
+    }
+
+    /** Constructor for TLS libraries that no longer support MD2  */
+    Parse(const T none,
+          const T md5,
+          const T sha1,
+          const T sha256,
+          const T sha384,
+          const T sha512)
+        : none_(none),
+          md2_(none),
           md5_(md5),
           sha1_(sha1),
           sha256_(sha256),

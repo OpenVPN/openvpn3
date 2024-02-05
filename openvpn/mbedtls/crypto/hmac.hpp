@@ -30,6 +30,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/mbedtls/crypto/digest.hpp>
+#include <openvpn/mbedtls/mbedtls_compat.hpp>
 
 namespace openvpn {
 namespace MbedTLSCrypto {
@@ -66,7 +67,6 @@ class HMACContext
     void init(const CryptoAlgs::Type digest, const unsigned char *key, const size_t key_size)
     {
         erase();
-        ctx.md_ctx = nullptr;
 
         mbedtls_md_init(&ctx);
         if (mbedtls_md_setup(&ctx, DigestContext::digest_type(digest), 1) < 0)
@@ -121,7 +121,7 @@ class HMACContext
 
     size_t size_() const
     {
-        return mbedtls_md_get_size(ctx.md_info);
+        return mbedtls_md_get_size(mbedtls_md_info_from_ctx(&ctx));
     }
 
     void check_initialized() const

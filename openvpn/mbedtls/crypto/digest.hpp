@@ -32,6 +32,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
+#include <openvpn/mbedtls/mbedtls_compat.hpp>
 
 namespace openvpn {
 namespace MbedTLSCrypto {
@@ -80,7 +81,6 @@ class DigestContext
     void init(const CryptoAlgs::Type alg)
     {
         erase();
-        ctx.md_ctx = nullptr;
 
         mbedtls_md_init(&ctx);
         if (mbedtls_md_setup(&ctx, digest_type(alg), 1) < 0)
@@ -121,8 +121,10 @@ class DigestContext
     {
         switch (alg)
         {
+#if MBEDTLS_VERSION_NUMBER < 0x03000000
         case CryptoAlgs::MD4:
             return mbedtls_md_info_from_type(MBEDTLS_MD_MD4);
+#endif
         case CryptoAlgs::MD5:
             return mbedtls_md_info_from_type(MBEDTLS_MD_MD5);
         case CryptoAlgs::SHA1:
@@ -151,7 +153,7 @@ class DigestContext
 
     size_t size_() const
     {
-        return mbedtls_md_get_size(ctx.md_info);
+        return mbedtls_md_get_size(mbedtls_md_info_from_ctx(&ctx));
     }
 
     void check_initialized() const

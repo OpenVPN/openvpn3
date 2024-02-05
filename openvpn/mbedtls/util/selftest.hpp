@@ -27,7 +27,9 @@
 #include <sstream>
 
 #include <mbedtls/bignum.h>
+#if MBEDTLS_VERSION_NUMBER < 0x03000000
 #include <mbedtls/config.h>
+#endif
 #include <mbedtls/cipher.h>
 #include <mbedtls/aes.h>
 #include <mbedtls/sha1.h>

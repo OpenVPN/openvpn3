@@ -27,12 +27,12 @@
 namespace openvpn {
 namespace PKCS1 {
 namespace DigestPrefix {
+
 class MbedTLSParse : public Parse<mbedtls_md_type_t>
 {
   public:
     MbedTLSParse()
         : Parse(MBEDTLS_MD_NONE,
-                MBEDTLS_MD_MD2,
                 MBEDTLS_MD_MD5,
                 MBEDTLS_MD_SHA1,
                 MBEDTLS_MD_SHA256,
@@ -47,8 +47,6 @@ class MbedTLSParse : public Parse<mbedtls_md_type_t>
         {
         case MBEDTLS_MD_NONE:
             return "MBEDTLS_MD_NONE";
-        case MBEDTLS_MD_MD2:
-            return "MBEDTLS_MD_MD2";
         case MBEDTLS_MD_MD5:
             return "MBEDTLS_MD_MD5";
         case MBEDTLS_MD_SHA1:

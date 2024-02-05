@@ -904,6 +904,7 @@ int test(const int thread_num)
         ClientSSLAPI::Config::Ptr cc(new ClientSSLAPI::Config());
         cc->set_mode(Mode(Mode::CLIENT));
         cc->set_frame(frame);
+        cc->set_rng(rng_cli);
 #ifdef USE_APPLE_SSL
         cc->load_identity("etest");
 #else
@@ -915,7 +916,6 @@ int test(const int thread_num)
 #ifdef VERBOSE
         cc->set_debug_level(1);
 #endif
-        cc->set_rng(rng_cli);
 
         // stats
         MySessionStats::Ptr cli_stats(new MySessionStats);
@@ -1001,12 +1001,12 @@ int test(const int thread_num)
         ClientSSLAPI::Config::Ptr sc(new ClientSSLAPI::Config());
         sc->set_mode(Mode(Mode::SERVER));
         sc->set_frame(frame);
+        sc->set_rng(rng_serv);
         sc->load_ca(ca_crt, true);
         sc->load_cert(server_crt);
         sc->load_private_key(server_key);
         sc->load_dh(dh_pem);
         sc->set_tls_version_min(TLS_VER_MIN);
-        sc->set_rng(rng_serv);
 #ifdef VERBOSE
         sc->set_debug_level(1);
 #endif

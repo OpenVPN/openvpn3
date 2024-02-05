@@ -51,7 +51,7 @@ function(add_core_dependencies target)
             -DASIO_STANDALONE
             -DUSE_ASIO
             -DHAVE_LZ4
-            -DMBEDTLS_DEPRECATED_REMOVED
+            #-DMBEDTLS_DEPRECATED_REMOVED  # with mbed TLS 3.0 we currently still need the deprecated APIs
             )
 
     if (WIN32)

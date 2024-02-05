@@ -34,6 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/error/error.hpp>
 #include <openvpn/error/excode.hpp>
+#include <openvpn/mbedtls/mbedtls_compat.hpp>
 
 namespace openvpn {
 
@@ -79,7 +80,7 @@ class MbedTLSException : public ExceptionCode
         case MBEDTLS_ERR_PK_PASSWORD_MISMATCH:
             set_code(Error::PEM_PASSWORD_FAIL, true);
             break;
-        case MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION:
+        case MBEDTLS_ERR_SSL_BAD_PROTOCOL_VERSION:
             set_code(Error::TLS_VERSION_MIN, true);
             break;
         }
