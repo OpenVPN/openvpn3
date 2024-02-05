@@ -1156,7 +1156,7 @@ OPENVPN_CLIENT_EXPORT Status OpenVPNClient::status_from_exception(const std::exc
 {
     Status ret;
     ret.error = true;
-    ret.message = Unicode::utf8_printable<std::string>(e.what(), 256);
+    ret.message = Unicode::utf8_printable<std::string>(e.what(), 256 | Unicode::UTF8_PASS_FMT);
 
     // if exception is an ExceptionCode, translate the code
     // to return status string

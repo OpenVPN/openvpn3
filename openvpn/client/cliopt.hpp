@@ -30,6 +30,7 @@
 
 #include <string>
 #include <unordered_set>
+#include <map>
 #include <set>
 
 #include <openvpn/error/excode.hpp>
@@ -825,6 +826,54 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "txqueuelen", /* so platforms evaluate that in tun, some do not, do not warn about that */
         "verb"};
 
+    class OptionErrors
+    {
+      public:
+        void add_failed_opt(const Option &o, const std::string &message, bool fatal_arg)
+        {
+            if (options_per_category.find(message) == options_per_category.end())
+            {
+                options_per_category[message] = {};
+            }
+
+            fatal |= fatal_arg;
+            options_per_category[message].push_back(o);
+        }
+
+        void print_option_errors()
+        {
+            std::ostringstream os;
+
+            for (const auto &[category, options] : options_per_category)
+            {
+                if (!options.empty())
+                {
+                    OPENVPN_LOG(category);
+
+                    os << category << ": ";
+                    std::vector<std::string> opts;
+                    for (size_t i = 0; i < options.size(); ++i)
+                    {
+                        auto &o = options[i];
+                        OPENVPN_LOG(std::to_string(i) << ' ' << o.render(Option::RENDER_BRACKET | Option::RENDER_TRUNC_64));
+                        opts.push_back(o.get(0, 64));
+                    }
+
+                    os << string::join(opts, ",") << std::endl;
+                }
+            }
+
+            if (fatal)
+            {
+                throw ErrorCode(Error::UNUSED_OPTIONS, true, os.str());
+            }
+        }
+
+      private:
+        std::map<std::string, std::vector<Option>> options_per_category;
+        bool fatal = false;
+    };
+
     /**
      * This groups all the options that OpenVPN 2.x supports that the
      * OpenVPN v3 client does not support into a number of different groups
@@ -886,76 +935,64 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         OPENVPN_LOG_NTNL("NOTE: This configuration contains options that were not used:" << std::endl);
 
+        OptionErrors errors{};
+
         /* Go through all options and check all options that have not been
          * touched (parsed) yet */
-        showUnusedOptionsByList(opt, settings_removedOptions, "Removed deprecated option", true);
-        showUnusedOptionsByList(opt, settings_serverOnlyOptions, "Server only option", true);
-        showUnusedOptionsByList(opt, settings_standalone_options, "OpenVPN 2.x command line operation", true);
-        showUnusedOptionsByList(opt, settings_feature_not_implemented_warn, "Feature not implemented (option ignored)", false);
-        showUnusedOptionsByList(opt, settings_pushonlyoptions, "Option allowed only to be pushed by the server", true);
-
-        showUnusedOptionsByList(opt, settings_script_plugin_feature, "Ignored (no script/plugin support)", false);
-        showUnusedOptionsByList(opt, ignore_unknown_option_list, "Ignored by option 'ignore-unknown-option'", false);
-        showUnusedOptionsByList(opt, settings_ignoreWithWarning, "Unsupported option (ignored)", false);
+        showUnusedOptionsByList(opt, settings_removedOptions, "Removed deprecated option", true, errors);
+        showUnusedOptionsByList(opt, settings_serverOnlyOptions, "Server only option", true, errors);
+        showUnusedOptionsByList(opt, settings_standalone_options, "OpenVPN 2.x command line operation", true, errors);
+        showUnusedOptionsByList(opt, settings_feature_not_implemented_warn, "Feature not implemented (option ignored)", false, errors);
+        showUnusedOptionsByList(opt, settings_pushonlyoptions, "Option allowed only to be pushed by the server", true, errors);
+        showUnusedOptionsByList(opt, settings_script_plugin_feature, "Ignored (no script/plugin support)", false, errors);
+        showUnusedOptionsByList(opt, ignore_unknown_option_list, "Ignored by option 'ignore-unknown-option'", false, errors);
+        showUnusedOptionsByList(opt, settings_ignoreWithWarning, "Unsupported option (ignored)", false, errors);
 
         auto ignoredBySetenvOpt = [](const Option &option)
         { return !option.touched() && option.warnonlyunknown(); };
-        showOptionsByFunction(opt, ignoredBySetenvOpt, "Ignored options prefixed with 'setenv opt'", false);
+        showOptionsByFunction(opt, ignoredBySetenvOpt, "Ignored options prefixed with 'setenv opt'", false, errors);
 
         auto unusedMetaOpt = [](const Option &option)
         { return !option.touched() && option.meta(); };
-        showOptionsByFunction(opt, unusedMetaOpt, "Unused ignored meta options", false);
+        showOptionsByFunction(opt, unusedMetaOpt, "Unused ignored meta options", false, errors);
 
         auto managmentOpt = [](const Option &option)
         { return !option.touched() && option.get(0, 0).rfind("management", 0) == 0; };
-        showOptionsByFunction(opt, managmentOpt, "OpenVPN management interface is not supported by this client", true);
+        showOptionsByFunction(opt, managmentOpt, "OpenVPN management interface is not supported by this client", true, errors);
 
         // If we still have options that are unaccounted for, we print them and throw an error or just warn about them
         auto onlyLightlyTouchedOptions = [](const Option &option)
         { return option.touched_lightly(); };
-        showOptionsByFunction(opt, onlyLightlyTouchedOptions, "Unused options, probably specified multiple times in the configuration file", false);
+        showOptionsByFunction(opt, onlyLightlyTouchedOptions, "Unused options, probably specified multiple times in the configuration file", false, errors);
 
         auto nonTouchedOptions = [](const Option &option)
         { return !option.touched() && !option.touched_lightly(); };
-        showOptionsByFunction(opt, nonTouchedOptions, OPENVPN_UNUSED_OPTIONS, true);
+        showOptionsByFunction(opt, nonTouchedOptions, OPENVPN_UNUSED_OPTIONS, true, errors);
+
+        errors.print_option_errors();
     }
 
-    void showUnusedOptionsByList(const OptionList &optlist, std::unordered_set<std::string> option_set, const std::string &message, bool fatal)
+    void showUnusedOptionsByList(const OptionList &optlist, std::unordered_set<std::string> option_set, const std::string &message, bool fatal, OptionErrors &errors)
     {
         auto func = [&option_set](const Option &opt)
         { return !opt.touched() && option_set.find(opt.get(0, 0)) != option_set.end(); };
-        showOptionsByFunction(optlist, func, message, fatal);
+        showOptionsByFunction(optlist, func, message, fatal, errors);
     }
 
     /* lambda expression that capture variables have complex signatures, avoid these by letting the compiler
      * itself figure it out with a template */
     template <typename T>
-    void showOptionsByFunction(const OptionList &opt, T func, const std::string &message, bool fatal)
+    void showOptionsByFunction(const OptionList &opt, T func, const std::string &message, bool fatal, OptionErrors &errors)
     {
-        bool messageShown = false;
-        /* Remember options that caused a fatal error */
-        std::set<std::string> unsupported_option_in_config;
-
         for (size_t i = 0; i < opt.size(); ++i)
         {
             auto &o = opt[i];
             if (func(o))
             {
-                if (!messageShown)
-                {
-                    OPENVPN_LOG(message);
-                    messageShown = true;
-                }
                 o.touch();
-                unsupported_option_in_config.emplace(o.get(0, 0));
 
-                OPENVPN_LOG_NTNL(std::to_string(i) << ' ' << o.render(Option::RENDER_BRACKET | Option::RENDER_TRUNC_64) << std::endl);
+                errors.add_failed_opt(o, message, fatal);
             }
-        }
-        if (fatal && messageShown)
-        {
-            throw option_error("sorry, unsupported options present in configuration: " + message
-                               + " (" + string::join(unsupported_option_in_config, ",") + ")");
         }
     }
 

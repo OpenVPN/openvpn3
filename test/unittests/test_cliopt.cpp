@@ -101,8 +101,8 @@ TEST(config, parse_unknown_option)
 {
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "bikeshed-color green"),
-        option_error,
-        "sorry, unsupported options present in configuration: UNKNOWN/UNSUPPORTED OPTIONS");
+        ErrorCode,
+        "UNKNOWN/UNSUPPORTED OPTIONS");
 }
 
 TEST(config, duplicate_option)
@@ -131,12 +131,12 @@ TEST(config, parse_management)
 {
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "management-is-blue"),
-        option_error,
+        ErrorCode,
         "OpenVPN management interface is not supported by this client");
 
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "management"),
-        option_error,
+        ErrorCode,
         "OpenVPN management interface is not supported by this client");
 }
 
@@ -201,11 +201,11 @@ TEST(config, server_options_present_in_error_msg)
     for (auto &option : server_options)
     {
         auto optname = option.substr(0, option.find(' '));
-        auto expected_error_string = "Server only option (" + optname;
+        auto expected_error_string = "Server only option: " + optname;
 
         OVPN_EXPECT_THROW(
             load_client_config(minimalConfig + option),
-            option_error,
+            ErrorCode,
             expected_error_string);
     }
 }
@@ -217,16 +217,26 @@ TEST(config, unknown_options_present_in_error_msg)
     for (auto &option : server_options)
     {
         auto optname = option.substr(0, option.find(' '));
-        auto expected_error_string = "UNKNOWN/UNSUPPORTED OPTIONS (" + optname;
+        auto expected_error_string = "UNKNOWN/UNSUPPORTED OPTIONS: " + optname;
 
         OVPN_EXPECT_THROW(
             load_client_config(minimalConfig + option),
-            option_error,
+            ErrorCode,
             expected_error_string);
     }
 }
 
+TEST(config, multiple_option_errors)
+{
+    std::ostringstream os;
+    os << "OpenVPN management interface is not supported by this client: management\n";
+    os << "UNKNOWN/UNSUPPORTED OPTIONS: lol,lal";
 
+    OVPN_EXPECT_THROW(
+        load_client_config(minimalConfig + "management\nlol\nlal"),
+        ErrorCode,
+        os.str());
+}
 
 TEST(config, client_missing_in_config)
 {

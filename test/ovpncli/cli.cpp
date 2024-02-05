@@ -727,7 +727,7 @@ static void worker_thread()
         {
             std::cout << "connect error: ";
             if (!connect_status.status.empty())
-                std::cout << connect_status.status << ": ";
+                std::cout << connect_status.status << ": " << std::endl;
             std::cout << connect_status.message << std::endl;
         }
     }
