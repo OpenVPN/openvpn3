@@ -156,7 +156,7 @@ enum
 } // namespace
 } // namespace proto_context_private
 
-class ProtoContextCallbackInterface 
+class ProtoContextCallbackInterface
 {
   public:
     /**

@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -129,11 +129,9 @@ class Logger
     }
 
     /**
-     * Prints a verbose log message like decompression ratio on individual packets if
-     * the log level is at least VERB (=2)
+     * Prints a verbose log message if the log level is at least VERB (=2)
      * @param msg   the message to log
      */
-
     template <typename T>
     void log_verbose(T &&msg)
     {
@@ -275,6 +273,7 @@ class LoggingMixin
     } while (0)
 
 
+/* These are convince macros for classes that use the LoggingMixin to avoid specifying the logger */
 #define LOG_INFO(args) LOGGER_LOG_INFO(log_, args)
 #define LOG_VERBOSE(args) LOGGER_LOG_VERBOSE(log_, args)
 #define LOG_DEBUG(args) LOGGER_LOG_DEBUG(log_, args)

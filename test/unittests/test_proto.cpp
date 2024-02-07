@@ -32,15 +32,12 @@
 #include <limits>
 #include <thread>
 
-#define OPENVPN_DEBUG_COMPRESS 0 // debug level for compression objects (0)
-
+#include <gmock/gmock.h>
 #include <openvpn/common/platform.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
+
 
 #define OPENVPN_DEBUG
-#define OPENVPN_ENABLE_ASSERT
-
-// EKM vs. TLS_PRF mode
-// #define USE_TLS_EKM
 
 #if !defined(USE_TLS_AUTH) && !defined(USE_TLS_CRYPT)
 // #define USE_TLS_AUTH
@@ -100,7 +97,9 @@
 #endif
 
 // how many virtual seconds between SSL renegotiations
-#ifndef RENEG
+#ifdef PROTO_RENEG
+#define RENEG PROTO_RENEG
+#else
 #define RENEG 900
 #endif
 
@@ -111,24 +110,23 @@
 #define FEEDBACK 0
 #endif
 
-// number of threads to use for test
-#ifndef N_THREADS
-#define N_THREADS 1
-#endif
-
 // number of iterations
-#ifndef ITER
+#ifdef PROTO_ITER
+#define ITER PROTO_ITER
+#else
 #define ITER 1000000
 #endif
 
 // number of high-level session iterations
-#ifndef SITER
+#ifdef PROTO_SITER
+#define SITER PROTO_SITER
+#else
 #define SITER 1
 #endif
 
 // number of retries for failed test
 #ifndef N_RETRIES
-#define N_RETRIES 5
+#define N_RETRIES 2
 #endif
 
 // potentially, the above manifest constants can be converted to variables and modified
@@ -137,15 +135,8 @@
 // abort if we reach this limit
 // #define DROUGHT_LIMIT 100000
 
-#if !defined(VERBOSE) && !defined(QUIET) && ITER <= 10000
+#if !defined(PROTO_VERBOSE) && !defined(QUIET) && ITER <= 10000
 #define VERBOSE
-#endif
-
-#ifdef VERBOSE
-#define OPENVPN_DEBUG_PROTO 2
-#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
-#else
-#define OPENVPN_LOG_SSL(x) // disable
 #endif
 
 #define STRINGIZE1(x) #x
@@ -868,7 +859,7 @@ class MySessionStats : public SessionStats
 };
 
 // execute the unit test in one thread
-int test(const int thread_num)
+int test(const int thread_num, bool use_tls_ekm)
 {
     try
     {
@@ -938,9 +929,8 @@ int test(const int thread_num)
         cp->comp_ctx = CompressContext(COMP_METH, false);
         cp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
         cp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
-#ifdef USE_TLS_EKM
-        cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
-#endif
+        if (use_tls_ekm)
+            cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
 #ifdef USE_TLS_AUTH
         cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ClientCryptoAPI>());
         cp->tls_key.parse(tls_auth_key);
@@ -1027,9 +1017,8 @@ int test(const int thread_num)
         sp->comp_ctx = CompressContext(COMP_METH, false);
         sp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
         sp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
-#ifdef USE_TLS_EKM
-        sp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
-#endif
+        if (use_tls_ekm)
+            sp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
 #ifdef USE_TLS_AUTH
         sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
         sp->tls_key.parse(tls_auth_key);
@@ -1169,13 +1158,12 @@ int test(const int thread_num)
     return 0;
 }
 
-int test_retry(const int thread_num)
+int test_retry(const int thread_num, const int n_retries, bool use_tls_ekm)
 {
-    const int n_retries = N_RETRIES;
     int ret = 1;
     for (int i = 0; i < n_retries; ++i)
     {
-        ret = test(thread_num);
+        ret = test(thread_num, use_tls_ekm);
         if (!ret)
             return 0;
         std::cout << "Retry " << (i + 1) << '/' << n_retries << std::endl;
@@ -1184,32 +1172,83 @@ int test_retry(const int thread_num)
     return ret;
 }
 
-TEST(proto, base_1_thread)
+class ProtoUnitTest : public testing::Test
+{
+    // Sets up the test fixture.
+    virtual void SetUp()
+    {
+#if defined(USE_MBEDTLS)
+        mbedtls_debug_set_threshold(1);
+#endif
+
+        openvpn::Compress::set_log_level(0);
+
+#ifdef PROTO_VERBOSE
+        openvpn::ProtoContext::set_log_level(2);
+#else
+        openvpn::ProtoContext::set_log_level(0);
+#endif
+    }
+
+    // Tears down the test fixture.
+    virtual void TearDown()
+    {
+#if defined(USE_MBEDTLS)
+        mbedtls_debug_set_threshold(4);
+#endif
+        openvpn::Compress::set_log_level(openvpn::Compress::default_log_level);
+        openvpn::ProtoContext::set_log_level(openvpn::ProtoContext::default_log_level);
+    }
+};
+
+TEST_F(ProtoUnitTest, base_single_thread_tls_ekm)
+{
+    if (!openvpn::SSLLib::SSLAPI::support_key_material_export())
+        GTEST_SKIP_("our mbed TLS implementation does not support TLS EKM");
+
+    int ret = 0;
+
+    ret = test_retry(1, N_RETRIES, true);
+
+    EXPECT_EQ(ret, 0);
+}
+
+
+TEST_F(ProtoUnitTest, base_single_thread_no_tls_ekm)
 {
     int ret = 0;
 
-    // set global MbedTLS debug level
-#if defined(USE_MBEDTLS)
-    mbedtls_debug_set_threshold(1);
-#endif
-
-#if N_THREADS >= 2
-    // probably ought to set ret in this compile path too
-    std::thread *threads[N_THREADS];
-    int i;
-    for (i = 0; i < N_THREADS; ++i)
-    {
-        threads[i] = new std::thread([i]()
-                                     { test_retry(i); });
-    }
-    for (i = 0; i < N_THREADS; ++i)
-    {
-        threads[i]->join();
-        delete threads[i];
-    }
-#else
-    ret = test_retry(1);
-#endif
+    ret = test_retry(1, N_RETRIES, false);
 
     EXPECT_EQ(ret, 0);
+}
+
+TEST_F(ProtoUnitTest, base_multiple_thread)
+{
+    unsigned int num_threads = std::thread::hardware_concurrency();
+#if defined(PROTO_N_THREADS) && PROTO_N_THREADS >= 1
+    num_threadsnum_threads = PROTO_N_THREADS;
+#endif
+
+    std::vector<std::thread> running_threads{};
+    std::vector<int> results(num_threads, -777);
+
+    for (unsigned int i = 0; i < num_threads; ++i)
+    {
+        running_threads.emplace_back([i, &results]()
+                                     {
+            /* Use ekm on odd threads */
+            const bool use_ekm = openvpn::SSLLib::SSLAPI::support_key_material_export() && (i % 2 == 0);
+            results[i] = test_retry(static_cast<int>(i), N_RETRIES, use_ekm); });
+    }
+    for (unsigned int i = 0; i < num_threads; ++i)
+    {
+        running_threads[i].join();
+    }
+
+
+    // expect 1 for all threads
+    const std::vector<int> expected_results(num_threads, 0);
+
+    EXPECT_THAT(expected_results, ::testing::ContainerEq(results));
 }
