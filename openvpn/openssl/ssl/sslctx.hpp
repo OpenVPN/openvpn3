@@ -67,7 +67,6 @@
 #include <openvpn/ssl/peer_fingerprint.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
-#include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/ssl/sni_handler.hpp>
 #include <openvpn/ssl/iana_ciphers.hpp>
 #include <openvpn/openssl/util/error.hpp>
@@ -1171,9 +1170,9 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 if (pair->iana_name != ciphersuite)
                 {
-                    OPENVPN_LOG_SSL("OpenSSLContext: Deprecated cipher suite name '"
-                                    << pair->openssl_name << "' please use IANA name ' "
-                                    << pair->iana_name << "'");
+                    LOG_INFO("OpenSSLContext: Deprecated cipher suite name '"
+                             << pair->openssl_name << "' please use IANA name ' "
+                             << pair->iana_name << "'");
                 }
                 result << pair->openssl_name;
             }
@@ -1589,8 +1588,8 @@ class OpenSSLContext : public SSLFactoryAPI
             }
             else
             {
-                OPENVPN_LOG_SSL("OpenSSL -- warning ignoring unknown group '"
-                                << group << "' in tls-groups");
+                LOG_INFO("OpenSSL -- warning ignoring unknown group '"
+                         << group << "' in tls-groups");
             }
         }
 
@@ -1873,7 +1872,7 @@ class OpenSSLContext : public SSLFactoryAPI
                 || !(self->config->flags & SSLConst::VERIFY_PEER_FINGERPRINT))
             {
                 auto sign_alg = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
-                OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
             }
         }
 
@@ -1895,28 +1894,28 @@ class OpenSSLContext : public SSLFactoryAPI
             preverify_ok = self->config->peer_fingerprints.match(fp);
             if (!preverify_ok)
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
             }
         }
 
         // verify ns-cert-type
         if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
         {
-            OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+            LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 key usage
         if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
         {
-            OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+            LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 extended key usage
         if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
         {
-            OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+            LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
             preverify_ok = false;
         }
 
@@ -1932,7 +1931,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
             if (!verify_x509.verify(name))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- verify-x509-name failed");
+                LOG_INFO("VERIFY FAIL -- verify-x509-name failed");
                 preverify_ok = false;
             }
         }
@@ -1945,7 +1944,7 @@ class OpenSSLContext : public SSLFactoryAPI
             TLSRemote::log(self->config->tls_remote, subj, common_name);
             if (!TLSRemote::test(self->config->tls_remote, subj, common_name))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
+                LOG_INFO("VERIFY FAIL -- tls-remote match failed");
                 preverify_ok = false;
             }
         }
@@ -1984,7 +1983,7 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 const auto sign_alg = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
                 const auto subject = OpenSSLPKI::x509_get_subject(current_cert);
-                OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
             }
         }
 
@@ -2011,7 +2010,7 @@ class OpenSSLContext : public SSLFactoryAPI
             PeerFingerprint fp(OpenSSLPKI::x509_get_fingerprint(current_cert));
             if (self->config->peer_fingerprints && !self->config->peer_fingerprints.match(fp))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2022,7 +2021,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify ns-cert-type
             if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+                LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2033,7 +2032,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify X509 key usage
             if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+                LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2044,7 +2043,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify X509 extended key usage
             if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+                LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2079,20 +2078,20 @@ class OpenSSLContext : public SSLFactoryAPI
     {
         if (where & SSL_CB_LOOP)
         {
-            OPENVPN_LOG_SSL("SSL state ("
-                            << ((where & SSL_ST_CONNECT)
-                                    ? "connect"
-                                    : (where & SSL_ST_ACCEPT
-                                           ? "accept"
-                                           : "undefined"))
-                            << "): " << SSL_state_string_long(s));
+            LOG_INFO("SSL state ("
+                     << ((where & SSL_ST_CONNECT)
+                             ? "connect"
+                             : (where & SSL_ST_ACCEPT
+                                    ? "accept"
+                                    : "undefined"))
+                     << "): " << SSL_state_string_long(s));
         }
         else if (where & SSL_CB_ALERT)
         {
-            OPENVPN_LOG_SSL("SSL alert ("
-                            << (where & SSL_CB_READ ? "read" : "write") << "): "
-                            << SSL_alert_type_string_long(ret) << ": "
-                            << SSL_alert_desc_string_long(ret));
+            LOG_INFO("SSL alert ("
+                     << (where & SSL_CB_READ ? "read" : "write") << "): "
+                     << SSL_alert_type_string_long(ret) << ": "
+                     << SSL_alert_desc_string_long(ret));
         }
     }
 

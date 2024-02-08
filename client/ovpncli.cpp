@@ -78,8 +78,6 @@
 #include <openvpn/log/logthread.hpp> // should be included early
 #endif
 
-// log SSL handshake messages
-#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
 
 // on Android and iOS, use TunBuilderBase abstraction
 #include <openvpn/common/platform.hpp>

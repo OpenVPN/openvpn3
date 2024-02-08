@@ -29,9 +29,6 @@
 
 #include <openvpn/io/io.hpp>
 
-// debug settings (production setting in parentheses)
-#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
-
 #include <openvpn/common/stringize.hpp>
 // VERSION version can be passed on build command line
 #ifdef VERSION

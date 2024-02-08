@@ -46,6 +46,7 @@
 #include <openvpn/ssl/tls_cert_profile.hpp>
 #include <openvpn/ssl/sess_ticket.hpp>
 #include <openvpn/random/randapi.hpp>
+#include "openvpn/log/logger.hpp"
 
 namespace openvpn {
 
@@ -87,7 +88,7 @@ class SSLAPI : public RC<thread_unsafe_refcount>
     uint32_t tls_warnings = 0; // bitfield of SSLAPI::TLSWarnings
 };
 
-class SSLFactoryAPI : public RC<thread_unsafe_refcount>
+class SSLFactoryAPI : public RC<thread_unsafe_refcount>, public logging::LoggingMixin<logging::LOG_LEVEL_VERB>
 {
   public:
     OPENVPN_EXCEPTION(ssl_options_error);
