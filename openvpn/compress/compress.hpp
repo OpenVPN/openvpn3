@@ -32,23 +32,16 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/log/sessionstats.hpp>
-
-#define OPENVPN_LOG_COMPRESS(x)
-#define OPENVPN_LOG_COMPRESS_VERBOSE(x)
-
-#if defined(OPENVPN_DEBUG_COMPRESS)
-#if OPENVPN_DEBUG_COMPRESS >= 1
-#undef OPENVPN_LOG_COMPRESS
-#define OPENVPN_LOG_COMPRESS(x) OPENVPN_LOG(x)
-#endif
-#if OPENVPN_DEBUG_COMPRESS >= 2
-#undef OPENVPN_LOG_COMPRESS_VERBOSE
-#define OPENVPN_LOG_COMPRESS_VERBOSE(x) OPENVPN_LOG(x)
-#endif
-#endif
+#include <openvpn/log/logger.hpp>
 
 namespace openvpn {
-class Compress : public RC<thread_unsafe_refcount>
+
+//! Debugging level for message emitted from compression
+#if !defined(OPENVPN_DEBUG_COMPRESS)
+#define OPENVPN_DEBUG_COMPRESS 1
+#endif
+
+class Compress : public RC<thread_unsafe_refcount>, public logging::LoggingMixin<OPENVPN_DEBUG_COMPRESS>
 {
   public:
     typedef RCPtr<Compress> Ptr;

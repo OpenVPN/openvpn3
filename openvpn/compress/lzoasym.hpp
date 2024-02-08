@@ -48,7 +48,7 @@ class CompressLZOAsym : public Compress
         : Compress(frame, stats),
           support_swap(support_swap_arg)
     {
-        OPENVPN_LOG_COMPRESS("LZO-ASYM init swap=" << support_swap_arg << " asym=" << asym_arg);
+        LOG_INFO("LZO-ASYM init swap=" << support_swap_arg << " asym=" << asym_arg);
     }
 
     static void init_static()
@@ -72,7 +72,7 @@ class CompressLZOAsym : public Compress
             error(buf);
             return;
         }
-        OPENVPN_LOG_COMPRESS_VERBOSE("LZO-ASYM uncompress " << buf.size() << " -> " << zlen);
+        LOG_VERBOSE("LZO-ASYM uncompress " << buf.size() << " -> " << zlen);
         work.set_size(zlen);
         buf.swap(work);
     }
