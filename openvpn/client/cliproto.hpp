@@ -494,6 +494,7 @@ class Session : ProtoContext,
     {
         try
         {
+            Base::conf().build_connect_time_peer_info_string(transport);
             OPENVPN_LOG("Connecting to " << server_endpoint_render());
             Base::set_protocol(transport->transport_protocol());
             Base::start();

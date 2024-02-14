@@ -1040,14 +1040,24 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (!config.sso_methods.empty())
             pi->emplace_back("IV_SSO", config.sso_methods);
 
+        return pi;
+    }
+
+    PeerInfo::Set::Ptr build_peer_info_transport(const Config &config, const ParseClientConfig &pcc)
+    {
+        PeerInfo::Set::Ptr pi(new PeerInfo::Set);
+
         // MAC address
         if (pcc.pushPeerInfo())
         {
-            std::string hwaddr = get_hwaddr();
+            /* If we override the HWADDR, we add it at this time statically. If we need to
+             * dynamically discover it from the transport it will be added in
+             * \c build_connect_time_peer_info_string instead */
             if (!config.hw_addr_override.empty())
+            {
                 pi->emplace_back("IV_HWADDR", config.hw_addr_override);
-            else if (!hwaddr.empty())
-                pi->emplace_back("IV_HWADDR", hwaddr);
+            }
+
             pi->emplace_back("IV_SSL", get_ssl_library_version());
 
             if (!config.platform_version.empty())
@@ -1055,6 +1065,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         }
         return pi;
     }
+
 
     void next(RemoteList::Advance type)
     {
@@ -1253,6 +1264,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cp->load(opt, *proto_context_options, config.default_key_direction, false);
         cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
         cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
+        cp->extra_peer_info_push_peerinfo = pcc.pushPeerInfo();
         cp->frame = frame;
         cp->now = &now_;
         cp->rng = rng;

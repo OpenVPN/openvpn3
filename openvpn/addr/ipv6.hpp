@@ -109,6 +109,10 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         ret.sin6_port = htons(port);
         host_to_network_order((union ipv6addr *)&ret.sin6_addr.s6_addr, &u);
         ret.sin6_scope_id = scope_id_;
+#ifdef SIN6_LEN
+        /* This is defined on both macOS and FreeBSD that have the sin6_len member */
+        ret.sin6_len = sizeof(sockaddr_in6);
+#endif
         return ret;
     }
 
