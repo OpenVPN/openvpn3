@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,13 +19,10 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_LOG_LOGBASE_H
-#define OPENVPN_LOG_LOGBASE_H
+#pragma once
 
 #include "openvpn/log/logbase_class.hpp"
 
 #define OPENVPN_LOG_INFO(x) x
 
 #include <openvpn/log/logthread.hpp>
-
-#endif

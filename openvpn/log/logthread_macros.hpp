@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -22,8 +22,7 @@
 // This is a general-purpose logging framework that allows for OPENVPN_LOG and
 // OPENVPN_LOG_NTNL macros to dispatch logging data to a thread-local handler.
 
-#ifndef OPENVPN_LOG_LOGTHREAD_MACROS_H
-#define OPENVPN_LOG_LOGTHREAD_MACROS_H
+#pragma once
 
 // Define this parameter before including this header:
 // OPENVPN_LOG_INFO  -- converts a log string to the form that should be passed to log()
@@ -63,6 +62,3 @@
             (openvpn::Log::Context::obj()->log(OPENVPN_LOG_INFO(str))); \
         }                                                               \
     } while (0)
-
-
-#endif

@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -21,8 +21,7 @@
 
 // Define simple logging macros that simply output to stdout
 
-#ifndef OPENVPN_LOG_LOGSIMPLE_H
-#define OPENVPN_LOG_LOGSIMPLE_H
+#pragma once
 
 #include <iostream>
 
@@ -36,5 +35,3 @@
 #define OPENVPN_LOG_NTNL(args) OPENVPN_LOG_STREAM << args << std::flush
 
 #define OPENVPN_LOG_STRING(str) OPENVPN_LOG_STREAM << (str) << std::flush
-
-#endif // OPENVPN_LOG_LOGSIMPLE_H

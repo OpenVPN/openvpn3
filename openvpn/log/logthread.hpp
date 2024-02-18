@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -22,13 +22,7 @@
 // This is a general-purpose logging framework that allows for OPENVPN_LOG and
 // OPENVPN_LOG_NTNL macros to dispatch logging data to a thread-local handler.
 
-// NOTE: define USE_ASIO_THREADLOCAL if your C++ doesn't support the
-// "thread_local" attribute.
-
-#ifndef OPENVPN_LOG_LOGTHREAD_H
-#define OPENVPN_LOG_LOGTHREAD_H
+#pragma once
 
 #include "openvpn/log/logthread_macros.hpp"
 #include "openvpn/log/logthread_class.hpp"
-
-#endif

@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,25 +19,10 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// NOTE: define USE_ASIO_THREADLOCAL if your C++ doesn't support the
-// "thread_local" attribute.
-
-#ifndef OPENVPN_LOG_LOGTHREAD_CLASS_H
-#define OPENVPN_LOG_LOGTHREAD_CLASS_H
-
-#include <string>
-#include <sstream>
-#include <thread>
-
-#if defined(USE_ASIO) && defined(USE_ASIO_THREADLOCAL)
-#include <asio/detail/tss_ptr.hpp>
-#endif
-
-#include <openvpn/common/size.hpp>
+#pragma once
 
 // Define this parameter before including this header:
 // OPENVPN_LOG_CLASS -- client class that exposes a log() method
-
 #ifndef OPENVPN_LOG_CLASS
 #error OPENVPN_LOG_CLASS must be defined
 #endif
@@ -48,49 +33,17 @@ namespace Log {
 #ifdef OPENVPN_LOG_GLOBAL
 // OPENVPN_LOG uses global object pointer
 inline OPENVPN_LOG_CLASS *global_log = nullptr; // GLOBAL
-struct Context
-{
-    struct Wrapper
-    {
-    };
-
-    Context(const Wrapper &wrap)
-    {
-    }
-
-    Context(OPENVPN_LOG_CLASS *cli)
-    {
-        global_log = cli;
-    }
-
-    ~Context()
-    {
-        global_log = nullptr;
-    }
-
-    static bool defined()
-    {
-        return global_log != nullptr;
-    }
-
-    static OPENVPN_LOG_CLASS *obj()
-    {
-        return global_log;
-    }
-};
 #else
 // OPENVPN_LOG uses thread-local object pointer
-#if defined(USE_ASIO) && defined(USE_ASIO_THREADLOCAL)
-inline asio::detail::tss_ptr<OPENVPN_LOG_CLASS> global_log; // GLOBAL
-#else
 inline thread_local OPENVPN_LOG_CLASS *global_log = nullptr; // GLOBAL
 #endif
+
 struct Context
 {
-    // Mechanism for passing thread-local
-    // global_log to another thread.
+    // Mechanism for passing thread-local global_log to another thread.
     class Wrapper
     {
+#ifndef OPENVPN_LOG_GLOBAL
       public:
         Wrapper()
             : log(obj())
@@ -100,13 +53,15 @@ struct Context
       private:
         friend struct Context;
         OPENVPN_LOG_CLASS *log;
+#endif
     };
 
-    // While in scope, turns on global_log
-    // for this thread.
+    // While in scope, turns on global_log for this thread.
     Context(const Wrapper &wrap)
     {
+#ifndef OPENVPN_LOG_GLOBAL
         global_log = wrap.log;
+#endif
     }
 
     Context(OPENVPN_LOG_CLASS *cli)
@@ -129,8 +84,5 @@ struct Context
         return global_log;
     }
 };
-#endif
 } // namespace Log
 } // namespace openvpn
-
-#endif
