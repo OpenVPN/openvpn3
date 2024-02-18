@@ -38,9 +38,21 @@ inline OPENVPN_LOG_CLASS *global_log = nullptr; // GLOBAL
 inline thread_local OPENVPN_LOG_CLASS *global_log = nullptr; // GLOBAL
 #endif
 
+/**
+ * @brief Scoped RAII for the \c global_log \a pointer
+ *
+ * While in scope, \c global_log points to the instance of the class defined by
+ * the \c OPENVPN_LOG_CLASS macro above.  When it goes out of scope, the
+ * \c global_log pointer is reset to \c nullptr
+ */
 struct Context
 {
-    // Mechanism for passing thread-local global_log to another thread.
+    /**
+     * @brief Argument to construct a \c Context in a different thread
+     *
+     * The new \c Context will have the same \c global_log pointer as the current
+     * \c Context.  Intended for the thread_local version of \c global_log
+     */
     class Wrapper
     {
 #ifndef OPENVPN_LOG_GLOBAL
@@ -56,7 +68,11 @@ struct Context
 #endif
     };
 
-    // While in scope, turns on global_log for this thread.
+    /**
+     * @brief construct a \c Context in a different thread
+     *
+     * @param wrap holds the value of \c global_log from the sourcing thread
+     */
     Context(const Wrapper &wrap)
     {
 #ifndef OPENVPN_LOG_GLOBAL
@@ -64,6 +80,11 @@ struct Context
 #endif
     }
 
+    /**
+     * @brief construct a \c Context setting the \c global_log pointer
+     *
+     * @param cli pointer to \c OPENVPN_LOG_CLASS instance
+     */
     Context(OPENVPN_LOG_CLASS *cli)
     {
         global_log = cli;
