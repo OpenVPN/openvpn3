@@ -25,6 +25,7 @@
 #define OPENVPN_OPENSSL_SIGN_VERIFY_H
 
 #include <string>
+#include <list>
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
@@ -32,6 +33,7 @@
 #include <openvpn/common/cleanup.hpp>
 #include <openvpn/common/numeric_cast.hpp>
 #include <openvpn/common/base64.hpp>
+#include <openvpn/buffer/buffer.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/util/error.hpp>
 

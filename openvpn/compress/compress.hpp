@@ -221,10 +221,10 @@ class CompressContext
         {
         case NONE:
             return new CompressNull(frame, stats);
-        case ANY:
         case ANY_LZO:
         case LZO_STUB:
             return new CompressStub(frame, stats, false);
+        case ANY:
         case COMP_STUB:
             return new CompressStub(frame, stats, true);
         case COMP_STUBv2:

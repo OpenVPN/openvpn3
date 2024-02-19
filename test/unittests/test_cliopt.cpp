@@ -72,9 +72,19 @@ TEST(config, parse_missing_option)
 TEST(config, parse_forbidden_option)
 {
     OVPN_EXPECT_THROW(
+        load_client_config(minimalConfig + "mode"),
+        option_error,
+        "Only 'mode p2p' supported");
+
+    OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "mode server"),
         option_error,
         "Only 'mode p2p' supported");
+
+    OVPN_EXPECT_THROW(
+        load_client_config(minimalConfig + "key-method 1"),
+        option_error,
+        "Only 'key-method 2' is supported");
 
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "fragment"),
@@ -86,8 +96,8 @@ TEST(config, parse_unknown_option)
 {
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "bikeshed-color green"),
-        option_error,
-        "sorry, unsupported options present in configuration: UNKNOWN/UNSUPPORTED OPTIONS");
+        ErrorCode,
+        "UNKNOWN/UNSUPPORTED OPTIONS");
 }
 
 TEST(config, duplicate_option)
@@ -116,12 +126,12 @@ TEST(config, parse_management)
 {
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "management-is-blue"),
-        option_error,
+        ErrorCode,
         "OpenVPN management interface is not supported by this client");
 
     OVPN_EXPECT_THROW(
         load_client_config(minimalConfig + "management"),
-        option_error,
+        ErrorCode,
         "OpenVPN management interface is not supported by this client");
 }
 
@@ -189,6 +199,52 @@ TEST(config, dco_compatibility)
             option_error,
             "option_error: dco_compatibility: config/options are not compatible with dco");
     }
+}
+
+
+TEST(config, server_options_present_in_error_msg)
+{
+    std::vector<std::string> server_options = {"server 10.0.0.0 255.255.255.0",
+                                               "push \"foo bar\""};
+
+    for (auto &option : server_options)
+    {
+        auto optname = option.substr(0, option.find(' '));
+        auto expected_error_string = "Server only option: " + optname;
+
+        OVPN_EXPECT_THROW(
+            load_client_config(minimalConfig + option),
+            ErrorCode,
+            expected_error_string);
+    }
+}
+
+TEST(config, unknown_options_present_in_error_msg)
+{
+    std::vector<std::string> server_options = {"make-a-lot-of-noise", "water-the-plants"};
+
+    for (auto &option : server_options)
+    {
+        auto optname = option.substr(0, option.find(' '));
+        auto expected_error_string = "UNKNOWN/UNSUPPORTED OPTIONS: " + optname;
+
+        OVPN_EXPECT_THROW(
+            load_client_config(minimalConfig + option),
+            ErrorCode,
+            expected_error_string);
+    }
+}
+
+TEST(config, multiple_option_errors)
+{
+    std::ostringstream os;
+    os << "OpenVPN management interface is not supported by this client: management\n";
+    os << "UNKNOWN/UNSUPPORTED OPTIONS: lol,lal";
+
+    OVPN_EXPECT_THROW(
+        load_client_config(minimalConfig + "management\nlol\nlal"),
+        ErrorCode,
+        os.str());
 }
 
 TEST(config, client_missing_in_config)

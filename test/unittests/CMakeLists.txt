@@ -102,6 +102,7 @@ else ()
             test_openssl_x509certinfo.cpp
             test_openssl_authcert.cpp
             test_opensslpki.cpp
+            test_openssl_misc.cpp
             test_session_id.cpp
             )
 endif ()

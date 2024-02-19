@@ -31,6 +31,8 @@
 #include <string>
 #include <tuple>
 #include <unordered_set>
+#include <map>
+#include <set>
 
 #include <openvpn/error/excode.hpp>
 
@@ -665,9 +667,19 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (opt.exists("mode"))
         {
             const auto &mode = opt.get("mode");
-            if (mode.size() != 1 || mode.get(1, 128) != "p2p")
+            if (mode.size() != 2 || mode.get(1, 128) != "p2p")
             {
                 throw option_error("Only 'mode p2p' supported");
+            }
+        }
+
+        // key-method 2 is the only thing that 2.5+ and 3.x support
+        if (opt.exists("key-method"))
+        {
+            auto keymethod = opt.get("key-method");
+            if (keymethod.size() != 2 || keymethod.get(1, 128) != "2")
+            {
+                throw option_error("Only 'key-method 2' is supported: " + keymethod.get(1, 128));
             }
         }
     }
@@ -677,6 +689,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "allow-recursive-routing",
         "auth-nocache",
         "auth-retry",
+        "block-outside-dns", /* Core will decide on its own when to block outside dns, so this is not 100% identical in behaviour, so still warn */
         "compat-mode",
         "connect-retry",
         "connect-retry-max",
@@ -709,11 +722,13 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "replay-window",
         "resolv-retry",
         "route-method", /* Windows specific fine tuning option */
+        "route-delay",
         "show-net-up",
         "socket-flags",
         "suppress-timestamps", /* harmless to ignore  */
         "tcp-nodelay",
         "tls-version-max", /* We don't allow restricting max version */
+        "tun-mtu-extra",   /* (only really used in tap in OpenVPN 2.x)*/
         "udp-mtu",         /* Alias for link-mtu */
         "user",
     };
@@ -783,8 +798,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "status",
         "status-version",
         "syslog",
-        "tls-server",    /* No p2p mode in v3 */
-        "tun-mtu-extra", /*(only really used in tap in OpenVPN 2.x)*/
+        "tls-server", /* No p2p mode in v3 */
         "verify-hash",
         "win-sys",
         "writepid",
@@ -819,7 +833,10 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "key-derivation",
         "peer-id",
         "protocol-flags",
-    };
+        "ifconfig",
+        "ifconfig-ipv6",
+        "topology",
+        "route-gateway"};
 
     /* Features related to scripts/plugins */
     std::unordered_set<std::string> settings_script_plugin_feature = {
@@ -854,7 +871,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
     /* Deprecated/throwing error in OpenVPN 2.x already: */
     std::unordered_set<std::string> settings_removedOptions = {
-        "mtu-dynamic", "no-replay", "no-name-remapping", "compat-names", "ncp-disable"};
+        "mtu-dynamic", "no-replay", "no-name-remapping", "compat-names", "ncp-disable", "no-iv"};
 
     std::unordered_set<std::string> settings_ignoreSilently = {
         "ecdh-curve", /* Deprecated in v2, not needed with modern OpenSSL */
@@ -871,6 +888,54 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "tun-ipv6",   /* ignored in v2 as well */
         "txqueuelen", /* so platforms evaluate that in tun, some do not, do not warn about that */
         "verb"};
+
+    class OptionErrors
+    {
+      public:
+        void add_failed_opt(const Option &o, const std::string &message, bool fatal_arg)
+        {
+            if (options_per_category.find(message) == options_per_category.end())
+            {
+                options_per_category[message] = {};
+            }
+
+            fatal |= fatal_arg;
+            options_per_category[message].push_back(o);
+        }
+
+        void print_option_errors()
+        {
+            std::ostringstream os;
+
+            for (const auto &[category, options] : options_per_category)
+            {
+                if (!options.empty())
+                {
+                    OPENVPN_LOG(category);
+
+                    os << category << ": ";
+                    std::vector<std::string> opts;
+                    for (size_t i = 0; i < options.size(); ++i)
+                    {
+                        auto &o = options[i];
+                        OPENVPN_LOG(std::to_string(i) << ' ' << o.render(Option::RENDER_BRACKET | Option::RENDER_TRUNC_64));
+                        opts.push_back(o.get(0, 64));
+                    }
+
+                    os << string::join(opts, ",") << std::endl;
+                }
+            }
+
+            if (fatal)
+            {
+                throw ErrorCode(Error::UNUSED_OPTIONS, true, os.str());
+            }
+        }
+
+      private:
+        std::map<std::string, std::vector<Option>> options_per_category;
+        bool fatal = false;
+    };
 
     /**
      * This groups all the options that OpenVPN 2.x supports that the
@@ -933,72 +998,64 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         OPENVPN_LOG_NTNL("NOTE: This configuration contains options that were not used:" << std::endl);
 
+        OptionErrors errors{};
+
         /* Go through all options and check all options that have not been
          * touched (parsed) yet */
-        showUnusedOptionsByList(opt, settings_removedOptions, "Removed deprecated option", true);
-        showUnusedOptionsByList(opt, settings_serverOnlyOptions, "Server only option", true);
-        showUnusedOptionsByList(opt, settings_standalone_options, "OpenVPN 2.x command line operation", true);
-        showUnusedOptionsByList(opt, settings_feature_not_implemented_warn, "Feature not implemented (option ignored)", false);
-        showUnusedOptionsByList(opt, settings_pushonlyoptions, "Option allowed only to be pushed by the server", true);
-
-        showUnusedOptionsByList(opt, settings_feature_not_implemented_warn, "feature not implemented/available", false);
-        showUnusedOptionsByList(opt, settings_script_plugin_feature, "Ignored (no script/plugin support)", false);
-        showUnusedOptionsByList(opt, ignore_unknown_option_list, "Ignored by option 'ignore-unknown-option'", false);
-        showUnusedOptionsByList(opt, settings_ignoreWithWarning, "Unsupported option (ignored)", false);
+        showUnusedOptionsByList(opt, settings_removedOptions, "Removed deprecated option", true, errors);
+        showUnusedOptionsByList(opt, settings_serverOnlyOptions, "Server only option", true, errors);
+        showUnusedOptionsByList(opt, settings_standalone_options, "OpenVPN 2.x command line operation", true, errors);
+        showUnusedOptionsByList(opt, settings_feature_not_implemented_warn, "Feature not implemented (option ignored)", false, errors);
+        showUnusedOptionsByList(opt, settings_pushonlyoptions, "Option allowed only to be pushed by the server", true, errors);
+        showUnusedOptionsByList(opt, settings_script_plugin_feature, "Ignored (no script/plugin support)", false, errors);
+        showUnusedOptionsByList(opt, ignore_unknown_option_list, "Ignored by option 'ignore-unknown-option'", false, errors);
+        showUnusedOptionsByList(opt, settings_ignoreWithWarning, "Unsupported option (ignored)", false, errors);
 
         auto ignoredBySetenvOpt = [](const Option &option)
         { return !option.touched() && option.warnonlyunknown(); };
-        showOptionsByFunction(opt, ignoredBySetenvOpt, "Ignored options prefixed with 'setenv opt'", false);
+        showOptionsByFunction(opt, ignoredBySetenvOpt, "Ignored options prefixed with 'setenv opt'", false, errors);
 
         auto unusedMetaOpt = [](const Option &option)
         { return !option.touched() && option.meta(); };
-        showOptionsByFunction(opt, unusedMetaOpt, "Unused ignored meta options", false);
+        showOptionsByFunction(opt, unusedMetaOpt, "Unused ignored meta options", false, errors);
 
         auto managmentOpt = [](const Option &option)
         { return !option.touched() && option.get(0, 0).rfind("management", 0) == 0; };
-        showOptionsByFunction(opt, managmentOpt, "OpenVPN management interface is not supported by this client", true);
+        showOptionsByFunction(opt, managmentOpt, "OpenVPN management interface is not supported by this client", true, errors);
 
         // If we still have options that are unaccounted for, we print them and throw an error or just warn about them
         auto onlyLightlyTouchedOptions = [](const Option &option)
         { return option.touched_lightly(); };
-        showOptionsByFunction(opt, onlyLightlyTouchedOptions, "Unused options, probably specified multiple times in the configuration file", false);
+        showOptionsByFunction(opt, onlyLightlyTouchedOptions, "Unused options, probably specified multiple times in the configuration file", false, errors);
 
         auto nonTouchedOptions = [](const Option &option)
         { return !option.touched() && !option.touched_lightly(); };
-        showOptionsByFunction(opt, nonTouchedOptions, OPENVPN_UNUSED_OPTIONS, true);
+        showOptionsByFunction(opt, nonTouchedOptions, OPENVPN_UNUSED_OPTIONS, true, errors);
+
+        errors.print_option_errors();
     }
 
-    void showUnusedOptionsByList(const OptionList &optlist, std::unordered_set<std::string> option_set, const std::string &message, bool fatal)
+    void showUnusedOptionsByList(const OptionList &optlist, std::unordered_set<std::string> option_set, const std::string &message, bool fatal, OptionErrors &errors)
     {
         auto func = [&option_set](const Option &opt)
         { return !opt.touched() && option_set.find(opt.get(0, 0)) != option_set.end(); };
-        showOptionsByFunction(optlist, func, message, fatal);
+        showOptionsByFunction(optlist, func, message, fatal, errors);
     }
 
     /* lambda expression that capture variables have complex signatures, avoid these by letting the compiler
      * itself figure it out with a template */
     template <typename T>
-    void showOptionsByFunction(const OptionList &opt, T func, const std::string &message, bool fatal)
+    void showOptionsByFunction(const OptionList &opt, T func, const std::string &message, bool fatal, OptionErrors &errors)
     {
-        bool messageShown = false;
         for (size_t i = 0; i < opt.size(); ++i)
         {
             auto &o = opt[i];
             if (func(o))
             {
-                if (!messageShown)
-                {
-                    OPENVPN_LOG(message);
-                    messageShown = true;
-                }
                 o.touch();
 
-                OPENVPN_LOG_NTNL(std::to_string(i) << ' ' << o.render(Option::RENDER_BRACKET | Option::RENDER_TRUNC_64) << std::endl);
+                errors.add_failed_opt(o, message, fatal);
             }
-        }
-        if (fatal && messageShown)
-        {
-            throw option_error("sorry, unsupported options present in configuration: " + message);
         }
     }
 
