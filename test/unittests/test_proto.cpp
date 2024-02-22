@@ -353,24 +353,20 @@ class DroughtMeasure
 };
 
 // test the OpenVPN protocol implementation in ProtoContext
-class TestProto : public ProtoContext
+class TestProto : public ProtoContextCallbackInterface
 {
-    typedef ProtoContext Base;
+    /* Callback methods that are not used */
+    void active(bool primary) override
+    {
+    }
 
-    using Base::is_server;
-    using Base::mode;
-    using Base::now;
 
   public:
-    using Base::flush;
-
-    typedef Base::PacketType PacketType;
-
     OPENVPN_EXCEPTION(session_invalidated);
 
-    TestProto(const Base::ProtoConfig::Ptr &config,
+    TestProto(const ProtoContext::ProtoConfig::Ptr &config,
               const SessionStats::Ptr &stats)
-        : Base(config, stats),
+        : proto_context(this, config, stats),
           control_drought("control", config->now),
           data_drought("data", config->now),
           frame(config->frame)
@@ -382,27 +378,26 @@ class TestProto : public ProtoContext
     void reset()
     {
         net_out.clear();
-        Base::reset();
-
-        Base::conf().mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
+        proto_context.reset();
+        proto_context.conf().mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
     }
 
     void initial_app_send(const char *msg)
     {
-        Base::start();
+        proto_context.start();
         const size_t msglen = std::strlen(msg) + 1;
         BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
         copy_progress(app_buf);
         control_send(std::move(app_buf));
-        flush(true);
+        proto_context.flush(true);
     }
 
     void app_send_templ_init(const char *msg)
     {
-        Base::start();
+        proto_context.start();
         const size_t msglen = std::strlen(msg) + 1;
         templ.reset(new BufferAllocated((unsigned char *)msg, msglen, 0));
-        flush(true);
+        proto_context.flush(true);
     }
 
     void app_send_templ()
@@ -421,9 +416,9 @@ class TestProto : public ProtoContext
 
     bool do_housekeeping()
     {
-        if (now() >= Base::next_housekeeping())
+        if (proto_context.now() >= proto_context.next_housekeeping())
         {
-            Base::housekeeping();
+            proto_context.housekeeping();
             return true;
         }
         else
@@ -433,13 +428,13 @@ class TestProto : public ProtoContext
     void control_send(BufferPtr &&app_bp)
     {
         app_bytes_ += app_bp->size();
-        Base::control_send(std::move(app_bp));
+        proto_context.control_send(std::move(app_bp));
     }
 
     void control_send(BufferAllocated &&app_buf)
     {
         app_bytes_ += app_buf.size();
-        Base::control_send(std::move(app_buf));
+        proto_context.control_send(std::move(app_buf));
     }
 
     BufferPtr data_encrypt_string(const char *str)
@@ -453,12 +448,12 @@ class TestProto : public ProtoContext
 
     void data_encrypt(BufferAllocated &in_out)
     {
-        Base::data_encrypt(in_out);
+        proto_context.data_encrypt(in_out);
     }
 
-    void data_decrypt(const PacketType &type, BufferAllocated &in_out)
+    void data_decrypt(const ProtoContext::PacketType &type, BufferAllocated &in_out)
     {
-        Base::data_decrypt(type, in_out);
+        proto_context.data_decrypt(type, in_out);
         if (in_out.size())
         {
             data_bytes_ += in_out.size();
@@ -500,13 +495,8 @@ class TestProto : public ProtoContext
 
     void check_invalidated()
     {
-        if (Base::invalidated())
-            throw session_invalidated(Error::name(Base::invalidation_reason()));
-    }
-
-    bool is_state_client_wait_reset_ack() const
-    {
-        return primary_state() == C_WAIT_RESET_ACK;
+        if (proto_context.invalidated())
+            throw session_invalidated(Error::name(proto_context.invalidation_reason()));
     }
 
     void disable_xmit()
@@ -514,13 +504,15 @@ class TestProto : public ProtoContext
         disable_xmit_ = true;
     }
 
+    ProtoContext proto_context;
+
     std::deque<BufferPtr> net_out;
 
     DroughtMeasure control_drought;
     DroughtMeasure data_drought;
 
   private:
-    virtual void control_net_send(const Buffer &net_buf)
+    void control_net_send(const Buffer &net_buf) override
     {
         if (disable_xmit_)
             return;
@@ -528,7 +520,7 @@ class TestProto : public ProtoContext
         net_out.push_back(BufferPtr(new BufferAllocated(net_buf, 0)));
     }
 
-    virtual void control_recv(BufferPtr &&app_bp)
+    void control_recv(BufferPtr &&app_bp) override
     {
         BufferPtr work;
         work.swap(app_bp);
@@ -559,7 +551,7 @@ class TestProto : public ProtoContext
     void modmsg(BufferPtr &buf)
     {
         char *msg = (char *)buf->data();
-        if (is_server())
+        if (proto_context.is_server())
         {
             msg[8] = 'S';
             msg[11] = 'C';
@@ -602,9 +594,9 @@ class TestProtoClient : public TestProto
     typedef TestProto Base;
 
   public:
-    TestProtoClient(const Base::ProtoConfig::Ptr &config,
+    TestProtoClient(const ProtoContext::ProtoConfig::Ptr &config,
                     const SessionStats::Ptr &stats)
-        : Base(config, stats)
+        : TestProto(config, stats)
     {
     }
 
@@ -613,21 +605,26 @@ class TestProtoClient : public TestProto
     {
         const std::string username("foo");
         const std::string password("bar");
-        Base::write_auth_string(username, buf);
-        Base::write_auth_string(password, buf);
+        ProtoContext::write_auth_string(username, buf);
+        ProtoContext::write_auth_string(password, buf);
     }
 };
 
 class TestProtoServer : public TestProto
 {
-    typedef TestProto Base;
 
   public:
+    void start()
+    {
+        proto_context.start();
+    }
+
     OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
-    TestProtoServer(const Base::ProtoConfig::Ptr &config,
+
+    TestProtoServer(const ProtoContext::ProtoConfig::Ptr &config,
                     const SessionStats::Ptr &stats)
-        : Base(config, stats)
+        : TestProto(config, stats)
     {
     }
 
@@ -687,7 +684,7 @@ class NoisyWire
         a.app_send_templ();
 
         // queue a data channel packet
-        if (a.data_channel_ready())
+        if (a.proto_context.data_channel_ready())
         {
             BufferPtr bp = a.data_encrypt_string("Waiting for godot A... Waiting for godot B... Waiting for godot C... Waiting for godot D... Waiting for godot E... Waiting for godot F... Waiting for godot G... Waiting for godot H... Waiting for godot I... Waiting for godot J...");
             wire.push_back(bp);
@@ -710,14 +707,14 @@ class NoisyWire
             BufferPtr bp = recv();
             if (!bp)
                 break;
-            typename T2::PacketType pt = b.packet_type(*bp);
+            typename ProtoContext::PacketType pt = b.proto_context.packet_type(*bp);
             if (pt.is_control())
             {
 #ifdef VERBOSE
                 if (!b.control_net_validate(pt, *bp)) // not strictly necessary since control_net_recv will also validate
                     std::cout << now->raw() << " " << title << " CONTROL PACKET VALIDATION FAILED" << std::endl;
 #endif
-                b.control_net_recv(pt, std::move(bp));
+                b.proto_context.control_net_recv(pt, std::move(bp));
             }
             else if (pt.is_data())
             {
@@ -744,11 +741,11 @@ class NoisyWire
 #ifdef VERBOSE
                 std::cout << now->raw() << " " << title << " KEY_STATE_ERROR" << std::endl;
 #endif
-                b.stat().error(Error::KEY_STATE_ERROR);
+                b.proto_context.stat().error(Error::KEY_STATE_ERROR);
             }
 
 #ifdef SIMULATE_UDP_AMPLIFY_ATTACK
-            if (b.is_state_client_wait_reset_ack())
+            if (b.proto_context.is_state_client_wait_reset_ack())
             {
                 b.disable_xmit();
 #ifdef VERBOSE
@@ -757,7 +754,7 @@ class NoisyWire
             }
 #endif
         }
-        b.flush(true);
+        b.proto_context.flush(true);
     }
 
   private:
@@ -1148,8 +1145,8 @@ int test(const int thread_num)
                   << " CTRL=" << cli_proto.n_control_recv() << '/' << cli_proto.n_control_send() << '/' << serv_proto.n_control_recv() << '/' << serv_proto.n_control_send()
 #endif
                   << " D=" << cli_proto.control_drought().raw() << '/' << cli_proto.data_drought().raw() << '/' << serv_proto.control_drought().raw() << '/' << serv_proto.data_drought().raw()
-                  << " N=" << cli_proto.negotiations() << '/' << serv_proto.negotiations()
-                  << " SH=" << cli_proto.slowest_handshake().raw() << '/' << serv_proto.slowest_handshake().raw()
+                  << " N=" << cli_proto.proto_context.negotiations() << '/' << serv_proto.proto_context.negotiations()
+                  << " SH=" << cli_proto.proto_context.slowest_handshake().raw() << '/' << serv_proto.proto_context.slowest_handshake().raw()
                   << " HE=" << cli_stats->get_error_count(Error::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get_error_count(Error::HANDSHAKE_TIMEOUT)
                   << std::endl;
 

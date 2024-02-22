@@ -109,15 +109,12 @@ class ServerProto
     };
 
     // This is the main server-side client instance object
-    class Session : ProtoContext,         // OpenVPN protocol implementation
-                    public TransportLink, // Transport layer
-                    public TunLink,       // Tun/routing layer
-                    public ManLink        // Management layer
+    class Session : ProtoContextCallbackInterface, // Callback interface from protocol implementation
+                    public TransportLink,          // Transport layer
+                    public TunLink,                // Tun/routing layer
+                    public ManLink                 // Management layer
     {
         friend class Factory; // calls constructor
-
-        using ProtoContext::now;
-        using ProtoContext::stat;
 
       public:
         typedef RCPtr<Session> Ptr;
@@ -142,11 +139,11 @@ class ServerProto
             peer_addr = addr;
 
             // init OpenVPN protocol handshake
-            ProtoContext::update_now();
-            ProtoContext::reset(cookie_psid);
-            ProtoContext::set_local_peer_id(local_peer_id);
-            ProtoContext::start(cookie_psid);
-            ProtoContext::flush(true);
+            proto_context.update_now();
+            proto_context.reset(cookie_psid);
+            proto_context.set_local_peer_id(local_peer_id);
+            proto_context.start(cookie_psid);
+            proto_context.flush(true);
 
             // coarse wakeup range
             housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
@@ -182,8 +179,8 @@ class ServerProto
                         ManLink::send->stats_notify(TransportLink::send->stats_poll(), true);
                 }
 
-                ProtoContext::pre_destroy();
-                ProtoContext::reset_dc_factory();
+                proto_context.pre_destroy();
+                proto_context.reset_dc_factory();
                 if (TransportLink::send)
                 {
                     TransportLink::send->stop();
@@ -206,23 +203,23 @@ class ServerProto
         virtual bool transport_recv(BufferAllocated &buf) override
         {
             bool ret = false;
-            if (!ProtoContext::primary_defined())
+            if (!proto_context.primary_defined())
                 return false;
             try
             {
-                OPENVPN_LOG_SERVPROTO(instance_name() << " : Transport RECV[" << buf.size() << "] " << client_endpoint_render() << ' ' << ProtoContext::dump_packet(buf));
+                OPENVPN_LOG_SERVPROTO(instance_name() << " : Transport RECV[" << buf.size() << "] " << client_endpoint_render() << ' ' << proto_context.dump_packet(buf));
 
                 // update current time
-                ProtoContext::update_now();
+                proto_context.update_now();
 
                 // get packet type
-                ProtoContext::PacketType pt = ProtoContext::packet_type(buf);
+                ProtoContext::PacketType pt = proto_context.packet_type(buf);
 
                 // process packet
                 if (pt.is_data())
                 {
                     // data packet
-                    ret = ProtoContext::data_decrypt(pt, buf);
+                    ret = proto_context.data_decrypt(pt, buf);
                     if (buf.size())
                     {
 #ifdef OPENVPN_PACKET_LOG
@@ -237,15 +234,15 @@ class ServerProto
                     }
 
                     // do a lightweight flush
-                    ProtoContext::flush(false);
+                    proto_context.flush(false);
                 }
                 else if (pt.is_control())
                 {
                     // control packet
-                    ret = ProtoContext::control_net_recv(pt, std::move(buf));
+                    ret = proto_context.control_net_recv(pt, std::move(buf));
 
                     // do a full flush
-                    ProtoContext::flush(true);
+                    proto_context.flush(true);
                 }
 
                 // schedule housekeeping wakeup
@@ -269,7 +266,7 @@ class ServerProto
         // Return true if keepalive parameter(s) are enabled.
         virtual bool is_keepalive_enabled() const override
         {
-            return ProtoContext::is_keepalive_enabled();
+            return proto_context.is_keepalive_enabled();
         }
 
         // Disable keepalive for rest of session, but fetch
@@ -278,7 +275,7 @@ class ServerProto
         virtual void disable_keepalive(unsigned int &keepalive_ping,
                                        unsigned int &keepalive_timeout) override
         {
-            ProtoContext::disable_keepalive(keepalive_ping, keepalive_timeout);
+            proto_context.disable_keepalive(keepalive_ping, keepalive_timeout);
             if (ManLink::send)
                 ManLink::send->keepalive_override(keepalive_ping, keepalive_timeout);
         }
@@ -286,7 +283,7 @@ class ServerProto
         // override the data channel factory
         virtual void override_dc_factory(const CryptoDCFactory::Ptr &dc_factory) override
         {
-            ProtoContext::dc_settings().set_factory(dc_factory);
+            proto_context.dc_settings().set_factory(dc_factory);
         }
 
         virtual ~Session()
@@ -301,7 +298,7 @@ class ServerProto
                 const Factory &factory,
                 ManClientInstance::Factory::Ptr man_factory_arg,
                 TunClientInstance::Factory::Ptr tun_factory_arg)
-            : ProtoContext(factory.clone_proto_config(), factory.stats),
+            : proto_context(this, factory.clone_proto_config(), factory.stats),
               housekeeping_timer(io_context_arg),
               disconnect_at(Time::infinite()),
               stats(factory.stats),
@@ -318,11 +315,11 @@ class ServerProto
         // proto base class calls here for control channel network sends
         virtual void control_net_send(const Buffer &net_buf) override
         {
-            OPENVPN_LOG_SERVPROTO(instance_name() << " : Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << ProtoContext::dump_packet(net_buf));
+            OPENVPN_LOG_SERVPROTO(instance_name() << " : Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << proto_context.dump_packet(net_buf));
             if (TransportLink::send)
             {
                 if (TransportLink::send->transport_send_const(net_buf))
-                    ProtoContext::update_last_sent();
+                    proto_context.update_last_sent();
             }
         }
 
@@ -353,7 +350,7 @@ class ServerProto
             if (msg == "PUSH_REQUEST")
             {
                 if (get_management())
-                    ManLink::send->push_request(ProtoContext::conf_ptr());
+                    ManLink::send->push_request(proto_context.conf_ptr());
                 else
                     auth_failed("no management provider", "");
             }
@@ -368,6 +365,14 @@ class ServerProto
             }
         }
 
+        void active(bool primary) override
+        {
+            /* Currently the server does not do anything special when the connection
+             * is ready (control channel fully established). We probably should trigger
+             * sending a PUSH_REPLY here, when the client requested it via
+             * IV_PROTO_REQUEST_PUSH instead waiting for an explicit PUSH_REQUEST */
+        }
+
         virtual void auth_failed(const std::string &reason,
                                  const std::string &client_reason) override
         {
@@ -379,7 +384,7 @@ class ServerProto
             if (halt || disconnect_type == DT_HALT_RESTART)
                 return;
 
-            ProtoContext::update_now();
+            proto_context.update_now();
 
             if (TunLink::send && (disconnect_type < DT_RELAY_TRANSITION))
             {
@@ -388,13 +393,13 @@ class ServerProto
                 disconnect_in(Time::Duration::seconds(10)); // not a real disconnect, just complete transition to relay
             }
 
-            if (ProtoContext::primary_defined())
+            if (proto_context.primary_defined())
             {
                 BufferPtr buf(new BufferAllocated(64, 0));
                 buf_append_string(*buf, "RELAY");
                 buf->null_terminate();
-                ProtoContext::control_send(std::move(buf));
-                ProtoContext::flush(true);
+                proto_context.control_send(std::move(buf));
+                proto_context.flush(true);
             }
 
             set_housekeeping_timer();
@@ -402,7 +407,7 @@ class ServerProto
 
         virtual void push_reply(std::vector<BufferPtr> &&push_msgs) override
         {
-            if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !ProtoContext::primary_defined())
+            if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !proto_context.primary_defined())
                 return;
 
             if (disconnect_type == DT_AUTH_PENDING)
@@ -411,17 +416,17 @@ class ServerProto
                 cancel_disconnect();
             }
 
-            ProtoContext::update_now();
+            proto_context.update_now();
 
             if (get_tun())
             {
-                ProtoContext::init_data_channel();
+                proto_context.init_data_channel();
                 for (auto &msg : push_msgs)
                 {
                     msg->null_terminate();
-                    ProtoContext::control_send(std::move(msg));
+                    proto_context.control_send(std::move(msg));
                 }
-                ProtoContext::flush(true);
+                proto_context.flush(true);
                 set_housekeeping_timer();
             }
             else
@@ -445,7 +450,7 @@ class ServerProto
             if (halt || disconnect_type == DT_HALT_RESTART)
                 return;
 
-            ProtoContext::update_now();
+            proto_context.update_now();
 
             BufferPtr buf(new BufferAllocated(128, BufferAllocated::GROW));
             BufferStreamOut os(*buf);
@@ -520,11 +525,11 @@ class ServerProto
 
             OPENVPN_LOG(instance_name() << " : Disconnect: " << ts << ' ' << reason);
 
-            if (ProtoContext::primary_defined())
+            if (proto_context.primary_defined())
             {
                 buf->null_terminate();
-                ProtoContext::control_send(std::move(buf));
-                ProtoContext::flush(true);
+                proto_context.control_send(std::move(buf));
+                proto_context.flush(true);
             }
 
             set_housekeeping_timer();
@@ -534,7 +539,7 @@ class ServerProto
         {
             if (halt || disconnect_type == DT_HALT_RESTART)
                 return;
-            ProtoContext::update_now();
+            proto_context.update_now();
             disconnect_in(Time::Duration::seconds(seconds));
             set_housekeeping_timer();
         }
@@ -543,7 +548,7 @@ class ServerProto
         {
             if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !seconds)
                 return;
-            ProtoContext::update_now();
+            proto_context.update_now();
             disconnect_type = DT_AUTH_PENDING;
             disconnect_in(Time::Duration::seconds(seconds));
             set_housekeeping_timer();
@@ -551,41 +556,41 @@ class ServerProto
 
         virtual void post_cc_msg(BufferPtr &&msg) override
         {
-            if (halt || !ProtoContext::primary_defined())
+            if (halt || !proto_context.primary_defined())
                 return;
 
-            ProtoContext::update_now();
+            proto_context.update_now();
             msg->null_terminate();
-            ProtoContext::control_send(std::move(msg));
-            ProtoContext::flush(true);
+            proto_context.control_send(std::move(msg));
+            proto_context.flush(true);
             set_housekeeping_timer();
         }
 
-        virtual void stats_notify(const PeerStats &ps, const bool final) override
+        void stats_notify(const PeerStats &ps, const bool final) override
         {
             if (ManLink::send)
                 ManLink::send->stats_notify(ps, final);
         }
 
-        virtual void float_notify(const PeerAddr::Ptr &addr) override
+        void float_notify(const PeerAddr::Ptr &addr) override
         {
             if (ManLink::send)
                 ManLink::send->float_notify(addr);
         }
 
-        virtual void ipma_notify(const struct ovpn_tun_head_ipma &ipma) override
+        void ipma_notify(const struct ovpn_tun_head_ipma &ipma) override
         {
             if (ManLink::send)
                 ManLink::send->ipma_notify(ipma);
         }
 
-        virtual void data_limit_notify(const int key_id,
-                                       const DataLimit::Mode cdl_mode,
-                                       const DataLimit::State cdl_status) override
+        void data_limit_notify(const int key_id,
+                               const DataLimit::Mode cdl_mode,
+                               const DataLimit::State cdl_status) override
         {
-            ProtoContext::update_now();
-            ProtoContext::data_limit_notify(key_id, cdl_mode, cdl_status);
-            ProtoContext::flush(true);
+            proto_context.update_now();
+            proto_context.data_limit_notify(key_id, cdl_mode, cdl_status);
+            proto_context.flush(true);
             set_housekeeping_timer();
         }
 
@@ -613,7 +618,7 @@ class ServerProto
         // and set_housekeeping_timer() called after this method
         void disconnect_in(const Time::Duration &dur)
         {
-            disconnect_at = now() + dur;
+            disconnect_at = proto_context.now() + dur;
         }
 
         void cancel_disconnect()
@@ -628,13 +633,13 @@ class ServerProto
                 if (!e && !halt)
                 {
                     // update current time
-                    ProtoContext::update_now();
+                    proto_context.update_now();
 
                     housekeeping_schedule.reset();
-                    ProtoContext::housekeeping();
-                    if (ProtoContext::invalidated())
-                        invalidation_error(ProtoContext::invalidation_reason());
-                    else if (now() >= disconnect_at)
+                    proto_context.housekeeping();
+                    if (proto_context.invalidated())
+                        invalidation_error(proto_context.invalidation_reason());
+                    else if (proto_context.now() >= disconnect_at)
                     {
                         switch (disconnect_type)
                         {
@@ -642,7 +647,7 @@ class ServerProto
                             error("disconnect triggered");
                             break;
                         case DT_RELAY_TRANSITION:
-                            ProtoContext::pre_destroy();
+                            proto_context.pre_destroy();
                             break;
                         case DT_AUTH_PENDING:
                             auth_failed("Auth Pending Timeout", "Auth Pending Timeout");
@@ -664,13 +669,13 @@ class ServerProto
 
         void set_housekeeping_timer()
         {
-            Time next = ProtoContext::next_housekeeping();
+            Time next = proto_context.next_housekeeping();
             next.min(disconnect_at);
             if (!housekeeping_schedule.similar(next))
             {
                 if (!next.is_infinite())
                 {
-                    next.max(now());
+                    next.max(proto_context.now());
                     housekeeping_schedule.reset(next);
                     housekeeping_timer.expires_at(next);
                     housekeeping_timer.async_wait([self = Ptr(this)](const openvpn_io::error_code &error)
@@ -738,6 +743,8 @@ class ServerProto
             DT_RELAY_TRANSITION,
             DT_HALT_RESTART,
         };
+
+        ProtoContext proto_context;
         int disconnect_type = DT_NONE;
         bool preserve_session_id = true;
 

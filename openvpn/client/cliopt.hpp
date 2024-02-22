@@ -1164,7 +1164,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         // Copy ProtoConfig so that modifications due to server push will
         // not persist across client instantiations.
-        cli_config->proto_context_config.reset(new Client::ProtoConfig(proto_config_cached(relay_mode)));
+        cli_config->proto_context_config.reset(new ProtoContext::ProtoConfig(proto_config_cached(relay_mode)));
 
         cli_config->proto_context_options = proto_context_options;
         cli_config->push_base = push_base;
@@ -1274,7 +1274,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     }
 
   private:
-    Client::ProtoConfig &proto_config_cached(const bool relay_mode)
+    ProtoContext::ProtoConfig &proto_config_cached(const bool relay_mode)
     {
         if (relay_mode && cp_relay)
             return *cp_relay;
@@ -1282,14 +1282,14 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             return *cp_main;
     }
 
-    Client::ProtoConfig::Ptr proto_config(const OptionList &opt,
-                                          const Config &config,
-                                          const ParseClientConfig &pcc,
-                                          const bool relay_mode)
+    ProtoContext::ProtoConfig::Ptr proto_config(const OptionList &opt,
+                                                const Config &config,
+                                                const ParseClientConfig &pcc,
+                                                const bool relay_mode)
     {
         // relay mode is null unless one of the below directives is defined
         if (relay_mode && !opt.exists("relay-mode"))
-            return Client::ProtoConfig::Ptr();
+            return ProtoContext::ProtoConfig::Ptr();
 
         // load flags
         unsigned int lflags = SSLConfigAPI::LF_PARSE_MODE;
@@ -1314,7 +1314,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cc->set_tls_ciphersuite_list(config.clientconf.tlsCiphersuitesList);
 
         // client ProtoContext config
-        Client::ProtoConfig::Ptr cp(new Client::ProtoConfig());
+        ProtoContext::ProtoConfig::Ptr cp(new ProtoContext::ProtoConfig());
         cp->ssl_factory = cc->new_factory();
         cp->relay_mode = relay_mode;
         cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, rng));
@@ -1454,8 +1454,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     RandomAPI::Ptr prng;
     Frame::Ptr frame;
     Layer layer;
-    Client::ProtoConfig::Ptr cp_main;
-    Client::ProtoConfig::Ptr cp_relay;
+    ProtoContext::ProtoConfig::Ptr cp_main;
+    ProtoContext::ProtoConfig::Ptr cp_relay;
     RemoteList::Ptr remote_list;
     bool server_addr_float;
     TransportClientFactory::Ptr transport_factory;

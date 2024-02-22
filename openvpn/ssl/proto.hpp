@@ -168,6 +168,53 @@ enum
 } // namespace
 } // namespace proto_context_private
 
+class ProtoContextCallbackInterface
+{
+  public:
+    /**
+     * Sends out bytes to the network.
+     */
+    virtual void control_net_send(const Buffer &net_buf) = 0;
+
+    /*
+     * Receive as packet from the network
+     * \note app may take ownership of app_bp via std::move
+     */
+    virtual void control_recv(BufferPtr &&app_bp) = 0;
+
+    /** Called on client to request username/password credentials.
+     * Should be overridden by derived class if credentials are required.
+     * username and password should be written into buf with write_auth_string().
+     */
+    virtual void client_auth(Buffer &buf)
+    {
+        write_empty_string(buf); // username
+        write_empty_string(buf); // password
+    }
+
+    /** Called on server with credentials and peer info provided by client.
+     *Should be overriden by derived class if credentials are required. */
+    virtual void server_auth(const std::string &username,
+                             const SafeString &password,
+                             const std::string &peer_info,
+                             const AuthCert::Ptr &auth_cert)
+    {
+    }
+
+    /**
+     * Writes an empty user or password string for the key-method 2 packet in the OpenVPN protocol
+     * @param buf  buffer to write to
+     */
+    static void write_empty_string(Buffer &buf)
+    {
+        uint8_t empty[]{0x00, 0x00}; // empty length field without content
+        buf.write(&empty, 2);
+    }
+
+    //! Called when KeyContext transitions to ACTIVE state
+    virtual void active(bool primary) = 0;
+};
+
 class ProtoContext
 {
   protected:
@@ -1388,9 +1435,8 @@ class ProtoContext
         return out.str();
     }
 
-  protected:
-    // used for reading/writing authentication strings (username, password, etc.)
-
+    // used for reading/writing authentication strings (username, password, etc.) from buffer using the
+    //  2 byte prefix for length
     static void write_uint16_length(const size_t size, Buffer &buf)
     {
         if (size > 0xFFFF)
@@ -1446,6 +1492,11 @@ class ProtoContext
         buf.null_terminate();
     }
 
+    static void write_empty_string(Buffer &buf)
+    {
+        write_uint16_length(0, buf);
+    }
+
     template <typename S>
     static S read_control_string(const Buffer &buf)
     {
@@ -1469,17 +1520,7 @@ class ProtoContext
         control_send(std::move(bp));
     }
 
-    static unsigned char *skip_string(Buffer &buf)
-    {
-        const size_t len = read_uint16_length(buf);
-        return buf.read_alloc(len);
-    }
-
-    static void write_empty_string(Buffer &buf)
-    {
-        write_uint16_length(0, buf);
-    }
-
+  protected:
     // Packet structure for managing network packets, passed as a template
     // parameter to ProtoStackBase
     class Packet
@@ -2785,7 +2826,7 @@ class ProtoContext
                 const std::string username = read_auth_string<std::string>(*buf);
                 const SafeString password = read_auth_string<SafeString>(*buf);
                 const std::string peer_info = read_auth_string<std::string>(*buf);
-                proto.server_auth(username, password, peer_info, Base::auth_cert());
+                proto.proto_callback->server_auth(username, password, peer_info, Base::auth_cert());
             }
         }
 
@@ -3641,9 +3682,11 @@ class ProtoContext
 
     OPENVPN_SIMPLE_EXCEPTION(select_key_context_error);
 
-    ProtoContext(const ProtoConfig::Ptr &config_arg, // configuration
+    ProtoContext(ProtoContextCallbackInterface *cb_arg,
+                 const ProtoConfig::Ptr &config_arg, // configuration
                  const SessionStats::Ptr &stats_arg) // error stats
-        : config(config_arg),
+        : proto_callback(cb_arg),
+          config(config_arg),
           stats(stats_arg),
           mode_(config_arg->ssl_factory->mode()),
           n_key_ids(0),
@@ -4263,8 +4306,13 @@ class ProtoContext
         return *stats;
     }
 
-  protected:
     // debugging
+    bool is_state_client_wait_reset_ack() const
+    {
+        return primary_state() == C_WAIT_RESET_ACK;
+    }
+
+  protected:
     int primary_state() const
     {
         if (primary)
@@ -4291,32 +4339,11 @@ class ProtoContext
         secondary.reset();
     }
 
-    virtual void control_net_send(const Buffer &net_buf) = 0;
-
-    // app may take ownership of app_bp via std::move
-    virtual void control_recv(BufferPtr &&app_bp) = 0;
-
     // Called on client to request username/password credentials.
-    // Should be overriden by derived class if credentials are required.
-    // username and password should be written into buf with write_auth_string().
-    virtual void client_auth(Buffer &buf)
+    // delegated to the callback/parent
+    void client_auth(Buffer &buf)
     {
-        write_empty_string(buf); // username
-        write_empty_string(buf); // password
-    }
-
-    // Called on server with credentials and peer info provided by client.
-    // Should be overriden by derived class if credentials are required.
-    virtual void server_auth(const std::string &username,
-                             const SafeString &password,
-                             const std::string &peer_info,
-                             const AuthCert::Ptr &auth_cert)
-    {
-    }
-
-    // Called when KeyContext transitions to ACTIVE state
-    virtual void active(bool primary)
-    {
+        proto_callback->client_auth(buf);
     }
 
     void update_last_received()
@@ -4326,12 +4353,12 @@ class ProtoContext
 
     void net_send(const unsigned int key_id, const Packet &net_pkt)
     {
-        control_net_send(net_pkt.buffer());
+        proto_callback->control_net_send(net_pkt.buffer());
     }
 
     void app_recv(const unsigned int key_id, BufferPtr &&to_app_buf)
     {
-        control_recv(std::move(to_app_buf));
+        proto_callback->control_recv(std::move(to_app_buf));
     }
 
     // we're getting a request from peer to renegotiate.
@@ -4471,7 +4498,7 @@ class ProtoContext
             case KeyContext::KEV_ACTIVE:
                 OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " SESSION_ACTIVE");
                 primary->rekey(CryptoDCInstance::ACTIVATE_PRIMARY);
-                active(true);
+                proto_callback->active(true);
                 break;
             case KeyContext::KEV_RENEGOTIATE:
             case KeyContext::KEV_RENEGOTIATE_FORCE:
@@ -4511,7 +4538,7 @@ class ProtoContext
                 secondary->rekey(CryptoDCInstance::NEW_SECONDARY);
                 if (primary)
                     primary->prepare_expire();
-                active(false);
+                proto_callback->active(false);
                 break;
             case KeyContext::KEV_BECOME_PRIMARY:
                 if (!secondary->invalidated())
@@ -4589,6 +4616,13 @@ class ProtoContext
     }
 
     // BEGIN ProtoContext data members
+
+    /** the class that uses this class needs to be called back on a few things. Typically a class
+     * that uses this class as field for composition. This parent/callback class needs to ensure that
+     * it lives longer than this class, e.g. by having this class as field as this class blindly
+     * assumes that this pointer is always valid for its lifetime
+     */
+    ProtoContextCallbackInterface *proto_callback;
 
     ProtoConfig::Ptr config;
     SessionStats::Ptr stats;
