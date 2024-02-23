@@ -1,0 +1,6 @@
+{
+  "$schema": "http://nginx/renovate-schema.json",
+  "extends": [
+    "local>openvpntechnologies/ops-sec-renovate"
+  ]
+}
