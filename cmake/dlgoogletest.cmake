@@ -12,6 +12,7 @@ set(GTEST_LIB gtest_main)
 include_guard(GLOBAL)
 
 if(NOT OVPN_GTEST_VERSION)
+    # renovate: datasource=github-releases depName=google/googletest
     set(OVPN_GTEST_VERSION v1.13.0)
 endif()
 

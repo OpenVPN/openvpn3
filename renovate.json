@@ -1,6 +1,29 @@
 {
-  "$schema": "http://nginx/renovate-schema.json",
-  "extends": [
-    "local>openvpntechnologies/ops-sec-renovate"
-  ]
+    "$schema": "http://nginx/renovate-schema.json",
+    "extends": [
+        "local>openvpntechnologies/ops-sec-renovate"
+    ],
+    "packageRules": [
+        {
+            "matchDepTypes": [
+                "action"
+            ],
+            "groupName": "github actions",
+            "pinDigests": true,
+            "extends": [
+                "schedule:monthly"
+            ]
+        }
+    ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "fileMatch": [
+                "\\.cmake$"
+            ],
+            "matchStrings": [
+                "datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s*set\\(.*_VERSION\\s*(?<currentValue>.*?)\\)\\s"
+            ]
+        }
+    ]
 }
