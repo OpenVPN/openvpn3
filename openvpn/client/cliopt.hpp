@@ -895,7 +895,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             "WSHOST",
             "WEB_CA_BUNDLE",
             "IS_OPENVPN_WEB_CA",
-            "OVPN_ACCESS_SERVER_NO_WEB",
+            "NO_WEB",
+            "ORGANIZATION"
         };
 
         std::unordered_set<std::string> ignore_unknown_option_list;
