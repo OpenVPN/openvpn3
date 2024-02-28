@@ -28,16 +28,18 @@ jobs:
         if: steps.check_submit.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
+          # versioning=regex:^asio-(?<major>\d+)-(?<minor>\d+)-(?<patch>\d+)$
           repository: chriskohlhoff/asio
-          path: asio
           ref: asio-1-28-0
+          path: asio
       - name: Checkout xxHash
         if: steps.check_submit.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
+          # versioning=semver-coerced
           repository: Cyan4973/xxHash
-          path: xxHash
           ref: v0.8.2
+          path: xxHash
       - uses: lukka/get-cmake@v3.28.3
         if: steps.check_submit.outputs.cache-hit != 'true'
 
