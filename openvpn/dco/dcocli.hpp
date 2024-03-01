@@ -36,22 +36,22 @@
 #include <openvpn/tun/builder/capture.hpp>
 #include <openvpn/tun/client/tunbase.hpp>
 
-#ifndef ENABLE_OVPNDCOWIN
+#if !defined(ENABLE_OVPNDCOWIN)
 #include <openvpn/tun/linux/client/tunmethods.hpp>
 #endif
 
-#ifdef ENABLE_KOVPN
+#if defined(ENABLE_KOVPN)
 #include <openvpn/kovpn/kodevtun.hpp>
 #include <openvpn/kovpn/kostats.hpp>
 #include <openvpn/kovpn/kovpn.hpp>
 #include <openvpn/kovpn/rps_xps.hpp>
-#elif ENABLE_OVPNDCO
+#elif defined(ENABLE_OVPNDCO)
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/dco/key.hpp>
 #include <openvpn/tun/linux/client/genl.hpp>
 #include <openvpn/tun/linux/client/sitnl.hpp>
-#elif ENABLE_OVPNDCOWIN
+#elif defined(ENABLE_OVPNDCOWIN)
 #include <bcrypt.h>
 #include <openvpn/dco/key.hpp>
 #include <openvpn/dco/ovpn-dco.h>
@@ -92,7 +92,7 @@ class ClientConfig : public DCO,
 
     virtual void finalize(const bool disconnected) override
     {
-#ifdef ENABLE_OVPNDCOWIN
+#if defined(ENABLE_OVPNDCOWIN)
         if (disconnected)
             tun.tun_persist.reset();
 #endif
@@ -286,7 +286,7 @@ class Client : public TransportClient,
     uint32_t peer_id;
 };
 
-#ifdef ENABLE_KOVPN
+#if defined(ENABLE_KOVPN)
 #include <openvpn/kovpn/kovpncli.hpp>
 inline DCO::Ptr new_controller(TunBuilderBase *)
 {
@@ -298,7 +298,7 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 {
     return TransportClient::Ptr(new KovpnClient(io_context, this, parent));
 }
-#elif ENABLE_OVPNDCO
+#elif defined(ENABLE_OVPNDCO)
 #include <openvpn/dco/ovpndcocli.hpp>
 inline DCO::Ptr new_controller(TunBuilderBase *tb)
 {
@@ -317,7 +317,7 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 {
     return TransportClient::Ptr(new OvpnDcoClient(io_context, this, parent));
 }
-#elif ENABLE_OVPNDCOWIN
+#elif defined(ENABLE_OVPNDCOWIN)
 #include <openvpn/dco/ovpndcowincli.hpp>
 inline DCO::Ptr new_controller(TunBuilderBase *tb)
 {
