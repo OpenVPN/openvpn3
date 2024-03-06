@@ -12,6 +12,12 @@
 #include "ovpncli.hpp"
 %}
 
+#ifndef OPENVPN_PLATFORM_WIN
+// simplify interface, not picked up automatically
+%apply int { openvpn_io::detail::socket_type };
+%apply int { asio::detail::socket_type };
+#endif
+
 // ignore these ClientAPI::OpenVPNClient bases
 %ignore openvpn::ClientAPI::LogReceiver;
 %ignore openvpn::ExternalTun::Factory;
