@@ -119,6 +119,27 @@ class Exception : public std::exception
         }                                                                              \
     }
 
+// define a custom exception class that allows extra info with error code
+#define OPENVPN_EXCEPTION_WITH_CODE(C, DEFAULT_CODE, ...)                               \
+    enum C##_##code : unsigned int{__VA_ARGS__};                                        \
+    class C : public openvpn::Exception                                                 \
+    {                                                                                   \
+      public:                                                                           \
+        C() : openvpn::Exception(#C OPENVPN_FILE_LINE)                                  \
+        {                                                                               \
+            add_label(#DEFAULT_CODE);                                                   \
+        }                                                                               \
+        C(const std::string &err) : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err) \
+        {                                                                               \
+            add_label(#DEFAULT_CODE);                                                   \
+        }                                                                               \
+        option_error(C##_##code code, const std::string &err)                           \
+            : openvpn::Exception(#C OPENVPN_FILE_LINE ": " + err)                       \
+        {                                                                               \
+            add_label(code2string(code));                                               \
+        }                                                                               \
+        static std::string code2string(C##_##code code);                                \
+    }
 // define a custom exception class that allows extra info, but does not emit a tag
 #define OPENVPN_UNTAGGED_EXCEPTION(C)                      \
     class C : public openvpn::Exception                    \
@@ -148,9 +169,7 @@ class Exception : public std::exception
     class C : public B                           \
     {                                            \
       public:                                    \
-        C(const std::string err) : B(err)        \
-        {                                        \
-        }                                        \
+        using B::B;                              \
     }
 
 // throw an Exception with stringstream concatenation allowed
@@ -169,6 +188,14 @@ class Exception : public std::exception
         std::ostringstream _ovpn_exc; \
         _ovpn_exc << stuff;           \
         throw exc(_ovpn_exc.str());   \
+    } while (0)
+
+#define OPENVPN_THROW_ARG1(exc, arg, stuff) \
+    do                                      \
+    {                                       \
+        std::ostringstream _ovpn_exc;       \
+        _ovpn_exc << stuff;                 \
+        throw exc(arg, _ovpn_exc.str());    \
     } while (0)
 
 // properly rethrow an exception that might be derived from Exception
