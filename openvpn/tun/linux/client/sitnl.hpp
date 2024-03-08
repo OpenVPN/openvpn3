@@ -823,7 +823,7 @@ class SITNL
 
         /* for SITNL_ADDATTR */
     err:
-        return -EINVAL;
+        return ret;
     }
 
     static int
@@ -933,7 +933,7 @@ class SITNL
 
         /* for SITNL_ADDATTR */
     err:
-        return -1;
+        return ret;
     }
 
     static int
