@@ -240,6 +240,7 @@ INSTANTIATE_TEST_SUITE_P(
         certconfig + "\nremote 1.2.3.4\ntls-client\npull\n",
         /* Should not trigger an error. Redundant options are no problem */
         certconfig + "\nremote 1.2.3.4\ntls-client\npull\nclient\n",
+        certconfig + "\nremote 1.2.3.4\npull\nclient\n",
         certconfig + "\nremote 1.2.3.4\nclient\ntls-client\n"));
 
 INSTANTIATE_TEST_SUITE_P(
