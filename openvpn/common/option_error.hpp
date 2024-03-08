@@ -21,10 +21,24 @@
 
 #pragma once
 
+#include <cassert>
 #include <openvpn/common/exception.hpp>
 
 namespace openvpn {
 
-OPENVPN_EXCEPTION(option_error);
+OPENVPN_EXCEPTION_WITH_CODE(option_error, ERR_PROFILE_OPTION, ERR_INVALID_OPTION_DNS, ERR_INVALID_OPTION_CRYPTO, ERR_INVALID_CONFIG, ERR_INVALID_OPTION_PUSHED, ERR_INVALID_OPTION_VAL);
 
+inline std::string option_error::code2string(option_error_code code)
+{
+    static const char *code_strings[] = {
+        "ERR_INVALID_OPTION_DNS",
+        "ERR_INVALID_OPTION_CRYPTO",
+        "ERR_INVALID_CONFIG",
+        "ERR_INVALID_OPTION_PUSHED",
+        "ERR_INVALID_OPTION_VAL"};
+
+    assert(code < sizeof(code_strings));
+    return code_strings[code];
 }
+
+} // namespace openvpn
