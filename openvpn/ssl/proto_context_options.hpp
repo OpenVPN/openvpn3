@@ -64,7 +64,7 @@ struct ProtoContextCompressionOptions : public RC<thread_safe_refcount>
         else if (mode == "asym")
             compression_mode = COMPRESS_ASYM;
         else
-            OPENVPN_THROW(option_error, "error parsing compression mode: " << mode);
+            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_VAL, "error parsing compression mode: " << mode);
     }
 
     CompressionMode compression_mode;

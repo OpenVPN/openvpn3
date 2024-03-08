@@ -57,7 +57,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
             else if (action_str == "reject")
                 action = Reject;
             else
-                throw option_error("invalid pull-filter action: " + action_str);
+                throw option_error(ERR_INVALID_OPTION_VAL, "invalid pull-filter action: " + action_str);
 
             Option match = OptionList::parse_option_from_line(o.get(2, -1), nullptr);
             pull_filter_list_.push_back({action, match});
@@ -107,7 +107,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
             && o.ref(1) == "server"
             && DnsServer::parse_priority(o.ref(2)) < 0)
         {
-            throw option_error(o.escape(false));
+            throw option_error(ERR_INVALID_CONFIG, o.escape(false));
         }
     }
 

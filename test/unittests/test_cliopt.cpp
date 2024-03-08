@@ -57,7 +57,7 @@ TEST(config, missingRequiredOption)
 {
     ParseClientConfig conf = ParseClientConfig::parse("mode server");
     EXPECT_EQ(conf.error(), true);
-    EXPECT_EQ(conf.message(), "ERR_PROFILE_OPTION: option_error: remote option not specified");
+    EXPECT_TRUE(conf.message().find("option_error: remote option not specified") != std::string::npos);
 }
 
 TEST(config, parse_missing_option)
@@ -197,7 +197,7 @@ TEST(config, dco_compatibility)
         OVPN_EXPECT_THROW(
             load_client_config(minimalConfig + optname),
             option_error,
-            "option_error: dco_compatibility: config/options are not compatible with dco");
+            "ERR_INVALID_CONFIG: option_error: dco_compatibility: config/options are not compatible with dco");
     }
 }
 
@@ -253,7 +253,7 @@ TEST(config, client_missing_in_config)
     OVPN_EXPECT_THROW(
         load_client_config(configNoClient),
         option_error,
-        "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
+        "ERR_INVALID_CONFIG: option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
 }
 
 TEST(config, pull_and_tlsclient_in_config)
@@ -280,7 +280,7 @@ TEST(config, onlypullortlsclient)
         OVPN_EXPECT_THROW(
             load_client_config(configNoClient),
             option_error,
-            "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
+            "ERR_INVALID_CONFIG: option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
     }
 }
 

@@ -294,7 +294,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         else
             remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr, prng));
         if (!remote_list->defined())
-            throw option_error("no remote option specified");
+            throw option_error(ERR_INVALID_CONFIG, "no remote option specified");
 
         // If running in tun_persist mode, we need to do basic DNS caching so that
         // we can avoid emitting DNS requests while the tunnel is blocked during
@@ -336,7 +336,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         std::tie(dco_compatible, std::ignore) = check_dco_compatibility(clientconf, opt);
         if (config.clientconf.dco && !dco_compatible)
         {
-            throw option_error("dco_compatibility: config/options are not compatible with dco");
+            throw option_error(ERR_INVALID_CONFIG, "dco_compatibility: config/options are not compatible with dco");
         }
 
 #ifdef OPENVPN_PLATFORM_UWP
@@ -396,7 +396,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf.stop = config.stop;
                 tun_factory.reset(config.extern_tun_factory->new_tun_factory(tunconf, opt));
                 if (!tun_factory)
-                    throw option_error("OPENVPN_EXTERNAL_TUN_FACTORY: no tun factory");
+                    throw option_error(ERR_INVALID_CONFIG, "OPENVPN_EXTERNAL_TUN_FACTORY: no tun factory");
             }
 #elif defined(USE_TUN_BUILDER)
             {
@@ -654,14 +654,14 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     {
         // secret option not supported
         if (opt.exists("secret"))
-            throw option_error("sorry, static key encryption mode (non-SSL/TLS) is not supported");
+            throw option_error(ERR_INVALID_OPTION_CRYPTO, "sorry, static key encryption mode (non-SSL/TLS) is not supported");
 
         // fragment option not supported
         if (opt.exists("fragment"))
-            throw option_error("sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
+            throw option_error(ERR_INVALID_OPTION_VAL, "sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
 
         if (!opt.exists("client"))
-            throw option_error("Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
+            throw option_error(ERR_INVALID_CONFIG, "Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
 
         // Only p2p mode accept
         if (opt.exists("mode"))
@@ -669,7 +669,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             const auto &mode = opt.get("mode");
             if (mode.size() != 2 || mode.get(1, 128) != "p2p")
             {
-                throw option_error("Only 'mode p2p' supported");
+                throw option_error(ERR_INVALID_CONFIG, "Only 'mode p2p' supported");
             }
         }
 
@@ -679,7 +679,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             auto keymethod = opt.get("key-method");
             if (keymethod.size() != 2 || keymethod.get(1, 128) != "2")
             {
-                throw option_error("Only 'key-method 2' is supported: " + keymethod.get(1, 128));
+                throw option_error(ERR_INVALID_OPTION_VAL, "Only 'key-method 2' is supported: " + keymethod.get(1, 128));
             }
         }
     }
@@ -1373,7 +1373,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         else if (alt_proxy)
         {
             if (alt_proxy->requires_tcp() && !transport_protocol.is_tcp())
-                throw option_error("internal error: no TCP server entries for " + alt_proxy->name() + " transport");
+                throw option_error(ERR_INVALID_CONFIG, "internal error: no TCP server entries for " + alt_proxy->name() + " transport");
             AltProxy::Config conf;
             conf.remote_list = remote_list;
             conf.frame = frame;
@@ -1386,7 +1386,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         else if (http_proxy_options)
         {
             if (!transport_protocol.is_tcp())
-                throw option_error("internal error: no TCP server entries for HTTP proxy transport");
+                throw option_error(ERR_INVALID_CONFIG, "internal error: no TCP server entries for HTTP proxy transport");
 
             // HTTP Proxy transport
             HTTPProxyTransport::ClientConfig::Ptr httpconf = HTTPProxyTransport::ClientConfig::new_obj();
@@ -1441,7 +1441,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 transport_factory = tcpconf;
             }
             else
-                throw option_error("internal error: unknown transport protocol");
+                throw option_error(ERR_INVALID_OPTION_VAL, "internal error: unknown transport protocol");
         }
 #endif // OPENVPN_EXTERNAL_TRANSPORT_FACTORY
         return remote_list->current_server_host();

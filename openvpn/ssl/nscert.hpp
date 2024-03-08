@@ -46,7 +46,7 @@ inline Type ns_cert_type(const std::string &ct)
     else if (ct == "client")
         return CLIENT;
     else
-        throw option_error("ns-cert-type must be 'client' or 'server'");
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "ns-cert-type must be 'client' or 'server'");
 }
 
 inline Type ns_cert_type(const OptionList &opt, const std::string &relay_prefix)

@@ -280,9 +280,9 @@ class ProtoContext
     }
 
   public:
-    OPENVPN_EXCEPTION(proto_error);
-    OPENVPN_EXCEPTION(process_server_push_error);
-    OPENVPN_EXCEPTION_INHERIT(option_error, proto_option_error);
+    OPENVPN_UNTAGGED_EXCEPTION_INHERIT(option_error, proto_error);
+    OPENVPN_UNTAGGED_EXCEPTION_INHERIT(option_error, process_server_push_error);
+    OPENVPN_UNTAGGED_EXCEPTION_INHERIT(option_error, proto_option_error);
 
     // configuration data passed to ProtoContext constructor
     class ProtoConfig : public RCCopyable<thread_unsafe_refcount>
@@ -422,14 +422,14 @@ class ProtoContext
                 if (!dev)
                     dev = opt.get_ptr("dev");
                 if (!dev)
-                    throw proto_option_error("missing dev-type or dev option");
+                    throw proto_option_error(ERR_INVALID_CONFIG, "missing dev-type or dev option");
                 const std::string &dev_type = dev->get(1, 64);
                 if (string::starts_with(dev_type, "tun"))
                     layer = Layer(Layer::OSI_LAYER_3);
                 else if (string::starts_with(dev_type, "tap"))
-                    throw proto_option_error("TAP mode is not supported");
+                    throw proto_option_error(ERR_INVALID_CONFIG, "TAP mode is not supported");
                 else
-                    throw proto_option_error("bad dev-type");
+                    throw proto_option_error(ERR_INVALID_OPTION_VAL, "bad dev-type");
             }
 
             // cipher/digest/tls-auth/tls-crypt
@@ -471,7 +471,7 @@ class ProtoContext
                     if (o)
                     {
                         if (tls_crypt_context)
-                            throw proto_option_error("tls-auth and tls-crypt are mutually exclusive");
+                            throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-auth and tls-crypt are mutually exclusive");
 
                         tls_key.parse(o->get(1, 0));
 
@@ -489,9 +489,9 @@ class ProtoContext
                     if (o)
                     {
                         if (tls_auth_context)
-                            throw proto_option_error("tls-auth and tls-crypt are mutually exclusive");
+                            throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-auth and tls-crypt are mutually exclusive");
                         if (tls_crypt_context)
-                            throw proto_option_error("tls-crypt and tls-crypt-v2 are mutually exclusive");
+                            throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-crypt and tls-crypt-v2 are mutually exclusive");
 
                         tls_crypt_ = TLSCrypt::V1;
                         tls_key.parse(o->get(1, 0));
@@ -506,9 +506,9 @@ class ProtoContext
                     if (o)
                     {
                         if (tls_auth_context)
-                            throw proto_option_error("tls-auth and tls-crypt-v2 are mutually exclusive");
+                            throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-auth and tls-crypt-v2 are mutually exclusive");
                         if (tls_crypt_context)
-                            throw proto_option_error("tls-crypt and tls-crypt-v2 are mutually exclusive");
+                            throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "tls-crypt and tls-crypt-v2 are mutually exclusive");
 
                         // initialize tls_crypt_context
                         set_tls_crypt_algs();
@@ -550,11 +550,11 @@ class ProtoContext
                         else if (dir == "bidirectional" || dir == "bi")
                             key_direction = -1;
                         else
-                            throw proto_option_error("bad key-direction parameter");
+                            throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "bad key-direction parameter");
                     }
                 }
                 else
-                    throw proto_option_error("bad key-direction default");
+                    throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "bad key-direction default");
             }
 
             // compression
@@ -567,7 +567,7 @@ class ProtoContext
                         const std::string meth_name = o->get(1, 128);
                         CompressContext::Type meth = CompressContext::parse_method(meth_name);
                         if (meth == CompressContext::NONE)
-                            OPENVPN_THROW(proto_option_error, "Unknown compressor: '" << meth_name << '\'');
+                            OPENVPN_THROW_ARG1(proto_option_error, ERR_INVALID_OPTION_VAL, "Unknown compressor: '" << meth_name << '\'');
                         comp_ctx = CompressContext(pco.is_comp() ? meth : CompressContext::stub(meth), pco.is_comp_asym());
                     }
                     else
@@ -886,7 +886,7 @@ class ProtoContext
             else if (protocol.is_tcp())
                 pid_mode = PacketIDReceive::TCP_MODE;
             else
-                throw proto_option_error("transport protocol undefined");
+                throw proto_option_error(ERR_INVALID_OPTION_VAL, "transport protocol undefined");
         }
 
         void set_protocol(const Protocol &p)
@@ -910,7 +910,7 @@ class ProtoContext
             auto cipher = CryptoAlgs::lookup("AES-256-CTR");
 
             if ((digest == CryptoAlgs::NONE) || (cipher == CryptoAlgs::NONE))
-                throw proto_option_error("missing support for tls-crypt algorithms");
+                throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "missing support for tls-crypt algorithms");
 
             /* TODO: we currently use the default SSL library context here as the
              * library context is not available this early. This should not matter
@@ -1850,7 +1850,7 @@ class ProtoContext
                     // trigger renegotiation if we hit decrypt data limit
                     if (data_limit)
                         if (!data_limit_add(DataLimit::Decrypt, buf.size()))
-                            throw proto_option_error("Unable to add data limit");
+                            throw proto_option_error(ERR_INVALID_OPTION_CRYPTO, "Unable to add data limit");
 
                     // decompress packet
                     if (compress)

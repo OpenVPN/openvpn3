@@ -176,7 +176,7 @@ class Protocol
         {
             if (!title)
                 title = "protocol";
-            OPENVPN_THROW(option_error, "error parsing " << title << ": " << str);
+            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_VAL, "error parsing " << title << ": " << str);
         }
         return ret;
     }

@@ -73,7 +73,7 @@ struct DnsServer
 
         std::int32_t priority;
         if (!parse_number_validate<std::int32_t>(prio_str, 4, min, max, &priority))
-            OPENVPN_THROW(option_error, "dns server priority '" << prio_str << "' invalid");
+            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server priority '" << prio_str << "' invalid");
         return priority;
     }
 };
@@ -166,7 +166,7 @@ struct DnsOptions
                         {
                             std::string port_str;
                             if (!HostPort::split_host_port(o.ref(j), addr_str, port_str, "", false, &port))
-                                OPENVPN_THROW(option_error, "dns server " << priority << " invalid address: " << o.ref(j));
+                                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << o.ref(j));
                         }
 
                         try
@@ -175,7 +175,7 @@ struct DnsOptions
                         }
                         catch (const IP::ip_exception &)
                         {
-                            OPENVPN_THROW(option_error, "dns server " << priority << " invalid address: " << o.ref(j));
+                            OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " invalid address: " << o.ref(j));
                         }
 
                         if (addr.is_ipv6())
@@ -194,8 +194,7 @@ struct DnsOptions
                 {
                     if (server.domain_type == DnsServer::DomainType::Exclude)
                     {
-                        OPENVPN_THROW(option_error,
-                                      "dns server " << priority << " cannot use resolve-domains and exclude-domains together");
+                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " cannot use resolve-domains and exclude-domains together");
                     }
 
                     server.domain_type = DnsServer::DomainType::Resolve;
@@ -206,8 +205,7 @@ struct DnsOptions
                 {
                     if (server.domain_type == DnsServer::DomainType::Resolve)
                     {
-                        OPENVPN_THROW(option_error,
-                                      "dns server " << priority << " cannot use exclude-domains and resolve-domains together");
+                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " cannot use exclude-domains and resolve-domains together");
                     }
 
                     server.domain_type = DnsServer::DomainType::Exclude;
@@ -224,8 +222,7 @@ struct DnsOptions
                         server.dnssec = DnsServer::Security::Optional;
                     else
                     {
-                        OPENVPN_THROW(option_error,
-                                      "dns server " << priority << " dnssec setting '" << o.ref(4) << "' invalid");
+                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " dnssec setting '" << o.ref(4) << "' invalid");
                     }
                 }
                 else if (o.ref(3) == "transport" && o.size() == 5)
@@ -238,8 +235,7 @@ struct DnsOptions
                         server.transport = DnsServer::Transport::TLS;
                     else
                     {
-                        OPENVPN_THROW(option_error,
-                                      "dns server " << priority << " transport '" << o.ref(4) << "' invalid");
+                        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " transport '" << o.ref(4) << "' invalid");
                     }
                 }
                 else if (o.ref(3) == "sni" && o.size() == 5)
@@ -248,15 +244,12 @@ struct DnsOptions
                 }
                 else
                 {
-                    OPENVPN_THROW(option_error,
-                                  "dns server " << priority << " option '" << o.ref(3) << "' unknown or too many parameters");
+                    OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " option '" << o.ref(3) << "' unknown or too many parameters");
                 }
             }
             else
             {
-                OPENVPN_THROW(option_error,
-                              "dns option unknown or invalid number of parameters "
-                                  << o.render(Option::RENDER_TRUNC_64 | Option::RENDER_BRACKET));
+                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns option unknown or invalid number of parameters " << o.render(Option::RENDER_TRUNC_64 | Option::RENDER_BRACKET));
             }
         }
 
@@ -265,8 +258,7 @@ struct DnsOptions
             const auto priority = keyval.first;
             const auto &server = keyval.second;
             if (server.address4.unspecified() && server.address6.unspecified())
-                OPENVPN_THROW(option_error,
-                              "dns server " << priority << " does not have an address assigned");
+                OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_DNS, "dns server " << priority << " does not have an address assigned");
         }
     }
 

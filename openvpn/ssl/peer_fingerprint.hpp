@@ -51,7 +51,7 @@ struct PeerFingerprint
         }
 
         if (fingerprint_.size() != fingerprint_.capacity())
-            throw option_error("malformed peer-fingerprint: " + fp);
+            throw option_error(ERR_INVALID_OPTION_VAL, "malformed peer-fingerprint: " + fp);
     }
 
     explicit PeerFingerprint(const std::vector<uint8_t> &fingerprint)

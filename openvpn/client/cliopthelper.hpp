@@ -321,7 +321,7 @@ class ParseClientConfig
         catch (const option_error &e)
         {
             error_ = true;
-            message_ = Unicode::utf8_printable<std::string>(std::string("ERR_PROFILE_OPTION: ") + e.what(), 256);
+            message_ = Unicode::utf8_printable<std::string>(e.what(), 256);
         }
         catch (const std::exception &e)
         {
@@ -771,7 +771,7 @@ class ParseClientConfig
         else if (parm == "1")
             return true;
         else
-            throw option_error(title + ": parameter must be 0 or 1");
+            throw option_error(ERR_INVALID_OPTION_VAL, title + ": parameter must be 0 or 1");
     }
 
     bool error_;
