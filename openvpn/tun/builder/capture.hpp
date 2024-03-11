@@ -489,7 +489,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         Route r;
         r.address = address;
         r.prefix_length = static_cast<unsigned char>(prefix_length);
-        r.metric = metric;
+        r.metric = (metric < 0 ? route_metric_default : metric);
         r.ipv6 = ipv6;
         add_routes.push_back(r);
         return true;
