@@ -23,7 +23,6 @@
 
 #include <sys/ioctl.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <net/if.h>
 #include <linux/if_tun.h>
 
