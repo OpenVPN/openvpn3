@@ -319,10 +319,12 @@ struct NetlinkRoute4 : public Action
                   int prefixlen_arg,
                   IPv4::Addr &gw_arg,
                   std::string dev_arg,
+                  int metric_arg,
                   bool add_arg)
         : route(dst_arg, prefixlen_arg),
           gw(gw_arg),
           dev(dev_arg),
+          metric(metric_arg),
           add(add_arg)
     {
     }
@@ -333,6 +335,7 @@ struct NetlinkRoute4 : public Action
         ret->route = route;
         ret->gw = gw;
         ret->dev = dev;
+        ret->metric = metric;
         return ret;
     }
 
@@ -347,11 +350,11 @@ struct NetlinkRoute4 : public Action
         int ret;
         if (add)
         {
-            ret = SITNL::net_route_add(route, gw, dev, 0, 0);
+            ret = SITNL::net_route_add(route, gw, dev, 0, metric);
         }
         else
         {
-            ret = SITNL::net_route_del(route, gw, dev, 0, 0);
+            ret = SITNL::net_route_del(route, gw, dev, 0, metric);
         }
 
         if (ret)
@@ -365,13 +368,14 @@ struct NetlinkRoute4 : public Action
     {
         std::ostringstream os;
         os << "netlink route " << (add ? "add" : "del") << " dev " << dev << " "
-           << route << " via " << gw.to_string();
+           << route << " via " << gw.to_string() << " metric " << metric;
         return os.str();
     }
 
     IP::Route4 route;
     IPv4::Addr gw;
     std::string dev;
+    int metric = -1;
     bool add = true;
 };
 
@@ -387,10 +391,12 @@ struct NetlinkRoute6 : public Action
                   int prefixlen_arg,
                   IPv6::Addr &gw_arg,
                   std::string dev_arg,
+                  int metric_arg,
                   bool add_arg)
         : route(dst_arg, prefixlen_arg),
           gw(gw_arg),
           dev(dev_arg),
+          metric(metric_arg),
           add(add_arg)
     {
     }
@@ -401,6 +407,7 @@ struct NetlinkRoute6 : public Action
         ret->route = route;
         ret->gw = gw;
         ret->dev = dev;
+        ret->metric = metric;
         return ret;
     }
 
@@ -415,11 +422,11 @@ struct NetlinkRoute6 : public Action
         int ret;
         if (add)
         {
-            ret = SITNL::net_route_add(route, gw, dev, 0, 0);
+            ret = SITNL::net_route_add(route, gw, dev, 0, metric);
         }
         else
         {
-            ret = SITNL::net_route_del(route, gw, dev, 0, 0);
+            ret = SITNL::net_route_del(route, gw, dev, 0, metric);
         }
 
         if (ret)
@@ -433,13 +440,14 @@ struct NetlinkRoute6 : public Action
     {
         std::ostringstream os;
         os << "netlink route " << (add ? "add" : "del") << " dev " << dev << " "
-           << route << " via " << gw.to_string();
+           << route << " via " << gw.to_string() << " metric " << metric;
         return os.str();
     }
 
     IP::Route6 route;
     IPv6::Addr gw;
     std::string dev;
+    int metric = -1;
     bool add = true;
 };
 
@@ -517,6 +525,7 @@ inline void add_del_route(const std::string &addr_str,
                           const int prefix_len,
                           const std::string &gateway_str,
                           const std::string &dev,
+                          const int metric,
                           const unsigned int flags,
                           std::vector<IP::Route> *rtvec,
                           Action::Ptr &create,
@@ -536,6 +545,7 @@ inline void add_del_route(const std::string &addr_str,
             add->route.prefix_len = prefix_len;
             add->gw = IPv6::Addr::from_string(gateway_str);
             add->dev = dev;
+            add->metric = metric;
             add->add = true;
 
             create = add;
@@ -562,6 +572,7 @@ inline void add_del_route(const std::string &addr_str,
             add->route.prefix_len = prefix_len;
             add->gw = IPv4::Addr::from_string(gateway_str);
             add->dev = dev;
+            add->metric = metric;
             add->add = true;
 
             create = add;
@@ -580,13 +591,14 @@ inline void add_del_route(const std::string &addr_str,
                           const int prefix_len,
                           const std::string &gateway_str,
                           const std::string &dev,
+                          const int metric,
                           const unsigned int flags, // add interface route to rtvec if defined
                           std::vector<IP::Route> *rtvec,
                           ActionList &create,
                           ActionList &destroy)
 {
     Action::Ptr c, d;
-    add_del_route(addr_str, prefix_len, gateway_str, dev, flags, rtvec, c, d);
+    add_del_route(addr_str, prefix_len, gateway_str, dev, metric, flags, rtvec, c, d);
     create.add(c);
     destroy.add(d);
 }
@@ -648,6 +660,7 @@ inline void iface_config(const std::string &iface_name,
                       local4->prefix_length,
                       local4->address,
                       iface_name,
+                      0,
                       R_ADD_DCO,
                       rtvec,
                       create,
@@ -675,6 +688,7 @@ inline void iface_config(const std::string &iface_name,
                       local6->prefix_length,
                       local6->address,
                       iface_name,
+                      0,
                       R_ADD_DCO | R_IPv6,
                       rtvec,
                       create,
@@ -711,6 +725,7 @@ struct TunMethods
                                       route.prefix_length,
                                       local6->gateway,
                                       iface_name,
+                                      route.metric,
                                       R_ADD_ALL | R_IPv6,
                                       rtvec,
                                       create,
@@ -723,6 +738,7 @@ struct TunMethods
                                       route.prefix_length,
                                       local4->gateway,
                                       iface_name,
+                                      route.metric,
                                       R_ADD_ALL,
                                       rtvec,
                                       create,
@@ -751,6 +767,7 @@ struct TunMethods
                                       route.prefix_length,
                                       gw.v4.addr().to_string(),
                                       gw.v4.dev(),
+                                      route.metric,
                                       R_ADD_SYS,
                                       rtvec,
                                       create,
@@ -779,8 +796,8 @@ struct TunMethods
                                      destroy);
                 }
 
-                add_del_route("0.0.0.0", 1, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
-                add_del_route("128.0.0.0", 1, local4->gateway, iface_name, R_ADD_ALL, rtvec, create, destroy);
+                add_del_route("0.0.0.0", 1, local4->gateway, iface_name, 0, R_ADD_ALL, rtvec, create, destroy);
+                add_del_route("128.0.0.0", 1, local4->gateway, iface_name, 0, R_ADD_ALL, rtvec, create, destroy);
             }
 
             // Process IPv6 redirect-gateway
@@ -799,8 +816,8 @@ struct TunMethods
                                      destroy);
                 }
 
-                add_del_route("0000::", 1, local6->gateway, iface_name, R_ADD_ALL | R_IPv6, rtvec, create, destroy);
-                add_del_route("8000::", 1, local6->gateway, iface_name, R_ADD_ALL | R_IPv6, rtvec, create, destroy);
+                add_del_route("0000::", 1, local6->gateway, iface_name, 0, R_ADD_ALL | R_IPv6, rtvec, create, destroy);
+                add_del_route("8000::", 1, local6->gateway, iface_name, 0, R_ADD_ALL | R_IPv6, rtvec, create, destroy);
             }
         }
 
@@ -823,6 +840,7 @@ struct TunMethods
                           32,
                           gw.v4.addr().to_string(),
                           gw.dev(),
+                          0,
                           R_ADD_SYS,
                           rtvec,
                           create,
@@ -833,6 +851,7 @@ struct TunMethods
                           128,
                           gw.v6.addr().to_string(),
                           gw.dev(),
+                          0,
                           R_IPv6 | R_ADD_SYS,
                           rtvec,
                           create,
