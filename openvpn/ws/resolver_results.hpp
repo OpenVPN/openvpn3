@@ -29,11 +29,11 @@
 namespace openvpn {
 namespace WS {
 
-// These methods become no-ops unless building with a patched Asio and C++14 or higher.
+// These methods become no-ops unless building with a patched Asio.
 // Define ASIO_RESOLVER_RESULTS_DATA_REQUIRED to force an error if these methods
 // cannot be compiled.
 
-#if defined(HAVE_ASIO_RESOLVER_RESULTS_DATA) && __cplusplus >= 201402L
+#if defined(HAVE_ASIO_RESOLVER_RESULTS_DATA)
 
 template <typename RESULTS>
 inline void randomize_results(RESULTS &results, RandomAPI &prng)
@@ -73,7 +73,7 @@ inline void filter_by_ip_version(RESULTS &results, const IP::Addr::Version ip_ve
 }
 
 #elif defined(ASIO_RESOLVER_RESULTS_DATA_REQUIRED)
-#error ASIO_RESOLVER_RESULTS_DATA_REQUIRED is defined but Asio results data are not available or compiler is pre-C++14
+#error ASIO_RESOLVER_RESULTS_DATA_REQUIRED is defined but Asio results data are not available
 #else
 
 template <typename RESULTS>
