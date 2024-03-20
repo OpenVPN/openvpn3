@@ -8,7 +8,10 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/pool.hpp>
 #include <openvpn/addr/ipv6.hpp>
+
+#if defined(SIN6_LEN) || defined(__APPLE__) || defined(__FreeBSD__)
 #include <sys/socket.h>
+#endif
 
 using namespace openvpn;
 
