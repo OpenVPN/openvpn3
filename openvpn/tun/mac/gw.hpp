@@ -217,7 +217,7 @@ class MacGatewayInfo
             if (::ioctl(sockfd(), SIOCGIFNETMASK, (char *)&ifr) < 0)
                 throw route_gateway_error("GDG: ioctl SIOCGIFNETMASK failed");
 
-            gateway_.netmask = IP::Addr::from_sockaddr(&ifr.ifr_addr));
+            gateway_.netmask = IP::Addr::from_sockaddr(&ifr.ifr_addr);
             flags_ |= NETMASK_DEFINED;
 
             sockfd.close();
