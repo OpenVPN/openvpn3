@@ -1213,7 +1213,6 @@ TEST_F(ProtoUnitTest, base_single_thread_tls_ekm)
     EXPECT_EQ(ret, 0);
 }
 
-
 TEST_F(ProtoUnitTest, base_single_thread_no_tls_ekm)
 {
     int ret = 0;
@@ -1251,4 +1250,80 @@ TEST_F(ProtoUnitTest, base_multiple_thread)
     const std::vector<int> expected_results(num_threads, 0);
 
     EXPECT_THAT(expected_results, ::testing::ContainerEq(results));
+}
+
+TEST(proto, iv_ciphers_aead)
+{
+    CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(nullptr, true, false);
+
+    auto protoConf = openvpn::ProtoContext::ProtoConfig();
+
+    auto infostring = protoConf.peer_info_string();
+
+    auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
+    ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
+
+
+    std::string expectedstr{"IV_CIPHERS=AES-128-GCM:AES-192-GCM:AES-256-GCM"};
+    if (SSLLib::CryptoAPI::CipherContextAEAD::is_supported(nullptr, openvpn::CryptoAlgs::CHACHA20_POLY1305))
+        expectedstr += ":CHACHA20-POLY1305";
+
+    EXPECT_EQ(ivciphers, expectedstr);
+}
+
+TEST(proto, iv_ciphers_non_preferred)
+{
+    CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(nullptr, false, false);
+
+    auto protoConf = openvpn::ProtoContext::ProtoConfig();
+
+    auto infostring = protoConf.peer_info_string();
+
+    auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
+    ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
+
+
+    std::string expectedstr{"IV_CIPHERS=AES-128-CBC:AES-192-CBC:AES-256-CBC:AES-128-GCM:AES-192-GCM:AES-256-GCM"};
+    if (SSLLib::CryptoAPI::CipherContextAEAD::is_supported(nullptr, openvpn::CryptoAlgs::CHACHA20_POLY1305))
+        expectedstr += ":CHACHA20-POLY1305";
+
+    EXPECT_EQ(ivciphers, expectedstr);
+}
+
+TEST(proto, iv_ciphers_legacy)
+{
+
+    /* Need to a whole lot of things to enable legacy provider/OpenSSL context */
+    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    EXPECT_TRUE(config);
+
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    config->set_rng(rng);
+
+    config->set_mode(Mode(Mode::CLIENT));
+    config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
+    config->set_local_cert_enabled(false);
+    config->enable_legacy_algorithms(true);
+
+    auto factory_client = config->new_factory();
+    EXPECT_TRUE(factory_client);
+
+    auto client = factory_client->ssl();
+    auto libctx = factory_client->libctx();
+
+
+    CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(libctx, false, true);
+
+    auto protoConf = openvpn::ProtoContext::ProtoConfig();
+
+    auto infostring = protoConf.peer_info_string();
+
+    auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
+    ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
+
+    std::string expectedstr{"IV_CIPHERS=NONE:AES-128-CBC:AES-192-CBC:AES-256-CBC:DES-CBC:DES-EDE3-CBC:BF-CBC:AES-128-GCM:AES-192-GCM:AES-256-GCM"};
+    if (SSLLib::CryptoAPI::CipherContextAEAD::is_supported(nullptr, openvpn::CryptoAlgs::CHACHA20_POLY1305))
+        expectedstr += ":CHACHA20-POLY1305";
+
+    EXPECT_EQ(ivciphers, expectedstr);
 }

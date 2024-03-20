@@ -1071,7 +1071,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             CryptoAlgs::for_each(
                 [&out](CryptoAlgs::Type type, const CryptoAlgs::Alg &alg) -> bool
                 {
-                if (!CryptoAlgs::defined(type) || !alg.dc_cipher())
+                if (!alg.dc_cipher())
                     return false;
                 out << alg.name() << ':';
                 return true;
