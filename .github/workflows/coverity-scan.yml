@@ -30,7 +30,7 @@ jobs:
         with:
           # versioning=regex:^asio-(?<major>\d+)-(?<minor>\d+)-(?<patch>\d+)$
           repository: chriskohlhoff/asio
-          ref: asio-1-28-0
+          ref: asio-1-29-0
           path: asio
       - name: Checkout xxHash
         if: steps.check_submit.outputs.cache-hit != 'true'
