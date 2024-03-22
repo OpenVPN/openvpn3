@@ -45,76 +45,30 @@ void generic_test(const Tests &tests)
     }
 }
 
-// converting Container<T> to Container<T*> for the pointer tests using the existing
-// test data (a.k.a., having fun with types)
-template <typename Container>
-struct PtrConv;
-
-template <typename ValueT>
-struct PtrConv<std::vector<ValueT>>
+template <template <typename...> typename Coll_T, typename Val_T>
+auto container_of_pointers(const Coll_T<Val_T> &colln)
 {
-    using type = std::vector<ValueT *>;
-};
+    Coll_T<Val_T *> transformed;
+    typename Coll_T<Val_T>::const_iterator inIt = colln.begin(), inEndIt = colln.end();
+    // transform here
+    std::transform(inIt, inEndIt, std::back_inserter(transformed), [](const Val_T &in) -> Val_T *
+                   { return const_cast<Val_T *>(&in); });
 
-template <typename ValueT>
-struct PtrConv<std::list<ValueT>>
-{
-    using type = std::list<ValueT *>;
-};
-
-template <typename ValueT>
-struct PtrConv<std::deque<ValueT>>
-{
-    using type = std::deque<ValueT *>;
-};
-
-template <typename Container>
-using PtrConv_t = typename PtrConv<Container>::type;
-
-static_assert(std::is_same_v<PtrConv_t<std::vector<int>>, std::vector<int *>>);
-static_assert(std::is_same_v<PtrConv_t<std::list<int>>, std::list<int *>>);
-static_assert(std::is_same_v<PtrConv_t<std::deque<int>>, std::deque<int *>>);
-
-template <typename T>
-class TD;
-
-template <typename Container>
-struct TestPtr
-{
-    using PtrColln = PtrConv_t<Container>;
-
-    TestPtr(const TestItem<Container> &ti)
-        : container(container_of_pointers(ti)), expected(ti.expected)
-    {
-    }
-
-    static PtrColln container_of_pointers(const TestItem<Container> &ti)
-    {
-        const Container &inC = ti.container;
-        typename Container::const_iterator inIt = inC.begin(), inEndIt = inC.end();
-        PtrColln outC;
-
-        std::transform(inIt, inEndIt, std::back_inserter(outC), [](const typename Container::value_type &in) -> typename PtrColln::value_type
-                       { return const_cast<typename PtrColln::value_type>(&in); });
-
-        return outC;
-    }
-
-    PtrColln container;
-    const std::string expected;
-};
+    return transformed;
+}
 
 template <typename Tests>
 void generic_ptr_test(const Tests &tests)
 {
     for (auto &test : tests)
     {
-        TestPtr tp(test);
+        auto ptr_colln = container_of_pointers(test.container);
+
         std::ostringstream oss;
 
-        oss << C2os::cast_deref(tp.container);
+        oss << C2os::cast_deref(ptr_colln);
 
-        EXPECT_EQ(oss.str(), tp.expected);
+        EXPECT_EQ(oss.str(), test.expected);
     }
 }
 
