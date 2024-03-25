@@ -48,15 +48,12 @@ class RegKey
     RegKey &operator=(const RegKey &) = delete;
 
   public:
-    RegKey()
-        : key(nullptr)
-    {
-    }
+    RegKey() = default;
     bool defined() const
     {
-        return key != nullptr && key != INVALID_HANDLE_VALUE;
+        return key != INVALID_HANDLE_VALUE;
     }
-    HKEY *ref()
+    PHKEY ref()
     {
         return &key;
     }
@@ -72,7 +69,7 @@ class RegKey
     }
 
   private:
-    HKEY key;
+    HKEY key = static_cast<HKEY>(INVALID_HANDLE_VALUE);
 };
 
 class RegKeyEnumerator : public std::vector<std::string>
