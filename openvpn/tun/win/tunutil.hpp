@@ -773,16 +773,14 @@ struct IPNetmask4
         {
             try
             {
-                if (ias->IpAddress.String)
-                    ip = IPv4::Addr::from_string(ias->IpAddress.String);
+                ip = IPv4::Addr::from_string(ias->IpAddress.String);
             }
             catch (const std::exception &)
             {
             }
             try
             {
-                if (ias->IpMask.String)
-                    netmask = IPv4::Addr::from_string(ias->IpMask.String);
+                netmask = IPv4::Addr::from_string(ias->IpMask.String);
             }
             catch (const std::exception &)
             {
