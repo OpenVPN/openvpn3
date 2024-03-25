@@ -130,7 +130,7 @@ if (UNIX)
 endif ()
 
 if (WIN32)
-    target_sources(coreUnitTests PRIVATE test_iphelper.cpp)
+    target_sources(coreUnitTests PRIVATE test_iphelper.cpp test_wstring.cpp)
 endif ()
 
 add_core_dependencies(coreUnitTests)
