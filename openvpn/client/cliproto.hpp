@@ -261,7 +261,11 @@ class Session : ProtoContext,
             halt = true;
             housekeeping_timer.cancel();
             push_request_timer.cancel();
+
+            out_tun_callback_.reset();
+            in_tun_callback_.reset();
             inactive_timer.cancel();
+
             info_hold_timer.cancel();
             if (notify_callback && call_terminate_callback)
                 notify_callback->client_proto_terminate();
@@ -1256,7 +1260,18 @@ class Session : ProtoContext,
             if (o)
             {
                 if (o->size() >= 3)
-                    inactive_bytes = parse_number_throw<unsigned int>(o->get(2, 16), "inactive bytes");
+                    inactivity_minimum_bytes = parse_number_throw<unsigned int>(o->get(2, 16), "inactive bytes");
+
+                out_tun_callback_ = cli_stats->set_inc_callback(
+                    SessionStats::Stats::TUN_BYTES_OUT,
+                    [self = Ptr(this)](const count_t value)
+                    { self->reset_inactive_timer(value); });
+
+                in_tun_callback_ = cli_stats->set_inc_callback(
+                    SessionStats::Stats::TUN_BYTES_IN,
+                    [self = Ptr(this)](const count_t value)
+                    { self->reset_inactive_timer(value); });
+
                 schedule_inactive_timer();
             }
         }
@@ -1275,34 +1290,37 @@ class Session : ProtoContext,
                                     self->inactive_callback(error); });
     }
 
+    void reset_inactive_timer(const count_t bytes_count)
+    {
+        // Ensure that it's called within the io_context in case it needs to be invoked from a separate thread.
+        openvpn_io::post(io_context, [self = Ptr(this), bytes_count]()
+                         {
+            OPENVPN_ASYNC_HANDLER;
+
+            self->inactivity_bytes += bytes_count;
+            if (self->inactivity_bytes >= self->inactivity_minimum_bytes)
+            {
+                // OPENVPN_LOG("reset_inactive_timer: " << self->inactivity_bytes);
+                self->inactivity_bytes = 0;
+                self->schedule_inactive_timer();
+            } });
+    }
+
     void inactive_callback(const openvpn_io::error_code &e) // fixme for DCO
     {
         try
         {
             if (!e && !halt)
             {
-                // update current time
-                Base::update_now();
-                const count_t sample = cli_stats->get_stat(SessionStats::TUN_BYTES_IN) + cli_stats->get_stat(SessionStats::TUN_BYTES_OUT);
-                const count_t delta = sample - inactive_last_sample;
-                // OPENVPN_LOG("*** INACTIVE SAMPLE " << delta << ' ' << inactive_bytes);
-                if (delta <= count_t(inactive_bytes))
+                fatal_ = Error::INACTIVE_TIMEOUT;
+                send_explicit_exit_notify();
+                if (notify_callback)
                 {
-                    fatal_ = Error::INACTIVE_TIMEOUT;
-                    send_explicit_exit_notify();
-                    if (notify_callback)
-                    {
-                        OPENVPN_LOG("inactive timer expired");
-                        stop(true);
-                    }
-                    else
-                        throw inactive_timer_expired();
+                    OPENVPN_LOG("inactive timer expired");
+                    stop(true);
                 }
                 else
-                {
-                    inactive_last_sample = sample;
-                    schedule_inactive_timer();
-                }
+                    throw inactive_timer_expired();
             }
         }
         catch (const std::exception &e)
@@ -1448,8 +1466,11 @@ class Session : ProtoContext,
 
     AsioTimer inactive_timer;
     Time::Duration inactive_duration;
-    unsigned int inactive_bytes = 0;
-    count_t inactive_last_sample = 0;
+
+    unsigned int inactivity_minimum_bytes = 0;
+    std::uint64_t inactivity_bytes = 0;
+    std::shared_ptr<SessionStats::inc_callback_t> out_tun_callback_;
+    std::shared_ptr<SessionStats::inc_callback_t> in_tun_callback_;
 
     std::unique_ptr<std::vector<ClientEvent::Base::Ptr>> info_hold;
     AsioTimer info_hold_timer;
