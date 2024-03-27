@@ -21,6 +21,12 @@
 
 #pragma once
 
+// the following define was part of the header guard that was replaced by the
+// "#pragma once".  Apparently, some logging consumers check that this macro is
+// defined and their logging breaks if it is not.  Adding it back here as the
+// path of least resistance to fix; but IMO, the macro name should be better.
+#define OPENVPN_LOG_LOGBASE_H
+
 #include "openvpn/log/logbase_class.hpp"
 
 #define OPENVPN_LOG_INFO(x) x
