@@ -1007,6 +1007,19 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         if (pcc.pushPeerInfo())
         {
+            /* If we override the HWADDR, we add it at this time statically. If we need to
+             * dynamically discover it from the transport it will be added in
+             * \c build_connect_time_peer_info_string instead */
+            if (!config.hw_addr_override.empty())
+            {
+                pi->emplace_back("IV_HWADDR", config.hw_addr_override);
+            }
+
+            pi->emplace_back("IV_SSL", get_ssl_library_version());
+
+            if (!config.platform_version.empty())
+                pi->emplace_back("IV_PLAT_VER", config.platform_version);
+
             /* ensure that we use only one variable with the same name */
             std::unordered_map<std::string, std::string> extra_values;
 
@@ -1043,30 +1056,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         return pi;
     }
-
-    PeerInfo::Set::Ptr build_peer_info_transport(const Config &config, const ParseClientConfig &pcc)
-    {
-        PeerInfo::Set::Ptr pi(new PeerInfo::Set);
-
-        // MAC address
-        if (pcc.pushPeerInfo())
-        {
-            /* If we override the HWADDR, we add it at this time statically. If we need to
-             * dynamically discover it from the transport it will be added in
-             * \c build_connect_time_peer_info_string instead */
-            if (!config.hw_addr_override.empty())
-            {
-                pi->emplace_back("IV_HWADDR", config.hw_addr_override);
-            }
-
-            pi->emplace_back("IV_SSL", get_ssl_library_version());
-
-            if (!config.platform_version.empty())
-                pi->emplace_back("IV_PLAT_VER", config.platform_version);
-        }
-        return pi;
-    }
-
 
     void next(RemoteList::Advance type)
     {
