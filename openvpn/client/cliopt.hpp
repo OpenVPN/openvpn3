@@ -175,7 +175,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         bool synchronous_dns_lookup = false;
         bool disable_client_cert = false;
         int default_key_direction = -1;
-        bool autologin_sessions = false;
         bool allow_local_lan_access = false;
 
         PeerInfo::Set::Ptr extra_peer_info;
@@ -234,7 +233,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         // creds
         userlocked_username = pcc.userlockedUsername();
         autologin = pcc.autologin();
-        autologin_sessions = (autologin && config.autologin_sessions);
+        autologin_sessions = (autologin && clientconf.autologinSessions);
 
         // digest factory
         DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
@@ -540,15 +539,11 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             {
                 cc->set_username(userlocked_username);
                 cc->set_password(pcc.embeddedPassword());
-                cc->enable_password_cache(true);
-                cc->set_replace_password_with_session_id(true);
                 submit_creds(cc);
                 creds_locked = true;
             }
             else if (autologin_sessions)
             {
-                // autologin sessions require replace_password_with_session_id
-                cc->set_replace_password_with_session_id(true);
                 submit_creds(cc);
                 creds_locked = true;
             }
@@ -687,7 +682,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     std::unordered_set<std::string> settings_ignoreWithWarning = {
         "allow-compression", /* TODO: maybe check against our client option compression setting? */
         "allow-recursive-routing",
-        "auth-nocache",
         "auth-retry",
         "block-outside-dns", /* Core will decide on its own when to block outside dns, so this is not 100% identical in behaviour, so still warn */
         "compat-mode",
@@ -1178,6 +1172,13 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cli_config->echo = clientconf.echo;
         cli_config->info = clientconf.info;
         cli_config->autologin_sessions = autologin_sessions;
+
+        // if the previous client instance had session-id, it must be used by the new instance too
+        if (creds && creds->session_id_defined())
+        {
+            cli_config->proto_context_config->set_xmit_creds(true);
+        }
+
         return cli_config;
     }
 
@@ -1202,7 +1203,10 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             // if no username is defined in creds and userlocked_username is defined
             // in profile, set the creds username to be the userlocked_username
             if (!creds_arg->username_defined() && !userlocked_username.empty())
+            {
                 creds_arg->set_username(userlocked_username);
+                creds_arg->save_username_for_session_id();
+            }
             creds = creds_arg;
         }
     }

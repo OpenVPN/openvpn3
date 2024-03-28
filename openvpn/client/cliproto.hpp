@@ -160,7 +160,6 @@ class Session : ProtoContextCallbackInterface,
           cli_events(config.cli_events),
           echo(config.echo),
           info(config.info),
-          autologin_sessions(config.autologin_sessions),
           pushed_options_limit(config.pushed_options_limit),
           pushed_options_filter(config.pushed_options_filter),
           inactive_timer(io_context_arg),
@@ -580,9 +579,7 @@ class Session : ProtoContextCallbackInterface,
 #else
                     OPENVPN_LOG("Session token: [redacted]");
 #endif
-                    autologin_sessions = true;
                     proto_context.conf().set_xmit_creds(true);
-                    creds->set_replace_password_with_session_id(true);
                     creds->set_session_id(username, sess_id);
                 }
             }
@@ -696,26 +693,61 @@ class Session : ProtoContextCallbackInterface,
         if (msg.length() >= 13)
             reason = string::trim_left_copy(std::string(msg, 12));
 
-        // If session token problem (such as expiration), and we have a cached
-        // password, retry with it.  Otherwise, fail without retry.
-        if (string::starts_with(reason, "SESSION:")
-            && ((creds && creds->reset_to_cached_password())
-                || autologin_sessions))
-        {
-            if (creds && creds->session_id_defined())
-                creds->purge_session_id();
-            log_reason = "SESSION_AUTH_FAILED";
-        }
-        else if (string::starts_with(reason, "TEMP"))
+        if (string::starts_with(reason, "TEMP"))
         {
             log_reason = "AUTH_FAILED_TEMP:" + parse_auth_failed_temp(std::string(reason, 4));
         }
         else
         {
-            fatal_ = Error::AUTH_FAILED;
-            fatal_reason_ = std::move(reason);
-            log_reason = "AUTH_FAILED";
+            bool password_defined = false;
+            bool session_id_defined = false;
+            if (creds)
+            {
+                password_defined = creds->password_defined();
+                session_id_defined = creds->session_id_defined();
+
+                // authentication failure, purge auth-token
+                creds->purge_session_id();
+            }
+
+            // do we have a session-id?
+            if (session_id_defined)
+            {
+                bool reconnect = false;
+
+                // if there was an OOB auth (server pushed AUTH_PENDING) throw a fatal error since we need a user input
+                if (!creds->need_user_interaction())
+                {
+                    // reconnect if we have a password OR password is not needed
+                    if (!creds->password_needed() || password_defined)
+                    {
+                        reconnect = true;
+                    }
+                }
+
+                OPENVPN_LOG("need_user_interaction: " << creds->need_user_interaction() << ", pw_needed: " << creds->password_needed() << ", pw_defined: " << password_defined << ", reconnect: " << reconnect);
+
+                if (reconnect)
+                {
+                    log_reason = "SESSION_AUTH_FAILED";
+                }
+                else
+                {
+                    // we don't have a password and we need a user input, throw a fatal error and let the client to re-authenticate
+                    fatal_ = Error::SESSION_EXPIRED;
+                    fatal_reason_ = reason;
+                    log_reason = "SESSION_EXPIRED";
+                }
+            }
+            else
+            {
+                // no session-id, throw fatal error
+                fatal_ = Error::AUTH_FAILED;
+                fatal_reason_ = reason;
+                log_reason = "AUTH_FAILED";
+            }
         }
+
         if (notify_callback)
         {
             OPENVPN_LOG(log_reason);
@@ -755,8 +787,6 @@ class Session : ProtoContextCallbackInterface,
                     }
                 }
             }
-
-
 
             if (notify_callback && timeout > 0)
             {
@@ -798,9 +828,17 @@ class Session : ProtoContextCallbackInterface,
         // requires the VPN tunnel to be ready.
         ClientEvent::Base::Ptr ev;
         if (info_pre)
+        {
             ev = new ClientEvent::Info(msg.substr(std::strlen("INFO_PRE,")));
+            if ((string::starts_with(ev->render(), "WEB_AUTH:") || string::starts_with(ev->render(), "CR_TEXT:")) && creds)
+            {
+                creds->set_need_user_interaction();
+            }
+        }
         else
+        {
             ev = new ClientEvent::Info(msg.substr(std::strlen("INFO,")));
+        }
 
         // INFO_PRE is like INFO but it is never buffered
         if (info_hold && !info_pre)
@@ -912,6 +950,12 @@ class Session : ProtoContextCallbackInterface,
 
                 // modify proto config (cipher, auth, key-derivation and compression methods)
                 proto_context.process_push(received_options, *proto_context_options);
+
+                // process pushed auth-nocache
+                if (creds && proto_context.conf().auth_nocache)
+                {
+                    creds->purge_user_pass();
+                }
 
                 // initialize tun/routing
                 tun = tun_factory->new_tun_client_obj(io_context, *this, transport.get());
@@ -1058,6 +1102,14 @@ class Session : ProtoContextCallbackInterface,
 #endif
             {
                 proto_context.write_auth_string(creds->get_password(), buf);
+            }
+
+            // save username for auth-token, which might be pushed later
+            creds->save_username_for_session_id();
+
+            if (proto_context.conf().auth_nocache)
+            {
+                creds->purge_user_pass();
             }
         }
         else
@@ -1451,7 +1503,6 @@ class Session : ProtoContextCallbackInterface,
 
     bool echo;
     bool info;
-    bool autologin_sessions;
 
     Error::Type fatal_ = Error::UNDEF;
     std::string fatal_reason_;

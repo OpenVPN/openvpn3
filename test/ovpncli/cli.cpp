@@ -1015,7 +1015,6 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             std::string appCustomProtocols;
             bool eval = false;
             bool self_test = false;
-            bool cachePassword = false;
             bool disableClientCert = false;
             bool proxyAllowCleartextAuth = false;
             int defaultKeyDirection = -1;
@@ -1077,9 +1076,6 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     break;
                 case 'T':
                     self_test = true;
-                    break;
-                case 'C':
-                    cachePassword = true;
                     break;
                 case 'x':
                     disableClientCert = true;
@@ -1375,8 +1371,6 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                             creds.http_proxy_pass = proxyPassword;
                             creds.response = response;
                             creds.dynamicChallengeCookie = dynamicChallengeCookie;
-                            creds.replacePasswordWithSessionID = true;
-                            creds.cachePassword = cachePassword;
                             ClientAPI::Status creds_status = client.provide_creds(creds);
                             if (creds_status.error)
                                 OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);

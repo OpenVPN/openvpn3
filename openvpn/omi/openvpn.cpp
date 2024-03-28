@@ -483,16 +483,12 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
                 // response contains only challenge text
                 creds->response = auth_password;
             }
-            creds->cachePassword = !auth_nocache;
-            creds->replacePasswordWithSessionID = true;
         }
         else if (type == "Auth")
         {
             creds.reset(new ClientAPI::ProvideCreds);
             creds->username = username;
             creds->password = password;
-            creds->replacePasswordWithSessionID = true;
-            creds->cachePassword = !auth_nocache;
         }
         else if (type == "HTTP Proxy")
         {

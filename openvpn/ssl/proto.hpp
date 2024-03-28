@@ -440,6 +440,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
         // instead of possible modifications caused by NCP
         std::string initial_options;
 
+        bool auth_nocache = false;
+
         void load(const OptionList &opt,
                   const ProtoContextCompressionOptions &pco,
                   const int default_key_direction,
@@ -1202,6 +1204,11 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
                     load_duration_parm(keepalive_ping, "ping", opt, 1, false, false);
                     load_duration_parm(keepalive_timeout, "ping-restart", opt, 1, false, false);
                 }
+            }
+
+            if ((type == LOAD_COMMON_CLIENT) || (type == LOAD_COMMON_CLIENT_PUSHED))
+            {
+                auth_nocache = opt.exists("auth-nocache");
             }
         }
 
