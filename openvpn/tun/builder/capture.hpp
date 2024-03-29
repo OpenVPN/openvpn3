@@ -150,7 +150,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         std::string to_string() const
         {
             std::ostringstream os;
-            os << address << '/' << prefix_length;
+            os << address << '/' << static_cast<uint16_t>(prefix_length);
             if (!gateway.empty())
                 os << " -> " << gateway;
             if (metric >= 0)
