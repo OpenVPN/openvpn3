@@ -703,6 +703,14 @@ class Setup : public SetupBase
             }
         }
 
+        // DCO doesn't support DHCP (and so option 119), so we have to manually set domain search list.
+        // "dhcp-option DOMAIN-SEARCH mycompany.com mycompany.org" directive.
+        if (tun_type_ == OvpnDco && !pull.search_domains.empty())
+        {
+            create.add(new Util::ActionSetSearchList(tap.guid, pull.search_domains));
+            destroy.add(new Util::ActionSetSearchList(tap.guid));
+        }
+
         // Set a default TAP-adapter domain suffix using
         // "dhcp-option ADAPTER_DOMAIN_SUFFIX mycompany.com" directive.
         if (!pull.adapter_domain_suffix.empty())

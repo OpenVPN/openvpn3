@@ -958,6 +958,63 @@ class ActionSetAdapterDomainSuffix : public Action
     const std::string tap_guid;
 };
 
+// An action to set the DNS Suffix Search Order
+class ActionSetSearchList : public Action
+{
+  public:
+    ActionSetSearchList(const std::string &tap_guid_arg,
+                        const std::vector<TunBuilderCapture::SearchDomain> &search_domains_arg = std::vector<TunBuilderCapture::SearchDomain>())
+          : search_domains(search_domains_arg),
+            tap_guid(tap_guid_arg)
+    {
+        for (const auto& domain : search_domains)
+        {
+            this->search_domains_str += domain.to_string();
+            if (&domain != &search_domains.back())
+                this->search_domains_str += ",";
+        }
+    }
+
+    virtual void execute(std::ostream &os) override
+    {
+        os << to_string() << std::endl;
+
+        LONG status;
+        Win::RegKey key;
+        const std::string reg_key_name = "SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces\\" + tap_guid;
+        status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+                                 reg_key_name.c_str(),
+                                 0,
+                                 KEY_READ | KEY_WRITE,
+                                 key.ref());
+        if (status != ERROR_SUCCESS)
+        {
+            const Win::Error err(status);
+            OPENVPN_THROW(tun_win_util, "ActionSetSearchList: error opening registry key: " << reg_key_name << " : " << err.message());
+        }
+
+        Win::UTF16 dom(Win::utf16(search_domains_str));
+        status = ::RegSetValueExW(key(),
+                                  L"SearchList",
+                                  0,
+                                  REG_SZ,
+                                  (const BYTE *)dom.get(),
+                                  (Win::utf16_strlen(dom.get()) + 1) * 2);
+        if (status != ERROR_SUCCESS)
+            OPENVPN_THROW(tun_win_util, "ActionSetSearchList: error writing SearchList registry key: " << reg_key_name);
+    }
+
+    virtual std::string to_string() const override
+    {
+        return "Set adapter suffix search order: '" + search_domains_str + "' " + tap_guid;
+    }
+
+  private:
+    std::string search_domains_str;
+    const std::vector<TunBuilderCapture::SearchDomain> search_domains;
+    const std::string tap_guid;
+};
+
 // get the Windows IPv4 routing table
 inline const MIB_IPFORWARDTABLE *windows_routing_table()
 {
