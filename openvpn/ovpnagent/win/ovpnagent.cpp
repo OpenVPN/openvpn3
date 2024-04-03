@@ -636,6 +636,7 @@ class MyClientInstance : public WS::Server::Listener::Client
                     jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
 
                     auto tap = parent()->get_adapter_state();
+                    jout["adapter_guid"] = tap.guid;
                     jout["adapter_index"] = Json::Int(tap.index);
                     jout["adapter_name"] = tap.name;
 
@@ -710,6 +711,7 @@ class MyClientInstance : public WS::Server::Listener::Client
                     TunWin::Util::TapNameGuidPair tap;
                     if (tun_type == TunWin::OvpnDco)
                     {
+                        tap.guid = json::get_string(root, "adapter_guid");
                         tap.index = (DWORD)json::get_int(root, "adapter_index");
                         tap.name = json::get_string(root, "adapter_name");
                     }

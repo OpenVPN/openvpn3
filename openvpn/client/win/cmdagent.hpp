@@ -181,6 +181,7 @@ class WinCommandAgent : public TunWin::SetupFactory
             os << "TAP handle: " << tap_handle_hex << std::endl;
             const HANDLE h = BufHex::parse<HANDLE>(tap_handle_hex, "TAP handle");
 
+            tap_.guid = json::get_string(jres, "adapter_guid");
             tap_.index = (DWORD)json::get_int(jres, "adapter_index");
             tap_.name = json::get_string(jres, "adapter_name");
 
@@ -220,8 +221,9 @@ class WinCommandAgent : public TunWin::SetupFactory
             }
             else
             {
-                jreq["adapter_name"] = tap_.name;
+                jreq["adapter_guid"] = tap_.guid;
                 jreq["adapter_index"] = Json::Int(tap_.index);
+                jreq["adapter_name"] = tap_.name;
             }
 
             jreq["allow_local_dns_resolvers"] = config->allow_local_dns_resolvers;
