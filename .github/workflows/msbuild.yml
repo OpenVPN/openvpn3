@@ -14,9 +14,9 @@ jobs:
 
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: lukka/get-cmake@v3.28.3
-    - uses: ilammy/msvc-dev-cmd@v1
+    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+    - uses: lukka/get-cmake@4931ab1fc1604964c055eb330edb3f6b26ba0cfa # v3.29.2
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
       with:
         arch: ${{ matrix.arch }}
 
@@ -41,7 +41,7 @@ jobs:
         configurePreset: win-${{ matrix.arch }}-release
         buildPreset: win-${{ matrix.arch }}-release
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
       with:
         name: openvpn3-msvc-${{ matrix.arch }}
         path: |
@@ -61,8 +61,8 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: lukka/get-cmake@v3.28.3
+    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+    - uses: lukka/get-cmake@4931ab1fc1604964c055eb330edb3f6b26ba0cfa # v3.29.2
 
     - name: Install dependencies
       run: sudo apt update && sudo apt install -y mingw-w64 unzip cmake build-essential
@@ -79,7 +79,7 @@ jobs:
         configurePreset: mingw-${{ matrix.arch }}-release
         buildPreset: mingw-${{ matrix.arch }}-release
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
       with:
         name: openvpn3-mingw-${{ matrix.arch }}
         path: |
