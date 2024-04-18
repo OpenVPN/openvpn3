@@ -586,6 +586,16 @@ class Setup : public SetupBase
             destroy.add(new WinCmd("netsh interface ipv6 delete route 8000::/1 " + tap_index_name + ' ' + ipv6_next_hop + " store=active"));
         }
 
+        // Process redirect-gateway "block-local" flag:
+        // Block traffic on all interfaces but VPN and loopback
+        const bool use_wfp = IsWindows8OrGreater();
+        const bool block_local_traffic = (pull.reroute_gw.flags & RedirectGatewayFlags::RG_BLOCK_LOCAL) != 0;
+        if (use_wfp && block_local_traffic && !openvpn_app_path.empty())
+        {
+            create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, false, wfp));
+            destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, false, wfp));
+        }
+
         // Process DNS Servers
         //
         // Usage: set dnsservers [name=]<string> [source=]dhcp|static
@@ -616,7 +626,6 @@ class Setup : public SetupBase
 #if 1
             // normal production setting
             const bool use_nrpt = IsWindows8OrGreater();
-            const bool use_wfp = IsWindows8OrGreater();
             const bool add_netsh_rules = true;
 #else
             // test NRPT registry settings on pre-Win8
@@ -693,13 +702,14 @@ class Setup : public SetupBase
                 destroy.add(new NRPT::ActionDelete);
             }
 
-            // Use WFP for DNS leak protection.
+            // Use WFP for DNS leak protection unless local traffic is blocked already.
             // If we added DNS servers, block DNS on all interfaces except
-            // the TAP adapter.
-            if (use_wfp && !split_dns && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
+            // the TAP adapter and loopback.
+            if (use_wfp && !block_local_traffic
+                && !split_dns && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
             {
-                create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, allow_local_dns_resolvers, wfp));
-                destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, allow_local_dns_resolvers, wfp));
+                create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, true, wfp));
+                destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, true, wfp));
             }
         }
 
