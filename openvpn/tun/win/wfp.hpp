@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,14 +19,14 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_TUN_WIN_WFP_H
-#define OPENVPN_TUN_WIN_WFP_H
+#pragma once
 
 #include <ostream>
 
 #include <openvpn/common/rc.hpp>
 #include <openvpn/common/wstring.hpp>
 #include <openvpn/common/action.hpp>
+#include <openvpn/common/uniqueptr.hpp>
 #include <openvpn/buffer/bufstr.hpp>
 #include <openvpn/tun/win/tunutil.hpp>
 #include <openvpn/win/winerr.hpp>
@@ -46,7 +46,7 @@
 #define FWPM_SESSION_FLAG_DYNAMIC 0x00000001
 #endif
 
-// defines below are taken from openvpn2 code (https://github.com/OpenVPN/openvpn/blob/master/src/openvpn/block_dns.c)
+// defines below are taken from openvpn2 code
 // which likely borrowed them from Windows SDK header fwpmu.h
 
 /* c38d57d1-05a7-4c33-904f-7fbceee60e82 */
@@ -160,12 +160,129 @@ DEFINE_GUID(
 namespace openvpn {
 namespace TunWin {
 
+/**
+ * @brief Add WFP rules to block traffic from escaping the VPN
+ */
 class WFP : public RC<thread_unsafe_refcount>
 {
   public:
     typedef RCPtr<WFP> Ptr;
 
     OPENVPN_EXCEPTION(wfp_error);
+
+    class ActionBase;
+
+    /**
+     * @brief Wrapper class for a WFP session
+     */
+    class Context : public RC<thread_unsafe_refcount>
+    {
+      public:
+        typedef RCPtr<Context> Ptr;
+
+      private:
+        friend class ActionBase;
+
+        void block(const std::wstring &openvpn_app_path,
+                   const NET_IFINDEX itf_index,
+                   const bool allow_local_dns_resolvers,
+                   std::ostream &log)
+        {
+            unblock(log);
+            wfp.reset(new WFP());
+            wfp->block_dns(openvpn_app_path, itf_index, allow_local_dns_resolvers, log);
+        }
+
+        void unblock(std::ostream &log)
+        {
+            if (wfp)
+            {
+                wfp->reset(log);
+                wfp.reset();
+            }
+        }
+
+        WFP::Ptr wfp;
+    };
+
+    /**
+     * @brief Base class for WFP actions
+     *
+     * It holds a pointer to the WFP context and blocks / unblocks using
+     * the context, when it is invoked. This class cannot be constructed,
+     * use the derived ActionBlock and ActionUnblock classes to manage
+     * the firewall rules.
+     */
+    class ActionBase : public Action
+    {
+      public:
+        /**
+         * @brief Invoke the context class to block / unblock traffic.
+         *
+         * @param log   the log stream for diagnostics
+         */
+        void execute(std::ostream &log) override
+        {
+            log << to_string() << std::endl;
+            if (block_)
+                ctx_->block(openvpn_app_path_, itf_index_, allow_local_dns_resolvers_, log);
+            else
+                ctx_->unblock(log);
+        }
+
+        std::string to_string() const override
+        {
+            return "ActionBase openvpn_app_path=" + wstring::to_utf8(openvpn_app_path_)
+                   + " tap_index=" + std::to_string(itf_index_)
+                   + " enable=" + std::to_string(block_);
+        }
+
+      protected:
+        ActionBase(const bool block,
+                   const std::wstring &openvpn_app_path,
+                   const NET_IFINDEX itf_index,
+                   const bool allow_local_dns_resolvers,
+                   const Context::Ptr &ctx)
+            : block_(block),
+              openvpn_app_path_(openvpn_app_path),
+              itf_index_(itf_index),
+              allow_local_dns_resolvers_(allow_local_dns_resolvers),
+              ctx_(ctx)
+        {
+        }
+
+      private:
+        const bool block_;
+        const std::wstring openvpn_app_path_;
+        const NET_IFINDEX itf_index_;
+        const bool allow_local_dns_resolvers_;
+        Context::Ptr ctx_;
+    };
+
+    struct ActionBlock : public ActionBase
+    {
+        ActionBlock(const std::wstring &openvpn_app_path,
+                    const NET_IFINDEX itf_index,
+                    const bool allow_local_dns_resolvers,
+                    const Context::Ptr &wfp)
+            : ActionBase(true, openvpn_app_path, itf_index, allow_local_dns_resolvers, wfp)
+        {
+        }
+    };
+
+    struct ActionUnblock : public ActionBase
+    {
+        ActionUnblock(const std::wstring &openvpn_app_path,
+                      const NET_IFINDEX itf_index,
+                      const bool allow_local_dns_resolvers,
+                      const Context::Ptr &wfp)
+            : ActionBase(false, openvpn_app_path, itf_index, allow_local_dns_resolvers, wfp)
+        {
+        }
+    };
+
+  private:
+    friend class Context;
 
     // Block DNS from all apps except openvpn_app_path and
     // from all interfaces except tap_index.
@@ -305,11 +422,16 @@ class WFP : public RC<thread_unsafe_refcount>
         engineHandle.reset(&log);
     }
 
-  private:
-    class WFPEngine
+    /**
+     * @class Wrapper for the WFP engine handle
+     */
+    class EngineHandle
     {
       public:
-        WFPEngine()
+        /**
+         * @brief Open a new WFP session and store the handle
+         */
+        EngineHandle()
         {
             FWPM_SESSION0 session = {0};
 
@@ -321,23 +443,30 @@ class WFP : public RC<thread_unsafe_refcount>
                 OPENVPN_THROW(wfp_error, "FwpmEngineOpen0 failed with status=0x" << std::hex << status);
         }
 
+        /**
+         * @brief Close the engine handle.
+         *
+         * This will effectively remove all block filter rules set using this engine handle.
+         *
+         * @param log   the log ostream to use for disgnostics
+         */
         void reset(std::ostream *log)
         {
             if (defined())
             {
                 const DWORD status = ::FwpmEngineClose0(handle);
-                handle = NULL;
+                handle = INVALID_HANDLE_VALUE;
                 if (log)
                 {
                     if (status != ERROR_SUCCESS)
                         *log << "FwpmEngineClose0 failed, status=" << status << std::endl;
                     else
-                        *log << "WFPEngine closed" << std::endl;
+                        *log << "WFP Engine closed" << std::endl;
                 }
             }
         }
 
-        ~WFPEngine()
+        ~EngineHandle()
         {
             reset(nullptr);
         }
@@ -347,16 +476,21 @@ class WFP : public RC<thread_unsafe_refcount>
             return Win::Handle::defined(handle);
         }
 
+        /**
+         * @brief Return the engine handle.
+         *
+         * @return HANDLE   The engine handle. May not represent an open session.
+         */
         HANDLE operator()() const
         {
             return handle;
         }
 
       private:
-        WFPEngine(const WFPEngine &) = delete;
-        WFPEngine &operator=(const WFPEngine &) = delete;
+        EngineHandle(const EngineHandle &) = delete;
+        EngineHandle &operator=(const EngineHandle &) = delete;
 
-        HANDLE handle = NULL;
+        HANDLE handle = INVALID_HANDLE_VALUE;
     };
 
     static GUID new_guid()
@@ -370,11 +504,11 @@ class WFP : public RC<thread_unsafe_refcount>
 
     static NET_LUID adapter_index_to_luid(const NET_IFINDEX index)
     {
-        NET_LUID tap_luid;
-        const NETIO_STATUS ret = ::ConvertInterfaceIndexToLuid(index, &tap_luid);
+        NET_LUID itf_luid;
+        const NETIO_STATUS ret = ::ConvertInterfaceIndexToLuid(index, &itf_luid);
         if (ret != NO_ERROR)
             throw wfp_error("ConvertInterfaceIndexToLuid failed");
-        return tap_luid;
+        return itf_luid;
     }
 
     static unique_ptr_del<FWP_BYTE_BLOB> get_app_id_blob(const std::wstring &app_path)
@@ -397,77 +531,8 @@ class WFP : public RC<thread_unsafe_refcount>
     }
 
     const GUID subLayerGUID{new_guid()};
-    WFPEngine engineHandle;
+    EngineHandle engineHandle;
 };
 
-class WFPContext : public RC<thread_unsafe_refcount>
-{
-  public:
-    typedef RCPtr<WFPContext> Ptr;
-
-  private:
-    friend class ActionWFP;
-
-    void block(const std::wstring &openvpn_app_path,
-               const NET_IFINDEX tap_index,
-               const bool allow_local_dns_resolvers,
-               std::ostream &log)
-    {
-        unblock(log);
-        wfp.reset(new WFP());
-        wfp->block_dns(openvpn_app_path, tap_index, allow_local_dns_resolvers, log);
-    }
-
-    void unblock(std::ostream &log)
-    {
-        if (wfp)
-        {
-            wfp->reset(log);
-            wfp.reset();
-        }
-    }
-
-    WFP::Ptr wfp;
-};
-
-class ActionWFP : public Action
-{
-  public:
-    ActionWFP(const std::wstring &openvpn_app_path_arg,
-              const NET_IFINDEX tap_index_arg,
-              const bool enable_arg,
-              const bool allow_local_dns_resolvers_arg,
-              const WFPContext::Ptr &wfp_arg)
-        : openvpn_app_path(openvpn_app_path_arg),
-          tap_index(tap_index_arg),
-          enable(enable_arg),
-          wfp(wfp_arg),
-          allow_local_dns_resolvers(allow_local_dns_resolvers_arg)
-    {
-    }
-
-    virtual void execute(std::ostream &log) override
-    {
-        log << to_string() << std::endl;
-        if (enable)
-            wfp->block(openvpn_app_path, tap_index, allow_local_dns_resolvers, log);
-        else
-            wfp->unblock(log);
-    }
-
-    virtual std::string to_string() const override
-    {
-        return "ActionWFP openvpn_app_path=" + wstring::to_utf8(openvpn_app_path) + " tap_index=" + std::to_string(tap_index) + " enable=" + std::to_string(enable);
-    }
-
-  private:
-    const std::wstring openvpn_app_path;
-    const NET_IFINDEX tap_index;
-    const bool enable;
-    WFPContext::Ptr wfp;
-    const bool allow_local_dns_resolvers;
-};
 } // namespace TunWin
 } // namespace openvpn
-
-#endif

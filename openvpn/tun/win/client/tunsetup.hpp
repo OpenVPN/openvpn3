@@ -698,8 +698,8 @@ class Setup : public SetupBase
             // the TAP adapter.
             if (use_wfp && !split_dns && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
             {
-                create.add(new ActionWFP(openvpn_app_path, tap.index, true, allow_local_dns_resolvers, wfp));
-                destroy.add(new ActionWFP(openvpn_app_path, tap.index, false, allow_local_dns_resolvers, wfp));
+                create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, allow_local_dns_resolvers, wfp));
+                destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, allow_local_dns_resolvers, wfp));
             }
         }
 
@@ -979,7 +979,7 @@ class Setup : public SetupBase
     }
 
 #if _WIN32_WINNT >= 0x0600 // Vista+
-    TunWin::WFPContext::Ptr wfp{new TunWin::WFPContext};
+    WFP::Context::Ptr wfp{new WFP::Context};
 #endif
 
     std::unique_ptr<std::thread> l2_thread;
