@@ -1227,7 +1227,7 @@ TEST_F(ProtoUnitTest, base_multiple_thread)
 {
     unsigned int num_threads = std::thread::hardware_concurrency();
 #if defined(PROTO_N_THREADS) && PROTO_N_THREADS >= 1
-    num_threadsnum_threads = PROTO_N_THREADS;
+    num_threads = PROTO_N_THREADS;
 #endif
 
     std::vector<std::thread> running_threads{};
