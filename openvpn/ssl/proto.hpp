@@ -270,11 +270,12 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
         IV_PROTO_REQUEST_PUSH = (1 << 2),
         IV_PROTO_TLS_KEY_EXPORT = (1 << 3),
         IV_PROTO_AUTH_PENDING_KW = (1 << 4),
-        IV_PROTO_NCP_P2P = (1 << 5), // not implemented
-        IV_PROTO_DNS_OPTION = (1 << 6),
+        IV_PROTO_NCP_P2P = (1 << 5),    // not implemented
+        IV_PROTO_DNS_OPTION = (1 << 6), // outdated, don't send
         IV_PROTO_CC_EXIT_NOTIFY = (1 << 7),
         IV_PROTO_AUTH_FAIL_TEMP = (1 << 8),
         IV_PROTO_DYN_TLS_CRYPT = (1 << 9),
+        IV_PROTO_DNS_OPTION_V2 = (1 << 11),
     };
 
     enum tlv_types : uint16_t
@@ -1070,7 +1071,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             unsigned int iv_proto = IV_PROTO_DATA_V2
                                     | IV_PROTO_REQUEST_PUSH
                                     | IV_PROTO_AUTH_PENDING_KW
-                                    | IV_PROTO_DNS_OPTION
+                                    | IV_PROTO_DNS_OPTION_V2
                                     | IV_PROTO_CC_EXIT_NOTIFY
                                     | IV_PROTO_AUTH_FAIL_TEMP;
 
