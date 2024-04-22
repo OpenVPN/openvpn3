@@ -621,7 +621,7 @@ class Session : ProtoContextCallbackInterface,
         if (msg.at(0) == '[' && endofflags != std::string::npos)
         {
             reason_idx = ++endofflags;
-            auto flags = string::split({msg, 1, endofflags - 2}, ',');
+            auto flags = string::split(std::string{msg, 1, endofflags - 2}, ',');
             for (const auto &flag : flags)
             {
                 std::string key;
