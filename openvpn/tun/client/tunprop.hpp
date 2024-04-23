@@ -181,6 +181,9 @@ class TunProp
         tb->tun_builder_set_allow_family(AF_INET, !opt.exists("block-ipv4"));
         tb->tun_builder_set_allow_family(AF_INET6, !opt.exists("block-ipv6"));
 
+        // Allow access to local port 53 with --dns options unless explicitly blocked
+        tb->tun_builder_set_allow_local_dns(!opt.exists("block-outside-dns"));
+
         // DNS fallback
         if (ipv.rgv4() && !(dhcp_option_flags & F_ADD_DNS))
         {

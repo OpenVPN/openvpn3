@@ -610,6 +610,12 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
+    bool tun_builder_set_allow_local_dns(bool allow) override
+    {
+        block_outside_dns = !allow;
+        return true;
+    }
+
     void reset_tunnel_addresses()
     {
         tunnel_addresses.clear();
@@ -691,6 +697,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
         os << "Block IPv4: " << (block_ipv4 ? "yes" : "no") << std::endl;
         os << "Block IPv6: " << (block_ipv6 ? "yes" : "no") << std::endl;
+        os << "Block local DNS: " << (block_outside_dns ? "yes" : "no") << std::endl;
         if (route_metric_default >= 0)
             os << "Route Metric Default: " << route_metric_default << std::endl;
         render_list(os, "Add Routes", add_routes);
@@ -733,6 +740,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         root["tunnel_address_index_ipv6"] = Json::Value(tunnel_address_index_ipv6);
         root["reroute_gw"] = reroute_gw.to_json();
         root["block_ipv6"] = Json::Value(block_ipv6);
+        root["block_outside_dns"] = Json::Value(block_outside_dns);
         root["route_metric_default"] = Json::Value(route_metric_default);
         json::from_vector(root, add_routes, "add_routes");
         json::from_vector(root, exclude_routes, "exclude_routes");
@@ -765,6 +773,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         json::to_int(root, tbc->tunnel_address_index_ipv6, "tunnel_address_index_ipv6", title);
         tbc->reroute_gw.from_json(root["reroute_gw"], "reroute_gw");
         json::to_bool(root, tbc->block_ipv6, "block_ipv6", title);
+        json::to_bool(root, tbc->block_outside_dns, "block_outside_dns", title);
         json::to_int(root, tbc->route_metric_default, "route_metric_default", title);
         json::to_vector(root, tbc->add_routes, "add_routes", title);
         json::to_vector(root, tbc->exclude_routes, "exclude_routes", title);
@@ -793,6 +802,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     RerouteGW reroute_gw;                       // redirect-gateway info
     bool block_ipv4 = false;                    // block IPv4 traffic while VPN is active
     bool block_ipv6 = false;                    // block IPv6 traffic while VPN is active
+    bool block_outside_dns = false;             // block traffic to port 53 locally while VPN is active
     int route_metric_default = -1;              // route-metric directive
     std::vector<Route> add_routes;              // routes that should be added to tunnel
     std::vector<Route> exclude_routes;          // routes that should be excluded from tunnel

@@ -222,6 +222,17 @@ class TunBuilderBase
         return true;
     }
 
+    // Optional callback that indicates whether local DNS traffic
+    // should be blocked or allowed, to prevent DNS queries to leak
+    // while the tunnel is connected.
+    // Note that this option is only relevant on Windows when the
+    // --dns option is used. If DNS is set via --dhcp-option port 53
+    // is always blocked for backwards compatibility reasons.
+    virtual bool tun_builder_set_allow_local_dns(bool allow)
+    {
+        return true;
+    }
+
     // Optional callback to set a DNS suffix on tun/tap adapter.
     // Currently only implemented on Windows, where it will
     // set the "Connection-specific DNS Suffix" property on

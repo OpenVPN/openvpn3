@@ -650,6 +650,13 @@ class Setup : public SetupBase
                 create.add(new DNS::ActionCreate(tap.name, search_domains));
                 destroy.add(new NRPT::ActionDelete(pid));
                 destroy.add(new DNS::ActionDelete(tap.name, search_domains));
+
+                // block local DNS lookup unless all traffic is blocked already
+                if (use_wfp && pull.block_outside_dns && !block_local_traffic && !openvpn_app_path.empty())
+                {
+                    create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, true, wfp));
+                    destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, true, wfp));
+                }
             }
             else
             {

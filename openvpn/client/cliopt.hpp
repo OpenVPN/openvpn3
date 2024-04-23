@@ -683,7 +683,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         "allow-compression", /* TODO: maybe check against our client option compression setting? */
         "allow-recursive-routing",
         "auth-retry",
-        "block-outside-dns", /* Core will decide on its own when to block outside dns, so this is not 100% identical in behaviour, so still warn */
         "compat-mode",
         "connect-retry",
         "connect-retry-max",
