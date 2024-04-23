@@ -1059,7 +1059,7 @@ int run(OptionList opt)
 
     try
     {
-        TunWin::NRPT::delete_rule(); // delete stale NRPT rules
+        TunWin::NRPT::delete_rules(0); // delete stale NRPT rules
         omi.reset(new OMI(io_context, std::move(opt)));
         omi->start();
         io_context_run_called = true;

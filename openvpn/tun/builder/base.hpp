@@ -31,6 +31,9 @@
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
+
+struct DnsOptions;
+
 class TunBuilderBase
 {
   public:
@@ -122,6 +125,16 @@ class TunBuilderBase
     {
         return false;
     }
+
+    /**
+     * Callback to add --dns options to VPN interface
+     * May be called more than once to override previous options
+     */
+    virtual bool tun_builder_add_dns_options(const DnsOptions &dns)
+    {
+        return false;
+    }
+
 
     // Callback to add DNS server to VPN interface
     // May be called more than once per tun_builder session

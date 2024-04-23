@@ -58,14 +58,24 @@ class MacDNS : public RC<thread_unsafe_refcount>
         }
 
         Config(const TunBuilderCapture &settings)
-            : dns_servers(get_dns_servers(settings)),
+            : have_dns_options(!settings.dns_options.servers.empty()),
+              dns_servers(get_dns_servers(settings)),
+              resolve_domains(get_resolve_domains(settings)),
               search_domains(get_search_domains(settings)),
               adapter_domain_suffix(settings.adapter_domain_suffix)
         {
-            // We redirect DNS if either of the following is true:
-            // 1. redirect-gateway (IPv4) is pushed, or
-            // 2. DNS servers are pushed but no search domains are pushed
-            redirect_dns = settings.reroute_gw.ipv4 || (CF::array_len(dns_servers) && !CF::array_len(search_domains));
+            if (have_dns_options)
+            {
+                // With --dns options we redirect when there are no split domains
+                redirect_dns = CF::array_len(resolve_domains);
+            }
+            else
+            {
+                // We redirect DNS if either of the following is true:
+                // 1. redirect-gateway (IPv4) is pushed, or
+                // 2. DNS servers are pushed but no search domains are pushed
+                redirect_dns = settings.reroute_gw.ipv4 || (CF::array_len(dns_servers) && !CF::array_len(search_domains));
+            }
         }
 
         std::string to_string() const
@@ -74,14 +84,17 @@ class MacDNS : public RC<thread_unsafe_refcount>
             os << "RD=" << redirect_dns;
             os << " SO=" << search_order;
             os << " DNS=" << CF::array_to_string(dns_servers);
+            os << " RSD=" << CF::array_to_string(resolve_domains);
             os << " DOM=" << CF::array_to_string(search_domains);
             os << " ADS=" << adapter_domain_suffix;
             return os.str();
         }
 
+        bool have_dns_options;
         bool redirect_dns = false;
         int search_order = 5000;
         CF::Array dns_servers;
+        CF::Array resolve_domains;
         CF::Array search_domains;
         std::string adapter_domain_suffix;
 
@@ -89,12 +102,34 @@ class MacDNS : public RC<thread_unsafe_refcount>
         static CF::Array get_dns_servers(const TunBuilderCapture &settings)
         {
             CF::MutableArray ret(CF::mutable_array());
-            for (std::vector<TunBuilderCapture::DNSServer>::const_iterator i = settings.dns_servers.begin();
-                 i != settings.dns_servers.end();
-                 ++i)
+            if (!settings.dns_options.servers.empty())
             {
-                const TunBuilderCapture::DNSServer &ds = *i;
-                CF::array_append_str(ret, ds.address);
+                const auto &server = settings.dns_options.servers.begin()->second;
+                for (const auto &ip : server.addresses)
+                {
+                    CF::array_append_str(ret, ip.address.to_string());
+                }
+            }
+            else
+            {
+                for (const auto &server : settings.dns_servers)
+                {
+                    CF::array_append_str(ret, server.address);
+                }
+            }
+            return CF::const_array(ret);
+        }
+
+        static CF::Array get_resolve_domains(const TunBuilderCapture &settings)
+        {
+            CF::MutableArray ret(CF::mutable_array());
+            if (!settings.dns_options.servers.empty())
+            {
+                const auto &server = settings.dns_options.servers.begin()->second;
+                for (const auto &rd : server.domains)
+                {
+                    CF::array_append_str(ret, rd.domain);
+                }
             }
             return CF::const_array(ret);
         }
@@ -102,12 +137,19 @@ class MacDNS : public RC<thread_unsafe_refcount>
         static CF::Array get_search_domains(const TunBuilderCapture &settings)
         {
             CF::MutableArray ret(CF::mutable_array());
-            for (std::vector<TunBuilderCapture::SearchDomain>::const_iterator i = settings.search_domains.begin();
-                 i != settings.search_domains.end();
-                 ++i)
+            if (!settings.dns_options.servers.empty())
             {
-                const TunBuilderCapture::SearchDomain &sd = *i;
-                CF::array_append_str(ret, sd.domain);
+                for (const auto &sd : settings.dns_options.search_domains)
+                {
+                    CF::array_append_str(ret, sd.domain);
+                }
+            }
+            else
+            {
+                for (const auto &sd : settings.search_domains)
+                {
+                    CF::array_append_str(ret, sd.domain);
+                }
             }
             return CF::const_array(ret);
         }
@@ -173,14 +215,23 @@ class MacDNS : public RC<thread_unsafe_refcount>
 
                 // set search domains
                 info->dns.backup_orig("SearchDomains");
-                CF::MutableArray search_domains(CF::mutable_array());
 
-                // add adapter_domain_suffix to SearchDomains for domain autocompletion
-                if (config.adapter_domain_suffix.length() > 0)
-                    CF::array_append_str(search_domains, config.adapter_domain_suffix);
+                if (config.have_dns_options)
+                {
+                    if (CF::array_len(config.search_domains))
+                        CF::dict_set_obj(info->dns.mod, "SearchDomains", config.search_domains());
+                }
+                else
+                {
+                    // add adapter_domain_suffix to SearchDomains for domain autocompletion
+                    CF::MutableArray search_domains(CF::mutable_array());
 
-                if (CF::array_len(search_domains))
-                    CF::dict_set_obj(info->dns.mod, "SearchDomains", search_domains());
+                    if (config.adapter_domain_suffix.length() > 0)
+                        CF::array_append_str(search_domains, config.adapter_domain_suffix);
+
+                    if (CF::array_len(search_domains))
+                        CF::dict_set_obj(info->dns.mod, "SearchDomains", search_domains());
+                }
 
                 // set search order
                 info->dns.backup_orig("SearchOrder");
@@ -193,16 +244,38 @@ class MacDNS : public RC<thread_unsafe_refcount>
             {
                 // split-DNS - resolve only specific domains
                 info->ovpn.mod_reset();
-                if (CF::array_len(config.dns_servers) && CF::array_len(config.search_domains))
+                if (config.have_dns_options)
                 {
                     // set DNS servers
                     CF::dict_set_obj(info->ovpn.mod, "ServerAddresses", config.dns_servers());
 
                     // DNS will be used only for those domains
-                    CF::dict_set_obj(info->ovpn.mod, "SupplementalMatchDomains", config.search_domains());
+                    CF::dict_set_obj(info->ovpn.mod, "SupplementalMatchDomains", config.resolve_domains());
 
                     // do not use those domains in autocompletion
                     CF::dict_set_int(info->ovpn.mod, "SupplementalMatchDomainsNoSearch", 1);
+
+                    // set search domains if there are any
+                    if (CF::array_len(config.search_domains))
+                    {
+                        info->dns.backup_orig("SearchDomains");
+                        CF::dict_set_obj(info->dns.mod, "SearchDomains", config.search_domains());
+                        mod |= info->dns.push_to_store();
+                    }
+                }
+                else
+                {
+                    if (CF::array_len(config.dns_servers) && CF::array_len(config.search_domains))
+                    {
+                        // set DNS servers
+                        CF::dict_set_obj(info->ovpn.mod, "ServerAddresses", config.dns_servers());
+
+                        // DNS will be used only for those domains
+                        CF::dict_set_obj(info->ovpn.mod, "SupplementalMatchDomains", config.search_domains());
+
+                        // do not use those domains in autocompletion
+                        CF::dict_set_int(info->ovpn.mod, "SupplementalMatchDomainsNoSearch", 1);
+                    }
                 }
 
                 // in case of split-DNS macOS uses domain suffix of network adapter,

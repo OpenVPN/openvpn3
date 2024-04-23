@@ -48,6 +48,7 @@
 
 #if _WIN32_WINNT >= 0x0600 // Vista+
 #include <openvpn/tun/win/nrpt.hpp>
+#include <openvpn/tun/win/dns.hpp>
 #include <openvpn/tun/win/wfp.hpp>
 #endif
 
@@ -82,6 +83,21 @@ class Setup : public SetupBase
     void set_adapter_state(const Util::TapNameGuidPair &tap) override
     {
         tap_ = tap;
+    }
+
+    /**
+     * @brief Set the process id to be used with the NPRT rules
+     *
+     * The NRPT c'tor expects a process id parameter, which is used
+     * internally. This function can be used if you want that pid to
+     * be different from the current process id, e.g. if you are doing
+     * the setup for a different process, like in the agent.
+     *
+     * @param process_id    The process id used with the NRPT class
+     */
+    void set_process_id(DWORD process_id)
+    {
+        process_id_ = process_id;
     }
 
     HANDLE get_handle(std::ostream &os) override
@@ -596,130 +612,168 @@ class Setup : public SetupBase
             destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, false, wfp));
         }
 
-        // Process DNS Servers
-        //
-        // Usage: set dnsservers [name=]<string> [source=]dhcp|static
-        //  [[address=]<IP address>|none]
-        //  [[register=]none|primary|both]
-        //  [[validate=]yes|no]
-        // Usage: add dnsservers [name=]<string> [address=]<IPv4 address>
-        //  [[index=]<integer>] [[validate=]yes|no]
-        // Usage: delete dnsservers [name=]<string> [[address=]<IP address>|all] [[validate=]yes|no]
-        //
-        // Usage: set dnsservers [name=]<string> [source=]dhcp|static
-        //  [[address=]<IPv6 address>|none]
-        //  [[register=]none|primary|both]
-        //  [[validate=]yes|no]
-        // Usage: add dnsservers [name=]<string> [address=]<IPv6 address>
-        //  [[index=]<integer>] [[validate=]yes|no]
-        // Usage: delete dnsservers [name=]<string> [[address=]<IPv6 address>|all] [[validate=]yes|no]
+        // The process id for NRPT rules
+        DWORD pid = process_id_ ? process_id_ : ::GetCurrentProcessId();
+
+        // Process DNS related settings
         {
-            // fix for vista and dnsserver vs win7+ dnsservers
-            std::string dns_servers_cmd = "dnsservers";
-            std::string validate_cmd = " validate=no";
-            if (IsWindowsVistaOrGreater() && !IsWindows7OrGreater())
+            if (!pull.dns_options.servers.empty())
             {
-                dns_servers_cmd = "dnsserver";
-                validate_cmd = "";
-            }
+                // apply DNS settings from --dns options
+                const DnsServer &server = pull.dns_options.servers.begin()->second;
 
-#if 1
-            // normal production setting
-            const bool use_nrpt = IsWindows8OrGreater();
-            const bool add_netsh_rules = true;
-#else
-            // test NRPT registry settings on pre-Win8
-            const bool use_nrpt = true;
-            const bool use_wfp = true;
-            const bool add_netsh_rules = true;
-#endif
-            // determine IPv4/IPv6 DNS redirection
-            const UseDNS dns(pull);
-
-            // will DNS requests be split between VPN DNS server and local?
-            const bool split_dns = (!pull.search_domains.empty()
-                                    && !(pull.reroute_gw.ipv4 && dns.ipv4())
-                                    && !(pull.reroute_gw.ipv6 && dns.ipv6()));
-
-            // add DNS servers via netsh
-            if (add_netsh_rules && !(use_nrpt && split_dns) && !l2_post)
-            {
-                UseDNS dc;
-                for (auto &ds : pull.dns_servers)
+                // DNS server address(es)
+                std::vector<std::string> addresses;
+                for (const auto &addr : server.addresses)
                 {
-                    // 0-based index for specific IPv4/IPv6 protocol, or -1 if disabled
-                    const int count = dc.add(ds, pull);
-                    if (count >= 0)
+                    addresses.push_back(addr.address.to_string());
+                }
+
+                // DNS server split domain(s)
+                std::vector<std::string> domains;
+                for (const auto &dom : server.domains)
+                {
+                    domains.push_back("." + dom.domain);
+                }
+
+                const bool dnssec = server.dnssec == DnsServer::Security::Yes;
+
+                std::string delimiter;
+                std::string search_domains;
+                for (const auto &domain : pull.dns_options.search_domains)
+                {
+                    search_domains.append(delimiter + domain.to_string());
+                    delimiter = ",";
+                }
+
+                create.add(new NRPT::ActionCreate(pid, domains, addresses, dnssec));
+                create.add(new DNS::ActionCreate(tap.name, search_domains));
+                destroy.add(new NRPT::ActionDelete(pid));
+                destroy.add(new DNS::ActionDelete(tap.name, search_domains));
+            }
+            else
+            {
+                // apply DNS settings from --dhcp-options
+                const bool use_nrpt = IsWindows8OrGreater();
+
+                // count IPv4/IPv6 DNS servers
+                const UseDNS dns(pull);
+
+                // will DNS requests be split between VPN DNS server and local?
+                const bool split_dns = (!pull.search_domains.empty()
+                                        && !(pull.reroute_gw.ipv4 && dns.ipv4())
+                                        && !(pull.reroute_gw.ipv6 && dns.ipv6()));
+
+                // add DNS servers via netsh
+                if (!(use_nrpt && split_dns) && !l2_post)
+                {
+                    // Usage: set dnsservers [name=]<string> [source=]dhcp|static
+                    //  [[address=]<IP address>|none]
+                    //  [[register=]none|primary|both]
+                    //  [[validate=]yes|no]
+                    // Usage: add dnsservers [name=]<string> [address=]<IPv4 address>
+                    //  [[index=]<integer>] [[validate=]yes|no]
+                    // Usage: delete dnsservers [name=]<string> [[address=]<IP address>|all] [[validate=]yes|no]
+                    //
+                    // Usage: set dnsservers [name=]<string> [source=]dhcp|static
+                    //  [[address=]<IPv6 address>|none]
+                    //  [[register=]none|primary|both]
+                    //  [[validate=]yes|no]
+                    // Usage: add dnsservers [name=]<string> [address=]<IPv6 address>
+                    //  [[index=]<integer>] [[validate=]yes|no]
+                    // Usage: delete dnsservers [name=]<string> [[address=]<IPv6 address>|all] [[validate=]yes|no]
+
+                    // fix for vista and dnsserver vs win7+ dnsservers
+                    std::string dns_servers_cmd = "dnsservers";
+                    std::string validate_cmd = " validate=no";
+                    if (IsWindowsVistaOrGreater() && !IsWindows7OrGreater())
                     {
-                        const std::string proto = ds.ipv6 ? "ipv6" : "ip";
-                        if (count)
-                            create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(count + 1) + validate_cmd));
-                        else
+                        dns_servers_cmd = "dnsserver";
+                        validate_cmd = "";
+                    }
+
+                    UseDNS dc;
+                    for (auto &ds : pull.dns_servers)
+                    {
+                        // 0-based index for specific IPv4/IPv6 protocol, or -1 if disabled
+                        const int count = dc.add(ds, pull);
+                        if (count >= 0)
                         {
-                            create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ds.address + " register=primary" + validate_cmd));
-                            destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
+                            const std::string proto = ds.ipv6 ? "ipv6" : "ip";
+                            if (count)
+                                create.add(new WinCmd("netsh interface " + proto + " add " + dns_servers_cmd + " " + tap_index_name + ' ' + ds.address + " " + to_string(count + 1) + validate_cmd));
+                            else
+                            {
+                                create.add(new WinCmd("netsh interface " + proto + " set " + dns_servers_cmd + " " + tap_index_name + " static " + ds.address + " register=primary" + validate_cmd));
+                                destroy.add(new WinCmd("netsh interface " + proto + " delete " + dns_servers_cmd + " " + tap_index_name + " all" + validate_cmd));
+                            }
                         }
                     }
                 }
-            }
 
-            // If NRPT enabled and at least one IPv4 or IPv6 DNS
-            // server was added, add NRPT registry entries to
-            // route DNS through the tunnel.
-            // Also consider selective DNS routing using domain
-            // suffix list from pull.search_domains as set by
-            // "dhcp-option DOMAIN ..." directives.
-            if (use_nrpt && (dns.ipv4() || dns.ipv6()))
-            {
-                // domain suffix list
-                std::vector<std::string> dsfx;
-
-                // Only add DNS routing suffixes if not rerouting gateway.
-                // Otherwise, route all DNS requests with wildcard (".").
-                if (split_dns)
+                // If NRPT enabled and at least one IPv4 or IPv6 DNS
+                // server was added, add NRPT registry entries to
+                // route DNS through the tunnel.
+                // Also consider selective DNS routing using domain
+                // suffix list from pull.search_domains as set by
+                // "dhcp-option DOMAIN ..." directives.
+                if (use_nrpt && (dns.ipv4() || dns.ipv6()))
                 {
-                    for (const auto &sd : pull.search_domains)
+                    // domain suffix list
+                    std::vector<std::string> dsfx;
+
+                    // Only add DNS routing suffixes if not rerouting gateway.
+                    // Otherwise, route all DNS requests with wildcard (".").
+                    if (split_dns)
                     {
-                        std::string dom = sd.domain;
-                        if (!dom.empty())
+                        for (const auto &sd : pull.search_domains)
                         {
-                            // each DNS suffix must begin with '.'
-                            if (dom[0] != '.')
-                                dom = "." + dom;
-                            dsfx.push_back(std::move(dom));
+                            std::string dom = sd.domain;
+                            if (!dom.empty())
+                            {
+                                // each DNS suffix must begin with '.'
+                                if (dom[0] != '.')
+                                    dom = "." + dom;
+                                dsfx.push_back(std::move(dom));
+                            }
                         }
                     }
+                    if (dsfx.empty() && !allow_local_dns_resolvers)
+                        dsfx.emplace_back(".");
+
+                    // DNS server list
+                    std::vector<std::string> dserv;
+                    for (const auto &ds : pull.dns_servers)
+                        dserv.push_back(ds.address);
+
+                    create.add(new NRPT::ActionCreate(pid, dsfx, dserv, false));
+                    destroy.add(new NRPT::ActionDelete(pid));
                 }
-                if (dsfx.empty() && !allow_local_dns_resolvers)
-                    dsfx.emplace_back(".");
 
-                // DNS server list
-                std::vector<std::string> dserv;
-                for (const auto &ds : pull.dns_servers)
-                    dserv.push_back(ds.address);
+                // Set a default TAP-adapter domain suffix using
+                // "dhcp-option ADAPTER_DOMAIN_SUFFIX mycompany.com" directive.
+                if (!pull.adapter_domain_suffix.empty())
+                {
+                    // Only the first search domain is used
+                    create.add(new Util::ActionSetAdapterDomainSuffix(pull.adapter_domain_suffix, tap.guid));
+                    destroy.add(new Util::ActionSetAdapterDomainSuffix("", tap.guid));
+                }
 
-                create.add(new NRPT::ActionCreate(dsfx, dserv));
-                destroy.add(new NRPT::ActionDelete);
+
+                // Use WFP for DNS leak protection unless local traffic is blocked already.
+                // If we added DNS servers, block DNS on all interfaces except
+                // the TAP adapter and loopback.
+                if (use_wfp && !block_local_traffic
+                    && !split_dns && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
+                {
+                    create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, true, wfp));
+                    destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, true, wfp));
+                }
+
+                // flush DNS cache
+                create.add(new WinCmd("ipconfig /flushdns"));
+                destroy.add(new WinCmd("ipconfig /flushdns"));
             }
-
-            // Use WFP for DNS leak protection unless local traffic is blocked already.
-            // If we added DNS servers, block DNS on all interfaces except
-            // the TAP adapter and loopback.
-            if (use_wfp && !block_local_traffic
-                && !split_dns && !openvpn_app_path.empty() && (dns.ipv4() || dns.ipv6()))
-            {
-                create.add(new WFP::ActionBlock(openvpn_app_path, tap.index, true, wfp));
-                destroy.add(new WFP::ActionUnblock(openvpn_app_path, tap.index, true, wfp));
-            }
-        }
-
-        // Set a default TAP-adapter domain suffix using
-        // "dhcp-option ADAPTER_DOMAIN_SUFFIX mycompany.com" directive.
-        if (!pull.adapter_domain_suffix.empty())
-        {
-            // Only the first search domain is used
-            create.add(new Util::ActionSetAdapterDomainSuffix(pull.adapter_domain_suffix, tap.guid));
-            destroy.add(new Util::ActionSetAdapterDomainSuffix("", tap.guid));
         }
 
         // Process WINS Servers
@@ -745,10 +799,6 @@ class Setup : public SetupBase
         OPENVPN_LOG("proxy_auto_config_url " << pull.proxy_auto_config_url.url);
         if (pull.proxy_auto_config_url.defined())
             ProxySettings::add_actions<WinProxySettings>(pull, create, destroy);
-
-        // flush DNS cache
-        create.add(new WinCmd("ipconfig /flushdns"));
-        destroy.add(new WinCmd("ipconfig /flushdns"));
     }
 #else
     // Configure TAP adapter for pre-Vista
@@ -1003,6 +1053,7 @@ class Setup : public SetupBase
     const Type tun_type_;
     Util::TapNameGuidPair tap_;
     bool allow_local_dns_resolvers = false;
+    DWORD process_id_ = 0;
 };
 } // namespace TunWin
 } // namespace openvpn
