@@ -47,7 +47,7 @@ class NRPT
 
     static void create_rule(const std::vector<std::string> names, const std::vector<std::string> dns_servers)
     {
-        Win::RegKey key;
+        Win::Reg::Key key;
 
         for (size_t i = 0; i < names.size(); ++i)
         {
@@ -114,16 +114,17 @@ class NRPT
 
     static bool delete_rule()
     {
-        Win::RegKeyEnumerator keys(HKEY_LOCAL_MACHINE, dnsPolicyConfig());
+        Reg::Key policies(wstring::from_utf8(dnsPolicyConfig()));
+        Win::Reg::KeyEnumerator keys(policies);
 
         for (const auto &key : keys)
         {
             // remove only own policies
-            if (key.find(policyPrefix()) == std::string::npos)
+            if (key.find(wstring::from_utf8(policyPrefix())) == std::wstring::npos)
                 continue;
 
             std::ostringstream ss;
-            ss << dnsPolicyConfig() << "\\" << key;
+            ss << dnsPolicyConfig() << "\\" << wstring::to_utf8(key);
             auto path = ss.str();
             ::RegDeleteTreeA(HKEY_LOCAL_MACHINE, path.c_str());
         }

@@ -49,8 +49,8 @@ class WinProxySettings : public ProxySettings
         Impersonate imp{false};
 
         LONG status;
-        RegKey hkcu;
-        RegKey key;
+        Reg::Key hkcu;
+        Reg::Key key;
 
         status = ::RegOpenCurrentUser(KEY_QUERY_VALUE | KEY_SET_VALUE, hkcu.ref());
         check_reg_error<proxy_error>(status, "RegOpenCurrentUser");
@@ -80,14 +80,14 @@ class WinProxySettings : public ProxySettings
     }
 
   private:
-    void restore_key(Win::RegKey &regkey, const std::string &key, bool str)
+    void restore_key(Win::Reg::Key &regkey, const std::string &key, bool str)
     {
         LONG status;
         char prev_val_str[1024] = {0}; // should be enough to fit proxy URL
         DWORD prev_val_dword;
         DWORD prev_buf_size = str ? sizeof(prev_val_str) : sizeof(prev_val_dword);
         bool del = false;
-        Win::RegKey hkcu;
+        Win::Reg::Key hkcu;
 
         status = ::RegOpenCurrentUser(KEY_QUERY_VALUE | KEY_SET_VALUE, hkcu.ref());
         check_reg_error<proxy_error>(status, "RegOpenCurrentUser");
@@ -122,13 +122,13 @@ class WinProxySettings : public ProxySettings
                              str ? static_cast<DWORD>(strlen(prev_val_str) + 1) : sizeof(prev_val_dword));
     }
 
-    void save_key(Win::RegKey &regkey, const std::string &key, const std::string &value, bool str)
+    void save_key(Win::Reg::Key &regkey, const std::string &key, const std::string &value, bool str)
     {
         LONG status;
         char prev_val_str[1024] = {0}; // should be enought to fit proxy URL
         DWORD prev_val_dword;
         DWORD prev_buf_size = str ? sizeof(prev_val_str) : sizeof(prev_val_dword);
-        Win::RegKey hkcu;
+        Win::Reg::Key hkcu;
 
         status = ::RegOpenCurrentUser(KEY_QUERY_VALUE | KEY_SET_VALUE, hkcu.ref());
         check_reg_error<proxy_error>(status, "RegOpenCurrentUser");

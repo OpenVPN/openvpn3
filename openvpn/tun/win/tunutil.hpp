@@ -135,7 +135,7 @@ inline std::vector<TapGuidLuid> tap_guids(const Type tun_type)
         break;
     }
 
-    Win::RegKey adapter_key;
+    Win::Reg::Key adapter_key;
     status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
                              ADAPTER,
                              0,
@@ -150,7 +150,7 @@ inline std::vector<TapGuidLuid> tap_guids(const Type tun_type)
     for (int i = 0;; ++i)
     {
         char strbuf[256];
-        Win::RegKey unit_key;
+        Win::Reg::Key unit_key;
 
         len = sizeof(strbuf);
         status = ::RegEnumKeyExA(adapter_key(),
@@ -300,7 +300,7 @@ struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
             DWORD len;
             DWORD data_type;
 
-            Win::RegKey network_connections_key;
+            Win::Reg::Key network_connections_key;
             status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
                                      NETWORK_CONNECTIONS,
                                      0,
@@ -315,7 +315,7 @@ struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
             for (int i = 0;; ++i)
             {
                 char strbuf[256];
-                Win::RegKey connection_key;
+                Win::Reg::Key connection_key;
 
                 len = sizeof(strbuf);
                 status = ::RegEnumKeyExA(network_connections_key(),
@@ -463,7 +463,7 @@ struct DeviceInstanceIdInterfaceList : public std::vector<DeviceInstanceIdInterf
                     continue;
             }
 
-            Win::RegKey regkey;
+            Win::Reg::Key regkey;
             *regkey.ref() = SetupDiOpenDevRegKey(device_info_set, &dev_info_data, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_QUERY_VALUE);
             if (!regkey.defined())
                 continue;
@@ -922,7 +922,7 @@ class ActionSetAdapterDomainSuffix : public Action
         os << to_string() << std::endl;
 
         LONG status;
-        Win::RegKey key;
+        Win::Reg::Key key;
         const std::string reg_key_name = "SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces\\" + tap_guid;
         status = ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
                                  reg_key_name.c_str(),
