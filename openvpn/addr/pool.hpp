@@ -155,7 +155,7 @@ class PoolType
         return ret;
     }
 
-    virtual ~PoolType<ADDR>() = default;
+    virtual ~PoolType() = default;
 
   private:
     std::deque<ADDR> freelist;
