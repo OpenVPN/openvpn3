@@ -1875,6 +1875,8 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 auto sign_alg = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
                 LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                // Output the certificates itself for debug logging
+                LOG_TRACE(OpenSSLPKI::X509_get_pem_encoding(current_cert));
             }
         }
 

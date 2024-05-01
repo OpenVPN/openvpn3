@@ -104,6 +104,18 @@ static inline std::string x509_get_subject(::X509 *cert, bool new_format = false
                        subject_mem->data + subject_mem->length);
 }
 
+static inline std::string X509_get_pem_encoding(::X509 *cert)
+{
+    char *data;
+    BIO *bio = BIO_new(BIO_s_mem());
+    /* Even though PEM_write_bio_X509 should not modify the argument the official API does not have a const argument */
+    PEM_write_bio_X509(bio, cert);
+    size_t len = BIO_get_mem_data(bio, &data);
+    std::string certpem{data, len};
+    BIO_free(bio);
+    return certpem;
+}
+
 /**
  * Retrives the algorithm used to sign a X509 certificate
  * @param cert 	OpenSSL certificate

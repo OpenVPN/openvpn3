@@ -357,6 +357,7 @@ class Client : public ClientBase
             }
         }
     }
+
     /**
       @brief Begin a cck1 (certcheck) handshake in response to a cxa1 server request.
     */
