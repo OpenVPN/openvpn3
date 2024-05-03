@@ -31,6 +31,7 @@
 #include <net/route.h>
 #include <net/if.h>
 #include <net/if_dl.h>
+#include <netinet6/in6_var.h>
 
 #include <cstring>
 #include <string>
@@ -47,9 +48,10 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/addrpair.hpp>
 #include <openvpn/addr/macaddr.hpp>
+#include <ifaddrs.h>
 
 namespace openvpn {
-class MacGatewayInfoV4
+class MacGatewayInfo
 {
     struct rtmsg
     {
@@ -60,12 +62,21 @@ class MacGatewayInfoV4
 #define OPENVPN_ROUNDUP(a) \
     ((a) > 0 ? (1 + (((a)-1) | (sizeof(std::uint32_t) - 1))) : sizeof(std::uint32_t))
 
-#define OPENVPN_NEXTADDR(w, u)         \
-    if (rtm_addrs & (w))               \
-    {                                  \
-        l = OPENVPN_ROUNDUP(u.sa_len); \
-        std::memmove(cp, &(u), l);     \
-        cp += l;                       \
+#define OPENVPN_NEXTADDR(w, u)          \
+    if (rtm_addrs & (w))                \
+    {                                   \
+        l = OPENVPN_ROUNDUP(u.sin_len); \
+        std::memmove(cp, &(u), l);      \
+        cp += l;                        \
+    }
+
+
+#define OPENVPN_NEXTADDR6(w, u)          \
+    if (rtm_addrs & (w))                 \
+    {                                    \
+        l = OPENVPN_ROUNDUP(u.sin6_len); \
+        std::memmove(cp, &(u), l);       \
+        cp += l;                         \
     }
 
 #define OPENVPN_ADVANCE(x, n) \
@@ -82,13 +93,13 @@ class MacGatewayInfoV4
         IFACE_DEFINED = (1 << 3),   /* set if iface is defined */
     };
 
-    MacGatewayInfoV4()
-        : flags_(0)
+    MacGatewayInfo(IP::Addr dest)
     {
         struct rtmsg m_rtmsg;
         ScopedFD sockfd;
         int seq, l, pid, rtm_addrs;
-        struct sockaddr so_dst, so_mask;
+        sockaddr_in so_dst{}, so_mask{};
+        sockaddr_in6 so_dst6{};
         char *cp = m_rtmsg.m_space;
         struct sockaddr *gate = nullptr, *ifp = nullptr, *sa;
         struct rt_msghdr *rtm_aux;
@@ -99,8 +110,6 @@ class MacGatewayInfoV4
         rtm_addrs = RTA_DST | RTA_NETMASK | RTA_IFP;
 
         std::memset(&m_rtmsg, 0, sizeof(m_rtmsg));
-        std::memset(&so_dst, 0, sizeof(so_dst));
-        std::memset(&so_mask, 0, sizeof(so_mask));
         std::memset(&m_rtmsg.m_rtm, 0, sizeof(struct rt_msghdr));
 
         m_rtmsg.m_rtm.rtm_type = RTM_GET;
@@ -109,13 +118,24 @@ class MacGatewayInfoV4
         m_rtmsg.m_rtm.rtm_seq = ++seq;
         m_rtmsg.m_rtm.rtm_addrs = rtm_addrs;
 
-        so_dst.sa_family = AF_INET;
-        so_dst.sa_len = sizeof(struct sockaddr_in);
-        so_mask.sa_family = AF_INET;
-        so_mask.sa_len = sizeof(struct sockaddr_in);
+        const bool ipv6 = dest.is_ipv6();
 
-        OPENVPN_NEXTADDR(RTA_DST, so_dst);
-        OPENVPN_NEXTADDR(RTA_NETMASK, so_mask);
+        if (!ipv6)
+        {
+            so_dst = dest.to_ipv4().to_sockaddr();
+            // 32 netmask to lookup the route to the destination
+            so_mask.sin_family = AF_INET;
+            so_mask.sin_addr.s_addr = 0xffffffff;
+            so_mask.sin_len = sizeof(struct sockaddr_in);
+
+            OPENVPN_NEXTADDR(RTA_DST, so_dst);
+            OPENVPN_NEXTADDR(RTA_NETMASK, so_mask);
+        }
+        else
+        {
+            so_dst6 = dest.to_ipv6().to_sockaddr();
+            OPENVPN_NEXTADDR6(RTA_DST, so_dst6);
+        }
 
         m_rtmsg.m_rtm.rtm_msglen = l = cp - (char *)&m_rtmsg;
 
@@ -123,10 +143,12 @@ class MacGatewayInfoV4
         sockfd.reset(socket(PF_ROUTE, SOCK_RAW, 0));
         if (!sockfd.defined())
             throw route_gateway_error("GDG: socket #1 failed");
+
         auto ret = ::write(sockfd(), (char *)&m_rtmsg, l);
         if (ret < 0)
             throw route_gateway_error("GDG: problem writing to routing socket: " + std::to_string(ret)
-                                      + " errno: " + std::to_string(errno) + " msg: " + strerror(errno));
+                                      + " errno: " + std::to_string(errno) + " msg: " + ::strerror(errno));
+
         do
         {
             l = ::read(sockfd(), (char *)&m_rtmsg, sizeof(m_rtmsg));
@@ -158,7 +180,7 @@ class MacGatewayInfoV4
         if (gate != nullptr)
         {
             /* get default gateway addr */
-            gateway_.addr.reset_ipv4_from_uint32(ntohl(((struct sockaddr_in *)gate)->sin_addr.s_addr));
+            gateway_.addr = IP::Addr::from_sockaddr(gate);
             if (!gateway_.addr.unspecified())
                 flags_ |= ADDR_DEFINED;
 
@@ -176,94 +198,64 @@ class MacGatewayInfoV4
             }
         }
 
-        /* get netmask of interface that owns default gateway */
-        if (flags_ & IFACE_DEFINED)
+        /* get netmask of interface that owns default gateway. Querying the IPv6 netmask does not
+         * seem to work on my system (Arne), so it is disabled for now until we can figure out why it
+         * doesn't work */
+        if (flags_ & IFACE_DEFINED && gateway_.addr.version() == IP::Addr::V4)
         {
-            struct ifreq ifr;
+            ifreq ifr{};
+            sa_family_t sa_family;
 
-            sockfd.reset(socket(AF_INET, SOCK_DGRAM, 0));
+            sa_family = AF_INET;
+            ifr.ifr_addr.sa_family = sa_family;
+            string::strncpynt(ifr.ifr_name, iface_, IFNAMSIZ);
+
+            sockfd.reset(socket(sa_family, SOCK_DGRAM, 0));
             if (!sockfd.defined())
                 throw route_gateway_error("GDG: socket #2 failed");
 
-            std::memset(&ifr, 0, sizeof(ifr));
-            ifr.ifr_addr.sa_family = AF_INET;
-            string::strncpynt(ifr.ifr_name, iface_, IFNAMSIZ);
-
             if (::ioctl(sockfd(), SIOCGIFNETMASK, (char *)&ifr) < 0)
-                throw route_gateway_error("GDG: ioctl #1 failed");
-            sockfd.close();
+                throw route_gateway_error("GDG: ioctl SIOCGIFNETMASK failed");
 
-            gateway_.netmask.reset_ipv4_from_uint32(ntohl(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr));
+            gateway_.netmask = IP::Addr::from_sockaddr(&ifr.ifr_addr);
             flags_ |= NETMASK_DEFINED;
+
+            sockfd.close();
         }
 
         /* try to read MAC addr associated with interface that owns default gateway */
         if (flags_ & IFACE_DEFINED)
         {
-            struct ifconf ifc;
-            const int bufsize = 4096;
+            struct ifaddrs *ifaddrp, *ifa;
 
-            const std::unique_ptr<char[]> buffer(new char[bufsize]);
-            std::memset(buffer.get(), 0, bufsize);
-            sockfd.reset(socket(AF_INET, SOCK_DGRAM, 0));
-            if (!sockfd.defined())
-                throw route_gateway_error("GDG: socket #3 failed");
-
-            ifc.ifc_len = bufsize;
-            ifc.ifc_buf = buffer.get();
-
-            if (::ioctl(sockfd(), SIOCGIFCONF, (char *)&ifc) < 0)
-                throw route_gateway_error("GDG: ioctl #2 failed");
-            sockfd.close();
-
-            for (cp = buffer.get(); cp <= buffer.get() + ifc.ifc_len - sizeof(struct ifreq);)
+            if (getifaddrs(&ifaddrp) != 0)
             {
-                ifreq ifr = {};
-                std::memcpy(&ifr, cp, sizeof(ifr));
-                const size_t len = sizeof(ifr.ifr_name) + std::max(sizeof(ifr.ifr_addr), size_t{ifr.ifr_addr.sa_len});
+                throw route_gateway_error("GDG: getifaddrs failed errno: " + std::to_string(errno) + " msg: " + ::strerror(errno));
+            }
 
-                if (!ifr.ifr_addr.sa_family)
-                    break;
-                if (!::strncmp(ifr.ifr_name, iface_, IFNAMSIZ))
+            /* put the pointer into a unique_ptr to have RAII (allow throwing etc) */
+            std::unique_ptr<::ifaddrs, decltype(&::freeifaddrs)> ifap{ifaddrp, &::freeifaddrs};
+
+            for (ifa = ifap.get(); ifa != nullptr; ifa = ifa->ifa_next)
+            {
+                if (ifa->ifa_addr == nullptr)
+                    continue;
+
+                if (flags_ & IFACE_DEFINED
+                    && ifa->ifa_addr->sa_family == AF_LINK
+                    && !strncmp(ifa->ifa_name, iface_, IFNAMSIZ))
                 {
-                    if (ifr.ifr_addr.sa_family == AF_LINK)
-                    {
-                        /* This is a confusing member access on multiple levels.
-                         *
-                         * struct sockaddr_dl is 20 bytes in size and has
-                         * 12 bytes space for the hw address (6 bytes)
-                         * and Ethernet interface name (max 16 bytes)
-                         *
-                         * So if the interface name is more than 6 byte, it
-                         * extends beyond the struct.
-                         *
-                         * This struct is embedded into ifreq that has
-                         * 16 bytes for a sockaddr and also expects this
-                         * struct to potentially extend beyond the bounds of
-                         * the struct.
-                         *
-                         * Since we only copied 32 bytes from cp to ifr but sdl
-                         * might extend after ifr's end, we  need to copy from
-                         * cp directly to avoid missing out on extra bytes
-                         * behind the struct
-                         */
-                        const size_t sock_dl_len = std::max(sizeof(sockaddr_dl), size_t{ifr.ifr_addr.sa_len});
+                    const struct sockaddr_dl *sockaddr_dl = reinterpret_cast<struct sockaddr_dl *>(ifa->ifa_addr);
 
-                        const std::unique_ptr<char[]> sock_dl_buf(new char[sock_dl_len]);
-                        std::memcpy(sock_dl_buf.get(), cp + offsetof(struct ifreq, ifr_addr), sock_dl_len);
-
-                        const struct sockaddr_dl *sockaddr_dl = reinterpret_cast<struct sockaddr_dl *>(sock_dl_buf.get());
-
-                        hwaddr_.reset(reinterpret_cast<unsigned char *>(LLADDR(sockaddr_dl)));
-                        flags_ |= HWADDR_DEFINED;
-                    }
+                    hwaddr_.reset(reinterpret_cast<unsigned char *>(LLADDR(sockaddr_dl)));
+                    flags_ |= HWADDR_DEFINED;
                 }
-                cp += len;
             }
         }
     }
 #undef OPENVPN_ROUNDUP
 #undef OPENVPN_NEXTADDR
+#undef OPENVPN_NEXTADDR6
 #undef OPENVPN_ADVANCE
 
     std::string info() const
@@ -325,7 +317,7 @@ class MacGatewayInfoV4
     }
 
   private:
-    unsigned int flags_;
+    unsigned int flags_ = 0;
     IP::AddrMaskPair gateway_;
     char iface_[16];
     MACAddr hwaddr_;

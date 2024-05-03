@@ -367,8 +367,12 @@ class ParseClientConfig
             // add in missing options
             bool added = false;
 
-            // client
-            if (options.exists("tls-client") && options.exists("pull"))
+            /* client
+               Ensure that we always look at both options, so they register as touched */
+            const bool tls_client_exists = options.exists("tls-client");
+            const bool pull_exists = options.exists("pull");
+
+            if (tls_client_exists && pull_exists)
             {
                 Option opt;
                 opt.push_back("client");

@@ -958,8 +958,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             "WSHOST",
             "WEB_CA_BUNDLE",
             "IS_OPENVPN_WEB_CA",
-            "OVPN_ACCESS_SERVER_NO_WEB",
-        };
+            "NO_WEB",
+            "ORGANIZATION"};
 
         std::unordered_set<std::string> ignore_unknown_option_list;
 
@@ -1069,6 +1069,19 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         if (pcc.pushPeerInfo())
         {
+            /* If we override the HWADDR, we add it at this time statically. If we need to
+             * dynamically discover it from the transport it will be added in
+             * \c build_connect_time_peer_info_string instead */
+            if (!config.clientconf.hwAddrOverride.empty())
+            {
+                pi->emplace_back("IV_HWADDR", config.clientconf.hwAddrOverride);
+            }
+
+            pi->emplace_back("IV_SSL", get_ssl_library_version());
+
+            if (!config.clientconf.platformVersion.empty())
+                pi->emplace_back("IV_PLAT_VER", config.clientconf.platformVersion);
+
             /* ensure that we use only one variable with the same name */
             std::unordered_map<std::string, std::string> extra_values;
 
@@ -1106,19 +1119,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (!config.clientconf.appCustomProtocols.empty())
             pi->emplace_back("IV_ACC", "2048,6:A," + config.clientconf.appCustomProtocols);
 
-        // MAC address
-        if (pcc.pushPeerInfo())
-        {
-            std::string hwaddr = get_hwaddr();
-            if (!config.clientconf.hwAddrOverride.empty())
-                pi->emplace_back("IV_HWADDR", config.clientconf.hwAddrOverride);
-            else if (!hwaddr.empty())
-                pi->emplace_back("IV_HWADDR", hwaddr);
-            pi->emplace_back("IV_SSL", get_ssl_library_version());
-
-            if (!config.clientconf.platformVersion.empty())
-                pi->emplace_back("IV_PLAT_VER", config.clientconf.platformVersion);
-        }
         return pi;
     }
 
@@ -1326,6 +1326,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cp->load(opt, *proto_context_options, config.default_key_direction, false);
         cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
         cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
+        cp->extra_peer_info_push_peerinfo = pcc.pushPeerInfo();
         cp->frame = frame;
         cp->now = &now_;
         cp->rng = rng;

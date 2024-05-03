@@ -32,13 +32,13 @@
 #if defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_PLATFORM_UWP)
 #include <openvpn/tun/win/tunutil.hpp>
 #elif defined(OPENVPN_PLATFORM_MAC)
-#include <openvpn/tun/mac/gwv4.hpp>
+#include <openvpn/tun/mac/gw.hpp>
 #elif defined(TARGET_OS_IPHONE)
 #include <UIKit/UIKit.h>
 #endif
 
 namespace openvpn {
-inline std::string get_hwaddr()
+inline std::string get_hwaddr([[maybe_unused]] IP::Addr server_addr)
 {
 #if defined(OPENVPN_PLATFORM_WIN) && !defined(OPENVPN_PLATFORM_UWP)
     const TunWin::Util::BestGateway dg{AF_INET};
@@ -53,7 +53,7 @@ inline std::string get_hwaddr()
         }
     }
 #elif defined(OPENVPN_PLATFORM_MAC)
-    const MacGatewayInfoV4 gw;
+    const MacGatewayInfo gw{server_addr};
     if (gw.hwaddr_defined())
     {
         const MACAddr &mac = gw.hwaddr();

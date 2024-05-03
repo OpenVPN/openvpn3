@@ -1338,9 +1338,8 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     else
                     {
 #if defined(USE_NETCFG)
-                        DBus conn(G_BUS_TYPE_SYSTEM);
-                        conn.Connect();
-                        NetCfgTunBuilder<Client> client(conn.GetConnection());
+                        auto dbus_system = DBus::Connection::Create(DBus::BusType::SYSTEM);
+                        NetCfgTunBuilder<Client> client(dbus_system);
 #else
                         Client client;
 #endif

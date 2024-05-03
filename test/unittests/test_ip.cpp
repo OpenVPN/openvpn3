@@ -9,6 +9,10 @@
 #include <openvpn/addr/pool.hpp>
 #include <openvpn/addr/ipv6.hpp>
 
+#if defined(SIN6_LEN) || defined(__APPLE__) || defined(__FreeBSD__)
+#include <sys/socket.h>
+#endif
+
 using namespace openvpn;
 
 static const uint8_t icmp6_packet[] = {
@@ -134,6 +138,11 @@ void do_shift_tests(const std::vector<test_case> &test_vectors, bool leftshift)
         auto ret = shifted_addr.to_sockaddr();
 
         sockaddr_in6 cmp{};
+#if defined(SIN6_LEN) || defined(__APPLE__) || defined(__FreeBSD__)
+        /* Enable this test on the platforms that we know to have sin6_len
+         * to not only depend on SIN6_LEN */
+        cmp.sin6_len = sizeof(sockaddr_in6);
+#endif
         cmp.sin6_family = AF_INET6;
         for (int i = 0; i < 16; i++)
         {

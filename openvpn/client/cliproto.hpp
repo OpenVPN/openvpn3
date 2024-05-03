@@ -508,6 +508,7 @@ class Session : ProtoContextCallbackInterface,
     {
         try
         {
+            proto_context.conf().build_connect_time_peer_info_string(transport);
             OPENVPN_LOG("Connecting to " << server_endpoint_render());
             proto_context.set_protocol(transport->transport_protocol());
             proto_context.start();
@@ -1131,7 +1132,7 @@ class Session : ProtoContextCallbackInterface,
 
         if (tls_warnings & SSLAPI::TLS_WARN_SIG_MD5)
         {
-            ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with MD5. Please inform your admin to upgrade to a stronger algorithm. Support for MD5 will be dropped at end of Apr 2018");
+            ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with MD5. Please inform your admin to upgrade to a stronger algorithm. Support for MD5 will be dropped in the near future");
             cli_events->add_event(std::move(ev));
         }
 
