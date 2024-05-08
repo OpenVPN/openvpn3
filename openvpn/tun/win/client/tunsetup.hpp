@@ -634,6 +634,12 @@ class Setup : public SetupBase
                 {
                     domains.push_back("." + dom.domain);
                 }
+                if (domains.empty() && allow_local_dns_resolvers)
+                {
+                    // This empty domain tells the NRPT code that
+                    // no '.' rule should be created
+                    domains.push_back("");
+                }
 
                 const bool dnssec = server.dnssec == DnsServer::Security::Yes;
 
@@ -744,8 +750,11 @@ class Setup : public SetupBase
                             }
                         }
                     }
-                    if (dsfx.empty() && !allow_local_dns_resolvers)
-                        dsfx.emplace_back(".");
+
+                    // This empty domain tells the NRPT code that
+                    // no '.' rule should be created
+                    if (dsfx.empty() && allow_local_dns_resolvers)
+                        dsfx.emplace_back("");
 
                     // DNS server list
                     std::vector<std::string> dserv;
