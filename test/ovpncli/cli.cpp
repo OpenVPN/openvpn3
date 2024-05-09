@@ -929,27 +929,28 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
 {
     static const struct option longopts[] = {
         // clang-format off
-        { "username",       required_argument,  nullptr,      'u' },
-        { "password",       required_argument,  nullptr,      'p' },
-        { "response",       required_argument,  nullptr,      'r' },
-        { "dc",             required_argument,  nullptr,      'D' },
-        { "proto",          required_argument,  nullptr,      'P' },
-        { "ipv6",           required_argument,  nullptr,      '6' },
-        { "server",         required_argument,  nullptr,      's' },
-        { "port",           required_argument,  nullptr,      'R' },
-        { "timeout",        required_argument,  nullptr,      't' },
-        { "compress",       required_argument,  nullptr,      'c' },
-        { "pk-password",    required_argument,  nullptr,      'z' },
-        { "tvm-override",   required_argument,  nullptr,      'M' },
-        { "proxy-host",     required_argument,  nullptr,      'h' },
-        { "proxy-port",     required_argument,  nullptr,      'q' },
-        { "proxy-username", required_argument,  nullptr,      'U' },
-        { "proxy-password", required_argument,  nullptr,      'W' },
-        { "peer-info",      required_argument,  nullptr,      'I' },
-        { "acc-protos",     required_argument,  nullptr,      'K' },
-        { "gremlin",        required_argument,  nullptr,      'G' },
-        { "proxy-basic",    no_argument,        nullptr,      'B' },
-        { "alt-proxy",      no_argument,        nullptr,      'A' },
+        { "username",         required_argument,  nullptr,      'u' },
+        { "password",         required_argument,  nullptr,      'p' },
+        { "response",         required_argument,  nullptr,      'r' },
+        { "dc",               required_argument,  nullptr,      'D' },
+        { "proto",            required_argument,  nullptr,      'P' },
+        { "ipv6",             required_argument,  nullptr,      '6' },
+        { "server",           required_argument,  nullptr,      's' },
+        { "port",             required_argument,  nullptr,      'R' },
+        { "timeout",          required_argument,  nullptr,      't' },
+        { "compress",         required_argument,  nullptr,      'c' },
+        { "pk-password",      required_argument,  nullptr,      'z' },
+        { "pk-password-file", required_argument,  nullptr,      'i' },
+        { "tvm-override",     required_argument,  nullptr,      'M' },
+        { "proxy-host",       required_argument,  nullptr,      'h' },
+        { "proxy-port",       required_argument,  nullptr,      'q' },
+        { "proxy-username",   required_argument,  nullptr,      'U' },
+        { "proxy-password",   required_argument,  nullptr,      'W' },
+        { "peer-info",        required_argument,  nullptr,      'I' },
+        { "acc-protos",       required_argument,  nullptr,      'K' },
+        { "gremlin",          required_argument,  nullptr,      'G' },
+        { "proxy-basic",      no_argument,        nullptr,      'B' },
+        { "alt-proxy",        no_argument,        nullptr,      'A' },
 #if defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
         { "no-dco",         no_argument,        nullptr,      'd' },
 #endif
@@ -1003,6 +1004,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             int timeout = 0;
             std::string compress;
             std::string privateKeyPassword;
+            std::string privateKeyPasswordFile;
             std::string tlsVersionMinOverride;
             std::string tlsCertProfileOverride;
             std::string proxyHost;
@@ -1048,7 +1050,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             int ch;
             optind = 1;
 
-            while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:K:LM:P:QR:S:TU:W:X:YZ:ac:degh:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
+            while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:K:LM:P:QR:S:TU:W:X:YZ:ac:degh:jk:lmp:q:r:s:t:u:vwxzi:", longopts, nullptr)) != -1)
             {
                 switch (ch)
                 {
@@ -1116,6 +1118,9 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     break;
                 case 'z':
                     privateKeyPassword = optarg;
+                    break;
+                case 'i':
+                    privateKeyPasswordFile = optarg;
                     break;
                 case 'M':
                     tlsVersionMinOverride = optarg;
@@ -1257,6 +1262,9 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     config.connTimeout = timeout;
                     config.compressionMode = compress;
                     config.allowUnusedAddrFamilies = allowUnusedAddrFamilies;
+                    if (privateKeyPassword.empty() && !privateKeyPasswordFile.empty()) {
+                        privateKeyPassword = string::trim_crlf_copy(read_text_utf8(privateKeyPasswordFile));
+                    }
                     config.privateKeyPassword = privateKeyPassword;
                     config.tlsVersionMinOverride = tlsVersionMinOverride;
                     config.tlsCertProfileOverride = tlsCertProfileOverride;
@@ -1469,6 +1477,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
         std::cout << "--timeout, -t         : timeout" << std::endl;
         std::cout << "--compress, -c        : compression mode (yes|no|asym)" << std::endl;
         std::cout << "--pk-password, -z     : private key password" << std::endl;
+        std::cout << "--pk-password-file, -i: private key password file, contains plaintext password in it" << std::endl;
         std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
         std::cout << "--legacy-algorithms, -L: Enable legacy algorithm (OpenSSL legacy provider)" << std::endl;
         std::cout << "--non-preferred-algorithms, -Q: Enables non preferred data channel algorithms" << std::endl;
