@@ -306,6 +306,27 @@ class Session : ProtoContextCallbackInterface,
     {
         return temp_fail_backoff_;
     }
+
+
+    SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string &client_cert,
+                                                           const std::optional<const std::string> &ca)
+    {
+        SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+        config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
+        config->set_mode(Mode(Mode::CLIENT));
+        config->load_cert(client_cert);
+        unsigned int flags = SSLConst::LOG_VERIFY_STATUS;
+
+        if (ca)
+            config->load_ca(*ca, false);
+        else
+            flags |= SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED;
+
+        config->set_flags(flags);
+
+        return config;
+    }
+
     /**
       @brief Start up the cert check handshake using the given certs and key
       @param client_cert String containing the properly encoded client certificate
@@ -320,17 +341,9 @@ class Session : ProtoContextCallbackInterface,
                              const std::string &clientkey,
                              const std::optional<const std::string> &ca)
     {
-        SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-        config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
-        config->set_mode(Mode(Mode::CLIENT));
-        config->load_cert(client_cert);
+        SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config(client_cert, ca);
         config->load_private_key(clientkey);
-        if (ca)
-            config->load_ca(*ca, false);
-        else
-            config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
         certcheck_hs.reset(std::move(config));
-
         do_acc_certcheck(std::string(""));
     }
     /**
@@ -345,16 +358,10 @@ class Session : ProtoContextCallbackInterface,
     void start_acc_certcheck(ExternalPKIBase *external_pki_arg,
                              const std::optional<const std::string> &ca)
     {
-        SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-        config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
-        config->set_mode(Mode(Mode::CLIENT));
+        SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config("", ca);
         config->set_external_pki_callback(external_pki_arg);
-        if (ca)
-            config->load_ca(*ca, false);
-        else
-            config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
-        certcheck_hs.reset(std::move(config));
 
+        certcheck_hs.reset(std::move(config));
         do_acc_certcheck(std::string(""));
     }
 
