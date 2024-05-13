@@ -841,25 +841,37 @@ class Session : ProtoContextCallbackInterface,
         // race conditions in the client app, if the INFO event
         // triggers the client app to perform an operation that
         // requires the VPN tunnel to be ready.
-        ClientEvent::Base::Ptr ev;
+        std::string info_msg;
+
         if (info_pre)
+            info_msg = msg.substr(std::string_view{"INFO_PRE,"}.length());
+        else
+            info_msg = msg.substr(std::string_view{"INFO,"}.length());
+
+        if (string::starts_with(info_msg, "ACC:"))
         {
-            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO_PRE,")));
-            if ((string::starts_with(ev->render(), "WEB_AUTH:") || string::starts_with(ev->render(), "CR_TEXT:")) && creds)
+            // We want this to be parsed exactly like the custom-control option.
+            // That means we replace ACC: with custom-control for the parser.
+            auto acc_options = OptionList::parse_from_csv_static("custom-control " + info_msg.substr(std::strlen("ACC:")), &pushed_options_limit);
+            proto_context.conf().parse_custom_app_control(acc_options);
+            // check if we need to notify about ACC protocols
+            notify_client_acc_protocols();
+        }
+        else
+        {
+            if ((string::starts_with(info_msg, "WEB_AUTH:") || string::starts_with(info_msg, "CR_TEXT:")) && creds)
             {
                 creds->set_need_user_interaction();
             }
-        }
-        else
-        {
-            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO,")));
-        }
 
-        // INFO_PRE is like INFO but it is never buffered
-        if (info_hold && !info_pre)
-            info_hold->push_back(std::move(ev));
-        else
-            cli_events->add_event(std::move(ev));
+            ClientEvent::Info::Ptr ev = new ClientEvent::Info(std::move(info_msg));
+
+            // INFO_PRE is like INFO but it is never buffered
+            if (info_hold && !info_pre)
+                info_hold->push_back(std::move(ev));
+            else
+                cli_events->add_event(std::move(ev));
+        }
     }
 
     // proto base class calls here for app-level control-channel messages received
@@ -930,7 +942,7 @@ class Session : ProtoContextCallbackInterface,
         }
         else if (proto_context.conf().app_control_config.supports_protocol(proto))
         {
-            auto ev = new ClientEvent::AppCustomControlMessage(std::move(proto), std::move(app_proto_msg));
+            ClientEvent::Base::Ptr ev = new ClientEvent::AppCustomControlMessage(std::move(proto), std::move(app_proto_msg));
             cli_events->add_event(std::move(ev));
         }
         else
@@ -967,6 +979,16 @@ class Session : ProtoContextCallbackInterface,
         catch (std::exception &ex)
         {
             OPENVPN_LOG("App custom control cert check exception: " << ex.what());
+        }
+    }
+
+    void notify_client_acc_protocols()
+    {
+        if (!proto_context.conf().app_control_config.supported_protocols.empty())
+        {
+            // Signal support for supported protocols
+            ClientEvent::Base::Ptr ev = new ClientEvent::AppCustomControlMessage("internal:supported_protocols", string::join(proto_context.conf().app_control_config.supported_protocols, ":"));
+            cli_events->add_event(std::move(ev));
         }
     }
 
@@ -1054,12 +1076,7 @@ class Session : ProtoContextCallbackInterface,
                 cli_events->add_event(connected_);
 
                 // send an event for custom app control if present
-                if (!proto_context.conf().app_control_config.supported_protocols.empty())
-                {
-                    // Signal support for supported protocols
-                    auto ev = new ClientEvent::AppCustomControlMessage("internal:supported_protocols", string::join(proto_context.conf().app_control_config.supported_protocols, ":"));
-                    cli_events->add_event(std::move(ev));
-                }
+                notify_client_acc_protocols();
 
                 // check for proto options
                 check_proto_warnings();

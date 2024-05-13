@@ -342,19 +342,29 @@ class Client : public ClientBase
             }
         }
     }
+
     /**
       @brief Handles ACC messages
       @param acev The current ACC event
     */
     virtual void acc_event(const ClientAPI::AppCustomControlMessageEvent &acev) override
     {
-        if (acev.protocol == certcheck_init_verb)
+        if (acev.protocol == "internal:supported_protocols")
+        {
+            std::cout << "Client/server common app custom control protocols: " << acev.payload << std::endl;
+        }
+        else if (acev.protocol == certcheck_init_verb)
         {
             if (string::starts_with(acev.payload, "{\"dpc_certcheck_cert_req\""))
             {
                 std::cout << "ACC CERTCHECK challenge initiated\n";
                 handle_certcheck_request();
             }
+        }
+        else
+        {
+            std::cout << "received app custom control message for protocol " << acev.protocol
+                      << " msg payload: " << acev.payload << std::endl;
         }
     }
 
