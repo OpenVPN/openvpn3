@@ -162,4 +162,6 @@ target_link_libraries(coreUnitTests ${GTEST_LIB} GTest::gmock ${EXTRA_LIBS})
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
 target_include_directories(coreUnitTests PRIVATE ${EXTRA_INCLUDES})
 
-add_test(NAME CoreTests COMMAND coreUnitTests)
+add_test(NAME CoreTests
+    COMMAND coreUnitTests --gtest_shuffle --gtest_output=xml:test_results/test_core_$<CONFIG>.xml
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
