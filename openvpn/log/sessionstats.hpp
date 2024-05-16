@@ -214,6 +214,12 @@ class SessionStats : public RC<thread_safe_refcount>
         if (dco_)
         {
             const DCOTransportSource::Data data = dco_->dco_transport_stats_delta();
+
+            if (data.transport_bytes_in > 0)
+            {
+                update_last_packet_received(Time::now());
+            }
+
             stats_[BYTES_IN] += data.transport_bytes_in;
             stats_[BYTES_OUT] += data.transport_bytes_out;
             stats_[TUN_BYTES_IN] += data.tun_bytes_in;
