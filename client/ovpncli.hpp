@@ -28,6 +28,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <optional>
 
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/extern/fw.hpp>
@@ -679,6 +680,31 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
 
     // send custom app control channel message
     void send_app_control_channel_msg(const std::string &protocol, const std::string &msg);
+    /**
+      @brief Start up the cert check handshake using the given certs and key
+      @param client_cert String containing the properly encoded client certificate
+      @param clientkey String containing the properly encoded private key for \p client_cert
+      @param ca Optional string containing the properly encoded authority
+
+      This function forwards to ClientProto::Session::start_acc_certcheck, which sets up the
+      session ACC certcheck TLS handshake object. Every time this function is called the state of
+      the handshake object will be reset and the handshake will be restarted.
+    */
+    void start_cert_check(const std::string &client_cert,
+                          const std::string &clientkey,
+                          const std::optional<const std::string> &ca = std::nullopt);
+
+    /**
+      @brief Start up the cert check handshake using the given epki_alias string
+      @param external_pki_arg EPKI callback object
+      @param ca Optional string containing the properly encoded authority
+
+      This function forwards to ClientProto::Session::start_acc_certcheck, which sets up the
+      session ACC certcheck TLS handshake object. Every time this function is called the state of
+      the handshake object will be reset and the handshake will be restarted.
+    */
+    void start_cert_check(ExternalPKIBase *external_pki_arg,
+                          const std::optional<const std::string> &ca = std::nullopt);
 
     // Callback for delivering events during connect() call.
     // Will be called from the thread executing connect().

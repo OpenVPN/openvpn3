@@ -215,6 +215,9 @@ class ClientBase : public ClientAPI::OpenVPNClient
 
 class Client : public ClientBase
 {
+    // This is the protocol tag that appcontrol expects to trigger the certcheck start.
+    static constexpr char certcheck_init_verb[] = "cxa1"; // TODO: std::string in C++ '20
+
   public:
     enum ClockTickAction
     {
@@ -243,6 +246,10 @@ class Client : public ClientBase
 #elif defined(USE_OPENSSL)
     openvpn::OpenSSLPKI::PKey epki_pkey;
 #endif
+
+    std::string certcheck_cert_fn;     ///< file name of properly encoded server cert
+    std::string certcheck_pkey_fn;     ///< file name of properly encoded private key
+    std::string certcheck_clientca_fn; ///< file name of properly encoded client ca
 
     void set_clock_tick_action(const ClockTickAction action)
     {
@@ -274,6 +281,7 @@ class Client : public ClientBase
     {
         write_url_fn = fn;
     }
+
 
   private:
     virtual void event(const ClientAPI::Event &ev) override
@@ -333,11 +341,44 @@ class Client : public ClientBase
             }
         }
     }
-
-    void acc_event(const ClientAPI::AppCustomControlMessageEvent &acev) override
+    /**
+      @brief Handles ACC messages
+      @param acev The current ACC event
+    */
+    virtual void acc_event(const ClientAPI::AppCustomControlMessageEvent &acev) override
     {
-        std::cout << "received app custom control message for protocol " << acev.protocol
-                  << " msg payload: " << acev.payload << std::endl;
+        if (acev.protocol == certcheck_init_verb)
+        {
+            if (string::starts_with(acev.payload, "{\"dpc_certcheck_cert_req\""))
+            {
+                std::cout << "ACC CERTCHECK challenge initiated\n";
+                handle_certcheck_request();
+            }
+        }
+    }
+    /**
+      @brief Begin a cck1 (certcheck) handshake in response to a cxa1 server request.
+    */
+    void handle_certcheck_request()
+    {
+        if (certcheck_cert_fn.empty() || certcheck_pkey_fn.empty())
+        {
+            std::cout << "ACC CERTCHECK FAILED: MISSING PARAMETERS" << std::endl;
+            return;
+        }
+
+        auto cert_pem = ::openvpn::read_text_utf8(certcheck_cert_fn);
+        auto pkey_pem = ::openvpn::read_text_utf8(certcheck_pkey_fn);
+
+        if (!certcheck_clientca_fn.empty())
+        {
+            auto clientca_pem = ::openvpn::read_text_utf8(certcheck_clientca_fn);
+            start_cert_check(cert_pem, pkey_pem, clientca_pem);
+        }
+        else
+        {
+            start_cert_check(cert_pem, pkey_pem);
+        }
     }
 
     void open_url(std::string url_str)
@@ -980,6 +1021,10 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
         { "remote-override",required_argument,  nullptr,       5  },
 #endif
         { "tbc",            no_argument,        nullptr,       6  },
+        { "app-custom-protocols", required_argument, nullptr, 'K' },
+        { "certcheck-cert", required_argument, nullptr, 'o' },
+        { "certcheck-pkey", required_argument, nullptr, 'O' },
+        { "certcheck-clientca", required_argument, nullptr, 'b' },
         { nullptr,          0,                  nullptr,       0  }
         // clang-format on
     };
@@ -1013,6 +1058,9 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             std::string gremlin;
             std::string ssoMethods;
             std::string appCustomProtocols;
+            std::string certcheck_cert;
+            std::string certcheck_pkey;
+            std::string certcheck_clientca;
             bool eval = false;
             bool self_test = false;
             bool disableClientCert = false;
@@ -1047,7 +1095,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             int ch;
             optind = 1;
 
-            while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:K:LM:P:QR:S:TU:W:X:YZ:ac:degh:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
+            while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:K:LM:P:QR:S:TU:W:X:YZ:ac:degh:o:O:b:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
             {
                 switch (ch)
                 {
@@ -1191,6 +1239,15 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     break;
                 case 'K':
                     appCustomProtocols = optarg;
+                    break;
+                case 'o':
+                    certcheck_cert = optarg;
+                    break;
+                case 'O':
+                    certcheck_pkey = optarg;
+                    break;
+                case 'b':
+                    certcheck_clientca = optarg;
                     break;
                 case 'L':
                     enableLegacyAlgorithms = true;
@@ -1376,6 +1433,10 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                                 OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
                         }
 
+                        client.certcheck_cert_fn = certcheck_cert;
+                        client.certcheck_pkey_fn = certcheck_pkey;
+                        client.certcheck_clientca_fn = certcheck_clientca;
+
                         // external PKI
                         if (!epki_cert_fn.empty())
                         {
@@ -1473,32 +1534,36 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                   <<
 #endif
             "legacy, preferred, etc.)" << std::endl;
-        std::cout << "--proxy-host, -h      : HTTP proxy hostname/IP" << std::endl;
-        std::cout << "--proxy-port, -q      : HTTP proxy port" << std::endl;
-        std::cout << "--proxy-username, -U  : HTTP proxy username" << std::endl;
-        std::cout << "--proxy-password, -W  : HTTP proxy password" << std::endl;
-        std::cout << "--proxy-basic, -B     : allow HTTP basic auth" << std::endl;
-        std::cout << "--alt-proxy, -A       : enable alternative proxy module" << std::endl;
+        std::cout << "--proxy-host, -h           : HTTP proxy hostname/IP" << std::endl;
+        std::cout << "--proxy-port, -q           : HTTP proxy port" << std::endl;
+        std::cout << "--proxy-username, -U       : HTTP proxy username" << std::endl;
+        std::cout << "--proxy-password, -W       : HTTP proxy password" << std::endl;
+        std::cout << "--proxy-basic, -B          : allow HTTP basic auth" << std::endl;
+        std::cout << "--alt-proxy, -A            : enable alternative proxy module" << std::endl;
 #if defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)
-        std::cout << "--no-dco, -d          : disable data channel offload" << std::endl;
+        std::cout << "--no-dco, -d               : disable data channel offload" << std::endl;
 #endif
-        std::cout << "--cache-password, -C  : cache password" << std::endl;
-        std::cout << "--no-cert, -x         : disable client certificate" << std::endl;
-        std::cout << "--def-keydir, -k      : default key direction ('bi', '0', or '1')" << std::endl;
-        std::cout << "--ssl-debug           : SSL debug level" << std::endl;
-        std::cout << "--google-dns, -g      : enable Google DNS fallback" << std::endl;
-        std::cout << "--auto-sess, -a       : request autologin session" << std::endl;
-        std::cout << "--auth-retry, -Y      : retry connection on auth failure" << std::endl;
-        std::cout << "--persist-tun, -j     : keep TUN interface open across reconnects" << std::endl;
-        std::cout << "--wintun, -w          : use WinTun instead of TAP-Windows6 on Windows" << std::endl;
-        std::cout << "--peer-info, -I       : peer info key/value list in the form K1=V1,K2=V2,... or @kv.json" << std::endl;
-        std::cout << "--gremlin, -G         : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
-        std::cout << "--epki-ca             : simulate external PKI cert supporting intermediate/root certs" << std::endl;
-        std::cout << "--epki-cert           : simulate external PKI cert" << std::endl;
-        std::cout << "--epki-key            : simulate external PKI private key" << std::endl;
-        std::cout << "--sso-methods         : auth pending methods to announce via IV_SSO" << std::endl;
-        std::cout << "--write-url, -Z       : write INFO URL to file" << std::endl;
-        std::cout << "--tbc                 : generate INFO_JSON/TUN_BUILDER_CAPTURE event" << std::endl;
+        std::cout << "--cache-password, -C       : cache password" << std::endl;
+        std::cout << "--no-cert, -x              : disable client certificate" << std::endl;
+        std::cout << "--def-keydir, -k           : default key direction ('bi', '0', or '1')" << std::endl;
+        std::cout << "--ssl-debug                : SSL debug level" << std::endl;
+        std::cout << "--google-dns, -g           : enable Google DNS fallback" << std::endl;
+        std::cout << "--auto-sess, -a            : request autologin session" << std::endl;
+        std::cout << "--auth-retry, -Y           : retry connection on auth failure" << std::endl;
+        std::cout << "--persist-tun, -j          : keep TUN interface open across reconnects" << std::endl;
+        std::cout << "--wintun, -w               : use WinTun instead of TAP-Windows6 on Windows" << std::endl;
+        std::cout << "--peer-info, -I            : peer info key/value list in the form K1=V1,K2=V2,... or @kv.json" << std::endl;
+        std::cout << "--gremlin, -G              : gremlin info (send_delay_ms, recv_delay_ms, send_drop_prob, recv_drop_prob)" << std::endl;
+        std::cout << "--epki-ca                  : simulate external PKI cert supporting intermediate/root certs" << std::endl;
+        std::cout << "--epki-cert                : simulate external PKI cert" << std::endl;
+        std::cout << "--epki-key                 : simulate external PKI private key" << std::endl;
+        std::cout << "--sso-methods              : auth pending methods to announce via IV_SSO" << std::endl;
+        std::cout << "--write-url, -Z            : write INFO URL to file" << std::endl;
+        std::cout << "--tbc                      : generate INFO_JSON/TUN_BUILDER_CAPTURE event" << std::endl;
+        std::cout << "--app-custom-protocols, -K : ACC protocols to advertise" << std::endl;
+        std::cout << "--certcheck-cert, -o       : path to certificate PEM for certcheck" << std::endl;
+        std::cout << "--certcheck-pkey, -O       : path to decrypted pkey PEM for certcheck" << std::endl;
+        std::cout << "--certcheck-clientca, -b   : path to decrypted pkey PEM for certcheck CA" << std::endl;
         ret = 2;
     }
     return ret;

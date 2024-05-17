@@ -20,10 +20,7 @@
 
 #include "test_common.h"
 
-#include <openvpn/ssl/sslchoose.hpp>
-
-
-#include <openvpn/ssl/sslapi.hpp>
+#include <openvpn/client/acc_certcheck.hpp>
 
 using namespace openvpn;
 
@@ -244,102 +241,23 @@ I/+4kAlXuAKdhsXohHeBhC2ijg/kTOMDxEbEVv+SkCIUyM+dB8UtlPKOH9HEL5Xi
 +BpDSqO6Bha5+NAVUU7OdDsnzRwSWaD6lwIBAgICAOE=
 -----END DH PARAMETERS-----)";
 
-TEST(sslctx_ut, create_config)
+static inline bool xfer_oneway(SslApiBuilder &sender, SslApiBuilder &recv, std::string out)
 {
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-    EXPECT_TRUE(config);
-}
-
-TEST(sslctx_ut, config_new_factory_server)
-{
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-    EXPECT_TRUE(config);
-
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
-    config->set_rng(rng);
-
-    config->set_mode(Mode(Mode::SERVER));
-    config->load_cert(cert_txt);
-    config->load_private_key(pvt_key_txt);
-    config->load_ca(cert_txt, false);
-
-    auto factory_server = config->new_factory();
-    EXPECT_TRUE(factory_server);
-
-    auto server = factory_server->ssl();
-    EXPECT_TRUE(server);
-}
-
-TEST(sslctx_ut, config_new_factory_client)
-{
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-    EXPECT_TRUE(config);
-
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
-    config->set_rng(rng);
-
-    config->set_mode(Mode(Mode::CLIENT));
-    config->load_cert(cert_txt);
-    config->load_private_key(pvt_key_txt);
-    config->load_ca(cert_txt, false);
-
-    auto factory_client = config->new_factory();
-    EXPECT_TRUE(factory_client);
-
-    auto client = factory_client->ssl();
-    EXPECT_TRUE(client);
-}
-
-#define ITER 1000
-#define ITER_OUT_LIMIT 1000
-
-// From ovpn3/common/test/osx/ssl.cpp
-template <typename T>
-inline void do_write(T &obj, const bool server, char *msg, const size_t len, long &count, const int iter)
-{
-    const ssize_t status = obj.write_cleartext_unbuffered(msg, len);
-    if (status > 0)
-        count += status;
-#if ITER <= ITER_OUT_LIMIT
-    std::cout << (server ? "SERVER" : "CLIENT") << " WRITE #" << iter << " status=" << status << std::endl;
-#endif
-}
-
-template <typename T>
-inline void do_read(T &obj, const bool server, char *msg, const size_t len, long &count, const int iter)
-{
-    const ssize_t status = obj.read_cleartext(msg, len);
-    if (status > 0)
-        count += status;
-
-#if ITER <= ITER_OUT_LIMIT
-    const ssize_t trunc = 64;
-    std::cout << (server ? "SERVER" : "CLIENT") << " READ #" << iter << " status=" << status << std::endl;
-    if (status >= trunc)
+    if (sender.get().read_ciphertext_ready())
     {
-        msg[trunc] = 0;
-        std::cout << "GOT IT: " << msg << std::endl;
-    }
-#endif
-}
-
-static inline bool xfer_oneway(SSLAPI &sender, SSLAPI &recv, std::string out)
-{
-    if (sender.read_ciphertext_ready())
-    {
-        BufferPtr buf = sender.read_ciphertext();
-        recv.write_ciphertext(buf);
+        BufferPtr buf = sender.get().read_ciphertext();
+        recv.get().write_ciphertext(buf);
         std::cout << out << buf->size() << " bytes" << std::endl;
         return true;
     }
 
-    if (sender.read_cleartext_ready())
+    if (sender.get().read_cleartext_ready())
     {
         /* this can also indicate an error */
         uint8_t cleartext[1024];
 
         std::cout << out << " read ready?" << std::endl;
-        auto ctsize = sender.read_cleartext(cleartext, sizeof(cleartext));
+        auto ctsize = sender.get().read_cleartext(cleartext, sizeof(cleartext));
         std::cout << ctsize << std::endl;
 
         EXPECT_FALSE(ctsize > 0);
@@ -349,7 +267,7 @@ static inline bool xfer_oneway(SSLAPI &sender, SSLAPI &recv, std::string out)
     return false;
 }
 
-static inline void xfer(SSLAPI &cli, SSLAPI &serv)
+static inline void xfer(SslApiBuilder &cli, SslApiBuilder &serv)
 {
     while (xfer_oneway(cli, serv, "CLIENT -> SERVER ") || xfer_oneway(serv, cli, "SERVER -> CLIENT"))
     {
@@ -357,83 +275,95 @@ static inline void xfer(SSLAPI &cli, SSLAPI &serv)
     }
 }
 
-static inline auto MakeClient(Frame::Ptr frame,
-                              const std::string &pvt_key,
-                              const std::string &cert,
-                              const std::string &ca = "")
+static inline void xfer(AccHandshaker &cli, AccHandshaker &serv)
 {
-    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-    EXPECT_TRUE(config);
+    using data_t = std::optional<std::string>;
+    data_t cdata;
+    data_t sdata;
 
-    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
-    config->set_rng(rng);
-
-    config->set_mode(Mode(Mode::CLIENT));
-    config->load_cert(cert_txt);
-    config->load_private_key(pvt_key_txt);
-    config->set_frame(frame);
-    if (ca.empty())
+    do
     {
-        std::cout << "No CA for client\n";
-        config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
-    }
-    else
-        config->load_ca(ca, false);
-
-    auto factory_client = config->new_factory();
-    EXPECT_TRUE(factory_client);
-
-    auto client = factory_client->ssl();
-    EXPECT_TRUE(client);
-
-    return std::make_tuple(config, factory_client, client);
+        if (sdata)
+            std::cout << "CLIENT <-- SERVER: " << sdata->size() << " bytes\n";
+        cdata = cli.process_msg(sdata);
+        try
+        {
+            if (cdata)
+                std::cout << "CLIENT --> SERVER: " << cdata->size() << " bytes\n";
+            sdata = serv.process_msg(cdata);
+        }
+        catch (...)
+        {
+            std::cout << "Server side exception indicates failed handshake\n";
+            throw;
+        }
+    } while (sdata || cdata);
 }
 
-static inline auto MakeServer(Frame::Ptr frame, const std::string &pvt_key, const std::string &cert)
+
+SSLLib::SSLAPI::Config::Ptr CreateServerConfig(const std::string &pvtKey,
+                                               const std::string &cert,
+                                               const std::string &ca,
+                                               Frame::Ptr &&frm)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     config->enable_legacy_algorithms(false);
-    EXPECT_TRUE(config);
 
+#ifdef USE_MBEDTLS
     StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
     config->set_rng(rng);
+#endif
 
+    config->set_frame(frm);
     config->set_mode(Mode(Mode::SERVER));
     config->load_cert(cert);
-    config->load_private_key(pvt_key);
-    config->load_ca(cert, false);
-    config->set_frame(frame);
-    config->load_dh(dhparam_txt);
+    config->load_private_key(pvtKey);
+    config->load_ca(ca, false);
 
-    auto factory_server = config->new_factory();
-    EXPECT_TRUE(factory_server);
-
-    auto server = factory_server->ssl();
-    EXPECT_TRUE(server);
-
-    return std::make_tuple(config, factory_server, server);
+    return config;
 }
 
-TEST(sslctx_ut, handshake)
+SSLLib::SSLAPI::Config::Ptr CreateClientConfig(const std::string &pvtKey,
+                                               const std::string &cert,
+                                               const std::string &ca,
+                                               Frame::Ptr &&frm)
 {
-    Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
-    auto [serverconfig, serverfactory, server] = MakeServer(frame, pvt_key_txt, cert_txt);
-    auto [clientconfig, clientfactory, client] = MakeClient(std::move(frame), pvt_key_txt, cert_txt);
+    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
 
-    // Some internal state that's inside these objects seems required for ssl to work
-    // serverconfig.reset();
-    // serverfactory.reset();
-    // clientconfig.reset();
-    // clientfactory.reset();
+#ifdef USE_MBEDTLS
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    config->set_rng(rng);
+#endif
 
-    client->start_handshake();
+    config->set_frame(frm);
+    config->set_mode(Mode(Mode::CLIENT));
+    config->load_cert(cert);
+    config->load_private_key(pvtKey);
+    if (ca.empty())
+        config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
+    else
+        config->load_ca(ca, false);
+
+    return config;
+}
+
+TEST(AccCertCheckSsl, SslApiBuilder_ssl_handshake)
+{
+    auto server = SslApiBuilder(CreateServerConfig(pvt_key_txt,
+                                                   cert_txt,
+                                                   cert_txt,
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
+    auto client = SslApiBuilder(CreateClientConfig(pvt_key_txt,
+                                                   cert_txt,
+                                                   cert_txt,
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
+
+    server.get().start_handshake();
+    client.get().start_handshake();
 
     try
     {
-        for (auto i = 0u; i < ITER; ++i)
-        {
-            xfer(*client, *server);
-        }
+        xfer(client, server);
     }
     catch (...)
     {
@@ -441,26 +371,20 @@ TEST(sslctx_ut, handshake)
     }
 }
 
-TEST(sslctx_ut, ca_handshake)
+TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake)
 {
-    Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
-    auto [serverconfig, serverfactory, server] = MakeServer(frame, pvt_key_txt, cert_txt);
-    auto [clientconfig, clientfactory, client] = MakeClient(std::move(frame), pvt_key_txt, cert_txt, cert_txt);
-
-    // Some internal state that's inside these objects seems required for ssl to work
-    // serverconfig.reset();
-    // serverfactory.reset();
-    // clientconfig.reset();
-    // clientfactory.reset();
-
-    client->start_handshake();
+    auto server = AccHandshaker(CreateServerConfig(pvt_key_txt,
+                                                   cert_txt,
+                                                   cert_txt,
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
+    auto client = AccHandshaker(CreateClientConfig(pvt_key_txt,
+                                                   cert_txt,
+                                                   cert_txt,
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
 
     try
     {
-        for (auto i = 0u; i < ITER; ++i)
-        {
-            xfer(*client, *server);
-        }
+        xfer(client, server);
     }
     catch (...)
     {
@@ -468,52 +392,45 @@ TEST(sslctx_ut, ca_handshake)
     }
 }
 
-TEST(sslctx_ut, handshake_fail)
+TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake_no_cli_ca)
 {
-    Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
-    auto [serverconfig, serverfactory, server] = MakeServer(frame, fail_pvt_key_txt, fail_cert_txt);
-    auto [clientconfig, clientfactory, client] = MakeClient(std::move(frame), pvt_key_txt, cert_txt);
-
-    client->start_handshake();
+    auto server = AccHandshaker(CreateServerConfig(pvt_key_txt,
+                                                   cert_txt,
+                                                   cert_txt,
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
+    auto client = AccHandshaker(CreateClientConfig(pvt_key_txt,
+                                                   cert_txt,
+                                                   "",
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
 
     try
     {
-        for (auto i = 0u; i < ITER; ++i)
-        {
-            xfer(*client, *server);
-        }
+        xfer(client, server);
     }
     catch (...)
     {
-        // Oddly enough, these return true even though a full handshake did not happen
-        // EXPECT_FALSE(client->did_full_handshake());
-        // EXPECT_FALSE(server->did_full_handshake());
+        FAIL();
+    }
+}
+
+TEST(AccCertCheckSsl, AccHandshaker_ssl_handshake_fail)
+{
+    auto server = AccHandshaker(CreateServerConfig(fail_pvt_key_txt,
+                                                   fail_cert_txt,
+                                                   fail_cert_txt,
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
+    auto client = AccHandshaker(CreateClientConfig(pvt_key_txt,
+                                                   cert_txt,
+                                                   cert_txt,
+                                                   new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0))));
+
+    try
+    {
+        xfer(client, server);
+    }
+    catch (...)
+    {
         return;
     }
     FAIL();
-}
-
-TEST(sslctx_ut, clienthello)
-{
-    /* Checks that a server context correctly responds to a TLS 1.3 client hello */
-    uint8_t clienthello[] = {
-        0x16, 0x03, 0x01, 0x01, 0x10, 0x01, 0x00, 0x01, 0x0c, 0x03, 0x03, 0x0a, 0xef, 0xce, 0xc6, 0xe3, 0xcc, 0xb7, 0x7c, 0x38, 0xb2, 0x0e, 0xac, 0x12, 0xb5, 0xfa, 0x6d, 0x98, 0xc7, 0x76, 0xd1, 0x96, 0x22, 0x97, 0xf5, 0x57, 0xc5, 0x12, 0xf7, 0x01, 0xfc, 0xbe, 0x7d, 0x20, 0x64, 0xbd, 0xb5, 0x68, 0x06, 0x55, 0xb1, 0xf3, 0xf3, 0xc7, 0xb4, 0x1b, 0xbe, 0x83, 0x89, 0xab, 0xa5, 0xa0, 0x55, 0xa5, 0x6d, 0xca, 0xb1, 0x21, 0x5f, 0x2c, 0x71, 0xf5, 0x13, 0x4d, 0xeb, 0x68, 0x00, 0x32, 0x13, 0x02, 0x13, 0x03, 0x13, 0x01, 0xc0, 0x2c, 0xc0, 0x30, 0x00, 0x9f, 0xcc, 0xa9, 0xcc, 0xa8, 0xcc, 0xaa, 0xc0, 0x2b, 0xc0, 0x2f, 0x00, 0x9e, 0xc0, 0x24, 0xc0, 0x28, 0x00, 0x6b, 0xc0, 0x23, 0xc0, 0x27, 0x00, 0x67, 0xc0, 0x0a, 0xc0, 0x14, 0x00, 0x39, 0xc0, 0x09, 0xc0, 0x13, 0x00, 0x33, 0x00, 0xff, 0x01, 0x00, 0x00, 0x91, 0x00, 0x0b, 0x00, 0x04, 0x03, 0x00, 0x01, 0x02, 0x00, 0x0a, 0x00, 0x16, 0x00, 0x14, 0x00, 0x1d, 0x00, 0x17, 0x00, 0x1e, 0x00, 0x19, 0x00, 0x18, 0x01, 0x00, 0x01, 0x01, 0x01, 0x02, 0x01, 0x03, 0x01, 0x04, 0x00, 0x16, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x2a, 0x00, 0x28, 0x04, 0x03, 0x05, 0x03, 0x06, 0x03, 0x08, 0x07, 0x08, 0x08, 0x08, 0x09, 0x08, 0x0a, 0x08, 0x0b, 0x08, 0x04, 0x08, 0x05, 0x08, 0x06, 0x04, 0x01, 0x05, 0x01, 0x06, 0x01, 0x03, 0x03, 0x03, 0x01, 0x03, 0x02, 0x04, 0x02, 0x05, 0x02, 0x06, 0x02, 0x00, 0x2b, 0x00, 0x05, 0x04, 0x03, 0x04, 0x03, 0x03, 0x00, 0x2d, 0x00, 0x02, 0x01, 0x01, 0x00, 0x33, 0x00, 0x26, 0x00, 0x24, 0x00, 0x1d, 0x00, 0x20, 0x6e, 0x11, 0xc2, 0x45, 0x19, 0x7c, 0x68, 0x45, 0xf8, 0x4f, 0xa4, 0x26, 0xa2, 0x39, 0xce, 0xf1, 0x38, 0x8d, 0x83, 0x35, 0xee, 0x45, 0x74, 0x08, 0x83, 0x08, 0x44, 0x15, 0xf7, 0xd4, 0x38, 0x13};
-
-    Frame::Ptr frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
-    auto [serverconfig, serverfactory, server] = MakeServer(std::move(frame), pvt_key_txt, cert_txt);
-
-    server->start_handshake();
-
-    server->write_ciphertext_unbuffered(clienthello, sizeof(clienthello));
-
-    server->read_cleartext_ready();
-
-    uint8_t cleartext[1024];
-
-    auto ctsize = server->read_cleartext(cleartext, sizeof(cleartext));
-    std::cout << ctsize << std::endl;
-
-    EXPECT_TRUE(server->read_ciphertext_ready());
-    auto buf = server->read_ciphertext();
-    ASSERT_TRUE(buf->length() > 1);
 }

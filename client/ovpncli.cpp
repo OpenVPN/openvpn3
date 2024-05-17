@@ -1335,6 +1335,28 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::send_app_control_channel_msg(const std
     }
 }
 
+OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check(const std::string &client_cert,
+                                                           const std::string &clientkey,
+                                                           const std::optional<const std::string> &ca)
+{
+    if (state->is_foreign_thread_access())
+    {
+        ClientConnect *session = state->session.get();
+        if (session)
+            session->start_acc_certcheck(client_cert, clientkey, ca);
+    }
+}
+
+OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check(ExternalPKIBase *external_pki_arg,
+                                                           const std::optional<const std::string> &ca)
+{
+    if (state->is_foreign_thread_access())
+    {
+        ClientConnect *session = state->session.get();
+        if (session)
+            session->start_acc_certcheck(external_pki_arg, ca);
+    }
+}
 
 OPENVPN_CLIENT_EXPORT void OpenVPNClient::clock_tick()
 {

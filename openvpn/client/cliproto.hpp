@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -56,6 +56,7 @@
 #include <openvpn/transport/client/relay.hpp>
 #include <openvpn/options/continuation.hpp>
 #include <openvpn/options/sanitize.hpp>
+#include <openvpn/client/acc_certcheck.hpp>
 #include <openvpn/client/clievent.hpp>
 #include <openvpn/client/clicreds.hpp>
 #include <openvpn/client/cliconstants.hpp>
@@ -97,6 +98,8 @@ class Session : ProtoContextCallbackInterface,
                 TunClientParent,
                 public RC<thread_unsafe_refcount>
 {
+    static inline const std::string certcheckProto = "cck1";
+
   public:
     typedef RCPtr<Session> Ptr;
 
@@ -302,6 +305,57 @@ class Session : ProtoContextCallbackInterface,
     unsigned int reconnect_delay() const
     {
         return temp_fail_backoff_;
+    }
+    /**
+      @brief Start up the cert check handshake using the given certs and key
+      @param client_cert String containing the properly encoded client certificate
+      @param clientkey String containing the properly encoded private key for \p client_cert
+      @param ca String containing the properly encoded authority
+
+      Creates, initializes,and installs an SSLLib::SSLAPI::Config object into the TLS
+      handshake object we use for the certcheck function. Then begins the handshake
+      with Client Hello via the ACC.
+    */
+    void start_acc_certcheck(const std::string &client_cert,
+                             const std::string &clientkey,
+                             const std::optional<const std::string> &ca)
+    {
+        SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+        config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
+        config->set_mode(Mode(Mode::CLIENT));
+        config->load_cert(client_cert);
+        config->load_private_key(clientkey);
+        if (ca)
+            config->load_ca(*ca, false);
+        else
+            config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
+        certcheck_hs.reset(std::move(config));
+
+        do_acc_certcheck(std::string(""));
+    }
+    /**
+      @brief Start up the cert check handshake using the given epki_alias string
+      @param external_pki_arg EPKI callback object
+      @param ca String containing the properly encoded authority
+
+      Creates, initializes,and installs an SSLLib::SSLAPI::Config object into the TLS
+      handshake object we use for the certcheck function. Then begins the handshake
+      with Client Hello via the ACC.
+    */
+    void start_acc_certcheck(ExternalPKIBase *external_pki_arg,
+                             const std::optional<const std::string> &ca)
+    {
+        SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+        config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
+        config->set_mode(Mode(Mode::CLIENT));
+        config->set_external_pki_callback(external_pki_arg);
+        if (ca)
+            config->load_ca(*ca, false);
+        else
+            config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
+        certcheck_hs.reset(std::move(config));
+
+        do_acc_certcheck(std::string(""));
     }
 
     virtual ~Session()
@@ -888,23 +942,66 @@ class Session : ProtoContextCallbackInterface,
             recv_custom_control_message(msg);
         }
     }
+    /**
+      @brief receive, validate, and dispatch ACC messages
+      @param msg the received message
+
+      This function's main purpose is to receive a custom control message from the server, parse
+      out the protocol and contents, validate the protocol is supported, and queue a ClientEvent
+      for supported protocols to be handled later. It acts as the interface between the lower-level
+      network code receiving the raw message, and the higher-level event handling logic.
+    */
     void recv_custom_control_message(const std::string msg)
     {
-
         bool fullmessage = proto_context.conf().app_control_recv.receive_message(msg);
         if (!fullmessage)
             return;
 
         auto [proto, app_proto_msg] = proto_context.conf().app_control_recv.get_message();
 
-        if (proto_context.conf().app_control_config.supports_protocol(proto))
+        if (proto == certcheckProto) // handle this built-in ACC internal protocol intrinsically
+        {
+            do_acc_certcheck(app_proto_msg);
+        }
+        else if (proto_context.conf().app_control_config.supports_protocol(proto))
         {
             auto ev = new ClientEvent::AppCustomControlMessage(std::move(proto), std::move(app_proto_msg));
             cli_events->add_event(std::move(ev));
         }
         else
         {
-            OPENVPN_LOG("App custom control message with unsupported protocol received");
+            OPENVPN_LOG("App custom control message with unsupported protocol [" + proto + "] received");
+        }
+    }
+    /**
+      @brief Handles the ACC certcheck TLS handshake data exchange
+      @param msg_str TLS handshake traffic
+      @todo std::string is perfectly OK for storing buffers containing null bytes but it's atypical.
+    */
+    void do_acc_certcheck(const std::string &msg_str)
+    {
+        AccHandshaker::MsgT reply = std::nullopt;
+        AccHandshaker::MsgT msg = std::nullopt;
+
+        if (msg_str.empty() == false)
+            msg = msg_str;
+
+        try
+        {
+            do
+            {
+                reply = certcheck_hs.process_msg(msg);
+
+                if (reply)
+                {
+                    post_app_control_message(certcheckProto, *reply);
+                }
+                msg = std::nullopt;
+            } while (reply);
+        }
+        catch (std::exception &ex)
+        {
+            OPENVPN_LOG("App custom control cert check exception: " << ex.what());
         }
     }
 
@@ -1297,6 +1394,14 @@ class Session : ProtoContextCallbackInterface,
             }
         }
     }
+    /**
+      @brief Set the cc handshake config object
+      @param cfg The config to use for initializing the SSLAPI
+    */
+    void set_cc_handshake_config(SSLLib::SSLAPI::Config::Ptr cfg)
+    {
+        certcheck_hs.reset(cfg);
+    }
 
     void process_inactive(const OptionList &opt)
     {
@@ -1525,6 +1630,9 @@ class Session : ProtoContextCallbackInterface,
     // AUTH_FAILED,TEMP flag values
     unsigned int temp_fail_backoff_ = 0;
     RemoteList::Advance temp_fail_advance_ = RemoteList::Advance::Addr;
+
+    // Client side certcheck
+    AccHandshaker certcheck_hs;
 
 #ifdef OPENVPN_PACKET_LOG
     std::ofstream packet_log;
