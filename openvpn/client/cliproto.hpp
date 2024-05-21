@@ -307,60 +307,14 @@ class Session : ProtoContextCallbackInterface,
         return temp_fail_backoff_;
     }
 
-
-    SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string &client_cert,
-                                                           const std::optional<const std::string> &ca)
-    {
-        SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
-        config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
-        config->set_mode(Mode(Mode::CLIENT));
-        config->load_cert(client_cert);
-        unsigned int flags = SSLConst::LOG_VERIFY_STATUS;
-
-        if (ca)
-            config->load_ca(*ca, false);
-        else
-            flags |= SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED;
-
-        config->set_flags(flags);
-
-        return config;
-    }
-
     /**
       @brief Start up the cert check handshake using the given certs and key
-      @param client_cert String containing the properly encoded client certificate
-      @param clientkey String containing the properly encoded private key for \p client_cert
-      @param ca String containing the properly encoded authority
+      @param config SSL Config setup with the correct keys and certificates
 
-      Creates, initializes,and installs an SSLLib::SSLAPI::Config object into the TLS
-      handshake object we use for the certcheck function. Then begins the handshake
-      with Client Hello via the ACC.
+      Begins the handshake with Client Hello via the ACC.
     */
-    void start_acc_certcheck(const std::string &client_cert,
-                             const std::string &clientkey,
-                             const std::optional<const std::string> &ca)
+    void start_acc_certcheck(SSLLib::SSLAPI::Config::Ptr config)
     {
-        SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config(client_cert, ca);
-        config->load_private_key(clientkey);
-        certcheck_hs.reset(std::move(config));
-        do_acc_certcheck(std::string(""));
-    }
-    /**
-      @brief Start up the cert check handshake using the given epki_alias string
-      @param external_pki_arg EPKI callback object
-      @param ca String containing the properly encoded authority
-
-      Creates, initializes,and installs an SSLLib::SSLAPI::Config object into the TLS
-      handshake object we use for the certcheck function. Then begins the handshake
-      with Client Hello via the ACC.
-    */
-    void start_acc_certcheck(ExternalPKIBase *external_pki_arg,
-                             const std::optional<const std::string> &ca)
-    {
-        SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config("", ca);
-        config->set_external_pki_callback(external_pki_arg, "certcheck");
-
         certcheck_hs.reset(std::move(config));
         do_acc_certcheck(std::string(""));
     }

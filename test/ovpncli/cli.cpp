@@ -242,13 +242,14 @@ class Client : public ClientBase
     std::string epki_ca;
     std::string epki_cert;
 #if defined(USE_MBEDTLS)
-    MbedTLSPKI::PKContext epki_ctx; // external PKI context
+    MbedTLSPKI::PKContext epki_ctx;       // external PKI context
+    MbedTLSPKI::PKContext certcheck_pkey; // external PKI context
 #elif defined(USE_OPENSSL)
     openvpn::OpenSSLPKI::PKey epki_pkey;
+    openvpn::OpenSSLPKI::PKey certcheck_pkey;
 #endif
 
-    std::string certcheck_cert_fn;     ///< file name of properly encoded server cert
-    std::string certcheck_pkey_fn;     ///< file name of properly encoded private key
+    std::string certcheck_cert;        ///< file name of properly encoded server cert
     std::string certcheck_clientca_fn; ///< file name of properly encoded client ca
 
     void set_clock_tick_action(const ClockTickAction action)
@@ -361,23 +362,33 @@ class Client : public ClientBase
     */
     void handle_certcheck_request()
     {
-        if (certcheck_cert_fn.empty() || certcheck_pkey_fn.empty())
+        if (certcheck_cert.empty() || !certcheck_pkey.defined())
         {
             std::cout << "ACC CERTCHECK FAILED: MISSING PARAMETERS" << std::endl;
             return;
         }
 
-        auto cert_pem = ::openvpn::read_text_utf8(certcheck_cert_fn);
-        auto pkey_pem = ::openvpn::read_text_utf8(certcheck_pkey_fn);
+        std::string clientca_pem = "";
 
         if (!certcheck_clientca_fn.empty())
+            clientca_pem = ::openvpn::read_text_utf8(certcheck_clientca_fn);
+
+        if constexpr (false)
         {
-            auto clientca_pem = ::openvpn::read_text_utf8(certcheck_clientca_fn);
-            start_cert_check(cert_pem, pkey_pem, clientca_pem);
+            /* cli.cpp typically goes the long complicated way of using the epki API to do its checks */
+
+            if (!clientca_pem.empty())
+            {
+                start_cert_check(certcheck_cert, certcheck_pkey.render_pem(), clientca_pem);
+            }
+            else
+            {
+                start_cert_check(certcheck_cert, certcheck_pkey.render_pem());
+            }
         }
         else
         {
-            start_cert_check(cert_pem, pkey_pem);
+            start_cert_check_epki("certcheck", clientca_pem);
         }
     }
 
@@ -462,10 +473,15 @@ class Client : public ClientBase
 
     virtual void external_pki_cert_request(ClientAPI::ExternalPKICertRequest &certreq) override
     {
-        if (!epki_cert.empty())
+        if (certreq.alias == "epki" && !epki_cert.empty())
         {
             certreq.cert = epki_cert;
             certreq.supportingChain = epki_ca;
+        }
+        else if (certreq.alias == "certcheck" && !certcheck_cert.empty())
+        {
+            certreq.cert = certcheck_cert;
+            certreq.supportingChain = ::openvpn::read_text_utf8(certcheck_clientca_fn);
         }
         else
         {
@@ -483,7 +499,8 @@ class Client : public ClientBase
         base64->decode(signdata, signreq.data);
 
         EVP_PKEY *pkey = epki_pkey.obj();
-
+        if (signreq.alias == "certcheck")
+            pkey = certcheck_pkey.obj();
 
         PKEY_CTX_unique_ptr pkey_ctx(EVP_PKEY_CTX_new(pkey, nullptr), EVP_PKEY_CTX_free);
 
@@ -574,6 +591,9 @@ class Client : public ClientBase
         }
 
         EVP_PKEY *pkey = epki_pkey.obj();
+        if (signreq.alias == "certcheck")
+            pkey = certcheck_pkey.obj();
+
         OSSL_PARAM params[6] = {OSSL_PARAM_END};
 
         char *hashalg = const_cast<char *>(signreq.hashalg.c_str());
@@ -678,7 +698,9 @@ class Client : public ClientBase
         }
         else
 #elif defined(USE_OPENSSL)
-        if (epki_pkey.defined())
+
+        if ((epki_pkey.defined() && signreq.alias == "epki")
+            || (certcheck_pkey.defined() && signreq.alias == "certcheck"))
         {
             try
             {
@@ -1058,8 +1080,8 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             std::string gremlin;
             std::string ssoMethods;
             std::string appCustomProtocols;
-            std::string certcheck_cert;
-            std::string certcheck_pkey;
+            std::string certcheck_cert_fn;
+            std::string certcheck_pkey_fn;
             std::string certcheck_clientca;
             bool eval = false;
             bool self_test = false;
@@ -1087,6 +1109,7 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
             std::string epki_cert_fn;
             std::string epki_ca_fn;
             std::string epki_key_fn;
+
 #ifdef OPENVPN_REMOTE_OVERRIDE
             std::string remote_override_cmd;
 #endif
@@ -1241,10 +1264,10 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                     appCustomProtocols = optarg;
                     break;
                 case 'o':
-                    certcheck_cert = optarg;
+                    certcheck_cert_fn = optarg;
                     break;
                 case 'O':
-                    certcheck_pkey = optarg;
+                    certcheck_pkey_fn = optarg;
                     break;
                 case 'b':
                     certcheck_clientca = optarg;
@@ -1433,8 +1456,6 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                                 OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
                         }
 
-                        client.certcheck_cert_fn = certcheck_cert;
-                        client.certcheck_pkey_fn = certcheck_pkey;
                         client.certcheck_clientca_fn = certcheck_clientca;
 
                         // external PKI
@@ -1457,6 +1478,19 @@ int openvpn_client(int argc, char *argv[], const std::string *profile_content)
                             }
                             else
                                 OPENVPN_THROW_EXCEPTION("--epki-key must be specified");
+#endif
+                        }
+
+                        // Certcheck
+                        if (!certcheck_cert_fn.empty())
+                        {
+                            client.certcheck_cert = read_text_utf8(certcheck_cert_fn);
+                            const std::string epki_key_txt = read_text_utf8(certcheck_pkey_fn);
+#ifdef USE_OPENSSL
+                            client.certcheck_pkey.parse_pem(epki_key_txt, "certcheck private key", nullptr);
+#else
+                            auto mbedrng = std::make_unique<MbedTLSRandom>();
+                            client.certcheck_pkey.parse(epki_key_txt, "Certcheck", privateKeyPassword, *mbedrng);
 #endif
                         }
 

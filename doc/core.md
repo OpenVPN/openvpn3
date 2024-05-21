@@ -184,8 +184,7 @@ For the MVP the start_cert_check API accepts encoded certs and keys as std::stri
 
 Alternatively one can use the EPKI enabled API:
 
-    void start_cert_check_epki(ExternalPKIBase *external_pki_arg,
-                               const std::optional<const std::string> &ca = std::nullopt);
+    void start_cert_check_epki(const std::string &alias);
 
 Both found in ovpn3/core/client/ovpncli.hpp
 
