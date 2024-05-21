@@ -164,9 +164,10 @@ class OpenSSLContext : public SSLFactoryAPI
         }
 
         // if this callback is defined, no private key needs to be loaded
-        void set_external_pki_callback(ExternalPKIBase *external_pki_arg) override
+        void set_external_pki_callback(ExternalPKIBase *external_pki_arg, const std::string &alias) override
         {
             external_pki = external_pki_arg;
+            external_pki_alias = alias;
         }
 
         // server side
@@ -666,6 +667,7 @@ class OpenSSLContext : public SSLFactoryAPI
         OpenSSLPKI::PKey pkey;            // private key
         OpenSSLPKI::DH dh;                // diffie-hellman parameters (only needed in server mode)
         ExternalPKIBase *external_pki = nullptr;
+        std::string external_pki_alias;
         TLSSessionTicketBase *session_ticket_handler = nullptr; // server side only
         SNI::HandlerBase *sni_handler = nullptr;                // server side only
         Frame::Ptr frame;
@@ -1420,18 +1422,18 @@ class OpenSSLContext : public SSLFactoryAPI
             {
 #ifdef ENABLE_EXTERNAL_PKI
 #if OPENSSL_VERSION_NUMBER >= 0x30000010L
-                epki = XKeyExternalPKIImpl::create(ctx.get(), config->cert.obj(), config->external_pki);
+                epki = XKeyExternalPKIImpl::create(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias);
 
 #else
                 auto certType = EVP_PKEY_id(X509_get0_pubkey(config->cert.obj()));
                 if (certType == EVP_PKEY_RSA)
                 {
-                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki));
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
                 }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
                 else if (certType == EVP_PKEY_EC)
                 {
-                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki));
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
                 }
 #endif
                 else

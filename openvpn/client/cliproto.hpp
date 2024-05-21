@@ -359,7 +359,7 @@ class Session : ProtoContextCallbackInterface,
                              const std::optional<const std::string> &ca)
     {
         SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config("", ca);
-        config->set_external_pki_callback(external_pki_arg);
+        config->set_external_pki_callback(external_pki_arg, "certcheck");
 
         certcheck_hs.reset(std::move(config));
         do_acc_certcheck(std::string(""));

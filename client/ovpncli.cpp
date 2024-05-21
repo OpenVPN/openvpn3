@@ -1128,15 +1128,16 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::external_pki_error(const ExternalPKIRe
     }
 }
 
-OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string &data,
+OPENVPN_CLIENT_EXPORT bool OpenVPNClient::sign(const std::string &alias,
+                                               const std::string &data,
                                                std::string &sig,
                                                const std::string &algorithm,
                                                const std::string &hashalg,
                                                const std::string &saltlen)
 {
     ExternalPKISignRequest req;
+    req.alias = alias;
     req.data = data;
-    req.alias = state->clientconf.external_pki_alias;
     req.algorithm = algorithm;
     req.hashalg = hashalg;
     req.saltlen = saltlen;

@@ -125,7 +125,7 @@ class AppleSSLContext : public SSLFactoryAPI
             }
         }
 
-        virtual void set_external_pki_callback(ExternalPKIBase *external_pki_arg)
+        virtual void set_external_pki_callback(ExternalPKIBase *external_pki_arg, const std::string &alias)
         {
             not_implemented("set_external_pki_callback");
         }

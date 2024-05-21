@@ -235,9 +235,10 @@ class MbedTLSContext : public SSLFactoryAPI
         }
 
         // if this callback is defined, no private key needs to be loaded
-        virtual void set_external_pki_callback(ExternalPKIBase *external_pki_arg)
+        virtual void set_external_pki_callback(ExternalPKIBase *external_pki_arg, const std::string &alias)
         {
             external_pki = external_pki_arg;
+            external_pki_alias = alias;
         }
 
         virtual void set_session_ticket_handler(TLSSessionTicketBase *session_ticket_handler_arg)
@@ -652,6 +653,7 @@ class MbedTLSContext : public SSLFactoryAPI
         std::string priv_key_pwd;            // private key password
         MbedTLSPKI::DH::Ptr dh;              // diffie-hellman parameters (only needed in server mode)
         ExternalPKIBase *external_pki;
+        std::string external_pki_alias;
         Frame::Ptr frame;
         int ssl_debug_level;
         unsigned int flags; // defined in sslconsts.hpp
@@ -1602,7 +1604,7 @@ class MbedTLSContext : public SSLFactoryAPI
 
                 /* get signature */
                 std::string sig_b64;
-                const bool status = self->config->external_pki->sign(from_b64, sig_b64, "RSA_PKCS1_PADDING", "", "");
+                const bool status = self->config->external_pki->sign(self->config->external_pki_alias, from_b64, sig_b64, "RSA_PKCS1_PADDING", "", "");
                 if (!status)
                     throw ssl_external_pki("MbedTLS: could not obtain signature");
 

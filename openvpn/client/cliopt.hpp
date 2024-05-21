@@ -1301,7 +1301,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         // client SSL config
         SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
-        cc->set_external_pki_callback(config.external_pki);
+        cc->set_external_pki_callback(config.external_pki, config.clientconf.external_pki_alias);
         cc->set_frame(frame);
         cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
         cc->set_debug_level(config.clientconf.sslDebugLevel);
