@@ -39,7 +39,7 @@ TEST(ssl, sslciphersuites)
 
 
     sslcfg->set_tls_ciphersuite_list("TLS_CHACHA2000");
-#if defined(USE_MBEDTLS) || OPENSSL_VERSION_NUMBER < 0x10100000L
+#if defined(USE_MBEDTLS)
     /* Ignored on non TLS 1.3 implementations */
     sslfact = sslcfg->new_factory();
 #else

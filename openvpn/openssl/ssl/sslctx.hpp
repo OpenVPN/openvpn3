@@ -829,38 +829,13 @@ class OpenSSLContext : public SSLFactoryAPI
         static void init_static()
         {
             bmq_stream::init_static();
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER < 0x30000010L && !defined(OPENSSL_NO_EC) && defined(ENABLE_EXTERNAL_PKI)
+#if OPENSSL_VERSION_NUMBER < 0x30000010L && !defined(OPENSSL_NO_EC) && defined(ENABLE_EXTERNAL_PKI)
             ExternalPKIECImpl::init_static();
 #endif
 
 
             ssl_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
             context_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext", nullptr, nullptr, nullptr);
-
-            /*
-             * We actually override some of the OpenSSL SSLv23 methods here,
-             * in particular the ssl_pending method.  We want ssl_pending
-             * to return 0 until the SSL negotiation establishes the
-             * actual method.  The default OpenSSL SSLv23 ssl_pending method
-             * (ssl_undefined_const_function) triggers an OpenSSL error condition
-             * when calling SSL_pending early which is not what we want.
-             *
-             * This depends on SSL23 being a generic method and OpenSSL later
-             * switching to a spefic TLS method (TLS10method etc..) with
-             * ssl23_get_client_method that has the proper ssl3_pending pending method.
-             *
-             * OpenSSL 1.1.x does not allow hacks like this anymore. So overriding is not
-             * possible. Fortunately OpenSSL 1.1 also always defines ssl_pending method to
-             * be ssl3_pending, so this hack is no longer needed.
-             */
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-            ssl23_method_client_ = *SSLv23_client_method();
-            ssl23_method_client_.ssl_pending = ssl_pending_override;
-
-            ssl23_method_server_ = *SSLv23_server_method();
-            ssl23_method_server_.ssl_pending = ssl_pending_override;
-#endif
         }
 
       private:
@@ -1101,32 +1076,6 @@ class OpenSSLContext : public SSLFactoryAPI
             return bio;
         }
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        /*
-         * Return modified OpenSSL SSLv23 methods,
-         * as configured in init_static().
-         */
-
-        static const SSL_METHOD *tls_method_client()
-        {
-            return &ssl23_method_client_;
-        }
-
-        static const SSL_METHOD *tls_method_server()
-        {
-            return &ssl23_method_server_;
-        }
-#else
-        static const SSL_METHOD *tls_method_client()
-        {
-            return TLS_client_method();
-        }
-
-        static const SSL_METHOD *tls_method_server()
-        {
-            return TLS_server_method();
-        }
-#endif
         ::SSL *ssl;   // OpenSSL SSL object
         BIO *ssl_bio; // read/write cleartext from here
         BIO *ct_in;   // write ciphertext to here
@@ -1141,12 +1090,6 @@ class OpenSSLContext : public SSLFactoryAPI
         // Helps us to store pointer to self in ::SSL object
         inline static int ssl_data_index = -1;
         inline static int context_data_index = -1;
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        // Modified SSLv23 methods
-        inline static SSL_METHOD ssl23_method_client_;
-        inline static SSL_METHOD ssl23_method_server_;
-#endif
     };
 
     /////// start of main class implementation
@@ -1210,7 +1153,7 @@ class OpenSSLContext : public SSLFactoryAPI
         // Create new SSL_CTX for server or client mode
         if (config->mode.is_server())
         {
-            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_server()), ::SSL_CTX_free};
+            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, ::TLS_server_method()), ::SSL_CTX_free};
             if (!ctx)
                 throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
 
@@ -1231,17 +1174,12 @@ class OpenSSLContext : public SSLFactoryAPI
             // server-side SNI
             if (config->sni_handler)
             {
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-#define OPENSSL_SERVER_SNI
                 SSL_CTX_set_client_hello_cb(ctx.get(), client_hello_callback, nullptr);
-#else
-                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: server-side SNI requires OpenSSL 1.1 or higher");
-#endif
             }
         }
         else if (config->mode.is_client())
         {
-            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_client()), &::SSL_CTX_free};
+            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, ::TLS_client_method()), &::SSL_CTX_free};
             if (!ctx)
                 throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for client method");
         }
@@ -1770,17 +1708,8 @@ class OpenSSLContext : public SSLFactoryAPI
         BIGNUM *bn = ASN1_INTEGER_to_BN(ai, NULL);
         if (!bn)
             return;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        const size_t nb = BN_num_bytes(bn);
-        if (nb <= authcert.serial.size())
-        {
-            const size_t offset = authcert.serial.size() - nb;
-            std::memset(authcert.serial.number(), 0, offset);
-            BN_bn2bin(bn, authcert.serial.number() + offset);
-        }
-#else
+
         BN_bn2binpad(bn, authcert.serial.number(), static_cast<int>(authcert.serial.size()));
-#endif
         BN_free(bn);
     }
 
@@ -2126,20 +2055,7 @@ class OpenSSLContext : public SSLFactoryAPI
             {
             case TLSSessionTicketBase::NO_TICKET:
             case TLSSessionTicketBase::TICKET_EXPIRING: // doesn't really make sense for enc==1?
-                                                        // NOTE: OpenSSL may segfault on a zero return.
-                                                        // This appears to be fixed by:
-                                                        // commit dbdb96617cce2bd4356d57f53ecc327d0e31f2ad
-                                                        // Author: Todd Short <tshort@akamai.com>
-                                                        // Date:   Thu May 12 18:16:52 2016 -0400
-                                                        // Fix session ticket and SNI
-                                                        // OPENVPN_LOG("tls_ticket_key_callback: create: no ticket or expiring ticket");
-#if OPENSSL_VERSION_NUMBER < 0x1000212fL                // 1.0.2r
-                if (!randomize_name_key(name, key))
-                    return -1;
-                    // fallthrough
-#else
                 return 0;
-#endif
             case TLSSessionTicketBase::TICKET_AVAILABLE:
                 if (!RAND_bytes(iv, EVP_MAX_IV_LENGTH))
                     return -1;
@@ -2219,8 +2135,6 @@ class OpenSSLContext : public SSLFactoryAPI
             return false;
         return true;
     }
-
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 
     static int client_hello_callback(::SSL *s, int *al, void *)
     {
@@ -2341,7 +2255,6 @@ class OpenSSLContext : public SSLFactoryAPI
             return std::string((const char *)buf.c_data(), len);
         }
     }
-#endif
 
     // Return true if we should continue with authentication
     // even though there was an error, because the user has

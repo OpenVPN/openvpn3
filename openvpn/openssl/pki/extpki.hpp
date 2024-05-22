@@ -217,7 +217,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
 };
 
 /* The OpenSSL EC_* methods we are using here are only available for OpenSSL 1.1.0 and later */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
+#if !defined(OPENSSL_NO_EC)
 class ExternalPKIECImpl : public ExternalPKIImpl
 {
 
@@ -410,5 +410,5 @@ class ExternalPKIECImpl : public ExternalPKIImpl
     std::string alias;
     inline static int ec_self_data_index = -1;
 };
-#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC) */
+#endif /* !defined(OPENSSL_NO_EC) */
 } // namespace openvpn
