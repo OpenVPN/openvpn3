@@ -79,6 +79,19 @@ class Logger
     }
 
 
+    //! return the current prefix all logging
+    std::string log_prefix()
+    {
+        return prefix_;
+    }
+
+    //! set the log prefix for all loggigng
+    void set_log_prefix(const std::string &prefix)
+    {
+        prefix_ = prefix;
+    }
+
+
     /**
      * Prints a log message for tracing if the log level
      * is at least TRACE (=4)
@@ -91,7 +104,7 @@ class Logger
         if constexpr (max_log_level >= LOG_LEVEL_TRACE)
         {
             if (current_log_level >= LOG_LEVEL_TRACE)
-                OPENVPN_LOG(msg);
+                OPENVPN_LOG(prefix_ << msg);
         }
     }
 
@@ -107,7 +120,7 @@ class Logger
         if constexpr (max_log_level >= LOG_LEVEL_DEBUG)
         {
             if (current_log_level >= LOG_LEVEL_DEBUG)
-                OPENVPN_LOG(msg);
+                OPENVPN_LOG(prefix_ << msg);
         }
     }
 
@@ -124,7 +137,7 @@ class Logger
         if constexpr (max_log_level >= LOG_LEVEL_INFO)
         {
             if (current_log_level >= LOG_LEVEL_INFO)
-                OPENVPN_LOG(msg);
+                OPENVPN_LOG(prefix_ << msg);
         }
     }
 
@@ -139,7 +152,7 @@ class Logger
         if constexpr (max_log_level >= LOG_LEVEL_VERB)
         {
             if (current_log_level >= LOG_LEVEL_VERB)
-                OPENVPN_LOG(msg);
+                OPENVPN_LOG(prefix_ << msg);
         }
     }
 
@@ -151,12 +164,13 @@ class Logger
     void log_error(T &&msg)
     {
         if (current_log_level >= LOG_LEVEL_ERROR)
-            OPENVPN_LOG(msg);
+            OPENVPN_LOG(prefix_ << msg);
     }
 
   protected:
     //! configured loglevel
     int current_log_level = DEFAULT_LOG_LEVEL;
+    std::string prefix_;
 };
 
 /**
