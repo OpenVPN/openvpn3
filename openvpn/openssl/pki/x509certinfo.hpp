@@ -64,7 +64,7 @@ namespace OpenSSLPKI {
  *         If it was not possible to retrieve the subject, and empty string
  *         is returned.
  */
-static std::string x509_get_subject(::X509 *cert, bool new_format = false)
+static inline std::string x509_get_subject(::X509 *cert, bool new_format = false)
 {
     if (!new_format)
     {
@@ -109,7 +109,7 @@ static std::string x509_get_subject(::X509 *cert, bool new_format = false)
  * @param cert 	OpenSSL certificate
  * @return
  */
-static const std::string x509_get_signature_algorithm(const ::X509 *cert)
+static inline std::string x509_get_signature_algorithm(const ::X509 *cert)
 {
     int nid = X509_get_signature_nid(cert);
     const char *sig = OBJ_nid2sn(nid);
@@ -134,7 +134,7 @@ static const std::string x509_get_signature_algorithm(const ::X509 *cert)
  *         resulting string may be empty if the extraction failed or the field
  *         is empty.
  */
-static std::string x509_get_field(::X509 *cert, const int nid)
+static inline std::string x509_get_field(::X509 *cert, const int nid)
 {
     static const char nullc = '\0';
     std::string ret;
@@ -196,7 +196,7 @@ static std::string x509_get_field(::X509 *cert, const int nid)
  * @return Returns the numeric representation of the certificate serial number
  *         as a std::string.
  */
-static std::string x509_get_serial(::X509 *cert)
+static inline std::string x509_get_serial(::X509 *cert)
 {
     const ASN1_INTEGER *asn1_i = X509_get_serialNumber(cert);
     BIGNUM *bignum = ASN1_INTEGER_to_BN(asn1_i, NULL);
@@ -221,7 +221,7 @@ static std::string x509_get_serial(::X509 *cert)
  * @return Returns the hexadecimal representation of the certificate
  *         serial number as a std::string.
  */
-static std::string x509_get_serial_hex(::X509 *cert)
+static inline std::string x509_get_serial_hex(::X509 *cert)
 {
     const ASN1_INTEGER *asn1_i = X509_get_serialNumber(cert);
     return render_hex_sep(asn1_i->data, asn1_i->length, ':', false);
@@ -236,11 +236,12 @@ static std::string x509_get_serial_hex(::X509 *cert)
  * @return Returns a uint8_t std:vector containing the binary representation
  *         of the certificate's SHA256 fingerprint.
  */
-static std::size_t x509_fingerprint_size()
+static inline std::size_t x509_fingerprint_size()
 {
     return EVP_MD_size(EVP_sha256());
 }
-static std::vector<uint8_t> x509_get_fingerprint(const ::X509 *cert)
+
+static inline std::vector<uint8_t> x509_get_fingerprint(const ::X509 *cert)
 {
     std::vector<uint8_t> fingerprint;
     fingerprint.resize(x509_fingerprint_size());
