@@ -154,6 +154,16 @@ class WFP : public RC<thread_unsafe_refcount>
 
     OPENVPN_EXCEPTION(wfp_error);
 
+    /**
+     * @brief Enum for type of local traffic to block
+     */
+    enum class Block
+    {
+        All,
+        AllButLocalDns,
+        Dns,
+    };
+
     class ActionBase;
 
     /**
@@ -169,12 +179,12 @@ class WFP : public RC<thread_unsafe_refcount>
 
         void block(const std::wstring &openvpn_app_path,
                    const NET_IFINDEX itf_index,
-                   const bool dns_only,
+                   const Block block_type,
                    std::ostream &log)
         {
             unblock(log);
             wfp.reset(new WFP());
-            wfp->block(openvpn_app_path, itf_index, dns_only, log);
+            wfp->block(openvpn_app_path, itf_index, block_type, log);
         }
 
         void unblock(std::ostream &log)
@@ -209,7 +219,7 @@ class WFP : public RC<thread_unsafe_refcount>
         {
             log << to_string() << std::endl;
             if (block_)
-                ctx_->block(openvpn_app_path_, itf_index_, dns_only_, log);
+                ctx_->block(openvpn_app_path_, itf_index_, block_type_, log);
             else
                 ctx_->unblock(log);
         }
@@ -225,12 +235,12 @@ class WFP : public RC<thread_unsafe_refcount>
         ActionBase(const bool block,
                    const std::wstring &openvpn_app_path,
                    const NET_IFINDEX itf_index,
-                   const bool dns_only,
+                   const Block block_type,
                    const Context::Ptr &ctx)
             : block_(block),
               openvpn_app_path_(openvpn_app_path),
               itf_index_(itf_index),
-              dns_only_(dns_only),
+              block_type_(block_type),
               ctx_(ctx)
         {
         }
@@ -239,7 +249,7 @@ class WFP : public RC<thread_unsafe_refcount>
         const bool block_;
         const std::wstring openvpn_app_path_;
         const NET_IFINDEX itf_index_;
-        const bool dns_only_;
+        const Block block_type_;
         Context::Ptr ctx_;
     };
 
@@ -247,9 +257,9 @@ class WFP : public RC<thread_unsafe_refcount>
     {
         ActionBlock(const std::wstring &openvpn_app_path,
                     const NET_IFINDEX itf_index,
-                    const bool dns_only,
+                    const Block block_type,
                     const Context::Ptr &wfp)
-            : ActionBase(true, openvpn_app_path, itf_index, dns_only, wfp)
+            : ActionBase(true, openvpn_app_path, itf_index, block_type, wfp)
         {
         }
     };
@@ -258,9 +268,9 @@ class WFP : public RC<thread_unsafe_refcount>
     {
         ActionUnblock(const std::wstring &openvpn_app_path,
                       const NET_IFINDEX itf_index,
-                      const bool dns_only,
+                      const Block block_type,
                       const Context::Ptr &wfp)
-            : ActionBase(false, openvpn_app_path, itf_index, dns_only, wfp)
+            : ActionBase(false, openvpn_app_path, itf_index, block_type, wfp)
         {
         }
     };
@@ -280,12 +290,12 @@ class WFP : public RC<thread_unsafe_refcount>
      *
      * @param openvpn_app_path  path to the openvpn executable
      * @param itf_index         interface index of the VPN interface
-     * @param dns_only          whether only port 53 should be blocked
+     * @param block_type        which type of traffic should be blocked
      * @param log               the log ostream to use for diagnostics
      */
     void block(const std::wstring &openvpn_app_path,
                NET_IFINDEX itf_index,
-               bool dns_only,
+               Block block_type,
                std::ostream &log)
     {
         // WFP filter/conditions
@@ -294,6 +304,7 @@ class WFP : public RC<thread_unsafe_refcount>
         FWPM_FILTER_CONDITION0 match_openvpn = {0};
         FWPM_FILTER_CONDITION0 match_port_53 = {0};
         FWPM_FILTER_CONDITION0 match_interface = {0};
+        FWPM_FILTER_CONDITION0 match_loopback = {0};
         FWPM_FILTER_CONDITION0 match_not_loopback = {0};
         UINT64 filterid = 0;
 
@@ -334,6 +345,11 @@ class WFP : public RC<thread_unsafe_refcount>
         match_interface.conditionValue.type = FWP_UINT64;
         match_interface.conditionValue.uint64 = &itf_luid.Value;
 
+        match_loopback.fieldKey = FWPM_CONDITION_FLAGS;
+        match_loopback.matchType = FWP_MATCH_FLAGS_ALL_SET;
+        match_loopback.conditionValue.type = FWP_UINT32;
+        match_loopback.conditionValue.uint32 = FWP_CONDITION_FLAG_IS_LOOPBACK;
+
         match_not_loopback.fieldKey = FWPM_CONDITION_FLAGS;
         match_not_loopback.matchType = FWP_MATCH_FLAGS_NONE_SET;
         match_not_loopback.conditionValue.type = FWP_UINT32;
@@ -351,11 +367,6 @@ class WFP : public RC<thread_unsafe_refcount>
         filter.action.type = FWP_ACTION_PERMIT;
         filter.numFilterConditions = 1;
         condition[0] = match_openvpn;
-        if (dns_only)
-        {
-            filter.numFilterConditions = 2;
-            condition[1] = match_port_53;
-        }
         add_filter(&filter, NULL, &filterid);
         log << "permit IPv4 requests from OpenVPN app" << std::endl;
 
@@ -366,17 +377,22 @@ class WFP : public RC<thread_unsafe_refcount>
         log << "permit IPv6 requests from OpenVPN app" << std::endl;
 
 
-        // Filter #3 -- block IPv4 requests (except to loopback) from other apps
+        // Filter #3 -- block IPv4 (DNS) requests, except to loopback, from other apps
         filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
         filter.action.type = FWP_ACTION_BLOCK;
         filter.weight.type = FWP_EMPTY;
         filter.numFilterConditions = 1;
-        condition[0] = dns_only ? match_port_53 : match_not_loopback;
+        condition[0] = match_not_loopback;
+        if (block_type == Block::Dns)
+        {
+            filter.numFilterConditions = 2;
+            condition[1] = match_port_53;
+        }
         add_filter(&filter, NULL, &filterid);
         log << "block IPv4 requests from other apps" << std::endl;
 
 
-        // Filter #4 -- block IPv6 requests (except to loopback) from other apps
+        // Filter #4 -- block IPv6 (DNS) requests, except to loopback, from other apps
         filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
         add_filter(&filter, NULL, &filterid);
         log << "block IPv6 requests from other apps" << std::endl;
@@ -387,11 +403,6 @@ class WFP : public RC<thread_unsafe_refcount>
         filter.action.type = FWP_ACTION_PERMIT;
         filter.numFilterConditions = 1;
         condition[0] = match_interface;
-        if (dns_only)
-        {
-            filter.numFilterConditions = 2;
-            condition[1] = match_port_53;
-        }
         add_filter(&filter, NULL, &filterid);
         log << "allow IPv4 traffic from TAP" << std::endl;
 
@@ -400,6 +411,25 @@ class WFP : public RC<thread_unsafe_refcount>
         filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
         add_filter(&filter, NULL, &filterid);
         log << "allow IPv6 traffic from TAP" << std::endl;
+
+        if (block_type != Block::AllButLocalDns)
+        {
+            // Filter #7 -- block IPv4 DNS requests to loopback from other apps
+            filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
+            filter.action.type = FWP_ACTION_BLOCK;
+            filter.weight.type = FWP_EMPTY;
+            filter.numFilterConditions = 2;
+            condition[0] = match_loopback;
+            condition[1] = match_port_53;
+            add_filter(&filter, NULL, &filterid);
+            log << "block IPv4 DNS requests to loopback from other apps" << std::endl;
+
+
+            // Filter #8 -- block IPv6 DNS requests to loopback from other apps
+            filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V6;
+            add_filter(&filter, NULL, &filterid);
+            log << "block IPv6 DNS requests to loopback from other apps" << std::endl;
+        }
     }
 
     /**
