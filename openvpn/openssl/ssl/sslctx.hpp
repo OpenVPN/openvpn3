@@ -1115,9 +1115,9 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 if (pair->iana_name != ciphersuite)
                 {
-                    LOG_INFO("OpenSSLContext: Deprecated cipher suite name '"
-                             << pair->openssl_name << "' please use IANA name ' "
-                             << pair->iana_name << "'");
+                    OVPN_LOG_INFO("OpenSSLContext: Deprecated cipher suite name '"
+                                  << pair->openssl_name << "' please use IANA name ' "
+                                  << pair->iana_name << "'");
                 }
                 result << pair->openssl_name;
             }
@@ -1528,8 +1528,8 @@ class OpenSSLContext : public SSLFactoryAPI
             }
             else
             {
-                LOG_INFO("OpenSSL -- warning ignoring unknown group '"
-                         << group << "' in tls-groups");
+                OVPN_LOG_INFO("OpenSSL -- warning ignoring unknown group '"
+                              << group << "' in tls-groups");
             }
         }
 
@@ -1803,9 +1803,9 @@ class OpenSSLContext : public SSLFactoryAPI
                 || !(self->config->flags & SSLConst::VERIFY_PEER_FINGERPRINT))
             {
                 auto sign_alg = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
-                LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                OVPN_LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
                 // Output the certificates itself for debug logging
-                LOG_TRACE(OpenSSLPKI::X509_get_pem_encoding(current_cert));
+                OVPN_LOG_TRACE(OpenSSLPKI::X509_get_pem_encoding(current_cert));
             }
         }
 
@@ -1827,28 +1827,28 @@ class OpenSSLContext : public SSLFactoryAPI
             preverify_ok = self->config->peer_fingerprints.match(fp);
             if (!preverify_ok)
             {
-                LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
             }
         }
 
         // verify ns-cert-type
         if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
         {
-            LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+            OVPN_LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 key usage
         if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
         {
-            LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+            OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 extended key usage
         if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
         {
-            LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+            OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
             preverify_ok = false;
         }
 
@@ -1864,7 +1864,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
             if (!verify_x509.verify(name))
             {
-                LOG_INFO("VERIFY FAIL -- verify-x509-name failed");
+                OVPN_LOG_INFO("VERIFY FAIL -- verify-x509-name failed");
                 preverify_ok = false;
             }
         }
@@ -1877,7 +1877,7 @@ class OpenSSLContext : public SSLFactoryAPI
             TLSRemote::log(self->config->tls_remote, subj, common_name);
             if (!TLSRemote::test(self->config->tls_remote, subj, common_name))
             {
-                LOG_INFO("VERIFY FAIL -- tls-remote match failed");
+                OVPN_LOG_INFO("VERIFY FAIL -- tls-remote match failed");
                 preverify_ok = false;
             }
         }
@@ -1916,7 +1916,7 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 const auto sign_alg = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
                 const auto subject = OpenSSLPKI::x509_get_subject(current_cert);
-                LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                OVPN_LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
             }
         }
 
@@ -1943,7 +1943,7 @@ class OpenSSLContext : public SSLFactoryAPI
             PeerFingerprint fp(OpenSSLPKI::x509_get_fingerprint(current_cert));
             if (self->config->peer_fingerprints && !self->config->peer_fingerprints.match(fp))
             {
-                LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -1954,7 +1954,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify ns-cert-type
             if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -1965,7 +1965,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify X509 key usage
             if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -1976,7 +1976,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify X509 extended key usage
             if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2011,20 +2011,20 @@ class OpenSSLContext : public SSLFactoryAPI
     {
         if (where & SSL_CB_LOOP)
         {
-            LOG_INFO("SSL state ("
-                     << ((where & SSL_ST_CONNECT)
-                             ? "connect"
-                             : (where & SSL_ST_ACCEPT
-                                    ? "accept"
-                                    : "undefined"))
-                     << "): " << SSL_state_string_long(s));
+            OVPN_LOG_INFO("SSL state ("
+                          << ((where & SSL_ST_CONNECT)
+                                  ? "connect"
+                                  : (where & SSL_ST_ACCEPT
+                                         ? "accept"
+                                         : "undefined"))
+                          << "): " << SSL_state_string_long(s));
         }
         else if (where & SSL_CB_ALERT)
         {
-            LOG_INFO("SSL alert ("
-                     << (where & SSL_CB_READ ? "read" : "write") << "): "
-                     << SSL_alert_type_string_long(ret) << ": "
-                     << SSL_alert_desc_string_long(ret));
+            OVPN_LOG_INFO("SSL alert ("
+                          << (where & SSL_CB_READ ? "read" : "write") << "): "
+                          << SSL_alert_type_string_long(ret) << ": "
+                          << SSL_alert_desc_string_long(ret));
         }
     }
 

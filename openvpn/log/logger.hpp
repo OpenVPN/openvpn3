@@ -272,10 +272,36 @@ class LoggingMixin
         }                                                                                   \
     } while (0)
 
+/**
+ * Logging macro that logs with ERROR verbosity using the logger named logger
+ *
+ * The macro tries very hard to avoid executing the
+ * code that is inside args when logging is not happening
+ */
+#define LOGGER_LOG_ERROR(logger, args)                                                     \
+    do                                                                                     \
+    {                                                                                      \
+        if constexpr (decltype(logger)::max_log_level >= openvpn::logging::LOG_LEVEL_INFO) \
+        {                                                                                  \
+            if (logger.log_level() >= openvpn::logging::LOG_LEVEL_INFO)                    \
+            {                                                                              \
+                std::ostringstream _ovpn_log_ss;                                           \
+                _ovpn_log_ss << args;                                                      \
+                logger.log_info(_ovpn_log_ss.str());                                       \
+            }                                                                              \
+        }                                                                                  \
+    } while (0)
 
-/* These are convince macros for classes that use the LoggingMixin to avoid specifying the logger */
-#define LOG_INFO(args) LOGGER_LOG_INFO(log_, args)
-#define LOG_VERBOSE(args) LOGGER_LOG_VERBOSE(log_, args)
-#define LOG_DEBUG(args) LOGGER_LOG_DEBUG(log_, args)
-#define LOG_TRACE(args) LOGGER_LOG_TRACE(log_, args)
+/**
+ * These are convenience macros for classes that use the LoggingMixin to avoid specifying the logger
+ *
+ * The spelling has been chosen to avoid conflicts with syslog.h log level
+ * constants LOG_INFO and LOG_DEBUG.
+ */
+#define OVPN_LOG_ERROR(args) LOGGER_LOG_ERROR(log_, args)
+#define OVPN_LOG_INFO(args) LOGGER_LOG_INFO(log_, args)
+#define OVPN_LOG_VERBOSE(args) LOGGER_LOG_VERBOSE(log_, args)
+#define OVPN_LOG_DEBUG(args) LOGGER_LOG_DEBUG(log_, args)
+#define OVPN_LOG_TRACE(args) LOGGER_LOG_TRACE(log_, args)
+
 } // namespace openvpn::logging
