@@ -865,8 +865,12 @@ class Session : ProtoContextCallbackInterface,
     // proto base class calls here for app-level control-channel messages received
     void control_recv(BufferPtr &&app_bp) override
     {
-        const std::string msg = Unicode::utf8_printable(ProtoContext::template read_control_string<std::string>(*app_bp),
-                                                        Unicode::UTF8_FILTER | Unicode::UTF8_PASS_FMT);
+        const std::string msg = ProtoContext::read_control_string<std::string>(*app_bp);
+        if (!Unicode::is_valid_utf8(msg, Unicode::UTF8_NO_CTRL))
+        {
+            OPENVPN_LOG("Control channel message with invalid characters received, ignoring message");
+            return;
+        }
 
         // OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 

@@ -345,8 +345,15 @@ class ServerProto
         // proto base class calls here for app-level control-channel messages received
         virtual void control_recv(BufferPtr &&app_bp) override
         {
-            const std::string msg = Unicode::utf8_printable(ProtoContext::template read_control_string<std::string>(*app_bp),
-                                                            Unicode::UTF8_FILTER);
+            const std::string msg = ProtoContext::template read_control_string<std::string>(*app_bp);
+            if (!Unicode::is_valid_utf8(msg, Unicode::UTF8_NO_CTRL))
+            {
+                /* if we received invalid data from a client on the control channel terminate the connection */
+                const auto reason = "Control channel message with invalid characters received";
+                auth_failed(reason, reason);
+                return;
+            }
+
             if (msg == "PUSH_REQUEST")
             {
                 if (get_management())
