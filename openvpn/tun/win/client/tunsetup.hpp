@@ -634,12 +634,6 @@ class Setup : public SetupBase
                 {
                     domains.push_back("." + dom.domain);
                 }
-                if (domains.empty() && allow_local_dns_resolvers)
-                {
-                    // This empty domain tells the NRPT code that
-                    // no '.' rule should be created
-                    domains.push_back("");
-                }
 
                 const bool dnssec = server.dnssec == DnsServer::Security::Yes;
 
@@ -651,9 +645,14 @@ class Setup : public SetupBase
                     delimiter = ",";
                 }
 
-                create.add(new NRPT::ActionCreate(pid, domains, addresses, dnssec));
+                // To keep local resolvers working, only split rules must be created
+                if (!allow_local_dns_resolvers || !domains.empty())
+                {
+                    create.add(new NRPT::ActionCreate(pid, domains, addresses, dnssec));
+                    destroy.add(new NRPT::ActionDelete(pid));
+                }
+
                 create.add(new DNS::ActionCreate(tap.name, search_domains));
-                destroy.add(new NRPT::ActionDelete(pid));
                 destroy.add(new DNS::ActionDelete(tap.name, search_domains));
 
                 // block local DNS lookup unless all traffic is blocked already
@@ -732,7 +731,7 @@ class Setup : public SetupBase
                 if (use_nrpt && (dns.ipv4() || dns.ipv6()))
                 {
                     // domain suffix list
-                    std::vector<std::string> dsfx;
+                    std::vector<std::string> split_domains;
 
                     // Only add DNS routing suffixes if not rerouting gateway.
                     // Otherwise, route all DNS requests with wildcard (".").
@@ -746,23 +745,22 @@ class Setup : public SetupBase
                                 // each DNS suffix must begin with '.'
                                 if (dom[0] != '.')
                                     dom = "." + dom;
-                                dsfx.push_back(std::move(dom));
+                                split_domains.push_back(std::move(dom));
                             }
                         }
                     }
-
-                    // This empty domain tells the NRPT code that
-                    // no '.' rule should be created
-                    if (dsfx.empty() && allow_local_dns_resolvers)
-                        dsfx.emplace_back("");
 
                     // DNS server list
                     std::vector<std::string> dserv;
                     for (const auto &ds : pull.dns_servers)
                         dserv.push_back(ds.address);
 
-                    create.add(new NRPT::ActionCreate(pid, dsfx, dserv, false));
-                    destroy.add(new NRPT::ActionDelete(pid));
+                    // To keep local resolvers working, only split rules must be created
+                    if (!allow_local_dns_resolvers || !split_domains.empty())
+                    {
+                        create.add(new NRPT::ActionCreate(pid, split_domains, dserv, false));
+                        destroy.add(new NRPT::ActionDelete(pid));
+                    }
                 }
 
                 // Set a default TAP-adapter domain suffix using
