@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012 - 2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -53,8 +53,14 @@ struct ServerEntry
     std::string friendlyName;
 };
 
-// return properties of config
-// (client reads)
+/**
+    @brief Struct containing configuration details parsed from an OpenVPN configuration file.
+    @details
+    This struct holds various properties extracted from an OpenVPN configuration file, such as
+    error status, profile name, autologin flag, external PKI flag, VPN server CA, static
+    challenge, private key password requirement, remote host information, list of selectable VPN
+    servers, Windows driver, and DCO compatibility details.
+*/
 struct EvalConfig
 {
     // true if error
@@ -77,6 +83,13 @@ struct EvalConfig
 
     // if true, this is an External PKI profile (no cert or key directives)
     bool externalPki = false;
+
+    // VPN server CA in PEM format as given in the configuration. This is the CA, the
+    // VPN server certificate is checked against. This is not a parsed version so it
+    // can have extra lines around the actual certificates that an X509 parser would
+    // ignore.
+    // Note that this can can be empty if the profile uses --peer-fingerprint instead of traditional PKI check.
+    std::string vpnCa;
 
     // static challenge, may be empty, ignored if autologin
     std::string staticChallenge;

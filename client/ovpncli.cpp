@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012 - 2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -650,6 +650,7 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClientHelper::parse_config(const Config &confi
         eval.friendlyName = cc.friendlyName();
         eval.autologin = cc.autologin();
         eval.externalPki = cc.externalPki();
+        eval.vpnCa = cc.vpnCa();
         eval.staticChallenge = cc.staticChallenge();
         eval.staticChallengeEcho = cc.staticChallengeEcho();
         eval.privateKeyPasswordRequired = cc.privateKeyPasswordRequired();
