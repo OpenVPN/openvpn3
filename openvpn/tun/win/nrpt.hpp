@@ -424,11 +424,6 @@ class Nrpt
          */
         void execute(std::ostream &log) override
         {
-            // Don't add anything if there is only one empty domain. This
-            // is the way to tell us that no '.' rules should be added
-            if (domains_.size() == 1 && domains_[0] == "")
-                return;
-
             // Convert domains into a wide MULTI_SZ string
             std::wstring domains;
             if (domains_.empty())
