@@ -184,7 +184,7 @@ class LoggingMixin
     //! return the current logging level for all logging
     static int log_level()
     {
-        return log_.log_level;
+        return log_.log_level();
     }
 
     //! set the log level for all loggigng
