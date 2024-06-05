@@ -216,7 +216,7 @@ class ClientBase : public ClientAPI::OpenVPNClient
 class Client : public ClientBase
 {
     // This is the protocol tag that appcontrol expects to trigger the certcheck start.
-    static constexpr char certcheck_init_verb[] = "cxa1"; // TODO: std::string in C++ '20
+    static constexpr char certcheck_init_verb[] = "dpc1"; // TODO: std::string in C++ '20
 
   public:
     enum ClockTickAction
@@ -369,7 +369,7 @@ class Client : public ClientBase
     }
 
     /**
-      @brief Begin a cck1 (certcheck) handshake in response to a cxa1 server request.
+      @brief Begin a cck1 (certcheck) handshake in response to a dpc1 server request.
     */
     void handle_certcheck_request()
     {
