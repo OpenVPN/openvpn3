@@ -290,6 +290,7 @@ class MyListener : public WS::Server::Listener
 
         remove_cmds_bypass_hosts.execute(os);
         remove_cmds_bypass_hosts.clear();
+        bypass_host.clear();
     }
 
     void set_watchdog(pid_t pid)
