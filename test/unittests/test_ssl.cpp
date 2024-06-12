@@ -79,6 +79,7 @@ TEST(ssl, tls_groups)
     sslcfg->set_local_cert_enabled(false);
     sslcfg->set_flags(SSLConst::NO_VERIFY_PEER);
     sslcfg->set_rng(rng);
+    sslcfg->set_debug_level(1);
 
     sslcfg->set_tls_groups("secp521r1:secp384r1");
 
@@ -88,9 +89,9 @@ TEST(ssl, tls_groups)
 
     sslcfg->set_tls_groups("secp521r1:secp384r1:greenhell");
 
-
     testLog->startCollecting();
     f = sslcfg->new_factory();
+    f->set_log_level(logging::LOG_LEVEL_INFO);
     f->ssl();
 #ifdef USE_OPENSSL
     EXPECT_EQ("OpenSSL -- warning ignoring unknown group 'greenhell' in tls-groups\n", testLog->stopCollecting());

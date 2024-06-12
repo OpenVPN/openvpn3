@@ -294,7 +294,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
         void set_debug_level(const int debug_level) override
         {
-            ssl_debug_level = debug_level;
+            set_log_level(debug_level);
         }
 
         void set_flags(const unsigned int flags_arg) override
@@ -520,7 +520,6 @@ class OpenSSLContext : public SSLFactoryAPI
             ret->mode = mode;
             ret->dh = dh;
             ret->frame = frame;
-            ret->ssl_debug_level = ssl_debug_level;
             ret->flags = flags;
             ret->local_cert_enabled = local_cert_enabled;
 
@@ -676,7 +675,6 @@ class OpenSSLContext : public SSLFactoryAPI
         TLSSessionTicketBase *session_ticket_handler = nullptr; // server side only
         SNI::HandlerBase *sni_handler = nullptr;                // server side only
         Frame::Ptr frame;
-        int ssl_debug_level = 0;
         unsigned int flags = 0; // defined in sslconsts.hpp
         std::string sni_name;   // client side only
         NSCert::Type ns_cert_type{NSCert::NONE};
@@ -1441,7 +1439,7 @@ class OpenSSLContext : public SSLFactoryAPI
             OPENVPN_THROW(ssl_context_error, "OpenSSLContext: CA not defined");
 
         // Show handshake debugging info
-        if (config->ssl_debug_level)
+        if (log_.log_level() >= logging::LOG_LEVEL_INFO)
             SSL_CTX_set_info_callback(ctx.get(), info_callback);
     }
 
@@ -2046,7 +2044,7 @@ class OpenSSLContext : public SSLFactoryAPI
                                          : "undefined"))
                           << "): " << SSL_state_string_long(s));
         }
-        else if (where & SSL_CB_ALERT)
+        if (where & SSL_CB_ALERT)
         {
             OVPN_LOG_INFO("SSL alert ("
                           << (where & SSL_CB_READ ? "read" : "write") << "): "
