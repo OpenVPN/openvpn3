@@ -75,6 +75,13 @@ enum Type
     AUTH_FAILED,
     CERT_VERIFY_FAIL,
     TLS_VERSION_MIN,
+    TLS_ALERT_PROTOCOL_VERSION,
+    TLS_ALERT_UNKNOWN_CA,
+    TLS_ALERT_MISC,
+    TLS_ALERT_HANDSHAKE_FAILURE,
+    TLS_ALERT_CERTIFICATE_EXPIRED,
+    TLS_ALERT_CERTIFICATE_REVOKED,
+    TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED,
     CLIENT_HALT,
     CLIENT_SETUP,
     TUN_HALT,
@@ -138,6 +145,13 @@ inline const char *event_name(const Type type)
         "AUTH_FAILED",
         "CERT_VERIFY_FAIL",
         "TLS_VERSION_MIN",
+        "TLS_ALERT_PROTOCOL_VERSION",
+        "TLS_ALERT_UNKNOWN_CA",
+        "TLS_ALERT_MISC",
+        "TLS_ALERT_HANDSHAKE_FAILURE",
+        "TLS_ALERT_CERTIFICATE_EXPIRED",
+        "TLS_ALERT_CERTIFICATE_REVOKED",
+        "TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED",
         "CLIENT_HALT",
         "CLIENT_SETUP",
         "TUN_HALT",
@@ -320,6 +334,14 @@ struct InactiveTimeout : public Base
     }
 };
 
+struct TLSMinVersion : public Base
+{
+    TLSMinVersion()
+        : Base(TLS_VERSION_MIN)
+    {
+    }
+};
+
 struct TLSVersionMinFail : public Base
 {
     TLSVersionMinFail()
@@ -327,6 +349,56 @@ struct TLSVersionMinFail : public Base
     {
     }
 };
+
+struct TLSAlertProtocolVersion : public Base
+{
+    TLSAlertProtocolVersion()
+        : Base(TLS_ALERT_PROTOCOL_VERSION)
+    {
+    }
+};
+
+struct TLSAlertHandshakeFailure : public Base
+{
+    TLSAlertHandshakeFailure()
+        : Base(TLS_ALERT_HANDSHAKE_FAILURE)
+    {
+    }
+};
+
+struct TLSAlertCertificateExpire : public Base
+{
+    TLSAlertCertificateExpire()
+        : Base(TLS_ALERT_CERTIFICATE_EXPIRED)
+    {
+    }
+};
+
+struct TLSAlertCertificateRevoked : public Base
+{
+    TLSAlertCertificateRevoked()
+        : Base(TLS_ALERT_CERTIFICATE_REVOKED)
+    {
+    }
+};
+
+struct TLSSigAlgDisallowedOrUnsupported : public Base
+{
+    TLSSigAlgDisallowedOrUnsupported()
+        : Base(TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED)
+    {
+    }
+};
+
+struct TLSAlertProtocolUnknownCA : public Base
+{
+    TLSAlertProtocolUnknownCA()
+        : Base(TLS_ALERT_UNKNOWN_CA)
+    {
+    }
+};
+
+
 
 #ifdef HAVE_JSON
 
@@ -444,6 +516,15 @@ struct ReasonBase : public Base
     std::string reason;
 };
 
+/* thrown if no other of the TLSAlert* events are matching */
+struct TLSAlertMisc : public ReasonBase
+{
+    TLSAlertMisc(std::string reason)
+        : ReasonBase(TLS_ALERT_MISC, std::move(reason))
+    {
+    }
+};
+
 struct AuthFailed : public ReasonBase
 {
     AuthFailed(std::string reason)
@@ -539,6 +620,7 @@ struct NtlmMissingCryptoError : public ReasonBase
     {
     }
 };
+
 
 struct ProxyNeedCreds : public ReasonBase
 {

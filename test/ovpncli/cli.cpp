@@ -341,6 +341,10 @@ class Client : public ClientBase
                 std::cout << "Unrecognized INFO/INFO_PRE message: " << ev.info << std::endl;
             }
         }
+        else
+        {
+            std::cout << "Received event " << ev.name << " " << ev.info << std::endl;
+        }
     }
 
     void handle_dpc1_protocol(const ClientAPI::AppCustomControlMessageEvent &acev)

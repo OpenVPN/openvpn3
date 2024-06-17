@@ -140,12 +140,19 @@ class OpenSSLException : public ExceptionCode
             if (n_err < MAX_ERRORS)
                 errstack[n_err++] = err;
             ERR_error_string_n(err, buf, sizeof(buf));
+            auto reason = ERR_GET_REASON(err);
             tmp << prefix << buf;
+            if (reason >= SSL_AD_REASON_OFFSET)
+            {
+                tmp << "[" << SSL_alert_desc_string_long(reason - SSL_AD_REASON_OFFSET) << "]";
+            }
+
             prefix = " / ";
 
             // for certain OpenSSL errors, translate them to an OpenVPN error code,
             // so they can be propagated up to the higher levels (such as UI level)
-            switch (ERR_GET_REASON(err))
+
+            switch (reason)
             {
             case SSL_R_CERTIFICATE_VERIFY_FAILED:
                 set_code(Error::CERT_VERIFY_FAIL, true);
@@ -172,6 +179,30 @@ class OpenSSLException : public ExceptionCode
             case SSL_R_DH_KEY_TOO_SMALL:
                 set_code(Error::SSL_DH_KEY_TOO_SMALL, true);
                 break;
+            case SSL_R_TLSV1_ALERT_PROTOCOL_VERSION:
+                set_code(Error::TLS_ALERT_PROTOCOL_VERSION, true);
+                break;
+            case SSL_R_TLSV1_ALERT_UNKNOWN_CA:
+                set_code(Error::TLS_ALERT_UNKNOWN_CA, true);
+                break;
+            case SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE:
+                set_code(Error::TLS_ALERT_HANDSHAKE_FAILURE, true);
+                break;
+            case SSL_R_TLSV13_ALERT_CERTIFICATE_REQUIRED:
+                set_code(Error::TLS_ALERT_CERTIFICATE_REQUIRED, true);
+                break;
+            case SSL_R_SSLV3_ALERT_CERTIFICATE_EXPIRED:
+                set_code(Error::TLS_ALERT_CERTIFICATE_EXPIRED, true);
+                break;
+            case SSL_R_SSLV3_ALERT_CERTIFICATE_REVOKED:
+                set_code(Error::TLS_ALERT_CERTIFICATE_REVOKED, true);
+                break;
+            default:
+                if (reason > SSL_AD_REASON_OFFSET)
+                {
+                    /* all TLS alerts use TLS alert code + SSL_AD_REASON_OFFSET in OpenSSL */
+                    set_code(Error::TLS_ALERT_MISC, true);
+                }
             }
         }
         errtxt = tmp.str();

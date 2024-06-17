@@ -584,7 +584,27 @@ class ClientConnect : ClientProto::NotifyCallback,
                 case Error::NTLM_MISSING_CRYPTO:
                     add_error_and_stop<ClientEvent::NtlmMissingCryptoError>(client.get());
                     break;
-
+                case Error::TLS_ALERT_PROTOCOL_VERSION:
+                    add_error_and_stop<ClientEvent::TLSAlertProtocolVersion>(fatal_code);
+                    break;
+                case Error::TLS_SIGALG_DISALLOWED_OR_UNSUPPORTED:
+                    add_error_and_stop<ClientEvent::TLSSigAlgDisallowedOrUnsupported>(fatal_code);
+                    break;
+                case Error::TLS_ALERT_UNKNOWN_CA:
+                    add_error_and_stop<ClientEvent::TLSAlertProtocolUnknownCA>(fatal_code);
+                    break;
+                case Error::TLS_ALERT_MISC:
+                    add_error_and_stop<ClientEvent::TLSAlertMisc>(fatal_code, fatal_reason);
+                    break;
+                case Error::TLS_ALERT_HANDSHAKE_FAILURE:
+                    add_error_and_stop<ClientEvent::TLSAlertHandshakeFailure>(fatal_code);
+                    break;
+                case Error::TLS_ALERT_CERTIFICATE_EXPIRED:
+                    add_error_and_stop<ClientEvent::TLSAlertCertificateExpire>(fatal_code);
+                    break;
+                case Error::TLS_ALERT_CERTIFICATE_REVOKED:
+                    add_error_and_stop<ClientEvent::TLSAlertCertificateRevoked>(fatal_code);
+                    break;
                 default:
                     throw client_connect_unhandled_exception();
                 }
