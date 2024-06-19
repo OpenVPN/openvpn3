@@ -631,7 +631,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
                 default_provider.reset(OSSL_PROVIDER_load(lib_ctx.get(), "default"));
                 if (!default_provider)
-                    throw OpenSSLException("OpenSSLContext: laoding default provider failed");
+                    throw OpenSSLException("OpenSSLContext: loading default provider failed");
             }
 #endif
         }
