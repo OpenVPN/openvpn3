@@ -343,6 +343,33 @@ class Client : public ClientBase
         }
     }
 
+    void handle_dpc1_protocol(const ClientAPI::AppCustomControlMessageEvent &acev)
+    {
+        if (string::starts_with(acev.payload, "{\"dpc_request\"") && acev.payload.find("certificate") != std::string::npos)
+        {
+            std::cout << "ACC CERTCHECK challenge initiated" << std::endl;
+            handle_certcheck_request();
+        }
+        else if (string::starts_with(acev.payload, "{\"dpc_request\"") && acev.payload.find("client_info") != std::string::npos)
+        {
+            std::string fakeResponse{R"("dpc_response\": {
+                    "client_info" : {
+                            "os" :  {"type" : "FakeOS", "version" : "1.2.3.4" }
+                        }
+                    })"};
+
+            send_app_control_channel_msg("dpc1", fakeResponse);
+        }
+        else if (string::starts_with(acev.payload, "{\"dpc_request\""))
+        {
+            std::cout << "Cannot parse dpc request message:" << acev.payload << std::endl;
+        }
+        else
+        {
+            std::cout << "Cannot parse device posture message:" << acev.payload << std::endl;
+        }
+    }
+
     /**
       @brief Handles ACC messages
       @param acev The current ACC event
@@ -355,15 +382,11 @@ class Client : public ClientBase
         }
         else if (acev.protocol == certcheck_init_verb)
         {
-            if (string::starts_with(acev.payload, "{\"dpc_certcheck_cert_req\""))
-            {
-                std::cout << "ACC CERTCHECK challenge initiated\n";
-                handle_certcheck_request();
-            }
+            handle_dpc1_protocol(acev);
         }
         else
         {
-            std::cout << "received app custom control message for protocol " << acev.protocol
+            std::cout << "received unhandled app custom control message for protocol " << acev.protocol
                       << " msg payload: " << acev.payload << std::endl;
         }
     }
