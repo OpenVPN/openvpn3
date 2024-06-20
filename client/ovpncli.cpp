@@ -1339,7 +1339,8 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::send_app_control_channel_msg(const std
 
 static SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string &client_cert,
                                                               const std::string &extra_certs,
-                                                              const std::optional<const std::string> &ca)
+                                                              const std::optional<const std::string> &ca,
+                                                              bool disabletls13)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
     config->set_frame(new Frame(Frame::Context(128, 4096, 4096 - 128, 0, 16, 0)));
@@ -1352,6 +1353,9 @@ static SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string 
     else
         flags |= SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED;
 
+    if (disabletls13)
+        config->set_tls_version_max(TLSVersion::Type::V1_2);
+
     config->set_flags(flags);
 
     return config;
@@ -1362,6 +1366,7 @@ static SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string 
   @param client_cert String containing the properly encoded client certificate
   @param clientkey String containing the properly encoded private key for \p client_cert
   @param ca String containing the properly encoded authority
+  @param disableTLS13 disable TLS 1.3 support
 
       Creates, initializes,and installs an SSLLib::SSLAPI::Config object into the TLS
       handshake object we use for the certcheck function. Then begins the handshake
@@ -1369,14 +1374,15 @@ static SSLLib::SSLAPI::Config::Ptr setup_certcheck_ssl_config(const std::string 
 */
 OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check(const std::string &client_cert,
                                                            const std::string &clientkey,
-                                                           const std::optional<const std::string> &ca)
+                                                           const std::optional<const std::string> &ca,
+                                                           bool disableTLS13)
 {
     if (state->is_foreign_thread_access())
     {
         ClientConnect *session = state->session.get();
         if (session)
         {
-            SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config(client_cert, "", ca);
+            SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config(client_cert, "", ca, disableTLS13);
             config->load_private_key(clientkey);
 
             session->start_acc_certcheck(config);
@@ -1384,7 +1390,7 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check(const std::string &cl
     }
 }
 
-OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check_epki(const std::string &alias, const std::optional<const std::string> &ca)
+OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check_epki(const std::string &alias, const std::optional<const std::string> &ca, bool disableTLS13)
 {
     if (state->is_foreign_thread_access())
     {
@@ -1401,7 +1407,7 @@ OPENVPN_CLIENT_EXPORT void OpenVPNClient::start_cert_check_epki(const std::strin
                 return;
             }
 
-            SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config(req.cert, req.supportingChain, ca);
+            SSLLib::SSLAPI::Config::Ptr config = setup_certcheck_ssl_config(req.cert, req.supportingChain, ca, disableTLS13);
 
             config->set_external_pki_callback(this, alias);
 
