@@ -177,7 +177,7 @@ class Logger
  * A mixin class that can be used as base class to expose the setting and getting of the log level publicly but not expose
  * the log methods themselves. Class parameters are the same as for \class Logger
  */
-template <int DEFAULT_LOG_LEVEL, int MAX_LEVEL = LOG_LEVEL_TRACE>
+template <int DEFAULT_LOG_LEVEL, int MAX_LEVEL = LOG_LEVEL_TRACE, typename TagT = std::nullptr_t>
 class LoggingMixin
 {
   public:

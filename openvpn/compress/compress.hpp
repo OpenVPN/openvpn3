@@ -41,7 +41,8 @@ namespace openvpn {
 #define OPENVPN_DEBUG_COMPRESS 1
 #endif
 
-class Compress : public RC<thread_unsafe_refcount>, public logging::LoggingMixin<OPENVPN_DEBUG_COMPRESS>
+class Compress : public RC<thread_unsafe_refcount>,
+                 public logging::LoggingMixin<OPENVPN_DEBUG_COMPRESS, logging::LOG_LEVEL_TRACE, Compress>
 {
   public:
     typedef RCPtr<Compress> Ptr;
