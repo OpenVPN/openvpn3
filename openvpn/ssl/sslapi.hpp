@@ -88,7 +88,8 @@ class SSLAPI : public RC<thread_unsafe_refcount>
     uint32_t tls_warnings = 0; // bitfield of SSLAPI::TLSWarnings
 };
 
-class SSLFactoryAPI : public RC<thread_unsafe_refcount>, public logging::LoggingMixin<logging::LOG_LEVEL_VERB>
+class SSLFactoryAPI : public RC<thread_unsafe_refcount>,
+                      public logging::LoggingMixin<logging::LOG_LEVEL_VERB, logging::LOG_LEVEL_TRACE, SSLFactoryAPI>
 {
   public:
     OPENVPN_EXCEPTION(ssl_options_error);
