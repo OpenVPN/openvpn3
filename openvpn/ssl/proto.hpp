@@ -205,7 +205,9 @@ class ProtoContextCallbackInterface
     virtual void active(bool primary) = 0;
 };
 
-class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::LOG_LEVEL_VERB>
+class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
+                                                  logging::LOG_LEVEL_VERB,
+                                                  ProtoContext>
 {
   protected:
     static constexpr size_t APP_MSG_MAX = 65536;
