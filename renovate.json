@@ -1,8 +1,10 @@
 {
     "$schema": "http://nginx/renovate-schema.json",
     "extends": [
-        "local>openvpntechnologies/ops-sec-renovate"
+        "local>openvpntechnologies/ops-sec-renovate",
+        "local>openvpntechnologies/core-team-renovate"
     ],
+    "rebaseWhen": "behind-base-branch",
     "packageRules": [
         {
             "matchDepTypes": [

@@ -29,9 +29,6 @@
 
 #include <openvpn/io/io.hpp>
 
-// debug settings (production setting in parentheses)
-#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
-
 #include <openvpn/common/stringize.hpp>
 // VERSION version can be passed on build command line
 #ifdef VERSION
@@ -151,6 +148,7 @@ class MyListener : public WS::Server::Listener
 
     Win::ScopedHANDLE establish_tun(const TunBuilderCapture &tbc,
                                     const std::wstring &openvpn_app_path,
+                                    DWORD client_process_id,
                                     Stop *stop,
                                     std::ostream &os,
                                     TunWin::Type tun_type,
@@ -163,6 +161,7 @@ class MyListener : public WS::Server::Listener
         if ((tun_type == TunWin::OvpnDco) && (tap.index != DWORD(-1)))
             tun->set_adapter_state(tap);
 
+        tun->set_process_id(client_process_id);
         auto th = tun->establish(tbc, openvpn_app_path, stop, os, ring_buffer);
         // store VPN interface index to be able to exclude it
         // when next time adding bypass route
@@ -579,6 +578,7 @@ class MyClientInstance : public WS::Server::Listener::Client
         try
         {
             const HANDLE client_pipe = get_client_pipe();
+            const DWORD client_pid = get_client_pid(client_pipe);
             const std::wstring client_exe = get_client_exe(client_pipe);
 
             const HTTP::Request &req = request();
@@ -636,6 +636,7 @@ class MyClientInstance : public WS::Server::Listener::Client
                     jout["tap_handle_hex"] = parent()->get_remote_tap_handle_hex();
 
                     auto tap = parent()->get_adapter_state();
+                    jout["adapter_guid"] = tap.guid;
                     jout["adapter_index"] = Json::Int(tap.index);
                     jout["adapter_name"] = tap.name;
 
@@ -710,12 +711,13 @@ class MyClientInstance : public WS::Server::Listener::Client
                     TunWin::Util::TapNameGuidPair tap;
                     if (tun_type == TunWin::OvpnDco)
                     {
+                        tap.guid = json::get_string(root, "adapter_guid");
                         tap.index = (DWORD)json::get_int(root, "adapter_index");
                         tap.name = json::get_string(root, "adapter_name");
                     }
 
                     // establish the tun setup object
-                    Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, nullptr, os, tun_type, allow_local_dns_resolvers, tap));
+                    Win::ScopedHANDLE tap_handle(parent()->establish_tun(*tbc, client_exe, client_pid, nullptr, os, tun_type, allow_local_dns_resolvers, tap));
 
                     // post-establish impersonation
                     {
@@ -849,6 +851,17 @@ class MyClientInstance : public WS::Server::Listener::Client
         return np->handle.native_handle();
     }
 
+    /**
+     * @brief Get the named pipe client process id
+     *
+     * @param client_pipe   The handle to the named pipe
+     * @return DWORD        The client process id
+     */
+    DWORD get_client_pid(const HANDLE client_pipe)
+    {
+        return NamedPipePeerInfo::get_pid(client_pipe, true);
+    }
+
     std::wstring get_client_exe(const HANDLE client_pipe)
     {
         Win::NamedPipePeerInfoClient npinfo(client_pipe);
@@ -914,7 +927,7 @@ class MyService : public Win::Service
         MyConfig conf;
 
         Win::NamedPipePeerInfo::allow_client_query();
-        TunWin::NRPT::delete_rule(); // remove stale NRPT rules
+        TunWin::NRPT::delete_rules(0); // remove stale NRPT rules
 
         WS::Server::Config::Ptr hconf = new WS::Server::Config();
         hconf->http_server_id = OVPNAGENT_NAME_STRING "/" HTTP_SERVER_VERSION;

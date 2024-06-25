@@ -20,6 +20,7 @@
 
 #include "test_common.h"
 
+#include <json/value.h>
 #include <openvpn/client/dns.hpp>
 
 using namespace openvpn;
@@ -34,13 +35,12 @@ TEST(Dns, Options)
         "dns server -2 address [2.2.2.2]:5353\n"
         "dns server -2 resolve-domains rdom0\n"
         "dns server 1 address [1::1]:5353\n"
-        "dns server 1 exclude-domains xdom0\n"
         "dns search-domains domain2\n"
         "dns server -2 resolve-domains rdom1\n"
         "dns server -2 dnssec optional\n"
         "dns server -2 transport DoT\n"
         "dns server -2 sni hostname\n"
-        "dns server 3 address 3::3 3.2.1.0:4242\n"
+        "dns server 3 address 3::3 3.2.1.0:4242 [3:3::3:3]:3333\n"
         "dns server 3 dnssec no\n"
         "dns server 3 transport DoH\n",
         nullptr);
@@ -49,9 +49,9 @@ TEST(Dns, Options)
     DnsOptions dns(config);
 
     ASSERT_EQ(dns.search_domains.size(), 3u);
-    ASSERT_EQ(dns.search_domains[0], "domain0");
-    ASSERT_EQ(dns.search_domains[1], "domain1");
-    ASSERT_EQ(dns.search_domains[2], "domain2");
+    ASSERT_EQ(dns.search_domains[0].to_string(), "domain0");
+    ASSERT_EQ(dns.search_domains[1].to_string(), "domain1");
+    ASSERT_EQ(dns.search_domains[2].to_string(), "domain2");
 
     ASSERT_EQ(dns.servers.size(), 3u);
 
@@ -65,17 +65,14 @@ TEST(Dns, Options)
         {
             ASSERT_EQ(i, 1);
 
-            ASSERT_TRUE(server.address4.specified());
-            ASSERT_EQ(server.address4.to_string(), "2.2.2.2");
-            ASSERT_EQ(server.port4, 5353u);
-
-            ASSERT_TRUE(server.address6.unspecified());
-            ASSERT_EQ(server.port6, 0u);
+            ASSERT_TRUE(server.addresses.size() == 1u);
+            ASSERT_EQ(server.addresses[0].address.version(), IP::Addr::V4);
+            ASSERT_EQ(server.addresses[0].address.to_string(), "2.2.2.2");
+            ASSERT_EQ(server.addresses[0].port, 5353u);
 
             ASSERT_EQ(server.domains.size(), 2u);
-            ASSERT_EQ(server.domain_type, DnsServer::DomainType::Resolve);
-            ASSERT_EQ(server.domains[0], "rdom0");
-            ASSERT_EQ(server.domains[1], "rdom1");
+            ASSERT_EQ(server.domains[0].to_string(), "rdom0");
+            ASSERT_EQ(server.domains[1].to_string(), "rdom1");
 
             ASSERT_EQ(server.dnssec, DnsServer::Security::Optional);
 
@@ -86,17 +83,16 @@ TEST(Dns, Options)
         {
             ASSERT_EQ(i, 2);
 
-            ASSERT_TRUE(server.address4.specified());
-            ASSERT_EQ(server.address4.to_string(), "1.1.1.1");
-            ASSERT_EQ(server.port4, 0u);
+            ASSERT_TRUE(server.addresses.size() == 2u);
+            ASSERT_EQ(server.addresses[0].address.version(), IP::Addr::V4);
+            ASSERT_EQ(server.addresses[0].address.to_string(), "1.1.1.1");
+            ASSERT_EQ(server.addresses[0].port, 0u);
 
-            ASSERT_TRUE(server.address6.specified());
-            ASSERT_EQ(server.address6.to_string(), "1::1");
-            ASSERT_EQ(server.port6, 5353u);
+            ASSERT_EQ(server.addresses[1].address.version(), IP::Addr::V6);
+            ASSERT_EQ(server.addresses[1].address.to_string(), "1::1");
+            ASSERT_EQ(server.addresses[1].port, 5353u);
 
-            ASSERT_EQ(server.domains.size(), 1u);
-            ASSERT_EQ(server.domain_type, DnsServer::DomainType::Exclude);
-            ASSERT_EQ(server.domains[0], "xdom0");
+            ASSERT_EQ(server.domains.size(), 0u);
 
             ASSERT_EQ(server.dnssec, DnsServer::Security::Unset);
 
@@ -107,16 +103,20 @@ TEST(Dns, Options)
         {
             ASSERT_EQ(i, 3);
 
-            ASSERT_TRUE(server.address4.specified());
-            ASSERT_EQ(server.address4.to_string(), "3.2.1.0");
-            ASSERT_EQ(server.port4, 4242u);
+            ASSERT_TRUE(server.addresses.size() == 3u);
+            ASSERT_EQ(server.addresses[0].address.version(), IP::Addr::V6);
+            ASSERT_EQ(server.addresses[0].address.to_string(), "3::3");
+            ASSERT_EQ(server.addresses[0].port, 0u);
 
-            ASSERT_TRUE(server.address6.specified());
-            ASSERT_EQ(server.address6.to_string(), "3::3");
-            ASSERT_EQ(server.port6, 0u);
+            ASSERT_EQ(server.addresses[1].address.version(), IP::Addr::V4);
+            ASSERT_EQ(server.addresses[1].address.to_string(), "3.2.1.0");
+            ASSERT_EQ(server.addresses[1].port, 4242u);
+
+            ASSERT_EQ(server.addresses[2].address.version(), IP::Addr::V6);
+            ASSERT_EQ(server.addresses[2].address.to_string(), "3:3::3:3");
+            ASSERT_EQ(server.addresses[2].port, 3333u);
 
             ASSERT_EQ(server.domains.size(), 0u);
-            ASSERT_EQ(server.domain_type, DnsServer::DomainType::Unset);
 
             ASSERT_EQ(server.dnssec, DnsServer::Security::No);
 
@@ -151,11 +151,31 @@ TEST(Dns, OptionsMerger)
 TEST(Dns, ServerNoAddress)
 {
     OptionList config;
-    config.parse_from_config("dns server 0 exclude-domains xdom0\n", nullptr);
+    config.parse_from_config("dns server 0 resolve-domains dom0\n", nullptr);
     config.update_map();
     JY_EXPECT_THROW(DnsOptions dns(config),
                     option_error,
                     "dns server 0 does not have an address assigned");
+}
+
+TEST(Dns, ServerEightAddresses)
+{
+    OptionList config;
+    config.parse_from_config("dns server 0 address 1::1 2::2 3::3 4::4 5::5 6::6 7::7 8::8\n", nullptr);
+    config.update_map();
+    DnsOptions dns(config);
+    ASSERT_EQ(dns.servers.size(), 1u);
+    ASSERT_EQ(dns.servers[0].addresses.size(), 8u);
+}
+
+TEST(Dns, ServerTooManyAddresses)
+{
+    OptionList config;
+    config.parse_from_config("dns server 0 address 1::1 2::2 3::3 4::4 5::5 6::6 7::7 8::8 9::9\n", nullptr);
+    config.update_map();
+    JY_EXPECT_THROW(DnsOptions dns(config),
+                    option_error,
+                    "dns server 0 option 'address' unknown or too many parameters");
 }
 
 TEST(Dns, ServerInvalidAddress)
@@ -208,28 +228,201 @@ TEST(Dns, ServerInvalidTransport)
     }
 }
 
-TEST(Dns, ServerMixedDomainType)
+TEST(Dns, ToStringMinValuesSet)
 {
-    {
-        OptionList config;
-        config.parse_from_config(
-            "dns server 0 resolve-domains this that\n"
-            "dns server 0 exclude-domains foo bar baz\n",
-            nullptr);
-        config.update_map();
-        JY_EXPECT_THROW(DnsOptions dns(config),
-                        option_error,
-                        "dns server 0 cannot use exclude-domains and resolve-domains together");
-    }
-    {
-        OptionList config;
-        config.parse_from_config(
-            "dns server 0 exclude-domains foo bar baz\n"
-            "dns server 0 resolve-domains this that\n",
-            nullptr);
-        config.update_map();
-        JY_EXPECT_THROW(DnsOptions dns(config),
-                        option_error,
-                        "dns server 0 cannot use resolve-domains and exclude-domains together");
-    }
+    OptionList config;
+    config.parse_from_config("dns server 10 address 1::1\n", nullptr);
+    config.update_map();
+    DnsOptions dns(config);
+    ASSERT_EQ(dns.to_string(),
+              "DNS Servers:\n"
+              "  Priority: 10\n"
+              "  Addresses:\n"
+              "    1::1\n");
+}
+
+TEST(Dns, ToStringAllValuesSet)
+{
+    OptionList config;
+    config.parse_from_config(
+        "dns search-domains dom1 dom2 dom3\n"
+        "dns server 10 address 1::1 1.1.1.1\n"
+        "dns server 10 resolve-domains rdom11 rdom12\n"
+        "dns server 10 transport DoT\n"
+        "dns server 10 sni snidom1\n"
+        "dns server 10 dnssec optional\n"
+        "dns server 20 address 2::2 2.2.2.2\n"
+        "dns server 20 resolve-domains rdom21 rdom22\n"
+        "dns server 20 transport DoH\n"
+        "dns server 20 sni snidom2\n"
+        "dns server 20 dnssec yes\n",
+        nullptr);
+    config.update_map();
+    DnsOptions dns(config);
+    ASSERT_EQ(dns.to_string(),
+              "DNS Servers:\n"
+              "  Priority: 10\n"
+              "  Addresses:\n"
+              "    1::1\n"
+              "    1.1.1.1\n"
+              "  Domains:\n"
+              "    rdom11\n"
+              "    rdom12\n"
+              "  DNSSEC: Optional\n"
+              "  Transport: TLS\n"
+              "  SNI: snidom1\n"
+              "  Priority: 20\n"
+              "  Addresses:\n"
+              "    2::2\n"
+              "    2.2.2.2\n"
+              "  Domains:\n"
+              "    rdom21\n"
+              "    rdom22\n"
+              "  DNSSEC: Yes\n"
+              "  Transport: HTTPS\n"
+              "  SNI: snidom2\n"
+              "DNS Search Domains:\n"
+              "  dom1\n"
+              "  dom2\n"
+              "  dom3\n");
+}
+
+TEST(Dns, JsonRoundtripMinValuesSet)
+{
+    OptionList config;
+    config.parse_from_config("dns server 10 address 1::1\n", nullptr);
+    config.update_map();
+    DnsOptions toJson(config);
+    Json::Value json = toJson.to_json();
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "  ";
+    ASSERT_EQ(Json::writeString(builder, json),
+              "{\n"
+              "  \"servers\" : \n"
+              "  {\n"
+              "    \"10\" : \n"
+              "    {\n"
+              "      \"addresses\" : \n"
+              "      [\n"
+              "        {\n"
+              "          \"address\" : \"1::1\"\n"
+              "        }\n"
+              "      ]\n"
+              "    }\n"
+              "  }\n"
+              "}");
+
+    DnsOptions fromJson;
+    fromJson.from_json(json, "json test");
+    ASSERT_EQ(fromJson.to_string(),
+              "DNS Servers:\n"
+              "  Priority: 10\n"
+              "  Addresses:\n"
+              "    1::1\n");
+}
+
+TEST(Dns, JsonRoundtripAllValuesSet)
+{
+    OptionList config;
+    config.parse_from_config(
+        "dns search-domains dom1 dom2 dom3\n"
+        "dns server 10 address 1::1 1.1.1.1\n"
+        "dns server 10 resolve-domains rdom11 rdom12\n"
+        "dns server 10 transport DoT\n"
+        "dns server 10 sni snidom1\n"
+        "dns server 10 dnssec optional\n"
+        "dns server 20 address [2::2]:5353 2.2.2.2:5353\n"
+        "dns server 20 resolve-domains rdom21 rdom22\n"
+        "dns server 20 transport DoH\n"
+        "dns server 20 sni snidom2\n"
+        "dns server 20 dnssec yes\n",
+        nullptr);
+    config.update_map();
+    DnsOptions toJson(config);
+    Json::Value json = toJson.to_json();
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "  ";
+    ASSERT_EQ(Json::writeString(builder, json),
+              "{\n"
+              "  \"search_domains\" : \n"
+              "  [\n"
+              "    \"dom1\",\n"
+              "    \"dom2\",\n"
+              "    \"dom3\"\n"
+              "  ],\n"
+              "  \"servers\" : \n"
+              "  {\n"
+              "    \"10\" : \n"
+              "    {\n"
+              "      \"addresses\" : \n"
+              "      [\n"
+              "        {\n"
+              "          \"address\" : \"1::1\"\n"
+              "        },\n"
+              "        {\n"
+              "          \"address\" : \"1.1.1.1\"\n"
+              "        }\n"
+              "      ],\n"
+              "      \"dnssec\" : \"Optional\",\n"
+              "      \"domains\" : \n"
+              "      [\n"
+              "        \"rdom11\",\n"
+              "        \"rdom12\"\n"
+              "      ],\n"
+              "      \"sni\" : \"snidom1\",\n"
+              "      \"transport\" : \"TLS\"\n"
+              "    },\n"
+              "    \"20\" : \n"
+              "    {\n"
+              "      \"addresses\" : \n"
+              "      [\n"
+              "        {\n"
+              "          \"address\" : \"2::2\",\n"
+              "          \"port\" : 5353\n"
+              "        },\n"
+              "        {\n"
+              "          \"address\" : \"2.2.2.2\",\n"
+              "          \"port\" : 5353\n"
+              "        }\n"
+              "      ],\n"
+              "      \"dnssec\" : \"Yes\",\n"
+              "      \"domains\" : \n"
+              "      [\n"
+              "        \"rdom21\",\n"
+              "        \"rdom22\"\n"
+              "      ],\n"
+              "      \"sni\" : \"snidom2\",\n"
+              "      \"transport\" : \"HTTPS\"\n"
+              "    }\n"
+              "  }\n"
+              "}");
+
+    DnsOptions fromJson;
+    fromJson.from_json(json, "json test");
+    ASSERT_EQ(fromJson.to_string(),
+              "DNS Servers:\n"
+              "  Priority: 10\n"
+              "  Addresses:\n"
+              "    1::1\n"
+              "    1.1.1.1\n"
+              "  Domains:\n"
+              "    rdom11\n"
+              "    rdom12\n"
+              "  DNSSEC: Optional\n"
+              "  Transport: TLS\n"
+              "  SNI: snidom1\n"
+              "  Priority: 20\n"
+              "  Addresses:\n"
+              "    2::2 5353\n"
+              "    2.2.2.2 5353\n"
+              "  Domains:\n"
+              "    rdom21\n"
+              "    rdom22\n"
+              "  DNSSEC: Yes\n"
+              "  Transport: HTTPS\n"
+              "  SNI: snidom2\n"
+              "DNS Search Domains:\n"
+              "  dom1\n"
+              "  dom2\n"
+              "  dom3\n");
 }

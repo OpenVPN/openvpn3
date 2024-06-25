@@ -32,15 +32,12 @@
 #include <limits>
 #include <thread>
 
-#define OPENVPN_DEBUG_COMPRESS 0 // debug level for compression objects (0)
-
+#include <gmock/gmock.h>
 #include <openvpn/common/platform.hpp>
+#include <openvpn/ssl/sslchoose.hpp>
+
 
 #define OPENVPN_DEBUG
-#define OPENVPN_ENABLE_ASSERT
-
-// EKM vs. TLS_PRF mode
-// #define USE_TLS_EKM
 
 #if !defined(USE_TLS_AUTH) && !defined(USE_TLS_CRYPT)
 // #define USE_TLS_AUTH
@@ -100,7 +97,9 @@
 #endif
 
 // how many virtual seconds between SSL renegotiations
-#ifndef RENEG
+#ifdef PROTO_RENEG
+#define RENEG PROTO_RENEG
+#else
 #define RENEG 900
 #endif
 
@@ -111,24 +110,23 @@
 #define FEEDBACK 0
 #endif
 
-// number of threads to use for test
-#ifndef N_THREADS
-#define N_THREADS 1
-#endif
-
 // number of iterations
-#ifndef ITER
+#ifdef PROTO_ITER
+#define ITER PROTO_ITER
+#else
 #define ITER 1000000
 #endif
 
 // number of high-level session iterations
-#ifndef SITER
+#ifdef PROTO_SITER
+#define SITER PROTO_SITER
+#else
 #define SITER 1
 #endif
 
 // number of retries for failed test
 #ifndef N_RETRIES
-#define N_RETRIES 5
+#define N_RETRIES 2
 #endif
 
 // potentially, the above manifest constants can be converted to variables and modified
@@ -137,15 +135,8 @@
 // abort if we reach this limit
 // #define DROUGHT_LIMIT 100000
 
-#if !defined(VERBOSE) && !defined(QUIET) && ITER <= 10000
+#if !defined(PROTO_VERBOSE) && !defined(QUIET) && ITER <= 10000
 #define VERBOSE
-#endif
-
-#ifdef VERBOSE
-#define OPENVPN_DEBUG_PROTO 2
-#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
-#else
-#define OPENVPN_LOG_SSL(x) // disable
 #endif
 
 #define STRINGIZE1(x) #x
@@ -353,24 +344,20 @@ class DroughtMeasure
 };
 
 // test the OpenVPN protocol implementation in ProtoContext
-class TestProto : public ProtoContext
+class TestProto : public ProtoContextCallbackInterface
 {
-    typedef ProtoContext Base;
+    /* Callback methods that are not used */
+    void active(bool primary) override
+    {
+    }
 
-    using Base::is_server;
-    using Base::mode;
-    using Base::now;
 
   public:
-    using Base::flush;
-
-    typedef Base::PacketType PacketType;
-
     OPENVPN_EXCEPTION(session_invalidated);
 
-    TestProto(const Base::ProtoConfig::Ptr &config,
+    TestProto(const ProtoContext::ProtoConfig::Ptr &config,
               const SessionStats::Ptr &stats)
-        : Base(config, stats),
+        : proto_context(this, config, stats),
           control_drought("control", config->now),
           data_drought("data", config->now),
           frame(config->frame)
@@ -382,27 +369,26 @@ class TestProto : public ProtoContext
     void reset()
     {
         net_out.clear();
-        Base::reset();
-
-        Base::conf().mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
+        proto_context.reset();
+        proto_context.conf().mss_parms.mssfix = MSSParms::MSSFIX_DEFAULT;
     }
 
     void initial_app_send(const char *msg)
     {
-        Base::start();
+        proto_context.start();
         const size_t msglen = std::strlen(msg) + 1;
         BufferAllocated app_buf((unsigned char *)msg, msglen, 0);
         copy_progress(app_buf);
         control_send(std::move(app_buf));
-        flush(true);
+        proto_context.flush(true);
     }
 
     void app_send_templ_init(const char *msg)
     {
-        Base::start();
+        proto_context.start();
         const size_t msglen = std::strlen(msg) + 1;
         templ.reset(new BufferAllocated((unsigned char *)msg, msglen, 0));
-        flush(true);
+        proto_context.flush(true);
     }
 
     void app_send_templ()
@@ -421,9 +407,9 @@ class TestProto : public ProtoContext
 
     bool do_housekeeping()
     {
-        if (now() >= Base::next_housekeeping())
+        if (proto_context.now() >= proto_context.next_housekeeping())
         {
-            Base::housekeeping();
+            proto_context.housekeeping();
             return true;
         }
         else
@@ -433,13 +419,13 @@ class TestProto : public ProtoContext
     void control_send(BufferPtr &&app_bp)
     {
         app_bytes_ += app_bp->size();
-        Base::control_send(std::move(app_bp));
+        proto_context.control_send(std::move(app_bp));
     }
 
     void control_send(BufferAllocated &&app_buf)
     {
         app_bytes_ += app_buf.size();
-        Base::control_send(std::move(app_buf));
+        proto_context.control_send(std::move(app_buf));
     }
 
     BufferPtr data_encrypt_string(const char *str)
@@ -453,12 +439,12 @@ class TestProto : public ProtoContext
 
     void data_encrypt(BufferAllocated &in_out)
     {
-        Base::data_encrypt(in_out);
+        proto_context.data_encrypt(in_out);
     }
 
-    void data_decrypt(const PacketType &type, BufferAllocated &in_out)
+    void data_decrypt(const ProtoContext::PacketType &type, BufferAllocated &in_out)
     {
-        Base::data_decrypt(type, in_out);
+        proto_context.data_decrypt(type, in_out);
         if (in_out.size())
         {
             data_bytes_ += in_out.size();
@@ -500,13 +486,8 @@ class TestProto : public ProtoContext
 
     void check_invalidated()
     {
-        if (Base::invalidated())
-            throw session_invalidated(Error::name(Base::invalidation_reason()));
-    }
-
-    bool is_state_client_wait_reset_ack() const
-    {
-        return primary_state() == C_WAIT_RESET_ACK;
+        if (proto_context.invalidated())
+            throw session_invalidated(Error::name(proto_context.invalidation_reason()));
     }
 
     void disable_xmit()
@@ -514,13 +495,15 @@ class TestProto : public ProtoContext
         disable_xmit_ = true;
     }
 
+    ProtoContext proto_context;
+
     std::deque<BufferPtr> net_out;
 
     DroughtMeasure control_drought;
     DroughtMeasure data_drought;
 
   private:
-    virtual void control_net_send(const Buffer &net_buf)
+    void control_net_send(const Buffer &net_buf) override
     {
         if (disable_xmit_)
             return;
@@ -528,7 +511,7 @@ class TestProto : public ProtoContext
         net_out.push_back(BufferPtr(new BufferAllocated(net_buf, 0)));
     }
 
-    virtual void control_recv(BufferPtr &&app_bp)
+    void control_recv(BufferPtr &&app_bp) override
     {
         BufferPtr work;
         work.swap(app_bp);
@@ -559,7 +542,7 @@ class TestProto : public ProtoContext
     void modmsg(BufferPtr &buf)
     {
         char *msg = (char *)buf->data();
-        if (is_server())
+        if (proto_context.is_server())
         {
             msg[8] = 'S';
             msg[11] = 'C';
@@ -602,9 +585,9 @@ class TestProtoClient : public TestProto
     typedef TestProto Base;
 
   public:
-    TestProtoClient(const Base::ProtoConfig::Ptr &config,
+    TestProtoClient(const ProtoContext::ProtoConfig::Ptr &config,
                     const SessionStats::Ptr &stats)
-        : Base(config, stats)
+        : TestProto(config, stats)
     {
     }
 
@@ -613,21 +596,26 @@ class TestProtoClient : public TestProto
     {
         const std::string username("foo");
         const std::string password("bar");
-        Base::write_auth_string(username, buf);
-        Base::write_auth_string(password, buf);
+        ProtoContext::write_auth_string(username, buf);
+        ProtoContext::write_auth_string(password, buf);
     }
 };
 
 class TestProtoServer : public TestProto
 {
-    typedef TestProto Base;
 
   public:
+    void start()
+    {
+        proto_context.start();
+    }
+
     OPENVPN_SIMPLE_EXCEPTION(auth_failed);
 
-    TestProtoServer(const Base::ProtoConfig::Ptr &config,
+
+    TestProtoServer(const ProtoContext::ProtoConfig::Ptr &config,
                     const SessionStats::Ptr &stats)
-        : Base(config, stats)
+        : TestProto(config, stats)
     {
     }
 
@@ -687,7 +675,7 @@ class NoisyWire
         a.app_send_templ();
 
         // queue a data channel packet
-        if (a.data_channel_ready())
+        if (a.proto_context.data_channel_ready())
         {
             BufferPtr bp = a.data_encrypt_string("Waiting for godot A... Waiting for godot B... Waiting for godot C... Waiting for godot D... Waiting for godot E... Waiting for godot F... Waiting for godot G... Waiting for godot H... Waiting for godot I... Waiting for godot J...");
             wire.push_back(bp);
@@ -710,14 +698,14 @@ class NoisyWire
             BufferPtr bp = recv();
             if (!bp)
                 break;
-            typename T2::PacketType pt = b.packet_type(*bp);
+            typename ProtoContext::PacketType pt = b.proto_context.packet_type(*bp);
             if (pt.is_control())
             {
 #ifdef VERBOSE
                 if (!b.control_net_validate(pt, *bp)) // not strictly necessary since control_net_recv will also validate
                     std::cout << now->raw() << " " << title << " CONTROL PACKET VALIDATION FAILED" << std::endl;
 #endif
-                b.control_net_recv(pt, std::move(bp));
+                b.proto_context.control_net_recv(pt, std::move(bp));
             }
             else if (pt.is_data())
             {
@@ -744,11 +732,11 @@ class NoisyWire
 #ifdef VERBOSE
                 std::cout << now->raw() << " " << title << " KEY_STATE_ERROR" << std::endl;
 #endif
-                b.stat().error(Error::KEY_STATE_ERROR);
+                b.proto_context.stat().error(Error::KEY_STATE_ERROR);
             }
 
 #ifdef SIMULATE_UDP_AMPLIFY_ATTACK
-            if (b.is_state_client_wait_reset_ack())
+            if (b.proto_context.is_state_client_wait_reset_ack())
             {
                 b.disable_xmit();
 #ifdef VERBOSE
@@ -757,7 +745,7 @@ class NoisyWire
             }
 #endif
         }
-        b.flush(true);
+        b.proto_context.flush(true);
     }
 
   private:
@@ -871,7 +859,7 @@ class MySessionStats : public SessionStats
 };
 
 // execute the unit test in one thread
-int test(const int thread_num)
+int test(const int thread_num, bool use_tls_ekm)
 {
     try
     {
@@ -941,9 +929,8 @@ int test(const int thread_num)
         cp->comp_ctx = CompressContext(COMP_METH, false);
         cp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
         cp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
-#ifdef USE_TLS_EKM
-        cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
-#endif
+        if (use_tls_ekm)
+            cp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
 #ifdef USE_TLS_AUTH
         cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ClientCryptoAPI>());
         cp->tls_key.parse(tls_auth_key);
@@ -1030,9 +1017,8 @@ int test(const int thread_num)
         sp->comp_ctx = CompressContext(COMP_METH, false);
         sp->dc.set_cipher(CryptoAlgs::lookup(PROTO_CIPHER));
         sp->dc.set_digest(CryptoAlgs::lookup(PROTO_DIGEST));
-#ifdef USE_TLS_EKM
-        sp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
-#endif
+        if (use_tls_ekm)
+            sp->dc.set_key_derivation(CryptoAlgs::KeyDerivation::TLS_EKM);
 #ifdef USE_TLS_AUTH
         sp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<ServerCryptoAPI>());
         sp->tls_key.parse(tls_auth_key);
@@ -1148,8 +1134,8 @@ int test(const int thread_num)
                   << " CTRL=" << cli_proto.n_control_recv() << '/' << cli_proto.n_control_send() << '/' << serv_proto.n_control_recv() << '/' << serv_proto.n_control_send()
 #endif
                   << " D=" << cli_proto.control_drought().raw() << '/' << cli_proto.data_drought().raw() << '/' << serv_proto.control_drought().raw() << '/' << serv_proto.data_drought().raw()
-                  << " N=" << cli_proto.negotiations() << '/' << serv_proto.negotiations()
-                  << " SH=" << cli_proto.slowest_handshake().raw() << '/' << serv_proto.slowest_handshake().raw()
+                  << " N=" << cli_proto.proto_context.negotiations() << '/' << serv_proto.proto_context.negotiations()
+                  << " SH=" << cli_proto.proto_context.slowest_handshake().raw() << '/' << serv_proto.proto_context.slowest_handshake().raw()
                   << " HE=" << cli_stats->get_error_count(Error::HANDSHAKE_TIMEOUT) << '/' << serv_stats->get_error_count(Error::HANDSHAKE_TIMEOUT)
                   << std::endl;
 
@@ -1172,13 +1158,12 @@ int test(const int thread_num)
     return 0;
 }
 
-int test_retry(const int thread_num)
+int test_retry(const int thread_num, const int n_retries, bool use_tls_ekm)
 {
-    const int n_retries = N_RETRIES;
     int ret = 1;
     for (int i = 0; i < n_retries; ++i)
     {
-        ret = test(thread_num);
+        ret = test(thread_num, use_tls_ekm);
         if (!ret)
             return 0;
         std::cout << "Retry " << (i + 1) << '/' << n_retries << std::endl;
@@ -1187,32 +1172,158 @@ int test_retry(const int thread_num)
     return ret;
 }
 
-TEST(proto, base_1_thread)
+class ProtoUnitTest : public testing::Test
+{
+    // Sets up the test fixture.
+    virtual void SetUp()
+    {
+#if defined(USE_MBEDTLS)
+        mbedtls_debug_set_threshold(1);
+#endif
+
+        openvpn::Compress::set_log_level(0);
+
+#ifdef PROTO_VERBOSE
+        openvpn::ProtoContext::set_log_level(2);
+#else
+        openvpn::ProtoContext::set_log_level(0);
+#endif
+    }
+
+    // Tears down the test fixture.
+    virtual void TearDown()
+    {
+#if defined(USE_MBEDTLS)
+        mbedtls_debug_set_threshold(4);
+#endif
+        openvpn::Compress::set_log_level(openvpn::Compress::default_log_level);
+        openvpn::ProtoContext::set_log_level(openvpn::ProtoContext::default_log_level);
+    }
+};
+
+TEST_F(ProtoUnitTest, base_single_thread_tls_ekm)
+{
+    if (!openvpn::SSLLib::SSLAPI::support_key_material_export())
+        GTEST_SKIP_("our mbed TLS implementation does not support TLS EKM");
+
+    int ret = 0;
+
+    ret = test_retry(1, N_RETRIES, true);
+
+    EXPECT_EQ(ret, 0);
+}
+
+TEST_F(ProtoUnitTest, base_single_thread_no_tls_ekm)
 {
     int ret = 0;
 
-    // set global MbedTLS debug level
-#if defined(USE_MBEDTLS)
-    mbedtls_debug_set_threshold(1);
-#endif
-
-#if N_THREADS >= 2
-    // probably ought to set ret in this compile path too
-    std::thread *threads[N_THREADS];
-    int i;
-    for (i = 0; i < N_THREADS; ++i)
-    {
-        threads[i] = new std::thread([i]()
-                                     { test_retry(i); });
-    }
-    for (i = 0; i < N_THREADS; ++i)
-    {
-        threads[i]->join();
-        delete threads[i];
-    }
-#else
-    ret = test_retry(1);
-#endif
+    ret = test_retry(1, N_RETRIES, false);
 
     EXPECT_EQ(ret, 0);
+}
+
+TEST_F(ProtoUnitTest, base_multiple_thread)
+{
+    unsigned int num_threads = std::thread::hardware_concurrency();
+#if defined(PROTO_N_THREADS) && PROTO_N_THREADS >= 1
+    num_threads = PROTO_N_THREADS;
+#endif
+
+    std::vector<std::thread> running_threads{};
+    std::vector<int> results(num_threads, -777);
+
+    for (unsigned int i = 0; i < num_threads; ++i)
+    {
+        running_threads.emplace_back([i, &results]()
+                                     {
+            /* Use ekm on odd threads */
+            const bool use_ekm = openvpn::SSLLib::SSLAPI::support_key_material_export() && (i % 2 == 0);
+            results[i] = test_retry(static_cast<int>(i), N_RETRIES, use_ekm); });
+    }
+    for (unsigned int i = 0; i < num_threads; ++i)
+    {
+        running_threads[i].join();
+    }
+
+
+    // expect 1 for all threads
+    const std::vector<int> expected_results(num_threads, 0);
+
+    EXPECT_THAT(expected_results, ::testing::ContainerEq(results));
+}
+
+TEST(proto, iv_ciphers_aead)
+{
+    CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(nullptr, true, false);
+
+    auto protoConf = openvpn::ProtoContext::ProtoConfig();
+
+    auto infostring = protoConf.peer_info_string();
+
+    auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
+    ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
+
+
+    std::string expectedstr{"IV_CIPHERS=AES-128-GCM:AES-192-GCM:AES-256-GCM"};
+    if (SSLLib::CryptoAPI::CipherContextAEAD::is_supported(nullptr, openvpn::CryptoAlgs::CHACHA20_POLY1305))
+        expectedstr += ":CHACHA20-POLY1305";
+
+    EXPECT_EQ(ivciphers, expectedstr);
+}
+
+TEST(proto, iv_ciphers_non_preferred)
+{
+    CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(nullptr, false, false);
+
+    auto protoConf = openvpn::ProtoContext::ProtoConfig();
+
+    auto infostring = protoConf.peer_info_string();
+
+    auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
+    ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
+
+
+    std::string expectedstr{"IV_CIPHERS=AES-128-CBC:AES-192-CBC:AES-256-CBC:AES-128-GCM:AES-192-GCM:AES-256-GCM"};
+    if (SSLLib::CryptoAPI::CipherContextAEAD::is_supported(nullptr, openvpn::CryptoAlgs::CHACHA20_POLY1305))
+        expectedstr += ":CHACHA20-POLY1305";
+
+    EXPECT_EQ(ivciphers, expectedstr);
+}
+
+TEST(proto, iv_ciphers_legacy)
+{
+
+    /* Need to a whole lot of things to enable legacy provider/OpenSSL context */
+    SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    EXPECT_TRUE(config);
+
+    StrongRandomAPI::Ptr rng(new SSLLib::RandomAPI());
+    config->set_rng(rng);
+
+    config->set_mode(Mode(Mode::CLIENT));
+    config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
+    config->set_local_cert_enabled(false);
+    config->enable_legacy_algorithms(true);
+
+    auto factory_client = config->new_factory();
+    EXPECT_TRUE(factory_client);
+
+    auto client = factory_client->ssl();
+    auto libctx = factory_client->libctx();
+
+
+    CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(libctx, false, true);
+
+    auto protoConf = openvpn::ProtoContext::ProtoConfig();
+
+    auto infostring = protoConf.peer_info_string();
+
+    auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
+    ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
+
+    std::string expectedstr{"IV_CIPHERS=none:AES-128-CBC:AES-192-CBC:AES-256-CBC:DES-CBC:DES-EDE3-CBC:BF-CBC:AES-128-GCM:AES-192-GCM:AES-256-GCM"};
+    if (SSLLib::CryptoAPI::CipherContextAEAD::is_supported(nullptr, openvpn::CryptoAlgs::CHACHA20_POLY1305))
+        expectedstr += ":CHACHA20-POLY1305";
+
+    EXPECT_EQ(ivciphers, expectedstr);
 }

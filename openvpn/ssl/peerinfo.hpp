@@ -90,6 +90,13 @@ struct Set : public std::vector<KeyValue>, public RCCopyable<thread_unsafe_refco
             emplace_back(kv.key, kv.value);
     }
 
+    [[nodiscard]] bool contains_key(const std::string &key)
+    {
+        return std::find_if(begin(), end(), [&](const PeerInfo::KeyValue &kv)
+                            { return kv.key == key; })
+               != end();
+    }
+
     Ptr copy() const
     {
         return new Set(*this);

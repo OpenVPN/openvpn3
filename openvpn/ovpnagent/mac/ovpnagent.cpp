@@ -31,9 +31,6 @@
 
 #include <unistd.h>
 
-// debug settings (production setting in parentheses)
-#define OPENVPN_LOG_SSL(x) OPENVPN_LOG(x)
-
 // VERSION version can be passed on build command line
 #include <openvpn/common/stringize.hpp>
 #ifdef VERSION

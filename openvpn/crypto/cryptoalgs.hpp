@@ -189,7 +189,7 @@ class Alg
 
 inline std::array<Alg, Type::SIZE> algs = {
     // clang-format off
-    Alg{"NONE",               F_CIPHER|F_DIGEST|CBC_HMAC,   0,  0,  0 },
+    Alg{"none",               F_CIPHER|F_DIGEST|CBC_HMAC,   0,  0,  0 },
     Alg{"AES-128-CBC",        F_CIPHER|CBC_HMAC,           16, 16, 16 },
     Alg{"AES-192-CBC",        F_CIPHER|CBC_HMAC,           24, 16, 16 },
     Alg{"AES-256-CBC",        F_CIPHER|CBC_HMAC,           32, 16, 16 },

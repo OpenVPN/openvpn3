@@ -38,6 +38,7 @@ class SessionStats : public RC<thread_safe_refcount>
 {
   public:
     typedef RCPtr<SessionStats> Ptr;
+    using inc_callback_t = std::function<void(const count_t value)>;
 
     enum Stats
     {
@@ -77,7 +78,11 @@ class SessionStats : public RC<thread_safe_refcount>
         inc_stat(const size_t type, const count_t value)
     {
         if (type < N_STATS)
+        {
             stats_[type] += value;
+            if (auto lock = inc_callbacks_[type].lock())
+                std::invoke(*lock, value);
+        }
     }
 
     count_t get_stat(const size_t type) const
@@ -209,6 +214,12 @@ class SessionStats : public RC<thread_safe_refcount>
         if (dco_)
         {
             const DCOTransportSource::Data data = dco_->dco_transport_stats_delta();
+
+            if (data.transport_bytes_in > 0)
+            {
+                update_last_packet_received(Time::now());
+            }
+
             stats_[BYTES_IN] += data.transport_bytes_in;
             stats_[BYTES_OUT] += data.transport_bytes_out;
             stats_[TUN_BYTES_IN] += data.tun_bytes_in;
@@ -218,6 +229,22 @@ class SessionStats : public RC<thread_safe_refcount>
             stats_[TUN_PACKETS_IN] += data.tun_pkts_in;
             stats_[TUN_PACKETS_OUT] += data.tun_pkts_out;
         }
+    }
+
+    /**
+     * @brief Sets a callback to be triggered upon increment of stats
+     *
+     * The callback can be removed by client code by deleting the returned shared pointer
+     *
+     * @param stat Type of stat to be tracked
+     * @param callback Notification callback
+     * @return Shared pointer which maintains the lifetime of the callback
+     */
+    [[nodiscard]] std::shared_ptr<inc_callback_t> set_inc_callback(Stats stat, inc_callback_t callback)
+    {
+        auto cb_ptr = std::make_shared<inc_callback_t>(callback);
+        inc_callbacks_[stat] = cb_ptr;
+        return cb_ptr;
     }
 
   protected:
@@ -231,6 +258,7 @@ class SessionStats : public RC<thread_safe_refcount>
     Time last_packet_received_;
     DCOTransportSource::Ptr dco_;
     volatile count_t stats_[N_STATS];
+    std::array<std::weak_ptr<inc_callback_t>, N_STATS> inc_callbacks_;
 };
 
 } // namespace openvpn

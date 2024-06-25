@@ -60,7 +60,7 @@ class TunProp
   public:
     OPENVPN_EXCEPTION(tun_prop_error);
     OPENVPN_EXCEPTION(tun_prop_route_error);
-    OPENVPN_EXCEPTION(tun_prop_dhcp_option_error);
+    OPENVPN_UNTAGGED_EXCEPTION_INHERIT(option_error, tun_prop_dhcp_option_error);
 
     struct Config
     {
@@ -174,11 +174,15 @@ class TunProp
         }
 
         // add DNS servers and domain prefixes
-        const unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
+        unsigned int dhcp_option_flags = add_dhcp_options(tb, opt, quiet);
+        dhcp_option_flags |= add_dns_options(tb, opt);
 
         // Allow protocols unless explicitly blocked
         tb->tun_builder_set_allow_family(AF_INET, !opt.exists("block-ipv4"));
         tb->tun_builder_set_allow_family(AF_INET6, !opt.exists("block-ipv6"));
+
+        // Allow access to local port 53 with --dns options unless explicitly blocked
+        tb->tun_builder_set_allow_local_dns(!opt.exists("block-outside-dns"));
 
         // DNS fallback
         if (ipv.rgv4() && !(dhcp_option_flags & F_ADD_DNS))
@@ -270,7 +274,7 @@ class TunProp
             tun_mtu = std::min(tun_mtu, config_mtu_max);
 
             if (!status)
-                throw option_error("tun-mtu parse/range issue");
+                throw option_error(ERR_INVALID_OPTION_VAL, "tun-mtu parse/range issue");
 
             if (state)
                 state->mtu = tun_mtu;
@@ -307,7 +311,7 @@ class TunProp
                 else if (topstr == "net30")
                     top = NET30;
                 else
-                    throw option_error("only topology 'subnet' and 'net30' supported");
+                    throw option_error(ERR_INVALID_OPTION_VAL, "only topology 'subnet' and 'net30' supported");
             }
         }
 
@@ -359,7 +363,7 @@ class TunProp
                     ip_ver_flags |= IP::Addr::V4_MASK;
                 }
                 else
-                    throw option_error("internal topology error");
+                    throw option_error(ERR_INVALID_OPTION_VAL, "internal topology error");
             }
 
             o = opt.get_ptr("ifconfig-ipv6"); // DIRECTIVE
@@ -527,6 +531,25 @@ class TunProp
         }
     }
 
+    /**
+     * @brief Configure tun builder to use --dns options if defined
+     *
+     * @param tb            pointer to the tun builder
+     * @param opt           the --dns options object
+     * @return unsigned int F_ADD_DNS flag when there were servers defined in the options
+     */
+    static unsigned int add_dns_options(TunBuilderBase *tb, const OptionList &opt)
+    {
+        DnsOptions dns_options(opt);
+        if (dns_options.servers.empty())
+            return 0;
+
+        if (!tb->tun_builder_add_dns_options(dns_options))
+            throw tun_prop_dhcp_option_error("tun_builder_add_dns_options failed");
+
+        return F_ADD_DNS;
+    }
+
     static unsigned int add_dhcp_options(TunBuilderBase *tb, const OptionList &opt, const bool quiet)
     {
         // Example:
@@ -543,35 +566,6 @@ class TunProp
         //   [dhcp-option] [PROXY_AUTO_CONFIG_URL] [http://...]
         unsigned int flags = 0;
 
-        DnsOptions dns_options(opt);
-        for (const auto &domain : dns_options.search_domains)
-        {
-            if (!tb->tun_builder_set_adapter_domain_suffix(domain))
-                throw tun_prop_dhcp_option_error("tun_builder_set_adapter_domain_suffix");
-            break; // use only the first domain for now
-        }
-        for (const auto &keyval : dns_options.servers)
-        {
-            const auto &server = keyval.second;
-            if (server.address4.specified())
-            {
-                if (!tb->tun_builder_add_dns_server(server.address4.to_string(), false))
-                    throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
-                flags |= F_ADD_DNS;
-            }
-            if (server.address6.specified())
-            {
-                if (!tb->tun_builder_add_dns_server(server.address6.to_string(), true))
-                    throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
-                flags |= F_ADD_DNS;
-            }
-            for (const auto &domain : server.domains)
-            {
-                if (!tb->tun_builder_add_search_domain(domain))
-                    throw tun_prop_dhcp_option_error("tun_builder_add_search_domain failed");
-            }
-        }
-
         OptionList::IndexMap::const_iterator dopt = opt.map().find("dhcp-option"); // DIRECTIVE
         if (dopt != opt.map().end())
         {
@@ -586,16 +580,16 @@ class TunProp
                 try
                 {
                     const std::string &type = o.get(1, 64);
-                    if ((type == "DNS" || type == "DNS6") && dns_options.servers.empty())
+                    if (type == "DNS" || type == "DNS6")
                     {
                         o.exact_args(3);
                         const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
                         if (!tb->tun_builder_add_dns_server(ip.to_string(),
                                                             ip.version() == IP::Addr::V6))
-                            throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
+                            throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_add_dns_server failed");
                         flags |= F_ADD_DNS;
                     }
-                    else if ((type == "DOMAIN" || type == "DOMAIN-SEARCH") && dns_options.servers.empty())
+                    else if (type == "DOMAIN" || type == "DOMAIN-SEARCH")
                     {
                         o.min_args(3);
                         for (size_t j = 2; j < o.size(); ++j)
@@ -605,16 +599,16 @@ class TunProp
                             for (size_t k = 0; k < v.size(); ++k)
                             {
                                 if (!tb->tun_builder_add_search_domain(v[k]))
-                                    throw tun_prop_dhcp_option_error("tun_builder_add_search_domain failed");
+                                    throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_add_search_domain failed");
                             }
                         }
                     }
-                    else if (type == "ADAPTER_DOMAIN_SUFFIX" && dns_options.search_domains.empty())
+                    else if (type == "ADAPTER_DOMAIN_SUFFIX")
                     {
                         o.exact_args(3);
                         const std::string &adapter_domain_suffix = o.get(2, 256);
                         if (!tb->tun_builder_set_adapter_domain_suffix(adapter_domain_suffix))
-                            throw tun_prop_dhcp_option_error("tun_builder_set_adapter_domain_suffix");
+                            throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_set_adapter_domain_suffix");
                     }
                     else if (type == "PROXY_BYPASS")
                     {
@@ -626,7 +620,7 @@ class TunProp
                             for (size_t k = 0; k < v.size(); ++k)
                             {
                                 if (!tb->tun_builder_add_proxy_bypass(v[k]))
-                                    throw tun_prop_dhcp_option_error("tun_builder_add_proxy_bypass");
+                                    throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_add_proxy_bypass");
                             }
                         }
                     }
@@ -652,9 +646,9 @@ class TunProp
                         o.exact_args(3);
                         const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "wins-server-ip");
                         if (ip.version() != IP::Addr::V4)
-                            throw tun_prop_dhcp_option_error("WINS addresses must be IPv4");
+                            throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "WINS addresses must be IPv4");
                         if (!tb->tun_builder_add_wins_server(ip.to_string()))
-                            throw tun_prop_dhcp_option_error("tun_builder_add_wins_server failed");
+                            throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_add_wins_server failed");
                     }
                     else if (!quiet)
                         OPENVPN_LOG("Unknown pushed DHCP option: " << o.render(OPT_RENDER_FLAGS));
@@ -670,17 +664,17 @@ class TunProp
                 if (!http_host.empty())
                 {
                     if (!tb->tun_builder_set_proxy_http(http_host, http_port))
-                        throw tun_prop_dhcp_option_error("tun_builder_set_proxy_http");
+                        throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_set_proxy_http");
                 }
                 if (!https_host.empty())
                 {
                     if (!tb->tun_builder_set_proxy_https(https_host, https_port))
-                        throw tun_prop_dhcp_option_error("tun_builder_set_proxy_https");
+                        throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_set_proxy_https");
                 }
                 if (!auto_config_url.empty())
                 {
                     if (!tb->tun_builder_set_proxy_auto_config_url(auto_config_url))
-                        throw tun_prop_dhcp_option_error("tun_builder_set_proxy_auto_config_url");
+                        throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_set_proxy_auto_config_url");
                 }
             }
             catch (const std::exception &e)
@@ -720,7 +714,7 @@ class TunProp
     {
         if (!tb->tun_builder_add_dns_server("8.8.8.8", false)
             || !tb->tun_builder_add_dns_server("8.8.4.4", false))
-            throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed for Google DNS");
+            throw tun_prop_dhcp_option_error(ERR_INVALID_OPTION_PUSHED, "tun_builder_add_dns_server failed for Google DNS");
     }
 };
 } // namespace openvpn

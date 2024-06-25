@@ -67,7 +67,6 @@
 #include <openvpn/ssl/peer_fingerprint.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ssl/sslapi.hpp>
-#include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/ssl/sni_handler.hpp>
 #include <openvpn/ssl/iana_ciphers.hpp>
 #include <openvpn/openssl/util/error.hpp>
@@ -165,9 +164,10 @@ class OpenSSLContext : public SSLFactoryAPI
         }
 
         // if this callback is defined, no private key needs to be loaded
-        void set_external_pki_callback(ExternalPKIBase *external_pki_arg) override
+        void set_external_pki_callback(ExternalPKIBase *external_pki_arg, const std::string &alias) override
         {
             external_pki = external_pki_arg;
+            external_pki_alias = alias;
         }
 
         // server side
@@ -667,6 +667,7 @@ class OpenSSLContext : public SSLFactoryAPI
         OpenSSLPKI::PKey pkey;            // private key
         OpenSSLPKI::DH dh;                // diffie-hellman parameters (only needed in server mode)
         ExternalPKIBase *external_pki = nullptr;
+        std::string external_pki_alias;
         TLSSessionTicketBase *session_ticket_handler = nullptr; // server side only
         SNI::HandlerBase *sni_handler = nullptr;                // server side only
         Frame::Ptr frame;
@@ -828,38 +829,13 @@ class OpenSSLContext : public SSLFactoryAPI
         static void init_static()
         {
             bmq_stream::init_static();
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER < 0x30000010L && !defined(OPENSSL_NO_EC) && defined(ENABLE_EXTERNAL_PKI)
+#if OPENSSL_VERSION_NUMBER < 0x30000010L && !defined(OPENSSL_NO_EC) && defined(ENABLE_EXTERNAL_PKI)
             ExternalPKIECImpl::init_static();
 #endif
 
 
             ssl_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext::SSL", nullptr, nullptr, nullptr);
             context_data_index = SSL_get_ex_new_index(0, (char *)"OpenSSLContext", nullptr, nullptr, nullptr);
-
-            /*
-             * We actually override some of the OpenSSL SSLv23 methods here,
-             * in particular the ssl_pending method.  We want ssl_pending
-             * to return 0 until the SSL negotiation establishes the
-             * actual method.  The default OpenSSL SSLv23 ssl_pending method
-             * (ssl_undefined_const_function) triggers an OpenSSL error condition
-             * when calling SSL_pending early which is not what we want.
-             *
-             * This depends on SSL23 being a generic method and OpenSSL later
-             * switching to a spefic TLS method (TLS10method etc..) with
-             * ssl23_get_client_method that has the proper ssl3_pending pending method.
-             *
-             * OpenSSL 1.1.x does not allow hacks like this anymore. So overriding is not
-             * possible. Fortunately OpenSSL 1.1 also always defines ssl_pending method to
-             * be ssl3_pending, so this hack is no longer needed.
-             */
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-            ssl23_method_client_ = *SSLv23_client_method();
-            ssl23_method_client_.ssl_pending = ssl_pending_override;
-
-            ssl23_method_server_ = *SSLv23_server_method();
-            ssl23_method_server_.ssl_pending = ssl_pending_override;
-#endif
         }
 
       private:
@@ -1100,32 +1076,6 @@ class OpenSSLContext : public SSLFactoryAPI
             return bio;
         }
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        /*
-         * Return modified OpenSSL SSLv23 methods,
-         * as configured in init_static().
-         */
-
-        static const SSL_METHOD *tls_method_client()
-        {
-            return &ssl23_method_client_;
-        }
-
-        static const SSL_METHOD *tls_method_server()
-        {
-            return &ssl23_method_server_;
-        }
-#else
-        static const SSL_METHOD *tls_method_client()
-        {
-            return TLS_client_method();
-        }
-
-        static const SSL_METHOD *tls_method_server()
-        {
-            return TLS_server_method();
-        }
-#endif
         ::SSL *ssl;   // OpenSSL SSL object
         BIO *ssl_bio; // read/write cleartext from here
         BIO *ct_in;   // write ciphertext to here
@@ -1140,12 +1090,6 @@ class OpenSSLContext : public SSLFactoryAPI
         // Helps us to store pointer to self in ::SSL object
         inline static int ssl_data_index = -1;
         inline static int context_data_index = -1;
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        // Modified SSLv23 methods
-        inline static SSL_METHOD ssl23_method_client_;
-        inline static SSL_METHOD ssl23_method_server_;
-#endif
     };
 
     /////// start of main class implementation
@@ -1171,9 +1115,9 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 if (pair->iana_name != ciphersuite)
                 {
-                    OPENVPN_LOG_SSL("OpenSSLContext: Deprecated cipher suite name '"
-                                    << pair->openssl_name << "' please use IANA name ' "
-                                    << pair->iana_name << "'");
+                    OVPN_LOG_INFO("OpenSSLContext: Deprecated cipher suite name '"
+                                  << pair->openssl_name << "' please use IANA name ' "
+                                  << pair->iana_name << "'");
                 }
                 result << pair->openssl_name;
             }
@@ -1209,7 +1153,7 @@ class OpenSSLContext : public SSLFactoryAPI
         // Create new SSL_CTX for server or client mode
         if (config->mode.is_server())
         {
-            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_server()), ::SSL_CTX_free};
+            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, ::TLS_server_method()), ::SSL_CTX_free};
             if (!ctx)
                 throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
 
@@ -1230,17 +1174,12 @@ class OpenSSLContext : public SSLFactoryAPI
             // server-side SNI
             if (config->sni_handler)
             {
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-#define OPENSSL_SERVER_SNI
                 SSL_CTX_set_client_hello_cb(ctx.get(), client_hello_callback, nullptr);
-#else
-                OPENVPN_THROW(ssl_context_error, "OpenSSLContext: server-side SNI requires OpenSSL 1.1 or higher");
-#endif
             }
         }
         else if (config->mode.is_client())
         {
-            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, SSL::tls_method_client()), &::SSL_CTX_free};
+            ctx = SSL_CTX_unique_ptr{SSL_CTX_new_ex(libctx(), nullptr, ::TLS_client_method()), &::SSL_CTX_free};
             if (!ctx)
                 throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for client method");
         }
@@ -1421,18 +1360,18 @@ class OpenSSLContext : public SSLFactoryAPI
             {
 #ifdef ENABLE_EXTERNAL_PKI
 #if OPENSSL_VERSION_NUMBER >= 0x30000010L
-                epki = XKeyExternalPKIImpl::create(ctx.get(), config->cert.obj(), config->external_pki);
+                epki = XKeyExternalPKIImpl::create(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias);
 
 #else
                 auto certType = EVP_PKEY_id(X509_get0_pubkey(config->cert.obj()));
                 if (certType == EVP_PKEY_RSA)
                 {
-                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki));
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIRsaImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
                 }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
                 else if (certType == EVP_PKEY_EC)
                 {
-                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki));
+                    epki = std::make_shared<ExternalPKIImpl>(ExternalPKIECImpl(ctx.get(), config->cert.obj(), config->external_pki, config->external_pki_alias));
                 }
 #endif
                 else
@@ -1589,8 +1528,8 @@ class OpenSSLContext : public SSLFactoryAPI
             }
             else
             {
-                OPENVPN_LOG_SSL("OpenSSL -- warning ignoring unknown group '"
-                                << group << "' in tls-groups");
+                OVPN_LOG_INFO("OpenSSL -- warning ignoring unknown group '"
+                              << group << "' in tls-groups");
             }
         }
 
@@ -1769,17 +1708,8 @@ class OpenSSLContext : public SSLFactoryAPI
         BIGNUM *bn = ASN1_INTEGER_to_BN(ai, NULL);
         if (!bn)
             return;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        const size_t nb = BN_num_bytes(bn);
-        if (nb <= authcert.serial.size())
-        {
-            const size_t offset = authcert.serial.size() - nb;
-            std::memset(authcert.serial.number(), 0, offset);
-            BN_bn2bin(bn, authcert.serial.number() + offset);
-        }
-#else
+
         BN_bn2binpad(bn, authcert.serial.number(), static_cast<int>(authcert.serial.size()));
-#endif
         BN_free(bn);
     }
 
@@ -1873,7 +1803,9 @@ class OpenSSLContext : public SSLFactoryAPI
                 || !(self->config->flags & SSLConst::VERIFY_PEER_FINGERPRINT))
             {
                 auto sign_alg = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
-                OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                OVPN_LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                // Output the certificates itself for debug logging
+                OVPN_LOG_TRACE(OpenSSLPKI::X509_get_pem_encoding(current_cert));
             }
         }
 
@@ -1895,28 +1827,28 @@ class OpenSSLContext : public SSLFactoryAPI
             preverify_ok = self->config->peer_fingerprints.match(fp);
             if (!preverify_ok)
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
             }
         }
 
         // verify ns-cert-type
         if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
         {
-            OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+            OVPN_LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 key usage
         if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
         {
-            OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+            OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
             preverify_ok = false;
         }
 
         // verify X509 extended key usage
         if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
         {
-            OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+            OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
             preverify_ok = false;
         }
 
@@ -1932,7 +1864,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
             if (!verify_x509.verify(name))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- verify-x509-name failed");
+                OVPN_LOG_INFO("VERIFY FAIL -- verify-x509-name failed");
                 preverify_ok = false;
             }
         }
@@ -1945,7 +1877,7 @@ class OpenSSLContext : public SSLFactoryAPI
             TLSRemote::log(self->config->tls_remote, subj, common_name);
             if (!TLSRemote::test(self->config->tls_remote, subj, common_name))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- tls-remote match failed");
+                OVPN_LOG_INFO("VERIFY FAIL -- tls-remote match failed");
                 preverify_ok = false;
             }
         }
@@ -1984,7 +1916,7 @@ class OpenSSLContext : public SSLFactoryAPI
             {
                 const auto sign_alg = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
                 const auto subject = OpenSSLPKI::x509_get_subject(current_cert);
-                OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
+                OVPN_LOG_INFO(cert_status_line(preverify_ok, depth, err, sign_alg, subject));
             }
         }
 
@@ -2011,7 +1943,7 @@ class OpenSSLContext : public SSLFactoryAPI
             PeerFingerprint fp(OpenSSLPKI::x509_get_fingerprint(current_cert));
             if (self->config->peer_fingerprints && !self->config->peer_fingerprints.match(fp))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad peer-fingerprint in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2022,7 +1954,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify ns-cert-type
             if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(current_cert))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2033,7 +1965,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify X509 key usage
             if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(current_cert))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2044,7 +1976,7 @@ class OpenSSLContext : public SSLFactoryAPI
             // verify X509 extended key usage
             if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(current_cert))
             {
-                OPENVPN_LOG_SSL("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 if (self_ssl->authcert)
                     self_ssl->authcert->add_fail(depth,
                                                  AuthCert::Fail::BAD_CERT_TYPE,
@@ -2079,20 +2011,20 @@ class OpenSSLContext : public SSLFactoryAPI
     {
         if (where & SSL_CB_LOOP)
         {
-            OPENVPN_LOG_SSL("SSL state ("
-                            << ((where & SSL_ST_CONNECT)
-                                    ? "connect"
-                                    : (where & SSL_ST_ACCEPT
-                                           ? "accept"
-                                           : "undefined"))
-                            << "): " << SSL_state_string_long(s));
+            OVPN_LOG_INFO("SSL state ("
+                          << ((where & SSL_ST_CONNECT)
+                                  ? "connect"
+                                  : (where & SSL_ST_ACCEPT
+                                         ? "accept"
+                                         : "undefined"))
+                          << "): " << SSL_state_string_long(s));
         }
         else if (where & SSL_CB_ALERT)
         {
-            OPENVPN_LOG_SSL("SSL alert ("
-                            << (where & SSL_CB_READ ? "read" : "write") << "): "
-                            << SSL_alert_type_string_long(ret) << ": "
-                            << SSL_alert_desc_string_long(ret));
+            OVPN_LOG_INFO("SSL alert ("
+                          << (where & SSL_CB_READ ? "read" : "write") << "): "
+                          << SSL_alert_type_string_long(ret) << ": "
+                          << SSL_alert_desc_string_long(ret));
         }
     }
 
@@ -2123,20 +2055,7 @@ class OpenSSLContext : public SSLFactoryAPI
             {
             case TLSSessionTicketBase::NO_TICKET:
             case TLSSessionTicketBase::TICKET_EXPIRING: // doesn't really make sense for enc==1?
-                                                        // NOTE: OpenSSL may segfault on a zero return.
-                                                        // This appears to be fixed by:
-                                                        // commit dbdb96617cce2bd4356d57f53ecc327d0e31f2ad
-                                                        // Author: Todd Short <tshort@akamai.com>
-                                                        // Date:   Thu May 12 18:16:52 2016 -0400
-                                                        // Fix session ticket and SNI
-                                                        // OPENVPN_LOG("tls_ticket_key_callback: create: no ticket or expiring ticket");
-#if OPENSSL_VERSION_NUMBER < 0x1000212fL                // 1.0.2r
-                if (!randomize_name_key(name, key))
-                    return -1;
-                    // fallthrough
-#else
                 return 0;
-#endif
             case TLSSessionTicketBase::TICKET_AVAILABLE:
                 if (!RAND_bytes(iv, EVP_MAX_IV_LENGTH))
                     return -1;
@@ -2216,8 +2135,6 @@ class OpenSSLContext : public SSLFactoryAPI
             return false;
         return true;
     }
-
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 
     static int client_hello_callback(::SSL *s, int *al, void *)
     {
@@ -2338,7 +2255,6 @@ class OpenSSLContext : public SSLFactoryAPI
             return std::string((const char *)buf.c_data(), len);
         }
     }
-#endif
 
     // Return true if we should continue with authentication
     // even though there was an error, because the user has

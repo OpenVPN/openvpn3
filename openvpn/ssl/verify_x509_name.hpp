@@ -131,7 +131,7 @@ class VerifyX509Name
         {
             return VERIFY_X509_SUBJECT_RDN_PREFIX;
         }
-        throw option_error("Invalid verify-x509-name type: " + type);
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "Invalid verify-x509-name type: " + type);
     }
 
 }; // class VerifyX509Name

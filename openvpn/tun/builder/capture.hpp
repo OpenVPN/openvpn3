@@ -37,6 +37,7 @@
 #include <openvpn/common/jsonlib.hpp>
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/client/rgopt.hpp>
+#include <openvpn/client/dns.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/route.hpp>
 #include <openvpn/http/urlparse.hpp>
@@ -150,7 +151,7 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         std::string to_string() const
         {
             std::ostringstream os;
-            os << address << '/' << prefix_length;
+            os << address << '/' << static_cast<uint16_t>(prefix_length);
             if (!gateway.empty())
                 os << " -> " << gateway;
             if (metric >= 0)
@@ -506,6 +507,23 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
+    /**
+     * @brief Add --dns options for use with tun builder
+     *
+     * Calling this invalidates any DNS related --dhcp-options previously added.
+     *
+     * @param dns       The --dns options to be set
+     * @return true     unconditionally
+     */
+    virtual bool tun_builder_add_dns_options(const DnsOptions &dns) override
+    {
+        reset_dns_servers();
+        reset_search_domains();
+        reset_adapter_domain_suffix();
+        dns_options = dns;
+        return true;
+    }
+
     virtual bool tun_builder_add_dns_server(const std::string &address, bool ipv6) override
     {
         DNSServer dns;
@@ -592,6 +610,12 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         return true;
     }
 
+    bool tun_builder_set_allow_local_dns(bool allow) override
+    {
+        block_outside_dns = !allow;
+        return true;
+    }
+
     void reset_tunnel_addresses()
     {
         tunnel_addresses.clear();
@@ -602,6 +626,16 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     void reset_dns_servers()
     {
         dns_servers.clear();
+    }
+
+    void reset_search_domains()
+    {
+        search_domains.clear();
+    }
+
+    void reset_adapter_domain_suffix()
+    {
+        adapter_domain_suffix.clear();
     }
 
     const RouteAddress *vpn_ipv4() const
@@ -663,14 +697,21 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         os << "Reroute Gateway: " << reroute_gw.to_string() << std::endl;
         os << "Block IPv4: " << (block_ipv4 ? "yes" : "no") << std::endl;
         os << "Block IPv6: " << (block_ipv6 ? "yes" : "no") << std::endl;
+        os << "Block local DNS: " << (block_outside_dns ? "yes" : "no") << std::endl;
         if (route_metric_default >= 0)
             os << "Route Metric Default: " << route_metric_default << std::endl;
         render_list(os, "Add Routes", add_routes);
         render_list(os, "Exclude Routes", exclude_routes);
-        render_list(os, "DNS Servers", dns_servers);
-        render_list(os, "Search Domains", search_domains);
+        if (!dns_servers.empty())
+            render_list(os, "DNS Servers", dns_servers);
+        if (!search_domains.empty())
+            render_list(os, "Search Domains", search_domains);
         if (!adapter_domain_suffix.empty())
             os << "Adapter Domain Suffix: " << adapter_domain_suffix << std::endl;
+        if (!dns_options.servers.empty())
+        {
+            os << dns_options.to_string() << std::endl;
+        }
         if (!proxy_bypass.empty())
             render_list(os, "Proxy Bypass", proxy_bypass);
         if (proxy_auto_config_url.defined())
@@ -699,9 +740,11 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         root["tunnel_address_index_ipv6"] = Json::Value(tunnel_address_index_ipv6);
         root["reroute_gw"] = reroute_gw.to_json();
         root["block_ipv6"] = Json::Value(block_ipv6);
+        root["block_outside_dns"] = Json::Value(block_outside_dns);
         root["route_metric_default"] = Json::Value(route_metric_default);
         json::from_vector(root, add_routes, "add_routes");
         json::from_vector(root, exclude_routes, "exclude_routes");
+        root["dns_options"] = dns_options.to_json();
         json::from_vector(root, dns_servers, "dns_servers");
         json::from_vector(root, wins_servers, "wins_servers");
         json::from_vector(root, search_domains, "search_domains");
@@ -730,9 +773,11 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
         json::to_int(root, tbc->tunnel_address_index_ipv6, "tunnel_address_index_ipv6", title);
         tbc->reroute_gw.from_json(root["reroute_gw"], "reroute_gw");
         json::to_bool(root, tbc->block_ipv6, "block_ipv6", title);
+        json::to_bool(root, tbc->block_outside_dns, "block_outside_dns", title);
         json::to_int(root, tbc->route_metric_default, "route_metric_default", title);
         json::to_vector(root, tbc->add_routes, "add_routes", title);
         json::to_vector(root, tbc->exclude_routes, "exclude_routes", title);
+        tbc->dns_options.from_json(root["dns_options"], "dns_options");
         json::to_vector(root, tbc->dns_servers, "dns_servers", title);
         json::to_vector(root, tbc->wins_servers, "wins_servers", title);
         json::to_vector(root, tbc->search_domains, "search_domains", title);
@@ -757,10 +802,12 @@ class TunBuilderCapture : public TunBuilderBase, public RC<thread_unsafe_refcoun
     RerouteGW reroute_gw;                       // redirect-gateway info
     bool block_ipv4 = false;                    // block IPv4 traffic while VPN is active
     bool block_ipv6 = false;                    // block IPv6 traffic while VPN is active
+    bool block_outside_dns = false;             // block traffic to port 53 locally while VPN is active
     int route_metric_default = -1;              // route-metric directive
     std::vector<Route> add_routes;              // routes that should be added to tunnel
     std::vector<Route> exclude_routes;          // routes that should be excluded from tunnel
-    std::vector<DNSServer> dns_servers;         // VPN DNS servers
+    DnsOptions dns_options;                     // VPN DNS related settings from --dns option
+    std::vector<DNSServer> dns_servers;         // VPN DNS servers from --dhcp-option(s)
     std::vector<SearchDomain> search_domains;   // domain suffixes whose DNS requests should be tunnel-routed
     std::string adapter_domain_suffix;          // domain suffix on tun/tap adapter (currently Windows only)
 

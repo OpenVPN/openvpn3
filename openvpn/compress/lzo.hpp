@@ -50,7 +50,7 @@ class CompressLZO : public Compress
           support_swap(support_swap_arg),
           asym(asym_arg)
     {
-        OPENVPN_LOG_COMPRESS("LZO init swap=" << support_swap_arg << " asym=" << asym_arg);
+        OVPN_LOG_INFO("LZO init swap=" << support_swap_arg << " asym=" << asym_arg);
         lzo_workspace.init(LZO1X_1_15_MEM_COMPRESS, BufferAllocated::ARRAY);
     }
 
@@ -77,7 +77,7 @@ class CompressLZO : public Compress
             error(buf);
             return;
         }
-        OPENVPN_LOG_COMPRESS_VERBOSE("LZO uncompress " << buf.size() << " -> " << zlen);
+        OVPN_LOG_VERBOSE("LZO uncompress " << buf.size() << " -> " << zlen);
         work.set_size(zlen);
         buf.swap(work);
     }
@@ -114,7 +114,7 @@ class CompressLZO : public Compress
             // did compression actually reduce data length?
             if (zlen < buf.size())
             {
-                OPENVPN_LOG_COMPRESS_VERBOSE("LZO compress " << buf.size() << " -> " << zlen);
+                OVPN_LOG_VERBOSE("LZO compress " << buf.size() << " -> " << zlen);
                 work.set_size(zlen);
                 if (support_swap)
                     do_swap(work, LZO_COMPRESS_SWAP);

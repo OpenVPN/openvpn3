@@ -86,7 +86,7 @@ inline Type parse_tls_cert_profile(const std::string &profile_name)
     else if (profile_name == "suiteb")
         return SUITEB;
     else
-        throw option_error("tls-cert-profile: unrecognized profile name");
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-cert-profile: unrecognized profile name");
 }
 
 inline Type parse_tls_cert_profile(const OptionList &opt,
@@ -137,7 +137,7 @@ inline void apply_override(Type &type, const std::string &override)
     else if (override == "suiteb")
         type = SUITEB;
     else
-        throw option_error("tls-cert-profile: unrecognized override string");
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-cert-profile: unrecognized override string");
     // OPENVPN_LOG("*** tls-cert-profile before=" << to_string(orig) << " override=" << override << " after=" << to_string(type));
 }
 } // namespace TLSCertProfile

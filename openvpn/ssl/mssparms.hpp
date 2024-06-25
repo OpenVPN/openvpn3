@@ -48,7 +48,7 @@ struct MSSParms
                     return;
                 }
                 else
-                    throw option_error("mssfix must have a value");
+                    throw option_error(ERR_INVALID_OPTION_VAL, "mssfix must have a value");
             }
 
             const bool status = parse_number_validate<decltype(mssfix)>(*val,
@@ -68,7 +68,7 @@ struct MSSParms
                     }
                 }
                 else
-                    throw option_error("mssfix: parse/range issue");
+                    throw option_error(ERR_INVALID_OPTION_VAL, "mssfix: parse/range issue");
             }
             else
             {

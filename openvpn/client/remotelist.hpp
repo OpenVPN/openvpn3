@@ -535,7 +535,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
         }
 
         if (!(flags & ALLOW_EMPTY) && list.empty())
-            throw option_error("remote option not specified");
+            throw option_error(ERR_INVALID_CONFIG, "remote option not specified");
     }
 
     void process_push(const OptionList &opt)
@@ -619,7 +619,7 @@ class RemoteList : public RC<thread_unsafe_refcount>
             if (contains_protocol(tcp))
                 set_proto_override(tcp);
             else
-                throw option_error("cannot connect via TCP-based proxy because no TCP server entries exist in profile");
+                throw option_error(ERR_INVALID_CONFIG, "cannot connect via TCP-based proxy because no TCP server entries exist in profile");
         }
         else if (proto_override.defined() && contains_protocol(proto_override))
             set_proto_override(proto_override);

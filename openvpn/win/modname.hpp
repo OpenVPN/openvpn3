@@ -32,6 +32,7 @@
 #include <openvpn/common/wstring.hpp>
 #include <openvpn/win/winerr.hpp>
 #include <openvpn/win/reg.hpp>
+#include <openvpn/win/npinfo.hpp>
 
 namespace openvpn {
 namespace Win {

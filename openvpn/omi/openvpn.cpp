@@ -483,16 +483,12 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
                 // response contains only challenge text
                 creds->response = auth_password;
             }
-            creds->cachePassword = !auth_nocache;
-            creds->replacePasswordWithSessionID = true;
         }
         else if (type == "Auth")
         {
             creds.reset(new ClientAPI::ProvideCreds);
             creds->username = username;
             creds->password = password;
-            creds->replacePasswordWithSessionID = true;
-            creds->cachePassword = !auth_nocache;
         }
         else if (type == "HTTP Proxy")
         {
@@ -1063,7 +1059,7 @@ int run(OptionList opt)
 
     try
     {
-        TunWin::NRPT::delete_rule(); // delete stale NRPT rules
+        TunWin::NRPT::delete_rules(0); // delete stale NRPT rules
         omi.reset(new OMI(io_context, std::move(opt)));
         omi->start();
         io_context_run_called = true;

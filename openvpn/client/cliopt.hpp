@@ -173,9 +173,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         HTTPProxyTransport::Options::Ptr http_proxy_options;
         bool alt_proxy = false;
         bool synchronous_dns_lookup = false;
-        bool disable_client_cert = false;
         int default_key_direction = -1;
-        bool autologin_sessions = false;
         bool allow_local_lan_access = false;
 
         PeerInfo::Set::Ptr extra_peer_info;
@@ -234,7 +232,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         // creds
         userlocked_username = pcc.userlockedUsername();
         autologin = pcc.autologin();
-        autologin_sessions = (autologin && config.autologin_sessions);
+        autologin_sessions = (autologin && clientconf.autologinSessions);
 
         // digest factory
         DigestFactory::Ptr digest_factory(new CryptoDigestFactory<SSLLib::CryptoAPI>());
@@ -294,7 +292,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         else
             remote_list.reset(new RemoteList(opt, "", RemoteList::WARN_UNSUPPORTED, nullptr, prng));
         if (!remote_list->defined())
-            throw option_error("no remote option specified");
+            throw option_error(ERR_INVALID_CONFIG, "no remote option specified");
 
         // If running in tun_persist mode, we need to do basic DNS caching so that
         // we can avoid emitting DNS requests while the tunnel is blocked during
@@ -336,7 +334,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         std::tie(dco_compatible, std::ignore) = check_dco_compatibility(clientconf, opt);
         if (config.clientconf.dco && !dco_compatible)
         {
-            throw option_error("dco_compatibility: config/options are not compatible with dco");
+            throw option_error(ERR_INVALID_CONFIG, "dco_compatibility: config/options are not compatible with dco");
         }
 
 #ifdef OPENVPN_PLATFORM_UWP
@@ -396,7 +394,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 tunconf.stop = config.stop;
                 tun_factory.reset(config.extern_tun_factory->new_tun_factory(tunconf, opt));
                 if (!tun_factory)
-                    throw option_error("OPENVPN_EXTERNAL_TUN_FACTORY: no tun factory");
+                    throw option_error(ERR_INVALID_CONFIG, "OPENVPN_EXTERNAL_TUN_FACTORY: no tun factory");
             }
 #elif defined(USE_TUN_BUILDER)
             {
@@ -540,15 +538,11 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             {
                 cc->set_username(userlocked_username);
                 cc->set_password(pcc.embeddedPassword());
-                cc->enable_password_cache(true);
-                cc->set_replace_password_with_session_id(true);
                 submit_creds(cc);
                 creds_locked = true;
             }
             else if (autologin_sessions)
             {
-                // autologin sessions require replace_password_with_session_id
-                cc->set_replace_password_with_session_id(true);
                 submit_creds(cc);
                 creds_locked = true;
             }
@@ -654,14 +648,14 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     {
         // secret option not supported
         if (opt.exists("secret"))
-            throw option_error("sorry, static key encryption mode (non-SSL/TLS) is not supported");
+            throw option_error(ERR_INVALID_OPTION_CRYPTO, "sorry, static key encryption mode (non-SSL/TLS) is not supported");
 
         // fragment option not supported
         if (opt.exists("fragment"))
-            throw option_error("sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
+            throw option_error(ERR_INVALID_OPTION_VAL, "sorry, 'fragment' directive is not supported, nor is connecting to a server that uses 'fragment' directive");
 
         if (!opt.exists("client"))
-            throw option_error("Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
+            throw option_error(ERR_INVALID_CONFIG, "Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
 
         // Only p2p mode accept
         if (opt.exists("mode"))
@@ -669,7 +663,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             const auto &mode = opt.get("mode");
             if (mode.size() != 2 || mode.get(1, 128) != "p2p")
             {
-                throw option_error("Only 'mode p2p' supported");
+                throw option_error(ERR_INVALID_CONFIG, "Only 'mode p2p' supported");
             }
         }
 
@@ -679,7 +673,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             auto keymethod = opt.get("key-method");
             if (keymethod.size() != 2 || keymethod.get(1, 128) != "2")
             {
-                throw option_error("Only 'key-method 2' is supported: " + keymethod.get(1, 128));
+                throw option_error(ERR_INVALID_OPTION_VAL, "Only 'key-method 2' is supported: " + keymethod.get(1, 128));
             }
         }
     }
@@ -687,9 +681,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     std::unordered_set<std::string> settings_ignoreWithWarning = {
         "allow-compression", /* TODO: maybe check against our client option compression setting? */
         "allow-recursive-routing",
-        "auth-nocache",
         "auth-retry",
-        "block-outside-dns", /* Core will decide on its own when to block outside dns, so this is not 100% identical in behaviour, so still warn */
         "compat-mode",
         "connect-retry",
         "connect-retry-max",
@@ -958,8 +950,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             "WSHOST",
             "WEB_CA_BUNDLE",
             "IS_OPENVPN_WEB_CA",
-            "OVPN_ACCESS_SERVER_NO_WEB",
-        };
+            "NO_WEB",
+            "ORGANIZATION"};
 
         std::unordered_set<std::string> ignore_unknown_option_list;
 
@@ -1069,6 +1061,19 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         if (pcc.pushPeerInfo())
         {
+            /* If we override the HWADDR, we add it at this time statically. If we need to
+             * dynamically discover it from the transport it will be added in
+             * \c build_connect_time_peer_info_string instead */
+            if (!config.clientconf.hwAddrOverride.empty())
+            {
+                pi->emplace_back("IV_HWADDR", config.clientconf.hwAddrOverride);
+            }
+
+            pi->emplace_back("IV_SSL", get_ssl_library_version());
+
+            if (!config.clientconf.platformVersion.empty())
+                pi->emplace_back("IV_PLAT_VER", config.clientconf.platformVersion);
+
             /* ensure that we use only one variable with the same name */
             std::unordered_map<std::string, std::string> extra_values;
 
@@ -1106,19 +1111,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         if (!config.clientconf.appCustomProtocols.empty())
             pi->emplace_back("IV_ACC", "2048,6:A," + config.clientconf.appCustomProtocols);
 
-        // MAC address
-        if (pcc.pushPeerInfo())
-        {
-            std::string hwaddr = get_hwaddr();
-            if (!config.clientconf.hwAddrOverride.empty())
-                pi->emplace_back("IV_HWADDR", config.clientconf.hwAddrOverride);
-            else if (!hwaddr.empty())
-                pi->emplace_back("IV_HWADDR", hwaddr);
-            pi->emplace_back("IV_SSL", get_ssl_library_version());
-
-            if (!config.clientconf.platformVersion.empty())
-                pi->emplace_back("IV_PLAT_VER", config.clientconf.platformVersion);
-        }
         return pi;
     }
 
@@ -1164,7 +1156,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         // Copy ProtoConfig so that modifications due to server push will
         // not persist across client instantiations.
-        cli_config->proto_context_config.reset(new Client::ProtoConfig(proto_config_cached(relay_mode)));
+        cli_config->proto_context_config.reset(new ProtoContext::ProtoConfig(proto_config_cached(relay_mode)));
 
         cli_config->proto_context_options = proto_context_options;
         cli_config->push_base = push_base;
@@ -1178,6 +1170,13 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cli_config->echo = clientconf.echo;
         cli_config->info = clientconf.info;
         cli_config->autologin_sessions = autologin_sessions;
+
+        // if the previous client instance had session-id, it must be used by the new instance too
+        if (creds && creds->session_id_defined())
+        {
+            cli_config->proto_context_config->set_xmit_creds(true);
+        }
+
         return cli_config;
     }
 
@@ -1202,7 +1201,10 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             // if no username is defined in creds and userlocked_username is defined
             // in profile, set the creds username to be the userlocked_username
             if (!creds_arg->username_defined() && !userlocked_username.empty())
+            {
                 creds_arg->set_username(userlocked_username);
+                creds_arg->save_username_for_session_id();
+            }
             creds = creds_arg;
         }
     }
@@ -1274,7 +1276,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     }
 
   private:
-    Client::ProtoConfig &proto_config_cached(const bool relay_mode)
+    ProtoContext::ProtoConfig &proto_config_cached(const bool relay_mode)
     {
         if (relay_mode && cp_relay)
             return *cp_relay;
@@ -1282,14 +1284,14 @@ class ClientOptions : public RC<thread_unsafe_refcount>
             return *cp_main;
     }
 
-    Client::ProtoConfig::Ptr proto_config(const OptionList &opt,
-                                          const Config &config,
-                                          const ParseClientConfig &pcc,
-                                          const bool relay_mode)
+    ProtoContext::ProtoConfig::Ptr proto_config(const OptionList &opt,
+                                                const Config &config,
+                                                const ParseClientConfig &pcc,
+                                                const bool relay_mode)
     {
         // relay mode is null unless one of the below directives is defined
         if (relay_mode && !opt.exists("relay-mode"))
-            return Client::ProtoConfig::Ptr();
+            return ProtoContext::ProtoConfig::Ptr();
 
         // load flags
         unsigned int lflags = SSLConfigAPI::LF_PARSE_MODE;
@@ -1298,12 +1300,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         // client SSL config
         SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
-        cc->set_external_pki_callback(config.external_pki);
+        cc->set_external_pki_callback(config.external_pki, config.clientconf.external_pki_alias);
         cc->set_frame(frame);
         cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
         cc->set_debug_level(config.clientconf.sslDebugLevel);
         cc->set_rng(rng);
-        cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
+        cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.clientconf.disableClientCert);
         /* load depends on private key password and legacy algorithms */
         cc->enable_legacy_algorithms(config.clientconf.enableLegacyAlgorithms);
         cc->set_private_key_password(config.clientconf.privateKeyPassword);
@@ -1314,7 +1316,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cc->set_tls_ciphersuite_list(config.clientconf.tlsCiphersuitesList);
 
         // client ProtoContext config
-        Client::ProtoConfig::Ptr cp(new Client::ProtoConfig());
+        ProtoContext::ProtoConfig::Ptr cp(new ProtoContext::ProtoConfig());
         cp->ssl_factory = cc->new_factory();
         cp->relay_mode = relay_mode;
         cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, rng));
@@ -1326,6 +1328,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         cp->load(opt, *proto_context_options, config.default_key_direction, false);
         cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
         cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
+        cp->extra_peer_info_push_peerinfo = pcc.pushPeerInfo();
         cp->frame = frame;
         cp->now = &now_;
         cp->rng = rng;
@@ -1373,7 +1376,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         else if (alt_proxy)
         {
             if (alt_proxy->requires_tcp() && !transport_protocol.is_tcp())
-                throw option_error("internal error: no TCP server entries for " + alt_proxy->name() + " transport");
+                throw option_error(ERR_INVALID_CONFIG, "internal error: no TCP server entries for " + alt_proxy->name() + " transport");
             AltProxy::Config conf;
             conf.remote_list = remote_list;
             conf.frame = frame;
@@ -1386,7 +1389,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         else if (http_proxy_options)
         {
             if (!transport_protocol.is_tcp())
-                throw option_error("internal error: no TCP server entries for HTTP proxy transport");
+                throw option_error(ERR_INVALID_CONFIG, "internal error: no TCP server entries for HTTP proxy transport");
 
             // HTTP Proxy transport
             HTTPProxyTransport::ClientConfig::Ptr httpconf = HTTPProxyTransport::ClientConfig::new_obj();
@@ -1441,7 +1444,7 @@ class ClientOptions : public RC<thread_unsafe_refcount>
                 transport_factory = tcpconf;
             }
             else
-                throw option_error("internal error: unknown transport protocol");
+                throw option_error(ERR_INVALID_OPTION_VAL, "internal error: unknown transport protocol");
         }
 #endif // OPENVPN_EXTERNAL_TRANSPORT_FACTORY
         return remote_list->current_server_host();
@@ -1454,8 +1457,8 @@ class ClientOptions : public RC<thread_unsafe_refcount>
     RandomAPI::Ptr prng;
     Frame::Ptr frame;
     Layer layer;
-    Client::ProtoConfig::Ptr cp_main;
-    Client::ProtoConfig::Ptr cp_relay;
+    ProtoContext::ProtoConfig::Ptr cp_main;
+    ProtoContext::ProtoConfig::Ptr cp_relay;
     RemoteList::Ptr remote_list;
     bool server_addr_float;
     TransportClientFactory::Ptr transport_factory;

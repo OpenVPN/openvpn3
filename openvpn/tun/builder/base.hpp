@@ -31,6 +31,9 @@
 #include <openvpn/addr/ip.hpp>
 
 namespace openvpn {
+
+struct DnsOptions;
+
 class TunBuilderBase
 {
   public:
@@ -123,6 +126,16 @@ class TunBuilderBase
         return false;
     }
 
+    /**
+     * Callback to add --dns options to VPN interface
+     * May be called more than once to override previous options
+     */
+    virtual bool tun_builder_add_dns_options(const DnsOptions &dns)
+    {
+        return false;
+    }
+
+
     // Callback to add DNS server to VPN interface
     // May be called more than once per tun_builder session
     // If reroute_dns is true, all DNS traffic should be routed over the
@@ -205,6 +218,17 @@ class TunBuilderBase
     // ignored for that family
     // See also Android's VPNService.Builder.allowFamily method
     virtual bool tun_builder_set_allow_family(int af, bool allow)
+    {
+        return true;
+    }
+
+    // Optional callback that indicates whether local DNS traffic
+    // should be blocked or allowed, to prevent DNS queries to leak
+    // while the tunnel is connected.
+    // Note that this option is only relevant on Windows when the
+    // --dns option is used. If DNS is set via --dhcp-option port 53
+    // is always blocked for backwards compatibility reasons.
+    virtual bool tun_builder_set_allow_local_dns(bool allow)
     {
         return true;
     }

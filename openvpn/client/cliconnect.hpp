@@ -277,6 +277,19 @@ class ClientConnect : ClientProto::NotifyCallback,
         if (!halt && client)
             client->post_app_control_message(std::move(protocol), std::move(msg));
     }
+    /**
+      @brief Passes the given arguments through to start_acc_certcheck
+      @tparam ArgsT Argument types to pass
+      @param args parameter pack
+      @see ClientProto::Session::start_acc_certcheck
+      @see OpenVPNClient::start_cert_check
+    */
+    template <typename... ArgsT>
+    void start_acc_certcheck(ArgsT &&...args)
+    {
+        if (!halt && client)
+            client->start_acc_certcheck(std::forward<ArgsT>(args)...);
+    }
 
     void thread_safe_send_app_control_channel_msg(std::string protocol, std::string msg)
     {
@@ -463,6 +476,7 @@ class ClientConnect : ClientProto::NotifyCallback,
                     // Errors below will cause the client to NOT retry the connection,
                     // or otherwise give the error special handling.
 
+                case Error::SESSION_EXPIRED:
                 case Error::AUTH_FAILED:
                     {
                         const std::string &reason = client->fatal_reason();
@@ -474,9 +488,13 @@ class ClientConnect : ClientProto::NotifyCallback,
                         }
                         else
                         {
-                            ClientEvent::Base::Ptr ev = new ClientEvent::AuthFailed(reason);
+                            ClientEvent::Base::Ptr ev;
+                            if (client->fatal() == Error::SESSION_EXPIRED)
+                                ev = new ClientEvent::SessionExpired(reason);
+                            else
+                                ev = new ClientEvent::AuthFailed(reason);
                             client_options->events().add_event(std::move(ev));
-                            client_options->stats().error(Error::AUTH_FAILED);
+                            client_options->stats().error(client->fatal());
                             if (client_options->retry_on_auth_failed())
                                 queue_restart(5000);
                             else

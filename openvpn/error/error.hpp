@@ -94,6 +94,7 @@ enum Type
     EARLY_NEG_INVALID,                    // Early protoctol negotiation information invalid/parse error
     NTLM_MISSING_CRYPTO,                  // crypto primitives requires for NTLM are unavailable
     UNUSED_OPTIONS,                       // unused/unknown options found in configuration
+    SESSION_EXPIRED,                      // authentication error when using session-id and password is not cached
 
     // key event errors
     KEV_NEGOTIATE_ERROR,
@@ -180,6 +181,7 @@ inline const char *name(const size_t type)
         "EARLY_NEG_INVALID",
         "NTLM_MISSING_CRYPTO",
         "UNUSED_OPTIONS_ERROR",
+        "SESSION_EXPIRED",
         "KEV_NEGOTIATE_ERROR",
         "KEV_PENDING_ERROR",
         "N_KEV_EXPIRE",

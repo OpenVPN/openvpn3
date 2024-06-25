@@ -38,7 +38,7 @@ inline void set_duration_parm(Time::Duration &dur,
     unsigned int value = 0;
     const bool status = parse_number<unsigned int>(valstr, value);
     if (!status)
-        OPENVPN_THROW(option_error, name << ": error parsing number of " << (ms ? "milliseconds" : "seconds"));
+        OPENVPN_THROW_ARG1(option_error, ERR_INVALID_OPTION_VAL, name << ": error parsing number of " << (ms ? "milliseconds" : "seconds"));
     if (x2)
         value *= 2;
     if (value == 0 || value > maxdur)

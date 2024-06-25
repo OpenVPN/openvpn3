@@ -60,7 +60,7 @@ class CompressLZ4Base : public Compress
             error(buf);
             return false;
         }
-        OPENVPN_LOG_COMPRESS_VERBOSE("LZ4 uncompress " << buf.size() << " -> " << decomp_size);
+        OVPN_LOG_VERBOSE("LZ4 uncompress " << buf.size() << " -> " << decomp_size);
         work.set_size(decomp_size);
         buf.swap(work);
         return true;
@@ -92,7 +92,7 @@ class CompressLZ4Base : public Compress
                 error(buf);
                 return false;
             }
-            OPENVPN_LOG_COMPRESS_VERBOSE("LZ4 compress " << buf.size() << " -> " << comp_size);
+            OVPN_LOG_VERBOSE("LZ4 compress " << buf.size() << " -> " << comp_size);
             work.set_size(comp_size);
             buf.swap(work);
             return true;
@@ -130,7 +130,7 @@ class CompressLZ4 : public CompressLZ4Base
         : CompressLZ4Base(frame, stats),
           asym(asym_arg)
     {
-        OPENVPN_LOG_COMPRESS("LZ4 init asym=" << asym_arg);
+        OVPN_LOG_INFO("LZ4 init asym=" << asym_arg);
     }
 
     virtual const char *name() const
@@ -189,7 +189,7 @@ class CompressLZ4v2 : public CompressLZ4Base
         : CompressLZ4Base(frame, stats),
           asym(asym_arg)
     {
-        OPENVPN_LOG_COMPRESS("LZ4v2 init asym=" << asym_arg);
+        OVPN_LOG_INFO("LZ4v2 init asym=" << asym_arg);
     }
 
     virtual const char *name() const

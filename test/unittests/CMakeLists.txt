@@ -1,13 +1,18 @@
 ##
-##  Tunable protoUnitTests parameters
+##  Tunable test_proto parameters
 ##
-set(TEST_PROTO_NTHREADS 1 CACHE STRING "protoUnitTests - Number of threads")
-set(TEST_PROTO_RENEG 900 CACHE STRING "protoUnitTests - Renegotiation intervall")
-set(TEST_PROTO_ITER 1000000 CACHE STRING "protoUnitTests - Number of iterations")
-set(TEST_PROTO_SITER 1 CACHE STRING "protoUnitTests - Number of high-level iterations")
-set(TEST_KEYCERT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ssl" CACHE STRING "protoUnitTests - Certificate/private keys for testing")
+set(TEST_PROTO_NTHREADS -1 CACHE STRING "test_proto - Override number of threads")
+set(TEST_PROTO_RENEG 900 CACHE STRING "test_proto - Renegotiation interval")
+set(TEST_PROTO_ITER 1000000 CACHE STRING "test_proto - Number of iterations")
+set(TEST_PROTO_SITER 1 CACHE STRING "test_proto - Number of high-level iterations")
+set(TEST_KEYCERT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ssl" CACHE STRING "test_proto - Certificate/private keys for testing")
 option(TEST_PROTO_VERBOSE "test/ssl/proto - Enable verbose logging" OFF)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    set(RUN_UT_AS_ROOT CACHE STRING "Program to use to change to root for running the sitnl tests")
+else()
+    unset(RUN_UT_AS_ROOT CACHE)
+endif()
 
 if (NOT BUILD_TESTING)
   return()
@@ -20,11 +25,13 @@ set(CORE_TEST_DEFINES
         -DUNIT_TEST
         -DUNITTEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\"
         -DOPENVPN_RC_NOTIFY
+        -DOPENVPN_ENABLE_ASSERT
         )
 
 add_executable(coreUnitTests
         core_tests.cpp
         test_acc.cpp
+        test_acc_certcheck.cpp
         test_route_emulation.cpp
         test_log.cpp
         test_comp.cpp
@@ -67,28 +74,26 @@ add_executable(coreUnitTests
         test_streq.cpp
         test_time.cpp
         test_typeindex.cpp
+        test_tun_builder.cpp
         test_userpass.cpp
         test_validatecreds.cpp
         test_weak.cpp
         test_cliopt.cpp
         test_buffer.cpp
-        )
+        test_proto.cpp
+)
 
-add_executable(protoUnitTests
-        core_tests.cpp
-	test_proto.cpp
-	)
-
+# The compile flags for test_proto.cpp, prefixed with PROTO_ to avoid collision with other defines
 if (${TEST_PROTO_VERBOSE})
-        set(PROTO_CFLAGS_VERBOSE -DVERBOSE)
+        set(PROTO_CFLAGS_VERBOSE -DPROTO_VERBOSE)
 endif()
 
-target_compile_definitions(protoUnitTests PRIVATE
+target_compile_definitions(coreUnitTests PRIVATE
         ${PROTO_CFLAGS_VERBOSE}
-        -DN_THREADS=${TEST_PROTO_NTHREADS}
-        -DRENEG=${TEST_PROTO_RENEG}
-        -DITER=${TEST_PROTO_ITER}
-        -DSITER=${TEST_PROTO_SITER}
+        -DPROTO_N_THREADS=${TEST_PROTO_NTHREADS}
+        -DPROTO_RENEG=${TEST_PROTO_RENEG}
+        -DPROTO_ITER=${TEST_PROTO_ITER}
+        -DPROTO_SITER=${TEST_PROTO_SITER}
         -DTEST_KEYCERT_DIR=\"${TEST_KEYCERT_DIR}/\"
 )
 
@@ -131,12 +136,11 @@ if (UNIX)
 endif ()
 
 if (WIN32)
-    target_sources(coreUnitTests PRIVATE test_iphelper.cpp)
+    target_sources(coreUnitTests PRIVATE test_iphelper.cpp test_wstring.cpp)
 endif ()
 
 add_core_dependencies(coreUnitTests)
 add_json_library(coreUnitTests)
-add_core_dependencies(protoUnitTests)
 
 # xxHash
 target_compile_definitions(coreUnitTests PRIVATE -DHAVE_XXHASH)
@@ -153,20 +157,16 @@ find_package(LZO)
 if (LZO_FOUND)
   target_compile_definitions(coreUnitTests PRIVATE -DHAVE_LZO)
   target_link_libraries(coreUnitTests lzo::lzo)
-  target_compile_definitions(protoUnitTests PRIVATE -DHAVE_LZO)
-  target_link_libraries(protoUnitTests lzo::lzo)
   message("lzo found, running lzo compression tests")
 else ()
     message("lzo not found, skipping lzo compression tests")
 endif ()
 
-target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
-target_link_libraries(protoUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
+target_link_libraries(coreUnitTests ${GTEST_LIB} GTest::gmock ${EXTRA_LIBS})
 
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
-target_compile_definitions(protoUnitTests PRIVATE ${CORE_TEST_DEFINES})
 target_include_directories(coreUnitTests PRIVATE ${EXTRA_INCLUDES})
-target_include_directories(protoUnitTests PRIVATE ${EXTRA_INCLUDES})
 
-add_test(NAME CoreTests COMMAND coreUnitTests)
-add_test(NAME ProtoTests COMMAND protoUnitTests)
+add_test(NAME CoreTests
+    COMMAND ${RUN_UT_AS_ROOT} $<TARGET_FILE:coreUnitTests> --gtest_shuffle --gtest_output=xml:test_results/test_core_$<CONFIG>.xml
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})

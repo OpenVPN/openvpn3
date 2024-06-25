@@ -38,7 +38,15 @@ std::string minimalConfig = certconfig + "\n"
                             + "client\n"
                               "remote wooden.box\n";
 
-void load_client_config(const std::string &config_content, bool dco = false)
+class ValidConfigs : public testing::TestWithParam<std::string>
+{
+};
+typedef std::pair<std::string, std::string> config_error;
+class InvalidConfigs : public testing::TestWithParam<config_error>
+{
+};
+
+void load_client_config(const std::string &config_content)
 {
     OptionList options;
     ClientOptions::Config config;
@@ -53,44 +61,37 @@ void load_client_config(const std::string &config_content, bool dco = false)
     ClientOptions cliopt(options, config);
 }
 
+TEST_P(ValidConfigs, valid_config)
+{
+    load_client_config(GetParam());
+}
+
+TEST_P(InvalidConfigs, config_throws_option_error)
+{
+    OVPN_EXPECT_THROW(
+        load_client_config(GetParam().first),
+        option_error,
+        GetParam().second);
+}
+
 TEST(config, missingRequiredOption)
 {
     ParseClientConfig conf = ParseClientConfig::parse("mode server");
     EXPECT_EQ(conf.error(), true);
-    EXPECT_EQ(conf.message(), "ERR_PROFILE_OPTION: option_error: remote option not specified");
+    EXPECT_TRUE(conf.message().find("option_error: remote option not specified") != std::string::npos);
 }
 
-TEST(config, parse_missing_option)
-{
-    OVPN_EXPECT_THROW(
-        load_client_config(std::string("remote wooden.box\n") + "mode server"
-                           + "\n<ca>\n" + dummysecp256cert + "</ca>\n"),
-        option_error,
-        "option 'cert' not found");
-}
-
-TEST(config, parse_forbidden_option)
-{
-    OVPN_EXPECT_THROW(
-        load_client_config(minimalConfig + "mode"),
-        option_error,
-        "Only 'mode p2p' supported");
-
-    OVPN_EXPECT_THROW(
-        load_client_config(minimalConfig + "mode server"),
-        option_error,
-        "Only 'mode p2p' supported");
-
-    OVPN_EXPECT_THROW(
-        load_client_config(minimalConfig + "key-method 1"),
-        option_error,
-        "Only 'key-method 2' is supported");
-
-    OVPN_EXPECT_THROW(
-        load_client_config(minimalConfig + "fragment"),
-        option_error,
-        "sorry, 'fragment' directive is not supported");
-}
+INSTANTIATE_TEST_SUITE_P(
+    optionError,
+    InvalidConfigs,
+    testing::Values(
+        config_error{std::string("remote wooden.box\n") + "mode server"
+                         + "\n<ca>\n" + dummysecp256cert + "</ca>\n",
+                     "option 'cert' not found"},
+        config_error{minimalConfig + "mode", "Only 'mode p2p' supported"},
+        config_error{minimalConfig + "mode server", "Only 'mode p2p' supported"},
+        config_error{minimalConfig + "key-method 1", "Only 'key-method 2' is supported"},
+        config_error{minimalConfig + "fragment", "sorry, 'fragment' directive is not supported"}));
 
 TEST(config, parse_unknown_option)
 {
@@ -100,27 +101,20 @@ TEST(config, parse_unknown_option)
         "UNKNOWN/UNSUPPORTED OPTIONS");
 }
 
-TEST(config, duplicate_option)
-{
-    /* A duplicate option should not cause our parser to fail */
-    load_client_config(minimalConfig + "cipher AES-192-CBC\ncipher AES-256-GCM\n");
-}
-
-TEST(config, parse_ignore_unkown)
-{
-    /* Bikeshed colour is ignored should throw no error */
-    load_client_config(minimalConfig + "ignore-unknown-option bikeshed-colour bikeshed-color\n"
-                                       "ignore-unknown-option danish axe phk\n"
-                                       "bikeshed-colour green");
-
-    load_client_config(minimalConfig + "setenv opt bikeshed-paint silver with sparkling");
-}
-
-TEST(config, ignore_warning_option)
-{
-    load_client_config(minimalConfig + "tun-ipv6\n");
-    load_client_config(minimalConfig + "opt-verify\n");
-}
+INSTANTIATE_TEST_SUITE_P(
+    minimalConfigs,
+    ValidConfigs,
+    testing::Values(
+        /* A duplicate option should not cause our parser to fail */
+        minimalConfig + "cipher AES-192-CBC\ncipher AES-256-GCM\n",
+        /* Bikeshed colour is ignored should throw no error */
+        minimalConfig + "ignore-unknown-option bikeshed-colour bikeshed-color\n"
+                        "ignore-unknown-option danish axe phk\n"
+                        "bikeshed-colour green",
+        minimalConfig + "setenv opt bikeshed-paint silver with sparkling",
+        /* warnings, but no errors */
+        minimalConfig + "tun-ipv6\n",
+        minimalConfig + "opt-verify\n"));
 
 TEST(config, parse_management)
 {
@@ -197,8 +191,19 @@ TEST(config, dco_compatibility)
         OVPN_EXPECT_THROW(
             load_client_config(minimalConfig + optname),
             option_error,
-            "option_error: dco_compatibility: config/options are not compatible with dco");
+            "ERR_INVALID_CONFIG: option_error: dco_compatibility: config/options are not compatible with dco");
     }
+}
+
+TEST(config, server_cert_in_eval)
+{
+    ClientAPI::Config api_config;
+    api_config.content = minimalConfig;
+
+    ClientAPI::OpenVPNClientHelper client_helper;
+    auto eval = client_helper.eval_config(api_config);
+
+    EXPECT_FALSE(eval.vpnCa.empty());
 }
 
 
@@ -247,42 +252,27 @@ TEST(config, multiple_option_errors)
         os.str());
 }
 
-TEST(config, client_missing_in_config)
-{
-    std::string configNoClient = certconfig + "\nremote 1.2.3.4\n";
-    OVPN_EXPECT_THROW(
-        load_client_config(configNoClient),
-        option_error,
-        "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
-}
+INSTANTIATE_TEST_SUITE_P(
+    clientPull,
+    ValidConfigs,
+    testing::Values(
+        /* Should not trigger an error, even without --client in place */
+        certconfig + "\nremote 1.2.3.4\ntls-client\npull\n",
+        /* Should not trigger an error. Redundant options are no problem */
+        certconfig + "\nremote 1.2.3.4\ntls-client\npull\nclient\n",
+        certconfig + "\nremote 1.2.3.4\npull\nclient\n",
+        certconfig + "\nremote 1.2.3.4\nclient\ntls-client\n"));
 
-TEST(config, pull_and_tlsclient_in_config)
-{
-    std::string configNoClient = certconfig + "\nremote 1.2.3.4\ntls-client\npull\n";
-    /* Should not trigger an error, even without --client in place */
-    load_client_config(configNoClient);
-}
-
-TEST(config, pull_and_client_and_tlsclient_in_config)
-{
-    std::string configNoClient = certconfig + "\nremote 1.2.3.4\ntls-client\npull\nclient\n";
-    /* Should not trigger an error. Redundant options are no problem */
-    load_client_config(configNoClient);
-}
-
-TEST(config, onlypullortlsclient)
-{
-    std::array<std::string, 2> options{"tls-client", "pull"};
-
-    for (const auto &opt : options)
-    {
-        std::string configNoClient = certconfig + "\nremote 1.2.3.4\n" + opt + "\n";
-        OVPN_EXPECT_THROW(
-            load_client_config(configNoClient),
-            option_error,
-            "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode.");
-    }
-}
+INSTANTIATE_TEST_SUITE_P(
+    clientPull,
+    InvalidConfigs,
+    testing::Values(
+        config_error{certconfig + "\nremote 1.2.3.4\n",
+                     "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode."},
+        config_error{certconfig + "\nremote 1.2.3.4\ntls-client\n",
+                     "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode."},
+        config_error{certconfig + "\nremote 1.2.3.4\npull\n",
+                     "option_error: Neither 'client' nor both 'tls-client' and 'pull' options declared. OpenVPN3 client only supports --client mode."}));
 
 TEST(config, meta_option_in_content)
 {

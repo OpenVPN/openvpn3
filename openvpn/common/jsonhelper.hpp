@@ -44,8 +44,11 @@ namespace json {
 
 OPENVPN_EXCEPTION(json_parse);
 
-/* Workaround warnings in gcc 12/13, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109642 */
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ == 13
+/* Workaround warnings in gcc 13+, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109642
+ * Could use [[gnu::no_dangling]] in gcc 14+ but that would then cause warnings in older
+ * compilers...
+ */
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 13
 #define DISABLE_DANGLING_WARNINGS() \
     _Pragma("GCC diagnostic push")  \
         _Pragma("GCC diagnostic ignored \"-Wdangling-reference\"")

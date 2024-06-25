@@ -79,7 +79,7 @@ inline Type parse_tls_version_min(const std::string &ver,
     else if (or_highest)
         return max_version;
     else
-        throw option_error("tls-version-min: unrecognized TLS version");
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-version-min: unrecognized TLS version");
 }
 
 inline Type parse_tls_version_min(const OptionList &opt,
@@ -114,7 +114,7 @@ inline void apply_override(Type &tvm, const std::string &override)
     else if (override == "tls_1_3")
         newtvm = Type::V1_3;
     else
-        throw option_error("tls-version-min: unrecognized override string");
+        throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-version-min: unrecognized override string");
 
     if (newtvm > orig || newtvm == Type::UNDEF)
         tvm = newtvm;

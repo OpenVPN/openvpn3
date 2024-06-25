@@ -499,13 +499,16 @@ inline std::string unix2dos(const std::string &str, const bool force_eol = false
 // Split a string on sep delimiter.  The size of the
 // returned string vector will be at least 1 and at
 // most maxsplit + 1 (unless maxsplit is passed as -1).
-inline std::vector<std::string> split(const std::string &str,
-                                      const char sep,
-                                      const int maxsplit = -1)
+template <typename T>
+inline std::vector<T> split(const T &str,
+                            const typename T::value_type sep,
+                            const int maxsplit = -1)
 {
-    std::vector<std::string> ret;
+    /* ensure we have a string as type */
+    static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, std::wstring>);
+    std::vector<T> ret;
     int nterms = 0;
-    std::string term;
+    T term;
 
     if (maxsplit >= 0)
         ret.reserve(maxsplit + 1);
@@ -526,13 +529,13 @@ inline std::vector<std::string> split(const std::string &str,
 }
 
 template <class T>
-inline std::string join(const T &strings,
-                        const std::string &delim,
-                        const bool tail = false)
+inline auto join(const T &strings,
+                 const typename T::value_type &delim,
+                 const bool tail = false)
 {
     /* ensure we have a container with strings as values */
-    static_assert(std::is_same_v<typename T::value_type, std::string>);
-    std::string ret;
+    static_assert(std::is_same_v<typename T::value_type, std::string> || std::is_same_v<typename T::value_type, std::wstring>);
+    typename T::value_type ret;
     bool first = true;
     for (const auto &s : strings)
     {

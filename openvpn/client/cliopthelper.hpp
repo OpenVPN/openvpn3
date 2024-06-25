@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012 - 2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -224,6 +224,12 @@ class ParseClientConfig
                 }
             }
 
+            {
+                const Option *o = options.get_ptr("ca");
+                if (o)
+                    vpnCa_ = o->get(1, Option::MULTILINE);
+            }
+
             // profile name
             {
                 const Option *o = options.get_ptr("PROFILE");
@@ -321,7 +327,7 @@ class ParseClientConfig
         catch (const option_error &e)
         {
             error_ = true;
-            message_ = Unicode::utf8_printable<std::string>(std::string("ERR_PROFILE_OPTION: ") + e.what(), 256);
+            message_ = Unicode::utf8_printable<std::string>(e.what(), 256);
         }
         catch (const std::exception &e)
         {
@@ -367,8 +373,12 @@ class ParseClientConfig
             // add in missing options
             bool added = false;
 
-            // client
-            if (options.exists("tls-client") && options.exists("pull"))
+            /* client
+               Ensure that we always look at both options, so they register as touched */
+            const bool tls_client_exists = options.exists("tls-client");
+            const bool pull_exists = options.exists("pull");
+
+            if (tls_client_exists && pull_exists)
             {
                 Option opt;
                 opt.push_back("client");
@@ -455,6 +465,11 @@ class ParseClientConfig
     bool externalPki() const
     {
         return externalPki_;
+    }
+
+    std::string vpnCa() const
+    {
+        return vpnCa_;
     }
 
     // static challenge, may be empty, ignored if autologin
@@ -771,7 +786,7 @@ class ParseClientConfig
         else if (parm == "1")
             return true;
         else
-            throw option_error(title + ": parameter must be 0 or 1");
+            throw option_error(ERR_INVALID_OPTION_VAL, title + ": parameter must be 0 or 1");
     }
 
     bool error_;
@@ -782,6 +797,7 @@ class ParseClientConfig
     bool autologin_;
     bool clientCertEnabled_;
     bool externalPki_;
+    std::string vpnCa_;
     bool pushPeerInfo_;
     std::string staticChallenge_;
     bool staticChallengeEcho_;
