@@ -40,8 +40,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/crypto/digestapi.hpp>
 
-namespace openvpn {
-namespace HTTPProxy {
+namespace openvpn::HTTPProxy {
 
 class NTLM
 {
@@ -227,7 +226,6 @@ class NTLM
             throw Exception("split_domain_username failed");
     }
 };
-} // namespace HTTPProxy
-} // namespace openvpn
+} // namespace openvpn::HTTPProxy
 
 #endif

@@ -28,8 +28,7 @@
 #include <openvpn/win/winerr.hpp>
 #include <openvpn/common/size.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 template <typename E>
 static void check_reg_error(DWORD status, const std::string &key)
@@ -410,5 +409,4 @@ struct Reg
     }
 };
 
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win

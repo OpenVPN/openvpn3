@@ -23,8 +23,7 @@
 
 #include <mbedtls/ssl.h>
 
-namespace openvpn {
-namespace MbedTLSCrypto {
+namespace openvpn::MbedTLSCrypto {
 class TLS1PRF
 {
   public:
@@ -141,5 +140,4 @@ class TLS1PRF
 #endif
 };
 
-} // namespace MbedTLSCrypto
-} // namespace openvpn
+} // namespace openvpn::MbedTLSCrypto

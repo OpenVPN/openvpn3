@@ -26,8 +26,7 @@
 
 #include <openvpn/dco/kocrypto.hpp>
 
-namespace openvpn {
-namespace KoRekey {
+namespace openvpn::KoRekey {
 
 class Receiver : public virtual RC<thread_unsafe_refcount>
 {
@@ -195,7 +194,6 @@ class Factory : public CryptoDCFactory
     Frame::Ptr frame;
 };
 
-} // namespace KoRekey
-} // namespace openvpn
+} // namespace openvpn::KoRekey
 
 #endif

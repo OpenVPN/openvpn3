@@ -37,8 +37,7 @@
 #include "openvpn/common/hexstr.hpp"
 #include "openvpn/common/uniqueptr.hpp"
 
-namespace openvpn {
-namespace OpenSSLPKI {
+namespace openvpn::OpenSSLPKI {
 
 /**
  *  Retrieve the complete X.509 Certificate Subject field
@@ -264,5 +263,4 @@ static inline std::vector<uint8_t> x509_get_fingerprint(const ::X509 *cert)
     return fingerprint;
 }
 
-} // namespace OpenSSLPKI
-} // namespace openvpn
+} // namespace openvpn::OpenSSLPKI

@@ -31,8 +31,7 @@
 #include <openvpn/win/winerr.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 // Wrap a standard Windows Event object
 class Event
@@ -102,7 +101,6 @@ struct DestroyEvent : public Event
     }
 };
 
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win
 
 #endif

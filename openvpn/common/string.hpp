@@ -33,8 +33,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/size.hpp>
 
-namespace openvpn {
-namespace string {
+namespace openvpn::string {
 // case insensitive compare functions
 
 inline int strcasecmp(const char *s1, const char *s2)
@@ -691,8 +690,6 @@ inline std::string remove_char(const std::string &str, const char remove)
     return ret;
 }
 
-} // namespace string
-
-} // namespace openvpn
+} // namespace openvpn::string
 
 #endif // OPENVPN_COMMON_STRING_H

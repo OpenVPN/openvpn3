@@ -61,8 +61,7 @@
 #define TUNWINDOWS Util::TunIPHELPER
 #endif
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 class Setup : public SetupBase
 {
   public:
@@ -909,5 +908,4 @@ class Setup : public SetupBase
     bool allow_local_dns_resolvers = false;
     DWORD process_id_ = 0;
 };
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

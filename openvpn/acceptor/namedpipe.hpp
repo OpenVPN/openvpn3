@@ -25,8 +25,7 @@
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/secattr.hpp>
 
-namespace openvpn {
-namespace Acceptor {
+namespace openvpn::Acceptor {
 
 class NamedPipe : public Base
 {
@@ -113,5 +112,4 @@ class NamedPipe : public Base
     Win::SecurityAttributes sa;
 };
 
-} // namespace Acceptor
-} // namespace openvpn
+} // namespace openvpn::Acceptor

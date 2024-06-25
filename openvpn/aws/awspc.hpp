@@ -40,8 +40,7 @@
 #include <openvpn/openssl/sign/pkcs7verify.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
 
-namespace openvpn {
-namespace AWS {
+namespace openvpn::AWS {
 
 class PCQuery : public RC<thread_unsafe_refcount>
 {
@@ -609,5 +608,4 @@ class PCQuery : public RC<thread_unsafe_refcount>
     Json::Value awspc_req;
     bool pending = false;
 };
-} // namespace AWS
-} // namespace openvpn
+} // namespace openvpn::AWS

@@ -33,8 +33,7 @@
 #include <sys/ucred.h>
 #endif
 
-namespace openvpn {
-namespace SockOpt {
+namespace openvpn::SockOpt {
 
 struct Creds
 {
@@ -87,7 +86,6 @@ inline bool peercreds(const int fd, Creds &cr)
 #endif
 }
 
-} // namespace SockOpt
-} // namespace openvpn
+} // namespace openvpn::SockOpt
 
 #endif

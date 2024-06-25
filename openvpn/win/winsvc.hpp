@@ -36,8 +36,7 @@
 #include <openvpn/win/winerr.hpp>
 #include <openvpn/win/modname.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 class Service
 {
   public:
@@ -415,5 +414,4 @@ class Service
 };
 
 Service *Service::service = nullptr; // GLOBAL
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win

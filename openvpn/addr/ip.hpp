@@ -37,14 +37,13 @@
 
 #define OPENVPN_IP_THROW(ERR) throw openvpn::IP::ip_exception(ERR)
 
-namespace openvpn {
-// This is our fundamental IP address class that handles IPv4 or IPv6
-// IP addresses.  It is implemented as a discriminated union of IPv4::Addr
-// and IPv6::Addr.
-namespace IP {
+namespace openvpn::IP {
 
 OPENVPN_EXCEPTION(ip_exception);
 
+// This is our fundamental IP address class that handles IPv4 or IPv6
+// IP addresses.  It is implemented as a discriminated union of IPv4::Addr
+// and IPv6::Addr.
 class Addr
 {
   public:
@@ -1132,8 +1131,7 @@ class Addr
 };
 
 OPENVPN_OSTREAM(Addr, to_string)
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP
 
 #ifdef USE_OPENVPN_HASH
 OPENVPN_HASH_METHOD(openvpn::IP::Addr, hashval);

@@ -25,8 +25,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/addr/ip.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 
 // A list of unique IP addresses
 class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
@@ -59,7 +58,6 @@ class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
       }
 #endif
 };
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP
 
 #endif

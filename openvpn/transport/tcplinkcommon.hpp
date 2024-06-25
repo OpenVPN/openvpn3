@@ -37,8 +37,7 @@
 #define OPENVPN_LOG_TCPLINK_VERBOSE(x)
 #endif
 
-namespace openvpn {
-namespace TCPTransport {
+namespace openvpn::TCPTransport {
 
 template <typename Protocol,
           typename ReadHandler,
@@ -474,7 +473,6 @@ class LinkCommon : public LinkBase
     virtual void recv_buffer(PacketFrom::SPtr &pfp, const size_t bytes_recvd) = 0;
     virtual void from_app_send_buffer(BufferPtr &buf) = 0;
 };
-} // namespace TCPTransport
-} // namespace openvpn
+} // namespace openvpn::TCPTransport
 
 #endif

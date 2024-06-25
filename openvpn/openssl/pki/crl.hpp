@@ -33,8 +33,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
-namespace openvpn {
-namespace OpenSSLPKI {
+namespace openvpn::OpenSSLPKI {
 
 class CRL
 {
@@ -172,5 +171,4 @@ class CRLList : public std::vector<CRL>
         return ret;
     }
 };
-} // namespace OpenSSLPKI
-} // namespace openvpn
+} // namespace openvpn::OpenSSLPKI

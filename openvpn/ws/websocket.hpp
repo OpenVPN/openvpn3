@@ -36,8 +36,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/random/randapi.hpp>
 
-namespace openvpn {
-namespace WebSocket {
+namespace openvpn::WebSocket {
 
 OPENVPN_EXCEPTION(websocket_error);
 
@@ -556,5 +555,4 @@ class PerRequest : public RC<thread_unsafe_refcount>
 
 } // namespace Server
 
-} // namespace WebSocket
-} // namespace openvpn
+} // namespace openvpn::WebSocket

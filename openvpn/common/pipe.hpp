@@ -34,8 +34,7 @@
 #include <openvpn/common/strerror.hpp>
 #include <openvpn/buffer/buflist.hpp>
 
-namespace openvpn {
-namespace Pipe {
+namespace openvpn::Pipe {
 class SD
 {
   public:
@@ -143,7 +142,6 @@ inline void make_pipe(ScopedFD &read, ScopedFD &write)
     read.reset(fd[0]);
     write.reset(fd[1]);
 }
-} // namespace Pipe
-} // namespace openvpn
+} // namespace openvpn::Pipe
 
 #endif

@@ -28,8 +28,7 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/http/header.hpp>
 
-namespace openvpn {
-namespace HTTPProxy {
+namespace openvpn::HTTPProxy {
 
 // parse the Proxy-Authenticate HTTP header
 class ProxyAuthenticate : public RC<thread_unsafe_refcount>
@@ -83,7 +82,6 @@ class ProxyAuthenticate : public RC<thread_unsafe_refcount>
         }
     }
 };
-} // namespace HTTPProxy
-} // namespace openvpn
+} // namespace openvpn::HTTPProxy
 
 #endif

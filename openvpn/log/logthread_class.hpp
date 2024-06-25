@@ -27,8 +27,7 @@
 #error OPENVPN_LOG_CLASS must be defined
 #endif
 
-namespace openvpn {
-namespace Log {
+namespace openvpn::Log {
 
 #ifdef OPENVPN_LOG_GLOBAL
 // OPENVPN_LOG uses global object pointer
@@ -105,5 +104,4 @@ struct Context
         return global_log;
     }
 };
-} // namespace Log
-} // namespace openvpn
+} // namespace openvpn::Log

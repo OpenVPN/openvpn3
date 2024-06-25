@@ -24,8 +24,7 @@
 #include <string>
 #include <regex>
 
-namespace openvpn {
-namespace HTTP {
+namespace openvpn::HTTP {
 
 inline std::string headers_redact(const std::string &headers)
 {
@@ -65,5 +64,4 @@ inline std::string headers_redact(const std::string &headers)
 #endif
 }
 
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP

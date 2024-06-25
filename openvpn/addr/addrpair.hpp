@@ -29,8 +29,7 @@
 #include <openvpn/common/split.hpp>
 #include <openvpn/addr/ip.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 
 // AddrMaskPair is basically an object that combines an IP address (v4 or v6)
 // with a netmask or prefix length.
@@ -218,7 +217,6 @@ struct AddrMaskPair
     }
 };
 OPENVPN_OSTREAM(AddrMaskPair, to_string)
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP
 
 #endif

@@ -41,20 +41,17 @@
 #include <openvpn/auth/authcert.hpp>
 
 
-namespace openvpn {
-namespace AuthStatus {
+namespace openvpn::AuthStatus {
 // Auth constants
 enum Type : unsigned char;
-} // namespace AuthStatus
-} // namespace openvpn
+} // namespace openvpn::AuthStatus
 
 
 
 // used by ipma_notify()
 struct ovpn_tun_head_ipma;
 
-namespace openvpn {
-namespace ManClientInstance {
+namespace openvpn::ManClientInstance {
 
 // Base class for the per-client-instance state of the ManServer.
 // Each client instance uses this class to send data to the man layer.
@@ -182,7 +179,6 @@ struct Factory : public RC<thread_unsafe_refcount>
     virtual Send::Ptr new_man_obj(Recv *instance) = 0;
 };
 
-} // namespace ManClientInstance
-} // namespace openvpn
+} // namespace openvpn::ManClientInstance
 
 #endif

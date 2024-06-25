@@ -26,8 +26,7 @@
 #include <openvpn/common/fileunix.hpp>
 #include <openvpn/common/stat.hpp>
 
-namespace openvpn {
-namespace AWS {
+namespace openvpn::AWS {
 inline std::string api_ca()
 {
     // paths are copied from https://golang.org/src/crypto/x509/root_linux.go
@@ -46,5 +45,4 @@ inline std::string api_ca()
     }
     throw file_unix_error("No CA certificate files found in system paths");
 }
-} // namespace AWS
-} // namespace openvpn
+} // namespace openvpn::AWS

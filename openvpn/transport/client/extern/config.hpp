@@ -27,8 +27,7 @@
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/client/remotelist.hpp>
 
-namespace openvpn {
-namespace ExternalTransport {
+namespace openvpn::ExternalTransport {
 struct Config
 {
     Protocol protocol;
@@ -39,7 +38,6 @@ struct Config
     SessionStats::Ptr stats;
     SocketProtect *socket_protect = nullptr;
 };
-} // namespace ExternalTransport
-} // namespace openvpn
+} // namespace openvpn::ExternalTransport
 
 #endif

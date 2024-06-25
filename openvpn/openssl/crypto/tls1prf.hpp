@@ -31,8 +31,7 @@
 
 #include <openvpn/common/numeric_util.hpp>
 
-namespace openvpn {
-namespace OpenSSLCrypto {
+namespace openvpn::OpenSSLCrypto {
 
 class TLS1PRF
 {
@@ -123,5 +122,4 @@ class TLS1PRF
 #endif
 };
 
-} // namespace OpenSSLCrypto
-} // namespace openvpn
+} // namespace openvpn::OpenSSLCrypto

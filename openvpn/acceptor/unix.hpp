@@ -26,8 +26,7 @@
 
 #include <openvpn/acceptor/base.hpp>
 
-namespace openvpn {
-namespace Acceptor {
+namespace openvpn::Acceptor {
 
 struct Unix : public Base
 {
@@ -76,5 +75,4 @@ struct Unix : public Base
     openvpn_io::basic_socket_acceptor<openvpn_io::local::stream_protocol> acceptor;
 };
 
-} // namespace Acceptor
-} // namespace openvpn
+} // namespace openvpn::Acceptor

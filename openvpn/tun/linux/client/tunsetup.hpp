@@ -47,8 +47,7 @@
 #include <openvpn/tun/client/tunconfigflags.hpp>
 #include <openvpn/netconf/linux/gw.hpp>
 
-namespace openvpn {
-namespace TunLinuxSetup {
+namespace openvpn::TunLinuxSetup {
 
 OPENVPN_EXCEPTION(tun_linux_error);
 OPENVPN_EXCEPTION(tun_open_error);
@@ -264,7 +263,6 @@ class Setup : public TunBuilderSetup::Base
 
     std::string tun_iface_name; // used to skip tun-based default gw when add bypass route
 };
-} // namespace TunLinuxSetup
-} // namespace openvpn
+} // namespace openvpn::TunLinuxSetup
 
 #endif // OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H

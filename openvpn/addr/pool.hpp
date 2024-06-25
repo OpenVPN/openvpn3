@@ -33,8 +33,7 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/range.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 
 // Maintain a pool of IP addresses.
 // A should be IP::Addr, IPv4::Addr, or IPv6::Addr.
@@ -163,7 +162,6 @@ class PoolType
 };
 
 typedef PoolType<IP::Addr> Pool;
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP
 
 #endif

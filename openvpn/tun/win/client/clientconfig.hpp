@@ -28,8 +28,7 @@
 #include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/win/client/tunsetup.hpp>
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 
 // These types manage the underlying TAP driver HANDLE
 typedef openvpn_io::windows::stream_handle TAPStream;
@@ -99,5 +98,4 @@ class ClientConfig : public TunClientFactory
         return true;
     }
 };
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

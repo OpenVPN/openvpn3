@@ -30,8 +30,7 @@
 
 #include <openvpn/addr/ip.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 
 // Denote a range of IP addresses with a start and extent,
 // where A represents an address class.
@@ -157,7 +156,6 @@ class RangePartitionType
 
 typedef RangeType<IP::Addr> Range;
 typedef RangePartitionType<IP::Addr> RangePartition;
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP
 
 #endif

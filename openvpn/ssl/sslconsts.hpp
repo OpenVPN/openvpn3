@@ -22,8 +22,7 @@
 #ifndef OPENVPN_SSL_SSLCONSTS_H
 #define OPENVPN_SSL_SSLCONSTS_H
 
-namespace openvpn {
-namespace SSLConst {
+namespace openvpn::SSLConst {
 
 // Special return values from SSL read/write methods
 enum
@@ -83,7 +82,6 @@ inline unsigned int ssl_flags(const unsigned int flags)
 {
     return flags & (LAST - 1);
 }
-} // namespace SSLConst
-} // namespace openvpn
+} // namespace openvpn::SSLConst
 
 #endif

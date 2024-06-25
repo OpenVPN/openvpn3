@@ -30,8 +30,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 
-namespace openvpn {
-namespace TLSCertProfile {
+namespace openvpn::TLSCertProfile {
 enum Type
 {
     UNDEF = 0,
@@ -140,7 +139,6 @@ inline void apply_override(Type &type, const std::string &override)
         throw option_error(ERR_INVALID_OPTION_CRYPTO, "tls-cert-profile: unrecognized override string");
     // OPENVPN_LOG("*** tls-cert-profile before=" << to_string(orig) << " override=" << override << " after=" << to_string(type));
 }
-} // namespace TLSCertProfile
-} // namespace openvpn
+} // namespace openvpn::TLSCertProfile
 
 #endif

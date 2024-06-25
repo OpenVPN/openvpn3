@@ -141,8 +141,7 @@ DEFINE_GUID(
 
 #endif
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 
 /**
  * @brief Add WFP rules to block traffic from escaping the VPN
@@ -554,5 +553,4 @@ class WFP : public RC<thread_unsafe_refcount>
     EngineHandle engineHandle;
 };
 
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

@@ -40,8 +40,7 @@
 #include <openvpn/ssl/sslconsts.hpp>
 #include <openvpn/ws/chunked.hpp>
 
-namespace openvpn {
-namespace WS {
+namespace openvpn::WS {
 OPENVPN_EXCEPTION(http_exception);
 
 template <typename PARENT,
@@ -566,5 +565,4 @@ class HTTPBase : public REFCOUNT_BASE
     HTTPOutState out_state;
 };
 
-} // namespace WS
-} // namespace openvpn
+} // namespace openvpn::WS

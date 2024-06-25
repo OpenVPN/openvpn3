@@ -36,8 +36,7 @@
 #include <openvpn/transport/socket_protect.hpp>
 #include <openvpn/client/remotelist.hpp>
 
-namespace openvpn {
-namespace TCPTransport {
+namespace openvpn::TCPTransport {
 
 class ClientConfig : public TransportClientFactory
 {
@@ -414,7 +413,6 @@ inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::i
 {
     return TransportClient::Ptr(new Client(io_context, this, parent));
 }
-} // namespace TCPTransport
-} // namespace openvpn
+} // namespace openvpn::TCPTransport
 
 #endif

@@ -24,12 +24,11 @@
 
 #include <openvpn/common/unicode.hpp>
 
-namespace openvpn {
 // Validate authentication credential.
 // Must be UTF-8.
 // Other checks on size and content below.
 // We don't check that the credential is non-empty.
-namespace ValidateCreds {
+namespace openvpn::ValidateCreds {
 
 enum Type
 {
@@ -66,7 +65,6 @@ static bool is_valid(const Type type, const STRING &cred, const bool strict)
     }
     return Unicode::is_valid_utf8(cred, max_len_flags);
 }
-} // namespace ValidateCreds
-} // namespace openvpn
+} // namespace openvpn::ValidateCreds
 
 #endif

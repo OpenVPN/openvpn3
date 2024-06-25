@@ -38,8 +38,7 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/apple/cf/error.hpp>
 
-namespace openvpn {
-namespace AppleCrypto {
+namespace openvpn::AppleCrypto {
 class CipherContext
 {
     CipherContext(const CipherContext &) = delete;
@@ -205,7 +204,6 @@ class CipherContext
     const CryptoAlgs::Alg *cinfo;
     CCCryptorRef cref;
 };
-} // namespace AppleCrypto
-} // namespace openvpn
+} // namespace openvpn::AppleCrypto
 
 #endif

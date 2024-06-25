@@ -41,8 +41,7 @@
 #define WINTUN_MAX_PACKET_SIZE 0xffff
 #define WINTUN_PACKET_ALIGN 4
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 struct TUN_RING
 {
     std::atomic_ulong head;
@@ -176,5 +175,4 @@ class RingBuffer : public RC<thread_unsafe_refcount>
     TUN_RING *send_ring_ = nullptr;
     TUN_RING *receive_ring_ = nullptr;
 };
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

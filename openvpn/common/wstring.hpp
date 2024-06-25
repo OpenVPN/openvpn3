@@ -27,8 +27,7 @@
 #include <vector>
 #include <memory>
 
-namespace openvpn {
-namespace wstring {
+namespace openvpn::wstring {
 
 /**
  * @brief Convert a UTF-8 string to UTF-16
@@ -117,6 +116,4 @@ inline std::wstring pack_string_vector(const std::vector<std::string> &strvec)
 }
 
 #endif // #ifdef _WIN32
-
-} // namespace wstring
-} // namespace openvpn
+}

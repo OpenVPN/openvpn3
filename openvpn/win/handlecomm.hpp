@@ -26,9 +26,7 @@
 #include <openvpn/buffer/bufhex.hpp>
 #include <openvpn/win/winerr.hpp>
 
-namespace openvpn {
-namespace Win {
-namespace HandleComm {
+namespace openvpn::Win::HandleComm {
 
 OPENVPN_EXCEPTION(handle_comm);
 
@@ -74,6 +72,4 @@ inline HANDLE receive_handle(const std::string &remote_handle_hex,
     return local_handle;
 }
 
-} // namespace HandleComm
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win::HandleComm

@@ -41,8 +41,7 @@
 
 #include <openvpn/openssl/compat.hpp>
 
-namespace openvpn {
-namespace OpenSSLCrypto {
+namespace openvpn::OpenSSLCrypto {
 class HMACContext;
 
 class DigestContext
@@ -133,7 +132,6 @@ class DigestContext
     using EVP_MD_CTX_unique_ptr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
     EVP_MD_CTX_unique_ptr ctx{nullptr, ::EVP_MD_CTX_free};
 };
-} // namespace OpenSSLCrypto
-} // namespace openvpn
+} // namespace openvpn::OpenSSLCrypto
 
 #endif

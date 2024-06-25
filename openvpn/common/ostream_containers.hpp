@@ -30,9 +30,7 @@
 
 #include <ostream>
 
-namespace openvpn {
-
-namespace C2os {
+namespace openvpn::C2os {
 
 /**
  * @brief New typename for holding the underlying container type
@@ -141,5 +139,4 @@ inline std::ostream &operator<<(std::ostream &os, const PtrContainer<C> &contain
     return os;
 }
 
-} // namespace C2os
-} // namespace openvpn
+} // namespace openvpn::C2os

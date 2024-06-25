@@ -35,8 +35,7 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/ssl/sslapi.hpp>
 
-namespace openvpn {
-namespace MbedTLSCrypto {
+namespace openvpn::MbedTLSCrypto {
 class CipherContextCommon
 {
   public:
@@ -239,7 +238,6 @@ class CipherContext
         }
     }
 };
-} // namespace MbedTLSCrypto
-} // namespace openvpn
+} // namespace openvpn::MbedTLSCrypto
 
 #endif

@@ -24,10 +24,8 @@
 
 #include <openvpn/apple/cf/cf.hpp>
 
-namespace openvpn {
-namespace CF {
+namespace openvpn::CF {
 OPENVPN_CF_WRAP(Timer, timer_cast, CFRunLoopTimerRef, CFRunLoopTimerGetTypeID)
 }
-} // namespace openvpn
 
 #endif

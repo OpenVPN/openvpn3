@@ -33,8 +33,7 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/server/servhalt.hpp>
 
-namespace openvpn {
-namespace TunClientInstance {
+namespace openvpn::TunClientInstance {
 
 typedef Function<void(int fd)> PostCloseFunc;
 
@@ -116,7 +115,6 @@ struct Factory : public RC<thread_unsafe_refcount>
     virtual Send::Ptr new_tun_obj(Recv *parent) = 0;
 };
 
-} // namespace TunClientInstance
-} // namespace openvpn
+} // namespace openvpn::TunClientInstance
 
 #endif

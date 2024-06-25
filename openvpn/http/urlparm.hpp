@@ -31,8 +31,7 @@
 #include <openvpn/http/webexcept.hpp>
 #include <openvpn/common/string.hpp>
 
-namespace openvpn {
-namespace URL {
+namespace openvpn::URL {
 OPENVPN_EXCEPTION(url_parameter_error);
 
 struct Parm
@@ -208,7 +207,6 @@ class ParmList : public std::vector<Parm>
     std::string request_;
 };
 
-} // namespace URL
-} // namespace openvpn
+} // namespace openvpn::URL
 
 #endif

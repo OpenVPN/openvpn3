@@ -34,8 +34,7 @@
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/crypto/definitions.hpp>
 
-namespace openvpn {
-namespace CryptoAlgs {
+namespace openvpn::CryptoAlgs {
 
 OPENVPN_EXCEPTION(crypto_alg);
 OPENVPN_SIMPLE_EXCEPTION(crypto_alg_index);
@@ -390,7 +389,6 @@ inline bool use_cipher_digest(const Type type)
     const Alg &alg = get(type);
     return alg.mode() != AEAD;
 }
-} // namespace CryptoAlgs
-} // namespace openvpn
+} // namespace openvpn::CryptoAlgs
 
 #endif

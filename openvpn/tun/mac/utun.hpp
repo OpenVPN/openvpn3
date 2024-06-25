@@ -48,9 +48,7 @@
 #include <openvpn/common/to_string.hpp>
 #include <openvpn/common/scoped_fd.hpp>
 
-namespace openvpn {
-namespace TunMac {
-namespace UTun {
+namespace openvpn::TunMac::UTun {
 OPENVPN_EXCEPTION(utun_error);
 
 // Open specific utun device unit and return fd.
@@ -108,8 +106,6 @@ inline int utun_open(std::string &name)
     }
     throw utun_error("cannot open available utun device");
 }
-} // namespace UTun
-} // namespace TunMac
-} // namespace openvpn
+} // namespace openvpn::TunMac::UTun
 
 #endif

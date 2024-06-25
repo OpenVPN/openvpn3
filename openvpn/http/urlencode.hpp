@@ -32,8 +32,7 @@
 #include <openvpn/common/unicode.hpp>
 #include <openvpn/http/parseutil.hpp>
 
-namespace openvpn {
-namespace URL {
+namespace openvpn::URL {
 OPENVPN_EXCEPTION(url_error);
 
 inline std::string encode(const std::string &str)
@@ -115,7 +114,6 @@ inline std::vector<std::string> decode_path(std::string path)
         i = decode(i);
     return list;
 }
-} // namespace URL
-} // namespace openvpn
+} // namespace openvpn::URL
 
 #endif

@@ -34,8 +34,7 @@
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/mbedtls/mbedtls_compat.hpp>
 
-namespace openvpn {
-namespace MbedTLSCrypto {
+namespace openvpn::MbedTLSCrypto {
 class HMACContext;
 
 class DigestContext
@@ -167,7 +166,6 @@ class DigestContext
     bool initialized;
     mbedtls_md_context_t ctx;
 };
-} // namespace MbedTLSCrypto
-} // namespace openvpn
+} // namespace openvpn::MbedTLSCrypto
 
 #endif

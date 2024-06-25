@@ -80,9 +80,7 @@
 #define OPENVPN_HTTP_SERV_RC RC<thread_unsafe_refcount>
 #endif
 
-namespace openvpn {
-namespace WS {
-namespace Server {
+namespace openvpn::WS::Server {
 
 OPENVPN_EXCEPTION(http_server_exception);
 
@@ -1131,6 +1129,4 @@ class Listener : public ProxyListener
     ClientMap clients;
 };
 
-} // namespace Server
-} // namespace WS
-} // namespace openvpn
+} // namespace openvpn::WS::Server

@@ -36,8 +36,7 @@
 #include <openvpn/common/hash.hpp>
 #include <openvpn/addr/ip.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 // Basic route object
 template <typename ADDR>
 class RouteType
@@ -433,8 +432,7 @@ inline Route route_from_string(const std::string &rtstr,
 
 #endif
 
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP
 
 #ifdef USE_OPENVPN_HASH
 OPENVPN_HASH_METHOD(openvpn::IP::Route, hash_value);

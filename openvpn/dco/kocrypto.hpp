@@ -33,8 +33,7 @@
 #include <openvpn/crypto/cryptodc.hpp>
 #include <openvpn/crypto/bs64_data_limit.hpp>
 
-namespace openvpn {
-namespace KoRekey {
+namespace openvpn::KoRekey {
 
 OPENVPN_EXCEPTION(korekey_error);
 
@@ -138,8 +137,7 @@ class Key
             std::memset(dest + NONCE_TAIL_SIZE, 0, dest_size - NONCE_TAIL_SIZE);
     }
 };
-} // namespace KoRekey
-} // namespace openvpn
+} // namespace openvpn::KoRekey
 
 #ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kovpnkocrypto.hpp>

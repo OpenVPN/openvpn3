@@ -35,8 +35,7 @@
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/frame/memq_dgram.hpp>
 
-namespace openvpn {
-namespace bmq_dgram {
+namespace openvpn::bmq_dgram {
 
 class MemQ : public MemQDgram
 {
@@ -268,7 +267,6 @@ MemQ()
 {
     bio_memq_internal::free_bio_method();
 }
-} // namespace bmq_dgram
-} // namespace openvpn
+} // namespace openvpn::bmq_dgram
 
 #endif // OPENVPN_OPENSSL_BIO_BIO_MEMQ_DGRAM_H

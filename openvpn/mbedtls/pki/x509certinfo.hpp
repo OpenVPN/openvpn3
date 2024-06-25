@@ -34,8 +34,7 @@
 
 #define MBEDTLS_MAX_SUBJECT_LENGTH 256
 
-namespace openvpn {
-namespace MbedTLSPKI {
+namespace openvpn::MbedTLSPKI {
 
 /**
  *  Retrieve the complete X.509 Certificate Subject field
@@ -138,5 +137,4 @@ static std::string x509_get_common_name(const mbedtls_x509_crt *cert)
                  : std::string(""));
 }
 
-} // namespace MbedTLSPKI
-} // namespace openvpn
+} // namespace openvpn::MbedTLSPKI

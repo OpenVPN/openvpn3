@@ -30,8 +30,7 @@
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/common/stop.hpp>
 
-namespace openvpn {
-namespace ExternalTun {
+namespace openvpn::ExternalTun {
 struct Config
 {
     TunProp::Config tun_prop;
@@ -40,6 +39,5 @@ struct Config
     Stop *stop = nullptr;
     bool tun_persist = false;
 };
-} // namespace ExternalTun
-} // namespace openvpn
+} // namespace openvpn::ExternalTun
 #endif

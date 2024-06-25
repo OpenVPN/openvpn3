@@ -39,8 +39,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/mbedtls/util/error.hpp>
 
-namespace openvpn {
-namespace MbedTLSPKI {
+namespace openvpn::MbedTLSPKI {
 
 class X509Cert : public RC<thread_unsafe_refcount>
 {
@@ -176,7 +175,6 @@ class X509Cert : public RC<thread_unsafe_refcount>
     constexpr static const char *begin_cert = "-----BEGIN CERTIFICATE-----\n";
     constexpr static const char *end_cert = "-----END CERTIFICATE-----\n";
 };
-} // namespace MbedTLSPKI
-} // namespace openvpn
+} // namespace openvpn::MbedTLSPKI
 
 #endif

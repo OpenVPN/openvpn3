@@ -24,11 +24,9 @@
 
 #include <openvpn/apple/cf/cf.hpp>
 
-namespace openvpn {
-namespace CF {
+namespace openvpn::CF {
 OPENVPN_CF_WRAP(RunLoop, runloop_cast, CFRunLoopRef, CFRunLoopGetTypeID)
 OPENVPN_CF_WRAP(RunLoopSource, runloop_source_cast, CFRunLoopSourceRef, CFRunLoopSourceGetTypeID);
-} // namespace CF
-} // namespace openvpn
+} // namespace openvpn::CF
 
 #endif

@@ -27,8 +27,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/addr/route.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 class AddressSpaceSplitter : public RouteList
 {
   public:
@@ -108,5 +107,4 @@ class AddressSpaceSplitter : public RouteList
         return type;
     }
 };
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP

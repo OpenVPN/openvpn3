@@ -44,8 +44,7 @@
 #include <openvpn/transport/gremlin.hpp>
 #endif
 
-namespace openvpn {
-namespace TCPTransport {
+namespace openvpn::TCPTransport {
 
 template <typename Protocol, typename ReadHandler, bool RAW_MODE_ONLY>
 class TCPLink : public LinkCommon<Protocol,
@@ -99,7 +98,6 @@ class TCPLink : public LinkCommon<Protocol,
             Base::queue_recv(pfp.release()); // reuse PacketFrom object
     }
 };
-} // namespace TCPTransport
-} // namespace openvpn
+} // namespace openvpn::TCPTransport
 
 #endif

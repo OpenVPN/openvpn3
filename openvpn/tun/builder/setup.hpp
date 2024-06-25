@@ -29,8 +29,7 @@
 #include <openvpn/common/stop.hpp>
 #include <openvpn/tun/builder/capture.hpp>
 
-namespace openvpn {
-namespace TunBuilderSetup {
+namespace openvpn::TunBuilderSetup {
 struct Config
 {
 #ifdef HAVE_JSON
@@ -55,7 +54,6 @@ struct Factory : public RC<thread_unsafe_refcount>
 
     virtual Base::Ptr new_setup_obj() = 0;
 };
-} // namespace TunBuilderSetup
-} // namespace openvpn
+} // namespace openvpn::TunBuilderSetup
 
 #endif

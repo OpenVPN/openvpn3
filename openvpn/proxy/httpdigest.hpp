@@ -29,8 +29,7 @@
 
 #include <openvpn/crypto/hashstr.hpp>
 
-namespace openvpn {
-namespace HTTPProxy {
+namespace openvpn::HTTPProxy {
 
 class Digest
 {
@@ -107,7 +106,6 @@ class Digest
         return h2.final_hex();
     }
 };
-} // namespace HTTPProxy
-} // namespace openvpn
+} // namespace openvpn::HTTPProxy
 
 #endif

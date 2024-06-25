@@ -25,8 +25,7 @@
 
 #include <openvpn/common/endian_platform.hpp>
 
-namespace openvpn {
-namespace Endian {
+namespace openvpn::Endian {
 #ifdef __MINGW32__
 inline std::uint64_t mingw_bswap64(const std::uint64_t val)
 {
@@ -56,5 +55,4 @@ inline std::uint64_t rev64(const std::uint64_t value)
     return value;
 #endif /* OPENVPN_LITTLE_ENDIAN */
 }
-} // namespace Endian
-} // namespace openvpn
+} // namespace openvpn::Endian

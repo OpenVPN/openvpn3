@@ -30,8 +30,7 @@
 #include <openvpn/common/platform.hpp>
 #include <openvpn/common/string.hpp>
 
-namespace openvpn {
-namespace path {
+namespace openvpn::path {
 
 // Directory separators.  The first char in dirsep is the primary
 // separator for the platform, while subsequent chars are also
@@ -202,7 +201,6 @@ inline std::string join(const std::string &p1, const std::string &p2, Args... ar
     return join(join(p1, p2), args...);
 }
 
-} // namespace path
-} // namespace openvpn
+} // namespace openvpn::path
 
 #endif // OPENVPN_COMMON_STRING_H

@@ -29,8 +29,7 @@
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/size.hpp>
 
-namespace openvpn {
-namespace IPChecksum {
+namespace openvpn::IPChecksum {
 
 inline std::uint16_t fold(std::uint32_t sum)
 {
@@ -170,5 +169,4 @@ inline std::uint16_t checksum(const void *data, const size_t size)
 {
     return cfold(compute(data, size));
 }
-} // namespace IPChecksum
-} // namespace openvpn
+} // namespace openvpn::IPChecksum

@@ -28,9 +28,7 @@
 #include <string>
 #include <openvpn/win/handle.hpp>
 
-namespace openvpn {
-namespace Win {
-namespace Console {
+namespace openvpn::Win::Console {
 
 class Input
 {
@@ -160,8 +158,6 @@ class Title
     bool old_title_defined;
     std::string old_title;
 };
-} // namespace Console
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win::Console
 
 #endif

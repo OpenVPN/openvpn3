@@ -33,8 +33,7 @@
 #include <openvpn/init/cryptoinit.hpp>
 #include <openvpn/init/engineinit.hpp>
 
-namespace openvpn {
-namespace InitProcess {
+namespace openvpn::InitProcess {
 class Init
 {
   private:
@@ -93,5 +92,4 @@ class Init
     }
 };
 
-} // namespace InitProcess
-} // namespace openvpn
+} // namespace openvpn::InitProcess

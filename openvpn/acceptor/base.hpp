@@ -39,8 +39,7 @@
 #define OPENVPN_ACCEPTOR_LISTENER_BASE_RC RC<thread_unsafe_refcount>
 #endif
 
-namespace openvpn {
-namespace Acceptor {
+namespace openvpn::Acceptor {
 
 struct ListenerBase : public OPENVPN_ACCEPTOR_LISTENER_BASE_RC
 {
@@ -91,5 +90,4 @@ struct Set : public std::vector<Item>
     }
 };
 
-} // namespace Acceptor
-} // namespace openvpn
+} // namespace openvpn::Acceptor

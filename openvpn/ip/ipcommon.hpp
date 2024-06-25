@@ -25,8 +25,7 @@
 
 #include <cstdint> // for std::uint32_t, uint16_t, uint8_t
 
-namespace openvpn {
-namespace IPCommon {
+namespace openvpn::IPCommon {
 
 enum
 {
@@ -48,5 +47,4 @@ inline unsigned int version(const std::uint8_t version_len_prio)
     return (version_len_prio >> 4) & 0x0F;
 }
 
-} // namespace IPCommon
-} // namespace openvpn
+} // namespace openvpn::IPCommon

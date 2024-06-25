@@ -23,8 +23,7 @@
 
 #include <string>
 
-namespace openvpn {
-namespace HaltRestart {
+namespace openvpn::HaltRestart {
 enum Type
 {
     HALT,            // disconnect
@@ -55,5 +54,4 @@ inline std::string to_string(Type type)
         return "HaltRestart_?";
     }
 }
-} // namespace HaltRestart
-} // namespace openvpn
+} // namespace openvpn::HaltRestart

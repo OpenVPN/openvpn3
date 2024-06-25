@@ -32,9 +32,7 @@
 #include <openvpn/win/secattr.hpp>
 #include <openvpn/win/scoped_handle.hpp>
 
-namespace openvpn {
-namespace Win {
-namespace LogUtil {
+namespace openvpn::Win::LogUtil {
 
 inline void log(const HANDLE file, const std::string &str)
 {
@@ -75,6 +73,4 @@ inline ScopedHANDLE create_file(const std::string &fn,
     return file;
 }
 
-} // namespace LogUtil
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win::LogUtil

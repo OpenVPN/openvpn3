@@ -32,8 +32,7 @@
 #include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/linux/client/tunmethods.hpp>
 
-namespace openvpn {
-namespace TunLinux {
+namespace openvpn::TunLinux {
 
 struct PacketFrom
 {
@@ -370,7 +369,6 @@ inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context &i
     return TunClient::Ptr(new Client(io_context, this, parent));
 }
 
-} // namespace TunLinux
-} // namespace openvpn
+} // namespace openvpn::TunLinux
 
 #endif // OPENVPN_TUN_LINUX_CLIENT_TUNCLI_H

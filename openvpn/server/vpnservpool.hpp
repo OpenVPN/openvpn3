@@ -37,8 +37,7 @@
 #include <openvpn/addr/route.hpp>
 #include <openvpn/addr/pool.hpp>
 
-namespace openvpn {
-namespace VPNServerPool {
+namespace openvpn::VPNServerPool {
 
 OPENVPN_EXCEPTION(vpn_serv_pool_error);
 
@@ -154,7 +153,6 @@ class IP46AutoRelease : public IP46, public RC<thread_safe_refcount>
     Pool *pool;
 };
 
-} // namespace VPNServerPool
-} // namespace openvpn
+} // namespace openvpn::VPNServerPool
 
 #endif

@@ -31,8 +31,7 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/common/to_string.hpp>
 
-namespace openvpn {
-namespace AsioBoundSocket {
+namespace openvpn::AsioBoundSocket {
 
 typedef openvpn_io::basic_stream_socket<openvpn_io::ip::tcp> SocketBase;
 
@@ -149,7 +148,6 @@ class Socket : public SocketBase
     Proto<IPv6::Addr> v6;
 };
 
-} // namespace AsioBoundSocket
-} // namespace openvpn
+} // namespace openvpn::AsioBoundSocket
 
 #endif

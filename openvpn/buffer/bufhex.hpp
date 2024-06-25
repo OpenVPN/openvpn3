@@ -26,8 +26,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
-namespace openvpn {
-namespace BufHex {
+namespace openvpn::BufHex {
 
 OPENVPN_EXCEPTION(buf_hex);
 
@@ -56,7 +55,6 @@ inline T parse(const std::string &hex, const std::string &title)
     return obj;
 }
 
-} // namespace BufHex
-} // namespace openvpn
+} // namespace openvpn::BufHex
 
 #endif

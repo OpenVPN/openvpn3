@@ -66,8 +66,7 @@
         goto assert_fail;          \
     }
 
-namespace openvpn {
-namespace lzo_asym_impl {
+namespace openvpn::lzo_asym_impl {
 // Return status values
 enum
 {
@@ -351,8 +350,7 @@ assert_fail:
 input_too_large:
     return LZOASYM_E_INPUT_TOO_LARGE;
 }
-} // namespace lzo_asym_impl
-} // namespace openvpn
+} // namespace openvpn::lzo_asym_impl
 
 #undef LZOASYM_CHECK_INPUT_OVERFLOW
 #undef LZOASYM_CHECK_OUTPUT_OVERFLOW

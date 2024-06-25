@@ -46,8 +46,7 @@
 #include <openvpn/common/peercred.hpp>
 #endif
 
-namespace openvpn {
-namespace AsioPolySock {
+namespace openvpn::AsioPolySock {
 // for shutdown()
 enum ShutdownFlags
 {
@@ -385,7 +384,6 @@ struct NamedPipe : public Base
     openvpn_io::windows::stream_handle handle;
 };
 #endif
-} // namespace AsioPolySock
-} // namespace openvpn
+} // namespace openvpn::AsioPolySock
 
 #endif

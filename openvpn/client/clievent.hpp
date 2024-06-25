@@ -38,8 +38,7 @@
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
-namespace openvpn {
-namespace ClientEvent {
+namespace openvpn::ClientEvent {
 enum Type
 {
     // normal events including disconnected, connected, and other transitional events
@@ -686,7 +685,6 @@ class Queue : public RC<thread_unsafe_refcount>
 
     virtual void add_event(Base::Ptr event) = 0;
 };
-} // namespace ClientEvent
-} // namespace openvpn
+} // namespace openvpn::ClientEvent
 
 #endif // OPENVPN_CLIENT_CLIEVENT_H

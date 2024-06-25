@@ -45,8 +45,7 @@
 #include <openvpn/tun/linux/client/tunsetup.hpp>
 #include <openvpn/netconf/linux/gw.hpp>
 
-namespace openvpn {
-namespace TunIPRoute {
+namespace openvpn::TunIPRoute {
 
 using namespace openvpn::TunLinuxSetup;
 
@@ -352,5 +351,4 @@ struct TunMethods
             add_del_route(address, 128, gw.v6.addr().to_string(), gw.dev(), R_ADD_SYS, rtvec, create, destroy);
     }
 };
-} // namespace TunIPRoute
-} // namespace openvpn
+} // namespace openvpn::TunIPRoute

@@ -36,8 +36,7 @@
 
 #include <openvpn/buffer/buffer.hpp>
 
-namespace openvpn {
-namespace HTTP {
+namespace openvpn::HTTP {
 
 class HTMLSkip
 {
@@ -283,7 +282,6 @@ class HTMLSkip
     unsigned long bytes;
 };
 
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP
 
 #endif

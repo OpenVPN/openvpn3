@@ -23,8 +23,7 @@
 
 #include <openvpn/common/endian_platform.hpp>
 
-namespace openvpn {
-namespace Endian {
+namespace openvpn::Endian {
 #if defined(OPENVPN_LITTLE_ENDIAN)
 inline size_t e16(const size_t v)
 {
@@ -78,5 +77,4 @@ inline size_t e2(const size_t v)
 #else
 #error One of OPENVPN_LITTLE_ENDIAN or OPENVPN_BIG_ENDIAN must be defined
 #endif
-} // namespace Endian
-} // namespace openvpn
+} // namespace openvpn::Endian

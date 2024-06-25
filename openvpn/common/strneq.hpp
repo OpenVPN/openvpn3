@@ -24,8 +24,7 @@
 #include <string>
 #include <atomic>
 
-namespace openvpn {
-namespace crypto {
+namespace openvpn::crypto {
 
 // Compare strings in a way that is more resistant to timing attacks.
 // s1 should be the string provided by the user, while s2 is the
@@ -60,5 +59,4 @@ inline bool str_neq(const std::string &s1, const std::string &s2)
 {
     return str_neq(s1.c_str(), s2.c_str());
 }
-} // namespace crypto
-} // namespace openvpn
+} // namespace openvpn::crypto

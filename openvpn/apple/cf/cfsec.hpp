@@ -40,8 +40,7 @@
 
 // Define C++ wrappings for Apple security-related objects.
 
-namespace openvpn {
-namespace CF {
+namespace openvpn::CF {
 OPENVPN_CF_WRAP(Cert, cert_cast, SecCertificateRef, SecCertificateGetTypeID)
 OPENVPN_CF_WRAP(Key, key_cast, SecKeyRef, SecKeyGetTypeID)
 OPENVPN_CF_WRAP(Identity, identity_cast, SecIdentityRef, SecIdentityGetTypeID)
@@ -51,8 +50,7 @@ OPENVPN_CF_WRAP(Trust, trust_cast, SecTrustRef, SecTrustGetTypeID)
 OPENVPN_CF_WRAP(Keychain, keychain_cast, SecKeychainRef, SecKeychainGetTypeID)
 OPENVPN_CF_WRAP(Access, access_cast, SecAccessRef, SecAccessGetTypeID)
 #endif
-} // namespace CF
+} // namespace openvpn::CF
 
-} // namespace openvpn
 
 #endif // OPENVPN_APPLECRYPTO_CF_CFSEC_H

@@ -25,8 +25,7 @@
 
 #include <openvpn/ssl/tlsver.hpp>
 
-namespace openvpn {
-namespace TLSVersion {
+namespace openvpn::TLSVersion {
 
 inline int toTLSVersion(const Type version)
 {
@@ -51,5 +50,4 @@ inline int toTLSVersion(const Type version)
 #endif
     }
 }
-} // namespace TLSVersion
-} // namespace openvpn
+} // namespace openvpn::TLSVersion

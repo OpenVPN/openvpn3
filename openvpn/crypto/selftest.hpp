@@ -43,8 +43,7 @@
 #include <openvpn/mbedtls/util/selftest.hpp>
 #endif
 
-namespace openvpn {
-namespace SelfTest {
+namespace openvpn::SelfTest {
 inline std::string crypto_self_test()
 {
     std::string ret;
@@ -59,7 +58,6 @@ inline std::string crypto_self_test()
 #endif
     return ret;
 }
-} // namespace SelfTest
-} // namespace openvpn
+} // namespace openvpn::SelfTest
 
 #endif // OPENVPN_CRYPTO_CRYPTO_H

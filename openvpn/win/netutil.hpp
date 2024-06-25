@@ -26,8 +26,7 @@
 #include <string>
 #include "openvpn/win/reg.hpp"
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 struct NetApi
 {
@@ -150,5 +149,4 @@ static bool dhcp_enabled_on_itf(typename REG::Key &itf_key)
     return !error && dhcp ? true : false;
 }
 
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win

@@ -30,9 +30,7 @@
 #ifndef OPENVPN_HTTP_PARSEUTIL_H
 #define OPENVPN_HTTP_PARSEUTIL_H
 
-namespace openvpn {
-namespace HTTP {
-namespace Util {
+namespace openvpn::HTTP::Util {
 
 // Check if a byte is an HTTP character.
 inline bool is_char(const unsigned char c)
@@ -95,8 +93,6 @@ inline bool is_escaped(const unsigned char c)
         return false;
     return true;
 }
-} // namespace Util
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP::Util
 
 #endif

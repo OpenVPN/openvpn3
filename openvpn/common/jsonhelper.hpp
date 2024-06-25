@@ -39,8 +39,7 @@
 #error no JSON library available
 #endif
 
-namespace openvpn {
-namespace json {
+namespace openvpn::json {
 
 OPENVPN_EXCEPTION(json_parse);
 
@@ -958,5 +957,4 @@ inline Json::Value dict_result(Json::Value jr)
         return jret;
     }
 }
-} // namespace json
-} // namespace openvpn
+} // namespace openvpn::json

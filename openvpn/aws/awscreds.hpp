@@ -25,8 +25,7 @@
 
 #include <string>
 
-namespace openvpn {
-namespace AWS {
+namespace openvpn::AWS {
 struct Creds
 {
     Creds()
@@ -64,5 +63,4 @@ struct Creds
     std::string secret_key;
     std::string token;
 };
-} // namespace AWS
-} // namespace openvpn
+} // namespace openvpn::AWS

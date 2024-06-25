@@ -37,8 +37,7 @@
 
 #include <openvpn/openssl/compat.hpp>
 
-namespace openvpn {
-namespace bmq_stream {
+namespace openvpn::bmq_stream {
 
 class MemQ : public MemQStream
 {
@@ -235,5 +234,4 @@ inline const MemQ *const_memq_from_bio(const BIO *b)
     else
         return nullptr;
 }
-} // namespace bmq_stream
-} // namespace openvpn
+} // namespace openvpn::bmq_stream

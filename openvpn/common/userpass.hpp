@@ -32,8 +32,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/file.hpp>
 
-namespace openvpn {
-namespace UserPass {
+namespace openvpn::UserPass {
 
 OPENVPN_EXCEPTION(creds_error);
 
@@ -211,7 +210,6 @@ inline void parse_file(const std::string &path,
         throw creds_error(path + " : password empty");
 }
 
-} // namespace UserPass
-} // namespace openvpn
+} // namespace openvpn::UserPass
 
 #endif

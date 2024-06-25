@@ -36,8 +36,7 @@
         throw exc(status, _ovpn_exc.str());   \
     } while (0)
 
-namespace openvpn {
-namespace HTTP {
+namespace openvpn::HTTP {
 class WebException : public std::exception
 {
   public:
@@ -74,7 +73,6 @@ class WebException : public std::exception
     const std::string error_;
     const std::string formatted;
 };
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP
 
 #endif

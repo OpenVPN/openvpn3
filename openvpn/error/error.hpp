@@ -26,8 +26,7 @@
 
 #include <openvpn/common/arraysize.hpp>
 
-namespace openvpn {
-namespace Error {
+namespace openvpn::Error {
 
 enum Type
 {
@@ -199,7 +198,6 @@ inline const char *name(const size_t type)
     else
         return "UNKNOWN_ERROR_TYPE";
 }
-} // namespace Error
-} // namespace openvpn
+} // namespace openvpn::Error
 
 #endif // OPENVPN_ERROR_ERROR_H

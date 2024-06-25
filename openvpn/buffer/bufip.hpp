@@ -28,8 +28,7 @@
 #include <openvpn/buffer/buffmt.hpp>
 #include <openvpn/common/socktypes.hpp> // for ntohs
 
-namespace openvpn {
-namespace BufferFormat {
+namespace openvpn::BufferFormat {
 
 static inline void ipv4(Buffer &buf, const std::uint32_t addr) // addr is big-endian
 {
@@ -150,5 +149,4 @@ static inline void ipv6(Buffer &buf, const void *addr)
             buf_append_string(buf, "::");
     }
 }
-} // namespace BufferFormat
-} // namespace openvpn
+} // namespace openvpn::BufferFormat

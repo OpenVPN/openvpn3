@@ -28,8 +28,7 @@
 
 #include <openvpn/io/io.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 struct Error : public openvpn_io::error_code
 {
     Error(const DWORD err)
@@ -45,7 +44,6 @@ struct LastError : public Error
     {
     }
 };
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win
 
 #endif

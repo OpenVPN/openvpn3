@@ -29,8 +29,7 @@
 #include <openvpn/common/options.hpp>
 #include <openvpn/common/unicode.hpp>
 
-namespace openvpn {
-namespace HostPort {
+namespace openvpn::HostPort {
 OPENVPN_EXCEPTION(host_port_error);
 
 inline bool is_valid_port(const unsigned int port)
@@ -147,7 +146,6 @@ inline bool split_host_port(const std::string &str,
         return is_valid_host(host) && is_valid_port(port, port_save);
 }
 
-} // namespace HostPort
-} // namespace openvpn
+} // namespace openvpn::HostPort
 
 #endif

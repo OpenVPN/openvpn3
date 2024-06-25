@@ -29,8 +29,7 @@
 // defined in cf.hpp.  They add additional convenience methods, such as dictionary
 // lookup.
 
-namespace openvpn {
-namespace CF {
+namespace openvpn::CF {
 
 // essentially a vector of void *, used as source for array and dictionary constructors
 typedef BufferAllocatedType<CFTypeRef, thread_unsafe_refcount> SrcList;
@@ -256,6 +255,5 @@ inline void array_append_index(MutableArray &array, CFIndex value)
     Number num = number_from_index(value);
     arrayAppendValue(array(), num());
 }
-} // namespace CF
-} // namespace openvpn
+} // namespace openvpn::CF
 #endif

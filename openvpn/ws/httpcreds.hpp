@@ -37,8 +37,7 @@
 #include <openvpn/common/writeprivate.hpp>
 #include <openvpn/http/header.hpp>
 
-namespace openvpn {
-namespace WS {
+namespace openvpn::WS {
 struct Creds
 {
     OPENVPN_EXCEPTION(web_creds_error);
@@ -165,5 +164,4 @@ struct Creds
     std::string username;
     std::string password;
 };
-} // namespace WS
-} // namespace openvpn
+} // namespace openvpn::WS

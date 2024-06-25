@@ -26,8 +26,7 @@
 
 #include <openvpn/tun/client/tunbase.hpp>
 
-namespace openvpn {
-namespace TunNull {
+namespace openvpn::TunNull {
 
 class ClientConfig : public TunClientFactory
 {
@@ -122,7 +121,6 @@ inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context &i
     return TunClient::Ptr(new Client(io_context, this, parent));
 }
 
-} // namespace TunNull
-} // namespace openvpn
+} // namespace openvpn::TunNull
 
 #endif // OPENVPN_TUN_CLIENT_TUNNULL_H

@@ -55,8 +55,7 @@
 #include <openvpn/win/netutil.hpp>
 #include <openvpn/win/winerr.hpp>
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 
 /**
  * @brief Manage NRPT rules for Windows
@@ -509,5 +508,4 @@ class Nrpt
 
 using NRPT = Nrpt<Win::Reg, Win::NetApi>;
 
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

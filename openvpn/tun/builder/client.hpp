@@ -33,8 +33,7 @@
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/tun/tunio.hpp>
 
-namespace openvpn {
-namespace TunBuilderClient {
+namespace openvpn::TunBuilderClient {
 
 OPENVPN_EXCEPTION(tun_builder_error);
 
@@ -336,7 +335,6 @@ inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context &i
     return TunClient::Ptr(new Client(io_context, this, parent));
 }
 
-} // namespace TunBuilderClient
-} // namespace openvpn
+} // namespace openvpn::TunBuilderClient
 
 #endif

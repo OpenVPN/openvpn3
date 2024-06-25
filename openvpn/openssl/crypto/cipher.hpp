@@ -37,8 +37,7 @@
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/compat.hpp>
 
-namespace openvpn {
-namespace OpenSSLCrypto {
+namespace openvpn::OpenSSLCrypto {
 class CipherContext
 {
     /* In OpenSSL 3.0 the method that returns EVP_CIPHER, the cipher needs to be
@@ -219,7 +218,6 @@ class CipherContext
 
     EVP_CIPHER_CTX *ctx = nullptr;
 };
-} // namespace OpenSSLCrypto
-} // namespace openvpn
+} // namespace openvpn::OpenSSLCrypto
 
 #endif

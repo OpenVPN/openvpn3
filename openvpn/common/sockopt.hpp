@@ -35,8 +35,7 @@
 
 #include <openvpn/common/exception.hpp>
 
-namespace openvpn {
-namespace SockOpt {
+namespace openvpn::SockOpt {
 
 #ifdef SO_REUSEPORT
 // set SO_REUSEPORT for inter-thread load balancing
@@ -77,8 +76,7 @@ static inline void set_nonblock(const int fd)
     if (::fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
         throw Exception("error setting socket to non-blocking mode");
 }
-} // namespace SockOpt
-} // namespace openvpn
+} // namespace openvpn::SockOpt
 
 #endif
 #endif

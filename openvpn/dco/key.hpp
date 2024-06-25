@@ -22,8 +22,7 @@
 
 #pragma once
 
-namespace openvpn {
-namespace KoRekey {
+namespace openvpn::KoRekey {
 
 struct KeyDirection
 {
@@ -42,5 +41,4 @@ struct KeyConfig
     unsigned int cipher_alg;
 };
 
-} // namespace KoRekey
-} // namespace openvpn
+} // namespace openvpn::KoRekey

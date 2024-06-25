@@ -39,8 +39,7 @@
 #define CHECKED_PTR_OF(type, p) ((char *)(1 ? p : (type *)0))
 #endif
 
-namespace openvpn {
-namespace OpenSSLPKI {
+namespace openvpn::OpenSSLPKI {
 
 namespace DH_private {
 // defined outside of DH class to avoid symbol collision in way
@@ -167,5 +166,4 @@ class DH
 
     ::DH *dh_;
 };
-} // namespace OpenSSLPKI
-} // namespace openvpn
+} // namespace openvpn::OpenSSLPKI

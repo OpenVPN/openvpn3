@@ -39,8 +39,7 @@
 #include <openssl/params.h>
 
 
-namespace openvpn {
-namespace OpenSSLCrypto {
+namespace openvpn::OpenSSLCrypto {
 class HMACContext
 {
     HMACContext(const HMACContext &) = delete;
@@ -171,7 +170,6 @@ class HMACContext
     uint8_t key[EVP_MAX_MD_SIZE];
     EVP_MAC_CTX *ctx = nullptr;
 };
-} // namespace OpenSSLCrypto
-} // namespace openvpn
+} // namespace openvpn::OpenSSLCrypto
 
 #endif

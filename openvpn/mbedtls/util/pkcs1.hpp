@@ -24,9 +24,7 @@
 
 #include <openvpn/pki/pkcs1.hpp>
 
-namespace openvpn {
-namespace PKCS1 {
-namespace DigestPrefix {
+namespace openvpn::PKCS1::DigestPrefix {
 
 class MbedTLSParse : public Parse<mbedtls_md_type_t>
 {
@@ -62,8 +60,6 @@ class MbedTLSParse : public Parse<mbedtls_md_type_t>
         }
     }
 };
-} // namespace DigestPrefix
-} // namespace PKCS1
-} // namespace openvpn
+} // namespace openvpn::PKCS1::DigestPrefix
 
 #endif

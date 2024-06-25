@@ -29,8 +29,7 @@
 
 #include <openvpn/common/string.hpp>
 
-namespace openvpn {
-namespace TLSRemote {
+namespace openvpn::TLSRemote {
 inline bool test(const std::string &tls_remote, const std::string &subject, const std::string &common_name)
 {
     return tls_remote == subject || string::starts_with(common_name, tls_remote);
@@ -94,7 +93,6 @@ inline std::string sanitize_common_name(const std::string &str)
     }
     return ret;
 }
-} // namespace TLSRemote
-} // namespace openvpn
+} // namespace openvpn::TLSRemote
 
 #endif

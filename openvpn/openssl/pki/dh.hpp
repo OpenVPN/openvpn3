@@ -36,8 +36,7 @@
 #else
 
 
-namespace openvpn {
-namespace OpenSSLPKI {
+namespace openvpn::OpenSSLPKI {
 
 
 
@@ -169,6 +168,5 @@ class DH
 
     ::EVP_PKEY *dh_;
 };
-} // namespace OpenSSLPKI
-} // namespace openvpn
+} // namespace openvpn::OpenSSLPKI
 #endif

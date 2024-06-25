@@ -24,8 +24,7 @@
 
 // Various sanity checks for different limits on OpenVPN clients
 
-namespace openvpn {
-namespace ProfileParseLimits {
+namespace openvpn::ProfileParseLimits {
 enum
 {
     MAX_PROFILE_SIZE = 262144,   // maximum size of an OpenVPN configuration file
@@ -36,7 +35,6 @@ enum
     TERM_OVERHEAD = 16,          // bytes overhead of one argument in an option, for accounting purposes
     MAX_SERVER_LIST_SIZE = 4096, // maximum server list size, i.e. "setenv SERVER ..."
 };
-} // namespace ProfileParseLimits
-} // namespace openvpn
+} // namespace openvpn::ProfileParseLimits
 
 #endif

@@ -31,8 +31,7 @@
 #include <openvpn/common/string.hpp>
 #include <openvpn/common/to_string.hpp>
 
-namespace openvpn {
-namespace X509Track {
+namespace openvpn::X509Track {
 
 enum Type
 {
@@ -229,7 +228,6 @@ struct Set : public std::vector<KeyValue>
     }
 };
 
-} // namespace X509Track
-} // namespace openvpn
+} // namespace openvpn::X509Track
 
 #endif

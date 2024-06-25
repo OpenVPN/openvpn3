@@ -55,8 +55,7 @@
             return cls();                              \
     }
 
-namespace openvpn {
-namespace CF {
+namespace openvpn::CF {
 enum Rule
 {
     CREATE, // create rule
@@ -471,7 +470,6 @@ inline Data plist(CFTypeRef obj)
                                          nullptr));
 }
 
-} // namespace CF
-} // namespace openvpn
+} // namespace openvpn::CF
 
 #endif // OPENVPN_APPLECRYPTO_CF_CF_H

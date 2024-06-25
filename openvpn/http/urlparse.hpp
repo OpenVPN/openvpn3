@@ -32,8 +32,7 @@
 #include <openvpn/http/validate_uri.hpp>
 #include <openvpn/http/parseutil.hpp>
 
-namespace openvpn {
-namespace URL {
+namespace openvpn::URL {
 OPENVPN_EXCEPTION(url_parse_error);
 
 class Parse
@@ -269,7 +268,6 @@ class Parse
     }
 };
 
-} // namespace URL
-} // namespace openvpn
+} // namespace openvpn::URL
 
 #endif

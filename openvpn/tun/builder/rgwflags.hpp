@@ -22,15 +22,13 @@
 #ifndef OPENVPN_TUN_BUILDER_RGWFLAGS_H
 #define OPENVPN_TUN_BUILDER_RGWFLAGS_H
 
-namespace openvpn {
-namespace RGWFlags {
+namespace openvpn::RGWFlags {
 // These flags are passed as the flags argument to TunBuilderBase::tun_builder_reroute_gw
 // NOTE: must not collide with RG_x flags in rgopt.hpp.
 enum
 {
     EmulateExcludeRoutes = (1 << 16),
 };
-} // namespace RGWFlags
-} // namespace openvpn
+} // namespace openvpn::RGWFlags
 
 #endif

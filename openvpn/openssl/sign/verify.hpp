@@ -39,8 +39,7 @@
 
 #include <openvpn/openssl/compat.hpp>
 
-namespace openvpn {
-namespace OpenSSLSign {
+namespace openvpn::OpenSSLSign {
 /*
  * Verify signature.
  * On success, return.
@@ -94,7 +93,6 @@ inline void verify(const OpenSSLPKI::X509 &cert,
     if (EVP_VerifyFinal(md_ctx, binsig.c_data(), numeric_cast<unsigned int>(binsig.length()), pkey) != 1)
         throw OpenSSLException("OpenSSLSign::verify: verification failed");
 }
-} // namespace OpenSSLSign
-} // namespace openvpn
+} // namespace openvpn::OpenSSLSign
 
 #endif

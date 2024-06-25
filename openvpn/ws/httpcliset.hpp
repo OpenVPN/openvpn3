@@ -49,8 +49,7 @@
 #define OPENVPN_HTTP_CLISET_RC RC<thread_unsafe_refcount>
 #endif
 
-namespace openvpn {
-namespace WS {
+namespace openvpn::WS {
 
 class ClientSet : public RC<thread_unsafe_refcount>
 {
@@ -1030,5 +1029,4 @@ class ClientSet : public RC<thread_unsafe_refcount>
     std::map<client_t, Client::Ptr> clients;
 };
 
-} // namespace WS
-} // namespace openvpn
+} // namespace openvpn::WS

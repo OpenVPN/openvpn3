@@ -33,8 +33,7 @@
 #include <openvpn/aws/awsca.hpp>
 #include <openvpn/ssl/sslchoose.hpp>
 
-namespace openvpn {
-namespace AWS {
+namespace openvpn::AWS {
 class HTTPContext
 {
   public:
@@ -127,7 +126,6 @@ class HTTPContext
 #endif
     int debug_level_;
 };
-} // namespace AWS
-} // namespace openvpn
+} // namespace openvpn::AWS
 
 #endif

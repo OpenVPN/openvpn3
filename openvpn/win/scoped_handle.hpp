@@ -29,8 +29,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/win/handle.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 class ScopedHANDLE
 {
     ScopedHANDLE(const ScopedHANDLE &) = delete;
@@ -124,7 +123,6 @@ class ScopedHANDLE
     HANDLE handle;
 };
 
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win
 
 #endif

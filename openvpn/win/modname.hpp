@@ -34,8 +34,7 @@
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/npinfo.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 inline std::wstring module_name()
 {
@@ -75,7 +74,6 @@ inline std::string omiclient_path()
 
     return strbuf;
 }
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win
 
 #endif

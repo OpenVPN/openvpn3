@@ -27,10 +27,8 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
-namespace openvpn {
-namespace PKCS1 {
 // from http://www.ietf.org/rfc/rfc3447.txt
-namespace DigestPrefix { // CONST GLOBAL
+namespace openvpn::PKCS1::DigestPrefix { // CONST GLOBAL
 namespace {
 // clang-format off
 const unsigned char MD2[] = {
@@ -144,8 +142,6 @@ class Parse
 
     const T none_, md2_, md5_, sha1_, sha256_, sha384_, sha512_;
 };
-} // namespace DigestPrefix
-} // namespace PKCS1
-} // namespace openvpn
+} // namespace openvpn::PKCS1::DigestPrefix
 
 #endif

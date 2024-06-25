@@ -33,8 +33,7 @@
 #include <openvpn/http/header.hpp>
 #include <openvpn/http/parseutil.hpp>
 
-namespace openvpn {
-namespace HTTP {
+namespace openvpn::HTTP {
 
 struct Request
 {
@@ -399,7 +398,6 @@ struct RequestType
     typedef Request State;
     typedef RequestParser Parser;
 };
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP
 
 #endif

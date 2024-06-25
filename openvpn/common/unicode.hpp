@@ -35,8 +35,7 @@
 #include <openvpn/common/unicode-impl.hpp>
 #include <openvpn/buffer/buffer.hpp>
 
-namespace openvpn {
-namespace Unicode {
+namespace openvpn::Unicode {
 
 OPENVPN_SIMPLE_EXCEPTION(unicode_src_overflow);
 OPENVPN_SIMPLE_EXCEPTION(unicode_dest_overflow);
@@ -300,7 +299,6 @@ class UTF8Iterator
     const unsigned char *str;
     size_t size;
 };
-} // namespace Unicode
-} // namespace openvpn
+} // namespace openvpn::Unicode
 
 #endif

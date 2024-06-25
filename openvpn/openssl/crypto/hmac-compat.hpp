@@ -33,8 +33,7 @@
 
 #include <openvpn/openssl/compat.hpp>
 
-namespace openvpn {
-namespace OpenSSLCrypto {
+namespace openvpn::OpenSSLCrypto {
 class HMACContext
 {
   public:
@@ -148,7 +147,6 @@ class HMACContext
 
     HMAC_CTX *ctx = nullptr;
 };
-} // namespace OpenSSLCrypto
-} // namespace openvpn
+} // namespace openvpn::OpenSSLCrypto
 
 #endif

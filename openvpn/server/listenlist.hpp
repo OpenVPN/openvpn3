@@ -37,8 +37,7 @@
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/transport/protocol.hpp>
 
-namespace openvpn {
-namespace Listen {
+namespace openvpn::Listen {
 struct Item
 {
     enum SSLMode
@@ -340,7 +339,6 @@ class List : public std::vector<Item>
 #endif
     }
 };
-} // namespace Listen
-} // namespace openvpn
+} // namespace openvpn::Listen
 
 #endif

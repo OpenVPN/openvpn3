@@ -55,8 +55,7 @@
 #include <openvpn/client/remotelist.hpp>
 #include <openvpn/crypto/digestapi.hpp>
 
-namespace openvpn {
-namespace HTTPProxyTransport {
+namespace openvpn::HTTPProxyTransport {
 
 enum AuthMethod
 {
@@ -1102,7 +1101,6 @@ inline TransportClient::Ptr ClientConfig::new_transport_client_obj(openvpn_io::i
 {
     return TransportClient::Ptr(new Client(io_context, this, parent));
 }
-} // namespace HTTPProxyTransport
-} // namespace openvpn
+} // namespace openvpn::HTTPProxyTransport
 
 #endif

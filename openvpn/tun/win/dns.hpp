@@ -60,8 +60,7 @@
 #include <openvpn/win/reg.hpp>
 #include <openvpn/win/netutil.hpp>
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 
 /**
  * @brief Manage DNS search suffixes for Windows
@@ -546,5 +545,4 @@ class Dns
 
 using DNS = Dns<Win::Reg, Win::NetApi>;
 
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

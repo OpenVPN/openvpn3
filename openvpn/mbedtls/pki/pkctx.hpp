@@ -36,8 +36,7 @@
 #include <openvpn/mbedtls/util/error.hpp>
 #include <openvpn/mbedtls/util/rand.hpp>
 
-namespace openvpn {
-namespace MbedTLSPKI {
+namespace openvpn::MbedTLSPKI {
 
 class PKContext : public RC<thread_unsafe_refcount>
 {
@@ -174,6 +173,5 @@ class PKContext : public RC<thread_unsafe_refcount>
     mbedtls_pk_context *ctx;
 };
 
-} // namespace MbedTLSPKI
-} // namespace openvpn
+} // namespace openvpn::MbedTLSPKI
 #endif

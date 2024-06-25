@@ -27,8 +27,7 @@
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/sni_metadata.hpp>
 
-namespace openvpn {
-namespace SNI {
+namespace openvpn::SNI {
 
 // Abstract base class used to provide an SNI handler
 class HandlerBase
@@ -53,5 +52,4 @@ class HandlerBase
     }
 };
 
-} // namespace SNI
-} // namespace openvpn
+} // namespace openvpn::SNI

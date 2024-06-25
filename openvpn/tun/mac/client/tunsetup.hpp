@@ -50,8 +50,7 @@
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
-namespace openvpn {
-namespace TunMac {
+namespace openvpn::TunMac {
 class Setup : public TunBuilderSetup::Base
 {
   public:
@@ -504,7 +503,6 @@ class Setup : public TunBuilderSetup::Base
         }
     }
 };
-} // namespace TunMac
-} // namespace openvpn
+} // namespace openvpn::TunMac
 
 #endif

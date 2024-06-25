@@ -32,8 +32,7 @@
 #include <cstddef> // for std::nullptr_t
 #include <utility>
 
-namespace openvpn {
-namespace StringTempl {
+namespace openvpn::StringTempl {
 
 // empty
 
@@ -88,7 +87,6 @@ inline const char *to_cstring(const char *str)
 {
     return str;
 }
-} // namespace StringTempl
-} // namespace openvpn
+} // namespace openvpn::StringTempl
 
 #endif

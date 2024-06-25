@@ -45,8 +45,7 @@
 #endif
 #endif
 
-namespace openvpn {
-namespace TunNetlink {
+namespace openvpn::TunNetlink {
 
 #define SNDBUF_SIZE (1024 * 2)
 #define RCVBUF_SIZE (1024 * 4)
@@ -1380,5 +1379,4 @@ class SITNL
                                metric);
     }
 };
-} // namespace TunNetlink
-} // namespace openvpn
+} // namespace openvpn::TunNetlink

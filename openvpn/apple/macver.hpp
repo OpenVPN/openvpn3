@@ -33,8 +33,7 @@
 #include <openvpn/common/number.hpp>
 #include <openvpn/apple/ver.hpp>
 
-namespace openvpn {
-namespace Mac {
+namespace openvpn::Mac {
 class Version : public AppleVersion
 {
   public:
@@ -70,7 +69,6 @@ class Version : public AppleVersion
             init(std::string(str, size));
     }
 };
-} // namespace Mac
-} // namespace openvpn
+} // namespace openvpn::Mac
 
 #endif

@@ -37,8 +37,7 @@
 #include <openvpn/crypto/definitions.hpp>
 #include <openvpn/openssl/compat.hpp>
 
-namespace openvpn {
-namespace OpenSSLPKI {
+namespace openvpn::OpenSSLPKI {
 
 class PKey
 {
@@ -231,5 +230,4 @@ class PKey
     ::EVP_PKEY *pkey_;
     std::string priv_key_pwd;
 };
-} // namespace OpenSSLPKI
-} // namespace openvpn
+} // namespace openvpn::OpenSSLPKI

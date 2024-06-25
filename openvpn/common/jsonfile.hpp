@@ -24,8 +24,7 @@
 #include <openvpn/common/jsonhelper.hpp>
 #include <openvpn/common/fileatomic.hpp>
 
-namespace openvpn {
-namespace json {
+namespace openvpn::json {
 
 inline Json::Value read_fast(const std::string &fn,
                              const bool optional = true,
@@ -72,5 +71,4 @@ inline void write_fast(const std::string &fn,
     format_compact(root, *bp);
     write_binary_unix(fn, mode, mtime_ns, *bp);
 }
-} // namespace json
-} // namespace openvpn
+} // namespace openvpn::json

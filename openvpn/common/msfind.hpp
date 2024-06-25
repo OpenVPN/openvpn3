@@ -26,8 +26,7 @@
 
 #include <utility>
 
-namespace openvpn {
-namespace MSF {
+namespace openvpn::MSF {
 
 template <typename ITERATOR>
 class Iter : public ITERATOR
@@ -86,5 +85,4 @@ inline auto iter(ITERATOR i)
 {
     return Iter<ITERATOR>(std::move(i));
 }
-} // namespace MSF
-} // namespace openvpn
+} // namespace openvpn::MSF

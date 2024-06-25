@@ -7,8 +7,7 @@
 
 #pragma once
 
-namespace openvpn {
-namespace TCPTransport {
+namespace openvpn::TCPTransport {
 struct PacketFrom
 {
     typedef std::unique_ptr<PacketFrom> SPtr;
@@ -34,5 +33,4 @@ class LinkBase : public RC<thread_unsafe_refcount>
     virtual void start() = 0;
     virtual void stop() = 0;
 };
-} // namespace TCPTransport
-} // namespace openvpn
+} // namespace openvpn::TCPTransport

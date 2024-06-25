@@ -30,8 +30,7 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 typedef std::unique_ptr<wchar_t[]> UTF16;
 typedef std::unique_ptr<char[]> UTF8;
 
@@ -91,6 +90,5 @@ inline char *utf8(wchar_t *str)
         throw win_utf16();
     return ret.release();
 }
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win
 #endif

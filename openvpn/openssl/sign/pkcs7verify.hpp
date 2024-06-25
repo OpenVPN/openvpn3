@@ -35,8 +35,7 @@
 #include <openvpn/openssl/pki/x509.hpp>
 #include <openvpn/openssl/util/error.hpp>
 
-namespace openvpn {
-namespace OpenSSLSign {
+namespace openvpn::OpenSSLSign {
 /*
  * Verify PKCS7 signature.
  * On success, return.
@@ -85,7 +84,6 @@ inline void verify_pkcs7(const std::list<OpenSSLPKI::X509> &certs,
     if (PKCS7_verify(p7, x509_stack, nullptr, in, nullptr, PKCS7_NOVERIFY) != 1)
         throw OpenSSLException("OpenSSLSign::verify_pkcs7: verification failed");
 }
-} // namespace OpenSSLSign
-} // namespace openvpn
+} // namespace openvpn::OpenSSLSign
 
 #endif

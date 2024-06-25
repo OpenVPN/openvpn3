@@ -33,8 +33,7 @@
 #include <openvpn/http/header.hpp>
 #include <openvpn/http/parseutil.hpp>
 
-namespace openvpn {
-namespace HTTP {
+namespace openvpn::HTTP {
 
 struct Reply
 {
@@ -404,7 +403,6 @@ struct ReplyType
     typedef Reply State;
     typedef ReplyParser Parser;
 };
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP
 
 #endif

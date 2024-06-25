@@ -25,8 +25,7 @@
 
 #include <openvpn/common/stringtempl2.hpp>
 
-namespace openvpn {
-namespace json {
+namespace openvpn::json {
 
 // format name.title but omit .title if title is empty
 template <typename NAME, typename TITLE>
@@ -54,5 +53,4 @@ inline std::string fmt_name_cast(const TITLE &title)
     return "element." + StringTempl::to_string(title);
 }
 
-} // namespace json
-} // namespace openvpn
+} // namespace openvpn::json

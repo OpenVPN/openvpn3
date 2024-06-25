@@ -32,8 +32,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/string.hpp>
 
-namespace openvpn {
-namespace HTTP {
+namespace openvpn::HTTP {
 
 struct Header
 {
@@ -111,7 +110,6 @@ struct HeaderList : public std::vector<Header>
     }
 };
 
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP
 
 #endif

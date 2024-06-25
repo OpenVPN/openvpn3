@@ -28,8 +28,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/common/hexstr.hpp>
 
-namespace openvpn {
-namespace BufferFormat {
+namespace openvpn::BufferFormat {
 
 template <typename T>
 class UnsignedDecimal
@@ -127,5 +126,4 @@ class Hex
     T value_;
 };
 
-} // namespace BufferFormat
-} // namespace openvpn
+} // namespace openvpn::BufferFormat

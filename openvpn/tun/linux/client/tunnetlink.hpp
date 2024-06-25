@@ -36,8 +36,7 @@
 #include <openvpn/tun/linux/client/sitnl.hpp>
 #include <openvpn/tun/linux/client/tunsetup.hpp>
 
-namespace openvpn {
-namespace TunNetlink {
+namespace openvpn::TunNetlink {
 
 using namespace openvpn::TunLinuxSetup;
 
@@ -858,5 +857,4 @@ struct TunMethods
                           destroy);
     }
 };
-} // namespace TunNetlink
-} // namespace openvpn
+} // namespace openvpn::TunNetlink

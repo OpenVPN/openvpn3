@@ -27,8 +27,7 @@
 
 #include <openvpn/win/winerr.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 class Impersonate
 {
@@ -216,5 +215,4 @@ class Impersonate
     bool local_system_ = false;
     bool impersonated = false;
 };
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win

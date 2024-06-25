@@ -35,8 +35,7 @@
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/secattr.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 struct NamedPipeImpersonate
 {
     OPENVPN_EXCEPTION(named_pipe_impersonate);
@@ -190,5 +189,4 @@ struct NamedPipePeerInfoServer : public NamedPipePeerInfoCS
     }
 };
 
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win

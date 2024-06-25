@@ -36,9 +36,7 @@
 #include <openvpn/common/scoped_fd.hpp>
 #include <openvpn/tun/layer.hpp>
 
-namespace openvpn {
-namespace TunMac {
-namespace Util {
+namespace openvpn::TunMac::Util {
 OPENVPN_EXCEPTION(tun_mac_util);
 
 inline int tuntap_open(const Layer &layer, std::string &name)
@@ -69,8 +67,6 @@ inline int tuntap_open(const Layer &layer, std::string &name)
     throw tun_mac_util(std::string("error opening Mac ") + layer.dev_type() + " device");
 }
 
-} // namespace Util
-} // namespace TunMac
-} // namespace openvpn
+} // namespace openvpn::TunMac::Util
 
 #endif

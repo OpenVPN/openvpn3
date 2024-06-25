@@ -24,9 +24,7 @@
 
 // HTTP status codes
 
-namespace openvpn {
-namespace HTTP {
-namespace Status {
+namespace openvpn::HTTP::Status {
 enum
 {
     OK = 200,
@@ -73,8 +71,6 @@ inline const char *to_string(const int status)
         return "";
     }
 }
-} // namespace Status
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP::Status
 
 #endif

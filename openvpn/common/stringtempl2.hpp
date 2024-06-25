@@ -27,8 +27,7 @@
 
 #include <openvpn/common/stringtempl.hpp>
 
-namespace openvpn {
-namespace StringTempl {
+namespace openvpn::StringTempl {
 
 // empty
 
@@ -64,5 +63,4 @@ inline std::string to_string(T value)
     return std::to_string(value);
 }
 
-} // namespace StringTempl
-} // namespace openvpn
+} // namespace openvpn::StringTempl

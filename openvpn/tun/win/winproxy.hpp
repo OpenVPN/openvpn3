@@ -32,8 +32,7 @@
 
 using namespace openvpn::Win;
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 class WinProxySettings : public ProxySettings
 {
   public:
@@ -181,5 +180,4 @@ class WinProxySettings : public ProxySettings
     const char *delete_value_str = "DeleteValue";
     const DWORD delete_value_dword = 0xCAFEBABE;
 };
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

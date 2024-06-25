@@ -32,8 +32,7 @@
 #include <openvpn/common/hexstr.hpp>
 #include <openvpn/common/options.hpp>
 
-namespace openvpn {
-namespace KUParse {
+namespace openvpn::KUParse {
 enum TLSWebType
 {
     TLS_WEB_NONE,
@@ -136,7 +135,6 @@ inline void remote_cert_eku(const OptionList &opt,
     if (o)
         eku = o->get(1, 256);
 }
-} // namespace KUParse
-} // namespace openvpn
+} // namespace openvpn::KUParse
 
 #endif

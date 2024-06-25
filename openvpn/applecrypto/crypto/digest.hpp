@@ -65,8 +65,7 @@
 
 #define OPENVPN_DIGEST_INFO_DECLARE_NO_HMAC(TYPE) const DigestInfo info_##TYPE(CryptoAlgs::TYPE, &alg_##TYPE, DigestInfo::NO_HMAC_ALG)
 
-namespace openvpn {
-namespace AppleCrypto {
+namespace openvpn::AppleCrypto {
 typedef CC_SHA256_CTX CC_SHA224_CTX;
 typedef CC_SHA512_CTX CC_SHA384_CTX;
 
@@ -270,8 +269,7 @@ class DigestContext
     const DigestAlgorithm *meth;
     DigestCTX ctx;
 };
-} // namespace AppleCrypto
-} // namespace openvpn
+} // namespace openvpn::AppleCrypto
 
 #undef OPENVPN_DIGEST_CONTEXT
 #undef OPENVPN_DIGEST_ALG_CLASS

@@ -38,8 +38,7 @@
 #define OPENVPN_LOG_STRING(str) OPENVPN_LOG_STREAM << date_time() << ' ' << (str)
 
 // no-op constructs normally used with logthread.hpp
-namespace openvpn {
-namespace Log {
+namespace openvpn::Log {
 struct Context
 {
     struct Wrapper
@@ -49,5 +48,4 @@ struct Context
     {
     }
 };
-} // namespace Log
-} // namespace openvpn
+} // namespace openvpn::Log

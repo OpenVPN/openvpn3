@@ -27,8 +27,7 @@
 
 #include <openvpn/addr/regex.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 inline const std::regex re_v4(v4_regex(), std::regex_constants::ECMAScript | std::regex_constants::nosubs);
 inline const std::regex re_v6(v6_regex(), std::regex_constants::ECMAScript | std::regex_constants::nosubs);
 
@@ -46,5 +45,4 @@ inline bool is_ip_address(const std::string &host)
 {
     return is_ipv4_address(host) || is_ipv6_address(host);
 }
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP

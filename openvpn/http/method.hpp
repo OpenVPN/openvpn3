@@ -22,9 +22,7 @@
 #ifndef OPENVPN_HTTP_METHOD_H
 #define OPENVPN_HTTP_METHOD_H
 
-namespace openvpn {
-namespace HTTP {
-namespace Method {
+namespace openvpn::HTTP::Method {
 enum Type
 {
     OTHER,
@@ -41,8 +39,6 @@ Type parse(const std::string &methstr)
     else
         return OTHER;
 }
-} // namespace Method
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP::Method
 
 #endif

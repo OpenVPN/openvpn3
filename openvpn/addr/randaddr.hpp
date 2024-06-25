@@ -25,8 +25,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/random/randapi.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 
 inline IPv4::Addr random_addr_v4(RandomAPI &prng)
 {
@@ -64,5 +63,4 @@ inline Route random_subnet(const Route &templ,
                      & Addr::netmask_from_prefix_len(templ.addr.version(), prefix_len),
                  prefix_len);
 }
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP

@@ -43,8 +43,7 @@
 #include <openvpn/client/cliemuexr.hpp>
 #endif
 
-namespace openvpn {
-namespace TunMac {
+namespace openvpn::TunMac {
 
 OPENVPN_EXCEPTION(tun_mac_error);
 
@@ -388,7 +387,6 @@ inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context &i
     return TunClient::Ptr(new Client(io_context, this, parent));
 }
 
-} // namespace TunMac
-} // namespace openvpn
+} // namespace openvpn::TunMac
 
 #endif

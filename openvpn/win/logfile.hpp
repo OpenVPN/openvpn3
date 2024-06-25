@@ -24,8 +24,7 @@
 #include <openvpn/log/logbase.hpp>
 #include <openvpn/win/logutil.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 class LogFile : public LogBase
 {
@@ -50,5 +49,4 @@ class LogFile : public LogBase
     Log::Context log_context; // must be initialized last
 };
 
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win

@@ -40,8 +40,7 @@
 #include <openvpn/common/jsonhelper.hpp>
 #endif
 
-namespace openvpn {
-namespace PeerInfo {
+namespace openvpn::PeerInfo {
 
 OPENVPN_EXCEPTION(peer_info_error);
 
@@ -171,7 +170,6 @@ struct Set : public std::vector<KeyValue>, public RCCopyable<thread_unsafe_refco
     }
 };
 
-} // namespace PeerInfo
-} // namespace openvpn
+} // namespace openvpn::PeerInfo
 
 #endif

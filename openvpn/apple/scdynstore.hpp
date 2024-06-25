@@ -26,8 +26,7 @@
 
 #include <openvpn/apple/cf/cf.hpp>
 
-namespace openvpn {
-namespace CF {
+namespace openvpn::CF {
 OPENVPN_CF_WRAP(DynamicStore, dynamic_store_cast, SCDynamicStoreRef, SCDynamicStoreGetTypeID)
 
 template <typename RET, typename KEY>
@@ -46,7 +45,6 @@ inline Dict DynamicStoreCopyDict(const DynamicStore &ds, const KEY &key)
     else
         return CF::empty_dict();
 }
-} // namespace CF
-} // namespace openvpn
+} // namespace openvpn::CF
 
 #endif

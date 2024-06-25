@@ -35,8 +35,7 @@
 #include <openvpn/time/asiotimer.hpp>
 #include <openvpn/random/mtrandapi.hpp>
 
-namespace openvpn {
-namespace Gremlin {
+namespace openvpn::Gremlin {
 
 OPENVPN_EXCEPTION(gremlin_error);
 
@@ -219,7 +218,6 @@ class SendRecvQueue
     DelayedQueue::Ptr recv;
     bool tcp;
 };
-} // namespace Gremlin
-} // namespace openvpn
+} // namespace openvpn::Gremlin
 
 #endif

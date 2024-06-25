@@ -55,8 +55,7 @@
 #include <openvpn/mbedtls/util/rand.hpp>
 #endif
 
-namespace openvpn {
-namespace SSLLib {
+namespace openvpn::SSLLib {
 #if defined(USE_MBEDTLS)
 #define SSL_LIB_NAME "MbedTLS"
 typedef MbedTLSCryptoAPI CryptoAPI;
@@ -87,7 +86,6 @@ typedef OpenSSLPEM PEMAPI;
 #else
 #error no SSL library defined
 #endif
-} // namespace SSLLib
-} // namespace openvpn
+} // namespace openvpn::SSLLib
 
 #endif

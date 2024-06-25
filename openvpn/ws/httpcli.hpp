@@ -97,9 +97,7 @@
 #include <openvpn/win/winerr.hpp>
 #endif
 
-namespace openvpn {
-namespace WS {
-namespace Client {
+namespace openvpn::WS::Client {
 
 OPENVPN_EXCEPTION(http_client_exception);
 
@@ -1564,6 +1562,4 @@ class HTTPDelegate : public HTTPCore
   private:
     PARENT *parent_;
 };
-} // namespace Client
-} // namespace WS
-} // namespace openvpn
+} // namespace openvpn::WS::Client

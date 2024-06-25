@@ -26,8 +26,7 @@
 #include <openvpn/random/randapi.hpp>
 #include <openvpn/addr/ip.hpp>
 
-namespace openvpn {
-namespace WS {
+namespace openvpn::WS {
 
 // These methods become no-ops unless building with a patched Asio.
 // Define ASIO_RESOLVER_RESULTS_DATA_REQUIRED to force an error if these methods
@@ -88,5 +87,4 @@ inline void filter_by_ip_version(RESULTS &results, const IP::Addr::Version ip_ve
 
 #endif
 
-} // namespace WS
-} // namespace openvpn
+} // namespace openvpn::WS

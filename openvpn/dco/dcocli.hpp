@@ -64,8 +64,7 @@
 
 // client-side DCO (Data Channel Offload) module for Linux/kovpn
 
-namespace openvpn {
-namespace DCOTransport {
+namespace openvpn::DCOTransport {
 enum
 {
     OVPN_PEER_ID_UNDEF = 0x00FFFFFF,
@@ -353,5 +352,4 @@ ClientConfig::new_tun_client_obj(openvpn_io::io_context &io_context,
     cli->tun_parent = &parent;
     return TunClient::Ptr(cli);
 }
-} // namespace DCOTransport
-} // namespace openvpn
+} // namespace openvpn::DCOTransport

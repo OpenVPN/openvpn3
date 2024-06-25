@@ -56,8 +56,7 @@
 #include <openvpn/aws/awspc.hpp>
 #include <openvpn/aws/awsrest.hpp>
 
-namespace openvpn {
-namespace AWS {
+namespace openvpn::AWS {
 class Route
 {
   public:
@@ -601,5 +600,4 @@ class Route
         return "ec2." + instance_info.region + ".amazonaws.com";
     }
 };
-} // namespace AWS
-} // namespace openvpn
+} // namespace openvpn::AWS

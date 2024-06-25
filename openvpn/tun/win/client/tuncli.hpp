@@ -43,8 +43,7 @@
 #include <openvpn/win/modname.hpp>
 #include <openvpn/tun/win/client/wintun.hpp>
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 
 OPENVPN_EXCEPTION(tun_win_error);
 
@@ -423,7 +422,6 @@ inline TunClient::Ptr ClientConfig::new_tun_client_obj(openvpn_io::io_context &i
         throw tun_win_error("unsupported tun driver");
 }
 
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin
 
 #endif

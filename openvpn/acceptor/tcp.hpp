@@ -24,8 +24,7 @@
 #include <openvpn/acceptor/base.hpp>
 #include <openvpn/ssl/sslconsts.hpp>
 
-namespace openvpn {
-namespace Acceptor {
+namespace openvpn::Acceptor {
 
 struct TCP : public Base
 {
@@ -93,5 +92,4 @@ struct TCP : public Base
     openvpn_io::ip::tcp::acceptor acceptor;
 };
 
-} // namespace Acceptor
-} // namespace openvpn
+} // namespace openvpn::Acceptor

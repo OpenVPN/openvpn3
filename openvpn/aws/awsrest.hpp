@@ -36,8 +36,7 @@
 #include <openvpn/crypto/digestapi.hpp>
 #include <openvpn/aws/awscreds.hpp>
 
-namespace openvpn {
-namespace AWS {
+namespace openvpn::AWS {
 class REST
 {
   public:
@@ -248,5 +247,4 @@ class REST
         }
     };
 };
-} // namespace AWS
-} // namespace openvpn
+} // namespace openvpn::AWS

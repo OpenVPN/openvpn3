@@ -72,8 +72,7 @@
 #include <openvpn/win/cmd.hpp>
 #include <openvpn/win/winerr.hpp>
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 enum Type
 {
     TapWindows6,
@@ -1444,5 +1443,4 @@ class AddRoute4Cmd : public Action
 };
 } // namespace TunIPHELPER
 } // namespace Util
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

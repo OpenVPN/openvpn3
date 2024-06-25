@@ -34,8 +34,7 @@
 #include <openvpn/win/scoped_handle.hpp>
 #include <openvpn/win/unicode.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 OPENVPN_EXCEPTION(win_call);
 
@@ -149,7 +148,6 @@ inline std::string call(const std::string &cmd)
 
     return out;
 }
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win
 
 #endif

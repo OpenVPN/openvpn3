@@ -30,8 +30,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
 
-namespace openvpn {
-namespace NSCert {
+namespace openvpn::NSCert {
 enum Type
 {
     NONE,
@@ -59,7 +58,6 @@ inline Type ns_cert_type(const OptionList &opt, const std::string &relay_prefix)
     }
     return NONE;
 }
-} // namespace NSCert
-} // namespace openvpn
+} // namespace openvpn::NSCert
 
 #endif

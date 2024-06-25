@@ -29,8 +29,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/win/winerr.hpp>
 
-namespace openvpn {
-namespace Win {
+namespace openvpn::Win {
 
 struct SecurityAttributes
 {
@@ -65,5 +64,4 @@ struct SecurityAttributes
     SECURITY_ATTRIBUTES sa;
 };
 
-} // namespace Win
-} // namespace openvpn
+} // namespace openvpn::Win

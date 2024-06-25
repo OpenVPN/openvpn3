@@ -23,8 +23,7 @@
 
 // private key types
 
-namespace openvpn {
-namespace PKType {
+namespace openvpn::PKType {
 
 enum Type
 {
@@ -36,5 +35,4 @@ enum Type
     PK_ECDSA,
 };
 
-} // namespace PKType
-} // namespace openvpn
+} // namespace openvpn::PKType

@@ -34,8 +34,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/applecrypto/crypto/digest.hpp>
 
-namespace openvpn {
-namespace AppleCrypto {
+namespace openvpn::AppleCrypto {
 class HMACContext
 {
     HMACContext(const HMACContext &) = delete;
@@ -141,7 +140,6 @@ class HMACContext
     unsigned char key_[MAX_HMAC_KEY_SIZE];
     CCHmacContext ctx;
 };
-} // namespace AppleCrypto
-} // namespace openvpn
+} // namespace openvpn::AppleCrypto
 
 #endif

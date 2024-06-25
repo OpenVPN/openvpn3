@@ -49,8 +49,7 @@
 #define OPENVPN_LOG_UDPLINK_VERBOSE(x)
 #endif
 
-namespace openvpn {
-namespace UDPTransport {
+namespace openvpn::UDPTransport {
 
 typedef openvpn_io::ip::udp::endpoint AsioEndpoint;
 
@@ -245,7 +244,6 @@ class UDPLink : public RC<thread_unsafe_refcount>
     std::unique_ptr<Gremlin::SendRecvQueue> gremlin;
 #endif
 };
-} // namespace UDPTransport
-} // namespace openvpn
+} // namespace openvpn::UDPTransport
 
 #endif

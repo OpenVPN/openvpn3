@@ -37,8 +37,7 @@
 
 #include <openvpn/tun/win/ringbuffer.hpp>
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 struct SetupBase : public DestructorBase
 {
     typedef RCPtr<SetupBase> Ptr;
@@ -86,7 +85,6 @@ struct SetupFactory : public RC<thread_unsafe_refcount>
                                          bool allow_local_dns_resolvers) = 0;
     // clang-format on
 };
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin
 
 #endif

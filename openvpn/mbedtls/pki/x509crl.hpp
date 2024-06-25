@@ -35,8 +35,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/mbedtls/util/error.hpp>
 
-namespace openvpn {
-namespace MbedTLSPKI {
+namespace openvpn::MbedTLSPKI {
 
 class X509CRL : public RC<thread_unsafe_refcount>
 {
@@ -117,7 +116,6 @@ class X509CRL : public RC<thread_unsafe_refcount>
     mbedtls_x509_crl *chain;
     std::string pem_chain;
 };
-} // namespace MbedTLSPKI
-} // namespace openvpn
+} // namespace openvpn::MbedTLSPKI
 
 #endif

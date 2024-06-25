@@ -24,8 +24,7 @@
 
 #pragma once
 
-namespace openvpn {
-namespace KoRekey {
+namespace openvpn::KoRekey {
 
 /**
  * @brief Parses key information into format consumed by ovpn-dco.
@@ -103,5 +102,4 @@ class OvpnDcoKey : public Key
     struct KeyConfig kc;
 };
 
-} // namespace KoRekey
-} // namespace openvpn
+} // namespace openvpn::KoRekey

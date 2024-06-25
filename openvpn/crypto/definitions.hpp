@@ -28,8 +28,7 @@
 
 /* We need to define this very early and in its own small header file so we
  * can ensure that these definitions are always available */
-namespace openvpn {
-namespace SSLLib {
+namespace openvpn::SSLLib {
 
 #if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
 using Ctx = OSSL_LIB_CTX *;
@@ -37,5 +36,4 @@ using Ctx = OSSL_LIB_CTX *;
 using Ctx = void *;
 #endif
 
-} // namespace SSLLib
-} // namespace openvpn
+} // namespace openvpn::SSLLib

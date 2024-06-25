@@ -65,8 +65,7 @@ extern "C" void _ReadWriteBarrier();
 
 #define OPENVPN_INCR_VOID_PTR(var, incr) (var) = static_cast<const unsigned char *>(var) + (incr)
 
-namespace openvpn {
-namespace crypto {
+namespace openvpn::crypto {
 /**
  * memneq - Compare two areas of memory in constant time
  *
@@ -103,5 +102,4 @@ inline bool memneq(const void *a, const void *b, size_t size)
     return bool(diff);
 }
 #endif
-} // namespace crypto
-} // namespace openvpn
+} // namespace openvpn::crypto

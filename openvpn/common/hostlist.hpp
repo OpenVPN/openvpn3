@@ -32,8 +32,7 @@
 #include <openvpn/common/hostport.hpp>
 #include <openvpn/random/randapi.hpp>
 
-namespace openvpn {
-namespace HostList {
+namespace openvpn::HostList {
 
 struct Host
 {
@@ -157,7 +156,6 @@ class Iterator
   private:
     int index;
 };
-} // namespace HostList
-} // namespace openvpn
+} // namespace openvpn::HostList
 
 #endif

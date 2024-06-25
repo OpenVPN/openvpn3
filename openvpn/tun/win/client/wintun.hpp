@@ -6,8 +6,7 @@
 #include <openvpn/tun/win/client/clientconfig.hpp>
 #include <openvpn/win/modname.hpp>
 
-namespace openvpn {
-namespace TunWin {
+namespace openvpn::TunWin {
 
 class WintunClient : public TunClient
 {
@@ -320,5 +319,4 @@ class WintunClient : public TunClient
 
     RingBuffer::Ptr ring_buffer;
 };
-} // namespace TunWin
-} // namespace openvpn
+} // namespace openvpn::TunWin

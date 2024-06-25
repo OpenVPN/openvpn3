@@ -23,8 +23,7 @@
 
 #include <openvpn/common/exception.hpp>
 
-namespace openvpn {
-namespace HTTP {
+namespace openvpn::HTTP {
 inline bool is_valid_uri_char(const unsigned char c)
 {
     return c >= 0x21 && c <= 0x7E;
@@ -48,5 +47,4 @@ inline void validate_uri(const std::string &uri, const std::string &title)
     }
 }
 
-} // namespace HTTP
-} // namespace openvpn
+} // namespace openvpn::HTTP

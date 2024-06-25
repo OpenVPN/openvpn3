@@ -26,8 +26,7 @@
 #include <openvpn/transport/client/transbase.hpp>
 #endif
 
-namespace openvpn {
-namespace ExternalTransport {
+namespace openvpn::ExternalTransport {
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
 struct Config;
 struct Factory
@@ -42,6 +41,5 @@ struct Factory
 {
 };
 #endif
-} // namespace ExternalTransport
-} // namespace openvpn
+} // namespace openvpn::ExternalTransport
 #endif

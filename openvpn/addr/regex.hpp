@@ -27,8 +27,7 @@
 
 #include <string>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 inline std::string v4_regex()
 {
     const std::string ipv4seg = "(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])";
@@ -55,7 +54,6 @@ inline std::string v6_regex()
         ")";
     // clang-format on
 }
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP
 
 #endif

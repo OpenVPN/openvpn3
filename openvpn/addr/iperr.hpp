@@ -31,9 +31,7 @@
 #include <openvpn/common/stringtempl2.hpp>
 #endif
 
-namespace openvpn {
-namespace IP {
-namespace internal {
+namespace openvpn::IP::internal {
 
 #ifndef OPENVPN_LEGACY_TITLE_ABSTRACTION
 
@@ -112,6 +110,4 @@ inline std::string format_error(const std::string &ipstr, const char *title, con
 }
 
 #endif
-} // namespace internal
-} // namespace IP
-} // namespace openvpn
+} // namespace openvpn::IP::internal

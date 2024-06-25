@@ -26,8 +26,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 
-namespace openvpn {
-namespace WS {
+namespace openvpn::WS {
 class ChunkedHelper
 {
     enum State
@@ -184,5 +183,4 @@ class ChunkedHelper
     State state;
     size_t size;
 };
-} // namespace WS
-} // namespace openvpn
+} // namespace openvpn::WS
