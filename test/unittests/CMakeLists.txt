@@ -70,6 +70,7 @@ add_executable(coreUnitTests
         test_route.cpp
         test_reliable.cpp
         test_splitlines.cpp
+        test_loggingmixin.cpp
         test_statickey.cpp
         test_streq.cpp
         test_time.cpp
