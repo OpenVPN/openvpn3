@@ -31,7 +31,7 @@ These instructions were tested on Ubuntu 20.
 
 Prepare directory structure::
 
-    $ sudo apt install g++ make libmbedtls-dev libssl-dev liblz4-dev cmake
+    $ sudo apt install g++ make pkg-config libmbedtls-dev libssl-dev liblz4-dev cmake liblzo2-dev
     $ export O3=~/O3 && mkdir $O3
     $ export DEP_DIR=$O3/deps && mkdir $DEP_DIR
     $ export DL=$O3/dl && mkdir $DL
