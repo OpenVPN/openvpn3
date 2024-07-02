@@ -27,34 +27,31 @@ A simple command-line wrapper for the API is provided in
 Building the OpenVPN 3 client on Linux
 --------------------------------------
 
-These instructions were tested on Ubuntu 20.
+These instructions were tested on Ubuntu 22.04.
 
-Prepare directory structure::
+Install essential dependencies::
 
-    $ sudo apt install g++ make libmbedtls-dev libssl-dev liblz4-dev cmake
-    $ export O3=~/O3 && mkdir $O3
-    $ export DEP_DIR=$O3/deps && mkdir $DEP_DIR
-    $ export DL=$O3/dl && mkdir $DL
+    $ sudo apt install --no-install-recommends ca-certificates cmake g++ git iproute2 ninja-build pkg-config
+    $ sudo apt install --no-install-recommends libasio-dev libcap-dev liblz4-dev libjsoncpp-dev libssl-dev libxxhash-dev
+
+Potentially install optional dependencies::
+
+    $ sudo apt install --no-install-recommends libmbedtls-dev liblzo2-dev python3-dev swig
 
 Clone the OpenVPN 3 source repo::
 
-    $ cd $O3
-    $ git clone https://github.com/OpenVPN/openvpn3.git core
-
-Build dependencies::
-
-    $ cd core/scripts/linux/
-    $ ./build-all
+    $ git clone https://github.com/OpenVPN/openvpn3.git
 
 Build the OpenVPN 3 client wrapper (cli) with OpenSSL library::
 
-    $ cd $O3/core && mkdir build && cd build
-    $ cmake ..
+    $ cd openvpn3 && mkdir build && cd build
+    $ cmake -GNinja ..
     $ cmake --build .
+    $ ctest # Run Unit Tests
 
-To use mbed TLS, use::
+To use mbedTLS, use::
 
-    $ cmake -DUSE_MBEDTLS=on ..
+    $ cmake -GNinja -DUSE_MBEDTLS=ON ..
 
 Run OpenVPN 3 client::
 
@@ -75,7 +72,7 @@ to disable this).
 
 Download, build and install ovpn-dco::
 
-    $ cd $O3
+    $ sudo apt install make
     $ git clone https://github.com/OpenVPN/ovpn-dco.git
     $ cd ovpn-dco
     $ make && sudo make install
@@ -83,12 +80,12 @@ Download, build and install ovpn-dco::
 
 Install core dependencies::
 
-    $ sudo apt install pkg-config libnl-genl-3-dev
+    $ sudo apt install libnl-genl-3-dev
 
 Build cli with ovpn-dco support::
 
     $ cd $O3/core/build
-    $ cmake -DCLI_OVPNDCO=on .. && make
+    $ cmake -DCLI_OVPNDCO=ON .. && cmake --build .
     $ sudo test/ovpncli/ovpncli [--no-dco] myprofile.ovpn
 
 Options:
