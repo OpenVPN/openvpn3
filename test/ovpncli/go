@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Options:
 #   OSSL=1    -- build using OpenSSL

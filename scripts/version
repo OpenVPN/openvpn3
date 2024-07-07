@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #    OpenVPN -- An application to securely tunnel IP networks
 #               over a single port, with support for SSL/TLS-based
