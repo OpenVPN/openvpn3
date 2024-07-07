@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 #    OpenVPN -- An application to securely tunnel IP networks
 #               over a single port, with support for SSL/TLS-based
@@ -25,7 +25,8 @@ set -eu
 
 # ensure this script works even when core is used as submodule, by setting
 # O3/core/.git as git folder
-export GIT_DIR=$(dirname $0)/../.git
+GIT_DIR=$(dirname "$0")/../.git
+export GIT_DIR
 
 MAJOR=3
 BRANCH="$(git rev-parse --symbolic-full-name HEAD | cut -d/ -f3- | tr / _)"
