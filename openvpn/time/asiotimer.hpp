@@ -36,7 +36,7 @@ namespace openvpn {
 struct AsioClock
 {
     typedef olong rep;
-    typedef std::ratio<1, 1024> period; // time resolution of openvpn::Time
+    typedef std::ratio<1, 1024> period; // time resolution of openvpn::Time, note 1024 instead of the usual 1000
     typedef std::chrono::duration<rep, period> duration;
     typedef std::chrono::time_point<AsioClock> time_point;
 

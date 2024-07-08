@@ -51,6 +51,8 @@
 
 #include <memory>
 #include <utility>
+#include <chrono>
+using namespace std::chrono_literals;
 
 #include <openvpn/common/bigmutex.hpp>
 #include <openvpn/common/rc.hpp>
@@ -427,12 +429,12 @@ class ClientConnect : ClientProto::NotifyCallback,
             bulk_resolve->start(this);
     }
 
-    void queue_restart(const unsigned int delay_ms = default_delay_)
+    void queue_restart(std::chrono::milliseconds delay = default_delay_)
     {
-        OPENVPN_LOG("Client terminated, restarting in " << delay_ms << " ms...");
+        OPENVPN_LOG("Client terminated, restarting in " << delay.count() << " ms...");
         server_poll_timer.cancel();
         interim_finalize();
-        restart_wait_timer.expires_after(Time::Duration::milliseconds(delay_ms));
+        restart_wait_timer.expires_after(Time::Duration::milliseconds(delay));
         restart_wait_timer.async_wait([self = Ptr(this), gen = generation](const openvpn_io::error_code &error)
                                       {
                                       OPENVPN_ASYNC_HANDLER;
@@ -481,21 +483,21 @@ class ClientConnect : ClientProto::NotifyCallback,
     }
 
     template <typename ErrorClass>
-    void add_error_and_restart(const unsigned int delay_ms, const std::string &fatal_reason)
+    void add_error_and_restart(std::chrono::milliseconds delay, const std::string &fatal_reason)
     {
         ClientEvent::Base::Ptr ev = new ErrorClass{fatal_reason};
         client_options->events().add_event(std::move(ev));
         client_options->stats().error(Error::TUN_ERROR);
-        queue_restart(delay_ms);
+        queue_restart(delay);
     }
 
     template <typename ErrorClass>
-    void add_error_and_restart(const unsigned int delay_ms)
+    void add_error_and_restart(std::chrono::milliseconds delay)
     {
         ClientEvent::Base::Ptr ev = new ErrorClass{};
         client_options->events().add_event(std::move(ev));
         client_options->stats().error(Error::TUN_ERROR);
-        queue_restart(delay_ms);
+        queue_restart(delay);
     }
 
     virtual void client_proto_terminate() override
@@ -515,8 +517,8 @@ class ClientConnect : ClientProto::NotifyCallback,
                 {
                 case Error::UNDEF: // means that there wasn't a fatal error
                     {
-                        auto client_delay = client->reconnect_delay();
-                        queue_restart(client_delay ? client_delay : default_delay_);
+                        std::chrono::duration client_delay = client->reconnect_delay();
+                        queue_restart(client_delay.count() > 0 ? client_delay : default_delay_);
                     }
                     break;
 
@@ -537,7 +539,7 @@ class ClientConnect : ClientProto::NotifyCallback,
                     add_error_and_stop<ClientEvent::TunIfaceCreate>(client.get());
                     break;
                 case Error::TUN_IFACE_DISABLED:
-                    add_error_and_restart<ClientEvent::TunIfaceDisabled>(5000, fatal_reason);
+                    add_error_and_restart<ClientEvent::TunIfaceDisabled>(5000ms, fatal_reason);
                     break;
                 case Error::PROXY_ERROR:
                     add_error_and_stop<ClientEvent::ProxyError>(client.get());
@@ -555,7 +557,7 @@ class ClientConnect : ClientProto::NotifyCallback,
                     add_error_and_stop<ClientEvent::ClientHalt>(client.get());
                     break;
                 case Error::CLIENT_RESTART:
-                    add_error_and_restart<ClientEvent::ClientRestart>(5000, fatal_reason);
+                    add_error_and_restart<ClientEvent::ClientRestart>(5000ms, fatal_reason);
                     break;
                 case Error::INACTIVE_TIMEOUT:
                     // explicit exit notify is sent earlier by
@@ -563,17 +565,17 @@ class ClientConnect : ClientProto::NotifyCallback,
                     add_error_and_stop<ClientEvent::InactiveTimeout>(fatal_code);
                     break;
                 case Error::TRANSPORT_ERROR:
-                    add_error_and_restart<ClientEvent::TransportError>(5000, fatal_reason);
+                    add_error_and_restart<ClientEvent::TransportError>(5000ms, fatal_reason);
                     break;
                 case Error::TUN_ERROR:
-                    add_error_and_restart<ClientEvent::TunError>(5000, fatal_reason);
+                    add_error_and_restart<ClientEvent::TunError>(5000ms, fatal_reason);
                     break;
                 case Error::TUN_HALT:
                     add_error_and_stop<ClientEvent::TunHalt>(client.get());
                     break;
                 case Error::RELAY:
                     transport_factory_relay = client->transport_factory_relay();
-                    add_error_and_restart<ClientEvent::Relay>(0);
+                    add_error_and_restart<ClientEvent::Relay>(0ms);
                     break;
                 case Error::RELAY_ERROR:
                     add_error_and_stop<ClientEvent::RelayError>(client.get());
@@ -630,7 +632,7 @@ class ClientConnect : ClientProto::NotifyCallback,
             client_options->events().add_event(std::move(ev));
             client_options->stats().error(error_code);
             if (client_options->retry_on_auth_failed())
-                queue_restart(5000);
+                queue_restart(5000ms);
             else
                 stop();
         }
@@ -730,7 +732,7 @@ class ClientConnect : ClientProto::NotifyCallback,
     std::unique_ptr<AsioWork> asio_work;
     RemoteList::BulkResolve::Ptr bulk_resolve;
 
-    static constexpr unsigned int default_delay_ = 2000; // ms
+    static constexpr std::chrono::milliseconds default_delay_ = 2000ms;
 };
 
 } // namespace openvpn

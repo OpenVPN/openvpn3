@@ -42,6 +42,7 @@
 #include <memory>
 #include <algorithm> // for std::min
 #include <cstdint>   // for std::uint...
+using namespace std::chrono_literals;
 
 #include <openvpn/io/io.hpp>
 
@@ -304,7 +305,7 @@ class Session : ProtoContextCallbackInterface,
     {
         return temp_fail_advance_;
     }
-    unsigned int reconnect_delay() const
+    std::chrono::milliseconds reconnect_delay() const
     {
         return temp_fail_backoff_;
     }
@@ -630,7 +631,7 @@ class Session : ProtoContextCallbackInterface,
             return msg;
 
         // Reset to default values
-        temp_fail_backoff_ = 0;
+        temp_fail_backoff_ = 0ms;
         temp_fail_advance_ = RemoteList::Advance::Addr;
 
         std::string::size_type reason_idx = 0;
@@ -654,11 +655,12 @@ class Session : ProtoContextCallbackInterface,
 
                 if (key == "backoff")
                 {
-                    if (!parse_number(value, temp_fail_backoff_))
+                    int timeout;
+                    if (!parse_number(value, timeout))
                     {
                         OPENVPN_LOG("invalid AUTH_FAILED,TEMP flag: " << flag);
                     }
-                    temp_fail_backoff_ *= 1000; // Convert to ms
+                    temp_fail_backoff_ = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds{timeout});
                 }
                 else if (key == "advance")
                 {
@@ -1653,7 +1655,7 @@ class Session : ProtoContextCallbackInterface,
     AsioTimer info_hold_timer;
 
     // AUTH_FAILED,TEMP flag values
-    unsigned int temp_fail_backoff_ = 0;
+    std::chrono::milliseconds temp_fail_backoff_{0};
     RemoteList::Advance temp_fail_advance_ = RemoteList::Advance::Addr;
 
     // Client side certcheck

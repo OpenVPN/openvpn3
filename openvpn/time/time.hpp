@@ -28,6 +28,8 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/olong.hpp>
 #include <openvpn/common/to_string.hpp>
+#include <openvpn/common/numeric_cast.hpp>
+
 
 #ifdef OPENVPN_PLATFORM_WIN
 #include <time.h>    // for ::time() on Windows
@@ -94,6 +96,12 @@ class TimeType
             // NOTE: assumes that prec == 1024
             // Also note that this might wrap if v is larger than 1/3 of max size of T
             return Duration(v + (v * T(3) / T(128)));
+        }
+
+        static Duration milliseconds(std::chrono::milliseconds ms)
+        {
+            /* Windows on 32 bit platforms warns about loss of precision otherwise */
+            return milliseconds(openvpn::numeric_util::numeric_cast<T>(ms.count()));
         }
 
         Duration() noexcept
