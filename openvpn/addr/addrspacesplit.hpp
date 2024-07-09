@@ -94,9 +94,9 @@ class AddressSpaceSplitter : public RouteList
     static Type find(const RouteList &in, const Route &route)
     {
         Type type = Type::LEAF;
-        for (RouteList::const_iterator i = in.begin(); i != in.end(); ++i)
+        for(const auto& i : in)
         {
-            const Route &r = *i;
+            const Route &r = i;
             if (route == r)
                 type = Type::EQUAL;
             else if (route.contains(r))
