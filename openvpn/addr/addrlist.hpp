@@ -47,9 +47,11 @@ class AddrList : public std::vector<IP::Addr>, public RC<thread_unsafe_refcount>
 #if 0
       void dump() const
       {
-	OPENVPN_LOG("******* AddrList::dump");
-	for (const_iterator i = begin(); i != end(); ++i)
-	  OPENVPN_LOG(i->to_string());
+          OPENVPN_LOG("******* AddrList::dump");
+          for (const auto& i : *this)
+          {
+              OPENVPN_LOG(i.to_string());
+          }
       }
 #endif
 };
