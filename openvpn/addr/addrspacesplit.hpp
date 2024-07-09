@@ -33,9 +33,7 @@ class AddressSpaceSplitter : public RouteList
   public:
     OPENVPN_EXCEPTION(address_space_splitter);
 
-    AddressSpaceSplitter()
-    {
-    }
+    AddressSpaceSplitter() = default;
 
     // NOTE: when passing AddressSpaceSplitter to this constructor, make sure
     // to static_cast it to RouteList& so as to avoid matching the
