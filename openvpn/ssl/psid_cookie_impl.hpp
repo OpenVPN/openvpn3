@@ -65,12 +65,13 @@ class PsidCookieImpl : public PsidCookie
     PsidCookieImpl(ServerProto::Factory *psfp)
         : pcfg_(*psfp->proto_context_config),
           not_tls_auth_mode_(!pcfg_.tls_auth_enabled()),
-          now_(pcfg_.now), handwindow_(pcfg_.handshake_window),
-          ta_hmac_recv_(pcfg_.tls_auth_context->new_obj()),
-          ta_hmac_send_(pcfg_.tls_auth_context->new_obj())
+          now_(pcfg_.now), handwindow_(pcfg_.handshake_window)
     {
         if (not_tls_auth_mode_)
             return;
+
+        ta_hmac_recv_ = pcfg_.tls_auth_context->new_obj();
+        ta_hmac_send_ = pcfg_.tls_auth_context->new_obj();
 
         // init tls_auth hmac (see ProtoContext.reset() case TLS_AUTH; also TLSAuthPreValidate ctor)
         if (pcfg_.key_direction >= 0)
