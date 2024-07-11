@@ -241,6 +241,8 @@ I/+4kAlXuAKdhsXohHeBhC2ijg/kTOMDxEbEVv+SkCIUyM+dB8UtlPKOH9HEL5Xi
 +BpDSqO6Bha5+NAVUU7OdDsnzRwSWaD6lwIBAgICAOE=
 -----END DH PARAMETERS-----)";
 
+static constexpr int debug_output = 0;
+
 static inline bool xfer_oneway(SslApiBuilder &sender, SslApiBuilder &recv, std::string out)
 {
     if (sender.get().read_ciphertext_ready())
@@ -283,12 +285,12 @@ static inline void xfer(AccHandshaker &cli, AccHandshaker &serv)
 
     do
     {
-        if (sdata)
+        if (sdata && debug_output)
             std::cout << "CLIENT <-- SERVER: " << sdata->size() << " bytes\n";
         cdata = cli.process_msg(sdata);
         try
         {
-            if (cdata)
+            if (cdata && debug_output)
                 std::cout << "CLIENT --> SERVER: " << cdata->size() << " bytes\n";
             sdata = serv.process_msg(cdata);
         }
@@ -319,6 +321,8 @@ SSLLib::SSLAPI::Config::Ptr CreateServerConfig(const std::string &pvtKey,
     config->load_cert(cert);
     config->load_private_key(pvtKey);
     config->load_ca(ca, false);
+    // Do not log extra data during unit test
+    config->set_debug_level(debug_output);
 
     return config;
 }
@@ -343,6 +347,9 @@ SSLLib::SSLAPI::Config::Ptr CreateClientConfig(const std::string &pvtKey,
         config->set_flags(SSLConfigAPI::LF_ALLOW_CLIENT_CERT_NOT_REQUIRED);
     else
         config->load_ca(ca, false);
+
+    // Do not log extra data during unit test
+    config->set_debug_level(debug_output);
 
     return config;
 }

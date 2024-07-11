@@ -247,6 +247,8 @@ I/+4kAlXuAKdhsXohHeBhC2ijg/kTOMDxEbEVv+SkCIUyM+dB8UtlPKOH9HEL5Xi
 TEST(sslctx_ut, create_config)
 {
     SSLLib::SSLAPI::Config::Ptr config = new SSLLib::SSLAPI::Config;
+    // Do not log extra data during unit test
+    config->set_debug_level(0);
     EXPECT_TRUE(config);
 }
 
@@ -262,6 +264,9 @@ TEST(sslctx_ut, config_new_factory_server)
     config->load_cert(cert_txt);
     config->load_private_key(pvt_key_txt);
     config->load_ca(cert_txt, false);
+
+    // Do not log extra data during unit test
+    config->set_debug_level(0);
 
     auto factory_server = config->new_factory();
     EXPECT_TRUE(factory_server);
@@ -282,6 +287,9 @@ TEST(sslctx_ut, config_new_factory_client)
     config->load_cert(cert_txt);
     config->load_private_key(pvt_key_txt);
     config->load_ca(cert_txt, false);
+
+    // Do not log extra data during unit test
+    config->set_debug_level(0);
 
     auto factory_client = config->new_factory();
     EXPECT_TRUE(factory_client);
