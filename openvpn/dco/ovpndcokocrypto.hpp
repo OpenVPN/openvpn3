@@ -39,9 +39,9 @@ class OvpnDcoKey : public Key
 
         kc.remote_peer_id = rkinfo.remote_peer_id;
 
-        const CryptoDCContext::Info ci = rkinfo.dc_context_delegate->crypto_info();
-        const CryptoAlgs::Alg &calg = CryptoAlgs::get(ci.cipher_alg);
-        switch (ci.cipher_alg)
+        const CryptoDCSettingsData ci = rkinfo.dc_context_delegate->crypto_info();
+        const CryptoAlgs::Alg &calg = CryptoAlgs::get(ci.cipher());
+        switch (ci.cipher())
         {
         case CryptoAlgs::NONE:
             kc.cipher_alg = OVPN_CIPHER_ALG_NONE;

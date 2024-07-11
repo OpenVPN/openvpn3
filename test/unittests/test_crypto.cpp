@@ -102,7 +102,10 @@ TEST(crypto, dcaead)
     auto frameptr = openvpn::Frame::Ptr{new openvpn::Frame{frame_ctx()}};
     auto statsptr = openvpn::SessionStats::Ptr{new openvpn::SessionStats{}};
 
-    openvpn::AEAD::Crypto<openvpn::SSLLib::CryptoAPI> cryptodc{nullptr, openvpn::CryptoAlgs::AES_256_GCM, frameptr, statsptr};
+    openvpn::CryptoDCSettingsData dc;
+    dc.set_cipher(openvpn::CryptoAlgs::AES_256_GCM);
+
+    openvpn::AEAD::Crypto<openvpn::SSLLib::CryptoAPI> cryptodc{nullptr, dc, frameptr, statsptr};
 
     const char *plaintext = "The quick little fox jumps over the bureaucratic hurdles";
 
@@ -119,16 +122,19 @@ TEST(crypto, dcaead)
         bigkey[i] = static_cast<uint8_t>(key[i % sizeof(key)] ^ i);
     }
 
-    openvpn::StaticKey const static_bigkey{bigkey, openvpn::OpenVPNStaticKey::KEY_SIZE};
-    openvpn::StaticKey static_en_key{key, sizeof(key)};
-    openvpn::StaticKey static_de_key = static_en_key;
+    openvpn::OpenVPNStaticKey static_key;
+    std::memcpy(static_key.raw_alloc(), bigkey, sizeof(bigkey));
 
-    /* StaticKey implements all implicit copy and move operations as it
-       explicitly defines none of them nor does it explicitly define a dtor */
-    cryptodc.init_cipher(std::move(static_en_key), std::move(static_de_key));
-    cryptodc.init_pid(openvpn::PacketID::SHORT_FORM,
-                      0,
-                      openvpn::PacketID::SHORT_FORM,
+    auto key_dir = openvpn::OpenVPNStaticKey::NORMAL;
+
+    /* We here make encrypt and decrypt keys the same by design to have the loopback decryption capability */
+    cryptodc.init_hmac(static_key.slice(openvpn::OpenVPNStaticKey::HMAC | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir),
+                       static_key.slice(openvpn::OpenVPNStaticKey::HMAC | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir));
+
+    cryptodc.init_cipher(static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir),
+                         static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir));
+
+    cryptodc.init_pid(0,
                       "DATA",
                       0,
                       statsptr);
@@ -152,7 +158,7 @@ TEST(crypto, dcaead)
     /* 16 for tag, 4 for IV */
     EXPECT_EQ(work.size(), std::strlen(plaintext) + 4 + 16);
 
-    const uint8_t expected_tag[16]{0xe0, 0xa7, 0x19, '*', 0x89, ']', 0x1d, 0x90, 0xc9, 0xd6, '\n', 0xee, '8', 'z', 0x01, 0xbd};
+    const uint8_t expected_tag[16]{0x1f, 0xdd, 0x90, 0x8f, 0x0e, 0x9d, 0xc2, 0x5e, 0x79, 0xd8, 0x32, 0x02, 0x0d, 0x58, 0xe7, 0x3f};
     // Packet id/IV should 1
     uint8_t packetid1[]{0, 0, 0, 1};
     EXPECT_TRUE(std::memcmp(work.data(), packetid1, 4) == 0);
@@ -161,7 +167,7 @@ TEST(crypto, dcaead)
     EXPECT_TRUE(std::memcmp(work.data() + 4, expected_tag, 16) == 0);
 
     // Check a few random bytes of the encrypted output
-    const uint8_t bytesat30[6]{0x52, 0x2e, 0xbf, 0xdf, 0x24, 0x1c};
+    const uint8_t bytesat30[6]{0xa8, 0x2e, 0x6b, 0x2e, 0x6b, 0x17};
     EXPECT_TRUE(std::memcmp(work.data() + 30, bytesat30, 6) == 0);
 
     /* Check now if decrypting also works */

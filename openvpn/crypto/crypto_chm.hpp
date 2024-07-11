@@ -40,13 +40,11 @@ class CryptoCHM : public CryptoDCInstance
 
     CryptoCHM(
         SSLLib::Ctx libctx_arg,
-        const CryptoAlgs::Type cipher_arg,
-        const CryptoAlgs::Type digest_arg,
+        CryptoDCSettingsData dc_settings_data,
         const Frame::Ptr &frame_arg,
         const SessionStats::Ptr &stats_arg,
         const StrongRandomAPI::Ptr &rng_arg)
-        : cipher(cipher_arg),
-          digest(digest_arg),
+        : dc_settings(dc_settings_data),
           frame(frame_arg),
           stats(stats_arg),
           rng(rng_arg),
@@ -76,26 +74,27 @@ class CryptoCHM : public CryptoDCInstance
     void init_cipher(StaticKey &&encrypt_key,
                      StaticKey &&decrypt_key) override
     {
-        encrypt_.cipher.init(libctx, cipher, encrypt_key, CRYPTO_API::CipherContext::ENCRYPT);
-        decrypt_.cipher.init(libctx, cipher, decrypt_key, CRYPTO_API::CipherContext::DECRYPT);
+        encrypt_.cipher.init(libctx, dc_settings.cipher(), encrypt_key, CRYPTO_API::CipherContext::ENCRYPT);
+        decrypt_.cipher.init(libctx, dc_settings.cipher(), decrypt_key, CRYPTO_API::CipherContext::DECRYPT);
     }
 
     void init_hmac(StaticKey &&encrypt_key,
                    StaticKey &&decrypt_key) override
     {
-        encrypt_.hmac.init(digest, encrypt_key);
-        decrypt_.hmac.init(digest, decrypt_key);
+        encrypt_.hmac.init(dc_settings.digest(), encrypt_key);
+        decrypt_.hmac.init(dc_settings.digest(), decrypt_key);
     }
 
-    void init_pid(const int send_form,
-                  const int recv_mode,
-                  const int recv_form,
+    void init_pid(const int recv_mode,
                   const char *recv_name,
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
     {
-        encrypt_.pid_send.init(send_form);
-        decrypt_.pid_recv.init(recv_mode, recv_form, recv_name, recv_unit, recv_stats_arg);
+        /* CBC encryption always uses short packet ID */
+        auto pid_form = PacketID::SHORT_FORM;
+
+        encrypt_.pid_send.init(pid_form);
+        decrypt_.pid_recv.init(recv_mode, pid_form, recv_name, recv_unit, recv_stats_arg);
     }
 
     bool consider_compression(const CompressContext &comp_ctx) override
@@ -108,9 +107,9 @@ class CryptoCHM : public CryptoDCInstance
     unsigned int defined() const override
     {
         unsigned int ret = CRYPTO_DEFINED;
-        if (CryptoAlgs::defined(cipher))
+        if (CryptoAlgs::defined(dc_settings.cipher()))
             ret |= CIPHER_DEFINED;
-        if (CryptoAlgs::defined(digest))
+        if (CryptoAlgs::defined(dc_settings.digest()))
             ret |= HMAC_DEFINED;
         return ret;
     }
@@ -122,8 +121,7 @@ class CryptoCHM : public CryptoDCInstance
     }
 
   private:
-    CryptoAlgs::Type cipher;
-    CryptoAlgs::Type digest;
+    CryptoDCSettingsData dc_settings;
     Frame::Ptr frame;
     SessionStats::Ptr stats;
     StrongRandomAPI::Ptr rng;
@@ -141,15 +139,12 @@ class CryptoContextCHM : public CryptoDCContext
 
     CryptoContextCHM(
         SSLLib::Ctx libctx_arg,
-        const CryptoAlgs::Type cipher_arg,
-        const CryptoAlgs::Type digest_arg,
-        const CryptoAlgs::KeyDerivation key_method,
+        CryptoDCSettingsData dc_settings_arg,
         const Frame::Ptr &frame_arg,
         const SessionStats::Ptr &stats_arg,
         const StrongRandomAPI::Ptr &rng_arg)
-        : CryptoDCContext(key_method),
-          cipher(CryptoAlgs::dc_cbc_cipher(cipher_arg)),
-          digest(CryptoAlgs::dc_cbc_hash(digest_arg)),
+        : CryptoDCContext(dc_settings_arg.key_derivation()),
+          dc_settings(std::move(dc_settings_arg)),
           frame(frame_arg),
           stats(stats_arg),
           rng(rng_arg),
@@ -163,35 +158,29 @@ class CryptoContextCHM : public CryptoDCContext
          * can be called and calculated for the OCC strings even if we do not allow the cipher
          * to be actually used */
         return new CryptoCHM<CRYPTO_API>(libctx,
-                                         CryptoAlgs::legal_dc_cipher(cipher),
-                                         CryptoAlgs::legal_dc_digest(digest),
+                                         dc_settings,
                                          frame,
                                          stats,
                                          rng);
     }
 
     // cipher/HMAC/key info
-    Info crypto_info() override
+    CryptoDCSettingsData crypto_info() override
     {
-        Info ret;
-        ret.cipher_alg = cipher;
-        ret.hmac_alg = digest;
-        ret.key_derivation = key_derivation;
-        return ret;
+        return dc_settings;
     }
 
     // Info for ProtoContext::link_mtu_adjust
 
     size_t encap_overhead() const override
     {
-        return CryptoAlgs::size(digest) +      // HMAC
-               CryptoAlgs::iv_length(cipher) + // Cipher IV
-               CryptoAlgs::block_size(cipher); // worst-case PKCS#7 padding expansion
+        return CryptoAlgs::size(dc_settings.digest()) +      // HMAC
+               CryptoAlgs::iv_length(dc_settings.cipher()) + // Cipher IV
+               CryptoAlgs::block_size(dc_settings.cipher()); // worst-case PKCS#7 padding expansion
     }
 
   private:
-    CryptoAlgs::Type cipher;
-    CryptoAlgs::Type digest;
+    CryptoDCSettingsData dc_settings;
     Frame::Ptr frame;
     SessionStats::Ptr stats;
     StrongRandomAPI::Ptr rng;

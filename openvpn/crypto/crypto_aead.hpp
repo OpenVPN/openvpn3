@@ -157,10 +157,10 @@ class Crypto : public CryptoDCInstance
     typedef CryptoDCInstance Base;
 
     Crypto(SSLLib::Ctx libctx_arg,
-           const CryptoAlgs::Type cipher_arg,
+           CryptoDCSettingsData dc_settings_data,
            const Frame::Ptr &frame_arg,
            const SessionStats::Ptr &stats_arg)
-        : cipher(cipher_arg),
+        : dc_settings(dc_settings_data),
           frame(frame_arg),
           stats(stats_arg),
           libctx(libctx_arg)
@@ -270,12 +270,12 @@ class Crypto : public CryptoDCInstance
     void init_cipher(StaticKey &&encrypt_key, StaticKey &&decrypt_key) override
     {
         e.impl.init(libctx,
-                    cipher,
+                    dc_settings.cipher(),
                     encrypt_key.data(),
                     clamp_to_default<unsigned int>(encrypt_key.size(), 0),
                     CRYPTO_API::CipherContextAEAD::ENCRYPT);
         d.impl.init(libctx,
-                    cipher,
+                    dc_settings.cipher(),
                     decrypt_key.data(),
                     clamp_to_default<unsigned int>(decrypt_key.size(), 0),
                     CRYPTO_API::CipherContextAEAD::DECRYPT);
@@ -288,15 +288,13 @@ class Crypto : public CryptoDCInstance
         d.nonce.set_tail(decrypt_key);
     }
 
-    void init_pid(const int send_form,
-                  const int recv_mode,
-                  const int recv_form,
+    void init_pid(const int recv_mode,
                   const char *recv_name,
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
     {
-        e.pid_send.init(send_form);
-        d.pid_recv.init(recv_mode, recv_form, recv_name, recv_unit, recv_stats_arg);
+        e.pid_send.init(PacketID::SHORT_FORM);
+        d.pid_recv.init(recv_mode, PacketID::SHORT_FORM, recv_name, recv_unit, recv_stats_arg);
     }
 
     // Indicate whether or not cipher/digest is defined
@@ -307,7 +305,7 @@ class Crypto : public CryptoDCInstance
 
         // AEAD mode doesn't use HMAC, but we still indicate HMAC_DEFINED
         // because we want to use the HMAC keying material for the AEAD nonce tail.
-        if (CryptoAlgs::defined(cipher))
+        if (CryptoAlgs::defined(dc_settings.cipher()))
             ret |= (CIPHER_DEFINED | HMAC_DEFINED);
         return ret;
     }
@@ -324,7 +322,7 @@ class Crypto : public CryptoDCInstance
     }
 
   private:
-    CryptoAlgs::Type cipher;
+    CryptoDCSettingsData dc_settings;
     Frame::Ptr frame;
     SessionStats::Ptr stats;
     SSLLib::Ctx libctx;
@@ -339,31 +337,29 @@ class CryptoContext : public CryptoDCContext
     typedef RCPtr<CryptoContext> Ptr;
 
     CryptoContext(SSLLib::Ctx libctx_arg,
-                  const CryptoAlgs::Type cipher_arg,
-                  const CryptoAlgs::KeyDerivation key_method,
+                  CryptoDCSettingsData dc_settings_data,
                   const Frame::Ptr &frame_arg,
                   const SessionStats::Ptr &stats_arg)
-        : CryptoDCContext(key_method),
-          cipher(CryptoAlgs::legal_dc_cipher(cipher_arg)),
+        : CryptoDCContext(dc_settings_data.key_derivation()),
+          dc_settings(std::move(dc_settings_data)),
           frame(frame_arg),
           stats(stats_arg),
           libctx(libctx_arg)
     {
+        /* Check if the cipher is legal for AEAD and otherwise throw */
+        legal_dc_cipher(dc_settings.cipher());
+        dc_settings.set_digest(CryptoAlgs::NONE);
     }
 
     CryptoDCInstance::Ptr new_obj(const unsigned int key_id) override
     {
-        return new Crypto<CRYPTO_API>(libctx, cipher, frame, stats);
+        return new Crypto<CRYPTO_API>(libctx, dc_settings, frame, stats);
     }
 
     // cipher/HMAC/key info
-    Info crypto_info() override
+    CryptoDCSettingsData crypto_info() override
     {
-        Info ret;
-        ret.cipher_alg = cipher;
-        ret.hmac_alg = CryptoAlgs::NONE;
-        ret.key_derivation = key_derivation;
-        return ret;
+        return dc_settings;
     }
 
     // Info for ProtoContext::link_mtu_adjust
@@ -374,7 +370,7 @@ class CryptoContext : public CryptoDCContext
     }
 
   private:
-    CryptoAlgs::Type cipher;
+    CryptoDCSettingsData dc_settings;
     Frame::Ptr frame;
     SessionStats::Ptr stats;
     SSLLib::Ctx libctx;

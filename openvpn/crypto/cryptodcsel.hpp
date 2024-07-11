@@ -34,6 +34,9 @@ namespace openvpn {
 
 OPENVPN_EXCEPTION(crypto_dc_select);
 
+/**
+ * Implements the data channel encryption and decryption in userspace
+ */
 template <typename CRYPTO_API>
 class CryptoDCSelect : public CryptoDCFactory
 {
@@ -51,15 +54,13 @@ class CryptoDCSelect : public CryptoDCFactory
     {
     }
 
-    CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
-                                 const CryptoAlgs::Type digest,
-                                 const CryptoAlgs::KeyDerivation method) override
+    CryptoDCContext::Ptr new_obj(CryptoDCSettingsData dc_settings) override
     {
-        const CryptoAlgs::Alg &alg = CryptoAlgs::get(cipher);
+        const CryptoAlgs::Alg &alg = CryptoAlgs::get(dc_settings.cipher());
         if (alg.flags() & CryptoAlgs::CBC_HMAC)
-            return new CryptoContextCHM<CRYPTO_API>(libctx, cipher, digest, method, frame, stats, rng);
+            return new CryptoContextCHM<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats, rng);
         else if (alg.flags() & CryptoAlgs::AEAD)
-            return new AEAD::CryptoContext<CRYPTO_API>(libctx, cipher, method, frame, stats);
+            return new AEAD::CryptoContext<CRYPTO_API>(libctx, std::move(dc_settings), frame, stats);
         else
             OPENVPN_THROW(crypto_dc_select, alg.name() << ": only CBC/HMAC and AEAD cipher modes supported");
     }

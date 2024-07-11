@@ -896,15 +896,20 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             }
         }
 
-        std::string show_options() const
+        void get_data_channel_options(std::ostringstream &os) const
         {
-            std::ostringstream os;
-            os << "PROTOCOL OPTIONS:" << std::endl;
-            os << "  cipher: " << CryptoAlgs::name(dc.cipher()) << std::endl;
-            os << "  digest: " << CryptoAlgs::name(dc.digest()) << std::endl;
-            os << "  key-derivation: " << CryptoAlgs::name(dc.key_derivation()) << std::endl;
-            os << "  compress: " << comp_ctx.str() << std::endl;
-            os << "  peer ID: " << remote_peer_id << std::endl;
+            os << "  data channel:";
+            os << " cipher " << CryptoAlgs::name(dc.cipher());
+            if (CryptoAlgs::mode(dc.cipher()) != CryptoAlgs::Mode::AEAD)
+                os << ", digest " << CryptoAlgs::name(dc.digest());
+
+            os << ", peer-id " << remote_peer_id;
+
+            os << std::endl;
+        }
+
+        void show_cc_enc_option(std::ostringstream &os) const
+        {
             if (tls_auth_enabled())
             {
                 os << "  control channel: tls-auth enabled" << std::endl;
@@ -921,10 +926,24 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             {
                 os << "  control channel: dynamic tls-crypt enabled" << std::endl;
             }
+        }
+
+        std::string show_options() const
+        {
+            std::ostringstream os;
+            os << "PROTOCOL OPTIONS:" << std::endl;
+            os << "  key-derivation: " << CryptoAlgs::name(dc.key_derivation()) << std::endl;
+            if (comp_ctx.type() != CompressContext::NONE)
+                os << "  compress: " << comp_ctx.str() << std::endl;
+
+            show_cc_enc_option(os);
+            get_data_channel_options(os);
+
             if (!app_control_config.supported_protocols.empty())
             {
                 os << "  app custom control channel: " << app_control_config.str() << std::endl;
             }
+
             return os.str();
         }
 
@@ -1129,6 +1148,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 out << "IV_BS64DL=1\n"; // indicate support for data limits when using 64-bit block-size ciphers, version 1 (CVE-2016-6329)
             if (relay_mode)
                 out << "IV_RELAY=1\n";
+
+
             const std::string ret = out.str();
             OVPN_LOG_INFO("Sending Peer Info:" << std::endl
                                                << ret);
@@ -2278,9 +2299,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 crypto->init_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir),
                                   key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 
-            crypto->init_pid(PacketID::SHORT_FORM,
-                             c.pid_mode,
-                             PacketID::SHORT_FORM,
+            crypto->init_pid(c.pid_mode,
                              "DATA",
                              int(key_id_),
                              proto.stats);

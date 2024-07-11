@@ -75,9 +75,7 @@ class Instance : public CryptoDCInstance
         info.decrypt_hmac = std::move(decrypt_key);
     }
 
-    void init_pid(const int send_form,
-                  const int recv_mode,
-                  const int recv_form,
+    void init_pid(const int recv_mode,
                   const char *recv_name,
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
@@ -122,6 +120,7 @@ class Instance : public CryptoDCInstance
         throw korekey_error("decrypt");
     }
 
+
   private:
     Receiver::Ptr rcv;
     Info info;
@@ -130,18 +129,16 @@ class Instance : public CryptoDCInstance
 class Context : public CryptoDCContext
 {
   public:
-    Context(const CryptoAlgs::Type cipher,
-            const CryptoAlgs::Type digest,
-            const CryptoAlgs::KeyDerivation key_method,
+    Context(CryptoDCSettingsData dc_settings_data,
             CryptoDCFactory &dc_factory_delegate,
             const Receiver::Ptr &rcv_arg,
             const Frame::Ptr &frame_arg)
-        : CryptoDCContext(key_method),
+        : CryptoDCContext(dc_settings_data.key_derivation()),
           rcv(rcv_arg),
-          dc_context_delegate(dc_factory_delegate.new_obj(cipher, digest, key_method)),
+          dc_context_delegate(dc_factory_delegate.new_obj(dc_settings_data)),
           frame(frame_arg)
     {
-        Key::validate(cipher, digest);
+        Key::validate(dc_settings_data.cipher(), dc_settings_data.digest());
     }
 
     CryptoDCInstance::Ptr new_obj(const unsigned int key_id) override
@@ -150,8 +147,7 @@ class Context : public CryptoDCContext
     }
 
     // Info for ProtoContext::options_string
-
-    Info crypto_info() override
+    CryptoDCSettingsData crypto_info() override
     {
         return dc_context_delegate->crypto_info();
     }
@@ -181,11 +177,9 @@ class Factory : public CryptoDCFactory
     {
     }
 
-    CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
-                                 const CryptoAlgs::Type digest,
-                                 const CryptoAlgs::KeyDerivation key_method) override
+    CryptoDCContext::Ptr new_obj(const CryptoDCSettingsData dc_settings_data) override
     {
-        return new Context(cipher, digest, key_method, *dc_factory_delegate, rcv, frame);
+        return new Context(dc_settings_data, *dc_factory_delegate, rcv, frame);
     }
 
   private:

@@ -61,6 +61,7 @@ class CryptoDCInstance : public RC<thread_unsafe_refcount>
         HMAC_DEFINED = (1 << 1),                 // may call init_hmac method
         CRYPTO_DEFINED = (1 << 2),               // may call encrypt or decrypt methods
         EXPLICIT_EXIT_NOTIFY_DEFINED = (1 << 3), // may call explicit_exit_notify method
+        LONG_IV_DEFINED = (1 << 4)
     };
     virtual unsigned int defined() const = 0;
 
@@ -72,9 +73,7 @@ class CryptoDCInstance : public RC<thread_unsafe_refcount>
                            StaticKey &&decrypt_key)
         = 0;
 
-    virtual void init_pid(const int send_form,
-                          const int recv_mode,
-                          const int recv_form,
+    virtual void init_pid(const int recv_mode,
                           const char *recv_name,
                           const int recv_unit,
                           const SessionStats::Ptr &recv_stats_arg)
@@ -105,102 +104,22 @@ class CryptoDCInstance : public RC<thread_unsafe_refcount>
     virtual void rekey(const RekeyType type) = 0;
 };
 
-// Factory for CryptoDCInstance objects
-class CryptoDCContext : public RC<thread_unsafe_refcount>
-{
-  public:
-    explicit CryptoDCContext(const CryptoAlgs::KeyDerivation method)
-        : key_derivation(method)
-    {
-    }
-
-    typedef RCPtr<CryptoDCContext> Ptr;
-
-    virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id) = 0;
-
-    // cipher/HMAC/key info
-    struct Info
-    {
-        Info()
-        {
-        }
-        CryptoAlgs::Type cipher_alg = CryptoAlgs::NONE;
-        CryptoAlgs::Type hmac_alg = CryptoAlgs::NONE;
-        CryptoAlgs::KeyDerivation key_derivation = CryptoAlgs::KeyDerivation::OPENVPN_PRF;
-    };
-    virtual Info crypto_info() = 0;
-
-    // Info for ProtoContext::link_mtu_adjust
-    virtual size_t encap_overhead() const = 0;
-
-  protected:
-    CryptoAlgs::KeyDerivation key_derivation = CryptoAlgs::KeyDerivation::OPENVPN_PRF;
-};
-
-// Factory for CryptoDCContext objects
-class CryptoDCFactory : public RC<thread_unsafe_refcount>
-{
-  public:
-    typedef RCPtr<CryptoDCFactory> Ptr;
-
-    virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
-                                         const CryptoAlgs::Type digest,
-                                         const CryptoAlgs::KeyDerivation method)
-        = 0;
-};
-
-// Manage cipher/digest settings, DC factory, and DC context.
-class CryptoDCSettings
+/** class that holds settings for a data channel encryption */
+class CryptoDCSettingsData
 {
   public:
     OPENVPN_SIMPLE_EXCEPTION(no_data_channel_factory);
 
-    CryptoDCSettings()
+    CryptoDCSettingsData() = default;
+
+    void set_cipher(CryptoAlgs::Type cipher)
     {
+        cipher_ = cipher;
     }
 
-    void set_factory(const CryptoDCFactory::Ptr &factory)
+    void set_digest(CryptoAlgs::Type digest)
     {
-        factory_ = factory;
-        context_.reset();
-        dirty = false;
-    }
-
-    void set_cipher(const CryptoAlgs::Type cipher)
-    {
-        if (cipher != cipher_)
-        {
-            cipher_ = cipher;
-            dirty = true;
-        }
-    }
-
-    void set_digest(const CryptoAlgs::Type digest)
-    {
-        if (digest != digest_)
-        {
-            digest_ = digest;
-            dirty = true;
-        }
-    }
-
-    CryptoDCContext &context()
-    {
-        if (!context_ || dirty)
-        {
-            if (!factory_)
-                throw no_data_channel_factory();
-            context_ = factory_->new_obj(cipher_, digest_, key_derivation_);
-            dirty = false;
-        }
-        return *context_;
-    }
-
-    void reset()
-    {
-        factory_.reset();
-        context_.reset();
-        dirty = false;
+        digest_ = digest;
     }
 
     CryptoAlgs::Type cipher() const
@@ -220,12 +139,6 @@ class CryptoDCSettings
         return (CryptoAlgs::use_cipher_digest(cipher_) ? digest_ : CryptoAlgs::NONE);
     }
 
-
-    CryptoDCFactory::Ptr factory() const
-    {
-        return factory_;
-    }
-
     void set_key_derivation(CryptoAlgs::KeyDerivation method)
     {
         key_derivation_ = method;
@@ -236,14 +149,106 @@ class CryptoDCSettings
         return key_derivation_;
     }
 
+
   private:
     CryptoAlgs::Type cipher_ = CryptoAlgs::NONE;
     CryptoAlgs::Type digest_ = CryptoAlgs::NONE;
     CryptoAlgs::KeyDerivation key_derivation_ = CryptoAlgs::KeyDerivation::OPENVPN_PRF;
+};
 
+// Factory for CryptoDCInstance objects
+class CryptoDCContext : public RC<thread_unsafe_refcount>
+{
+  public:
+    explicit CryptoDCContext(const CryptoAlgs::KeyDerivation method)
+        : key_derivation(method)
+    {
+    }
+
+    typedef RCPtr<CryptoDCContext> Ptr;
+
+    virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id) = 0;
+
+    virtual CryptoDCSettingsData crypto_info() = 0;
+
+    // Info for ProtoContext::link_mtu_adjust
+    virtual size_t encap_overhead() const = 0;
+
+  protected:
+    CryptoAlgs::KeyDerivation key_derivation = CryptoAlgs::KeyDerivation::OPENVPN_PRF;
+};
+
+// Factory for CryptoDCContext objects
+class CryptoDCFactory : public RC<thread_unsafe_refcount>
+{
+  public:
+    typedef RCPtr<CryptoDCFactory> Ptr;
+
+    virtual CryptoDCContext::Ptr new_obj(const CryptoDCSettingsData) = 0;
+};
+
+
+// Manage cipher/digest settings, DC factory, and DC context.
+class CryptoDCSettings : public CryptoDCSettingsData
+{
+  public:
+    OPENVPN_SIMPLE_EXCEPTION(no_data_channel_factory);
+
+    CryptoDCSettings() = default;
+
+    void set_factory(const CryptoDCFactory::Ptr &factory)
+    {
+        factory_ = factory;
+        context_.reset();
+        dirty = false;
+    }
+
+    void set_cipher(const CryptoAlgs::Type new_cipher)
+    {
+        if (new_cipher != cipher())
+        {
+            CryptoDCSettingsData::set_cipher(new_cipher);
+            dirty = true;
+        }
+    }
+
+    void set_digest(const CryptoAlgs::Type new_digest)
+    {
+        if (new_digest != digest())
+        {
+            CryptoDCSettingsData::set_digest(new_digest);
+            dirty = true;
+        }
+    }
+
+    CryptoDCContext &context()
+    {
+        if (!context_ || dirty)
+        {
+            if (!factory_)
+                throw no_data_channel_factory();
+            context_ = factory_->new_obj(*this);
+            dirty = false;
+        }
+        return *context_;
+    }
+
+    void reset()
+    {
+        factory_.reset();
+        context_.reset();
+        dirty = false;
+    }
+
+    [[nodiscard]] CryptoDCFactory::Ptr factory() const
+    {
+        return factory_;
+    }
+
+  private:
+    bool dirty = false;
     CryptoDCFactory::Ptr factory_;
     CryptoDCContext::Ptr context_;
-    bool dirty = false;
 };
 } // namespace openvpn
 
