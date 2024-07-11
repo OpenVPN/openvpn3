@@ -1325,7 +1325,15 @@ TEST(proto, iv_ciphers_legacy)
     auto ivciphers = infostring.substr(infostring.find("IV_CIPHERS="));
     ivciphers = ivciphers.substr(0, ivciphers.find("\n"));
 
-    std::string expectedstr{"IV_CIPHERS=none:AES-128-CBC:AES-192-CBC:AES-256-CBC:DES-CBC:DES-EDE3-CBC:BF-CBC:AES-128-GCM:AES-192-GCM:AES-256-GCM"};
+
+
+    std::string expectedstr{"IV_CIPHERS=none:AES-128-CBC:AES-192-CBC:AES-256-CBC:DES-CBC:DES-EDE3-CBC"};
+
+    if (SSLLib::CryptoAPI::CipherContext::is_supported(libctx, openvpn::CryptoAlgs::BF_CBC))
+        expectedstr += ":BF-CBC";
+
+    expectedstr += ":AES-128-GCM:AES-192-GCM:AES-256-GCM";
+
     if (SSLLib::CryptoAPI::CipherContextAEAD::is_supported(nullptr, openvpn::CryptoAlgs::CHACHA20_POLY1305))
         expectedstr += ":CHACHA20-POLY1305";
 
