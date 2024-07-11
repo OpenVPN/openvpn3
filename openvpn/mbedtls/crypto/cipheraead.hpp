@@ -123,7 +123,20 @@ class CipherContextAEAD : public CipherContextCommon
             OPENVPN_THROW(mbedtls_aead_error, "mbedtls_cipher_auth_encrypt failed with status=" << status);
     }
 
-    // input and output may NOT be equal
+    /**
+     * Decrypts AEAD encrypted data. Note that this method ignores the tag parameter
+     * and the tag is assumed to be part of input and at the end of the input.
+     *
+     * @param input     Input data to decrypt
+     * @param output    Where decrypted data will be written to
+     * @param iv        IV of the encrypted data.
+     * @param length    length the of the data, this includes the tag at the end.
+     * @param ad        start of the additional data
+     * @param ad_len    length of the additional data
+     * @param tag       ignored by the mbed TLS variant of the method. (see OpenSSL variant of the method for more details).
+     *
+     * input and output may NOT be equal
+     */
     bool decrypt(const unsigned char *input,
                  unsigned char *output,
                  size_t length,
@@ -133,6 +146,12 @@ class CipherContextAEAD : public CipherContextCommon
                  size_t ad_len)
     {
         check_initialized();
+
+        if (unlikely(tag != nullptr))
+        {
+            /* If we are called with a non-null tag, the function is not going to be able to decrypt */
+            throw mbedtls_aead_error("tag must be null for aead decrypt");
+        }
 
         size_t olen;
         const int status = mbedtls_cipher_auth_decrypt_ext(&ctx,

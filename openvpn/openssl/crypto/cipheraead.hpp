@@ -63,7 +63,7 @@ class CipherContextAEAD
     };
 
     // OpenSSL cipher constants
-    enum
+    enum : size_t
     {
         IV_LEN = 12,
         AUTH_TAG_LEN = 16
@@ -172,16 +172,38 @@ class CipherContextAEAD
         }
     }
 
+    /**
+     * Decrypts AEAD encrypted data. Note that if tag is the nullptr the tag is assumed to be
+     * part of input and at the end of the input. The length parameter of input includes the tag in
+     * this case
+     *
+     * @param input     Input data to decrypt
+     * @param output    Where decrypted data will be written to
+     * @param iv        IV of the encrypted data.
+     * @param length    length the of the data, this includes the tag at the end if tag is not a nullptr.
+     * @param ad        start of the additional data
+     * @param ad_len    length of the additional data
+     * @param tag       location of the tag to use or nullptr if at the end of the input
+     */
     bool decrypt(const unsigned char *input,
                  unsigned char *output,
                  size_t length,
                  const unsigned char *iv,
-                 unsigned char *tag,
+                 const unsigned char *tag,
                  const unsigned char *ad,
                  size_t ad_len)
     {
-        int len;
-        int plaintext_len;
+        if (!tag)
+        {
+            /* Tag is at the end of input, check that input is large enough to hold the tag */
+            if (length < AUTH_TAG_LEN)
+            {
+                throw openssl_gcm_error("decrypt input length too short");
+            }
+
+            length = length - AUTH_TAG_LEN;
+            tag = input + length;
+        }
 
         check_initialized();
         if (!EVP_DecryptInit_ex(ctx, nullptr, nullptr, nullptr, iv))
@@ -189,6 +211,8 @@ class CipherContextAEAD
             openssl_clear_error_stack();
             throw openssl_gcm_error("EVP_DecryptInit_ex (reset)");
         }
+
+        int len;
         if (!EVP_DecryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
         {
             openssl_clear_error_stack();
@@ -199,8 +223,11 @@ class CipherContextAEAD
             openssl_clear_error_stack();
             throw openssl_gcm_error("EVP_DecryptUpdate data");
         }
-        plaintext_len = len;
-        if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AUTH_TAG_LEN, tag))
+
+        int plaintext_len = len;
+        /** This API of OpenSSL does not modify the tag it is given but the function signature always expects
+         * a modifiable tag, so we have to const cast it to get around this restriction */
+        if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AUTH_TAG_LEN, const_cast<unsigned char *>(tag)))
         {
             openssl_clear_error_stack();
             throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl set tag");
