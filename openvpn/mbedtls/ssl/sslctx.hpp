@@ -412,6 +412,10 @@ class MbedTLSContext : public SSLFactoryAPI
             tls_version_min = tvm;
         }
 
+        virtual void set_tls_version_max(const TLSVersion::Type tvm)
+        {
+        }
+
         virtual void set_tls_version_min_override(const std::string &override)
         {
             TLSVersion::apply_override(tls_version_min, override);

@@ -177,6 +177,7 @@ class SSLConfigAPI : public RC<thread_unsafe_refcount>
     virtual void set_remote_cert_tls(const KUParse::TLSWebType wt) = 0;
     virtual void set_tls_remote(const std::string &tls_remote_arg) = 0;
     virtual void set_tls_version_min(const TLSVersion::Type tvm) = 0;
+    virtual void set_tls_version_max(const TLSVersion::Type tvm) = 0;
     virtual void set_tls_version_min_override(const std::string &override) = 0;
     virtual void set_tls_cert_profile(const TLSCertProfile::Type type) = 0;
     virtual void set_tls_cert_profile_override(const std::string &override) = 0;

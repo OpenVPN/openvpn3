@@ -1327,3 +1327,44 @@ TEST(proto, iv_ciphers_legacy)
 
     EXPECT_EQ(ivciphers, expectedstr);
 }
+
+TEST(proto, controlmessage_invalidchar)
+{
+    std::string valid_auth_fail{"AUTH_FAILED: go away"};
+    std::string valid_auth_fail_newline_end{"AUTH_FAILED: go away\n"};
+    std::string invalid_auth_fail{"AUTH_FAILED: go\n away\n"};
+    std::string lot_of_whitespace{"AUTH_FAILED: a lot of white space\n\n\r\n\r\n\r\n"};
+    std::string only_whitespace{"\n\n\r\n\r\n\r\n"};
+    std::string empty{""};
+
+    BufferAllocated valid_auth_fail_buf{reinterpret_cast<const unsigned char *>(valid_auth_fail.c_str()), valid_auth_fail.size(), BufferAllocated::GROW};
+    BufferAllocated valid_auth_fail_newline_end_buf{reinterpret_cast<const unsigned char *>(valid_auth_fail_newline_end.c_str()), valid_auth_fail_newline_end.size(), BufferAllocated::GROW};
+    BufferAllocated invalid_auth_fail_buf{reinterpret_cast<const unsigned char *>(invalid_auth_fail.c_str()), invalid_auth_fail.size(), BufferAllocated::GROW};
+    BufferAllocated lot_of_whitespace_buf{reinterpret_cast<const unsigned char *>(lot_of_whitespace.c_str()), lot_of_whitespace.size(), BufferAllocated::GROW};
+    BufferAllocated only_whitespace_buf{reinterpret_cast<const unsigned char *>(only_whitespace.c_str()), only_whitespace.size(), BufferAllocated::GROW};
+    BufferAllocated empty_buf{reinterpret_cast<const unsigned char *>(empty.c_str()), empty.size(), BufferAllocated::GROW};
+
+    auto msg = ProtoContext::read_control_string<std::string>(valid_auth_fail_buf);
+    EXPECT_EQ(msg, valid_auth_fail);
+    EXPECT_TRUE(Unicode::is_valid_utf8(msg, Unicode::UTF8_NO_CTRL));
+
+    auto msg2 = ProtoContext::read_control_string<std::string>(valid_auth_fail_newline_end_buf);
+    EXPECT_EQ(msg2, valid_auth_fail);
+    EXPECT_TRUE(Unicode::is_valid_utf8(msg2, Unicode::UTF8_NO_CTRL));
+
+    auto msg3 = ProtoContext::read_control_string<std::string>(invalid_auth_fail_buf);
+    EXPECT_EQ(msg3, "AUTH_FAILED: go\n away");
+    EXPECT_FALSE(Unicode::is_valid_utf8(msg3, Unicode::UTF8_NO_CTRL));
+
+    auto msg4 = ProtoContext::read_control_string<std::string>(lot_of_whitespace_buf);
+    EXPECT_EQ(msg4, "AUTH_FAILED: a lot of white space");
+    EXPECT_TRUE(Unicode::is_valid_utf8(msg4, Unicode::UTF8_NO_CTRL));
+
+    auto msg5 = ProtoContext::read_control_string<std::string>(only_whitespace_buf);
+    EXPECT_EQ(msg5, "");
+    EXPECT_TRUE(Unicode::is_valid_utf8(msg5, Unicode::UTF8_NO_CTRL));
+
+    auto msg6 = ProtoContext::read_control_string<std::string>(empty_buf);
+    EXPECT_EQ(msg6, "");
+    EXPECT_TRUE(Unicode::is_valid_utf8(msg5, Unicode::UTF8_NO_CTRL));
+}
