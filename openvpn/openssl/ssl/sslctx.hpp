@@ -2309,7 +2309,7 @@ class OpenSSLContext : public SSLFactoryAPI
 
 inline const std::string get_ssl_library_version()
 {
-    return OPENSSL_VERSION_TEXT;
+    return OpenSSL_version(OPENSSL_VERSION);
 }
 } // namespace openvpn
 #endif
