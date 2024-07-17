@@ -391,6 +391,7 @@ struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
             if (pair.guid == guid)
                 return pair.name;
         }
+        throw std::range_error{"guid not found"};
     }
 
     std::string guid_from_name(const std::string &name) const
@@ -401,6 +402,7 @@ struct TapNameGuidPairList : public std::vector<TapNameGuidPair>
             if (pair.name == name)
                 return pair.guid;
         }
+        throw std::range_error{"name not found"};
     }
 };
 

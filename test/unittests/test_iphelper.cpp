@@ -42,7 +42,7 @@ class IpHelperTest : public testing::Test
         ::GetBestInterface(addr, &tap.index);
     }
 
-    virtual void TearDown()
+    virtual void TearDown() override
     {
         remove_cmds.execute(os);
         remove_cmds.clear();

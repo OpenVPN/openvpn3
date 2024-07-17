@@ -298,13 +298,13 @@ class WFP : public RC<thread_unsafe_refcount>
                std::ostream &log)
     {
         // WFP filter/conditions
-        FWPM_FILTER0 filter = {0};
-        FWPM_FILTER_CONDITION0 condition[2] = {0};
-        FWPM_FILTER_CONDITION0 match_openvpn = {0};
-        FWPM_FILTER_CONDITION0 match_port_53 = {0};
-        FWPM_FILTER_CONDITION0 match_interface = {0};
-        FWPM_FILTER_CONDITION0 match_loopback = {0};
-        FWPM_FILTER_CONDITION0 match_not_loopback = {0};
+        FWPM_FILTER0 filter = {};
+        FWPM_FILTER_CONDITION0 condition[2] = {};
+        FWPM_FILTER_CONDITION0 match_openvpn = {};
+        FWPM_FILTER_CONDITION0 match_port_53 = {};
+        FWPM_FILTER_CONDITION0 match_interface = {};
+        FWPM_FILTER_CONDITION0 match_loopback = {};
+        FWPM_FILTER_CONDITION0 match_not_loopback = {};
         UINT64 filterid = 0;
 
         // Get NET_LUID object for adapter
@@ -315,7 +315,7 @@ class WFP : public RC<thread_unsafe_refcount>
 
         // Populate packet filter layer information
         {
-            FWPM_SUBLAYER0 subLayer = {0};
+            FWPM_SUBLAYER0 subLayer = {};
             subLayer.subLayerKey = subLayerGUID;
             subLayer.displayData.name = const_cast<wchar_t *>(L"OpenVPN");
             subLayer.displayData.description = const_cast<wchar_t *>(L"OpenVPN");
@@ -452,7 +452,7 @@ class WFP : public RC<thread_unsafe_refcount>
          */
         EngineHandle()
         {
-            FWPM_SESSION0 session = {0};
+            FWPM_SESSION0 session = {};
 
             // delete all filters when engine handle is closed
             session.flags = FWPM_SESSION_FLAG_DYNAMIC;
