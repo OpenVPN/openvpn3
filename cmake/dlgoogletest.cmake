@@ -13,7 +13,7 @@ include_guard(GLOBAL)
 
 if(NOT OVPN_GTEST_VERSION)
     # renovate: datasource=github-releases depName=google/googletest
-    set(OVPN_GTEST_VERSION v1.14.0)
+    set(OVPN_GTEST_VERSION v1.15.0)
 endif()
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt.in googletest-download/CMakeLists.txt)
