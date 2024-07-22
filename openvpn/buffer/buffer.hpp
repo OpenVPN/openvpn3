@@ -52,7 +52,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
-#include <type_traits> // for std::is_nothrow_move_constructible, std::remove_const, std::enable_if, and std::is_const
+#include <type_traits> // for std::is_nothrow_move_constructible_v, std::remove_const, std::enable_if_t, and std::is_const_v
 
 #ifndef OPENVPN_NO_IO
 #include <openvpn/io/io.hpp>
@@ -81,6 +81,44 @@ namespace openvpn {
 //  special-purpose exception class for Buffer classes
 //  ===============================================================================================
 
+/**
+    @brief report various types of exceptions or errors that may occur when working with buffers
+    @details defines a C++ class called BufferException which is derived from the standard
+    std::exception class. The purpose of this class is to provide a way to handle and report
+    various types of exceptions or errors that may occur when working with buffers (data
+    containers) in the OpenVPN application.
+
+    The BufferException class does not take any direct input. Instead, it is designed to be
+    instantiated and thrown (raised) when certain exceptional conditions arise during buffer
+    operations. The class defines an enumeration Status that lists various types of buffer-related
+    exceptions, such as buffer_full, buffer_underflow, buffer_overflow, buffer_offset, and others.
+
+    When a BufferException is thrown, it can be caught and handled by the calling code. The output
+    produced by this class is an error message that describes the specific type of exception that
+    occurred. This error message can be obtained by calling the what() member function, which
+    returns a C-style string (const char*) containing the error description.
+
+    The class achieves its purpose through the following logic and algorithm:
+
+    The BufferException class has two constructors: one that takes only a Status value, and another
+    that takes both a Status value and an additional error message string. The what() member
+    function is overridden from the base std::exception class. It returns the error message
+    associated with the exception. If an additional error message string was provided during
+    construction, the what() function returns a combination of the status string (e.g.,
+    "buffer_full") and the additional message. If no additional message was provided, the what()
+    function returns only the status string. The status_string() private static member function
+    is used to convert the Status enumeration value to a corresponding string representation
+    (e.g., "buffer_full" for buffer_full).
+
+    The important logic flow in this code is the conversion of the Status enumeration value to
+    a human-readable string representation, which is then used to construct the error message
+    returned by the what() function. This error message can be used by the calling code to
+    understand the nature of the exception and take appropriate action.
+
+    It's important to note that this code does not handle any data transformations or perform
+    any complex algorithms. Its sole purpose is to provide a mechanism for reporting and
+    handling buffer-related exceptions in a consistent and descriptive manner.
+*/
 class BufferException : public std::exception
 {
   public:
@@ -176,7 +214,12 @@ class BufferType;
 //  class ConstBufferType
 //  ===============================================================================================
 /**
-   @brief Buffer with double ended access and adjustable free space at both ends.
+   @brief Immutable buffer with double ended access and adjustable free space at both ends.
+   @details This template implements a buffer with double ended access and adjustable free space at
+            both ends. It's generalized for type \p T but is only really fully functional with
+            various types that can represent strings, as it does have string interoperation helpers.
+            It is particularly useful for use as a building block in implementing protocols such
+            as wire protocols for a network.
 
    Data layout:
    @verbatim
@@ -197,190 +240,531 @@ class ConstBufferType
     typedef T value_type;
     typedef T *type;
     typedef const T *const_type;
-    typedef typename std::remove_const<T>::type NCT; // non-const type
+    typedef typename std::remove_const_t<T> NCT;
 
+    /**
+     * @brief Default constructor for ConstBufferType.
+     */
     ConstBufferType();
 
+    /**
+     * @brief Constructs a ConstBufferType from a void pointer and size.
+     * @param data Pointer to the data.
+     * @param size Size of the data in bytes.
+     * @param filled Indicates whether the buffer is filled or not.
+     * @note The term filled indicates that the memory pointed to contains desired data and
+     *       that the size of the buffer should be set equal to its capacity, as opposed to
+     *       this being a buffer of available memory with capacity 'size' and size zero. See
+     *       layout diagram for more insight.
+     */
     ConstBufferType(void *data, const size_t size, const bool filled);
 
-    // When T is already const, this constructor becomes redundant, so disable it.
+    /**
+     * @brief Constructs a ConstBufferType from a const void pointer and size.
+     *        This constructor is disabled when T is already const.
+     * @param data Pointer to the const data.
+     * @param size Size of the data in bytes.
+     * @param filled Indicates whether the buffer is filled or not.
+     */
     template <typename U = T,
-              typename std::enable_if<!std::is_const<U>::value, int>::type = 0>
+              typename std::enable_if_t<!std::is_const_v<U>, int> = 0>
     ConstBufferType(const void *data, const size_t size, const bool filled);
 
+    /**
+     * @brief Constructs a ConstBufferType from a pointer to T and size.
+     * @param data Pointer to the data.
+     * @param size Size of the data in bytes.
+     * @param filled Indicates whether the buffer is filled or not.
+     */
     ConstBufferType(T *data, const size_t size, const bool filled);
 
-    // When T is already const, this constructor becomes redundant, so disable it.
+    /**
+     * @brief Constructs a ConstBufferType from a const pointer to T and size.
+     *        This constructor is disabled when T is already const.
+     * @param data Pointer to the const data.
+     * @param size Size of the data in bytes.
+     * @param filled Indicates whether the buffer is filled or not.
+     */
     template <typename U = T,
-              typename std::enable_if<!std::is_const<U>::value, int>::type = 0>
+              typename std::enable_if_t<!std::is_const_v<U>, int> = 0>
     ConstBufferType(const U *data, const size_t size, const bool filled);
 
-    // const index into array
-    auto &operator[](const size_t index) const;
+    /**
+     * @brief Const indexing operator for ConstBufferType.
+     * @param index Index of the element to access.
+     * @return Const reference to the element at the specified index.
+     */
+    const auto &operator[](const size_t index) const;
+
+    /**
+     * @brief Non-const indexing operator for ConstBufferType.
+     * @param index Index of the element to access.
+     * @return Non-const reference to the element at the specified index.
+     */
     auto &operator[](const size_t index);
 
+    /**
+     * @brief Initializes the headroom (offset) of the buffer.
+     * @param headroom The desired headroom value.
+     */
     void init_headroom(const size_t headroom);
+
+    /**
+     * @brief Resets the offset of the buffer.
+     * @param offset The new offset value.
+     */
     void reset_offset(const size_t offset);
+
+    /**
+     * @brief Resets the size of the buffer to zero.
+     */
     void reset_size();
+
+    /**
+     * @brief Resets the content of the buffer.
+     */
     void reset_content();
 
-    // std::string compatible methods
+    /**
+     * @brief Returns a const pointer to the null-terminated string representation of the buffer.
+     * @return Const pointer to the null-terminated string.
+     */
     const T *c_str() const;
+
+    /**
+     * @brief Returns the length of the buffer.
+     * @return The length of the buffer in elements.
+     */
     size_t length() const;
 
-    // return a const pointer to start of array
+    /**
+     * @brief Returns a const pointer to the start of the buffer.
+     * @return Const pointer to the start of the buffer.
+     */
     const T *c_data() const;
 
-    // return a const pointer to end of array
+    /**
+     * @brief Returns a const pointer to the end of the buffer.
+     * @return Const pointer to the end of the buffer.
+     */
     const T *c_data_end() const;
 
-    // return a const pointer to start of raw data
+    /**
+     * @brief Returns a const pointer to the start of the raw data in the buffer.
+     * @return Const pointer to the start of the raw data.
+     */
     const T *c_data_raw() const;
 
-    // return raw size of allocated buffer in T objects
+    /**
+     * @brief Returns the capacity (raw size) of the allocated buffer in T objects.
+     * @return The capacity of the buffer in T objects.
+     */
     size_t capacity() const;
 
-    // return current offset (headroom) into buffer
+    /**
+     * @brief Returns the current offset (headroom) into the buffer.
+     * @return The offset into the buffer.
+     */
     size_t offset() const;
 
-    // return true if array is not empty
+    /**
+     * @brief Returns true if the buffer is not empty.
+     * @return True if the buffer is not empty, false otherwise.
+     */
     bool defined() const;
 
-    // return true if data memory is defined
+    /**
+     * @brief Returns true if the data memory is defined (allocated).
+     * @return True if the data memory is defined, false otherwise.
+     */
     bool allocated() const;
 
-    // return true if array is empty
+    /**
+     * @brief Returns true if the buffer is empty.
+     * @return True if the buffer is empty, false otherwise.
+     */
     bool empty() const;
 
-    // return size of array in T objects
+    /**
+     * @brief Returns the size of the buffer in T objects.
+     * @return The size of the buffer in T objects.
+     */
     size_t size() const;
 
+    /**
+     * @brief Removes and returns the last element from the buffer.
+     * @return The last element of the buffer.
+     */
     T pop_back();
+
+    /**
+     * @brief Removes and returns the first element from the buffer.
+     * @return The first element of the buffer.
+     */
     T pop_front();
+
+    /**
+     * @brief Returns the first element of the buffer.
+     * @return The first element of the buffer.
+     */
     T front() const;
+
+    /**
+     * @brief Returns the last element of the buffer.
+     * @return The last element of the buffer.
+     */
     T back() const;
+
+    /**
+     * @brief Advances the buffer by the specified delta.
+     * @param delta The amount to advance the buffer.
+     */
     void advance(const size_t delta);
+
+    /**
+     * @brief Returns true if the buffer contains a null character.
+     * @return True if the buffer contains a null character, false otherwise.
+     */
     bool contains_null() const;
+
+    /**
+     * @brief Returns true if the buffer is zeroed (all elements are zero).
+     * @return True if the buffer is zeroed, false otherwise.
+     */
     bool is_zeroed() const;
 
 #ifndef OPENVPN_NO_IO
-    // return a openvpn_io::const_buffer object used by
-    // asio write methods.
+    /**
+     * @brief Return an openvpn_io::const_buffer object used by asio write methods.
+     * @return A const_buffer object representing the underlying buffer data.
+     */
     openvpn_io::const_buffer const_buffer() const;
 
-    // clamped version of const_buffer()
+    /**
+     * @brief Return a clamped version of const_buffer().
+     * @details This function returns a const_buffer object that represents the underlying
+     *          buffer data, but with a size clamped to a certain limit. This can be useful
+     *          when you want to ensure that the buffer size does not exceed a specific
+     *          value.
+     * @return A const_buffer object representing the underlying buffer data, with
+     *         the size clamped to a certain limit.
+     */
     openvpn_io::const_buffer const_buffer_clamp() const;
+
+    /**
+     * @brief Return a const_buffer object with a specified size limit.
+     * @details This function returns a const_buffer object that represents the underlying
+     *          buffer data, but with a size limited to the specified `limit` value. This
+     *          can be useful when you want to ensure that the buffer size does not exceed
+     *          a specific value.
+     * @param limit The maximum size of the returned const_buffer object.
+     * @return A const_buffer object representing the underlying buffer data, with
+     *         the size limited to the specified `limit` value.
+     */
     openvpn_io::const_buffer const_buffer_limit(const size_t limit) const;
 #endif
 
+    /**
+     * @brief Read data from the buffer into the specified memory location.
+     * @param data Pointer to the memory location where the data will be read.
+     * @param size Number of bytes to read from the buffer.
+     */
     void read(NCT *data, const size_t size);
+
+    /**
+     * @brief Read data from the buffer into the specified memory location.
+     * @param data Pointer to the memory location where the data will be read.
+     * @param size Number of bytes to read from the buffer.
+     */
     void read(void *data, const size_t size);
+
+    /**
+     * @brief Allocate memory and read data from the buffer into the allocated memory.
+     * @param size Number of bytes to read from the buffer.
+     * @return Pointer to the allocated memory containing the read data.
+     */
     auto *read_alloc(const size_t size);
+
+    /**
+     * @brief Allocate memory and read data from the buffer into the allocated memory.
+     * @param size Number of bytes to read from the buffer.
+     * @return Buffer containing the read data.
+     */
     auto read_alloc_buf(const size_t size);
 
-    // return the maximum allowable size value in T objects given the current offset (without considering resize)
+    /**
+     * @brief Return the maximum allowable size value in T objects given the current offset (without considering resize).
+     * @return The maximum allowable size value in T objects.
+     */
     size_t max_size() const;
 
-    // After an external method, operating on the array as
-    // a mutable unsigned char buffer, has written data to the
-    // array, use this method to set the array length in terms
-    // of T objects.
+    /**
+     * @brief After an external method, operating on the array as a mutable unsigned char buffer, has written data to the array, use this method to set the array length in terms of T objects.
+     * @param size The new size of the array in terms of T objects.
+     */
     void set_size(const size_t size);
 
-    // Increment size (usually used in a similar context
-    // to set_size such as after mutable_buffer_append).
+    /**
+     * @brief Increment the size of the array (usually used in a similar context to set_size such as after mutable_buffer_append).
+     * @param delta The amount to increment the size by.
+     */
     void inc_size(const size_t delta);
 
+    /**
+     * @brief Get a range of the buffer as a ConstBufferType object.
+     * @param offset The starting offset of the range.
+     * @param len The length of the range.
+     * @return A ConstBufferType object representing the specified range of the buffer.
+     */
     ConstBufferType range(size_t offset, size_t len) const;
 
-    // const index into array
+    /**
+     * @brief Get a const pointer to the element at the specified index in the array.
+     * @param index The index of the element to retrieve.
+     * @return A const pointer to the element at the specified index.
+     */
     const T *c_index(const size_t index) const;
 
+    /**
+     * @brief Equality operator to compare this buffer with another ConstBufferType object.
+     * @param other The ConstBufferType object to compare with.
+     * @return true if the buffers are equal, false otherwise.
+     */
     bool operator==(const ConstBufferType &other) const;
+
+    /**
+     * @brief Inequality operator to compare this buffer with another ConstBufferType object.
+     * @param other The ConstBufferType object to compare with.
+     * @return true if the buffers are not equal, false otherwise.
+     */
     bool operator!=(const ConstBufferType &other) const;
 
-  protected: // mutable iplementations are only available to derived classes
+  protected: // mutable implementations are only available to derived classes
+    /**
+     * @brief Reserve additional memory for the buffer.
+     * @param n The amount of additional memory to reserve.
+     */
     void reserve(const size_t n);
 
-    // return a mutable pointer to start of array
+    /**
+     * @brief Get a mutable pointer to the start of the array.
+     * @return A mutable pointer to the start of the array.
+     */
     T *data();
 
-    // return a mutable pointer to end of array
+    /**
+     * @brief Get a mutable pointer to the end of the array.
+     * @return A mutable pointer to the end of the array.
+     */
     T *data_end();
 
-    // return a mutable pointer to start of raw data
+    /**
+     * @brief Get a mutable pointer to the start of the raw data.
+     * @return A mutable pointer to the start of the raw data.
+     */
     T *data_raw();
 
-    // return the number of additional T objects that can be added before capacity is reached (without considering resize)
+    /**
+     * @brief Return the number of additional T objects that can be added before capacity is reached (without considering resize).
+     * @param tailroom (Optional) The amount of additional space to reserve at the end of the buffer.
+     * @return The number of additional T objects that can be added.
+     */
     size_t remaining(const size_t tailroom = 0) const;
 
-    // like max_size, but take tailroom into account
+    /**
+     * @brief Return the maximum allowable size value in T objects, taking into account the specified tailroom.
+     * @param tailroom The amount of additional space to reserve at the end of the buffer.
+     * @return The maximum allowable size value in T objects, considering the tailroom.
+     */
     size_t max_size_tailroom(const size_t tailroom) const;
 
-    // append a T object to array, with possible resize
+    /**
+     * @brief Append a T object to the end of the array, resizing the array if necessary.
+     * @param value The T object to append.
+     */
     void push_back(const T &value);
 
-    // append a T object to array, with possible resize
+    /**
+     * @brief Append a T object to the array, with possible resize.
+     * @param value The T object to be appended to the array.
+     */
     void push_front(const T &value);
 
-    // Place a T object after the last object in the
-    // array, with possible resize to contain it,
-    // however don't actually change the size of the
-    // array to reflect the added object.  Useful
-    // for maintaining null-terminated strings.
+    /**
+     * @brief Place a T object after the last object in the array, with possible resize to contain it.
+     *        However, it doesn't actually change the size of the array to reflect the added object.
+     *        Useful for maintaining null-terminated strings.
+     * @param value The T object to be placed after the last object in the array.
+     * @throws Will throw an exception if there is no room for the trailing value and the resize fails.
+     */
     void set_trailer(const T &value);
 
+    /**
+     * @brief Null-terminate the array.
+     * @throws Will throw an exception if there is no room, termination is required, and the resize fails.
+     */
     void null_terminate();
 
-    // mutable index into array
+    /**
+     * @brief Get a mutable index into the array.
+     * @param index The index of the element to be accessed.
+     * @return A pointer to the element at the specified index.
+     */
     T *index(const size_t index);
 
 #ifndef OPENVPN_NO_IO
-    // return a openvpn_io::mutable_buffer object used by
-    // asio read methods, starting from data()
+    /**
+     * @brief Return an openvpn_io::mutable_buffer object used by asio read methods, starting from data().
+     * @param tailroom The amount of tailroom to reserve in the buffer (default: 0).
+     * @return An openvpn_io::mutable_buffer object.
+     */
     openvpn_io::mutable_buffer mutable_buffer(const size_t tailroom = 0);
 
-    // return a openvpn_io::mutable_buffer object used by
-    // asio read methods, starting from data_end()
+    /**
+     * @brief Return an openvpn_io::mutable_buffer object used by asio read methods, starting from data_end().
+     * @param tailroom The amount of tailroom to reserve in the buffer (default: 0).
+     * @return An openvpn_io::mutable_buffer object.
+     */
     openvpn_io::mutable_buffer mutable_buffer_append(const size_t tailroom = 0);
 
-    // clamped versions of mutable_buffer(), mutable_buffer_append(),
+    /**
+     * @brief Clamped version of mutable_buffer().
+     * @param tailroom The amount of tailroom to reserve in the buffer (default: 0).
+     * @return An openvpn_io::mutable_buffer object.
+     */
     openvpn_io::mutable_buffer mutable_buffer_clamp(const size_t tailroom = 0);
+
+    /**
+     * @brief Clamped version of mutable_buffer_append().
+     * @param tailroom The amount of tailroom to reserve in the buffer (default: 0).
+     * @return An openvpn_io::mutable_buffer object.
+     */
     openvpn_io::mutable_buffer mutable_buffer_append_clamp(const size_t tailroom = 0);
 #endif
 
+    /**
+     * @brief Realign the buffer with the specified headroom.
+     * @param headroom The amount of headroom to reserve in the buffer.
+     * @note This is useful for aligning structures within the buffer or for adjusting the
+     *       headroom in the buffer. It does one by adjusting the other.
+     */
     void realign(size_t headroom);
+
+    /**
+     * @brief Write data to the buffer.
+     * @param data A pointer to the data to be written.
+     * @param size The number of T objects to be written.
+     */
     void write(const T *data, const size_t size);
+
+    /**
+     * @brief Write data to the buffer.
+     * @param data A pointer to the data to be written.
+     * @param size The number of bytes to be written.
+     */
     void write(const void *data, const size_t size);
+
+    /**
+     * @brief Prepend data to the buffer.
+     * @param data A pointer to the data to be prepended.
+     * @param size The number of T objects to be prepended.
+     */
     void prepend(const T *data, const size_t size);
+
+    /**
+     * @brief Prepend data to the buffer.
+     * @param data A pointer to the data to be prepended.
+     * @param size The number of bytes to be prepended.
+     */
     void prepend(const void *data, const size_t size);
+
+    /**
+     * @brief Allocate space for writing data to the buffer.
+     * @param size The number of T objects to allocate space for.
+     * @return A pointer to the allocated space in the buffer.
+     */
     T *write_alloc(const size_t size);
+
+    /**
+     * @brief Allocate space for prepending data to the buffer.
+     * @param size The number of T objects to allocate space for.
+     * @return A pointer to the allocated space in the buffer.
+     */
     T *prepend_alloc(const size_t size);
+
+    /**
+     * @brief Reset the buffer with the specified minimum capacity and flags.
+     * @param min_capacity The minimum capacity of the buffer.
+     * @param flags Flags to control the behavior of the reset operation.
+     */
     void reset(const size_t min_capacity, const unsigned int flags);
+
+    /**
+     * @brief Reset the buffer with the specified headroom, minimum capacity, and flags.
+     * @param headroom The amount of headroom to reserve in the buffer.
+     * @param min_capacity The minimum capacity of the buffer.
+     * @param flags Flags to control the behavior of the reset operation.
+     */
     void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
+
+    /**
+     * @brief Append data from another buffer to this buffer.
+     * @tparam B The type of the other buffer.
+     * @param other The other buffer to be appended.
+     */
     template <typename B>
     void append(const B &other);
 
+    /**
+     * @brief Swap the contents of this buffer with another buffer.
+     * @tparam T_ The type of the other buffer.
+     * @param other The other buffer to swap with.
+     */
     template <typename T_>
-    void swap(ConstBufferType<T_> &);
+    void swap(ConstBufferType<T_> &other);
 
+    /**
+     * @brief Throw an exception when the buffer is full.
+     * @param newcap The new capacity required for the buffer.
+     * @param allocated A flag indicating whether memory was allocated.
+     */
     void buffer_full_error(const size_t newcap, const bool allocated) const;
 
-  protected: // Virtual Functions
-    // Called when reset method needs to expand the buffer size
+    /**
+     * @brief Called when the reset method needs to expand the buffer size.
+     * @param min_capacity The minimum capacity required for the buffer.
+     * @param flags Flags to control the behavior of the reset operation.
+     */
     virtual void reset_impl(const size_t min_capacity, const unsigned int flags);
 
-    // Derived classes can implement buffer growing semantics
-    // by overloading this method.  In the default implementation,
-    // buffers are non-growable, so we throw an exception.
+    /**
+     * @brief Derived classes can implement buffer growing semantics by overloading this method.
+     *        In the default implementation, buffers are non-growable, so an exception is thrown.
+     * @param new_capacity The new capacity required for the buffer.
+     * @throws std::exception if the buffer cannot be resized.
+     */
     virtual void resize(const size_t new_capacity);
 
-  protected:
+    /**
+     * @brief Construct a ConstBufferType object.
+     * @param data A pointer to the data buffer.
+     * @param offset The offset from data where the T array starts.
+     * @param size The number of T objects in the array.
+     * @param capacity The maximum number of T objects that can be stored in the buffer.
+     */
     ConstBufferType(T *data, const size_t offset, const size_t size, const size_t capacity);
 
-    // When T is already const, this constructor becomes redundant, so disable it.
+    /**
+     * @brief Construct a ConstBufferType object from a const U* pointer.
+     *        This constructor is disabled when T is already const.
+     * @tparam U The type of the data pointer.
+     * @param data A pointer to the data buffer.
+     * @param offset The offset from data where the T array starts.
+     * @param size The number of T objects in the array.
+     * @param capacity The maximum number of T objects that can be stored in the buffer.
+     */
     template <typename U = T,
-              typename std::enable_if<!std::is_const<U>::value, int>::type = 0>
+              typename std::enable_if_t<!std::is_const_v<U>, int> = 0>
     ConstBufferType(const U *data, const size_t offset, const size_t size, const size_t capacity);
 
   private:
@@ -439,14 +823,36 @@ class BufferType : public ConstBufferType<T>
     using ConstBufferType<T>::resize;
     using ConstBufferType<T>::buffer_full_error;
 
+    /**
+     * @brief Default constructor for BufferType.
+     */
     BufferType(){};
 
+    /**
+     * @brief Constructor for BufferType that takes a void pointer, size, and a flag indicating if the buffer is filled.
+     * @param data A void pointer to the buffer data.
+     * @param size The size of the buffer.
+     * @param filled A boolean flag indicating if the buffer is filled.
+     */
     BufferType(void *data, const size_t size, const bool filled)
         : ConstBufferType<T>(data, size, filled){};
 
+    /**
+     * @brief Constructor for BufferType that takes a T pointer, size, and a flag indicating if the buffer is filled.
+     * @param data A pointer to the buffer data of type T.
+     * @param size The size of the buffer.
+     * @param filled A boolean flag indicating if the buffer is filled.
+     */
     BufferType(T *data, const size_t size, const bool filled)
         : ConstBufferType<T>(data, size, filled){};
 
+    /**
+     * @brief Protected constructor for BufferType that takes a T pointer, offset, size, and capacity.
+     * @param data A pointer to the buffer data of type T.
+     * @param offset The offset of the buffer.
+     * @param size The size of the buffer.
+     * @param capacity The capacity of the buffer.
+     */
   protected:
     BufferType(T *data, const size_t offset, const size_t size, const size_t capacity)
         : ConstBufferType<T>(data, offset, size, capacity){};
@@ -478,45 +884,185 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
 
     enum
     {
-        CONSTRUCT_ZERO = (1 << 0), // if enabled, constructors/init will zero allocated space
-        DESTRUCT_ZERO = (1 << 1),  // if enabled, destructor will zero data before deletion
-        GROW = (1 << 2),           // if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
-        ARRAY = (1 << 3),          // if enabled, use as array
+        CONSTRUCT_ZERO = (1 << 0), ///< if enabled, constructors/init will zero allocated space
+        DESTRUCT_ZERO = (1 << 1),  ///< if enabled, destructor will zero data before deletion
+        GROW = (1 << 2),           ///< if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
+        ARRAY = (1 << 3),          ///< if enabled, use as array
     };
 
+    /**
+     * @brief Default constructor.
+     */
     BufferAllocatedType();
+
+    /**
+     * @brief Constructs a BufferAllocatedType with the specified capacity and flags.
+     * @param capacity The initial capacity of the buffer.
+     * @param flags The flags to set for the buffer.
+     */
     BufferAllocatedType(const size_t capacity, const unsigned int flags);
+
+    /**
+     * @brief Constructs a BufferAllocatedType with the specified data, size, and flags.
+     * @param data A pointer to the data to be copied into the buffer.
+     * @param size The size of the data to be copied.
+     * @param flags The flags to set for the buffer.
+     */
     BufferAllocatedType(const T *data, const size_t size, const unsigned int flags);
+
+    /**
+     * @brief Copy constructor.
+     * @param other The BufferAllocatedType object to copy from.
+     */
     BufferAllocatedType(const BufferAllocatedType &other);
+
+    /**
+     * @brief Constructs a BufferAllocatedType from a BufferType object with the specified flags.
+     * @tparam T_ The template parameter type of the BufferType object.
+     * @param other The BufferType object to copy from.
+     * @param flags The flags to set for the new BufferAllocatedType object.
+     */
     template <typename T_>
     BufferAllocatedType(const BufferType<T_> &other, const unsigned int flags);
+
+    /**
+     * @brief Assignment operator.
+     * @param other The BufferAllocatedType object to copy from.
+     */
     void operator=(const BufferAllocatedType &other);
+
+    /**
+     * @brief Initializes the buffer with the specified capacity and flags.
+     * @param capacity The initial capacity of the buffer.
+     * @param flags The flags to set for the buffer.
+     */
     void init(const size_t capacity, const unsigned int flags);
+
+    /**
+     * @brief Initializes the buffer with the specified data, size, and flags.
+     * @param data A pointer to the data to be copied into the buffer.
+     * @param size The size of the data to be copied.
+     * @param flags The flags to set for the buffer.
+     */
     void init(const T *data, const size_t size, const unsigned int flags);
+
+    /**
+     * @brief Reallocates the buffer to the specified new capacity.
+     * @param newcap The new capacity for the buffer.
+     */
     void realloc(const size_t newcap);
+
+    /**
+     * @brief Resets the buffer with the specified minimum capacity and flags.
+     * @param min_capacity The minimum capacity for the buffer.
+     * @param flags The flags to set for the buffer.
+     */
     void reset(const size_t min_capacity, const unsigned int flags);
+
+    /**
+     * @brief Resets the buffer with the specified headroom, minimum capacity, and flags.
+     * @param headroom The additional capacity to allocate beyond the minimum capacity.
+     * @param min_capacity The minimum capacity for the buffer.
+     * @param flags The flags to set for the buffer.
+     */
     void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
+
+    /**
+     * @brief Moves the contents of another BufferAllocatedType object into this object.
+     * @tparam T_ The template parameter type of the other BufferAllocatedType object.
+     * @tparam R_ The template parameter type of the other BufferAllocatedType object.
+     * @param other The other BufferAllocatedType object to move from.
+     */
     template <typename T_, typename R_>
     void move(BufferAllocatedType<T_, R_> &other);
+
+    /**
+     * @brief Moves the contents of this BufferAllocatedType object into a new RCPtr object.
+     * @return A new RCPtr object containing the contents of this BufferAllocatedType object.
+     */
     RCPtr<BufferAllocatedType<T, R>> move_to_ptr();
+
+    /**
+     * @brief Swaps the contents of this BufferAllocatedType object with another BufferAllocatedType object.
+     * @tparam T_ The template parameter type of the other BufferAllocatedType object.
+     * @tparam R_ The template parameter type of the other BufferAllocatedType object.
+     * @param other The other BufferAllocatedType object to swap with.
+     */
     template <typename T_, typename R_>
     void swap(BufferAllocatedType<T_, R_> &other);
+
+    /**
+     * @brief Move constructor.
+     * @tparam T_ The template parameter type of the other BufferAllocatedType object.
+     * @tparam R_ The template parameter type of the other BufferAllocatedType object.
+     * @param other The other BufferAllocatedType object to move from.
+     */
     template <typename T_, typename R_>
     BufferAllocatedType(BufferAllocatedType<T_, R_> &&other) noexcept;
+
+    /**
+     * @brief Move assignment operator.
+     * @param other The BufferAllocatedType object to move from.
+     * @return A reference to this BufferAllocatedType object.
+     */
     BufferAllocatedType &operator=(BufferAllocatedType &&other) noexcept;
+
+    /**
+     * @brief Clears the contents of the buffer.
+     */
     void clear();
+
+    /**
+     * @brief Sets the specified flags for the buffer.
+     * @param flags The flags to set.
+     */
     void or_flags(const unsigned int flags);
+
+    /**
+     * @brief Clears the specified flags for the buffer.
+     * @param flags The flags to clear.
+     */
     void and_flags(const unsigned int flags);
+
+    /**
+     * @brief Destructor.
+     */
     ~BufferAllocatedType();
 
-  private:
+    /**
+     * @brief Private constructor.
+     * @param offset The offset of the buffer.
+     * @param size The size of the buffer.
+     * @param capacity The capacity of the buffer.
+     * @param flags The flags for the buffer.
+     */
     BufferAllocatedType(const size_t offset,
                         const size_t size,
                         const size_t capacity,
                         const unsigned int flags);
+
+    /**
+     * @brief Resets the buffer implementation with the specified minimum capacity and flags.
+     * @param min_capacity The minimum capacity for the buffer.
+     * @param flags The flags to set for the buffer.
+     */
     virtual void reset_impl(const size_t min_capacity, const unsigned int flags) override;
+
+    /**
+     * @brief Resizes the buffer to the specified new capacity.
+     * @param new_capacity The new capacity for the buffer.
+     */
     virtual void resize(const size_t new_capacity) override;
+
+    /**
+     * @brief Reallocates the buffer to the specified new capacity.
+     * @param newcap The new capacity for the buffer.
+     */
     void realloc_(const size_t newcap);
+
+    /**
+     * @brief Frees the data associated with the buffer.
+     */
     void free_data();
 
   private:
@@ -530,7 +1076,7 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
 template <typename T>
 ConstBufferType<T>::ConstBufferType()
 {
-    static_assert(std::is_nothrow_move_constructible<ConstBufferType>::value,
+    static_assert(std::is_nothrow_move_constructible_v<ConstBufferType>,
                   "class ConstBufferType not noexcept move constructable");
     data_ = nullptr;
     offset_ = size_ = capacity_ = 0;
@@ -541,7 +1087,7 @@ ConstBufferType<T>::ConstBufferType(void *data, const size_t size, const bool fi
     : ConstBufferType((T *)data, size, filled){};
 
 template <typename T>
-template <typename U, typename std::enable_if<!std::is_const<U>::value, int>::type>
+template <typename U, typename std::enable_if_t<!std::is_const_v<U>, int>>
 ConstBufferType<T>::ConstBufferType(const void *data, const size_t size, const bool filled)
     : ConstBufferType(const_cast<void *>(data), size, filled){};
 
@@ -553,12 +1099,12 @@ ConstBufferType<T>::ConstBufferType(T *data, const size_t size, const bool fille
       capacity_(size){};
 
 template <typename T>
-template <typename U, typename std::enable_if<!std::is_const<U>::value, int>::type>
+template <typename U, typename std::enable_if_t<!std::is_const_v<U>, int>>
 ConstBufferType<T>::ConstBufferType(const U *data, const size_t size, const bool filled)
     : ConstBufferType(const_cast<U *>(data), size, filled){};
 
 template <typename T>
-auto &ConstBufferType<T>::operator[](const size_t index) const
+const auto &ConstBufferType<T>::operator[](const size_t index) const
 {
     if (index >= size_)
         OPENVPN_BUFFER_THROW(buffer_const_index);
@@ -1084,7 +1630,7 @@ ConstBufferType<T>::ConstBufferType(T *data, const size_t offset, const size_t s
     : data_(data), offset_(offset), size_(size), capacity_(capacity){};
 
 template <typename T>
-template <typename U, typename std::enable_if<!std::is_const<U>::value, int>::type>
+template <typename U, typename std::enable_if_t<!std::is_const_v<U>, int>>
 ConstBufferType<T>::ConstBufferType(const U *data, const size_t offset, const size_t size, const size_t capacity)
     : ConstBufferType(const_cast<U *>(data), offset, size, capacity){};
 
@@ -1104,7 +1650,7 @@ template <typename T, typename R>
 BufferAllocatedType<T, R>::BufferAllocatedType()
     : BufferAllocatedType(0, 0, 0, 0)
 {
-    static_assert(std::is_nothrow_move_constructible<BufferAllocatedType>::value,
+    static_assert(std::is_nothrow_move_constructible_v<BufferAllocatedType>,
                   "class BufferAllocatedType not noexcept move constructable");
 }
 
