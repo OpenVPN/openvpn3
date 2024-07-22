@@ -163,6 +163,10 @@ class BufferException : public std::exception
 
 template <typename T, typename R>
 class BufferAllocatedType;
+
+template <typename T>
+class BufferType;
+
 template <typename T>
 class ConstBufferType
 {
@@ -170,6 +174,9 @@ class ConstBufferType
     // allow access to other.data_
     template <typename, typename>
     friend class BufferAllocatedType;
+
+    template <typename>
+    friend class BufferType;
 
   public:
     typedef T value_type;
@@ -194,7 +201,8 @@ class ConstBufferType
     ConstBufferType(const U *data, const size_t size, const bool filled);
 
     // const index into array
-    const T &operator[](const size_t index) const;
+    auto &operator[](const size_t index) const;
+    auto &operator[](const size_t index);
 
     void init_headroom(const size_t headroom);
     void reset_offset(const size_t offset);
@@ -253,8 +261,8 @@ class ConstBufferType
 
     void read(NCT *data, const size_t size);
     void read(void *data, const size_t size);
-    const T *read_alloc(const size_t size);
-    ConstBufferType read_alloc_buf(const size_t size);
+    auto *read_alloc(const size_t size);
+    auto read_alloc_buf(const size_t size);
 
     // return the maximum allowable size value in T objects given the current offset (without considering resize)
     size_t max_size() const;
@@ -276,6 +284,43 @@ class ConstBufferType
 
     bool operator==(const ConstBufferType &other) const;
     bool operator!=(const ConstBufferType &other) const;
+
+  protected:
+    void reserve(const size_t n);
+    T *data();
+    T *data_end();
+    T *data_raw();
+    size_t remaining(const size_t tailroom = 0) const;
+    size_t max_size_tailroom(const size_t tailroom) const;
+    void push_back(const T &value);
+    void push_front(const T &value);
+    void set_trailer(const T &value);
+    void null_terminate();
+    T *index(const size_t index);
+
+#ifndef OPENVPN_NO_IO
+    openvpn_io::mutable_buffer mutable_buffer(const size_t tailroom = 0);
+    openvpn_io::mutable_buffer mutable_buffer_append(const size_t tailroom = 0);
+    openvpn_io::mutable_buffer mutable_buffer_clamp(const size_t tailroom = 0);
+    openvpn_io::mutable_buffer mutable_buffer_append_clamp(const size_t tailroom = 0);
+#endif
+
+    void realign(size_t headroom);
+    void write(const T *data, const size_t size);
+    void write(const void *data, const size_t size);
+    void prepend(const T *data, const size_t size);
+    void prepend(const void *data, const size_t size);
+    T *write_alloc(const size_t size);
+    T *prepend_alloc(const size_t size);
+    void reset(const size_t min_capacity, const unsigned int flags);
+    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
+    template <typename B>
+    void append(const B &other);
+
+    virtual void reset_impl(const size_t min_capacity, const unsigned int flags);
+    virtual void resize(const size_t new_capacity);
+    void buffer_full_error(const size_t newcap, const bool allocated) const;
+
 
   protected:
     ConstBufferType(T *data, const size_t offset, const size_t size, const size_t capacity);
@@ -334,11 +379,22 @@ ConstBufferType<T>::ConstBufferType(const U *data, const size_t size, const bool
 }
 
 template <typename T>
-const T &ConstBufferType<T>::operator[](const size_t index) const
+auto &ConstBufferType<T>::operator[](const size_t index) const
 {
     if (index >= size_)
         OPENVPN_BUFFER_THROW(buffer_const_index);
     return c_data()[index];
+}
+
+template <typename T>
+auto &ConstBufferType<T>::operator[](const size_t index)
+{
+    if (index >= size_)
+        OPENVPN_BUFFER_THROW(buffer_const_index);
+    if constexpr (std::is_same_v<ConstBufferType<T>, decltype(*this)>)
+        return c_data()[index];
+    else
+        return data()[index];
 }
 
 template <typename T>
@@ -533,11 +589,16 @@ void ConstBufferType<T>::read(void *data, const size_t size)
 }
 
 template <typename T>
-const T *ConstBufferType<T>::read_alloc(const size_t size)
+auto *ConstBufferType<T>::read_alloc(const size_t size)
 {
     if (size <= size_)
     {
-        const T *ret = c_data();
+        using retT = std::conditional_t<std::is_same_v<decltype(*this), ConstBufferType<T>>, const value_type, value_type>;
+        retT *ret;
+        if constexpr (std::is_const_v<retT>)
+            ret = c_data();
+        else
+            ret = data();
         offset_ += size;
         size_ -= size;
         return ret;
@@ -547,11 +608,12 @@ const T *ConstBufferType<T>::read_alloc(const size_t size)
 }
 
 template <typename T>
-ConstBufferType<T> ConstBufferType<T>::read_alloc_buf(const size_t size)
+auto ConstBufferType<T>::read_alloc_buf(const size_t size)
 {
     if (size <= size_)
     {
-        ConstBufferType ret(data_, offset_, size, capacity_);
+        using retT = std::conditional_t<std::is_same_v<decltype(*this), ConstBufferType<T>>, ConstBufferType<T>, BufferType<T>>;
+        retT ret(data_, offset_, size, capacity_);
         offset_ += size;
         size_ -= size;
         return ret;
@@ -629,6 +691,216 @@ ConstBufferType<T>::ConstBufferType(const U *data, const size_t offset, const si
 {
 }
 
+
+template <typename T>
+void ConstBufferType<T>::reserve(const size_t n)
+{
+    if (n > capacity_)
+        resize(n);
+}
+
+template <typename T>
+T *ConstBufferType<T>::data()
+{
+    return data_ + offset_;
+}
+
+template <typename T>
+T *ConstBufferType<T>::data_end()
+{
+    return data_ + offset_ + size_;
+}
+
+template <typename T>
+T *ConstBufferType<T>::data_raw()
+{
+    return data_;
+}
+
+template <typename T>
+size_t ConstBufferType<T>::remaining(const size_t tailroom) const
+{
+    const size_t r = capacity_ - (offset_ + size_ + tailroom);
+    return r <= capacity_ ? r : 0;
+}
+
+template <typename T>
+size_t ConstBufferType<T>::max_size_tailroom(const size_t tailroom) const
+{
+    const size_t r = capacity_ - (offset_ + tailroom);
+    return r <= capacity_ ? r : 0;
+}
+
+template <typename T>
+void ConstBufferType<T>::push_back(const T &value)
+{
+    if (!remaining())
+        resize(offset_ + size_ + 1);
+    *(data() + size_++) = value;
+}
+
+template <typename T>
+void ConstBufferType<T>::push_front(const T &value)
+{
+    if (!offset_)
+        OPENVPN_BUFFER_THROW(buffer_push_front_headroom);
+    --offset_;
+    ++size_;
+    *data() = value;
+}
+
+template <typename T>
+void ConstBufferType<T>::set_trailer(const T &value)
+{
+    if (!remaining())
+        resize(offset_ + size_ + 1);
+    *(data() + size_) = value;
+}
+
+template <typename T>
+void ConstBufferType<T>::null_terminate()
+{
+    if (empty() || back())
+        push_back(0);
+}
+
+template <typename T>
+T *ConstBufferType<T>::index(const size_t index)
+{
+    if (index >= size_)
+        OPENVPN_BUFFER_THROW(buffer_index);
+    return &data()[index];
+}
+
+#ifndef OPENVPN_NO_IO
+template <typename T>
+openvpn_io::mutable_buffer ConstBufferType<T>::mutable_buffer(const size_t tailroom)
+{
+    return openvpn_io::mutable_buffer(data(), max_size_tailroom(tailroom));
+}
+
+template <typename T>
+openvpn_io::mutable_buffer ConstBufferType<T>::mutable_buffer_append(const size_t tailroom)
+{
+    return openvpn_io::mutable_buffer(data_end(), remaining(tailroom));
+}
+
+template <typename T>
+openvpn_io::mutable_buffer ConstBufferType<T>::mutable_buffer_clamp(const size_t tailroom)
+{
+    return openvpn_io::mutable_buffer(data(), buf_clamp_read(max_size_tailroom(tailroom)));
+}
+
+template <typename T>
+openvpn_io::mutable_buffer ConstBufferType<T>::mutable_buffer_append_clamp(const size_t tailroom)
+{
+    return openvpn_io::mutable_buffer(data_end(), buf_clamp_read(remaining(tailroom)));
+}
+#endif
+
+template <typename T>
+void ConstBufferType<T>::realign(size_t headroom)
+{
+    if (headroom != offset_)
+    {
+        if (headroom + size_ > capacity_)
+            OPENVPN_BUFFER_THROW(buffer_headroom);
+        std::memmove(data_ + headroom, data_ + offset_, size_);
+        offset_ = headroom;
+    }
+}
+
+template <typename T>
+void ConstBufferType<T>::write(const T *data, const size_t size)
+{
+    std::memcpy(write_alloc(size), data, size * sizeof(T));
+}
+
+template <typename T>
+void ConstBufferType<T>::write(const void *data, const size_t size)
+{
+    write((const T *)data, size);
+}
+
+template <typename T>
+void ConstBufferType<T>::prepend(const T *data, const size_t size)
+{
+    std::memcpy(prepend_alloc(size), data, size * sizeof(T));
+}
+
+template <typename T>
+void ConstBufferType<T>::prepend(const void *data, const size_t size)
+{
+    prepend((const T *)data, size);
+}
+
+template <typename T>
+T *ConstBufferType<T>::write_alloc(const size_t size)
+{
+    if (size > remaining())
+        resize(offset_ + size_ + size);
+    T *ret = data() + size_;
+    size_ += size;
+    return ret;
+}
+
+template <typename T>
+T *ConstBufferType<T>::prepend_alloc(const size_t size)
+{
+    if (size <= offset_)
+    {
+        offset_ -= size;
+        size_ += size;
+        return data();
+    }
+    else
+        OPENVPN_BUFFER_THROW(buffer_headroom);
+}
+
+template <typename T>
+void ConstBufferType<T>::reset(const size_t min_capacity, const unsigned int flags)
+{
+    if (min_capacity > capacity_)
+        reset_impl(min_capacity, flags);
+}
+
+template <typename T>
+void ConstBufferType<T>::reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
+{
+    reset(min_capacity, flags);
+    init_headroom(headroom);
+}
+
+template <typename T>
+template <typename B>
+void ConstBufferType<T>::append(const B &other)
+{
+    write(other.c_data(), other.size());
+}
+
+template <typename T>
+void ConstBufferType<T>::reset_impl(const size_t min_capacity, const unsigned int flags)
+{
+    OPENVPN_BUFFER_THROW(buffer_no_reset_impl);
+}
+
+template <typename T>
+void ConstBufferType<T>::resize(const size_t new_capacity)
+{
+    if (new_capacity > capacity_)
+        buffer_full_error(new_capacity, false);
+}
+
+template <typename T>
+void ConstBufferType<T>::buffer_full_error(const size_t newcap, const bool allocated) const
+{
+#ifdef OPENVPN_BUFFER_ABORT
+    std::abort();
+#else
+    throw BufferException(BufferException::buffer_full, "allocated=" + std::to_string(allocated) + " size=" + std::to_string(size_) + " offset=" + std::to_string(offset_) + " capacity=" + std::to_string(capacity_) + " newcap=" + std::to_string(newcap));
+#endif
+}
+
 template <typename T>
 class BufferType : public ConstBufferType<T>
 {
@@ -637,61 +909,51 @@ class BufferType : public ConstBufferType<T>
     template <typename, typename>
     friend class BufferAllocatedType;
 
-  protected:
-    using ConstBufferType<T>::data_;
-    using ConstBufferType<T>::offset_;
-    using ConstBufferType<T>::size_;
-    using ConstBufferType<T>::capacity_;
+    template <typename>
+    friend class ConstBufferType;
 
   public:
     using ConstBufferType<T>::empty;
+    using ConstBufferType<T>::capacity;
+    using ConstBufferType<T>::offset;
     using ConstBufferType<T>::back;
     using ConstBufferType<T>::init_headroom;
     using ConstBufferType<T>::operator[];
+    using ConstBufferType<T>::reserve;
+    using ConstBufferType<T>::data;
+    using ConstBufferType<T>::data_end;
+    using ConstBufferType<T>::data_raw;
+    using ConstBufferType<T>::remaining;
+    using ConstBufferType<T>::max_size_tailroom;
+    using ConstBufferType<T>::push_back;
+    using ConstBufferType<T>::push_front;
+    using ConstBufferType<T>::set_trailer;
+    using ConstBufferType<T>::null_terminate;
+    using ConstBufferType<T>::index;
+#ifndef OPENVPN_NO_IO
+    using ConstBufferType<T>::mutable_buffer;
+    using ConstBufferType<T>::mutable_buffer_append;
+    using ConstBufferType<T>::mutable_buffer_clamp;
+    using ConstBufferType<T>::mutable_buffer_append_clamp;
+#endif
+    using ConstBufferType<T>::realign;
+    using ConstBufferType<T>::write;
+    using ConstBufferType<T>::prepend;
+    using ConstBufferType<T>::write_alloc;
+    using ConstBufferType<T>::prepend_alloc;
+    using ConstBufferType<T>::reset;
+    using ConstBufferType<T>::append;
+    using ConstBufferType<T>::reset_impl;
+    using ConstBufferType<T>::resize;
+    using ConstBufferType<T>::buffer_full_error;
+
 
     BufferType();
     BufferType(void *data, const size_t size, const bool filled);
     BufferType(T *data, const size_t size, const bool filled);
 
-    void reserve(const size_t n);
-    T *data();
-    T *data_end();
-    T *data_raw();
-    size_t remaining(const size_t tailroom = 0) const;
-    size_t max_size_tailroom(const size_t tailroom) const;
-    void push_back(const T &value);
-    void push_front(const T &value);
-    void set_trailer(const T &value);
-    void null_terminate();
-    T &operator[](const size_t index);
-    T *index(const size_t index);
-
-#ifndef OPENVPN_NO_IO
-    openvpn_io::mutable_buffer mutable_buffer(const size_t tailroom = 0);
-    openvpn_io::mutable_buffer mutable_buffer_append(const size_t tailroom = 0);
-    openvpn_io::mutable_buffer mutable_buffer_clamp(const size_t tailroom = 0);
-    openvpn_io::mutable_buffer mutable_buffer_append_clamp(const size_t tailroom = 0);
-#endif
-
-    void realign(size_t headroom);
-    void write(const T *data, const size_t size);
-    void write(const void *data, const size_t size);
-    void prepend(const T *data, const size_t size);
-    void prepend(const void *data, const size_t size);
-    T *write_alloc(const size_t size);
-    T *prepend_alloc(const size_t size);
-    T *read_alloc(const size_t size);
-    BufferType read_alloc_buf(const size_t size);
-    void reset(const size_t min_capacity, const unsigned int flags);
-    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
-    template <typename B>
-    void append(const B &other);
-
   protected:
     BufferType(T *data, const size_t offset, const size_t size, const size_t capacity);
-    virtual void reset_impl(const size_t min_capacity, const unsigned int flags);
-    virtual void resize(const size_t new_capacity);
-    void buffer_full_error(const size_t newcap, const bool allocated) const;
 };
 
 // Member function definitions
@@ -714,254 +976,9 @@ BufferType<T>::BufferType(T *data, const size_t size, const bool filled)
 }
 
 template <typename T>
-void BufferType<T>::reserve(const size_t n)
-{
-    if (n > capacity_)
-        resize(n);
-}
-
-template <typename T>
-T *BufferType<T>::data()
-{
-    return data_ + offset_;
-}
-
-template <typename T>
-T *BufferType<T>::data_end()
-{
-    return data_ + offset_ + size_;
-}
-
-template <typename T>
-T *BufferType<T>::data_raw()
-{
-    return data_;
-}
-
-template <typename T>
-size_t BufferType<T>::remaining(const size_t tailroom) const
-{
-    const size_t r = capacity_ - (offset_ + size_ + tailroom);
-    return r <= capacity_ ? r : 0;
-}
-
-template <typename T>
-size_t BufferType<T>::max_size_tailroom(const size_t tailroom) const
-{
-    const size_t r = capacity_ - (offset_ + tailroom);
-    return r <= capacity_ ? r : 0;
-}
-
-template <typename T>
-void BufferType<T>::push_back(const T &value)
-{
-    if (!remaining())
-        resize(offset_ + size_ + 1);
-    *(data() + size_++) = value;
-}
-
-template <typename T>
-void BufferType<T>::push_front(const T &value)
-{
-    if (!offset_)
-        OPENVPN_BUFFER_THROW(buffer_push_front_headroom);
-    --offset_;
-    ++size_;
-    *data() = value;
-}
-
-template <typename T>
-void BufferType<T>::set_trailer(const T &value)
-{
-    if (!remaining())
-        resize(offset_ + size_ + 1);
-    *(data() + size_) = value;
-}
-
-template <typename T>
-void BufferType<T>::null_terminate()
-{
-    if (empty() || back())
-        push_back(0);
-}
-
-template <typename T>
-T &BufferType<T>::operator[](const size_t index)
-{
-    if (index >= size_)
-        OPENVPN_BUFFER_THROW(buffer_index);
-    return data()[index];
-}
-
-template <typename T>
-T *BufferType<T>::index(const size_t index)
-{
-    if (index >= size_)
-        OPENVPN_BUFFER_THROW(buffer_index);
-    return &data()[index];
-}
-
-#ifndef OPENVPN_NO_IO
-template <typename T>
-openvpn_io::mutable_buffer BufferType<T>::mutable_buffer(const size_t tailroom)
-{
-    return openvpn_io::mutable_buffer(data(), max_size_tailroom(tailroom));
-}
-
-template <typename T>
-openvpn_io::mutable_buffer BufferType<T>::mutable_buffer_append(const size_t tailroom)
-{
-    return openvpn_io::mutable_buffer(data_end(), remaining(tailroom));
-}
-
-template <typename T>
-openvpn_io::mutable_buffer BufferType<T>::mutable_buffer_clamp(const size_t tailroom)
-{
-    return openvpn_io::mutable_buffer(data(), buf_clamp_read(max_size_tailroom(tailroom)));
-}
-
-template <typename T>
-openvpn_io::mutable_buffer BufferType<T>::mutable_buffer_append_clamp(const size_t tailroom)
-{
-    return openvpn_io::mutable_buffer(data_end(), buf_clamp_read(remaining(tailroom)));
-}
-#endif
-
-template <typename T>
-void BufferType<T>::realign(size_t headroom)
-{
-    if (headroom != offset_)
-    {
-        if (headroom + size_ > capacity_)
-            OPENVPN_BUFFER_THROW(buffer_headroom);
-        std::memmove(data_ + headroom, data_ + offset_, size_);
-        offset_ = headroom;
-    }
-}
-
-template <typename T>
-void BufferType<T>::write(const T *data, const size_t size)
-{
-    std::memcpy(write_alloc(size), data, size * sizeof(T));
-}
-
-template <typename T>
-void BufferType<T>::write(const void *data, const size_t size)
-{
-    write((const T *)data, size);
-}
-
-template <typename T>
-void BufferType<T>::prepend(const T *data, const size_t size)
-{
-    std::memcpy(prepend_alloc(size), data, size * sizeof(T));
-}
-
-template <typename T>
-void BufferType<T>::prepend(const void *data, const size_t size)
-{
-    prepend((const T *)data, size);
-}
-
-template <typename T>
-T *BufferType<T>::write_alloc(const size_t size)
-{
-    if (size > remaining())
-        resize(offset_ + size_ + size);
-    T *ret = data() + size_;
-    size_ += size;
-    return ret;
-}
-
-template <typename T>
-T *BufferType<T>::prepend_alloc(const size_t size)
-{
-    if (size <= offset_)
-    {
-        offset_ -= size;
-        size_ += size;
-        return data();
-    }
-    else
-        OPENVPN_BUFFER_THROW(buffer_headroom);
-}
-
-template <typename T>
-T *BufferType<T>::read_alloc(const size_t size)
-{
-    if (size <= size_)
-    {
-        T *ret = data();
-        offset_ += size;
-        size_ -= size;
-        return ret;
-    }
-    else
-        OPENVPN_BUFFER_THROW(buffer_underflow);
-}
-
-template <typename T>
-BufferType<T> BufferType<T>::read_alloc_buf(const size_t size)
-{
-    if (size <= size_)
-    {
-        BufferType ret(data_, offset_, size, capacity_);
-        offset_ += size;
-        size_ -= size;
-        return ret;
-    }
-    else
-        OPENVPN_BUFFER_THROW(buffer_underflow);
-}
-
-template <typename T>
-void BufferType<T>::reset(const size_t min_capacity, const unsigned int flags)
-{
-    if (min_capacity > capacity_)
-        reset_impl(min_capacity, flags);
-}
-
-template <typename T>
-void BufferType<T>::reset(const size_t headroom, const size_t min_capacity, const unsigned int flags)
-{
-    reset(min_capacity, flags);
-    init_headroom(headroom);
-}
-
-template <typename T>
-template <typename B>
-void BufferType<T>::append(const B &other)
-{
-    write(other.c_data(), other.size());
-}
-
-template <typename T>
 BufferType<T>::BufferType(T *data, const size_t offset, const size_t size, const size_t capacity)
     : ConstBufferType<T>(data, offset, size, capacity)
 {
-}
-
-template <typename T>
-void BufferType<T>::reset_impl(const size_t min_capacity, const unsigned int flags)
-{
-    OPENVPN_BUFFER_THROW(buffer_no_reset_impl);
-}
-
-template <typename T>
-void BufferType<T>::resize(const size_t new_capacity)
-{
-    if (new_capacity > capacity_)
-        buffer_full_error(new_capacity, false);
-}
-
-template <typename T>
-void BufferType<T>::buffer_full_error(const size_t newcap, const bool allocated) const
-{
-#ifdef OPENVPN_BUFFER_ABORT
-    std::abort();
-#else
-    throw BufferException(BufferException::buffer_full, "allocated=" + std::to_string(allocated) + " size=" + std::to_string(size_) + " offset=" + std::to_string(offset_) + " capacity=" + std::to_string(capacity_) + " newcap=" + std::to_string(newcap));
-#endif
 }
 
 template <typename T, typename R>
@@ -980,6 +997,14 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
   public:
     using BufferType<T>::init_headroom;
     using BufferType<T>::buffer_full_error;
+    using BufferType<T>::size;
+    using BufferType<T>::capacity;
+    using BufferType<T>::offset;
+    using BufferType<T>::data_raw;
+    using BufferType<T>::c_data_raw;
+    using BufferType<T>::data;
+    using BufferType<T>::c_data;
+    using BufferType<T>::operator[];
 
     enum
     {
