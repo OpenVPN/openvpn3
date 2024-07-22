@@ -87,6 +87,23 @@ class Client : public TunClient
   public:
     typedef RCPtr<Client> Ptr;
 
+    void apply_push_update(const OptionList &opt, TransportClient &transcli) override
+    {
+        stop_();
+        if (impl)
+        {
+            impl.reset();
+        }
+
+        // this has to be done in post, because we need to wait
+        // for all async tun read requests to complete
+        openvpn_io::post(io_context, [self = Ptr(this), opt, &transcli]
+                         {
+            OPENVPN_ASYNC_HANDLER;
+            CryptoDCSettings c{};
+            self->tun_start(opt, transcli, c); });
+    }
+
     virtual void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override
     {
         if (!impl)
