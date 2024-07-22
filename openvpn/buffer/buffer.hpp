@@ -339,6 +339,130 @@ class ConstBufferType
     size_t capacity_; // maximum number of array objects of type T for which memory is allocated, starting at data_
 };
 
+template <typename T>
+class BufferType : public ConstBufferType<T>
+{
+  private:
+    // allow access to other.data_
+    template <typename, typename>
+    friend class BufferAllocatedType;
+
+    template <typename>
+    friend class ConstBufferType;
+
+  public:
+    using ConstBufferType<T>::empty;
+    using ConstBufferType<T>::capacity;
+    using ConstBufferType<T>::offset;
+    using ConstBufferType<T>::back;
+    using ConstBufferType<T>::init_headroom;
+    using ConstBufferType<T>::operator[];
+    using ConstBufferType<T>::reserve;
+    using ConstBufferType<T>::data;
+    using ConstBufferType<T>::data_end;
+    using ConstBufferType<T>::data_raw;
+    using ConstBufferType<T>::remaining;
+    using ConstBufferType<T>::max_size_tailroom;
+    using ConstBufferType<T>::push_back;
+    using ConstBufferType<T>::push_front;
+    using ConstBufferType<T>::set_trailer;
+    using ConstBufferType<T>::null_terminate;
+    using ConstBufferType<T>::index;
+#ifndef OPENVPN_NO_IO
+    using ConstBufferType<T>::mutable_buffer;
+    using ConstBufferType<T>::mutable_buffer_append;
+    using ConstBufferType<T>::mutable_buffer_clamp;
+    using ConstBufferType<T>::mutable_buffer_append_clamp;
+#endif
+    using ConstBufferType<T>::realign;
+    using ConstBufferType<T>::write;
+    using ConstBufferType<T>::prepend;
+    using ConstBufferType<T>::write_alloc;
+    using ConstBufferType<T>::prepend_alloc;
+    using ConstBufferType<T>::reset;
+    using ConstBufferType<T>::append;
+    using ConstBufferType<T>::reset_impl;
+    using ConstBufferType<T>::resize;
+    using ConstBufferType<T>::buffer_full_error;
+
+
+    BufferType();
+    BufferType(void *data, const size_t size, const bool filled);
+    BufferType(T *data, const size_t size, const bool filled);
+
+  protected:
+    BufferType(T *data, const size_t offset, const size_t size, const size_t capacity);
+};
+
+template <typename T, typename R>
+class BufferAllocatedType : public BufferType<T>, public RC<R>
+{
+  private:
+    // allow access to other.data_
+    template <typename, typename>
+    friend class BufferAllocatedType;
+
+    using BufferType<T>::data_;
+    using BufferType<T>::offset_;
+    using BufferType<T>::size_;
+    using BufferType<T>::capacity_;
+
+  public:
+    using BufferType<T>::init_headroom;
+    using BufferType<T>::buffer_full_error;
+    using BufferType<T>::size;
+    using BufferType<T>::capacity;
+    using BufferType<T>::offset;
+    using BufferType<T>::data_raw;
+    using BufferType<T>::c_data_raw;
+    using BufferType<T>::data;
+    using BufferType<T>::c_data;
+    using BufferType<T>::operator[];
+
+    enum
+    {
+        CONSTRUCT_ZERO = (1 << 0), // if enabled, constructors/init will zero allocated space
+        DESTRUCT_ZERO = (1 << 1),  // if enabled, destructor will zero data before deletion
+        GROW = (1 << 2),           // if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
+        ARRAY = (1 << 3),          // if enabled, use as array
+    };
+
+    BufferAllocatedType();
+    BufferAllocatedType(const size_t capacity, const unsigned int flags);
+    BufferAllocatedType(const T *data, const size_t size, const unsigned int flags);
+    BufferAllocatedType(const BufferAllocatedType &other);
+    template <typename T_>
+    BufferAllocatedType(const BufferType<T_> &other, const unsigned int flags);
+    void operator=(const BufferAllocatedType &other);
+    void init(const size_t capacity, const unsigned int flags);
+    void init(const T *data, const size_t size, const unsigned int flags);
+    void realloc(const size_t newcap);
+    void reset(const size_t min_capacity, const unsigned int flags);
+    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
+    template <typename T_, typename R_>
+    void move(BufferAllocatedType<T_, R_> &other);
+    RCPtr<BufferAllocatedType<T, R>> move_to_ptr();
+    void swap(BufferAllocatedType &other);
+    template <typename T_, typename R_>
+    BufferAllocatedType(BufferAllocatedType<T_, R_> &&other) noexcept;
+    BufferAllocatedType &operator=(BufferAllocatedType &&other) noexcept;
+    void clear();
+    void or_flags(const unsigned int flags);
+    void and_flags(const unsigned int flags);
+    ~BufferAllocatedType();
+
+  protected:
+    virtual void reset_impl(const size_t min_capacity, const unsigned int flags);
+    virtual void resize(const size_t new_capacity);
+    void realloc_(const size_t newcap);
+    template <typename T_, typename R_>
+    void move_(BufferAllocatedType<T_, R_> &other);
+    void erase_();
+    void delete_();
+
+    unsigned int flags_;
+};
+
 // Member function definitions
 
 template <typename T>
@@ -902,63 +1026,6 @@ void ConstBufferType<T>::buffer_full_error(const size_t newcap, const bool alloc
 }
 
 template <typename T>
-class BufferType : public ConstBufferType<T>
-{
-  private:
-    // allow access to other.data_
-    template <typename, typename>
-    friend class BufferAllocatedType;
-
-    template <typename>
-    friend class ConstBufferType;
-
-  public:
-    using ConstBufferType<T>::empty;
-    using ConstBufferType<T>::capacity;
-    using ConstBufferType<T>::offset;
-    using ConstBufferType<T>::back;
-    using ConstBufferType<T>::init_headroom;
-    using ConstBufferType<T>::operator[];
-    using ConstBufferType<T>::reserve;
-    using ConstBufferType<T>::data;
-    using ConstBufferType<T>::data_end;
-    using ConstBufferType<T>::data_raw;
-    using ConstBufferType<T>::remaining;
-    using ConstBufferType<T>::max_size_tailroom;
-    using ConstBufferType<T>::push_back;
-    using ConstBufferType<T>::push_front;
-    using ConstBufferType<T>::set_trailer;
-    using ConstBufferType<T>::null_terminate;
-    using ConstBufferType<T>::index;
-#ifndef OPENVPN_NO_IO
-    using ConstBufferType<T>::mutable_buffer;
-    using ConstBufferType<T>::mutable_buffer_append;
-    using ConstBufferType<T>::mutable_buffer_clamp;
-    using ConstBufferType<T>::mutable_buffer_append_clamp;
-#endif
-    using ConstBufferType<T>::realign;
-    using ConstBufferType<T>::write;
-    using ConstBufferType<T>::prepend;
-    using ConstBufferType<T>::write_alloc;
-    using ConstBufferType<T>::prepend_alloc;
-    using ConstBufferType<T>::reset;
-    using ConstBufferType<T>::append;
-    using ConstBufferType<T>::reset_impl;
-    using ConstBufferType<T>::resize;
-    using ConstBufferType<T>::buffer_full_error;
-
-
-    BufferType();
-    BufferType(void *data, const size_t size, const bool filled);
-    BufferType(T *data, const size_t size, const bool filled);
-
-  protected:
-    BufferType(T *data, const size_t offset, const size_t size, const size_t capacity);
-};
-
-// Member function definitions
-
-template <typename T>
 BufferType<T>::BufferType()
 {
 }
@@ -980,77 +1047,6 @@ BufferType<T>::BufferType(T *data, const size_t offset, const size_t size, const
     : ConstBufferType<T>(data, offset, size, capacity)
 {
 }
-
-template <typename T, typename R>
-class BufferAllocatedType : public BufferType<T>, public RC<R>
-{
-  private:
-    // allow access to other.data_
-    template <typename, typename>
-    friend class BufferAllocatedType;
-
-    using BufferType<T>::data_;
-    using BufferType<T>::offset_;
-    using BufferType<T>::size_;
-    using BufferType<T>::capacity_;
-
-  public:
-    using BufferType<T>::init_headroom;
-    using BufferType<T>::buffer_full_error;
-    using BufferType<T>::size;
-    using BufferType<T>::capacity;
-    using BufferType<T>::offset;
-    using BufferType<T>::data_raw;
-    using BufferType<T>::c_data_raw;
-    using BufferType<T>::data;
-    using BufferType<T>::c_data;
-    using BufferType<T>::operator[];
-
-    enum
-    {
-        CONSTRUCT_ZERO = (1 << 0), // if enabled, constructors/init will zero allocated space
-        DESTRUCT_ZERO = (1 << 1),  // if enabled, destructor will zero data before deletion
-        GROW = (1 << 2),           // if enabled, buffer will grow (otherwise buffer_full exception will be thrown)
-        ARRAY = (1 << 3),          // if enabled, use as array
-    };
-
-    BufferAllocatedType();
-    BufferAllocatedType(const size_t capacity, const unsigned int flags);
-    BufferAllocatedType(const T *data, const size_t size, const unsigned int flags);
-    BufferAllocatedType(const BufferAllocatedType &other);
-    template <typename T_>
-    BufferAllocatedType(const BufferType<T_> &other, const unsigned int flags);
-    void operator=(const BufferAllocatedType &other);
-    void init(const size_t capacity, const unsigned int flags);
-    void init(const T *data, const size_t size, const unsigned int flags);
-    void realloc(const size_t newcap);
-    void reset(const size_t min_capacity, const unsigned int flags);
-    void reset(const size_t headroom, const size_t min_capacity, const unsigned int flags);
-    template <typename T_, typename R_>
-    void move(BufferAllocatedType<T_, R_> &other);
-    RCPtr<BufferAllocatedType<T, R>> move_to_ptr();
-    void swap(BufferAllocatedType &other);
-    template <typename T_, typename R_>
-    BufferAllocatedType(BufferAllocatedType<T_, R_> &&other) noexcept;
-    BufferAllocatedType &operator=(BufferAllocatedType &&other) noexcept;
-    void clear();
-    void or_flags(const unsigned int flags);
-    void and_flags(const unsigned int flags);
-    ~BufferAllocatedType();
-
-  protected:
-    virtual void reset_impl(const size_t min_capacity, const unsigned int flags);
-    virtual void resize(const size_t new_capacity);
-    void realloc_(const size_t newcap);
-    template <typename T_, typename R_>
-    void move_(BufferAllocatedType<T_, R_> &other);
-    void erase_();
-    void delete_();
-
-    unsigned int flags_;
-};
-
-// Member function definitions
 
 template <typename T, typename R>
 BufferAllocatedType<T, R>::BufferAllocatedType()
