@@ -57,6 +57,7 @@ namespace openvpn::numeric_util {
  *  @return The safely converted inVal.
  *  @tparam InT  Source (input) type, inferred from 'inVal'
  *  @tparam OutT Desired result type
+ *  @throws numeric_out_of_range if the conversion is not safe
  */
 template <typename OutT, typename InT>
 OutT numeric_cast(InT inVal)
@@ -71,11 +72,14 @@ OutT numeric_cast(InT inVal)
     }
     else if constexpr (!numeric_util::is_int_rangesafe<OutT, InT>() && numeric_util::is_int_s2u<OutT, InT>())
     {
-        // Cast to uintmax_t only applied if inVal is positive ...
-        if (inVal < 0 || static_cast<uintmax_t>(inVal) > static_cast<uintmax_t>(std::numeric_limits<OutT>::max()))
-        {
-            throw numeric_out_of_range("Range exceeded for signed --> unsigned integer conversion");
-        }
+        // This is certainly bad
+        if (inVal < 0)
+            throw numeric_out_of_range("Cannot store negative value for signed --> unsigned integer conversion");
+
+        // Is it possibly unsafe? If so do the runtime positive val range test
+        if constexpr (std::numeric_limits<OutT>::digits - 1 < std::numeric_limits<InT>::digits)
+            if (static_cast<uintmax_t>(inVal) > static_cast<uintmax_t>(std::numeric_limits<OutT>::max()))
+                throw numeric_out_of_range("Range exceeded for signed --> unsigned integer conversion");
     }
     else if constexpr (!numeric_util::is_int_rangesafe<OutT, InT>())
     {
