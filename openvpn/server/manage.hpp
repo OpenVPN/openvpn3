@@ -66,6 +66,9 @@ struct SendBase : public virtual RC<thread_unsafe_refcount>
     virtual std::string instance_name() const = 0;
     virtual std::uint64_t instance_id() const = 0;
 
+    // Status
+    virtual bool is_stopped() const = 0;
+
     // IP-mapped ACL (IPMA) notification
     virtual void ipma_notify(const struct ovpn_tun_head_ipma &ipma) = 0;
 
