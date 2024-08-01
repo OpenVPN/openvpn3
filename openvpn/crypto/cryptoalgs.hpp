@@ -26,6 +26,7 @@
 
 #include <functional>
 #include <string>
+#include <list>
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
