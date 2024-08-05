@@ -206,105 +206,30 @@ class LoggingMixin
  * other #defines that do not use if constexpr */
 
 /**
- * Logging macro that logs with INFO verbosity using the logger named logger
- *
- * The macro tries very hard to avoid executing the
- * code that is inside args when logging is not happening
- */
-#define LOGGER_LOG_INFO(logger, args)                                                      \
-    do                                                                                     \
-    {                                                                                      \
-        if constexpr (decltype(logger)::max_log_level >= openvpn::logging::LOG_LEVEL_INFO) \
-        {                                                                                  \
-            if (logger.log_level() >= openvpn::logging::LOG_LEVEL_INFO)                    \
-            {                                                                              \
-                std::ostringstream _ovpn_log_ss;                                           \
-                _ovpn_log_ss << args;                                                      \
-                logger.log_info(_ovpn_log_ss.str());                                       \
-            }                                                                              \
-        }                                                                                  \
-    } while (0)
-
-/**
  * Logging macro that logs with VERB verbosity using the logger named logger
  *
  * The macro tries very hard to avoid executing the
  * code that is inside args when logging is not happening
  */
-#define LOGGER_LOG_VERBOSE(logger, args)                                                   \
-    do                                                                                     \
-    {                                                                                      \
-        if constexpr (decltype(logger)::max_log_level >= openvpn::logging::LOG_LEVEL_VERB) \
-        {                                                                                  \
-            if (logger.log_level() >= openvpn::logging::LOG_LEVEL_VERB)                    \
-            {                                                                              \
-                std::ostringstream _ovpn_log_ss;                                           \
-                _ovpn_log_ss << args;                                                      \
-                logger.log_verbose(_ovpn_log_ss.str());                                    \
-            }                                                                              \
-        }                                                                                  \
+#define LOGGER_LOG(VERB, logger, args)                                                       \
+    do                                                                                       \
+    {                                                                                        \
+        if constexpr (decltype(logger)::max_log_level >= openvpn::logging::LOG_LEVEL_##VERB) \
+        {                                                                                    \
+            if (logger.log_level() >= openvpn::logging::LOG_LEVEL_##VERB)                    \
+            {                                                                                \
+                std::ostringstream _ovpn_log_ss;                                             \
+                _ovpn_log_ss << args;                                                        \
+                logger.log_info(_ovpn_log_ss.str());                                         \
+            }                                                                                \
+        }                                                                                    \
     } while (0)
 
-/**
- * Logging macro that logs with DEBUG verbosity using the logger named logger
- *
- * The macro tries very hard to avoid executing the
- * code that is inside args when logging is not happening
- */
-#define LOGGER_LOG_DEBUG(logger, args)                                                      \
-    do                                                                                      \
-    {                                                                                       \
-        if constexpr (decltype(logger)::max_log_level >= openvpn::logging::LOG_LEVEL_DEBUG) \
-        {                                                                                   \
-            if (logger.log_level() >= openvpn::logging::LOG_LEVEL_DEBUG)                    \
-            {                                                                               \
-                std::ostringstream _ovpn_log_ss;                                            \
-                _ovpn_log_ss << args;                                                       \
-                logger.log_debug(_ovpn_log_ss.str());                                       \
-            }                                                                               \
-        }                                                                                   \
-    } while (0)
-
-
-/**
- * Logging macro that logs with TRACE verbosity using the logger named logger
- *
- * The macro tries very hard to avoid executing the
- * code that is inside args when logging is not happening
- */
-#define LOGGER_LOG_TRACE(logger, args)                                                      \
-    do                                                                                      \
-    {                                                                                       \
-        if constexpr (decltype(logger)::max_log_level >= openvpn::logging::LOG_LEVEL_TRACE) \
-        {                                                                                   \
-            if (logger.log_level() >= openvpn::logging::LOG_LEVEL_TRACE)                    \
-            {                                                                               \
-                std::ostringstream _ovpn_log_ss;                                            \
-                _ovpn_log_ss << args;                                                       \
-                logger.log_trace(_ovpn_log_ss.str());                                       \
-            }                                                                               \
-        }                                                                                   \
-    } while (0)
-
-/**
- * Logging macro that logs with ERROR verbosity using the logger named logger
- *
- * The macro tries very hard to avoid executing the
- * code that is inside args when logging is not happening
- */
-#define LOGGER_LOG_ERROR(logger, args)                                                     \
-    do                                                                                     \
-    {                                                                                      \
-        if constexpr (decltype(logger)::max_log_level >= openvpn::logging::LOG_LEVEL_INFO) \
-        {                                                                                  \
-            if (logger.log_level() >= openvpn::logging::LOG_LEVEL_INFO)                    \
-            {                                                                              \
-                std::ostringstream _ovpn_log_ss;                                           \
-                _ovpn_log_ss << args;                                                      \
-                logger.log_info(_ovpn_log_ss.str());                                       \
-            }                                                                              \
-        }                                                                                  \
-    } while (0)
+#define LOGGER_LOG_INFO(logger, args) LOGGER_LOG(INFO, logger, args)
+#define LOGGER_LOG_VERBOSE(logger, args) LOGGER_LOG(VERB, logger, args)
+#define LOGGER_LOG_DEBUG(logger, args) LOGGER_LOG(DEBUG, logger, args)
+#define LOGGER_LOG_TRACE(logger, args) LOGGER_LOG(TRACE, logger, args)
+#define LOGGER_LOG_ERROR(logger, args) LOGGER_LOG(ERROR, logger, args)
 
 /**
  * These are convenience macros for classes that use the LoggingMixin to avoid specifying the logger
