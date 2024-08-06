@@ -67,7 +67,7 @@ class Logger
 
 
     //! return the current logging level for all logging
-    int log_level()
+    int log_level() const
     {
         return current_log_level;
     }
@@ -78,9 +78,8 @@ class Logger
         current_log_level = level;
     }
 
-
     //! return the current prefix all logging
-    std::string log_prefix()
+    std::string log_prefix() const
     {
         return prefix_;
     }
@@ -91,6 +90,21 @@ class Logger
         prefix_ = prefix;
     }
 
+    /**
+     * Prints a log message for tracing if the log level
+     * is at least LEVEL.
+     * @param msg   the message to print
+     */
+    template <int LEVEL, typename T>
+    void log(T &&msg)
+    {
+        /* this ensures that the function is empty if MAX_LEVEL excludes this level */
+        if constexpr (max_log_level >= LEVEL)
+        {
+            if (current_log_level >= LEVEL)
+                OPENVPN_LOG(prefix_ << std::forward<T>(msg));
+        }
+    }
 
     /**
      * Prints a log message for tracing if the log level
@@ -100,12 +114,7 @@ class Logger
     template <typename T>
     void log_trace(T &&msg)
     {
-        /* this ensures that the function is empty if MAX_LEVEL excludes this level */
-        if constexpr (max_log_level >= LOG_LEVEL_TRACE)
-        {
-            if (current_log_level >= LOG_LEVEL_TRACE)
-                OPENVPN_LOG(prefix_ << msg);
-        }
+        log<LOG_LEVEL_TRACE>(std::forward<T>(msg));
     }
 
     /**
@@ -116,14 +125,8 @@ class Logger
     template <typename T>
     void log_debug(T &&msg)
     {
-        /* this ensures that the function is empty if MAX_LEVEL excludes this level */
-        if constexpr (max_log_level >= LOG_LEVEL_DEBUG)
-        {
-            if (current_log_level >= LOG_LEVEL_DEBUG)
-                OPENVPN_LOG(prefix_ << msg);
-        }
+        log<LOG_LEVEL_DEBUG>(std::forward<T>(msg));
     }
-
 
     /**
      * Prints a log message for general info  if the log level
@@ -133,12 +136,7 @@ class Logger
     template <typename T>
     void log_info(T &&msg)
     {
-        /* this ensures that the function is empty if MAX_LEVEL excludes this level */
-        if constexpr (max_log_level >= LOG_LEVEL_INFO)
-        {
-            if (current_log_level >= LOG_LEVEL_INFO)
-                OPENVPN_LOG(prefix_ << msg);
-        }
+        log<LOG_LEVEL_INFO>(std::forward<T>(msg));
     }
 
     /**
@@ -148,12 +146,7 @@ class Logger
     template <typename T>
     void log_verbose(T &&msg)
     {
-        /* this ensures that the function is empty if MAX_LEVEL excludes this level */
-        if constexpr (max_log_level >= LOG_LEVEL_VERB)
-        {
-            if (current_log_level >= LOG_LEVEL_VERB)
-                OPENVPN_LOG(prefix_ << msg);
-        }
+        log<LOG_LEVEL_VERB>(std::forward<T>(msg));
     }
 
     /**
@@ -163,8 +156,7 @@ class Logger
     template <typename T>
     void log_error(T &&msg)
     {
-        if (current_log_level >= LOG_LEVEL_ERROR)
-            OPENVPN_LOG(prefix_ << msg);
+        log<LOG_LEVEL_ERROR>(std::forward<T>(msg));
     }
 
   protected:
