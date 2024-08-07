@@ -161,6 +161,8 @@ enum
 class ProtoContextCallbackInterface
 {
   public:
+    virtual ~ProtoContextCallbackInterface() = default;
+
     /**
      * Sends out bytes to the network.
      */

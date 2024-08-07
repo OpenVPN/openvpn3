@@ -214,7 +214,17 @@ class ConstBufferType
     {
     }
 
-    // const index into array
+    /**
+     * @brief Needed because this class has virtual member functions and is
+     *        intended as a base class.
+     */
+    virtual ~ConstBufferType() = default;
+
+    /**
+     * @brief Const indexing operator for ConstBufferType.
+     * @param index Index of the element to access.
+     * @return Const reference to the element at the specified index.
+     */
     const T &operator[](const size_t index) const
     {
         if (index >= size_)

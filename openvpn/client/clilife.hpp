@@ -34,6 +34,8 @@ class ClientLifeCycle : public RC<thread_unsafe_refcount>
   public:
     struct NotifyCallback
     {
+        virtual ~NotifyCallback() = default;
+
         virtual void cln_stop() = 0;
         virtual void cln_pause(const std::string &reason) = 0;
         virtual void cln_resume() = 0;

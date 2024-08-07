@@ -112,6 +112,8 @@ class RemoteList : public RC<thread_unsafe_refcount>
     {
         typedef RCPtr<ConnBlockFactory> Ptr;
 
+        virtual ~ConnBlockFactory() = default;
+
         virtual ConnBlock::Ptr new_conn_block(const OptionList::Ptr &opt) = 0;
     };
 
@@ -229,6 +231,8 @@ class RemoteList : public RC<thread_unsafe_refcount>
 
     struct RemoteOverride
     {
+        virtual ~RemoteOverride() = default;
+
         virtual Item::Ptr get() = 0;
     };
 
@@ -311,6 +315,8 @@ class RemoteList : public RC<thread_unsafe_refcount>
 
         struct NotifyCallback
         {
+            virtual ~NotifyCallback() = default;
+
             // client callback when resolve operation is complete
             virtual void bulk_resolve_done() = 0;
         };

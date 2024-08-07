@@ -26,6 +26,8 @@ namespace openvpn {
 class ReconnectNotify
 {
   public:
+    virtual ~ReconnectNotify() = default;
+
     // When a connection is close to timeout, the core will call this
     // method.  If it returns false, the core will disconnect with a
     // CONNECTION_TIMEOUT event.  If true, the core will enter a PAUSE

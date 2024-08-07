@@ -81,6 +81,8 @@ namespace openvpn::ClientProto {
 
 struct NotifyCallback
 {
+    virtual ~NotifyCallback() = default;
+
     virtual void client_proto_terminate() = 0;
     virtual void client_proto_connected()
     {
