@@ -32,8 +32,9 @@ namespace openvpn {
 class BufferComplete
 {
   public:
-    /* each advance/get method returns false if message is incomplete */
+    virtual ~BufferComplete() = default;
 
+    /* each advance/get method returns false if message is incomplete */
     bool advance(size_t size)
     {
         while (size)

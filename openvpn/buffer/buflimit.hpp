@@ -43,6 +43,8 @@ class BufferLimit
         reset();
     }
 
+    virtual ~BufferLimit() = default;
+
     void set_max(const T max_lines_arg,
                  const T max_bytes_arg)
     {

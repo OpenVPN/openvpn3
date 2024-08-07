@@ -35,6 +35,8 @@ namespace openvpn {
 class BaseSocketProtect
 {
   public:
+    virtual ~BaseSocketProtect() = default;
+
     virtual bool socket_protect(openvpn_io::detail::socket_type socket, IP::Addr endpoint) = 0;
 };
 
