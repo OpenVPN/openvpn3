@@ -127,7 +127,7 @@ function(add_core_dependencies target)
         # C4146: unary minus operator applied to unsigned type, result still unsigned
         target_compile_options(${target} PRIVATE /W3 /wd4200 /wd4146)
     else()
-        target_compile_options(${target} PRIVATE -Wall -Wsign-compare)
+        target_compile_options(${target} PRIVATE -Wall -Wsign-compare -Wnon-virtual-dtor)
         if (USE_WCONVERSION)
             target_compile_options(${target} PRIVATE -Wconversion -Wno-sign-conversion)
         endif()
