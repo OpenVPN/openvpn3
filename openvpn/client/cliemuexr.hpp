@@ -166,7 +166,7 @@ class EmulateExcludeRouteFactoryImpl : public EmulateExcludeRouteFactory
     }
 
   private:
-    virtual EmulateExcludeRoute::Ptr new_obj() const
+    EmulateExcludeRoute::Ptr new_obj() const override
     {
         return EmulateExcludeRoute::Ptr(new EmulateExcludeRouteImpl(exclude_server_address_));
     }

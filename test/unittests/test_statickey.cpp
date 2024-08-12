@@ -60,12 +60,12 @@ class StaticSinkBase : public RC<thread_unsafe_refcount>
 class StaticSink : public StaticSinkBase
 {
   public:
-    virtual void init(StaticKey &&key)
+    void init(StaticKey &&key) override
     {
         k = std::move(key);
     }
 
-    virtual std::string dump()
+    std::string dump() override
     {
         return k.render_hex();
     }

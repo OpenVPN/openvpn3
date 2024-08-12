@@ -60,7 +60,7 @@ class CompressLZO : public Compress
             throw lzo_init_failed();
     }
 
-    virtual const char *name() const
+    const char *name() const override
     {
         return "lzo";
     }
@@ -82,7 +82,7 @@ class CompressLZO : public Compress
         buf.swap(work);
     }
 
-    virtual void compress(BufferAllocated &buf, const bool hint)
+    void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
         if (!buf.size())
@@ -132,7 +132,7 @@ class CompressLZO : public Compress
             buf.push_front(NO_COMPRESS);
     }
 
-    virtual void decompress(BufferAllocated &buf)
+    void decompress(BufferAllocated &buf) override
     {
         // skip null packets
         if (!buf.size())

@@ -34,14 +34,14 @@ class CompressNull : public Compress
     {
     }
 
-    virtual const char *name() const
+    const char *name() const override
     {
         return "null";
     }
-    virtual void compress(BufferAllocated &buf, const bool hint)
+    void compress(BufferAllocated &buf, const bool hint) override
     {
     }
-    virtual void decompress(BufferAllocated &buf)
+    void decompress(BufferAllocated &buf) override
     {
     }
 };

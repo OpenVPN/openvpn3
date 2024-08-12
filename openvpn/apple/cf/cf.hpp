@@ -382,7 +382,7 @@ inline CFTypeRef dict_index(const DICT &dict, const KEY &key)
 
 struct cppstring_error : public std::exception
 {
-    virtual const char *what() const noexcept
+    const char *what() const noexcept override
     {
         return "cppstring_error";
     }

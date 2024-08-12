@@ -43,9 +43,9 @@ class NamedPipe : public Base
     {
     }
 
-    virtual void async_accept(ListenerBase *listener,
-                              const size_t acceptor_index,
-                              openvpn_io::io_context &io_context) override
+    void async_accept(ListenerBase *listener,
+                      const size_t acceptor_index,
+                      openvpn_io::io_context &io_context) override
     {
         // create the named pipe
         const HANDLE h = ::CreateNamedPipeA(
@@ -101,7 +101,7 @@ class NamedPipe : public Base
         }
     }
 
-    virtual void close() override
+    void close() override
     {
         handle.close();
     }

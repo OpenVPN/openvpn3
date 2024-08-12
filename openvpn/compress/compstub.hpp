@@ -49,12 +49,12 @@ class CompressStub : public Compress
         OVPN_LOG_INFO("Comp-stub init swap=" << support_swap_arg);
     }
 
-    virtual const char *name() const
+    const char *name() const override
     {
         return "stub";
     }
 
-    virtual void compress(BufferAllocated &buf, const bool hint)
+    void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
         if (!buf.size())
@@ -67,7 +67,7 @@ class CompressStub : public Compress
             buf.push_front(NO_COMPRESS);
     }
 
-    virtual void decompress(BufferAllocated &buf)
+    void decompress(BufferAllocated &buf) override
     {
         // skip null packets
         if (!buf.size())
@@ -112,12 +112,12 @@ class CompressStubV2 : public Compress
         OVPN_LOG_INFO("Comp-stubV2 init");
     }
 
-    virtual const char *name() const
+    const char *name() const override
     {
         return "stubv2";
     }
 
-    virtual void compress(BufferAllocated &buf, const bool hint)
+    void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
         if (!buf.size())
@@ -127,7 +127,7 @@ class CompressStubV2 : public Compress
         v2_push(buf, OVPN_COMPv2_NONE);
     }
 
-    virtual void decompress(BufferAllocated &buf)
+    void decompress(BufferAllocated &buf) override
     {
         // skip null packets
         if (!buf.size())

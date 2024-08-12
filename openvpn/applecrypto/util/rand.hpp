@@ -40,13 +40,13 @@ class AppleRandom : public StrongRandomAPI
 
     AppleRandom() = default;
 
-    virtual std::string name() const
+    std::string name() const override
     {
         return "AppleRandom";
     }
 
     // Fill buffer with random bytes
-    virtual void rand_bytes(unsigned char *buf, size_t size)
+    void rand_bytes(unsigned char *buf, size_t size) override
     {
         if (!rndbytes(buf, size))
             throw rand_error_apple("rand_bytes");
@@ -54,7 +54,7 @@ class AppleRandom : public StrongRandomAPI
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
-    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
+    bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
     {
         return rndbytes(buf, size);
     }

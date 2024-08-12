@@ -63,7 +63,7 @@ class WebException : public std::exception
         return error_;
     }
 
-    virtual const char *what() const noexcept
+    const char *what() const noexcept override
     {
         return formatted.c_str();
     }

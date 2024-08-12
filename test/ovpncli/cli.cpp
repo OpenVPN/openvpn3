@@ -285,7 +285,7 @@ class Client : public ClientBase
 
 
   private:
-    virtual void event(const ClientAPI::Event &ev) override
+    void event(const ClientAPI::Event &ev) override
     {
         std::cout << date_time() << " EVENT: " << ev.name;
         if (!ev.info.empty())
@@ -374,7 +374,7 @@ class Client : public ClientBase
       @brief Handles ACC messages
       @param acev The current ACC event
     */
-    virtual void acc_event(const ClientAPI::AppCustomControlMessageEvent &acev) override
+    void acc_event(const ClientAPI::AppCustomControlMessageEvent &acev) override
     {
         if (acev.protocol == "internal:supported_protocols")
         {
@@ -467,13 +467,13 @@ class Client : public ClientBase
         }
     }
 
-    virtual void log(const ClientAPI::LogInfo &log) override
+    void log(const ClientAPI::LogInfo &log) override
     {
         std::lock_guard<std::mutex> lock(log_mutex);
         std::cout << date_time() << ' ' << log.text << std::flush;
     }
 
-    virtual void clock_tick() override
+    void clock_tick() override
     {
         const ClockTickAction action = clock_tick_action;
         clock_tick_action = CT_UNDEF;
@@ -505,7 +505,7 @@ class Client : public ClientBase
         }
     }
 
-    virtual void external_pki_cert_request(ClientAPI::ExternalPKICertRequest &certreq) override
+    void external_pki_cert_request(ClientAPI::ExternalPKICertRequest &certreq) override
     {
         if (certreq.alias == "epki" && !epki_cert.empty())
         {
@@ -682,7 +682,7 @@ class Client : public ClientBase
     }
 #endif
 
-    virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest &signreq) override
+    void external_pki_sign_request(ClientAPI::ExternalPKISignRequest &signreq) override
     {
 #if defined(USE_MBEDTLS)
         if (epki_ctx.defined())
@@ -765,18 +765,18 @@ class Client : public ClientBase
         return self->rng->rand_bytes_noexcept(data, len) ? 0 : -1; // using -1 as a general-purpose mbed TLS error code
     }
 
-    virtual bool pause_on_connection_timeout() override
+    bool pause_on_connection_timeout() override
     {
         return false;
     }
 
 #ifdef OPENVPN_REMOTE_OVERRIDE
-    virtual bool remote_override_enabled() override
+    bool remote_override_enabled() override
     {
         return !remote_override_cmd.empty();
     }
 
-    virtual void remote_override(ClientAPI::RemoteOverride &ro) override
+    void remote_override(ClientAPI::RemoteOverride &ro) override
     {
         RedirectPipe::InOut pio;
         Argv argv;

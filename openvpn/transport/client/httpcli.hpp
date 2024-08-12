@@ -231,8 +231,8 @@ class ClientConfig : public TransportClientFactory
         return new ClientConfig;
     }
 
-    virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context &io_context,
-                                                          TransportClientParent *parent);
+    TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context &io_context,
+                                                  TransportClientParent *parent) override;
 
   private:
     ClientConfig()
@@ -370,12 +370,12 @@ class Client : public TransportClient, AsyncResolvableTCP
         {
         }
 
-        virtual void bytes_exceeded()
+        void bytes_exceeded() override
         {
             OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << max_bytes << " bytes)");
         }
 
-        virtual void lines_exceeded()
+        void lines_exceeded() override
         {
             OPENVPN_THROW_EXCEPTION("HTTP proxy response too large (> " << max_lines << " lines)");
         }

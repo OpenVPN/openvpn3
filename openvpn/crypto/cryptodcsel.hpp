@@ -51,9 +51,9 @@ class CryptoDCSelect : public CryptoDCFactory
     {
     }
 
-    virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
-                                         const CryptoAlgs::Type digest,
-                                         const CryptoAlgs::KeyDerivation method)
+    CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
+                                 const CryptoAlgs::Type digest,
+                                 const CryptoAlgs::KeyDerivation method) override
     {
         const CryptoAlgs::Alg &alg = CryptoAlgs::get(cipher);
         if (alg.flags() & CryptoAlgs::CBC_HMAC)

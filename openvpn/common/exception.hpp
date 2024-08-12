@@ -55,7 +55,7 @@ class Exception : public std::exception
         : err_(std::move(err))
     {
     }
-    virtual const char *what() const noexcept
+    const char *what() const noexcept override
     {
         return err_.c_str();
     }
@@ -82,28 +82,28 @@ class Exception : public std::exception
 };
 
 // define a simple custom exception class with no extra info
-#define OPENVPN_SIMPLE_EXCEPTION(C)               \
-    class C : public std::exception               \
-    {                                             \
-      public:                                     \
-        virtual const char *what() const noexcept \
-        {                                         \
-            return #C OPENVPN_FILE_LINE;          \
-        }                                         \
+#define OPENVPN_SIMPLE_EXCEPTION(C)                \
+    class C : public std::exception                \
+    {                                              \
+      public:                                      \
+        const char *what() const noexcept override \
+        {                                          \
+            return #C OPENVPN_FILE_LINE;           \
+        }                                          \
     }
 
 // define a simple custom exception class with no extra info that inherits from a custom base
-#define OPENVPN_SIMPLE_EXCEPTION_INHERIT(B, C)    \
-    class C : public B                            \
-    {                                             \
-      public:                                     \
-        C() : B(#C OPENVPN_FILE_LINE)             \
-        {                                         \
-        }                                         \
-        virtual const char *what() const noexcept \
-        {                                         \
-            return #C OPENVPN_FILE_LINE;          \
-        }                                         \
+#define OPENVPN_SIMPLE_EXCEPTION_INHERIT(B, C)     \
+    class C : public B                             \
+    {                                              \
+      public:                                      \
+        C() : B(#C OPENVPN_FILE_LINE)              \
+        {                                          \
+        }                                          \
+        const char *what() const noexcept override \
+        {                                          \
+            return #C OPENVPN_FILE_LINE;           \
+        }                                          \
     }
 
 // define a custom exception class that allows extra info

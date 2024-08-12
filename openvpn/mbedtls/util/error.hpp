@@ -86,7 +86,7 @@ class MbedTLSException : public ExceptionCode
         }
     }
 
-    virtual const char *what() const noexcept
+    const char *what() const noexcept override
     {
         return errtxt.c_str();
     }

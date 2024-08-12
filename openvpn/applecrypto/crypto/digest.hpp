@@ -38,25 +38,25 @@
 
 #define OPENVPN_DIGEST_CONTEXT(TYPE) CC_##TYPE##_CTX TYPE##_ctx
 
-#define OPENVPN_DIGEST_ALG_CLASS(TYPE)                                                   \
-    class DigestAlgorithm##TYPE : public DigestAlgorithm                                 \
-    {                                                                                    \
-      public:                                                                            \
-        DigestAlgorithm##TYPE()                                                          \
-        {                                                                                \
-        }                                                                                \
-        virtual int init(DigestCTX &ctx) const                                           \
-        {                                                                                \
-            return CC_##TYPE##_Init(&ctx.u.TYPE##_ctx);                                  \
-        }                                                                                \
-        virtual int update(DigestCTX &ctx, const unsigned char *data, size_t size) const \
-        {                                                                                \
-            return CC_##TYPE##_Update(&ctx.u.TYPE##_ctx, data, size);                    \
-        }                                                                                \
-        virtual int final(DigestCTX &ctx, unsigned char *md) const                       \
-        {                                                                                \
-            return CC_##TYPE##_Final(md, &ctx.u.TYPE##_ctx);                             \
-        }                                                                                \
+#define OPENVPN_DIGEST_ALG_CLASS(TYPE)                                                    \
+    class DigestAlgorithm##TYPE : public DigestAlgorithm                                  \
+    {                                                                                     \
+      public:                                                                             \
+        DigestAlgorithm##TYPE()                                                           \
+        {                                                                                 \
+        }                                                                                 \
+        int init(DigestCTX &ctx) const override                                           \
+        {                                                                                 \
+            return CC_##TYPE##_Init(&ctx.u.TYPE##_ctx);                                   \
+        }                                                                                 \
+        int update(DigestCTX &ctx, const unsigned char *data, size_t size) const override \
+        {                                                                                 \
+            return CC_##TYPE##_Update(&ctx.u.TYPE##_ctx, data, size);                     \
+        }                                                                                 \
+        int final(DigestCTX &ctx, unsigned char *md) const override                       \
+        {                                                                                 \
+            return CC_##TYPE##_Final(md, &ctx.u.TYPE##_ctx);                              \
+        }                                                                                 \
     }
 
 #define OPENVPN_DIGEST_ALG_DECLARE(TYPE) const DigestAlgorithm##TYPE alg_##TYPE;

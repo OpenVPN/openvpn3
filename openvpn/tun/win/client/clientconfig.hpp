@@ -83,17 +83,17 @@ class ClientConfig : public TunClientFactory
         return new ClientConfig;
     }
 
-    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
-                                              TunClientParent &parent,
-                                              TransportClient *transcli) override;
+    TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
+                                      TunClientParent &parent,
+                                      TransportClient *transcli) override;
 
-    virtual void finalize(const bool disconnected) override
+    void finalize(const bool disconnected) override
     {
         if (disconnected)
             tun_persist.reset();
     }
 
-    virtual bool layer_2_supported() const override
+    bool layer_2_supported() const override
     {
         return true;
     }

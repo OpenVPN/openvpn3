@@ -274,35 +274,35 @@ class CryptoTLSPRFInstance : public TLSPRFInstance
     {
     }
 
-    virtual void self_randomize(StrongRandomAPI &rng)
+    void self_randomize(StrongRandomAPI &rng) override
     {
         self.randomize(rng);
     }
 
-    virtual void self_write(Buffer &buf)
+    void self_write(Buffer &buf) override
     {
         self.write(buf);
     }
 
-    virtual void peer_read(Buffer &buf)
+    void peer_read(Buffer &buf) override
     {
         peer.read(buf);
     }
 
-    virtual bool peer_read_complete(BufferComplete &bc)
+    bool peer_read_complete(BufferComplete &bc) override
     {
         return peer.read_complete(bc);
     }
 
-    virtual void erase()
+    void erase() override
     {
         self.erase();
         peer.erase();
     }
 
-    virtual void generate_key_expansion(OpenVPNStaticKey &dest,
-                                        const ProtoSessionID &psid_self,
-                                        const ProtoSessionID &psid_peer) const
+    void generate_key_expansion(OpenVPNStaticKey &dest,
+                                const ProtoSessionID &psid_self,
+                                const ProtoSessionID &psid_peer) const override
     {
         self.generate_key_expansion(dest, peer, psid_self, psid_peer);
     }
@@ -316,7 +316,7 @@ template <typename CRYPTO_API>
 class CryptoTLSPRFFactory : public TLSPRFFactory
 {
   public:
-    virtual TLSPRFInstance::Ptr new_obj(const bool self_is_server)
+    TLSPRFInstance::Ptr new_obj(const bool self_is_server) override
     {
         return new CryptoTLSPRFInstance<CRYPTO_API>(self_is_server);
     }

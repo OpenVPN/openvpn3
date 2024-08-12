@@ -149,7 +149,7 @@ class BufferException : public std::exception
     {
     }
 
-    virtual const char *what() const noexcept
+    const char *what() const noexcept override
     {
         if (!msg_.empty())
             return msg_.c_str();
@@ -1052,13 +1052,13 @@ class BufferAllocatedType : public BufferType<T>, public RC<R>
      * @param min_capacity The minimum capacity for the buffer.
      * @param flags The flags to set for the buffer.
      */
-    virtual void reset_impl(const size_t min_capacity, const unsigned int flags) override;
+    void reset_impl(const size_t min_capacity, const unsigned int flags) override;
 
     /**
      * @brief Resizes the buffer to the specified new capacity.
      * @param new_capacity The new capacity for the buffer.
      */
-    virtual void resize(const size_t new_capacity) override;
+    void resize(const size_t new_capacity) override;
 
     /**
      * @brief Reallocates the buffer to the specified new capacity.

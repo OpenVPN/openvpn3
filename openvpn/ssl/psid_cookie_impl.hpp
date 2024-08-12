@@ -97,7 +97,7 @@ class PsidCookieImpl : public PsidCookie
 
     virtual ~PsidCookieImpl() = default;
 
-    virtual Intercept intercept(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib) override
+    Intercept intercept(ConstBuffer &pkt_buf, const PsidCookieAddrInfoBase &pcaib) override
     {
         // tls auth enabled is the only config we handle
         if (not_tls_auth_mode_)
@@ -123,14 +123,14 @@ class PsidCookieImpl : public PsidCookie
         return Intercept::EARLY_DROP; // bad op field
     }
 
-    virtual ProtoSessionID get_cookie_psid() override
+    ProtoSessionID get_cookie_psid() override
     {
         ProtoSessionID ret_val = cookie_psid_;
         cookie_psid_.reset();
         return ret_val;
     }
 
-    virtual void provide_psid_cookie_transport(PsidCookieTransportBase::Ptr pctb) override
+    void provide_psid_cookie_transport(PsidCookieTransportBase::Ptr pctb) override
     {
         pctb_ = std::move(pctb);
     }

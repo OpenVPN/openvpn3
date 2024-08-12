@@ -39,21 +39,21 @@ class BufferStream : public std::streambuf
   protected:
 #if 0 // not implemented yet
     // input
-    virtual std::streamsize showmanyc();
-    virtual std::streamsize xsgetn(char* s, std::streamsize n);
-    virtual int underflow();
-    virtual int uflow();
-    virtual int pbackfail(int c = EOF);
+    std::streamsize showmanyc() override;
+    std::streamsize xsgetn(char* s, std::streamsize n) override;
+    int underflow() override;
+    int uflow() override;
+    int pbackfail(int c = EOF) override;
 #endif
 
     // output
-    virtual std::streamsize xsputn(const char *s, std::streamsize n)
+    std::streamsize xsputn(const char *s, std::streamsize n) override
     {
         buf.write((unsigned char *)s, (size_t)n);
         return n;
     }
 
-    virtual int overflow(int c = EOF)
+    int overflow(int c = EOF) override
     {
         if (c != EOF)
         {

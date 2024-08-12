@@ -219,85 +219,85 @@ class MbedTLSContext : public SSLFactoryAPI
         {
         }
 
-        virtual SSLFactoryAPI::Ptr new_factory()
+        SSLFactoryAPI::Ptr new_factory() override
         {
             return SSLFactoryAPI::Ptr(new MbedTLSContext(this));
         }
 
-        virtual void set_mode(const Mode &mode_arg)
+        void set_mode(const Mode &mode_arg) override
         {
             mode = mode_arg;
         }
 
-        virtual const Mode &get_mode() const
+        const Mode &get_mode() const override
         {
             return mode;
         }
 
         // if this callback is defined, no private key needs to be loaded
-        virtual void set_external_pki_callback(ExternalPKIBase *external_pki_arg, const std::string &alias)
+        void set_external_pki_callback(ExternalPKIBase *external_pki_arg, const std::string &alias) override
         {
             external_pki = external_pki_arg;
             external_pki_alias = alias;
         }
 
-        virtual void set_session_ticket_handler(TLSSessionTicketBase *session_ticket_handler_arg)
+        void set_session_ticket_handler(TLSSessionTicketBase *session_ticket_handler_arg) override
         {
             // fixme -- this method should be implemented for server-side TLS session resumption tickets
             throw MbedTLSException("set_session_ticket_handler not implemented");
         }
 
-        virtual void set_client_session_tickets(const bool v)
+        void set_client_session_tickets(const bool v) override
         {
             // fixme -- this method should be implemented for client-side TLS session resumption tickets
             throw MbedTLSException("set_client_session_tickets not implemented");
         }
 
-        virtual void enable_legacy_algorithms(const bool v)
+        void enable_legacy_algorithms(const bool v) override
         {
             // We ignore the request to enable legacy as we do not have a runtime
             // configuration for this
         }
 
-        virtual void set_sni_handler(SNI::HandlerBase *sni_handler)
+        void set_sni_handler(SNI::HandlerBase *sni_handler) override
         {
             // fixme -- this method should be implemented on the server-side for SNI
             throw MbedTLSException("set_sni_handler not implemented");
         }
 
-        virtual void set_sni_name(const std::string &sni_name_arg)
+        void set_sni_name(const std::string &sni_name_arg) override
         {
             // fixme -- this method should be implemented on the client-side for SNI
             throw MbedTLSException("set_sni_name not implemented");
         }
 
-        virtual void set_private_key_password(const std::string &pwd)
+        void set_private_key_password(const std::string &pwd) override
         {
             priv_key_pwd = pwd;
         }
 
-        virtual void load_ca(const std::string &ca_txt, bool strict)
+        void load_ca(const std::string &ca_txt, bool strict) override
         {
             MbedTLSPKI::X509Cert::Ptr c = new MbedTLSPKI::X509Cert();
             c->parse(ca_txt, "ca", strict);
             ca_chain = c;
         }
 
-        virtual void load_crl(const std::string &crl_txt)
+        void load_crl(const std::string &crl_txt) override
         {
             MbedTLSPKI::X509CRL::Ptr c = new MbedTLSPKI::X509CRL();
             c->parse(crl_txt);
             crl_chain = c;
         }
 
-        virtual void load_cert(const std::string &cert_txt)
+        void load_cert(const std::string &cert_txt) override
         {
             MbedTLSPKI::X509Cert::Ptr c = new MbedTLSPKI::X509Cert();
             c->parse(cert_txt, "cert", true);
             crt_chain = c;
         }
 
-        virtual void load_cert(const std::string &cert_txt, const std::string &extra_certs_txt)
+        void load_cert(const std::string &cert_txt, const std::string &extra_certs_txt) override
         {
             MbedTLSPKI::X509Cert::Ptr c = new MbedTLSPKI::X509Cert();
             c->parse(cert_txt, "cert", true);
@@ -306,7 +306,7 @@ class MbedTLSContext : public SSLFactoryAPI
             crt_chain = c;
         }
 
-        virtual void load_private_key(const std::string &key_txt)
+        void load_private_key(const std::string &key_txt) override
         {
             MbedTLSPKI::PKContext::Ptr p = new MbedTLSPKI::PKContext();
             auto *mbedrng = get_mbed_random_class();
@@ -314,114 +314,114 @@ class MbedTLSContext : public SSLFactoryAPI
             priv_key = p;
         }
 
-        virtual void load_dh(const std::string &dh_txt)
+        void load_dh(const std::string &dh_txt) override
         {
             MbedTLSPKI::DH::Ptr mydh = new MbedTLSPKI::DH();
             mydh->parse(dh_txt, "server-config");
             dh = mydh;
         }
 
-        virtual std::string extract_ca() const
+        std::string extract_ca() const override
         {
             if (!ca_chain)
                 return std::string();
             return ca_chain->extract();
         }
 
-        virtual std::string extract_crl() const
+        std::string extract_crl() const override
         {
             if (!crl_chain)
                 return std::string();
             return crl_chain->extract();
         }
 
-        virtual std::string extract_cert() const
+        std::string extract_cert() const override
         {
             if (!crt_chain)
                 return std::string();
             return crt_chain->extract();
         }
 
-        virtual std::vector<std::string> extract_extra_certs() const
+        std::vector<std::string> extract_extra_certs() const override
         {
             if (!crt_chain)
                 return std::vector<std::string>();
             return crt_chain->extract_extra_certs();
         }
 
-        virtual std::string extract_private_key() const
+        std::string extract_private_key() const override
         {
             if (!priv_key)
                 return std::string();
             return priv_key->extract();
         }
 
-        virtual std::string extract_dh() const
+        std::string extract_dh() const override
         {
             if (!dh)
                 return std::string();
             return dh->extract();
         }
 
-        virtual PKType::Type private_key_type() const
+        PKType::Type private_key_type() const override
         {
             if (!priv_key)
                 return PKType::PK_NONE;
             return priv_key->key_type();
         }
 
-        virtual size_t private_key_length() const
+        size_t private_key_length() const override
         {
             if (!priv_key)
                 return 0;
             return priv_key->key_length();
         }
 
-        virtual void set_frame(const Frame::Ptr &frame_arg)
+        void set_frame(const Frame::Ptr &frame_arg) override
         {
             frame = frame_arg;
         }
 
-        virtual void set_debug_level(const int debug_level)
+        void set_debug_level(const int debug_level) override
         {
             ssl_debug_level = debug_level;
         }
 
-        virtual void set_flags(const unsigned int flags_arg)
+        void set_flags(const unsigned int flags_arg) override
         {
             flags = flags_arg;
         }
 
-        virtual void set_ns_cert_type(const NSCert::Type ns_cert_type_arg)
+        void set_ns_cert_type(const NSCert::Type ns_cert_type_arg) override
         {
             ns_cert_type = ns_cert_type_arg;
         }
 
-        virtual void set_remote_cert_tls(const KUParse::TLSWebType wt)
+        void set_remote_cert_tls(const KUParse::TLSWebType wt) override
         {
             KUParse::remote_cert_tls(wt, ku, eku);
         }
 
-        virtual void set_tls_remote(const std::string &tls_remote_arg)
+        void set_tls_remote(const std::string &tls_remote_arg) override
         {
             tls_remote = tls_remote_arg;
         }
 
-        virtual void set_tls_version_min(const TLSVersion::Type tvm)
+        void set_tls_version_min(const TLSVersion::Type tvm) override
         {
             tls_version_min = tvm;
         }
 
-        virtual void set_tls_version_max(const TLSVersion::Type tvm)
+        void set_tls_version_max(const TLSVersion::Type tvm) override
         {
         }
 
-        virtual void set_tls_version_min_override(const std::string &override)
+        void set_tls_version_min_override(const std::string &override) override
         {
             TLSVersion::apply_override(tls_version_min, override);
         }
 
-        virtual void set_tls_cert_profile(const TLSCertProfile::Type type)
+        void set_tls_cert_profile(const TLSCertProfile::Type type) override
         {
             tls_cert_profile = type;
         }
@@ -443,58 +443,58 @@ class MbedTLSContext : public SSLFactoryAPI
                 tls_groups = groups;
         }
 
-        virtual void set_tls_cert_profile_override(const std::string &override)
+        void set_tls_cert_profile_override(const std::string &override) override
         {
             TLSCertProfile::apply_override(tls_cert_profile, override);
         }
 
-        virtual void set_local_cert_enabled(const bool v)
+        void set_local_cert_enabled(const bool v) override
         {
             local_cert_enabled = v;
         }
 
-        virtual void set_x509_track(X509Track::ConfigSet x509_track_config_arg)
+        void set_x509_track(X509Track::ConfigSet x509_track_config_arg) override
         {
             x509_track_config = std::move(x509_track_config_arg);
         }
 
-        virtual void set_rng(const StrongRandomAPI::Ptr &rng_arg)
+        void set_rng(const StrongRandomAPI::Ptr &rng_arg) override
         {
             rng = rng_arg;
         }
 
-        virtual std::string validate_cert(const std::string &cert_txt) const
+        std::string validate_cert(const std::string &cert_txt) const override
         {
             MbedTLSPKI::X509Cert::Ptr cert = new MbedTLSPKI::X509Cert(cert_txt, "validation cert", true);
             return cert_txt; // fixme -- implement parse/re-render semantics
         }
 
-        virtual std::string validate_cert_list(const std::string &certs_txt) const
+        std::string validate_cert_list(const std::string &certs_txt) const override
         {
             MbedTLSPKI::X509Cert::Ptr cert = new MbedTLSPKI::X509Cert(certs_txt, "validation cert list", true);
             return certs_txt; // fixme -- implement parse/re-render semantics
         }
 
-        virtual std::string validate_private_key(const std::string &key_txt) const
+        std::string validate_private_key(const std::string &key_txt) const override
         {
             auto *mbedrng = get_mbed_random_class();
             MbedTLSPKI::PKContext::Ptr pkey = new MbedTLSPKI::PKContext(key_txt, "validation", "", *mbedrng);
             return key_txt; // fixme -- implement parse/re-render semantics
         }
 
-        virtual std::string validate_dh(const std::string &dh_txt) const
+        std::string validate_dh(const std::string &dh_txt) const override
         {
             MbedTLSPKI::DH::Ptr dh = new MbedTLSPKI::DH(dh_txt, "validation");
             return dh_txt; // fixme -- implement parse/re-render semantics
         }
 
-        virtual std::string validate_crl(const std::string &crl_txt) const
+        std::string validate_crl(const std::string &crl_txt) const override
         {
             MbedTLSPKI::X509CRL::Ptr crl = new MbedTLSPKI::X509CRL(crl_txt);
             return crl_txt; // fixme -- implement parse/re-render semantics
         }
 
-        virtual void load(const OptionList &opt, const unsigned int lflags)
+        void load(const OptionList &opt, const unsigned int lflags) override
         {
             // client/server
             if (lflags & LF_PARSE_MODE)
@@ -599,7 +599,7 @@ class MbedTLSContext : public SSLFactoryAPI
         }
 
 #ifdef OPENVPN_JSON_INTERNAL
-        virtual SSLConfigAPI::Ptr json_override(const Json::Value &root, const bool load_cert_key) const
+        SSLConfigAPI::Ptr json_override(const Json::Value &root, const bool load_cert_key) const override
         {
             throw MbedTLSException("json_override not implemented");
         }
@@ -692,12 +692,12 @@ class MbedTLSContext : public SSLFactoryAPI
       public:
         typedef RCPtr<SSL> Ptr;
 
-        virtual void start_handshake() override
+        void start_handshake() override
         {
             mbedtls_ssl_handshake(ssl);
         }
 
-        virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size) override
+        ssize_t write_cleartext_unbuffered(const void *data, const size_t size) override
         {
             const int status = mbedtls_ssl_write(ssl, (const unsigned char *)data, size);
             if (status < 0)
@@ -713,7 +713,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 return status;
         }
 
-        virtual ssize_t read_cleartext(void *data, const size_t capacity) override
+        ssize_t read_cleartext(void *data, const size_t capacity) override
         {
             if (!overflow)
             {
@@ -736,12 +736,12 @@ class MbedTLSContext : public SSLFactoryAPI
                 throw ssl_ciphertext_in_overflow();
         }
 
-        virtual bool read_cleartext_ready() const override
+        bool read_cleartext_ready() const override
         {
             return !ct_in.empty() || mbedtls_ssl_get_bytes_avail(ssl);
         }
 
-        virtual void write_ciphertext(const BufferPtr &buf) override
+        void write_ciphertext(const BufferPtr &buf) override
         {
             if (ct_in.size() < MAX_CIPHERTEXT_IN)
                 ct_in.write_buf(buf);
@@ -749,7 +749,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 overflow = true;
         }
 
-        virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size) override
+        void write_ciphertext_unbuffered(const unsigned char *data, const size_t size) override
         {
             if (ct_in.size() < MAX_CIPHERTEXT_IN)
                 ct_in.write(data, size);
@@ -757,17 +757,17 @@ class MbedTLSContext : public SSLFactoryAPI
                 overflow = true;
         }
 
-        virtual bool read_ciphertext_ready() const override
+        bool read_ciphertext_ready() const override
         {
             return !ct_out.empty();
         }
 
-        virtual BufferPtr read_ciphertext() override
+        BufferPtr read_ciphertext() override
         {
             return ct_out.read_buf();
         }
 
-        virtual std::string ssl_handshake_details() const override
+        std::string ssl_handshake_details() const override
         {
             if (ssl)
             {
@@ -779,22 +779,22 @@ class MbedTLSContext : public SSLFactoryAPI
             return "";
         }
 
-        virtual bool export_keying_material(const std::string &label, unsigned char *, size_t size) override
+        bool export_keying_material(const std::string &label, unsigned char *, size_t size) override
         {
             return false; // not implemented in our mbed TLS implementation
         }
 
-        virtual bool did_full_handshake() override
+        bool did_full_handshake() override
         {
             return false; // fixme -- not implemented
         }
 
-        virtual const AuthCert::Ptr &auth_cert() const override
+        const AuthCert::Ptr &auth_cert() const override
         {
             return authcert;
         }
 
-        virtual void mark_no_cache() override
+        void mark_no_cache() override
         {
             // fixme -- this method should be implemented for client-side TLS session resumption tickets
         }
@@ -1194,7 +1194,7 @@ class MbedTLSContext : public SSLFactoryAPI
     /////// start of main class implementation
 
     // create a new SSL instance
-    virtual SSLAPI::Ptr ssl() override
+    SSLAPI::Ptr ssl() override
     {
         return SSL::Ptr(new SSL(this, nullptr));
     }

@@ -66,7 +66,7 @@ class Setup : public TunBuilderSetup::Base
         bool add_bypass_routes_on_establish = false;
 
 #ifdef HAVE_JSON
-        virtual Json::Value to_json() override
+        Json::Value to_json() override
         {
             Json::Value root(Json::objectValue);
             root["iface_name"] = Json::Value(iface_name);
@@ -75,7 +75,7 @@ class Setup : public TunBuilderSetup::Base
             return root;
         };
 
-        virtual void from_json(const Json::Value &root, const std::string &title) override
+        void from_json(const Json::Value &root, const std::string &title) override
         {
             json::assert_dict(root, title);
             json::to_string(root, iface_name, "iface_name", title);
@@ -93,10 +93,10 @@ class Setup : public TunBuilderSetup::Base
         return true;
     }
 
-    virtual int establish(const TunBuilderCapture &pull, // defined by TunBuilderSetup::Base
-                          TunBuilderSetup::Config *config,
-                          Stop *stop,
-                          std::ostream &os) override
+    int establish(const TunBuilderCapture &pull, // defined by TunBuilderSetup::Base
+                  TunBuilderSetup::Config *config,
+                  Stop *stop,
+                  std::ostream &os) override
     {
         // get configuration
         Config *conf = dynamic_cast<Config *>(config);
@@ -160,7 +160,7 @@ class Setup : public TunBuilderSetup::Base
         return fd;
     }
 
-    virtual void destroy(std::ostream &os) override // defined by DestructorBase
+    void destroy(std::ostream &os) override // defined by DestructorBase
     {
         if (remove_cmds)
         {

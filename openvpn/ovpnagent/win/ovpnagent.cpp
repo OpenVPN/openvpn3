@@ -100,7 +100,7 @@ class MySessionStats : public SessionStats
   public:
     typedef RCPtr<MySessionStats> Ptr;
 
-    virtual void error(const size_t err_type, const std::string *text = nullptr) override
+    void error(const size_t err_type, const std::string *text = nullptr) override
     {
         OPENVPN_LOG(openvpn::Error::name(err_type));
     }
@@ -511,7 +511,7 @@ class MyListener : public WS::Server::Listener
     TunWin::RingBuffer::Ptr ring_buffer;
 
   private:
-    virtual bool allow_client(AsioPolySock::Base &sock) override
+    bool allow_client(AsioPolySock::Base &sock) override
     {
         AsioPolySock::NamedPipe *np = dynamic_cast<AsioPolySock::NamedPipe *>(&sock);
         if (np)
@@ -570,7 +570,7 @@ class MyClientInstance : public WS::Server::Listener::Client
         generate_reply_headers(ci);
     }
 
-    virtual void http_request_received() override
+    void http_request_received() override
     {
         // alloc output buffer
         std::ostringstream os;
@@ -813,26 +813,26 @@ class MyClientInstance : public WS::Server::Listener::Client
         }
     }
 
-    virtual void http_content_in(BufferAllocated &buf) override
+    void http_content_in(BufferAllocated &buf) override
     {
         if (buf.defined())
             in.emplace_back(new BufferAllocated(std::move(buf)));
     }
 
-    virtual BufferPtr http_content_out() override
+    BufferPtr http_content_out() override
     {
         BufferPtr ret;
         ret.swap(out);
         return ret;
     }
 
-    virtual bool http_out_eof() override
+    bool http_out_eof() override
     {
         // OPENVPN_LOG("HTTP output EOF");
         return true;
     }
 
-    virtual bool http_stop(const int status, const std::string &description) override
+    bool http_stop(const int status, const std::string &description) override
     {
         if (status != WS::Server::Status::E_SUCCESS)
         {
@@ -890,7 +890,7 @@ class MyClientFactory : public WS::Server::Listener::Client::Factory
   public:
     typedef RCPtr<MyClientFactory> Ptr;
 
-    virtual WS::Server::Listener::Client::Ptr new_client(WS::Server::Listener::Client::Initializer &ci) override
+    WS::Server::Listener::Client::Ptr new_client(WS::Server::Listener::Client::Initializer &ci) override
     {
         return new MyClientInstance(ci);
     }
@@ -904,7 +904,7 @@ class MyService : public Win::Service
     {
     }
 
-    virtual void service_work(DWORD argc, LPWSTR *argv) override
+    void service_work(DWORD argc, LPWSTR *argv) override
     {
         if (is_service())
         {
@@ -968,7 +968,7 @@ class MyService : public Win::Service
 
     // Called by service control manager in another thread
     // to signal the service_work() method to exit.
-    virtual void service_stop() override
+    void service_stop() override
     {
         openvpn_io::post(*io_context, [this]()
                          {

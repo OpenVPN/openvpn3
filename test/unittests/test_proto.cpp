@@ -592,7 +592,7 @@ class TestProtoClient : public TestProto
     }
 
   private:
-    virtual void client_auth(Buffer &buf)
+    void client_auth(Buffer &buf) override
     {
         const std::string username("foo");
         const std::string password("bar");
@@ -620,10 +620,10 @@ class TestProtoServer : public TestProto
     }
 
   private:
-    virtual void server_auth(const std::string &username,
-                             const SafeString &password,
-                             const std::string &peer_info,
-                             const AuthCert::Ptr &auth_cert)
+    void server_auth(const std::string &username,
+                     const SafeString &password,
+                     const std::string &peer_info,
+                     const AuthCert::Ptr &auth_cert) override
     {
 #ifdef VERBOSE
         std::cout << "**** AUTHENTICATE " << username << '/' << password << " PEER INFO:" << std::endl;
@@ -830,7 +830,7 @@ class MySessionStats : public SessionStats
         std::memset(errors, 0, sizeof(errors));
     }
 
-    virtual void error(const size_t err_type, const std::string *text = nullptr)
+    void error(const size_t err_type, const std::string *text = nullptr) override
     {
         if (err_type < Error::N_ERRORS)
             ++errors[err_type];
@@ -1175,7 +1175,7 @@ int test_retry(const int thread_num, const int n_retries, bool use_tls_ekm)
 class ProtoUnitTest : public testing::Test
 {
     // Sets up the test fixture.
-    virtual void SetUp()
+    void SetUp() override
     {
 #if defined(USE_MBEDTLS)
         mbedtls_debug_set_threshold(1);
@@ -1191,7 +1191,7 @@ class ProtoUnitTest : public testing::Test
     }
 
     // Tears down the test fixture.
-    virtual void TearDown()
+    void TearDown() override
     {
 #if defined(USE_MBEDTLS)
         mbedtls_debug_set_threshold(4);

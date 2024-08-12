@@ -45,12 +45,12 @@ class CompressSnappy : public Compress
         OVPN_LOG_INFO("SNAPPY init asym=" << asym_arg);
     }
 
-    virtual const char *name() const
+    const char *name() const override
     {
         return "snappy";
     }
 
-    virtual void compress(BufferAllocated &buf, const bool hint)
+    void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
         if (!buf.size())
@@ -87,7 +87,7 @@ class CompressSnappy : public Compress
         do_swap(buf, NO_COMPRESS_SWAP);
     }
 
-    virtual void decompress(BufferAllocated &buf)
+    void decompress(BufferAllocated &buf) override
     {
         // skip null packets
         if (!buf.size())

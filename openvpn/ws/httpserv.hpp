@@ -796,7 +796,7 @@ class Listener : public ProxyListener
     {
     }
 
-    virtual void start() override
+    void start() override
     {
         if (halt)
             return;
@@ -920,7 +920,7 @@ class Listener : public ProxyListener
         }
     }
 
-    virtual void stop() override
+    void stop() override
     {
         if (halt)
             return;
@@ -1016,7 +1016,7 @@ class Listener : public ProxyListener
             throttle_timer_wait();
     }
 
-    virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code &error) override
+    void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code &error) override
     {
         if (halt)
             return;

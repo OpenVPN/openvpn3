@@ -1345,17 +1345,17 @@ class HTTPCore : public Base, public TransportClientParent
 
     // TransportClientParent methods
 
-    virtual bool transport_is_openvpn_protocol()
+    bool transport_is_openvpn_protocol() override
     {
         return false;
     }
 
-    virtual void transport_recv(BufferAllocated &buf)
+    void transport_recv(BufferAllocated &buf) override
     {
         tcp_read_handler(buf);
     }
 
-    virtual void transport_needs_send()
+    void transport_needs_send() override
     {
         tcp_write_queue_needs_send();
     }
@@ -1369,39 +1369,39 @@ class HTTPCore : public Base, public TransportClientParent
         return os.str();
     }
 
-    virtual void transport_error(const Error::Type fatal_err, const std::string &err_text)
+    void transport_error(const Error::Type fatal_err, const std::string &err_text) override
     {
         return error_handler(Status::E_TRANSPORT, err_fmt(fatal_err, err_text));
     }
 
-    virtual void proxy_error(const Error::Type fatal_err, const std::string &err_text)
+    void proxy_error(const Error::Type fatal_err, const std::string &err_text) override
     {
         return error_handler(Status::E_PROXY, err_fmt(fatal_err, err_text));
     }
 
-    virtual void transport_pre_resolve()
+    void transport_pre_resolve() override
     {
     }
 
-    virtual void transport_wait_proxy()
+    void transport_wait_proxy() override
     {
     }
 
-    virtual void transport_wait()
+    void transport_wait() override
     {
     }
 
-    virtual bool is_keepalive_enabled() const
+    bool is_keepalive_enabled() const override
     {
         return false;
     }
 
-    virtual void disable_keepalive(unsigned int &keepalive_ping,
-                                   unsigned int &keepalive_timeout)
+    void disable_keepalive(unsigned int &keepalive_ping,
+                           unsigned int &keepalive_timeout) override
     {
     }
 
-    virtual void transport_connecting()
+    void transport_connecting() override
     {
         do_connect(false);
     }
@@ -1477,7 +1477,7 @@ class HTTPDelegate : public HTTPCore
         return parent_;
     }
 
-    virtual Host http_host()
+    Host http_host() override
     {
         if (parent_)
             return parent_->http_host(*this);
@@ -1485,7 +1485,7 @@ class HTTPDelegate : public HTTPCore
             throw http_delegate_error("http_host");
     }
 
-    virtual Request http_request()
+    Request http_request() override
     {
         if (parent_)
             return parent_->http_request(*this);
@@ -1493,7 +1493,7 @@ class HTTPDelegate : public HTTPCore
             throw http_delegate_error("http_request");
     }
 
-    virtual ContentInfo http_content_info()
+    ContentInfo http_content_info() override
     {
         if (parent_)
             return parent_->http_content_info(*this);
@@ -1501,7 +1501,7 @@ class HTTPDelegate : public HTTPCore
             throw http_delegate_error("http_content_info");
     }
 
-    virtual BufferPtr http_content_out()
+    BufferPtr http_content_out() override
     {
         if (parent_)
             return parent_->http_content_out(*this);
@@ -1509,7 +1509,7 @@ class HTTPDelegate : public HTTPCore
             throw http_delegate_error("http_content_out");
     }
 
-    virtual void http_content_out_needed()
+    void http_content_out_needed() override
     {
         if (parent_)
             parent_->http_content_out_needed(*this);
@@ -1517,43 +1517,43 @@ class HTTPDelegate : public HTTPCore
             throw http_delegate_error("http_content_out_needed");
     }
 
-    virtual void http_headers_received()
+    void http_headers_received() override
     {
         if (parent_)
             parent_->http_headers_received(*this);
     }
 
-    virtual void http_headers_sent(const Buffer &buf)
+    void http_headers_sent(const Buffer &buf) override
     {
         if (parent_)
             parent_->http_headers_sent(*this, buf);
     }
 
-    virtual void http_mutate_resolver_results(results_type &results)
+    void http_mutate_resolver_results(results_type &results) override
     {
         if (parent_)
             parent_->http_mutate_resolver_results(*this, results);
     }
 
-    virtual void http_content_in(BufferAllocated &buf)
+    void http_content_in(BufferAllocated &buf) override
     {
         if (parent_)
             parent_->http_content_in(*this, buf);
     }
 
-    virtual void http_done(const int status, const std::string &description)
+    void http_done(const int status, const std::string &description) override
     {
         if (parent_)
             parent_->http_done(*this, status, description);
     }
 
-    virtual void http_keepalive_close(const int status, const std::string &description)
+    void http_keepalive_close(const int status, const std::string &description) override
     {
         if (parent_)
             parent_->http_keepalive_close(*this, status, description);
     }
 
-    virtual void http_post_connect(AsioPolySock::Base &sock)
+    void http_post_connect(AsioPolySock::Base &sock) override
     {
         if (parent_)
             parent_->http_post_connect(*this, sock);

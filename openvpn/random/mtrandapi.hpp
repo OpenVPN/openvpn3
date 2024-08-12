@@ -56,13 +56,13 @@ class MTRand : public WeakRandomAPI
     }
 
     // Random algorithm name
-    virtual std::string name() const
+    std::string name() const override
     {
         return "MTRand";
     }
 
     // Fill buffer with random bytes
-    virtual void rand_bytes(unsigned char *buf, size_t size)
+    void rand_bytes(unsigned char *buf, size_t size) override
     {
         if (!rndbytes(buf, size))
             throw mtrand_error("rand_bytes failed");
@@ -70,7 +70,7 @@ class MTRand : public WeakRandomAPI
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
-    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
+    bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
     {
         return rndbytes(buf, size);
     }

@@ -99,7 +99,7 @@ class ErrorCode : public ExceptionCode
     {
     }
 
-    virtual const char *what() const noexcept
+    const char *what() const noexcept override
     {
         return err_.c_str();
     }

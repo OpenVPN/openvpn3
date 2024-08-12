@@ -53,9 +53,9 @@ class OvpnDcoClient : public Client,
             return GeNLImpl::available();
     }
 
-    virtual void tun_start(const OptionList &opt,
-                           TransportClient &transcli,
-                           CryptoDCSettings &dc_settings) override
+    void tun_start(const OptionList &opt,
+                   TransportClient &transcli,
+                   CryptoDCSettings &dc_settings) override
     {
         // extract peer ID from pushed options
         try
@@ -143,12 +143,12 @@ class OvpnDcoClient : public Client,
         tun_parent->tun_connected();
     }
 
-    virtual std::string tun_name() const override
+    std::string tun_name() const override
     {
         return "ovpn-dco";
     }
 
-    virtual IP::Addr server_endpoint_addr() const override
+    IP::Addr server_endpoint_addr() const override
     {
         if (transport)
             return transport->server_endpoint_addr();
@@ -156,7 +156,7 @@ class OvpnDcoClient : public Client,
             return IP::Addr();
     }
 
-    virtual unsigned short server_endpoint_port() const override
+    unsigned short server_endpoint_port() const override
     {
         if (transport)
             return transport->server_endpoint_port();
@@ -164,12 +164,12 @@ class OvpnDcoClient : public Client,
             return 0;
     }
 
-    virtual Protocol transport_protocol() const override
+    Protocol transport_protocol() const override
     {
         return transport->transport_protocol();
     }
 
-    virtual void transport_start() override
+    void transport_start() override
     {
         TransportClientFactory::Ptr transport_factory;
 
@@ -199,12 +199,12 @@ class OvpnDcoClient : public Client,
         transport->transport_start();
     }
 
-    virtual bool transport_send_const(const Buffer &buf) override
+    bool transport_send_const(const Buffer &buf) override
     {
         return transport->transport_send_const(buf);
     }
 
-    virtual bool transport_send(BufferAllocated &buf) override
+    bool transport_send(BufferAllocated &buf) override
     {
         OPENVPN_THROW(dcocli_error,
                       "Non-const send expected for data channel only, but "
@@ -291,12 +291,12 @@ class OvpnDcoClient : public Client,
         last_delta = last_stats - old_stats;
     }
 
-    virtual void resolve_callback(const openvpn_io::error_code &error,
-                                  results_type results) override
+    void resolve_callback(const openvpn_io::error_code &error,
+                          results_type results) override
     {
     }
 
-    virtual void stop_() override
+    void stop_() override
     {
         if (!halt)
         {
@@ -329,8 +329,8 @@ class OvpnDcoClient : public Client,
         }
     }
 
-    virtual void rekey(const CryptoDCInstance::RekeyType rktype,
-                       const KoRekey::Info &rkinfo) override
+    void rekey(const CryptoDCInstance::RekeyType rktype,
+               const KoRekey::Info &rkinfo) override
     {
         if (halt)
             return;
@@ -420,7 +420,7 @@ class OvpnDcoClient : public Client,
         }
     }
 
-    virtual void transport_recv(BufferAllocated &buf) override
+    void transport_recv(BufferAllocated &buf) override
     {
         transport_parent->transport_recv(buf);
     }
@@ -512,55 +512,55 @@ class OvpnDcoClient : public Client,
         return true;
     }
 
-    virtual void transport_needs_send() override
+    void transport_needs_send() override
     {
         transport_parent->transport_needs_send();
     }
 
-    virtual void transport_error(const Error::Type fatal_err,
-                                 const std::string &err_text) override
+    void transport_error(const Error::Type fatal_err,
+                         const std::string &err_text) override
     {
         transport_parent->transport_error(fatal_err, err_text);
     }
 
-    virtual void proxy_error(const Error::Type fatal_err,
-                             const std::string &err_text) override
+    void proxy_error(const Error::Type fatal_err,
+                     const std::string &err_text) override
     {
         transport_parent->proxy_error(fatal_err, err_text);
     }
 
-    virtual bool transport_is_openvpn_protocol() override
+    bool transport_is_openvpn_protocol() override
     {
         return transport_parent->transport_is_openvpn_protocol();
     }
 
-    virtual void transport_pre_resolve() override
+    void transport_pre_resolve() override
     {
         transport_parent->transport_pre_resolve();
     }
 
-    virtual void transport_wait_proxy() override
+    void transport_wait_proxy() override
     {
         transport_parent->transport_wait_proxy();
     }
 
-    virtual void transport_wait() override
+    void transport_wait() override
     {
         transport_parent->transport_wait();
     }
 
-    virtual void transport_connecting() override
+    void transport_connecting() override
     {
         transport_parent->transport_connecting();
     }
 
-    virtual bool is_keepalive_enabled() const override
+    bool is_keepalive_enabled() const override
     {
         return transport_parent->is_keepalive_enabled();
     }
 
-    virtual void disable_keepalive(unsigned int &keepalive_ping,
-                                   unsigned int &keepalive_timeout) override
+    void disable_keepalive(unsigned int &keepalive_ping,
+                           unsigned int &keepalive_timeout) override
     {
         transport_parent->disable_keepalive(keepalive_ping, keepalive_timeout);
     }
@@ -669,7 +669,7 @@ class OvpnDcoClient : public Client,
             });
     }
 
-    virtual SessionStats::DCOTransportSource::Data dco_transport_stats_delta() override
+    SessionStats::DCOTransportSource::Data dco_transport_stats_delta() override
     {
         if (halt)
         {

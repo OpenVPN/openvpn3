@@ -373,7 +373,7 @@ struct UnsupportedFeature : public Base
     std::string reason;
     bool critical;
 
-    virtual std::string render() const
+    std::string render() const override
     {
         std::ostringstream out;
         out << "name: " << name << ", reason: " << reason << ", critical: " << critical;
@@ -403,7 +403,7 @@ struct Connected : public Base
     std::string client_ip;
     std::string tun_name;
 
-    virtual std::string render() const
+    std::string render() const override
     {
         std::ostringstream out;
         // eg. "godot@foo.bar.gov:443 (1.2.3.4) via TCPv4 on tun0/5.5.1.1"
@@ -436,7 +436,7 @@ struct ReasonBase : public Base
     {
     }
 
-    virtual std::string render() const
+    std::string render() const override
     {
         return reason;
     }

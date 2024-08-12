@@ -35,9 +35,9 @@ struct TCP : public Base
     {
     }
 
-    virtual void async_accept(ListenerBase *listener,
-                              const size_t acceptor_index,
-                              openvpn_io::io_context &io_context) override
+    void async_accept(ListenerBase *listener,
+                      const size_t acceptor_index,
+                      openvpn_io::io_context &io_context) override
     {
         AsioPolySock::TCP::Ptr sock(new AsioPolySock::TCP(io_context, acceptor_index));
         acceptor.async_accept(sock->socket,
@@ -45,7 +45,7 @@ struct TCP : public Base
                               { listener->handle_accept(std::move(sock), error); });
     }
 
-    virtual void close() override
+    void close() override
     {
 #ifdef OPENVPN_DEBUG_ACCEPT
         OPENVPN_LOG("ACCEPTOR CLOSE " << local_endpoint);

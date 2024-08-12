@@ -167,7 +167,7 @@ class MySessionStats : public SessionStats
         parent = nullptr;
     }
 
-    virtual void error(const size_t err, const std::string *text = nullptr)
+    void error(const size_t err, const std::string *text = nullptr) override
     {
         if (err < Error::N_ERRORS)
         {
@@ -196,7 +196,7 @@ class MyClientEvents : public ClientEvent::Queue
     {
     }
 
-    virtual void add_event(ClientEvent::Base::Ptr event) override
+    void add_event(ClientEvent::Base::Ptr event) override
     {
         if (parent)
         {
@@ -326,7 +326,7 @@ class MyReconnectNotify : public ReconnectNotify
         parent = nullptr;
     }
 
-    virtual bool pause_on_connection_timeout()
+    bool pause_on_connection_timeout() override
     {
         if (parent)
             return parent->pause_on_connection_timeout();
@@ -351,7 +351,7 @@ class MyRemoteOverride : public RemoteList::RemoteOverride
         parent = nullptr;
     }
 
-    virtual RemoteList::Item::Ptr get() override
+    RemoteList::Item::Ptr get() override
     {
         if (parent)
         {

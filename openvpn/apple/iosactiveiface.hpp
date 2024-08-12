@@ -32,7 +32,7 @@ namespace openvpn {
 class iOSActiveInterface : public ReachabilityInterface
 {
   public:
-    virtual Status reachable() const
+    Status reachable() const override
     {
         if (ei.iface_up("en0"))
             return ReachableViaWiFi;
@@ -42,7 +42,7 @@ class iOSActiveInterface : public ReachabilityInterface
             return NotReachable;
     }
 
-    virtual bool reachableVia(const std::string &net_type) const
+    bool reachableVia(const std::string &net_type) const override
     {
         const Status r = reachable();
         if (net_type == "cellular")
@@ -53,7 +53,7 @@ class iOSActiveInterface : public ReachabilityInterface
             return r != NotReachable;
     }
 
-    virtual std::string to_string() const
+    std::string to_string() const override
     {
         switch (reachable())
         {

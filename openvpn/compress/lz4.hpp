@@ -133,12 +133,12 @@ class CompressLZ4 : public CompressLZ4Base
         OVPN_LOG_INFO("LZ4 init asym=" << asym_arg);
     }
 
-    virtual const char *name() const
+    const char *name() const override
     {
         return "lz4";
     }
 
-    virtual void compress(BufferAllocated &buf, const bool hint)
+    void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
         if (!buf.size())
@@ -157,7 +157,7 @@ class CompressLZ4 : public CompressLZ4Base
         do_swap(buf, NO_COMPRESS_SWAP);
     }
 
-    virtual void decompress(BufferAllocated &buf)
+    void decompress(BufferAllocated &buf) override
     {
         // skip null packets
         if (!buf.size())
@@ -192,12 +192,12 @@ class CompressLZ4v2 : public CompressLZ4Base
         OVPN_LOG_INFO("LZ4v2 init asym=" << asym_arg);
     }
 
-    virtual const char *name() const
+    const char *name() const override
     {
         return "lz4v2";
     }
 
-    virtual void compress(BufferAllocated &buf, const bool hint)
+    void compress(BufferAllocated &buf, const bool hint) override
     {
         // skip null packets
         if (!buf.size())
@@ -216,7 +216,7 @@ class CompressLZ4v2 : public CompressLZ4Base
         v2_push(buf, OVPN_COMPv2_NONE);
     }
 
-    virtual void decompress(BufferAllocated &buf)
+    void decompress(BufferAllocated &buf) override
     {
         // skip null packets
         if (!buf.size())

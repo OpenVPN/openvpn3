@@ -76,9 +76,9 @@ class ServerProto
                 preval.reset(new ProtoContext::TLSAuthPreValidate(c, true));
         }
 
-        virtual TransportClientInstance::Recv::Ptr new_client_instance() override;
+        TransportClientInstance::Recv::Ptr new_client_instance() override;
 
-        virtual bool validate_initial_packet(const BufferAllocated &net_buf) override
+        bool validate_initial_packet(const BufferAllocated &net_buf) override
         {
             if (preval)
             {
@@ -119,21 +119,21 @@ class ServerProto
       public:
         typedef RCPtr<Session> Ptr;
 
-        virtual bool defined() const override
+        bool defined() const override
         {
             return defined_();
         }
 
-        virtual TunClientInstance::Recv *override_tun(TunClientInstance::Send *tun) override
+        TunClientInstance::Recv *override_tun(TunClientInstance::Send *tun) override
         {
             TunLink::send.reset(tun);
             return this;
         }
 
-        virtual void start(const TransportClientInstance::Send::Ptr &parent,
-                           const PeerAddr::Ptr &addr,
-                           const int local_peer_id,
-                           const ProtoSessionID cookie_psid = ProtoSessionID()) override
+        void start(const TransportClientInstance::Send::Ptr &parent,
+                   const PeerAddr::Ptr &addr,
+                   const int local_peer_id,
+                   const ProtoSessionID cookie_psid = ProtoSessionID()) override
         {
             TransportLink::send = parent;
             peer_addr = addr;
@@ -149,7 +149,7 @@ class ServerProto
             housekeeping_schedule.init(Time::Duration::binary_ms(512), Time::Duration::binary_ms(1024));
         }
 
-        virtual PeerStats stats_poll() override
+        PeerStats stats_poll() override
         {
             if (TransportLink::send)
                 return TransportLink::send->stats_poll();
@@ -157,12 +157,12 @@ class ServerProto
                 return PeerStats();
         }
 
-        virtual bool should_preserve_session_id() override
+        bool should_preserve_session_id() override
         {
             return preserve_session_id;
         }
 
-        virtual void stop() override
+        void stop() override
         {
             if (!halt)
             {
@@ -200,7 +200,7 @@ class ServerProto
         }
 
         // called with OpenVPN-encapsulated packets from transport layer
-        virtual bool transport_recv(BufferAllocated &buf) override
+        bool transport_recv(BufferAllocated &buf) override
         {
             bool ret = false;
             if (!proto_context.primary_defined())
@@ -258,13 +258,13 @@ class ServerProto
         }
 
         // called with cleartext IP packets from routing layer
-        virtual void tun_recv(BufferAllocated &buf) override
+        void tun_recv(BufferAllocated &buf) override
         {
             // fixme -- code me
         }
 
         // Return true if keepalive parameter(s) are enabled.
-        virtual bool is_keepalive_enabled() const override
+        bool is_keepalive_enabled() const override
         {
             return proto_context.is_keepalive_enabled();
         }
@@ -272,8 +272,8 @@ class ServerProto
         // Disable keepalive for rest of session, but fetch
         // the keepalive parameters (in seconds).
         // Also, allow the management layer to override parameters.
-        virtual void disable_keepalive(unsigned int &keepalive_ping,
-                                       unsigned int &keepalive_timeout) override
+        void disable_keepalive(unsigned int &keepalive_ping,
+                               unsigned int &keepalive_timeout) override
         {
             proto_context.disable_keepalive(keepalive_ping, keepalive_timeout);
             if (ManLink::send)
@@ -281,7 +281,7 @@ class ServerProto
         }
 
         // override the data channel factory
-        virtual void override_dc_factory(const CryptoDCFactory::Ptr &dc_factory) override
+        void override_dc_factory(const CryptoDCFactory::Ptr &dc_factory) override
         {
             proto_context.dc_settings().set_factory(dc_factory);
         }
@@ -313,7 +313,7 @@ class ServerProto
         }
 
         // proto base class calls here for control channel network sends
-        virtual void control_net_send(const Buffer &net_buf) override
+        void control_net_send(const Buffer &net_buf) override
         {
             OPENVPN_LOG_SERVPROTO(instance_name() << " : Transport SEND[" << net_buf.size() << "] " << client_endpoint_render() << ' ' << proto_context.dump_packet(net_buf));
             if (TransportLink::send)
@@ -325,10 +325,10 @@ class ServerProto
 
         // Called on server with credentials and peer info provided by client.
         // Should be overriden by derived class if credentials are required.
-        virtual void server_auth(const std::string &username,
-                                 const SafeString &password,
-                                 const std::string &peer_info,
-                                 const AuthCert::Ptr &auth_cert) override
+        void server_auth(const std::string &username,
+                         const SafeString &password,
+                         const std::string &peer_info,
+                         const AuthCert::Ptr &auth_cert) override
         {
             constexpr size_t MAX_USERNAME_SIZE = 256;
             constexpr size_t MAX_PASSWORD_SIZE = 16384;
@@ -343,7 +343,7 @@ class ServerProto
         }
 
         // proto base class calls here for app-level control-channel messages received
-        virtual void control_recv(BufferPtr &&app_bp) override
+        void control_recv(BufferPtr &&app_bp) override
         {
             const std::string msg = ProtoContext::template read_control_string<std::string>(*app_bp);
             if (!Unicode::is_valid_utf8(msg, Unicode::UTF8_NO_CTRL))
@@ -380,13 +380,13 @@ class ServerProto
              * IV_PROTO_REQUEST_PUSH instead waiting for an explicit PUSH_REQUEST */
         }
 
-        virtual void auth_failed(const std::string &reason,
-                                 const std::string &client_reason) override
+        void auth_failed(const std::string &reason,
+                         const std::string &client_reason) override
         {
             push_halt_restart_msg(HaltRestart::AUTH_FAILED, reason, client_reason);
         }
 
-        virtual void relay(const IP::Addr &target, const int port) override
+        void relay(const IP::Addr &target, const int port) override
         {
             if (halt || disconnect_type == DT_HALT_RESTART)
                 return;
@@ -412,7 +412,7 @@ class ServerProto
             set_housekeeping_timer();
         }
 
-        virtual void push_reply(std::vector<BufferPtr> &&push_msgs) override
+        void push_reply(std::vector<BufferPtr> &&push_msgs) override
         {
             if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !proto_context.primary_defined())
                 return;
@@ -442,7 +442,7 @@ class ServerProto
             }
         }
 
-        virtual TunClientInstance::NativeHandle tun_native_handle() override
+        TunClientInstance::NativeHandle tun_native_handle() override
         {
             if (get_tun())
                 return TunLink::send->tun_native_handle();
@@ -450,9 +450,9 @@ class ServerProto
                 return TunClientInstance::NativeHandle();
         }
 
-        virtual void push_halt_restart_msg(const HaltRestart::Type type,
-                                           const std::string &reason,
-                                           const std::string &client_reason) override
+        void push_halt_restart_msg(const HaltRestart::Type type,
+                                   const std::string &reason,
+                                   const std::string &client_reason) override
         {
             if (halt || disconnect_type == DT_HALT_RESTART)
                 return;
@@ -542,7 +542,7 @@ class ServerProto
             set_housekeeping_timer();
         }
 
-        virtual void schedule_disconnect(const unsigned int seconds) override
+        void schedule_disconnect(const unsigned int seconds) override
         {
             if (halt || disconnect_type == DT_HALT_RESTART)
                 return;
@@ -551,7 +551,7 @@ class ServerProto
             set_housekeeping_timer();
         }
 
-        virtual void schedule_auth_pending_timeout(const unsigned int seconds) override
+        void schedule_auth_pending_timeout(const unsigned int seconds) override
         {
             if (halt || (disconnect_type >= DT_RELAY_TRANSITION) || !seconds)
                 return;
@@ -561,7 +561,7 @@ class ServerProto
             set_housekeeping_timer();
         }
 
-        virtual void post_cc_msg(BufferPtr &&msg) override
+        void post_cc_msg(BufferPtr &&msg) override
         {
             if (halt || !proto_context.primary_defined())
                 return;

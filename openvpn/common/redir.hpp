@@ -56,7 +56,7 @@ struct RedirectBase
 
 struct RedirectStdFD : public RedirectBase
 {
-    virtual void redirect() noexcept override
+    void redirect() noexcept override
     {
         // stdin
         if (in.defined())
@@ -87,7 +87,7 @@ struct RedirectStdFD : public RedirectBase
         close();
     }
 
-    virtual void close() override
+    void close() override
     {
         in.close();
         out.close();

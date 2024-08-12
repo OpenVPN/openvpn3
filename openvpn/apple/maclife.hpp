@@ -52,12 +52,12 @@ class MacLifeCycle : public ClientLifeCycle, MacSleep, ReachabilityTracker
         stop_thread();
     }
 
-    virtual bool network_available()
+    bool network_available() override
     {
         return net_up();
     }
 
-    virtual void start(NotifyCallback *nc_arg)
+    void start(NotifyCallback *nc_arg) override
     {
         if (!thread && nc_arg)
         {
@@ -66,7 +66,7 @@ class MacLifeCycle : public ClientLifeCycle, MacSleep, ReachabilityTracker
         }
     }
 
-    virtual void stop()
+    void stop() override
     {
         stop_thread();
     }
@@ -217,21 +217,21 @@ class MacLifeCycle : public ClientLifeCycle, MacSleep, ReachabilityTracker
         schedule_action_timer(1);
     }
 
-    virtual void notify_sleep()
+    void notify_sleep() override
     {
         OPENVPN_LOG("MacLifeCycle SLEEP");
         state.sleep = true;
         schedule_action_timer(0);
     }
 
-    virtual void notify_wakeup()
+    void notify_wakeup() override
     {
         OPENVPN_LOG("MacLifeCycle WAKEUP");
         state.sleep = false;
         schedule_action_timer(1);
     }
 
-    virtual void reachability_tracker_event(const ReachabilityBase &rb, SCNetworkReachabilityFlags flags)
+    void reachability_tracker_event(const ReachabilityBase &rb, SCNetworkReachabilityFlags flags) override
     {
         if (rb.vtype() == ReachabilityBase::Internet)
         {

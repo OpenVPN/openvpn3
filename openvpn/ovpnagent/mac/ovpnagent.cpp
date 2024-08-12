@@ -82,7 +82,7 @@ class MySessionStats : public SessionStats
   public:
     typedef RCPtr<MySessionStats> Ptr;
 
-    virtual void error(const size_t err_type, const std::string *text = nullptr) override
+    void error(const size_t err_type, const std::string *text = nullptr) override
     {
         OPENVPN_LOG(Error::name(err_type));
     }
@@ -323,7 +323,7 @@ class MyListener : public WS::Server::Listener
     }
 
   private:
-    virtual bool allow_client(AsioPolySock::Base &sock) override
+    bool allow_client(AsioPolySock::Base &sock) override
     {
         return true;
     }
@@ -364,7 +364,7 @@ class MyClientInstance : public WS::Server::Listener::Client
         generate_reply_headers(ci);
     }
 
-    virtual void http_request_received() override
+    void http_request_received() override
     {
         // alloc output buffer
         std::ostringstream os;
@@ -460,13 +460,13 @@ class MyClientInstance : public WS::Server::Listener::Client
         }
     }
 
-    virtual void http_content_in(BufferAllocated &buf) override
+    void http_content_in(BufferAllocated &buf) override
     {
         if (buf.defined())
             in.emplace_back(new BufferAllocated(std::move(buf)));
     }
 
-    virtual BufferPtr http_content_out() override
+    BufferPtr http_content_out() override
     {
         BufferPtr ret;
         ret.swap(out);
@@ -475,7 +475,7 @@ class MyClientInstance : public WS::Server::Listener::Client
 
     // Normally true is returned, however return false if we
     // are planning to send the tun file descriptor to the client.
-    virtual bool http_out_eof() override
+    bool http_out_eof() override
     {
         // OPENVPN_LOG("HTTP output EOF send_fd=" << send_fd());
         return !send_fd.defined();
@@ -484,7 +484,7 @@ class MyClientInstance : public WS::Server::Listener::Client
     // After HTTP reply has been transmitted, wait for client to
     // send a 't' message.  On receipt, reply with a 'T' message
     // that bundles the tun file descriptor.
-    virtual void http_pipeline_peek(BufferAllocated &buf) override
+    void http_pipeline_peek(BufferAllocated &buf) override
     {
         // OPENVPN_LOG("HTTP PIPELINE PEEK send_fd=" << send_fd() << " CONTENT=" << buf_to_string(buf));
         if (send_fd.defined())
@@ -502,7 +502,7 @@ class MyClientInstance : public WS::Server::Listener::Client
         }
     }
 
-    virtual bool http_stop(const int status, const std::string &description) override
+    bool http_stop(const int status, const std::string &description) override
     {
         OPENVPN_LOG("INSTANCE STOP : " << WS::Server::Status::error_str(status) << " : " << description);
 
@@ -538,7 +538,7 @@ class MyClientFactory : public WS::Server::Listener::Client::Factory
   public:
     typedef RCPtr<MyClientFactory> Ptr;
 
-    virtual WS::Server::Listener::Client::Ptr new_client(WS::Server::Listener::Client::Initializer &ci) override
+    WS::Server::Listener::Client::Ptr new_client(WS::Server::Listener::Client::Initializer &ci) override
     {
         return new MyClientInstance(ci);
     }
@@ -584,7 +584,7 @@ class ServerThread : public ServerThreadBase
         }
     }
 
-    virtual void thread_safe_stop() override
+    void thread_safe_stop() override
     {
         if (!halt)
         {

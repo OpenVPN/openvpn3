@@ -39,9 +39,9 @@ struct Unix : public Base
     {
     }
 
-    virtual void async_accept(ListenerBase *listener,
-                              const size_t acceptor_index,
-                              openvpn_io::io_context &io_context) override
+    void async_accept(ListenerBase *listener,
+                      const size_t acceptor_index,
+                      openvpn_io::io_context &io_context) override
     {
         AsioPolySock::Unix::Ptr sock(new AsioPolySock::Unix(io_context, acceptor_index));
         acceptor.async_accept(sock->socket,
@@ -49,7 +49,7 @@ struct Unix : public Base
                               { listener->handle_accept(std::move(sock), error); });
     }
 
-    virtual void close() override
+    void close() override
     {
         acceptor.close();
     }

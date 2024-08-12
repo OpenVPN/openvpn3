@@ -63,14 +63,14 @@ class MacDNSWatchdog : public RC<thread_unsafe_refcount>
         {
         }
 
-        virtual void execute(std::ostream &os)
+        void execute(std::ostream &os) override
         {
             os << to_string() << std::endl;
             if (parent)
                 parent->setdns(config, flags);
         }
 
-        virtual std::string to_string() const
+        std::string to_string() const override
         {
             std::ostringstream os;
             os << "MacDNSAction: FLAGS=";

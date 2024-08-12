@@ -157,7 +157,7 @@ class CryptoContextCHM : public CryptoDCContext
     {
     }
 
-    virtual CryptoDCInstance::Ptr new_obj(const unsigned int key_id)
+    CryptoDCInstance::Ptr new_obj(const unsigned int key_id) override
     {
         /* The check if the data channel cipher is valid is moved here, so encap_overhead
          * can be called and calculated for the OCC strings even if we do not allow the cipher
@@ -171,7 +171,7 @@ class CryptoContextCHM : public CryptoDCContext
     }
 
     // cipher/HMAC/key info
-    virtual Info crypto_info()
+    Info crypto_info() override
     {
         Info ret;
         ret.cipher_alg = cipher;
@@ -182,7 +182,7 @@ class CryptoContextCHM : public CryptoDCContext
 
     // Info for ProtoContext::link_mtu_adjust
 
-    virtual size_t encap_overhead() const
+    size_t encap_overhead() const override
     {
         return CryptoAlgs::size(digest) +      // HMAC
                CryptoAlgs::iv_length(cipher) + // Cipher IV

@@ -41,9 +41,9 @@ class ClientConfig : public TunClientFactory
         return new ClientConfig;
     }
 
-    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
-                                              TunClientParent &parent,
-                                              TransportClient *transcli);
+    TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
+                                      TunClientParent &parent,
+                                      TransportClient *transcli) override;
 
   private:
     ClientConfig()
@@ -56,7 +56,7 @@ class Client : public TunClient
     friend class ClientConfig; // calls constructor
 
   public:
-    virtual void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override
+    void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override
     {
 #ifdef TUN_NULL_EXIT
         throw ErrorCode(Error::TUN_SETUP_FAILED, true, "TUN_NULL_EXIT");
@@ -66,24 +66,24 @@ class Client : public TunClient
 #endif
     }
 
-    virtual bool tun_send(BufferAllocated &buf) override
+    bool tun_send(BufferAllocated &buf) override
     {
         config->stats->inc_stat(SessionStats::TUN_BYTES_OUT, buf.size());
         config->stats->inc_stat(SessionStats::TUN_PACKETS_OUT, 1);
         return true;
     }
 
-    virtual std::string tun_name() const override
+    std::string tun_name() const override
     {
         return "TUN_NULL";
     }
 
-    virtual std::string vpn_ip4() const override
+    std::string vpn_ip4() const override
     {
         return "";
     }
 
-    virtual std::string vpn_ip6() const override
+    std::string vpn_ip6() const override
     {
         return "";
     }
@@ -93,11 +93,11 @@ class Client : public TunClient
         return 0;
     }
 
-    virtual void set_disconnect() override
+    void set_disconnect() override
     {
     }
 
-    virtual void stop() override
+    void stop() override
     {
     }
 

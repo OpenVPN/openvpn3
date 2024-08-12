@@ -69,7 +69,7 @@ class MbedTLSRandom : public StrongRandomAPI
     }
 
     // Random algorithm name
-    virtual std::string name() const
+    std::string name() const override
     {
         const std::string n = "mbedTLS-CTR_DRBG";
         if (entropy)
@@ -79,7 +79,7 @@ class MbedTLSRandom : public StrongRandomAPI
     }
 
     // Fill buffer with random bytes
-    virtual void rand_bytes(unsigned char *buf, size_t size)
+    void rand_bytes(unsigned char *buf, size_t size) override
     {
         const int errnum = rndbytes(buf, size);
         if (errnum < 0)
@@ -88,7 +88,7 @@ class MbedTLSRandom : public StrongRandomAPI
 
     // Like rand_bytes, but don't throw exception.
     // Return true on successs, false on fail.
-    virtual bool rand_bytes_noexcept(unsigned char *buf, size_t size)
+    bool rand_bytes_noexcept(unsigned char *buf, size_t size) override
     {
         return rndbytes(buf, size) >= 0;
     }

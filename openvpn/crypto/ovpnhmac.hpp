@@ -199,30 +199,30 @@ class CryptoOvpnHMACInstance : public OvpnHMACInstance
     {
     }
 
-    virtual void init(const StaticKey &key)
+    void init(const StaticKey &key) override
     {
         ovpn_hmac.init(digest, key);
     }
 
-    virtual size_t output_size() const
+    size_t output_size() const override
     {
         return ovpn_hmac.output_size();
     }
 
-    virtual void ovpn_hmac_gen(unsigned char *data,
-                               const size_t data_size,
-                               const size_t l1,
-                               const size_t l2,
-                               const size_t l3)
+    void ovpn_hmac_gen(unsigned char *data,
+                       const size_t data_size,
+                       const size_t l1,
+                       const size_t l2,
+                       const size_t l3) override
     {
         ovpn_hmac.ovpn_hmac_gen(data, data_size, l1, l2, l3);
     }
 
-    virtual bool ovpn_hmac_cmp(const unsigned char *data,
-                               const size_t data_size,
-                               const size_t l1,
-                               const size_t l2,
-                               const size_t l3)
+    bool ovpn_hmac_cmp(const unsigned char *data,
+                       const size_t data_size,
+                       const size_t l1,
+                       const size_t l2,
+                       const size_t l3) override
     {
         return ovpn_hmac.ovpn_hmac_cmp(data, data_size, l1, l2, l3);
     }
@@ -241,12 +241,12 @@ class CryptoOvpnHMACContext : public OvpnHMACContext
     {
     }
 
-    virtual size_t size() const
+    size_t size() const override
     {
         return CryptoAlgs::size(digest);
     }
 
-    virtual OvpnHMACInstance::Ptr new_obj()
+    OvpnHMACInstance::Ptr new_obj() override
     {
         return new CryptoOvpnHMACInstance<CRYPTO_API>(digest);
     }
@@ -259,7 +259,7 @@ template <typename CRYPTO_API>
 class CryptoOvpnHMACFactory : public OvpnHMACFactory
 {
   public:
-    virtual OvpnHMACContext::Ptr new_obj(const CryptoAlgs::Type digest_type)
+    OvpnHMACContext::Ptr new_obj(const CryptoAlgs::Type digest_type) override
     {
         return new CryptoOvpnHMACContext<CRYPTO_API>(digest_type);
     }

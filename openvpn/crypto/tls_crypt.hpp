@@ -270,22 +270,22 @@ class CryptoTLSCryptContext : public TLSCryptContext
     {
     }
 
-    virtual size_t digest_size() const
+    size_t digest_size() const override
     {
         return CryptoAlgs::size(digest);
     }
 
-    virtual size_t cipher_key_size() const
+    size_t cipher_key_size() const override
     {
         return CryptoAlgs::key_length(cipher);
     }
 
-    virtual TLSCryptInstance::Ptr new_obj_send()
+    TLSCryptInstance::Ptr new_obj_send() override
     {
         return new CryptoTLSCryptInstance<CRYPTO_API>(libctx, digest, cipher, CRYPTO_API::CipherContext::ENCRYPT);
     }
 
-    virtual TLSCryptInstance::Ptr new_obj_recv()
+    TLSCryptInstance::Ptr new_obj_recv() override
     {
         return new CryptoTLSCryptInstance<CRYPTO_API>(libctx, digest, cipher, CRYPTO_API::CipherContext::DECRYPT);
     }

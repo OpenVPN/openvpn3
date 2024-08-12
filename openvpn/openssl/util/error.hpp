@@ -68,7 +68,7 @@ class OpenSSLException : public ExceptionCode
         init_ssl_error(ssl_error, error_text.c_str());
     }
 
-    virtual const char *what() const noexcept
+    const char *what() const noexcept override
     {
         return errtxt.c_str();
     }

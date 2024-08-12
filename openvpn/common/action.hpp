@@ -141,7 +141,7 @@ class ActionList : public std::vector<Action::Ptr>, public DestructorBase
         halt_ = true;
     }
 
-    virtual void destroy(std::ostream &os) override // defined by DestructorBase
+    void destroy(std::ostream &os) override // defined by DestructorBase
     {
         if (enable_destroy_)
         {

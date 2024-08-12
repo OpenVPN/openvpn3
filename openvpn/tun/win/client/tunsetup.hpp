@@ -131,11 +131,11 @@ class Setup : public SetupBase
     }
 
     // Set up the TAP device
-    virtual HANDLE establish(const TunBuilderCapture &pull,
-                             const std::wstring &openvpn_app_path,
-                             Stop *stop,
-                             std::ostream &os,
-                             RingBuffer::Ptr ring_buffer) override // defined by SetupBase
+    HANDLE establish(const TunBuilderCapture &pull,
+                     const std::wstring &openvpn_app_path,
+                     Stop *stop,
+                     std::ostream &os,
+                     RingBuffer::Ptr ring_buffer) override // defined by SetupBase
     {
         // close out old remove cmds, if they exist
         destroy(os);
@@ -185,7 +185,7 @@ class Setup : public SetupBase
     // the adapter properties matches the data given in pull.
     // This method is usually called once per second until it
     // returns true.
-    virtual bool l2_ready(const TunBuilderCapture &pull) override
+    bool l2_ready(const TunBuilderCapture &pull) override
     {
         const unsigned int route_delay = 5;
         if (l2_state)
@@ -208,9 +208,9 @@ class Setup : public SetupBase
 
     // Finish the layer 2 configuration, should be called
     // after l2_ready() returns true.
-    virtual void l2_finish(const TunBuilderCapture &pull,
-                           Stop *stop,
-                           std::ostream &os) override
+    void l2_finish(const TunBuilderCapture &pull,
+                   Stop *stop,
+                   std::ostream &os) override
     {
         std::unique_ptr<L2State> l2s(std::move(l2_state));
         if (l2s)
@@ -222,7 +222,7 @@ class Setup : public SetupBase
         }
     }
 
-    virtual void destroy(std::ostream &os) override // defined by DestructorBase
+    void destroy(std::ostream &os) override // defined by DestructorBase
     {
         // l2_state
         l2_state.reset();

@@ -76,7 +76,7 @@ class MySessionStats : public SessionStats
         std::memset(errors, 0, sizeof(errors));
     }
 
-    virtual void error(const size_t err_type, const std::string *text = NULL)
+    void error(const size_t err_type, const std::string *text = NULL) override
     {
         if (err_type < Error::N_ERRORS)
             ++errors[err_type];

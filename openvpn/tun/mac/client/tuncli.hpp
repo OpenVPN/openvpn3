@@ -116,12 +116,12 @@ class ClientConfig : public TunClientFactory
         return new ClientConfig;
     }
 
-    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
-                                              TunClientParent &parent,
-                                              TransportClient *transcli);
+    TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
+                                      TunClientParent &parent,
+                                      TransportClient *transcli) override;
 
     // return true if layer 2 tunnels are supported
-    virtual bool layer_2_supported() const
+    bool layer_2_supported() const override
     {
 #if defined(MAC_TUNTAP_FALLBACK)
         return false; // change to true after TAP support is added
@@ -131,7 +131,7 @@ class ClientConfig : public TunClientFactory
     }
 
     // called just prior to transmission of Disconnect event
-    virtual void finalize(const bool disconnected)
+    void finalize(const bool disconnected) override
     {
         if (disconnected)
             tun_persist.reset();
@@ -146,7 +146,7 @@ class Client : public TunClient
     typedef Tun<Client *, TunPersist> TunImpl;
 
   public:
-    virtual void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override
+    void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override
     {
         if (!impl)
         {
@@ -263,12 +263,12 @@ class Client : public TunClient
         }
     }
 
-    virtual bool tun_send(BufferAllocated &buf) override
+    bool tun_send(BufferAllocated &buf) override
     {
         return send(buf);
     }
 
-    virtual std::string tun_name() const override
+    std::string tun_name() const override
     {
         if (impl)
             return impl->name();
@@ -276,7 +276,7 @@ class Client : public TunClient
             return "UNDEF_TUN";
     }
 
-    virtual std::string vpn_ip4() const override
+    std::string vpn_ip4() const override
     {
         if (state->vpn_ip4_addr.specified())
             return state->vpn_ip4_addr.to_string();
@@ -284,7 +284,7 @@ class Client : public TunClient
             return "";
     }
 
-    virtual std::string vpn_ip6() const override
+    std::string vpn_ip6() const override
     {
         if (state->vpn_ip6_addr.specified())
             return state->vpn_ip6_addr.to_string();
@@ -292,7 +292,7 @@ class Client : public TunClient
             return "";
     }
 
-    virtual std::string vpn_gw4() const override
+    std::string vpn_gw4() const override
     {
         if (state->vpn_ip4_gw.specified())
             return state->vpn_ip4_gw.to_string();
@@ -300,7 +300,7 @@ class Client : public TunClient
             return "";
     }
 
-    virtual std::string vpn_gw6() const override
+    std::string vpn_gw6() const override
     {
         if (state->vpn_ip6_gw.specified())
             return state->vpn_ip6_gw.to_string();
@@ -313,11 +313,11 @@ class Client : public TunClient
         return state->mtu;
     }
 
-    virtual void set_disconnect() override
+    void set_disconnect() override
     {
     }
 
-    virtual void stop() override
+    void stop() override
     {
         stop_();
     }

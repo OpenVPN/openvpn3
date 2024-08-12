@@ -1349,7 +1349,7 @@ class RCWeak<RCImpl>::NotifyItem : public NotifyBase
     }
 
   private:
-    virtual void call() noexcept override
+    void call() noexcept override
     {
         callable();
     }

@@ -148,10 +148,10 @@ class UnixCommandAgent : public TunBuilderSetup::Factory
         }
 
       private:
-        virtual int establish(const TunBuilderCapture &pull, // defined by TunBuilderSetup::Base
-                              TunBuilderSetup::Config *tbs_config,
-                              Stop *stop,
-                              std::ostream &os) override
+        int establish(const TunBuilderCapture &pull, // defined by TunBuilderSetup::Base
+                      TunBuilderSetup::Config *tbs_config,
+                      Stop *stop,
+                      std::ostream &os) override
         {
             os << "SetupClient: transmitting tun setup list to " << config->uds_name << std::endl;
 
@@ -223,7 +223,7 @@ class UnixCommandAgent : public TunBuilderSetup::Factory
             return tun_fd.release();
         }
 
-        virtual void destroy(std::ostream &os) override // defined by DestructorBase
+        void destroy(std::ostream &os) override // defined by DestructorBase
         {
             os << "SetupClient: transmitting tun destroy request to " << config->uds_name << std::endl;
 
@@ -293,7 +293,7 @@ class UnixCommandAgent : public TunBuilderSetup::Factory
         Config::Ptr config;
     };
 
-    virtual TunBuilderSetup::Base::Ptr new_setup_obj() override
+    TunBuilderSetup::Base::Ptr new_setup_obj() override
     {
         if (config)
             return new SetupClient(config);

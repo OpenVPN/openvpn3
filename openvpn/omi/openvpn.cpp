@@ -74,16 +74,16 @@ class Client : public ClientAPI::OpenVPNClient
         return true;
     }
 
-    virtual bool pause_on_connection_timeout() override
+    bool pause_on_connection_timeout() override
     {
         return false;
     }
 
-    virtual void event(const ClientAPI::Event &ev) override;
-    virtual void log(const ClientAPI::LogInfo &msg) override;
-    virtual void external_pki_cert_request(ClientAPI::ExternalPKICertRequest &certreq) override;
-    virtual void external_pki_sign_request(ClientAPI::ExternalPKISignRequest &signreq) override;
-    virtual void acc_event(const openvpn::ClientAPI::AppCustomControlMessageEvent &event) override;
+    void event(const ClientAPI::Event &ev) override;
+    void log(const ClientAPI::LogInfo &msg) override;
+    void external_pki_cert_request(ClientAPI::ExternalPKICertRequest &certreq) override;
+    void external_pki_sign_request(ClientAPI::ExternalPKISignRequest &signreq) override;
+    void acc_event(const openvpn::ClientAPI::AppCustomControlMessageEvent &event) override;
 
     OMI *parent;
 };
@@ -147,7 +147,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         OMICore::start(opt);
     }
 
-    virtual void log(const ClientAPI::LogInfo &msg) override
+    void log(const ClientAPI::LogInfo &msg) override
     {
         openvpn_io::post(io_context, [this, msg]()
                          { log_msg(msg); });
@@ -257,7 +257,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         }
     }
 
-    virtual bool omi_command_is_multiline(const std::string &arg0, const Option &o) override
+    bool omi_command_is_multiline(const std::string &arg0, const Option &o) override
     {
         if (arg0 == "rsa-sig")
             return true;
@@ -265,7 +265,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
     }
 
   private:
-    virtual bool omi_command_in(const std::string &arg0, const Command &cmd) override
+    bool omi_command_in(const std::string &arg0, const Command &cmd) override
     {
         switch (arg0.at(0))
         {
@@ -306,7 +306,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         return false;
     }
 
-    virtual void omi_done(const bool eof) override
+    void omi_done(const bool eof) override
     {
         // OPENVPN_LOG("OMI DONE eof=" << eof);
     }
@@ -332,7 +332,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         return ret;
     }
 
-    virtual void omi_start_connection() override
+    void omi_start_connection() override
     {
         try
         {
@@ -655,7 +655,7 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
         }
     }
 
-    virtual bool omi_stop() override
+    bool omi_stop() override
     {
         bool ret = false;
 
@@ -716,19 +716,19 @@ class OMI : public OMICore, public ClientAPI::LogReceiver
 				   } });
     }
 
-    virtual void omi_sigterm() override
+    void omi_sigterm() override
     {
         if (client)
             set_final_error(gen_state_msg(true, "EXITING", "exit-with-notification"));
         stop();
     }
 
-    virtual bool omi_is_sighup_implemented() override
+    bool omi_is_sighup_implemented() override
     {
         return true;
     }
 
-    virtual void omi_sighup() override
+    void omi_sighup() override
     {
         if (client)
             client->reconnect(1);

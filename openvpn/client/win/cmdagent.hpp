@@ -200,11 +200,11 @@ class WinCommandAgent : public TunWin::SetupFactory
             return tap_;
         }
 
-        virtual HANDLE establish(const TunBuilderCapture &pull,
-                                 const std::wstring &openvpn_app_path,
-                                 Stop *stop,
-                                 std::ostream &os,
-                                 TunWin::RingBuffer::Ptr ring_buffer) override // TunWin::SetupBase
+        HANDLE establish(const TunBuilderCapture &pull,
+                         const std::wstring &openvpn_app_path,
+                         Stop *stop,
+                         std::ostream &os,
+                         TunWin::RingBuffer::Ptr ring_buffer) override // TunWin::SetupBase
         {
             os << "SetupClient: transmitting tun setup list to " << config->npserv << std::endl;
 
@@ -260,19 +260,19 @@ class WinCommandAgent : public TunWin::SetupFactory
             return tap;
         }
 
-        virtual void l2_finish(const TunBuilderCapture &pull,
-                               Stop *stop,
-                               std::ostream &os) override
+        void l2_finish(const TunBuilderCapture &pull,
+                       Stop *stop,
+                       std::ostream &os) override
         {
             throw ovpnagent("l2_finish not implemented");
         }
 
-        virtual bool l2_ready(const TunBuilderCapture &pull) override
+        bool l2_ready(const TunBuilderCapture &pull) override
         {
             throw ovpnagent("l2_ready not implemented");
         }
 
-        virtual void confirm() override
+        void confirm() override
         {
             confirm_event.signal_event();
         }
@@ -288,7 +288,7 @@ class WinCommandAgent : public TunWin::SetupFactory
             }
         }
 
-        virtual void destroy(std::ostream &os) override // defined by DestructorBase
+        void destroy(std::ostream &os) override // defined by DestructorBase
         {
             os << "SetupClient: signaling tun destroy event" << std::endl;
             service_process.close();
@@ -350,7 +350,7 @@ class WinCommandAgent : public TunWin::SetupFactory
         Win::DestroyEvent destroy_event;
     };
 
-    virtual TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context &io_context, TunWin::Type tun_type, bool allow_local_dns_resolvers) override
+    TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context &io_context, TunWin::Type tun_type, bool allow_local_dns_resolvers) override
     {
         if (config)
         {

@@ -90,12 +90,12 @@ struct DelayedQueue : public RC<thread_unsafe_refcount>
         {
         }
 
-        virtual void call()
+        void call() override
         {
             func();
         }
 
-        virtual const Time &fire_time()
+        const Time &fire_time() override
         {
             return fire;
         }

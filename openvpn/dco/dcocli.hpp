@@ -89,7 +89,7 @@ class ClientConfig : public DCO,
         transport.remote_list->process_push(opt);
     }
 
-    virtual void finalize(const bool disconnected) override
+    void finalize(const bool disconnected) override
     {
 #if defined(ENABLE_OVPNDCOWIN)
         if (disconnected)
@@ -97,8 +97,7 @@ class ClientConfig : public DCO,
 #endif
     }
 
-    virtual TunClientFactory::Ptr
-    new_tun_factory(const DCO::TunConfig &conf, const OptionList &opt) override
+    TunClientFactory::Ptr new_tun_factory(const DCO::TunConfig &conf, const OptionList &opt) override
     {
         tun = conf;
 
@@ -122,20 +121,18 @@ class ClientConfig : public DCO,
         return TunClientFactory::Ptr(this);
     }
 
-    virtual TransportClientFactory::Ptr
-    new_transport_factory(const DCO::TransportConfig &conf) override
+    TransportClientFactory::Ptr new_transport_factory(const DCO::TransportConfig &conf) override
     {
         transport = conf;
         return TransportClientFactory::Ptr(this);
     }
 
-    virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
-                                              TunClientParent &parent,
-                                              TransportClient *transcli) override;
+    TunClient::Ptr new_tun_client_obj(openvpn_io::io_context &io_context,
+                                      TunClientParent &parent,
+                                      TransportClient *transcli) override;
 
-    virtual TransportClient::Ptr
-    new_transport_client_obj(openvpn_io::io_context &io_context,
-                             TransportClientParent *parent) override;
+    TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context &io_context,
+                                                  TransportClientParent *parent) override;
 
     static DCO::Ptr new_controller(TunBuilderBase *tb)
     {
@@ -160,33 +157,33 @@ class Client : public TransportClient,
   public:
     // transport methods
 
-    virtual bool transport_send_queue_empty() override
+    bool transport_send_queue_empty() override
     {
         return false;
     }
 
-    virtual bool transport_has_send_queue() override
+    bool transport_has_send_queue() override
     {
         return false;
     }
 
-    virtual size_t transport_send_queue_size() override
+    size_t transport_send_queue_size() override
     {
         return 0;
     }
 
-    virtual void reset_align_adjust(const size_t align_adjust) override
+    void reset_align_adjust(const size_t align_adjust) override
     {
     }
 
-    virtual void transport_stop_requeueing() override
+    void transport_stop_requeueing() override
     {
     }
 
-    virtual void server_endpoint_info(std::string &host,
-                                      std::string &port,
-                                      std::string &proto,
-                                      std::string &ip_addr) const override
+    void server_endpoint_info(std::string &host,
+                              std::string &port,
+                              std::string &proto,
+                              std::string &ip_addr) const override
     {
         host = server_host;
         port = server_port;
@@ -196,24 +193,23 @@ class Client : public TransportClient,
         ip_addr = addr.to_string();
     }
 
-    virtual void stop() override
+    void stop() override
     {
         stop_();
     }
 
     // tun methods
 
-    virtual void set_disconnect() override
+    void set_disconnect() override
     {
     }
 
-    virtual bool
-    tun_send(BufferAllocated &buf) override // return true if send succeeded
+    bool tun_send(BufferAllocated &buf) override // return true if send succeeded
     {
         return false;
     }
 
-    virtual std::string vpn_ip4() const override
+    std::string vpn_ip4() const override
     {
         if (state->vpn_ip4_addr.specified())
             return state->vpn_ip4_addr.to_string();
@@ -221,7 +217,7 @@ class Client : public TransportClient,
             return "";
     }
 
-    virtual std::string vpn_ip6() const override
+    std::string vpn_ip6() const override
     {
         if (state->vpn_ip6_addr.specified())
             return state->vpn_ip6_addr.to_string();
@@ -229,7 +225,7 @@ class Client : public TransportClient,
             return "";
     }
 
-    virtual std::string vpn_gw4() const override
+    std::string vpn_gw4() const override
     {
         if (state->vpn_ip4_gw.specified())
             return state->vpn_ip4_gw.to_string();
@@ -237,7 +233,7 @@ class Client : public TransportClient,
             return "";
     }
 
-    virtual std::string vpn_gw6() const override
+    std::string vpn_gw6() const override
     {
         if (state->vpn_ip6_gw.specified())
             return state->vpn_ip6_gw.to_string();
@@ -261,7 +257,7 @@ class Client : public TransportClient,
     {
     }
 
-    virtual void transport_reparent(TransportClientParent *parent_arg) override
+    void transport_reparent(TransportClientParent *parent_arg) override
     {
         transport_parent = parent_arg;
     }

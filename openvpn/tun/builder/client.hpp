@@ -125,7 +125,7 @@ class Client : public TunClient
     typedef Tun<Client *> TunImpl;
 
   public:
-    virtual void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override
+    void tun_start(const OptionList &opt, TransportClient &transcli, CryptoDCSettings &) override
     {
         if (!impl)
         {
@@ -210,12 +210,12 @@ class Client : public TunClient
         }
     }
 
-    virtual bool tun_send(BufferAllocated &buf) override
+    bool tun_send(BufferAllocated &buf) override
     {
         return send(buf);
     }
 
-    virtual std::string tun_name() const override
+    std::string tun_name() const override
     {
         if (impl)
             return impl->name();
@@ -223,7 +223,7 @@ class Client : public TunClient
             return "UNDEF_TUN";
     }
 
-    virtual std::string vpn_ip4() const override
+    std::string vpn_ip4() const override
     {
         if (state->vpn_ip4_addr.specified())
             return state->vpn_ip4_addr.to_string();
@@ -231,7 +231,7 @@ class Client : public TunClient
             return "";
     }
 
-    virtual std::string vpn_ip6() const override
+    std::string vpn_ip6() const override
     {
         if (state->vpn_ip6_addr.specified())
             return state->vpn_ip6_addr.to_string();
@@ -239,7 +239,7 @@ class Client : public TunClient
             return "";
     }
 
-    virtual std::string vpn_gw4() const override
+    std::string vpn_gw4() const override
     {
         if (state->vpn_ip4_gw.specified())
             return state->vpn_ip4_gw.to_string();
@@ -247,7 +247,7 @@ class Client : public TunClient
             return "";
     }
 
-    virtual std::string vpn_gw6() const override
+    std::string vpn_gw6() const override
     {
         if (state->vpn_ip6_gw.specified())
             return state->vpn_ip6_gw.to_string();
@@ -260,13 +260,13 @@ class Client : public TunClient
         return state->mtu;
     }
 
-    virtual void set_disconnect() override
+    void set_disconnect() override
     {
         if (tun_persist)
             tun_persist->set_disconnect();
     }
 
-    virtual void stop() override
+    void stop() override
     {
         stop_();
     }

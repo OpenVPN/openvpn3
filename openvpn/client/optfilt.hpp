@@ -64,7 +64,7 @@ class PushedOptionsFilter : public OptionList::FilterBase
         }
     }
 
-    virtual bool filter(const Option &opt)
+    bool filter(const Option &opt) override
     {
         return filter_(opt) == Accept ? true : false;
     }

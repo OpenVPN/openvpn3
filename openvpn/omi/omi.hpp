@@ -855,7 +855,7 @@ class OMICore : public Acceptor::ListenerBase
     }
 
     // despite its name, this method handles both accept and connect events
-    virtual void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code &error) override
+    void handle_accept(AsioPolySock::Base::Ptr sock, const openvpn_io::error_code &error) override
     {
         if (stop_called)
             return;

@@ -133,20 +133,20 @@ struct TCP : public Base
     {
     }
 
-    virtual void async_send(const openvpn_io::const_buffer &buf,
-                            Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
+    void async_send(const openvpn_io::const_buffer &buf,
+                    Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
     {
         socket.async_send(buf, std::move(callback));
     }
 
-    virtual void async_receive(const openvpn_io::mutable_buffer &buf,
-                               Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
+    void async_receive(const openvpn_io::mutable_buffer &buf,
+                       Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
     {
         socket.async_receive(buf, std::move(callback));
     }
 
 #if !defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
-    virtual std::string remote_endpoint_str() const override
+    std::string remote_endpoint_str() const override
     {
         try
         {
@@ -159,7 +159,7 @@ struct TCP : public Base
     }
 #endif
 
-    virtual bool remote_ip_port(IP::Addr &addr, unsigned int &port) const override
+    bool remote_ip_port(IP::Addr &addr, unsigned int &port) const override
     {
         try
         {
@@ -173,18 +173,18 @@ struct TCP : public Base
         }
     }
 
-    virtual void non_blocking(const bool state) override
+    void non_blocking(const bool state) override
     {
         socket.non_blocking(state);
     }
 
-    virtual void tcp_nodelay() override
+    void tcp_nodelay() override
     {
         socket.set_option(openvpn_io::ip::tcp::no_delay(true));
     }
 
 #if !defined(OPENVPN_PLATFORM_WIN)
-    virtual void set_cloexec() override
+    void set_cloexec() override
     {
         const int fd = socket.native_handle();
         if (fd >= 0)
@@ -192,7 +192,7 @@ struct TCP : public Base
     }
 #endif
 
-    virtual void shutdown(const unsigned int flags) override
+    void shutdown(const unsigned int flags) override
     {
         if (flags & SHUTDOWN_SEND)
             socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_send);
@@ -200,34 +200,34 @@ struct TCP : public Base
             socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_receive);
     }
 
-    virtual void close() override
+    void close() override
     {
         socket.close();
     }
 
-    virtual bool is_open() const override
+    bool is_open() const override
     {
         return socket.is_open();
     }
 
-    virtual bool is_local() const override
+    bool is_local() const override
     {
         return false;
     }
 
-    virtual openvpn_io::detail::socket_type native_handle() override
+    openvpn_io::detail::socket_type native_handle() override
     {
         return socket.native_handle();
     }
 
 #if defined(OPENVPN_POLYSOCK_SUPPORTS_ALT_ROUTING)
-    virtual std::string remote_endpoint_str() const override
+    std::string remote_endpoint_str() const override
     {
         const char *proto = (socket.alt_routing_enabled() ? "TCP ALT " : "TCP ");
         return proto + socket.to_string();
     }
 
-    virtual bool alt_routing_enabled() const override
+    bool alt_routing_enabled() const override
     {
         return socket.alt_routing_enabled();
     }
@@ -252,39 +252,39 @@ struct Unix : public Base
     {
     }
 
-    virtual void async_send(const openvpn_io::const_buffer &buf,
-                            Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
+    void async_send(const openvpn_io::const_buffer &buf,
+                    Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
     {
         socket.async_send(buf, std::move(callback));
     }
 
-    virtual void async_receive(const openvpn_io::mutable_buffer &buf,
-                               Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
+    void async_receive(const openvpn_io::mutable_buffer &buf,
+                       Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
     {
         socket.async_receive(buf, std::move(callback));
     }
 
-    virtual std::string remote_endpoint_str() const override
+    std::string remote_endpoint_str() const override
     {
         return "LOCAL";
     }
 
-    virtual bool remote_ip_port(IP::Addr &, unsigned int &) const override
+    bool remote_ip_port(IP::Addr &, unsigned int &) const override
     {
         return false;
     }
 
-    virtual void non_blocking(const bool state) override
+    void non_blocking(const bool state) override
     {
         socket.non_blocking(state);
     }
 
-    virtual bool peercreds(SockOpt::Creds &cr) override
+    bool peercreds(SockOpt::Creds &cr) override
     {
         return SockOpt::peercreds(socket.native_handle(), cr);
     }
 
-    virtual void set_cloexec() override
+    void set_cloexec() override
     {
         const int fd = socket.native_handle();
         if (fd >= 0)
@@ -295,7 +295,7 @@ struct Unix : public Base
     // shutdown() throws "socket is not connected" exception
     // on macos if another side has called close() - this behavior
     // breaks communication with agent, and hence disabled
-    virtual void shutdown(const unsigned int flags) override
+    void shutdown(const unsigned int flags) override
     {
         if (flags & SHUTDOWN_SEND)
             socket.shutdown(openvpn_io::ip::tcp::socket::shutdown_send);
@@ -304,22 +304,22 @@ struct Unix : public Base
     }
 #endif
 
-    virtual void close() override
+    void close() override
     {
         socket.close();
     }
 
-    virtual bool is_open() const override
+    bool is_open() const override
     {
         return socket.is_open();
     }
 
-    virtual bool is_local() const override
+    bool is_local() const override
     {
         return true;
     }
 
-    virtual openvpn_io::detail::socket_type native_handle() override
+    openvpn_io::detail::socket_type native_handle() override
     {
         return socket.native_handle();
     }
@@ -340,43 +340,43 @@ struct NamedPipe : public Base
     {
     }
 
-    virtual void async_send(const openvpn_io::const_buffer &buf,
-                            Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
+    void async_send(const openvpn_io::const_buffer &buf,
+                    Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
     {
         handle.async_write_some(buf, std::move(callback));
     }
 
-    virtual void async_receive(const openvpn_io::mutable_buffer &buf,
-                               Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
+    void async_receive(const openvpn_io::mutable_buffer &buf,
+                       Function<void(const openvpn_io::error_code &, const size_t)> &&callback) override
     {
         handle.async_read_some(buf, std::move(callback));
     }
 
-    virtual std::string remote_endpoint_str() const override
+    std::string remote_endpoint_str() const override
     {
         return "NAMED_PIPE";
     }
 
-    virtual bool remote_ip_port(IP::Addr &, unsigned int &) const override
+    bool remote_ip_port(IP::Addr &, unsigned int &) const override
     {
         return false;
     }
 
-    virtual void non_blocking(const bool state) override
+    void non_blocking(const bool state) override
     {
     }
 
-    virtual void close() override
+    void close() override
     {
         handle.close();
     }
 
-    virtual bool is_open() const override
+    bool is_open() const override
     {
         return handle.is_open();
     }
 
-    virtual bool is_local() const override
+    bool is_local() const override
     {
         return true;
     }
