@@ -59,6 +59,8 @@ class Service
         checkpoint = 1;
     }
 
+    virtual ~Service() = default;
+
     bool is_service() const
     {
         return bool(service);
