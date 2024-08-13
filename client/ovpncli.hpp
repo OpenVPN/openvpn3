@@ -452,9 +452,7 @@ struct LogInfo
 struct LogReceiver
 {
     virtual void log(const LogInfo &) = 0;
-    virtual ~LogReceiver()
-    {
-    }
+    virtual ~LogReceiver() = default;
 };
 
 // used to pass stats for an interface

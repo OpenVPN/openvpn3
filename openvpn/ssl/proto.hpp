@@ -3949,9 +3949,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         return bool(primary);
     }
 
-    virtual ~ProtoContext()
-    {
-    }
+    virtual ~ProtoContext() = default;
 
     // return the PacketType of an incoming network packet
     PacketType packet_type(const Buffer &buf)

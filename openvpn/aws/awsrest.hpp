@@ -242,9 +242,7 @@ class REST
             return date.substr(0, 8) + '/' + region + '/' + service + "/aws4_request";
         }
 
-        virtual ~QueryBuilder()
-        {
-        }
+        virtual ~QueryBuilder() = default;
     };
 };
 } // namespace openvpn::AWS

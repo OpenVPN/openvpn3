@@ -76,9 +76,7 @@ class SetUserGroup
         }
     }
 
-    virtual ~SetUserGroup()
-    {
-    }
+    virtual ~SetUserGroup() = default;
 
     const std::string &user() const
     {

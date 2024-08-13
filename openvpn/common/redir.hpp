@@ -49,9 +49,7 @@ struct RedirectBase
     OPENVPN_EXCEPTION(redirect_std_err);
     virtual void redirect() = 0;
     virtual void close() = 0;
-    virtual ~RedirectBase()
-    {
-    }
+    virtual ~RedirectBase() = default;
 };
 
 struct RedirectStdFD : public RedirectBase

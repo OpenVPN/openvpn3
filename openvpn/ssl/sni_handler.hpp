@@ -47,9 +47,7 @@ class HandlerBase
                                          SSLConfigAPI::Ptr default_factory) const = 0;
     // clang-format on
 
-    virtual ~HandlerBase()
-    {
-    }
+    virtual ~HandlerBase() = default;
 };
 
 } // namespace openvpn::SNI

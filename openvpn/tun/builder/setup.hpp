@@ -36,9 +36,7 @@ struct Config
     virtual Json::Value to_json() = 0;
     virtual void from_json(const Json::Value &root, const std::string &title) = 0;
 #endif
-    virtual ~Config()
-    {
-    }
+    virtual ~Config() = default;
 };
 
 struct Base : public DestructorBase

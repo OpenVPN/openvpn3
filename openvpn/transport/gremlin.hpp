@@ -75,9 +75,7 @@ struct DelayedQueue : public RC<thread_unsafe_refcount>
     {
         virtual void call() = 0;
         virtual const Time &fire_time() = 0;
-        virtual ~EventBase()
-        {
-        }
+        virtual ~EventBase() = default;
     };
 
     template <class F>

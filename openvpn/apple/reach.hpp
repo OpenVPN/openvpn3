@@ -38,9 +38,7 @@ struct ReachabilityInterface
     virtual Status reachable() const = 0;
     virtual bool reachableVia(const std::string &net_type) const = 0;
     virtual std::string to_string() const = 0;
-    virtual ~ReachabilityInterface()
-    {
-    }
+    virtual ~ReachabilityInterface() = default;
 };
 } // namespace openvpn
 #endif

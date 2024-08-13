@@ -343,13 +343,9 @@ class MyClientInstance : public WS::Server::Listener::Client
     MyClientInstance(WS::Server::Listener::Client::Initializer &ci)
         : WS::Server::Listener::Client(ci)
     {
-        // OPENVPN_LOG("INSTANCE START");
     }
 
-    virtual ~MyClientInstance()
-    {
-        // OPENVPN_LOG("INSTANCE DESTRUCT");
-    }
+    virtual ~MyClientInstance() = default;
 
   private:
     void generate_reply(const Json::Value &jout)

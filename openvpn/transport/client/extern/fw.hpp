@@ -32,9 +32,7 @@ struct Config;
 struct Factory
 {
     virtual TransportClientFactory *new_transport_factory(const Config &conf) = 0;
-    virtual ~Factory()
-    {
-    }
+    virtual ~Factory() = default;
 };
 #else
 struct Factory

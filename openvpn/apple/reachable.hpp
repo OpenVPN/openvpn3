@@ -205,9 +205,7 @@ class ReachabilityBase
     virtual Type vtype() const = 0;
     virtual Status vstatus(const SCNetworkReachabilityFlags flags) const = 0;
 
-    virtual ~ReachabilityBase()
-    {
-    }
+    virtual ~ReachabilityBase() = default;
 
     CF::NetworkReachability reach;
 };

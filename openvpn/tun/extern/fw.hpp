@@ -34,9 +34,7 @@ struct Config; // defined in config.hpp
 struct Factory
 {
     virtual TunClientFactory *new_tun_factory(const Config &conf, const OptionList &opt) = 0;
-    virtual ~Factory()
-    {
-    }
+    virtual ~Factory() = default;
 };
 } // namespace ExternalTun
 

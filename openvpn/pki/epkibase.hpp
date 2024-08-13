@@ -35,9 +35,7 @@ class ExternalPKIBase
     // Return true on success or false on error.
     virtual bool sign(const std::string &alias, const std::string &data, std::string &sig, const std::string &algorithm, const std::string &hashalg, const std::string &saltlen) = 0;
 
-    virtual ~ExternalPKIBase()
-    {
-    }
+    virtual ~ExternalPKIBase() = default;
 };
 
 class ExternalPKIImpl

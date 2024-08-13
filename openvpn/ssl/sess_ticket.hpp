@@ -222,9 +222,7 @@ class TLSSessionTicketBase
     // return string that identifies the app
     virtual std::string session_id_context() const = 0;
 
-    virtual ~TLSSessionTicketBase()
-    {
-    }
+    virtual ~TLSSessionTicketBase() = default;
 
   private:
     static void b64_to_key(const std::string &b64, const char *title, unsigned char *out, const size_t outlen)

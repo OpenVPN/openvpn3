@@ -55,9 +55,7 @@ class CFException : public std::exception
         return errtxt;
     }
 
-    virtual ~CFException() noexcept
-    {
-    }
+    virtual ~CFException() noexcept = default;
 
   private:
     void set_errtxt(const std::string &text, const OSStatus status)

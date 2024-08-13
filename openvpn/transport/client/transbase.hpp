@@ -102,9 +102,7 @@ struct TransportClientParent
                                    unsigned int &keepalive_timeout) = 0;
     // clang-format on
 
-    virtual ~TransportClientParent()
-    {
-    }
+    virtual ~TransportClientParent() = default;
 };
 
 // Factory for client transport object.

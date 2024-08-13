@@ -989,8 +989,8 @@ template <typename RCImpl>
 class RCCopyable
 {
   public:
-    virtual ~RCCopyable(){};
-    RCCopyable() noexcept {};
+    virtual ~RCCopyable() = default;
+    RCCopyable() noexcept = default;
     RCCopyable(const RCCopyable &) noexcept;
     RCCopyable(RCCopyable &&) noexcept;
     RCCopyable &operator=(const RCCopyable &) noexcept;
@@ -1318,13 +1318,9 @@ template <typename RCImpl>
 class RCWeak<RCImpl>::NotifyBase
 {
   public:
-    NotifyBase() noexcept
-    {
-    }
+    NotifyBase() noexcept = default;
     virtual void call() noexcept = 0;
-    virtual ~NotifyBase()
-    {
-    }
+    virtual ~NotifyBase() = default;
     NotifyBase *next = nullptr;
 
   private:

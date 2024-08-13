@@ -48,9 +48,7 @@ struct Action : public RC<thread_unsafe_refcount>
         throw Exception("Action::to_json() virtual method not implemented");
     }
 #endif
-    virtual ~Action()
-    {
-    }
+    virtual ~Action() = default;
 };
 
 class ActionList : public std::vector<Action::Ptr>, public DestructorBase

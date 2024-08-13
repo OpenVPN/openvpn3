@@ -75,9 +75,7 @@ class ExceptionCode : public std::exception
         return code_ != 0;
     }
 
-    virtual ~ExceptionCode() noexcept
-    {
-    }
+    virtual ~ExceptionCode() noexcept = default;
 
   private:
     static unsigned int mkcode(const Error::Type code, const bool fatal)
@@ -104,9 +102,7 @@ class ErrorCode : public ExceptionCode
         return err_.c_str();
     }
 
-    virtual ~ErrorCode() noexcept
-    {
-    }
+    virtual ~ErrorCode() noexcept = default;
 
   private:
     std::string err_;
