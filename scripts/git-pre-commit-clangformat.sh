@@ -76,7 +76,7 @@ else
     against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
 fi
 
-CLANGFORMAT=$(command -v clang-format)
+CLANGFORMAT=$(command -v clang-format || true)
 
 # make sure the executable are correctly set
 if [ -z "$CLANGFORMAT" ] ; then
