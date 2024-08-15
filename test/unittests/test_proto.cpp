@@ -958,7 +958,6 @@ int test(const int thread_num, bool use_tls_ekm)
         }
         cp->tls_crypt_ = ClientProtoContext::ProtoConfig::TLSCrypt::V2;
 #endif
-        cp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)
         cp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1
@@ -1046,7 +1045,6 @@ int test(const int thread_num, bool use_tls_ekm)
         sp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
         sp->tls_crypt_ = ClientProtoContext::ProtoConfig::TLSCrypt::V2;
 #endif
-        sp->pid_mode = PacketIDReceive::UDP_MODE;
 #if defined(HANDSHAKE_WINDOW)
         sp->handshake_window = Time::Duration::seconds(HANDSHAKE_WINDOW);
 #elif SITER > 1

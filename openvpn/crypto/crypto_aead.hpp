@@ -333,8 +333,7 @@ class Crypto : public CryptoDCInstance
         d.nonce.set_tail(decrypt_key, dc_settings.use64bitPktCounter());
     }
 
-    void init_pid(const int recv_mode,
-                  const char *recv_name,
+    void init_pid(const char *recv_name,
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
     {

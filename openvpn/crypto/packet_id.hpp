@@ -249,13 +249,6 @@ class PacketIDReceiveType
     static constexpr unsigned int REPLAY_WINDOW_BYTES = 1 << REPLAY_WINDOW_ORDER;
     static constexpr unsigned int REPLAY_WINDOW_SIZE = REPLAY_WINDOW_BYTES * 8;
 
-    // mode
-    enum
-    {
-        UDP_MODE = 0,
-        TCP_MODE = 1
-    };
-
     OPENVPN_SIMPLE_EXCEPTION(packet_id_not_initialized);
 
     // TODO: [OVPN3-933] Consider RAII'ifying this code
@@ -264,8 +257,7 @@ class PacketIDReceiveType
     {
     }
 
-    void init(const int mode_arg,
-              const int form_arg,
+    void init(const int form_arg,
               const char *name_arg,
               const int unit_arg,
               const SessionStats::Ptr &stats_arg)
@@ -278,7 +270,6 @@ class PacketIDReceiveType
         time_high = 0;
         id_floor = 0;
         max_backtrack = 0;
-        mode = mode_arg;
         form = form_arg;
         unit = unit_arg;
         name = name_arg;
@@ -443,7 +434,6 @@ class PacketIDReceiveType
     PacketID::id_t id_floor;    // we will only accept backtrack IDs > id_floor
     unsigned int max_backtrack;
 
-    int mode;         // UDP_MODE or TCP_MODE
     int form;         // PacketID::LONG_FORM or PacketID::SHORT_FORM
     int unit;         // unit number of this object (for debugging)
     std::string name; // name of this object (for debugging)

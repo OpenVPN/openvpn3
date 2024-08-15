@@ -56,7 +56,6 @@ struct Info
     CompressContext comp_ctx;
     unsigned int key_id = 0;
     int remote_peer_id = -1;
-    bool tcp_linear = false;
     StaticKey encrypt_cipher;
     StaticKey encrypt_hmac;
     StaticKey decrypt_cipher;

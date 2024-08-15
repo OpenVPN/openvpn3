@@ -75,12 +75,10 @@ class Instance : public CryptoDCInstance
         info.decrypt_hmac = std::move(decrypt_key);
     }
 
-    void init_pid(const int recv_mode,
-                  const char *recv_name,
+    void init_pid(const char *recv_name,
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
     {
-        info.tcp_linear = (recv_mode == PacketIDReceive::TCP_MODE);
     }
 
     void init_remote_peer_id(const int remote_peer_id) override

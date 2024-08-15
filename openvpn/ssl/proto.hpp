@@ -408,9 +408,6 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
 
         TLSCryptMetadataFactory::Ptr tls_crypt_metadata_factory;
 
-        // packet_id parms for both data and control channels
-        int pid_mode = 0; // PacketIDReceive::UDP_MODE or PacketIDReceive::TCP_MODE
-
         // timeout parameters, relative to construction of KeyContext object
         Time::Duration handshake_window; // SSL/TLS negotiation must complete by this time
         Time::Duration become_primary;   // KeyContext (that is ACTIVE) becomes primary at this time
@@ -468,7 +465,6 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             keepalive_timeout_early = keepalive_timeout;
             comp_ctx = CompressContext(CompressContext::NONE, false);
             protocol = Protocol();
-            pid_mode = PacketIDReceive::UDP_MODE;
             key_direction = default_key_direction;
 
             // layer
@@ -967,21 +963,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             return os.str();
         }
 
-        void set_pid_mode(const bool tcp_linear)
-        {
-            if (protocol.is_udp() || !tcp_linear)
-                pid_mode = PacketIDReceive::UDP_MODE;
-            else if (protocol.is_tcp())
-                pid_mode = PacketIDReceive::TCP_MODE;
-            else
-                throw proto_option_error(ERR_INVALID_OPTION_VAL, "transport protocol undefined");
-        }
-
         void set_protocol(const Protocol &p)
         {
             // adjust options for new transport protocol
             protocol = p;
-            set_pid_mode(false);
         }
 
         void set_tls_auth_digest(const CryptoAlgs::Type digest)
@@ -2321,8 +2306,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
                 crypto->init_hmac(key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::ENCRYPT | key_dir),
                                   key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir));
 
-            crypto->init_pid(c.pid_mode,
-                             "DATA",
+            crypto->init_pid("DATA",
                              int(key_id_),
                              proto.stats);
 
@@ -3842,7 +3826,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
         hmac_size = c.tls_crypt_context->digest_size();
 
         ta_pid_send.init(PacketID::LONG_FORM);
-        ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
+        ta_pid_recv.init(PacketID::LONG_FORM, "SSL-CC", 0, stats);
 
         reset_tls_crypt(c, dyn_key);
     }
@@ -3900,7 +3884,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
             reset_tls_crypt(c, c.tls_key);
             // init tls_crypt packet ID
             ta_pid_send.init(PacketID::LONG_FORM);
-            ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
+            ta_pid_recv.init(PacketID::LONG_FORM, "SSL-CC", 0, stats);
             break;
         case TLS_CRYPT_V2:
             if (is_server())
@@ -3914,7 +3898,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
              * to indicate EARLY_NEG_START/CONTROL_WKC_V1 support */
             // init tls_crypt packet ID
             ta_pid_send.init(PacketID::LONG_FORM, EARLY_NEG_START);
-            ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
+            ta_pid_recv.init(PacketID::LONG_FORM, "SSL-CC", 0, stats);
             break;
         case TLS_AUTH:
             // init OvpnHMACInstance
@@ -3946,7 +3930,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO,
              *
              */
             ta_pid_send.init(PacketID::LONG_FORM, cookie_psid.defined() ? 1 : 0);
-            ta_pid_recv.init(c.pid_mode, PacketID::LONG_FORM, "SSL-CC", 0, stats);
+            ta_pid_recv.init(PacketID::LONG_FORM, "SSL-CC", 0, stats);
             break;
         case TLS_PLAIN:
             break;

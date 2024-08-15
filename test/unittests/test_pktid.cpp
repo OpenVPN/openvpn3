@@ -1,6 +1,7 @@
 #include "test_common.h"
 
 #include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/packet_id_aead.hpp>
 
 using namespace openvpn;
 
@@ -17,12 +18,12 @@ void testcase(PIDRecv &pr,
     ASSERT_EQ(status, expected_status);
 }
 
-void test()
+template <typename PIDRecv>
+void do_packet_id_recv_test()
 {
-    typedef PacketIDReceiveType<3, 5> PIDRecv;
     SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
-    pr.init(PIDRecv::UDP_MODE, PacketID::SHORT_FORM, "test", 0, stats);
+    pr.init(PacketID::SHORT_FORM, "test", 0, stats);
 
     testcase(pr, 0, 0, 0, Error::PKTID_INVALID);
     testcase(pr, 1, 0, 1, Error::SUCCESS);
@@ -77,6 +78,12 @@ void test()
     testcase(pr, 85, 15, 66, Error::SUCCESS);
 }
 
+TEST(misc, pktid_test_normal)
+{
+    do_packet_id_recv_test<PacketIDReceiveType<3, 5>>();
+}
+
+
 template <unsigned int ORDER, unsigned int EXPIRE>
 void perfiter(const long n,
               const long range,
@@ -97,7 +104,7 @@ void perfiter(const long n,
     long high = 0;
     SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
-    pr.init(PIDRecv::UDP_MODE, PacketID::SHORT_FORM, "test", 0, stats);
+    pr.init(PacketID::SHORT_FORM, "test", 0, stats);
 
     for (long i = 1; i < n; i += step)
     {
@@ -144,7 +151,7 @@ void perf(long &count)
     perfiter<ORDER, EXPIRE>(20000, 4, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
 }
 
-TEST(misc, pktid)
+TEST(misc, pktid_perf)
 {
     {
         long count = 0;
@@ -153,5 +160,4 @@ TEST(misc, pktid)
         perf<8, 5>(count);
         // ASSERT_EQ(4746439, count);
     }
-    test();
 }

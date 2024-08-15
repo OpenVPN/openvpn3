@@ -85,8 +85,7 @@ class CryptoCHM : public CryptoDCInstance
         decrypt_.hmac.init(dc_settings.digest(), decrypt_key);
     }
 
-    void init_pid(const int recv_mode,
-                  const char *recv_name,
+    void init_pid(const char *recv_name,
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
     {
@@ -94,7 +93,7 @@ class CryptoCHM : public CryptoDCInstance
         auto pid_form = PacketID::SHORT_FORM;
 
         encrypt_.pid_send.init(pid_form);
-        decrypt_.pid_recv.init(recv_mode, pid_form, recv_name, recv_unit, recv_stats_arg);
+        decrypt_.pid_recv.init(pid_form, recv_name, recv_unit, recv_stats_arg);
     }
 
     bool consider_compression(const CompressContext &comp_ctx) override

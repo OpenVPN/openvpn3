@@ -136,8 +136,7 @@ void test_datachannel_crypto(bool tag_at_the_end, bool longpktcounter = false)
     cryptodc.init_cipher(static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir),
                          static_key.slice(openvpn::OpenVPNStaticKey::CIPHER | openvpn::OpenVPNStaticKey::ENCRYPT | key_dir));
 
-    cryptodc.init_pid(0,
-                      "DATA",
+    cryptodc.init_pid("DATA",
                       0,
                       statsptr);
 
