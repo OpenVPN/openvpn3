@@ -41,6 +41,7 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
 
     OSSL_LIB_CTX_unique_ptr tls_libctx{nullptr, ::OSSL_LIB_CTX_free};
     ExternalPKIBase *external_pki;
+    std::string alias;
 
     static void
     xkey_logging_callback(const char *message, bool debug)
@@ -130,9 +131,9 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
     }
 
   public:
-    [[nodiscard]] static std::shared_ptr<XKeyExternalPKIImpl> create(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki)
+    [[nodiscard]] static std::shared_ptr<XKeyExternalPKIImpl> create(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki, std::string alias)
     {
-        auto ret = std::shared_ptr<XKeyExternalPKIImpl>{new XKeyExternalPKIImpl{external_pki}};
+        auto ret = std::shared_ptr<XKeyExternalPKIImpl>{new XKeyExternalPKIImpl{external_pki, alias}};
         ret->use_external_key(ssl_ctx, cert);
         return ret;
     }
@@ -145,8 +146,8 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
         }
     }
 
-    XKeyExternalPKIImpl(ExternalPKIBase *external_pki)
-        : external_pki(external_pki)
+    XKeyExternalPKIImpl(ExternalPKIBase *external_pki, std::string alias)
+        : external_pki(external_pki), alias(alias)
     {
     }
 
@@ -269,7 +270,7 @@ class XKeyExternalPKIImpl : public std::enable_shared_from_this<XKeyExternalPKII
         const std::string from_b64 = base64->encode(from_buf);
 
         std::string sig_b64;
-        external_pki->sign(from_b64, sig_b64, algstr, hashalg, saltlen);
+        external_pki->sign(alias, from_b64, sig_b64, algstr, hashalg, saltlen);
 
         Buffer sigbuf(static_cast<void *>(sig), *siglen, false);
         base64->decode(sigbuf, sig_b64);

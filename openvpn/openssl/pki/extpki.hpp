@@ -38,8 +38,8 @@ using ssl_external_pki = SSLFactoryAPI::ssl_external_pki;
 class ExternalPKIRsaImpl : public ExternalPKIImpl
 {
   public:
-    ExternalPKIRsaImpl(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki_arg)
-        : external_pki(external_pki_arg), n_errors(0)
+    ExternalPKIRsaImpl(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki_arg, const std::string &alias)
+        : external_pki(external_pki_arg), alias(alias), n_errors(0)
     {
         RSA *rsa = nullptr;
         const RSA *pub_rsa = nullptr;
@@ -157,7 +157,7 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
 
             /* get signature */
             std::string sig_b64;
-            const bool status = self->external_pki->sign(from_b64, sig_b64, padding_algo, "", "");
+            const bool status = self->external_pki->sign(self->alias, from_b64, sig_b64, padding_algo, "", "");
             if (!status)
                 throw ssl_external_pki("OpenSSL: could not obtain signature");
 
@@ -212,17 +212,18 @@ class ExternalPKIRsaImpl : public ExternalPKIImpl
     }
 
     ExternalPKIBase *external_pki;
+    std::string alias;
     unsigned int n_errors;
 };
 
 /* The OpenSSL EC_* methods we are using here are only available for OpenSSL 1.1.0 and later */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC)
+#if !defined(OPENSSL_NO_EC)
 class ExternalPKIECImpl : public ExternalPKIImpl
 {
 
   public:
-    ExternalPKIECImpl(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki_arg)
-        : external_pki(external_pki_arg)
+    ExternalPKIECImpl(SSL_CTX *ssl_ctx, ::X509 *cert, ExternalPKIBase *external_pki_arg, const std::string &alias)
+        : external_pki(external_pki_arg), alias(alias)
     {
 
         if (ec_self_data_index < 0)
@@ -394,7 +395,7 @@ class ExternalPKIECImpl : public ExternalPKIImpl
 
         /* get signature */
         std::string sig_b64;
-        const bool status = external_pki->sign(dgst_b64, sig_b64, "ECDSA", "", "");
+        const bool status = external_pki->sign(alias, dgst_b64, sig_b64, "ECDSA", "", "");
         if (!status)
             throw ssl_external_pki("OpenSSL: could not obtain signature");
 
@@ -406,7 +407,8 @@ class ExternalPKIECImpl : public ExternalPKIImpl
     }
 
     ExternalPKIBase *external_pki;
+    std::string alias;
     inline static int ec_self_data_index = -1;
 };
-#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(OPENSSL_NO_EC) */
+#endif /* !defined(OPENSSL_NO_EC) */
 } // namespace openvpn

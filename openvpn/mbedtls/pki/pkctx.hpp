@@ -125,6 +125,11 @@ class PKContext : public RC<thread_unsafe_refcount>
         return std::string((const char *)buff.data());
     }
 
+    std::string render_pem() const
+    {
+        return extract();
+    }
+
     void epki_enable(void *arg,
                      mbedtls_pk_rsa_alt_decrypt_func epki_decrypt,
                      mbedtls_pk_rsa_alt_sign_func epki_sign,

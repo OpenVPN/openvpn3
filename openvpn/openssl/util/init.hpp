@@ -22,18 +22,3 @@
 #pragma once
 
 #include <openssl/opensslv.h>
-
-// OpenSSL 1.1.0 does not require an explicit init, in fact the
-// asio init for 1.1.0 is a noop, see also OPENSSL_init_ssl man page
-
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-#define OPENSSL_NEEDS_INIT
-
-// Instantiate this object to ensure openssl is initialised.
-#ifdef USE_ASIO
-#include <asio/ssl/detail/openssl_init.hpp>
-typedef asio::ssl::detail::openssl_init<> openssl_init;
-#else
-#error no OpenSSL init code (USE_ASIO needed for OpenSSL < 1.1)
-#endif
-#endif

@@ -689,7 +689,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             }
 
             // show negotiated options
-            LOG_INFO(show_options());
+            OVPN_LOG_INFO(show_options());
         }
 
         void parse_custom_app_control(const OptionList &opt)
@@ -1124,8 +1124,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             if (relay_mode)
                 out << "IV_RELAY=1\n";
             const std::string ret = out.str();
-            LOG_INFO("Sending Peer Info:" << std::endl
-                                          << ret);
+            OVPN_LOG_INFO("Sending Peer Info:" << std::endl
+                                               << ret);
             return ret;
         }
 
@@ -1527,12 +1527,19 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
         size_t size = buf.size();
         if (size)
         {
-            if (buf[size - 1] == 0)
+            /* Trim any trailing \n or \r or 0x00 characters. Scripts plugin sometimes accidentally include a \n or \r\n in AUTH_FAILED
+             * or similar messages */
+            while (size > 0 && (buf[size - 1] == 0 || buf[size - 1] == '\r' || buf[size - 1] == '\n'))
+            {
                 --size;
+            }
+
             if (size)
-                return S((const char *)buf.c_data(), size);
+            {
+                return S{reinterpret_cast<const char *>(buf.c_data()), size};
+            }
         }
-        return S();
+        return {};
     }
 
     template <typename S>
@@ -2092,7 +2099,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
                     {
                         // skip validation of HARD_RESET_V3 because the tls-crypt
                         // engine has not been initialized yet
-                        LOG_VERBOSE("SKIPPING VALIDATION OF HARD_RESET_V3");
+                        OVPN_LOG_VERBOSE("SKIPPING VALIDATION OF HARD_RESET_V3");
                         return true;
                     }
                     /* no break */
@@ -2104,7 +2111,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             }
             catch ([[maybe_unused]] BufferException &e)
             {
-                LOG_VERBOSE("validate() exception: " << e.what());
+                OVPN_LOG_VERBOSE("validate() exception: " << e.what());
             }
             return false;
         }
@@ -2127,9 +2134,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
                 tlsprf->generate_key_expansion(dck->key, proto.psid_self, proto.psid_peer);
             }
             tlsprf->erase();
-            LOG_VERBOSE(proto.debug_prefix()
-                        << " KEY " << CryptoAlgs::name(proto.config->dc.key_derivation())
-                        << " " << proto.mode().str() << ' ' << dck->key.render());
+            OVPN_LOG_VERBOSE(proto.debug_prefix()
+                             << " KEY " << CryptoAlgs::name(proto.config->dc.key_derivation())
+                             << " " << proto.mode().str() << ' ' << dck->key.render());
 
             if (data_channel_key)
             {
@@ -2220,11 +2227,11 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             }
 
             c.mss_fix = static_cast<decltype(c.mss_fix)>(target - payload_overhead);
-            LOG_VERBOSE("mssfix=" << c.mss_fix
-                                  << " (upper bound=" << c.mss_parms.mssfix
-                                  << ", overhead=" << overhead
-                                  << ", payload_overhead=" << payload_overhead
-                                  << ", target=" << target << ")");
+            OVPN_LOG_VERBOSE("mssfix=" << c.mss_fix
+                                       << " (upper bound=" << c.mss_parms.mssfix
+                                       << ", overhead=" << overhead
+                                       << ", payload_overhead=" << payload_overhead
+                                       << ", target=" << target << ")");
         }
 
         // Initialize the components of the OpenVPN data channel protocol
@@ -2247,8 +2254,8 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
                 DataLimit::Parameters dp;
                 dp.encrypt_red_limit = OPENVPN_BS64_DATA_LIMIT;
                 dp.decrypt_red_limit = OPENVPN_BS64_DATA_LIMIT;
-                LOG_INFO("Per-Key Data Limit: "
-                         << dp.encrypt_red_limit << '/' << dp.decrypt_red_limit);
+                OVPN_LOG_INFO("Per-Key Data Limit: "
+                              << dp.encrypt_red_limit << '/' << dp.decrypt_red_limit);
                 data_limit.reset(new DataLimit(dp));
             }
 
@@ -2494,26 +2501,26 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
 
         void set_state(const int newstate)
         {
-            LOG_VERBOSE(proto.debug_prefix()
-                        << " KeyContext[" << key_id_ << "] "
-                        << state_string(state) << " -> " << state_string(newstate));
+            OVPN_LOG_VERBOSE(proto.debug_prefix()
+                             << " KeyContext[" << key_id_ << "] "
+                             << state_string(state) << " -> " << state_string(newstate));
             state = newstate;
         }
 
         void set_event(const EventType current)
         {
-            LOG_VERBOSE(proto.debug_prefix()
-                        << " KeyContext[" << key_id_ << "] "
-                        << event_type_string(current));
+            OVPN_LOG_VERBOSE(proto.debug_prefix()
+                             << " KeyContext[" << key_id_ << "] "
+                             << event_type_string(current));
             current_event = current;
         }
 
         void set_event(const EventType current, const EventType next, const Time &next_time)
         {
-            LOG_VERBOSE(proto.debug_prefix()
-                        << " KeyContext[" << key_id_ << "] "
-                        << event_type_string(current) << " -> " << event_type_string(next)
-                        << '(' << seconds_until(next_time) << ')');
+            OVPN_LOG_VERBOSE(proto.debug_prefix()
+                             << " KeyContext[" << key_id_ << "] "
+                             << event_type_string(current) << " -> " << event_type_string(next)
+                             << '(' << seconds_until(next_time) << ')');
             current_event = current;
             next_event = next;
             next_event_time = next_time;
@@ -2532,7 +2539,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
         {
             if (!key_limit_renegotiation_fired && state >= ACTIVE && !invalidated())
             {
-                LOG_VERBOSE(proto.debug_prefix() << " SCHEDULE KEY LIMIT RENEGOTIATION");
+                OVPN_LOG_VERBOSE(proto.debug_prefix() << " SCHEDULE KEY LIMIT RENEGOTIATION");
 
                 key_limit_renegotiation_fired = true;
                 proto.stats->error(Error::N_KEY_LIMIT_RENEG);
@@ -2567,10 +2574,10 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
         // Handle a DataLimit event.
         void data_limit_event(const DataLimit::Mode mode, const DataLimit::State state)
         {
-            LOG_VERBOSE(proto.debug_prefix()
-                        << " DATA LIMIT " << DataLimit::mode_str(mode)
-                        << ' ' << DataLimit::state_str(state)
-                        << " key_id=" << key_id_);
+            OVPN_LOG_VERBOSE(proto.debug_prefix()
+                             << " DATA LIMIT " << DataLimit::mode_str(mode)
+                             << ' ' << DataLimit::state_str(state)
+                             << " key_id=" << key_id_);
 
             // State values:
             //   DataLimit::Green -- first packet received and decrypted.
@@ -2819,7 +2826,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             write_auth_string(options, *buf);
             if (!proto.is_server())
             {
-                LOG_INFO("Tunnel Options:" << options);
+                OVPN_LOG_INFO("Tunnel Options:" << options);
                 buf->or_flags(BufferAllocated::DESTRUCT_ZERO);
                 if (proto.config->xmit_creds)
                     proto.client_auth(*buf);
@@ -2874,7 +2881,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
 
         void active()
         {
-            LOG_INFO("SSL Handshake: " << Base::ssl_handshake_details());
+            OVPN_LOG_INFO("SSL Handshake: " << Base::ssl_handshake_details());
 
             /* Our internal state machine only decides after push request what protocol
              * options we want to use. Therefore we also have to postpone data key
@@ -3907,7 +3914,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
 
         // initialize key contexts
         primary.reset(new KeyContext(*this, is_client(), cookie_psid.defined()));
-        LOG_VERBOSE(debug_prefix() << " New KeyContext PRIMARY id=" << primary->key_id());
+        OVPN_LOG_VERBOSE(debug_prefix() << " New KeyContext PRIMARY id=" << primary->key_id());
 
         // initialize keepalive timers
         keepalive_expire = Time::infinite(); // initially disabled
@@ -4077,7 +4084,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
     // encrypt a data channel packet using primary KeyContext
     void data_encrypt(BufferAllocated &in_out)
     {
-        LOG_DEBUG(debug_prefix() << " DATA ENCRYPT size=" << in_out.size());
+        OVPN_LOG_DEBUG(debug_prefix() << " DATA ENCRYPT size=" << in_out.size());
         if (!primary)
             throw proto_error("data_encrypt: no primary key");
         primary->encrypt(in_out);
@@ -4089,7 +4096,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
     {
         bool ret = false;
 
-        LOG_DEBUG(debug_prefix() << " DATA DECRYPT key_id=" << select_key_context(type, false).key_id() << " size=" << in_out.size());
+        OVPN_LOG_DEBUG(debug_prefix() << " DATA DECRYPT key_id=" << select_key_context(type, false).key_id() << " size=" << in_out.size());
 
         select_key_context(type, false).decrypt(in_out);
 
@@ -4430,7 +4437,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
     // than the immediate rollover practiced by OpenVPN 2.x.
     KeyContext &select_control_send_context()
     {
-        LOG_VERBOSE(debug_prefix() << " CONTROL SEND");
+        OVPN_LOG_VERBOSE(debug_prefix() << " CONTROL SEND");
         if (!primary)
             throw proto_error("select_control_send_context: no primary key");
         return *primary;
@@ -4487,9 +4494,9 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
     {
         // Create the secondary
         secondary.reset(new KeyContext(*this, initiator));
-        LOG_VERBOSE(debug_prefix()
-                    << " New KeyContext SECONDARY id=" << secondary->key_id()
-                    << (initiator ? " local-triggered" : " remote-triggered"));
+        OVPN_LOG_VERBOSE(debug_prefix()
+                         << " New KeyContext SECONDARY id=" << secondary->key_id()
+                         << (initiator ? " local-triggered" : " remote-triggered"));
     }
 
     // Promote a newly renegotiated KeyContext to primary status.
@@ -4502,7 +4509,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             primary->rekey(CryptoDCInstance::PRIMARY_SECONDARY_SWAP);
         if (secondary)
             secondary->prepare_expire();
-        LOG_VERBOSE(debug_prefix() << " PRIMARY_SECONDARY_SWAP");
+        OVPN_LOG_VERBOSE(debug_prefix() << " PRIMARY_SECONDARY_SWAP");
     }
 
     void process_primary_event()
@@ -4514,7 +4521,7 @@ class ProtoContext : public logging::LoggingMixin<OPENVPN_DEBUG_PROTO, logging::
             switch (ev)
             {
             case KeyContext::KEV_ACTIVE:
-                LOG_VERBOSE(debug_prefix() << " SESSION_ACTIVE");
+                OVPN_LOG_VERBOSE(debug_prefix() << " SESSION_ACTIVE");
                 primary->rekey(CryptoDCInstance::ACTIVATE_PRIMARY);
                 proto_callback->active(true);
                 break;

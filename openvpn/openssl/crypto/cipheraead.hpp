@@ -239,17 +239,6 @@ class CipherContextAEAD
     {
         switch (alg)
         {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        case CryptoAlgs::AES_128_GCM:
-            keysize = 16;
-            return EVP_CIPHER_fetch(libctx, "id-aes128-GCM", nullptr);
-        case CryptoAlgs::AES_192_GCM:
-            keysize = 24;
-            return EVP_CIPHER_fetch(libctx, "id-aes192-GCM", nullptr);
-        case CryptoAlgs::AES_256_GCM:
-            keysize = 32;
-            return EVP_CIPHER_fetch(libctx, "id-aes256-GCM", nullptr);
-#else
         case CryptoAlgs::AES_128_GCM:
             keysize = 16;
             return EVP_CIPHER_fetch(libctx, "AES-128-GCM", nullptr);
@@ -259,7 +248,6 @@ class CipherContextAEAD
         case CryptoAlgs::AES_256_GCM:
             keysize = 32;
             return EVP_CIPHER_fetch(libctx, "AES-256-GCM", nullptr);
-#endif
         case CryptoAlgs::CHACHA20_POLY1305:
             keysize = 32;
             return EVP_CIPHER_fetch(libctx, "CHACHA20-POLY1305", nullptr);

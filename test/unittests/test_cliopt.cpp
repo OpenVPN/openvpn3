@@ -195,6 +195,17 @@ TEST(config, dco_compatibility)
     }
 }
 
+TEST(config, server_cert_in_eval)
+{
+    ClientAPI::Config api_config;
+    api_config.content = minimalConfig;
+
+    ClientAPI::OpenVPNClientHelper client_helper;
+    auto eval = client_helper.eval_config(api_config);
+
+    EXPECT_FALSE(eval.vpnCa.empty());
+}
+
 
 TEST(config, server_options_present_in_error_msg)
 {

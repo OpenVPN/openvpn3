@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012-2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -56,6 +56,7 @@
 #include <openvpn/transport/client/relay.hpp>
 #include <openvpn/options/continuation.hpp>
 #include <openvpn/options/sanitize.hpp>
+#include <openvpn/client/acc_certcheck.hpp>
 #include <openvpn/client/clievent.hpp>
 #include <openvpn/client/clicreds.hpp>
 #include <openvpn/client/cliconstants.hpp>
@@ -97,6 +98,8 @@ class Session : ProtoContextCallbackInterface,
                 TunClientParent,
                 public RC<thread_unsafe_refcount>
 {
+    static inline const std::string certcheckProto = "cck1";
+
   public:
     typedef RCPtr<Session> Ptr;
 
@@ -302,6 +305,18 @@ class Session : ProtoContextCallbackInterface,
     unsigned int reconnect_delay() const
     {
         return temp_fail_backoff_;
+    }
+
+    /**
+      @brief Start up the cert check handshake using the given certs and key
+      @param config SSL Config setup with the correct keys and certificates
+
+      Begins the handshake with Client Hello via the ACC.
+    */
+    void start_acc_certcheck(SSLLib::SSLAPI::Config::Ptr config)
+    {
+        certcheck_hs.reset(std::move(config));
+        do_acc_certcheck(std::string(""));
     }
 
     virtual ~Session()
@@ -826,32 +841,48 @@ class Session : ProtoContextCallbackInterface,
         // race conditions in the client app, if the INFO event
         // triggers the client app to perform an operation that
         // requires the VPN tunnel to be ready.
-        ClientEvent::Base::Ptr ev;
+        std::string info_msg;
+
         if (info_pre)
+            info_msg = msg.substr(std::string_view{"INFO_PRE,"}.length());
+        else
+            info_msg = msg.substr(std::string_view{"INFO,"}.length());
+
+        if (string::starts_with(info_msg, "ACC:"))
         {
-            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO_PRE,")));
-            if ((string::starts_with(ev->render(), "WEB_AUTH:") || string::starts_with(ev->render(), "CR_TEXT:")) && creds)
+            // We want this to be parsed exactly like the custom-control option.
+            // That means we replace ACC: with custom-control for the parser.
+            auto acc_options = OptionList::parse_from_csv_static("custom-control " + info_msg.substr(std::strlen("ACC:")), &pushed_options_limit);
+            proto_context.conf().parse_custom_app_control(acc_options);
+            // check if we need to notify about ACC protocols
+            notify_client_acc_protocols();
+        }
+        else
+        {
+            if ((string::starts_with(info_msg, "WEB_AUTH:") || string::starts_with(info_msg, "CR_TEXT:")) && creds)
             {
                 creds->set_need_user_interaction();
             }
-        }
-        else
-        {
-            ev = new ClientEvent::Info(msg.substr(std::strlen("INFO,")));
-        }
 
-        // INFO_PRE is like INFO but it is never buffered
-        if (info_hold && !info_pre)
-            info_hold->push_back(std::move(ev));
-        else
-            cli_events->add_event(std::move(ev));
+            ClientEvent::Info::Ptr ev = new ClientEvent::Info(std::move(info_msg));
+
+            // INFO_PRE is like INFO but it is never buffered
+            if (info_hold && !info_pre)
+                info_hold->push_back(std::move(ev));
+            else
+                cli_events->add_event(std::move(ev));
+        }
     }
 
     // proto base class calls here for app-level control-channel messages received
     void control_recv(BufferPtr &&app_bp) override
     {
-        const std::string msg = Unicode::utf8_printable(ProtoContext::template read_control_string<std::string>(*app_bp),
-                                                        Unicode::UTF8_FILTER | Unicode::UTF8_PASS_FMT);
+        const std::string msg = ProtoContext::read_control_string<std::string>(*app_bp);
+        if (!Unicode::is_valid_utf8(msg, Unicode::UTF8_NO_CTRL))
+        {
+            OPENVPN_LOG("Control channel message with invalid characters received, ignoring message");
+            return;
+        }
 
         // OPENVPN_LOG("SERVER: " << sanitize_control_message(msg));
 
@@ -888,23 +919,76 @@ class Session : ProtoContextCallbackInterface,
             recv_custom_control_message(msg);
         }
     }
+    /**
+      @brief receive, validate, and dispatch ACC messages
+      @param msg the received message
+
+      This function's main purpose is to receive a custom control message from the server, parse
+      out the protocol and contents, validate the protocol is supported, and queue a ClientEvent
+      for supported protocols to be handled later. It acts as the interface between the lower-level
+      network code receiving the raw message, and the higher-level event handling logic.
+    */
     void recv_custom_control_message(const std::string msg)
     {
-
         bool fullmessage = proto_context.conf().app_control_recv.receive_message(msg);
         if (!fullmessage)
             return;
 
         auto [proto, app_proto_msg] = proto_context.conf().app_control_recv.get_message();
 
-        if (proto_context.conf().app_control_config.supports_protocol(proto))
+        if (proto == certcheckProto) // handle this built-in ACC internal protocol intrinsically
         {
-            auto ev = new ClientEvent::AppCustomControlMessage(std::move(proto), std::move(app_proto_msg));
+            do_acc_certcheck(app_proto_msg);
+        }
+        else if (proto_context.conf().app_control_config.supports_protocol(proto))
+        {
+            ClientEvent::Base::Ptr ev = new ClientEvent::AppCustomControlMessage(std::move(proto), std::move(app_proto_msg));
             cli_events->add_event(std::move(ev));
         }
         else
         {
-            OPENVPN_LOG("App custom control message with unsupported protocol received");
+            OPENVPN_LOG("App custom control message with unsupported protocol [" + proto + "] received");
+        }
+    }
+    /**
+      @brief Handles the ACC certcheck TLS handshake data exchange
+      @param msg_str TLS handshake traffic
+      @todo std::string is perfectly OK for storing buffers containing null bytes but it's atypical.
+    */
+    void do_acc_certcheck(const std::string &msg_str)
+    {
+        AccHandshaker::MsgT reply = std::nullopt;
+        AccHandshaker::MsgT msg = std::nullopt;
+
+        if (msg_str.empty() == false)
+            msg = msg_str;
+
+        try
+        {
+            do
+            {
+                reply = certcheck_hs.process_msg(msg);
+
+                if (reply)
+                {
+                    post_app_control_message(certcheckProto, *reply);
+                }
+                msg = std::nullopt;
+            } while (reply);
+        }
+        catch (std::exception &ex)
+        {
+            OPENVPN_LOG("App custom control cert check exception: " << ex.what());
+        }
+    }
+
+    void notify_client_acc_protocols()
+    {
+        if (!proto_context.conf().app_control_config.supported_protocols.empty())
+        {
+            // Signal support for supported protocols
+            ClientEvent::Base::Ptr ev = new ClientEvent::AppCustomControlMessage("internal:supported_protocols", string::join(proto_context.conf().app_control_config.supported_protocols, ":"));
+            cli_events->add_event(std::move(ev));
         }
     }
 
@@ -992,12 +1076,7 @@ class Session : ProtoContextCallbackInterface,
                 cli_events->add_event(connected_);
 
                 // send an event for custom app control if present
-                if (!proto_context.conf().app_control_config.supported_protocols.empty())
-                {
-                    // Signal support for supported protocols
-                    auto ev = new ClientEvent::AppCustomControlMessage("internal:supported_protocols", string::join(proto_context.conf().app_control_config.supported_protocols, ":"));
-                    cli_events->add_event(std::move(ev));
-                }
+                notify_client_acc_protocols();
 
                 // check for proto options
                 check_proto_warnings();
@@ -1297,6 +1376,14 @@ class Session : ProtoContextCallbackInterface,
             }
         }
     }
+    /**
+      @brief Set the cc handshake config object
+      @param cfg The config to use for initializing the SSLAPI
+    */
+    void set_cc_handshake_config(SSLLib::SSLAPI::Config::Ptr cfg)
+    {
+        certcheck_hs.reset(cfg);
+    }
 
     void process_inactive(const OptionList &opt)
     {
@@ -1525,6 +1612,9 @@ class Session : ProtoContextCallbackInterface,
     // AUTH_FAILED,TEMP flag values
     unsigned int temp_fail_backoff_ = 0;
     RemoteList::Advance temp_fail_advance_ = RemoteList::Advance::Addr;
+
+    // Client side certcheck
+    AccHandshaker certcheck_hs;
 
 #ifdef OPENVPN_PACKET_LOG
     std::ofstream packet_log;

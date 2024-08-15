@@ -235,9 +235,10 @@ class MbedTLSContext : public SSLFactoryAPI
         }
 
         // if this callback is defined, no private key needs to be loaded
-        virtual void set_external_pki_callback(ExternalPKIBase *external_pki_arg)
+        virtual void set_external_pki_callback(ExternalPKIBase *external_pki_arg, const std::string &alias)
         {
             external_pki = external_pki_arg;
+            external_pki_alias = alias;
         }
 
         virtual void set_session_ticket_handler(TLSSessionTicketBase *session_ticket_handler_arg)
@@ -409,6 +410,10 @@ class MbedTLSContext : public SSLFactoryAPI
         virtual void set_tls_version_min(const TLSVersion::Type tvm)
         {
             tls_version_min = tvm;
+        }
+
+        virtual void set_tls_version_max(const TLSVersion::Type tvm)
+        {
         }
 
         virtual void set_tls_version_min_override(const std::string &override)
@@ -652,6 +657,7 @@ class MbedTLSContext : public SSLFactoryAPI
         std::string priv_key_pwd;            // private key password
         MbedTLSPKI::DH::Ptr dh;              // diffie-hellman parameters (only needed in server mode)
         ExternalPKIBase *external_pki;
+        std::string external_pki_alias;
         Frame::Ptr frame;
         int ssl_debug_level;
         unsigned int flags; // defined in sslconsts.hpp
@@ -1052,9 +1058,9 @@ class MbedTLSContext : public SSLFactoryAPI
 
                 if (pair && pair->iana_name != ciphersuite)
                 {
-                    LOG_INFO("mbed TLS -- Deprecated cipher suite name '"
-                             << pair->openssl_name << "' please use IANA name ' "
-                             << pair->iana_name << "'");
+                    OVPN_LOG_INFO("mbed TLS -- Deprecated cipher suite name '"
+                                  << pair->openssl_name << "' please use IANA name ' "
+                                  << pair->iana_name << "'");
                 }
 
                 auto cipher_id = mbedtls_ssl_get_ciphersuite_id(ciphersuite.c_str());
@@ -1067,8 +1073,8 @@ class MbedTLSContext : public SSLFactoryAPI
                 {
                     /* OpenVPN 2.x ignores silently ignores unknown cipher suites with
                      * mbed TLS. We warn about them in OpenVPN 3.x */
-                    LOG_INFO("mbed TLS -- warning ignoring unknown cipher suite '"
-                             << ciphersuite << "' in tls-cipher");
+                    OVPN_LOG_INFO("mbed TLS -- warning ignoring unknown cipher suite '"
+                                  << ciphersuite << "' in tls-cipher");
                 }
             }
 
@@ -1099,8 +1105,8 @@ class MbedTLSContext : public SSLFactoryAPI
                 }
                 else
                 {
-                    LOG_INFO("mbed TLS -- warning ignoring unknown group '"
-                             << group << "' in tls-groups");
+                    OVPN_LOG_INFO("mbed TLS -- warning ignoring unknown group '"
+                                  << group << "' in tls-groups");
                 }
             }
 
@@ -1356,7 +1362,7 @@ class MbedTLSContext : public SSLFactoryAPI
 
         // log status
         if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
-            LOG_INFO(status_string(cert, depth, flags));
+            OVPN_LOG_INFO(status_string(cert, depth, flags));
 
             // notify if connection is happening with an insecurely signed cert.
 
@@ -1380,21 +1386,21 @@ class MbedTLSContext : public SSLFactoryAPI
             // verify ns-cert-type
             if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
                 fail = true;
             }
 
             // verify X509 key usage
             if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 fail = true;
             }
 
             // verify X509 extended key usage
             if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 fail = true;
             }
 
@@ -1406,7 +1412,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 TLSRemote::log(self->config->tls_remote, subject, common_name);
                 if (!TLSRemote::test(self->config->tls_remote, subject, common_name))
                 {
-                    LOG_INFO("VERIFY FAIL -- tls-remote match failed");
+                    OVPN_LOG_INFO("VERIFY FAIL -- tls-remote match failed");
                     fail = true;
                 }
             }
@@ -1432,7 +1438,7 @@ class MbedTLSContext : public SSLFactoryAPI
                 }
                 if (!res)
                 {
-                    LOG_INFO("VERIFY FAIL -- verify-x509-name failed");
+                    OVPN_LOG_INFO("VERIFY FAIL -- verify-x509-name failed");
                     fail = true;
                 }
             }
@@ -1456,7 +1462,7 @@ class MbedTLSContext : public SSLFactoryAPI
             {
                 if (!load_issuer_fingerprint_into_authcert(*ssl->authcert, cert))
                 {
-                    LOG_INFO("VERIFY FAIL -- SHA1 calculation failed.");
+                    OVPN_LOG_INFO("VERIFY FAIL -- SHA1 calculation failed.");
                     fail = true;
                 }
             }
@@ -1466,21 +1472,21 @@ class MbedTLSContext : public SSLFactoryAPI
             // verify ns-cert-type
             if (self->ns_cert_type_defined() && !self->verify_ns_cert_type(cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad ns-cert-type in leaf certificate");
                 fail = true;
             }
 
             // verify X509 key usage
             if (self->x509_cert_ku_defined() && !self->verify_x509_cert_ku(cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 key usage in leaf certificate");
                 fail = true;
             }
 
             // verify X509 extended key usage
             if (self->x509_cert_eku_defined() && !self->verify_x509_cert_eku(cert))
             {
-                LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
+                OVPN_LOG_INFO("VERIFY FAIL -- bad X509 extended key usage in leaf certificate");
                 fail = true;
             }
 
@@ -1528,8 +1534,8 @@ class MbedTLSContext : public SSLFactoryAPI
                             unsigned char *output,
                             size_t output_max_len)
     {
-        LOG_INFO("MbedTLSContext::epki_decrypt is unimplemented"
-                 << " output_max_len=" << output_max_len);
+        OVPN_LOG_INFO("MbedTLSContext::epki_decrypt is unimplemented"
+                      << " output_max_len=" << output_max_len);
 
         return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
     }
@@ -1583,11 +1589,11 @@ class MbedTLSContext : public SSLFactoryAPI
                     digest_prefix_len = sizeof(PKCS1::DigestPrefix::SHA512);
                     break;
                 default:
-                    LOG_INFO("MbedTLSContext::epki_sign unrecognized hash_id"
+                    OVPN_LOG_INFO("MbedTLSContext::epki_sign unrecognized hash_id"
 #if MBEDTLS_VERSION_NUMBER < 0x03000000
-                             << "mode=" << mode
+                                  << "mode=" << mode
 #endif
-                             << " md_alg=" << md_alg << " hashlen=" << hashlen);
+                                  << " md_alg=" << md_alg << " hashlen=" << hashlen);
                     return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
                 }
 
@@ -1602,7 +1608,7 @@ class MbedTLSContext : public SSLFactoryAPI
 
                 /* get signature */
                 std::string sig_b64;
-                const bool status = self->config->external_pki->sign(from_b64, sig_b64, "RSA_PKCS1_PADDING", "", "");
+                const bool status = self->config->external_pki->sign(self->config->external_pki_alias, from_b64, sig_b64, "RSA_PKCS1_PADDING", "", "");
                 if (!status)
                     throw ssl_external_pki("MbedTLS: could not obtain signature");
 
@@ -1620,11 +1626,11 @@ class MbedTLSContext : public SSLFactoryAPI
             }
             else
             {
-                LOG_INFO("MbedTLSContext::epki_sign unrecognized parameters"
+                OVPN_LOG_INFO("MbedTLSContext::epki_sign unrecognized parameters"
 #if MBEDTLS_VERSION_NUMBER < 0x03000000
-                         << "mode=" << mode
+                              << "mode=" << mode
 #endif
-                         << " md_alg=" << md_alg << " hashlen=" << hashlen);
+                              << " md_alg=" << md_alg << " hashlen=" << hashlen);
                 return MBEDTLS_ERR_RSA_BAD_INPUT_DATA;
             }
         }

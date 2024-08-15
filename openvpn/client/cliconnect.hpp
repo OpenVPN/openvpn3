@@ -277,6 +277,19 @@ class ClientConnect : ClientProto::NotifyCallback,
         if (!halt && client)
             client->post_app_control_message(std::move(protocol), std::move(msg));
     }
+    /**
+      @brief Passes the given arguments through to start_acc_certcheck
+      @tparam ArgsT Argument types to pass
+      @param args parameter pack
+      @see ClientProto::Session::start_acc_certcheck
+      @see OpenVPNClient::start_cert_check
+    */
+    template <typename... ArgsT>
+    void start_acc_certcheck(ArgsT &&...args)
+    {
+        if (!halt && client)
+            client->start_acc_certcheck(std::forward<ArgsT>(args)...);
+    }
 
     void thread_safe_send_app_control_channel_msg(std::string protocol, std::string msg)
     {
@@ -433,7 +446,7 @@ class ClientConnect : ClientProto::NotifyCallback,
             auto timer_left = std::chrono::duration_cast<std::chrono::seconds>(conn_timer.expiry() - AsioTimer::clock_type::now()).count();
             if (timer_left < timeout)
             {
-                OPENVPN_LOG("Extending connection timeout from " << timer_left << " to " << timeout << " for pending authentification");
+                OPENVPN_LOG("Extending connection timeout from " << timer_left << " to " << timeout << " for pending authentication");
                 conn_timer.cancel();
                 conn_timer_pending = false;
                 conn_timer_start(timeout);

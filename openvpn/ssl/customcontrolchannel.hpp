@@ -25,6 +25,8 @@
  * channel messages
  */
 
+#pragma once
+
 #include <vector>
 #include <string>
 #include <utility>
@@ -76,11 +78,22 @@ struct AppControlMessageConfig
     {
         return (std::find(supported_protocols.begin(), supported_protocols.end(), protocol) != std::end(supported_protocols));
     }
+    /**
+      @brief Format a protocol string and a message into a properly packed series of message fragments
+      @param protocol The requested ACC protocol
+      @param message The raw message, which may be transformed during formatting
+      @return std::vector<std::string> The resulting container of message fragments
+      @see AppControlMessageReceiver::receive_message
+      @see AppControlMessageReceiver::get_msg
 
+      Format a protocol string and a message into a properly packed series of message fragments. If the message is not
+      a UTF-8 legal sequence, it will be encoded into some form that can represent the data in the message. Once it's
+      received the AppControlMessageReceiver methods receive_message and get_msg can be used to reverse this process.
+    */
     std::vector<std::string> format_message(const std::string &protocol, const std::string &message)
     {
         if (!supports_protocol(protocol))
-            throw std::invalid_argument("protocol is not supported by peer");
+            throw std::invalid_argument("protocol [" + protocol + "] is not supported by peer");
 
         std::string format;
 

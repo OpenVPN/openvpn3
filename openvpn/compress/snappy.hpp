@@ -42,7 +42,7 @@ class CompressSnappy : public Compress
         : Compress(frame, stats),
           asym(asym_arg)
     {
-        LOG_INFO("SNAPPY init asym=" << asym_arg);
+        OVPN_LOG_INFO("SNAPPY init asym=" << asym_arg);
     }
 
     virtual const char *name() const
@@ -75,7 +75,7 @@ class CompressSnappy : public Compress
             // did compression actually reduce data length?
             if (comp_size < buf.size())
             {
-                LOG_VERBOSE("SNAPPY compress " << buf.size() << " -> " << comp_size);
+                OVPN_LOG_VERBOSE("SNAPPY compress " << buf.size() << " -> " << comp_size);
                 work.set_size(comp_size);
                 do_swap(work, SNAPPY_COMPRESS);
                 buf.swap(work);
@@ -119,7 +119,7 @@ class CompressSnappy : public Compress
                     error(buf);
                     break;
                 }
-                LOG_VERBOSE("SNAPPY uncompress " << buf.size() << " -> " << decomp_size);
+                OVPN_LOG_VERBOSE("SNAPPY uncompress " << buf.size() << " -> " << decomp_size);
                 work.set_size(decomp_size);
                 buf.swap(work);
             }

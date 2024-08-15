@@ -8,6 +8,11 @@ set(TEST_PROTO_SITER 1 CACHE STRING "test_proto - Number of high-level iteration
 set(TEST_KEYCERT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ssl" CACHE STRING "test_proto - Certificate/private keys for testing")
 option(TEST_PROTO_VERBOSE "test/ssl/proto - Enable verbose logging" OFF)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    set(RUN_UT_AS_ROOT CACHE STRING "Program to use to change to root for running the sitnl tests")
+else()
+    unset(RUN_UT_AS_ROOT CACHE)
+endif()
 
 if (NOT BUILD_TESTING)
   return()
@@ -26,6 +31,7 @@ set(CORE_TEST_DEFINES
 add_executable(coreUnitTests
         core_tests.cpp
         test_acc.cpp
+        test_acc_certcheck.cpp
         test_route_emulation.cpp
         test_log.cpp
         test_comp.cpp
@@ -161,4 +167,6 @@ target_link_libraries(coreUnitTests ${GTEST_LIB} GTest::gmock ${EXTRA_LIBS})
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
 target_include_directories(coreUnitTests PRIVATE ${EXTRA_INCLUDES})
 
-add_test(NAME CoreTests COMMAND coreUnitTests)
+add_test(NAME CoreTests
+    COMMAND ${RUN_UT_AS_ROOT} $<TARGET_FILE:coreUnitTests> --gtest_shuffle --gtest_output=xml:test_results/test_core_$<CONFIG>.xml
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})

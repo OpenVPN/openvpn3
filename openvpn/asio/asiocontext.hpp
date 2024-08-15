@@ -36,10 +36,23 @@ class AsioContextStore
     {
         openvpn_io::io_context *ioc = new openvpn_io::io_context(concurrency_hint);
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::lock_guard lock(mutex);
             contexts.emplace_back(ioc);
         }
         return *ioc;
+    }
+
+    /**
+     *  This is to be used only as a last resort. The proper way to end an
+     *  io_context-driven thread is to simply stop scheduling work on the reactor
+     *  and exit gracefully. DO NOT USE THIS IF THERE'S AN ALTERNATIVE!
+     */
+    void stop()
+    {
+        std::lock_guard lock(mutex);
+
+        for (auto &context : contexts)
+            context->stop();
     }
 
   private:

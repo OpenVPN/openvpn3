@@ -173,7 +173,6 @@ class ClientOptions : public RC<thread_unsafe_refcount>
         HTTPProxyTransport::Options::Ptr http_proxy_options;
         bool alt_proxy = false;
         bool synchronous_dns_lookup = false;
-        bool disable_client_cert = false;
         int default_key_direction = -1;
         bool allow_local_lan_access = false;
 
@@ -1301,12 +1300,12 @@ class ClientOptions : public RC<thread_unsafe_refcount>
 
         // client SSL config
         SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
-        cc->set_external_pki_callback(config.external_pki);
+        cc->set_external_pki_callback(config.external_pki, config.clientconf.external_pki_alias);
         cc->set_frame(frame);
         cc->set_flags(SSLConst::LOG_VERIFY_STATUS);
         cc->set_debug_level(config.clientconf.sslDebugLevel);
         cc->set_rng(rng);
-        cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.disable_client_cert);
+        cc->set_local_cert_enabled(pcc.clientCertEnabled() && !config.clientconf.disableClientCert);
         /* load depends on private key password and legacy algorithms */
         cc->enable_legacy_algorithms(config.clientconf.enableLegacyAlgorithms);
         cc->set_private_key_password(config.clientconf.privateKeyPassword);

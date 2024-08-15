@@ -74,7 +74,7 @@ class Route
       public:
         Context(PCQuery::Info instance_info_arg,
                 Creds creds_arg,
-                RandomAPI::Ptr rng,
+                StrongRandomAPI::Ptr rng,
                 Stop *async_stop_arg,
                 const int debug_level)
             : instance_info(std::move(instance_info_arg)),

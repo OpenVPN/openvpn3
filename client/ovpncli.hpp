@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012 - 2024 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -28,6 +28,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <optional>
 
 #include <openvpn/tun/builder/base.hpp>
 #include <openvpn/tun/extern/fw.hpp>
@@ -52,8 +53,14 @@ struct ServerEntry
     std::string friendlyName;
 };
 
-// return properties of config
-// (client reads)
+/**
+    @brief Struct containing configuration details parsed from an OpenVPN configuration file.
+    @details
+    This struct holds various properties extracted from an OpenVPN configuration file, such as
+    error status, profile name, autologin flag, external PKI flag, VPN server CA, static
+    challenge, private key password requirement, remote host information, list of selectable VPN
+    servers, Windows driver, and DCO compatibility details.
+*/
 struct EvalConfig
 {
     // true if error
@@ -76,6 +83,13 @@ struct EvalConfig
 
     // if true, this is an External PKI profile (no cert or key directives)
     bool externalPki = false;
+
+    // VPN server CA in PEM format as given in the configuration. This is the CA, the
+    // VPN server certificate is checked against. This is not a parsed version so it
+    // can have extra lines around the actual certificates that an X509 parser would
+    // ignore.
+    // Note that this can can be empty if the profile uses --peer-fingerprint instead of traditional PKI check.
+    std::string vpnCa;
 
     // static challenge, may be empty, ignored if autologin
     std::string staticChallenge;
@@ -679,6 +693,31 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
 
     // send custom app control channel message
     void send_app_control_channel_msg(const std::string &protocol, const std::string &msg);
+    /**
+      @brief Start up the cert check handshake using the given certs and key
+      @param client_cert String containing the properly encoded client certificate
+      @param clientkey String containing the properly encoded private key for \p client_cert
+      @param ca Optional string containing the properly encoded authority
+
+      This function forwards to ClientProto::Session::start_acc_certcheck, which sets up the
+      session ACC certcheck TLS handshake object. Every time this function is called the state of
+      the handshake object will be reset and the handshake will be restarted.
+    */
+    void start_cert_check(const std::string &client_cert,
+                          const std::string &clientkey,
+                          const std::optional<const std::string> &ca = std::nullopt,
+                          bool disableTLS13 = false);
+
+    /**
+      @brief Start up the cert check handshake using the given epki_alias string
+      @param alias     string containing the epki used for callbacks for certificate and signing operations
+      @param ca Optional string containing the properly encoded authority
+
+      This function forwards to ClientProto::Session::start_acc_certcheck, which sets up the
+      session ACC certcheck TLS handshake object. Every time this function is called the state of
+      the handshake object will be reset and the handshake will be restarted.
+    */
+    void start_cert_check_epki(const std::string &alias, const std::optional<const std::string> &ca, bool disableTLS13 = false);
 
     // Callback for delivering events during connect() call.
     // Will be called from the thread executing connect().
@@ -735,7 +774,8 @@ class OpenVPNClient : public TunBuilderBase,             // expose tun builder v
     void on_disconnect();
 
     // from ExternalPKIBase
-    bool sign(const std::string &data,
+    bool sign(const std::string &alias,
+              const std::string &data,
               std::string &sig,
               const std::string &algorithm,
               const std::string &hashalg,
