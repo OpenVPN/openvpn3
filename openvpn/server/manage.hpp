@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2022 OpenVPN Inc.
+//    Copyright (C) 2012- OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -68,6 +68,9 @@ struct SendBase : public virtual RC<thread_unsafe_refcount>
 
     // Status
     virtual bool is_stopped() const = 0;
+
+    // Retrieve any potentially collected debug state.
+    virtual std::string to_string_debug() const = 0;
 
     // IP-mapped ACL (IPMA) notification
     virtual void ipma_notify(const struct ovpn_tun_head_ipma &ipma) = 0;
