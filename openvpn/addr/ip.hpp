@@ -522,15 +522,14 @@ class Addr
         }
     }
 
-    // build a netmask using *this as extent
-    Addr netmask_from_extent() const
+    Addr netmask_from_this_as_extent() const
     {
         switch (ver)
         {
         case V4:
-            return from_ipv4(u.v4.netmask_from_extent());
+            return from_ipv4(u.v4.netmask_from_this_as_extent());
         case V6:
-            return from_ipv6(u.v6.netmask_from_extent());
+            return from_ipv6(u.v6.netmask_from_this_as_extent());
         default:
             OPENVPN_IP_THROW("netmask_from_extent: address unspecified");
         }

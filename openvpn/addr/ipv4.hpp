@@ -28,24 +28,20 @@
 
 #include <openvpn/io/io.hpp>
 
-#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/endian.hpp>
 #include <openvpn/common/ostream.hpp>
-#include <openvpn/common/socktypes.hpp>
 #include <openvpn/common/ffs.hpp>
 #include <openvpn/common/hexstr.hpp>
-#include <openvpn/common/hash.hpp>
 #include <openvpn/addr/iperr.hpp>
 
-namespace openvpn {
-namespace IP {
+namespace openvpn::IP {
 class Addr;
 }
 
 // Fundamental classes for representing an IPv4 IP address.
 
-namespace IPv4 {
+namespace openvpn::IPv4 {
 
 OPENVPN_EXCEPTION(ipv4_exception);
 
@@ -67,7 +63,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         return 4;
     }
 
-    bool defined() const
+    static constexpr bool defined()
     {
         return true;
     }
@@ -77,31 +73,30 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         return addr;
     }
 
-    static Addr from_in_addr(const struct in_addr *in4)
+    static Addr from_in_addr(const in_addr *in4)
     {
         Addr ret;
         ret.u.addr = ntohl(in4->s_addr);
         return ret;
     }
 
-    struct in_addr to_in_addr() const
+    in_addr to_in_addr() const
     {
-        struct in_addr ret;
+        in_addr ret;
         ret.s_addr = htonl(u.addr);
         return ret;
     }
 
-    static Addr from_sockaddr(const struct sockaddr_in *sa)
+    static Addr from_sockaddr(const sockaddr_in *sa)
     {
         Addr ret;
         ret.u.addr = ntohl(sa->sin_addr.s_addr);
         return ret;
     }
 
-    struct sockaddr_in to_sockaddr(const unsigned short port = 0) const
+    sockaddr_in to_sockaddr(const unsigned short port = 0) const
     {
-        struct sockaddr_in ret;
-        std::memset(&ret, 0, sizeof(ret));
+        sockaddr_in ret = {};
         ret.sin_family = AF_INET;
         ret.sin_port = htons(port);
         ret.sin_addr.s_addr = htonl(u.addr);
@@ -129,7 +124,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
 
     void to_byte_string(unsigned char *bytestr) const
     {
-        *(base_type *)bytestr = ntohl(u.addr);
+        *reinterpret_cast<base_type *>(bytestr) = ntohl(u.addr);
     }
 
     std::uint32_t to_uint32_net() const // return value in net byte order
@@ -140,27 +135,25 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     static Addr from_ulong(unsigned long ul)
     {
         Addr ret;
-        ret.u.addr = (base_type)ul;
+        ret.u.addr = static_cast<base_type>(ul);
         return ret;
     }
 
-    // return *this as a unsigned long
     unsigned long to_ulong() const
     {
-        return (unsigned long)u.addr;
+        return u.addr;
     }
 
     static Addr from_long(long ul)
     {
         Addr ret;
-        ret.u.addr = (base_type)(signed_base_type)ul;
+        ret.u.addr = static_cast<base_type>(ul);
         return ret;
     }
 
-    // return *this as a long
     long to_long() const
     {
-        return (long)(signed_base_type)u.addr;
+        return u.addr;
     }
 
     static Addr from_bytes(const unsigned char *bytes) // host byte order
@@ -199,7 +192,6 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         return ret;
     }
 
-    // build a netmask using given prefix_len
     static Addr netmask_from_prefix_len(const unsigned int prefix_len)
     {
         Addr ret;
@@ -207,8 +199,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         return ret;
     }
 
-    // build a netmask using given extent
-    Addr netmask_from_extent() const
+    Addr netmask_from_this_as_extent() const
     {
         const int lb = find_last_set(u.addr - 1);
         return netmask_from_prefix_len(SIZE - lb);
@@ -267,7 +258,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         if (len < 1 || len > 8)
             throw ipv4_exception("parse hex error");
         size_t di = (len - 1) >> 1;
-        for (int i = (len & 1) ? -1 : 0; i < int(len); i += 2)
+        for (int i = (len & 1) ? -1 : 0; i < static_cast<int>(len); i += 2)
         {
             const size_t idx = base + i;
             const int bh = (i >= 0) ? parse_hex_char(s[idx]) : 0;
@@ -302,17 +293,17 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     std::string arpa() const
     {
         std::ostringstream os;
-        os << int(u.bytes[Endian::e4(0)]) << '.'
-           << int(u.bytes[Endian::e4(1)]) << '.'
-           << int(u.bytes[Endian::e4(2)]) << '.'
-           << int(u.bytes[Endian::e4(3)]) << ".in-addr.arpa";
+        os << static_cast<int>(u.bytes[Endian::e4(0)]) << '.'
+           << static_cast<int>(u.bytes[Endian::e4(1)]) << '.'
+           << static_cast<int>(u.bytes[Endian::e4(2)]) << '.'
+           << static_cast<int>(u.bytes[Endian::e4(3)]) << ".in-addr.arpa";
         return os.str();
     }
 
     static Addr from_asio(const openvpn_io::ip::address_v4 &asio_addr)
     {
         Addr ret;
-        ret.u.addr = (std::uint32_t)asio_addr.to_uint();
+        ret.u.addr = asio_addr.to_uint();
         return ret;
     }
 
@@ -338,7 +329,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     Addr operator+(const long delta) const
     {
         Addr ret;
-        ret.u.addr = u.addr + (std::uint32_t)delta;
+        ret.u.addr = u.addr + static_cast<base_type>(delta);
         return ret;
     }
 
@@ -473,8 +464,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         const int ret = prefix_len_32(u.addr);
         if (ret >= 0)
             return ret;
-        else
-            throw ipv4_exception("malformed netmask");
+        throw ipv4_exception("malformed netmask");
     }
 
     int prefix_len_nothrow() const
@@ -501,10 +491,9 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
         const unsigned int hl = host_len();
         if (hl < SIZE)
             return 1 << hl;
-        else if (hl == SIZE)
+        if (hl == SIZE)
             return 0;
-        else
-            throw ipv4_exception("extent overflow");
+        throw ipv4_exception("extent overflow");
     }
 
     // convert netmask in addr to prefix_len, will return -1 on error
@@ -512,29 +501,26 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     {
         if (addr == ~std::uint32_t(0))
             return 32;
-        else if (addr == 0)
+        if (addr == 0)
             return 0;
-        else
+        unsigned int high = 32;
+        unsigned int low = 1;
+        for (unsigned int i = 0; i < 5; ++i)
         {
-            unsigned int high = 32;
-            unsigned int low = 1;
-            for (unsigned int i = 0; i < 5; ++i)
-            {
-                const unsigned int mid = (high + low) / 2;
-                const IPv4::Addr::base_type test = prefix_len_to_netmask_unchecked(mid);
-                if (addr == test)
-                    return mid;
-                else if (addr > test)
-                    low = mid;
-                else
-                    high = mid;
-            }
-            return -1;
+            const unsigned int mid = (high + low) / 2;
+            const IPv4::Addr::base_type test = prefix_len_to_netmask_unchecked(mid);
+            if (addr == test)
+                return mid;
+            if (addr > test)
+                low = mid;
+            else
+                high = mid;
         }
+        return -1;
     }
 
     // address size in bits
-    static unsigned int size()
+    static constexpr unsigned int size()
     {
         return SIZE;
     }
@@ -596,20 +582,18 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
     }
 
   private:
-    static base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len)
+    static base_type prefix_len_to_netmask_unchecked(const unsigned int prefix_len) noexcept
     {
         if (prefix_len)
             return ~((1u << (SIZE - prefix_len)) - 1);
-        else
-            return 0;
+        return 0;
     }
 
     static base_type prefix_len_to_netmask(const unsigned int prefix_len)
     {
         if (prefix_len <= SIZE)
             return prefix_len_to_netmask_unchecked(prefix_len);
-        else
-            throw ipv4_exception("bad prefix len");
+        throw ipv4_exception("bad prefix len");
     }
 
     union {
@@ -619,8 +603,7 @@ class Addr // NOTE: must be union-legal, so default constructor does not initial
 };
 
 OPENVPN_OSTREAM(Addr, to_string)
-} // namespace IPv4
-} // namespace openvpn
+} // namespace openvpn::IPv4
 
 #ifdef USE_OPENVPN_HASH
 OPENVPN_HASH_METHOD(openvpn::IPv4::Addr, hashval);
