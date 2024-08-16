@@ -33,7 +33,7 @@
 #include <openvpn/common/rc.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/static_key.hpp>
-#include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/packet_id_control.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
 #include <openvpn/compress/compress.hpp>
 
@@ -48,9 +48,9 @@ class CryptoDCInstance : public RC<thread_unsafe_refcount>
     // Encrypt/Decrypt
 
     // returns true if packet ID is close to wrapping
-    virtual bool encrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) = 0;
+    virtual bool encrypt(BufferAllocated &buf, const unsigned char *op32) = 0;
 
-    virtual Error::Type decrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) = 0;
+    virtual Error::Type decrypt(BufferAllocated &buf, std::time_t now, const unsigned char *op32) = 0;
 
     // Initialization
 

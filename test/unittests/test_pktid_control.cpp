@@ -1,29 +1,38 @@
 #include "test_common.h"
 
-#include <openvpn/crypto/packet_id.hpp>
-#include <openvpn/crypto/packet_id_aead.hpp>
+#include <openvpn/crypto/packet_id_control.hpp>
 
 using namespace openvpn;
 
+struct PacketIDControlConstruct : public PacketIDControl
+{
+    PacketIDControlConstruct(const PacketIDControl::time_t v_time = PacketIDControl::time_t(0), const PacketIDControl::id_t v_id = PacketIDControl::id_t(0))
+    {
+        id = v_id;
+        time = v_time;
+    }
+};
+
+
 template <typename PIDRecv>
 void testcase(PIDRecv &pr,
-              const PacketID::time_t t,
-              const PacketID::time_t pkt_time,
-              const PacketID::id_t pkt_id,
+              const PacketIDControl::time_t t,
+              const PacketIDControl::time_t pkt_time,
+              const PacketIDControl::id_t pkt_id,
               const Error::Type expected_status)
 {
-    const PacketIDConstruct pid(pkt_time, pkt_id);
+    const PacketIDControlConstruct pid(pkt_time, pkt_id);
     const Error::Type status = pr.do_test_add(pid, t, true);
     // OPENVPN_LOG("[" << t << "] id=" << pkt_id << " time=" << pkt_time << ' ' << Error::name(status));
     ASSERT_EQ(status, expected_status);
 }
 
-template <typename PIDRecv>
-void do_packet_id_recv_test()
+TEST(misc, pktid_test_control)
 {
+    typedef PacketIDControlReceiveType<3, 5> PIDRecv;
     SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
-    pr.init(PacketID::SHORT_FORM, "test", 0, stats);
+    pr.init("test", 0, stats);
 
     testcase(pr, 0, 0, 0, Error::PKTID_INVALID);
     testcase(pr, 1, 0, 1, Error::SUCCESS);
@@ -78,12 +87,6 @@ void do_packet_id_recv_test()
     testcase(pr, 85, 15, 66, Error::SUCCESS);
 }
 
-TEST(misc, pktid_test_normal)
-{
-    do_packet_id_recv_test<PacketIDReceiveType<3, 5>>();
-}
-
-
 template <unsigned int ORDER, unsigned int EXPIRE>
 void perfiter(const long n,
               const long range,
@@ -91,20 +94,20 @@ void perfiter(const long n,
               const long iter_per_step_pre,
               long &count)
 {
-    typedef PacketIDReceiveType<ORDER, EXPIRE> PIDRecv;
+    typedef PacketIDControlReceiveType<ORDER, EXPIRE> PIDRecv;
 
     const long iter_per_step = iter_per_step_pre * step;
     // OPENVPN_LOG("ITER order=" << ORDER << " n=" << n << " range=" << range << " step=" << step << " iter_per_step="
     //			    << iter_per_step);
 
-    constexpr PacketID::time_t pkt_time = 1234;
+    constexpr PacketIDControl::time_t pkt_time = 1234;
 
     MTRand urand;
     std::vector<bool> bv(n);
     long high = 0;
     SessionStats::Ptr stats(new SessionStats());
     PIDRecv pr;
-    pr.init(PacketID::SHORT_FORM, "test", 0, stats);
+    pr.init("test", 0, stats);
 
     for (long i = 1; i < n; i += step)
     {
@@ -123,7 +126,7 @@ void perfiter(const long n,
                     expected = Error::PKTID_BACKTRACK;
                 else if (bv[id])
                     expected = Error::PKTID_REPLAY;
-                const PacketIDConstruct pid(0, static_cast<unsigned>(id));
+                const PacketIDControlConstruct pid(0, static_cast<unsigned>(id));
                 const Error::Type result = pr.do_test_add(pid, pkt_time, true);
                 ++count;
 #define INFO "i=" << i << " id=" << id << " high=" << high << " result=" << Error::name(result) << " expected=" << Error::name(expected)
@@ -139,7 +142,7 @@ void perfiter(const long n,
 template <unsigned int ORDER, unsigned int EXPIRE>
 void perf(long &count)
 {
-    typedef PacketIDReceiveType<ORDER, EXPIRE> PIDRecv;
+    typedef PacketIDControlReceiveType<ORDER, EXPIRE> PIDRecv;
 
     perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 3, 1, 10, count);
     perfiter<ORDER, EXPIRE>(20000, PIDRecv::REPLAY_WINDOW_SIZE * 3, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
@@ -151,13 +154,11 @@ void perf(long &count)
     perfiter<ORDER, EXPIRE>(20000, 4, PIDRecv::REPLAY_WINDOW_SIZE / 2, 10, count);
 }
 
-TEST(misc, pktid_perf)
+TEST(misc, pktid_control_perf)
 {
-    {
-        long count = 0;
-        perf<3, 5>(count);
-        perf<6, 5>(count);
-        perf<8, 5>(count);
-        // ASSERT_EQ(4746439, count);
-    }
+    long count = 0;
+    perf<3, 5>(count);
+    perf<6, 5>(count);
+    perf<8, 5>(count);
+    // ASSERT_EQ(4746439, count);
 }

@@ -108,12 +108,12 @@ class Instance : public CryptoDCInstance
     // should never be reached.
 
     // returns true if packet ID is close to wrapping
-    bool encrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) override
+    bool encrypt(BufferAllocated &buf, const unsigned char *op32) override
     {
         throw korekey_error("encrypt");
     }
 
-    Error::Type decrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) override
+    Error::Type decrypt(BufferAllocated &buf, const std::time_t now, const unsigned char *op32) override
     {
         throw korekey_error("decrypt");
     }

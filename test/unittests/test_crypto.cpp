@@ -149,11 +149,11 @@ void test_datachannel_crypto(bool tag_at_the_end, bool longpktcounter = false)
     const unsigned char *data = work.data();
     EXPECT_TRUE(std::memcmp(data, plaintext, std::strlen(plaintext)) == 0);
 
-    const openvpn::PacketID::time_t now = 42;
+    const std::time_t now = 42;
 
     const unsigned char op32[]{7, 0, 0, 23};
 
-    bool const wrapwarn = cryptodc.encrypt(work, now, op32);
+    bool const wrapwarn = cryptodc.encrypt(work, op32);
     ASSERT_FALSE(wrapwarn);
 
     size_t pkt_counter_len = longpktcounter ? 8 : 4;

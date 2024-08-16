@@ -43,24 +43,25 @@
 
 namespace openvpn {
 /**
- * Communicate packet-id over the wire for AEAD
+ * Communicate packet-id over the wire for data channel packets
  * A short packet-id is just a 32 bit sequence number. A long packet-id is a
- * 64 bit sequence number. This sequence number is reused for AEAD IV.
+ * 64 bit sequence number. This sequence number is reused for AEAD IV when
+ * AEAD is used as a cipher. CBC transmits an additional IV.
  *
  * This data structure is always sent over the net in network byte order,
  *
- * This class is different from PacketID in the way that it always uses
- * a "flat" packet id that is either 32 or 64 bit while PacketID has a long
+ * This class is different from PacketIDControl in the way that it always uses
+ * a "flat" packet id that is either 32 or 64 bit while PacketIDControl has a long
  * packet id that is 32bit + 32bit but follow different rules and includes
- * a timestamp. Merging PacketIDAEAD and PacketID would result in a much
- * more convoluted and hard to understand class than keeping them seperate
+ * a timestamp. Merging PacketIData and PacketIDControl would result in a much
+ * more convoluted and hard to understand class than keeping them separate.
  *
  */
-struct PacketIDAEAD
+struct PacketIDData
 {
-    typedef std::uint64_t aead_id_t;
+    typedef std::uint64_t data_id_t;
 
-    aead_id_t id = 0; // legal values are 1 through 2^64-1
+    data_id_t id = 0; // legal values are 1 through 2^64-1
     bool wide = false;
 
     /**
@@ -81,12 +82,12 @@ struct PacketIDAEAD
     }
 
 
-    explicit PacketIDAEAD(bool wide_arg)
+    explicit PacketIDData(bool wide_arg)
         : wide(wide_arg)
     {
     }
 
-    explicit PacketIDAEAD(bool wide_arg, aead_id_t id_arg)
+    explicit PacketIDData(bool wide_arg, data_id_t id_arg)
         : id(id_arg), wide(wide_arg)
     {
     }
@@ -94,14 +95,14 @@ struct PacketIDAEAD
     constexpr static std::size_t short_id_size = sizeof(std::uint32_t);
     constexpr static std::size_t long_id_size = sizeof(std::uint64_t);
 
-    bool is_valid() const
+    [[nodiscard]] bool is_valid() const
     {
         return id != 0;
     }
 
     void reset()
     {
-        id = aead_id_t(0);
+        id = data_id_t(0);
     }
 
     /**
@@ -139,7 +140,23 @@ struct PacketIDAEAD
         }
     }
 
-    std::string str() const
+    /** Prepend the packet id to a buffer */
+    void write_prepend(Buffer &buf) const
+    {
+        if (wide)
+        {
+            const std::uint64_t net_id = Endian::rev64(id);
+            buf.prepend(reinterpret_cast<const unsigned char *>(&net_id), sizeof(net_id));
+        }
+        else
+        {
+            const std::uint32_t net_id = htonl(static_cast<std::uint32_t>(id));
+            buf.prepend(reinterpret_cast<const unsigned char *>(&net_id), sizeof(net_id));
+        }
+    }
+
+
+    [[nodiscard]] std::string str() const
     {
         std::ostringstream os;
         os << std::hex << "[0x" << id << "]";
@@ -147,12 +164,12 @@ struct PacketIDAEAD
     }
 };
 
-class PacketIDAEADSend
+class PacketIDDataSend
 {
   public:
     OPENVPN_SIMPLE_EXCEPTION(packet_id_wrap);
 
-    PacketIDAEADSend(bool wide_arg)
+    explicit PacketIDDataSend(bool wide_arg)
         : pid_(wide_arg)
     {
     }
@@ -163,10 +180,10 @@ class PacketIDAEADSend
      * @throws  packet_id_wrap if the packet id space is exhausted
      * @return  packet id to use next.
      */
-    PacketIDAEAD next()
+    [[nodiscard]] PacketIDData next()
     {
         ++pid_.id;
-        PacketIDAEAD ret{pid_.wide, pid_.id};
+        PacketIDData ret{pid_.wide, pid_.id};
         if (!pid_.wide && unlikely(pid_.id == std::numeric_limits<std::uint32_t>::max())) // wraparound
         {
             throw packet_id_wrap();
@@ -184,26 +201,21 @@ class PacketIDAEADSend
      */
     void write_next(Buffer &buf)
     {
-        const PacketIDAEAD pid = next();
+        const PacketIDData pid = next();
         pid.write(buf);
     }
 
     /**
-     * When a VPN runs in TLS mode (the only mode that OpenVPN supports,
-     * there is no --secret mode anymore), it needs to be warned about wrapping to
-     * start thinking about triggering a new SSL/TLS handshake.
-     * This method can be called to see if that level has been reached.
+     * increases the packet id and prepends it to a buffer
+     * @param buf   buffer to write to
      */
-    bool wrap_warning() const
+    void prepend_next(Buffer &buf)
     {
-        if (pid_.wide)
-            return false;
-
-        const PacketIDAEAD::aead_id_t wrap_at = 0xFF000000;
-        return pid_.id >= wrap_at;
+        const PacketIDData pid = next();
+        pid.write_prepend(buf);
     }
 
-    std::string str() const
+    [[nodiscard]] std::string str() const
     {
         std::string ret;
         ret = pid_.str();
@@ -221,8 +233,28 @@ class PacketIDAEADSend
         return pid_.size();
     }
 
-  private:
-    PacketIDAEAD pid_;
+    /**
+     * When a VPN runs in TLS mode (the only mode that OpenVPN supports,
+     * there is no --secret mode anymore), it needs to be warned about wrapping to
+     * start thinking about triggering a new SSL/TLS handshake.
+     * This method can be called to see if that level has been reached.
+     *
+     * For 64bit counters, even with (non-existing) 1 byte packets, we would need
+     * to transfer 16 EB (exabytes) and 1,6 ZB (zettabytes) with 100 byte packets.
+     * This is not reachable in reasonable amount of time. And we still have the
+     * failsafe to throw an exception if we would overflow the ocunter.
+     */
+    bool wrap_warning() const
+    {
+        if (pid_.wide)
+            return false;
+
+        const PacketIDData::data_id_t wrap_at = 0xFF000000;
+        return pid_.id >= wrap_at;
+    }
+
+  protected:
+    PacketIDData pid_;
 };
 
 /*
@@ -234,7 +266,7 @@ class PacketIDAEADSend
  */
 template <unsigned int REPLAY_WINDOW_ORDER,
           unsigned int PKTID_RECV_EXPIRE>
-class PacketIDAEADReceiveType
+class PacketIDDataReceiveType
 {
   public:
     static constexpr unsigned int REPLAY_WINDOW_BYTES = 1u << REPLAY_WINDOW_ORDER;
@@ -268,7 +300,7 @@ class PacketIDAEADReceiveType
      * @param now       Current time to check that reordered packets are in the allowed time
      * @return          true if the packet id is okay and has been accepted
      */
-    [[nodiscard]] bool test_add(const PacketIDAEAD &pin,
+    [[nodiscard]] bool test_add(const PacketIDData &pin,
                                 const Time::base_type now)
     {
         const Error::Type err = do_test_add(pin, now);
@@ -290,7 +322,7 @@ class PacketIDAEADReceiveType
      * @param now       Current time to check that reordered packets are in the allowed time
      * @return          Error::SUCCESS if successful, otherwise  PKTID_EXPIRE, PKTID_BACKTRACK or PKTID_REPLAY
      */
-    [[nodiscard]] Error::Type do_test_add(const PacketIDAEAD &pin,
+    [[nodiscard]] Error::Type do_test_add(const PacketIDData &pin,
                                           const Time::base_type now)
     {
         // expire backtracks at or below id_floor after PKTID_RECV_EXPIRE time
@@ -364,9 +396,9 @@ class PacketIDAEADReceiveType
         return Error::SUCCESS;
     }
 
-    PacketIDAEAD read_next(Buffer &buf) const
+    PacketIDData read_next(Buffer &buf) const
     {
-        PacketIDAEAD pid{wide};
+        PacketIDData pid{wide};
         pid.read(buf);
         return pid;
     }
@@ -380,11 +412,11 @@ class PacketIDAEADReceiveType
 
     [[nodiscard]] std::size_t constexpr length() const
     {
-        return PacketIDAEAD::size(wide);
+        return PacketIDData::size(wide);
     }
 
   private:
-    [[nodiscard]] constexpr std::size_t replay_index(PacketIDAEAD::aead_id_t i) const
+    [[nodiscard]] constexpr std::size_t replay_index(PacketIDData::data_id_t i) const
     {
         return (base + i) & (REPLAY_WINDOW_SIZE - 1);
     }
@@ -392,8 +424,8 @@ class PacketIDAEADReceiveType
     std::size_t base;                 // bit position of deque base in history
     std::size_t extent;               // extent (in bits) of deque in history
     Time::base_type expire;           // expiration of history
-    PacketIDAEAD::aead_id_t id_high;  // highest sequence number received
-    PacketIDAEAD::aead_id_t id_floor; // we will only accept backtrack IDs > id_floor
+    PacketIDData::data_id_t id_high;  // highest sequence number received
+    PacketIDData::data_id_t id_floor; // we will only accept backtrack IDs > id_floor
 
     //!< 32 or 64 bit packet counter
     bool wide;
@@ -408,6 +440,6 @@ class PacketIDAEADReceiveType
 
 // Our standard packet ID window with order=8 (window size=2048).
 // and recv expire=30 seconds.
-typedef PacketIDAEADReceiveType<8, 30> PacketIDAEADReceive;
+typedef PacketIDDataReceiveType<8, 30> PacketIDDataReceive;
 
 } // namespace openvpn

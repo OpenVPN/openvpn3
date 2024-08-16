@@ -32,7 +32,7 @@
 #include <openvpn/common/memneq.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
-#include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/packet_id_control.hpp>
 #include <openvpn/ssl/psid.hpp>
 
 namespace openvpn {
@@ -190,7 +190,7 @@ class TLSCryptContext : public RC<thread_unsafe_refcount>
     // [OP]  [PSID]  [PID]  [HMAC] [...]
     //
 
-    constexpr const static size_t hmac_offset = 1 + ProtoSessionID::SIZE + PacketID::longidsize;
+    constexpr const static size_t hmac_offset = 1 + ProtoSessionID::SIZE + PacketIDControl::idsize;
 };
 
 

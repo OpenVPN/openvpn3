@@ -35,7 +35,7 @@
 #include <openvpn/crypto/cipher.hpp>
 #include <openvpn/crypto/ovpnhmac.hpp>
 #include <openvpn/crypto/static_key.hpp>
-#include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/packet_id_data.hpp>
 
 namespace openvpn {
 template <typename CRYPTO_API>
@@ -44,7 +44,7 @@ class EncryptCHM
   public:
     OPENVPN_SIMPLE_EXCEPTION(chm_unsupported_cipher_mode);
 
-    void encrypt(BufferAllocated &buf, const PacketID::time_t now)
+    void encrypt(BufferAllocated &buf)
     {
         // skip null packets
         if (!buf.size())
@@ -64,7 +64,7 @@ class EncryptCHM
                 rng->rand_bytes(iv_buf, iv_length);
 
                 // generate fresh outgoing packet ID and prepend to cleartext buffer
-                pid_send.write_next(buf, true, now);
+                pid_send.prepend_next(buf);
             }
             else
             {
@@ -95,7 +95,7 @@ class EncryptCHM
         else // no encryption
         {
             // generate fresh outgoing packet ID and prepend to cleartext buffer
-            pid_send.write_next(buf, true, now);
+            pid_send.prepend_next(buf);
 
             // HMAC the cleartext
             prepend_hmac(buf);
@@ -110,7 +110,7 @@ class EncryptCHM
     Frame::Ptr frame;
     CipherContext<CRYPTO_API> cipher;
     OvpnHMAC<CRYPTO_API> hmac;
-    PacketIDSend pid_send;
+    PacketIDDataSend pid_send{false};
 
   private:
     // compute HMAC signature of data buffer,

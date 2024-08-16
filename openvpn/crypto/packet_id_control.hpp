@@ -21,8 +21,7 @@
 
 // Manage OpenVPN protocol Packet IDs for packet replay detection
 
-#ifndef OPENVPN_CRYPTO_PACKET_ID_H
-#define OPENVPN_CRYPTO_PACKET_ID_H
+#pragma once
 
 #include <string>
 #include <cstring>
@@ -42,59 +41,38 @@
 
 namespace openvpn {
 /*
- * Communicate packet-id over the wire.
- * A short packet-id is just a 32 bit
- * sequence number.  A long packet-id
- * includes a timestamp as well.
+ * Control channel Packet ID. These IDs have the format
  *
- * Long packet-ids are used as IVs for
- * CFB/OFB ciphers.
+ *  | 32 bit integer timestamp in BE | 32 bit packet counter in BE |
  *
- * This data structure is always sent
- * over the net in network byte order,
- * by calling htonl, ntohl, on the
- * 32-bit data elements, id_t and
- * net_time_t, to change them to and
- * from network order.
+ * This format of long packet-ids is also used as IVs for CFB/OFB ciphers
+ * in OpenVPN 2.x but OpenVPN 3.x supports only CBC and AEAD ciphers, so
+ * it is only used for control channel and control chanel authentication/encryption
+ * schemes like tls-auth/tls-crypt.
  *
- * In addition, time is converted to
- * a PacketID::net_time_t before sending,
- * since openvpn always
- * uses a 32-bit time_t but some
- * 64 bit platforms use a
- * 64 bit time_t.
+ * This data structure is always sent over the net in network byte order,
+ * by calling htonl, ntohl, on the 32-bit data elements, id_t and
+ * net_time_t, to change them to and from network order.
  */
-struct PacketID
+struct PacketIDControl
 {
     typedef std::uint32_t id_t;
     typedef std::uint32_t net_time_t;
     typedef Time::base_type time_t;
 
-    enum
-    {
-        SHORT_FORM = 0, // short form of ID (4 bytes)
-        LONG_FORM = 1,  // long form of ID (8 bytes)
-
-        UNDEF = 0, // special undefined/null id_t value
-    };
-
     id_t id;     // legal values are 1 through 2^32-1
     time_t time; // converted to PacketID::net_time_t before transmission
 
-    static constexpr size_t size(const int form)
+    static constexpr size_t size()
     {
-        if (form == PacketID::LONG_FORM)
-            return longidsize;
-        else
-            return shortidsize;
+        return idsize;
     }
 
-    constexpr static size_t shortidsize = sizeof(id_t);
-    constexpr static size_t longidsize = sizeof(id_t) + sizeof(net_time_t);
+    constexpr static size_t idsize = sizeof(id_t) + sizeof(net_time_t);
 
     bool is_valid() const
     {
-        return id != UNDEF;
+        return id != 0;
     }
 
     void reset()
@@ -104,7 +82,7 @@ struct PacketID
     }
 
     template <typename BufType> // so it can take a Buffer or a ConstBuffer
-    void read(BufType &buf, const int form)
+    void read(BufType &buf)
     {
         id_t net_id;
         net_time_t net_time;
@@ -112,16 +90,11 @@ struct PacketID
         buf.read((unsigned char *)&net_id, sizeof(net_id));
         id = ntohl(net_id);
 
-        if (form == LONG_FORM)
-        {
-            buf.read((unsigned char *)&net_time, sizeof(net_time));
-            time = ntohl(net_time);
-        }
-        else
-            time = time_t(0);
+        buf.read((unsigned char *)&net_time, sizeof(net_time));
+        time = ntohl(net_time);
     }
 
-    void write(Buffer &buf, const int form, const bool prepend) const
+    void write(Buffer &buf, const bool prepend) const
     {
         const id_t net_id = htonl(id);
         const net_time_t net_time = htonl(static_cast<uint32_t>(time & 0x00000000FFFFFFFF));
@@ -130,15 +103,13 @@ struct PacketID
 
         if (prepend)
         {
-            if (form == LONG_FORM)
-                buf.prepend((unsigned char *)&net_time, sizeof(net_time));
+            buf.prepend((unsigned char *)&net_time, sizeof(net_time));
             buf.prepend((unsigned char *)&net_id, sizeof(net_id));
         }
         else
         {
             buf.write((unsigned char *)&net_id, sizeof(net_id));
-            if (form == LONG_FORM)
-                buf.write((unsigned char *)&net_time, sizeof(net_time));
+            buf.write((unsigned char *)&net_time, sizeof(net_time));
         }
     }
 
@@ -150,51 +121,36 @@ struct PacketID
     }
 };
 
-struct PacketIDConstruct : public PacketID
-{
-    PacketIDConstruct(const PacketID::time_t v_time = PacketID::time_t(0), const PacketID::id_t v_id = PacketID::id_t(0))
-    {
-        id = v_id;
-        time = v_time;
-    }
-};
 
-class PacketIDSend
+class PacketIDControlSend
 {
   public:
     OPENVPN_SIMPLE_EXCEPTION(packet_id_wrap);
 
-    PacketIDSend()
-    {
-        init(PacketID::SHORT_FORM);
-    }
 
-    explicit PacketIDSend(int form, PacketID::id_t start_at = PacketID::id_t(0))
+    explicit PacketIDControlSend(PacketIDControl::id_t start_at = PacketIDControl::id_t(0))
     {
-        init(form, start_at);
+        init(start_at);
     }
 
     /**
      * @param form PacketID::LONG_FORM or PacketID::SHORT_FORM
      * @param start_at initial id for the sending
      */
-    void init(const int form, PacketID::id_t start_at = 0)
+    void init(PacketIDControl::id_t start_at = 0)
     {
         pid_.id = start_at;
-        pid_.time = PacketID::time_t(0);
-        form_ = form;
+        pid_.time = PacketIDControl::time_t(0);
     }
 
-    PacketID next(const PacketID::time_t now)
+    PacketIDControl next(const PacketIDControl::time_t now)
     {
-        PacketID ret;
+        PacketIDControl ret;
         if (!pid_.time)
             pid_.time = now;
         ret.id = ++pid_.id;
         if (unlikely(!pid_.id)) // wraparound
         {
-            if (form_ != PacketID::LONG_FORM)
-                throw packet_id_wrap();
             pid_.time = now;
             ret.id = pid_.id = 1;
         }
@@ -202,35 +158,22 @@ class PacketIDSend
         return ret;
     }
 
-    void write_next(Buffer &buf, const bool prepend, const PacketID::time_t now)
+    void write_next(Buffer &buf, const bool prepend, const PacketIDControl::time_t now)
     {
-        const PacketID pid = next(now);
-        pid.write(buf, form_, prepend);
-    }
-
-    /*
-     * In TLS mode, when a packet ID gets to this level,
-     * start thinking about triggering a new
-     * SSL/TLS handshake.
-     */
-    bool wrap_warning() const
-    {
-        const PacketID::id_t wrap_at = 0xFF000000;
-        return pid_.id >= wrap_at;
+        const PacketIDControl pid = next(now);
+        pid.write(buf, prepend);
     }
 
     std::string str() const
     {
         std::string ret;
         ret = pid_.str();
-        if (form_ == PacketID::LONG_FORM)
-            ret += 'L';
+        ret += 'L';
         return ret;
     }
 
   private:
-    PacketID pid_;
-    int form_;
+    PacketIDControl pid_;
 };
 
 /*
@@ -243,7 +186,7 @@ class PacketIDSend
  */
 template <unsigned int REPLAY_WINDOW_ORDER,
           unsigned int PKTID_RECV_EXPIRE>
-class PacketIDReceiveType
+class PacketIDControlReceiveType
 {
   public:
     static constexpr unsigned int REPLAY_WINDOW_BYTES = 1 << REPLAY_WINDOW_ORDER;
@@ -252,13 +195,11 @@ class PacketIDReceiveType
     OPENVPN_SIMPLE_EXCEPTION(packet_id_not_initialized);
 
     // TODO: [OVPN3-933] Consider RAII'ifying this code
-    PacketIDReceiveType()
-        : initialized_(false)
+    PacketIDControlReceiveType()
     {
     }
 
-    void init(const int form_arg,
-              const char *name_arg,
+    void init(const char *name_arg,
               const int unit_arg,
               const SessionStats::Ptr &stats_arg)
     {
@@ -270,20 +211,19 @@ class PacketIDReceiveType
         time_high = 0;
         id_floor = 0;
         max_backtrack = 0;
-        form = form_arg;
         unit = unit_arg;
         name = name_arg;
         stats = stats_arg;
         std::memset(history, 0, sizeof(history));
     }
 
-    bool initialized() const
+    [[nodiscard]] bool initialized() const
     {
         return initialized_;
     }
 
-    bool test_add(const PacketID &pin,
-                  const PacketID::time_t now,
+    bool test_add(const PacketIDControl &pin,
+                  const PacketIDControl::time_t now,
                   const bool mod) // don't modify history unless mod is true
     {
         const Error::Type err = do_test_add(pin, now, mod);
@@ -296,8 +236,8 @@ class PacketIDReceiveType
             return true;
     }
 
-    Error::Type do_test_add(const PacketID &pin,
-                            const PacketID::time_t now,
+    Error::Type do_test_add(const PacketIDControl &pin,
+                            const PacketIDControl::time_t now,
                             const bool mod) // don't modify history unless mod is true
     {
         // make sure we were initialized
@@ -402,12 +342,12 @@ class PacketIDReceiveType
         return Error::SUCCESS;
     }
 
-    PacketID read_next(Buffer &buf) const
+    PacketIDControl read_next(Buffer &buf) const
     {
         if (!initialized_)
             throw packet_id_not_initialized();
-        PacketID pid;
-        pid.read(buf, form);
+        PacketIDControl pid{};
+        pid.read(buf);
         return pid;
     }
 
@@ -424,18 +364,17 @@ class PacketIDReceiveType
         return (base + i) & (REPLAY_WINDOW_SIZE - 1);
     }
 
-    bool initialized_;
+    bool initialized_ = false;
 
-    unsigned int base;          // bit position of deque base in history
-    unsigned int extent;        // extent (in bits) of deque in history
-    PacketID::time_t expire;    // expiration of history
-    PacketID::id_t id_high;     // highest sequence number received
-    PacketID::time_t time_high; // highest time stamp received
-    PacketID::id_t id_floor;    // we will only accept backtrack IDs > id_floor
-    unsigned int max_backtrack;
+    unsigned int base = 0;                 // bit position of deque base in history
+    unsigned int extent = 0;               // extent (in bits) of deque in history
+    PacketIDControl::time_t expire = 0;    // expiration of history
+    PacketIDControl::id_t id_high = 0;     // highest sequence number received
+    PacketIDControl::time_t time_high = 0; // highest time stamp received
+    PacketIDControl::id_t id_floor = 0;    // we will only accept backtrack IDs > id_floor
+    unsigned int max_backtrack = 0;
 
-    int form;         // PacketID::LONG_FORM or PacketID::SHORT_FORM
-    int unit;         // unit number of this object (for debugging)
+    int unit = -1;    // unit number of this object (for debugging)
     std::string name; // name of this object (for debugging)
 
     SessionStats::Ptr stats;
@@ -445,8 +384,6 @@ class PacketIDReceiveType
 
 // Our standard packet ID window with order=8 (window size=2048).
 // and recv expire=30 seconds.
-typedef PacketIDReceiveType<8, 30> PacketIDReceive;
+typedef PacketIDControlReceiveType<8, 30> PacketIDControlReceive;
 
 } // namespace openvpn
-
-#endif // OPENVPN_CRYPTO_PACKET_ID_H

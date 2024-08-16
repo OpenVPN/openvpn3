@@ -24,13 +24,15 @@
 #ifndef OPENVPN_RELIABLE_RELCOMMON_H
 #define OPENVPN_RELIABLE_RELCOMMON_H
 
-#include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/packet_id_control.hpp>
 
 namespace openvpn {
 
 namespace reliable {
-typedef PacketID::id_t id_t;
-}
+typedef std::uint32_t id_t;
+constexpr static std::size_t id_size = sizeof(id_t);
+
+} // namespace reliable
 
 template <typename PACKET>
 class ReliableMessageBase

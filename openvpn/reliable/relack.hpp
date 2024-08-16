@@ -30,7 +30,7 @@
 
 #include <openvpn/common/socktypes.hpp>
 #include <openvpn/buffer/buffer.hpp>
-#include <openvpn/crypto/packet_id.hpp>
+#include <openvpn/crypto/packet_id_control.hpp>
 #include <openvpn/reliable/relcommon.hpp>
 
 namespace openvpn {

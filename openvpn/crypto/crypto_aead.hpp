@@ -32,7 +32,7 @@
 #include <openvpn/buffer/buffer.hpp>
 #include <openvpn/frame/frame.hpp>
 #include <openvpn/crypto/static_key.hpp>
-#include <openvpn/crypto/packet_id_aead.hpp>
+#include <openvpn/crypto/packet_id_data.hpp>
 #include <openvpn/log/sessionstats.hpp>
 #include <openvpn/crypto/cryptodc.hpp>
 
@@ -85,12 +85,12 @@ class Crypto : public CryptoDCInstance
         }
 
         // for encrypt
-        Nonce(const Nonce &ref, PacketIDAEADSend &pid_send, const unsigned char *op32)
+        Nonce(const Nonce &ref, PacketIDDataSend &pid_send, const unsigned char *op32)
         {
             /** Copy op code and tail of packet ID */
             std::memcpy(data, ref.data, sizeof(data));
 
-            Buffer buf(data + data_offset_pkt_id, PacketIDAEAD::long_id_size, false);
+            Buffer buf(data + data_offset_pkt_id, PacketIDData::long_id_size, false);
             pid_send.write_next(buf);
             if (op32)
             {
@@ -102,13 +102,13 @@ class Crypto : public CryptoDCInstance
         }
 
         // for encrypt
-        void prepend_ad(Buffer &buf, const PacketIDAEADSend &pid_send) const
+        void prepend_ad(Buffer &buf, const PacketIDDataSend &pid_send) const
         {
             buf.prepend(data + data_offset_pkt_id, pid_send.length());
         }
 
         // for decrypt
-        Nonce(const Nonce &ref, const PacketIDAEADReceive &recv_pid, Buffer &buf, const unsigned char *op32)
+        Nonce(const Nonce &ref, const PacketIDDataReceive &recv_pid, Buffer &buf, const unsigned char *op32)
         {
             /* Copy opcode and tail of packet ID */
             std::memcpy(data, ref.data, sizeof(data));
@@ -125,10 +125,10 @@ class Crypto : public CryptoDCInstance
         }
 
         // for decrypt
-        bool verify_packet_id(PacketIDAEADReceive &pid_recv, const PacketID::time_t now)
+        bool verify_packet_id(PacketIDDataReceive &pid_recv, const PacketIDControl::time_t now)
         {
-            Buffer buf(data + data_offset_pkt_id, PacketIDAEAD::long_id_size, true);
-            const PacketIDAEAD pid = pid_recv.read_next(buf);
+            Buffer buf(data + data_offset_pkt_id, PacketIDData::long_id_size, true);
+            const PacketIDData pid = pid_recv.read_next(buf);
             return pid_recv.test_add(pid, now); // verify packet ID
         }
 
@@ -142,12 +142,12 @@ class Crypto : public CryptoDCInstance
             return ad_op32 ? data : data + data_offset_pkt_id;
         }
 
-        size_t ad_len(const PacketIDAEADSend &pid_send) const
+        size_t ad_len(const PacketIDDataSend &pid_send) const
         {
             return (ad_op32 ? op32_size : 0) + pid_send.length();
         }
 
-        size_t ad_len(const PacketIDAEADReceive &pid_recv) const
+        size_t ad_len(const PacketIDDataReceive &pid_recv) const
         {
             return (ad_op32 ? op32_size : 0) + pid_recv.length();
         }
@@ -168,7 +168,7 @@ class Crypto : public CryptoDCInstance
     {
         typename CRYPTO_API::CipherContextAEAD impl;
         Nonce nonce;
-        PacketIDAEADSend pid_send{false};
+        PacketIDDataSend pid_send{false};
         BufferAllocated work;
     };
 
@@ -176,7 +176,7 @@ class Crypto : public CryptoDCInstance
     {
         typename CRYPTO_API::CipherContextAEAD impl;
         Nonce nonce;
-        PacketIDAEADReceive pid_recv{};
+        PacketIDDataReceive pid_recv{};
         BufferAllocated work;
     };
 
@@ -197,7 +197,7 @@ class Crypto : public CryptoDCInstance
     // Encrypt/Decrypt
 
     // returns true if packet ID is close to wrapping
-    bool encrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) override
+    bool encrypt(BufferAllocated &buf, const unsigned char *op32) override
     {
         // only process non-null packets
         if (buf.size())
@@ -251,7 +251,7 @@ class Crypto : public CryptoDCInstance
         return e.pid_send.wrap_warning();
     }
 
-    Error::Type decrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) override
+    Error::Type decrypt(BufferAllocated &buf, const std::time_t now, const unsigned char *op32) override
     {
         // only process non-null packets
         if (buf.size())
@@ -337,7 +337,7 @@ class Crypto : public CryptoDCInstance
                   const int recv_unit,
                   const SessionStats::Ptr &recv_stats_arg) override
     {
-        e.pid_send = PacketIDAEADSend{dc_settings.use64bitPktCounter()};
+        e.pid_send = PacketIDDataSend{dc_settings.use64bitPktCounter()};
         d.pid_recv.init(recv_name, recv_unit, dc_settings.use64bitPktCounter(), recv_stats_arg);
     }
 

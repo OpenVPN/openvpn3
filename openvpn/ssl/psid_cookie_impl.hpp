@@ -144,7 +144,7 @@ class PsidCookieImpl : public PsidCookie
     {
         static const size_t hmac_size = ta_hmac_recv_->output_size();
         // ovpn_hmac_cmp checks for adequate pkt_buf.size()
-        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(), pkt_buf.size(), 1 + SID_SIZE, hmac_size, long_pktid_size_);
+        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(), pkt_buf.size(), 1 + SID_SIZE, hmac_size, PacketIDControl::idsize);
         if (!pkt_hmac_valid)
         {
             // JMD_TODO: log failure?  Logging DDoS?
@@ -155,7 +155,7 @@ class PsidCookieImpl : public PsidCookie
         static const size_t reqd_packet_size
             // clang-format off
             // [op_field] [cli_psid] [HMAC]      [cli_auth_pktid]   [cli_pktid]
-            =  1 +        SID_SIZE + hmac_size + long_pktid_size_ + short_pktid_size_;
+            =  1 +        SID_SIZE + hmac_size + PacketIDControl::idsize + reliable::id_size;
         // clang-format on
         if (pkt_buf.size() < reqd_packet_size)
         {
@@ -169,10 +169,13 @@ class PsidCookieImpl : public PsidCookie
         // decapsulate_tls_auth
         const ProtoSessionID cli_psid(recv_buf_copy);
         recv_buf_copy.advance(hmac_size);
-        PacketID cli_auth_pktid; // a.k.a, replay_packet_id in draft RFC
-        cli_auth_pktid.read(recv_buf_copy, PacketID::LONG_FORM);
-        PacketID cli_pktid; // a.k.a., packet_id in draft RFC
-        cli_pktid.read(recv_buf_copy, PacketID::SHORT_FORM);
+
+        PacketIDControl cli_auth_pktid; // a.k.a, replay_packet_id in draft RFC
+        cli_auth_pktid.read(recv_buf_copy);
+
+        uint8_t cli_net_id[4]; // a.k.a., packet_id in draft RFC
+
+        recv_buf_copy.read(cli_net_id, sizeof(cli_net_id));
 
         // start building the server reply HARD_RESET packet
         BufferAllocated send_buf;
@@ -186,12 +189,11 @@ class PsidCookieImpl : public PsidCookie
 
         // prepend_dest_psid_and_acks
         cli_psid.prepend(send_buf);
-        const id_t cli_net_id = htonl(cli_pktid.id);
-        send_buf.prepend((unsigned char *)&cli_net_id, sizeof(cli_net_id));
+        send_buf.prepend(cli_net_id, sizeof(cli_net_id));
         send_buf.push_front((unsigned char)1);
 
         // gen head
-        PacketIDSend svr_auth_pid(PacketID::LONG_FORM);
+        PacketIDControlSend svr_auth_pid{};
         svr_auth_pid.write_next(send_buf, true, now_->seconds_since_epoch());
         // make space for tls-auth HMAC
         send_buf.prepend_alloc(ta_hmac_send_->output_size());
@@ -202,7 +204,7 @@ class PsidCookieImpl : public PsidCookie
         const unsigned char op_field = CookieHelper::get_server_hard_reset_opfield();
         send_buf.push_front(op_field);
         // write hmac
-        ta_hmac_send_->ovpn_hmac_gen(send_buf.data(), send_buf.size(), 1 + SID_SIZE, ta_hmac_send_->output_size(), long_pktid_size_);
+        ta_hmac_send_->ovpn_hmac_gen(send_buf.data(), send_buf.size(), 1 + SID_SIZE, ta_hmac_send_->output_size(), PacketIDControl::idsize);
 
         // consumer's implementation to send the SERVER_HARD_RESET to the client
         bool send_ok = pctb_->psid_cookie_send_const(send_buf, pcaib);
@@ -218,7 +220,7 @@ class PsidCookieImpl : public PsidCookie
     {
         static const size_t hmac_size = ta_hmac_recv_->output_size();
         // ovpn_hmac_cmp checks for adequate pkt_buf.size()
-        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(), pkt_buf.size(), 1 + SID_SIZE, hmac_size, long_pktid_size_);
+        bool pkt_hmac_valid = ta_hmac_recv_->ovpn_hmac_cmp(pkt_buf.c_data(), pkt_buf.size(), 1 + SID_SIZE, hmac_size, PacketIDControl::idsize);
         if (!pkt_hmac_valid)
         {
             // JMD_TODO: log failure?  Logging DDoS?
@@ -228,7 +230,7 @@ class PsidCookieImpl : public PsidCookie
         static const size_t reqd_packet_size
             // clang-format off
             // [op_field] [cli_psid] [HMAC]      [cli_auth_pktid]   [acked] [srv_psid]
-            =  1 +        SID_SIZE + hmac_size + long_pktid_size_ + 5 +     SID_SIZE;
+            =  1 +        SID_SIZE + hmac_size + PacketIDControl::size() + 5 +     SID_SIZE;
         // the fixed size, 5, of the [acked] field recognizes that the client's first
         // response will ack exactly one packet, the server's HARD_RESET
         // clang-format on
@@ -244,8 +246,10 @@ class PsidCookieImpl : public PsidCookie
         // decapsulate_tls_auth
         const ProtoSessionID cli_psid(recv_buf_copy);
         recv_buf_copy.advance(hmac_size);
-        PacketID cli_auth_pktid; // a.k.a, replay_packet_id in draft RFC
-        cli_auth_pktid.read(recv_buf_copy, PacketID::LONG_FORM);
+
+        PacketIDControl cli_auth_pktid; // a.k.a, replay_packet_id in draft RFC
+        cli_auth_pktid.read(recv_buf_copy);
+
         unsigned int ack_count = recv_buf_copy[0];
         if (ack_count != 1)
         {
@@ -349,8 +353,6 @@ class PsidCookieImpl : public PsidCookie
     }
 
     static constexpr CryptoAlgs::Type digest_ = CryptoAlgs::Type::SHA256;
-    static constexpr size_t long_pktid_size_ = PacketID::size(PacketID::LONG_FORM);
-    static constexpr size_t short_pktid_size_ = PacketID::size(PacketID::SHORT_FORM);
 
     const ProtoContext::ProtoConfig &pcfg_;
     bool not_tls_auth_mode_;

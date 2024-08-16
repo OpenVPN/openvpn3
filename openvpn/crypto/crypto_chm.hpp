@@ -58,13 +58,13 @@ class CryptoCHM : public CryptoDCInstance
     // Encrypt/Decrypt
 
     /* returns true if packet ID is close to wrapping */
-    bool encrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) override
+    bool encrypt(BufferAllocated &buf, const unsigned char *op32) override
     {
-        encrypt_.encrypt(buf, now);
+        encrypt_.encrypt(buf);
         return encrypt_.pid_send.wrap_warning();
     }
 
-    Error::Type decrypt(BufferAllocated &buf, const PacketID::time_t now, const unsigned char *op32) override
+    Error::Type decrypt(BufferAllocated &buf, const std::time_t now, const unsigned char *op32) override
     {
         return decrypt_.decrypt(buf, now);
     }
@@ -90,10 +90,10 @@ class CryptoCHM : public CryptoDCInstance
                   const SessionStats::Ptr &recv_stats_arg) override
     {
         /* CBC encryption always uses short packet ID */
-        auto pid_form = PacketID::SHORT_FORM;
+        constexpr bool wide = false;
 
-        encrypt_.pid_send.init(pid_form);
-        decrypt_.pid_recv.init(pid_form, recv_name, recv_unit, recv_stats_arg);
+        encrypt_.pid_send = PacketIDDataSend{wide};
+        decrypt_.pid_recv.init(recv_name, recv_unit, wide, recv_stats_arg);
     }
 
     bool consider_compression(const CompressContext &comp_ctx) override
