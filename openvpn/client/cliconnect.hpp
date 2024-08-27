@@ -252,7 +252,7 @@ class ClientConnect : ClientProto::NotifyCallback,
     void post_cc_msg(const std::string &msg)
     {
         if (!halt && client)
-            client->post_cc_msg(msg);
+            client->validate_and_post_cc_msg(msg);
     }
 
     void thread_safe_post_cc_msg(std::string msg)

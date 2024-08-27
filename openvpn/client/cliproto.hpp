@@ -59,6 +59,7 @@ using namespace std::chrono_literals;
 #include <openvpn/error/excode.hpp>
 
 #include <openvpn/ssl/proto.hpp>
+#include <openvpn/client/remotelist.hpp>
 
 #ifdef OPENVPN_DEBUG_CLIPROTO
 #define OPENVPN_LOG_CLIPROTO(x) OPENVPN_LOG(x)
@@ -221,6 +222,29 @@ class Session : ProtoContextCallbackInterface,
             tun->set_disconnect();
     }
 
+    /**
+     * Posts a control message from the client API. To ensure the client that will always send
+     * valid message (e.g. no extra newlines or invalid) character this method will first check the
+     * message for validity before sending it to the control channel
+     * @param msg   control channel message
+     */
+    void validate_and_post_cc_msg(const std::string &msg)
+    {
+        if (!Unicode::is_valid_utf8(msg, Unicode::UTF8_NO_CTRL))
+        {
+            ClientEvent::Base::Ptr ev = new ClientEvent::UnsupportedFeature{"Invalid chars in control message", "Control channel message with invalid characters not allowed to be send with post_cc_msg", false};
+            cli_events->add_event(std::move(ev));
+            return;
+        }
+        post_cc_msg(msg);
+    }
+
+    /**
+     * Post a control message to the control channel. This only intended to be used by consumers that
+     * either validated the message itself beforehand or construct a message in a way that it is
+     * always valid.
+     * @param msg   The message to send on the control channel.
+     */
     void post_cc_msg(const std::string &msg)
     {
         proto_context.update_now();
