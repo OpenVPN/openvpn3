@@ -34,14 +34,13 @@
 namespace openvpn::IP {
 
 // Maintain a pool of IP addresses.
-// A should be IP::Addr, IPv4::Addr, or IPv6::Addr.
+// Should be IP::Addr, IPv4::Addr, or IPv6::Addr.
 template <typename ADDR>
 class PoolType
 {
   public:
     PoolType() = default;
 
-    // Add range of addresses to pool (pool will own the addresses).
     void add_range(const RangeType<ADDR> &range)
     {
         auto iter = range.iterator();
@@ -64,13 +63,11 @@ class PoolType
         }
     }
 
-    // Return number of pool addresses currently in use.
     size_t n_in_use() const
     {
         return map.size() - freelist.size();
     }
 
-    // Return number of pool addresses currently in use.
     size_t n_free() const
     {
         return freelist.size();
