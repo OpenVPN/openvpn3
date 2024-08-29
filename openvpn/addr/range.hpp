@@ -61,6 +61,20 @@ class RangeType
             }
         }
 
+        Iterator &operator++()
+        {
+            next();
+            return *this;
+        }
+        const ADDR &operator*() const
+        {
+            return addr_;
+        }
+        bool operator!=(const Iterator &rhs) const
+        {
+            return remaining_ != rhs.remaining_ || addr_ != rhs.addr_;
+        }
+
       private:
         Iterator(const RangeType &range)
             : addr_(range.start_), remaining_(range.extent_)
@@ -81,6 +95,17 @@ class RangeType
     {
     }
 
+    Iterator begin() const
+    {
+        return Iterator(*this);
+    }
+    Iterator end() const
+    {
+        RangeType end_range = *this;
+        end_range.start_ += static_cast<long>(end_range.extent_);
+        end_range.extent_ = 0;
+        return Iterator(end_range);
+    }
     Iterator iterator() const
     {
         return Iterator(*this);
