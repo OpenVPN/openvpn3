@@ -128,12 +128,6 @@ class PoolType
         }
     }
 
-    // DEBUGGING -- get the map load factor
-    float load_factor() const
-    {
-        return map.load_factor();
-    }
-
     // Override to refill freelist on demand
     virtual void freelist_fill()
     {
