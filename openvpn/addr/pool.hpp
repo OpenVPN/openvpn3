@@ -63,12 +63,12 @@ class PoolType
         }
     }
 
-    size_t n_in_use() const
+    [[nodiscard]] size_t n_in_use() const noexcept
     {
         return map.size() - freelist.size();
     }
 
-    size_t n_free() const
+    [[nodiscard]] size_t n_free() const noexcept
     {
         return freelist.size();
     }
