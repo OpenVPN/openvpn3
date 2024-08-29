@@ -23,11 +23,9 @@
 #define OPENVPN_ADDR_POOL_H
 
 #include <string>
-#include <sstream>
 #include <deque>
 #include <unordered_map>
 
-#include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 
 #include <openvpn/addr/ip.hpp>
