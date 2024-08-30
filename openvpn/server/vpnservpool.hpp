@@ -22,16 +22,13 @@
 #ifndef OPENVPN_SERVER_VPNSERVPOOL_H
 #define OPENVPN_SERVER_VPNSERVPOOL_H
 
-#include <sstream>
-#include <vector>
 #include <memory>
 #include <mutex>
-#include <thread>
-#include <cstdint> // for std::uint32_t
+#include <sstream>
+#include <vector>
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/rc.hpp>
-#include <openvpn/common/arraysize.hpp>
 #include <openvpn/server/vpnservnetblock.hpp>
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/route.hpp>
