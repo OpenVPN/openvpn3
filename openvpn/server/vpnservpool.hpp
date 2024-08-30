@@ -112,10 +112,9 @@ class Pool : public VPNServerNetblock
     {
         if (configured(opt, "server"))
             return VPNServerNetblock(opt, "server", false, 0);
-        else if (configured(opt, "ifconfig"))
+        if (configured(opt, "ifconfig"))
             return VPNServerNetblock(opt, "ifconfig", false, 0);
-        else
-            return VPNServerNetblock();
+        return VPNServerNetblock();
     }
 
     static bool configured(const OptionList &opt,
