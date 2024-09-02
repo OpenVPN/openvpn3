@@ -40,7 +40,7 @@ jobs:
           repository: Cyan4973/xxHash
           ref: v0.8.2
           path: xxHash
-      - uses: lukka/get-cmake@34181361be075620f7c3871daa1cadb92d9a903e # v3.30.1
+      - uses: lukka/get-cmake@070a0507a7abe157ef918deec391da1be197d2d1 # v3.30.3
         if: steps.check_submit.outputs.cache-hit != 'true'
 
       - name: Download Coverity Build Tool
