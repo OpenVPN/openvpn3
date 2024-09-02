@@ -28,7 +28,6 @@
 #include <unordered_map>
 
 #include <openvpn/common/exception.hpp>
-
 #include <openvpn/addr/ip.hpp>
 #include <openvpn/addr/range.hpp>
 
@@ -42,6 +41,10 @@ class PoolType
   public:
     PoolType() = default;
 
+    /**
+     * @brief Adds range of addresses to pool (pool will own the addresses).
+     * @param range RangeType of IP Addresses
+     */
     void add_range(const RangeType<ADDR> &range)
     {
         for (const auto &address : range)
@@ -60,11 +63,19 @@ class PoolType
         }
     }
 
+    /**
+     * @brief Returns number of pool addresses currently in use
+     * @return number of pool addresses currently in use
+     */
     [[nodiscard]] size_t n_in_use() const noexcept
     {
         return map.size() - freelist.size();
     }
 
+    /**
+     * @brief Returns number of free pool addresses
+     * @return number of free pool addresses
+     */
     [[nodiscard]] size_t n_free() const noexcept
     {
         return freelist.size();
