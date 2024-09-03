@@ -43,6 +43,12 @@ struct IPv4Header
         return static_cast<uint8_t>(((len >> 2) & 0x0F) | (version & 0x0F) << 4);
     }
 
+    static bool is_df_set(const unsigned char *data)
+    {
+        auto *hdr = reinterpret_cast<const IPv4Header *>(data);
+        return ntohs(hdr->frag_off) & IPv4Header::DF;
+    }
+
     std::uint8_t version_len;
 
     std::uint8_t tos;
@@ -52,6 +58,7 @@ struct IPv4Header
     enum
     {
         OFFMASK = 0x1fff,
+        DF = 0x4000,
     };
     std::uint16_t frag_off;
 
