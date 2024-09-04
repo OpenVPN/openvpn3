@@ -64,7 +64,18 @@ struct TunClient : public virtual RC<thread_unsafe_refcount>
 
     virtual void adjust_mss(int mss){};
 
-    virtual void apply_push_update(const OptionList &, TransportClient &){};
+    /**
+     * @brief Notifies tun client about received PUSH_UPDATE control channel message.
+     *
+     * The merging of exiting and incoming options (including removing options)
+     * happens before this call, so implementations are supposed to only undo
+     * existing options and apply the new ones, normally by calling stop()
+     * and tun_start().
+     *
+     * @param opt merged options, to be applied by implementation
+     * @param cli transport client, passed to tun_start() call
+     */
+    virtual void apply_push_update(const OptionList &opt, TransportClient &cli){};
 };
 
 // Base class for parent of tun interface object, used to
