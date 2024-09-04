@@ -50,6 +50,16 @@
             }
         },
         {
+            "name": "tunbuilder",
+            "hidden": true,
+            "cacheVariables": {
+                "CLI_TUNBUILDER": {
+                    "value": "ON",
+                    "type": "BOOL"
+                }
+            }
+        },
+        {
             "name": "base-mingw",
             "hidden": true,
             "generator": "Unix Makefiles",
@@ -267,6 +277,14 @@
                 "base-linux",
                 "release"
             ]
+        },
+        {
+            "name": "linux-x64-debug-tunbuilder",
+            "inherits": [
+                "base-linux",
+                "debug",
+                "tunbuilder"
+            ]
         }
     ],
     "buildPresets": [
@@ -334,6 +352,11 @@
             "name": "linux-x64-release",
             "configurePreset": "linux-x64-release",
             "configuration": "Release"
+        },
+        {
+            "name": "linux-x64-debug-tunbuilder",
+            "configurePreset": "linux-x64-debug-tunbuilder",
+            "configuration": "Debug"
         }
     ],
     "testPresets": [

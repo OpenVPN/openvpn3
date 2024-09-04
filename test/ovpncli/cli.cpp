@@ -123,16 +123,12 @@ class ClientBase : public ClientAPI::OpenVPNClient
   public:
     bool tun_builder_new() override
     {
-        tbc.tun_builder_set_mtu(1500);
         return true;
     }
 
     int tun_builder_establish() override
     {
-        if (!tun)
-        {
-            tun.reset(new TUN_CLASS_SETUP());
-        }
+        tun.reset(new TUN_CLASS_SETUP());
 
         TUN_CLASS_SETUP::Config config;
         config.layer = Layer(Layer::Type::OSI_LAYER_3);
@@ -195,6 +191,16 @@ class ClientBase : public ClientAPI::OpenVPNClient
         auto os_print = Cleanup([&os]()
                                 { OPENVPN_LOG_STRING(os.str()); });
         return tun->add_bypass_route(remote, ipv6, os);
+    }
+
+    bool tun_builder_add_dns_options(const DnsOptions &dns) override
+    {
+        return tbc.tun_builder_add_dns_options(dns);
+    }
+
+    bool tun_builder_set_mtu(int mtu) override
+    {
+        return tbc.tun_builder_set_mtu(mtu);
     }
 
   private:
